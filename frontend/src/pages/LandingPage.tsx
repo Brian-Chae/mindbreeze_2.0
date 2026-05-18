@@ -128,7 +128,7 @@ export default function LandingPage() {
           <Link
             to="/"
             className={`font-display text-xl font-light tracking-tight transition-colors duration-300 ${
-              scrolled ? 'text-ink-primary' : 'text-ink-on-brand'
+              scrolled ? 'text-ink-primary' : 'text-white'
             }`}
           >
             Mind Breeze
@@ -140,7 +140,7 @@ export default function LandingPage() {
             className={`inline-flex items-center h-9 px-5 rounded-pill border text-sm font-medium transition-all duration-300 ${
               scrolled
                 ? 'border-border-default hover:border-brand-primary hover:text-brand-primary text-ink-primary'
-                : 'border-ink-on-brand/25 hover:border-ink-on-brand/50 text-ink-on-brand'
+                : 'border-white/25 hover:border-white/50 text-white'
             }`}
           >
             로그인

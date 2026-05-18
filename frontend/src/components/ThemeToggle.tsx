@@ -9,7 +9,7 @@ export default function ThemeToggle({ className = '', inverted = false }: Props)
   const { theme, toggle } = useTheme();
 
   const base = inverted
-    ? 'text-ink-on-brand/70 hover:text-ink-on-brand border-ink-on-brand/25 hover:border-ink-on-brand/50'
+    ? 'text-white/70 hover:text-white border-white/25 hover:border-white/50'
     : theme === 'dark'
       ? 'border-border-default bg-surface-raised text-accent-warm hover:bg-surface-elevated'
       : 'border-border-subtle bg-transparent text-ink-tertiary hover:text-accent-warm hover:border-accent-warm/40';
