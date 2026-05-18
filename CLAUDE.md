@@ -2,7 +2,7 @@
 
 > 뇌파(EEG) 기반 심리상담 · 명상 통합 서비스 플랫폼.
 > LINK BAND 2.0으로 실시간 뇌파 측정(선택) + AI 기반 자동 기록·요약·리포트.
-> 상세 기획: `docs/MIND_BREEZE_2.0_종합_기획.md` / `docs/MIND_BREEZE_2.0_기능명세서.md` / `docs/AI_STACK_DECISION.md`
+> 상세 기획: `docs/MIND_BREEZE_2.0_종합_기획.md` / `docs/MIND_BREEZE_2.0_기능명세서.md` / `docs/MIND_BREEZE_2.0_개발_기획서.md` / `docs/AI_STACK_DECISION.md`
 
 ## 언어
 
