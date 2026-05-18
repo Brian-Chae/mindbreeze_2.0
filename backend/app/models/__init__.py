@@ -14,6 +14,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.client_profile import ClientProfile
 from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
+from app.models.client_invite import ClientInvite
 
 __all__ = [
     "User",
@@ -34,4 +35,5 @@ __all__ = [
     "ClientProfile",
     "Organization",
     "OrganizationJoinRequest",
+    "ClientInvite",
 ]
