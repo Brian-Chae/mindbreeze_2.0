@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 /* ─── 정적 데이터 ─── */
 
@@ -123,15 +124,15 @@ export default function LandingPage() {
         }`}
       >
         <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
-          <a href="/" className="font-display text-xl font-light text-ink-primary tracking-tight">
+          <Link to="/" className="font-display text-xl font-light text-ink-primary tracking-tight">
             Mind Breeze
-          </a>
-          <a
-            href="/login"
+          </Link>
+          <Link
+            to="/login"
             className="inline-flex items-center h-9 px-5 rounded-pill border border-border-default hover:border-brand-primary hover:text-brand-primary text-sm font-medium transition-colors duration-150"
           >
             로그인
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -171,12 +172,12 @@ export default function LandingPage() {
             당신이 온전히 사람에게 집중합니다.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="/register"
+            <Link
+              to="/register"
               className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-medium transition-all duration-150"
             >
               무료로 시작하기
-            </a>
+            </Link>
             <a
               href="#how"
               className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/20 hover:border-white/40 text-ink-on-brand/80 hover:text-ink-on-brand font-medium transition-all duration-150"
@@ -294,8 +295,8 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
-                href="/register"
+              <Link
+                to="/register"
                 className={`inline-flex items-center justify-center h-11 px-6 rounded-pill mt-8 text-sm font-medium transition-all duration-150 ${
                   a.inverted
                     ? 'bg-accent-warm hover:bg-[#dba590] text-slate-800'
@@ -303,7 +304,7 @@ export default function LandingPage() {
                 }`}
               >
                 {a.cta}
-              </a>
+              </Link>
             </div>
           ))}
         </div>
@@ -345,12 +346,12 @@ export default function LandingPage() {
             첫 30일 무료. 신용카드 없이 시작할 수 있습니다.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="/register"
+            <Link
+              to="/register"
               className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-medium transition-all duration-150"
             >
               무료로 시작하기
-            </a>
+            </Link>
             <a
               href="mailto:support@looxidlabs.com"
               className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/20 hover:border-white/40 text-ink-on-brand/70 hover:text-ink-on-brand font-medium transition-all duration-150"

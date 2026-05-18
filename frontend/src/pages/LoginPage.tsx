@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -126,9 +127,9 @@ export default function LoginPage() {
                 <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">
                   비밀번호
                 </label>
-                <a href="#" className="text-xs text-ink-tertiary hover:text-brand-primary transition-colors">
+                <Link to="#" className="text-xs text-ink-tertiary hover:text-brand-primary transition-colors">
                   비밀번호를 잊으셨나요
-                </a>
+                </Link>
               </div>
               <input
                 id="password"
@@ -187,9 +188,9 @@ export default function LoginPage() {
           {/* 회원가입 */}
           <p className="text-center text-sm text-ink-tertiary">
             아직 계정이 없으신가요?{' '}
-            <a href="#" className="text-brand-primary hover:text-brand-primary-hover font-medium transition-colors">
+            <Link to="/register" className="text-brand-primary hover:text-brand-primary-hover font-medium transition-colors">
               회원가입
-            </a>
+            </Link>
           </p>
         </div>
       </div>
