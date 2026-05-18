@@ -75,7 +75,7 @@
   },
   "accent": {
     "warm": {
-      "$value": "{color.coral.500}",
+      "$value": "{color.coral.700}",
       "$type": "color"
     },
     "warm-subtle": {

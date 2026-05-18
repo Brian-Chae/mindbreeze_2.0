@@ -171,7 +171,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative z-10 text-center px-5 max-w-3xl">
-          <p className="text-[#e8b4a0] text-sm font-medium tracking-widest uppercase mb-6">
+          <p className="text-accent-warm text-sm font-semibold tracking-widest uppercase mb-6">
             Clinical Garden — Mind Breeze
           </p>
           <h1 className="font-korean text-5xl sm:text-6xl lg:text-7xl font-light text-white tracking-tight leading-tight">
@@ -213,7 +213,7 @@ export default function LandingPage() {
       {/* ─── 핵심 가치 ─── */}
       <section className="py-24 sm:py-32 px-5">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-sm font-medium text-accent-warm tracking-widest uppercase mb-3">
+          <p className="text-center text-base font-semibold text-accent-warm tracking-widest uppercase mb-3">
             왜 Mind Breeze 인가
           </p>
           <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
@@ -247,7 +247,7 @@ export default function LandingPage() {
       {/* ─── How It Works ─── */}
       <section id="how" className="py-24 sm:py-32 px-5 bg-surface-sunken">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-base font-semibold text-[#c68870] tracking-widest uppercase mb-3">
+          <p className="text-center text-base font-semibold text-accent-warm tracking-widest uppercase mb-3">
             간단한 3단계
           </p>
           <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
@@ -285,7 +285,7 @@ export default function LandingPage() {
               }`}
             >
               <p
-                className={`text-xs font-medium tracking-widest uppercase mb-4 ${
+                className={`text-sm font-semibold tracking-widest uppercase mb-4 ${
                   a.inverted ? 'text-accent-warm' : 'text-brand-primary'
                 }`}
               >
@@ -326,7 +326,7 @@ export default function LandingPage() {
       {/* ─── 신뢰 ─── */}
       <section className="py-24 sm:py-32 px-5 bg-surface-elevated">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-sm font-medium text-brand-primary tracking-widest uppercase mb-3">
+          <p className="text-center text-base font-semibold text-accent-warm tracking-widest uppercase mb-3">
             안심하세요
           </p>
           <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
