@@ -97,7 +97,7 @@ const footerLinks = {
 
 const colorMap: Record<string, string> = {
   'accent-cool': 'bg-accent-cool text-slate-800',
-  'brand-primary': 'bg-brand-primary text-ink-on-brand',
+  'brand-primary': 'bg-brand-primary text-white',
   'accent-warm': 'bg-accent-warm text-slate-800',
 };
 
@@ -171,15 +171,15 @@ export default function LandingPage() {
         </div>
 
         <div className="relative z-10 text-center px-5 max-w-3xl">
-          <p className="text-accent-warm text-sm font-medium tracking-widest uppercase mb-6">
+          <p className="text-[#e8b4a0] text-sm font-medium tracking-widest uppercase mb-6">
             Clinical Garden — Mind Breeze
           </p>
-          <h1 className="font-korean text-5xl sm:text-6xl lg:text-7xl font-light text-ink-on-brand tracking-tight leading-tight">
+          <h1 className="font-korean text-5xl sm:text-6xl lg:text-7xl font-light text-white tracking-tight leading-tight">
             과학으로 검증된
             <br />
             <span className="text-[#d4956b]">평온함</span>
           </h1>
-          <p className="mt-8 text-lg sm:text-xl text-ink-on-brand/85 leading-relaxed max-w-xl mx-auto">
+          <p className="mt-8 text-lg sm:text-xl text-white/85 leading-relaxed max-w-xl mx-auto">
             AI가 상담을 기록하고, 뇌파가 마음을 증명하며,
             <br />
             당신이 온전히 사람에게 집중합니다.
@@ -193,7 +193,7 @@ export default function LandingPage() {
             </Link>
             <a
               href="#how"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-ink-on-brand/90 hover:text-ink-on-brand font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-white/90 hover:text-white font-medium transition-all duration-150"
             >
               더 알아보기
             </a>
@@ -280,7 +280,7 @@ export default function LandingPage() {
               key={a.label}
               className={`rounded-2xl p-10 sm:p-12 ${
                 a.inverted
-                  ? 'bg-brand-deep text-ink-on-brand'
+                  ? 'bg-brand-deep text-white'
                   : 'bg-surface-elevated border border-border-subtle'
               }`}
             >
@@ -293,7 +293,7 @@ export default function LandingPage() {
               </p>
               <h3
                 className={`font-korean text-2xl font-semibold ${
-                  a.inverted ? 'text-ink-on-brand' : 'text-ink-primary'
+                  a.inverted ? 'text-white' : 'text-ink-primary'
                 }`}
               >
                 {a.label}
@@ -304,7 +304,7 @@ export default function LandingPage() {
                     <span className={`mt-0.5 shrink-0 text-lg ${a.inverted ? 'text-accent-warm' : 'text-leaf-500'}`}>
                       ◆
                     </span>
-                    <span className={a.inverted ? 'text-ink-on-brand/90' : 'text-ink-secondary'}>{p}</span>
+                    <span className={a.inverted ? 'text-white/90' : 'text-ink-secondary'}>{p}</span>
                   </li>
                 ))}
               </ul>
@@ -313,7 +313,7 @@ export default function LandingPage() {
                 className={`inline-flex items-center justify-center h-11 px-6 rounded-pill mt-8 text-sm font-medium transition-all duration-150 ${
                   a.inverted
                     ? 'bg-accent-warm hover:bg-[#dba590] text-slate-800'
-                    : 'bg-brand-primary hover:bg-brand-primary-hover text-ink-on-brand'
+                    : 'bg-brand-primary hover:bg-brand-primary-hover text-white'
                 }`}
               >
                 {a.cta}
@@ -350,12 +350,12 @@ export default function LandingPage() {
       {/* ─── CTA ─── */}
       <section className="py-24 sm:py-32 px-5 bg-brand-deep text-center">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-ink-on-brand tracking-tight">
+          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-white tracking-tight">
             오늘, 마음의 평화를
             <br />
             과학으로 만나보세요
           </h2>
-          <p className="mt-5 text-ink-on-brand/75 leading-relaxed">
+          <p className="mt-5 text-white/75 leading-relaxed">
             첫 30일 무료. 신용카드 없이 시작할 수 있습니다.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
@@ -367,7 +367,7 @@ export default function LandingPage() {
             </Link>
             <a
               href="mailto:support@looxidlabs.com"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-ink-on-brand/85 hover:text-ink-on-brand font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-white/85 hover:text-white font-medium transition-all duration-150"
             >
               문의하기
             </a>
