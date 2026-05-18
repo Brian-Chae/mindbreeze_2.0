@@ -5,19 +5,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
+import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
 import { useAuthStore } from './stores/authStore';
-
-// 추후 구현 예정인 페이지 자리표시자
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">이 페이지는 추후 구현됩니다.</p>
-      </div>
-    </div>
-  );
-}
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -35,8 +25,8 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/onboarding/counselor" element={<Placeholder title="상담사 온보딩" />} />
-        <Route path="/onboarding/client" element={<Placeholder title="내담자 온보딩" />} />
+        <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
+        <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
       </Routes>
     </BrowserRouter>
   );
