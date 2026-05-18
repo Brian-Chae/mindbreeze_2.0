@@ -100,3 +100,12 @@ class UserResponse(BaseModel):
 class LoginResponse(BaseModel):
     user: UserResponse
     tokens: TokenResponse
+
+
+class PasswordForgotRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)

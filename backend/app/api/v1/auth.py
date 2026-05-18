@@ -27,6 +27,8 @@ from app.schemas.auth import (
     LogoutRequest,
     OtpRequestPayload,
     OtpVerifyPayload,
+    PasswordForgotRequest,
+    PasswordResetRequest,
     RefreshRequest,
     RegisterClientRequest,
     RegisterCounselorRequest,
@@ -34,7 +36,13 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
-from app.services import email_verify_service, otp_service, refresh_token_service
+from app.services import (
+    email_verify_service,
+    login_attempt_service,
+    otp_service,
+    password_reset_service,
+    refresh_token_service,
+)
 from app.tasks.email import send_otp_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -64,15 +72,23 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(req: LoginRequest, db: Session = Depends(get_db)):
-    """로그인 → JWT 발급"""
+async def login(
+    req: LoginRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """로그인 → JWT 발급. 5회 실패 시 15분 잠금."""
+    await login_attempt_service.check_login_lock(req.email, redis)
+
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.password_hash):
+        await login_attempt_service.record_failed_attempt(req.email, redis)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 일치하지 않습니다",
         )
 
+    await login_attempt_service.reset_attempts(req.email, redis)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
@@ -296,3 +312,29 @@ async def logout(
             pass
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ---------------------------------------------------------------------------
+# B5: 비밀번호 재설정
+# ---------------------------------------------------------------------------
+
+@router.post("/password/forgot", status_code=status.HTTP_204_NO_CONTENT)
+async def password_forgot(
+    req: PasswordForgotRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """비밀번호 재설정 링크 발송 (사용자 존재 노출 방지 위해 항상 204)"""
+    await password_reset_service.initiate_reset(req.email, db, redis)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/password/reset", status_code=status.HTTP_200_OK)
+async def password_reset(
+    req: PasswordResetRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """재설정 토큰 검증 + 새 비밀번호 적용"""
+    await password_reset_service.complete_reset(req.token, req.new_password, db, redis)
+    return {"detail": "비밀번호가 변경되었습니다"}
