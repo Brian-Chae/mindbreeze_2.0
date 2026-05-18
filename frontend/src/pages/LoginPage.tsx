@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 
