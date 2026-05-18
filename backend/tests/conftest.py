@@ -26,6 +26,37 @@ def _compile_array_sqlite(element, compiler, **kw):
     return "TEXT"
 
 
+# ARRAY/JSONB는 SQLite에 list/dict 그대로 바인딩 불가 → JSON 직렬화 처리기 부착
+import json as _json
+
+
+def _json_bind_processor(self, dialect):
+    def process(value):
+        if value is None:
+            return None
+        return _json.dumps(value)
+    return process
+
+
+def _json_result_processor(self, dialect, coltype):
+    def process(value):
+        if value is None or value == "":
+            return None
+        if isinstance(value, (list, dict)):
+            return value
+        try:
+            return _json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    return process
+
+
+ARRAY.bind_processor = _json_bind_processor
+ARRAY.result_processor = _json_result_processor
+JSONB.bind_processor = _json_bind_processor
+JSONB.result_processor = _json_result_processor
+
+
 @pytest.fixture(scope="function")
 def app_client():
     from app.main import app as fastapi_app
