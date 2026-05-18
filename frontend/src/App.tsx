@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import { useAuthStore } from './stores/authStore';
 
 // 추후 구현 예정인 페이지 자리표시자
@@ -29,9 +32,9 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<Placeholder title="회원가입" />} />
-        <Route path="/forgot-password" element={<Placeholder title="비밀번호 찾기" />} />
-        <Route path="/reset-password" element={<Placeholder title="비밀번호 재설정" />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/onboarding/counselor" element={<Placeholder title="상담사 온보딩" />} />
         <Route path="/onboarding/client" element={<Placeholder title="내담자 온보딩" />} />
       </Routes>
