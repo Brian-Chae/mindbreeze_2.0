@@ -1,0 +1,6 @@
+node_modules/
+
+# 빌드 출력은 커밋한다 (frontend가 npm 의존 없이 사용 가능하게).
+# 다만 watch 모드 중 발생할 수 있는 임시 파일은 제외.
+*.log
+.DS_Store

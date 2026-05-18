@@ -1,0 +1,41 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+[data-theme="dark"] {
+  --surface-canvas: #1a1d1a;
+  --surface-elevated: #232624;
+  --surface-raised: #2d312e;
+  --surface-sunken: #13150f;
+  --surface-inverse: #faf8f2;
+  --ink-primary: #f4f1e8;
+  --ink-secondary: #c7bfae;
+  --ink-tertiary: #a89f8c;
+  --ink-disabled: #5c6b7a;
+  --ink-on-brand: #1a1d1a;
+  --ink-on-inverse: #2c3e50;
+  --brand-primary: #9fb89b;
+  --brand-primary-hover: #b4c9b0;
+  --brand-primary-active: #d8e4d3;
+  --brand-subtle: #4a6b5a;
+  --brand-muted: #2f3f2e;
+  --brand-deep: #d8e4d3;
+  --accent-warm: #e8b4a0;
+  --accent-warm-subtle: #8b5a45;
+  --accent-cool: #a5c5d6;
+  --accent-cool-subtle: #3d6480;
+  --status-success: #6b9a6b;
+  --status-success-subtle: #2f3f2e;
+  --status-warning: #d4956b;
+  --status-warning-subtle: #a36f4a;
+  --status-danger: #b85c5c;
+  --status-danger-subtle: #8c4242;
+  --status-info: #6b9ab3;
+  --status-info-subtle: #4e748a;
+  --border-subtle: #2d312e;
+  --border-default: #475262;
+  --border-strong: #5c6b7a;
+  --border-focus: #b4c9b0;
+  --overlay-backdrop: rgba(15, 17, 16, 0.75);
+  --overlay-scrim: rgba(255, 255, 255, 0.1);
+}

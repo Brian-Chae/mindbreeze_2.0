@@ -1,0 +1,28 @@
+{
+  "transition": {
+    "hover": {
+      "$value": "{motion.duration.instant} {motion.easing.ease-out}",
+      "$type": "transition"
+    },
+    "toggle": {
+      "$value": "{motion.duration.instant} {motion.easing.ease-in-out}",
+      "$type": "transition"
+    },
+    "card": {
+      "$value": "{motion.duration.smooth} {motion.easing.standard}",
+      "$type": "transition"
+    },
+    "page": {
+      "$value": "{motion.duration.deliberate} {motion.easing.standard}",
+      "$type": "transition"
+    },
+    "modal": {
+      "$value": "{motion.duration.deliberate} {motion.easing.standard}",
+      "$type": "transition"
+    },
+    "breath": {
+      "$value": "{motion.duration.breath} {motion.easing.breath}",
+      "$type": "transition"
+    }
+  }
+}

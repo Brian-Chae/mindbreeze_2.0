@@ -1,0 +1,50 @@
+{
+  "modal": {
+    "radius": {
+      "$value": "{radius.lg}",
+      "$type": "dimension"
+    },
+    "padding": {
+      "$value": "{spacing.8}",
+      "$type": "dimension"
+    },
+    "gap": {
+      "$value": "{spacing.6}",
+      "$type": "dimension"
+    },
+    "bg": {
+      "$value": "{surface.raised}",
+      "$type": "color"
+    },
+    "backdrop": {
+      "$value": "{overlay.backdrop}",
+      "$type": "color"
+    },
+    "shadow": {
+      "$value": "{shadow.xl}",
+      "$type": "shadow"
+    },
+    "headerGap": {
+      "$value": "{spacing.2}",
+      "$type": "dimension"
+    },
+    "footerGap": {
+      "$value": "{spacing.3}",
+      "$type": "dimension"
+    },
+    "width": {
+      "sm": {
+        "$value": "400px",
+        "$type": "dimension"
+      },
+      "md": {
+        "$value": "560px",
+        "$type": "dimension"
+      },
+      "lg": {
+        "$value": "720px",
+        "$type": "dimension"
+      }
+    }
+  }
+}

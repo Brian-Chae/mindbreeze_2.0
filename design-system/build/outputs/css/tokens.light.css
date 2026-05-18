@@ -1,0 +1,41 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root {
+  --surface-canvas: #f4f1e8;
+  --surface-elevated: #faf8f2;
+  --surface-raised: #ffffff;
+  --surface-sunken: #ede9dc;
+  --surface-inverse: #2c3e50;
+  --ink-primary: #2c3e50;
+  --ink-secondary: #5c6b7a;
+  --ink-tertiary: #94a3b8;
+  --ink-disabled: #b0bcca;
+  --ink-on-brand: #ffffff;
+  --ink-on-inverse: #ffffff;
+  --brand-primary: #88a887;
+  --brand-primary-hover: #6e8e6c;
+  --brand-primary-active: #5a7558;
+  --brand-subtle: #e5ede3;
+  --brand-muted: #f1f5ef;
+  --brand-deep: #4a6b5a;
+  --accent-warm: #e8b4a0;
+  --accent-warm-subtle: #fbe8df;
+  --accent-cool: #a5c5d6;
+  --accent-cool-subtle: #dce9f0;
+  --status-success: #6b9a6b;
+  --status-success-subtle: #e0efdc;
+  --status-warning: #d4956b;
+  --status-warning-subtle: #f5e3d2;
+  --status-danger: #b85c5c;
+  --status-danger-subtle: #efd6d6;
+  --status-info: #6b9ab3;
+  --status-info-subtle: #d7e5ee;
+  --border-subtle: #ede9dc;
+  --border-default: #e0daca;
+  --border-strong: #c7bfae;
+  --border-focus: #4a6b5a;
+  --overlay-backdrop: rgba(44, 62, 80, 0.5);
+  --overlay-scrim: rgba(44, 62, 80, 0.2);
+}

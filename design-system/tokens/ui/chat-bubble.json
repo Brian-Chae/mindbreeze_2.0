@@ -1,0 +1,70 @@
+{
+  "chatBubble": {
+    "radius": {
+      "$value": "{radius.pill}",
+      "$type": "dimension"
+    },
+    "radiusSystem": {
+      "$value": "{radius.md}",
+      "$type": "dimension"
+    },
+    "padding": {
+      "$value": "{spacing.3} {spacing.4}",
+      "$type": "dimension"
+    },
+    "gap": {
+      "$value": "{spacing.2}",
+      "$type": "dimension"
+    },
+    "fontSize": {
+      "$value": "{fontSize.sm}",
+      "$type": "dimension"
+    },
+    "maxWidth": {
+      "$value": "75%",
+      "$type": "dimension"
+    },
+    "counselor": {
+      "bg": {
+        "$value": "{brand.subtle}",
+        "$type": "color"
+      },
+      "fg": {
+        "$value": "{ink.primary}",
+        "$type": "color"
+      },
+      "align": {
+        "$value": "flex-start",
+        "$type": "other"
+      }
+    },
+    "client": {
+      "bg": {
+        "$value": "{brand.primary}",
+        "$type": "color"
+      },
+      "fg": {
+        "$value": "{ink.on-brand}",
+        "$type": "color"
+      },
+      "align": {
+        "$value": "flex-end",
+        "$type": "other"
+      }
+    },
+    "system": {
+      "bg": {
+        "$value": "{surface.sunken}",
+        "$type": "color"
+      },
+      "fg": {
+        "$value": "{ink.secondary}",
+        "$type": "color"
+      },
+      "align": {
+        "$value": "center",
+        "$type": "other"
+      }
+    }
+  }
+}

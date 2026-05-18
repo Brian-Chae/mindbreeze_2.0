@@ -1,0 +1,15 @@
+{
+  "name": "@mindbreeze/design-system",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MIND BREEZE 디자인 시스템 — W3C 토큰 SSOT + Style Dictionary 빌드",
+  "type": "module",
+  "scripts": {
+    "build": "node ./build/style-dictionary.config.mjs",
+    "clean": "rm -rf build/outputs",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "devDependencies": {
+    "style-dictionary": "^5.4.1"
+  }
+}

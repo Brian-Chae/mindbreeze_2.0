@@ -1,0 +1,68 @@
+{
+  "breathCircle": {
+    "size": {
+      "$value": "80px",
+      "$type": "dimension"
+    },
+    "sizeSm": {
+      "$value": "48px",
+      "$type": "dimension"
+    },
+    "duration": {
+      "inhale": {
+        "$value": "4s",
+        "$type": "duration"
+      },
+      "exhale": {
+        "$value": "4s",
+        "$type": "duration"
+      }
+    },
+    "stroke": {
+      "outer": {
+        "$value": "{brand.muted}",
+        "$type": "color"
+      },
+      "middle": {
+        "$value": "{brand.subtle}",
+        "$type": "color"
+      },
+      "inner": {
+        "$value": "{brand.primary}",
+        "$type": "color"
+      }
+    },
+    "strokeWidth": {
+      "outer": {
+        "$value": "1.5px",
+        "$type": "dimension"
+      },
+      "middle": {
+        "$value": "1.5px",
+        "$type": "dimension"
+      },
+      "inner": {
+        "$value": "2px",
+        "$type": "dimension"
+      }
+    },
+    "opacity": {
+      "outer": {
+        "$value": 0.4,
+        "$type": "opacity"
+      },
+      "middle": {
+        "$value": 0.6,
+        "$type": "opacity"
+      },
+      "inner": {
+        "$value": 0.8,
+        "$type": "opacity"
+      }
+    },
+    "easing": {
+      "$value": "ease-in-out",
+      "$type": "other"
+    }
+  }
+}

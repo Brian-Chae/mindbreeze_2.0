@@ -1,0 +1,66 @@
+@import '../design-system/build/outputs/css/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-canvas text-ink-primary font-body;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Fraunces display font */
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,700&family=Inter:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap');
+}
+
+@layer components {
+  /* Breath Circle 로더 */
+  .breath-circle {
+    position: relative;
+    width: var(--breath-circle-size);
+    height: var(--breath-circle-size);
+  }
+
+  .breath-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border-style: solid;
+    animation: breathe 8s ease-in-out infinite;
+  }
+
+  .breath-ring--outer {
+    border-color: var(--breath-circle-stroke-outer);
+    border-width: var(--breath-circle-stroke-width-outer);
+    opacity: var(--breath-circle-opacity-outer);
+    animation-delay: 0s;
+  }
+
+  .breath-ring--middle {
+    inset: 8px;
+    border-color: var(--breath-circle-stroke-middle);
+    border-width: var(--breath-circle-stroke-width-middle);
+    opacity: var(--breath-circle-opacity-middle);
+    animation-delay: 1s;
+  }
+
+  .breath-ring--inner {
+    inset: 16px;
+    border-color: var(--breath-circle-stroke-inner);
+    border-width: var(--breath-circle-stroke-width-inner);
+    opacity: var(--breath-circle-opacity-inner);
+    animation-delay: 2s;
+    background: radial-gradient(circle, var(--brand-muted) 0%, transparent 60%);
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(0.92); }
+    50% { transform: scale(1.08); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .breath-ring { animation: none; transform: scale(1); }
+  }
+}

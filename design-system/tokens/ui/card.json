@@ -1,0 +1,36 @@
+{
+  "card": {
+    "radius": {
+      "$value": "{radius.lg}",
+      "$type": "dimension"
+    },
+    "padding": {
+      "$value": "{spacing.6}",
+      "$type": "dimension"
+    },
+    "gap": {
+      "$value": "{spacing.4}",
+      "$type": "dimension"
+    },
+    "bg": {
+      "$value": "{surface.raised}",
+      "$type": "color"
+    },
+    "bgHover": {
+      "$value": "{surface.elevated}",
+      "$type": "color"
+    },
+    "border": {
+      "$value": "{border.subtle}",
+      "$type": "color"
+    },
+    "shadow": {
+      "$value": "{shadow.xs}",
+      "$type": "shadow"
+    },
+    "shadowHover": {
+      "$value": "{shadow.sm}",
+      "$type": "shadow"
+    }
+  }
+}

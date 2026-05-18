@@ -2,7 +2,7 @@
 
 > 뇌파(EEG) 기반 심리상담 · 명상 통합 서비스 플랫폼.
 > LINK BAND 2.0으로 실시간 뇌파 측정(선택) + AI 기반 자동 기록·요약·리포트.
-> 상세 기획: `docs/MIND_BREEZE_Service_Plan.md` / `docs/PRD_MVP1_MVP2.md` / `docs/PRD_User_Mobile_Service.md`
+> 상세 기획: `docs/MIND_BREEZE_2.0_종합_기획.md` / `docs/MIND_BREEZE_2.0_기능명세서.md` / `docs/AI_STACK_DECISION.md`
 
 ## 언어
 
@@ -18,9 +18,9 @@
 | BLE 연동 | Web Bluetooth API (Chromium 기반 브라우저) |
 | Realtime | WebSocket (Socket.IO) |
 | Backend | FastAPI (Python), Celery + Redis |
-| Database | PostgreSQL + TimescaleDB (시계열 EEG) |
+| Database | PostgreSQL (OLTP). EEG Raw → S3 Parquet |
 | ORM | SQLAlchemy + Alembic |
-| AI/ML | STT(Whisper/Clova), Diarization(pyannote), LLM(Claude/GPT), EEG 분석(Looxid SDK) |
+| AI/ML | STT(Gemini Audio→Whisper+pyannote), 요약(Claude→Gemini), OCR(Gemini Vision), EEG(Looxid SDK) — `docs/AI_STACK_DECISION.md` |
 | Storage | S3 호환 (음성 녹음, 리포트 PDF) |
 | 스타일링 | Tailwind CSS 3 + shadcn/ui |
 | 테스트 | vitest (unit) + Playwright (E2E) |
@@ -56,10 +56,10 @@ mindbreeze_2.0/
 │       ├── plan.md
 │       └── tasks.md
 ├── docs/                       # 기획 문서
-│   ├── MIND_BREEZE_Service_Plan.md
-│   ├── PRD_MVP1_MVP2.md
-│   ├── PRD_User_Mobile_Service.md
-│   └── VARIANT_AI_LOGIN_DESIGN_BRIEF.md
+│   ├── MIND_BREEZE_2.0_종합_기획.md
+│   ├── MIND_BREEZE_2.0_기능명세서.md
+│   ├── AI_STACK_DECISION.md
+│   └── Archives/               # 구 PRD·기획서
 ├── .claude/                    # Claude 하네스
 │   ├── agents/                 # 도메인 에이전트
 │   ├── rules/                  # 코딩 규칙
@@ -149,4 +149,4 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 3. **실시간 데이터**: WebSocket 기반. 1:1 상담은 단일 뷰, 명상 수업은 다자 그리드 뷰(MVP3).
 4. **AI 파이프라인**: STT → Diarization → LLM 요약은 Celery 비동기 큐로 처리. 수 분 소요.
 5. **데이터 프라이버시**: 뇌파 데이터 + 상담 내용 → 접근 제어, 동의 플로우, 보관 기간 정책 필수.
-6. **MVP1+2 통합 릴리스**: 14주. 인증, 세션·내담자, BLE+1:1 대시보드, 녹음·STT·AI 기록지·리포트.
+6. **제품 로드맵 (31주)**: MVP1 17주(웹·B2B·AI·PC BLE) → MVP2 8주(앱·푸시·앱 BLE) → MVP3 6주(케어·고도화). 개발 착수 전 문서 정합·§18 승인.

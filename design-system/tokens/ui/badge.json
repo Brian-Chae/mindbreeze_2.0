@@ -1,0 +1,90 @@
+{
+  "badge": {
+    "radius": {
+      "$value": "{radius.pill}",
+      "$type": "dimension"
+    },
+    "height": {
+      "$value": "24px",
+      "$type": "dimension"
+    },
+    "paddingX": {
+      "$value": "{spacing.3}",
+      "$type": "dimension"
+    },
+    "fontSize": {
+      "$value": "{fontSize.xs}",
+      "$type": "dimension"
+    },
+    "fontWeight": {
+      "$value": "{font.weight.medium}",
+      "$type": "fontWeight"
+    },
+    "variant": {
+      "neutral": {
+        "bg": {
+          "$value": "{surface.sunken}",
+          "$type": "color"
+        },
+        "fg": {
+          "$value": "{ink.secondary}",
+          "$type": "color"
+        }
+      },
+      "brand": {
+        "bg": {
+          "$value": "{brand.muted}",
+          "$type": "color"
+        },
+        "fg": {
+          "$value": "{brand.deep}",
+          "$type": "color"
+        }
+      },
+      "success": {
+        "bg": {
+          "$value": "{status.success-subtle}",
+          "$type": "color"
+        },
+        "fg": {
+          "$value": "{color.leaf.700}",
+          "$type": "color"
+        }
+      },
+      "warning": {
+        "bg": {
+          "$value": "{status.warning-subtle}",
+          "$type": "color"
+        },
+        "fg": {
+          "$value": "{color.clay.700}",
+          "$type": "color"
+        }
+      },
+      "danger": {
+        "bg": {
+          "$value": "{status.danger-subtle}",
+          "$type": "color"
+        },
+        "fg": {
+          "$value": "{color.earth.700}",
+          "$type": "color"
+        }
+      }
+    },
+    "verified": {
+      "icon": {
+        "$value": "leaf",
+        "$type": "other"
+      },
+      "border": {
+        "$value": "1.5px solid {brand.primary}",
+        "$type": "border"
+      },
+      "bg": {
+        "$value": "{brand.muted}",
+        "$type": "color"
+      }
+    }
+  }
+}

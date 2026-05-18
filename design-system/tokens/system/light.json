@@ -1,0 +1,156 @@
+{
+  "surface": {
+    "canvas": {
+      "$value": "{color.oat.200}",
+      "$type": "color"
+    },
+    "elevated": {
+      "$value": "{color.oat.100}",
+      "$type": "color"
+    },
+    "raised": {
+      "$value": "{color.oat.50}",
+      "$type": "color"
+    },
+    "sunken": {
+      "$value": "{color.oat.300}",
+      "$type": "color"
+    },
+    "inverse": {
+      "$value": "{color.slate.800}",
+      "$type": "color"
+    }
+  },
+  "ink": {
+    "primary": {
+      "$value": "{color.slate.800}",
+      "$type": "color"
+    },
+    "secondary": {
+      "$value": "{color.slate.600}",
+      "$type": "color"
+    },
+    "tertiary": {
+      "$value": "{color.slate.400}",
+      "$type": "color"
+    },
+    "disabled": {
+      "$value": "{color.slate.300}",
+      "$type": "color"
+    },
+    "on-brand": {
+      "$value": "{color.oat.50}",
+      "$type": "color"
+    },
+    "on-inverse": {
+      "$value": "{color.oat.50}",
+      "$type": "color"
+    }
+  },
+  "brand": {
+    "primary": {
+      "$value": "{color.sage.500}",
+      "$type": "color"
+    },
+    "primary-hover": {
+      "$value": "{color.sage.600}",
+      "$type": "color"
+    },
+    "primary-active": {
+      "$value": "{color.sage.700}",
+      "$type": "color"
+    },
+    "subtle": {
+      "$value": "{color.sage.100}",
+      "$type": "color"
+    },
+    "muted": {
+      "$value": "{color.sage.50}",
+      "$type": "color"
+    },
+    "deep": {
+      "$value": "{color.sage.800}",
+      "$type": "color"
+    }
+  },
+  "accent": {
+    "warm": {
+      "$value": "{color.coral.500}",
+      "$type": "color"
+    },
+    "warm-subtle": {
+      "$value": "{color.coral.100}",
+      "$type": "color"
+    },
+    "cool": {
+      "$value": "{color.sky.500}",
+      "$type": "color"
+    },
+    "cool-subtle": {
+      "$value": "{color.sky.100}",
+      "$type": "color"
+    }
+  },
+  "status": {
+    "success": {
+      "$value": "{color.leaf.500}",
+      "$type": "color"
+    },
+    "success-subtle": {
+      "$value": "{color.leaf.100}",
+      "$type": "color"
+    },
+    "warning": {
+      "$value": "{color.clay.500}",
+      "$type": "color"
+    },
+    "warning-subtle": {
+      "$value": "{color.clay.100}",
+      "$type": "color"
+    },
+    "danger": {
+      "$value": "{color.earth.500}",
+      "$type": "color"
+    },
+    "danger-subtle": {
+      "$value": "{color.earth.100}",
+      "$type": "color"
+    },
+    "info": {
+      "$value": "{color.river.500}",
+      "$type": "color"
+    },
+    "info-subtle": {
+      "$value": "{color.river.100}",
+      "$type": "color"
+    }
+  },
+  "border": {
+    "subtle": {
+      "$value": "{color.oat.300}",
+      "$type": "color"
+    },
+    "default": {
+      "$value": "{color.oat.400}",
+      "$type": "color"
+    },
+    "strong": {
+      "$value": "{color.oat.500}",
+      "$type": "color"
+    },
+    "focus": {
+      "$value": "{color.sage.800}",
+      "$type": "color"
+    }
+  },
+  "overlay": {
+    "backdrop": {
+      "$value": "{color.alpha.ink-50}",
+      "$type": "color"
+    },
+    "scrim": {
+      "$value": "{color.alpha.ink-20}",
+      "$type": "color"
+    }
+  }
+}

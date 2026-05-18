@@ -1,4 +1,20 @@
 {
+  "permissions": {
+    "allow": [
+      "Skill(frontend-design:frontend-design)",
+      "Skill(frontend-design:frontend-design:*)",
+      "WebSearch",
+      "Bash(cd /tmp/claude-skill-install/designer-skills && echo \"=== design-systems ===\" && ls design-systems/ 2>&1 && echo \"=== ui-design ===\" && ls ui-design/ 2>&1 && echo \"=== visual-critique ===\" && ls visual-critique/ 2>&1)",
+      "Read(//private/tmp/claude-skill-install/designer-skills/**)",
+      "Bash(mkdir -p ~/.claude/references)",
+      "Bash(cp -R /tmp/claude-skill-install/awesome-claude-design ~/.claude/references/awesome-claude-design)",
+      "Bash(npm view *)",
+      "Bash(npm ls *)",
+      "Bash(node -e 'const fs=require\\('\\\\''fs'\\\\''\\);const p='\\\\''__TRACKED_VAR__'\\\\'';const j=JSON.parse\\(fs.readFileSync\\(p,'\\\\''utf8'\\\\''\\)\\);if\\(j.$description\\){delete j.$description;fs.writeFileSync\\(p,JSON.stringify\\(j,null,2\\)+'\\\\''\\\\n'\\\\''\\)}')",
+      "Bash(node -e ' *)",
+      "Bash(grep -l '\\\\$description' . -r)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {

@@ -1,0 +1,11 @@
+/**
+ * MIND BREEZE 디자인 토큰 — 합본 진입점
+ *
+ * frontend에서는 이 파일 하나만 import 하면 된다:
+ *   @import '@mindbreeze/design-system/css/tokens.css';
+ *
+ * 빌드 후 base/light/dark 세 파일이 함께 채워진다. 본 파일은 단순 글루.
+ */
+@import './tokens.base.css';
+@import './tokens.light.css';
+@import './tokens.dark.css';

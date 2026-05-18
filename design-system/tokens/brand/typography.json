@@ -1,0 +1,40 @@
+{
+  "font": {
+    "family": {
+      "display": {
+        "$value": "'Fraunces', 'Recoleta', Georgia, 'Times New Roman', serif",
+        "$type": "fontFamily"
+      },
+      "body": {
+        "$value": "'Inter', 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif",
+        "$type": "fontFamily"
+      },
+      "korean": {
+        "$value": "'Pretendard Variable', 'Pretendard', system-ui, sans-serif",
+        "$type": "fontFamily"
+      },
+      "mono": {
+        "$value": "'JetBrains Mono', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace",
+        "$type": "fontFamily"
+      }
+    },
+    "weight": {
+      "light": {
+        "$value": 300,
+        "$type": "fontWeight"
+      },
+      "regular": {
+        "$value": 400,
+        "$type": "fontWeight"
+      },
+      "medium": {
+        "$value": 500,
+        "$type": "fontWeight"
+      },
+      "bold": {
+        "$value": 700,
+        "$type": "fontWeight"
+      }
+    }
+  }
+}
