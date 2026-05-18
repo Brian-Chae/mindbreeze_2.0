@@ -3,13 +3,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.v1 import router as v1_router
+
 app = FastAPI(
     title="MIND BREEZE 2.0",
     description="뇌파 기반 심리상담·명상 통합 서비스 플랫폼 API",
     version="0.1.0",
 )
 
-# CORS (개발 환경 — 전체 허용)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -18,12 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(v1_router)
+
 
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "mindbreeze-api"}
-
-
-@app.get("/api/v1/")
-async def root():
-    return {"version": "0.1.0", "docs": "/docs"}
