@@ -12,6 +12,8 @@ from app.models.client_counselor_link import ClientCounselorLink
 from app.models.password_history import PasswordHistory
 from app.models.counselor_profile import CounselorProfile
 from app.models.client_profile import ClientProfile
+from app.models.organization import Organization
+from app.models.org_join_request import OrganizationJoinRequest
 
 __all__ = [
     "User",
@@ -30,4 +32,6 @@ __all__ = [
     "PasswordHistory",
     "CounselorProfile",
     "ClientProfile",
+    "Organization",
+    "OrganizationJoinRequest",
 ]

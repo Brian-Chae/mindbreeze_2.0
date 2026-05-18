@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, Text, func
+from sqlalchemy import String, DateTime, Text, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,6 +22,7 @@ class User(Base):
     profile_image: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
     verified_tier: Mapped[str] = mapped_column(String(20), default="unverified")
+    org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -37,3 +38,4 @@ class User(Base):
     password_history = relationship("PasswordHistory", back_populates="user", cascade="all, delete-orphan")
     counselor_profile = relationship("CounselorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     client_profile = relationship("ClientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    org = relationship("Organization", foreign_keys=[org_id])
