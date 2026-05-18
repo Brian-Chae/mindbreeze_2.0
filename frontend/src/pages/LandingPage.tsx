@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 /* ─── 정적 데이터 ─── */
 
@@ -127,12 +128,15 @@ export default function LandingPage() {
           <Link to="/" className="font-display text-xl font-light text-ink-primary tracking-tight">
             Mind Breeze
           </Link>
-          <Link
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
             to="/login"
             className="inline-flex items-center h-9 px-5 rounded-pill border border-border-default hover:border-brand-primary hover:text-brand-primary text-sm font-medium transition-colors duration-150"
           >
             로그인
           </Link>
+          </div>
         </div>
       </nav>
 
@@ -161,12 +165,12 @@ export default function LandingPage() {
           <p className="text-accent-warm text-sm font-medium tracking-widest uppercase mb-6">
             Clinical Garden — Mind Breeze
           </p>
-          <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-light text-ink-on-brand tracking-tight leading-tight">
+          <h1 className="font-korean text-5xl sm:text-6xl lg:text-7xl font-light text-ink-on-brand tracking-tight leading-tight">
             과학으로 검증된
             <br />
-            <span className="text-accent-warm">평온함</span>
+            <span className="text-[#d4956b]">평온함</span>
           </h1>
-          <p className="mt-8 text-lg sm:text-xl text-ink-on-brand/60 leading-relaxed max-w-xl mx-auto">
+          <p className="mt-8 text-lg sm:text-xl text-ink-on-brand/85 leading-relaxed max-w-xl mx-auto">
             AI가 상담을 기록하고, 뇌파가 마음을 증명하며,
             <br />
             당신이 온전히 사람에게 집중합니다.
@@ -174,13 +178,13 @@ export default function LandingPage() {
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/register"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-semibold shadow-lg shadow-accent-warm/20 transition-all duration-150"
             >
               무료로 시작하기
             </Link>
             <a
               href="#how"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/20 hover:border-white/40 text-ink-on-brand/80 hover:text-ink-on-brand font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-ink-on-brand/90 hover:text-ink-on-brand font-medium transition-all duration-150"
             >
               더 알아보기
             </a>
@@ -200,10 +204,10 @@ export default function LandingPage() {
       {/* ─── 핵심 가치 ─── */}
       <section className="py-24 sm:py-32 px-5">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-sm font-medium text-brand-primary tracking-widest uppercase mb-3">
+          <p className="text-center text-sm font-medium text-accent-warm tracking-widest uppercase mb-3">
             왜 Mind Breeze 인가
           </p>
-          <h2 className="font-display text-3xl sm:text-4xl font-light text-center text-ink-primary tracking-tight">
+          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
             상담이 가벼워집니다
           </h2>
           <p className="mt-4 text-center text-ink-secondary max-w-lg mx-auto">
@@ -214,16 +218,16 @@ export default function LandingPage() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="group rounded-2xl bg-surface-elevated border border-border-subtle hover:border-border-default p-8 transition-all duration-300"
+                className="group rounded-2xl bg-surface-elevated border border-border-subtle hover:border-accent-warm/40 hover:shadow-md p-8 transition-all duration-300"
               >
                 <div
-                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl text-lg ${
+                  className={`inline-flex items-center justify-center w-14 h-14 rounded-xl text-xl ${
                     colorMap[f.color] || 'bg-slate-100'
                   }`}
                 >
                   {f.icon}
                 </div>
-                <h3 className="mt-5 font-display text-lg font-medium text-ink-primary">{f.title}</h3>
+                <h3 className="mt-5 font-korean text-lg font-semibold text-ink-primary">{f.title}</h3>
                 <p className="mt-3 text-sm text-ink-secondary leading-relaxed">{f.desc}</p>
               </div>
             ))}
@@ -234,10 +238,10 @@ export default function LandingPage() {
       {/* ─── How It Works ─── */}
       <section id="how" className="py-24 sm:py-32 px-5 bg-surface-sunken">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-sm font-medium text-brand-primary tracking-widest uppercase mb-3">
+          <p className="text-center text-sm font-medium text-accent-warm tracking-widest uppercase mb-3">
             간단한 3단계
           </p>
-          <h2 className="font-display text-3xl sm:text-4xl font-light text-center text-ink-primary tracking-tight">
+          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
             연결하고, 기록하고, 이해합니다
           </h2>
 
@@ -248,10 +252,10 @@ export default function LandingPage() {
                 {i < steps.length - 1 && (
                   <div className="hidden sm:block absolute top-10 left-[calc(50%+3rem)] w-[calc(100%-6rem)] h-px bg-border-default" />
                 )}
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-canvas border border-border-default text-brand-primary font-display text-xl font-light">
+                <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-surface-canvas border-2 border-accent-warm/30 text-accent-warm font-korean text-2xl font-semibold">
                   {s.step}
                 </div>
-                <h3 className="mt-5 font-display text-xl font-medium text-ink-primary">{s.title}</h3>
+                <h3 className="mt-5 font-korean text-xl font-semibold text-ink-primary">{s.title}</h3>
                 <p className="mt-3 text-sm text-ink-secondary leading-relaxed whitespace-pre-line">{s.desc}</p>
               </div>
             ))}
@@ -279,7 +283,7 @@ export default function LandingPage() {
                 대상
               </p>
               <h3
-                className={`font-display text-2xl font-light ${
+                className={`font-korean text-2xl font-semibold ${
                   a.inverted ? 'text-ink-on-brand' : 'text-ink-primary'
                 }`}
               >
@@ -288,10 +292,10 @@ export default function LandingPage() {
               <ul className="mt-6 space-y-3">
                 {a.points.map((p) => (
                   <li key={p} className="flex items-start gap-3 text-sm leading-relaxed">
-                    <span className={`mt-0.5 shrink-0 ${a.inverted ? 'text-accent-warm' : 'text-accent-cool'}`}>
+                    <span className={`mt-0.5 shrink-0 text-lg ${a.inverted ? 'text-accent-warm' : 'text-leaf-500'}`}>
                       ◆
                     </span>
-                    <span className={a.inverted ? 'text-ink-on-brand/70' : 'text-ink-secondary'}>{p}</span>
+                    <span className={a.inverted ? 'text-ink-on-brand/90' : 'text-ink-secondary'}>{p}</span>
                   </li>
                 ))}
               </ul>
@@ -316,17 +320,17 @@ export default function LandingPage() {
           <p className="text-center text-sm font-medium text-brand-primary tracking-widest uppercase mb-3">
             안심하세요
           </p>
-          <h2 className="font-display text-3xl sm:text-4xl font-light text-center text-ink-primary tracking-tight">
+          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
             신뢰 위에 설계되었습니다
           </h2>
 
           <div className="mt-16 grid sm:grid-cols-3 gap-6">
             {trustItems.map((t) => (
               <div key={t.title} className="text-center px-4">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand-muted text-brand-primary text-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent-warm-subtle text-accent-warm text-2xl">
                   {t.icon}
                 </div>
-                <h3 className="mt-4 font-display text-base font-medium text-ink-primary">{t.title}</h3>
+                <h3 className="mt-4 font-korean text-base font-semibold text-ink-primary">{t.title}</h3>
                 <p className="mt-2 text-sm text-ink-secondary leading-relaxed whitespace-pre-line">{t.desc}</p>
               </div>
             ))}
@@ -337,24 +341,24 @@ export default function LandingPage() {
       {/* ─── CTA ─── */}
       <section className="py-24 sm:py-32 px-5 bg-brand-deep text-center">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-3xl sm:text-4xl font-light text-ink-on-brand tracking-tight">
+          <h2 className="font-korean text-3xl sm:text-4xl font-medium text-ink-on-brand tracking-tight">
             오늘, 마음의 평화를
             <br />
             과학으로 만나보세요
           </h2>
-          <p className="mt-5 text-ink-on-brand/50 leading-relaxed">
+          <p className="mt-5 text-ink-on-brand/75 leading-relaxed">
             첫 30일 무료. 신용카드 없이 시작할 수 있습니다.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               to="/register"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-semibold shadow-lg shadow-accent-warm/20 transition-all duration-150"
             >
               무료로 시작하기
             </Link>
             <a
               href="mailto:support@looxidlabs.com"
-              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/20 hover:border-white/40 text-ink-on-brand/70 hover:text-ink-on-brand font-medium transition-all duration-150"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill border border-white/30 hover:border-white/60 text-ink-on-brand/85 hover:text-ink-on-brand font-medium transition-all duration-150"
             >
               문의하기
             </a>

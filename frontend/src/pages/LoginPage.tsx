@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -78,7 +79,10 @@ export default function LoginPage() {
       </div>
 
       {/* 로그인 폼 */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex-1 flex items-center justify-center p-8 relative">
+        <div className="absolute top-8 right-8">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-[400px] space-y-8">
           {/* 모바일 로고 */}
           <div className="lg:hidden text-center space-y-2">
