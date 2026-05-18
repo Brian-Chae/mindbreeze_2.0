@@ -247,7 +247,7 @@ export default function LandingPage() {
       {/* ─── How It Works ─── */}
       <section id="how" className="py-24 sm:py-32 px-5 bg-surface-sunken">
         <div className="mx-auto max-w-5xl">
-          <p className="text-center text-sm font-medium text-accent-warm tracking-widest uppercase mb-3">
+          <p className="text-center text-base font-semibold text-[#c68870] tracking-widest uppercase mb-3">
             간단한 3단계
           </p>
           <h2 className="font-korean text-3xl sm:text-4xl font-medium text-center text-ink-primary tracking-tight">
