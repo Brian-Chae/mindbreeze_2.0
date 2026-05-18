@@ -186,7 +186,13 @@ export default function LandingPage() {
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              to="/register"
+              to="/register/counselor"
+              className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-brand-primary hover:bg-brand-primary-hover active:bg-brand-primary-active text-ink-on-brand font-semibold shadow-lg transition-all duration-150"
+            >
+              상담사 가입
+            </Link>
+            <Link
+              to="/register/client"
               className="inline-flex items-center justify-center h-12 px-8 rounded-pill bg-accent-warm hover:bg-[#dba590] active:bg-[#ce9778] text-slate-800 font-semibold shadow-lg shadow-accent-warm/20 transition-all duration-150"
             >
               무료로 시작하기
