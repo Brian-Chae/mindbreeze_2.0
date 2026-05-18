@@ -125,14 +125,23 @@ export default function LandingPage() {
         }`}
       >
         <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
-          <Link to="/" className="font-display text-xl font-light text-ink-primary tracking-tight">
+          <Link
+            to="/"
+            className={`font-display text-xl font-light tracking-tight transition-colors duration-300 ${
+              scrolled ? 'text-ink-primary' : 'text-ink-on-brand'
+            }`}
+          >
             Mind Breeze
           </Link>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
+            <ThemeToggle inverted={!scrolled} />
             <Link
             to="/login"
-            className="inline-flex items-center h-9 px-5 rounded-pill border border-border-default hover:border-brand-primary hover:text-brand-primary text-sm font-medium transition-colors duration-150"
+            className={`inline-flex items-center h-9 px-5 rounded-pill border text-sm font-medium transition-all duration-300 ${
+              scrolled
+                ? 'border-border-default hover:border-brand-primary hover:text-brand-primary text-ink-primary'
+                : 'border-ink-on-brand/25 hover:border-ink-on-brand/50 text-ink-on-brand'
+            }`}
           >
             로그인
           </Link>

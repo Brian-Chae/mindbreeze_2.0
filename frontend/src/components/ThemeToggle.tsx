@@ -2,20 +2,23 @@ import { useTheme } from '../hooks/useTheme';
 
 interface Props {
   className?: string;
+  inverted?: boolean;
 }
 
-export default function ThemeToggle({ className = '' }: Props) {
+export default function ThemeToggle({ className = '', inverted = false }: Props) {
   const { theme, toggle } = useTheme();
+
+  const base = inverted
+    ? 'text-ink-on-brand/70 hover:text-ink-on-brand border-ink-on-brand/25 hover:border-ink-on-brand/50'
+    : theme === 'dark'
+      ? 'border-border-default bg-surface-raised text-accent-warm hover:bg-surface-elevated'
+      : 'border-border-subtle bg-transparent text-ink-tertiary hover:text-accent-warm hover:border-accent-warm/40';
 
   return (
     <button
       onClick={toggle}
       aria-label={theme === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
-      className={`inline-flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-300 ${
-        theme === 'dark'
-          ? 'border-border-default bg-surface-raised text-accent-warm hover:bg-surface-elevated'
-          : 'border-border-subtle bg-transparent text-ink-tertiary hover:text-accent-warm hover:border-accent-warm/40'
-      } ${className}`}
+      className={`inline-flex items-center justify-center w-9 h-9 rounded-full border transition-all duration-300 ${base} ${className}`}
     >
       {theme === 'dark' ? (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
