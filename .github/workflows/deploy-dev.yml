@@ -68,24 +68,13 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-      - name: Debug - List files
-        run: |
-          ls -la
-          ls -la frontend/dist/ 2>/dev/null || echo "no frontend/dist"
-          ls -la docker/ 2>/dev/null || echo "no docker/"
-          ls -la docker/nginx/ 2>/dev/null || echo "no docker/nginx/"
-
       - name: Deploy to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: |
-            be.tar.gz
-            frontend/dist
-            docker/docker-compose.dev.yml
-            docker/nginx
+          source: "be.tar.gz,frontend/dist,docker/docker-compose.dev.yml,docker/nginx"
           target: /home/ubuntu/mindbreeze/
 
       - name: Restart services
