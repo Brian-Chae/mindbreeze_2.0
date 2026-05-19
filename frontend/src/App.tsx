@@ -7,6 +7,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
 import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
+import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
+        <Route path="/credentials" element={<CredentialDashboardPage />} />
       </Routes>
     </BrowserRouter>
   );
