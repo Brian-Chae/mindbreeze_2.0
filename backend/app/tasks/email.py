@@ -1,40 +1,50 @@
-"""이메일 발송 — AWS SES (boto3)
+"""이메일 발송 — Resend REST API
 
 개발 모드(debug=True): 콘솔 로그 출력
-운영 모드: SES로 실제 발송
+운영 모드: Resend로 실제 발송
 """
 
 import logging
 
-import boto3
-from botocore.exceptions import ClientError
+import httpx
 
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+RESEND_API = "https://api.resend.com/emails"
+
 
 def _send_email(to_email: str, subject: str, body_text: str) -> bool:
-    """SES로 이메일 발송. 실패 시 로그만 남기고 False 반환."""
-    if settings.debug:
-        logger.info(f"[EMAIL] To: {to_email} | Subject: {subject}")
-        logger.info(f"[EMAIL] Body: {body_text[:200]}")
+    """Resend로 이메일 발송. 실패 시 로그만 남기고 False 반환."""
+    if settings.debug and not settings.resend_api_key:
+        logger.info(f"[EMAIL DEBUG] To: {to_email} | Subject: {subject}")
+        logger.info(f"[EMAIL DEBUG] Body: {body_text[:200]}")
         return True
 
     try:
-        client = boto3.client("ses", region_name=settings.aws_region)
-        client.send_email(
-            Source=settings.ses_from_email,
-            Destination={"ToAddresses": [to_email]},
-            Message={
-                "Subject": {"Data": subject, "Charset": "UTF-8"},
-                "Body": {"Text": {"Data": body_text, "Charset": "UTF-8"}},
-            },
-        )
-        logger.info(f"[EMAIL] 발송 성공 → {to_email}")
-        return True
-    except ClientError as e:
-        logger.error(f"[EMAIL] 발송 실패 → {to_email}: {e}")
+        with httpx.Client(timeout=10) as client:
+            resp = client.post(
+                RESEND_API,
+                headers={
+                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": settings.resend_from_email,
+                    "to": [to_email],
+                    "subject": subject,
+                    "text": body_text,
+                },
+            )
+        if resp.is_success:
+            logger.info(f"[EMAIL] 발송 성공 → {to_email} (id={resp.json().get('id', '?')})")
+            return True
+        else:
+            logger.error(f"[EMAIL] 발송 실패 → {to_email}: {resp.status_code} {resp.text[:200]}")
+            return False
+    except Exception as e:
+        logger.error(f"[EMAIL] 예외 발생 → {to_email}: {e}")
         return False
 
 
