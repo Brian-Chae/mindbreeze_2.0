@@ -15,12 +15,12 @@ import OrgSearchPage from './pages/org/OrgSearchPage';
 import OrgRegisterPage from './pages/org/OrgRegisterPage';
 import OrgManagementPage from './pages/org/OrgManagementPage';
 import MyRequestsPage from './pages/org/MyRequestsPage';
+import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
 
-  // 앱 시작 시 localStorage에서 인증 상태 복원
   useEffect(() => {
     initialize();
   }, [initialize]);
@@ -43,6 +43,7 @@ function App() {
         <Route path="/org/register" element={<OrgRegisterPage />} />
         <Route path="/org/requests" element={<MyRequestsPage />} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
+        <Route path="/credentials" element={<CredentialDashboardPage />} />
       </Routes>
     </BrowserRouter>
   );
