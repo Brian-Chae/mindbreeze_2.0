@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import { useAuthStore } from '../stores/authStore';
 
 /* ─── 정적 데이터 ─── */
 
@@ -106,6 +107,16 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 /* ─── 컴포넌트 ─── */
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'counselor') navigate('/sessions', { replace: true });
+      else if (user.role === 'client') navigate('/clients', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
