@@ -42,7 +42,7 @@ async def initiate_reset(email: str, db: Session, redis: Redis) -> None:
     jti = uuid.uuid4().hex
     expire = datetime.now(timezone.utc) + timedelta(minutes=RESET_TTL_MINUTES)
     payload = {"sub": email, "exp": expire, "type": TOKEN_TYPE, "jti": jti}
-    token = jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+    token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
     await redis.setex(_reset_key(jti), RESET_TTL_MINUTES * 60, str(user.id))
 
@@ -72,7 +72,7 @@ async def complete_reset(
     _validate_password(new_password)
 
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

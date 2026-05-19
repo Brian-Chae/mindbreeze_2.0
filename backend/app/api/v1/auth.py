@@ -238,7 +238,7 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
 
 def _decode_refresh(token: str) -> dict:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -294,7 +294,7 @@ async def logout(
     # Refresh 토큰 폐기
     try:
         payload = jwt.decode(
-            req.refresh_token, settings.secret_key, algorithms=[settings.jwt_algorithm]
+            req.refresh_token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
         )
         jti = payload.get("jti")
         if jti:

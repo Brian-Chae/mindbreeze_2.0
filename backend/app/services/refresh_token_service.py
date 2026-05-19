@@ -16,7 +16,7 @@ def _now() -> datetime:
 
 def _encode(user_id: str, jti: str, expire: datetime) -> str:
     payload = {"sub": user_id, "exp": expire, "type": "refresh", "jti": jti}
-    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 def issue_refresh_token(user_id: str, db: Session) -> str:

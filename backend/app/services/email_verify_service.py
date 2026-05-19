@@ -15,13 +15,13 @@ def generate_email_verify_token(email: str) -> str:
     """이메일 검증 통과 → 15분 유효 JWT 발급"""
     expire = datetime.now(timezone.utc) + timedelta(minutes=EMAIL_VERIFY_TTL_MINUTES)
     payload = {"sub": email, "exp": expire, "type": TOKEN_TYPE}
-    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 def verify_email_token(token: str) -> str:
     """JWT 검증 → 이메일 반환. 위조/만료/타입 불일치 시 401."""
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
