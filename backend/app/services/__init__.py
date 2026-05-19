@@ -5,6 +5,7 @@ from app.services import password_reset_service
 from app.services import refresh_token_service
 from app.services import org_service
 from app.services import credential_service
+from app.services import session_service
 
 __all__ = [
     "email_verify_service",
@@ -14,4 +15,5 @@ __all__ = [
     "refresh_token_service",
     "org_service",
     "credential_service",
+    "session_service",
 ]

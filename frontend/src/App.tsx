@@ -16,6 +16,9 @@ import OrgRegisterPage from './pages/org/OrgRegisterPage';
 import OrgManagementPage from './pages/org/OrgManagementPage';
 import MyRequestsPage from './pages/org/MyRequestsPage';
 import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage';
+import SessionListPage from './pages/sessions/SessionListPage';
+import SessionCreatePage from './pages/sessions/SessionCreatePage';
+import SessionDetailPage from './pages/sessions/SessionDetailPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -45,6 +48,9 @@ function App() {
         <Route path="/org/requests" element={<MyRequestsPage />} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<CredentialDashboardPage />} />
+        <Route path="/sessions" element={<SessionListPage />} />
+        <Route path="/sessions/new" element={<SessionCreatePage />} />
+        <Route path="/sessions/:id" element={<SessionDetailPage />} />
       </Routes>
     </BrowserRouter>
   );
