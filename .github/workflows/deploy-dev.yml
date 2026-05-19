@@ -1,0 +1,95 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — Dev 배포 (GitHub Actions)
+# 트리거: develop 브랜치 push
+# ─────────────────────────────────────────
+
+name: Deploy Dev
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker Build & Push
+        run: |
+          docker build -t mindbreeze-dev-be -f docker/Dockerfile.backend backend/
+          docker save mindbreeze-dev-be | gzip > be.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-image
+          path: be.tar.gz
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build
+        run: |
+          cd frontend
+          cp .env.dev .env
+          npm ci
+          npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+  deploy:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend image
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-image
+
+      - name: Download frontend dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Deploy to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_DEV_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: |
+            be.tar.gz
+            frontend/dist
+            docker/docker-compose.dev.yml
+            docker/nginx
+            backend/.env.dev
+          target: /home/ubuntu/mindbreeze/
+
+      - name: Restart services
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_DEV_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/mindbreeze
+            docker load < be.tar.gz
+            docker compose -f docker/docker-compose.dev.yml up -d --build
+            docker image prune -f

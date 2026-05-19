@@ -44,10 +44,10 @@ export interface ClientRegisterPayload {
 }
 
 export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
-  apiClient.post('/auth/otp/request', { email }, { skipAuth: true });
+  apiClient.post('/auth/email/request-otp', { email }, { skipAuth: true });
 
 export const verifyOtp = (email: string, code: string): Promise<OtpVerifyResponse> =>
-  apiClient.post('/auth/otp/verify', { email, code }, { skipAuth: true });
+  apiClient.post('/auth/email/verify-otp', { email, code }, { skipAuth: true });
 
 export const registerCounselor = (data: CounselorRegisterPayload): Promise<LoginResponse> =>
   apiClient.post('/auth/register/counselor', data, { skipAuth: true });

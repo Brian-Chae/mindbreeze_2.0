@@ -13,7 +13,16 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://dev.mindbreeze.looxidlabs.com",
+        "https://dev.mindbreeze.looxidlabs.com",
+        "http://dev-api.mindbreeze.looxidlabs.com",
+        "https://dev-api.mindbreeze.looxidlabs.com",
+        # prod (릴리즈 시 활성화)
+        # "https://mindbreeze.looxidlabs.com",
+        # "https://api.mindbreeze.looxidlabs.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
