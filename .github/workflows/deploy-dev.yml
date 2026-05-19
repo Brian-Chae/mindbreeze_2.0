@@ -42,7 +42,7 @@ jobs:
         run: |
           cd frontend
           cp .env.dev .env
-          npm ci
+          npm install
           npm run build
 
       - name: Upload artifact
