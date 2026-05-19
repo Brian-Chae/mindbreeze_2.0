@@ -16,7 +16,7 @@ class OnboardingProgressResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CounselorStep1Request(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
+    name: str | None = None
     phone: str | None = None
 
 
@@ -47,7 +47,7 @@ class CounselorCompleteResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ClientStep1Request(BaseModel):
-    name: str = Field(min_length=1, max_length=100)
+    name: str | None = None
     phone: str | None = None
 
 

@@ -78,10 +78,8 @@ export default function ClientOnboardingPage() {
       try {
         const p = await getOnboardingProgress();
         if (cancelled) return;
-        if (p.role === 'client') {
-          setStep(Math.min(Math.max(p.current_step, 1), 4));
-          setCompletedSteps(p.completed_steps ?? []);
-          const d = p.data ?? {};
+        setStep(Math.min(Math.max(p.current_step, 1), 4));
+        const d = p.step_data ?? {};
           setForm((prev) => ({
             ...prev,
             phone: (d.phone as string) ?? prev.phone,
@@ -92,7 +90,6 @@ export default function ClientOnboardingPage() {
             profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
             bio: (d.bio as string) ?? prev.bio,
           }));
-        }
       } catch {
         // 진행 상태 없음
       }
@@ -389,7 +386,7 @@ export default function ClientOnboardingPage() {
                   <div className="space-y-1">
                     <p className="text-sm text-ink-tertiary">이름</p>
                     <p className="text-lg font-semibold text-ink-primary">
-                      {matchedCounselor.counselor_name}
+                      {matchedCounselor.matched_counselor?.name}
                     </p>
                   </div>
                   {matchedCounselor.counselor_code && (

@@ -71,7 +71,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(
     req: LoginRequest,
     db: Session = Depends(get_db),
@@ -91,7 +91,11 @@ async def login(
     await login_attempt_service.reset_attempts(req.email, redis)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
-    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+    return LoginResponse(
+        user=UserResponse.model_validate(user),
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +214,8 @@ async def register_counselor(req: RegisterCounselorRequest, db: Session = Depend
     )
     return LoginResponse(
         user=UserResponse.model_validate(user),
-        tokens=TokenResponse(access_token=access, refresh_token=refresh),
+        access_token=access,
+        refresh_token=refresh,
     )
 
 
@@ -228,7 +233,8 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
     )
     return LoginResponse(
         user=UserResponse.model_validate(user),
-        tokens=TokenResponse(access_token=access, refresh_token=refresh),
+        access_token=access,
+        refresh_token=refresh,
     )
 
 

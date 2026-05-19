@@ -122,7 +122,8 @@ def counselor_step1(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    user.name = req.name
+    if req.name is not None:
+        user.name = req.name
     if req.phone is not None:
         user.phone = req.phone
     db.add(user)
@@ -224,7 +225,8 @@ def client_step1(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    user.name = req.name
+    if req.name is not None:
+        user.name = req.name
     if req.phone is not None:
         user.phone = req.phone
     db.add(user)

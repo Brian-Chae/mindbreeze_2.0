@@ -74,11 +74,9 @@ export default function CounselorOnboardingPage() {
       try {
         const p = await getOnboardingProgress();
         if (cancelled) return;
-        if (p.role === 'counselor') {
-          setStep(Math.min(Math.max(p.current_step, 1), 4));
-          setCompletedSteps(p.completed_steps ?? []);
-          const d = p.data ?? {};
-          setForm((prev) => ({
+        setStep(Math.min(Math.max(p.current_step, 1), 4));
+        const d = p.step_data ?? {};
+        setForm((prev) => ({
             ...prev,
             phone: (d.phone as string) ?? prev.phone,
             gender: (d.gender as string) ?? prev.gender,
@@ -90,7 +88,6 @@ export default function CounselorOnboardingPage() {
             profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
             bio: (d.bio as string) ?? prev.bio,
           }));
-        }
       } catch {
         // 진행 상태 없음 → step 1 유지
       }
