@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: |
           cd frontend
-          cp .env.dev .env
+          echo "VITE_API_BASE_URL=http://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           npm install --legacy-peer-deps
           npm run build
 
