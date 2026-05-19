@@ -79,7 +79,6 @@ jobs:
             frontend/dist
             docker/docker-compose.dev.yml
             docker/nginx
-            backend/.env.dev
           target: /home/ubuntu/mindbreeze/
 
       - name: Restart services
