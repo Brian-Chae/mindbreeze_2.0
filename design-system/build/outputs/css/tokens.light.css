@@ -8,6 +8,7 @@
   --surface-raised: #ffffff;
   --surface-sunken: #ede9dc;
   --surface-inverse: #2c3e50;
+  --surface: var(--surface-raised);
   --ink-primary: #2c3e50;
   --ink-secondary: #5c6b7a;
   --ink-tertiary: #94a3b8;

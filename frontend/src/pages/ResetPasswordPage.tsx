@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
                     placeholder="영문+숫자+특수문자 8자 이상"
                     required
                     disabled={loading}
-                    className="w-full h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-50"
+                    className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-50"
                   />
                 </div>
 
@@ -125,7 +125,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setPasswordConfirm(e.target.value)}
                     required
                     disabled={loading}
-                    className="w-full h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-50"
+                    className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-50"
                   />
                 </div>
 

@@ -248,7 +248,7 @@ export default function ClientOnboardingPage() {
                   type="text"
                   value={user?.name ?? ''}
                   readOnly
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary opacity-70"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary opacity-70"
                 />
               </div>
               <div className="space-y-2">
@@ -260,7 +260,7 @@ export default function ClientOnboardingPage() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="010-0000-0000"
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
                 />
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function ClientOnboardingPage() {
                 <select
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
                 >
                   <option value="">선택해주세요</option>
                   <option value="male">남성</option>
@@ -287,7 +287,7 @@ export default function ClientOnboardingPage() {
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
                 />
               </div>
               <div className="space-y-2">
@@ -296,7 +296,7 @@ export default function ClientOnboardingPage() {
                   {CONCERN_OPTIONS.map((opt) => (
                     <label
                       key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
+                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
                     >
                       <input
                         type="checkbox"
@@ -314,7 +314,7 @@ export default function ClientOnboardingPage() {
                   {INTEREST_OPTIONS.map((opt) => (
                     <label
                       key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
+                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
                     >
                       <input
                         type="checkbox"
@@ -340,7 +340,7 @@ export default function ClientOnboardingPage() {
                   value={form.profileImageUrl}
                   onChange={(e) => setForm({ ...form, profileImageUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
                 />
               </div>
               <div className="space-y-2">
@@ -351,7 +351,7 @@ export default function ClientOnboardingPage() {
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary resize-none"
+                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary resize-none"
                 />
               </div>
             </div>
@@ -376,7 +376,7 @@ export default function ClientOnboardingPage() {
                         })
                       }
                       placeholder="ABC123"
-                      className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-center text-xl font-bold tracking-widest text-ink-primary"
+                      className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-center text-xl font-bold tracking-widest text-ink-primary"
                     />
                   </div>
                   <p className="text-xs text-ink-tertiary">
@@ -384,7 +384,7 @@ export default function ClientOnboardingPage() {
                   </p>
                 </>
               ) : (
-                <div className="space-y-3 bg-surface rounded-lg border border-border-default p-5">
+                <div className="space-y-3 bg-surface-raised rounded-lg border border-border-default p-5">
                   <p className="text-base font-semibold text-accent-warm">매칭된 상담사</p>
                   <div className="space-y-1">
                     <p className="text-sm text-ink-tertiary">이름</p>

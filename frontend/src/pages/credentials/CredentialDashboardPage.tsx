@@ -173,7 +173,7 @@ export default function CredentialDashboardPage() {
               type="file"
               accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileChange}
-              className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary file:mr-3 file:rounded file:border-0 file:bg-brand-deep file:px-3 file:py-1 file:text-white"
+              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary file:mr-3 file:rounded file:border-0 file:bg-brand-deep file:px-3 file:py-1 file:text-white"
             />
             <p className="text-xs text-ink-tertiary">PDF, JPG, PNG · 최대 10MB</p>
           </div>
@@ -183,7 +183,7 @@ export default function CredentialDashboardPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as CredentialType)}
-              className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
             >
               <option value="id_card">신분증</option>
               <option value="license">자격증</option>
@@ -200,7 +200,7 @@ export default function CredentialDashboardPage() {
               type="date"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-lg border border-border-default bg-surface px-4 py-3 text-sm text-ink-primary"
+              className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
             />
           </div>
 
@@ -245,7 +245,7 @@ export default function CredentialDashboardPage() {
                 return (
                   <div
                     key={c.id}
-                    className="rounded-lg border border-border-default bg-surface p-4 space-y-2"
+                    className="rounded-lg border border-border-default bg-surface-raised p-4 space-y-2"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-1">

@@ -224,7 +224,7 @@ export default function RegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
                     disabled={loading || otpSent}
-                    className="flex-1 h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60"
+                    className="flex-1 h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -304,7 +304,7 @@ export default function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                 />
               </div>
 
@@ -319,7 +319,7 @@ export default function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="영문+숫자+특수문자 8자 이상"
                   disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                 />
               </div>
 
@@ -333,7 +333,7 @@ export default function RegisterPage() {
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                 />
               </div>
 
