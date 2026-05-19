@@ -89,6 +89,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     verified_tier: str
+    onboarding_completed: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -97,9 +98,8 @@ class UserResponse(BaseModel):
         return str(v)
 
 
-class LoginResponse(BaseModel):
+class LoginResponse(TokenResponse):
     user: UserResponse
-    tokens: TokenResponse
 
 
 class PasswordForgotRequest(BaseModel):

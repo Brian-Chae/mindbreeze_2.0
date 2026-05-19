@@ -11,6 +11,7 @@ export interface User {
   name: string;
   role: UserRole;
   verified_tier: VerifiedTier;
+  onboarding_completed: boolean;
 }
 
 export interface TokenResponse {

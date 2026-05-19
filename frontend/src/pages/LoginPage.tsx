@@ -21,8 +21,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      // 역할별 온보딩 페이지로 이동
-      if (user.role === 'counselor') {
+      // 온보딩 완료 여부에 따라 리디렉션
+      if (user.onboarding_completed) {
+        navigate('/');
+      } else if (user.role === 'counselor') {
         navigate('/onboarding/counselor');
       } else if (user.role === 'client') {
         navigate('/onboarding/client');

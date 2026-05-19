@@ -39,3 +39,7 @@ class User(Base):
     counselor_profile = relationship("CounselorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     client_profile = relationship("ClientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     org = relationship("Organization", foreign_keys=[org_id])
+
+    @property
+    def onboarding_completed(self) -> bool:
+        return self.onboarding_progress is not None and self.onboarding_progress.completed
