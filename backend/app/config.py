@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     # AWS
     s3_bucket: str = "mindbreeze-dev"
     aws_region: str = "ap-northeast-2"
+    ses_from_email: str = "noreply@mindbreeze.kr"
 
     # App
     debug: bool = True
