@@ -42,7 +42,7 @@ jobs:
         run: |
           cd frontend
           cp .env.dev .env
-          npm install
+          npm install --legacy-peer-deps
           npm run build
 
       - name: Upload artifact
