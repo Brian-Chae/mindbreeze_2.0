@@ -50,6 +50,18 @@ class JoinRequestUpdate(BaseModel):
     reason: str | None = None
 
 
+class OrgJoinRequestDetail(BaseModel):
+    id: str
+    org_id: str
+    org_name: str
+    user_id: str
+    user_name: str
+    user_email: str
+    status: str
+    reason: str | None = None
+    created_at: str
+
+
 class CounselorResponse(BaseModel):
     id: str
     name: str

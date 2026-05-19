@@ -12,6 +12,7 @@ from app.schemas.org import (
     OrganizationCreate,
     OrganizationResponse,
     OrganizationSearchResult,
+    OrgJoinRequestDetail,
 )
 from app.services import org_service
 
@@ -67,6 +68,20 @@ async def my_join_requests(
     """내가 신청한 가입 요청 목록."""
     rows = org_service.list_my_join_requests(current_user["id"], db)
     return [JoinRequestResponse(**r) for r in rows]
+
+
+@router.get("/{org_id}/requests", response_model=list[OrgJoinRequestDetail])
+async def org_join_requests(
+    org_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """센터의 가입 요청 목록 — OrgAdmin 전용."""
+    if current_user.get("role") != "org_admin" or str(current_user.get("org_id", "")) != str(org_id):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="센터 관리자만 조회할 수 있습니다")
+    rows = org_service.list_org_join_requests(org_id, db)
+    return [OrgJoinRequestDetail(**r) for r in rows]
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)

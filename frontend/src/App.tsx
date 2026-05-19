@@ -11,6 +11,10 @@ import ClientListPage from './pages/clients/ClientListPage';
 import ClientProfilePage from './pages/clients/ClientProfilePage';
 import ClientInvitePage from './pages/clients/ClientInvitePage';
 import InviteLandingPage from './pages/clients/InviteLandingPage';
+import OrgSearchPage from './pages/org/OrgSearchPage';
+import OrgRegisterPage from './pages/org/OrgRegisterPage';
+import OrgManagementPage from './pages/org/OrgManagementPage';
+import MyRequestsPage from './pages/org/MyRequestsPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -35,6 +39,10 @@ function App() {
         <Route path="/clients/invite" element={<ClientInvitePage />} />
         <Route path="/clients/:id" element={<ClientProfilePage />} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
+        <Route path="/org/search" element={<OrgSearchPage />} />
+        <Route path="/org/register" element={<OrgRegisterPage />} />
+        <Route path="/org/requests" element={<MyRequestsPage />} />
+        <Route path="/org/:org_id" element={<OrgManagementPage />} />
       </Routes>
     </BrowserRouter>
   );
