@@ -7,6 +7,10 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
 import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
+import OrgSearchPage from './pages/org/OrgSearchPage';
+import OrgRegisterPage from './pages/org/OrgRegisterPage';
+import OrgManagementPage from './pages/org/OrgManagementPage';
+import MyRequestsPage from './pages/org/MyRequestsPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -27,6 +31,11 @@ function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
+        <Route path="/org/search" element={<OrgSearchPage />} />
+        <Route path="/org/register" element={<OrgRegisterPage />} />
+        <Route path="/org/requests" element={<MyRequestsPage />} />
+        <Route path="/org/:org_id" element={<OrgManagementPage />} />
+        <Route path="/org/:org_id/info" element={<OrgManagementPage />} />
       </Routes>
     </BrowserRouter>
   );

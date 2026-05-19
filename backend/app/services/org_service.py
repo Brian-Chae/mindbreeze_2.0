@@ -182,6 +182,32 @@ def list_my_join_requests(user_id: str, db: Session) -> list[dict]:
     ]
 
 
+def list_org_join_requests(org_id: str, db: Session) -> list[dict]:
+    """센터의 가입 신청 목록 — OrgAdmin 전용."""
+    rows = (
+        db.query(OrganizationJoinRequest, User, Organization)
+        .join(User, User.id == OrganizationJoinRequest.user_id)
+        .join(Organization, Organization.id == OrganizationJoinRequest.org_id)
+        .filter(OrganizationJoinRequest.org_id == uuid.UUID(org_id))
+        .order_by(OrganizationJoinRequest.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": str(req.id),
+            "org_id": str(req.org_id),
+            "org_name": org.name,
+            "user_id": str(user.id),
+            "user_name": user.name,
+            "user_email": user.email,
+            "status": req.status,
+            "reason": req.reason,
+            "created_at": req.created_at.isoformat() if req.created_at else "",
+        }
+        for req, user, org in rows
+    ]
+
+
 def handle_join_request(
     req_id: str,
     org_id: str,

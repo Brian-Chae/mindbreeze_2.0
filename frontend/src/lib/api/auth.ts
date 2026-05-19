@@ -2,7 +2,7 @@
 
 import { apiClient } from './client';
 
-export type UserRole = 'counselor' | 'client' | 'admin';
+export type UserRole = 'counselor' | 'client' | 'admin' | 'org_admin';
 export type VerifiedTier = 'unverified' | 'email_verified' | 'fully_verified';
 
 export interface User {
