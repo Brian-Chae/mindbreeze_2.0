@@ -221,6 +221,14 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     s.status = target
     db.commit()
     db.refresh(s)
+
+    if action == "end":
+        try:
+            from app.services import audio_service
+            audio_service.finalize_on_session_end(s.id, db)
+        except Exception:
+            pass
+
     return _serialize(s)
 
 

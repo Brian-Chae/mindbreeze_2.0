@@ -2,7 +2,7 @@
 
 from app.models.user import User
 from app.models.session import Session, SessionParticipant
-from app.models.record import SessionRecord, EEGRecord, Report
+from app.models.record import SessionRecord, EEGRecord, Report, AudioChunk
 from app.models.credential import Credential, VerificationAudit
 from app.models.notification import Notification
 from app.models.refresh_token import RefreshToken
@@ -27,6 +27,7 @@ __all__ = [
     "SessionRecord",
     "EEGRecord",
     "Report",
+    "AudioChunk",
     "Credential",
     "VerificationAudit",
     "Notification",

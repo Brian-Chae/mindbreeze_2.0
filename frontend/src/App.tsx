@@ -19,6 +19,8 @@ import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage
 import SessionListPage from './pages/sessions/SessionListPage';
 import SessionCreatePage from './pages/sessions/SessionCreatePage';
 import SessionDetailPage from './pages/sessions/SessionDetailPage';
+import SessionLivePage from './pages/sessions/SessionLivePage';
+import SessionRecordPage from './pages/records/SessionRecordPage';
 import ChatPage from './pages/chat/ChatPage';
 import DesignIndexPage from './pages/design/DesignIndexPage';
 import HomepagePage from './pages/design/HomepagePage';
@@ -58,6 +60,8 @@ function App() {
         <Route path="/sessions" element={<SessionListPage />} />
         <Route path="/sessions/new" element={<SessionCreatePage />} />
         <Route path="/sessions/:id" element={<SessionDetailPage />} />
+        <Route path="/sessions/:id/live" element={<SessionLivePage />} />
+        <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat/:sessionId" element={<ChatPage />} />
         <Route path="/design" element={<DesignIndexPage />} />
         <Route path="/design/homepage" element={<HomepagePage />} />
