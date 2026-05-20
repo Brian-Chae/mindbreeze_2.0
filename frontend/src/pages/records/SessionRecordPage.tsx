@@ -31,8 +31,8 @@ export default function SessionRecordPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-6">
-      <h1 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100">AI 기록지</h1>
+    <div className="mx-auto max-w-2xl space-y-4 px-4 py-4 md:max-w-3xl md:p-6 text-sm md:text-base">
+      <h1 className="text-lg md:text-xl font-semibold text-neutral-900 dark:text-neutral-100">AI 기록지</h1>
       <div className="flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
         <button
           type="button"

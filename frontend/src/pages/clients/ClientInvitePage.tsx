@@ -98,7 +98,7 @@ export default function ClientInvitePage() {
           {invite && (
             <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-md">
               <p className="text-sm font-medium text-emerald-900 mb-2">초대 링크가 생성되었습니다</p>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   readOnly
                   value={invite.invite_url}

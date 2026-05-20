@@ -81,7 +81,7 @@ export default function OrgManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-8">
+    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
           <h1 className="font-display text-3xl font-light text-ink-primary">상담센터 관리</h1>
@@ -114,7 +114,7 @@ export default function OrgManagementPage() {
               {counselors.map((c) => (
                 <div
                   key={c.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border-default"
+                  className="flex flex-wrap items-center gap-3 p-3 rounded-lg border border-border-default"
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-ink-primary truncate">{c.name}</p>

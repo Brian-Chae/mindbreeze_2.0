@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -28,6 +29,11 @@ import OperatorAppPage from './pages/design/OperatorAppPage';
 import UserAppPage from './pages/design/UserAppPage';
 import ReportPage from './pages/design/ReportPage';
 import DocsPage from './pages/design/DocsPage';
+import ReportListPage from './pages/reports/ReportListPage';
+import ReportDetailPage from './pages/reports/ReportDetailPage';
+import AdminReviewListPage from './pages/admin/AdminReviewListPage';
+import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -46,6 +52,7 @@ function App() {
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/clients" element={<ClientListPage />} />
@@ -62,6 +69,7 @@ function App() {
         <Route path="/sessions/:id" element={<SessionDetailPage />} />
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/chat/:sessionId" element={<ChatPage />} />
         <Route path="/design" element={<DesignIndexPage />} />
         <Route path="/design/homepage" element={<HomepagePage />} />
@@ -69,6 +77,11 @@ function App() {
         <Route path="/design/user-app" element={<UserAppPage />} />
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
+        <Route path="/reports" element={<ReportListPage />} />
+        <Route path="/reports/:id" element={<ReportDetailPage />} />
+        <Route path="/admin/reviews" element={<AdminReviewListPage />} />
+        <Route path="/admin/reviews/:targetType/:id" element={<AdminReviewDetailPage />} />
+        <Route path="/admin/users" element={<UserManagementPage />} />
       </Routes>
     </BrowserRouter>
   );

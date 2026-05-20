@@ -1,10 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import AppShell from '../../components/layout/AppShell';
 import { useAuthStore } from '../../stores/authStore';
 import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 
 const PAGE_SIZE = 20;
+
+function initials(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  return trimmed.charAt(0);
+}
 
 export default function ClientListPage() {
   const navigate = useNavigate();
@@ -18,7 +25,6 @@ export default function ClientListPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 인증 가드
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
       navigate('/login');
@@ -58,51 +64,52 @@ export default function ClientListPage() {
 
   if (user && user.role !== 'counselor') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-6">
-        <div className="max-w-md text-center">
-          <h1 className="text-xl font-semibold mb-2">접근 권한이 없습니다</h1>
-          <p className="text-sm text-gray-600">상담사 전용 페이지입니다.</p>
+      <AppShell title="내담자">
+        <div className="flex items-center justify-center py-24">
+          <div className="max-w-md text-center">
+            <h1 className="text-xl font-bold mb-2 text-[#1F1F1F]">접근 권한이 없습니다</h1>
+            <p className="text-sm text-[#6F6F6F]">상담사 전용 페이지입니다.</p>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  return (
-    <div className="min-h-screen bg-surface-canvas p-6">
-      <div className="max-w-5xl mx-auto">
-        <header className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold">내담자 관리</h1>
-          <Link
-            to="/clients/invite"
-            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium"
-          >
-            내담자 초대
-          </Link>
-        </header>
+  const rightSlot = (
+    <button
+      type="button"
+      onClick={() => navigate('/clients/invite')}
+      className="mb-btn"
+    >
+      내담자 초대
+    </button>
+  );
 
-        <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+  return (
+    <AppShell title="내담자" sub="CLIENTS" rightSlot={rightSlot}>
+      <div className="max-w-5xl mx-auto space-y-6">
+        <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 또는 이메일 검색"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="flex-1 h-11 px-5 rounded-full border border-[#DDDEE7] bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
           />
-          <button
-            type="submit"
-            className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900 text-sm"
-          >
+          <button type="submit" className="mb-btn mb-btn--ghost">
             검색
           </button>
         </form>
 
-        {loading && <p className="text-center text-gray-500 py-8">불러오는 중...</p>}
+        {loading && (
+          <p className="text-center text-[#6F6F6F] py-8">불러오는 중...</p>
+        )}
         {error && <p className="text-center text-red-600 py-8">{error}</p>}
 
         {!loading && !error && clients.length === 0 && (
-          <div className="text-center text-gray-500 py-16">
+          <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-12 text-center text-[#6F6F6F]">
             등록된 내담자가 없습니다.
           </div>
         )}
@@ -111,58 +118,72 @@ export default function ClientListPage() {
           {clients.map((c) => (
             <button
               key={c.id}
+              type="button"
               onClick={() => navigate(`/clients/${c.id}`)}
-              className="text-left p-4 bg-white border border-gray-200 rounded-lg hover:border-emerald-500 hover:shadow-sm transition"
+              className="text-left bg-white rounded-[20px] border border-[#EFEFEF] p-6 hover:border-[#5F0080] hover:shadow-sm transition-all"
             >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-semibold text-gray-900">{c.name}</h3>
-                  <p className="text-sm text-gray-500">{c.email}</p>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold text-lg shrink-0">
+                  {initials(c.name)}
                 </div>
-                {c.last_session_at && (
-                  <span className="text-xs text-gray-400">
-                    {new Date(c.last_session_at).toLocaleDateString('ko-KR')}
-                  </span>
-                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-[15px] text-[#1F1F1F] truncate">
+                        {c.name}
+                      </h3>
+                      <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">
+                        {c.email}
+                      </p>
+                    </div>
+                    {c.last_session_at && (
+                      <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080] text-[11px] font-mono">
+                        {new Date(c.last_session_at).toLocaleDateString('ko-KR')}
+                      </span>
+                    )}
+                  </div>
+                  {c.concerns.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-3">
+                      {c.concerns.map((tag) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-[11px] rounded-full"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              {c.concerns.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {c.concerns.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
             </button>
           ))}
         </div>
 
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-3 mt-8">
+          <div className="flex justify-center items-center gap-3 pt-4">
             <button
+              type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 text-sm"
+              className="mb-btn mb-btn--ghost disabled:opacity-40"
             >
               이전
             </button>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-[#6F6F6F] font-mono">
               {page} / {totalPages}
             </span>
             <button
+              type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
-              className="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 text-sm"
+              className="mb-btn mb-btn--ghost disabled:opacity-40"
             >
               다음
             </button>
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

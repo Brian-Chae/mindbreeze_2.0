@@ -22,6 +22,7 @@ class User(Base):
     profile_image: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
     verified_tier: Mapped[str] = mapped_column(String(20), default="unverified")
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, server_default="active")
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

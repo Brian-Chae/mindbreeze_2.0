@@ -8,6 +8,8 @@ from app.services import credential_service
 from app.services import session_service
 from app.services import chat_service
 from app.services import system_message_service
+from app.services import report_service
+from app.services import admin_service
 
 __all__ = [
     "chat_service",
@@ -20,4 +22,5 @@ __all__ = [
     "org_service",
     "credential_service",
     "session_service",
+    "report_service",
 ]

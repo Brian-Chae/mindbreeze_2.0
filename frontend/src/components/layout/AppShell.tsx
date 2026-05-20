@@ -1,0 +1,115 @@
+import { useState, type ReactNode } from 'react';
+import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
+import MobileDrawer from './MobileDrawer';
+import BottomTabBar from './BottomTabBar';
+
+export interface AppShellProps {
+  children: ReactNode;
+  title: string;
+  sub?: string;
+  rightSlot?: ReactNode;
+  contentPad?: string;
+  noScroll?: boolean;
+}
+
+export default function AppShell({
+  children,
+  title,
+  sub,
+  rightSlot,
+  contentPad = 'px-4 py-4 md:px-8 md:py-6',
+  noScroll = false,
+}: AppShellProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
+      {/* 데스크톱 사이드바 */}
+      <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
+        <SidebarNav />
+      </aside>
+
+      {/* 모바일 헤더 */}
+      <header className="md:hidden h-14 flex items-center justify-between px-4 border-b border-[#EFEFEF] bg-white shrink-0">
+        <button
+          type="button"
+          aria-label="메뉴 열기"
+          onClick={() => setDrawerOpen(true)}
+          className="w-10 h-10 flex items-center justify-center -ml-2 text-[#1F1F1F]"
+        >
+          <StrokeIcon d={ICONS.hamburger} size={22} />
+        </button>
+        <div className="flex items-center gap-2">
+          <img
+            src="/mb-design/assets/logo_symbol_dark.svg"
+            width={24}
+            height={11}
+            alt=""
+          />
+          <span className="font-extrabold text-[15px] text-[#5F0080] tracking-tight">
+            mind&nbsp;breeze
+          </span>
+        </div>
+        <button
+          type="button"
+          aria-label="알림"
+          className="w-10 h-10 flex items-center justify-center -mr-2 text-[#1F1F1F]"
+        >
+          <StrokeIcon d={ICONS.bell} size={22} />
+        </button>
+      </header>
+
+      <section className="flex flex-col md:overflow-hidden flex-1 min-w-0">
+        {/* 데스크톱 헤더 */}
+        <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
+          <div>
+            {sub && (
+              <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
+                {sub}
+              </div>
+            )}
+            <div className="font-bold text-[22px] text-[#1F1F1F] tracking-tight mt-0.5">
+              {title}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {rightSlot}
+            <button
+              type="button"
+              aria-label="알림"
+              className="w-11 h-11 rounded-full bg-[#F2F3F8] flex items-center justify-center text-[#1F1F1F] hover:bg-[#E6E7EE] transition-colors"
+            >
+              <StrokeIcon d={ICONS.bell} />
+            </button>
+          </div>
+        </header>
+
+        {/* 모바일 페이지 타이틀 */}
+        {(title || sub || rightSlot) && (
+          <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              {sub && (
+                <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
+                  {sub}
+                </div>
+              )}
+              <div className="font-bold text-[18px] text-[#1F1F1F] tracking-tight mt-0.5 truncate">
+                {title}
+              </div>
+            </div>
+            {rightSlot && <div className="flex items-center gap-2 shrink-0">{rightSlot}</div>}
+          </div>
+        )}
+
+        <div
+          className={`flex-1 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0`}
+        >
+          {children}
+        </div>
+      </section>
+
+      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <BottomTabBar onMoreClick={() => setDrawerOpen(true)} />
+    </div>
+  );
+}

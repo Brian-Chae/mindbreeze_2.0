@@ -16,16 +16,16 @@ export function MessageBubble({ message, isMine }: Props) {
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} my-1`}>
       <div className="flex flex-col max-w-[70%]">
         <div
-          className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+          className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
             isMine
-              ? 'bg-blue-500 text-white rounded-br-sm'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-sm'
+              ? 'bg-[#5F0080] text-white rounded-br-sm'
+              : 'bg-[#F5EDFC] text-[#1F1F1F] rounded-bl-sm'
           }`}
         >
           {message.content}
         </div>
         <span
-          className={`text-[10px] text-gray-400 mt-0.5 ${
+          className={`text-[10px] text-[#9CA0AE] mt-1 font-mono ${
             isMine ? 'text-right' : 'text-left'
           }`}
         >

@@ -1,4 +1,4 @@
-// 세션 목록 페이지 (목록 + 캘린더 토글 + 생성 모달)
+// 세션 목록 페이지 (목록 + 캘린더 토글 + 생성 모달) — UI Kit
 
 import { useEffect, useState, useCallback } from 'react';
 
@@ -6,8 +6,8 @@ import { listSessions, createSession, type SessionDto, type SessionType, type Cr
 import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
 import { useSessionStore } from '../../stores/sessionStore';
+import AppShell from '../../components/layout/AppShell';
 
-/* ─── 오늘+1시간 ISO 문자열 ─── */
 const nowPlusOneHour = (): string => {
   const d = new Date();
   d.setHours(d.getHours() + 1, 0, 0, 0);
@@ -15,7 +15,10 @@ const nowPlusOneHour = (): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-/* ─── 생성 모달 ─── */
+const inputCls =
+  'w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080]';
+const labelCls = 'block text-sm font-medium text-[#1F1F1F] mb-1.5';
+
 function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [type, setType] = useState<SessionType>('clinical');
   const [scheduledAt, setScheduledAt] = useState(nowPlusOneHour());
@@ -65,20 +68,16 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   if (!open) return null;
 
-  const inputCls =
-    'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm';
-  const labelCls = 'block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative bg-white dark:bg-gray-900 rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">새 세션 생성</h2>
+      <div className="relative bg-white rounded-[20px] shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 border border-[#EFEFEF]">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-[#1F1F1F]">새 세션 생성</h2>
           <button
             type="button"
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full text-[#6F6F6F] hover:text-[#1F1F1F] hover:bg-[#F2F3F8] transition-colors"
           >
             ✕
           </button>
@@ -136,24 +135,16 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
             <label className={labelCls}>메모</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+          <label className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]">
             <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
             시간 충돌 무시
           </label>
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm text-[#B3261E]">{error}</p>}
           <div className="flex gap-2 pt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium"
-            >
+            <button type="submit" disabled={submitting} className="mb-btn">
               {submitting ? '생성 중...' : '생성'}
             </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 text-sm"
-            >
+            <button type="button" onClick={handleClose} className="mb-btn mb-btn--ghost">
               취소
             </button>
           </div>
@@ -163,7 +154,6 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   );
 }
 
-/* ─── 메인 페이지 ─── */
 export default function SessionListPage() {
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,84 +179,84 @@ export default function SessionListPage() {
     setCurrentDate(next);
   };
 
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">세션 관리</h1>
-        <button
-          type="button"
-          onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium"
-        >
-          + 새 세션
-        </button>
-      </div>
+  const rightSlot = (
+    <button type="button" onClick={() => setShowCreate(true)} className="mb-btn">
+      + 새 세션
+    </button>
+  );
 
-      <div className="flex items-center justify-between">
-        <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 text-sm ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}
-          >
-            목록
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('weekly')}
-            className={`px-3 py-1.5 text-sm ${viewMode === 'weekly' ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'}`}
-          >
-            주간
-          </button>
-        </div>
-        {viewMode === 'weekly' && (
-          <div className="flex items-center gap-2">
+  return (
+    <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot}>
+      <div className="max-w-6xl mx-auto space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
             <button
               type="button"
-              onClick={() => shiftWeek(-1)}
-              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200"
+              onClick={() => setViewMode('list')}
+              className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+                viewMode === 'list' ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+              }`}
             >
-              ‹
+              목록
             </button>
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              {currentDate.toLocaleDateString('ko-KR')}
-            </span>
             <button
               type="button"
-              onClick={() => shiftWeek(1)}
-              className="px-2 py-1 text-sm border border-gray-200 dark:border-gray-700 rounded text-gray-700 dark:text-gray-200"
+              onClick={() => setViewMode('weekly')}
+              className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+                viewMode === 'weekly' ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+              }`}
             >
-              ›
+              주간
             </button>
           </div>
-        )}
-      </div>
-
-      {loading && <p className="text-gray-500 dark:text-gray-400">불러오는 중...</p>}
-      {error && <p className="text-red-600 dark:text-red-400">{error}</p>}
-
-      {!loading && !error && viewMode === 'list' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sessions.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-8">
-              등록된 세션이 없습니다.
-            </p>
-          ) : (
-            sessions.map((s) => <SessionCard key={s.id} session={s} />)
+          {viewMode === 'weekly' && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => shiftWeek(-1)}
+                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+              >
+                ‹
+              </button>
+              <span className="text-sm font-mono text-[#1F1F1F] min-w-[120px] text-center">
+                {currentDate.toLocaleDateString('ko-KR')}
+              </span>
+              <button
+                type="button"
+                onClick={() => shiftWeek(1)}
+                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+              >
+                ›
+              </button>
+            </div>
           )}
         </div>
-      )}
 
-      {!loading && !error && viewMode === 'weekly' && (
-        <CalendarView sessions={sessions} currentDate={currentDate} />
-      )}
+        {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+        {error && <p className="text-[#B3261E]">{error}</p>}
 
-      {/* 생성 모달 */}
-      <CreateSessionModal
-        open={showCreate}
-        onClose={() => setShowCreate(false)}
-        onCreated={refreshSessions}
-      />
-    </div>
+        {!loading && !error && viewMode === 'list' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {sessions.length === 0 ? (
+              <p className="text-[#6F6F6F] col-span-full text-center py-12">
+                등록된 세션이 없습니다.
+              </p>
+            ) : (
+              sessions.map((s) => <SessionCard key={s.id} session={s} />)
+            )}
+          </div>
+        )}
+
+        {!loading && !error && viewMode === 'weekly' && (
+          <CalendarView sessions={sessions} currentDate={currentDate} />
+        )}
+
+        <CreateSessionModal
+          open={showCreate}
+          onClose={() => setShowCreate(false)}
+          onCreated={refreshSessions}
+        />
+      </div>
+    </AppShell>
   );
 }

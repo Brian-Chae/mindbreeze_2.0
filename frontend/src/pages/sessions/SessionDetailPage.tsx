@@ -109,7 +109,7 @@ export default function SessionDetailPage(){
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
           {session.title || '제목 없음'}
         </h1>
-        <dl className="grid grid-cols-2 gap-y-2 text-sm">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 text-sm">
           <dt className="text-gray-500 dark:text-gray-400">일시</dt>
           <dd className="text-gray-900 dark:text-gray-100">
             {new Date(session.scheduled_at).toLocaleString('ko-KR')}

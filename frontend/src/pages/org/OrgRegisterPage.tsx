@@ -85,7 +85,7 @@ export default function OrgRegisterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-8">
+    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h1 className="font-display text-3xl font-light text-ink-primary">새 상담센터 등록</h1>
@@ -112,7 +112,7 @@ export default function OrgRegisterPage() {
           <button
             type="submit"
             disabled={loading || !name || !ceoName || !bizNumber || !address || !phone}
-            className="w-full h-11 rounded-pill bg-brand-primary text-ink-on-brand font-medium text-sm disabled:bg-surface-sunken disabled:text-ink-disabled"
+            className="w-full sm:w-auto sm:px-6 h-11 rounded-pill bg-brand-primary text-ink-on-brand font-medium text-sm disabled:bg-surface-sunken disabled:text-ink-disabled"
           >
             {loading ? '등록 중...' : '센터 등록'}
           </button>

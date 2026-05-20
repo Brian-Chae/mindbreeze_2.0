@@ -1,10 +1,11 @@
-// 세션 생성 페이지
+// 세션 생성 페이지 (UI Kit)
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createSession, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
+import AppShell from '../../components/layout/AppShell';
 
-export default function SessionCreatePage(){
+export default function SessionCreatePage() {
   const navigate = useNavigate();
   const [type, setType] = useState<SessionType>('clinical');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -40,99 +41,89 @@ export default function SessionCreatePage(){
   };
 
   const inputCls =
-    'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500';
-  const labelCls = 'block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1';
+    'w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080]';
+  const labelCls = 'block text-sm font-medium text-[#1F1F1F] mb-1.5';
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">새 세션 생성</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className={labelCls}>세션 유형</label>
-          <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
-            <option value="clinical">임상심리상담</option>
-            <option value="hypnosis">최면심리상담</option>
-            <option value="meditation">명상수업</option>
-          </select>
+    <AppShell title="새 세션" sub="CREATE">
+      <div className="max-w-[640px] mx-auto">
+        <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-5 sm:p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className={labelCls}>세션 유형</label>
+              <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
+                <option value="clinical">임상심리상담</option>
+                <option value="hypnosis">최면심리상담</option>
+                <option value="meditation">명상수업</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelCls}>일시</label>
+              <input
+                type="datetime-local"
+                required
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className={inputCls}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>소요 시간(분)</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={600}
+                  required
+                  value={durationMin}
+                  onChange={(e) => setDurationMin(Number(e.target.value))}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>최대 참여자 수</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={100}
+                  required
+                  value={maxParticipants}
+                  onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                  className={inputCls}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>제목</label>
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+            </div>
+
+            <div>
+              <label className={labelCls}>메모</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]">
+              <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
+              시간 충돌 무시
+            </label>
+
+            {error && <p className="text-sm text-[#B3261E]">{error}</p>}
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button type="submit" disabled={submitting} className="mb-btn w-full sm:w-auto">
+                {submitting ? '생성 중...' : '생성'}
+              </button>
+              <button type="button" onClick={() => navigate('/sessions')} className="mb-btn mb-btn--ghost w-full sm:w-auto">
+                취소
+              </button>
+            </div>
+          </form>
         </div>
-
-        <div>
-          <label className={labelCls}>일시</label>
-          <input
-            type="datetime-local"
-            required
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            className={inputCls}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelCls}>소요 시간(분)</label>
-            <input
-              type="number"
-              min={1}
-              max={600}
-              required
-              value={durationMin}
-              onChange={(e) => setDurationMin(Number(e.target.value))}
-              className={inputCls}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>최대 참여자 수</label>
-            <input
-              type="number"
-              min={1}
-              max={100}
-              required
-              value={maxParticipants}
-              onChange={(e) => setMaxParticipants(Number(e.target.value))}
-              className={inputCls}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className={labelCls}>제목</label>
-          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
-        </div>
-
-        <div>
-          <label className={labelCls}>메모</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            className={inputCls}
-          />
-        </div>
-
-        <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-          <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
-          시간 충돌 무시
-        </label>
-
-        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-
-        <div className="flex gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {submitting ? '생성 중...' : '생성'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/sessions')}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200"
-          >
-            취소
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+    </AppShell>
   );
 }

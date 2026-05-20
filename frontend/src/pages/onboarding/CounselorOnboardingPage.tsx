@@ -1,4 +1,4 @@
-// 상담사 온보딩 페이지 (4단계)
+// 상담사 온보딩 페이지 (4단계) — UI Kit 보라색 스타일
 
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -30,16 +30,12 @@ const SPECIALTY_OPTIONS = [
 const STEP_LABELS = ['기본 정보', '상세 정보', '자격 증빙', '프로필'];
 
 interface FormState {
-  // Step 1
   phone: string;
-  // Step 2
   gender: string;
   birthDate: string;
   experienceYears: string;
   specialties: string[];
-  // Step 3
   affiliationType: string;
-  // Step 4
   profileImageUrl: string;
   bio: string;
 }
@@ -55,6 +51,9 @@ const initialForm: FormState = {
   bio: '',
 };
 
+const INPUT_CLS =
+  'w-full rounded-xl border border-[#DDDEE7] bg-white px-4 py-3 text-sm text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition';
+
 export default function CounselorOnboardingPage() {
   useRequireAuth();
   const navigate = useNavigate();
@@ -67,7 +66,6 @@ export default function CounselorOnboardingPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CounselorCompleteResponse | null>(null);
 
-  // 마운트 시 진행 상태 복원
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -77,19 +75,19 @@ export default function CounselorOnboardingPage() {
         setStep(Math.min(Math.max(p.current_step, 1), 4));
         const d = p.step_data ?? {};
         setForm((prev) => ({
-            ...prev,
-            phone: (d.phone as string) ?? prev.phone,
-            gender: (d.gender as string) ?? prev.gender,
-            birthDate: (d.birth_date as string) ?? prev.birthDate,
-            experienceYears:
-              d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
-            specialties: (d.specialties as string[]) ?? prev.specialties,
-            affiliationType: (d.affiliation_type as string) ?? prev.affiliationType,
-            profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
-            bio: (d.bio as string) ?? prev.bio,
-          }));
+          ...prev,
+          phone: (d.phone as string) ?? prev.phone,
+          gender: (d.gender as string) ?? prev.gender,
+          birthDate: (d.birth_date as string) ?? prev.birthDate,
+          experienceYears:
+            d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
+          specialties: (d.specialties as string[]) ?? prev.specialties,
+          affiliationType: (d.affiliation_type as string) ?? prev.affiliationType,
+          profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
+          bio: (d.bio as string) ?? prev.bio,
+        }));
       } catch {
-        // 진행 상태 없음 → step 1 유지
+        // 진행 상태 없음
       }
     })();
     return () => {
@@ -160,27 +158,22 @@ export default function CounselorOnboardingPage() {
     if (step > 1) setStep(step - 1);
   };
 
-  // 완료 결과 화면
   if (result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4">
-        <div className="w-full max-w-[480px] bg-surface-raised rounded-2xl border border-border-default p-8 space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-ink-primary">온보딩 완료</h1>
-          <p className="text-sm text-ink-secondary">
+      <div className="min-h-screen flex items-center justify-center bg-[#F5EDFC] p-4 font-sans">
+        <div className="w-full max-w-[480px] bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-8 space-y-6 text-center">
+          <h1 className="text-2xl font-bold text-[#1F1F1F]">온보딩 완료</h1>
+          <p className="text-sm text-[#6F6F6F]">
             상담사 등록이 완료되었습니다. 아래 코드를 내담자에게 공유하세요.
           </p>
-          <div className="bg-surface-raised rounded-lg border border-border-default p-6 space-y-2">
-            <p className="text-xs text-ink-tertiary">상담사 코드</p>
-            <p className="text-3xl font-bold tracking-widest text-brand-deep">
+          <div className="bg-[#F5EDFC] rounded-xl border border-[#EFEFEF] p-6 space-y-2">
+            <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">상담사 코드</p>
+            <p className="text-3xl font-bold tracking-widest text-[#5F0080]">
               {result.counselor_code}
             </p>
-            <p className="text-xs text-ink-tertiary">인증 등급: {result.verified_tier}</p>
+            <p className="text-xs text-[#6F6F6F]">인증 등급: {result.verified_tier}</p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90"
-          >
+          <button type="button" onClick={() => navigate('/')} className="mb-btn w-full">
             대시보드로 이동
           </button>
         </div>
@@ -189,21 +182,21 @@ export default function CounselorOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#F5EDFC] p-4 sm:p-8 font-sans text-[#1F1F1F]">
       <div className="w-full max-w-[600px] space-y-8">
         <div className="text-center space-y-2">
           <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
+            <h1 className="text-3xl font-extrabold tracking-tight text-[#5F0080]">
+              mind breeze
             </h1>
           </Link>
-          <p className="text-sm text-ink-tertiary">상담사 온보딩</p>
+          <p className="text-sm text-[#6F6F6F]">상담사 온보딩</p>
         </div>
 
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-6 sm:p-8 space-y-6">
           <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
 
-          <h2 className="text-2xl font-bold text-ink-primary">
+          <h2 className="text-2xl font-bold text-[#1F1F1F]">
             {step === 1 && '기본 정보'}
             {step === 2 && '상세 정보'}
             {step === 3 && '자격 증빙'}
@@ -213,16 +206,16 @@ export default function CounselorOnboardingPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">이름</label>
+                <label className="block text-sm font-semibold text-[#6F6F6F]">이름</label>
                 <input
                   type="text"
                   value={user?.name ?? ''}
                   readOnly
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary opacity-70"
+                  className={`${INPUT_CLS} opacity-70`}
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="phone" className="block text-sm font-medium text-ink-secondary">
+                <label htmlFor="phone" className="block text-sm font-semibold text-[#6F6F6F]">
                   연락처 (선택)
                 </label>
                 <input
@@ -231,7 +224,7 @@ export default function CounselorOnboardingPage() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="010-0000-0000"
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary outline-none focus:border-brand-primary"
+                  className={INPUT_CLS}
                 />
               </div>
             </div>
@@ -240,11 +233,11 @@ export default function CounselorOnboardingPage() {
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">성별</label>
+                <label className="block text-sm font-semibold text-[#6F6F6F]">성별</label>
                 <select
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={INPUT_CLS}
                 >
                   <option value="">선택해주세요</option>
                   <option value="male">남성</option>
@@ -253,36 +246,37 @@ export default function CounselorOnboardingPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">생년월일</label>
+                <label className="block text-sm font-semibold text-[#6F6F6F]">생년월일</label>
                 <input
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={INPUT_CLS}
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">경력연수</label>
+                <label className="block text-sm font-semibold text-[#6F6F6F]">경력연수</label>
                 <input
                   type="number"
                   min="0"
                   value={form.experienceYears}
                   onChange={(e) => setForm({ ...form, experienceYears: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={INPUT_CLS}
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">전문분야 (다중 선택)</p>
+                <p className="text-sm font-semibold text-[#6F6F6F]">전문분야 (다중 선택)</p>
                 <div className="grid grid-cols-2 gap-2">
                   {SPECIALTY_OPTIONS.map((opt) => (
                     <label
                       key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
+                      className="flex items-center gap-2 rounded-xl border border-[#DDDEE7] bg-white px-3 py-2.5 text-sm text-[#1F1F1F] cursor-pointer hover:border-[#5F0080] transition"
                     >
                       <input
                         type="checkbox"
                         checked={form.specialties.includes(opt)}
                         onChange={() => toggleSpecialty(opt)}
+                        className="accent-purple-900"
                       />
                       <span>{opt}</span>
                     </label>
@@ -295,11 +289,11 @@ export default function CounselorOnboardingPage() {
           {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">소속형태</label>
+                <label className="block text-sm font-semibold text-[#6F6F6F]">소속형태</label>
                 <select
                   value={form.affiliationType}
                   onChange={(e) => setForm({ ...form, affiliationType: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={INPUT_CLS}
                 >
                   <option value="">선택해주세요</option>
                   <option value="center">센터 소속</option>
@@ -307,8 +301,8 @@ export default function CounselorOnboardingPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">자격증 업로드</p>
-                <div className="rounded-lg border border-dashed border-border-default bg-surface-raised px-4 py-6 text-center text-sm text-ink-tertiary">
+                <p className="text-sm font-semibold text-[#6F6F6F]">자격증 업로드</p>
+                <div className="rounded-xl border border-dashed border-[#DDDEE7] bg-[#F5EDFC]/40 px-4 py-8 text-center text-sm text-[#6F6F6F]">
                   자격증 파일 업로드 기능은 준비 중입니다.
                 </div>
               </div>
@@ -318,7 +312,7 @@ export default function CounselorOnboardingPage() {
           {step === 4 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
+                <label className="block text-sm font-semibold text-[#6F6F6F]">
                   프로필 사진 URL (선택)
                 </label>
                 <input
@@ -326,18 +320,18 @@ export default function CounselorOnboardingPage() {
                   value={form.profileImageUrl}
                   onChange={(e) => setForm({ ...form, profileImageUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={INPUT_CLS}
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
+                <label className="block text-sm font-semibold text-[#6F6F6F]">
                   한줄 소개 (선택)
                 </label>
                 <textarea
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary resize-none"
+                  className={`${INPUT_CLS} resize-none`}
                 />
               </div>
             </div>
@@ -350,7 +344,7 @@ export default function CounselorOnboardingPage() {
               type="button"
               onClick={handlePrev}
               disabled={loading || step === 1}
-              className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated disabled:opacity-40"
+              className="mb-btn mb-btn--ghost flex-1 disabled:opacity-40"
             >
               이전
             </button>
@@ -358,7 +352,7 @@ export default function CounselorOnboardingPage() {
               type="button"
               onClick={handleNext}
               disabled={loading}
-              className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+              className="mb-btn flex-1 disabled:opacity-50"
             >
               {loading ? '저장 중...' : step === 4 ? '완료' : '다음'}
             </button>

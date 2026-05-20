@@ -105,7 +105,7 @@ export function ChatRoom({ roomId }: Props) {
   }, [input, roomId, appendMessage]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-white">
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse"
@@ -129,11 +129,11 @@ export function ChatRoom({ roomId }: Props) {
         )}
       </div>
       {error && (
-        <div className="px-4 py-1 text-xs text-red-500 bg-red-50 dark:bg-red-900/20">
+        <div className="px-4 py-1 text-xs text-red-500 bg-red-50">
           {error}
         </div>
       )}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-3 flex gap-2">
+      <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white">
         <input
           type="text"
           value={input}
@@ -145,13 +145,13 @@ export function ChatRoom({ roomId }: Props) {
             }
           }}
           placeholder="메시지를 입력하세요"
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
         />
         <button
           type="button"
           onClick={() => void handleSend()}
           disabled={!input.trim()}
-          className="px-4 py-2 rounded-lg bg-blue-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600"
+          className="mb-btn disabled:opacity-50"
         >
           전송
         </button>

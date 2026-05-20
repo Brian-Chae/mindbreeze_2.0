@@ -6,7 +6,7 @@
 
 @layer base {
   body {
-    @apply bg-surface-canvas text-ink-primary font-body;
+    @apply bg-mb-bg text-mb-fg font-mb-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

@@ -44,7 +44,7 @@ export default function MyRequestsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-canvas p-8">
+    <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="font-display text-3xl font-light text-ink-primary">내 가입 신청 내역</h1>
@@ -64,9 +64,9 @@ export default function MyRequestsPage() {
                 key={r.id}
                 className="rounded-xl border border-border-default bg-surface-raised p-5"
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-ink-primary truncate">{r.org_name}</p>
+                    <p className="font-medium text-ink-primary break-words">{r.org_name}</p>
                     <p className="text-xs text-ink-tertiary mt-1">신청일: {r.created_at}</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${statusColor[r.status]}`}>

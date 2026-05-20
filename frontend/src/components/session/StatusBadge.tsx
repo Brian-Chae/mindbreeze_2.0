@@ -1,4 +1,4 @@
-// 세션 상태 뱃지
+// 세션 상태 뱃지 (UI Kit)
 
 import type { SessionStatus } from '../../lib/api/session';
 
@@ -11,21 +11,21 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
 };
 
 const STATUS_CLASSES: Record<SessionStatus, string> = {
-  scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  in_progress: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
-  completed: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
-  cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+  scheduled: 'bg-[#F5EDFC] text-[#5F0080]',
+  in_progress: 'bg-[#E6F8F3] text-[#1F8A5B]',
+  paused: 'bg-[#FFF4DC] text-[#8A6B1F]',
+  completed: 'bg-[#F2F3F8] text-[#6F6F6F]',
+  cancelled: 'bg-[#FDECEC] text-[#B3261E]',
 };
 
 interface Props {
   status: SessionStatus;
 }
 
-export function StatusBadge({ status }: Props){
+export function StatusBadge({ status }: Props) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_CLASSES[status]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${STATUS_CLASSES[status]}`}
     >
       {STATUS_LABELS[status]}
     </span>

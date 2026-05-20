@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import ThemeToggle from '../components/ThemeToggle';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 
@@ -9,9 +8,7 @@ export default function LoginPage() {
   const login = useAuthStore((s) => s.login);
 
   const [email, setEmail] = useState('');
-  const [emailFocused, setEmailFocused] = useState(false);
   const [password, setPassword] = useState('');
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,11 +18,9 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      // 온보딩 완료 여부에 따라 리디렉션
       if (user.onboarding_completed) {
-        // 역할별 기본 페이지로 이동
         if (user.role === 'counselor') {
-          navigate('/sessions');
+          navigate('/dashboard');
         } else if (user.role === 'client') {
           navigate('/clients');
         } else {
@@ -56,156 +51,79 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-surface-canvas">
-      {/* 브랜드 패널 (항상 다크 배경) */}
-      <div className="hidden lg:flex lg:w-[600px] relative overflow-hidden bg-brand-deep">
-        <div className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `radial-gradient(circle at 20% 50%, var(--accent-warm) 0%, transparent 50%),
-                             radial-gradient(circle at 80% 20%, var(--brand-primary) 0%, transparent 40%),
-                             radial-gradient(circle at 60% 80%, var(--accent-cool) 0%, transparent 45%)`,
-          }}
+    <div className="relative min-h-screen overflow-hidden font-sans">
+      <img
+        src="/mb-design/assets/images/background3.jpg"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/35" />
+
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-[18px] px-6">
+        <img
+          src="/mb-design/assets/logo_symbol_dark.svg"
+          width={84}
+          height={38}
+          alt=""
+          className="brightness-0 invert"
         />
+        <div className="font-extrabold text-[32px] text-white tracking-tight">
+          mind&nbsp;breeze
+        </div>
+        <div className="text-[15px] text-white/85 mb-7">
+          상담사 전용 · MIND BREEZE Operator
+        </div>
 
-        <div className="relative z-10 flex flex-col justify-between p-16 w-full">
-          <div>
-            <h1 className="font-display text-5xl font-light text-ink-on-brand tracking-tight leading-tight">
-              Mind Breeze
-            </h1>
-            <p className="mt-6 text-lg text-ink-on-brand/70 leading-relaxed">
-              과학으로 검증된 평온함.
-              <br />
-              AI가 기록하고, 뇌파가 증명하며,
-              <br />
-              사람이 결정합니다.
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="이메일"
+            disabled={loading}
+            autoComplete="email"
+            className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="비밀번호"
+            disabled={loading}
+            autoComplete="current-password"
+            className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+          />
+
+          {error && (
+            <p className="text-[13px] text-white bg-red-500/80 rounded-full px-4 py-1.5" role="alert">
+              {error}
             </p>
-          </div>
+          )}
 
-          <div className="flex justify-center">
-            <div className="breath-circle">
-              <div className="breath-ring breath-ring--outer" />
-              <div className="breath-ring breath-ring--middle" />
-              <div className="breath-ring breath-ring--inner" />
-            </div>
-          </div>
+          <button
+            type="submit"
+            disabled={loading || !email || !password}
+            className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+          >
+            {loading ? '로그인 중…' : '로그인'}
+          </button>
+        </form>
 
-          <div className="space-y-4">
-            {[
-              { label: 'AI 기반 기록', desc: '세션 내용을 자동으로 기록하고 요약합니다' },
-              { label: 'LINK BAND 연동', desc: '실시간 뇌파로 내담자 상태를 과학적으로 파악' },
-              { label: '신뢰 기반 플랫폼', desc: '자격·사업자 진위를 AI가 자동 검증' },
-            ].map((item) => (
-              <div key={item.label} className="flex gap-4 items-start">
-                <div className="w-1 h-1 rounded-full bg-accent-warm mt-2 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-ink-on-brand">{item.label}</p>
-                  <p className="text-sm text-ink-on-brand/50">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <p className="text-xs text-ink-on-brand/30">
-            © 2026 Looxid Labs. All Right Reserved.
-          </p>
+        <Link
+          to="/forgot-password"
+          className="text-[13px] text-white/85 hover:text-white underline-offset-2 hover:underline"
+        >
+          비밀번호를 잊으셨나요?
+        </Link>
+        <div className="text-[13px] text-white/85">
+          아직 계정이 없으신가요?{' '}
+          <Link to="/register" className="text-white font-semibold hover:underline">
+            회원가입
+          </Link>
         </div>
-      </div>
 
-      {/* 로그인 폼 */}
-      <div className="flex-1 flex items-center justify-center p-8 relative">
-        <div className="absolute top-8 right-8">
-          <ThemeToggle />
-        </div>
-        <div className="w-full max-w-[400px] space-y-8">
-          <div className="lg:hidden text-center space-y-2">
-            <h1 className="font-display text-4xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
-            <p className="text-sm text-ink-tertiary">마음의 평화를 과학으로 만나다</p>
-          </div>
-
-          <div className="space-y-2">
-            <h2 className="font-display text-2xl font-light text-ink-primary">로그인</h2>
-            <p className="text-sm text-ink-secondary">준비되시면 시작합니다.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-ink-secondary">
-                이메일
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
-                placeholder="name@example.com"
-                disabled={loading}
-                className={`w-full h-11 px-4 rounded-xl bg-surface-raised border text-sm text-ink-primary placeholder:text-ink-tertiary transition-all duration-150 outline-none disabled:opacity-50
-                  ${emailFocused
-                    ? 'border-brand-primary ring-2 ring-brand-primary/15'
-                    : 'border-border-default hover:border-border-strong'
-                  }`}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-baseline">
-                <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">
-                  비밀번호
-                </label>
-                <Link to="/forgot-password" className="text-xs text-ink-tertiary hover:text-brand-primary transition-colors">
-                  비밀번호를 잊으셨나요
-                </Link>
-              </div>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-                placeholder="••••••••"
-                disabled={loading}
-                className={`w-full h-11 px-4 rounded-xl bg-surface-raised border text-sm text-ink-primary placeholder:text-ink-tertiary transition-all duration-150 outline-none disabled:opacity-50
-                  ${passwordFocused
-                    ? 'border-brand-primary ring-2 ring-brand-primary/15'
-                    : 'border-border-default hover:border-border-strong'
-                  }`}
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-500 text-sm" role="alert">
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="w-full h-11 rounded-pill bg-brand-primary hover:bg-brand-primary-hover active:bg-brand-primary-active disabled:bg-surface-sunken text-ink-on-brand disabled:text-ink-disabled font-medium text-sm transition-all duration-150 flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <div className="breath-circle" style={{ width: '24px', height: '24px' } as React.CSSProperties}>
-                  <div className="breath-ring breath-ring--outer" />
-                  <div className="breath-ring breath-ring--middle" />
-                  <div className="breath-ring breath-ring--inner" />
-                </div>
-              ) : (
-                '로그인'
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-ink-tertiary">
-            아직 계정이 없으신가요?{' '}
-            <Link to="/register" className="text-brand-primary hover:text-brand-primary-hover font-medium transition-colors">
-              회원가입
-            </Link>
-          </p>
+        <div className="mt-7 text-[12px] text-white/70">
+          기관 발급 계정으로만 접속하실 수 있습니다.
         </div>
       </div>
     </div>
