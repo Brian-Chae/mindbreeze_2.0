@@ -15,8 +15,12 @@ from app.models.client_profile import ClientProfile
 from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.client_invite import ClientInvite
+from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead
 
 __all__ = [
+    "ChatRoom",
+    "ChatMessage",
+    "ChatMessageRead",
     "User",
     "Session",
     "SessionParticipant",

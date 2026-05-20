@@ -6,8 +6,12 @@ from app.services import refresh_token_service
 from app.services import org_service
 from app.services import credential_service
 from app.services import session_service
+from app.services import chat_service
+from app.services import system_message_service
 
 __all__ = [
+    "chat_service",
+    "system_message_service",
     "email_verify_service",
     "login_attempt_service",
     "otp_service",

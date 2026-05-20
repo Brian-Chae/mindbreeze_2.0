@@ -19,6 +19,7 @@ import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage
 import SessionListPage from './pages/sessions/SessionListPage';
 import SessionCreatePage from './pages/sessions/SessionCreatePage';
 import SessionDetailPage from './pages/sessions/SessionDetailPage';
+import ChatPage from './pages/chat/ChatPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -51,6 +52,7 @@ function App() {
         <Route path="/sessions" element={<SessionListPage />} />
         <Route path="/sessions/new" element={<SessionCreatePage />} />
         <Route path="/sessions/:id" element={<SessionDetailPage />} />
+        <Route path="/chat/:sessionId" element={<ChatPage />} />
       </Routes>
     </BrowserRouter>
   );
