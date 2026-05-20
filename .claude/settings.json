@@ -12,7 +12,17 @@
       "Bash(npm ls *)",
       "Bash(node -e 'const fs=require\\('\\\\''fs'\\\\''\\);const p='\\\\''__TRACKED_VAR__'\\\\'';const j=JSON.parse\\(fs.readFileSync\\(p,'\\\\''utf8'\\\\''\\)\\);if\\(j.$description\\){delete j.$description;fs.writeFileSync\\(p,JSON.stringify\\(j,null,2\\)+'\\\\''\\\\n'\\\\''\\)}')",
       "Bash(node -e ' *)",
-      "Bash(grep -l '\\\\$description' . -r)"
+      "Bash(grep -l '\\\\$description' . -r)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(curl -sI \"https://api.anthropic.com/v1/design/h/UvYpPz16DQ06GQI_8i7agg\")",
+      "Read(//private/tmp/**)",
+      "Bash(curl -sL \"https://api.anthropic.com/v1/design/h/UvYpPz16DQ06GQI_8i7agg\" -o /tmp/design2.bin)",
+      "Read(//tmp/**)",
+      "Bash(curl -sL -H \"Accept: application/json\" -H \"anthropic-version: 2023-06-01\" \"https://api.anthropic.com/v1/design/h/UvYpPz16DQ06GQI_8i7agg\" -o /tmp/d.bin -w \"HTTP %{http_code}\\\\nCT: %{content_type}\\\\nSize: %{size_download}\\\\n\")",
+      "Bash(/usr/bin/curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://api.anthropic.com/v1/design/UvYpPz16DQ06GQI_8i7agg\")",
+      "Bash(/usr/bin/curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://claude.com/design/h/UvYpPz16DQ06GQI_8i7agg\")",
+      "Bash(/usr/bin/curl -sL \"https://claude.com/design/h/UvYpPz16DQ06GQI_8i7agg\" -o /tmp/d3.html -w \"%{http_code} %{content_type}\\\\n\")",
+      "Bash(wait 99661)"
     ]
   },
   "hooks": {

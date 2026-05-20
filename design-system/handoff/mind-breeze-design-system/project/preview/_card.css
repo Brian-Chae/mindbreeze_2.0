@@ -1,0 +1,63 @@
+/* Shared card chrome for design-system preview tiles.
+   Each tile is ~700px wide, content varies in height (120-400px).
+   Cards are rendered framed/scaled inside the Design System tab. */
+@import url("../colors_and_type.css");
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #FAFAFB;
+  font-family: var(--mb-font-sans);
+  color: var(--mb-fg);
+}
+body {
+  padding: 20px 24px;
+}
+.row { display: flex; align-items: stretch; gap: 12px; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.swatch {
+  flex: 1;
+  min-height: 92px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+.swatch .name {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+.swatch .hex {
+  font-family: var(--mb-font-mono);
+  font-size: 11px;
+  opacity: 0.85;
+}
+.swatch.dark { color: #fff; }
+.swatch.light { color: var(--mb-fg); }
+.tile-meta {
+  font-family: var(--mb-font-mono);
+  font-size: 11px;
+  color: var(--mb-fg-muted);
+  letter-spacing: 0.02em;
+}
+.token {
+  font-family: var(--mb-font-mono);
+  font-size: 11px;
+  color: var(--mb-fg-muted);
+}
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: var(--mb-fg-muted);
+  font-family: var(--mb-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}

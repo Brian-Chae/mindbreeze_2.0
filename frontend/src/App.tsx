@@ -20,6 +20,12 @@ import SessionListPage from './pages/sessions/SessionListPage';
 import SessionCreatePage from './pages/sessions/SessionCreatePage';
 import SessionDetailPage from './pages/sessions/SessionDetailPage';
 import ChatPage from './pages/chat/ChatPage';
+import DesignIndexPage from './pages/design/DesignIndexPage';
+import HomepagePage from './pages/design/HomepagePage';
+import OperatorAppPage from './pages/design/OperatorAppPage';
+import UserAppPage from './pages/design/UserAppPage';
+import ReportPage from './pages/design/ReportPage';
+import DocsPage from './pages/design/DocsPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -53,6 +59,12 @@ function App() {
         <Route path="/sessions/new" element={<SessionCreatePage />} />
         <Route path="/sessions/:id" element={<SessionDetailPage />} />
         <Route path="/chat/:sessionId" element={<ChatPage />} />
+        <Route path="/design" element={<DesignIndexPage />} />
+        <Route path="/design/homepage" element={<HomepagePage />} />
+        <Route path="/design/app" element={<OperatorAppPage />} />
+        <Route path="/design/user-app" element={<UserAppPage />} />
+        <Route path="/design/report" element={<ReportPage />} />
+        <Route path="/design/docs" element={<DocsPage />} />
       </Routes>
     </BrowserRouter>
   );

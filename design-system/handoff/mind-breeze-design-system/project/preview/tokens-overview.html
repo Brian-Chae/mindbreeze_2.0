@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Tokens overview</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .panel { background:#fff; border:1px solid #DDDEE7; border-radius:12px; padding:14px 16px; }
+  .panel h4 { margin:0 0 10px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--mb-fg-muted); font-family:var(--mb-font-mono); font-weight:600; }
+  .row-tok { display:flex; align-items:center; gap:10px; font-family:var(--mb-font-mono); font-size:11px; color:var(--mb-fg-muted); }
+  .row-tok + .row-tok { margin-top:6px; }
+  .swatch-dot { width:14px; height:14px; border-radius:4px; flex:none; border:1px solid rgba(0,0,0,0.06); }
+  .row-tok code { color:var(--mb-fg); }
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="label-row"><span>colors_and_type.css · tokens overview</span><span>:root vars</span></div>
+  <div class="grid">
+    <div class="panel">
+      <h4>Brand</h4>
+      <div class="row-tok"><span class="swatch-dot" style="background:#5F0080;"></span><code>--mb-primary</code> #5F0080</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#B373EF;"></span><code>--mb-lavender</code> #B373EF</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#D2AEFC;"></span><code>--mb-pale</code> #D2AEFC</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#EBE6E2;"></span><code>--mb-cream</code> #EBE6E2</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#01F0C8;"></span><code>--mb-mint</code> #01F0C8</div>
+    </div>
+    <div class="panel">
+      <h4>Neutrals</h4>
+      <div class="row-tok"><span class="swatch-dot" style="background:#191A1E;"></span><code>--mb-label-80</code> #191A1E</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#1F1F1F;"></span><code>--mb-fg</code> #1F1F1F</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#6F6F6F;"></span><code>--mb-fg-muted</code> #6F6F6F</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#DDDEE7;"></span><code>--mb-border</code> #DDDEE7</div>
+      <div class="row-tok"><span class="swatch-dot" style="background:#F2F3F8;"></span><code>--mb-bg-10</code> #F2F3F8</div>
+    </div>
+    <div class="panel">
+      <h4>Type families</h4>
+      <div style="font-family:var(--mb-font-sans);font-size:18px;font-weight:600;color:var(--mb-fg);">Pretendard <span style="color:var(--mb-fg-muted);font-weight:400;font-size:12px;">— display + UI</span></div>
+      <div style="font-family:var(--mb-font-text);font-size:14px;font-weight:400;color:var(--mb-fg-muted);margin-top:6px;">Noto Sans KR — long-form 한글 본문</div>
+      <div style="font-family:var(--mb-font-mono);font-size:11px;color:var(--mb-fg-muted);margin-top:8px;">--mb-font-sans · --mb-font-text · --mb-font-mono</div>
+    </div>
+    <div class="panel">
+      <h4>Scale · radii · shadow</h4>
+      <div class="row-tok"><code>space</code> 2 · 4 · 8 · 12 · 16 · 24 · 32 · 60 · 80</div>
+      <div class="row-tok"><code>radius</code> 4 · 8 · 12 · 16 · 22 · 24 · 42 · 48 · pill</div>
+      <div class="row-tok"><code>shadow</code> sm · card · md · lg (purple-tinted)</div>
+      <div class="row-tok"><code>motion</code> 120 / 220 / 420 ms · cubic-bezier(.2,.8,.2,1)</div>
+    </div>
+  </div>
+  <div class="token">Single source of truth — imported by every preview card + UI kit. Edit here, propagates everywhere.</div>
+</div>
+</body>
+</html>

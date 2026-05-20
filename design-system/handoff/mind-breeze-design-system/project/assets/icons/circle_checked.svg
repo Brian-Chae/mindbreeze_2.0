@@ -1,0 +1,10 @@
+<svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon/Normal/CircleCheck">
+<mask id="mask0_1513_1263" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="2" y="2" width="30" height="30">
+<path id="Vector" fill-rule="evenodd" clip-rule="evenodd" d="M24.3635 13.6047L15.1061 23.1426L9.63649 17.5073L11.4848 15.7134L15.1061 19.4444L22.5152 11.8107L24.3635 13.6047ZM2.83344 17.0006C2.83344 9.17658 9.17603 2.83398 17 2.83398C24.824 2.83398 31.1666 9.17658 31.1666 17.0006C31.1666 24.8245 24.824 31.1671 17 31.1671C9.17603 31.1671 2.83344 24.8245 2.83344 17.0006Z" fill="black"></path>
+</mask>
+<g mask="url(#mask0_1513_1263)">
+<rect id="Color" x="0.00012207" width="33.9998" height="33.9998" fill="white"></rect>
+</g>
+</g>
+</svg>

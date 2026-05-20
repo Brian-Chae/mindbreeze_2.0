@@ -1,0 +1,10 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon/Normal/Arrow Foward">
+<mask id="mask0_1278_5044" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="3" y="4" width="18" height="16">
+<path id="Vector" fill-rule="evenodd" clip-rule="evenodd" d="M20.7476 12.6445C21.0841 12.2885 21.0841 11.7115 20.7476 11.3555L14.0455 4.26694C13.709 3.91102 13.1634 3.91102 12.8269 4.26694C12.4903 4.62286 12.4903 5.19992 12.8269 5.55584L18.058 11.0886H3.8617C3.3858 11.0886 3 11.4967 3 12C3 12.5033 3.3858 12.9114 3.8617 12.9114H18.058L12.8269 18.4442C12.4903 18.8001 12.4903 19.3771 12.8269 19.7331C13.1634 20.089 13.709 20.089 14.0455 19.7331L20.7476 12.6445Z" fill="black"></path>
+</mask>
+<g mask="url(#mask0_1278_5044)">
+<rect id="Color" width="24" height="24" fill="#8655BA"></rect>
+</g>
+</g>
+</svg>

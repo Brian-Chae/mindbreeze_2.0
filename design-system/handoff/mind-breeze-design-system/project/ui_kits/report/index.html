@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>MIND BREEZE — AI Report</title>
+<link rel="icon" href="../../assets/favicon_symbol.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  html, body { background: #EBE6E2; }
+  body { padding: 32px 24px; display: flex; justify-content: center; }
+  .report { width: 412px; display: flex; flex-direction: column; gap: 14px; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app"></div>
+<script type="text/babel" src="Cover.jsx"></script>
+<script type="text/babel" src="Charts.jsx"></script>
+<script type="text/babel">
+  function App() {
+    const attention = [42, 48, 55, 60, 64, 58, 66, 72, 70, 76, 78, 74, 80, 78, 82, 84];
+    return (
+      <main className="report" data-screen-label="01 AI Report">
+        <Cover />
+
+        <Section
+          eyebrow="introduction"
+          title="이 리포트가 측정하는 것"
+          body="명상 세션 동안 측정된 뇌파(EEG)를 룩시드랩스의 AI 모델로 분석하여 스트레스, 주의, 균형 세 가지 지표로 정리합니다. 본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다."
+        />
+
+        <Section eyebrow="summary" title="오늘의 두뇌건강 지수">
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}>
+            <Gauge value={74} label="휴식도" sub="평균 64 · ▲ +10" color="#5F0080" />
+          </div>
+          <div style={{ marginTop: 28, display: "flex", flexDirection: "column", gap: 14 }}>
+            <HBar label="이완 (α파)" value={72} color="#59CE90" note="안정된 휴식 상태가 잘 유지되었습니다." />
+            <HBar label="주의 (β파)" value={61} color="#5F0080" note="중간 수준의 집중을 유지했습니다." />
+            <HBar label="몰입 (γ파)" value={48} color="#7878FA" note="후반부에 깊은 몰입이 관찰되었습니다." />
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="stress"
+          title="스트레스 지표"
+          body="세션 후반부로 갈수록 스트레스 지표가 안정 영역으로 진입했습니다."
+        >
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Gauge value={38} label="스트레스 지수" sub="낮음 (0–40)" color="#59CE90" />
+          </div>
+          <div style={{ marginTop: 18, padding: "14px 16px", background: "#F0F9F5", borderRadius: 12, fontFamily: "var(--mb-font-text)", fontSize: 13, lineHeight: "20px", color: "#1F1F1F" }}>
+            <b style={{ color: "#5E704F" }}>안내</b><br />
+            7일 평균 대비 12% 낮은 수치입니다. 호흡 기반 명상을 주 3회 이상 지속해 보세요.
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="attention"
+          title="주의력 추이"
+          body="20분 세션 동안 주의력이 점진적으로 향상되었습니다."
+        >
+          <LineChart data={attention} color="#5F0080" />
+          <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 11, color: "#6F6F6F" }}>최고</div>
+              <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 700, fontSize: 20, color: "#1F1F1F" }}>84</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 11, color: "#6F6F6F" }}>평균</div>
+              <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 700, fontSize: 20, color: "#1F1F1F" }}>67</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 11, color: "#6F6F6F" }}>변동성</div>
+              <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 700, fontSize: 20, color: "#1F1F1F" }}>낮음</div>
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          eyebrow="balance"
+          title="좌·우 뇌 균형도"
+          body="좌·우 반구의 활동량이 균형적으로 분포했습니다."
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <HBar label="좌반구 활동" value={48} color="#B373EF" />
+            <HBar label="우반구 활동" value={52} color="#5F0080" />
+            <HBar label="균형도" value={92} color="#59CE90" note="0.92 · 매우 균형적" />
+          </div>
+        </Section>
+
+        <Section eyebrow="next" title="다음 세션 권장"
+          body="호흡 위주의 입문 단계를 한 단계 더 진행하기를 권합니다. 지도사와 함께 4주차 후반 모듈을 진행하세요.">
+          <div style={{
+            marginTop: 4,
+            padding: "16px 16px",
+            background: "#F5EDFC",
+            borderRadius: 12,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <div style={{
+                fontFamily: "var(--mb-font-mono)",
+                fontSize: 11,
+                color: "#5F0080",
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                fontWeight: 600,
+              }}>recommended · 4주차 후반</div>
+              <div style={{
+                fontFamily: "var(--mb-font-sans)",
+                fontWeight: 600,
+                fontSize: 12,
+                color: "#5F0080",
+              }}>30분</div>
+            </div>
+            <div style={{
+              fontFamily: "var(--mb-font-sans)",
+              fontWeight: 700,
+              fontSize: 18,
+              lineHeight: "24px",
+              color: "#1F1F1F",
+              letterSpacing: "-0.012em",
+            }}>마음챙김 입문 · 호흡 가이드</div>
+            <div style={{ display: "flex", gap: 16, paddingTop: 4, borderTop: "1px solid rgba(95,0,128,0.12)" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 10, color: "#6F6F6F", letterSpacing: "0.04em", textTransform: "uppercase" }}>focus</div>
+                <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 600, fontSize: 13, color: "#1F1F1F", marginTop: 4 }}>호흡 · 이완</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 10, color: "#6F6F6F", letterSpacing: "0.04em", textTransform: "uppercase" }}>level</div>
+                <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 600, fontSize: 13, color: "#1F1F1F", marginTop: 4 }}>입문 · 2단계</div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: "var(--mb-font-mono)", fontSize: 10, color: "#6F6F6F", letterSpacing: "0.04em", textTransform: "uppercase" }}>guide</div>
+                <div style={{ fontFamily: "var(--mb-font-sans)", fontWeight: 600, fontSize: 13, color: "#1F1F1F", marginTop: 4 }}>김지수 지도사</div>
+              </div>
+            </div>
+          </div>
+          <button className="mb-btn" style={{ marginTop: 12, width: "100%", height: 44, borderRadius: 12, fontSize: 14 }}>
+            세션 예약하기
+          </button>
+        </Section>
+      </main>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

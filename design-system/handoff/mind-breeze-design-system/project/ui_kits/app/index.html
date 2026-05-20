@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>MIND BREEZE — Operator</title>
+<link rel="icon" href="../../assets/favicon_symbol.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  html, body { background: #ECE6E2; }
+  body { padding: 40px; display: flex; justify-content: center; align-items: flex-start; }
+  .stage {
+    width: 1366px; height: 1024px; flex-shrink: 0;
+    position: relative; /* anchor for the modal overlay */
+  }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: center; flex-wrap: wrap; }
+  .toolbar button {
+    background: #FFFFFF; border: 1px solid #DDDEE7; border-radius: 999px;
+    padding: 8px 16px; font-family: var(--mb-font-sans); font-weight: 600; font-size: 13px; color: #1F1F1F;
+    cursor: pointer; white-space: nowrap;
+  }
+  .toolbar button.active { background: #5F0080; color: #FFFFFF; border-color: transparent; }
+  .toolbar .sep { width: 1px; background: #DDDEE7; margin: 4px 4px; }
+  .toolbar .demo {
+    background: transparent; color: #5F0080; border-color: #B373EF;
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="app"></div>
+<script type="text/babel" src="AppShell.jsx"></script>
+<script type="text/babel" src="SignIn.jsx"></script>
+<script type="text/babel" src="Dashboard.jsx"></script>
+<script type="text/babel" src="Clients.jsx"></script>
+<script type="text/babel" src="Messages.jsx"></script>
+<script type="text/babel" src="SessionRunning.jsx"></script>
+<script type="text/babel" src="Modal.jsx"></script>
+<script type="text/babel">
+  const { useState } = React;
+  function App() {
+    const [route, setRoute] = useState("dashboard");
+    const [modal, setModal] = useState(null);
+    const nav = React.useMemo(() => ({ route, go: setRoute }), [route]);
+    const modalCtx = React.useMemo(() => ({
+      open: (data) => setModal(data),
+      close: () => setModal(null),
+    }), []);
+
+    const screens = {
+      "dashboard":       <Dashboard />,
+      "clients":         <Clients />,
+      "messages":        <Messages />,
+      "session-running": <SessionRunning />,
+      "sign-in":         <SignIn />,
+      "reports":         <Dashboard />,
+      "settings":        <Dashboard />,
+    };
+
+    const tabs = [
+      ["dashboard",       "대시보드"],
+      ["clients",         "참여자"],
+      ["messages",        "메시지"],
+      ["session-running", "수업 진행"],
+      ["sign-in",         "로그인"],
+    ];
+
+    return (
+      <div>
+        <div className="toolbar">
+          {tabs.map(([id, label]) => (
+            <button key={id} className={route === id ? "active" : ""} onClick={() => setRoute(id)}>{label}</button>
+          ))}
+          <span className="sep"></span>
+          <button className="demo" onClick={() => modalCtx.open({
+            kind: "confirm",
+            title: "리포트를 발급할까요?",
+            body: "측정이 완료된 김민지 참여자에게 두뇌건강 리포트를 즉시 발송합니다.",
+            cancel: "취소", confirm: "발급하기",
+          })}>확인 모달</button>
+          <button className="demo" onClick={() => modalCtx.open({
+            kind: "danger",
+            title: "세션을 삭제할까요?",
+            body: "5월 21일 14:00 사내 워크숍 세션이 영구 삭제됩니다. 되돌릴 수 없습니다.",
+            cancel: "취소", confirm: "삭제",
+          })}>삭제 모달</button>
+        </div>
+        <div className="stage" data-screen-label="01 Operator app">
+          <NavCtx.Provider value={nav}>
+            <ModalCtx.Provider value={modalCtx}>
+              {screens[route]}
+              <Modal data={modal} onClose={modalCtx.close} />
+            </ModalCtx.Provider>
+          </NavCtx.Provider>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

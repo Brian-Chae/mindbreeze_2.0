@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Consent</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .row-item {
+    display:flex; align-items:flex-start; gap:14px;
+    padding:14px 16px; border-radius:12px; background:#F5EDFC;
+  }
+  .check {
+    width:24px; height:24px; border-radius:9999px; flex-shrink:0;
+    background:#5F0080; color:#fff;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .uncheck {
+    width:24px; height:24px; border-radius:9999px; flex-shrink:0;
+    border:1.5px solid #DDDEE7; background:#fff;
+  }
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="label-row"><span>guest consent / selection list</span><span>radius 12 · row 56</span></div>
+  <div class="row-item">
+    <span class="check">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l4 4 10-10"/></svg>
+    </span>
+    <div>
+      <div style="font-family:var(--mb-font-sans);font-weight:600;font-size:15px;color:var(--mb-fg);">개인정보 수집 및 이용 동의 (필수)</div>
+      <div style="font-family:var(--mb-font-text);font-weight:500;font-size:12px;color:var(--mb-fg-muted);margin-top:2px;">뇌파 측정값 및 사용 기록은 서비스 제공에만 사용됩니다.</div>
+    </div>
+  </div>
+  <div class="row-item" style="background:#FFFFFF;border:1px solid #DDDEE7;">
+    <span class="uncheck"></span>
+    <div>
+      <div style="font-family:var(--mb-font-sans);font-weight:600;font-size:15px;color:var(--mb-fg);">마케팅 정보 수신 동의 (선택)</div>
+      <div style="font-family:var(--mb-font-text);font-weight:500;font-size:12px;color:var(--mb-fg-muted);margin-top:2px;">새로운 클래스 안내를 받아보실 수 있습니다.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

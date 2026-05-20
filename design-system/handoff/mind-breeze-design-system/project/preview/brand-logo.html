@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Logo</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  /* Logo lockup: symbol + wordmark.
+     Sizing rule — wordmark cap-height ≈ symbol height; symbol-to-wordmark
+     gap ≈ ½ symbol height. Wordmark is all caps, set in Pretendard 700 with
+     +0.04em tracking (caps need more breathing room) and line-height:0.85
+     so the baseline aligns with the symbol's optical center. */
+  .lockup-card {
+    flex: 1;
+    border-radius: 16px;
+    padding: 28px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    min-height: 120px;
+  }
+  .lockup-card.light { background: #FFFFFF; border: 1px solid #DDDEE7; }
+  .lockup-card.dark  { background: #5F0080; }
+
+  .lockup-card img { display: block; width: 64px; height: auto; }
+  .lockup-card.dark img { filter: brightness(0) invert(1); }
+
+  .wordmark {
+    font-family: var(--mb-font-sans);
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 0.85;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .light .wordmark { color: #111111; }
+  .dark  .wordmark { color: #FFFFFF; }
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="label-row"><span>signature lockup · symbol + wordmark</span><span>Pretendard 700 · +0.04em · ALL CAPS</span></div>
+  <div class="row" style="gap:14px;">
+    <div class="lockup-card light">
+      <img src="../assets/logo_symbol_dark.svg" alt="" />
+      <div class="wordmark">MIND&nbsp;BREEZE</div>
+    </div>
+    <div class="lockup-card dark">
+      <img src="../assets/logo_symbol_dark.svg" alt="" />
+      <div class="wordmark">MIND&nbsp;BREEZE</div>
+    </div>
+  </div>
+  <div class="token">Wordmark is always uppercase: “MIND BREEZE”. Pretendard Bold with +0.04em tracking. Symbol height ≈ wordmark cap-height; gap ≈ ½ symbol height.</div>
+</div>
+</body>
+</html>

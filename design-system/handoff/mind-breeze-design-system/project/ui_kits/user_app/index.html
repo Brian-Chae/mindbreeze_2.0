@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>MIND BREEZE — 참여자 앱</title>
+<link rel="icon" href="../../assets/favicon_symbol.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  html, body { background: #ECE6E2; margin: 0; padding: 0; }
+  body { padding: 40px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .toolbar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .toolbar button {
+    background: #FFFFFF; border: 1px solid #DDDEE7; border-radius: 999px;
+    padding: 8px 16px; font-family: var(--mb-font-sans); font-weight: 600; font-size: 13px; color: #1F1F1F;
+    cursor: pointer; white-space: nowrap;
+  }
+  .toolbar button.active { background: #5F0080; color: #FFFFFF; border-color: transparent; }
+  .stage {
+    position: relative;
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="app"></div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="UserShell.jsx"></script>
+<script type="text/babel" src="HomeScreen.jsx"></script>
+<script type="text/babel" src="SessionScreen.jsx"></script>
+<script type="text/babel" src="ReportScreen.jsx"></script>
+<script type="text/babel" src="ClassScreen.jsx"></script>
+<script type="text/babel" src="ProfileScreen.jsx"></script>
+
+<script type="text/babel">
+  const { useState } = React;
+  function App() {
+    const [route, setRoute] = useState("home");
+    const [tab, setTab] = useState("home");
+
+    // Tab change routes to the matching main-tab screen (and exits the
+    // session/report sub-views automatically).
+    const onTab = (next) => {
+      setTab(next);
+      setRoute(next === "report" ? "report" : next);
+    };
+
+    const screens = {
+      home:    <HomeScreen    tab={tab} onTab={onTab} goSession={() => setRoute("session")} goReport={() => setRoute("report")} />,
+      class:   <ClassScreen   tab={tab} onTab={onTab} />,
+      report:  <ReportScreen  tab={tab} onTab={onTab} back={() => { setRoute("home"); setTab("home"); }} />,
+      profile: <ProfileScreen tab={tab} onTab={onTab} />,
+      session: <SessionScreen onExit={() => setRoute("home")} />,
+    };
+
+    const labels = [
+      ["home",    "오늘 (홈)"],
+      ["class",   "클래스"],
+      ["session", "세션 진행"],
+      ["report",  "리포트"],
+      ["profile", "프로필"],
+    ];
+
+    return (
+      <div>
+        <div className="toolbar">
+          {labels.map(([id, l]) => (
+            <button key={id} className={route === id ? "active" : ""} onClick={() => {
+              setRoute(id);
+              if (id === "session") return; // session is sub-view
+              setTab(id === "report" ? "report" : id);
+            }}>{l}</button>
+          ))}
+        </div>
+        <div className="stage" data-screen-label="02 Participant app">
+          <IOSDevice>
+            {screens[route]}
+          </IOSDevice>
+        </div>
+      </div>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>

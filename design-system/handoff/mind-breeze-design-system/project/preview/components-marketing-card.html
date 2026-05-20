@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Marketing card</title>
+<link rel="stylesheet" href="_card.css" />
+</head>
+<body style="background:#EBE6E2;padding:24px;">
+<style>
+  /* Override eyebrow chip — pale fill was too washed-out against the
+     white marketing card. Solid brand purple with white text reads
+     cleanly and reinforces the brand color on hero surfaces. */
+  .mb-eyebrow.mc {
+    background: #5F0080;
+    color: #FFFFFF;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+  }
+</style>
+<div class="row" style="gap:18px;">
+  <div style="flex:1;background:#FFFFFF;border-radius:22px;padding:28px;">
+    <span class="mb-eyebrow mc" style="margin-bottom:18px;display:inline-flex;">뇌과학 전문 기업</span>
+    <div style="font-family:var(--mb-font-sans);font-weight:700;font-size:24px;line-height:30px;color:rgba(0,0,0,0.78);margin-top:18px;">뇌파 특허 다수 보유</div>
+    <div style="font-family:var(--mb-font-text);font-weight:500;font-size:15px;line-height:24px;color:rgba(0,0,0,0.6);margin-top:8px;">14건의 관련 특허 다수 출품 및 취득</div>
+  </div>
+  <div style="flex:1;background:#FFFFFF;border-radius:22px;padding:28px;">
+    <span class="mb-eyebrow mc" style="margin-bottom:18px;display:inline-flex;">인정받은 기술력</span>
+    <div style="font-family:var(--mb-font-sans);font-weight:700;font-size:24px;line-height:30px;color:rgba(0,0,0,0.78);margin-top:18px;">CES 2회 수상</div>
+    <div style="font-family:var(--mb-font-text);font-weight:500;font-size:15px;line-height:24px;color:rgba(0,0,0,0.6);margin-top:8px;">CES 2018 최고혁신상, 2022 혁신상 수상</div>
+  </div>
+</div>
+</body>
+</html>

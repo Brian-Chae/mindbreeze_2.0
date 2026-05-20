@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Calendar</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .cal {
+    background: #FFFFFF; border: 1px solid #DDDEE7; border-radius: 18px;
+    padding: 20px; width: 100%;
+  }
+  .cal-head {
+    display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;
+  }
+  .cal-title {
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 17px;
+    color: var(--mb-fg); letter-spacing: -0.012em;
+  }
+  .cal-nav { display:flex; gap:4px; }
+  .cal-nav button {
+    width: 28px; height: 28px; border-radius: 8px; border: 0;
+    background: #F5EDFC; color: var(--mb-purple-100); cursor: pointer;
+    font-size: 14px; line-height: 1; font-weight: 600;
+  }
+  .cal-nav button:hover { background: #EADFFB; }
+
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .cal-dow {
+    font-family: var(--mb-font-mono); font-size: 10px;
+    color: var(--mb-fg-muted); text-align: center; padding: 4px 0;
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .cal-day {
+    aspect-ratio: 1 / 1;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mb-font-sans); font-weight: 500; font-size: 13px;
+    color: var(--mb-fg); border-radius: 8px; position: relative;
+    cursor: pointer; transition: background var(--mb-duration-fast) var(--mb-ease);
+  }
+  .cal-day:hover { background: #F5EDFC; }
+  .cal-day.muted { color: #C2C3CE; }
+  .cal-day.today {
+    background: #F5EDFC; color: var(--mb-purple-100); font-weight: 700;
+  }
+  .cal-day.selected {
+    background: var(--mb-purple-100); color: #FFFFFF; font-weight: 700;
+  }
+  .cal-day.selected:hover { background: var(--mb-purple-100); }
+  .cal-day .dot {
+    position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: var(--mb-lavender);
+  }
+  .cal-day.selected .dot { background: rgba(255,255,255,0.7); }
+
+  .sessions {
+    background: #FFFFFF; border: 1px solid #DDDEE7; border-radius: 18px;
+    padding: 18px; width: 100%; display:flex; flex-direction:column; gap: 10px;
+  }
+  .sess-head {
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom: 4px;
+  }
+  .sess-date {
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 15px;
+    color: var(--mb-fg); letter-spacing: -0.012em;
+  }
+  .sess-count {
+    font-family: var(--mb-font-mono); font-size: 11px; color: var(--mb-fg-muted);
+  }
+  .sess-item {
+    display:flex; align-items:center; gap: 12px;
+    padding: 10px 12px; border-radius: 12px; background: #F8F4FC;
+  }
+  .sess-time {
+    font-family: var(--mb-font-mono); font-weight: 700; font-size: 12px;
+    color: var(--mb-purple-100); width: 56px; flex: none;
+  }
+  .sess-title {
+    font-family: var(--mb-font-sans); font-weight: 600; font-size: 13px;
+    color: var(--mb-fg); flex: 1;
+  }
+  .sess-tag {
+    font-family: var(--mb-font-sans); font-weight: 600; font-size: 10px;
+    padding: 3px 8px; border-radius: 9999px; letter-spacing: 0.04em;
+  }
+  .sess-tag.online  { background: #E6F8F3; color: #1F8A5B; }
+  .sess-tag.offline { background: #F5EDFC; color: var(--mb-purple-100); }
+</style>
+</head>
+<body>
+<div class="row" style="gap:14px;">
+  <div class="cal" style="flex:1.05;">
+    <div class="cal-head">
+      <div class="cal-title">2026년 5월</div>
+      <div class="cal-nav">
+        <button>‹</button>
+        <button>›</button>
+      </div>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-dow">일</div><div class="cal-dow">월</div><div class="cal-dow">화</div>
+      <div class="cal-dow">수</div><div class="cal-dow">목</div><div class="cal-dow">금</div>
+      <div class="cal-dow">토</div>
+    </div>
+    <div class="cal-grid" style="margin-top:4px;">
+      <div class="cal-day muted">27</div><div class="cal-day muted">28</div><div class="cal-day muted">29</div>
+      <div class="cal-day muted">30</div><div class="cal-day">1</div><div class="cal-day">2<span class="dot"></span></div>
+      <div class="cal-day">3</div>
+      <div class="cal-day">4</div><div class="cal-day">5<span class="dot"></span></div><div class="cal-day">6</div>
+      <div class="cal-day">7</div><div class="cal-day">8</div><div class="cal-day">9<span class="dot"></span></div>
+      <div class="cal-day">10</div>
+      <div class="cal-day">11</div><div class="cal-day">12<span class="dot"></span></div><div class="cal-day">13</div>
+      <div class="cal-day">14</div><div class="cal-day">15<span class="dot"></span></div><div class="cal-day">16</div>
+      <div class="cal-day">17</div>
+      <div class="cal-day">18</div><div class="cal-day">19</div>
+      <div class="cal-day today">20<span class="dot"></span></div>
+      <div class="cal-day selected">21<span class="dot"></span></div>
+      <div class="cal-day">22</div><div class="cal-day">23<span class="dot"></span></div>
+      <div class="cal-day">24</div>
+    </div>
+  </div>
+
+  <div class="sessions" style="flex:1;">
+    <div class="sess-head">
+      <div class="sess-date">5월 21일 · 목</div>
+      <div class="sess-count">세션 3건</div>
+    </div>
+    <div class="sess-item">
+      <div class="sess-time">09:30</div>
+      <div class="sess-title">아침 마음챙김 · 정기반</div>
+      <span class="sess-tag offline">오프라인</span>
+    </div>
+    <div class="sess-item">
+      <div class="sess-time">14:00</div>
+      <div class="sess-title">사내 워크숍 · 라온건강원</div>
+      <span class="sess-tag online">온라인</span>
+    </div>
+    <div class="sess-item">
+      <div class="sess-time">19:00</div>
+      <div class="sess-title">바디스캔 입문 · 1:1</div>
+      <span class="sess-tag offline">오프라인</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

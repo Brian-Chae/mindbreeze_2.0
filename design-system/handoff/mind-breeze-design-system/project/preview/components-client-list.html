@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Client list</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  /* Operator's participant list — custom layout, not a stock table.
+     Each row is a small "tile" showing the person, their progress
+     through a program (ring around the avatar), a 7-session stress-
+     score sparkline (alpha wave style), recent change vs. baseline,
+     and the next scheduled session as a date-chip. */
+
+  body { background: #FAFAFB; padding: 16px; }
+
+  .panel-head {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin: 0 4px 14px;
+  }
+  .panel-title {
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 18px;
+    letter-spacing: -0.018em; color: var(--mb-fg);
+  }
+  .panel-meta {
+    font-family: var(--mb-font-mono); font-size: 10px;
+    color: var(--mb-fg-muted); letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .panel-tools { display:flex; gap: 8px; }
+  .panel-tools .seg {
+    display:flex; background:#FFFFFF; border:1px solid #E8E4F0; border-radius: 9999px;
+    padding: 3px; gap: 2px;
+  }
+  .panel-tools .seg button {
+    border:0; background:transparent; cursor:pointer;
+    font-family: var(--mb-font-sans); font-weight: 600; font-size: 11px;
+    padding: 5px 10px; border-radius: 9999px; color: var(--mb-fg-muted);
+  }
+  .panel-tools .seg button.on {
+    background: #5F0080; color: #FFFFFF;
+  }
+
+  .stack { display:flex; flex-direction: column; gap: 8px; }
+
+  .tile {
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 16px 18px 16px 14px;
+    display: grid;
+    grid-template-columns: 56px 1.4fr 1.2fr 110px;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid transparent;
+    position: relative;
+    transition: border-color var(--mb-duration-fast) var(--mb-ease),
+                box-shadow var(--mb-duration-fast) var(--mb-ease);
+  }
+  .tile:hover { border-color: #EADFFB; box-shadow: 0 1px 1px rgba(25,26,30,0.06); }
+  .tile.featured {
+    background: #FBF7FE;
+    border-color: #E8D8F8;
+  }
+
+  /* Avatar with progress ring */
+  .ring {
+    width: 52px; height: 52px;
+    position: relative; flex: none;
+  }
+  .ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ring .face {
+    position: absolute; inset: 4px; border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 16px;
+    letter-spacing: -0.02em; color: #FFFFFF;
+  }
+  .face.p1 { background: linear-gradient(140deg, #B373EF 10%, #5F0080 100%); }
+  .face.p2 { background: linear-gradient(140deg, #FFC79A 10%, #E6593D 100%); }
+  .face.p3 { background: linear-gradient(140deg, #9CE9C4 10%, #1F8A5B 100%); }
+  .face.p4 { background: linear-gradient(140deg, #B7C5F3 10%, #5E4FFF 100%); }
+
+  /* Identity */
+  .id-block { min-width: 0; }
+  .id-name {
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 15px;
+    color: var(--mb-fg); letter-spacing: -0.014em;
+    display:flex; align-items:center; gap: 8px;
+  }
+  .star { color: #C2A6E0; font-size: 11px; }
+  .id-program {
+    font-family: var(--mb-font-text); font-weight: 500; font-size: 12px;
+    color: var(--mb-fg-muted); margin-top: 3px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .id-program .sep { width: 3px; height: 3px; border-radius: 50%; background: #C2C3CE; }
+  .id-status {
+    display:inline-flex; align-items:center; gap: 5px;
+    font-family: var(--mb-font-sans); font-weight: 600; font-size: 11px;
+    margin-top: 6px;
+  }
+  .id-status .d { width: 6px; height: 6px; border-radius: 50%; }
+  .id-status.active   { color: #1F8A5B; }
+  .id-status.active .d   { background: #59CE90; box-shadow: 0 0 0 3px rgba(89,206,144,0.18); }
+  .id-status.pending  { color: #B57C00; }
+  .id-status.pending .d  { background: #EFC14C; }
+  .id-status.paused   { color: #6F6F6F; }
+  .id-status.paused .d   { background: #A2A3AD; }
+
+  /* Bars + stats */
+  .signal {
+    display:flex; flex-direction: column; gap: 6px;
+    padding-left: 18px;
+    border-left: 1px solid #F0EBF6;
+  }
+  .signal-row {
+    display:flex; align-items: flex-end; gap: 12px;
+  }
+  .bars {
+    display:flex; align-items: flex-end; gap: 3px;
+    height: 30px; flex: none;
+  }
+  .bar {
+    width: 9px; border-radius: 3px 3px 1px 1px;
+    background: #F0EBF6;
+    transition: background var(--mb-duration-fast) var(--mb-ease);
+  }
+  .bar.now { /* most recent — full color, taller emphasis */ }
+  .delta-block {
+    display: flex; flex-direction: column; gap: 1px;
+    padding-bottom: 1px;
+  }
+  .delta {
+    font-family: var(--mb-font-sans); font-weight: 700; font-size: 14px;
+    letter-spacing: -0.012em;
+    display:flex; align-items: baseline; gap: 3px;
+  }
+  .delta.up   { color: #1F8A5B; }
+  .delta.down { color: #D33F3F; }
+  .delta.flat { color: var(--mb-fg-muted); }
+  .delta .arr { font-size: 11px; font-weight: 800; }
+  .delta-sub {
+    font-family: var(--mb-font-text); font-size: 10px;
+    color: var(--mb-fg-muted); letter-spacing: 0;
+  }
+
+  /* Date chip */
+  .chip-wrap { display:flex; justify-content: flex-end; align-items: center; gap: 8px; }
+  .date-chip {
+    width: 56px; min-height: 56px;
+    border-radius: 14px;
+    background: #F5EDFC;
+    display:flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4px 0;
+  }
+  .date-chip .dow {
+    font-family: var(--mb-font-mono); font-size: 9px; font-weight: 600;
+    color: var(--mb-purple-100); letter-spacing: 0.1em; text-transform: uppercase;
+  }
+  .date-chip .num {
+    font-family: var(--mb-font-sans); font-weight: 800; font-size: 18px;
+    color: var(--mb-purple-100); line-height: 22px; letter-spacing: -0.02em;
+  }
+  .date-chip .time {
+    font-family: var(--mb-font-mono); font-size: 9px; color: var(--mb-purple-100);
+    opacity: 0.7; margin-top: 1px;
+  }
+  .date-chip.muted {
+    background: #F2F3F8;
+  }
+  .date-chip.muted .dow, .date-chip.muted .num, .date-chip.muted .time {
+    color: var(--mb-fg-muted);
+  }
+  .date-chip.muted .num { font-size: 13px; line-height: 16px; letter-spacing: 0.01em; }
+
+  .ko { font-family: var(--mb-font-sans); }
+</style>
+</head>
+<body>
+
+<div class="panel-head">
+  <div>
+    <div class="panel-title">참여자</div>
+    <div class="panel-meta" style="margin-top:4px;">활동중 12 · 대기 3 · 일시중지 1</div>
+  </div>
+  <div class="panel-tools">
+    <div class="seg">
+      <button class="on">전체</button>
+      <button>이번 주</button>
+      <button>리포트 대기</button>
+    </div>
+  </div>
+</div>
+
+<div class="stack">
+
+  <!-- Row 1 — featured / active -->
+  <div class="tile featured">
+    <div class="ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#E8D8F8" stroke-width="3" />
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#5F0080" stroke-width="3"
+                stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="34.5" />
+      </svg>
+      <div class="face p1">민</div>
+    </div>
+    <div class="id-block">
+      <div class="id-name">김민지<span class="star">★</span></div>
+      <div class="id-program">정기 8주<span class="sep"></span>4 / 8회차</div>
+      <div class="id-status active"><span class="d"></span>활동중 · 측정 진행</div>
+    </div>
+    <div class="signal">
+      <div class="signal-row">
+        <div class="bars">
+          <div class="bar" style="height:30%;background:#E8D8F8;"></div>
+          <div class="bar" style="height:48%;background:#D7BCEC;"></div>
+          <div class="bar" style="height:42%;background:#D7BCEC;"></div>
+          <div class="bar" style="height:65%;background:#A775D6;"></div>
+          <div class="bar" style="height:58%;background:#A775D6;"></div>
+          <div class="bar" style="height:78%;background:#7D3399;"></div>
+          <div class="bar now" style="height:92%;background:#5F0080;"></div>
+        </div>
+        <div class="delta-block">
+          <div class="delta up"><span class="arr">↓</span>18%</div>
+          <div class="delta-sub">vs 시작</div>
+        </div>
+      </div>
+    </div>
+    <div class="chip-wrap">
+      <div class="date-chip">
+        <div class="dow">목</div>
+        <div class="num">21</div>
+        <div class="time">09:30</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 2 -->
+  <div class="tile">
+    <div class="ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#F0EBF6" stroke-width="3" />
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#E6593D" stroke-width="3"
+                stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="103.6" />
+      </svg>
+      <div class="face p2">박</div>
+    </div>
+    <div class="id-block">
+      <div class="id-name">박서준</div>
+      <div class="id-program">1:1 코칭<span class="sep"></span>2 / 8회차</div>
+      <div class="id-status active"><span class="d"></span>활동중</div>
+    </div>
+    <div class="signal">
+      <div class="signal-row">
+        <div class="bars">
+          <div class="bar" style="height:55%;background:#FFD4C2;"></div>
+          <div class="bar" style="height:60%;background:#FFC2A8;"></div>
+          <div class="bar" style="height:52%;background:#FFC2A8;"></div>
+          <div class="bar" style="height:62%;background:#F49C7B;"></div>
+          <div class="bar" style="height:50%;background:#F49C7B;"></div>
+          <div class="bar" style="height:58%;background:#EE7350;"></div>
+          <div class="bar now" style="height:55%;background:#E6593D;"></div>
+        </div>
+        <div class="delta-block">
+          <div class="delta flat"><span class="arr">·</span>안정</div>
+          <div class="delta-sub">vs 시작</div>
+        </div>
+      </div>
+    </div>
+    <div class="chip-wrap">
+      <div class="date-chip">
+        <div class="dow">금</div>
+        <div class="num">22</div>
+        <div class="time">19:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3 — pending report -->
+  <div class="tile">
+    <div class="ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#F0EBF6" stroke-width="3" />
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#1F8A5B" stroke-width="3"
+                stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="69.1" />
+      </svg>
+      <div class="face p3">정</div>
+    </div>
+    <div class="id-block">
+      <div class="id-name">정수아</div>
+      <div class="id-program">사내 워크숍<span class="sep"></span>라온건강원</div>
+      <div class="id-status pending"><span class="d"></span>리포트 발급 대기</div>
+    </div>
+    <div class="signal">
+      <div class="signal-row">
+        <div class="bars">
+          <div class="bar" style="height:88%;background:#C9ECDB;"></div>
+          <div class="bar" style="height:80%;background:#A8DDC1;"></div>
+          <div class="bar" style="height:72%;background:#A8DDC1;"></div>
+          <div class="bar" style="height:65%;background:#7CCBA0;"></div>
+          <div class="bar" style="height:58%;background:#7CCBA0;"></div>
+          <div class="bar" style="height:45%;background:#4DAE7C;"></div>
+          <div class="bar now" style="height:38%;background:#1F8A5B;"></div>
+        </div>
+        <div class="delta-block">
+          <div class="delta up"><span class="arr">↓</span>24%</div>
+          <div class="delta-sub">vs 시작</div>
+        </div>
+      </div>
+    </div>
+    <div class="chip-wrap">
+      <div class="date-chip muted">
+        <div class="dow">예정</div>
+        <div class="num">미정</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4 — paused -->
+  <div class="tile">
+    <div class="ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#F0EBF6" stroke-width="3" />
+        <circle cx="26" cy="26" r="22" fill="none" stroke="#C2C3CE" stroke-width="3"
+                stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="86.4" />
+      </svg>
+      <div class="face p4" style="opacity:0.78;">이</div>
+    </div>
+    <div class="id-block">
+      <div class="id-name" style="color:#6F6F6F;">이도윤</div>
+      <div class="id-program">청소년 집중력<span class="sep"></span>6 / 12회차</div>
+      <div class="id-status paused"><span class="d"></span>일시 중지 · 5월 11일</div>
+    </div>
+    <div class="signal">
+      <div class="signal-row">
+        <div class="bars">
+          <div class="bar" style="height:30%;background:#EAECF1;"></div>
+          <div class="bar" style="height:38%;background:#DDDFE6;"></div>
+          <div class="bar" style="height:32%;background:#DDDFE6;"></div>
+          <div class="bar" style="height:48%;background:#CACCD5;"></div>
+          <div class="bar" style="height:52%;background:#CACCD5;"></div>
+          <div class="bar" style="height:60%;background:#B3B5C0;"></div>
+          <div class="bar now" style="height:68%;background:#A2A3AD;"></div>
+        </div>
+        <div class="delta-block">
+          <div class="delta down"><span class="arr">↑</span>9%</div>
+          <div class="delta-sub">vs 시작</div>
+        </div>
+      </div>
+    </div>
+    <div class="chip-wrap">
+      <div class="date-chip muted">
+        <div class="dow">—</div>
+        <div class="num">없음</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

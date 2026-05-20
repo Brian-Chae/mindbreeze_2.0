@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Modal</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  /* Three modal flavours used across the operator app, side by side at
+     reduced scale so all variants fit one preview card. */
+  body { background: #E8E4E8; padding: 18px; }
+
+  .stage {
+    position: relative;
+    background:
+      linear-gradient(0deg, rgba(0,0,0,0.18), rgba(0,0,0,0.18)),
+      linear-gradient(135deg, #5F0080 0%, #875EB3 100%);
+    border-radius: 16px;
+    padding: 18px;
+    display: grid;
+    grid-template-columns: 1.05fr 1fr 0.8fr;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .modal {
+    background: #FFFFFF;
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(95,0,128,0.18);
+    padding: 18px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+  }
+
+  .modal .close {
+    position: absolute; top: 12px; right: 12px;
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 0; background: #F2F3F8; color: var(--mb-fg-muted);
+    cursor: pointer; display:flex; align-items:center; justify-content:center;
+    font-size: 14px;
+  }
+
+  .modal h4 {
+    font-family: var(--mb-font-sans); font-weight: 700;
+    font-size: 15px; line-height: 22px; letter-spacing: -0.012em;
+    color: var(--mb-fg); margin: 0;
+  }
+  .modal p {
+    font-family: var(--mb-font-text); font-weight: 500;
+    font-size: 12px; line-height: 18px;
+    color: var(--mb-fg-muted); margin: 0;
+  }
+
+  .icon-pad {
+    width: 40px; height: 40px; border-radius: 12px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom: 2px;
+  }
+  .icon-pad.brand   { background: #F5EDFC; color: var(--mb-purple-100); }
+  .icon-pad.warning { background: #FFF4E0; color: #B57C00; }
+  .icon-pad.danger  { background: rgba(252,85,85,0.12); color: #D33F3F; }
+
+  .actions { display:flex; gap: 6px; margin-top: 4px; }
+  .actions .mb-btn { height: 34px; padding: 0 14px; font-size: 12px; border-radius: 10px; flex: 1; }
+  .actions .mb-btn--ghost { border-color: #DDDEE7; color: var(--mb-fg); }
+
+  /* Danger variant — only the primary (non-ghost) button turns red.
+     Cancel stays as a neutral ghost so the destructive action is the
+     clear, single-coloured affordance. */
+  .modal.danger .actions .mb-btn:not(.mb-btn--ghost) { background: #D33F3F; color: #FFFFFF; }
+  .modal.danger .actions .mb-btn:not(.mb-btn--ghost):hover { background: #B53636; }
+
+  /* Toast variant — inline confirmation */
+  .toast {
+    background: #1F1F1F; border-radius: 14px;
+    padding: 14px 16px;
+    display:flex; gap: 12px; align-items: center;
+    box-shadow: 0 12px 30px rgba(95,0,128,0.18);
+    color: #FFFFFF;
+  }
+  .toast .dot {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(89,206,144,0.18); color: #59CE90;
+    display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .toast .body {
+    font-family: var(--mb-font-sans); font-weight: 600; font-size: 12px;
+    line-height: 18px;
+  }
+  .toast .sub {
+    font-family: var(--mb-font-text); font-weight: 500; font-size: 11px;
+    color: rgba(255,255,255,0.6); margin-top: 1px;
+  }
+
+  .toast-col { display:flex; flex-direction: column; gap: 10px; justify-content:center; }
+  .toast.warning .dot { background: rgba(239,193,76,0.18); color: #EFC14C; }
+  .toast.danger  .dot { background: rgba(252,85,85,0.18); color: #FC5555; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+  <!-- Standard confirm dialog -->
+  <div class="modal">
+    <button class="close">×</button>
+    <div class="icon-pad brand">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2 4 5v7c0 5 4 8 8 10 4-2 8-5 8-10V5l-8-3z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+    </div>
+    <h4>리포트를 발급할까요?</h4>
+    <p>측정이 완료된 김민지 참여자에게 두뇌건강 리포트를 즉시 발송합니다.</p>
+    <div class="actions">
+      <button class="mb-btn mb-btn--ghost">취소</button>
+      <button class="mb-btn">발급하기</button>
+    </div>
+  </div>
+
+  <!-- Destructive confirm -->
+  <div class="modal danger">
+    <button class="close">×</button>
+    <div class="icon-pad danger">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <h4>세션을 삭제할까요?</h4>
+    <p>5월 21일 14:00 사내 워크숍 세션이 영구 삭제됩니다. 되돌릴 수 없습니다.</p>
+    <div class="actions">
+      <button class="mb-btn mb-btn--ghost">취소</button>
+      <button class="mb-btn">삭제</button>
+    </div>
+  </div>
+
+  <!-- Toasts / inline alerts -->
+  <div class="toast-col">
+    <div class="toast">
+      <div class="dot">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <div class="body">리포트가 발송되었습니다</div>
+        <div class="sub">참여자 1명 · 방금 전</div>
+      </div>
+    </div>
+    <div class="toast warning">
+      <div class="dot">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+      </div>
+      <div>
+        <div class="body">LINK BAND 연결 불안정</div>
+        <div class="sub">참여자의 헤드밴드를 다시 착용해주세요</div>
+      </div>
+    </div>
+    <div class="toast danger">
+      <div class="dot">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      </div>
+      <div>
+        <div class="body">세션 저장 실패</div>
+        <div class="sub">네트워크를 확인해주세요</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

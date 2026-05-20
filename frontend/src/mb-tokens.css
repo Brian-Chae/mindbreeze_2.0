@@ -1,0 +1,291 @@
+/* ──────────────────────────────────────────────────────────────────
+   MIND BREEZE — Core color + type tokens
+   Sources of truth:
+     • mind-breeze-app  · src/constants/Color.ts
+     • mind-breeze-admin · src/styles/Texts.tsx
+     • mind-breeze-report · tailwind.config.ts
+     • Figma — /Branding/Brand-Colors
+   Use the @import at the top to pull Pretendard + Noto Sans KR from
+   Google Fonts. Pretendard is the brand display + UI face; Noto Sans
+   KR is the secondary Korean text face used in long copy.
+   ────────────────────────────────────────────────────────────────── */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap");
+
+:root {
+  /* ── BRAND · PURPLE ─────────────────────────────────────────── */
+  --mb-purple-100:        #5F0080;   /* signature purple — symbol fill, brand surfaces */
+  --mb-purple-90:         #6E1A8C;
+  --mb-purple-80:         #7D3399;
+  --mb-purple-70:         #875EB3;   /* mauve / light purple */
+  --mb-purple-60:         #9577D0;
+  --mb-purple-50:         #A775D6;
+  --mb-lavender:          #B373EF;   /* primary_70 — soft purple accent */
+  --mb-lavender-alpha:    #B373EFB2; /* 70% — translucent surfaces */
+  --mb-pale:              #D2AEFC;   /* badge / capsule fills */
+  --mb-pale-alt:          #D2BEFF;
+  --mb-purple-cream:      #F5EDFC;   /* hover bg, page tints */
+
+  /* ── BRAND · WARM BACKGROUND ───────────────────────────────── */
+  --mb-cream:             #EBE6E2;   /* homepage / brochure backgrounds */
+  --mb-cream-deep:        #ECE6E2;
+
+  /* ── ACCENTS ───────────────────────────────────────────────── */
+  --mb-mint:              #01F0C8;   /* electric mint — data viz highlights */
+  --mb-electric:          #5E4FFF;   /* alt brand blue (rarely used) */
+  --mb-electric-alpha:    #5E4FFF4D;
+
+  /* ── REPORT PALETTE (semantic data viz) ───────────────────── */
+  --mb-data-green:        #59CE90;
+  --mb-data-green-light:  #93E5B9;
+  --mb-data-green-cream:  #F0F9F5;
+  --mb-data-khaki:        #5E704F;
+  --mb-data-khaki-light:  #84AA59;
+  --mb-data-blue:         #7878FA;
+  --mb-data-blue-light:   #7878FA33;
+  --mb-data-blue-cream:   #F2F3F8;
+  --mb-data-pink:         #E15895;
+  --mb-data-pink-light:   #FA78D5;
+  --mb-data-orange:       #E6593D;
+  --mb-data-yellow:       #EFC14C;
+  --mb-data-mint:         #89CCD5;
+  --mb-data-deep-mint:    #57849C;
+  --mb-data-red:          #F9746B;
+  --mb-data-red-light:    #FFC9C7;
+
+  /* ── NEUTRALS ──────────────────────────────────────────────── */
+  --mb-white:             #FFFFFF;
+  --mb-white-90:          #FFFFFFE6;
+  --mb-white-80:          #FFFFFFCC;
+  --mb-white-70:          #FFFFFFB2;
+  --mb-white-60:          #FFFFFF99;
+  --mb-white-20:          #FFFFFF33;
+  --mb-bg-10:             #F2F3F8;   /* surface */
+  --mb-bg-20:             #EFEFEF;
+  --mb-bg-30:             #E8E8E8;   /* report `light-gray` */
+  --mb-border:            #DDDEE7;
+  --mb-disabled:          #A2A3AD;
+  --mb-disabled-bg:       #B3B4B6;
+  --mb-gray-60:           #6F6F6F;   /* report `gray` (body) */
+  --mb-label-60:          #404040;
+  --mb-label-70:          #1F1F1F;
+  --mb-label-80:          #191A1E;   /* near-black; brand "Black" */
+  --mb-black:             #000000;
+  --mb-black-20:          #00000033;
+  --mb-black-40:          #00000066;
+  --mb-black-70:          rgba(0,0,0,0.7); /* common hero copy color */
+
+  /* ── SEMANTIC / FUNCTIONAL ─────────────────────────────────── */
+  --mb-danger:            #FF453A;
+  --mb-danger-deep:       #D33F3F;
+  --mb-danger-soft:       #FC5555;
+  --mb-danger-tint:       #FC55554D;
+  --mb-warning:           #EFC14C;
+  --mb-success:           #59CE90;
+  --mb-info:              #7878FA;
+
+  /* ── ROLE TOKENS ───────────────────────────────────────────── */
+  --mb-bg:                #FFFFFF;
+  --mb-bg-soft:           #F5EDFC;       /* on-brand soft tint */
+  --mb-bg-warm:           #EBE6E2;       /* hero / marketing surface */
+  --mb-bg-deep:           #5F0080;       /* inverted brand surface */
+  --mb-fg:                #1F1F1F;       /* primary text on light bg */
+  --mb-fg-soft:           rgba(0,0,0,0.7);
+  --mb-fg-muted:          #6F6F6F;
+  --mb-fg-disabled:       #A2A3AD;
+  --mb-fg-on-brand:       #FFFFFF;       /* text on purple */
+  --mb-fg-on-brand-soft:  #C6AEF6;       /* secondary text on purple */
+  --mb-primary:           #5F0080;
+  --mb-primary-hover:     #4C0066;
+  --mb-primary-press:     #3A004F;
+  --mb-primary-soft:      #D2AEFC;
+  --mb-accent:            #01F0C8;
+  --mb-link:              #5F0080;
+  --mb-divider:           #EFEFEF;
+  --mb-divider-strong:    #DDDEE7;
+
+  /* ── TYPE — FAMILIES ───────────────────────────────────────── */
+  --mb-font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR",
+                   -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+  --mb-font-text: "Noto Sans KR", "Pretendard Variable", Pretendard,
+                   -apple-system, BlinkMacSystemFont, sans-serif;
+  --mb-font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* ── TYPE — BASE SCALE (from app + admin Texts) ───────────── */
+  --mb-text-8:        8px;
+  --mb-text-12:       12px;
+  --mb-text-14:       14px;
+  --mb-text-16:       16px;
+  --mb-text-18:       18px;
+  --mb-text-20:       20px;
+  --mb-text-24:       24px;
+  --mb-text-28:       28px;
+  --mb-text-36:       36px;
+  --mb-text-38:       38px;
+  --mb-text-40:       40px;
+  --mb-text-48:       48px;
+  --mb-text-70:       70px;
+  --mb-text-130:      130px;
+
+  /* ── TYPE — REPORT SCALE (tailwind tokens, semantic) ──────── */
+  --mb-fs-title:      40px;   --mb-lh-title:    54px;   --mb-ls-title:    -0.0336em;
+  --mb-fs-subtitle:   28px;   --mb-lh-subtitle: 38px;   --mb-ls-subtitle: -0.0236em;
+  --mb-fs-heading:    20px;   --mb-lh-heading:  28px;   --mb-ls-heading:  -0.012em;
+  --mb-fs-label:      16px;   --mb-lh-label:    24px;   --mb-ls-label:    0.0057em;
+  --mb-fs-body:       14px;   --mb-lh-body:     22px;   --mb-ls-body:     0.0145em;
+  --mb-fs-caption:    12px;   --mb-lh-caption:  18px;   --mb-ls-caption:  0.0252em;
+
+  /* ── SPACING + RADII + ELEVATION ──────────────────────────── */
+  --mb-space-2:   2px;
+  --mb-space-4:   4px;
+  --mb-space-8:   8px;
+  --mb-space-12:  12px;
+  --mb-space-16:  16px;
+  --mb-space-20:  20px;
+  --mb-space-24:  24px;
+  --mb-space-32:  32px;
+  --mb-space-40:  40px;
+  --mb-space-60:  60px;
+  --mb-space-80:  80px;
+
+  --mb-radius-xs:  4px;
+  --mb-radius-sm:  8px;
+  --mb-radius-md:  12px;   /* default button */
+  --mb-radius-lg:  16px;   /* text radius wrapper */
+  --mb-radius-xl:  22px;   /* homepage 4x3 cards */
+  --mb-radius-2xl: 24px;   /* report panels */
+  --mb-radius-3xl: 42px;   /* branding showcase containers */
+  --mb-radius-4xl: 48px;   /* hero cards */
+  --mb-radius-pill: 9999px;
+
+  --mb-shadow-sm:  0 1px 1px rgba(25,26,30,0.06);
+  --mb-shadow-md:  0 8px 12px rgba(95,0,128,0.08);
+  --mb-shadow-lg:  0 12px 30px rgba(95,0,128,0.18);
+  --mb-shadow-card:0 4px 12px rgba(0,0,0,0.05);
+
+  /* ── MOTION ───────────────────────────────────────────────── */
+  --mb-ease:           cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mb-ease-out:       cubic-bezier(0.16, 1, 0.3, 1);
+  --mb-duration-fast:  120ms;
+  --mb-duration-base:  220ms;
+  --mb-duration-slow:  420ms;
+}
+
+/* ────────────────────────────────────────────────────────────────
+   SEMANTIC ELEMENTS — drop-in styles for raw HTML
+   Used by all preview cards + UI kits as defaults.
+   ──────────────────────────────────────────────────────────────── */
+
+html, body {
+  font-family: var(--mb-font-sans);
+  color: var(--mb-fg);
+  background: var(--mb-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, .mb-h1 {
+  font-family: var(--mb-font-sans);
+  font-weight: 700;
+  font-size: var(--mb-fs-title);
+  line-height: var(--mb-lh-title);
+  letter-spacing: var(--mb-ls-title);
+  color: var(--mb-fg);
+  margin: 0;
+}
+h2, .mb-h2 {
+  font-family: var(--mb-font-sans);
+  font-weight: 700;
+  font-size: var(--mb-fs-subtitle);
+  line-height: var(--mb-lh-subtitle);
+  letter-spacing: var(--mb-ls-subtitle);
+  color: var(--mb-fg);
+  margin: 0;
+}
+h3, .mb-h3 {
+  font-family: var(--mb-font-sans);
+  font-weight: 600;
+  font-size: var(--mb-fs-heading);
+  line-height: var(--mb-lh-heading);
+  letter-spacing: var(--mb-ls-heading);
+  color: var(--mb-fg);
+  margin: 0;
+}
+.mb-label {
+  font-family: var(--mb-font-sans);
+  font-weight: 500;
+  font-size: var(--mb-fs-label);
+  line-height: var(--mb-lh-label);
+  letter-spacing: var(--mb-ls-label);
+  color: var(--mb-fg);
+}
+p, .mb-body {
+  font-family: var(--mb-font-text);
+  font-weight: 400;
+  font-size: var(--mb-fs-body);
+  line-height: var(--mb-lh-body);
+  letter-spacing: var(--mb-ls-body);
+  color: var(--mb-fg-muted);
+  margin: 0;
+}
+.mb-caption {
+  font-family: var(--mb-font-text);
+  font-weight: 500;
+  font-size: var(--mb-fs-caption);
+  line-height: var(--mb-lh-caption);
+  letter-spacing: var(--mb-ls-caption);
+  color: var(--mb-fg-muted);
+}
+
+/* Eyebrow badge — used liberally in marketing surfaces */
+.mb-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: var(--mb-radius-pill);
+  background: var(--mb-pale);
+  color: var(--mb-purple-100);
+  font-family: var(--mb-font-sans);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+/* Primary button — contained */
+.mb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: var(--mb-radius-md);
+  border: 0;
+  background: var(--mb-primary);
+  color: var(--mb-fg-on-brand);
+  font-family: var(--mb-font-sans);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 24px;
+  cursor: pointer;
+  transition: background var(--mb-duration-base) var(--mb-ease),
+              transform var(--mb-duration-fast) var(--mb-ease);
+}
+.mb-btn:hover { background: var(--mb-primary-hover); }
+.mb-btn:active { background: var(--mb-primary-press); transform: scale(0.98); }
+.mb-btn:disabled { background: var(--mb-border); color: var(--mb-disabled); cursor: not-allowed; }
+
+.mb-btn--soft { background: var(--mb-pale); color: var(--mb-purple-100); }
+.mb-btn--soft:hover { background: var(--mb-pale-alt); }
+
+.mb-btn--ghost { background: transparent; color: var(--mb-fg); border: 1px solid var(--mb-label-70); }
+.mb-btn--ghost:hover { background: var(--mb-purple-cream); }
+
+/* Card */
+.mb-card {
+  background: var(--mb-white);
+  border-radius: var(--mb-radius-xl);
+  padding: 38px;
+}
+.mb-card--surface { background: var(--mb-bg-soft); }
+.mb-card--brand   { background: var(--mb-purple-100); color: var(--mb-fg-on-brand); }

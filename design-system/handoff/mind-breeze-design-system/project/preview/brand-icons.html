@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>Icons</title>
+<link rel="stylesheet" href="_card.css" />
+<style>
+  .icon-tile {
+    background:#fff; border:1px solid #EFEFEF; border-radius:12px;
+    height:78px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  }
+  .icon-tile img { width:24px; height:24px; }
+  .icon-tile span { font-family: var(--mb-font-mono); font-size:10px; color:var(--mb-fg-muted); }
+</style>
+</head>
+<body>
+<div class="col">
+  <div class="label-row"><span>SVG set from mind-breeze-app/src/assets/svg</span><span>outline · 24 · 2px stroke</span></div>
+  <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;">
+    <div class="icon-tile"><img src="../assets/icons/arrow_back.svg" alt="" /><span>arrow_back</span></div>
+    <div class="icon-tile"><img src="../assets/icons/arrow_forward.svg" alt="" /><span>arrow_fwd</span></div>
+    <div class="icon-tile"><img src="../assets/icons/ble_connected.svg" alt="" /><span>ble_on</span></div>
+    <div class="icon-tile"><img src="../assets/icons/ble_disconnected.svg" alt="" /><span>ble_off</span></div>
+    <div class="icon-tile"><img src="../assets/icons/circle_checked.svg" alt="" /><span>checked</span></div>
+    <div class="icon-tile"><img src="../assets/icons/circle_unchecked.svg" alt="" /><span>unchecked</span></div>
+    <div class="icon-tile"><img src="../assets/icons/close.svg" alt="" /><span>close</span></div>
+    <div class="icon-tile"><img src="../assets/icons/icon_google.svg" alt="" /><span>google</span></div>
+    <div class="icon-tile"><img src="../assets/icons/icon_apple.svg" alt="" /><span>apple</span></div>
+    <div class="icon-tile"><img src="../assets/icons/thumbs_up.svg" alt="" /><span>thumbs_up</span></div>
+    <div class="icon-tile"><img src="../assets/icons/thumbs_down.svg" alt="" /><span>thumbs_dn</span></div>
+    <div class="icon-tile"><img src="../assets/icons/thumbs_up_selected.svg" alt="" /><span>up · sel</span></div>
+    <div class="icon-tile"><img src="../assets/icons/thumbs_down_selected.svg" alt="" /><span>dn · sel</span></div>
+    <div class="icon-tile" style="background:#F5EDFC;color:#5F0080;">
+      <img src="../assets/favicon_symbol.svg" width="24" height="24" alt="" /><span>favicon</span>
+    </div>
+  </div>
+  <div class="token">Missing icon? Use Lucide @ stroke-width 2 with rounded caps — visually matches.</div>
+</div>
+</body>
+</html>

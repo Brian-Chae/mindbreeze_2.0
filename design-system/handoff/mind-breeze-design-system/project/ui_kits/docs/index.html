@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>MIND BREEZE — 제품 소개서</title>
+<link rel="icon" href="../../assets/favicon_symbol.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="../../colors_and_type.css" />
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #ECE6E2;
+    font-family: var(--mb-font-sans);
+  }
+  /* Spread layout — pages stacked vertically, like a brochure mockup */
+  .spread {
+    padding: 64px 48px 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 48px;
+  }
+  /* Floating side rail with page navigator */
+  .rail {
+    position: fixed;
+    top: 50%;
+    right: 24px;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--mb-border);
+    border-radius: 16px;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 50;
+    box-shadow: 0 12px 30px rgba(95,0,128,0.10);
+  }
+  .rail a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-family: var(--mb-font-mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--mb-fg-muted);
+    text-decoration: none;
+    transition: background 120ms;
+  }
+  .rail a:hover { background: var(--mb-purple-cream); color: var(--mb-purple-100); }
+  .rail a .n { width: 18px; font-weight: 700; color: var(--mb-fg); }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<nav class="rail">
+  <a href="#p1"><span class="n">01</span> Cover</a>
+  <a href="#p2"><span class="n">02</span> Contents</a>
+  <a href="#p3"><span class="n">03</span> Brand</a>
+  <a href="#p4"><span class="n">04</span> Product</a>
+  <a href="#p5"><span class="n">05</span> Flow</a>
+  <a href="#p6"><span class="n">06</span> Numbers</a>
+  <a href="#p7"><span class="n">07</span> People</a>
+  <a href="#p8"><span class="n">08</span> Back</a>
+</nav>
+
+<div id="app" class="spread" data-screen-label="Product Brochure"></div>
+
+<script type="text/babel" src="DocPage.jsx"></script>
+<script type="text/babel" src="CoverPage.jsx"></script>
+<script type="text/babel" src="TOCPage.jsx"></script>
+<script type="text/babel" src="SectionDividerPage.jsx"></script>
+<script type="text/babel" src="ContentPage.jsx"></script>
+<script type="text/babel" src="FeatureGridPage.jsx"></script>
+<script type="text/babel" src="QuotePage.jsx"></script>
+<script type="text/babel" src="StatsPage.jsx"></script>
+<script type="text/babel" src="BackCoverPage.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    return (
+      <React.Fragment>
+        <div id="p1"><CoverPage /></div>
+        <div id="p2"><TOCPage /></div>
+        <div id="p3"><SectionDividerPage /></div>
+        <div id="p4"><ContentPage /></div>
+        <div id="p5"><FeatureGridPage /></div>
+        <div id="p6"><StatsPage /></div>
+        <div id="p7"><QuotePage /></div>
+        <div id="p8"><BackCoverPage /></div>
+      </React.Fragment>
+    );
+  }
+  ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>
