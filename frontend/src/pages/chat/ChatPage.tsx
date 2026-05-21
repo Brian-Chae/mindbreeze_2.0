@@ -1,11 +1,42 @@
 // 채팅 페이지 — 좌측 대화 목록 + 우측 채팅 영역. /chat 또는 /chat/:sessionId
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, Component, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { ChatRoom } from '../../components/chat/ChatRoom';
+
+// 채팅 영역 에러 바운더리 — 크래시 시 흰 화면 대신 메시지 표시
+class ChatErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMsg: '' };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, errorMsg: error.message || '알 수 없는 오류' };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center">
+            <p className="text-sm text-[#B3261E] font-bold mb-1">채팅을 불러올 수 없습니다</p>
+            <p className="text-xs text-[#6F6F6F]">{this.state.errorMsg}</p>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="mt-3 px-4 py-1.5 rounded-full bg-[#F5EDFC] text-[#5F0080] text-xs font-medium"
+            >
+              새로고침
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -44,7 +75,7 @@ export default function ChatPage() {
 
   return (
     <AppShell title="채팅" sub="MESSAGES" contentPad="" noScroll>
-      <div className="h-full grid md:grid-cols-[320px_1fr]">
+      <div className="h-full flex flex-col md:grid md:grid-cols-[320px_1fr]">
         {/* 좌측 대화 목록 */}
         <aside
           className={`border-r border-[#EFEFEF] bg-white overflow-y-auto ${
@@ -103,7 +134,7 @@ export default function ChatPage() {
 
         {/* 우측 채팅 영역 */}
         <main
-          className={`flex flex-col overflow-hidden bg-white ${
+          className={`flex-1 flex flex-col overflow-hidden bg-white ${
             sessionId ? 'flex' : 'hidden md:flex'
           }`}
         >
@@ -119,7 +150,9 @@ export default function ChatPage() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
-                <ChatRoom roomId={selectedRoom.id} />
+                <ChatErrorBoundary>
+                  <ChatRoom roomId={selectedRoom.id} />
+                </ChatErrorBoundary>
               </div>
             </>
           ) : sessionId && !loading ? (
