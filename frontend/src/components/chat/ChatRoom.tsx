@@ -66,7 +66,7 @@ export function ChatRoom({ roomId }: Props) {
   }, [input, roomId, appendMessage]);
 
   return (
-    <div className="flex flex-col min-h-0 flex-1 bg-white">
+    <div className="flex flex-col min-h-0 flex-1 bg-white pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse"
