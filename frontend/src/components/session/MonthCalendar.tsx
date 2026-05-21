@@ -115,9 +115,10 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
           const isWeekStart = isWeekHighlight && d.getDay() === 0;
           const items = sessionsOn(d);
 
-          // 배경: 주간 하이라이트 > 당월/전월
+          // 배경: 선택날짜 > 주간 하이라이트 > 당월/전월
           let cellBg = '';
-          if (isWeekHighlight && inMonth) cellBg = 'bg-[#F5EDFC]';
+          if (isSelected) cellBg = 'bg-[#F5EDFC]';
+          else if (isWeekHighlight && inMonth) cellBg = 'bg-[#F5EDFC]';
           else if (isWeekHighlight) cellBg = 'bg-[#F5EDFC]/40';
           else if (inMonth) cellBg = 'bg-white';
           else cellBg = 'bg-[#FAFAFA]';
@@ -127,9 +128,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
               key={d.toISOString()}
               type="button"
               onClick={() => onSelectDate(d)}
-              className={`border-t border-l border-[#EFEFEF] h-[40px] md:h-[80px] p-1 md:p-1.5 flex flex-col items-stretch text-left transition-colors hover:bg-[#FAFAFA] ${cellBg} ${isWeekHighlight && !isWeekStart ? 'border-l-transparent' : ''} ${
-                isSelected ? 'ring-2 ring-inset ring-[#5F0080]' : ''
-              }`}
+              className={`border-t border-l border-[#EFEFEF] h-[40px] md:h-[80px] p-1 md:p-1.5 flex flex-col items-stretch text-left transition-colors hover:bg-[#FAFAFA] ${cellBg} ${isWeekHighlight && !isWeekStart ? 'border-l-transparent' : ''}`}
             >
               <div className="flex items-center justify-center md:justify-start">
                 <span
