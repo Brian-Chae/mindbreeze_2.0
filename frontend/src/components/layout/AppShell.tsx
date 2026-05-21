@@ -12,6 +12,7 @@ export interface AppShellProps {
   contentPad?: string;
   noScroll?: boolean;
   noBottomPad?: boolean;
+  hideBottomTab?: boolean;
 }
 
 export default function AppShell({
@@ -22,6 +23,7 @@ export default function AppShell({
   contentPad = 'px-4 py-4 md:px-8 md:py-6',
   noScroll = false,
   noBottomPad = false,
+  hideBottomTab = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -134,7 +136,7 @@ export default function AppShell({
       </section>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      <BottomTabBar onMoreClick={() => setDrawerOpen(true)} />
+      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} />}
     </div>
   );
 }
