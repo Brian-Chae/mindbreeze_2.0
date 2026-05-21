@@ -1,13 +1,12 @@
 // 채팅 페이지 — 좌측 대화 목록 + 우측 채팅 영역. /chat 또는 /chat/:sessionId
 
-import { useEffect, useMemo, useState, useRef, useCallback, Component, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, useCallback, Component, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import {
   listChatRooms,
   listChatMessages,
   sendChatMessage,
-  markRoomRead,
   type ChatRoom as ChatRoomDto,
   type ChatMessage,
 } from '../../lib/api/chat';
@@ -39,18 +38,17 @@ class InlineErrorBoundary extends Component<{ children: ReactNode; name: string 
   }
 }
 
-// 인라인 채팅방 (ChatRoom 없이)
+// 인라인 채팅방 — 최소화 버전 (clearRoomUnread/scroll 제거)
 function InlineChatRoom({ roomId }: { roomId: string }) {
   const user = useAuthStore((s) => s.user);
-  const messages = useChatStore((s) => s.messagesByRoom[roomId] ?? []);
+  const messages = useChatStore((s) => s.messagesByRoom[roomId]);
+  const msgList = messages ?? [];
   const setMessages = useChatStore((s) => s.setMessages);
   const appendMessage = useChatStore((s) => s.appendMessage);
-  const clearRoomUnread = useChatStore((s) => s.clearRoomUnread);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,16 +69,8 @@ function InlineChatRoom({ roomId }: { roomId: string }) {
         }
       });
     return () => { cancelled = true; };
-  }, [roomId, setMessages]);
-
-  useEffect(() => {
-    markRoomRead(roomId).catch(() => undefined);
-    clearRoomUnread(roomId);
-  }, [roomId, clearRoomUnread]);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-  }, [messages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
@@ -97,17 +87,17 @@ function InlineChatRoom({ roomId }: { roomId: string }) {
   return (
     <div className="flex flex-col min-h-0 flex-1 bg-white">
       <div className="px-3 py-1.5 text-[11px] font-mono flex gap-3 border-b border-[#EFEFEF] bg-[#FFF9F0]">
-        <span>state: {loading ? 'loading' : error ? 'error' : `msgs(${messages.length})`}</span>
+        <span>state: {loading ? 'loading' : error ? 'error' : `msgs(${msgList.length})`}</span>
         <span className="text-[#9CA0AE]">user: {user ? '✓' : '✗'}</span>
         {error && <span className="text-red-500">err: {error}</span>}
       </div>
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse">
+      <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse">
         {loading ? (
           <div className="text-center text-gray-500 py-4">메시지를 불러오는 중…</div>
-        ) : messages.length === 0 ? (
+        ) : msgList.length === 0 ? (
           <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다</div>
         ) : (
-          messages.map((m: ChatMessage) => (
+          msgList.map((m: ChatMessage) => (
             <div key={m.id} style={{ display: 'flex', justifyContent: m.type === 'system' ? 'center' : (!!user && m.sender_id === user.id ? 'flex-end' : 'flex-start'), margin: '4px 0' }}>
               <div style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ padding: '8px 14px', borderRadius: m.type === 'system' ? '999px' : '16px', fontSize: m.type === 'system' ? '12px' : '14px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: m.type === 'system' ? '#F2F3F8' : (!!user && m.sender_id === user.id ? '#5F0080' : '#F5EDFC'), color: m.type === 'system' ? '#6F6F6F' : (!!user && m.sender_id === user.id ? '#fff' : '#1F1F1F') }}>
