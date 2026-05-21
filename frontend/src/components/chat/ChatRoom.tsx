@@ -80,11 +80,11 @@ export function ChatRoom({ roomId }: Props) {
   }, [input, roomId, appendMessage, scrollToBottom]);
 
   return (
-    <div className="grid grid-rows-[1fr_auto] h-full min-h-0 bg-white">
+    <div className="flex flex-col h-full min-h-0 bg-white">
       {/* 메시지 리스트 — 일반 flex-col (oldest top → newest bottom) */}
       <div
         ref={listRef}
-        className="min-h-0 overflow-y-auto px-4 py-2"
+        className="flex-1 min-h-0 overflow-y-scroll px-4 py-2 pb-16"
         style={{
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
