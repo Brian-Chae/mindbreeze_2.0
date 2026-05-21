@@ -11,6 +11,7 @@ export interface AppShellProps {
   rightSlot?: ReactNode;
   contentPad?: string;
   noScroll?: boolean;
+  noBottomPad?: boolean;
 }
 
 export default function AppShell({
@@ -20,6 +21,7 @@ export default function AppShell({
   rightSlot,
   contentPad = 'px-4 py-4 md:px-8 md:py-6',
   noScroll = false,
+  noBottomPad = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -125,7 +127,7 @@ export default function AppShell({
         )}
 
         <div
-          className={`flex-1 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0`}
+          className={`flex-1 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
         >
           {children}
         </div>
