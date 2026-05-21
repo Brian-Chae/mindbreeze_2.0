@@ -1,8 +1,10 @@
-// 채팅방 컴포넌트 — 메시지 리스트 + 입력창
-import { useEffect, useRef, useState, useCallback } from 'react';
+// 채팅방 — iOS 모바일 대응 재구현
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { listChatMessages, sendChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
+import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { MessageBubble } from './MessageBubble';
 import { SystemMessage } from './SystemMessage';
 
@@ -21,33 +23,18 @@ export function ChatRoom({ roomId }: Props) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const didInitialScroll = useRef(false);
 
-  // DOM ref로 직접 스크롤 (store 의존성 회피)
-  const scrollToBottom = useCallback(() => {
-    const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, []);
-
-  // 초기 로딩 완료 시 한 번만 하단 스크롤
-  useEffect(() => {
-    if (!loading && !didInitialScroll.current) {
-      // DOM이 렌더링된 후 스크롤
-      requestAnimationFrame(() => {
-        scrollToBottom();
-        didInitialScroll.current = true;
-      });
-    }
-  }, [loading, scrollToBottom]);
+  const keyboardHeight = useKeyboardHeight();
+  const { handleScroll, scrollToBottom } = useAutoScroll(listRef, [msgList.length, loading]);
 
   // 초기 메시지 로딩
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    didInitialScroll.current = false;
     listChatMessages(roomId)
       .then((res) => {
         if (!cancelled) {
@@ -65,15 +52,14 @@ export function ChatRoom({ roomId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(async (): Promise<void> => {
     const content = input.trim();
     if (!content) return;
     setInput('');
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
       appendMessage(roomId, msg);
-      // 전송 후 최하단 스크롤
-      requestAnimationFrame(() => scrollToBottom());
+      scrollToBottom();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }
@@ -81,13 +67,13 @@ export function ChatRoom({ roomId }: Props) {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
-      {/* 메시지 리스트 — 일반 flex-col (oldest top → newest bottom) */}
+      {/* 메시지 리스트 */}
       <div
         ref={listRef}
-        className="flex-1 min-h-0 overflow-y-scroll px-4 py-2 pb-16"
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-scroll px-4 py-2"
         style={{
           WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
           overscrollBehavior: 'contain',
         }}
       >
@@ -111,11 +97,14 @@ export function ChatRoom({ roomId }: Props) {
       </div>
 
       {error && (
-        <div className="px-4 py-1 text-xs text-red-500 bg-red-50">{error}</div>
+        <div className="px-4 py-1 text-xs text-red-500 bg-red-50 shrink-0">{error}</div>
       )}
 
-      {/* 입력창 — 항상 하단 고정 */}
-      <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0">
+      {/* 입력창 — 항상 하단. 키보드 높이만큼 하단 padding */}
+      <div
+        className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0"
+        style={{ paddingBottom: `calc(0.75rem + ${keyboardHeight}px)` }}
+      >
         <input
           ref={inputRef}
           type="text"

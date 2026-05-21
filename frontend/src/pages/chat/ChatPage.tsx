@@ -117,7 +117,7 @@ export default function ChatPage() {
                   ← 대화 목록
                 </button>
               </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 min-h-0">
                 <ChatRoom roomId={selectedRoom.id} />
               </div>
             </>
