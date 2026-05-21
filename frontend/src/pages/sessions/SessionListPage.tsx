@@ -5,8 +5,33 @@ import { useEffect, useState, useCallback } from 'react';
 import { listSessions, createSession, type SessionDto, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
 import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
-import { useSessionStore } from '../../stores/sessionStore';
+import { MonthCalendar } from '../../components/session/MonthCalendar';
+import { DaySchedule } from '../../components/session/DaySchedule';
+import { useSessionStore, type CalendarViewMode } from '../../stores/sessionStore';
 import AppShell from '../../components/layout/AppShell';
+
+const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
+
+const startOfWeek = (date: Date): Date => {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+};
+
+const formatWeekRange = (date: Date): string => {
+  const start = startOfWeek(date);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${start.getFullYear()}.${pad(start.getMonth() + 1)}.${pad(start.getDate())} – ${pad(end.getMonth() + 1)}.${pad(end.getDate())}`;
+};
+
+const formatDay = (date: Date): string =>
+  `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} (${WEEKDAY[date.getDay()]})`;
+
+const formatMonth = (date: Date): string =>
+  `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 
 const nowPlusOneHour = (): string => {
   const d = new Date();
@@ -154,11 +179,19 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   );
 }
 
+const TABS: { mode: CalendarViewMode; label: string }[] = [
+  { mode: 'daily', label: '일간' },
+  { mode: 'weekly', label: '주간' },
+  { mode: 'monthly', label: '월간' },
+  { mode: 'list', label: '목록' },
+];
+
 export default function SessionListPage() {
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { viewMode, setViewMode, currentDate, setCurrentDate } = useSessionStore();
 
   const refreshSessions = useCallback(() => {
@@ -173,9 +206,19 @@ export default function SessionListPage() {
     refreshSessions();
   }, [refreshSessions]);
 
+  const shiftDay = (direction: 1 | -1): void => {
+    const next = new Date(currentDate);
+    next.setDate(next.getDate() + direction);
+    setCurrentDate(next);
+  };
   const shiftWeek = (direction: 1 | -1): void => {
     const next = new Date(currentDate);
     next.setDate(next.getDate() + direction * 7);
+    setCurrentDate(next);
+  };
+  const shiftMonth = (direction: 1 | -1): void => {
+    const next = new Date(currentDate);
+    next.setMonth(next.getMonth() + direction);
     setCurrentDate(next);
   };
 
@@ -185,71 +228,109 @@ export default function SessionListPage() {
     </button>
   );
 
+  const navLabel =
+    viewMode === 'daily' ? formatDay(currentDate)
+      : viewMode === 'weekly' ? formatWeekRange(currentDate)
+        : viewMode === 'monthly' ? formatMonth(currentDate)
+          : '';
+  const onShift = (dir: 1 | -1): void => {
+    if (viewMode === 'daily') shiftDay(dir);
+    else if (viewMode === 'weekly') shiftWeek(dir);
+    else if (viewMode === 'monthly') shiftMonth(dir);
+  };
+
   return (
     <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot}>
       <div className="max-w-6xl mx-auto space-y-5">
-        <div className="flex items-center justify-between">
-          <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                viewMode === 'list' ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
-              }`}
-            >
-              목록
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('weekly')}
-              className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                viewMode === 'weekly' ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
-              }`}
-            >
-              주간
-            </button>
-          </div>
-          {viewMode === 'weekly' && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => shiftWeek(-1)}
-                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-              >
-                ‹
-              </button>
-              <span className="text-sm font-mono text-[#1F1F1F] min-w-[120px] text-center">
-                {currentDate.toLocaleDateString('ko-KR')}
-              </span>
-              <button
-                type="button"
-                onClick={() => shiftWeek(1)}
-                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-              >
-                ›
-              </button>
-            </div>
+        {/* 모바일: 월간 캘린더 + 일별 일정 */}
+        <div className="md:hidden space-y-4">
+          <MonthCalendar
+            sessions={sessions}
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            onShiftMonth={shiftMonth}
+          />
+          {!loading && !error && (
+            <DaySchedule sessions={sessions} selectedDate={selectedDate} />
           )}
+          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+          {error && <p className="text-[#B3261E]">{error}</p>}
         </div>
 
-        {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-        {error && <p className="text-[#B3261E]">{error}</p>}
-
-        {!loading && !error && viewMode === 'list' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {sessions.length === 0 ? (
-              <p className="text-[#6F6F6F] col-span-full text-center py-12">
-                등록된 세션이 없습니다.
-              </p>
-            ) : (
-              sessions.map((s) => <SessionCard key={s.id} session={s} />)
+        {/* 데스크톱: 일간/주간/월간/목록 4탭 */}
+        <div className="hidden md:block space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+              {TABS.map((t) => (
+                <button
+                  key={t.mode}
+                  type="button"
+                  onClick={() => setViewMode(t.mode)}
+                  className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+                    viewMode === t.mode ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {viewMode !== 'list' && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onShift(-1)}
+                  className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                  aria-label="이전"
+                >
+                  ‹
+                </button>
+                <span className="text-sm font-mono text-[#1F1F1F] min-w-[180px] text-center">
+                  {navLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onShift(1)}
+                  className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                  aria-label="다음"
+                >
+                  ›
+                </button>
+              </div>
             )}
           </div>
-        )}
 
-        {!loading && !error && viewMode === 'weekly' && (
-          <CalendarView sessions={sessions} currentDate={currentDate} />
-        )}
+          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+          {error && <p className="text-[#B3261E]">{error}</p>}
+
+          {!loading && !error && viewMode === 'list' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {sessions.length === 0 ? (
+                <p className="text-[#6F6F6F] col-span-full text-center py-12">
+                  등록된 세션이 없습니다.
+                </p>
+              ) : (
+                sessions.map((s) => <SessionCard key={s.id} session={s} />)
+              )}
+            </div>
+          )}
+
+          {!loading && !error && viewMode === 'weekly' && (
+            <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
+          )}
+          {!loading && !error && viewMode === 'daily' && (
+            <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
+          )}
+          {!loading && !error && viewMode === 'monthly' && (
+            <MonthCalendar
+              sessions={sessions}
+              currentDate={currentDate}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              onShiftMonth={shiftMonth}
+            />
+          )}
+        </div>
 
         <CreateSessionModal
           open={showCreate}

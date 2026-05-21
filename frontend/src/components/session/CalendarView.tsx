@@ -19,16 +19,22 @@ const sameDay = (a: Date, b: Date): boolean =>
 interface Props {
   sessions: SessionDto[];
   currentDate: Date;
+  mode?: 'weekly' | 'daily';
 }
 
-export function CalendarView({ sessions, currentDate }: Props) {
+export function CalendarView({ sessions, currentDate, mode = 'weekly' }: Props) {
   const weekStart = startOfWeek(currentDate);
   const today = new Date();
-  const days: Date[] = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart);
-    d.setDate(weekStart.getDate() + i);
-    return d;
-  });
+  const days: Date[] =
+    mode === 'daily'
+      ? [new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate())]
+      : Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(weekStart);
+          d.setDate(weekStart.getDate() + i);
+          return d;
+        });
+  const gridCols = mode === 'daily' ? 'grid-cols-[60px_1fr]' : 'grid-cols-[60px_repeat(7,1fr)]';
+  const minWidth = mode === 'daily' ? 'min-w-[320px]' : 'min-w-[800px]';
 
   const cellSessions = (day: Date, hour: number): SessionDto[] =>
     sessions.filter((s) => {
@@ -57,8 +63,8 @@ export function CalendarView({ sessions, currentDate }: Props) {
   };
 
   return (
-    <div className="overflow-x-auto bg-white rounded-[20px] border border-[#EFEFEF]">
-      <div className="min-w-[800px] grid grid-cols-[60px_repeat(7,1fr)]">
+    <div className="hidden md:block overflow-x-auto bg-white rounded-[20px] border border-[#EFEFEF]">
+      <div className={`${minWidth} grid ${gridCols}`}>
         <div className="bg-[#FAFAFA] border-b border-[#EFEFEF]" />
         {days.map((d) => {
           const isToday = sameDay(d, today);
