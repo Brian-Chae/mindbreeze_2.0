@@ -85,6 +85,7 @@ export function ChatRoom({ roomId }: Props) {
       <div
         ref={listRef}
         className="flex-1 min-h-0 overflow-y-auto px-4 py-2"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {loading ? (
           <div className="text-center text-gray-500 py-4">메시지를 불러오는 중…</div>
