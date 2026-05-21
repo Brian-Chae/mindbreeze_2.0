@@ -1,5 +1,5 @@
 // 채팅방 컴포넌트 — 메시지 리스트 + 입력창
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { listChatMessages, sendChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -20,7 +20,6 @@ export function ChatRoom({ roomId }: Props) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   // 초기 메시지 로딩
   useEffect(() => {
@@ -44,14 +43,7 @@ export function ChatRoom({ roomId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  // 새 메시지 도착 시 하단 스크롤
-  useEffect(() => {
-    if (scrollRef.current && msgList.length > 0) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-    // msgList 참조를 의도적으로 의존성에서 제외 (DOM only)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages]);
+  // flex-col-reverse가 새 메시지를 자동으로 하단에 배치하므로 별도 스크롤 불필요
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
@@ -68,7 +60,6 @@ export function ChatRoom({ roomId }: Props) {
   return (
     <div className="flex flex-col min-h-0 flex-1 bg-white pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       <div
-        ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse"
       >
         {loading ? (
