@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.record import Report
-from app.models.notification import Notification
 from app.models.user import User
+from app.services import notification_service
 from app.tasks.report_task import generate_report_inline
 
 
@@ -162,16 +162,18 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     content["approved"] = True
     report.content = content
 
-    # F10 알림 이벤트 (이메일 발송은 별도 SDD)
+    # F10 알림 이벤트
     try:
-        notif = Notification(
-            user_id=report.user_id,
-            type="report_approved",
-            title="리포트가 도착했습니다",
-            body=f"세션 리포트가 승인되어 전송되었습니다",
-            extra={"report_id": str(report.id), "session_id": str(report.session_id)},
+        notification_service.notify_event(
+            "report_ready",
+            report.user_id,
+            {
+                "title": "리포트가 도착했습니다",
+                "body": "세션 리포트가 승인되어 전송되었습니다",
+                "extra": {"report_id": str(report.id), "session_id": str(report.session_id)},
+            },
+            db,
         )
-        db.add(notif)
     except Exception:  # noqa: BLE001
         pass
 

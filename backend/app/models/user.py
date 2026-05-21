@@ -4,8 +4,26 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import String, DateTime, Text, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+
+DEFAULT_NOTIFICATION_PREFERENCES: dict = {
+    "email": {
+        "session_booked": True,
+        "session_cancelled": True,
+        "chat_message": False,
+        "report_ready": True,
+        "verification_result": True,
+    },
+    "in_app": {
+        "session_booked": True,
+        "session_cancelled": True,
+        "chat_message": True,
+        "report_ready": True,
+        "verification_result": True,
+    },
+}
 
 from app.core.database import Base
 
@@ -24,6 +42,7 @@ class User(Base):
     verified_tier: Mapped[str] = mapped_column(String(20), default="unverified")
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, server_default="active")
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
+    notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

@@ -34,6 +34,8 @@ import ReportDetailPage from './pages/reports/ReportDetailPage';
 import AdminReviewListPage from './pages/admin/AdminReviewListPage';
 import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
+import SettingsPage from './pages/SettingsPage';
 import { useAuthStore } from './stores/authStore';
 
 function App() {
@@ -82,6 +84,8 @@ function App() {
         <Route path="/admin/reviews" element={<AdminReviewListPage />} />
         <Route path="/admin/reviews/:targetType/:id" element={<AdminReviewDetailPage />} />
         <Route path="/admin/users" element={<UserManagementPage />} />
+        <Route path="/notifications" element={<NotificationCenterPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </BrowserRouter>
   );

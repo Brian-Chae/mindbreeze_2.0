@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
 import MobileDrawer from './MobileDrawer';
 import BottomTabBar from './BottomTabBar';
+import { getUnreadCount } from '../../lib/api/notifications';
 
 export interface AppShellProps {
   children: ReactNode;
@@ -21,6 +22,18 @@ export default function AppShell({
   noScroll = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    const poll = () => {
+      getUnreadCount()
+        .then((r) => setUnread(r.unread))
+        .catch(() => {});
+    };
+    poll();
+    const id = setInterval(poll, 30000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="min-h-screen w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
@@ -53,9 +66,14 @@ export default function AppShell({
         <button
           type="button"
           aria-label="알림"
-          className="w-10 h-10 flex items-center justify-center -mr-2 text-[#1F1F1F]"
+          className="w-10 h-10 flex items-center justify-center -mr-2 text-[#1F1F1F] relative"
         >
           <StrokeIcon d={ICONS.bell} size={22} />
+          {unread > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center">
+              {unread > 9 ? '9+' : unread}
+            </span>
+          )}
         </button>
       </header>
 
@@ -77,9 +95,14 @@ export default function AppShell({
             <button
               type="button"
               aria-label="알림"
-              className="w-11 h-11 rounded-full bg-[#F2F3F8] flex items-center justify-center text-[#1F1F1F] hover:bg-[#E6E7EE] transition-colors"
+              className="w-11 h-11 rounded-full bg-[#F2F3F8] flex items-center justify-center text-[#1F1F1F] hover:bg-[#E6E7EE] transition-colors relative"
             >
               <StrokeIcon d={ICONS.bell} />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
             </button>
           </div>
         </header>

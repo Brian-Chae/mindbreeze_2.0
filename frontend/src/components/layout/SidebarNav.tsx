@@ -75,6 +75,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
   { to: '/reports', label: '리포트', icon: ICONS.report },
+  { to: '/notifications', label: '알림', icon: ICONS.bell },
   { to: '/settings', label: '설정', icon: ICONS.settings },
 ];
 
