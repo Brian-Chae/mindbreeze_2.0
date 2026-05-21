@@ -33,6 +33,8 @@ def _now() -> datetime:
 
 
 def _serialize(s: Session) -> dict:
+    parts = list(s.participants or [])
+    waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
         "type": s.type,
@@ -50,9 +52,12 @@ def _serialize(s: Session) -> dict:
                 "band_connected": p.band_connected,
                 "consent_audio": p.consent_audio,
                 "consent_eeg": p.consent_eeg,
+                "is_waitlisted": p.is_waitlisted,
+                "waitlist_position": p.waitlist_position,
             }
-            for p in (s.participants or [])
+            for p in parts
         ],
+        "waitlist_count": waitlist_count,
     }
 
 
@@ -232,14 +237,34 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     return _serialize(s)
 
 
+def _next_waitlist_position(s: Session) -> int:
+    positions = [p.waitlist_position or 0 for p in (s.participants or []) if p.is_waitlisted]
+    return (max(positions) + 1) if positions else 1
+
+
+def _promote_waitlist(s: Session, db: DBSession) -> None:
+    """정원에 여유가 생기면 대기열 1순위를 자동 승격"""
+    active = [p for p in (s.participants or []) if not p.is_waitlisted]
+    if len(active) >= s.max_participants:
+        return
+    waiting = sorted(
+        [p for p in (s.participants or []) if p.is_waitlisted],
+        key=lambda p: p.waitlist_position or 0,
+    )
+    if not waiting:
+        return
+    promoted = waiting[0]
+    promoted.is_waitlisted = False
+    promoted.waitlist_position = None
+    for idx, p in enumerate(waiting[1:], start=1):
+        p.waitlist_position = idx
+    db.flush()
+
+
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션에는 초대할 수 없습니다")
-
-    current = len(s.participants or [])
-    if current >= s.max_participants:
-        raise HTTPException(status_code=400, detail="참여자 정원을 초과했습니다")
 
     target_uuid = _to_uuid(user_id)
     existing = (
@@ -253,7 +278,52 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     if existing:
         raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
 
-    db.add(SessionParticipant(session_id=s.id, user_id=target_uuid))
+    active = [p for p in (s.participants or []) if not p.is_waitlisted]
+    if len(active) >= s.max_participants:
+        position = _next_waitlist_position(s)
+        db.add(SessionParticipant(
+            session_id=s.id,
+            user_id=target_uuid,
+            is_waitlisted=True,
+            waitlist_position=position,
+        ))
+    else:
+        db.add(SessionParticipant(session_id=s.id, user_id=target_uuid))
+
+    db.commit()
+    db.refresh(s)
+    return _serialize(s)
+
+
+def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
+    s = _get_session_as_host(session_id, host_id, db)
+    target_uuid = _to_uuid(user_id)
+    participant = (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.user_id == target_uuid,
+        )
+        .first()
+    )
+    if not participant:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+
+    was_waitlisted = participant.is_waitlisted
+    removed_position = participant.waitlist_position
+    db.delete(participant)
+    db.flush()
+    db.refresh(s)
+
+    if was_waitlisted and removed_position is not None:
+        # 대기열에서 빠진 경우, 뒤 순번 당기기
+        for p in (s.participants or []):
+            if p.is_waitlisted and p.waitlist_position and p.waitlist_position > removed_position:
+                p.waitlist_position -= 1
+        db.flush()
+    else:
+        _promote_waitlist(s, db)
+
     db.commit()
     db.refresh(s)
     return _serialize(s)

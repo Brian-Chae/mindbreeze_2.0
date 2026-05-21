@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import String, Integer, DateTime, Text, Boolean, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -39,5 +40,7 @@ class SessionParticipant(Base):
     band_connected: Mapped[bool] = mapped_column(Boolean, default=False)
     consent_audio: Mapped[bool] = mapped_column(Boolean, default=False)
     consent_eeg: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_waitlisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    waitlist_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     session = relationship("Session", back_populates="participants")

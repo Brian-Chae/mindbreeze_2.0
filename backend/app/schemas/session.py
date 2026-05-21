@@ -34,6 +34,8 @@ class ParticipantInfo(BaseModel):
     band_connected: bool = False
     consent_audio: bool = False
     consent_eeg: bool = False
+    is_waitlisted: bool = False
+    waitlist_position: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -50,6 +52,7 @@ class SessionResponse(BaseModel):
     max_participants: int
     created_at: datetime
     participants: list[ParticipantInfo] = []
+    waitlist_count: int = 0
 
     model_config = {"from_attributes": True}
 

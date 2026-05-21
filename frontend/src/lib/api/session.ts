@@ -10,6 +10,10 @@ export interface SessionParticipant {
   band_connected: boolean;
   consent_audio: boolean;
   consent_eeg: boolean;
+  is_waitlisted: boolean;
+  waitlist_position: number | null;
+  user_name?: string;
+  user_email?: string;
 }
 
 export interface SessionDto {
@@ -24,6 +28,7 @@ export interface SessionDto {
   max_participants: number;
   created_at: string;
   participants: SessionParticipant[];
+  waitlist_count: number;
 }
 
 export interface SessionListResponse {
@@ -73,6 +78,9 @@ export const transitionSession = (id: string, action: SessionAction): Promise<Se
 
 export const inviteParticipant = (id: string, userId: string): Promise<SessionDto> =>
   apiClient.post<SessionDto>(`/sessions/${id}/invite`, { user_id: userId });
+
+export const removeParticipant = (id: string, userId: string): Promise<SessionDto> =>
+  apiClient.delete<SessionDto>(`/sessions/${id}/participants/${userId}`);
 
 export const addMarker = (id: string, timestampSec: number, note: string): Promise<{ markers: unknown[] }> =>
   apiClient.post<{ markers: unknown[] }>(`/sessions/${id}/markers`, { timestamp_sec: timestampSec, note });

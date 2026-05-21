@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createSession, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
+import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 
 export default function SessionCreatePage() {
@@ -13,6 +14,7 @@ export default function SessionCreatePage() {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(1);
+  const [selectedParticipants, setSelectedParticipants] = useState<SelectedParticipant[]>([]);
   const [force, setForce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +31,7 @@ export default function SessionCreatePage() {
         title: title || undefined,
         notes: notes || undefined,
         max_participants: maxParticipants,
+        participant_ids: selectedParticipants.length > 0 ? selectedParticipants.map((s) => s.userId) : undefined,
         force,
       };
       const created = await createSession(payload);
@@ -95,6 +98,12 @@ export default function SessionCreatePage() {
                 />
               </div>
             </div>
+
+            <ParticipantPicker
+              selected={selectedParticipants}
+              onChange={setSelectedParticipants}
+              maxParticipants={maxParticipants}
+            />
 
             <div>
               <label className={labelCls}>제목</label>

@@ -5,11 +5,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   deleteSession,
   getSession,
+  inviteParticipant,
+  removeParticipant,
   transitionSession,
   type SessionAction,
   type SessionDto,
 } from '../../lib/api/session';
 import { StatusBadge } from '../../components/session/StatusBadge';
+import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 
 const TYPE_LABELS: Record<SessionDto['type'], string> = {
   clinical: '임상심리상담',
@@ -39,6 +42,11 @@ export default function SessionDetailPage(){
   const [session, setSession] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteSelected, setInviteSelected] = useState<SelectedParticipant[]>([]);
+
+  const activeParticipants = (session?.participants ?? []).filter((p) => !p.is_waitlisted);
+  const waitlisted = (session?.participants ?? []).filter((p) => p.is_waitlisted);
 
   useEffect(() => {
     if (!id) return;
@@ -70,6 +78,39 @@ export default function SessionDetailPage(){
       navigate('/sessions');
     } catch (e) {
       setError(e instanceof Error ? e.message : '삭제에 실패했습니다');
+      setBusy(false);
+    }
+  };
+
+  const handleInvite = async (): Promise<void> => {
+    if (!id || inviteSelected.length === 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      let updated = session;
+      for (const s of inviteSelected) {
+        updated = await inviteParticipant(id, s.userId);
+      }
+      setSession(updated);
+      setShowInvite(false);
+      setInviteSelected([]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '초대에 실패했습니다');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemoveParticipant = async (userId: string): Promise<void> => {
+    if (!id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await removeParticipant(id, userId);
+      setSession(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '참여자 제거에 실패했습니다');
+    } finally {
       setBusy(false);
     }
   };
@@ -125,6 +166,91 @@ export default function SessionDetailPage(){
           <div>
             <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">메모</div>
             <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{session.notes}</p>
+          </div>
+        )}
+      </div>
+
+      {/* 참여자 섹션 */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-700">
+            참여자 ({activeParticipants.length}/{session.max_participants}명)
+            {session.waitlist_count > 0 && (
+              <span className="ml-2 text-gray-400 font-normal">대기 {session.waitlist_count}명</span>
+            )}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowInvite(true)}
+            disabled={busy}
+            className="text-xs text-[#5F0080] font-medium hover:underline"
+          >
+            + 참여자 초대
+          </button>
+        </div>
+
+        {activeParticipants.length === 0 && waitlisted.length === 0 ? (
+          <p className="text-sm text-gray-400">아직 참여자가 없습니다</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {activeParticipants.map((p) => (
+              <li key={p.user_id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-400" />
+                  <span className="text-sm text-gray-800">
+                    {p.user_name || p.user_email || p.user_id.slice(0, 8)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveParticipant(p.user_id)}
+                  disabled={busy}
+                  className="text-xs text-red-400 hover:text-red-600"
+                >
+                  제거
+                </button>
+              </li>
+            ))}
+            {waitlisted.length > 0 && (
+              <>
+                <li className="py-2 text-xs text-gray-400 font-medium">대기열</li>
+                {waitlisted
+                  .sort((a, b) => (a.waitlist_position ?? 99) - (b.waitlist_position ?? 99))
+                  .map((p) => (
+                    <li key={p.user_id} className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        <span className="text-sm text-gray-500">
+                          {p.user_name || p.user_email || p.user_id.slice(0, 8)}
+                        </span>
+                        <span className="text-xs text-gray-400">({p.waitlist_position}순위)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveParticipant(p.user_id)}
+                        disabled={busy}
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
+                        제거
+                      </button>
+                    </li>
+                  ))}
+              </>
+            )}
+          </ul>
+        )}
+
+        {showInvite && (
+          <div className="border-t border-gray-200 pt-3 mt-3">
+            <ParticipantPicker
+              selected={inviteSelected}
+              onChange={setInviteSelected}
+              maxParticipants={session.max_participants - activeParticipants.length}
+            />
+            <div className="flex gap-2 mt-3">
+              <button type="button" onClick={handleInvite} disabled={busy || inviteSelected.length === 0} className="mb-btn text-sm">초대</button>
+              <button type="button" onClick={() => { setShowInvite(false); setInviteSelected([]); }} className="mb-btn mb-btn--ghost text-sm">취소</button>
+            </div>
           </div>
         )}
       </div>

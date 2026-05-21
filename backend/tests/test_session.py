@@ -173,7 +173,13 @@ def test_13_meditation_정원_초과(client):
         json={"user_id": participants[5]["id"]},
         headers=host["auth"],
     )
-    assert r6.status_code == 400
+    assert r6.status_code == 200
+    body = r6.json()
+    waitlisted = [p for p in body["participants"] if p["is_waitlisted"]]
+    assert len(waitlisted) == 1
+    assert waitlisted[0]["user_id"] == participants[5]["id"]
+    assert waitlisted[0]["waitlist_position"] == 1
+    assert body["waitlist_count"] == 1
 
 
 def test_14_세션_목록_host와_participant_포함(client):

@@ -95,6 +95,16 @@ def invite_participant(
     return session_service.invite_participant(session_id, current_user["id"], payload.user_id, db)
 
 
+@router.delete("/{session_id}/participants/{user_id}", response_model=SessionResponse)
+def remove_participant(
+    session_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    return session_service.remove_participant(session_id, current_user["id"], user_id, db)
+
+
 @router.post("/{session_id}/markers")
 def add_marker(
     session_id: str,
