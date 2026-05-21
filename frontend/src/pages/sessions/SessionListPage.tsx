@@ -203,7 +203,6 @@ interface MobileSectionProps {
   loading: boolean;
   error: string | null;
   currentDate: Date;
-  selectedDate: Date;
   setSelectedDate: (d: Date) => void;
   shiftMonth: (dir: 1 | -1) => void;
   shiftDay: (dir: 1 | -1) => void;
@@ -211,13 +210,20 @@ interface MobileSectionProps {
 }
 
 function MobileSection({
-  sessions, loading, error, currentDate, selectedDate, setSelectedDate, shiftMonth, shiftDay, shiftWeek,
+  sessions, loading, error, currentDate, setSelectedDate, shiftMonth, shiftDay, shiftWeek,
 }: MobileSectionProps) {
   const [mode, setMode] = useState<MobileMode>('daily');
+  const { setCurrentDate } = useSessionStore();
   const navLabel = mode === 'daily' ? formatMobileDay(currentDate) : formatMobileWeekRange(currentDate);
   const onShift = (dir: 1 | -1): void => {
     if (mode === 'daily') shiftDay(dir);
     else shiftWeek(dir);
+  };
+
+  // MonthCalendar 날짜 선택 → sessionStore + 로컬 selectedDate 동기화
+  const handleCalendarSelect = (date: Date) => {
+    setCurrentDate(date);
+    setSelectedDate(date);
   };
 
   return (
@@ -225,8 +231,8 @@ function MobileSection({
       <MonthCalendar
         sessions={sessions}
         currentDate={currentDate}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
+        selectedDate={currentDate}
+        onSelectDate={handleCalendarSelect}
         onShiftMonth={shiftMonth}
       />
 
@@ -337,7 +343,6 @@ export default function SessionListPage() {
           loading={loading}
           error={error}
           currentDate={currentDate}
-          selectedDate={selectedDate}
           setSelectedDate={setSelectedDate}
           shiftMonth={shiftMonth}
           shiftDay={shiftDay}
