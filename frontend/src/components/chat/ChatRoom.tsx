@@ -1,5 +1,5 @@
 // 채팅방 컴포넌트 — 메시지 리스트 + 입력창
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { listChatMessages, sendChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -13,19 +13,40 @@ interface Props {
 export function ChatRoom({ roomId }: Props) {
   const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId]);
-  const msgList = messages ?? [];
+  // store는 최신순 저장 → 일반 flex-col용으로 오래된 순으로 뒤집기
+  const msgList = messages ? [...messages].reverse() : [];
   const setMessages = useChatStore((s) => s.setMessages);
   const appendMessage = useChatStore((s) => s.appendMessage);
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const didInitialScroll = useRef(false);
+
+  // DOM ref로 직접 스크롤 (store 의존성 회피)
+  const scrollToBottom = useCallback(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, []);
+
+  // 초기 로딩 완료 시 한 번만 하단 스크롤
+  useEffect(() => {
+    if (!loading && !didInitialScroll.current) {
+      // DOM이 렌더링된 후 스크롤
+      requestAnimationFrame(() => {
+        scrollToBottom();
+        didInitialScroll.current = true;
+      });
+    }
+  }, [loading, scrollToBottom]);
 
   // 초기 메시지 로딩
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    didInitialScroll.current = false;
     listChatMessages(roomId)
       .then((res) => {
         if (!cancelled) {
@@ -43,8 +64,6 @@ export function ChatRoom({ roomId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
-  // flex-col-reverse가 새 메시지를 자동으로 하단에 배치하므로 별도 스크롤 불필요
-
   const handleSend = useCallback(async () => {
     const content = input.trim();
     if (!content) return;
@@ -52,15 +71,19 @@ export function ChatRoom({ roomId }: Props) {
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
       appendMessage(roomId, msg);
+      // 전송 후 하단 스크롤
+      requestAnimationFrame(() => scrollToBottom());
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }
-  }, [input, roomId, appendMessage]);
+  }, [input, roomId, appendMessage, scrollToBottom]);
 
   return (
     <div className="flex flex-col min-h-0 flex-1 bg-white pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      {/* 메시지 리스트 — 일반 flex-col (oldest top → newest bottom) */}
       <div
-        className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse"
+        ref={listRef}
+        className="flex-1 overflow-y-auto px-4 py-2"
       >
         {loading ? (
           <div className="text-center text-gray-500 py-4">메시지를 불러오는 중…</div>
@@ -85,7 +108,8 @@ export function ChatRoom({ roomId }: Props) {
         <div className="px-4 py-1 text-xs text-red-500 bg-red-50">{error}</div>
       )}
 
-      <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white">
+      {/* 입력창 — 항상 하단 고정 */}
+      <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0">
         <input
           type="text"
           value={input}
