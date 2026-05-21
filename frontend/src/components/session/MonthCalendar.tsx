@@ -112,6 +112,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
           const isToday = sameDay(d, today);
           const isSelected = selectedDate ? sameDay(d, selectedDate) : false;
           const isWeekHighlight = weekHighlight ? inSameWeek(d, weekHighlight) : false;
+          const isWeekStart = isWeekHighlight && d.getDay() === 0;
           const items = sessionsOn(d);
 
           // 배경: 주간 하이라이트 > 당월/전월
@@ -126,7 +127,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
               key={d.toISOString()}
               type="button"
               onClick={() => onSelectDate(d)}
-              className={`border-t border-l border-[#EFEFEF] h-[40px] md:h-[80px] p-1 md:p-1.5 flex flex-col items-stretch text-left transition-colors hover:bg-[#FAFAFA] ${cellBg} ${
+              className={`border-t border-l border-[#EFEFEF] h-[40px] md:h-[80px] p-1 md:p-1.5 flex flex-col items-stretch text-left transition-colors hover:bg-[#FAFAFA] ${cellBg} ${isWeekHighlight && !isWeekStart ? 'border-l-transparent' : ''} ${
                 isSelected ? 'ring-2 ring-inset ring-[#5F0080]' : ''
               }`}
             >
