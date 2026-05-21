@@ -12,6 +12,8 @@ import {
 } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
+import { MessageBubble } from '../../components/chat/MessageBubble';
+import { SystemMessage } from '../../components/chat/SystemMessage';
 
 // 인라인 ErrorBoundary
 class InlineErrorBoundary extends Component<{ children: ReactNode; name: string }, { hasError: boolean; errorMsg: string }> {
@@ -97,18 +99,13 @@ function InlineChatRoom({ roomId }: { roomId: string }) {
         ) : msgList.length === 0 ? (
           <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다</div>
         ) : (
-          msgList.map((m: ChatMessage) => (
-            <div key={m.id} style={{ display: 'flex', justifyContent: m.type === 'system' ? 'center' : (!!user && m.sender_id === user.id ? 'flex-end' : 'flex-start'), margin: '4px 0' }}>
-              <div style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '8px 14px', borderRadius: m.type === 'system' ? '999px' : '16px', fontSize: m.type === 'system' ? '12px' : '14px', whiteSpace: 'pre-wrap', wordBreak: 'break-word', background: m.type === 'system' ? '#F2F3F8' : (!!user && m.sender_id === user.id ? '#5F0080' : '#F5EDFC'), color: m.type === 'system' ? '#6F6F6F' : (!!user && m.sender_id === user.id ? '#fff' : '#1F1F1F') }}>
-                  {m.content ?? '(내용 없음)'}
-                </div>
-                <span style={{ fontSize: '10px', color: '#9CA0AE', marginTop: '2px', textAlign: (!!user && m.sender_id === user.id) ? 'right' : 'left' }}>
-                  {(m.created_at ?? '').slice(11, 16)}
-                </span>
-              </div>
-            </div>
-          ))
+          msgList.map((m: ChatMessage) =>
+            m.type === 'system' ? (
+              <SystemMessage key={m.id} content={m.content} createdAt={m.created_at} />
+            ) : (
+              <MessageBubble key={m.id} message={m} isMine={!!user && m.sender_id === user.id} />
+            )
+          )
         )}
       </div>
       <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white">
