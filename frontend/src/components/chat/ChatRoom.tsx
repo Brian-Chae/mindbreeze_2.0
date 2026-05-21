@@ -72,18 +72,13 @@ export function ChatRoom({ roomId }: Props) {
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
       appendMessage(roomId, msg);
-      // 전송 후 입력창 포커스 유지 + 입력창이 보이도록 스크롤
-      requestAnimationFrame(() => {
-        inputRef.current?.focus();
-        inputRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
-      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }
   }, [input, roomId, appendMessage, scrollToBottom]);
 
   return (
-    <div className="flex flex-col min-h-0 flex-1 bg-white pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="flex flex-col min-h-0 flex-1 bg-white">
       {/* 메시지 리스트 — 일반 flex-col (oldest top → newest bottom) */}
       <div
         ref={listRef}
