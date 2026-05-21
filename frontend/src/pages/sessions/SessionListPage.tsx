@@ -231,7 +231,8 @@ function MobileSection({
       <MonthCalendar
         sessions={sessions}
         currentDate={currentDate}
-        selectedDate={currentDate}
+        selectedDate={mode === 'daily' ? currentDate : undefined}
+        weekHighlight={mode === 'weekly' ? currentDate : undefined}
         onSelectDate={handleCalendarSelect}
         onShiftMonth={shiftMonth}
       />
