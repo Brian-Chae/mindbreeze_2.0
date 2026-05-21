@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
+import { ChatRoom } from '../../components/chat/ChatRoom';
 
 export default function ChatPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -118,13 +119,7 @@ export default function ChatPage() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-center h-full bg-white">
-                  <div className="text-center">
-                    <p className="text-sm font-bold text-[#5F0080]">채팅방 선택됨</p>
-                    <p className="text-xs text-[#6F6F6F] mt-1">Room: {selectedRoom.id.slice(0, 12)}…</p>
-                    <p className="text-xs text-[#1F8A5B] mt-2">페이지 구조 정상</p>
-                  </div>
-                </div>
+                <ChatRoom roomId={selectedRoom.id} />
               </div>
             </>
           ) : sessionId && !loading ? (
