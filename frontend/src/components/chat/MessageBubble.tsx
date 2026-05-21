@@ -1,5 +1,4 @@
 // 메시지 말풍선 — 내/상대 구분
-
 import type { ChatMessage } from '../../lib/api/chat';
 
 interface Props {
@@ -8,28 +7,34 @@ interface Props {
 }
 
 export function MessageBubble({ message, isMine }: Props) {
-  const time = new Date(message.created_at).toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  // 방어적 처리
+  if (!message) return null;
+
+  const content = message.content ?? '(내용 없음)';
+  const createdAt = message.created_at ?? new Date().toISOString();
+  const timeStr = createdAt.slice(11, 16); // HH:MM 추출
+
   return (
-    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} my-1`}>
-      <div className="flex flex-col max-w-[70%]">
-        <div
-          className={`px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
-            isMine
-              ? 'bg-[#5F0080] text-white rounded-br-sm'
-              : 'bg-[#F5EDFC] text-[#1F1F1F] rounded-bl-sm'
-          }`}
-        >
-          {message.content}
+    <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', margin: '4px 0' }}>
+      <div style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          padding: '8px 14px',
+          borderRadius: '16px',
+          fontSize: '14px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          background: isMine ? '#5F0080' : '#F5EDFC',
+          color: isMine ? '#fff' : '#1F1F1F',
+        }}>
+          {content}
         </div>
-        <span
-          className={`text-[10px] text-[#9CA0AE] mt-1 font-mono ${
-            isMine ? 'text-right' : 'text-left'
-          }`}
-        >
-          {time}
+        <span style={{
+          fontSize: '10px',
+          color: '#9CA0AE',
+          marginTop: '2px',
+          textAlign: isMine ? 'right' : 'left',
+        }}>
+          {timeStr}
         </span>
       </div>
     </div>

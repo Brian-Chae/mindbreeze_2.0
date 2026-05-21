@@ -6,17 +6,22 @@ interface Props {
 }
 
 export function SystemMessage({ content, createdAt }: Props) {
-  const time = new Date(createdAt).toLocaleString('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const timeStr = (createdAt || new Date().toISOString()).slice(11, 16);
+
   return (
-    <div className="flex justify-center my-2">
-      <div className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full">
-        <span>{content}</span>
-        <span className="ml-2 opacity-70">{time}</span>
+    <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
+      <div style={{
+        padding: '4px 12px',
+        fontSize: '12px',
+        color: '#6F6F6F',
+        background: '#F2F3F8',
+        borderRadius: '999px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <span>{content ?? ''}</span>
+        <span style={{ opacity: 0.7 }}>{timeStr}</span>
       </div>
     </div>
   );
