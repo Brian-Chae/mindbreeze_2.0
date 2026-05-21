@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
 interface NavItem {
@@ -47,6 +47,11 @@ export const ICONS = {
     'M3 12h18',
     'M3 18h18',
   ],
+  logout: [
+    'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4',
+    'M16 17l5-5-5-5',
+    'M21 12H9',
+  ],
 };
 
 export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
@@ -90,6 +95,13 @@ interface SidebarNavProps {
 
 export default function SidebarNav({ onNavigate }: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   return (
     <div className="flex flex-col gap-7 px-5 py-8 h-full">
@@ -164,6 +176,15 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           {user?.email ?? '계정 정보 없음'}
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[14px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
+      >
+        <StrokeIcon d={ICONS.logout} />
+        로그아웃
+      </button>
     </div>
   );
 }
