@@ -84,7 +84,7 @@ export function ChatRoom({ roomId }: Props) {
       {/* 메시지 리스트 — 일반 flex-col (oldest top → newest bottom) */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto px-4 py-2"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-2"
       >
         {loading ? (
           <div className="text-center text-gray-500 py-4">메시지를 불러오는 중…</div>
