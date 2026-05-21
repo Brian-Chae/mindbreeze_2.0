@@ -40,7 +40,7 @@ export default function AppShell({
   }, []);
 
   return (
-    <div className="absolute inset-0 md:static md:h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
+    <div className="h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
         <SidebarNav />
@@ -81,7 +81,7 @@ export default function AppShell({
         </button>
       </header>
 
-      <section className="flex flex-col overflow-hidden flex-1 min-w-0 min-h-0">
+      <section className="flex flex-col flex-1 min-w-0 min-h-0">
         {/* 데스크톱 헤더 */}
         <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
           <div>
