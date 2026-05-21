@@ -8,25 +8,34 @@ import { useChatStore } from '../../stores/chatStore';
 import { ChatRoom } from '../../components/chat/ChatRoom';
 
 // 채팅 영역 에러 바운더리 — 크래시 시 흰 화면 대신 메시지 표시
-class ChatErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string }> {
+class ChatErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; errorMsg: string; errorStack: string }> {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false, errorMsg: '' };
+    this.state = { hasError: false, errorMsg: '', errorStack: '' };
   }
   static getDerivedStateFromError(error: Error) {
-    return { hasError: true, errorMsg: error.message || '알 수 없는 오류' };
+    return { hasError: true, errorMsg: error.message || '알 수 없는 오류', errorStack: error.stack || '' };
+  }
+  componentDidCatch(error: Error, info: { componentStack: string }) {
+    console.error('[ChatErrorBoundary]', error, info.componentStack);
   }
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center max-w-full">
             <p className="text-sm text-[#B3261E] font-bold mb-1">채팅을 불러올 수 없습니다</p>
-            <p className="text-xs text-[#6F6F6F]">{this.state.errorMsg}</p>
+            <p className="text-xs text-[#6F6F6F] mb-2 break-all">{this.state.errorMsg}</p>
+            {this.state.errorStack && (
+              <details className="text-[10px] text-[#9CA0AE] mb-3 max-h-32 overflow-auto text-left bg-[#FAFAFA] rounded-lg p-2">
+                <summary className="cursor-pointer">오류 상세</summary>
+                <pre className="whitespace-pre-wrap break-all">{this.state.errorStack}</pre>
+              </details>
+            )}
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="mt-3 px-4 py-1.5 rounded-full bg-[#F5EDFC] text-[#5F0080] text-xs font-medium"
+              className="px-4 py-1.5 rounded-full bg-[#F5EDFC] text-[#5F0080] text-xs font-medium"
             >
               새로고침
             </button>
