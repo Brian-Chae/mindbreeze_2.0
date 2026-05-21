@@ -26,6 +26,20 @@ export function ChatRoom({ roomId }: Props) {
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [diag, setDiag] = useState('');
+
+  // 진단: scrollHeight vs clientHeight 추적
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const check = () => {
+      const canScroll = el.scrollHeight > el.clientHeight;
+      setDiag(`H:${el.clientHeight}px SH:${el.scrollHeight}px O:${canScroll ? 'Y' : 'N'} P:${el.parentElement ? getComputedStyle(el.parentElement).height : '?'}`);
+    };
+    check();
+    const id = setInterval(check, 2000);
+    return () => clearInterval(id);
+  }, [loading, msgList.length]);
 
   const keyboardHeight = useKeyboardHeight();
   const { handleScroll, scrollToBottom } = useAutoScroll(listRef, [msgList.length, loading]);
@@ -96,7 +110,12 @@ export function ChatRoom({ roomId }: Props) {
         <div className="px-4 py-1 text-xs text-red-500 bg-red-50 shrink-0">{error}</div>
       )}
 
-      {/* 입력창 — 항상 하단. 키보드 높이만큼 하단 padding */}
+      {/* 진단 정보 (디버깅용 — 해결 후 제거) */}
+      {diag && (
+        <div className="px-4 py-0.5 text-[10px] text-gray-400 font-mono bg-gray-50 shrink-0">{diag}</div>
+      )}
+
+      {/* 입력창 — 항상 하단 */}
       <div
         className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0"
         style={{ paddingBottom: `calc(0.75rem + ${keyboardHeight}px)` }}
