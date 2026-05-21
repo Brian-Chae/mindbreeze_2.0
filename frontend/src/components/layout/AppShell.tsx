@@ -129,7 +129,7 @@ export default function AppShell({
         )}
 
         <div
-          className={`flex-1 min-h-0 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
+          className={`flex-1 min-h-0 bg-white ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
         >
           {children}
         </div>
