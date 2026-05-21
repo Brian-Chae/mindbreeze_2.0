@@ -15,6 +15,13 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 모바일 body 스크롤 잠금 — 가장 확실한 방법
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
