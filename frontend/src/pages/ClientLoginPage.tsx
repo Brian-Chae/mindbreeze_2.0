@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 
-export default function LoginPage() {
+export default function ClientLoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore((s) => s.login);
 
@@ -19,17 +19,17 @@ export default function LoginPage() {
     try {
       const user = await login(email, password);
       if (user.onboarding_completed) {
-        if (user.role === 'counselor') {
-          navigate('/dashboard');
-        } else if (user.role === 'client') {
+        if (user.role === 'client') {
           navigate('/clients');
+        } else if (user.role === 'counselor') {
+          navigate('/dashboard');
         } else {
           navigate('/');
         }
-      } else if (user.role === 'counselor') {
-        navigate('/onboarding/counselor');
       } else if (user.role === 'client') {
         navigate('/onboarding/client');
+      } else if (user.role === 'counselor') {
+        navigate('/onboarding/counselor');
       } else {
         navigate('/');
       }
@@ -79,10 +79,10 @@ export default function LoginPage() {
             </span>
           </Link>
           <Link
-            to="/login/client"
+            to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            회원 로그인
+            상담사 로그인
           </Link>
         </div>
 
@@ -97,7 +97,7 @@ export default function LoginPage() {
           mind&nbsp;breeze
         </div>
         <div className="text-[15px] text-white/85 mb-7">
-          상담사 전용 · MIND BREEZE Operator
+          회원 전용 · MIND BREEZE Member
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3">
@@ -149,7 +149,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-7 text-[12px] text-white/70">
-          기관 발급 계정으로만 접속하실 수 있습니다.
+          초대 코드 또는 상담사 승인 후 이용하실 수 있습니다.
         </div>
       </div>
     </div>
