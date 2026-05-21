@@ -40,7 +40,7 @@ export default function AppShell({
   }, []);
 
   return (
-    <div className="absolute inset-0 md:static md:h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col overflow-hidden overscroll-none">
+    <div className="absolute inset-0 md:static md:h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
         <SidebarNav />
