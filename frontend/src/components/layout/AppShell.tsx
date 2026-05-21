@@ -81,7 +81,7 @@ export default function AppShell({
         </button>
       </header>
 
-      <section className="flex flex-col md:overflow-hidden flex-1 min-w-0">
+      <section className="flex flex-col overflow-hidden flex-1 min-w-0 min-h-0">
         {/* 데스크톱 헤더 */}
         <header className="hidden md:flex h-[76px] px-8 items-center justify-between border-b border-[#EFEFEF] shrink-0">
           <div>
@@ -129,7 +129,7 @@ export default function AppShell({
         )}
 
         <div
-          className={`flex-1 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
+          className={`flex-1 min-h-0 bg-white ${noScroll ? 'overflow-hidden' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
         >
           {children}
         </div>
