@@ -119,6 +119,9 @@ export default function ChatPage() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden">
+                <div className="px-3 py-1.5 text-[11px] font-mono bg-yellow-200 border-b border-yellow-400">
+                  ✅ ChatRoom 영역 진입 — roomId: {selectedRoom.id.slice(0, 12)}…
+                </div>
                 <ChatRoom roomId={selectedRoom.id} />
               </div>
             </>
