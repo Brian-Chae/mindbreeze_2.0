@@ -10,16 +10,12 @@ import {
 import { tokenStorage } from '../../lib/api/client';
 import { getChatSocket, disconnectChatSocket } from '../../lib/socket';
 import { useChatStore } from '../../stores/chatStore';
-import { useAuthStore } from '../../stores/authStore';
-import { MessageBubble } from './MessageBubble';
-import { SystemMessage } from './SystemMessage';
 
 interface Props {
   roomId: string;
 }
 
 export function ChatRoom({ roomId }: Props) {
-  const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId] ?? []);
   const setMessages = useChatStore((s) => s.setMessages);
   const appendMessage = useChatStore((s) => s.appendMessage);
@@ -58,24 +54,32 @@ export function ChatRoom({ roomId }: Props) {
     clearRoomUnread(roomId);
   }, [roomId, clearRoomUnread]);
 
-  // Socket.IO 연결 + 메시지 수신
+  // Socket.IO 연결 + 메시지 수신 (실패해도 채팅방 정상 동작)
   useEffect(() => {
-    const token = tokenStorage.getAccess();
-    if (!token) return;
-    const socket = getChatSocket(token);
-    socket.emit('join', { room_id: roomId });
-    const onMessage = (data: ChatMessage): void => {
-      if (data.room_id === roomId) {
-        appendMessage(roomId, data);
-      }
-    };
-    socket.on('message', onMessage);
-    socket.on('system', onMessage);
-    return () => {
-      socket.emit('leave', { room_id: roomId });
-      socket.off('message', onMessage);
-      socket.off('system', onMessage);
-    };
+    try {
+      const token = tokenStorage.getAccess();
+      if (!token) return;
+      const socket = getChatSocket(token);
+      socket.emit('join', { room_id: roomId });
+      const onMessage = (data: ChatMessage): void => {
+        if (data.room_id === roomId) {
+          appendMessage(roomId, data);
+        }
+      };
+      socket.on('message', onMessage);
+      socket.on('system', onMessage);
+      return () => {
+        try {
+          socket.emit('leave', { room_id: roomId });
+          socket.off('message', onMessage);
+          socket.off('system', onMessage);
+        } catch {
+          // ignore cleanup errors
+        }
+      };
+    } catch {
+      // socket 연결 실패는 무시 — REST API로만 채팅 가능
+    }
   }, [roomId, appendMessage]);
 
   // 컴포넌트 언마운트 시 소켓 종료
@@ -115,18 +119,14 @@ export function ChatRoom({ roomId }: Props) {
         ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다.</div>
         ) : (
-          messages.map((m) =>
-            m.type === 'system' ? (
-              <SystemMessage key={m.id} content={m.content} createdAt={m.created_at} />
-            ) : (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                isMine={!!user && m.sender_id === user.id}
-              />
-            )
-          )
+          messages.map((m) => (
+            <div key={m.id} className="flex my-1 px-4 py-2">
+              <span className="text-xs text-[#6F6F6F]">{m.type}</span>
+              <span className="flex-1 ml-2 text-sm">{m.content || '(내용 없음)'}</span>
+            </div>
+          ))
         )}
+
       </div>
       {error && (
         <div className="px-4 py-1 text-xs text-red-500 bg-red-50">
