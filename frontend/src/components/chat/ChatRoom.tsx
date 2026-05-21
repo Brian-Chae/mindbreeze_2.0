@@ -72,6 +72,8 @@ export function ChatRoom({ roomId }: Props) {
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
       appendMessage(roomId, msg);
+      // 전송 후 최하단 스크롤
+      requestAnimationFrame(() => scrollToBottom());
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }

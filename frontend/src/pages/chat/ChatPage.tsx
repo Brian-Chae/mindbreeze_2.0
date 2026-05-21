@@ -42,7 +42,7 @@ export default function ChatPage() {
   };
 
   return (
-    <AppShell title="채팅" sub="MESSAGES" contentPad="" noScroll hideBottomTab>
+    <AppShell title="채팅" sub="MESSAGES" contentPad="" noScroll hideBottomTab noBottomPad>
       <div className="h-full flex flex-col md:grid md:grid-cols-[320px_1fr]">
         {/* 좌측 대화 목록 */}
         <aside
