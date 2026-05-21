@@ -22,6 +22,7 @@ export function ChatRoom({ roomId }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const didInitialScroll = useRef(false);
 
   // DOM ref로 직접 스크롤 (store 의존성 회피)
@@ -71,8 +72,11 @@ export function ChatRoom({ roomId }: Props) {
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
       appendMessage(roomId, msg);
-      // 전송 후 하단 스크롤
-      requestAnimationFrame(() => scrollToBottom());
+      // 전송 후 입력창 포커스 유지 + 입력창이 보이도록 스크롤
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
+      });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }
@@ -111,6 +115,7 @@ export function ChatRoom({ roomId }: Props) {
       {/* 입력창 — 항상 하단 고정 */}
       <div className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
