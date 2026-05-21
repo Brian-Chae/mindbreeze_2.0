@@ -37,6 +37,7 @@ export function ChatRoom({ roomId }: Props) {
         }
       })
       .catch((err: unknown) => {
+        console.error('[ChatRoom] API error:', err);
         if (!cancelled) {
           setError(err instanceof Error ? err.message : '메시지 로딩 실패');
           setLoading(false);
@@ -74,6 +75,11 @@ export function ChatRoom({ roomId }: Props) {
 
   return (
     <div className="flex flex-col min-h-0 flex-1 bg-white">
+      {/* 디버그 헤더 */}
+      <div className="px-3 py-1.5 text-[11px] font-mono flex gap-3 border-b border-[#EFEFEF] bg-[#FFF9F0]">
+        <span>state: {loading ? 'loading' : error ? 'error' : `msgs(${messages.length})`}</span>
+        {error && <span className="text-red-500">err: {error}</span>}
+      </div>
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 py-2 flex flex-col-reverse"
