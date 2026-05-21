@@ -6,7 +6,7 @@ import { listSessions, createSession, type SessionDto, type SessionType, type Cr
 import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
-import { DaySchedule } from '../../components/session/DaySchedule';
+import { MobileTimetable } from '../../components/session/MobileTimetable';
 import { useSessionStore, type CalendarViewMode } from '../../stores/sessionStore';
 import AppShell from '../../components/layout/AppShell';
 
@@ -186,6 +186,95 @@ const TABS: { mode: CalendarViewMode; label: string }[] = [
   { mode: 'list', label: '목록' },
 ];
 
+type MobileMode = 'daily' | 'weekly';
+
+const formatMobileDay = (date: Date): string =>
+  `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAY[date.getDay()]})`;
+
+const formatMobileWeekRange = (date: Date): string => {
+  const start = startOfWeek(date);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  return `${start.getMonth() + 1}.${start.getDate()} – ${end.getMonth() + 1}.${end.getDate()}`;
+};
+
+interface MobileSectionProps {
+  sessions: SessionDto[];
+  loading: boolean;
+  error: string | null;
+  currentDate: Date;
+  selectedDate: Date;
+  setSelectedDate: (d: Date) => void;
+  shiftMonth: (dir: 1 | -1) => void;
+  shiftDay: (dir: 1 | -1) => void;
+  shiftWeek: (dir: 1 | -1) => void;
+}
+
+function MobileSection({
+  sessions, loading, error, currentDate, selectedDate, setSelectedDate, shiftMonth, shiftDay, shiftWeek,
+}: MobileSectionProps) {
+  const [mode, setMode] = useState<MobileMode>('daily');
+  const navLabel = mode === 'daily' ? formatMobileDay(currentDate) : formatMobileWeekRange(currentDate);
+  const onShift = (dir: 1 | -1): void => {
+    if (mode === 'daily') shiftDay(dir);
+    else shiftWeek(dir);
+  };
+
+  return (
+    <div className="md:hidden space-y-4">
+      <MonthCalendar
+        sessions={sessions}
+        currentDate={currentDate}
+        selectedDate={selectedDate}
+        onSelectDate={setSelectedDate}
+        onShiftMonth={shiftMonth}
+      />
+
+      <div className="flex items-center justify-between">
+        <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+          {(['daily', 'weekly'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                mode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+              }`}
+            >
+              {m === 'daily' ? '일간' : '주간'}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onShift(-1)}
+            className="w-8 h-8 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+            aria-label="이전"
+          >
+            ‹
+          </button>
+          <span className="text-xs font-mono text-[#1F1F1F] min-w-[110px] text-center">{navLabel}</span>
+          <button
+            type="button"
+            onClick={() => onShift(1)}
+            className="w-8 h-8 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+            aria-label="다음"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
+      {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+      {error && <p className="text-[#B3261E]">{error}</p>}
+      {!loading && !error && (
+        <MobileTimetable sessions={sessions} currentDate={currentDate} mode={mode} />
+      )}
+    </div>
+  );
+}
+
 export default function SessionListPage() {
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,21 +331,18 @@ export default function SessionListPage() {
   return (
     <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot}>
       <div className="max-w-6xl mx-auto space-y-5">
-        {/* 모바일: 월간 캘린더 + 일별 일정 */}
-        <div className="md:hidden space-y-4">
-          <MonthCalendar
-            sessions={sessions}
-            currentDate={currentDate}
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            onShiftMonth={shiftMonth}
-          />
-          {!loading && !error && (
-            <DaySchedule sessions={sessions} selectedDate={selectedDate} />
-          )}
-          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-          {error && <p className="text-[#B3261E]">{error}</p>}
-        </div>
+        {/* 모바일: 월간 캘린더 + 일간/주간 타임테이블 */}
+        <MobileSection
+          sessions={sessions}
+          loading={loading}
+          error={error}
+          currentDate={currentDate}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          shiftMonth={shiftMonth}
+          shiftDay={shiftDay}
+          shiftWeek={shiftWeek}
+        />
 
         {/* 데스크톱: 일간/주간/월간/목록 4탭 */}
         <div className="hidden md:block space-y-5">
