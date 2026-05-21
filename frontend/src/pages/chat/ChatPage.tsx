@@ -43,10 +43,10 @@ export default function ChatPage() {
 
   return (
     <AppShell title="채팅" sub="MESSAGES" contentPad="" noScroll hideBottomTab noBottomPad>
-      <div className="flex-1 min-h-0 flex flex-col md:grid md:grid-cols-[320px_1fr]">
+      <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside
-          className={`border-r border-[#EFEFEF] bg-white overflow-y-auto ${
+          className={`md:w-80 shrink-0 border-r border-[#EFEFEF] bg-white overflow-y-auto ${
             sessionId ? 'hidden md:block' : 'block'
           }`}
         >
@@ -102,7 +102,7 @@ export default function ChatPage() {
 
         {/* 우측 채팅 영역 */}
         <main
-          className={`flex-1 flex flex-col overflow-hidden bg-white ${
+          className={`flex-1 min-h-0 flex flex-col bg-white ${
             sessionId ? 'flex' : 'hidden md:flex'
           }`}
         >
