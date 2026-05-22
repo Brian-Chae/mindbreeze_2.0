@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| **현재 버전** | `v1.1.0` |
+| **현재 버전** | `v1.2.0` |
 | **문서 상태** | `Draft` |
 | **최초 작성** | 2026-05-23 |
 | **최종 수정** | 2026-05-23 |
@@ -13,6 +13,7 @@
 
 | 버전 | 일자 | 변경 요약 | 작성 |
 |------|------|----------|------|
+| `v1.2.0` | 2026-05-23 | §2A 인증 플로우 추가 — 초대 랜딩·회원가입·로그인·인증 상태 라우팅. 3개 기존 페이지 리팩토링 계획. Phase 0 신설 | — |
 | `v1.1.0` | 2026-05-23 | 초안 — BT·CL 아키텍처 + CH·CA 상세 명세 + CS 안티패턴 + 구현 로드맵 | — |
 | `v1.0.0` | 2026-05-23 | 최초 작성 | — |
 
@@ -94,6 +95,79 @@ MVP1에서 이미 구축된 백엔드(채팅·세션·리포트·알림 API) 위
 ```
 
 > **제외:** 케어(🧘)·게시판(📋) 탭 — MVP3 범위. LINK BAND — MVP2 범위(F9).
+
+---
+
+## 2A. 인증 플로우 — 로그인·회원가입·초대
+
+> **기존 페이지 상태:** `ClientLoginPage`, `ClientOnboardingPage`, `InviteLandingPage`가 이미 존재하나, ① 구 디자인(에메랄드 그라데이션·회색 텍스트) ② 상담사 AppShell 기반 레이아웃 ③ 로그인 후 잘못된 리디렉션(`/clients`) 문제가 있다. MVP 1.5에서 Clinical Garden 디자인과 모바일 셸에 맞게 **전면 재작성**한다.
+
+### 2A.1 전체 인증 흐름
+
+```
+[초대 이메일 수신]
+       ↓
+[InviteLandingPage]  ← 초대 링크 클릭 (/invite/:token)
+       │               상담사명·센터 표시 + "가입하기" / "로그인" 버튼
+       ↓
+[ClientOnboardingPage]  ← 신규 가입 (/onboarding/client)
+       │                  4단계: 기본정보 → 상세정보 → 프로필 → 상담사 코드
+       ↓
+[ClientLoginPage]  ← 기존 회원 로그인 (/login/client)
+       │             이메일·비밀번호
+       ↓
+[ClientHomePage]  ← /app (오늘 화면)
+```
+
+### 2A.2 AU-01 — 초대 랜딩 (InviteLandingPage)
+
+**리팩토링 대상:** 기존 `pages/clients/InviteLandingPage.tsx`
+
+| 항목 | 기존 | 변경 |
+|------|------|------|
+| 디자인 | `bg-gradient-to-br from-emerald-50 to-blue-50`, `text-gray-500` | Clinical Garden — `bg-surface-canvas`, `text-ink-primary`, `rounded-[20px]` |
+| 상담사 정보 | 텍스트만 | 상담사 프로필 카드 (아바타·이름·소속·자격 뱃지) |
+| 액션 | 단일 버튼 | "가입하기" (→ `/onboarding/client`) + "로그인" (→ `/login/client`) 분리 |
+
+**레이아웃:** 모바일 430px居中. 상단: MIND BREEZE 로고 + "초대합니다" 타이틀. 중앙: 상담사 프로필 카드. 하단: CTA 버튼 2개.
+
+### 2A.3 AU-02 — 내담자 회원가입 (ClientOnboardingPage)
+
+**리팩토링 대상:** 기존 `pages/onboarding/ClientOnboardingPage.tsx`
+
+- 4단계 구조는 유지하되, Clinical Garden 디자인 시스템 적용
+- Step Indicator: `text-brand-primary` 활성 단계, `rounded-full` 번호
+- 입력 필드: `rounded-[20px] border-[#EFEFEF]`, `text-base`(16px, iOS 확대 방지)
+- 상담사 코드 입력: OTP 스타일 6칸 (각 칸 `w-12 h-14 rounded-xl border-2 text-2xl text-center`)
+- 완료 후: `/login/client`로 리디렉트 + "이제 로그인해주세요" 메시지
+
+**기존 기능 유지:** `saveClientStep1` ~ `matchClientWithCounselor` API 그대로 사용.
+
+### 2A.4 AU-03 — 내담자 로그인 (ClientLoginPage)
+
+**리팩토링 대상:** 기존 `pages/ClientLoginPage.tsx`
+
+| 항목 | 기존 | 변경 |
+|------|------|------|
+| 리디렉션 | `navigate('/clients')` | `navigate('/app')` — 내담자 홈으로 |
+| 디자인 | `bg-gradient-to-br from-purple-50 to-indigo-50` | Clinical Garden 전체 적용 |
+| 회원가입 링크 | 없음 | "처음이신가요? 가입하기" → `/onboarding/client` |
+| 초대 코드 | 없음 | "초대 코드가 있으신가요?" → `/invite/:token` (토큰 없으면 입력창) |
+
+**레이아웃 (좌우 분할, 모바일은 상하):**
+- 좌측 (PC): 브랜드 패널 — MIND BREEZE 로고 + "당신의 마음쉼" 태그라인 + 배경 이미지
+- 우측 (PC) / 하단 (모바일): 로그인 폼 — 이메일·비밀번호·로그인 버튼·비밀번호 찾기·가입하기
+
+### 2A.5 인증 상태 라우팅
+
+```typescript
+// RoleRouter 로직
+if (!user) → 로그인/가입 페이지만 접근 가능 (PublicRoute)
+if (user.role === 'client' && !user.onboarding_completed) → /onboarding/client
+if (user.role === 'client' && user.onboarding_completed) → /app (ClientShell)
+if (user.role === 'counselor' && !user.onboarding_completed) → /onboarding/counselor
+if (user.role === 'counselor' && user.onboarding_completed) → /dashboard (AppShell)
+```
 
 ---
 
@@ -253,6 +327,11 @@ frontend/src/
 │   │   ├── ClientSessionListPage.tsx
 │   │   ├── ClientSessionDetailPage.tsx
 │   │   └── ClientProfilePage.tsx
+│   ├── ClientLoginPage.tsx      # 내담자 로그인 (리팩토링)
+│   ├── onboarding/
+│   │   └── ClientOnboardingPage.tsx  # 내담자 가입 (리팩토링)
+│   ├── clients/
+│   │   └── InviteLandingPage.tsx     # 초대 랜딩 (리팩토링)
 │   └── ...                     # 기존 상담사 페이지 (변경 없음)
 └── components/
     └── client/                 # 내담자 전용 컴포넌트 (신규)
@@ -279,6 +358,9 @@ function App() {
 **내담자 라우트:**
 | 경로 | 화면 | 탭 |
 |------|------|----|
+| `/invite/:token` | 초대 랜딩 | — (비로그인) |
+| `/login/client` | 내담자 로그인 | — (비로그인) |
+| `/onboarding/client` | 내담자 회원가입 | — (비로그인) |
 | `/app` | 오늘 (Home) | 오늘 |
 | `/app/chat` | 채팅방 목록 | 채팅 |
 | `/app/chat/:roomId` | 채팅방 | — |
@@ -288,6 +370,7 @@ function App() {
 | `/app/reports/:id` | 리포트 상세 | — |
 | `/app/notifications` | 알림 센터 | — |
 
+> **비로그인 라우트**는 `ClientShell` 외부에서 렌더링. 로그인/가입 완료 후에만 `ClientShell`(탭바 포함) 진입.
 > 상담사 앱 라우트(`/dashboard`, `/sessions`, `/chat` 등)는 그대로 유지. Client role은 `/app/*`만 접근 가능.
 
 ### 4.3 상태 관리
@@ -424,7 +507,16 @@ class User(Base):
 
 ## 8. 구현 로드맵
 
-### Phase 1 — 기초 (2~3일)
+### Phase 0 — 인증 리팩토링 (1~2일)
+
+| 작업 | 내용 |
+|------|------|
+| **InviteLandingPage** | Clinical Garden 디자인 적용, 상담사 프로필 카드, 가입/로그인 분기 |
+| **ClientLoginPage** | Clinical Garden 디자인, `/clients` → `/app` 리디렉션 수정, 회원가입 링크 |
+| **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, 완료 후 `/login/client` 이동 |
+| **RoleRouter** | App.tsx에 client/counselor 분기 + 인증 상태별 라우팅 |
+
+### Phase 1 — 기초·오늘 화면 (2~3일)
 
 | 작업 | 내용 |
 |------|------|
@@ -469,7 +561,8 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 | FC-ID | 명칭 | MVP | 설명 |
 |:---:|------|:---:|------|
-| FC.1 | 내담자 앱 셸 + 탭 내비게이션 | 1.5 | ClientShell·BottomTabBar·RoleRouter |
+| FC.0 | 내담자 인증 (로그인·가입·초대) | 1.5 | InviteLanding·ClientOnboarding·ClientLogin 리팩토링, RoleRouter |
+| FC.1 | 내담자 앱 셸 + 탭 내비게이션 | 1.5 | ClientShell·BottomTabBar |
 | FC.2 | 내담자 오늘 화면 | 1.5 | 다음 세션·최근 리포트·메시지 배지 |
 | FC.3 | 내담자-상담사 채팅 | 1.5 | 채팅방 목록·메시지·WebSocket |
 | FC.4 | 내담자 세션 캘린더 | 1.5 | 월간 뷰·세션 상세·신청 |
@@ -494,6 +587,6 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ## 문서 식별
 
-**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.1.0`
+**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.2.0`
 
 **상태:** Draft → 검토 요청 (Brian)
