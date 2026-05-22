@@ -339,6 +339,7 @@ export default function SessionListPage() {
     <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot} noScroll>
       <div className="h-full flex flex-col min-h-0 max-w-6xl mx-auto w-full">
         {/* 모바일: 월간 캘린더 + 일간/주간 타임테이블 */}
+        <div className="md:hidden flex-1 min-h-0 overflow-y-auto">
         <MobileSection
           sessions={sessions}
           loading={loading}
@@ -349,6 +350,7 @@ export default function SessionListPage() {
           shiftDay={shiftDay}
           shiftWeek={shiftWeek}
         />
+        </div>
 
         {/* 데스크톱: 일간/주간/월간/목록 4탭 */}
         <div className="hidden md:flex flex-col min-h-0 flex-1">
