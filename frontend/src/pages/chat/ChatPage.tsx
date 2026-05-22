@@ -9,13 +9,19 @@ import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat'
 import { useChatStore } from '../../stores/chatStore';
 
 function roomLabel(room: ChatRoomDto): string {
+  const count = room.participant_count ?? 0;
+  const countStr = count > 0 ? ` (${count}명)` : '';
+  
   if (room.room_type === 'direct') {
-    return room.name ? `내담자 ${room.name.slice(0, 8)}` : '1:1 채팅';
+    const displayName = room.name && room.name.length > 12 ? room.name : room.name || '1:1 채팅';
+    const isUUID = room.name && /^[0-9a-f]{8}-/.test(room.name);
+    return isUUID ? `1:1 채팅${countStr}` : `${displayName}${countStr}`;
   }
   if (room.room_type === 'group') {
-    return room.name || '그룹 채팅';
+    return `${room.name || '그룹 채팅'}${countStr}`;
   }
-  return room.session_id ? `세션 ${room.session_id.slice(0, 8)}` : '채팅방';
+  const label = room.session_id ? `세션 ${room.session_id.slice(0, 8)}` : '채팅방';
+  return `${label}${countStr}`;
 }
 
 function roomSub(room: ChatRoomDto): string {

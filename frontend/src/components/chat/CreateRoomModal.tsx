@@ -64,7 +64,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
     setCreating(true);
     setError(null);
     try {
-      const room = await createDirectRoom({ client_id: client.id, room_type: 'direct' });
+      const room = await createDirectRoom({ client_id: client.id, room_type: 'direct', name: roomName.trim() || undefined });
       onClose();
       navigate(`/chat/${room.id}`);
     } catch (e) {
@@ -152,16 +152,14 @@ export function CreateRoomModal({ open, onClose }: Props) {
           </button>
         </div>
 
-        {/* 그룹방 이름 입력 */}
-        {mode === 'group' && (
-          <input
-            type="text"
-            placeholder="그룹방 이름 (선택)"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-            className="w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
-          />
-        )}
+        {/* 방 이름 입력 (공통) */}
+        <input
+          type="text"
+          placeholder={mode === 'direct' ? '채팅방 이름 (선택, 예: 홍길동 상담)' : '그룹방 이름 (선택)'}
+          value={roomName}
+          onChange={(e) => setRoomName(e.target.value)}
+          className="w-full px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-3"
+        />
 
         {/* 그룹방: 선택된 인원 표시 */}
         {mode === 'group' && selectedCount > 0 && (

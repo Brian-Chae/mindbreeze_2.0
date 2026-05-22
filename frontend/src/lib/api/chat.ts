@@ -22,6 +22,7 @@ export interface ChatRoom {
   room_type: RoomType;
   host_id: string | null;
   name: string | null;
+  participant_count: number;
   created_at: string;
   unread_count: number;
 }
@@ -44,6 +45,7 @@ export interface SendMessagePayload {
 export interface CreateDirectRoomPayload {
   client_id: string;
   room_type: 'direct';
+  name?: string;
 }
 
 export interface CreateGroupRoomPayload {

@@ -112,13 +112,13 @@ def get_or_create_direct_room(counselor_id: UUID, client_id: UUID, db: DBSession
     return new_room
 
 
-def create_direct_room(counselor_id: str, client_id: str, db: DBSession) -> dict:
+def create_direct_room(counselor_id: str, client_id: str, name: str | None = None, db: DBSession = None) -> dict:
     return create_room(
         host_id=counselor_id,
         room_type="direct",
         client_id=client_id,
         participant_ids=None,
-        name=None,
+        name=name,
         db=db,
     )
 
@@ -206,6 +206,8 @@ def _peer_id_for_direct(room: ChatRoom, user_id: UUID) -> str | None:
 
 def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
     uid = _uuid(user_id)
+    # 참여자 수 계산
+    count = _participant_count(room, db)
     return {
         "id": str(room.id),
         "session_id": str(room.session_id) if room.session_id else None,
@@ -213,9 +215,25 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
         "host_id": str(room.host_id) if room.host_id else None,
         "name": room.name,
         "peer_id": _peer_id_for_direct(room, uid),
+        "participant_count": count,
         "created_at": room.created_at or datetime.utcnow(),
         "unread_count": _unread_count(room, user_id, db),
     }
+
+
+def _participant_count(room: ChatRoom, db: DBSession) -> int:
+    if room.room_type == "direct":
+        return 2  # host + client
+    if room.room_type == "group":
+        pc = db.query(ChatRoomParticipant).filter(
+            ChatRoomParticipant.room_id == room.id
+        ).count()
+        return pc + (1 if room.host_id else 0)
+    if room.session_id:
+        return db.query(SessionParticipant).filter(
+            SessionParticipant.session_id == room.session_id
+        ).count()
+    return 0
 
 
 def _unread_count(room: ChatRoom, user_id: str, db: DBSession) -> int:
