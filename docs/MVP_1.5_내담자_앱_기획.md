@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| **현재 버전** | `v1.4.0` |
+| **현재 버전** | `v1.5.0` |
 | **문서 상태** | `Draft` |
 | **최초 작성** | 2026-05-23 |
 | **최종 수정** | 2026-05-23 |
@@ -13,6 +13,7 @@
 
 | 버전 | 일자 | 변경 요약 | 작성 |
 |------|------|----------|------|
+| `v1.5.0` | 2026-05-23 | §2D 초대 기반 모델 + N:M 상담사 관계 — ClientCounselor 조인 테이블, 상담사 코드 입력, 상담사 無 상태, 복수 상담사 UX. §2B.2c·§2C·§7 데이터 모델 전면 개정 | — |
 | `v1.4.0` | 2026-05-23 | §2B.2~2C 필수 정보 수집 적용 — Google OAuth 후 필수 정보 1페이지(이름·성별·생년월일·휴대전화번호). `onboarding_completed=false` → `essentials`. ClientEssentialsPage 신설, Phase 0 업데이트 | — |
 | `v1.3.0` | 2026-05-23 | §2B 간편 인증 — Google OAuth(신규)·이메일(기존)·Kakao(예정). 초대 링크+Google 1클릭 가입. §2C 통합 인증 라우팅 | — |
 | `v1.2.0` | 2026-05-23 | §2A 인증 플로우 추가 — 초대 랜딩·회원가입·로그인·인증 상태 라우팅. 3개 기존 페이지 리팩토링 계획. Phase 0 신설 | — |
@@ -97,6 +98,222 @@ MVP1에서 이미 구축된 백엔드(채팅·세션·리포트·알림 API) 위
 ```
 
 > **제외:** 케어(🧘)·게시판(📋) 탭 — MVP3 범위. LINK BAND — MVP2 범위(F9).
+
+---
+
+## 2D. 초대 기반 모델 + N:M 상담사 관계
+
+> **핵심 전제:** MIND BREEZE는 내담자가 상담사를 **탐색·선택하지 않는다.** 모든 관계는 상담사의 **초대(invite)** 또는 **상담사 코드 입력**으로만 성립한다. 상담사가 배정되지 않은 내담자는 어떤 기능도 사용할 수 없다.
+
+### 2D.1 서비스 모델
+
+| 속성 | 설명 |
+|------|------|
+| 상담사 탐색 | ❌ 없음. 상담사 검색·목록·추천 기능 없음 |
+| 관계 성립 | ✅ 초대 링크 (counselor code 자동 포함) 또는 상담사 코드 수동 입력 |
+| 관계 유형 | **N:M** — 내담자는 여러 상담사와, 상담사는 여러 내담자와 관계 |
+| 동시 진행 | 내담자는 여러 상담사와 동시에 각각 다른 세션·채팅 진행 가능 |
+| 상담사 코드 | 상담사 가입 완료 시 자동 발급되는 6자리 고유 코드 (예: `A3F92K`) |
+
+### 2D.2 N:M 데이터 모델
+
+```python
+# 기존: User.counselor_id (단일 FK) → 폐기
+# 신규: ClientCounselor 조인 테이블
+
+class ClientCounselor(Base):
+    __tablename__ = "client_counselors"
+    
+    id = Column(UUID, primary_key=True, default=uuid4)
+    client_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(20), default="active")  # "active" | "inactive"
+    invited_by = Column(String(20))                 # "counselor" | "client"
+    created_at = Column(DateTime, default=utcnow)
+    
+    client = relationship("User", foreign_keys=[client_id])
+    counselor = relationship("User", foreign_keys=[counselor_id])
+    
+    __table_args__ = (
+        UniqueConstraint("client_id", "counselor_id", name="uq_client_counselor"),
+    )
+```
+
+**User 모델 변경:**
+```python
+class User(Base):
+    # ... 기존 필드 ...
+    
+    # 제거: counselor_id (더 이상 단일 FK 아님)
+    
+    # 신규: 다대다 관계
+    counselors = relationship(
+        "User",
+        secondary="client_counselors",
+        primaryjoin="User.id == ClientCounselor.client_id",
+        secondaryjoin="User.id == ClientCounselor.counselor_id",
+        viewonly=True,
+    )
+    clients = relationship(
+        "User",
+        secondary="client_counselors",
+        primaryjoin="User.id == ClientCounselor.counselor_id",
+        secondaryjoin="User.id == ClientCounselor.client_id",
+        viewonly=True,
+    )
+```
+
+### 2D.3 상담사 코드 기반 관계 성립
+
+**두 가지 경로:**
+
+| 경로 | 트리거 | 흐름 |
+|------|--------|------|
+| **초대** | 상담사가 내담자 초대 전송 | 초대 이메일 → 링크 클릭 → 코드 자동 포함 → 가입 시 자동 매칭 |
+| **코드 입력** | 내담자가 직접 코드 입력 | 프로필 → "상담사 코드 입력" → 6자리 코드 → 매칭 |
+
+**코드 매칭 로직:**
+```python
+# POST /api/v1/client/counselors
+async def add_counselor(client_user, code: str):
+    # 1. 코드로 상담사 찾기
+    counselor = await find_user_by_counselor_code(code)
+    if not counselor or counselor.role != "counselor":
+        raise HTTPException(404, "유효하지 않은 상담사 코드입니다")
+    
+    # 2. 이미 연결된 관계인지 확인
+    existing = await find_client_counselor(client_user.id, counselor.id)
+    if existing:
+        if existing.status == "active":
+            raise HTTPException(409, "이미 연결된 상담사입니다")
+        else:
+            # 비활성 관계 재활성화
+            existing.status = "active"
+            await save(existing)
+            return existing
+    
+    # 3. 새 관계 생성
+    relation = ClientCounselor(
+        client_id=client_user.id,
+        counselor_id=counselor.id,
+        status="active",
+        invited_by="client",  # 내담자가 직접 입력
+    )
+    await save(relation)
+    
+    # 4. 상담사에게 알림 (선택)
+    await notify_counselor_new_client(counselor.id, client_user.id)
+    
+    return relation
+```
+
+### 2D.4 상담사 無 상태 (No Counselor)
+
+**내담자가 상담사가 한 명도 없을 때:**
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│         🌿                       │
+│                                 │
+│  아직 연결된 상담사가 없어요      │
+│                                 │
+│  상담사에게 받은 6자리 코드를     │
+│  입력하면 상담을 시작할 수 있어요  │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │  _  _  _  _  _  _       │    │
+│  └─────────────────────────┘    │
+│  [      상담사 연결하기     ]    │
+│                                 │
+│  상담사가 아직 코드를 안 줬다면   │
+│  상담사에게 요청해보세요         │
+│                                 │
+└─────────────────────────────────┘
+```
+
+- **모든 탭 비활성:** 채팅·세션·리포트 탭 접근 불가 (리디렉트 또는 "상담사 연결 필요" 안내)
+- **프로필만 활성:** 상담사 코드 입력 가능
+- **첫 상담사 연결 시:** 바로 `/app` 오늘 화면으로 전환
+
+### 2D.5 복수 상담사 UX
+
+**오늘 화면 (Home):**
+- 상담사별 다음 세션 카드 (여러 상담사가 있으면 복수 카드)
+- "전체" 탭과 상담사별 필터 탭
+
+```
+오늘
+─────────────────────────────────
+[전체] [김상담] [이명상]          ← 상담사 필터 (좌우 스크롤)
+
+┌─────────────────────────────┐
+│ 김상담 ・ 명상 지도사         │
+│ 다음 명상 수업                │
+│ 5월 25일 (월) 오후 3시        │
+│               [예정] →       │
+└─────────────────────────────┘
+
+┌─────────────────────────────┐
+│ 이명상 ・ 임상 심리상담사      │
+│ 다음 상담                     │
+│ 5월 26일 (화) 오전 10시       │
+│               [예정] →       │
+└─────────────────────────────┘
+```
+
+**채팅 (Chat):**
+- 상담사별 채팅방 목록 (이름 + 최근 메시지)
+- 상담사가 여러 명이면 여러 채팅방
+
+**세션 (Sessions):**
+- 전체 상담사 세션 통합 캘린더
+- 상담사별 색상 구분 (dot/바)
+- 상담사 필터
+
+**프로필 (Profile):**
+- "내 상담사" 섹션 — 연결된 모든 상담사 목록
+- 각 상담사: 이름·소속·자격 뱃지·연결 상태
+- "+ 상담사 코드 입력" 버튼 (항상 표시)
+
+### 2D.6 백엔드 변경
+
+**신규 API:**
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/api/v1/client/counselors` | 내 상담사 목록 |
+| `POST` | `/api/v1/client/counselors` | 상담사 코드로 추가 (Body: `{code}`) |
+| `DELETE` | `/api/v1/client/counselors/:id` | 상담사 연결 해제 (비활성화) |
+
+**기존 API 변경:**
+
+| API | 변경 |
+|-----|------|
+| `GET /api/v1/sessions?role=client` | 모든 연결된 상담사의 세션 중 내가 참여자인 것 |
+| `GET /api/v1/chat/rooms` | 모든 연결된 상담사와의 채팅방 |
+| `GET /api/v1/reports?role=client` | 모든 연결된 상담사가 발행한 내 리포트 |
+| `GET /api/v1/users/me` | `counselors[]` 필드 추가 (연결된 상담사 목록) |
+
+### 2D.7 라우트 업데이트
+
+| 경로 | 화면 | 상태 |
+|------|------|------|
+| `/onboarding/client/essentials` | 필수 정보 입력 | onboarding_completed=false |
+| `/app` | **상담사 없음 화면** (코드 입력) | 상담사 0명 |
+| `/app` | 오늘 화면 | 상담사 1명 이상 |
+| `/app/profile` | 프로필 (상담사 목록 + 코드 입력) | 항상 접근 가능 |
+
+**라우팅 로직:**
+```typescript
+if (user.role === 'client' && user.onboarding_completed) {
+  if (user.counselors.length === 0) {
+    → /app (상담사 無 상태 — 코드 입력 화면)
+  } else {
+    → /app (정상 오늘 화면)
+  }
+}
+```
 
 ---
 
@@ -270,7 +487,7 @@ async def google_auth(id_token: str, invite_token: str | None):
     email = payload["email"]
     name = payload.get("name", "")
     
-    # 2. User find-or-create (onboarding_completed=False → 필수 정보 입력 필요)
+    # 2. User find-or-create
     user = await find_user_by_email(email)
     if not user:
         user = await create_user(
@@ -278,20 +495,24 @@ async def google_auth(id_token: str, invite_token: str | None):
             name=name,
             role="client",
             auth_provider="google",
-            onboarding_completed=False  # ← 필수 정보 입력 전까지 false
+            onboarding_completed=False
         )
     elif user.auth_provider != "google":
         raise HTTPException(409, "이미 이메일로 가입된 계정입니다. 이메일로 로그인해주세요.")
     
-    # 3. 초대 토큰 처리
+    # 3. 초대 토큰 처리 → ClientCounselor 관계 생성
     if invite_token:
         invite = await get_invite_by_token(invite_token)
         if invite:
-            user.counselor_id = invite.counselor_id
-            await save_user(user)
+            await create_client_counselor(
+                client_id=user.id,
+                counselor_id=invite.counselor_id,
+                status="active",
+                invited_by="counselor"
+            )
             await mark_invite_accepted(invite_token)
     
-    # 4. JWT 발급 (onboarding_completed=false → FE에서 /onboarding/client/essentials로 리디렉트)
+    # 4. JWT 발급 (FE에서 onboarding_completed 확인 → essentials 또는 /app)
     return create_jwt(user)
 ```
 
@@ -494,10 +715,13 @@ if (!user) {
 }
 if (user.role === 'client') {
   if (!user.onboarding_completed) {
-    if (user.auth_provider === 'google') → /onboarding/client/essentials  // Google: 필수정보 1페이지
-    else → /onboarding/client  // 이메일: 4단계 온보딩
+    if (user.auth_provider === 'google') → /onboarding/client/essentials
+    else → /onboarding/client
   }
-  else → /app (ClientShell)
+  else if (user.counselors.length === 0) {
+    → /app?mode=no_counselor  // 상담사 無 상태 — 코드 입력 화면
+  }
+  else → /app (ClientShell 정상)
 }
 if (user.role === 'counselor') {
   if (!user.onboarding_completed) → /onboarding/counselor
@@ -802,20 +1026,25 @@ function App() {
 | `GET` | `/api/v1/chat/unread-count` | 클라이언트별 안 읽은 메시지 총계 | **P0** |
 | `POST` | `/api/v1/sessions/request` | 세션 신청 (시스템 메시지 자동 생성) | **P1** |
 
-### 6.2 User 모델 확장
+### 6.2 데이터 모델 변경
 
 ```python
-# backend/app/models/user.py
-class User(Base):
-    # ... existing fields ...
-    auth_provider = Column(String(20), default="email")  # "email" | "google" | "kakao"
-    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=True)
+# 제거: backend/app/models/user.py — counselor_id 필드
+# 신규: backend/app/models/client_counselor.py — ClientCounselor 조인 테이블
+#        Alembic: add_client_counselor_table + remove_user_counselor_id
 ```
 
-### 6.3 기존 API 권한 확장
+상세한 모델 정의는 §7 참조.
 
-| API | 현재 | 변경 |
-|-----|------|------|
+### 6.3 신규 API (상담사 관계)
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `GET` | `/api/v1/client/counselors` | 내 상담사 목록 (이름·소속·자격·상태) |
+| `POST` | `/api/v1/client/counselors` | 상담사 코드로 추가 (Body: `{code}`) |
+| `DELETE` | `/api/v1/client/counselors/:id` | 상담사 연결 해제 (비활성화) |
+
+### 6.4 기존 API 권한 확장
 | `GET /api/v1/sessions` | Counselor: 본인 세션 | Client role → 본인이 참여자인 세션만 반환 |
 | `GET /api/v1/chat/rooms` | Counselor: 본인 채팅방 | Client → 본인이 participant인 채팅방 |
 | `GET /api/v1/reports` | Counselor: 본인 발행 리포트 | Client → 본인 대상 리포트 |
@@ -831,29 +1060,52 @@ class User(Base):
 
 ## 7. 데이터 모델 변경
 
-### 7.1 신규 모델 없음
+### 7.1 신규 모델: ClientCounselor
 
-MVP 1.5는 기존 데이터 모델 위에서 동작. 단, 아래 필드 활용 방식 변경:
+MVP 1.5의 핵심 구조 변경 — 내담자↔상담사 N:M 관계를 위한 조인 테이블.
+
+```python
+# backend/app/models/client_counselor.py
+class ClientCounselor(Base):
+    __tablename__ = "client_counselors"
+    
+    id = Column(UUID, primary_key=True, default=uuid4)
+    client_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String(20), default="active")  # "active" | "inactive"
+    invited_by = Column(String(20))                 # "counselor" | "client"
+    created_at = Column(DateTime, default=utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint("client_id", "counselor_id", name="uq_client_counselor"),
+    )
+```
+
+### 7.2 User 모델 변경
+
+```python
+class User(Base):
+    # ... existing fields ...
+    auth_provider = Column(String(20), default="email")  # "email" | "google" | "kakao"
+    
+    # 제거: counselor_id (N:M으로 대체)
+    
+    # 신규: 관계 (읽기 전용)
+    counselors = relationship("User", secondary="client_counselors", ...)
+    clients = relationship("User", secondary="client_counselors", ...)
+```
+
+### 7.3 기존 모델 활용 (변경 없음)
 
 | 모델 | 필드 | 용도 |
 |------|------|------|
 | `User` | `role='client'` | Role Router 분기 |
-| `User` | `counselor_id` (신규 또는 `client_of`) | 내담자↔상담사 연결 |
+| `User` | `counselor_code` | 상담사 고유 6자리 코드 (가입 시 자동 발급) |
+| `ClientCounselor` | `client_id + counselor_id` | 내담자↔상담사 연결 (신규) |
 | `Session` | `participants[]` | 내담자의 세션 목록 조회 |
 | `ChatRoom` | `participants[]` | 내담자의 채팅방 목록 |
 | `Report` | `recipient_id` | 내담자 대상 리포트 필터링 |
 | `Message` | `type='system'`, `subtype='session_request'` | 세션 신청 메시지 |
-
-### 7.2 User 모델 확장 (필요 시)
-
-```python
-# backend/app/models/user.py
-class User(Base):
-    # ... existing fields ...
-    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=True)  # 내담자의 상담사
-```
-
-이미 `counselor_code`로 매칭된 상담사가 있다면, `counselor_id`를 저장하여 빠른 참조.
 
 ---
 
@@ -868,8 +1120,8 @@ class User(Base):
 | **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, Step 1~2에 필수 정보(성별·생년월일·휴대전화번호) 포함 |
 | **ClientEssentialsPage** | Google OAuth 후 필수 정보 입력 1페이지 — 이름·이메일(Google 자동입력·비활성) + 성별·생년월일·휴대전화번호 |
 | **GoogleLoginButton** | `@react-oauth/google` 연동, ID token → `/api/v1/auth/google` |
-| **Google OAuth 백엔드** | `POST /api/v1/auth/google`, ID token 검증, User find-or-create, invite_token 처리 |
-| **User 모델 확장** | `auth_provider`, `counselor_id` 필드 추가 + Alembic 마이그레이션 |
+| **Google OAuth 백엔드** | `POST /api/v1/auth/google`, ID token 검증, User find-or-create, ClientCounselor 관계 생성 |
+| **User 모델 확장** | `auth_provider` 필드, `counselor_id` 제거, `ClientCounselor` 조인 테이블 + Alembic 마이그레이션 |
 | **RoleRouter** | App.tsx에 client/counselor 분기 + 인증 상태·제공자별 라우팅 |
 | **Kakao 버튼 (UI only)** | 그레이아웃 + "MVP2 출시 예정" 툴팁 |
 
@@ -919,6 +1171,7 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 | FC-ID | 명칭 | MVP | 설명 |
 |:---:|------|:---:|------|
 | FC.0 | 내담자 인증 (로그인·가입·초대) | 1.5 | Google OAuth·이메일·Kakao(예정), InviteLanding·ClientOnboarding·ClientLogin 리팩토링 |
+| FC.0a | N:M 상담사 관계 | 1.5 | ClientCounselor 조인 테이블, 상담사 코드 입력, 상담사 無 상태, 복수 상담사 UX |
 | FC.1 | 내담자 앱 셸 + 탭 내비게이션 | 1.5 | ClientShell·BottomTabBar |
 | FC.2 | 내담자 오늘 화면 | 1.5 | 다음 세션·최근 리포트·메시지 배지 |
 | FC.3 | 내담자-상담사 채팅 | 1.5 | 채팅방 목록·메시지·WebSocket |
@@ -944,6 +1197,6 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ## 문서 식별
 
-**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.4.0`
+**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.5.0`
 
 **상태:** Draft → 검토 요청 (Brian)
