@@ -70,8 +70,18 @@ export default function ChatPage() {
     navigate(`/chat/${room.id}`);
   };
 
+  const headerTitle = useMemo(() => {
+    if (!selectedRoom) return '채팅';
+    return roomLabel(selectedRoom);
+  }, [selectedRoom]);
+
+  const headerSub = useMemo(() => {
+    if (!selectedRoom) return 'MESSAGES';
+    return roomSub(selectedRoom);
+  }, [selectedRoom]);
+
   return (
-    <AppShell title="채팅" sub="MESSAGES" contentPad="" noScroll hideBottomTab noBottomPad>
+    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab noBottomPad>
       <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside
