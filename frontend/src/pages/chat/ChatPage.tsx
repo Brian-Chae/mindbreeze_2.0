@@ -12,12 +12,16 @@ function roomLabel(room: ChatRoomDto): string {
   if (room.room_type === 'direct') {
     return room.name ? `내담자 ${room.name.slice(0, 8)}` : '1:1 채팅';
   }
+  if (room.room_type === 'group') {
+    return room.name || '그룹 채팅';
+  }
   return room.session_id ? `세션 ${room.session_id.slice(0, 8)}` : '채팅방';
 }
 
 function roomSub(room: ChatRoomDto): string {
   if (room.room_type === 'direct') return '1:1 대화';
-  return '그룹 채팅';
+  if (room.room_type === 'group') return '그룹 대화';
+  return '세션 채팅';
 }
 
 export default function ChatPage() {

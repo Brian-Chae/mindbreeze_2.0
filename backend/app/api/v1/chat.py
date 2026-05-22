@@ -33,10 +33,14 @@ def create_room(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    if payload.room_type != "direct":
-        from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="현재는 direct 방만 생성 가능합니다")
-    room = chat_service.create_direct_room(current_user["id"], payload.client_id, db)
+    room = chat_service.create_room(
+        host_id=current_user["id"],
+        room_type=payload.room_type,
+        client_id=payload.client_id,
+        participant_ids=payload.participant_ids,
+        name=payload.name,
+        db=db,
+    )
     return RoomResponse(**room)
 
 

@@ -3,7 +3,7 @@
 import { apiClient } from './client';
 
 export type ChatMessageType = 'text' | 'image' | 'file' | 'system';
-export type RoomType = 'direct' | 'session';
+export type RoomType = 'direct' | 'session' | 'group';
 
 export interface ChatMessage {
   id: string;
@@ -46,10 +46,19 @@ export interface CreateDirectRoomPayload {
   room_type: 'direct';
 }
 
+export interface CreateGroupRoomPayload {
+  participant_ids: string[];
+  room_type: 'group';
+  name?: string;
+}
+
 export const listChatRooms = (): Promise<ChatRoomListResponse> =>
   apiClient.get<ChatRoomListResponse>('/chat/rooms');
 
 export const createDirectRoom = (payload: CreateDirectRoomPayload): Promise<ChatRoom> =>
+  apiClient.post<ChatRoom>('/chat/rooms', payload);
+
+export const createGroupRoom = (payload: CreateGroupRoomPayload): Promise<ChatRoom> =>
   apiClient.post<ChatRoom>('/chat/rooms', payload);
 
 export const getChatRoom = (roomId: string): Promise<ChatRoom> =>

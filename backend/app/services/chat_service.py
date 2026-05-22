@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead
+from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
 from app.models.session import Session, SessionParticipant
 from app.models.client_counselor_link import ClientCounselorLink
 from app.models.user import User
@@ -46,6 +46,20 @@ def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | Non
             .first()
         )
         if not link:
+            raise HTTPException(status_code=403, detail="채팅방 접근 권한이 없습니다")
+        return None
+    if room.room_type == "group":
+        if room.host_id == uid:
+            return None
+        is_participant = (
+            db.query(ChatRoomParticipant)
+            .filter(
+                ChatRoomParticipant.room_id == room.id,
+                ChatRoomParticipant.user_id == uid,
+            )
+            .first()
+        )
+        if not is_participant:
             raise HTTPException(status_code=403, detail="채팅방 접근 권한이 없습니다")
         return None
     session = db.query(Session).filter(Session.id == room.session_id).first()
@@ -99,21 +113,87 @@ def get_or_create_direct_room(counselor_id: UUID, client_id: UUID, db: DBSession
 
 
 def create_direct_room(counselor_id: str, client_id: str, db: DBSession) -> dict:
-    counselor_uuid = _uuid(counselor_id)
-    client_uuid = _uuid(client_id)
-    # 상담사-내담자 연결 확인
-    link = (
-        db.query(ClientCounselorLink)
-        .filter(
-            ClientCounselorLink.counselor_id == counselor_uuid,
-            ClientCounselorLink.client_id == client_uuid,
-        )
-        .first()
+    return create_room(
+        host_id=counselor_id,
+        room_type="direct",
+        client_id=client_id,
+        participant_ids=None,
+        name=None,
+        db=db,
     )
-    if not link:
-        raise HTTPException(status_code=403, detail="연결되지 않은 내담자입니다")
-    room = get_or_create_direct_room(counselor_uuid, client_uuid, db)
-    return _serialize_room(room, counselor_id, db)
+
+
+def create_group_room(
+    host_id: str,
+    participant_ids: list[str],
+    name: str | None,
+    db: DBSession,
+) -> dict:
+    host_uuid = _uuid(host_id)
+    if not participant_ids:
+        raise HTTPException(status_code=422, detail="참여자를 1명 이상 선택해야 합니다")
+    # 상담사-내담자 연결 확인 (각 참여자)
+    participant_uuids: list[UUID] = []
+    for pid in participant_ids:
+        puid = _uuid(pid)
+        if puid == host_uuid:
+            continue
+        link = (
+            db.query(ClientCounselorLink)
+            .filter(
+                ClientCounselorLink.counselor_id == host_uuid,
+                ClientCounselorLink.client_id == puid,
+            )
+            .first()
+        )
+        if not link:
+            raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
+        participant_uuids.append(puid)
+    if not participant_uuids:
+        raise HTTPException(status_code=422, detail="참여자를 1명 이상 선택해야 합니다")
+    room = ChatRoom(
+        session_id=None,
+        room_type="group",
+        host_id=host_uuid,
+        name=name,
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    for puid in participant_uuids:
+        db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
+    db.commit()
+    return _serialize_room(room, host_id, db)
+
+
+def create_room(
+    host_id: str,
+    room_type: str,
+    client_id: str | None,
+    participant_ids: list[str] | None,
+    name: str | None,
+    db: DBSession,
+) -> dict:
+    if room_type == "direct":
+        if not client_id:
+            raise HTTPException(status_code=422, detail="client_id가 필요합니다")
+        counselor_uuid = _uuid(host_id)
+        client_uuid = _uuid(client_id)
+        link = (
+            db.query(ClientCounselorLink)
+            .filter(
+                ClientCounselorLink.counselor_id == counselor_uuid,
+                ClientCounselorLink.client_id == client_uuid,
+            )
+            .first()
+        )
+        if not link:
+            raise HTTPException(status_code=403, detail="연결되지 않은 내담자입니다")
+        room = get_or_create_direct_room(counselor_uuid, client_uuid, db)
+        return _serialize_room(room, host_id, db)
+    if room_type == "group":
+        return create_group_room(host_id, participant_ids or [], name, db)
+    raise HTTPException(status_code=400, detail="지원하지 않는 방 유형입니다")
 
 
 def _peer_id_for_direct(room: ChatRoom, user_id: UUID) -> str | None:
@@ -190,6 +270,24 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     for r in as_host + as_client:
         direct_seen.setdefault(r.id, r)
     for r in direct_seen.values():
+        result.append(_serialize_room(r, user_id, db))
+
+    # 그룹방: 본인이 host(상담사) 이거나 ChatRoomParticipant 인 경우
+    group_as_host = (
+        db.query(ChatRoom)
+        .filter(ChatRoom.room_type == "group", ChatRoom.host_id == uid)
+        .all()
+    )
+    group_as_participant = (
+        db.query(ChatRoom)
+        .join(ChatRoomParticipant, ChatRoomParticipant.room_id == ChatRoom.id)
+        .filter(ChatRoom.room_type == "group", ChatRoomParticipant.user_id == uid)
+        .all()
+    )
+    group_seen: dict[UUID, ChatRoom] = {}
+    for r in group_as_host + group_as_participant:
+        group_seen.setdefault(r.id, r)
+    for r in group_seen.values():
         result.append(_serialize_room(r, user_id, db))
     return result
 

@@ -46,6 +46,18 @@ class ChatMessage(Base):
     room = relationship("ChatRoom", back_populates="messages")
 
 
+class ChatRoomParticipant(Base):
+    __tablename__ = "chat_room_participants"
+
+    room_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("chat_rooms.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ChatMessageRead(Base):
     __tablename__ = "chat_message_reads"
 
