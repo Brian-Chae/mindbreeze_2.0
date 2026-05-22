@@ -130,6 +130,12 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
 
     db.commit()
     db.refresh(session)
+
+    # 그룹 세션(참여자 2인 이상)이면 채팅방 자동 생성
+    if len(payload.participant_ids) >= 2:
+        from app.services import chat_service
+        chat_service.get_or_create_room_by_session(session.id, db)
+
     return _serialize(session)
 
 

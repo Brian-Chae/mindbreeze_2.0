@@ -6,6 +6,12 @@ from pydantic import BaseModel, Field
 
 
 MessageType = Literal["text", "image", "file", "system"]
+RoomType = Literal["direct", "session"]
+
+
+class RoomCreateRequest(BaseModel):
+    client_id: str
+    room_type: RoomType = "direct"
 
 
 class MessageCreateRequest(BaseModel):
@@ -32,7 +38,11 @@ class MessageListResponse(BaseModel):
 
 class RoomResponse(BaseModel):
     id: str
-    session_id: str
+    session_id: str | None = None
+    room_type: str = "session"
+    host_id: str | None = None
+    name: str | None = None
+    peer_id: str | None = None
     created_at: datetime
     unread_count: int = 0
 

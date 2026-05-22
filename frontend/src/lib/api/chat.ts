@@ -3,6 +3,7 @@
 import { apiClient } from './client';
 
 export type ChatMessageType = 'text' | 'image' | 'file' | 'system';
+export type RoomType = 'direct' | 'session';
 
 export interface ChatMessage {
   id: string;
@@ -17,7 +18,10 @@ export interface ChatMessage {
 
 export interface ChatRoom {
   id: string;
-  session_id: string;
+  session_id: string | null;
+  room_type: RoomType;
+  host_id: string | null;
+  name: string | null;
   created_at: string;
   unread_count: number;
 }
@@ -37,8 +41,16 @@ export interface SendMessagePayload {
   file_url?: string;
 }
 
+export interface CreateDirectRoomPayload {
+  client_id: string;
+  room_type: 'direct';
+}
+
 export const listChatRooms = (): Promise<ChatRoomListResponse> =>
   apiClient.get<ChatRoomListResponse>('/chat/rooms');
+
+export const createDirectRoom = (payload: CreateDirectRoomPayload): Promise<ChatRoom> =>
+  apiClient.post<ChatRoom>('/chat/rooms', payload);
 
 export const getChatRoom = (roomId: string): Promise<ChatRoom> =>
   apiClient.get<ChatRoom>(`/chat/rooms/${roomId}`);

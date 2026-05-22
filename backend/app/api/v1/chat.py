@@ -9,6 +9,7 @@ from app.schemas.chat import (
     MessageCreateRequest,
     MessageListResponse,
     MessageResponse,
+    RoomCreateRequest,
     RoomListResponse,
     RoomResponse,
 )
@@ -24,6 +25,19 @@ def list_rooms(
 ):
     rooms = chat_service.list_my_rooms(current_user["id"], db)
     return RoomListResponse(rooms=[RoomResponse(**r) for r in rooms])
+
+
+@router.post("/rooms", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+def create_room(
+    payload: RoomCreateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    if payload.room_type != "direct":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="현재는 direct 방만 생성 가능합니다")
+    room = chat_service.create_direct_room(current_user["id"], payload.client_id, db)
+    return RoomResponse(**room)
 
 
 @router.get("/rooms/{room_id}", response_model=RoomResponse)

@@ -74,7 +74,7 @@ function App() {
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:sessionId" element={<ChatPage />} />
+        <Route path="/chat/:roomId" element={<ChatPage />} />
         <Route path="/design" element={<DesignIndexPage />} />
         <Route path="/design/homepage" element={<HomepagePage />} />
         <Route path="/design/app" element={<OperatorAppPage />} />
