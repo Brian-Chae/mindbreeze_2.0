@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| **현재 버전** | `v1.3.0` |
+| **현재 버전** | `v1.4.0` |
 | **문서 상태** | `Draft` |
 | **최초 작성** | 2026-05-23 |
 | **최종 수정** | 2026-05-23 |
@@ -13,6 +13,7 @@
 
 | 버전 | 일자 | 변경 요약 | 작성 |
 |------|------|----------|------|
+| `v1.4.0` | 2026-05-23 | §2B.2~2C 필수 정보 수집 적용 — Google OAuth 후 필수 정보 1페이지(이름·성별·생년월일·휴대전화번호). `onboarding_completed=false` → `essentials`. ClientEssentialsPage 신설, Phase 0 업데이트 | — |
 | `v1.3.0` | 2026-05-23 | §2B 간편 인증 — Google OAuth(신규)·이메일(기존)·Kakao(예정). 초대 링크+Google 1클릭 가입. §2C 통합 인증 라우팅 | — |
 | `v1.2.0` | 2026-05-23 | §2A 인증 플로우 추가 — 초대 랜딩·회원가입·로그인·인증 상태 라우팅. 3개 기존 페이지 리팩토링 계획. Phase 0 신설 | — |
 | `v1.1.0` | 2026-05-23 | 초안 — BT·CL 아키텍처 + CH·CA 상세 명세 + CS 안티패턴 + 구현 로드맵 | — |
@@ -184,7 +185,7 @@ if (user.role === 'counselor' && user.onboarding_completed) → /dashboard (AppS
 | **이메일 + 비밀번호** | ✅ 기존 | — | 폴백·기존 회원 |
 | **Kakao OAuth** | — | ✅ | 국내 사용자 타겟 |
 
-### 2B.2 Google OAuth 플로우
+### 2B.2 Google OAuth 플로우 (필수 정보 수집 적용)
 
 ```
 [초대 링크] → InviteLandingPage
@@ -195,16 +196,104 @@ if (user.role === 'counselor' && user.onboarding_completed) → /dashboard (AppS
                  │       ↓
                  │   Backend: token 검증 → email 기준 User find-or-create
                  │       ↓
-                 │   초대 토큰으로 상담사 자동 매칭 (counselor_code 자동 입력)
+                 │   초대 토큰으로 상담사 자동 매칭
                  │       ↓
-                 │   → /app (바로 진입. 온보딩 4단계 생략)
+                 │   → /onboarding/client/essentials (필수 정보 1페이지)
+                 │       ↓
+                 │   이름(Google 자동입력) + 성별 + 생년월일 + 휴대전화번호
+                 │       ↓
+                 │   → /app (진입)
                  │
-                 └─ "이메일로 가입하기" → ClientOnboardingPage (기존 4단계)
+                 └─ "이메일로 가입하기" → ClientOnboardingPage (기존 4단계,
+                    Step 1~2에서 필수 정보 수집)
 ```
 
-**핵심 차이:**
-- Google OAuth: 온보딩 4단계 **전면 생략**. 기본 정보는 Google 프로필에서 자동 추출 (이름·이메일). 상세 정보·프로필은 앱 진입 후 설정에서 보완.
-- 이메일 가입: 기존 4단계 유지하되, Google OAuth 이후에도 4단계를 건너뛰고 싶은 사용자는 "나중에 설정" 버튼으로 스킵 가능.
+**핵심 변경:**
+- ~~온보딩 4단계 전면 생략~~ → **필수 정보 1페이지로 압축**
+- Google에서 이름·이메일은 자동 확보 → 성별·생년월일·휴대전화번호만 추가 입력
+- `onboarding_completed = false` 유지 → 필수 정보 입력 완료 후 `true`로 전환
+- 기존 이메일 가입도 Step 1~2에 이 필드들이 필수로 포함됨
+
+### 2B.2a 필수 수집 정보
+
+| 필드 | Google OAuth | 이메일 가입 | 사유 |
+|------|:---:|:---:|------|
+| **이름** | ✅ 자동 (Google) | 필수 입력 | 내담자 식별·호칭 |
+| **이메일** | ✅ 자동 (Google) | 필수 입력 | 계정·연락 |
+| **성별** | ⬜ 필수 입력 | 필수 입력 | 상담 시 기본 정보, 리포트 개인화 |
+| **생년월일** | ⬜ 필수 입력 | 필수 입력 | 연령대 분석, 상담 접근법 |
+| **휴대전화번호** | ⬜ 필수 입력 | 필수 입력 | 긴급 연락, 세션 리마인더 |
+| 관심 분야 | — | Step 2 (선택) | 상담사 매칭 보조 |
+| 프로필 사진 | — | Step 3 (선택) | 나중에 설정 가능 |
+
+### 2B.2b Google OAuth 이후 — 필수 정보 페이지 (`/onboarding/client/essentials`)
+
+```
+┌─────────────────────────────────┐
+│  ←  거의 다 됐어요!              │
+│                                 │
+│  상담사가 당신을 더 잘 이해할 수  │
+│  있도록 아래 정보를 입력해주세요   │
+│                                 │
+│  이름                           │
+│  [홍길동           ]  ✓ Google  │  ← 비활성 (Google에서 가져옴)
+│                                 │
+│  이메일                          │
+│  [hong@example.com ]  ✓ Google  │  ← 비활성
+│                                 │
+│  성별                           │
+│  [남성] [여성] [기타]            │  ← 필수 선택
+│                                 │
+│  생년월일                        │
+│  [YYYY]년 [MM]월 [DD]일          │  ← 필수, 3개 select 또는 date picker
+│                                 │
+│  휴대전화번호                    │
+│  [010-____-____]                │  ← 필수, 하이픈 자동
+│                                 │
+│  [      완료      ]              │
+│                                 │
+│  입력한 정보는 상담 목적 외에      │
+│  사용되지 않습니다 🔒             │
+└─────────────────────────────────┘
+```
+
+**백엔드:** `PATCH /api/v1/users/me` 호출 → `onboarding_completed = true` → `/app` 진입
+
+**Design:** Clinical Garden — `bg-surface-canvas`, `rounded-[20px]` 입력 필드, `text-base`(16px), 성별은 `mb-btn` 스타일 토글 버튼
+
+### 2B.2c Google OAuth 백엔드 로직 (업데이트)
+
+```python
+async def google_auth(id_token: str, invite_token: str | None):
+    # 1. Google ID token 검증
+    payload = verify_google_token(id_token)
+    email = payload["email"]
+    name = payload.get("name", "")
+    
+    # 2. User find-or-create (onboarding_completed=False → 필수 정보 입력 필요)
+    user = await find_user_by_email(email)
+    if not user:
+        user = await create_user(
+            email=email,
+            name=name,
+            role="client",
+            auth_provider="google",
+            onboarding_completed=False  # ← 필수 정보 입력 전까지 false
+        )
+    elif user.auth_provider != "google":
+        raise HTTPException(409, "이미 이메일로 가입된 계정입니다. 이메일로 로그인해주세요.")
+    
+    # 3. 초대 토큰 처리
+    if invite_token:
+        invite = await get_invite_by_token(invite_token)
+        if invite:
+            user.counselor_id = invite.counselor_id
+            await save_user(user)
+            await mark_invite_accepted(invite_token)
+    
+    # 4. JWT 발급 (onboarding_completed=false → FE에서 /onboarding/client/essentials로 리디렉트)
+    return create_jwt(user)
+```
 
 ### 2B.3 로그인 페이지 재설계
 
@@ -400,10 +489,14 @@ if (!user) {
   if (path.startsWith('/invite/')) → InviteLandingPage
   else if (path === '/login/client') → ClientLoginPage
   else if (path === '/onboarding/client') → ClientOnboardingPage
+  else if (path === '/onboarding/client/essentials') → ClientEssentialsPage  // Google OAuth 후
   else → LandingPage (일반 방문자)
 }
 if (user.role === 'client') {
-  if (!user.onboarding_completed) → /onboarding/client  // 이메일 가입만 해당
+  if (!user.onboarding_completed) {
+    if (user.auth_provider === 'google') → /onboarding/client/essentials  // Google: 필수정보 1페이지
+    else → /onboarding/client  // 이메일: 4단계 온보딩
+  }
   else → /app (ClientShell)
 }
 if (user.role === 'counselor') {
@@ -412,7 +505,9 @@ if (user.role === 'counselor') {
 }
 ```
 
-> **Google OAuth로 가입한 Client**는 `onboarding_completed = true`이므로 바로 `/app` 진입. 이메일 가입자는 4단계 온보딩 후 `/app` 진입.
+> **Google OAuth 가입자:** `onboarding_completed = false` → `/onboarding/client/essentials`로 이동 → 필수 정보(성별·생년월일·휴대전화번호) 입력 → `onboarding_completed = true` → `/app`
+>
+> **이메일 가입자:** `onboarding_completed = false` → `/onboarding/client` → 4단계(Step 1~2에서 필수 정보 수집) → `onboarding_completed = true` → `/app`
 
 ---
 
@@ -572,7 +667,8 @@ frontend/src/
 │   │   └── ClientProfilePage.tsx
 │   ├── ClientLoginPage.tsx      # 내담자 로그인 (리팩토링)
 │   ├── onboarding/
-│   │   └── ClientOnboardingPage.tsx  # 내담자 가입 (리팩토링)
+│   │   ├── ClientOnboardingPage.tsx  # 내담자 가입 4단계 (리팩토링)
+│   │   └── ClientEssentialsPage.tsx  # Google OAuth 후 필수 정보 (신규)
 │   ├── clients/
 │   │   └── InviteLandingPage.tsx     # 초대 랜딩 (리팩토링)
 │   └── ...                     # 기존 상담사 페이지 (변경 없음)
@@ -603,7 +699,8 @@ function App() {
 |------|------|----|
 | `/invite/:token` | 초대 랜딩 | — (비로그인) |
 | `/login/client` | 내담자 로그인 | — (비로그인) |
-| `/onboarding/client` | 내담자 회원가입 | — (비로그인) |
+| `/onboarding/client` | 내담자 회원가입 (4단계) | — (비로그인) |
+| `/onboarding/client/essentials` | 필수 정보 입력 (Google OAuth 후) | — (비로그인·로그인) |
 | `/app` | 오늘 (Home) | 오늘 |
 | `/app/chat` | 채팅방 목록 | 채팅 |
 | `/app/chat/:roomId` | 채팅방 | — |
@@ -768,7 +865,8 @@ class User(Base):
 |------|------|
 | **InviteLandingPage** | Clinical Garden 디자인, 상담사 프로필 카드, "Google로 시작하기" CTA |
 | **ClientLoginPage** | Clinical Garden 디자인, `/clients` → `/app` 리디렉션 수정, Google 로그인 버튼 |
-| **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, "나중에 설정" 스킵 옵션 |
+| **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, Step 1~2에 필수 정보(성별·생년월일·휴대전화번호) 포함 |
+| **ClientEssentialsPage** | Google OAuth 후 필수 정보 입력 1페이지 — 이름·이메일(Google 자동입력·비활성) + 성별·생년월일·휴대전화번호 |
 | **GoogleLoginButton** | `@react-oauth/google` 연동, ID token → `/api/v1/auth/google` |
 | **Google OAuth 백엔드** | `POST /api/v1/auth/google`, ID token 검증, User find-or-create, invite_token 처리 |
 | **User 모델 확장** | `auth_provider`, `counselor_id` 필드 추가 + Alembic 마이그레이션 |
@@ -846,6 +944,6 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ## 문서 식별
 
-**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.3.0`
+**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.4.0`
 
 **상태:** Draft → 검토 요청 (Brian)
