@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| **현재 버전** | `v1.2.0` |
+| **현재 버전** | `v1.3.0` |
 | **문서 상태** | `Draft` |
 | **최초 작성** | 2026-05-23 |
 | **최종 수정** | 2026-05-23 |
@@ -13,6 +13,7 @@
 
 | 버전 | 일자 | 변경 요약 | 작성 |
 |------|------|----------|------|
+| `v1.3.0` | 2026-05-23 | §2B 간편 인증 — Google OAuth(신규)·이메일(기존)·Kakao(예정). 초대 링크+Google 1클릭 가입. §2C 통합 인증 라우팅 | — |
 | `v1.2.0` | 2026-05-23 | §2A 인증 플로우 추가 — 초대 랜딩·회원가입·로그인·인증 상태 라우팅. 3개 기존 페이지 리팩토링 계획. Phase 0 신설 | — |
 | `v1.1.0` | 2026-05-23 | 초안 — BT·CL 아키텍처 + CH·CA 상세 명세 + CS 안티패턴 + 구현 로드맵 | — |
 | `v1.0.0` | 2026-05-23 | 최초 작성 | — |
@@ -171,7 +172,249 @@ if (user.role === 'counselor' && user.onboarding_completed) → /dashboard (AppS
 
 ---
 
-## 3. 화면별 상세 설계
+## 2B. 간편 인증 (Google OAuth + 이메일)
+
+> **목표:** 내담자의 회원가입·로그인 진입 장벽을 낮춘다. 초대 링크 → Google 클릭 한 번 → 앱 진입. 4단계 온보딩을 최대한 생략하거나 후순위로 미룬다.
+
+### 2B.1 인증 수단
+
+| 수단 | MVP 1.5 | MVP2 | 비고 |
+|------|:---:|:---:|------|
+| **Google OAuth** | ✅ 신규 | — | 1순위 간편가입 |
+| **이메일 + 비밀번호** | ✅ 기존 | — | 폴백·기존 회원 |
+| **Kakao OAuth** | — | ✅ | 국내 사용자 타겟 |
+
+### 2B.2 Google OAuth 플로우
+
+```
+[초대 링크] → InviteLandingPage
+                 │
+                 ├─ "Google로 시작하기" → Google OAuth 팝업
+                 │       ↓
+                 │   Google 계정 선택 → 동의
+                 │       ↓
+                 │   Backend: token 검증 → email 기준 User find-or-create
+                 │       ↓
+                 │   초대 토큰으로 상담사 자동 매칭 (counselor_code 자동 입력)
+                 │       ↓
+                 │   → /app (바로 진입. 온보딩 4단계 생략)
+                 │
+                 └─ "이메일로 가입하기" → ClientOnboardingPage (기존 4단계)
+```
+
+**핵심 차이:**
+- Google OAuth: 온보딩 4단계 **전면 생략**. 기본 정보는 Google 프로필에서 자동 추출 (이름·이메일). 상세 정보·프로필은 앱 진입 후 설정에서 보완.
+- 이메일 가입: 기존 4단계 유지하되, Google OAuth 이후에도 4단계를 건너뛰고 싶은 사용자는 "나중에 설정" 버튼으로 스킵 가능.
+
+### 2B.3 로그인 페이지 재설계
+
+**ClientLoginPage** — 두 가지 로그인 경로:
+
+```
+┌─────────────────────────────────┐
+│      MIND BREEZE                │
+│      당신의 마음쉼               │
+├─────────────────────────────────┤
+│                                 │
+│  [G] Google로 로그인             │  ← 1순위 (브랜드 컬러, 상단 배치)
+│                                 │
+│  ─────── 또는 ───────            │
+│                                 │
+│  이메일                          │
+│  [________________]             │
+│  비밀번호                        │
+│  [________________]             │
+│  [      로그인      ]            │
+│                                 │
+│  비밀번호 찾기 · 처음이신가요?    │
+│  가입하기                       │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**Google 버튼 디자인:**
+- Google 브랜드 가이드라인 준수 (흰색 배경 + Google 'G' 로고 + "Google로 로그인")
+- 또는 Clinical Garden에 맞게 커스텀 (sage 배경 + 흰색 Google 아이콘)
+
+### 2B.4 초대 랜딩 재설계
+
+**InviteLandingPage** — 초대 링크 진입 시:
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│        🌿 MIND BREEZE           │
+│                                 │
+│  {상담사명}님의                  │
+│  마음쉼에 초대합니다              │
+│                                 │
+│  ┌─────────────────────────┐    │
+│  │ [상담사 프로필]           │    │
+│  │  김상담 ・ 명상 지도사     │    │
+│  │  마음쉼 상담센터           │    │
+│  │  🛡️ Verified+           │    │
+│  └─────────────────────────┘    │
+│                                 │
+│  [G] Google로 시작하기          │  ← 1순위 CTA
+│                                 │
+│  이메일로 가입하기 →             │  ← 2순위 (작은 텍스트)
+│                                 │
+│  이미 계정이 있으신가요? 로그인 → │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**Google 시작하기 선택 시:**
+1. Google OAuth 팝업 → 계정 선택
+2. Backend: `POST /api/v1/auth/google` 호출 (invite_token 포함)
+3. Backend 처리:
+   - Google ID token 검증
+   - 이메일로 User find-or-create (`role='client'`)
+   - invite_token으로 상담사 매칭 (`counselor_code` → `counselor_id` 저장)
+   - `onboarding_completed = true` (Google OAuth는 온보딩 스킵)
+   - 자체 JWT 발급 → 응답
+4. Frontend: JWT 저장 → `/app` 리디렉트
+
+### 2B.5 백엔드 변경
+
+**신규 엔드포인트:**
+
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| `POST` | `/api/v1/auth/google` | Google OAuth 로그인·가입 |
+| `GET` | `/api/v1/auth/google/url` | Google OAuth 인증 URL 반환 |
+
+**`POST /api/v1/auth/google` — Request:**
+```json
+{
+  "id_token": "eyJ...",           // Google ID Token (Frontend에서 Google SDK로 획득)
+  "invite_token": "abc123"        // optional — 초대 링크 통해 왔을 때만
+}
+```
+
+**Backend 처리 로직:**
+```python
+# google_auth_service.py
+async def google_auth(id_token: str, invite_token: str | None):
+    # 1. Google ID token 검증 (google-auth 라이브러리)
+    payload = verify_google_token(id_token)
+    email = payload["email"]
+    name = payload.get("name", "")
+    
+    # 2. User find-or-create
+    user = await find_user_by_email(email)
+    if not user:
+        user = await create_user(
+            email=email,
+            name=name,
+            role="client",
+            auth_provider="google",
+            onboarding_completed=True  # Google OAuth는 온보딩 스킵
+        )
+    
+    # 3. 초대 토큰 처리 (상담사 매칭)
+    if invite_token:
+        invite = await get_invite_by_token(invite_token)
+        if invite:
+            user.counselor_id = invite.counselor_id
+            await save_user(user)
+            await mark_invite_accepted(invite_token)
+    
+    # 4. JWT 발급
+    return create_jwt(user)
+```
+
+**필요 패키지:** `google-auth` (PyPI), `google-api-python-client`
+
+**User 모델 확장:**
+```python
+class User(Base):
+    # ... existing ...
+    auth_provider = Column(String(20), default="email")  # "email" | "google" | "kakao"
+    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=True)
+```
+
+### 2B.6 프론트엔드 — Google SDK 연동
+
+**Google Identity Services (GIS) — `@react-oauth/google` 패키지:**
+
+```tsx
+// GoogleLoginButton.tsx
+import { useGoogleLogin } from '@react-oauth/google';
+
+function GoogleLoginButton({ inviteToken }: { inviteToken?: string }) {
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      const res = await fetch('/api/v1/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({
+          id_token: tokenResponse.credential,
+          invite_token: inviteToken,
+        }),
+      });
+      const { access_token } = await res.json();
+      authStore.setToken(access_token);
+      navigate('/app');
+    },
+    onError: () => setError('Google 로그인에 실패했습니다'),
+  });
+
+  return (
+    <button onClick={() => login()} className="...">
+      <GoogleIcon />
+      Google로 {inviteToken ? '시작하기' : '로그인'}
+    </button>
+  );
+}
+```
+
+**Google OAuth Client ID:** Google Cloud Console에서 등록. 승인된 리디렉션 URI에 프론트엔드 도메인 추가 필수.
+
+**iOS Safari 주의사항:**
+- Google OAuth 팝업이 iOS Safari에서 차단될 수 있음 → `useGoogleLogin`의 `ux_mode: 'redirect'` 옵션 사용
+- 또는 `flow: 'auth-code'` 방식으로 PKCE 적용
+
+### 2B.7 Kakao 로그인 (MVP2 예정)
+
+**MVP1.5에서는 UI 준비만 (버튼 그레이아웃 + "준비 중" 툴팁):**
+
+```
+[G] Google로 로그인
+[K] Kakao로 로그인  ← 비활성 (회색, "MVP2 출시 예정")
+```
+
+MVP2에서 추가 시:
+- Kakao Developers에서 앱 등록 → REST API 키 발급
+- `kakao-login` 패키지 또는 REST API 직접 연동
+- Backend: `POST /api/v1/auth/kakao` 엔드포인트
+- User 모델 `auth_provider = "kakao"`
+
+---
+
+## 2C. 통합 인증 상태 라우팅 (업데이트)
+
+```typescript
+// RoleRouter — 최종 버전
+if (!user) {
+  // 비로그인
+  if (path.startsWith('/invite/')) → InviteLandingPage
+  else if (path === '/login/client') → ClientLoginPage
+  else if (path === '/onboarding/client') → ClientOnboardingPage
+  else → LandingPage (일반 방문자)
+}
+if (user.role === 'client') {
+  if (!user.onboarding_completed) → /onboarding/client  // 이메일 가입만 해당
+  else → /app (ClientShell)
+}
+if (user.role === 'counselor') {
+  if (!user.onboarding_completed) → /onboarding/counselor
+  else → /dashboard (AppShell)
+}
+```
+
+> **Google OAuth로 가입한 Client**는 `onboarding_completed = true`이므로 바로 `/app` 진입. 이메일 가입자는 4단계 온보딩 후 `/app` 진입.
+
+---
 
 ### 3.1 BT — 하단 탭바 (Bottom Tab Bar)
 
@@ -456,11 +699,23 @@ function App() {
 
 | 메서드 | 경로 | 설명 | 우선순위 |
 |--------|------|------|:---:|
+| `POST` | `/api/v1/auth/google` | Google OAuth 로그인·가입 (ID token 검증 + User find-or-create) | **P0** |
+| `GET` | `/api/v1/auth/google/url` | Google OAuth 인증 URL 반환 (옵션 — 프론트에서 직접 구성 가능) | **P1** |
 | `GET` | `/api/v1/client/home` | 오늘 화면 집계 (다음 세션·최근 리포트·안 읽은 메시지) | **P0** |
 | `GET` | `/api/v1/chat/unread-count` | 클라이언트별 안 읽은 메시지 총계 | **P0** |
 | `POST` | `/api/v1/sessions/request` | 세션 신청 (시스템 메시지 자동 생성) | **P1** |
 
-### 6.2 기존 API 권한 확장
+### 6.2 User 모델 확장
+
+```python
+# backend/app/models/user.py
+class User(Base):
+    # ... existing fields ...
+    auth_provider = Column(String(20), default="email")  # "email" | "google" | "kakao"
+    counselor_id = Column(UUID, ForeignKey("users.id"), nullable=True)
+```
+
+### 6.3 기존 API 권한 확장
 
 | API | 현재 | 변경 |
 |-----|------|------|
@@ -507,14 +762,18 @@ class User(Base):
 
 ## 8. 구현 로드맵
 
-### Phase 0 — 인증 리팩토링 (1~2일)
+### Phase 0 — 인증 리팩토링 (2~3일)
 
 | 작업 | 내용 |
 |------|------|
-| **InviteLandingPage** | Clinical Garden 디자인 적용, 상담사 프로필 카드, 가입/로그인 분기 |
-| **ClientLoginPage** | Clinical Garden 디자인, `/clients` → `/app` 리디렉션 수정, 회원가입 링크 |
-| **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, 완료 후 `/login/client` 이동 |
-| **RoleRouter** | App.tsx에 client/counselor 분기 + 인증 상태별 라우팅 |
+| **InviteLandingPage** | Clinical Garden 디자인, 상담사 프로필 카드, "Google로 시작하기" CTA |
+| **ClientLoginPage** | Clinical Garden 디자인, `/clients` → `/app` 리디렉션 수정, Google 로그인 버튼 |
+| **ClientOnboardingPage** | Clinical Garden 디자인, OTP 스타일 코드 입력, "나중에 설정" 스킵 옵션 |
+| **GoogleLoginButton** | `@react-oauth/google` 연동, ID token → `/api/v1/auth/google` |
+| **Google OAuth 백엔드** | `POST /api/v1/auth/google`, ID token 검증, User find-or-create, invite_token 처리 |
+| **User 모델 확장** | `auth_provider`, `counselor_id` 필드 추가 + Alembic 마이그레이션 |
+| **RoleRouter** | App.tsx에 client/counselor 분기 + 인증 상태·제공자별 라우팅 |
+| **Kakao 버튼 (UI only)** | 그레이아웃 + "MVP2 출시 예정" 툴팁 |
 
 ### Phase 1 — 기초·오늘 화면 (2~3일)
 
@@ -561,7 +820,7 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 | FC-ID | 명칭 | MVP | 설명 |
 |:---:|------|:---:|------|
-| FC.0 | 내담자 인증 (로그인·가입·초대) | 1.5 | InviteLanding·ClientOnboarding·ClientLogin 리팩토링, RoleRouter |
+| FC.0 | 내담자 인증 (로그인·가입·초대) | 1.5 | Google OAuth·이메일·Kakao(예정), InviteLanding·ClientOnboarding·ClientLogin 리팩토링 |
 | FC.1 | 내담자 앱 셸 + 탭 내비게이션 | 1.5 | ClientShell·BottomTabBar |
 | FC.2 | 내담자 오늘 화면 | 1.5 | 다음 세션·최근 리포트·메시지 배지 |
 | FC.3 | 내담자-상담사 채팅 | 1.5 | 채팅방 목록·메시지·WebSocket |
@@ -587,6 +846,6 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ## 문서 식별
 
-**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.2.0`
+**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.3.0`
 
 **상태:** Draft → 검토 요청 (Brian)
