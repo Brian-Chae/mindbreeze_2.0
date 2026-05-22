@@ -336,8 +336,8 @@ export default function SessionListPage() {
   };
 
   return (
-    <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot}>
-      <div className="max-w-6xl mx-auto space-y-5">
+    <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot} noScroll>
+      <div className="h-full flex flex-col min-h-0 max-w-6xl mx-auto w-full">
         {/* 모바일: 월간 캘린더 + 일간/주간 타임테이블 */}
         <MobileSection
           sessions={sessions}
@@ -351,8 +351,9 @@ export default function SessionListPage() {
         />
 
         {/* 데스크톱: 일간/주간/월간/목록 4탭 */}
-        <div className="hidden md:block space-y-5">
-          <div className="flex items-center justify-between">
+        <div className="hidden md:flex flex-col min-h-0 flex-1">
+          {/* 탭 바 + 네비게이션 (고정) */}
+          <div className="flex items-center justify-between shrink-0 py-1">
             <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
               {TABS.map((t) => (
                 <button
@@ -392,6 +393,8 @@ export default function SessionListPage() {
             )}
           </div>
 
+          {/* 스크롤 가능한 컨텐츠 영역 */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
           {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
           {error && <p className="text-[#B3261E]">{error}</p>}
 
@@ -422,6 +425,7 @@ export default function SessionListPage() {
               onShiftMonth={shiftMonth}
             />
           )}
+          </div>
         </div>
 
         <CreateSessionModal
