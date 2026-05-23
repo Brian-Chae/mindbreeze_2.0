@@ -2,7 +2,7 @@
 
 | 항목 | 값 |
 |------|-----|
-| **현재 버전** | `v1.5.0` |
+| **현재 버전** | `v1.6.0` |
 | **문서 상태** | `Draft` |
 | **최초 작성** | 2026-05-23 |
 | **최종 수정** | 2026-05-23 |
@@ -13,6 +13,7 @@
 
 | 버전 | 일자 | 변경 요약 | 작성 |
 |------|------|----------|------|
+| `v1.6.0` | 2026-05-23 | §9 SDD 리스트 — C01~C06 6개 SDD (인증·페이지·셸·채팅·세션·프로필). QA List 포함. 의존성 그래프. 총 12~15일 | — |
 | `v1.5.0` | 2026-05-23 | §2D 초대 기반 모델 + N:M 상담사 관계 — ClientCounselor 조인 테이블, 상담사 코드 입력, 상담사 無 상태, 복수 상담사 UX. §2B.2c·§2C·§7 데이터 모델 전면 개정 | — |
 | `v1.4.0` | 2026-05-23 | §2B.2~2C 필수 정보 수집 적용 — Google OAuth 후 필수 정보 1페이지(이름·성별·생년월일·휴대전화번호). `onboarding_completed=false` → `essentials`. ClientEssentialsPage 신설, Phase 0 업데이트 | — |
 | `v1.3.0` | 2026-05-23 | §2B 간편 인증 — Google OAuth(신규)·이메일(기존)·Kakao(예정). 초대 링크+Google 1클릭 가입. §2C 통합 인증 라우팅 | — |
@@ -1183,13 +1184,204 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ---
 
+## 9. SDD 리스트 (Spec-Driven Development)
+
+> 각 SDD는 `specs/<unix-ts>-<sdd-id>/` 디렉토리에 `spec.md` → `plan.md` → `tasks.md` 순으로 작성·구현한다.
+> 우선순위: **P0**(차단) > **P1**(필수) > **P2**(가능 시). 의존성: 상위 SDD 완료 후 하위 SDD 진행.
+
+### SDD-C01 — 인증·모델 기초
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.0 · FC.0a |
+| **우선순위** | **P0** — 모든 SDD의 선행 조건 |
+| **예상 기간** | 2~3일 |
+| **의존성** | 없음 (MVP1 코드베이스) |
+| **범위** | Google OAuth 백엔드, ClientCounselor 모델, Alembic 마이그레이션, RoleRouter |
+
+**포함 작업:**
+- [ ] `POST /api/v1/auth/google` — Google ID token 검증 + User find-or-create
+- [ ] `ClientCounselor` 모델 + Alembic 마이그레이션 (`add_client_counselor`, `remove_user_counselor_id`)
+- [ ] `User.auth_provider` 필드 추가 (`"email"` | `"google"`)
+- [ ] `GET /api/v1/client/counselors` — 내 상담사 목록
+- [ ] `POST /api/v1/client/counselors` — 상담사 코드로 추가
+- [ ] Google OAuth 초대 토큰 연동 → `ClientCounselor` 자동 생성
+- [ ] `App.tsx` — RoleRouter (client/counselor/비로그인 분기, 상담사 無 상태 분기)
+- [ ] pytest: Google OAuth + ClientCounselor CRUD + RoleRouter 단위 테스트
+
+**QA List (핵심):**
+- [ ] Google ID token 위조 시 401
+- [ ] 동일 이메일 Google↔이메일 중복 가입 시 409
+- [ ] 초대 토큰 유효기간 만료 시 적절한 에러
+- [ ] `GET /users/me` 응답에 `counselors[]` 포함
+- [ ] `counselors.length === 0` → `/app?mode=no_counselor`
+
+---
+
+### SDD-C02 — 인증 페이지 (로그인·가입·초대·필수정보)
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.0 |
+| **우선순위** | **P0** |
+| **예상 기간** | 2~3일 |
+| **의존성** | SDD-C01 (백엔드·모델 완료 후) |
+
+**포함 작업:**
+- [ ] **InviteLandingPage** — Clinical Garden 리팩토링, 상담사 프로필 카드, "Google로 시작하기" CTA
+- [ ] **ClientLoginPage** — Clinical Garden, Google 로그인 버튼, `/clients` → `/app` 리디렉션 수정
+- [ ] **ClientOnboardingPage** — Clinical Garden, Step1~2 필수 정보(성별·생년월일·휴대전화번호) 포함
+- [ ] **ClientEssentialsPage** — Google OAuth 후 필수 정보 1페이지 (이름·이메일 Google 자동입력)
+- [ ] **GoogleLoginButton** — `@react-oauth/google` 연동, ID token → 백엔드
+- [ ] **Kakao 버튼 (UI only)** — 그레이아웃 + "MVP2 출시 예정" 툴팁
+- [ ] `PATCH /api/v1/users/me` — 필수 정보 저장 + `onboarding_completed = true`
+- [ ] vitest: 각 페이지 렌더링 + 폼 유효성 검사
+
+**QA List (핵심):**
+- [ ] 초대 링크 → Google 클릭 → 필수정보 입력 → `/app` 진입 (E2E)
+- [ ] Google 로그인 실패 시 명확한 에러 메시지
+- [ ] 이메일 로그인 → 4단계 온보딩 → `/app` 진입
+- [ ] 필수 정보 누락 시 "완료" 버튼 비활성
+- [ ] iOS Safari에서 input `text-base`(16px), 자동확대 없음
+- [ ] Kakao 버튼 클릭 시 "MVP2 출시 예정" 토스트
+
+---
+
+### SDD-C03 — ClientShell + 오늘 화면
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.1 · FC.2 |
+| **우선순위** | **P0** |
+| **예상 기간** | 2~3일 |
+| **의존성** | SDD-C02 (인증 완료 → 로그인 후 진입 가능) |
+
+**포함 작업:**
+- [ ] **ClientShell** — TopBar + BottomTabBar + 콘텐츠 `flex-1 min-h-0 overflow-y-auto`
+- [ ] **BottomTabBar** — 4탭 (오늘·채팅·세션·프로필), safe-area-inset-bottom, 활성/비활성 스타일
+- [ ] **ClientHomePage** — 오늘 화면 (다음 세션 카드 + 최근 리포트 + 메시지 배지)
+- [ ] **상담사 無 화면** — OTP 스타일 코드 입력 6칸 + "상담사 연결하기"
+- [ ] **상담사 필터 탭** — 좌우 스크롤, "전체" + 상담사별
+- [ ] `GET /api/v1/client/home` — 오늘 화면 집계 API
+- [ ] `POST /api/v1/client/counselors` — 상담사 코드 입력 → 실시간 연결
+- [ ] iOS Safe Area + 키보드 대응 (`visualViewport`)
+
+**QA List (핵심):**
+- [ ] 상담사 0명 → 코드 입력 화면 → 코드 입력 → 바로 오늘 화면 전환
+- [ ] 상담사 1명 → 오늘 화면에 해당 상담사 세션만 표시
+- [ ] 상담사 3명 → 필터 탭 4개 (전체 + 3명), 탭별 세션 필터링
+- [ ] 탭 전환 시 히스토리 독립 (각 탭은 자체 뒤로가기 스택)
+- [ ] iPhone 노치·홈 인디케이터 영역 콘텐츠 가려짐 없음
+- [ ] 채팅 탭 뱃지: 안 읽은 메시지 수 실시간 갱신
+
+---
+
+### SDD-C04 — 내담자 채팅
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.3 |
+| **우선순위** | **P1** |
+| **예상 기간** | 2일 |
+| **의존성** | SDD-C03 (ClientShell + 탭 내비게이션) |
+
+**포함 작업:**
+- [ ] **ClientChatListPage** — 상담사별 채팅방 목록 (아바타·이름·마지막 메시지·안 읽은 뱃지)
+- [ ] **ClientChatRoomPage** — 말풍선 (내담자/상담사/시스템), 입력창, 무한 스크롤
+- [ ] WebSocket — Client role으로 Socket.IO 접속
+- [ ] `GET /api/v1/chat/unread-count` — 안 읽은 메시지 총계
+- [ ] 말풍선 디자인: 내담자(`bg-brand-primary`·우측), 상담사(`bg-white`·좌측), 시스템(중앙·회색)
+- [ ] iOS 키보드 대응 — `useKeyboardHeight` 훅
+
+**QA List (핵심):**
+- [ ] 상담사 A와의 채팅방에서 메시지 송수신 정상
+- [ ] 상담사 B와의 채팅방 별도 분리 (메시지 섞이지 않음)
+- [ ] 상담사 無 상태 → 채팅 탭 접근 불가 (리디렉트)
+- [ ] 새 메시지 수신 → 탭 뱃지 실시간 갱신
+- [ ] iOS 키보드 올라올 때 입력창이 키보드 위에 정확히 위치
+- [ ] 과거 메시지 무한 스크롤 (위로 스크롤 → 추가 로드)
+
+---
+
+### SDD-C05 — 내담자 세션 캘린더 + 신청
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.4 · FC.7 |
+| **우선순위** | **P1** |
+| **예상 기간** | 2일 |
+| **의존성** | SDD-C03 (ClientShell) |
+
+**포함 작업:**
+- [ ] **ClientSessionListPage** — 월간 캘린더 + 당일 세션 리스트
+- [ ] **ClientSessionDetailPage** — 세션 정보 + 상태별 액션 (입장/리포트)
+- [ ] **세션 신청** — 채팅 시스템 메시지 기반 (`type=system, subtype=session_request`)
+- [ ] 상담사별 세션 색상 구분 (dot·컬러 바)
+- [ ] `GET /api/v1/sessions?role=client` — 모든 연결 상담사의 내 세션
+- [ ] `POST /api/v1/sessions/request` — 시스템 메시지 생성
+
+**QA List (핵심):**
+- [ ] 캘린더에 세션 있는 날 dot 표시, 오늘 강조
+- [ ] 상담사별 다른 색상 dot (최대 5색 순환)
+- [ ] "세션 신청하기" → 채팅방에 시스템 메시지 "세션 요청" 전송
+- [ ] 과거 세션 반투명 + "종료" 뱃지
+- [ ] 상담사 無 상태 → 세션 탭 접근 불가
+
+---
+
+### SDD-C06 — 내담자 프로필·리포트·마무리
+
+| 항목 | 값 |
+|------|-----|
+| **FC-ID** | FC.5 · FC.6 |
+| **우선순위** | **P1** |
+| **예상 기간** | 2일 |
+| **의존성** | SDD-C04·C05 (채팅·세션 완료 후) |
+
+**포함 작업:**
+- [ ] **ClientProfilePage** — 내 정보 + 상담사 목록 + 리포트 링크 + 설정
+- [ ] **리포트 연동** — 기존 ReportListPage/ReportDetailPage client role 연동
+- [ ] **알림 설정** — 이메일 ON/OFF 토글
+- [ ] **상담사 코드 입력** — 프로필에서 항상 접근 가능
+- [ ] **로그아웃**
+- [ ] **빈 상태** — 각 탭별 empty state UI ("아직 OO이 없어요" + CTA)
+- [ ] 전체 QA: iOS Safari 실기기 테스트, build 통과 확인
+
+**QA List (핵심):**
+- [ ] 프로필에 연결된 모든 상담사 목록 표시 (이름·소속·자격 뱃지)
+- [ ] "+ 상담사 코드 입력" → 코드 매칭 즉시 반영
+- [ ] 잘못된 코드 입력 시 "유효하지 않은 상담사 코드입니다"
+- [ ] 리포트 목록에서 모든 상담사의 내 리포트 통합 조회
+- [ ] `npm run build` 통과, `npm test` 통과
+
+---
+
+### SDD 우선순위·의존성 그래프
+
+```
+SDD-C01 (인증·모델 기초) ── P0, 2~3d
+    │
+    └── SDD-C02 (인증 페이지) ── P0, 2~3d
+            │
+            └── SDD-C03 (셸 + 오늘) ── P0, 2~3d
+                    │
+                    ├── SDD-C04 (채팅) ── P1, 2d
+                    ├── SDD-C05 (세션) ── P1, 2d
+                    │
+                    └── SDD-C06 (프로필·마무리) ── P1, 2d
+```
+
+**총 예상 기간: 12~15일** (순차 진행 기준. C04·C05 병렬 가능 시 10~12일)
+
+---
+
 ## 10. 리스크·주의사항
 
 | # | 리스크 | 대응 |
 |---|--------|------|
 | 1 | iOS Safari에서 `position:fixed` + 키보드 레이아웃 붕괴 | `ios-scroll-layout-pattern` 스킬 참고. flexbox 기반으로만 구현 |
 | 2 | 채팅 API 권한 문제 (Counselor 전용 가정) | 백엔드 `get_current_user`에 Client role 대응 추가 (Phase 1 선행) |
-| 3 | 내담자↔상담사 연결 관계 누락 | `User.counselor_id` 필드 추가 또는 `onboarding_code` 기반 조회 |
+| 3 | 내담자↔상담사 N:M 관계 마이그레이션 (기존 `counselor_id` → `ClientCounselor`) | Alembic 마이그레이션에 데이터 변환 스크립트 포함. 기존 데이터 있으면 `counselor_id` → `ClientCounselor` 행 자동 생성 |
 | 4 | MVP1 상담사 UI와의 코드 충돌 | 내담자 페이지는 `pages/client/`에 격리. 공통 컴포넌트만 `components/` 공유 |
 | 5 | 모바일 성능 (애니메이션·이미지) | `will-change` 최소화, 이미지 지연 로딩, Virtualize long lists |
 
@@ -1197,6 +1389,6 @@ MVP 1.5는 `docs/MIND_BREEZE_2.0_기능명세서.md`의 기존 F-ID를 확장하
 
 ## 문서 식별
 
-**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.5.0`
+**문서 식별:** `mindbreeze-2.0-mvp1.5-client-app` · 현재 `v1.6.0`
 
 **상태:** Draft → 검토 요청 (Brian)
