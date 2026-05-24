@@ -25,6 +25,10 @@ export interface ChatRoom {
   participant_count: number;
   created_at: string;
   unread_count: number;
+  last_message?: {
+    content: string | null;
+    created_at: string;
+  } | null;
 }
 
 export interface ChatRoomListResponse {

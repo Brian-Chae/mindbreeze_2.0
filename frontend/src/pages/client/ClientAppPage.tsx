@@ -8,6 +8,8 @@ import { useAuthStore } from '../../stores/authStore';
 import { apiClient } from '../../lib/api/client';
 import ClientShell from '../../components/client/ClientShell';
 import ClientHomePage from './ClientHomePage';
+import ClientChatListPage from './ClientChatListPage';
+import ClientChatRoomPage from './ClientChatRoomPage';
 
 /** 상담사 코드 입력 화면 */
 function CounselorCodeScreen() {
@@ -184,10 +186,16 @@ export default function ClientAppPage() {
     return <CounselorCodeScreen />;
   }
 
+  // /app/chat/:roomId → 채팅방 상세 (ClientShell 없이 풀스크린)
+  const chatRoomMatch = pathname.match(/^\/app\/chat\/([^/]+)$/);
+  if (chatRoomMatch) {
+    return <ClientChatRoomPage />;
+  }
+
   // 탭별 콘텐츠 렌더링
   const renderTabContent = () => {
     if (pathname.startsWith('/app/chat')) {
-      return <PlaceholderPage title="채팅" />;
+      return <ClientChatListPage />;
     }
     if (pathname.startsWith('/app/sessions')) {
       return <PlaceholderPage title="세션" />;
