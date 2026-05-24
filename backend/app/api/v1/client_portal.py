@@ -1,5 +1,6 @@
-"""내담자 포털 API — Client-facing (상담사 관리, 내 정보)"""
+"""내담자 포털 API — Client-facing (상담사 관리, 내 정보, 홈)"""
 
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,11 +8,20 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.models.chat import ChatMessage, ChatMessageRead, ChatRoomParticipant
 from app.models.client_counselor_link import ClientCounselorLink
 from app.models.counselor_profile import CounselorProfile
 from app.models.organization import Organization
+from app.models.record import Report
+from app.models.session import Session as SessionModel, SessionParticipant
 from app.models.user import User
-from app.schemas.client import AddCounselorRequest, CounselorInfo
+from app.schemas.client import (
+    AddCounselorRequest,
+    ClientHomeResponse,
+    CounselorInfo,
+    NextSessionInfo,
+    RecentReportInfo,
+)
 
 router = APIRouter(prefix="/client", tags=["client-portal"])
 
@@ -146,4 +156,126 @@ def add_counselor_by_code(
         profile_image=profile.profile_image_url,
         org_name=org_name,
         status="active",
+    )
+
+
+# ── 내담자 홈 화면 ──
+
+def _get_today_range() -> tuple[datetime, datetime]:
+    """오늘의 시작/끝 datetime (UTC) 반환"""
+    now = datetime.now(timezone.utc)
+    today_start = datetime.combine(now.date(), datetime.min.time()).replace(tzinfo=timezone.utc)
+    today_end = datetime.combine(now.date(), datetime.max.time()).replace(tzinfo=timezone.utc)
+    return today_start, today_end
+
+
+@router.get("/home", response_model=ClientHomeResponse)
+def get_client_home(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """내담자 홈 화면 집계 데이터
+
+    - 다음 예정 세션
+    - 최근 리포트
+    - 안 읽은 메시지 수
+    - 오늘 세션 수
+    """
+    user = _get_user_from_token(current_user, db)
+    user_id = user.id
+    now = datetime.now(timezone.utc)
+
+    # ── 1. 다음 예정 세션 ──
+    next_session: NextSessionInfo | None = None
+
+    upcoming_session = (
+        db.query(SessionModel)
+        .join(SessionParticipant, SessionParticipant.session_id == SessionModel.id)
+        .filter(
+            SessionParticipant.user_id == user_id,
+            SessionModel.status == "scheduled",
+            SessionModel.scheduled_at > now,
+        )
+        .order_by(SessionModel.scheduled_at.asc())
+        .first()
+    )
+
+    if upcoming_session:
+        counselor = db.query(User).filter(User.id == upcoming_session.host_id).first()
+        next_session = NextSessionInfo(
+            id=str(upcoming_session.id),
+            title=upcoming_session.title or "상담 세션",
+            counselor_name=counselor.name if counselor else "알 수 없음",
+            counselor_id=str(upcoming_session.host_id),
+            start_time=upcoming_session.scheduled_at.isoformat(),
+            status=upcoming_session.status,
+        )
+
+    # ── 2. 최근 리포트 ──
+    recent_report: RecentReportInfo | None = None
+
+    latest_report = (
+        db.query(Report)
+        .filter(Report.user_id == user_id)
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+
+    if latest_report:
+        title = latest_report.created_at.strftime("%m월 %d일") + " 리포트"
+        recent_report = RecentReportInfo(
+            id=str(latest_report.id),
+            title=title,
+            created_at=latest_report.created_at.isoformat(),
+        )
+
+    # ── 3. 안 읽은 메시지 수 ──
+    # 사용자가 참여한 채팅방의 메시지 중, 자신이 보낸 것이 아니고 아직 읽지 않은 것
+    participant_room_ids = (
+        db.query(ChatRoomParticipant.room_id)
+        .filter(ChatRoomParticipant.user_id == user_id)
+        .subquery()
+    )
+
+    total_received = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.room_id.in_(db.query(participant_room_ids.c.room_id)),
+            ChatMessage.sender_id != user_id,
+        )
+        .count()
+    )
+
+    read_count = (
+        db.query(ChatMessageRead)
+        .join(ChatMessage, ChatMessage.id == ChatMessageRead.message_id)
+        .filter(
+            ChatMessage.room_id.in_(db.query(participant_room_ids.c.room_id)),
+            ChatMessageRead.user_id == user_id,
+            ChatMessage.sender_id != user_id,
+        )
+        .count()
+    )
+
+    unread_messages = max(total_received - read_count, 0)
+
+    # ── 4. 오늘 세션 수 ──
+    today_start, today_end = _get_today_range()
+
+    today_sessions = (
+        db.query(SessionModel)
+        .join(SessionParticipant, SessionParticipant.session_id == SessionModel.id)
+        .filter(
+            SessionParticipant.user_id == user_id,
+            SessionModel.scheduled_at >= today_start,
+            SessionModel.scheduled_at <= today_end,
+        )
+        .count()
+    )
+
+    return ClientHomeResponse(
+        next_session=next_session,
+        recent_report=recent_report,
+        unread_messages=unread_messages,
+        today_sessions=today_sessions,
     )
