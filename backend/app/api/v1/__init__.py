@@ -1,7 +1,7 @@
 """API v1 Router"""
 
 from fastapi import APIRouter
-from app.api.v1 import auth, client, credential, onboarding, org, session, chat, audio, records, reports, admin, notifications
+from app.api.v1 import auth, client, client_portal, credential, onboarding, org, session, chat, audio, records, reports, admin, notifications
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -10,6 +10,7 @@ router.include_router(org.router)
 router.include_router(credential.router)
 router.include_router(client.router)
 router.include_router(client.invite_router)
+router.include_router(client_portal.router)
 router.include_router(session.router)
 router.include_router(chat.router)
 router.include_router(audio.router)

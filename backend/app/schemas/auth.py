@@ -90,12 +90,19 @@ class UserResponse(BaseModel):
     role: str
     verified_tier: str
     onboarding_completed: bool = False
+    auth_provider: str = "email"
+    counselors: list[dict] = []
 
     model_config = {"from_attributes": True}
 
     @field_serializer("id")
     def serialize_id(self, v: UUID) -> str:
         return str(v)
+
+
+class GoogleAuthRequest(BaseModel):
+    id_token: str
+    invite_token: str | None = None
 
 
 class LoginResponse(TokenResponse):

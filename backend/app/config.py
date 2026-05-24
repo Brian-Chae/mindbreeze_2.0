@@ -31,5 +31,8 @@ class Settings(BaseSettings):
     # App
     debug: bool = True
 
+    # Google OAuth
+    google_client_id: str = ""
+
 
 settings = Settings()

@@ -37,7 +37,26 @@ import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
 import SettingsPage from './pages/SettingsPage';
+import ClientAppPage from './pages/client/ClientAppPage';
 import { useAuthStore } from './stores/authStore';
+
+/** 로그인 후 역할에 따라 라우팅 */
+function RoleRouter() {
+  const { user, isAuthenticated, isInitialized } = useAuthStore();
+
+  if (!isInitialized) return null; // 초기화 중
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user.role === 'client') {
+    return <Navigate to="/app" replace />;
+  }
+
+  // counselor, org_admin, platform_admin → 대시보드
+  return <Navigate to="/dashboard" replace />;
+}
 
 function App() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -54,6 +73,9 @@ function App() {
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
+        <Route path="/role-redirect" element={<RoleRouter />} />
+        <Route path="/app" element={<ClientAppPage />} />
+        <Route path="/app/*" element={<ClientAppPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />

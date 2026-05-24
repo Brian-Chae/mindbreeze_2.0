@@ -43,6 +43,7 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, server_default="active")
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

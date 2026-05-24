@@ -12,6 +12,8 @@ export interface User {
   role: UserRole;
   verified_tier: VerifiedTier;
   onboarding_completed: boolean;
+  auth_provider: string;
+  counselors: Array<{ id: string; name: string; profile_image: string | null }>;
 }
 
 export interface TokenResponse {

@@ -52,3 +52,17 @@ class InviteInfoResponse(BaseModel):
     counselor_name: str
     counselor_code: str | None = None
     organization: str | None = None
+
+
+# ── 내담자 포털 (client-facing) ──
+
+class AddCounselorRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class CounselorInfo(BaseModel):
+    id: str
+    name: str
+    profile_image: str | None = None
+    org_name: str | None = None
+    status: str = "active"

@@ -19,9 +19,12 @@ from app.core.security import (
 from app.models.consent import Consent
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+from app.models.client_counselor_link import ClientCounselorLink
+from app.models.client_invite import ClientInvite
 from app.schemas.auth import (
     ConsentRequest,
     EmailVerifyTokenResponse,
+    GoogleAuthRequest,
     LoginRequest,
     LoginResponse,
     LogoutRequest,
@@ -344,3 +347,102 @@ async def password_reset(
     """재설정 토큰 검증 + 새 비밀번호 적용"""
     await password_reset_service.complete_reset(req.token, req.new_password, db, redis)
     return {"detail": "비밀번호가 변경되었습니다"}
+
+
+# ---------------------------------------------------------------------------
+# Google OAuth
+# ---------------------------------------------------------------------------
+
+@router.post("/google", response_model=LoginResponse)
+async def google_auth(
+    req: GoogleAuthRequest,
+    db: Session = Depends(get_db),
+):
+    """Google ID 토큰 검증 → User find-or-create → JWT 발급"""
+    import secrets
+
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+
+    # 1. Google ID 토큰 검증
+    try:
+        id_info = id_token.verify_oauth2_token(
+            req.id_token,
+            google_requests.Request(),
+            settings.google_client_id,
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="유효하지 않은 Google 인증 토큰입니다",
+        )
+
+    email = id_info.get("email")
+    name = id_info.get("name", email.split("@")[0] if email else "")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google 계정에서 이메일을 확인할 수 없습니다",
+        )
+
+    # 2. User find-or-create
+    user = db.query(User).filter(User.email == email).first()
+
+    if user:
+        # 기존 사용자 — auth_provider 업데이트
+        if user.auth_provider == "email":
+            user.auth_provider = "google"
+            db.commit()
+            db.refresh(user)
+    else:
+        # 신규 Google 사용자 생성
+        rand_pw = secrets.token_urlsafe(32)
+        user = User(
+            email=email,
+            password_hash=hash_password(rand_pw),
+            name=name,
+            role="client",
+            auth_provider="google",
+            verified_tier="email",
+        )
+        db.add(user)
+        db.flush()
+
+        # 약관 동의 (Google 가입 시 암묵적 동의)
+        for ctype in ("tos", "privacy", "sensitive"):
+            db.add(Consent(user_id=user.id, type=ctype, agreed=True))
+        db.commit()
+        db.refresh(user)
+
+    # 3. 초대 토큰 처리 → ClientCounselorLink 자동 생성
+    if req.invite_token:
+        invite = db.query(ClientInvite).filter(
+            ClientInvite.token == req.invite_token,
+            ClientInvite.status != "expired",
+        ).first()
+
+        if invite:
+            existing_link = db.query(ClientCounselorLink).filter(
+                ClientCounselorLink.client_id == user.id,
+                ClientCounselorLink.counselor_id == invite.counselor_id,
+            ).first()
+
+            if not existing_link:
+                link = ClientCounselorLink(
+                    client_id=user.id,
+                    counselor_id=invite.counselor_id,
+                    status="active",
+                )
+                db.add(link)
+                db.commit()
+
+    # 4. JWT 발급
+    access_token = create_access_token(subject=str(user.id))
+    refresh_token_str = refresh_token_service.issue_refresh_token(str(user.id), db)
+
+    return LoginResponse(
+        user=UserResponse.model_validate(user),
+        access_token=access_token,
+        refresh_token=refresh_token_str,
+    )
