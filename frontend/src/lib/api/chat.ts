@@ -43,6 +43,7 @@ export interface ChatMessageListResponse {
 export interface SendMessagePayload {
   content: string;
   type?: ChatMessageType;
+  event_type?: string;
   file_url?: string;
 }
 

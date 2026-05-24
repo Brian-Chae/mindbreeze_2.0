@@ -10,6 +10,11 @@ import ClientShell from '../../components/client/ClientShell';
 import ClientHomePage from './ClientHomePage';
 import ClientChatListPage from './ClientChatListPage';
 import ClientChatRoomPage from './ClientChatRoomPage';
+import ClientSessionListPage from './ClientSessionListPage';
+import ClientSessionDetailPage from './ClientSessionDetailPage';
+import ClientProfilePage from './ClientProfilePage';
+import ClientReportListPage from './ClientReportListPage';
+import ClientReportDetailPage from './ClientReportDetailPage';
 
 /** 상담사 코드 입력 화면 */
 function CounselorCodeScreen() {
@@ -167,15 +172,6 @@ function CounselorCodeScreen() {
   );
 }
 
-/** 플레이스홀더 페이지 (C04~C06에서 구현 예정) */
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center flex-1 min-h-[60vh]">
-      <p className="text-[#6F6F6F] text-sm">{title} (추후 구현 예정)</p>
-    </div>
-  );
-}
-
 export default function ClientAppPage() {
   const user = useAuthStore((s) => s.user);
   const hasCounselors = (user?.counselors?.length ?? 0) > 0;
@@ -192,16 +188,31 @@ export default function ClientAppPage() {
     return <ClientChatRoomPage />;
   }
 
-  // 탭별 콘텐츠 렌더링
+  // /app/sessions/:id → 세션 상세 (ClientShell 없이 풀스크린)
+  const sessionDetailMatch = pathname.match(/^\/app\/sessions\/([^/]+)$/);
+  if (sessionDetailMatch) {
+    return <ClientSessionDetailPage />;
+  }
+
+  // /app/reports/:id → 리포트 상세 (ClientShell 없이 풀스크린)
+  const reportDetailMatch = pathname.match(/^\/app\/reports\/([^/]+)$/);
+  if (reportDetailMatch) {
+    return <ClientReportDetailPage />;
+  }
+
+  // 탭별 콘텐츠 렌더링 (ClientShell 포함)
   const renderTabContent = () => {
     if (pathname.startsWith('/app/chat')) {
       return <ClientChatListPage />;
     }
     if (pathname.startsWith('/app/sessions')) {
-      return <PlaceholderPage title="세션" />;
+      return <ClientSessionListPage />;
+    }
+    if (pathname.startsWith('/app/reports')) {
+      return <ClientReportListPage />;
     }
     if (pathname.startsWith('/app/profile')) {
-      return <PlaceholderPage title="프로필" />;
+      return <ClientProfilePage />;
     }
     // /app → 홈
     return <ClientHomePage />;
