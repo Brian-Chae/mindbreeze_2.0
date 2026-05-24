@@ -8,6 +8,7 @@ import {
   registerClient as apiRegisterClient,
   logout as apiLogout,
   refreshToken as apiRefresh,
+  loginGoogle as apiLoginGoogle,
   type User,
   type CounselorRegisterPayload,
   type ClientRegisterPayload,
@@ -25,6 +26,7 @@ interface AuthState {
 
   initialize: () => void;
   login: (email: string, password: string) => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string) => Promise<User>;
   registerCounselor: (data: CounselorRegisterPayload) => Promise<User>;
   registerClient: (data: ClientRegisterPayload) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
@@ -75,6 +77,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email, password): Promise<User> => {
     const res = await apiLogin(email, password);
+    const user = applyLogin(res);
+    set({
+      user,
+      accessToken: res.access_token,
+      refreshToken: res.refresh_token,
+      isAuthenticated: true,
+    });
+    return user;
+  },
+
+  loginGoogle: async (idToken, inviteToken): Promise<User> => {
+    const res = await apiLoginGoogle({ id_token: idToken, invite_token: inviteToken });
     const user = applyLogin(res);
     set({
       user,

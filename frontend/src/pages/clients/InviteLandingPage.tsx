@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getInviteInfo, type InviteInfoResponse } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
+import type { User } from '../../lib/api/auth';
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
 export default function InviteLandingPage() {
   const { token } = useParams<{ token: string }>();
@@ -34,18 +36,57 @@ export default function InviteLandingPage() {
     };
   }, [token]);
 
+  const handleGoogleSuccess = (user: User | null): void => {
+    if (!user) {
+      navigate('/');
+      return;
+    }
+    if (user.onboarding_completed) {
+      if (user.role === 'client') {
+        navigate('/app');
+      } else {
+        navigate('/dashboard');
+      }
+    } else if (user.role === 'client') {
+      navigate('/onboarding/client');
+    } else {
+      navigate('/onboarding/counselor');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-        {loading && <p className="text-gray-500">확인 중...</p>}
+        {loading && (
+          <div className="py-8">
+            <div className="inline-block w-8 h-8 border-2 border-[#5F0080] border-t-transparent rounded-full animate-spin mb-3" />
+            <p className="text-[#6F6F6F]">확인 중...</p>
+          </div>
+        )}
 
         {!loading && error && (
           <>
-            <h1 className="text-xl font-semibold text-red-600 mb-3">초대 확인 실패</h1>
-            <p className="text-sm text-gray-600 mb-6">{error}</p>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#EFEFEF] flex items-center justify-center">
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6F6F6F"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">초대가 만료되었습니다</h1>
+            <p className="text-sm text-[#6F6F6F] mb-6">{error}</p>
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-900"
+              className="rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#D4D4D4] hover:bg-[#EFEFEF] transition-colors"
             >
               홈으로
             </button>
@@ -54,27 +95,42 @@ export default function InviteLandingPage() {
 
         {!loading && info && (
           <>
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center">
+            {/* 상담사 프로필 카드 */}
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-[#5F0080]/10 flex items-center justify-center">
               <span className="text-3xl">🌿</span>
             </div>
-            <h1 className="text-2xl font-bold mb-2">환영합니다</h1>
-            <p className="text-gray-600 mb-6">
-              <span className="font-semibold text-emerald-700">{info.counselor_name}</span>
-              {info.organization ? <> ({info.organization})</> : null} 상담사님이
-              <br />
-              MIND BREEZE에 초대했습니다.
-            </p>
-            <div className="bg-gray-50 rounded-md p-3 text-sm text-gray-600 mb-6">
-              <p>상담사 코드</p>
-              <p className="font-mono font-semibold text-gray-900">{info.counselor_code}</p>
+            <h1 className="text-2xl font-bold text-[#1F1F1F] mb-1">{info.counselor_name}</h1>
+            {info.organization && (
+              <p className="text-[#6F6F6F] text-sm mb-2">{info.organization}</p>
+            )}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#5F0080]/10 text-[#5F0080] rounded-full text-xs font-medium mb-6">
+              상담사 코드: {info.counselor_code}
             </div>
-            <button
-              onClick={() => navigate(`/register?token=${token}&type=client`)}
-              className="w-full px-4 py-3 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-medium"
-            >
-              가입하기
-            </button>
-            <p className="text-xs text-gray-500 mt-4">
+
+            <p className="text-sm text-[#6F6F6F] mb-6">
+              상담사님이 MIND BREEZE에 초대했습니다.
+            </p>
+
+            {/* Google 로그인 CTA */}
+            <div className="mb-4">
+              <GoogleLoginButton
+                inviteToken={token}
+                onSuccess={handleGoogleSuccess}
+              />
+            </div>
+
+            {/* 이메일 가입 보조 링크 */}
+            <p className="text-sm text-[#6F6F6F]">
+              또는{' '}
+              <Link
+                to={`/register?token=${token}&type=client`}
+                className="text-[#5F0080] underline hover:text-[#4A0066] transition-colors"
+              >
+                이메일로 가입하기
+              </Link>
+            </p>
+
+            <p className="text-xs text-[#6F6F6F] mt-4">
               가입 후 자동으로 상담사와 연결됩니다.
             </p>
           </>

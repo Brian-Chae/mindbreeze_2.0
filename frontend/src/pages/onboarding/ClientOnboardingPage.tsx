@@ -1,7 +1,7 @@
 // 내담자 온보딩 페이지 (4단계)
 
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
@@ -197,16 +197,30 @@ export default function ClientOnboardingPage() {
 
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4">
-        <div className="w-full max-w-[480px] bg-surface-raised rounded-2xl border border-border-default p-8 space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-ink-primary">온보딩 완료</h1>
-          <p className="text-sm text-ink-secondary">
+      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 space-y-6 text-center">
+          <div className="w-16 h-16 mx-auto rounded-full bg-[#5F0080]/10 flex items-center justify-center">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#5F0080"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-[#1F1F1F]">온보딩 완료</h1>
+          <p className="text-sm text-[#6F6F6F]">
             상담사와 매칭되었습니다. 이제 세션을 시작할 수 있습니다.
           </p>
           <button
             type="button"
-            onClick={() => navigate('/')}
-            className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90"
+            onClick={() => navigate('/app')}
+            className="w-full rounded-xl px-6 py-3 font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
           >
             대시보드로 이동
           </button>
@@ -216,21 +230,19 @@ export default function ClientOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8">
-      <div className="w-full max-w-[600px] space-y-8">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
-          </Link>
-          <p className="text-sm text-ink-tertiary">내담자 온보딩</p>
+    <div className="min-h-screen bg-[#FAFAFA] py-10 px-6">
+      <div className="max-w-lg mx-auto">
+        {/* 헤더 */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-[#1F1F1F]">MIND BREEZE</h1>
+          <p className="text-sm text-[#6F6F6F] mt-1">내담자 온보딩</p>
         </div>
 
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
+        {/* 카드 */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
           <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
 
-          <h2 className="text-2xl font-bold text-ink-primary">
+          <h2 className="text-xl font-bold text-[#1F1F1F]">
             {step === 1 && '기본 정보'}
             {step === 2 && '상세 정보'}
             {step === 3 && '프로필'}
@@ -240,16 +252,16 @@ export default function ClientOnboardingPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">이름</label>
+                <label className="block text-sm font-medium text-[#6F6F6F]">이름</label>
                 <input
                   type="text"
                   value={user?.name ?? ''}
                   readOnly
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary opacity-70"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] bg-[#FAFAFA] opacity-70"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
+                <label className="block text-sm font-medium text-[#6F6F6F]">
                   연락처 (선택)
                 </label>
                 <input
@@ -257,7 +269,7 @@ export default function ClientOnboardingPage() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   placeholder="010-0000-0000"
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                 />
               </div>
             </div>
@@ -266,11 +278,11 @@ export default function ClientOnboardingPage() {
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">성별</label>
+                <label className="block text-sm font-medium text-[#6F6F6F]">성별</label>
                 <select
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] bg-white focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                 >
                   <option value="">선택해주세요</option>
                   <option value="male">남성</option>
@@ -279,48 +291,56 @@ export default function ClientOnboardingPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">생년월일</label>
+                <label className="block text-sm font-medium text-[#6F6F6F]">생년월일</label>
                 <input
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                 />
               </div>
               <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">주요 호소 (다중 선택)</p>
+                <p className="text-sm font-semibold text-[#1F1F1F]">주요 호소 (다중 선택)</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {CONCERN_OPTIONS.map((opt) => (
-                    <label
-                      key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.concerns.includes(opt)}
-                        onChange={() => toggleItem('concerns', opt)}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  ))}
+                  {CONCERN_OPTIONS.map((opt) => {
+                    const selected = form.concerns.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleItem('concerns', opt)}
+                        className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                          selected
+                            ? 'bg-[#5F0080] text-white'
+                            : 'bg-[#EFEFEF] text-[#1F1F1F] hover:bg-[#D4D4D4]'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">관심 영역 (선택)</p>
+                <p className="text-sm font-semibold text-[#1F1F1F]">관심 영역 (선택)</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {INTEREST_OPTIONS.map((opt) => (
-                    <label
-                      key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={form.interests.includes(opt)}
-                        onChange={() => toggleItem('interests', opt)}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  ))}
+                  {INTEREST_OPTIONS.map((opt) => {
+                    const selected = form.interests.includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleItem('interests', opt)}
+                        className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                          selected
+                            ? 'bg-[#5F0080] text-white'
+                            : 'bg-[#EFEFEF] text-[#1F1F1F] hover:bg-[#D4D4D4]'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -329,7 +349,7 @@ export default function ClientOnboardingPage() {
           {step === 3 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
+                <label className="block text-sm font-medium text-[#6F6F6F]">
                   프로필 사진 URL (선택)
                 </label>
                 <input
@@ -337,18 +357,18 @@ export default function ClientOnboardingPage() {
                   value={form.profileImageUrl}
                   onChange={(e) => setForm({ ...form, profileImageUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
+                <label className="block text-sm font-medium text-[#6F6F6F]">
                   한줄 소개 (선택)
                 </label>
                 <textarea
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary resize-none"
+                  className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-sm text-[#1F1F1F] resize-none focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                 />
               </div>
             </div>
@@ -359,7 +379,7 @@ export default function ClientOnboardingPage() {
               {!matchedCounselor ? (
                 <>
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-ink-secondary">
+                    <label className="block text-sm font-medium text-[#6F6F6F]">
                       상담사 코드 (6자리)
                     </label>
                     <input
@@ -373,34 +393,34 @@ export default function ClientOnboardingPage() {
                         })
                       }
                       placeholder="ABC123"
-                      className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-center text-xl font-bold tracking-widest text-ink-primary"
+                      className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-center text-xl font-bold tracking-widest text-[#1F1F1F] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none transition-shadow"
                     />
                   </div>
-                  <p className="text-xs text-ink-tertiary">
+                  <p className="text-xs text-[#6F6F6F]">
                     상담사로부터 전달받은 6자리 코드를 입력해주세요.
                   </p>
                 </>
               ) : (
-                <div className="space-y-3 bg-surface-raised rounded-lg border border-border-default p-5">
-                  <p className="text-base font-semibold text-accent-warm">매칭된 상담사</p>
+                <div className="space-y-3 bg-[#FAFAFA] rounded-xl border border-[#D4D4D4] p-5">
+                  <p className="text-sm font-semibold text-[#5F0080]">매칭된 상담사</p>
                   <div className="space-y-1">
-                    <p className="text-sm text-ink-tertiary">이름</p>
-                    <p className="text-lg font-semibold text-ink-primary">
+                    <p className="text-xs text-[#6F6F6F]">이름</p>
+                    <p className="text-lg font-semibold text-[#1F1F1F]">
                       {matchedCounselor.matched_counselor?.name}
                     </p>
                   </div>
                   {matchedCounselor.counselor_code && (
                     <div className="space-y-1">
-                      <p className="text-sm text-ink-tertiary">코드</p>
-                      <p className="text-base font-mono text-ink-primary tracking-widest">
+                      <p className="text-xs text-[#6F6F6F]">코드</p>
+                      <p className="text-base font-mono text-[#1F1F1F] tracking-widest">
                         {matchedCounselor.counselor_code}
                       </p>
                     </div>
                   )}
                   {matchedCounselor.specialties && matchedCounselor.specialties.length > 0 && (
                     <div className="space-y-1">
-                      <p className="text-sm text-ink-tertiary">전문분야</p>
-                      <p className="text-sm text-ink-primary">
+                      <p className="text-xs text-[#6F6F6F]">전문분야</p>
+                      <p className="text-sm text-[#1F1F1F]">
                         {matchedCounselor.specialties.join(', ')}
                       </p>
                     </div>
@@ -410,14 +430,16 @@ export default function ClientOnboardingPage() {
             </div>
           )}
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && (
+            <p className="text-red-500 text-sm text-center bg-red-50 rounded-xl px-4 py-2">{error}</p>
+          )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 pt-2">
             <button
               type="button"
               onClick={handlePrev}
               disabled={loading || step === 1}
-              className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated disabled:opacity-40"
+              className="flex-1 rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#D4D4D4] hover:bg-[#EFEFEF] disabled:opacity-40 transition-colors"
             >
               이전
             </button>
@@ -426,7 +448,7 @@ export default function ClientOnboardingPage() {
                 type="button"
                 onClick={handleNext}
                 disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                className="flex-1 rounded-xl px-6 py-3 font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50 transition-colors"
               >
                 {loading ? '저장 중...' : '다음'}
               </button>
@@ -436,7 +458,7 @@ export default function ClientOnboardingPage() {
                 type="button"
                 onClick={handleMatch}
                 disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                className="flex-1 rounded-xl px-6 py-3 font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50 transition-colors"
               >
                 {loading ? '매칭 중...' : '매칭하기'}
               </button>
@@ -446,7 +468,7 @@ export default function ClientOnboardingPage() {
                 type="button"
                 onClick={handleComplete}
                 disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                className="flex-1 rounded-xl px-6 py-3 font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50 transition-colors"
               >
                 {loading ? '처리 중...' : '완료'}
               </button>

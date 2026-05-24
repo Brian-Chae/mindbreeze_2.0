@@ -9,6 +9,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
 import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
+import ClientEssentialsPage from './pages/onboarding/ClientEssentialsPage';
 import ClientListPage from './pages/clients/ClientListPage';
 import ClientProfilePage from './pages/clients/ClientProfilePage';
 import ClientInvitePage from './pages/clients/ClientInvitePage';
@@ -81,6 +82,7 @@ function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
+        <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
         <Route path="/clients" element={<ClientListPage />} />
         <Route path="/clients/invite" element={<ClientInvitePage />} />
         <Route path="/clients/:id" element={<ClientProfilePage />} />

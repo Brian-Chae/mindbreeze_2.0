@@ -105,6 +105,14 @@ class GoogleAuthRequest(BaseModel):
     invite_token: str | None = None
 
 
+class UpdateUserMeRequest(BaseModel):
+    """PATCH /users/me 요청 — 업데이트 가능 필드만 선택적으로 전달"""
+    name: str | None = Field(None, min_length=1, max_length=100)
+    phone: str | None = Field(None, min_length=1, max_length=20)
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
+
+
 class LoginResponse(TokenResponse):
     user: UserResponse
 

@@ -72,3 +72,11 @@ export const forgotPassword = (email: string): Promise<{ ok: boolean }> =>
 
 export const resetPassword = (token: string, newPassword: string): Promise<{ ok: boolean }> =>
   apiClient.post('/auth/password/reset', { token, new_password: newPassword }, { skipAuth: true });
+
+export interface GoogleLoginPayload {
+  id_token: string;
+  invite_token?: string;
+}
+
+export const loginGoogle = (payload: GoogleLoginPayload): Promise<LoginResponse> =>
+  apiClient.post('/auth/google', payload, { skipAuth: true });

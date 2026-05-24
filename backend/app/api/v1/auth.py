@@ -8,6 +8,7 @@ from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.redis import get_redis
 from app.core.security import (
@@ -16,7 +17,9 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+from app.models.client_profile import ClientProfile
 from app.models.consent import Consent
+from app.models.onboarding_progress import OnboardingProgress
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.models.client_counselor_link import ClientCounselorLink
@@ -37,11 +40,13 @@ from app.schemas.auth import (
     RegisterCounselorRequest,
     RegisterRequest,
     TokenResponse,
+    UpdateUserMeRequest,
     UserResponse,
 )
 from app.services import (
     email_verify_service,
     login_attempt_service,
+    onboarding_service,
     otp_service,
     password_reset_service,
     refresh_token_service,
@@ -446,3 +451,55 @@ async def google_auth(
         access_token=access_token,
         refresh_token=refresh_token_str,
     )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /users/me — 사용자 기본정보 업데이트
+# ---------------------------------------------------------------------------
+
+@router.patch("/users/me", response_model=UserResponse)
+async def update_user_me(
+    req: UpdateUserMeRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """현재 사용자의 기본정보(name, phone, gender, birth_date)를 업데이트하고 온보딩 완료 처리합니다."""
+    user_id = uuid.UUID(current_user["id"])
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
+    # User 필드 업데이트
+    if req.name is not None:
+        user.name = req.name
+    if req.phone is not None:
+        user.phone = req.phone
+
+    # ClientProfile 필드 업데이트 (gender, birth_date)
+    if req.gender is not None or req.birth_date is not None:
+        profile = db.query(ClientProfile).filter(ClientProfile.user_id == user_id).first()
+        if profile is None:
+            profile = ClientProfile(user_id=user_id)
+            db.add(profile)
+            db.flush()
+        if req.gender is not None:
+            profile.gender = req.gender
+        if req.birth_date is not None:
+            try:
+                from datetime import date
+                profile.birth_date = date.fromisoformat(req.birth_date)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
+                )
+
+    # 온보딩 완료 처리
+    onboarding_service.complete_onboarding(str(user_id), db)
+
+    db.commit()
+    db.refresh(user)
+    return user
