@@ -363,27 +363,34 @@ async def google_auth(
     req: GoogleAuthRequest,
     db: Session = Depends(get_db),
 ):
-    """Google ID 토큰 검증 → User find-or-create → JWT 발급"""
+    """Google access token 검증 → User find-or-create → JWT 발급"""
     import secrets
 
-    from google.oauth2 import id_token
-    from google.auth.transport import requests as google_requests
+    import httpx
 
-    # 1. Google ID 토큰 검증
+    # 1. Google userinfo API로 access token 검증 + 사용자 정보 획득
     try:
-        id_info = id_token.verify_oauth2_token(
-            req.id_token,
-            google_requests.Request(),
-            settings.google_client_id,
-        )
-    except ValueError:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {req.access_token}"},
+            )
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="유효하지 않은 Google 인증 토큰입니다",
+                )
+            user_info = resp.json()
+    except HTTPException:
+        raise
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="유효하지 않은 Google 인증 토큰입니다",
+            detail="Google 인증 서버와 통신할 수 없습니다",
         )
 
-    email = id_info.get("email")
-    name = id_info.get("name", email.split("@")[0] if email else "")
+    email = user_info.get("email")
+    name = user_info.get("name", email.split("@")[0] if email else "")
 
     if not email:
         raise HTTPException(
@@ -395,13 +402,19 @@ async def google_auth(
     user = db.query(User).filter(User.email == email).first()
 
     if user:
-        # 기존 사용자 — auth_provider 업데이트
+        # 기존 사용자 — auth_provider 업데이트 (role은 유지)
         if user.auth_provider == "email":
             user.auth_provider = "google"
             db.commit()
             db.refresh(user)
     else:
-        # 신규 Google 사용자 생성
+        # 상담사 로그인 요청은 신규 계정 자동 생성 금지 → 403
+        if req.role == "counselor":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="상담사 계정이 없습니다. 관리자에게 문의하세요.",
+            )
+        # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
             email=email,

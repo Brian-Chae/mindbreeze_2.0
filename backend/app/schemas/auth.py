@@ -101,8 +101,9 @@ class UserResponse(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    id_token: str
+    access_token: str
     invite_token: str | None = None
+    role: str | None = None
 
 
 class UpdateUserMeRequest(BaseModel):

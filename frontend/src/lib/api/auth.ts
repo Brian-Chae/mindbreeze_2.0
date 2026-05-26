@@ -74,8 +74,9 @@ export const resetPassword = (token: string, newPassword: string): Promise<{ ok:
   apiClient.post('/auth/password/reset', { token, new_password: newPassword }, { skipAuth: true });
 
 export interface GoogleLoginPayload {
-  id_token: string;
+  access_token: string;
   invite_token?: string;
+  role?: string;
 }
 
 export const loginGoogle = (payload: GoogleLoginPayload): Promise<LoginResponse> =>
