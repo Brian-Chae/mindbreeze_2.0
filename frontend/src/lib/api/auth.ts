@@ -14,6 +14,7 @@ export interface User {
   onboarding_completed: boolean;
   auth_provider: string;
   counselors: Array<{ id: string; name: string; profile_image: string | null }>;
+  counselor_code?: string | null;
 }
 
 export interface TokenResponse {

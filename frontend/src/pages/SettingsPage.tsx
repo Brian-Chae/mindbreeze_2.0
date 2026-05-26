@@ -95,6 +95,28 @@ export default function SettingsPage() {
                 </span>
               </div>
             </div>
+            {user?.role === 'counselor' && user?.counselor_code && (
+              <div className="col-span-full">
+                <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">초대 코드</div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold tracking-[0.3em] text-[#5F0080] font-mono">
+                    {user.counselor_code}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(user.counselor_code ?? '');
+                    }}
+                    className="text-[12px] text-[#5F0080] hover:text-[#3F0055] font-medium px-3 py-1.5 rounded-full bg-[#F5EDFC] hover:bg-[#E8D5F8] transition-colors"
+                  >
+                    복사
+                  </button>
+                </div>
+                <p className="text-[12px] text-[#9B9B9B] mt-1">
+                  내담자에게 이 코드를 공유하면 상담사-내담자 관계가 연결됩니다.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

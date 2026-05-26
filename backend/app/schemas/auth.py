@@ -92,6 +92,7 @@ class UserResponse(BaseModel):
     onboarding_completed: bool = False
     auth_provider: str = "email"
     counselors: list[dict] = []
+    counselor_code: str | None = None
 
     model_config = {"from_attributes": True}
 

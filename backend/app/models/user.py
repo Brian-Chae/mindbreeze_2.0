@@ -64,3 +64,9 @@ class User(Base):
     @property
     def onboarding_completed(self) -> bool:
         return self.onboarding_progress is not None and self.onboarding_progress.completed
+
+    @property
+    def counselor_code(self) -> str | None:
+        if self.counselor_profile:
+            return self.counselor_profile.counselor_code
+        return None
