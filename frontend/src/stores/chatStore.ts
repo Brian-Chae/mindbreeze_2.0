@@ -13,6 +13,8 @@ interface ChatState {
   appendMessage: (roomId: string, message: ChatMessage) => void;
   setActiveRoom: (roomId: string | null) => void;
   clearRoomUnread: (roomId: string) => void;
+  incrementUnread: (roomId: string) => void;
+  updateSenderName: (senderId: string, newName: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -38,4 +40,24 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       rooms: state.rooms.map((r) => (r.id === roomId ? { ...r, unread_count: 0 } : r)),
     })),
+  incrementUnread: (roomId) =>
+    set((state) => ({
+      rooms: state.rooms.map((r) =>
+        r.id === roomId ? { ...r, unread_count: (r.unread_count ?? 0) + 1 } : r,
+      ),
+    })),
+  updateSenderName: (senderId, newName) =>
+    set((state) => {
+      const updated: Record<string, ChatMessage[]> = {};
+      let changed = false;
+      for (const [roomId, msgs] of Object.entries(state.messagesByRoom)) {
+        const newMsgs = msgs.map((m) =>
+          m.sender_id === senderId ? { ...m, sender_name: newName } : m,
+        );
+        if (newMsgs !== msgs) changed = true;
+        updated[roomId] = newMsgs;
+      }
+      if (!changed) return state;
+      return { messagesByRoom: updated };
+    }),
 }));
