@@ -78,7 +78,6 @@ jobs:
           source: "be.tar.gz,frontend/dist,docker/docker-compose.dev.yml,docker/nginx"
           target: /home/ubuntu/mindbreeze/
           overwrite: true
-          rm: true
 
       - name: Restart services
         uses: appleboy/ssh-action@v1.0.3
