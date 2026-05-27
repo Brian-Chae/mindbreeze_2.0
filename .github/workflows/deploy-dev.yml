@@ -44,6 +44,7 @@ jobs:
           echo "VITE_API_BASE_URL=http://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           npm install --legacy-peer-deps
+          npx tsc -b --clean
           npm run build
 
       - name: Upload artifact
