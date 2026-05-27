@@ -3,6 +3,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '../components/layout/AppShell';
 import { getPreferences, updatePreferences, type NotificationPreferencesResponse } from '../lib/api/notifications';
+import {
+  getCounselorProfile,
+  updateCounselorProfile,
+  type CounselorProfile,
+  type CounselorProfileUpdate,
+} from '../lib/api/counselor';
+import AccountSection from '../components/settings/AccountSection';
+import ProfileSection from '../components/settings/ProfileSection';
 import { useAuthStore } from '../stores/authStore';
 
 const EVENT_LABELS: Record<string, string> = {
@@ -38,12 +46,39 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  const isCounselor = user?.role === 'counselor';
+  const [profile, setProfile] = useState<CounselorProfile | null>(null);
+  const [profileSaved, setProfileSaved] = useState(false);
+
   useEffect(() => {
     getPreferences()
       .then((p) => setPrefs(p))
       .catch((e) => setError(e instanceof Error ? e.message : '설정 조회 실패'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!isCounselor) return;
+    getCounselorProfile()
+      .then((p) => setProfile(p))
+      .catch((e) => setError(e instanceof Error ? e.message : '프로필 조회 실패'));
+  }, [isCounselor]);
+
+  const handleProfileSave = useCallback(
+    async (data: CounselorProfileUpdate): Promise<void> => {
+      setError(null);
+      try {
+        const updated = await updateCounselorProfile(data);
+        setProfile(updated);
+        setProfileSaved(true);
+        setTimeout(() => setProfileSaved(false), 2000);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '프로필 저장 실패');
+        throw e;
+      }
+    },
+    [],
+  );
 
   const handleToggle = useCallback(
     async (channel: 'email' | 'in_app', event: string) => {
@@ -105,7 +140,19 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard.writeText(user.counselor_code ?? '');
+                      const text = user.counselor_code ?? '';
+                      if (navigator.clipboard) {
+                        navigator.clipboard.writeText(text);
+                      } else {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                      }
                     }}
                     className="text-[12px] text-[#5F0080] hover:text-[#3F0055] font-medium px-3 py-1.5 rounded-full bg-[#F5EDFC] hover:bg-[#E8D5F8] transition-colors"
                   >
@@ -119,6 +166,17 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        {/* 상담사 프로필 섹션 */}
+        {isCounselor && profile && (
+          <>
+            {profileSaved && (
+              <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
+            )}
+            <AccountSection profile={profile} onSave={handleProfileSave} />
+            <ProfileSection profile={profile} onSave={handleProfileSave} />
+          </>
+        )}
 
         {/* 알림 설정 */}
         {loading ? (

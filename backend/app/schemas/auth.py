@@ -126,3 +126,53 @@ class PasswordForgotRequest(BaseModel):
 class PasswordResetRequest(BaseModel):
     token: str
     new_password: str = Field(min_length=8)
+
+
+# ---------------------------------------------------------------------------
+# 상담사 프로필 스키마
+# ---------------------------------------------------------------------------
+
+
+class QualificationItem(BaseModel):
+    id: str | None = None
+    name: str
+    issuer: str | None = None
+    issued_at: str | None = None
+
+
+class CareerItem(BaseModel):
+    id: str | None = None
+    organization: str
+    role: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    is_current: bool = False
+
+
+class CounselorProfileUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+    profile_image: str | None = None
+    bio: str | None = None
+    affiliation_type: str | None = None
+    years_of_experience: int | None = None
+    specialties: list[str] | None = None
+    qualifications: list[QualificationItem] | None = None
+    careers: list[CareerItem] | None = None
+
+
+class CounselorProfileResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: str
+    phone: str | None = None
+    profile_image: str | None = None
+    bio: str | None = None
+    counselor_code: str | None = None
+    affiliation_type: str | None = None
+    years_of_experience: int | None = None
+    specialties: list[str] = []
+    qualifications: list[dict] = []
+    careers: list[dict] = []
+    model_config = {"from_attributes": True}
