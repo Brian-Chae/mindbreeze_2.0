@@ -59,6 +59,8 @@ class User(Base):
     password_history = relationship("PasswordHistory", back_populates="user", cascade="all, delete-orphan")
     counselor_profile = relationship("CounselorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     client_profile = relationship("ClientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    qualifications = relationship("Qualification", back_populates="user", cascade="all, delete-orphan")
+    careers = relationship("Career", back_populates="user", cascade="all, delete-orphan")
     org = relationship("Organization", foreign_keys=[org_id])
 
     @property

@@ -17,6 +17,8 @@ from app.models.org_join_request import OrganizationJoinRequest
 from app.models.client_invite import ClientInvite
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead
 from app.models.org_document import OrgDocument
+from app.models.qualification import Qualification
+from app.models.career import Career
 
 __all__ = [
     "ChatRoom",
@@ -43,4 +45,6 @@ __all__ = [
     "OrganizationJoinRequest",
     "ClientInvite",
     "OrgDocument",
+    "Qualification",
+    "Career",
 ]
