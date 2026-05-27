@@ -557,23 +557,23 @@ async def get_counselor_profile(
         )
     profile = user.counselor_profile
     quals = [
-        {
-            "id": str(q.id),
-            "name": q.name,
-            "issuer": q.issuer,
-            "issued_at": str(q.issued_at) if q.issued_at else None,
-        }
+        QualificationItem(
+            id=str(q.id),
+            name=q.name,
+            issuer=q.issuer,
+            issued_at=str(q.issued_at) if q.issued_at else None,
+        )
         for q in (user.qualifications or [])
     ]
     cars = [
-        {
-            "id": str(c.id),
-            "organization": c.organization,
-            "role": c.role,
-            "started_at": str(c.started_at) if c.started_at else None,
-            "ended_at": str(c.ended_at) if c.ended_at else None,
-            "is_current": c.is_current,
-        }
+        CareerItem(
+            id=str(c.id),
+            organization=c.organization,
+            role=c.role,
+            started_at=str(c.started_at) if c.started_at else None,
+            ended_at=str(c.ended_at) if c.ended_at else None,
+            is_current=c.is_current,
+        )
         for c in (user.careers or [])
     ]
     return CounselorProfileResponse(

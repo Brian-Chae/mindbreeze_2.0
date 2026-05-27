@@ -47,9 +47,9 @@ export interface CounselorProfileUpdate {
 }
 
 export const getCounselorProfile = (): Promise<CounselorProfile> =>
-  apiClient.get<CounselorProfile>('/counselors/me/profile');
+  apiClient.get<CounselorProfile>('/auth/counselors/me/profile');
 
 export const updateCounselorProfile = (
   data: CounselorProfileUpdate,
 ): Promise<CounselorProfile> =>
-  apiClient.patch<CounselorProfile>('/counselors/me/profile', data);
+  apiClient.patch<CounselorProfile>('/auth/counselors/me/profile', data);

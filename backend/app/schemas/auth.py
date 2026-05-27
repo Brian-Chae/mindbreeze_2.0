@@ -173,6 +173,6 @@ class CounselorProfileResponse(BaseModel):
     affiliation_type: str | None = None
     years_of_experience: int | None = None
     specialties: list[str] = []
-    qualifications: list[dict] = []
-    careers: list[dict] = []
+    qualifications: list[QualificationItem] = []
+    careers: list[CareerItem] = []
     model_config = {"from_attributes": True}
