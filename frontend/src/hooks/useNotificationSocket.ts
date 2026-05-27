@@ -17,7 +17,11 @@ export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    console.log('[WS] useEffect running, hasToken:', !!token);
+    if (!token) {
+      console.warn('[WS] no token, skipping socket connection');
+      return;
+    }
 
     const socket: Socket = io(`${SOCKET_URL}/chat`, {
       path: '/socket.io',
