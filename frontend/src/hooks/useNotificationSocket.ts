@@ -21,13 +21,26 @@ export function useNotificationSocket() {
 
     const socket: Socket = io(`${SOCKET_URL}/chat`, {
       path: '/socket.io',
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       auth: { token },
       autoConnect: true,
       reconnection: true,
     });
 
     socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('[WS] socket.io connected to', SOCKET_URL);
+      fetch();
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('[WS] socket.io connect error:', err.message);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[WS] socket.io disconnect:', reason);
+    });
 
     socket.on('new_notification', (data: { id?: string; type?: string; title?: string; body?: string; extra?: { room_id?: string } }) => {
       // 알림 도착 → unread count 갱신
@@ -51,17 +64,14 @@ export function useNotificationSocket() {
       }
     });
 
-    socket.on('connect', () => {
-      // 재연결 시 카운트 갱신
-      fetch();
-    });
-
     // 최초 카운트
     fetch();
 
     return () => {
       socket.off('new_notification');
       socket.off('connect');
+      socket.off('connect_error');
+      socket.off('disconnect');
       socket.disconnect();
     };
   }, [token, fetch]);
