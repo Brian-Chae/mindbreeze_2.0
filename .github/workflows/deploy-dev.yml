@@ -41,10 +41,11 @@ jobs:
       - name: Build
         run: |
           cd frontend
+          rm -rf dist node_modules/.tmp
           echo "VITE_API_BASE_URL=http://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           npm install --legacy-peer-deps
-          npx tsc -b --clean
+          npx tsc -b --clean 2>/dev/null; true
           npm run build
 
       - name: Upload artifact
