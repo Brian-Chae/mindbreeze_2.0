@@ -87,8 +87,8 @@ jobs:
           script: |
             cd /home/ubuntu/mindbreeze
             docker load < be.tar.gz
-            docker compose -f docker/docker-compose.dev.yml build --no-cache frontend
-            docker compose -f docker/docker-compose.dev.yml up -d --force-recreate
-            sleep 5
+            docker compose -f docker/docker-compose.dev.yml build --no-cache frontend && \
+            docker compose -f docker/docker-compose.dev.yml up -d --force-recreate && \
+            sleep 5 && \
             docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head
             docker image prune -f
