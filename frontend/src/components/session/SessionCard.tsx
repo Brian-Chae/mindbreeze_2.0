@@ -29,14 +29,17 @@ const formatDateTime = (iso: string): string => {
 
 interface Props {
   session: SessionDto;
+  /** 클릭 핸들러 (제공 시 Link 대신 button 으로 렌더링) */
+  onClick?: () => void;
+  /** 내담자 뷰에서 표시할 상담사 이름 */
+  counselorName?: string;
 }
 
-export function SessionCard({ session }: Props) {
-  return (
-    <Link
-      to={`/sessions/${session.id}`}
-      className="block bg-white rounded-[20px] border border-[#EFEFEF] p-6 hover:shadow-md transition-shadow"
-    >
+const cardCls = 'block w-full text-left bg-white rounded-2xl border border-[#DDDEE7] p-[22px] hover:shadow-md transition-shadow';
+
+export function SessionCard({ session, onClick, counselorName }: Props) {
+  const inner = (
+    <>
       <div className="flex items-center justify-between mb-3">
         <span
           className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
@@ -56,7 +59,24 @@ export function SessionCard({ session }: Props) {
             참여자 {session.participants.length}/{session.max_participants}
           </span>
         </div>
+        {counselorName && (
+          <div className="text-[#5F0080] font-medium">{counselorName}</div>
+        )}
       </div>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cardCls}>
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link to={`/sessions/${session.id}`} className={cardCls}>
+      {inner}
     </Link>
   );
 }

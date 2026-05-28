@@ -47,9 +47,10 @@ interface Props {
   weekHighlight?: Date;
   onSelectDate: (date: Date) => void;
   onShiftMonth: (direction: 1 | -1) => void;
+  className?: string;
 }
 
-export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlight, onSelectDate, onShiftMonth }: Props) {
+export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlight, onSelectDate, onShiftMonth, className }: Props) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -70,7 +71,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
 
   return (
-    <div className="bg-white rounded-[20px] border border-[#EFEFEF] overflow-hidden">
+    <div className={`bg-white rounded-[20px] border border-[#EFEFEF] overflow-hidden ${className ?? ''}`}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#EFEFEF]">
         <button
           type="button"

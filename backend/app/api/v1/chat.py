@@ -65,13 +65,13 @@ def list_messages(
 
 
 @router.post("/rooms/{room_id}/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-def create_message(
+async def create_message(
     room_id: str,
     payload: MessageCreateRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    msg = chat_service.post_message(
+    msg = await chat_service.post_message(
         room_id, current_user["id"], payload.content, payload.type, payload.file_url, db
     )
     return MessageResponse(**msg)

@@ -1,11 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import React from 'react';
 import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 interface NavItem {
   to: string;
   label: string;
   icon: string[];
   badge?: number;
+  end?: boolean;
 }
 
 export const ICONS = {
@@ -84,6 +87,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/settings', label: '설정', icon: ICONS.settings },
 ];
 
+const CLIENT_NAV_ITEMS: NavItem[] = [
+  { to: '/app', label: '홈', icon: ICONS.home, end: true },
+  { to: '/app/chat', label: '채팅', icon: ICONS.message },
+  { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/reports', label: '리포트', icon: ICONS.report },
+  { to: '/app/notifications', label: '알림', icon: ICONS.bell },
+  { to: '/app/profile', label: '설정', icon: ICONS.settings },
+];
+
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/admin/reviews', label: '검토 큐', icon: ICONS.report },
   { to: '/admin/users', label: '사용자 관리', icon: ICONS.users },
@@ -91,16 +103,31 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 
 interface SidebarNavProps {
   onNavigate?: () => void;
+  role?: 'counselor' | 'client';
+  notificationBadge?: number;
+  chatBadge?: number;
 }
 
-export default function SidebarNav({ onNavigate }: SidebarNavProps) {
+export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
+  };
+
+  const getBadge = (label: string): React.ReactNode => {
+    if (label === '채팅' && (chatBadge ?? 0) > 0) {
+      return (
+        <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#EF4444] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
+          {(chatBadge ?? 0) > 9 ? '9+' : chatBadge}
+        </span>
+      );
+    }
+    return null;
   };
 
   return (
@@ -118,10 +145,11 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
       </div>
 
       <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((it) => (
+        {(role === 'client' ? CLIENT_NAV_ITEMS : NAV_ITEMS).map((it) => (
           <NavLink
             key={it.to}
             to={it.to}
+            end={it.end}
             onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-left transition-colors ${
@@ -133,16 +161,18 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           >
             <StrokeIcon d={it.icon} />
             <span className="flex-1">{it.label}</span>
-            {it.badge ? (
+            {it.badge != null ? (
               <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#5F0080] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
                 {it.badge}
               </span>
-            ) : null}
+            ) : (
+              getBadge(it.label)
+            )}
           </NavLink>
         ))}
       </nav>
 
-      {user?.role === 'platform_admin' && (
+      {user?.role === 'platform_admin' && role === 'counselor' && (
         <div className="mt-2 pt-4 border-t border-[#DDD0EA]">
           <div className="px-3.5 text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
             어드민
@@ -151,6 +181,7 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
             <NavLink
               key={it.to}
               to={it.to}
+              end={it.end}
               onClick={onNavigate}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-left transition-colors ${
@@ -168,13 +199,25 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
       )}
 
       <div className="mt-auto bg-white rounded-2xl p-4">
-        <div className="text-[12px] text-[#6F6F6F] font-mono">상담사</div>
+        <div className="text-[12px] text-[#6F6F6F] font-mono">{role === 'client' ? '내담자' : '상담사'}</div>
         <div className="font-bold text-[15px] text-[#1F1F1F] mt-1">
           {user?.name ?? '게스트'}
         </div>
         <div className="text-[12px] text-[#6F6F6F] mt-0.5">
           {user?.email ?? '계정 정보 없음'}
         </div>
+      </div>
+
+      {/* 서버 연결 상태 */}
+      <div className="flex items-center gap-2 px-1 py-2">
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            wsConnected ? 'bg-[#10B981] animate-pulse' : 'bg-[#EF4444]'
+          }`}
+        />
+        <span className="text-[12px] text-[#6F6F6F]">
+          서버연결: {wsConnected ? '양호' : '끊김'}
+        </span>
       </div>
 
       <button

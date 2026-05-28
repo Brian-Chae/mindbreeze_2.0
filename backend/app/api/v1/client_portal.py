@@ -15,6 +15,7 @@ from app.models.organization import Organization
 from app.models.record import Report
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.models.user import User
+from app.services.chat_service import get_or_create_direct_room
 from app.schemas.client import (
     AddCounselorRequest,
     ClientHomeResponse,
@@ -143,6 +144,8 @@ def add_counselor_by_code(
         )
         db.add(link)
         db.commit()
+        # 상담사 연결 시 채팅방 자동 생성
+        get_or_create_direct_room(counselor.id, user.id, db)
 
     org_name = None
     if counselor.org_id:

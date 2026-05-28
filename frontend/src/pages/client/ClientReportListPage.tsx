@@ -91,9 +91,9 @@ export default function ClientReportListPage() {
   }, []);
 
   return (
-    <div className="pb-4">
+    <div className="px-4 md:px-8 py-4 md:py-6">
       {/* 헤더 */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="pt-4 pb-2 md:flex md:justify-between md:items-center">
         <h2 className="text-lg font-bold text-[#1F1F1F]">리포트</h2>
         <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">AI REPORTS</p>
       </div>
@@ -107,7 +107,7 @@ export default function ClientReportListPage() {
       ) : reports.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="px-4 grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {reports.map((r) => {
             const headline = (r.content?.headline as string) ?? '리포트';
             const score = (r.content?.score as number) ?? null;

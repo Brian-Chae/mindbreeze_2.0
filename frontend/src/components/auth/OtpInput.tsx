@@ -22,7 +22,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
   };
 
   const handleChange = (idx: number) => (e: ChangeEvent<HTMLInputElement>): void => {
-    const raw = e.target.value.replace(/\D/g, '');
+    const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (!raw) {
       updateAt(idx, '');
       return;
@@ -60,7 +60,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>): void => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, length);
+    const pasted = e.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, length);
     if (!pasted) return;
     onChange(pasted.padEnd(0, ''));
     const focusIdx = Math.min(pasted.length, length - 1);
@@ -77,7 +77,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
               inputsRef.current[idx] = el;
             }}
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             autoComplete="one-time-code"
             maxLength={1}
             value={d}

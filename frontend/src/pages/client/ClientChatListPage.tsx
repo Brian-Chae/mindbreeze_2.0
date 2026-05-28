@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listChatRooms, type ChatRoom } from '../../lib/api/chat';
 import { useAuthStore } from '../../stores/authStore';
+import { useChatStore } from '../../stores/chatStore';
 
 /** 상담사 이름에서 이니셜 추출 (최대 2글자) */
 function getInitials(name: string | null): string {
@@ -35,9 +36,10 @@ function formatTime(iso: string): string {
 export default function ClientChatListPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const rooms = useChatStore((s) => s.rooms);
+  const setRooms = useChatStore((s) => s.setRooms);
   const hasCounselors = (user?.counselors?.length ?? 0) > 0;
 
-  const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,7 +85,7 @@ export default function ClientChatListPage() {
   }
 
   return (
-    <div className="pb-14">
+    <div className="pb-14 px-0 md:px-4">
       {loading ? (
         <div className="p-8 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
       ) : error ? (
@@ -107,12 +109,12 @@ export default function ClientChatListPage() {
               <button
                 type="button"
                 onClick={() => navigate(`/app/chat/${room.id}`)}
-                className="w-full text-left flex items-center gap-3 px-4 py-3.5 hover:bg-[#F8F8FB] active:bg-[#F0F0F5] transition-colors"
+                className="w-full text-left flex items-center gap-3 px-4 md:px-6 py-3.5 md:py-4 hover:bg-[#F8F8FB] active:bg-[#F0F0F5] transition-colors"
               >
                 {/* 상담사 아바타 (이니셜) */}
-                <div className="w-12 h-12 rounded-full bg-[#EFEFEF] flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-[#EFEFEF] flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-[#5F0080]">
-                    {getInitials(room.name)}
+                    {getInitials(room.peer_name || room.name)}
                   </span>
                 </div>
 
@@ -120,7 +122,7 @@ export default function ClientChatListPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[15px] font-semibold text-[#1F1F1F] truncate">
-                      {room.name || '채팅방'}
+                      {room.peer_name || room.name || '채팅방'}
                     </span>
                     {room.last_message?.created_at && (
                       <span className="text-[11px] text-[#9CA0AE] shrink-0">

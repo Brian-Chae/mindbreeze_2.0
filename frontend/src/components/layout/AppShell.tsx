@@ -1,8 +1,12 @@
 import { useState, useEffect, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from './SidebarNav';
 import MobileDrawer from './MobileDrawer';
 import BottomTabBar from './BottomTabBar';
-import { getUnreadCount } from '../../lib/api/notifications';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { useChatStore } from '../../stores/chatStore';
+import { useNotificationSocket } from '../../hooks/useNotificationSocket';
+import { listChatRooms } from '../../lib/api/chat';
 
 export interface AppShellProps {
   children: ReactNode;
@@ -26,24 +30,41 @@ export default function AppShell({
   hideBottomTab = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [unread, setUnread] = useState(0);
+  const navigate = useNavigate();
+  const unread = useNotificationStore((s) => s.unread);
+  const toast = useNotificationStore((s) => s.toast);
+  const dismissToast = useNotificationStore((s) => s.dismissToast);
+  const chatUnread = useChatStore((s) =>
+    s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
+  );
 
+  // Socket.IO 실시간 알림 리스너 + 최초 fetch
+  useNotificationSocket();
+
+  // 채팅방 목록 불러오기 (사이드바 뱃지용)
+  const setRooms = useChatStore((s) => s.setRooms);
   useEffect(() => {
-    const poll = () => {
-      getUnreadCount()
-        .then((r) => setUnread(r.unread))
-        .catch(() => {});
-    };
-    poll();
-    const id = setInterval(poll, 30000);
-    return () => clearInterval(id);
-  }, []);
+    listChatRooms()
+      .then((res) => setRooms(res.rooms))
+      .catch(() => { /* 조용히 실패 */ });
+  }, [setRooms]);
+
+  const handleToastClick = () => {
+    if (toast?.roomId) {
+      navigate(`/chat?room=${toast.roomId}`);
+    }
+    dismissToast();
+  };
+
+  const handleBellClick = () => {
+    navigate('/notifications');
+  };
 
   return (
     <div className="h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
-        <SidebarNav />
+        <SidebarNav notificationBadge={unread} chatBadge={chatUnread} />
       </aside>
 
       {/* 모바일 헤더 */}
@@ -70,6 +91,7 @@ export default function AppShell({
         <button
           type="button"
           aria-label="알림"
+          onClick={handleBellClick}
           className="w-10 h-10 flex items-center justify-center -mr-2 text-[#1F1F1F] relative"
         >
           <StrokeIcon d={ICONS.bell} size={22} />
@@ -94,11 +116,12 @@ export default function AppShell({
               {title}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             {rightSlot}
             <button
               type="button"
               aria-label="알림"
+              onClick={handleBellClick}
               className="w-11 h-11 rounded-full bg-[#F2F3F8] flex items-center justify-center text-[#1F1F1F] hover:bg-[#E6E7EE] transition-colors relative"
             >
               <StrokeIcon d={ICONS.bell} />
@@ -108,6 +131,43 @@ export default function AppShell({
                 </span>
               )}
             </button>
+            {/* 토스트 팝업 */}
+            {toast && (
+              <button
+                type="button"
+                onClick={handleToastClick}
+                className="absolute top-full right-0 mt-2 w-72 bg-[#F5EDFC] border border-[#DDD0EA] rounded-xl shadow-lg shadow-[#5F0080]/10 p-3.5 z-50 text-left hover:bg-[#EFE3FA] hover:border-[#C9B0E8] transition-all cursor-pointer overflow-hidden"
+              >
+                {/* 왼쪽 악센트 바 */}
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#5F0080] rounded-l-xl" />
+                <div className="flex items-start gap-3 pl-1">
+                  {/* 알림 아이콘 */}
+                  <div className="shrink-0 w-8 h-8 rounded-lg bg-[#5F0080]/10 flex items-center justify-center mt-0.5">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5F0080" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-bold text-[#1F1F1F] truncate pr-5">
+                      {toast.title}
+                    </div>
+                    <div className="text-[12px] text-[#6F6F6F] mt-0.5 line-clamp-2">
+                      {toast.body}
+                    </div>
+                  </div>
+                </div>
+                {/* 닫기 버튼 */}
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); dismissToast(); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); dismissToast(); } }}
+                  className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#DDD0EA]/50 flex items-center justify-center text-[#6E1A8C] hover:bg-[#DDD0EA] hover:text-[#5F0080] text-[10px] transition-colors"
+                >
+                  ✕
+                </span>
+              </button>
+            )}
           </div>
         </header>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
+import InviteModal from '../../components/clients/InviteModal';
 import { useAuthStore } from '../../stores/authStore';
 import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
@@ -24,6 +25,7 @@ export default function ClientListPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
@@ -80,7 +82,7 @@ export default function ClientListPage() {
   const rightSlot = (
     <button
       type="button"
-      onClick={() => navigate('/clients/invite')}
+      onClick={() => setShowInvite(true)}
       className="mb-btn"
     >
       내담자 초대
@@ -184,6 +186,7 @@ export default function ClientListPage() {
           </div>
         )}
       </div>
+      <InviteModal open={showInvite} onClose={() => setShowInvite(false)} />
     </AppShell>
   );
 }

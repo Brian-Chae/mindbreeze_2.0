@@ -26,6 +26,7 @@ class MessageResponse(BaseModel):
     id: str
     room_id: str
     sender_id: str | None
+    sender_name: str | None = None
     type: str
     content: str | None
     file_url: str | None
@@ -44,6 +45,7 @@ class RoomResponse(BaseModel):
     room_type: str = "session"
     host_id: str | None = None
     name: str | None = None
+    peer_name: str | None = None
     peer_id: str | None = None
     participant_count: int = 0
     created_at: datetime

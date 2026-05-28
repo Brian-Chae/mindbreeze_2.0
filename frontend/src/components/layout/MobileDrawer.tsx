@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import SidebarNav from './SidebarNav';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 interface MobileDrawerProps {
   open: boolean;
   onClose: () => void;
+  role?: 'counselor' | 'client';
 }
 
-export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
+export default function MobileDrawer({ open, onClose, role = 'counselor' }: MobileDrawerProps) {
+  const unread = useNotificationStore((s) => s.unread);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -36,7 +39,7 @@ export default function MobileDrawer({ open, onClose }: MobileDrawerProps) {
         }`}
         aria-hidden={!open}
       >
-        <SidebarNav onNavigate={onClose} />
+        <SidebarNav onNavigate={onClose} role={role} notificationBadge={unread} />
       </aside>
     </>
   );

@@ -29,6 +29,7 @@ from app.schemas.onboarding import (
     OnboardingProgressResponse,
 )
 from app.services import onboarding_service
+from app.services.chat_service import get_or_create_direct_room
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -308,6 +309,8 @@ def client_step4_match(
             status="active",
         )
         db.add(link)
+        # 상담사 매칭 시 채팅방 자동 생성
+        get_or_create_direct_room(counselor.id, user_id, db)
 
     onboarding_service.save_step(
         user_id,
@@ -318,9 +321,11 @@ def client_step4_match(
 
     return ClientMatchResponse(
         matched_counselor=MatchedCounselor(
+            id=str(counselor.id),
             name=counselor.name,
             counselor_code=profile.counselor_code,
             specialties=list(profile.specialties or []),
+            profile_image=counselor.profile_image,
         )
     )
 

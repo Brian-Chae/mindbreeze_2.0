@@ -14,16 +14,19 @@ export interface NotificationToast {
 interface NotificationState {
   unread: number;
   toast: NotificationToast | null;
+  wsConnected: boolean;
   fetch: () => Promise<void>;
   showToast: (t: NotificationToast) => void;
   dismissToast: () => void;
   increment: (n?: number) => void;
   reset: () => void;
+  setWsConnected: (v: boolean) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   unread: 0,
   toast: null,
+  wsConnected: false,
 
   fetch: async () => {
     try {
@@ -48,4 +51,6 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     set((s) => ({ unread: Math.max(0, s.unread + n) })),
 
   reset: () => set({ unread: 0 }),
+
+  setWsConnected: (v) => set({ wsConnected: v }),
 }));

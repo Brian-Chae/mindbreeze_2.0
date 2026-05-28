@@ -35,15 +35,18 @@ export function useNotificationSocket() {
 
     socket.on('connect', () => {
       console.log('[WS] socket.io connected to', SOCKET_URL);
+      useNotificationStore.getState().setWsConnected(true);
       fetch();
     });
 
     socket.on('connect_error', (err) => {
       console.error('[WS] socket.io connect error:', err.message);
+      useNotificationStore.getState().setWsConnected(false);
     });
 
     socket.on('disconnect', (reason) => {
       console.warn('[WS] socket.io disconnect:', reason);
+      useNotificationStore.getState().setWsConnected(false);
     });
 
     socket.on('new_notification', (data: { id?: string; type?: string; title?: string; body?: string; extra?: { room_id?: string } }) => {

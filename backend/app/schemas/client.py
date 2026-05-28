@@ -46,6 +46,7 @@ class InviteRequest(BaseModel):
 class InviteResponse(BaseModel):
     invite_token: str
     invite_url: str
+    message: str = ""
 
 
 class InviteInfoResponse(BaseModel):

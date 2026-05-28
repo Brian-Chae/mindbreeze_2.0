@@ -33,6 +33,7 @@ export interface ClientProfile {
 export interface InviteCreateResponse {
   invite_token: string;
   invite_url: string;
+  message: string;
 }
 
 export interface InviteInfoResponse {

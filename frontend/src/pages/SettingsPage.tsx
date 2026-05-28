@@ -186,7 +186,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-bold text-[#1F1F1F] flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
-                알림 설정
+                메일 알림 설정
               </h3>
               {saved && (
                 <span className="text-[12px] text-[#10B981] font-medium">✓ 저장됨</span>

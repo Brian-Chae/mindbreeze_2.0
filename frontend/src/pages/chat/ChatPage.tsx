@@ -13,9 +13,7 @@ function roomLabel(room: ChatRoomDto): string {
   const countStr = count > 0 ? ` (${count}명)` : '';
   
   if (room.room_type === 'direct') {
-    const displayName = room.name && room.name.length > 12 ? room.name : room.name || '1:1 채팅';
-    const isUUID = room.name && /^[0-9a-f]{8}-/.test(room.name);
-    return isUUID ? `1:1 채팅${countStr}` : `${displayName}${countStr}`;
+    return `${room.peer_name || '1:1 채팅'}${countStr}`;
   }
   if (room.room_type === 'group') {
     return `${room.name || '그룹 채팅'}${countStr}`;
@@ -167,7 +165,7 @@ export default function ChatPage() {
                 </button>
               </div>
               <div className="flex-1 min-h-0">
-                <ChatRoom roomId={selectedRoom.id} />
+                <ChatRoom roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
               </div>
             </>
           ) : paramRoomId && !loading ? (

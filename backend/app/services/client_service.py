@@ -116,7 +116,12 @@ def update_memo(client_id: str, counselor_id: str, memo: str, db: Session):
 
 
 def create_invite(counselor_id: str, email: str, db: Session) -> dict:
-    """내담자 초대 토큰 생성"""
+    """내담자 초대 토큰 생성 + 초대 이메일 발송"""
+    import logging
+
+    from app.tasks.email import send_invite_email
+
+    logger = logging.getLogger(__name__)
     token = secrets.token_urlsafe(32)
     invite = ClientInvite(
         counselor_id=UUID(counselor_id), email=email, token=token
@@ -125,9 +130,26 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
     db.commit()
     db.refresh(invite)
 
+    invite_url = f"http://dev.mindbreeze.looxidlabs.com/invite/{token}"
+
+    # 상담사 이름 + 코드 조회
+    counselor = db.query(User).filter(User.id == UUID(counselor_id)).first()
+    counselor_name = counselor.name if counselor else "상담사"
+    profile = db.query(CounselorProfile).filter(CounselorProfile.user_id == UUID(counselor_id)).first()
+    counselor_code = profile.counselor_code if profile else "------"
+
+    # 이메일 발송 (실패해도 초대 자체는 성공)
+    try:
+        send_invite_email(email, invite_url, counselor_name, counselor_code)
+        message = f"{email}로 초대 메일을 발송했습니다"
+    except Exception as e:
+        logger.warning(f"초대 이메일 발송 실패: {e}")
+        message = "초대 링크가 생성되었습니다 (이메일 발송 실패)"
+
     return {
         "invite_token": token,
         "invite_url": f"/invite/{token}",
+        "message": message,
     }
 
 

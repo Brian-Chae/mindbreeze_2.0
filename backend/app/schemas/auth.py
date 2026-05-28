@@ -176,3 +176,37 @@ class CounselorProfileResponse(BaseModel):
     qualifications: list[QualificationItem] = []
     careers: list[CareerItem] = []
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# 내담자 프로필 스키마
+# ---------------------------------------------------------------------------
+
+
+class ClientProfileResponse(BaseModel):
+    """내담자 프로필 응답"""
+    id: str
+    email: str
+    name: str
+    role: str
+    phone: str | None = None
+    profile_image: str | None = None
+    bio: str | None = None
+    gender: str | None = None
+    birth_date: str | None = None
+    concerns: list[str] = []
+    interests: list[str] = []
+
+    model_config = {"from_attributes": True}
+
+
+class ClientProfileUpdate(BaseModel):
+    """내담자 프로필 수정 요청"""
+    name: str | None = None
+    phone: str | None = None
+    profile_image: str | None = None
+    bio: str | None = None
+    gender: str | None = None
+    birth_date: str | None = None
+    concerns: list[str] | None = None
+    interests: list[str] | None = None

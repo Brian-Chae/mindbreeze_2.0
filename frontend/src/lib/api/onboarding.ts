@@ -14,9 +14,11 @@ export interface CounselorCompleteResponse {
 }
 
 export interface MatchedCounselor {
+  id: string;
   name: string;
   counselor_code: string;
   specialties: string[];
+  profile_image: string | null;
 }
 
 export interface ClientMatchResponse {

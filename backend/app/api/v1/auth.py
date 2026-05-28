@@ -30,6 +30,8 @@ from app.models.client_counselor_link import ClientCounselorLink
 from app.models.client_invite import ClientInvite
 from app.schemas.auth import (
     CareerItem,
+    ClientProfileResponse,
+    ClientProfileUpdate,
     ConsentRequest,
     CounselorProfileResponse,
     CounselorProfileUpdate,
@@ -505,7 +507,10 @@ async def update_user_me(
         )
 
     # User 필드 업데이트
+    name_changed = False
     if req.name is not None:
+        if user.name != req.name:
+            name_changed = True
         user.name = req.name
     if req.phone is not None:
         user.phone = req.phone
@@ -534,6 +539,12 @@ async def update_user_me(
 
     db.commit()
     db.refresh(user)
+
+    # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    if name_changed:
+        from app.ws.chat_namespace import broadcast_profile_updated
+        await broadcast_profile_updated(str(user.id), user.name)
+
     return _to_user_response(user)
 
 
@@ -608,7 +619,10 @@ async def update_counselor_profile(
             detail="사용자를 찾을 수 없습니다",
         )
 
+    name_changed = False
     if req.name is not None:
+        if user.name != req.name:
+            name_changed = True
         user.name = req.name
     if req.phone is not None:
         user.phone = req.phone
@@ -663,4 +677,104 @@ async def update_counselor_profile(
 
     db.commit()
     db.refresh(user)
+
+    # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    if name_changed:
+        from app.ws.chat_namespace import broadcast_profile_updated
+        await broadcast_profile_updated(str(user.id), user.name)
+
     return await get_counselor_profile(current_user, db)
+
+
+# ---------------------------------------------------------------------------
+# 내담자 프로필 API
+# ---------------------------------------------------------------------------
+
+
+@router.get("/clients/me/profile", response_model=ClientProfileResponse)
+async def get_client_profile(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """내담자 프로필 조회 (계정정보 + 프로필정보)"""
+    user_id = uuid.UUID(current_user["id"])
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다",
+        )
+    profile = user.client_profile
+    return ClientProfileResponse(
+        id=str(user.id),
+        email=user.email,
+        name=user.name,
+        role=user.role,
+        phone=user.phone,
+        profile_image=user.profile_image or (profile.profile_image_url if profile else None),
+        bio=user.bio or (profile.bio if profile else None),
+        gender=profile.gender if profile else None,
+        birth_date=str(profile.birth_date) if profile and profile.birth_date else None,
+        concerns=profile.concerns if profile else [],
+        interests=profile.interests if profile else [],
+    )
+
+
+@router.patch("/clients/me/profile", response_model=ClientProfileResponse)
+async def update_client_profile(
+    req: ClientProfileUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """내담자 프로필 수정"""
+    user_id = uuid.UUID(current_user["id"])
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다",
+        )
+
+    name_changed = False
+    if req.name is not None:
+        if user.name != req.name:
+            name_changed = True
+        user.name = req.name
+    if req.phone is not None:
+        user.phone = req.phone
+    if req.profile_image is not None:
+        user.profile_image = req.profile_image
+    if req.bio is not None:
+        user.bio = req.bio
+
+    # ClientProfile 업데이트
+    profile = db.query(ClientProfile).filter(ClientProfile.user_id == user_id).first()
+    if profile is None:
+        profile = ClientProfile(user_id=user_id, concerns=[], interests=[])
+        db.add(profile)
+        db.flush()
+
+    if req.gender is not None:
+        profile.gender = req.gender
+    if req.birth_date is not None:
+        try:
+            profile.birth_date = date.fromisoformat(req.birth_date)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
+            )
+    if req.concerns is not None:
+        profile.concerns = req.concerns
+    if req.interests is not None:
+        profile.interests = req.interests
+
+    db.commit()
+    db.refresh(user)
+
+    # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    if name_changed:
+        from app.ws.chat_namespace import broadcast_profile_updated
+        await broadcast_profile_updated(str(user.id), user.name)
+
+    return await get_client_profile(current_user, db)

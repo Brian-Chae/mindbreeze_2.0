@@ -8,13 +8,28 @@ import { useAuthStore } from '../../stores/authStore';
 import { apiClient } from '../../lib/api/client';
 import ClientShell from '../../components/client/ClientShell';
 import ClientHomePage from './ClientHomePage';
-import ClientChatListPage from './ClientChatListPage';
-import ClientChatRoomPage from './ClientChatRoomPage';
+import ClientChatPage from './ClientChatPage';
 import ClientSessionListPage from './ClientSessionListPage';
 import ClientSessionDetailPage from './ClientSessionDetailPage';
-import ClientProfilePage from './ClientProfilePage';
+import ClientSettingsPage from '../settings/ClientSettingsPage';
 import ClientReportListPage from './ClientReportListPage';
 import ClientReportDetailPage from './ClientReportDetailPage';
+
+// ── 헬퍼 ──────────────────────────────────────────────────────────
+
+const WEEK_LABELS = ['첫째', '둘째', '셋째', '넷째', '다섯째'];
+
+/** 오늘 날짜 → "2026년 5월 · 5월 넷째 주" 형식 */
+function formatKoreanSub(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const firstDay = new Date(y, m - 1, 1).getDay(); // 0=일
+  const weekNum = Math.ceil((d + firstDay) / 7);
+  const label = WEEK_LABELS[Math.min(weekNum - 1, 4)];
+  return `${y}년 ${m}월 · ${m}월 ${label} 주`;
+}
 
 /** 상담사 코드 입력 화면 */
 function CounselorCodeScreen() {
@@ -27,12 +42,12 @@ function CounselorCodeScreen() {
 
   const handleChange = useCallback(
     (index: number, value: string) => {
-      // 숫자만 허용
-      if (value && !/^\d$/.test(value)) return;
+      // 영문+숫자만 허용, 대문자로 변환
+      if (value && !/^[A-Za-z0-9]$/.test(value)) return;
 
       setError(null);
       const newCode = [...code];
-      newCode[index] = value;
+      newCode[index] = value.toUpperCase();
       setCode(newCode);
 
       // 다음 칸으로 포커스 이동
@@ -58,7 +73,7 @@ function CounselorCodeScreen() {
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pasted = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
     if (!pasted) return;
 
     const newCode = Array(6).fill('');
@@ -135,7 +150,7 @@ function CounselorCodeScreen() {
                 inputRefs.current[i] = el;
               }}
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               maxLength={1}
               autoFocus={i === 0}
               value={digit}
@@ -174,18 +189,66 @@ function CounselorCodeScreen() {
 
 export default function ClientAppPage() {
   const user = useAuthStore((s) => s.user);
-  const hasCounselors = (user?.counselors?.length ?? 0) > 0;
+  const setUser = useAuthStore((s) => s.setUser);
   const { pathname } = useLocation();
+
+  // counselors: null = 로딩중, [] = 상담사 없음, [...] = 상담사 있음
+  const [counselors, setCounselors] = useState<Array<{ id: string; name: string; profile_image: string | null }> | null>(() => {
+    // store에 이미 있으면 그걸로 초기화 (깜빡임 방지)
+    return (user?.counselors?.length ?? 0) > 0 ? user!.counselors : null;
+  });
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // 마운트 시 상담사 목록 API 호출
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchCounselors() {
+      try {
+        // GET /client/counselors → CounselorInfo[] (배열)
+        const res = await apiClient.get<
+          Array<{ id: string; name: string; profile_image: string | null }>
+        >('/client/counselors');
+
+        if (cancelled) return;
+
+        const list = Array.isArray(res) ? res : [];
+        setCounselors(list);
+
+        // authStore에도 저장 (새로고침 후에도 유지)
+        if (user) {
+          setUser({ ...user, counselors: list });
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setFetchError(err instanceof Error ? err.message : '상담사 정보를 불러오지 못했습니다');
+        setCounselors([]);
+      }
+    }
+
+    fetchCounselors();
+    return () => { cancelled = true; };
+  }, []); // mount only
+
+  // 로딩 중
+  if (counselors === null && !fetchError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#FAFAFA]">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#5F0080] border-t-transparent" />
+      </div>
+    );
+  }
+
+  const hasCounselors = counselors !== null && counselors.length > 0;
 
   // 상담사 연결 전 → 코드 입력 화면
   if (!hasCounselors) {
     return <CounselorCodeScreen />;
   }
 
-  // /app/chat/:roomId → 채팅방 상세 (ClientShell 없이 풀스크린)
-  const chatRoomMatch = pathname.match(/^\/app\/chat\/([^/]+)$/);
-  if (chatRoomMatch) {
-    return <ClientChatRoomPage />;
+  // /app/chat 또는 /app/chat/:roomId → ClientChatPage (자체 ClientShell 보유, 상담사 ChatPage와 동일 패턴)
+  if (pathname.startsWith('/app/chat')) {
+    return <ClientChatPage />;
   }
 
   // /app/sessions/:id → 세션 상세 (ClientShell 없이 풀스크린)
@@ -200,23 +263,49 @@ export default function ClientAppPage() {
     return <ClientReportDetailPage />;
   }
 
-  // 탭별 콘텐츠 렌더링 (ClientShell 포함)
+  // 탭별 콘텐츠 + ClientShell (AppShell과 동일 구조)
+  let shellTitle = '홈';
+  let shellSub: string | undefined = 'HOME';
+
+  if (pathname === '/app' || pathname === '/app/') {
+    // 홈: 대시보드 스타일 헤더
+    shellTitle = `안녕하세요, ${user?.name ?? '내담자'}님`;
+    shellSub = formatKoreanSub();
+  } else if (pathname.startsWith('/app/sessions')) {
+    shellTitle = '세션';
+    shellSub = 'SESSIONS';
+  } else if (pathname.startsWith('/app/reports')) {
+    shellTitle = '리포트';
+    shellSub = 'REPORTS';
+  } else if (pathname.startsWith('/app/notifications')) {
+    shellTitle = '알림';
+    shellSub = 'NOTIFICATIONS';
+  } else if (pathname.startsWith('/app/profile')) {
+    shellTitle = '설정';
+    shellSub = 'SETTINGS';
+  }
+
   const renderTabContent = () => {
-    if (pathname.startsWith('/app/chat')) {
-      return <ClientChatListPage />;
-    }
     if (pathname.startsWith('/app/sessions')) {
       return <ClientSessionListPage />;
     }
     if (pathname.startsWith('/app/reports')) {
       return <ClientReportListPage />;
     }
+    if (pathname.startsWith('/app/notifications')) {
+      // 알림 페이지 — 추후 전용 페이지로 교체
+      return <ClientHomePage />;
+    }
     if (pathname.startsWith('/app/profile')) {
-      return <ClientProfilePage />;
+      return <ClientSettingsPage />;
     }
     // /app → 홈
     return <ClientHomePage />;
   };
 
-  return <ClientShell>{renderTabContent()}</ClientShell>;
+  return (
+    <ClientShell title={shellTitle} sub={shellSub}>
+      {renderTabContent()}
+    </ClientShell>
+  );
 }

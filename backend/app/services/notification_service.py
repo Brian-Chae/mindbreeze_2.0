@@ -110,6 +110,24 @@ def notify_event(
     notif: Notification | None = None
     if prefs["in_app"].get(pref_key, True):
         notif = create_notification(user.id, notif_type, title, body_message, db, extra=extra)
+        db.commit()  # 알림을 DB에 확정
+        # 실시간 알림 브로드캐스트
+        try:
+            from app.ws.chat_namespace import broadcast_notification
+            import asyncio
+            asyncio.create_task(broadcast_notification(
+                str(user.id),
+                {
+                    "id": str(notif.id),
+                    "type": notif_type,
+                    "title": title,
+                    "body": body_message,
+                    "extra": extra,
+                },
+            ))
+            logger.info(f"[NOTIF] broadcast sent to user:{user.id}")
+        except Exception as e:
+            logger.error(f"[NOTIF] broadcast failed: {e}", exc_info=True)
 
     if prefs["email"].get(pref_key, False) and user.email:
         send_email_notification(user.email, subject, body_text or body_message or title)

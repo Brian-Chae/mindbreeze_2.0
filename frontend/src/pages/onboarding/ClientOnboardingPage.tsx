@@ -1,7 +1,7 @@
 // 내담자 온보딩 페이지 (4단계) — 로그인 페이지와 동일한 다크 테마
 
-import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
@@ -68,6 +68,10 @@ export default function ClientOnboardingPage() {
   useRequireAuth();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const [searchParams] = useSearchParams();
+  const autoCode = searchParams.get('code') ?? '';
+  const autoMatchTriggered = useRef(false);
 
   const [step, setStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -99,11 +103,23 @@ export default function ClientOnboardingPage() {
       } catch {
         // 진행 상태 없음
       }
+      // 초대 링크에서 전달된 상담사 코드 자동 입력
+      if (!cancelled && autoCode.length === 6) {
+        setForm((prev) => ({ ...prev, counselorCode: autoCode }));
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // 초대 링크로 들어온 경우 step 4에서 자동 매칭
+  useEffect(() => {
+    if (step === 4 && form.counselorCode.length === 6 && !autoMatchTriggered.current && !matchedCounselor) {
+      autoMatchTriggered.current = true;
+      handleMatch();
+    }
+  }, [step, form.counselorCode]);
 
   const toggleItem = (field: 'concerns' | 'interests', item: string): void => {
     setForm((f) => ({
@@ -212,6 +228,20 @@ export default function ClientOnboardingPage() {
     try {
       await completeClientOnboarding();
       markCompleted(4);
+
+      // 매칭된 상담사 정보로 authStore 업데이트 → /app 에서 연결됨으로 인식
+      if (matchedCounselor?.matched_counselor && user) {
+        const mc = matchedCounselor.matched_counselor;
+        setUser({
+          ...user,
+          counselors: [
+            ...(user.counselors ?? []),
+            { id: mc.id, name: mc.name, profile_image: mc.profile_image },
+          ],
+          onboarding_completed: true,
+        });
+      }
+
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : '완료 처리에 실패했습니다');

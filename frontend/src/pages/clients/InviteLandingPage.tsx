@@ -48,7 +48,7 @@ export default function InviteLandingPage() {
         navigate('/dashboard');
       }
     } else if (user.role === 'client') {
-      navigate('/onboarding/client');
+      navigate(`/onboarding/client?code=${info?.counselor_code ?? ''}`);
     } else {
       navigate('/onboarding/counselor');
     }
@@ -123,7 +123,7 @@ export default function InviteLandingPage() {
             <p className="text-sm text-[#6F6F6F]">
               또는{' '}
               <Link
-                to={`/register?token=${token}&type=client`}
+                to={`/register?token=${token}&type=client&code=${info.counselor_code ?? ''}`}
                 className="text-[#5F0080] underline hover:text-[#4A0066] transition-colors"
               >
                 이메일로 가입하기

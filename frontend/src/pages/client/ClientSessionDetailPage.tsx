@@ -89,7 +89,7 @@ export default function ClientSessionDetailPage() {
 
     if (session.status === 'scheduled' || session.status === 'in_progress' || session.status === 'paused') {
       return (
-        <div className="space-y-2">
+        <div className="flex flex-col md:flex-row gap-2">
           {session.status === 'in_progress' ? (
             <button
               type="button"
@@ -112,7 +112,7 @@ export default function ClientSessionDetailPage() {
 
     if (session.status === 'completed') {
       return (
-        <div className="space-y-2">
+        <div className="flex flex-col md:flex-row gap-2">
           <button
             type="button"
             onClick={() => navigate(`/app/reports/${session.id}`)}
@@ -161,7 +161,7 @@ export default function ClientSessionDetailPage() {
       </header>
 
       {/* 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 max-w-3xl mx-auto md:px-8">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-sm text-[#6F6F6F]">
             불러오는 중...
@@ -197,7 +197,7 @@ export default function ClientSessionDetailPage() {
               </h2>
 
               {/* 세션 상세 정보 */}
-              <dl className="space-y-3">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <dt className="text-xs text-[#6F6F6F] mb-0.5">상담사</dt>
                   <dd className="text-sm text-[#1F1F1F] font-medium">{counselorName}</dd>

@@ -9,6 +9,7 @@ export interface ChatMessage {
   id: string;
   room_id: string;
   sender_id: string | null;
+  sender_name?: string | null;
   type: ChatMessageType;
   content: string | null;
   file_url: string | null;
@@ -22,6 +23,8 @@ export interface ChatRoom {
   room_type: RoomType;
   host_id: string | null;
   name: string | null;
+  peer_name: string | null;
+  peer_id: string | null;
   participant_count: number;
   created_at: string;
   unread_count: number;

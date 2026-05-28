@@ -68,9 +68,11 @@ class ClientStep4MatchRequest(BaseModel):
 
 
 class MatchedCounselor(BaseModel):
+    id: str
     name: str
     counselor_code: str
     specialties: list[str] = Field(default_factory=list)
+    profile_image: str | None = None
 
 
 class ClientMatchResponse(BaseModel):
