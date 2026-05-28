@@ -132,21 +132,26 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
 
   return (
     <div className="flex flex-col gap-7 px-5 py-8 h-full">
-      <div className="flex items-center gap-2.5 px-2.5">
-        <img
-          src="/mb-design/assets/logo_symbol_dark.svg"
-          width={28}
-          height={13}
-          alt=""
-        />
-        <span className="font-extrabold text-[17px] text-[#5F0080] tracking-tight">
-          mind&nbsp;breeze
-        </span>
-      </div>
-      <div className="px-2.5 -mt-5">
-        <span className={`text-[11px] font-semibold tracking-wider uppercase ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
-          {role === 'client' ? '회원 전용' : '상담사 전용'}
-        </span>
+      {/* 브랜딩 블록 */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2.5 px-2.5">
+          <img
+            src="/mb-design/assets/logo_symbol_dark.svg"
+            width={28}
+            height={13}
+            alt=""
+            className="hue-rotate-[271deg] saturate-[5.38] brightness-[0.93] contrast-[1.03] invert-[0.13] sepia-[0.48]"
+            style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(48%) saturate(5380%) hue-rotate(271deg) brightness(93%) contrast(103%)' }}
+          />
+          <span className="font-extrabold text-[17px] text-[#5F0080] tracking-tight">
+            mind&nbsp;breeze
+          </span>
+        </div>
+        <div className="px-2.5">
+          <span className={`inline-block text-[10px] font-bold tracking-[0.15em] uppercase rounded-full px-2.5 py-0.5 border ${role === 'client' ? 'text-[#7C3AED] bg-[#7C3AED]/8 border-[#7C3AED]/20' : 'text-[#5F0080] bg-[#5F0080]/8 border-[#5F0080]/15'}`}>
+            {role === 'client' ? '회원 전용' : '상담사 전용'}
+          </span>
+        </div>
       </div>
 
       <nav className="flex flex-col gap-1">
