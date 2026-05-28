@@ -79,6 +79,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (newToken) {
       token = newToken;
       res = await doFetch(token);
+    } else {
+      // refresh 실패 → 토큰 클리어 + 로그인 페이지로 강제 이동
+      tokenStorage.clear();
+      window.location.href = '/login';
+      throw new ApiError(401, '인증이 만료되었습니다.', null);
     }
   }
 
