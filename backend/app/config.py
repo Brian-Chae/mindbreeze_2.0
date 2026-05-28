@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # JWT
     jwt_secret_key: str = "dev-secret-change-me"
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
+    access_token_expire_minutes: int = 2880  # 48시간
     refresh_token_expire_days: int = 14
 
     # Resend Email
