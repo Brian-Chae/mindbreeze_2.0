@@ -46,7 +46,7 @@ export default function ClientSessionListPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   // 세션 신청 관련 상태
   const [showRequestModal, setShowRequestModal] = useState(false);
