@@ -147,9 +147,9 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
             Mind&nbsp;Breeze
           </span>
         </div>
-        <div className="px-2.5 flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${role === 'client' ? 'bg-[#7C3AED]' : 'bg-[#5F0080]'}`} />
-          <span className={`text-[12px] font-medium tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
+        <div className="pl-4 flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${role === 'client' ? 'bg-[#7C3AED]' : 'bg-[#5F0080]'}`} />
+          <span className={`text-[14px] font-semibold tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
             {role === 'client' ? '회원 전용' : '상담사 전용'}
           </span>
         </div>
