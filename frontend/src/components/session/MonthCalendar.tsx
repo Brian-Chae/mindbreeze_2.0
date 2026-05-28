@@ -31,15 +31,6 @@ const typeDotColor = (type: SessionType): string => {
   }
 };
 
-const typeShortLabel = (type: SessionType): string => {
-  switch (type) {
-    case 'clinical': return '임상';
-    case 'hypnosis': return '최면';
-    case 'meditation': return '명상';
-    default: return type;
-  }
-};
-
 interface Props {
   sessions: SessionDto[];
   currentDate: Date;
@@ -47,10 +38,11 @@ interface Props {
   weekHighlight?: Date;
   onSelectDate: (date: Date) => void;
   onShiftMonth: (direction: 1 | -1) => void;
+  onToday?: () => void;
   className?: string;
 }
 
-export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlight, onSelectDate, onShiftMonth, className }: Props) {
+export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlight, onSelectDate, onShiftMonth, onToday, className }: Props) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -72,34 +64,48 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
 
   return (
     <div className={`bg-white rounded-[20px] border border-[#EFEFEF] overflow-hidden ${className ?? ''}`}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#EFEFEF]">
-        <button
-          type="button"
-          onClick={() => onShiftMonth(-1)}
-          className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-          aria-label="이전 월"
-        >
-          ‹
-        </button>
-        <span className="text-sm font-bold text-[#1F1F1F]">
+      <div className="flex items-center justify-between px-4 py-3.5">
+        <div className="font-bold text-[17px] tracking-tight text-[#1F1F1F]">
           {year}년 {month + 1}월
-        </span>
-        <button
-          type="button"
-          onClick={() => onShiftMonth(1)}
-          className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-          aria-label="다음 월"
-        >
-          ›
-        </button>
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => onShiftMonth(-1)}
+            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
+            aria-label="이전 월"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (onToday) { onToday(); } else {
+                const now = new Date();
+                onSelectDate(now);
+              }
+            }}
+            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+          >
+            오늘
+          </button>
+          <button
+            type="button"
+            onClick={() => onShiftMonth(1)}
+            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
+            aria-label="다음 월"
+          >
+            ›
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-7 bg-[#FAFAFA] border-b border-[#EFEFEF]">
+      <div className="grid grid-cols-7 px-2">
         {DAY_LABELS.map((label, i) => (
           <div
             key={label}
-            className={`text-center py-2 text-[11px] font-bold ${
-              i === 0 ? 'text-[#B3261E]' : i === 6 ? 'text-[#1F4FB3]' : 'text-[#1F1F1F]'
+            className={`text-center py-2 text-[10px] font-mono uppercase tracking-wider ${
+              i === 0 ? 'text-[#B3261E]' : i === 6 ? 'text-[#1F4FB3]' : 'text-[#6F6F6F]'
             }`}
           >
             {label}
@@ -107,71 +113,35 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-1 px-2 pb-3">
         {cells.map((d) => {
           const inMonth = d.getMonth() === month;
           const isToday = sameDay(d, today);
           const isSelected = selectedDate ? sameDay(d, selectedDate) : false;
           const isWeekHighlight = weekHighlight ? inSameWeek(d, weekHighlight) : false;
-          const isWeekStart = isWeekHighlight && d.getDay() === 0;
           const items = sessionsOn(d);
 
-          // 배경: 선택날짜 > 주간 하이라이트 > 당월/전월
           let cellBg = '';
-          if (isSelected) cellBg = 'bg-[#F5EDFC]';
-          else if (isWeekHighlight && inMonth) cellBg = 'bg-[#F5EDFC]';
-          else if (isWeekHighlight) cellBg = 'bg-[#F5EDFC]/40';
-          else if (inMonth) cellBg = 'bg-white';
-          else cellBg = 'bg-[#FAFAFA]';
+          if (isSelected) cellBg = 'bg-[#5F0080] text-white font-bold';
+          else if (isToday) cellBg = 'bg-[#F5EDFC] text-[#5F0080] font-bold';
+          else if (isWeekHighlight && inMonth) cellBg = 'bg-[#F5EDFC]/40 text-[#1F1F1F]';
+          else if (inMonth) cellBg = 'text-[#1F1F1F] hover:bg-[#F8F4FC]';
+          else cellBg = 'text-[#C2C3CE]';
+
+          const hasDot = items.length > 0;
+          const dotColor = hasDot ? typeDotColor(items[0]!.type) : '';
 
           return (
             <button
               key={d.toISOString()}
               type="button"
-              onClick={() => onSelectDate(d)}
-              className={`border-t border-l border-[#EFEFEF] h-[40px] md:h-[80px] p-1 md:p-1.5 flex flex-col items-stretch text-left transition-colors hover:bg-[#FAFAFA] ${cellBg} ${isWeekHighlight && !isWeekStart ? 'border-l-transparent' : ''}`}
+              onClick={() => inMonth && onSelectDate(d)}
+              disabled={!inMonth}
+              className={`aspect-square flex flex-col items-center justify-center rounded-[10px] text-sm relative transition-colors ${cellBg}`}
             >
-              <div className="flex items-center justify-center md:justify-start">
-                <span
-                  className={`text-[11px] md:text-xs font-mono inline-flex items-center justify-center ${
-                    isToday
-                      ? 'w-5 h-5 md:w-6 md:h-6 rounded-full bg-[#5F0080] text-white font-bold'
-                      : inMonth
-                        ? d.getDay() === 0
-                          ? 'text-[#B3261E]'
-                          : d.getDay() === 6
-                            ? 'text-[#1F4FB3]'
-                            : 'text-[#1F1F1F]'
-                        : 'text-[#C0C0C0]'
-                  }`}
-                >
-                  {d.getDate()}
-                </span>
-              </div>
-
-              {items.length > 0 && (
-                <>
-                  <div className="flex md:hidden items-center justify-center gap-0.5 mt-0.5">
-                    {items.slice(0, 3).map((s) => (
-                      <span key={s.id} className={`w-1 h-1 rounded-full ${typeDotColor(s.type)}`} />
-                    ))}
-                  </div>
-                  <div className="hidden md:flex flex-col gap-0.5 mt-1 overflow-hidden">
-                    {items.slice(0, 2).map((s) => (
-                      <span
-                        key={s.id}
-                        className="flex items-center gap-1 text-[10px] text-[#1F1F1F] truncate"
-                        title={s.title || typeShortLabel(s.type)}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${typeDotColor(s.type)}`} />
-                        <span className="truncate">{s.title || typeShortLabel(s.type)}</span>
-                      </span>
-                    ))}
-                    {items.length > 2 && (
-                      <span className="text-[10px] text-[#6F6F6F]">+{items.length - 2}</span>
-                    )}
-                  </div>
-                </>
+              <span>{d.getDate()}</span>
+              {hasDot && (
+                <span className={`absolute bottom-[5px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full ${isSelected ? 'bg-white/70' : dotColor}`} />
               )}
             </button>
           );

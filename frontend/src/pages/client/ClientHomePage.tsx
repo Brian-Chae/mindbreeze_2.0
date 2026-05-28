@@ -161,6 +161,11 @@ export default function ClientHomePage() {
     });
   }, []);
 
+  const handleToday = useCallback(() => {
+    setCurrentDate(new Date());
+    setSelectedDate(new Date());
+  }, []);
+
   const isSelectedToday = sameDay(selectedDate, new Date());
 
   // ── 렌더 ──────────────────────────────────────────────────────
@@ -202,52 +207,17 @@ export default function ClientHomePage() {
         <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>
       ) : (
         <>
-          {/* 캘린더 + 오늘 세션 (2열) — 대시보드 스타일 */}
+          {/* 캘린더 + 오늘 세션 (2열) */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mb-6">
-            {/* 좌측: 캘린더 — 대시보드 MiniCalendar 스타일 카드 */}
-            <div className={CARD_CLS}>
-              <div className="flex justify-between items-center mb-4">
-                <div className={CARD_TITLE_CLS}>
-                  {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
-                </div>
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleShiftMonth(-1)}
-                    className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080]"
-                    aria-label="이전 월"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentDate(new Date());
-                      setSelectedDate(new Date());
-                    }}
-                    className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#5F0080] text-white"
-                  >
-                    오늘
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleShiftMonth(1)}
-                    className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080]"
-                    aria-label="다음 월"
-                  >
-                    ›
-                  </button>
-                </div>
-              </div>
-              <MonthCalendar
-                sessions={filteredSessions}
-                currentDate={currentDate}
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-                onShiftMonth={handleShiftMonth}
-                className="!border-0 !rounded-none"
-              />
-            </div>
+            {/* 좌측: 캘린더 */}
+            <MonthCalendar
+              sessions={filteredSessions}
+              currentDate={currentDate}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              onShiftMonth={handleShiftMonth}
+              onToday={handleToday}
+            />
 
             {/* 우측: 오늘 세션 — 대시보드 TodaySessions 스타일 */}
             <div className={`${CARD_CLS} flex flex-col gap-3`}>
