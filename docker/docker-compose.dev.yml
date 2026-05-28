@@ -25,6 +25,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend
     container_name: mindbreeze-dev-fe
+    volumes:
+      - ../frontend/dist:/usr/share/nginx/html:ro
     depends_on:
       - backend
     restart: unless-stopped
