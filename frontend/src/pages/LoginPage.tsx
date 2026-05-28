@@ -134,16 +134,19 @@ export default function LoginPage() {
 
         <img
           src="/mb-design/assets/logo_symbol_dark.svg"
-          width={84}
-          height={38}
+          width={64}
+          height={29}
           alt=""
-          className="brightness-0 invert"
+          className="brightness-0 invert opacity-80"
         />
-        <div className="font-extrabold text-[32px] text-white tracking-tight">
+        <div className="font-extrabold text-[22px] text-white/70 tracking-tight">
           mind&nbsp;breeze
         </div>
-        <div className="text-[15px] text-white/85 mb-7">
-          상담사 전용 · MIND BREEZE Operator
+        <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
+          상담사 로그인
+        </h1>
+        <div className="text-[15px] text-white/60 mb-7">
+          MIND BREEZE Operator
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3">

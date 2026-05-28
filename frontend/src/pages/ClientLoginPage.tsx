@@ -105,7 +105,7 @@ export default function ClientLoginPage() {
   return (
     <div className="relative min-h-screen font-sans">
       <img
-        src="/mb-design/assets/images/background3.jpg"
+        src="/mb-design/assets/images/background5.jpg"
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -140,16 +140,19 @@ export default function ClientLoginPage() {
 
         <img
           src="/mb-design/assets/logo_symbol_dark.svg"
-          width={84}
-          height={38}
+          width={64}
+          height={29}
           alt=""
-          className="brightness-0 invert"
+          className="brightness-0 invert opacity-80"
         />
-        <div className="font-extrabold text-[32px] text-white tracking-tight">
+        <div className="font-extrabold text-[22px] text-white/70 tracking-tight">
           mind&nbsp;breeze
         </div>
-        <div className="text-[15px] text-white/85 mb-7">
-          회원 전용 · MIND BREEZE Member
+        <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
+          회원 로그인
+        </h1>
+        <div className="text-[15px] text-white/60 mb-7">
+          MIND BREEZE Member
         </div>
 
         {/* 이메일 로그인 폼 */}
