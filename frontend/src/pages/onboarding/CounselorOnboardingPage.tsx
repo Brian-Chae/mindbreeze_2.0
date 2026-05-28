@@ -187,7 +187,7 @@ export default function CounselorOnboardingPage() {
         <div className="text-center space-y-2">
           <Link to="/" className="inline-block">
             <h1 className="text-3xl font-extrabold tracking-tight text-[#5F0080]">
-              mind breeze
+              Mind Breeze
             </h1>
           </Link>
           <p className="text-sm text-[#6F6F6F]">상담사 온보딩</p>

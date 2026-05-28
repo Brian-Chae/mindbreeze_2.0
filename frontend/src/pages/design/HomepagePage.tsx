@@ -38,7 +38,7 @@ function Nav() {
               letterSpacing: '-0.02em',
             }}
           >
-            mind&nbsp;breeze
+            Mind&nbsp;Breeze
           </span>
         </a>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -587,7 +587,7 @@ function Footer() {
               alt=""
               style={{ filter: 'brightness(0) invert(1)' }}
             />
-            <span style={{ fontFamily: 'var(--mb-font-sans)', fontWeight: 800, fontSize: 18 }}>mind&nbsp;breeze</span>
+            <span style={{ fontFamily: 'var(--mb-font-sans)', fontWeight: 800, fontSize: 18 }}>Mind&nbsp;Breeze</span>
           </div>
           <p
             style={{

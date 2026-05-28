@@ -11,7 +11,7 @@ const Nav: React.FC = () => {
         <a href="#" className="flex items-center gap-3 no-underline">
           <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={13} alt="" />
           <span className="font-sans font-extrabold text-[19px] text-purple-900 tracking-[-0.02em]">
-            mind&nbsp;breeze
+            Mind&nbsp;Breeze
           </span>
         </a>
         <div className="hidden md:flex gap-1 items-center">

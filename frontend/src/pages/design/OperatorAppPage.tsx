@@ -67,7 +67,7 @@ function AppShell({ children, title, sub, rightSlot, contentPad = '24px 32px', n
       <aside style={{ background: '#F5EDFC', padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: 28, borderRight: '1px solid #EFEFEF' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 10px' }}>
           <img src={`${ASSET}/logo_symbol_dark.svg`} width="28" height="13" alt="" />
-          <span style={{ fontWeight: 800, fontSize: 17, color: '#5F0080', letterSpacing: '-0.02em' }}>mind&nbsp;breeze</span>
+          <span style={{ fontWeight: 800, fontSize: 17, color: '#5F0080', letterSpacing: '-0.02em' }}>Mind&nbsp;Breeze</span>
         </div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {railItems.map((it) => {
@@ -581,7 +581,7 @@ function SignIn() {
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.35) 100%)' }} />
       <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 18 }}>
         <img src={`${ASSET}/logo_symbol_dark.svg`} width="84" height="38" alt="" style={{ filter: 'brightness(0) invert(1)' }} />
-        <div style={{ fontFamily: 'var(--mb-font-sans)', fontWeight: 800, fontSize: 32, color: '#FFFFFF', letterSpacing: '-0.02em' }}>mind&nbsp;breeze</div>
+        <div style={{ fontFamily: 'var(--mb-font-sans)', fontWeight: 800, fontSize: 32, color: '#FFFFFF', letterSpacing: '-0.02em' }}>Mind&nbsp;Breeze</div>
         <div style={{ fontFamily: 'var(--mb-font-text)', fontSize: 15, color: 'rgba(255,255,255,0.86)', marginBottom: 28 }}>지도사 전용 · MIND BREEZE Operator</div>
         {[
           { icon: 'icon_google.svg', label: 'Sign in with Google' },

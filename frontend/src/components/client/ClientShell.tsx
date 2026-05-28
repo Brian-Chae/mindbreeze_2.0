@@ -89,7 +89,7 @@ export default function ClientShell({
             alt=""
           />
           <span className="font-extrabold text-[15px] text-[#5F0080] tracking-tight">
-            mind&nbsp;breeze
+            Mind&nbsp;Breeze
           </span>
         </div>
         <button

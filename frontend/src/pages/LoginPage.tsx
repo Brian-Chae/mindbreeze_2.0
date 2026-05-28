@@ -121,7 +121,7 @@ export default function LoginPage() {
               className="brightness-0 invert"
             />
             <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
-              mind&nbsp;breeze
+              Mind&nbsp;Breeze
             </span>
           </Link>
           <Link
@@ -140,7 +140,7 @@ export default function LoginPage() {
           className="brightness-0 invert opacity-80"
         />
         <div className="font-extrabold text-[22px] text-white/70 tracking-tight">
-          mind&nbsp;breeze
+          Mind&nbsp;Breeze
         </div>
         <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
           상담사 로그인

@@ -66,7 +66,7 @@ export const Footer: React.FC = () => {
               alt=""
               style={{ filter: 'brightness(0) invert(1)' }}
             />
-            <span className="font-sans font-extrabold text-[18px]">mind&nbsp;breeze</span>
+            <span className="font-sans font-extrabold text-[18px]">Mind&nbsp;Breeze</span>
           </div>
           <p className="text-[13px] leading-[22px] text-[#A2A3AD] mt-[14px] max-w-[360px]">
             ⓒ Looxid Labs Inc.

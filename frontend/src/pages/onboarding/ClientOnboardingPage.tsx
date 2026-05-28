@@ -280,7 +280,7 @@ export default function ClientOnboardingPage() {
                 className="brightness-0 invert"
               />
               <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
-                mind&nbsp;breeze
+                Mind&nbsp;Breeze
               </span>
             </Link>
           </div>
@@ -294,7 +294,7 @@ export default function ClientOnboardingPage() {
             className="brightness-0 invert"
           />
           <div className="font-extrabold text-[32px] text-white tracking-tight">
-            mind&nbsp;breeze
+            Mind&nbsp;Breeze
           </div>
 
           <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
@@ -359,7 +359,7 @@ export default function ClientOnboardingPage() {
               className="brightness-0 invert"
             />
             <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
-              mind&nbsp;breeze
+              Mind&nbsp;Breeze
             </span>
           </Link>
           <Link
@@ -379,7 +379,7 @@ export default function ClientOnboardingPage() {
           className="brightness-0 invert"
         />
         <div className="font-extrabold text-[32px] text-white tracking-tight">
-          mind&nbsp;breeze
+          Mind&nbsp;Breeze
         </div>
         <p className="text-[15px] text-white/85">내담자 온보딩</p>
 
