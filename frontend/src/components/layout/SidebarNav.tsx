@@ -143,6 +143,11 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
           mind&nbsp;breeze
         </span>
       </div>
+      <div className="px-2.5 -mt-5">
+        <span className={`text-[11px] font-semibold tracking-wider uppercase ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
+          {role === 'client' ? '회원 전용' : '상담사 전용'}
+        </span>
+      </div>
 
       <nav className="flex flex-col gap-1">
         {(role === 'client' ? CLIENT_NAV_ITEMS : NAV_ITEMS).map((it) => (
