@@ -250,16 +250,39 @@ export default function ClientSessionListPage() {
         {renderSessionList()}
       </div>
 
-      {/* ===== 데스크톱: 좌측 캘린더 + 우측 타임라인 ===== */}
-      <div className="hidden md:grid grid-cols-[320px_1fr] gap-6">
-        {/* 좌측: 캘린더 */}
-        <MonthCalendar
-          sessions={sessions}
-          currentDate={currentDate}
-          selectedDate={selectedDate}
-          onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
-          onShiftMonth={shiftMonth}
-        />
+      {/* ===== 데스크톱: 좌측 캘린더+목록 / 우측 타임라인 (50:50) ===== */}
+      <div className="hidden md:grid grid-cols-2 gap-6 min-h-0">
+        {/* 좌측: 캘린더 + 선택일 세션 목록 */}
+        <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
+          <MonthCalendar
+            sessions={sessions}
+            currentDate={currentDate}
+            selectedDate={selectedDate}
+            onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
+            onShiftMonth={shiftMonth}
+          />
+          {/* 선택일 세션 리스트 */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-[#1F1F1F]">
+              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
+            </h3>
+            {(() => {
+              const daySessions = sessions.filter((s) => {
+                const d = new Date(s.scheduled_at);
+                return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
+              }).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+              if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
+              return daySessions.map((s) => (
+                <SessionCard
+                  key={s.id}
+                  session={s}
+                  onClick={() => navigate(`/app/sessions/${s.id}`)}
+                  counselorName={counselorNameMap[s.host_id] || undefined}
+                />
+              ));
+            })()}
+          </div>
+        </div>
 
         {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
         <div className="flex flex-col min-h-0">

@@ -340,10 +340,10 @@ export default function SessionListPage() {
         />
         </div>
 
-        {/* 데스크톱: 좌측 캘린더 + 우측 타임라인 */}
-        <div className="hidden md:grid grid-cols-[320px_1fr] gap-6 min-h-0 flex-1">
-          {/* 좌측: 캘린더 + 목록 버튼 */}
-          <div className="flex flex-col gap-3 min-h-0">
+        {/* 데스크톱: 좌측 캘린더+목록 / 우측 타임라인 (50:50) */}
+        <div className="hidden md:grid grid-cols-2 gap-6 min-h-0 flex-1">
+          {/* 좌측: 캘린더 + 선택일 세션 목록 */}
+          <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
             <MonthCalendar
               sessions={sessions}
               currentDate={currentDate}
@@ -351,13 +351,29 @@ export default function SessionListPage() {
               onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
               onShiftMonth={shiftMonth}
             />
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'list' ? 'bg-[#5F0080] text-white' : 'bg-[#F2F3F8] text-[#1F1F1F] hover:bg-[#E6E7EE]'}`}
-            >
-              목록 보기
-            </button>
+            {/* 선택일 세션 리스트 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[#1F1F1F]">
+                  {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#5F0080] text-white' : 'bg-[#F2F3F8] text-[#1F1F1F] hover:bg-[#E6E7EE]'}`}
+                >
+                  전체 목록
+                </button>
+              </div>
+              {(() => {
+                const daySessions = sessions.filter((s) => {
+                  const d = new Date(s.scheduled_at);
+                  return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
+                }).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
+                return daySessions.map((s) => <SessionCard key={s.id} session={s} />);
+              })()}
+            </div>
           </div>
 
           {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
