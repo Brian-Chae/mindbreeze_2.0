@@ -352,7 +352,7 @@ export default function SessionListPage() {
               onShiftMonth={shiftMonth}
             />
             {/* 선택일 세션 리스트 */}
-            <div className="space-y-2">
+            <div className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-[#1F1F1F]">
                   {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션

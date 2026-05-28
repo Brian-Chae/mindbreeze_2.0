@@ -303,8 +303,23 @@ export default function ClientAppPage() {
     return <ClientHomePage />;
   };
 
+  const handleSessionRequest = () => {
+    window.dispatchEvent(new CustomEvent('open-session-request'));
+  };
+
+  // 세션 탭이면 rightSlot에 신청하기 버튼
+  const rightSlot = pathname.startsWith('/app/sessions') ? (
+    <button
+      type="button"
+      onClick={handleSessionRequest}
+      className="px-4 py-2 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
+    >
+      세션 신청하기
+    </button>
+  ) : undefined;
+
   return (
-    <ClientShell title={shellTitle} sub={shellSub}>
+    <ClientShell title={shellTitle} sub={shellSub} rightSlot={rightSlot}>
       {renderTabContent()}
     </ClientShell>
   );

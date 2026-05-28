@@ -72,6 +72,13 @@ export default function ClientSessionListPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // 상단 헤더의 "세션 신청하기" 버튼 이벤트 리스너
+  useEffect(() => {
+    const handler = () => { void handleOpenRequest(); };
+    window.addEventListener('open-session-request', handler);
+    return () => window.removeEventListener('open-session-request', handler);
+  }, []);
+
   // 상담사 ID → 색상 매핑
   const counselorColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -223,17 +230,6 @@ export default function ClientSessionListPage() {
         </div>
       )}
 
-      {/* 세션 신청하기 버튼 */}
-      <div className="py-3">
-        <button
-          type="button"
-          onClick={() => void handleOpenRequest()}
-          className="w-full rounded-xl bg-[#5F0080] text-white text-sm font-semibold py-3 active:scale-[0.98] transition-transform"
-        >
-          세션 신청하기
-        </button>
-      </div>
-
       {/* ===== 모바일: MonthCalendar + 세션 리스트 ===== */}
       <div className="md:hidden space-y-4">
         <MonthCalendar
@@ -262,7 +258,7 @@ export default function ClientSessionListPage() {
             onShiftMonth={shiftMonth}
           />
           {/* 선택일 세션 리스트 */}
-          <div className="space-y-2">
+          <div className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 space-y-2">
             <h3 className="text-sm font-semibold text-[#1F1F1F]">
               {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
             </h3>
