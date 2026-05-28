@@ -23,10 +23,6 @@ const startOfWeek = (date: Date): Date => {
   return d;
 };
 
-function formatMonth(date: Date): string {
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
-}
-
 function formatDay(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} (${WEEKDAY[date.getDay()]})`;
@@ -39,12 +35,6 @@ function formatWeekRange(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${start.getFullYear()}.${pad(start.getMonth() + 1)}.${pad(start.getDate())} – ${pad(end.getMonth() + 1)}.${pad(end.getDate())}`;
 }
-
-const TABS: { mode: 'daily' | 'weekly' | 'monthly'; label: string }[] = [
-  { mode: 'daily', label: '일간' },
-  { mode: 'weekly', label: '주간' },
-  { mode: 'monthly', label: '월간' },
-];
 
 export default function ClientSessionListPage() {
   const navigate = useNavigate();
@@ -177,16 +167,9 @@ export default function ClientSessionListPage() {
     return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${WEEKDAY[d.getDay()]})`;
   })();
 
-  // 네비게이션 라벨
-  const navLabel =
-    viewMode === 'daily' ? formatDay(currentDate)
-    : viewMode === 'weekly' ? formatWeekRange(currentDate)
-    : formatMonth(currentDate);
-
   const onShift = (dir: 1 | -1): void => {
     if (viewMode === 'daily') shiftDay(dir);
     else if (viewMode === 'weekly') shiftWeek(dir);
-    else shiftMonth(dir);
   };
 
   // --- 렌더링 헬퍼: 세션 리스트 (공통) ---
@@ -267,81 +250,67 @@ export default function ClientSessionListPage() {
         {renderSessionList()}
       </div>
 
-      {/* ===== 데스크톱: 일간/주간/월간 탭 + 캘린더 뷰 ===== */}
-      <div className="hidden md:block">
-        {/* 탭 바 + 네비게이션 */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
-            {TABS.map((t) => (
+      {/* ===== 데스크톱: 좌측 캘린더 + 우측 타임라인 ===== */}
+      <div className="hidden md:grid grid-cols-[320px_1fr] gap-6">
+        {/* 좌측: 캘린더 */}
+        <MonthCalendar
+          sessions={sessions}
+          currentDate={currentDate}
+          selectedDate={selectedDate}
+          onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
+          onShiftMonth={shiftMonth}
+        />
+
+        {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
+        <div className="flex flex-col min-h-0">
+          <div className="flex items-center justify-between shrink-0 mb-3">
+            <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+              {(['daily', 'weekly'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setViewMode(m)}
+                  className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+                    viewMode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+                  }`}
+                >
+                  {m === 'daily' ? '일간' : '주간'}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
               <button
-                key={t.mode}
                 type="button"
-                onClick={() => setViewMode(t.mode)}
-                className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                  viewMode === t.mode
-                    ? 'bg-[#5F0080] text-white font-bold'
-                    : 'text-[#1F1F1F] font-medium'
-                }`}
+                onClick={() => onShift(-1)}
+                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                aria-label="이전"
               >
-                {t.label}
+                ‹
               </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onShift(-1)}
-              className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-              aria-label="이전"
-            >
-              ‹
-            </button>
-            <span className="text-sm font-mono text-[#1F1F1F] min-w-[180px] text-center">
-              {navLabel}
-            </span>
-            <button
-              type="button"
-              onClick={() => onShift(1)}
-              className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-              aria-label="다음"
-            >
-              ›
-            </button>
-          </div>
-        </div>
-
-        {/* 로딩 / 에러 */}
-        {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-        {error && <p className="text-[#B3261E]">{error}</p>}
-
-        {/* 일간 뷰 */}
-        {!loading && !error && viewMode === 'daily' && (
-          <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
-        )}
-
-        {/* 주간 뷰 */}
-        {!loading && !error && viewMode === 'weekly' && (
-          <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
-        )}
-
-        {/* 월간 뷰: MonthCalendar + 선택일 세션 리스트 */}
-        {!loading && !error && viewMode === 'monthly' && (
-          <div className="space-y-4">
-            <MonthCalendar
-              sessions={sessions}
-              currentDate={currentDate}
-              selectedDate={selectedDate}
-              onSelectDate={handleCalendarSelect}
-              onShiftMonth={shiftMonth}
-            />
-            <div>
-              <h2 className="text-sm font-semibold text-[#1F1F1F] mb-2">
-                {selectedDateLabel}
-              </h2>
-              {renderSessionList()}
+              <span className="text-sm font-mono text-[#1F1F1F] min-w-[140px] text-center">
+                {viewMode === 'daily' ? formatDay(currentDate) : viewMode === 'weekly' ? formatWeekRange(currentDate) : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => onShift(1)}
+                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                aria-label="다음"
+              >
+                ›
+              </button>
             </div>
           </div>
-        )}
+
+          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+          {error && <p className="text-[#B3261E]">{error}</p>}
+
+          {!loading && !error && viewMode === 'daily' && (
+            <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
+          )}
+          {!loading && !error && viewMode === 'weekly' && (
+            <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
+          )}
+        </div>
       </div>
 
       {/* 세션 신청 모달 */}

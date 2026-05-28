@@ -7,7 +7,7 @@ import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { MobileTimetable } from '../../components/session/MobileTimetable';
-import { useSessionStore, type CalendarViewMode } from '../../stores/sessionStore';
+import { useSessionStore } from '../../stores/sessionStore';
 import AppShell from '../../components/layout/AppShell';
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
@@ -29,9 +29,6 @@ const formatWeekRange = (date: Date): string => {
 
 const formatDay = (date: Date): string =>
   `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} (${WEEKDAY[date.getDay()]})`;
-
-const formatMonth = (date: Date): string =>
-  `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 
 const nowPlusOneHour = (): string => {
   const d = new Date();
@@ -179,13 +176,6 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   );
 }
 
-const TABS: { mode: CalendarViewMode; label: string }[] = [
-  { mode: 'daily', label: '일간' },
-  { mode: 'weekly', label: '주간' },
-  { mode: 'monthly', label: '월간' },
-  { mode: 'list', label: '목록' },
-];
-
 type MobileMode = 'daily' | 'weekly';
 
 const formatMobileDay = (date: Date): string =>
@@ -327,12 +317,10 @@ export default function SessionListPage() {
   const navLabel =
     viewMode === 'daily' ? formatDay(currentDate)
       : viewMode === 'weekly' ? formatWeekRange(currentDate)
-        : viewMode === 'monthly' ? formatMonth(currentDate)
-          : '';
+        : '';
   const onShift = (dir: 1 | -1): void => {
     if (viewMode === 'daily') shiftDay(dir);
     else if (viewMode === 'weekly') shiftWeek(dir);
-    else if (viewMode === 'monthly') shiftMonth(dir);
   };
 
   return (
@@ -352,81 +340,89 @@ export default function SessionListPage() {
         />
         </div>
 
-        {/* 데스크톱: 일간/주간/월간/목록 4탭 */}
-        <div className="hidden md:flex flex-col min-h-0 flex-1">
-          {/* 탭 바 + 네비게이션 (고정) */}
-          <div className="flex items-center justify-between shrink-0 py-1">
-            <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
-              {TABS.map((t) => (
-                <button
-                  key={t.mode}
-                  type="button"
-                  onClick={() => setViewMode(t.mode)}
-                  className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                    viewMode === t.mode ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            {viewMode !== 'list' && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => onShift(-1)}
-                  className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-                  aria-label="이전"
-                >
-                  ‹
-                </button>
-                <span className="text-sm font-mono text-[#1F1F1F] min-w-[180px] text-center">
-                  {navLabel}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onShift(1)}
-                  className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-                  aria-label="다음"
-                >
-                  ›
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 스크롤 가능한 컨텐츠 영역 */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
-          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-          {error && <p className="text-[#B3261E]">{error}</p>}
-
-          {!loading && !error && viewMode === 'list' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {sessions.length === 0 ? (
-                <p className="text-[#6F6F6F] col-span-full text-center py-12">
-                  등록된 세션이 없습니다.
-                </p>
-              ) : (
-                sessions.map((s) => <SessionCard key={s.id} session={s} />)
-              )}
-            </div>
-          )}
-
-          {!loading && !error && viewMode === 'weekly' && (
-            <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
-          )}
-          {!loading && !error && viewMode === 'daily' && (
-            <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
-          )}
-          {!loading && !error && viewMode === 'monthly' && (
+        {/* 데스크톱: 좌측 캘린더 + 우측 타임라인 */}
+        <div className="hidden md:grid grid-cols-[320px_1fr] gap-6 min-h-0 flex-1">
+          {/* 좌측: 캘린더 + 목록 버튼 */}
+          <div className="flex flex-col gap-3 min-h-0">
             <MonthCalendar
               sessions={sessions}
               currentDate={currentDate}
               selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
+              onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
               onShiftMonth={shiftMonth}
             />
-          )}
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'list' ? 'bg-[#5F0080] text-white' : 'bg-[#F2F3F8] text-[#1F1F1F] hover:bg-[#E6E7EE]'}`}
+            >
+              목록 보기
+            </button>
+          </div>
+
+          {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
+          <div className="flex flex-col min-h-0 overflow-y-auto">
+            {viewMode === 'list' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {sessions.length === 0 ? (
+                  <p className="text-[#6F6F6F] col-span-full text-center py-12">
+                    등록된 세션이 없습니다.
+                  </p>
+                ) : (
+                  sessions.map((s) => <SessionCard key={s.id} session={s} />)
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between shrink-0 mb-3">
+                  <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+                    {(['daily', 'weekly'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setViewMode(m)}
+                        className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
+                          viewMode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+                        }`}
+                      >
+                        {m === 'daily' ? '일간' : '주간'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onShift(-1)}
+                      className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                      aria-label="이전"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-sm font-mono text-[#1F1F1F] min-w-[140px] text-center">
+                      {navLabel}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onShift(1)}
+                      className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                      aria-label="다음"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+
+                {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
+                {error && <p className="text-[#B3261E]">{error}</p>}
+
+                {!loading && !error && viewMode === 'weekly' && (
+                  <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
+                )}
+                {!loading && !error && viewMode === 'daily' && (
+                  <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
+                )}
+              </>
+            )}
           </div>
         </div>
 
