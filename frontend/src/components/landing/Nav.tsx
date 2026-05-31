@@ -31,6 +31,9 @@ const Nav: React.FC = () => {
           <Link to="/login" className="mb-btn mb-btn--ghost h-10 px-4 text-[14px] whitespace-nowrap inline-flex items-center">
             상담사 로그인
           </Link>
+          <Link to="/login/client" className="mb-btn mb-btn--ghost h-10 px-4 text-[14px] whitespace-nowrap inline-flex items-center">
+            회원 로그인
+          </Link>
           <Link to="/register" className="mb-btn h-10 px-[18px] text-[14px] whitespace-nowrap inline-flex items-center">
             무료 체험
           </Link>
