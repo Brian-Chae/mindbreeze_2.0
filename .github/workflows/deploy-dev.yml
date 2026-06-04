@@ -81,9 +81,7 @@ jobs:
             docker/docker-compose.dev.yml \
             docker/nginx \
             docker/Dockerfile.frontend \
-            docker/Dockerfile.backend \
-            backend/.env.dev \
-            certbot/
+            docker/Dockerfile.backend
 
       - name: Deploy to EC2
         uses: appleboy/scp-action@v0.1.7
