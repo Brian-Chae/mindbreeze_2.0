@@ -5,6 +5,7 @@
 
 services:
   backend:
+    image: mindbreeze-dev-be:latest
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
