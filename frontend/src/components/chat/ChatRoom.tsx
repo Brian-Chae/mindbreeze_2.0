@@ -99,7 +99,7 @@ export function ChatRoom({ roomId, peerName }: Props) {
           setLoading(false);
         }
       });
-    // 읽음 처리 — API 호출 + 스토어 초기화
+    // 읽음 처리 — 사이드바 배지만 초기화 (내 메시지의 "1"은 messages_read 이벤트로만 사라짐)
     clearRoomUnread(roomId);
     markRoomRead(roomId)
       .then(() => useNotificationStore.getState().fetch())
@@ -153,12 +153,11 @@ export function ChatRoom({ roomId, peerName }: Props) {
       // 사이드바 뱃지 즉시 갱신
       store.clearRoomUnread(payload.room_id);
 
-      // 현재 보고 있는 방이면 API로 메시지 다시 불러오기 (가장 정확)
-      if (payload.room_id === roomId) {
-        listChatMessages(roomId)
-          .then((res) => setMessages(roomId, res.messages))
-          .catch(() => { /* 조용히 실패 */ });
-      }
+      // 낙관적 업데이트: 모든 메시지 unread_count → 0 + read_by 갱신
+      // (reader_id가 보낸 메시지는 markAllMessagesRead 내부에서 건너뜀)
+      store.markAllMessagesRead(payload.room_id, payload.reader_id);
+
+      // API 재호출 없음 — markAllMessagesRead로 UI가 이미 정확함
     };
     socket.on('messages_read', handleMessagesRead);
 

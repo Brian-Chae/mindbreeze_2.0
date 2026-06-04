@@ -87,7 +87,9 @@ export const useChatStore = create<ChatState>((set) => ({
         messagesByRoom: {
           ...state.messagesByRoom,
           [roomId]: msgs.map((m) => {
-            // readerId가 있으면 read_by에 추가 (중복 방지)
+            // readerId가 보낸 메시지는 건드리지 않음 (자기 메시지 읽음 방지)
+            if (readerId && m.sender_id === readerId) return m;
+
             const currentReadBy = m.read_by ?? [];
             const newReadBy = readerId && !currentReadBy.includes(readerId)
               ? [...currentReadBy, readerId]
