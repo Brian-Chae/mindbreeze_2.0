@@ -1,6 +1,7 @@
 # ─────────────────────────────────────────
 # MIND BREEZE 2.0 — Dev 배포 (GitHub Actions)
 # 트리거: develop 브랜치 push
+# EC2: ARM64 (Graviton) → 서버에서 네이티브 빌드
 # ─────────────────────────────────────────
 
 name: Deploy Dev
@@ -10,23 +11,6 @@ on:
     branches: [develop]
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Docker Build & Push
-        run: |
-          docker build -t mindbreeze-dev-be -f docker/Dockerfile.backend backend/
-          docker save mindbreeze-dev-be | gzip > be.tar.gz
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-image
-          path: be.tar.gz
-          overwrite: true
-
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -43,7 +27,7 @@ jobs:
         run: |
           cd frontend
           rm -rf dist node_modules/.tmp
-          echo "VITE_API_BASE_URL=http://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
+          echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
@@ -57,15 +41,10 @@ jobs:
           overwrite: true
 
   deploy:
-    needs: [backend, frontend]
+    needs: [frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download backend image
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-image
 
       - name: Download frontend dist
         uses: actions/download-artifact@v4
@@ -76,8 +55,8 @@ jobs:
       - name: Package deploy bundle
         run: |
           tar czf deploy-bundle.tar.gz \
-            be.tar.gz \
             frontend/dist \
+            backend/ \
             docker/docker-compose.dev.yml \
             docker/nginx \
             docker/Dockerfile.frontend \
@@ -108,22 +87,17 @@ jobs:
             tar xzf deploy-bundle.tar.gz
             rm -f deploy-bundle.tar.gz
 
-            # Clean stale backend source on host (Docker build context)
-            # The pre-built image is loaded, not rebuilt on server
-            rm -rf backend/app backend/app.old 2>/dev/null || true
+            # Build backend natively on ARM64
+            docker compose -f docker/docker-compose.dev.yml build --no-cache backend
 
-            # Load pre-built backend image
-            docker load < be.tar.gz
-            rm -f be.tar.gz
-
-            # Rebuild frontend container with new dist
+            # Build frontend container with new dist
             docker compose -f docker/docker-compose.dev.yml build --no-cache frontend
 
             # Restart all services
             docker compose -f docker/docker-compose.dev.yml up -d --force-recreate
 
             # Run DB migrations
-            sleep 5
+            sleep 10
             docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head
 
             # Cleanup
