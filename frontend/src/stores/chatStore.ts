@@ -79,20 +79,25 @@ export const useChatStore = create<ChatState>((set) => ({
       };
     }),
 
-  markAllMessagesRead: (roomId, _readerId) =>
+  markAllMessagesRead: (roomId, readerId) =>
     set((state) => {
       const msgs = state.messagesByRoom[roomId];
       if (!msgs) return state;
-      const room = state.rooms.find((r) => r.id === roomId);
-      const total = room?.participant_count ?? 2;
       return {
         messagesByRoom: {
           ...state.messagesByRoom,
-          [roomId]: msgs.map((m) => ({
-            ...m,
-            unread_count: 0,
-            read_count: total,
-          })),
+          [roomId]: msgs.map((m) => {
+            // readerId가 있으면 read_by에 추가 (중복 방지)
+            const currentReadBy = m.read_by ?? [];
+            const newReadBy = readerId && !currentReadBy.includes(readerId)
+              ? [...currentReadBy, readerId]
+              : currentReadBy;
+            return {
+              ...m,
+              unread_count: 0,
+              read_by: newReadBy,
+            };
+          }),
         },
       };
     }),

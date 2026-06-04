@@ -24,14 +24,14 @@ function getInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
 }
 
-/** read_by + recipient_count로 안읽은 사람 수 계산 (백엔드 unread_count 폴백) */
+/** read_by + recipient_count로 안읽은 사람 수 계산 (실시간 정확도 우선) */
 function calcUnreadCount(msg: ChatMessage): number {
-  // 백엔드에서 unread_count를 명시적으로 보내줬으면 우선 사용
-  if (msg.unread_count != null) return msg.unread_count;
-  // read_by + recipient_count로 클라이언트 계산
+  // read_by + recipient_count: Socket.IO 실시간 업데이트되는 가장 정확한 소스
   if (msg.read_by != null && msg.recipient_count != null && msg.recipient_count > 0) {
     return Math.max(0, msg.recipient_count - msg.read_by.length);
   }
+  // 백엔드 unread_count를 폴백으로 사용 (구 메시지 등 read_by 미존재 시)
+  if (msg.unread_count != null) return msg.unread_count;
   return 0;
 }
 

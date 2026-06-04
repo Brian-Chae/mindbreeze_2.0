@@ -89,4 +89,4 @@ export const markRoomRead = (roomId: string): Promise<void> =>
 
 /** 여러 메시지를 한 번에 읽음 처리 (IntersectionObserver 배치 전송) */
 export const markMessagesRead = (roomId: string, messageIds: string[]): Promise<void> =>
-  apiClient.put<void>(`/chat/rooms/${roomId}/messages/read`, { message_ids: messageIds });
+  apiClient.post<void>(`/chat/rooms/${roomId}/messages/read`, { message_ids: messageIds });

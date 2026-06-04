@@ -208,3 +208,149 @@ def test_10_시스템_메시지_저장(client, app_client):
             next(db_gen)
         except StopIteration:
             pass
+
+
+# ── Phase 3a: 읽음/안읽음 백엔드 테스트 ──
+
+def test_11_메시지_recipient_count_설정(client):
+    """메시지 발송 시 recipient_count가 올바르게 설정되는지 확인"""
+    host = _register(client, "chat11host@test.com")
+    participant = _register(client, "chat11p@test.com", role="client")
+    s = _create_session(
+        client, host["auth"],
+        type="meditation", max_participants=5,
+    )
+    client.post(
+        f"/api/v1/sessions/{s['id']}/invite",
+        json={"user_id": participant["id"]},
+        headers=host["auth"],
+    )
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    # 메시지 발송
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages",
+        json={"content": "안녕하세요", "type": "text"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["recipient_count"] >= 1
+    # 발신자는 자동 읽음 (read_by에 포함)
+    assert host["id"] in body["read_by"]
+
+
+def test_12_batch_메시지_읽음_처리(client):
+    """POST /messages/read로 여러 메시지를 한 번에 읽음 처리"""
+    host = _register(client, "chat12host@test.com")
+    participant = _register(client, "chat12p@test.com", role="client")
+    s = _create_session(
+        client, host["auth"],
+        type="meditation", max_participants=5,
+    )
+    client.post(
+        f"/api/v1/sessions/{s['id']}/invite",
+        json={"user_id": participant["id"]},
+        headers=host["auth"],
+    )
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    # 여러 메시지 발송
+    msg_ids = []
+    for i in range(3):
+        res = client.post(
+            f"/api/v1/chat/rooms/{room_id}/messages",
+            json={"content": f"메시지 {i+1}", "type": "text"},
+            headers=host["auth"],
+        )
+        assert res.status_code == 201
+        msg_ids.append(res.json()["id"])
+
+    # 참여자가 batch 읽음 처리
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages/read",
+        json={"message_ids": msg_ids},
+        headers=participant["auth"],
+    )
+    assert res.status_code == 204
+
+    # unread-counts 확인
+    counts_res = client.get(
+        f"/api/v1/chat/rooms/{room_id}/unread-counts",
+        headers=participant["auth"],
+    )
+    assert counts_res.status_code == 200
+    counts = counts_res.json()["unread_counts"]
+    # 참여자가 모두 읽었으므로 모든 메시지의 unread_count가 0
+    for mid in msg_ids:
+        assert counts[mid] == 0, f"메시지 {mid}의 unread_count가 0이어야 함"
+
+
+def test_13_unread_counts_권한_없는_사용자_403(client):
+    """권한 없는 사용자가 unread-counts 호출 시 403"""
+    host = _register(client, "chat13host@test.com")
+    other = _register(client, "chat13other@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.get(
+        f"/api/v1/chat/rooms/{room_id}/unread-counts",
+        headers=other["auth"],
+    )
+    assert res.status_code == 403
+
+
+def test_14_mark_messages_read_빈_목록(client):
+    """빈 message_ids로 읽음 처리 시도"""
+    host = _register(client, "chat14host@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages/read",
+        json={"message_ids": []},
+        headers=host["auth"],
+    )
+    # 빈 목록은 422 (min_length=1)
+    assert res.status_code == 422
+
+
+def test_15_messages_read_없는_메시지_ID(client):
+    """존재하지 않는 message_id를 포함한 읽음 처리"""
+    host = _register(client, "chat15host@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages/read",
+        json={"message_ids": ["00000000-0000-0000-0000-000000000000"]},
+        headers=host["auth"],
+    )
+    # 존재하지 않는 메시지여도 204 반환 (조용히 무시)
+    assert res.status_code == 204
+
+
+def test_16_unread_counts_빈_방(client):
+    """메시지가 없는 방의 unread-counts"""
+    host = _register(client, "chat16@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.get(
+        f"/api/v1/chat/rooms/{room_id}/unread-counts",
+        headers=host["auth"],
+    )
+    assert res.status_code == 200
+    counts = res.json()["unread_counts"]
+    assert counts == {}
+
+
+def test_17_발신자_자동읽음_확인(client):
+    """메시지 발신자는 자동으로 read_by에 포함되는지 확인"""
+    host = _register(client, "chat17host@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages",
+        json={"content": "테스트", "type": "text"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201
+    body = res.json()
+    assert body["unread_count"] == 0  # 발신자는 자동 읽음이므로 unread=0
+    assert host["id"] in body["read_by"]
+    assert body["recipient_count"] >= 1
