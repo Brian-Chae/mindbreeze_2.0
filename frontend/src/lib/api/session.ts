@@ -2,12 +2,17 @@
 
 import { apiClient } from './client';
 
-export type SessionType = 'clinical' | 'hypnosis' | 'meditation';
+export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 export type SessionStatus = 'scheduled' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+export type LocationType = 'online' | 'offline';
+export type ParticipantMode = 'one_on_one' | 'group';
+export type LinkbandMode = 'none' | 'required' | 'optional';
 
 export interface SessionParticipant {
   user_id: string;
   band_connected: boolean;
+  linkband_device_id: string | null;
+  webrtc_peer_id: string | null;
   consent_audio: boolean;
   consent_eeg: boolean;
   is_waitlisted: boolean;
@@ -19,6 +24,7 @@ export interface SessionParticipant {
 export interface SessionDto {
   id: string;
   type: SessionType;
+  custom_type_name: string | null;
   status: SessionStatus;
   host_id: string;
   scheduled_at: string;
@@ -26,6 +32,11 @@ export interface SessionDto {
   title: string | null;
   notes: string | null;
   max_participants: number;
+  location_type: LocationType;
+  participant_mode: ParticipantMode;
+  linkband_mode: LinkbandMode;
+  webrtc_room_id: string | null;
+  sfu_enabled: boolean;
   created_at: string;
   participants: SessionParticipant[];
   waitlist_count: number;
@@ -45,6 +56,10 @@ export interface CreateSessionPayload {
   max_participants?: number;
   participant_ids?: string[];
   force?: boolean;
+  custom_type_name?: string;
+  location_type?: LocationType;
+  participant_mode?: ParticipantMode;
+  linkband_mode?: LinkbandMode;
 }
 
 export interface UpdateSessionPayload {
@@ -54,6 +69,10 @@ export interface UpdateSessionPayload {
   notes?: string;
   max_participants?: number;
   force?: boolean;
+  custom_type_name?: string;
+  location_type?: LocationType;
+  participant_mode?: ParticipantMode;
+  linkband_mode?: LinkbandMode;
 }
 
 export const listSessions = (): Promise<SessionListResponse> =>

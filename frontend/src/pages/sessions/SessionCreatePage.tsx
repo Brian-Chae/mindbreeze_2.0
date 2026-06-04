@@ -2,13 +2,17 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSession, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
+import { createSession, type SessionType, type CreateSessionPayload, type LocationType, type ParticipantMode, type LinkbandMode } from '../../lib/api/session';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 
 export default function SessionCreatePage() {
   const navigate = useNavigate();
   const [type, setType] = useState<SessionType>('clinical');
+  const [customTypeName, setCustomTypeName] = useState('');
+  const [locationType, setLocationType] = useState<LocationType>('offline');
+  const [participantMode, setParticipantMode] = useState<ParticipantMode>('one_on_one');
+  const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('none');
   const [scheduledAt, setScheduledAt] = useState('');
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
@@ -33,6 +37,10 @@ export default function SessionCreatePage() {
         max_participants: maxParticipants,
         participant_ids: selectedParticipants.length > 0 ? selectedParticipants.map((s) => s.userId) : undefined,
         force,
+        custom_type_name: type === 'custom' ? customTypeName || undefined : undefined,
+        location_type: locationType,
+        participant_mode: participantMode,
+        linkband_mode: linkbandMode,
       };
       const created = await createSession(payload);
       navigate(`/sessions/${created.id}`);
@@ -58,6 +66,43 @@ export default function SessionCreatePage() {
                 <option value="clinical">임상심리상담</option>
                 <option value="hypnosis">최면심리상담</option>
                 <option value="meditation">명상수업</option>
+                <option value="custom">기타 (직접 입력)</option>
+              </select>
+              {type === 'custom' && (
+                <input
+                  type="text"
+                  value={customTypeName}
+                  onChange={(e) => setCustomTypeName(e.target.value)}
+                  placeholder="세션 유형명 입력"
+                  maxLength={30}
+                  className={`${inputCls} mt-2`}
+                />
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={labelCls}>진행 방식</label>
+                <select value={locationType} onChange={(e) => setLocationType(e.target.value as LocationType)} className={inputCls}>
+                  <option value="offline">오프라인 (대면)</option>
+                  <option value="online">온라인 (화상)</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>인원</label>
+                <select value={participantMode} onChange={(e) => setParticipantMode(e.target.value as ParticipantMode)} className={inputCls}>
+                  <option value="one_on_one">1:1</option>
+                  <option value="group">1:N (그룹)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>LINK BAND</label>
+              <select value={linkbandMode} onChange={(e) => setLinkbandMode(e.target.value as LinkbandMode)} className={inputCls}>
+                <option value="none">미사용</option>
+                <option value="optional">선택</option>
+                <option value="required">필수</option>
               </select>
             </div>
 

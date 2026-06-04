@@ -15,10 +15,11 @@ import { StatusBadge } from '../../components/session/StatusBadge';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 
-const TYPE_LABELS: Record<SessionDto['type'], string> = {
+const TYPE_LABELS: Record<string, string> = {
   clinical: '임상심리상담',
   hypnosis: '최면심리상담',
   meditation: '명상수업',
+  custom: '기타',
 };
 
 const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {

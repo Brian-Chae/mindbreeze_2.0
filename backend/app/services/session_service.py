@@ -1,5 +1,6 @@
 """세션 관리 비즈니스 로직"""
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -38,6 +39,7 @@ def _serialize(s: Session) -> dict:
     return {
         "id": str(s.id),
         "type": s.type,
+        "custom_type_name": s.custom_type_name,
         "status": s.status,
         "host_id": str(s.host_id),
         "scheduled_at": s.scheduled_at,
@@ -45,11 +47,18 @@ def _serialize(s: Session) -> dict:
         "title": s.title,
         "notes": s.notes,
         "max_participants": s.max_participants,
+        "location_type": s.location_type,
+        "participant_mode": s.participant_mode,
+        "linkband_mode": s.linkband_mode,
+        "webrtc_room_id": str(s.webrtc_room_id) if s.webrtc_room_id else None,
+        "sfu_enabled": s.sfu_enabled,
         "created_at": s.created_at or _now(),
         "participants": [
             {
                 "user_id": str(p.user_id),
                 "band_connected": p.band_connected,
+                "linkband_device_id": p.linkband_device_id,
+                "webrtc_peer_id": p.webrtc_peer_id,
                 "consent_audio": p.consent_audio,
                 "consent_eeg": p.consent_eeg,
                 "is_waitlisted": p.is_waitlisted,
@@ -104,6 +113,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         if conflict:
             raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
 
+    # type=custom 일 때 custom_type_name 필수 (스키마에서도 검증하나 서비스 레벨 방어)
+    if payload.type == "custom" and not (payload.custom_type_name and payload.custom_type_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
+
     if payload.type == "meditation":
         max_p = payload.max_participants
     else:
@@ -112,8 +125,12 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     if len(payload.participant_ids) > max_p:
         raise HTTPException(status_code=400, detail="참여자 수가 정원을 초과합니다")
 
+    # 온라인 세션은 WebRTC 룸 ID 자동 생성
+    webrtc_room_id = uuid.uuid4() if payload.location_type == "online" else None
+
     session = Session(
         type=payload.type,
+        custom_type_name=payload.custom_type_name.strip() if (payload.type == "custom" and payload.custom_type_name) else None,
         status="scheduled",
         host_id=host_uuid,
         scheduled_at=scheduled_at,
@@ -121,6 +138,11 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         title=payload.title,
         notes=payload.notes,
         max_participants=max_p,
+        location_type=payload.location_type,
+        participant_mode=payload.participant_mode,
+        linkband_mode=payload.linkband_mode,
+        webrtc_room_id=webrtc_room_id,
+        sfu_enabled=payload.sfu_enabled,
     )
     db.add(session)
     db.flush()
@@ -200,6 +222,12 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         if conflict:
             raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
 
+    # 유형 변경 검증: 최종 유형이 custom 이면 custom_type_name 필수
+    new_type = payload.type if payload.type is not None else s.type
+    new_custom_name = payload.custom_type_name if payload.custom_type_name is not None else s.custom_type_name
+    if new_type == "custom" and not (new_custom_name and new_custom_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
+
     if payload.scheduled_at:
         s.scheduled_at = new_scheduled_at
     if payload.duration_min is not None:
@@ -210,6 +238,26 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.notes = payload.notes
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
+    if payload.type is not None:
+        s.type = payload.type
+    if payload.custom_type_name is not None:
+        s.custom_type_name = payload.custom_type_name.strip() or None
+    # 유형이 custom 이 아니게 되면 custom_type_name 정리
+    if new_type != "custom":
+        s.custom_type_name = None
+    if payload.participant_mode is not None:
+        s.participant_mode = payload.participant_mode
+    if payload.linkband_mode is not None:
+        s.linkband_mode = payload.linkband_mode
+    if payload.sfu_enabled is not None:
+        s.sfu_enabled = payload.sfu_enabled
+    if payload.location_type is not None:
+        s.location_type = payload.location_type
+        # 온라인 전환 시 WebRTC 룸 자동 생성, 오프라인 전환 시 정리
+        if payload.location_type == "online" and not s.webrtc_room_id:
+            s.webrtc_room_id = uuid.uuid4()
+        elif payload.location_type == "offline":
+            s.webrtc_room_id = None
 
     db.commit()
     db.refresh(s)

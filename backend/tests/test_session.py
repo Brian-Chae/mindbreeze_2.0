@@ -208,3 +208,71 @@ def test_15_세션_삭제(client):
     assert r_del.status_code == 204
     r_get = client.get(f"/api/v1/sessions/{s['id']}", headers=host["auth"])
     assert r_get.status_code == 404
+
+
+# ── Sprint 1 확장: 세션 설정 필드 ──────────────────────────────────────────
+
+def test_16_기본_설정값_검증(client):
+    host = _register(client, "host16@test.com")
+    body = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()
+    assert body["location_type"] == "offline"
+    assert body["participant_mode"] == "one_on_one"
+    assert body["linkband_mode"] == "none"
+    assert body["sfu_enabled"] is False
+    assert body["webrtc_room_id"] is None
+
+
+def test_17_커스텀_유형_이름_누락_차단(client):
+    host = _register(client, "host17@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(type="custom"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 422  # Pydantic model_validator
+
+
+def test_18_커스텀_유형_생성_성공(client):
+    host = _register(client, "host18@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(type="custom", custom_type_name="집단상담"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["type"] == "custom"
+    assert body["custom_type_name"] == "집단상담"
+
+
+def test_19_온라인_세션_webrtc_room_자동생성(client):
+    host = _register(client, "host19@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(location_type="online", participant_mode="group", linkband_mode="optional"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["location_type"] == "online"
+    assert body["participant_mode"] == "group"
+    assert body["linkband_mode"] == "optional"
+    assert body["webrtc_room_id"] is not None
+
+
+def test_20_오프라인으로_수정시_webrtc_room_정리(client):
+    host = _register(client, "host20@test.com")
+    s = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(location_type="online"),
+        headers=host["auth"],
+    ).json()
+    assert s["webrtc_room_id"] is not None
+    upd = client.put(
+        f"/api/v1/sessions/{s['id']}",
+        json={"location_type": "offline"},
+        headers=host["auth"],
+    )
+    assert upd.status_code == 200, upd.text
+    assert upd.json()["location_type"] == "offline"
+    assert upd.json()["webrtc_room_id"] is None

@@ -1,20 +1,26 @@
 // 세션 카드 (UI Kit)
 
 import { Link } from 'react-router-dom';
-import type { SessionDto } from '../../lib/api/session';
+import type { SessionDto, LocationType, ParticipantMode, LinkbandMode } from '../../lib/api/session';
 import { StatusBadge } from './StatusBadge';
 
-const TYPE_LABELS: Record<SessionDto['type'], string> = {
+const TYPE_LABELS: Record<string, string> = {
   clinical: '임상심리상담',
   hypnosis: '최면심리상담',
   meditation: '명상수업',
+  custom: '기타',
 };
 
-const TYPE_CLASSES: Record<SessionDto['type'], string> = {
+const TYPE_CLASSES: Record<string, string> = {
   clinical: 'bg-[#F5EDFC] text-[#5F0080]',
   hypnosis: 'bg-[#EFE3FA] text-[#6E1A8C]',
   meditation: 'bg-[#E6F8F3] text-[#1F8A5B]',
+  custom: 'bg-[#FFF4DC] text-[#8A6B1F]',
 };
+
+const LOCATION_LABELS: Record<LocationType, string> = { online: '온라인', offline: '오프라인' };
+const MODE_LABELS: Record<ParticipantMode, string> = { one_on_one: '1:1', group: '1:N' };
+const LINKBAND_LABELS: Record<LinkbandMode, string> = { none: '', required: 'LB 필수', optional: 'LB 선택' };
 
 const formatDateTime = (iso: string): string => {
   const d = new Date(iso);
@@ -58,6 +64,24 @@ export function SessionCard({ session, onClick, counselorName }: Props) {
           <span>
             참여자 {session.participants.length}/{session.max_participants}
           </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F5EDFC] text-[#5F0080]">
+            {LOCATION_LABELS[session.location_type] ?? session.location_type}
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDEDED] text-[#6F6F6F]">
+            {MODE_LABELS[session.participant_mode] ?? session.participant_mode}
+          </span>
+          {session.linkband_mode !== 'none' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#E6F8F3] text-[#1F8A5B]">
+              {LINKBAND_LABELS[session.linkband_mode]}
+            </span>
+          )}
+          {session.type === 'custom' && session.custom_type_name && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FFF4DC] text-[#8A6B1F]">
+              {session.custom_type_name}
+            </span>
+          )}
         </div>
         {counselorName && (
           <div className="text-[#5F0080] font-medium">{counselorName}</div>
