@@ -142,18 +142,19 @@ export function ChatRoom({ roomId, peerName }: Props) {
     socket.on('profile_updated', handleProfileUpdated);
 
     // 읽음 상태 업데이트 (messages_read 이벤트)
-    // 백엔드 페이로드: { room_id, reader_id, messages?: [{id, read_count, unread_count}] }
+    // 백엔드 페이로드: { room_id, reader_id, messages?: [{id, unread_count, read_by}], read_count? }
     const handleMessagesRead = (payload: {
       room_id: string;
       reader_id: string;
-      messages?: Array<{ id: string; read_count: number; unread_count: number }>;
+      messages?: Array<{ id: string; read_count?: number; unread_count: number; read_by?: string[] }>;
     }): void => {
       if (payload.room_id !== roomId) return;
       const store = useChatStore.getState();
       if (payload.messages && payload.messages.length > 0) {
         // per-message 업데이트
         payload.messages.forEach((m) => {
-          store.updateMessageReadCount(payload.room_id, m.id, m.read_count, m.unread_count);
+          const rc = m.read_count ?? (m.read_by?.length ?? 0);
+          store.updateMessageReadCount(payload.room_id, m.id, rc, m.unread_count, m.read_by);
         });
       } else {
         // fallback: 모든 메시지 읽음 처리

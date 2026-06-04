@@ -559,7 +559,7 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
             read_by_list = m.read_by or []
             rc = m.recipient_count or 0
             uc = max(rc - len(read_by_list), 0) if rc > 0 else _message_unread_count(m, room, db)
-            updates.append({"id": str(m.id), "unread_count": uc, "read_by": read_by_list})
+            updates.append({"id": str(m.id), "unread_count": uc, "read_count": len(read_by_list), "read_by": read_by_list})
         await broadcast_messages_read(str(rid), str(uid), updates)
     except Exception:
         pass  # WS 실패해도 REST 응답은 정상
@@ -624,6 +624,7 @@ async def mark_messages_read(room_id: str, user_id: str, message_ids: list[str],
         updates.append({
             "id": str(m.id),
             "unread_count": uc,
+            "read_count": len(read_by_list),
             "read_by": read_by_list,
         })
 

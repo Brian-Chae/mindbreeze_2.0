@@ -15,7 +15,7 @@ interface ChatState {
   clearRoomUnread: (roomId: string) => void;
   incrementUnread: (roomId: string) => void;
   updateSenderName: (senderId: string, newName: string) => void;
-  updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number) => void;
+  updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number, readBy?: string[]) => void;
   markAllMessagesRead: (roomId: string, readerId?: string) => void;
 }
 
@@ -63,7 +63,7 @@ export const useChatStore = create<ChatState>((set) => ({
       return { messagesByRoom: updated };
     }),
 
-  updateMessageReadCount: (roomId, messageId, readCount, unreadCount) =>
+  updateMessageReadCount: (roomId, messageId, readCount, unreadCount, readBy) =>
     set((state) => {
       const msgs = state.messagesByRoom[roomId];
       if (!msgs) return state;
@@ -72,7 +72,7 @@ export const useChatStore = create<ChatState>((set) => ({
           ...state.messagesByRoom,
           [roomId]: msgs.map((m) =>
             m.id === messageId
-              ? { ...m, read_count: readCount, unread_count: unreadCount }
+              ? { ...m, read_count: readCount, unread_count: unreadCount, read_by: readBy ?? m.read_by }
               : m,
           ),
         },

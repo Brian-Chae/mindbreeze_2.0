@@ -32,6 +32,9 @@ class MessageResponse(BaseModel):
     file_url: str | None
     event_type: str | None
     created_at: datetime
+    # ── Phase 3a: 읽음 상태 ──
+    read_by: list[str] = []
+    recipient_count: int = 0
     read_count: int = 0
     unread_count: int = 0
 

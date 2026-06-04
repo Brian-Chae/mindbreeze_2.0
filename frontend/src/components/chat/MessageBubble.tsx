@@ -24,12 +24,24 @@ function getInitial(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
 }
 
+/** read_by + recipient_count로 안읽은 사람 수 계산 (백엔드 unread_count 폴백) */
+function calcUnreadCount(msg: ChatMessage): number {
+  // 백엔드에서 unread_count를 명시적으로 보내줬으면 우선 사용
+  if (msg.unread_count != null) return msg.unread_count;
+  // read_by + recipient_count로 클라이언트 계산
+  if (msg.read_by != null && msg.recipient_count != null && msg.recipient_count > 0) {
+    return Math.max(0, msg.recipient_count - msg.read_by.length);
+  }
+  return 0;
+}
+
 export function MessageBubble({ message, isMine, senderName, showSender }: Props) {
   if (!message) return null;
 
   const content = message.content ?? '(내용 없음)';
   const createdAt = message.created_at ?? new Date().toISOString();
   const timeStr = formatTime(createdAt);
+  const unread = calcUnreadCount(message);
 
   return (
     <div
@@ -44,9 +56,9 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
       {/* 내 메시지: 안읽은 사람 수 + 시간 왼쪽 */}
       {isMine && (
         <>
-          {(message.unread_count ?? 0) > 0 && (
+          {unread > 0 && (
             <span style={{ fontSize: '11px', color: '#F5B041', flexShrink: 0, marginBottom: '6px', fontWeight: 500 }}>
-              {message.unread_count}
+              {unread}
             </span>
           )}
           <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '6px' }}>
