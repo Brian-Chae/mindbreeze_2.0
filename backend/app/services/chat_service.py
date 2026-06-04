@@ -65,6 +65,12 @@ def _serialize_msg(m: ChatMessage, db=None) -> dict:
         sender = db.query(UserModel).filter(UserModel.id == m.sender_id).first()
         if sender:
             sender_name = sender.name
+    # 읽지 않은 사람 수 계산
+    unread_count = 0
+    if db and m.room_id:
+        room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
+        if room:
+            unread_count = _message_unread_count(m, room, db)
     return {
         "id": str(m.id),
         "room_id": str(m.room_id),
@@ -75,6 +81,7 @@ def _serialize_msg(m: ChatMessage, db=None) -> dict:
         "file_url": m.file_url,
         "event_type": m.event_type,
         "created_at": created.isoformat() if hasattr(created, 'isoformat') else str(created),
+        "unread_count": unread_count,
     }
 
 
@@ -311,6 +318,27 @@ def _unread_count(room: ChatRoom, user_id: str, db: DBSession) -> int:
     return max(total - read, 0)
 
 
+def _message_unread_count(msg: ChatMessage, room: ChatRoom, db: DBSession) -> int:
+    """특정 메시지를 아직 읽지 않은 사람 수 계산."""
+    if room.room_type == "direct":
+        # 1:1 채팅: 발신자 제외 상대방 1명만 체크
+        read_count = (
+            db.query(ChatMessageRead)
+            .filter(ChatMessageRead.message_id == msg.id)
+            .count()
+        )
+        # 발신자가 자동 읽음 + 상대방이 읽으면 2, 발신자만 읽으면 1
+        return max(2 - read_count, 0)
+    # 그룹/세션 채팅: 전체 참여자 - 읽은 사람 수
+    total_participants = _participant_count(room, db)
+    read_count = (
+        db.query(ChatMessageRead)
+        .filter(ChatMessageRead.message_id == msg.id)
+        .count()
+    )
+    return max(total_participants - read_count, 0)
+
+
 def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     uid = _uuid(user_id)
     hosted = db.query(Session).filter(Session.host_id == uid).all()
@@ -479,7 +507,7 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     return serialized
 
 
-def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
+async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
     rid = _uuid(room_id)
     room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
     if not room:
@@ -507,3 +535,10 @@ def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
         Notification.extra["room_id"].astext == str(rid),
     ).update({"is_read": True}, synchronize_session=False)
     db.commit()
+
+    # 읽음 상태 실시간 브로드캐스트
+    try:
+        from app.ws.chat_namespace import broadcast_messages_read
+        await broadcast_messages_read(str(rid), str(uid))
+    except Exception:
+        pass  # WS 실패해도 REST 응답은 정상

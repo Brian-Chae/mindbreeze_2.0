@@ -1,6 +1,6 @@
 // 세션 목록 페이지 (목록 + 캘린더 토글 + 생성 모달) — UI Kit
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 import { listSessions, createSession, type SessionDto, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
 import { SessionCard } from '../../components/session/SessionCard';
@@ -51,18 +51,24 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [force, setForce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(true);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarNavDate, setCalendarNavDate] = useState(new Date());
+  const calendarRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
     try {
+      const onlineTag = isOnline ? '[온라인]' : '[오프라인]';
+      const combinedNotes = [onlineTag, notes].filter(Boolean).join(' ');
       const payload: CreateSessionPayload = {
         type,
         scheduled_at: new Date(scheduledAt).toISOString(),
         duration_min: durationMin,
         title: title || undefined,
-        notes: notes || undefined,
+        notes: combinedNotes || undefined,
         max_participants: maxParticipants,
         force,
       };
@@ -85,8 +91,96 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
     setNotes('');
     setMaxParticipants(1);
     setForce(false);
+    setIsOnline(true);
     onClose();
   };
+
+  // 캘린더 팝오버 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!showCalendar) return;
+    const handler = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendar(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showCalendar]);
+
+  // scheduledAt에서 날짜/시간 분리
+  const dateValue = scheduledAt.slice(0, 10); // YYYY-MM-DD
+  const timeValue = scheduledAt.slice(11, 16); // HH:MM
+  const selectedDateObj = new Date(dateValue + 'T00:00:00');
+
+  const handleDateSelect = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    setScheduledAt(`${yyyy}-${mm}-${dd}T${timeValue}`);
+    setShowCalendar(false);
+  };
+
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const timePickerRef = useRef<HTMLDivElement>(null);
+  const hourScrollRef = useRef<HTMLDivElement>(null);
+  const minuteScrollRef = useRef<HTMLDivElement>(null);
+
+  // 시간 표시용 (오전/오후 + 12시간제)
+  const timeHour24 = parseInt(timeValue.slice(0, 2), 10);
+  const timeMinute = timeValue.slice(3, 5);
+  const isPM = timeHour24 >= 12;
+  const displayHour12 = timeHour24 === 0 ? 12 : timeHour24 > 12 ? timeHour24 - 12 : timeHour24;
+  const timeLabel = `${isPM ? '오후' : '오전'} ${displayHour12}:${timeMinute}`;
+
+  // 다이얼에서 시간 선택 시
+  const handleTimeSelect = (hour12: number, minute: string, ampm: '오전' | '오후', keepOpen = false) => {
+    let h24: number;
+    if (ampm === '오전') {
+      h24 = hour12 === 12 ? 0 : hour12;
+    } else {
+      h24 = hour12 === 12 ? 12 : hour12 + 12;
+    }
+    const hh = String(h24).padStart(2, '0');
+    setScheduledAt(`${dateValue}T${hh}:${minute}`);
+    if (!keepOpen) setShowTimePicker(false);
+  };
+
+  // 타임피커 외부 클릭 시 닫기
+  useEffect(() => {
+    if (!showTimePicker) return;
+    const handler = (e: MouseEvent) => {
+      if (timePickerRef.current && !timePickerRef.current.contains(e.target as Node)) {
+        setShowTimePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showTimePicker]);
+
+  // 타임피커 열릴 때 선택된 항목으로 스크롤
+  useEffect(() => {
+    if (showTimePicker) {
+      requestAnimationFrame(() => {
+        // 시 다이얼 스크롤
+        if (hourScrollRef.current) {
+          const sel = hourScrollRef.current.querySelector('[data-selected="true"]');
+          if (sel) sel.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+        // 분 다이얼 스크롤
+        if (minuteScrollRef.current) {
+          const sel = minuteScrollRef.current.querySelector('[data-selected="true"]');
+          if (sel) sel.scrollIntoView({ block: 'center', behavior: 'instant' });
+        }
+      });
+    }
+  }, [showTimePicker]);
+
+  // 모달 열릴 때 캘린더 내비게이션을 선택된 날짜로 초기화
+  useEffect(() => {
+    if (open) setCalendarNavDate(selectedDateObj);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   if (!open) return null;
 
@@ -113,49 +207,217 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
               <option value="meditation">명상수업</option>
             </select>
           </div>
+
+          <div>
+            <label className={labelCls}>진행 방식</label>
+            <div className="flex rounded-xl bg-[#F2F3F8] p-1">
+              <button
+                type="button"
+                onClick={() => setIsOnline(true)}
+                className={`flex-1 px-5 py-2 text-sm rounded-[10px] font-medium transition-colors ${
+                  isOnline ? 'bg-[#5F0080] text-white' : 'text-[#1F1F1F] hover:bg-[#E6E7EE]'
+                }`}
+              >
+                온라인
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsOnline(false)}
+                className={`flex-1 px-5 py-2 text-sm rounded-[10px] font-medium transition-colors ${
+                  !isOnline ? 'bg-[#5F0080] text-white' : 'text-[#1F1F1F] hover:bg-[#E6E7EE]'
+                }`}
+              >
+                오프라인
+              </button>
+            </div>
+          </div>
           <div>
             <label className={labelCls}>일시</label>
-            <input
-              type="datetime-local"
-              required
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className={inputCls}
-            />
+            <div className="flex gap-2 items-center">
+              {/* 날짜 선택 필드 (통합) */}
+              <div className="relative flex-1" ref={calendarRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCalendarNavDate(selectedDateObj);
+                    setShowCalendar(!showCalendar);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm hover:border-[#5F0080] hover:bg-[#FDFAFF] transition-colors focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080]"
+                >
+                  <svg className="w-4 h-4 text-[#5F0080] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="flex-1 text-left font-medium">
+                    {selectedDateObj.getFullYear()}년 {selectedDateObj.getMonth() + 1}월 {selectedDateObj.getDate()}일 ({WEEKDAY[selectedDateObj.getDay()]})
+                  </span>
+                  <svg className="w-3.5 h-3.5 text-[#6F6F6F] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showCalendar && (
+                  <div className="absolute top-full left-0 mt-2 z-50 w-[320px] shadow-xl animate-in fade-in zoom-in-95 origin-top">
+                    <MonthCalendar
+                      sessions={[]}
+                      currentDate={calendarNavDate}
+                      selectedDate={selectedDateObj}
+                      onSelectDate={handleDateSelect}
+                      onShiftMonth={(dir) => {
+                        const next = new Date(calendarNavDate);
+                        next.setMonth(next.getMonth() + dir);
+                        setCalendarNavDate(next);
+                      }}
+                      onToday={() => {
+                        const now = new Date();
+                        handleDateSelect(now);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              {/* 시간 다이얼 피커 */}
+              <div className="relative flex-1" ref={timePickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowTimePicker(!showTimePicker)}
+                  className="w-full flex items-center gap-1.5 pl-3.5 pr-2.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm font-medium hover:border-[#5F0080] hover:bg-[#FDFAFF] transition-colors focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080]"
+                >
+                  <svg className="w-4 h-4 text-[#5F0080] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="flex-1 text-left">{timeLabel}</span>
+                  <svg className="w-3 h-3 text-[#6F6F6F] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showTimePicker && (
+                  <div className="absolute top-full right-0 mt-2 z-50 w-[220px] bg-white rounded-[20px] border border-[#EFEFEF] shadow-xl p-4 animate-in fade-in zoom-in-95 origin-top">
+                    {/* AM/PM 토글 */}
+                    <div className="flex justify-center mb-4">
+                      <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+                        {(['오전', '오후'] as const).map((ap) => {
+                          const active = (ap === '오전' && !isPM) || (ap === '오후' && isPM);
+                          return (
+                          <button
+                            key={ap}
+                            type="button"
+                            onClick={() => {
+                              if (!active) {
+                                handleTimeSelect(displayHour12, timeMinute, ap, true);
+                              }
+                            }}
+                            className={`px-6 py-1.5 text-sm rounded-full transition-colors font-medium ${
+                              active
+                                ? 'bg-[#5F0080] text-white'
+                                : 'text-[#1F1F1F] hover:bg-[#E6E7EE]'
+                            }`}
+                          >
+                            {ap}
+                          </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 시 / 분 다이얼 */}
+                    <div className="flex gap-3">
+                      {/* 시 다이얼 */}
+                      <div className="flex-1">
+                        <div className="text-center text-[10px] font-medium text-[#6F6F6F] pb-2">시</div>
+                        <div ref={hourScrollRef} className="max-h-[200px] overflow-y-auto scrollbar-hide space-y-1">
+                          {Array.from({ length: 12 }, (_, i) => {
+                            const h = i + 1;
+                            const selected = displayHour12 === h;
+                            return (
+                              <button
+                                key={h}
+                                type="button"
+                                data-selected={selected}
+                                onClick={() => handleTimeSelect(h, timeMinute, isPM ? '오후' : '오전', true)}
+                                className={`w-full py-2.5 rounded-[10px] text-sm font-medium transition-colors ${
+                                  selected
+                                    ? 'bg-[#5F0080] text-white'
+                                    : 'text-[#1F1F1F] hover:bg-[#F2F3F8]'
+                                }`}
+                              >
+                                {h}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 구분선 */}
+                      <div className="w-px bg-[#EFEFEF] shrink-0" />
+
+                      {/* 분 다이얼 */}
+                      <div className="flex-1">
+                        <div className="text-center text-[10px] font-medium text-[#6F6F6F] pb-2">분</div>
+                        <div ref={minuteScrollRef} className="max-h-[200px] overflow-y-auto scrollbar-hide space-y-1">
+                          {['00', '10', '20', '30', '40', '50'].map((m) => {
+                            const selected = timeMinute === m;
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                data-selected={selected}
+                                onClick={() => handleTimeSelect(displayHour12, m, isPM ? '오후' : '오전', true)}
+                                className={`w-full py-2.5 rounded-[10px] text-sm font-medium transition-colors ${
+                                  selected
+                                    ? 'bg-[#5F0080] text-white'
+                                    : 'text-[#1F1F1F] hover:bg-[#F2F3F8]'
+                                }`}
+                              >
+                                {m}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelCls}>소요 시간(분)</label>
               <input
-                type="number"
-                min={1}
-                max={600}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
-                value={durationMin}
-                onChange={(e) => setDurationMin(Number(e.target.value))}
+                value={durationMin || ''}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '');
+                  setDurationMin(v === '' ? 0 : Math.min(600, Math.max(1, Number(v))));
+                }}
                 className={inputCls}
               />
             </div>
             <div>
               <label className={labelCls}>최대 참여자 수</label>
               <input
-                type="number"
-                min={1}
-                max={100}
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
-                value={maxParticipants}
-                onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                value={maxParticipants || ''}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '');
+                  setMaxParticipants(v === '' ? 0 : Math.min(100, Math.max(1, Number(v))));
+                }}
                 className={inputCls}
               />
             </div>
           </div>
           <div>
             <label className={labelCls}>제목</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="예: 1차 상담, 스트레스 관리 명상" />
           </div>
           <div>
-            <label className={labelCls}>메모</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
+            <label className={labelCls}>설명</label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} placeholder="세션에 대한 설명을 입력하세요" />
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]">
             <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />

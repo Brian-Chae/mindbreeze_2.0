@@ -41,11 +41,18 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
         margin: '6px 0',
       }}
     >
-      {/* 내 메시지: 시간 왼쪽 */}
+      {/* 내 메시지: 안읽은 사람 수 + 시간 왼쪽 */}
       {isMine && (
-        <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '6px' }}>
-          {timeStr}
-        </span>
+        <>
+          {(message.unread_count ?? 0) > 0 && (
+            <span style={{ fontSize: '11px', color: '#F5B041', flexShrink: 0, marginBottom: '6px', fontWeight: 500 }}>
+              {message.unread_count}
+            </span>
+          )}
+          <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '6px' }}>
+            {timeStr}
+          </span>
+        </>
       )}
       {/* 상대 메시지: 아바타 영역 */}
       {!isMine && (

@@ -130,17 +130,66 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 
 `specs/<unix-ts>-feature-name/` — Unix epoch timestamp 기준 디렉토리. 숫자가 클수록 최근 생성.
 
+## Superpowers 적용 (2026-05-30~)
+
+> 이 프로젝트는 [obra/superpowers](https://github.com/obra/superpowers) (v5.1.0, ⭐212k) 플러그인을 사용합니다.
+> Claude Code 호출 시 **brainstorming → writing-plans → test-driven-development → subagent-driven-development** 파이프라인이 자동 발동됩니다.
+
+### Superpowers 자동화 파이프라인
+
+| 단계 | Skill | 설명 |
+|------|------|------|
+| 1 | **brainstorming** | 설계 자동 제안 + 승인 요청 (spec.md 불필요) |
+| 2 | **writing-plans** | 2~5분 bite-sized 태스크로 분할 |
+| 3 | **test-driven-development** | RED-GREEN-REFACTOR 강제 적용 |
+| 4 | **subagent-driven-development** | 태스크별 subagent dispatch + 2단계 리뷰 |
+| 5 | **requesting-code-review** | 태스크 간 자동 리뷰 (Critical 이슈는 진행 차단) |
+| 6 | **finishing-a-development-branch** | 테스트 통과 → merge/PR 결정 |
+
+### Hermes Worker 디스패치 (Superpowers 적용)
+
+```bash
+# 기존: claude -p 'specs/NNN/spec.md 읽고 구현하세요...' --allowedTools "Read,Write,Edit,Bash" --max-turns 20
+# 신규: claude -p '[미션만 전달]' --permission-mode bypassPermissions --max-turns 35 --worktree feature-name
+```
+
+- `--worktree` 필수: Superpowers의 using-git-worktrees와 연동하여 격리 환경 제공
+- spec.md 전달 불필요: brainstorming이 자동 설계 제안
+- `--allowedTools` 생략: Superpowers가 적절한 도구만 선택
+- max-turns 35 이상: brainstorming → plan → TDD → verify 다단계 프로세스 대응
+
+## 3-Tier Pipeline (2026-06-01~)
+
+> 모든 신규 기능은 Phase 1→2→3 Pipeline을 통과한다. 각 Phase는 Brian의 명시적 승인 후에만 다음 Phase로 진행된다.
+
+| Phase | Agent | Worker | 산출물 | 승인 Gate |
+|-------|-------|--------|--------|-----------|
+| **Phase 1** — 서비스 기획 | `product-strategist` | OpenAI (Codex) | `docs/{기능}_기획.md` | 문제 정의·MVP 범위·우선순위 |
+| **Phase 2** — 디자인 기획 | `design-planner` | Gemini CLI | `designs/{기능}/` (목업·토큰·전략) | 디자인 방향·시각적 퀄리티 |
+| **Phase 3** — 구현 | `planner` + `tdd-guide` | Claude Code (Superpowers) | `specs/` → 코드 → 배포 | 실제 동작 확인 + Design QA |
+
+```text
+Brian 요청 → Phase 1 (docs/) ──[승인]──→ Phase 2 (designs/) ──[승인]──→ Phase 3 (specs/→code)
+                  ↑                               ↑                            ↑
+            OpenAI/Codex                      Gemini CLI                  Claude Code
+            시장·전략·MVP                      목업·토큰·다이어그램          SDD·TDD·구현
+```
+
+> 상세 Pipeline 명세: `multi-agent-harness` 스킬의 "3-Tier Pipeline Mode" 섹션 참조.
+
 ## 프로젝트 에이전트
 
-`.claude/agents/`에 5개 에이전트 정의:
+`.claude/agents/`에 7개 에이전트 정의:
 
-| 에이전트 | 역할 | 사용 시점 |
-|---|---|---|
-| **qa-test-writer** | 스펙 QA → 테스트 코드 생성 (RED) | Stage 2 |
-| **planner** | 구현 계획 + 아키텍처 설계 | 복잡한 기능, 리팩토링 |
-| **code-reviewer** | 코드 품질 + 보안 검토 | 코드 작성 직후 |
-| **build-validator** | 빌드/타입 검증 | 변경 후 검증 |
-| **tdd-guide** | TDD 워크플로우 (vitest/pytest) | 새 기능, 버그 수정 |
+| 에이전트 | Tier | 역할 | Worker |
+|---|---|---|---|
+| **product-strategist** | Phase 1 | 서비스 기획·MVP 정의·시장 분석 | OpenAI (Codex) |
+| **design-planner** | Phase 2 | 디자인 리서치·목업·토큰·다이어그램 | Gemini CLI |
+| **planner** | Phase 3 | 구현 계획 + 아키텍처 설계 | Claude Code |
+| **qa-test-writer** | Phase 3 | 스펙 QA → 테스트 코드 생성 (RED) | Claude Code |
+| **code-reviewer** | Phase 3 | 코드 품질 + 보안 검토 | Claude Code |
+| **build-validator** | Phase 3 | 빌드/타입 검증 + Design QA | Claude Code |
+| **tdd-guide** | Phase 3 | TDD 워크플로우 (vitest/pytest) | Claude Code |
 
 ## 알려진 이슈 / 설계 결정
 

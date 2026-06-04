@@ -78,10 +78,10 @@ async def create_message(
 
 
 @router.put("/rooms/{room_id}/read", status_code=status.HTTP_204_NO_CONTENT)
-def mark_read(
+async def mark_read(
     room_id: str,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    chat_service.mark_read(room_id, current_user["id"], db)
+    await chat_service.mark_read(room_id, current_user["id"], db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

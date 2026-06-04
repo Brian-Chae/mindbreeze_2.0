@@ -15,6 +15,7 @@ export interface ChatMessage {
   file_url: string | null;
   event_type: string | null;
   created_at: string;
+  unread_count?: number;
 }
 
 export interface ChatRoom {

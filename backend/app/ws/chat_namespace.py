@@ -113,3 +113,13 @@ async def broadcast_notification(user_id: str, notif_data: dict) -> None:
     """특정 사용자에게 실시간 알림 브로드캐스트."""
     room = f"user:{user_id}"
     await sio.emit("new_notification", notif_data, room=room, namespace="/chat")
+
+
+async def broadcast_messages_read(room_id: str, reader_id: str) -> None:
+    """채팅방의 모든 메시지가 읽혔음을 브로드캐스트."""
+    await sio.emit(
+        "messages_read",
+        {"room_id": room_id, "reader_id": reader_id},
+        room=room_id,
+        namespace="/chat",
+    )

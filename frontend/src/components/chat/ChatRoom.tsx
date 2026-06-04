@@ -141,6 +141,26 @@ export function ChatRoom({ roomId, peerName }: Props) {
     };
     socket.on('profile_updated', handleProfileUpdated);
 
+    // 상대방이 읽었을 때 모든 메시지 unread_count = 0으로 업데이트
+    const handleMessagesRead = (payload: { room_id: string; reader_id: string }): void => {
+      if (payload.room_id !== roomId) return;
+      const currentMessages = useChatStore.getState().messagesByRoom[roomId];
+      if (!currentMessages) return;
+      // 모든 내 메시지의 unread_count를 0으로 설정
+      const updated = currentMessages.map((msg) => {
+        if (user && msg.sender_id === user.id && (msg.unread_count ?? 0) > 0) {
+          return { ...msg, unread_count: 0 };
+        }
+        return msg;
+      });
+      // 변경이 있을 때만 업데이트
+      const hasChanges = updated.some((msg, i) => (msg.unread_count ?? 0) !== (currentMessages[i]?.unread_count ?? 0));
+      if (hasChanges) {
+        setMessages(roomId, updated);
+      }
+    };
+    socket.on('messages_read', handleMessagesRead);
+
     const handleReconnect = (): void => {
       socket.emit('join_room', { room_id: roomId });
     };
@@ -149,6 +169,7 @@ export function ChatRoom({ roomId, peerName }: Props) {
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('profile_updated', handleProfileUpdated);
+      socket.off('messages_read', handleMessagesRead);
       socket.off('connect', handleReconnect);
       socket.emit('leave_room', { room_id: roomId });
     };
