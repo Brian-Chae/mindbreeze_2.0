@@ -16,6 +16,9 @@ export interface ChatMessage {
   event_type: string | null;
   created_at: string;
   unread_count?: number;
+  read_count?: number;
+  read_by?: string[];
+  recipient_count?: number;
 }
 
 export interface ChatRoom {
@@ -83,3 +86,7 @@ export const sendChatMessage = (roomId: string, payload: SendMessagePayload): Pr
 
 export const markRoomRead = (roomId: string): Promise<void> =>
   apiClient.put<void>(`/chat/rooms/${roomId}/read`);
+
+/** 여러 메시지를 한 번에 읽음 처리 (IntersectionObserver 배치 전송) */
+export const markMessagesRead = (roomId: string, messageIds: string[]): Promise<void> =>
+  apiClient.put<void>(`/chat/rooms/${roomId}/messages/read`, { message_ids: messageIds });

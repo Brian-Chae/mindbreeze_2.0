@@ -15,6 +15,8 @@ interface ChatState {
   clearRoomUnread: (roomId: string) => void;
   incrementUnread: (roomId: string) => void;
   updateSenderName: (senderId: string, newName: string) => void;
+  updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number) => void;
+  markAllMessagesRead: (roomId: string, readerId?: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -59,5 +61,39 @@ export const useChatStore = create<ChatState>((set) => ({
       }
       if (!changed) return state;
       return { messagesByRoom: updated };
+    }),
+
+  updateMessageReadCount: (roomId, messageId, readCount, unreadCount) =>
+    set((state) => {
+      const msgs = state.messagesByRoom[roomId];
+      if (!msgs) return state;
+      return {
+        messagesByRoom: {
+          ...state.messagesByRoom,
+          [roomId]: msgs.map((m) =>
+            m.id === messageId
+              ? { ...m, read_count: readCount, unread_count: unreadCount }
+              : m,
+          ),
+        },
+      };
+    }),
+
+  markAllMessagesRead: (roomId, _readerId) =>
+    set((state) => {
+      const msgs = state.messagesByRoom[roomId];
+      if (!msgs) return state;
+      const room = state.rooms.find((r) => r.id === roomId);
+      const total = room?.participant_count ?? 2;
+      return {
+        messagesByRoom: {
+          ...state.messagesByRoom,
+          [roomId]: msgs.map((m) => ({
+            ...m,
+            unread_count: 0,
+            read_count: total,
+          })),
+        },
+      };
     }),
 }));

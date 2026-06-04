@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listChatMessages, sendChatMessage, markRoomRead, type ChatMessage } from '../../lib/api/chat';
+import { listChatMessages, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -141,22 +141,23 @@ export function ChatRoom({ roomId, peerName }: Props) {
     };
     socket.on('profile_updated', handleProfileUpdated);
 
-    // 상대방이 읽었을 때 모든 메시지 unread_count = 0으로 업데이트
-    const handleMessagesRead = (payload: { room_id: string; reader_id: string }): void => {
+    // 읽음 상태 업데이트 (messages_read 이벤트)
+    // 백엔드 페이로드: { room_id, reader_id, messages?: [{id, read_count, unread_count}] }
+    const handleMessagesRead = (payload: {
+      room_id: string;
+      reader_id: string;
+      messages?: Array<{ id: string; read_count: number; unread_count: number }>;
+    }): void => {
       if (payload.room_id !== roomId) return;
-      const currentMessages = useChatStore.getState().messagesByRoom[roomId];
-      if (!currentMessages) return;
-      // 모든 내 메시지의 unread_count를 0으로 설정
-      const updated = currentMessages.map((msg) => {
-        if (user && msg.sender_id === user.id && (msg.unread_count ?? 0) > 0) {
-          return { ...msg, unread_count: 0 };
-        }
-        return msg;
-      });
-      // 변경이 있을 때만 업데이트
-      const hasChanges = updated.some((msg, i) => (msg.unread_count ?? 0) !== (currentMessages[i]?.unread_count ?? 0));
-      if (hasChanges) {
-        setMessages(roomId, updated);
+      const store = useChatStore.getState();
+      if (payload.messages && payload.messages.length > 0) {
+        // per-message 업데이트
+        payload.messages.forEach((m) => {
+          store.updateMessageReadCount(payload.room_id, m.id, m.read_count, m.unread_count);
+        });
+      } else {
+        // fallback: 모든 메시지 읽음 처리
+        store.markAllMessagesRead(payload.room_id, payload.reader_id);
       }
     };
     socket.on('messages_read', handleMessagesRead);
@@ -174,6 +175,73 @@ export function ChatRoom({ roomId, peerName }: Props) {
       socket.emit('leave_room', { room_id: roomId });
     };
   }, [roomId, token, appendMessage, updateSenderName]);
+
+  // ── IntersectionObserver: 스크롤 읽음 처리 ──
+  const messageElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const readSentRef = useRef<Set<string>>(new Set());
+  const readQueueRef = useRef<string[]>([]);
+  const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 배치 요청: 300ms 동안 모아서 한 번에 전송
+  const flushReadQueue = useCallback(() => {
+    const ids = readQueueRef.current;
+    readQueueRef.current = [];
+    if (ids.length === 0) return;
+    markMessagesRead(roomId, ids).catch(() => { /* 조용히 실패 */ });
+  }, [roomId]);
+
+  useEffect(() => {
+    if (loading || !user) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const mid = (entry.target as HTMLElement).dataset.messageId;
+          if (!mid) continue;
+          // 이미 읽음 처리 전송했으면 스킵
+          if (readSentRef.current.has(mid)) continue;
+          // 시스템 메시지나 내 메시지는 스킵
+          const msg = msgList.find((m) => m.id === mid);
+          if (!msg) continue;
+          if (msg.type === 'system') continue;
+          if (msg.sender_id === user.id) continue;
+          // 이미 내가 읽었다면 스킵 (read_by에 내 ID가 있으면)
+          if (msg.read_by?.includes(user.id)) continue;
+
+          readSentRef.current.add(mid);
+          readQueueRef.current.push(mid);
+
+          // 300ms debounce
+          if (readTimerRef.current) clearTimeout(readTimerRef.current);
+          readTimerRef.current = setTimeout(flushReadQueue, 300);
+        }
+      },
+      { threshold: 0.5 }, // 메시지의 50% 이상 보이면 읽음 처리
+    );
+
+    // 메시지가 렌더링된 후 observer에 등록
+    const timer = setTimeout(() => {
+      messageElRefs.current.forEach((el) => {
+        observer.observe(el);
+      });
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+      if (readTimerRef.current) {
+        flushReadQueue();
+        clearTimeout(readTimerRef.current);
+      }
+    };
+  }, [loading, user, msgList, roomId, flushReadQueue]);
+
+  // 방 전환 시 readSent 초기화
+  useEffect(() => {
+    readSentRef.current = new Set();
+    readQueueRef.current = [];
+  }, [roomId]);
 
   const handleSend = useCallback(async (): Promise<void> => {
     const content = input.trim();
@@ -225,13 +293,28 @@ export function ChatRoom({ roomId, peerName }: Props) {
                   showSender={showSender}
                 />
               );
-            return showDateSep ? (
-              <div key={`group-${m.id}`}>
-                <DateSeparator iso={m.created_at} />
+            // 메시지에 ref 등록 + data-message-id (IntersectionObserver용)
+            const setRef = (el: HTMLDivElement | null) => {
+              if (el) {
+                messageElRefs.current.set(m.id, el);
+              } else {
+                messageElRefs.current.delete(m.id);
+              }
+            };
+            const wrapped = m.type !== 'system' ? (
+              <div key={m.id} ref={setRef} data-message-id={m.id}>
                 {item}
               </div>
             ) : (
-              item
+              <div key={m.id}>{item}</div>
+            );
+            return showDateSep ? (
+              <div key={`group-${m.id}`}>
+                <DateSeparator iso={m.created_at} />
+                {wrapped}
+              </div>
+            ) : (
+              wrapped
             );
           })
         )}

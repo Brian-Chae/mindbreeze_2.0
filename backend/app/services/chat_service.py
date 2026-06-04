@@ -65,9 +65,13 @@ def _serialize_msg(m: ChatMessage, db=None) -> dict:
         sender = db.query(UserModel).filter(UserModel.id == m.sender_id).first()
         if sender:
             sender_name = sender.name
-    # 읽지 않은 사람 수 계산
+    # ── 읽음 상태 추적 (Phase 3a): read_by / recipient_count 우선, 없으면 ChatMessageRead 하위호환 ──
     unread_count = 0
-    if db and m.room_id:
+    read_by_list = m.read_by or []
+    rc = m.recipient_count or 0
+    if rc > 0:
+        unread_count = max(rc - len(read_by_list), 0)
+    elif db and m.room_id:
         room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
         if room:
             unread_count = _message_unread_count(m, room, db)
@@ -82,8 +86,10 @@ def _serialize_msg(m: ChatMessage, db=None) -> dict:
         "event_type": m.event_type,
         "created_at": created.isoformat() if hasattr(created, 'isoformat') else str(created),
         "unread_count": unread_count,
+        "read_count": len(read_by_list),
+        "read_by": read_by_list,
+        "recipient_count": rc,
     }
-
 
 def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | None:
     uid = _uuid(user_id)
@@ -473,16 +479,19 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     db.add(msg)
     db.commit()
     db.refresh(msg)
-    # 본인 메시지는 자동 읽음
-    db.add(ChatMessageRead(message_id=msg.id, user_id=_uuid(user_id)))
+    # 본인 메시지는 자동 읽음 + recipient_count 설정
+    sender_uid = _uuid(user_id)
+    recipients = _resolve_recipients(room, sender_uid, db)
+    msg.recipient_count = len(recipients) + 1  # 발신자 포함 전체 인원
+    msg.read_by = [user_id]  # 발신자는 자동 읽음
+    db.add(ChatMessageRead(message_id=msg.id, user_id=sender_uid))
     db.commit()
 
     # ── 수신자 알림 생성 ──
     try:
         from app.services.notification_service import notify_event
-        sender = db.query(User).filter(User.id == _uuid(user_id)).first()
+        sender = db.query(User).filter(User.id == sender_uid).first()
         sender_display = sender.name if sender else "사용자"
-        recipients = _resolve_recipients(room, _uuid(user_id), db)
         for recipient_id in recipients:
             notif = notify_event(
                 "chat_message",
@@ -524,6 +533,11 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
     for m in msgs:
         if m.id not in existing:
             db.add(ChatMessageRead(message_id=m.id, user_id=uid))
+            # ── Phase 3a: read_by 배열에도 추가 (중복 방지) ──
+            current_read_by = m.read_by or []
+            if user_id not in current_read_by:
+                current_read_by.append(user_id)
+                m.read_by = current_read_by
     db.commit()
 
     # 같은 방의 채팅 알림도 읽음 처리
@@ -539,6 +553,111 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
     # 읽음 상태 실시간 브로드캐스트
     try:
         from app.ws.chat_namespace import broadcast_messages_read
-        await broadcast_messages_read(str(rid), str(uid))
+        # 각 메시지의 read_count/unread_count 계산
+        updates = []
+        for m in msgs:
+            read_by_list = m.read_by or []
+            rc = m.recipient_count or 0
+            uc = max(rc - len(read_by_list), 0) if rc > 0 else _message_unread_count(m, room, db)
+            updates.append({"id": str(m.id), "unread_count": uc, "read_by": read_by_list})
+        await broadcast_messages_read(str(rid), str(uid), updates)
     except Exception:
         pass  # WS 실패해도 REST 응답은 정상
+
+
+async def mark_messages_read(room_id: str, user_id: str, message_ids: list[str], db: DBSession) -> None:
+    """여러 메시지를 한 번에 읽음 처리 (Phase 3a).
+
+    - message_ids에 해당하는 메시지들의 read_by 배열에 user_id 추가 (중복 방지)
+    - ChatMessageRead 테이블에도 기록 (하위 호환)
+    - Socket.IO로 messages_read 이벤트 broadcast
+    """
+    rid = _uuid(room_id)
+    uid = _uuid(user_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    _ensure_member(room, user_id, db)
+
+    # UUID로 변환
+    try:
+        msg_uuids = [_uuid(mid) for mid in message_ids]
+    except HTTPException:
+        raise HTTPException(status_code=400, detail="잘못된 메시지 ID 형식입니다")
+
+    # 메시지 조회
+    msgs = db.query(ChatMessage).filter(
+        ChatMessage.id.in_(msg_uuids),
+        ChatMessage.room_id == rid,
+    ).all()
+
+    if not msgs:
+        return  # 읽음 처리할 메시지 없음
+
+    # 중복 체크를 위한 기존 ChatMessageRead 조회
+    existing = {
+        r.message_id
+        for r in db.query(ChatMessageRead)
+        .filter(
+            ChatMessageRead.user_id == uid,
+            ChatMessageRead.message_id.in_(msg_uuids),
+        )
+        .all()
+    }
+
+    user_id_str = str(uid)
+    updates = []
+    for m in msgs:
+        # ChatMessageRead 테이블에 기록
+        if m.id not in existing:
+            db.add(ChatMessageRead(message_id=m.id, user_id=uid))
+            # read_by 배열 업데이트
+            current_read_by = list(m.read_by or [])
+            if user_id_str not in current_read_by:
+                current_read_by.append(user_id_str)
+                m.read_by = current_read_by
+
+        # broadcast용 업데이트 데이터 계산
+        read_by_list = m.read_by or []
+        rc = m.recipient_count or 0
+        uc = max(rc - len(read_by_list), 0) if rc > 0 else 0
+        updates.append({
+            "id": str(m.id),
+            "unread_count": uc,
+            "read_by": read_by_list,
+        })
+
+    db.commit()
+
+    # Socket.IO broadcast
+    try:
+        from app.ws.chat_namespace import broadcast_messages_read
+        await broadcast_messages_read(str(rid), user_id_str, updates)
+    except Exception:
+        pass
+
+
+def get_unread_counts(room_id: str, user_id: str, db: DBSession) -> dict[str, int]:
+    """채팅방의 각 메시지별 안읽은 수 반환 (Phase 3a).
+
+    Returns:
+        {message_id: unread_count}
+    """
+    rid = _uuid(room_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    _ensure_member(room, user_id, db)
+
+    msgs = db.query(ChatMessage).filter(ChatMessage.room_id == rid).all()
+    result: dict[str, int] = {}
+    for m in msgs:
+        read_by_list = m.read_by or []
+        rc = m.recipient_count or 0
+        if rc > 0:
+            result[str(m.id)] = max(rc - len(read_by_list), 0)
+        else:
+            # 하위 호환: recipient_count가 0인 경우 ChatMessageRead 기반 계산
+            unread = _message_unread_count(m, room, db)
+            result[str(m.id)] = unread
+    return result

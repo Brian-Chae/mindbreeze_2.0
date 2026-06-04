@@ -32,6 +32,18 @@ class MessageResponse(BaseModel):
     file_url: str | None
     event_type: str | None
     created_at: datetime
+    read_count: int = 0
+    unread_count: int = 0
+
+
+class UnreadCountsResponse(BaseModel):
+    """각 메시지별 안읽은 수"""
+    unread_counts: dict[str, int]  # {message_id: unread_count}
+
+
+class MarkMessagesReadRequest(BaseModel):
+    """읽음 처리할 메시지 ID 목록"""
+    message_ids: list[str] = Field(..., min_length=1, max_length=500)
 
 
 class MessageListResponse(BaseModel):

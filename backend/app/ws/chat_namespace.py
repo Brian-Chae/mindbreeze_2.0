@@ -115,11 +115,15 @@ async def broadcast_notification(user_id: str, notif_data: dict) -> None:
     await sio.emit("new_notification", notif_data, room=room, namespace="/chat")
 
 
-async def broadcast_messages_read(room_id: str, reader_id: str) -> None:
+async def broadcast_messages_read(room_id: str, reader_id: str, message_updates: list[dict] | None = None) -> None:
     """채팅방의 모든 메시지가 읽혔음을 브로드캐스트."""
     await sio.emit(
         "messages_read",
-        {"room_id": room_id, "reader_id": reader_id},
+        {
+            "room_id": room_id,
+            "reader_id": reader_id,
+            "messages": message_updates or [],
+        },
         room=room_id,
         namespace="/chat",
     )

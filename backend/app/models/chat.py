@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Text, ForeignKey, func, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, DateTime, Text, ForeignKey, Integer, func, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -42,6 +42,10 @@ class ChatMessage(Base):
     file_url: Mapped[str | None] = mapped_column(String(500))
     event_type: Mapped[str | None] = mapped_column(String(40))  # system 메시지 이벤트 종류
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    # ── 읽음 상태 추적 (Phase 3a) ──
+    read_by: Mapped[list[str] | None] = mapped_column(ARRAY(String(36)), nullable=True, default=None)
+    recipient_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     room = relationship("ChatRoom", back_populates="messages")
 

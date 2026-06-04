@@ -6,12 +6,14 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.chat import (
+    MarkMessagesReadRequest,
     MessageCreateRequest,
     MessageListResponse,
     MessageResponse,
     RoomCreateRequest,
     RoomListResponse,
     RoomResponse,
+    UnreadCountsResponse,
 )
 from app.services import chat_service
 
@@ -85,3 +87,28 @@ async def mark_read(
 ):
     await chat_service.mark_read(room_id, current_user["id"], db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/rooms/{room_id}/messages/read", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_messages_read(
+    room_id: str,
+    payload: MarkMessagesReadRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """여러 메시지를 한 번에 읽음 처리 (Phase 3a)."""
+    await chat_service.mark_messages_read(
+        room_id, current_user["id"], payload.message_ids, db
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/rooms/{room_id}/unread-counts", response_model=UnreadCountsResponse)
+def get_unread_counts(
+    room_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """채팅방의 각 메시지별 안읽은 수 반환 (Phase 3a)."""
+    counts = chat_service.get_unread_counts(room_id, current_user["id"], db)
+    return UnreadCountsResponse(unread_counts=counts)
