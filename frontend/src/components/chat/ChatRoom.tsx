@@ -148,20 +148,17 @@ export function ChatRoom({ roomId, peerName }: Props) {
       reader_id: string;
       messages?: Array<{ id: string; read_count?: number; unread_count: number; read_by?: string[] }>;
     }): void => {
-      if (payload.room_id !== roomId) return;
       const store = useChatStore.getState();
-      if (payload.messages && payload.messages.length > 0) {
-        // per-message 업데이트
-        payload.messages.forEach((m) => {
-          const rc = m.read_count ?? (m.read_by?.length ?? 0);
-          store.updateMessageReadCount(payload.room_id, m.id, rc, m.unread_count, m.read_by);
-        });
-      } else {
-        // fallback: 모든 메시지 읽음 처리
-        store.markAllMessagesRead(payload.room_id, payload.reader_id);
-      }
-      // ← 사이드바 뱃지 갱신
+
+      // 사이드바 뱃지 즉시 갱신
       store.clearRoomUnread(payload.room_id);
+
+      // 현재 보고 있는 방이면 API로 메시지 다시 불러오기 (가장 정확)
+      if (payload.room_id === roomId) {
+        listChatMessages(roomId)
+          .then((res) => setMessages(roomId, res.messages))
+          .catch(() => { /* 조용히 실패 */ });
+      }
     };
     socket.on('messages_read', handleMessagesRead);
 
