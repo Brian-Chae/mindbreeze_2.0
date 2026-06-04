@@ -73,15 +73,28 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
+      - name: Package deploy bundle
+        run: |
+          tar czf deploy-bundle.tar.gz \
+            be.tar.gz \
+            frontend/dist \
+            docker/docker-compose.dev.yml \
+            docker/nginx \
+            docker/Dockerfile.frontend \
+            docker/Dockerfile.backend \
+            backend/.env.dev \
+            certbot/
+
       - name: Deploy to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "be.tar.gz,frontend/dist,docker/docker-compose.dev.yml,docker/nginx,docker/Dockerfile.frontend,docker/Dockerfile.backend,backend/.env.dev"
+          source: "deploy-bundle.tar.gz"
           target: /home/ubuntu/mindbreeze/
           overwrite: true
+          strip_components: 0
 
       - name: Restart services
         uses: appleboy/ssh-action@v1.0.3
@@ -90,10 +103,30 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
             cd /home/ubuntu/mindbreeze
+
+            # Extract deploy bundle (preserving directory structure)
+            tar xzf deploy-bundle.tar.gz
+            rm -f deploy-bundle.tar.gz
+
+            # Clean stale backend source on host (Docker build context)
+            # The pre-built image is loaded, not rebuilt on server
+            rm -rf backend/app backend/app.old 2>/dev/null || true
+
+            # Load pre-built backend image
             docker load < be.tar.gz
-            docker compose -f docker/docker-compose.dev.yml build --no-cache frontend && \
-            docker compose -f docker/docker-compose.dev.yml up -d --force-recreate && \
-            sleep 5 && \
+            rm -f be.tar.gz
+
+            # Rebuild frontend container with new dist
+            docker compose -f docker/docker-compose.dev.yml build --no-cache frontend
+
+            # Restart all services
+            docker compose -f docker/docker-compose.dev.yml up -d --force-recreate
+
+            # Run DB migrations
+            sleep 5
             docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head
+
+            # Cleanup
             docker image prune -f
