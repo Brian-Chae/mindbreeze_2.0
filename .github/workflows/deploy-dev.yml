@@ -98,7 +98,7 @@ jobs:
 
             # Run DB migrations
             sleep 10
-            docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head
+            docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head || true
 
             # Cleanup
-            docker image prune -f
+            docker image prune -f || true

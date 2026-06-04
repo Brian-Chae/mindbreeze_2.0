@@ -160,6 +160,8 @@ export function ChatRoom({ roomId, peerName }: Props) {
         // fallback: 모든 메시지 읽음 처리
         store.markAllMessagesRead(payload.room_id, payload.reader_id);
       }
+      // ← 사이드바 뱃지 갱신
+      store.clearRoomUnread(payload.room_id);
     };
     socket.on('messages_read', handleMessagesRead);
 
