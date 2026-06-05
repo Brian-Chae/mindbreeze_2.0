@@ -27,6 +27,12 @@ export interface SessionDto {
   notes: string | null;
   max_participants: number;
   created_at: string;
+  custom_type_name: string | null;
+  location_type: 'online' | 'offline';
+  participant_mode: 'one_on_one' | 'group';
+  linkband_mode: 'none' | 'required' | 'optional';
+  webrtc_room_id: string | null;
+  sfu_enabled: boolean;
   participants: SessionParticipant[];
   waitlist_count: number;
 }
@@ -84,3 +90,22 @@ export const removeParticipant = (id: string, userId: string): Promise<SessionDt
 
 export const addMarker = (id: string, timestampSec: number, note: string): Promise<{ markers: unknown[] }> =>
   apiClient.post<{ markers: unknown[] }>(`/sessions/${id}/markers`, { timestamp_sec: timestampSec, note });
+
+// ── LiveKit WebRTC ──────────────────────────────────────────────
+
+export interface JoinSessionResponse {
+  session: SessionDto;
+  livekit_token: string;
+  webrtc_room_id: string;
+}
+
+export interface LiveKitTokenResponse {
+  livekit_token: string;
+  webrtc_room_id: string;
+}
+
+export const joinSession = (id: string): Promise<JoinSessionResponse> =>
+  apiClient.post<JoinSessionResponse>(`/sessions/${id}/join`);
+
+export const getLiveKitToken = (id: string): Promise<LiveKitTokenResponse> =>
+  apiClient.post<LiveKitTokenResponse>(`/sessions/${id}/livekit-token`);

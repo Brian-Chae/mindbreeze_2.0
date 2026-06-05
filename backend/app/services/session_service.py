@@ -46,6 +46,12 @@ def _serialize(s: Session) -> dict:
         "notes": s.notes,
         "max_participants": s.max_participants,
         "created_at": s.created_at or _now(),
+        "custom_type_name": s.custom_type_name,
+        "location_type": s.location_type,
+        "participant_mode": s.participant_mode,
+        "linkband_mode": s.linkband_mode,
+        "webrtc_room_id": str(s.webrtc_room_id) if s.webrtc_room_id else None,
+        "sfu_enabled": s.sfu_enabled,
         "participants": [
             {
                 "user_id": str(p.user_id),
@@ -54,6 +60,8 @@ def _serialize(s: Session) -> dict:
                 "consent_eeg": p.consent_eeg,
                 "is_waitlisted": p.is_waitlisted,
                 "waitlist_position": p.waitlist_position,
+                "linkband_device_id": p.linkband_device_id,
+                "webrtc_peer_id": p.webrtc_peer_id,
             }
             for p in parts
         ],
@@ -351,3 +359,60 @@ def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, d
     record.markers = markers
     db.commit()
     return {"markers": markers}
+
+
+# ── LiveKit WebRTC ──────────────────────────────────────────────
+
+def join_session(session_id: str, user_id: str, db: DBSession) -> dict:
+    """세션에 입장하고 LiveKit 토큰을 발급한다."""
+    import uuid as _uuid_mod
+    from livekit import api as livekit_api
+    from app.config import settings
+
+    s = _get_session_for_user(session_id, user_id, db)
+    if s.status not in ("scheduled", "in_progress", "paused"):
+        raise HTTPException(status_code=400, detail="시작 가능한 상태가 아닙니다")
+
+    # webrtc_room_id가 없으면 생성
+    if not getattr(s, "webrtc_room_id", None):
+        s.webrtc_room_id = str(_uuid_mod.uuid4())
+        db.flush()
+
+    # scheduled → in_progress 자동 전이
+    if s.status == "scheduled":
+        s.status = "in_progress"
+
+    db.commit()
+    db.refresh(s)
+
+    token = _generate_livekit_token(str(s.webrtc_room_id), user_id)
+    return {
+        "session": _serialize(s),
+        "livekit_token": token,
+        "webrtc_room_id": str(s.webrtc_room_id),
+    }
+
+
+def get_livekit_token(session_id: str, user_id: str, db: DBSession) -> dict:
+    """기존 WebRTC 룸의 LiveKit 토큰만 재발급한다."""
+    s = _get_session_for_user(session_id, user_id, db)
+    if not getattr(s, "webrtc_room_id", None):
+        raise HTTPException(status_code=400, detail="WebRTC 룸이 생성되지 않았습니다")
+
+    token = _generate_livekit_token(str(s.webrtc_room_id), user_id)
+    return {"livekit_token": token, "webrtc_room_id": str(s.webrtc_room_id)}
+
+
+def _generate_livekit_token(room_name: str, user_id: str) -> str:
+    from livekit import api as livekit_api
+    from app.config import settings
+
+    token = (
+        livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+        .with_identity(user_id)
+        .with_name(user_id)
+        .with_grants(
+            livekit_api.VideoGrants(room_join=True, room=room_name)
+        )
+    )
+    return token.to_jwt()

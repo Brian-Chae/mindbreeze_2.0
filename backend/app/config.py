@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
 
+    # LiveKit
+    livekit_host: str = "http://livekit:7880"
+    livekit_api_key: str = "devkey"
+    livekit_api_secret: str = "secret"
+
     # App
     debug: bool = True
 

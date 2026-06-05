@@ -115,3 +115,25 @@ def add_marker(
     return session_service.add_marker(
         session_id, current_user["id"], payload.timestamp_sec, payload.note, db
     )
+
+
+# ── LiveKit WebRTC ──────────────────────────────────────────────
+
+@router.post("/{session_id}/join")
+def join_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """세션에 입장하고 LiveKit 토큰을 발급"""
+    return session_service.join_session(session_id, current_user["id"], db)
+
+
+@router.post("/{session_id}/livekit-token")
+def livekit_token(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """기존 WebRTC 룸 토큰만 재발급"""
+    return session_service.get_livekit_token(session_id, current_user["id"], db)

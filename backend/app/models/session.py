@@ -25,6 +25,14 @@ class Session(Base):
     max_participants: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # Sprint 1 — 세션 유형 확장
+    custom_type_name: Mapped[str | None] = mapped_column(String(30))
+    location_type: Mapped[str] = mapped_column(String(10), default="offline")  # online, offline
+    participant_mode: Mapped[str] = mapped_column(String(20), default="one_on_one")  # one_on_one, group
+    linkband_mode: Mapped[str] = mapped_column(String(10), default="none")  # none, required, optional
+    webrtc_room_id: Mapped[str | None] = mapped_column(String(36))
+    sfu_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
     participants = relationship("SessionParticipant", back_populates="session", cascade="all, delete-orphan")
     record = relationship("SessionRecord", back_populates="session", uselist=False, cascade="all, delete-orphan")
@@ -42,5 +50,9 @@ class SessionParticipant(Base):
     consent_eeg: Mapped[bool] = mapped_column(Boolean, default=False)
     is_waitlisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     waitlist_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Sprint 1 — WebRTC + LINK BAND
+    linkband_device_id: Mapped[str | None] = mapped_column(String(100))
+    webrtc_peer_id: Mapped[str | None] = mapped_column(String(100))
 
     session = relationship("Session", back_populates="participants")
