@@ -6,5 +6,6 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
 from app.ws import chat_namespace  # noqa: F401,E402
 from app.ws import eeg_namespace  # noqa: F401,E402
+from app.ws import session_namespace  # noqa: F401,E402
 
 asgi_app = socketio.ASGIApp(sio, socketio_path="socket.io")

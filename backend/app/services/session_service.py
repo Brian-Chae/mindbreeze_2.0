@@ -248,6 +248,20 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         except Exception:
             pass
 
+    # WebSocket 브로드캐스트
+    try:
+        from app.ws.session_namespace import broadcast_session_update
+        import asyncio
+        asyncio.ensure_future(
+            broadcast_session_update(str(s.id), "status_changed", {
+                "session_id": str(s.id),
+                "status": s.status,
+                "action": action,
+            })
+        )
+    except Exception:
+        pass
+
     return _serialize(s)
 
 
