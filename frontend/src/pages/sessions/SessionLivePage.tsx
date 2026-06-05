@@ -15,6 +15,7 @@ import { StatusBadge } from '../../components/session/StatusBadge';
 import AppShell from '../../components/layout/AppShell';
 
 const VideoConference = lazy(() => import('../../components/session/VideoConference'));
+const EEGLiveDashboard = lazy(() => import('../../components/session/EEGLiveDashboard'));
 
 export default function SessionLivePage() {
   const { id } = useParams<{ id: string }>();
@@ -153,6 +154,24 @@ export default function SessionLivePage() {
                 onDisconnected={() => setVideoConnected(false)}
                 onError={(err) => setError(err.message)}
               />
+            </Suspense>
+          </div>
+        )}
+
+        {/* LINK BAND EEG 대시보드 */}
+        {session.linkband_mode !== 'none' && (
+          <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-4 sm:p-6">
+            <div className="text-[12px] font-mono text-[#6F6F6F] uppercase tracking-wider mb-3">
+              LINK BAND 뇌파
+            </div>
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center h-40 bg-neutral-50 rounded-xl">
+                  <div className="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                </div>
+              }
+            >
+              <EEGLiveDashboard sessionId={id ?? ''} />
             </Suspense>
           </div>
         )}
