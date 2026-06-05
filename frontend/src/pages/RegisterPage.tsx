@@ -1,8 +1,8 @@
 // 회원가입 페이지: 이메일+OTP → 약관 동의 → 비밀번호+이름 (3단계)
+// LoginPage 디자인과 일치하도록 다크 배경 + background3.jpg 적용
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import ThemeToggle from '../components/ThemeToggle';
 import { OtpInput } from '../components/auth/OtpInput';
 import { ConsentCheckList, type Consents } from '../components/auth/ConsentCheckList';
 import { requestOtp, verifyOtp } from '../lib/api/auth';
@@ -14,37 +14,33 @@ type Role = 'counselor' | 'client';
 // 비밀번호 정책: 영문 + 숫자 + 특수문자, 8자 이상
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-interface StepIndicatorProps {
-  current: 1 | 2 | 3;
-}
-
-function StepIndicator({ current }: StepIndicatorProps) {
+function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
   const steps = [
     { n: 1 as const, label: '이메일 인증' },
     { n: 2 as const, label: '약관 동의' },
     { n: 3 as const, label: '계정 정보' },
   ];
   return (
-    <div className="flex items-center justify-center gap-2 mb-6">
+    <div className="flex items-center justify-center gap-3 mb-8">
       {steps.map((s, idx) => (
-        <div key={s.n} className="flex items-center gap-2">
+        <div key={s.n} className="flex items-center gap-3">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
               current >= s.n
-                ? 'bg-brand-primary text-ink-on-brand'
-                : 'bg-surface-sunken text-ink-tertiary'
+                ? 'bg-[#5F0080] text-white'
+                : 'bg-white/15 text-white/40'
             }`}
           >
             {s.n}
           </div>
           <span
-            className={`text-xs ${
-              current >= s.n ? 'text-ink-primary font-medium' : 'text-ink-tertiary'
+            className={`text-[13px] ${
+              current >= s.n ? 'text-white font-medium' : 'text-white/40'
             }`}
           >
             {s.label}
           </span>
-          {idx < steps.length - 1 && <div className="w-6 h-px bg-border-default" />}
+          {idx < steps.length - 1 && <div className="w-8 h-px bg-white/15" />}
         </div>
       ))}
     </div>
@@ -182,28 +178,58 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8 relative">
-      <div className="absolute top-6 right-6">
-        <ThemeToggle />
-      </div>
+  const inputClass =
+    'h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50';
+  const btnClass =
+    'h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors';
 
-      <div className="w-full max-w-[480px] space-y-8">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
+  return (
+    <div className="relative min-h-screen overflow-hidden font-sans">
+      {/* Background — LoginPage와 동일 */}
+      <img
+        src="/mb-design/assets/images/background3.jpg"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/35" />
+
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-[18px] px-6">
+        {/* Top bar */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-5">
+          <Link to="/" className="flex items-center gap-2.5 group" aria-label="랜딩 페이지로 이동">
+            <img
+              src="/mb-design/assets/logo_symbol_dark.svg"
+              width={32}
+              height={14}
+              alt=""
+              className="brightness-0 invert"
+            />
+            <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+              mind&nbsp;breeze
+            </span>
           </Link>
-          <p className="text-sm text-ink-tertiary">
-            {role === 'counselor' ? '상담사 회원가입' : '내담자 회원가입'}
-          </p>
         </div>
 
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
+        {/* Logo */}
+        <img
+          src="/mb-design/assets/logo_symbol_dark.svg"
+          width={84}
+          height={38}
+          alt=""
+          className="brightness-0 invert"
+        />
+        <div className="font-extrabold text-[32px] text-white tracking-tight">
+          mind&nbsp;breeze
+        </div>
+        <div className="text-[15px] text-white/85 mb-4">
+          {role === 'counselor' ? '상담사 회원가입' : '내담자 회원가입'}
+        </div>
+
+        {/* Card */}
+        <div className="bg-white rounded-[22px] p-6 sm:p-8 w-full max-w-[400px] shadow-lg">
           <StepIndicator current={step} />
 
-          <h2 className="text-2xl font-bold text-ink-primary text-center">
+          <h2 className="text-xl font-bold text-[#1F1F1F] text-center mb-6">
             {step === 1 && '이메일 인증'}
             {step === 2 && '약관 동의'}
             {step === 3 && '계정 정보 입력'}
@@ -211,35 +237,29 @@ export default function RegisterPage() {
 
           {/* Step 1: 이메일 + OTP */}
           {step === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-ink-secondary">
-                  이메일
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    disabled={loading || otpSent}
-                    className="flex-1 h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleRequestOtp}
-                    disabled={loading || !email || otpSent}
-                    className="px-4 h-11 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-semibold hover:opacity-90 disabled:opacity-50"
-                  >
-                    {otpSent ? '발송됨' : '인증 요청'}
-                  </button>
-                </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex gap-2 w-full max-w-[280px]">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  disabled={loading || otpSent}
+                  className={`flex-1 ${inputClass}`}
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestOtp}
+                  disabled={loading || !email || otpSent}
+                  className="px-4 h-[52px] rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {otpSent ? '발송됨' : '인증 요청'}
+                </button>
               </div>
 
               {otpSent && (
-                <div className="space-y-3">
-                  <label className="block text-sm font-medium text-ink-secondary text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <label className="text-sm text-[#6F6F6F]">
                     6자리 인증 코드를 입력해주세요
                   </label>
                   <OtpInput value={otp} onChange={setOtp} disabled={loading} />
@@ -247,20 +267,24 @@ export default function RegisterPage() {
                     type="button"
                     onClick={handleRequestOtp}
                     disabled={loading}
-                    className="w-full text-xs text-ink-tertiary hover:text-brand-primary"
+                    className="text-xs text-[#6F6F6F] hover:text-[#5F0080]"
                   >
                     인증 코드 재발송
                   </button>
                 </div>
               )}
 
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              {error && (
+                <p className="text-[13px] text-white bg-red-500/80 rounded-full px-4 py-1.5" role="alert">
+                  {error}
+                </p>
+              )}
 
               <button
                 type="button"
                 onClick={handleVerifyOtp}
                 disabled={loading || !otpSent || otp.length !== 6}
-                className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                className={btnClass}
               >
                 {loading ? '확인 중...' : '다음'}
               </button>
@@ -269,21 +293,25 @@ export default function RegisterPage() {
 
           {/* Step 2: 약관 동의 */}
           {step === 2 && (
-            <div className="space-y-4">
+            <div className="flex flex-col items-center gap-4">
               <ConsentCheckList consents={consents} onChange={setConsents} />
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-              <div className="flex gap-3">
+              {error && (
+                <p className="text-[13px] text-white bg-red-500/80 rounded-full px-4 py-1.5" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="flex gap-3 w-full max-w-[280px]">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated"
+                  className="flex-1 h-[52px] rounded-full border border-[#DDDEE7] text-[#6F6F6F] font-semibold hover:bg-[#F5EDFC]"
                 >
                   이전
                 </button>
                 <button
                   type="button"
                   onClick={handleConsentNext}
-                  className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90"
+                  className={`flex-1 ${btnClass} w-auto`}
                 >
                   다음
                 </button>
@@ -293,65 +321,54 @@ export default function RegisterPage() {
 
           {/* Step 3: 비밀번호 + 이름 */}
           {step === 3 && (
-            <form onSubmit={handleRegister} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="name" className="block text-sm font-medium text-ink-secondary">
-                  이름
-                </label>
-                <input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-                />
-              </div>
+            <form onSubmit={handleRegister} className="flex flex-col items-center gap-3">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="이름"
+                disabled={loading}
+                autoComplete="name"
+                className={inputClass}
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호 (영문+숫자+특수문자 8자 이상)"
+                disabled={loading}
+                autoComplete="new-password"
+                className={inputClass}
+              />
+              <input
+                type="password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                placeholder="비밀번호 확인"
+                disabled={loading}
+                autoComplete="new-password"
+                className={inputClass}
+              />
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">
-                  비밀번호
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="영문+숫자+특수문자 8자 이상"
-                  disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-                />
-              </div>
+              {error && (
+                <p className="text-[13px] text-white bg-red-500/80 rounded-full px-4 py-1.5" role="alert">
+                  {error}
+                </p>
+              )}
 
-              <div className="space-y-2">
-                <label htmlFor="passwordConfirm" className="block text-sm font-medium text-ink-secondary">
-                  비밀번호 확인
-                </label>
-                <input
-                  id="passwordConfirm"
-                  type="password"
-                  value={passwordConfirm}
-                  onChange={(e) => setPasswordConfirm(e.target.value)}
-                  disabled={loading}
-                  className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-                />
-              </div>
-
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-              <div className="flex gap-3">
+              <div className="flex gap-3 w-full max-w-[280px]">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={loading}
-                  className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated"
+                  className="flex-1 h-[52px] rounded-full border border-[#DDDEE7] text-[#6F6F6F] font-semibold hover:bg-[#F5EDFC]"
                 >
                   이전
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
+                  className={`flex-1 ${btnClass} w-auto`}
                 >
                   {loading ? '가입 중...' : '가입 완료'}
                 </button>
@@ -360,9 +377,9 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <p className="text-center text-sm text-ink-tertiary">
+        <p className="text-[13px] text-white/85">
           이미 계정이 있으신가요?{' '}
-          <Link to="/login" className="text-brand-primary hover:text-brand-primary-hover font-medium">
+          <Link to="/login" className="text-white font-semibold hover:underline">
             로그인
           </Link>
         </p>
