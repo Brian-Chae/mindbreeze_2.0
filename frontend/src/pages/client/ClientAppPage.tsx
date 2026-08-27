@@ -114,6 +114,22 @@ function CounselorCodeScreen() {
         }
       } catch (err: unknown) {
         if (cancelled) return;
+        // 409: 이미 연결된 상담사 → GET으로 목록 새로고침
+        if (err instanceof Error && 'status' in err && (err as { status: number }).status === 409) {
+          try {
+            const list = await apiClient.get<
+              Array<{ id: string; name: string; profile_image: string | null }>
+            >('/client/counselors');
+            if (cancelled) return;
+            const counselors = Array.isArray(list) ? list : [];
+            if (user) {
+              setUser({ ...user, counselors });
+            }
+            return; // 성공 → 코드 입력 화면 빠져나감
+          } catch {
+            // GET도 실패하면 아래 일반 에러 처리로
+          }
+        }
         const message =
           err instanceof Error ? err.message : '연결에 실패했습니다. 코드를 다시 확인해주세요.';
         setError(message);
@@ -197,7 +213,7 @@ export default function ClientAppPage() {
     // store에 이미 있으면 그걸로 초기화 (깜빡임 방지)
     return (user?.counselors?.length ?? 0) > 0 ? user!.counselors : null;
   });
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const fetchError = null; // keep for future error handling
 
   // 마운트 시 상담사 목록 API 호출
   useEffect(() => {
@@ -205,7 +221,6 @@ export default function ClientAppPage() {
 
     async function fetchCounselors() {
       try {
-        // GET /client/counselors → CounselorInfo[] (배열)
         const res = await apiClient.get<
           Array<{ id: string; name: string; profile_image: string | null }>
         >('/client/counselors');
@@ -215,13 +230,13 @@ export default function ClientAppPage() {
         const list = Array.isArray(res) ? res : [];
         setCounselors(list);
 
-        // authStore에도 저장 (새로고침 후에도 유지)
         if (user) {
           setUser({ ...user, counselors: list });
         }
       } catch (err) {
         if (cancelled) return;
-        setFetchError(err instanceof Error ? err.message : '상담사 정보를 불러오지 못했습니다');
+        console.error('Failed to fetch counselors:', err);
+        // GET 실패해도 counselors=[], 코드 입력 화면으로 넘어가기 (POST로 연결 시도 가능)
         setCounselors([]);
       }
     }

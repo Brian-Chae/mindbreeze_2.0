@@ -13,7 +13,8 @@ export default function SessionCreatePage() {
   const [locationType, setLocationType] = useState<LocationType>('offline');
   const [participantMode, setParticipantMode] = useState<ParticipantMode>('one_on_one');
   const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('none');
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -28,9 +29,10 @@ export default function SessionCreatePage() {
     setError(null);
     setSubmitting(true);
     try {
+      const combinedDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
       const payload: CreateSessionPayload = {
         type,
-        scheduled_at: new Date(scheduledAt).toISOString(),
+        scheduled_at: combinedDateTime.toISOString(),
         duration_min: durationMin,
         title: title || undefined,
         notes: notes || undefined,
@@ -41,6 +43,7 @@ export default function SessionCreatePage() {
         location_type: locationType,
         participant_mode: participantMode,
         linkband_mode: linkbandMode,
+        sfu_enabled: locationType === 'online' && participantMode === 'group',
       };
       const created = await createSession(payload);
       navigate(`/sessions/${created.id}`);
@@ -108,13 +111,22 @@ export default function SessionCreatePage() {
 
             <div>
               <label className={labelCls}>일시</label>
-              <input
-                type="datetime-local"
-                required
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
-                className={inputCls}
-              />
+              <div className="space-y-2">
+                <input
+                  type="date"
+                  required
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className={inputCls}
+                />
+                <input
+                  type="time"
+                  required
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                  className={inputCls}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

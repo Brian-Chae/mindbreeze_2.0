@@ -233,7 +233,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           </div>
           <div>
             <label className={labelCls}>일시</label>
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col gap-2">
               {/* 날짜 선택 필드 (통합) */}
               <div className="relative flex-1" ref={calendarRef}>
                 <button

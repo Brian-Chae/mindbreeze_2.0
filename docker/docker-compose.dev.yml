@@ -76,6 +76,16 @@ services:
     networks:
       - mindbreeze-dev
 
+  livekit:
+    image: livekit/livekit-server:v1.8
+    command: --config /etc/livekit.yaml
+    # 포트매핑 없음 — nginx가 Docker 내부망으로 프록시
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    restart: unless-stopped
+    networks:
+      - mindbreeze-dev
+
 networks:
   mindbreeze-dev:
     driver: bridge

@@ -5,8 +5,10 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from livekit import api as livekit_api
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 
@@ -399,3 +401,70 @@ def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, d
     record.markers = markers
     db.commit()
     return {"markers": markers}
+
+
+# ── LiveKit WebRTC ──────────────────────────────────────────────
+
+def generate_livekit_token(room_name: str, participant_name: str, participant_id: str) -> str:
+    """LiveKit 접근 토큰(JWT)을 발급합니다."""
+    token = (
+        livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+        .with_identity(participant_id)
+        .with_name(participant_name)
+        .with_grants(
+            livekit_api.VideoGrants(
+                room_join=True,
+                room=room_name,
+            )
+        )
+    )
+    return token.to_jwt()
+
+
+def _get_session_for_participant(session_id: str, user_id: str, db: DBSession) -> Session:
+    """host 또는 participant 권한으로 세션 조회"""
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    uid = _to_uuid(user_id)
+    if s.host_id == uid:
+        return s
+    is_participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
+        .first()
+    )
+    if is_participant:
+        return s
+    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+
+
+def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
+    """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
+    s = _get_session_for_participant(session_id, user_id, db)
+
+    # 오프라인 세션은 입장 불가
+    if s.location_type == "offline":
+        raise HTTPException(status_code=400, detail="오프라인 세션은 입장할 수 없습니다")
+
+    # webrtc_room_id가 없으면 생성
+    if not s.webrtc_room_id:
+        s.webrtc_room_id = uuid.uuid4()
+
+    # 상태 전이: scheduled → in_progress (host만 가능)
+    if s.status == "scheduled" and s.host_id == _to_uuid(user_id):
+        s.status = "in_progress"
+    elif s.status not in ("in_progress", "paused"):
+        raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
+
+    db.commit()
+    db.refresh(s)
+
+    # LiveKit 토큰 발급
+    room_name = str(s.webrtc_room_id)
+    token = generate_livekit_token(room_name, user_name, user_id)
+
+    result = _serialize(s)
+    result["livekit_token"] = token
+    return result

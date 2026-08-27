@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MIND BREEZE 2.0 — 세션 관리 고도화 · 프로토타입 덱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   MIND BREEZE 2.0 — 세션 관리 디자인 시스템 토큰
+   Dark · Editorial · Clinical-Precise
+   ============================================================ */
+:root{
+  /* 캔버스 */
+  --bg-0:#0E0A12; --bg-1:#161019; --bg-2:#1E1726; --bg-3:#2A2033; --bg-elev:#241B2E;
+  /* 퍼플 */
+  --purple-900:#2A0038; --purple-800:#3D0052; --purple-700:#5F0080; --purple-600:#7A1AA0;
+  --purple-500:#9333B8; --purple-400:#B05CD0; --purple-300:#D29BE8; --purple-tint:#F5EDFC;
+  /* 텍스트 */
+  --text-hi:#F4F0F7; --text-mid:#B7AEC2; --text-lo:#7C7388; --text-on-purple:#FBF5FF;
+  /* 라인 */
+  --line:rgba(244,240,247,0.08); --line-strong:rgba(244,240,247,0.14); --line-purple:rgba(176,92,208,0.28);
+  /* 상태 */
+  --st-scheduled:#7AA2F7; --st-live:#FF5C7A; --st-done:#4FD1A1; --st-cancelled:#7C7388;
+  /* 유형 */
+  --type-clinical:#B05CD0; --type-hypnosis:#7B6CF6; --type-meditation:#3FB6A8; --type-custom:#9A93A6;
+  /* EEG */
+  --eeg-focus:#B05CD0; --eeg-calm:#3FB6A8; --eeg-stress:#E0A14B; --eeg-signal:#C77DDE; --eeg-grid:rgba(244,240,247,0.06);
+  /* 스페이싱 */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
+  /* 반경 */
+  --r-sm:6px; --r-md:10px; --r-lg:16px; --r-xl:24px; --r-pill:999px;
+  /* 그림자 */
+  --shadow-card:0 1px 0 rgba(255,255,255,0.02) inset, 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-modal:0 24px 64px rgba(0,0,0,0.6);
+  --glow-live:0 0 0 1px rgba(255,92,122,0.4), 0 0 20px rgba(255,92,122,0.25);
+  --glow-focus:0 0 0 2px rgba(176,92,208,0.55);
+  /* 폰트 */
+  --font-display:"Gowun Batang",serif;
+  --font-body:"IBM Plex Sans KR",sans-serif;
+  --font-mono:"IBM Plex Mono",monospace;
+  /* 타입스케일 */
+  --fs-display:44px; --fs-h1:30px; --fs-h2:22px; --fs-h3:17px; --fs-body:15px;
+  --fs-sm:13px; --fs-xs:11.5px; --fs-kpi:34px; --fs-data:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:#08060B; color:var(--text-mid);
+  font-family:var(--font-body); font-size:var(--fs-body); line-height:1.5;
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* ====== 덱 스케일 컨테이너 ====== */
+#viewport{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+#stage{width:1920px; height:1080px; position:relative; transform-origin:center center; flex:none;}
+.slide{position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .25s ease; overflow:hidden;
+  background:var(--bg-0); display:flex; flex-direction:column;}
+.slide.active{opacity:1; pointer-events:auto;}
+
+/* 진입 staggered reveal */
+.slide.active .reveal{animation:rise .5s cubic-bezier(.2,.7,.2,1) backwards;}
+@keyframes rise{from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:none}}
+
+/* ====== 덱 크롬 (하단 네비) ====== */
+#chrome{position:fixed; left:50%; bottom:18px; transform:translateX(-50%); z-index:50;
+  display:flex; align-items:center; gap:16px; padding:8px 14px;
+  background:rgba(20,15,24,0.92); border:1px solid var(--line-strong); border-radius:var(--r-pill);
+  font-family:var(--font-mono); font-size:12px; color:var(--text-mid);}
+#chrome .dots{display:flex; gap:7px}
+#chrome .dot{width:8px; height:8px; border-radius:50%; background:var(--bg-3); cursor:pointer; transition:.2s; border:1px solid var(--line)}
+#chrome .dot.on{background:var(--purple-400); box-shadow:0 0 8px rgba(176,92,208,.6); border-color:transparent}
+#chrome .sep{width:1px; height:16px; background:var(--line-strong)}
+#chrome .title{color:var(--text-hi); font-family:var(--font-body); font-weight:500; min-width:230px}
+#chrome .hint{color:var(--text-lo)}
+#chrome kbd{background:var(--bg-3); border:1px solid var(--line-strong); border-radius:4px; padding:1px 6px; color:var(--text-mid); font-family:var(--font-mono)}
+
+/* ============================================================
+   공통 컴포넌트
+   ============================================================ */
+.brandmark{display:flex; align-items:center; gap:10px;}
+.brandmark .glyph{width:30px; height:30px; border-radius:9px; flex:none;
+  background:linear-gradient(150deg,var(--purple-600),var(--purple-800));
+  display:flex; align-items:center; justify-content:center; box-shadow:0 0 0 1px var(--line-purple) inset;}
+.brandmark .glyph svg{width:17px;height:17px}
+.brandmark .wm{line-height:1.05}
+.brandmark .wm b{display:block; color:var(--text-hi); font-weight:600; font-size:14px; letter-spacing:.01em}
+.brandmark .wm span{display:block; color:var(--text-lo); font-size:10px; letter-spacing:.18em; text-transform:uppercase}
+
+.overline{font-size:var(--fs-xs); letter-spacing:.08em; text-transform:uppercase; color:var(--purple-400); font-weight:600}
+.page-title{font-family:var(--font-display); color:var(--text-hi); font-size:var(--fs-display); font-weight:700; letter-spacing:-.01em}
+.h1{font-size:var(--fs-h1); color:var(--text-hi); font-weight:600; letter-spacing:-.01em}
+.h2{font-size:var(--fs-h2); color:var(--text-hi); font-weight:600}
+.h3{font-size:var(--fs-h3); color:var(--text-hi); font-weight:600}
+.muted{color:var(--text-lo)}
+.mono{font-family:var(--font-mono); font-feature-settings:"tnum"}
+
+/* 버튼 */
+.btn{display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:var(--r-md);
+  font-family:var(--font-body); font-size:14px; font-weight:500; cursor:pointer; border:1px solid transparent;
+  transition:.12s; white-space:nowrap; color:var(--text-hi); background:transparent}
+.btn svg{width:16px;height:16px}
+.btn.primary{background:var(--purple-700); color:var(--text-on-purple); box-shadow:0 0 0 1px rgba(176,92,208,.25) inset}
+.btn.primary:hover{background:var(--purple-600)}
+.btn.secondary{border-color:var(--line-strong)}
+.btn.secondary:hover{background:var(--bg-3)}
+.btn.ghost{color:var(--text-mid)}
+.btn.ghost:hover{background:var(--bg-3); color:var(--text-hi)}
+.btn.danger{color:var(--st-live); border-color:rgba(255,92,122,.4)}
+.btn.danger:hover{background:rgba(255,92,122,.12)}
+.btn.sm{height:32px; padding:0 12px; font-size:13px}
+.btn.lg{height:46px; padding:0 22px; font-size:15px}
+
+/* 배지 / 칩 */
+.badge{display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px; border-radius:var(--r-pill);
+  background:var(--bg-3); color:var(--text-mid); font-size:var(--fs-sm); border:1px solid var(--line)}
+.badge .dt{width:6px; height:6px; border-radius:50%; flex:none}
+.badge.outline{background:transparent}
+.dt-scheduled{background:var(--st-scheduled)} .dt-live{background:var(--st-live)}
+.dt-done{background:var(--st-done)} .dt-cancelled{background:var(--st-cancelled)}
+.dt-clinical{background:var(--type-clinical)} .dt-hypnosis{background:var(--type-hypnosis)}
+.dt-meditation{background:var(--type-meditation)} .dt-custom{background:var(--type-custom)}
+
+.live-badge{display:inline-flex; align-items:center; gap:8px; height:30px; padding:0 12px; border-radius:var(--r-pill);
+  background:rgba(255,92,122,.12); color:#FF9AB1; border:1px solid rgba(255,92,122,.35); font-family:var(--font-mono); font-size:13px; font-weight:500}
+.live-badge .dt{width:8px;height:8px;border-radius:50%;background:var(--st-live); animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+/* 세그먼티드 */
+.seg{display:inline-flex; background:var(--bg-1); border:1px solid var(--line); border-radius:var(--r-md); padding:3px; gap:2px}
+.seg button{border:0; background:transparent; color:var(--text-mid); font-family:var(--font-body); font-size:13px; font-weight:500;
+  padding:7px 14px; border-radius:7px; cursor:pointer; transition:.12s; display:inline-flex; align-items:center; gap:7px}
+.seg button.on{background:var(--purple-700); color:var(--text-on-purple)}
+.seg button:not(.on):hover{color:var(--text-hi)}
+
+/* 카드 */
+.card{background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-card)}
+
+/* 인풋 */
+.field label{display:block; font-size:var(--fs-sm); color:var(--text-mid); margin-bottom:6px; font-weight:500}
+.input{width:100%; height:42px; background:var(--bg-1); border:1px solid var(--line-strong); border-radius:var(--r-md);
+  color:var(--text-hi); padding:0 14px; font-family:var(--font-body); font-size:14px}
+.input::placeholder{color:var(--text-lo)}
+.input:focus{outline:none; border-color:var(--purple-400); box-shadow:var(--glow-focus)}
+textarea.input{height:auto; padding:12px 14px; resize:none; line-height:1.55}
+
+/* 스크롤바 */
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--bg-3); border-radius:9px; border:2px solid transparent; background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============================================================
+   AppShell (사이드바 + 메인)
+   ============================================================ */
+.shell{display:grid; grid-template-columns:220px 1fr; height:100%}
+.sidebar{background:var(--bg-1); border-right:1px solid var(--line); display:flex; flex-direction:column; padding:22px 16px}
+.sidebar .nav{margin-top:30px; display:flex; flex-direction:column; gap:3px}
+.sidebar .navi{display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:var(--r-md); color:var(--text-mid); font-size:14px; cursor:pointer; transition:.12s}
+.sidebar .navi svg{width:18px;height:18px; opacity:.85}
+.sidebar .navi:hover{background:var(--bg-2); color:var(--text-hi)}
+.sidebar .navi.on{background:var(--purple-900); color:var(--text-hi); box-shadow:inset 3px 0 0 var(--purple-500)}
+.sidebar .navi.on svg{color:var(--purple-300); opacity:1}
+.sidebar .grp{margin-top:22px; padding:0 12px 8px; font-size:var(--fs-xs); letter-spacing:.1em; text-transform:uppercase; color:var(--text-lo)}
+.sidebar .me{margin-top:auto; display:flex; align-items:center; gap:11px; padding:10px; border-radius:var(--r-md); background:var(--bg-2); border:1px solid var(--line)}
+.avatar{width:34px;height:34px;border-radius:50%; flex:none; display:flex;align-items:center;justify-content:center; font-size:13px; font-weight:600; color:var(--text-on-purple);
+  background:linear-gradient(150deg,var(--purple-500),var(--purple-800))}
+.me .info b{display:block; color:var(--text-hi); font-size:13px; font-weight:600}
+.me .info span{display:block; color:var(--text-lo); font-size:11px}
+
+.main{display:flex; flex-direction:column; min-width:0; background:var(--bg-0)}
+.topbar{height:64px; flex:none; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 var(--sp-6)}
+.topbar .left{display:flex; align-items:center; gap:14px}
+.crumb{color:var(--text-lo); font-size:13px}
+.crumb b{color:var(--text-hi); font-weight:600}
+.topbar .search{display:flex;align-items:center;gap:8px; height:38px; padding:0 14px; background:var(--bg-1); border:1px solid var(--line); border-radius:var(--r-pill); color:var(--text-lo); font-size:13px; width:240px}
+.topbar .search svg{width:15px;height:15px}
+.content{flex:1; min-height:0; overflow:hidden; padding:var(--sp-6)}
+
+/* ============================================================
+   SLIDE 1 — 대시보드
+   ============================================================ */
+.dash-head{display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:var(--sp-5)}
+.dash-head .filters{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.select{display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 12px; background:var(--bg-1); border:1px solid var(--line-strong); border-radius:var(--r-md); color:var(--text-mid); font-size:13px; cursor:pointer}
+.select svg{width:14px;height:14px; opacity:.7}
+.select .dt{width:7px;height:7px;border-radius:50%}
+
+.dash-grid{display:grid; grid-template-columns:1.7fr 1fr; gap:var(--sp-5); height:calc(100% - 86px)}
+
+/* 캘린더 */
+.cal{display:flex; flex-direction:column; overflow:hidden; padding:0}
+.cal-top{display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line)}
+.cal-top .nav{display:flex; align-items:center; gap:6px}
+.iconbtn{width:32px;height:32px; display:flex;align-items:center;justify-content:center; border-radius:var(--r-md); border:1px solid var(--line); background:var(--bg-1); color:var(--text-mid); cursor:pointer}
+.iconbtn:hover{background:var(--bg-3); color:var(--text-hi)}
+.iconbtn svg{width:15px;height:15px}
+.cal-grid{flex:1; overflow:hidden; display:grid; grid-template-rows:auto 1fr}
+.cal-days{display:grid; grid-template-columns:54px repeat(7,1fr); border-bottom:1px solid var(--line)}
+.cal-days .d{padding:10px 8px; text-align:center; border-left:1px solid var(--line)}
+.cal-days .d:first-child{border-left:0}
+.cal-days .d .wd{font-size:11px; color:var(--text-lo); letter-spacing:.06em}
+.cal-days .d .dn{font-size:16px; color:var(--text-mid); font-family:var(--font-mono); margin-top:2px}
+.cal-days .d.today .dn{color:var(--purple-300); font-weight:600}
+.cal-days .d.today{background:var(--purple-900)}
+.cal-body{position:relative; overflow:hidden; display:grid; grid-template-columns:54px repeat(7,1fr)}
+.cal-hours{display:flex; flex-direction:column}
+.cal-hours .hr{height:62px; border-bottom:1px solid var(--line); position:relative}
+.cal-hours .hr span{position:absolute; top:-7px; right:8px; font-size:10px; color:var(--text-lo); font-family:var(--font-mono)}
+.cal-col{border-left:1px solid var(--line); position:relative}
+.cal-col .hr{height:62px; border-bottom:1px solid var(--line)}
+.now-line{position:absolute; left:0; right:0; height:0; border-top:1px solid var(--purple-400); z-index:5}
+.now-line::before{content:""; position:absolute; left:-4px; top:-3px; width:7px;height:7px;border-radius:50%; background:var(--purple-400); box-shadow:0 0 8px var(--purple-400)}
+.evt{position:absolute; left:5px; right:5px; border-radius:var(--r-sm); background:var(--bg-2); border:1px solid var(--line-strong); padding:7px 9px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.evt::before{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:3px}
+.evt.clinical::before{background:var(--type-clinical)} .evt.hypnosis::before{background:var(--type-hypnosis)}
+.evt.meditation::before{background:var(--type-meditation)} .evt.custom::before{background:var(--type-custom)}
+.evt .et{font-size:10px; color:var(--text-lo); font-family:var(--font-mono)}
+.evt .en{font-size:12.5px; color:var(--text-hi); font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.evt .em{font-size:11px; color:var(--text-mid); margin-top:3px; display:flex; gap:6px; align-items:center}
+.evt.live{border-color:rgba(255,92,122,.4); box-shadow:var(--glow-live)}
+.evt .pill{display:inline-flex; align-items:center; gap:4px; font-size:10px; color:var(--text-lo)}
+
+/* 아젠다 */
+.agenda{display:flex; flex-direction:column; overflow:hidden}
+.agenda-top{padding:16px 20px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between}
+.agenda-list{flex:1; overflow:auto; padding:14px}
+.scard{position:relative; background:var(--bg-1); border:1px solid var(--line); border-radius:var(--r-md); padding:14px 14px 14px 16px; margin-bottom:10px; cursor:pointer; transition:.12s}
+.scard:hover{border-color:var(--line-strong); background:var(--bg-2)}
+.scard::before{content:""; position:absolute; left:0; top:10px; bottom:10px; width:3px; border-radius:3px}
+.scard.clinical::before{background:var(--type-clinical)} .scard.hypnosis::before{background:var(--type-hypnosis)}
+.scard.meditation::before{background:var(--type-meditation)} .scard.custom::before{background:var(--type-custom)}
+.scard .row1{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.scard .time{font-family:var(--font-mono); font-size:13px; color:var(--text-hi)}
+.scard .nm{font-size:14.5px; color:var(--text-hi); font-weight:600; margin-top:8px}
+.scard .ty{font-size:12px; color:var(--text-mid); margin-top:2px; display:flex; align-items:center; gap:6px}
+.scard .tags{display:flex; gap:6px; margin-top:11px; flex-wrap:wrap}
+.tag{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--text-mid); background:var(--bg-3); border:1px solid var(--line); padding:3px 9px; border-radius:var(--r-pill)}
+.tag svg{width:12px;height:12px; opacity:.8}
+
+/* ============================================================
+   SLIDE 2 — 세션 생성/수정 폼
+   ============================================================ */
+.form-wrap{display:grid; grid-template-columns:1.35fr 1fr; gap:var(--sp-6); height:100%}
+.form-panel{overflow:auto; padding:var(--sp-6); display:flex; flex-direction:column; gap:var(--sp-6)}
+.form-sec{display:flex; flex-direction:column; gap:14px}
+.form-sec > .lbl{display:flex; align-items:center; gap:9px; font-size:13px; color:var(--text-mid); font-weight:600}
+.form-sec > .lbl .n{width:20px;height:20px; border-radius:6px; background:var(--purple-900); color:var(--purple-300); font-family:var(--font-mono); font-size:11px; display:flex;align-items:center;justify-content:center}
+.type-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+.type-opt{position:relative; padding:16px 14px; border-radius:var(--r-md); background:var(--bg-1); border:1px solid var(--line-strong); cursor:pointer; transition:.12s}
+.type-opt:hover{border-color:var(--line-purple)}
+.type-opt.on{border-color:var(--purple-400); background:var(--purple-900); box-shadow:var(--glow-focus)}
+.type-opt .dt{width:9px;height:9px;border-radius:50%; margin-bottom:10px}
+.type-opt b{display:block; color:var(--text-hi); font-size:14px; font-weight:600}
+.type-opt span{display:block; color:var(--text-lo); font-size:11px; margin-top:3px}
+.type-opt .ck{position:absolute; top:12px; right:12px; width:16px;height:16px; color:var(--purple-300); display:none}
+.type-opt.on .ck{display:block}
+.custom-row{display:flex; gap:10px; align-items:center}
+.custom-row .input{flex:1}
+.two{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.three{display:grid; grid-template-columns:repeat(3,1fr); gap:10px}
+.radio-card{padding:13px 14px; border-radius:var(--r-md); background:var(--bg-1); border:1px solid var(--line-strong); cursor:pointer; display:flex; gap:11px; align-items:flex-start; transition:.12s}
+.radio-card:hover{border-color:var(--line-purple)}
+.radio-card.on{border-color:var(--purple-400); background:var(--purple-900)}
+.radio-card .rd{width:18px;height:18px;border-radius:50%; border:2px solid var(--line-strong); flex:none; margin-top:1px; position:relative}
+.radio-card.on .rd{border-color:var(--purple-400)}
+.radio-card.on .rd::after{content:""; position:absolute; inset:3px; border-radius:50%; background:var(--purple-400)}
+.radio-card .tx b{display:block; color:var(--text-hi); font-size:13.5px; font-weight:600}
+.radio-card .tx span{display:block; color:var(--text-lo); font-size:11.5px; margin-top:2px}
+.participants{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.pchip{display:inline-flex; align-items:center; gap:8px; padding:6px 8px 6px 6px; border-radius:var(--r-pill); background:var(--bg-3); border:1px solid var(--line)}
+.pchip .av{width:24px;height:24px;border-radius:50%; font-size:11px}
+.pchip b{color:var(--text-hi); font-size:13px; font-weight:500}
+.pchip .x{width:18px;height:18px; display:flex;align-items:center;justify-content:center; color:var(--text-lo); cursor:pointer}
+.pchip .x:hover{color:var(--text-hi)}
+.add-chip{display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:var(--r-pill); border:1px dashed var(--line-strong); color:var(--text-mid); font-size:13px; cursor:pointer}
+.add-chip:hover{border-color:var(--purple-400); color:var(--purple-300)}
+
+/* 요약 프리뷰 */
+.summary{padding:var(--sp-6); display:flex; flex-direction:column; background:var(--bg-1); border-left:1px solid var(--line)}
+.preview-card{background:var(--bg-2); border:1px solid var(--line-strong); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--shadow-card)}
+.preview-card .pc-head{padding:18px 20px; border-bottom:1px solid var(--line); position:relative}
+.preview-card .pc-head::before{content:""; position:absolute; left:0;top:0;bottom:0; width:4px; background:var(--type-clinical)}
+.kv{display:flex; align-items:center; justify-content:space-between; padding:13px 20px; border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.kv .k{font-size:13px; color:var(--text-lo)}
+.kv .v{font-size:13.5px; color:var(--text-hi); font-weight:500; display:flex; align-items:center; gap:7px}
+.matrix-note{margin-top:16px; padding:14px 16px; background:var(--purple-900); border:1px solid var(--line-purple); border-radius:var(--r-md); font-size:12.5px; color:var(--purple-200, #DCC4EC); line-height:1.55}
+.matrix-note b{color:var(--purple-300)}
+
+/* ============================================================
+   SLIDE 3 & 4 — Live 화면
+   ============================================================ */
+.live-shell{display:flex; flex-direction:column; height:100%; background:var(--bg-0)}
+.live-top{height:66px; flex:none; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; padding:0 var(--sp-6); background:var(--bg-1)}
+.live-top .l{display:flex; align-items:center; gap:16px}
+.live-top .sess{display:flex; flex-direction:column}
+.live-top .sess b{color:var(--text-hi); font-size:16px; font-weight:600; display:flex; align-items:center; gap:9px}
+.live-top .sess span{color:var(--text-lo); font-size:12px; margin-top:1px}
+.live-top .r{display:flex; align-items:center; gap:12px}
+.live-body{flex:1; min-height:0; display:grid; grid-template-columns:1.55fr 1fr}
+.video-area{position:relative; background:var(--bg-0); display:flex; flex-direction:column; padding:var(--sp-5); border-right:1px solid var(--line)}
+.video-main{flex:1; border-radius:var(--r-lg); overflow:hidden; position:relative; border:1px solid var(--line-strong);
+  background:linear-gradient(160deg,#1a1320,#120d18)}
+.comfy{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-lo); font-family:var(--font-mono); font-size:13px; letter-spacing:.04em}
+.comfy .box{display:flex; flex-direction:column; align-items:center; gap:10px; opacity:.55}
+.comfy .box svg{width:34px;height:34px}
+.vlabel{position:absolute; bottom:14px; left:14px; display:flex; align-items:center; gap:9px; padding:7px 12px; border-radius:var(--r-pill); background:rgba(8,5,11,.7); border:1px solid var(--line); font-size:13px; color:var(--text-hi)}
+.vlabel .dt{width:7px;height:7px;border-radius:50%; background:var(--st-done)}
+.vcontrols{position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:8px; padding:7px; background:rgba(8,5,11,.78); border:1px solid var(--line-strong); border-radius:var(--r-pill)}
+.vbtn{width:42px;height:42px; border-radius:50%; border:1px solid var(--line); background:var(--bg-2); color:var(--text-hi); display:flex;align-items:center;justify-content:center; cursor:pointer}
+.vbtn svg{width:18px;height:18px}
+.vbtn:hover{background:var(--bg-3)}
+.vbtn.end{background:var(--st-live); border-color:transparent; color:#fff}
+.thumbs{display:flex; gap:12px; margin-top:14px; height:108px}
+.thumb{width:172px; flex:none; border-radius:var(--r-md); overflow:hidden; position:relative; border:1px solid var(--line-strong);
+  background:linear-gradient(160deg,#191220,#110c17)}
+.thumb .tl{position:absolute; bottom:8px; left:8px; font-size:11px; color:var(--text-hi); background:rgba(8,5,11,.7); padding:3px 8px; border-radius:var(--r-pill)}
+.thumb.add{background:var(--bg-1); border-style:dashed; display:flex; align-items:center; justify-content:center; color:var(--text-lo); cursor:pointer; flex-direction:column; gap:6px; font-size:12px}
+
+/* Solo (오프라인) 비디오 영역 비활성 */
+.solo-area{flex:1; border-radius:var(--r-lg); border:1px dashed var(--line-strong); background:var(--bg-1);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; position:relative}
+.solo-area .ring{width:120px;height:120px; border-radius:50%; border:1px solid var(--line-purple); display:flex; align-items:center; justify-content:center; position:relative}
+.solo-area .ring::after{content:""; position:absolute; inset:-14px; border-radius:50%; border:1px solid var(--line); animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1); opacity:.5}50%{transform:scale(1.08); opacity:.15}}
+.solo-area .ring svg{width:42px;height:42px; color:var(--purple-300)}
+.solo-area h3{color:var(--text-hi); font-size:19px; font-weight:600}
+.solo-area p{color:var(--text-lo); font-size:13.5px; max-width:340px; line-height:1.6}
+.solo-wave{margin-top:6px; width:380px; height:40px}
+
+/* 우측 패널 */
+.live-panel{display:flex; flex-direction:column; min-height:0; background:var(--bg-1)}
+.panel-tabs{display:flex; padding:0 var(--sp-5); border-bottom:1px solid var(--line); gap:4px; flex:none}
+.panel-tabs button{border:0; background:transparent; color:var(--text-lo); font-family:var(--font-body); font-size:13.5px; font-weight:500; padding:16px 12px; cursor:pointer; position:relative}
+.panel-tabs button.on{color:var(--text-hi)}
+.panel-tabs button.on::after{content:""; position:absolute; left:8px; right:8px; bottom:-1px; height:2px; background:var(--purple-400); border-radius:2px}
+.panel-tabs button .cnt{font-family:var(--font-mono); font-size:11px; color:var(--text-lo); margin-left:5px}
+.panel-body{flex:1; overflow:auto; padding:var(--sp-5)}
+
+/* EEG 대시보드 */
+.eeg-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px}
+.eeg-head .l{display:flex; align-items:center; gap:10px}
+.eeg-head .band{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-mid)}
+.sample-badge{font-family:var(--font-mono); font-size:10px; letter-spacing:.06em; color:var(--text-lo); border:1px dashed var(--line-strong); padding:3px 8px; border-radius:var(--r-pill)}
+.sensors{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px}
+.sensor{background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-md); padding:12px 14px}
+.sensor .sh{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+.sensor .sh b{color:var(--text-hi); font-family:var(--font-mono); font-size:13px}
+.sensor .sh span{font-size:10.5px; color:var(--st-done); display:flex; align-items:center; gap:5px}
+.sensor .sh span .dt{width:6px;height:6px;border-radius:50%; background:var(--st-done)}
+.sensor svg{width:100%; height:42px; display:block}
+.kpi-row{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px}
+.kpi{background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-md); padding:14px}
+.kpi .kl{font-size:11px; color:var(--text-lo); letter-spacing:.02em}
+.kpi .kn{font-family:var(--font-mono); font-size:var(--fs-kpi); color:var(--text-hi); font-weight:500; margin-top:6px; line-height:1}
+.kpi .kn small{font-size:14px; color:var(--text-lo); font-weight:400}
+.kpi .kb{height:4px; border-radius:4px; background:var(--eeg-grid); margin-top:10px; overflow:hidden}
+.kpi .kb i{display:block; height:100%; border-radius:4px}
+.idx-list{display:flex; flex-direction:column; gap:2px}
+.idx-list .sub{font-size:var(--fs-xs); letter-spacing:.08em; text-transform:uppercase; color:var(--text-lo); margin:6px 0 8px}
+.idx{display:flex; align-items:center; gap:12px; padding:9px 4px; border-bottom:1px solid var(--line)}
+.idx:last-child{border-bottom:0}
+.idx .nm{font-size:13px; color:var(--text-mid); width:96px; flex:none}
+.idx .track{flex:1; height:5px; border-radius:5px; background:var(--eeg-grid); overflow:hidden}
+.idx .track i{display:block; height:100%; border-radius:5px}
+.idx .val{font-family:var(--font-mono); font-size:13px; color:var(--text-hi); width:42px; text-align:right; flex:none}
+
+/* 빈 상태 (LINK BAND 미사용) */
+.eeg-empty{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:40px 20px; text-align:center; color:var(--text-lo)}
+.eeg-empty svg{width:34px;height:34px; opacity:.5}
+
+/* 녹음 컨트롤 바 (패널 하단) */
+.rec-bar{flex:none; border-top:1px solid var(--line); padding:14px var(--sp-5); display:flex; align-items:center; justify-content:space-between; background:var(--bg-1)}
+.rec-bar .wave{display:flex; align-items:center; gap:2px; height:24px}
+.rec-bar .wave i{width:2.5px; background:var(--st-live); border-radius:2px; opacity:.8; animation:eq 1s ease-in-out infinite}
+@keyframes eq{0%,100%{height:5px}50%{height:20px}}
+
+/* 메모 탭 */
+.notes-area{display:flex; flex-direction:column; gap:14px; height:100%}
+.note-line{display:flex; gap:12px}
+.note-line .ts{font-family:var(--font-mono); font-size:12px; color:var(--purple-300); flex:none; width:50px; padding-top:2px}
+.note-line .tx{font-size:13.5px; color:var(--text-mid); line-height:1.55}
+.note-line .tx b{color:var(--text-hi)}
+.marker{display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--eeg-stress); background:rgba(224,161,75,.12); border:1px solid rgba(224,161,75,.3); padding:2px 8px; border-radius:var(--r-pill); margin-left:6px}
+
+/* 참여자 목록 탭 */
+.plist .pi{display:flex; align-items:center; gap:12px; padding:11px 4px; border-bottom:1px solid var(--line)}
+.plist .pi .info{flex:1}
+.plist .pi .info b{display:block; color:var(--text-hi); font-size:13.5px; font-weight:500}
+.plist .pi .info span{display:block; color:var(--text-lo); font-size:11.5px; margin-top:1px}
+.plist .pi .st{font-size:11px; color:var(--st-done); display:flex; align-items:center; gap:5px}
+
+/* ============================================================
+   SLIDE 5 — 초대 모달
+   ============================================================ */
+.modal-stage{position:relative; height:100%; overflow:hidden}
+.modal-stage .backdrop{position:absolute; inset:0; background:rgba(8,5,11,0.72)}
+.modal{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:560px; background:var(--bg-elev);
+  border:1px solid var(--line-strong); border-radius:var(--r-xl); box-shadow:var(--shadow-modal); overflow:hidden}
+.modal .m-head{padding:24px 26px 0}
+.modal .m-head .x{position:absolute; top:20px; right:20px; width:34px;height:34px; border-radius:var(--r-md); border:1px solid var(--line); background:var(--bg-2); color:var(--text-mid); display:flex;align-items:center;justify-content:center; cursor:pointer}
+.modal .m-head .x:hover{color:var(--text-hi); background:var(--bg-3)}
+.modal .m-tabs{display:flex; gap:6px; padding:18px 26px 0; border-bottom:1px solid var(--line); margin-top:18px}
+.modal .m-tabs button{border:0; background:transparent; color:var(--text-lo); font-family:var(--font-body); font-size:14px; font-weight:500; padding:12px 6px; cursor:pointer; position:relative}
+.modal .m-tabs button.on{color:var(--text-hi)}
+.modal .m-tabs button.on::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--purple-400); border-radius:2px}
+.modal .m-body{padding:24px 26px}
+.copy-field{display:flex; align-items:center; gap:0; border:1px solid var(--line-strong); border-radius:var(--r-md); overflow:hidden; background:var(--bg-1)}
+.copy-field .v{flex:1; padding:0 14px; height:46px; display:flex; align-items:center; font-family:var(--font-mono); font-size:13.5px; color:var(--text-hi); overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
+.copy-field .cp{height:46px; padding:0 18px; border:0; border-left:1px solid var(--line-strong); background:var(--purple-700); color:var(--text-on-purple); font-family:var(--font-body); font-size:13.5px; font-weight:500; cursor:pointer; display:flex; align-items:center; gap:7px}
+.copy-field .cp:hover{background:var(--purple-600)}
+.code-box{text-align:center; padding:28px; background:var(--bg-1); border:1px solid var(--line-strong); border-radius:var(--r-lg); margin-bottom:18px}
+.code-box .code{font-family:var(--font-mono); font-size:42px; letter-spacing:.22em; color:var(--text-hi); font-weight:500}
+.code-box .exp{margin-top:12px; font-size:12px; color:var(--text-lo)}
+.invited{margin-top:22px}
+.invited .ih{font-size:var(--fs-xs); letter-spacing:.08em; text-transform:uppercase; color:var(--text-lo); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between}
+.invited .ii{display:flex; align-items:center; gap:11px; padding:10px 0; border-bottom:1px solid var(--line)}
+.invited .ii .info{flex:1}
+.invited .ii .info b{color:var(--text-hi); font-size:13.5px; font-weight:500; display:block}
+.invited .ii .info span{color:var(--text-lo); font-size:12px}
+.invited .ii .ist{font-size:11px; padding:3px 9px; border-radius:var(--r-pill); background:var(--bg-3); color:var(--text-mid)}
+.opt-row{display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-top:1px solid var(--line)}
+.opt-row .ot b{display:block; color:var(--text-hi); font-size:13.5px}
+.opt-row .ot span{display:block; color:var(--text-lo); font-size:12px; margin-top:2px}
+.switch{width:42px;height:24px; border-radius:var(--r-pill); background:var(--purple-700); position:relative; cursor:pointer}
+.switch::after{content:""; position:absolute; top:3px; right:3px; width:18px;height:18px; border-radius:50%; background:#fff}
+.switch.off{background:var(--bg-3)}
+.switch.off::after{right:auto; left:3px}
+.m-foot{display:flex; gap:10px; padding:18px 26px; border-top:1px solid var(--line); background:var(--bg-1)}
+.m-foot .btn{flex:1; justify-content:center}
+
+/* 모달 뒤 흐릿한 대시보드 더미 (단색, blur 없음) */
+.modal-bg{position:absolute; inset:0; padding:var(--sp-6); opacity:.5}
+.modal-bg .row{height:60px; background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r-md); margin-bottom:14px}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+
+    <!-- ============================================================
+         SLIDE 1 — 세션 관리 대시보드
+         ============================================================ -->
+    <section class="slide active" data-title="세션 관리 대시보드">
+      <div class="shell">
+        <!-- 사이드바 -->
+        <aside class="sidebar">
+          <div class="brandmark">
+            <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="#F4F0F7" stroke-width="1.8"><path d="M3 13c2-5 5-7 9-7s7 2 9 7" stroke-linecap="round"/><circle cx="12" cy="14" r="2.4" fill="#D29BE8" stroke="none"/></svg></span>
+            <span class="wm"><b>MIND BREEZE</b><span>2.0</span></span>
+          </div>
+          <nav class="nav">
+            <div class="navi on">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round"/></svg> 세션 관리
+            </div>
+            <div class="navi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 19a4 4 0 0 0-8 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke-linecap="round"/></svg> 내담자
+            </div>
+            <div class="navi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5M4 19h16M8 16l3-5 3 3 4-7" stroke-linecap="round" stroke-linejoin="round"/></svg> 리포트
+            </div>
+            <div class="navi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 8v8M8 12h8" stroke-linecap="round"/><circle cx="12" cy="12" r="9"/></svg> 셀프 트레이닝
+            </div>
+            <div class="grp">디바이스</div>
+            <div class="navi">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l8 10-4 3V4l4 3-8 10" stroke-linecap="round" stroke-linejoin="round"/></svg> LINK BAND
+            </div>
+          </nav>
+          <div class="me">
+            <span class="avatar">윤</span>
+            <span class="info"><b>윤서연 상담사</b><span>임상심리전문가</span></span>
+          </div>
+        </aside>
+
+        <!-- 메인 -->
+        <div class="main">
+          <header class="topbar">
+            <div class="left">
+              <div class="crumb">대시보드 / <b>세션 관리</b></div>
+            </div>
+            <div class="left">
+              <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3" stroke-linecap="round"/></svg> 내담자·세션 검색</div>
+            </div>
+          </header>
+
+          <div class="content">
+            <div class="dash-head reveal">
+              <div>
+                <div class="overline">2026년 6월 · 24주차</div>
+                <h1 class="page-title" style="margin-top:6px">세션 관리</h1>
+              </div>
+              <div class="filters">
+                <div class="seg">
+                  <button class="on">주간</button><button>일간</button><button>목록</button>
+                </div>
+                <div class="select"><span class="dt" style="background:var(--type-clinical)"></span> 모든 유형 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round"/></svg></div>
+                <div class="select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/></svg> 온/오프라인 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round"/></svg></div>
+                <div class="select"><span class="dt" style="background:var(--st-scheduled)"></span> 상태 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" stroke-linecap="round"/></svg></div>
+                <button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> 세션 생성</button>
+              </div>
+            </div>
+
+            <div class="dash-grid">
+              <!-- 캘린더 -->
+              <div class="card cal reveal" style="animation-delay:.06s">
+                <div class="cal-top">
+                  <div class="nav">
+                    <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                    <h3 class="h3" style="margin:0 6px">6월 1일 — 7일</h3>
+                    <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+                  </div>
+                  <button class="btn ghost sm">오늘</button>
+                </div>
+                <div class="cal-grid">
+                  <div class="cal-days">
+                    <div class="d"></div>
+                    <div class="d"><div class="wd">월</div><div class="dn">1</div></div>
+                    <div class="d"><div class="wd">화</div><div class="dn">2</div></div>
+                    <div class="d"><div class="wd">수</div><div class="dn">3</div></div>
+                    <div class="d today"><div class="wd">목</div><div class="dn">4</div></div>
+                    <div class="d"><div class="wd">금</div><div class="dn">5</div></div>
+                    <div class="d"><div class="wd">토</div><div class="dn">6</div></div>
+                    <div class="d"><div class="wd">일</div><div class="dn">7</div></div>
+                  </div>
+                  <div class="cal-body" style="overflow:auto">
+                    <div class="cal-hours">
+                      <div class="hr"><span>09:00</span></div><div class="hr"><span>10:00</span></div>
+                      <div class="hr"><span>11:00</span></div><div class="hr"><span>12:00</span></div>
+                      <div class="hr"><span>13:00</span></div><div class="hr"><span>14:00</span></div>
+                      <div class="hr"><span>15:00</span></div>
+                    </div>
+                    <!-- 월 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div>
+                      <div class="evt clinical" style="top:6px;height:74px"><div class="et">09:00 – 10:00</div><div class="en">박지우 · 임상상담</div><div class="em"><span class="pill">온라인</span></div></div>
+                    </div>
+                    <!-- 화 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div>
+                      <div class="evt meditation" style="top:130px;height:86px"><div class="et">11:00 – 12:30</div><div class="en">목요 명상 클래스</div><div class="em"><span class="pill">1:N · 6명</span></div></div>
+                    </div>
+                    <!-- 수 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div>
+                      <div class="evt hypnosis" style="top:200px;height:74px"><div class="et">12:00 – 13:00</div><div class="en">최면 세션 · 이도현</div><div class="em"><span class="pill">오프라인</span></div></div>
+                    </div>
+                    <!-- 목 (today) -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div>
+                      <div class="now-line" style="top:148px"></div>
+                      <div class="evt live" style="top:70px;height:84px"><div class="et" style="color:#FF9AB1">진행중 · 14:00</div><div class="en">김민준 · 임상상담</div><div class="em"><span class="pill">● REC 18:42</span></div></div>
+                      <div class="evt clinical" style="top:280px;height:74px"><div class="et">15:30 – 16:30</div><div class="en">정수아 · 임상상담</div><div class="em"><span class="pill">온라인</span></div></div>
+                    </div>
+                    <!-- 금 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div>
+                      <div class="evt custom" style="top:40px;height:74px"><div class="et">09:30 – 10:30</div><div class="en">진로 코칭 · 한예린</div><div class="em"><span class="pill">기타</span></div></div>
+                    </div>
+                    <!-- 토 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div></div>
+                    <!-- 일 -->
+                    <div class="cal-col"><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div><div class="hr"></div></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 아젠다 -->
+              <div class="card agenda reveal" style="animation-delay:.12s">
+                <div class="agenda-top">
+                  <div><div class="overline">오늘 · 6월 4일</div><h3 class="h3" style="margin-top:4px">세션 4건</h3></div>
+                  <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>
+                </div>
+                <div class="agenda-list">
+                  <div class="scard clinical">
+                    <div class="row1"><span class="time">14:00 – 15:00</span><span class="badge"><span class="dt dt-live"></span>진행중</span></div>
+                    <div class="nm">김민준 내담자</div>
+                    <div class="ty"><span class="badge outline" style="height:auto;padding:1px 8px;font-size:11px"><span class="dt dt-clinical"></span>임상심리상담</span></div>
+                    <div class="tags">
+                      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m9 10 4 2-4 2z" fill="currentColor"/></svg>온라인 · 1:1</span>
+                      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 7l8 10-4 3V4l4 3-8 10" stroke-linecap="round"/></svg>LINK BAND 필수</span>
+                    </div>
+                  </div>
+                  <div class="scard meditation">
+                    <div class="row1"><span class="time">11:00 – 12:30</span><span class="badge"><span class="dt dt-done"></span>완료</span></div>
+                    <div class="nm">목요 명상 클래스</div>
+                    <div class="ty"><span class="badge outline" style="height:auto;padding:1px 8px;font-size:11px"><span class="dt dt-meditation"></span>명상수업</span></div>
+                    <div class="tags">
+                      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 19a4 4 0 0 0-8 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>온라인 · 1:N · 6명</span>
+                      <span class="tag">LINK BAND 선택</span>
+                    </div>
+                  </div>
+                  <div class="scard clinical">
+                    <div class="row1"><span class="time">15:30 – 16:30</span><span class="badge"><span class="dt dt-scheduled"></span>예정</span></div>
+                    <div class="nm">정수아 내담자</div>
+                    <div class="ty"><span class="badge outline" style="height:auto;padding:1px 8px;font-size:11px"><span class="dt dt-clinical"></span>임상심리상담</span></div>
+                    <div class="tags">
+                      <span class="tag">온라인 · 1:1</span>
+                      <span class="tag">LINK BAND 필수</span>
+                    </div>
+                  </div>
+                  <div class="scard custom">
+                    <div class="row1"><span class="time">17:00 – 18:00</span><span class="badge"><span class="dt dt-scheduled"></span>예정</span></div>
+                    <div class="nm">한예린 내담자</div>
+                    <div class="ty"><span class="badge outline" style="height:auto;padding:1px 8px;font-size:11px"><span class="dt dt-custom"></span>기타 · 진로 코칭</span></div>
+                    <div class="tags">
+                      <span class="tag">오프라인 Solo</span>
+                      <span class="tag">LINK BAND 미사용</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SLIDE 2 — 세션 생성/수정 폼
+         ============================================================ -->
+    <section class="slide" data-title="세션 생성 / 수정 폼">
+      <div class="shell">
+        <aside class="sidebar">
+          <div class="brandmark">
+            <span class="glyph"><svg viewBox="0 0 24 24" fill="none" stroke="#F4F0F7" stroke-width="1.8"><path d="M3 13c2-5 5-7 9-7s7 2 9 7" stroke-linecap="round"/><circle cx="12" cy="14" r="2.4" fill="#D29BE8" stroke="none"/></svg></span>
+            <span class="wm"><b>MIND BREEZE</b><span>2.0</span></span>
+          </div>
+          <nav class="nav">
+            <div class="navi on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round"/></svg> 세션 관리</div>
+            <div class="navi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M16 19a4 4 0 0 0-8 0M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke-linecap="round"/></svg> 내담자</div>
+            <div class="navi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19V5M4 19h16M8 16l3-5 3 3 4-7" stroke-linecap="round" stroke-linejoin="round"/></svg> 리포트</div>
+          </nav>
+          <div class="me"><span class="avatar">윤</span><span class="info"><b>윤서연 상담사</b><span>임상심리전문가</span></span></div>
+        </aside>
+
+        <div class="main">
+          <header class="topbar">
+            <div class="left">
+              <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <div class="crumb">세션 관리 / <b>새 세션 생성</b></div>
+            </div>
+            <div class="left">
+              <button class="btn ghost">취소</button>
+              <button class="btn secondary">임시저장</button>
+            </div>
+          </header>
+
+          <div style="flex:1; min-height:0">
+            <div class="form-wrap">
+              <!-- 폼 -->
+              <div class="form-panel">
+                <div class="reveal">
+                  <div class="overline">새 세션</div>
+                  <h1 class="page-title" style="margin-top:6px">세션 만들기</h1>
+                </div>
+
+                <!-- 유형 -->
+                <div class="form-sec reveal" style="animation-delay:.05s">
+                  <div class="lbl"><span class="n">1</span> 세션 유형</div>
+                  <div class="type-grid">
+                    <div class="type-opt on">
+                      <svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      <span class="dt" style="background:var(--type-clinical)"></span><b>임상심리상담</b><span>clinical</span>
+                    </div>
+                    <div class="type-opt"><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="dt" style="background:var(--type-hypnosis)"></span><b>최면심리상담</b><span>hypnosis</span></div>
+                    <div class="type-opt"><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="dt" style="background:var(--type-meditation)"></span><b>명상수업</b><span>meditation</span></div>
+                    <div class="type-opt"><svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="dt" style="background:var(--type-custom)"></span><b>기타</b><span>custom · 직접 입력</span></div>
+                  </div>
+                  <div class="custom-row" style="opacity:.5">
+                    <input class="input" placeholder="기타 선택 시 유형명을 직접 입력 (예: 진로 코칭, 부모 상담)" />
+                  </div>
+                </div>
+
+                <!-- 진행 방식 -->
+                <div class="form-sec reveal" style="animation-delay:.1s">
+                  <div class="lbl"><span class="n">2</span> 진행 방식</div>
+                  <div class="two">
+                    <div>
+                      <div class="muted" style="font-size:12px;margin-bottom:8px">연결</div>
+                      <div class="three" style="grid-template-columns:1fr 1fr">
+                        <div class="radio-card on"><span class="rd"></span><span class="tx"><b>온라인</b><span>WebRTC 화상 + 녹음 + EEG</span></span></div>
+                        <div class="radio-card"><span class="rd"></span><span class="tx"><b>오프라인</b><span>Solo 방 · 녹음 + EEG</span></span></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="muted" style="font-size:12px;margin-bottom:8px">인원</div>
+                      <div class="three" style="grid-template-columns:1fr 1fr">
+                        <div class="radio-card on"><span class="rd"></span><span class="tx"><b>1:1</b><span>상담사 1 · 내담자 1</span></span></div>
+                        <div class="radio-card"><span class="rd"></span><span class="tx"><b>1:N</b><span>그룹 · SFU 화상</span></span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- LINK BAND -->
+                <div class="form-sec reveal" style="animation-delay:.15s">
+                  <div class="lbl"><span class="n">3</span> LINK BAND 설정</div>
+                  <div class="three">
+                    <div class="radio-card"><span class="rd"></span><span class="tx"><b>미사용</b><span>EEG 측정 안 함</span></span></div>
+                    <div class="radio-card on"><span class="rd"></span><span class="tx"><b>필수</b><span>착용해야 시작 가능</span></span></div>
+                    <div class="radio-card"><span class="rd"></span><span class="tx"><b>선택</b><span>내담자 동의 시 착용</span></span></div>
+                  </div>
+                </div>
+
+                <!-- 일정 + 참여자 -->
+                <div class="form-sec reveal" style="animation-delay:.2s">
+                  <div class="lbl"><span class="n">4</span> 일정 · 참여자</div>
+                  <div class="two">
+                    <div class="field"><label>날짜</label><div class="input" style="display:flex;align-items:center;gap:10px;color:var(--text-hi)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4" stroke-linecap="round"/></svg> 2026. 06. 11 (목)</div></div>
+                    <div class="field"><label>시간</label><div class="input mono" style="display:flex;align-items:center;gap:10px;color:var(--text-hi)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round"/></svg> 14:00 — 15:00 (60분)</div></div>
+                  </div>
+                  <div class="field">
+                    <label>참여자</label>
+                    <div class="participants">
+                      <span class="pchip"><span class="avatar av">김</span><b>김민준</b><span class="x"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg></span></span>
+                      <span class="add-chip"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> 참여자 추가</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 요약 프리뷰 -->
+              <div class="summary">
+                <div class="overline reveal">실시간 요약</div>
+                <h3 class="h2 reveal" style="margin:6px 0 18px">이 세션은…</h3>
+                <div class="preview-card reveal" style="animation-delay:.08s">
+                  <div class="pc-head">
+                    <div class="badge outline" style="border-color:var(--line-purple);color:var(--purple-300)"><span class="dt dt-clinical"></span>임상심리상담</div>
+                    <div class="h2" style="margin-top:12px">김민준 내담자 세션</div>
+                    <div class="muted mono" style="font-size:13px;margin-top:6px">2026.06.11 · 14:00–15:00</div>
+                  </div>
+                  <div class="kv"><span class="k">연결</span><span class="v"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--st-done)" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m9 10 4 2-4 2z" fill="var(--st-done)"/></svg> 온라인 · WebRTC</span></div>
+                  <div class="kv"><span class="k">인원</span><span class="v">1:1 · 상담사 + 내담자</span></div>
+                  <div class="kv"><span class="k">LINK BAND</span><span class="v"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--purple-300)" stroke-width="1.8"><path d="M8 7l8 10-4 3V4l4 3-8 10" stroke-linecap="round"/></svg> 필수 · Fp1·Fp2</span></div>
+                  <div class="kv"><span class="k">녹음</span><span class="v">자동 · STT + AI 요약</span></div>
+                </div>
+                <div class="matrix-note reveal" style="animation-delay:.14s">
+                  <b>온라인 · 1:1 · 필수</b> 조합 → Live 화면에 <b>화상 영역 + EEG 대시보드(10종 지표)</b>가 함께 표시됩니다. 시작 전 LINK BAND 착용·녹음 동의가 필요합니다.
+                </div>
+                <div style="margin-top:auto; display:flex; gap:10px; padding-top:24px">
+                  <button class="btn secondary" style="flex:1;justify-content:center">미리보기</button>
+                  <button class="btn primary lg" style="flex:1.4;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 13 4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> 세션 생성</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SLIDE 3 — Live (온라인)
+         ============================================================ -->
+    <section class="slide" data-title="세션 Live — 온라인 (WebRTC + EEG)">
+      <div class="live-shell">
+        <div class="live-top reveal">
+          <div class="l">
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="sess">
+              <b><span class="badge outline" style="height:auto;padding:2px 9px;font-size:11px;border-color:var(--line-purple);color:var(--purple-300)"><span class="dt dt-clinical"></span>임상심리상담</span> 김민준 내담자 세션</b>
+              <span>온라인 · 1:1 · LINK BAND 필수</span>
+            </div>
+          </div>
+          <div class="r">
+            <span class="live-badge"><span class="dt"></span>REC 18:42</span>
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L16.5 3h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5L8 11a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z"/></svg></button>
+            <button class="btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> 세션 종료</button>
+          </div>
+        </div>
+
+        <div class="live-body">
+          <!-- 비디오 -->
+          <div class="video-area reveal" style="animation-delay:.05s">
+            <div class="video-main">
+              <div class="comfy"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg><span>{{COMFYUI_BG}} · 내담자 화상</span></div></div>
+              <div class="vlabel"><span class="dt"></span> 김민준 내담자</div>
+              <div class="vcontrols">
+                <div class="vbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke-linecap="round"/></svg></div>
+                <div class="vbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="14" height="14" rx="2"/><path d="m17 9 4-2v10l-4-2" stroke-linejoin="round"/></svg></div>
+                <div class="vbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10" stroke-linecap="round"/></svg></div>
+                <div class="vbtn end"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M21 15.5c-2.5 0-4-.5-4-2 0-2-3-2.5-5-2.5s-5 .5-5 2.5c0 1.5-1.5 2-4 2-1 0-1-1-1-2 0-4 5-6 10-6s10 2 10 6c0 1 0 2-1 2Z"/></svg></div>
+              </div>
+            </div>
+            <div class="thumbs">
+              <div class="thumb"><div class="comfy"><div class="box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/></svg></div></div><div class="tl">윤서연 상담사 (나)</div></div>
+              <div class="thumb add"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>참여자 초대</div>
+            </div>
+          </div>
+
+          <!-- EEG / 메모 / 참여자 패널 -->
+          <div class="live-panel reveal" style="animation-delay:.1s">
+            <div class="panel-tabs">
+              <button class="on">EEG 대시보드</button>
+              <button>기록 메모 <span class="cnt">7</span></button>
+              <button>참여자 <span class="cnt">2</span></button>
+            </div>
+            <div class="panel-body">
+              <div class="eeg-head">
+                <div class="l"><h3 class="h3">실시간 뇌파</h3><span class="sample-badge">샘플 데이터</span></div>
+                <div class="band"><span class="badge" style="height:24px"><span class="dt dt-done"></span>LINK BAND 연결됨</span></div>
+              </div>
+
+              <!-- Fp1 / Fp2 센서 -->
+              <div class="sensors">
+                <div class="sensor">
+                  <div class="sh"><b>Fp1</b><span><span class="dt"></span>좌전두</span></div>
+                  <svg viewBox="0 0 280 42" preserveAspectRatio="none"><path d="M0,21 L12,21 18,8 24,34 30,14 38,28 46,12 54,30 62,18 70,24 80,21 92,21 98,10 104,32 110,16 118,26 126,14 134,29 142,20 150,23 160,21 172,21 178,12 184,30 190,17 198,25 206,15 214,27 222,19 230,22 240,21 260,21 280,21" fill="none" stroke="var(--eeg-signal)" stroke-width="1.4"/></svg>
+                </div>
+                <div class="sensor">
+                  <div class="sh"><b>Fp2</b><span><span class="dt"></span>우전두</span></div>
+                  <svg viewBox="0 0 280 42" preserveAspectRatio="none"><path d="M0,21 L12,21 18,12 24,30 30,16 38,26 46,15 54,28 62,20 70,23 80,21 92,21 98,8 104,33 110,15 118,27 126,13 134,30 142,19 150,24 160,21 172,21 178,14 184,28 190,18 198,26 206,16 214,29 222,20 230,22 240,21 260,21 280,21" fill="none" stroke="var(--eeg-signal)" stroke-width="1.4" opacity=".85"/></svg>
+                </div>
+              </div>
+
+              <!-- 핵심 3종 KPI -->
+              <div class="kpi-row">
+                <div class="kpi"><div class="kl">집중도</div><div class="kn">72<small>%</small></div><div class="kb"><i style="width:72%;background:var(--eeg-focus)"></i></div></div>
+                <div class="kpi"><div class="kl">이완도</div><div class="kn">58<small>%</small></div><div class="kb"><i style="width:58%;background:var(--eeg-calm)"></i></div></div>
+                <div class="kpi"><div class="kl">스트레스</div><div class="kn">34<small>%</small></div><div class="kb"><i style="width:34%;background:var(--eeg-stress)"></i></div></div>
+              </div>
+
+              <!-- 10종 지표 (나머지 7 + 위 3 = 10) -->
+              <div class="idx-list">
+                <div class="sub">실시간 지표 · 10종</div>
+                <div class="idx"><span class="nm">좌우뇌 균형</span><span class="track"><i style="width:64%;background:var(--eeg-focus)"></i></span><span class="val">0.64</span></div>
+                <div class="idx"><span class="nm">인지 부하</span><span class="track"><i style="width:47%;background:var(--eeg-stress)"></i></span><span class="val">47</span></div>
+                <div class="idx"><span class="nm">정서 안정</span><span class="track"><i style="width:69%;background:var(--eeg-calm)"></i></span><span class="val">69</span></div>
+                <div class="idx"><span class="nm">각성도</span><span class="track"><i style="width:55%;background:var(--eeg-focus)"></i></span><span class="val">55</span></div>
+                <div class="idx"><span class="nm">명상 깊이</span><span class="track"><i style="width:41%;background:var(--eeg-calm)"></i></span><span class="val">41</span></div>
+                <div class="idx"><span class="nm">피로도</span><span class="track"><i style="width:28%;background:var(--eeg-stress)"></i></span><span class="val">28</span></div>
+                <div class="idx"><span class="nm">몰입도</span><span class="track"><i style="width:61%;background:var(--eeg-focus)"></i></span><span class="val">61</span></div>
+              </div>
+            </div>
+
+            <!-- 녹음 컨트롤 바 -->
+            <div class="rec-bar">
+              <div style="display:flex;align-items:center;gap:14px">
+                <span class="live-badge"><span class="dt"></span>REC</span>
+                <div class="wave">
+                  <i style="animation-delay:0s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.15s"></i><i style="animation-delay:.25s"></i><i style="animation-delay:.05s"></i><i style="animation-delay:.35s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.1s"></i>
+                </div>
+                <span class="mono" style="color:var(--text-hi);font-size:13px">18:42</span>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn ghost sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> 마커</button>
+                <button class="btn secondary sm"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="7" width="10" height="10" rx="1"/></svg> 일시정지</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SLIDE 4 — Live (오프라인 Solo)
+         ============================================================ -->
+    <section class="slide" data-title="세션 Live — 오프라인 Solo (화상 없음)">
+      <div class="live-shell">
+        <div class="live-top reveal">
+          <div class="l">
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="sess">
+              <b><span class="badge outline" style="height:auto;padding:2px 9px;font-size:11px;border-color:var(--line-purple);color:var(--purple-300)"><span class="dt dt-hypnosis"></span>최면심리상담</span> 이도현 내담자 세션</b>
+              <span>오프라인 Solo · 1:1 · LINK BAND 선택</span>
+            </div>
+          </div>
+          <div class="r">
+            <span class="live-badge"><span class="dt"></span>REC 06:18</span>
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L16.5 3h-4l-.3 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.5L8 11a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 2.5h4l.3-2.5a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5a7 7 0 0 0 .1-1Z"/></svg></button>
+            <button class="btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> 세션 종료</button>
+          </div>
+        </div>
+
+        <div class="live-body">
+          <!-- 비디오 영역 비활성 (Solo) -->
+          <div class="video-area reveal" style="animation-delay:.05s">
+            <div class="solo-area">
+              <div class="ring"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke-linecap="round"/></svg></div>
+              <div>
+                <h3>오프라인 Solo 방</h3>
+                <p>화상 연결이 없는 대면 세션입니다. 녹음과 EEG 측정, 기록 메모가 진행됩니다.</p>
+              </div>
+              <svg class="solo-wave" viewBox="0 0 380 40" preserveAspectRatio="none">
+                <path d="M0,20 Q20,20 30,20 T60,18 T90,26 T120,12 T150,28 T180,16 T210,24 T240,14 T270,26 T300,18 T330,22 T360,20 T380,20" fill="none" stroke="var(--st-live)" stroke-width="1.6" opacity=".7"/>
+              </svg>
+              <div style="display:flex;gap:10px;margin-top:6px">
+                <span class="badge"><span class="dt dt-live"></span>녹음 중 06:18</span>
+                <span class="badge"><span class="dt dt-done"></span>LINK BAND 착용</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 동일 골격의 우측 패널 -->
+          <div class="live-panel reveal" style="animation-delay:.1s">
+            <div class="panel-tabs">
+              <button class="on">EEG 대시보드</button>
+              <button>기록 메모 <span class="cnt">4</span></button>
+              <button>세션 정보</button>
+            </div>
+            <div class="panel-body">
+              <div class="eeg-head">
+                <div class="l"><h3 class="h3">실시간 뇌파</h3><span class="sample-badge">샘플 데이터</span></div>
+                <div class="band"><span class="badge" style="height:24px"><span class="dt dt-done"></span>LINK BAND 연결됨</span></div>
+              </div>
+              <div class="sensors">
+                <div class="sensor">
+                  <div class="sh"><b>Fp1</b><span><span class="dt"></span>좌전두</span></div>
+                  <svg viewBox="0 0 280 42" preserveAspectRatio="none"><path d="M0,21 L14,21 20,14 26,28 34,18 42,24 50,16 58,26 66,20 74,22 84,21 96,21 102,15 108,27 116,18 124,25 132,17 140,26 148,20 156,23 166,21 178,21 184,16 190,26 198,19 206,24 214,17 222,25 230,21 240,21 280,21" fill="none" stroke="var(--eeg-signal)" stroke-width="1.4"/></svg>
+                </div>
+                <div class="sensor">
+                  <div class="sh"><b>Fp2</b><span><span class="dt"></span>우전두</span></div>
+                  <svg viewBox="0 0 280 42" preserveAspectRatio="none"><path d="M0,21 L14,21 20,17 26,25 34,15 42,27 50,19 58,24 66,16 74,26 84,21 96,21 102,18 108,24 116,16 124,27 132,19 140,25 148,17 156,24 166,21 178,21 184,19 190,25 198,16 206,26 214,18 222,24 230,21 240,21 280,21" fill="none" stroke="var(--eeg-signal)" stroke-width="1.4" opacity=".85"/></svg>
+                </div>
+              </div>
+              <div class="kpi-row">
+                <div class="kpi"><div class="kl">집중도</div><div class="kn">44<small>%</small></div><div class="kb"><i style="width:44%;background:var(--eeg-focus)"></i></div></div>
+                <div class="kpi"><div class="kl">이완도</div><div class="kn">81<small>%</small></div><div class="kb"><i style="width:81%;background:var(--eeg-calm)"></i></div></div>
+                <div class="kpi"><div class="kl">스트레스</div><div class="kn">19<small>%</small></div><div class="kb"><i style="width:19%;background:var(--eeg-stress)"></i></div></div>
+              </div>
+              <div class="idx-list">
+                <div class="sub">실시간 지표 · 10종</div>
+                <div class="idx"><span class="nm">좌우뇌 균형</span><span class="track"><i style="width:52%;background:var(--eeg-focus)"></i></span><span class="val">0.52</span></div>
+                <div class="idx"><span class="nm">인지 부하</span><span class="track"><i style="width:22%;background:var(--eeg-stress)"></i></span><span class="val">22</span></div>
+                <div class="idx"><span class="nm">정서 안정</span><span class="track"><i style="width:84%;background:var(--eeg-calm)"></i></span><span class="val">84</span></div>
+                <div class="idx"><span class="nm">각성도</span><span class="track"><i style="width:33%;background:var(--eeg-focus)"></i></span><span class="val">33</span></div>
+                <div class="idx"><span class="nm">명상 깊이</span><span class="track"><i style="width:78%;background:var(--eeg-calm)"></i></span><span class="val">78</span></div>
+                <div class="idx"><span class="nm">피로도</span><span class="track"><i style="width:31%;background:var(--eeg-stress)"></i></span><span class="val">31</span></div>
+                <div class="idx"><span class="nm">몰입도</span><span class="track"><i style="width:70%;background:var(--eeg-focus)"></i></span><span class="val">70</span></div>
+              </div>
+            </div>
+            <div class="rec-bar">
+              <div style="display:flex;align-items:center;gap:14px">
+                <span class="live-badge"><span class="dt"></span>REC</span>
+                <div class="wave">
+                  <i style="animation-delay:0s"></i><i style="animation-delay:.12s"></i><i style="animation-delay:.24s"></i><i style="animation-delay:.3s"></i><i style="animation-delay:.18s"></i><i style="animation-delay:.28s"></i><i style="animation-delay:.08s"></i><i style="animation-delay:.34s"></i><i style="animation-delay:.22s"></i><i style="animation-delay:.14s"></i>
+                </div>
+                <span class="mono" style="color:var(--text-hi);font-size:13px">06:18</span>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn ghost sm"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg> 마커</button>
+                <button class="btn secondary sm"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="7" width="10" height="10" rx="1"/></svg> 일시정지</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SLIDE 5 — 참여자 초대 모달
+         ============================================================ -->
+    <section class="slide" data-title="참여자 초대 모달">
+      <div class="modal-stage">
+        <!-- 뒤 대시보드 더미 (단색 디밍, blur 없음) -->
+        <div class="modal-bg">
+          <div class="row" style="height:120px"></div>
+          <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+        </div>
+        <div class="backdrop"></div>
+
+        <div class="modal reveal">
+          <div class="m-head">
+            <div class="overline">참여자 초대</div>
+            <h2 class="h2" style="margin-top:8px">김민준 내담자 세션</h2>
+            <div class="muted mono" style="font-size:12.5px;margin-top:4px">2026.06.11 · 14:00 · 온라인 1:1</div>
+            <div class="x"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18" stroke-linecap="round"/></svg></div>
+          </div>
+          <div class="m-tabs">
+            <button>이메일</button>
+            <button class="on">링크</button>
+            <button>코드</button>
+          </div>
+          <div class="m-body">
+            <!-- 링크 탭 -->
+            <div class="field" style="margin-bottom:18px">
+              <label>초대 링크</label>
+              <div class="copy-field">
+                <div class="v">https://app.mindbreeze.io/join/s-9F4K-mbz2</div>
+                <button class="cp"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" stroke-linecap="round"/></svg> 복사</button>
+              </div>
+            </div>
+
+            <div class="opt-row" style="border-top:0;padding-top:0">
+              <div class="ot"><b>링크로 참여 허용</b><span>링크를 받은 사람은 누구나 입장</span></div>
+              <div class="switch"></div>
+            </div>
+            <div class="opt-row">
+              <div class="ot"><b>입장 시 대기실 승인</b><span>상담사가 수락해야 입장</span></div>
+              <div class="switch"></div>
+            </div>
+            <div class="opt-row">
+              <div class="ot"><b>링크 만료</b><span>세션 종료 24시간 후 자동 만료</span></div>
+              <div class="switch off"></div>
+            </div>
+
+            <!-- 초대된 참여자 -->
+            <div class="invited">
+              <div class="ih"><span>초대된 참여자</span><span class="mono">2</span></div>
+              <div class="ii">
+                <span class="avatar" style="background:linear-gradient(150deg,var(--type-clinical),var(--purple-800))">김</span>
+                <span class="info"><b>김민준</b><span>minjun.k@example.com</span></span>
+                <span class="ist">내담자</span>
+              </div>
+              <div class="ii">
+                <span class="avatar">윤</span>
+                <span class="info"><b>윤서연 (나)</b><span>상담사 · 호스트</span></span>
+                <span class="ist" style="color:var(--st-done)">참여 중</span>
+              </div>
+            </div>
+          </div>
+          <div class="m-foot">
+            <button class="btn secondary" style="flex:.8"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 8h16" stroke-linecap="round"/></svg> QR</button>
+            <button class="btn primary"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" stroke-linejoin="round"/></svg> 링크 복사 후 닫기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- 덱 크롬 -->
+<div id="chrome">
+  <div class="dots" id="dots"></div>
+  <span class="sep"></span>
+  <span class="title" id="ctitle">세션 관리 대시보드</span>
+  <span class="sep"></span>
+  <span class="hint"><kbd>←</kbd> <kbd>→</kbd> 이동 · <span id="cidx">1 / 5</span></span>
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var dotsWrap = document.getElementById('dots');
+  var ctitle = document.getElementById('ctitle');
+  var cidx = document.getElementById('cidx');
+  var cur = 0;
+
+  // 도트 생성
+  slides.forEach(function(s, i){
+    var d = document.createElement('div');
+    d.className = 'dot' + (i===0?' on':'');
+    d.addEventListener('click', function(){ go(i); });
+    dotsWrap.appendChild(d);
+  });
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function go(i){
+    if(i<0) i=0; if(i>slides.length-1) i=slides.length-1;
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('on');
+    cur = i;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('on');
+    ctitle.textContent = slides[cur].getAttribute('data-title');
+    cidx.textContent = (cur+1) + ' / ' + slides.length;
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight' || e.key==='PageDown' || e.key===' '){ e.preventDefault(); go(cur+1); }
+    else if(e.key==='ArrowLeft' || e.key==='PageUp'){ e.preventDefault(); go(cur-1); }
+    else if(e.key==='Home'){ go(0); }
+    else if(e.key==='End'){ go(slides.length-1); }
+  });
+
+  // 1920x1080 스테이지를 화면에 맞춰 스케일
+  function fit(){
+    var s = Math.min(window.innerWidth/1920, window.innerHeight/1080);
+    stage.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+})();
+</script>
+</body>
+</html>

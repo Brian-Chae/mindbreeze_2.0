@@ -111,24 +111,62 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 | 불변성 | 객체 직접 변경 금지, 복사 후 수정 |
 | 타입 | `any` 사용 금지, 명시적 인터페이스 사용 |
 
-## Spec-Driven Development
+## 7-Stage SDD (Spec-Driven Development) (2026-06-05~)
 
-**핵심 원칙**: QA List = Spec. QA 항목이 곧 테스트 케이스이자 수락 기준.
+> 모든 Linear 프로젝트에 적용되는 7-Stage 방법론. `sdd-workflow` 스킬 기반.
+> **Stage ③ Verify는 구현 전 필수 게이트** — 건너뛰면 안 됨.
 
-### 파이프라인
+| # | Stage | 산출물 | 설명 | Brian 개입 |
+|---|-------|--------|------|-----------|
+| ① | **Spec** | `specs/NNN/spec.md` | 무엇을 왜 만드는지 | ✅ go/no-go |
+| ② | **Plan** | `specs/NNN/plan.md` | 어떻게 만들지 (아키텍처, Task) | ❌ 자동 |
+| ③ | **Verify** | `specs/NNN/verify.md` | 구현 전 QA 체크리스트 (🚨 필수 게이트) | ✅ 승인 후 구현 |
+| ④ | **Implement** | 코드 | plan.md Task 순차 구현 | ❌ 자동 |
+| ⑤ | **Test** | 테스트 실행 | verify.md 시나리오 실제 테스트 | ❌ 자동 |
+| ⑥ | **Summary** | `specs/NNN/summary.md` | 구현 결과, 디버깅, 테스트 정리 | ❌ 자동 |
+| ⑦ | **Review** | 승인 | Brian 최종 리뷰 → Done | ✅ 승인 |
 
-| Stage | 설명 | Output |
-|---|---|---|
-| 1 | spec.md 작성 (QA List 포함) | `specs/<unix-ts>/spec.md` |
-| 2 | plan.md 작성 | `specs/<unix-ts>/plan.md` |
-| 3 | tasks.md 작성 | `specs/<unix-ts>/tasks.md` |
-| 4 | 구현 | 소스 코드 |
-| 5 | 코드 리뷰 | 리뷰 결과 |
-| 6 | 테스트 + 빌드 검증 | `npm test && npm run build` |
+### Linear 상태 매핑
 
-### 스펙 위치
+| Stage | Linear 상태 |
+|-------|------------|
+| ① Spec | Backlog → Todo |
+| ②~③ Plan + Verify | Todo → In Progress |
+| ④~⑤ Implement + Test | In Progress |
+| ⑥ Summary | In Progress → In Review |
+| ⑦ Review | In Review → Done |
 
-`specs/<unix-ts>-feature-name/` — Unix epoch timestamp 기준 디렉토리. 숫자가 클수록 최근 생성.
+### 핵심 규칙
+
+- **spec + plan + verify + summary 4종 모두 존재해야 SDD 완료**
+- **Stage ③ Verify는 구현 전에만 작성. 사후 작성 금지.**
+- **각 Stage 완료 시 Linear 코멘트에 해당 문서 전문 게시**
+- Git commit: `feat(sdd-NNN):` / `fix(sdd-NNN):` 태그 포함
+- 스펙 번호는 `specs/.sdd-counter`로 관리 (NNN 순차 증가)
+
+### 스펙 디렉토리 구조
+
+```
+specs/
+├── .sdd-counter          # 현재 NNN 값
+├── 001-feature/          # SDD-001
+│   ├── spec.md           # Stage ①
+│   ├── plan.md           # Stage ②
+│   ├── verify.md         # Stage ③ (구현 전)
+│   └── summary.md        # Stage ⑥
+└── ...
+```
+
+### 카드 태그별 간소화
+
+| 태그 | Spec | Plan | Verify | Implement | Test | Summary | Review |
+|------|------|------|--------|-----------|------|---------|--------|
+| [SDD] | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Fix] | 생략 | 원인분석 | ✅ | Fix | ✅ | ✅ | ✅ |
+| [Refactor] | 생략 | ✅ | ✅ | Refactor | ✅ | ✅ | ✅ |
+| [Chore] | 생략 | 생략 | 생략 | Execute | 간소화 | ✅ | ✅ |
+
+> 상세: `sdd-workflow` 스킬 참조.
 
 ## Superpowers 적용 (2026-05-30~)
 

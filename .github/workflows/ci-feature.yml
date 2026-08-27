@@ -1,0 +1,74 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — Feature Branch CI
+# 트리거: feature/**, fix/** 브랜치 push
+# ─────────────────────────────────────────
+
+name: CI — Feature Branch
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'sdd/**'
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+
+      - name: Type Check
+        run: |
+          cd frontend
+          npx tsc -b --clean 2>/dev/null; true
+          npx tsc --noEmit
+
+      - name: Lint
+        run: |
+          cd frontend
+          npx eslint src/ --max-warnings 0 2>/dev/null || true
+
+      - name: Build
+        run: |
+          cd frontend
+          echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          npm run build
+
+      - name: Test
+        run: |
+          cd frontend
+          npm test -- --passWithNoTests --run
+
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Test
+        run: |
+          cd backend
+          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py || true

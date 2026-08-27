@@ -60,6 +60,7 @@ export interface CreateSessionPayload {
   location_type?: LocationType;
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
+  sfu_enabled?: boolean;
 }
 
 export interface UpdateSessionPayload {
@@ -73,6 +74,7 @@ export interface UpdateSessionPayload {
   location_type?: LocationType;
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
+  sfu_enabled?: boolean;
 }
 
 export const listSessions = (): Promise<SessionListResponse> =>
@@ -103,3 +105,10 @@ export const removeParticipant = (id: string, userId: string): Promise<SessionDt
 
 export const addMarker = (id: string, timestampSec: number, note: string): Promise<{ markers: unknown[] }> =>
   apiClient.post<{ markers: unknown[] }>(`/sessions/${id}/markers`, { timestamp_sec: timestampSec, note });
+
+// LiveKit WebRTC 화상 회의 — 세션 참여 + 토큰 발급
+export const joinSession = (id: string): Promise<SessionDto> =>
+  apiClient.post<SessionDto>(`/sessions/${id}/join`);
+
+export const getLiveKitToken = (id: string): Promise<{ livekit_token: string; webrtc_room_id: string }> =>
+  apiClient.post<{ livekit_token: string; webrtc_room_id: string }>(`/sessions/${id}/livekit-token`);

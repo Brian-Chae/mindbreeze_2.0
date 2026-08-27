@@ -115,3 +115,39 @@ def add_marker(
     return session_service.add_marker(
         session_id, current_user["id"], payload.timestamp_sec, payload.note, db
     )
+
+
+# ── LiveKit WebRTC ──────────────────────────────────────────────
+
+@router.post("/{session_id}/livekit-token")
+def get_livekit_token(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """현재 사용자에게 LiveKit 접근 토큰을 발급합니다."""
+    s = session_service._get_session_for_participant(session_id, current_user["id"], db)
+    if not s.webrtc_room_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="WebRTC 룸이 아직 생성되지 않았습니다")
+    token = session_service.generate_livekit_token(
+        room_name=str(s.webrtc_room_id),
+        participant_name=current_user.get("name", "익명"),
+        participant_id=current_user["id"],
+    )
+    return {"livekit_token": token, "webrtc_room_id": str(s.webrtc_room_id)}
+
+
+@router.post("/{session_id}/join")
+def join_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """세션 입장 처리 — 상태 전이 + LiveKit 토큰 발급"""
+    return session_service.join_session(
+        session_id=session_id,
+        user_id=current_user["id"],
+        user_name=current_user.get("name", "익명"),
+        db=db,
+    )
