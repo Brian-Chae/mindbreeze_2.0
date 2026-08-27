@@ -34,5 +34,10 @@ class Settings(BaseSettings):
     # Google OAuth
     google_client_id: str = ""
 
+    # LiveKit WebRTC
+    livekit_host: str = "ws://localhost:7880"
+    livekit_api_key: str = "devkey"
+    livekit_api_secret: str = "secret"
+
 
 settings = Settings()

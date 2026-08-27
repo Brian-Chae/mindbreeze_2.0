@@ -35,6 +35,10 @@ email-validator>=2.2
 httpx>=0.27
 requests>=2.31
 
+# WebRTC / LiveKit
+livekit>=1.0
+livekit-api>=0.8
+
 # AI/ML (worker only)
 # google-generativeai  # Gemini
 # anthropic            # Claude
