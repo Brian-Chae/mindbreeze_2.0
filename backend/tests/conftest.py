@@ -57,6 +57,49 @@ JSONB.bind_processor = _json_bind_processor
 JSONB.result_processor = _json_result_processor
 
 
+# postgresql UUID는 SQLite에서 bind/result 변환기가 없어 str 입력 시 `value.hex`로 폭발한다.
+# DDL만 CHAR(36)으로 바꾸는 것으로는 부족하므로 값 변환기도 SQLite 전용으로 부착한다.
+import uuid as _uuid
+
+_pg_uuid_bind = UUID.bind_processor
+_pg_uuid_result = UUID.result_processor
+
+
+def _uuid_bind_processor(self, dialect):
+    if dialect.name != "sqlite":
+        return _pg_uuid_bind(self, dialect)
+
+    def process(value):
+        if value is None:
+            return None
+        if isinstance(value, _uuid.UUID):
+            return str(value)
+        # str/기타 입력도 UUID로 정규화해 저장 표현을 일치시킨다
+        return str(_uuid.UUID(str(value)))
+
+    return process
+
+
+def _uuid_result_processor(self, dialect, coltype):
+    if dialect.name != "sqlite":
+        return _pg_uuid_result(self, dialect, coltype)
+
+    def process(value):
+        if value is None:
+            return None
+        if not getattr(self, "as_uuid", True):
+            return str(value)
+        if isinstance(value, _uuid.UUID):
+            return value
+        return _uuid.UUID(str(value))
+
+    return process
+
+
+UUID.bind_processor = _uuid_bind_processor
+UUID.result_processor = _uuid_result_processor
+
+
 @pytest.fixture(scope="function")
 def app_client():
     from app.main import app as fastapi_app

@@ -19,7 +19,7 @@ def _register(client, role, email):
     }
     res = client.post(f"/api/v1/auth/register/{role}", json=payload)
     assert res.status_code == 201, res.text
-    return res.json()["tokens"]["access_token"]
+    return res.json()["access_token"]
 
 
 def _headers(token):

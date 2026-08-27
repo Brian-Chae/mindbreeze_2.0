@@ -1,33 +1,43 @@
 """Google OAuth + Client Portal API 테스트"""
 
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestGoogleAuth:
-    """POST /api/v1/auth/google"""
+    """POST /api/v1/auth/google
+
+    실제 구현은 Google userinfo API를 access_token으로 호출한다.
+    따라서 httpx.AsyncClient.get 을 모킹한다.
+    """
+
+    @staticmethod
+    def _userinfo_mock(status_code: int, payload: dict | None = None):
+        """Google userinfo 응답을 흉내내는 AsyncMock 생성"""
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.json.return_value = payload or {}
+        return AsyncMock(return_value=resp)
 
     def test_위조_토큰_401(self, client):
-        """Google ID token 위조 시 401"""
-        with patch("google.oauth2.id_token.verify_oauth2_token") as mock_verify:
-            mock_verify.side_effect = ValueError("Invalid token")
+        """Google access token 위조 시 401"""
+        with patch("httpx.AsyncClient.get", self._userinfo_mock(401)):
             res = client.post(
                 "/api/v1/auth/google",
-                json={"id_token": "fake-token"},
+                json={"access_token": "fake-token"},
             )
             assert res.status_code == 401
             assert "유효하지 않은" in res.json()["detail"]
 
     def test_신규_Google_사용자_생성_200(self, client):
         """신규 Google 사용자 생성 → JWT 발급"""
-        with patch("google.oauth2.id_token.verify_oauth2_token") as mock_verify:
-            mock_verify.return_value = {
-                "email": "google-user@test.com",
-                "name": "Google User",
-            }
+        mock_get = self._userinfo_mock(
+            200, {"email": "google-user@test.com", "name": "Google User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
             res = client.post(
                 "/api/v1/auth/google",
-                json={"id_token": "valid-token"},
+                json={"access_token": "valid-token"},
             )
             assert res.status_code == 200
             data = res.json()
@@ -50,14 +60,13 @@ class TestGoogleAuth:
             },
         )
 
-        with patch("google.oauth2.id_token.verify_oauth2_token") as mock_verify:
-            mock_verify.return_value = {
-                "email": "existing@test.com",
-                "name": "Existing User",
-            }
+        mock_get = self._userinfo_mock(
+            200, {"email": "existing@test.com", "name": "Existing User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
             res = client.post(
                 "/api/v1/auth/google",
-                json={"id_token": "valid-token"},
+                json={"access_token": "valid-token"},
             )
             assert res.status_code == 200
             data = res.json()

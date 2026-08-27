@@ -19,7 +19,7 @@ def _register_counselor(client, email="counselor@test.com"):
     }
     res = client.post("/api/v1/auth/register/counselor", json=payload)
     assert res.status_code == 201, res.text
-    return res.json()["tokens"]["access_token"]
+    return res.json()["access_token"]
 
 
 def _headers(token):

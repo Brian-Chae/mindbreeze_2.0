@@ -25,7 +25,7 @@ def test_register_counselor_성공(client):
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["user"]["role"] == "counselor"
-    assert body["tokens"]["access_token"]
+    assert body["access_token"]
 
 
 def test_register_client_성공(client):

@@ -16,7 +16,7 @@ def _register_counselor(client, email="counselor@test.com"):
         },
     )
     assert res.status_code == 201, res.text
-    return res.json()["tokens"]["access_token"]
+    return res.json()["access_token"]
 
 
 def test_초대_토큰_생성_및_조회(client):
