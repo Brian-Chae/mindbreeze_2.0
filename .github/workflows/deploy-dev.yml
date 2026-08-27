@@ -1,7 +1,9 @@
 # ─────────────────────────────────────────
 # MIND BREEZE 2.0 — Dev 배포 (GitHub Actions)
 # 트리거: develop 브랜치 push
-# EC2: ARM64 (Graviton) → 서버에서 네이티브 빌드
+# 방식: systemd (Docker 미사용) — SDD-014 아키텍처 정합
+#   · 프론트: GitHub에서 빌드 → nginx 루트(/home/ubuntu/mindbreeze/dist) 교체
+#   · 백엔드: 소스 SCP 전송 → (venv 이미 서버에 존재) → alembic upgrade → systemctl restart
 # ─────────────────────────────────────────
 
 name: Deploy Dev
@@ -56,13 +58,11 @@ jobs:
         run: |
           tar czf deploy-bundle.tar.gz \
             frontend/dist \
-            backend/ \
-            docker/docker-compose.dev.yml \
-            docker/nginx \
-            docker/Dockerfile.frontend \
-            docker/Dockerfile.backend
+            backend/app \
+            backend/alembic \
+            backend/requirements.txt
 
-      - name: Deploy to EC2
+      - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
@@ -72,33 +72,54 @@ jobs:
           target: /home/ubuntu/mindbreeze/
           overwrite: true
           strip_components: 0
+          timeout: 60s
 
-      - name: Restart services
+      - name: Apply + restart (systemd)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 10m
           script: |
             set -e
-            cd /home/ubuntu/mindbreeze
+            BASE=/home/ubuntu/mindbreeze
+            cd "$BASE"
 
-            # Extract deploy bundle (preserving directory structure)
+            # 1. 번들 압축 해제 (디렉토리 구조 보존)
             tar xzf deploy-bundle.tar.gz
             rm -f deploy-bundle.tar.gz
 
-            # Build backend natively on ARM64
-            docker compose -f docker/docker-compose.dev.yml build --no-cache backend
+            # 2. 백엔드 소스 교체 (app/·alembic/·requirements.txt)
+            #    .env.dev 등 서버 전용 파일은 번들에 없으므로 보존된다.
+            #    macOS 리소스포크(._*)가 끼지 않도록 정리.
+            find backend/app backend/alembic -name '._*' -delete 2>/dev/null || true
+            rm -rf backend/app/__pycache__ backend/alembic/__pycache__ 2>/dev/null || true
 
-            # Build frontend container with new dist
-            docker compose -f docker/docker-compose.dev.yml build --no-cache frontend
+            # 3. venv 존재 확인 (없으면 생성 — 재배포 내구성)
+            cd "$BASE/backend"
+            if [ ! -x venv/bin/python ]; then
+              python3 -m venv venv
+              venv/bin/pip install --upgrade pip
+            fi
+            venv/bin/pip install -q -r requirements.txt || true
 
-            # Restart all services
-            docker compose -f docker/docker-compose.dev.yml up -d --force-recreate
+            # 4. DB 마이그레이션 (EnvironmentFile 기반)
+            set -a
+            . ./.env.dev
+            set +a
+            venv/bin/alembic upgrade head
 
-            # Run DB migrations
-            sleep 10
-            docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head || true
+            # 5. 서비스 재시작
+            sudo systemctl restart mindbreeze-backend
+            sleep 5
+            sudo systemctl is-active mindbreeze-backend
 
-            # Cleanup
-            docker image prune -f || true
+            # 6. 헬스체크
+            curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"
+
+      - name: Health check (public)
+        run: |
+          sleep 5
+          curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
+          curl -sf https://dev-api.mindbreeze.looxidlabs.com/health && echo " ← api health OK"
