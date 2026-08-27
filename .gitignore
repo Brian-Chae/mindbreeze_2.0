@@ -9,3 +9,6 @@ frontend/node_modules/
 .hermes/
 *.tar.gz
 .DS_Store
+
+# Claude Code / 에이전트 워크트리 (커밋 대상 아님)
+.claude/worktrees/
