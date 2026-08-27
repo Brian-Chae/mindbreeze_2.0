@@ -1,82 +1,79 @@
-// AI 기록지 뷰어 + 편집
+// AI 기록지 3탭 통합 뷰어 (SDD-013)
 
 import { useState } from 'react';
-import { updateRecord, type RecordResponse } from '../../lib/api/audio';
+import type { RecordResponse, TranscriptResponse } from '../../lib/api/audio';
+import { AISummaryTab } from './AISummaryTab';
+import { TranscriptTab } from './TranscriptTab';
+import { CounselorNotesTab } from './CounselorNotesTab';
+
+type TabId = 'summary' | 'transcript' | 'notes';
 
 interface Props {
   record: RecordResponse;
+  transcript: TranscriptResponse | null;
   onUpdated: (r: RecordResponse) => void;
 }
 
-export function RecordView({ record, onUpdated }: Props) {
-  const [notes, setNotes] = useState(record.counselor_notes ?? '');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function RecordView({ record, transcript, onUpdated }: Props) {
+  const [tab, setTab] = useState<TabId>('summary');
 
-  const summary = record.ai_summary as { headline?: string; sections?: Record<string, string> };
-  const sections = summary.sections ?? {};
-
-  const save = async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      const next = await updateRecord(record.session_id, { counselor_notes: notes });
-      onUpdated(next);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const tabs: { id: TabId; label: string }[] = [
+    { id: 'summary', label: 'AI 요약' },
+    { id: 'transcript', label: '전사문' },
+    { id: 'notes', label: '상담사 메모' },
+  ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            record.status === 'completed'
+              ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+              : record.status === 'processing'
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400'
+          }`}
+        >
           상태: {record.status}
         </span>
         {record.is_edited && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
             편집됨 ({record.edit_history.length}회)
           </span>
         )}
       </div>
 
-      {summary.headline && (
-        <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">{summary.headline}</h3>
-      )}
-
-      <div className="grid gap-3">
-        {Object.entries(sections).map(([title, body]) => (
-          <div key={title} className="rounded-lg border border-neutral-200 p-3 dark:border-neutral-800">
-            <h4 className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{title}</h4>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{body}</p>
-          </div>
+      <div className="flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
+        {tabs.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setTab(id)}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              tab === id
+                ? 'border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300'
+            }`}
+          >
+            {label}
+          </button>
         ))}
       </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          상담사 메모
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={5}
-          className="w-full rounded-lg border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-          placeholder="추가 메모를 작성하세요"
-        />
-        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-        <div className="mt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={save}
-            disabled={busy}
-            className="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            메모 저장
-          </button>
-        </div>
+      <div className="min-h-[200px]">
+        {tab === 'summary' && (
+          <AISummaryTab aiSummary={record.ai_summary} />
+        )}
+        {tab === 'transcript' && (
+          <TranscriptTab
+            segments={transcript?.segments ?? []}
+            status={transcript?.status ?? record.status}
+          />
+        )}
+        {tab === 'notes' && (
+          <CounselorNotesTab record={record} onUpdated={onUpdated} />
+        )}
       </div>
     </div>
   );

@@ -79,7 +79,7 @@ export default function ChatPage() {
   }, [selectedRoom]);
 
   return (
-    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab noBottomPad>
+    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
       <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside

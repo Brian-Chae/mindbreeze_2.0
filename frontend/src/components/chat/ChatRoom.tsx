@@ -131,6 +131,8 @@ export function ChatRoom({ roomId, peerName }: Props) {
 
     const handleNewMessage = (msg: ChatMessage): void => {
       if (msg.room_id !== roomId) return;
+      // 내가 보낸 메시지는 handleSend에서 이미 추가됨 (중복 방지)
+      if (user && msg.sender_id === user.id) return;
       appendMessage(roomId, msg);
     };
 

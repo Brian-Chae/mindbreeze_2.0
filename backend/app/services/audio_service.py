@@ -1,5 +1,6 @@
 """오디오 청크 수신 및 STT 트리거 서비스"""
 
+import logging
 import os
 import uuid
 from datetime import datetime, timezone
@@ -11,6 +12,10 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
+from app.tasks.stt_task import run_stt_inline
+from app.tasks.summary_task import run_summary_inline
+
+logger = logging.getLogger(__name__)
 
 CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/tmp/mindbreeze_audio"))
 
@@ -101,12 +106,18 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
 
     total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
 
-    # MVP1: STT/요약 태스크를 동기 실행 (Celery 비활성 환경 + 테스트 호환)
-    from app.tasks.stt_task import run_stt_inline
-    from app.tasks.summary_task import run_summary_inline
-
-    run_stt_inline(str(s.id), db)
-    run_summary_inline(str(s.id), db)
+    # Celery 체인으로 STT/요약 태스크 실행 (비동기)
+    try:
+        from celery import chain
+        chain(
+            stt_task.si(str(s.id)),
+            summary_task.si(str(s.id)),
+        ).apply_async()
+        logger.info("[audio] Celery chain started for session %s", s.id)
+    except Exception:
+        logger.warning("[audio] Celery unavailable, running inline for session %s", s.id)
+        run_stt_inline(str(s.id), db)
+        run_summary_inline(str(s.id), db)
 
     db.refresh(record)
     return {
