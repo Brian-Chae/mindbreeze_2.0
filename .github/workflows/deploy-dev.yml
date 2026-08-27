@@ -104,10 +104,10 @@ jobs:
             fi
             venv/bin/pip install -q -r requirements.txt || true
 
-            # 4. DB 마이그레이션 (EnvironmentFile 기반)
-            set -a
-            . ./.env.dev
-            set +a
+            # 4. DB 마이그레이션 — .env.dev 전체 source 대신 필요한 변수만 추출
+            #    (.env.dev의 RESEND_FROM_EMAIL 등이 공백·꺽쇠를 포함해 셸 source가 깨짐)
+            export DATABASE_URL=$(grep -E '^DATABASE_URL=' ./.env.dev | head -1 | cut -d= -f2-)
+            export REDIS_URL=$(grep -E '^REDIS_URL=' ./.env.dev | head -1 | cut -d= -f2-)
             venv/bin/alembic upgrade head
 
             # 5. 서비스 재시작
