@@ -15,9 +15,12 @@ class Organization(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    ceo_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    biz_number: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
-    address: Mapped[str] = mapped_column(String(300), nullable=False)
+    # SDD-015: 상담사 가입 시 입력하는 6자리 기관 코드 (system_admin이 기관 등록 시 발급)
+    org_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)
+    # SDD-015: system_admin 간이 등록(기관명만)을 위해 사업자 정보는 nullable로 완화
+    ceo_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    biz_number: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True)
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20))
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

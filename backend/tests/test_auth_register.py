@@ -9,7 +9,10 @@ def _consents(tos=True, privacy=True, sensitive=True):
 
 def _payload(email, **overrides):
     from app.services import email_verify_service
+    from tests.conftest import create_test_org
     payload = {
+        # SDD-015: 상담사 가입에는 유효한 기관 코드가 필수 (client 가입에서는 무시됨)
+        "org_code": create_test_org(),
         "email": email,
         "password": VALID_PASSWORD,
         "name": "홍길동",

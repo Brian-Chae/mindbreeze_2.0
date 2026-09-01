@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.services import admin_service
+from app.schemas.org import OrganizationAdminCreate, OrganizationAdminResponse
+from app.services import admin_service, org_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -151,3 +152,42 @@ def unsuspend(
     except ValueError:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     return admin_service.unsuspend_user(uid, admin.id, db)
+
+
+# ---------------------------------------------------------------------------
+# SDD-015: system_admin 전용 기관 등록 (기관명 → 6자리 기관 코드 발급)
+# ---------------------------------------------------------------------------
+
+
+def _serialize_org(org) -> OrganizationAdminResponse:
+    return OrganizationAdminResponse(
+        id=str(org.id),
+        name=org.name,
+        org_code=org.org_code,
+        phone=org.phone,
+        verified=org.verified,
+        created_at=org.created_at.isoformat() if org.created_at else "",
+    )
+
+
+@router.post("/orgs", response_model=OrganizationAdminResponse, status_code=status.HTTP_201_CREATED)
+def admin_register_org(
+    req: OrganizationAdminCreate,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """기관 등록 — 기관명만 입력하면 6자리 기관 코드(org_code)를 발급한다.
+
+    기존 /org/register(신청자를 org_admin으로 승격)와는 별개 흐름이며
+    사용자 역할을 변경하지 않는다.
+    """
+    return _serialize_org(org_service.admin_create_organization(req.name, db, phone=req.phone))
+
+
+@router.get("/orgs", response_model=list[OrganizationAdminResponse])
+def admin_list_orgs(
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """전체 기관 목록 + 발급된 기관 코드."""
+    return [_serialize_org(o) for o in org_service.list_organizations(db)]

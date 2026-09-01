@@ -3,11 +3,14 @@
 
 def _register_counselor(client, email="counselor@test.com"):
     from app.services import email_verify_service
+    from tests.conftest import create_test_org
 
     token = email_verify_service.generate_email_verify_token(email)
     res = client.post(
         "/api/v1/auth/register/counselor",
         json={
+            # SDD-015: 상담사 가입에 필요한 기관 코드
+            "org_code": create_test_org(),
             "email": email,
             "password": "Test1234!",
             "name": "김상담",

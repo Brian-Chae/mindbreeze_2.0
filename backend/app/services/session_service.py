@@ -11,16 +11,19 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
+from app.services import code_service
 
 
-ACTIVE_STATUSES = ("scheduled", "in_progress", "paused")
+# SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
+# 기존 예약형 세션의 "scheduled" 는 그대로 유지해 하위 호환을 지킨다.
+ACTIVE_STATUSES = ("ready", "scheduled", "in_progress", "paused")
 
 TRANSITIONS = {
-    "start": ({"scheduled"}, "in_progress"),
+    "start": ({"ready", "scheduled"}, "in_progress"),
     "pause": ({"in_progress"}, "paused"),
     "resume": ({"paused"}, "in_progress"),
     "end": ({"in_progress", "paused"}, "completed"),
-    "cancel": ({"scheduled", "in_progress", "paused"}, "cancelled"),
+    "cancel": ({"ready", "scheduled", "in_progress", "paused"}, "cancelled"),
 }
 
 
@@ -45,6 +48,9 @@ def _serialize(s: Session) -> dict:
         "status": s.status,
         "host_id": str(s.host_id),
         "scheduled_at": s.scheduled_at,
+        "access_code": s.access_code,
+        "started_at": s.started_at,
+        "ended_at": s.ended_at,
         "duration_min": s.duration_min,
         "title": s.title,
         "notes": s.notes,
@@ -57,7 +63,10 @@ def _serialize(s: Session) -> dict:
         "created_at": s.created_at or _now(),
         "participants": [
             {
-                "user_id": str(p.user_id),
+                # 게스트는 user_id가 없으므로 None으로 직렬화한다
+                "user_id": str(p.user_id) if p.user_id else None,
+                "guest_name": p.guest_name,
+                "is_guest": p.user_id is None,
                 "band_connected": p.band_connected,
                 "linkband_device_id": p.linkband_device_id,
                 "webrtc_peer_id": p.webrtc_peer_id,
@@ -70,6 +79,22 @@ def _serialize(s: Session) -> dict:
         ],
         "waitlist_count": waitlist_count,
     }
+
+
+_FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _sort_key(s: Session) -> datetime:
+    """목록 정렬 키 — scheduled_at 우선, 없으면 created_at, 둘 다 없으면 epoch."""
+    for value in (s.scheduled_at, s.created_at):
+        if value is not None:
+            return _ensure_aware(value)
+    return _FALLBACK_SORT_TIME
+
+
+def generate_access_code(db: DBSession) -> str:
+    """클래스 코드(6자리) 발급 — Session.access_code 에서 unique 보장."""
+    return code_service.generate_unique_code(db, Session, "access_code", label="클래스 코드")
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -96,6 +121,9 @@ def detect_conflict(
     if exclude_id is not None:
         q = q.filter(Session.id != exclude_id)
     for s in q.all():
+        # 일정 없는 즉석 클래스(scheduled_at=None)는 시간 충돌 판정 대상이 아니다
+        if s.scheduled_at is None:
+            continue
         s_start = _ensure_aware(s.scheduled_at)
         s_end = s_start + timedelta(minutes=s.duration_min)
         if s_start < new_end and scheduled_at < s_end:
@@ -105,15 +133,19 @@ def detect_conflict(
 
 def create_session(host_id: str, payload, db: DBSession) -> dict:
     host_uuid = _to_uuid(host_id)
-    scheduled_at = _ensure_aware(payload.scheduled_at)
+    # SDD-015: scheduled_at 이 없으면 "즉석 클래스" — 과거 일시 검증·충돌 검사를 건너뛰고
+    # status를 ready로 두어 상담사가 "시작"을 누를 때 진행중으로 전이한다.
+    scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else None
+    initial_status = "scheduled" if scheduled_at else "ready"
 
-    if scheduled_at < _now() - timedelta(minutes=1):
-        raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
+    if scheduled_at is not None:
+        if scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
 
-    if not payload.force:
-        conflict = detect_conflict(host_uuid, scheduled_at, payload.duration_min, None, db)
-        if conflict:
-            raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+        if not payload.force:
+            conflict = detect_conflict(host_uuid, scheduled_at, payload.duration_min, None, db)
+            if conflict:
+                raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
 
     # type=custom 일 때 custom_type_name 필수 (스키마에서도 검증하나 서비스 레벨 방어)
     if payload.type == "custom" and not (payload.custom_type_name and payload.custom_type_name.strip()):
@@ -133,9 +165,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     session = Session(
         type=payload.type,
         custom_type_name=payload.custom_type_name.strip() if (payload.type == "custom" and payload.custom_type_name) else None,
-        status="scheduled",
+        status=initial_status,
         host_id=host_uuid,
         scheduled_at=scheduled_at,
+        access_code=generate_access_code(db),
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
@@ -175,7 +208,8 @@ def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
     seen: dict[UUID, Session] = {s.id: s for s in hosted}
     for s in participated:
         seen.setdefault(s.id, s)
-    result = sorted(seen.values(), key=lambda s: s.scheduled_at, reverse=True)
+    # scheduled_at 이 없는 즉석 클래스는 created_at 으로 정렬한다
+    result = sorted(seen.values(), key=_sort_key, reverse=True)
     return [_serialize(s) for s in result], len(result)
 
 
@@ -216,10 +250,11 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
-    new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _ensure_aware(s.scheduled_at)
+    _current_scheduled = _ensure_aware(s.scheduled_at) if s.scheduled_at else None
+    new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _current_scheduled
     new_duration = payload.duration_min if payload.duration_min is not None else s.duration_min
 
-    if not payload.force and (payload.scheduled_at or payload.duration_min):
+    if not payload.force and new_scheduled_at is not None and (payload.scheduled_at or payload.duration_min):
         conflict = detect_conflict(s.host_id, new_scheduled_at, new_duration, s.id, db)
         if conflict:
             raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
@@ -280,6 +315,11 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     if s.status not in allowed_from:
         raise HTTPException(status_code=400, detail="잘못된 상태 전이입니다")
     s.status = target
+    # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
+    if action == "start" and s.started_at is None:
+        s.started_at = _now()
+    elif action == "end":
+        s.ended_at = _now()
     db.commit()
     db.refresh(s)
 
@@ -468,3 +508,95 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
     result = _serialize(s)
     result["livekit_token"] = token
     return result
+
+
+# ---------------------------------------------------------------------------
+# SDD-015: 클래스 코드 기반 조회 · 참여
+# ---------------------------------------------------------------------------
+
+# 코드로 참여할 수 없는 상태 (이미 끝났거나 취소된 클래스)
+_CLOSED_STATUSES = ("completed", "cancelled")
+
+
+def _get_session_by_code(code: str, db: DBSession) -> Session:
+    normalized = code_service.normalize_code(code)
+    if len(normalized) != code_service.CODE_LENGTH:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    s = db.query(Session).filter(Session.access_code == normalized).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    return s
+
+
+def get_session_by_code(code: str, db: DBSession) -> dict:
+    """참여 전 클래스 정보 확인 — 인증 불필요, 민감 정보는 노출하지 않는다."""
+    s = _get_session_by_code(code, db)
+    host_name = None
+    if s.host_id:
+        from app.models.user import User
+
+        host = db.query(User).filter(User.id == s.host_id).first()
+        host_name = host.name if host else None
+    return {
+        "id": str(s.id),
+        "access_code": s.access_code,
+        "title": s.title,
+        "type": s.type,
+        "custom_type_name": s.custom_type_name,
+        "status": s.status,
+        "host_name": host_name,
+        "participant_mode": s.participant_mode,
+        "linkband_mode": s.linkband_mode,
+        "location_type": s.location_type,
+        "participant_count": len(list(s.participants or [])),
+        "max_participants": s.max_participants,
+        "started_at": s.started_at,
+        "scheduled_at": s.scheduled_at,
+    }
+
+
+def join_session_by_code(
+    code: str,
+    db: DBSession,
+    *,
+    user_id: str | None = None,
+    guest_name: str | None = None,
+) -> dict:
+    """클래스 코드로 참여.
+
+    로그인 사용자 → SessionParticipant(user_id) 생성 (이미 있으면 재사용).
+    게스트 → user_id=NULL + guest_name 으로 생성. 동일 이름 중복 참여는 허용한다.
+    """
+    s = _get_session_by_code(code, db)
+    if s.status in _CLOSED_STATUSES:
+        raise HTTPException(status_code=400, detail="이미 종료된 클래스입니다")
+
+    if user_id:
+        uid = _to_uuid(user_id)
+        if s.host_id == uid:
+            # host 상담사는 참여자로 중복 등록하지 않는다
+            return {"session": _serialize(s), "participant_id": None, "is_guest": False}
+        existing = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == s.id,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        if existing is None:
+            existing = SessionParticipant(session_id=s.id, user_id=uid)
+            db.add(existing)
+            db.commit()
+        db.refresh(s)
+        return {"session": _serialize(s), "participant_id": str(existing.id), "is_guest": False}
+
+    name = (guest_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="게스트 참여에는 이름이 필요합니다")
+
+    participant = SessionParticipant(session_id=s.id, user_id=None, guest_name=name[:100])
+    db.add(participant)
+    db.commit()
+    db.refresh(s)
+    return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True}

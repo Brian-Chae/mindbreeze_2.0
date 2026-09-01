@@ -153,3 +153,26 @@ def verified_email_token():
     """OTP 검증 통과 후 발급되는 email_verify_token (테스트용)"""
     from app.services import email_verify_service
     return lambda email: email_verify_service.generate_email_verify_token(email)
+
+
+def create_test_org(name: str = "테스트 기관") -> str:
+    """SDD-015 — 테스트용 기관을 만들고 6자리 기관 코드를 반환한다.
+
+    상담사 가입에 유효한 기관 코드가 필요해졌으므로, client fixture가 활성인 상태에서
+    호출해 같은 인메모리 DB에 기관을 생성한다.
+    """
+    from app.core.database import get_db
+    from app.main import app as fastapi_app
+    from app.services import org_service
+
+    db = next(fastapi_app.dependency_overrides[get_db]())
+    try:
+        return org_service.admin_create_organization(name, db).org_code
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def org_code():
+    """상담사 가입용 기관 코드 fixture."""
+    return create_test_org()

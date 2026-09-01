@@ -10,6 +10,7 @@ from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
 from app.schemas.org import OrganizationCreate
+from app.services import code_service
 
 
 def validate_biz_number(biz_number: str) -> bool:
@@ -86,6 +87,8 @@ def create_organization(
         address=data.address,
         phone=data.phone,
         verified=False,
+        # SDD-015: 상담사 가입에 쓰이는 6자리 기관 코드를 등록 시점에 발급
+        org_code=generate_org_code(db),
     )
     db.add(org)
     db.flush()
@@ -331,3 +334,51 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
     if user.role == "org_admin":
         user.role = "counselor"
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# SDD-015: 기관 코드 발급 · system_admin 간이 등록 · 코드 조회
+# ---------------------------------------------------------------------------
+
+
+def generate_org_code(db: Session) -> str:
+    """6자리 기관 코드 발급 — Organization.org_code 에서 unique 보장."""
+    return code_service.generate_unique_code(db, Organization, "org_code", label="기관 코드")
+
+
+def admin_create_organization(name: str, db: Session, *, phone: str | None = None) -> Organization:
+    """system_admin(platform_admin) 전용 간이 기관 등록.
+
+    기관명만으로 기관을 만들고 기관 코드를 발급한다.
+    기존 /org/register(신청자 → org_admin 승격) 흐름과 달리 사용자 역할을 바꾸지 않는다.
+    """
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="기관명을 입력해야 합니다",
+        )
+
+    org = Organization(
+        name=clean_name,
+        phone=phone,
+        verified=True,  # 플랫폼 관리자가 직접 등록하므로 검증 완료로 간주
+        org_code=generate_org_code(db),
+    )
+    db.add(org)
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+def get_organization_by_code(code: str, db: Session) -> Organization | None:
+    """기관 코드로 기관 조회 — 없으면 None."""
+    normalized = code_service.normalize_code(code)
+    if len(normalized) != code_service.CODE_LENGTH:
+        return None
+    return db.query(Organization).filter(Organization.org_code == normalized).first()
+
+
+def list_organizations(db: Session) -> list[Organization]:
+    """전체 기관 목록 (system_admin 용)."""
+    return db.query(Organization).order_by(Organization.created_at.desc()).all()

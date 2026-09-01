@@ -33,3 +33,34 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="사용자를 찾을 수 없습니다")
     return {"id": str(user.id), "role": user.role, "email": user.email, "name": user.name}
+
+
+async def get_current_user_optional(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> dict | None:
+    """선택적 인증 — 토큰이 없거나 유효하지 않으면 None.
+
+    SDD-015 게스트 참여처럼 비로그인 접근을 허용하는 엔드포인트에서 사용한다.
+    401을 던지지 않는다.
+    """
+    if token is None:
+        return None
+    try:
+        return await get_current_user(token=token, db=db)
+    except HTTPException:
+        return None
+
+
+def require_roles(*roles: str):
+    """지정한 role 만 접근을 허용하는 의존성 팩토리 (SDD-015)."""
+
+    async def _guard(current_user: dict = Depends(get_current_user)) -> dict:
+        if current_user.get("role") not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="이 작업을 수행할 권한이 없습니다",
+            )
+        return current_user
+
+    return _guard

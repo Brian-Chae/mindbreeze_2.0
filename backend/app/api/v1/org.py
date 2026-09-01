@@ -27,6 +27,7 @@ def _serialize_org(org) -> OrganizationResponse:
         biz_number=org.biz_number,
         address=org.address,
         phone=org.phone,
+        org_code=org.org_code,
         verified=org.verified,
         verified_at=org.verified_at.isoformat() if org.verified_at else None,
         created_at=org.created_at.isoformat() if org.created_at else "",

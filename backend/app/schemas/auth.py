@@ -44,7 +44,13 @@ class _RegisterBase(BaseModel):
 
 
 class RegisterCounselorRequest(_RegisterBase):
-    """상담사 가입 — role=counselor 고정"""
+    """상담사 가입 — role=counselor 고정.
+
+    SDD-015: 기관 코드(org_code) 필수. 스키마에서는 optional로 두고
+    서비스 레이어에서 400으로 거부해 누락/오류 모두 같은 형태로 응답한다.
+    """
+
+    org_code: str | None = Field(None, max_length=6)
 
 
 class RegisterClientRequest(_RegisterBase):

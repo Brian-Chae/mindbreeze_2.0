@@ -3,10 +3,13 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.schemas.session import (
     InviteParticipantRequest,
+    JoinByCodeRequest,
+    JoinByCodeResponse,
+    SessionByCodeResponse,
     MarkerRequest,
     SessionCreateRequest,
     SessionListResponse,
@@ -34,6 +37,30 @@ def create_session(
     db: DBSession = Depends(get_db),
 ):
     return session_service.create_session(current_user["id"], payload, db)
+
+
+# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
+@router.get("/by-code/{code}", response_model=SessionByCodeResponse)
+def get_session_by_code(code: str, db: DBSession = Depends(get_db)):
+    """클래스 코드로 클래스 정보 조회 — 참여 전 확인용(인증 불필요)."""
+    return session_service.get_session_by_code(code, db)
+
+
+@router.post("/by-code/{code}/join", response_model=JoinByCodeResponse)
+def join_session_by_code(
+    code: str,
+    payload: JoinByCodeRequest | None = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """클래스 코드로 참여 — 로그인 사용자는 user_id로, 게스트는 이름으로 등록한다."""
+    name = payload.name if payload else None
+    return session_service.join_session_by_code(
+        code,
+        db,
+        user_id=current_user["id"] if current_user else None,
+        guest_name=name,
+    )
 
 
 @router.get("/{session_id}", response_model=SessionResponse)

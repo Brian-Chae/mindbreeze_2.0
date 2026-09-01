@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import secrets
-import string
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from app.models.counselor_profile import CounselorProfile
 from app.models.onboarding_progress import OnboardingProgress
+from app.services import code_service
 
 
-_CODE_ALPHABET = string.ascii_uppercase + string.digits
-_MAX_CODE_RETRY = 5
+_CODE_ALPHABET = code_service.CODE_ALPHABET
+_MAX_CODE_RETRY = code_service.MAX_CODE_RETRY
 
 
 def get_progress(user_id: str, db: Session) -> OnboardingProgress:
@@ -60,14 +59,10 @@ def complete_onboarding(user_id: str, db: Session) -> OnboardingProgress:
 
 
 def generate_counselor_code(db: Session) -> str:
-    """6자리 대문자+숫자 상담사 코드 발급 — unique 충돌 시 최대 5회 재시도."""
-    for _ in range(_MAX_CODE_RETRY):
-        code = "".join(secrets.choice(_CODE_ALPHABET) for _ in range(6))
-        exists = (
-            db.query(CounselorProfile)
-            .filter(CounselorProfile.counselor_code == code)
-            .first()
-        )
-        if exists is None:
-            return code
-    raise RuntimeError("상담사 코드 발급에 실패했습니다 (충돌)")
+    """6자리 대문자+숫자 상담사 코드 발급 — unique 충돌 시 최대 5회 재시도.
+
+    SDD-015에서 발급 로직을 code_service로 공용화했다 (동작 동일).
+    """
+    return code_service.generate_unique_code(
+        db, CounselorProfile, "counselor_code", label="상담사 코드"
+    )

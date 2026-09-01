@@ -231,7 +231,16 @@ def _create_user_with_role(
 
 @router.post("/register/counselor", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
 async def register_counselor(req: RegisterCounselorRequest, db: Session = Depends(get_db)):
-    """상담사 가입"""
+    """상담사 가입 — SDD-015에 따라 유효한 기관 코드(org_code)가 필수."""
+    from app.services import org_service
+
+    if not (req.org_code or "").strip():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="기관 코드를 입력해야 합니다")
+
+    org = org_service.get_organization_by_code(req.org_code, db)
+    if org is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="유효하지 않은 기관 코드입니다")
+
     user, access, refresh = _create_user_with_role(
         role="counselor",
         email_verify_token=req.email_verify_token,
@@ -241,6 +250,10 @@ async def register_counselor(req: RegisterCounselorRequest, db: Session = Depend
         consents=req.consents,
         db=db,
     )
+    # 기관 코드로 확인된 기관에 소속시킨다
+    user.org_id = org.id
+    db.commit()
+    db.refresh(user)
     return LoginResponse(
         user=_to_user_response(user),
         access_token=access,
