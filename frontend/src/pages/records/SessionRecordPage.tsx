@@ -3,9 +3,133 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getRecord, getTranscript, type RecordResponse, type TranscriptResponse } from '../../lib/api/audio';
+import AppShell from '../../components/layout/AppShell';
+import { StatusBadge } from '../../components/session/StatusBadge';
 import { RecordView } from '../../components/records/RecordView';
+import { getRecord, getTranscript, type RecordResponse, type TranscriptResponse } from '../../lib/api/audio';
+import { getSession, type SessionDto, type SessionType } from '../../lib/api/session';
 import { useRecordSocket, RECORD_STATUS_LABELS, type RecordStatus } from '../../hooks/useRecordSocket';
+
+const TYPE_LABELS: Record<SessionType, string> = {
+  clinical: '임상심리상담',
+  hypnosis: '최면심리상담',
+  meditation: '명상수업',
+  custom: '기타',
+};
+
+const TYPE_CLASSES: Record<SessionType, string> = {
+  clinical: 'bg-[#F5EDFC] text-[#5F0080]',
+  hypnosis: 'bg-[#EFE3FA] text-[#6E1A8C]',
+  meditation: 'bg-[#E6F8F3] text-[#1F8A5B]',
+  custom: 'bg-[#FFF4DC] text-[#8A6B1F]',
+};
+
+const PROCESSING_STATUSES: RecordStatus[] = ['merging', 'transcribing', 'diarizing', 'summarizing'];
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function AccessCodeCell({ code }: { code: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (): Promise<void> => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* 클립보드 실패 시 무시 */
+    }
+  };
+
+  if (!code) {
+    return <span className="text-[#C2C3CE]">-</span>;
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-mono font-bold tracking-widest text-[#5F0080]">{code}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+      >
+        {copied ? '복사됨' : '복사'}
+      </button>
+    </div>
+  );
+}
+
+function TypeBadge({ session }: { session: SessionDto }) {
+  const label =
+    session.type === 'custom' && session.custom_type_name
+      ? session.custom_type_name
+      : TYPE_LABELS[session.type];
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function ClassMetaCard({ session }: { session: SessionDto }) {
+  const guestCount = session.participants.filter((p) => p.is_guest).length;
+  const participantCount = session.participants.length;
+
+  return (
+    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="font-bold tracking-tight text-[#1F1F1F] text-[17px]">
+          {session.title || '제목 없음'}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <TypeBadge session={session} />
+          <StatusBadge status={session.status} />
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            클래스 코드
+          </div>
+          <AccessCodeCell code={session.access_code} />
+        </div>
+        <div>
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            참여자
+          </div>
+          <span className="text-[14px] text-[#1F1F1F]">
+            {participantCount}명
+            {guestCount > 0 && (
+              <span className="text-[12px] text-[#9B9B9B] ml-1">(게스트 {guestCount})</span>
+            )}
+          </span>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            일시
+          </div>
+          <span className="text-[14px] text-[#6F6F6F] font-mono">
+            {formatDateTime(session.started_at)} ~ {formatDateTime(session.ended_at)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatusProgressBar({ status }: { status: RecordStatus }) {
   const steps: { key: RecordStatus; label: string }[] = [
@@ -17,66 +141,56 @@ function StatusProgressBar({ status }: { status: RecordStatus }) {
   ];
 
   const currentIndex = steps.findIndex((s) => s.key === status);
-  const isFailed = status === 'failed';
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50">
-      <div className="flex items-center gap-1.5">
-        {isFailed ? (
-          <span className="text-sm font-medium text-red-600 dark:text-red-400">처리 실패</span>
-        ) : (
-          <>
-            {steps.map((step, i) => {
-              const isDone = i < currentIndex;
-              const isCurrent = i === currentIndex;
-              return (
-                <div key={step.key} className="flex items-center gap-1.5">
-                  {i > 0 && (
-                    <div
-                      className={`h-px w-6 ${
-                        isDone ? 'bg-indigo-400' : 'bg-neutral-300 dark:bg-neutral-600'
-                      }`}
-                    />
-                  )}
-                  <div
-                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
-                      isDone
-                        ? 'bg-indigo-600 text-white'
-                        : isCurrent
-                          ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-400 dark:bg-indigo-900/50 dark:text-indigo-300'
-                          : 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
-                    }`}
-                  >
-                    {isDone ? '✓' : i + 1}
-                  </div>
-                  <span
-                    className={`text-xs ${
-                      isCurrent
-                        ? 'font-semibold text-indigo-600 dark:text-indigo-400'
-                        : 'text-neutral-500'
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                </div>
-              );
-            })}
-          </>
-        )}
+    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {steps.map((step, i) => {
+          const isDone = i < currentIndex;
+          const isCurrent = i === currentIndex;
+          return (
+            <div key={step.key} className="flex items-center gap-1.5">
+              {i > 0 && (
+                <div
+                  className={`h-px w-6 ${isDone ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'}`}
+                />
+              )}
+              <div
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                  isDone
+                    ? 'bg-[#5F0080] text-white'
+                    : isCurrent
+                      ? 'bg-[#F5EDFC] text-[#5F0080] ring-2 ring-[#5F0080]'
+                      : 'bg-[#F2F3F8] text-[#6F6F6F]'
+                }`}
+              >
+                {isDone ? '✓' : i + 1}
+              </div>
+              <span
+                className={`text-xs ${
+                  isCurrent ? 'font-semibold text-[#5F0080]' : 'text-[#6F6F6F]'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
-      <p className="mt-1.5 text-xs text-neutral-500">
-        {status === 'completed'
-          ? 'AI 기록지 생성이 완료되었습니다.'
-          : status === 'failed'
-            ? '처리 중 오류가 발생했습니다. 다시 시도해주세요.'
-            : `${RECORD_STATUS_LABELS[status]}...`}
+      <p className="mt-2 text-xs text-[#6F6F6F]">
+        {`${RECORD_STATUS_LABELS[status]}...`}
       </p>
     </div>
   );
 }
 
+function isProcessingStatus(status: string | null): status is RecordStatus {
+  return status !== null && PROCESSING_STATUSES.includes(status as RecordStatus);
+}
+
 export default function SessionRecordPage() {
   const { id } = useParams<{ id: string }>();
+  const [session, setSession] = useState<SessionDto | null>(null);
   const [record, setRecord] = useState<RecordResponse | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,19 +221,26 @@ export default function SessionRecordPage() {
     }
   }, [id]);
 
+  const fetchSession = useCallback(async () => {
+    if (!id) return;
+    try {
+      const s = await getSession(id);
+      setSession(s);
+    } catch {
+      /* 세션 메타 로드 실패 시 기록지는 계속 표시 */
+    }
+  }, [id]);
+
   useEffect(() => {
     if (!id) return;
     setLoading(true);
 
-    // WebSocket 구독
     subscribe(id);
+    void fetchSession();
+    void fetchData();
 
-    // 초기 로드
-    fetchData();
-
-    // 폴링 (3초 간격, 완료/실패 시 중지)
     pollRef.current = setInterval(() => {
-      fetchData();
+      void fetchData();
     }, 3000);
 
     return () => {
@@ -127,56 +248,58 @@ export default function SessionRecordPage() {
         clearInterval(pollRef.current);
       }
     };
-  }, [id, subscribe, fetchData]);
+  }, [id, subscribe, fetchData, fetchSession]);
 
-  // WebSocket 상태가 업데이트될 때마다 데이터 갱신
   useEffect(() => {
     if (wsStatus === 'completed' || wsStatus === 'failed') {
-      fetchData();
+      void fetchData();
     }
   }, [wsStatus, fetchData]);
 
+  const recordStatus = record?.status ?? null;
+  const progressStatus = isProcessingStatus(wsStatus)
+    ? wsStatus
+    : isProcessingStatus(recordStatus)
+      ? (recordStatus as RecordStatus)
+      : null;
+
   if (error) {
     return (
-      <div className="p-6">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
-          {error}
-        </div>
-      </div>
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
+      </AppShell>
     );
   }
 
   if (loading && !record) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-sm text-neutral-500">기록지 로딩 중...</div>
-      </div>
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="text-[#6F6F6F] text-sm">기록지 로딩 중...</div>
+      </AppShell>
     );
   }
 
   if (!record) {
     return (
-      <div className="p-6 text-sm text-neutral-500">
-        기록지를 불러올 수 없습니다.
-      </div>
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="text-sm text-[#6F6F6F]">기록지를 불러올 수 없습니다.</div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 px-4 py-4 md:max-w-3xl md:p-6 text-sm md:text-base">
-      <h1 className="text-lg md:text-xl font-semibold text-neutral-900 dark:text-neutral-100">
-        AI 기록지
-      </h1>
+    <AppShell title="AI 기록지" sub="클래스 기록">
+      <div className="space-y-4 max-w-4xl">
+        {session && <ClassMetaCard session={session} />}
 
-      {wsStatus && wsStatus !== 'completed' && wsStatus !== 'failed' && (
-        <StatusProgressBar status={wsStatus} />
-      )}
+        {progressStatus && <StatusProgressBar status={progressStatus} />}
 
-      <RecordView
-        record={record}
-        transcript={transcript}
-        onUpdated={setRecord}
-      />
-    </div>
+        <RecordView
+          record={record}
+          transcript={transcript}
+          onUpdated={setRecord}
+        />
+      </div>
+    </AppShell>
   );
 }

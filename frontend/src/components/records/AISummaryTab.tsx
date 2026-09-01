@@ -1,16 +1,18 @@
 // AI 요약 탭 — 구조화된 요약 결과를 섹션별 카드로 표시
 
+interface AISummaryData {
+  headline?: string;
+  sections?: Record<string, string>;
+  keywords?: string[];
+  risk_flags?: string[];
+}
+
 interface Props {
   aiSummary: Record<string, unknown>;
 }
 
 export function AISummaryTab({ aiSummary }: Props) {
-  const summary = aiSummary as {
-    headline?: string;
-    sections?: Record<string, string>;
-    keywords?: string[];
-    risk_flags?: string[];
-  };
+  const summary = aiSummary as AISummaryData;
   const sections = summary.sections ?? {};
   const keywords = summary.keywords ?? [];
   const riskFlags = summary.risk_flags ?? [];
@@ -18,7 +20,7 @@ export function AISummaryTab({ aiSummary }: Props) {
   return (
     <div className="space-y-4">
       {summary.headline && (
-        <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+        <h3 className="font-bold tracking-tight text-[#1F1F1F] text-lg">
           {summary.headline}
         </h3>
       )}
@@ -27,12 +29,12 @@ export function AISummaryTab({ aiSummary }: Props) {
         {Object.entries(sections).map(([title, body]) => (
           <div
             key={title}
-            className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50"
+            className="rounded-2xl border border-[#DDDEE7] bg-[#F5EDFC] p-4"
           >
-            <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+            <h4 className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
               {title}
             </h4>
-            <p className="mt-1.5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+            <p className="mt-2 text-sm leading-relaxed text-[#1F1F1F]">
               {body}
             </p>
           </div>
@@ -40,22 +42,27 @@ export function AISummaryTab({ aiSummary }: Props) {
       </div>
 
       {keywords.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {keywords.map((kw) => (
-            <span
-              key={kw}
-              className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
-            >
-              {kw}
-            </span>
-          ))}
+        <div>
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
+            키워드
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {keywords.map((kw) => (
+              <span
+                key={kw}
+                className="rounded-full bg-[#F5EDFC] px-2.5 py-0.5 text-xs font-medium text-[#5F0080]"
+              >
+                {kw}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
       {riskFlags.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950/30">
-          <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">위험 플래그</h4>
-          <ul className="mt-1 list-inside list-disc text-sm text-red-600 dark:text-red-300">
+        <div className="rounded-2xl border border-[#F5C2C2] bg-[#FDECEC] p-4">
+          <h4 className="text-sm font-semibold text-[#B3261E]">위험 플래그</h4>
+          <ul className="mt-2 list-inside list-disc text-sm text-[#B3261E]">
             {riskFlags.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
@@ -64,7 +71,7 @@ export function AISummaryTab({ aiSummary }: Props) {
       )}
 
       {!summary.headline && Object.keys(sections).length === 0 && (
-        <p className="text-sm text-neutral-500">아직 AI 요약이 생성되지 않았습니다.</p>
+        <p className="text-sm text-[#6F6F6F]">아직 AI 요약이 생성되지 않았습니다.</p>
       )}
     </div>
   );

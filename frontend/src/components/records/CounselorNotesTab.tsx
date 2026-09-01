@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import { updateRecord, type RecordResponse } from '../../lib/api/audio';
 
+interface EditHistoryEntry {
+  edited_at: string;
+  editor_id: string;
+  changes: Record<string, unknown>;
+}
+
 interface Props {
   record: RecordResponse;
   onUpdated: (r: RecordResponse) => void;
@@ -26,32 +32,28 @@ export function CounselorNotesTab({ record, onUpdated }: Props) {
     }
   };
 
-  const editHistory = record.edit_history as Array<{
-    edited_at: string;
-    editor_id: string;
-    changes: Record<string, unknown>;
-  }> | null;
+  const editHistory = record.edit_history as unknown as EditHistoryEntry[] | null;
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300">
+        <label className="mb-1.5 block text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
           상담사 메모
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={8}
-          className="w-full rounded-lg border border-neutral-300 p-3 text-sm leading-relaxed dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          className="w-full rounded-xl border border-[#DDDEE7] p-3 text-sm leading-relaxed text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 focus:border-[#5F0080]"
           placeholder="세션 중 관찰 내용, 특이사항, 다음 세션 계획 등을 자유롭게 기록하세요."
         />
-        {error && <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-1.5 text-xs text-[#B3261E]">{error}</p>}
         <div className="mt-2 flex justify-end">
           <button
             type="button"
             onClick={save}
             disabled={busy}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-xl bg-[#5F0080] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50 transition-colors"
           >
             {busy ? '저장 중...' : '메모 저장'}
           </button>
@@ -60,13 +62,13 @@ export function CounselorNotesTab({ record, onUpdated }: Props) {
 
       {editHistory && editHistory.length > 0 && (
         <div>
-          <h4 className="mb-2 text-sm font-semibold text-neutral-700 dark:text-neutral-300">
+          <h4 className="mb-2 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
             수정 이력 ({editHistory.length}회)
           </h4>
-          <div className="space-y-2 border-l-2 border-neutral-200 pl-4 dark:border-neutral-700">
+          <div className="space-y-2 border-l-2 border-[#DDDEE7] pl-4">
             {[...editHistory].reverse().map((entry, i) => (
-              <div key={i} className="text-xs text-neutral-500 dark:text-neutral-400">
-                <span className="font-medium text-neutral-600 dark:text-neutral-300">
+              <div key={i} className="text-xs text-[#6F6F6F]">
+                <span className="font-medium text-[#1F1F1F]">
                   {new Date(entry.edited_at).toLocaleString('ko-KR')}
                 </span>
                 {entry.changes && typeof entry.changes === 'object' && (
