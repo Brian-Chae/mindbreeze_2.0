@@ -90,13 +90,18 @@ jobs:
             tar xzf deploy-bundle.tar.gz
             rm -f deploy-bundle.tar.gz
 
-            # 2. 백엔드 소스 교체 (app/·alembic/·requirements.txt)
+            # 2. 프론트 dist → nginx root(/home/ubuntu/mindbreeze/dist) 반영
+            #    번들은 frontend/dist 로 풀리지만 nginx는 dist 를 서빙하므로 복사한다.
+            rm -rf dist
+            cp -r frontend/dist dist
+
+            # 3. 백엔드 소스 교체 (app/·alembic/·requirements.txt)
             #    .env.dev 등 서버 전용 파일은 번들에 없으므로 보존된다.
             #    macOS 리소스포크(._*)가 끼지 않도록 정리.
             find backend/app backend/alembic -name '._*' -delete 2>/dev/null || true
             rm -rf backend/app/__pycache__ backend/alembic/__pycache__ 2>/dev/null || true
 
-            # 3. venv 존재 확인 (없으면 생성 — 재배포 내구성)
+            # 4. venv 존재 확인 (없으면 생성 — 재배포 내구성)
             cd "$BASE/backend"
             if [ ! -x venv/bin/python ]; then
               python3 -m venv venv
