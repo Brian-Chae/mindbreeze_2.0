@@ -1,6 +1,4 @@
 // 세션 진행 중 라이브 페이지 (UI Kit) — 녹음 + 마커 + 화상 회의
-// location_type='online' → LiveKit WebRTC 화상 컴포넌트 표시
-// location_type='offline' → 기존 녹음 + 마커 UI 그대로
 
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -22,8 +20,8 @@ export default function SessionLivePage() {
   const [error, setError] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  const [transitioning, setTransitioning] = useState(false);
 
-  // LiveKit 화상 회의 훅 (온라인 세션 전용)
   const liveKit = useLiveKit(id);
 
   const recorder = useAudioRecorder({
@@ -38,17 +36,30 @@ export default function SessionLivePage() {
       .catch((e) => setError((e as Error).message));
   }, [id]);
 
-  /** "세션 시작" 버튼 클릭 — 오프라인이면 바로 녹음, 온라인이면 LiveKit 연결도 함께 */
+  /** 녹음 시작 버튼 클릭 — 온라인 세션이면 화상 연결 후 동의를 확인한다. */
   const handleStartClick = () => {
     setError(null);
-    // 온라인 세션이면 LiveKit 연결 먼저 — 녹음은 동의 모달 이후
     if (session?.location_type === 'online') {
       liveKit.connect();
     }
     setConsentOpen(true);
   };
 
-  /** 동의 모달 확인 — 녹음 시작 (오디오만, LiveKit은 이미 연결됨) */
+  const startSession = async (): Promise<void> => {
+    if (!id) return;
+    setTransitioning(true);
+    setError(null);
+    try {
+      const updated = await transitionSession(id, 'start');
+      setSession(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
+    } finally {
+      setTransitioning(false);
+    }
+  };
+
+  /** 동의 모달 확인 — 기존 오디오 녹음을 시작한다. */
   const handleConsentConfirm = async () => {
     setConsentOpen(false);
     if (!id) return;
@@ -73,16 +84,19 @@ export default function SessionLivePage() {
 
   const finishSession = async () => {
     if (!id) return;
+    setTransitioning(true);
+    setError(null);
     try {
       if (recorder.state === 'recording' || recorder.state === 'paused') {
         await handleStop();
       }
-      // LiveKit 연결 해제
       liveKit.disconnect();
       await transitionSession(id, 'end');
       navigate(`/sessions/${id}/record`);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setTransitioning(false);
     }
   };
 
@@ -98,11 +112,15 @@ export default function SessionLivePage() {
     );
   }
 
-  const rightSlot = (
-    <button type="button" onClick={finishSession} className="mb-btn">
-      세션 종료
+  const rightSlot = session.status === 'ready' || session.status === 'scheduled' ? (
+    <button type="button" onClick={startSession} disabled={transitioning} className="mb-btn">
+      {transitioning ? '시작 중...' : '클래스 시작'}
     </button>
-  );
+  ) : session.status === 'in_progress' || session.status === 'paused' ? (
+    <button type="button" onClick={finishSession} disabled={transitioning} className="mb-btn">
+      {transitioning ? '종료 중...' : '클래스 종료'}
+    </button>
+  ) : null;
 
   return (
     <AppShell title={session.title ?? '세션'} sub="LIVE" rightSlot={rightSlot}>
@@ -134,14 +152,12 @@ export default function SessionLivePage() {
           </div>
         )}
 
-        {/* LiveKit 오류 */}
         {liveKit.error && (
           <div className="rounded-xl bg-[#FDECEC] p-3.5 text-sm text-[#B3261E] border border-[#F5C2C0]">
             화상 연결 오류: {liveKit.error}
           </div>
         )}
 
-        {/* 온라인 세션 — LiveKit 화상 회의 영역 */}
         {isOnline && (
           <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-5 sm:p-6">
             <div className="text-[12px] font-mono text-[#6F6F6F] uppercase tracking-wider mb-3">
@@ -162,7 +178,7 @@ export default function SessionLivePage() {
             {!liveKit.token && !liveKit.loading && (
               <div className="rounded-2xl bg-[#F9F9F9] min-h-[200px] flex flex-col items-center justify-center gap-3 border border-dashed border-[#E5E5E5]">
                 <p className="text-sm text-[#6F6F6F]">
-                  "세션 시작" 버튼을 누르면 화상 회의가 연결됩니다
+                  녹음을 시작하면 화상 회의가 연결됩니다
                 </p>
               </div>
             )}
@@ -174,14 +190,18 @@ export default function SessionLivePage() {
           <div className="text-[12px] font-mono text-[#6F6F6F] uppercase tracking-wider mb-3">
             녹음
           </div>
-          <RecordingControls
-            state={recorder.state}
-            uploadedChunks={recorder.uploadedChunks}
-            onStart={handleStartClick}
-            onPause={recorder.pause}
-            onResume={recorder.resume}
-            onStop={handleStop}
-          />
+          {session.status === 'in_progress' || session.status === 'paused' ? (
+            <RecordingControls
+              state={recorder.state}
+              uploadedChunks={recorder.uploadedChunks}
+              onStart={handleStartClick}
+              onPause={recorder.pause}
+              onResume={recorder.resume}
+              onStop={handleStop}
+            />
+          ) : (
+            <p className="text-sm text-[#6F6F6F]">클래스를 시작하면 녹음을 사용할 수 있습니다.</p>
+          )}
         </div>
 
         {/* 마커 영역 */}
@@ -197,7 +217,6 @@ export default function SessionLivePage() {
           onConfirm={handleConsentConfirm}
           onCancel={() => {
             setConsentOpen(false);
-            // 동의 취소 시 LiveKit도 연결 해제
             if (isOnline) liveKit.disconnect();
           }}
         />

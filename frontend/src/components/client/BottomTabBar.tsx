@@ -1,8 +1,7 @@
-// 하단 탭바: 홈 / 채팅 / 세션 / 리포트 / 더보기 (상담사와 동일 패턴)
+// 하단 탭바: 홈 / 세션 / 리포트 / 더보기
 // useLocation으로 현재 경로 기반 활성 탭 판단
 
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useChatStore } from '../../stores/chatStore';
 import { ICONS, StrokeIcon } from '../layout/SidebarNav';
 
 interface TabItem {
@@ -13,7 +12,6 @@ interface TabItem {
 
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home },
-  { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
 ];
@@ -25,19 +23,10 @@ interface BottomTabBarProps {
 export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const totalUnread = useChatStore((s) =>
-    s.rooms.reduce((sum, r) => sum + (r.unread_count || 0), 0)
-  );
 
   const isActive = (path: string): boolean => {
     if (path === '/app') return pathname === '/app';
     return pathname.startsWith(path);
-  };
-
-  // 채팅 탭에만 안 읽은 배지 표시
-  const badgeFor = (path: string): number | undefined => {
-    if (path === '/app/chat' && totalUnread > 0) return totalUnread;
-    return undefined;
   };
 
   return (
@@ -47,7 +36,6 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
     >
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
-        const badge = badgeFor(tab.to);
 
         return (
           <button
@@ -63,11 +51,6 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             )}
             <StrokeIcon d={tab.icon} size={22} />
             <span>{tab.label}</span>
-            {badge !== undefined && (
-              <span className="absolute top-0.5 right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
-                {badge > 99 ? '99+' : badge}
-              </span>
-            )}
           </button>
         );
       })}

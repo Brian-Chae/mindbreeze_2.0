@@ -27,6 +27,7 @@ const typeLabel = (type: string): string => {
 
 const statusColor = (status: string): string => {
   switch (status) {
+    case 'ready':       return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled':   return 'bg-[#F5EDFC] text-[#5F0080]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
     case 'paused':      return 'bg-[#FFF4DC] text-[#8A6B1F]';
@@ -63,6 +64,7 @@ function DailyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cur
 
   const cellSessions = (hour: number): SessionDto[] =>
     sessions.filter((s) => {
+      if (!s.scheduled_at) return false;
       const at = new Date(s.scheduled_at);
       return sameDay(at, day) && at.getHours() === hour;
     });
@@ -108,6 +110,7 @@ function WeeklyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cu
 
   const cellSessions = (day: Date, hour: number): SessionDto[] =>
     sessions.filter((s) => {
+      if (!s.scheduled_at) return false;
       const at = new Date(s.scheduled_at);
       return sameDay(at, day) && at.getHours() === hour;
     });

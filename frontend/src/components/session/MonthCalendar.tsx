@@ -59,7 +59,9 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
 
   const sessionsOn = (day: Date): SessionDto[] =>
     sessions
-      .filter((s) => sameDay(new Date(s.scheduled_at), day))
+      .filter((s): s is SessionDto & { scheduled_at: string } => (
+        Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), day)
+      ))
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
 
   return (

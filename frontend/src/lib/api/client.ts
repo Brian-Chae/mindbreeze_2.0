@@ -35,7 +35,7 @@ interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const refresh = tokenStorage.getRefresh();
   if (!refresh) return null;
   try {

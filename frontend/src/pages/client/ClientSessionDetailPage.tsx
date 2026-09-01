@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 /** 상태 한글 라벨 */
 function statusLabel(status: string): string {
   switch (status) {
+    case 'ready': return '준비';
     case 'scheduled': return '예정';
     case 'in_progress': return '진행중';
     case 'paused': return '일시정지';
@@ -21,6 +22,7 @@ function statusLabel(status: string): string {
 /** 상태별 뱃지 클래스 */
 function statusBadgeClass(status: string): string {
   switch (status) {
+    case 'ready': return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled': return 'bg-[#F5EDFC] text-[#5F0080]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
     case 'paused': return 'bg-[#FFF4DC] text-[#8A6B1F]';
@@ -31,7 +33,8 @@ function statusBadgeClass(status: string): string {
 }
 
 /** 날짜/시간 포맷 */
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string | null): string {
+  if (!iso) return '즉시 클래스';
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -87,7 +90,7 @@ export default function ClientSessionDetailPage() {
   const renderActions = (): React.ReactNode => {
     if (!session) return null;
 
-    if (session.status === 'scheduled' || session.status === 'in_progress' || session.status === 'paused') {
+    if (session.status === 'ready' || session.status === 'scheduled' || session.status === 'in_progress' || session.status === 'paused') {
       return (
         <div className="flex flex-col md:flex-row gap-2">
           {session.status === 'in_progress' ? (

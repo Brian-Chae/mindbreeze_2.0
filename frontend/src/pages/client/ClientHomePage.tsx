@@ -2,6 +2,7 @@
 // 캘린더 + 오늘 세션 + 최근 활동 피드 + 최근 리포트
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
 import { listReports, type ReportDto } from '../../lib/api/reports';
@@ -52,6 +53,7 @@ const CARD_SUBTITLE_CLS = 'font-mono text-[11px] text-[#6F6F6F]';
 // ── 컴포넌트 ──────────────────────────────────────────────────────
 
 export default function ClientHomePage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors: Counselor[] = user?.counselors ?? [];
 
@@ -99,9 +101,20 @@ export default function ClientHomePage() {
   // 선택된 날짜의 세션
   const todaySessions = useMemo(() => {
     return filteredSessions
-      .filter((s) => sameDay(new Date(s.scheduled_at), selectedDate))
+      .filter((s): s is SessionDto & { scheduled_at: string } => (
+        Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), selectedDate)
+      ))
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
   }, [filteredSessions, selectedDate]);
+
+  const instantSessions = useMemo(
+    () => filteredSessions.filter((session) => (
+      !session.scheduled_at && (session.status === 'ready' || session.status === 'in_progress')
+    )),
+    [filteredSessions],
+  );
+  const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
+  const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
 
   // 최근 리포트 (최대 4개)
   const recentReports = useMemo(() => {
@@ -126,14 +139,19 @@ export default function ClientHomePage() {
     }
 
     const upcoming = filteredSessions
-      .filter((s) => s.status === 'scheduled' || s.status === 'in_progress')
-      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+      .filter((s) => s.status === 'ready' || s.status === 'scheduled' || s.status === 'in_progress')
+      .sort((a, b) => new Date(a.scheduled_at ?? a.created_at).getTime() - new Date(b.scheduled_at ?? b.created_at).getTime())
       .slice(0, 5);
     for (const s of upcoming) {
       const ts = new Date(s.created_at).getTime();
-      const sessionTime = formatDate(s.scheduled_at);
+      const sessionTitle = s.title || '세션';
+      const message = s.status === 'ready'
+        ? `'${sessionTitle}' 클래스가 시작 대기 중입니다. 지금 참여할 수 있습니다`
+        : s.status === 'in_progress'
+          ? `'${sessionTitle}' 클래스가 진행 중입니다`
+          : `'${sessionTitle}' 세션이 예정되었습니다 (${formatDate(s.scheduled_at)})`;
       items.push({
-        message: `'${s.title || '세션'}' 세션이 예정되었습니다 (${sessionTime})`,
+        message,
         time: relativeTime(s.created_at),
         timestamp: ts,
       });
@@ -207,6 +225,27 @@ export default function ClientHomePage() {
         <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>
       ) : (
         <>
+          {instantSessions.length > 0 && (
+            <section className={`${CARD_CLS} mb-6`}>
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3.5">
+                <div className={CARD_TITLE_CLS}>즉시 클래스</div>
+                <div className={CARD_SUBTITLE_CLS}>
+                  시작 대기 {readyInstantCount}건 · 진행 중 {inProgressInstantCount}건
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {instantSessions.map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    onClick={() => navigate(`/app/sessions/${session.id}`)}
+                    counselorName={getCounselorName(session)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* 캘린더 + 오늘 세션 (2열) */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mb-6">
             {/* 좌측: 캘린더 */}

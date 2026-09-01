@@ -23,6 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {
+  ready: ['start', 'cancel'],
   scheduled: ['start', 'cancel'],
   in_progress: ['pause', 'end', 'cancel'],
   paused: ['resume', 'end', 'cancel'],
@@ -38,12 +39,19 @@ const ACTION_LABELS: Record<SessionAction, string> = {
   cancel: '취소',
 };
 
+const participantLabel = (participant: SessionDto['participants'][number]): string =>
+  participant.user_name
+  || participant.user_email
+  || participant.guest_name
+  || (participant.user_id ? participant.user_id.slice(0, 8) : '게스트');
+
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteSelected, setInviteSelected] = useState<SelectedParticipant[]>([]);
 
@@ -52,9 +60,23 @@ export default function SessionDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    getSession(id)
-      .then(setSession)
-      .catch((e: Error) => setError(e.message));
+    let cancelled = false;
+    const loadSession = (): void => {
+      getSession(id)
+        .then((nextSession) => {
+          if (!cancelled) setSession(nextSession);
+        })
+        .catch((e: Error) => {
+          if (!cancelled) setError(e.message);
+        });
+    };
+
+    loadSession();
+    const timer = window.setInterval(loadSession, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [id]);
 
   const handleAction = async (action: SessionAction): Promise<void> => {
@@ -64,6 +86,9 @@ export default function SessionDetailPage() {
     try {
       const updated = await transitionSession(id, action);
       setSession(updated);
+      if (action === 'start') {
+        navigate(`/sessions/${id}/live`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : '상태 변경에 실패했습니다');
     } finally {
@@ -114,6 +139,17 @@ export default function SessionDetailPage() {
       setError(e instanceof Error ? e.message : '참여자 제거에 실패했습니다');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleCopyCode = async (): Promise<void> => {
+    if (!session?.access_code) return;
+    try {
+      await navigator.clipboard.writeText(session.access_code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('클래스 코드를 복사하지 못했습니다. 코드를 직접 선택해 주세요.');
     }
   };
 
@@ -192,11 +228,24 @@ export default function SessionDetailPage() {
           <h1 className="text-xl font-bold text-[#1F1F1F]">
             {session.title || '제목 없음'}
           </h1>
+          {session.access_code && (
+            <div className="rounded-xl bg-[#F5EDFC] border border-[#DDD0EA] px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <dt className="text-xs text-[#6F6F6F] mb-1">클래스 코드</dt>
+                <dd className="font-mono text-3xl font-black tracking-[0.16em] text-[#5F0080]">
+                  {session.access_code}
+                </dd>
+              </div>
+              <button type="button" onClick={handleCopyCode} className="mb-btn text-sm">
+                {copied ? '복사 완료' : '코드 복사'}
+              </button>
+            </div>
+          )}
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <dt className="text-xs text-[#6F6F6F] mb-0.5">일시</dt>
               <dd className="text-sm text-[#1F1F1F] font-medium">
-                {new Date(session.scheduled_at).toLocaleString('ko-KR')}
+                {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString('ko-KR') : '즉시 클래스'}
               </dd>
             </div>
             <div>
@@ -245,22 +294,24 @@ export default function SessionDetailPage() {
             <p className="text-sm text-[#6F6F6F]">아직 참여자가 없습니다</p>
           ) : (
             <ul className="divide-y divide-[#EFEFEF] -mx-2">
-              {activeParticipants.map((p) => (
-                <li key={p.user_id} className="flex items-center justify-between px-2 py-2.5">
+              {activeParticipants.map((p, index) => (
+                <li key={p.user_id ?? `guest-${p.guest_name ?? index}`} className="flex items-center justify-between px-2 py-2.5">
                   <div className="flex items-center gap-2.5">
                     <span className="w-2 h-2 rounded-full bg-[#1F8A5B]" />
                     <span className="text-sm text-[#1F1F1F]">
-                      {p.user_name || p.user_email || p.user_id.slice(0, 8)}
+                      {participantLabel(p)}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveParticipant(p.user_id)}
-                    disabled={busy}
-                    className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
-                  >
-                    제거
-                  </button>
+                  {p.user_id && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveParticipant(p.user_id!)}
+                      disabled={busy}
+                      className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
+                    >
+                      제거
+                    </button>
+                  )}
                 </li>
               ))}
               {waitlisted.length > 0 && (
@@ -270,25 +321,27 @@ export default function SessionDetailPage() {
                   </li>
                   {waitlisted
                     .sort((a, b) => (a.waitlist_position ?? 99) - (b.waitlist_position ?? 99))
-                    .map((p) => (
-                      <li key={p.user_id} className="flex items-center justify-between px-2 py-2.5">
+                    .map((p, index) => (
+                      <li key={p.user_id ?? `waitlisted-guest-${p.guest_name ?? index}`} className="flex items-center justify-between px-2 py-2.5">
                         <div className="flex items-center gap-2.5">
                           <span className="w-2 h-2 rounded-full bg-[#E6A817]" />
                           <span className="text-sm text-[#6F6F6F]">
-                            {p.user_name || p.user_email || p.user_id.slice(0, 8)}
+                            {participantLabel(p)}
                           </span>
                           <span className="text-xs text-[#A0A0B0]">
                             {p.waitlist_position}순위
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveParticipant(p.user_id)}
-                          disabled={busy}
-                          className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
-                        >
-                          제거
-                        </button>
+                        {p.user_id && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveParticipant(p.user_id!)}
+                            disabled={busy}
+                            className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
+                          >
+                            제거
+                          </button>
+                        )}
                       </li>
                     ))}
                 </>

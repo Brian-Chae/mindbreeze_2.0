@@ -77,6 +77,20 @@ export interface ActionResponse {
   message: string;
 }
 
+export interface AdminOrganizationDto {
+  id: string;
+  name: string;
+  org_code: string | null;
+  phone: string | null;
+  verified: boolean;
+  created_at: string;
+}
+
+export interface AdminOrganizationCreatePayload {
+  name: string;
+  phone?: string;
+}
+
 export const listReviews = (
   params?: { document_type?: string; risk_level?: string; page?: number; size?: number },
 ): Promise<ReviewListResponse> => {
@@ -118,3 +132,11 @@ export const suspendUser = (userId: string, reason: string): Promise<ActionRespo
 
 export const unsuspendUser = (userId: string): Promise<ActionResponse> =>
   apiClient.post<ActionResponse>(`/admin/users/${userId}/unsuspend`);
+
+export const listAdminOrganizations = (): Promise<AdminOrganizationDto[]> =>
+  apiClient.get<AdminOrganizationDto[]>('/admin/orgs');
+
+export const createAdminOrganization = (
+  payload: AdminOrganizationCreatePayload,
+): Promise<AdminOrganizationDto> =>
+  apiClient.post<AdminOrganizationDto>('/admin/orgs', payload);

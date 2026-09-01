@@ -100,11 +100,18 @@ export default function ClientSessionListPage() {
   // 특정 날짜의 세션 목록
   const sessionsOnDay = (day: Date): SessionDto[] =>
     sessions
-      .filter((s) => sameDay(new Date(s.scheduled_at), day))
+      .filter((s): s is SessionDto & { scheduled_at: string } => (
+        Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), day)
+      ))
       .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
 
   // 선택된 날짜의 세션
   const todaySessions = sessionsOnDay(selectedDate);
+  const instantSessions = sessions.filter((session) => (
+    !session.scheduled_at && (session.status === 'ready' || session.status === 'in_progress')
+  ));
+  const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
+  const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
 
   // 날짜 이동
   const shiftDay = (dir: 1 | -1): void => {
@@ -230,6 +237,27 @@ export default function ClientSessionListPage() {
         </div>
       )}
 
+      {!loading && !error && instantSessions.length > 0 && (
+        <section className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3">
+            <h2 className="text-sm font-bold text-[#1F1F1F]">즉시 클래스</h2>
+            <p className="text-xs text-[#6F6F6F]">
+              시작 대기 {readyInstantCount}건 · 진행 중 {inProgressInstantCount}건
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {instantSessions.map((session) => (
+              <SessionCard
+                key={session.id}
+                session={session}
+                onClick={() => navigate(`/app/sessions/${session.id}`)}
+                counselorName={counselorNameMap[session.host_id] || undefined}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ===== 모바일: MonthCalendar + 세션 리스트 ===== */}
       <div className="md:hidden space-y-4">
         <MonthCalendar
@@ -264,9 +292,10 @@ export default function ClientSessionListPage() {
             </h3>
             {(() => {
               const daySessions = sessions.filter((s) => {
+                if (!s.scheduled_at) return false;
                 const d = new Date(s.scheduled_at);
                 return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
-              }).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+              }).sort((a, b) => new Date(a.scheduled_at ?? 0).getTime() - new Date(b.scheduled_at ?? 0).getTime());
               if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
               return daySessions.map((s) => (
                 <SessionCard

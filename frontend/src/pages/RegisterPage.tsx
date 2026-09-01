@@ -75,6 +75,7 @@ export default function RegisterPage() {
 
   // Step 3
   const [name, setName] = useState('');
+  const [orgCode, setOrgCode] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
 
@@ -138,6 +139,11 @@ export default function RegisterPage() {
       setError('이름을 입력해주세요');
       return;
     }
+    const normalizedOrgCode = orgCode.trim().toUpperCase();
+    if (role === 'counselor' && !/^[A-Z0-9]{6}$/.test(normalizedOrgCode)) {
+      setError('기관 코드는 영문 대문자와 숫자로 된 6자리여야 합니다');
+      return;
+    }
     if (!PASSWORD_REGEX.test(password)) {
       setError('비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다');
       return;
@@ -161,7 +167,7 @@ export default function RegisterPage() {
         consents,
       };
       if (role === 'counselor') {
-        await registerCounselor(payload);
+        await registerCounselor({ ...payload, org_code: normalizedOrgCode });
         navigate('/onboarding/counselor');
       } else {
         await registerClient(payload);
@@ -307,6 +313,25 @@ export default function RegisterPage() {
                   className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                 />
               </div>
+
+              {role === 'counselor' && (
+                <div className="space-y-2">
+                  <label htmlFor="orgCode" className="block text-sm font-medium text-ink-secondary">
+                    기관 코드
+                  </label>
+                  <input
+                    id="orgCode"
+                    type="text"
+                    value={orgCode}
+                    onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                    placeholder="영문·숫자 6자리"
+                    maxLength={6}
+                    autoCapitalize="characters"
+                    disabled={loading}
+                    className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm font-mono uppercase text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">

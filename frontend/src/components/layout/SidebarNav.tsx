@@ -11,6 +11,8 @@ interface NavItem {
   end?: boolean;
 }
 
+// 레이아웃 간 공유하는 아이콘 경로로, 컴포넌트 export와 함께 유지한다.
+// eslint-disable-next-line react-refresh/only-export-components
 export const ICONS = {
   home: ['M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z'],
   calendar: [
@@ -81,7 +83,15 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: ICONS.home },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
-  { to: '/chat', label: '채팅', icon: ICONS.message },
+  { to: '/reports', label: '리포트', icon: ICONS.report },
+  { to: '/notifications', label: '알림', icon: ICONS.bell },
+  { to: '/settings', label: '설정', icon: ICONS.settings },
+];
+
+const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
+  { to: '/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/reports', label: '리포트', icon: ICONS.report },
   { to: '/notifications', label: '알림', icon: ICONS.bell },
   { to: '/settings', label: '설정', icon: ICONS.settings },
@@ -89,7 +99,6 @@ const NAV_ITEMS: NavItem[] = [
 
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home, end: true },
-  { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
   { to: '/app/notifications', label: '알림', icon: ICONS.bell },
@@ -97,8 +106,7 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: '/admin/reviews', label: '검토 큐', icon: ICONS.report },
-  { to: '/admin/users', label: '사용자 관리', icon: ICONS.users },
+  { to: '/admin/orgs', label: '기관 관리', icon: ICONS.users },
 ];
 
 interface SidebarNavProps {
@@ -113,6 +121,22 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
+  const navItems =
+    role === 'client'
+      ? CLIENT_NAV_ITEMS
+      : user?.role === 'platform_admin'
+        ? ADMIN_NAV_ITEMS
+        : user?.role === 'org_admin'
+          ? ORG_ADMIN_NAV_ITEMS
+          : NAV_ITEMS;
+  const roleLabel =
+    role === 'client'
+      ? '회원 전용'
+      : user?.role === 'platform_admin'
+        ? '플랫폼 관리자'
+        : user?.role === 'org_admin'
+          ? '기관 관리자'
+          : '상담사 전용';
 
   const handleLogout = async () => {
     await logout();
@@ -150,13 +174,13 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
         <div className="pl-4 flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full shrink-0 ${role === 'client' ? 'bg-[#7C3AED]' : 'bg-[#5F0080]'}`} />
           <span className={`text-[14px] font-semibold tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
-            {role === 'client' ? '회원 전용' : '상담사 전용'}
+            {roleLabel}
           </span>
         </div>
       </div>
 
       <nav className="flex flex-col gap-1">
-        {(role === 'client' ? CLIENT_NAV_ITEMS : NAV_ITEMS).map((it) => (
+        {navItems.map((it) => (
           <NavLink
             key={it.to}
             to={it.to}
@@ -183,34 +207,8 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
         ))}
       </nav>
 
-      {user?.role === 'platform_admin' && role === 'counselor' && (
-        <div className="mt-2 pt-4 border-t border-[#DDD0EA]">
-          <div className="px-3.5 text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
-            어드민
-          </div>
-          {ADMIN_NAV_ITEMS.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.end}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-left transition-colors ${
-                  isActive
-                    ? 'bg-white text-[#5F0080] font-bold shadow-sm'
-                    : 'bg-transparent text-[#1F1F1F] font-medium hover:bg-white/60'
-                }`
-              }
-            >
-              <StrokeIcon d={it.icon} />
-              <span className="flex-1">{it.label}</span>
-            </NavLink>
-          ))}
-        </div>
-      )}
-
       <div className="mt-auto bg-white rounded-2xl p-4">
-        <div className="text-[12px] text-[#6F6F6F] font-mono">{role === 'client' ? '내담자' : '상담사'}</div>
+        <div className="text-[12px] text-[#6F6F6F] font-mono">{roleLabel}</div>
         <div className="font-bold text-[15px] text-[#1F1F1F] mt-1">
           {user?.name ?? '게스트'}
         </div>

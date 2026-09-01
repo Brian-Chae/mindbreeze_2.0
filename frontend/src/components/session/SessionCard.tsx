@@ -22,7 +22,8 @@ const LOCATION_LABELS: Record<LocationType, string> = { online: '온라인', off
 const MODE_LABELS: Record<ParticipantMode, string> = { one_on_one: '1:1', group: '1:N' };
 const LINKBAND_LABELS: Record<LinkbandMode, string> = { none: '', required: 'LB 필수', optional: 'LB 선택' };
 
-const formatDateTime = (iso: string): string => {
+const formatDateTime = (iso: string | null): string => {
+  if (!iso) return '즉시 클래스';
   const d = new Date(iso);
   return d.toLocaleString('ko-KR', {
     year: 'numeric',
@@ -59,6 +60,12 @@ export function SessionCard({ session, onClick, counselorName }: Props) {
       </h3>
       <div className="text-[13px] text-[#6F6F6F] space-y-1">
         <div className="font-mono">{formatDateTime(session.scheduled_at)}</div>
+        {session.access_code && (
+          <div className="flex items-center gap-2">
+            <span className="text-[#6F6F6F]">클래스 코드</span>
+            <span className="font-mono font-bold tracking-widest text-[#5F0080]">{session.access_code}</span>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <span>{session.duration_min}분</span>
           <span>

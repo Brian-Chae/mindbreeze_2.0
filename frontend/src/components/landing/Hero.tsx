@@ -44,6 +44,12 @@ const Hero: React.FC = () => {
             >
               무료로 시작하기
             </Link>
+            <Link
+              to="/join"
+              className="mb-btn mb-btn--ghost h-[52px] px-[22px] text-[16px] rounded-[14px] inline-flex items-center backdrop-blur-md"
+            >
+              클래스 코드로 참여
+            </Link>
             <button
               className="mb-btn mb-btn--ghost h-[52px] px-[22px] text-[16px] rounded-[14px] backdrop-blur-md"
               style={{ background: 'rgba(255,255,255,0.6)' }}

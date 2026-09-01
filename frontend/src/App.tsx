@@ -36,9 +36,12 @@ import ReportDetailPage from './pages/reports/ReportDetailPage';
 import AdminReviewListPage from './pages/admin/AdminReviewListPage';
 import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import AdminOrgManagementPage from './pages/admin/OrgManagementPage';
 import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
 import SettingsPage from './pages/SettingsPage';
 import ClientAppPage from './pages/client/ClientAppPage';
+import ClassJoinPage from './pages/class-join-page';
+import OrgDashboardPage from './pages/OrgDashboardPage';
 import { useAuthStore } from './stores/authStore';
 
 /** 로그인 후 역할에 따라 라우팅 */
@@ -55,7 +58,14 @@ function RoleRouter() {
     return <Navigate to="/app" replace />;
   }
 
-  // counselor, org_admin, platform_admin → 대시보드
+  if (user.role === 'org_admin') {
+    return <Navigate to="/dashboard/org" replace />;
+  }
+
+  if (user.role === 'platform_admin') {
+    return <Navigate to="/admin/orgs" replace />;
+  }
+
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -70,6 +80,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/join" element={<ClassJoinPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -80,6 +91,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/dashboard/org" element={<OrgDashboardPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
@@ -110,6 +122,7 @@ function App() {
         <Route path="/admin/reviews" element={<AdminReviewListPage />} />
         <Route path="/admin/reviews/:targetType/:id" element={<AdminReviewDetailPage />} />
         <Route path="/admin/users" element={<UserManagementPage />} />
+        <Route path="/admin/orgs" element={<AdminOrgManagementPage />} />
         <Route path="/notifications" element={<NotificationCenterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>

@@ -1,6 +1,7 @@
 // 세션 목록 페이지 (목록 + 캘린더 토글 + 생성 모달) — UI Kit
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { listSessions, createSession, type SessionDto, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
 import { SessionCard } from '../../components/session/SessionCard';
@@ -535,6 +536,7 @@ function MobileSection({
 }
 
 export default function SessionListPage() {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -571,15 +573,25 @@ export default function SessionListPage() {
   };
 
   const rightSlot = (
-    <button type="button" onClick={() => setShowCreate(true)} className="mb-btn">
-      + 새 세션
-    </button>
+    <div className="flex items-center gap-2">
+      <button type="button" onClick={() => setShowCreate(true)} className="mb-btn mb-btn--ghost">
+        예약 만들기
+      </button>
+      <button type="button" onClick={() => navigate('/sessions/new')} className="mb-btn">
+        + 즉시 클래스
+      </button>
+    </div>
   );
 
   const navLabel =
     viewMode === 'daily' ? formatDay(currentDate)
       : viewMode === 'weekly' ? formatWeekRange(currentDate)
         : '';
+  const instantSessions = sessions.filter((session) => (
+    !session.scheduled_at && (session.status === 'ready' || session.status === 'in_progress')
+  ));
+  const instantSessionIds = new Set(instantSessions.map((session) => session.id));
+  const listedSessions = sessions.filter((session) => !instantSessionIds.has(session.id));
   const onShift = (dir: 1 | -1): void => {
     if (viewMode === 'daily') shiftDay(dir);
     else if (viewMode === 'weekly') shiftWeek(dir);
@@ -588,6 +600,17 @@ export default function SessionListPage() {
   return (
     <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot} noScroll>
       <div className="h-full flex flex-col min-h-0 max-w-6xl mx-auto w-full">
+        {instantSessions.length > 0 && (
+          <section className="shrink-0 mb-4 bg-white border border-[#EFEFEF] rounded-[20px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-[#1F1F1F]">즉시 클래스</h2>
+              <span className="text-xs text-[#6F6F6F]">{instantSessions.length}개</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+              {instantSessions.map((session) => <SessionCard key={session.id} session={session} />)}
+            </div>
+          </section>
+        )}
         {/* 모바일: 월간 캘린더 + 일간/주간 타임테이블 */}
         <div className="md:hidden flex-1 min-h-0 overflow-y-auto">
         <MobileSection
@@ -629,9 +652,10 @@ export default function SessionListPage() {
               </div>
               {(() => {
                 const daySessions = sessions.filter((s) => {
+                  if (!s.scheduled_at) return false;
                   const d = new Date(s.scheduled_at);
                   return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
-                }).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+                }).sort((a, b) => new Date(a.scheduled_at ?? 0).getTime() - new Date(b.scheduled_at ?? 0).getTime());
                 if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
                 return daySessions.map((s) => <SessionCard key={s.id} session={s} />);
               })()}
@@ -642,12 +666,12 @@ export default function SessionListPage() {
           <div className="flex flex-col min-h-0 overflow-y-auto">
             {viewMode === 'list' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {sessions.length === 0 ? (
+                {listedSessions.length === 0 ? (
                   <p className="text-[#6F6F6F] col-span-full text-center py-12">
-                    등록된 세션이 없습니다.
+                    그 밖의 세션이 없습니다.
                   </p>
                 ) : (
-                  sessions.map((s) => <SessionCard key={s.id} session={s} />)
+                  listedSessions.map((s) => <SessionCard key={s.id} session={s} />)
                 )}
               </div>
             ) : (

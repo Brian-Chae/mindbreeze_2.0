@@ -1,15 +1,17 @@
 // 세션 관리 API
 
-import { apiClient } from './client';
+import { ApiError, apiClient, refreshAccessToken, tokenStorage } from './client';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
-export type SessionStatus = 'scheduled' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+export type SessionStatus = 'ready' | 'scheduled' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
 export type LocationType = 'online' | 'offline';
 export type ParticipantMode = 'one_on_one' | 'group';
 export type LinkbandMode = 'none' | 'required' | 'optional';
 
 export interface SessionParticipant {
-  user_id: string;
+  user_id: string | null;
+  guest_name: string | null;
+  is_guest: boolean;
   band_connected: boolean;
   linkband_device_id: string | null;
   webrtc_peer_id: string | null;
@@ -27,7 +29,10 @@ export interface SessionDto {
   custom_type_name: string | null;
   status: SessionStatus;
   host_id: string;
-  scheduled_at: string;
+  scheduled_at: string | null;
+  access_code: string | null;
+  started_at: string | null;
+  ended_at: string | null;
   duration_min: number;
   title: string | null;
   notes: string | null;
@@ -49,7 +54,7 @@ export interface SessionListResponse {
 
 export interface CreateSessionPayload {
   type: SessionType;
-  scheduled_at: string;
+  scheduled_at?: string;
   duration_min: number;
   title?: string;
   notes?: string;
@@ -77,11 +82,60 @@ export interface UpdateSessionPayload {
   sfu_enabled?: boolean;
 }
 
+export interface SessionByCodeResponse {
+  id: string;
+  access_code: string | null;
+  title: string | null;
+  type: SessionType;
+  custom_type_name: string | null;
+  status: SessionStatus;
+  host_name: string | null;
+  participant_mode: ParticipantMode;
+  linkband_mode: LinkbandMode;
+  location_type: LocationType;
+  participant_count: number;
+  max_participants: number;
+  started_at: string | null;
+  scheduled_at: string | null;
+}
+
+export interface JoinByCodePayload {
+  name?: string;
+}
+
+export interface JoinByCodeResponse {
+  session: SessionDto;
+  participant_id: string | null;
+  is_guest: boolean;
+}
+
 export const listSessions = (): Promise<SessionListResponse> =>
   apiClient.get<SessionListResponse>('/sessions');
 
 export const getSession = (id: string): Promise<SessionDto> =>
   apiClient.get<SessionDto>(`/sessions/${id}`);
+
+export const getSessionByCode = (code: string): Promise<SessionByCodeResponse> =>
+  apiClient.get<SessionByCodeResponse>(`/sessions/by-code/${code}`, { skipAuth: true });
+
+export const joinSessionByCode = async (
+  code: string,
+  payload: JoinByCodePayload = {},
+): Promise<JoinByCodeResponse> => {
+  if (tokenStorage.getAccess()) {
+    const refreshedToken = await refreshAccessToken();
+    if (!refreshedToken) {
+      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
+    }
+    return apiClient.post<JoinByCodeResponse>(`/sessions/by-code/${code}/join`, payload);
+  }
+
+  return apiClient.post<JoinByCodeResponse>(
+    `/sessions/by-code/${code}/join`,
+    payload,
+    { skipAuth: true },
+  );
+};
 
 export const createSession = (payload: CreateSessionPayload): Promise<SessionDto> =>
   apiClient.post<SessionDto>('/sessions', payload);

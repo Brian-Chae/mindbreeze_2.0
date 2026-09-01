@@ -35,6 +35,7 @@ export interface CounselorRegisterPayload {
   email: string;
   password: string;
   name: string;
+  org_code: string;
   email_verify_token: string;
   consents: { tos: boolean; privacy: boolean; sensitive: boolean };
 }

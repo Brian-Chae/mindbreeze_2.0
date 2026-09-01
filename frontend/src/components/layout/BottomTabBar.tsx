@@ -10,7 +10,6 @@ interface TabItem {
 const TAB_ITEMS: TabItem[] = [
   { to: '/dashboard', label: '홈', icon: ICONS.home },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
-  { to: '/chat', label: '채팅', icon: ICONS.message },
   { to: '/reports', label: '리포트', icon: ICONS.report },
 ];
 
