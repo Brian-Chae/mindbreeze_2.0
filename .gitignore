@@ -12,3 +12,6 @@ frontend/node_modules/
 
 # Claude Code / 에이전트 워크트리 (커밋 대상 아님)
 .claude/worktrees/
+
+# Codex 에이전트 로컬 설정
+.codex/
