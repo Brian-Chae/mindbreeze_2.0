@@ -37,6 +37,7 @@ import ReportDetailPage from './pages/reports/ReportDetailPage';
 import AdminReviewListPage from './pages/admin/AdminReviewListPage';
 import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import ClientManagementPage from './pages/admin/ClientManagementPage';
 import AdminOrgManagementPage from './pages/admin/OrgManagementPage';
 import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
 import SettingsPage from './pages/SettingsPage';
@@ -166,6 +167,14 @@ function App() {
           element={(
             <PlatformAdminRoute>
               <UserManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/clients"
+          element={(
+            <PlatformAdminRoute>
+              <ClientManagementPage />
             </PlatformAdminRoute>
           )}
         />

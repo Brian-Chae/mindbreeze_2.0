@@ -108,6 +108,7 @@ const CLIENT_NAV_ITEMS: NavItem[] = [
 const ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/admin/orgs', label: '기관 관리', icon: ICONS.users },
   { to: '/admin/users', label: '상담사 관리', icon: ICONS.users },
+  { to: '/admin/clients', label: '회원 관리', icon: ICONS.users },
 ];
 
 interface SidebarNavProps {

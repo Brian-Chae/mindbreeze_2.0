@@ -70,6 +70,25 @@ def _is_looxidlabs_email(email: str) -> bool:
     return email.strip().lower().endswith("@looxidlabs.com")
 
 
+def _ensure_account_active(user: User) -> None:
+    """SDD-020: 인증 상태 강제 — suspended/pending 계정의 세션 발급을 차단한다.
+
+    - suspended: 관리자가 비활성화한 계정 → 403.
+    - pending: 초대 수락(비밀번호 설정) 전 계정 → 403.
+    이번 범위에서는 suspended/pending 만 차단한다(SDD-018 inactive/deleted 미도입).
+    """
+    if user.status == "suspended":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="정지된 계정입니다. 관리자에게 문의하세요.",
+        )
+    if user.status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="초대 수락(비밀번호 설정)이 완료되지 않은 계정입니다.",
+        )
+
+
 def _to_user_response(user: User) -> UserResponse:
     """User ORM 객체 → UserResponse 변환.
 
@@ -133,6 +152,11 @@ async def login(
         )
 
     await login_attempt_service.reset_attempts(req.email, redis)
+
+    # SDD-020: 비활성화 실효성 — suspended/pending 계정은 비밀번호가 맞아도 로그인 차단.
+    # (비밀번호 검증 이후에 확인해 계정 존재 여부를 노출하지 않는다.)
+    _ensure_account_active(user)
+
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
     return LoginResponse(
@@ -357,6 +381,16 @@ async def refresh(req: RefreshRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
         )
+
+    # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
+    # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다",
+        )
+    _ensure_account_active(user)
 
     new_refresh = refresh_token_service.rotate_refresh_token(jti, user_id, db)
     new_access = create_access_token(subject=user_id)

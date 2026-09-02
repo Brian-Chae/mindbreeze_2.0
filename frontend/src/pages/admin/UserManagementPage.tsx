@@ -47,7 +47,6 @@ export default function UserManagementPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState('counselor');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState<{ user: UserDto; action: 'suspend' | 'unsuspend' | 'delete' } | null>(null);
@@ -58,8 +57,7 @@ export default function UserManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, string | number> = { page, size: 20 };
-      if (role) params.role = role;
+      const params: Record<string, string | number> = { page, size: 20, role: 'counselor' };
       if (q) params.q = q;
       const res = await listUsers(params as { role?: string; q?: string; page?: number; size?: number });
       setUsers(res.items);
@@ -69,7 +67,7 @@ export default function UserManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, role, q]);
+  }, [page, q]);
 
   useEffect(() => {
     fetchUsers();
@@ -114,16 +112,6 @@ export default function UserManagementPage() {
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           className="rounded-xl border border-[#EFEFEF] px-4 py-2 text-[13px] w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
         />
-        <select
-          value={role}
-          onChange={(e) => { setRole(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[#EFEFEF] px-3 py-2 text-[13px]"
-        >
-          <option value="">전체 역할</option>
-          {Object.entries(ROLE_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
         <span className="text-[13px] text-[#6F6F6F]">총 {total}명</span>
       </div>
 

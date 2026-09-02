@@ -23,7 +23,11 @@ from app.config import settings
 from app.core.security import hash_password
 from app.models.password_history import PasswordHistory
 from app.models.user import User
-from app.tasks.email import send_counselor_invite_email, send_org_invite_email
+from app.tasks.email import (
+    send_client_invite_email,
+    send_counselor_invite_email,
+    send_org_invite_email,
+)
 
 # 초대 토큰 유효기간 — 7일 (스펙 §7)
 INVITE_TTL_DAYS = 7
@@ -33,12 +37,16 @@ INVITE_TTL_SECONDS = INVITE_TTL_DAYS * 24 * 60 * 60
 # 토큰 type 은 화이트리스트로만 수용한다.
 TOKEN_TYPE = "org_admin_invite"
 COUNSELOR_TOKEN_TYPE = "counselor_invite"
-ALLOWED_INVITE_TYPES = {TOKEN_TYPE, COUNSELOR_TOKEN_TYPE}
+# SDD-020: 플랫폼 관리자가 수동 추가한 내담자(pending 계정)의 비밀번호 설정 초대도
+# 동일 토큰 인프라를 공유하되 type="client_invite" 로 구분한다.
+CLIENT_TOKEN_TYPE = "client_invite"
+ALLOWED_INVITE_TYPES = {TOKEN_TYPE, COUNSELOR_TOKEN_TYPE, CLIENT_TOKEN_TYPE}
 
 # Redis key prefix — 발급·소비가 반드시 동일 key 를 쓰도록 token_type 별 prefix 를 고정한다.
 _INVITE_KEY_PREFIX = {
     TOKEN_TYPE: "org_invite",
     COUNSELOR_TOKEN_TYPE: "counselor_invite",
+    CLIENT_TOKEN_TYPE: "client_invite",
 }
 
 # 재발송 레이트 리밋 — 기관당 60초 1회
@@ -126,6 +134,25 @@ async def issue_counselor_invite(user: User, org_name: str, redis: Redis) -> boo
         invite_link,
         admin_name=user.name,
         org_name=org_name,
+        expires_days=INVITE_TTL_DAYS,
+    )
+
+
+async def issue_client_invite(
+    user: User, counselor_name: str, redis: Redis, *, client_name: str | None = None
+) -> bool:
+    """내담자(client) 초대 토큰 발급 + 비밀번호 설정 링크 이메일 발송 (SDD-020).
+
+    플랫폼 관리자가 이름+이메일+담당 상담사로 수동 추가한 pending 내담자에게
+    보내는 초대다. org_admin/counselor 초대와 동일한 토큰 인프라를 쓰되
+    type="client_invite" 로 구분한다. 반환값은 이메일 발송 성공 여부.
+    """
+    invite_link = await _issue(user, redis, token_type=CLIENT_TOKEN_TYPE)
+    return send_client_invite_email(
+        user.email,
+        invite_link,
+        client_name=client_name or user.name,
+        counselor_name=counselor_name,
         expires_days=INVITE_TTL_DAYS,
     )
 

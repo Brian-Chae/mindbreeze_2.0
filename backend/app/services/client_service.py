@@ -13,6 +13,74 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.user import User
 
 
+def assign_counselor(
+    client_id,
+    counselor_id,
+    db: Session,
+    *,
+    create_room: bool = True,
+) -> ClientCounselorLink:
+    """내담자-상담사 연결(ClientCounselorLink) 생성 공용 함수 (SDD-020).
+
+    link_invited_client / client_portal.add_counselor_by_code 가 각자 갖고 있던
+    링크 생성 규칙(중복 방지, ended 재활성화, active 상태, 1:1 채팅방 생성)을
+    한 곳으로 수렴한다. 신규 admin 수동 추가(create_client) 경로가 이 함수를 쓴다.
+
+    - 이미 active 링크가 있으면 그대로 반환한다 (idempotent, 채팅방도 재생성하지 않음).
+    - ended 링크가 있으면 active 로 재활성화한다.
+    - 신규 생성 시 create_room=True 면 상담사-내담자 1:1 채팅방을 만든다.
+
+    참고: get_or_create_direct_room 은 내부에서 db.commit() 을 수행하므로,
+    이 함수를 호출하면 진행 중인 트랜잭션이 함께 커밋될 수 있다. 호출부는
+    링크 생성 직전까지의 변경(User/ClientProfile 등)이 flush 되어 있어야 한다.
+
+    Args:
+        client_id: 내담자 User.id (UUID 또는 str).
+        counselor_id: 상담사 User.id (UUID 또는 str).
+        db: DB 세션.
+        create_room: 신규 링크일 때 1:1 채팅방 자동 생성 여부.
+
+    Returns:
+        생성/재활성화/기존 ClientCounselorLink.
+    """
+    from app.services.chat_service import get_or_create_direct_room
+
+    client_uuid = client_id if isinstance(client_id, UUID) else UUID(str(client_id))
+    counselor_uuid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+
+    existing = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == client_uuid,
+            ClientCounselorLink.counselor_id == counselor_uuid,
+        )
+        .first()
+    )
+    if existing is not None:
+        if existing.status != "active":
+            # ended 링크 재활성화 (add_counselor_by_code 규칙과 동일)
+            existing.status = "active"
+            existing.ended_at = None
+            db.add(existing)
+            db.commit()
+            db.refresh(existing)
+        return existing
+
+    link = ClientCounselorLink(
+        client_id=client_uuid,
+        counselor_id=counselor_uuid,
+        status="active",
+    )
+    db.add(link)
+    if create_room:
+        # 채팅방 생성 함수가 내부에서 commit 하므로 링크도 함께 영속화된다.
+        get_or_create_direct_room(counselor_uuid, client_uuid, db)
+    else:
+        db.commit()
+    db.refresh(link)
+    return link
+
+
 def list_clients(
     counselor_id: str,
     q: str | None,

@@ -59,6 +59,40 @@ class SuspendRequest(BaseModel):
     reason: str
 
 
+class ClientCreateRequest(BaseModel):
+    """SDD-020 회원(내담자) 수동 추가 요청."""
+
+    name: str
+    email: str
+    counselor_id: str
+    phone: str | None = None
+    send_invite: bool = True
+
+
+class ClientCounselorSummary(BaseModel):
+    id: str
+    name: str
+    email: str
+    status: str
+
+
+class ClientDetail(BaseModel):
+    id: str
+    email: str
+    name: str
+    phone: str | None = None
+    role: str
+    status: str
+    verified_tier: str
+    counselors: list[ClientCounselorSummary]
+    created_at: str | None = None
+
+
+class ClientCreateResponse(BaseModel):
+    client: ClientDetail
+    invite_sent: bool
+
+
 @router.get("/reviews")
 def list_reviews(
     document_type: str | None = Query(default=None),
@@ -132,6 +166,47 @@ def list_users(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     return admin_service.list_users(db, role, q, page, size)
+
+
+@router.post(
+    "/clients",
+    response_model=ClientCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_client(
+    req: ClientCreateRequest,
+    admin: User = Depends(require_platform_admin),  # noqa: ARG001
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """회원(내담자) 수동 추가 — pending 계정 + 담당 상담사 배정 + 비밀번호 설정 초대 메일.
+
+    SDD-020: 관리자가 임시 비밀번호를 지정하거나 응답으로 받지 않는다. 내담자는
+    초대 메일의 /set-password 링크로만 계정을 활성화한다. 계정·프로필·상담사
+    연결은 admin_service.create_client 트랜잭션에서 처리되고, 초대 메일 발송만
+    별도 후처리로 수행한다(발송 실패해도 계정 생성은 유지, invite_sent=false).
+    """
+    client_user = admin_service.create_client(
+        name=req.name,
+        email=req.email,
+        counselor_id=req.counselor_id,
+        db=db,
+        phone=req.phone,
+    )
+
+    invite_sent = False
+    if req.send_invite:
+        # 담당 상담사 이름을 초대 메일 카피에 사용
+        counselor = db.query(User).filter(User.id == uuid.UUID(req.counselor_id)).first()
+        counselor_name = counselor.name if counselor else "상담사"
+        invite_sent = await org_invite_service.issue_client_invite(
+            client_user, counselor_name, redis
+        )
+
+    return ClientCreateResponse(
+        client=ClientDetail(**admin_service.serialize_client_detail(client_user, db)),
+        invite_sent=invite_sent,
+    )
 
 
 @router.post("/users/{user_id}/suspend")

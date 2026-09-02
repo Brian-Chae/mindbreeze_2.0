@@ -56,6 +56,12 @@ export interface AuditDto {
   admin_name?: string | null;
 }
 
+export interface PrimaryCounselorDto {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface UserDto {
   id: string;
   name: string;
@@ -63,6 +69,20 @@ export interface UserDto {
   role: string;
   suspended: boolean;
   created_at: string;
+  primary_counselor?: PrimaryCounselorDto | null;
+  status?: string;
+}
+
+export interface CreateAdminClientPayload {
+  name: string;
+  email: string;
+  counselor_id: string;
+  send_invite: boolean;
+}
+
+export interface CreateAdminClientResponse {
+  client: UserDto;
+  invite_sent: boolean;
 }
 
 export interface UserListResponse {
@@ -135,6 +155,11 @@ export const unsuspendUser = (userId: string): Promise<ActionResponse> =>
 
 export const deleteUser = (userId: string): Promise<void> =>
   apiClient.delete<void>(`/admin/users/${userId}`);
+
+export const createAdminClient = (
+  payload: CreateAdminClientPayload,
+): Promise<CreateAdminClientResponse> =>
+  apiClient.post<CreateAdminClientResponse>('/admin/clients', payload);
 
 export const listAdminOrganizations = (): Promise<AdminOrganizationDto[]> =>
   apiClient.get<AdminOrganizationDto[]>('/admin/orgs');
