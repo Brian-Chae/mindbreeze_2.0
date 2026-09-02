@@ -70,7 +70,7 @@ async def issue_invite(user: User, org_name: str, redis: Redis) -> bool:
 
     await redis.setex(_invite_key(jti), INVITE_TTL_SECONDS, str(user.id))
 
-    invite_link = f"/auth/set-password?token={token}"
+    invite_link = f"{settings.frontend_base_url.rstrip('/')}/set-password?token={token}"
     return send_org_invite_email(
         user.email,
         invite_link,

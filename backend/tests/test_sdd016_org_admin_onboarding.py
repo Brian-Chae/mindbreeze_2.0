@@ -76,7 +76,7 @@ def _capture_invite_token(monkeypatch) -> list[str]:
     captured: list[str] = []
 
     def _fake_send(to_email, invite_link, *, admin_name, org_name, expires_days):
-        captured.append(invite_link.split("token=", 1)[1])
+        captured.append(invite_link)
         return True
 
     monkeypatch.setattr("app.services.org_invite_service.send_org_invite_email", _fake_send)
@@ -108,6 +108,7 @@ def test_01_기관등록시_담당자계정과_초대발송(client, monkeypatch)
     assert body["admin"]["status"] == "pending"
     assert body["invite_sent"] is True
     assert len(tokens) == 1
+    assert tokens[0].startswith("https://dev.mindbreeze.looxidlabs.com/set-password?token=")
 
 
 def test_02_담당자_User가_org_admin으로_생성되고_primary_admin_id_연결(client, monkeypatch):
@@ -212,7 +213,7 @@ def test_08_초대토큰으로_비밀번호설정_및_활성화(client, monkeypa
 
     res = client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[0], "new_password": NEW_PASSWORD},
+        json={"token": tokens[0].split("token=", 1)[1], "new_password": NEW_PASSWORD},
     )
     assert res.status_code == 200, res.text
     body = res.json()
@@ -240,7 +241,7 @@ def test_09_설정후_이메일_비밀번호로_로그인(client, monkeypatch):
     )
     client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[0], "new_password": NEW_PASSWORD},
+        json={"token": tokens[0].split("token=", 1)[1], "new_password": NEW_PASSWORD},
     )
 
     res = client.post(
@@ -262,13 +263,13 @@ def test_10_초대토큰_재사용_거부(client, monkeypatch):
 
     first = client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[0], "new_password": NEW_PASSWORD},
+        json={"token": tokens[0].split("token=", 1)[1], "new_password": NEW_PASSWORD},
     )
     assert first.status_code == 200
 
     second = client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[0], "new_password": "AnotherPw1!"},
+        json={"token": tokens[0].split("token=", 1)[1], "new_password": "AnotherPw1!"},
     )
     assert second.status_code == 401
     assert "이미 사용" in second.json()["detail"]
@@ -316,7 +317,7 @@ def test_13_약한_비밀번호_거부_422(client, monkeypatch):
 
     res = client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[0], "new_password": "onlyletters"},
+        json={"token": tokens[0].split("token=", 1)[1], "new_password": "onlyletters"},
     )
     assert res.status_code == 422
 
@@ -362,7 +363,7 @@ def test_15_초대_재발송(client, monkeypatch):
     # 재발송된 토큰으로도 설정 가능
     ok = client.post(
         "/api/v1/auth/set-password",
-        json={"token": tokens[1], "new_password": NEW_PASSWORD},
+        json={"token": tokens[1].split("token=", 1)[1], "new_password": NEW_PASSWORD},
     )
     assert ok.status_code == 200
 

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # App
     debug: bool = True
+    frontend_base_url: str = "https://dev.mindbreeze.looxidlabs.com"
 
     # Google OAuth
     google_client_id: str = ""
