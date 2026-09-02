@@ -22,6 +22,8 @@ export default function SetPasswordPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const token = params.get('token') ?? '';
+  const inviteType = params.get('type');
+  const isCounselorInvite = inviteType === 'counselor';
 
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -54,6 +56,7 @@ export default function SetPasswordPage() {
         { skipAuth: true },
       );
 
+      let redirectPath = '/dashboard/org';
       if (isLoginResponse(response)) {
         tokenStorage.set(response.access_token, response.refresh_token);
         localStorage.setItem('mb_user', JSON.stringify(response.user));
@@ -64,9 +67,13 @@ export default function SetPasswordPage() {
           isAuthenticated: true,
           isInitialized: true,
         });
+        redirectPath =
+          response.user.role === 'counselor' ? '/dashboard' : '/dashboard/org';
+      } else if (isCounselorInvite) {
+        redirectPath = '/dashboard';
       }
 
-      navigate('/dashboard/org', { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && (err.status === 400 || err.status === 410)) {
         setLinkExpired(true);
@@ -111,7 +118,7 @@ export default function SetPasswordPage() {
             to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            기관 로그인
+            {isCounselorInvite ? '상담사 로그인' : '기관 로그인'}
           </Link>
         </div>
 
@@ -124,12 +131,22 @@ export default function SetPasswordPage() {
         />
         <div className="font-extrabold text-[22px] text-white/70 tracking-tight">Mind&nbsp;Breeze</div>
         <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
-          비밀번호 설정
+          {isCounselorInvite ? '상담사 계정 활성화' : '비밀번호 설정'}
         </h1>
         <div className="text-[15px] text-white/60 mb-7 text-center">
-          초대 링크로 접속하셨습니다.
-          <br />
-          계정 활성화를 위해 비밀번호를 설정해주세요.
+          {isCounselorInvite ? (
+            <>
+              기관 담당자의 초대로 접속하셨습니다.
+              <br />
+              상담사 계정 활성화를 위해 비밀번호를 설정해주세요.
+            </>
+          ) : (
+            <>
+              초대 링크로 접속하셨습니다.
+              <br />
+              계정 활성화를 위해 비밀번호를 설정해주세요.
+            </>
+          )}
         </div>
 
         {linkExpired ? (
@@ -141,7 +158,7 @@ export default function SetPasswordPage() {
               to="/login"
               className="text-[13px] text-white/85 hover:text-white underline-offset-2 hover:underline"
             >
-              기관 로그인 페이지로 이동
+              {isCounselorInvite ? '상담사 로그인 페이지로 이동' : '기관 로그인 페이지로 이동'}
             </Link>
           </div>
         ) : (

@@ -55,9 +55,8 @@ export default function RegisterPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const roleParam = params.get('role');
-  const role: Role = roleParam === 'client' ? 'client' : 'counselor';
+  const role: Role = roleParam === 'counselor' ? 'counselor' : 'client';
 
-  const registerCounselor = useAuthStore((s) => s.registerCounselor);
   const registerClient = useAuthStore((s) => s.registerClient);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -75,7 +74,6 @@ export default function RegisterPage() {
 
   // Step 3
   const [name, setName] = useState('');
-  const [orgCode, setOrgCode] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
 
@@ -139,11 +137,6 @@ export default function RegisterPage() {
       setError('이름을 입력해주세요');
       return;
     }
-    const normalizedOrgCode = orgCode.trim().toUpperCase();
-    if (role === 'counselor' && !/^[A-Z0-9]{6}$/.test(normalizedOrgCode)) {
-      setError('기관 코드는 영문 대문자와 숫자로 된 6자리여야 합니다');
-      return;
-    }
     if (!PASSWORD_REGEX.test(password)) {
       setError('비밀번호는 영문, 숫자, 특수문자를 포함하여 8자 이상이어야 합니다');
       return;
@@ -166,13 +159,8 @@ export default function RegisterPage() {
         email_verify_token: emailVerifyToken,
         consents,
       };
-      if (role === 'counselor') {
-        await registerCounselor({ ...payload, org_code: normalizedOrgCode });
-        navigate('/onboarding/counselor');
-      } else {
-        await registerClient(payload);
-        navigate('/onboarding/client');
-      }
+      await registerClient(payload);
+      navigate('/onboarding/client');
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
@@ -188,6 +176,40 @@ export default function RegisterPage() {
     }
   };
 
+  // 상담사는 기관 담당자의 초대로만 가입 가능 (SDD-017) — 직접 기관코드 가입 숨김
+  if (role === 'counselor') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8 relative">
+        <div className="absolute top-6 right-6">
+          <ThemeToggle />
+        </div>
+        <div className="w-full max-w-[480px] space-y-6">
+          <div className="text-center space-y-2">
+            <Link to="/" className="inline-block">
+              <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
+                Mind Breeze
+              </h1>
+            </Link>
+            <p className="text-sm text-ink-tertiary">상담사 가입 안내</p>
+          </div>
+          <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 text-center space-y-4">
+            <p className="text-ink-primary font-semibold">상담사는 기관 담당자의 초대로 가입합니다</p>
+            <p className="text-sm text-ink-tertiary leading-relaxed">
+              소속 기관의 담당자에게 상담사 초대를 요청해 주세요.
+              초대 메일의 링크로 비밀번호를 설정하면 바로 이용할 수 있습니다.
+            </p>
+            <Link
+              to="/login"
+              className="inline-block w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 flex items-center justify-center"
+            >
+              로그인으로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8 relative">
       <div className="absolute top-6 right-6">
@@ -202,7 +224,7 @@ export default function RegisterPage() {
             </h1>
           </Link>
           <p className="text-sm text-ink-tertiary">
-            {role === 'counselor' ? '상담사 회원가입' : '내담자 회원가입'}
+            내담자 회원가입
           </p>
         </div>
 
@@ -313,25 +335,6 @@ export default function RegisterPage() {
                   className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
                 />
               </div>
-
-              {role === 'counselor' && (
-                <div className="space-y-2">
-                  <label htmlFor="orgCode" className="block text-sm font-medium text-ink-secondary">
-                    기관 코드
-                  </label>
-                  <input
-                    id="orgCode"
-                    type="text"
-                    value={orgCode}
-                    onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
-                    placeholder="영문·숫자 6자리"
-                    maxLength={6}
-                    autoCapitalize="characters"
-                    disabled={loading}
-                    className="w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm font-mono uppercase text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15"
-                  />
-                </div>
-              )}
 
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium text-ink-secondary">

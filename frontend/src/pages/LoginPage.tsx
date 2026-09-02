@@ -14,14 +14,14 @@ function resolvePostLoginPath(user: User, next: string | null): string {
     return '/dashboard/org';
   }
 
-  if (user.onboarding_completed) {
-    if (user.role === 'counselor') return '/dashboard';
-    if (user.role === 'client') return '/app';
-    return '/';
+  if (user.role === 'counselor') {
+    return '/dashboard';
   }
 
-  if (user.role === 'counselor') return '/onboarding/counselor';
-  if (user.role === 'client') return '/onboarding/client';
+  if (user.role === 'client') {
+    return user.onboarding_completed ? '/app' : '/onboarding/client';
+  }
+
   return '/';
 }
 

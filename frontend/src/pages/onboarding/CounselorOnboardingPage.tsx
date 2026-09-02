@@ -108,6 +108,10 @@ export default function CounselorOnboardingPage() {
     setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
   };
 
+  const handleSkip = (): void => {
+    navigate('/dashboard');
+  };
+
   const handleNext = async (): Promise<void> => {
     setError(null);
     setLoading(true);
@@ -117,24 +121,20 @@ export default function CounselorOnboardingPage() {
         markCompleted(1);
         setStep(2);
       } else if (step === 2) {
-        if (!form.gender || !form.birthDate || !form.experienceYears) {
-          setError('성별, 생년월일, 경력연수를 모두 입력해주세요');
-          return;
+        if (form.gender && form.birthDate && form.experienceYears) {
+          await saveCounselorStep2({
+            gender: form.gender,
+            birth_date: form.birthDate,
+            experience_years: Number(form.experienceYears),
+            specialties: form.specialties,
+          });
         }
-        await saveCounselorStep2({
-          gender: form.gender,
-          birth_date: form.birthDate,
-          experience_years: Number(form.experienceYears),
-          specialties: form.specialties,
-        });
         markCompleted(2);
         setStep(3);
       } else if (step === 3) {
-        if (!form.affiliationType) {
-          setError('소속형태를 선택해주세요');
-          return;
+        if (form.affiliationType) {
+          await saveCounselorStep3({ affiliation_type: form.affiliationType });
         }
-        await saveCounselorStep3({ affiliation_type: form.affiliationType });
         markCompleted(3);
         setStep(4);
       } else if (step === 4) {
@@ -173,7 +173,7 @@ export default function CounselorOnboardingPage() {
             </p>
             <p className="text-xs text-[#6F6F6F]">인증 등급: {result.verified_tier}</p>
           </div>
-          <button type="button" onClick={() => navigate('/')} className="mb-btn w-full">
+          <button type="button" onClick={() => navigate('/dashboard')} className="mb-btn w-full">
             대시보드로 이동
           </button>
         </div>
@@ -190,11 +190,20 @@ export default function CounselorOnboardingPage() {
               Mind Breeze
             </h1>
           </Link>
-          <p className="text-sm text-[#6F6F6F]">상담사 온보딩</p>
+          <p className="text-sm text-[#6F6F6F]">상담사 온보딩 (선택)</p>
         </div>
 
         <div className="bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-6 sm:p-8 space-y-6">
-          <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+          <div className="flex items-center justify-between gap-3">
+            <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="shrink-0 text-[13px] font-semibold text-[#6F6F6F] hover:text-[#5F0080] transition-colors"
+            >
+              나중에 하기
+            </button>
+          </div>
 
           <h2 className="text-2xl font-bold text-[#1F1F1F]">
             {step === 1 && '기본 정보'}
@@ -347,6 +356,14 @@ export default function CounselorOnboardingPage() {
               className="mb-btn mb-btn--ghost flex-1 disabled:opacity-40"
             >
               이전
+            </button>
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={loading}
+              className="mb-btn mb-btn--ghost flex-1 disabled:opacity-50"
+            >
+              건너뛰기
             </button>
             <button
               type="button"

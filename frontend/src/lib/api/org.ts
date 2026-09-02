@@ -33,12 +33,36 @@ export interface JoinRequest {
 }
 
 export type CounselorRole = 'counselor' | 'org_admin';
+export type CounselorAccountStatus = 'pending' | 'active';
 
 export interface CounselorItem {
   id: string;
   name: string;
   email: string;
   role: CounselorRole;
+  status?: CounselorAccountStatus;
+  invited_at?: string | null;
+  invite_expires_at?: string | null;
+}
+
+export interface InviteCounselorPayload {
+  name: string;
+  email: string;
+}
+
+export interface InviteCounselorResponse {
+  id: string;
+  name: string;
+  email: string;
+  status: CounselorAccountStatus;
+  invited_at: string;
+  invite_expires_at: string;
+  invite_sent: boolean;
+}
+
+export interface ResendCounselorInviteResponse {
+  invite_sent: boolean;
+  invite_expires_at: string;
 }
 
 export interface RegisterOrgPayload {
@@ -94,3 +118,18 @@ export const updateCounselor = (
 
 export const removeCounselor = (orgId: string, userId: string): Promise<void> =>
   apiClient.delete<void>(`${PREFIX}/${orgId}/counselors/${userId}`);
+
+export const inviteCounselor = (
+  orgId: string,
+  body: InviteCounselorPayload,
+): Promise<InviteCounselorResponse> =>
+  apiClient.post<InviteCounselorResponse>(`${PREFIX}/${orgId}/counselors/invite`, body);
+
+export const resendCounselorInvite = (
+  orgId: string,
+  userId: string,
+): Promise<ResendCounselorInviteResponse> =>
+  apiClient.post<ResendCounselorInviteResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/resend-invite`,
+    {},
+  );

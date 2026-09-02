@@ -191,6 +191,8 @@ export default function DashboardPage() {
   const [data, setData] = useState<CounselorDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   const fetchDashboard = useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -211,6 +213,20 @@ export default function DashboardPage() {
 
   const displayName = data?.counselor_name ?? user?.name ?? '상담사';
   const orgLabel = data?.org_name ? `${data.org_name} 소속` : 'MY CLASSES';
+  const counselorCode = user?.counselor_code ?? null;
+  const showProfileBanner =
+    !profileBannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
+
+  const handleCopyCounselorCode = async (): Promise<void> => {
+    if (!counselorCode) return;
+    try {
+      await navigator.clipboard.writeText(counselorCode);
+      setCodeCopied(true);
+      window.setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      /* 클립보드 실패 시 무시 */
+    }
+  };
 
   return (
     <AppShell
@@ -230,10 +246,70 @@ export default function DashboardPage() {
         <div className="mb-4 p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
       )}
 
+      {showProfileBanner && (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[14px] font-semibold text-[#5F0080]">프로필을 완성해보세요</p>
+            <p className="mt-1 text-[13px] text-[#6F6F6F]">
+              자격증명·경력 등은 원하실 때 설정에서 입력하실 수 있습니다.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate('/onboarding/counselor')}
+              className="h-9 rounded-xl bg-[#5F0080] px-4 text-[13px] font-semibold text-white hover:bg-[#4B0066] transition-colors"
+            >
+              프로필 완성하기
+            </button>
+            <button
+              type="button"
+              onClick={() => setProfileBannerDismissed(true)}
+              className="h-9 rounded-xl border border-[#C9B0E8] bg-white px-4 text-[13px] font-semibold text-[#6F6F6F] hover:bg-[#EFE3FA] transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-[#6F6F6F] text-sm">불러오는 중...</div>
       ) : data ? (
         <div className="space-y-6">
+          {counselorCode && (
+            <div className="rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
+                    내 상담사 코드
+                  </p>
+                  <p className="mt-1 text-[13px] text-[#6F6F6F]">
+                    내담자에게 이 코드를 공유하면 상담 관계가 연결됩니다.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-2xl font-bold tracking-[0.25em] text-[#5F0080]">
+                    {counselorCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyCounselorCode()}
+                    className="rounded-lg border border-[#C9B0E8] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
+                  >
+                    {codeCopied ? '복사됨' : '복사'}
+                  </button>
+                  <Link
+                    to="/settings"
+                    className="text-[12px] font-semibold text-[#5F0080] hover:underline"
+                  >
+                    설정
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="총 클래스" value={data.total_classes} accent="text-[#5F0080]" />
             <StatCard label="진행중" value={data.in_progress_classes} accent="text-[#1F8A5B]" />
