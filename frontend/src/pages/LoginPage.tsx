@@ -6,8 +6,10 @@ import type { User } from '../lib/api/auth';
 import { useGoogleLogin } from '@react-oauth/google';
 import DevRoleSimulationPanel from '../components/auth/DevRoleSimulationPanel';
 
-const isRoleSimEnabled =
-  import.meta.env.MODE !== 'production' && import.meta.env.VITE_ENABLE_ROLE_SIM === 'true';
+// dev 역할 시뮬레이션 노출 여부는 VITE_ENABLE_ROLE_SIM 플래그 단독으로 판별한다.
+// (백엔드 게이트가 1차 방어. Vite의 `npm run build`는 MODE=production 으로 빌드되므로
+//  MODE !== 'production' 조건은 dev 배포에서도 항상 false가 되어 패널을 숨겨버린다.)
+const isRoleSimEnabled = import.meta.env.VITE_ENABLE_ROLE_SIM === 'true';
 
 function resolvePostLoginPath(user: User, next: string | null): string {
   if (user.role === 'platform_admin') {
