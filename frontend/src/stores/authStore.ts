@@ -14,6 +14,7 @@ import {
   type ClientRegisterPayload,
   type LoginResponse,
 } from '../lib/api/auth';
+import { loginDevUser } from '../lib/api/devAuth';
 
 const USER_KEY = 'mb_user';
 
@@ -27,6 +28,7 @@ interface AuthState {
   initialize: () => void;
   login: (email: string, password: string) => Promise<User>;
   loginGoogle: (idToken: string, inviteToken?: string, role?: string) => Promise<User>;
+  devLogin: (userId: string) => Promise<User>;
   registerCounselor: (data: CounselorRegisterPayload) => Promise<User>;
   registerClient: (data: ClientRegisterPayload) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
@@ -89,6 +91,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginGoogle: async (accessToken, inviteToken, role): Promise<User> => {
     const res = await apiLoginGoogle({ access_token: accessToken, invite_token: inviteToken, role });
+    const user = applyLogin(res);
+    set({
+      user,
+      accessToken: res.access_token,
+      refreshToken: res.refresh_token,
+      isAuthenticated: true,
+    });
+    return user;
+  },
+
+  devLogin: async (userId): Promise<User> => {
+    const res = await loginDevUser(userId);
     const user = applyLogin(res);
     set({
       user,

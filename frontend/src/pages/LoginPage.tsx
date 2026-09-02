@@ -4,6 +4,10 @@ import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 import type { User } from '../lib/api/auth';
 import { useGoogleLogin } from '@react-oauth/google';
+import DevRoleSimulationPanel from '../components/auth/DevRoleSimulationPanel';
+
+const isRoleSimEnabled =
+  import.meta.env.MODE !== 'production' && import.meta.env.VITE_ENABLE_ROLE_SIM === 'true';
 
 function resolvePostLoginPath(user: User, next: string | null): string {
   if (user.role === 'platform_admin') {
@@ -271,6 +275,12 @@ export default function LoginPage() {
           <div className="mt-7 max-w-[320px] text-center text-[12px] text-white/70">
             시스템 어드민은 Google 로그인만 지원한다. `@looxidlabs.com` 계정으로 로그인하면 관리자 접근이 승인된다.
           </div>
+        )}
+
+        {isRoleSimEnabled && (
+          <DevRoleSimulationPanel
+            onLoginSuccess={(user) => navigate(resolvePostLoginPath(user, next))}
+          />
         )}
       </div>
     </div>

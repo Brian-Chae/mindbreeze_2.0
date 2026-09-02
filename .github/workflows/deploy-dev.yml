@@ -31,6 +31,7 @@ jobs:
           rm -rf dist node_modules/.tmp
           echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          echo "VITE_ENABLE_ROLE_SIM=true" >> .env
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
           npm run build
