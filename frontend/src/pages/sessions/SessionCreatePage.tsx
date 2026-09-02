@@ -11,21 +11,18 @@ import {
   type SessionDto,
   type SessionType,
 } from '../../lib/api/session';
-import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 
 export default function SessionCreatePage() {
   const navigate = useNavigate();
-  const [type, setType] = useState<SessionType>('clinical');
-  const [customTypeName, setCustomTypeName] = useState('');
-  const [locationType, setLocationType] = useState<LocationType>('offline');
+  const [type, setType] = useState<SessionType>('meditation');
+  const [locationType] = useState<LocationType>('offline');
   const [participantMode, setParticipantMode] = useState<ParticipantMode>('one_on_one');
   const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('none');
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(1);
-  const [selectedParticipants, setSelectedParticipants] = useState<SelectedParticipant[]>([]);
   const [createdSession, setCreatedSession] = useState<SessionDto | null>(null);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -42,8 +39,6 @@ export default function SessionCreatePage() {
         title: title || undefined,
         notes: notes || undefined,
         max_participants: maxParticipants,
-        participant_ids: selectedParticipants.length > 0 ? selectedParticipants.map((s) => s.userId) : undefined,
-        custom_type_name: type === 'custom' ? customTypeName || undefined : undefined,
         location_type: locationType,
         participant_mode: participantMode,
         linkband_mode: linkbandMode,
@@ -127,50 +122,27 @@ export default function SessionCreatePage() {
             <div>
               <label className={labelCls}>세션 유형</label>
               <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
-                <option value="clinical">임상심리상담</option>
-                <option value="hypnosis">최면심리상담</option>
                 <option value="meditation">명상수업</option>
-                <option value="custom">기타 (직접 입력)</option>
+                <option value="clinical">임상심리상담</option>
               </select>
-              {type === 'custom' && (
-                <input
-                  type="text"
-                  required
-                  value={customTypeName}
-                  onChange={(e) => setCustomTypeName(e.target.value)}
-                  placeholder="세션 유형명 입력"
-                  maxLength={30}
-                  className={`${inputCls} mt-2`}
-                />
-              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>진행 방식</label>
-                <select value={locationType} onChange={(e) => setLocationType(e.target.value as LocationType)} className={inputCls}>
-                  <option value="offline">오프라인 (대면)</option>
-                  <option value="online">온라인 (화상)</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>인원</label>
-                <select
-                  value={participantMode}
-                  onChange={(e) => {
-                    const nextMode = e.target.value as ParticipantMode;
-                    setParticipantMode(nextMode);
-                    if (nextMode === 'one_on_one') {
-                      setMaxParticipants(1);
-                      setSelectedParticipants((current) => current.slice(0, 1));
-                    }
-                  }}
-                  className={inputCls}
-                >
-                  <option value="one_on_one">1:1</option>
-                  <option value="group">1:N (그룹)</option>
-                </select>
-              </div>
+            <div>
+              <label className={labelCls}>인원</label>
+              <select
+                value={participantMode}
+                onChange={(e) => {
+                  const nextMode = e.target.value as ParticipantMode;
+                  setParticipantMode(nextMode);
+                  if (nextMode === 'one_on_one') {
+                    setMaxParticipants(1);
+                  }
+                }}
+                className={inputCls}
+              >
+                <option value="one_on_one">1:1</option>
+                <option value="group">1:N (그룹)</option>
+              </select>
             </div>
 
             <div>
@@ -216,12 +188,6 @@ export default function SessionCreatePage() {
                 />
               </div>
             </div>
-
-            <ParticipantPicker
-              selected={selectedParticipants}
-              onChange={setSelectedParticipants}
-              maxParticipants={maxParticipants}
-            />
 
             <div>
               <label className={labelCls}>제목</label>
