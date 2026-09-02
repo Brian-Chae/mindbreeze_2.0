@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import SetPasswordPage from './pages/SetPasswordPage';
 import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
 import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
 import ClientEssentialsPage from './pages/onboarding/ClientEssentialsPage';
@@ -92,6 +93,7 @@ function App() {
         <Route path="/app/*" element={<ClientAppPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/dashboard/org" element={<OrgDashboardPage />} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />

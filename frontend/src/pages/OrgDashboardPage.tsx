@@ -200,6 +200,48 @@ function ClassCard({ cls }: { cls: ClassSummary }) {
   );
 }
 
+function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
+
+  const handleCopy = async (): Promise<void> => {
+    if (!orgCode) return;
+    try {
+      await navigator.clipboard.writeText(orgCode);
+      setCopyMessage('기관 코드를 복사했습니다.');
+    } catch {
+      setCopyMessage('기관 코드를 복사하지 못했습니다.');
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-5 md:p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-[15px] font-bold text-[#5F0080]">상담사 초대용 기관 코드</h2>
+          <p className="mt-1 text-[13px] text-[#6F6F6F]">
+            상담사 회원가입 시 이 코드를 입력하면 기관에 소속됩니다.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <strong className="font-mono text-3xl tracking-[0.2em] text-[#5F0080]">
+            {orgCode ?? '-'}
+          </strong>
+          {orgCode && (
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 text-[13px] font-semibold text-[#5F0080] transition-colors hover:bg-[#EFE3FA]"
+            >
+              코드 복사
+            </button>
+          )}
+        </div>
+      </div>
+      {copyMessage && <p className="mt-3 text-[13px] text-[#5F0080]">{copyMessage}</p>}
+    </div>
+  );
+}
+
 export default function OrgDashboardPage() {
   const [data, setData] = useState<OrgDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -235,13 +277,9 @@ export default function OrgDashboardPage() {
         <div className="text-[#6F6F6F] text-sm">불러오는 중...</div>
       ) : data ? (
         <div className="space-y-8">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <StatCard
-              label="기관 코드"
-              value={data.org_code ?? '-'}
-              accent="text-[#5F0080]"
-              sub="참여 코드"
-            />
+          <OrgCodeCard orgCode={data.org_code} />
+
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <StatCard label="상담사" value={data.total_counselors} />
             <StatCard label="총 클래스" value={data.total_classes} accent="text-[#5F0080]" />
             <StatCard label="총 참여자" value={data.total_participants} />
