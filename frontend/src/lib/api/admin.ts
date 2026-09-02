@@ -133,6 +133,9 @@ export const suspendUser = (userId: string, reason: string): Promise<ActionRespo
 export const unsuspendUser = (userId: string): Promise<ActionResponse> =>
   apiClient.post<ActionResponse>(`/admin/users/${userId}/unsuspend`);
 
+export const deleteUser = (userId: string): Promise<void> =>
+  apiClient.delete<void>(`/admin/users/${userId}`);
+
 export const listAdminOrganizations = (): Promise<AdminOrganizationDto[]> =>
   apiClient.get<AdminOrganizationDto[]>('/admin/orgs');
 

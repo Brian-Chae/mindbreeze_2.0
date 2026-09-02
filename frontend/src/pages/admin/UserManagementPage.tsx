@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import AppShell from '../../components/layout/AppShell';
-import { listUsers, suspendUser, unsuspendUser, type UserDto } from '../../lib/api/admin';
+import { listUsers, suspendUser, unsuspendUser, deleteUser, type UserDto } from '../../lib/api/admin';
 
 const ROLE_LABELS: Record<string, string> = {
   platform_admin: '플랫폼 관리자',
@@ -47,10 +47,10 @@ export default function UserManagementPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState('');
+  const [role, setRole] = useState('counselor');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
-  const [modal, setModal] = useState<{ user: UserDto; action: 'suspend' | 'unsuspend' } | null>(null);
+  const [modal, setModal] = useState<{ user: UserDto; action: 'suspend' | 'unsuspend' | 'delete' } | null>(null);
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
 
@@ -82,6 +82,8 @@ export default function UserManagementPage() {
     try {
       if (modal.action === 'suspend') {
         await suspendUser(modal.user.id, reason);
+      } else if (modal.action === 'delete') {
+        await deleteUser(modal.user.id);
       } else {
         await unsuspendUser(modal.user.id);
       }
@@ -98,7 +100,7 @@ export default function UserManagementPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   return (
-    <AppShell title="사용자 관리" sub="USER MANAGEMENT">
+    <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT">
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
       )}
@@ -145,21 +147,29 @@ export default function UserManagementPage() {
                 <div className="text-[12px] text-[#9B9B9B] font-mono mt-1">{formatDate(u.created_at)}</div>
                 <div className="flex items-center justify-between mt-3">
                   <RoleBadge role={u.role} />
-                  {u.suspended ? (
+                  <div className="flex items-center gap-3">
+                    {u.suspended ? (
+                      <button
+                        onClick={() => setModal({ user: u, action: 'unsuspend' })}
+                        className="text-[13px] font-medium text-[#10B981] hover:underline"
+                      >
+                        해제
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setModal({ user: u, action: 'suspend' })}
+                        className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                      >
+                        정지
+                      </button>
+                    )}
                     <button
-                      onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                      className="text-[13px] font-medium text-[#10B981] hover:underline"
-                    >
-                      해제
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setModal({ user: u, action: 'suspend' })}
+                      onClick={() => setModal({ user: u, action: 'delete' })}
                       className="text-[13px] font-medium text-[#EF4444] hover:underline"
                     >
-                      정지
+                      삭제
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -187,21 +197,29 @@ export default function UserManagementPage() {
                     <td className="px-6 py-4"><StatusBadge suspended={u.suspended} /></td>
                     <td className="px-6 py-4 text-[#9B9B9B] font-mono text-[12px]">{formatDate(u.created_at)}</td>
                     <td className="px-6 py-4">
-                      {u.suspended ? (
+                      <div className="flex items-center gap-3">
+                        {u.suspended ? (
+                          <button
+                            onClick={() => setModal({ user: u, action: 'unsuspend' })}
+                            className="text-[13px] font-medium text-[#10B981] hover:underline"
+                          >
+                            해제
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setModal({ user: u, action: 'suspend' })}
+                            className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                          >
+                            정지
+                          </button>
+                        )}
                         <button
-                          onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                          className="text-[13px] font-medium text-[#10B981] hover:underline"
-                        >
-                          해제
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setModal({ user: u, action: 'suspend' })}
+                          onClick={() => setModal({ user: u, action: 'delete' })}
                           className="text-[13px] font-medium text-[#EF4444] hover:underline"
                         >
-                          정지
+                          삭제
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -240,12 +258,14 @@ export default function UserManagementPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">
-              {modal.action === 'suspend' ? '사용자 정지' : '정지 해제'}
+              {modal.action === 'suspend' ? '사용자 정지' : modal.action === 'delete' ? '사용자 삭제' : '정지 해제'}
             </h3>
             <p className="text-[14px] text-[#6F6F6F] mb-4">
               {modal.action === 'suspend'
                 ? `"${modal.user.name}" (${modal.user.email}) 님을 정지하시겠습니까?`
-                : `"${modal.user.name}" (${modal.user.email}) 님의 정지를 해제하시겠습니까?`}
+                : modal.action === 'delete'
+                  ? `"${modal.user.name}" (${modal.user.email}) 님을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+                  : `"${modal.user.name}" (${modal.user.email}) 님의 정지를 해제하시겠습니까?`}
             </p>
 
             {modal.action === 'suspend' && (
@@ -269,10 +289,10 @@ export default function UserManagementPage() {
                 onClick={handleAction}
                 disabled={acting || (modal.action === 'suspend' && !reason.trim())}
                 className={`px-4 py-2 rounded-xl text-[14px] font-medium text-white disabled:opacity-50 ${
-                  modal.action === 'suspend' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
+                  modal.action === 'suspend' || modal.action === 'delete' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
                 }`}
               >
-                {acting ? '처리 중...' : modal.action === 'suspend' ? '정지' : '해제'}
+                {acting ? '처리 중...' : modal.action === 'suspend' ? '정지' : modal.action === 'delete' ? '삭제' : '해제'}
               </button>
             </div>
           </div>
