@@ -454,6 +454,132 @@ def create_org_with_admin(
     return org, admin
 
 
+# ---------------------------------------------------------------------------
+# SDD-017: 상담사 초대 (기관 담당자가 이름+이메일로 초대)
+# ---------------------------------------------------------------------------
+
+
+async def invite_counselor(
+    org_id: str, name: str, email: str, redis, db: Session
+) -> tuple[User, bool]:
+    """상담사를 초대한다 — pending 계정 + CounselorProfile + 초대 토큰/메일.
+
+    - 이메일은 ``.strip().lower()`` 로 정규화해 전체 User 대상으로 중복 검사(409).
+    - 계정은 status="pending" + 추측 불가능한 난수 해시로 만들어 초대 수락 전 로그인 불가.
+    - counselor_code 는 ``code_service.generate_unique_code`` 로 유니크 발급.
+    - 이메일 폭탄 방지를 위해 기관당 초기 초대 레이트리밋을 적용한다.
+
+    반환값: (생성된 counselor User, 초대 메일 발송 성공 여부)
+    """
+    import secrets
+    from datetime import timedelta
+
+    from app.core.security import hash_password
+    from app.models.counselor_profile import CounselorProfile
+    from app.services import org_invite_service
+
+    org = get_organization(org_id, db)
+
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="상담사 이름을 입력해야 합니다",
+        )
+
+    email_norm = (email or "").strip().lower()
+    if not email_norm:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="상담사 이메일을 입력해야 합니다",
+        )
+
+    # 중복 검사(409)를 레이트리밋(429)보다 먼저 수행한다 — 대소문자 변형 재초대는
+    # 항상 409 로 응답해야 하며, 쿨다운이 이를 가려서는 안 된다.
+    if db.query(User).filter(User.email == email_norm).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 이메일입니다",
+        )
+
+    await org_invite_service.check_counselor_send_cooldown(str(org.id), redis)
+
+    now = datetime.now(timezone.utc)
+    user = User(
+        email=email_norm,
+        # 초대 수락 전까지 아무도 알 수 없는 난수 — 실질적으로 로그인 불가
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        name=clean_name,
+        role="counselor",
+        org_id=org.id,
+        status="pending",
+        verified_tier="unverified",
+        invited_at=now,
+        invite_expires_at=now + timedelta(days=org_invite_service.INVITE_TTL_DAYS),
+    )
+    db.add(user)
+    db.flush()
+
+    code = code_service.generate_unique_code(
+        db, CounselorProfile, "counselor_code", label="상담사 코드"
+    )
+    db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
+    db.commit()
+    db.refresh(user)
+
+    invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
+    await org_invite_service.mark_counselor_sent(str(org.id), redis)
+    return user, invite_sent
+
+
+async def resend_counselor_invite(
+    org_id: str, user_id: str, redis, db: Session
+) -> tuple[User, bool]:
+    """상담사 초대 재발송 — pending 상태 대상만 허용.
+
+    active 계정 재발송(비밀번호 초기화 벡터)과 타 기관 상담사 대상은 차단한다.
+    """
+    from app.services import org_invite_service
+
+    org = get_organization(org_id, db)
+
+    try:
+        uid = uuid.UUID(str(user_id))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.id == uid, User.org_id == org.id, User.role == "counselor")
+        .first()
+    )
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
+        )
+    if user.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 활성화된 상담사에게는 초대를 재발송할 수 없습니다",
+        )
+
+    await org_invite_service.check_counselor_resend_cooldown(str(org.id), redis)
+
+    from datetime import timedelta
+
+    now = datetime.now(timezone.utc)
+    user.invited_at = now
+    user.invite_expires_at = now + timedelta(days=org_invite_service.INVITE_TTL_DAYS)
+    db.commit()
+    db.refresh(user)
+
+    invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
+    await org_invite_service.mark_counselor_resent(str(org.id), redis)
+    return user, invite_sent
+
+
 def get_primary_admin(org_id: str, db: Session) -> tuple[Organization, User]:
     """기관과 주 담당자를 함께 조회한다. 없으면 404."""
     try:

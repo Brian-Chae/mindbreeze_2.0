@@ -132,6 +132,22 @@ class CounselorResponse(BaseModel):
     name: str
     email: str
     role: str
+    # SDD-017: 초대·가입 현황 표시용. pending/active 구분 + 만료 뱃지.
+    status: str | None = None
+    invited_at: str | None = None
+    invite_expires_at: str | None = None
+
+
+class CounselorInviteRequest(BaseModel):
+    """SDD-017 — 상담사 초대 (이름 + 이메일 최소 입력)."""
+
+    name: str = Field(min_length=1, max_length=100)
+    email: EmailStr
+
+
+class CounselorInviteResponse(BaseModel):
+    counselor: CounselorResponse
+    invite_sent: bool = False
 
 
 OrganizationWithAdminResponse.model_rebuild()

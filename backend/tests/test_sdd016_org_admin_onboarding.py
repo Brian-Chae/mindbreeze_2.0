@@ -414,7 +414,8 @@ def test_19_레거시_register로_상담사_가입_차단(client):
         },
     )
     assert res.status_code == 400
-    assert "기관 코드" in res.json()["detail"]
+    # SDD-017: 안내 문구를 '기관 담당자에게 초대 요청'으로 변경
+    assert "초대" in res.json()["detail"]
 
     from app.models.user import User
 

@@ -1,11 +1,15 @@
 """상담센터(Organization) API 라우터"""
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from redis.asyncio import Redis
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.redis import get_redis
 from app.schemas.org import (
+    CounselorInviteRequest,
+    CounselorInviteResponse,
     CounselorResponse,
     JoinRequestResponse,
     JoinRequestUpdate,
@@ -17,6 +21,27 @@ from app.schemas.org import (
 from app.services import org_service
 
 router = APIRouter(prefix="/org", tags=["org"])
+
+
+def _require_org_admin(current_user: dict, org_id: str) -> None:
+    """본인 기관의 org_admin 만 통과. 아니면 403."""
+    if current_user.get("role") != "org_admin" or str(current_user.get("org_id") or "") != str(org_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="센터 관리자만 접근할 수 있습니다",
+        )
+
+
+def _counselor_to_response(u) -> CounselorResponse:
+    return CounselorResponse(
+        id=str(u.id),
+        name=u.name,
+        email=u.email,
+        role=u.role,
+        status=u.status,
+        invited_at=u.invited_at.isoformat() if u.invited_at else None,
+        invite_expires_at=u.invite_expires_at.isoformat() if u.invite_expires_at else None,
+    )
 
 
 def _serialize_org(org) -> OrganizationResponse:
@@ -135,13 +160,58 @@ async def handle_request(
 
 
 @router.get("/{org_id}/counselors", response_model=list[CounselorResponse])
-async def list_counselors(org_id: str, db: Session = Depends(get_db)):
-    """센터 소속 상담사 목록."""
+async def list_counselors(
+    org_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """센터 소속 상담사 목록 — OrgAdmin 전용. pending/active 상태 포함."""
+    _require_org_admin(current_user, org_id)
     users = org_service.get_counselors(org_id, db)
-    return [
-        CounselorResponse(id=str(u.id), name=u.name, email=u.email, role=u.role)
-        for u in users
-    ]
+    return [_counselor_to_response(u) for u in users]
+
+
+@router.post(
+    "/{org_id}/counselors/invite",
+    response_model=CounselorInviteResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def invite_counselor(
+    org_id: str,
+    req: CounselorInviteRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """상담사 초대 — OrgAdmin 전용. 이름+이메일 → pending 계정 + 초대 메일."""
+    _require_org_admin(current_user, org_id)
+    user, invite_sent = await org_service.invite_counselor(
+        org_id, req.name, str(req.email), redis, db
+    )
+    return CounselorInviteResponse(
+        counselor=_counselor_to_response(user), invite_sent=invite_sent
+    )
+
+
+@router.post(
+    "/{org_id}/counselors/{user_id}/resend-invite",
+    response_model=CounselorInviteResponse,
+)
+async def resend_counselor_invite(
+    org_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """상담사 초대 재발송 — OrgAdmin 전용. pending 상태만 허용."""
+    _require_org_admin(current_user, org_id)
+    user, invite_sent = await org_service.resend_counselor_invite(
+        org_id, user_id, redis, db
+    )
+    return CounselorInviteResponse(
+        counselor=_counselor_to_response(user), invite_sent=invite_sent
+    )
 
 
 @router.put("/{org_id}/counselors/{user_id}", response_model=CounselorResponse)
@@ -157,7 +227,7 @@ async def update_counselor(
     user = org_service.update_counselor_role(
         org_id, user_id, new_role, current_user["id"], db
     )
-    return CounselorResponse(id=str(user.id), name=user.name, email=user.email, role=user.role)
+    return _counselor_to_response(user)
 
 
 @router.delete("/{org_id}/counselors/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

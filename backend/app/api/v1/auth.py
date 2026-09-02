@@ -95,9 +95,10 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
     기관 코드를 검증하는 /register/counselor 만 허용한다.
     """
     if req.role == "counselor":
+        # SDD-017: 상담사는 직접 가입하지 않고 기관 담당자의 초대로 계정이 생성된다.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="상담사 가입은 기관 코드가 필요합니다. /auth/register/counselor 를 이용하세요",
+            detail="상담사는 직접 가입할 수 없습니다. 소속 기관 담당자에게 초대를 요청하세요",
         )
 
     existing = db.query(User).filter(User.email == req.email).first()

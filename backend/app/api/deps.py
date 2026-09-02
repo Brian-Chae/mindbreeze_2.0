@@ -32,7 +32,14 @@ async def get_current_user(
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="사용자를 찾을 수 없습니다")
-    return {"id": str(user.id), "role": user.role, "email": user.email, "name": user.name}
+    return {
+        "id": str(user.id),
+        "role": user.role,
+        "email": user.email,
+        "name": user.name,
+        # SDD-017: 기관 소속 권한 검증(초대/목록/재발송)에 사용
+        "org_id": str(user.org_id) if user.org_id else None,
+    }
 
 
 async def get_current_user_optional(
