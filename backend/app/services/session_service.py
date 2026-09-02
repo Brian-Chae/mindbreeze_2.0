@@ -314,6 +314,17 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     allowed_from, target = TRANSITIONS[action]
     if s.status not in allowed_from:
         raise HTTPException(status_code=400, detail="잘못된 상태 전이입니다")
+
+    # SDD-021: 1.0 "클래스 시작" 패리티 — 그룹 수업은 active 참가자(대기열 제외) 1명 이상이어야
+    # 시작할 수 있다. 1:1 세션은 내담자가 암묵적으로 지정되므로 기존 상태전이 동작을 유지한다.
+    if action == "start" and s.participant_mode == "group":
+        active = [p for p in (s.participants or []) if not p.is_waitlisted]
+        if len(active) < 1:
+            raise HTTPException(
+                status_code=400,
+                detail="참가자가 1명 이상 있어야 클래스를 시작할 수 있습니다",
+            )
+
     s.status = target
     # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
     if action == "start" and s.started_at is None:
@@ -548,7 +559,8 @@ def get_session_by_code(code: str, db: DBSession) -> dict:
         "participant_mode": s.participant_mode,
         "linkband_mode": s.linkband_mode,
         "location_type": s.location_type,
-        "participant_count": len(list(s.participants or [])),
+        # SDD-021: 대기열(waitlisted) 제외, active 참가자만 카운트한다
+        "participant_count": sum(1 for p in (s.participants or []) if not p.is_waitlisted),
         "max_participants": s.max_participants,
         "started_at": s.started_at,
         "scheduled_at": s.scheduled_at,
@@ -600,3 +612,118 @@ def join_session_by_code(
     db.commit()
     db.refresh(s)
     return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True}
+
+
+# ---------------------------------------------------------------------------
+# SDD-021: 클래스 시작 프로세스 1.0 패리티
+# ---------------------------------------------------------------------------
+
+
+def _participant_log_state(status: str) -> str:
+    """세션 상태에서 참가자 진행 상태(1.0 SessionLog 상태)를 파생한다.
+
+    참가자 단위 상태 저장은 Phase 2 이므로, 현재는 세션 상태를 그대로 매핑한다.
+    """
+    if status == "completed":
+        return "COMPLETED"
+    if status in ("in_progress", "paused"):
+        return "STARTED"
+    return "READY"
+
+
+def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
+    """호스트 전용 실시간 모니터링 데이터.
+
+    뇌파 값(효율/배터리/접촉상태)은 이번 단계에서 null/placeholder 로 둔다.
+    실제 EEG 연동(Web Bluetooth/Looxid SDK)은 Phase 2 에서 채운다.
+    band_connected 는 기존 SessionParticipant 필드를 그대로 사용한다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    # 모니터링 대상은 active 참가자만 (대기열 제외)
+    active = [p for p in (s.participants or []) if not p.is_waitlisted]
+
+    # 로그인 참가자 표시 이름을 한 번의 쿼리로 확보 (게스트는 guest_name 사용)
+    from app.models.user import User
+
+    user_ids = [p.user_id for p in active if p.user_id]
+    names: dict = {}
+    if user_ids:
+        for u in db.query(User).filter(User.id.in_(user_ids)).all():
+            names[u.id] = u.name
+
+    log_state = _participant_log_state(s.status)
+
+    metrics = []
+    for p in active:
+        display_name = names.get(p.user_id) if p.user_id else p.guest_name
+        metrics.append(
+            {
+                "participant_id": str(p.id),
+                "user_id": str(p.user_id) if p.user_id else None,
+                "is_guest": p.user_id is None,
+                "display_name": display_name or "익명",
+                "seat_number": None,  # Phase 2: 좌석 배정
+                "consent_eeg": p.consent_eeg,
+                "session_log_state": log_state,
+                "band_connected": p.band_connected,
+                "device_status": "unknown",  # placeholder — 접촉 상태는 Phase 2 EEG 연동
+                "band_battery": None,
+                "avg_efficiency": None,
+                "current_efficiency": None,
+                "upload_status": "idle",
+                "last_eeg_at": None,
+            }
+        )
+
+    return {
+        "session_id": str(s.id),
+        "status": s.status,
+        "access_code": s.access_code,
+        "metrics": metrics,
+        # DashboardBox 4종 집계 — 뇌파 placeholder 단계에서는 모두 0
+        "summary": {
+            "participant_count": len(metrics),
+            "contact_fail_count": 0,
+            "device_fail_count": 0,
+            "band_low_count": 0,
+        },
+    }
+
+
+def get_guest_session_state(
+    code: str,
+    db: DBSession,
+    *,
+    participant_id: str | None = None,
+) -> dict:
+    """게스트가 인증 없이 자기/세션 상태를 확인한다 (대기→명상 전이 감지용).
+
+    민감한 참가자 목록은 노출하지 않고, 세션 상태와 본인 상태만 내려준다.
+    """
+    s = _get_session_by_code(code, db)
+
+    participant_state = None
+    if participant_id:
+        try:
+            pid = UUID(str(participant_id))
+        except (TypeError, ValueError):
+            pid = None
+        if pid is not None:
+            p = (
+                db.query(SessionParticipant)
+                .filter(
+                    SessionParticipant.id == pid,
+                    SessionParticipant.session_id == s.id,
+                )
+                .first()
+            )
+            if p is not None:
+                participant_state = _participant_log_state(s.status)
+
+    return {
+        "session_id": str(s.id),
+        "status": s.status,
+        "in_progress": s.status == "in_progress",
+        "ended": s.status in _CLOSED_STATUSES,
+        "participant_state": participant_state,
+    }

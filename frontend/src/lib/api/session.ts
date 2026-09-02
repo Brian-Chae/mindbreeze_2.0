@@ -109,6 +109,38 @@ export interface JoinByCodeResponse {
   is_guest: boolean;
 }
 
+/** 호스트 라이브 모니터링 — 참가자별 실시간(placeholder) 지표 */
+export type DeviceStatus = 'ok' | 'lead_off' | 'disconnected' | 'unsupported' | 'unknown';
+export type UploadStatus = 'idle' | 'streaming' | 'delayed' | 'failed' | 'completed' | null;
+
+export interface SessionLiveMetric {
+  participant_id: string;
+  display_name: string;
+  is_guest: boolean;
+  band_connected: boolean;
+  device_status: DeviceStatus | null;
+  band_battery: number | null;
+  avg_efficiency: number | null;
+  current_efficiency: number | null;
+  upload_status: UploadStatus;
+  last_eeg_at: string | null;
+}
+
+export interface SessionLiveMetricsResponse {
+  participants: SessionLiveMetric[];
+}
+
+/** 게스트 by-code 상태 — waiting→meditation 전이 감지용 */
+export type GuestState = 'waiting' | 'meditation' | 'complete' | string;
+
+export interface SessionByCodeStateResponse {
+  status: SessionStatus;
+  guest_state: GuestState;
+  started_at?: string | null;
+  duration_min?: number | null;
+  title?: string | null;
+}
+
 export const listSessions = (): Promise<SessionListResponse> =>
   apiClient.get<SessionListResponse>('/sessions');
 
@@ -166,3 +198,17 @@ export const joinSession = (id: string): Promise<SessionDto> =>
 
 export const getLiveKitToken = (id: string): Promise<{ livekit_token: string; webrtc_room_id: string }> =>
   apiClient.post<{ livekit_token: string; webrtc_room_id: string }>(`/sessions/${id}/livekit-token`);
+
+/** 호스트 콘솔용 참가자 라이브 지표 (뇌파는 null placeholder) */
+export const getSessionLiveMetrics = (id: string): Promise<SessionLiveMetricsResponse> =>
+  apiClient.get<SessionLiveMetricsResponse>(`/sessions/${id}/live-metrics`);
+
+/** 게스트 대기/명상 전이용 세션 상태 */
+export const getSessionByCodeState = (
+  code: string,
+  participantId: string,
+): Promise<SessionByCodeStateResponse> =>
+  apiClient.get<SessionByCodeStateResponse>(
+    `/sessions/by-code/${code}/state?participant_id=${encodeURIComponent(participantId)}`,
+    { skipAuth: true },
+  );

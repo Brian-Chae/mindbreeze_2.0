@@ -144,3 +144,71 @@ class JoinByCodeResponse(BaseModel):
     session: SessionResponse
     participant_id: str | None = None
     is_guest: bool = False
+
+
+# ---------------------------------------------------------------------------
+# SDD-021: 클래스 시작 프로세스 1.0 패리티
+# ---------------------------------------------------------------------------
+
+# 접촉/기기 상태 — Phase 2 EEG 연동 전까지는 placeholder("unknown")로 내려온다
+DeviceStatus = Literal["ok", "lead_off", "disconnected", "unsupported", "unknown"]
+# 데이터 업로드 현황 — 실제 EEG 스트리밍 연동 전까지는 "idle"
+UploadStatus = Literal["idle", "streaming", "delayed", "failed", "completed"]
+# 참가자별 진행 상태 (1.0 SessionLog 상태 대응)
+ParticipantLogState = Literal["READY", "STARTED", "COMPLETED"]
+
+
+class SessionLiveMetric(BaseModel):
+    """호스트 모니터링 테이블의 참가자 1행.
+
+    뇌파 값(battery/efficiency 등)은 이번 단계에서 null placeholder 다.
+    실제 EEG 연동은 Phase 2 에서 채운다.
+    """
+
+    participant_id: str
+    user_id: str | None = None
+    is_guest: bool = False
+    display_name: str
+    # 자리번호: 기본 생략, 운영자 장비 배정용으로 nullable 만 선반영 (현재 항상 None)
+    seat_number: int | None = None
+    consent_eeg: bool = False
+    session_log_state: ParticipantLogState = "READY"
+    band_connected: bool = False
+    device_status: DeviceStatus = "unknown"
+    band_battery: int | None = None
+    avg_efficiency: float | None = None
+    current_efficiency: float | None = None
+    upload_status: UploadStatus = "idle"
+    last_eeg_at: datetime | None = None
+
+
+class SessionLiveMetricsSummary(BaseModel):
+    """DashboardBox 4종 대응 집계 — placeholder 단계에서는 0."""
+
+    participant_count: int = 0
+    contact_fail_count: int = 0
+    device_fail_count: int = 0
+    band_low_count: int = 0
+
+
+class SessionLiveMetricsResponse(BaseModel):
+    """호스트 전용 실시간 모니터링 응답 (일반 상세/목록과 분리)."""
+
+    session_id: str
+    status: SessionStatus
+    access_code: str | None = None
+    metrics: list[SessionLiveMetric] = []
+    summary: SessionLiveMetricsSummary
+
+
+class GuestSessionStateResponse(BaseModel):
+    """게스트가 인증 없이 대기→명상 전이를 감지하기 위한 최소 상태.
+
+    민감한 참가자 목록은 포함하지 않는다.
+    """
+
+    session_id: str
+    status: SessionStatus
+    in_progress: bool = False
+    ended: bool = False
+    participant_state: ParticipantLogState | None = None

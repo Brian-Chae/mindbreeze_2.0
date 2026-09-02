@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.schemas.session import (
+    GuestSessionStateResponse,
     InviteParticipantRequest,
     JoinByCodeRequest,
     JoinByCodeResponse,
     SessionByCodeResponse,
+    SessionLiveMetricsResponse,
     MarkerRequest,
     SessionCreateRequest,
     SessionListResponse,
@@ -61,6 +63,17 @@ def join_session_by_code(
         user_id=current_user["id"] if current_user else None,
         guest_name=name,
     )
+
+
+# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
+@router.get("/by-code/{code}/state", response_model=GuestSessionStateResponse)
+def get_guest_session_state(
+    code: str,
+    participant_id: str | None = None,
+    db: DBSession = Depends(get_db),
+):
+    """게스트 상태 조회 — 인증 없이 세션/본인 상태를 확인한다(대기→명상 전이 감지)."""
+    return session_service.get_guest_session_state(code, db, participant_id=participant_id)
 
 
 @router.get("/{session_id}", response_model=SessionResponse)
@@ -142,6 +155,16 @@ def add_marker(
     return session_service.add_marker(
         session_id, current_user["id"], payload.timestamp_sec, payload.note, db
     )
+
+
+@router.get("/{session_id}/live-metrics", response_model=SessionLiveMetricsResponse)
+def get_live_metrics(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """호스트 전용 실시간 참가자 모니터링 데이터 (뇌파 값은 Phase 2 placeholder)."""
+    return session_service.get_live_metrics(session_id, current_user["id"], db)
 
 
 # ── LiveKit WebRTC ──────────────────────────────────────────────
