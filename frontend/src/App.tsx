@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, type ReactElement } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import ClientLoginPage from './pages/ClientLoginPage';
@@ -46,11 +46,16 @@ import OrgPublicPage from './pages/OrgPublicPage';
 import OrgDashboardPage from './pages/OrgDashboardPage';
 import { useAuthStore } from './stores/authStore';
 
+function buildLoginRedirect(pathname: string, search: string): string {
+  const next = `${pathname}${search}`;
+  return `/login?role=platform_admin&next=${encodeURIComponent(next)}`;
+}
+
 /** 로그인 후 역할에 따라 라우팅 */
 function RoleRouter() {
   const { user, isAuthenticated, isInitialized } = useAuthStore();
 
-  if (!isInitialized) return null; // 초기화 중
+  if (!isInitialized) return null;
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace />;
@@ -69,6 +74,23 @@ function RoleRouter() {
   }
 
   return <Navigate to="/dashboard" replace />;
+}
+
+function PlatformAdminRoute({ children }: { children: ReactElement }) {
+  const location = useLocation();
+  const { user, isAuthenticated, isInitialized } = useAuthStore();
+
+  if (!isInitialized) return null;
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to={buildLoginRedirect(location.pathname, location.search)} replace />;
+  }
+
+  if (user.role !== 'platform_admin') {
+    return <Navigate to="/role-redirect" replace />;
+  }
+
+  return children;
 }
 
 function App() {
@@ -123,10 +145,38 @@ function App() {
         <Route path="/design/docs" element={<DocsPage />} />
         <Route path="/reports" element={<ReportListPage />} />
         <Route path="/reports/:id" element={<ReportDetailPage />} />
-        <Route path="/admin/reviews" element={<AdminReviewListPage />} />
-        <Route path="/admin/reviews/:targetType/:id" element={<AdminReviewDetailPage />} />
-        <Route path="/admin/users" element={<UserManagementPage />} />
-        <Route path="/admin/orgs" element={<AdminOrgManagementPage />} />
+        <Route
+          path="/admin/reviews"
+          element={(
+            <PlatformAdminRoute>
+              <AdminReviewListPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/reviews/:targetType/:id"
+          element={(
+            <PlatformAdminRoute>
+              <AdminReviewDetailPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/users"
+          element={(
+            <PlatformAdminRoute>
+              <UserManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/orgs"
+          element={(
+            <PlatformAdminRoute>
+              <AdminOrgManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
         <Route path="/notifications" element={<NotificationCenterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>

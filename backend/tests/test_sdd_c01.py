@@ -73,6 +73,35 @@ class TestGoogleAuth:
             assert data["user"]["email"] == "existing@test.com"
             assert data["user"]["auth_provider"] == "google"
 
+    def test_looxidlabs_Google_시스템관리자_신규생성_200(self, client):
+        """looxidlabs.com Google 계정은 시스템 관리자 로그인 시 자동 승인된다."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "admin@looxidlabs.com", "name": "Looxid Admin"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token", "role": "platform_admin"},
+            )
+            assert res.status_code == 200
+            data = res.json()
+            assert data["user"]["email"] == "admin@looxidlabs.com"
+            assert data["user"]["role"] == "platform_admin"
+            assert data["user"]["auth_provider"] == "google"
+
+    def test_외부도메인_Google_시스템관리자_거부_403(self, client):
+        """시스템 관리자 Google 로그인은 looxidlabs.com 도메인만 허용한다."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "admin@example.com", "name": "External Admin"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token", "role": "platform_admin"},
+            )
+            assert res.status_code == 403
+            assert "looxidlabs.com" in res.json()["detail"]
+
 
 class TestClientPortal:
     """GET/POST /api/v1/client/counselors — JWT 인증 필요, 통합 환경에서 검증"""

@@ -1,12 +1,33 @@
 import { useState, useCallback, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 import type { User } from '../lib/api/auth';
 import { useGoogleLogin } from '@react-oauth/google';
 
+function resolvePostLoginPath(user: User, next: string | null): string {
+  if (user.role === 'platform_admin') {
+    return next && next.startsWith('/admin') ? next : '/admin/orgs';
+  }
+
+  if (user.role === 'org_admin') {
+    return '/dashboard/org';
+  }
+
+  if (user.onboarding_completed) {
+    if (user.role === 'counselor') return '/dashboard';
+    if (user.role === 'client') return '/app';
+    return '/';
+  }
+
+  if (user.role === 'counselor') return '/onboarding/counselor';
+  if (user.role === 'client') return '/onboarding/client';
+  return '/';
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const login = useAuthStore((s) => s.login);
   const loginGoogle = useAuthStore((s) => s.loginGoogle);
 
@@ -17,6 +38,9 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const hasGoogleClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
+  const loginRole = searchParams.get('role') === 'platform_admin' ? 'platform_admin' : 'counselor';
+  const next = searchParams.get('next');
+  const isPlatformAdminMode = loginRole === 'platform_admin';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,21 +48,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      if (user.onboarding_completed) {
-        if (user.role === 'counselor') {
-          navigate('/dashboard');
-        } else if (user.role === 'client') {
-          navigate('/clients');
-        } else {
-          navigate('/');
-        }
-      } else if (user.role === 'counselor') {
-        navigate('/onboarding/counselor');
-      } else if (user.role === 'client') {
-        navigate('/onboarding/client');
-      } else {
-        navigate('/');
-      }
+      navigate(resolvePostLoginPath(user, next));
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 423) {
@@ -61,11 +71,7 @@ export default function LoginPage() {
       navigate('/');
       return;
     }
-    if (user.onboarding_completed) {
-      navigate('/dashboard');
-    } else {
-      navigate('/onboarding/counselor');
-    }
+    navigate(resolvePostLoginPath(user, next));
   };
 
   const googleLogin = useGoogleLogin({
@@ -73,7 +79,7 @@ export default function LoginPage() {
       setError(null);
       setGoogleLoading(true);
       try {
-        const user = await loginGoogle(tokenResponse.access_token, undefined, 'counselor');
+        const user = await loginGoogle(tokenResponse.access_token, undefined, loginRole);
         handleGoogleSuccess(user);
       } catch (err) {
         const message =
@@ -101,16 +107,15 @@ export default function LoginPage() {
       <img
         src="/mb-design/assets/images/background3.jpg"
         alt=""
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/5 to-black/35" />
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-[18px] px-6">
-        {/* 상단 전환 버튼 */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-5">
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-[18px] px-6">
+        <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-6 py-5">
           <Link
             to="/"
-            className="flex items-center gap-2.5 group"
+            className="group flex items-center gap-2.5"
             aria-label="랜딩 페이지로 이동"
           >
             <img
@@ -120,13 +125,13 @@ export default function LoginPage() {
               alt=""
               className="brightness-0 invert"
             />
-            <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+            <span className="text-[17px] font-extrabold tracking-tight text-white opacity-90 transition-opacity group-hover:opacity-100">
               Mind&nbsp;Breeze
             </span>
           </Link>
           <Link
             to="/login/client"
-            className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
+            className="rounded-full border border-white/30 px-4 py-2 text-[13px] font-medium text-white/90 transition-colors hover:border-white/60 hover:text-white"
           >
             회원 로그인
           </Link>
@@ -139,65 +144,73 @@ export default function LoginPage() {
           alt=""
           className="brightness-0 invert opacity-80"
         />
-        <div className="font-extrabold text-[22px] text-white/70 tracking-tight">
+        <div className="text-[22px] font-extrabold tracking-tight text-white/70">
           Mind&nbsp;Breeze
         </div>
-        <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
-          상담사 로그인
+        <h1 className="text-[36px] font-extrabold leading-tight tracking-tighter text-white">
+          {isPlatformAdminMode ? '시스템 관리자 로그인' : '상담사 로그인'}
         </h1>
-        <div className="text-[15px] text-white/60 mb-7">
-          MIND BREEZE Operator
+        <div className="mb-7 text-[15px] text-white/60">
+          {isPlatformAdminMode ? 'MIND BREEZE System Admin' : 'MIND BREEZE Operator'}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="이메일"
-            disabled={loading}
-            autoComplete="email"
-            className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호"
-            disabled={loading}
-            autoComplete="current-password"
-            className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
-          />
+        {!isPlatformAdminMode && (
+          <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="이메일"
+              disabled={loading}
+              autoComplete="email"
+              className="h-[52px] w-[280px] rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none placeholder:text-[#9A9BA8] focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="비밀번호"
+              disabled={loading}
+              autoComplete="current-password"
+              className="h-[52px] w-[280px] rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none placeholder:text-[#9A9BA8] focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+            />
 
-          {error && (
-            <p className="text-[13px] text-white bg-red-500/80 rounded-full px-4 py-1.5" role="alert">
-              {error}
-            </p>
+            {error && (
+              <p className="rounded-full bg-red-500/80 px-4 py-1.5 text-[13px] text-white" role="alert">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || !email || !password}
+              className="h-[52px] w-[280px] rounded-full bg-[#5F0080] text-[15px] font-semibold text-white transition-colors hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60"
+            >
+              {loading ? '로그인 중…' : '로그인'}
+            </button>
+          </form>
+        )}
+
+        {isPlatformAdminMode && error && (
+          <p className="rounded-full bg-red-500/80 px-4 py-1.5 text-[13px] text-white" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="flex flex-col items-center gap-3">
+          {!isPlatformAdminMode && (
+            <div className="flex w-[280px] items-center gap-3">
+              <div className="h-px flex-1 bg-white/20" />
+              <span className="text-[13px] text-white/60">또는</span>
+              <div className="h-px flex-1 bg-white/20" />
+            </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading || !email || !password}
-            className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
-          >
-            {loading ? '로그인 중…' : '로그인'}
-          </button>
-        </form>
-
-        {/* 소셜 로그인 */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center gap-3 w-[280px]">
-            <div className="flex-1 h-px bg-white/20" />
-            <span className="text-[13px] text-white/60">또는</span>
-            <div className="flex-1 h-px bg-white/20" />
-          </div>
-
-          {/* Google 로그인 — 다크 테마 맞춤 */}
           <button
             type="button"
             onClick={handleGoogleClick}
             disabled={!hasGoogleClientId || googleLoading}
-            className="flex items-center justify-center gap-3 w-[280px] h-[52px] rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex h-[52px] w-[280px] items-center justify-center gap-3 rounded-full border border-white/20 bg-white/10 transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {googleLoading ? (
               <span className="text-[15px] font-medium text-white/80">연결 중...</span>
@@ -209,44 +222,56 @@ export default function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                <span className="text-[15px] font-medium text-white/90">Google로 시작하기</span>
+                <span className="text-[15px] font-medium text-white/90">
+                  {isPlatformAdminMode ? 'Google Workspace로 로그인' : 'Google로 시작하기'}
+                </span>
               </>
             )}
           </button>
 
-          {/* 카카오 로그인 (비활성) */}
-          <button
-            type="button"
-            disabled
-            className="flex items-center justify-center gap-3 w-[280px] h-[52px] rounded-full bg-[#FEE500]/70 border border-white/20 opacity-50 cursor-not-allowed"
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M9 0C4.03 0 0 3.144 0 7.024c0 2.465 1.633 4.63 4.09 5.864l-1.03 3.784c-.066.242.213.44.434.306l4.518-2.995c.322.044.65.066.988.066 4.97 0 9-3.145 9-7.025S13.97 0 9 0z"
-                fill="#391B1B"
-                fillOpacity="0.85"
-              />
-            </svg>
-            <span className="text-[15px] font-medium text-[#391B1B]/60">카카오로 시작하기</span>
-          </button>
+          {!isPlatformAdminMode && (
+            <button
+              type="button"
+              disabled
+              className="flex h-[52px] w-[280px] cursor-not-allowed items-center justify-center gap-3 rounded-full border border-white/20 bg-[#FEE500]/70 opacity-50"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M9 0C4.03 0 0 3.144 0 7.024c0 2.465 1.633 4.63 4.09 5.864l-1.03 3.784c-.066.242.213.44.434.306l4.518-2.995c.322.044.65.066.988.066 4.97 0 9-3.145 9-7.025S13.97 0 9 0z"
+                  fill="#391B1B"
+                  fillOpacity="0.85"
+                />
+              </svg>
+              <span className="text-[15px] font-medium text-[#391B1B]/60">카카오로 시작하기</span>
+            </button>
+          )}
         </div>
 
-        <Link
-          to="/forgot-password"
-          className="text-[13px] text-white/85 hover:text-white underline-offset-2 hover:underline"
-        >
-          비밀번호를 잊으셨나요?
-        </Link>
-        <div className="text-[13px] text-white/85">
-          아직 계정이 없으신가요?{' '}
-          <Link to="/register" className="text-white font-semibold hover:underline">
-            회원가입
-          </Link>
-        </div>
+        {!isPlatformAdminMode && (
+          <>
+            <Link
+              to="/forgot-password"
+              className="text-[13px] text-white/85 underline-offset-2 hover:text-white hover:underline"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
+            <div className="text-[13px] text-white/85">
+              아직 계정이 없으신가요?{' '}
+              <Link to="/register" className="font-semibold text-white hover:underline">
+                회원가입
+              </Link>
+            </div>
+            <div className="mt-7 text-[12px] text-white/70">
+              기관 발급 계정으로만 접속하실 수 있습니다.
+            </div>
+          </>
+        )}
 
-        <div className="mt-7 text-[12px] text-white/70">
-          기관 발급 계정으로만 접속하실 수 있습니다.
-        </div>
+        {isPlatformAdminMode && (
+          <div className="mt-7 max-w-[320px] text-center text-[12px] text-white/70">
+            시스템 어드민은 Google 로그인만 지원한다. `@looxidlabs.com` 계정으로 로그인하면 관리자 접근이 승인된다.
+          </div>
+        )}
       </div>
     </div>
   );

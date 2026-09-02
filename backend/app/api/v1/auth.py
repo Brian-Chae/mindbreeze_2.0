@@ -68,6 +68,10 @@ from app.tasks.email import send_otp_email
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _is_looxidlabs_email(email: str) -> bool:
+    return email.strip().lower().endswith("@looxidlabs.com")
+
+
 def _to_user_response(user: User) -> UserResponse:
     """User ORM 객체 → UserResponse 변환.
 
@@ -465,29 +469,45 @@ async def google_auth(
             detail="Google 계정에서 이메일을 확인할 수 없습니다",
         )
 
+    requested_role = req.role or ""
+    wants_platform_admin = requested_role == "platform_admin"
+
+    if wants_platform_admin and not _is_looxidlabs_email(email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="시스템 관리자는 looxidlabs.com Google 계정만 로그인할 수 있습니다",
+        )
+
     # 2. User find-or-create
     user = db.query(User).filter(User.email == email).first()
 
     if user:
-        # 기존 사용자 — auth_provider 업데이트 (role은 유지)
+        # 기존 사용자 — auth_provider 업데이트 + 필요 시 platform_admin 승격
+        updated = False
         if user.auth_provider == "email":
             user.auth_provider = "google"
+            updated = True
+        if wants_platform_admin and user.role != "platform_admin":
+            user.role = "platform_admin"
+            updated = True
+        if updated:
             db.commit()
             db.refresh(user)
     else:
         # 상담사 로그인 요청은 신규 계정 자동 생성 금지 → 403
-        if req.role == "counselor":
+        if requested_role == "counselor":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="상담사 계정이 없습니다. 관리자에게 문의하세요.",
             )
-        # 신규 Google 사용자 생성 (내담자)
+        role = "platform_admin" if wants_platform_admin else "client"
+        # 신규 Google 사용자 생성 (내담자 / 시스템 관리자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
             email=email,
             password_hash=hash_password(rand_pw),
             name=name,
-            role="client",
+            role=role,
             auth_provider="google",
             verified_tier="email",
         )
