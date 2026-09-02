@@ -12,8 +12,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.org import OrganizationAdminCreate, OrganizationAdminResponse
-from app.services import admin_service, org_service
+from app.core.redis import get_redis
+from app.schemas.org import (
+    OrgAdminSummary,
+    OrganizationAdminCreate,
+    OrganizationAdminResponse,
+    OrganizationWithAdminResponse,
+    ResendInviteResponse,
+)
+from app.services import admin_service, org_invite_service, org_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -170,18 +177,68 @@ def _serialize_org(org) -> OrganizationAdminResponse:
     )
 
 
-@router.post("/orgs", response_model=OrganizationAdminResponse, status_code=status.HTTP_201_CREATED)
-def admin_register_org(
+def _serialize_admin(user: User) -> OrgAdminSummary:
+    return OrgAdminSummary(
+        id=str(user.id), email=user.email, name=user.name, status=user.status
+    )
+
+
+@router.post(
+    "/orgs",
+    response_model=OrganizationWithAdminResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def admin_register_org(
     req: OrganizationAdminCreate,
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_db),
+    redis=Depends(get_redis),
 ):
-    """기관 등록 — 기관명만 입력하면 6자리 기관 코드(org_code)를 발급한다.
+    """기관 등록 — 6자리 기관 코드 발급 + (선택) 주 담당자 계정 생성 및 초대 발송.
 
-    기존 /org/register(신청자를 org_admin으로 승격)와는 별개 흐름이며
-    사용자 역할을 변경하지 않는다.
+    SDD-016: 담당자 정보를 함께 주면 org_admin 계정을 만들고 비밀번호 설정 링크를
+    이메일로 보낸다. 임시 비밀번호는 발급하지 않으며, 담당자는 초대 링크로만 계정을
+    활성화할 수 있다. 이메일이 이미 사용 중이면 409로 거부한다.
     """
-    return _serialize_org(org_service.admin_create_organization(req.name, db, phone=req.phone))
+    if not req.admin_email:
+        # 담당자 없이 기관만 등록하는 기존(SDD-015) 동작
+        org = org_service.admin_create_organization(req.name, db, phone=req.phone)
+        return OrganizationWithAdminResponse(org=_serialize_org(org), admin=None, invite_sent=False)
+
+    org, admin_user = org_service.create_org_with_admin(
+        name=req.name,
+        admin_name=req.admin_name,
+        admin_email=req.admin_email,
+        admin_phone=req.admin_phone,
+        phone=req.phone,
+        address=req.address,
+        db=db,
+    )
+    invite_sent = await org_invite_service.issue_invite(admin_user, org.name, redis)
+    return OrganizationWithAdminResponse(
+        org=_serialize_org(org),
+        admin=_serialize_admin(admin_user),
+        invite_sent=invite_sent,
+    )
+
+
+@router.post("/orgs/{org_id}/resend-invite", response_model=ResendInviteResponse)
+async def admin_resend_invite(
+    org_id: str,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """주 담당자에게 초대(비밀번호 설정) 링크를 재발송한다.
+
+    이전 토큰은 무효화되지 않지만 각 토큰은 일회용이며 7일 후 만료된다.
+    발송 폭탄을 막기 위해 기관당 쿨다운을 둔다.
+    """
+    org, admin_user = org_service.get_primary_admin(org_id, db)
+    await org_invite_service.check_resend_cooldown(str(org.id), redis)
+    invite_sent = await org_invite_service.issue_invite(admin_user, org.name, redis)
+    await org_invite_service.mark_resent(str(org.id), redis)
+    return ResendInviteResponse(admin=_serialize_admin(admin_user), invite_sent=invite_sent)
 
 
 @router.get("/orgs", response_model=list[OrganizationAdminResponse])

@@ -49,6 +49,7 @@ from app.schemas.auth import (
     RegisterClientRequest,
     RegisterCounselorRequest,
     RegisterRequest,
+    SetPasswordRequest,
     TokenResponse,
     UpdateUserMeRequest,
     UserResponse,
@@ -57,6 +58,7 @@ from app.services import (
     email_verify_service,
     login_attempt_service,
     onboarding_service,
+    org_invite_service,
     otp_service,
     password_reset_service,
     refresh_token_service,
@@ -83,7 +85,17 @@ def _to_user_response(user: User) -> UserResponse:
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(req: RegisterRequest, db: Session = Depends(get_db)):
-    """회원가입 (하위 호환). 신규 플로우는 /register/counselor, /register/client 사용."""
+    """회원가입 (하위 호환). 신규 플로우는 /register/counselor, /register/client 사용.
+
+    SDD-016: 이 경로로는 상담사를 만들 수 없다. 상담사는 반드시 기관에 소속되어야 하므로
+    기관 코드를 검증하는 /register/counselor 만 허용한다.
+    """
+    if req.role == "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="상담사 가입은 기관 코드가 필요합니다. /auth/register/counselor 를 이용하세요",
+        )
+
     existing = db.query(User).filter(User.email == req.email).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다")
@@ -386,6 +398,27 @@ async def password_reset(
     """재설정 토큰 검증 + 새 비밀번호 적용"""
     await password_reset_service.complete_reset(req.token, req.new_password, db, redis)
     return {"detail": "비밀번호가 변경되었습니다"}
+
+
+@router.post("/set-password", response_model=LoginResponse)
+async def set_password(
+    req: SetPasswordRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """SDD-016 — 기관 담당자 초대 토큰으로 최초 비밀번호 설정 + 계정 활성화.
+
+    토큰은 일회용이며 7일 후 만료된다. 성공 시 곧바로 로그인 상태로 진입할 수 있도록
+    로그인 응답(access_token/refresh_token)을 반환한다.
+    """
+    user = await org_invite_service.consume_invite(req.token, req.new_password, db, redis)
+    access_token = create_access_token(subject=str(user.id))
+    refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
+    return LoginResponse(
+        user=_to_user_response(user),
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
 
 
 # ---------------------------------------------------------------------------

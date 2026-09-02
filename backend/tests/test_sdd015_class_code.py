@@ -79,7 +79,8 @@ def test_01_platform_admin_기관등록_org_code_발급(client):
 
     res = client.post("/api/v1/admin/orgs", json={"name": "마인드브리즈 센터"}, headers=admin["h"])
     assert res.status_code == 201, res.text
-    body = res.json()
+    # SDD-016: 응답이 {org, admin, invite_sent} 구조로 확장됨
+    body = res.json()["org"]
     assert body["name"] == "마인드브리즈 센터"
     assert body["org_code"] and len(body["org_code"]) == 6
 
@@ -92,7 +93,7 @@ def test_02_기관_코드는_서로_중복되지_않는다(client):
     for i in range(5):
         res = client.post("/api/v1/admin/orgs", json={"name": f"센터{i}"}, headers=admin["h"])
         assert res.status_code == 201
-        codes.add(res.json()["org_code"])
+        codes.add(res.json()["org"]["org_code"])
     assert len(codes) == 5
 
     listed = client.get("/api/v1/admin/orgs", headers=admin["h"])

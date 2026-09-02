@@ -15,11 +15,24 @@ logger = logging.getLogger(__name__)
 RESEND_API = "https://api.resend.com/emails"
 
 
+def _mask_email(email: str) -> str:
+    """로그용 이메일 마스킹 — 로컬파트 앞 2자만 남긴다. (예: br***@corp.com)"""
+    if not email or "@" not in email:
+        return "***"
+    local, _, domain = email.partition("@")
+    head = local[:2]
+    return f"{head}{'*' * max(len(local) - 2, 1)}@{domain}"
+
+
 def _send_email(to_email: str, subject: str, body_text: str, body_html: str | None = None) -> bool:
     """Resend로 이메일 발송. 실패 시 로그만 남기고 False 반환."""
     if settings.debug and not settings.resend_api_key:
-        logger.info(f"[EMAIL DEBUG] To: {to_email} | Subject: {subject}")
-        logger.info(f"[EMAIL DEBUG] Body: {body_text[:200]}")
+        # SDD-016: 본문에는 초대 토큰·재설정 링크·OTP 등 비밀 값이 들어있으므로
+        # 디버그 모드라도 본문을 로그에 남기지 않는다. 수신자와 제목, 길이만 기록한다.
+        logger.info(
+            f"[EMAIL DEBUG] To: {_mask_email(to_email)} | Subject: {subject} "
+            f"| Body: <{len(body_text)}자 생략>"
+        )
         return True
 
     payload: dict = {
@@ -42,13 +55,13 @@ def _send_email(to_email: str, subject: str, body_text: str, body_html: str | No
                 json=payload,
             )
         if resp.is_success:
-            logger.info(f"[EMAIL] 발송 성공 → {to_email} (id={resp.json().get('id', '?')})")
+            logger.info(f"[EMAIL] 발송 성공 → {_mask_email(to_email)} (id={resp.json().get('id', '?')})")
             return True
         else:
-            logger.error(f"[EMAIL] 발송 실패 → {to_email}: {resp.status_code} {resp.text[:200]}")
+            logger.error(f"[EMAIL] 발송 실패 → {_mask_email(to_email)}: {resp.status_code}")
             return False
     except Exception as e:
-        logger.error(f"[EMAIL] 예외 발생 → {to_email}: {e}")
+        logger.error(f"[EMAIL] 예외 발생 → {_mask_email(to_email)}: {e}")
         return False
 
 
@@ -196,3 +209,29 @@ def send_invite_email(to_email: str, invite_url: str, counselor_name: str, couns
 </html>"""
 
     return _send_email(to_email, subject, body_text, body_html)
+
+
+def send_org_invite_email(
+    to_email: str,
+    invite_link: str,
+    *,
+    admin_name: str,
+    org_name: str,
+    expires_days: int,
+) -> bool:
+    """기관 담당자 초대 — 비밀번호 설정 링크 발송 (SDD-016).
+
+    임시 비밀번호를 보내지 않고, 일회용 설정 링크만 전달한다.
+    """
+    subject = "[MIND BREEZE] 기관 담당자 계정 비밀번호 설정 안내"
+    body = (
+        f"{admin_name}님, 안녕하세요.\n\n"
+        f"MIND BREEZE에 '{org_name}' 기관 담당자로 등록되었습니다.\n"
+        f"아래 링크에서 비밀번호를 설정하시면 계정이 활성화됩니다.\n\n"
+        f"{invite_link}\n\n"
+        f"· 이 링크는 {expires_days}일간 유효하며 한 번만 사용할 수 있습니다.\n"
+        f"· 링크가 만료된 경우 플랫폼 관리자에게 재발송을 요청해 주세요.\n"
+        f"· 본인이 요청하지 않았다면 이 메일을 무시해 주세요.\n\n"
+        f"감사합니다.\nMIND BREEZE 드림"
+    )
+    return _send_email(to_email, subject, body)

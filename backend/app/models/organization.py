@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, func
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,13 @@ class Organization(Base):
     biz_number: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True)
     address: Mapped[str | None] = mapped_column(String(300), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20))
+    # SDD-016: 주 담당자(org_admin) User 참조. 담당자 이름/이메일/전화의 진실원은 User 이며
+    # 여기에는 참조만 둔다. users.org_id 와 순환 FK 이므로 use_alter 로 생성 순서를 분리한다.
+    primary_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", use_alter=True, name="fk_organizations_primary_admin_id"),
+        nullable=True,
+    )
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

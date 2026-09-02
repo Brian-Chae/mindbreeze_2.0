@@ -1,6 +1,6 @@
 """상담센터(Organization) 관련 Pydantic 스키마"""
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
 class OrganizationBase(BaseModel):
@@ -33,10 +33,47 @@ class OrganizationResponse(BaseModel):
 
 
 class OrganizationAdminCreate(BaseModel):
-    """SDD-015 — system_admin 간이 기관 등록. 기관명만 필수."""
+    """SDD-015/016 — system_admin 기관 등록.
+
+    SDD-016에서 주 담당자(org_admin) 정보를 함께 받도록 확장했다.
+    담당자 정보를 생략하면 기관만 생성되는 기존 동작을 유지한다.
+    """
 
     name: str = Field(min_length=1, max_length=200)
     phone: str | None = Field(None, max_length=20)
+    address: str | None = Field(None, max_length=300)
+    admin_name: str | None = Field(None, min_length=1, max_length=100)
+    admin_email: EmailStr | None = None
+    admin_phone: str | None = Field(None, max_length=20)
+
+    @model_validator(mode="after")
+    def _validate_admin(self) -> "OrganizationAdminCreate":
+        # 담당자를 등록하려면 이름과 이메일이 함께 있어야 한다
+        if bool(self.admin_name) != bool(self.admin_email):
+            raise ValueError("담당자 이름과 이메일은 함께 입력해야 합니다")
+        return self
+
+
+class OrgAdminSummary(BaseModel):
+    """생성된 기관 담당자 요약 — 초대 토큰은 포함하지 않는다."""
+
+    id: str
+    email: str
+    name: str
+    status: str
+
+
+class OrganizationWithAdminResponse(BaseModel):
+    """기관 등록 결과 — 기관 + 담당자 + 초대 발송 여부."""
+
+    org: "OrganizationAdminResponse"
+    admin: OrgAdminSummary | None = None
+    invite_sent: bool = False
+
+
+class ResendInviteResponse(BaseModel):
+    admin: OrgAdminSummary
+    invite_sent: bool = False
 
 
 class OrganizationAdminResponse(BaseModel):
@@ -95,3 +132,6 @@ class CounselorResponse(BaseModel):
     name: str
     email: str
     role: str
+
+
+OrganizationWithAdminResponse.model_rebuild()

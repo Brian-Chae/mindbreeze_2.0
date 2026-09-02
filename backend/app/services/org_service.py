@@ -382,3 +382,96 @@ def get_organization_by_code(code: str, db: Session) -> Organization | None:
 def list_organizations(db: Session) -> list[Organization]:
     """전체 기관 목록 (system_admin 용)."""
     return db.query(Organization).order_by(Organization.created_at.desc()).all()
+
+
+# ---------------------------------------------------------------------------
+# SDD-016: 기관 + 주 담당자(org_admin) 동시 등록
+# ---------------------------------------------------------------------------
+
+
+def create_org_with_admin(
+    *,
+    name: str,
+    admin_name: str,
+    admin_email: str,
+    admin_phone: str | None,
+    phone: str | None,
+    address: str | None,
+    db: Session,
+) -> tuple[Organization, User]:
+    """기관 + org_admin 계정을 함께 생성한다 (SDD-016).
+
+    담당자 계정은 비밀번호를 설정하지 않은 상태(status="pending")로 만들고,
+    추측 불가능한 난수 해시를 넣어 초대 수락 전에는 로그인할 수 없게 한다.
+    이메일이 이미 사용 중이면 409로 거부한다 — 자동 병합·승격은 권한 상승 위험이 있다.
+    """
+    import secrets
+
+    from app.core.security import hash_password
+
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="기관명을 입력해야 합니다",
+        )
+
+    email = (admin_email or "").strip().lower()
+    if db.query(User).filter(User.email == email).first() is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 이메일입니다",
+        )
+
+    org = Organization(
+        name=clean_name,
+        phone=phone,
+        address=address,
+        verified=True,  # 플랫폼 관리자가 직접 등록하므로 검증 완료로 간주
+        org_code=generate_org_code(db),
+    )
+    db.add(org)
+    db.flush()
+
+    admin = User(
+        email=email,
+        # 초대 수락 전까지 아무도 알 수 없는 난수 — 실질적으로 로그인 불가
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        name=(admin_name or "").strip(),
+        phone=admin_phone,
+        role="org_admin",
+        org_id=org.id,
+        status="pending",
+        verified_tier="unverified",
+    )
+    db.add(admin)
+    db.flush()
+
+    org.primary_admin_id = admin.id
+    db.commit()
+    db.refresh(org)
+    db.refresh(admin)
+    return org, admin
+
+
+def get_primary_admin(org_id: str, db: Session) -> tuple[Organization, User]:
+    """기관과 주 담당자를 함께 조회한다. 없으면 404."""
+    try:
+        oid = uuid.UUID(str(org_id))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다")
+
+    org = db.query(Organization).filter(Organization.id == oid).first()
+    if org is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다")
+    if org.primary_admin_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="기관에 등록된 담당자가 없습니다"
+        )
+
+    admin = db.query(User).filter(User.id == org.primary_admin_id).first()
+    if admin is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="담당자 계정을 찾을 수 없습니다"
+        )
+    return org, admin

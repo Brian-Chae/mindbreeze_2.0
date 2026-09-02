@@ -129,6 +129,13 @@ class PasswordForgotRequest(BaseModel):
     email: EmailStr
 
 
+class SetPasswordRequest(BaseModel):
+    """SDD-016 — 초대 토큰으로 최초 비밀번호를 설정한다."""
+
+    token: str = Field(min_length=1)
+    new_password: str = Field(min_length=8)
+
+
 class PasswordResetRequest(BaseModel):
     token: str
     new_password: str = Field(min_length=8)
