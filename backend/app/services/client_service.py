@@ -130,17 +130,15 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
     db.commit()
     db.refresh(invite)
 
-    invite_url = f"http://dev.mindbreeze.looxidlabs.com/invite/{token}"
+    invite_url = f"https://dev.mindbreeze.looxidlabs.com/invite/{token}"
 
-    # 상담사 이름 + 코드 조회
+    # 상담사 이름 조회 (상담사 코드는 더 이상 사용하지 않음)
     counselor = db.query(User).filter(User.id == UUID(counselor_id)).first()
     counselor_name = counselor.name if counselor else "상담사"
-    profile = db.query(CounselorProfile).filter(CounselorProfile.user_id == UUID(counselor_id)).first()
-    counselor_code = profile.counselor_code if profile else "------"
 
     # 이메일 발송 (실패해도 초대 자체는 성공)
     try:
-        send_invite_email(email, invite_url, counselor_name, counselor_code)
+        send_invite_email(email, invite_url, counselor_name)
         message = f"{email}로 초대 메일을 발송했습니다"
     except Exception as e:
         logger.warning(f"초대 이메일 발송 실패: {e}")
