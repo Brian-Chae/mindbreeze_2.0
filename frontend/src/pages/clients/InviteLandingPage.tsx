@@ -48,7 +48,9 @@ export default function InviteLandingPage() {
         navigate('/dashboard');
       }
     } else if (user.role === 'client') {
-      navigate(`/onboarding/client?code=${info?.counselor_code ?? ''}`);
+      // 초대 경로: source=invite로 Step 4 연결 확인 UI 진입 (code는 fallback용)
+      const codeQuery = info?.counselor_code ? `&code=${info.counselor_code}` : '';
+      navigate(`/onboarding/client?source=invite${codeQuery}`);
     } else {
       navigate('/onboarding/counselor');
     }

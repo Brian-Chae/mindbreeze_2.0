@@ -151,6 +151,95 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
     }
 
 
+def link_invited_client(
+    invite_token: str, client: User, db: Session
+) -> ClientInvite | None:
+    """초대 토큰으로 내담자를 초대한 상담사에 자동 연결한다.
+
+    register_client(이메일 가입)와 google_auth(구글 가입) 양쪽이 공유하는 공통 로직.
+    기존 google_auth 인라인 로직에 있던 보안 결함을 여기서 일괄 보완한다:
+
+    - 이메일 일치 검증: 초대받은 이메일(invite.email)과 실제 가입 이메일(client.email)이
+      일치할 때만 연결한다. 불일치 시 링크를 만들지 않는다.
+      (초대 링크를 가로챈 제3자가 다른 이메일 계정으로 상담사에 연결되는 것을 차단)
+    - single-use: 연결에 성공하면 초대 상태를 "accepted"로 전환한다.
+    - 만료 처리: status가 "expired"면 무효로 간주한다.
+
+    Args:
+        invite_token: 초대 토큰(ClientInvite.token). 빈 값이면 아무 것도 하지 않음.
+        client: 방금 가입한 내담자 User (이메일은 이미 검증된 상태).
+        db: DB 세션.
+
+    Returns:
+        연결 성공(또는 동일 사용자의 idempotent 재수락) 시 ClientInvite.
+        토큰 무효 / 만료 / 이메일 불일치 시 None
+        (이 경우 가입 자체는 성공하고, 온보딩에서 상담사 코드 수동 입력으로 폴백한다).
+    """
+    # 순환 import 방지를 위해 함수 내부에서 지연 import
+    from app.services import onboarding_service
+    from app.services.chat_service import get_or_create_direct_room
+
+    if not invite_token:
+        return None
+
+    invite = (
+        db.query(ClientInvite)
+        .filter(ClientInvite.token == invite_token)
+        .first()
+    )
+    # 존재하지 않거나 이미 만료된 초대는 무효
+    if invite is None or invite.status == "expired":
+        return None
+
+    # 이메일 일치 검증 — 초대 대상 이메일과 가입 이메일이 같아야만 연결한다
+    if (invite.email or "").strip().lower() != (client.email or "").strip().lower():
+        return None
+
+    counselor_id = invite.counselor_id
+
+    # 링크 중복 방지 — 이미 연결돼 있으면 새로 만들지 않는다(idempotent)
+    existing_link = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == client.id,
+            ClientCounselorLink.counselor_id == counselor_id,
+        )
+        .first()
+    )
+    if existing_link is None:
+        link = ClientCounselorLink(
+            client_id=client.id,
+            counselor_id=counselor_id,
+            status="active",
+        )
+        db.add(link)
+        # 수동 코드 매칭(onboarding.client_step4_match)과 동일하게
+        # 상담사-내담자 1:1 채팅방을 자동 생성한다
+        get_or_create_direct_room(counselor_id, client.id, db)
+
+    # single-use: 초대 수락 처리
+    invite.status = "accepted"
+
+    # 온보딩 완료 게이트 해소 — step4(상담사 매칭)를 초대 정보로 미리 마킹한다.
+    # 이렇게 해두면 초대 가입자는 온보딩에서 상담사 코드를 다시 입력하지 않아도
+    # client_complete의 step4 필수 조건을 통과한다.
+    profile = (
+        db.query(CounselorProfile)
+        .filter(CounselorProfile.user_id == counselor_id)
+        .first()
+    )
+    counselor_code = profile.counselor_code if profile else None
+    onboarding_service.save_step(
+        str(client.id),
+        4,
+        {"counselor_code": counselor_code, "counselor_id": str(counselor_id)},
+        db,
+    )
+
+    db.commit()
+    return invite
+
+
 def get_invite(token: str, db: Session) -> dict:
     """초대 토큰 조회 → 상담사 정보"""
     invite = (

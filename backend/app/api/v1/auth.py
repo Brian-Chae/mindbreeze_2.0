@@ -26,8 +26,6 @@ from app.models.onboarding_progress import OnboardingProgress
 from app.models.qualification import Qualification
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
-from app.models.client_counselor_link import ClientCounselorLink
-from app.models.client_invite import ClientInvite
 from app.schemas.auth import (
     CareerItem,
     ClientProfileResponse,
@@ -280,7 +278,14 @@ async def register_counselor(req: RegisterCounselorRequest, db: Session = Depend
 
 @router.post("/register/client", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
 async def register_client(req: RegisterClientRequest, db: Session = Depends(get_db)):
-    """내담자(회원) 가입"""
+    """내담자(회원) 가입.
+
+    초대 링크(invite_token)로 들어온 경우 초대한 상담사에 자동 연결한다.
+    가입 이메일은 _create_user_with_role에서 email_verify_token으로 이미 검증되므로,
+    link_invited_client의 이메일 일치 검증 기준(user.email)으로 안전하게 쓸 수 있다.
+    """
+    from app.services import client_service
+
     user, access, refresh = _create_user_with_role(
         role="client",
         email_verify_token=req.email_verify_token,
@@ -290,6 +295,15 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
         consents=req.consents,
         db=db,
     )
+
+    # 초대 토큰이 있으면 상담사 자동 연결.
+    # 이메일 불일치/만료/무효 토큰이면 조용히 스킵되고(가입은 성공),
+    # 내담자는 온보딩에서 상담사 코드를 수동 입력하는 폴백을 따른다.
+    if req.invite_token:
+        client_service.link_invited_client(req.invite_token, user, db)
+        # 새로 생성된 링크가 응답 관계에 반영되도록 사용자 재조회
+        db.refresh(user)
+
     return LoginResponse(
         user=_to_user_response(user),
         access_token=access,
@@ -521,27 +535,13 @@ async def google_auth(
         db.commit()
         db.refresh(user)
 
-    # 3. 초대 토큰 처리 → ClientCounselorLink 자동 생성
+    # 3. 초대 토큰 처리 → ClientCounselorLink 자동 생성 (공통 헬퍼 사용)
+    #    이메일 일치 검증 + single-use(accepted 전환) + 만료 처리는
+    #    link_invited_client가 담당한다. 이메일 불일치/무효 시 조용히 스킵된다.
     if req.invite_token:
-        invite = db.query(ClientInvite).filter(
-            ClientInvite.token == req.invite_token,
-            ClientInvite.status != "expired",
-        ).first()
-
-        if invite:
-            existing_link = db.query(ClientCounselorLink).filter(
-                ClientCounselorLink.client_id == user.id,
-                ClientCounselorLink.counselor_id == invite.counselor_id,
-            ).first()
-
-            if not existing_link:
-                link = ClientCounselorLink(
-                    client_id=user.id,
-                    counselor_id=invite.counselor_id,
-                    status="active",
-                )
-                db.add(link)
-                db.commit()
+        from app.services import client_service
+        client_service.link_invited_client(req.invite_token, user, db)
+        db.refresh(user)
 
     # 4. JWT 발급
     access_token = create_access_token(subject=str(user.id))

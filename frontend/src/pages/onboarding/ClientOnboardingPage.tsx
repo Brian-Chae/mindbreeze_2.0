@@ -5,7 +5,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
-import { ApiError } from '../../lib/api/client';
+import { ApiError, apiClient } from '../../lib/api/client';
 import {
   getOnboardingProgress,
   saveClientStep1,
@@ -71,7 +71,9 @@ export default function ClientOnboardingPage() {
   const setUser = useAuthStore((s) => s.setUser);
   const [searchParams] = useSearchParams();
   const autoCode = searchParams.get('code') ?? '';
+  const inviteSource = searchParams.get('source') === 'invite';
   const autoMatchTriggered = useRef(false);
+  const inviteFetchTriggered = useRef(false);
 
   const [step, setStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -79,7 +81,16 @@ export default function ClientOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchedCounselor, setMatchedCounselor] = useState<MatchInfo | null>(null);
+  const [inviteConfirmLoading, setInviteConfirmLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  // 초대 경로 또는 이미 연결된 상담사가 있는 경우 Step 4 코드 입력 생략
+  const hasLinkedCounselor = (user?.counselors?.length ?? 0) > 0;
+  const isInviteFlow = inviteSource || hasLinkedCounselor;
+
+  const markCompleted = (n: number): void => {
+    setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -103,7 +114,7 @@ export default function ClientOnboardingPage() {
       } catch {
         // 진행 상태 없음
       }
-      // 초대 링크에서 전달된 상담사 코드 자동 입력
+      // 초대 링크에서 전달된 상담사 코드 자동 입력 (일반 가입 ?code= fallback 포함)
       if (!cancelled && autoCode.length === 6) {
         setForm((prev) => ({ ...prev, counselorCode: autoCode }));
       }
@@ -113,13 +124,100 @@ export default function ClientOnboardingPage() {
     };
   }, []);
 
-  // 초대 링크로 들어온 경우 step 4에서 자동 매칭
+  // 초대 경로 Step 4: 연결된 상담사 조회 후 확인 카드 표시 (코드 입력 없음)
   useEffect(() => {
-    if (step === 4 && form.counselorCode.length === 6 && !autoMatchTriggered.current && !matchedCounselor) {
-      autoMatchTriggered.current = true;
-      handleMatch();
+    if (step !== 4 || !isInviteFlow || inviteFetchTriggered.current) return;
+
+    inviteFetchTriggered.current = true;
+    let cancelled = false;
+
+    (async () => {
+      setInviteConfirmLoading(true);
+      setError(null);
+      try {
+        // authStore에 상담사 정보가 있으면 우선 사용
+        if (hasLinkedCounselor && user?.counselors?.[0]) {
+          const linked = user.counselors[0];
+          if (!cancelled) {
+            setMatchedCounselor({
+              matched_counselor: {
+                id: linked.id,
+                name: linked.name,
+                counselor_code: autoCode || '',
+                specialties: [],
+                profile_image: linked.profile_image,
+              },
+              counselor_code: autoCode || undefined,
+            });
+            markCompleted(4);
+          }
+          return;
+        }
+
+        // 서버에서 연결된 상담사 목록 조회
+        const list = await apiClient.get<
+          Array<{ id: string; name: string; profile_image: string | null }>
+        >('/client/counselors');
+        if (cancelled) return;
+
+        if (list.length > 0) {
+          const linked = list[0];
+          setMatchedCounselor({
+            matched_counselor: {
+              id: linked.id,
+              name: linked.name,
+              counselor_code: autoCode || '',
+              specialties: [],
+              profile_image: linked.profile_image,
+            },
+            counselor_code: autoCode || undefined,
+          });
+          markCompleted(4);
+          return;
+        }
+
+        // edge case: link 미생성 시 code fallback으로 silent 매칭 시도
+        if (autoCode.length === 6) {
+          try {
+            const res = await matchClientWithCounselor(autoCode);
+            if (!cancelled) {
+              setMatchedCounselor({ ...res, counselor_code: autoCode });
+              markCompleted(4);
+            }
+          } catch {
+            if (!cancelled) {
+              setError('상담사 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+            }
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setError('상담사 연결 정보를 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) setInviteConfirmLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, isInviteFlow, hasLinkedCounselor, user, autoCode]);
+
+  // 일반 가입 ?code= 자동 매칭 (초대 source=invite 경로는 제외)
+  useEffect(() => {
+    if (
+      inviteSource ||
+      step !== 4 ||
+      form.counselorCode.length !== 6 ||
+      autoMatchTriggered.current ||
+      matchedCounselor
+    ) {
+      return;
     }
-  }, [step, form.counselorCode]);
+    autoMatchTriggered.current = true;
+    handleMatch();
+  }, [step, form.counselorCode, inviteSource, matchedCounselor]);
 
   const toggleItem = (field: 'concerns' | 'interests', item: string): void => {
     setForm((f) => ({
@@ -128,10 +226,6 @@ export default function ClientOnboardingPage() {
         ? f[field].filter((s) => s !== item)
         : [...f[field], item],
     }));
-  };
-
-  const markCompleted = (n: number): void => {
-    setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
   };
 
   const handlePhoneChange = (value: string): void => {
@@ -229,7 +323,7 @@ export default function ClientOnboardingPage() {
       await completeClientOnboarding();
       markCompleted(4);
 
-      // 매칭된 상담사 정보로 authStore 업데이트 → /app 에서 연결됨으로 인식
+      // 매칭/연결된 상담사 정보로 authStore 업데이트 → /app 에서 연결됨으로 인식
       if (matchedCounselor?.matched_counselor && user) {
         const mc = matchedCounselor.matched_counselor;
         setUser({
@@ -240,6 +334,9 @@ export default function ClientOnboardingPage() {
           ],
           onboarding_completed: true,
         });
+      } else if (user) {
+        // 초대 경로 등 step4 매칭 API 없이 완료된 경우
+        setUser({ ...user, onboarding_completed: true });
       }
 
       setDone(true);
@@ -394,7 +491,7 @@ export default function ClientOnboardingPage() {
             {step === 1 && '기본 정보'}
             {step === 2 && '상세 정보'}
             {step === 3 && '프로필'}
-            {step === 4 && '상담사 코드 매칭'}
+            {step === 4 && (isInviteFlow ? '상담사 연결' : '상담사 코드 매칭')}
           </h2>
 
           {/* Step 1: 기본 정보 */}
@@ -549,10 +646,46 @@ export default function ClientOnboardingPage() {
             </div>
           )}
 
-          {/* Step 4: 상담사 코드 매칭 */}
+          {/* Step 4: 상담사 매칭 / 초대 연결 확인 */}
           {step === 4 && (
             <div className="space-y-4">
-              {!matchedCounselor ? (
+              {isInviteFlow ? (
+                <>
+                  {inviteConfirmLoading ? (
+                    <p className="text-[13px] text-white/60 text-center py-4">
+                      상담사 연결을 확인하는 중...
+                    </p>
+                  ) : matchedCounselor ? (
+                    <>
+                      <p className="text-[15px] font-semibold text-white text-center">
+                        상담사와 연결되었습니다
+                      </p>
+                      <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
+                        <p className="text-sm font-semibold text-[#C38BFF]">연결된 상담사</p>
+                        <div>
+                          <p className="text-xs text-white/40">이름</p>
+                          <p className="text-lg font-semibold text-white">
+                            {matchedCounselor.matched_counselor?.name}
+                          </p>
+                        </div>
+                        {matchedCounselor.counselor_code && (
+                          <div>
+                            <p className="text-xs text-white/40">코드</p>
+                            <p className="text-base font-mono text-white tracking-widest">
+                              {matchedCounselor.counselor_code}
+                            </p>
+                          </div>
+                        )}
+                        <p className="text-xs text-white/50">초대를 통해 자동 연결됨</p>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-[13px] text-white/60 text-center">
+                      상담사 연결 정보를 확인할 수 없습니다.
+                    </p>
+                  )}
+                </>
+              ) : !matchedCounselor ? (
                 <>
                   <div>
                     <label className="block text-[13px] text-white/60 mb-1.5 ml-1">
@@ -637,7 +770,7 @@ export default function ClientOnboardingPage() {
                   {loading ? '저장 중...' : '다음'}
                 </button>
               )}
-              {step === 4 && !matchedCounselor && (
+              {step === 4 && !isInviteFlow && !matchedCounselor && (
                 <button
                   type="button"
                   onClick={handleMatch}
@@ -651,7 +784,7 @@ export default function ClientOnboardingPage() {
                 <button
                   type="button"
                   onClick={handleComplete}
-                  disabled={loading}
+                  disabled={loading || inviteConfirmLoading}
                   className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
                 >
                   {loading ? '처리 중...' : '완료'}

@@ -56,6 +56,10 @@ class RegisterCounselorRequest(_RegisterBase):
 class RegisterClientRequest(_RegisterBase):
     """내담자 가입 — role=client 고정"""
 
+    # 초대 링크를 통한 가입 시 상담사 자동 연결에 사용하는 초대 토큰(선택).
+    # ClientInvite.token은 String(64)이므로 과도한 입력은 쿼리 전에 거른다.
+    invite_token: str | None = Field(None, max_length=128)
+
 
 class LoginRequest(BaseModel):
     email: EmailStr

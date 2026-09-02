@@ -46,6 +46,8 @@ export interface ClientRegisterPayload {
   name: string;
   email_verify_token: string;
   consents: { tos: boolean; privacy: boolean; sensitive: boolean };
+  /** 초대 링크 토큰 — 있으면 가입 시 상담사 자동 연결 */
+  invite_token?: string;
 }
 
 export const requestOtp = (email: string): Promise<{ ok: boolean }> =>

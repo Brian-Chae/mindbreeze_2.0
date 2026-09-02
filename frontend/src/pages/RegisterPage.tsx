@@ -55,7 +55,12 @@ export default function RegisterPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const roleParam = params.get('role');
-  const role: Role = roleParam === 'counselor' ? 'counselor' : 'client';
+  const typeParam = params.get('type');
+  // type=client 또는 role=client 모두 내담자 가입으로 처리
+  const role: Role =
+    roleParam === 'counselor' ? 'counselor' : 'client';
+  const inviteToken = params.get('token') ?? '';
+  const isInviteRegistration = typeParam === 'client' && inviteToken.length > 0;
 
   const registerClient = useAuthStore((s) => s.registerClient);
 
@@ -158,9 +163,11 @@ export default function RegisterPage() {
         name: name.trim(),
         email_verify_token: emailVerifyToken,
         consents,
+        invite_token: inviteToken || undefined,
       };
       await registerClient(payload);
-      navigate('/onboarding/client');
+      // 초대 가입: 온보딩 Step 4에서 코드 입력 없이 연결 확인 화면으로 진입
+      navigate(isInviteRegistration ? '/onboarding/client?source=invite' : '/onboarding/client');
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
@@ -224,9 +231,20 @@ export default function RegisterPage() {
             </h1>
           </Link>
           <p className="text-sm text-ink-tertiary">
-            내담자 회원가입
+            {isInviteRegistration ? '초대받은 내담자 가입' : '내담자 회원가입'}
           </p>
         </div>
+
+        {isInviteRegistration && (
+          <div className="rounded-2xl border border-brand-primary/30 bg-brand-primary/5 px-5 py-4 text-center space-y-1">
+            <p className="text-sm font-semibold text-ink-primary">
+              상담사님의 초대로 가입 중입니다
+            </p>
+            <p className="text-xs text-ink-tertiary">
+              가입 완료 시 상담사와 자동으로 연결됩니다
+            </p>
+          </div>
+        )}
 
         <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
           <StepIndicator current={step} />
