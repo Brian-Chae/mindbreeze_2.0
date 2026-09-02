@@ -258,6 +258,19 @@ def test_정지사유_누락_422(client):
     assert r.status_code == 422
 
 
+def test_사용자_삭제(client):
+    admin = _make_admin(client)
+    sub = _register(client, "delete-me@test.com")
+
+    r = client.delete(f"/api/v1/admin/users/{sub['id']}", headers=admin["h"])
+    assert r.status_code == 204, r.text
+
+    # 삭제 후 목록에서 조회되지 않는다
+    res = client.get("/api/v1/admin/users?q=delete-me", headers=admin["h"])
+    assert res.status_code == 200
+    assert all(it["email"] != "delete-me@test.com" for it in res.json()["items"])
+
+
 def test_counselor_admin_API_403(client):
     counselor = _register(client, "regular@test.com")
     res = client.get("/api/v1/admin/reviews", headers=counselor["h"])

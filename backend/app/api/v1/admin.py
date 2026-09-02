@@ -161,6 +161,20 @@ def unsuspend(
     return admin_service.unsuspend_user(uid, admin.id, db)
 
 
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: str,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    """사용자 계정 영구 삭제 — 플랫폼 관리자 전용. FK 자식 레코드까지 정리한다."""
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    admin_service.delete_user(uid, admin.id, db)
+
+
 # ---------------------------------------------------------------------------
 # SDD-015: system_admin 전용 기관 등록 (기관명 → 6자리 기관 코드 발급)
 # ---------------------------------------------------------------------------

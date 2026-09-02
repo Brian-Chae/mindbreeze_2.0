@@ -6,6 +6,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.credential import Credential, VerificationAudit
@@ -306,6 +307,7 @@ def list_users(
                 "name": u.name,
                 "role": u.role,
                 "status": u.status,
+                "suspended": u.status == "suspended",
                 "verified_tier": u.verified_tier,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
@@ -353,3 +355,59 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
     ))
     db.commit()
     return {"id": str(user.id), "status": user.status}
+
+
+def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
+    """사용자 계정을 영구 삭제한다 (플랫폼 관리자 전용).
+
+    users.id 를 참조하는 모든 FK 자식 레코드를 먼저 삭제한 뒤 사용자를 삭제한다.
+    ORM cascade 가 없는 관계(client_counselor_links, credentials, sessions 등)까지
+    명시적으로 정리해 FK 제약 위반을 방지한다.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if user.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="플랫폼 관리자는 삭제할 수 없습니다")
+
+    uid = str(user_id)
+
+    # 1. 기관의 primary_admin_id 참조 해제 (SET NULL)
+    db.execute(
+        text("UPDATE organizations SET primary_admin_id = NULL WHERE primary_admin_id = :id"),
+        {"id": uid},
+    )
+
+    # 2. users.id 를 참조하는 자식 테이블 정리
+    child_tables: list[tuple[str, list[str]]] = [
+        ("client_counselor_links", ["client_id", "counselor_id"]),
+        ("client_invites", ["counselor_id"]),
+        ("chat_message_reads", ["user_id"]),
+        ("chat_messages", ["sender_id"]),
+        ("chat_room_participants", ["user_id"]),
+        ("chat_rooms", ["host_id"]),
+        ("credentials", ["user_id"]),
+        ("eeg_records", ["user_id"]),
+        ("notifications", ["user_id"]),
+        ("org_join_requests", ["user_id"]),
+        ("reports", ["user_id"]),
+        ("session_participants", ["user_id"]),
+        ("sessions", ["host_id"]),
+        ("verification_audits", ["admin_id"]),
+        ("consents", ["user_id"]),
+        ("refresh_tokens", ["user_id"]),
+        ("password_history", ["user_id"]),
+        ("onboarding_progress", ["user_id"]),
+        ("counselor_profiles", ["user_id"]),
+        ("client_profiles", ["user_id"]),
+        ("qualifications", ["user_id"]),
+        ("careers", ["user_id"]),
+    ]
+    for table, cols in child_tables:
+        for col in cols:
+            db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
+
+    # 3. 사용자 삭제
+    db.delete(user)
+    db.commit()
+    return {"id": uid, "deleted": True}
