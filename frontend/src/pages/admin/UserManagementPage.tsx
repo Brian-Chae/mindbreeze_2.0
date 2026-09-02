@@ -62,7 +62,7 @@ export default function UserManagementPage() {
       if (role) params.role = role;
       if (q) params.q = q;
       const res = await listUsers(params as { role?: string; q?: string; page?: number; size?: number });
-      setUsers(res.users);
+      setUsers(res.items);
       setTotal(res.total);
     } catch (e) {
       setError(e instanceof Error ? e.message : '사용자 조회 실패');

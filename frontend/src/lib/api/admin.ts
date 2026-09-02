@@ -66,7 +66,7 @@ export interface UserDto {
 }
 
 export interface UserListResponse {
-  users: UserDto[];
+  items: UserDto[];
   total: number;
   page: number;
   size: number;
