@@ -41,6 +41,7 @@ import NotificationCenterPage from './pages/notifications/NotificationCenterPage
 import SettingsPage from './pages/SettingsPage';
 import ClientAppPage from './pages/client/ClientAppPage';
 import ClassJoinPage from './pages/class-join-page';
+import OrgPublicPage from './pages/OrgPublicPage';
 import OrgDashboardPage from './pages/OrgDashboardPage';
 import { useAuthStore } from './stores/authStore';
 
@@ -81,6 +82,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/join" element={<ClassJoinPage />} />
+        <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
