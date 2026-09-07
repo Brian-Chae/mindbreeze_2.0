@@ -205,6 +205,7 @@ class GuestSessionStateResponse(BaseModel):
     """게스트가 인증 없이 대기→명상 전이를 감지하기 위한 최소 상태.
 
     민감한 참가자 목록은 포함하지 않는다.
+    SDD-023: 게스트 명상 화면 실데이터(최신 윈도우) 필드를 추가한다. 미착용/미수집 시 null.
     """
 
     session_id: str
@@ -212,3 +213,58 @@ class GuestSessionStateResponse(BaseModel):
     in_progress: bool = False
     ended: bool = False
     participant_state: ParticipantLogState | None = None
+    # SDD-023: 본인(participant_id)의 최신 EEG feature 윈도우 실값 (없으면 null)
+    band_connected: bool = False
+    relaxation_index: float | None = None
+    focus_index: float | None = None
+    stress_index: float | None = None
+    signal_quality: float | None = None
+    last_eeg_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# SDD-023: LINK BAND 실연동 — EEG feature ingestion
+# ---------------------------------------------------------------------------
+
+
+class EEGFeatureItem(BaseModel):
+    """1초 단위 EEG feature. 산출 불가 값은 null 로 보낸다(0 치환 금지)."""
+
+    # 세션 내 0-based 초 인덱스 (윈도우 순서)
+    second_offset: int = Field(..., ge=0)
+    # 디바이스 원시 타임스탬프(ms epoch) — 선택
+    timestamp: float | None = None
+    # 밴드파워
+    delta_power: float | None = None
+    theta_power: float | None = None
+    alpha_power: float | None = None
+    beta_power: float | None = None
+    gamma_power: float | None = None
+    total_power: float | None = None
+    # 지표
+    focus_index: float | None = None
+    relaxation_index: float | None = None
+    stress_index: float | None = None
+    meditation_level: float | None = None
+    attention_level: float | None = None
+    cognitive_load: float | None = None
+    emotional_stability: float | None = None
+    hemispheric_balance: float | None = None
+    # 신호 품질 원시값(0~1)
+    signal_quality: float | None = None
+
+
+class EEGFeatureBatchRequest(BaseModel):
+    """5초 배치 업로드 — 초당 1개 feature 배열.
+
+    participant_id: 게스트/특정 참가자 식별용. 미지정 시 인증 사용자를 참가자로 해석한다.
+    """
+
+    participant_id: str | None = None
+    features: list[EEGFeatureItem] = Field(..., min_length=1)
+
+
+class EEGFeatureBatchResponse(BaseModel):
+    session_id: str
+    # 실제 저장된 윈도우 수 (중복 초 인덱스는 제외)
+    saved: int

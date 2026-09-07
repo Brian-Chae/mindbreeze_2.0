@@ -115,6 +115,7 @@ export type UploadStatus = 'idle' | 'streaming' | 'delayed' | 'failed' | 'comple
 
 export interface SessionLiveMetric {
   participant_id: string;
+  user_id?: string | null;
   display_name: string;
   is_guest: boolean;
   band_connected: boolean;
@@ -127,7 +128,42 @@ export interface SessionLiveMetric {
 }
 
 export interface SessionLiveMetricsResponse {
-  participants: SessionLiveMetric[];
+  /** SDD-023 BE 계약 — 참가자별 라이브 지표 */
+  metrics: SessionLiveMetric[];
+  /** 하위 호환 — 일부 호출부가 participants 를 기대할 수 있음 */
+  participants?: SessionLiveMetric[];
+}
+
+/** 1초 EEG feature — POST /sessions/{id}/features 배치 항목 */
+export interface EegFeatureItem {
+  second_offset: number;
+  timestamp?: number | null;
+  delta_power?: number | null;
+  theta_power?: number | null;
+  alpha_power?: number | null;
+  beta_power?: number | null;
+  gamma_power?: number | null;
+  total_power?: number | null;
+  focus_index?: number | null;
+  relaxation_index?: number | null;
+  stress_index?: number | null;
+  meditation_level?: number | null;
+  attention_level?: number | null;
+  cognitive_load?: number | null;
+  emotional_stability?: number | null;
+  hemispheric_balance?: number | null;
+  /** 0~1 신호 품질 */
+  signal_quality?: number | null;
+}
+
+export interface EegFeatureBatchPayload {
+  participant_id?: string | null;
+  features: EegFeatureItem[];
+}
+
+export interface EegFeatureBatchResponse {
+  session_id: string;
+  saved: number;
 }
 
 /** 게스트 by-code 상태 — waiting→meditation 전이 감지용 */
@@ -135,10 +171,19 @@ export type GuestState = 'waiting' | 'meditation' | 'complete' | string;
 
 export interface SessionByCodeStateResponse {
   status: SessionStatus;
-  guest_state: GuestState;
+  guest_state?: GuestState;
+  /** BE는 participant_state 로도 내려줄 수 있음 */
+  participant_state?: string | null;
   started_at?: string | null;
   duration_min?: number | null;
   title?: string | null;
+  /** SDD-023: 게스트 본인 최신 EEG (미착용 시 null) */
+  band_connected?: boolean;
+  relaxation_index?: number | null;
+  focus_index?: number | null;
+  stress_index?: number | null;
+  signal_quality?: number | null;
+  last_eeg_at?: string | null;
 }
 
 export const listSessions = (): Promise<SessionListResponse> =>
@@ -199,9 +244,27 @@ export const joinSession = (id: string): Promise<SessionDto> =>
 export const getLiveKitToken = (id: string): Promise<{ livekit_token: string; webrtc_room_id: string }> =>
   apiClient.post<{ livekit_token: string; webrtc_room_id: string }>(`/sessions/${id}/livekit-token`);
 
-/** 호스트 콘솔용 참가자 라이브 지표 (뇌파는 null placeholder) */
-export const getSessionLiveMetrics = (id: string): Promise<SessionLiveMetricsResponse> =>
-  apiClient.get<SessionLiveMetricsResponse>(`/sessions/${id}/live-metrics`);
+/** 호스트 콘솔용 참가자 라이브 지표 */
+export const getSessionLiveMetrics = async (
+  id: string,
+): Promise<SessionLiveMetricsResponse> => {
+  const res = await apiClient.get<SessionLiveMetricsResponse>(
+    `/sessions/${id}/live-metrics`,
+  );
+  // BE는 metrics, 구 FE는 participants — 양쪽 정규화
+  const rows = res.metrics ?? res.participants ?? [];
+  return { ...res, metrics: rows, participants: rows };
+};
+
+/** SDD-023: 5초 배치 EEG feature 업로드 */
+export const postSessionFeatures = (
+  id: string,
+  payload: EegFeatureBatchPayload,
+  options?: { skipAuth?: boolean },
+): Promise<EegFeatureBatchResponse> =>
+  apiClient.post<EegFeatureBatchResponse>(`/sessions/${id}/features`, payload, {
+    skipAuth: options?.skipAuth ?? false,
+  });
 
 /** 게스트 대기/명상 전이용 세션 상태 */
 export const getSessionByCodeState = (

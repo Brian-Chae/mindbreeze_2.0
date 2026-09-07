@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
+from app.models.eeg_feature import EEGFeatureWindow
 from app.services import code_service
 
 
@@ -634,8 +635,9 @@ def _participant_log_state(status: str) -> str:
 def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     """호스트 전용 실시간 모니터링 데이터.
 
-    뇌파 값(효율/배터리/접촉상태)은 이번 단계에서 null/placeholder 로 둔다.
-    실제 EEG 연동(Web Bluetooth/Looxid SDK)은 Phase 2 에서 채운다.
+    SDD-023: LINK BAND 실연동 — EEGFeatureWindow 최신 윈도우를 조회해 두뇌휴식도
+    (relaxation_index)·연결상태(device_status)·신호품질(quality)을 실값으로 반환한다.
+    feature 가 없으면(미착용/미수집) 기존 placeholder(null/unknown/idle) 동작을 유지한다.
     band_connected 는 기존 SessionParticipant 필드를 그대로 사용한다.
     """
     s = _get_session_as_host(session_id, host_id, db)
@@ -652,10 +654,33 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             names[u.id] = u.name
 
     log_state = _participant_log_state(s.status)
+    # 참가자별 EEG feature 집계(최신 윈도우 + 평균 두뇌휴식도)
+    stats = _aggregate_window_stats(s.id, [p.id for p in active], db)
 
     metrics = []
+    contact_fail = 0
+    device_fail = 0
     for p in active:
         display_name = names.get(p.user_id) if p.user_id else p.guest_name
+        st = stats.get(p.id)
+        if st is None:
+            # feature 미수집 — placeholder 유지 (null 보존)
+            device_status = "unknown"
+            avg_efficiency = None
+            current_efficiency = None
+            upload_status = "idle"
+            last_eeg_at = None
+        else:
+            device_status = st["device_status"]
+            avg_efficiency = st["avg_relaxation"]
+            current_efficiency = st["current_relaxation"]
+            upload_status = "streaming"
+            last_eeg_at = st["last_eeg_at"]
+            if device_status == "lead_off":
+                contact_fail += 1
+            elif device_status == "disconnected":
+                device_fail += 1
+
         metrics.append(
             {
                 "participant_id": str(p.id),
@@ -666,12 +691,12 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "consent_eeg": p.consent_eeg,
                 "session_log_state": log_state,
                 "band_connected": p.band_connected,
-                "device_status": "unknown",  # placeholder — 접촉 상태는 Phase 2 EEG 연동
-                "band_battery": None,
-                "avg_efficiency": None,
-                "current_efficiency": None,
-                "upload_status": "idle",
-                "last_eeg_at": None,
+                "device_status": device_status,
+                "band_battery": None,  # 배터리는 후속(밴드 상태 프레임 파싱) 범위
+                "avg_efficiency": avg_efficiency,
+                "current_efficiency": current_efficiency,
+                "upload_status": upload_status,
+                "last_eeg_at": last_eeg_at,
             }
         )
 
@@ -680,12 +705,12 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
         "status": s.status,
         "access_code": s.access_code,
         "metrics": metrics,
-        # DashboardBox 4종 집계 — 뇌파 placeholder 단계에서는 모두 0
+        # DashboardBox 4종 집계 — 접촉/기기 실패는 최신 윈도우 품질에서 파생
         "summary": {
             "participant_count": len(metrics),
-            "contact_fail_count": 0,
-            "device_fail_count": 0,
-            "band_low_count": 0,
+            "contact_fail_count": contact_fail,
+            "device_fail_count": device_fail,
+            "band_low_count": 0,  # 배터리 미수집 단계
         },
     }
 
@@ -703,6 +728,8 @@ def get_guest_session_state(
     s = _get_session_by_code(code, db)
 
     participant_state = None
+    band_connected = False
+    latest = None
     if participant_id:
         try:
             pid = UUID(str(participant_id))
@@ -719,6 +746,17 @@ def get_guest_session_state(
             )
             if p is not None:
                 participant_state = _participant_log_state(s.status)
+                band_connected = p.band_connected
+                # SDD-023: 게스트 명상 실데이터 — 본인 최신 EEG feature 윈도우 (없으면 null)
+                latest = (
+                    db.query(EEGFeatureWindow)
+                    .filter(
+                        EEGFeatureWindow.session_id == s.id,
+                        EEGFeatureWindow.participant_id == pid,
+                    )
+                    .order_by(EEGFeatureWindow.window_index.desc())
+                    .first()
+                )
 
     return {
         "session_id": str(s.id),
@@ -726,4 +764,173 @@ def get_guest_session_state(
         "in_progress": s.status == "in_progress",
         "ended": s.status in _CLOSED_STATUSES,
         "participant_state": participant_state,
+        "band_connected": band_connected,
+        "relaxation_index": latest.relaxation_index if latest else None,
+        "focus_index": latest.focus_index if latest else None,
+        "stress_index": latest.stress_index if latest else None,
+        "signal_quality": latest.signal_quality if latest else None,
+        "last_eeg_at": latest.created_at if latest else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# SDD-023: LINK BAND 실연동 — EEG feature ingestion
+# ---------------------------------------------------------------------------
+
+# 신호 품질 원시값(0~1) → 윈도우 품질 문자열. 리포트 게이트(§A4.4)가 소비한다.
+_SIGNAL_QUALITY_VALID = 0.7
+_SIGNAL_QUALITY_DEGRADED = 0.4
+
+
+def _quality_from_signal(signal_quality: float | None) -> str:
+    """signal_quality(0~1) 에서 품질 문자열을 파생한다.
+
+    값이 없으면(null) 판정 불가이므로 모델 기본값 'valid' 를 유지한다(0 치환 금지).
+    """
+    if signal_quality is None:
+        return "valid"
+    if signal_quality >= _SIGNAL_QUALITY_VALID:
+        return "valid"
+    if signal_quality >= _SIGNAL_QUALITY_DEGRADED:
+        return "degraded"
+    return "invalid"
+
+
+def _device_status_from_quality(quality: str) -> str:
+    """최신 윈도우 품질 → 모니터링 device_status.
+
+    valid 는 접촉 양호(ok), 그 외(degraded/invalid)는 접촉 불량(lead_off)으로 본다.
+    """
+    return "ok" if quality == "valid" else "lead_off"
+
+
+def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) -> dict:
+    """참가자별 EEG feature 윈도우 집계.
+
+    반환: {participant_id(UUID): {current_relaxation, avg_relaxation, device_status, last_eeg_at}}
+    윈도우가 없는 참가자는 키를 포함하지 않는다(호출측에서 placeholder 처리).
+    """
+    if not participant_ids:
+        return {}
+
+    rows = (
+        db.query(EEGFeatureWindow)
+        .filter(
+            EEGFeatureWindow.session_id == session_id,
+            EEGFeatureWindow.participant_id.in_(participant_ids),
+        )
+        .order_by(EEGFeatureWindow.window_index)
+        .all()
+    )
+
+    grouped: dict = {}
+    for w in rows:
+        grouped.setdefault(w.participant_id, []).append(w)
+
+    result: dict = {}
+    for pid, windows in grouped.items():
+        latest = windows[-1]  # window_index 오름차순 정렬 → 마지막이 최신
+        # 평균 두뇌휴식도 — null 은 제외해 평균한다(0 치환 금지)
+        rel_values = [w.relaxation_index for w in windows if w.relaxation_index is not None]
+        avg_relaxation = round(sum(rel_values) / len(rel_values), 4) if rel_values else None
+        result[pid] = {
+            "current_relaxation": latest.relaxation_index,
+            "avg_relaxation": avg_relaxation,
+            "device_status": _device_status_from_quality(latest.quality),
+            "last_eeg_at": latest.created_at,
+        }
+    return result
+
+
+def ingest_features(
+    session_id: str,
+    payload,
+    db: DBSession,
+    *,
+    current_user_id: str | None = None,
+) -> dict:
+    """5초 배치 EEG feature 업로드 → EEGFeatureWindow 일괄 저장.
+
+    참가자 검증: participant_id(게스트/명시) 또는 인증 사용자(user_id)가 세션 참가자여야 한다.
+    비참가자는 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
+    중복 초 인덱스(재업로드)는 건너뛰고, 실제 저장한 윈도우 수만 반환한다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    # 소유 참가자 확인 — participant_id 우선, 없으면 인증 사용자로 해석
+    participant = None
+    if payload.participant_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(payload.participant_id),
+                SessionParticipant.session_id == sid,
+            )
+            .first()
+        )
+    elif current_user_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == _to_uuid(current_user_id),
+            )
+            .first()
+        )
+
+    if participant is None:
+        raise HTTPException(status_code=403, detail="세션 참가자만 EEG 데이터를 업로드할 수 있습니다")
+
+    # 동일 참가자의 기존 초 인덱스는 재저장하지 않는다(멱등)
+    existing_indices = {
+        idx
+        for (idx,) in db.query(EEGFeatureWindow.window_index)
+        .filter(
+            EEGFeatureWindow.session_id == sid,
+            EEGFeatureWindow.participant_id == participant.id,
+        )
+        .all()
+    }
+
+    saved = 0
+    seen_in_batch: set = set()
+    for f in payload.features:
+        if f.second_offset in existing_indices or f.second_offset in seen_in_batch:
+            continue
+        seen_in_batch.add(f.second_offset)
+        db.add(
+            EEGFeatureWindow(
+                session_id=sid,
+                user_id=participant.user_id,
+                participant_id=participant.id,
+                window_index=f.second_offset,
+                quality=_quality_from_signal(f.signal_quality),
+                device_timestamp_ms=f.timestamp,
+                delta_power=f.delta_power,
+                theta_power=f.theta_power,
+                alpha_power=f.alpha_power,
+                beta_power=f.beta_power,
+                gamma_power=f.gamma_power,
+                total_power=f.total_power,
+                focus_index=f.focus_index,
+                relaxation_index=f.relaxation_index,
+                stress_index=f.stress_index,
+                meditation_level=f.meditation_level,
+                attention_level=f.attention_level,
+                cognitive_load=f.cognitive_load,
+                emotional_stability=f.emotional_stability,
+                hemispheric_balance=f.hemispheric_balance,
+                signal_quality=f.signal_quality,
+            )
+        )
+        saved += 1
+
+    # 업로드가 발생하면 밴드 연결 상태로 마킹(호스트 모니터링/게스트 화면 정합)
+    if saved and not participant.band_connected:
+        participant.band_connected = True
+
+    db.commit()
+    return {"session_id": str(sid), "saved": saved}

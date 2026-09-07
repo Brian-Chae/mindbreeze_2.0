@@ -1,4 +1,4 @@
-// 세션 진행 중 라이브 페이지 — 호스트 콘솔(코드 배너·모니터링) + 녹음/마커/LiveKit
+// 세션 진행 중 라이브 페이지 — 호스트 콘솔(코드 배너·모니터링) + 녹음/마커/LiveKit + LINK BAND
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,7 +11,9 @@ import {
 } from '../../lib/api/session';
 import { startAudio, stopAudio } from '../../lib/api/audio';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
+import { useAuthStore } from '../../stores/authStore';
 import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
 import { RecordingControls } from '../../components/session/RecordingControls';
@@ -89,10 +91,25 @@ export default function SessionLivePage() {
   const [activeFilter, setActiveFilter] = useState<keyof MonitorSummaryCounts | null>(null);
 
   const liveKit = useLiveKit(id);
+  const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const recorder = useAudioRecorder({
     sessionId: id ?? '',
     onError: (err) => setError(err.message),
+  });
+
+  /** 호스트 본인 참가자 id — live-metrics 행의 user_id 매칭 */
+  const hostParticipantId = useMemo(() => {
+    if (!currentUserId) return null;
+    const fromMetrics = metrics.find((m) => m.user_id === currentUserId);
+    if (fromMetrics) return fromMetrics.participant_id;
+    return null;
+  }, [currentUserId, metrics]);
+
+  const band = useBand({
+    sessionId: id ?? '',
+    participantId: hostParticipantId,
+    enabled: Boolean(id && hostParticipantId),
   });
 
   const refreshSession = useCallback(async (): Promise<void> => {
@@ -109,7 +126,7 @@ export default function SessionLivePage() {
     if (!id) return;
     try {
       const res = await getSessionLiveMetrics(id);
-      setMetrics(res.participants ?? []);
+      setMetrics(res.metrics ?? res.participants ?? []);
     } catch {
       // live-metrics API 미준비 시 세션 참가자로 fallback
       setSession((prev) => {
@@ -209,10 +226,24 @@ export default function SessionLivePage() {
   const isRunning = session?.status === 'in_progress' || session?.status === 'paused';
 
   const displayMetrics = useMemo(() => {
-    if (metrics.length > 0) return metrics;
-    if (session) return participantsToMetrics(session);
-    return [];
-  }, [metrics, session]);
+    const base =
+      metrics.length > 0 ? metrics : session ? participantsToMetrics(session) : [];
+
+    // 호스트 본인 useBand 실데이터로 해당 행을 즉시 보강 (배터리·연결·휴식도)
+    if (!hostParticipantId || band.connectionState !== 'connected') return base;
+
+    return base.map((row) => {
+      if (row.participant_id !== hostParticipantId) return row;
+      return {
+        ...row,
+        band_connected: true,
+        band_battery: band.battery ?? row.band_battery,
+        device_status: band.deviceStatus ?? row.device_status,
+        current_efficiency: band.currentEfficiency ?? row.current_efficiency,
+        upload_status: band.uploadStatus ?? row.upload_status,
+      };
+    });
+  }, [metrics, session, hostParticipantId, band]);
 
   const activeCount = useMemo(
     () => (session?.participants ?? []).filter((p) => !p.is_waitlisted).length,
@@ -286,6 +317,48 @@ export default function SessionLivePage() {
         {/* 시작 후: Dashboard + 모니터링 테이블 */}
         {isRunning && (
           <>
+            <div className="flex flex-col gap-3 rounded-[20px] border border-[#EFEFEF] bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <div className="mb-1 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
+                  LINK BAND
+                </div>
+                <p className="text-sm text-[#1F1F1F]">
+                  {band.connectionState === 'connected'
+                    ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'}`
+                    : band.connectionState === 'unsupported'
+                      ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
+                      : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
+                </p>
+                {band.error && (
+                  <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {band.connectionState !== 'connected' ? (
+                  <button
+                    type="button"
+                    onClick={() => void band.connect()}
+                    disabled={!band.isSupported || !hostParticipantId || band.connectionState === 'connecting'}
+                    className="mb-btn disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {band.connectionState === 'connecting'
+                      ? '연결 중...'
+                      : band.isMock
+                        ? '시뮬레이션 시작'
+                        : '밴드 연결'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void band.disconnect()}
+                    className="rounded-xl border border-[#E5E5E5] px-4 py-2 text-sm font-semibold text-[#6F6F6F] hover:bg-[#FAFAFA]"
+                  >
+                    연결 해제
+                  </button>
+                )}
+              </div>
+            </div>
+
             <SessionMonitorSummary
               counts={summary}
               activeFilter={activeFilter}

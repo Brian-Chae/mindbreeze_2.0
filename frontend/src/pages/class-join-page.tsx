@@ -281,6 +281,8 @@ const ClassJoinPage: React.FC = () => {
             startedAt={session.started_at}
             durationMin={durationMin}
             onLeave={resetJoin}
+            sessionId={session.id}
+            participantId={participantId}
           />
           {error && (
             <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">

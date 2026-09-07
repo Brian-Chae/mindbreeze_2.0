@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.schemas.session import (
+    EEGFeatureBatchRequest,
+    EEGFeatureBatchResponse,
     GuestSessionStateResponse,
     InviteParticipantRequest,
     JoinByCodeRequest,
@@ -154,6 +156,25 @@ def add_marker(
 ):
     return session_service.add_marker(
         session_id, current_user["id"], payload.timestamp_sec, payload.note, db
+    )
+
+
+@router.post("/{session_id}/features", response_model=EEGFeatureBatchResponse)
+def ingest_eeg_features(
+    session_id: str,
+    payload: EEGFeatureBatchRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-023: LINK BAND 5초 배치 EEG feature 업로드.
+
+    게스트는 participant_id 로, 로그인 참가자는 인증 토큰으로 식별한다(비참가자 403).
+    """
+    return session_service.ingest_features(
+        session_id,
+        payload,
+        db,
+        current_user_id=current_user["id"] if current_user else None,
     )
 
 
