@@ -393,7 +393,7 @@ def _notify_session_state(s: Session) -> None:
             str(s.id),
             {
                 "status": s.status,
-                "state_version": s.state_version or 0,
+                "version": s.state_version or 0,
                 "started_at": s.started_at.isoformat() if s.started_at else None,
                 "ended_at": s.ended_at.isoformat() if s.ended_at else None,
             },
@@ -411,7 +411,7 @@ def _notify_participant_changed(s: Session) -> None:
         live.notify_participant_changed(
             str(s.id),
             {
-                "state_version": s.state_version or 0,
+                "version": s.state_version or 0,
                 "participant_count": len(active),
                 "waitlist_count": sum(1 for p in (s.participants or []) if p.is_waitlisted),
             },
@@ -800,7 +800,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
         "session_id": str(s.id),
         "status": s.status,
         # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트와 동일 계약
-        "state_version": s.state_version or 0,
+        "version": s.state_version or 0,
         "started_at": s.started_at,
         "access_code": s.access_code,
         "metrics": metrics,
@@ -861,7 +861,7 @@ def get_guest_session_state(
     return {
         "session_id": str(s.id),
         "status": s.status,
-        "state_version": s.state_version or 0,
+        "version": s.state_version or 0,
         "in_progress": s.status == "in_progress",
         "ended": s.status in _CLOSED_STATUSES,
         "participant_state": participant_state,
@@ -904,7 +904,7 @@ def _participant_live_snapshot(s: Session, participant: SessionParticipant, db: 
         "session_id": str(s.id),
         "role": "participant",
         "status": s.status,
-        "state_version": s.state_version or 0,
+        "version": s.state_version or 0,
         "started_at": s.started_at,
         "participant_id": str(participant.id),
         "band_connected": participant.band_connected,

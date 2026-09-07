@@ -10,9 +10,9 @@
    - 비인가 join 거부(room 미입장 + join_denied)
    - 게스트 격리: 게스트는 전체 수신 룸에 미입장 → 게스트 간 EEG 비노출
 2. 상태 계약
-   - 호스트 join snapshot(status/state_version/started_at/참가자·집계)
+   - 호스트 join snapshot(status/version/started_at/참가자·집계)
    - 게스트 join snapshot(본인 상태만, 타 참가자 미노출)
-   - 상태전이 시 state_version 증가
+   - 상태전이 시 version 증가
    - session_state_changed / participant_changed / device_status_changed 브로드캐스트 룸·payload
 3. 품질·기기 정합
    - SQI 0.5 → lead_off, 0.9 → ok (WS·REST 동일)
@@ -193,7 +193,7 @@ def test_04_host_join_전체룸_snapshot(client, monkeypatch):
     assert joined and joined[0]["data"]["role"] == "host"
     snap = joined[0]["data"]["snapshot"]
     assert snap["session_id"] == cls["id"]
-    assert "state_version" in snap
+    assert "version" in snap
     assert len(snap["metrics"]) == 1  # 호스트는 참가자 목록을 본다
 
 
@@ -359,16 +359,16 @@ def test_12_게스트_feature_호스트룸만_브로드캐스트(client, monkeyp
 # ---------------------------------------------------------------------------
 
 
-def test_13_상태전이_state_version_증가(client, monkeypatch):
+def test_13_상태전이_version_증가(client, monkeypatch):
     counselor = _register(client, "s026c13@test.com")
     cls = _create_group_class(client, counselor["h"])
     _join_guest(client, cls["access_code"], "게스트A")
 
-    v0 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["state_version"]
+    v0 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
     assert client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"]).status_code == 200
-    v1 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["state_version"]
+    v1 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
     assert client.post(f"/api/v1/sessions/{cls['id']}/pause", headers=counselor["h"]).status_code == 200
-    v2 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["state_version"]
+    v2 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
 
     assert v1 == v0 + 1
     assert v2 == v1 + 1
@@ -377,18 +377,18 @@ def test_13_상태전이_state_version_증가(client, monkeypatch):
 def test_14_broadcast_session_state_공용룸(client, monkeypatch):
     fake = _wire(monkeypatch)
     asyncio.run(
-        ns.broadcast_session_state("sess-x", {"status": "in_progress", "state_version": 3})
+        ns.broadcast_session_state("sess-x", {"status": "in_progress", "version": 3})
     )
     e = fake.events("session_state_changed")
     assert len(e) == 1
     assert e[0]["room"] == "session:sess-x:all"
-    assert e[0]["data"]["state_version"] == 3
+    assert e[0]["data"]["version"] == 3
     assert e[0]["data"]["status"] == "in_progress"
 
 
 def test_15_broadcast_participant_호스트룸(client, monkeypatch):
     fake = _wire(monkeypatch)
-    asyncio.run(ns.broadcast_participant("sess-y", {"state_version": 2, "participant_count": 4}))
+    asyncio.run(ns.broadcast_participant("sess-y", {"version": 2, "participant_count": 4}))
     e = fake.events("participant_changed")
     assert len(e) == 1
     assert e[0]["room"] == "session:sess-y"

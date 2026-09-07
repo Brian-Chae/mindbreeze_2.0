@@ -176,7 +176,11 @@ export default function SessionLivePage() {
   const handleParticipantChanged = useCallback(
     (event: ParticipantChangedEvent) => {
       if (!id || event.session_id !== id) return;
-      setMetrics(event.participants);
+      // SDD-021 버그수정: 백엔드 participant_changed는 참가자 목록이 아니라 count만 보내므로
+      // 목록이 오면 반영하고, 없으면 폴링(refreshSession/refreshMetrics)이 안전망으로 갱신한다.
+      if (event.participants && event.participants.length > 0) {
+        setMetrics(event.participants);
+      }
     },
     [id],
   );
@@ -222,7 +226,7 @@ export default function SessionLivePage() {
     [id],
   );
 
-  const liveSocket = useSessionLiveSocket({
+  useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
     enabled: Boolean(id && session),
@@ -266,16 +270,17 @@ export default function SessionLivePage() {
     return () => window.clearInterval(timer);
   }, [id, refreshSession]);
 
-  // snapshot 적용 후에만 REST live-metrics 폴링 중단 (연결만으로 중단 금지)
+  // SDD-021 버그수정: WS snapshot/이벤트가 어떤 이유로든 누락돼도 참가자가 보이도록,
+  // 폴링을 항상 유지한다(hasSnapshot 으로 중단하지 않음). WS 실시간은 handleParticipantChanged
+  // 등이 트리거로 즉시 갱신하되, 폴링은 안전망으로 병행한다.
   useEffect(() => {
     if (!id || !session) return undefined;
     void refreshMetrics();
-    if (liveSocket.hasSnapshot) return undefined;
     const timer = window.setInterval(() => {
       void refreshMetrics();
     }, LIVE_METRICS_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [id, session?.status, refreshMetrics, liveSocket.hasSnapshot]);
+  }, [id, session?.status, refreshMetrics]);
 
   /** 녹음 시작 버튼 클릭 — 온라인 세션이면 화상 연결 후 동의를 확인한다. */
   const handleStartClick = () => {

@@ -206,7 +206,7 @@ class SessionLiveMetricsResponse(BaseModel):
     session_id: str
     status: SessionStatus
     # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트 순서 판정용
-    state_version: int = 0
+    version: int = 0
     started_at: datetime | None = None
     access_code: str | None = None
     metrics: list[SessionLiveMetric] = []
@@ -226,7 +226,7 @@ class GuestSessionStateResponse(BaseModel):
     ended: bool = False
     participant_state: ParticipantLogState | None = None
     # SDD-026: 상태 계약 버전 (게스트도 폴백 중단/역순 판정에 사용)
-    state_version: int = 0
+    version: int = 0
     # SDD-023: 본인(participant_id)의 최신 EEG feature 윈도우 실값 (없으면 null)
     band_connected: bool = False
     # SDD-026: 접촉/연결 축(device_status)과 신호품질 축(signal_state) 분리 + 배터리
