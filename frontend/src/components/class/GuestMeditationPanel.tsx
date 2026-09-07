@@ -1,9 +1,15 @@
 // 게스트 명상 화면 — 타이머 + useBand 실데이터(미연결 시 대기 placeholder 유지)
 // SDD-024: WS eeg_feature 구독으로 본인 지표 실시간 보강 (REST EEG 폴링 없음)
+// SDD-026: LeadOff(접촉)/SQI(신호품질) 분리, 배터리·last_eeg_at 표시
 
 import { useCallback, useEffect, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import {
+  contactStatusLabel,
+  resolveBandLinkState,
+  signalQualityLevelLabel,
+} from '../../lib/session-live/signal-status';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 
 interface GuestMeditationPanelProps {
@@ -67,15 +73,25 @@ export function GuestMeditationPanel({
   // room join + eeg_feature 구독 (WS 미연결이어도 밴드 로컬 표시 유지)
   useSessionLiveSocket({
     sessionId,
+    participantId,
     enabled: Boolean(sessionId && participantId),
     skipAuth: true,
     onEegFeature: handleEegFeature,
   });
 
   const isLive = band.connectionState === 'connected';
+  const linkState = resolveBandLinkState({
+    bleConnected: isLive,
+    lastEegAt: band.lastEegAt,
+  });
   const displayEfficiency = isLive
     ? (band.currentEfficiency ?? remoteEfficiency)
     : remoteEfficiency;
+  // lead_off / stale 시 오염된 현재값 대신 placeholder
+  const showEfficiency =
+    band.deviceStatus !== 'lead_off' && linkState !== 'stale'
+      ? displayEfficiency
+      : null;
 
   useEffect(() => {
     const startedMs = startedAt ? new Date(startedAt).getTime() : Date.now();
@@ -107,14 +123,18 @@ export function GuestMeditationPanel({
         <div className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm sm:p-8">
           <p className="text-sm font-medium text-purple-200">두뇌휴식도</p>
           <p className="mt-4 text-6xl font-bold tracking-tight text-white sm:text-7xl">
-            {displayEfficiency !== null ? formatEfficiency(displayEfficiency) : '—'}
+            {showEfficiency !== null ? formatEfficiency(showEfficiency) : '—'}
           </p>
           <p className="mt-4 text-sm leading-6 text-purple-100">
-            {isLive
-              ? 'LINK BAND에서 실시간으로 측정 중입니다'
-              : remoteEfficiency !== null
-                ? 'WebSocket으로 실시간 지표를 수신 중입니다'
-                : 'LINK BAND 연결 시 표시됩니다'}
+            {band.deviceStatus === 'lead_off'
+              ? '접촉 불량 — LINK BAND 위치를 조정해 주세요'
+              : linkState === 'stale'
+                ? '최근 뇌파 수신이 없습니다 — 연결을 확인해 주세요'
+                : isLive
+                  ? 'LINK BAND에서 실시간으로 측정 중입니다'
+                  : remoteEfficiency !== null
+                    ? 'WebSocket으로 실시간 지표를 수신 중입니다'
+                    : 'LINK BAND 연결 시 표시됩니다'}
           </p>
 
           {/* 뇌파 차트 — 연결 시 SVG sparkline, 미연결 시 대기 shell */}
@@ -156,7 +176,9 @@ export function GuestMeditationPanel({
               <li>
                 연결 ·{' '}
                 {band.connectionState === 'connected'
-                  ? '연결됨'
+                  ? linkState === 'stale'
+                    ? '전송 중단'
+                    : '연결됨'
                   : band.connectionState === 'unsupported'
                     ? '브라우저 미지원'
                     : band.connectionState === 'connecting'
@@ -167,14 +189,8 @@ export function GuestMeditationPanel({
                 배터리 ·{' '}
                 {band.battery !== null ? `${Math.round(band.battery)}%` : '—'}
               </li>
-              <li>
-                접촉 ·{' '}
-                {band.deviceStatus === 'ok'
-                  ? '정상'
-                  : band.deviceStatus === 'lead_off'
-                    ? '불량'
-                    : '—'}
-              </li>
+              <li>접촉 · {contactStatusLabel(band.deviceStatus)}</li>
+              <li>신호품질 · {signalQualityLevelLabel(band.signalQualityLevel)}</li>
             </ul>
 
             {!band.isSupported && (

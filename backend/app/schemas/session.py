@@ -156,6 +156,8 @@ DeviceStatus = Literal["ok", "lead_off", "disconnected", "unsupported", "unknown
 UploadStatus = Literal["idle", "streaming", "delayed", "failed", "completed"]
 # 참가자별 진행 상태 (1.0 SessionLog 상태 대응)
 ParticipantLogState = Literal["READY", "STARTED", "COMPLETED"]
+# SDD-026: 신호품질(SQI) 상태 — 접촉(device_status)과 분리한 별도 축. null SQI 는 unknown(valid 승격 금지).
+SignalQualityState = Literal["valid", "degraded", "invalid", "unknown"]
 
 
 class SessionLiveMetric(BaseModel):
@@ -174,8 +176,13 @@ class SessionLiveMetric(BaseModel):
     consent_eeg: bool = False
     session_log_state: ParticipantLogState = "READY"
     band_connected: bool = False
+    # SDD-026: device_status 는 접촉/연결 축(ok/lead_off/disconnected/unknown).
+    # 신호품질(SQI)은 아래 signal_quality/signal_state 로 분리 표시한다.
     device_status: DeviceStatus = "unknown"
     band_battery: int | None = None
+    # SDD-026: 신호품질 원시값(0~1)·상태 — WS/REST 동일 계약. null 보존(unknown, valid 승격 금지).
+    signal_quality: float | None = None
+    signal_state: SignalQualityState = "unknown"
     avg_efficiency: float | None = None
     current_efficiency: float | None = None
     upload_status: UploadStatus = "idle"
@@ -196,6 +203,9 @@ class SessionLiveMetricsResponse(BaseModel):
 
     session_id: str
     status: SessionStatus
+    # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트 순서 판정용
+    state_version: int = 0
+    started_at: datetime | None = None
     access_code: str | None = None
     metrics: list[SessionLiveMetric] = []
     summary: SessionLiveMetricsSummary
@@ -213,8 +223,14 @@ class GuestSessionStateResponse(BaseModel):
     in_progress: bool = False
     ended: bool = False
     participant_state: ParticipantLogState | None = None
+    # SDD-026: 상태 계약 버전 (게스트도 폴백 중단/역순 판정에 사용)
+    state_version: int = 0
     # SDD-023: 본인(participant_id)의 최신 EEG feature 윈도우 실값 (없으면 null)
     band_connected: bool = False
+    # SDD-026: 접촉/연결 축(device_status)과 신호품질 축(signal_state) 분리 + 배터리
+    device_status: DeviceStatus = "unknown"
+    signal_state: SignalQualityState = "unknown"
+    band_battery: int | None = None
     relaxation_index: float | None = None
     focus_index: float | None = None
     stress_index: float | None = None
@@ -252,6 +268,10 @@ class EEGFeatureItem(BaseModel):
     hemispheric_balance: float | None = None
     # 신호 품질 원시값(0~1)
     signal_quality: float | None = None
+    # SDD-026: 실행 세그먼트 식별자(play/resume 마다 새 값). pause/resume window_index 충돌 방지.
+    play_group_id: str | None = None
+    # SDD-026: 밴드 배터리(%) — 프레임에 실릴 때만. null 보존(0 치환 금지).
+    band_battery: int | None = Field(default=None, ge=0, le=100)
 
 
 class EEGFeatureBatchRequest(BaseModel):

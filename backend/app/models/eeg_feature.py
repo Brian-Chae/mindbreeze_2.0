@@ -22,7 +22,12 @@ class EEGFeatureWindow(Base):
     __table_args__ = (
         # SDD-023: 참가자별 초 인덱스가 유일 — 그룹 세션에서 다수 참가자가 동일 초 인덱스를
         # 업로드해도 충돌하지 않으며, 동일 참가자의 재업로드(중복)는 방지한다.
-        UniqueConstraint("session_id", "participant_id", "window_index", name="uq_eeg_feature_window"),
+        # SDD-026: play_group_id 를 제약에 포함 — pause/resume 으로 second_offset(window_index)가
+        # 0 부터 재시작해도 실행 세그먼트가 다르면(play_group_id 상이) 충돌하지 않아 데이터가 보존된다.
+        UniqueConstraint(
+            "session_id", "participant_id", "play_group_id", "window_index",
+            name="uq_eeg_feature_window",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -37,6 +42,9 @@ class EEGFeatureWindow(Base):
     participant_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=True, index=True,
     )
+    # SDD-026: 실행 세그먼트 식별자(play/resume 마다 새 값). pause/resume 시 window_index 재시작
+    # 충돌을 방지한다. 레거시(미전달) 데이터는 NULL 로 남아 기존 window_index 멱등 동작을 유지한다.
+    play_group_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     # 0-based 초 인덱스 (윈도우 순서)
     window_index: Mapped[int] = mapped_column(Integer, nullable=False)
     # 윈도우 품질 — valid/degraded/invalid (§A4.4 게이트 집계 입력)

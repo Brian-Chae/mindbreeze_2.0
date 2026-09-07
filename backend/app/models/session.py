@@ -18,6 +18,9 @@ class Session(Base):
     type: Mapped[str] = mapped_column(String(20), nullable=False)  # clinical, hypnosis, meditation, custom
     custom_type_name: Mapped[str | None] = mapped_column(String(30))  # type=custom 시 필수
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")
+    # SDD-026: 상태 계약 버전. 상태전이(start/pause/resume/end/cancel)마다 +1 증가시켜
+    # join snapshot / session_state_changed 이벤트의 중복·역순 처리를 가능케 한다.
+    state_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     host_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     # SDD-015: 즉석 클래스는 일정 없이 생성되므로 nullable
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -62,6 +65,8 @@ class SessionParticipant(Base):
     guest_name: Mapped[str | None] = mapped_column(String(100))
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     band_connected: Mapped[bool] = mapped_column(Boolean, default=False)  # LINK BAND 실연결 여부
+    # SDD-026: 밴드 배터리(%) 최신값. null 보존(미상 시 None, 0 치환 금지). device_status_changed 이벤트로 전달.
+    band_battery: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     linkband_device_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     webrtc_peer_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     consent_audio: Mapped[bool] = mapped_column(Boolean, default=False)

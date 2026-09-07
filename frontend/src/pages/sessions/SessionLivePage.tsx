@@ -1,5 +1,6 @@
 // 세션 진행 중 라이브 페이지 — 호스트 콘솔(코드 배너·모니터링) + 녹음/마커/LiveKit + LINK BAND
 // SDD-024: live-metrics는 WS eeg_feature 우선, 미연결 시 REST 폴링 폴백
+// SDD-026: join snapshot 적용 후에만 폴백 중단. LeadOff/SQI 분리.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -7,9 +8,9 @@ import {
   getSession,
   getSessionLiveMetrics,
   transitionSession,
-  type DeviceStatus,
   type SessionDto,
   type SessionLiveMetric,
+  type SessionStatus,
 } from '../../lib/api/session';
 import { startAudio, stopAudio } from '../../lib/api/audio';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
@@ -17,7 +18,21 @@ import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useAuthStore } from '../../stores/authStore';
-import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
+import {
+  contactStatusLabel,
+  isEegStale,
+  normalizeSignalQuality01,
+  resolveBandLinkState,
+  signalQualityLevel,
+  signalQualityLevelLabel,
+} from '../../lib/session-live/signal-status';
+import type {
+  DeviceStatusChangedEvent,
+  ParticipantChangedEvent,
+  SessionLiveEegFeatureEvent,
+  SessionLiveJoinSnapshot,
+  SessionStateChangedEvent,
+} from '../../lib/socket';
 import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
 import { RecordingControls } from '../../components/session/RecordingControls';
@@ -34,16 +49,7 @@ import AppShell from '../../components/layout/AppShell';
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
 
-/** signal_quality(0~1) → device_status */
-function deviceStatusFromSignalQuality(sq: number | null | undefined): DeviceStatus | null {
-  if (sq == null) return null;
-  // 0~1 또는 0~100 모두 허용
-  const pct = sq <= 1 ? sq * 100 : sq;
-  if (pct < 40) return 'lead_off';
-  return 'ok';
-}
-
-/** eeg_feature 브로드캐스트로 해당 참가자 행만 갱신 (BE: participant_id + feature) */
+/** eeg_feature 브로드캐스트로 해당 참가자 행만 갱신 — LeadOff/SQI 분리 */
 function applyEegFeatureToMetrics(
   rows: SessionLiveMetric[],
   event: SessionLiveEegFeatureEvent,
@@ -54,14 +60,19 @@ function applyEegFeatureToMetrics(
     event.relaxation_index ??
     feature?.relaxation_index ??
     null;
-  const sq = event.signal_quality ?? feature?.signal_quality ?? null;
-  const derivedStatus =
-    event.device_status ?? deviceStatusFromSignalQuality(sq);
+  const sq01 = normalizeSignalQuality01(
+    event.signal_quality ?? feature?.signal_quality ?? null,
+  );
+  const sqLevel =
+    event.signal_quality_level ?? signalQualityLevel(sq01);
+  // device_status는 접촉(LeadOff). SQI로 ok/lead_off 추정 금지.
+  const contactStatus = event.device_status ?? null;
   const lastAt =
     event.last_eeg_at ??
     (feature?.timestamp != null
       ? new Date(feature.timestamp).toISOString()
       : new Date().toISOString());
+  const bandConnected = event.band_connected ?? true;
 
   let found = false;
   const next = rows.map((row) => {
@@ -69,13 +80,15 @@ function applyEegFeatureToMetrics(
     found = true;
     return {
       ...row,
-      band_connected: event.band_connected ?? true,
-      device_status: derivedStatus ?? row.device_status,
+      band_connected: bandConnected,
+      device_status: contactStatus ?? row.device_status,
       band_battery: event.band_battery ?? row.band_battery,
       current_efficiency:
         typeof efficiency === 'number' ? efficiency : row.current_efficiency,
       upload_status: event.upload_status ?? 'streaming',
       last_eeg_at: lastAt,
+      signal_quality: sq01 ?? row.signal_quality ?? null,
+      signal_quality_level: sqLevel,
     };
   });
 
@@ -84,13 +97,16 @@ function applyEegFeatureToMetrics(
       participant_id: event.participant_id,
       display_name: '참가자',
       is_guest: false,
-      band_connected: event.band_connected ?? true,
-      device_status: derivedStatus ?? 'ok',
+      band_connected: bandConnected,
+      // unknown을 ok로 승격하지 않음
+      device_status: contactStatus ?? 'unknown',
       band_battery: event.band_battery ?? null,
       avg_efficiency: null,
       current_efficiency: typeof efficiency === 'number' ? efficiency : null,
       upload_status: event.upload_status ?? 'streaming',
       last_eeg_at: lastAt,
+      signal_quality: sq01,
+      signal_quality_level: sqLevel,
     });
   }
   return next;
@@ -137,9 +153,13 @@ function summarizeMetrics(rows: SessionLiveMetric[]): MonitorSummaryCounts {
   return {
     participants: rows.length,
     leadOff: rows.filter((r) => r.device_status === 'lead_off').length,
-    connectionFailed: rows.filter(
-      (r) => !r.band_connected || r.device_status === 'disconnected',
-    ).length,
+    connectionFailed: rows.filter((r) => {
+      if (r.device_status === 'disconnected') return true;
+      // 밴드 미사용(EEG 이력 없음)은 연결실패로 치지 않음
+      if (r.last_eeg_at == null && !r.band_connected) return false;
+      if (!r.band_connected) return true;
+      return isEegStale(r.last_eeg_at);
+    }).length,
     lowBattery: rows.filter((r) => r.band_battery !== null && r.band_battery < 20).length,
   };
 }
@@ -186,10 +206,74 @@ export default function SessionLivePage() {
     [id],
   );
 
+  const handleSnapshot = useCallback((snap: SessionLiveJoinSnapshot) => {
+    if (snap.participants?.length) {
+      setMetrics(snap.participants);
+    }
+    if (snap.status) {
+      setSession((prev) =>
+        prev ? { ...prev, status: snap.status as SessionStatus } : prev,
+      );
+    }
+  }, []);
+
+  const handleSessionState = useCallback((event: SessionStateChangedEvent) => {
+    if (!id || event.session_id !== id) return;
+    setSession((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: event.status as SessionStatus,
+            started_at: event.started_at ?? prev.started_at,
+          }
+        : prev,
+    );
+  }, [id]);
+
+  const handleParticipantChanged = useCallback(
+    (event: ParticipantChangedEvent) => {
+      if (!id || event.session_id !== id) return;
+      setMetrics(event.participants);
+    },
+    [id],
+  );
+
+  const handleDeviceStatus = useCallback(
+    (event: DeviceStatusChangedEvent) => {
+      if (!id || event.session_id !== id) return;
+      setMetrics((prev) =>
+        prev.map((row) => {
+          if (row.participant_id !== event.participant_id) return row;
+          const lastAt = event.last_eeg_at ?? row.last_eeg_at;
+          const sq01 = normalizeSignalQuality01(event.signal_quality);
+          return {
+            ...row,
+            device_status: event.device_status ?? row.device_status,
+            band_connected:
+              event.band_connected ??
+              (lastAt ? !isEegStale(lastAt) : row.band_connected),
+            band_battery: event.band_battery ?? row.band_battery,
+            last_eeg_at: lastAt,
+            signal_quality: sq01 ?? row.signal_quality ?? null,
+            signal_quality_level:
+              event.signal_quality_level ??
+              (sq01 != null ? signalQualityLevel(sq01) : row.signal_quality_level),
+          };
+        }),
+      );
+    },
+    [id],
+  );
+
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
+    participantId: hostParticipantId,
     enabled: Boolean(id && session),
     onEegFeature: handleLiveFeature,
+    onSnapshot: handleSnapshot,
+    onSessionStateChanged: handleSessionState,
+    onParticipantChanged: handleParticipantChanged,
+    onDeviceStatusChanged: handleDeviceStatus,
   });
 
   const refreshSession = useCallback(async (): Promise<void> => {
@@ -225,16 +309,16 @@ export default function SessionLivePage() {
     return () => window.clearInterval(timer);
   }, [id, refreshSession]);
 
-  // WS 연결 시 REST live-metrics 폴링 중단, 미연결 시 폴백 폴링
+  // snapshot 적용 후에만 REST live-metrics 폴링 중단 (연결만으로 중단 금지)
   useEffect(() => {
     if (!id || !session) return undefined;
     void refreshMetrics();
-    if (liveSocket.isConnected) return undefined;
+    if (liveSocket.hasSnapshot) return undefined;
     const timer = window.setInterval(() => {
       void refreshMetrics();
     }, LIVE_METRICS_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [id, session?.status, refreshMetrics, liveSocket.isConnected]);
+  }, [id, session?.status, refreshMetrics, liveSocket.hasSnapshot]);
 
   /** 녹음 시작 버튼 클릭 — 온라인 세션이면 화상 연결 후 동의를 확인한다. */
   const handleStartClick = () => {
@@ -311,18 +395,28 @@ export default function SessionLivePage() {
     const base =
       metrics.length > 0 ? metrics : session ? participantsToMetrics(session) : [];
 
-    // 호스트 본인 useBand 실데이터로 해당 행을 즉시 보강 (배터리·연결·휴식도)
+    // 호스트 본인 useBand 실데이터로 해당 행을 즉시 보강 (배터리·접촉·SQI·휴식도)
     if (!hostParticipantId || band.connectionState !== 'connected') return base;
+
+    const linkState = resolveBandLinkState({
+      bleConnected: true,
+      lastEegAt: band.lastEegAt,
+    });
 
     return base.map((row) => {
       if (row.participant_id !== hostParticipantId) return row;
+      const sq01 =
+        band.signalQuality == null ? null : band.signalQuality / 100;
       return {
         ...row,
-        band_connected: true,
+        band_connected: linkState === 'connected',
         band_battery: band.battery ?? row.band_battery,
         device_status: band.deviceStatus ?? row.device_status,
         current_efficiency: band.currentEfficiency ?? row.current_efficiency,
         upload_status: band.uploadStatus ?? row.upload_status,
+        last_eeg_at: band.lastEegAt ?? row.last_eeg_at,
+        signal_quality: sq01 ?? row.signal_quality ?? null,
+        signal_quality_level: band.signalQualityLevel,
       };
     });
   }, [metrics, session, hostParticipantId, band]);
@@ -406,11 +500,20 @@ export default function SessionLivePage() {
                 </div>
                 <p className="text-sm text-[#1F1F1F]">
                   {band.connectionState === 'connected'
-                    ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'}`
+                    ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
                     : band.connectionState === 'unsupported'
                       ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
                       : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
                 </p>
+                {band.connectionState === 'connected' &&
+                  resolveBandLinkState({
+                    bleConnected: true,
+                    lastEegAt: band.lastEegAt,
+                  }) === 'stale' && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      최근 EEG 수신이 없습니다 — BLE 단절 또는 전송 중단 가능
+                    </p>
+                  )}
                 {band.error && (
                   <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>
                 )}

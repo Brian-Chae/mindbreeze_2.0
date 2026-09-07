@@ -1,6 +1,13 @@
 // 호스트 참가자 모니터링 테이블 — 뇌파 값은 null이면 '-' placeholder
+// SDD-026: 접촉(LeadOff) / 신호품질(SQI) 분리, unknown을 정상으로 표시하지 않음
 
 import type { SessionLiveMetric } from '../../lib/api/session';
+import {
+  contactStatusLabel,
+  isEegStale,
+  signalQualityLevelLabel,
+  type SignalQualityLevel,
+} from '../../lib/session-live/signal-status';
 import type { MonitorSummaryCounts } from './SessionMonitorSummary';
 
 interface SessionMonitorTableProps {
@@ -14,14 +21,6 @@ function formatMetric(value: number | null | undefined, suffix = ''): string {
   return `${value}${suffix}`;
 }
 
-function deviceLabel(status: SessionLiveMetric['device_status']): string {
-  if (status === 'ok') return '정상';
-  if (status === 'lead_off') return '불량';
-  if (status === 'disconnected') return '끊김';
-  if (status === 'unsupported') return '미지원';
-  return '-';
-}
-
 function uploadLabel(status: SessionLiveMetric['upload_status']): string {
   if (status === 'completed') return '완료';
   if (status === 'streaming') return '전송 중';
@@ -31,6 +30,14 @@ function uploadLabel(status: SessionLiveMetric['upload_status']): string {
   return '-';
 }
 
+function qualityLabel(row: SessionLiveMetric): string {
+  const level = (row.signal_quality_level ?? null) as SignalQualityLevel | null;
+  if (level) return signalQualityLevelLabel(level);
+  if (row.signal_quality == null) return '—';
+  // level 미수신 시 값만 표시 (ok 승격 금지)
+  return `${Math.round(row.signal_quality * 100)}%`;
+}
+
 function matchesFilter(
   row: SessionLiveMetric,
   filter: keyof MonitorSummaryCounts | null,
@@ -38,7 +45,11 @@ function matchesFilter(
   if (!filter || filter === 'participants') return true;
   if (filter === 'leadOff') return row.device_status === 'lead_off';
   if (filter === 'connectionFailed') {
-    return !row.band_connected || row.device_status === 'disconnected';
+    if (row.device_status === 'disconnected') return true;
+    // 밴드 미사용은 제외
+    if (row.last_eeg_at == null && !row.band_connected) return false;
+    if (!row.band_connected) return true;
+    return isEegStale(row.last_eeg_at);
   }
   if (filter === 'lowBattery') {
     return row.band_battery !== null && row.band_battery < 20;
@@ -64,6 +75,7 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
           <tr>
             <th className="px-4 py-3 font-medium">이름</th>
             <th className="px-4 py-3 font-medium">접촉</th>
+            <th className="px-4 py-3 font-medium">신호</th>
             <th className="px-4 py-3 font-medium">연결</th>
             <th className="px-4 py-3 font-medium">배터리</th>
             <th className="px-4 py-3 font-medium">평균 두뇌휴식도</th>
@@ -74,11 +86,17 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
         <tbody>
           {rows.map((row, index) => {
             const leadOff = row.device_status === 'lead_off';
+            const stale = isEegStale(row.last_eeg_at);
+            const connected = row.band_connected && !stale;
             return (
               <tr
                 key={row.participant_id}
                 className={`border-t border-[#F0F0F0] ${
-                  leadOff ? 'bg-[#FDECEC]' : index % 2 === 1 ? 'bg-[#FAFAFA]' : 'bg-white'
+                  leadOff || stale
+                    ? 'bg-[#FDECEC]'
+                    : index % 2 === 1
+                      ? 'bg-[#FAFAFA]'
+                      : 'bg-white'
                 }`}
               >
                 <td className="px-4 py-3 font-medium text-[#1F1F1F]">
@@ -94,12 +112,15 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
                           : 'text-[#6F6F6F]'
                     }
                   >
-                    {deviceLabel(row.device_status)}
+                    {contactStatusLabel(row.device_status)}
                   </span>
                 </td>
+                <td className="px-4 py-3 text-[#6F6F6F]">{qualityLabel(row)}</td>
                 <td className="px-4 py-3">
-                  {row.band_connected ? (
+                  {connected ? (
                     <span className="font-medium text-[#5F0080]">연결됨</span>
+                  ) : stale && row.band_connected ? (
+                    <span className="font-medium text-amber-700">전송중단</span>
                   ) : (
                     <span className="text-[#9CA3AF]">미연결</span>
                   )}
@@ -111,7 +132,7 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
                   {formatMetric(row.avg_efficiency, '%')}
                 </td>
                 <td className="px-4 py-3 tabular-nums font-semibold text-[#5F0080]">
-                  {formatMetric(row.current_efficiency, '%')}
+                  {leadOff || stale ? '-' : formatMetric(row.current_efficiency, '%')}
                 </td>
                 <td className="px-4 py-3 text-[#6F6F6F]">{uploadLabel(row.upload_status)}</td>
               </tr>
@@ -121,7 +142,7 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
       </table>
       {rows.length === 0 && (
         <p className="border-t border-[#F0F0F0] px-4 py-6 text-center text-sm text-[#6F6F6F]">
-          선택한 조건에 해당하는 참가자가 없습니다
+          필터 조건에 맞는 참가자가 없습니다
         </p>
       )}
     </div>

@@ -119,12 +119,17 @@ export interface SessionLiveMetric {
   display_name: string;
   is_guest: boolean;
   band_connected: boolean;
+  /** 접촉(LeadOff) — SQI와 분리. unknown을 ok로 표시하지 않음 */
   device_status: DeviceStatus | null;
   band_battery: number | null;
   avg_efficiency: number | null;
   current_efficiency: number | null;
   upload_status: UploadStatus;
   last_eeg_at: string | null;
+  /** 신호품질 0~1 (SQI). 접촉과 별도 */
+  signal_quality?: number | null;
+  /** ok | degraded | invalid | unknown */
+  signal_quality_level?: 'ok' | 'degraded' | 'invalid' | 'unknown' | null;
 }
 
 export interface SessionLiveMetricsResponse {
