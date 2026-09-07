@@ -1,4 +1,5 @@
 // 세션 진행 중 라이브 페이지 — 호스트 콘솔(코드 배너·모니터링) + 녹음/마커/LiveKit + LINK BAND
+// SDD-024: live-metrics는 WS eeg_feature 우선, 미연결 시 REST 폴링 폴백
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -6,6 +7,7 @@ import {
   getSession,
   getSessionLiveMetrics,
   transitionSession,
+  type DeviceStatus,
   type SessionDto,
   type SessionLiveMetric,
 } from '../../lib/api/session';
@@ -13,7 +15,9 @@ import { startAudio, stopAudio } from '../../lib/api/audio';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
+import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useAuthStore } from '../../stores/authStore';
+import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
 import { RecordingControls } from '../../components/session/RecordingControls';
@@ -29,6 +33,68 @@ import AppShell from '../../components/layout/AppShell';
 
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
+
+/** signal_quality(0~1) → device_status */
+function deviceStatusFromSignalQuality(sq: number | null | undefined): DeviceStatus | null {
+  if (sq == null) return null;
+  // 0~1 또는 0~100 모두 허용
+  const pct = sq <= 1 ? sq * 100 : sq;
+  if (pct < 40) return 'lead_off';
+  return 'ok';
+}
+
+/** eeg_feature 브로드캐스트로 해당 참가자 행만 갱신 (BE: participant_id + feature) */
+function applyEegFeatureToMetrics(
+  rows: SessionLiveMetric[],
+  event: SessionLiveEegFeatureEvent,
+): SessionLiveMetric[] {
+  const feature = event.feature;
+  const efficiency =
+    event.current_efficiency ??
+    event.relaxation_index ??
+    feature?.relaxation_index ??
+    null;
+  const sq = event.signal_quality ?? feature?.signal_quality ?? null;
+  const derivedStatus =
+    event.device_status ?? deviceStatusFromSignalQuality(sq);
+  const lastAt =
+    event.last_eeg_at ??
+    (feature?.timestamp != null
+      ? new Date(feature.timestamp).toISOString()
+      : new Date().toISOString());
+
+  let found = false;
+  const next = rows.map((row) => {
+    if (row.participant_id !== event.participant_id) return row;
+    found = true;
+    return {
+      ...row,
+      band_connected: event.band_connected ?? true,
+      device_status: derivedStatus ?? row.device_status,
+      band_battery: event.band_battery ?? row.band_battery,
+      current_efficiency:
+        typeof efficiency === 'number' ? efficiency : row.current_efficiency,
+      upload_status: event.upload_status ?? 'streaming',
+      last_eeg_at: lastAt,
+    };
+  });
+
+  if (!found && event.participant_id) {
+    next.push({
+      participant_id: event.participant_id,
+      display_name: '참가자',
+      is_guest: false,
+      band_connected: event.band_connected ?? true,
+      device_status: derivedStatus ?? 'ok',
+      band_battery: event.band_battery ?? null,
+      avg_efficiency: null,
+      current_efficiency: typeof efficiency === 'number' ? efficiency : null,
+      upload_status: event.upload_status ?? 'streaming',
+      last_eeg_at: lastAt,
+    });
+  }
+  return next;
+}
 
 /** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
 function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
@@ -112,6 +178,20 @@ export default function SessionLivePage() {
     enabled: Boolean(id && hostParticipantId),
   });
 
+  const handleLiveFeature = useCallback(
+    (event: SessionLiveEegFeatureEvent) => {
+      if (!id || event.session_id !== id) return;
+      setMetrics((prev) => applyEegFeatureToMetrics(prev, event));
+    },
+    [id],
+  );
+
+  const liveSocket = useSessionLiveSocket({
+    sessionId: id,
+    enabled: Boolean(id && session),
+    onEegFeature: handleLiveFeature,
+  });
+
   const refreshSession = useCallback(async (): Promise<void> => {
     if (!id) return;
     try {
@@ -145,14 +225,16 @@ export default function SessionLivePage() {
     return () => window.clearInterval(timer);
   }, [id, refreshSession]);
 
+  // WS 연결 시 REST live-metrics 폴링 중단, 미연결 시 폴백 폴링
   useEffect(() => {
     if (!id || !session) return undefined;
     void refreshMetrics();
+    if (liveSocket.isConnected) return undefined;
     const timer = window.setInterval(() => {
       void refreshMetrics();
     }, LIVE_METRICS_POLL_MS);
     return () => window.clearInterval(timer);
-  }, [id, session?.status, refreshMetrics]);
+  }, [id, session?.status, refreshMetrics, liveSocket.isConnected]);
 
   /** 녹음 시작 버튼 클릭 — 온라인 세션이면 화상 연결 후 동의를 확인한다. */
   const handleStartClick = () => {

@@ -1,7 +1,10 @@
 // 게스트 명상 화면 — 타이머 + useBand 실데이터(미연결 시 대기 placeholder 유지)
+// SDD-024: WS eeg_feature 구독으로 본인 지표 실시간 보강 (REST EEG 폴링 없음)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
+import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -34,6 +37,8 @@ export function GuestMeditationPanel({
   participantId,
 }: GuestMeditationPanelProps) {
   const [elapsedSec, setElapsedSec] = useState(0);
+  /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
+  const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   const targetSec = Math.max(1, durationMin) * 60;
 
   const band = useBand({
@@ -43,7 +48,34 @@ export function GuestMeditationPanel({
     skipAuth: true,
   });
 
+  const handleEegFeature = useCallback(
+    (event: SessionLiveEegFeatureEvent) => {
+      if (!participantId || event.participant_id !== participantId) return;
+      if (event.session_id && event.session_id !== sessionId) return;
+      const efficiency =
+        event.current_efficiency ??
+        event.relaxation_index ??
+        event.feature?.relaxation_index ??
+        null;
+      if (typeof efficiency === 'number') {
+        setRemoteEfficiency(efficiency);
+      }
+    },
+    [participantId, sessionId],
+  );
+
+  // room join + eeg_feature 구독 (WS 미연결이어도 밴드 로컬 표시 유지)
+  useSessionLiveSocket({
+    sessionId,
+    enabled: Boolean(sessionId && participantId),
+    skipAuth: true,
+    onEegFeature: handleEegFeature,
+  });
+
   const isLive = band.connectionState === 'connected';
+  const displayEfficiency = isLive
+    ? (band.currentEfficiency ?? remoteEfficiency)
+    : remoteEfficiency;
 
   useEffect(() => {
     const startedMs = startedAt ? new Date(startedAt).getTime() : Date.now();
@@ -75,12 +107,14 @@ export function GuestMeditationPanel({
         <div className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm sm:p-8">
           <p className="text-sm font-medium text-purple-200">두뇌휴식도</p>
           <p className="mt-4 text-6xl font-bold tracking-tight text-white sm:text-7xl">
-            {isLive ? formatEfficiency(band.currentEfficiency) : '—'}
+            {displayEfficiency !== null ? formatEfficiency(displayEfficiency) : '—'}
           </p>
           <p className="mt-4 text-sm leading-6 text-purple-100">
             {isLive
               ? 'LINK BAND에서 실시간으로 측정 중입니다'
-              : 'LINK BAND 연결 시 표시됩니다'}
+              : remoteEfficiency !== null
+                ? 'WebSocket으로 실시간 지표를 수신 중입니다'
+                : 'LINK BAND 연결 시 표시됩니다'}
           </p>
 
           {/* 뇌파 차트 — 연결 시 SVG sparkline, 미연결 시 대기 shell */}

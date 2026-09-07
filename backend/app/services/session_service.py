@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from livekit import api as livekit_api
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
@@ -842,6 +843,113 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
     return result
 
 
+def resolve_upload_participant(
+    sid: UUID,
+    participant_id: str | None,
+    current_user_id: str | None,
+    db: DBSession,
+) -> SessionParticipant:
+    """업로드 소유 참가자를 확인한다 — participant_id(게스트/명시) 우선, 없으면 인증 사용자.
+
+    REST 배치 업로드와 WS 실시간 feature 가 공유하는 참가자 검증 로직.
+    비참가자·미식별은 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
+    """
+    participant = None
+    if participant_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(participant_id),
+                SessionParticipant.session_id == sid,
+            )
+            .first()
+        )
+    elif current_user_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == _to_uuid(current_user_id),
+            )
+            .first()
+        )
+
+    if participant is None:
+        raise HTTPException(status_code=403, detail="세션 참가자만 EEG 데이터를 업로드할 수 있습니다")
+    return participant
+
+
+def persist_feature_windows(
+    sid: UUID,
+    participant: SessionParticipant,
+    features,
+    db: DBSession,
+) -> int:
+    """검증된 참가자의 EEG feature 윈도우를 멱등 저장한다(window_index 중복 skip).
+
+    REST 5초 배치와 WS 1초 실시간이 동일 window_index 를 이중 저장할 수 있으므로,
+    (a) 사전 조회로 기존 초 인덱스를 skip 하고
+    (b) 유니크 제약 경합(동시 커밋)은 SAVEPOINT + IntegrityError 로 흡수한다.
+    실제 저장한 윈도우 수를 반환한다.
+    """
+    # 동일 참가자의 기존 초 인덱스는 재저장하지 않는다(멱등)
+    existing_indices = {
+        idx
+        for (idx,) in db.query(EEGFeatureWindow.window_index)
+        .filter(
+            EEGFeatureWindow.session_id == sid,
+            EEGFeatureWindow.participant_id == participant.id,
+        )
+        .all()
+    }
+
+    saved = 0
+    seen_in_batch: set = set()
+    for f in features:
+        if f.second_offset in existing_indices or f.second_offset in seen_in_batch:
+            continue
+        seen_in_batch.add(f.second_offset)
+        row = EEGFeatureWindow(
+            session_id=sid,
+            user_id=participant.user_id,
+            participant_id=participant.id,
+            window_index=f.second_offset,
+            quality=_quality_from_signal(f.signal_quality),
+            device_timestamp_ms=f.timestamp,
+            delta_power=f.delta_power,
+            theta_power=f.theta_power,
+            alpha_power=f.alpha_power,
+            beta_power=f.beta_power,
+            gamma_power=f.gamma_power,
+            total_power=f.total_power,
+            focus_index=f.focus_index,
+            relaxation_index=f.relaxation_index,
+            stress_index=f.stress_index,
+            meditation_level=f.meditation_level,
+            attention_level=f.attention_level,
+            cognitive_load=f.cognitive_load,
+            emotional_stability=f.emotional_stability,
+            hemispheric_balance=f.hemispheric_balance,
+            signal_quality=f.signal_quality,
+        )
+        try:
+            # SAVEPOINT 단위 flush — 동시 저장 경합(유니크 위반)은 롤백 후 skip
+            with db.begin_nested():
+                db.add(row)
+                db.flush()
+            saved += 1
+        except IntegrityError:
+            # WS 1초 + REST 5초 폴백이 같은 window_index 를 거의 동시에 저장한 경우 — 멱등 skip
+            continue
+
+    # 업로드가 발생하면 밴드 연결 상태로 마킹(호스트 모니터링/게스트 화면 정합)
+    if saved and not participant.band_connected:
+        participant.band_connected = True
+
+    db.commit()
+    return saved
+
+
 def ingest_features(
     session_id: str,
     payload,
@@ -860,77 +968,6 @@ def ingest_features(
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
-    # 소유 참가자 확인 — participant_id 우선, 없으면 인증 사용자로 해석
-    participant = None
-    if payload.participant_id:
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.id == _to_uuid(payload.participant_id),
-                SessionParticipant.session_id == sid,
-            )
-            .first()
-        )
-    elif current_user_id:
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id == _to_uuid(current_user_id),
-            )
-            .first()
-        )
-
-    if participant is None:
-        raise HTTPException(status_code=403, detail="세션 참가자만 EEG 데이터를 업로드할 수 있습니다")
-
-    # 동일 참가자의 기존 초 인덱스는 재저장하지 않는다(멱등)
-    existing_indices = {
-        idx
-        for (idx,) in db.query(EEGFeatureWindow.window_index)
-        .filter(
-            EEGFeatureWindow.session_id == sid,
-            EEGFeatureWindow.participant_id == participant.id,
-        )
-        .all()
-    }
-
-    saved = 0
-    seen_in_batch: set = set()
-    for f in payload.features:
-        if f.second_offset in existing_indices or f.second_offset in seen_in_batch:
-            continue
-        seen_in_batch.add(f.second_offset)
-        db.add(
-            EEGFeatureWindow(
-                session_id=sid,
-                user_id=participant.user_id,
-                participant_id=participant.id,
-                window_index=f.second_offset,
-                quality=_quality_from_signal(f.signal_quality),
-                device_timestamp_ms=f.timestamp,
-                delta_power=f.delta_power,
-                theta_power=f.theta_power,
-                alpha_power=f.alpha_power,
-                beta_power=f.beta_power,
-                gamma_power=f.gamma_power,
-                total_power=f.total_power,
-                focus_index=f.focus_index,
-                relaxation_index=f.relaxation_index,
-                stress_index=f.stress_index,
-                meditation_level=f.meditation_level,
-                attention_level=f.attention_level,
-                cognitive_load=f.cognitive_load,
-                emotional_stability=f.emotional_stability,
-                hemispheric_balance=f.hemispheric_balance,
-                signal_quality=f.signal_quality,
-            )
-        )
-        saved += 1
-
-    # 업로드가 발생하면 밴드 연결 상태로 마킹(호스트 모니터링/게스트 화면 정합)
-    if saved and not participant.band_connected:
-        participant.band_connected = True
-
-    db.commit()
+    participant = resolve_upload_participant(sid, payload.participant_id, current_user_id, db)
+    saved = persist_feature_windows(sid, participant, payload.features, db)
     return {"session_id": str(sid), "saved": saved}
