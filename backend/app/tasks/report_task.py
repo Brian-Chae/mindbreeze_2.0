@@ -174,6 +174,23 @@ def _client_content(session: Session, record: SessionRecord | None, eeg_block: d
     }
 
 
+# SDD-027: EEG 품질 게이트(§A4.4) status → 데이터 신뢰도(data_credibility) 파생.
+# not_measured(EEG 미측정)는 신뢰도 개념이 없으므로 None 유지(0/'low' 치환 금지).
+_CREDIBILITY_BY_EEG_STATUS = {
+    "valid": "high",
+    "degraded": "medium",
+    "invalid": "low",
+    "insufficient": "low",
+}
+
+
+def _derive_data_credibility(eeg_block: dict) -> str | None:
+    """content.eeg 품질 게이트에서 데이터 신뢰도를 파생한다(미측정이면 None)."""
+    if not isinstance(eeg_block, dict):
+        return None
+    return _CREDIBILITY_BY_EEG_STATUS.get(eeg_block.get("status"))
+
+
 def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     rid = UUID(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
@@ -192,9 +209,15 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             content = _client_content(session, record, eeg_block)
         else:
             content = _counselor_content(session, record, eeg_block)
+        # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생
+        report.data_credibility = _derive_data_credibility(eeg_block)
+        report.status = "pending_review"
     except Exception as exc:  # noqa: BLE001
         logger.exception("[report_task] generate failed: %s", exc)
         content = {"headline": "리포트 생성 실패", "error": str(exc), "fallback": True}
+        # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
+        report.status = "error"
+        report.data_credibility = None
 
     report.content = content
     db.commit()

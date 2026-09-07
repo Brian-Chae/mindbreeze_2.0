@@ -21,12 +21,26 @@ export {
   resolveMetricLabel,
 } from './report';
 
+// SDD-027 — 파이프라인 상태 · data_credibility
+export type {
+  DataCredibilityDisplay,
+  ReportPipelineStatus,
+} from './report-status';
+export {
+  REPORT_STATUS_LABELS,
+  canApproveReport,
+  credibilityFromQuality,
+  resolveDataCredibility,
+  resolveReportStatus,
+} from './report-status';
+
 export type ReportType = 'counselor' | 'client';
 
 export interface ReportDto {
   id: string;
   session_id: string;
-  user_id: string;
+  /** 게스트 리포트 시 null 가능(SDD-027) */
+  user_id: string | null;
   type: ReportType;
   content: Record<string, unknown>;
   pdf_url: string | null;
@@ -36,6 +50,18 @@ export interface ReportDto {
   session_title: string | null;
   session_type: string | null;
   scheduled_at: string | null;
+  /**
+   * SDD-027 파이프라인 상태.
+   * 미제공 시 resolveReportStatus가 sent_at 기준 폴백.
+   */
+  status?: string | null;
+  /**
+   * quality 게이트 파생 신뢰도(서버).
+   * number(0~1/0~100) 또는 quality/라벨 문자열.
+   */
+  data_credibility?: string | number | null;
+  /** 게스트/참여자 기반 리포트 */
+  participant_id?: string | null;
 }
 
 export interface ReportListResponse {

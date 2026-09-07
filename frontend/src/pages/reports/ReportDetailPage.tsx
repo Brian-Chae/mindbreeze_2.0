@@ -8,10 +8,14 @@ import AppShell from '../../components/layout/AppShell';
 import EegQualityBanner from '../../components/reports/EegQualityBanner';
 import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
+import ReportStatusBadge from '../../components/reports/ReportStatusBadge';
 import {
   getReport,
   approveReport,
   adaptReportContent,
+  canApproveReport,
+  resolveDataCredibility,
+  resolveReportStatus,
   type AdaptedReportContent,
   type ReportDto,
 } from '../../lib/api/reports';
@@ -184,6 +188,17 @@ export default function ReportDetailPage() {
   const { summary, insights, markers } = adapted;
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
+  // SDD-027 — 파이프라인 상태 · quality 파생 credibility
+  const pipelineStatus = resolveReportStatus(report);
+  const credibility = resolveDataCredibility(
+    report.data_credibility,
+    eeg?.status ?? null,
+  );
+  const showApprove = isCounselor && canApproveReport({
+    status: report.status,
+    sent_at: report.sent_at,
+    alreadyApprovedLocally: approved,
+  });
 
   return (
     <AppShell title="리포트 상세" sub="AI REPORT DETAIL">
@@ -194,6 +209,13 @@ export default function ReportDetailPage() {
 
         {/* 1. Cover — 종합점수 / 사유 칩 */}
         <CoverSection report={report} adapted={adapted} />
+
+        {/* SDD-027: pending_analysis / pending_review / completed / error */}
+        <ReportStatusBadge
+          status={pipelineStatus}
+          credibility={credibility}
+          showApprovalHint={isCounselor}
+        />
 
         {/* 2. 상담 본문 */}
         {summary && (
@@ -257,7 +279,8 @@ export default function ReportDetailPage() {
             목록으로
           </button>
 
-          {isCounselor && !report.sent_at && !approved && (
+          {/* pending_review = 승인 게이트 */}
+          {showApprove && (
             <button
               onClick={handleApprove}
               disabled={approving}

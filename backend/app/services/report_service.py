@@ -99,8 +99,13 @@ def _serialize(report: Report, session: Session | None = None) -> dict:
     return {
         "id": str(report.id),
         "session_id": str(report.session_id),
-        "user_id": str(report.user_id),
+        # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유).
+        "user_id": str(report.user_id) if report.user_id else None,
+        "participant_id": str(report.participant_id) if report.participant_id else None,
         "type": report.type,
+        # SDD-027: 리포트 상태머신 + 데이터 신뢰도(null 보존)
+        "status": report.status,
+        "data_credibility": report.data_credibility,
         "content": normalize_report_content(report.content, report.type),
         "pdf_url": report.pdf_url,
         "sent_at": report.sent_at,
@@ -127,6 +132,7 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
     s = _get_session_as_host(session_id, host_id, db)
 
+    owner_participant_id = None
     if report_type == "counselor":
         owner_uuid = s.host_id
     else:
@@ -135,7 +141,12 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
             .filter(SessionParticipant.session_id == s.id)
             .first()
         )
-        owner_uuid = first_participant.user_id if first_participant else s.host_id
+        if first_participant:
+            # SDD-027: 게스트 내담자는 user_id 가 없다(None) — participant_id 로 소유를 보완한다.
+            owner_uuid = first_participant.user_id
+            owner_participant_id = first_participant.id
+        else:
+            owner_uuid = s.host_id
 
     existing = (
         db.query(Report)
@@ -148,7 +159,10 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
         report = Report(
             session_id=s.id,
             user_id=owner_uuid,
+            participant_id=owner_participant_id,
             type=report_type,
+            # SDD-027: 상태머신 시작점 — 분석 대기(pending_analysis)
+            status="pending_analysis",
             content={"status": "generating"},
         )
         db.add(report)
@@ -228,25 +242,33 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     if not session or session.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
 
-    report.sent_at = _now()
+    # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.
+    # 분석 미완/실패(pending_analysis/error) 상태는 승인할 수 없다.
+    if report.status not in ("pending_review", "completed"):
+        raise HTTPException(status_code=400, detail="검토 대기 상태의 리포트만 승인할 수 있습니다")
+
+    already_completed = report.status == "completed"
+    report.status = "completed"
+    report.sent_at = report.sent_at or _now()
     content = dict(report.content or {})
     content["approved"] = True
     report.content = content
 
-    # F10 알림 이벤트
-    try:
-        notification_service.notify_event(
-            "report_ready",
-            report.user_id,
-            {
-                "title": "리포트가 도착했습니다",
-                "body": "세션 리포트가 승인되어 전송되었습니다",
-                "extra": {"report_id": str(report.id), "session_id": str(report.session_id)},
-            },
-            db,
-        )
-    except Exception:  # noqa: BLE001
-        pass
+    # F10 알림 이벤트 — 게스트(user_id 없음)는 알림 대상이 아니며, 중복 승인 시 재발송하지 않는다.
+    if report.user_id is not None and not already_completed:
+        try:
+            notification_service.notify_event(
+                "report_ready",
+                report.user_id,
+                {
+                    "title": "리포트가 도착했습니다",
+                    "body": "세션 리포트가 승인되어 전송되었습니다",
+                    "extra": {"report_id": str(report.id), "session_id": str(report.session_id)},
+                },
+                db,
+            )
+        except Exception:  # noqa: BLE001
+            pass
 
     db.commit()
     db.refresh(report)

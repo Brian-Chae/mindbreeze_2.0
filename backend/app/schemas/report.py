@@ -21,8 +21,13 @@ class ReportApprovalRequest(BaseModel):
 class ReportResponse(BaseModel):
     id: str
     session_id: str
-    user_id: str
+    # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유)
+    user_id: str | None = None
+    participant_id: str | None = None
     type: str
+    # SDD-027: 리포트 상태머신(pending_analysis/pending_review/completed/error) + 데이터 신뢰도
+    status: str = "pending_analysis"
+    data_credibility: str | None = None
     content: dict[str, Any] = Field(default_factory=dict)
     pdf_url: str | None = None
     sent_at: datetime | None = None

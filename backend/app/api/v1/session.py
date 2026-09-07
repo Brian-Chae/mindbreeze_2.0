@@ -20,7 +20,14 @@ from app.schemas.session import (
     SessionResponse,
     SessionUpdateRequest,
 )
-from app.services import session_service
+from app.schemas.eeg import (
+    EEGRollupResponse,
+    RawAckRequest,
+    RawAckResponse,
+    RawPresignRequest,
+    RawPresignResponse,
+)
+from app.services import eeg_raw_service, eeg_rollup_service, session_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -174,6 +181,55 @@ def ingest_eeg_features(
         session_id,
         payload,
         db,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.get("/{session_id}/eeg-rollup", response_model=EEGRollupResponse)
+def get_eeg_rollup(
+    session_id: str,
+    participant_id: str | None = None,
+    resolution: int = 60,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-027: 60초 롤업 조회 — host 상담사 전용.
+
+    EEGFeatureWindow(1초 원천) 온디맨드 집계(valid_count/coverage/유효샘플 가중평균).
+    """
+    session_service._get_session_as_host(session_id, current_user["id"], db)
+    return eeg_rollup_service.compute_rollup(
+        session_id, db, participant_id=participant_id, resolution_sec=resolution
+    )
+
+
+@router.post("/{session_id}/eeg-raw/presign", response_model=RawPresignResponse)
+def presign_eeg_raw(
+    session_id: str,
+    payload: RawPresignRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-027: raw EEG 청크 presigned PUT URL 발급 + manifest 생성.
+
+    게스트는 participant_id 로, 로그인 참가자는 인증 토큰으로 소유 검증(비참가자 403).
+    """
+    return eeg_raw_service.presign_upload(
+        session_id, payload, db,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.post("/{session_id}/eeg-raw/ack", response_model=RawAckResponse)
+def ack_eeg_raw(
+    session_id: str,
+    payload: RawAckRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-027: raw EEG 청크 업로드 완료 확인(ack) — EEGRecord.file_count 갱신."""
+    return eeg_raw_service.ack_upload(
+        session_id, payload, db,
         current_user_id=current_user["id"] if current_user else None,
     )
 
