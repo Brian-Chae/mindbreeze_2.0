@@ -10,7 +10,7 @@ null 보존 원칙: 산출 불가한 feature 는 NULL 로 저장하며 0 으로 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Float, Integer, String, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import Float, Integer, String, DateTime, ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -27,6 +27,13 @@ class EEGFeatureWindow(Base):
         UniqueConstraint(
             "session_id", "participant_id", "play_group_id", "window_index",
             name="uq_eeg_feature_window",
+        ),
+        # SDD-028: batch key(window_index 범위) 조회·최신값 조회를 인덱스로 지원한다.
+        # (session_id, participant_id, window_index) 복합 인덱스로 라이브·롤업의 참가자별
+        # 윈도우 범위 스캔을 전체 스캔에서 인덱스 범위 스캔으로 전환한다.
+        Index(
+            "ix_eeg_feature_window_batch_key",
+            "session_id", "participant_id", "window_index",
         ),
     )
 

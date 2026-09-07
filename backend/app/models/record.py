@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, UniqueConstraint, func
+from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -79,6 +79,13 @@ class EEGRawChunk(Base):
         UniqueConstraint(
             "session_id", "participant_id", "stream_id", "chunk_index",
             name="uq_eeg_raw_chunk",
+        ),
+        # SDD-028: batch key(chunk_index 범위) 조회를 인덱스로 지원한다.
+        # (session_id, participant_id, chunk_index) 복합 인덱스로 세그먼트별 청크 범위 스캔을
+        # 전체 스캔에서 인덱스 범위 스캔으로 전환한다(unique 제약은 stream_id 를 포함해 축이 다름).
+        Index(
+            "ix_eeg_raw_chunk_batch_key",
+            "session_id", "participant_id", "chunk_index",
         ),
     )
 

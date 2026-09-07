@@ -15,6 +15,12 @@ class Session(Base):
     __tablename__ = "sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # SDD-028: 반복 실행 회차 식별자(경량 SessionRun). 기본값 = session_id.
+    # 같은 수업 정의를 "새 실행(명시적)"으로 열 때만 새 run_id 를 발급하고,
+    # 재접속·pause/resume·이어하기는 기존 run_id 를 유지한다. EEG/리포트는 여전히
+    # session_id 기반이므로 run_id 는 조회·집계의 그룹핑 키로만 활용한다(대규모 마이그레이션 회피).
+    # 직접 생성(테스트 등)에서 미지정 시 None 으로 남으며, 그 경우 session_id 를 회차로 간주한다.
+    run_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     type: Mapped[str] = mapped_column(String(20), nullable=False)  # clinical, hypnosis, meditation, custom
     custom_type_name: Mapped[str | None] = mapped_column(String(30))  # type=custom 시 필수
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled")

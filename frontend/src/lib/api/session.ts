@@ -45,6 +45,8 @@ export interface SessionDto {
   created_at: string;
   participants: SessionParticipant[];
   waitlist_count: number;
+  /** SDD-028: 실행 회차 키(기본=session_id). 반복 실행 표시는 후순위 */
+  run_id?: string | null;
 }
 
 export interface SessionListResponse {

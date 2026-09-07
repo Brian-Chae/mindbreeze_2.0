@@ -13,7 +13,7 @@ from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
-from app.services import code_service
+from app.services import code_service, eeg_query
 
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
@@ -45,6 +45,8 @@ def _serialize(s: Session) -> dict:
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
+        # SDD-028: 실행 회차 식별자. 미설정(직접 생성 등) 시 session_id 를 회차로 간주한다.
+        "run_id": str(s.run_id) if s.run_id else str(s.id),
         "type": s.type,
         "custom_type_name": s.custom_type_name,
         "status": s.status,
@@ -183,6 +185,11 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     )
     db.add(session)
     db.flush()
+
+    # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
+    # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
+    # 기존 run_id 를 유지한다.
+    session.run_id = session.id
 
     for pid in payload.participant_ids:
         db.add(SessionParticipant(session_id=session.id, user_id=_to_uuid(pid)))
@@ -348,6 +355,32 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
 
+    return _serialize(s)
+
+
+# 새 실행(명시적)을 발급할 수 없는 상태 — 완료/취소된 세션은 즉시 재시작을 허용하지 않는다.
+_NON_RESTARTABLE_STATUSES = ("completed", "cancelled")
+
+
+def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
+    """같은 수업 정의를 "새 실행(명시적)"으로 열어 새 run_id 를 발급한다.
+
+    SDD-028 경량 SessionRun:
+      - run_id 만 새 값으로 교체한다(EEG/리포트는 session_id 기반이라 데이터 마이그레이션 없음).
+      - completed/cancelled 세션은 즉시 재시작을 허용하지 않는다(기존 상태 규칙 유지) → 400.
+        (재수업이 필요하면 새 세션을 생성한다.)
+      - pause/resume·이어하기는 이 함수를 호출하지 않으므로 기존 run_id 가 그대로 유지된다.
+    호스트 상담사만 호출할 수 있다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    if s.status in _NON_RESTARTABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="완료·취소된 세션은 즉시 재시작할 수 없습니다. 새 세션을 생성하세요",
+        )
+    s.run_id = uuid.uuid4()
+    db.commit()
+    db.refresh(s)
     return _serialize(s)
 
 
@@ -816,19 +849,9 @@ def get_guest_session_state(
                 band_connected = p.band_connected
                 band_battery = p.band_battery
                 # SDD-023/026: 게스트 명상 실데이터 — 본인 최신 EEG feature 윈도우 (없으면 null).
-                # pause/resume 로 window_index 가 재시작하므로 created_at 기준 최신을 취한다.
-                latest = (
-                    db.query(EEGFeatureWindow)
-                    .filter(
-                        EEGFeatureWindow.session_id == s.id,
-                        EEGFeatureWindow.participant_id == pid,
-                    )
-                    .order_by(
-                        EEGFeatureWindow.created_at.desc(),
-                        EEGFeatureWindow.window_index.desc(),
-                    )
-                    .first()
-                )
+                # SDD-028: pause/resume 로 window_index 가 재시작하므로 created_at 기준 최신을 취하되,
+                # 전체 로딩 없이 LIMIT 1 헬퍼로 최신 1건만 조회한다.
+                latest = eeg_query.latest_feature_window(db, s.id, pid)
 
     # SDD-026: 접촉/연결(device_status)과 신호품질(signal_state)을 분리해 게스트에도 동일 계약으로 내린다.
     sq = latest.signal_quality if latest else None
@@ -1052,14 +1075,10 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
     if not participant_ids:
         return {}
 
-    rows = (
-        db.query(EEGFeatureWindow)
-        .filter(
-            EEGFeatureWindow.session_id == session_id,
-            EEGFeatureWindow.participant_id.in_(participant_ids),
-        )
-        .order_by(EEGFeatureWindow.window_index)
-        .all()
+    # SDD-028: batch key 기반 조회 헬퍼로 라우팅한다. 범위 미지정이므로 전체 스캔과 동일 결과이며
+    # (session_id, participant_id, window_index) 복합 인덱스를 타 참가자별 범위 스캔이 된다.
+    rows = eeg_query.feature_windows_in_range(
+        db, session_id, participant_ids=participant_ids
     )
 
     grouped: dict = {}

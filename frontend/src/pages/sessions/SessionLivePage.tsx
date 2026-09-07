@@ -1,6 +1,7 @@
 // 세션 진행 중 라이브 페이지 — 호스트 콘솔(코드 배너·모니터링) + 녹음/마커/LiveKit + LINK BAND
 // SDD-024: live-metrics는 WS eeg_feature 우선, 미연결 시 REST 폴링 폴백
 // SDD-026: join snapshot 적용 후에만 폴백 중단. LeadOff/SQI 분리.
+// SDD-028: eeg_feature는 참가자 행 증분 패치(전체 재계산·불필요 재렌더 회피)
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useAuthStore } from '../../stores/authStore';
+import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
 import {
   contactStatusLabel,
   isEegStale,
@@ -48,69 +50,6 @@ import AppShell from '../../components/layout/AppShell';
 
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
-
-/** eeg_feature 브로드캐스트로 해당 참가자 행만 갱신 — LeadOff/SQI 분리 */
-function applyEegFeatureToMetrics(
-  rows: SessionLiveMetric[],
-  event: SessionLiveEegFeatureEvent,
-): SessionLiveMetric[] {
-  const feature = event.feature;
-  const efficiency =
-    event.current_efficiency ??
-    event.relaxation_index ??
-    feature?.relaxation_index ??
-    null;
-  const sq01 = normalizeSignalQuality01(
-    event.signal_quality ?? feature?.signal_quality ?? null,
-  );
-  const sqLevel =
-    event.signal_quality_level ?? signalQualityLevel(sq01);
-  // device_status는 접촉(LeadOff). SQI로 ok/lead_off 추정 금지.
-  const contactStatus = event.device_status ?? null;
-  const lastAt =
-    event.last_eeg_at ??
-    (feature?.timestamp != null
-      ? new Date(feature.timestamp).toISOString()
-      : new Date().toISOString());
-  const bandConnected = event.band_connected ?? true;
-
-  let found = false;
-  const next = rows.map((row) => {
-    if (row.participant_id !== event.participant_id) return row;
-    found = true;
-    return {
-      ...row,
-      band_connected: bandConnected,
-      device_status: contactStatus ?? row.device_status,
-      band_battery: event.band_battery ?? row.band_battery,
-      current_efficiency:
-        typeof efficiency === 'number' ? efficiency : row.current_efficiency,
-      upload_status: event.upload_status ?? 'streaming',
-      last_eeg_at: lastAt,
-      signal_quality: sq01 ?? row.signal_quality ?? null,
-      signal_quality_level: sqLevel,
-    };
-  });
-
-  if (!found && event.participant_id) {
-    next.push({
-      participant_id: event.participant_id,
-      display_name: '참가자',
-      is_guest: false,
-      band_connected: bandConnected,
-      // unknown을 ok로 승격하지 않음
-      device_status: contactStatus ?? 'unknown',
-      band_battery: event.band_battery ?? null,
-      avg_efficiency: null,
-      current_efficiency: typeof efficiency === 'number' ? efficiency : null,
-      upload_status: event.upload_status ?? 'streaming',
-      last_eeg_at: lastAt,
-      signal_quality: sq01,
-      signal_quality_level: sqLevel,
-    });
-  }
-  return next;
-}
 
 /** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
 function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
@@ -201,7 +140,11 @@ export default function SessionLivePage() {
   const handleLiveFeature = useCallback(
     (event: SessionLiveEegFeatureEvent) => {
       if (!id || event.session_id !== id) return;
-      setMetrics((prev) => applyEegFeatureToMetrics(prev, event));
+      // 해당 participant 행만 증분 패치 — 무변경이면 prev 참조 유지
+      setMetrics((prev) => {
+        const { rows, unchanged } = applyEegFeatureToMetricsDetailed(prev, event);
+        return unchanged ? prev : rows;
+      });
     },
     [id],
   );
@@ -241,12 +184,13 @@ export default function SessionLivePage() {
   const handleDeviceStatus = useCallback(
     (event: DeviceStatusChangedEvent) => {
       if (!id || event.session_id !== id) return;
-      setMetrics((prev) =>
-        prev.map((row) => {
+      setMetrics((prev) => {
+        let changed = false;
+        const next = prev.map((row) => {
           if (row.participant_id !== event.participant_id) return row;
           const lastAt = event.last_eeg_at ?? row.last_eeg_at;
           const sq01 = normalizeSignalQuality01(event.signal_quality);
-          return {
+          const patched: SessionLiveMetric = {
             ...row,
             device_status: event.device_status ?? row.device_status,
             band_connected:
@@ -259,8 +203,21 @@ export default function SessionLivePage() {
               event.signal_quality_level ??
               (sq01 != null ? signalQualityLevel(sq01) : row.signal_quality_level),
           };
-        }),
-      );
+          if (
+            patched.device_status === row.device_status &&
+            patched.band_connected === row.band_connected &&
+            patched.band_battery === row.band_battery &&
+            patched.last_eeg_at === row.last_eeg_at &&
+            patched.signal_quality === row.signal_quality &&
+            patched.signal_quality_level === row.signal_quality_level
+          ) {
+            return row;
+          }
+          changed = true;
+          return patched;
+        });
+        return changed ? next : prev;
+      });
     },
     [id],
   );
@@ -395,7 +352,7 @@ export default function SessionLivePage() {
     const base =
       metrics.length > 0 ? metrics : session ? participantsToMetrics(session) : [];
 
-    // 호스트 본인 useBand 실데이터로 해당 행을 즉시 보강 (배터리·접촉·SQI·휴식도)
+    // 호스트 본인 useBand 실데이터로 해당 행만 즉시 보강 (나머지 행 참조 유지)
     if (!hostParticipantId || band.connectionState !== 'connected') return base;
 
     const linkState = resolveBandLinkState({
@@ -403,11 +360,12 @@ export default function SessionLivePage() {
       lastEegAt: band.lastEegAt,
     });
 
-    return base.map((row) => {
+    let changed = false;
+    const next = base.map((row) => {
       if (row.participant_id !== hostParticipantId) return row;
       const sq01 =
         band.signalQuality == null ? null : band.signalQuality / 100;
-      return {
+      const patched: SessionLiveMetric = {
         ...row,
         band_connected: linkState === 'connected',
         band_battery: band.battery ?? row.band_battery,
@@ -418,8 +376,36 @@ export default function SessionLivePage() {
         signal_quality: sq01 ?? row.signal_quality ?? null,
         signal_quality_level: band.signalQualityLevel,
       };
+      // 필드 동일하면 기존 행 유지 → SessionMonitorRow memo 히트
+      if (
+        patched.band_connected === row.band_connected &&
+        patched.band_battery === row.band_battery &&
+        patched.device_status === row.device_status &&
+        patched.current_efficiency === row.current_efficiency &&
+        patched.upload_status === row.upload_status &&
+        patched.last_eeg_at === row.last_eeg_at &&
+        patched.signal_quality === row.signal_quality &&
+        patched.signal_quality_level === row.signal_quality_level
+      ) {
+        return row;
+      }
+      changed = true;
+      return patched;
     });
-  }, [metrics, session, hostParticipantId, band]);
+    return changed ? next : base;
+  }, [
+    metrics,
+    session,
+    hostParticipantId,
+    band.connectionState,
+    band.lastEegAt,
+    band.signalQuality,
+    band.battery,
+    band.deviceStatus,
+    band.currentEfficiency,
+    band.uploadStatus,
+    band.signalQualityLevel,
+  ]);
 
   const activeCount = useMemo(
     () => (session?.participants ?? []).filter((p) => !p.is_waitlisted).length,
@@ -474,6 +460,11 @@ export default function SessionLivePage() {
             <h2 className="text-[18px] font-bold text-[#1F1F1F]">{session.title ?? '세션'}</h2>
             <div className="mt-1 text-[13px] text-[#6F6F6F]">
               {session.duration_min}분 · 참여자 {activeCount}/{session.max_participants}
+              {session.run_id && session.run_id !== session.id && (
+                <span className="ml-2 font-mono text-[11px] text-[#9CA3AF]">
+                  run {session.run_id.slice(0, 8)}
+                </span>
+              )}
               {isOnline && (
                 <span className="ml-2 inline-flex items-center gap-1 text-[#2563EB]">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#2563EB]" />

@@ -1,5 +1,6 @@
 // `/session-live` 네임스페이스 구독 훅 — 호스트/게스트 실시간 EEG + SDD-026 상태 계약
 // snapshot 적용 전에는 isReady=false → 호출측이 REST 폴백을 유지해야 한다.
+// SDD-028: eeg_feature는 setState 없이 콜백만 — 대규모 참여자 전체 재렌더 회피
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { tokenStorage } from '../lib/api/client';
@@ -71,7 +72,6 @@ export function useSessionLiveSocket({
   const [hasSnapshot, setHasSnapshot] = useState(false);
   const [snapshot, setSnapshot] = useState<SessionLiveJoinSnapshot | null>(null);
   const [version, setVersion] = useState(0);
-  const [lastEvent, setLastEvent] = useState<SessionLiveEegFeatureEvent | null>(null);
 
   const onFeatureRef = useRef(onEegFeature);
   onFeatureRef.current = onEegFeature;
@@ -85,6 +85,8 @@ export function useSessionLiveSocket({
   onDeviceRef.current = onDeviceStatusChanged;
   const joinedSessionRef = useRef<string | null>(null);
   const versionRef = useRef(0);
+  /** SDD-028: feature는 콜백으로만 전달 — setState 하면 대규모 테이블 전체 재렌더 */
+  const lastEventRef = useRef<SessionLiveEegFeatureEvent | null>(null);
 
   /** version이 이전이면 무시 (중복·역순 방어) */
   const acceptVersion = useCallback((next: number): boolean => {
@@ -105,7 +107,8 @@ export function useSessionLiveSocket({
   );
 
   const handleFeature = useCallback((event: SessionLiveEegFeatureEvent) => {
-    setLastEvent(event);
+    // 최신 feature만 콜백으로 증분 반영 — 훅 state를 건드리지 않음
+    lastEventRef.current = event;
     onFeatureRef.current?.(event);
   }, []);
 
@@ -227,6 +230,7 @@ export function useSessionLiveSocket({
     isReady: hasSnapshot,
     snapshot,
     version,
-    lastEvent,
+    /** 렌더 구독 없음 — onEegFeature로 증분 반영. 디버그/폴백용 최신값 */
+    lastEvent: lastEventRef.current,
   };
 }

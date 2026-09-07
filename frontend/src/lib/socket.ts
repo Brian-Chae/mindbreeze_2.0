@@ -76,6 +76,8 @@ export interface SessionLiveFeatureAck {
 /** join 응답 snapshot — status/version/참여자/집계 */
 export interface SessionLiveJoinSnapshot {
   session_id: string;
+  /** SDD-028: 실행 회차 키(기본=session_id). 반복 실행 UI는 후순위 */
+  run_id?: string | null;
   status: SessionStatus | string;
   version: number;
   started_at?: string | null;
@@ -132,6 +134,8 @@ export interface DeviceStatusChangedEvent {
 /** 서버 → 클라이언트: room broadcast `eeg_feature` */
 export interface SessionLiveEegFeatureEvent {
   session_id: string;
+  /** SDD-028: 실행 회차 키 — 증분 반영 시 필터/표시용(선택) */
+  run_id?: string | null;
   participant_id: string;
   feature?: EegFeatureItem;
   stream_id?: string;

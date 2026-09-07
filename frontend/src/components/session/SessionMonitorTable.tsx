@@ -1,6 +1,8 @@
 // 호스트 참가자 모니터링 테이블 — 뇌파 값은 null이면 '-' placeholder
 // SDD-026: 접촉(LeadOff) / 신호품질(SQI) 분리, unknown을 정상으로 표시하지 않음
+// SDD-028: 행 단위 memo — eeg_feature 증분 시 변경되지 않은 행 재렌더 회피
 
+import { memo } from 'react';
 import type { SessionLiveMetric } from '../../lib/api/session';
 import {
   contactStatusLabel,
@@ -57,6 +59,71 @@ function matchesFilter(
   return true;
 }
 
+interface MonitorRowProps {
+  row: SessionLiveMetric;
+  /** 줄무늬용 — 필터 후 인덱스 */
+  zebra: boolean;
+}
+
+/** 단일 참가자 행 — props.row 참조가 같으면 재렌더 스킵 */
+const SessionMonitorRow = memo(function SessionMonitorRow({
+  row,
+  zebra,
+}: MonitorRowProps) {
+  const leadOff = row.device_status === 'lead_off';
+  const stale = isEegStale(row.last_eeg_at);
+  const connected = row.band_connected && !stale;
+
+  return (
+    <tr
+      className={`border-t border-[#F0F0F0] ${
+        leadOff || stale
+          ? 'bg-[#FDECEC]'
+          : zebra
+            ? 'bg-[#FAFAFA]'
+            : 'bg-white'
+      }`}
+    >
+      <td className="px-4 py-3 font-medium text-[#1F1F1F]">
+        {row.display_name || (row.is_guest ? '게스트' : '참가자')}
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={
+            leadOff
+              ? 'font-medium text-[#B3261E]'
+              : row.device_status === 'ok'
+                ? 'text-emerald-700'
+                : 'text-[#6F6F6F]'
+          }
+        >
+          {contactStatusLabel(row.device_status)}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-[#6F6F6F]">{qualityLabel(row)}</td>
+      <td className="px-4 py-3">
+        {connected ? (
+          <span className="font-medium text-[#5F0080]">연결됨</span>
+        ) : stale && row.band_connected ? (
+          <span className="font-medium text-amber-700">전송중단</span>
+        ) : (
+          <span className="text-[#9CA3AF]">미연결</span>
+        )}
+      </td>
+      <td className="px-4 py-3 tabular-nums text-[#1F1F1F]">
+        {formatMetric(row.band_battery, '%')}
+      </td>
+      <td className="px-4 py-3 tabular-nums font-semibold text-[#5F0080]">
+        {formatMetric(row.avg_efficiency, '%')}
+      </td>
+      <td className="px-4 py-3 tabular-nums font-semibold text-[#5F0080]">
+        {leadOff || stale ? '-' : formatMetric(row.current_efficiency, '%')}
+      </td>
+      <td className="px-4 py-3 text-[#6F6F6F]">{uploadLabel(row.upload_status)}</td>
+    </tr>
+  );
+});
+
 export function SessionMonitorTable({ participants, filter }: SessionMonitorTableProps) {
   const rows = participants.filter((p) => matchesFilter(p, filter));
 
@@ -84,60 +151,13 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
-            const leadOff = row.device_status === 'lead_off';
-            const stale = isEegStale(row.last_eeg_at);
-            const connected = row.band_connected && !stale;
-            return (
-              <tr
-                key={row.participant_id}
-                className={`border-t border-[#F0F0F0] ${
-                  leadOff || stale
-                    ? 'bg-[#FDECEC]'
-                    : index % 2 === 1
-                      ? 'bg-[#FAFAFA]'
-                      : 'bg-white'
-                }`}
-              >
-                <td className="px-4 py-3 font-medium text-[#1F1F1F]">
-                  {row.display_name || (row.is_guest ? '게스트' : '참가자')}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={
-                      leadOff
-                        ? 'font-medium text-[#B3261E]'
-                        : row.device_status === 'ok'
-                          ? 'text-emerald-700'
-                          : 'text-[#6F6F6F]'
-                    }
-                  >
-                    {contactStatusLabel(row.device_status)}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-[#6F6F6F]">{qualityLabel(row)}</td>
-                <td className="px-4 py-3">
-                  {connected ? (
-                    <span className="font-medium text-[#5F0080]">연결됨</span>
-                  ) : stale && row.band_connected ? (
-                    <span className="font-medium text-amber-700">전송중단</span>
-                  ) : (
-                    <span className="text-[#9CA3AF]">미연결</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 tabular-nums text-[#1F1F1F]">
-                  {formatMetric(row.band_battery, '%')}
-                </td>
-                <td className="px-4 py-3 tabular-nums font-semibold text-[#5F0080]">
-                  {formatMetric(row.avg_efficiency, '%')}
-                </td>
-                <td className="px-4 py-3 tabular-nums font-semibold text-[#5F0080]">
-                  {leadOff || stale ? '-' : formatMetric(row.current_efficiency, '%')}
-                </td>
-                <td className="px-4 py-3 text-[#6F6F6F]">{uploadLabel(row.upload_status)}</td>
-              </tr>
-            );
-          })}
+          {rows.map((row, index) => (
+            <SessionMonitorRow
+              key={row.participant_id}
+              row={row}
+              zebra={index % 2 === 1}
+            />
+          ))}
         </tbody>
       </table>
       {rows.length === 0 && (

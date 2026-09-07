@@ -70,6 +70,8 @@ class ParticipantInfo(BaseModel):
 
 class SessionResponse(BaseModel):
     id: str
+    # SDD-028: 실행 회차 식별자(경량 SessionRun). 미설정 시 서비스가 session_id 를 채운다.
+    run_id: str | None = None
     type: SessionType
     custom_type_name: str | None = None
     status: SessionStatus

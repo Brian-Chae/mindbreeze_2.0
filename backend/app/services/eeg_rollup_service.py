@@ -15,7 +15,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.eeg_feature import EEGFeatureWindow
+from app.services import eeg_query
 
 # 롤업 대상 지표(원천 feature 컬럼). 밴드파워는 재분석 자산이므로 롤업에서 제외한다.
 ROLLUP_METRIC_KEYS: tuple[str, ...] = (
@@ -89,19 +89,33 @@ def compute_rollup(
     *,
     participant_id: str | None = None,
     resolution_sec: int = _DEFAULT_RESOLUTION_SEC,
+    start_bucket: int | None = None,
+    end_bucket: int | None = None,
 ) -> dict:
     """세션(선택적으로 특정 참가자)의 60초 롤업을 온디맨드로 산출한다.
 
     participant_id 미지정 시 세션 전체 윈도우를 대상으로 한다.
+
+    SDD-028: batch key(버킷 범위) 지원 — start_bucket/end_bucket 을 주면 해당 버킷 구간만
+    조회·집계한다(반열린 구간 [start_bucket, end_bucket)). 버킷 인덱스는 window_index 범위
+    [start_bucket*resolution, end_bucket*resolution) 로 환산해 인덱스 범위 스캔으로 읽는다.
+    범위를 생략하면 전체 스캔과 동일한 결과를 반환한다(회귀 방지).
     """
     if resolution_sec < 1:
         raise HTTPException(status_code=400, detail="resolution 은 1 이상이어야 합니다")
 
     sid = _to_uuid(session_id)
-    q = db.query(EEGFeatureWindow).filter(EEGFeatureWindow.session_id == sid)
-    if participant_id:
-        q = q.filter(EEGFeatureWindow.participant_id == _to_uuid(participant_id))
-    windows = q.order_by(EEGFeatureWindow.window_index).all()
+    # 버킷(batch key) 범위를 window_index 범위로 환산 — 필요한 구간만 원천을 읽는다.
+    start_index = start_bucket * resolution_sec if start_bucket is not None else None
+    end_index = end_bucket * resolution_sec if end_bucket is not None else None
+    participant_ids = [_to_uuid(participant_id)] if participant_id else None
+    windows = eeg_query.feature_windows_in_range(
+        db,
+        sid,
+        participant_ids=participant_ids,
+        start_index=start_index,
+        end_index=end_index,
+    )
 
     # 버킷 그룹핑(window_index // resolution_sec)
     grouped: dict[int, list] = {}

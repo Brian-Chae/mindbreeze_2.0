@@ -134,6 +134,19 @@ for _action in ("start", "pause", "resume", "end", "cancel"):
     )
 
 
+@router.post("/{session_id}/new-run", response_model=SessionResponse)
+def start_new_run(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-028: 같은 수업 정의를 "새 실행(명시적)"으로 열어 새 run_id 를 발급한다.
+
+    completed·cancelled 세션은 즉시 재시작할 수 없다(400). host 상담사 전용.
+    """
+    return session_service.start_new_run(session_id, current_user["id"], db)
+
+
 @router.post("/{session_id}/invite", response_model=SessionResponse)
 def invite_participant(
     session_id: str,
@@ -190,16 +203,24 @@ def get_eeg_rollup(
     session_id: str,
     participant_id: str | None = None,
     resolution: int = 60,
+    start_bucket: int | None = None,
+    end_bucket: int | None = None,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     """SDD-027: 60초 롤업 조회 — host 상담사 전용.
 
     EEGFeatureWindow(1초 원천) 온디맨드 집계(valid_count/coverage/유효샘플 가중평균).
+    SDD-028: start_bucket/end_bucket(batch key)로 필요한 버킷 구간만 조회할 수 있다.
     """
     session_service._get_session_as_host(session_id, current_user["id"], db)
     return eeg_rollup_service.compute_rollup(
-        session_id, db, participant_id=participant_id, resolution_sec=resolution
+        session_id,
+        db,
+        participant_id=participant_id,
+        resolution_sec=resolution,
+        start_bucket=start_bucket,
+        end_bucket=end_bucket,
     )
 
 
