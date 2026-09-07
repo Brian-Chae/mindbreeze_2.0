@@ -24,13 +24,84 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# 하루밴드 7지표 키 (프론트 report.ts EEG_METRIC_KEYS 와 순서·이름 동일)
+_EEG_METRIC_KEYS = (
+    "focus_index_stability_score",
+    "total_neural_activity_score",
+    "cognitive_load_stability_score",
+    "stress_score",
+    "hemispheric_balance_score",
+    "emotional_stability_score",
+    "relaxation_score",
+)
+
+
+def _normalize_eeg(eeg) -> dict | None:
+    """content.eeg 를 단일 계약으로 정규화한다.
+
+    - 레거시 {available: bool} → status 매핑
+    - not_measured 는 최소 형태로 축약 (프론트 섹션 숨김)
+    - 두뇌휴식도 = relaxation_score 단일 소스를 summary_labels 로 보장
+    - 7지표는 null 보존 (없는 키는 None, 0 치환 금지)
+    """
+    if not isinstance(eeg, dict):
+        return None
+
+    status = eeg.get("status")
+    if status is None:
+        avail = eeg.get("available")
+        status = "valid" if avail is True else "not_measured"
+    if status == "not_measured":
+        return {"status": "not_measured"}
+
+    metrics_in = eeg.get("metrics") if isinstance(eeg.get("metrics"), dict) else {}
+    metrics = {k: metrics_in.get(k) for k in _EEG_METRIC_KEYS}
+
+    labels = dict(eeg.get("summary_labels") or {})
+    labels.setdefault("relaxation_score", "두뇌휴식도")
+
+    return {
+        "status": status,
+        "reliability": eeg.get("reliability"),
+        "drowsiness_flag": bool(eeg.get("drowsiness_flag")),
+        "score": eeg.get("score"),
+        "metrics": metrics,
+        "summary_labels": labels,
+        "timeline": eeg.get("timeline") if isinstance(eeg.get("timeline"), list) else [],
+        "normalization_version": eeg.get("normalization_version"),
+    }
+
+
+def normalize_report_content(content, report_type: str = "counselor") -> dict:
+    """리포트 content 를 UI 단일 계약으로 정규화한다.
+
+    additive·idempotent — 기존 키(headline/approved/sections 등)를 보존하면서
+    summary/insights/markers/eeg 계약 필드를 보강한다. null 보존이 원칙이다.
+    """
+    if not isinstance(content, dict):
+        return {}
+
+    out = dict(content)  # 기존 키 보존
+    # summary 는 없으면 None (하위호환: headline 은 그대로 둔다)
+    out["summary"] = content.get("summary")
+    out["insights"] = out["insights"] if isinstance(out.get("insights"), list) else []
+    out["markers"] = out["markers"] if isinstance(out.get("markers"), list) else []
+
+    eeg_norm = _normalize_eeg(content.get("eeg"))
+    if eeg_norm is None:
+        out.pop("eeg", None)
+    else:
+        out["eeg"] = eeg_norm
+    return out
+
+
 def _serialize(report: Report, session: Session | None = None) -> dict:
     return {
         "id": str(report.id),
         "session_id": str(report.session_id),
         "user_id": str(report.user_id),
         "type": report.type,
-        "content": report.content or {},
+        "content": normalize_report_content(report.content, report.type),
         "pdf_url": report.pdf_url,
         "sent_at": report.sent_at,
         "is_read": bool(report.is_read),

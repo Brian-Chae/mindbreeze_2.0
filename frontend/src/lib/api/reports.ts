@@ -2,6 +2,25 @@
 
 import { apiClient } from './client';
 
+// content.eeg 계약·어댑터는 report.ts (SDD-022)
+export type {
+  AdaptedReportContent,
+  EegMetricKey,
+  EegQualityStatus,
+  EegTimelinePoint,
+  ReportEegContent,
+  ReportMarker,
+} from './report';
+export {
+  adaptReportContent,
+  CLIENT_METRIC_LABELS,
+  CLIENT_PRIMARY_METRIC_KEYS,
+  COUNSELOR_METRIC_LABELS,
+  EEG_METRIC_KEYS,
+  reliabilityLabel,
+  resolveMetricLabel,
+} from './report';
+
 export type ReportType = 'counselor' | 'client';
 
 export interface ReportDto {
