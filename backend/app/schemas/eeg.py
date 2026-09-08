@@ -3,6 +3,28 @@
 from pydantic import BaseModel, Field
 
 
+class HRVMotionFeatures(BaseModel):
+    """PPG HRV·ACC 움직임 입력 계약. 미수신·산출 불가는 null 보존."""
+
+    sdnn: float | None = Field(None, description="SDNN (ms)")
+    rmssd: float | None = Field(None, description="RMSSD (ms)")
+    lf_power: float | None = Field(None, description="LF 파워 (ms²)")
+    hf_power: float | None = Field(None, description="HF 파워 (ms²)")
+    lf_hf_ratio: float | None = None
+    heart_rate: float | None = Field(None, description="심박수 (bpm)")
+    motion: float | None = Field(None, ge=0, le=1, description="움직임 활동도 (0~1)")
+
+
+class HRVMotionSummary(BaseModel):
+    """비-null 원천 샘플의 평균. 해당 지표가 없으면 null."""
+
+    sdnn_mean: float | None = None
+    rmssd_mean: float | None = None
+    lf_hf_ratio_mean: float | None = None
+    heart_rate_mean: float | None = None
+    motion_mean: float | None = None
+
+
 # ---------------------------------------------------------------------------
 # T1. 60초 롤업
 # ---------------------------------------------------------------------------
@@ -20,7 +42,7 @@ class EEGRollupBucket(BaseModel):
     metrics: dict[str, float | None]
 
 
-class EEGRollupOverall(BaseModel):
+class EEGRollupOverall(HRVMotionSummary):
     """전 구간 요약 — 유효 샘플 수 가중 평균(버킷 단순 평균 아님)."""
 
     sample_count: int

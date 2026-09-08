@@ -16,6 +16,7 @@ from app.models.session import Session
 from app.models.record import SessionRecord, Report, EEGRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.services import eeg_metrics
+from app.services.eeg_rollup_service import summarize_hrv_motion
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,7 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
         for w in windows
     ]
     return {
+        **summarize_hrv_motion(windows),
         "status": m.session_status,
         "reliability": m.eeg_reliability,
         "drowsiness_flag": bool(m.drowsiness_flag),

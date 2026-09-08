@@ -1235,6 +1235,13 @@ def persist_feature_windows(
             emotional_stability=f.emotional_stability,
             hemispheric_balance=f.hemispheric_balance,
             signal_quality=f.signal_quality,
+            sdnn=f.sdnn,
+            rmssd=f.rmssd,
+            lf_power=f.lf_power,
+            hf_power=f.hf_power,
+            lf_hf_ratio=f.lf_hf_ratio,
+            heart_rate=f.heart_rate,
+            motion=f.motion,
         )
         try:
             # SAVEPOINT 단위 flush — 동시 저장 경합(유니크 위반)은 롤백 후 skip

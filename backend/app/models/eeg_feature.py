@@ -82,4 +82,13 @@ class EEGFeatureWindow(Base):
     # 신호 품질 원시값(0~1). quality(valid/degraded/invalid) 문자열은 여기서 파생한다.
     signal_quality: Mapped[float | None] = mapped_column(Float)
 
+    # HRV·움직임 원천값 — 미수신·산출 불가는 NULL 보존
+    sdnn: Mapped[float | None] = mapped_column(Float, nullable=True)
+    rmssd: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lf_power: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hf_power: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lf_hf_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
+    heart_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    motion: Mapped[float | None] = mapped_column(Float, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

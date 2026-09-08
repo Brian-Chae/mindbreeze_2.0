@@ -10,6 +10,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.record import Report
 from app.models.user import User
 from app.services import notification_service
+from app.schemas.eeg import HRVMotionSummary
 from app.tasks.report_task import generate_report_inline
 
 
@@ -61,6 +62,7 @@ def _normalize_eeg(eeg) -> dict | None:
     labels.setdefault("relaxation_score", "두뇌휴식도")
 
     return {
+        **HRVMotionSummary.model_validate(eeg).model_dump(),
         "status": status,
         "reliability": eeg.get("reliability"),
         "drowsiness_flag": bool(eeg.get("drowsiness_flag")),
@@ -96,7 +98,11 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
 
 
 def _serialize(report: Report, session: Session | None = None) -> dict:
+    content = normalize_report_content(report.content, report.type)
+    eeg = content.get("eeg")
+    summary = HRVMotionSummary.model_validate(eeg if isinstance(eeg, dict) else {})
     return {
+        **summary.model_dump(),
         "id": str(report.id),
         "session_id": str(report.session_id),
         # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유).
@@ -106,7 +112,7 @@ def _serialize(report: Report, session: Session | None = None) -> dict:
         # SDD-027: 리포트 상태머신 + 데이터 신뢰도(null 보존)
         "status": report.status,
         "data_credibility": report.data_credibility,
-        "content": normalize_report_content(report.content, report.type),
+        "content": content,
         "pdf_url": report.pdf_url,
         "sent_at": report.sent_at,
         "is_read": bool(report.is_read),

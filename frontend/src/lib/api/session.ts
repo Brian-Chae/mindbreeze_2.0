@@ -178,6 +178,15 @@ export interface EegFeatureItem {
   hemispheric_balance?: number | null;
   /** 0~1 신호 품질 */
   signal_quality?: number | null;
+  /** PPG HRV — 계산 불가 시 null (0 치환 금지) */
+  sdnn?: number | null;
+  rmssd?: number | null;
+  lf_power?: number | null;
+  hf_power?: number | null;
+  lf_hf_ratio?: number | null;
+  heart_rate?: number | null;
+  /** 움직임 활동도 0~1 */
+  motion?: number | null;
 }
 
 export interface EegFeatureBatchPayload {

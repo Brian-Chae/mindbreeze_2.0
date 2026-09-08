@@ -6,6 +6,6 @@ export { bluetoothService, eegBluetoothService } from './bluetoothService';
 export { StreamProcessor } from './StreamProcessor';
 export { mockDataGenerator, MockDataGenerator } from './mockDataGenerator';
 export { AnalysisMetricsService } from './AnalysisMetricsService';
-export type { LatestEegFeature } from './AnalysisMetricsService';
+export type { LatestEegFeature, HrvMetricsSnapshot } from './AnalysisMetricsService';
 export type { BandPowers, ConnectionState, LeadOffStatus } from './types/eeg';
 export type { EEGAnalysisMetrics } from './types/processed-data';

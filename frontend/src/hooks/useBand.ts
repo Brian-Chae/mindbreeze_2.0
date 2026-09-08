@@ -120,6 +120,8 @@ function metricsToFeature(
   bandPowers: BandPowers | null,
   signalQuality0to100: number | null,
 ): EegFeatureItem {
+  // HRV는 AnalysisMetricsService RR 버퍼 기반 getter에서 읽음 (null 보존)
+  const hrv = AnalysisMetricsService.getInstance();
   return {
     second_offset: secondOffset,
     timestamp: metrics.timestamp,
@@ -139,6 +141,13 @@ function metricsToFeature(
     hemispheric_balance: metrics.hemisphericBalance,
     signal_quality:
       signalQuality0to100 == null ? null : toApiSignalQuality(signalQuality0to100),
+    sdnn: hrv.getCurrentSDNN(),
+    rmssd: hrv.getCurrentRMSSD(),
+    lf_power: hrv.getCurrentLfPower(),
+    hf_power: hrv.getCurrentHfPower(),
+    lf_hf_ratio: hrv.getCurrentLfHfRatio(),
+    heart_rate: hrv.getCurrentHeartRate(),
+    motion: hrv.getCurrentMotion(),
   };
 }
 

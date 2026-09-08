@@ -697,147 +697,133 @@ export class StreamProcessor {
 
       // 콜백을 통해 ProcessedDataStore 업데이트
       {
-        const ppgData = {
-          // 필터링된 PPG 데이터
-          filteredData: result.filteredData,
-          
-          // 생체 신호 정보
-          vitals: result.vitals,
-          
-          // 신호 품질 정보
-          signalQuality: result.signalQuality,
-          
-          // 피크 정보
-          peakInfo: result.peakInfo,
-          
-          // 타임스탬프
-          timestamp: Date.now()
-        };
-        
-        // ProcessedDataStore에 PPG 분석 결과 직접 업데이트
-        const transformedPPGData = {
-          ...ppgData,
-          indices: result.vitals ? {
-            heartRate: result.vitals.heartRate || 0,
-            hrv: result.vitals.hrv || 0,
-            spo2: result.vitals.spo2 || 0,
-            rmssd: result.vitals.hrv || 0, // HRV와 동일
-            // 🔧 실제 고급 HRV 값들 사용 (advancedHRV에서 가져오기)
-            sdnn: result.advancedHRV?.sdnn || 0,
-            pnn50: result.advancedHRV?.pnn50 || 0,
-            lfPower: result.advancedHRV?.lfPower || 0,
-            hfPower: result.advancedHRV?.hfPower || 0,
-            lfHfRatio: result.advancedHRV?.lfHfRatio || 0,
-            stressIndex: result.advancedHRV?.stressIndex || 0,
-            // 🔧 새로운 HRV 지표들 추가
-            avnn: result.advancedHRV?.avnn || 0,
-            pnn20: result.advancedHRV?.pnn20 || 0,
-            sdsd: result.advancedHRV?.sdsd || 0,
-            hrMax: result.advancedHRV?.hrMax || 0,
-            hrMin: result.advancedHRV?.hrMin || 0,
-            triangularIndex: 0, // 아직 구현되지 않음
-            // 🔧 호흡 분석 기본값들 (아직 구현되지 않음)
-            respiratoryRate: 0,
-            respiratoryVariability: 0,
-            respiratoryDepth: 0,
-            respiratoryRegularity: 0,
-            respiratoryEffort: 0,
-            apneaEvents: 0,
-            respiratoryLfPower: 0,
-            respiratoryHfPower: 0,
-            respiratoryTotalPower: 0,
-            respiratorySpectralEntropy: 0
-          } : {
-            heartRate: 0,
-            hrv: 0,
-            spo2: 0,
-            rmssd: 0,
-            sdnn: 0,
-            pnn50: 0,
-            lfPower: 0,
-            hfPower: 0,
-            lfHfRatio: 0,
-            stressIndex: 0,
-            // 🔧 새로운 HRV 지표들 기본값
-            avnn: 0,
-            pnn20: 0,
-            sdsd: 0,
-            hrMax: 0,
-            hrMin: 0,
-            triangularIndex: 0,
-            respiratoryRate: 0,
-            respiratoryVariability: 0,
-            respiratoryDepth: 0,
-            respiratoryRegularity: 0,
-            respiratoryEffort: 0,
-            apneaEvents: 0,
-            respiratoryLfPower: 0,
-            respiratoryHfPower: 0,
-            respiratoryTotalPower: 0,
-            respiratorySpectralEntropy: 0
-          }
-        };
-        
-        this.systemCallbacks.onStoreUpdate?.("updatePPGAnalysis", transformedPPGData);
-        
-        // PPG SQI 데이터도 별도로 업데이트
-        // PPGSignalProcessor에서 개별 SQI 배열을 직접 사용
-        if (result.signalQuality?.redSQI && result.signalQuality?.irSQI && result.signalQuality?.overallSQI && result.filteredData) {
-          // PPG SQI는 400개로 제한 (PPG 처리 결과와 일치)
-          const maxLength = Math.min(400, result.signalQuality.redSQI.length);
-          
-          const redSQIData = result.signalQuality.redSQI.slice(0, maxLength).map((value, index) => ({
-            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20), // 20ms 간격
-            value: value // 이미 퍼센트로 변환됨 (0-100%)
-          }));
-          
-          const irSQIData = result.signalQuality.irSQI.slice(0, maxLength).map((value, index) => ({
-            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20), // 20ms 간격
-            value: value // 이미 퍼센트로 변환됨 (0-100%)
-          }));
-          
-          const overallSQIData = result.signalQuality.overallSQI.slice(0, maxLength).map((value, index) => ({
-            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20), // 20ms 간격
-            value: value // 이미 퍼센트로 변환됨 (0-100%)
-          }));
-          
-          this.systemCallbacks.onStoreUpdate?.("updatePPGSQI", {
-            redSQI: redSQIData,
-            irSQI: irSQIData,
-            overallSQI: overallSQIData
-          });
-        }
-        
-        // PPG 분석 지표 생성 및 저장 (SQI 값 포함) - EEG 방식과 동일한 조건 적용
-        if (result.vitals && result.advancedHRV) {
+        // 1) RR 버퍼·HRV 계산을 먼저 갱신 (advancedHRV 하드코딩 0을 쓰지 않음)
+        if (result.vitals) {
           try {
-            // 현재 SQI 값 계산 (overallSQI 배열의 최신 평균값)
             let currentSQI = 0;
             if (result.signalQuality?.overallSQI && result.signalQuality.overallSQI.length > 0) {
-              // EEG와 동일: 최근 10개 샘플의 평균 SQI 값 사용
               const recentSQI = result.signalQuality.overallSQI.slice(-10);
               currentSQI = recentSQI.reduce((sum, val) => sum + val, 0) / recentSQI.length;
             }
-            
-            // EEG와 동일한 품질 조건: SQI 80% 이상
             const isQualityGood = currentSQI >= 80;
-            
+
             await this.analysisMetricsService.processPPGAnalysisMetrics(
               {
                 vitals: result.vitals,
-                advancedHRV: result.advancedHRV
+                advancedHRV: result.advancedHRV,
               },
               Date.now(),
-              currentSQI, // SQI 값 전달
-              isQualityGood, // 품질 상태 전달 (EEG와 동일한 조건)
-              result.rrIntervals // RR 간격 전달 (LF/HF 계산용)
+              currentSQI,
+              isQualityGood,
+              result.rrIntervals,
             );
           } catch (error) {
             logger.error('❌ PPG 분석 지표 생성 실패:', error);
           }
         }
-        
-        // SystemCallbacks로 processed PPG 데이터 전달 (S3CloudStorageService 등)
+
+        // 2) AnalysisMetricsService getter로 실제 HRV 값 사용 (계산 불가 시 null 유지)
+        const hrv = this.analysisMetricsService.getCurrentHRVMetrics();
+
+        const ppgData = {
+          filteredData: result.filteredData,
+          vitals: result.vitals,
+          signalQuality: result.signalQuality,
+          peakInfo: result.peakInfo,
+          timestamp: Date.now(),
+        };
+
+        const emptyHrvIndices = {
+          heartRate: 0,
+          hrv: 0,
+          spo2: 0,
+          rmssd: null as number | null,
+          sdnn: null as number | null,
+          pnn50: null as number | null,
+          lfPower: null as number | null,
+          hfPower: null as number | null,
+          lfHfRatio: null as number | null,
+          stressIndex: null as number | null,
+          avnn: null as number | null,
+          pnn20: null as number | null,
+          sdsd: null as number | null,
+          hrMax: null as number | null,
+          hrMin: null as number | null,
+          triangularIndex: 0,
+          respiratoryRate: 0,
+          respiratoryVariability: 0,
+          respiratoryDepth: 0,
+          respiratoryRegularity: 0,
+          respiratoryEffort: 0,
+          apneaEvents: 0,
+          respiratoryLfPower: 0,
+          respiratoryHfPower: 0,
+          respiratoryTotalPower: 0,
+          respiratorySpectralEntropy: 0,
+        };
+
+        const transformedPPGData = {
+          ...ppgData,
+          indices: result.vitals
+            ? {
+                heartRate: result.vitals.heartRate || 0,
+                hrv: result.vitals.hrv || 0,
+                spo2: result.vitals.spo2 || 0,
+                // HRV — AnalysisMetricsService RR 버퍼 기반 (0 치환 금지)
+                rmssd: hrv.rmssd,
+                sdnn: hrv.sdnn,
+                pnn50: hrv.pnn50,
+                lfPower: hrv.lfPower,
+                hfPower: hrv.hfPower,
+                lfHfRatio: hrv.lfHfRatio,
+                stressIndex: hrv.stressIndex,
+                avnn: hrv.avnn,
+                pnn20: hrv.pnn20,
+                sdsd: hrv.sdsd,
+                hrMax: hrv.hrMax,
+                hrMin: hrv.hrMin,
+                triangularIndex: 0,
+                respiratoryRate: 0,
+                respiratoryVariability: 0,
+                respiratoryDepth: 0,
+                respiratoryRegularity: 0,
+                respiratoryEffort: 0,
+                apneaEvents: 0,
+                respiratoryLfPower: 0,
+                respiratoryHfPower: 0,
+                respiratoryTotalPower: 0,
+                respiratorySpectralEntropy: 0,
+              }
+            : emptyHrvIndices,
+        };
+
+        this.systemCallbacks.onStoreUpdate?.("updatePPGAnalysis", transformedPPGData);
+
+        if (result.signalQuality?.redSQI && result.signalQuality?.irSQI && result.signalQuality?.overallSQI && result.filteredData) {
+          const maxLength = Math.min(400, result.signalQuality.redSQI.length);
+
+          const redSQIData = result.signalQuality.redSQI.slice(0, maxLength).map((value, index) => ({
+            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20),
+            value: value,
+          }));
+
+          const irSQIData = result.signalQuality.irSQI.slice(0, maxLength).map((value, index) => ({
+            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20),
+            value: value,
+          }));
+
+          const overallSQIData = result.signalQuality.overallSQI.slice(0, maxLength).map((value, index) => ({
+            timestamp: result.filteredData[index]?.timestamp || (Date.now() - (maxLength - index) * 20),
+            value: value,
+          }));
+
+          this.systemCallbacks.onStoreUpdate?.("updatePPGSQI", {
+            redSQI: redSQIData,
+            irSQI: irSQIData,
+            overallSQI: overallSQIData,
+          });
+        }
+
         if (this.systemCallbacks.onProcessedPPG) {
           this.systemCallbacks.onProcessedPPG(transformedPPGData);
         }

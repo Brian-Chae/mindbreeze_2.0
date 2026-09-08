@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.schemas.eeg import HRVMotionSummary
+
 
 class ReportCreate(BaseModel):
     type: str = "counselor"  # counselor | client
@@ -18,7 +20,7 @@ class ReportApprovalRequest(BaseModel):
     note: str | None = None
 
 
-class ReportResponse(BaseModel):
+class ReportResponse(HRVMotionSummary):
     id: str
     session_id: str
     # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유)

@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
+from app.schemas.eeg import HRVMotionFeatures
+
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 SessionType = Literal["clinical", "hypnosis", "meditation", "custom"]
@@ -247,7 +249,7 @@ class GuestSessionStateResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class EEGFeatureItem(BaseModel):
+class EEGFeatureItem(HRVMotionFeatures):
     """1초 단위 EEG feature. 산출 불가 값은 null 로 보낸다(0 치환 금지)."""
 
     # 세션 내 0-based 초 인덱스 (윈도우 순서)
