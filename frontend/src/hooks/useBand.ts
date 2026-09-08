@@ -498,6 +498,17 @@ export function useBand({
     setConnectionState('connecting');
 
     try {
+      // Web Bluetooth requestDevice는 사용자 제스처(클릭) 내에서 즉시 호출해야 하므로
+      // 디바이스 선택(scan)을 맨 앞에서 수행해 다이얼로그가 정상적으로 뜨도록 한다.
+      let selectedDeviceId: string | null = null;
+      if (!isMock) {
+        const devices = await bluetoothService.scan();
+        if (devices.length === 0) {
+          throw new Error('LINK BAND 디바이스를 찾지 못했습니다');
+        }
+        selectedDeviceId = devices[0].id;
+      }
+
       // 확정 cursor 복구 — offset 0 재시작 금지
       const cursor = await loadStreamCursor(sessionId, participantId);
       streamIdRef.current = cursor.streamId;
@@ -560,11 +571,7 @@ export function useBand({
       });
       await stream.start();
 
-      const devices = await bluetoothService.scan();
-      if (devices.length === 0) {
-        throw new Error('LINK BAND 디바이스를 찾지 못했습니다');
-      }
-      await bluetoothService.connect(devices[0].id);
+      await bluetoothService.connect(selectedDeviceId!);
 
       try {
         const level = await bluetoothService.getBatteryLevel();
