@@ -271,25 +271,26 @@ const ClassJoinPage: React.FC = () => {
     clearPersistedParticipant();
   };
 
-  // 명상 화면은 전체 폭 immersive 레이아웃
+  // 명상 화면 — 검정 풀블리드 immersive (SDD-029)
   if (step === 'meditation' && session) {
     return (
-      <main className="min-h-screen bg-[#1A0B2E] px-4 py-8 sm:px-8">
-        <div className="mx-auto w-full max-w-5xl">
-          <GuestMeditationPanel
-            title={session.title}
-            startedAt={session.started_at}
-            durationMin={durationMin}
-            onLeave={resetJoin}
-            sessionId={session.id}
-            participantId={participantId}
-          />
-          {error && (
-            <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </p>
-          )}
-        </div>
+      <main className="min-h-screen bg-black">
+        <GuestMeditationPanel
+          title={session.title}
+          startedAt={session.started_at}
+          durationMin={durationMin}
+          onLeave={resetJoin}
+          sessionId={session.id}
+          participantId={participantId}
+        />
+        {error && (
+          <p
+            role="alert"
+            className="fixed bottom-4 left-1/2 z-20 w-[min(100%-2rem,28rem)] -translate-x-1/2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+          >
+            {error}
+          </p>
+        )}
       </main>
     );
   }

@@ -15,6 +15,14 @@ export const SIGNAL_QUALITY_DEGRADED = 0.4;
 /** last_eeg_at 기준 BLE/전송 단절 판정 (ms) */
 export const EEG_STALE_MS = 10_000;
 
+/** 배터리 부족 임계 — Brian 확정: 25% 이하(포함) */
+export const LOW_BATTERY_PCT = 25;
+
+/** 배터리 %가 부족 임계 이하인지 (null은 false) */
+export function isLowBattery(batteryPct: number | null | undefined): boolean {
+  return batteryPct != null && !Number.isNaN(batteryPct) && batteryPct <= LOW_BATTERY_PCT;
+}
+
 export type SignalQualityLevel = 'ok' | 'degraded' | 'invalid' | 'unknown';
 
 /** SDK SQI(0~100) → API signal_quality(0~1) */

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
 
+    # SDD-029: 외부에서 접근 가능한 백엔드 리포트 열람 주소
+    report_email_base_url: str = "https://dev.mindbreeze.looxidlabs.com"
+
     # S3
     s3_bucket: str = "mindbreeze-dev"
     s3_region: str = "ap-northeast-1"

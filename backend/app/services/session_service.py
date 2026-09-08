@@ -695,7 +695,9 @@ def join_session_by_code(
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s)
-    return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True}
+    from app.services.report_email_service import participant_token
+    return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True,
+            "participant_token": participant_token(participant)}
 
 
 # ---------------------------------------------------------------------------

@@ -272,4 +272,15 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
 
     db.commit()
     db.refresh(report)
+    # SDD-029: 승인 게이트 통과 후에만 메일 발송을 예약한다.
+    if report.type == "client" and report.participant_id:
+        participant = db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first()
+        if participant and participant.report_email and not participant.report_email_sent_at:
+            from app.services.report_email_service import enqueue_report_email
+            try:
+                enqueue_report_email(str(report.id))
+            except Exception:
+                participant.report_email_status = "failed"
+                db.commit()
+                raise HTTPException(503, "리포트 승인은 완료되었으나 메일 발송 예약에 실패했습니다. 재승인해주세요")
     return _serialize(report, session)

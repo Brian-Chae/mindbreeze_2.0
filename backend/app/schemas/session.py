@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 SessionType = Literal["clinical", "hypnosis", "meditation", "custom"]
 # SDD-015: 일정 없는 즉석 클래스의 대기 상태 "ready" 추가 (기존 "scheduled" 유지)
@@ -143,6 +144,7 @@ class JoinByCodeRequest(BaseModel):
 
 
 class JoinByCodeResponse(BaseModel):
+    participant_token: str | None = None
     session: SessionResponse
     participant_id: str | None = None
     is_guest: bool = False
@@ -290,3 +292,16 @@ class EEGFeatureBatchResponse(BaseModel):
     session_id: str
     # 실제 저장된 윈도우 수 (중복 초 인덱스는 제외)
     saved: int
+
+
+# SDD-029: 이메일 OTP 인증 결과와 참가자 소유 증명을 함께 제출한다.
+class ReportEmailRequest(BaseModel):
+    participant_id: UUID
+    email: EmailStr
+    email_verify_token: str | None = None
+    participant_token: str | None = None
+
+
+class ReportEmailResponse(BaseModel):
+    status: str
+    message: str

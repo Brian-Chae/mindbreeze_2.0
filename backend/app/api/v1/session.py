@@ -1,11 +1,16 @@
 """세션 관리 API"""
 
+from uuid import UUID
+
+from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.schemas.session import (
+    ReportEmailRequest,
+    ReportEmailResponse,
     EEGFeatureBatchRequest,
     EEGFeatureBatchResponse,
     GuestSessionStateResponse,
@@ -27,7 +32,7 @@ from app.schemas.eeg import (
     RawPresignRequest,
     RawPresignResponse,
 )
-from app.services import eeg_raw_service, eeg_rollup_service, session_service
+from app.services import eeg_raw_service, eeg_rollup_service, session_service, report_email_service
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -299,3 +304,24 @@ def join_session(
         user_name=current_user.get("name", "익명"),
         db=db,
     )
+
+
+# SDD-029: 게스트 리포트 메일 요청 및 만료 링크 열람
+
+
+@router.post("/{session_id}/report-email", response_model=ReportEmailResponse, status_code=202)
+def request_report_email(
+    session_id: UUID, payload: ReportEmailRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    return report_email_service.request_report_email(
+        session_id, payload, db, current_user["id"] if current_user else None,
+    )
+
+
+@router.get("/{session_id}/report-email/view", response_class=HTMLResponse)
+def view_report_email(session_id: UUID, token: str, db: DBSession = Depends(get_db)):
+    return HTMLResponse(report_email_service.view_report_email(session_id, token, db),
+                        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+                                 "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'"})

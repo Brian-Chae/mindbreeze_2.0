@@ -69,6 +69,10 @@ class SessionParticipant(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     # SDD-015: 회원가입 없이 참여하는 게스트의 표시 이름 (user_id가 NULL일 때만 사용)
     guest_name: Mapped[str | None] = mapped_column(String(100))
+    # SDD-029: 인증 완료된 리포트 수신 이메일과 실제 발송 결과
+    report_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    report_email_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    report_email_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     joined_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now())
     band_connected: Mapped[bool] = mapped_column(Boolean, default=False)  # LINK BAND 실연결 여부
     # SDD-026: 밴드 배터리(%) 최신값. null 보존(미상 시 None, 0 치환 금지). device_status_changed 이벤트로 전달.

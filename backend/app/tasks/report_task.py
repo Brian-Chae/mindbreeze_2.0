@@ -68,7 +68,7 @@ def _longest_usable_run(windows: list[EEGFeatureWindow]) -> int:
     return longest
 
 
-def _build_eeg_content(session_id: UUID, db: DBSession) -> dict:
+def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | None = None) -> dict:
     """EEGFeatureWindow 시계열 → content.eeg 단일 계약 블록.
 
     윈도우가 없으면(미착용/미수집) status="not_measured" — 프론트에서 섹션 숨김.
@@ -76,6 +76,7 @@ def _build_eeg_content(session_id: UUID, db: DBSession) -> dict:
     windows = (
         db.query(EEGFeatureWindow)
         .filter(EEGFeatureWindow.session_id == session_id)
+        .filter(EEGFeatureWindow.participant_id == participant_id if participant_id else True)
         .order_by(EEGFeatureWindow.window_index)
         .all()
     )
@@ -204,9 +205,11 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).first()
 
     try:
-        eeg_block = _build_eeg_content(session.id, db)
+        eeg_block = _build_eeg_content(session.id, db, report.participant_id if report.type == "client" else None)
         if report.type == "client":
-            content = _client_content(session, record, eeg_block)
+            # 그룹 세션의 공통 녹음 요약은 다른 참가자의 상담 내용을 포함할 수 있다.
+            client_record = None if session.participant_mode == "group" else record
+            content = _client_content(session, client_record, eeg_block)
         else:
             content = _counselor_content(session, record, eeg_block)
         # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생

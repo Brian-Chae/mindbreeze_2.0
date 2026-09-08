@@ -451,3 +451,11 @@ def send_client_invite_email(
 </body>
 </html>"""
     return _send_email(to_email, subject, body_text, body_html)
+
+
+def send_report_email(to_email: str, report_link: str) -> bool:
+    """로그인 없이 열람 가능한 7일 만료 리포트 링크를 발송한다."""
+    from html import escape
+    text = f"안녕하세요, MIND BREEZE입니다.\n\n리포트가 준비되었습니다.\n{report_link}\n\n링크는 7일간 유효합니다. 개인정보 보호를 위해 다른 사람에게 공유하지 마세요."
+    html = f'<html lang="ko"><body><h1>MIND BREEZE 리포트</h1><p>리포트가 준비되었습니다.</p><a href="{escape(report_link, quote=True)}">내 리포트 보기</a><p>7일간 유효한 개인 링크입니다. 다른 사람에게 공유하지 마세요.</p></body></html>'
+    return _send_email(to_email, "[MIND BREEZE] 세션 리포트가 도착했습니다", text, html)

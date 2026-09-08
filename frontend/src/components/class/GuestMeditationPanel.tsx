@@ -1,8 +1,8 @@
-// 게스트 명상 화면 — 타이머 + useBand 실데이터(미연결 시 대기 placeholder 유지)
-// SDD-024: WS eeg_feature 구독으로 본인 지표 실시간 보강 (REST EEG 폴링 없음)
-// SDD-026: LeadOff(접촉)/SQI(신호품질) 분리, 배터리·last_eeg_at 표시
+// 게스트 명상 화면 — 1.0 디자인 패리티 (SDD-029 P0)
+// 검정 풀블리드 + FadingImageBackground + clamp 초대형 수치 + BlinkingText + BrainChart
+// 데이터 계약(useBand/WS)은 SDD-024/026 유지 — 표현층만 교체
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import {
@@ -11,6 +11,9 @@ import {
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
+import { FadingImageBackground } from './FadingImageBackground';
+import { BlinkingText } from './BlinkingText';
+import { BrainChart } from './BrainChart';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -34,6 +37,8 @@ function formatEfficiency(value: number | null): string {
   return `${Math.round(value)}`;
 }
 
+const AI_ANALYZING_MS = 15_000;
+
 export function GuestMeditationPanel({
   title,
   startedAt,
@@ -45,6 +50,10 @@ export function GuestMeditationPanel({
   const [elapsedSec, setElapsedSec] = useState(0);
   /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
+  /** LeadOff 해소 후 15초 "AI 분석중" */
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const wasLeadOffRef = useRef(false);
+  const analyzingTimerRef = useRef<number | null>(null);
   const targetSec = Math.max(1, durationMin) * 60;
 
   const band = useBand({
@@ -70,7 +79,6 @@ export function GuestMeditationPanel({
     [participantId, sessionId],
   );
 
-  // room join + eeg_feature 구독 (WS 미연결이어도 밴드 로컬 표시 유지)
   useSessionLiveSocket({
     sessionId,
     participantId,
@@ -87,11 +95,43 @@ export function GuestMeditationPanel({
   const displayEfficiency = isLive
     ? (band.currentEfficiency ?? remoteEfficiency)
     : remoteEfficiency;
-  // lead_off / stale 시 오염된 현재값 대신 placeholder
   const showEfficiency =
     band.deviceStatus !== 'lead_off' && linkState !== 'stale'
       ? displayEfficiency
       : null;
+
+  // LeadOff 해소 → 15초 AI 분석중
+  useEffect(() => {
+    const isLeadOff = band.deviceStatus === 'lead_off';
+    if (isLeadOff) {
+      wasLeadOffRef.current = true;
+      setIsAnalyzing(false);
+      if (analyzingTimerRef.current != null) {
+        window.clearTimeout(analyzingTimerRef.current);
+        analyzingTimerRef.current = null;
+      }
+      return;
+    }
+    if (wasLeadOffRef.current) {
+      wasLeadOffRef.current = false;
+      setIsAnalyzing(true);
+      if (analyzingTimerRef.current != null) {
+        window.clearTimeout(analyzingTimerRef.current);
+      }
+      analyzingTimerRef.current = window.setTimeout(() => {
+        setIsAnalyzing(false);
+        analyzingTimerRef.current = null;
+      }, AI_ANALYZING_MS);
+    }
+  }, [band.deviceStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (analyzingTimerRef.current != null) {
+        window.clearTimeout(analyzingTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const startedMs = startedAt ? new Date(startedAt).getTime() : Date.now();
@@ -105,147 +145,138 @@ export function GuestMeditationPanel({
     return () => window.clearInterval(id);
   }, [startedAt]);
 
+  const chartValues = band.chartPoints.map((pt) => pt.relaxation);
+  const heroNumberClass =
+    'text-[clamp(64px,10vw,130px)] font-semibold leading-none text-white tabular-nums';
+  const heroLabelClass =
+    'text-[clamp(18px,3vw,38px)] font-semibold leading-tight text-white/60';
+
   return (
-    <div className="min-h-[70vh] rounded-3xl bg-gradient-to-b from-[#2D1045] to-[#5F0080] p-6 text-white sm:p-10">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-purple-200">명상 진행 중</p>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-            {title ?? '클래스'}
-          </h1>
-        </div>
-        <div className="font-mono text-lg tabular-nums text-purple-100 sm:text-xl">
-          {formatClock(elapsedSec)} / {formatClock(targetSec)}
-        </div>
-      </div>
+    <div className="relative flex min-h-screen w-full flex-col bg-black text-white">
+      <FadingImageBackground />
 
-      <div className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm sm:p-8">
-          <p className="text-sm font-medium text-purple-200">두뇌휴식도</p>
-          <p className="mt-4 text-6xl font-bold tracking-tight text-white sm:text-7xl">
-            {showEfficiency !== null ? formatEfficiency(showEfficiency) : '—'}
-          </p>
-          <p className="mt-4 text-sm leading-6 text-purple-100">
-            {band.deviceStatus === 'lead_off'
-              ? '접촉 불량 — LINK BAND 위치를 조정해 주세요'
-              : linkState === 'stale'
-                ? '최근 뇌파 수신이 없습니다 — 연결을 확인해 주세요'
-                : isLive
-                  ? 'LINK BAND에서 실시간으로 측정 중입니다'
-                  : remoteEfficiency !== null
-                    ? 'WebSocket으로 실시간 지표를 수신 중입니다'
-                    : 'LINK BAND 연결 시 표시됩니다'}
-          </p>
+      {/* 헤더 */}
+      <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
+        <button
+          type="button"
+          onClick={onLeave}
+          className="rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white"
+        >
+          종료
+        </button>
+        <h1 className="truncate px-3 text-center text-base font-medium text-[#F2F3F8] sm:text-lg">
+          {title ?? '클래스'}
+        </h1>
+        <div className="w-[4.5rem]" aria-hidden="true" />
+      </header>
 
-          {/* 뇌파 차트 — 연결 시 SVG sparkline, 미연결 시 대기 shell */}
-          <div className="mt-8 flex h-40 items-center justify-center rounded-xl border border-dashed border-white/25 bg-white/5 px-4 py-3">
-            {isLive && band.chartPoints.length > 0 ? (
-              <svg
-                className="h-full w-full text-cyan-300/80"
-                viewBox={`0 0 ${Math.max(band.chartPoints.length, 1)} 100`}
-                preserveAspectRatio="none"
-                role="img"
-                aria-label="실시간 두뇌휴식도 추이"
-              >
-                {band.chartPoints.map((pt, index) => {
-                  const h = Math.max(4, Math.min(100, pt.relaxation));
-                  return (
-                    <rect
-                      key={pt.t}
-                      x={index}
-                      y={100 - h}
-                      width={0.7}
-                      height={h}
-                      className="fill-current"
-                    />
-                  );
-                })}
-              </svg>
-            ) : (
-              <p className="px-4 text-center text-sm text-purple-200">
-                뇌파 차트는 LINK BAND 연결 후 표시됩니다
-              </p>
-            )}
-          </div>
-        </div>
-
-        <aside className="space-y-4">
-          <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm">
-            <p className="text-sm font-medium text-purple-200">밴드 상태</p>
-            <ul className="mt-3 space-y-2 text-sm text-purple-50">
-              <li>
-                연결 ·{' '}
-                {band.connectionState === 'connected'
-                  ? linkState === 'stale'
-                    ? '전송 중단'
-                    : '연결됨'
-                  : band.connectionState === 'unsupported'
-                    ? '브라우저 미지원'
-                    : band.connectionState === 'connecting'
-                      ? '연결 중'
-                      : '미연결'}
-              </li>
-              <li>
-                배터리 ·{' '}
-                {band.battery !== null ? `${Math.round(band.battery)}%` : '—'}
-              </li>
-              <li>접촉 · {contactStatusLabel(band.deviceStatus)}</li>
-              <li>신호품질 · {signalQualityLevelLabel(band.signalQualityLevel)}</li>
-            </ul>
-
-            {!band.isSupported && (
-              <p className="mt-3 text-xs leading-5 text-amber-200">
-                Web Bluetooth는 Chrome/Edge에서만 지원됩니다.
-              </p>
-            )}
-
-            {band.error && (
-              <p role="alert" className="mt-3 text-xs leading-5 text-red-200">
-                {band.error}
-              </p>
-            )}
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {band.connectionState !== 'connected' ? (
-                <button
-                  type="button"
-                  onClick={() => void band.connect()}
-                  disabled={!band.isSupported || band.connectionState === 'connecting'}
-                  className="rounded-lg bg-white/20 px-3 py-2 text-sm font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {band.connectionState === 'connecting'
-                    ? '연결 중...'
-                    : band.isMock
-                      ? '시뮬레이션 시작'
-                      : 'LINK BAND 연결'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void band.disconnect()}
-                  className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold text-purple-100 hover:bg-white/20"
-                >
-                  연결 해제
-                </button>
-              )}
-            </div>
-          </div>
-          <div className="rounded-2xl bg-white/10 p-5 backdrop-blur-sm">
-            <p className="text-sm font-medium text-purple-200">안내</p>
-            <p className="mt-2 text-sm leading-6 text-purple-100">
-              호스트가 클래스를 종료할 때까지 편안하게 호흡해 주세요.
+      {/* 본문: 모바일 세로 스택 / 데스크톱 2컬럼 */}
+      <div className="relative z-10 flex flex-1 flex-col px-4 pb-8 sm:px-8">
+        <div className="flex flex-1 flex-col justify-center gap-10 md:grid md:grid-cols-2 md:items-center md:gap-8">
+          {/* 진행시간 */}
+          <div className="flex flex-col items-center text-center">
+            <p className={heroLabelClass}>진행시간</p>
+            <p className={`mt-2 ${heroNumberClass}`} aria-live="off">
+              {formatClock(elapsedSec)}
+            </p>
+            <p className="mt-2 text-sm text-white/50 tabular-nums">
+              / {formatClock(targetSec)}
             </p>
           </div>
-        </aside>
-      </div>
 
-      <button
-        type="button"
-        onClick={onLeave}
-        className="mt-8 text-sm font-semibold text-purple-200 underline-offset-4 hover:text-white hover:underline"
-      >
-        나가기
-      </button>
+          {/* 두뇌휴식도 or AI 분석중 */}
+          <div className="flex flex-col items-center text-center">
+            <p className={heroLabelClass}>두뇌휴식도</p>
+            {isAnalyzing ? (
+              <BlinkingText className="mt-2 text-[clamp(40px,6vw,70px)] font-medium leading-none text-white">
+                AI 분석중
+              </BlinkingText>
+            ) : (
+              <p className={`mt-2 ${heroNumberClass}`}>
+                {showEfficiency !== null ? (
+                  <>
+                    {formatEfficiency(showEfficiency)}
+                    <span className="text-[0.45em]">%</span>
+                  </>
+                ) : (
+                  '—'
+                )}
+              </p>
+            )}
+            <p className="mt-3 max-w-sm text-sm leading-6 text-white/70">
+              {band.deviceStatus === 'lead_off'
+                ? '접촉 불량 — LINK BAND 위치를 조정해 주세요'
+                : linkState === 'stale'
+                  ? '최근 뇌파 수신이 없습니다 — 연결을 확인해 주세요'
+                  : isLive
+                    ? 'LINK BAND에서 실시간으로 측정 중입니다'
+                    : remoteEfficiency !== null
+                      ? 'WebSocket으로 실시간 지표를 수신 중입니다'
+                      : 'LINK BAND 연결 시 표시됩니다'}
+            </p>
+          </div>
+        </div>
+
+        {/* BrainChart */}
+        <div className="mt-8 flex min-h-[160px] items-end justify-center md:mt-4 md:min-h-[248px]">
+          {isLive && chartValues.length > 0 ? (
+            <BrainChart values={chartValues} className="w-full max-w-3xl" height={200} />
+          ) : (
+            <p className="pb-8 text-center text-sm text-white/50">
+              뇌파 차트는 LINK BAND 연결 후 표시됩니다
+            </p>
+          )}
+        </div>
+
+        {/* 밴드 연결 보조 (최소화) */}
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
+          <span>
+            연결 ·{' '}
+            {band.connectionState === 'connected'
+              ? linkState === 'stale'
+                ? '전송 중단'
+                : '연결됨'
+              : band.connectionState === 'unsupported'
+                ? '브라우저 미지원'
+                : band.connectionState === 'connecting'
+                  ? '연결 중'
+                  : '미연결'}
+          </span>
+          <span>
+            배터리 ·{' '}
+            {band.battery !== null ? `${Math.round(band.battery)}%` : '—'}
+          </span>
+          <span>접촉 · {contactStatusLabel(band.deviceStatus)}</span>
+          <span>신호 · {signalQualityLevelLabel(band.signalQualityLevel)}</span>
+          {band.connectionState !== 'connected' ? (
+            <button
+              type="button"
+              onClick={() => void band.connect()}
+              disabled={!band.isSupported || band.connectionState === 'connecting'}
+              className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {band.connectionState === 'connecting'
+                ? '연결 중...'
+                : band.isMock
+                  ? '시뮬레이션 시작'
+                  : 'LINK BAND 연결'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void band.disconnect()}
+              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/20"
+            >
+              연결 해제
+            </button>
+          )}
+        </div>
+        {band.error && (
+          <p role="alert" className="mt-2 text-center text-xs text-red-300">
+            {band.error}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

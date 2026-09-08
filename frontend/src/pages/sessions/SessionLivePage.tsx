@@ -23,6 +23,7 @@ import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-e
 import {
   contactStatusLabel,
   isEegStale,
+  isLowBattery,
   normalizeSignalQuality01,
   resolveBandLinkState,
   signalQualityLevel,
@@ -39,7 +40,6 @@ import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
 import { RecordingControls } from '../../components/session/RecordingControls';
 import { MarkerButton } from '../../components/session/MarkerButton';
-import { StatusBadge } from '../../components/session/StatusBadge';
 import { SessionCodeBanner } from '../../components/session/SessionCodeBanner';
 import {
   SessionMonitorSummary,
@@ -99,7 +99,7 @@ function summarizeMetrics(rows: SessionLiveMetric[]): MonitorSummaryCounts {
       if (!r.band_connected) return true;
       return isEegStale(r.last_eeg_at);
     }).length,
-    lowBattery: rows.filter((r) => r.band_battery !== null && r.band_battery < 20).length,
+    lowBattery: rows.filter((r) => isLowBattery(r.band_battery)).length,
   };
 }
 
@@ -114,6 +114,8 @@ export default function SessionLivePage() {
   const [transitioning, setTransitioning] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<keyof MonitorSummaryCounts | null>(null);
+  /** 수업 진행시간(초) — session.started_at 기준 (녹음 시각과 분리) */
+  const [classElapsedSec, setClassElapsedSec] = useState(0);
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -331,6 +333,9 @@ export default function SessionLivePage() {
 
   const finishSession = async () => {
     if (!id) return;
+    if (!window.confirm('정말 종료할까요?\n클래스가 종료되면 사용자들도 모두 종료됩니다.')) {
+      return;
+    }
     setTransitioning(true);
     setError(null);
     try {
@@ -349,9 +354,37 @@ export default function SessionLivePage() {
 
   const startedAtMs = useMemo(() => recordingStartedAt ?? Date.now(), [recordingStartedAt]);
 
+  // 수업 경과 타이머 — started_at 기준 (녹음 startedAtMs와 별개)
+  useEffect(() => {
+    if (!session?.started_at) {
+      setClassElapsedSec(0);
+      return undefined;
+    }
+    const startedMs = new Date(session.started_at).getTime();
+    const tick = (): void => {
+      setClassElapsedSec(Math.max(0, Math.floor((Date.now() - startedMs) / 1000)));
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [session?.started_at]);
+
+  /** 1.0 Timer 형식: 00분 00초 */
+  const classElapsedLabel = useMemo(() => {
+    const mm = String(Math.floor(classElapsedSec / 60)).padStart(2, '0');
+    const ss = String(classElapsedSec % 60).padStart(2, '0');
+    return `${mm}분 ${ss}초`;
+  }, [classElapsedSec]);
+
   const isOnline = session?.location_type === 'online';
   const isPreStart = session?.status === 'ready' || session?.status === 'scheduled';
   const isRunning = session?.status === 'in_progress' || session?.status === 'paused';
+  const bannerMode: 'waiting' | 'running' | 'paused' =
+    session?.status === 'paused'
+      ? 'paused'
+      : session?.status === 'in_progress'
+        ? 'running'
+        : 'waiting';
 
   const displayMetrics = useMemo(() => {
     const base =
@@ -432,135 +465,119 @@ export default function SessionLivePage() {
     );
   }
 
-  const rightSlot = isPreStart ? (
-    <button
-      type="button"
-      onClick={() => void startSession()}
-      disabled={!canStart}
-      title={!canStart ? '참가자 1명 이상 입장 후 시작할 수 있습니다' : undefined}
-      className="mb-btn disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {transitioning ? '시작 중...' : '클래스 시작'}
-    </button>
-  ) : isRunning ? (
-    <button
-      type="button"
-      onClick={() => void finishSession()}
-      disabled={transitioning}
-      className="mb-btn"
-    >
-      {transitioning ? '종료 중...' : '클래스 종료'}
-    </button>
-  ) : null;
+  const rightSlot = (
+    <div className="flex flex-wrap items-center gap-2">
+      {isPreStart ? (
+        <button
+          type="button"
+          onClick={() => void startSession()}
+          disabled={!canStart}
+          title={!canStart ? '참가자 1명 이상 입장 후 시작할 수 있습니다' : undefined}
+          className="mb-btn disabled:cursor-not-allowed"
+        >
+          {transitioning ? '시작 중...' : '클래스 시작'}
+        </button>
+      ) : isRunning ? (
+        <button
+          type="button"
+          onClick={() => void finishSession()}
+          disabled={transitioning}
+          className="mb-btn mb-btn--soft disabled:cursor-not-allowed"
+        >
+          {transitioning ? '종료 중...' : '클래스 종료'}
+        </button>
+      ) : null}
+    </div>
+  );
+
+  const accessCode = session.access_code ?? '';
 
   return (
-    <AppShell title={session.title ?? '세션'} sub="LIVE" rightSlot={rightSlot}>
-      <div className="mx-auto max-w-7xl space-y-5">
-        {/* 세션 정보 카드 */}
-        <div className="flex flex-col gap-3 rounded-[20px] border border-[#EFEFEF] bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div>
-            <div className="mb-1 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-              세션 정보
-            </div>
-            <h2 className="text-[18px] font-bold text-[#1F1F1F]">{session.title ?? '세션'}</h2>
-            <div className="mt-1 text-[13px] text-[#6F6F6F]">
-              {session.duration_min}분 · 참여자 {activeCount}/{session.max_participants}
-              {session.run_id && session.run_id !== session.id && (
-                <span className="ml-2 font-mono text-[11px] text-[#9CA3AF]">
-                  run {session.run_id.slice(0, 8)}
-                </span>
-              )}
-              {isOnline && (
-                <span className="ml-2 inline-flex items-center gap-1 text-[#2563EB]">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#2563EB]" />
-                  온라인
-                </span>
-              )}
-            </div>
+    <AppShell
+      title={accessCode ? `세션코드: ${accessCode}` : '세션코드 확인 중'}
+      sub="LIVE"
+      rightSlot={rightSlot}
+    >
+      <div className="mx-auto max-w-7xl space-y-3 bg-white px-0 py-1 md:space-y-3">
+        {/* 안내 배너 + Timer — 대기/진행 공통 */}
+        {accessCode ? (
+          <SessionCodeBanner
+            accessCode={accessCode}
+            mode={bannerMode}
+            elapsedText={
+              session.started_at
+                ? classElapsedLabel
+                : isRunning
+                  ? '진행시간 확인 중'
+                  : undefined
+            }
+            onRefresh={() => {
+              void refreshSession();
+              void refreshMetrics();
+            }}
+          />
+        ) : (
+          <div className="rounded-xl bg-[#F2F3F8] p-4 text-base font-semibold text-[#5E4FFF]">
+            세션코드 확인 중
           </div>
-          <StatusBadge status={session.status} />
+        )}
+
+        {/* DashboardBox 4종 — 시작 전에도 표시 */}
+        <SessionMonitorSummary
+          counts={summary}
+          activeFilter={activeFilter}
+          onFilterToggle={handleFilterToggle}
+        />
+
+        {/* 평평한 모니터링 테이블 */}
+        <div>
+          <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
         </div>
 
-        {/* 시작 전: 클래스 코드 안내 */}
-        {isPreStart && session.access_code && (
-          <SessionCodeBanner accessCode={session.access_code} waitingCount={activeCount} />
-        )}
-
-        {/* 시작 후: Dashboard + 모니터링 테이블 */}
+        {/* 호스트 LINK BAND — 보조 영역 */}
         {isRunning && (
-          <>
-            <div className="flex flex-col gap-3 rounded-[20px] border border-[#EFEFEF] bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-              <div>
-                <div className="mb-1 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                  LINK BAND
-                </div>
-                <p className="text-sm text-[#1F1F1F]">
-                  {band.connectionState === 'connected'
-                    ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
-                    : band.connectionState === 'unsupported'
-                      ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
-                      : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
-                </p>
-                {band.connectionState === 'connected' &&
-                  resolveBandLinkState({
-                    bleConnected: true,
-                    lastEegAt: band.lastEegAt,
-                  }) === 'stale' && (
-                    <p className="mt-1 text-xs text-amber-700">
-                      최근 EEG 수신이 없습니다 — BLE 단절 또는 전송 중단 가능
-                    </p>
-                  )}
-                {band.error && (
-                  <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {band.connectionState !== 'connected' ? (
-                  <button
-                    type="button"
-                    onClick={() => void band.connect()}
-                    disabled={!band.isSupported || !hostParticipantId || band.connectionState === 'connecting'}
-                    className="mb-btn disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {band.connectionState === 'connecting'
-                      ? '연결 중...'
-                      : band.isMock
-                        ? '시뮬레이션 시작'
-                        : '밴드 연결'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void band.disconnect()}
-                    className="rounded-xl border border-[#E5E5E5] px-4 py-2 text-sm font-semibold text-[#6F6F6F] hover:bg-[#FAFAFA]"
-                  >
-                    연결 해제
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <SessionMonitorSummary
-              counts={summary}
-              activeFilter={activeFilter}
-              onFilterToggle={handleFilterToggle}
-            />
+          <div className="flex flex-col gap-3 rounded-xl bg-[#F2F3F8] p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                참가자 모니터링
-              </div>
-              <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
+              <p className="text-sm font-semibold text-[#1F1F1F]">LINK BAND (호스트)</p>
+              <p className="mt-1 text-sm text-[#6F6F6F]">
+                {band.connectionState === 'connected'
+                  ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
+                  : band.connectionState === 'unsupported'
+                    ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
+                    : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
+              </p>
+              {band.error && (
+                <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>
+              )}
             </div>
-          </>
-        )}
-
-        {/* 시작 전에도 입장 참가자 미리보기 */}
-        {isPreStart && (
-          <div>
-            <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-              입장한 참가자
+            <div className="flex gap-2">
+              {band.connectionState !== 'connected' ? (
+                <button
+                  type="button"
+                  onClick={() => void band.connect()}
+                  disabled={
+                    !band.isSupported ||
+                    !hostParticipantId ||
+                    band.connectionState === 'connecting'
+                  }
+                  className="mb-btn disabled:cursor-not-allowed"
+                >
+                  {band.connectionState === 'connecting'
+                    ? '연결 중...'
+                    : band.isMock
+                      ? '시뮬레이션 시작'
+                      : '밴드 연결'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void band.disconnect()}
+                  className="mb-btn mb-btn--ghost"
+                >
+                  연결 해제
+                </button>
+              )}
             </div>
-            <SessionMonitorTable participants={displayMetrics} filter={null} />
           </div>
         )}
 
@@ -578,7 +595,7 @@ export default function SessionLivePage() {
         )}
 
         {/* 녹음 / 화상 — 접기 (온라인·진행 중 기본 활용) */}
-        <div className="rounded-[20px] border border-[#EFEFEF] bg-white">
+        <div className="rounded-xl border border-[#EFEFEF] bg-white">
           <button
             type="button"
             onClick={() => setMediaOpen((v) => !v)}
