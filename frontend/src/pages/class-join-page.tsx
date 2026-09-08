@@ -1,6 +1,6 @@
-// 클래스 코드 참여 — code → details → waiting → meditation (1.0 게스트 패리티)
+// 클래스 코드 참여 — code → details → waiting → meditation → complete (1.0 게스트 패리티)
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../lib/api/client';
 import {
@@ -11,6 +11,8 @@ import {
 } from '../lib/api/session';
 import { useAuthStore } from '../stores/authStore';
 import { GuestMeditationPanel } from '../components/class/GuestMeditationPanel';
+import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
+import { WelcomeText } from '../components/class/WelcomeText';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 
@@ -35,6 +37,7 @@ const PARTICIPANT_STORAGE_KEY = 'mb_join_participant';
 interface StoredJoinContext {
   code: string;
   participantId: string;
+  participantToken?: string | null;
 }
 
 function normalizeCode(value: string): string {
@@ -59,8 +62,12 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function persistParticipant(code: string, participantId: string): void {
-  const payload: StoredJoinContext = { code, participantId };
+function persistParticipant(
+  code: string,
+  participantId: string,
+  participantToken: string | null,
+): void {
+  const payload: StoredJoinContext = { code, participantId, participantToken };
   try {
     sessionStorage.setItem(PARTICIPANT_STORAGE_KEY, JSON.stringify(payload));
   } catch {
@@ -86,11 +93,19 @@ const ClassJoinPage: React.FC = () => {
   const [guestName, setGuestName] = useState('');
   const [session, setSession] = useState<SessionByCodeResponse | null>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
+  /** join 응답의 소유 증명 — 게스트 report-email 필수 */
+  const [participantToken, setParticipantToken] = useState<string | null>(null);
   const [durationMin, setDurationMin] = useState(50);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  /** waiting: Welcome 페이드 완료 후 대기 상태 UI */
+  const [welcomeDone, setWelcomeDone] = useState(false);
 
   const isLoggedIn = isInitialized && isAuthenticated;
+
+  const handleWelcomeFinish = useCallback(() => {
+    setWelcomeDone(true);
+  }, []);
 
   // waiting: 세션 상태 폴링 → in_progress 시 meditation으로 자동 전환
   useEffect(() => {
@@ -236,9 +251,11 @@ const ClassJoinPage: React.FC = () => {
     try {
       const joined = await joinSessionByCode(code, isLoggedIn ? {} : { name: trimmedGuestName });
       const nextParticipantId = joined.participant_id;
+      const nextToken = joined.participant_token ?? null;
       setParticipantId(nextParticipantId);
+      setParticipantToken(nextToken);
       if (nextParticipantId) {
-        persistParticipant(code, nextParticipantId);
+        persistParticipant(code, nextParticipantId, nextToken);
       }
       if (joined.session.duration_min > 0) {
         setDurationMin(joined.session.duration_min);
@@ -252,6 +269,7 @@ const ClassJoinPage: React.FC = () => {
         });
         setStep('meditation');
       } else {
+        setWelcomeDone(false);
         setStep('waiting');
       }
     } catch (joinError) {
@@ -266,8 +284,10 @@ const ClassJoinPage: React.FC = () => {
     setSession(null);
     setGuestName('');
     setParticipantId(null);
+    setParticipantToken(null);
     setDurationMin(50);
     setError(null);
+    setWelcomeDone(false);
     clearPersistedParticipant();
   };
 
@@ -295,38 +315,66 @@ const ClassJoinPage: React.FC = () => {
     );
   }
 
+  // 완료 화면 — #F5EDFC + 리포트 메일 (SDD-029 P1)
   if (step === 'complete') {
     return (
-      <main className="min-h-screen bg-[#F8F6FA] px-5 py-10 sm:px-8">
-        <div className="mx-auto w-full max-w-xl">
-          <section className="rounded-3xl border border-purple-100 bg-white p-6 text-center shadow-sm sm:p-10">
-            <p className="text-sm font-bold text-purple-800">수업 종료</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950">
-              수업이 종료되었습니다
-            </h1>
-            <p className="mt-4 text-sm leading-6 text-gray-600">
-              {session?.title ?? '클래스'} 참여해 주셔서 감사합니다.
-              리포트는 상담사가 발급하면 확인할 수 있습니다.
-            </p>
-            {error && (
-              <p role="alert" className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                {error}
+      <GuestCompletePanel
+        sessionId={session?.id ?? null}
+        sessionTitle={session?.title ?? null}
+        participantId={participantId}
+        participantToken={participantToken}
+        accountEmail={isLoggedIn ? (user?.email ?? null) : null}
+        isLoggedIn={isLoggedIn}
+        error={error}
+        onReset={resetJoin}
+      />
+    );
+  }
+
+  // waiting — 검정 풀블리드 + Welcome 페이드 → 대기 상태 (영상은 후속)
+  if (step === 'waiting' && session) {
+    return (
+      <main className="relative flex min-h-screen flex-col bg-black text-white">
+        <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
+          <button
+            type="button"
+            onClick={resetJoin}
+            className="rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white"
+          >
+            종료
+          </button>
+          <h1 className="truncate px-3 text-center text-base font-medium text-white/80 sm:text-lg">
+            {session.title ?? '클래스'}
+          </h1>
+          <div className="w-[4.5rem]" aria-hidden="true" />
+        </header>
+
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-16">
+          {!welcomeDone ? (
+            <WelcomeText onFinish={handleWelcomeFinish} />
+          ) : (
+            <div className="mx-auto max-w-xl text-center">
+              <p className="text-[clamp(18px,3.5vw,28px)] font-semibold leading-snug text-white/90">
+                잠시 후 클래스가 시작됩니다.
               </p>
-            )}
-            <Link
-              to="/"
-              className="mb-btn mt-8 inline-flex h-[52px] w-full items-center justify-center rounded-xl px-6 text-base"
+              <p className="mt-4 text-sm leading-6 text-white/70">
+                호스트가 시작할 때까지 잠시 쉬어가세요.
+                현재 상태: {STATUS_LABELS[session.status]}.
+              </p>
+              <p className="mt-8 text-xs font-medium tracking-wide text-white/40">클래스 코드</p>
+              <p className="mt-2 font-mono text-3xl font-bold tracking-[0.22em] text-white/70 sm:text-4xl">
+                {code}
+              </p>
+            </div>
+          )}
+          {error && (
+            <p
+              role="alert"
+              className="mt-8 w-full max-w-md rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
             >
-              홈으로
-            </Link>
-            <button
-              type="button"
-              onClick={resetJoin}
-              className="mt-4 w-full py-2 text-sm font-semibold text-gray-500 hover:text-gray-800"
-            >
-              다른 클래스 코드 입력하기
-            </button>
-          </section>
+              {error}
+            </p>
+          )}
         </div>
       </main>
     );
@@ -426,25 +474,6 @@ const ClassJoinPage: React.FC = () => {
                 </button>
               </form>
             </>
-          )}
-
-          {step === 'waiting' && session && (
-            <div className="text-center">
-              <p className="text-sm font-bold text-purple-800">참여가 완료되었습니다</p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950">{session.title ?? '클래스'}</h1>
-              <p className="mt-7 text-sm font-medium text-gray-500">클래스 코드</p>
-              <p className="mt-2 font-mono text-5xl font-bold tracking-[0.22em] text-purple-900 sm:text-6xl">{code}</p>
-              <div className="mt-8 rounded-2xl bg-purple-50 px-5 py-6">
-                <p className="text-lg font-bold text-purple-950">호스트가 시작할 때까지 잠시 쉬어가세요</p>
-                <p className="mt-2 text-sm leading-6 text-purple-800">
-                  현재 상태: {STATUS_LABELS[session.status]}. 클래스가 시작되면 명상 화면으로 자동 이동합니다.
-                </p>
-              </div>
-              {error && <p role="alert" className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-              <button type="button" onClick={resetJoin} className="mt-7 text-sm font-semibold text-gray-500 hover:text-gray-800">
-                다른 클래스 코드 입력하기
-              </button>
-            </div>
           )}
         </section>
       </div>

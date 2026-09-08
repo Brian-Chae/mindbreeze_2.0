@@ -109,6 +109,23 @@ export interface JoinByCodeResponse {
   session: SessionDto;
   participant_id: string | null;
   is_guest: boolean;
+  /** SDD-029: 게스트 리포트 메일 소유 증명 — 공개 참가자 목록에는 미포함 */
+  participant_token?: string | null;
+}
+
+/** SDD-029: 완료 세션 리포트 메일 요청 */
+export interface ReportEmailRequest {
+  participant_id: string;
+  email: string;
+  email_verify_token: string;
+  participant_token?: string | null;
+}
+
+export type ReportEmailStatus = 'pending_review' | 'queued' | 'sent' | string;
+
+export interface ReportEmailResponse {
+  status: ReportEmailStatus;
+  message: string;
 }
 
 /** 호스트 라이브 모니터링 — 참가자별 실시간(placeholder) 지표 */
@@ -282,3 +299,13 @@ export const getSessionByCodeState = (
     `/sessions/by-code/${code}/state?participant_id=${encodeURIComponent(participantId)}`,
     { skipAuth: true },
   );
+
+/** SDD-029: 인증된 이메일로 리포트 메일 발송 요청 (202 pending_review/queued/sent) */
+export const requestReportEmail = (
+  sessionId: string,
+  payload: ReportEmailRequest,
+  options?: { skipAuth?: boolean },
+): Promise<ReportEmailResponse> =>
+  apiClient.post<ReportEmailResponse>(`/sessions/${sessionId}/report-email`, payload, {
+    skipAuth: options?.skipAuth ?? false,
+  });

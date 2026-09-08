@@ -14,6 +14,7 @@ import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { BrainChart } from './BrainChart';
+import { LeadOffModal } from './LeadOffModal';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -52,6 +53,8 @@ export function GuestMeditationPanel({
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   /** LeadOff 해소 후 15초 "AI 분석중" */
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  /** 접촉불량 모달 — 사용자가 「무시하기」하면 닫힘 */
+  const [leadOffDismissed, setLeadOffDismissed] = useState(false);
   const wasLeadOffRef = useRef(false);
   const analyzingTimerRef = useRef<number | null>(null);
   const targetSec = Math.max(1, durationMin) * 60;
@@ -100,11 +103,12 @@ export function GuestMeditationPanel({
       ? displayEfficiency
       : null;
 
-  // LeadOff 해소 → 15초 AI 분석중
+  // LeadOff 해소 → 15초 AI 분석중 + 모달 재표시 준비
   useEffect(() => {
     const isLeadOff = band.deviceStatus === 'lead_off';
     if (isLeadOff) {
       wasLeadOffRef.current = true;
+      setLeadOffDismissed(false);
       setIsAnalyzing(false);
       if (analyzingTimerRef.current != null) {
         window.clearTimeout(analyzingTimerRef.current);
@@ -124,6 +128,8 @@ export function GuestMeditationPanel({
       }, AI_ANALYZING_MS);
     }
   }, [band.deviceStatus]);
+
+  const showLeadOffModal = band.deviceStatus === 'lead_off' && !leadOffDismissed;
 
   useEffect(() => {
     return () => {
@@ -205,7 +211,9 @@ export function GuestMeditationPanel({
             )}
             <p className="mt-3 max-w-sm text-sm leading-6 text-white/70">
               {band.deviceStatus === 'lead_off'
-                ? '접촉 불량 — LINK BAND 위치를 조정해 주세요'
+                ? leadOffDismissed
+                  ? '접촉 불량 — 위치를 조정하거나 연결을 확인해 주세요'
+                  : '접촉 불량 감지'
                 : linkState === 'stale'
                   ? '최근 뇌파 수신이 없습니다 — 연결을 확인해 주세요'
                   : isLive
@@ -277,6 +285,12 @@ export function GuestMeditationPanel({
           </p>
         )}
       </div>
+
+      <LeadOffModal
+        isVisible={showLeadOffModal}
+        leadOff={band.leadOff}
+        onDismiss={() => setLeadOffDismissed(true)}
+      />
     </div>
   );
 }
