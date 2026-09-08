@@ -496,7 +496,8 @@ export function useBand({
   }, [drainPendingQueue, isSupported, stopMock]);
 
   const connect = useCallback(async () => {
-    if (!enabled) return;
+    // BLE 연결 자체는 세션/참가자 정보와 무관하게 가능해야 한다.
+    // (participantId가 아직 없어도 웹블루투스 다이얼로그는 떠야 함)
     if (!isSupported) {
       setConnectionState('unsupported');
       setError('이 브라우저는 Web Bluetooth를 지원하지 않습니다. Chrome/Edge를 사용해 주세요.');
