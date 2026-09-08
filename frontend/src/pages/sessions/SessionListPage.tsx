@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { listSessions, createSession, type SessionDto, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
-import { SessionCard } from '../../components/session/SessionCard';
+import { SessionListTable } from '../../components/session/SessionListTable';
 import { CalendarView } from '../../components/session/CalendarView';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { MobileTimetable } from '../../components/session/MobileTimetable';
@@ -526,10 +526,37 @@ function MobileSection({
         </div>
       </div>
 
-      {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-      {error && <p className="text-[#B3261E]">{error}</p>}
+      {loading && <p className="text-[var(--mb-fg-muted)]">불러오는 중...</p>}
+      {error && <p className="text-[var(--mb-danger-deep)]">{error}</p>}
       {!loading && !error && (
-        <MobileTimetable sessions={sessions} currentDate={currentDate} mode={mode} />
+        <>
+          <MobileTimetable sessions={sessions} currentDate={currentDate} mode={mode} />
+          {/* 모바일도 동일 표 정보 — 1.0 패리티 */}
+          <div className="overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+            <div className="border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
+              <h3 className="text-sm font-semibold text-[var(--mb-fg)]">클래스 목록</h3>
+            </div>
+            <SessionListTable
+              sessions={
+                mode === 'daily'
+                  ? sessions.filter((s) => {
+                      if (!s.scheduled_at && (s.status === 'ready' || s.status === 'in_progress')) {
+                        return true;
+                      }
+                      if (!s.scheduled_at) return false;
+                      const d = new Date(s.scheduled_at);
+                      return (
+                        d.getFullYear() === currentDate.getFullYear() &&
+                        d.getMonth() === currentDate.getMonth() &&
+                        d.getDate() === currentDate.getDate()
+                      );
+                    })
+                  : sessions
+              }
+              emptyMessage="생성된 클래스가 없습니다."
+            />
+          </div>
+        </>
       )}
     </div>
   );
@@ -598,93 +625,118 @@ export default function SessionListPage() {
   };
 
   return (
-    <AppShell title="세션 관리" sub="SESSIONS" rightSlot={rightSlot} noScroll>
-      <div className="h-full flex flex-col min-h-0 max-w-6xl mx-auto w-full">
+    <AppShell title="클래스 목록" sub="SESSIONS" rightSlot={rightSlot} noScroll>
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col bg-[var(--mb-white)]">
+        {/* 즉시 클래스 — 1.0 평평한 표 */}
         {instantSessions.length > 0 && (
-          <section className="shrink-0 mb-4 bg-white border border-[#EFEFEF] rounded-[20px] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-[#1F1F1F]">즉시 클래스</h2>
-              <span className="text-xs text-[#6F6F6F]">{instantSessions.length}개</span>
+          <section className="mb-4 shrink-0 overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+            <div className="flex items-center justify-between border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
+              <h2 className="text-sm font-bold text-[var(--mb-fg)]">즉시 클래스</h2>
+              <span className="text-xs text-[var(--mb-fg-muted)]">{instantSessions.length}개</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-              {instantSessions.map((session) => <SessionCard key={session.id} session={session} />)}
-            </div>
+            <SessionListTable sessions={instantSessions} />
           </section>
         )}
-        {/* 모바일: 월간 캘린더 + 일간/주간 타임테이블 */}
-        <div className="md:hidden flex-1 min-h-0 overflow-y-auto">
-        <MobileSection
-          sessions={sessions}
-          loading={loading}
-          error={error}
-          currentDate={currentDate}
-          setSelectedDate={setSelectedDate}
-          shiftMonth={shiftMonth}
-          shiftDay={shiftDay}
-          shiftWeek={shiftWeek}
-        />
+
+        {/* 모바일: 월간 캘린더 + 일간/주간 + 선택 범위 표 */}
+        <div className="min-h-0 flex-1 overflow-y-auto md:hidden">
+          <MobileSection
+            sessions={sessions}
+            loading={loading}
+            error={error}
+            currentDate={currentDate}
+            setSelectedDate={setSelectedDate}
+            shiftMonth={shiftMonth}
+            shiftDay={shiftDay}
+            shiftWeek={shiftWeek}
+          />
         </div>
 
-        {/* 데스크톱: 좌측 캘린더+목록 / 우측 타임라인 (50:50) */}
-        <div className="hidden md:grid grid-cols-2 gap-6 min-h-0 flex-1">
-          {/* 좌측: 캘린더 + 선택일 세션 목록 */}
-          <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
+        {/* 데스크톱: 좌측 캘린더 / 우측 표·타임라인 */}
+        <div className="hidden min-h-0 flex-1 gap-6 md:grid md:grid-cols-2">
+          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
             <MonthCalendar
               sessions={sessions}
               currentDate={currentDate}
               selectedDate={selectedDate}
-              onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
+              onSelectDate={(d) => {
+                setSelectedDate(d);
+                setViewMode('daily');
+              }}
               onShiftMonth={shiftMonth}
             />
-            {/* 선택일 세션 리스트 */}
-            <div className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[#1F1F1F]">
+            <div className="overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+              <div className="flex items-center justify-between border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
+                <h3 className="text-sm font-semibold text-[var(--mb-fg)]">
                   {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
                 </h3>
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-[#5F0080] text-white' : 'bg-[#F2F3F8] text-[#1F1F1F] hover:bg-[#E6E7EE]'}`}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-[var(--mb-primary)] text-white'
+                      : 'bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]'
+                  }`}
                 >
                   전체 목록
                 </button>
               </div>
               {(() => {
-                const daySessions = sessions.filter((s) => {
-                  if (!s.scheduled_at) return false;
-                  const d = new Date(s.scheduled_at);
-                  return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
-                }).sort((a, b) => new Date(a.scheduled_at ?? 0).getTime() - new Date(b.scheduled_at ?? 0).getTime());
-                if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
-                return daySessions.map((s) => <SessionCard key={s.id} session={s} />);
+                const daySessions = sessions
+                  .filter((s) => {
+                    if (!s.scheduled_at) return false;
+                    const d = new Date(s.scheduled_at);
+                    return (
+                      d.getFullYear() === selectedDate.getFullYear() &&
+                      d.getMonth() === selectedDate.getMonth() &&
+                      d.getDate() === selectedDate.getDate()
+                    );
+                  })
+                  .sort(
+                    (a, b) =>
+                      new Date(a.scheduled_at ?? 0).getTime() - new Date(b.scheduled_at ?? 0).getTime(),
+                  );
+                return (
+                  <SessionListTable
+                    sessions={daySessions}
+                    emptyMessage="예정된 세션이 없습니다"
+                  />
+                );
               })()}
             </div>
           </div>
 
-          {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
-          <div className="flex flex-col min-h-0 overflow-y-auto">
+          <div className="flex min-h-0 flex-col overflow-y-auto">
             {viewMode === 'list' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {listedSessions.length === 0 ? (
-                  <p className="text-[#6F6F6F] col-span-full text-center py-12">
-                    그 밖의 세션이 없습니다.
-                  </p>
-                ) : (
-                  listedSessions.map((s) => <SessionCard key={s.id} session={s} />)
+              <div className="overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+                <div className="border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
+                  <h3 className="text-sm font-semibold text-[var(--mb-fg)]">전체 클래스 목록</h3>
+                </div>
+                {loading && (
+                  <p className="py-8 text-center text-[var(--mb-fg-muted)]">불러오는 중...</p>
+                )}
+                {error && <p className="px-4 py-4 text-[var(--mb-danger-deep)]">{error}</p>}
+                {!loading && !error && (
+                  <SessionListTable
+                    sessions={listedSessions}
+                    emptyMessage="그 밖의 세션이 없습니다."
+                  />
                 )}
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between shrink-0 mb-3">
-                  <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
+                <div className="mb-3 flex shrink-0 items-center justify-between">
+                  <div className="inline-flex rounded-full bg-[var(--mb-bg-10)] p-1">
                     {(['daily', 'weekly'] as const).map((m) => (
                       <button
                         key={m}
                         type="button"
                         onClick={() => setViewMode(m)}
-                        className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                          viewMode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
+                        className={`rounded-full px-4 py-1.5 text-sm transition-colors ${
+                          viewMode === m
+                            ? 'bg-[var(--mb-primary)] font-bold text-white'
+                            : 'font-medium text-[var(--mb-fg)]'
                         }`}
                       >
                         {m === 'daily' ? '일간' : '주간'}
@@ -695,18 +747,18 @@ export default function SessionListPage() {
                     <button
                       type="button"
                       onClick={() => onShift(-1)}
-                      className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
                       aria-label="이전"
                     >
                       ‹
                     </button>
-                    <span className="text-sm font-mono text-[#1F1F1F] min-w-[140px] text-center">
+                    <span className="min-w-[140px] text-center font-mono text-sm text-[var(--mb-fg)]">
                       {navLabel}
                     </span>
                     <button
                       type="button"
                       onClick={() => onShift(1)}
-                      className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
                       aria-label="다음"
                     >
                       ›
@@ -714,8 +766,8 @@ export default function SessionListPage() {
                   </div>
                 </div>
 
-                {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-                {error && <p className="text-[#B3261E]">{error}</p>}
+                {loading && <p className="text-[var(--mb-fg-muted)]">불러오는 중...</p>}
+                {error && <p className="text-[var(--mb-danger-deep)]">{error}</p>}
 
                 {!loading && !error && viewMode === 'weekly' && (
                   <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />

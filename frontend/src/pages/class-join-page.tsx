@@ -13,6 +13,8 @@ import { useAuthStore } from '../stores/authStore';
 import { GuestMeditationPanel } from '../components/class/GuestMeditationPanel';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
 import { WelcomeText } from '../components/class/WelcomeText';
+import { IntroVideoBackground } from '../components/class/IntroVideoBackground';
+import { useWakeLock } from '../hooks/useWakeLock';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 
@@ -102,6 +104,9 @@ const ClassJoinPage: React.FC = () => {
   const [welcomeDone, setWelcomeDone] = useState(false);
 
   const isLoggedIn = isInitialized && isAuthenticated;
+
+  // 대기·명상 중 화면 꺼짐 방지 (Wake Lock)
+  useWakeLock(step === 'waiting' || step === 'meditation');
 
   const handleWelcomeFinish = useCallback(() => {
     setWelcomeDone(true);
@@ -331,10 +336,13 @@ const ClassJoinPage: React.FC = () => {
     );
   }
 
-  // waiting — 검정 풀블리드 + Welcome 페이드 → 대기 상태 (영상은 후속)
+  // waiting — 검정 풀블리드 + Welcome 페이드 → intro 영상 루프 (SDD-029 P2)
   if (step === 'waiting' && session) {
     return (
-      <main className="relative flex min-h-screen flex-col bg-black text-white">
+      <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
+        {/* Welcome 페이드 완료 후 intro 자동재생 — 실패/reduced-motion 시 null */}
+        <IntroVideoBackground active={welcomeDone} />
+
         <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
           <button
             type="button"
