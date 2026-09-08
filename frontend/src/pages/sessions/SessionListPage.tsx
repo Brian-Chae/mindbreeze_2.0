@@ -48,7 +48,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [maxParticipants, setMaxParticipants] = useState(1);
+  const [maxParticipants, setMaxParticipants] = useState(10);
   const [force, setForce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

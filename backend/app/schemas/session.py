@@ -22,7 +22,7 @@ class SessionCreateRequest(BaseModel):
     duration_min: int = Field(..., ge=1, le=600)
     title: str | None = None
     notes: str | None = None
-    max_participants: int = Field(1, ge=1, le=100)
+    max_participants: int = Field(10, ge=1, le=100)
     location_type: LocationType = "offline"
     participant_mode: ParticipantMode = "one_on_one"
     linkband_mode: LinkbandMode = "none"

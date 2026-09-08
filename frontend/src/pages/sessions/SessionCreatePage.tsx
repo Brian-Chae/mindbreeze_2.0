@@ -22,7 +22,7 @@ export default function SessionCreatePage() {
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  const [maxParticipants, setMaxParticipants] = useState(1);
+  const [maxParticipants, setMaxParticipants] = useState(10);
   const [createdSession, setCreatedSession] = useState<SessionDto | null>(null);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
