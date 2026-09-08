@@ -45,6 +45,15 @@ const LINK_BAND_UUIDs = {
   BATTERY_CHARACTERISTIC: '00002a19-0000-1000-8000-00805f9b34fb'
 };
 
+// GATT 접근 허용을 위해 requestDevice()의 optionalServices에 전달할 서비스 UUID 목록.
+// (Web Bluetooth는 미리 optionalServices에 명시하지 않은 서비스 접근을 차단한다 — SecurityError)
+const LINK_BAND_SERVICE_UUIDS = [
+  LINK_BAND_UUIDs.EEG_SERVICE,
+  LINK_BAND_UUIDs.PPG_SERVICE,
+  LINK_BAND_UUIDs.ACCELEROMETER_SERVICE,
+  LINK_BAND_UUIDs.BATTERY_SERVICE,
+];
+
 // SAMPLING_RATES / TIMESTAMP_CLOCK은 src/utils/blePacketParser.ts에 정의 (BLE 프로토콜 상수).
 
 /**
@@ -410,7 +419,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     try {
       const provider = await this.ensureProvider();
       // Provider 가 플랫폼별 디바이스 선택 UI(Web chooser / Native 스캔)를 띄운다.
-      const deviceInfo = await provider.requestDevice({ namePrefix: LINK_BAND_NAME_PREFIX });
+      const deviceInfo = await provider.requestDevice({ namePrefix: LINK_BAND_NAME_PREFIX, services: LINK_BAND_SERVICE_UUIDS });
       this.scannedDevices.set(deviceInfo.deviceId, deviceInfo);
       const result: EEGDevice = {
         id: deviceInfo.deviceId,
@@ -459,7 +468,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       if (cached) {
         this.deviceName = cached.name;
       } else {
-        const selected = await provider.requestDevice({ namePrefix: LINK_BAND_NAME_PREFIX });
+        const selected = await provider.requestDevice({ namePrefix: LINK_BAND_NAME_PREFIX, services: LINK_BAND_SERVICE_UUIDS });
         this.scannedDevices.set(selected.deviceId, selected);
         targetId = selected.deviceId;
         this.deviceName = selected.name;
