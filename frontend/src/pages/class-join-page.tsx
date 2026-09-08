@@ -14,9 +14,12 @@ import { GuestMeditationPanel } from '../components/class/GuestMeditationPanel';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
 import { WelcomeText } from '../components/class/WelcomeText';
 import { IntroVideoBackground } from '../components/class/IntroVideoBackground';
+import { BandGuidePanel } from '../components/class/BandGuidePanel';
 import { useWakeLock } from '../hooks/useWakeLock';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
+/** waiting 내부 3단계 — Welcome → LINK BAND 착용 가이드 → 시작 대기 */
+type WaitingStep = 'welcome' | 'guide' | 'wait';
 
 const TYPE_LABELS: Record<SessionByCodeResponse['type'], string> = {
   clinical: '임상심리상담',
@@ -100,8 +103,8 @@ const ClassJoinPage: React.FC = () => {
   const [durationMin, setDurationMin] = useState(50);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  /** waiting: Welcome 페이드 완료 후 대기 상태 UI */
-  const [welcomeDone, setWelcomeDone] = useState(false);
+  /** waiting 3단계: welcome → guide(착용 가이드) → wait(시작 대기) */
+  const [waitingStep, setWaitingStep] = useState<WaitingStep>('welcome');
 
   const isLoggedIn = isInitialized && isAuthenticated;
 
@@ -109,7 +112,11 @@ const ClassJoinPage: React.FC = () => {
   useWakeLock(step === 'waiting' || step === 'meditation');
 
   const handleWelcomeFinish = useCallback(() => {
-    setWelcomeDone(true);
+    setWaitingStep('guide');
+  }, []);
+
+  const handleGuideConfirm = useCallback(() => {
+    setWaitingStep('wait');
   }, []);
 
   // waiting: 세션 상태 폴링 → in_progress 시 meditation으로 자동 전환
@@ -274,7 +281,7 @@ const ClassJoinPage: React.FC = () => {
         });
         setStep('meditation');
       } else {
-        setWelcomeDone(false);
+        setWaitingStep('welcome');
         setStep('waiting');
       }
     } catch (joinError) {
@@ -292,7 +299,7 @@ const ClassJoinPage: React.FC = () => {
     setParticipantToken(null);
     setDurationMin(50);
     setError(null);
-    setWelcomeDone(false);
+    setWaitingStep('welcome');
     clearPersistedParticipant();
   };
 
@@ -336,12 +343,14 @@ const ClassJoinPage: React.FC = () => {
     );
   }
 
-  // waiting — 검정 풀블리드 + Welcome 페이드 → intro 영상 루프 (SDD-029 P2)
+  // waiting — Welcome → LINK BAND 착용 가이드 → 시작 대기 (1.0 3단계 패리티)
   if (step === 'waiting' && session) {
+    const displayName =
+      (isLoggedIn ? user?.name : null) || guestName.trim() || null;
+
     return (
       <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
-        {/* Welcome 페이드 완료 후 intro 자동재생 — 실패/reduced-motion 시 null */}
-        <IntroVideoBackground active={welcomeDone} />
+        <IntroVideoBackground active={waitingStep !== 'welcome'} />
 
         <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
           <button
@@ -357,28 +366,31 @@ const ClassJoinPage: React.FC = () => {
           <div className="w-[4.5rem]" aria-hidden="true" />
         </header>
 
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-16">
-          {!welcomeDone ? (
+        <div
+          className={`relative z-10 flex flex-1 flex-col px-4 pb-16 ${
+            waitingStep === 'guide'
+              ? 'justify-start pt-2 md:justify-center'
+              : 'items-center justify-center'
+          }`}
+        >
+          {waitingStep === 'welcome' && (
             <WelcomeText onFinish={handleWelcomeFinish} />
-          ) : (
-            <div className="mx-auto max-w-xl text-center">
-              <p className="text-[clamp(18px,3.5vw,28px)] font-semibold leading-snug text-white/90">
-                잠시 후 클래스가 시작됩니다.
-              </p>
-              <p className="mt-4 text-sm leading-6 text-white/70">
-                호스트가 시작할 때까지 잠시 쉬어가세요.
-                현재 상태: {STATUS_LABELS[session.status]}.
-              </p>
-              <p className="mt-8 text-xs font-medium tracking-wide text-white/40">클래스 코드</p>
-              <p className="mt-2 font-mono text-3xl font-bold tracking-[0.22em] text-white/70 sm:text-4xl">
-                {code}
-              </p>
-            </div>
+          )}
+          {(waitingStep === 'guide' || waitingStep === 'wait') && (
+            <BandGuidePanel
+              sessionId={session.id}
+              participantId={participantId}
+              phase={waitingStep}
+              onConfirm={handleGuideConfirm}
+              displayName={displayName}
+              classCode={code}
+              statusLabel={STATUS_LABELS[session.status]}
+            />
           )}
           {error && (
             <p
               role="alert"
-              className="mt-8 w-full max-w-md rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+              className="mt-8 w-full max-w-md self-center rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
             >
               {error}
             </p>
