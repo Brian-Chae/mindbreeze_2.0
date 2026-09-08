@@ -776,12 +776,10 @@ export function useBand({
     };
   }, [stopMock]);
 
-  // enabled 해제 시 자동 해제(drain 포함)
-  useEffect(() => {
-    if (!enabled && connectionState === 'connected') {
-      void disconnect();
-    }
-  }, [enabled, connectionState, disconnect]);
+  // 주의: enabled=false(participantId 미확정) 상태에서도 BLE 연결은 가능해야 한다.
+  // 이전에는 여기서 `!enabled && connected → disconnect()`를 호출해, participantId가 null이면
+  // 연결되자마자 곧바로 끊기는 문제를 일으켰다. 연결 해제는 컴포넌트 unmount 정리(위 useEffect)와
+  // 명시적 연결해제 버튼으로만 수행한다.
 
   return {
     isSupported,
