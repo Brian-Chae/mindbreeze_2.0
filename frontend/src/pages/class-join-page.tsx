@@ -13,7 +13,7 @@ import { useAuthStore } from '../stores/authStore';
 import { GuestMeditationPanel } from '../components/class/GuestMeditationPanel';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
 import { WelcomeText } from '../components/class/WelcomeText';
-import { IntroVideoBackground } from '../components/class/IntroVideoBackground';
+import { FadingImageBackground } from '../components/class/FadingImageBackground';
 import { BandGuidePanel } from '../components/class/BandGuidePanel';
 import { useWakeLock } from '../hooks/useWakeLock';
 
@@ -350,7 +350,7 @@ const ClassJoinPage: React.FC = () => {
 
     return (
       <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
-        <IntroVideoBackground active={waitingStep !== 'welcome'} />
+        <FadingImageBackground />
 
         <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
           <button

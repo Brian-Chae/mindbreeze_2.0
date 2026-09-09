@@ -137,9 +137,9 @@ export class BasicSignalProcessor {
     const theta = ch1BandPowers.theta;
     const gamma = ch1BandPowers.gamma;
 
-    const focusIndex = safeFloat((alpha + theta) > 0 ? beta / (alpha + theta) : 0);
-    const relaxationIndex = safeFloat((alpha + beta) > 0 ? alpha / (alpha + beta) : 0);
-    const stressIndex = safeFloat((alpha + theta) > 0 ? (beta + gamma) / (alpha + theta) : 0);
+    const focusIndex = safeFloat((alpha + theta) > 0 ? beta / (alpha + theta) : 0) * 100;
+    const relaxationIndex = safeFloat((alpha + beta) > 0 ? alpha / (alpha + beta) : 0) * 100;
+    const stressIndex = safeFloat((alpha + theta) > 0 ? (beta + gamma) / (alpha + theta) : 0) * 100;
     
     // 반구 균형 (좌우 채널 비교) - 개선된 계산
     const leftPower = ch1BandPowers.alpha || 0;

@@ -224,13 +224,13 @@ export class EEGSignalProcessor {
 
     const totalPower = Object.values(ch1BandPowers).reduce((sum, power) => sum + power, 0);
     
-    // EEG 지수 계산 (중복 변수 제거하고 직접 접근)
+    // EEG 지수 계산 (0~1 비율 → 0~100% 스케일로 변환)
     const focusIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.theta) > 0 ? 
-      ch1BandPowers.beta / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0);
+      ch1BandPowers.beta / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0) * 100;
     const relaxationIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.beta) > 0 ? 
-      ch1BandPowers.alpha / (ch1BandPowers.alpha + ch1BandPowers.beta) : 0);
+      ch1BandPowers.alpha / (ch1BandPowers.alpha + ch1BandPowers.beta) : 0) * 100;
     const stressIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.theta) > 0 ? 
-      (ch1BandPowers.beta + ch1BandPowers.gamma) / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0);
+      (ch1BandPowers.beta + ch1BandPowers.gamma) / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0) * 100;
     
     // 좌우뇌 균형 계산 개선 (0으로 나누기 방지 및 자연스러운 값 처리)
     const leftAlpha = ch1BandPowers.alpha || 0;
