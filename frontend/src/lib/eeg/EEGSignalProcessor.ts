@@ -744,11 +744,13 @@ export class EEGSignalProcessor {
       totalPower += real * real + imag * imag;
     }
     
-    // 정규화
+    // 정규화 — 평균 파워 (linear μV² 스케일)
     const avgPower = totalPower / convResult.length;
-    
-    // 로그 스케일 적용 (10 * log10) - Python MNE와 동일
-    return avgPower > 0 ? 10 * Math.log10(avgPower) : -100; // 0일 때는 -100dB로 설정
+
+    // linear power 반환. dB(10·log10) 변환을 여기서 하면 밴드파워가 음수가 되어
+    // relaxationIndex 등 지수 계산의 (alpha+beta)>0 게이트가 false가 되고 0으로 고정된다.
+    // dB 변환은 필요 시 소비처에서 수행한다.
+    return avgPower;
   }
 
   /**
