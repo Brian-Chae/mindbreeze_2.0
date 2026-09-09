@@ -110,6 +110,8 @@ export default function SessionLivePage() {
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
   // WS 1초 feature 즉시 갱신 스로틀 — 1초마다 재렌더되어 "밀려서" 보이는 것을 막는다.
   const lastFeaturePatchAtRef = useRef(0);
+  // participant별 두뇌휴식도(1초 feature) 누적 버퍼 — 3초 구간 평균 표시용
+  const featureBufferRef = useRef<Map<string, number[]>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
@@ -145,14 +147,40 @@ export default function SessionLivePage() {
     (event: SessionLiveEegFeatureEvent) => {
       if (!id || event.session_id !== id) return;
       const now = Date.now();
-      // 1초마다 feature가 들어와 화면이 연속 갱신("밀려서")되는 것을 막기 위해
-      // 3초 간격으로만 증분 패치한다. 그 사이 최신값은 폴링(live-metrics)이 반영.
+      const efficiency =
+        event.current_efficiency ??
+        event.relaxation_index ??
+        event.feature?.relaxation_index ??
+        null;
+      // 1초 feature의 두뇌휴식도를 participant별 버퍼에 누적
+      if (event.participant_id && typeof efficiency === 'number') {
+        const arr = featureBufferRef.current.get(event.participant_id) ?? [];
+        arr.push(efficiency);
+        featureBufferRef.current.set(event.participant_id, arr);
+      }
+      // 3초 간격으로 버퍼의 평균값을 반영 — 매 초 튀는 최신값 대신 구간 평균 표시
       if (now - lastFeaturePatchAtRef.current < 3000) return;
       lastFeaturePatchAtRef.current = now;
-      // 해당 participant 행만 증분 패치 — 무변경이면 prev 참조 유지
       setMetrics((prev) => {
-        const { rows, unchanged } = applyEegFeatureToMetricsDetailed(prev, event);
-        return unchanged ? prev : rows;
+        let next = prev;
+        let changed = false;
+        for (const [pid, values] of featureBufferRef.current) {
+          if (values.length === 0) continue;
+          const avg = values.reduce((s, v) => s + v, 0) / values.length;
+          const averaged: SessionLiveEegFeatureEvent = {
+            ...event,
+            participant_id: pid,
+            current_efficiency: avg,
+            relaxation_index: avg,
+          };
+          const { rows, unchanged } = applyEegFeatureToMetricsDetailed(next, averaged);
+          if (!unchanged) {
+            next = rows;
+            changed = true;
+          }
+        }
+        featureBufferRef.current = new Map();
+        return changed ? next : prev;
       });
     },
     [id],
