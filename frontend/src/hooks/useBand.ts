@@ -168,9 +168,12 @@ export function useBand({
   const isMock = useMockEeg();
   const isSupported = isMock || isWebBluetoothSupported();
 
-  const [connectionState, setConnectionState] = useState<BandConnectionState>(() =>
-    isSupported ? 'disconnected' : 'unsupported',
-  );
+  const [connectionState, setConnectionState] = useState<BandConnectionState>(() => {
+    if (!isSupported) return 'unsupported';
+    // 전역(singleton) BLE 연결이 이미 살아있으면 'connected'로 시작한다.
+    // waiting→meditation 전환 등 컴포넌트 unmount/remount에도 연결이 유지되도록.
+    return bluetoothService.isConnected() ? 'connected' : 'disconnected';
+  });
   const [battery, setBattery] = useState<number | null>(null);
   const [signalQuality, setSignalQuality] = useState<number | null>(null);
   const [leadOff, setLeadOff] = useState<LeadOffStatus | null>(null);
@@ -772,7 +775,9 @@ export function useBand({
         streamRef.current.cleanup();
         streamRef.current = null;
       }
-      void bluetoothService.disconnect().catch(() => undefined);
+      // BLE 연결은 전역(singleton)으로 유지한다 — waiting→meditation 전환 시
+      // 컴포넌트 unmount/remount로 연결이 끊기지 않도록 disconnect를 호출하지 않는다.
+      // 명시적 종료(resetJoin)에서 bluetoothService.disconnect()로 정리한다.
     };
   }, [stopMock]);
 

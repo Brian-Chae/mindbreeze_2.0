@@ -16,6 +16,7 @@ import { WelcomeText } from '../components/class/WelcomeText';
 import { FadingImageBackground } from '../components/class/FadingImageBackground';
 import { BandGuidePanel } from '../components/class/BandGuidePanel';
 import { useWakeLock } from '../hooks/useWakeLock';
+import { bluetoothService } from '../lib/eeg/bluetoothService';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 /** waiting 내부 3단계 — Welcome → LINK BAND 착용 가이드 → 시작 대기 */
@@ -292,6 +293,8 @@ const ClassJoinPage: React.FC = () => {
   };
 
   const resetJoin = (): void => {
+    // 명시적 종료 시 전역 BLE 연결 정리 (unmount에선 끊지 않으므로 여기서 명시적으로 해제)
+    void bluetoothService.disconnect().catch(() => undefined);
     setStep('code');
     setSession(null);
     setGuestName('');
