@@ -63,6 +63,17 @@ export function TrendPanel({
   const [points, setPoints] = useState<TrendPoint[]>([]);
   const startedAtRef = useRef<number | null>(null);
 
+  // setInterval 클로저가 stale 값을 읽지 않도록 최신 prop을 ref로 유지한다.
+  // (의존성 배열에 rawIndices 등을 넣으면 지표 갱신마다 interval이 재생성되어 점이 안 쌓임)
+  const rawIndicesRef = useRef(rawIndices);
+  const heartRateRef = useRef(heartRate);
+  const sdnnRef = useRef(sdnn);
+  const rmssdRef = useRef(rmssd);
+  rawIndicesRef.current = rawIndices;
+  heartRateRef.current = heartRate;
+  sdnnRef.current = sdnn;
+  rmssdRef.current = rmssd;
+
   useEffect(() => {
     if (!connected) {
       startedAtRef.current = null;
@@ -75,16 +86,16 @@ export function TrendPanel({
       const t = Math.floor((Date.now() - startedAtRef.current) / 1000);
       const next: TrendPoint = {
         t,
-        focusIndex: rawIndices?.focusIndex ?? 0,
-        relaxationIndex: rawIndices?.relaxationIndex ?? 0,
-        stressIndex: rawIndices?.stressIndex ?? 0,
-        cognitiveLoad: rawIndices?.cognitiveLoad ?? 0,
-        totalPower: rawIndices?.totalNeuralActivity ?? 0,
-        hemisphericBalance: rawIndices?.hemisphericBalance ?? 0,
-        emotionalStability: rawIndices?.emotionalStability ?? 0,
-        bpm: heartRate ?? 0,
-        sdnn: sdnn ?? 0,
-        rmssd: rmssd ?? 0,
+        focusIndex: rawIndicesRef.current?.focusIndex ?? 0,
+        relaxationIndex: rawIndicesRef.current?.relaxationIndex ?? 0,
+        stressIndex: rawIndicesRef.current?.stressIndex ?? 0,
+        cognitiveLoad: rawIndicesRef.current?.cognitiveLoad ?? 0,
+        totalPower: rawIndicesRef.current?.totalNeuralActivity ?? 0,
+        hemisphericBalance: rawIndicesRef.current?.hemisphericBalance ?? 0,
+        emotionalStability: rawIndicesRef.current?.emotionalStability ?? 0,
+        bpm: heartRateRef.current ?? 0,
+        sdnn: sdnnRef.current ?? 0,
+        rmssd: rmssdRef.current ?? 0,
       };
       setPoints((prev) => {
         const merged = [...prev, next];
@@ -92,7 +103,7 @@ export function TrendPanel({
       });
     }, 1000);
     return () => clearInterval(id);
-  }, [connected, paused, rawIndices, heartRate, sdnn, rmssd]);
+  }, [connected, paused]);
 
   const reset = () => {
     setPoints([]);
