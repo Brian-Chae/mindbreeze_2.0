@@ -120,7 +120,7 @@ export function TrendPanel({
                 'rounded px-2 py-1 text-[11px] font-medium transition-colors',
                 rangeSec === r.sec
                   ? 'bg-[#5F0080] text-white'
-                  : 'bg-gray-800 text-gray-400 hover:text-gray-200',
+                  : 'bg-[#F5EDFC] text-[#6F6F6F] hover:bg-[#EBDEF7] hover:text-[#5F0080]',
               ].join(' ')}
             >
               {r.label}
@@ -130,7 +130,7 @@ export function TrendPanel({
             type="button"
             onClick={() => setPaused((v) => !v)}
             aria-label={paused ? '재개' : '일시정지'}
-            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
           >
             <StrokeIcon d={paused ? ICON_PLAY : ICON_PAUSE} size={14} />
           </button>
@@ -138,7 +138,7 @@ export function TrendPanel({
             type="button"
             onClick={reset}
             aria-label="트렌드 초기화"
-            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
           >
             <StrokeIcon d={ICON_RESET} size={14} />
           </button>

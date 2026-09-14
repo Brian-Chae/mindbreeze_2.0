@@ -36,18 +36,18 @@ export function PlaygroundMeditationSimulator() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">
+      <section className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-gray-100">명상 시뮬레이터</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <h2 className="text-sm font-semibold text-[#1F1F1F]">명상 시뮬레이터</h2>
+            <p className="mt-0.5 text-xs text-[#6F6F6F]">
               시작 → 수집 → 중지(요약) → 리셋 · SDD-034 · LINK BAND 없이 mock
             </p>
           </div>
-          <span className="rounded-full bg-gray-800 px-2.5 py-0.5 text-[11px] font-medium text-gray-300">
+          <span className="rounded-full bg-[#F5EDFC] px-2.5 py-0.5 text-[11px] font-medium text-[#5F0080]">
             {STATUS_LABEL[status]}
           </span>
-          <p className="tabular-nums text-sm font-semibold text-gray-100">
+          <p className="tabular-nums text-sm font-semibold text-[#1F1F1F]">
             {formatMmSs(elapsedSec)}
           </p>
           <div className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export function PlaygroundMeditationSimulator() {
               type="button"
               onClick={start}
               disabled={!canStart}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#5F0080] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <StrokeIcon d={ICON_PLAY} size={14} />
               시작
@@ -64,7 +64,7 @@ export function PlaygroundMeditationSimulator() {
               type="button"
               onClick={stop}
               disabled={!canStop}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gray-700 px-3 py-1.5 text-xs font-medium text-gray-100 transition-colors hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDDEE7] bg-white px-3 py-1.5 text-xs font-medium text-[#1F1F1F] transition-colors hover:bg-[#EFE3FA] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <StrokeIcon d={ICON_PAUSE} size={14} />
               중지
@@ -72,7 +72,7 @@ export function PlaygroundMeditationSimulator() {
             <button
               type="button"
               onClick={reset}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-gray-700 hover:text-gray-100"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#C9B0E8] bg-[#F5EDFC] px-3 py-1.5 text-xs font-medium text-[#5F0080] transition-colors hover:bg-[#EBDEF7]"
             >
               <StrokeIcon d={ICON_RESET} size={14} />
               리셋

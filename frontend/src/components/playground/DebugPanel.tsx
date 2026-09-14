@@ -16,9 +16,9 @@ interface Props {
 }
 
 const LEVEL_CLASS: Record<PlaygroundLogEntry['level'], string> = {
-  info: 'text-gray-400',
-  warn: 'text-amber-300',
-  error: 'text-red-300',
+  info: 'text-[#6F6F6F]',
+  warn: 'text-[#8A6B1F]',
+  error: 'text-[#B3261E]',
 };
 
 const ICON_PLAY = ['M5 3l14 9-14 9V3z'];
@@ -60,7 +60,7 @@ export function DebugPanel({
             type="button"
             onClick={onTogglePause}
             aria-label={paused ? '로그 재개' : '로그 일시정지'}
-            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
           >
             <StrokeIcon d={paused ? ICON_PLAY : ICON_PAUSE} size={14} />
           </button>
@@ -68,7 +68,7 @@ export function DebugPanel({
             type="button"
             onClick={onClearLogs}
             aria-label="로그 지우기"
-            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
           >
             <StrokeIcon d={ICON_TRASH} size={14} />
           </button>
@@ -82,15 +82,15 @@ export function DebugPanel({
           <ul className="max-h-64 space-y-1 overflow-y-auto font-mono text-[11px]">
             {[...logs].reverse().map((log, i) => (
               <li key={`${log.ts}-${i}`} className="flex gap-2">
-                <span className="shrink-0 text-gray-600">{formatTime(log.ts)}</span>
-                <span className="shrink-0 text-gray-500">[{log.source}]</span>
+                <span className="shrink-0 text-[#9A9BA8]">{formatTime(log.ts)}</span>
+                <span className="shrink-0 text-[#6F6F6F]">[{log.source}]</span>
                 <span className={LEVEL_CLASS[log.level]}>{log.message}</span>
               </li>
             ))}
           </ul>
         )
       ) : snapshot ? (
-        <pre className="max-h-64 overflow-auto rounded-lg bg-gray-950 p-3 text-[11px] text-gray-300">
+        <pre className="max-h-64 overflow-auto rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] p-3 text-[11px] text-[#1F1F1F]">
           {JSON.stringify(snapshot, null, 2)}
         </pre>
       ) : (
@@ -118,7 +118,7 @@ function TabButton({
         'rounded px-2 py-1 text-[11px] font-medium transition-colors',
         active
           ? 'bg-[#5F0080] text-white'
-          : 'bg-gray-800 text-gray-400 hover:text-gray-200',
+          : 'bg-[#F5EDFC] text-[#6F6F6F] hover:bg-[#EBDEF7] hover:text-[#5F0080]',
       ].join(' ')}
     >
       {children}

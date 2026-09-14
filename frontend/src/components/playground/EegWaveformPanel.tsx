@@ -61,7 +61,7 @@ export function EegWaveformPanel({ connected, eegWaveform, getSamples }: Props) 
             type="button"
             onClick={() => setPaused((v) => !v)}
             aria-label={paused ? '재개' : '일시정지'}
-            className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+            className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
           >
             <StrokeIcon d={paused ? ICON_PLAY : ICON_PAUSE} size={14} />
           </button>
@@ -76,7 +76,7 @@ export function EegWaveformPanel({ connected, eegWaveform, getSamples }: Props) 
         paused={paused}
         stacked
       />
-      <p className="mt-2 text-[11px] text-gray-500">
+      <p className="mt-2 text-[11px] text-[#6F6F6F]">
         상단 FP1 · 하단 FP2.
         {!autoScale && ` 고정 y축 ±${FIXED_RANGE[1]}μV.`}
       </p>
@@ -102,7 +102,7 @@ function ToggleButton({
         'rounded px-2 py-1 text-[11px] font-medium transition-colors',
         active
           ? 'bg-[#5F0080] text-white'
-          : 'bg-gray-800 text-gray-400 hover:text-gray-200',
+          : 'bg-[#F5EDFC] text-[#6F6F6F] hover:bg-[#EBDEF7] hover:text-[#5F0080]',
       ].join(' ')}
     >
       {children}

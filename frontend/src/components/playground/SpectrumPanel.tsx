@@ -102,7 +102,7 @@ export const SpectrumPanel = memo(function SpectrumPanel({
 
           {areaData.length > 0 && (
             <div className="mt-4 h-40">
-              <p className="mb-1 text-xs text-gray-500">주파수 스펙트럼 (FP1/FP2 평균)</p>
+              <p className="mb-1 text-xs text-[#6F6F6F]">주파수 스펙트럼 (FP1/FP2 평균)</p>
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={areaData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                   <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />

@@ -31,7 +31,7 @@ export function CalibrationPanel({ connected, rawIndices }: Props) {
       subtitle="정규화 전 raw indices 스냅샷 (간소화)"
       state={panelState}
     >
-      <p className="mb-3 text-[11px] text-gray-500">
+      <p className="mb-3 text-[11px] text-[#6F6F6F]">
         전체 정규화/캘리브레이션 플로우는 추후 이식. 현재는 실시간 raw 7지표만 표시합니다.
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">

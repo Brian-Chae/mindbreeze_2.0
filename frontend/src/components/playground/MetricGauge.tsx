@@ -66,27 +66,27 @@ export function MetricGauge({
   const body = (
     <>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="truncate text-xs text-gray-400">{metric.label}</span>
+        <span className="truncate text-xs text-[#6F6F6F]">{metric.label}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-1">
         <span
           className={[
             'text-xl font-bold tabular-nums',
-            pending ? 'text-gray-600' : metric.stale ? 'text-gray-500' : 'text-gray-100',
+            pending ? 'text-[#9A9BA8]' : metric.stale ? 'text-[#6F6F6F]' : 'text-[#1F1F1F]',
           ].join(' ')}
         >
           {pending ? '--' : formatValue(metric.value)}
         </span>
         {metric.unit && !pending && (
-          <span className="text-xs text-gray-500">{metric.unit}</span>
+          <span className="text-xs text-[#6F6F6F]">{metric.unit}</span>
         )}
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-800">
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#F2F3F8]">
         {!pending && (
           <div
             className={[
               'h-full rounded-full',
-              bidirectional ? 'bg-violet-400' : 'bg-[#5F0080]',
+              bidirectional ? 'bg-[#A855F7]' : 'bg-[#5F0080]',
               metric.stale ? 'opacity-40' : '',
               widthClass(ratio),
             ].join(' ')}
@@ -94,15 +94,17 @@ export function MetricGauge({
         )}
       </div>
       {bidirectional ? (
-        <p className="mt-1 text-[10px] text-gray-600">중앙 50 = 좌우 균형</p>
+        <p className="mt-1 text-[10px] text-[#9A9BA8]">중앙 50 = 좌우 균형</p>
       ) : null}
     </>
   );
 
   const base = [
-    'rounded-lg border p-3 text-left transition-colors',
-    selected ? 'border-[#5F0080] bg-[#5F0080]/10' : 'border-gray-800 bg-gray-950',
-    interactive ? 'hover:border-gray-700' : '',
+    'rounded-2xl border p-3 text-left transition-colors',
+    selected
+      ? 'border-[#5F0080] bg-[#F5EDFC]'
+      : 'border-[#EFEFEF] bg-white',
+    interactive ? 'hover:border-[#C9B0E8] hover:bg-[#EFE3FA]' : '',
   ].join(' ');
 
   if (!interactive) {
@@ -130,18 +132,18 @@ interface ValueCardProps {
 
 export function ValueCard({ label, value, unit, pending = false }: ValueCardProps) {
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-950 p-3">
-      <div className="truncate text-xs text-gray-400">{label}</div>
+    <div className="rounded-2xl border border-[#EFEFEF] bg-white p-3">
+      <div className="truncate text-xs text-[#6F6F6F]">{label}</div>
       <div className="mt-1 flex items-baseline gap-1">
         <span
           className={[
             'text-lg font-semibold tabular-nums',
-            pending ? 'text-gray-600' : 'text-gray-100',
+            pending ? 'text-[#9A9BA8]' : 'text-[#1F1F1F]',
           ].join(' ')}
         >
           {pending ? '--' : typeof value === 'number' ? formatValue(value) : value}
         </span>
-        {unit && !pending && <span className="text-xs text-gray-500">{unit}</span>}
+        {unit && !pending && <span className="text-xs text-[#6F6F6F]">{unit}</span>}
       </div>
     </div>
   );

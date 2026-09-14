@@ -50,7 +50,7 @@ export function PpgPanel({
           type="button"
           onClick={() => setPaused((v) => !v)}
           aria-label={paused ? '재개' : '일시정지'}
-          className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:text-gray-100"
+          className="flex h-6 w-6 items-center justify-center rounded text-[#6F6F6F] hover:text-[#5F0080]"
         >
           <StrokeIcon d={paused ? ICON_PLAY : ICON_PAUSE} size={14} />
         </button>
@@ -58,10 +58,10 @@ export function PpgPanel({
     >
       <WaveformCanvas series={SERIES} supplier={supplier} size="md" paused={paused} stacked={false} />
 
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-800">
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#F2F3F8]">
         <div
           className={[
-            'h-full rounded-full bg-emerald-400 transition-all',
+            'h-full rounded-full bg-[#5F0080] transition-all',
             bufferPct >= 100
               ? 'w-full'
               : bufferPct >= 75

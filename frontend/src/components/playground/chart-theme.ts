@@ -1,28 +1,29 @@
-/** Playground 차트 색상 토큰 — brand #5F0080 */
+/** Playground 차트 색상 토큰 — mindbreeze brand #5F0080 */
 
 export const CHART_COLORS = {
   primary: '#5F0080',
   accent: '#9B30FF',
-  blue: '#38bdf8',
-  pink: '#f472b6',
-  warning: '#fbbf24',
-  grid: 'rgba(255,255,255,0.06)',
+  blue: '#7C3AED',
+  pink: '#C084FC',
+  warning: '#D97706',
+  grid: 'rgba(95,0,128,0.08)',
 } as const;
 
 export const CATEGORY_PALETTE = [
   '#5F0080',
-  '#38bdf8',
-  '#f472b6',
-  '#fbbf24',
-  '#34d399',
-  '#a78bfa',
+  '#7C3AED',
+  '#A855F7',
+  '#C084FC',
+  '#6E1A8C',
+  '#9B30FF',
 ] as const;
 
-export const AXIS_TICK = { fill: '#9ca3af', fontSize: 11 } as const;
+export const AXIS_TICK = { fill: '#6F6F6F', fontSize: 11 } as const;
 
 export const TOOLTIP_STYLE = {
-  backgroundColor: '#111827',
-  border: '1px solid #374151',
+  backgroundColor: '#ffffff',
+  border: '1px solid #EFEFEF',
   borderRadius: 8,
   fontSize: 12,
+  color: '#1F1F1F',
 } as const;

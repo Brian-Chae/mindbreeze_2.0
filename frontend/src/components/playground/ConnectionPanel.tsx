@@ -14,9 +14,9 @@ const SENSOR_LABEL: Record<keyof BandSensors, string> = {
 };
 
 const SENSOR_DOT: Record<string, string> = {
-  good: 'bg-emerald-400',
-  bad: 'bg-red-400',
-  loading: 'bg-gray-600',
+  good: 'bg-emerald-500',
+  bad: 'bg-red-500',
+  loading: 'bg-[#9A9BA8]',
 };
 
 function formatElapsed(sec: number): string {
@@ -54,13 +54,13 @@ export function ConnectionPanel({ band }: Props) {
       }
       state={panelState}
       actions={
-        <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[11px] text-gray-400">
+        <span className="rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] text-[#5F0080]">
           {connected ? formatElapsed(band.connectedElapsedSec) : '--:--'}
         </span>
       }
     >
       {browserHint && (
-        <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+        <div className="mb-3 rounded-xl border border-[#F5D0A9] bg-[#FFF4DC] p-3 text-xs text-[#8A6B1F]">
           {browserHint}
         </div>
       )}
@@ -70,7 +70,7 @@ export function ConnectionPanel({ band }: Props) {
           type="button"
           onClick={() => void band.connect()}
           disabled={!band.isSupported || isBusy || connected}
-          className="rounded-lg bg-[#5F0080] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#4A0066] disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg bg-[#5F0080] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {isBusy ? '연결 중…' : band.isMock ? 'Mock 연결' : '스캔 및 연결'}
         </button>
@@ -78,7 +78,7 @@ export function ConnectionPanel({ band }: Props) {
           type="button"
           onClick={() => void band.disconnect()}
           disabled={!connected}
-          className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg border border-[#DDDEE7] px-3 py-1.5 text-xs font-medium text-[#6F6F6F] hover:bg-[#EFE3FA] hover:text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-40"
         >
           연결 해제
         </button>
@@ -86,36 +86,36 @@ export function ConnectionPanel({ band }: Props) {
           type="button"
           onClick={band.clearBuffers}
           disabled={!connected}
-          className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg border border-[#DDDEE7] px-3 py-1.5 text-xs font-medium text-[#6F6F6F] hover:bg-[#EFE3FA] hover:text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-40"
         >
           버퍼 초기화
         </button>
       </div>
 
       {band.error && (
-        <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-300">
+        <p className="mt-3 rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-2 text-xs text-[#B3261E]">
           {band.error}
         </p>
       )}
 
       <dl className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <div>
-          <dt className="text-gray-500">모드</dt>
-          <dd className="mt-0.5 text-gray-200">{band.isMock ? 'Mock' : 'BLE'}</dd>
+          <dt className="text-[#6F6F6F]">모드</dt>
+          <dd className="mt-0.5 text-[#1F1F1F]">{band.isMock ? 'Mock' : 'BLE'}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">상태</dt>
-          <dd className="mt-0.5 text-gray-200">{band.connectionState}</dd>
+          <dt className="text-[#6F6F6F]">상태</dt>
+          <dd className="mt-0.5 text-[#1F1F1F]">{band.connectionState}</dd>
         </div>
         <div>
-          <dt className="text-gray-500">배터리</dt>
-          <dd className="mt-0.5 text-gray-200">
+          <dt className="text-[#6F6F6F]">배터리</dt>
+          <dd className="mt-0.5 text-[#1F1F1F]">
             {band.battery === null ? '--' : `${Math.round(band.battery)}%`}
           </dd>
         </div>
         <div>
-          <dt className="text-gray-500">SQI</dt>
-          <dd className="mt-0.5 text-gray-200">
+          <dt className="text-[#6F6F6F]">SQI</dt>
+          <dd className="mt-0.5 text-[#1F1F1F]">
             {band.signalQuality === null
               ? '--'
               : `${band.signalQuality.toFixed(0)} · ${band.signalQualityLevel}`}
@@ -127,10 +127,10 @@ export function ConnectionPanel({ band }: Props) {
         {(Object.keys(SENSOR_LABEL) as Array<keyof BandSensors>).map((key) => (
           <div
             key={key}
-            className="flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-950 px-3 py-2"
+            className="flex items-center gap-2 rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] px-3 py-2"
           >
             <span className={`h-2 w-2 shrink-0 rounded-full ${SENSOR_DOT[band.sensors[key]]}`} />
-            <span className="truncate text-xs text-gray-300">{SENSOR_LABEL[key]}</span>
+            <span className="truncate text-xs text-[#1F1F1F]">{SENSOR_LABEL[key]}</span>
           </div>
         ))}
       </div>

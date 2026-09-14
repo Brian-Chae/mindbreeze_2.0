@@ -61,7 +61,7 @@ export function MetricsPanel({
       subtitle="지표 카드를 클릭하면 P5 트렌드에 추가/제거됩니다 (EEG 최대 3 · PPG 최대 2)"
       state={panelState}
     >
-      <h3 className="mb-2 text-xs font-semibold text-gray-400">EEG</h3>
+      <h3 className="mb-2 text-xs font-semibold text-[#5F0080]">EEG</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {EEG_DEFS.map((def) => (
           <MetricGauge
@@ -81,7 +81,7 @@ export function MetricsPanel({
         ))}
       </div>
 
-      <h3 className="mt-5 mb-2 text-xs font-semibold text-gray-400">PPG</h3>
+      <h3 className="mt-5 mb-2 text-xs font-semibold text-[#5F0080]">PPG</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         <MetricGauge
           metric={{
@@ -121,7 +121,7 @@ export function MetricsPanel({
         />
       </div>
 
-      <h3 className="mt-5 mb-2 text-xs font-semibold text-gray-400">ACC</h3>
+      <h3 className="mt-5 mb-2 text-xs font-semibold text-[#5F0080]">ACC</h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <ValueCard
           label="활동 상태"

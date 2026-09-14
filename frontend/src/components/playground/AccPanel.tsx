@@ -26,14 +26,14 @@ const ACTIVITY_LABEL: Record<string, string> = {
 };
 
 const ACTIVITY_CLASS: Record<string, string> = {
-  stationary: 'text-emerald-300',
-  sitting: 'text-emerald-300',
-  rest: 'text-emerald-300',
-  light: 'text-sky-300',
-  walking: 'text-sky-300',
-  moderate: 'text-amber-300',
-  vigorous: 'text-red-300',
-  running: 'text-red-300',
+  stationary: 'text-[#1F8A5B]',
+  sitting: 'text-[#1F8A5B]',
+  rest: 'text-[#1F8A5B]',
+  light: 'text-[#5F0080]',
+  walking: 'text-[#5F0080]',
+  moderate: 'text-[#8A6B1F]',
+  vigorous: 'text-[#B3261E]',
+  running: 'text-[#B3261E]',
 };
 
 interface Props {
@@ -53,9 +53,9 @@ export function AccPanel({ connected, acc }: Props) {
       state={panelState}
     >
       <div className="mb-3 flex items-baseline gap-2">
-        <span className="text-xs text-gray-500">활동 상태</span>
+        <span className="text-xs text-[#6F6F6F]">활동 상태</span>
         <span
-          className={`text-lg font-bold ${ACTIVITY_CLASS[acc.activityType] ?? 'text-gray-200'}`}
+          className={`text-lg font-bold ${ACTIVITY_CLASS[acc.activityType] ?? 'text-[#1F1F1F]'}`}
         >
           {connected ? (ACTIVITY_LABEL[acc.activityType] ?? acc.activityType) : '--'}
         </span>
