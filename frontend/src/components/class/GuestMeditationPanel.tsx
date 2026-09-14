@@ -38,6 +38,12 @@ function formatEfficiency(value: number | null): string {
   return `${Math.round(value)}`;
 }
 
+/** 몸 지표 표시 — null은 대시 (0 치환 금지) */
+function formatBodyMetric(value: number | null, digits = 0): string {
+  if (value === null || Number.isNaN(value)) return '—';
+  return digits > 0 ? value.toFixed(digits) : `${Math.round(value)}`;
+}
+
 const AI_ANALYZING_MS = 15_000;
 
 export function GuestMeditationPanel({
@@ -234,6 +240,39 @@ export function GuestMeditationPanel({
               뇌파 차트는 LINK BAND 연결 후 표시됩니다
             </p>
           )}
+        </div>
+
+        {/* 몸 지표 패널 — BPM · 호흡수 · HRV */}
+        <div
+          className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4"
+          aria-label="몸 지표"
+        >
+          <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-3">
+            <p className="text-xs text-white/55">BPM</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-white">
+              {formatBodyMetric(isLive ? band.heartRate : null)}
+            </p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-3">
+            <p className="text-xs text-white/55">호흡수</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-white">
+              {formatBodyMetric(isLive ? band.respiratoryRate : null)}
+            </p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-3">
+            <p className="text-xs text-white/55">SDNN</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-white">
+              {formatBodyMetric(isLive ? band.sdnn : null)}
+              <span className="ml-0.5 text-xs font-normal text-white/50">ms</span>
+            </p>
+          </div>
+          <div className="flex flex-col items-center rounded-xl bg-white/10 px-3 py-3">
+            <p className="text-xs text-white/55">RMSSD</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-white">
+              {formatBodyMetric(isLive ? band.rmssd : null)}
+              <span className="ml-0.5 text-xs font-normal text-white/50">ms</span>
+            </p>
+          </div>
         </div>
 
         {/* 밴드 연결 보조 (최소화) */}

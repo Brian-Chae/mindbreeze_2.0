@@ -120,6 +120,12 @@ const SessionMonitorRow = memo(function SessionMonitorRow({
       <td className={`${cellCenter} tabular-nums`}>
         {showCurrent ? formatMetric(row.current_efficiency, '%') : '-'}
       </td>
+      <td className={`${cellCenter} tabular-nums`}>
+        {showCurrent ? formatMetric(row.heart_rate) : '-'}
+      </td>
+      <td className={`${cellCenter} tabular-nums`}>
+        {showCurrent ? formatMetric(row.respiratory_rate) : '-'}
+      </td>
       <td className={cellCenter}>{uploadLabel(row.upload_status)}</td>
     </tr>
   );
@@ -138,7 +144,7 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
 
   return (
     <div className="overflow-x-auto bg-white">
-      <table className="min-w-[960px] w-full text-sm">
+      <table className="min-w-[1100px] w-full text-sm">
         <thead className="bg-[#F2F3F8] text-sm font-medium text-[#1F1F1F]">
           <tr>
             <th className={`${cellCenter} font-medium`}>자리</th>
@@ -148,6 +154,8 @@ export function SessionMonitorTable({ participants, filter }: SessionMonitorTabl
             <th className={`${cellCenter} font-medium`}>배터리</th>
             <th className={`${cellCenter} font-medium`}>평균 두뇌휴식도</th>
             <th className={`${cellCenter} font-medium`}>현재 두뇌휴식도</th>
+            <th className={`${cellCenter} font-medium`}>BPM</th>
+            <th className={`${cellCenter} font-medium`}>호흡수</th>
             <th className={`${cellCenter} font-medium`}>업로드</th>
           </tr>
         </thead>

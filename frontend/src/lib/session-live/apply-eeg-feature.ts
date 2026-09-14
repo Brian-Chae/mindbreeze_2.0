@@ -29,7 +29,9 @@ function liveFieldsEqual(a: SessionLiveMetric, b: SessionLiveMetric): boolean {
     a.upload_status === b.upload_status &&
     a.last_eeg_at === b.last_eeg_at &&
     a.signal_quality === b.signal_quality &&
-    a.signal_quality_level === b.signal_quality_level
+    a.signal_quality_level === b.signal_quality_level &&
+    a.heart_rate === b.heart_rate &&
+    a.respiratory_rate === b.respiratory_rate
   );
 }
 
@@ -70,6 +72,10 @@ export function applyEegFeatureToMetricsDetailed(
       ? new Date(feature.timestamp).toISOString()
       : new Date().toISOString());
   const bandConnected = event.band_connected ?? true;
+  const heartRate =
+    event.feature?.heart_rate ?? null;
+  const respiratoryRate =
+    event.feature?.respiratory_rate ?? null;
 
   let found = false;
   let changed = false;
@@ -87,6 +93,12 @@ export function applyEegFeatureToMetricsDetailed(
       last_eeg_at: lastAt,
       signal_quality: sq01 ?? row.signal_quality ?? null,
       signal_quality_level: sqLevel,
+      heart_rate:
+        typeof heartRate === 'number' ? heartRate : row.heart_rate ?? null,
+      respiratory_rate:
+        typeof respiratoryRate === 'number'
+          ? respiratoryRate
+          : row.respiratory_rate ?? null,
     };
     if (liveFieldsEqual(row, patched)) return row;
     changed = true;
@@ -108,6 +120,9 @@ export function applyEegFeatureToMetricsDetailed(
       last_eeg_at: lastAt,
       signal_quality: sq01,
       signal_quality_level: sqLevel,
+      heart_rate: typeof heartRate === 'number' ? heartRate : null,
+      respiratory_rate:
+        typeof respiratoryRate === 'number' ? respiratoryRate : null,
     });
     return { rows: next, unchanged: false };
   }

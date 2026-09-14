@@ -1,0 +1,18 @@
+waiting for server to start.... done
+server started
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running stamp_revision  -> 4235a5871ac6
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 4235a5871ac6 -> 8e30b17c920a, SDD-030 호흡수 nullable 컬럼 추가.
+FULL_METADATA_DIFF: []
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running downgrade 8e30b17c920a -> 4235a5871ac6, SDD-030 호흡수 nullable 컬럼 추가.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 4235a5871ac6 -> 8e30b17c920a, SDD-030 호흡수 nullable 컬럼 추가.
+PASS: PostgreSQL previous-model baseline incremental upgrade, nullable column, downgrade, re-upgrade, compare_metadata=[]
+waiting for server to shut down.... done
+server stopped

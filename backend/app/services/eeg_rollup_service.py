@@ -35,6 +35,7 @@ ROLLUP_METRIC_KEYS: tuple[str, ...] = (
     "hf_power",
     "lf_hf_ratio",
     "heart_rate",
+    "respiratory_rate",
     "motion",
 )
 
@@ -58,10 +59,16 @@ def _mean_non_null(values: list) -> float | None:
 
 def summarize_hrv_motion(windows: list) -> dict[str, float | None]:
     """PPG·ACC는 EEG 품질과 독립적으로 비-null 원천 샘플을 집계한다."""
-    return {
+    summary = {
         f"{key}_mean": _mean_non_null([getattr(w, key) for w in windows])
-        for key in ("sdnn", "rmssd", "lf_hf_ratio", "heart_rate", "motion")
+        for key in ("sdnn", "rmssd", "lf_power", "hf_power", "lf_hf_ratio",
+                    "heart_rate", "respiratory_rate", "motion")
     }
+
+    heart_rates = [w.heart_rate for w in windows if w.heart_rate is not None]
+    summary["heart_rate_min"] = min(heart_rates, default=None)
+    summary["heart_rate_max"] = max(heart_rates, default=None)
+    return summary
 
 
 def _algorithm_version() -> int | None:

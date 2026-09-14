@@ -12,16 +12,22 @@ class HRVMotionFeatures(BaseModel):
     hf_power: float | None = Field(None, description="HF 파워 (ms²)")
     lf_hf_ratio: float | None = None
     heart_rate: float | None = Field(None, description="심박수 (bpm)")
+    respiratory_rate: float | None = Field(None, description="호흡수 (breaths/min)")
     motion: float | None = Field(None, ge=0, le=1, description="움직임 활동도 (0~1)")
 
 
 class HRVMotionSummary(BaseModel):
-    """비-null 원천 샘플의 평균. 해당 지표가 없으면 null."""
+    """비-null 원천 샘플의 평균과 심박수 최소·최대. 해당 지표가 없으면 null."""
 
     sdnn_mean: float | None = None
     rmssd_mean: float | None = None
     lf_hf_ratio_mean: float | None = None
     heart_rate_mean: float | None = None
+    heart_rate_min: float | None = None
+    heart_rate_max: float | None = None
+    respiratory_rate_mean: float | None = None
+    lf_power_mean: float | None = None
+    hf_power_mean: float | None = None
     motion_mean: float | None = None
 
 

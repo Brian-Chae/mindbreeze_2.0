@@ -251,6 +251,7 @@ def _store_feature(session_id, participant_id, current_user_id, feature):
             raise ValueError("세션을 찾을 수 없습니다")
         participant = session_service.resolve_upload_participant(sid, participant_id, current_user_id, db)
         saved = session_service.persist_feature_windows(sid, participant, [item], db)
+        # 공통 입력 계약 전체를 전송: 마음 지표 + BPM·호흡수·HRV, 미측정은 null.
         return saved, str(participant.id), item.model_dump()
     finally:
         db.close()

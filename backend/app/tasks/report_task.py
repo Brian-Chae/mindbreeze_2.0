@@ -113,13 +113,21 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
 
     # 7지표 — null 보존 (0 치환 금지)
     metrics = {k: getattr(m, k) for k in eeg_metrics.DEFAULT_SCORE_WEIGHTS}
-    # 3채널 타임라인 (t=초 인덱스, 원천 feature 그대로 — 스케일링은 프론트 담당)
+    # 마음·몸 지표 타임라인 (t=초 인덱스, 원천 feature 그대로 — 스케일링은 프론트 담당)
     timeline = [
         {
             "t": w.window_index,
             "concentration": w.focus_index,
             "relaxation": w.relaxation_index,
             "stress": w.stress_index,
+            "heart_rate": w.heart_rate,
+            "respiratory_rate": w.respiratory_rate,
+            "sdnn": w.sdnn,
+            "rmssd": w.rmssd,
+            "lf_power": w.lf_power,
+            "hf_power": w.hf_power,
+            "lf_hf_ratio": w.lf_hf_ratio,
+            "motion": w.motion,
         }
         for w in windows
     ]

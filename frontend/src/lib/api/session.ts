@@ -149,6 +149,10 @@ export interface SessionLiveMetric {
   signal_quality?: number | null;
   /** ok | degraded | invalid | unknown */
   signal_quality_level?: 'ok' | 'degraded' | 'invalid' | 'unknown' | null;
+  /** 몸 지표 — BPM (산출 불가 시 null) */
+  heart_rate?: number | null;
+  /** 몸 지표 — 호흡수 breaths/min (산출 불가 시 null) */
+  respiratory_rate?: number | null;
 }
 
 export interface SessionLiveMetricsResponse {
@@ -185,6 +189,8 @@ export interface EegFeatureItem {
   hf_power?: number | null;
   lf_hf_ratio?: number | null;
   heart_rate?: number | null;
+  /** PPG RSA 호흡수(breaths/min). 산출 불가 시 null */
+  respiratory_rate?: number | null;
   /** 움직임 활동도 0~1 */
   motion?: number | null;
 }

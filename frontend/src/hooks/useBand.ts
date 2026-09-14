@@ -95,6 +95,14 @@ export interface UseBandResult {
   currentEfficiency: number | null;
   focusIndex: number | null;
   stressIndex: number | null;
+  /** 몸 지표 — BPM (산출 불가 시 null) */
+  heartRate: number | null;
+  /** 몸 지표 — 호흡수 breaths/min (산출 불가 시 null) */
+  respiratoryRate: number | null;
+  /** HRV SDNN (ms) */
+  sdnn: number | null;
+  /** HRV RMSSD (ms) */
+  rmssd: number | null;
   bandPowers: BandPowers | null;
   chartPoints: BandChartPoint[];
   uploadStatus: UploadStatus;
@@ -147,6 +155,7 @@ function metricsToFeature(
     hf_power: hrv.getCurrentHfPower(),
     lf_hf_ratio: hrv.getCurrentLfHfRatio(),
     heart_rate: hrv.getCurrentHeartRate(),
+    respiratory_rate: hrv.getCurrentRespiratoryRate(),
     motion: hrv.getCurrentMotion(),
   };
 }
@@ -181,6 +190,10 @@ export function useBand({
   const [currentEfficiency, setCurrentEfficiency] = useState<number | null>(null);
   const [focusIndex, setFocusIndex] = useState<number | null>(null);
   const [stressIndex, setStressIndex] = useState<number | null>(null);
+  const [heartRate, setHeartRate] = useState<number | null>(null);
+  const [respiratoryRate, setRespiratoryRate] = useState<number | null>(null);
+  const [sdnn, setSdnn] = useState<number | null>(null);
+  const [rmssd, setRmssd] = useState<number | null>(null);
   const [bandPowers, setBandPowers] = useState<BandPowers | null>(null);
   const [chartPoints, setChartPoints] = useState<BandChartPoint[]>([]);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>('idle');
@@ -425,6 +438,12 @@ export function useBand({
       setCurrentEfficiency(metrics.relaxationIndex);
       setFocusIndex(metrics.focusIndex);
       setStressIndex(metrics.stressIndex);
+      // 몸 지표 — AnalysisMetricsService 싱글톤에서 null 보존 읽기
+      const body = AnalysisMetricsService.getInstance();
+      setHeartRate(body.getCurrentHeartRate());
+      setRespiratoryRate(body.getCurrentRespiratoryRate());
+      setSdnn(body.getCurrentSDNN());
+      setRmssd(body.getCurrentRMSSD());
       setSignalQuality(sqi);
       signalQualityRef.current = sqi;
       setLastEegAt(nowIso);
@@ -799,6 +818,10 @@ export function useBand({
     currentEfficiency,
     focusIndex,
     stressIndex,
+    heartRate,
+    respiratoryRate,
+    sdnn,
+    rmssd,
     bandPowers,
     chartPoints,
     uploadStatus,

@@ -110,8 +110,17 @@ export default function SessionLivePage() {
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
   // WS 1초 feature 즉시 갱신 스로틀 — 1초마다 재렌더되어 "밀려서" 보이는 것을 막는다.
   const lastFeaturePatchAtRef = useRef(0);
-  // participant별 두뇌휴식도(1초 feature) 누적 버퍼 — 3초 구간 평균 표시용
-  const featureBufferRef = useRef<Map<string, number[]>>(new Map());
+  // participant별 1초 feature 누적 버퍼 — 3초 구간 평균 표시용 (두뇌휴식도·BPM·호흡수)
+  const featureBufferRef = useRef<
+    Map<
+      string,
+      {
+        efficiency: number[];
+        heartRate: number[];
+        respiratoryRate: number[];
+      }
+    >
+  >(new Map());
   const [error, setError] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
@@ -152,11 +161,21 @@ export default function SessionLivePage() {
         event.relaxation_index ??
         event.feature?.relaxation_index ??
         null;
-      // 1초 feature의 두뇌휴식도를 participant별 버퍼에 누적
-      if (event.participant_id && typeof efficiency === 'number') {
-        const arr = featureBufferRef.current.get(event.participant_id) ?? [];
-        arr.push(efficiency);
-        featureBufferRef.current.set(event.participant_id, arr);
+      const heartRate = event.feature?.heart_rate ?? null;
+      const respiratoryRate = event.feature?.respiratory_rate ?? null;
+      // 1초 feature를 participant별 버퍼에 누적 (유효 숫자만)
+      if (event.participant_id) {
+        const buf = featureBufferRef.current.get(event.participant_id) ?? {
+          efficiency: [],
+          heartRate: [],
+          respiratoryRate: [],
+        };
+        if (typeof efficiency === 'number') buf.efficiency.push(efficiency);
+        if (typeof heartRate === 'number') buf.heartRate.push(heartRate);
+        if (typeof respiratoryRate === 'number') {
+          buf.respiratoryRate.push(respiratoryRate);
+        }
+        featureBufferRef.current.set(event.participant_id, buf);
       }
       // 3초 간격으로 버퍼의 평균값을 반영 — 매 초 튀는 최신값 대신 구간 평균 표시
       if (now - lastFeaturePatchAtRef.current < 3000) return;
@@ -165,15 +184,35 @@ export default function SessionLivePage() {
         let next = prev;
         let changed = false;
         for (const [pid, values] of featureBufferRef.current) {
-          if (values.length === 0) continue;
-          const avg = values.reduce((s, v) => s + v, 0) / values.length;
+          const hasAny =
+            values.efficiency.length > 0 ||
+            values.heartRate.length > 0 ||
+            values.respiratoryRate.length > 0;
+          if (!hasAny) continue;
+          const avgOf = (arr: number[]): number | null =>
+            arr.length > 0
+              ? arr.reduce((s, v) => s + v, 0) / arr.length
+              : null;
+          const avgEff = avgOf(values.efficiency);
+          const avgHr = avgOf(values.heartRate);
+          const avgRr = avgOf(values.respiratoryRate);
           const averaged: SessionLiveEegFeatureEvent = {
             ...event,
             participant_id: pid,
-            current_efficiency: avg,
-            relaxation_index: avg,
+            current_efficiency: avgEff,
+            relaxation_index: avgEff,
+            feature: {
+              ...event.feature,
+              second_offset: event.feature?.second_offset ?? 0,
+              relaxation_index: avgEff,
+              heart_rate: avgHr,
+              respiratory_rate: avgRr,
+            },
           };
-          const { rows, unchanged } = applyEegFeatureToMetricsDetailed(next, averaged);
+          const { rows, unchanged } = applyEegFeatureToMetricsDetailed(
+            next,
+            averaged,
+          );
           if (!unchanged) {
             next = rows;
             changed = true;

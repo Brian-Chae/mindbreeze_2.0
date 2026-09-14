@@ -750,7 +750,8 @@ export class StreamProcessor {
           hrMax: null as number | null,
           hrMin: null as number | null,
           triangularIndex: 0,
-          respiratoryRate: 0,
+          // 호흡수 — 산출 불가 시 null (0 치환 금지)
+          respiratoryRate: null as number | null,
           respiratoryVariability: 0,
           respiratoryDepth: 0,
           respiratoryRegularity: 0,
@@ -783,7 +784,8 @@ export class StreamProcessor {
                 hrMax: hrv.hrMax,
                 hrMin: hrv.hrMin,
                 triangularIndex: 0,
-                respiratoryRate: 0,
+                // 호흡수 — getCurrentRespiratoryRate null 보존
+                respiratoryRate: hrv.respiratoryRate,
                 respiratoryVariability: 0,
                 respiratoryDepth: 0,
                 respiratoryRegularity: 0,

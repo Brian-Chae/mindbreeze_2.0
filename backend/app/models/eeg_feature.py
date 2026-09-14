@@ -89,6 +89,7 @@ class EEGFeatureWindow(Base):
     hf_power: Mapped[float | None] = mapped_column(Float, nullable=True)
     lf_hf_ratio: Mapped[float | None] = mapped_column(Float, nullable=True)
     heart_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    respiratory_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     motion: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

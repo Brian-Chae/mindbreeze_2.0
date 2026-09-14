@@ -1241,6 +1241,7 @@ def persist_feature_windows(
             hf_power=f.hf_power,
             lf_hf_ratio=f.lf_hf_ratio,
             heart_rate=f.heart_rate,
+            respiratory_rate=f.respiratory_rate,
             motion=f.motion,
         )
         try:

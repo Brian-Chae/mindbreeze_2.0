@@ -21,6 +21,8 @@ class ReportApprovalRequest(BaseModel):
 
 
 class ReportResponse(HRVMotionSummary):
+    """몸 지표 평균·심박수 최소/최대는 공통 요약 계약을 상속한다."""
+
     id: str
     session_id: str
     # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유)

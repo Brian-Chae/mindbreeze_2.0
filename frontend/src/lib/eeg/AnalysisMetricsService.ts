@@ -53,6 +53,8 @@ export interface HrvMetricsSnapshot {
   hrMin: number | null;
   heartRate: number | null;
   motion: number | null;
+  /** PPG RSA 기반 호흡수(breaths/min). 산출 불가·생리범위 밖이면 null */
+  respiratoryRate: number | null;
 }
 
 /** 분석 지표 싱글톤 — StreamProcessor가 호출, useBand가 구독 */
@@ -86,6 +88,8 @@ export class AnalysisMetricsService {
   private currentHeartRate: number | null = null;
   /** ACC 움직임 활동도 0~1 */
   private currentMotion: number | null = null;
+  /** PPG RSA 호흡수(breaths/min). 불가 시 null (0 치환 금지) */
+  private currentRespiratoryRate: number | null = null;
 
   private hasTimeDomainMetrics = false;
   private hasFrequencyDomainMetrics = false;
@@ -229,6 +233,7 @@ export class AnalysisMetricsService {
       hrMin: this.getCurrentHRMin(),
       heartRate: this.getCurrentHeartRate(),
       motion: this.getCurrentMotion(),
+      respiratoryRate: this.getCurrentRespiratoryRate(),
     };
   }
 
@@ -288,6 +293,11 @@ export class AnalysisMetricsService {
     return this.currentMotion;
   }
 
+  /** PPG RSA 호흡수(breaths/min). 버퍼 부족·생리범위 밖이면 null */
+  getCurrentRespiratoryRate(): number | null {
+    return this.currentRespiratoryRate;
+  }
+
   getRRBufferStatus(): {
     isReady: boolean;
     bufferSize: number;
@@ -343,11 +353,13 @@ export class AnalysisMetricsService {
     }
   }
 
-  /** RR 버퍼 기반 전체 HRV 분석 (시간·스트레스·심박통계·주파수) */
+  /** RR 버퍼 기반 전체 HRV 분석 (시간·스트레스·심박통계·주파수·호흡수) */
   private calculateLFHF(): void {
     const currentTime = Date.now();
 
     if (this.rrIntervalBuffer.length < 30) {
+      // 버퍼 부족 시 호흡수는 null 유지 (0 치환 금지)
+      this.currentRespiratoryRate = null;
       return;
     }
 
@@ -363,10 +375,60 @@ export class AnalysisMetricsService {
       this.calculateStressMetrics(rrCopy);
       this.updateHeartRateStatistics();
       this.calculateFrequencyDomainMetrics(rrCopy);
+      this.calculateRespiratoryRate(rrCopy);
       this.lastLfHfCalculation = currentTime;
     } catch (error) {
       console.error('❌ RR 간격 버퍼 기반 HRV 분석 실패:', error);
+      this.currentRespiratoryRate = null;
     }
+  }
+
+  /**
+   * PPG RSA 호흡수 — RR → 4Hz 재샘플 → 0.15~0.4Hz 지배 주파수 × 60.
+   * 생리 범위 6~40 breaths/min 밖·산출 불가는 null.
+   */
+  private calculateRespiratoryRate(rrIntervals: number[]): void {
+    if (rrIntervals.length < 30) {
+      this.currentRespiratoryRate = null;
+      return;
+    }
+
+    const resamplingFs = 4.0;
+    const resampledRR = this.resampleRRIntervals(rrIntervals, resamplingFs);
+    if (resampledRR.length < 16) {
+      this.currentRespiratoryRate = null;
+      return;
+    }
+
+    const { frequencies, powerSpectralDensity } = this.computeWelchPeriodogram(
+      resampledRR,
+      resamplingFs,
+    );
+
+    let maxPower = -Infinity;
+    let dominantFreq: number | null = null;
+    for (let i = 0; i < frequencies.length; i++) {
+      const freq = frequencies[i];
+      if (freq < 0.15 || freq > 0.4) continue;
+      const power = powerSpectralDensity[i];
+      if (power > maxPower) {
+        maxPower = power;
+        dominantFreq = freq;
+      }
+    }
+
+    if (dominantFreq == null || !(maxPower > 0) || !Number.isFinite(dominantFreq)) {
+      this.currentRespiratoryRate = null;
+      return;
+    }
+
+    const rate = dominantFreq * 60;
+    if (rate < 6 || rate > 40 || !Number.isFinite(rate)) {
+      this.currentRespiratoryRate = null;
+      return;
+    }
+
+    this.currentRespiratoryRate = rate;
   }
 
   private calculateTimeDomainMetrics(rrIntervals: number[]): void {
