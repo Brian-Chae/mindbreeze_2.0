@@ -898,7 +898,9 @@ export function useBand({
       // Web Bluetooth requestDevice는 사용자 제스처(클릭) 내에서 즉시 호출해야 하므로
       // 디바이스 선택(scan)을 맨 앞에서 수행해 다이얼로그가 정상적으로 뜨도록 한다.
       let selectedDeviceId: string | null = null;
-      if (!isMock) {
+      // 전역(singleton) BLE 연결이 이미 살아있으면 scan/connect를 건너뛰고 스트림만 재시작한다.
+      const alreadyConnected = !isMock && bluetoothService.isConnected();
+      if (!isMock && !alreadyConnected) {
         const devices = await bluetoothService.scan();
         if (devices.length === 0) {
           throw new Error('LINK BAND 디바이스를 찾지 못했습니다');
@@ -980,7 +982,9 @@ export function useBand({
       });
       await stream.start();
 
-      await bluetoothService.connect(selectedDeviceId!);
+      if (!alreadyConnected) {
+        await bluetoothService.connect(selectedDeviceId!);
+      }
 
       try {
         const level = await bluetoothService.getBatteryLevel();
@@ -1026,6 +1030,17 @@ export function useBand({
     sessionId,
     startMock,
   ]);
+
+  // mount 시 전역(singleton) BLE 연결이 이미 살아있으면 스트림을 재시작한다.
+  // (waiting→meditation 전환 시 컴포넌트 remount로 StreamProcessor가 새로 생성되므로)
+  const connectRef = useRef(connect);
+  connectRef.current = connect;
+  useEffect(() => {
+    if (bluetoothService.isConnected() && !isMock) {
+      void connectRef.current();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // `/session-live` 연결 + join + ACK/본인 eeg_feature 구독
   useEffect(() => {
