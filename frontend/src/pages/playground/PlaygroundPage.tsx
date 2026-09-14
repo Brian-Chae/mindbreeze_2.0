@@ -28,7 +28,7 @@ const DEFAULT_TREND_METRICS = ['focusIndex', 'relaxationIndex', 'stressIndex'];
 const MAX_LOGS = 500;
 
 export default function PlaygroundPage() {
-  const [useMock, setUseMock] = useState(true);
+  const [useMock, setUseMock] = useState(false);
   const band = useBand({
     sessionId: 'playground-observation',
     participantId: null,
@@ -101,10 +101,7 @@ export default function PlaygroundPage() {
       : null;
 
   return (
-    <AppShell
-      title="플레이그라운드"
-      sub="LINK BAND(mock) 관찰 전용 · 파형/스펙트럼/PPG/ACC/지표 파이프라인 검증 (SDD-034)"
-    >
+    <AppShell title="플레이그라운드">
       <div className="mx-auto max-w-6xl space-y-4">
         <ConnectionPanel band={band} useMock={useMock} onToggleMock={() => setUseMock((v) => !v)} />
 
