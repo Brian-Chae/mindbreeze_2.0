@@ -47,6 +47,16 @@ import {
   type SessionLiveEegFeatureEvent,
   type SessionLiveFeatureAck,
 } from '../lib/socket';
+import type {
+  BandAccSnapshot,
+  BandEegWaveform,
+  BandPpgWaveform,
+  BandRawIndices,
+  BandSensors,
+  BandSensorState,
+  BandSpectrum,
+  WaveformPoint,
+} from '../types/playground';
 
 const logger = createLogger('useBand');
 
@@ -56,6 +66,31 @@ const CHART_MAX_POINTS = 60;
 /** 종료 drain 최대 대기 */
 const DRAIN_MAX_MS = 15_000;
 const DRAIN_POLL_MS = 200;
+/** playground 파형 보관 상한 — EEG 5초@250Hz / PPG 4초@50Hz / ACC 5초@30Hz */
+const EEG_WAVEFORM_MAX = 1250;
+const PPG_WAVEFORM_MAX = 200;
+const ACC_WAVEFORM_MAX = 150;
+/** 고빈도 파형 state 플러시 주기 (ms) */
+const PLAYGROUND_FLUSH_MS = 200;
+
+const INITIAL_SENSORS: BandSensors = {
+  leftElectrode: 'loading',
+  rightElectrode: 'loading',
+  ppgSensor: 'loading',
+  signalQuality: 'loading',
+};
+
+const INITIAL_ACC: BandAccSnapshot = {
+  magnitude: [],
+  magnitudeWaveform: [],
+  movement: 0,
+  intensity: 0,
+  activityType: 'stationary',
+  tiltAngle: 0,
+  stability: 0,
+  avgMovement: 0,
+  maxMovement: 0,
+};
 
 export type BandConnectionState =
   | 'unsupported'
@@ -76,6 +111,13 @@ export interface UseBandOptions {
   enabled?: boolean;
   /** 게스트 등 비인증 업로드 시 true */
   skipAuth?: boolean;
+  /**
+   * playground 관찰 전용 — IndexedDB 큐·WS 업로드 없이 로컬 스트림만.
+   * sessionId가 비어 있어도 연결·지표 갱신이 동작한다.
+   */
+  observationOnly?: boolean;
+  /** true면 VITE_USE_MOCK_EEG와 무관하게 mockDataGenerator 경로 사용 */
+  forceMock?: boolean;
 }
 
 export interface UseBandResult {
@@ -110,6 +152,25 @@ export interface UseBandResult {
   isWsConnected: boolean;
   pendingCount: number;
   error: string | null;
+  /** playground — EEG 필터 파형 (FP1/FP2) */
+  eegWaveform: BandEegWaveform;
+  /** playground — 주파수 스펙트럼 */
+  spectrum: BandSpectrum | null;
+  /** playground — PPG 필터 파형 */
+  ppgWaveform: BandPpgWaveform;
+  /** playground — ACC 요약 + magnitude */
+  acc: BandAccSnapshot;
+  /** playground — 7지표 raw */
+  rawIndices: BandRawIndices | null;
+  /** playground — 전극/센서 접촉 */
+  sensors: BandSensors;
+  /** playground — 연결 이후 경과 초 */
+  connectedElapsedSec: number;
+  /** WaveformCanvas용 — React 리렌더 없이 최신 EEG 샘플 */
+  getEegWaveformSamples: () => { fp1: number[]; fp2: number[] };
+  /** WaveformCanvas용 — 최신 PPG IR/RED */
+  getPpgWaveformSamples: () => BandPpgWaveform;
+  clearBuffers: () => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
 }
@@ -118,8 +179,37 @@ function isWebBluetoothSupported(): boolean {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
 }
 
-function useMockEeg(): boolean {
+function envMockEeg(): boolean {
   return import.meta.env.VITE_USE_MOCK_EEG === 'true';
+}
+
+function sensorFromLeadOff(leadOff: LeadOffStatus | null, connected: boolean): BandSensors {
+  if (!connected) return { ...INITIAL_SENSORS };
+  if (!leadOff) {
+    return {
+      leftElectrode: 'loading',
+      rightElectrode: 'loading',
+      ppgSensor: 'loading',
+      signalQuality: 'loading',
+    };
+  }
+  const left: BandSensorState = leadOff.ch1 ? 'bad' : 'good';
+  const right: BandSensorState = leadOff.ch2 ? 'bad' : 'good';
+  const quality: BandSensorState = leadOff.ch1 || leadOff.ch2 ? 'bad' : 'good';
+  return {
+    leftElectrode: left,
+    rightElectrode: right,
+    ppgSensor: 'good',
+    signalQuality: quality,
+  };
+}
+
+function trimWaveform(points: WaveformPoint[], max: number): WaveformPoint[] {
+  return points.length > max ? points.slice(points.length - max) : points;
+}
+
+function trimNumbers(values: number[], max: number): number[] {
+  return values.length > max ? values.slice(values.length - max) : values;
 }
 
 function metricsToFeature(
@@ -173,8 +263,10 @@ export function useBand({
   participantId,
   enabled = true,
   skipAuth = false,
+  observationOnly = false,
+  forceMock = false,
 }: UseBandOptions): UseBandResult {
-  const isMock = useMockEeg();
+  const isMock = forceMock || envMockEeg();
   const isSupported = isMock || isWebBluetoothSupported();
 
   const [connectionState, setConnectionState] = useState<BandConnectionState>(() => {
@@ -200,6 +292,13 @@ export function useBand({
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [eegWaveform, setEegWaveform] = useState<BandEegWaveform>({ fp1: [], fp2: [] });
+  const [spectrum, setSpectrum] = useState<BandSpectrum | null>(null);
+  const [ppgWaveform, setPpgWaveform] = useState<BandPpgWaveform>({ red: [], ir: [] });
+  const [acc, setAcc] = useState<BandAccSnapshot>(INITIAL_ACC);
+  const [rawIndices, setRawIndices] = useState<BandRawIndices | null>(null);
+  const [sensors, setSensors] = useState<BandSensors>(INITIAL_SENSORS);
+  const [connectedElapsedSec, setConnectedElapsedSec] = useState(0);
 
   const streamRef = useRef<StreamProcessor | null>(null);
   const secondOffsetRef = useRef(0);
@@ -212,11 +311,22 @@ export function useBand({
   const leadOffRef = useRef<LeadOffStatus | null>(null);
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mockTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const playgroundFlushRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const connectedAtRef = useRef<number | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
   const wsConnectedRef = useRef(false);
   const drainingRef = useRef(false);
+  const observationOnlyRef = useRef(observationOnly);
+  observationOnlyRef.current = observationOnly;
   const participantIdRef = useRef(participantId);
   participantIdRef.current = participantId;
+
+  const eegWaveformRef = useRef<BandEegWaveform>({ fp1: [], fp2: [] });
+  const ppgWaveformRef = useRef<BandPpgWaveform>({ red: [], ir: [] });
+  const spectrumRef = useRef<BandSpectrum | null>(null);
+  const accRef = useRef<BandAccSnapshot>(INITIAL_ACC);
+  const playgroundDirtyRef = useRef(false);
 
   const sqLevel = signalQualityLevel(
     signalQuality == null ? null : toApiSignalQuality(signalQuality),
@@ -391,48 +501,54 @@ export function useBand({
 
   const ingestMetrics = useCallback(
     (metrics: EEGAnalysisMetrics, powers: BandPowers | null, sqi: number | null) => {
-      if (!collectingRef.current || !cursorReadyRef.current || drainingRef.current) {
+      if (!collectingRef.current || drainingRef.current) {
         return;
       }
-      if (!sessionId || !streamIdRef.current) return;
 
-      const offset = secondOffsetRef.current++;
-      const feature = metricsToFeature(metrics, offset, powers, sqi);
-      const contactStatus = deviceStatusFromLeadOff(true, leadOffRef.current);
-      const signal01 =
-        sqi == null ? null : toApiSignalQuality(sqi);
+      const observation = observationOnlyRef.current;
+      if (!observation && (!cursorReadyRef.current || !sessionId || !streamIdRef.current)) {
+        return;
+      }
+
       const nowIso = new Date(metrics.timestamp || Date.now()).toISOString();
+      const contactStatus = deviceStatusFromLeadOff(true, leadOffRef.current);
+      const signal01 = sqi == null ? null : toApiSignalQuality(sqi);
 
-      // 전송 전 IndexedDB 큐 적재 (emit 성공 ≠ 저장 성공)
-      void (async () => {
-        try {
-          const item = await enqueueFeature({
-            sessionId,
-            participantId: participantIdRef.current,
-            streamId: streamIdRef.current,
-            sequence: offset,
-            feature,
-            bandBattery: batteryRef.current,
-            deviceStatus: contactStatus,
-            leadOff: leadOffRef.current,
-            signalQuality: signal01,
-            createdAt: Date.now(),
-          });
-          if (mountedRef.current) {
-            setPendingCount((c) => c + 1);
-            setUploadStatus('streaming');
+      if (!observation && sessionId && streamIdRef.current && cursorReadyRef.current) {
+        const offset = secondOffsetRef.current++;
+        const feature = metricsToFeature(metrics, offset, powers, sqi);
+
+        // 전송 전 IndexedDB 큐 적재 (emit 성공 ≠ 저장 성공)
+        void (async () => {
+          try {
+            const item = await enqueueFeature({
+              sessionId,
+              participantId: participantIdRef.current,
+              streamId: streamIdRef.current,
+              sequence: offset,
+              feature,
+              bandBattery: batteryRef.current,
+              deviceStatus: contactStatus,
+              leadOff: leadOffRef.current,
+              signalQuality: signal01,
+              createdAt: Date.now(),
+            });
+            if (mountedRef.current) {
+              setPendingCount((c) => c + 1);
+              setUploadStatus('streaming');
+            }
+            if (wsConnectedRef.current) {
+              emitQueuedItem(item);
+            }
+          } catch (err) {
+            logger.error('영속 큐 적재 실패', err);
+            if (mountedRef.current) {
+              setUploadStatus('failed');
+              setError(err instanceof Error ? err.message : 'EEG 큐 저장 실패');
+            }
           }
-          if (wsConnectedRef.current) {
-            emitQueuedItem(item);
-          }
-        } catch (err) {
-          logger.error('영속 큐 적재 실패', err);
-          if (mountedRef.current) {
-            setUploadStatus('failed');
-            setError(err instanceof Error ? err.message : 'EEG 큐 저장 실패');
-          }
-        }
-      })();
+        })();
+      }
 
       if (!mountedRef.current) return;
       setCurrentEfficiency(metrics.relaxationIndex);
@@ -451,6 +567,16 @@ export function useBand({
         setBandPowers(powers);
         bandPowersRef.current = powers;
       }
+      setRawIndices({
+        focusIndex: metrics.focusIndex,
+        relaxationIndex: metrics.relaxationIndex,
+        stressIndex: metrics.stressIndex,
+        cognitiveLoad: metrics.cognitiveLoad,
+        emotionalStability: metrics.emotionalStability,
+        hemisphericBalance: metrics.hemisphericBalance,
+        totalNeuralActivity: metrics.totalPower,
+      });
+      setSensors(sensorFromLeadOff(leadOffRef.current, true));
       pushChartPoint(metrics.relaxationIndex);
     },
     [emitQueuedItem, pushChartPoint, sessionId],
@@ -463,11 +589,86 @@ export function useBand({
     }
   }, []);
 
+  const applyMockWaveforms = useCallback(() => {
+    const now = Date.now();
+    const eegRaw = mockDataGenerator.generateEEGRaw(250);
+    const nextEeg: BandEegWaveform = {
+      fp1: trimWaveform(
+        [
+          ...eegWaveformRef.current.fp1,
+          ...eegRaw.map((p) => ({ timestamp: p.timestamp, value: p.fp1 })),
+        ],
+        EEG_WAVEFORM_MAX,
+      ),
+      fp2: trimWaveform(
+        [
+          ...eegWaveformRef.current.fp2,
+          ...eegRaw.map((p) => ({ timestamp: p.timestamp, value: p.fp2 })),
+        ],
+        EEG_WAVEFORM_MAX,
+      ),
+    };
+    eegWaveformRef.current = nextEeg;
+
+    const ppgRaw = mockDataGenerator.generatePPGRaw(50);
+    const nextPpg: BandPpgWaveform = {
+      red: trimNumbers(
+        [...ppgWaveformRef.current.red, ...ppgRaw.map((p) => p.red)],
+        PPG_WAVEFORM_MAX,
+      ),
+      ir: trimNumbers(
+        [...ppgWaveformRef.current.ir, ...ppgRaw.map((p) => p.ir)],
+        PPG_WAVEFORM_MAX,
+      ),
+    };
+    ppgWaveformRef.current = nextPpg;
+
+    const freqs = Array.from({ length: 64 }, (_, i) => i * 0.5 + 0.5);
+    const ch1 = freqs.map((f) => 20 + Math.sin(f) * 8 + Math.random() * 5);
+    const ch2 = freqs.map((f) => 18 + Math.cos(f) * 8 + Math.random() * 5);
+    const domIdx = ch1.indexOf(Math.max(...ch1));
+    spectrumRef.current = {
+      frequencies: freqs,
+      ch1Power: ch1,
+      ch2Power: ch2,
+      dominantFrequency: freqs[domIdx] ?? 10,
+    };
+
+    const accRaw = mockDataGenerator.generateACCRaw(30);
+    const accMetrics = mockDataGenerator.generateACCAnalysis();
+    const magPoints: WaveformPoint[] = accRaw.map((p) => ({
+      timestamp: p.timestamp,
+      value: p.magnitude,
+    }));
+    const mergedMag = trimWaveform(
+      [...accRef.current.magnitudeWaveform, ...magPoints],
+      ACC_WAVEFORM_MAX,
+    );
+    accRef.current = {
+      magnitude: mergedMag.map((p) => p.value),
+      magnitudeWaveform: mergedMag,
+      movement: accMetrics.avgMovement,
+      intensity: accMetrics.intensity,
+      activityType: accMetrics.activityState,
+      tiltAngle: 0,
+      stability: accMetrics.stability,
+      avgMovement: accMetrics.avgMovement,
+      maxMovement: accMetrics.maxMovement,
+    };
+    playgroundDirtyRef.current = true;
+    void now;
+  }, []);
+
   const startMock = useCallback(() => {
     stopMock();
     collectingRef.current = true;
+    if (observationOnlyRef.current) {
+      cursorReadyRef.current = true;
+      streamIdRef.current = streamIdRef.current || 'playground-mock';
+    }
     mockTimerRef.current = setInterval(() => {
       const analysis = mockDataGenerator.generateEEGAnalysis();
+      const ppgAnalysis = mockDataGenerator.generatePPGAnalysis();
       const powers: BandPowers = {
         delta: 20 + Math.random() * 10,
         theta: 15 + Math.random() * 10,
@@ -479,14 +680,125 @@ export function useBand({
       // mock: 접촉 정상
       leadOffRef.current = { ch1: false, ch2: false };
       if (mountedRef.current) setLeadOff({ ch1: false, ch2: false });
+      applyMockWaveforms();
       ingestMetrics(analysis, powers, sqi);
+      // mock PPG 몸 지표 — AnalysisMetricsService 버퍼가 비어 있을 때 직접 승격
+      if (mountedRef.current) {
+        setHeartRate(ppgAnalysis.bpm);
+        setSdnn(ppgAnalysis.sdnn);
+        setRmssd(ppgAnalysis.rmssd);
+        setRespiratoryRate(12 + Math.random() * 6);
+      }
       setBattery((prev) => {
         const next = prev === null ? 85 : Math.max(5, prev - 0.01);
         batteryRef.current = next;
         return next;
       });
     }, MOCK_TICK_MS);
-  }, [ingestMetrics, stopMock]);
+  }, [applyMockWaveforms, ingestMetrics, stopMock]);
+
+  const clearBuffers = useCallback(() => {
+    eegWaveformRef.current = { fp1: [], fp2: [] };
+    ppgWaveformRef.current = { red: [], ir: [] };
+    spectrumRef.current = null;
+    accRef.current = INITIAL_ACC;
+    setEegWaveform({ fp1: [], fp2: [] });
+    setPpgWaveform({ red: [], ir: [] });
+    setSpectrum(null);
+    setAcc(INITIAL_ACC);
+    streamRef.current?.clearBuffers();
+  }, []);
+
+  const getEegWaveformSamples = useCallback(
+    () => ({
+      fp1: eegWaveformRef.current.fp1.map((p) => p.value),
+      fp2: eegWaveformRef.current.fp2.map((p) => p.value),
+    }),
+    [],
+  );
+
+  const getPpgWaveformSamples = useCallback(() => ({ ...ppgWaveformRef.current }), []);
+
+  const handleStoreUpdate = useCallback((action: string, ...args: unknown[]) => {
+    if (action === 'updateEEGGraphData') {
+      const fp1 = (args[0] as WaveformPoint[] | undefined) ?? [];
+      const fp2 = (args[1] as WaveformPoint[] | undefined) ?? [];
+      eegWaveformRef.current = {
+        fp1: trimWaveform([...eegWaveformRef.current.fp1, ...fp1], EEG_WAVEFORM_MAX),
+        fp2: trimWaveform([...eegWaveformRef.current.fp2, ...fp2], EEG_WAVEFORM_MAX),
+      };
+      playgroundDirtyRef.current = true;
+      return;
+    }
+    if (action === 'updatePPGGraphData') {
+      const red = ((args[0] as WaveformPoint[] | undefined) ?? []).map((p) => p.value);
+      const ir = ((args[1] as WaveformPoint[] | undefined) ?? []).map((p) => p.value);
+      ppgWaveformRef.current = {
+        red: trimNumbers([...ppgWaveformRef.current.red, ...red], PPG_WAVEFORM_MAX),
+        ir: trimNumbers([...ppgWaveformRef.current.ir, ...ir], PPG_WAVEFORM_MAX),
+      };
+      playgroundDirtyRef.current = true;
+      return;
+    }
+    if (action === 'updateEEGAnalysis') {
+      const payload = args[0] as {
+        frequencySpectrum?: BandSpectrum | null;
+        indices?: Partial<BandRawIndices> | null;
+        bandPowers?: BandPowers | null;
+      };
+      if (payload?.frequencySpectrum) {
+        spectrumRef.current = payload.frequencySpectrum;
+        playgroundDirtyRef.current = true;
+      }
+      if (payload?.bandPowers) {
+        bandPowersRef.current = payload.bandPowers;
+        if (mountedRef.current) setBandPowers(payload.bandPowers);
+      }
+      if (payload?.indices && mountedRef.current) {
+        setRawIndices({
+          focusIndex: Number(payload.indices.focusIndex ?? 0),
+          relaxationIndex: Number(payload.indices.relaxationIndex ?? 0),
+          stressIndex: Number(payload.indices.stressIndex ?? 0),
+          cognitiveLoad: Number(payload.indices.cognitiveLoad ?? 0),
+          emotionalStability: Number(payload.indices.emotionalStability ?? 0),
+          hemisphericBalance: Number(payload.indices.hemisphericBalance ?? 0),
+          totalNeuralActivity: Number(payload.indices.totalNeuralActivity ?? 0),
+        });
+      }
+      return;
+    }
+    if (action === 'updateACCAnalysis') {
+      const payload = args[0] as {
+        magnitude?: WaveformPoint[];
+        indices?: {
+          activity?: number;
+          stability?: number;
+          intensity?: number;
+          activityState?: string;
+          avgMovement?: number;
+          maxMovement?: number;
+        };
+      };
+      const mag = payload?.magnitude ?? [];
+      const merged = trimWaveform(
+        [...accRef.current.magnitudeWaveform, ...mag],
+        ACC_WAVEFORM_MAX,
+      );
+      const idx = payload?.indices;
+      accRef.current = {
+        magnitude: merged.map((p) => p.value),
+        magnitudeWaveform: merged,
+        movement: idx?.avgMovement ?? accRef.current.movement,
+        intensity: idx?.intensity ?? accRef.current.intensity,
+        activityType: idx?.activityState ?? accRef.current.activityType,
+        tiltAngle: 0,
+        stability: idx?.stability ?? accRef.current.stability,
+        avgMovement: idx?.avgMovement ?? accRef.current.avgMovement,
+        maxMovement: idx?.maxMovement ?? accRef.current.maxMovement,
+      };
+      playgroundDirtyRef.current = true;
+    }
+  }, []);
 
   const disconnect = useCallback(async () => {
     // 새 수집 중단 후 기존 큐 drain
@@ -496,6 +808,11 @@ export function useBand({
       clearInterval(flushTimerRef.current);
       flushTimerRef.current = null;
     }
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+    connectedAtRef.current = null;
 
     if (streamRef.current) {
       streamRef.current.cleanup();
@@ -509,13 +826,27 @@ export function useBand({
       logger.warn('disconnect 중 오류', err);
     }
 
-    await drainPendingQueue();
+    if (!observationOnlyRef.current) {
+      await drainPendingQueue();
+    }
 
     if (mountedRef.current) {
       setConnectionState(isSupported ? 'disconnected' : 'unsupported');
       setUploadStatus('idle');
+      setConnectedElapsedSec(0);
+      setSensors(INITIAL_SENSORS);
     }
   }, [drainPendingQueue, isSupported, stopMock]);
+
+  const markConnected = useCallback(() => {
+    connectedAtRef.current = Date.now();
+    setConnectedElapsedSec(0);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    elapsedTimerRef.current = setInterval(() => {
+      if (!connectedAtRef.current || !mountedRef.current) return;
+      setConnectedElapsedSec(Math.floor((Date.now() - connectedAtRef.current) / 1000));
+    }, 1000);
+  }, []);
 
   const connect = useCallback(async () => {
     // BLE 연결 자체는 세션/참가자 정보와 무관하게 가능해야 한다.
@@ -541,18 +872,24 @@ export function useBand({
         selectedDeviceId = devices[0].id;
       }
 
-      // 확정 cursor 복구 — offset 0 재시작 금지
-      const cursor = await loadStreamCursor(sessionId, participantId);
-      streamIdRef.current = cursor.streamId;
-      secondOffsetRef.current = cursor.nextSequence;
-      cursorReadyRef.current = true;
-      await refreshPendingCount();
+      if (observationOnly) {
+        streamIdRef.current = 'playground-observation';
+        secondOffsetRef.current = 0;
+        cursorReadyRef.current = true;
+      } else {
+        // 확정 cursor 복구 — offset 0 재시작 금지
+        const cursor = await loadStreamCursor(sessionId, participantId);
+        streamIdRef.current = cursor.streamId;
+        secondOffsetRef.current = cursor.nextSequence;
+        cursorReadyRef.current = true;
+        await refreshPendingCount();
 
-      // REST 폴백 플러시 타이머 (미확정 큐 재전송)
-      if (flushTimerRef.current) clearInterval(flushTimerRef.current);
-      flushTimerRef.current = setInterval(() => {
-        void retransmitPending();
-      }, FEATURE_FLUSH_MS);
+        // REST 폴백 플러시 타이머 (미확정 큐 재전송)
+        if (flushTimerRef.current) clearInterval(flushTimerRef.current);
+        flushTimerRef.current = setInterval(() => {
+          void retransmitPending();
+        }, FEATURE_FLUSH_MS);
+      }
 
       if (isMock) {
         setConnectionState('connected');
@@ -560,7 +897,9 @@ export function useBand({
         batteryRef.current = 88;
         leadOffRef.current = { ch1: false, ch2: false };
         setLeadOff({ ch1: false, ch2: false });
-        setUploadStatus('streaming');
+        setSensors(sensorFromLeadOff({ ch1: false, ch2: false }, true));
+        setUploadStatus(observationOnly ? 'idle' : 'streaming');
+        markConnected();
         startMock();
         return;
       }
@@ -569,7 +908,10 @@ export function useBand({
         onSensorContactChanged: (ch1, ch2) => {
           const next: LeadOffStatus = { ch1, ch2 };
           leadOffRef.current = next;
-          if (mountedRef.current) setLeadOff(next);
+          if (mountedRef.current) {
+            setLeadOff(next);
+            setSensors(sensorFromLeadOff(next, true));
+          }
         },
       });
 
@@ -592,6 +934,7 @@ export function useBand({
         onError: (err) => {
           if (mountedRef.current) setError(err.message);
         },
+        onStoreUpdate: handleStoreUpdate,
       });
       stream.setStoreCallbacks({
         updateBatteryData: (data) => {
@@ -618,12 +961,14 @@ export function useBand({
           setConnectionState('disconnected');
           collectingRef.current = false;
           setError('LINK BAND 연결이 끊어졌습니다');
+          setSensors(INITIAL_SENSORS);
         }
       });
 
       collectingRef.current = true;
       setConnectionState('connected');
-      setUploadStatus('streaming');
+      setUploadStatus(observationOnly ? 'idle' : 'streaming');
+      markConnected();
     } catch (err) {
       logger.error('연결 실패', err);
       await disconnect();
@@ -635,9 +980,12 @@ export function useBand({
   }, [
     disconnect,
     enabled,
+    handleStoreUpdate,
     ingestMetrics,
     isMock,
     isSupported,
+    markConnected,
+    observationOnly,
     participantId,
     refreshPendingCount,
     retransmitPending,
@@ -647,7 +995,7 @@ export function useBand({
 
   // `/session-live` 연결 + join + ACK/본인 eeg_feature 구독
   useEffect(() => {
-    if (!enabled || !sessionId) {
+    if (observationOnly || !enabled || !sessionId) {
       wsConnectedRef.current = false;
       setIsWsConnected(false);
       return undefined;
@@ -757,11 +1105,32 @@ export function useBand({
       wsConnectedRef.current = false;
       if (mountedRef.current) setIsWsConnected(false);
     };
-  }, [enabled, sessionId, skipAuth, pushChartPoint, retransmitPending, handleFeatureAck]);
+  }, [enabled, observationOnly, sessionId, skipAuth, pushChartPoint, retransmitPending, handleFeatureAck]);
+
+  // playground 고빈도 파형 → React state 스로틀 플러시
+  useEffect(() => {
+    playgroundFlushRef.current = setInterval(() => {
+      if (!playgroundDirtyRef.current || !mountedRef.current) return;
+      playgroundDirtyRef.current = false;
+      setEegWaveform({
+        fp1: eegWaveformRef.current.fp1,
+        fp2: eegWaveformRef.current.fp2,
+      });
+      setPpgWaveform({ ...ppgWaveformRef.current });
+      setSpectrum(spectrumRef.current);
+      setAcc({ ...accRef.current });
+    }, PLAYGROUND_FLUSH_MS);
+    return () => {
+      if (playgroundFlushRef.current) {
+        clearInterval(playgroundFlushRef.current);
+        playgroundFlushRef.current = null;
+      }
+    };
+  }, []);
 
   // 훅 마운트 시 커서만 선행 로드 (연결 전 새로고침 복구)
   useEffect(() => {
-    if (!enabled || !sessionId) return;
+    if (observationOnly || !enabled || !sessionId) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -778,7 +1147,7 @@ export function useBand({
     return () => {
       cancelled = true;
     };
-  }, [enabled, sessionId, participantId, refreshPendingCount]);
+  }, [enabled, observationOnly, sessionId, participantId, refreshPendingCount]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -789,6 +1158,10 @@ export function useBand({
       if (flushTimerRef.current) {
         clearInterval(flushTimerRef.current);
         flushTimerRef.current = null;
+      }
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
       }
       if (streamRef.current) {
         streamRef.current.cleanup();
@@ -828,6 +1201,16 @@ export function useBand({
     isWsConnected,
     pendingCount,
     error,
+    eegWaveform,
+    spectrum,
+    ppgWaveform,
+    acc,
+    rawIndices,
+    sensors,
+    connectedElapsedSec,
+    getEegWaveformSamples,
+    getPpgWaveformSamples,
+    clearBuffers,
     connect,
     disconnect,
   };

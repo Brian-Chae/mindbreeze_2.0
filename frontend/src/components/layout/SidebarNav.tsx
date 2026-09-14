@@ -57,6 +57,10 @@ export const ICONS = {
     'M16 17l5-5-5-5',
     'M21 12H9',
   ],
+  /** activity / 플라스크 — 플레이그라운드 */
+  activity: [
+    'M22 12h-4l-3 9L9 3l-3 9H2',
+  ],
 };
 
 export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
@@ -84,6 +88,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/reports', label: '리포트', icon: ICONS.report },
+  { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
   { to: '/notifications', label: '알림', icon: ICONS.bell },
   { to: '/settings', label: '설정', icon: ICONS.settings },
 ];
