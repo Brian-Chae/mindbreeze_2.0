@@ -27,9 +27,11 @@ function formatElapsed(sec: number): string {
 
 interface Props {
   band: UseBandResult;
+  useMock: boolean;
+  onToggleMock: () => void;
 }
 
-export function ConnectionPanel({ band }: Props) {
+export function ConnectionPanel({ band, useMock, onToggleMock }: Props) {
   const connected = band.connectionState === 'connected';
   const isBusy = band.connectionState === 'connecting';
   const panelState =
@@ -54,9 +56,18 @@ export function ConnectionPanel({ band }: Props) {
       }
       state={panelState}
       actions={
-        <span className="rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] text-[#5F0080]">
-          {connected ? formatElapsed(band.connectedElapsedSec) : '--:--'}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleMock}
+            className="rounded-lg border border-[#C9B0E8] bg-[#F5EDFC] px-3 py-1.5 text-xs font-medium text-[#5F0080] hover:bg-[#EBDEF7]"
+          >
+            {useMock ? '실기기로 전환' : 'Mock으로 전환'}
+          </button>
+          <span className="rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] text-[#5F0080]">
+            {connected ? formatElapsed(band.connectedElapsedSec) : '--:--'}
+          </span>
+        </div>
       }
     >
       {browserHint && (
