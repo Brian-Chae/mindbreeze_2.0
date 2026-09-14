@@ -23,7 +23,7 @@ import {
   PPG_TREND_KEYS,
 } from '../../components/playground/trend-metric-keys';
 import { useBand } from '../../hooks/useBand';
-import { refreshActiveModel } from '../../lib/eeg/eegPersonalScore';
+import { getActiveModelCache, refreshActiveModel } from '../../lib/eeg/eegPersonalScore';
 import { useAuthStore } from '../../stores/authStore';
 import type { PlaygroundLogEntry } from '../../types/playground';
 
@@ -44,11 +44,12 @@ export default function PlaygroundPage() {
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_TREND_METRICS);
   const [debugPaused, setDebugPaused] = useState(false);
   const [logs, setLogs] = useState<PlaygroundLogEntry[]>([]);
+  const [activeModel, setActiveModel] = useState<ReturnType<typeof getActiveModelCache>>(null);
   const prevStatusRef = useRef(band.connectionState);
 
-  // 활성 표준 모델 프리페치 (지표 정규화 레이어)
+  // 활성 표준 모델 프리페치 (지표 정규화 레이어 + 현재 적용 모델 표시)
   useEffect(() => {
-    void refreshActiveModel();
+    void refreshActiveModel().then(() => setActiveModel(getActiveModelCache()));
   }, []);
 
   const appendLog = useCallback(
@@ -113,6 +114,21 @@ export default function PlaygroundPage() {
   return (
     <AppShell title="플레이그라운드">
       <div className="mx-auto max-w-6xl space-y-4">
+        {!isPlatformAdmin && (
+          <div className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-3">
+            <p className="text-xs text-[#6F6F6F]">
+              현재 적용된 표준 모델:{' '}
+              {activeModel ? (
+                <span className="font-medium text-[#1F8A5B]">
+                  v{activeModel.version} (n={activeModel.n_samples} 표본)
+                </span>
+              ) : (
+                <span className="font-medium text-[#8A6B1F]">코호트 상수 (B0)</span>
+              )}
+            </p>
+          </div>
+        )}
+
         <ConnectionPanel band={band} useMock={useMock} onToggleMock={() => setUseMock((v) => !v)} />
 
         <CalibrationPanel connected={connected} rawIndices={band.rawIndices} />
