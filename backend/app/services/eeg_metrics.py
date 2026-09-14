@@ -24,6 +24,8 @@ import os
 import statistics
 from typing import Optional, Sequence
 
+from app.services.normalization_score import sigmoid_score
+
 logger = logging.getLogger(__name__)
 
 # ★ 모듈과 같은 디렉토리에 둔다. `backend/app/data/` 는 .gitignore 의 `data/` 규칙에
@@ -254,6 +256,7 @@ class SessionMetrics:
         "focus_level_score", "meditation_total_score",
         # 메타
         "drowsiness_flag", "constants_version", "provisional",
+        "normalization_source", "normalization_version",
     )
 
     def __init__(self, **kw):
@@ -299,6 +302,8 @@ def compute_session_metrics(
     windows_degraded: int = 0,
     longest_usable_run: Optional[int] = None,
     constants: Optional[NormalizationConstants] = None,
+    normalization_params: Optional[dict] = None,
+    normalization_version: int | str | None = None,
 ) -> SessionMetrics:
     """윈도우 시계열 → 7개 지표 점수.
 
@@ -318,6 +323,7 @@ def compute_session_metrics(
         eeg_reliability=_round(reliability, 3),
         windows_total=n, windows_usable=usable, longest_usable_run=run,
         constants_version=c.version, provisional=c.provisional,
+        normalization_source="cohort", normalization_version=str(c.version),
         # ① raw indices — 게이트와 무관하게 항상 저장한다(재분석 자산)
         focus_index_mean=_round(mean(focus_index), 4),
         focus_index_median=_round(median(focus_index), 4),
@@ -380,6 +386,28 @@ def compute_session_metrics(
         out["drowsiness_flag"] = bool(
             rel_m > ri["p95"] and tna_m < tna["p25"]
             and (cog_p75 is None or cog_m > cog_p75))
+
+    # 기존 7지표 계약을 유지하며 표준 모델은 반올림 전 raw 대표값에 적용한다.
+    # 집중/부하의 기존 stability 필드는 표준 모델 적용 시 raw 평균 점수다.
+    model_inputs = (
+        ("focusIndex", mean(focus_index), "focus_level_score", True),
+        ("focusIndex", mean(focus_index), "focus_index_stability_score", stability_ok),
+        ("cognitiveLoad", mean(cognitive_load), "cognitive_load_stability_score", stability_ok),
+        ("relaxationIndex", mean(relaxation_index), "relaxation_score", True),
+        ("stressIndex", median(stress_index), "stress_score", True),
+        ("emotionalStability", median(emotional_stability), "emotional_stability_score", True),
+        ("totalNeuralActivity", mean(total_neural_activity), "total_neural_activity_score", True),
+        ("faa", mean(faa), "hemispheric_balance_score", True),
+    )
+    params = normalization_params if isinstance(normalization_params, dict) else {}
+    for key, raw, target, allowed in model_inputs:
+        score = sigmoid_score(key, raw, params.get(key)) if allowed else None
+        if score is not None:
+            out[target] = score
+            out["normalization_source"] = "standard_model"
+            out["normalization_version"] = (
+                str(normalization_version) if normalization_version is not None else None
+            )
 
     out["meditation_total_score"] = _round(weighted_total(out))
     return SessionMetrics(**out)

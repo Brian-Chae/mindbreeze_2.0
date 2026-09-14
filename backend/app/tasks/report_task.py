@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.session import Session
 from app.models.record import SessionRecord, Report, EEGRecord
 from app.models.eeg_feature import EEGFeatureWindow
+from app.models.normalization_model import NormalizationModel
 from app.services import eeg_metrics
 from app.services.eeg_rollup_service import summarize_hrv_motion
 
@@ -92,6 +93,15 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
     degraded = sum(1 for w in windows if w.quality == "degraded")
     longest = _longest_usable_run(windows)
 
+    # 활성 표준 모델 조회 — 있으면 sigmoid 정규화, 없으면 코호트 상수 fallback (SDD-041)
+    active_model = (
+        db.query(NormalizationModel)
+        .filter(NormalizationModel.is_active.is_(True))
+        .first()
+    )
+    normalization_params = active_model.params if active_model else None
+    normalization_version = active_model.version if active_model else None
+
     try:
         m = eeg_metrics.compute_session_metrics(
             focus_index=series("focus_index"),
@@ -106,6 +116,8 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
             windows_valid=valid,
             windows_degraded=degraded,
             longest_usable_run=longest,
+            normalization_params=normalization_params,
+            normalization_version=normalization_version,
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("[report_task] EEG 지표 산출 실패: %s", exc)
@@ -141,9 +153,8 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
         # 두뇌휴식도 = relaxation_score 단일 소스 (§ SDD-022)
         "summary_labels": {"relaxation_score": "두뇌휴식도"},
         "timeline": timeline,
-        "normalization_version": (
-            str(m.constants_version) if m.constants_version is not None else None
-        ),
+        "normalization_source": m.normalization_source,
+        "normalization_version": m.normalization_version,
     }
 
 

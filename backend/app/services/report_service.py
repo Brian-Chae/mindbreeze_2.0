@@ -70,6 +70,7 @@ def _normalize_eeg(eeg) -> dict | None:
         "metrics": metrics,
         "summary_labels": labels,
         "timeline": eeg.get("timeline") if isinstance(eeg.get("timeline"), list) else [],
+        "normalization_source": eeg.get("normalization_source", "cohort"),
         "normalization_version": eeg.get("normalization_version"),
     }
 
