@@ -174,16 +174,6 @@ export default function PlaygroundPage() {
 
         <PlaygroundMeditationSimulator />
 
-        {isPlatformAdmin && (
-          <NormalizationPanel
-            connected={connected}
-            rawIndices={band.rawIndices}
-            heartRate={band.heartRate}
-            sdnn={band.sdnn}
-            rmssd={band.rmssd}
-          />
-        )}
-
         <DebugPanel
           logs={logs}
           snapshot={snapshot}
