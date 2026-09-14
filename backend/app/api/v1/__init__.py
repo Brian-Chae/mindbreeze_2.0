@@ -2,10 +2,12 @@
 
 from fastapi import APIRouter
 from app.config import settings
+from app.api.v1 import normalization
 from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, records, reports, admin, notifications
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
+router.include_router(normalization.router)
 router.include_router(onboarding.router)
 router.include_router(org.router)
 router.include_router(credential.router)

@@ -11,6 +11,7 @@ import { ConnectionPanel } from '../../components/playground/ConnectionPanel';
 import { DebugPanel } from '../../components/playground/DebugPanel';
 import { EegWaveformPanel } from '../../components/playground/EegWaveformPanel';
 import { MetricsPanel } from '../../components/playground/MetricsPanel';
+import { NormalizationPanel } from '../../components/playground/NormalizationPanel';
 import { PlaygroundMeditationSimulator } from '../../components/playground/PlaygroundMeditationSimulator';
 import { PpgPanel } from '../../components/playground/PpgPanel';
 import { SpectrumPanel } from '../../components/playground/SpectrumPanel';
@@ -22,12 +23,16 @@ import {
   PPG_TREND_KEYS,
 } from '../../components/playground/trend-metric-keys';
 import { useBand } from '../../hooks/useBand';
+import { refreshActiveModel } from '../../lib/eeg/eegPersonalScore';
+import { useAuthStore } from '../../stores/authStore';
 import type { PlaygroundLogEntry } from '../../types/playground';
 
 const DEFAULT_TREND_METRICS = ['focusIndex', 'relaxationIndex', 'stressIndex'];
 const MAX_LOGS = 500;
 
 export default function PlaygroundPage() {
+  const user = useAuthStore((s) => s.user);
+  const isPlatformAdmin = user?.role === 'platform_admin';
   const [useMock, setUseMock] = useState(false);
   const band = useBand({
     sessionId: 'playground-observation',
@@ -40,6 +45,11 @@ export default function PlaygroundPage() {
   const [debugPaused, setDebugPaused] = useState(false);
   const [logs, setLogs] = useState<PlaygroundLogEntry[]>([]);
   const prevStatusRef = useRef(band.connectionState);
+
+  // 활성 표준 모델 프리페치 (지표 정규화 레이어)
+  useEffect(() => {
+    void refreshActiveModel();
+  }, []);
 
   const appendLog = useCallback(
     (level: PlaygroundLogEntry['level'], message: string, source: PlaygroundLogEntry['source'] = 'ble') => {
@@ -107,6 +117,16 @@ export default function PlaygroundPage() {
 
         <CalibrationPanel connected={connected} rawIndices={band.rawIndices} />
 
+        {isPlatformAdmin && (
+          <NormalizationPanel
+            connected={connected}
+            rawIndices={band.rawIndices}
+            heartRate={band.heartRate}
+            sdnn={band.sdnn}
+            rmssd={band.rmssd}
+          />
+        )}
+
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <EegWaveformPanel
             connected={connected}
@@ -134,7 +154,7 @@ export default function PlaygroundPage() {
 
         <MetricsPanel
           connected={connected}
-          rawIndices={band.rawIndices}
+          rawIndices={band.scoredIndices ?? band.rawIndices}
           heartRate={band.heartRate}
           sdnn={band.sdnn}
           rmssd={band.rmssd}
@@ -146,13 +166,23 @@ export default function PlaygroundPage() {
         <TrendPanel
           connected={connected}
           selectedMetrics={selectedMetrics}
-          rawIndices={band.rawIndices}
+          rawIndices={band.scoredIndices ?? band.rawIndices}
           heartRate={band.heartRate}
           sdnn={band.sdnn}
           rmssd={band.rmssd}
         />
 
         <PlaygroundMeditationSimulator />
+
+        {isPlatformAdmin && (
+          <NormalizationPanel
+            connected={connected}
+            rawIndices={band.rawIndices}
+            heartRate={band.heartRate}
+            sdnn={band.sdnn}
+            rmssd={band.rmssd}
+          />
+        )}
 
         <DebugPanel
           logs={logs}

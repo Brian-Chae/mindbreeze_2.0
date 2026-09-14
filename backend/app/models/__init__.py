@@ -21,7 +21,12 @@ from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
 
+from app.models.normalization_baseline import NormalizationBaseline
+from app.models.normalization_model import NormalizationModel
+
 __all__ = [
+    "NormalizationBaseline",
+    "NormalizationModel",
     "ChatRoom",
     "ChatMessage",
     "ChatMessageRead",

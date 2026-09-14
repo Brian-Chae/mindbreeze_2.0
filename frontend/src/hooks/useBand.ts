@@ -57,8 +57,32 @@ import type {
   BandSpectrum,
   WaveformPoint,
 } from '../types/playground';
+import { scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
+
+/** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
+function toScoredIndices(raw: BandRawIndices): BandRawIndices {
+  const scores = scoreIndices({
+    focusIndex: raw.focusIndex,
+    relaxationIndex: raw.relaxationIndex,
+    stressIndex: raw.stressIndex,
+    totalNeuralActivity: raw.totalNeuralActivity,
+    cognitiveLoad: raw.cognitiveLoad,
+    emotionalStability: raw.emotionalStability,
+    hemisphericBalance: raw.hemisphericBalance,
+    faa: raw.hemisphericBalance,
+  });
+  return {
+    focusIndex: scores.focusIndex,
+    relaxationIndex: scores.relaxationIndex,
+    stressIndex: scores.stressIndex,
+    cognitiveLoad: scores.cognitiveLoad,
+    emotionalStability: scores.emotionalStability,
+    hemisphericBalance: scores.hemisphericBalance,
+    totalNeuralActivity: scores.totalPower,
+  };
+}
 
 const FEATURE_FLUSH_MS = 5000;
 const MOCK_TICK_MS = 1000;
@@ -162,6 +186,8 @@ export interface UseBandResult {
   acc: BandAccSnapshot;
   /** playground — 7지표 raw */
   rawIndices: BandRawIndices | null;
+  /** playground — 정규화 점수 (활성 모델 > 코호트 B0). raw는 유지 */
+  scoredIndices: BandRawIndices | null;
   /** playground — 전극/센서 접촉 */
   sensors: BandSensors;
   /** playground — 연결 이후 경과 초 */
@@ -755,7 +781,7 @@ export function useBand({
         if (mountedRef.current) setBandPowers(payload.bandPowers);
       }
       if (payload?.indices && mountedRef.current) {
-        setRawIndices({
+        const raw: BandRawIndices = {
           focusIndex: Number(payload.indices.focusIndex ?? 0),
           relaxationIndex: Number(payload.indices.relaxationIndex ?? 0),
           stressIndex: Number(payload.indices.stressIndex ?? 0),
@@ -763,7 +789,8 @@ export function useBand({
           emotionalStability: Number(payload.indices.emotionalStability ?? 0),
           hemisphericBalance: Number(payload.indices.hemisphericBalance ?? 0),
           totalNeuralActivity: Number(payload.indices.totalNeuralActivity ?? 0),
-        });
+        };
+        setRawIndices(raw);
       }
       return;
     }
@@ -1206,6 +1233,7 @@ export function useBand({
     ppgWaveform,
     acc,
     rawIndices,
+    scoredIndices: rawIndices ? toScoredIndices(rawIndices) : null,
     sensors,
     connectedElapsedSec,
     getEegWaveformSamples,
