@@ -33,8 +33,8 @@ const SIZE_CLASS: Record<WaveformSize, string> = {
 };
 
 const SIZE_PX: Record<WaveformSize, number> = { sm: 96, md: 160, lg: 224 };
-const GRID_COLOR = 'rgba(255,255,255,0.06)';
-const HIGHLIGHT_COLOR = 'rgba(255,82,82,0.18)';
+const GRID_COLOR = 'rgba(95,0,128,0.08)';
+const HIGHLIGHT_COLOR = 'rgba(239,68,68,0.12)';
 
 export function WaveformCanvas({
   series,
@@ -86,6 +86,9 @@ export function WaveformCanvas({
 
       const { width: w, height: h } = sizeRef.current;
       ctx.clearRect(0, 0, w, h);
+      // 배경을 명시적으로 밝은 색으로 칠한다 (CSS/Tailwind 임의값 의존 제거)
+      ctx.fillStyle = '#F8FAFC';
+      ctx.fillRect(0, 0, w, h);
 
       ctx.strokeStyle = GRID_COLOR;
       ctx.lineWidth = 1;
@@ -186,7 +189,7 @@ export function WaveformCanvas({
   return (
     <canvas
       ref={canvasRef}
-      className={`block w-full rounded-lg bg-gray-950 ${SIZE_CLASS[size]}`}
+      className={`block w-full rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] ${SIZE_CLASS[size]}`}
     />
   );
 }
