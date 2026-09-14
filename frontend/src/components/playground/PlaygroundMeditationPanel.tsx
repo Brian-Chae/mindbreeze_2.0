@@ -188,53 +188,53 @@ export function PlaygroundMeditationPanel() {
   const mindPending = !bufferReady;
 
   return (
-    <section className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-4">
+    <section className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-4">
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-gray-100">명상 지표</h3>
-        <p className="mt-0.5 text-xs text-gray-500">
+        <h3 className="text-sm font-semibold text-[#1F1F1F]">명상 지표</h3>
+        <p className="mt-0.5 text-xs text-[#6F6F6F]">
           몸(PPG) · 마음(EEG) · 효과적 휴식 — mock 시뮬레이션
         </p>
       </div>
 
       {sessionStatus === 'idle' && (
-        <p className="rounded-lg border border-dashed border-gray-700 px-4 py-8 text-center text-sm text-gray-500">
+        <p className="rounded-xl border border-dashed border-[#DDDEE7] px-4 py-8 text-center text-sm text-[#6F6F6F]">
           시작 버튼을 눌러 명상 세션을 시작하세요.
         </p>
       )}
 
       {sessionStatus === 'stopped' && summary && (
-        <div className="mb-5 rounded-lg border border-indigo-900/60 bg-indigo-950/40 px-4 py-3">
-          <p className="text-xs font-medium text-indigo-300">세션 요약</p>
+        <div className="mb-5 rounded-xl border border-[#C9B0E8] bg-[#F5EDFC] px-4 py-3">
+          <p className="text-xs font-medium text-[#5F0080]">세션 요약</p>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <p className="text-[11px] text-gray-500">평균 BPM</p>
-              <p className="text-lg font-semibold tabular-nums text-gray-100">
+              <p className="text-[11px] text-[#6F6F6F]">평균 BPM</p>
+              <p className="text-lg font-semibold tabular-nums text-[#1F1F1F]">
                 {formatAvg(summary.avgHeartRate)}
-                <span className="ml-1 text-xs font-normal text-gray-500">bpm</span>
+                <span className="ml-1 text-xs font-normal text-[#6F6F6F]">bpm</span>
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-500">평균 호흡수</p>
-              <p className="text-lg font-semibold tabular-nums text-gray-100">
+              <p className="text-[11px] text-[#6F6F6F]">평균 호흡수</p>
+              <p className="text-lg font-semibold tabular-nums text-[#1F1F1F]">
                 {formatAvg(summary.avgRespiratoryRate, 1)}
-                <span className="ml-1 text-xs font-normal text-gray-500">회/분</span>
+                <span className="ml-1 text-xs font-normal text-[#6F6F6F]">회/분</span>
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-500">평균 SDNN</p>
-              <p className="text-lg font-semibold tabular-nums text-gray-100">
+              <p className="text-[11px] text-[#6F6F6F]">평균 SDNN</p>
+              <p className="text-lg font-semibold tabular-nums text-[#1F1F1F]">
                 {formatAvg(summary.avgSdnn, 1)}
-                <span className="ml-1 text-xs font-normal text-gray-500">ms</span>
+                <span className="ml-1 text-xs font-normal text-[#6F6F6F]">ms</span>
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-gray-500">평균 이완도</p>
-              <p className="text-lg font-semibold tabular-nums text-gray-100">
+              <p className="text-[11px] text-[#6F6F6F]">평균 이완도</p>
+              <p className="text-lg font-semibold tabular-nums text-[#1F1F1F]">
                 {formatAvg(summary.avgRelaxation)}
               </p>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-gray-500">
+          <p className="mt-2 text-[11px] text-[#6F6F6F]">
             효과적 휴식 {formatMmSs(summary.calmSec)} / 경과{' '}
             {formatMmSs(summary.elapsedSec)}
           </p>
@@ -243,23 +243,23 @@ export function PlaygroundMeditationPanel() {
 
       {showLive && (
         <>
-          <div className="mb-5 rounded-lg border border-gray-800 bg-gray-950 px-4 py-3">
-            <p className="text-xs font-medium text-gray-400">효과적 휴식</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-gray-100">
+          <div className="mb-5 rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] px-4 py-3">
+            <p className="text-xs font-medium text-[#5F0080]">효과적 휴식</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-[#1F1F1F]">
               {formatMmSs(calmSec)}
-              <span className="ml-2 text-base font-semibold text-gray-400">
+              <span className="ml-2 text-base font-semibold text-[#6F6F6F]">
                 {elapsedSec > 0 ? `(${calmRatioPct.toFixed(0)}%)` : '(--%)'}
               </span>
             </p>
-            <p className="mt-1 text-[11px] text-gray-500">
+            <p className="mt-1 text-[11px] text-[#6F6F6F]">
               고요 구간 누적 / 세션 경과 {formatMmSs(elapsedSec)}
               {sessionStatus === 'stopped' && ' · 수집 중지'}
             </p>
           </div>
 
-          <h4 className="mb-2 text-xs font-semibold text-gray-400">
+          <h4 className="mb-2 text-xs font-semibold text-[#5F0080]">
             몸{' '}
-            {bodyPending && <span className="text-amber-400">· 버퍼 충전 중</span>}
+            {bodyPending && <span className="text-[#8A6B1F]">· 버퍼 충전 중</span>}
           </h4>
           <div className="grid grid-cols-3 gap-2">
             <ValueCard
@@ -281,11 +281,11 @@ export function PlaygroundMeditationPanel() {
               pending={bodyPending || live.sdnn === null}
             />
           </div>
-          <p className="mt-1 text-[10px] text-gray-500">
+          <p className="mt-1 text-[10px] text-[#6F6F6F]">
             호흡수 참고 12~20회/분 · HRV=SDNN(ms)
           </p>
 
-          <h4 className="mb-2 mt-5 text-xs font-semibold text-gray-400">마음</h4>
+          <h4 className="mb-2 mt-5 text-xs font-semibold text-[#5F0080]">마음</h4>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <MetricGauge
               metric={{
