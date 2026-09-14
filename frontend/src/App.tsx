@@ -33,6 +33,7 @@ import UserAppPage from './pages/design/UserAppPage';
 import ReportPage from './pages/design/ReportPage';
 import DocsPage from './pages/design/DocsPage';
 import ReportListPage from './pages/reports/ReportListPage';
+import ReportSamplePage from './pages/reports/ReportSamplePage';
 import ReportDetailPage from './pages/reports/ReportDetailPage';
 import AdminReviewListPage from './pages/admin/AdminReviewListPage';
 import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
@@ -146,6 +147,7 @@ function App() {
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
         <Route path="/reports" element={<ReportListPage />} />
+        <Route path="/reports/sample" element={<ReportSamplePage />} />
         <Route path="/reports/:id" element={<ReportDetailPage />} />
         <Route
           path="/admin/reviews"
