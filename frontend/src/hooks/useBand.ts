@@ -577,9 +577,21 @@ export function useBand({
       }
 
       if (!mountedRef.current) return;
-      setCurrentEfficiency(metrics.relaxationIndex);
-      setFocusIndex(metrics.focusIndex);
-      setStressIndex(metrics.stressIndex);
+      // raw indices 저장 후, 표준 모델 정규화(scored)로 화면 표시용 지표를 갱신한다.
+      const raw = {
+        focusIndex: metrics.focusIndex,
+        relaxationIndex: metrics.relaxationIndex,
+        stressIndex: metrics.stressIndex,
+        cognitiveLoad: metrics.cognitiveLoad,
+        emotionalStability: metrics.emotionalStability,
+        hemisphericBalance: metrics.hemisphericBalance,
+        totalNeuralActivity: metrics.totalPower,
+      };
+      setRawIndices(raw);
+      const scored = toScoredIndices(raw);
+      setCurrentEfficiency(scored.relaxationIndex);
+      setFocusIndex(scored.focusIndex);
+      setStressIndex(scored.stressIndex);
       // 몸 지표 — AnalysisMetricsService 싱글톤에서 null 보존 읽기
       const body = AnalysisMetricsService.getInstance();
       setHeartRate(body.getCurrentHeartRate());
@@ -593,15 +605,6 @@ export function useBand({
         setBandPowers(powers);
         bandPowersRef.current = powers;
       }
-      setRawIndices({
-        focusIndex: metrics.focusIndex,
-        relaxationIndex: metrics.relaxationIndex,
-        stressIndex: metrics.stressIndex,
-        cognitiveLoad: metrics.cognitiveLoad,
-        emotionalStability: metrics.emotionalStability,
-        hemisphericBalance: metrics.hemisphericBalance,
-        totalNeuralActivity: metrics.totalPower,
-      });
       setSensors(sensorFromLeadOff(leadOffRef.current, true));
       pushChartPoint(metrics.relaxationIndex);
     },
@@ -791,6 +794,10 @@ export function useBand({
           totalNeuralActivity: Number(payload.indices.totalNeuralActivity ?? 0),
         };
         setRawIndices(raw);
+        const scored = toScoredIndices(raw);
+        setCurrentEfficiency(scored.relaxationIndex);
+        setFocusIndex(scored.focusIndex);
+        setStressIndex(scored.stressIndex);
       }
       return;
     }
