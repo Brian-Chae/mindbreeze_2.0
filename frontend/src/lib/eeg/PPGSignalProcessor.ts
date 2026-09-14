@@ -222,7 +222,7 @@ export class PPGSignalProcessor {
       if (peaks.length >= 2) {
         for (let i = 1; i < peaks.length; i++) {
           const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);
-          if (interval >= 300 && interval <= 1200) {
+          if (interval >= 200 && interval <= 2000) {
             rrIntervals.push(interval);
           }
         }
@@ -868,8 +868,8 @@ export class PPGSignalProcessor {
       rrIntervals.push(interval);
     }
     
-    // 2. 생리학적 범위 필터링 (300-1500ms)
-    const validRR = rrIntervals.filter(rr => rr >= 300 && rr <= 1500);
+    // 2. 생리학적 범위 필터링 (haru 정본: 200-2000ms)
+    const validRR = rrIntervals.filter(rr => rr >= 200 && rr <= 2000);
     
     if (validRR.length < 2) return validRR;
     
@@ -963,7 +963,7 @@ export class PPGSignalProcessor {
     const rrIntervals = [];
     for (let i = 1; i < peaks.length; i++) {
       const interval = (peaks[i] - peaks[i-1]) * (1000 / this.ppgSamplingRate);
-      if (interval >= 300 && interval <= 1500) { // 합리적인 범위
+      if (interval >= 200 && interval <= 2000) { // 합리적인 범위
         rrIntervals.push(interval);
       }
     }

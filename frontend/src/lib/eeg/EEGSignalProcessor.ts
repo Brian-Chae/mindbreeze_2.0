@@ -13,6 +13,26 @@ interface ComplexSample {
 
 /** Morlet 사이클 수 (haru 정본 / SDD-035) */
 const N_CYCLES = 7.0;
+const EPS = 1e-10;
+
+interface LinearBandPowers {
+  delta: number;
+  theta: number;
+  alpha: number;
+  beta: number;
+  gamma: number;
+}
+
+interface EEGRawIndices {
+  focusIndex: number;
+  relaxationIndex: number;
+  stressIndex: number;
+  cognitiveLoad: number;
+  emotionalStability: number;
+  totalNeuralActivity: number;
+  faa: number | null;
+  hemisphericBalance: number;
+}
 /** 분석에 사용할 최대 샘플 수 */
 const MAX_ANALYSIS_SAMPLES = 1000;
 
@@ -97,6 +117,8 @@ export class EEGSignalProcessor {
       cognitiveLoad: number;
       emotionalStability: number;
       totalPower: number;
+      totalNeuralActivity: number;
+      faa: number | null;
     };
     rawAnalysis: {
       ch1SQI: number[];
@@ -139,7 +161,9 @@ export class EEGSignalProcessor {
         hemisphericBalance,
         cognitiveLoad,
         emotionalStability,
-        totalPower
+        totalPower,
+        totalNeuralActivity: totalPower,
+        faa: processedData.faa,
       },
       rawAnalysis: {
         ch1SQI: processedData.ch1SQI,
@@ -155,7 +179,8 @@ export class EEGSignalProcessor {
    * EEG 세그먼트 처리 (Python process_eeg_data와 동일한 로직)
    * 최소 2초의 데이터 필요 (500 샘플)
    */
-  private processEEGSegment(data: EEGDataPoint[]): ProcessedEEGData & { 
+  private processEEGSegment(data: EEGDataPoint[]): ProcessedEEGData & EEGRawIndices & {
+    totalPower: number;
     filteredRawData: EEGDataPoint[];
     ch1SQI: number[];
     ch2SQI: number[];
@@ -250,46 +275,18 @@ export class EEGSignalProcessor {
     const ch1BandPowers = this.computeBandPowers(ch1Power, frequencies);
     const ch2BandPowers = this.computeBandPowers(ch2Power, frequencies);
 
-    // 7. EEG 지수 계산 (ch1BandPowers 객체 직접 사용)
-    const safeFloat = (value: number, defaultValue: number = 0): number => {
-      try {
-        const val = parseFloat(value.toString());
-        return (!isNaN(val) && isFinite(val)) ? val : defaultValue;
-      } catch {
-        return defaultValue;
-      }
-    };
-
-    const totalPower = Object.values(ch1BandPowers).reduce((sum, power) => sum + power, 0);
-    
-    // EEG 지수 계산 (0~1 비율 → 0~100% 스케일로 변환)
-    const focusIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.theta) > 0 ? 
-      ch1BandPowers.beta / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0) * 100;
-    const relaxationIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.beta) > 0 ? 
-      ch1BandPowers.alpha / (ch1BandPowers.alpha + ch1BandPowers.beta) : 0) * 100;
-    const stressIndex = safeFloat((ch1BandPowers.alpha + ch1BandPowers.theta) > 0 ? 
-      (ch1BandPowers.beta + ch1BandPowers.gamma) / (ch1BandPowers.alpha + ch1BandPowers.theta) : 0) * 100;
-    
-    // 좌우뇌 균형 계산 개선 (0으로 나누기 방지 및 자연스러운 값 처리)
-    const leftAlpha = ch1BandPowers.alpha || 0;
-    const rightAlpha = ch2BandPowers.alpha || 0;
-    const alphaSum = leftAlpha + rightAlpha;
-    
-    let hemisphericBalance = 0;
-    if (alphaSum > 0.001) { // 매우 작은 임계값 사용
-      hemisphericBalance = (leftAlpha - rightAlpha) / alphaSum;
-    } else if (leftAlpha > 0 || rightAlpha > 0) {
-      // 한쪽만 값이 있는 경우
-      hemisphericBalance = leftAlpha > rightAlpha ? 1 : -1;
-    }
-    // 극단값 제한 (-1 ~ 1 범위)
-    hemisphericBalance = Math.max(-1, Math.min(1, hemisphericBalance));
-    hemisphericBalance = safeFloat(hemisphericBalance);
-    
-    const cognitiveLoad = safeFloat(ch1BandPowers.alpha > 0 ? 
-      ch1BandPowers.theta / ch1BandPowers.alpha : 0);
-    const emotionalStability = safeFloat(ch1BandPowers.gamma > 0 ? 
-      (ch1BandPowers.alpha + ch1BandPowers.theta) / ch1BandPowers.gamma : 0);
+    // 7. haru 정본: SQI 가중 기하평균으로 병합하고 raw 단위로 반환한다.
+    const merged = this.mergeChannelBandPowers(
+      ch1BandPowers, ch2BandPowers, avgCh1SQI / 100, avgCh2SQI / 100,
+    );
+    const indices = this.calculateRawIndices(
+      merged, ch1BandPowers, ch2BandPowers,
+      avgCh1SQI >= qualityThreshold, avgCh2SQI >= qualityThreshold,
+    );
+    const {
+      focusIndex, relaxationIndex, stressIndex, hemisphericBalance,
+      cognitiveLoad, emotionalStability,
+    } = indices;
 
     // 신호 품질 평가 (이미 퍼센트 값으로 계산됨)
     const signalQuality: SignalQuality = {
@@ -317,20 +314,17 @@ export class EEGSignalProcessor {
     };
 
     // 결과 반환
-    const result: ProcessedEEGData & { 
+    const result: ProcessedEEGData & EEGRawIndices & {
+      totalPower: number;
       filteredRawData: EEGDataPoint[];
       ch1SQI: number[];
       ch2SQI: number[];
       overallSQI: number[];
       frequencySpectrum: { frequencies: number[]; ch1Power: number[]; ch2Power: number[]; timestamp: number };
     } = {
-      bandPowers: {
-        delta: ch1BandPowers.delta,
-        theta: ch1BandPowers.theta,
-        alpha: ch1BandPowers.alpha,
-        beta: ch1BandPowers.beta,
-        gamma: ch1BandPowers.gamma
-      },
+      ...indices,
+      totalPower: indices.totalNeuralActivity,
+      bandPowers: merged,
       signalQuality,
       brainState,
       timestamp: Date.now(),
@@ -347,16 +341,77 @@ export class EEGSignalProcessor {
       }
     };
 
-    // 추가 지수들을 result에 추가
-    (result as any).totalPower = safeFloat(totalPower);
-    (result as any).focusIndex = focusIndex;
-    (result as any).relaxationIndex = relaxationIndex;
-    (result as any).stressIndex = stressIndex;
-    (result as any).hemisphericBalance = hemisphericBalance;
-    (result as any).cognitiveLoad = cognitiveLoad;
-    (result as any).emotionalStability = emotionalStability;
-
     return result;
+  }
+
+  /** §A2.1 — 통합 밴드파워(선형) 기반 raw indices */
+  private calculateRawIndices(
+    merged: LinearBandPowers,
+    ch1: LinearBandPowers,
+    ch2: LinearBandPowers,
+    ch1Valid: boolean,
+    ch2Valid: boolean,
+  ): EEGRawIndices {
+    const { alpha, beta, theta, gamma } = merged;
+
+    const ch1Total = ch1.delta + ch1.theta + ch1.alpha + ch1.beta + ch1.gamma;
+    const ch2Total = ch2.delta + ch2.theta + ch2.alpha + ch2.beta + ch2.gamma;
+
+    // 인지 부하 = 4~45Hz(세타~감마) 총합 — 전두엽 전체 부하량 (델타 제외)
+    const ch1Load = ch1.theta + ch1.alpha + ch1.beta + ch1.gamma;
+    const ch2Load = ch2.theta + ch2.alpha + ch2.beta + ch2.gamma;
+
+    let faa: number | null = null;
+    if (ch1Valid && ch2Valid && ch1.alpha > 0 && ch2.alpha > 0) {
+      faa = Math.log(ch2.alpha) - Math.log(ch1.alpha);
+    }
+
+    const alphaSum = ch1.alpha + ch2.alpha;
+    const hemisphericBalance = alphaSum > EPS
+      ? (ch1.alpha - ch2.alpha) / alphaSum
+      : 0;
+
+    return {
+      focusIndex: beta / (alpha + theta + EPS),
+      relaxationIndex: alpha / (alpha + beta + EPS),
+      stressIndex: (beta + gamma) / (alpha + theta + EPS),
+      cognitiveLoad: (ch1Load + ch2Load) / 2,
+      emotionalStability: (alpha + theta) / (gamma + EPS),
+      totalNeuralActivity: (ch1Total + ch2Total) / 2,
+      faa,
+      hemisphericBalance: Math.max(-1, Math.min(1, hemisphericBalance)),
+    };
+  }
+
+  /** §A1.5 — SQI 가중 기하평균 (로그영역 가중 산술평균) */
+  private mergeChannelBandPowers(
+    ch1: LinearBandPowers,
+    ch2: LinearBandPowers,
+    w1: number,
+    w2: number,
+  ): LinearBandPowers {
+    const totalW = w1 + w2;
+    if (totalW <= 0) {
+      return { delta: 0, theta: 0, alpha: 0, beta: 0, gamma: 0 };
+    }
+
+    const merge = (p1: number, p2: number): number => {
+      if (w1 <= 0 && w2 <= 0) return 0;
+      if (w1 <= 0) return p2;
+      if (w2 <= 0) return p1;
+      if (p1 <= 0 && p2 <= 0) return 0;
+      if (p1 <= 0) return p2;
+      if (p2 <= 0) return p1;
+      return Math.exp((w1 * Math.log(p1) + w2 * Math.log(p2)) / totalW);
+    };
+
+    return {
+      delta: merge(ch1.delta, ch2.delta),
+      theta: merge(ch1.theta, ch2.theta),
+      alpha: merge(ch1.alpha, ch2.alpha),
+      beta: merge(ch1.beta, ch2.beta),
+      gamma: merge(ch1.gamma, ch2.gamma),
+    };
   }
 
   /**

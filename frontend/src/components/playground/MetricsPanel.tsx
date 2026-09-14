@@ -19,7 +19,7 @@ const EEG_DEFS = [
   { key: 'focusIndex', label: '집중도', unit: '' as const, range: [0, 100] as [number, number] },
   { key: 'relaxationIndex', label: '이완도', unit: '' as const, range: [0, 100] as [number, number] },
   { key: 'stressIndex', label: '스트레스', unit: '' as const, range: [0, 100] as [number, number] },
-  { key: 'totalPower', label: '총 파워', unit: '' as const, range: [0, 1000] as [number, number] },
+  { key: 'totalPower', label: '총 파워', unit: '' as const, range: [0, 100] as [number, number] },
   { key: 'hemisphericBalance', label: '좌우뇌 균형', unit: '' as const, range: [0, 100] as [number, number] },
   { key: 'cognitiveLoad', label: '인지 부하', unit: '' as const, range: [0, 100] as [number, number] },
   { key: 'emotionalStability', label: '정서 안정성', unit: '' as const, range: [0, 100] as [number, number] },
@@ -75,7 +75,7 @@ export function MetricsPanel({
             }}
             selected={selectedMetrics.includes(def.key)}
             onToggle={onToggleMetric}
-            bidirectional={def.key === 'hemisphericBalance'}
+            bidirectional={false}
             pending={eegPending}
           />
         ))}

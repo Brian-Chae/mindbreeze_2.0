@@ -9,3 +9,17 @@ export { AnalysisMetricsService } from './AnalysisMetricsService';
 export type { LatestEegFeature, HrvMetricsSnapshot } from './AnalysisMetricsService';
 export type { BandPowers, ConnectionState, LeadOffStatus } from './types/eeg';
 export type { EEGAnalysisMetrics } from './types/processed-data';
+export {
+  CALIBRATION_METRIC_KEYS,
+  scoreIndices,
+  refreshActiveModel,
+  getActiveModelCache,
+} from './eegPersonalScore';
+export {
+  transformRaw,
+  sigmoidScore,
+  paramsFromSamples,
+  SIGMOID_C,
+  MAD_TO_SIGMA,
+} from './eegSigmoidScore';
+export type { CalibrationMetricKey, CalibrationBaseline, SigmoidParams } from './eegSigmoidScore';

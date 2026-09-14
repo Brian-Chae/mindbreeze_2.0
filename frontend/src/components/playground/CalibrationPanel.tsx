@@ -28,11 +28,12 @@ export function CalibrationPanel({ connected, rawIndices }: Props) {
   return (
     <PanelShell
       title="P1.5 · 캘리브레이션"
-      subtitle="정규화 전 raw indices 스냅샷 (간소화)"
+      subtitle="정규화 전 raw indices 스냅샷"
       state={panelState}
     >
       <p className="mb-3 text-[11px] text-[#6F6F6F]">
-        전체 정규화/캘리브레이션 플로우는 추후 이식. 현재는 실시간 raw 7지표만 표시합니다.
+        아래는 정규화 전 raw 지표입니다. platform_admin은 표준 모델 관리 패널에서 baseline을 수집할 수
+        있습니다.
       </p>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
         {KEYS.map(({ key, label }) => (
