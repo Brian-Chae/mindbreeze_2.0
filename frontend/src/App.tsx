@@ -45,6 +45,7 @@ import ClientAppPage from './pages/client/ClientAppPage';
 import ClassJoinPage from './pages/class-join-page';
 import OrgPublicPage from './pages/OrgPublicPage';
 import OrgDashboardPage from './pages/OrgDashboardPage';
+import PlaygroundPage from './pages/playground/PlaygroundPage';
 import { useAuthStore } from './stores/authStore';
 
 function buildLoginRedirect(pathname: string, search: string): string {
@@ -188,6 +189,7 @@ function App() {
         />
         <Route path="/notifications" element={<NotificationCenterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/playground" element={<PlaygroundPage />} />
       </Routes>
     </BrowserRouter>
   );
