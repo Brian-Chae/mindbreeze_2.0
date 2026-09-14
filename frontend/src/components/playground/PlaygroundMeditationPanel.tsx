@@ -1,16 +1,28 @@
 /**
- * SDD-034 — 명상 지표 실시간 뷰.
+ * SDD-038 — 명상 지표 실시간 뷰.
  * 몸 3개(BPM·호흡수·HRV=SDNN) + 마음 게이지 + 효과적 휴식 + 중지 시 요약.
- * LINK BAND 없이 mockDataGenerator로 1초 tick 지표 변동.
+ * useBand 실제 지표 + 몸/마음 1Hz 시계열 그래프.
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { mockDataGenerator } from '../../lib/eeg/mockDataGenerator';
+import {
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import type { UseBandResult } from '../../hooks/useBand';
 import { useMeditationSessionStore } from '../../stores/useMeditationSessionStore';
+import { AXIS_TICK, CATEGORY_PALETTE, CHART_COLORS, TOOLTIP_STYLE } from './chart-theme';
 import { MetricGauge, ValueCard } from './MetricGauge';
 
 /** 버퍼 충전 시뮬레이션(초) — 이 전에는 pending('--') */
 const BUFFER_WARMUP_SEC = 3;
+const MAX_POINTS = 300;
 
 interface MetricAccum {
   sum: number;
@@ -41,6 +53,25 @@ interface ScoreSums {
   respiratoryRate: MetricAccum;
   sdnn: MetricAccum;
   relaxation: MetricAccum;
+}
+
+interface BodyPoint {
+  t: number;
+  bpm: number;
+  respiratoryRate: number;
+  sdnn: number;
+}
+
+interface MindPoint {
+  t: number;
+  relaxation: number;
+  focus: number;
+  emotional: number;
+}
+
+interface Props {
+  band: UseBandResult;
+  connected: boolean;
 }
 
 function emptyAccum(): MetricAccum {
@@ -84,6 +115,11 @@ function isCalmState(relaxation: number | null, stress: number | null): boolean 
   return relaxation >= 55 && stress <= 45;
 }
 
+function pushRing<T>(prev: T[], next: T): T[] {
+  const merged = [...prev, next];
+  return merged.length > MAX_POINTS ? merged.slice(merged.length - MAX_POINTS) : merged;
+}
+
 const EMPTY_LIVE: LiveMetrics = {
   heartRate: null,
   respiratoryRate: null,
@@ -94,7 +130,7 @@ const EMPTY_LIVE: LiveMetrics = {
   stress: null,
 };
 
-export function PlaygroundMeditationPanel() {
+export function PlaygroundMeditationPanel({ band, connected }: Props) {
   const sessionStatus = useMeditationSessionStore((s) => s.status);
   const elapsedSec = useMeditationSessionStore((s) => s.elapsedSec);
   const calmSec = useMeditationSessionStore((s) => s.calmSec);
@@ -103,34 +139,39 @@ export function PlaygroundMeditationPanel() {
 
   const sumsRef = useRef<ScoreSums>(emptySums());
   const prevSessionRef = useRef(sessionStatus);
+  const bandRef = useRef(band);
+  bandRef.current = band;
+
   const [live, setLive] = useState<LiveMetrics>(EMPTY_LIVE);
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [bufferReady, setBufferReady] = useState(false);
+  const [bodySeries, setBodySeries] = useState<BodyPoint[]>([]);
+  const [mindSeries, setMindSeries] = useState<MindPoint[]>([]);
 
   useEffect(() => {
     sumsRef.current = emptySums();
     setLive(EMPTY_LIVE);
     setSummary(null);
     setBufferReady(false);
+    setBodySeries([]);
+    setMindSeries([]);
   }, [generation]);
 
-  // running 중 1Hz: mock EEG/PPG → 지표 갱신 + tick
+  // running 중 1Hz: useBand 실제 지표 → 갱신 + tick + 시계열
   useEffect(() => {
     if (sessionStatus !== 'running') return;
 
     const id = window.setInterval(() => {
       if (useMeditationSessionStore.getState().status !== 'running') return;
 
-      const eeg = mockDataGenerator.generateEEGAnalysis();
-      const ppg = mockDataGenerator.generatePPGAnalysis();
-
-      const heartRate = ppg.bpm;
-      const respiratoryRate = 12 + Math.random() * 8; // 12~20 회/분
-      const sdnn = ppg.sdnn;
-      const relaxation = eeg.relaxationIndex;
-      const focus = eeg.focusIndex;
-      const emotional = eeg.emotionalStability;
-      const stress = eeg.stressIndex;
+      const b = bandRef.current;
+      const heartRate = b.heartRate;
+      const respiratoryRate = b.respiratoryRate;
+      const sdnn = b.sdnn;
+      const relaxation = b.scoredIndices?.relaxationIndex ?? null;
+      const focus = b.scoredIndices?.focusIndex ?? null;
+      const emotional = b.scoredIndices?.emotionalStability ?? null;
+      const stress = b.scoredIndices?.stressIndex ?? null;
 
       const next: LiveMetrics = {
         heartRate,
@@ -144,7 +185,26 @@ export function PlaygroundMeditationPanel() {
       setLive(next);
 
       const session = useMeditationSessionStore.getState();
-      if (session.elapsedSec + 1 >= BUFFER_WARMUP_SEC) {
+      const t = session.elapsedSec + 1;
+
+      setBodySeries((prev) =>
+        pushRing(prev, {
+          t,
+          bpm: heartRate ?? 0,
+          respiratoryRate: respiratoryRate ?? 0,
+          sdnn: sdnn ?? 0,
+        }),
+      );
+      setMindSeries((prev) =>
+        pushRing(prev, {
+          t,
+          relaxation: relaxation ?? 0,
+          focus: focus ?? 0,
+          emotional: emotional ?? 0,
+        }),
+      );
+
+      if (t >= BUFFER_WARMUP_SEC) {
         setBufferReady(true);
       }
 
@@ -152,7 +212,7 @@ export function PlaygroundMeditationPanel() {
       tick(calm);
 
       // 워밍업 이후만 평균 누적
-      if (session.elapsedSec + 1 >= BUFFER_WARMUP_SEC) {
+      if (t >= BUFFER_WARMUP_SEC) {
         const sums = sumsRef.current;
         pushMetric(sums.heartRate, heartRate);
         pushMetric(sums.respiratoryRate, respiratoryRate);
@@ -186,13 +246,15 @@ export function PlaygroundMeditationPanel() {
   const showLive = sessionStatus === 'running' || sessionStatus === 'stopped';
   const bodyPending = !bufferReady;
   const mindPending = !bufferReady;
+  const showCharts = showLive && (bodySeries.length > 0 || mindSeries.length > 0);
 
   return (
     <section className="rounded-2xl border border-[#EFEFEF] bg-white px-4 py-4">
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-[#1F1F1F]">명상 지표</h3>
         <p className="mt-0.5 text-xs text-[#6F6F6F]">
-          몸(PPG) · 마음(EEG) · 효과적 휴식 — mock 시뮬레이션
+          몸(PPG) · 마음(EEG) · 효과적 휴식 — useBand 실제 지표
+          {connected ? '' : ' · 밴드 미연결'}
         </p>
       </div>
 
@@ -282,7 +344,7 @@ export function PlaygroundMeditationPanel() {
             />
           </div>
           <p className="mt-1 text-[10px] text-[#6F6F6F]">
-            호흡수 참고 12~20회/분 · HRV=SDNN(ms)
+            HRV=SDNN(ms) · useBand PPG 경로
           </p>
 
           <h4 className="mb-2 mt-5 text-xs font-semibold text-[#5F0080]">마음</h4>
@@ -318,6 +380,104 @@ export function PlaygroundMeditationPanel() {
               pending={mindPending || live.emotional === null}
             />
           </div>
+
+          {showCharts && (
+            <div className="mt-5 space-y-4">
+              <div>
+                <h4 className="mb-2 text-xs font-semibold text-[#5F0080]">
+                  몸 시계열{' '}
+                  <span className="font-normal text-[#6F6F6F]">
+                    · 1Hz · {bodySeries.length}pt (최대 {MAX_POINTS})
+                  </span>
+                </h4>
+                <div className="h-48 rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] px-2 py-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={bodySeries} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                      <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
+                      <XAxis dataKey="t" tick={AXIS_TICK} unit="s" />
+                      <YAxis tick={AXIS_TICK} domain={['auto', 'auto']} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="bpm"
+                        name="BPM"
+                        stroke={CATEGORY_PALETTE[0]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="respiratoryRate"
+                        name="호흡수"
+                        stroke={CATEGORY_PALETTE[1]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="sdnn"
+                        name="SDNN"
+                        stroke={CATEGORY_PALETTE[2]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="mb-2 text-xs font-semibold text-[#5F0080]">
+                  마음 시계열{' '}
+                  <span className="font-normal text-[#6F6F6F]">
+                    · 0~100 · {mindSeries.length}pt (최대 {MAX_POINTS})
+                  </span>
+                </h4>
+                <div className="h-48 rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] px-2 py-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={mindSeries} margin={{ top: 8, right: 8, bottom: 4, left: 0 }}>
+                      <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
+                      <XAxis dataKey="t" tick={AXIS_TICK} unit="s" />
+                      <YAxis tick={AXIS_TICK} domain={[0, 100]} />
+                      <Tooltip contentStyle={TOOLTIP_STYLE} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      <Line
+                        type="monotone"
+                        dataKey="relaxation"
+                        name="이완도"
+                        stroke={CATEGORY_PALETTE[0]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="focus"
+                        name="집중도"
+                        stroke={CATEGORY_PALETTE[1]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="emotional"
+                        name="정서 안정도"
+                        stroke={CATEGORY_PALETTE[2]}
+                        dot={false}
+                        strokeWidth={1.5}
+                        isAnimationActive={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>

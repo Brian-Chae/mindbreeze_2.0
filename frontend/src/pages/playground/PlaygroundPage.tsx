@@ -172,7 +172,7 @@ export default function PlaygroundPage() {
           rmssd={band.rmssd}
         />
 
-        <PlaygroundMeditationSimulator />
+        <PlaygroundMeditationSimulator band={band} connected={connected} />
 
         <DebugPanel
           logs={logs}

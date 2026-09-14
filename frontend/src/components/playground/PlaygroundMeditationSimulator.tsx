@@ -1,10 +1,11 @@
 /**
- * SDD-034 — 명상 시뮬레이터 컨테이너.
- * 시작/중지/리셋 세션 제어 + 명상 지표 패널.
+ * SDD-038 — 명상 시뮬레이터 컨테이너.
+ * 시작/중지/리셋 세션 제어 + useBand 기반 명상 지표 패널.
  */
 
-import { StrokeIcon } from '../layout/SidebarNav';
+import type { UseBandResult } from '../../hooks/useBand';
 import { useMeditationSessionStore } from '../../stores/useMeditationSessionStore';
+import { StrokeIcon } from '../layout/SidebarNav';
 import { PlaygroundMeditationPanel } from './PlaygroundMeditationPanel';
 
 function formatMmSs(totalSec: number): string {
@@ -24,7 +25,12 @@ const ICON_PLAY = ['M5 3l14 9-14 9V3z'];
 const ICON_PAUSE = ['M6 4h4v16H6z', 'M14 4h4v16h-4z'];
 const ICON_RESET = ['M1 4v6h6', 'M3.51 15a9 9 0 1 0 2.13-9.36L1 10'];
 
-export function PlaygroundMeditationSimulator() {
+interface Props {
+  band: UseBandResult;
+  connected: boolean;
+}
+
+export function PlaygroundMeditationSimulator({ band, connected }: Props) {
   const status = useMeditationSessionStore((s) => s.status);
   const elapsedSec = useMeditationSessionStore((s) => s.elapsedSec);
   const start = useMeditationSessionStore((s) => s.start);
@@ -41,7 +47,7 @@ export function PlaygroundMeditationSimulator() {
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-[#1F1F1F]">명상 시뮬레이터</h2>
             <p className="mt-0.5 text-xs text-[#6F6F6F]">
-              시작 → 수집 → 중지(요약) → 리셋 · SDD-034 · LINK BAND 없이 mock
+              시작 → 수집 → 중지(요약) → 리셋 · SDD-038 · useBand 실제 지표
             </p>
           </div>
           <span className="rounded-full bg-[#F5EDFC] px-2.5 py-0.5 text-[11px] font-medium text-[#5F0080]">
@@ -81,7 +87,7 @@ export function PlaygroundMeditationSimulator() {
         </div>
       </section>
 
-      <PlaygroundMeditationPanel />
+      <PlaygroundMeditationPanel band={band} connected={connected} />
     </div>
   );
 }
