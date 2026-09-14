@@ -5,6 +5,44 @@ import type { ProcessedEEGData, BandPowers, BrainStateAnalysis, SignalQuality } 
 // BiquadFilters.js 라이브러리 추가 - EEG 전용 고품질 신호 처리
 import { Biquad, makeNotchFilter, makeBandpassFilter } from 'biquadjs';
 
+/** Morlet 웨이블렛 복소수 샘플 */
+interface ComplexSample {
+  real: number;
+  imag: number;
+}
+
+/** Morlet 사이클 수 (haru 정본 / SDD-035) */
+const N_CYCLES = 7.0;
+/** 분석에 사용할 최대 샘플 수 */
+const MAX_ANALYSIS_SAMPLES = 1000;
+
+/**
+ * PSD 절대 보정 상수 (haru 정본)
+ * PSD(f) = PSD_CALIB × corr(f) × P(f)
+ */
+const PSD_CALIB = 0.00739181390669613;
+
+/**
+ * 주파수별 보정벡터 corr(f), 1~45Hz (haru 정본)
+ */
+const PSD_CORRECTION_VECTOR: Readonly<Record<number, number>> = {
+  1: 3.458011, 2: 0.954247, 3: 0.979583, 4: 1.014871, 5: 0.991486,
+  6: 0.985819, 7: 0.988772, 8: 0.983593, 9: 1.000722, 10: 1.019498,
+  11: 1.015089, 12: 1.002732, 13: 0.994022, 14: 0.986332, 15: 0.979657,
+  16: 0.976007, 17: 0.976767, 18: 0.981398, 19: 0.987247, 20: 0.99246,
+  21: 0.996599, 22: 0.999288, 23: 1.000258, 24: 1.000149, 25: 1.000518,
+  26: 1.002928, 27: 1.008112, 28: 1.016309, 29: 1.027692, 30: 1.042752,
+  31: 1.062329, 32: 1.087514, 33: 1.119614, 34: 1.160231, 35: 1.21135,
+  36: 1.275479, 37: 1.355671, 38: 1.455584, 39: 1.579855, 40: 1.733971,
+  41: 1.924999, 42: 2.161598, 43: 2.454839, 44: 2.818886, 45: 3.271393,
+};
+
+/** 주파수 f[Hz]에 해당하는 보정계수 — 가장 가까운 정수 Hz(1~45)로 반올림/클램프 */
+function psdCorrectionFactor(frequency: number): number {
+  const hz = Math.min(45, Math.max(1, Math.round(frequency)));
+  return PSD_CORRECTION_VECTOR[hz] ?? 1;
+}
+
 /**
  * EEG 전용 독립 신호 처리기
  * 
@@ -18,13 +56,13 @@ import { Biquad, makeNotchFilter, makeBandpassFilter } from 'biquadjs';
 export class EEGSignalProcessor {
   private readonly samplingRate: number = 250; // Hz
   
-  // 주파수 대역 정의 (Hz) - Python 코드와 동일
+  // 주파수 대역 정의 (Hz) — haru 정본 (SDD-035)
   private readonly bands = {
-    delta: { min: 0.5, max: 4 },
+    delta: { min: 1, max: 4 },
     theta: { min: 4, max: 8 },
     alpha: { min: 8, max: 13 },
     beta: { min: 13, max: 30 },
-    gamma: { min: 30, max: 50 }
+    gamma: { min: 30, max: 45 }
   };
 
   constructor() {
@@ -140,7 +178,7 @@ export class EEGSignalProcessor {
     const ch2Filtered = this.bandpassFilter(ch2Notched, 1, 45);
 
     // Transient response 제거: 앞 250개 샘플 제거 후 1000개로 분석
-    const transientSamples = 250;
+    const transientSamples = Math.floor(data.length * 0.15);
     const ch1Clean = ch1Filtered.length > transientSamples ? ch1Filtered.slice(transientSamples) : ch1Filtered;
     const ch2Clean = ch2Filtered.length > transientSamples ? ch2Filtered.slice(transientSamples) : ch2Filtered;
     
@@ -712,70 +750,49 @@ export class EEGSignalProcessor {
   }
 
   /**
-   * Morlet wavelet 변환 (Python MNE tfr_morlet 방식)
-   * @param data 입력 신호
-   * @param frequency 분석할 주파수 (Hz)
-   * @returns 해당 주파수에서의 파워 값
+   * Morlet 변환 — 7사이클, 선형 파워 반환 (haru 정본 / SDD-035)
+   * @returns 해당 주파수 bin의 보정된 PSD [μV²/Hz] — PSD_CALIB × corr(f) × P(f)
    */
   private morletWaveletTransform(data: number[], frequency: number): number {
-    // Morlet wavelet 파라미터 (MNE 기본값과 동일)
-    const sigma = 7.0; // 주파수 해상도 조절 파라미터
-    const cycles = sigma; // 웨이블렛 사이클 수
-    
-    // 웨이블렛 길이 계산
-    const waveletLength = Math.floor(cycles * this.samplingRate / frequency);
-    
-    // 웨이블렛 길이가 너무 짧거나 길면 조정
-    const minLength = Math.max(32, Math.floor(this.samplingRate / frequency));
-    const maxLength = Math.min(data.length, Math.floor(2 * this.samplingRate / frequency));
-    const actualLength = Math.max(minLength, Math.min(maxLength, waveletLength));
-    
-    // Morlet wavelet 생성
-    const wavelet = this.createMorletWavelet(actualLength, frequency, sigma);
-    
-    // 컨볼루션 수행 (웨이블렛 변환)
+    const targetLength = Math.round((N_CYCLES * this.samplingRate) / frequency);
+    const actualLength = Math.min(targetLength, data.length, MAX_ANALYSIS_SAMPLES);
+    if (actualLength < 2) return 0;
+
+    const effectiveCycles = (actualLength * frequency) / this.samplingRate;
+    const wavelet = this.createMorletWavelet(actualLength, frequency, effectiveCycles);
     const convResult = this.convolve(data, wavelet);
-    
-    // 파워 계산 (복소수 크기의 제곱)
+
     let totalPower = 0;
     for (let i = 0; i < convResult.length; i++) {
-      const real = convResult[i].real;
-      const imag = convResult[i].imag;
+      const { real, imag } = convResult[i];
       totalPower += real * real + imag * imag;
     }
-    
-    // 정규화 — 평균 파워 (linear μV² 스케일)
-    const avgPower = totalPower / convResult.length;
 
-    // linear power 반환. dB(10·log10) 변환을 여기서 하면 밴드파워가 음수가 되어
-    // relaxationIndex 등 지수 계산의 (alpha+beta)>0 게이트가 false가 되고 0으로 고정된다.
-    // dB 변환은 필요 시 소비처에서 수행한다.
-    return avgPower;
+    const rawPower = convResult.length > 0 ? totalPower / convResult.length : 0;
+
+    // 절대 보정: PSD(f) = PSD_CALIB × corr(f) × P(f) — linear μV² 유지 (dB 변환 금지)
+    return PSD_CALIB * psdCorrectionFactor(frequency) * rawPower;
   }
 
   /**
-   * Morlet wavelet 생성
-   * @param length 웨이블렛 길이
-   * @param frequency 중심 주파수
-   * @param sigma 표준편차 파라미터
-   * @returns 복소수 웨이블렛 배열
+   * 교정된 Morlet 웨이블렛 생성 (haru 정본 / SDD-035)
+   * @param cycles 유효 사이클 수 — σ_t = cycles / (2π·f)
    */
-  private createMorletWavelet(length: number, frequency: number, sigma: number): Array<{real: number, imag: number}> {
-    const wavelet = new Array(length);
+  private createMorletWavelet(length: number, frequency: number, cycles: number): ComplexSample[] {
+    const sigmaT = cycles / (2 * Math.PI * frequency);
     const center = (length - 1) / 2;
-    const norm = Math.pow(Math.PI, -0.25) * Math.sqrt(2 / sigma);
-    
+    const norm = Math.pow(Math.PI, -0.25) * Math.sqrt(1 / sigmaT) / Math.sqrt(this.samplingRate);
+    const wavelet = new Array<ComplexSample>(length);
+
     for (let i = 0; i < length; i++) {
       const t = (i - center) / this.samplingRate;
-      const gauss = Math.exp(-t * t / (2 * sigma * sigma));
+      const gauss = Math.exp(-(t * t) / (2 * sigmaT * sigmaT));
       const omega = 2 * Math.PI * frequency * t;
-      
       wavelet[i] = {
         real: norm * gauss * Math.cos(omega),
-        imag: norm * gauss * Math.sin(omega)
+        imag: norm * gauss * Math.sin(omega),
       };
     }
-    
     return wavelet;
   }
 
@@ -785,69 +802,50 @@ export class EEGSignalProcessor {
    * @param wavelet 웨이블렛 (복소수)
    * @returns 컨볼루션 결과 (복소수)
    */
-  private convolve(signal: number[], wavelet: Array<{real: number, imag: number}>): Array<{real: number, imag: number}> {
-    const resultLength = signal.length - wavelet.length + 1;
-    const result = new Array(resultLength);
-    
+  private convolve(signal: number[], wavelet: ComplexSample[]): ComplexSample[] {
+    const resultLength = Math.max(1, signal.length - wavelet.length + 1);
+    const result = new Array<ComplexSample>(resultLength);
+
     for (let i = 0; i < resultLength; i++) {
       let realSum = 0;
       let imagSum = 0;
-      
       for (let j = 0; j < wavelet.length; j++) {
         const signalVal = signal[i + j];
         realSum += signalVal * wavelet[j].real;
         imagSum += signalVal * wavelet[j].imag;
       }
-      
-      result[i] = {
-        real: realSum,
-        imag: imagSum
-      };
+      result[i] = { real: realSum, imag: imagSum };
     }
-    
     return result;
   }
 
   /**
-   * 밴드 파워 계산
+   * 밴드 파워 계산 — haru computeBandPowersLinear와 동일한 linear Σ P(f)·Δf
+   * 반환 구조는 {delta,theta,alpha,beta,gamma} linear 유지 (소비처 호환)
    */
   private computeBandPowers(powerSpectrum: number[], frequencies: number[]): BandPowers {
+    const empty: BandPowers = { delta: 0, theta: 0, alpha: 0, beta: 0, gamma: 0 };
     if (powerSpectrum.length === 0 || frequencies.length === 0) {
-      return {
-        delta: 0,
-        theta: 0,
-        alpha: 0,
-        beta: 0,
-        gamma: 0
-      };
+      return empty;
     }
-    
-    let deltaPower = 0, thetaPower = 0, alphaPower = 0, betaPower = 0, gammaPower = 0;
-    
+
+    const result = { ...empty };
     for (let i = 0; i < frequencies.length; i++) {
       const freq = frequencies[i];
       const power = powerSpectrum[i];
-      
       if (freq >= this.bands.delta.min && freq < this.bands.delta.max) {
-        deltaPower += power;
+        result.delta += power;
       } else if (freq >= this.bands.theta.min && freq < this.bands.theta.max) {
-        thetaPower += power;
+        result.theta += power;
       } else if (freq >= this.bands.alpha.min && freq < this.bands.alpha.max) {
-        alphaPower += power;
+        result.alpha += power;
       } else if (freq >= this.bands.beta.min && freq < this.bands.beta.max) {
-        betaPower += power;
+        result.beta += power;
       } else if (freq >= this.bands.gamma.min && freq < this.bands.gamma.max) {
-        gammaPower += power;
+        result.gamma += power;
       }
     }
-    
-    return {
-      delta: deltaPower,
-      theta: thetaPower,
-      alpha: alphaPower,
-      beta: betaPower,
-      gamma: gammaPower
-    };
+    return result;
   }
 
   /**
