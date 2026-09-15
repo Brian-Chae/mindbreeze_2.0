@@ -119,7 +119,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
       <div className="side-note">나를 알아가는 시간,<br />그 작은 변화를 기록해요.<br /><br />{session?.shortDate ?? '날짜 정보 없음'}<br />{sessionDuration != null ? `${timeLabel(sessionDuration)} 호흡 명상` : '명상 기록'}</div>
     </aside>
     <div className="report-main">
-    <section data-section="cover" tabIndex={-1} className="cover" aria-labelledby={`${id}-cover`}>
+    <section id="cover" data-section="cover" tabIndex={-1} className="cover" aria-labelledby={`${id}-cover`}>
       <div className="eyebrow">MIND BREEZE · 명상 여정</div>
       <h1 id={`${id}-cover`}>나에게 돌아온 {durationLabel},<br />몸과 마음의 이야기</h1>
       <p className="cover-lead">분주했던 하루에서 한 걸음 물러나,<br />오늘 나에게 일어난 작은 변화를 만나보세요.</p>
@@ -132,7 +132,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
         <div><dt>비교 구간</dt><dd>{duration > 0 ? `전반 ${timeLabel(duration / 2)} ↔ 후반 ${timeLabel(duration / 2)}` : '비교 구간 정보 없음'}</dd></div>
       </dl><div className="quality"><span><span className="dot" />데이터 품질 안내</span><span>{session?.qualityLabel ?? '측정 품질 정보가 제공되지 않았어요.'}</span></div></div>
     </section>
-    <section data-section="journey" tabIndex={-1} aria-labelledby={`${id}-journey`}>
+    <section id="journey" data-section="journey" tabIndex={-1} aria-labelledby={`${id}-journey`}>
       <div className="section-head"><p className="eyebrow">02 · 종합 여정</p><h2 id={`${id}-journey`}>서서히 느려진 호흡,<br />조금 더 머무른 마음</h2></div>
       <p className="journey-quote">{narrative.journey}</p>
       <div className="journey-summary" aria-label="전반 대비 후반의 몸과 마음 변화 요약">
@@ -146,14 +146,14 @@ export default function NarrativeSections({ narrative, session, isSample = false
       </div>
       <p className="section-note">아래 변화량은 세션의 전반 평균과 후반 평균을 비교한 값입니다.</p>
     </section>
-    <section data-section="body" tabIndex={-1} className="body-section" aria-labelledby={`${id}-body`}>
+    <section id="body" data-section="body" tabIndex={-1} className="body-section" aria-labelledby={`${id}-body`}>
       <div className="section-head"><p className="eyebrow section-number">03 · 몸의 변화</p><h2 id={`${id}-body`}>몸이 들려주는<br />느긋해진 리듬</h2><p>호흡과 심장의 움직임에서 오늘의 변화를 살펴보세요.</p></div>
       {narrative.bodyText && <p className="narrative-copy">{narrative.bodyText}</p>}
       {narrative.body.map((metric) => <MetricChangeCard key={metric.id} metric={metric} timeline={timeline} duration={duration} />)}
       {narrative.body.length === 0 && <p className="section-note">몸 지표 변화량이 아직 없어요.</p>}
       <p className="section-note">HRV는 심장 박동 간격의 변동성을 뜻합니다. 지표의 상승·하강만으로 건강 상태나 명상의 효과를 판단하지 않아요.</p>
     </section>
-    <section data-section="mind" tabIndex={-1} className="mind-section" aria-labelledby={`${id}-mind`}>
+    <section id="mind" data-section="mind" tabIndex={-1} className="mind-section" aria-labelledby={`${id}-mind`}>
       <div className="section-head"><p className="eyebrow">04 · 마음의 변화</p><h2 id={`${id}-mind`}>지금 이 순간에<br />조금 더 가까이</h2><p>마음의 지표가 어떻게 흘렀는지, 나의 느낌과 함께 읽어보세요.</p></div>
       {narrative.mindText && <p className="narrative-copy">{narrative.mindText}</p>}
       {narrative.mind.map((metric) => <MetricChangeCard key={metric.id} metric={metric} timeline={timeline} duration={duration} />)}
@@ -162,7 +162,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
       {isSample && (<div className="distribution"><div><h3>집중도가 머문 구간</h3><p>각 높낮이 구간에 머문 유효 측정 시간의 비중입니다. 전반·후반 변화율과는 다른 값이에요.</p><p>구간 분류와 시간 비중 모두 예시입니다.</p></div><figure><svg className="bar-chart" viewBox="0 0 350 188" role="img" aria-labelledby="distribution-title distribution-desc"><title id="distribution-title">집중도 5구간 시간 분포 예시</title><desc id="distribution-desc">매우낮음 5%, 낮음 10%, 보통 25%, 높음 40%, 매우높음 20%.</desc><rect x="22" y="131" width="40" height="15" rx="5" fill="#F9746B"/><text x="42" y="121" textAnchor="middle">5%</text><text x="42" y="170" textAnchor="middle">매우낮음</text><rect x="88" y="116" width="40" height="30" rx="5" fill="#FFC9C7"/><text x="108" y="106" textAnchor="middle">10%</text><text x="108" y="170" textAnchor="middle">낮음</text><rect x="154" y="71" width="40" height="75" rx="5" fill="#E8E8E8"/><text x="174" y="61" textAnchor="middle">25%</text><text x="174" y="170" textAnchor="middle">보통</text><rect x="220" y="26" width="40" height="120" rx="5" fill="#93E5B9"/><text x="240" y="16" textAnchor="middle">40%</text><text x="240" y="170" textAnchor="middle">높음</text><rect x="286" y="86" width="40" height="60" rx="5" fill="#59CE90"/><text x="306" y="76" textAnchor="middle">20%</text><text x="306" y="170" textAnchor="middle">매우높음</text></svg><figcaption>유효 측정 시간 중 비중 · 예시</figcaption></figure></div>)}
       <details className="legend-panel"><summary>그래프와 색상은 이렇게 읽어요</summary><p>곡선은 시간에 따른 지표의 상대적 흐름입니다. 배경의 5구간은 높낮이를 구분하는 시각적 안내이며, ‘낮음·보통·높음’은 건강 상태의 판정이 아닙니다. 몸 지표도 각 지표 안의 흐름을 보여주므로 그래프 높이를 서로 비교하지 마세요.</p><div className="gradient" aria-hidden="true"></div><div className="legend-ends"><span><svg className="face" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="#b54840"/><circle cx="8" cy="9" r="1" fill="#b54840"/><circle cx="16" cy="9" r="1" fill="#b54840"/><path d="M7 17Q12 11 17 17" fill="none" stroke="#b54840"/></svg>낮은 구간</span><span>높은 구간<svg className="face" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="#26724b"/><circle cx="8" cy="9" r="1" fill="#26724b"/><circle cx="16" cy="9" r="1" fill="#26724b"/><path d="M7 14Q12 20 17 14" fill="none" stroke="#26724b"/></svg></span></div><p>표정과 색상은 1.0 리포트의 시각 언어를 계승한 범례입니다. 좋고 나쁨을 판정하거나 종합 상태를 표시하지 않습니다. 측정이 부족한 실제 리포트에서는 값을 채우지 않고 ‘분석할 데이터가 부족해요’로 안내합니다.</p></details>
     </section>
-    <section data-section="closing" tabIndex={-1} className="closing" aria-labelledby={`${id}-closing`}>
+    <section id="closing" data-section="closing" tabIndex={-1} className="closing" aria-labelledby={`${id}-closing`}>
       <p className="eyebrow">05 · 마무리</p><h2 id={`${id}-closing`}>오늘의 작은 쉼을,<br />내일의 나에게도</h2>
       <p>명상마다 흐름은 달라질 수 있어요.<br />오늘 느꼈던 나의 감각 하나를 기억해 두면 어떨까요?</p>
       <div className="practice practice-body"><span className="practice-icon" aria-hidden="true">↘</span><div><span className="practice-label">몸을 위한 다음 제안</span><strong>시작할 때, 몸이 머무를 시간을 주세요</strong><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div></div>

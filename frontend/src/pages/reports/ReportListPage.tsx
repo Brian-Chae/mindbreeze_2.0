@@ -65,6 +65,7 @@ export default function ReportListPage() {
 
   return (
     <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? sampleLink : undefined}>
+      {!loading && <div className="mb-4 md:hidden">{sampleLink}</div>}
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
       )}
