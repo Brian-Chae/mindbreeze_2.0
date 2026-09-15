@@ -1,5 +1,5 @@
-// AI 리포트 상세 페이지
-// 순서: Cover → 상담 본문 → EEG 품질 배너 → 7지표 → 3채널 타임라인
+// AI 리포트 상세 페이지 — SDD-045 서사형
+// 순서: Cover(점수 최소화) → 서사(종합→몸→마음→마무리) → 상담 본문 → EEG 보조(7지표/타임라인)
 // LINK BAND 미착용(not_measured) 시 EEG 섹션 DOM 미노출
 
 import { useEffect, useState, useCallback } from 'react';
@@ -8,6 +8,7 @@ import AppShell from '../../components/layout/AppShell';
 import EegQualityBanner from '../../components/reports/EegQualityBanner';
 import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
+import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportStatusBadge from '../../components/reports/ReportStatusBadge';
 import {
   getReport,
@@ -36,68 +37,55 @@ function CoverSection({
   const headline = adapted.headline ?? '리포트';
   const sessionTitle = report.session_title || headline;
   const sessionType = report.session_type ?? '-';
-  // valid/degraded만 coverScore 노출 — invalid/insufficient에서 0 채우기 금지
-  const score = adapted.coverScore;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#5F0080] via-[#7B00A6] to-[#9B30FF] p-8 text-white">
-      <div className="absolute inset-0 opacity-10">
-        <svg width="100%" height="100%">
-          <defs>
-            <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="white" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots)" />
+    <section className="relative overflow-hidden rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-8">
+      <div className="absolute right-6 top-8 opacity-40 pointer-events-none" aria-hidden>
+        <svg width="120" height="120" viewBox="0 0 240 240">
+          <g fill="none" stroke="#5F0080" strokeWidth="1.5">
+            <ellipse cx="120" cy="120" rx="95" ry="44" transform="rotate(-32 120 120)" opacity=".25" />
+            <ellipse cx="120" cy="120" rx="70" ry="70" opacity=".3" />
+          </g>
+          <circle cx="187" cy="76" r="8" fill="#59CE90" />
         </svg>
       </div>
 
-      <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20">
-              {report.type === 'counselor' ? '상담사용' : '내담자용'}
+      <div className="relative z-10">
+        <p className="text-[11px] font-bold tracking-[1.5px] text-[#5F0080]">
+          MIND BREEZE · 몸·마음 리포트
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
+            {report.type === 'counselor' ? '상담사용' : '내담자용'}
+          </span>
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
+            {sessionType}
+          </span>
+          {adapted.coverReasonChip && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+              {adapted.coverReasonChip}
             </span>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20">
-              {sessionType}
-            </span>
-            {adapted.coverReasonChip && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-400/25 text-amber-50 border border-amber-200/30">
-                {adapted.coverReasonChip}
-              </span>
-            )}
-          </div>
-          <h1 className="text-[28px] font-extrabold tracking-tight mb-2">
-            {sessionTitle}
-          </h1>
-          <div className="text-[14px] text-white/70 font-mono">
-            {formatDate(report.scheduled_at ?? report.created_at)}
-          </div>
-          {report.sent_at && (
-            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/15 text-[12px] font-bold">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              승인 완료
-            </div>
           )}
         </div>
-
-        {score !== null && (
-          <div className="flex-shrink-0">
-            <div className="bg-white/10 backdrop-blur rounded-2xl px-6 py-5 text-center border border-white/10">
-              <div className="text-[12px] text-white/60 font-mono uppercase tracking-wider mb-1">
-                {report.type === 'client' ? '오늘의 두뇌휴식' : 'EEG 종합'}
-              </div>
-              <div className="text-[48px] font-extrabold leading-none">
-                {score}
-              </div>
-              <div className="text-[13px] text-white/50 mt-1">/ 100</div>
-            </div>
+        <h1 className="mt-4 text-[26px] font-extrabold tracking-tight text-[#5F0080] leading-snug">
+          {sessionTitle}
+        </h1>
+        <p className="mt-2 text-[14px] text-[#6D547A]">
+          오늘 나에게 일어난 작은 변화를 만나보세요.
+        </p>
+        <div className="mt-4 text-[13px] text-[#6F6F6F] font-mono">
+          {formatDate(report.scheduled_at ?? report.created_at)}
+        </div>
+        {report.sent_at && (
+          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F0F9F5] text-[12px] font-bold text-[#26724B] border border-[#D8EFE3]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            승인 완료
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -185,10 +173,9 @@ export default function ReportDetailPage() {
   if (!report) return null;
 
   const adapted = adaptReportContent(report.content, report.type);
-  const { summary, insights, markers } = adapted;
+  const { summary, insights, markers, displayNarrative } = adapted;
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
-  // SDD-027 — 파이프라인 상태 · quality 파생 credibility
   const pipelineStatus = resolveReportStatus(report);
   const credibility = resolveDataCredibility(
     report.data_credibility,
@@ -201,23 +188,25 @@ export default function ReportDetailPage() {
   });
 
   return (
-    <AppShell title="리포트 상세" sub="AI REPORT DETAIL">
+    <AppShell title="리포트 상세" sub="BODY · MIND REPORT">
       <div className="max-w-4xl mx-auto space-y-6">
         {error && (
           <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
 
-        {/* 1. Cover — 종합점수 / 사유 칩 */}
+        {/* 1. Cover — 서사 우선, 종합점수 대형 노출 없음 */}
         <CoverSection report={report} adapted={adapted} />
 
-        {/* SDD-027: pending_analysis / pending_review / completed / error */}
         <ReportStatusBadge
           status={pipelineStatus}
           credibility={credibility}
           showApprovalHint={isCounselor}
         />
 
-        {/* 2. 상담 본문 */}
+        {/* 2. 서사 섹션 (LLM 또는 규칙 폴백) */}
+        {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
+
+        {/* 3. 상담 본문 */}
         {summary && (
           <SummaryCard title="AI 요약">
             <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
@@ -244,7 +233,6 @@ export default function ReportDetailPage() {
           </SummaryCard>
         )}
 
-        {/* 상담사: 마커 노출 / 내담자: 미노출(정보 비대칭) */}
         {isCounselor && markers.length > 0 && (
           <SummaryCard title="주요 지표">
             <div className="space-y-2">
@@ -255,13 +243,13 @@ export default function ReportDetailPage() {
           </SummaryCard>
         )}
 
-        {/* 3~5. EEG — not_measured면 섹션 전체 미마운트 */}
+        {/* 4. EEG 보조 — 7지표/타임라인 축소 유지 (다크 테마 금지) */}
         {adapted.showEegSection && eeg && (
           <div className="space-y-4" data-testid="eeg-section">
             <EegQualityBanner eeg={eeg} reportType={report.type} />
 
             {adapted.showEegMetrics && (
-              <EegMetricsGrid eeg={eeg} reportType={report.type} />
+              <EegMetricsGrid eeg={eeg} reportType={report.type} compact />
             )}
 
             {adapted.showEegTimeline && (
@@ -279,7 +267,6 @@ export default function ReportDetailPage() {
             목록으로
           </button>
 
-          {/* pending_review = 승인 게이트 */}
           {showApprove && (
             <button
               onClick={handleApprove}

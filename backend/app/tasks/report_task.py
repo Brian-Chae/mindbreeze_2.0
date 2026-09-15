@@ -18,6 +18,8 @@ from app.models.eeg_feature import EEGFeatureWindow
 from app.models.normalization_model import NormalizationModel
 from app.services import eeg_metrics
 from app.services.eeg_rollup_service import summarize_hrv_motion
+from app.services.report_narrative import build_metrics_summary
+from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +155,7 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
         # 두뇌휴식도 = relaxation_score 단일 소스 (§ SDD-022)
         "summary_labels": {"relaxation_score": "두뇌휴식도"},
         "timeline": timeline,
+        "narrative": _call_narrative_llm(build_metrics_summary(windows, m.session_status)),
         "normalization_source": m.normalization_source,
         "normalization_version": m.normalization_version,
     }

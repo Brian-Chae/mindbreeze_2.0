@@ -26,6 +26,56 @@ TEMPLATE_BY_TYPE = {
 }
 
 
+def _call_narrative_llm(metrics_summary: dict) -> dict:
+    """Deepseek 서사 생성. 키 누락/실패 시 규칙 스텁으로 안전하게 폴백한다."""
+    from app.services.report_narrative import fallback_narrative
+
+    fallback = fallback_narrative(metrics_summary)
+    if not DEEPSEEK_API_KEY or not any(
+        metric.get("direction") is not None
+        for group in ("body", "mind")
+        for metric in metrics_summary.get(group, {}).values()
+    ):
+        return fallback
+
+    import requests
+
+    prompt = """세션 전반과 후반의 생체 지표 변화를 한국어 서사로 설명하세요.
+명상을 점수(0~100), 등급, 잘함/못함으로 평가하지 마세요.
+몸과 마음이 어떻게 변했는지 관측된 방향만 설명하세요. 원천 지표이며 정규화 점수가 아닙니다.
+null은 측정/비교 불가이므로 안정, 개선, 0으로 해석하지 마세요.
+생체 지표로 감정, 질병, 자율신경 회복, 호흡 깊이, 치료 효과를 확정하지 마세요.
+HRV는 PPG 기반 SDNN이며 ECG 측정으로 표현하지 마세요.
+journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마무리)의
+네 키를 가진 JSON 객체만 반환하세요. 각 값은 비어 있지 않은 짧은 문자열입니다.
+자료:
+""" + json.dumps(metrics_summary, ensure_ascii=False, allow_nan=False)
+    try:
+        response = requests.post(
+            f"{DEEPSEEK_BASE}/chat/completions",
+            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
+            json={"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}],
+                  "temperature": 0.3, "max_tokens": 1024,
+                  "response_format": {"type": "json_object"}},
+            timeout=30,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"].strip()
+        if content.startswith("```"):
+            content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        parsed = json.loads(content)
+        keys = ("journey", "body", "mind", "closing")
+        if not isinstance(parsed, dict) or any(
+            not isinstance(parsed.get(key), str) or not parsed[key].strip() or len(parsed[key]) > 2000
+            for key in keys
+        ):
+            raise ValueError("서사 JSON 계약 불일치")
+        return {key: parsed[key].strip() for key in keys}
+    except Exception:  # 공급자 오류가 리포트 생성 자체를 실패시키지 않는다.
+        logger.warning("[summary_task] 서사 생성 실패: 규칙 스텁 사용")
+        return fallback
+
+
 def _call_deepseek_summary(session_type: str, transcript: str | None) -> dict:
     """Deepseek API — 구조화된 JSON 요약."""
     if not DEEPSEEK_API_KEY:

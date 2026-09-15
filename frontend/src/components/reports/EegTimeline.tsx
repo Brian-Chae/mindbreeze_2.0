@@ -1,5 +1,5 @@
 // EEG 3채널 타임라인 — concentration / relaxation / stress
-// Recharts 계약 유지, Y축 0–100, inline style 금지(범례는 Tailwind)
+// mindbreeze 라이트 토큰 (haru 다크 테마 금지)
 
 import {
   LineChart,
@@ -19,46 +19,46 @@ interface EegTimelineProps {
 }
 
 const CHANNELS = [
-  { key: 'concentration' as const, label: '집중도', stroke: '#22D3EE', legendBg: 'bg-cyan-400' },
-  { key: 'relaxation' as const, label: '이완도', stroke: '#34D399', legendBg: 'bg-emerald-400' },
-  { key: 'stress' as const, label: '스트레스', stroke: '#F87171', legendBg: 'bg-red-400' },
+  { key: 'concentration' as const, label: '집중도', stroke: '#5F0080', legendBg: 'bg-[#5F0080]' },
+  { key: 'relaxation' as const, label: '이완도', stroke: '#59CE90', legendBg: 'bg-[#59CE90]' },
+  { key: 'stress' as const, label: '스트레스', stroke: '#F9746B', legendBg: 'bg-[#F9746B]' },
 ];
 
 export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
   if (!data || data.length === 0) return null;
 
   return (
-    <section className="rounded-2xl border border-cyan-400/20 bg-slate-950 p-5 text-slate-100">
+    <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5">
       <div className="mb-4">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/80">
+        <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
           eeg timeline
         </p>
-        <h3 className="mt-1 text-[15px] font-bold text-slate-100">뇌파 트렌드</h3>
+        <h3 className="mt-1 text-[14px] font-bold text-[#1F1F1F]">뇌파 트렌드</h3>
         {!dense && (
-          <p className="mt-1 text-[12px] text-slate-400">
-            세션 중 집중·이완·스트레스 추이 (0–100)
+          <p className="mt-1 text-[12px] text-[#6F6F6F]">
+            세션 중 집중·이완·스트레스 추이 (참고)
           </p>
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" />
           <XAxis
             dataKey="min"
-            tick={{ fontSize: 11, fill: '#94A3B8' }}
-            axisLine={{ stroke: '#334155' }}
+            tick={{ fontSize: 11, fill: '#6F6F6F' }}
+            axisLine={{ stroke: '#EFEFEF' }}
             tickLine={false}
             label={{
               value: '분',
               position: 'insideBottomRight',
               offset: -5,
               fontSize: 11,
-              fill: '#64748B',
+              fill: '#9B9B9B',
             }}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: '#94A3B8' }}
+            tick={{ fontSize: 11, fill: '#6F6F6F' }}
             axisLine={false}
             tickLine={false}
             domain={[0, 100]}
@@ -66,10 +66,10 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
           <Tooltip
             contentStyle={{
               borderRadius: 8,
-              border: '1px solid rgba(34,211,238,0.25)',
-              background: '#020617',
+              border: '1px solid #EFEFEF',
+              background: '#FFFFFF',
               fontSize: 12,
-              color: '#E2E8F0',
+              color: '#1F1F1F',
             }}
           />
           {CHANNELS.map((ch) => (
@@ -90,7 +90,7 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
 
       <div className="mt-4 flex items-center justify-center gap-5">
         {CHANNELS.map((ch) => (
-          <div key={ch.key} className="flex items-center gap-1.5 text-[12px] text-slate-300">
+          <div key={ch.key} className="flex items-center gap-1.5 text-[12px] text-[#5A5A5A]">
             <span className={`h-0.5 w-3 ${ch.legendBg}`} />
             {ch.label}
           </div>

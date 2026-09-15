@@ -1,6 +1,16 @@
 // SDD-022 — 리포트 content.eeg 계약 + UI 매핑 어댑터
 // UI 기대(summary/insights/markers/eeg_summary/eeg_timeline)와
 // 생성기 산출(content.eeg)을 단일 뷰 모델로 통일한다.
+// SDD-045 — content.eeg.narrative / changes 서사 필드 확장
+
+import type { MetricChangeInput } from '../report/narrative';
+import {
+  parseLlmNarrative,
+  parseMetricChanges,
+  resolveDisplayNarrative,
+  type DisplayNarrative,
+  type LlmNarrativePayload,
+} from '../report/resolve-narrative';
 
 /** reports.ts 와 동일 — 순환 import 방지용 로컬 별칭 */
 export type ReportViewType = 'counselor' | 'client';
@@ -62,6 +72,11 @@ export interface EegTimelinePoint {
   concentration: number | null;
   relaxation: number | null;
   stress: number | null;
+  /** 몸 지표(선택) — 서사 변화량 유도용 */
+  heart_rate?: number | null;
+  respiratory_rate?: number | null;
+  sdnn?: number | null;
+  hrv?: number | null;
 }
 
 export interface ReportEegContent {
@@ -74,6 +89,10 @@ export interface ReportEegContent {
   summary_labels: Partial<Record<EegMetricKey, string>>;
   timeline: EegTimelinePoint[];
   normalization_version: string | null;
+  /** SDD-045 LLM 서사 (없으면 null) */
+  narrative: LlmNarrativePayload | null;
+  /** 전반/후반 평균 변화량 (서사 폴백·델타 표시) */
+  changes: MetricChangeInput[] | null;
 }
 
 export interface ReportMarker {
@@ -103,6 +122,8 @@ export interface AdaptedReportContent {
   /** 평탄 뷰: 7지표 (null 유지) */
   eeg_summary: Partial<Record<EegMetricKey, number | null>> | null;
   eeg_timeline: EegTimelinePoint[];
+  /** SDD-045 서사 표시 모델 (LLM 또는 규칙 폴백). 없으면 null */
+  displayNarrative: DisplayNarrative | null;
 }
 
 const QUALITY_STATUSES: readonly EegQualityStatus[] = [
@@ -193,6 +214,10 @@ function parseTimeline(raw: unknown): EegTimelinePoint[] {
       concentration: toDisplayScale(asNullableNumber(item.concentration)),
       relaxation: toDisplayScale(asNullableNumber(item.relaxation)),
       stress: toDisplayScale(asNullableNumber(item.stress)),
+      heart_rate: asNullableNumber(item.heart_rate),
+      respiratory_rate: asNullableNumber(item.respiratory_rate),
+      sdnn: asNullableNumber(item.sdnn),
+      hrv: asNullableNumber(item.hrv),
     });
   }
   return points;
@@ -238,6 +263,10 @@ function parseEegBlock(raw: unknown): ReportEegContent | null {
   const status = asQualityStatus(raw.status) ?? 'not_measured';
   if (status === 'not_measured') return null;
 
+  const narrative = parseLlmNarrative(raw.narrative);
+  const changes =
+    parseMetricChanges(raw.changes) ?? narrative?.changes ?? null;
+
   return {
     status,
     reliability: asNullableNumber(raw.reliability),
@@ -247,6 +276,8 @@ function parseEegBlock(raw: unknown): ReportEegContent | null {
     summary_labels: parseSummaryLabels(raw.summary_labels),
     timeline: parseTimeline(raw.timeline),
     normalization_version: asString(raw.normalization_version),
+    narrative,
+    changes,
   };
 }
 
@@ -283,6 +314,8 @@ function parseLegacyEeg(
     summary_labels: {},
     timeline,
     normalization_version: null,
+    narrative: null,
+    changes: null,
   };
 }
 
@@ -310,6 +343,7 @@ export function adaptReportContent(
       showEegTimeline: false,
       eeg_summary: null,
       eeg_timeline: [],
+      displayNarrative: null,
     };
   }
 
@@ -319,7 +353,8 @@ export function adaptReportContent(
     eeg !== null && (eeg.status === 'valid' || eeg.status === 'degraded');
   const showEegTimeline = showEegMetrics && eeg.timeline.length > 0;
 
-  // invalid/insufficient/not_measured에서는 종합점수를 0으로 채우지 않음
+  // SDD-045: 종합점수 대형 노출 제거 — coverScore는 하위호환용으로만 유지하되
+  // 서사 우선 페이지에서는 사용하지 않음. valid/degraded에서만 값 보존.
   let coverScore: number | null = null;
   if (eeg && (eeg.status === 'valid' || eeg.status === 'degraded')) {
     coverScore = eeg.score;
@@ -331,6 +366,14 @@ export function adaptReportContent(
   const eeg_summary: Partial<Record<EegMetricKey, number | null>> | null = eeg
     ? { ...eeg.metrics }
     : null;
+
+  // content 루트 narrative 도 허용 (BE가 eeg 밖에도 둘 수 있음)
+  const rootNarrative = parseLlmNarrative(content.narrative);
+  const displayNarrative = resolveDisplayNarrative({
+    narrative: eeg?.narrative ?? rootNarrative,
+    changes: eeg?.changes ?? null,
+    timeline: eeg?.timeline ?? null,
+  });
 
   return {
     summary: asString(content.summary),
@@ -345,6 +388,7 @@ export function adaptReportContent(
     showEegTimeline,
     eeg_summary,
     eeg_timeline: eeg?.timeline ?? [],
+    displayNarrative,
   };
 }
 

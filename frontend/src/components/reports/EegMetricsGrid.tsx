@@ -1,4 +1,4 @@
-// EEG 7지표 카드 그리드
+// EEG 7지표 카드 그리드 — mindbreeze 라이트 토큰 (보조·축소 표시)
 // null → "산출 불가" (0 위장 금지)
 // counselor=전체+reliability, client=상위 3~4 + 접힘
 
@@ -14,6 +14,8 @@ import type { ReportType } from '../../lib/api/reports';
 interface EegMetricsGridProps {
   eeg: ReportEegContent;
   reportType: ReportType;
+  /** SDD-045: 서사 우선 시 보조 그리드 축소 */
+  compact?: boolean;
 }
 
 function MetricCard({
@@ -30,28 +32,36 @@ function MetricCard({
 
   return (
     <div
-      className={`rounded-xl border border-cyan-400/15 bg-black/40 ${
-        dense ? 'px-3 py-3' : 'px-4 py-4'
+      className={`rounded-xl border border-[#EFEFEF] bg-white ${
+        dense ? 'px-3 py-2.5' : 'px-4 py-3'
       }`}
     >
-      <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-slate-400">
+      <div className="mb-1.5 font-mono text-[10px] uppercase tracking-wider text-[#9B9B9B]">
         {label}
       </div>
       <div
         className={`font-bold tracking-tight ${
-          value === null ? 'text-[15px] text-slate-500' : 'text-[22px] text-cyan-200'
+          value === null
+            ? 'text-[13px] text-[#9B9B9B]'
+            : dense
+              ? 'text-[16px] text-[#5F0080]'
+              : 'text-[18px] text-[#5F0080]'
         }`}
       >
         {display}
       </div>
       {value !== null && (
-        <div className="mt-0.5 font-mono text-[11px] text-slate-500">/ 100</div>
+        <div className="mt-0.5 font-mono text-[10px] text-[#B0B0B0]">/ 100</div>
       )}
     </div>
   );
 }
 
-export default function EegMetricsGrid({ eeg, reportType }: EegMetricsGridProps) {
+export default function EegMetricsGrid({
+  eeg,
+  reportType,
+  compact = false,
+}: EegMetricsGridProps) {
   const [expanded, setExpanded] = useState(false);
   const isCounselor = reportType === 'counselor';
 
@@ -68,30 +78,35 @@ export default function EegMetricsGrid({ eeg, reportType }: EegMetricsGridProps)
     : [...primaryKeys];
 
   return (
-    <section className="rounded-2xl border border-cyan-400/20 bg-slate-950 p-5 text-slate-100">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+    <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-cyan-400/80">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
             eeg metrics
           </p>
-          <h3 className="mt-1 text-[15px] font-bold text-slate-100">
-            {isCounselor ? '7지표 분석' : '오늘의 뇌파 지표'}
+          <h3 className="mt-1 text-[14px] font-bold text-[#1F1F1F]">
+            {isCounselor ? '7지표 참고' : '뇌파 지표 참고'}
           </h3>
+          {compact && (
+            <p className="mt-0.5 text-[11px] text-[#9B9B9B]">
+              서사·변화량이 우선이며, 점수는 보조 참고용입니다.
+            </p>
+          )}
         </div>
         {isCounselor && eeg.reliability !== null && (
-          <span className="font-mono text-[11px] text-emerald-300/90">
+          <span className="font-mono text-[11px] text-[#26724B]">
             reliability {eeg.reliability.toFixed(2)}
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {visibleKeys.map((key) => (
           <MetricCard
             key={key}
             label={resolveMetricLabel(key, reportType, eeg.summary_labels)}
             value={eeg.metrics[key]}
-            dense={!isCounselor}
+            dense={compact || !isCounselor}
           />
         ))}
       </div>
@@ -100,7 +115,7 @@ export default function EegMetricsGrid({ eeg, reportType }: EegMetricsGridProps)
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-4 w-full rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-[12px] font-medium text-cyan-200 transition-colors hover:bg-cyan-400/10"
+          className="mt-3 w-full rounded-lg border border-[#EFEFEF] bg-[#F5EDFC]/60 px-3 py-2 text-[12px] font-medium text-[#5F0080] transition-colors hover:bg-[#F5EDFC]"
         >
           {expanded ? '간단히 보기' : '더보기'}
         </button>
