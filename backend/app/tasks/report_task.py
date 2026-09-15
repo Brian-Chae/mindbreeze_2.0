@@ -155,7 +155,7 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
         # 두뇌휴식도 = relaxation_score 단일 소스 (§ SDD-022)
         "summary_labels": {"relaxation_score": "두뇌휴식도"},
         "timeline": timeline,
-        "narrative": _call_narrative_llm(build_metrics_summary(windows, m.session_status)),
+        "narrative": _call_narrative_llm(build_metrics_summary(windows, m.session_status), db),
         "normalization_source": m.normalization_source,
         "normalization_version": m.normalization_version,
     }

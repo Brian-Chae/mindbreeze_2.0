@@ -26,17 +26,30 @@ TEMPLATE_BY_TYPE = {
 }
 
 
-def _call_narrative_llm(metrics_summary: dict) -> dict:
+def _call_narrative_llm(metrics_summary: dict, db: DBSession | None = None) -> dict:
     """Deepseek 서사 생성. 키 누락/실패 시 규칙 스텁으로 안전하게 폴백한다."""
-    from app.services.report_narrative import fallback_narrative
+    from app.models.narrative_cache import NarrativeCache
+    from app.services.report_narrative import build_narrative_signature, fallback_narrative
 
     fallback = fallback_narrative(metrics_summary)
+    signature = build_narrative_signature(metrics_summary)
+    if db is not None and signature is not None:
+        cached = db.get(NarrativeCache, signature)
+        if cached is not None:
+            return dict(cached.narrative)
+
+    def cache(narrative: dict) -> dict:
+        if db is not None and signature is not None:
+            db.merge(NarrativeCache(signature=signature, narrative=narrative))
+            db.flush()
+        return narrative
+
     if not DEEPSEEK_API_KEY or not any(
         metric.get("direction") is not None
         for group in ("body", "mind")
         for metric in metrics_summary.get(group, {}).values()
     ):
-        return fallback
+        return cache(fallback)
 
     import requests
 
@@ -70,10 +83,10 @@ journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마
             for key in keys
         ):
             raise ValueError("서사 JSON 계약 불일치")
-        return {key: parsed[key].strip() for key in keys}
+        return cache({key: parsed[key].strip() for key in keys})
     except Exception:  # 공급자 오류가 리포트 생성 자체를 실패시키지 않는다.
         logger.warning("[summary_task] 서사 생성 실패: 규칙 스텁 사용")
-        return fallback
+        return cache(fallback)
 
 
 def _call_deepseek_summary(session_type: str, transcript: str | None) -> dict:

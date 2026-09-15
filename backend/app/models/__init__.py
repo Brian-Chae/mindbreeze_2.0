@@ -23,10 +23,12 @@ from app.models.career import Career
 
 from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
+from app.models.narrative_cache import NarrativeCache
 
 __all__ = [
     "NormalizationBaseline",
     "NormalizationModel",
+    "NarrativeCache",
     "ChatRoom",
     "ChatMessage",
     "ChatMessageRead",

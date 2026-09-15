@@ -9,6 +9,29 @@ METRICS = {
 }
 LABELS = {"respiratory_rate": "호흡수", "heart_rate": "심박수", "hrv": "HRV(SDNN)",
           "focus": "집중 지표", "relaxation": "이완 지표", "emotional_stability": "감정안정 지표"}
+SIGNATURE_METRICS = (
+    ("body", "respiratory_rate"),
+    ("body", "heart_rate"),
+    ("body", "hrv"),
+    ("mind", "focus"),
+    ("mind", "relaxation"),
+    ("mind", "emotional_stability"),
+)
+SIGNATURE_DIRECTION = {"up": "↑", "down": "↓", "stable": "→"}
+
+
+def build_narrative_signature(summary: dict) -> str | None:
+    """6개 지표의 방향을 고정 순서 시그니처로 변환한다.
+
+    한 지표라도 비교할 수 없으면 결측을 안정 상태로 오인하지 않도록 캐시를 사용하지 않는다.
+    """
+    directions = [
+        summary.get(group, {}).get(metric, {}).get("direction")
+        for group, metric in SIGNATURE_METRICS
+    ]
+    if any(direction not in SIGNATURE_DIRECTION for direction in directions):
+        return None
+    return "".join(SIGNATURE_DIRECTION[direction] for direction in directions)
 
 
 def build_metrics_summary(windows: list, session_status: str) -> dict:
