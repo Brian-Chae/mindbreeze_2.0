@@ -71,9 +71,14 @@ def test_upgrade_replaces_rule_narrative_after_real_llm_success(monkeypatch, nar
     assert cached.narrative == generated
 
 
-def test_celery_beat_registers_daily_upgrade():
-    from app.core.celery_app import celery_app
+def test_cron_calls_upgrade_rule_narratives_with_daily_limit(monkeypatch):
+    import upgrade_narrative_cache_cron as cron_module
 
-    schedule = celery_app.conf.beat_schedule["upgrade-narrative-cache-daily"]
-    assert schedule["task"] == "tasks.upgrade_narrative_cache"
-    assert schedule["kwargs"] == {"limit": 5}
+    db = Mock()
+    upgrade = Mock(return_value=2)
+    monkeypatch.setattr(cron_module, "SessionLocal", Mock(return_value=db))
+    monkeypatch.setattr(cron_module, "upgrade_rule_narratives", upgrade)
+
+    assert cron_module.main() == 0
+    upgrade.assert_called_once_with(db, limit=5)
+    db.close.assert_called_once_with()

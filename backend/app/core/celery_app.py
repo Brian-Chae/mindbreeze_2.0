@@ -13,10 +13,4 @@ celery_app = Celery(
         "app.tasks.upgrade_narrative_cache",
     ],
 )
-celery_app.conf.beat_schedule = {
-    "upgrade-narrative-cache-daily": {
-        "task": "tasks.upgrade_narrative_cache",
-        "schedule": 24 * 60 * 60,
-        "kwargs": {"limit": 5},
-    },
-}
+# 서사 캐시의 주기적 업그레이드는 upgrade_narrative_cache_cron.py가 cron에서 실행한다.
