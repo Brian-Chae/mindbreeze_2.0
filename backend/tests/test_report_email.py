@@ -90,6 +90,23 @@ def test_delivery_approval_and_failure(client, setup_email, monkeypatch):
     assert client.get(f"/api/v1/sessions/{uuid4()}/report-email/view", params={"token": token}).status_code == 403
 
 
+def test_delivery_failure_logs_report_context(client, setup_email, monkeypatch, caplog):
+    from app.services import report_email_service as service
+    db, session, participant = setup_email
+    client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
+    report = db.query(Report).one()
+    report.status = "completed"
+    db.commit()
+    monkeypatch.setattr(service, "send_report_email", Mock(return_value=False))
+
+    with caplog.at_level("WARNING", logger=service.__name__):
+        assert service.deliver_report_email(str(report.id), db) == "failed"
+
+    assert str(report.id) in caplog.text
+    assert str(session.id) in caplog.text
+    assert str(participant.id) in caplog.text
+
+
 def test_queue_failure_is_visible(client, setup_email, monkeypatch):
     from app.services import report_email_service as service
     db, session, participant = setup_email

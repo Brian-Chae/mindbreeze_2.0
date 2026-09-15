@@ -1,4 +1,5 @@
 """SDD-029: 인증된 참가자 이메일로 승인된 개인 리포트를 발송한다."""
+import logging
 from datetime import datetime, timedelta, timezone
 from html import escape
 from uuid import UUID
@@ -13,6 +14,8 @@ from app.models.record import Report
 from app.services.report_service import _serialize
 from app.services.email_verify_service import verify_email_token
 from app.tasks.email import send_report_email
+
+logger = logging.getLogger(__name__)
 
 
 def _token(kind: str, subject: str, session_id: str, **extra) -> str:
@@ -91,6 +94,12 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
     except Exception:
         participant.report_email_status = "failed"
         db.commit()
+        logger.exception(
+            "[report_email] enqueue failed: report_id=%s session_id=%s participant_id=%s",
+            report.id,
+            session.id,
+            participant.id,
+        )
         raise HTTPException(503, "메일 발송 예약에 실패했습니다. 다시 요청해주세요")
     return {"status": "queued", "message": "메일 발송을 예약했습니다"}
 
@@ -111,9 +120,27 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         return "sent"
     token = _token("report_view", str(report.id), str(report.session_id), email=participant.report_email)
     link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
-    if not send_report_email(participant.report_email, link):
+    try:
+        sent = send_report_email(participant.report_email, link)
+    except Exception:
         participant.report_email_status = "failed"
         db.commit()
+        logger.exception(
+            "[report_email] delivery exception: report_id=%s session_id=%s participant_id=%s",
+            report.id,
+            report.session_id,
+            participant.id,
+        )
+        return "failed"
+    if not sent:
+        participant.report_email_status = "failed"
+        db.commit()
+        logger.warning(
+            "[report_email] delivery failed: report_id=%s session_id=%s participant_id=%s",
+            report.id,
+            report.session_id,
+            participant.id,
+        )
         return "failed"
     participant.report_email_status = "sent"
     participant.report_email_sent_at = datetime.now(timezone.utc)
@@ -150,7 +177,23 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
         email=email,
     )
     link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
-    if not send_report_email(email, link):
+    try:
+        sent = send_report_email(email, link)
+    except Exception:
+        logger.exception(
+            "[report_email] resend exception: report_id=%s session_id=%s participant_id=%s",
+            report.id,
+            report.session_id,
+            participant.id,
+        )
+        return False
+    if not sent:
+        logger.warning(
+            "[report_email] resend failed: report_id=%s session_id=%s participant_id=%s",
+            report.id,
+            report.session_id,
+            participant.id,
+        )
         return False
 
     participant.report_email = email
