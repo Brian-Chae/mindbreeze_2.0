@@ -10,9 +10,11 @@ import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportStatusBadge from '../../components/reports/ReportStatusBadge';
+import { useAuthStore } from '../../stores/authStore';
 import {
   getReport,
   approveReport,
+  resendReportEmail,
   adaptReportContent,
   canApproveReport,
   resolveDataCredibility,
@@ -20,6 +22,8 @@ import {
   type AdaptedReportContent,
   type ReportDto,
 } from '../../lib/api/reports';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -113,16 +117,25 @@ function MarkerBadge({ label, value }: { label: string; value: string | number }
 export default function ReportDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const userRole = useAuthStore((s) => s.user?.role);
+  const isCounselorUser = userRole === 'counselor';
   const [report, setReport] = useState<ReportDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState<string | null>(null);
+  const [resendError, setResendError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     getReport(id)
-      .then((r) => setReport(r))
+      .then((r) => {
+        setReport(r);
+        setResendEmail(r.report_email ?? '');
+      })
       .catch((e) => setError(e instanceof Error ? e.message : '리포트 조회 실패'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -147,6 +160,26 @@ export default function ReportDetailPage() {
     if (!id) return;
     alert('PDF 생성 기능은 추후 제공됩니다.');
   }, [id]);
+
+  const handleResendEmail = useCallback(async () => {
+    if (!id) return;
+    const email = resendEmail.trim();
+    setResendSuccess(null);
+    setResendError(null);
+    if (!email || !EMAIL_RE.test(email)) {
+      setResendError('올바른 이메일 주소를 입력해 주세요.');
+      return;
+    }
+    setResending(true);
+    try {
+      await resendReportEmail(id, email);
+      setResendSuccess(`${email}로 리포트 메일을 재발송했습니다.`);
+    } catch (e) {
+      setResendError(e instanceof Error ? e.message : '메일 재발송에 실패했습니다.');
+    } finally {
+      setResending(false);
+    }
+  }, [id, resendEmail]);
 
   if (loading) {
     return (
@@ -186,6 +219,7 @@ export default function ReportDetailPage() {
     sent_at: report.sent_at,
     alreadyApprovedLocally: approved,
   });
+  const showResendEmail = isCounselorUser && report.type === 'client';
 
   return (
     <AppShell title="리포트 상세" sub="BODY · MIND REPORT">
@@ -295,6 +329,52 @@ export default function ReportDetailPage() {
             </button>
           ) : null}
         </div>
+
+        {/* SDD-050 — 메일 재발송 (상담사 + client 리포트) */}
+        {showResendEmail && (
+          <section className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
+            <h3 className="text-[15px] font-bold text-[#5F0080] flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
+              리포트 메일 재발송
+            </h3>
+            <p className="mt-1.5 text-[13px] text-[#6D547A]">
+              기본 주소는 저장된 리포트 수신 메일입니다. 수정 후 재발송할 수 있습니다.
+            </p>
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                value={resendEmail}
+                onChange={(e) => {
+                  setResendEmail(e.target.value);
+                  setResendSuccess(null);
+                  setResendError(null);
+                }}
+                placeholder="수신 이메일 주소"
+                disabled={resending}
+                className="flex-1 px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50"
+                aria-label="재발송 이메일"
+              />
+              <button
+                type="button"
+                onClick={handleResendEmail}
+                disabled={resending || !resendEmail.trim()}
+                className="mb-btn mb-btn-primary text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
+              >
+                {resending ? '발송 중...' : '재발송'}
+              </button>
+            </div>
+            {resendSuccess && (
+              <div role="status" className="mt-3 p-3 rounded-xl bg-[#F0F9F5] text-[#26724B] text-sm border border-[#D8EFE3]">
+                {resendSuccess}
+              </div>
+            )}
+            {resendError && (
+              <div role="alert" className="mt-3 p-3 rounded-xl bg-red-50 text-red-700 text-sm">
+                {resendError}
+              </div>
+            )}
+          </section>
+        )}
 
         {!isCounselor && (
           <p className="text-center text-[11px] text-[#9B9B9B] pb-4">

@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.eeg import HRVMotionSummary
 
@@ -20,6 +20,14 @@ class ReportApprovalRequest(BaseModel):
     note: str | None = None
 
 
+class ReportEmailResendRequest(BaseModel):
+    email: EmailStr
+
+
+class ReportEmailResendResponse(BaseModel):
+    success: bool
+
+
 class ReportAutoApproveSetting(BaseModel):
     enabled: bool
 
@@ -32,6 +40,7 @@ class ReportResponse(HRVMotionSummary):
     # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유)
     user_id: str | None = None
     participant_id: str | None = None
+    report_email: str | None = None
     type: str
     # SDD-027: 리포트 상태머신(pending_analysis/pending_review/completed/error) + 데이터 신뢰도
     status: str = "pending_analysis"

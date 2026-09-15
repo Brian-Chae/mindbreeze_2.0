@@ -62,6 +62,8 @@ export interface ReportDto {
   data_credibility?: string | number | null;
   /** 게스트/참여자 기반 리포트 */
   participant_id?: string | null;
+  /** SDD-050 — participant.report_email (client 리포트 재발송 기본값) */
+  report_email?: string | null;
 }
 
 export interface ReportListResponse {
@@ -94,3 +96,16 @@ export const getAutoApprove = (): Promise<AutoApproveResponse> =>
 
 export const setAutoApprove = (enabled: boolean): Promise<AutoApproveResponse> =>
   apiClient.patch<AutoApproveResponse>('/reports/auto-approve', { enabled });
+
+/** SDD-050 — 리포트 메일 재발송 */
+export interface ResendReportEmailResponse {
+  ok?: boolean;
+  email?: string;
+  message?: string;
+}
+
+export const resendReportEmail = (
+  reportId: string,
+  email: string,
+): Promise<ResendReportEmailResponse> =>
+  apiClient.post<ResendReportEmailResponse>(`/reports/${reportId}/resend-email`, { email });

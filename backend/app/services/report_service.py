@@ -100,7 +100,11 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
     return out
 
 
-def _serialize(report: Report, session: Session | None = None) -> dict:
+def _serialize(
+    report: Report,
+    session: Session | None = None,
+    report_email: str | None = None,
+) -> dict:
     content = normalize_report_content(report.content, report.type)
     eeg = content.get("eeg")
     summary = HRVMotionSummary.model_validate(eeg if isinstance(eeg, dict) else {})
@@ -111,6 +115,7 @@ def _serialize(report: Report, session: Session | None = None) -> dict:
         # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유).
         "user_id": str(report.user_id) if report.user_id else None,
         "participant_id": str(report.participant_id) if report.participant_id else None,
+        "report_email": report_email,
         "type": report.type,
         # SDD-027: 리포트 상태머신 + 데이터 신뢰도(null 보존)
         "status": report.status,
@@ -246,7 +251,29 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     uid = _to_uuid(user_id)
     if report.user_id != uid and (not session or session.host_id != uid):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-    return _serialize(report, session)
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == report.participant_id)
+        .first()
+        if report.participant_id
+        else None
+    )
+    return _serialize(
+        report,
+        session,
+        participant.report_email if participant else None,
+    )
+
+
+def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
+    """리포트가 현재 상담사의 세션에 속하는지 확인한다."""
+    rid = _to_uuid(report_id)
+    report = db.query(Report).filter(Report.id == rid).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
+    session = db.query(Session).filter(Session.id == report.session_id).first()
+    if not session or session.host_id != _to_uuid(host_id):
+        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
 
 
 def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:

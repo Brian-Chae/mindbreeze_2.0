@@ -9,11 +9,14 @@ from app.schemas.report import (
     ReportApprovalRequest,
     ReportAutoApproveSetting,
     ReportCreate,
+    ReportEmailResendRequest,
+    ReportEmailResendResponse,
     ReportListResponse,
     ReportResponse,
     ReportUpdate,
 )
 from app.services import report_service
+from app.services import report_email_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -82,3 +85,22 @@ def approve(
     db: DBSession = Depends(get_db),
 ):
     return report_service.approve_report(report_id, current_user["id"], db)
+
+
+@router.post(
+    "/{report_id}/resend-email",
+    response_model=ReportEmailResendResponse,
+)
+def resend_email(
+    report_id: str,
+    payload: ReportEmailResendRequest,
+    current_user: dict = Depends(require_roles("counselor")),
+    db: DBSession = Depends(get_db),
+):
+    report_service.require_report_host(report_id, current_user["id"], db)
+    success = report_email_service.resend_report_email(
+        report_id,
+        str(payload.email),
+        db,
+    )
+    return {"success": success}

@@ -120,6 +120,46 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
     return "sent"
 
 
+def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
+    """승인된 내담자 리포트를 지정 주소로 다시 발송한다."""
+    try:
+        report_uuid = UUID(report_id)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "잘못된 리포트 ID 형식입니다")
+
+    report = db.query(Report).filter(Report.id == report_uuid).first()
+    if not report:
+        raise HTTPException(404, "리포트를 찾을 수 없습니다")
+    if report.type != "client" or not report.participant_id:
+        raise HTTPException(400, "내담자 리포트만 재발송할 수 있습니다")
+    if report.status != "completed":
+        raise HTTPException(409, "승인 완료된 리포트만 재발송할 수 있습니다")
+
+    participant = db.query(SessionParticipant).filter(
+        SessionParticipant.id == report.participant_id,
+        SessionParticipant.session_id == report.session_id,
+    ).first()
+    if not participant:
+        raise HTTPException(400, "리포트 참가자를 찾을 수 없습니다")
+
+    token = _token(
+        "report_view",
+        str(report.id),
+        str(report.session_id),
+        email=email,
+    )
+    link = (
+        f"{settings.report_email_base_url.rstrip('/')}"
+        f"/api/v1/sessions/{report.session_id}/report-email/view?token={token}"
+    )
+    if not send_report_email(email, link):
+        return False
+
+    participant.report_email = email
+    db.commit()
+    return True
+
+
 def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
     claims = _decode(token, "report_view")
     if claims.get("session_id") != str(session_id):
