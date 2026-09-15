@@ -34,10 +34,10 @@ def _future(minutes: int = 60) -> str:
     return (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat()
 
 
-def _create_session(client, host) -> str:
+def _create_session(client, host, minutes: int = 60) -> str:
     res = client.post(
         "/api/v1/sessions",
-        json={"type": "clinical", "scheduled_at": _future(60), "duration_min": 50, "title": "리포트 테스트"},
+        json={"type": "clinical", "scheduled_at": _future(minutes), "duration_min": 50, "title": "리포트 테스트"},
         headers=host["auth"],
     )
     assert res.status_code == 201, res.text
@@ -108,6 +108,47 @@ def test_report_04_목록_조회(client):
     body = res.json()
     assert body["total"] >= 1
     assert body["reports"][0]["session_id"] == sid
+    assert "page" not in body
+    assert "limit" not in body
+
+
+def test_report_04_목록_페이지네이션(client):
+    host = _register(client, "rep04-pagination@test.com")
+    session_ids = []
+    for minutes in (60, 120, 180):
+        sid = _create_session(client, host, minutes)
+        session_ids.append(sid)
+        generated = client.post(
+            f"/api/v1/reports/generate/{sid}",
+            json={"type": "counselor"},
+            headers=host["auth"],
+        )
+        assert generated.status_code == 200, generated.text
+
+    first_res = client.get(
+        "/api/v1/reports",
+        params={"page": 1, "limit": 2},
+        headers=host["auth"],
+    )
+    res = client.get(
+        "/api/v1/reports",
+        params={"page": 2, "limit": 2},
+        headers=host["auth"],
+    )
+
+    assert first_res.status_code == 200, first_res.text
+    assert res.status_code == 200, res.text
+    first_body = first_res.json()
+    body = res.json()
+    assert body["total"] == 3
+    assert body["page"] == 2
+    assert body["limit"] == 2
+    assert len(body["reports"]) == 1
+    paged_session_ids = {
+        report["session_id"]
+        for report in first_body["reports"] + body["reports"]
+    }
+    assert paged_session_ids == set(session_ids)
 
 
 def test_report_05_상세_조회(client):

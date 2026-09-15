@@ -1,6 +1,6 @@
 """AI 리포트 API"""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, require_roles
@@ -56,12 +56,14 @@ def generate(
     return report_service.generate_report(session_id, current_user["id"], payload.type, db)
 
 
-@router.get("", response_model=ReportListResponse)
+@router.get("", response_model=ReportListResponse, response_model_exclude_none=True)
 def list_all(
+    page: int | None = Query(default=None, ge=1),
+    limit: int | None = Query(default=None, ge=1),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return report_service.list_reports(current_user["id"], db)
+    return report_service.list_reports(current_user["id"], db, page, limit)
 
 
 @router.get("/{report_id}", response_model=ReportResponse)

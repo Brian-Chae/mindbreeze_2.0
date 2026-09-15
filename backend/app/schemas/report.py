@@ -58,3 +58,5 @@ class ReportResponse(HRVMotionSummary):
 class ReportListResponse(BaseModel):
     reports: list[ReportResponse]
     total: int
+    page: int | None = None
+    limit: int | None = None

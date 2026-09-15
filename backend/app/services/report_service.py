@@ -209,29 +209,33 @@ def update_auto_approve_setting(user_id: str, enabled: bool, db: DBSession) -> d
     return {"enabled": user.auto_approve_report}
 
 
-def list_reports(user_id: str, db: DBSession) -> dict:
+def list_reports(
+    user_id: str,
+    db: DBSession,
+    page: int | None = None,
+    limit: int | None = None,
+) -> dict:
     uid = _to_uuid(user_id)
     user = db.query(User).filter(User.id == uid).first()
 
-    items: list[Report] = []
     if user and user.role == "counselor":
         sessions = db.query(Session).filter(Session.host_id == uid).all()
         sids = [s.id for s in sessions]
         sessions_map = {s.id: s for s in sessions}
         if sids:
-            items = (
-                db.query(Report)
-                .filter(Report.session_id.in_(sids))
-                .order_by(Report.created_at.desc())
-                .all()
-            )
+            query = db.query(Report).filter(Report.session_id.in_(sids))
+        else:
+            query = db.query(Report).filter(False)
     else:
-        items = (
-            db.query(Report)
-            .filter(Report.user_id == uid)
-            .order_by(Report.created_at.desc())
-            .all()
-        )
+        query = db.query(Report).filter(Report.user_id == uid)
+
+    total = query.count()
+    query = query.order_by(Report.created_at.desc(), Report.id.desc())
+    if page is not None and limit is not None:
+        query = query.offset((page - 1) * limit).limit(limit)
+    items = query.all()
+
+    if not (user and user.role == "counselor"):
         session_ids = {r.session_id for r in items}
         sessions_map = {
             s.id: s
@@ -239,7 +243,10 @@ def list_reports(user_id: str, db: DBSession) -> dict:
         } if session_ids else {}
 
     result = [_serialize(r, sessions_map.get(r.session_id)) for r in items]
-    return {"reports": result, "total": len(result)}
+    response = {"reports": result, "total": total}
+    if page is not None and limit is not None:
+        response.update({"page": page, "limit": limit})
+    return response
 
 
 def get_report(report_id: str, user_id: str, db: DBSession) -> dict:

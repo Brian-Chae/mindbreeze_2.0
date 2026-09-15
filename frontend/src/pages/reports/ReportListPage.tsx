@@ -14,6 +14,9 @@ import {
 type StatusFilter = 'all' | 'pending' | 'approved';
 type SortKey = 'newest' | 'oldest' | 'title';
 
+/** SDD-058 — 페이지당 건수 */
+const PAGE_LIMIT = 20;
+
 const SESSION_TYPE_LABELS: Record<string, string> = {
   clinical: '임상심리상담',
   hypnosis: '최면심리상담',
@@ -121,6 +124,8 @@ function groupBySession(reports: ReportDto[]): { sessionId: string; label: strin
 export default function ReportListPage() {
   const [sampleOpen, setSampleOpen] = useState(false);
   const [reports, setReports] = useState<ReportDto[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -136,12 +141,33 @@ export default function ReportListPage() {
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
 
+  // SDD-058 — page/limit 조회. BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
   useEffect(() => {
-    listReports()
-      .then((r) => setReports(r.reports))
-      .catch((e) => setError(e instanceof Error ? e.message : '리포트 조회 실패'))
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    listReports({ page, limit: PAGE_LIMIT })
+      .then((r) => {
+        if (cancelled) return;
+        setTotal(r.total);
+        if (r.reports.length > PAGE_LIMIT) {
+          const start = (page - 1) * PAGE_LIMIT;
+          setReports(r.reports.slice(start, start + PAGE_LIMIT));
+        } else {
+          setReports(r.reports);
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : '리포트 조회 실패');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page]);
 
   useEffect(() => {
     getAutoApprove()
@@ -190,6 +216,13 @@ export default function ReportListPage() {
     () => (groupByClass ? groupBySession(filtered) : null),
     [groupByClass, filtered],
   );
+
+  // SDD-058 — total 기반 페이지 수. 필터 변경 시 1페이지로 리셋.
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, sessionFilter, sortKey]);
 
   const toggleDisabled = autoApproveLoading || autoApproveSaving;
 
@@ -310,9 +343,9 @@ export default function ReportListPage() {
       {autoApproveError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
       )}
-      {loading ? (
+      {loading && total === 0 ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
-      ) : reports.length === 0 ? (
+      ) : total === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
           <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
           <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
@@ -395,7 +428,7 @@ export default function ReportListPage() {
               세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}
             </button>
             <span className="text-[13px] text-[#6F6F6F] lg:ml-auto">
-              {filtered.length} / {reports.length}건
+              {filtered.length} / {total}건
             </span>
           </div>
 
@@ -455,6 +488,34 @@ export default function ReportListPage() {
                   </table>
                 )}
               </div>
+
+              {/* SDD-058 — 페이지네이션 */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || loading}
+                    aria-label="이전"
+                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    이전
+                  </button>
+                  <span className="text-[13px] text-[#6F6F6F] font-mono tabular-nums">
+                    {page} / {totalPages}
+                    <span className="ml-2 text-[#9B9B9B]">(전체 {total}건)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || loading}
+                    aria-label="다음"
+                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

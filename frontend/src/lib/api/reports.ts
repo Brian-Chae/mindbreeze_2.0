@@ -71,9 +71,26 @@ export interface ReportListResponse {
   total: number;
 }
 
-export const listReports = (): Promise<ReportListResponse> =>
-  apiClient.get<ReportListResponse>('/reports');
+/** SDD-058 — 리포트 목록 페이지네이션 */
+export interface ListReportsParams {
+  page?: number;
+  limit?: number;
+}
 
+const DEFAULT_REPORT_LIST_LIMIT = 20;
+
+function buildReportListQuery(params?: ListReportsParams): string {
+  if (!params) return '';
+  const page = params.page ?? 1;
+  const limit = params.limit ?? DEFAULT_REPORT_LIST_LIMIT;
+  const sp = new URLSearchParams();
+  sp.set('page', String(page));
+  sp.set('limit', String(limit));
+  return `?${sp.toString()}`;
+}
+
+export const listReports = (params?: ListReportsParams): Promise<ReportListResponse> =>
+  apiClient.get<ReportListResponse>(`/reports${buildReportListQuery(params)}`);
 export const getReport = (id: string): Promise<ReportDto> =>
   apiClient.get<ReportDto>(`/reports/${id}`);
 
