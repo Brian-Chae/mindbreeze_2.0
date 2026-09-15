@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import Report
+from app.services.report_service import _serialize
 from app.services.email_verify_service import verify_email_token
 from app.tasks.email import send_report_email
 
@@ -109,7 +110,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
     if participant.report_email_sent_at:
         return "sent"
     token = _token("report_view", str(report.id), str(report.session_id), email=participant.report_email)
-    link = f"{settings.report_email_base_url.rstrip('/')}/api/v1/sessions/{report.session_id}/report-email/view?token={token}"
+    link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
     if not send_report_email(participant.report_email, link):
         participant.report_email_status = "failed"
         db.commit()
@@ -148,16 +149,41 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
         str(report.session_id),
         email=email,
     )
-    link = (
-        f"{settings.report_email_base_url.rstrip('/')}"
-        f"/api/v1/sessions/{report.session_id}/report-email/view?token={token}"
-    )
+    link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
     if not send_report_email(email, link):
         return False
 
     participant.report_email = email
     db.commit()
     return True
+
+
+def get_report_view_content(token: str, db: DBSession) -> dict:
+    """report_view 토큰 소유자에게 완료된 내담자 리포트 계약을 반환한다."""
+    claims = _decode(token, "report_view")
+    try:
+        report_id = UUID(claims.get("sub", ""))
+        session_id = UUID(claims.get("session_id", ""))
+    except (TypeError, ValueError):
+        raise HTTPException(401, "유효하지 않은 리포트 링크입니다")
+
+    report = db.query(Report).filter(
+        Report.id == report_id,
+        Report.session_id == session_id,
+        Report.type == "client",
+        Report.status == "completed",
+    ).first()
+    participant = db.query(SessionParticipant).filter(
+        SessionParticipant.id == report.participant_id,
+        SessionParticipant.session_id == session_id,
+    ).first() if report and report.participant_id else None
+    if not participant or participant.report_email != claims.get("email"):
+        raise HTTPException(403, "리포트 접근 권한이 없습니다")
+
+    session = db.query(Session).filter(Session.id == session_id).first()
+    if not session:
+        raise HTTPException(403, "리포트 접근 권한이 없습니다")
+    return _serialize(report, session, report_email=participant.report_email)
 
 
 def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:

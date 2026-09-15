@@ -21,6 +21,12 @@ from app.services import report_email_service
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 
+@router.get("/view", response_model=ReportResponse)
+def view(token: str, db: DBSession = Depends(get_db)):
+    """이메일 report_view 토큰으로 내담자 리포트를 공개 열람한다."""
+    return report_email_service.get_report_view_content(token, db)
+
+
 @router.get("/auto-approve", response_model=ReportAutoApproveSetting)
 def get_auto_approve(
     current_user: dict = Depends(require_roles("counselor")),

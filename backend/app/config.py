@@ -22,9 +22,8 @@ class Settings(BaseSettings):
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
 
-    # SDD-029: 외부에서 접근 가능한 백엔드 리포트 열람 주소
-    # 리포트 보기 링크는 백엔드 API(session.py view_report_email)로 열려야 하므로 API 도메인 사용
-    report_email_base_url: str = "https://dev-api.mindbreeze.looxidlabs.com"
+    # SDD-052: 이메일 링크가 여는 프론트엔드 리포트 열람 주소
+    report_email_base_url: str = "https://dev.mindbreeze.looxidlabs.com"
 
     # S3
     s3_bucket: str = "mindbreeze-dev"

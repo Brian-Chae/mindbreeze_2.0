@@ -71,7 +71,7 @@ def test_resend_service_uses_new_email_and_updates_default_only_on_success(clien
         assert participant.report_email == "new@example.com"
         sent_email, link = sender.call_args.args
         assert sent_email == "new@example.com"
-        assert f"/api/v1/sessions/{report.session_id}/report-email/view?token=" in link
+        assert link.startswith("https://dev.mindbreeze.looxidlabs.com/report-view?token=")
     finally:
         provider.close()
 

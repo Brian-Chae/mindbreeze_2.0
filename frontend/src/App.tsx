@@ -35,6 +35,7 @@ import DocsPage from './pages/design/DocsPage';
 import ReportListPage from './pages/reports/ReportListPage';
 import ReportSamplePage from './pages/reports/ReportSamplePage';
 import ReportDetailPage from './pages/reports/ReportDetailPage';
+import ReportViewPage from './pages/reports/ReportViewPage';
 import AdminReviewListPage from './pages/admin/AdminReviewListPage';
 import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -128,6 +129,7 @@ function App() {
         <Route path="/clients/invite" element={<ClientInvitePage />} />
         <Route path="/clients/:id" element={<ClientProfilePage />} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
+        <Route path="/report-view" element={<ReportViewPage />} />
         <Route path="/org/search" element={<OrgSearchPage />} />
         <Route path="/org/register" element={<OrgRegisterPage />} />
         <Route path="/org/requests" element={<MyRequestsPage />} />

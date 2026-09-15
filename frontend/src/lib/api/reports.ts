@@ -77,6 +77,12 @@ export const listReports = (): Promise<ReportListResponse> =>
 export const getReport = (id: string): Promise<ReportDto> =>
   apiClient.get<ReportDto>(`/reports/${id}`);
 
+/** SDD-052 — 메일 토큰 기반 리포트 열람 (로그인 불필요) */
+export const getReportView = (token: string): Promise<ReportDto> =>
+  apiClient.get<ReportDto>(`/reports/view?token=${encodeURIComponent(token)}`, {
+    skipAuth: true,
+  });
+
 export const generateReport = (sessionId: string, type: ReportType = 'counselor'): Promise<ReportDto> =>
   apiClient.post<ReportDto>(`/reports/generate/${sessionId}`, { type });
 
