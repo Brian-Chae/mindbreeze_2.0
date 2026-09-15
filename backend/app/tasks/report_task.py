@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session
-from app.models.record import SessionRecord, Report, EEGRecord
+from app.models.record import SessionRecord, Report
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.normalization_model import NormalizationModel
 from app.services import eeg_metrics
