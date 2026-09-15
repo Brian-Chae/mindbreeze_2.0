@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ReportSampleModal } from './ReportSamplePage';
 import AppShell from '../../components/layout/AppShell';
+import { ReportStatusChip } from '../../components/reports/ReportStatusBadge';
 import {
   getAutoApprove,
   listReports,
+  resolveReportStatus,
   setAutoApprove,
   type ReportDto,
 } from '../../lib/api/reports';
@@ -57,21 +59,6 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-function StatusBadge({ sentAt }: { sentAt: string | null }) {
-  if (sentAt) {
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E0F2FE] text-[#075985]">
-        승인됨
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#92400E]">
-      검토중
-    </span>
-  );
-}
-
 function filterAndSortReports(
   reports: ReportDto[],
   search: string,
@@ -82,8 +69,9 @@ function filterAndSortReports(
   const q = search.trim().toLowerCase();
 
   let filtered = reports.filter((r) => {
-    if (statusFilter === 'pending' && r.sent_at) return false;
-    if (statusFilter === 'approved' && !r.sent_at) return false;
+    const pipeline = resolveReportStatus(r);
+    if (statusFilter === 'pending' && pipeline === 'completed') return false;
+    if (statusFilter === 'approved' && pipeline !== 'completed') return false;
     if (sessionFilter && r.session_id !== sessionFilter) return false;
     if (!q) return true;
     const title = reportTitle(r).toLowerCase();
@@ -286,7 +274,7 @@ export default function ReportListPage() {
       <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{sessionTypeLabel(r.session_type)}</td>
       <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono">{formatDate(reportDateIso(r))}</td>
       <td className="px-5 py-3.5">
-        <StatusBadge sentAt={r.sent_at} />
+        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </td>
       <td className="px-5 py-3.5">
         <Link
@@ -307,7 +295,7 @@ export default function ReportListPage() {
     >
       <div className="flex items-center justify-between mb-2 gap-2">
         <TypeBadge type={r.type} />
-        <StatusBadge sentAt={r.sent_at} />
+        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </div>
       <div className="font-bold text-[15px] text-[#1F1F1F] truncate mb-1">{reportTitle(r)}</div>
       <div className="text-[12px] text-[#6F6F6F]">

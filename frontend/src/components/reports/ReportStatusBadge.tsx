@@ -1,11 +1,18 @@
-// SDD-027 — 리포트 파이프라인 상태 배지 + data_credibility
-// mindbreeze 라이트 토큰 (haru 다크 테마 금지)
+// SDD-060 — 리포트 파이프라인 상태 배지 (status 머신 4단계)
+// mindbreeze 라이트 토큰 (보라 테마 유지, 배지 색은 상태별)
 
 import {
   REPORT_STATUS_LABELS,
+  resolveReportStatus,
   type DataCredibilityDisplay,
   type ReportPipelineStatus,
 } from '../../lib/api/report-status';
+
+interface ReportStatusChipProps {
+  status?: string | null;
+  sentAt?: string | null;
+  className?: string;
+}
 
 interface ReportStatusBadgeProps {
   status: ReportPipelineStatus;
@@ -14,10 +21,38 @@ interface ReportStatusBadgeProps {
   showApprovalHint?: boolean;
 }
 
-function statusTone(status: ReportPipelineStatus): string {
+/** 칩(목록)용 톤 — 회색/노랑/초록/빨강 */
+function chipTone(status: ReportPipelineStatus): string {
   switch (status) {
     case 'pending_analysis':
-      return 'border-[#E8D9F5] bg-[#F5EDFC] text-[#5F0080]';
+      return 'bg-[#F1F5F9] text-[#64748B]';
+    case 'pending_review':
+      return 'bg-[#FEF3C7] text-[#92400E]';
+    case 'completed':
+      return 'bg-[#E6F4EA] text-[#2E7D32]';
+    case 'error':
+      return 'bg-red-50 text-red-700';
+  }
+}
+
+function chipDotClass(status: ReportPipelineStatus): string {
+  switch (status) {
+    case 'pending_analysis':
+      return 'bg-[#94A3B8]';
+    case 'pending_review':
+      return 'bg-[#F59E0B]';
+    case 'completed':
+      return 'bg-[#2E7D32]';
+    case 'error':
+      return 'bg-red-500';
+  }
+}
+
+/** 상세 패널용 톤 */
+function panelTone(status: ReportPipelineStatus): string {
+  switch (status) {
+    case 'pending_analysis':
+      return 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]';
     case 'pending_review':
       return 'border-amber-200 bg-amber-50 text-amber-900';
     case 'completed':
@@ -40,6 +75,33 @@ function statusHint(status: ReportPipelineStatus, showApprovalHint: boolean): st
   return null;
 }
 
+function StatusDot({ status }: { status: ReportPipelineStatus }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${chipDotClass(status)}`}
+    />
+  );
+}
+
+/** 목록용 컴팩트 배지 — status 우선, 없으면 sent_at 폴백 */
+export function ReportStatusChip({ status, sentAt, className = '' }: ReportStatusChipProps) {
+  const resolved = resolveReportStatus({ status, sent_at: sentAt });
+  const label = REPORT_STATUS_LABELS[resolved];
+
+  return (
+    <span
+      data-testid="report-status-chip"
+      data-status={resolved}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${chipTone(resolved)} ${className}`.trim()}
+    >
+      <StatusDot status={resolved} />
+      {label}
+    </span>
+  );
+}
+
+/** 상세 페이지용 패널 배지 */
 export default function ReportStatusBadge({
   status,
   credibility,
@@ -53,12 +115,13 @@ export default function ReportStatusBadge({
       role="status"
       data-testid="report-pipeline-status"
       data-status={status}
-      className={`rounded-xl border px-4 py-3 ${statusTone(status)}`}
+      className={`rounded-xl border px-4 py-3 ${panelTone(status)}`}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-lg border border-black/5 bg-white/80 px-2.5 py-1 text-[11px] font-bold tracking-wide">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-black/5 bg-white/80 px-2.5 py-1 text-[11px] font-bold tracking-wide">
+              <StatusDot status={status} />
               {label}
             </span>
             <span className="font-mono text-[10px] uppercase tracking-wider opacity-60">

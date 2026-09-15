@@ -21,12 +21,12 @@ const PIPELINE_STATUSES: readonly ReportPipelineStatus[] = [
   'error',
 ];
 
-/** UI 표시용 한글 라벨 */
+/** UI 표시용 한글 라벨 (SDD-060) */
 export const REPORT_STATUS_LABELS: Record<ReportPipelineStatus, string> = {
-  pending_analysis: '분석 대기',
-  pending_review: '검수 대기',
-  completed: '완료',
-  error: '오류',
+  pending_analysis: '분석중',
+  pending_review: '검토중',
+  completed: '승인됨',
+  error: '실패',
 };
 
 /** data_credibility 표시 문자열(서버 number/string 또는 quality 파생) */
