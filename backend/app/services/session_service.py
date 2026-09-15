@@ -1,7 +1,7 @@
 """세션 관리 비즈니스 로직"""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -70,6 +70,8 @@ def _serialize(s: Session) -> dict:
                 # 게스트는 user_id가 없으므로 None으로 직렬화한다
                 "user_id": str(p.user_id) if p.user_id else None,
                 "guest_name": p.guest_name,
+                "gender": p.gender,
+                "birth_date": p.birth_date,
                 "is_guest": p.user_id is None,
                 "band_connected": p.band_connected,
                 "linkband_device_id": p.linkband_device_id,
@@ -649,6 +651,8 @@ def join_session_by_code(
     *,
     user_id: str | None = None,
     guest_name: str | None = None,
+    gender: str | None = None,
+    birth_date: date | None = None,
 ) -> dict:
     """클래스 코드로 참여.
 
@@ -690,7 +694,10 @@ def join_session_by_code(
         raise HTTPException(status_code=400, detail="게스트 참여에는 이름이 필요합니다")
 
     # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
-    participant = SessionParticipant(session_id=s.id, user_id=None, guest_name=name[:100], consent_eeg=True)
+    participant = SessionParticipant(
+        session_id=s.id, user_id=None, guest_name=name[:100],
+        gender=gender, birth_date=birth_date, consent_eeg=True,
+    )
     db.add(participant)
     db.commit()
     db.refresh(s)

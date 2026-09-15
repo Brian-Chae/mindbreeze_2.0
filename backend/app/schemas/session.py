@@ -1,6 +1,6 @@
 """세션 관리 Pydantic 스키마"""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -59,6 +59,8 @@ class ParticipantInfo(BaseModel):
     # SDD-015: 게스트 참여자는 user_id가 없고 guest_name만 갖는다
     user_id: str | None = None
     guest_name: str | None = None
+    gender: str | None = None
+    birth_date: date | None = None
     is_guest: bool = False
     band_connected: bool = False
     linkband_device_id: str | None = None
@@ -143,6 +145,8 @@ class JoinByCodeRequest(BaseModel):
     """게스트 참여 시 name 필수, 로그인 참여 시 생략 가능."""
 
     name: str | None = Field(None, min_length=1, max_length=100)
+    gender: Literal["male", "female", "other"] | None = None
+    birth_date: str | None = None
 
 
 class JoinByCodeResponse(BaseModel):

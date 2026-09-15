@@ -97,6 +97,9 @@ const ClassJoinPage: React.FC = () => {
   const [step, setStep] = useState<JoinStep>('code');
   const [code, setCode] = useState('');
   const [guestName, setGuestName] = useState('');
+  /** SDD-062: 게스트 성별·생년월일 (선택, 온보딩 규약과 동일) */
+  const [guestGender, setGuestGender] = useState('');
+  const [guestBirthDate, setGuestBirthDate] = useState('');
   const [session, setSession] = useState<SessionByCodeResponse | null>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
   /** join 응답의 소유 증명 — 게스트 report-email 필수 */
@@ -262,7 +265,19 @@ const ClassJoinPage: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      const joined = await joinSessionByCode(code, isLoggedIn ? {} : { name: trimmedGuestName });
+      const birthDateComplete = /^\d{4}-\d{2}-\d{2}$/.test(guestBirthDate)
+        ? guestBirthDate
+        : undefined;
+      const joined = await joinSessionByCode(
+        code,
+        isLoggedIn
+          ? {}
+          : {
+              name: trimmedGuestName,
+              ...(guestGender ? { gender: guestGender } : {}),
+              ...(birthDateComplete ? { birth_date: birthDateComplete } : {}),
+            },
+      );
       const nextParticipantId = joined.participant_id;
       const nextToken = joined.participant_token ?? null;
       setParticipantId(nextParticipantId);
@@ -298,6 +313,8 @@ const ClassJoinPage: React.FC = () => {
     setStep('code');
     setSession(null);
     setGuestName('');
+    setGuestGender('');
+    setGuestBirthDate('');
     setParticipantId(null);
     setParticipantToken(null);
     setDurationMin(50);
@@ -461,21 +478,93 @@ const ClassJoinPage: React.FC = () => {
 
               <form className="mt-7 space-y-5" onSubmit={(e) => void handleJoinSubmit(e)}>
                 {!isLoggedIn && (
-                  <div>
-                    <label htmlFor="guest-name" className="block text-sm font-semibold text-gray-800">
-                      이름
-                    </label>
-                    <input
-                      id="guest-name"
-                      value={guestName}
-                      onChange={(event) => setGuestName(event.target.value)}
-                      placeholder="클래스에서 사용할 이름"
-                      maxLength={80}
-                      autoComplete="name"
-                      className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
-                    />
-                    <p className="mt-2 text-xs leading-5 text-gray-500">로그인하지 않아도 이름만 입력하면 게스트로 참여할 수 있습니다.</p>
-                  </div>
+                  <>
+                    <div>
+                      <label htmlFor="guest-name" className="block text-sm font-semibold text-gray-800">
+                        이름
+                      </label>
+                      <input
+                        id="guest-name"
+                        value={guestName}
+                        onChange={(event) => setGuestName(event.target.value)}
+                        placeholder="클래스에서 사용할 이름"
+                        maxLength={80}
+                        autoComplete="name"
+                        className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
+                      />
+                      <p className="mt-2 text-xs leading-5 text-gray-500">로그인하지 않아도 이름만 입력하면 게스트로 참여할 수 있습니다.</p>
+                    </div>
+
+                    {/* SDD-062: 성별·생년월일 — 선택 필드, 온보딩 값 규약 동일 / 모바일 1열·md+ 2열 */}
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <div>
+                        <label htmlFor="guest-gender" className="block text-sm font-semibold text-gray-800">
+                          성별 <span className="font-normal text-gray-400">(선택)</span>
+                        </label>
+                        <select
+                          id="guest-gender"
+                          value={guestGender}
+                          onChange={(event) => setGuestGender(event.target.value)}
+                          className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
+                        >
+                          <option value="">선택해주세요</option>
+                          <option value="male">남성</option>
+                          <option value="female">여성</option>
+                          <option value="other">기타</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-800">
+                          생년월일 <span className="font-normal text-gray-400">(선택)</span>
+                        </label>
+                        <div className="mt-2 grid grid-cols-3 gap-2">
+                          <select
+                            aria-label="생년"
+                            value={guestBirthDate ? guestBirthDate.split('-')[0] : ''}
+                            onChange={(event) => {
+                              const [, m, d] = (guestBirthDate || '--').split('-');
+                              setGuestBirthDate(`${event.target.value}-${m || ''}-${d || ''}`);
+                            }}
+                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
+                          >
+                            <option value="">년</option>
+                            {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
+                              <option key={y} value={y}>{y}년</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="생월"
+                            value={guestBirthDate ? guestBirthDate.split('-')[1] : ''}
+                            onChange={(event) => {
+                              const [y, , d] = (guestBirthDate || '--').split('-');
+                              setGuestBirthDate(`${y || ''}-${event.target.value}-${d || ''}`);
+                            }}
+                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
+                          >
+                            <option value="">월</option>
+                            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                              <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
+                            ))}
+                          </select>
+                          <select
+                            aria-label="생일"
+                            value={guestBirthDate ? guestBirthDate.split('-')[2] : ''}
+                            onChange={(event) => {
+                              const [y, m] = (guestBirthDate || '--').split('-');
+                              setGuestBirthDate(`${y || ''}-${m || ''}-${event.target.value}`);
+                            }}
+                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
+                          >
+                            <option value="">일</option>
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                              <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
                 {isLoggedIn && (
                   <p className="rounded-xl bg-purple-50 px-4 py-3 text-sm text-purple-900">

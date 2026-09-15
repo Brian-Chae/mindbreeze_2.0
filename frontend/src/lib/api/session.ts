@@ -103,6 +103,10 @@ export interface SessionByCodeResponse {
 
 export interface JoinByCodePayload {
   name?: string;
+  /** SDD-062: 게스트 성별 — male | female | other */
+  gender?: string;
+  /** SDD-062: 게스트 생년월일 YYYY-MM-DD */
+  birth_date?: string;
 }
 
 export interface JoinByCodeResponse {

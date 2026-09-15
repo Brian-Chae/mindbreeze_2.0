@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, get_current_user_optional
+from app.api.v1.onboarding import _parse_date
 from app.core.database import get_db
 from app.schemas.session import (
     ReportEmailRequest,
@@ -76,6 +77,8 @@ def join_session_by_code(
         db,
         user_id=current_user["id"] if current_user else None,
         guest_name=name,
+        gender=payload.gender if payload and not current_user else None,
+        birth_date=_parse_date(payload.birth_date) if payload and not current_user else None,
     )
 
 

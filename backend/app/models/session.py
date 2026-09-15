@@ -1,10 +1,10 @@
 """Session & SessionParticipant Models"""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, func
+from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -69,6 +69,8 @@ class SessionParticipant(Base):
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     # SDD-015: 회원가입 없이 참여하는 게스트의 표시 이름 (user_id가 NULL일 때만 사용)
     guest_name: Mapped[str | None] = mapped_column(String(100))
+    gender: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     # SDD-029: 인증 완료된 리포트 수신 이메일과 실제 발송 결과
     report_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     report_email_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
