@@ -20,6 +20,10 @@ class ReportApprovalRequest(BaseModel):
     note: str | None = None
 
 
+class ReportAutoApproveSetting(BaseModel):
+    enabled: bool
+
+
 class ReportResponse(HRVMotionSummary):
     """몸 지표 평균·심박수 최소/최대는 공통 요약 계약을 상속한다."""
 

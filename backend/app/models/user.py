@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, Text, ForeignKey, func
+from sqlalchemy import Boolean, String, DateTime, Text, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -43,6 +43,9 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, server_default="active")
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    auto_approve_report: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
     auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google"
     # SDD-017: 초대(pending) 계정의 초대 시각·만료 시각. 초대 관리 목록에서 상태/만료 뱃지에 사용한다.
     invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

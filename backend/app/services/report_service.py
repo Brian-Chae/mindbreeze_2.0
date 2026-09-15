@@ -178,7 +178,30 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
         db.flush()
 
     report = generate_report_inline(str(report.id), db) or report
+    host = db.query(User).filter(User.id == s.host_id).first()
+    if (
+        report.status == "pending_review"
+        and host is not None
+        and host.role == "counselor"
+        and host.auto_approve_report
+    ):
+        return approve_report(str(report.id), host_id, db)
     return _serialize(report, s)
+
+
+def get_auto_approve_setting(user_id: str, db: DBSession) -> dict:
+    user = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+    return {"enabled": bool(user and user.auto_approve_report)}
+
+
+def update_auto_approve_setting(user_id: str, enabled: bool, db: DBSession) -> dict:
+    user = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    user.auto_approve_report = enabled
+    db.commit()
+    db.refresh(user)
+    return {"enabled": user.auto_approve_report}
 
 
 def list_reports(user_id: str, db: DBSession) -> dict:

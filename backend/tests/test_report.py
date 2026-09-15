@@ -149,3 +149,76 @@ def test_report_07_승인_알림이벤트(client):
 def test_report_08_비로그인_401(client):
     res = client.get("/api/v1/reports")
     assert res.status_code == 401
+
+
+def test_report_09_자동승인_설정_조회와_변경(client):
+    host = _register(client, "rep09@test.com")
+
+    initial = client.get("/api/v1/reports/auto-approve", headers=host["auth"])
+    assert initial.status_code == 200, initial.text
+    assert initial.json() == {"enabled": False}
+
+    updated = client.patch(
+        "/api/v1/reports/auto-approve",
+        json={"enabled": True},
+        headers=host["auth"],
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json() == {"enabled": True}
+
+    persisted = client.get("/api/v1/reports/auto-approve", headers=host["auth"])
+    assert persisted.json() == {"enabled": True}
+
+
+def test_report_10_자동승인_설정은_상담사만_변경(client):
+    participant = _register(client, "rep10@test.com", role="client")
+
+    get_res = client.get("/api/v1/reports/auto-approve", headers=participant["auth"])
+    patch_res = client.patch(
+        "/api/v1/reports/auto-approve",
+        json={"enabled": True},
+        headers=participant["auth"],
+    )
+
+    assert get_res.status_code == 403
+    assert patch_res.status_code == 403
+
+
+def test_report_11_자동승인_ON이면_생성_직후_발행(client):
+    host = _register(client, "rep11@test.com")
+    setting = client.patch(
+        "/api/v1/reports/auto-approve",
+        json={"enabled": True},
+        headers=host["auth"],
+    )
+    assert setting.status_code == 200, setting.text
+    sid = _create_session(client, host)
+
+    generated = client.post(
+        f"/api/v1/reports/generate/{sid}",
+        json={"type": "counselor"},
+        headers=host["auth"],
+    )
+
+    assert generated.status_code == 200, generated.text
+    body = generated.json()
+    assert body["status"] == "completed"
+    assert body["sent_at"] is not None
+    assert body["content"]["approved"] is True
+
+
+def test_report_12_자동승인_OFF이면_기존_수동승인_상태_유지(client):
+    host = _register(client, "rep12@test.com")
+    sid = _create_session(client, host)
+
+    generated = client.post(
+        f"/api/v1/reports/generate/{sid}",
+        json={"type": "counselor"},
+        headers=host["auth"],
+    )
+
+    assert generated.status_code == 200, generated.text
+    body = generated.json()
+    assert body["status"] == "pending_review"
+    assert body["sent_at"] is None
+    assert body["content"].get("approved") is not True

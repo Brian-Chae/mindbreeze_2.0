@@ -3,10 +3,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
 from app.schemas.report import (
     ReportApprovalRequest,
+    ReportAutoApproveSetting,
     ReportCreate,
     ReportListResponse,
     ReportResponse,
@@ -15,6 +16,25 @@ from app.schemas.report import (
 from app.services import report_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
+
+
+@router.get("/auto-approve", response_model=ReportAutoApproveSetting)
+def get_auto_approve(
+    current_user: dict = Depends(require_roles("counselor")),
+    db: DBSession = Depends(get_db),
+):
+    return report_service.get_auto_approve_setting(current_user["id"], db)
+
+
+@router.patch("/auto-approve", response_model=ReportAutoApproveSetting)
+def update_auto_approve(
+    payload: ReportAutoApproveSetting,
+    current_user: dict = Depends(require_roles("counselor")),
+    db: DBSession = Depends(get_db),
+):
+    return report_service.update_auto_approve_setting(
+        current_user["id"], payload.enabled, db
+    )
 
 
 @router.post("/generate/{session_id}", response_model=ReportResponse)

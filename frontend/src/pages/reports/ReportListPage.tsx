@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ReportSampleModal } from './ReportSamplePage';
 import AppShell from '../../components/layout/AppShell';
-import { listReports, type ReportDto } from '../../lib/api/reports';
+import {
+  getAutoApprove,
+  listReports,
+  setAutoApprove,
+  type ReportDto,
+} from '../../lib/api/reports';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -46,12 +51,76 @@ export default function ReportListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // SDD-049 — 자동 승인 토글
+  const [autoApprove, setAutoApproveState] = useState(false);
+  const [autoApproveLoading, setAutoApproveLoading] = useState(true);
+  const [autoApproveSaving, setAutoApproveSaving] = useState(false);
+  const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
+
   useEffect(() => {
     listReports()
       .then((r) => setReports(r.reports))
       .catch((e) => setError(e instanceof Error ? e.message : '리포트 조회 실패'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    getAutoApprove()
+      .then((r) => setAutoApproveState(r.enabled))
+      .catch((e) =>
+        setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 조회 실패'),
+      )
+      .finally(() => setAutoApproveLoading(false));
+  }, []);
+
+  const handleToggleAutoApprove = async () => {
+    if (autoApproveLoading || autoApproveSaving) return;
+    const prev = autoApprove;
+    const next = !prev;
+    setAutoApproveState(next);
+    setAutoApproveError(null);
+    setAutoApproveSaving(true);
+    try {
+      const res = await setAutoApprove(next);
+      setAutoApproveState(res.enabled);
+    } catch (e) {
+      setAutoApproveState(prev);
+      setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 변경 실패');
+    } finally {
+      setAutoApproveSaving(false);
+    }
+  };
+
+  const toggleDisabled = autoApproveLoading || autoApproveSaving;
+
+  const autoApproveToggle = (
+    <div className="inline-flex items-center gap-2">
+      <span
+        className={`text-[13px] font-semibold ${
+          autoApprove ? 'text-[#5F0080]' : 'text-[#6F6F6F]'
+        }`}
+      >
+        {autoApproveLoading ? '설정 로딩…' : autoApprove ? '자동 승인' : '수동 승인'}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={autoApprove}
+        aria-label={autoApprove ? '자동 승인' : '수동 승인'}
+        disabled={toggleDisabled}
+        onClick={() => void handleToggleAutoApprove()}
+        className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          autoApprove ? 'bg-[#5F0080]' : 'bg-[#D4D4D4]'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+            autoApprove ? 'translate-x-[22px]' : 'translate-x-0.5'
+          }`}
+        />
+      </button>
+    </div>
+  );
 
   const sampleLink = (
     <button
@@ -63,11 +132,26 @@ export default function ReportListPage() {
     </button>
   );
 
+  const rightSlot = (
+    <div className="inline-flex items-center gap-3">
+      {autoApproveToggle}
+      {sampleLink}
+    </div>
+  );
+
   return (
-    <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? sampleLink : undefined}>
-      {!loading && <div className="mb-4 md:hidden">{sampleLink}</div>}
+    <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? rightSlot : undefined}>
+      {!loading && (
+        <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
+          {autoApproveToggle}
+          {sampleLink}
+        </div>
+      )}
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+      )}
+      {autoApproveError && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
       )}
       {loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>

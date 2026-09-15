@@ -83,3 +83,14 @@ export const updateReport = (id: string, content: Record<string, unknown>): Prom
 
 export const approveReport = (id: string, note?: string): Promise<ReportDto> =>
   apiClient.post<ReportDto>(`/reports/${id}/approve`, { note });
+
+/** SDD-049 — 리포트 자동 승인 설정 */
+export interface AutoApproveResponse {
+  enabled: boolean;
+}
+
+export const getAutoApprove = (): Promise<AutoApproveResponse> =>
+  apiClient.get<AutoApproveResponse>('/reports/auto-approve');
+
+export const setAutoApprove = (enabled: boolean): Promise<AutoApproveResponse> =>
+  apiClient.patch<AutoApproveResponse>('/reports/auto-approve', { enabled });
