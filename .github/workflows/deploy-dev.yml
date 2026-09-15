@@ -118,6 +118,7 @@ jobs:
 
             # 5. 서비스 재시작
             sudo systemctl restart mindbreeze-backend
+            sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
             sleep 5
             sudo systemctl is-active mindbreeze-backend
 
