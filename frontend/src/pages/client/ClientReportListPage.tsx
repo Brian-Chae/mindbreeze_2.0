@@ -110,7 +110,6 @@ export default function ClientReportListPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {reports.map((r) => {
             const headline = (r.content?.headline as string) ?? '리포트';
-            const score = (r.content?.score as number) ?? null;
             return (
               <Link
                 key={r.id}
@@ -124,15 +123,9 @@ export default function ClientReportListPage() {
                 <div className="font-bold text-[15px] text-[#1F1F1F] mb-1 truncate">
                   {r.session_title || headline}
                 </div>
-                <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
+                <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
                   {r.session_type ?? '-'} · {formatDate(r.scheduled_at ?? r.created_at)}
                 </div>
-                {score !== null && (
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-[24px] font-extrabold text-[#5F0080]">{score}</span>
-                    <span className="text-[11px] text-[#6F6F6F]">/ 100</span>
-                  </div>
-                )}
               </Link>
             );
           })}

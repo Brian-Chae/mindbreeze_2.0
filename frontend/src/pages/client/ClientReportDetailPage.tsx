@@ -6,92 +6,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import EegQualityBanner from '../../components/reports/EegQualityBanner';
 import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
+import NarrativeSections from '../../components/reports/NarrativeSections';
+import ReportCoverSection from '../../components/reports/ReportCoverSection';
 import {
   getReport,
   adaptReportContent,
-  type AdaptedReportContent,
   type ReportDto,
 } from '../../lib/api/reports';
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '-';
-  const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function CoverSection({
-  report,
-  adapted,
-}: {
-  report: ReportDto;
-  adapted: AdaptedReportContent;
-}) {
-  const headline = adapted.headline ?? '리포트';
-  const sessionTitle = report.session_title || headline;
-  const sessionType = report.session_type ?? '-';
-  const score = adapted.coverScore;
-
-  return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#5F0080] via-[#7B00A6] to-[#9B30FF] p-8 text-white">
-      <div className="absolute inset-0 opacity-10">
-        <svg width="100%" height="100%">
-          <defs>
-            <pattern id="dots2" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="white" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#dots2)" />
-        </svg>
-      </div>
-
-      <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20">
-              내담자용
-            </span>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white/20">
-              {sessionType}
-            </span>
-            {adapted.coverReasonChip && (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-400/25 text-amber-50 border border-amber-200/30">
-                {adapted.coverReasonChip}
-              </span>
-            )}
-          </div>
-          <h1 className="text-[28px] font-extrabold tracking-tight mb-2">
-            {sessionTitle}
-          </h1>
-          <div className="text-[14px] text-white/70 font-mono">
-            {formatDate(report.scheduled_at ?? report.created_at)}
-          </div>
-          {report.sent_at && (
-            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/15 text-[12px] font-bold">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              확인 가능
-            </div>
-          )}
-        </div>
-
-        {score !== null && (
-          <div className="flex-shrink-0">
-            <div className="bg-white/10 backdrop-blur rounded-2xl px-6 py-5 text-center border border-white/10">
-              <div className="text-[12px] text-white/60 font-mono uppercase tracking-wider mb-1">
-                오늘의 두뇌휴식
-              </div>
-              <div className="text-[48px] font-extrabold leading-none">
-                {score}
-              </div>
-              <div className="text-[13px] text-white/50 mt-1">/ 100</div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -165,7 +86,7 @@ export default function ClientReportDetailPage() {
 
   // 내담자 뷰로 강제 — 라벨·접힘 비대칭
   const adapted = adaptReportContent(report.content, 'client');
-  const { summary, insights } = adapted;
+  const { summary, insights, displayNarrative } = adapted;
   const eeg = adapted.eeg;
 
   return (
@@ -175,7 +96,10 @@ export default function ClientReportDetailPage() {
           <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
 
-        <CoverSection report={report} adapted={adapted} />
+        {/* Cover — 서사 우선, 종합점수 대형 노출 없음 (SDD-054) */}
+        <ReportCoverSection report={report} adapted={adapted} />
+
+        {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
 
         {summary && (
           <SummaryCard title="AI 요약">
