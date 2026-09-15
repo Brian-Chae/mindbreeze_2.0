@@ -1,4 +1,4 @@
-// 몸·마음 서사형 리포트 샘플 (mock) — 종합 → 몸 → 마음
+// 몸·마음 서사형 리포트 샘플 — 규칙 기반 narrative + SDD-043 디자인
 
 import { Link } from 'react-router-dom';
 import {
@@ -11,47 +11,40 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import AppShell from '../../components/layout/AppShell';
-
-type Direction = 'up' | 'down';
+import {
+  buildReportNarrative,
+  type Direction,
+  type MetricId,
+  type MetricNarrative,
+} from '../../lib/report/narrative';
 
 interface MetricPoint {
   t: string;
   value: number;
 }
 
-interface BodyMetric {
-  id: string;
-  label: string;
-  direction: Direction;
-  deltaLabel: string;
-  caption: string;
+interface SampleSeries {
+  id: MetricId;
   color: string;
   series: MetricPoint[];
 }
 
-interface MindMetric {
-  id: string;
-  label: string;
-  direction: Direction;
-  deltaLabel: string;
-  color: string;
-  series: MetricPoint[];
-}
-
-const JOURNEY_NARRATIVE =
-  '몸은 점차 안정으로, 마음은 산만함에서 차분한 집중으로 흘렀습니다.';
-
-/** 개선 방향이면 그린, 악화면 레드 (샘플은 모두 개선) */
 const COLOR_IMPROVE = '#1F8A5B';
-const COLOR_WORSEN = '#F9746B';
+const COLOR_NEUTRAL = '#6F6F6F';
 
-const BODY_METRICS: BodyMetric[] = [
+/** 샘플 mock: 전반/후반 평균 (디자인 시안 변화량과 정합) */
+const SAMPLE_CHANGES = [
+  { id: 'respiratory_rate' as const, early: 16.8, late: 14.4 },
+  { id: 'heart_rate' as const, early: 78, late: 73 },
+  { id: 'hrv' as const, early: 32, late: 40 },
+  { id: 'focus' as const, early: 50, late: 59 }, // ≈18%
+  { id: 'relaxation' as const, early: 42, late: 47 }, // ≈12%
+  { id: 'emotional_stability' as const, early: 45, late: 49 }, // ≈9%
+];
+
+const SAMPLE_SERIES: SampleSeries[] = [
   {
     id: 'respiratory_rate',
-    label: '호흡수',
-    direction: 'down',
-    deltaLabel: '2.4회/분',
-    caption: '얕은 호흡 → 깊고 느린 호흡',
     color: '#5F0080',
     series: [
       { t: '0분', value: 16.8 },
@@ -63,10 +56,6 @@ const BODY_METRICS: BodyMetric[] = [
   },
   {
     id: 'heart_rate',
-    label: '심박수',
-    direction: 'down',
-    deltaLabel: '5bpm',
-    caption: '긴장 → 안정',
     color: '#7B2D8E',
     series: [
       { t: '0분', value: 78 },
@@ -78,10 +67,6 @@ const BODY_METRICS: BodyMetric[] = [
   },
   {
     id: 'hrv',
-    label: 'HRV',
-    direction: 'up',
-    deltaLabel: '8ms',
-    caption: '자율신경 회복 반응',
     color: '#2E7D5B',
     series: [
       { t: '0분', value: 32 },
@@ -91,14 +76,8 @@ const BODY_METRICS: BodyMetric[] = [
       { t: '20분', value: 40 },
     ],
   },
-];
-
-const MIND_METRICS: MindMetric[] = [
   {
     id: 'focus',
-    label: '집중도',
-    direction: 'up',
-    deltaLabel: '18%',
     color: '#5F0080',
     series: [
       { t: '0분', value: 42 },
@@ -110,9 +89,6 @@ const MIND_METRICS: MindMetric[] = [
   },
   {
     id: 'relaxation',
-    label: '이완도',
-    direction: 'up',
-    deltaLabel: '12%',
     color: '#2E7D5B',
     series: [
       { t: '0분', value: 38 },
@@ -124,9 +100,6 @@ const MIND_METRICS: MindMetric[] = [
   },
   {
     id: 'emotional_stability',
-    label: '감정안정도',
-    direction: 'up',
-    deltaLabel: '9%',
     color: '#7B2D8E',
     series: [
       { t: '0분', value: 45 },
@@ -138,32 +111,33 @@ const MIND_METRICS: MindMetric[] = [
   },
 ];
 
-function DirectionBadge({
-  direction,
-  improved = true,
-}: {
-  direction: Direction;
-  improved?: boolean;
-}) {
-  const color = improved ? COLOR_IMPROVE : COLOR_WORSEN;
+const SERIES_BY_ID = new Map(SAMPLE_SERIES.map((s) => [s.id, s]));
+
+const narrative = buildReportNarrative(SAMPLE_CHANGES);
+
+function directionTone(direction: Direction): string {
+  if (direction === 'stable') return COLOR_NEUTRAL;
+  // 샘플은 몸 이완·마음 안정 방향이 개선으로 읽힘
+  if (direction === 'up') return COLOR_IMPROVE;
+  return COLOR_IMPROVE;
+}
+
+function DirectionBadge({ direction }: { direction: Direction }) {
+  const color = directionTone(direction);
+  const label =
+    direction === 'up' ? '상승' : direction === 'down' ? '하락' : '유지';
   return (
     <span
       className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[14px] font-bold"
       style={{ backgroundColor: `${color}18`, color }}
-      aria-label={direction === 'up' ? '상승' : '하락'}
+      aria-label={label}
     >
-      {direction === 'up' ? '↑' : '↓'}
+      {direction === 'up' ? '↑' : direction === 'down' ? '↓' : '→'}
     </span>
   );
 }
 
-function TrendChart({
-  data,
-  color,
-}: {
-  data: MetricPoint[];
-  color: string;
-}) {
+function TrendChart({ data, color }: { data: MetricPoint[]; color: string }) {
   return (
     <ResponsiveContainer width="100%" height={120}>
       <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
@@ -203,6 +177,36 @@ function TrendChart({
   );
 }
 
+function MetricCard({ metric }: { metric: MetricNarrative }) {
+  const series = SERIES_BY_ID.get(metric.id);
+  const tone = directionTone(metric.direction);
+
+  return (
+    <article className="rounded-xl border border-[#EFEFEF] bg-white p-4">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <DirectionBadge direction={metric.direction} />
+          <div className="min-w-0">
+            <div className="text-[14px] font-bold text-[#1F1F1F]">{metric.label}</div>
+            <div className="text-[12px] text-[#6F6F6F] mt-0.5">{metric.sentence}</div>
+          </div>
+        </div>
+        <div
+          className="shrink-0 text-[15px] font-bold tabular-nums"
+          style={{ color: tone }}
+        >
+          {metric.arrow} {metric.deltaLabel}
+        </div>
+      </div>
+      {series ? <TrendChart data={series.series} color={series.color} /> : null}
+    </article>
+  );
+}
+
+function chipLabel(metrics: MetricNarrative[]): string {
+  return metrics.map((m) => `${m.label.replace('안정도', '안정')} ${m.arrow}`).join(' · ');
+}
+
 export default function ReportSamplePage() {
   return (
     <AppShell
@@ -224,18 +228,32 @@ export default function ReportSamplePage() {
             샘플 리포트
           </span>
           <span className="text-[12px] text-[#6F6F6F]">
-            실제 세션 데이터가 아닙니다. 몸·마음 서사형 리포트 미리보기입니다.
+            실제 세션 데이터가 아닙니다. 규칙 기반 서사 미리보기입니다.
           </span>
         </div>
 
         {/* 1. 종합 여정 */}
         <section className="rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-6">
           <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/80">
-            journey
+            02 · journey
           </p>
           <h2 className="mt-1 text-[18px] font-bold text-[#1F1F1F]">종합 여정</h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-[#1F1F1F]">
-            {JOURNEY_NARRATIVE}
+          <p className="mt-4 rounded-xl border-l-[3px] border-[#59CE90] bg-[#F0F9F5] px-5 py-4 text-[15px] leading-relaxed text-[#1F1F1F]">
+            {narrative.journey}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 rounded-xl bg-[#F0F9F5] px-3.5 py-2 text-[12px] text-[#26724B]">
+              <strong className="font-bold">몸</strong>
+              <span>{chipLabel(narrative.body)}</span>
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-xl bg-[#F5EDFC] px-3.5 py-2 text-[12px] text-[#5F0080]">
+              <strong className="font-bold">마음</strong>
+              <span>{chipLabel(narrative.mind)}</span>
+            </span>
+          </div>
+          <p className="mt-4 text-[11px] leading-relaxed text-[#6F6F6F]">
+            아래 변화량은 세션의 전반 평균과 후반 평균을 비교한 값입니다. 점수(0~100)는
+            표시하지 않습니다.
           </p>
         </section>
 
@@ -243,37 +261,17 @@ export default function ReportSamplePage() {
         <section className="rounded-2xl border border-[#EFEFEF] bg-[#F0F9F5] p-6 space-y-5">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-[#1F8A5B]/90">
-              body
+              03 · body
             </p>
             <h2 className="mt-1 text-[18px] font-bold text-[#1F1F1F]">몸의 변화</h2>
-            <p className="mt-1 text-[12px] text-[#6F6F6F]">
-              방향성 + 절대 변화량 · 세션 전반→후반 추이
+            <p className="mt-1 text-[13px] text-[#5A5A5A]">
+              호흡과 심장의 움직임에서 오늘의 변화를 살펴보세요.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {BODY_METRICS.map((m) => (
-              <article
-                key={m.id}
-                className="rounded-xl border border-[#EFEFEF] bg-white p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <DirectionBadge direction={m.direction} improved />
-                    <div className="min-w-0">
-                      <div className="text-[14px] font-bold text-[#1F1F1F]">{m.label}</div>
-                      <div className="text-[12px] text-[#6F6F6F] mt-0.5">{m.caption}</div>
-                    </div>
-                  </div>
-                  <div
-                    className="shrink-0 text-[15px] font-bold tabular-nums"
-                    style={{ color: COLOR_IMPROVE }}
-                  >
-                    {m.direction === 'up' ? '↑' : '↓'} {m.deltaLabel}
-                  </div>
-                </div>
-                <TrendChart data={m.series} color={m.color} />
-              </article>
+            {narrative.body.map((m) => (
+              <MetricCard key={m.id} metric={m} />
             ))}
           </div>
         </section>
@@ -282,36 +280,34 @@ export default function ReportSamplePage() {
         <section className="rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-6 space-y-5">
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/80">
-              mind
+              04 · mind
             </p>
             <h2 className="mt-1 text-[18px] font-bold text-[#1F1F1F]">마음의 변화</h2>
-            <p className="mt-1 text-[12px] text-[#6F6F6F]">
-              방향성 + 상대 변화율 · 세션 전반→후반 추이
+            <p className="mt-1 text-[13px] text-[#5A5A5A]">
+              마음의 지표가 어떻게 흘렀는지, 나의 느낌과 함께 읽어보세요.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {MIND_METRICS.map((m) => (
-              <article
-                key={m.id}
-                className="rounded-xl border border-[#EFEFEF] bg-white p-4"
-              >
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <DirectionBadge direction={m.direction} improved />
-                    <div className="text-[14px] font-bold text-[#1F1F1F]">{m.label}</div>
-                  </div>
-                  <div
-                    className="shrink-0 text-[15px] font-bold tabular-nums"
-                    style={{ color: COLOR_IMPROVE }}
-                  >
-                    {m.direction === 'up' ? '↑' : '↓'} {m.deltaLabel}
-                  </div>
-                </div>
-                <TrendChart data={m.series} color={m.color} />
-              </article>
+            {narrative.mind.map((m) => (
+              <MetricCard key={m.id} metric={m} />
             ))}
           </div>
+        </section>
+
+        {/* 4. 마무리 */}
+        <section className="rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-6 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/80">
+            05 · closing
+          </p>
+          <h2 className="mt-1 text-[18px] font-bold text-[#5F0080]">마무리</h2>
+          <p className="mt-4 mx-auto max-w-md text-[14px] leading-relaxed text-[#6D547A]">
+            {narrative.closing}
+          </p>
+          <p className="mt-5 text-[11px] leading-relaxed text-[#6F6F6F]">
+            이 기록은 자기 이해를 돕기 위한 참고 자료이며, 의학적 진단이나 치료를 대신하지
+            않습니다.
+          </p>
         </section>
       </div>
     </AppShell>
