@@ -163,3 +163,49 @@ def test_join_issues_private_participant_token(client, setup_email):
     assert response.status_code == 200, response.text
     assert response.json()["participant_token"]
     assert "participant_token" not in response.json()["session"]["participants"][0]
+
+
+def test_branded_email_preserves_link_and_text(monkeypatch):
+    from html import escape
+    from app.tasks import email
+    sender = Mock(return_value=True)
+    monkeypatch.setattr(email, "_send_email", sender)
+    link = 'https://example.com/report?token=a&value="quoted"'
+    assert email.send_report_email("guest@example.com", link)
+    _, _, text, html = sender.call_args.args
+    assert link in text and "7일" in text
+    assert f'href="{escape(link, quote=True)}"' in html
+    assert "<table" in html and "리포트 보기" in html
+    assert "<style" not in html and "<script" not in html
+
+
+def test_branded_view_preserves_private_content_and_missing_values(client, setup_email):
+    from app.services import report_email_service as service
+    db, session, participant = setup_email
+    participant.report_email = "guest@example.com"
+    unsafe = '<script>alert("private")</script>'
+    report = Report(session_id=session.id, participant_id=participant.id,
+                    type="client", status="completed", content={
+                        "title": unsafe, "summary": unsafe, "insights": [unsafe],
+                        "private_notes": "상담사 전용 비밀",
+                        "eeg": {"metrics": {"focus_index_stability_score": 0,
+                                             "stress_score": None,
+                                             "relaxation_score": unsafe}},
+                    })
+    db.add(report)
+    db.commit()
+    token = service._token("report_view", str(report.id), str(session.id), email=participant.report_email)
+    response = client.get(f"/api/v1/sessions/{session.id}/report-email/view", params={"token": token})
+    assert response.status_code == 200
+    html = response.text
+    assert "<script>" not in html and "&lt;script&gt;" in html
+    assert "상담사 전용 비밀" not in html
+    assert '<details' in html and '<details open' not in html
+    assert "측정값: 0" in html
+    assert "측정 정보 없음" in html
+    for label in ["집중 안정도", "신경 활동도", "인지 부하 안정도", "스트레스", "좌우 균형", "정서 안정도", "두뇌휴식도"]:
+        assert label in html
+    assert "style-src 'unsafe-inline'" in response.headers["content-security-policy"]
+    assert "default-src 'none'" in response.headers["content-security-policy"]
+    assert response.headers["referrer-policy"] == "no-referrer"
+    assert response.headers["cache-control"] == "no-store"

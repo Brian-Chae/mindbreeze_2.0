@@ -178,12 +178,66 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
     title = escape(str(content.get("title") or "내 마음 리포트"))
     summary = escape(str(content.get("summary") or "오늘 세션에 참여해주셔서 감사합니다."))
     insights = content.get("insights") or []
-    items = "".join(f"<li>{escape(str(item))}</li>" for item in insights)
+    items = "".join(
+        f'<li style="padding:18px 20px;margin-bottom:12px;background:#F1FAF5;'
+        f'border-left:3px solid #59CE90;border-radius:0 12px 12px 0;white-space:pre-wrap;">{escape(str(item))}</li>'
+        for item in insights
+    )
     eeg = content.get("eeg") or {}
     metrics = eeg.get("metrics") or {}
     labels = {"focus_index_stability_score": "집중 안정도", "total_neural_activity_score": "신경 활동도",
               "cognitive_load_stability_score": "인지 부하 안정도", "stress_score": "스트레스",
               "hemispheric_balance_score": "좌우 균형", "emotional_stability_score": "정서 안정도",
               "relaxation_score": "두뇌휴식도"}
-    rows = "".join(f"<li>{label}: {escape(str(metrics[key]))}</li>" for key, label in labels.items() if metrics.get(key) is not None)
-    return f'<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title}</title><body><main><h1>{title}</h1><p>{summary}</p><ul>{items}</ul><h2>뇌파 분석</h2><ul>{rows or "<li>측정된 뇌파 지표가 없습니다.</li>"}</ul></main></body></html>'
+    cards = []
+    for key, label in labels.items():
+        value = metrics.get(key)
+        # 측정되지 않은 값은 0으로 대체하거나 긍정적인 상태로 해석하지 않는다.
+        detail = (
+            f'<details style="margin-top:12px;color:#5F0080;font-size:13px;">'
+            f'<summary style="cursor:pointer;padding:6px 0;">측정값 자세히 보기</summary>'
+            f'<p style="margin:8px 0 0;color:#63566B;">측정값: {escape(str(value))}</p></details>'
+            if value is not None else
+            '<p style="margin:12px 0 0;color:#63566B;font-size:13px;">측정 정보 없음</p>'
+        )
+        cards.append(
+            f'<article style="min-width:0;padding:22px;background:#FFFFFF;border:1px solid #E8D9EF;border-radius:16px;">'
+            f'<h3 style="margin:0;font-size:16px;font-weight:700;">{label}</h3>{detail}</article>'
+        )
+    empty_metrics = (
+        '<p style="color:#63566B;">측정된 뇌파 지표가 없습니다.</p>'
+        if all(metrics.get(key) is None for key in labels) else ''
+    )
+    return f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{title} · MIND BREEZE</title></head>
+<body style="margin:0;background:#FAF9FB;color:#1F1F1F;font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:16px;line-height:1.8;overflow-wrap:anywhere;">
+<header style="max-width:840px;margin:auto;padding:24px 20px;box-sizing:border-box;">
+  <span style="color:#59CE90;font-size:24px;" aria-hidden="true">●</span>
+  <strong style="color:#5F0080;font-size:16px;letter-spacing:2px;">MIND BREEZE</strong>
+  <span style="display:inline-block;margin-left:12px;color:#63566B;font-size:12px;">나를 위한 세션 리포트</span>
+</header>
+<main style="max-width:800px;margin:0 auto 32px;border:1px solid #E8D9EF;border-radius:24px;overflow:hidden;background:#FFFFFF;">
+  <section aria-labelledby="cover-title" style="padding:clamp(28px,6vw,56px) clamp(20px,5vw,48px);background:#F5EDFC;">
+    <p style="margin:0 0 20px;color:#5F0080;font-size:12px;letter-spacing:2px;">01 · 나에게 돌아오는 시간</p>
+    <h1 id="cover-title" style="margin:0;color:#5F0080;font-size:clamp(28px,5vw,42px);line-height:1.4;letter-spacing:-1px;white-space:pre-wrap;">{title}</h1>
+    <div style="width:40px;height:4px;background:#59CE90;border-radius:4px;margin:28px 0;" aria-hidden="true"></div>
+    <p style="margin:0;color:#63566B;font-size:17px;line-height:1.95;white-space:pre-wrap;">{summary}</p>
+  </section>
+  <section aria-labelledby="insights-title" style="padding:clamp(28px,6vw,48px) clamp(20px,5vw,48px);">
+    <p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">02 · 세션 인사이트</p>
+    <h2 id="insights-title" style="margin:0 0 24px;font-size:24px;line-height:1.5;">오늘의 나를 돌아보며</h2>
+    <ul style="list-style:none;margin:0;padding:0;">{items or '<li style="color:#63566B;">아직 등록된 인사이트가 없습니다.</li>'}</ul>
+  </section>
+  <section aria-labelledby="eeg-title" style="padding:clamp(28px,6vw,48px) clamp(20px,5vw,48px);background:#F5EDFC;">
+    <p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">03 · 뇌파 분석</p>
+    <h2 id="eeg-title" style="margin:0 0 12px;font-size:24px;line-height:1.5;">마음의 기록을 살펴보세요</h2>
+    <p style="margin:0 0 24px;color:#63566B;font-size:14px;">세션에서 기록한 지표입니다. 궁금한 항목을 펼쳐 측정값을 확인해 보세요.</p>
+    {empty_metrics}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px;">{''.join(cards)}</div>
+    <p style="margin:24px 0 0;color:#63566B;font-size:12px;">측정 정보가 없는 항목은 해석하지 않습니다. 지표는 나의 느낌과 함께 읽어주세요.</p>
+  </section>
+  <footer style="padding:32px clamp(20px,5vw,48px);">
+    <p style="margin:0 0 12px;color:#5F0080;font-weight:bold;">나를 알아가는 작은 시간, MIND BREEZE</p>
+    <p style="margin:0;color:#63566B;font-size:12px;">이 페이지는 개인 리포트입니다. 링크를 다른 사람에게 공유하지 마세요.<br>리포트 링크는 발급 후 7일간 유효합니다.</p>
+  </footer>
+</main></body></html>"""

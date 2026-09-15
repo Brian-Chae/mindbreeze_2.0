@@ -457,5 +457,27 @@ def send_report_email(to_email: str, report_link: str) -> bool:
     """로그인 없이 열람 가능한 7일 만료 리포트 링크를 발송한다."""
     from html import escape
     text = f"안녕하세요, MIND BREEZE입니다.\n\n리포트가 준비되었습니다.\n{report_link}\n\n링크는 7일간 유효합니다. 개인정보 보호를 위해 다른 사람에게 공유하지 마세요."
-    html = f'<html lang="ko"><body><h1>MIND BREEZE 리포트</h1><p>리포트가 준비되었습니다.</p><a href="{escape(report_link, quote=True)}">내 리포트 보기</a><p>7일간 유효한 개인 링크입니다. 다른 사람에게 공유하지 마세요.</p></body></html>'
+    html = f"""<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MIND BREEZE 리포트</title></head>
+<body style="margin:0;padding:0;background-color:#F5EDFC;color:#1F1F1F;font-family:Arial,'Malgun Gothic',sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5EDFC;"><tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#FFFFFF;border:1px solid #E8D9EF;border-radius:24px;">
+<tr><td style="padding:32px 28px 24px;border-bottom:1px solid #EEE7F1;">
+  <span style="color:#59CE90;font-size:24px;" aria-hidden="true">●</span>
+  <strong style="color:#5F0080;font-size:18px;letter-spacing:2px;">MIND BREEZE</strong>
+</td></tr>
+<tr><td style="padding:36px 28px;">
+  <p style="margin:0 0 12px;color:#5F0080;font-size:12px;letter-spacing:2px;">나를 알아가는 시간</p>
+  <h1 style="margin:0 0 24px;color:#5F0080;font-size:28px;line-height:1.45;">오늘의 마음을 담은<br>리포트가 도착했어요.</h1>
+  <p style="margin:0 0 14px;font-size:16px;line-height:1.8;">안녕하세요, MIND BREEZE입니다.</p>
+  <p style="margin:0 0 28px;color:#63566B;font-size:15px;line-height:1.9;">세션에 함께해 주셔서 감사합니다.<br>나를 위해 머물렀던 시간을 리포트로 만나보세요.<br>아래 버튼을 누르면 브라우저에서 바로 확인할 수 있어요.</p>
+  <table role="presentation" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#5F0080" style="background-color:#5F0080;border-radius:12px;mso-padding-alt:16px 32px;">
+    <a href="{escape(report_link, quote=True)}" style="display:inline-block;padding:16px 32px;border:1px solid #5F0080;border-radius:12px;color:#FFFFFF;text-decoration:none;font-size:16px;font-weight:bold;line-height:1.5;">리포트 보기</a>
+  </td></tr></table>
+  <p style="margin:28px 0 0;padding:18px;background-color:#F5EDFC;border-radius:12px;color:#63566B;font-size:13px;line-height:1.8;">이 링크는 <strong style="color:#5F0080;">7일간 유효</strong>합니다.<br>개인정보 보호를 위해 다른 사람에게 공유하지 마세요.</p>
+  <p style="margin:24px 0 6px;font-size:12px;line-height:1.7;color:#63566B;">버튼이 작동하지 않으면 아래 주소를 브라우저에 붙여넣어 주세요.</p>
+  <p style="margin:0;font-size:12px;line-height:1.7;color:#5F0080;word-break:break-all;overflow-wrap:anywhere;">{escape(report_link)}</p>
+</td></tr>
+<tr><td style="padding:24px 28px;border-top:1px solid #EEE7F1;color:#63566B;font-size:12px;line-height:1.8;">나에게 돌아오는 작은 시간, MIND BREEZE<br>이 메일은 리포트 발송 요청에 따라 전송되었습니다.</td></tr>
+</table></td></tr></table></body></html>"""
     return _send_email(to_email, "[MIND BREEZE] 세션 리포트가 도착했습니다", text, html)

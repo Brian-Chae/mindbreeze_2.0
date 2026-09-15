@@ -324,4 +324,4 @@ def request_report_email(
 def view_report_email(session_id: UUID, token: str, db: DBSession = Depends(get_db)):
     return HTMLResponse(report_email_service.view_report_email(session_id, token, db),
                         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
-                                 "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'"})
+                                 "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"})
