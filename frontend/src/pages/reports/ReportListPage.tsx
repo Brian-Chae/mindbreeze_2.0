@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ReportSampleModal } from './ReportSamplePage';
 import AppShell from '../../components/layout/AppShell';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 
@@ -40,6 +41,7 @@ function StatusBadge({ sentAt }: { sentAt: string | null }) {
 }
 
 export default function ReportListPage() {
+  const [sampleOpen, setSampleOpen] = useState(false);
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,12 +54,13 @@ export default function ReportListPage() {
   }, []);
 
   const sampleLink = (
-    <Link
-      to="/reports/sample"
+    <button
+      type="button"
+      onClick={() => setSampleOpen(true)}
       className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-[#5F0080] bg-[#F5EDFC] border border-[#E8D9F5] hover:bg-[#EFE3FA] transition-colors"
     >
       샘플 보기
-    </Link>
+    </button>
   );
 
   return (
@@ -71,12 +74,13 @@ export default function ReportListPage() {
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
           <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
           <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
-          <Link
-            to="/reports/sample"
+          <button
+            type="button"
+            onClick={() => setSampleOpen(true)}
             className="inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
           >
             샘플 리포트 보기
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -110,6 +114,7 @@ export default function ReportListPage() {
           })}
         </div>
       )}
+      {sampleOpen && <ReportSampleModal onClose={() => setSampleOpen(false)} />}
     </AppShell>
   );
 }
