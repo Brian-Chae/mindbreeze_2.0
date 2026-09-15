@@ -11,9 +11,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base
 from app.services.report_narrative import (
+    DEFAULT_NARRATIVE_PATTERNS,
     build_metrics_summary,
     build_narrative_signature,
     fallback_narrative,
+    seed_narrative_cache,
 )
 from app.tasks import summary_task, report_task
 
@@ -100,6 +102,48 @@ def test_narrative_cache_miss_saves_fallback(monkeypatch, summary, narrative_db)
     cached = narrative_db.get(NarrativeCache, "↓↓↑↑↑↑")
     assert cached is not None
     assert cached.narrative == expected
+    assert cached.source == "rule"
+
+
+def test_seed_narrative_cache_is_rule_based_and_idempotent(monkeypatch, narrative_db):
+    from app.models.narrative_cache import NarrativeCache
+
+    post = Mock()
+    monkeypatch.setattr(requests, "post", post)
+    assert seed_narrative_cache(narrative_db, ["↓↓↑↑↑↑", "→→→→→→"]) == 2
+    narrative_db.commit()
+
+    rows = narrative_db.query(NarrativeCache).order_by(NarrativeCache.signature).all()
+    assert [row.source for row in rows] == ["rule", "rule"]
+    assert all(row.narrative == fallback_narrative({
+        "body": {
+            "respiratory_rate": {"direction": {"↓": "down", "→": "stable"}[row.signature[0]]},
+            "heart_rate": {"direction": {"↓": "down", "→": "stable"}[row.signature[1]]},
+            "hrv": {"direction": {"↑": "up", "→": "stable"}[row.signature[2]]},
+        },
+        "mind": {
+            "focus": {"direction": {"↑": "up", "→": "stable"}[row.signature[3]]},
+            "relaxation": {"direction": {"↑": "up", "→": "stable"}[row.signature[4]]},
+            "emotional_stability": {"direction": {"↑": "up", "→": "stable"}[row.signature[5]]},
+        },
+    }) for row in rows)
+    assert seed_narrative_cache(narrative_db, ["↓↓↑↑↑↑", "→→→→→→"]) == 0
+    post.assert_not_called()
+
+
+def test_seed_defaults_to_representative_patterns(narrative_db):
+    assert seed_narrative_cache(narrative_db) == len(DEFAULT_NARRATIVE_PATTERNS)
+
+
+def test_seed_does_not_overwrite_llm_cache(narrative_db):
+    from app.models.narrative_cache import NarrativeCache
+
+    llm_narrative = dict(journey="LLM", body="몸", mind="마음", closing="마무리")
+    narrative_db.add(NarrativeCache(signature="↓↓↑↑↑↑", narrative=llm_narrative, source="llm"))
+    narrative_db.commit()
+
+    assert seed_narrative_cache(narrative_db, ["↓↓↑↑↑↑"]) == 0
+    assert narrative_db.get(NarrativeCache, "↓↓↑↑↑↑").narrative == llm_narrative
 
 
 def test_same_direction_pattern_reuses_first_narrative(monkeypatch, summary, narrative_db):

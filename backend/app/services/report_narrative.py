@@ -1,4 +1,6 @@
 """SDD-045: 원천 지표 변화와 결측을 보존하는 서사 입력/규칙 폴백."""
+from sqlalchemy.orm import Session as DBSession
+
 from app.services.eeg_metrics import mean
 
 METRICS = {
@@ -18,6 +20,20 @@ SIGNATURE_METRICS = (
     ("mind", "emotional_stability"),
 )
 SIGNATURE_DIRECTION = {"up": "↑", "down": "↓", "stable": "→"}
+DIRECTION_BY_SYMBOL = {symbol: direction for direction, symbol in SIGNATURE_DIRECTION.items()}
+
+# 몸 이완(호흡수/심박수 감소, HRV 증가)과 마음 지표의 대표적인 변화 조합이다.
+DEFAULT_NARRATIVE_PATTERNS = (
+    "↓↓↑↑↑↑",
+    "↓↓↑→↑↑",
+    "↓↓↑↑→↑",
+    "↓↓↑→→↑",
+    "↓↓↑→→→",
+    "→→→→→→",
+    "↓→↑→↑→",
+    "→↓↑↑↑↑",
+    "↓↓→↑↑↑",
+)
 
 
 def build_narrative_signature(summary: dict) -> str | None:
@@ -78,3 +94,35 @@ def fallback_narrative(summary: dict) -> dict[str, str]:
         sections[group] = " ".join(sentences) or f"측정 자료가 부족해 {label}의 전후 변화를 확인하기 어려워요."
     return {"journey": f"이번 세션의 흐름을 돌아봅니다. {sections['body']} {sections['mind']}",
             **sections, "closing": "오늘의 경험을 있는 그대로 돌아보며, 잠시 자신의 몸과 마음에 귀 기울여 보세요."}
+
+
+def summary_from_signature(signature: str) -> dict:
+    """검증된 6자리 시그니처를 규칙 서사 입력으로 복원한다."""
+    if len(signature) != len(SIGNATURE_METRICS) or any(
+        symbol not in DIRECTION_BY_SYMBOL for symbol in signature
+    ):
+        raise ValueError(f"유효하지 않은 서사 시그니처: {signature}")
+    summary = {"body": {}, "mind": {}}
+    for (group, metric), symbol in zip(SIGNATURE_METRICS, signature, strict=True):
+        summary[group][metric] = {"direction": DIRECTION_BY_SYMBOL[symbol]}
+    return summary
+
+
+def seed_narrative_cache(db: DBSession, patterns: list[str] | None = None) -> int:
+    """LLM 호출 없이 아직 없는 대표 패턴을 규칙 서사로 채운다."""
+    from app.models.narrative_cache import NarrativeCache
+
+    signatures = tuple(dict.fromkeys(patterns if patterns is not None else DEFAULT_NARRATIVE_PATTERNS))
+    inserted = 0
+    for signature in signatures:
+        summary = summary_from_signature(signature)
+        if db.get(NarrativeCache, signature) is not None:
+            continue
+        db.add(NarrativeCache(
+            signature=signature,
+            narrative=fallback_narrative(summary),
+            source="rule",
+        ))
+        db.flush()
+        inserted += 1
+    return inserted
