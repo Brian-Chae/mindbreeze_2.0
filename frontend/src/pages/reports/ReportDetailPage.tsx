@@ -22,8 +22,25 @@ import {
   resolveReportStatus,
   type ReportDto,
 } from '../../lib/api/reports';
+import type { EegQualityStatus } from '../../lib/api/report';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** 접힌 EEG 요약줄용 짧은 품질 라벨 (SDD-056) */
+function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
+  switch (status) {
+    case 'valid':
+      return '품질 양호';
+    case 'degraded':
+      return '품질 주의';
+    case 'invalid':
+      return '품질 미달';
+    case 'insufficient':
+      return '데이터 부족';
+    default:
+      return null;
+  }
+}
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -209,19 +226,42 @@ export default function ReportDetailPage() {
           </SummaryCard>
         )}
 
-        {/* 4. EEG 보조 — 7지표/타임라인 축소 유지 (다크 테마 금지) */}
+        {/* 4. EEG 보조 — 기본 접힘, 토글로 7지표/타임라인 확인 (SDD-056) */}
         {adapted.showEegSection && eeg && (
-          <div className="space-y-4" data-testid="eeg-section">
-            <EegQualityBanner eeg={eeg} reportType={report.type} />
+          <details
+            className="group rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] open:bg-white"
+            data-testid="eeg-section"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-6 [&::-webkit-details-marker]:hidden">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="text-[15px] font-bold text-[#5F0080]">
+                  뇌파 상세 지표 보기
+                </span>
+                {eegQualitySummaryLabel(eeg.status) && (
+                  <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6D547A]">
+                    {eegQualitySummaryLabel(eeg.status)}
+                  </span>
+                )}
+              </div>
+              <span
+                aria-hidden="true"
+                className="shrink-0 text-[12px] text-[#9B9B9B] transition-transform group-open:rotate-180"
+              >
+                ▾
+              </span>
+            </summary>
+            <div className="space-y-4 border-t border-[#E8D9F5] px-5 pb-5 pt-4 md:px-6 md:pb-6">
+              <EegQualityBanner eeg={eeg} reportType={report.type} />
 
-            {adapted.showEegMetrics && (
-              <EegMetricsGrid eeg={eeg} reportType={report.type} compact />
-            )}
+              {adapted.showEegMetrics && (
+                <EegMetricsGrid eeg={eeg} reportType={report.type} compact />
+              )}
 
-            {adapted.showEegTimeline && (
-              <EegTimeline data={adapted.eeg_timeline} dense={!isCounselor} />
-            )}
-          </div>
+              {adapted.showEegTimeline && (
+                <EegTimeline data={adapted.eeg_timeline} dense={!isCounselor} />
+              )}
+            </div>
+          </details>
         )}
 
         {/* 액션 */}
