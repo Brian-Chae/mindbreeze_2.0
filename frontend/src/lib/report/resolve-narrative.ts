@@ -31,9 +31,13 @@ export interface DisplayNarrative {
   body: MetricNarrative[];
   mind: MetricNarrative[];
   source: 'llm' | 'rule';
+  /** 실제 측정 시계열. 구형 호출자는 생략할 수 있다. */
+  timeline?: TimelineLikePoint[];
 }
 
 export interface TimelineLikePoint {
+  /** 세션 시작 후 경과 시간(분) */
+  min?: number;
   concentration?: number | null;
   relaxation?: number | null;
   stress?: number | null;
@@ -224,6 +228,7 @@ export function resolveDisplayNarrative(input: {
     body: metrics?.body ?? [],
     mind: metrics?.mind ?? [],
     source,
+    timeline: input.timeline ? input.timeline.map((point) => ({ ...point })) : [],
   };
 }
 

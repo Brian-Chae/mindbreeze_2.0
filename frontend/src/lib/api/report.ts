@@ -207,7 +207,8 @@ function parseTimeline(raw: unknown): EegTimelinePoint[] {
     if (!isRecord(item)) continue;
     const t = asNullableNumber(item.t);
     const minLegacy = asNullableNumber(item.min);
-    const x = t ?? minLegacy;
+    // 백엔드 t는 초 인덱스, 레거시 min은 분이다.
+    const x = t !== null ? t / 60 : minLegacy;
     if (x === null) continue;
     points.push({
       min: x,

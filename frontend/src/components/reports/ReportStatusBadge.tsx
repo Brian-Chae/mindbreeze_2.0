@@ -1,5 +1,5 @@
 // SDD-027 — 리포트 파이프라인 상태 배지 + data_credibility
-// 다크 AI 톤: slate-950 + cyan/amber/emerald/red 얇은 경계
+// mindbreeze 라이트 토큰 (haru 다크 테마 금지)
 
 import {
   REPORT_STATUS_LABELS,
@@ -17,13 +17,13 @@ interface ReportStatusBadgeProps {
 function statusTone(status: ReportPipelineStatus): string {
   switch (status) {
     case 'pending_analysis':
-      return 'border-cyan-400/30 bg-cyan-950/40 text-cyan-100';
+      return 'border-[#E8D9F5] bg-[#F5EDFC] text-[#5F0080]';
     case 'pending_review':
-      return 'border-amber-400/30 bg-amber-950/40 text-amber-100';
+      return 'border-amber-200 bg-amber-50 text-amber-900';
     case 'completed':
-      return 'border-emerald-400/30 bg-emerald-950/40 text-emerald-100';
+      return 'border-[#D8EFE3] bg-[#F0F9F5] text-[#26724B]';
     case 'error':
-      return 'border-red-400/30 bg-red-950/50 text-red-100';
+      return 'border-red-200 bg-red-50 text-red-700';
   }
 }
 
@@ -58,10 +58,10 @@ export default function ReportStatusBadge({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-lg border border-white/15 bg-black/25 px-2.5 py-1 text-[11px] font-bold tracking-wide">
+            <span className="inline-flex items-center rounded-lg border border-black/5 bg-white/80 px-2.5 py-1 text-[11px] font-bold tracking-wide">
               {label}
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider opacity-70">
+            <span className="font-mono text-[10px] uppercase tracking-wider opacity-60">
               {status}
             </span>
           </div>
@@ -73,9 +73,9 @@ export default function ReportStatusBadge({
         {credibility && (
           <div
             data-testid="report-data-credibility"
-            className="shrink-0 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-right"
+            className="shrink-0 rounded-lg border border-black/5 bg-white/80 px-3 py-2 text-right"
           >
-            <div className="font-mono text-[10px] uppercase tracking-wider opacity-60">
+            <div className="font-mono text-[10px] uppercase tracking-wider opacity-50">
               data_credibility
             </div>
             <div className="mt-0.5 text-[12px] font-semibold">{credibility.label}</div>
