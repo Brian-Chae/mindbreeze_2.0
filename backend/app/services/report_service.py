@@ -72,6 +72,8 @@ def _normalize_eeg(eeg) -> dict | None:
         "timeline": eeg.get("timeline") if isinstance(eeg.get("timeline"), list) else [],
         "normalization_source": eeg.get("normalization_source", "cohort"),
         "normalization_version": eeg.get("normalization_version"),
+        # SDD-045: LLM 서사(또는 규칙 폴백) 보존 — 없으면 None
+        "narrative": eeg.get("narrative"),
     }
 
 
