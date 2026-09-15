@@ -158,6 +158,7 @@ export default function ReportDetailPage() {
   const { summary, insights, markers, displayNarrative } = adapted;
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
+  const eegQualityLabel = eeg ? eegQualitySummaryLabel(eeg.status) : null;
   const pipelineStatus = resolveReportStatus(report);
   const credibility = resolveDataCredibility(
     report.data_credibility,
@@ -237,9 +238,9 @@ export default function ReportDetailPage() {
                 <span className="text-[15px] font-bold text-[#5F0080]">
                   뇌파 상세 지표 보기
                 </span>
-                {eegQualitySummaryLabel(eeg.status) && (
+                {eegQualityLabel && (
                   <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6D547A]">
-                    {eegQualitySummaryLabel(eeg.status)}
+                    {eegQualityLabel}
                   </span>
                 )}
               </div>
