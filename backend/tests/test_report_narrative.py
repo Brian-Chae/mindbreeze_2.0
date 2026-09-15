@@ -51,6 +51,55 @@ def test_missing_and_mixed_participants_are_not_stable():
         assert "유지" not in narrative["journey"]
 
 
+@pytest.mark.parametrize(("metric", "direction", "sentence"), [
+    ("respiratory_rate", "down", "호흡이 깊고 느려졌어요"),
+    ("respiratory_rate", "stable", "호흡이 고르게 유지됐어요"),
+    ("respiratory_rate", "up", "호흡이 빨라졌어요"),
+    ("heart_rate", "down", "심장이 차분해졌어요"),
+    ("heart_rate", "stable", "심박이 일정했어요"),
+    ("heart_rate", "up", "심박이 빨라졌어요"),
+    ("hrv", "down", "자율신경이 긴장 상태였어요"),
+    ("hrv", "stable", "자율신경이 유지됐어요"),
+    ("hrv", "up", "자율신경 회복이 좋았어요"),
+    ("focus", "down", "집중이 흔들렸어요"),
+    ("focus", "stable", "집중이 유지됐어요"),
+    ("focus", "up", "집중이 깊어졌어요"),
+    ("relaxation", "down", "긴장이 남아 있었어요"),
+    ("relaxation", "stable", "이완이 유지됐어요"),
+    ("relaxation", "up", "이완이 깊어졌어요"),
+    ("emotional_stability", "down", "감정 기복이 있었어요"),
+    ("emotional_stability", "stable", "감정이 유지됐어요"),
+    ("emotional_stability", "up", "감정이 평온해졌어요"),
+])
+def test_fallback_uses_frontend_metric_sentence(metric, direction, sentence):
+    group = "body" if metric in {"respiratory_rate", "heart_rate", "hrv"} else "mind"
+
+    narrative = fallback_narrative({group: {metric: {"direction": direction}}})
+
+    assert narrative[group] == f"{sentence}."
+
+
+@pytest.mark.parametrize(("metric", "early", "stable_late", "boundary_late"), [
+    ("respiratory_rate", 10, 10.999, 11),
+    ("heart_rate", 60, 62.999, 63),
+    ("hrv", 30, 34.999, 35),
+    ("focus", 100, 104.999, 105),
+    ("relaxation", 100, 104.999, 105),
+    ("emotional_stability", 100, 104.999, 105),
+])
+def test_direction_threshold_boundaries_match_frontend(metric, early, stable_late, boundary_late):
+    attr = {"respiratory_rate": "respiratory_rate", "heart_rate": "heart_rate", "hrv": "sdnn",
+            "focus": "focus_index", "relaxation": "relaxation_index",
+            "emotional_stability": "emotional_stability"}[metric]
+    group = "body" if metric in {"respiratory_rate", "heart_rate", "hrv"} else "mind"
+
+    stable = build_metrics_summary([window(0, **{attr: early}), window(10, **{attr: stable_late})], "valid")
+    boundary = build_metrics_summary([window(0, **{attr: early}), window(10, **{attr: boundary_late})], "valid")
+
+    assert stable[group][metric]["direction"] == "stable"
+    assert boundary[group][metric]["direction"] == "up"
+
+
 def test_narrative_signature_uses_six_metric_directions():
     summary = build_metrics_summary([window(0), window(10)], "valid")
     assert build_narrative_signature(summary) == "↓↓↑↑↑↑"
