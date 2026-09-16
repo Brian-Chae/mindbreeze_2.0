@@ -1,54 +1,57 @@
-import { useEffect, type ReactElement } from 'react';
+import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import ClientLoginPage from './pages/ClientLoginPage';
-import DashboardPage from './pages/DashboardPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import SetPasswordPage from './pages/SetPasswordPage';
-import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
-import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
-import ClientEssentialsPage from './pages/onboarding/ClientEssentialsPage';
-import ClientListPage from './pages/clients/ClientListPage';
-import ClientProfilePage from './pages/clients/ClientProfilePage';
-import ClientInvitePage from './pages/clients/ClientInvitePage';
-import InviteLandingPage from './pages/clients/InviteLandingPage';
-import OrgSearchPage from './pages/org/OrgSearchPage';
-import OrgRegisterPage from './pages/org/OrgRegisterPage';
-import OrgManagementPage from './pages/org/OrgManagementPage';
-import MyRequestsPage from './pages/org/MyRequestsPage';
-import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage';
-import SessionListPage from './pages/sessions/SessionListPage';
-import SessionCreatePage from './pages/sessions/SessionCreatePage';
-import SessionDetailPage from './pages/sessions/SessionDetailPage';
-import SessionLivePage from './pages/sessions/SessionLivePage';
-import SessionRecordPage from './pages/records/SessionRecordPage';
-import ChatPage from './pages/chat/ChatPage';
-import DesignIndexPage from './pages/design/DesignIndexPage';
-import HomepagePage from './pages/design/HomepagePage';
-import OperatorAppPage from './pages/design/OperatorAppPage';
-import UserAppPage from './pages/design/UserAppPage';
-import ReportPage from './pages/design/ReportPage';
-import DocsPage from './pages/design/DocsPage';
-import ReportListPage from './pages/reports/ReportListPage';
-import ReportSamplePage from './pages/reports/ReportSamplePage';
-import ReportDetailPage from './pages/reports/ReportDetailPage';
-import ReportViewPage from './pages/reports/ReportViewPage';
-import AdminReviewListPage from './pages/admin/AdminReviewListPage';
-import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import ClientManagementPage from './pages/admin/ClientManagementPage';
-import AdminOrgManagementPage from './pages/admin/OrgManagementPage';
-import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
-import SettingsPage from './pages/SettingsPage';
-import ClientAppPage from './pages/client/ClientAppPage';
-import ClassJoinPage from './pages/class-join-page';
-import OrgPublicPage from './pages/OrgPublicPage';
-import OrgDashboardPage from './pages/OrgDashboardPage';
-import PlaygroundPage from './pages/playground/PlaygroundPage';
+
 import { useAuthStore } from './stores/authStore';
+
+// 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
+const CounselorOnboardingPage = lazy(() => import('./pages/onboarding/CounselorOnboardingPage'));
+const ClientOnboardingPage = lazy(() => import('./pages/onboarding/ClientOnboardingPage'));
+const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssentialsPage'));
+const ClientListPage = lazy(() => import('./pages/clients/ClientListPage'));
+const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
+const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
+const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
+const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
+const OrgRegisterPage = lazy(() => import('./pages/org/OrgRegisterPage'));
+const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
+const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
+const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
+const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
+const SessionCreatePage = lazy(() => import('./pages/sessions/SessionCreatePage'));
+const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
+const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
+const SessionRecordPage = lazy(() => import('./pages/records/SessionRecordPage'));
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
+const DesignIndexPage = lazy(() => import('./pages/design/DesignIndexPage'));
+const HomepagePage = lazy(() => import('./pages/design/HomepagePage'));
+const OperatorAppPage = lazy(() => import('./pages/design/OperatorAppPage'));
+const UserAppPage = lazy(() => import('./pages/design/UserAppPage'));
+const ReportPage = lazy(() => import('./pages/design/ReportPage'));
+const DocsPage = lazy(() => import('./pages/design/DocsPage'));
+const ReportListPage = lazy(() => import('./pages/reports/ReportListPage'));
+const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
+const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
+const ReportViewPage = lazy(() => import('./pages/reports/ReportViewPage'));
+const AdminReviewListPage = lazy(() => import('./pages/admin/AdminReviewListPage'));
+const AdminReviewDetailPage = lazy(() => import('./pages/admin/AdminReviewDetailPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
+const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
+const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
+const ClassJoinPage = lazy(() => import('./pages/class-join-page'));
+const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
+const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
+const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
 
 function buildLoginRedirect(pathname: string, search: string): string {
   const next = `${pathname}${search}`;
@@ -106,6 +109,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/join" element={<ClassJoinPage />} />
@@ -195,6 +199,7 @@ function App() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/playground" element={<PlaygroundPage />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
