@@ -192,7 +192,8 @@ export function BandGuidePanel({
                   type="button"
                   onClick={() => void band.connect()}
                   disabled={band.connectionState === 'connecting'}
-                  className="rounded-xl bg-white/20 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base disabled:cursor-not-allowed disabled:opacity-60"
+                  style={{ background: '#5F0080' }}
                 >
                   {band.connectionState === 'connecting'
                     ? '연결 중...'
