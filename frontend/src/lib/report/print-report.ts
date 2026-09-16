@@ -1,3 +1,5 @@
+import './report-print.css';
+
 /** 화면과 동일한 DOM/CSS를 사용하되 앱과 모달의 스크롤 제약을 인쇄 문서에서 분리한다. */
 export async function printReport(content: HTMLElement, title: string): Promise<void> {
   document.querySelector('iframe[data-report-print]')?.remove();
@@ -29,9 +31,7 @@ export async function printReport(content: HTMLElement, title: string): Promise<
     });
     const body = content.cloneNode(true) as HTMLElement;
     body.querySelectorAll('[data-print-exclude]').forEach(node => node.remove());
-    // 화면에서 접힌 상세 지표도 PDF에 보존한다.
-    body.querySelectorAll('details').forEach(node => { node.open = true; });
-    doc.body.className = 'm-0 bg-white';
+    doc.body.className = 'report-print-document m-0 bg-white';
     doc.body.append(body);
     await Promise.all(styles);
     await doc.fonts.ready;

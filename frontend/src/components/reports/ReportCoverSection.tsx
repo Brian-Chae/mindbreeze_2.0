@@ -20,7 +20,7 @@ export default function ReportCoverSection({
   const sessionType = report.session_type ?? '-';
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-8">
+    <section className="report-print-cover relative overflow-hidden rounded-2xl border border-[#EFEFEF] bg-[#F5EDFC] p-8">
       <div className="absolute right-6 top-8 opacity-40 pointer-events-none" aria-hidden>
         <svg width="120" height="120" viewBox="0 0 240 240">
           <g fill="none" stroke="#5F0080" strokeWidth="1.5">
@@ -54,9 +54,12 @@ export default function ReportCoverSection({
         <p className="mt-2 text-[14px] text-[#6D547A]">
           오늘 나에게 일어난 작은 변화를 만나보세요.
         </p>
-        <div className="mt-4 text-[13px] text-[#6F6F6F] font-mono">
+        <div className="report-print-date mt-4 text-[13px] text-[#6F6F6F] font-mono">
           {formatDate(report.scheduled_at ?? report.created_at)}
         </div>
+        <p className="report-print-participant hidden">
+          {report.participant_name ? `${report.participant_name}님을 위한 기록` : '참여자 정보 없음'}
+        </p>
         {report.sent_at && (
           <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F0F9F5] text-[12px] font-bold text-[#26724B] border border-[#D8EFE3]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

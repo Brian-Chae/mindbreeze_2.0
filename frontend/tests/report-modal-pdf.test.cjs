@@ -7,7 +7,7 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
  try {
   const page = await browser.newPage();
   await page.addInitScript(() => { window.print = () => { window.__printed = true; }; });
-  const report = { id:'pdf-test', session_id:'test', type:'counselor', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:'검증용 여정',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
+  const report = { id:'pdf-test', session_id:'test', type:'counselor', participant_name:savedEmail ? '검증 참여자' : null, session_title:'몸과 마음의 기록', scheduled_at:'2026-09-16T09:00:00+09:00', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:'검증용 여정',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
   let approvals=0; let deliveries=0;
   await page.route('**/reports/pdf-test**', async route=>{
    if(route.request().url().endsWith('/resend-email')) { deliveries++; assert.equal(route.request().postDataJSON().email,'new@example.com'); }
@@ -37,22 +37,50 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
    const box=await page.getByRole('button',{name:'승인하기'}).boundingBox();
    assert.ok(box && box.y>=0 && box.y+box.height<=800 && box.x>=0 && box.x+box.width<=width);
   }
+  await page.locator('[data-testid="eeg-section"]').evaluate(el => { el.open = true; });
   await page.getByRole('button',{name:'PDF 생성'}).click();
   const iframe=page.locator('iframe[title="리포트 인쇄"]');
   await iframe.waitFor({state:'attached'});
   const frame=await(await iframe.elementHandle()).contentFrame();
   await frame.waitForFunction(()=>document.body.innerText.includes('검증용 마무리'));
   await frame.waitForFunction(()=>window.__printed === true);
+  assert.equal(await frame.locator('[data-testid="eeg-section"]').count(),0);
+  assert.equal(await page.locator('[data-testid="eeg-section"]').evaluate(el => el.open),true);
+  assert.equal(await frame.locator('details[open]').count(),0);
   assert.equal(await frame.locator('[data-section]').count(),5);
   assert.equal(await frame.locator('button,input,dialog').count(),0);
-  assert.ok(await frame.locator('svg polyline').count()>=6);
+  assert.ok(await frame.locator('svg polyline').count()>=6); // 화면용 서사 DOM은 유지한다.
   const printPage=await browser.newPage();
   await printPage.goto('http://localhost:5175/');
   await printPage.setContent(await frame.content());
   await printPage.evaluate(()=>document.fonts.ready);
-  const pdf=await printPage.pdf({format:'A4',printBackground:true,path:'/tmp/sdd-066-report.pdf'});
+  await printPage.emulateMedia({media:'print'});
+  assert.equal(await printPage.locator('.narrative-report .cover').evaluate(el=>getComputedStyle(el).display),'none');
+  assert.match(await printPage.locator('.report-print-cover').innerText(),savedEmail ? /검증 참여자/ : /참여자 정보 없음/);
+  for(const section of ['journey','body','mind','closing']) {
+   assert.equal(await printPage.locator(`[data-section="${section}"]`).evaluate(el=>getComputedStyle(el).breakBefore),'auto');
+  }
+  assert.equal(await printPage.locator('.metric:visible').count(),6);
+  assert.equal(await printPage.locator('svg:visible').count(),0);
+  assert.equal(await printPage.locator('.report-summary-card:visible').count(),0);
+  const pdf=await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-report.pdf'});
   assert.ok(pdf.length>10000);
-  assert.ok((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length>=2);
+  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length,1);
+  if (savedEmail) {
+   await printPage.locator('[data-section="body"] .section-head').evaluate(el => {
+    const paragraph = document.querySelector('.journey-quote');
+    document.querySelector('.closing-message').textContent = '마무리 문장 '.repeat(100);
+    paragraph.textContent = '긴 서사 문장도 페이지를 넘어 자연스럽게 이어집니다. '.repeat(160) + '긴본문끝표식';
+
+   });
+   const longPdf = await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-long-report.pdf'});
+   assert.ok((longPdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length === 1);
+  }
+  await printPage.locator('.narrative-report').evaluate(el=>el.remove());
+  assert.equal(await printPage.locator('.report-summary-card:visible').count(),1);
+  assert.match(await printPage.locator('.report-summary-card:visible').innerText(),/검증용 상담 본문/);
+  const fallbackPdf=await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-no-eeg-report.pdf'});
+  assert.equal((fallbackPdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length,1);
   await page.getByRole('button',{name:'승인하기'}).click();
   await page.waitForFunction(()=>!Array.from(document.querySelectorAll('button')).some(el=>el.textContent==='승인하기'));
   assert.equal(approvals,1);

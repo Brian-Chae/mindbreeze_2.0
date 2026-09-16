@@ -42,7 +42,7 @@ function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
+    <div className="report-summary-card bg-white border border-[#EFEFEF] rounded-2xl p-6">
       <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
         {title}
@@ -281,6 +281,7 @@ export default function ReportDetailView({
         <details
           className="group rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] open:bg-white"
           data-testid="eeg-section"
+          data-print-exclude
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-6 [&::-webkit-details-marker]:hidden">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
