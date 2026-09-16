@@ -158,8 +158,8 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
     report = db.query(Report).filter(Report.id == report_uuid).first()
     if not report:
         raise HTTPException(404, "리포트를 찾을 수 없습니다")
-    if report.type != "client" or not report.participant_id:
-        raise HTTPException(400, "내담자 리포트만 재발송할 수 있습니다")
+    if not report.participant_id:
+        raise HTTPException(400, "참가자가 있는 리포트만 재발송할 수 있습니다")
     if report.status != "completed":
         raise HTTPException(409, "승인 완료된 리포트만 재발송할 수 있습니다")
 

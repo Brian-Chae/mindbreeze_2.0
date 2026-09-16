@@ -160,7 +160,8 @@ export default function ReportDetailView({
     sent_at: report.sent_at,
     alreadyApprovedLocally: approved,
   });
-  const showResendEmail = isCounselorUser && report.type === 'client';
+  // 상담사라면 리포트 타입(client/counselor) 구분 없이 재발송 가능 (개별 리포트를 원하는 메일로 발송)
+  const showResendEmail = isCounselorUser;
   const displayError = externalError || error;
 
   return (

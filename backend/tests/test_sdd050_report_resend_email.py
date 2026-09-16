@@ -78,7 +78,8 @@ def test_resend_service_uses_new_email_and_updates_default_only_on_success(clien
 
 @pytest.mark.parametrize(
     ("report_type", "status"),
-    [("counselor", "completed"), ("client", "pending_review")],
+    # SDD-065: counselor 리포트도 재발송 허용으로 변경 → counselor 케이스 제거
+    [("client", "pending_review")],
 )
 def test_resend_service_rejects_ineligible_report(client, report_type, status):
     _, db, provider, report, _ = _client_report(client)
