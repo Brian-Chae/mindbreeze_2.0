@@ -1,7 +1,10 @@
 // NODE_PATH에 Playwright 설치 경로를 지정하고 Vite(5175)를 실행한 뒤 node --test로 실행한다.
 const { test } = require('node:test');
+const { execFileSync } = require('node:child_process');
+const pdfText = path => execFileSync('python3', ['-c', 'import fitz,sys; print("".join(p.get_text() for p in fitz.open(sys.argv[1])))', path], {encoding:'utf8'}).replace(/\s/g, '');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
+const baseUrl = process.env.REPORT_TEST_BASE_URL || 'http://localhost:5175';
 for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본문 전용 PDF (수신 주소: ${savedEmail ?? '없음'})`, async () => {
  const browser = await chromium.launch({ headless: true, channel: 'chrome' });
  try {
@@ -25,7 +28,7 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
    import '/src/index.css'; import '/src/mb-tokens.css';
    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(ReportDetailModal,{reportId:'pdf-test',onClose:()=>{}}));
    </script></body></html>`}));
-  await page.goto('http://localhost:5175/sdd-066-test');
+  await page.goto(`${baseUrl}/sdd-066-test`);
   await page.getByRole('button',{name:'승인하기'}).waitFor();
   assert.equal(await page.getByRole('button',{name:/닫기/}).count(),1);
   assert.equal(await page.getByRole('button',{name:'승인하기'}).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(95, 0, 128)');
@@ -51,30 +54,37 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
   assert.equal(await frame.locator('button,input,dialog').count(),0);
   assert.ok(await frame.locator('svg polyline').count()>=6); // 화면용 서사 DOM은 유지한다.
   const printPage=await browser.newPage();
-  await printPage.goto('http://localhost:5175/');
+  // 앱 React 루트 없이 인쇄 iframe의 독립 문서를 재현한다.
+  await printPage.goto('about:blank');
   await printPage.setContent(await frame.content());
   await printPage.evaluate(()=>document.fonts.ready);
   await printPage.emulateMedia({media:'print'});
-  assert.equal(await printPage.locator('.narrative-report .cover').evaluate(el=>getComputedStyle(el).display),'none');
+  assert.equal(await printPage.locator('.narrative-report .cover').evaluate(el=>getComputedStyle(el).display),'block');
   assert.match(await printPage.locator('.report-print-cover').innerText(),savedEmail ? /검증 참여자/ : /참여자 정보 없음/);
   for(const section of ['journey','body','mind','closing']) {
    assert.equal(await printPage.locator(`[data-section="${section}"]`).evaluate(el=>getComputedStyle(el).breakBefore),'auto');
   }
   assert.equal(await printPage.locator('.metric:visible').count(),6);
-  assert.equal(await printPage.locator('svg:visible').count(),0);
-  assert.equal(await printPage.locator('.report-summary-card:visible').count(),0);
+  assert.equal(await printPage.locator('svg:visible').count() > 6,true);
+  assert.equal(await printPage.locator('.report-summary-card:visible').count(),1);
+  const expectedText = await printPage.locator('.report-print-cover p, .report-print-cover h1, .narrative-report p, .narrative-report h1, .narrative-report h2, .narrative-report h3, .report-summary-card p').evaluateAll(nodes => nodes.filter(node => !node.closest('details,aside,header')).map(node => node.textContent.replace(/\s/g, '')));
   const pdf=await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-report.pdf'});
   assert.ok(pdf.length>10000);
-  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length,1);
+  const extracted = pdfText('/tmp/sdd-067-report.pdf');
+  for (const text of expectedText) assert.ok(extracted.includes(text), `PDF 원문 누락: ${text}`);
+  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length >= 2,true);
   if (savedEmail) {
    await printPage.locator('[data-section="body"] .section-head').evaluate(el => {
     const paragraph = document.querySelector('.journey-quote');
-    document.querySelector('.closing-message').textContent = '마무리 문장 '.repeat(100);
+    document.querySelector('.closing-message').textContent = '마무리 문장 '.repeat(100) + '마무리끝표식';
     paragraph.textContent = '긴 서사 문장도 페이지를 넘어 자연스럽게 이어집니다. '.repeat(160) + '긴본문끝표식';
 
    });
    const longPdf = await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-long-report.pdf'});
-   assert.ok((longPdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length === 1);
+   const longText = pdfText('/tmp/sdd-067-long-report.pdf');
+   assert.ok(longText.includes('긴본문끝표식'));
+   assert.ok(longText.includes('마무리끝표식'));
+   assert.ok((longPdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length > 2);
   }
   await printPage.locator('.narrative-report').evaluate(el=>el.remove());
   assert.equal(await printPage.locator('.report-summary-card:visible').count(),1);

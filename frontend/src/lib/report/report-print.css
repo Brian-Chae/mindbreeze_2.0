@@ -1,190 +1,74 @@
-/* SDD-067: 화면은 유지하고 인쇄 문서만 A4 한 장 요약으로 구성한다. */
-@page report {
-  size: A4 portrait;
-  margin: 10mm;
-}
-
+/* SDD-067: 화면의 전체 서사를 A4에 이어 담는 인쇄 전용 스타일. */
+@page report { size: A4 portrait; margin: 6mm; }
 @media print {
-  .report-print-document {
-    page: report;
-    margin: 0;
-    background: white;
-    color: #302b35;
-    font: 9pt/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-  }
-  .report-print-document * {
-    box-sizing: border-box;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-    overflow-wrap: anywhere;
-  }
+  .report-print-document { page: report; margin: 0; background: white; color: #302b35; font: 10pt/1.65 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  .report-print-document * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; overflow-wrap: anywhere; }
   .report-print-document [data-print-exclude],
   .report-print-document details,
-  .report-print-document .narrative-report .cover,
   .report-print-document .narrative-report .topbar,
   .report-print-document .narrative-report .sidebar,
-  .report-print-document .narrative-report .footer,
-  .report-print-document .narrative-report .journey-summary,
-  .report-print-document .narrative-report .journey-stages,
-  .report-print-document .narrative-report .distribution,
-  .report-print-document .narrative-report .narrative-copy,
-  .report-print-document .narrative-report .section-head > :not(.eyebrow),
-  .report-print-document .narrative-report .metric figure,
-  .report-print-document .narrative-report .metric-copy > :not(.metric-title):not(.delta),
-  .report-print-document .narrative-report .metric:nth-of-type(n+4),
-  .report-print-document .narrative-report .closing > :not(.eyebrow):not(.closing-message),
-  .report-print-document .report-summary-card,
-  .report-print-document > div > p {
-    display: none !important;
-  }
-  .report-print-document > div,
-  .report-print-document > div > * {
-    max-width: none;
-    margin: 0;
-  }
-  .report-print-document .report-print-cover {
-    padding: 0 0 4mm;
-    border: 0;
-    border-bottom: .6mm solid #5f0080;
-    border-radius: 0;
-    background: white;
-  }
-  .report-print-document .report-print-cover > [aria-hidden],
-  .report-print-document .report-print-cover > .relative > :not(h1):not(.report-print-date):not(.report-print-participant) {
-    display: none;
-  }
-  .report-print-document .report-print-cover > .relative {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto) auto;
-    align-items: baseline;
-    gap: 4mm;
-  }
-  .report-print-document .report-print-cover h1 {
-    margin: 0;
-    font-size: 14pt;
-    line-height: 1.5;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .report-print-document .report-print-participant {
-    display: block;
-    grid-column: 2;
-    grid-row: 1;
-    margin: 0;
-    font-size: 9pt;
-    color: #5f0080;
-    max-width: 50mm;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .report-print-document .report-print-date {
-    grid-column: 3;
-    grid-row: 1;
-    margin: 0;
-    font-size: 8pt;
-    color: #45404a;
-    white-space: nowrap;
-  }
-  .report-print-document .narrative-report {
-    background: white;
-    font-size: 9pt;
-    line-height: 1.6;
-  }
-  .report-print-document .narrative-report .layout {
-    display: block;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-  }
-  .report-print-document .narrative-report .report-main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4mm;
-    padding-top: 5mm;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-  }
-  .report-print-document .narrative-report section[data-section] {
-    min-width: 0;
-    min-height: 0;
-    padding: 5mm;
-    border: 1px solid #e8dfe9;
-    border-radius: 3mm;
-    break-before: auto;
-    break-inside: avoid;
-  }
-  .report-print-document .narrative-report [data-section="journey"],
-  .report-print-document .narrative-report .closing { grid-column: 1 / -1; }
-  .report-print-document .narrative-report .body-section { background: #f0f8f2; }
-  .report-print-document .narrative-report .mind-section,
-  .report-print-document .narrative-report .closing { background: #f5edfc; }
-  .report-print-document .narrative-report .section-head { margin-bottom: 3mm; }
-  .report-print-document .narrative-report .eyebrow { font-size: 10pt; letter-spacing: 0; }
-  .report-print-document .narrative-report .journey-quote {
-    padding: 0;
-    margin: 0;
-    border: 0;
-    background: transparent;
-    font-size: 10pt;
-    line-height: 1.8;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 6;
-    overflow: hidden;
-  }
-  .report-print-document .narrative-report .metric {
-    display: block;
-    margin-top: 2mm;
-    padding: 3mm;
-    border-radius: 2mm;
-  }
-  .report-print-document .narrative-report .metric-title { justify-content: space-between; }
-  .report-print-document .narrative-report h3 { font-size: 10pt; }
-  .report-print-document .narrative-report .badge { font-size: 7pt; }
-  .report-print-document .narrative-report .delta { margin: 1mm 0 0; font-size: 17pt; }
-  .report-print-document .narrative-report .delta span { font-size: 9pt; }
-  .report-print-document .narrative-report .section-note {
-    margin-top: 3mm;
-    color: #45404a;
-    font-size: 7pt;
-    line-height: 1.5;
-  }
-  .report-print-document .narrative-report .closing { display: flex; align-items: baseline; gap: 4mm; text-align: left; }
-  .report-print-document .narrative-report .closing > .eyebrow { flex-shrink: 0; margin: 0; }
-  .report-print-document .narrative-report .closing .closing-message {
-    min-width: 0;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    border: 0;
-    font-size: 9pt;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  /* LINK BAND 없이도 상담 요약을 출력한다. 원문 전체는 화면에 보존한다. */
-  .report-print-document > div:not(:has(.narrative-report)) .report-summary-card:first-of-type {
-    display: block !important;
-    margin-top: 5mm;
-    padding: 5mm;
-  }
-  .report-print-document .report-summary-card p {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 16;
-    overflow: hidden;
-    font-size: 10pt;
-  }
-  .report-print-document > div::after {
-    content: "MIND BREEZE · 한 장 요약 | 긴 문장은 줄여 표시합니다. 전문은 화면 리포트에서 확인하세요. 의학적 진단 자료가 아닙니다.";
-    display: block;
-    margin-top: 4mm;
-    padding-top: 3mm;
-    border-top: 1px solid #d8cddd;
-    color: #45404a;
-    font-size: 7pt;
-  }
+  .report-print-document .narrative-report .footer a { display: none !important; }
+  .report-print-document > div { max-width: none; margin: 0; }
+  .report-print-document > div > :not([hidden]) ~ :not([hidden]) { margin-top: 2mm; margin-bottom: 0; }
+  .report-print-document .report-print-cover { margin: 0 0 3mm; padding: 5mm; border-radius: 3mm; break-inside: avoid; }
+  .report-print-document .report-print-cover h1 { font-size: 17pt; margin-top: 2mm; }
+  .report-print-document .report-print-cover .relative > div { margin-top: 2mm; }
+  .report-print-document .report-print-cover .relative > p { margin-top: 1mm; }
+  .report-print-document .report-print-cover .relative > p:first-child { margin-top: 0; }
+  .report-print-document .report-print-cover .relative > div > p { margin-top: 0; }
+  .report-print-document .narrative-report .cover .cover-info { margin-top: 2mm; }
+  .report-print-document .narrative-report .cover .session { margin-top: 2mm; padding: 2mm 3mm; }
+  .report-print-document .narrative-report .cover .session dl { gap: 1mm 5mm; }
+  .report-print-document .narrative-report .cover .quality { margin-top: 1mm; padding-top: 1mm; }
+  .report-print-document .narrative-report .cover h1 { font-size: 21pt; }
+  .report-print-document .narrative-report .metric .delta { font-size: 20pt; }
+  .report-print-document .report-print-participant { display: block; }
+  .report-print-document .narrative-report { background: white; font-size: 10pt; line-height: 1.65; }
+  .report-print-document .narrative-report .layout { display: block; max-width: none; margin: 0; padding: 0; }
+  .report-print-document .narrative-report .report-main { display: block; overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
+  /* 섹션 전체를 다음 장으로 밀지 않고 문단과 카드 사이에서 이어간다. */
+  .report-print-document .narrative-report section[data-section] { min-height: 0; padding: 4mm; break-before: auto; break-inside: auto; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .report-print-document p { orphans: 3; widows: 3; }
+  .report-print-document .narrative-report h1 { font-size: 24pt; }
+  .report-print-document .narrative-report h2 { font-size: 17pt; line-height: 1.3; }
+  .report-print-document .narrative-report h3 { font-size: 12pt; }
+  .report-print-document .narrative-report .eyebrow { font-size: 8pt; }
+  .report-print-document .narrative-report .section-head { margin-bottom: 2mm; break-inside: avoid; break-after: avoid; }
+  .report-print-document .narrative-report .section-head h2 { margin-top: 1mm; }
+  .report-print-document .narrative-report .section-head p:last-child { margin-top: 1mm; }
+  .report-print-document .narrative-report .cover .eyebrow { margin-top: 0; }
+  .report-print-document .narrative-report .cover h1 { margin-top: 2mm; }
+  .report-print-document .narrative-report .cover-lead { margin-top: 2mm; font-size: 10pt; }
+  .report-print-document .narrative-report .cover-info { margin-top: 4mm; }
+  .report-print-document .narrative-report .cover-art { top: 5mm; right: 8mm; width: 42mm; height: 42mm; }
+  .report-print-document .narrative-report .session { margin-top: 3mm; padding: 3mm; }
+  .report-print-document .narrative-report .session dl { gap: 2mm 5mm; }
+  .report-print-document .narrative-report .quality { margin-top: 2mm; padding-top: 2mm; }
+  .report-print-document .narrative-report .journey-quote { padding: 3mm 4mm; font-size: 10pt; line-height: 1.8; }
+  .report-print-document .narrative-report .journey-summary { margin-top: 3mm; gap: 2mm; }
+  .report-print-document .narrative-report .summary-chip { padding: 2mm 3mm; }
+  .report-print-document .narrative-report .journey-stages { margin-top: 4mm; }
+  .report-print-document .narrative-report .stage { padding-top: 2mm; }
+  .report-print-document .narrative-report .narrative-copy { margin-bottom: 3mm; }
+  .report-print-document .narrative-report .metric { grid-template-columns: 1.3fr 1fr; gap: 4mm; margin-top: 3mm; padding: 3mm; border-radius: 3mm; break-inside: avoid; }
+  .report-print-document .narrative-report .trend { max-height: 28mm; }
+  .report-print-document .narrative-report .closing > .eyebrow,
+  .report-print-document .narrative-report .closing h2 { break-after: avoid; }
+  .report-print-document .report-print-cover .relative > .mt-6 { margin-top: 3mm; }
+  .report-print-document .narrative-report .metric figure { break-inside: avoid; }
+  .report-print-document .narrative-report .delta { margin: 2mm 0; font-size: 22pt; }
+  .report-print-document .narrative-report .delta span { font-size: 11pt; }
+  .report-print-document .narrative-report .metric-copy > .caption { margin-top: 2mm; }
+  .report-print-document .narrative-report .section-note { margin-top: 3mm; font-size: 8pt; }
+  .report-print-document .narrative-report .distribution { padding: 4mm; gap: 4mm; break-inside: avoid; }
+  .report-print-document .narrative-report .closing h2 { margin: 2mm 0; }
+  .report-print-document .narrative-report .closing > p { max-width: none; }
+  .report-print-document .narrative-report .practice { font-size: 9.5pt; margin-top: 2mm; padding: 2mm 3mm; gap: 3mm; break-inside: avoid; }
+  .report-print-document .narrative-report .practice + .practice { margin-top: 3mm; }
+  .report-print-document .narrative-report .closing .closing-message { margin-top: 3mm; padding-top: 3mm; white-space: normal; overflow: visible; }
+  .report-print-document .narrative-report .closing-note { margin-top: 3mm !important; }
+  .report-print-document .narrative-report .footer { padding: 2mm 4mm; }
+  .report-print-document .report-summary-card { margin-top: 3mm; padding: 4mm; break-inside: auto; }
+  .report-print-document .report-summary-card h3 { margin-bottom: 2mm; font-size: 10pt; break-after: avoid; }
+  .report-print-document .report-summary-card p { font-size: 10pt; line-height: 1.6; }
 }

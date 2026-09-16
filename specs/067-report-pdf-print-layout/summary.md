@@ -1,11 +1,41 @@
-# SDD-067 Summary — 리포트 PDF A4 세로 1장 압축 디자인
+# SDD-067 재구현 결과 — 전체 내용 A4 인쇄
 
-## 구현 결과 (codex gpt-6-astra)
-- A4 세로 1장: report-print.css @page size A4 portrait + min-height 0 + break-before auto (여러 장 → 1장)
-- EEG 상세지표 제거: EegMetricsGrid/EegTimeline/details data-print-exclude + details open 로직 제거
-- 1장 심플 디자인: 헤더(제목/이름/날짜) + 종합여정/몸/마음 핵심지표 + 마무리 압축
-- print-report.ts가 report-print.css import, data-print-exclude 제거, report-print-document 클래스
+2026-09-16 최신 재구현 브리프에 따라 기존 한 장 요약을 폐기했다.
 
-## 검증·배포
-- FE build 0 error
-- 커밋 `83f089c` → Deploy Dev 성공
+## 변경
+
+- `report-print.css`만으로 실제 제품 인쇄 디자인을 변경했다. 화면 CSS, NarrativeSections, ReportCoverSection, iframe 인쇄 로직은 그대로다.
+- 커버·여정·전체 지표 카드·서사 문장·그래프·마무리 제안·상담 요약을 복원했다. clamp, ellipsis, nth-of-type 제한, 전문을 화면에서 확인하라는 안내를 제거했다.
+- A4 세로 6mm 여백, 단일 문서 흐름, 섹션 분할 허용, 제목 묶음/지표 카드 보호, 커버·그래프·문단 간격을 조정했다. 팔레트 및 print-color-adjust: exact 유지.
+- 기존 `data-print-exclude` 제거와 details 숨김을 유지해 EEG 상세를 제외했다.
+- 스펙/계획/구현 전 검증 문서를 최신 승인 브리프에 맞게 코드 수정 전에 갱신했다.
+
+## 반복 검증
+
+매 루프 CSS 변경 → `npm run build` exit 0 → Chrome headless 인쇄 PDF 생성 → 모든 페이지 PNG 확인을 수행했다. OS 인쇄 대화상자가 아닌 Chromium PDF 인쇄 엔진의 출력을 확인했다.
+
+1. 전체 내용 복원, 7mm 여백: 4쪽. 번호/제목 경계 분리 발견.
+2. 제목 묶음 보호, 그래프 38mm: 4쪽. 몸 섹션 아래 여백 발견.
+3. 커버/카드 압축, 그래프 30mm: 4쪽. 중간 장 여백이 남음.
+4. 제목 17pt 및 그래프 28mm: 4쪽. 마지막 장에는 AI 요약만 남음.
+5. 6mm 여백, 화면용 바깥 간격 제거: 4쪽. AI 요약 마지막 문단이 이월됨.
+6. 상담 요약 제목/본문 간격 정리: 기본 리포트 3쪽, 빈 페이지 없음.
+
+루프별 PDF 및 전체 페이지 이미지: `evidence/loop1`부터 `evidence/loop6`까지. 최종 기본 PDF: `evidence/loop6.pdf`.
+
+## 최종 검증
+
+- `npm run build`: 6회 모두 exit 0. 기존 번들 크기 경고 및 디자인 토큰 CSS import 경고는 남아 있으며 빌드 오류는 없다.
+- 브라우저 회귀: 2/2 통과. 저장된 메일 있음/없음, 1280/390/320px 액션 표시, PDF 생성, 화면 EEG 펼침 상태 보존, 인쇄 EEG 제거, 승인/메일 발송 동작 확인.
+- 서사 컴포넌트 회귀: 6/6 통과.
+- PDF 텍스트 추출: 커버와 서사 섹션의 문단/제목 및 상담 요약을 웹 DOM과 공백 정규화 후 대조하여 누락 없음 확인.
+- 긴 여정 160회 반복 및 마무리 100회 반복: 6쪽, `긴본문끝표식`과 `마무리끝표식` 모두 PDF 텍스트에 존재. 실제 마지막 문장이 출력됨.
+- 서사 없는 상담 요약 출력: 1쪽, 본문 보존.
+- `git diff --check`: 통과.
+
+## 한계 및 작업 환경
+
+- 문서 길이에 따라 마지막 장에 잔여 여백이 생길 수 있다. 긴 입력 검증에서는 마지막 6쪽에 상담 요약이 남고, 미측정 짧은 요약은 1쪽 상단에만 내용이 있다. 페이지를 채우려고 내용을 만들거나 문장을 줄이지 않는다.
+- 지표 카드와 제목 보호 때문에 카드 하나보다 작은 중간 장 잔여 공간이 발생할 수 있다.
+- 초반 기존 Vite 인스턴스/HMR 상태에서 브라우저 테스트가 정체됐다. 테스트용 5176 서버를 새로 시작하고 독립 about:blank 문서에 iframe 내용을 복제해 검증했다. 수정 후 각 루프는 서버 재시작 뒤 완료했다.
+- 실제 프린터 출력/OS 인쇄 대화상자, 운영 데이터 전체, 배포는 수행하지 않았다. 커밋/배포하지 않은 작업 트리 변경이다.
