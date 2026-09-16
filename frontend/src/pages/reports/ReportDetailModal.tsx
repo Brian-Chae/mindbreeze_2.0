@@ -13,6 +13,7 @@ interface ReportDetailModalProps {
 }
 
 export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps) {
+  const [actionContainer, setActionContainer] = useState<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [report, setReport] = useState<ReportDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,13 +102,12 @@ export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps)
               report={report}
               onReportChange={setReport}
               error={error}
-              showListAction
-              listActionLabel="닫기"
-              onListAction={onClose}
+              actionContainer={actionContainer}
             />
           </div>
         )}
       </div>
+      <div ref={setActionContainer} className={report && !loading ? "shrink-0 border-t border-[#E8D9F5] bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6" : "hidden"} />
     </dialog>,
     document.body,
   );

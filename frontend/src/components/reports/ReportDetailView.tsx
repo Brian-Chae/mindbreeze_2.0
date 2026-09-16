@@ -1,7 +1,9 @@
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { printReport } from '../../lib/report/print-report';
 import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
@@ -61,6 +63,7 @@ function MarkerBadge({ label, value }: { label: string; value: string | number }
 
 export interface ReportDetailViewProps {
   report: ReportDto;
+  actionContainer?: HTMLElement | null;
   /** 승인 등으로 리포트가 갱신될 때 */
   onReportChange?: (report: ReportDto) => void;
   /** 외부 오류 메시지 (로드 실패 등) */
@@ -73,12 +76,15 @@ export interface ReportDetailViewProps {
 
 export default function ReportDetailView({
   report: initialReport,
+  actionContainer,
   onReportChange,
   error: externalError = null,
   listActionLabel = '목록으로',
   onListAction,
   showListAction = true,
 }: ReportDetailViewProps) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [printing, setPrinting] = useState(false);
   const userRole = useAuthStore((s) => s.user?.role);
   const isCounselorUser = userRole === 'counselor';
   const [report, setReport] = useState(initialReport);
@@ -122,9 +128,18 @@ export default function ReportDetailView({
     }
   }, [report.id, updateReport]);
 
-  const handleGeneratePDF = useCallback(() => {
-    alert('PDF 생성 기능은 추후 제공됩니다.');
-  }, []);
+  const handleGeneratePDF = useCallback(async () => {
+    if (!contentRef.current || printing) return;
+    setPrinting(true);
+    setError(null);
+    try {
+      await printReport(contentRef.current, report.session_title || 'MIND BREEZE 리포트');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'PDF 인쇄 준비에 실패했습니다.');
+    } finally {
+      setPrinting(false);
+    }
+  }, [printing, report.session_title]);
 
   const handleResendEmail = useCallback(async () => {
     const email = resendEmail.trim();
@@ -137,9 +152,9 @@ export default function ReportDetailView({
     setResending(true);
     try {
       await resendReportEmail(report.id, email);
-      setResendSuccess(`${email}로 리포트 메일을 재발송했습니다.`);
+      setResendSuccess(`${email}로 리포트 메일을 발송했습니다.`);
     } catch (e) {
-      setResendError(e instanceof Error ? e.message : '메일 재발송에 실패했습니다.');
+      setResendError(e instanceof Error ? e.message : '메일 발송에 실패했습니다.');
     } finally {
       setResending(false);
     }
@@ -155,28 +170,74 @@ export default function ReportDetailView({
     report.data_credibility,
     eeg?.status ?? null,
   );
-  const showApprove = isCounselor && canApproveReport({
+  const showApprove = isCounselorUser && canApproveReport({
     status: report.status,
     sent_at: report.sent_at,
     alreadyApprovedLocally: approved,
   });
-  // 상담사라면 리포트 타입(client/counselor) 구분 없이 재발송 가능 (개별 리포트를 원하는 메일로 발송)
-  const showResendEmail = isCounselorUser;
+  // 승인 완료 후 상담사가 수신 주소를 확인하고 별도로 발송한다.
+  const showResendEmail = isCounselorUser && report.status === 'completed';
   const displayError = externalError || error;
 
+  const actions = (
+      <div data-print-exclude className="flex flex-wrap items-center justify-end gap-3">
+        {!actionContainer && showListAction && onListAction && (
+          <button
+            type="button"
+            onClick={onListAction}
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
+          >
+            {listActionLabel}
+          </button>
+        )}
+
+        {showApprove && (
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={approving}
+            className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50"
+          >
+            {approving ? '승인 중...' : '승인하기'}
+          </button>
+        )}
+
+        {report.pdf_url ? (
+          <a
+            href={report.pdf_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
+          >
+            PDF 다운로드
+          </a>
+        ) : (
+          <button
+            type="button"
+            onClick={handleGeneratePDF}
+            disabled={printing}
+            title="인쇄 창에서 PDF로 저장을 선택하세요"
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
+          >
+            {printing ? 'PDF 준비 중...' : 'PDF 생성'}
+          </button>
+        )}
+      </div>
+  );
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div ref={contentRef} className="max-w-4xl mx-auto space-y-6 print:max-w-none print:[&_.report-main]:overflow-visible print:[&_.narrative-report_section]:break-inside-auto print:[&_.metric]:break-inside-avoid">
       {displayError && (
-        <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{displayError}</div>
+        <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{displayError}</div>
       )}
 
       <ReportCoverSection report={report} adapted={adapted} />
 
-      <ReportStatusBadge
+      <div data-print-exclude><ReportStatusBadge
         status={pipelineStatus}
         credibility={credibility}
         showApprovalHint={isCounselor}
-      />
+      /></div>
 
       {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
 
@@ -253,56 +314,16 @@ export default function ReportDetailView({
         </details>
       )}
 
-      <div className="flex items-center gap-3 pt-4 border-t border-[#EFEFEF]">
-        {showListAction && onListAction && (
-          <button
-            type="button"
-            onClick={onListAction}
-            className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
-          >
-            {listActionLabel}
-          </button>
-        )}
-
-        {showApprove && (
-          <button
-            type="button"
-            onClick={handleApprove}
-            disabled={approving}
-            className="mb-btn mb-btn-primary text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50"
-          >
-            {approving ? '승인 중...' : '승인 및 발송'}
-          </button>
-        )}
-
-        {report.pdf_url ? (
-          <a
-            href={report.pdf_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
-          >
-            PDF 다운로드
-          </a>
-        ) : report.sent_at ? (
-          <button
-            type="button"
-            onClick={handleGeneratePDF}
-            className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
-          >
-            PDF 생성
-          </button>
-        ) : null}
-      </div>
+      {actionContainer ? createPortal(actions, actionContainer) : actions}
 
       {showResendEmail && (
-        <section className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
+        <section data-print-exclude className="rounded-2xl border border-[#E8D9F5] bg-[#FDFAFF] p-5 md:p-6">
           <h3 className="text-[15px] font-bold text-[#5F0080] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
-            리포트 메일 재발송
+            메일 발송
           </h3>
           <p className="mt-1.5 text-[13px] text-[#6D547A]">
-            기본 주소는 저장된 리포트 수신 메일입니다. 수정 후 재발송할 수 있습니다.
+            기본 주소는 저장된 리포트 수신 메일입니다. 주소를 확인하거나 수정한 후 발송해 주세요.
           </p>
           <div className="mt-4 flex flex-col sm:flex-row gap-3">
             <input
@@ -316,15 +337,15 @@ export default function ReportDetailView({
               placeholder="수신 이메일 주소"
               disabled={resending}
               className="flex-1 px-3.5 py-2.5 border border-[#DDDEE7] rounded-xl bg-white text-[#1F1F1F] text-sm placeholder:text-[#9B9B9B] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] disabled:opacity-50"
-              aria-label="재발송 이메일"
+              aria-label="발송 이메일"
             />
             <button
               type="button"
               onClick={handleResendEmail}
               disabled={resending || !resendEmail.trim()}
-              className="mb-btn mb-btn-primary text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
+              className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
             >
-              {resending ? '발송 중...' : '재발송'}
+              {resending ? '발송 중...' : '발송'}
             </button>
           </div>
           {resendSuccess && (

@@ -1,5 +1,5 @@
 """SDD-029: 게스트 메일 요청과 승인·발송·열람 경계 검증."""
-from uuid import uuid4
+from uuid import UUID, uuid4
 from unittest.mock import Mock
 
 import pytest
@@ -147,7 +147,7 @@ def test_member_cannot_be_claimed_by_guest(client, setup_email):
     assert client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant)).status_code == 403
 
 
-def test_approval_enqueues_only_after_completion(client, setup_email, monkeypatch):
+def test_approval_does_not_enqueue_email(client, setup_email, monkeypatch):
     from app.services import report_email_service, report_service
     db, session, participant = setup_email
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
@@ -155,7 +155,7 @@ def test_approval_enqueues_only_after_completion(client, setup_email, monkeypatc
     enqueue = Mock()
     monkeypatch.setattr(report_email_service, "enqueue_report_email", enqueue)
     report_service.approve_report(str(report.id), str(session.host_id), db)
-    enqueue.assert_called_once_with(str(report.id))
+    enqueue.assert_not_called()
     assert report.status == "completed"
 
 
@@ -226,3 +226,30 @@ def test_branded_view_preserves_private_content_and_missing_values(client, setup
     assert "default-src 'none'" in response.headers["content-security-policy"]
     assert response.headers["referrer-policy"] == "no-referrer"
     assert response.headers["cache-control"] == "no-store"
+
+
+def test_auto_approval_does_not_send_email(client, setup_email, monkeypatch):
+    from app.models.user import User
+    from app.services import report_email_service, report_service
+    db, session, participant = setup_email
+    participant.report_email = "guest@example.com"
+    db.add(User(id=session.host_id, email="auto-approve@example.com",
+                password_hash="unused", name="상담사", role="counselor",
+                auto_approve_report=True))
+    db.commit()
+    enqueue = Mock()
+    sender = Mock()
+    monkeypatch.setattr(report_email_service, "enqueue_report_email", enqueue)
+    monkeypatch.setattr(report_email_service, "send_report_email", sender)
+
+    def generated(report_id, database):
+        report = database.get(Report, UUID(report_id))
+        report.status = "pending_review"
+        return report
+
+    monkeypatch.setattr(report_service, "generate_report_inline", generated)
+    result = report_service.generate_report(str(session.id), str(session.host_id), "client", db)
+    assert result["status"] == "completed"
+    enqueue.assert_not_called()
+    sender.assert_not_called()
+    assert participant.report_email_sent_at is None

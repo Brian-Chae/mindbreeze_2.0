@@ -380,7 +380,7 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                 report.user_id,
                 {
                     "title": "리포트가 도착했습니다",
-                    "body": "세션 리포트가 승인되어 전송되었습니다",
+                    "body": "세션 리포트가 승인되었습니다",
                     "extra": {"report_id": str(report.id), "session_id": str(report.session_id)},
                 },
                 db,
@@ -390,15 +390,5 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
 
     db.commit()
     db.refresh(report)
-    # SDD-029: 승인 게이트 통과 후에만 메일 발송을 예약한다.
-    if report.type == "client" and report.participant_id:
-        participant = db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first()
-        if participant and participant.report_email and not participant.report_email_sent_at:
-            from app.services.report_email_service import enqueue_report_email
-            try:
-                enqueue_report_email(str(report.id))
-            except Exception:
-                participant.report_email_status = "failed"
-                db.commit()
-                raise HTTPException(503, "리포트 승인은 완료되었으나 메일 발송 예약에 실패했습니다. 재승인해주세요")
+    # SDD-066: 수동/자동 승인 모두 메일을 예약하지 않는다. 발송은 별도 요청으로 처리한다.
     return _serialize(report, session)
