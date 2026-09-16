@@ -117,7 +117,8 @@ export default function LoginPage() {
   };
   const googleButton = (
     <button type="button" onClick={handleGoogleClick} disabled={busy || !hasGoogleClientId}
-      className={`h-[52px] w-full rounded-full border border-white/30 px-4 text-[15px] font-semibold transition-colors disabled:opacity-50 ${loginRole === 'client' ? 'bg-white text-[#5F0080] hover:bg-white/90' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+      className={`flex h-[52px] w-full items-center justify-center gap-3 rounded-full border border-white/30 px-4 text-[15px] font-semibold transition-colors disabled:opacity-50 ${loginRole === 'client' ? 'bg-white text-[#5F0080] hover:bg-white/90' : 'bg-white/10 text-white hover:bg-white/20'}`}>
+      <img src="/mb-design/assets/icons/icon_google.svg" width={20} height={20} alt="" aria-hidden="true" />
       {pending === 'google' ? '연결 중…' : isAdmin ? 'Google Workspace로 로그인' : `Google로 ${config.label} 로그인`}
     </button>
   );
@@ -129,9 +130,12 @@ export default function LoginPage() {
       <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/60" />
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pb-10 pt-24 text-white">
-        <Link to="/" aria-label="홈으로 이동" className="absolute left-6 top-6 text-lg font-extrabold">Mind Breeze</Link>
+        <Link to="/" aria-label="Mind Breeze 홈으로 이동" className="absolute left-6 top-6 flex items-center gap-2.5 text-xl font-extrabold tracking-[-0.04em] text-white">
+          <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={16} alt="" className="brightness-0 invert" />
+          Mind Breeze
+        </Link>
         <img src="/mb-design/assets/logo_symbol_dark.svg" width={64} height={29} alt="" className="mb-5 brightness-0 invert" />
-        <h1 className="text-center text-[28px] font-extrabold tracking-tight sm:text-[32px]">{isAdmin ? '플랫폼 관리자 로그인' : 'MIND BREEZE 로그인'}</h1>
+        <h1 className="text-center text-[28px] font-extrabold tracking-tight text-white sm:text-[32px]">{isAdmin ? '플랫폼 관리자 로그인' : 'MIND BREEZE 로그인'}</h1>
         <div className="mt-6 w-full max-w-[360px]">
           {!isAdmin && <div role="tablist" aria-label="로그인 유형" className="mb-5 grid grid-cols-3 rounded-full bg-black/20 p-1">
             {tabs.map((tab, index) => <button key={tab.role} ref={(el) => { tabRefs.current[index] = el; }}
@@ -141,8 +145,6 @@ export default function LoginPage() {
           </div>}
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {(loginRole === 'client' || isAdmin) && googleButton}
-            {loginRole === 'client' && divider}
             {!isAdmin && <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <label htmlFor="login-email" className="text-sm">이메일</label>
               <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} className={inputClass} />
@@ -150,6 +152,8 @@ export default function LoginPage() {
               <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} className={inputClass} />
               <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
             </form>}
+            {loginRole === 'client' && divider}
+            {(loginRole === 'client' || isAdmin) && googleButton}
             {loginRole === 'counselor' && <>{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {error && <p role="alert" className="rounded-xl bg-red-950/70 px-4 py-3 text-sm">{error}</p>}
             {!isAdmin && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
