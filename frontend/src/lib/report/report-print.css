@@ -60,7 +60,7 @@
   .report-print-document .narrative-report .session { margin-top: 3mm; padding: 3mm; }
   .report-print-document .narrative-report .session dl { gap: 2mm 5mm; }
   .report-print-document .narrative-report .quality { margin-top: 2mm; padding-top: 2mm; }
-  .report-print-document .narrative-report .journey-quote { min-height: 24mm; padding: 6mm; font-size: 12pt; line-height: 1.8; }
+  .report-print-document .narrative-report .journey-quote { min-height: 20mm; padding: 6mm; font-size: 12pt; line-height: 1.8; }
   .report-print-document .narrative-report .journey-summary { margin-top: 3mm; gap: 2mm; }
   .report-print-document .narrative-report .summary-chip { padding: 2mm 3mm; }
   .report-print-document .narrative-report .journey-stages { margin-top: 20mm; }
@@ -104,7 +104,7 @@
 
 /* SDD-068: 정의·방향 설명을 보존하면서 기본 4페이지의 읽기 밀도를 유지한다. */
 @media print {
-  .report-print-document .narrative-report .journey-stages { margin-top: 4mm; }
+  .report-print-document .narrative-report .journey-stages { margin-top: 2mm; }
   .report-print-document .narrative-report .summary-chip { font-size: 9pt; line-height: 1.5; }
   .report-print-document .narrative-report .metric { padding: 3mm; gap: 3mm; }
   .report-print-document .narrative-report .metric-copy > p:not(.delta) { font-size: 9pt; line-height: 1.45; }
