@@ -18,7 +18,7 @@ export default function ClientProfilePage() {
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
     }
   }, [isInitialized, isAuthenticated, navigate]);
 

@@ -196,7 +196,7 @@ export default function ClientProfilePage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/login?role=client');
   };
 
   // 마운트 시 상담사 목록 API 호출

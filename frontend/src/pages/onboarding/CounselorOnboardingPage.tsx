@@ -55,7 +55,7 @@ const INPUT_CLS =
   'w-full rounded-xl border border-[#DDDEE7] bg-white px-4 py-3 text-sm text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition';
 
 export default function CounselorOnboardingPage() {
-  useRequireAuth();
+  useRequireAuth('counselor');
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 

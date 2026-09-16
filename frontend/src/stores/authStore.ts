@@ -1,7 +1,7 @@
 // 인증 전역 상태 (Zustand)
 
 import { create } from 'zustand';
-import { tokenStorage } from '../lib/api/client';
+import { ApiError, tokenStorage } from '../lib/api/client';
 import {
   login as apiLogin,
   registerCounselor as apiRegisterCounselor,
@@ -10,6 +10,7 @@ import {
   refreshToken as apiRefresh,
   loginGoogle as apiLoginGoogle,
   type User,
+  type UserRole,
   type CounselorRegisterPayload,
   type ClientRegisterPayload,
   type LoginResponse,
@@ -26,7 +27,7 @@ interface AuthState {
   isInitialized: boolean;
 
   initialize: () => void;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, role?: UserRole) => Promise<User>;
   loginGoogle: (idToken: string, inviteToken?: string, role?: string) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
   registerCounselor: (data: CounselorRegisterPayload) => Promise<User>;
@@ -51,7 +52,11 @@ const loadUser = (): User | null => {
   }
 };
 
-const applyLogin = (res: LoginResponse): User => {
+const applyLogin = (res: LoginResponse, requestedRole?: string): User => {
+  if (!res.user?.role) throw new ApiError(502, '로그인 응답을 확인할 수 없습니다.', null);
+  if (requestedRole && res.user.role !== requestedRole) {
+    throw new ApiError(403, '선택한 로그인 유형과 계정 유형이 다릅니다. 올바른 탭에서 다시 로그인해 주세요.', null);
+  }
   tokenStorage.set(res.access_token, res.refresh_token);
   persistUser(res.user);
   return res.user;
@@ -77,9 +82,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
   },
 
-  login: async (email, password): Promise<User> => {
-    const res = await apiLogin(email, password);
-    const user = applyLogin(res);
+  login: async (email, password, role): Promise<User> => {
+    const res = await apiLogin(email, password, role);
+    const user = applyLogin(res, role);
     set({
       user,
       accessToken: res.access_token,
@@ -91,7 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loginGoogle: async (accessToken, inviteToken, role): Promise<User> => {
     const res = await apiLoginGoogle({ access_token: accessToken, invite_token: inviteToken, role });
-    const user = applyLogin(res);
+    const user = applyLogin(res, role);
     set({
       user,
       accessToken: res.access_token,

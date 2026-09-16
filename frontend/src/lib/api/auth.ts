@@ -62,8 +62,8 @@ export const registerCounselor = (data: CounselorRegisterPayload): Promise<Login
 export const registerClient = (data: ClientRegisterPayload): Promise<LoginResponse> =>
   apiClient.post('/auth/register/client', data, { skipAuth: true });
 
-export const login = (email: string, password: string): Promise<LoginResponse> =>
-  apiClient.post('/auth/login', { email, password }, { skipAuth: true });
+export const login = (email: string, password: string, role?: UserRole): Promise<LoginResponse> =>
+  apiClient.post('/auth/login', { email, password, role }, { skipAuth: true });
 
 export const refreshToken = (token: string): Promise<TokenResponse> =>
   apiClient.post('/auth/refresh', { refresh_token: token }, { skipAuth: true });

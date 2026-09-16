@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import LandingPage from './pages/LandingPage';
 
 import { useAuthStore } from './stores/authStore';
+import { resolvePostLoginPath } from './lib/auth-routing';
+import { RoleGuard } from './components/auth/RoleGuard';
 
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -68,19 +70,7 @@ function RoleRouter() {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === 'client') {
-    return <Navigate to="/app" replace />;
-  }
-
-  if (user.role === 'org_admin') {
-    return <Navigate to="/dashboard/org" replace />;
-  }
-
-  if (user.role === 'platform_admin') {
-    return <Navigate to="/admin/orgs" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to={resolvePostLoginPath(user)} replace />;
 }
 
 function PlatformAdminRoute({ children }: { children: ReactElement }) {
@@ -124,8 +114,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/dashboard/org" element={<OrgDashboardPage />} />
+        <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
+        <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
@@ -152,6 +142,7 @@ function App() {
         <Route path="/design/user-app" element={<UserAppPage />} />
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
+        <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<ReportListPage />} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
         <Route path="/reports/:id" element={<ReportDetailPage />} />

@@ -1,3 +1,4 @@
+import { loginPathForRole } from '../../lib/auth-routing';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React from 'react';
 import { useAuthStore } from '../../stores/authStore';
@@ -148,7 +149,7 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate(loginPathForRole(user?.role));
   };
 
   const getBadge = (label: string): React.ReactNode => {

@@ -22,7 +22,7 @@ export default function OrgRegisterPage() {
 
   useEffect(() => {
     if (!isInitialized) return;
-    if (!isAuthenticated) navigate('/login');
+    if (!isAuthenticated) navigate('/login?role=counselor');
   }, [isInitialized, isAuthenticated, navigate]);
 
   const handleSubmit = async (e: FormEvent) => {

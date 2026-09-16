@@ -64,6 +64,7 @@ class RegisterClientRequest(_RegisterBase):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
 
 
 class TokenResponse(BaseModel):
@@ -114,7 +115,7 @@ class UserResponse(BaseModel):
 class GoogleAuthRequest(BaseModel):
     access_token: str
     invite_token: str | None = None
-    role: str | None = None
+    role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
 
 
 class UpdateUserMeRequest(BaseModel):

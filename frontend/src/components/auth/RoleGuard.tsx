@@ -1,3 +1,4 @@
+import { loginPathForRole } from '../../lib/auth-routing';
 // 역할 + 인증 단계 기반 라우트 가드
 
 import type { ReactNode } from 'react';
@@ -22,7 +23,7 @@ export function RoleGuard({ role, requireFullyVerified = false, children }: Role
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={loginPathForRole(role)} replace />;
   }
 
   if (role && user.role !== role) {

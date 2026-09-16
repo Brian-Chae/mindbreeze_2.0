@@ -206,7 +206,7 @@ export default function RegisterPage() {
               초대 메일의 링크로 비밀번호를 설정하면 바로 이용할 수 있습니다.
             </p>
             <Link
-              to="/login"
+              to="/login?role=counselor"
               className="inline-block w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 flex items-center justify-center"
             >
               로그인으로 돌아가기
@@ -408,7 +408,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-ink-tertiary">
           이미 계정이 있으신가요?{' '}
-          <Link to="/login" className="text-brand-primary hover:text-brand-primary-hover font-medium">
+          <Link to="/login?role=client" className="text-brand-primary hover:text-brand-primary-hover font-medium">
             로그인
           </Link>
         </p>

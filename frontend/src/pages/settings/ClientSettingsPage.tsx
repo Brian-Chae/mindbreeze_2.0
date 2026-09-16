@@ -59,7 +59,7 @@ export default function ClientSettingsPage() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/login?role=client');
   };
 
   if (loading) {

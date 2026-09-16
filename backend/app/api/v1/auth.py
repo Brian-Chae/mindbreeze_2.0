@@ -70,6 +70,14 @@ def _is_looxidlabs_email(email: str) -> bool:
     return email.strip().lower().endswith("@looxidlabs.com")
 
 
+def _ensure_login_role(user: User, requested_role: str | None) -> None:
+    if requested_role is not None and user.role != requested_role:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="선택한 로그인 유형과 계정 유형이 다릅니다. 올바른 탭에서 다시 로그인해 주세요.",
+        )
+
+
 def _ensure_account_active(user: User) -> None:
     """SDD-020: 인증 상태 강제 — suspended/pending 계정의 세션 발급을 차단한다.
 
@@ -157,6 +165,7 @@ async def login(
     # (비밀번호 검증 이후에 확인해 계정 존재 여부를 노출하지 않는다.)
     _ensure_account_active(user)
 
+    _ensure_login_role(user, req.role)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
     return LoginResponse(
@@ -531,6 +540,10 @@ async def google_auth(
     user = db.query(User).filter(User.email == email).first()
 
     if user:
+        # 역할 의도 검증은 계정 연결 변경과 토큰 발급보다 먼저 수행한다.
+        # 관리자 요청은 위의 기존 도메인 승인 정책으로 역할을 결정한다.
+        if not wants_platform_admin:
+            _ensure_login_role(user, req.role)
         # 기존 사용자 — auth_provider 업데이트 + 필요 시 platform_admin 승격
         updated = False
         if user.auth_provider == "email":
@@ -543,11 +556,11 @@ async def google_auth(
             db.commit()
             db.refresh(user)
     else:
-        # 상담사 로그인 요청은 신규 계정 자동 생성 금지 → 403
-        if requested_role == "counselor":
+        # 상담사·기관 로그인 요청은 신규 계정 자동 생성 금지 → 403
+        if requested_role in ("counselor", "org_admin"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="상담사 계정이 없습니다. 관리자에게 문의하세요.",
+                detail="사전 등록된 계정이 없습니다. 관리자에게 문의하세요.",
             )
         role = "platform_admin" if wants_platform_admin else "client"
         # 신규 Google 사용자 생성 (내담자 / 시스템 관리자)

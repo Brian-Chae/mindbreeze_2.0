@@ -1,3 +1,4 @@
+import { loginPathForRole } from '../lib/auth-routing';
 // 인증 관련 훅
 
 import { useEffect } from 'react';
@@ -15,16 +16,16 @@ export const useAuth = () => {
 };
 
 // 미인증 시 로그인 페이지로 리다이렉트
-export const useRequireAuth = (): void => {
+export const useRequireAuth = (role?: UserRole): void => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isInitialized = useAuthStore((s) => s.isInitialized);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      navigate('/login', { replace: true });
+      navigate(loginPathForRole(role), { replace: true });
     }
-  }, [isInitialized, isAuthenticated, navigate]);
+  }, [isInitialized, isAuthenticated, navigate, role]);
 };
 
 // 역할 불일치 시 루트로 리다이렉트
@@ -36,7 +37,7 @@ export const useRequireRole = (role: UserRole): void => {
   useEffect(() => {
     if (!isInitialized) return;
     if (!user) {
-      navigate('/login', { replace: true });
+      navigate(loginPathForRole(role), { replace: true });
       return;
     }
     if (user.role !== role) {

@@ -30,7 +30,7 @@ export default function MyRequestsPage() {
   useEffect(() => {
     if (!isInitialized) return;
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
       return;
     }
     getMyRequests()

@@ -16,7 +16,7 @@ export default function ClientInvitePage() {
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
     }
   }, [isInitialized, isAuthenticated, navigate]);
 
