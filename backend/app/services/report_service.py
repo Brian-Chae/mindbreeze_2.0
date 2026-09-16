@@ -155,14 +155,17 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
     s = _get_session_as_host(session_id, host_id, db)
 
     owner_participant_id = None
+    first_participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id == s.id)
+        .first()
+    )
     if report_type == "counselor":
         owner_uuid = s.host_id
+        # SDD-065: counselor 리포트도 참여자 정보(이름/성별/생년월일/회원·비회원) 표시를 위해 participant_id 설정
+        if first_participant:
+            owner_participant_id = first_participant.id
     else:
-        first_participant = (
-            db.query(SessionParticipant)
-            .filter(SessionParticipant.session_id == s.id)
-            .first()
-        )
         if first_participant:
             # SDD-027: 게스트 내담자는 user_id 가 없다(None) — participant_id 로 소유를 보완한다.
             owner_uuid = first_participant.user_id
