@@ -1,8 +1,8 @@
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { ReportSampleModal } from './ReportSamplePage';
+import { ReportDetailModal } from './ReportDetailModal';
 import AppShell from '../../components/layout/AppShell';
 import { ReportStatusChip } from '../../components/reports/ReportStatusBadge';
 import {
@@ -111,6 +111,8 @@ function groupBySession(reports: ReportDto[]): { sessionId: string; label: strin
 
 export default function ReportListPage() {
   const [sampleOpen, setSampleOpen] = useState(false);
+  /** SDD-064 — 목록에서 팝업으로 상세 보기 */
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -263,8 +265,22 @@ export default function ReportListPage() {
   const selectClass =
     'h-10 rounded-xl border border-[#EFEFEF] px-3 text-[13px] text-[#1F1F1F] bg-white focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
 
+  const openReportModal = (id: string) => setSelectedReportId(id);
+
   const renderRow = (r: ReportDto) => (
-    <tr key={r.id} className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors">
+    <tr
+      key={r.id}
+      role="button"
+      tabIndex={0}
+      onClick={() => openReportModal(r.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openReportModal(r.id);
+        }
+      }}
+      className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+    >
       <td className="px-5 py-3.5">
         <div className="font-medium text-[#1F1F1F] truncate max-w-[280px]">{reportTitle(r)}</div>
       </td>
@@ -277,21 +293,26 @@ export default function ReportListPage() {
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </td>
       <td className="px-5 py-3.5">
-        <Link
-          to={`/reports/${r.id}`}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            openReportModal(r.id);
+          }}
           className="text-[13px] font-semibold text-[#5F0080] hover:underline"
         >
           보기
-        </Link>
+        </button>
       </td>
     </tr>
   );
 
   const renderMobileCard = (r: ReportDto) => (
-    <Link
+    <button
       key={r.id}
-      to={`/reports/${r.id}`}
-      className="block bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:border-[#5F0080]/30 hover:shadow-sm transition-all"
+      type="button"
+      onClick={() => openReportModal(r.id)}
+      className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:border-[#5F0080]/30 hover:shadow-sm transition-all"
     >
       <div className="flex items-center justify-between mb-2 gap-2">
         <TypeBadge type={r.type} />
@@ -301,7 +322,7 @@ export default function ReportListPage() {
       <div className="text-[12px] text-[#6F6F6F]">
         {sessionTypeLabel(r.session_type)} · {formatDate(reportDateIso(r))}
       </div>
-    </Link>
+    </button>
   );
 
   const tableHead = (
@@ -509,6 +530,12 @@ export default function ReportListPage() {
         </div>
       )}
       {sampleOpen && <ReportSampleModal onClose={() => setSampleOpen(false)} />}
+      {selectedReportId && (
+        <ReportDetailModal
+          reportId={selectedReportId}
+          onClose={() => setSelectedReportId(null)}
+        />
+      )}
     </AppShell>
   );
 }
