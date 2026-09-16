@@ -39,8 +39,8 @@
   .report-print-document .narrative-report section[data-section="body"],
   .report-print-document .narrative-report section[data-section="mind"],
   .report-print-document .narrative-report section[data-section="closing"] { break-before: page; page-break-before: always; }
-  .report-print-document .narrative-report section[data-section="cover"] { min-height: 120mm; }
-  .report-print-document .narrative-report section[data-section="journey"] { min-height: 150mm; }
+  .report-print-document .narrative-report section[data-section="cover"] { min-height: 100mm; }
+  .report-print-document .narrative-report section[data-section="journey"] { min-height: 132mm; }
   .report-print-document .narrative-report section[data-section="body"],
   .report-print-document .narrative-report section[data-section="mind"] { min-height: 272mm; }
   .report-print-document .narrative-report section[data-section="closing"] { min-height: 225mm; }
