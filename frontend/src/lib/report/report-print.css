@@ -25,21 +25,21 @@
   .report-print-document > div > :not([hidden]) ~ :not([hidden]) { margin-top: 2mm; margin-bottom: 0; }
   /* 별도 관리용 커버는 숨기고 서사형 명상 여정 커버는 유지한다. */
   .report-print-document .report-print-cover { display: none !important; }
-  .report-print-document .narrative-report .cover .cover-info { margin-top: 1mm; gap: 3mm; }
-  .report-print-document .narrative-report .cover .session { margin-top: 1mm; padding: 1.5mm 2mm; }
-  .report-print-document .narrative-report .cover .session dl { gap: .5mm 4mm; }
-  .report-print-document .narrative-report .cover .quality { margin-top: .5mm; padding-top: .5mm; gap: 1mm; }
-  .report-print-document .narrative-report .cover h1 { font-size: 20pt; line-height: 1.3; }
+  .report-print-document .narrative-report .cover .cover-info { margin-top: 2mm; }
+  .report-print-document .narrative-report .cover .session { margin-top: 2mm; padding: 2mm 3mm; }
+  .report-print-document .narrative-report .cover .session dl { gap: 1mm 5mm; }
+  .report-print-document .narrative-report .cover .quality { margin-top: 1mm; padding-top: 1mm; }
+  .report-print-document .narrative-report .cover h1 { font-size: 29pt; }
   .report-print-document .narrative-report .metric .delta { font-size: 20pt; }
   .report-print-document .narrative-report { background: white; font-size: 11pt; line-height: 1.75; }
   .report-print-document .narrative-report .layout { display: block; max-width: none; margin: 0; padding: 0; }
   .report-print-document .narrative-report .report-main { display: block; overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
   /* 긴 원문은 잘라내지 않고 이어가되 각 주요 섹션은 새 장에서 시작한다. */
-  .report-print-document .narrative-report section[data-section] { min-height: 0; padding: 5mm; break-before: auto; break-inside: auto; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .report-print-document .narrative-report section[data-section] { min-height: 0; padding: 8mm; break-before: auto; break-inside: auto; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
   .report-print-document .narrative-report section[data-section="body"],
   .report-print-document .narrative-report section[data-section="mind"],
   .report-print-document .narrative-report section[data-section="closing"] { break-before: page; page-break-before: always; }
-  .report-print-document .narrative-report section[data-section="cover"] { min-height: 85mm; font-size: 10pt; line-height: 1.5; }
+  .report-print-document .narrative-report section[data-section="cover"] { min-height: 100mm; }
   .report-print-document .narrative-report section[data-section="journey"] { min-height: 132mm; }
   .report-print-document .narrative-report section[data-section="body"],
   .report-print-document .narrative-report section[data-section="mind"] { min-height: 272mm; }
@@ -47,8 +47,6 @@
   .report-print-document p { orphans: 3; widows: 3; }
   .report-print-document .narrative-report h1 { font-size: 24pt; }
   .report-print-document .narrative-report h2 { font-size: 23pt; line-height: 1.3; }
-  .report-print-document .narrative-report section[data-section="journey"] h2 { font-size: 18pt; }
-  .report-print-document .narrative-report section[data-section="journey"] .section-note { margin-top: 2mm; line-height: 1.5; }
   .report-print-document .narrative-report h3 { font-size: 12pt; }
   .report-print-document .narrative-report .eyebrow { font-size: 8pt; }
   .report-print-document .narrative-report .section-head { margin-bottom: 2mm; break-inside: avoid; break-after: avoid; }
@@ -56,20 +54,17 @@
   .report-print-document .narrative-report .section-head p:last-child { margin-top: 1mm; }
   .report-print-document .narrative-report .cover .eyebrow { margin-top: 0; }
   .report-print-document .narrative-report .cover h1 { margin-top: 2mm; }
-  .report-print-document .narrative-report .cover-lead { margin-top: 1mm; font-size: 10pt; line-height: 1.5; }
+  .report-print-document .narrative-report .cover-lead { margin-top: 2mm; font-size: 10pt; }
   .report-print-document .narrative-report .cover-info { margin-top: 4mm; }
   .report-print-document .narrative-report .cover-art { top: 5mm; right: 8mm; width: 42mm; height: 42mm; }
   .report-print-document .narrative-report .session { margin-top: 3mm; padding: 3mm; }
   .report-print-document .narrative-report .session dl { gap: 2mm 5mm; }
   .report-print-document .narrative-report .quality { margin-top: 2mm; padding-top: 2mm; }
-  .report-print-document .narrative-report .journey-quote { min-height: 18mm; padding: 3mm; font-size: 10.5pt; line-height: 1.5; }
-  .report-print-document .narrative-report .journey-summary { margin-top: 2mm; gap: 1mm; }
-  .report-print-document .narrative-report .summary-chip { padding: 1mm 2mm; gap: 1mm 2mm; }
-  .report-print-document .narrative-report .journey-stages { margin-top: 3mm; gap: 3mm; font-size: 10pt; line-height: 1.5; }
-  .report-print-document .narrative-report .stage { padding-top: 1mm; }
-  .report-print-document .narrative-report .stage strong { margin: 1mm 0; }
-  .report-print-document .narrative-report .cover .avatar { width: 8mm; height: 8mm; }
-  .report-print-document .narrative-report .cover-info strong { font-size: 10pt; }
+  .report-print-document .narrative-report .journey-quote { min-height: 24mm; padding: 6mm; font-size: 12pt; line-height: 1.8; }
+  .report-print-document .narrative-report .journey-summary { margin-top: 3mm; gap: 2mm; }
+  .report-print-document .narrative-report .summary-chip { padding: 2mm 3mm; }
+  .report-print-document .narrative-report .journey-stages { margin-top: 20mm; }
+  .report-print-document .narrative-report .stage { padding-top: 2mm; }
   .report-print-document .narrative-report .narrative-copy { margin-bottom: 3mm; }
   .report-print-document .narrative-report .metric { grid-template-columns: 1.3fr 1fr; gap: 4mm; margin-top: 3mm; padding: 4mm; min-height: 56mm; border-radius: 3mm; break-inside: avoid; }
   /* 카드 크기와 무관하게 모서리는 통일하고 태그만 pill 형태로 구분한다. */
@@ -109,6 +104,7 @@
 
 /* SDD-068: 정의·방향 설명을 보존하면서 기본 4페이지의 읽기 밀도를 유지한다. */
 @media print {
+  .report-print-document .narrative-report .journey-stages { margin-top: 4mm; }
   .report-print-document .narrative-report .summary-chip { font-size: 9pt; line-height: 1.5; }
   .report-print-document .narrative-report .metric { padding: 3mm; gap: 3mm; }
   .report-print-document .narrative-report .metric-copy > p:not(.delta) { font-size: 9pt; line-height: 1.45; }
