@@ -1,7 +1,7 @@
 /* SDD-067: 전체 서사를 섹션별 4페이지에 담는 인쇄 전용 스타일. */
 @page report {
   size: A4 portrait;
-  margin: 12mm 6mm;
+  margin: 12mm 6mm 6mm;
   @top-center {
     content: "MIND BREEZE · 몸과 마음의 기록";
     font: 9pt -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
