@@ -91,6 +91,15 @@ def main() -> int:
                 "report_email": None,
                 "type": "counselor",
             },
+            {
+                "title": "정민준 (내담자)",
+                "guest_name": "정민준",
+                "user_id": None,
+                "gender": "male",
+                "birth_date": date(1992, 5, 8),
+                "report_email": REPORT_EMAIL,
+                "type": "client",
+            },
         ]
 
         created = 0
