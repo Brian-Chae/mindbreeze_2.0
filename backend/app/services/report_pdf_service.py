@@ -5,6 +5,8 @@ from pathlib import Path
 from fastapi import HTTPException
 from fastapi.responses import Response
 
+from app.services.report_pdf_narrative import resolve_pdf_narrative, render_cards, render_chips
+
 FONT_PATH = Path(__file__).resolve().parents[1] / "assets/fonts/NotoSansKR.ttf"
 FONT_URL = "https://report.invalid/fonts/NotoSansKR.ttf"
 
@@ -25,15 +27,15 @@ def _text(value: object, fallback: str = "") -> str:
 
 
 def render_report_html(report: dict, scale: float = 1) -> str:
-    """서사만 허용 목록으로 투영한다. 상담 메모와 EEG 상세지표는 포함하지 않는다."""
+    """서사와 웹 표시 지표만 허용 목록으로 투영한다. 상담 메모와 EEG 상세지표는 포함하지 않는다."""
     content = _record(report.get("content"))
-    narrative = _record(_record(content.get("eeg")).get("narrative"))
-    fields = {
-        "journey": _text(narrative.get("journey"), _text(content.get("summary"), "오늘의 기록을 돌아보며 몸과 마음의 감각을 살펴보세요.")),
-        "body": _text(narrative.get("body"), _text(narrative.get("body_text"), "측정 자료가 부족해 몸의 전후 변화를 확인하기 어려워요.")),
-        "mind": _text(narrative.get("mind"), _text(narrative.get("mind_text"), "측정 자료가 부족해 마음의 전후 변화를 확인하기 어려워요.")),
-        "closing": _text(narrative.get("closing"), _text(narrative.get("closing_text"), "오늘의 경험을 있는 그대로 돌아보며, 잠시 자신의 몸과 마음에 귀 기울여 보세요.")),
-    }
+    fields, body, mind, timeline = resolve_pdf_narrative(content)
+    body_cards = render_cards(body, timeline, "몸")
+    mind_cards = render_cards(mind, timeline, "마음")
+    chips = render_chips(body, mind)
+    duration = timeline[-1]['min'] if timeline else 0
+    half_label = f"{duration / 2:g}분" if duration > 0 else "정보 없음"
+    end_label = f"{duration:g}분" if duration > 0 else "정보 없음"
     # 지나치게 큰 콘텐츠로 렌더러의 메모리를 소모하지 않도록 사전 제한한다.
     if any(len(value) > 12000 for value in fields.values()):
         raise HTTPException(422, "리포트 본문이 너무 길어 4페이지 PDF로 만들 수 없습니다.")
@@ -74,22 +76,38 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 .practice {{ margin: 7mm 0; padding: 6mm; background: #F1FAF5; border-radius: 4mm; }}
 .practice.mind {{ background: #F5EFF9; }}
 .closing-message {{ padding-top: 8mm; border-top: 1px solid #E8D9EF; margin-top: 9mm; color: #5F0080; }}
+.body h2,.mind h2 {{ font-size: {22 * scale}pt; margin-bottom: 3mm; }}
+.body .lead,.mind .lead {{ margin: 2mm 0; }} .body .rule,.mind .rule {{ margin: 3mm 0; }}
+.narrative-copy {{ font-size: {9 * scale}pt; margin-bottom: 3mm; }}
+.metric-card {{ display: table; width: 100%; padding: {3 * scale}mm; margin: 3mm 0; border: 1px solid #D1EADB; border-radius: 3mm; background: #F1FAF5; break-inside: avoid; font-size: {8.5 * scale}pt; line-height: 1.5; }}
+.mind .metric-card {{ background: #F5EFF9; border-color: #E8D9EF; }}
+.metric-copy {{ display: table-cell; width: 65%; vertical-align: middle; padding-right: 3mm; }}
+.metric-card h3 {{ font-size: {10 * scale}pt; margin: 0 0 1mm; }}
+.metric-card figure {{ display: table-cell; width: 35%; margin: 0; vertical-align: middle; }}
+.metric-card svg {{ width: 100%; }}
+.metric-card figcaption,.caption {{ font-size: {7 * scale}pt; color: #63566B; }}
+.delta {{ font-size: {19 * scale}pt; color: #5F0080; font-weight: 700; line-height: 1.3; }}
+.definition,.guide {{ margin-top: 1mm; color: #63566B; }}
+.badge {{ font-size: 7pt; font-weight: 400; color: #5F0080; }}
+.interpretation {{ color: #5F0080; }}
+.summary-chip {{ background: #F1FAF5; padding: 2mm 3mm; margin-top: 2mm; font-size: {8 * scale}pt; border-radius: 2mm; }}
+.summary-chip + .summary-chip {{ background: #F5EFF9; }}
+.journey-summary {{ margin-top: 4mm; }}
+.body .note,.mind .note {{ font-size: {8 * scale}pt; margin-top: 3mm; }}
 </style></head><body>
 <section><div class="cover"><p class="eyebrow">01 · 나의 명상 여정</p>
 <svg class="art" viewBox="0 0 240 240" aria-hidden="true"><g fill="none" stroke="#5F0080" opacity=".24"><ellipse cx="120" cy="120" rx="95" ry="44" transform="rotate(-32 120 120)"/><ellipse cx="120" cy="120" rx="84" ry="57" transform="rotate(-32 120 120)"/><circle cx="120" cy="120" r="70"/></g><circle cx="187" cy="76" r="9" fill="#59CE90"/></svg>
 <h1>나에게 돌아온 시간,<br>몸과 마음의 이야기</h1><p class="lead">분주했던 하루에서 한 걸음 물러나,<br>오늘 나에게 일어난 작은 변화를 만나보세요.</p>
-<div class="meta"><strong>{title}</strong><br>{name} · {date_label}</div></div>
+<div class="meta"><strong>{title}</strong><br>{name} · {date_label}<br>비교 구간: 명상 시작(전반) {half_label} ↔ 마무리(후반) {half_label}</div></div>
 <div class="journey"><p class="eyebrow">02 · 종합 여정</p><h2>오늘의 몸과 마음을 돌아보며</h2><p class="copy">{fields['journey']}</p></div>
-<table class="steps"><tr><td>처음<br><strong>잠시 멈추기</strong><br>자리에 몸을 맡기고</td><td>중간<br><strong>호흡에 머물기</strong><br>지금의 감각을 따라</td><td>마지막<br><strong>나에게 돌아오기</strong><br>몸과 마음을 살피며</td></tr></table>
+{chips}<table class="steps journey-stages"><tr><td>처음 · 0분<br><strong>잠시 멈추기</strong><br>자리에 몸을 맡기고</td><td>중간 · {half_label}<br><strong>호흡에 머물기</strong><br>지금의 감각을 따라</td><td>마지막 · {end_label}<br><strong>나에게 돌아오기</strong><br>몸과 마음을 살피며</td></tr></table>
 <p class="note">이 기록은 이번 세션에서 관찰한 흐름을 담습니다. 측정 자료가 없는 경우에는 변화를 단정하지 않습니다.</p></section>
 <section class="body"><p class="eyebrow">03 · 몸의 변화</p><h2>몸이 들려주는<br>오늘의 리듬</h2><p class="lead">호흡과 심장의 움직임에서 오늘의 변화를 살펴보세요.</p><div class="rule"></div>
-<div class="panel"><h3>몸의 이야기를 읽어요</h3><p class="copy">{fields['body']}</p></div>
-<div class="practice"><h3>몸의 감각도 함께 떠올려 보세요</h3><p>시작할 때와 마무리할 때, 호흡과 어깨의 감각은 어땠나요?<br>측정된 신호와 내가 느낀 경험을 나란히 살펴보세요.</p></div>
+<p class="copy narrative-copy">{fields['body']}</p>{body_cards}
 <p class="note">몸의 신호가 오르거나 내렸다는 사실만으로 건강 상태나 명상의 효과를 판단하지 않아요. 측정 자료가 부족한 항목은 비교할 수 없어요.</p></section>
 <section class="mind"><p class="eyebrow">04 · 마음의 변화</p><h2>지금 이 순간에<br>조금 더 가까이</h2><p class="lead">마음의 신호가 어떻게 흘렀는지, 나의 느낌과 함께 읽어보세요.</p><div class="rule"></div>
-<div class="panel"><h3>마음의 이야기를 읽어요</h3><p class="copy">{fields['mind']}</p></div>
-<div class="practice mind"><h3>내가 느낀 마음을 살펴보세요</h3><p>오늘 나의 주의는 어디에 머물렀나요?<br>생각이 오갔던 순간과 다시 호흡으로 돌아온 순간을 떠올려 보세요.</p></div>
-<p class="note">마음의 신호는 실제로 느낀 감정을 직접 측정한 값이 아닙니다. 측정 결과보다 나의 경험을 우선하여 읽어 주세요.</p></section>
+<p class="copy narrative-copy">{fields['mind']}</p>{mind_cards}
+<p class="note">%는 명상 시작(전반) 평균 대비 마무리(후반) 평균의 상대 변화율입니다. 감정안정도 흐름은 스트레스 신호의 역방향 근사이며, 실제로 느낀 감정을 직접 측정한 값은 아닙니다. 측정 결과보다 나의 경험을 우선하여 읽어 주세요.</p></section>
 <section><p class="eyebrow">05 · 마무리</p><h2>오늘의 작은 쉼을,<br>내일의 나에게도</h2><p class="lead">명상마다 흐름은 달라질 수 있어요.<br>오늘 느꼈던 나의 감각 하나를 기억해 두면 어떨까요?</p>
 <div class="practice"><p class="eyebrow">몸을 위한 다음 제안</p><h3>시작할 때, 몸이 머무를 시간을 주세요</h3><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div>
 <div class="practice mind"><p class="eyebrow">마음을 위한 다음 제안</p><h3>알아차린 순간, 다시 호흡으로 돌아와요</h3><p>5분만 나에게 머물러보세요. 생각이 다른 곳으로 향해도 괜찮아요. 알아차렸다면, 지금의 호흡에 부드럽게 주의를 돌려봐요.</p></div>
