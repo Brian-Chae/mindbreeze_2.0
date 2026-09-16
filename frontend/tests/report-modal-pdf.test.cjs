@@ -60,19 +60,21 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
   await printPage.evaluate(()=>document.fonts.ready);
   await printPage.emulateMedia({media:'print'});
   assert.equal(await printPage.locator('.narrative-report .cover').evaluate(el=>getComputedStyle(el).display),'block');
-  assert.match(await printPage.locator('.report-print-cover').innerText(),savedEmail ? /검증 참여자/ : /참여자 정보 없음/);
+  assert.equal(await printPage.locator('.report-print-cover').evaluate(el=>getComputedStyle(el).display),'none');
   for(const section of ['journey','body','mind','closing']) {
-   assert.equal(await printPage.locator(`[data-section="${section}"]`).evaluate(el=>getComputedStyle(el).breakBefore),'auto');
+   assert.equal(await printPage.locator(`[data-section="${section}"]`).evaluate(el=>getComputedStyle(el).breakBefore),section === 'journey' ? 'auto' : 'page');
   }
   assert.equal(await printPage.locator('.metric:visible').count(),6);
   assert.equal(await printPage.locator('svg:visible').count() > 6,true);
   assert.equal(await printPage.locator('.report-summary-card:visible').count(),1);
-  const expectedText = await printPage.locator('.report-print-cover p, .report-print-cover h1, .narrative-report p, .narrative-report h1, .narrative-report h2, .narrative-report h3, .report-summary-card p').evaluateAll(nodes => nodes.filter(node => !node.closest('details,aside,header')).map(node => node.textContent.replace(/\s/g, '')));
+  const expectedText = await printPage.locator('.narrative-report p, .narrative-report h1, .narrative-report h2, .narrative-report h3, .report-summary-card p').evaluateAll(nodes => nodes.filter(node => !node.closest('details,aside,header')).map(node => node.textContent.replace(/\s/g, '')));
   const pdf=await printPage.pdf({preferCSSPageSize:true,printBackground:true,path:'/tmp/sdd-067-report.pdf'});
   assert.ok(pdf.length>10000);
+  const pages = JSON.parse(execFileSync('python3', ['-c', 'import fitz,json; print(json.dumps([p.get_text() for p in fitz.open("/tmp/sdd-067-report.pdf")]))'], {encoding:'utf8'}));
+  for (const [index, heading] of ['02 · 종합 여정','03 · 몸의 변화','04 · 마음의 변화','05 · 마무리'].entries()) assert.ok(pages[index].replace(/\s/g, '').includes(heading.replace(/\s/g, '')), `페이지 ${index+1}: ${heading}`);
   const extracted = pdfText('/tmp/sdd-067-report.pdf');
   for (const text of expectedText) assert.ok(extracted.includes(text), `PDF 원문 누락: ${text}`);
-  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length >= 2,true);
+  assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length,4);
   if (savedEmail) {
    await printPage.locator('[data-section="body"] .section-head').evaluate(el => {
     const paragraph = document.querySelector('.journey-quote');
