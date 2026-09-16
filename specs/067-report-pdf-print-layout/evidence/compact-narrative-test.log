@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: 초 단위 백엔드 시간을 분으로 변환하고 서사에 시계열을 보존한다
+ok 1 - 초 단위 백엔드 시간을 분으로 변환하고 서사에 시계열을 보존한다
+  ---
+  duration_ms: 1.21825
+  type: 'test'
+  ...
+# Subtest: 실측 6지표 그래프와 서사 제목을 렌더한다
+ok 2 - 실측 6지표 그래프와 서사 제목을 렌더한다
+  ---
+  duration_ms: 7.684875
+  type: 'test'
+  ...
+# Subtest: 텍스트만 있으면 측정 곡선을 만들지 않는다
+ok 3 - 텍스트만 있으면 측정 곡선을 만들지 않는다
+  ---
+  duration_ms: 1.258917
+  type: 'test'
+  ...
+# Subtest: 레거시 분 단위 시간을 다시 나누지 않는다
+ok 4 - 레거시 분 단위 시간을 다시 나누지 않는다
+  ---
+  duration_ms: 0.409291
+  type: 'test'
+  ...
+# Subtest: 곡선은 실제 입력을 반영하고 결측 구간을 연결하지 않는다
+ok 5 - 곡선은 실제 입력을 반영하고 결측 구간을 연결하지 않는다
+  ---
+  duration_ms: 10.776917
+  type: 'test'
+  ...
+# Subtest: 변화량만 있는 구형 계약은 임의의 20분 그래프를 만들지 않는다
+ok 6 - 변화량만 있는 구형 계약은 임의의 20분 그래프를 만들지 않는다
+  ---
+  duration_ms: 2.035292
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 247.532375

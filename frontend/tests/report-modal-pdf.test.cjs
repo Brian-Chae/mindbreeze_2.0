@@ -10,7 +10,7 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
  try {
   const page = await browser.newPage();
   await page.addInitScript(() => { window.print = () => { window.__printed = true; }; });
-  const report = { id:'pdf-test', session_id:'test', type:'counselor', participant_name:savedEmail ? '검증 참여자' : null, session_title:'몸과 마음의 기록', scheduled_at:'2026-09-16T09:00:00+09:00', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:'검증용 여정',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
+  const report = { id:'pdf-test', session_id:'test', type:'counselor', participant_name:savedEmail ? '검증 참여자' : null, session_title:'몸과 마음의 기록', scheduled_at:'2026-09-16T09:00:00+09:00', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:'검증용 여정',body:'호흡이 서서히 느려지며 몸이 편안한 리듬을 찾아가는 흐름이 나타났어요. 심박수와 심박변이도의 변화를 함께 살펴보면서 오늘 몸에서 느꼈던 감각을 떠올려 보세요. 수치의 변화는 개인마다 다를 수 있으며, 편안함의 정도를 단정하지 않아요. 몸의 반응을 있는 그대로 바라보고 다음 명상에서도 자신만의 속도로 머물러 보세요.',mind:'주의가 다른 곳으로 향했다가 다시 돌아오는 과정에서 마음의 흐름도 조금씩 달라졌어요. 집중도와 이완도, 감정안정도는 오늘의 느낌과 함께 읽어 주세요. 지표가 오르거나 내렸다는 사실만으로 명상의 효과를 판단하지 않아요. 지금 이 순간의 감각을 알아차렸던 시간을 차분히 떠올려 보세요.',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
   let approvals=0; let deliveries=0;
   await page.route('**/reports/pdf-test**', async route=>{
    if(route.request().url().endsWith('/resend-email')) { deliveries++; assert.equal(route.request().postDataJSON().email,'new@example.com'); }
@@ -72,6 +72,16 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
   assert.ok(pdf.length>10000);
   const pages = JSON.parse(execFileSync('python3', ['-c', 'import fitz,json; print(json.dumps([p.get_text() for p in fitz.open("/tmp/sdd-067-report.pdf")]))'], {encoding:'utf8'}));
   for (const [index, heading] of ['02 · 종합 여정','03 · 몸의 변화','04 · 마음의 변화','05 · 마무리'].entries()) assert.ok(pages[index].replace(/\s/g, '').includes(heading.replace(/\s/g, '')), `페이지 ${index+1}: ${heading}`);
+  for (const [index, text] of pages.entries()) {
+   const compact = text.replace(/\s/g, '');
+   assert.ok(compact.includes('MINDBREEZE·몸과마음의기록'), '페이지 머리글');
+   assert.ok(compact.includes(`${index + 1}/${pages.length}`), '페이지 번호');
+  }
+  for (const section of ['body', 'mind']) {
+   const index = section === 'body' ? 1 : 2;
+   const content = await printPage.locator(`[data-section="${section}"]`).innerText();
+   assert.ok(pages[index].replace(/\s/g, '').includes(content.replace(/\s/g, '')), `${section} 전체 원문이 한 페이지`);
+  }
   const extracted = pdfText('/tmp/sdd-067-report.pdf');
   for (const text of expectedText) assert.ok(extracted.includes(text), `PDF 원문 누락: ${text}`);
   assert.equal((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length,4);
