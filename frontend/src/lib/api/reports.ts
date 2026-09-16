@@ -64,6 +64,14 @@ export interface ReportDto {
   participant_id?: string | null;
   /** SDD-050 — participant.report_email (client 리포트 재발송 기본값) */
   report_email?: string | null;
+  /** SDD-065 — 참여자 표시명 (게스트 guest_name / 회원 user.name) */
+  participant_name?: string | null;
+  /** SDD-065 — male | female | other */
+  gender?: string | null;
+  /** SDD-065 — ISO date (YYYY-MM-DD) */
+  birth_date?: string | null;
+  /** SDD-065 — participant.user_id 없으면 true */
+  is_guest?: boolean | null;
 }
 
 export interface ReportListResponse {

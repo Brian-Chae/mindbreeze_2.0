@@ -56,7 +56,7 @@ def generate(
     return report_service.generate_report(session_id, current_user["id"], payload.type, db)
 
 
-@router.get("", response_model=ReportListResponse, response_model_exclude_none=True)
+@router.get("", response_model=ReportListResponse)
 def list_all(
     page: int | None = Query(default=None, ge=1),
     limit: int | None = Query(default=None, ge=1),

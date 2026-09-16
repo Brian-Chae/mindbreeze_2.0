@@ -1,7 +1,7 @@
 // 리포트 상세 팝업 모달 — SDD-064
 // ESC / 오버레이 클릭 / 닫기 버튼으로 닫힘. 모바일 전체 · 데스크톱 큰 모달.
 
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ReportDetailView from '../../components/reports/ReportDetailView';
 import { getReport, type ReportDto } from '../../lib/api/reports';
@@ -51,10 +51,6 @@ export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps)
     };
   }, []);
 
-  const handleBackdropClick = (e: MouseEvent<HTMLDialogElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
   const title =
     (report?.content?.headline as string | undefined) ||
     report?.session_title ||
@@ -69,7 +65,9 @@ export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps)
         e.preventDefault();
         onClose();
       }}
-      onClick={handleBackdropClick}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="report-sample-toolbar">
         <h2 id="report-detail-modal-title" className="truncate">

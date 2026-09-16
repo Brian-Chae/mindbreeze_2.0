@@ -46,6 +46,27 @@ function sessionTypeLabel(type: string | null): string {
   return SESSION_TYPE_LABELS[type] ?? type;
 }
 
+/** SDD-065 — male/female/other → 한글 */
+function genderLabel(gender: string | null | undefined): string {
+  if (!gender) return '—';
+  if (gender === 'male') return '남성';
+  if (gender === 'female') return '여성';
+  if (gender === 'other') return '기타';
+  return '—';
+}
+
+/** SDD-065 — YYYY-MM-DD (없으면 —) */
+function formatBirthDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  return m ? m[1] : '—';
+}
+
+function participantDisplayName(r: ReportDto): string {
+  const name = r.participant_name?.trim();
+  return name || '—';
+}
+
 function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
@@ -55,6 +76,20 @@ function TypeBadge({ type }: { type: string }) {
       }`}
     >
       {isCounselor ? '상담사용' : '내담자용'}
+    </span>
+  );
+}
+
+/** SDD-065 — 회원(보라) / 비회원(회색) */
+function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
+  const guest = isGuest === true;
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
+        guest ? 'bg-[#F0F0F0] text-[#6F6F6F]' : 'bg-[#F5EDFC] text-[#5F0080]'
+      }`}
+    >
+      {guest ? '비회원' : '회원'}
     </span>
   );
 }
@@ -76,7 +111,8 @@ function filterAndSortReports(
     if (!q) return true;
     const title = reportTitle(r).toLowerCase();
     const sessionName = (r.session_title ?? '').toLowerCase();
-    return title.includes(q) || sessionName.includes(q);
+    const participant = (r.participant_name ?? '').toLowerCase();
+    return title.includes(q) || sessionName.includes(q) || participant.includes(q);
   });
 
   filtered = [...filtered].sort((a, b) => {
@@ -282,13 +318,21 @@ export default function ReportListPage() {
       className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors cursor-pointer"
     >
       <td className="px-5 py-3.5">
-        <div className="font-medium text-[#1F1F1F] truncate max-w-[280px]">{reportTitle(r)}</div>
+        <div className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</div>
+      </td>
+      <td className="px-5 py-3.5">
+        <div className="font-medium text-[#1F1F1F] truncate max-w-[120px]">{participantDisplayName(r)}</div>
+      </td>
+      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{genderLabel(r.gender)}</td>
+      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatBirthDate(r.birth_date)}</td>
+      <td className="px-5 py-3.5">
+        <MembershipBadge isGuest={r.is_guest} />
       </td>
       <td className="px-5 py-3.5">
         <TypeBadge type={r.type} />
       </td>
-      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{sessionTypeLabel(r.session_type)}</td>
-      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono">{formatDate(reportDateIso(r))}</td>
+      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{sessionTypeLabel(r.session_type)}</td>
+      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(reportDateIso(r))}</td>
       <td className="px-5 py-3.5">
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </td>
@@ -315,10 +359,17 @@ export default function ReportListPage() {
       className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:border-[#5F0080]/30 hover:shadow-sm transition-all"
     >
       <div className="flex items-center justify-between mb-2 gap-2">
-        <TypeBadge type={r.type} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <TypeBadge type={r.type} />
+          <MembershipBadge isGuest={r.is_guest} />
+        </div>
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </div>
       <div className="font-bold text-[15px] text-[#1F1F1F] truncate mb-1">{reportTitle(r)}</div>
+      <div className="text-[13px] text-[#1F1F1F] mb-1">
+        {participantDisplayName(r)}
+        <span className="text-[#9B9B9B] font-normal"> · {genderLabel(r.gender)} · {formatBirthDate(r.birth_date)}</span>
+      </div>
       <div className="text-[12px] text-[#6F6F6F]">
         {sessionTypeLabel(r.session_type)} · {formatDate(reportDateIso(r))}
       </div>
@@ -329,6 +380,10 @@ export default function ReportListPage() {
     <thead>
       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">제목</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">사용자</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">성별</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생년월일</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">구분</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">타입</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">세션유형</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">날짜</th>
@@ -374,7 +429,7 @@ export default function ReportListPage() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="제목·세션명 검색"
+              placeholder="제목·세션·사용자 검색"
               aria-label="리포트 검색"
               className="h-10 rounded-xl border border-[#EFEFEF] px-4 text-[13px] w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
             />
@@ -484,14 +539,14 @@ export default function ReportListPage() {
                         {g.label}
                         <span className="ml-2 font-normal text-[#6F6F6F]">{g.items.length}건</span>
                       </div>
-                      <table className="w-full text-[14px] min-w-[720px]">
+                      <table className="w-full text-[14px] min-w-[980px]">
                         {tableHead}
                         <tbody>{g.items.map(renderRow)}</tbody>
                       </table>
                     </div>
                   ))
                 ) : (
-                  <table className="w-full text-[14px] min-w-[720px]">
+                  <table className="w-full text-[14px] min-w-[980px]">
                     {tableHead}
                     <tbody>{filtered.map(renderRow)}</tbody>
                   </table>

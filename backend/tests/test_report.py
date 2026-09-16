@@ -108,8 +108,9 @@ def test_report_04_목록_조회(client):
     body = res.json()
     assert body["total"] >= 1
     assert body["reports"][0]["session_id"] == sid
-    assert "page" not in body
-    assert "limit" not in body
+    # SDD-058 페이지네이션: page/limit 미지정 시 None으로 직렬화됨 (스키마 Optional 필드)
+    assert body.get("page") is None
+    assert body.get("limit") is None
 
 
 def test_report_04_목록_페이지네이션(client):

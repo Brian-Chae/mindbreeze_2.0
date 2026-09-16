@@ -1,6 +1,6 @@
 """AI 리포트 Pydantic 스키마"""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
@@ -53,6 +53,10 @@ class ReportResponse(HRVMotionSummary):
     session_title: str | None = None
     session_type: str | None = None
     scheduled_at: datetime | None = None
+    participant_name: str | None = None
+    gender: str | None = None
+    birth_date: date | None = None
+    is_guest: bool | None = None
 
 
 class ReportListResponse(BaseModel):

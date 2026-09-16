@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
+from app.models.client_profile import ClientProfile
 from app.models.record import Report
 from app.models.user import User
 from app.services import notification_service
@@ -104,6 +105,7 @@ def _serialize(
     report: Report,
     session: Session | None = None,
     report_email: str | None = None,
+    participant_info: dict | None = None,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
     eeg = content.get("eeg")
@@ -128,6 +130,12 @@ def _serialize(
         "session_title": session.title if session else None,
         "session_type": session.type if session else None,
         "scheduled_at": session.scheduled_at if session else None,
+        "participant_name": (
+            participant_info.get("participant_name") if participant_info else None
+        ),
+        "gender": participant_info.get("gender") if participant_info else None,
+        "birth_date": participant_info.get("birth_date") if participant_info else None,
+        "is_guest": participant_info.get("is_guest") if participant_info else None,
     }
 
 
@@ -242,7 +250,48 @@ def list_reports(
             for s in db.query(Session).filter(Session.id.in_(session_ids)).all()
         } if session_ids else {}
 
-    result = [_serialize(r, sessions_map.get(r.session_id)) for r in items]
+    participant_ids = {r.participant_id for r in items if r.participant_id}
+    participants_map = {
+        participant.id: participant
+        for participant in db.query(SessionParticipant)
+        .filter(SessionParticipant.id.in_(participant_ids))
+        .all()
+    } if participant_ids else {}
+
+    participant_user_ids = {
+        participant.user_id
+        for participant in participants_map.values()
+        if participant.user_id
+    }
+    member_info_map = {
+        user.id: (user, profile)
+        for user, profile in db.query(User, ClientProfile)
+        .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
+        .filter(User.id.in_(participant_user_ids))
+        .all()
+    } if participant_user_ids else {}
+
+    participant_info_map = {}
+    for participant_id, participant in participants_map.items():
+        is_guest = participant.user_id is None
+        user, profile = member_info_map.get(participant.user_id, (None, None))
+        participant_info_map[participant_id] = {
+            "participant_name": participant.guest_name if is_guest else (user.name if user else None),
+            "gender": participant.gender if is_guest else (profile.gender if profile else None),
+            "birth_date": (
+                participant.birth_date if is_guest else (profile.birth_date if profile else None)
+            ),
+            "is_guest": is_guest,
+        }
+
+    result = [
+        _serialize(
+            report,
+            sessions_map.get(report.session_id),
+            participant_info=participant_info_map.get(report.participant_id),
+        )
+        for report in items
+    ]
     response = {"reports": result, "total": total}
     if page is not None and limit is not None:
         response.update({"page": page, "limit": limit})
