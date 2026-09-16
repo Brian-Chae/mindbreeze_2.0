@@ -20,6 +20,7 @@ from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead
 from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
+from app.models.signup_application import SignupApplication
 
 from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
@@ -57,6 +58,7 @@ __all__ = [
     "OrgDocument",
     "Qualification",
     "Career",
+    "SignupApplication",
 ]
 
 from app.models.data_export import DataExportJob, DataExportAudit

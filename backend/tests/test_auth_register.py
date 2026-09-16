@@ -23,12 +23,10 @@ def _payload(email, **overrides):
     return payload
 
 
-def test_register_counselor_성공(client):
+def test_register_counselor_직접가입_차단_403(client):
+    """SDD-073: org_code 직접 가입 경로는 우회로이므로 항상 403."""
     res = client.post("/api/v1/auth/register/counselor", json=_payload("counselor@test.com"))
-    assert res.status_code == 201, res.text
-    body = res.json()
-    assert body["user"]["role"] == "counselor"
-    assert body["access_token"]
+    assert res.status_code == 403, res.text
 
 
 def test_register_client_성공(client):

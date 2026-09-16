@@ -176,3 +176,77 @@ def create_test_org(name: str = "테스트 기관") -> str:
 def org_code():
     """상담사 가입용 기관 코드 fixture."""
     return create_test_org()
+
+
+class _FakeRegisterResponse:
+    """post_register 가 counselor 를 DB 직접 생성으로 대체할 때 반환하는 유사 Response."""
+
+    def __init__(self, status_code: int, body: dict):
+        self.status_code = status_code
+        self._body = body
+        self.text = str(body)
+
+    def json(self) -> dict:
+        return self._body
+
+
+def post_register(client, role: str, payload: dict):
+    """테스트용 가입 헬퍼 — SDD-073 로 상담사 직접 가입 API 가 차단되어,
+
+    counselor 역할은 DB 직접 생성으로 대체하고 기존 register 응답과 같은
+    형태의 body 를 돌려준다. 그 외 역할은 실제 API 를 그대로 호출한다.
+    """
+    if role != "counselor":
+        return client.post(f"/api/v1/auth/register/{role}", json=payload)
+
+    created = create_test_counselor(
+        payload["email"],
+        name=payload.get("name", "상담사"),
+        org_code=payload.get("org_code"),
+    )
+    body = {
+        "user": {"id": created["id"], "role": "counselor"},
+        "access_token": created["access_token"],
+        "tokens": {"access_token": created["access_token"]},
+    }
+    return _FakeRegisterResponse(201, body)
+
+
+def create_test_counselor(
+    email: str,
+    name: str = "상담사",
+    password: str = "Passw0rd!",
+    org_code: str | None = None,
+) -> dict:
+    """SDD-073 — 상담사 직접 가입 API가 차단되어 테스트용 상담사는 DB에 직접 만든다.
+
+    active 상태의 counselor User를 생성하고 {id, access_token}을 반환한다.
+    org_code를 주면 해당 기관 소속으로 만든다.
+    """
+    from app.core.database import get_db
+    from app.core.security import create_access_token, hash_password
+    from app.main import app as fastapi_app
+    from app.models.organization import Organization
+    from app.models.user import User
+
+    db = next(fastapi_app.dependency_overrides[get_db]())
+    try:
+        org_id = None
+        if org_code:
+            org = db.query(Organization).filter(Organization.org_code == org_code).first()
+            org_id = org.id if org else None
+        user = User(
+            email=email,
+            password_hash=hash_password(password),
+            name=name,
+            role="counselor",
+            status="active",
+            verified_tier="email",
+            org_id=org_id,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return {"id": str(user.id), "access_token": create_access_token(subject=str(user.id))}
+    finally:
+        db.close()

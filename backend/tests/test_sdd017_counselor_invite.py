@@ -251,11 +251,11 @@ def test_ts4_이메일_중복초대_409_대소문자(client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# TS5: 레거시 register/counselor 백엔드 유지
+# TS5: 레거시 register/counselor 차단 (SDD-073)
 # ---------------------------------------------------------------------------
 
 
-def test_ts5_레거시_register_counselor_백엔드_유지(client):
+def test_ts5_레거시_register_counselor_차단(client):
     code = create_test_org("레거시센터")
     res = client.post(
         "/api/v1/auth/register/counselor",
@@ -268,8 +268,8 @@ def test_ts5_레거시_register_counselor_백엔드_유지(client):
             "consents": _consents(),
         },
     )
-    assert res.status_code == 201, res.text
-    assert res.json()["user"]["role"] == "counselor"
+    assert res.status_code == 403, res.text
+    assert "직접 가입" in res.json()["detail"]
 
 
 def test_ts5_레거시_register로_상담사_가입은_초대안내(client):

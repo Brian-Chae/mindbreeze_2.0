@@ -11,18 +11,27 @@ def _consents():
 
 def _register(client, email: str, role: str = "counselor"):
     from app.services import email_verify_service
-    from tests.conftest import create_test_org
+    from tests.conftest import create_test_counselor, create_test_org
+
+    if role == "counselor":
+        # SDD-073: 상담사 직접 가입 API 차단 → 테스트 상담사는 DB에 직접 생성한다.
+        created = create_test_counselor(email, name=f"테스트{role}", org_code=create_test_org())
+        token = created["access_token"]
+        return {
+            "id": created["id"],
+            "token": token,
+            "h": {"Authorization": f"Bearer {token}"},
+        }
 
     payload = {
-        # SDD-015: 상담사 가입에 유효한 기관 코드 필수 (client 가입에서는 무시됨)
-        "org_code": create_test_org(),
         "email": email,
         "password": VALID_PASSWORD,
         "name": f"테스트{role}",
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": _consents(),
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body.get("access_token") or body.get("tokens", {}).get("access_token")

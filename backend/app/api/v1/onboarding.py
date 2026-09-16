@@ -293,6 +293,12 @@ def client_step4_match(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 상담사는 아직 인증이 완료되지 않아 매칭할 수 없습니다",
         )
+    # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
+    if counselor.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+        )
 
     existing_link = (
         db.query(ClientCounselorLink)

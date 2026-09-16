@@ -84,10 +84,10 @@ export default function OrgSearchPage() {
             <p className="text-sm text-ink-secondary mt-1">소속될 상담센터를 찾아 가입을 신청하세요</p>
           </div>
           <Link
-            to="/org/register"
+            to="/register/organization"
             className="text-sm text-brand-primary hover:text-brand-primary-hover font-medium"
           >
-            + 새 센터 등록
+            + 기관 가입 상담 신청
           </Link>
         </div>
 

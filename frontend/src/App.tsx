@@ -11,6 +11,9 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
+const RegisterCounselorPage = lazy(() => import('./pages/register/RegisterCounselorPage'));
+const RegisterOrganizationPage = lazy(() => import('./pages/register/RegisterOrganizationPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
@@ -22,7 +25,6 @@ const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage')
 const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
 const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
-const OrgRegisterPage = lazy(() => import('./pages/org/OrgRegisterPage'));
 const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
@@ -47,6 +49,7 @@ const AdminReviewDetailPage = lazy(() => import('./pages/admin/AdminReviewDetail
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
 const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
+const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
@@ -107,6 +110,9 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register/client" element={<RegisterClientPage />} />
+        <Route path="/register/counselor" element={<RegisterCounselorPage />} />
+        <Route path="/register/organization" element={<RegisterOrganizationPage />} />
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
         <Route path="/role-redirect" element={<RoleRouter />} />
         <Route path="/app" element={<ClientAppPage />} />
@@ -125,7 +131,8 @@ function App() {
         <Route path="/invite/:token" element={<InviteLandingPage />} />
         <Route path="/report-view" element={<ReportViewPage />} />
         <Route path="/org/search" element={<OrgSearchPage />} />
-        <Route path="/org/register" element={<OrgRegisterPage />} />
+        {/* SDD-073: /org/register 자가 등록 경로 제거 — 기관 가입 상담 신청으로 대체 */}
+        <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
         <Route path="/org/requests" element={<MyRequestsPage />} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<CredentialDashboardPage />} />
@@ -183,6 +190,14 @@ function App() {
           element={(
             <PlatformAdminRoute>
               <AdminOrgManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/applications"
+          element={(
+            <PlatformAdminRoute>
+              <SignupApplicationsPage />
             </PlatformAdminRoute>
           )}
         />

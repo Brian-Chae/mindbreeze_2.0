@@ -21,7 +21,8 @@ def _register(client, email: str, name: str, role: str) -> dict:
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": {"tos": True, "privacy": True, "sensitive": True},
     }
-    response = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    response = post_register(client, role, payload)
     assert response.status_code == 201, response.text
     body = response.json()
     token = body.get("access_token") or body["tokens"]["access_token"]

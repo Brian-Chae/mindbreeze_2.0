@@ -453,6 +453,70 @@ def send_client_invite_email(
     return _send_email(to_email, subject, body_text, body_html)
 
 
+def mask_phone(phone: str | None) -> str:
+    """전화번호 마스킹 — 뒤 4자리만 남긴다. 메일·로그에는 전체 번호를 넣지 않는다."""
+    if not phone:
+        return "미입력"
+    digits = "".join(ch for ch in phone if ch.isdigit())
+    if len(digits) <= 4:
+        return "*" * len(digits)
+    return f"{'*' * (len(digits) - 4)}{digits[-4:]}"
+
+
+def send_signup_application_notice(
+    *,
+    application_id: str,
+    application_type: str,
+    organization_name: str,
+    contact_name: str,
+    contact_email: str,
+    phone: str | None,
+    inquiry: str | None,
+    created_at: str,
+) -> bool:
+    """가입 신청(기관/개인 상담사) 운영 알림 메일 (SDD-073).
+
+    수신자는 settings.signup_notice_email 로 서버에 고정한다.
+    제목·본문에 전체 전화번호를 넣지 않으며(마스킹), 전체 정보는 관리자
+    신청 관리 화면에서 확인한다.
+    """
+    from html import escape
+
+    type_label = "기관 가입 상담" if application_type == "organization" else "개인 상담사 신청"
+    subject = f"[MIND BREEZE][{type_label}] 신청 {application_id}"
+    admin_link = f"{settings.frontend_base_url.rstrip('/')}/admin/applications"
+    inquiry_summary = (inquiry or "").strip()
+    if len(inquiry_summary) > 200:
+        inquiry_summary = inquiry_summary[:200] + "…"
+
+    body_text = (
+        f"새 {type_label} 신청이 접수되었습니다.\n\n"
+        f"· 신청 ID: {application_id}\n"
+        f"· 접수 일시: {created_at}\n"
+        f"· 유형: {type_label}\n"
+        f"· 기관/활동명: {organization_name}\n"
+        f"· 신청자: {contact_name}\n"
+        f"· 이메일: {contact_email}\n"
+        f"· 전화: {mask_phone(phone)}\n"
+        f"· 문의: {inquiry_summary or '없음'}\n\n"
+        f"상세 확인·검토: {admin_link}\n"
+    )
+    body_html = (
+        f"<p>새 <strong>{escape(type_label)}</strong> 신청이 접수되었습니다.</p>"
+        f"<ul>"
+        f"<li>신청 ID: {escape(application_id)}</li>"
+        f"<li>접수 일시: {escape(created_at)}</li>"
+        f"<li>기관/활동명: {escape(organization_name)}</li>"
+        f"<li>신청자: {escape(contact_name)}</li>"
+        f"<li>이메일: {escape(contact_email)}</li>"
+        f"<li>전화: {escape(mask_phone(phone))}</li>"
+        f"<li>문의: {escape(inquiry_summary) or '없음'}</li>"
+        f"</ul>"
+        f'<p><a href="{escape(admin_link, quote=True)}">관리자 신청 관리 화면에서 확인</a></p>'
+    )
+    return _send_email(settings.signup_notice_email, subject, body_text, body_html)
+
+
 def send_report_email(to_email: str, report_link: str) -> bool:
     """로그인 없이 열람 가능한 7일 만료 리포트 링크를 발송한다."""
     from html import escape

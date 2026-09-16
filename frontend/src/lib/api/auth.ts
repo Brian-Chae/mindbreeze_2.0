@@ -31,15 +31,6 @@ export interface OtpVerifyResponse {
   email_verify_token: string;
 }
 
-export interface CounselorRegisterPayload {
-  email: string;
-  password: string;
-  name: string;
-  org_code: string;
-  email_verify_token: string;
-  consents: { tos: boolean; privacy: boolean; sensitive: boolean };
-}
-
 export interface ClientRegisterPayload {
   email: string;
   password: string;
@@ -48,6 +39,12 @@ export interface ClientRegisterPayload {
   consents: { tos: boolean; privacy: boolean; sensitive: boolean };
   /** 초대 링크 토큰 — 있으면 가입 시 상담사 자동 연결 */
   invite_token?: string;
+  /** SDD-073: 가입 시점 개인정보 (전화번호는 선택) */
+  gender?: 'male' | 'female' | 'other';
+  birth_date?: string;
+  phone?: string;
+  /** SDD-073: 초대한 상담사 코드 (invite_token 이 있으면 생략) */
+  counselor_code?: string;
 }
 
 export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
@@ -55,9 +52,6 @@ export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
 
 export const verifyOtp = (email: string, code: string): Promise<OtpVerifyResponse> =>
   apiClient.post('/auth/email/verify-otp', { email, code }, { skipAuth: true });
-
-export const registerCounselor = (data: CounselorRegisterPayload): Promise<LoginResponse> =>
-  apiClient.post('/auth/register/counselor', data, { skipAuth: true });
 
 export const registerClient = (data: ClientRegisterPayload): Promise<LoginResponse> =>
   apiClient.post('/auth/register/client', data, { skipAuth: true });

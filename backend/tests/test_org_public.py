@@ -24,22 +24,14 @@ def _db():
 
 
 def _register_counselor(client, email: str, org_code: str, name: str = "김상담") -> dict:
-    payload = {
-        "org_code": org_code,
-        "email": email,
-        "password": VALID_PASSWORD,
-        "name": name,
-        "email_verify_token": email_verify_service.generate_email_verify_token(email),
-        "consents": _consents(),
-    }
-    res = client.post("/api/v1/auth/register/counselor", json=payload)
-    assert res.status_code == 201, res.text
-    body = res.json()
-    token = body["access_token"]
+    # SDD-073: 상담사 직접 가입 API 차단 → 테스트 상담사는 DB에 직접 생성한다.
+    from tests.conftest import create_test_counselor
+
+    created = create_test_counselor(email, name=name, org_code=org_code)
     return {
-        "id": body["user"]["id"],
+        "id": created["id"],
         "email": email,
-        "h": {"Authorization": f"Bearer {token}"},
+        "h": {"Authorization": f"Bearer {created['access_token']}"},
     }
 
 

@@ -65,14 +65,6 @@ export interface ResendCounselorInviteResponse {
   invite_expires_at: string;
 }
 
-export interface RegisterOrgPayload {
-  name: string;
-  ceo_name: string;
-  biz_number: string;
-  address: string;
-  phone: string;
-}
-
 export interface HandleRequestPayload {
   status: 'approved' | 'rejected';
   reason?: string;
@@ -87,9 +79,6 @@ export const searchOrgs = (q: string, region?: string): Promise<OrgSearchItem[]>
   const qs = params.toString();
   return apiClient.get<OrgSearchItem[]>(`${PREFIX}/search${qs ? `?${qs}` : ''}`, { skipAuth: true });
 };
-
-export const registerOrg = (body: RegisterOrgPayload): Promise<Org> =>
-  apiClient.post<Org>(`${PREFIX}/register`, body);
 
 export const getOrg = (orgId: string): Promise<Org> =>
   apiClient.get<Org>(`${PREFIX}/${orgId}`, { skipAuth: true });

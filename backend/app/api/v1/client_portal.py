@@ -115,6 +115,13 @@ def add_counselor_by_code(
             detail="상담사를 찾을 수 없습니다",
         )
 
+    # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
+    if counselor.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+        )
+
     # 이미 연결되어 있는지 확인
     existing = (
         db.query(ClientCounselorLink)

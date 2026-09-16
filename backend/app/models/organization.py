@@ -29,6 +29,17 @@ class Organization(Base):
         ForeignKey("users.id", use_alter=True, name="fk_organizations_primary_admin_id"),
         nullable=True,
     )
+    # SDD-073: 기관 유형 — institution(일반 기관) / individual(개인 상담사의 1인 기관)
+    kind: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="institution", server_default="institution"
+    )
+    # SDD-073: 개인 기관(kind=individual)의 소유 상담사 참조.
+    # primary_admin_id(org_admin 담당자)의 의미는 바꾸지 않는다.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", use_alter=True, name="fk_organizations_owner_user_id"),
+        nullable=True,
+    )
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

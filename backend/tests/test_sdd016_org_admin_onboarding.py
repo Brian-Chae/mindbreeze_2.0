@@ -33,7 +33,8 @@ def _register(client, email: str, role: str = "client") -> dict:
     }
     if role == "counselor":
         payload["org_code"] = create_test_org()
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     return {
@@ -440,8 +441,8 @@ def test_20_레거시_register의_client는_계속_허용(client):
     assert res.json()["role"] == "client"
 
 
-def test_21_상담사는_기관코드_경로로만_가입(client):
-    """SDD-015 경로는 기관 코드가 있으면 정상 동작한다."""
+def test_21_상담사_기관코드_직접가입_차단(client):
+    """SDD-073: org_code 직접 가입 경로는 우회로이므로 유효한 코드여도 403."""
     code = create_test_org("정상센터")
     res = client.post(
         "/api/v1/auth/register/counselor",
@@ -454,5 +455,5 @@ def test_21_상담사는_기관코드_경로로만_가입(client):
             "consents": _consents(),
         },
     )
-    assert res.status_code == 201
-    assert res.json()["user"]["role"] == "counselor"
+    assert res.status_code == 403
+    assert "직접 가입" in res.json()["detail"]

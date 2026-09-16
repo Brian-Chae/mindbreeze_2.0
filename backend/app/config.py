@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # SDD-052: 이메일 링크가 여는 프론트엔드 리포트 열람 주소
     report_email_base_url: str = "https://dev.mindbreeze.looxidlabs.com"
 
+    # SDD-073: 가입 신청(기관/개인 상담사) 운영 알림 수신자 — 서버 설정으로 고정하며
+    # 클라이언트 입력으로 바꿀 수 없다.
+    signup_notice_email: str = "brian.chae@looxidlabs.com"
+
     # S3
     s3_bucket: str = "mindbreeze-dev"
     s3_region: str = "ap-northeast-1"

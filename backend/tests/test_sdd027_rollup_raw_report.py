@@ -22,7 +22,8 @@ def _register(client, email: str, role: str = "counselor", org_code: str | None 
     }
     if role == "counselor":
         payload["org_code"] = org_code if org_code is not None else create_test_org()
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     return {"id": body["user"]["id"], "h": {"Authorization": f"Bearer {body['access_token']}"}}

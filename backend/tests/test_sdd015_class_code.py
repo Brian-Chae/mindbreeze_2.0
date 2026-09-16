@@ -22,6 +22,22 @@ def _db():
 
 
 def _register(client, email: str, role: str = "counselor", org_code: str | None = None) -> dict:
+    if role == "counselor":
+        # SDD-073: 상담사 직접 가입 API 차단 → 테스트 상담사는 DB에 직접 생성한다.
+        from tests.conftest import create_test_counselor
+
+        created = create_test_counselor(
+            email,
+            name=f"{role}-{email.split('@')[0]}",
+            org_code=org_code if org_code is not None else create_test_org(),
+        )
+        token = created["access_token"]
+        return {
+            "id": created["id"],
+            "token": token,
+            "h": {"Authorization": f"Bearer {token}"},
+        }
+
     payload = {
         "email": email,
         "password": VALID_PASSWORD,
@@ -29,9 +45,8 @@ def _register(client, email: str, role: str = "counselor", org_code: str | None 
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": _consents(),
     }
-    if role == "counselor":
-        payload["org_code"] = org_code if org_code is not None else create_test_org()
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body["access_token"]
@@ -139,9 +154,10 @@ def test_05_잘못된_기관코드_가입_거부_400(client):
         "email_verify_token": email_verify_service.generate_email_verify_token("c05@test.com"),
         "consents": _consents(),
     }
+    # SDD-073: 상담사 직접 가입 자체가 차단됨 (기관 코드 유효 여부와 무관하게 403)
     res = client.post("/api/v1/auth/register/counselor", json=payload)
-    assert res.status_code == 400
-    assert "유효하지 않은 기관 코드" in res.json()["detail"]
+    assert res.status_code == 403
+    assert "직접 가입" in res.json()["detail"]
 
 
 def test_06_기관코드_없이_상담사_가입_거부_400(client):
@@ -152,9 +168,10 @@ def test_06_기관코드_없이_상담사_가입_거부_400(client):
         "email_verify_token": email_verify_service.generate_email_verify_token("c06@test.com"),
         "consents": _consents(),
     }
+    # SDD-073: 상담사 직접 가입 자체가 차단됨
     res = client.post("/api/v1/auth/register/counselor", json=payload)
-    assert res.status_code == 400
-    assert "기관 코드를 입력" in res.json()["detail"]
+    assert res.status_code == 403
+    assert "직접 가입" in res.json()["detail"]
 
 
 # ---------------------------------------------------------------------------

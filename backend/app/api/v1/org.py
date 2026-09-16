@@ -13,7 +13,6 @@ from app.schemas.org import (
     CounselorResponse,
     JoinRequestResponse,
     JoinRequestUpdate,
-    OrganizationCreate,
     OrganizationResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
@@ -75,15 +74,20 @@ async def search_orgs(
     ]
 
 
-@router.post("/register", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", status_code=status.HTTP_403_FORBIDDEN)
 async def register_org(
-    req: OrganizationCreate,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),  # noqa: ARG001 — 인증만 요구
 ):
-    """센터 등록 — 신청자를 OrgAdmin으로 승격."""
-    org = org_service.create_organization(req, current_user["id"], db)
-    return _serialize_org(org)
+    """센터 자가 등록 차단 (SDD-073).
+
+    기존 흐름(신청자 → org_admin 자가 승격)은 플랫폼 관리자 등록 정책의 우회로였다.
+    기관 등록은 /signup-applications/organization 가입 상담 접수 후
+    플랫폼 관리자의 기관 등록(/admin/orgs)으로만 진행한다.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="기관 등록은 가입 상담 신청 후 플랫폼 관리자를 통해 진행됩니다.",
+    )
 
 
 @router.get("/requests", response_model=list[JoinRequestResponse])

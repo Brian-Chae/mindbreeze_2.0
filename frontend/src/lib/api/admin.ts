@@ -168,3 +168,67 @@ export const createAdminOrganization = (
   payload: AdminOrganizationCreatePayload,
 ): Promise<AdminOrganizationDto> =>
   apiClient.post<AdminOrganizationDto>('/admin/orgs', payload);
+
+// ---------------------------------------------------------------------------
+// SDD-073: 가입 신청(기관 상담 / 개인 상담사) 관리
+// ---------------------------------------------------------------------------
+
+export interface SignupApplicationDto {
+  id: string;
+  application_type: 'organization' | 'individual_counselor';
+  organization_name: string;
+  contact_name: string;
+  email: string;
+  phone: string | null;
+  status: 'submitted' | 'reviewing' | 'approved' | 'rejected' | 'withdrawn';
+  notify_status: 'pending' | 'queued' | 'sent' | 'failed';
+  created_at: string | null;
+}
+
+export interface SignupApplicationDetailDto extends SignupApplicationDto {
+  inquiry: string | null;
+  specialties: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  organization_id: string | null;
+  user_id: string | null;
+  notified_at: string | null;
+}
+
+export interface SignupApplicationListResponse {
+  items: SignupApplicationDto[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface SignupApplicationActionResponse {
+  application: SignupApplicationDetailDto;
+  invite_sent: boolean;
+}
+
+export const listSignupApplications = (
+  params?: { application_type?: string; status?: string; page?: number; size?: number },
+): Promise<SignupApplicationListResponse> => {
+  const qs = buildQuery(params);
+  return apiClient.get<SignupApplicationListResponse>(`/admin/signup-applications${qs}`);
+};
+
+export const getSignupApplication = (id: string): Promise<SignupApplicationDetailDto> =>
+  apiClient.get<SignupApplicationDetailDto>(`/admin/signup-applications/${id}`);
+
+export const approveSignupApplication = (id: string): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/approve`);
+
+export const rejectSignupApplication = (
+  id: string,
+  reason?: string,
+): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/reject`, {
+    reason,
+  });
+
+export const resendSignupApplicationNotice = (
+  id: string,
+): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/resend-notice`);

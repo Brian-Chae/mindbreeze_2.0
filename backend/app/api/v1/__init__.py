@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from app.config import settings
 from app.api.v1 import normalization
-from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, records, reports, admin, notifications
+from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, records, reports, admin, notifications, signup_applications
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -20,6 +20,8 @@ router.include_router(audio.router)
 router.include_router(records.router)
 router.include_router(reports.router)
 router.include_router(admin.router)
+router.include_router(signup_applications.router)
+router.include_router(signup_applications.admin_router)
 router.include_router(notifications.router)
 router.include_router(dashboard.router)
 router.include_router(org_public.router)

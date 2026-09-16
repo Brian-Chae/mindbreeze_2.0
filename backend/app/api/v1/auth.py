@@ -31,6 +31,8 @@ from app.schemas.auth import (
     ClientProfileResponse,
     ClientProfileUpdate,
     ConsentRequest,
+    CounselorCodeCheckRequest,
+    CounselorCodeCheckResponse,
     CounselorProfileResponse,
     CounselorProfileUpdate,
     EmailVerifyTokenResponse,
@@ -45,7 +47,6 @@ from app.schemas.auth import (
     QualificationItem,
     RefreshRequest,
     RegisterClientRequest,
-    RegisterCounselorRequest,
     RegisterRequest,
     SetPasswordRequest,
     TokenResponse,
@@ -277,47 +278,61 @@ def _create_user_with_role(
     return user, access_token, refresh_token
 
 
-@router.post("/register/counselor", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
-async def register_counselor(req: RegisterCounselorRequest, db: Session = Depends(get_db)):
-    """상담사 가입 — SDD-015에 따라 유효한 기관 코드(org_code)가 필수."""
-    from app.services import org_service
+@router.post("/register/counselor", status_code=status.HTTP_403_FORBIDDEN)
+async def register_counselor():
+    """상담사 직접 가입 차단 (SDD-073).
 
-    if not (req.org_code or "").strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="기관 코드를 입력해야 합니다")
-
-    org = org_service.get_organization_by_code(req.org_code, db)
-    if org is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="유효하지 않은 기관 코드입니다")
-
-    user, access, refresh = _create_user_with_role(
-        role="counselor",
-        email_verify_token=req.email_verify_token,
-        request_email=req.email,
-        password=req.password,
-        name=req.name,
-        consents=req.consents,
-        db=db,
+    기존 org_code 직접 가입 경로는 플랫폼 관리자 등록 정책의 우회로였다.
+    상담사 계정은 기관 담당자의 초대(SDD-017) 또는 개인 상담사 신청
+    (/signup-applications/individual-counselor) 승인으로만 생성된다.
+    """
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=(
+            "상담사 직접 가입은 지원하지 않습니다. 기관 담당자의 초대를 받거나 "
+            "개인 상담사 신청을 이용해 주세요."
+        ),
     )
-    # 기관 코드로 확인된 기관에 소속시킨다
-    user.org_id = org.id
-    db.commit()
-    db.refresh(user)
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access,
-        refresh_token=refresh,
-    )
+
+
+def _parse_birth_date(value: str | None) -> date | None:
+    """생년월일 검증 — 존재하는 날짜이며 미래 날짜는 불가."""
+    if not value:
+        return None
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
+        )
+    if parsed > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="생년월일은 미래 날짜일 수 없습니다",
+        )
+    return parsed
 
 
 @router.post("/register/client", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
 async def register_client(req: RegisterClientRequest, db: Session = Depends(get_db)):
     """내담자(회원) 가입.
 
-    초대 링크(invite_token)로 들어온 경우 초대한 상담사에 자동 연결한다.
+    SDD-073: 가입 시점에 성별·생년월일·전화번호(선택)와 초대 상담사 코드를 함께 받는다.
+    - invite_token 이 있으면 코드 대신 초대 상담사를 확정한다(기존 경로 유지).
+    - counselor_code 는 사용자 생성 전에 검증해 잘못된 코드로 불완전한 가입을 남기지 않는다.
     가입 이메일은 _create_user_with_role에서 email_verify_token으로 이미 검증되므로,
     link_invited_client의 이메일 일치 검증 기준(user.email)으로 안전하게 쓸 수 있다.
     """
-    from app.services import client_service
+    from app.services import client_service, onboarding_service, signup_application_service
+
+    # 사용자 생성 전에 실패 가능한 입력을 먼저 검증한다 (불완전 가입 방지)
+    birth = _parse_birth_date(req.birth_date)
+    matched_counselor = None
+    if not req.invite_token and req.counselor_code:
+        matched_counselor, _, _ = signup_application_service.validate_counselor_code(
+            req.counselor_code, db
+        )
 
     user, access, refresh = _create_user_with_role(
         role="client",
@@ -329,6 +344,27 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
         db=db,
     )
 
+    # SDD-073: 가입 정보 저장 — User.phone + ClientProfile(gender/birth_date)
+    phone = (req.phone or "").strip() or None
+    if phone:
+        user.phone = phone
+    if req.gender or birth:
+        profile = ClientProfile(user_id=user.id, concerns=[], interests=[])
+        profile.gender = req.gender
+        profile.birth_date = birth
+        db.add(profile)
+    db.commit()
+
+    # 온보딩 중복 입력 제거 — 가입에서 받은 값으로 step1·2를 미리 마킹한다
+    onboarding_service.save_step(str(user.id), 1, {"name": user.name, "phone": phone}, db)
+    if req.gender or birth:
+        onboarding_service.save_step(
+            str(user.id),
+            2,
+            {"gender": req.gender, "birth_date": req.birth_date, "concerns": [], "interests": []},
+            db,
+        )
+
     # 초대 토큰이 있으면 상담사 자동 연결.
     # 이메일 불일치/만료/무효 토큰이면 조용히 스킵되고(가입은 성공),
     # 내담자는 온보딩에서 상담사 코드를 수동 입력하는 폴백을 따른다.
@@ -336,12 +372,58 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
         client_service.link_invited_client(req.invite_token, user, db)
         # 새로 생성된 링크가 응답 관계에 반영되도록 사용자 재조회
         db.refresh(user)
+    elif matched_counselor is not None:
+        # 최종 가입 시 코드 재검증 후 연결 (중복 방지·재활성화·채팅방 생성 공용 규칙 재사용)
+        matched_counselor, matched_profile, _ = signup_application_service.validate_counselor_code(
+            req.counselor_code, db
+        )
+        client_service.assign_counselor(user.id, matched_counselor.id, db)
+        onboarding_service.save_step(
+            str(user.id),
+            4,
+            {
+                "counselor_code": matched_profile.counselor_code,
+                "counselor_id": str(matched_counselor.id),
+            },
+            db,
+        )
+        db.refresh(user)
+
+    # 온보딩 재개 지점 보정 — save_step 은 current_step 을 최대값으로 올리므로
+    # (예: 가입에서 step1·2·4 저장 시 4), 첫 미완료 단계(step3 프로필)로 되돌려
+    # 온보딩 완료 게이트(step1~4 필수)에 걸리지 않게 한다.
+    progress = onboarding_service.get_progress(user.id, db)
+    saved_steps = progress.steps or {}
+    for n in (1, 2, 3, 4):
+        if f"step{n}" not in saved_steps:
+            progress.current_step = n
+            break
+    db.commit()
 
     return LoginResponse(
         user=_to_user_response(user),
         access_token=access,
         refresh_token=refresh,
     )
+
+
+@router.post("/counselor-code/check", response_model=CounselorCodeCheckResponse)
+async def check_counselor_code(
+    req: CounselorCodeCheckRequest,
+    db: Session = Depends(get_db),
+):
+    """가입 전 상담사 코드 확인 (SDD-073).
+
+    OTP 검증을 통과한 사용자(email_verify_token 보유)만 조회할 수 있게 해
+    코드 무차별 조회를 제한한다. 응답에는 표시명·기관명만 담는다.
+    """
+    email_verify_service.verify_email_token(req.email_verify_token)
+    from app.services import signup_application_service
+
+    counselor, _, org_name = signup_application_service.validate_counselor_code(
+        req.counselor_code, db
+    )
+    return CounselorCodeCheckResponse(counselor_name=counselor.name, organization_name=org_name)
 
 
 # ---------------------------------------------------------------------------

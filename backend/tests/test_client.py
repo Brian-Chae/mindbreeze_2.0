@@ -2,24 +2,10 @@
 
 
 def _register_counselor(client, email="counselor@test.com"):
-    from app.services import email_verify_service
-    from tests.conftest import create_test_org
+    # SDD-073: 상담사 직접 가입 API 차단 → 테스트 상담사는 DB에 직접 생성한다.
+    from tests.conftest import create_test_counselor, create_test_org
 
-    token = email_verify_service.generate_email_verify_token(email)
-    res = client.post(
-        "/api/v1/auth/register/counselor",
-        json={
-            # SDD-015: 상담사 가입에 필요한 기관 코드
-            "org_code": create_test_org(),
-            "email": email,
-            "password": "Test1234!",
-            "name": "김상담",
-            "email_verify_token": token,
-            "consents": {"tos": True, "privacy": True, "sensitive": True},
-        },
-    )
-    assert res.status_code == 201, res.text
-    return res.json()["access_token"]
+    return create_test_counselor(email, name="김상담", org_code=create_test_org())["access_token"]
 
 
 def test_초대_토큰_생성_및_조회(client):

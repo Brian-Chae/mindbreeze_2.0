@@ -59,6 +59,27 @@ class RegisterClientRequest(_RegisterBase):
     # 초대 링크를 통한 가입 시 상담사 자동 연결에 사용하는 초대 토큰(선택).
     # ClientInvite.token은 String(64)이므로 과도한 입력은 쿼리 전에 거른다.
     invite_token: str | None = Field(None, max_length=128)
+    # SDD-073: 가입 시점에 수집하는 개인정보. 전화번호는 선택(문자 인증 없음).
+    gender: str | None = Field(None, pattern="^(male|female|other)$")
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
+    phone: str | None = Field(None, max_length=20)
+    # SDD-073: 초대한 상담사 코드(6자리 counselor_code).
+    # invite_token 이 있으면 코드 대신 초대 상담사를 확정한다.
+    counselor_code: str | None = Field(None, max_length=12)
+
+
+class CounselorCodeCheckRequest(BaseModel):
+    """SDD-073 — 가입 전 상담사 코드 확인. OTP 검증(email_verify_token) 후에만 허용."""
+
+    counselor_code: str = Field(min_length=1, max_length=12)
+    email_verify_token: str = Field(min_length=1)
+
+
+class CounselorCodeCheckResponse(BaseModel):
+    """코드 확인 응답 — 연결 대상 표시명·기관명만 노출한다(연락처·내담자 정보 금지)."""
+
+    counselor_name: str
+    organization_name: str | None = None
 
 
 class LoginRequest(BaseModel):

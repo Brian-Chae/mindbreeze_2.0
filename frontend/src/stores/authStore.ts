@@ -4,14 +4,12 @@ import { create } from 'zustand';
 import { ApiError, tokenStorage } from '../lib/api/client';
 import {
   login as apiLogin,
-  registerCounselor as apiRegisterCounselor,
   registerClient as apiRegisterClient,
   logout as apiLogout,
   refreshToken as apiRefresh,
   loginGoogle as apiLoginGoogle,
   type User,
   type UserRole,
-  type CounselorRegisterPayload,
   type ClientRegisterPayload,
   type LoginResponse,
 } from '../lib/api/auth';
@@ -30,7 +28,6 @@ interface AuthState {
   login: (email: string, password: string, role?: UserRole) => Promise<User>;
   loginGoogle: (idToken: string, inviteToken?: string, role?: string) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
-  registerCounselor: (data: CounselorRegisterPayload) => Promise<User>;
   registerClient: (data: ClientRegisterPayload) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
   logout: () => Promise<void>;
@@ -108,18 +105,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   devLogin: async (userId): Promise<User> => {
     const res = await loginDevUser(userId);
-    const user = applyLogin(res);
-    set({
-      user,
-      accessToken: res.access_token,
-      refreshToken: res.refresh_token,
-      isAuthenticated: true,
-    });
-    return user;
-  },
-
-  registerCounselor: async (data): Promise<User> => {
-    const res = await apiRegisterCounselor(data);
     const user = applyLogin(res);
     set({
       user,

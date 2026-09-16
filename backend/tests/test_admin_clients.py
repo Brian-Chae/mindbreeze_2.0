@@ -22,19 +22,27 @@ def _db():
 
 
 def _register(client, email: str, role: str = "counselor") -> dict:
-    """counselor/client 가입. counselor 는 유효 기관 코드로 active 계정이 된다."""
+    """counselor/client 계정 준비. counselor 는 DB에 직접 active 로 만든다(SDD-073)."""
     from app.services import email_verify_service
-    from tests.conftest import create_test_org
+    from tests.conftest import create_test_counselor, create_test_org
+
+    if role == "counselor":
+        created = create_test_counselor(email, name=f"테스트{role}", org_code=create_test_org())
+        return {
+            "id": created["id"],
+            "token": created["access_token"],
+            "h": {"Authorization": f"Bearer {created['access_token']}"},
+        }
 
     payload = {
-        "org_code": create_test_org(),  # client 가입에서는 무시됨
         "email": email,
         "password": VALID_PASSWORD,
         "name": f"테스트{role}",
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": _consents(),
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     return {
