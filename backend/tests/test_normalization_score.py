@@ -84,7 +84,8 @@ def test_report_active_model_and_serialization():
         db.add(inactive)
         db.flush()
         cohort = _build_eeg_content(sid, db)
-        assert cohort['normalization_source'] == 'cohort'
+        # SDD-069: is_active가 없으면 가장 최근 모델(version desc)을 기본 적용
+        assert cohort['normalization_source'] == 'standard_model'
         model = NormalizationModel(version=17, n_samples=5, is_active=True,
                                    params={'stressIndex': {'m': math.log(2+1e-9), 's': 1, 'direction': -1}})
         db.add(model)

@@ -56,3 +56,44 @@ test('변화량만 있는 구형 계약은 임의의 20분 그래프를 만들�
   assert.doesNotMatch(html, /<polyline|20분/);
   assert.equal((html.match(/추이를 분석할 데이터가 부족해요/g) || []).length, 6);
 });
+
+test('여섯 신호의 개선·반대·유지 방향을 카드에서 구분한다', () => {
+  const ids = ['respiratory_rate', 'heart_rate', 'hrv', 'focus', 'relaxation', 'emotional_stability'];
+  for (const mode of ['better', 'worse', 'stable']) {
+    const changes = ids.map((id, index) => ({ id, early: 50, late: mode === 'stable' ? 50 : 50 + (index < 2 ? -10 : 10) * (mode === 'better' ? 1 : -1) }));
+    const view = adaptReportContent({ eeg: { status: 'valid', changes } }).displayNarrative;
+    const html = renderToStaticMarkup(React.createElement(NarrativeSections, { narrative: view }));
+    const cards = html.match(/<article class="metric">[\s\S]*?<\/article>/g);
+    assert.equal(cards.length, 6);
+    for (const card of cards) {
+      assert.match(card, mode === 'better' ? /좋아졌어요/ : mode === 'worse' ? /주의가 필요해요/ : /비슷하게 유지됐어요/);
+      assert.match(card, /metric-definition/);
+      assert.match(card, /명상 시작\(전반\).*마무리\(후반\)/);
+    }
+    assert.match(html, /심박변이\(심장 박동 간격의 변화\)/);
+    assert.match(html, /밀리초/);
+    assert.doesNotMatch(html, /HRV|\dms|bpm/);
+  }
+});
+
+test('저장된 LLM 서사도 쉽게 표시하며 원본과 결측은 보존한다', () => {
+  const content = { narrative: { journey: '세션의 전반 대비 후반 HRV 지표가 8ms 늘었어요.', body: 'HRV는 유지됐어요.', mind: '지표를 살펴봐요.', closing: '다음 세션에도 함께해요.' } };
+  const original = structuredClone(content);
+  const view = adaptReportContent(content).displayNarrative;
+  assert.match(view.journey, /명상 시간.*명상 시작\(전반\).*마무리\(후반\).*심박변이.*몸·마음 신호.*8밀리초/);
+  assert.doesNotMatch([view.bodyText, view.mindText, view.closing].join(' '), /HRV|세션|지표/);
+  assert.equal(view.body.length, 0);
+  assert.equal(view.mind.length, 0);
+  assert.deepEqual(content, original);
+});
+
+test('웹 보조 카드의 집중 안정과 정서 안정 정의는 서사 근사와 구별한다', () => {
+  const EegMetricsGrid = require('../src/components/reports/EegMetricsGrid.tsx').default;
+  const eeg = adaptReportContent(raw).eeg;
+  const html = renderToStaticMarkup(React.createElement(EegMetricsGrid, { eeg, reportType: 'client' }));
+  assert.match(html, /집중 관련 뇌파 신호가 얼마나 일정하게 유지됐는지/);
+  assert.match(html, /정서 안정과 관련된 뇌파 신호/);
+  assert.doesNotMatch(html, /스트레스 신호를 반대로/);
+  assert.match(html, /산출 불가/);
+  assert.doesNotMatch(html, /좋아졌어요/);
+});

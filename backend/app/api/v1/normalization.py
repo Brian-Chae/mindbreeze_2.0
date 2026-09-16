@@ -82,11 +82,18 @@ def compute_model(db: Session = Depends(get_db)) -> NormalizationModelResponse:
                 status_code=400, detail="기준 데이터가 부족합니다 (최소 5개 필요)"
             )
         version = db.scalar(select(func.max(NormalizationModel.version)))
+        # SDD-069: 새로 계산한 모델을 "가장 최근 활성 모델"로 자동 활성화
+        # (이전 is_active=True 모델은 비활성화 — partial unique index 충족)
+        db.execute(
+            update(NormalizationModel)
+            .where(NormalizationModel.is_active.is_(True))
+            .values(is_active=False)
+        )
         model = NormalizationModel(
             version=(version or 0) + 1,
             n_samples=len(baselines),
             params=compute_distribution(baselines),
-            is_active=False,
+            is_active=True,
         )
         db.add(model)
         db.flush()
@@ -114,6 +121,13 @@ def get_active_model(
     model = db.scalar(
         select(NormalizationModel).where(NormalizationModel.is_active.is_(True))
     )
+    if model is None:
+        # SDD-069: 활성 모델이 없으면 가장 최근 계산된 모델을 기본으로 적용
+        model = db.scalar(
+            select(NormalizationModel)
+            .order_by(NormalizationModel.version.desc(), NormalizationModel.id.desc())
+            .limit(1)
+        )
     return ActiveNormalizationModelResponse(
         active=NormalizationModelResponse.model_validate(model) if model is not None else None
     )

@@ -20,3 +20,10 @@
 .report-sample-toolbar button:focus-visible{outline:3px solid #5F0080;outline-offset:2px}
 .report-sample-scroll{overflow:auto;min-height:0;flex:1;overscroll-behavior:contain}
 @media(max-width:560px){.report-sample-modal{width:100%;height:100dvh;border:0;border-radius:0}.report-sample-toolbar{padding:10px 16px}}
+
+/* SDD-068: 긴 한글 설명은 화면과 인쇄에서 접지 않고 읽을 수 있게 표시한다. */
+.narrative-report .metric-title{flex-wrap:wrap}
+.narrative-report .metric-title h3{overflow-wrap:anywhere}
+.narrative-report .metric-copy>.change-interpretation{margin-top:12px;color:var(--green-ink);font-size:.8125rem;font-weight:600}
+.narrative-report .metric-copy>.metric-definition{margin-top:12px;font-size:.8125rem}
+.narrative-report .metric-copy>.metric-direction-guide{margin-top:6px;font-size:.75rem;color:var(--gray)}

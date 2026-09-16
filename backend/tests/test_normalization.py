@@ -51,7 +51,7 @@ def test_baseline_model_lifecycle(client):
     assert first.status_code == 201, first.text
     first = first.json()
     assert first['version'] == 1 and first['n_samples'] == 5
-    assert first['is_active'] is False
+    assert first['is_active'] is True
     assert len(first['params']) == 11
     assert first['params']['faa'] == {'m': 3.0, 's': 1.4826, 'direction': -1}
     second = client.post(f'{ROOT}/models/compute').json()

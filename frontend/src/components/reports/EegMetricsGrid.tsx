@@ -7,6 +7,7 @@ import type { EegMetricKey, ReportEegContent } from '../../lib/api/report';
 import {
   CLIENT_PRIMARY_METRIC_KEYS,
   EEG_METRIC_KEYS,
+  EEG_METRIC_DEFINITIONS,
   resolveMetricLabel,
 } from '../../lib/api/report';
 import type { ReportType } from '../../lib/api/reports';
@@ -22,10 +23,12 @@ function MetricCard({
   label,
   value,
   dense,
+  description,
 }: {
   label: string;
   value: number | null;
   dense: boolean;
+  description: string;
 }) {
   const display =
     value === null ? '산출 불가' : Number.isInteger(value) ? String(value) : value.toFixed(1);
@@ -50,6 +53,7 @@ function MetricCard({
       >
         {display}
       </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-[#5A5A5A]">{description}</p>
       {value !== null && (
         <div className="mt-0.5 font-mono text-[10px] text-[#B0B0B0]">/ 100</div>
       )}
@@ -82,10 +86,10 @@ export default function EegMetricsGrid({
       <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
-            eeg metrics
+            몸·마음 신호
           </p>
           <h3 className="mt-1 text-[14px] font-bold text-[#1F1F1F]">
-            {isCounselor ? '7지표 참고' : '뇌파 지표 참고'}
+            {isCounselor ? '뇌파 신호 7가지 참고' : '뇌파 신호 참고'}
           </h3>
           {compact && (
             <p className="mt-0.5 text-[11px] text-[#9B9B9B]">
@@ -106,6 +110,7 @@ export default function EegMetricsGrid({
             key={key}
             label={resolveMetricLabel(key, reportType, eeg.summary_labels)}
             value={eeg.metrics[key]}
+            description={EEG_METRIC_DEFINITIONS[key]}
             dense={compact || !isCounselor}
           />
         ))}

@@ -58,6 +58,17 @@ export const COUNSELOR_METRIC_LABELS: Record<EegMetricKey, string> = {
   relaxation_score: 'Relaxation',
 };
 
+/** 보조 점수의 뜻. 서사 시계열과 점수의 계산 의미를 혼동하지 않는다. */
+export const EEG_METRIC_DEFINITIONS: Record<EegMetricKey, string> = {
+  focus_index_stability_score: '집중 관련 뇌파 신호가 얼마나 일정하게 유지됐는지 보여줘요.',
+  total_neural_activity_score: '전체 뇌파 활동의 크기를 참고 범위와 비교한 값이에요.',
+  cognitive_load_stability_score: '생각할 때의 부담과 관련된 뇌파 신호가 얼마나 일정했는지 보여줘요.',
+  stress_score: '긴장과 관련된 뇌파 신호를 바탕으로 한 참고값이에요. 높은 점수는 긴장 신호가 적은 쪽을 뜻해요.',
+  hemispheric_balance_score: '왼쪽과 오른쪽 뇌파 활동의 차이를 살펴보는 참고값이에요.',
+  emotional_stability_score: '정서 안정과 관련된 뇌파 신호를 살펴보는 참고값이며, 실제 감정을 직접 측정하지 않아요.',
+  relaxation_score: '편안한 상태와 관련된 뇌파 신호를 참고 범위와 비교한 값이에요.',
+};
+
 /** 내담자 기본 노출 상위 지표 (나머지 접힘) */
 export const CLIENT_PRIMARY_METRIC_KEYS: readonly EegMetricKey[] = [
   'relaxation_score',

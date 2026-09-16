@@ -65,7 +65,7 @@ const UNIT_THRESHOLDS: Record<'respiratory_rate' | 'heart_rate' | 'hrv', number>
 const METRIC_LABELS: Record<MetricId, string> = {
   respiratory_rate: '호흡수',
   heart_rate: '심박수',
-  hrv: 'HRV',
+  hrv: '심박변이(심장 박동 간격의 변화)',
   focus: '집중도',
   relaxation: '이완도',
   emotional_stability: '감정안정도',
@@ -73,7 +73,7 @@ const METRIC_LABELS: Record<MetricId, string> = {
 
 const SENTENCE_TEMPLATES: Record<MetricId, Record<Direction, string>> = {
   respiratory_rate: {
-    down: '호흡이 깊고 느려졌어요',
+    down: '호흡이 느려졌어요',
     stable: '호흡이 고르게 유지됐어요',
     up: '호흡이 빨라졌어요',
   },
@@ -83,9 +83,9 @@ const SENTENCE_TEMPLATES: Record<MetricId, Record<Direction, string>> = {
     up: '심박이 빨라졌어요',
   },
   hrv: {
-    down: '자율신경이 긴장 상태였어요',
-    stable: '자율신경이 유지됐어요',
-    up: '자율신경 회복이 좋았어요',
+    down: '심장 박동 간격의 변화가 줄었어요',
+    stable: '심장 박동 간격의 변화가 비슷했어요',
+    up: '심장 박동 간격의 변화가 늘었어요',
   },
   focus: {
     down: '집중이 흔들렸어요',
@@ -98,9 +98,9 @@ const SENTENCE_TEMPLATES: Record<MetricId, Record<Direction, string>> = {
     up: '이완이 깊어졌어요',
   },
   emotional_stability: {
-    down: '감정 기복이 있었어요',
-    stable: '감정이 유지됐어요',
-    up: '감정이 평온해졌어요',
+    down: '마음의 안정과 관련된 신호가 낮아졌어요',
+    stable: '마음의 안정과 관련된 신호가 유지됐어요',
+    up: '마음의 안정과 관련된 신호가 높아졌어요',
   },
 };
 
@@ -151,8 +151,8 @@ function round1(n: number): number {
 function formatUnitDelta(id: 'respiratory_rate' | 'heart_rate' | 'hrv', absDelta: number): string {
   const v = Number.isInteger(absDelta) ? String(absDelta) : String(round1(absDelta));
   if (id === 'respiratory_rate') return `${v}회/분`;
-  if (id === 'heart_rate') return `${v}bpm`;
-  return `${v}ms`;
+  if (id === 'heart_rate') return `${v}회/분`;
+  return `${v}밀리초`;
 }
 
 /**
@@ -308,4 +308,42 @@ export function buildReportNarrative(inputs: MetricChangeInput[]): ReportNarrati
     mind,
     closing: closingSentence(bodyTrend, mindTrend),
   };
+}
+
+/** 설명은 화면과 PDF에서 동일하게 표시하며 계산식과 판정 임계값은 바꾸지 않는다. */
+export const METRIC_DEFINITIONS: Record<MetricId, string> = {
+  respiratory_rate: '1분 동안 숨을 쉬는 횟수예요.',
+  heart_rate: '1분 동안 심장이 뛰는 횟수예요.',
+  hrv: '심장 박동 사이의 시간 간격이 얼마나 달라지는지 보여줘요. 밀리초는 1초의 1,000분의 1이에요.',
+  focus: '뇌파에서 주의를 기울이는 상태와 관련된 신호를 살펴봐요.',
+  relaxation: '뇌파에서 편안한 상태와 관련된 신호를 살펴봐요.',
+  emotional_stability: '마음의 안정과 관련된 신호예요. 그래프는 스트레스 신호를 반대로 읽은 추정값이며, 실제 감정을 직접 측정하지 않아요.',
+};
+
+export function metricDirectionGuide(id: MetricId): string {
+  if (id === 'respiratory_rate' || id === 'heart_rate') {
+    return '명상 중에는 감소(↓)를 차분해지는 방향으로 참고해요. 낮을수록 무조건 좋은 것은 아니에요.';
+  }
+  if (id === 'hrv') {
+    return '명상 중에는 증가(↑)를 편안해지는 방향으로 참고해요. 높을수록 무조건 좋은 것은 아니에요.';
+  }
+  return '명상 중에는 증가(↑)를 집중·안정에 가까워지는 방향으로 참고해요.';
+}
+
+export function metricChangeInterpretation(id: MetricId, direction: Direction): string {
+  if (direction === 'stable') return '비슷하게 유지됐어요';
+  const preferred = id === 'respiratory_rate' || id === 'heart_rate' ? 'down' : 'up';
+  return direction === preferred ? '명상 중 참고하는 방향으로 좋아졌어요' : '변화에 주의가 필요해요';
+}
+
+/** 저장된 서사는 유지하고 리포트 표시에서만 용어를 풀어 쓴다. */
+export function simplifyReportTerms(text: string): string {
+  return text
+    .replace(/\bHRV\b/gi, '심박변이(심장 박동 간격의 변화)')
+    .replace(/세션/g, '명상 시간')
+    .replace(/지표/g, '몸·마음 신호')
+    .replace(/전반(?!적|부|\))/g, '명상 시작(전반)')
+    .replace(/후반(?!부|\))/g, '마무리(후반)')
+    .replace(/(\d)\s*ms\b/g, '$1밀리초')
+    .replace(/(\d)\s*bpm\b/gi, '$1회/분');
 }

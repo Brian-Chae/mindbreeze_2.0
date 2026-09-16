@@ -96,11 +96,18 @@ def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | N
     longest = _longest_usable_run(windows)
 
     # 활성 표준 모델 조회 — 있으면 sigmoid 정규화, 없으면 코호트 상수 fallback (SDD-041)
+    # SDD-069: 활성 모델이 없으면 가장 최근 계산된 모델을 기본으로 적용
     active_model = (
         db.query(NormalizationModel)
         .filter(NormalizationModel.is_active.is_(True))
         .first()
     )
+    if active_model is None:
+        active_model = (
+            db.query(NormalizationModel)
+            .order_by(NormalizationModel.version.desc(), NormalizationModel.id.desc())
+            .first()
+        )
     normalization_params = active_model.params if active_model else None
     normalization_version = active_model.version if active_model else None
 

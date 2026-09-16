@@ -101,3 +101,15 @@
   .report-print-document .report-summary-card h3 { margin-bottom: 2mm; font-size: 10pt; break-after: avoid; }
   .report-print-document .report-summary-card p { font-size: 10pt; line-height: 1.6; }
 }
+
+/* SDD-068: 정의·방향 설명을 보존하면서 기본 4페이지의 읽기 밀도를 유지한다. */
+@media print {
+  .report-print-document .narrative-report .journey-stages { margin-top: 6mm; }
+  .report-print-document .narrative-report .summary-chip { font-size: 9pt; line-height: 1.5; }
+  .report-print-document .narrative-report .metric { padding: 3mm; gap: 3mm; }
+  .report-print-document .narrative-report .metric-copy > p:not(.delta) { font-size: 9pt; line-height: 1.45; }
+  .report-print-document .narrative-report .metric-copy > .change-interpretation,
+  .report-print-document .narrative-report .metric-copy > .metric-definition,
+  .report-print-document .narrative-report .metric-copy > .metric-direction-guide { margin-top: 1mm; }
+  .report-print-document .narrative-report .metric-copy > .caption { font-size: 8pt; line-height: 1.4; margin-top: 1mm; }
+}

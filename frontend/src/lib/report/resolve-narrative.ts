@@ -5,6 +5,8 @@
 
 import {
   buildReportNarrative,
+  metricChangeInterpretation,
+  simplifyReportTerms,
   type Direction,
   type MetricChangeInput,
   type MetricId,
@@ -221,10 +223,10 @@ export function resolveDisplayNarrative(input: {
     llm && (llm.journey || llm.body || llm.mind || llm.closing) ? 'llm' : 'rule';
 
   return {
-    journey: journey ?? '오늘의 몸과 마음 흐름을 살펴보세요.',
-    bodyText,
-    mindText,
-    closing: closing ?? '오늘의 작은 쉼을 마음에 담아 보세요.',
+    journey: simplifyReportTerms(journey ?? '오늘의 몸과 마음 흐름을 살펴보세요.'),
+    bodyText: bodyText ? simplifyReportTerms(bodyText) : null,
+    mindText: mindText ? simplifyReportTerms(mindText) : null,
+    closing: simplifyReportTerms(closing ?? '오늘의 작은 쉼을 마음에 담아 보세요.'),
     body: metrics?.body ?? [],
     mind: metrics?.mind ?? [],
     source,
@@ -234,7 +236,7 @@ export function resolveDisplayNarrative(input: {
 
 export function chipLabel(metrics: MetricNarrative[]): string {
   return metrics
-    .map((m) => `${m.label.replace('안정도', '안정')} ${m.arrow}`)
+    .map((m) => `${m.id === 'hrv' ? '심박변이' : m.label.replace('안정도', '안정')} ${m.arrow} ${metricChangeInterpretation(m.id, m.direction)}`)
     .join(' · ');
 }
 
