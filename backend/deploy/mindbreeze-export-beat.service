@@ -1,0 +1,18 @@
+# SDD-071: 클러스터에서 한 인스턴스만 실행한다. 서사 캐시 cron과 무관하다.
+[Unit]
+Description=MIND BREEZE data export expiration scheduler
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
+StateDirectory=mindbreeze-export
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app beat --schedule=/var/lib/mindbreeze-export/schedule --loglevel=INFO
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -6,6 +6,7 @@ raw EEG 청크는 서버를 거치지 않고 클라이언트가 S3 로 직접 PU
 """
 
 import logging
+from datetime import datetime, timezone
 
 from app.config import settings
 
@@ -49,3 +50,59 @@ def generate_presigned_put(
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] presigned 발급 실패, 스텁 URL 폴백: %s", exc)
         return _stub_url(object_key)
+
+
+class ExportStorageError(RuntimeError):
+    """내보내기 저장소는 미설정·실패를 성공 URL로 대체하지 않는다."""
+
+
+def _export_client():
+    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+        raise ExportStorageError('storage_not_configured')
+    try:
+        import boto3
+        from botocore.config import Config
+        return boto3.client(
+            's3', region_name=settings.s3_region,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
+            config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=60, retries={'max_attempts': 2}),
+        )
+    except Exception as exc:
+        raise ExportStorageError('storage_unavailable') from exc
+
+
+def upload_export(path: str, object_key: str) -> None:
+    try:
+        _export_client().upload_file(path, settings.s3_bucket, object_key, ExtraArgs={
+            'ContentType': 'application/zip', 'ServerSideEncryption': 'AES256',
+            'ContentDisposition': 'attachment; filename="mindbreeze-data.zip"',
+        })
+    except Exception as exc:
+        raise ExportStorageError('upload_failed') from exc
+
+
+def generate_presigned_get(object_key: str, *, expires_in: int = 300, expires_at: datetime | None = None) -> str:
+    if not 1 <= expires_in <= 300:
+        raise ExportStorageError('invalid_expiry')
+    try:
+        client = _export_client()
+        client.head_object(Bucket=settings.s3_bucket, Key=object_key)
+        if expires_at is not None:
+            expires_in = min(expires_in, int((expires_at - datetime.now(timezone.utc)).total_seconds()))
+            if expires_in < 1:
+                raise ExportStorageError('package_expired')
+        return client.generate_presigned_url('get_object', Params={
+            'Bucket': settings.s3_bucket, 'Key': object_key,
+            'ResponseContentType': 'application/zip',
+            'ResponseContentDisposition': 'attachment; filename="mindbreeze-data.zip"',
+        }, ExpiresIn=expires_in)
+    except Exception as exc:
+        raise ExportStorageError('presign_failed') from exc
+
+
+def delete_export(object_key: str) -> None:
+    try:
+        _export_client().delete_object(Bucket=settings.s3_bucket, Key=object_key)
+    except Exception as exc:
+        raise ExportStorageError('delete_failed') from exc

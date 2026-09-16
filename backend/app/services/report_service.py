@@ -12,7 +12,13 @@ from app.models.record import Report
 from app.models.user import User
 from app.services import notification_service
 from app.schemas.eeg import HRVMotionSummary
-from app.tasks.report_task import generate_report_inline
+
+
+def generate_report_inline(report_id: str, db: DBSession):
+    """Celery가 태스크부터 로드해도 순환 import 없이 기존 생성 함수를 호출한다."""
+    from app.tasks.report_task import generate_report_inline as generate
+
+    return generate(report_id, db)
 
 
 def _to_uuid(value: str) -> UUID:

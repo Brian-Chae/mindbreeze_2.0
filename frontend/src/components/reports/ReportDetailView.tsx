@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
+import DataExportButton from './DataExportButton';
 import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
@@ -85,6 +86,7 @@ export default function ReportDetailView({
 }: ReportDetailViewProps) {
   const [printing, setPrinting] = useState(false);
   const userRole = useAuthStore((s) => s.user?.role);
+  const userId = useAuthStore((s) => s.user?.id);
   const isCounselorUser = userRole === 'counselor';
   const [report, setReport] = useState(initialReport);
   const [error, setError] = useState<string | null>(null);
@@ -199,6 +201,11 @@ export default function ReportDetailView({
           >
             {approving ? '승인 중...' : '승인하기'}
           </button>
+        )}
+
+        {(isCounselorUser || userRole === 'platform_admin') && userId && report.participant_id && (
+          <DataExportButton key={`${report.session_id}:${report.participant_id}:${userId}`}
+            sessionId={report.session_id} participantId={report.participant_id} userId={userId} />
         )}
 
         {isCounselorUser && report.status === 'completed' && (

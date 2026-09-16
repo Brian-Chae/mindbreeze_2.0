@@ -30,3 +30,6 @@ if settings.environment != "production" and settings.enable_dev_role_simulation:
     from app.api.v1 import dev_auth
 
     router.include_router(dev_auth.router)
+
+from app.api.v1 import data_exports
+router.include_router(data_exports.router)

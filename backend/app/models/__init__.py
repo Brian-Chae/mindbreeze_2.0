@@ -58,3 +58,6 @@ __all__ = [
     "Qualification",
     "Career",
 ]
+
+from app.models.data_export import DataExportJob, DataExportAudit
+__all__ += ["DataExportJob", "DataExportAudit"]
