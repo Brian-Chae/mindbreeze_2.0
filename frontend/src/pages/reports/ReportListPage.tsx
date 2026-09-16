@@ -273,8 +273,8 @@ export default function ReportListPage() {
         }`}
       >
         <span
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-            autoApprove ? 'translate-x-[22px]' : 'translate-x-0.5'
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+            autoApprove ? 'left-[22px]' : 'left-0.5'
           }`}
         />
       </button>
