@@ -11,7 +11,7 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
   // Chrome의 로컬 개발 서버 WebSocket 접근 권한을 테스트 컨텍스트에만 부여한다.
   const page = await browser.newPage({permissions:['local-network-access']});
   await page.addInitScript(() => { window.print = () => { window.__printed = true; }; });
-  const report = { id:'pdf-test', session_id:'test', type:'counselor', participant_name:savedEmail ? '검증 참여자' : null, session_title:'몸과 마음의 기록', scheduled_at:'2026-09-16T09:00:00+09:00', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:'검증용 여정',body:'호흡이 서서히 느려지며 몸이 편안한 리듬을 찾아가는 흐름이 나타났어요. 심박수와 심박변이도의 변화를 함께 살펴보면서 오늘 몸에서 느꼈던 감각을 떠올려 보세요. 수치의 변화는 개인마다 다를 수 있으며, 편안함의 정도를 단정하지 않아요. 몸의 반응을 있는 그대로 바라보고 다음 명상에서도 자신만의 속도로 머물러 보세요.',mind:'주의가 다른 곳으로 향했다가 다시 돌아오는 과정에서 마음의 흐름도 조금씩 달라졌어요. 집중도와 이완도, 감정안정도는 오늘의 느낌과 함께 읽어 주세요. 지표가 오르거나 내렸다는 사실만으로 명상의 효과를 판단하지 않아요. 지금 이 순간의 감각을 알아차렸던 시간을 차분히 떠올려 보세요.',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
+  const report = { id:'pdf-test', session_id:'test', type:'counselor', participant_name:savedEmail ? '검증 참여자' : null, session_title:'몸과 마음의 기록', scheduled_at:'2026-09-16T09:00:00+09:00', report_email:savedEmail, status:'pending_review', sent_at:null, pdf_url:null, content:{summary:'검증용 상담 본문', eeg:{status:'valid', narrative:{journey:('명상을 시작하며 바쁘게 움직이던 생각을 잠시 내려놓고, 몸에 닿는 감각과 자연스러운 호흡을 차분히 느껴보았어요. 시간이 흐르면서 호흡과 심박의 리듬이 달라지고, 주의가 흩어졌다가 다시 돌아오는 순간도 있었어요. 지표의 변화만으로 오늘의 경험을 판단하기보다 스스로 느꼈던 편안함과 감각을 함께 떠올려 보세요. ').repeat(5) + '여정끝표식',body:'호흡이 서서히 느려지며 몸이 편안한 리듬을 찾아가는 흐름이 나타났어요. 심박수와 심박변이도의 변화를 함께 살펴보면서 오늘 몸에서 느꼈던 감각을 떠올려 보세요. 수치의 변화는 개인마다 다를 수 있으며, 편안함의 정도를 단정하지 않아요. 몸의 반응을 있는 그대로 바라보고 다음 명상에서도 자신만의 속도로 머물러 보세요.',mind:'주의가 다른 곳으로 향했다가 다시 돌아오는 과정에서 마음의 흐름도 조금씩 달라졌어요. 집중도와 이완도, 감정안정도는 오늘의 느낌과 함께 읽어 주세요. 지표가 오르거나 내렸다는 사실만으로 명상의 효과를 판단하지 않아요. 지금 이 순간의 감각을 알아차렸던 시간을 차분히 떠올려 보세요.',closing:'검증용 마무리'}, timeline:[0,600,1200].map((t,i)=>({t,respiratory_rate:18-i,heart_rate:75-i,sdnn:40+i,concentration:.4+i*.1,relaxation:.5+i*.1,stress:.5-i*.1}))}}};
   let approvals=0; let deliveries=0;
   await page.route('**/reports/pdf-test**', async route=>{
    if(route.request().url().endsWith('/resend-email')) { deliveries++; assert.equal(route.request().postDataJSON().email,'new@example.com'); }
@@ -83,6 +83,18 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
    const compact = text.replace(/\s/g, '');
    assert.ok(compact.includes('MINDBREEZE·몸과마음의기록'), '페이지 머리글');
    assert.ok(compact.includes(`${index + 1}/${pages.length}`), '페이지 번호');
+  }
+  // PDF 그리기 순서는 DOM 순서와 다를 수 있어 첫 페이지의 텍스트 노드를 개별 대조한다.
+  for (const section of ['cover', 'journey']) {
+   const fragments = await printPage.locator(`[data-section="${section}"]`).evaluate(element => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const texts = [];
+    while (walker.nextNode()) {
+     if (!walker.currentNode.parentElement.closest('svg')) texts.push(walker.currentNode.textContent.replace(/\s/g, ''));
+    }
+    return texts.filter(Boolean);
+   });
+   for (const text of fragments) assert.ok(pages[0].replace(/\s/g, '').includes(text), `${section} 첫 페이지 원문 누락: ${text}`);
   }
   for (const section of ['body', 'mind']) {
    const index = section === 'body' ? 1 : 2;

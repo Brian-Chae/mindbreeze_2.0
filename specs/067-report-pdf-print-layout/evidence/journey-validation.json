@@ -1,0 +1,32 @@
+{
+  "journey-loop4": {
+    "pages": 4,
+    "content_bottom_pt": [
+      790.53,
+      752.28,
+      746.28,
+      774.95
+    ],
+    "all_text_within_page": true
+  },
+  "journey-long-report": {
+    "pages": 7,
+    "content_bottom_pt": [
+      783.28,
+      786.28,
+      336.78,
+      752.28,
+      746.28,
+      764.02,
+      253.7
+    ],
+    "all_text_within_page": true
+  },
+  "journey-no-eeg-report": {
+    "pages": 1,
+    "content_bottom_pt": [
+      91.21
+    ],
+    "all_text_within_page": true
+  }
+}
