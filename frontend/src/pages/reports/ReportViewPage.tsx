@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportCoverSection from '../../components/reports/ReportCoverSection';
+import { downloadReportPdf } from '../../lib/report/print-report';
 import { ApiError } from '../../lib/api/client';
 import {
   adaptReportContent,
@@ -32,6 +33,22 @@ export default function ReportViewPage() {
   const [report, setReport] = useState<ReportDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    if (downloading) return;
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      await downloadReportPdf({ token });
+    } catch (err) {
+      setDownloadError(tokenErrorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -121,6 +138,13 @@ export default function ReportViewPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-5 py-8 space-y-6">
+        <div className="flex justify-end">
+          <button type="button" onClick={handleDownload} disabled={downloading} aria-busy={downloading}
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium px-5 py-2.5 rounded-xl disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5F0080]">
+            {downloading ? 'PDF 준비 중...' : 'PDF 다운로드'}
+          </button>
+        </div>
+        {downloadError && <p role="alert" className="text-sm text-red-600">{downloadError}</p>}
         <ReportCoverSection report={report} adapted={adapted} />
         {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
         <p className="text-center text-[11px] text-[#9B9B9B] pb-8">

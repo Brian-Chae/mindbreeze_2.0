@@ -1,9 +1,9 @@
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { printReport } from '../../lib/report/print-report';
+import { downloadReportPdf } from '../../lib/report/print-report';
 import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
@@ -83,7 +83,6 @@ export default function ReportDetailView({
   onListAction,
   showListAction = true,
 }: ReportDetailViewProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
   const [printing, setPrinting] = useState(false);
   const userRole = useAuthStore((s) => s.user?.role);
   const isCounselorUser = userRole === 'counselor';
@@ -129,17 +128,17 @@ export default function ReportDetailView({
   }, [report.id, updateReport]);
 
   const handleGeneratePDF = useCallback(async () => {
-    if (!contentRef.current || printing) return;
+    if (printing) return;
     setPrinting(true);
     setError(null);
     try {
-      await printReport(contentRef.current, report.session_title || 'MIND BREEZE 리포트');
+      await downloadReportPdf({ reportId: report.id });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'PDF 인쇄 준비에 실패했습니다.');
+      setError(e instanceof Error ? e.message : 'PDF 다운로드에 실패했습니다.');
     } finally {
       setPrinting(false);
     }
-  }, [printing, report.session_title]);
+  }, [printing, report.id]);
 
   const handleResendEmail = useCallback(async () => {
     const email = resendEmail.trim();
@@ -202,31 +201,22 @@ export default function ReportDetailView({
           </button>
         )}
 
-        {report.pdf_url ? (
-          <a
-            href={report.pdf_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
-          >
-            PDF 다운로드
-          </a>
-        ) : (
+        {isCounselorUser && report.status === 'completed' && (
           <button
             type="button"
             onClick={handleGeneratePDF}
             disabled={printing}
-            title="인쇄 창에서 PDF로 저장을 선택하세요"
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
+            aria-busy={printing}
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl disabled:opacity-50"
           >
-            {printing ? 'PDF 준비 중...' : 'PDF 생성'}
+            {printing ? 'PDF 준비 중...' : 'PDF 다운로드'}
           </button>
         )}
       </div>
   );
 
   return (
-    <div ref={contentRef} className="max-w-4xl mx-auto space-y-6 print:max-w-none print:[&_.report-main]:overflow-visible print:[&_.narrative-report_section]:break-inside-auto print:[&_.metric]:break-inside-avoid">
+    <div className="max-w-4xl mx-auto space-y-6 print:max-w-none print:[&_.report-main]:overflow-visible print:[&_.narrative-report_section]:break-inside-auto print:[&_.metric]:break-inside-avoid">
       {displayError && (
         <div data-print-exclude role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{displayError}</div>
       )}

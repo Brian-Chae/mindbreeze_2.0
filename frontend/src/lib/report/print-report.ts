@@ -1,48 +1,22 @@
-import './report-print.css';
+import { apiClient } from '../api/client';
 
-/** 화면과 동일한 DOM/CSS를 사용하되 앱과 모달의 스크롤 제약을 인쇄 문서에서 분리한다. */
-export async function printReport(content: HTMLElement, title: string): Promise<void> {
-  document.querySelector('iframe[data-report-print]')?.remove();
-  const frame = document.createElement('iframe');
-  frame.title = '리포트 인쇄';
-  frame.dataset.reportPrint = '';
-  frame.className = 'fixed -left-[10000px] top-0 h-px w-[900px] border-0';
-  frame.setAttribute('aria-hidden', 'true');
-  document.body.append(frame);
+/** 서버에서 생성한 PDF를 저장한다. 토큰 열람에는 로그인 토큰을 보내지 않는다. */
+export async function downloadReportPdf(source: { reportId: string } | { token: string }): Promise<void> {
+  const byToken = 'token' in source;
+  const path = byToken
+    ? `/reports/view/pdf?token=${encodeURIComponent(source.token)}`
+    : `/reports/${encodeURIComponent(source.reportId)}/pdf`;
+  const blob = await apiClient.getBlob(path, { skipAuth: byToken });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'mind-breeze-report.pdf';
+  document.body.append(link);
   try {
-    const doc = frame.contentDocument;
-    const printWindow = frame.contentWindow;
-    if (!doc || !printWindow) throw new Error('인쇄 문서를 열 수 없습니다.');
-    doc.documentElement.lang = 'ko';
-    doc.title = title;
-    const base = doc.createElement('base');
-    base.href = document.baseURI;
-    doc.head.append(base);
-    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]')).map(node => {
-      const copy = node.cloneNode(true) as HTMLElement;
-      const loaded = copy instanceof HTMLLinkElement
-        ? new Promise<void>((resolve, reject) => {
-          copy.onload = () => resolve();
-          copy.onerror = () => reject(new Error('인쇄 스타일을 불러오지 못했습니다.'));
-        })
-        : Promise.resolve();
-      doc.head.append(copy);
-      return loaded;
-    });
-    const body = content.cloneNode(true) as HTMLElement;
-    body.querySelectorAll('[data-print-exclude]').forEach(node => node.remove());
-    doc.body.className = 'report-print-document m-0 bg-white';
-    doc.body.append(body);
-    await Promise.all(styles);
-    await doc.fonts.ready;
-    await Promise.all(Array.from(doc.images).map(img => img.decode().catch(() => undefined)));
-    await new Promise<void>(resolve => printWindow.requestAnimationFrame(() => resolve()));
-    printWindow.addEventListener('afterprint', () => frame.remove(), { once: true });
-    printWindow.focus();
-    printWindow.print();
-    // afterprint 미지원 환경은 다음 인쇄 또는 페이지 이탈 시 정리한다.
-  } catch (error) {
-    frame.remove();
-    throw error;
+    link.click();
+  } finally {
+    link.remove();
+    // 브라우저가 다운로드를 시작할 시간을 확보한 뒤 메모리를 해제한다.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 }

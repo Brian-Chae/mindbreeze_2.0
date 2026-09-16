@@ -33,6 +33,7 @@ interface RequestOptions {
   body?: unknown;
   skipAuth?: boolean;
   headers?: Record<string, string>;
+  responseType?: 'json' | 'blob';
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
@@ -102,10 +103,18 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (res.status === 204) return undefined as T;
+  if (options.responseType === 'blob') {
+    if (!res.headers.get('content-type')?.toLowerCase().startsWith('application/pdf')) {
+      throw new ApiError(502, 'PDF 파일을 받지 못했습니다. 다시 시도해 주세요.', null);
+    }
+    return (await res.blob()) as T;
+  }
   return (await res.json()) as T;
 }
 
 export const apiClient = {
+  getBlob: (path: string, options?: Omit<RequestOptions, 'method' | 'body' | 'responseType'>): Promise<Blob> =>
+    request<Blob>(path, { ...options, method: 'GET', responseType: 'blob' }),
   get: <T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> =>
     request<T>(path, { ...options, method: 'GET' }),
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> =>

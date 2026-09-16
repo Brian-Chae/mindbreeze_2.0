@@ -108,7 +108,11 @@ jobs:
               python3 -m venv venv
               venv/bin/pip install --upgrade pip
             fi
-            venv/bin/pip install -q -r requirements.txt || true
+            # SDD-070: PDF 렌더러 시스템 의존성. 글꼴은 app/assets/fonts에도 포함한다.
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+            venv/bin/pip install -q -r requirements.txt
+            venv/bin/python -c "from weasyprint import HTML; from pathlib import Path; assert Path('app/assets/fonts/NotoSansKR.ttf').is_file()"
 
             # 4. DB 마이그레이션 — .env.dev 전체 source 대신 필요한 변수만 추출
             #    (.env.dev의 RESEND_FROM_EMAIL 등이 공백·꺽쇠를 포함해 셸 source가 깨짐)
