@@ -1,5 +1,7 @@
 """상담센터(Organization) 관련 Pydantic 스키마"""
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 
@@ -223,3 +225,12 @@ class OrganizationDeactivationImpact(BaseModel):
     blockers: list[str]
     can_deactivate: bool
     version: int
+
+
+class OrganizationCounselorRemove(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class OrganizationCounselorPatch(OrganizationCounselorRemove):
+    role: Literal["counselor", "org_admin"]

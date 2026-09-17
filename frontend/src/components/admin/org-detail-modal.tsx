@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   getAdminOrganization, listAdminOrganizationCounselors,
-  type AdminOrganizationDto,
+  type AdminOrganizationDto, type AdminOrganizationCounselorDto,
 } from '../../lib/api/admin';
 
 import OrgManagementActions from './org-management-actions';
+import OrgCounselorAction from './org-counselor-action';
 
 export const orgKindLabel = (kind: string): string =>
   ({ institution: '일반 기관', individual: '개인 기관' })[kind] ?? '확인 필요';
@@ -45,7 +46,11 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
   organization: AdminOrganizationDto; onClose: () => void; onUpdated: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [guard, setGuard] = useState({ dirty: false, busy: false });
+  const [infoGuard, setGuard] = useState({ dirty: false, busy: false });
+  const [counselorGuard, setCounselorGuard] = useState({ dirty: false, busy: false });
+  const [counselorAction, setCounselorAction] = useState<{ member: AdminOrganizationCounselorDto; action: 'role' | 'remove' } | null>(null);
+  const counselorGuardChange = useCallback((dirty: boolean, busy: boolean) => setCounselorGuard({ dirty, busy }), []);
+  const guard = { dirty: infoGuard.dirty || counselorGuard.dirty, busy: infoGuard.busy || counselorGuard.busy };
   const [confirmClose, setConfirmClose] = useState(false);
   const guardChange = useCallback((dirty: boolean, busy: boolean) => setGuard({ dirty, busy }), []);
   const requestClose = () => { if (guard.busy) return; if (guard.dirty) setConfirmClose(true); else onClose(); };
@@ -70,6 +75,14 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
     catch { setCopyMessage('복사하지 못했습니다. 코드를 직접 선택해 복사해주세요.'); }
   };
   const members = counselors.state.status === 'success' ? counselors.state.data : [];
+  const activeAdminCount = members.filter((member) => member.role === 'org_admin' && member.status === 'active').length;
+  const protectedReason = (member: AdminOrganizationCounselorDto): string | null => {
+    if (member.is_owner) return '개인 기관 소유자는 변경할 수 없습니다.';
+    if (member.is_primary_admin) return '주 담당자를 먼저 교체해주세요.';
+    if (member.role === 'org_admin' && member.status === 'active' && activeAdminCount <= 1) return '마지막 활성 기관 관리자는 변경할 수 없습니다.';
+    if (!['counselor', 'org_admin'].includes(member.role)) return '역할 확인이 필요합니다.';
+    return null;
+  };
   const filtered = members.filter((member) =>
     [member.name, member.email, member.counselor_code ?? ''].some((value) => value.toLowerCase().includes(query.trim().toLowerCase()))
     && (!role || (role === 'unknown' ? !['org_admin', 'counselor'].includes(member.role) : member.role === role))
@@ -116,7 +129,7 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
         <button type="button" className={`${control} ml-2`} onClick={onClose}>변경사항 버리기</button>
       </div>}
       <div role="tablist" aria-label="기관 상세" className="flex shrink-0 border-b px-5">
-        {(['info', 'counselors'] as const).map((value) => <button key={value} type="button" role="tab"
+        {(['info', 'counselors'] as const).map((value) => <button key={value} type="button" role="tab" disabled={guard.busy || guard.dirty}
           id={`org-tab-${value}`} aria-controls={`org-panel-${value}`} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1}
           onClick={() => setTab(value)} onKeyDown={(event) => {
             if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
@@ -153,6 +166,9 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
           </>}
         </section>
         <section role="tabpanel" id="org-panel-counselors" aria-labelledby="org-tab-counselors" hidden={tab !== 'counselors'} tabIndex={0}>
+          {counselorAction && <OrgCounselorAction orgId={org.id} member={counselorAction.member} action={counselorAction.action}
+            onGuardChange={counselorGuardChange} onCancel={() => setCounselorAction(null)}
+            onSaved={() => { setCounselorAction(null); counselorGuardChange(false, false); counselors.retry(); detail.retry(); onUpdated(); }} />}
           {counselors.state.status === 'loading' && <p role="status">상담사를 불러오는 중...</p>}
           {counselors.state.status === 'error' && <Retry label="상담사" onRetry={counselors.retry} />}
           {counselors.state.status === 'success' && <>
@@ -168,10 +184,19 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
             </div>
             {filtered.length === 0 ? <p className="py-8 text-center text-sm">{members.length === 0 ? '소속 상담사가 없습니다.' : '검색 조건에 맞는 상담사가 없습니다.'}</p> :
               <div className="overflow-x-auto"><table className="w-full min-w-[620px] text-left text-sm">
-                <thead className="bg-slate-50"><tr>{['이름', '이메일', '상담사 코드', '역할', '계정 상태'].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead>
+                <thead className="bg-slate-50"><tr>{['이름', '이메일', '상담사 코드', '역할', '계정 상태', '관리'].map((label) => <th key={label} className="p-3">{label}</th>)}</tr></thead>
                 <tbody>{filtered.map((member) => <tr key={member.id} className="border-b">
                   <td className="p-3">{member.name}{member.is_primary_admin && <span className="ml-2 text-xs text-purple-800">주 담당자</span>}{member.is_owner && <span className="ml-2 text-xs text-purple-800">소유자</span>}</td>
                   <td className="p-3">{member.email}</td><td className="p-3 font-mono">{member.counselor_code ?? '미등록'}</td><td className="p-3">{roleLabel(member.role)}</td><td className="p-3">{statusLabel(member.status)}</td>
+                  <td className="p-3">
+                    <div className="flex gap-2">
+                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || guard.busy}
+                        onClick={() => setCounselorAction({ member, action: 'role' })}>역할 변경</button>
+                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || guard.busy}
+                        onClick={() => setCounselorAction({ member, action: 'remove' })}>소속 해제</button>
+                    </div>
+                    {protectedReason(member) && <p className="mt-1 text-xs text-[#6F6F6F]">{protectedReason(member)}</p>}
+                  </td>
                 </tr>)}</tbody>
               </table></div>}
           </>}

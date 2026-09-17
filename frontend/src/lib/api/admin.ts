@@ -301,3 +301,12 @@ export const deactivateAdminOrganization = (id: string, payload: { reason: strin
   apiClient.post(`/admin/orgs/${id}/deactivate`, payload, versionHeaders(version));
 export const reactivateAdminOrganization = (id: string, reason: string, version: number): Promise<AdminOrganizationDetailDto> =>
   apiClient.post(`/admin/orgs/${id}/reactivate`, { reason }, versionHeaders(version));
+
+
+export const patchAdminOrganizationCounselor = (
+  orgId: string, userId: string, payload: { role: 'counselor' | 'org_admin'; reason: string },
+): Promise<AdminOrganizationCounselorDto> =>
+  apiClient.patch<AdminOrganizationCounselorDto>(`/admin/orgs/${orgId}/counselors/${userId}`, payload);
+
+export const removeAdminOrganizationCounselor = (orgId: string, userId: string, reason: string): Promise<void> =>
+  apiClient.delete<void>(`/admin/orgs/${orgId}/counselors/${userId}`, { body: { reason } });

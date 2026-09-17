@@ -31,7 +31,13 @@ def require_active_org(org_id: uuid.UUID | str, db: Session) -> Organization:
 
 
 def require_active_user_org(user: User, db: Session) -> Organization | None:
-    return require_active_org(user.org_id, db) if user.org_id else None
+    previous_org_id = user.org_id
+    org = require_active_org(previous_org_id, db) if previous_org_id else None
+    # 잠금 대기 중 소속 해제가 완료됐으면 이전 기관으로 업무를 생성하지 않는다.
+    db.refresh(user, attribute_names=["org_id", "role", "status"])
+    if user.org_id != previous_org_id:
+        raise HTTPException(409, "소속 기관이 변경되었습니다. 다시 시도해주세요")
+    return org
 
 
 def check_version(org: Organization, if_match: str | None) -> None:
@@ -139,3 +145,56 @@ def reactivate(org_id: uuid.UUID, data: OrganizationReactivate, if_match: str | 
     org.deactivated_by = None
     org.deactivation_reason = None
     return commit_change(org, before, "org_reactivated", data.reason, admin_id, db)
+
+
+def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
+                     reason: str, db: Session, *, role: str | None = None) -> User:
+    """기관 잠금 안에서 역할/소속과 감사 이력을 함께 변경한다. role=None은 소속 해제."""
+    org = lock_organization(org_id, db)
+    user = db.query(User).filter(User.id == user_id, User.org_id == org.id).populate_existing().with_for_update().first()
+    if user is None:
+        raise HTTPException(404, "대상 상담사를 찾을 수 없습니다")
+    if user.role not in ("counselor", "org_admin") or role not in (None, "counselor", "org_admin"):
+        raise HTTPException(422, "상담사와 기관 관리자 역할만 변경할 수 있습니다")
+    if org.kind == "individual" and org.owner_user_id == user.id:
+        raise HTTPException(409, "개인 기관 소유자는 역할 변경이나 소속 해제를 할 수 없습니다")
+    if role == user.role:
+        return user
+    if org.primary_admin_id == user.id:
+        raise HTTPException(409, "주 담당자를 먼저 교체해주세요")
+    if user.role == "org_admin" and user.status == "active":
+        remaining = db.query(User.id).filter(
+            User.org_id == org.id, User.id != user.id,
+            User.role == "org_admin", User.status == "active",
+        ).first()
+        if remaining is None:
+            raise HTTPException(409, "마지막 활성 기관 관리자는 강등하거나 소속 해제할 수 없습니다")
+    if role is None:
+        active_session = db.query(CounselingSession.id).filter(
+            CounselingSession.host_id == user.id,
+            CounselingSession.status.in_(["ready", "scheduled", "in_progress", "paused"]),
+        ).first()
+        if active_session:
+            raise HTTPException(409, "진행·일시정지·예정·대기 세션을 먼저 정리해주세요")
+        active_link = db.query(ClientCounselorLink.id).filter(
+            ClientCounselorLink.status == "active",
+            or_(ClientCounselorLink.counselor_id == user.id, ClientCounselorLink.client_id == user.id),
+        ).first()
+        if active_link:
+            raise HTTPException(409, "활성 내담자 연결을 먼저 이관하거나 종료해주세요")
+    before = {"org_id": str(user.org_id), "role": user.role}
+    user.role = role or "counselor"
+    if role is None:
+        user.org_id = None
+    # 인증은 JWT 역할을 신뢰하지 않고 매 요청 DB의 role/org_id를 다시 읽는다.
+    # 과거 세션의 기관 스냅샷과 프로필/연결/계정은 변경하지 않는다.
+    org.version += 1
+    db.add(VerificationAudit(
+        target_type="user", target_id=user.id, admin_id=admin_id,
+        action="org_counselor_removed" if role is None else "org_counselor_role_changed",
+        reason=reason, extra={"org_id": str(org.id), "before": before,
+                              "after": {"org_id": str(user.org_id) if user.org_id else None, "role": user.role}},
+    ))
+    db.commit()
+    db.refresh(user)
+    return user

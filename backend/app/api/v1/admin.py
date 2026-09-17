@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.models.organization import Organization
 from app.models.counselor_profile import CounselorProfile
 from app.core.redis import get_redis
 from app.schemas.org import (
+    OrganizationCounselorPatch, OrganizationCounselorRemove,
     OrganizationPatch, OrganizationDeactivate, OrganizationReactivate, OrganizationDeactivationImpact,
     OrgAdminSummary,
     OrganizationAdminDetail,
@@ -432,3 +433,23 @@ def admin_reactivate_org(org_id: uuid.UUID, req: OrganizationReactivate,
                          admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
     org_management_service.reactivate(org_id, req, if_match, admin.id, db)
     return admin_get_org(org_id, admin, db)
+
+
+@router.patch("/orgs/{org_id}/counselors/{user_id}", response_model=OrganizationAdminCounselor)
+def admin_patch_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorPatch,
+                              admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason, db, role=req.role)
+    org = _admin_org_or_404(org_id, db)
+    code = db.query(CounselorProfile.counselor_code).filter(CounselorProfile.user_id == user.id).scalar()
+    return OrganizationAdminCounselor(
+        id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+        role=user.role, status=user.status,
+        is_primary_admin=user.id == org.primary_admin_id, is_owner=user.id == org.owner_user_id,
+    )
+
+
+@router.delete("/orgs/{org_id}/counselors/{user_id}", status_code=204)
+def admin_remove_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorRemove,
+                               admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.change_counselor(org_id, user_id, admin.id, req.reason, db)
+    return Response(status_code=204)

@@ -50,9 +50,14 @@ def assign_counselor(
 
     from app.services.org_management_service import require_active_org
     users = db.query(User).filter(User.id.in_([client_uuid, counselor_uuid])).all()
+    previous_org_ids = {user.id: user.org_id for user in users}
     # 복수 기관은 ID 순서대로 잠가 교착을 피한다.
     for org_id in sorted({user.org_id for user in users if user.org_id}, key=str):
         require_active_org(org_id, db)
+    for user in users:
+        db.refresh(user, attribute_names=["org_id"])
+        if user.org_id != previous_org_ids[user.id]:
+            raise HTTPException(409, "소속 기관이 변경되었습니다. 다시 시도해주세요")
     existing = (
         db.query(ClientCounselorLink)
         .filter(
