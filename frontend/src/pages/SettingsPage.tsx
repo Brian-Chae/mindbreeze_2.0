@@ -12,6 +12,9 @@ import {
 import AccountSection from '../components/settings/AccountSection';
 import PersonalInfoSection from '../components/settings/PersonalInfoSection';
 import ProfileSection from '../components/settings/ProfileSection';
+import SelfInfoSection, { type SelfInfoValue } from '../components/settings/SelfInfoSection';
+import { updateUserMe, type UpdateUserMePayload } from '../lib/api/auth';
+import { getClientProfile } from '../lib/api/client-profile';
 import { useAuthStore } from '../stores/authStore';
 
 const EVENT_LABELS: Record<string, string> = {
@@ -42,14 +45,20 @@ function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void 
 
 export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const [prefs, setPrefs] = useState<NotificationPreferencesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  const isCounselor = user?.role === 'counselor';
+  // SDD-080: org_admin도 상담사 프로필 경로로 자기 정보 수정 (BE가 org_admin 허용)
+  const role = user?.role;
+  const isCounselorLike = role === 'counselor' || role === 'org_admin';
+  const isClient = role === 'client';
   const [profile, setProfile] = useState<CounselorProfile | null>(null);
   const [profileSaved, setProfileSaved] = useState(false);
+  // SDD-080: client "내 정보" + org_admin 프로필 조회 실패 시 기본 정보 폴백
+  const [basicInfo, setBasicInfo] = useState<SelfInfoValue | null>(null);
 
   useEffect(() => {
     getPreferences()
@@ -59,11 +68,34 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isCounselor) return;
+    if (!isCounselorLike) return;
     getCounselorProfile()
       .then((p) => setProfile(p))
-      .catch((e) => setError(e instanceof Error ? e.message : '프로필 조회 실패'));
-  }, [isCounselor]);
+      .catch((e) => {
+        if (role === 'org_admin') {
+          // 순수 기관 관리자: 프로필 조회 실패 시 이름/전화 기본 정보만 수정
+          const u = useAuthStore.getState().user;
+          setBasicInfo({ email: u?.email ?? '', name: u?.name ?? '', phone: null });
+        } else {
+          setError(e instanceof Error ? e.message : '프로필 조회 실패');
+        }
+      });
+  }, [isCounselorLike, role]);
+
+  useEffect(() => {
+    if (!isClient) return;
+    getClientProfile()
+      .then((p) =>
+        setBasicInfo({
+          email: p.email,
+          name: p.name,
+          phone: p.phone ?? null,
+          gender: p.gender ?? null,
+          birth_date: p.birth_date ?? null,
+        }),
+      )
+      .catch((e) => setError(e instanceof Error ? e.message : '내 정보 조회 실패'));
+  }, [isClient]);
 
   const handleProfileSave = useCallback(
     async (data: CounselorProfileUpdate): Promise<void> => {
@@ -80,6 +112,38 @@ export default function SettingsPage() {
       }
     },
     [profile?.version],
+  );
+
+  // SDD-080: client·org_admin 폴백 — PATCH /auth/users/me로 기본 정보 저장
+  const handleBasicInfoSave = useCallback(
+    async (data: UpdateUserMePayload): Promise<void> => {
+      setError(null);
+      try {
+        const updated = await updateUserMe(data);
+        setBasicInfo((prev) =>
+          prev
+            ? {
+                ...prev,
+                name: updated.name,
+                phone: data.phone ?? prev.phone,
+                gender: data.gender ?? prev.gender,
+                birth_date: data.birth_date ?? prev.birth_date,
+              }
+            : prev,
+        );
+        // 전역 사용자 이름 동기화 (상단 계정 정보 카드 표시용)
+        const current = useAuthStore.getState().user;
+        if (current && updated.name !== current.name) {
+          setUser({ ...current, name: updated.name });
+        }
+        setProfileSaved(true);
+        setTimeout(() => setProfileSaved(false), 2000);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '내 정보 저장 실패');
+        throw e;
+      }
+    },
+    [setUser],
   );
 
   const handleToggle = useCallback(
@@ -169,15 +233,30 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* 상담사 프로필 섹션 */}
-        {isCounselor && profile && (
+        {/* 상담사/기관관리자 프로필 섹션 */}
+        {isCounselorLike && profile && (
           <>
             {profileSaved && (
               <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
             )}
             <AccountSection profile={profile} onSave={handleProfileSave} />
-            <PersonalInfoSection profile={profile} onSave={handleProfileSave} />
-            <ProfileSection profile={profile} onSave={handleProfileSave} />
+            {/* 순수 기관 관리자(상담사 프로필 없음)는 기본 정보만 수정 — 프로필 생성을 유발하지 않는다 */}
+            {(role === 'counselor' || Boolean(profile.counselor_code)) && (
+              <>
+                <PersonalInfoSection profile={profile} onSave={handleProfileSave} />
+                <ProfileSection profile={profile} onSave={handleProfileSave} />
+              </>
+            )}
+          </>
+        )}
+
+        {/* SDD-080: client 내 정보 + org_admin 프로필 조회 실패 폴백 */}
+        {basicInfo && (
+          <>
+            {profileSaved && (
+              <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 저장됨</div>
+            )}
+            <SelfInfoSection value={basicInfo} showPersonal={isClient} onSave={handleBasicInfoSave} />
           </>
         )}
 

@@ -79,3 +79,14 @@ export interface GoogleLoginPayload {
 
 export const loginGoogle = (payload: GoogleLoginPayload): Promise<LoginResponse> =>
   apiClient.post('/auth/google', payload, { skipAuth: true });
+
+// SDD-080: 자기 기본정보 수정 — 이름/전화/성별/생년월일만 허용 (이메일·역할 불변)
+export interface UpdateUserMePayload {
+  name?: string;
+  phone?: string;
+  gender?: 'male' | 'female' | 'other';
+  birth_date?: string;
+}
+
+export const updateUserMe = (data: UpdateUserMePayload): Promise<User> =>
+  apiClient.patch<User>('/auth/users/me', data);
