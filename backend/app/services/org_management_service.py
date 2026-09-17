@@ -87,10 +87,11 @@ def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivat
     candidates = db.query(CounselingSession).filter(or_(CounselingSession.organization_id == org.id, unknown))
     scheduled = candidates.filter(CounselingSession.status.in_(["ready", "scheduled"])).count()
     ongoing = candidates.filter(CounselingSession.status.in_(["in_progress", "paused"])).count()
-    # 기존 소속 변경 이력이 없으므로 현재 타 기관 소속자의 과거 세션도
-    # 이 기관과 무관하다고 증명할 수 없다. 추정 배정 없이 전체 미확정을 차단한다.
+    # 귀속 불명 차단은 "이 기관 소속자"의 미확정 세션으로 한정한다.
+    # 타 기관·미소속의 미확정 세션은 이 기관 비활성화를 차단하지 않는다.
     unknown_count = db.query(CounselingSession).filter(
-        CounselingSession.organization_attribution_known.is_(False)
+        CounselingSession.organization_attribution_known.is_(False),
+        CounselingSession.host_id.in_(member_ids),
     ).count()
     active_links = db.query(ClientCounselorLink).filter(
         ClientCounselorLink.status == "active",
@@ -104,14 +105,14 @@ def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivat
     if active_links:
         blockers.append("활성 내담자 연결을 먼저 이관하거나 종료해주세요")
     if unknown_count:
-        blockers.append("전체 시스템에 기관 귀속이 확인되지 않은 기존 세션이 있습니다. 소속 이력과 귀속 확인이 필요합니다")
+        blockers.append("이 기관 소속자 중 기관 귀속이 확인되지 않은 기존 세션이 있습니다. 소속 이력과 귀속 확인이 필요합니다")
     if org.deactivated_at:
         blockers.append("이미 비활성화된 기관입니다")
     return OrganizationDeactivationImpact(
         account_count=member_ids.count(), active_link_count=active_links,
         scheduled_session_count=scheduled, ongoing_session_count=ongoing,
         unknown_attribution_count=unknown_count, preserved_session_count=candidates.count(),
-        attribution_note="세션 건수는 기관 스냅샷과 현재 소속자 기준 후보입니다. 귀속 확인 필요 건수는 소속 이력이 없는 전체 시스템의 미확정 세션이며 해당 기관 소유 건수가 아닙니다. 계정과 기존 기록은 삭제하지 않습니다.",
+        attribution_note="세션 건수는 기관 스냅샷과 현재 소속자 기준 후보입니다. 귀속 확인 필요 건수는 이 기관 소속자 중 소속 이력이 확인되지 않은 미확정 세션입니다. 계정과 기존 기록은 삭제하지 않습니다.",
         blockers=blockers, can_deactivate=not blockers, version=org.version,
     )
 

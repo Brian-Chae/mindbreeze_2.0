@@ -158,10 +158,17 @@ def test_inactive_entry_points(client, org_data, redis):
     assert error.value.status_code == 409
 
 
-def test_unknown_former_membership_cannot_be_assumed_safe(client, org_data):
+def test_unattributed_session_scoped_to_org_members(client, org_data):
     db, org, other, users = org_data
-    # 기관 이동 이력도 없으므로 현 소속이 달라도 과거 기관 귀속을 단정할 수 없다.
+    # 타 기관 소속자(users[4])의 미확정 세션은 이 기관 비활성화를 차단하지 않는다.
     db.add(Session(host_id=users[4].id, type="clinical", duration_min=30, status="completed"))
+    db.commit()
+    body = client.get(endpoint(org, "/deactivation-impact"), headers=auth(users)).json()
+    assert body["can_deactivate"] is True
+    assert body["unknown_attribution_count"] == 0
+
+    # 이 기관 소속자(users[2])의 미확정 세션은 차단한다.
+    db.add(Session(host_id=users[2].id, type="clinical", duration_min=30, status="completed"))
     db.commit()
     body = client.get(endpoint(org, "/deactivation-impact"), headers=auth(users)).json()
     assert not body["can_deactivate"]
