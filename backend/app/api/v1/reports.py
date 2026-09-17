@@ -36,7 +36,7 @@ def view_pdf(token: str, db: DBSession = Depends(get_db)):
 
 @router.get("/auto-approve", response_model=ReportAutoApproveSetting)
 def get_auto_approve(
-    current_user: dict = Depends(require_roles("counselor")),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
     return report_service.get_auto_approve_setting(current_user["id"], db)
@@ -45,7 +45,7 @@ def get_auto_approve(
 @router.patch("/auto-approve", response_model=ReportAutoApproveSetting)
 def update_auto_approve(
     payload: ReportAutoApproveSetting,
-    current_user: dict = Depends(require_roles("counselor")),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
     return report_service.update_auto_approve_setting(
@@ -76,7 +76,7 @@ def list_all(
 @router.get("/{report_id}/pdf")
 def download_pdf(
     report_id: str,
-    current_user: dict = Depends(require_roles("counselor")),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
     report_service.require_report_host(report_id, current_user["id"], db)
@@ -122,7 +122,7 @@ def approve(
 def resend_email(
     report_id: str,
     payload: ReportEmailResendRequest,
-    current_user: dict = Depends(require_roles("counselor")),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
     report_service.require_report_host(report_id, current_user["id"], db)

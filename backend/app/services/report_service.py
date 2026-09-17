@@ -235,8 +235,11 @@ def list_reports(
     uid = _to_uuid(user_id)
     user = db.query(User).filter(User.id == uid).first()
 
-    if user and user.role == "counselor":
-        sessions = db.query(Session).filter(Session.host_id == uid).all()
+    if user and user.role in ("counselor", "org_admin"):
+        host_ids = [uid] if user.role == "counselor" else [
+            row[0] for row in db.query(User.id).filter(User.org_id == user.org_id).all()
+        ]
+        sessions = db.query(Session).filter(Session.host_id.in_(host_ids)).all()
         sids = [s.id for s in sessions]
         sessions_map = {s.id: s for s in sessions}
         if sids:
@@ -252,7 +255,7 @@ def list_reports(
         query = query.offset((page - 1) * limit).limit(limit)
     items = query.all()
 
-    if not (user and user.role == "counselor"):
+    if not (user and user.role in ("counselor", "org_admin")):
         session_ids = {r.session_id for r in items}
         sessions_map = {
             s.id: s
@@ -313,8 +316,7 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    uid = _to_uuid(user_id)
-    if report.user_id != uid and (not session or session.host_id != uid):
+    if not _can_access_report(user_id, session, db):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     participant = (
         db.query(SessionParticipant)
@@ -330,14 +332,26 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     )
 
 
+def _can_access_report(user_id: str, session, db: DBSession) -> bool:
+    """사용자가 리포트 세션에 접근 가능한지 (본인 세션 host 또는 기관 관리자)."""
+    uid = _to_uuid(user_id)
+    if session and session.host_id == uid:
+        return True
+    user = db.query(User).filter(User.id == uid).first()
+    if user and user.role == "org_admin" and user.org_id and session:
+        host = db.query(User).filter(User.id == session.host_id).first()
+        return bool(host and host.org_id == user.org_id)
+    return False
+
+
 def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
-    """리포트가 현재 상담사의 세션에 속하는지 확인한다."""
+    """리포트가 현재 상담사의 세션에 속하는지 확인한다. (org_admin은 소속 기관 세션 허용)"""
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not session or session.host_id != _to_uuid(host_id):
+    if not _can_access_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
 
 
@@ -347,7 +361,7 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not session or session.host_id != _to_uuid(host_id):
+    if not _can_access_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 수정 가능합니다")
 
     if payload.content is not None:
