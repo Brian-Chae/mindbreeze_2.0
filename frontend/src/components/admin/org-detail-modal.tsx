@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   getAdminOrganization, listAdminOrganizationCounselors,
+  resetAdminOrgCounselorPassword, resetPrimaryAdminPassword,
   type AdminOrganizationDto, type AdminOrganizationCounselorDto,
 } from '../../lib/api/admin';
 
 import OrgManagementActions from './org-management-actions';
 import OrgCounselorAction from './org-counselor-action';
+import PasswordResetConfirm from './password-reset-confirm';
 import PrimaryAdminEdit from './primary-admin-edit';
 import CounselorInfoEditor from '../counselor/counselor-info-editor';
 import { getAdminCounselorProfile, patchAdminCounselorProfile } from '../../lib/api/counselor-info';
@@ -55,6 +57,11 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
   // SDD-077: 상담사 정보 수정 / 주 담당자 정보 수정 패널
   const [editingCounselor, setEditingCounselor] = useState<AdminOrganizationCounselorDto | null>(null);
   const [editingPrimary, setEditingPrimary] = useState(false);
+  // SDD-078: 비밀번호 재설정 확인 폼 (주 담당자 or 상담사)
+  const [resetTarget, setResetTarget] = useState<
+    { kind: 'primary' } | { kind: 'counselor'; member: AdminOrganizationCounselorDto } | null
+  >(null);
+  const [resetMessage, setResetMessage] = useState('');
   const [editGuard, setEditGuard] = useState({ dirty: false, busy: false });
   const editGuardChange = useCallback((dirty: boolean, busy: boolean) => setEditGuard({ dirty, busy }), []);
   const counselorGuardChange = useCallback((dirty: boolean, busy: boolean) => setCounselorGuard({ dirty, busy }), []);
@@ -133,6 +140,7 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
           {org.org_code && <button type="button" onClick={() => void copyCode()} className={control}>코드 복사</button>}
         </div>
         <p role="status" className="mt-1 text-xs">{copyMessage}</p>
+        {resetMessage && <p role="status" className="mt-1 text-xs text-green-800">{resetMessage}</p>}
       </header>
       {confirmClose && <div role="alertdialog" aria-label="미저장 변경 확인" className="border-b bg-amber-50 p-4 text-sm">
         <p>저장하지 않은 변경사항이 있습니다.</p>
@@ -164,10 +172,20 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
             </dl>
             <div className="mb-4 mt-7 flex items-center justify-between border-t pt-5">
               <h3 className="font-bold">{org.kind === 'individual' ? '소유자' : '주 담당자'}</h3>
-              {person && org.kind !== 'individual' && !editingPrimary &&
-                <button type="button" className={control} disabled={guard.busy}
-                  onClick={() => setEditingPrimary(true)}>담당자 정보 수정</button>}
+              <div className="flex gap-2">
+                {person && org.kind !== 'individual' && !editingPrimary &&
+                  <button type="button" className={control} disabled={guard.busy}
+                    onClick={() => setEditingPrimary(true)}>담당자 정보 수정</button>}
+                {person && org.kind !== 'individual' && person.status === 'active' && !resetTarget &&
+                  <button type="button" className={control} disabled={guard.busy}
+                    onClick={() => { setResetMessage(''); setResetTarget({ kind: 'primary' }); }}>비밀번호 재설정</button>}
+              </div>
             </div>
+            {resetTarget?.kind === 'primary' && person && <PasswordResetConfirm
+              target={{ name: person.name, email: person.email, roleLabel: '주 담당자' }}
+              submit={(reason) => resetPrimaryAdminPassword(org.id, reason)}
+              onGuardChange={counselorGuardChange} onCancel={() => setResetTarget(null)}
+              onSaved={(message) => { setResetTarget(null); counselorGuardChange(false, false); setResetMessage(message); }} />}
             {!person ? <p className="text-sm text-[#6F6F6F]">{org.kind === 'individual' ? '소유자 미지정 — 상담사 탭에서 정보를 수정하세요' : '담당자 미지정'}</p> :
               <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="이름">{person.name}</Field><Field label="이메일">{person.email}</Field>
@@ -193,6 +211,11 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
             save={(payload) => patchAdminCounselorProfile(editingCounselor.id, payload)}
             onGuardChange={editGuardChange} onCancel={() => setEditingCounselor(null)}
             onSaved={() => { setEditingCounselor(null); editGuardChange(false, false); counselors.retry(); detail.retry(); onUpdated(); }} />}
+          {resetTarget?.kind === 'counselor' && <PasswordResetConfirm
+            target={{ name: resetTarget.member.name, email: resetTarget.member.email, roleLabel: roleLabel(resetTarget.member.role) }}
+            submit={(reason) => resetAdminOrgCounselorPassword(org.id, resetTarget.member.id, reason)}
+            onGuardChange={counselorGuardChange} onCancel={() => setResetTarget(null)}
+            onSaved={(message) => { setResetTarget(null); counselorGuardChange(false, false); setResetMessage(message); }} />}
           {counselors.state.status === 'loading' && <p role="status">상담사를 불러오는 중...</p>}
           {counselors.state.status === 'error' && <Retry label="상담사" onRetry={counselors.retry} />}
           {counselors.state.status === 'success' && <>
@@ -221,6 +244,10 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
                         onClick={() => setCounselorAction({ member, action: 'role' })}>역할 변경</button>
                       <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setCounselorAction({ member, action: 'remove' })}>소속 해제</button>
+                      {member.status === 'active' && ['counselor', 'org_admin'].includes(member.role) &&
+                        <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`}
+                          disabled={!!counselorAction || !!editingCounselor || !!resetTarget || guard.busy}
+                          onClick={() => { setResetMessage(''); setResetTarget({ kind: 'counselor', member }); }}>비밀번호 재설정</button>}
                     </div>
                     {protectedReason(member) && <p className="mt-1 text-xs text-[#6F6F6F]">{protectedReason(member)}</p>}
                   </td>

@@ -78,6 +78,20 @@ class ResendInviteResponse(BaseModel):
     invite_sent: bool = False
 
 
+class PasswordResetIssueRequest(BaseModel):
+    """관리자 비밀번호 재설정 발급 요청 (SDD-078) — 사유 필수 (공백 불가, 422)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class PasswordResetIssueResponse(BaseModel):
+    """토큰 원문은 절대 포함하지 않는다 — 이메일 본문에만 존재."""
+
+    email_sent: bool
+    expires_at: str
+
+
 class OrganizationAdminResponse(BaseModel):
     """간이 등록 결과 — 발급된 기관 코드 포함."""
 

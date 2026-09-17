@@ -20,8 +20,10 @@ from app.schemas.org import (
     OrganizationResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
+    PasswordResetIssueRequest,
+    PasswordResetIssueResponse,
 )
-from app.services import counselor_info_service, org_service
+from app.services import admin_password_reset_service, counselor_info_service, org_service
 
 router = APIRouter(prefix="/org", tags=["org"])
 
@@ -295,6 +297,49 @@ async def patch_org_counselor_profile(
         from app.ws.chat_namespace import broadcast_profile_updated
         await broadcast_profile_updated(str(target.id), target.name)
     return counselor_info_service.serialize(target)
+
+
+@router.post(
+    "/{org_id}/counselors/{user_id}/password-reset",
+    response_model=PasswordResetIssueResponse,
+)
+async def reset_org_counselor_password(
+    org_id: str,
+    user_id: str,
+    req: PasswordResetIssueRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """소속 상담사(active) 비밀번호 재설정 링크 발송 — OrgAdmin 전용 (SDD-078).
+
+    기관 관리자는 소속 상담사만 재설정할 수 있다 — 기관 관리자(org_admin) 계정은
+    플랫폼 관리자를 통해서만 재설정한다 (권한 매트릭스 §4).
+    """
+    from app.models.user import User
+
+    _require_org_admin(current_user, org_id)
+    org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).first()
+    if org is None:
+        raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
+    if org.deactivated_at is not None:
+        raise HTTPException(status_code=409, detail="비활성화된 기관에서는 이 작업을 수행할 수 없습니다")
+    target = db.query(User).filter(
+        User.id == _parse_target_uuid(user_id), User.org_id == org.id,
+    ).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+    if target.role != "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="기관 관리자 계정은 플랫폼 관리자를 통해 재설정할 수 있습니다",
+        )
+    actor_id = uuid.UUID(current_user["id"])
+    email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
+        target, actor_id=actor_id, actor_name=current_user["name"], actor_role="org_admin",
+        reason=req.reason, org_id=org.id, db=db, redis=redis,
+    )
+    return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
 
 
 @router.delete("/{org_id}/counselors/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -310,3 +310,21 @@ export const patchAdminOrganizationCounselor = (
 
 export const removeAdminOrganizationCounselor = (orgId: string, userId: string, reason: string): Promise<void> =>
   apiClient.delete<void>(`/admin/orgs/${orgId}/counselors/${userId}`, { body: { reason } });
+
+
+// ---------------------------------------------------------------------------
+// SDD-078: 관리자 비밀번호 재설정 (재설정 링크 발급)
+// ---------------------------------------------------------------------------
+
+export interface PasswordResetIssueResponse {
+  email_sent: boolean;
+  expires_at: string;
+}
+
+export const resetPrimaryAdminPassword = (orgId: string, reason: string): Promise<PasswordResetIssueResponse> =>
+  apiClient.post<PasswordResetIssueResponse>(`/admin/orgs/${orgId}/primary-admin/password-reset`, { reason });
+
+export const resetAdminOrgCounselorPassword = (
+  orgId: string, userId: string, reason: string,
+): Promise<PasswordResetIssueResponse> =>
+  apiClient.post<PasswordResetIssueResponse>(`/admin/orgs/${orgId}/counselors/${userId}/password-reset`, { reason });

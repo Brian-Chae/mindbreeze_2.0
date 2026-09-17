@@ -25,6 +25,8 @@ from app.schemas.org import (
     OrganizationAdminCreate,
     OrganizationAdminResponse,
     OrganizationWithAdminResponse,
+    PasswordResetIssueRequest,
+    PasswordResetIssueResponse,
     ResendInviteResponse,
 )
 from app.schemas.counselor_info import (
@@ -35,6 +37,7 @@ from app.schemas.counselor_info import (
     PrimaryAdminProfilePatch,
 )
 from app.services import (
+    admin_password_reset_service,
     admin_service,
     counselor_info_service,
     org_invite_service,
@@ -554,3 +557,69 @@ def admin_patch_primary_admin_profile(
         id=str(user.id), name=user.name, email=user.email, phone=user.phone,
         role=user.role, status=user.status,
     )
+
+
+# ---------------------------------------------------------------------------
+# SDD-078: 관리자 비밀번호 재설정 (재설정 링크 발급 — 플랫폼 관리자)
+# ---------------------------------------------------------------------------
+
+
+def _require_active_org_for_reset(org: Organization) -> None:
+    """비활성화된 기관 구성원은 1차 범위에서 거부 — 재활성화 후 처리 (기획 §4)."""
+    if org.deactivated_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="비활성화된 기관에서는 이 작업을 수행할 수 없습니다",
+        )
+
+
+@router.post(
+    "/orgs/{org_id}/primary-admin/password-reset",
+    response_model=PasswordResetIssueResponse,
+)
+async def admin_reset_primary_admin_password(
+    org_id: uuid.UUID,
+    req: PasswordResetIssueRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """기관 주 담당자(active)에게 비밀번호 재설정 링크를 발송한다."""
+    org = _admin_org_or_404(org_id, db)
+    _require_active_org_for_reset(org)
+    target = db.get(User, org.primary_admin_id) if org.primary_admin_id else None
+    if target is None:
+        raise HTTPException(status_code=404, detail="주 담당자를 찾을 수 없습니다")
+    email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
+        target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",
+        reason=req.reason, org_id=org.id, db=db, redis=redis,
+    )
+    return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
+
+
+@router.post(
+    "/orgs/{org_id}/counselors/{user_id}/password-reset",
+    response_model=PasswordResetIssueResponse,
+)
+async def admin_reset_org_counselor_password(
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    req: PasswordResetIssueRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """기관 소속 상담사(active)에게 비밀번호 재설정 링크를 발송한다."""
+    org = _admin_org_or_404(org_id, db)
+    _require_active_org_for_reset(org)
+    target = db.query(User).filter(
+        User.id == user_id, User.org_id == org.id,
+        User.role.in_(["counselor", "org_admin"]),
+    ).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+    email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
+        target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",
+        reason=req.reason, org_id=org.id, db=db, redis=redis,
+    )
+    return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())

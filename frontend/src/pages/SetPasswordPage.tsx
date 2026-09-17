@@ -1,4 +1,5 @@
 // 초대 토큰으로 최초 비밀번호 설정 (기관 담당자 온보딩)
+// SDD-078: 관리자 비밀번호 재설정 링크(type=reset)도 같은 화면에서 처리한다.
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
@@ -24,6 +25,7 @@ export default function SetPasswordPage() {
   const token = params.get('token') ?? '';
   const inviteType = params.get('type');
   const isCounselorInvite = inviteType === 'counselor';
+  const isReset = inviteType === 'reset';
 
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -56,6 +58,12 @@ export default function SetPasswordPage() {
         { skipAuth: true },
       );
 
+      if (isReset) {
+        // 재설정은 전 세션이 무효화되므로 자동 로그인 없이 로그인 페이지로 이동
+        navigate('/login', { replace: true });
+        return;
+      }
+
       let redirectPath = '/dashboard/org';
       if (isLoginResponse(response)) {
         tokenStorage.set(response.access_token, response.refresh_token);
@@ -75,7 +83,7 @@ export default function SetPasswordPage() {
 
       navigate(redirectPath, { replace: true });
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 400 || err.status === 410)) {
+      if (err instanceof ApiError && (err.status === 400 || err.status === 401 || err.status === 410)) {
         setLinkExpired(true);
       } else if (err instanceof ApiError) {
         setError(err.message || '비밀번호 설정에 실패했습니다');
@@ -118,7 +126,7 @@ export default function SetPasswordPage() {
             to="/login"
             className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
           >
-            {isCounselorInvite ? '상담사 로그인' : '기관 로그인'}
+            {isReset ? '로그인' : isCounselorInvite ? '상담사 로그인' : '기관 로그인'}
           </Link>
         </div>
 
@@ -131,10 +139,16 @@ export default function SetPasswordPage() {
         />
         <div className="font-extrabold text-[22px] text-white/70 tracking-tight">Mind&nbsp;Breeze</div>
         <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
-          {isCounselorInvite ? '상담사 계정 활성화' : '비밀번호 설정'}
+          {isReset ? '새 비밀번호 설정' : isCounselorInvite ? '상담사 계정 활성화' : '비밀번호 설정'}
         </h1>
         <div className="text-[15px] text-white/60 mb-7 text-center">
-          {isCounselorInvite ? (
+          {isReset ? (
+            <>
+              관리자가 요청한 비밀번호 재설정 링크로 접속하셨습니다.
+              <br />
+              새 비밀번호를 설정하면 모든 기기에서 로그아웃됩니다.
+            </>
+          ) : isCounselorInvite ? (
             <>
               기관 담당자의 초대로 접속하셨습니다.
               <br />
@@ -152,13 +166,15 @@ export default function SetPasswordPage() {
         {linkExpired ? (
           <div className="flex flex-col items-center gap-4 text-center max-w-[320px]">
             <p className="text-[15px] text-white bg-red-500/80 rounded-full px-4 py-2" role="alert">
-              초대 링크가 만료되었거나 유효하지 않습니다
+              {isReset
+                ? '재설정 링크가 만료되었거나 유효하지 않습니다. 관리자에게 재발급을 요청하세요.'
+                : '초대 링크가 만료되었거나 유효하지 않습니다'}
             </p>
             <Link
               to="/login"
               className="text-[13px] text-white/85 hover:text-white underline-offset-2 hover:underline"
             >
-              {isCounselorInvite ? '상담사 로그인 페이지로 이동' : '기관 로그인 페이지로 이동'}
+              {isReset ? '로그인 페이지로 이동' : isCounselorInvite ? '상담사 로그인 페이지로 이동' : '기관 로그인 페이지로 이동'}
             </Link>
           </div>
         ) : (

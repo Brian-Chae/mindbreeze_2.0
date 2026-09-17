@@ -48,6 +48,7 @@ from app.schemas.auth import (
 )
 from app.schemas.counselor_info import CounselorInfoResponse, CounselorInfoUpdate
 from app.services import (
+    admin_password_reset_service,
     counselor_info_service,
     email_verify_service,
     login_attempt_service,
@@ -539,7 +540,7 @@ async def password_reset(
     return {"detail": "비밀번호가 변경되었습니다"}
 
 
-@router.post("/set-password", response_model=LoginResponse)
+@router.post("/set-password")
 async def set_password(
     req: SetPasswordRequest,
     db: Session = Depends(get_db),
@@ -549,7 +550,18 @@ async def set_password(
 
     토큰은 일회용이며 7일 후 만료된다. 성공 시 곧바로 로그인 상태로 진입할 수 있도록
     로그인 응답(access_token/refresh_token)을 반환한다.
+
+    SDD-078 — 단일 제출 경로 유지: 관리자 비밀번호 재설정 토큰(admin_password_reset)도
+    이 경로로 소비하되, 초대 수락 로직(status 강제 전환)과 격리된 별도 함수로 처리한다.
+    재설정은 전 세션을 무효화하므로 자동 로그인 없이 성공 여부만 반환한다.
     """
+    token_type = admin_password_reset_service.peek_token_type(req.token)
+    if token_type == admin_password_reset_service.TOKEN_TYPE:
+        await admin_password_reset_service.complete_admin_reset(
+            req.token, req.new_password, db, redis
+        )
+        return {"success": True, "flow": "password_reset"}
+
     user = await org_invite_service.consume_invite(req.token, req.new_password, db, redis)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
