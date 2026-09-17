@@ -26,6 +26,7 @@ from app.models.user import User
 from app.tasks.email import (
     send_client_invite_email,
     send_counselor_invite_email,
+    send_membership_invite_email,
     send_org_invite_email,
 )
 
@@ -40,6 +41,9 @@ COUNSELOR_TOKEN_TYPE = "counselor_invite"
 # SDD-020: 플랫폼 관리자가 수동 추가한 내담자(pending 계정)의 비밀번호 설정 초대도
 # 동일 토큰 인프라를 공유하되 type="client_invite" 로 구분한다.
 CLIENT_TOKEN_TYPE = "client_invite"
+# SDD-079: 기존 상담사 대상 "소속 추가 초대". 비밀번호 설정(set-password) 화이트리스트에는
+# 절대 넣지 않는다 — 소속 초대 토큰으로 기존 계정의 비밀번호를 바꿀 수 있으면 계정 탈취 벡터가 된다.
+MEMBERSHIP_TOKEN_TYPE = "membership_invite"
 ALLOWED_INVITE_TYPES = {TOKEN_TYPE, COUNSELOR_TOKEN_TYPE, CLIENT_TOKEN_TYPE}
 
 # Redis key prefix — 발급·소비가 반드시 동일 key 를 쓰도록 token_type 별 prefix 를 고정한다.
@@ -47,6 +51,7 @@ _INVITE_KEY_PREFIX = {
     TOKEN_TYPE: "org_invite",
     COUNSELOR_TOKEN_TYPE: "counselor_invite",
     CLIENT_TOKEN_TYPE: "client_invite",
+    MEMBERSHIP_TOKEN_TYPE: "membership_invite",
 }
 
 # 재발송 레이트 리밋 — 기관당 60초 1회
@@ -136,6 +141,103 @@ async def issue_counselor_invite(user: User, org_name: str, redis: Redis) -> boo
         org_name=org_name,
         expires_days=INVITE_TTL_DAYS,
     )
+
+
+async def issue_membership_invite(user: User, org, redis: Redis) -> bool:
+    """기존 상담사 대상 "소속 추가 초대" 토큰 발급 + 수락 링크 이메일 발송 (SDD-079).
+
+    set-password 가 아니라 /membership-invite 수락 링크다. 토큰에 org 클레임을 넣고
+    Redis 값도 "user_id:org_id" 로 저장해 소비 시 두 축을 모두 검증한다.
+    """
+    jti = uuid.uuid4().hex
+    expire = datetime.now(timezone.utc) + timedelta(seconds=INVITE_TTL_SECONDS)
+    payload = {
+        "sub": str(user.id),
+        "org": str(org.id),
+        "exp": expire,
+        "type": MEMBERSHIP_TOKEN_TYPE,
+        "jti": jti,
+    }
+    token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+    await redis.setex(
+        _invite_key(jti, MEMBERSHIP_TOKEN_TYPE), INVITE_TTL_SECONDS, f"{user.id}:{org.id}"
+    )
+    invite_link = f"{settings.frontend_base_url.rstrip('/')}/membership-invite?token={token}"
+    return send_membership_invite_email(
+        user.email,
+        invite_link,
+        counselor_name=user.name,
+        org_name=org.name,
+        expires_days=INVITE_TTL_DAYS,
+    )
+
+
+async def consume_membership_invite(token: str, db: Session, redis: Redis):
+    """소속 추가 초대 토큰 검증 → membership invited → active (SDD-079).
+
+    이메일 링크 소유 = 본인 수락으로 간주한다 (set-password 와 동일한 신뢰 모델).
+    비밀번호·계정 상태는 변경하지 않는다. 토큰은 일회용.
+    반환값: (User, Organization)
+    """
+    try:
+        payload = jwt.decode(
+            token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="초대 토큰이 만료되었거나 유효하지 않습니다",
+        )
+
+    if payload.get("type") != MEMBERSHIP_TOKEN_TYPE:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="초대 토큰 형식이 올바르지 않습니다",
+        )
+
+    jti = payload.get("jti")
+    user_id = payload.get("sub")
+    org_id = payload.get("org")
+    if not jti or not user_id or not org_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="초대 토큰에 필수 클레임이 없습니다",
+        )
+
+    stored = await redis.get(_invite_key(jti, MEMBERSHIP_TOKEN_TYPE))
+    if stored is None or stored != f"{user_id}:{org_id}":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="이미 사용되었거나 만료된 초대 토큰입니다",
+        )
+
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다"
+        )
+
+    from app.services import membership_service
+    from app.services.org_management_service import require_active_org
+
+    org = require_active_org(org_id, db)
+
+    membership = membership_service.get_membership(
+        db, user.id, org.id, statuses=("invited",)
+    )
+    if membership is None:
+        # 이미 수락했거나(active) 초대가 취소·해제된(left/없음) 경우
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 처리되었거나 유효하지 않은 소속 초대입니다",
+        )
+
+    membership_service.activate_membership(db, membership, user)
+    db.commit()
+    db.refresh(user)
+
+    await redis.delete(_invite_key(jti, MEMBERSHIP_TOKEN_TYPE))
+    return user, org
 
 
 async def issue_client_invite(
@@ -254,6 +356,15 @@ async def consume_invite(token: str, new_password: str, db: Session, redis: Redi
     user.status = "active"
     user.verified_tier = "email"
     db.add(PasswordHistory(user_id=user.id, password_hash=new_hash))
+    # SDD-079: 신규 초대 계정(counselor/org_admin)의 invited membership 도 함께 활성화
+    if token_type != CLIENT_TOKEN_TYPE and user.org_id is not None:
+        from app.services import membership_service
+
+        membership = membership_service.get_membership(
+            db, user.id, user.org_id, statuses=("invited",)
+        )
+        if membership is not None:
+            membership_service.activate_membership(db, membership, user)
     db.commit()
     db.refresh(user)
 

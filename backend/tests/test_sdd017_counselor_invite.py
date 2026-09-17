@@ -241,13 +241,14 @@ def test_ts4_이메일_중복초대_409_대소문자(client, monkeypatch):
     assert first.status_code == 201
 
     # 대소문자만 다른 동일 이메일 → 중복(409). 레이트리밋(429)보다 우선한다.
+    # SDD-079: 같은 기관 재초대는 "이미 소속(초대)" 문구로 응답한다.
     second = client.post(
         f"/api/v1/org/{ctx['org_id']}/counselors/invite",
         json={"name": "다른상담", "email": "foo4@test.com"},
         headers=ctx["h"],
     )
     assert second.status_code == 409, second.text
-    assert "이미 등록된 이메일" in second.json()["detail"]
+    assert "이미 이 기관에 소속(초대)된 상담사입니다" in second.json()["detail"]
 
 
 # ---------------------------------------------------------------------------

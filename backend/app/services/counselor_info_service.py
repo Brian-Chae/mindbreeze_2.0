@@ -61,10 +61,13 @@ def _parse_iso_date(value: str | None, label: str, *, allow_future: bool = True)
 
 def get_target_counselor(user_id: uuid.UUID, db: Session, *, org_id: uuid.UUID | str | None = None) -> User:
     """대상 상담사 조회 — 상담사/기관 관리자 계정만. 기관 경로는 소속 불일치 시 404."""
+    from app.services import membership_service
+
     user = db.query(User).filter(User.id == user_id).first()
     if user is None or user.role not in ("counselor", "org_admin"):
         raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
-    if org_id is not None and str(user.org_id or "") != str(org_id):
+    # SDD-079: 소속 검사는 membership 기준 — 다중 소속 상담사도 소속 기관 관리자가 조회 가능
+    if org_id is not None and membership_service.get_membership(db, user.id, org_id) is None:
         raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
     return user
 

@@ -94,9 +94,11 @@ def create_organization(
     db.add(org)
     db.flush()
 
-    # 신청자를 OrgAdmin으로 승격하고 센터 소속 부여
+    # 신청자를 OrgAdmin으로 승격하고 센터 소속 부여 (SDD-079: membership + 미러 동기)
+    from app.services import membership_service
+
     user.role = "org_admin"
-    user.org_id = org.id
+    membership_service.add_membership(db, user, org.id, status_="active", role="org_admin")
 
     db.commit()
     db.refresh(org)
@@ -260,20 +262,34 @@ def handle_join_request(
     if new_status == "approved":
         applicant = db.query(User).filter(User.id == req.user_id).first()
         if applicant and applicant.org_id is None:
-            applicant.org_id = req.org_id
+            # SDD-079: 가입 승인의 종착점도 membership — User.org_id 는 미러로 동기 갱신된다
+            from app.services import membership_service
+
+            if membership_service.get_membership(db, applicant.id, req.org_id) is None:
+                membership_service.add_membership(
+                    db, applicant, req.org_id, status_="active", role=applicant.role
+                )
 
     db.commit()
     db.refresh(req)
     return req
 
 
-def get_counselors(org_id: str, db: Session) -> list[User]:
-    """소속 상담사 목록 (counselor + org_admin)."""
+def get_counselors(org_id: str, db: Session) -> list[tuple[User, "UserOrgMembership"]]:
+    """소속 상담사 목록 (counselor + org_admin) — membership 기반 (SDD-079).
+
+    active(소속) + invited(신규 가입 초대·소속 추가 초대)를 함께 반환한다.
+    반환값은 (User, UserOrgMembership) 튜플 — 목록 상태는 membership 이 진실이다.
+    """
+    from app.models.user_org_membership import UserOrgMembership
+
     require_active_org(org_id, db)
     return (
-        db.query(User)
+        db.query(User, UserOrgMembership)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
         .filter(
-            User.org_id == uuid.UUID(org_id),
+            UserOrgMembership.org_id == uuid.UUID(org_id),
+            UserOrgMembership.status.in_(["active", "invited"]),
             User.role.in_(["counselor", "org_admin"]),
         )
         .order_by(User.created_at.asc())
@@ -298,18 +314,20 @@ def update_counselor_role(
             detail="해당 센터의 관리자만 변경할 수 있습니다",
         )
 
+    from app.services import membership_service
+
     require_active_org(org_id, db)
-    user = (
-        db.query(User)
-        .filter(User.id == uuid.UUID(user_id), User.org_id == uuid.UUID(org_id))
-        .first()
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    membership = (
+        membership_service.get_membership(db, user.id, org_id) if user is not None else None
     )
-    if not user:
+    if user is None or membership is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
         )
 
     user.role = new_role
+    membership.role = new_role
     db.commit()
     db.refresh(user)
     return user
@@ -324,18 +342,21 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
             detail="해당 센터의 관리자만 해제할 수 있습니다",
         )
 
+    from app.services import membership_service
+
     require_active_org(org_id, db)
-    user = (
-        db.query(User)
-        .filter(User.id == uuid.UUID(user_id), User.org_id == uuid.UUID(org_id))
-        .first()
+    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
+    membership = (
+        membership_service.get_membership(db, user.id, org_id) if user is not None else None
     )
-    if not user:
+    if user is None or membership is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
         )
 
-    user.org_id = None
+    # SDD-079: 소속 해제 = membership status='left' + left_at. User.org_id 미러는
+    # leave_membership 이 동기 갱신한다 (주 소속 해제 시 남은 소속 자동 승격).
+    membership_service.leave_membership(db, user, org_id)
     # OrgAdmin이었다면 일반 상담사로 강등
     if user.role == "org_admin":
         user.role = "counselor"
@@ -458,6 +479,18 @@ def create_org_with_admin(
     db.add(admin)
     db.flush()
 
+    # SDD-079: 담당자 소속도 membership 으로 기록 (초대 수락 시 active 전환)
+    from app.services import membership_service
+
+    membership_service.add_membership(
+        db,
+        admin,
+        org.id,
+        status_="invited",
+        role="org_admin",
+        invited_at=datetime.now(timezone.utc),
+    )
+
     org.primary_admin_id = admin.id
     db.commit()
     db.refresh(org)
@@ -487,7 +520,7 @@ async def invite_counselor(
 
     from app.core.security import hash_password
     from app.models.counselor_profile import CounselorProfile
-    from app.services import org_invite_service
+    from app.services import membership_service, org_invite_service
 
     org = require_active_org(org_id, db)
 
@@ -505,17 +538,46 @@ async def invite_counselor(
             detail="상담사 이메일을 입력해야 합니다",
         )
 
-    # 중복 검사(409)를 레이트리밋(429)보다 먼저 수행한다 — 대소문자 변형 재초대는
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=org_invite_service.INVITE_TTL_DAYS)
+
+    # 중복/분기 검사(409)를 레이트리밋(429)보다 먼저 수행한다 — 대소문자 변형 재초대는
     # 항상 409 로 응답해야 하며, 쿨다운이 이를 가려서는 안 된다.
-    if db.query(User).filter(User.email == email_norm).first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 등록된 이메일입니다",
+    existing = db.query(User).filter(User.email == email_norm).first()
+    if existing is not None:
+        # SDD-079 분기: 기존 계정 — 상담사면 "소속 추가 초대", 아니면 409.
+        # 계정 생성·CounselorProfile 발급 없이 membership(invited)만 추가한다.
+        if existing.role != "counselor":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="상담사 계정이 아닌 이메일입니다",
+            )
+        if membership_service.get_membership(db, existing.id, org.id) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 이 기관에 소속(초대)된 상담사입니다",
+            )
+
+        await org_invite_service.check_counselor_send_cooldown(str(org.id), redis)
+
+        membership_service.add_membership(
+            db,
+            existing,
+            org.id,
+            status_="invited",
+            invited_at=now,
+            invite_expires_at=expires,
         )
+        db.commit()
+        db.refresh(existing)
+
+        # 소속 추가는 반드시 본인 수락을 거친다 — 관리자 일방 배정 금지
+        invite_sent = await org_invite_service.issue_membership_invite(existing, org, redis)
+        await org_invite_service.mark_counselor_sent(str(org.id), redis)
+        return existing, invite_sent
 
     await org_invite_service.check_counselor_send_cooldown(str(org.id), redis)
 
-    now = datetime.now(timezone.utc)
     user = User(
         email=email_norm,
         # 초대 수락 전까지 아무도 알 수 없는 난수 — 실질적으로 로그인 불가
@@ -526,7 +588,7 @@ async def invite_counselor(
         status="pending",
         verified_tier="unverified",
         invited_at=now,
-        invite_expires_at=now + timedelta(days=org_invite_service.INVITE_TTL_DAYS),
+        invite_expires_at=expires,
     )
     db.add(user)
     db.flush()
@@ -535,6 +597,9 @@ async def invite_counselor(
         db, CounselorProfile, "counselor_code", label="상담사 코드"
     )
     db.add(CounselorProfile(user_id=user.id, counselor_code=code, specialties=[]))
+    membership_service.add_membership(
+        db, user, org.id, status_="invited", invited_at=now, invite_expires_at=expires
+    )
     db.commit()
     db.refresh(user)
 
@@ -546,11 +611,13 @@ async def invite_counselor(
 async def resend_counselor_invite(
     org_id: str, user_id: str, redis, db: Session
 ) -> tuple[User, bool]:
-    """상담사 초대 재발송 — pending 상태 대상만 허용.
+    """상담사 초대 재발송 — membership 이 invited 상태인 대상만 허용 (SDD-079).
 
-    active 계정 재발송(비밀번호 초기화 벡터)과 타 기관 상담사 대상은 차단한다.
+    - 신규 가입 초대(pending 계정) → set-password 링크 재발송
+    - 소속 추가 초대(기존 상담사) → membership 수락 링크 재발송
+    active 소속 재발송(비밀번호 초기화 벡터)과 타 기관 상담사 대상은 차단한다.
     """
-    from app.services import org_invite_service
+    from app.services import membership_service, org_invite_service
 
     org = require_active_org(org_id, db)
 
@@ -561,16 +628,15 @@ async def resend_counselor_invite(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
         )
 
-    user = (
-        db.query(User)
-        .filter(User.id == uid, User.org_id == org.id, User.role == "counselor")
-        .first()
+    user = db.query(User).filter(User.id == uid, User.role == "counselor").first()
+    membership = (
+        membership_service.get_membership(db, uid, org.id) if user is not None else None
     )
-    if user is None:
+    if user is None or membership is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
         )
-    if user.status != "pending":
+    if membership.status != "invited":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 활성화된 상담사에게는 초대를 재발송할 수 없습니다",
@@ -581,12 +647,20 @@ async def resend_counselor_invite(
     from datetime import timedelta
 
     now = datetime.now(timezone.utc)
-    user.invited_at = now
-    user.invite_expires_at = now + timedelta(days=org_invite_service.INVITE_TTL_DAYS)
+    expires = now + timedelta(days=org_invite_service.INVITE_TTL_DAYS)
+    membership.invited_at = now
+    membership.invite_expires_at = expires
+    is_new_account = user.status == "pending"
+    if is_new_account:
+        user.invited_at = now
+        user.invite_expires_at = expires
     db.commit()
     db.refresh(user)
 
-    invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
+    if is_new_account:
+        invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
+    else:
+        invite_sent = await org_invite_service.issue_membership_invite(user, org, redis)
     await org_invite_service.mark_counselor_resent(str(org.id), redis)
     return user, invite_sent
 

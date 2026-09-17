@@ -17,6 +17,8 @@ const RegisterOrganizationPage = lazy(() => import('./pages/register/RegisterOrg
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
+// SDD-079: 기존 상담사 소속 추가 초대 수락
+const MembershipInvitePage = lazy(() => import('./pages/MembershipInvitePage'));
 const CounselorOnboardingPage = lazy(() => import('./pages/onboarding/CounselorOnboardingPage'));
 const ClientOnboardingPage = lazy(() => import('./pages/onboarding/ClientOnboardingPage'));
 const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssentialsPage'));
@@ -120,6 +122,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/membership-invite" element={<MembershipInvitePage />} />
         <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />

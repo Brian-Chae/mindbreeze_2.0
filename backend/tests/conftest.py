@@ -245,6 +245,12 @@ def create_test_counselor(
             org_id=org_id,
         )
         db.add(user)
+        db.flush()
+        # SDD-079: 소속은 membership 이 진실의 원천 — org 소속 시 membership 도 생성
+        if org_id is not None:
+            from app.services import membership_service
+
+            membership_service.add_membership(db, user, org_id, status_="active")
         db.commit()
         db.refresh(user)
         return {"id": str(user.id), "access_token": create_access_token(subject=str(user.id))}

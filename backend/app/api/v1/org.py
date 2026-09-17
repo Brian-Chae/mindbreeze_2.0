@@ -17,13 +17,20 @@ from app.schemas.org import (
     CounselorResponse,
     JoinRequestResponse,
     JoinRequestUpdate,
+    MembershipInviteAcceptRequest,
+    MembershipInviteAcceptResponse,
     OrganizationResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
     PasswordResetIssueRequest,
     PasswordResetIssueResponse,
 )
-from app.services import admin_password_reset_service, counselor_info_service, org_service
+from app.services import (
+    admin_password_reset_service,
+    counselor_info_service,
+    membership_service,
+    org_service,
+)
 
 router = APIRouter(prefix="/org", tags=["org"])
 
@@ -37,15 +44,33 @@ def _require_org_admin(current_user: dict, org_id: str) -> None:
         )
 
 
-def _counselor_to_response(u) -> CounselorResponse:
+def _counselor_to_response(u, membership=None) -> CounselorResponse:
+    """SDD-079: membership 이 주어지면 목록 상태는 membership 기준으로 표시한다.
+
+    membership invited → "pending" (기존 FE 상태값 유지).
+    invite_type: 신규 가입 초대(new_account) / 소속 추가 초대(org_membership).
+    """
+    if membership is not None:
+        status_str = "pending" if membership.status == "invited" else membership.status
+        invited_at = membership.invited_at or u.invited_at
+        invite_expires_at = membership.invite_expires_at or u.invite_expires_at
+        invite_type = None
+        if membership.status == "invited":
+            invite_type = "new_account" if u.status == "pending" else "org_membership"
+    else:
+        status_str = u.status
+        invited_at = u.invited_at
+        invite_expires_at = u.invite_expires_at
+        invite_type = None
     return CounselorResponse(
         id=str(u.id),
         name=u.name,
         email=u.email,
         role=u.role,
-        status=u.status,
-        invited_at=u.invited_at.isoformat() if u.invited_at else None,
-        invite_expires_at=u.invite_expires_at.isoformat() if u.invite_expires_at else None,
+        status=status_str,
+        invited_at=invited_at.isoformat() if invited_at else None,
+        invite_expires_at=invite_expires_at.isoformat() if invite_expires_at else None,
+        invite_type=invite_type,
     )
 
 
@@ -175,10 +200,10 @@ async def list_counselors(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """센터 소속 상담사 목록 — OrgAdmin 전용. pending/active 상태 포함."""
+    """센터 소속 상담사 목록 — OrgAdmin 전용. membership 기반 (SDD-079)."""
     _require_org_admin(current_user, org_id)
-    users = org_service.get_counselors(org_id, db)
-    return [_counselor_to_response(u) for u in users]
+    rows = org_service.get_counselors(org_id, db)
+    return [_counselor_to_response(u, m) for u, m in rows]
 
 
 @router.post(
@@ -193,13 +218,18 @@ async def invite_counselor(
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """상담사 초대 — OrgAdmin 전용. 이름+이메일 → pending 계정 + 초대 메일."""
+    """상담사 초대 — OrgAdmin 전용 (SDD-079 자동 분기).
+
+    신규 이메일은 pending 계정 + 초대 메일, 기존 상담사는 소속 추가 초대 메일.
+    응답 형태는 두 경우 동일 — 계정 존재 여부를 문구로 노출하지 않는다.
+    """
     _require_org_admin(current_user, org_id)
     user, invite_sent = await org_service.invite_counselor(
         org_id, req.name, str(req.email), redis, db
     )
+    membership = membership_service.get_membership(db, user.id, org_id)
     return CounselorInviteResponse(
-        counselor=_counselor_to_response(user), invite_sent=invite_sent
+        counselor=_counselor_to_response(user, membership), invite_sent=invite_sent
     )
 
 
@@ -214,13 +244,14 @@ async def resend_counselor_invite(
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """상담사 초대 재발송 — OrgAdmin 전용. pending 상태만 허용."""
+    """상담사 초대 재발송 — OrgAdmin 전용. membership invited 상태만 허용 (SDD-079)."""
     _require_org_admin(current_user, org_id)
     user, invite_sent = await org_service.resend_counselor_invite(
         org_id, user_id, redis, db
     )
+    membership = membership_service.get_membership(db, user.id, org_id)
     return CounselorInviteResponse(
-        counselor=_counselor_to_response(user), invite_sent=invite_sent
+        counselor=_counselor_to_response(user, membership), invite_sent=invite_sent
     )
 
 
@@ -340,6 +371,23 @@ async def reset_org_counselor_password(
         reason=req.reason, org_id=org.id, db=db, redis=redis,
     )
     return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
+
+
+@router.post("/membership-invites/accept", response_model=MembershipInviteAcceptResponse)
+async def accept_membership_invite(
+    req: MembershipInviteAcceptRequest,
+    db: Session = Depends(get_db),
+    redis: Redis = Depends(get_redis),
+):
+    """기존 상담사 소속 추가 초대 수락 (SDD-079).
+
+    이메일 링크의 일회용 토큰이 본인 수락을 증명한다 (set-password 와 동일 신뢰 모델).
+    비밀번호·계정 상태는 변경하지 않고 membership 만 active 로 전환한다.
+    """
+    from app.services import org_invite_service
+
+    _, org = await org_invite_service.consume_membership_invite(req.token, db, redis)
+    return MembershipInviteAcceptResponse(org_id=str(org.id), org_name=org.name)
 
 
 @router.delete("/{org_id}/counselors/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

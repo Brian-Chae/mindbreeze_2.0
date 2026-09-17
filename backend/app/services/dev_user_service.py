@@ -147,6 +147,18 @@ def create_dev_user(
     db.add(user)
     db.flush()
 
+    # SDD-079: 소속은 membership 이 진실의 원천 — counselor/org_admin 소속 시 함께 생성
+    if resolved_org_id is not None and role in ("counselor", "org_admin"):
+        from app.services import membership_service
+
+        membership_service.add_membership(
+            db,
+            user,
+            resolved_org_id,
+            status_="active" if status_norm == "active" else "invited",
+            role=role,
+        )
+
     # org_admin 인데 기관에 주 담당자가 없으면 연결한다(_require_org_admin 정합).
     if role == "org_admin" and resolved_org_id is not None:
         org = db.query(Organization).filter(Organization.id == resolved_org_id).first()

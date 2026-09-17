@@ -15,6 +15,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.client_profile import ClientProfile
 from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
+from app.models.user_org_membership import UserOrgMembership
 from app.models.client_invite import ClientInvite
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead
 from app.models.org_document import OrgDocument
@@ -54,6 +55,7 @@ __all__ = [
     "ClientProfile",
     "Organization",
     "OrganizationJoinRequest",
+    "UserOrgMembership",
     "ClientInvite",
     "OrgDocument",
     "Qualification",

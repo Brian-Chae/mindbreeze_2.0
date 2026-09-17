@@ -183,9 +183,13 @@ class CounselorResponse(BaseModel):
     email: str
     role: str
     # SDD-017: 초대·가입 현황 표시용. pending/active 구분 + 만료 뱃지.
+    # SDD-079: status 는 membership 기준 (invited → "pending").
     status: str | None = None
     invited_at: str | None = None
     invite_expires_at: str | None = None
+    # SDD-079: 초대 유형 — "new_account"(신규 가입 초대) / "org_membership"(소속 추가 초대).
+    # active 구성원은 None.
+    invite_type: str | None = None
 
 
 class CounselorInviteRequest(BaseModel):
@@ -198,6 +202,17 @@ class CounselorInviteRequest(BaseModel):
 class CounselorInviteResponse(BaseModel):
     counselor: CounselorResponse
     invite_sent: bool = False
+
+
+class MembershipInviteAcceptRequest(BaseModel):
+    """SDD-079 — 기존 상담사 소속 추가 초대 수락."""
+
+    token: str = Field(min_length=1)
+
+
+class MembershipInviteAcceptResponse(BaseModel):
+    org_id: str
+    org_name: str
 
 
 OrganizationWithAdminResponse.model_rebuild()

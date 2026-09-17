@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.models.organization import Organization
 from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
 from app.models.session import Session as CounselingSession
 from app.models.client_counselor_link import ClientCounselorLink
 from app.models.credential import VerificationAudit
@@ -82,7 +83,12 @@ def patch_organization(org_id: uuid.UUID, data: OrganizationPatch, if_match: str
 
 
 def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivationImpact:
-    member_ids = db.query(User.id).filter(User.org_id == org.id)
+    # SDD-079: 구성원 = membership 기준 (active 소속 + invited 초대, left 제외).
+    # org_id 미러만 있는 계정(예: 기관 소속 내담자)도 놓치지 않도록 합집합으로 계산한다.
+    member_ids = db.query(UserOrgMembership.user_id).filter(
+        UserOrgMembership.org_id == org.id,
+        UserOrgMembership.status.in_(["active", "invited"]),
+    ).union(db.query(User.id).filter(User.org_id == org.id))
     unknown = and_(CounselingSession.organization_attribution_known.is_(False), CounselingSession.host_id.in_(member_ids))
     candidates = db.query(CounselingSession).filter(or_(CounselingSession.organization_id == org.id, unknown))
     scheduled = candidates.filter(CounselingSession.status.in_(["ready", "scheduled"])).count()
@@ -151,9 +157,15 @@ def reactivate(org_id: uuid.UUID, data: OrganizationReactivate, if_match: str | 
 def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
                      reason: str, db: Session, *, role: str | None = None) -> User:
     """기관 잠금 안에서 역할/소속과 감사 이력을 함께 변경한다. role=None은 소속 해제."""
+    from app.services import membership_service
+
     org = lock_organization(org_id, db)
-    user = db.query(User).filter(User.id == user_id, User.org_id == org.id).populate_existing().with_for_update().first()
-    if user is None:
+    user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
+    membership = (
+        membership_service.get_membership(db, user_id, org.id) if user is not None else None
+    )
+    # membership 미보유라도 org_id 미러가 이 기관이면 기존 계약(role 422 등)을 유지한다
+    if user is None or (membership is None and user.org_id != org.id):
         raise HTTPException(404, "대상 상담사를 찾을 수 없습니다")
     if user.role not in ("counselor", "org_admin") or role not in (None, "counselor", "org_admin"):
         raise HTTPException(422, "상담사와 기관 관리자 역할만 변경할 수 있습니다")
@@ -183,10 +195,15 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
         ).first()
         if active_link:
             raise HTTPException(409, "활성 내담자 연결을 먼저 이관하거나 종료해주세요")
-    before = {"org_id": str(user.org_id), "role": user.role}
+    before = {"org_id": str(org.id), "role": user.role}
     user.role = role or "counselor"
     if role is None:
-        user.org_id = None
+        # SDD-079: 소속 해제 = membership left (+ User.org_id 미러 동기 갱신)
+        membership_service.leave_membership(db, user, org.id)
+        if user.org_id == org.id:
+            user.org_id = None
+    elif membership is not None:
+        membership.role = role
     # 인증은 JWT 역할을 신뢰하지 않고 매 요청 DB의 role/org_id를 다시 읽는다.
     # 과거 세션의 기관 스냅샷과 프로필/연결/계정은 변경하지 않는다.
     org.version += 1

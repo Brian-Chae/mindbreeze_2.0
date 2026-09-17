@@ -9,6 +9,7 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models.organization import Organization
 from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
 from app.models.counselor_profile import CounselorProfile
 
 
@@ -30,6 +31,16 @@ def org_data(client):
                     created_at=datetime(2026, 1, i + 1, tzinfo=timezone.utc))
         db.add(user)
         users.append(user)
+    db.flush()
+    # SDD-079: 프로덕션 백필 불변식과 동일하게 counselor/org_admin 소속은 membership 으로 존재
+    for user in users:
+        if user.org_id is not None and user.role in ("counselor", "org_admin"):
+            db.add(UserOrgMembership(
+                user_id=user.id, org_id=user.org_id, role=user.role,
+                status="invited" if user.status == "pending" else "active",
+                is_primary=user.status != "pending",
+                joined_at=None if user.status == "pending" else user.created_at,
+            ))
     db.flush()
     org.primary_admin_id = users[1].id
     other.owner_user_id = users[4].id

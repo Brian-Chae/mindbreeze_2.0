@@ -368,6 +368,99 @@ def send_counselor_invite_email(
     return _send_email(to_email, subject, body_text, body_html)
 
 
+def send_membership_invite_email(
+    to_email: str,
+    invite_link: str,
+    *,
+    counselor_name: str,
+    org_name: str,
+    expires_days: int,
+) -> bool:
+    """기존 상담사 대상 "소속 추가 초대" 메일 (SDD-079).
+
+    이미 계정이 있는 상담사를 다른 기관이 초대할 때 보낸다 — 비밀번호 설정이 아니라
+    소속 초대 수락 링크다. 수락하면 기존 계정에 해당 기관 소속이 추가된다.
+    """
+    subject = f"[MIND BREEZE] {org_name} 소속 초대 안내"
+    body_text = (
+        f"{counselor_name}님, 안녕하세요.\n\n"
+        f"'{org_name}' 기관이 회원님을 소속 상담사로 초대했습니다.\n"
+        f"아래 링크에서 초대를 수락하시면 기존 계정에 소속이 추가됩니다.\n"
+        f"(비밀번호 설정은 필요 없습니다 — 기존 계정으로 로그인하시면 됩니다.)\n\n"
+        f"{invite_link}\n\n"
+        f"· 이 링크는 {expires_days}일간 유효하며 한 번만 사용할 수 있습니다.\n"
+        f"· 초대를 원하지 않으시면 이 메일을 무시해 주세요. 소속은 추가되지 않습니다.\n\n"
+        f"감사합니다.\nMIND BREEZE 드림"
+    )
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#F4F1F8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Apple SD Gothic Neo',sans-serif;color:#1F1630;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#F4F1F8;">
+  <tr>
+    <td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:1px solid #E9E2F2;border-radius:24px;overflow:hidden;box-shadow:0 10px 30px rgba(31,22,48,0.08);">
+        <tr>
+          <td style="padding:32px 32px 20px;background:linear-gradient(135deg,#21112F 0%,#4A1F6A 100%);text-align:center;">
+            <div style="font-size:13px;line-height:20px;font-weight:700;letter-spacing:1.6px;color:#DCC8F2;">MIND BREEZE</div>
+            <div style="margin-top:10px;font-size:26px;line-height:36px;font-weight:800;color:#FFFFFF;">기관 소속 초대</div>
+            <div style="margin-top:8px;font-size:14px;line-height:22px;color:#E9DDF8;">초대를 수락하면 기존 계정에 소속이 추가됩니다.</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px 32px;">
+            <div style="font-size:16px;line-height:26px;color:#2A1C3D;">{counselor_name}님, 안녕하세요.</div>
+            <div style="margin-top:12px;font-size:15px;line-height:24px;color:#4A3B5F;">
+              <strong style="color:#2A1C3D;">{org_name}</strong> 기관이 회원님을 소속 상담사로 초대했습니다.<br>
+              아래 버튼에서 초대를 수락해 주세요. 비밀번호 설정은 필요 없습니다.
+            </div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;background:#F7F3FB;border:1px solid #E7DCF5;border-radius:16px;">
+              <tr>
+                <td style="padding:18px 20px;">
+                  <div style="font-size:12px;line-height:18px;font-weight:700;letter-spacing:1px;color:#7A4FB0;text-transform:uppercase;">안내</div>
+                  <div style="margin-top:8px;font-size:14px;line-height:22px;color:#5C4A73;">
+                    이 링크는 {expires_days}일간 유효하며 1회만 사용할 수 있습니다.
+                  </div>
+                </td>
+              </tr>
+            </table>
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:28px;">
+              <tr>
+                <td align="center">
+                  <a href="{invite_link}" style="display:inline-block;background:#5F0080;color:#FFFFFF;text-decoration:none;font-size:16px;line-height:24px;font-weight:800;padding:14px 28px;border-radius:999px;">
+                    소속 초대 수락하기
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <div style="margin-top:24px;font-size:13px;line-height:21px;color:#7A6A90;">
+              버튼이 작동하지 않으면 아래 링크를 복사해서 브라우저에 붙여넣어 주세요.
+            </div>
+            <div style="margin-top:8px;font-size:12px;line-height:20px;color:#6A4A92;word-break:break-all;">
+              {invite_link}
+            </div>
+            <div style="margin-top:24px;padding-top:20px;border-top:1px solid #EFE8F7;font-size:13px;line-height:22px;color:#7A6A90;">
+              • 초대를 원하지 않으시면 이 메일을 무시해 주세요. 소속은 추가되지 않습니다.<br>
+              • 링크가 만료된 경우 기관 담당자에게 재발송을 요청해 주세요.
+            </div>
+            <div style="margin-top:24px;font-size:14px;line-height:22px;color:#4A3B5F;">
+              감사합니다.<br>MIND BREEZE 드림
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>"""
+    return _send_email(to_email, subject, body_text, body_html)
+
+
 def send_client_invite_email(
     to_email: str,
     invite_link: str,

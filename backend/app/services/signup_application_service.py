@@ -171,6 +171,13 @@ def create_individual_counselor_application(
 
     org.owner_user_id = user.id
 
+    # SDD-079: 소속은 membership 이 진실의 원천 — 초대 수락 시 active 로 전환된다
+    from app.services import membership_service
+
+    membership_service.add_membership(
+        db, user, org.id, status_="invited", invited_at=datetime.now(timezone.utc)
+    )
+
     counselor_code = code_service.generate_unique_code(
         db, CounselorProfile, "counselor_code", label="상담사 코드"
     )

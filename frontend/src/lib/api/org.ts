@@ -35,6 +35,9 @@ export interface JoinRequest {
 export type CounselorRole = 'counselor' | 'org_admin';
 export type CounselorAccountStatus = 'pending' | 'active';
 
+// SDD-079: 초대 유형 — 신규 가입 초대(new_account) / 소속 추가 초대(org_membership)
+export type CounselorInviteType = 'new_account' | 'org_membership';
+
 export interface CounselorItem {
   id: string;
   name: string;
@@ -43,6 +46,7 @@ export interface CounselorItem {
   status?: CounselorAccountStatus;
   invited_at?: string | null;
   invite_expires_at?: string | null;
+  invite_type?: CounselorInviteType | null;
 }
 
 export interface InviteCounselorPayload {
@@ -121,4 +125,17 @@ export const resendCounselorInvite = (
   apiClient.post<ResendCounselorInviteResponse>(
     `${PREFIX}/${orgId}/counselors/${userId}/resend-invite`,
     {},
+  );
+
+// SDD-079: 기존 상담사 소속 추가 초대 수락 (이메일 링크의 일회용 토큰)
+export interface MembershipInviteAcceptResponse {
+  org_id: string;
+  org_name: string;
+}
+
+export const acceptMembershipInvite = (token: string): Promise<MembershipInviteAcceptResponse> =>
+  apiClient.post<MembershipInviteAcceptResponse>(
+    `${PREFIX}/membership-invites/accept`,
+    { token },
+    { skipAuth: true },
   );

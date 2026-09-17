@@ -76,6 +76,28 @@ function InviteStatusBadge({ status }: { status: InviteDisplayStatus }) {
   );
 }
 
+// SDD-079: 초대 유형 라벨 — 신규 가입 초대 / 소속 추가 초대 (active 구성원은 null)
+function getInviteTypeLabel(counselor: CounselorItem): string | null {
+  if (counselor.invite_type === 'org_membership') return '소속 추가';
+  if (counselor.invite_type === 'new_account') return '신규 가입';
+  return null;
+}
+
+function InviteTypeBadge({ counselor }: { counselor: CounselorItem }) {
+  const label = getInviteTypeLabel(counselor);
+  if (!label) return <span className="text-[12px] text-[#C2C3CE]">-</span>;
+  const isMembership = counselor.invite_type === 'org_membership';
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
+        isMembership ? 'bg-[#EDE9FE] text-[#5B21B6]' : 'bg-[#DBEAFE] text-[#1E40AF]'
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function isActiveForStats(counselorId: string, inviteList: CounselorItem[]): boolean {
   const match = inviteList.find((item) => item.id === counselorId);
   if (!match) return true;
@@ -470,7 +492,10 @@ function CounselorInviteSection({
                         <div className="font-bold text-[#1F1F1F]">{counselor.name}</div>
                         <div className="break-all text-[13px] text-[#6F6F6F]">{counselor.email}</div>
                       </div>
-                      <InviteStatusBadge status={displayStatus} />
+                      <div className="flex flex-col items-end gap-1.5">
+                        <InviteStatusBadge status={displayStatus} />
+                        {getInviteTypeLabel(counselor) && <InviteTypeBadge counselor={counselor} />}
+                      </div>
                     </div>
                     <div className="text-[12px] text-[#6F6F6F]">
                       초대일 {formatDate(counselor.invited_at)}
@@ -501,6 +526,9 @@ function CounselorInviteSection({
                       이메일
                     </th>
                     <th className="px-6 py-3 text-left text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
+                      유형
+                    </th>
+                    <th className="px-6 py-3 text-left text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
                       상태
                     </th>
                     <th className="px-6 py-3 text-left text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
@@ -522,6 +550,9 @@ function CounselorInviteSection({
                       >
                         <td className="px-6 py-4 font-medium text-[#1F1F1F]">{counselor.name}</td>
                         <td className="px-6 py-4 break-all text-[#6F6F6F]">{counselor.email}</td>
+                        <td className="px-6 py-4">
+                          <InviteTypeBadge counselor={counselor} />
+                        </td>
                         <td className="px-6 py-4">
                           <InviteStatusBadge status={displayStatus} />
                         </td>
