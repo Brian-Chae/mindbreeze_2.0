@@ -86,7 +86,41 @@ class OrganizationAdminResponse(BaseModel):
     verified: bool
     created_at: str
 
+    kind: str = "institution"
+    has_primary_admin: bool = False
+
     model_config = ConfigDict(from_attributes=True)
+
+
+class OrganizationUserSummary(BaseModel):
+    """관리자 조회에 허용된 담당자/소유자 필드만 노출한다."""
+
+    id: str
+    name: str
+    email: str
+    phone: str | None
+    role: str
+    status: str
+
+
+class OrganizationAdminDetail(OrganizationAdminResponse):
+    address: str | None
+    verified_at: str | None
+    # 수정 버전은 아직 DB에 도입하지 않았으므로 값을 추정하지 않는다.
+    version: int | None = None
+    primary_admin: OrganizationUserSummary | None
+    owner: OrganizationUserSummary | None
+
+
+class OrganizationAdminCounselor(BaseModel):
+    id: str
+    name: str
+    email: str
+    counselor_code: str | None
+    role: str
+    status: str
+    is_primary_admin: bool
+    is_owner: bool
 
 
 class OrganizationSearchResult(BaseModel):

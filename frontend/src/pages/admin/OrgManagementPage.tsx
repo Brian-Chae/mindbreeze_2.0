@@ -1,6 +1,7 @@
 // 플랫폼 관리자용 기관 코드 발급 및 기관 목록 관리
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import OrgDetailModal, { orgKindLabel, orgDate } from '../../components/admin/org-detail-modal';
 import AppShell from '../../components/layout/AppShell';
 import { apiClient } from '../../lib/api/client';
 import {
@@ -24,16 +25,6 @@ interface ResendInviteResponse {
   invite_sent: boolean;
 }
 
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-}
-
 function VerificationBadge({ verified }: { verified: boolean }) {
   return verified ? (
     <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[11px] font-bold text-[#065F46]">
@@ -47,6 +38,14 @@ function VerificationBadge({ verified }: { verified: boolean }) {
 }
 
 export default function OrgManagementPage() {
+  const [selectedOrg, setSelectedOrg] = useState<AdminOrganizationDto | null>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const [query, setQuery] = useState('');
+  const [verification, setVerification] = useState('');
+  const [kind, setKind] = useState('');
+  const [grouped, setGrouped] = useState(false);
+  const [listError, setListError] = useState(false);
+  const [listAttempt, setListAttempt] = useState(0);
   const [organizations, setOrganizations] = useState<AdminOrganizationDto[]>([]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -69,9 +68,9 @@ export default function OrgManagementPage() {
       try {
         const organizationsResponse = await listAdminOrganizations();
         if (!cancelled) setOrganizations(organizationsResponse);
-      } catch (cause) {
+      } catch {
         if (!cancelled) {
-          setError(cause instanceof Error ? cause.message : '기관 목록을 불러오지 못했습니다.');
+          setListError(true);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -82,7 +81,7 @@ export default function OrgManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [listAttempt]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -155,6 +154,29 @@ export default function OrgManagementPage() {
     } finally {
       setResendingOrgId(null);
     }
+  };
+
+  const filteredOrganizations = organizations.filter((org) =>
+    [org.name, org.org_code ?? ''].some((value) => value.toLowerCase().includes(query.trim().toLowerCase()))
+    && (!kind || org.kind === kind)
+    && (!verification || org.verified === (verification === 'verified')),
+  );
+  const groups = grouped
+    ? [...new Set(filteredOrganizations.map((org) => org.kind))].sort().map((value) => ({
+      label: orgKindLabel(value), items: filteredOrganizations.filter((org) => org.kind === value),
+    })) : [{ label: '', items: filteredOrganizations }];
+  const openOrg = (org: AdminOrganizationDto, button: HTMLButtonElement | null) => {
+    openerRef.current = button;
+    setSelectedOrg(org);
+  };
+  const closeOrg = () => {
+    setSelectedOrg(null);
+    requestAnimationFrame(() => openerRef.current?.focus());
+  };
+  const resetFilters = () => { setQuery(''); setVerification(''); setKind(''); };
+  const copyListCode = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); setResendMessage('기관 코드를 복사했습니다.'); }
+    catch { setResendMessage('기관 코드를 복사하지 못했습니다.'); }
   };
 
   return (
@@ -325,52 +347,52 @@ export default function OrgManagementPage() {
           <span className="text-[13px] text-[#6F6F6F]">총 {organizations.length}개</span>
         </div>
 
-        {loading ? (
-          <div className="rounded-2xl border border-[#EFEFEF] p-10 text-center text-sm text-[#6F6F6F]">
-            기관 목록을 불러오는 중...
-          </div>
-        ) : organizations.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-10 text-center text-sm text-[#6F6F6F]">
-            등록된 기관이 없습니다.
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
-            <table className="min-w-[820px] w-full text-left text-[14px]">
-              <thead>
-                <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">기관명</th>
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">기관 코드</th>
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">전화번호</th>
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">인증</th>
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">생성일</th>
-                  <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">초대</th>
-                </tr>
-              </thead>
-              <tbody>
-                {organizations.map((organization) => (
-                  <tr key={organization.id} className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC]">
-                    <td className="px-5 py-4 font-semibold text-[#1F1F1F]">{organization.name}</td>
-                    <td className="px-5 py-4 font-mono font-semibold tracking-wider text-[#5F0080]">{organization.org_code ?? '-'}</td>
-                    <td className="px-5 py-4 text-[#6F6F6F]">{organization.phone ?? '-'}</td>
-                    <td className="px-5 py-4"><VerificationBadge verified={organization.verified} /></td>
-                    <td className="px-5 py-4 font-mono text-[12px] text-[#9B9B9B]">{formatDate(organization.created_at)}</td>
-                    <td className="px-5 py-4">
-                      <button
-                        type="button"
-                        onClick={() => void handleResendInvite(organization.id)}
-                        disabled={resendingOrgId === organization.id}
-                        className="rounded-lg border border-[#C9B0E8] bg-white px-3 py-1.5 text-[13px] font-semibold text-[#5F0080] transition-colors hover:bg-[#EFE3FA] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {resendingOrgId === organization.id ? '발송 중...' : '초대 재발송'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm" />
+          <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">전체 인증</option><option value="verified">인증됨</option><option value="unverified">미인증</option>
+          </select>
+          <select aria-label="기관 유형" value={kind} onChange={(event) => setKind(event.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+            <option value="">전체 유형</option><option value="institution">일반 기관</option><option value="individual">개인 기관</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={grouped} onChange={(event) => setGrouped(event.target.checked)} />유형별 그룹핑</label>
+          <button type="button" onClick={resetFilters} className="rounded-lg border px-3 py-2 text-sm">검색 초기화</button>
+        </div>
+        {loading ? <p role="status" className="p-10 text-center text-sm">기관 목록을 불러오는 중...</p>
+          : listError ? <div role="alert" className="rounded-xl bg-red-50 p-5 text-sm">기관 목록 조회에 실패했습니다. <button type="button" onClick={() => { setListError(false); setLoading(true); setListAttempt((value) => value + 1); }} className="ml-3 rounded-lg border px-3 py-2">다시 시도</button></div>
+          : filteredOrganizations.length === 0 ? <p className="p-10 text-center text-sm">{organizations.length === 0 ? '등록된 기관이 없습니다.' : '검색 조건에 맞는 기관이 없습니다.'}</p>
+          : groups.map((group) => <div key={group.label} className="mb-5">
+            {group.label && <h3 className="mb-2 text-sm font-bold">{group.label} · {group.items.length}개</h3>}
+            <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
+              <table className="w-full min-w-[900px] text-left text-sm">
+                <thead className="bg-[#F8FAFC] text-xs text-[#6F6F6F]"><tr>{['기관명', '유형', '기관 코드', '전화번호', '인증', '생성일 (KST)', '초대'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
+                <tbody>{group.items.map((organization) => <tr key={organization.id}
+                  onClick={(event) => openOrg(organization, event.currentTarget.querySelector<HTMLButtonElement>('[data-org-opener]'))}
+                  className="cursor-pointer border-t border-[#EFEFEF] hover:bg-[#F8FAFC]">
+                  <td className="px-4 py-4"><button type="button" data-org-opener
+                    onClick={(event) => { event.stopPropagation(); openOrg(organization, event.currentTarget); }}
+                    className="text-left font-semibold text-[#5F0080] underline-offset-4 hover:underline focus-visible:outline-2" aria-haspopup="dialog">{organization.name}</button></td>
+                  <td className="px-4 py-4 text-xs">{orgKindLabel(organization.kind)}</td>
+                  <td className="px-4 py-4"><span className="font-mono text-[#5F0080]">{organization.org_code ?? '미등록'}</span>
+                    {organization.org_code && <button type="button" aria-label={`${organization.name} 기관 코드 복사`} onClick={(event) => { event.stopPropagation(); void copyListCode(organization.org_code!); }} className="ml-2 rounded border px-2 py-1 text-xs">복사</button>}</td>
+                  <td className="px-4 py-4">{organization.phone ?? '미등록'}</td>
+                  <td className="px-4 py-4"><VerificationBadge verified={organization.verified} /></td>
+                  <td className="px-4 py-4 text-xs">{orgDate(organization.created_at)}</td>
+                  <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); void handleResendInvite(organization.id); }}
+                      disabled={resendingOrgId === organization.id || organization.kind === 'individual' || !organization.has_primary_admin}
+                      title={organization.kind === 'individual' ? '개인 기관은 담당자 초대 대상이 아닙니다.' : !organization.has_primary_admin ? '담당자 미지정' : undefined}
+                      className="rounded-lg border border-[#C9B0E8] px-3 py-1.5 text-xs font-semibold text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50">
+                      {resendingOrgId === organization.id ? '발송 중...' : '초대 재발송'}
+                    </button>
+                    {(organization.kind === 'individual' || !organization.has_primary_admin) && <p className="mt-1 text-xs text-[#6F6F6F]">{organization.kind === 'individual' ? '개인 기관' : '담당자 미지정'}</p>}
+                  </td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </div>)}
       </section>
+      {selectedOrg && <OrgDetailModal key={selectedOrg.id} organization={selectedOrg} onClose={closeOrg} />}
     </AppShell>
   );
 }

@@ -12,9 +12,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
+from app.models.organization import Organization
+from app.models.counselor_profile import CounselorProfile
 from app.core.redis import get_redis
 from app.schemas.org import (
     OrgAdminSummary,
+    OrganizationAdminDetail,
+    OrganizationAdminCounselor,
+    OrganizationUserSummary,
     OrganizationAdminCreate,
     OrganizationAdminResponse,
     OrganizationWithAdminResponse,
@@ -262,6 +267,8 @@ def _serialize_org(org) -> OrganizationAdminResponse:
         org_code=org.org_code,
         phone=org.phone,
         verified=org.verified,
+        kind=org.kind,
+        has_primary_admin=org.primary_admin_id is not None,
         created_at=org.created_at.isoformat() if org.created_at else "",
     )
 
@@ -337,3 +344,58 @@ def admin_list_orgs(
 ):
     """전체 기관 목록 + 발급된 기관 코드."""
     return [_serialize_org(o) for o in org_service.list_organizations(db)]
+
+
+# SDD-074: 기관 관리자 경로와 분리한 플랫폼 관리자 조회.
+def _admin_org_or_404(org_id: uuid.UUID, db: Session) -> Organization:
+    org = db.get(Organization, org_id)
+    if org is None:
+        raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
+    return org
+
+
+def _org_user_summary(user_id: uuid.UUID | None, db: Session) -> OrganizationUserSummary | None:
+    user = db.get(User, user_id) if user_id else None
+    if user is None:
+        return None
+    return OrganizationUserSummary(
+        id=str(user.id), name=user.name, email=user.email, phone=user.phone,
+        role=user.role, status=user.status,
+    )
+
+
+@router.get("/orgs/{org_id}", response_model=OrganizationAdminDetail)
+def admin_get_org(
+    org_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    org = _admin_org_or_404(org_id, db)
+    return OrganizationAdminDetail(
+        **_serialize_org(org).model_dump(), address=org.address,
+        verified_at=org.verified_at.isoformat() if org.verified_at else None,
+        primary_admin=_org_user_summary(org.primary_admin_id, db),
+        owner=_org_user_summary(org.owner_user_id, db),
+    )
+
+
+@router.get("/orgs/{org_id}/counselors", response_model=list[OrganizationAdminCounselor])
+def admin_get_org_counselors(
+    org_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    org = _admin_org_or_404(org_id, db)
+    # 코드 조회를 outer join으로 묶어 프로필 없는 담당자도 보존한다.
+    members = (
+        db.query(User, CounselorProfile.counselor_code)
+        .outerjoin(CounselorProfile, CounselorProfile.user_id == User.id)
+        .filter(User.org_id == org_id, User.role.in_(["counselor", "org_admin"]))
+        .order_by(User.created_at.asc(), User.id.asc()).all()
+    )
+    return [OrganizationAdminCounselor(
+        id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+        role=user.role, status=user.status,
+        is_primary_admin=user.id == org.primary_admin_id,
+        is_owner=user.id == org.owner_user_id,
+    ) for user, code in members]

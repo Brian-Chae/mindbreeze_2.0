@@ -103,6 +103,8 @@ export interface AdminOrganizationDto {
   org_code: string | null;
   phone: string | null;
   verified: boolean;
+  kind: string;
+  has_primary_admin: boolean;
   created_at: string;
 }
 
@@ -232,3 +234,38 @@ export const resendSignupApplicationNotice = (
   id: string,
 ): Promise<SignupApplicationActionResponse> =>
   apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/resend-notice`);
+
+
+export interface OrganizationUserSummaryDto {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+}
+
+export interface AdminOrganizationDetailDto extends AdminOrganizationDto {
+  address: string | null;
+  verified_at: string | null;
+  version: number | null;
+  primary_admin: OrganizationUserSummaryDto | null;
+  owner: OrganizationUserSummaryDto | null;
+}
+
+export interface AdminOrganizationCounselorDto {
+  id: string;
+  name: string;
+  email: string;
+  counselor_code: string | null;
+  role: string;
+  status: string;
+  is_primary_admin: boolean;
+  is_owner: boolean;
+}
+
+export const getAdminOrganization = (id: string): Promise<AdminOrganizationDetailDto> =>
+  apiClient.get<AdminOrganizationDetailDto>(`/admin/orgs/${id}`);
+
+export const listAdminOrganizationCounselors = (id: string): Promise<AdminOrganizationCounselorDto[]> =>
+  apiClient.get<AdminOrganizationCounselorDto[]>(`/admin/orgs/${id}/counselors`);
