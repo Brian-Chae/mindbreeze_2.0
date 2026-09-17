@@ -33,6 +33,8 @@ class CounselorDashboardResponse(BaseModel):
     counselor_name: str | None = None
     org_id: str | None = None
     org_name: str | None = None
+    # SDD-081: institution | individual — 개인 상담소면 FE 가 "내 개인 상담소" 라벨 표시
+    org_kind: str | None = None
     total_classes: int = 0
     in_progress_classes: int = 0
     completed_classes: int = 0

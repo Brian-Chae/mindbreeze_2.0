@@ -28,6 +28,8 @@ export interface CounselorDashboardResponse {
   counselor_name: string | null;
   org_id: string | null;
   org_name: string | null;
+  // SDD-081: institution | individual — 개인 상담소면 "내 개인 상담소" 라벨 표시
+  org_kind: string | null;
   total_classes: number;
   in_progress_classes: number;
   completed_classes: number;

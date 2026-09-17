@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
+import OrgRemovedNoticeDialog from '../components/org/OrgRemovedNoticeDialog';
 import { StatusBadge } from '../components/session/StatusBadge';
 import {
   getCounselorDashboard,
@@ -212,7 +213,13 @@ export default function DashboardPage() {
   }, [fetchDashboard]);
 
   const displayName = data?.counselor_name ?? user?.name ?? '상담사';
-  const orgLabel = data?.org_name ? `${data.org_name} 소속` : 'MY CLASSES';
+  // SDD-081: 주 소속이 개인 상담소면 기관명 대신 "내 개인 상담소"로 표시
+  const orgLabel =
+    data?.org_kind === 'individual'
+      ? '내 개인 상담소'
+      : data?.org_name
+        ? `${data.org_name} 소속`
+        : 'MY CLASSES';
   const counselorCode = user?.counselor_code ?? null;
   const showProfileBanner =
     !profileBannerDismissed && user?.role === 'counselor' && !user.onboarding_completed;
@@ -242,6 +249,8 @@ export default function DashboardPage() {
         </button>
       }
     >
+      <OrgRemovedNoticeDialog />
+
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
       )}

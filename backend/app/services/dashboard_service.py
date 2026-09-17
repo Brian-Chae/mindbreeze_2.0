@@ -108,6 +108,8 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "counselor_name": user.name,
         "org_id": str(user.org_id) if user.org_id else None,
         "org_name": org.name if org else None,
+        # SDD-081: 개인 상담소(individual)면 FE 가 "내 개인 상담소"로 표시한다
+        "org_kind": org.kind if org else None,
         "total_classes": len(summaries),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),

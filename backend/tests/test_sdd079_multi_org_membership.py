@@ -327,12 +327,19 @@ def test_ts6_소속해제_left_이력보존_재초대가능(client, monkeypatch,
     assert len(rows) == 1
     assert rows[0].status == "left" and rows[0].left_at is not None
 
+    from app.models.organization import Organization
     from app.models.user import User
 
     db = _db()
     try:
         user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
-        assert user.org_id is None  # 미러 동기 갱신
+        # SDD-081: 무소속 대신 개인 상담소로 복귀 — 미러도 개인 상담소로 동기 갱신
+        office = (
+            db.query(Organization)
+            .filter(Organization.owner_user_id == user.id, Organization.kind == "individual")
+            .one()
+        )
+        assert user.org_id == office.id
     finally:
         db.close()
 

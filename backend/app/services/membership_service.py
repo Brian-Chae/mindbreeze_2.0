@@ -102,6 +102,47 @@ def _sync_primary_mirror(db: Session, user: User) -> None:
     user.org_id = primary.org_id if primary else None
 
 
+def _personal_office_primary(db: Session, user: User) -> UserOrgMembership | None:
+    """현재 주 소속이 본인 개인 상담소(kind=individual, owner=본인)면 그 membership 반환 (SDD-081)."""
+    from app.models.organization import Organization
+
+    return (
+        db.query(UserOrgMembership)
+        .join(Organization, Organization.id == UserOrgMembership.org_id)
+        .filter(
+            UserOrgMembership.user_id == user.id,
+            UserOrgMembership.status == "active",
+            UserOrgMembership.is_primary.is_(True),
+            Organization.kind == "individual",
+            Organization.owner_user_id == user.id,
+        )
+        .first()
+    )
+
+
+def _promote_over_personal_office(
+    db: Session, user: User, membership: UserOrgMembership
+) -> None:
+    """개인 상담소가 주 소속인 상태에서 기관 소속이 생기면 기관을 주 소속으로 승격 (SDD-081).
+
+    개인 상담소는 무소속 방지용 fallback 기본 소속이므로 실제 기관 소속이 항상 우선한다.
+    """
+    from app.models.organization import Organization
+
+    if membership.is_primary:
+        return
+    new_org = db.query(Organization).filter(Organization.id == membership.org_id).first()
+    if new_org is None or new_org.kind == "individual":
+        return
+    current = _personal_office_primary(db, user)
+    if current is None or current.id == membership.id:
+        return
+    current.is_primary = False
+    db.flush()  # user 당 primary 1개 partial unique index — 해제를 먼저 반영한다
+    membership.is_primary = True
+    db.flush()
+
+
 def _has_active_primary(db: Session, user_id: uuid.UUID) -> bool:
     return (
         db.query(UserOrgMembership.id)
@@ -140,6 +181,9 @@ def add_membership(
     )
     db.add(membership)
     db.flush()
+    # SDD-081: 주 소속이 개인 상담소(fallback)뿐이면 새 기관 소속을 주 소속으로 승격
+    if status_ == "active" and not membership.is_primary:
+        _promote_over_personal_office(db, user, membership)
     if membership.is_primary:
         _sync_primary_mirror(db, user)
     return membership
@@ -153,6 +197,9 @@ def activate_membership(db: Session, membership: UserOrgMembership, user: User) 
     membership.joined_at = datetime.now(timezone.utc)
     if not _has_active_primary(db, user.id):
         membership.is_primary = True
+    else:
+        # SDD-081: 주 소속이 개인 상담소(fallback)뿐이면 새 기관 소속을 주 소속으로 승격
+        _promote_over_personal_office(db, user, membership)
     db.flush()
     _sync_primary_mirror(db, user)
     return membership
@@ -172,13 +219,20 @@ def leave_membership(db: Session, user: User, org_id: uuid.UUID | str) -> UserOr
     membership.is_primary = False
     db.flush()
     if was_primary:
+        from app.models.organization import Organization
+
         successor = (
             db.query(UserOrgMembership)
+            .join(Organization, Organization.id == UserOrgMembership.org_id)
             .filter(
                 UserOrgMembership.user_id == user.id,
                 UserOrgMembership.status == "active",
             )
-            .order_by(UserOrgMembership.joined_at.asc())
+            # SDD-081: 개인 상담소는 최후의 fallback — 남은 기관 소속을 먼저 승격한다
+            .order_by(
+                (Organization.kind == "individual").asc(),
+                UserOrgMembership.joined_at.asc(),
+            )
             .first()
         )
         if successor is not None:

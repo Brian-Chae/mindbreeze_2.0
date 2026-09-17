@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
+import OrgRemovedNoticeDialog from '../components/org/OrgRemovedNoticeDialog';
 import { StatusBadge } from '../components/session/StatusBadge';
 import {
   getOrgDashboard,
@@ -646,6 +647,8 @@ export default function OrgDashboardPage() {
       title={data?.org_name ?? '기관 대시보드'}
       sub="ORG DASHBOARD"
     >
+      <OrgRemovedNoticeDialog />
+
       {error && (
         <div className="mb-4 p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
       )}

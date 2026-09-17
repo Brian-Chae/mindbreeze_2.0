@@ -113,5 +113,6 @@ def test_list_remains_array_with_kind_and_admin_presence(client, org_data):
     body = client.get("/api/v1/admin/orgs", headers=headers(users[0])).json()
     rows = {item["id"]: item for item in body}
     assert rows[str(org.id)]["has_primary_admin"] is True
-    assert rows[str(other.id)]["kind"] == "individual"
-    assert rows[str(other.id)]["has_primary_admin"] is False
+    assert rows[str(org.id)]["kind"] == "institution"
+    # SDD-081: 개인 상담소(kind=individual)는 기관 관리 목록에서 숨긴다
+    assert str(other.id) not in rows

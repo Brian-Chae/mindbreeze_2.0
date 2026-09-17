@@ -108,8 +108,11 @@ def create_organization(
 def search_organizations(
     q: str | None, region: str | None, db: Session
 ) -> list[Organization]:
-    """센터 검색 (이름·주소 LIKE 검색)."""
-    query = db.query(Organization).filter(Organization.deactivated_at.is_(None))
+    """센터 검색 (이름·주소 LIKE 검색). 개인 상담소(kind=individual)는 숨긴다 (SDD-081)."""
+    query = db.query(Organization).filter(
+        Organization.deactivated_at.is_(None),
+        Organization.kind != "individual",
+    )
     if q:
         like = f"%{q}%"
         query = query.filter((Organization.name.ilike(like)) | (Organization.address.ilike(like)))
@@ -125,6 +128,19 @@ def get_organization(org_id: str, db: Session) -> Organization:
     return org
 
 
+def _eligible_for_join(user: User, db: Session) -> bool:
+    """기관 가입 신청 가능 여부 — 기존 정책(기소속 409)을 유지하되,
+    SDD-081 개인 상담소(fallback)만 있는 상태는 무소속과 동일하게 취급한다."""
+    from app.services import personal_office_service
+
+    if personal_office_service.active_institution_org_ids(db, user):
+        return False
+    if user.org_id is None:
+        return True
+    office = personal_office_service.get_personal_office(db, user)
+    return office is not None and user.org_id == office.id
+
+
 def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequest:
     """가입 신청 (중복·기소속 체크)."""
     org_uuid = uuid.UUID(org_id)
@@ -137,7 +153,7 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다")
-    if user.org_id is not None:
+    if not _eligible_for_join(user, db):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 다른 센터에 소속되어 있습니다",
@@ -261,7 +277,8 @@ def handle_join_request(
 
     if new_status == "approved":
         applicant = db.query(User).filter(User.id == req.user_id).first()
-        if applicant and applicant.org_id is None:
+        # SDD-081: 개인 상담소(fallback)만 있는 상담사도 승인 가능 — 신청 시점과 동일 기준
+        if applicant and _eligible_for_join(applicant, db):
             # SDD-079: 가입 승인의 종착점도 membership — User.org_id 는 미러로 동기 갱신된다
             from app.services import membership_service
 
@@ -342,9 +359,9 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
             detail="해당 센터의 관리자만 해제할 수 있습니다",
         )
 
-    from app.services import membership_service
+    from app.services import membership_service, personal_office_service
 
-    require_active_org(org_id, db)
+    org = require_active_org(org_id, db)
     user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
     membership = (
         membership_service.get_membership(db, user.id, org_id) if user is not None else None
@@ -360,7 +377,13 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
     # OrgAdmin이었다면 일반 상담사로 강등
     if user.role == "org_admin":
         user.role = "counselor"
+    # SDD-081: 남은 active 소속이 없으면 개인 상담소로 복귀 (무소속 차단) + 안내 알림
+    office = personal_office_service.fallback_to_personal_office(db, user)
+    if office is not None:
+        personal_office_service.create_org_removed_notification(db, user, org.name, office)
     db.commit()
+    if office is not None:
+        personal_office_service.enqueue_org_removed_notice(user.id, org.name, office.name)
 
 
 # ---------------------------------------------------------------------------
@@ -407,8 +430,11 @@ def get_organization_by_code(code: str, db: Session) -> Organization | None:
 
 
 def list_organizations(db: Session, status_filter: str = "active") -> list[Organization]:
-    """전체 기관 목록 (system_admin 용)."""
-    query = db.query(Organization)
+    """전체 기관 목록 (system_admin 용).
+
+    개인 상담소(kind=individual)는 상담사 개인 자산이므로 기관 관리 목록에서 숨긴다 (SDD-081).
+    """
+    query = db.query(Organization).filter(Organization.kind != "individual")
     if status_filter == "active":
         query = query.filter(Organization.deactivated_at.is_(None))
     elif status_filter == "inactive":

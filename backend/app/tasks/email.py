@@ -750,3 +750,28 @@ def send_password_reset_completed_email(to_email: str, *, name: str) -> bool:
         f"감사합니다.\nMIND BREEZE 드림"
     )
     return _send_email(to_email, subject, body_text)
+
+
+def send_org_removed_email(
+    to_email: str,
+    *,
+    counselor_name: str,
+    org_name: str,
+    office_name: str,
+) -> bool:
+    """기관 소속 해제 → 개인 상담소 전환 안내 (SDD-081).
+
+    기관에서 해제된 상담사에게 계정이 무소속이 아니라 개인 상담소 소속으로
+    유지된다는 사실을 알린다. 기존 상담 기록·내담자 연결은 변경되지 않는다.
+    """
+    subject = f"[MIND BREEZE] {org_name} 소속 해제 및 개인 상담소 등록 안내"
+    body_text = (
+        f"{counselor_name}님, 안녕하세요.\n\n"
+        f"'{org_name}' 기관에서 회원님의 소속이 해제되어\n"
+        f"'{office_name}'(개인 상담소)로 등록되었습니다.\n\n"
+        f"계정과 상담사 코드, 기존 상담 기록은 그대로 유지되며,\n"
+        f"개인 상담소 소속으로 계속 서비스를 이용하실 수 있습니다.\n\n"
+        f"문의 사항이 있으시면 해당 기관 또는 운영팀에 연락해 주세요.\n\n"
+        f"감사합니다.\nMIND BREEZE 드림"
+    )
+    return _send_email(to_email, subject, body_text)

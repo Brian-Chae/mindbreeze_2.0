@@ -197,11 +197,18 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
             raise HTTPException(409, "활성 내담자 연결을 먼저 이관하거나 종료해주세요")
     before = {"org_id": str(org.id), "role": user.role}
     user.role = role or "counselor"
+    office = None
     if role is None:
         # SDD-079: 소속 해제 = membership left (+ User.org_id 미러 동기 갱신)
         membership_service.leave_membership(db, user, org.id)
         if user.org_id == org.id:
             user.org_id = None
+        # SDD-081: 남은 active 소속이 없으면 개인 상담소로 복귀 (무소속 차단) + 안내 알림
+        from app.services import personal_office_service
+
+        office = personal_office_service.fallback_to_personal_office(db, user)
+        if office is not None:
+            personal_office_service.create_org_removed_notification(db, user, org.name, office)
     elif membership is not None:
         membership.role = role
     # 인증은 JWT 역할을 신뢰하지 않고 매 요청 DB의 role/org_id를 다시 읽는다.
@@ -215,4 +222,8 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     ))
     db.commit()
     db.refresh(user)
+    if office is not None:
+        from app.services import personal_office_service
+
+        personal_office_service.enqueue_org_removed_notice(user.id, org.name, office.name)
     return user

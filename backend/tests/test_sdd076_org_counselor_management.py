@@ -107,14 +107,18 @@ def test_removal_preserves_history_account_profile_and_demotes(client, org_data)
     token = headers(target)
     assert change(client, org, target, users[0], "DELETE").status_code == 204
     db.refresh(target); db.refresh(session)
-    assert target.org_id is None and target.role == "counselor" and target.status == "suspended"
+    assert target.role == "counselor" and target.status == "suspended"
+    # SDD-081: 해제 후 무소속 대신 개인 상담소로 복귀한다
+    from app.models.organization import Organization
+    office = db.query(Organization).filter_by(owner_user_id=target.id, kind="individual").one()
+    assert target.org_id == office.id
     assert session.organization_id == org.id and session.organization_attribution_known
     assert db.query(CounselorProfile).filter_by(user_id=target.id).count() == 1
     assert db.query(ClientCounselorLink).count() == 1
     assert client.get(f"/api/v1/org/{org.id}/counselors", headers=token).status_code == 403
     audit = db.query(VerificationAudit).one()
     assert audit.extra["before"]["org_id"] == str(org.id)
-    assert audit.extra["after"] == {"org_id": None, "role": "counselor"}
+    assert audit.extra["after"] == {"org_id": str(office.id), "role": "counselor"}
     assert change(client, org, target, users[0], "DELETE").status_code == 404
 
 
