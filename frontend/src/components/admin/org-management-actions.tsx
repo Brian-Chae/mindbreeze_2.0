@@ -6,8 +6,8 @@ import {
   type AdminOrganizationDetailDto, type OrganizationImpactDto,
 } from '../../lib/api/admin';
 
-const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm disabled:opacity-50';
-const primary = `${control} bg-[#5F0080] text-white`;
+const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm text-[#1F1F1F] disabled:opacity-50';
+const primary = 'rounded-lg border border-[#5F0080] bg-[#5F0080] px-3 py-2 text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50';
 type Props = {
   org: AdminOrganizationDetailDto;
   onSaved: (org: AdminOrganizationDetailDto) => void;
