@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
+from app.models.user import User
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
@@ -139,6 +140,11 @@ def detect_conflict(
 
 def create_session(host_id: str, payload, db: DBSession) -> dict:
     host_uuid = _to_uuid(host_id)
+    from app.services.org_management_service import require_active_user_org
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    org = require_active_user_org(host, db)
     # SDD-015: scheduled_at 이 없으면 "즉석 클래스" — 과거 일시 검증·충돌 검사를 건너뛰고
     # status를 ready로 두어 상담사가 "시작"을 누를 때 진행중으로 전이한다.
     scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else None
@@ -173,6 +179,8 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         custom_type_name=payload.custom_type_name.strip() if (payload.type == "custom" and payload.custom_type_name) else None,
         status=initial_status,
         host_id=host_uuid,
+        organization_id=org.id if org else None,
+        organization_attribution_known=True,
         scheduled_at=scheduled_at,
         access_code=generate_access_code(db),
         duration_min=payload.duration_min,
@@ -249,6 +257,12 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
+    from app.services.org_management_service import require_active_org, require_active_user_org
+    host = db.get(User, s.host_id)
+    if host:
+        require_active_user_org(host, db)
+    if s.organization_id:
+        require_active_org(s.organization_id, db)
     return s
 
 

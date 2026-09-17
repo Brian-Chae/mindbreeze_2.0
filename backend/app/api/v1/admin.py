@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.models.organization import Organization
 from app.models.counselor_profile import CounselorProfile
 from app.core.redis import get_redis
 from app.schemas.org import (
+    OrganizationPatch, OrganizationDeactivate, OrganizationReactivate, OrganizationDeactivationImpact,
     OrgAdminSummary,
     OrganizationAdminDetail,
     OrganizationAdminCounselor,
@@ -25,7 +26,7 @@ from app.schemas.org import (
     OrganizationWithAdminResponse,
     ResendInviteResponse,
 )
-from app.services import admin_service, org_invite_service, org_service
+from app.services import admin_service, org_invite_service, org_service, org_management_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -269,6 +270,8 @@ def _serialize_org(org) -> OrganizationAdminResponse:
         verified=org.verified,
         kind=org.kind,
         has_primary_admin=org.primary_admin_id is not None,
+        version=org.version,
+        deactivated_at=org.deactivated_at.isoformat() if org.deactivated_at else None,
         created_at=org.created_at.isoformat() if org.created_at else "",
     )
 
@@ -339,11 +342,12 @@ async def admin_resend_invite(
 
 @router.get("/orgs", response_model=list[OrganizationAdminResponse])
 def admin_list_orgs(
+    status: Literal["active", "inactive", "all"] = "active",
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_db),
 ):
     """전체 기관 목록 + 발급된 기관 코드."""
-    return [_serialize_org(o) for o in org_service.list_organizations(db)]
+    return [_serialize_org(o) for o in org_service.list_organizations(db, status)]
 
 
 # SDD-074: 기관 관리자 경로와 분리한 플랫폼 관리자 조회.
@@ -399,3 +403,32 @@ def admin_get_org_counselors(
         is_primary_admin=user.id == org.primary_admin_id,
         is_owner=user.id == org.owner_user_id,
     ) for user, code in members]
+
+
+@router.patch("/orgs/{org_id}", response_model=OrganizationAdminDetail)
+def admin_patch_org(org_id: uuid.UUID, req: OrganizationPatch,
+                    if_match: str | None = Header(None),
+                    admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.patch_organization(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)
+
+
+@router.get("/orgs/{org_id}/deactivation-impact", response_model=OrganizationDeactivationImpact)
+def admin_org_impact(org_id: uuid.UUID, admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    return org_management_service.deactivation_impact(_admin_org_or_404(org_id, db), db)
+
+
+@router.post("/orgs/{org_id}/deactivate", response_model=OrganizationAdminDetail)
+def admin_deactivate_org(org_id: uuid.UUID, req: OrganizationDeactivate,
+                         if_match: str | None = Header(None),
+                         admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.deactivate(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)
+
+
+@router.post("/orgs/{org_id}/reactivate", response_model=OrganizationAdminDetail)
+def admin_reactivate_org(org_id: uuid.UUID, req: OrganizationReactivate,
+                         if_match: str | None = Header(None),
+                         admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.reactivate(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)

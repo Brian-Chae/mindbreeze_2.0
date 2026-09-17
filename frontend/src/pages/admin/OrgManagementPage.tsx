@@ -40,6 +40,7 @@ function VerificationBadge({ verified }: { verified: boolean }) {
 export default function OrgManagementPage() {
   const [selectedOrg, setSelectedOrg] = useState<AdminOrganizationDto | null>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
+  const [operationStatus, setOperationStatus] = useState<'active' | 'inactive'>('active');
   const [query, setQuery] = useState('');
   const [verification, setVerification] = useState('');
   const [kind, setKind] = useState('');
@@ -63,10 +64,11 @@ export default function OrgManagementPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true); setListError(false);
 
     const loadOrganizations = async (): Promise<void> => {
       try {
-        const organizationsResponse = await listAdminOrganizations();
+        const organizationsResponse = await listAdminOrganizations(operationStatus);
         if (!cancelled) setOrganizations(organizationsResponse);
       } catch {
         if (!cancelled) {
@@ -81,7 +83,7 @@ export default function OrgManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [listAttempt]);
+  }, [listAttempt, operationStatus]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -116,7 +118,7 @@ export default function OrgManagementPage() {
         ...(adminPhone.trim() ? { admin_phone: adminPhone.trim() } : {}),
       });
       setCreatedResult(result);
-      setOrganizations((current) => [result.org, ...current]);
+      setListAttempt((value) => value + 1);
       setName('');
       setPhone('');
       setAddress('');
@@ -171,9 +173,13 @@ export default function OrgManagementPage() {
   };
   const closeOrg = () => {
     setSelectedOrg(null);
-    requestAnimationFrame(() => openerRef.current?.focus());
+    requestAnimationFrame(() => {
+      const opener = openerRef.current?.isConnected ? openerRef.current
+        : document.querySelector<HTMLButtonElement>(`[data-org-id="${selectedOrg?.id}"]`);
+      (opener ?? document.querySelector<HTMLSelectElement>('[aria-label="기관 운영 상태"]'))?.focus();
+    });
   };
-  const resetFilters = () => { setQuery(''); setVerification(''); setKind(''); };
+  const resetFilters = () => { setQuery(''); setVerification(''); setKind(''); setOperationStatus('active'); };
   const copyListCode = async (code: string) => {
     try { await navigator.clipboard.writeText(code); setResendMessage('기관 코드를 복사했습니다.'); }
     catch { setResendMessage('기관 코드를 복사하지 못했습니다.'); }
@@ -349,6 +355,7 @@ export default function OrgManagementPage() {
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm" />
+          <select aria-label="기관 운영 상태" value={operationStatus} onChange={(event) => setOperationStatus(event.target.value as 'active' | 'inactive')} className="rounded-lg border px-3 py-2 text-sm"><option value="active">운영 기관</option><option value="inactive">비활성화 기관</option></select>
           <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className="rounded-lg border px-3 py-2 text-sm">
             <option value="">전체 인증</option><option value="verified">인증됨</option><option value="unverified">미인증</option>
           </select>
@@ -369,7 +376,7 @@ export default function OrgManagementPage() {
                 <tbody>{group.items.map((organization) => <tr key={organization.id}
                   onClick={(event) => openOrg(organization, event.currentTarget.querySelector<HTMLButtonElement>('[data-org-opener]'))}
                   className="cursor-pointer border-t border-[#EFEFEF] hover:bg-[#F8FAFC]">
-                  <td className="px-4 py-4"><button type="button" data-org-opener
+                  <td className="px-4 py-4"><button type="button" data-org-opener data-org-id={organization.id}
                     onClick={(event) => { event.stopPropagation(); openOrg(organization, event.currentTarget); }}
                     className="text-left font-semibold text-[#5F0080] underline-offset-4 hover:underline focus-visible:outline-2" aria-haspopup="dialog">{organization.name}</button></td>
                   <td className="px-4 py-4 text-xs">{orgKindLabel(organization.kind)}</td>
@@ -380,7 +387,7 @@ export default function OrgManagementPage() {
                   <td className="px-4 py-4 text-xs">{orgDate(organization.created_at)}</td>
                   <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); void handleResendInvite(organization.id); }}
-                      disabled={resendingOrgId === organization.id || organization.kind === 'individual' || !organization.has_primary_admin}
+                      disabled={resendingOrgId === organization.id || !!organization.deactivated_at || organization.kind === 'individual' || !organization.has_primary_admin}
                       title={organization.kind === 'individual' ? '개인 기관은 담당자 초대 대상이 아닙니다.' : !organization.has_primary_admin ? '담당자 미지정' : undefined}
                       className="rounded-lg border border-[#C9B0E8] px-3 py-1.5 text-xs font-semibold text-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50">
                       {resendingOrgId === organization.id ? '발송 중...' : '초대 재발송'}
@@ -392,7 +399,7 @@ export default function OrgManagementPage() {
             </div>
           </div>)}
       </section>
-      {selectedOrg && <OrgDetailModal key={selectedOrg.id} organization={selectedOrg} onClose={closeOrg} />}
+      {selectedOrg && <OrgDetailModal key={selectedOrg.id} organization={selectedOrg} onClose={closeOrg} onUpdated={() => setListAttempt((value) => value + 1)} />}
     </AppShell>
   );
 }

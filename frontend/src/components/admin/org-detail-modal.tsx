@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   getAdminOrganization, listAdminOrganizationCounselors,
   type AdminOrganizationDto,
 } from '../../lib/api/admin';
+
+import OrgManagementActions from './org-management-actions';
 
 export const orgKindLabel = (kind: string): string =>
   ({ institution: '일반 기관', individual: '개인 기관' })[kind] ?? '확인 필요';
@@ -30,7 +32,7 @@ function useOrgRequest<T>(id: string, fetcher: (id: string) => Promise<T>) {
     );
     return () => { cancelled = true; };
   }, [id, attempt, fetcher]);
-  return { state, retry: () => { setState({ status: 'loading' }); setAttempt((value) => value + 1); } };
+  return { state, setData: (data: T) => setState({ status: 'success', data }), retry: () => { setState({ status: 'loading' }); setAttempt((value) => value + 1); } };
 }
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <div><dt className="text-xs text-[#6F6F6F]">{label}</dt><dd className="mt-1 break-words text-sm">{children ?? '미등록'}</dd></div>;
@@ -39,10 +41,14 @@ function Retry({ label, onRetry }: { label: string; onRetry: () => void }) {
   return <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{label} 조회에 실패했습니다. <button type="button" onClick={onRetry} className={control}>다시 시도</button></div>;
 }
 
-export default function OrgDetailModal({ organization, onClose }: {
-  organization: AdminOrganizationDto; onClose: () => void;
+export default function OrgDetailModal({ organization, onClose, onUpdated }: {
+  organization: AdminOrganizationDto; onClose: () => void; onUpdated: () => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [guard, setGuard] = useState({ dirty: false, busy: false });
+  const [confirmClose, setConfirmClose] = useState(false);
+  const guardChange = useCallback((dirty: boolean, busy: boolean) => setGuard({ dirty, busy }), []);
+  const requestClose = () => { if (guard.busy) return; if (guard.dirty) setConfirmClose(true); else onClose(); };
   const [tab, setTab] = useState<'info' | 'counselors'>('info');
   const [query, setQuery] = useState('');
   const [role, setRole] = useState('');
@@ -75,12 +81,12 @@ export default function OrgDetailModal({ organization, onClose }: {
     : counselors.state.status === 'error' ? '조회 실패' : '조회 중';
 
   return <dialog ref={dialogRef} aria-labelledby="org-detail-title"
-    onCancel={(event) => { event.preventDefault(); onClose(); }}
+    onCancel={(event) => { event.preventDefault(); requestClose(); }}
     onKeyDown={(event) => {
       if (event.key !== 'Tab') return;
       // native dialog도 마지막 요소에서 브라우저 UI로 이동할 수 있어 순환을 보장한다.
       const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
       )).filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -97,13 +103,18 @@ export default function OrgDetailModal({ organization, onClose }: {
           <div><h2 id="org-detail-title" className="text-xl font-bold break-all">{org.name}</h2>
             <div className="mt-2 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-purple-50 px-2 py-1">{orgKindLabel(org.kind)}</span><span className="rounded-full bg-slate-100 px-2 py-1">{org.verified ? '인증됨' : '미인증'}</span></div>
           </div>
-          <button type="button" autoFocus onClick={onClose} className={control} aria-label="기관 상세 닫기">닫기</button>
+          <button type="button" autoFocus disabled={guard.busy} onClick={requestClose} className={control} aria-label="기관 상세 닫기">닫기</button>
         </div>
         <div className="mt-3 flex items-center gap-3 text-sm"><span>기관 코드 <strong className="font-mono">{org.org_code ?? '미등록'}</strong></span>
           {org.org_code && <button type="button" onClick={() => void copyCode()} className={control}>코드 복사</button>}
         </div>
         <p role="status" className="mt-1 text-xs">{copyMessage}</p>
       </header>
+      {confirmClose && <div role="alertdialog" aria-label="미저장 변경 확인" className="border-b bg-amber-50 p-4 text-sm">
+        <p>저장하지 않은 변경사항이 있습니다.</p>
+        <button type="button" className={control} onClick={() => setConfirmClose(false)}>계속 편집</button>
+        <button type="button" className={`${control} ml-2`} onClick={onClose}>변경사항 버리기</button>
+      </div>}
       <div role="tablist" aria-label="기관 상세" className="flex shrink-0 border-b px-5">
         {(['info', 'counselors'] as const).map((value) => <button key={value} type="button" role="tab"
           id={`org-tab-${value}`} aria-controls={`org-panel-${value}`} aria-selected={tab === value} tabIndex={tab === value ? 0 : -1}
@@ -136,6 +147,9 @@ export default function OrgDetailModal({ organization, onClose }: {
                   ? <Retry label="상담사 코드" onRetry={counselors.retry} />
                   : members.find((member) => member.id === person.id)?.counselor_code ?? '미등록'}</Field>}
               </dl>}
+            <OrgManagementActions key={`${org.id}-${detail.state.data.version}`} org={detail.state.data}
+              onGuardChange={guardChange} onReload={() => { guardChange(false, false); detail.retry(); }}
+              onSaved={(updated) => { detail.setData(updated); counselors.retry(); onUpdated(); }} />
           </>}
         </section>
         <section role="tabpanel" id="org-panel-counselors" aria-labelledby="org-tab-counselors" hidden={tab !== 'counselors'} tabIndex={0}>

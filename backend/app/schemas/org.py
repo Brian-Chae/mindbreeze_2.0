@@ -88,6 +88,8 @@ class OrganizationAdminResponse(BaseModel):
 
     kind: str = "institution"
     has_primary_admin: bool = False
+    version: int = 1
+    deactivated_at: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -106,8 +108,6 @@ class OrganizationUserSummary(BaseModel):
 class OrganizationAdminDetail(OrganizationAdminResponse):
     address: str | None
     verified_at: str | None
-    # 수정 버전은 아직 DB에 도입하지 않았으므로 값을 추정하지 않는다.
-    version: int | None = None
     primary_admin: OrganizationUserSummary | None
     owner: OrganizationUserSummary | None
 
@@ -185,3 +185,41 @@ class CounselorInviteResponse(BaseModel):
 
 
 OrganizationWithAdminResponse.model_rebuild()
+
+
+class OrganizationPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    name: str | None = Field(None, min_length=1, max_length=200)
+    phone: str | None = Field(None, max_length=20)
+    address: str | None = Field(None, max_length=300)
+    verified: bool | None = None
+    reason: str | None = Field(None, max_length=2000)
+
+    @model_validator(mode="after")
+    def validate_present_fields(self) -> "OrganizationPatch":
+        for field in ("name", "verified"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field}는 null일 수 없습니다")
+        return self
+
+
+class OrganizationReactivate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class OrganizationDeactivate(OrganizationReactivate):
+    confirmation_value: str = Field(min_length=1, max_length=200)
+
+
+class OrganizationDeactivationImpact(BaseModel):
+    account_count: int
+    active_link_count: int
+    scheduled_session_count: int
+    ongoing_session_count: int
+    unknown_attribution_count: int
+    preserved_session_count: int
+    attribution_note: str
+    blockers: list[str]
+    can_deactivate: bool
+    version: int

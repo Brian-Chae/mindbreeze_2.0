@@ -109,7 +109,7 @@ def get_org_public_page(org_code: str, db: DBSession) -> dict:
             status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다"
         )
 
-    org = db.query(Organization).filter(Organization.org_code == normalized).first()
+    org = db.query(Organization).filter(Organization.org_code == normalized, Organization.deactivated_at.is_(None)).first()
     if org is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다"

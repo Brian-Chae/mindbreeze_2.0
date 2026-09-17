@@ -48,6 +48,11 @@ def assign_counselor(
     client_uuid = client_id if isinstance(client_id, UUID) else UUID(str(client_id))
     counselor_uuid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
 
+    from app.services.org_management_service import require_active_org
+    users = db.query(User).filter(User.id.in_([client_uuid, counselor_uuid])).all()
+    # 복수 기관은 ID 순서대로 잠가 교착을 피한다.
+    for org_id in sorted({user.org_id for user in users if user.org_id}, key=str):
+        require_active_org(org_id, db)
     existing = (
         db.query(ClientCounselorLink)
         .filter(

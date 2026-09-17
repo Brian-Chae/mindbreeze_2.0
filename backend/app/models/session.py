@@ -29,6 +29,13 @@ class Session(Base):
     state_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     host_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     # SDD-015: 즉석 클래스는 일정 없이 생성되므로 nullable
+    # 생성 당시 기관 귀속. 기존 데이터는 추정하여 보완하지 않는다.
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True, index=True
+    )
+    organization_attribution_known: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-015: 참여자가 입력하는 6자리 클래스 코드 (생성 시 자동 발급)
     access_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)

@@ -11,6 +11,7 @@ from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
 from app.schemas.org import OrganizationCreate
 from app.services import code_service
+from app.services.org_management_service import require_active_org
 
 
 def validate_biz_number(biz_number: str) -> bool:
@@ -106,7 +107,7 @@ def search_organizations(
     q: str | None, region: str | None, db: Session
 ) -> list[Organization]:
     """센터 검색 (이름·주소 LIKE 검색)."""
-    query = db.query(Organization)
+    query = db.query(Organization).filter(Organization.deactivated_at.is_(None))
     if q:
         like = f"%{q}%"
         query = query.filter((Organization.name.ilike(like)) | (Organization.address.ilike(like)))
@@ -127,7 +128,7 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
     org_uuid = uuid.UUID(org_id)
     user_uuid = uuid.UUID(user_id)
 
-    org = db.query(Organization).filter(Organization.id == org_uuid).first()
+    org = require_active_org(org_uuid, db)
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="센터를 찾을 수 없습니다")
 
@@ -187,6 +188,7 @@ def list_my_join_requests(user_id: str, db: Session) -> list[dict]:
 
 def list_org_join_requests(org_id: str, db: Session) -> list[dict]:
     """센터의 가입 신청 목록 — OrgAdmin 전용."""
+    require_active_org(org_id, db)
     rows = (
         db.query(OrganizationJoinRequest, User, Organization)
         .join(User, User.id == OrganizationJoinRequest.user_id)
@@ -251,6 +253,7 @@ def handle_join_request(
             detail="이미 처리된 신청입니다",
         )
 
+    require_active_org(org_id, db)
     req.status = new_status
     req.reason = reason
 
@@ -266,6 +269,7 @@ def handle_join_request(
 
 def get_counselors(org_id: str, db: Session) -> list[User]:
     """소속 상담사 목록 (counselor + org_admin)."""
+    require_active_org(org_id, db)
     return (
         db.query(User)
         .filter(
@@ -294,6 +298,7 @@ def update_counselor_role(
             detail="해당 센터의 관리자만 변경할 수 있습니다",
         )
 
+    require_active_org(org_id, db)
     user = (
         db.query(User)
         .filter(User.id == uuid.UUID(user_id), User.org_id == uuid.UUID(org_id))
@@ -319,6 +324,7 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
             detail="해당 센터의 관리자만 해제할 수 있습니다",
         )
 
+    require_active_org(org_id, db)
     user = (
         db.query(User)
         .filter(User.id == uuid.UUID(user_id), User.org_id == uuid.UUID(org_id))
@@ -376,12 +382,17 @@ def get_organization_by_code(code: str, db: Session) -> Organization | None:
     normalized = code_service.normalize_code(code)
     if len(normalized) != code_service.CODE_LENGTH:
         return None
-    return db.query(Organization).filter(Organization.org_code == normalized).first()
+    return db.query(Organization).filter(Organization.org_code == normalized, Organization.deactivated_at.is_(None)).first()
 
 
-def list_organizations(db: Session) -> list[Organization]:
+def list_organizations(db: Session, status_filter: str = "active") -> list[Organization]:
     """전체 기관 목록 (system_admin 용)."""
-    return db.query(Organization).order_by(Organization.created_at.desc()).all()
+    query = db.query(Organization)
+    if status_filter == "active":
+        query = query.filter(Organization.deactivated_at.is_(None))
+    elif status_filter == "inactive":
+        query = query.filter(Organization.deactivated_at.is_not(None))
+    return query.order_by(Organization.created_at.desc()).all()
 
 
 # ---------------------------------------------------------------------------
@@ -478,7 +489,7 @@ async def invite_counselor(
     from app.models.counselor_profile import CounselorProfile
     from app.services import org_invite_service
 
-    org = get_organization(org_id, db)
+    org = require_active_org(org_id, db)
 
     clean_name = (name or "").strip()
     if not clean_name:
@@ -541,7 +552,7 @@ async def resend_counselor_invite(
     """
     from app.services import org_invite_service
 
-    org = get_organization(org_id, db)
+    org = require_active_org(org_id, db)
 
     try:
         uid = uuid.UUID(str(user_id))
@@ -590,6 +601,7 @@ def get_primary_admin(org_id: str, db: Session) -> tuple[Organization, User]:
     org = db.query(Organization).filter(Organization.id == oid).first()
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다")
+    require_active_org(org.id, db)
     if org.primary_admin_id is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="기관에 등록된 담당자가 없습니다"

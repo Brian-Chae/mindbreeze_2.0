@@ -244,6 +244,10 @@ async def consume_invite(token: str, new_password: str, db: Session, redis: Redi
             status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다"
         )
 
+    from app.services.org_management_service import require_active_user_org
+    if token_type != CLIENT_TOKEN_TYPE:
+        require_active_user_org(user, db)
+
     new_hash = hash_password(new_password)
     user.password_hash = new_hash
     # 초대 수락 = 이메일 소유 증명이므로 계정을 활성화한다

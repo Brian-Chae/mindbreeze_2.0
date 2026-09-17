@@ -105,6 +105,8 @@ export interface AdminOrganizationDto {
   verified: boolean;
   kind: string;
   has_primary_admin: boolean;
+  version: number;
+  deactivated_at: string | null;
   created_at: string;
 }
 
@@ -163,8 +165,8 @@ export const createAdminClient = (
 ): Promise<CreateAdminClientResponse> =>
   apiClient.post<CreateAdminClientResponse>('/admin/clients', payload);
 
-export const listAdminOrganizations = (): Promise<AdminOrganizationDto[]> =>
-  apiClient.get<AdminOrganizationDto[]>('/admin/orgs');
+export const listAdminOrganizations = (status: 'active' | 'inactive' = 'active'): Promise<AdminOrganizationDto[]> =>
+  apiClient.get<AdminOrganizationDto[]>(`/admin/orgs?status=${status}`);
 
 export const createAdminOrganization = (
   payload: AdminOrganizationCreatePayload,
@@ -248,7 +250,7 @@ export interface OrganizationUserSummaryDto {
 export interface AdminOrganizationDetailDto extends AdminOrganizationDto {
   address: string | null;
   verified_at: string | null;
-  version: number | null;
+  version: number;
   primary_admin: OrganizationUserSummaryDto | null;
   owner: OrganizationUserSummaryDto | null;
 }
@@ -269,3 +271,33 @@ export const getAdminOrganization = (id: string): Promise<AdminOrganizationDetai
 
 export const listAdminOrganizationCounselors = (id: string): Promise<AdminOrganizationCounselorDto[]> =>
   apiClient.get<AdminOrganizationCounselorDto[]>(`/admin/orgs/${id}/counselors`);
+
+
+export interface OrganizationPatchPayload {
+  name?: string;
+  phone?: string | null;
+  address?: string | null;
+  verified?: boolean;
+  reason?: string;
+}
+export interface OrganizationImpactDto {
+  account_count: number;
+  active_link_count: number;
+  scheduled_session_count: number;
+  ongoing_session_count: number;
+  unknown_attribution_count: number;
+  preserved_session_count: number;
+  attribution_note: string;
+  blockers: string[];
+  can_deactivate: boolean;
+  version: number;
+}
+const versionHeaders = (version: number) => ({ headers: { 'If-Match': `"${version}"` } });
+export const patchAdminOrganization = (id: string, payload: OrganizationPatchPayload, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.patch(`/admin/orgs/${id}`, payload, versionHeaders(version));
+export const getOrganizationDeactivationImpact = (id: string): Promise<OrganizationImpactDto> =>
+  apiClient.get(`/admin/orgs/${id}/deactivation-impact`);
+export const deactivateAdminOrganization = (id: string, payload: { reason: string; confirmation_value: string }, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.post(`/admin/orgs/${id}/deactivate`, payload, versionHeaders(version));
+export const reactivateAdminOrganization = (id: string, reason: string, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.post(`/admin/orgs/${id}/reactivate`, { reason }, versionHeaders(version));

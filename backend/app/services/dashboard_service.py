@@ -129,6 +129,8 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
     if org is None:
         raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
 
+    from app.services.org_management_service import require_active_org
+    require_active_org(org.id, db)
     members = db.query(User).filter(User.org_id == org.id).all()
     counselors = [m for m in members if m.role in ("counselor", "org_admin")]
     counselor_ids = [m.id for m in counselors]

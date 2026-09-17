@@ -57,12 +57,12 @@ def test_detail_minimal_fields_and_nullable_references(client, org_data):
     body = client.get(f"/api/v1/admin/orgs/{org.id}", headers=headers(users[0])).json()
     assert body["address"] == "서울"
     assert body["kind"] == "institution"
-    assert body["version"] is None
+    assert body["version"] == 1
     assert body["owner"] is None
     assert set(body["primary_admin"]) == {"id", "name", "email", "phone", "role", "status"}
     assert body["primary_admin"]["id"] == str(users[1].id)
     assert set(body) == {"id", "name", "org_code", "phone", "address", "verified", "verified_at",
-                         "kind", "created_at", "version", "primary_admin", "owner", "has_primary_admin"}
+                         "kind", "created_at", "version", "primary_admin", "owner", "has_primary_admin", "deactivated_at"}
     body = client.get(f"/api/v1/admin/orgs/{other.id}", headers=headers(users[0])).json()
     assert body["primary_admin"] is None
     assert body["owner"]["id"] == str(users[4].id)
