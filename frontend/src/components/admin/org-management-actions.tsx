@@ -8,6 +8,7 @@ import {
 
 const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm text-[#1F1F1F] disabled:opacity-50';
 const primary = 'rounded-lg border border-[#5F0080] bg-[#5F0080] px-3 py-2 text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50';
+const danger = 'rounded-lg border border-red-700 bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50';
 type Props = {
   org: AdminOrganizationDetailDto;
   onSaved: (org: AdminOrganizationDetailDto) => void;
@@ -122,7 +123,7 @@ export default function OrgManagementActions({ org, onSaved, onReload, onGuardCh
       </div>}
       <div className="flex gap-2">
         <button ref={cancelRef} type="button" disabled={busy} className={control} onClick={cancel}>취소</button>
-        <button type="submit" className={mode === 'deactivate' ? `${control} bg-red-700 text-white` : primary}
+        <button type="submit" className={mode === 'deactivate' ? danger : primary}
           disabled={busy || conflict || (mode === 'edit' && (!name.trim() || (verified !== org.verified && !reason.trim())))
             || (mode !== 'edit' && !reason.trim()) || (mode === 'deactivate' && (!impact?.can_deactivate || loadingImpact || !agreed || confirmation.trim() !== (org.org_code || org.name)))}>
           {busy ? '처리 중...' : mode === 'edit' ? '저장' : mode === 'deactivate' ? '기관 운영 종료(비활성화)' : '재활성화 실행'}
