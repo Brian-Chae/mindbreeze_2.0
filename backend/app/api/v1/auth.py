@@ -18,23 +18,17 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models.career import Career
 from app.models.client_profile import ClientProfile
 from app.models.consent import Consent
-from app.models.counselor_profile import CounselorProfile as CPModel
 from app.models.onboarding_progress import OnboardingProgress
-from app.models.qualification import Qualification
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import (
-    CareerItem,
     ClientProfileResponse,
     ClientProfileUpdate,
     ConsentRequest,
     CounselorCodeCheckRequest,
     CounselorCodeCheckResponse,
-    CounselorProfileResponse,
-    CounselorProfileUpdate,
     EmailVerifyTokenResponse,
     GoogleAuthRequest,
     LoginRequest,
@@ -44,7 +38,6 @@ from app.schemas.auth import (
     OtpVerifyPayload,
     PasswordForgotRequest,
     PasswordResetRequest,
-    QualificationItem,
     RefreshRequest,
     RegisterClientRequest,
     RegisterRequest,
@@ -53,7 +46,9 @@ from app.schemas.auth import (
     UpdateUserMeRequest,
     UserResponse,
 )
+from app.schemas.counselor_info import CounselorInfoResponse, CounselorInfoUpdate
 from app.services import (
+    counselor_info_service,
     email_verify_service,
     login_attempt_service,
     onboarding_service,
@@ -749,12 +744,12 @@ async def update_user_me(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/counselors/me/profile", response_model=CounselorProfileResponse)
+@router.get("/counselors/me/profile", response_model=CounselorInfoResponse)
 async def get_counselor_profile(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 프로필 조회 (계정정보 + 프로필정보)"""
+    """상담사 프로필 조회 (계정정보 + 프로필정보 + 개인정보/주소/version — SDD-077)"""
     user_id = uuid.UUID(current_user["id"])
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -762,51 +757,16 @@ async def get_counselor_profile(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다",
         )
-    profile = user.counselor_profile
-    quals = [
-        QualificationItem(
-            id=str(q.id),
-            name=q.name,
-            issuer=q.issuer,
-            issued_at=str(q.issued_at) if q.issued_at else None,
-        )
-        for q in (user.qualifications or [])
-    ]
-    cars = [
-        CareerItem(
-            id=str(c.id),
-            organization=c.organization,
-            role=c.role,
-            started_at=str(c.started_at) if c.started_at else None,
-            ended_at=str(c.ended_at) if c.ended_at else None,
-            is_current=c.is_current,
-        )
-        for c in (user.careers or [])
-    ]
-    return CounselorProfileResponse(
-        id=str(user.id),
-        email=user.email,
-        name=user.name,
-        role=user.role,
-        phone=user.phone,
-        profile_image=user.profile_image or (profile.profile_image_url if profile else None),
-        bio=user.bio or (profile.bio if profile else None),
-        counselor_code=profile.counselor_code if profile else None,
-        affiliation_type=profile.affiliation_type if profile else None,
-        years_of_experience=profile.years_of_experience if profile else None,
-        specialties=profile.specialties if profile else [],
-        qualifications=quals,
-        careers=cars,
-    )
+    return counselor_info_service.serialize(user)
 
 
-@router.patch("/counselors/me/profile", response_model=CounselorProfileResponse)
+@router.patch("/counselors/me/profile", response_model=CounselorInfoResponse)
 async def update_counselor_profile(
-    req: CounselorProfileUpdate,
+    req: CounselorInfoUpdate,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 프로필 수정"""
+    """상담사 프로필 수정 — 본인. 이메일/역할/소속 등은 수정 불가(403)."""
     user_id = uuid.UUID(current_user["id"])
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -815,71 +775,16 @@ async def update_counselor_profile(
             detail="사용자를 찾을 수 없습니다",
         )
 
-    name_changed = False
-    if req.name is not None:
-        if user.name != req.name:
-            name_changed = True
-        user.name = req.name
-    if req.phone is not None:
-        user.phone = req.phone
-    if req.profile_image is not None:
-        user.profile_image = req.profile_image
-    if req.bio is not None:
-        user.bio = req.bio
-
-    profile = db.query(CPModel).filter(CPModel.user_id == user_id).first()
-    if profile is None:
-        import random
-        import string
-        code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        profile = CPModel(user_id=user_id, counselor_code=code, specialties=[])
-        db.add(profile)
-        db.flush()
-
-    if req.affiliation_type is not None:
-        profile.affiliation_type = req.affiliation_type
-    if req.years_of_experience is not None:
-        profile.years_of_experience = req.years_of_experience
-    if req.specialties is not None:
-        profile.specialties = req.specialties
-
-    # Qualifications: delete all then re-insert
-    if req.qualifications is not None:
-        db.query(Qualification).filter(Qualification.user_id == user_id).delete()
-        for q in req.qualifications:
-            db.add(
-                Qualification(
-                    user_id=user_id,
-                    name=q.name,
-                    issuer=q.issuer,
-                    issued_at=date.fromisoformat(q.issued_at) if q.issued_at else None,
-                )
-            )
-
-    # Careers: delete all then re-insert
-    if req.careers is not None:
-        db.query(Career).filter(Career.user_id == user_id).delete()
-        for c in req.careers:
-            db.add(
-                Career(
-                    user_id=user_id,
-                    organization=c.organization,
-                    role=c.role,
-                    started_at=date.fromisoformat(c.started_at) if c.started_at else None,
-                    ended_at=date.fromisoformat(c.ended_at) if c.ended_at else None,
-                    is_current=c.is_current,
-                )
-            )
-
-    db.commit()
-    db.refresh(user)
+    name_changed = counselor_info_service.update_profile(
+        user, req, db, actor_id=user.id, actor_kind="self"
+    )
 
     # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
     if name_changed:
         from app.ws.chat_namespace import broadcast_profile_updated
         await broadcast_profile_updated(str(user.id), user.name)
 
-    return await get_counselor_profile(current_user, db)
+    return counselor_info_service.serialize(user)
 
 
 # ---------------------------------------------------------------------------

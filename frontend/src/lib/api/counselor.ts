@@ -23,27 +23,43 @@ export interface CounselorProfile {
   email: string;
   name: string;
   role: string;
+  status?: string;
+  org_id?: string | null;
+  org_name?: string | null;
   phone?: string | null;
   profile_image?: string | null;
   bio?: string | null;
   counselor_code?: string | null;
+  // SDD-077: 개인정보(선택 입력) + 주소 + 낙관적 잠금 버전
+  gender?: string | null;
+  birth_date?: string | null;
+  postal_code?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
   affiliation_type?: string | null;
   years_of_experience?: number | null;
   specialties: string[];
   qualifications: QualificationItem[];
   careers: CareerItem[];
+  version: number;
 }
 
 export interface CounselorProfileUpdate {
   name?: string;
-  phone?: string;
-  profile_image?: string;
-  bio?: string;
-  affiliation_type?: string;
-  years_of_experience?: number;
+  phone?: string | null;
+  profile_image?: string | null;
+  bio?: string | null;
+  gender?: string | null;
+  birth_date?: string | null;
+  postal_code?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  affiliation_type?: string | null;
+  years_of_experience?: number | null;
   specialties?: string[];
   qualifications?: QualificationItem[];
   careers?: CareerItem[];
+  version?: number;
 }
 
 export const getCounselorProfile = (): Promise<CounselorProfile> =>

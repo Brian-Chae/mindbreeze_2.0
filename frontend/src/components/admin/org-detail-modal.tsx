@@ -6,6 +6,9 @@ import {
 
 import OrgManagementActions from './org-management-actions';
 import OrgCounselorAction from './org-counselor-action';
+import PrimaryAdminEdit from './primary-admin-edit';
+import CounselorInfoEditor from '../counselor/counselor-info-editor';
+import { getAdminCounselorProfile, patchAdminCounselorProfile } from '../../lib/api/counselor-info';
 
 export const orgKindLabel = (kind: string): string =>
   ({ institution: '일반 기관', individual: '개인 기관' })[kind] ?? '확인 필요';
@@ -49,8 +52,16 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
   const [infoGuard, setGuard] = useState({ dirty: false, busy: false });
   const [counselorGuard, setCounselorGuard] = useState({ dirty: false, busy: false });
   const [counselorAction, setCounselorAction] = useState<{ member: AdminOrganizationCounselorDto; action: 'role' | 'remove' } | null>(null);
+  // SDD-077: 상담사 정보 수정 / 주 담당자 정보 수정 패널
+  const [editingCounselor, setEditingCounselor] = useState<AdminOrganizationCounselorDto | null>(null);
+  const [editingPrimary, setEditingPrimary] = useState(false);
+  const [editGuard, setEditGuard] = useState({ dirty: false, busy: false });
+  const editGuardChange = useCallback((dirty: boolean, busy: boolean) => setEditGuard({ dirty, busy }), []);
   const counselorGuardChange = useCallback((dirty: boolean, busy: boolean) => setCounselorGuard({ dirty, busy }), []);
-  const guard = { dirty: infoGuard.dirty || counselorGuard.dirty, busy: infoGuard.busy || counselorGuard.busy };
+  const guard = {
+    dirty: infoGuard.dirty || counselorGuard.dirty || editGuard.dirty,
+    busy: infoGuard.busy || counselorGuard.busy || editGuard.busy,
+  };
   const [confirmClose, setConfirmClose] = useState(false);
   const guardChange = useCallback((dirty: boolean, busy: boolean) => setGuard({ dirty, busy }), []);
   const requestClose = () => { if (guard.busy) return; if (guard.dirty) setConfirmClose(true); else onClose(); };
@@ -151,8 +162,13 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
               <Field label="전화">{org.phone}</Field><Field label="주소">{detail.state.data.address}</Field>
               <Field label="인증 상태">{org.verified ? '인증됨' : '미인증'}</Field><Field label="생성일 (KST)">{orgDate(org.created_at)}</Field>
             </dl>
-            <h3 className="mb-4 mt-7 border-t pt-5 font-bold">{org.kind === 'individual' ? '소유자' : '주 담당자'}</h3>
-            {!person ? <p className="text-sm text-[#6F6F6F]">{org.kind === 'individual' ? '소유자 미지정' : '담당자 미지정'}</p> :
+            <div className="mb-4 mt-7 flex items-center justify-between border-t pt-5">
+              <h3 className="font-bold">{org.kind === 'individual' ? '소유자' : '주 담당자'}</h3>
+              {person && org.kind !== 'individual' && !editingPrimary &&
+                <button type="button" className={control} disabled={guard.busy}
+                  onClick={() => setEditingPrimary(true)}>담당자 정보 수정</button>}
+            </div>
+            {!person ? <p className="text-sm text-[#6F6F6F]">{org.kind === 'individual' ? '소유자 미지정 — 상담사 탭에서 정보를 수정하세요' : '담당자 미지정'}</p> :
               <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Field label="이름">{person.name}</Field><Field label="이메일">{person.email}</Field>
                 <Field label="전화">{person.phone}</Field><Field label="계정 상태">{statusLabel(person.status)}</Field>
@@ -160,6 +176,9 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
                   ? <Retry label="상담사 코드" onRetry={counselors.retry} />
                   : members.find((member) => member.id === person.id)?.counselor_code ?? '미등록'}</Field>}
               </dl>}
+            {editingPrimary && person && <PrimaryAdminEdit orgId={org.id} person={person}
+              onGuardChange={editGuardChange} onCancel={() => setEditingPrimary(false)}
+              onSaved={() => { setEditingPrimary(false); editGuardChange(false, false); detail.retry(); counselors.retry(); onUpdated(); }} />}
             <OrgManagementActions key={`${org.id}-${detail.state.data.version}`} org={detail.state.data}
               onGuardChange={guardChange} onReload={() => { guardChange(false, false); detail.retry(); }}
               onSaved={(updated) => { detail.setData(updated); counselors.retry(); onUpdated(); }} />
@@ -169,6 +188,11 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
           {counselorAction && <OrgCounselorAction orgId={org.id} member={counselorAction.member} action={counselorAction.action}
             onGuardChange={counselorGuardChange} onCancel={() => setCounselorAction(null)}
             onSaved={() => { setCounselorAction(null); counselorGuardChange(false, false); counselors.retry(); detail.retry(); onUpdated(); }} />}
+          {editingCounselor && <CounselorInfoEditor
+            load={() => getAdminCounselorProfile(editingCounselor.id)}
+            save={(payload) => patchAdminCounselorProfile(editingCounselor.id, payload)}
+            onGuardChange={editGuardChange} onCancel={() => setEditingCounselor(null)}
+            onSaved={() => { setEditingCounselor(null); editGuardChange(false, false); counselors.retry(); detail.retry(); onUpdated(); }} />}
           {counselors.state.status === 'loading' && <p role="status">상담사를 불러오는 중...</p>}
           {counselors.state.status === 'error' && <Retry label="상담사" onRetry={counselors.retry} />}
           {counselors.state.status === 'success' && <>
@@ -190,9 +214,12 @@ export default function OrgDetailModal({ organization, onClose, onUpdated }: {
                   <td className="p-3">{member.email}</td><td className="p-3 font-mono">{member.counselor_code ?? '미등록'}</td><td className="p-3">{roleLabel(member.role)}</td><td className="p-3">{statusLabel(member.status)}</td>
                   <td className="p-3">
                     <div className="flex gap-2">
-                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || guard.busy}
+                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`}
+                        disabled={!['counselor', 'org_admin'].includes(member.role) || !!counselorAction || !!editingCounselor || guard.busy}
+                        onClick={() => setEditingCounselor(member)}>정보 수정</button>
+                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setCounselorAction({ member, action: 'role' })}>역할 변경</button>
-                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || guard.busy}
+                      <button type="button" className={`${control} whitespace-nowrap disabled:opacity-50`} disabled={!!protectedReason(member) || !!counselorAction || !!editingCounselor || guard.busy}
                         onClick={() => setCounselorAction({ member, action: 'remove' })}>소속 해제</button>
                     </div>
                     {protectedReason(member) && <p className="mt-1 text-xs text-[#6F6F6F]">{protectedReason(member)}</p>}

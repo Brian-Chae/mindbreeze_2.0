@@ -79,8 +79,10 @@ export default function CounselorOnboardingPage() {
           phone: (d.phone as string) ?? prev.phone,
           gender: (d.gender as string) ?? prev.gender,
           birthDate: (d.birth_date as string) ?? prev.birthDate,
+          // SDD-077: 백엔드 계약은 years_of_experience — 과거 저장분(experience_years)도 읽는다
           experienceYears:
-            d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
+            d.years_of_experience != null ? String(d.years_of_experience)
+              : d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
           specialties: (d.specialties as string[]) ?? prev.specialties,
           affiliationType: (d.affiliation_type as string) ?? prev.affiliationType,
           profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
@@ -125,7 +127,7 @@ export default function CounselorOnboardingPage() {
           await saveCounselorStep2({
             gender: form.gender,
             birth_date: form.birthDate,
-            experience_years: Number(form.experienceYears),
+            years_of_experience: Number(form.experienceYears),
             specialties: form.specialties,
           });
         }

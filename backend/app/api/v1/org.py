@@ -1,5 +1,7 @@
 """상담센터(Organization) API 라우터"""
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
@@ -7,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.redis import get_redis
+from app.models.organization import Organization
+from app.schemas.counselor_info import CounselorInfoResponse, CounselorInfoUpdate
 from app.schemas.org import (
     CounselorInviteRequest,
     CounselorInviteResponse,
@@ -17,7 +21,7 @@ from app.schemas.org import (
     OrganizationSearchResult,
     OrgJoinRequestDetail,
 )
-from app.services import org_service
+from app.services import counselor_info_service, org_service
 
 router = APIRouter(prefix="/org", tags=["org"])
 
@@ -232,6 +236,65 @@ async def update_counselor(
         org_id, user_id, new_role, current_user["id"], db
     )
     return _counselor_to_response(user)
+
+
+# ---------------------------------------------------------------------------
+# SDD-077: 기관 관리자 — 소속 상담사 정보 조회·수정 (개인정보 포함, 정책 확정)
+# ---------------------------------------------------------------------------
+
+
+def _parse_target_uuid(user_id: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+
+
+@router.get("/{org_id}/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+async def get_org_counselor_profile(
+    org_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """소속 상담사 정보 조회 — OrgAdmin 전용. 성별/생년월일/전화/주소 포함(정책 확정)."""
+    _require_org_admin(current_user, org_id)
+    target = counselor_info_service.get_target_counselor(_parse_target_uuid(user_id), db, org_id=org_id)
+    return counselor_info_service.serialize(target)
+
+
+@router.patch("/{org_id}/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+async def patch_org_counselor_profile(
+    org_id: str,
+    user_id: str,
+    req: CounselorInfoUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """소속 상담사 정보 수정 — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림.
+
+    기관 관리자 계정(org_admin)은 이 경로로 수정할 수 없다 — 본인 설정 또는
+    플랫폼 관리자 수정만 허용한다.
+    """
+    _require_org_admin(current_user, org_id)
+    org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).first()
+    if org is None:
+        raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
+    if org.deactivated_at is not None:
+        raise HTTPException(status_code=409, detail="비활성화된 기관에서는 이 작업을 수행할 수 없습니다")
+    target = counselor_info_service.get_target_counselor(_parse_target_uuid(user_id), db, org_id=org_id)
+    if target.role == "org_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="기관 관리자 계정은 본인 설정 또는 플랫폼 관리자를 통해 수정할 수 있습니다",
+        )
+    name_changed = counselor_info_service.update_profile(
+        target, req, db, actor_id=uuid.UUID(current_user["id"]), actor_kind="org_admin"
+    )
+    if name_changed:
+        from app.ws.chat_namespace import broadcast_profile_updated
+        await broadcast_profile_updated(str(target.id), target.name)
+    return counselor_info_service.serialize(target)
 
 
 @router.delete("/{org_id}/counselors/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

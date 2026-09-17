@@ -27,7 +27,20 @@ from app.schemas.org import (
     OrganizationWithAdminResponse,
     ResendInviteResponse,
 )
-from app.services import admin_service, org_invite_service, org_service, org_management_service
+from app.schemas.counselor_info import (
+    AdminCounselorListItem,
+    AdminCounselorListResponse,
+    CounselorInfoResponse,
+    CounselorInfoUpdate,
+    PrimaryAdminProfilePatch,
+)
+from app.services import (
+    admin_service,
+    counselor_info_service,
+    org_invite_service,
+    org_service,
+    org_management_service,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -453,3 +466,91 @@ def admin_remove_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: Organ
                                admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
     org_management_service.change_counselor(org_id, user_id, admin.id, req.reason, db)
     return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# SDD-077: 플랫폼 관리자 상담사 정보 조회·수정 (미소속 포함)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/counselors", response_model=AdminCounselorListResponse)
+def admin_list_counselors(
+    org_id: str | None = Query(default=None, description="기관 UUID 또는 'none'(미소속)"),
+    q: str | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """전체 상담사 목록 — 미소속(org_id=none) 포함. 이름/이메일/코드 검색 + 상태 필터."""
+    query = (
+        db.query(User, CounselorProfile.counselor_code, Organization.name)
+        .outerjoin(CounselorProfile, CounselorProfile.user_id == User.id)
+        .outerjoin(Organization, Organization.id == User.org_id)
+        .filter(User.role.in_(["counselor", "org_admin"]))
+    )
+    if org_id in ("none", "unassigned"):
+        query = query.filter(User.org_id.is_(None))
+    elif org_id:
+        try:
+            query = query.filter(User.org_id == uuid.UUID(org_id))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="org_id 형식이 올바르지 않습니다")
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            User.name.ilike(like) | User.email.ilike(like) | CounselorProfile.counselor_code.ilike(like)
+        )
+    if status_filter:
+        query = query.filter(User.status == status_filter)
+    rows = query.order_by(User.created_at.asc(), User.id.asc()).all()
+    return AdminCounselorListResponse(
+        items=[AdminCounselorListItem(
+            id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+            role=user.role, status=user.status,
+            org_id=str(user.org_id) if user.org_id else None, org_name=org_name,
+        ) for user, code, org_name in rows],
+        total=len(rows),
+    )
+
+
+@router.get("/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+def admin_get_counselor_profile(
+    user_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    target = counselor_info_service.get_target_counselor(user_id, db)
+    return counselor_info_service.serialize(target)
+
+
+@router.patch("/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+async def admin_patch_counselor_profile(
+    user_id: uuid.UUID,
+    req: CounselorInfoUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """플랫폼 관리자 상담사 정보 수정 — 사유 필수, 감사 + 대상자 알림."""
+    target = counselor_info_service.get_target_counselor(user_id, db)
+    name_changed = counselor_info_service.update_profile(
+        target, req, db, actor_id=admin.id, actor_kind="platform_admin"
+    )
+    if name_changed:
+        from app.ws.chat_namespace import broadcast_profile_updated
+        await broadcast_profile_updated(str(target.id), target.name)
+    return counselor_info_service.serialize(target)
+
+
+@router.patch("/orgs/{org_id}/primary-admin/profile", response_model=OrganizationUserSummary)
+def admin_patch_primary_admin_profile(
+    org_id: uuid.UUID,
+    req: PrimaryAdminProfilePatch,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """주 담당자 이름/전화 정정 — 담당자 교체(primary_admin_id 변경) 아님."""
+    user = counselor_info_service.update_primary_admin_profile(org_id, req, db, actor_id=admin.id)
+    return OrganizationUserSummary(
+        id=str(user.id), name=user.name, email=user.email, phone=user.phone,
+        role=user.role, status=user.status,
+    )

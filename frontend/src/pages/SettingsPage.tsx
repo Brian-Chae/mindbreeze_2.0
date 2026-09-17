@@ -10,6 +10,7 @@ import {
   type CounselorProfileUpdate,
 } from '../lib/api/counselor';
 import AccountSection from '../components/settings/AccountSection';
+import PersonalInfoSection from '../components/settings/PersonalInfoSection';
 import ProfileSection from '../components/settings/ProfileSection';
 import { useAuthStore } from '../stores/authStore';
 
@@ -68,7 +69,8 @@ export default function SettingsPage() {
     async (data: CounselorProfileUpdate): Promise<void> => {
       setError(null);
       try {
-        const updated = await updateCounselorProfile(data);
+        // SDD-077: 동시 수정 충돌 감지 — 현재 버전을 함께 보낸다 (충돌 시 409 메시지 표시)
+        const updated = await updateCounselorProfile({ ...data, version: profile?.version });
         setProfile(updated);
         setProfileSaved(true);
         setTimeout(() => setProfileSaved(false), 2000);
@@ -77,7 +79,7 @@ export default function SettingsPage() {
         throw e;
       }
     },
-    [],
+    [profile?.version],
   );
 
   const handleToggle = useCallback(
@@ -174,6 +176,7 @@ export default function SettingsPage() {
               <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
             )}
             <AccountSection profile={profile} onSave={handleProfileSave} />
+            <PersonalInfoSection profile={profile} onSave={handleProfileSave} />
             <ProfileSection profile={profile} onSave={handleProfileSave} />
           </>
         )}

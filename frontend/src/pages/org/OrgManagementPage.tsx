@@ -13,6 +13,11 @@ import {
   type CounselorItem,
   type CounselorRole,
 } from '../../lib/api/org';
+import {
+  getOrgCounselorProfile,
+  patchOrgCounselorProfile,
+} from '../../lib/api/counselor-info';
+import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
 
 export default function OrgManagementPage() {
   const { org_id: orgId } = useParams<{ org_id: string }>();
@@ -24,6 +29,10 @@ export default function OrgManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyUser, setBusyUser] = useState<string | null>(null);
+  // SDD-077: 상담사 정보 수정 (성별/생년월일/전화/주소 포함 — 정책 확정)
+  const [editingUser, setEditingUser] = useState<CounselorItem | null>(null);
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   // org_admin 가드는 백엔드에서 강제됨. 프런트에서는 안내만.
   // org_admin 가드는 백엔드에서 강제됨. UserRole 타입에 'org_admin'이 아직 없어 문자열 비교로 처리.
@@ -74,6 +83,11 @@ export default function OrgManagementPage() {
     }
   };
 
+  const filteredCounselors = counselors.filter((c) =>
+    [c.name, c.email].some((value) => value.toLowerCase().includes(query.trim().toLowerCase()))
+    && (!statusFilter || (c.status ?? 'active') === statusFilter),
+  );
+
   if (!isInitialized || loading) {
     return (
       <div className="min-h-screen bg-surface-canvas p-8 text-sm text-ink-tertiary">로딩 중...</div>
@@ -104,41 +118,96 @@ export default function OrgManagementPage() {
           </p>
         </section>
 
-        {/* 소속 상담사 */}
+        {/* 소속 상담사 — 테이블 + 검색/상태 필터 + 정보 수정 (SDD-077) */}
         <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-4">
           <h2 className="text-lg font-medium text-ink-primary">소속 상담사 ({counselors.length}명)</h2>
+          {editingUser && orgId && (
+            <CounselorInfoEditor
+              load={() => getOrgCounselorProfile(orgId, editingUser.id)}
+              save={(payload) => patchOrgCounselorProfile(orgId, editingUser.id, payload)}
+              onCancel={() => setEditingUser(null)}
+              onSaved={() => {
+                setEditingUser(null);
+                listCounselors(orgId).then(setCounselors).catch(() => undefined);
+              }}
+            />
+          )}
+          <div className="flex flex-wrap gap-2">
+            <input
+              aria-label="상담사 검색"
+              placeholder="이름·이메일 검색"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9 min-w-0 flex-1 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+            />
+            <select
+              aria-label="계정 상태 필터"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+            >
+              <option value="">전체 상태</option>
+              <option value="active">활성</option>
+              <option value="pending">가입 대기</option>
+            </select>
+          </div>
           {counselors.length === 0 ? (
             <p className="text-sm text-ink-tertiary">아직 소속된 상담사가 없습니다.</p>
+          ) : filteredCounselors.length === 0 ? (
+            <p className="text-sm text-ink-tertiary">검색 조건에 맞는 상담사가 없습니다.</p>
           ) : (
-            <div className="space-y-2">
-              {counselors.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex flex-wrap items-center gap-3 p-3 rounded-lg border border-border-default"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-ink-primary truncate">{c.name}</p>
-                    <p className="text-xs text-ink-tertiary truncate">{c.email}</p>
-                  </div>
-                  <select
-                    value={c.role}
-                    onChange={(e) => handleRoleChange(c.id, e.target.value as CounselorRole)}
-                    disabled={busyUser === c.id}
-                    className="h-9 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
-                  >
-                    <option value="counselor">상담사</option>
-                    <option value="org_admin">관리자</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => handleRemove(c.id)}
-                    disabled={busyUser === c.id}
-                    className="h-9 px-3 rounded-pill border border-border-default text-sm text-ink-secondary hover:text-red-500 hover:border-red-500"
-                  >
-                    소속 해제
-                  </button>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border-default text-xs text-ink-tertiary">
+                    {['이름', '이메일', '상태', '역할', '관리'].map((h) => (
+                      <th key={h} className="p-2 font-medium">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCounselors.map((c) => (
+                    <tr key={c.id} className="border-b border-border-default">
+                      <td className="p-2 text-ink-primary">{c.name}</td>
+                      <td className="p-2 text-ink-tertiary">{c.email}</td>
+                      <td className="p-2 text-ink-tertiary">{c.status === 'pending' ? '가입 대기' : '활성'}</td>
+                      <td className="p-2">
+                        <select
+                          aria-label={`${c.name} 역할`}
+                          value={c.role}
+                          onChange={(e) => handleRoleChange(c.id, e.target.value as CounselorRole)}
+                          disabled={busyUser === c.id}
+                          className="h-9 px-3 rounded-lg bg-surface-canvas border border-border-default text-sm text-ink-primary"
+                        >
+                          <option value="counselor">상담사</option>
+                          <option value="org_admin">관리자</option>
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingUser(c)}
+                            disabled={busyUser === c.id || !!editingUser || c.role !== 'counselor'}
+                            title={c.role !== 'counselor' ? '기관 관리자 계정은 본인 설정 또는 플랫폼 관리자를 통해 수정합니다' : undefined}
+                            className="h-9 px-3 rounded-pill border border-border-default text-sm text-ink-secondary hover:text-ink-primary disabled:opacity-50"
+                          >
+                            정보 수정
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(c.id)}
+                            disabled={busyUser === c.id}
+                            className="h-9 px-3 rounded-pill border border-border-default text-sm text-ink-secondary hover:text-red-500 hover:border-red-500"
+                          >
+                            소속 해제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
