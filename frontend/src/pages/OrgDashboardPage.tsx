@@ -361,11 +361,13 @@ function CounselorInviteSection({
       setInviteSuccess(`${normalizedEmail}(으)로 초대 메일을 발송했습니다.`);
       await onRefresh();
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setInviteError('이미 등록된 이메일입니다. 다른 이메일을 사용해주세요.');
-      } else {
-        setInviteError(err instanceof Error ? err.message : '초대 발송에 실패했습니다.');
-      }
+      setInviteError(
+        err instanceof ApiError && err.message
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : '초대 발송에 실패했습니다.',
+      );
     } finally {
       setInviting(false);
     }
