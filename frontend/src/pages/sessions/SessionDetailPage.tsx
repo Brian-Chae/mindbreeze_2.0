@@ -81,14 +81,16 @@ export default function SessionDetailPage() {
 
   const handleAction = async (action: SessionAction): Promise<void> => {
     if (!id) return;
+    // SDD-083: 시작은 바로 전이하지 않고 라이브 페이지의 카메라/마이크 프리뷰에서 확인 후 시작
+    if (action === 'start') {
+      navigate(`/sessions/${id}/live`);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const updated = await transitionSession(id, action);
       setSession(updated);
-      if (action === 'start') {
-        navigate(`/sessions/${id}/live`);
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : '상태 변경에 실패했습니다');
     } finally {

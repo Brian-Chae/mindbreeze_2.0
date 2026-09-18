@@ -46,10 +46,18 @@ import {
   type MonitorSummaryCounts,
 } from '../../components/session/SessionMonitorSummary';
 import { SessionMonitorTable } from '../../components/session/SessionMonitorTable';
+import { SessionPreJoinPreview } from '../../components/session/SessionPreJoinPreview';
+import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
+import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
+import type { ParticipantHistoryPoint } from '../../lib/session-live/metric-display';
 import AppShell from '../../components/layout/AppShell';
 
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
+/** SDD-083: 상태 변화 시계열 누적 최소 간격 — 3초 평균 표시와 동일 리듬 */
+const HISTORY_MIN_INTERVAL_MS = 3000;
+/** SDD-083: participant당 시계열 최대 포인트 (3초 간격 ≈ 1시간) */
+const HISTORY_MAX_POINTS = 1200;
 
 /** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
 function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
@@ -127,6 +135,14 @@ export default function SessionLivePage() {
   const [transitioning, setTransitioning] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<keyof MonitorSummaryCounts | null>(null);
+  // SDD-083: 카드 그리드 기본, 기존 테이블은 토글로 병행 제공
+  const [monitorView, setMonitorView] = useState<'cards' | 'table'>('cards');
+  // SDD-083: 카드 클릭 → 상세 패널 대상 participant
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  // 상세 패널용 시계열 스냅샷 — ref를 렌더 중 읽지 않도록 선택 시/주기적으로 복사
+  const [selectedHistory, setSelectedHistory] = useState<ParticipantHistoryPoint[]>([]);
+  // SDD-083: participant별 상태 변화 시계열 (3초 평균 값 누적, 클라이언트 버퍼)
+  const historyRef = useRef<Map<string, ParticipantHistoryPoint[]>>(new Map());
   /** 수업 진행시간(초) — session.started_at 기준 (녹음 시각과 분리) */
   const [classElapsedSec, setClassElapsedSec] = useState(0);
 
@@ -527,6 +543,61 @@ export default function SessionLivePage() {
   const canStart = isPreStart && activeCount >= 1 && !transitioning;
   const summary = useMemo(() => summarizeMetrics(displayMetrics), [displayMetrics]);
 
+  // SDD-083: 진행 중 상태 변화 시계열 누적 — 3초 평균 갱신 리듬에 맞춰 participant별 append
+  useEffect(() => {
+    if (!isRunning) return;
+    const now = Date.now();
+    for (const row of displayMetrics) {
+      const hasLive =
+        row.current_efficiency != null ||
+        row.heart_rate != null ||
+        row.respiratory_rate != null;
+      if (!hasLive) continue;
+      const arr = historyRef.current.get(row.participant_id) ?? [];
+      const last = arr[arr.length - 1];
+      if (last && now - last.t < HISTORY_MIN_INTERVAL_MS) continue;
+      const next = [
+        ...arr,
+        {
+          t: now,
+          efficiency: row.current_efficiency ?? null,
+          heartRate: row.heart_rate ?? null,
+          respiratoryRate: row.respiratory_rate ?? null,
+        },
+      ];
+      historyRef.current.set(
+        row.participant_id,
+        next.length > HISTORY_MAX_POINTS ? next.slice(-HISTORY_MAX_POINTS) : next,
+      );
+    }
+  }, [displayMetrics, isRunning]);
+
+  /** SDD-083: 상세 패널 대상 행 — 목록에서 사라지면 자동 닫힘 */
+  const selectedRow = useMemo(
+    () =>
+      selectedParticipantId
+        ? displayMetrics.find((m) => m.participant_id === selectedParticipantId) ?? null
+        : null,
+    [displayMetrics, selectedParticipantId],
+  );
+
+  /** 카드 클릭 — 상세 열기 + 시계열 스냅샷 (이벤트 핸들러에서 ref 읽기) */
+  const handleSelectParticipant = useCallback((participantId: string) => {
+    setSelectedParticipantId(participantId);
+    setSelectedHistory(historyRef.current.get(participantId) ?? []);
+  }, []);
+
+  // 상세 패널 열려 있는 동안 시계열 스냅샷 주기 갱신 (append 리듬과 동일 간격)
+  useEffect(() => {
+    if (!selectedParticipantId) return undefined;
+    const timer = window.setInterval(() => {
+      setSelectedHistory(
+        historyRef.current.get(selectedParticipantId) ?? [],
+      );
+    }, HISTORY_MIN_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [selectedParticipantId]);
+
   const handleFilterToggle = (key: keyof MonitorSummaryCounts): void => {
     setActiveFilter((prev) => (prev === key ? null : key));
   };
@@ -596,6 +667,20 @@ export default function SessionLivePage() {
           </div>
         )}
 
+        {/* SDD-083 T1: 시작 전 카메라/마이크 프리뷰 — 확인 후 세션 시작 */}
+        {isPreStart && (
+          <SessionPreJoinPreview
+            onStart={() => void startSession()}
+            starting={transitioning}
+            canStart={canStart}
+            startDisabledReason={
+              !canStart && !transitioning
+                ? '참가자 1명 이상 입장 후 시작할 수 있습니다'
+                : undefined
+            }
+          />
+        )}
+
         {/* DashboardBox 4종 — 시작 전에도 표시 */}
         <SessionMonitorSummary
           counts={summary}
@@ -603,9 +688,40 @@ export default function SessionLivePage() {
           onFilterToggle={handleFilterToggle}
         />
 
-        {/* 평평한 모니터링 테이블 */}
-        <div>
-          <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
+        {/* SDD-083 T2: 내담자 상태 카드 그리드 (기본) ↔ 기존 테이블 토글 */}
+        <div className="space-y-2">
+          <div className="flex justify-end gap-1">
+            {(
+              [
+                { key: 'cards', label: '카드' },
+                { key: 'table', label: '테이블' },
+              ] as const
+            ).map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                aria-pressed={monitorView === v.key}
+                onClick={() => setMonitorView(v.key)}
+                className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition ${
+                  monitorView === v.key
+                    ? 'bg-[#5F0080] text-white'
+                    : 'bg-[#F2F3F8] text-[#6F6F6F] hover:text-[#1F1F1F]'
+                }`}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+          {monitorView === 'cards' ? (
+            <SessionParticipantCardGrid
+              participants={displayMetrics}
+              filter={activeFilter}
+              selectedId={selectedParticipantId}
+              onSelect={handleSelectParticipant}
+            />
+          ) : (
+            <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
+          )}
         </div>
 
         {/* 호스트 LINK BAND — 보조 영역 */}
@@ -737,6 +853,16 @@ export default function SessionLivePage() {
             </div>
           )}
         </div>
+
+        {/* SDD-083 T3: 카드 클릭 → 현재 상태 + 상태 변화 시계열 */}
+        {selectedRow && (
+          <SessionParticipantDetailPanel
+            row={selectedRow}
+            history={selectedHistory}
+            sessionStartedAt={session.started_at}
+            onClose={() => setSelectedParticipantId(null)}
+          />
+        )}
 
         <ConsentModal
           open={consentOpen}
