@@ -134,7 +134,7 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
   const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
   const navItems =
-    role === 'client'
+    user?.role === 'client' || role === 'client'
       ? CLIENT_NAV_ITEMS
       : user?.role === 'platform_admin'
         ? ADMIN_NAV_ITEMS
@@ -142,7 +142,7 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
           ? ORG_ADMIN_NAV_ITEMS
           : NAV_ITEMS;
   const roleLabel =
-    role === 'client'
+    user?.role === 'client' || role === 'client'
       ? '회원 전용'
       : user?.role === 'platform_admin'
         ? '플랫폼 관리자'
