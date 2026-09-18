@@ -49,6 +49,7 @@ import {
 } from '../../components/session/SessionMonitorSummary';
 import { SessionMonitorTable } from '../../components/session/SessionMonitorTable';
 import { SessionPreJoinPreview } from '../../components/session/SessionPreJoinPreview';
+import { SessionHostVideoView } from '../../components/session/SessionHostVideoView';
 import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import type { ParticipantHistoryPoint } from '../../lib/session-live/metric-display';
@@ -708,6 +709,16 @@ export default function SessionLivePage() {
                 ? '참가자 1명 이상 입장 후 시작할 수 있습니다'
                 : undefined
             }
+          />
+        )}
+
+        {/* 세션 시작 후에도 상담사 본인 영상 유지 — 프리뷰 → 셀프뷰 자연 전환
+            녹화 중이면 녹화 스트림(실제 저장 화면)을, 녹화 전이면 로컬 프리뷰를 표시 */}
+        {isRunning && (
+          <SessionHostVideoView
+            stream={videoRecorder.stream}
+            facingMode={videoRecorder.facingMode}
+            recording={videoRecorder.state === 'recording'}
           />
         )}
 

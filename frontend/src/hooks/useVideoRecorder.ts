@@ -1,10 +1,15 @@
-// SDD-084 — MediaRecorder(video/webm) 래퍼: 5초 청크 업로드 + 전면/후면 카메라 전환
+// SDD-084 — MediaRecorder(video/webm) 래퍼: 3초 청크 업로드 + 전면/후면 카메라 전환
 // useAudioRecorder 패턴 복제. 상담사 본인 카메라만 녹화한다(내담자 영상 저장 금지).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { uploadVideoChunk } from '../lib/api/video';
 
-const CHUNK_DURATION_MS = 5000;
+// 청크가 커지면 Nginx client_max_body_size 초과(413)로 업로드가 실패하고,
+// 413 응답에는 CORS 헤더가 없어 브라우저에서 CORS 에러로 보인다.
+// → 비트레이트 상한 + 3초 청크로 청크당 크기를 ~1MB 이내로 제어한다.
+const CHUNK_DURATION_MS = 3000;
+const VIDEO_BITS_PER_SECOND = 2_000_000; // 2Mbps — 3초 청크 ≈ 0.75MB
+const AUDIO_BITS_PER_SECOND = 128_000;
 
 export type VideoRecorderState = 'idle' | 'recording' | 'paused' | 'stopped' | 'error';
 export type FacingMode = 'user' | 'environment';
@@ -18,6 +23,8 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
   const [state, setState] = useState<VideoRecorderState>('idle');
   const [uploadedChunks, setUploadedChunks] = useState(0);
   const [facingMode, setFacingMode] = useState<FacingMode>('user');
+  // 세션 화면에 상담사 본인 영상(셀프뷰)을 계속 보여주기 위한 현재 스트림
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const indexRef = useRef(0);
@@ -31,6 +38,7 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
+    setStream(null);
   }, []);
 
   useEffect(() => () => cleanup(), [cleanup]);
@@ -41,7 +49,11 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
       const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
         ? 'video/webm;codecs=vp8,opus'
         : 'video/webm';
-      const rec = new MediaRecorder(stream, { mimeType: mime });
+      const rec = new MediaRecorder(stream, {
+        mimeType: mime,
+        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+      });
       recorderRef.current = rec;
 
       rec.ondataavailable = (ev) => {
@@ -82,9 +94,10 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
   const start = useCallback(async () => {
     if (state === 'recording') return;
     try {
-      const stream = await openStream(facingMode);
-      streamRef.current = stream;
-      startRecorder(stream);
+      const s = await openStream(facingMode);
+      streamRef.current = s;
+      setStream(s);
+      startRecorder(s);
       setState('recording');
     } catch (err) {
       setState('error');
@@ -117,9 +130,10 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
     try {
       await stopRecorder();
       cleanup();
-      const stream = await openStream(nextMode);
-      streamRef.current = stream;
-      startRecorder(stream);
+      const s = await openStream(nextMode);
+      streamRef.current = s;
+      setStream(s);
+      startRecorder(s);
       setFacingMode(nextMode);
       setState('recording');
     } catch (err) {
@@ -150,5 +164,5 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
     setState('stopped');
   }, [stopRecorder, cleanup]);
 
-  return { state, facingMode, start, pause, resume, stop, switchCamera, uploadedChunks };
+  return { state, facingMode, stream, start, pause, resume, stop, switchCamera, uploadedChunks };
 }
