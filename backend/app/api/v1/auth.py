@@ -678,6 +678,16 @@ async def google_auth(
         from app.services import client_service
         client_service.link_invited_client(req.invite_token, user, db)
         db.refresh(user)
+        # 초대 링크 가입: step4(상담사 매칭)는 link_invited_client가 미리 마킹하지만,
+        # step1~3(기본/상세/프로필) 입력은 필수다. current_step이 step4로 올라가
+        # step1~3을 건너뛰는 것을 막기 위해, 첫 미완료 단계(step1)부터 시작하도록 보정.
+        progress = onboarding_service.get_progress(str(user.id), db)
+        saved_steps = progress.steps or {}
+        for n in (1, 2, 3, 4):
+            if f"step{n}" not in saved_steps:
+                progress.current_step = n
+                break
+        db.commit()
 
     # 4. JWT 발급
     access_token = create_access_token(subject=str(user.id))
