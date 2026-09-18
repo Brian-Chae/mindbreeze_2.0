@@ -184,12 +184,16 @@ class CounselorResponse(BaseModel):
     role: str
     # SDD-017: 초대·가입 현황 표시용. pending/active 구분 + 만료 뱃지.
     # SDD-079: status 는 membership 기준 (invited → "pending").
+    # SDD-082: 계정 정지(suspended)는 membership 상태보다 우선 표기.
     status: str | None = None
     invited_at: str | None = None
     invite_expires_at: str | None = None
     # SDD-079: 초대 유형 — "new_account"(신규 가입 초대) / "org_membership"(소속 추가 초대).
     # active 구성원은 None.
     invite_type: str | None = None
+    # SDD-082: 상담사 코드 검색용 + 개인 상담소(kind=individual) 소속 구분 배지용
+    counselor_code: str | None = None
+    has_personal_office: bool = False
 
 
 class CounselorInviteRequest(BaseModel):
@@ -259,6 +263,51 @@ class OrganizationDeactivationImpact(BaseModel):
 class OrganizationCounselorRemove(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     reason: str = Field(min_length=1, max_length=2000)
+
+
+# ---------------------------------------------------------------------------
+# SDD-082: 기관 관리자 — 소속 상담사 활성화/비활성화 + 최근 이력
+# ---------------------------------------------------------------------------
+
+
+class CounselorStatusChangeRequest(BaseModel):
+    """상담사 정지/해제 요청 — 사유 필수 (공백 불가, 422)."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str = Field(min_length=1, max_length=2000)
+
+
+class CounselorStatusResponse(BaseModel):
+    id: str
+    status: str
+
+
+class CounselorActivitySession(BaseModel):
+    """최근 세션 메타데이터 — 내용(기록/녹음)은 노출하지 않는다."""
+
+    id: str
+    title: str | None = None
+    type: str
+    status: str
+    scheduled_at: str | None = None
+    started_at: str | None = None
+    participant_count: int = 0
+
+
+class CounselorActivityReport(BaseModel):
+    """최근 리포트 메타데이터 — 리포트 내용은 노출하지 않는다."""
+
+    id: str
+    session_id: str
+    title: str | None = None
+    type: str
+    status: str
+    created_at: str | None = None
+
+
+class CounselorActivityResponse(BaseModel):
+    sessions: list[CounselorActivitySession]
+    reports: list[CounselorActivityReport]
 
 
 class OrganizationCounselorPatch(OrganizationCounselorRemove):

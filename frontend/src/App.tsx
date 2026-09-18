@@ -28,6 +28,8 @@ const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
 const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
 const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
+// SDD-082: 기관 관리자 상담사 관리 페이지
+const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
 const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
@@ -137,6 +139,8 @@ function App() {
         {/* SDD-073: /org/register 자가 등록 경로 제거 — 기관 가입 상담 신청으로 대체 */}
         <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
         <Route path="/org/requests" element={<MyRequestsPage />} />
+        {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
+        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<CredentialDashboardPage />} />
         <Route path="/sessions" element={<SessionListPage />} />

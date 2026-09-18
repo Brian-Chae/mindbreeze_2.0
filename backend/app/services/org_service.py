@@ -314,6 +314,156 @@ def get_counselors(org_id: str, db: Session) -> list[tuple[User, "UserOrgMembers
     )
 
 
+# ---------------------------------------------------------------------------
+# SDD-082: 기관 관리자 — 소속 상담사 활성화/비활성화 + 최근 이력
+# ---------------------------------------------------------------------------
+
+
+def _get_org_counselor(org_id: str, user_id: str, db: Session) -> User:
+    """소속(membership 기준) 상담사 조회 — 미소속/미존재는 404."""
+    from app.services import membership_service
+
+    try:
+        target_uuid = uuid.UUID(str(user_id))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+    target = db.query(User).filter(User.id == target_uuid).first()
+    if target is None or membership_service.get_membership(db, target.id, org_id) is None:
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+    return target
+
+
+def set_counselor_suspension(
+    org_id: str, user_id: str, reason: str, admin_user_id: str, *, suspend: bool, db: Session
+) -> User:
+    """소속 상담사 정지/해제 — 계정 상태(active↔suspended)만 변경, 데이터 삭제 없음.
+
+    - 대상은 counselor 만. org_admin(주 담당자·자기 자신 포함)은 403.
+    - 정지는 active 계정만, 해제는 suspended 계정만 허용 (409).
+      pending(초대 미수락) 계정을 정지→해제 경로로 비밀번호 없이 활성화하는 우회를 막는다.
+    - 감사(VerificationAudit) + 대상자 인앱 알림을 변경과 같은 트랜잭션으로 저장한다.
+    """
+    from app.models.credential import VerificationAudit
+    from app.services.notification_service import create_notification
+
+    require_active_org(org_id, db)
+    target = _get_org_counselor(org_id, user_id, db)
+
+    if str(target.id) == str(admin_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="자기 자신은 정지/해제할 수 없습니다"
+        )
+    if target.role != "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="기관 관리자 계정은 정지/해제할 수 없습니다",
+        )
+
+    if suspend:
+        if target.status == "suspended":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 정지된 계정입니다")
+        if target.status != "active":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="활성 상태의 상담사만 비활성화할 수 있습니다",
+            )
+        target.status = "suspended"
+    else:
+        if target.status != "suspended":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="정지 상태의 계정이 아닙니다"
+            )
+        target.status = "active"
+
+    action = "org_counselor_suspend" if suspend else "org_counselor_unsuspend"
+    db.add(target)
+    db.add(
+        VerificationAudit(
+            target_type="user",
+            target_id=target.id,
+            admin_id=uuid.UUID(str(admin_user_id)),
+            action=action,
+            reason=reason,
+            extra={"actor_kind": "org_admin", "org_id": str(org_id)},
+        )
+    )
+    title = "계정이 비활성화되었습니다" if suspend else "계정이 다시 활성화되었습니다"
+    body = (
+        f"기관 관리자가 회원님의 계정을 {'비활성화' if suspend else '활성화'}했습니다. 사유: {reason}"
+    )
+    create_notification(
+        target.id, "system", title, body, db, extra={"actor_kind": "org_admin", "action": action}
+    )
+    db.commit()
+    db.refresh(target)
+    return target
+
+
+def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int = 10) -> dict:
+    """소속 상담사 최근 이력 — 주최 세션 + 해당 세션 리포트의 메타데이터만 반환한다.
+
+    기존 org_dashboard 와 동일하게 host_id 기준으로 조회한다. 상담 내용(기록/녹음/
+    리포트 본문)은 노출하지 않는다.
+    """
+    from sqlalchemy import func as sa_func
+
+    from app.models.record import Report
+    from app.models.session import Session as SessionModel
+    from app.models.session import SessionParticipant
+
+    require_active_org(org_id, db)
+    target = _get_org_counselor(org_id, user_id, db)
+
+    sessions = (
+        db.query(SessionModel)
+        .filter(SessionModel.host_id == target.id)
+        .order_by(SessionModel.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    counts = dict(
+        db.query(SessionParticipant.session_id, sa_func.count(SessionParticipant.id))
+        .filter(SessionParticipant.session_id.in_([s.id for s in sessions]))
+        .group_by(SessionParticipant.session_id)
+        .all()
+    ) if sessions else {}
+
+    reports = (
+        db.query(Report, SessionModel)
+        .join(SessionModel, Report.session_id == SessionModel.id)
+        .filter(SessionModel.host_id == target.id)
+        .order_by(Report.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return {
+        "sessions": [
+            {
+                "id": str(s.id),
+                "title": s.title,
+                "type": s.type,
+                "status": s.status,
+                "scheduled_at": s.scheduled_at.isoformat() if s.scheduled_at else None,
+                "started_at": s.started_at.isoformat() if s.started_at else None,
+                "participant_count": int(counts.get(s.id, 0)),
+            }
+            for s in sessions
+        ],
+        "reports": [
+            {
+                "id": str(r.id),
+                "session_id": str(r.session_id),
+                "title": sess.title,
+                "type": r.type,
+                "status": r.status,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r, sess in reports
+        ],
+    }
+
+
 def update_counselor_role(
     org_id: str, user_id: str, new_role: str, admin_user_id: str, db: Session
 ) -> User:

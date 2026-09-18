@@ -98,6 +98,8 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
+  // SDD-082: 기관 관리자 전용 상담사 관리 페이지
+  { to: '/org/counselors', label: '상담사', icon: ICONS.users },
   { to: '/reports', label: '리포트', icon: ICONS.report },
   { to: '/notifications', label: '알림', icon: ICONS.bell },
   { to: '/settings', label: '설정', icon: ICONS.settings },

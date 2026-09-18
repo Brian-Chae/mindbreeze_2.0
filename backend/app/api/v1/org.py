@@ -12,9 +12,12 @@ from app.core.redis import get_redis
 from app.models.organization import Organization
 from app.schemas.counselor_info import CounselorInfoResponse, CounselorInfoUpdate
 from app.schemas.org import (
+    CounselorActivityResponse,
     CounselorInviteRequest,
     CounselorInviteResponse,
     CounselorResponse,
+    CounselorStatusChangeRequest,
+    CounselorStatusResponse,
     JoinRequestResponse,
     JoinRequestUpdate,
     MembershipInviteAcceptRequest,
@@ -44,11 +47,12 @@ def _require_org_admin(current_user: dict, org_id: str) -> None:
         )
 
 
-def _counselor_to_response(u, membership=None) -> CounselorResponse:
+def _counselor_to_response(u, membership=None, *, has_personal_office: bool = False) -> CounselorResponse:
     """SDD-079: membership 이 주어지면 목록 상태는 membership 기준으로 표시한다.
 
     membership invited → "pending" (기존 FE 상태값 유지).
     invite_type: 신규 가입 초대(new_account) / 소속 추가 초대(org_membership).
+    SDD-082: 계정 정지(suspended)는 로그인이 차단된 상태이므로 membership 상태보다 우선 표기한다.
     """
     if membership is not None:
         status_str = "pending" if membership.status == "invited" else membership.status
@@ -62,6 +66,9 @@ def _counselor_to_response(u, membership=None) -> CounselorResponse:
         invited_at = u.invited_at
         invite_expires_at = u.invite_expires_at
         invite_type = None
+    if u.status == "suspended":
+        status_str = "suspended"
+    profile = u.counselor_profile
     return CounselorResponse(
         id=str(u.id),
         name=u.name,
@@ -71,6 +78,8 @@ def _counselor_to_response(u, membership=None) -> CounselorResponse:
         invited_at=invited_at.isoformat() if invited_at else None,
         invite_expires_at=invite_expires_at.isoformat() if invite_expires_at else None,
         invite_type=invite_type,
+        counselor_code=profile.counselor_code if profile else None,
+        has_personal_office=has_personal_office,
     )
 
 
@@ -203,7 +212,28 @@ async def list_counselors(
     """센터 소속 상담사 목록 — OrgAdmin 전용. membership 기반 (SDD-079)."""
     _require_org_admin(current_user, org_id)
     rows = org_service.get_counselors(org_id, db)
-    return [_counselor_to_response(u, m) for u, m in rows]
+    # SDD-082: 개인 상담소(kind=individual) 소속 여부를 1쿼리로 계산해 배지로 구분한다
+    personal_owner_ids: set = set()
+    if rows:
+        from app.models.user_org_membership import UserOrgMembership
+
+        personal_owner_ids = {
+            row[0]
+            for row in (
+                db.query(UserOrgMembership.user_id)
+                .join(Organization, Organization.id == UserOrgMembership.org_id)
+                .filter(
+                    UserOrgMembership.user_id.in_([u.id for u, _ in rows]),
+                    UserOrgMembership.status == "active",
+                    Organization.kind == "individual",
+                )
+                .all()
+            )
+        }
+    return [
+        _counselor_to_response(u, m, has_personal_office=u.id in personal_owner_ids)
+        for u, m in rows
+    ]
 
 
 @router.post(
@@ -371,6 +401,60 @@ async def reset_org_counselor_password(
         reason=req.reason, org_id=org.id, db=db, redis=redis,
     )
     return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
+
+
+# ---------------------------------------------------------------------------
+# SDD-082: 기관 관리자 — 소속 상담사 활성화/비활성화 + 최근 이력
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{org_id}/counselors/{user_id}/suspend", response_model=CounselorStatusResponse)
+async def suspend_org_counselor(
+    org_id: str,
+    user_id: str,
+    req: CounselorStatusChangeRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """소속 상담사 비활성화 — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림.
+
+    계정 상태만 suspended 로 변경한다 (데이터 삭제 아님). 정지된 계정은 기존
+    suspended 로직으로 로그인이 차단된다. counselor 만 대상 — 자기 자신·org_admin 은 403.
+    """
+    _require_org_admin(current_user, org_id)
+    user = org_service.set_counselor_suspension(
+        org_id, user_id, req.reason, current_user["id"], suspend=True, db=db
+    )
+    return CounselorStatusResponse(id=str(user.id), status=user.status)
+
+
+@router.post("/{org_id}/counselors/{user_id}/unsuspend", response_model=CounselorStatusResponse)
+async def unsuspend_org_counselor(
+    org_id: str,
+    user_id: str,
+    req: CounselorStatusChangeRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """소속 상담사 활성화(정지 해제) — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림."""
+    _require_org_admin(current_user, org_id)
+    user = org_service.set_counselor_suspension(
+        org_id, user_id, req.reason, current_user["id"], suspend=False, db=db
+    )
+    return CounselorStatusResponse(id=str(user.id), status=user.status)
+
+
+@router.get("/{org_id}/counselors/{user_id}/activity", response_model=CounselorActivityResponse)
+async def get_org_counselor_activity(
+    org_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """소속 상담사 최근 이력 — OrgAdmin 전용. 세션/리포트 메타데이터만 (내용 미노출)."""
+    _require_org_admin(current_user, org_id)
+    data = org_service.get_counselor_activity(org_id, user_id, db)
+    return CounselorActivityResponse(**data)
 
 
 @router.post("/membership-invites/accept", response_model=MembershipInviteAcceptResponse)

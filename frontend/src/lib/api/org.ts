@@ -33,7 +33,8 @@ export interface JoinRequest {
 }
 
 export type CounselorRole = 'counselor' | 'org_admin';
-export type CounselorAccountStatus = 'pending' | 'active';
+// SDD-082: suspended — 기관 관리자가 비활성화한 계정 (로그인 차단)
+export type CounselorAccountStatus = 'pending' | 'active' | 'suspended';
 
 // SDD-079: 초대 유형 — 신규 가입 초대(new_account) / 소속 추가 초대(org_membership)
 export type CounselorInviteType = 'new_account' | 'org_membership';
@@ -47,6 +48,9 @@ export interface CounselorItem {
   invited_at?: string | null;
   invite_expires_at?: string | null;
   invite_type?: CounselorInviteType | null;
+  // SDD-082: 상담사 코드 검색 + 개인 상담소(kind=individual) 소속 구분
+  counselor_code?: string | null;
+  has_personal_office?: boolean;
 }
 
 export interface InviteCounselorPayload {
@@ -126,6 +130,63 @@ export const resendCounselorInvite = (
     `${PREFIX}/${orgId}/counselors/${userId}/resend-invite`,
     {},
   );
+
+// SDD-082: 기관 관리자 — 소속 상담사 활성화/비활성화 + 최근 이력
+
+export interface CounselorStatusResponse {
+  id: string;
+  status: CounselorAccountStatus;
+}
+
+export interface CounselorActivitySession {
+  id: string;
+  title: string | null;
+  type: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  participant_count: number;
+}
+
+export interface CounselorActivityReport {
+  id: string;
+  session_id: string;
+  title: string | null;
+  type: string;
+  status: string;
+  created_at: string | null;
+}
+
+export interface CounselorActivity {
+  sessions: CounselorActivitySession[];
+  reports: CounselorActivityReport[];
+}
+
+export const suspendCounselor = (
+  orgId: string,
+  userId: string,
+  reason: string,
+): Promise<CounselorStatusResponse> =>
+  apiClient.post<CounselorStatusResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/suspend`,
+    { reason },
+  );
+
+export const unsuspendCounselor = (
+  orgId: string,
+  userId: string,
+  reason: string,
+): Promise<CounselorStatusResponse> =>
+  apiClient.post<CounselorStatusResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/unsuspend`,
+    { reason },
+  );
+
+export const getCounselorActivity = (
+  orgId: string,
+  userId: string,
+): Promise<CounselorActivity> =>
+  apiClient.get<CounselorActivity>(`${PREFIX}/${orgId}/counselors/${userId}/activity`);
 
 // SDD-079: 기존 상담사 소속 추가 초대 수락 (이메일 링크의 일회용 토큰)
 export interface MembershipInviteAcceptResponse {
