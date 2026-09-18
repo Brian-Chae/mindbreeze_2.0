@@ -28,6 +28,23 @@ class AudioStopResponse(BaseModel):
     ended_at: datetime | None = None
 
 
+class VideoStartRequest(BaseModel):
+    consent_video: bool = True
+
+
+class VideoStartResponse(BaseModel):
+    session_id: str
+    status: str
+    started_at: datetime | None = None
+
+
+class VideoStopResponse(BaseModel):
+    session_id: str
+    status: str
+    total_chunks: int
+    ended_at: datetime | None = None
+
+
 class TranscriptSegment(BaseModel):
     speaker: str
     text: str

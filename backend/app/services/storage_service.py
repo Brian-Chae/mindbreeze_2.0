@@ -52,6 +52,42 @@ def generate_presigned_put(
         return _stub_url(object_key)
 
 
+def upload_bytes(
+    object_key: str,
+    content: bytes,
+    *,
+    content_type: str = "application/octet-stream",
+) -> bool:
+    """바이트를 S3 에 직접 업로드한다(SDD-084 영상 청크 등 서버 경유 업로드용).
+
+    자격증명 미설정/실패 시 False 를 반환한다 — 호출부가 로컬 폴백을 결정한다
+    (기존 audio 청크와 동일하게 로컬 저장으로 흐름을 유지 가능하게).
+    """
+    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+        return False
+    try:
+        import boto3
+
+        client = boto3.client(
+            "s3",
+            region_name=settings.s3_region,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
+        )
+        # 민감 데이터(상담 영상) — 서버사이드 암호화 필수(데이터 프라이버시 규칙)
+        client.put_object(
+            Bucket=settings.s3_bucket,
+            Key=object_key,
+            Body=content,
+            ContentType=content_type,
+            ServerSideEncryption="AES256",
+        )
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] S3 업로드 실패, 로컬 폴백: %s", exc)
+        return False
+
+
 class ExportStorageError(RuntimeError):
     """내보내기 저장소는 미설정·실패를 성공 URL로 대체하지 않는다."""
 

@@ -2,7 +2,7 @@
 
 from app.models.user import User
 from app.models.session import Session, SessionParticipant
-from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk
+from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.credential import Credential, VerificationAudit
 from app.models.notification import Notification
@@ -43,6 +43,7 @@ __all__ = [
     "EEGFeatureWindow",
     "Report",
     "AudioChunk",
+    "VideoChunk",
     "Credential",
     "VerificationAudit",
     "Notification",

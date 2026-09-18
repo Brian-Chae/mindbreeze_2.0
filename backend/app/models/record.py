@@ -1,4 +1,4 @@
-"""SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk Models"""
+"""SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk Models"""
 
 import uuid
 from datetime import datetime
@@ -25,6 +25,11 @@ class SessionRecord(Base):
     audio_s3_key: Mapped[str | None] = mapped_column(String(500))
     recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # SDD-084: 영상 녹화 상태 트랙 — 음성(status/recording_*)과 분리 운영. idle/recording/completed
+    video_status: Mapped[str] = mapped_column(String(20), default="idle", server_default="idle", nullable=False)
+    video_s3_key: Mapped[str | None] = mapped_column(String(500))
+    video_recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    video_recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="record")
@@ -32,6 +37,23 @@ class SessionRecord(Base):
 
 class AudioChunk(Base):
     __tablename__ = "audio_chunks"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VideoChunk(Base):
+    """SDD-084: 세션 영상 청크 — AudioChunk와 동일 구조.
+
+    상담사(host) 본인 카메라 영상만 저장한다(온라인 클래스에서도 내담자 영상·음성 저장 금지).
+    file_path 에는 S3 object key(자격증명 설정 시) 또는 로컬 폴백 경로가 들어간다.
+    """
+
+    __tablename__ = "video_chunks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)

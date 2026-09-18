@@ -367,6 +367,12 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
             audio_service.finalize_on_session_end(s.id, db)
         except Exception:
             pass
+        # SDD-084: 영상 녹화도 세션 종료 시 자동 종료 (audio finalize 실패와 무관하게 시도)
+        try:
+            from app.services import video_service
+            video_service.finalize_on_session_end(s.id, db)
+        except Exception:
+            pass
 
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)

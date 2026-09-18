@@ -14,7 +14,9 @@ import {
   type SessionStatus,
 } from '../../lib/api/session';
 import { startAudio, stopAudio } from '../../lib/api/audio';
+import { startVideo, stopVideo } from '../../lib/api/video';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
+import { useVideoRecorder } from '../../hooks/useVideoRecorder';
 import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
@@ -150,6 +152,13 @@ export default function SessionLivePage() {
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const recorder = useAudioRecorder({
+    sessionId: id ?? '',
+    onError: (err) => setError(err.message),
+  });
+
+  // SDD-084: 상담사 본인 카메라 영상 녹화 — getUserMedia 는 호스트 로컬 장치만 캡처하므로
+  // 온라인 클래스에서도 내담자 영상·음성은 저장되지 않는다(LiveKit 송출과 별개).
+  const videoRecorder = useVideoRecorder({
     sessionId: id ?? '',
     onError: (err) => setError(err.message),
   });
@@ -398,7 +407,7 @@ export default function SessionLivePage() {
     }
   };
 
-  /** 동의 모달 확인 — 기존 오디오 녹음을 시작한다. */
+  /** 동의 모달 확인 — 오디오 녹음 + 상담사 영상 녹화를 시작한다. */
   const handleConsentConfirm = async () => {
     setConsentOpen(false);
     if (!id) return;
@@ -408,6 +417,13 @@ export default function SessionLivePage() {
       setRecordingStartedAt(Date.now());
     } catch (e) {
       setError((e as Error).message);
+    }
+    // SDD-084: 영상 녹화 실패는 음성 녹음을 막지 않는다(비치명 — 별도 try)
+    try {
+      await startVideo(id, true);
+      await videoRecorder.start();
+    } catch (e) {
+      setError(`영상 녹화 시작 실패: ${(e as Error).message}`);
     }
   };
 
@@ -419,6 +435,15 @@ export default function SessionLivePage() {
     } catch (e) {
       setError((e as Error).message);
     }
+    // SDD-084: 영상 녹화 종료 — 마지막 청크 업로드 대기 후 서버 stop
+    if (videoRecorder.state === 'recording' || videoRecorder.state === 'paused') {
+      try {
+        await videoRecorder.stop();
+        await stopVideo(id);
+      } catch (e) {
+        setError(`영상 녹화 종료 실패: ${(e as Error).message}`);
+      }
+    }
   };
 
   const finishSession = async () => {
@@ -429,7 +454,12 @@ export default function SessionLivePage() {
     setTransitioning(true);
     setError(null);
     try {
-      if (recorder.state === 'recording' || recorder.state === 'paused') {
+      if (
+        recorder.state === 'recording' ||
+        recorder.state === 'paused' ||
+        videoRecorder.state === 'recording' ||
+        videoRecorder.state === 'paused'
+      ) {
         await handleStop();
       }
       liveKit.disconnect();
@@ -831,14 +861,52 @@ export default function SessionLivePage() {
                   녹음
                 </div>
                 {isRunning ? (
-                  <RecordingControls
-                    state={recorder.state}
-                    uploadedChunks={recorder.uploadedChunks}
-                    onStart={handleStartClick}
-                    onPause={recorder.pause}
-                    onResume={recorder.resume}
-                    onStop={handleStop}
-                  />
+                  <>
+                    <RecordingControls
+                      state={recorder.state}
+                      uploadedChunks={recorder.uploadedChunks}
+                      onStart={handleStartClick}
+                      onPause={() => {
+                        recorder.pause();
+                        videoRecorder.pause();
+                      }}
+                      onResume={() => {
+                        recorder.resume();
+                        videoRecorder.resume();
+                      }}
+                      onStop={handleStop}
+                    />
+                    {/* SDD-084: 영상 녹화 상태 인디케이터 + 전면/후면 전환 */}
+                    {(videoRecorder.state === 'recording' || videoRecorder.state === 'paused') && (
+                      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-[#F2F3F8] px-4 py-3">
+                        <span className="flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              videoRecorder.state === 'recording'
+                                ? 'animate-pulse bg-[#B3261E]'
+                                : 'bg-[#9B9B9B]'
+                            }`}
+                          />
+                          {videoRecorder.state === 'recording'
+                            ? '영상 녹화 중 (상담사 본인)'
+                            : '영상 녹화 일시정지'}
+                        </span>
+                        <span className="text-xs text-[#6F6F6F]">
+                          업로드된 청크 {videoRecorder.uploadedChunks}개 ·{' '}
+                          {videoRecorder.facingMode === 'user' ? '전면 카메라' : '후면 카메라'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void videoRecorder.switchCamera()}
+                          className="mb-btn mb-btn--ghost !px-3 !py-1.5 text-xs"
+                        >
+                          {videoRecorder.facingMode === 'user'
+                            ? '후면 카메라로 전환'
+                            : '전면 카메라로 전환'}
+                        </button>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <p className="text-sm text-[#6F6F6F]">클래스를 시작하면 녹음을 사용할 수 있습니다.</p>
                 )}
