@@ -155,7 +155,7 @@ export default function LoginPage() {
             {loginRole === 'client' && divider}
             {(loginRole === 'client' || isAdmin) && googleButton}
             {loginRole === 'counselor' && <>{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
-            {error && <p role="alert" className="rounded-xl bg-red-950/70 px-4 py-3 text-sm">{error}</p>}
+            {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
             {!isAdmin && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {(loginRole === 'client' || loginRole === 'counselor') && <Link to={`/register?role=${loginRole}`} className="text-center text-sm font-semibold underline">{loginRole === 'client' ? '회원가입' : '상담사 가입'}</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
