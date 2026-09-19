@@ -98,6 +98,11 @@ export default function ClientSessionDetailPage() {
           {session.status === 'in_progress' ? (
             <button
               type="button"
+              onClick={() => {
+                if (session.access_code) {
+                  navigate(`/join?code=${session.access_code}`);
+                }
+              }}
               className="w-full rounded-xl bg-[#5F0080] text-white text-sm font-semibold py-3 active:scale-[0.98] transition-transform"
             >
               세션 입장하기

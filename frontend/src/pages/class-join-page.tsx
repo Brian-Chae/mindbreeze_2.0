@@ -1,7 +1,7 @@
 // 클래스 코드 참여 — code → details → waiting → meditation → complete (1.0 게스트 패리티)
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../lib/api/client';
 import {
   getSessionByCode,
@@ -95,7 +95,10 @@ const ClassJoinPage: React.FC = () => {
   const user = useAuthStore((state) => state.user);
 
   const [step, setStep] = useState<JoinStep>('code');
-  const [code, setCode] = useState('');
+  // 회원 세션 상세 "세션 입장하기"에서 /join?code=... 로 진입 — query code를 초기값으로 사용
+  const [searchParams] = useSearchParams();
+  const queryCode = searchParams.get('code') ?? '';
+  const [code, setCode] = useState(queryCode);
   const [guestName, setGuestName] = useState('');
   /** SDD-062: 게스트 성별·생년월일 (선택, 온보딩 규약과 동일) */
   const [guestGender, setGuestGender] = useState('');
@@ -111,6 +114,34 @@ const ClassJoinPage: React.FC = () => {
   const [waitingStep, setWaitingStep] = useState<WaitingStep>('welcome');
 
   const isLoggedIn = isInitialized && isAuthenticated;
+
+  // 회원 세션 상세 "세션 입장하기"에서 /join?code=... 로 진입 시 자동 클래스 확인
+  useEffect(() => {
+    if (queryCode.length !== 6) return;
+    let cancelled = false;
+    setError(null);
+    setIsLoading(true);
+    getSessionByCode(queryCode)
+      .then((foundSession) => {
+        if (cancelled) return;
+        setSession(foundSession);
+        if (isClosed(foundSession)) {
+          setError('이 클래스는 이미 종료되었거나 취소되어 참여할 수 없습니다.');
+          return;
+        }
+        setStep('details');
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setSession(null);
+        setError(errorMessage(e, '클래스 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'));
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryCode]);
 
   // 대기·명상 중 화면 꺼짐 방지 (Wake Lock)
   useWakeLock(step === 'waiting' || step === 'meditation');
