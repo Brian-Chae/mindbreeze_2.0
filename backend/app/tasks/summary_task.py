@@ -192,6 +192,21 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         logger.warning("[summary_task] not found: %s", session_id)
         return
 
+    # SDD-085 가드: 수동 기록 모드(마이크 오프)는 요약 대상 아님
+    if record.status == "manual":
+        logger.info("[summary_task] manual 세션 — 요약 스킵: %s", session_id)
+        return
+
+    # SDD-085 가드: transcript 부재(None/공백) 시 LLM 호출·스텁 생성 없이 종료
+    # — "(전사 기록 없음)"으로 LLM을 호출해 허위 요약이 저장되는 경로 제거
+    if not record.transcript or not record.transcript.strip():
+        logger.warning("[summary_task] transcript 없음 — 요약 미실행: %s", session_id)
+        if record.status == "processing":
+            record.status = "failed"
+            db.commit()
+        asyncio.run(_emit_status(session_id, "failed", {"reason": "no_transcript"}))
+        return
+
     asyncio.run(_emit_status(session_id, "summarizing"))
 
     try:

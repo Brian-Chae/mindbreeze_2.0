@@ -44,6 +44,19 @@ def _summary_text(summary: dict) -> str | None:
     return None
 
 
+def _ai_record_block(record: SessionRecord | None) -> dict:
+    """음성/AI 요약 가용성 계약 — EEG `not_measured` 패턴 준용 (SDD-085).
+
+    마이크 오프(manual) 세션은 status="not_available" + reason="mic_off" 로
+    프론트가 요약 섹션을 숨기고 사유를 표기한다.
+    """
+    if record is not None and record.status == "manual":
+        return {"status": "not_available", "reason": "mic_off"}
+    if record is None or not (record.transcript and record.transcript.strip()):
+        return {"status": "not_available", "reason": "no_transcript"}
+    return {"status": "available"}
+
+
 def _markers(record: SessionRecord | None) -> list[dict]:
     """마커를 UI 계약 [{label, value}] 로 정규화한다."""
     if record is None or not record.markers:
@@ -181,6 +194,8 @@ def _counselor_content(session: Session, record: SessionRecord | None, eeg_block
         "markers": _markers(record),
         "counselor_notes": (record.counselor_notes if record else None),
         "eeg": eeg_block,
+        # SDD-085: 음성/AI 요약 가용성 — 마이크 오프 시 not_available + 사유
+        "ai_record": _ai_record_block(record),
         "approved": False,
     }
 
@@ -202,6 +217,8 @@ def _client_content(session: Session, record: SessionRecord | None, eeg_block: d
         "greeting": "오늘 세션을 함께해주셔서 감사합니다.",
         "insights": insights,
         "eeg": eeg_block,
+        # SDD-085: 음성/AI 요약 가용성 — 마이크 오프 시 not_available + 사유
+        "ai_record": _ai_record_block(record),
         "approved": False,
     }
 

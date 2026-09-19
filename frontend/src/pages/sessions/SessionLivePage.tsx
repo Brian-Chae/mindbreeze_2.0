@@ -48,7 +48,10 @@ import {
   type MonitorSummaryCounts,
 } from '../../components/session/SessionMonitorSummary';
 import { SessionMonitorTable } from '../../components/session/SessionMonitorTable';
-import { SessionPreJoinPreview } from '../../components/session/SessionPreJoinPreview';
+import {
+  SessionPreJoinPreview,
+  type PreJoinMediaPrefs,
+} from '../../components/session/SessionPreJoinPreview';
 import { SessionHostVideoView } from '../../components/session/SessionHostVideoView';
 import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
@@ -148,6 +151,11 @@ export default function SessionLivePage() {
   const historyRef = useRef<Map<string, ParticipantHistoryPoint[]>>(new Map());
   /** 수업 진행시간(초) — session.started_at 기준 (녹음 시각과 분리) */
   const [classElapsedSec, setClassElapsedSec] = useState(0);
+  // SDD-085: 프리뷰에서 확정한 카메라/마이크 사용 여부 — 세션 전체(녹음·녹화)에 적용 (§5.1)
+  const [mediaPrefs, setMediaPrefs] = useState<PreJoinMediaPrefs>({
+    cameraOn: true,
+    micOn: true,
+  });
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -159,8 +167,10 @@ export default function SessionLivePage() {
 
   // SDD-084: 상담사 본인 카메라 영상 녹화 — getUserMedia 는 호스트 로컬 장치만 캡처하므로
   // 온라인 클래스에서도 내담자 영상·음성은 저장되지 않는다(LiveKit 송출과 별개).
+  // SDD-085: 마이크 오프 세션(조합 C)은 withAudio=false — 반드시 무음 영상으로 녹화
   const videoRecorder = useVideoRecorder({
     sessionId: id ?? '',
+    withAudio: mediaPrefs.micOn,
     onError: (err) => setError(err.message),
   });
 
@@ -386,6 +396,8 @@ export default function SessionLivePage() {
 
   /** 녹음 시작 버튼 클릭 — 온라인 세션이면 화상 연결 후 동의를 확인한다. */
   const handleStartClick = () => {
+    // SDD-085: 마이크 오프 세션은 녹음 시작 진입점 자체가 없다(수동 기록 모드 카드로 대체)
+    if (!mediaPrefs.micOn) return;
     setError(null);
     if (session?.location_type === 'online') {
       liveKit.connect();
@@ -393,19 +405,35 @@ export default function SessionLivePage() {
     setConsentOpen(true);
   };
 
-  const startSession = async (): Promise<void> => {
+  const startSession = async (prefs?: PreJoinMediaPrefs): Promise<void> => {
     if (!id) return;
     setTransitioning(true);
     setError(null);
     try {
       const updated = await transitionSession(id, 'start');
       setSession(updated);
+      // SDD-085: 마이크 오프 결정을 서버에 선언 — consent_audio=false → status='manual'
+      // (STT/요약 미실행 사유를 기록/리포트에서 처리 실패와 구분하기 위한 단일 경로)
+      if (prefs && !prefs.micOn) {
+        try {
+          await startAudio(id, false);
+        } catch (e) {
+          // 선언 실패는 세션 진행을 막지 않는다 (opt-in 원칙, NFR-1)
+          setError(`수동 기록 모드 선언 실패: ${(e as Error).message}`);
+        }
+      }
       await refreshMetrics();
     } catch (e) {
       setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
     } finally {
       setTransitioning(false);
     }
+  };
+
+  /** SDD-085: 프리뷰 시작 확정 — 토글 값 보관 후 세션 시작 */
+  const handlePreviewStart = (prefs: PreJoinMediaPrefs): void => {
+    setMediaPrefs(prefs);
+    void startSession(prefs);
   };
 
   /** 동의 모달 확인 — 오디오 녹음 + 상담사 영상 녹화를 시작한다. */
@@ -420,11 +448,37 @@ export default function SessionLivePage() {
       setError((e as Error).message);
     }
     // SDD-084: 영상 녹화 실패는 음성 녹음을 막지 않는다(비치명 — 별도 try)
+    // SDD-085: 카메라 오프 세션은 영상 녹화(스트림 오픈) 자체를 하지 않는다
+    if (mediaPrefs.cameraOn) {
+      try {
+        await startVideo(id, true);
+        await videoRecorder.start();
+      } catch (e) {
+        setError(`영상 녹화 시작 실패: ${(e as Error).message}`);
+      }
+    }
+  };
+
+  /** SDD-085 조합 C(카메라 ON + 마이크 OFF): 무음 영상만 단독 녹화 시작 */
+  const handleVideoOnlyStart = async () => {
+    if (!id) return;
+    setError(null);
     try {
       await startVideo(id, true);
       await videoRecorder.start();
     } catch (e) {
       setError(`영상 녹화 시작 실패: ${(e as Error).message}`);
+    }
+  };
+
+  /** SDD-085 조합 C: 무음 영상 단독 녹화 종료 */
+  const handleVideoOnlyStop = async () => {
+    if (!id) return;
+    try {
+      await videoRecorder.stop();
+      await stopVideo(id);
+    } catch (e) {
+      setError(`영상 녹화 종료 실패: ${(e as Error).message}`);
     }
   };
 
@@ -701,7 +755,7 @@ export default function SessionLivePage() {
         {/* SDD-083 T1: 시작 전 카메라/마이크 프리뷰 — 확인 후 세션 시작 */}
         {isPreStart && (
           <SessionPreJoinPreview
-            onStart={() => void startSession()}
+            onStart={handlePreviewStart}
             starting={transitioning}
             canStart={canStart}
             startDisabledReason={
@@ -714,13 +768,22 @@ export default function SessionLivePage() {
 
         {/* 세션 시작 후에도 상담사 본인 영상 유지 — 프리뷰 → 셀프뷰 자연 전환
             녹화 중이면 녹화 스트림(실제 저장 화면)을, 녹화 전이면 로컬 프리뷰를 표시 */}
-        {isRunning && (
-          <SessionHostVideoView
-            stream={videoRecorder.stream}
-            facingMode={videoRecorder.facingMode}
-            recording={videoRecorder.state === 'recording'}
-          />
-        )}
+        {isRunning &&
+          (mediaPrefs.cameraOn ? (
+            <SessionHostVideoView
+              stream={videoRecorder.stream}
+              facingMode={videoRecorder.facingMode}
+              recording={videoRecorder.state === 'recording'}
+            />
+          ) : (
+            /* SDD-085: 카메라 오프 세션 — 셀프뷰 대신 플레이스홀더 (녹화 스트림 미오픈) */
+            <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
+                🎥
+              </span>
+              <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
+            </div>
+          ))}
 
         {/* DashboardBox 4종 — 시작 전에도 표시 */}
         <SessionMonitorSummary
@@ -871,7 +934,58 @@ export default function SessionLivePage() {
                 <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
                   녹음
                 </div>
-                {isRunning ? (
+                {isRunning && !mediaPrefs.micOn ? (
+                  /* SDD-085: 마이크 오프 세션 — 녹음 컨트롤 대신 수동 기록 모드 카드 (§7 M-3) */
+                  <div className="space-y-3">
+                    <div className="rounded-xl border border-[#F5E2B8] bg-amber-50 p-4 text-sm text-[#8A6B1F]">
+                      이 세션은 마이크 꺼짐으로 시작되어 수동 기록 모드로 진행 중입니다.
+                      마커와 상담사 노트로 기록을 남길 수 있습니다.
+                    </div>
+                    {mediaPrefs.cameraOn && (
+                      /* 조합 C: 무음 영상 단독 녹화 컨트롤 */
+                      <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[#F2F3F8] px-4 py-3">
+                        {videoRecorder.state === 'recording' ||
+                        videoRecorder.state === 'paused' ? (
+                          <>
+                            <span className="flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
+                              <span
+                                className={`h-2 w-2 rounded-full ${
+                                  videoRecorder.state === 'recording'
+                                    ? 'animate-pulse bg-[#B3261E]'
+                                    : 'bg-[#9B9B9B]'
+                                }`}
+                              />
+                              무음 영상 녹화 중 (상담사 본인 · 음성 미포함)
+                            </span>
+                            <span className="text-xs text-[#6F6F6F]">
+                              업로드된 청크 {videoRecorder.uploadedChunks}개
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleVideoOnlyStop()}
+                              className="mb-btn mb-btn--soft !px-3 !py-1.5 text-xs"
+                            >
+                              영상 녹화 종료
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-sm text-[#6F6F6F]">
+                              영상은 무음으로 녹화됩니다 (음성 녹음·AI 분석 없음)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => void handleVideoOnlyStart()}
+                              className="mb-btn !px-3 !py-1.5 text-xs"
+                            >
+                              영상 녹화 시작
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : isRunning ? (
                   <>
                     <RecordingControls
                       state={recorder.state}
@@ -943,8 +1057,9 @@ export default function SessionLivePage() {
           />
         )}
 
+        {/* SDD-085: 마이크 오프 세션은 녹음 자체가 없어 음성 동의 절차 불필요 (§4.4) */}
         <ConsentModal
-          open={consentOpen}
+          open={consentOpen && mediaPrefs.micOn}
           onConfirm={() => void handleConsentConfirm()}
           onCancel={() => {
             setConsentOpen(false);

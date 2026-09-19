@@ -8,6 +8,7 @@ export type {
   EegMetricKey,
   EegQualityStatus,
   EegTimelinePoint,
+  ReportAiRecord,
   ReportEegContent,
   ReportMarker,
 } from './report';

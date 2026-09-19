@@ -16,10 +16,12 @@ export type FacingMode = 'user' | 'environment';
 
 export interface UseVideoRecorderOptions {
   sessionId: string;
+  /** SDD-085: 마이크 오프 세션(조합 C)은 false — 오디오 트랙 없는 무음 영상만 녹화 */
+  withAudio?: boolean;
   onError?: (err: Error) => void;
 }
 
-export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions) {
+export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVideoRecorderOptions) {
   const [state, setState] = useState<VideoRecorderState>('idle');
   const [uploadedChunks, setUploadedChunks] = useState(0);
   const [facingMode, setFacingMode] = useState<FacingMode>('user');
@@ -46,13 +48,13 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
   /** 현재 스트림으로 MediaRecorder 를 만들어 청크 녹화를 시작 (chunk index는 이어감) */
   const startRecorder = useCallback(
     (stream: MediaStream) => {
-      const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
-        ? 'video/webm;codecs=vp8,opus'
-        : 'video/webm';
+      // SDD-085: 무음 영상(withAudio=false)은 오디오 코덱 없는 mime으로 명시 분기
+      const preferredMime = withAudio ? 'video/webm;codecs=vp8,opus' : 'video/webm;codecs=vp8';
+      const mime = MediaRecorder.isTypeSupported(preferredMime) ? preferredMime : 'video/webm';
       const rec = new MediaRecorder(stream, {
         mimeType: mime,
         videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
-        audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
+        ...(withAudio ? { audioBitsPerSecond: AUDIO_BITS_PER_SECOND } : {}),
       });
       recorderRef.current = rec;
 
@@ -80,7 +82,7 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
 
       rec.start(CHUNK_DURATION_MS);
     },
-    [sessionId, onError],
+    [sessionId, withAudio, onError],
   );
 
   const openStream = useCallback(async (mode: FacingMode): Promise<MediaStream> => {
@@ -88,8 +90,9 @@ export function useVideoRecorder({ sessionId, onError }: UseVideoRecorderOptions
       throw new Error('이 브라우저는 카메라 녹화를 지원하지 않습니다 (Chrome/Edge 권장)');
     }
     // facingMode 는 ideal 취급 — 후면 카메라가 없는 데스크톱에서도 실패하지 않음
-    return navigator.mediaDevices.getUserMedia({ video: { facingMode: mode }, audio: true });
-  }, []);
+    // SDD-085: 마이크 오프 세션은 audio:false — 영상에 오디오 트랙이 섞이면 "마이크 오프" 약속 위반
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: mode }, audio: withAudio });
+  }, [withAudio]);
 
   const start = useCallback(async () => {
     if (state === 'recording') return;

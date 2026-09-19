@@ -51,14 +51,27 @@ def _get_or_create_record(session_id: UUID, db: DBSession) -> SessionRecord:
 
 
 def start_recording(session_id: str, host_id: str, consent_audio: bool, db: DBSession) -> dict:
-    if not consent_audio:
-        raise HTTPException(status_code=400, detail="음성 녹음 동의가 필요합니다")
-
     s = _get_host_session(session_id, host_id, db)
     if s.status not in ("scheduled", "in_progress", "paused"):
         raise HTTPException(status_code=400, detail="종료된 세션은 녹음할 수 없습니다")
 
     record = _get_or_create_record(s.id, db)
+
+    # SDD-085: 마이크 오프(미동의) 선언 — 400 대신 status='manual' 기록 후 200.
+    # "AI 요약이 왜 없는지"(의도적 오프 vs 처리 실패)를 사후 구분하는 단일 경로.
+    if not consent_audio:
+        if record.status in ("recording", "processing", "completed"):
+            raise HTTPException(status_code=400, detail="이미 녹음이 진행되었거나 완료된 세션입니다")
+        record.status = "manual"
+        db.commit()
+        db.refresh(record)
+        return {
+            "session_id": str(s.id),
+            "status": record.status,
+            "started_at": None,
+        }
+
+    # consent_audio=true: manual 상태에서도 recording 재전이 허용 (세션 중 재켜기 여지)
     record.status = "recording"
     record.recording_started_at = _now()
     db.commit()
@@ -100,6 +113,17 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
 def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
     record = _get_or_create_record(s.id, db)
+
+    # SDD-085: 수동 기록 모드(manual)에서는 stop이 no-op — STT/요약 파이프라인 미실행
+    if record.status == "manual":
+        total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
+        return {
+            "session_id": str(s.id),
+            "status": record.status,
+            "total_chunks": total,
+            "ended_at": record.recording_ended_at,
+        }
+
     record.status = "processing"
     record.recording_ended_at = _now()
     db.commit()

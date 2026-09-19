@@ -207,7 +207,8 @@ export default function SessionRecordPage() {
       setTranscript(t);
       setLoading(false);
 
-      if (r.status === 'completed' || r.status === 'failed') {
+      // SDD-085: manual(마이크 오프 수동 기록)은 처리 파이프라인이 없으므로 폴링 불필요
+      if (r.status === 'completed' || r.status === 'failed' || r.status === 'manual') {
         if (pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;
@@ -293,6 +294,17 @@ export default function SessionRecordPage() {
         {session && <ClassMetaCard session={session} />}
 
         {progressStatus && <StatusProgressBar status={progressStatus} />}
+
+        {/* SDD-085: 마이크 오프(수동 기록 모드) 안내 — §7 M-4 */}
+        {record.status === 'manual' && (
+          <div className="rounded-2xl border border-[#F5E2B8] bg-amber-50 p-5 text-sm text-[#8A6B1F]">
+            <p className="font-semibold">수동 기록 모드</p>
+            <p className="mt-1">
+              이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 없습니다. 아래에
+              상담사 노트를 직접 작성해주세요.
+            </p>
+          </div>
+        )}
 
         <RecordView
           record={record}

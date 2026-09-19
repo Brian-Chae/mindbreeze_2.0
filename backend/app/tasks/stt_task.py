@@ -85,7 +85,7 @@ def _call_gemini_fallback(chunk_paths: list[str]) -> dict:
 
 
 def _generate_stub(chunk_paths: list[str]) -> dict:
-    """청크가 없거나 API 키 없을 때 사용하는 스텁."""
+    """API 키 없을 때 사용하는 스텁 (SDD-085: 청크 0개 경로에서는 호출되지 않음)."""
     segments = [
         {"speaker": "counselor", "text": "안녕하세요. 오늘 컨디션은 어떠세요?", "start": 0.0, "end": 4.5},
         {"speaker": "client", "text": "조금 피곤하지만 괜찮습니다.", "start": 4.5, "end": 8.0},
@@ -117,6 +117,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         logger.warning("[stt_task] SessionRecord not found: %s", session_id)
         return
 
+    # SDD-085 가드 1: 수동 기록 모드(마이크 오프)는 STT 대상 아님
+    if record.status == "manual":
+        logger.info("[stt_task] manual 세션 — STT 스킵: %s", session_id)
+        return
+
     asyncio.run(_emit_status(session_id, "merging"))
 
     chunks = (
@@ -127,6 +132,14 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     )
     chunk_paths = [c.file_path for c in chunks]
     logger.info("[stt_task] Merged %d chunks for session %s", len(chunks), session_id)
+
+    # SDD-085 가드 2(G5): 청크 0개면 스텁 가짜 전사를 저장하지 않는다 — 데이터 무결성
+    if not chunks:
+        logger.warning("[stt_task] 오디오 청크 없음 — STT 미실행(failed): %s", session_id)
+        record.status = "failed"
+        db.commit()
+        asyncio.run(_emit_status(session_id, "failed", {"reason": "no_audio_chunks"}))
+        return
 
     asyncio.run(_emit_status(session_id, "transcribing"))
     try:

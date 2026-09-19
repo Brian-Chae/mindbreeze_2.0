@@ -112,6 +112,15 @@ export interface ReportMarker {
 }
 
 /**
+ * SDD-085: content.ai_record — 음성/AI 요약 가용성 계약 (EEG not_measured 패턴 준용).
+ * not_available + reason="mic_off" 면 요약 섹션 숨김 + 사유 표기.
+ */
+export interface ReportAiRecord {
+  status: 'available' | 'not_available';
+  reason: string | null;
+}
+
+/**
  * UI가 소비하는 단일 매핑 결과.
  * eeg_summary / eeg_timeline은 레거시 필드명과의 호환 뷰.
  */
@@ -135,6 +144,8 @@ export interface AdaptedReportContent {
   eeg_timeline: EegTimelinePoint[];
   /** SDD-045 서사 표시 모델 (LLM 또는 규칙 폴백). 없으면 null */
   displayNarrative: DisplayNarrative | null;
+  /** SDD-085: ai_record 계약 — 레거시 리포트(키 없음)는 null (기존 동작 유지) */
+  aiRecord: ReportAiRecord | null;
 }
 
 const QUALITY_STATUSES: readonly EegQualityStatus[] = [
@@ -162,6 +173,14 @@ function asNullableNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'number' || Number.isNaN(value)) return null;
   return value;
+}
+
+/** SDD-085: content.ai_record 파싱 — 계약 불일치는 null (레거시와 동일 취급) */
+function parseAiRecord(value: unknown): ReportAiRecord | null {
+  if (!isRecord(value)) return null;
+  const status = value.status;
+  if (status !== 'available' && status !== 'not_available') return null;
+  return { status, reason: asString(value.reason) };
 }
 
 function asQualityStatus(value: unknown): EegQualityStatus | null {
@@ -356,6 +375,7 @@ export function adaptReportContent(
       eeg_summary: null,
       eeg_timeline: [],
       displayNarrative: null,
+      aiRecord: null,
     };
   }
 
@@ -401,6 +421,7 @@ export function adaptReportContent(
     eeg_summary,
     eeg_timeline: eeg?.timeline ?? [],
     displayNarrative,
+    aiRecord: parseAiRecord(content.ai_record),
   };
 }
 

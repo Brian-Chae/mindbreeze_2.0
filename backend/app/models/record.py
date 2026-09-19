@@ -15,7 +15,8 @@ class SessionRecord(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), unique=True, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="idle", nullable=False)  # idle/recording/processing/completed/failed
+    # SDD-085: manual = 마이크 오프(음성 미동의) 확정 — transcript·ai_summary 생성 대상 아님
+    status: Mapped[str] = mapped_column(String(20), default="idle", nullable=False)  # idle/recording/processing/completed/failed/manual
     transcript: Mapped[str | None] = mapped_column(Text)
     ai_summary: Mapped[dict] = mapped_column(JSONB, default=dict)
     counselor_notes: Mapped[str | None] = mapped_column(Text)

@@ -6,11 +6,14 @@ from pydantic import BaseModel, Field
 
 
 class AudioStartRequest(BaseModel):
+    # SDD-085: consent_audio=false 는 400이 아니라 "마이크 오프(수동 기록)" 선언 —
+    # SessionRecord.status='manual' 기록 후 200 응답
     consent_audio: bool = True
 
 
 class AudioStartResponse(BaseModel):
     session_id: str
+    # idle/recording/processing/completed/failed/manual (SDD-085: manual 추가)
     status: str
     started_at: datetime | None = None
 

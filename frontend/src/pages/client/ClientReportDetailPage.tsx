@@ -89,6 +89,12 @@ export default function ClientReportDetailPage() {
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
   const eeg = adapted.eeg;
+  // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
+  const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
+  const aiRecordReasonText =
+    adapted.aiRecord?.reason === 'mic_off'
+      ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
+      : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -102,7 +108,13 @@ export default function ClientReportDetailPage() {
 
         {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
 
-        {summary && (
+        {aiRecordUnavailable && (
+          <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm text-[#6F6F6F]">
+            {aiRecordReasonText}
+          </div>
+        )}
+
+        {!aiRecordUnavailable && summary && (
           <SummaryCard title="AI 요약">
             <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {summary}
@@ -110,7 +122,7 @@ export default function ClientReportDetailPage() {
           </SummaryCard>
         )}
 
-        {insights.length > 0 && (
+        {!aiRecordUnavailable && insights.length > 0 && (
           <SummaryCard title="인사이트 카드">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {insights.map((insight, i) => (

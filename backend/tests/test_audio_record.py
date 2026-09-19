@@ -49,7 +49,8 @@ def _create_session(client, host, started: bool = True) -> str:
     return sid
 
 
-def test_01_녹음_시작_동의없음_400(client):
+def test_01_녹음_시작_동의없음_manual_200(client):
+    # SDD-085: consent_audio=false 는 400이 아니라 수동 기록 모드(manual) 선언 + 200
     host = _register(client, "rec01@test.com")
     sid = _create_session(client, host)
     res = client.post(
@@ -57,8 +58,8 @@ def test_01_녹음_시작_동의없음_400(client):
         json={"consent_audio": False},
         headers=host["auth"],
     )
-    assert res.status_code == 400
-    assert "동의" in res.json()["detail"]
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "manual"
 
 
 def test_02_녹음_시작_성공(client):
@@ -128,10 +129,23 @@ def test_06_녹음_종료_파이프라인_트리거(client):
     assert res.json()["status"] in ("processing", "completed")
 
 
+def _upload_chunk(client, sid: str, host: dict, index: int = 0) -> None:
+    # SDD-085: 청크 0개면 STT가 스텁을 저장하지 않으므로(G5), 파이프라인 테스트는 청크 업로드 필수
+    file_data = {"file": (f"c{index}.webm", io.BytesIO(b"fake-audio" * 50), "audio/webm")}
+    res = client.post(
+        f"/api/v1/sessions/{sid}/audio/chunk",
+        data={"chunk_index": str(index)},
+        files=file_data,
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+
+
 def test_07_기록지_조회_파이프라인후(client):
     host = _register(client, "rec07@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"])
@@ -146,6 +160,7 @@ def test_08_전사문_조회(client):
     host = _register(client, "rec08@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/transcript", headers=host["auth"])
@@ -194,6 +209,7 @@ def test_12_세션_end_시_자동_finalize(client):
     host = _register(client, "rec12@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     # /end 호출 → audio_service.finalize_on_session_end 자동 트리거
     r = client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
     assert r.status_code == 200
