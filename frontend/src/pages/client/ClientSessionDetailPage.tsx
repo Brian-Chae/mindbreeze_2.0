@@ -2,7 +2,7 @@
 // 세션 정보, 상태별 액션 버튼, 뒤로가기
 
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getSession, type SessionDto } from '../../lib/api/session';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -52,7 +52,9 @@ function typeLabel(type: string): string {
 }
 
 export default function ClientSessionDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  // ClientAppPage가 Route 없이 조건부 렌더링하므로 useParams 대신 pathname에서 id 파싱
+  const location = useLocation();
+  const id = location.pathname.match(/\/app\/sessions\/([^/]+)$/)?.[1];
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors = user?.counselors ?? [];

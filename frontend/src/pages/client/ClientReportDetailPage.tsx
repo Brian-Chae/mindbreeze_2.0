@@ -2,7 +2,7 @@
 // EEG: 어댑터 기반, 상위 지표 + 쉬운 라벨, not_measured 시 미노출
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import EegQualityBanner from '../../components/reports/EegQualityBanner';
 import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
@@ -27,7 +27,8 @@ function SummaryCard({ title, children }: { title: string; children: React.React
 }
 
 export default function ClientReportDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const id = location.pathname.match(/\/app\/reports\/([^/]+)$/)?.[1];
   const navigate = useNavigate();
   const [report, setReport] = useState<ReportDto | null>(null);
   const [loading, setLoading] = useState(true);
