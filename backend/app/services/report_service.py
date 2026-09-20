@@ -211,6 +211,62 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
     return _serialize(report, s)
 
 
+def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[dict]:
+    """SDD-086: 세션의 active participant(대기열 제외)별 client 리포트를 생성한다.
+
+    - existing 체크는 report_email_service.request_report_email 과 동일한
+      (session_id, participant_id, type="client") 기준 — 멱등, 중복 생성 방지.
+    - 게스트는 user_id 가 없으므로(None) participant_id 로 소유를 보완한다 (SDD-027).
+    - auto_approve_report 가 켜진 상담사는 생성 직후 자동 승인한다 (기존 정책 유지).
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    participants = (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .all()
+    )
+    host = db.query(User).filter(User.id == s.host_id).first()
+    auto_approve = bool(host and host.role == "counselor" and host.auto_approve_report)
+
+    results: list[dict] = []
+    for participant in participants:
+        report = (
+            db.query(Report)
+            .filter(
+                Report.session_id == s.id,
+                Report.participant_id == participant.id,
+                Report.type == "client",
+            )
+            .first()
+        )
+        if not report:
+            report = Report(
+                session_id=s.id,
+                user_id=participant.user_id,
+                participant_id=participant.id,
+                type="client",
+                status="pending_analysis",
+                content={"status": "generating"},
+            )
+            db.add(report)
+            db.flush()
+        # 이미 승인 게이트를 지난 리포트(pending_review/completed)는 재생성하지 않는다 — 멱등.
+        if report.status in ("pending_analysis", "error"):
+            report = generate_report_inline(str(report.id), db) or report
+        if report.status == "pending_review" and auto_approve:
+            results.append(approve_report(str(report.id), str(s.host_id), db))
+        else:
+            results.append(_serialize(report, s))
+    return results
+
+
 def get_auto_approve_setting(user_id: str, db: DBSession) -> dict:
     user = db.query(User).filter(User.id == _to_uuid(user_id)).first()
     return {"enabled": bool(user and user.auto_approve_report)}

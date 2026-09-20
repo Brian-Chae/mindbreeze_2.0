@@ -373,6 +373,18 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
             video_service.finalize_on_session_end(s.id, db)
         except Exception:
             pass
+        # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
+        # best-effort: 리포트 생성 실패해도 세션 종료는 성공한다 (audio finalize 와 동일 패턴).
+        try:
+            from app.services import report_service
+            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
+        except Exception:
+            pass
+        try:
+            from app.services import report_service
+            report_service.generate_client_reports_for_session(str(s.id), db)
+        except Exception:
+            pass
 
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
