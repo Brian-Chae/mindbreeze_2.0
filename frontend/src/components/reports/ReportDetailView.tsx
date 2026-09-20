@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
+import CounselorCommentCard from './CounselorCommentCard';
 import DataExportButton from './DataExportButton';
 import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
@@ -39,6 +40,38 @@ function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
     default:
       return null;
   }
+}
+
+// SDD-087 — content.counselor_comment 파싱 (문자열만 인정, 빈 값은 null)
+function commentOf(content: Record<string, unknown> | null | undefined): string | null {
+  const value = content?.counselor_comment;
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+// SDD-087 — counselor 리포트에 파생 주입되는 content.client_comments 파싱
+interface ClientCommentEntry {
+  participant_id: string | null;
+  participant_name: string | null;
+  comment: string;
+}
+
+function parseClientComments(
+  content: Record<string, unknown> | null | undefined,
+): ClientCommentEntry[] {
+  const raw = content?.client_comments;
+  if (!Array.isArray(raw)) return [];
+  const entries: ClientCommentEntry[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) continue;
+    const rec = item as Record<string, unknown>;
+    if (typeof rec.comment !== 'string' || !rec.comment.trim()) continue;
+    entries.push({
+      participant_id: typeof rec.participant_id === 'string' ? rec.participant_id : null,
+      participant_name: typeof rec.participant_name === 'string' ? rec.participant_name : null,
+      comment: rec.comment,
+    });
+  }
+  return entries;
 }
 
 function SummaryCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -96,6 +129,8 @@ export default function ReportDetailView({
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState<string | null>(null);
   const [resendError, setResendError] = useState<string | null>(null);
+  // SDD-087 — 코멘트 카드 미저장 변경 여부 (승인 confirm 소프트 가드)
+  const [commentDirty, setCommentDirty] = useState(false);
 
   useEffect(() => {
     setReport(initialReport);
@@ -115,6 +150,23 @@ export default function ReportDetailView({
   );
 
   const handleApprove = useCallback(async () => {
+    // SDD-087 — 소프트 가드(백엔드 차단 없음): 미저장 코멘트 / 전달 콘텐츠 없는 승인 확인
+    if (
+      commentDirty &&
+      !window.confirm('저장하지 않은 코멘트가 있습니다. 저장하지 않고 승인할까요?')
+    ) {
+      return;
+    }
+    const adaptedNow = adaptReportContent(report.content, report.type);
+    const noData = !adaptedNow.eeg && adaptedNow.aiRecord?.status === 'not_available';
+    if (
+      report.type === 'client' &&
+      noData &&
+      !commentOf(report.content) &&
+      !window.confirm('이 리포트에는 전달할 내용이 없습니다. 코멘트 없이 승인하시겠습니까?')
+    ) {
+      return;
+    }
     setApproving(true);
     setError(null);
     try {
@@ -127,7 +179,7 @@ export default function ReportDetailView({
     } finally {
       setApproving(false);
     }
-  }, [report.id, updateReport]);
+  }, [report, updateReport, commentDirty]);
 
   const handleGeneratePDF = useCallback(async () => {
     if (printing) return;
@@ -177,6 +229,13 @@ export default function ReportDetailView({
     report.data_credibility,
     eeg?.status ?? null,
   );
+  // SDD-087 — 상담사 코멘트
+  const counselorComment = commentOf(report.content);
+  const clientComments = isCounselor ? parseClientComments(report.content) : [];
+  // 측정 데이터 없음 = EEG 미측정(not_measured) + AI 기록 없음(not_available)
+  const noMeasuredData = !adapted.eeg && adapted.aiRecord?.status === 'not_available';
+  const showCommentEditor =
+    isCounselorUser && report.type === 'client' && pipelineStatus === 'pending_review';
   const showApprove = isCounselorUser && canApproveReport({
     status: report.status,
     sent_at: report.sent_at,
@@ -242,6 +301,39 @@ export default function ReportDetailView({
         showApprovalHint={isCounselor}
       /></div>
 
+      {/* SDD-087 — 코멘트 작성 카드 (pending_review · client · 상담사) */}
+      {showCommentEditor && (
+        <CounselorCommentCard
+          report={report}
+          onReportChange={updateReport}
+          showNoDataBanner={noMeasuredData}
+          onDirtyChange={setCommentDirty}
+        />
+      )}
+
+      {/* SDD-087 — counselor 리포트: 내담자별로 보낸 코멘트 파생 표시 */}
+      {isCounselor && clientComments.length > 0 && (
+        <SummaryCard title="내담자에게 보낸 코멘트">
+          <div className="space-y-3">
+            {clientComments.map((entry, i) => (
+              <div
+                key={entry.participant_id ?? i}
+                className="bg-[#F5EDFC] rounded-xl p-4"
+              >
+                {entry.participant_name && (
+                  <div className="text-[12px] font-medium text-[#5F0080] mb-1.5">
+                    {entry.participant_name}
+                  </div>
+                )}
+                <p className="text-[14px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+                  {entry.comment}
+                </p>
+              </div>
+            ))}
+          </div>
+        </SummaryCard>
+      )}
+
       {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
 
       {aiRecordUnavailable && (
@@ -254,6 +346,15 @@ export default function ReportDetailView({
         <SummaryCard title="AI 요약">
           <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
             {summary}
+          </p>
+        </SummaryCard>
+      )}
+
+      {/* SDD-087 — 저장된 상담사 코멘트 (편집 카드 미노출 시 읽기 전용: 내담자 뷰 · completed) */}
+      {report.type === 'client' && counselorComment && !showCommentEditor && (
+        <SummaryCard title="상담사 코멘트">
+          <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+            {counselorComment}
           </p>
         </SummaryCard>
       )}

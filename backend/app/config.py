@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     # Google OAuth
     google_client_id: str = ""
 
+    # SDD-087: Gemini — 상담사 코멘트 AI 초안 생성 (키 부재 시 규칙 템플릿 폴백)
+    gemini_api_key: str = ""
+
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"
     livekit_api_key: str = "devkey"

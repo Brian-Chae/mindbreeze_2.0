@@ -8,6 +8,8 @@ from app.core.database import get_db
 from app.schemas.report import (
     ReportApprovalRequest,
     ReportAutoApproveSetting,
+    ReportCommentDraftResponse,
+    ReportCommentUpdate,
     ReportCreate,
     ReportEmailResendRequest,
     ReportEmailResendResponse,
@@ -15,6 +17,7 @@ from app.schemas.report import (
     ReportResponse,
     ReportUpdate,
 )
+from app.services import report_comment_service
 from app.services import report_service
 from app.services import report_email_service
 from app.services.report_pdf_service import pdf_response
@@ -103,6 +106,29 @@ def update(
     db: DBSession = Depends(get_db),
 ):
     return report_service.update_report(report_id, current_user["id"], payload, db)
+
+
+@router.patch("/{report_id}/comment", response_model=ReportResponse)
+def update_comment(
+    report_id: str,
+    payload: ReportCommentUpdate,
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-087: 내담자 리포트에 상담사 코멘트 저장 (pending_review 한정, null=삭제)."""
+    return report_comment_service.update_client_comment(
+        report_id, current_user["id"], payload.comment, db
+    )
+
+
+@router.post("/{report_id}/comment-draft", response_model=ReportCommentDraftResponse)
+def create_comment_draft(
+    report_id: str,
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-087: AI(Gemini) 코멘트 초안 생성 — 실패 시 규칙 템플릿 폴백, 저장 없음."""
+    return report_comment_service.build_comment_draft(report_id, current_user["id"], db)
 
 
 @router.post("/{report_id}/approve", response_model=ReportResponse)

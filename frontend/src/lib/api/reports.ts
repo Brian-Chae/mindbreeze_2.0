@@ -118,6 +118,22 @@ export const updateReport = (id: string, content: Record<string, unknown>): Prom
 export const approveReport = (id: string, note?: string): Promise<ReportDto> =>
   apiClient.post<ReportDto>(`/reports/${id}/approve`, { note });
 
+/** SDD-087 — 상담사 코멘트 저장 (comment: null = 삭제, 1000자 제한) */
+export const updateReportComment = (
+  reportId: string,
+  comment: string | null,
+): Promise<ReportDto> =>
+  apiClient.patch<ReportDto>(`/reports/${reportId}/comment`, { comment });
+
+/** SDD-087 — AI(Gemini) 코멘트 초안. 실패 시 서버가 규칙 템플릿으로 폴백(source: 'rule') */
+export interface CommentDraftResponse {
+  draft: string;
+  source: 'llm' | 'rule';
+}
+
+export const generateCommentDraft = (reportId: string): Promise<CommentDraftResponse> =>
+  apiClient.post<CommentDraftResponse>(`/reports/${reportId}/comment-draft`, {});
+
 /** SDD-049 — 리포트 자동 승인 설정 */
 export interface AutoApproveResponse {
   enabled: boolean;

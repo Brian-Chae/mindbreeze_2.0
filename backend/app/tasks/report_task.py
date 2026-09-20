@@ -287,6 +287,12 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
         report.status = "error"
         report.data_credibility = None
 
+    # SDD-087: content 통째 교체로 기존 상담사 코멘트가 유실되지 않게 이월한다 (방어 가드)
+    prev = report.content if isinstance(report.content, dict) else {}
+    prev_comment = prev.get("counselor_comment")
+    if isinstance(prev_comment, str) and prev_comment.strip() and "counselor_comment" not in content:
+        content["counselor_comment"] = prev_comment
+
     report.content = content
     db.commit()
     db.refresh(report)

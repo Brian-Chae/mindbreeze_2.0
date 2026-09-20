@@ -96,6 +96,9 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
     out = dict(content)  # 기존 키 보존
     # summary 는 없으면 None (하위호환: headline 은 그대로 둔다)
     out["summary"] = content.get("summary")
+    # SDD-087: 상담사 코멘트 패스스루 — 문자열만 인정, 없으면 None (빈 문자열 치환 금지)
+    comment = content.get("counselor_comment")
+    out["counselor_comment"] = comment if isinstance(comment, str) and comment.strip() else None
     out["insights"] = out["insights"] if isinstance(out.get("insights"), list) else []
     out["markers"] = out["markers"] if isinstance(out.get("markers"), list) else []
 
@@ -207,6 +210,10 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
         and host.role == "counselor"
         and host.auto_approve_report
     ):
+        # SDD-087: 자동 승인 상담사는 초안 단계 없이 AI 코멘트를 생성해 담아 발송한다
+        from app.services.report_comment_service import ensure_auto_comment
+
+        ensure_auto_comment(report, db)
         return approve_report(str(report.id), host_id, db)
     return _serialize(report, s)
 
@@ -261,6 +268,10 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         if report.status in ("pending_analysis", "error"):
             report = generate_report_inline(str(report.id), db) or report
         if report.status == "pending_review" and auto_approve:
+            # SDD-087: 자동 승인 시 코멘트가 없으면 AI 초안을 생성해 저장 후 승인한다
+            from app.services.report_comment_service import ensure_auto_comment
+
+            ensure_auto_comment(report, db)
             results.append(approve_report(str(report.id), str(s.host_id), db))
         else:
             results.append(_serialize(report, s))
@@ -381,11 +392,52 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
         if report.participant_id
         else None
     )
-    return _serialize(
+    result = _serialize(
         report,
         session,
         participant.report_email if participant else None,
     )
+    # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
+    # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
+    if report.type == "counselor":
+        result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
+    return result
+
+
+def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
+    """세션의 client 리포트별 상담사 코멘트 목록 — [{participant_id, participant_name, comment}]."""
+    client_reports = (
+        db.query(Report)
+        .filter(Report.session_id == session_id, Report.type == "client")
+        .all()
+    )
+    comments: list[dict] = []
+    for cr in client_reports:
+        content = cr.content if isinstance(cr.content, dict) else {}
+        comment = content.get("counselor_comment")
+        if not (isinstance(comment, str) and comment.strip()):
+            continue
+        name = None
+        if cr.participant_id:
+            participant = (
+                db.query(SessionParticipant)
+                .filter(SessionParticipant.id == cr.participant_id)
+                .first()
+            )
+            if participant:
+                if participant.user_id:
+                    user = db.query(User).filter(User.id == participant.user_id).first()
+                    name = user.name if user else None
+                else:
+                    name = participant.guest_name
+        comments.append(
+            {
+                "participant_id": str(cr.participant_id) if cr.participant_id else None,
+                "participant_name": name,
+                "comment": comment,
+            }
+        )
+    return comments
 
 
 def _can_access_report(user_id: str, session, db: DBSession) -> bool:

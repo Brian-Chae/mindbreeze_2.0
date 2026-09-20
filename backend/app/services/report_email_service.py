@@ -260,6 +260,19 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
         f'border-left:3px solid #59CE90;border-radius:0 12px 12px 0;white-space:pre-wrap;">{escape(str(item))}</li>'
         for item in insights
     )
+    # SDD-087: 상담사 코멘트 — 있을 때만 섹션 렌더 (escape + pre-wrap, null 보존)
+    counselor_comment = content.get("counselor_comment")
+    comment_section = ""
+    if isinstance(counselor_comment, str) and counselor_comment.strip():
+        comment_section = (
+            '<section aria-labelledby="comment-title" '
+            'style="padding:clamp(28px,6vw,48px) clamp(20px,5vw,48px);border-top:1px solid #E8D9EF;">'
+            '<p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">상담사 코멘트</p>'
+            '<h2 id="comment-title" style="margin:0 0 20px;font-size:24px;line-height:1.5;">상담사가 전하는 말</h2>'
+            '<p style="margin:0;padding:20px 22px;background:#F1FAF5;border-left:3px solid #59CE90;'
+            'border-radius:0 12px 12px 0;color:#1F1F1F;font-size:15px;line-height:1.9;white-space:pre-wrap;">'
+            f'{escape(counselor_comment)}</p></section>'
+        )
     eeg = content.get("eeg") or {}
     metrics = eeg.get("metrics") or {}
     labels = {"focus_index_stability_score": "집중 안정도", "total_neural_activity_score": "신경 활동도",
@@ -300,6 +313,7 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
     <div style="width:40px;height:4px;background:#59CE90;border-radius:4px;margin:28px 0;" aria-hidden="true"></div>
     <p style="margin:0;color:#63566B;font-size:17px;line-height:1.95;white-space:pre-wrap;">{summary}</p>
   </section>
+  {comment_section}
   <section aria-labelledby="insights-title" style="padding:clamp(28px,6vw,48px) clamp(20px,5vw,48px);">
     <p style="margin:0 0 8px;color:#5F0080;font-size:12px;letter-spacing:2px;">02 · 세션 인사이트</p>
     <h2 id="insights-title" style="margin:0 0 24px;font-size:24px;line-height:1.5;">오늘의 나를 돌아보며</h2>

@@ -20,6 +20,19 @@ class ReportApprovalRequest(BaseModel):
     note: str | None = None
 
 
+class ReportCommentUpdate(BaseModel):
+    """SDD-087: 상담사 코멘트 갱신 — null = 삭제, 1000자 초과는 422."""
+
+    comment: str | None = Field(default=None, max_length=1000)
+
+
+class ReportCommentDraftResponse(BaseModel):
+    """SDD-087: AI 코멘트 초안 — source 는 llm(Gemini) | rule(템플릿 폴백)."""
+
+    draft: str
+    source: str
+
+
 class ReportEmailResendRequest(BaseModel):
     email: EmailStr
 
