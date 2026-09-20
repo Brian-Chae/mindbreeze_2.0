@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import Report
+from app.models.user import User
 from app.services.report_service import _serialize
 from app.services.email_verify_service import verify_email_token
 from app.tasks.email import send_report_email
@@ -64,10 +65,17 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
             raise HTTPException(403, "참가자 확인 정보가 일치하지 않습니다")
     if session.status != "completed":
         raise HTTPException(409, "완료된 세션에서만 리포트를 요청할 수 있습니다")
-    if not payload.email_verify_token:
-        raise HTTPException(401, "이메일 인증이 필요합니다")
-    if verify_email_token(payload.email_verify_token).casefold() != str(payload.email).casefold():
-        raise HTTPException(403, "인증한 이메일과 수신 이메일이 다릅니다")
+    # 로그인 회원이 본인 계정 이메일로 요청하면 OTP 인증 생략 (계정 이메일은 이미 인증됨)
+    email_verified = False
+    if participant.user_id and user_id and str(participant.user_id) == user_id:
+        account_user = db.query(User).filter(User.id == participant.user_id).first()
+        if account_user and str(account_user.email).casefold() == str(payload.email).casefold():
+            email_verified = True
+    if not email_verified:
+        if not payload.email_verify_token:
+            raise HTTPException(401, "이메일 인증이 필요합니다")
+        if verify_email_token(payload.email_verify_token).casefold() != str(payload.email).casefold():
+            raise HTTPException(403, "인증한 이메일과 수신 이메일이 다릅니다")
     if participant.report_email and participant.report_email != str(payload.email):
         # 이전 수신자에게 발송 중인 작업과 주소 변경이 경합하지 않게 한다.
         raise HTTPException(409, "이미 등록된 리포트 수신 이메일은 변경할 수 없습니다")

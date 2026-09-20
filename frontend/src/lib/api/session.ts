@@ -121,7 +121,7 @@ export interface JoinByCodeResponse {
 export interface ReportEmailRequest {
   participant_id: string;
   email: string;
-  email_verify_token: string;
+  email_verify_token: string | null;
   participant_token?: string | null;
 }
 

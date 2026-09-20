@@ -89,16 +89,19 @@ export function GuestCompletePanel({
       setFormError('참가 정보가 없습니다. 다시 참여해 주세요.');
       return;
     }
+    // 로그인 회원이 본인 계정 이메일로 신청하면 OTP 인증 생략
+    const skipOtp = isLoggedIn && Boolean(accountEmail) && email.trim() === accountEmail;
     const code = otp.trim();
-    if (!/^\d{6}$/.test(code)) {
+    if (!skipOtp && !/^\d{6}$/.test(code)) {
       setFormError('6자리 인증 코드를 입력해 주세요.');
       return;
     }
     setFormError(null);
     setIsSubmitting(true);
     try {
-      const verifyRes = await verifyOtp(email.trim(), code);
-      const token = verifyRes.email_verify_token;
+      const token = skipOtp
+        ? null
+        : (await verifyOtp(email.trim(), code)).email_verify_token;
 
       const reportRes = await requestReportEmail(
         sessionId,
@@ -205,7 +208,7 @@ export function GuestCompletePanel({
             {phase === 'email' && (
               <form
                 className="mx-auto mt-9 max-w-md space-y-4"
-                onSubmit={(e) => void handleRequestOtp(e)}
+                onSubmit={(e) => void (isLoggedIn && accountEmail ? handleVerifyAndSubmit(e) : handleRequestOtp(e))}
               >
                 <label
                   htmlFor="report-email"
@@ -238,7 +241,9 @@ export function GuestCompletePanel({
                   disabled={isSubmitting}
                   className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isSubmitting ? '인증 코드 발송 중...' : '인증 코드 받기'}
+                  {isSubmitting
+                    ? (isLoggedIn && accountEmail ? '신청 중...' : '인증 코드 발송 중...')
+                    : (isLoggedIn && accountEmail ? '리포트 신청' : '인증 코드 받기')}
                 </button>
               </form>
             )}
