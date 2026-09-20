@@ -441,7 +441,7 @@ def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
 
 
 def _can_access_report(user_id: str, session, db: DBSession) -> bool:
-    """사용자가 리포트 세션에 접근 가능한지 (본인 세션 host 또는 기관 관리자)."""
+    """사용자가 리포트 세션에 접근 가능한지 (본인 세션 host / 기관 관리자 / 참여 내담자)."""
     uid = _to_uuid(user_id)
     if session and session.host_id == uid:
         return True
@@ -449,6 +449,18 @@ def _can_access_report(user_id: str, session, db: DBSession) -> bool:
     if user and user.role == "org_admin" and user.org_id and session:
         host = db.query(User).filter(User.id == session.host_id).first()
         return bool(host and host.org_id == user.org_id)
+    # 내담자(client): 자신이 참여한 세션의 리포트는 열람 가능
+    if session:
+        is_participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == session.id,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        if is_participant is not None:
+            return True
     return False
 
 
