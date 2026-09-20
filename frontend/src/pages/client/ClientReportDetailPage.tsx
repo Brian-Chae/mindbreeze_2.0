@@ -95,6 +95,9 @@ export default function ClientReportDetailPage() {
     adapted.aiRecord?.reason === 'mic_off'
       ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
       : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
+  // SDD-087 — 상담사 코멘트 (내담자에게 전달되는 메시지)
+  const counselorComment =
+    (report.content?.counselor_comment as string | undefined)?.trim() || null;
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -112,6 +115,15 @@ export default function ClientReportDetailPage() {
           <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm text-[#6F6F6F]">
             {aiRecordReasonText}
           </div>
+        )}
+
+        {/* SDD-087 — 상담사 코멘트 (있을 때만) */}
+        {counselorComment && (
+          <SummaryCard title="상담사 코멘트">
+            <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+              {counselorComment}
+            </p>
+          </SummaryCard>
         )}
 
         {!aiRecordUnavailable && summary && (
