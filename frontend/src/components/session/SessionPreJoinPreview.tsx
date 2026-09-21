@@ -330,7 +330,7 @@ export function SessionPreJoinPreview({
                 autoPlay
                 playsInline
                 muted
-                className={`h-full max-h-[380px] w-full object-cover ${
+                className={`h-full max-h-[380px] w-full object-contain ${
                   facingMode === 'user' ? '-scale-x-100' : ''
                 } ${cameraOn ? '' : 'invisible'}`}
               />

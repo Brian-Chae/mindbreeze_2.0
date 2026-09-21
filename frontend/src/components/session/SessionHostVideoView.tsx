@@ -77,7 +77,7 @@ export function SessionHostVideoView({ stream, facingMode, recording }: SessionH
           autoPlay
           playsInline
           muted
-          className={`h-full max-h-[320px] w-full object-cover ${
+          className={`h-full max-h-[320px] w-full object-contain ${
             facingMode === 'user' ? '-scale-x-100' : ''
           }`}
         />
