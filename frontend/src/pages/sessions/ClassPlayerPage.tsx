@@ -811,6 +811,141 @@ export default function ClassPlayerPage() {
     </div>
   ) : null;
 
+  /* ─── 참여자 상태 피드백 패널 — 대기실(전체 폭)·라이브(우측 컬럼) 공용 ─── */
+  const monitorPanel = (isLobby || isRunning) && (
+    <div className="space-y-3 rounded-2xl bg-white p-4">
+      <SessionMonitorSummary
+        counts={summary}
+        activeFilter={activeFilter}
+        onFilterToggle={handleFilterToggle}
+      />
+
+      <div className="space-y-2">
+        <div className="flex justify-end gap-1">
+          {(
+            [
+              { key: 'cards', label: '카드' },
+              { key: 'table', label: '테이블' },
+            ] as const
+          ).map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              aria-pressed={monitorView === v.key}
+              onClick={() => setMonitorView(v.key)}
+              className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition ${
+                monitorView === v.key
+                  ? 'bg-[#5F0080] text-white'
+                  : 'bg-[#F2F3F8] text-[#6F6F6F] hover:text-[#1F1F1F]'
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        {monitorView === 'cards' ? (
+          <SessionParticipantCardGrid
+            participants={displayMetrics}
+            filter={activeFilter}
+            selectedId={selectedParticipantId}
+            onSelect={handleSelectParticipant}
+          />
+        ) : (
+          <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
+        )}
+      </div>
+
+      {/* 호스트 LINK BAND — 보조 영역 */}
+      {isHost && (
+        <div className="flex flex-col gap-3 rounded-xl bg-[#F2F3F8] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#1F1F1F]">LINK BAND (호스트)</p>
+            <p className="mt-1 text-sm text-[#6F6F6F]">
+              {band.connectionState === 'connected'
+                ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
+                : band.connectionState === 'unsupported'
+                  ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
+                  : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
+            </p>
+            {band.error && <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>}
+          </div>
+          <div className="flex gap-2">
+            {band.connectionState !== 'connected' ? (
+              <button
+                type="button"
+                onClick={() => void band.connect()}
+                disabled={
+                  !band.isSupported ||
+                  !hostParticipantId ||
+                  band.connectionState === 'connecting'
+                }
+                className="mb-btn disabled:cursor-not-allowed"
+              >
+                {band.connectionState === 'connecting'
+                  ? '연결 중...'
+                  : band.isMock
+                    ? '시뮬레이션 시작'
+                    : '밴드 연결'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void band.disconnect()}
+                className="mb-btn mb-btn--ghost"
+              >
+                연결 해제
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  /* ─── 라이브 좌측 — 호스트 상태 패널: 타이머 · 마이크/카메라 · AI 분석 ─── */
+  const isAnalyzing =
+    mediaPrefs.micOn && (recorder.state === 'recording' || recorder.state === 'paused');
+  const hostStatusPanel = (
+    <div className="rounded-2xl bg-white/5 p-4">
+      <p className="text-xs text-white/50">
+        {status === 'paused' ? '일시정지됨' : '진행 시간'}
+      </p>
+      <p className="mt-1 font-mono text-4xl font-bold tabular-nums text-white">
+        {elapsedLabel(classElapsedSec)}
+      </p>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+            mediaPrefs.micOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
+          }`}
+        >
+          {mediaPrefs.micOn ? '🎙️ 마이크 ON' : '🔇 마이크 OFF'}
+        </span>
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+            mediaPrefs.cameraOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
+          }`}
+        >
+          🎥 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}
+        </span>
+        {!mediaPrefs.micOn ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50">
+            AI 분석 없음 (마이크 꺼짐)
+          </span>
+        ) : isAnalyzing ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5F0080]/60 px-3 py-1.5 text-xs font-semibold text-[#E9D5FF]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#C084FC]" />
+            AI 분석중
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5F0080]/25 px-3 py-1.5 text-xs font-medium text-[#D8B4FE]">
+            AI 분석 대기 · 녹음 시작 시 분석
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-[#12081C] pb-10">
       {/* 플레이어 헤더 — 풀스크린 셸 (AppShell 밖) */}
@@ -879,117 +1014,44 @@ export default function ClassPlayerPage() {
                 {codeCopied ? '복사 완료' : '코드 복사'}
               </button>
             )}
-          </div>
-        )}
-
-        {/* 진행 중 셀프뷰 — 프리뷰 → 셀프뷰 자연 전환 (SDD-084/085) */}
-        {isRunning &&
-          isHost &&
-          (mediaPrefs.cameraOn ? (
-            <SessionHostVideoView
-              stream={videoRecorder.stream}
-              facingMode={videoRecorder.facingMode}
-              recording={videoRecorder.state === 'recording'}
-            />
-          ) : (
-            <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
-                🎥
-              </span>
-              <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
-            </div>
-          ))}
-
-        {/* 모니터링 — 대기실·진행 공통 (대기실의 핵심 목적: 착용·신호 확인) */}
-        {(isLobby || isRunning) && (
-          <div className="space-y-3 rounded-2xl bg-white p-4">
-            <SessionMonitorSummary
-              counts={summary}
-              activeFilter={activeFilter}
-              onFilterToggle={handleFilterToggle}
-            />
-
-            <div className="space-y-2">
-              <div className="flex justify-end gap-1">
-                {(
-                  [
-                    { key: 'cards', label: '카드' },
-                    { key: 'table', label: '테이블' },
-                  ] as const
-                ).map((v) => (
-                  <button
-                    key={v.key}
-                    type="button"
-                    aria-pressed={monitorView === v.key}
-                    onClick={() => setMonitorView(v.key)}
-                    className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition ${
-                      monitorView === v.key
-                        ? 'bg-[#5F0080] text-white'
-                        : 'bg-[#F2F3F8] text-[#6F6F6F] hover:text-[#1F1F1F]'
-                    }`}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-              {monitorView === 'cards' ? (
-                <SessionParticipantCardGrid
-                  participants={displayMetrics}
-                  filter={activeFilter}
-                  selectedId={selectedParticipantId}
-                  onSelect={handleSelectParticipant}
-                />
-              ) : (
-                <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />
-              )}
-            </div>
-
-            {/* 호스트 LINK BAND — 보조 영역 */}
-            {isHost && (
-              <div className="flex flex-col gap-3 rounded-xl bg-[#F2F3F8] p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-[#1F1F1F]">LINK BAND (호스트)</p>
-                  <p className="mt-1 text-sm text-[#6F6F6F]">
-                    {band.connectionState === 'connected'
-                      ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
-                      : band.connectionState === 'unsupported'
-                        ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
-                        : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
-                  </p>
-                  {band.error && <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>}
-                </div>
-                <div className="flex gap-2">
-                  {band.connectionState !== 'connected' ? (
-                    <button
-                      type="button"
-                      onClick={() => void band.connect()}
-                      disabled={
-                        !band.isSupported ||
-                        !hostParticipantId ||
-                        band.connectionState === 'connecting'
-                      }
-                      className="mb-btn disabled:cursor-not-allowed"
-                    >
-                      {band.connectionState === 'connecting'
-                        ? '연결 중...'
-                        : band.isMock
-                          ? '시뮬레이션 시작'
-                          : '밴드 연결'}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => void band.disconnect()}
-                      className="mb-btn mb-btn--ghost"
-                    >
-                      연결 해제
-                    </button>
-                  )}
-                </div>
+            {session.opened_at && (
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <p className="text-xs text-white/50">대기 시간</p>
+                <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-white">
+                  {elapsedLabel(lobbyElapsedSec)}
+                </p>
               </div>
             )}
           </div>
         )}
+
+        {/* ③ 라이브 씬 — 좌: 카메라+호스트 상태 / 우: 참여자 피드백 (lg 미만은 세로 스택) */}
+        {isRunning && isHost && (
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            <div className="flex min-w-0 flex-col gap-3">
+              {/* 셀프뷰 — 프리뷰 → 셀프뷰 자연 전환 (SDD-084/085) */}
+              {mediaPrefs.cameraOn ? (
+                <SessionHostVideoView
+                  stream={videoRecorder.stream}
+                  facingMode={videoRecorder.facingMode}
+                  recording={videoRecorder.state === 'recording'}
+                />
+              ) : (
+                <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
+                    🎥
+                  </span>
+                  <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
+                </div>
+              )}
+              {hostStatusPanel}
+            </div>
+            <div className="min-w-0">{monitorPanel}</div>
+          </div>
+        )}
+
+        {/* 모니터링 — 대기실(핵심 목적: 착용·신호 확인)·비호스트 진행 화면은 전체 폭 */}
+        {(isLobby || (isRunning && !isHost)) && monitorPanel}
 
         {/* 오류 표시 */}
         {error && (
