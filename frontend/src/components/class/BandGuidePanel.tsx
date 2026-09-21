@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
+import { useAuthStore } from '../../stores/authStore';
 import { SensorTracker } from './SensorTracker';
 
 export type BandGuidePhase = 'guide' | 'wait';
@@ -38,11 +39,13 @@ export function BandGuidePanel({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   // GuestMeditationPanel과 동일 시그니처 — guide/wait 공용
+  // 로그인 회원 참가자는 무토큰 업로드가 403으로 거부되므로 토큰으로 연결한다.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const band = useBand({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
-    skipAuth: true,
+    skipAuth: !isAuthenticated,
   });
 
   useEffect(() => {

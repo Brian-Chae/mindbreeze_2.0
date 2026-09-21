@@ -106,7 +106,21 @@ const SessionMonitorRow = memo(function SessionMonitorRow({
         {row.display_name || (row.is_guest ? '게스트' : '참가자')}
       </td>
       <td className={cellCenter}>{contactCellLabel(row.device_status)}</td>
-      <td className={cellCenter}>{deviceCellLabel(row)}</td>
+      <td className={cellCenter}>
+        <span className="inline-flex items-center gap-1.5">
+          {/* 실시간 수신 점 — 초록(pulse)=수신 중 / 빨강=끊김·중단 / 회색=미사용 */}
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${
+              deviceCellLabel(row) === '연결됨'
+                ? 'animate-pulse bg-[#2F9E68]'
+                : deviceCellLabel(row) === '미사용'
+                  ? 'bg-[#9B9B9B]'
+                  : 'bg-[#F22121]'
+            }`}
+          />
+          {deviceCellLabel(row)}
+        </span>
+      </td>
       <td
         className={`${cellCenter} tabular-nums ${
           lowBat && !alert ? 'text-[#F22121B2]' : ''

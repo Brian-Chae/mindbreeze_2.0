@@ -29,6 +29,13 @@ const BAND_BADGE_CLASS: Record<ReturnType<typeof bandCardState>, string> = {
   none: 'bg-[#F2F3F8] text-[#6F6F6F]',
 };
 
+/** 실시간 수신 상태 점 — 초록(pulse)=스트리밍 중 / 빨강=끊김 / 회색=미사용 */
+const BAND_DOT_CLASS: Record<ReturnType<typeof bandCardState>, string> = {
+  connected: 'animate-pulse bg-[#2F9E68]',
+  disconnected: 'bg-[#F22121]',
+  none: 'bg-[#9B9B9B]',
+};
+
 interface ParticipantCardProps {
   row: SessionLiveMetric;
   selected: boolean;
@@ -70,8 +77,11 @@ const ParticipantCard = memo(function ParticipantCard({
           )}
         </div>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${BAND_BADGE_CLASS[bandState]}`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${BAND_BADGE_CLASS[bandState]}`}
         >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${BAND_DOT_CLASS[bandState]}`}
+          />
           {bandCardStateLabel(bandState)}
         </span>
       </div>

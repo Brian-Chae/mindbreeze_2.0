@@ -63,7 +63,11 @@ import { SessionParticipantDetailPanel } from '../../components/session/SessionP
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { EndSessionModal } from '../../components/player/EndSessionModal';
 import { LeaveGuardModal } from '../../components/player/LeaveGuardModal';
-import type { ParticipantHistoryPoint } from '../../lib/session-live/metric-display';
+import {
+  isConnectionFailed,
+  isStreamingLive,
+  type ParticipantHistoryPoint,
+} from '../../lib/session-live/metric-display';
 
 const LIVE_METRICS_POLL_MS = 4000;
 const SESSION_POLL_MS = 5000;
@@ -337,7 +341,7 @@ export default function ClassPlayerPage() {
     [id],
   );
 
-  useSessionLiveSocket({
+  const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
     enabled: Boolean(id && session),
@@ -685,6 +689,16 @@ export default function ClassPlayerPage() {
     (session?.participant_mode !== 'group' || activeCount >= 1);
   const summary = useMemo(() => summarizeMetrics(displayMetrics), [displayMetrics]);
 
+  // 실시간 수신 요약 — 스트리밍 중 / 수신 끊김 인원 (4초 폴링 리렌더 주기로 재평가)
+  const streamingCount = useMemo(
+    () => displayMetrics.filter(isStreamingLive).length,
+    [displayMetrics],
+  );
+  const droppedCount = useMemo(
+    () => displayMetrics.filter(isConnectionFailed).length,
+    [displayMetrics],
+  );
+
   // SDD-083: 진행 중 상태 변화 시계열 누적
   useEffect(() => {
     if (!isRunning) return;
@@ -811,9 +825,62 @@ export default function ClassPlayerPage() {
     </div>
   ) : null;
 
+  /* ─── 서버 연결 + 스트리밍 상태 바 — 참여자 요약 상단 상시 표시 ─── */
+  const liveStatusBar = (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* 서버(WebSocket) 연결 상태 — 끊겨도 4초 폴링 안전망은 유지된다 */}
+      {liveSocket.isConnected ? (
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+            liveSocket.isReady
+              ? 'bg-[#59CE9026] text-[#2F9E68]'
+              : 'bg-amber-100 text-amber-700'
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              liveSocket.isReady ? 'bg-[#2F9E68]' : 'animate-pulse bg-amber-500'
+            }`}
+          />
+          {liveSocket.isReady ? '서버 실시간 연결됨' : '서버 연결 중 · 동기화 대기'}
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2212133] px-3 py-1.5 text-[12px] font-semibold text-[#F22121B2]">
+          <span className="h-2 w-2 rounded-full bg-[#F22121]" />
+          서버 연결 끊김 · 4초 주기로 갱신 중
+        </span>
+      )}
+
+      {/* 밴드 스트리밍 상태 — 실시간 수신 중 인원 요약 */}
+      {streamingCount > 0 ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#59CE9026] px-3 py-1.5 text-[12px] font-semibold text-[#2F9E68]">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#2F9E68]" />
+          밴드 {streamingCount}명 스트리밍 중
+        </span>
+      ) : droppedCount > 0 ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2212133] px-3 py-1.5 text-[12px] font-semibold text-[#F22121B2]">
+          <span className="h-2 w-2 rounded-full bg-[#F22121]" />
+          밴드 수신 끊김
+        </span>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2F3F8] px-3 py-1.5 text-[12px] font-medium text-[#6F6F6F]">
+          <span className="h-2 w-2 rounded-full bg-[#9B9B9B]" />
+          밴드 데이터 대기
+        </span>
+      )}
+      {droppedCount > 0 && streamingCount > 0 && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2212133] px-3 py-1.5 text-[12px] font-semibold text-[#F22121B2]">
+          <span className="h-2 w-2 rounded-full bg-[#F22121]" />
+          수신 끊김 {droppedCount}명
+        </span>
+      )}
+    </div>
+  );
+
   /* ─── 참여자 상태 피드백 패널 — 대기실(전체 폭)·라이브(우측 컬럼) 공용 ─── */
   const monitorPanel = (isLobby || isRunning) && (
     <div className="space-y-3 rounded-2xl bg-white p-4">
+      {liveStatusBar}
       <SessionMonitorSummary
         counts={summary}
         activeFilter={activeFilter}

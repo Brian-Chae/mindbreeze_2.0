@@ -26,6 +26,15 @@ export function isConnectionFailed(row: SessionLiveMetric): boolean {
   return isEegStale(row.last_eeg_at);
 }
 
+/** 실시간 수신 중 판정 — EEG 이력이 있고 stale하지 않은 참가자 (관제 상태 바 집계용) */
+export function isStreamingLive(row: SessionLiveMetric): boolean {
+  return (
+    Boolean(row.band_connected) &&
+    row.last_eeg_at != null &&
+    !isEegStale(row.last_eeg_at)
+  );
+}
+
 /** 카드 표시용 밴드 상태 — 연결됨 / 끊김(전송중단 포함) / 미사용 */
 export type BandCardState = 'connected' | 'disconnected' | 'none';
 

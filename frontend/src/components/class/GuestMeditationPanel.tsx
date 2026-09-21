@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { useAuthStore } from '../../stores/authStore';
 import {
   contactStatusLabel,
   resolveBandLinkState,
@@ -135,11 +136,15 @@ export function GuestMeditationPanel({
   const seriesRef = useRef<MetricSeries>(emptySeries());
   const bandRef = useRef<ReturnType<typeof useBand> | null>(null);
 
+  // 로그인 회원의 참가자 행은 user_id가 있어 무토큰 업로드가 403(사칭 차단)으로 거부된다.
+  // 회원은 반드시 토큰으로, 비로그인 게스트만 skipAuth로 연결한다.
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   const band = useBand({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
-    skipAuth: true,
+    skipAuth: !isAuthenticated,
   });
   bandRef.current = band;
 
@@ -163,7 +168,7 @@ export function GuestMeditationPanel({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
-    skipAuth: true,
+    skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
   });
 
