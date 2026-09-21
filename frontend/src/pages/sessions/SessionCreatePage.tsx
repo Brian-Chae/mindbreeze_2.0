@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   createSession,
+  inviteParticipant,
   type CreateSessionPayload,
   type LinkbandMode,
   type LocationType,
@@ -12,6 +13,7 @@ import {
   type SessionType,
 } from '../../lib/api/session';
 import AppShell from '../../components/layout/AppShell';
+import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 
 export default function SessionCreatePage() {
   const navigate = useNavigate();
@@ -23,10 +25,15 @@ export default function SessionCreatePage() {
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(10);
+  const [participants, setParticipants] = useState<SelectedParticipant[]>([]);
   const [createdSession, setCreatedSession] = useState<SessionDto | null>(null);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteWarning, setInviteWarning] = useState<string | null>(null);
+
+  // 1:1 모드면 1명, 그룹이면 최대 참여자 수만큼 선택 가능
+  const pickerMax = participantMode === 'one_on_one' ? 1 : maxParticipants;
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -45,6 +52,20 @@ export default function SessionCreatePage() {
         sfu_enabled: locationType === 'online' && participantMode === 'group',
       };
       const created = await createSession(payload);
+
+      // 선택된 참여자 일괄 초대 — 개별 실패해도 클래스 생성 자체는 성공 처리
+      if (participants.length > 0) {
+        const results = await Promise.allSettled(
+          participants.map((p) => inviteParticipant(created.id, p.userId)),
+        );
+        const failed = participants.filter((_, i) => results[i].status === 'rejected');
+        if (failed.length > 0) {
+          setInviteWarning(
+            `일부 참여자 초대에 실패했습니다: ${failed.map((p) => p.name).join(', ')}. 클래스 상세에서 다시 초대할 수 있습니다.`,
+          );
+        }
+      }
+
       setCreatedSession(created);
     } catch (e) {
       setError(e instanceof Error ? e.message : '세션 생성에 실패했습니다');
@@ -91,6 +112,11 @@ export default function SessionCreatePage() {
             >
               {copied ? '복사 완료' : '클래스 코드 복사'}
             </button>
+            {inviteWarning && (
+              <p className="mt-3 text-sm text-[#B3261E] bg-[#FDF1F0] border border-[#F2C9C5] rounded-xl px-4 py-3 text-left">
+                {inviteWarning}
+              </p>
+            )}
             {error && <p className="mt-3 text-sm text-[#B3261E]">{error}</p>}
             <div className="flex flex-col sm:flex-row justify-center gap-2 mt-8">
               <button
@@ -136,6 +162,8 @@ export default function SessionCreatePage() {
                   setParticipantMode(nextMode);
                   if (nextMode === 'one_on_one') {
                     setMaxParticipants(1);
+                    // 1:1 전환 시 선택된 참여자를 1명으로 정리
+                    setParticipants((prev) => prev.slice(0, 1));
                   }
                 }}
                 className={inputCls}
@@ -183,7 +211,12 @@ export default function SessionCreatePage() {
                   required
                   value={maxParticipants}
                   disabled={participantMode === 'one_on_one'}
-                  onChange={(e) => setMaxParticipants(Number(e.target.value))}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setMaxParticipants(next);
+                    // 최대 인원 축소 시 선택된 참여자도 그 수에 맞게 정리
+                    setParticipants((prev) => (prev.length > next ? prev.slice(0, next) : prev));
+                  }}
                   className={`${inputCls} disabled:bg-[#F2F3F8]`}
                 />
               </div>
@@ -198,6 +231,8 @@ export default function SessionCreatePage() {
               <label className={labelCls}>메모</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
             </div>
+
+            <ParticipantPicker selected={participants} onChange={setParticipants} maxParticipants={pickerMax} />
 
             {error && <p className="text-sm text-[#B3261E]">{error}</p>}
 
