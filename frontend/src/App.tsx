@@ -1,5 +1,14 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+// SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Outlet,
+  Route,
+  RouterProvider,
+  useLocation,
+} from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 
 import { useAuthStore } from './stores/authStore';
@@ -36,6 +45,8 @@ const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
 const SessionCreatePage = lazy(() => import('./pages/sessions/SessionCreatePage'));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
+// SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
+const ClassPlayerPage = lazy(() => import('./pages/sessions/ClassPlayerPage'));
 const SessionRecordPage = lazy(() => import('./pages/records/SessionRecordPage'));
 const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
 const DesignIndexPage = lazy(() => import('./pages/design/DesignIndexPage'));
@@ -97,7 +108,8 @@ function PlatformAdminRoute({ children }: { children: ReactElement }) {
   return children;
 }
 
-function App() {
+/** 데이터 라우터 루트 — 인증 초기화 + Suspense 셸 */
+function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
 
   useEffect(() => {
@@ -105,9 +117,15 @@ function App() {
   }, [initialize]);
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
-      <Routes>
+    <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
+      <Outlet />
+    </Suspense>
+  );
+}
+
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<RootLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/join" element={<ClassJoinPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
@@ -146,7 +164,9 @@ function App() {
         <Route path="/sessions" element={<SessionListPage />} />
         <Route path="/sessions/new" element={<SessionCreatePage />} />
         <Route path="/sessions/:id" element={<SessionDetailPage />} />
+        {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
+        <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/chat/:roomId" element={<ChatPage />} />
@@ -211,10 +231,12 @@ function App() {
         <Route path="/notifications" element={<NotificationCenterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/playground" element={<PlaygroundPage />} />
-      </Routes>
-      </Suspense>
-    </BrowserRouter>
-  );
+    </Route>,
+  ),
+);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

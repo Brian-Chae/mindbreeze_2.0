@@ -85,18 +85,30 @@ def _longest_usable_run(windows: list[EEGFeatureWindow]) -> int:
     return longest
 
 
-def _build_eeg_content(session_id: UUID, db: DBSession, participant_id: UUID | None = None) -> dict:
+def _build_eeg_content(
+    session_id: UUID,
+    db: DBSession,
+    participant_id: UUID | None = None,
+    *,
+    started_at=None,
+    ended_at=None,
+) -> dict:
     """EEGFeatureWindow 시계열 → content.eeg 단일 계약 블록.
 
     윈도우가 없으면(미착용/미수집) status="not_measured" — 프론트에서 섹션 숨김.
+    SDD-088: 오픈(대기실) 중 수집된 EEG는 표시용일 뿐 분석 대상이 아니므로,
+    started_at ~ ended_at 구간의 윈도우만 집계한다(경계 미전달 시 전체 유지 — 하위 호환).
     """
-    windows = (
+    q = (
         db.query(EEGFeatureWindow)
         .filter(EEGFeatureWindow.session_id == session_id)
         .filter(EEGFeatureWindow.participant_id == participant_id if participant_id else True)
-        .order_by(EEGFeatureWindow.window_index)
-        .all()
     )
+    if started_at is not None:
+        q = q.filter(EEGFeatureWindow.created_at >= started_at)
+    if ended_at is not None:
+        q = q.filter(EEGFeatureWindow.created_at <= ended_at)
+    windows = q.order_by(EEGFeatureWindow.window_index).all()
     if not windows:
         return {"status": "not_measured"}
 
@@ -258,7 +270,14 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).first()
 
     try:
-        eeg_block = _build_eeg_content(session.id, db, report.participant_id if report.type == "client" else None)
+        # SDD-088: 대기실(open) 중 수집 EEG 제외 — started_at~ended_at 구간만 집계
+        eeg_block = _build_eeg_content(
+            session.id,
+            db,
+            report.participant_id if report.type == "client" else None,
+            started_at=session.started_at,
+            ended_at=session.ended_at,
+        )
         if report.type == "client":
             # 그룹 세션의 공통 녹음 요약은 다른 참가자의 상담 내용을 포함할 수 있다.
             client_record = None if session.participant_mode == "group" else record

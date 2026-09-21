@@ -162,6 +162,8 @@ def test_06_참여자수는_게스트_포함(client):
     code = create_test_org("참여자센터")
     counselor = _register_counselor(client, "pub06@test.com", code)
     cls = _create_class(client, counselor["h"], max_participants=10)
+    # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용
+    client.post(f"/api/v1/sessions/{cls['id']}/open", headers=counselor["h"])
 
     # 게스트 2명 + 로그인 내담자 1명
     join_url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"

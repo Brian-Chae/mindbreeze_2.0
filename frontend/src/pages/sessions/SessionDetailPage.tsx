@@ -22,22 +22,41 @@ const TYPE_LABELS: Record<string, string> = {
   custom: '기타',
 };
 
+// SDD-088: 상태 전이 버튼(오픈/시작/일시정지/종료)은 플레이어 안에만 존재한다.
+// 상세 페이지는 정보 조회·참여자 관리·[입장]·[닫기(취소)]만 담당한다.
 const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {
-  ready: ['start', 'cancel'],
-  scheduled: ['start', 'cancel'],
-  in_progress: ['pause', 'end', 'cancel'],
-  paused: ['resume', 'end', 'cancel'],
+  ready: ['cancel'],
+  scheduled: ['cancel'],
+  open: ['cancel'],
+  in_progress: ['cancel'],
+  paused: ['cancel'],
   completed: [],
   cancelled: [],
 };
 
 const ACTION_LABELS: Record<SessionAction, string> = {
+  open: '오픈',
   start: '시작',
   pause: '일시정지',
   resume: '재개',
   end: '종료',
   cancel: '취소',
 };
+
+/** SDD-088: 오픈된 방의 cancel 은 "클래스 닫기"로 읽힌다 */
+function cancelLabel(status: SessionDto['status']): string {
+  return status === 'open' ? '클래스 닫기' : ACTION_LABELS.cancel;
+}
+
+/** 플레이어 입장 가능 상태 — 종료/취소 외 전부 (완료는 종료 씬 열람 허용) */
+const ENTERABLE_STATUSES: SessionDto['status'][] = [
+  'ready',
+  'scheduled',
+  'open',
+  'in_progress',
+  'paused',
+  'completed',
+];
 
 const participantLabel = (participant: SessionDto['participants'][number]): string =>
   participant.user_name
@@ -81,11 +100,6 @@ export default function SessionDetailPage() {
 
   const handleAction = async (action: SessionAction): Promise<void> => {
     if (!id) return;
-    // SDD-083: 시작은 바로 전이하지 않고 라이브 페이지의 카메라/마이크 프리뷰에서 확인 후 시작
-    if (action === 'start') {
-      navigate(`/sessions/${id}/live`);
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
@@ -178,15 +192,26 @@ export default function SessionDetailPage() {
 
   const rightSlot = (
     <div className="flex items-center gap-2">
+      {/* SDD-088: [입장] 단일 버튼 — 플레이어가 상태에 맞는 씬을 전개한다 */}
+      {ENTERABLE_STATUSES.includes(session.status) && (
+        <button
+          type="button"
+          onClick={() => navigate(`/sessions/${session.id}/player`)}
+          disabled={busy}
+          className="mb-btn text-sm"
+        >
+          입장
+        </button>
+      )}
       {actions.map((action) => (
         <button
           key={action}
           type="button"
           onClick={() => handleAction(action)}
           disabled={busy}
-          className="mb-btn text-sm"
+          className="mb-btn mb-btn--ghost text-sm"
         >
-          {ACTION_LABELS[action]}
+          {action === 'cancel' ? cancelLabel(session.status) : ACTION_LABELS[action]}
         </button>
       ))}
       <button

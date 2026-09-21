@@ -26,6 +26,8 @@ interface SessionPreJoinPreviewProps {
   canStart: boolean;
   /** canStart=false 사유 (버튼 title) */
   startDisabledReason?: string;
+  /** SDD-088: 확정 버튼 라벨 오버라이드 (플레이어 세팅 씬은 "클래스 오픈") */
+  startLabel?: string;
 }
 
 /** getUserMedia 오류 → 사용자 안내 문구 */
@@ -56,6 +58,7 @@ export function SessionPreJoinPreview({
   starting,
   canStart,
   startDisabledReason,
+  startLabel = '세션 시작',
 }: SessionPreJoinPreviewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
@@ -230,7 +233,7 @@ export function SessionPreJoinPreview({
       title={!canStart && !starting ? startDisabledReason : undefined}
       className="mb-btn disabled:cursor-not-allowed"
     >
-      {starting ? '시작 중...' : '세션 시작'}
+      {starting ? '처리 중...' : startLabel}
     </button>
   );
 

@@ -1,8 +1,11 @@
 // 호스트 클래스 목록 표 — 1.0 LectureScreen Table 패리티 (SDD-029 P2)
 // 흰 배경 + 평평한 테이블 + 보라 강조. 카드 그리드 대체.
+// SDD-088: "시작" 버튼 제거 → [입장] 단일 버튼(목적지 /player). 플레이어가 상태에 맞는 씬을 전개한다.
+//          오픈된 방은 "오픈" 뱃지(StatusBadge)와 [닫기](cancel)를 노출한다.
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { SessionDto } from '../../lib/api/session';
+import { transitionSession, type SessionDto } from '../../lib/api/session';
 import { StatusBadge } from './StatusBadge';
 
 interface SessionListTableProps {
@@ -26,6 +29,24 @@ export function SessionListTable({
   loadingMessage = '클래스 목록을 불러오는 중입니다.',
 }: SessionListTableProps) {
   const navigate = useNavigate();
+  // SDD-088: 목록에서 닫은(cancel) 세션의 로컬 반영 — 다음 목록 로드 전까지 상태 표시용
+  const [closedIds, setClosedIds] = useState<ReadonlySet<string>>(new Set());
+  const [closingId, setClosingId] = useState<string | null>(null);
+
+  const handleClose = async (sessionId: string): Promise<void> => {
+    if (!window.confirm('오픈된 클래스를 닫을까요?\n대기실에 있는 회원들의 입장이 종료됩니다.')) {
+      return;
+    }
+    setClosingId(sessionId);
+    try {
+      await transitionSession(sessionId, 'cancel');
+      setClosedIds((prev) => new Set([...prev, sessionId]));
+    } catch {
+      // 실패 시 상태 유지 — 폴링/재진입으로 최신화
+    } finally {
+      setClosingId(null);
+    }
+  };
 
   return (
     <div className="overflow-hidden bg-[var(--mb-white)]">
@@ -50,8 +71,34 @@ export function SessionListTable({
       {!loading &&
         sessions.map((session, index) => {
           const rowBg = index % 2 === 0 ? 'bg-[var(--mb-white)]' : 'bg-[var(--mb-bg-10)]';
-          const canStart = session.status === 'ready' || session.status === 'scheduled';
+          const status = closedIds.has(session.id) ? 'cancelled' : session.status;
+          const isOpen = status === 'open';
+          const canEnter = status !== 'cancelled';
           const title = session.title || '제목 없음';
+
+          const actionButtons = (
+            <>
+              {canEnter && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/sessions/${session.id}/player`)}
+                  className="mb-btn px-3 py-1.5 text-xs"
+                >
+                  입장
+                </button>
+              )}
+              {isOpen && (
+                <button
+                  type="button"
+                  onClick={() => void handleClose(session.id)}
+                  disabled={closingId === session.id}
+                  className="mb-btn mb-btn--ghost px-3 py-1.5 text-xs !text-[#B3261E] disabled:cursor-not-allowed"
+                >
+                  {closingId === session.id ? '닫는 중...' : '닫기'}
+                </button>
+              )}
+            </>
+          );
 
           return (
             <div key={session.id}>
@@ -67,35 +114,12 @@ export function SessionListTable({
                   {session.participants.length}/{session.max_participants}
                 </span>
                 <span className="flex justify-center">
-                  <StatusBadge status={session.status} />
+                  <StatusBadge status={status} />
                 </span>
                 <span className="text-center font-mono text-[var(--mb-fg-muted)]">
                   {formatTime(session.scheduled_at ?? session.started_at ?? session.created_at)}
                 </span>
-                <div className="flex w-[9.5rem] items-center justify-end gap-2">
-                  {canStart && (
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/sessions/${session.id}/live`)}
-                      className="mb-btn px-3 py-1.5 text-xs"
-                    >
-                      시작
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        session.status === 'in_progress' || session.status === 'paused'
-                          ? `/sessions/${session.id}/live`
-                          : `/sessions/${session.id}`,
-                      )
-                    }
-                    className="mb-btn px-3 py-1.5 text-xs"
-                  >
-                    입장
-                  </button>
-                </div>
+                <div className="flex w-[9.5rem] items-center justify-end gap-2">{actionButtons}</div>
               </div>
 
               {/* 모바일: 동일 정보 1열 카드 (표 정보 유지) */}
@@ -107,7 +131,7 @@ export function SessionListTable({
                       {session.access_code ?? '—'}
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[var(--mb-fg-muted)]">
-                      <StatusBadge status={session.status} />
+                      <StatusBadge status={status} />
                       <span>
                         {session.participants.length}/{session.max_participants}명
                       </span>
@@ -116,30 +140,7 @@ export function SessionListTable({
                       </span>
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col gap-2">
-                    {canStart && (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/sessions/${session.id}/live`)}
-                        className="mb-btn px-3 py-1.5 text-xs"
-                      >
-                        시작
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          session.status === 'in_progress' || session.status === 'paused'
-                            ? `/sessions/${session.id}/live`
-                            : `/sessions/${session.id}`,
-                        )
-                      }
-                      className="mb-btn px-3 py-1.5 text-xs"
-                    >
-                      입장
-                    </button>
-                  </div>
+                  <div className="flex shrink-0 flex-col gap-2">{actionButtons}</div>
                 </div>
               </div>
             </div>

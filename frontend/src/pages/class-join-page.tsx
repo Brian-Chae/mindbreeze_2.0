@@ -10,17 +10,16 @@ import {
   type SessionByCodeResponse,
 } from '../lib/api/session';
 import { useAuthStore } from '../stores/authStore';
-import { GuestMeditationPanel } from '../components/class/GuestMeditationPanel';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
-import { WelcomeText } from '../components/class/WelcomeText';
-import { FadingImageBackground } from '../components/class/FadingImageBackground';
-import { BandGuidePanel } from '../components/class/BandGuidePanel';
+// SDD-088: waiting/meditation 렌더는 플레이어 씬 컴포넌트로 이전 (join 게이트는 이 페이지가 유지)
+import { MemberWaitingScene, type MemberWaitingStep } from '../components/player/MemberWaitingScene';
+import { MemberSessionScene } from '../components/player/MemberSessionScene';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 /** waiting 내부 3단계 — Welcome → LINK BAND 착용 가이드 → 시작 대기 */
-type WaitingStep = 'welcome' | 'guide' | 'wait';
+type WaitingStep = MemberWaitingStep;
 
 const TYPE_LABELS: Record<SessionByCodeResponse['type'], string> = {
   clinical: '임상심리상담',
@@ -30,13 +29,19 @@ const TYPE_LABELS: Record<SessionByCodeResponse['type'], string> = {
 };
 
 const STATUS_LABELS: Record<SessionByCodeResponse['status'], string> = {
-  ready: '시작 대기',
+  ready: '오픈 전',
   scheduled: '예정',
+  open: '입장 가능',
   in_progress: '진행 중',
   paused: '일시 정지',
   completed: '종료됨',
   cancelled: '취소됨',
 };
+
+/** SDD-088: 상담사가 아직 클래스를 열지 않은 상태 — 입장 게이트에서 차단 + 자동 재시도 */
+function isPreOpen(session: SessionByCodeResponse): boolean {
+  return session.status === 'ready' || session.status === 'scheduled';
+}
 
 const PARTICIPANT_STORAGE_KEY = 'mb_join_participant';
 
@@ -63,6 +68,10 @@ function errorMessage(error: unknown, fallback: string): string {
       (error.status === 400 && (error.message.includes('이미 종료된 클래스') || error.message.includes('이미 취소된 클래스')))
     ) {
       return '이 클래스는 이미 종료되었거나 취소되어 참여할 수 없습니다.';
+    }
+    // SDD-088: 오픈 전 참여 시도 — 상담사가 클래스를 열면 자동으로 참여 가능해진다
+    if (error.status === 400 && error.message.includes('오픈 전')) {
+      return '상담사가 아직 클래스를 열지 않았습니다. 클래스가 열리면 자동으로 참여할 수 있습니다.';
     }
   }
   return fallback;
@@ -145,6 +154,25 @@ const ClassJoinPage: React.FC = () => {
 
   // 대기·명상 중 화면 꺼짐 방지 (Wake Lock)
   useWakeLock(step === 'waiting' || step === 'meditation');
+
+  // SDD-088: details 단계에서 아직 오픈 전이면 3초 폴링으로 오픈을 감지해 자동 활성화
+  const sessionStatus = session?.status ?? null;
+  const sessionId = session?.id ?? null;
+  useEffect(() => {
+    if (step !== 'details' || !sessionId) return undefined;
+    if (sessionStatus !== 'ready' && sessionStatus !== 'scheduled') return undefined;
+    const intervalId = window.setInterval(() => {
+      getSessionByCode(code)
+        .then((refreshed) => {
+          setSession(refreshed);
+          if (isClosed(refreshed)) {
+            setError('이 클래스는 이미 종료되었거나 취소되어 참여할 수 없습니다.');
+          }
+        })
+        .catch(() => undefined);
+    }, 3000);
+    return () => window.clearInterval(intervalId);
+  }, [step, sessionStatus, sessionId, code]);
 
   const handleWelcomeFinish = useCallback(() => {
     setWaitingStep('guide');
@@ -354,27 +382,18 @@ const ClassJoinPage: React.FC = () => {
     clearPersistedParticipant();
   };
 
-  // 명상 화면 — 검정 풀블리드 immersive (SDD-029)
+  // 진행 씬 — 검정 풀블리드 immersive (SDD-029, SDD-088: 플레이어 씬으로 이전)
   if (step === 'meditation' && session) {
     return (
-      <main className="min-h-screen bg-black">
-        <GuestMeditationPanel
-          title={session.title}
-          startedAt={session.started_at}
-          durationMin={durationMin}
-          onLeave={resetJoin}
-          sessionId={session.id}
-          participantId={participantId}
-        />
-        {error && (
-          <p
-            role="alert"
-            className="fixed bottom-4 left-1/2 z-20 w-[min(100%-2rem,28rem)] -translate-x-1/2 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-          >
-            {error}
-          </p>
-        )}
-      </main>
+      <MemberSessionScene
+        title={session.title}
+        startedAt={session.started_at}
+        durationMin={durationMin}
+        sessionId={session.id}
+        participantId={participantId}
+        error={error}
+        onLeave={resetJoin}
+      />
     );
   }
 
@@ -394,60 +413,25 @@ const ClassJoinPage: React.FC = () => {
     );
   }
 
-  // waiting — Welcome → LINK BAND 착용 가이드 → 시작 대기 (1.0 3단계 패리티)
+  // 대기실 씬 — Welcome → LINK BAND 착용 가이드 → 시작 대기 (1.0 3단계 패리티, SDD-088: 플레이어 씬으로 이전)
   if (step === 'waiting' && session) {
     const displayName =
       (isLoggedIn ? user?.name : null) || guestName.trim() || null;
 
     return (
-      <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
-        <FadingImageBackground />
-
-        <header className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-8">
-          <button
-            type="button"
-            onClick={resetJoin}
-            className="rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white"
-          >
-            종료
-          </button>
-          <h1 className="truncate px-3 text-center text-base font-medium text-white/80 sm:text-lg">
-            {session.title ?? '클래스'}
-          </h1>
-          <div className="w-[4.5rem]" aria-hidden="true" />
-        </header>
-
-        <div
-          className={`relative z-10 flex flex-1 flex-col px-4 pb-16 ${
-            waitingStep === 'guide'
-              ? 'justify-start pt-2 md:justify-center'
-              : 'items-center justify-center'
-          }`}
-        >
-          {waitingStep === 'welcome' && (
-            <WelcomeText onFinish={handleWelcomeFinish} />
-          )}
-          {(waitingStep === 'guide' || waitingStep === 'wait') && (
-            <BandGuidePanel
-              sessionId={session.id}
-              participantId={participantId}
-              phase={waitingStep}
-              onConfirm={handleGuideConfirm}
-              displayName={displayName}
-              classCode={code}
-              statusLabel={STATUS_LABELS[session.status]}
-            />
-          )}
-          {error && (
-            <p
-              role="alert"
-              className="mt-8 w-full max-w-md self-center rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            >
-              {error}
-            </p>
-          )}
-        </div>
-      </main>
+      <MemberWaitingScene
+        title={session.title}
+        waitingStep={waitingStep}
+        sessionId={session.id}
+        participantId={participantId}
+        displayName={displayName}
+        classCode={code}
+        statusLabel={STATUS_LABELS[session.status]}
+        error={error}
+        onWelcomeFinish={handleWelcomeFinish}
+        onGuideConfirm={handleGuideConfirm}
+        onLeave={resetJoin}
+      />
     );
   }
 
@@ -604,13 +588,24 @@ const ClassJoinPage: React.FC = () => {
                       : '로그인된 계정으로 참여합니다.'}
                   </p>
                 )}
+                {/* SDD-088: 오픈 전에는 입장 차단 — 3초 폴링으로 오픈을 감지하면 자동 활성화 */}
+                {isPreOpen(session) && (
+                  <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                    상담사가 아직 클래스를 열지 않았습니다. 클래스가 열리면 자동으로 참여
+                    버튼이 활성화됩니다.
+                  </p>
+                )}
                 {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isPreOpen(session)}
                   className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? '참여 처리 중...' : '클래스 참여하기'}
+                  {isLoading
+                    ? '참여 처리 중...'
+                    : isPreOpen(session)
+                      ? '클래스 오픈 대기 중...'
+                      : '클래스 참여하기'}
                 </button>
                 <button type="button" onClick={resetJoin} className="w-full py-2 text-sm font-semibold text-gray-500 hover:text-gray-800">
                   다른 코드 입력하기

@@ -172,7 +172,8 @@ def test_expired_link_rejected(client, setup_email):
 
 def test_join_issues_private_participant_token(client, setup_email):
     db, session, participant = setup_email
-    session.status = "ready"
+    # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용
+    session.status = "open"
     session.access_code = "912345"
     session.max_participants = 10
     db.commit()

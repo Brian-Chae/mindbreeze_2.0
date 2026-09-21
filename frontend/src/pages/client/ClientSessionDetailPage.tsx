@@ -11,6 +11,7 @@ function statusLabel(status: string): string {
   switch (status) {
     case 'ready': return '준비';
     case 'scheduled': return '예정';
+    case 'open': return '입장 가능';
     case 'in_progress': return '진행중';
     case 'paused': return '일시정지';
     case 'completed': return '완료';
@@ -24,6 +25,7 @@ function statusBadgeClass(status: string): string {
   switch (status) {
     case 'ready': return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled': return 'bg-[#F5EDFC] text-[#5F0080]';
+    case 'open': return 'bg-[#E0F5F1] text-[#0F766E]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
     case 'paused': return 'bg-[#FFF4DC] text-[#8A6B1F]';
     case 'completed': return 'bg-[#F2F3F8] text-[#6F6F6F]';
@@ -92,10 +94,13 @@ export default function ClientSessionDetailPage() {
   const renderActions = (): React.ReactNode => {
     if (!session) return null;
 
-    if (session.status === 'ready' || session.status === 'scheduled' || session.status === 'in_progress' || session.status === 'paused') {
+    if (session.status === 'ready' || session.status === 'scheduled' || session.status === 'open' || session.status === 'in_progress' || session.status === 'paused') {
+      // SDD-088: 입장 활성 조건 — 오픈(대기실 개방) 이후부터. ready/scheduled 는 "아직 열리지 않음".
+      const canEnter =
+        session.status === 'open' || session.status === 'in_progress' || session.status === 'paused';
       return (
         <div className="flex flex-col md:flex-row gap-2">
-          {session.status === 'in_progress' ? (
+          {canEnter ? (
             <button
               type="button"
               onClick={() => {
@@ -113,7 +118,7 @@ export default function ClientSessionDetailPage() {
               disabled
               className="w-full rounded-xl bg-[#D4D4D4] text-white text-sm font-semibold py-3 cursor-not-allowed"
             >
-              세션 입장하기 (아직 시작되지 않음)
+              세션 입장하기 (아직 열리지 않음)
             </button>
           )}
         </div>

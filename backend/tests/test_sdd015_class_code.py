@@ -83,6 +83,12 @@ def _create_class(client, headers: dict, **overrides) -> dict:
     return res.json()
 
 
+def _open_class(client, cls: dict, headers: dict) -> None:
+    """SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용 — 참여 전 오픈 처리."""
+    res = client.post(f"/api/v1/sessions/{cls['id']}/open", headers=headers)
+    assert res.status_code == 200, res.text
+
+
 # ---------------------------------------------------------------------------
 # 1. 기관 등록 (system_admin)
 # ---------------------------------------------------------------------------
@@ -245,6 +251,7 @@ def test_12_잘못된_클래스코드_404(client):
 def test_13_로그인_내담자_코드로_참여(client):
     counselor = _register(client, "c13@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10)
+    _open_class(client, cls, counselor["h"])
     member = _register(client, "m13@test.com", role="client")
 
     res = client.post(
@@ -263,6 +270,7 @@ def test_13_로그인_내담자_코드로_참여(client):
 def test_14_게스트_이름만으로_참여(client):
     counselor = _register(client, "c14@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10)
+    _open_class(client, cls, counselor["h"])
 
     res = client.post(
         f"/api/v1/sessions/by-code/{cls['access_code']}/join",
@@ -280,6 +288,7 @@ def test_14_게스트_이름만으로_참여(client):
 def test_15_게스트_이름_없으면_400(client):
     counselor = _register(client, "c15@test.com")
     cls = _create_class(client, counselor["h"])
+    _open_class(client, cls, counselor["h"])
     res = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={})
     assert res.status_code == 400
     assert "이름" in res.json()["detail"]
@@ -288,6 +297,7 @@ def test_15_게스트_이름_없으면_400(client):
 def test_16_동일_게스트이름_중복참여_허용(client):
     counselor = _register(client, "c16@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10)
+    _open_class(client, cls, counselor["h"])
     url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
 
     first = client.post(url, json={"name": "김철수"})
@@ -300,6 +310,7 @@ def test_16_동일_게스트이름_중복참여_허용(client):
 def test_17_로그인_사용자_중복참여는_1건만(client):
     counselor = _register(client, "c17@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10)
+    _open_class(client, cls, counselor["h"])
     member = _register(client, "m17@test.com", role="client")
     url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
 
@@ -330,6 +341,7 @@ def test_18_종료된_클래스는_참여불가_400(client):
 def test_19_상담사_대시보드(client):
     counselor = _register(client, "c19@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10, title="대시보드 클래스")
+    _open_class(client, cls, counselor["h"])
     client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "게스트A"})
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
 
@@ -361,6 +373,7 @@ def test_21_기관_대시보드_통계(client):
     code = create_test_org("통계센터")
     counselor = _register(client, "c21@test.com", org_code=code)
     cls = _create_class(client, counselor["h"], max_participants=10)
+    _open_class(client, cls, counselor["h"])
     client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "게스트B"})
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
     client.post(f"/api/v1/sessions/{cls['id']}/end", headers=counselor["h"])

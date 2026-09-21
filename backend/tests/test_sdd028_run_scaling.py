@@ -44,7 +44,11 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
     payload.update(overrides)
     res = client.post("/api/v1/sessions", json=payload, headers=headers)
     assert res.status_code == 201, res.text
-    return res.json()
+    session = res.json()
+    # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용 — 테스트 기본은 오픈까지 진행
+    opened = client.post(f"/api/v1/sessions/{session['id']}/open", headers=headers)
+    assert opened.status_code == 200, opened.text
+    return opened.json()
 
 
 def _join_guest(client, code: str, name: str) -> str:

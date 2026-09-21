@@ -17,7 +17,8 @@ from app.models.user import User
 from app.services import code_service
 
 # 공개 페이지에 노출하는 클래스 상태 — 완료/취소는 제외한다.
-PUBLIC_CLASS_STATUSES = ("ready", "scheduled", "in_progress")
+# SDD-088: open(오픈/대기)은 입장을 받는 상태이므로 공개 노출에 포함한다.
+PUBLIC_CLASS_STATUSES = ("ready", "scheduled", "open", "in_progress")
 
 
 def _counselors(org_id: uuid.UUID, db: DBSession) -> tuple[list[dict], list[uuid.UUID]]:

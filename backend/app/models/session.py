@@ -39,6 +39,8 @@ class Session(Base):
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-015: 참여자가 입력하는 6자리 클래스 코드 (생성 시 자동 발급)
     access_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)
+    # SDD-088: 클래스 오픈(대기실 개방) 시각 — 대기 경과 표시·오픈→시작 소요 지표용
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     duration_min: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -19,14 +19,20 @@ from app.services import code_service, eeg_query
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
 # 기존 예약형 세션의 "scheduled" 는 그대로 유지해 하위 호환을 지킨다.
-ACTIVE_STATUSES = ("ready", "scheduled", "in_progress", "paused")
+# SDD-088: "open"(오픈/대기)은 상담사가 준비를 마치고 회원 입장을 받는 상태 —
+# 진행 중으로 간주해 중복 개설 방지·목록 필터에 포함한다.
+ACTIVE_STATUSES = ("ready", "scheduled", "open", "in_progress", "paused")
 
+# SDD-088: ready/scheduled → open(오픈/대기) → in_progress → completed.
+# start 출발에 ready/scheduled 를 남기는 것은 과도기 하위 호환(구 클라이언트·1:1 즉석 세션).
+# 오픈된 방의 정상 퇴로는 cancel(=클래스 닫기)이며, end 는 진행중/일시정지에서만 가능하다.
 TRANSITIONS = {
-    "start": ({"ready", "scheduled"}, "in_progress"),
+    "open": ({"ready", "scheduled"}, "open"),
+    "start": ({"ready", "scheduled", "open"}, "in_progress"),
     "pause": ({"in_progress"}, "paused"),
     "resume": ({"paused"}, "in_progress"),
     "end": ({"in_progress", "paused"}, "completed"),
-    "cancel": ({"ready", "scheduled", "in_progress", "paused"}, "cancelled"),
+    "cancel": ({"ready", "scheduled", "open", "in_progress", "paused"}, "cancelled"),
 }
 
 
@@ -54,6 +60,7 @@ def _serialize(s: Session) -> dict:
         "host_id": str(s.host_id),
         "scheduled_at": s.scheduled_at,
         "access_code": s.access_code,
+        "opened_at": s.opened_at,
         "started_at": s.started_at,
         "ended_at": s.ended_at,
         "duration_min": s.duration_min,
@@ -352,7 +359,10 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
 
     s.status = target
     # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
-    if action == "start" and s.started_at is None:
+    # SDD-088: 오픈 시각도 최초 1회만 기록 (대기 경과 표시·오픈→시작 지표용)
+    if action == "open" and s.opened_at is None:
+        s.opened_at = _now()
+    elif action == "start" and s.started_at is None:
         s.started_at = _now()
     elif action == "end":
         s.ended_at = _now()
@@ -638,6 +648,9 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
 # 코드로 참여할 수 없는 상태 (이미 끝났거나 취소된 클래스)
 _CLOSED_STATUSES = ("completed", "cancelled")
 
+# SDD-088: 아직 오픈 전 상태 — 상담사가 "클래스 오픈"을 눌러야 회원 입장이 열린다.
+_PRE_OPEN_STATUSES = ("ready", "scheduled")
+
 
 def _get_session_by_code(code: str, db: DBSession) -> Session:
     normalized = code_service.normalize_code(code)
@@ -694,6 +707,15 @@ def join_session_by_code(
     s = _get_session_by_code(code, db)
     if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=400, detail="이미 종료된 클래스입니다")
+    # SDD-088: 입장 게이트 이동 — 오픈(open) 이후부터 회원/게스트 입장을 허용한다.
+    # host 상담사는 오픈 전에도 자기 세션 참여 처리(no-op)를 막지 않는다.
+    if s.status in _PRE_OPEN_STATUSES:
+        uid = _to_uuid(user_id) if user_id else None
+        if uid is None or s.host_id != uid:
+            raise HTTPException(
+                status_code=400,
+                detail="아직 오픈 전인 클래스입니다. 상담사가 클래스를 열면 입장할 수 있습니다",
+            )
 
     if user_id:
         uid = _to_uuid(user_id)

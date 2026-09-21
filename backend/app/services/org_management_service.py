@@ -91,7 +91,8 @@ def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivat
     ).union(db.query(User.id).filter(User.org_id == org.id))
     unknown = and_(CounselingSession.organization_attribution_known.is_(False), CounselingSession.host_id.in_(member_ids))
     candidates = db.query(CounselingSession).filter(or_(CounselingSession.organization_id == org.id, unknown))
-    scheduled = candidates.filter(CounselingSession.status.in_(["ready", "scheduled"])).count()
+    # SDD-088: open(오픈/대기)은 아직 시작 전이므로 예정 집계에 포함한다
+    scheduled = candidates.filter(CounselingSession.status.in_(["ready", "scheduled", "open"])).count()
     ongoing = candidates.filter(CounselingSession.status.in_(["in_progress", "paused"])).count()
     # 귀속 불명 차단은 "이 기관 소속자"의 미확정 세션으로 한정한다.
     # 타 기관·미소속의 미확정 세션은 이 기관 비활성화를 차단하지 않는다.
@@ -185,7 +186,7 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     if role is None:
         active_session = db.query(CounselingSession.id).filter(
             CounselingSession.host_id == user.id,
-            CounselingSession.status.in_(["ready", "scheduled", "in_progress", "paused"]),
+            CounselingSession.status.in_(["ready", "scheduled", "open", "in_progress", "paused"]),
         ).first()
         if active_session:
             raise HTTPException(409, "진행·일시정지·예정·대기 세션을 먼저 정리해주세요")

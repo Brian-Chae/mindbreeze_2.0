@@ -4,12 +4,13 @@ from datetime import date
 from uuid import UUID
 
 from app.models.session import SessionParticipant
-from tests.test_sdd015_class_code import _create_class, _db, _register
+from tests.test_sdd015_class_code import _create_class, _db, _open_class, _register
 
 
 def test_guest_gender_birth_saved_and_serialized(client):
     host = _register(client, "sdd062-host@test.com")
     session = _create_class(client, host["h"])
+    _open_class(client, session, host["h"])
     response = client.post(
         f"/api/v1/sessions/by-code/{session['access_code']}/join",
         json={"name": "게스트", "gender": "female", "birth_date": "1990-02-03"},
@@ -31,6 +32,7 @@ def test_guest_gender_birth_saved_and_serialized(client):
 def test_guest_gender_birth_omitted_stays_null(client):
     host = _register(client, "sdd062-null@test.com")
     session = _create_class(client, host["h"])
+    _open_class(client, session, host["h"])
     response = client.post(
         f"/api/v1/sessions/by-code/{session['access_code']}/join",
         json={"name": "게스트"},
@@ -44,6 +46,7 @@ def test_guest_gender_birth_omitted_stays_null(client):
 def test_guest_invalid_gender_or_birth_date_rejected(client):
     host = _register(client, "sdd062-invalid@test.com")
     session = _create_class(client, host["h"])
+    _open_class(client, session, host["h"])
     url = f"/api/v1/sessions/by-code/{session['access_code']}/join"
     for payload in (
         {"name": "게스트", "gender": "unknown"},

@@ -10,7 +10,8 @@ from pydantic import BaseModel, EmailStr, Field, model_validator
 
 SessionType = Literal["clinical", "hypnosis", "meditation", "custom"]
 # SDD-015: 일정 없는 즉석 클래스의 대기 상태 "ready" 추가 (기존 "scheduled" 유지)
-SessionStatus = Literal["ready", "scheduled", "in_progress", "paused", "completed", "cancelled"]
+# SDD-088: 오픈/대기 상태 "open" 추가 — 상담사가 클래스를 열어 회원 입장을 받는 단계
+SessionStatus = Literal["ready", "scheduled", "open", "in_progress", "paused", "completed", "cancelled"]
 LocationType = Literal["online", "offline"]
 ParticipantMode = Literal["one_on_one", "group"]
 LinkbandMode = Literal["none", "required", "optional"]
@@ -83,6 +84,8 @@ class SessionResponse(BaseModel):
     host_id: str
     scheduled_at: datetime | None = None
     access_code: str | None = None
+    # SDD-088: 클래스 오픈(대기실 개방) 시각
+    opened_at: datetime | None = None
     started_at: datetime | None = None
     ended_at: datetime | None = None
     duration_min: int

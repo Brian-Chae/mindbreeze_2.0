@@ -3,7 +3,8 @@
 import { ApiError, apiClient, refreshAccessToken, tokenStorage } from './client';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
-export type SessionStatus = 'ready' | 'scheduled' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+/** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
+export type SessionStatus = 'ready' | 'scheduled' | 'open' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
 export type LocationType = 'online' | 'offline';
 export type ParticipantMode = 'one_on_one' | 'group';
 export type LinkbandMode = 'none' | 'required' | 'optional';
@@ -31,6 +32,8 @@ export interface SessionDto {
   host_id: string;
   scheduled_at: string | null;
   access_code: string | null;
+  /** SDD-088: 클래스 오픈(대기실 개방) 시각 */
+  opened_at?: string | null;
   started_at: string | null;
   ended_at: string | null;
   duration_min: number;
@@ -266,7 +269,7 @@ export const updateSession = (id: string, payload: UpdateSessionPayload): Promis
 export const deleteSession = (id: string): Promise<void> =>
   apiClient.delete<void>(`/sessions/${id}`);
 
-export type SessionAction = 'start' | 'pause' | 'resume' | 'end' | 'cancel';
+export type SessionAction = 'open' | 'start' | 'pause' | 'resume' | 'end' | 'cancel';
 
 export const transitionSession = (id: string, action: SessionAction): Promise<SessionDto> =>
   apiClient.post<SessionDto>(`/sessions/${id}/${action}`);
