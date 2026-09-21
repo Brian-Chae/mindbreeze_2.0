@@ -108,7 +108,7 @@ export default function ClientSessionListPage() {
   // 선택된 날짜의 세션
   const todaySessions = sessionsOnDay(selectedDate);
   const instantSessions = sessions.filter((session) => (
-    !session.scheduled_at && (session.status === 'ready' || session.status === 'in_progress')
+    !session.scheduled_at && (session.status === 'ready' || session.status === 'open' || session.status === 'in_progress')
   ));
   const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
   const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;

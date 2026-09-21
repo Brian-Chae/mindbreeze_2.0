@@ -109,7 +109,7 @@ export default function ClientHomePage() {
 
   const instantSessions = useMemo(
     () => filteredSessions.filter((session) => (
-      !session.scheduled_at && (session.status === 'ready' || session.status === 'in_progress')
+      !session.scheduled_at && (session.status === 'ready' || session.status === 'open' || session.status === 'in_progress')
     )),
     [filteredSessions],
   );
