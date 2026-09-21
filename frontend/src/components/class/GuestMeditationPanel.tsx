@@ -11,6 +11,7 @@ import {
   resolveBandLinkState,
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
+import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
@@ -158,7 +159,8 @@ export function GuestMeditationPanel({
         event.feature?.relaxation_index ??
         null;
       if (typeof efficiency === 'number') {
-        setRemoteEfficiency(efficiency);
+        // feature 계약은 raw 비율(0~1) — 표시 전 표준모델/코호트 정규화(0~100)
+        setRemoteEfficiency(scoreIndices({ relaxationIndex: efficiency }).relaxationIndex);
       }
     },
     [participantId, sessionId],

@@ -28,6 +28,7 @@ import { useWakeLock } from '../../hooks/useWakeLock';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
+import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
 import {
   contactStatusLabel,
   isEegStale,
@@ -78,6 +79,23 @@ const HISTORY_MAX_POINTS = 1200;
 
 /** 이탈 보수 처리 대상 상태 — 오픈/진행중/일시정지 */
 const GUARDED_STATUSES: SessionStatus[] = ['open', 'in_progress', 'paused'];
+
+/** 서버 raw 두뇌휴식도(α/(α+β), 0~1 비율) → 표시용 정규화 점수(0~100).
+ * 서버·DB 계약은 raw 유지 — % 표시 직전에만 표준모델(없으면 코호트)로 점수화한다.
+ * raw를 그대로 %로 반올림하면 0~1%로 보이는 버그의 수정 지점. */
+function scoreEfficiency(raw: number | null | undefined): number | null {
+  if (raw == null || Number.isNaN(raw)) return null;
+  return scoreIndices({ relaxationIndex: raw }).relaxationIndex;
+}
+
+/** 서버가 내려준 참가자 지표 행의 efficiency 필드를 표시용 점수로 정규화한다 */
+function scoreServerRows(rows: SessionLiveMetric[]): SessionLiveMetric[] {
+  return rows.map((r) => ({
+    ...r,
+    current_efficiency: scoreEfficiency(r.current_efficiency),
+    avg_efficiency: scoreEfficiency(r.avg_efficiency),
+  }));
+}
 
 /** live-metrics가 없을 때 세션 참가자로 테이블 행을 만든다 (시작 전 대기 표시) */
 function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
@@ -201,12 +219,17 @@ export default function ClassPlayerPage() {
   const handleLiveFeature = useCallback(
     (event: SessionLiveEegFeatureEvent) => {
       if (!id || event.session_id !== id) return;
+      // saved=0 은 이미 저장된 window의 재전송 중복(멱등 skip) — 과거 timestamp가
+      // last_eeg_at을 되돌리고(→ false "수신끊김") 구간 평균을 오염시키므로 무시한다.
+      if (event.saved === 0) return;
       const now = Date.now();
-      const efficiency =
+      const rawEfficiency =
         event.current_efficiency ??
         event.relaxation_index ??
         event.feature?.relaxation_index ??
         null;
+      // feature 계약은 raw 비율 — 표시 버퍼에는 정규화 점수(0~100)로 적재
+      const efficiency = scoreEfficiency(rawEfficiency);
       const heartRate = event.feature?.heart_rate ?? null;
       const respiratoryRate = event.feature?.respiratory_rate ?? null;
       if (event.participant_id) {
@@ -265,7 +288,7 @@ export default function ClassPlayerPage() {
 
   const handleSnapshot = useCallback((snap: SessionLiveJoinSnapshot) => {
     if (snap.participants?.length) {
-      setMetrics(snap.participants);
+      setMetrics(scoreServerRows(snap.participants));
     }
     if (snap.status) {
       setSession((prev) =>
@@ -294,7 +317,7 @@ export default function ClassPlayerPage() {
     (event: ParticipantChangedEvent) => {
       if (!id || event.session_id !== id) return;
       if (event.participants && event.participants.length > 0) {
-        setMetrics(event.participants);
+        setMetrics(scoreServerRows(event.participants));
       }
     },
     [id],
@@ -366,7 +389,7 @@ export default function ClassPlayerPage() {
     if (!id) return;
     try {
       const res = await getSessionLiveMetrics(id);
-      setMetrics(res.metrics ?? res.participants ?? []);
+      setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
     } catch {
       setSession((prev) => {
         if (prev) setMetrics(participantsToMetrics(prev));

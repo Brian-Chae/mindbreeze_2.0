@@ -58,6 +58,10 @@ router = APIRouter(
     route_class=BaselineValidationRoute,
 )
 
+# 활성 표준 모델 조회 전용 공개 라우터 — 집계 분포 파라미터(m/s)만 노출(PII 없음).
+# 클래스 화면(회원·게스트)이 지표 정규화에 필요해 무인증 읽기를 허용한다.
+public_router = APIRouter(prefix="/normalization", tags=["normalization"])
+
 
 @contextmanager
 def _write_transaction(db: Session) -> Iterator[None]:
@@ -114,7 +118,7 @@ def list_models(db: Session = Depends(get_db)) -> NormalizationModelListResponse
     )
 
 
-@router.get("/models/active", response_model=ActiveNormalizationModelResponse)
+@public_router.get("/models/active", response_model=ActiveNormalizationModelResponse)
 def get_active_model(
     db: Session = Depends(get_db),
 ) -> ActiveNormalizationModelResponse:

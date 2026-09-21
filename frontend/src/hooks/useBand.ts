@@ -57,7 +57,7 @@ import type {
   BandSpectrum,
   WaveformPoint,
 } from '../types/playground';
-import { scoreIndices } from '../lib/eeg/eegPersonalScore';
+import { refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
 
@@ -400,7 +400,14 @@ export function useBand({
     [skipAuth],
   );
 
-  /** 미확정 큐 재전송 (재연결·주기 flush) */
+  /** 미확정 큐 REST 배치 flush (재연결·주기 flush).
+   *
+   * 게스트는 서버 eeg_feature 브로드캐스트(호스트 룸 전용)를 받지 못해 WS ACK가
+   * 오지 않으므로, WS 재전송으로는 큐가 영원히 drain되지 않고 무한 증식한다
+   * (과거 feature 재브로드캐스트 → 호스트 관제 last_eeg_at 회귀 → "수신끊김" 깜빡임).
+   * REST 배치는 저장 성공이 곧 확정이며 서버가 window_index 멱등 skip하므로
+   * WS 1초 실시간 emit과 이중 전송해도 안전하다.
+   */
   const retransmitPending = useCallback(async (): Promise<void> => {
     if (!sessionId || drainingRef.current) return;
     try {
@@ -408,17 +415,8 @@ export function useBand({
       if (mountedRef.current) setPendingCount(pending.length);
       if (pending.length === 0) return;
 
-      if (wsConnectedRef.current) {
-        for (const item of pending) {
-          emitQueuedItem(item);
-        }
-        if (mountedRef.current) setUploadStatus('streaming');
-        return;
-      }
-
-      // WS 미연결 → REST 배치 폴백. 성공 분만 ACK 처리.
       const batch = pending.map((p) => p.feature);
-      setUploadStatus('delayed');
+      if (!wsConnectedRef.current) setUploadStatus('delayed');
       await postSessionFeatures(
         sessionId,
         {
@@ -447,7 +445,7 @@ export function useBand({
         setError(err instanceof Error ? err.message : 'EEG feature 업로드 실패');
       }
     }
-  }, [emitQueuedItem, refreshPendingCount, sessionId, skipAuth]);
+  }, [refreshPendingCount, sessionId, skipAuth]);
 
   /** 종료 시 새 수집 중단 + 큐 drain */
   const drainPendingQueue = useCallback(async (): Promise<void> => {
@@ -461,15 +459,7 @@ export function useBand({
         if (mountedRef.current) setPendingCount(pending.length);
         if (pending.length === 0) break;
 
-        if (wsConnectedRef.current) {
-          for (const item of pending) {
-            emitQueuedItem(item);
-          }
-          // ACK 대기
-          await new Promise((r) => setTimeout(r, DRAIN_POLL_MS));
-          continue;
-        }
-
+        // WS ACK는 게스트에게 오지 않으므로(호스트 룸 전용 브로드캐스트) REST로만 drain한다.
         try {
           await postSessionFeatures(
             sessionId,
@@ -499,7 +489,7 @@ export function useBand({
       drainingRef.current = false;
       await refreshPendingCount();
     }
-  }, [emitQueuedItem, refreshPendingCount, sessionId, skipAuth]);
+  }, [refreshPendingCount, sessionId, skipAuth]);
 
   const handleFeatureAck = useCallback(
     async (ack: SessionLiveFeatureAck): Promise<void> => {
@@ -606,7 +596,8 @@ export function useBand({
         bandPowersRef.current = powers;
       }
       setSensors(sensorFromLeadOff(leadOffRef.current, true));
-      pushChartPoint(metrics.relaxationIndex);
+      // 차트도 표시 지표와 동일한 정규화 점수(0~100)로 축적한다 (raw 비율 혼용 금지)
+      pushChartPoint(scored.relaxationIndex);
     },
     [emitQueuedItem, pushChartPoint, sessionId],
   );
@@ -1031,6 +1022,12 @@ export function useBand({
     startMock,
   ]);
 
+  // 표시용 정규화에 쓸 활성 표준 모델을 1회 로드한다 (playground 외 화면도 표준모델 적용).
+  // 실패 시 코호트(B0) fallback — scoreIndices 내부에서 처리된다.
+  useEffect(() => {
+    void refreshActiveModel();
+  }, []);
+
   // mount 시 전역(singleton) BLE 연결이 이미 살아있으면 스트림을 재시작한다.
   // (waiting→meditation 전환 시 컴포넌트 remount로 StreamProcessor가 새로 생성되므로)
   const connectRef = useRef(connect);
@@ -1106,15 +1103,26 @@ export function useBand({
 
       if (!mountedRef.current) return;
 
+      // 로컬 밴드 수집 중에는 echo(과거 재전송분 포함)로 표시 상태를 덮어쓰지 않는다.
+      // ingestMetrics가 매초 정규화 점수와 신선한 lastEegAt을 이미 갱신하고 있으며,
+      // echo의 raw 값(비율 0~1)이 scored 값(0~100)을 덮으면 0% 깜빡임이 생긴다.
+      if (collectingRef.current) return;
+
       const efficiency = efficiencyFromEvent(event);
       if (efficiency !== null) {
-        setCurrentEfficiency(efficiency);
-        pushChartPoint(efficiency);
+        // feature 계약은 raw 비율 — 표시 전 표준모델/코호트 정규화(0~100)
+        const scored = scoreIndices({ relaxationIndex: efficiency }).relaxationIndex;
+        setCurrentEfficiency(scored);
+        pushChartPoint(scored);
       }
       const focus = event.focus_index ?? event.feature?.focus_index;
-      if (typeof focus === 'number') setFocusIndex(focus);
+      if (typeof focus === 'number') {
+        setFocusIndex(scoreIndices({ focusIndex: focus }).focusIndex);
+      }
       const stress = event.stress_index ?? event.feature?.stress_index;
-      if (typeof stress === 'number') setStressIndex(stress);
+      if (typeof stress === 'number') {
+        setStressIndex(scoreIndices({ stressIndex: stress }).stressIndex);
+      }
       const sq = event.signal_quality ?? event.feature?.signal_quality;
       const sq01 = normalizeSignalQuality01(sq);
       if (sq01 != null) {
@@ -1131,7 +1139,13 @@ export function useBand({
         batteryRef.current = event.band_battery;
       }
       if (event.last_eeg_at) {
-        setLastEegAt(event.last_eeg_at);
+        // 과거 feature 재전송 echo가 lastEegAt을 되돌리면 false stale이 발생 — 최신만 반영
+        const nextAt = event.last_eeg_at;
+        setLastEegAt((prev) => {
+          const prevMs = prev ? new Date(prev).getTime() : 0;
+          const nextMs = new Date(nextAt).getTime();
+          return Number.isFinite(nextMs) && nextMs > prevMs ? nextAt : prev;
+        });
       }
       if (event.upload_status) setUploadStatus(event.upload_status);
     };

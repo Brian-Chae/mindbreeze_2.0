@@ -71,6 +71,14 @@ export function applyEegFeatureToMetricsDetailed(
     (feature?.timestamp != null
       ? new Date(feature.timestamp).toISOString()
       : new Date().toISOString());
+  /** 과거 feature(재전송분)로 행의 last_eeg_at이 되돌아가 false stale이 되지 않게 최신만 취한다 */
+  const newerLastAt = (rowAt: string | null | undefined): string => {
+    const rowMs = rowAt ? new Date(rowAt).getTime() : Number.NaN;
+    const nextMs = new Date(lastAt).getTime();
+    if (!Number.isFinite(nextMs)) return rowAt ?? lastAt;
+    if (!Number.isFinite(rowMs)) return lastAt;
+    return nextMs >= rowMs ? lastAt : (rowAt as string);
+  };
   const bandConnected = event.band_connected ?? true;
   const heartRate =
     event.feature?.heart_rate ?? null;
@@ -90,7 +98,7 @@ export function applyEegFeatureToMetricsDetailed(
       current_efficiency:
         typeof efficiency === 'number' ? efficiency : row.current_efficiency,
       upload_status: event.upload_status ?? 'streaming',
-      last_eeg_at: lastAt,
+      last_eeg_at: newerLastAt(row.last_eeg_at),
       signal_quality: sq01 ?? row.signal_quality ?? null,
       signal_quality_level: sqLevel,
       heart_rate:

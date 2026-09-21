@@ -73,7 +73,7 @@ def test_all_endpoints_require_platform_admin(client, role):
     authenticate(client, role)
     for method, path in [('get', '/baselines'), ('post', '/baselines'),
                          ('delete', '/baselines/1'), ('get', '/models'),
-                         ('post', '/models/compute'), ('get', '/models/active'),
+                         ('post', '/models/compute'),
                          ('post', '/models/1/activate'), ('get', '/active'),
                          ('post', '/baselines/1/activate')]:
         kwargs = {'json': payload()} if path == '/baselines' and method == 'post' else {}
@@ -81,7 +81,8 @@ def test_all_endpoints_require_platform_admin(client, role):
 
 
 def test_unauthenticated(client):
-    assert client.get(f'{ROOT}/models/active').status_code == 401
+    # SDD-092: /models/active 는 집계 분포 파라미터(m/s)만 노출하는 무인증 읽기 — 게스트 지표 정규화용
+    assert client.get(f'{ROOT}/models/active').status_code == 200
 
 
 @pytest.mark.parametrize('invalid', [float('nan'), float('inf'), -float('inf'), True, '1'])
