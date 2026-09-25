@@ -12,7 +12,11 @@ from app.schemas.chat import (
     MessageResponse,
     RoomCreateRequest,
     RoomListResponse,
+    RoomParticipantsAddRequest,
+    RoomParticipantOut,
+    RoomParticipantsResponse,
     RoomResponse,
+    RoomUpdateRequest,
     UnreadCountsResponse,
 )
 from app.services import chat_service
@@ -53,6 +57,57 @@ def get_room(
     db: DBSession = Depends(get_db),
 ):
     return RoomResponse(**chat_service.get_room(room_id, current_user["id"], db))
+
+
+@router.patch("/rooms/{room_id}", response_model=RoomResponse)
+def update_room(
+    room_id: str,
+    payload: RoomUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """채팅방 이름 변경 (SDD-090) — direct/group host 전용, session은 403."""
+    room = chat_service.update_room(room_id, current_user["id"], payload.name, db)
+    return RoomResponse(**room)
+
+
+@router.post("/rooms/{room_id}/participants", response_model=RoomResponse)
+def add_room_participants(
+    room_id: str,
+    payload: RoomParticipantsAddRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 추가 (SDD-090) — group host 전용."""
+    room = chat_service.add_room_participants(
+        room_id, current_user["id"], payload.participant_ids, db
+    )
+    return RoomResponse(**room)
+
+
+@router.get("/rooms/{room_id}/participants", response_model=RoomParticipantsResponse)
+def list_room_participants(
+    room_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 명단 조회 (SDD-090) — group host 전용."""
+    participants = chat_service.get_room_participants(room_id, current_user["id"], db)
+    return RoomParticipantsResponse(
+        participants=[RoomParticipantOut(**p) for p in participants]
+    )
+
+
+@router.delete("/rooms/{room_id}/participants/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_room_participant(
+    room_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 내보내기 (SDD-090) — group host 전용."""
+    chat_service.remove_room_participant(room_id, current_user["id"], user_id, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/rooms/{room_id}/messages", response_model=MessageListResponse)

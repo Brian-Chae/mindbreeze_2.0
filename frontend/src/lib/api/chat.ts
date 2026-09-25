@@ -34,6 +34,11 @@ export interface ChatRoom {
   participant_count: number;
   created_at: string;
   unread_count: number;
+  last_message_at?: string | null;
+  custom_name?: string | null;
+  display_name?: string | null;
+  can_rename?: boolean;
+  rename_disabled_reason?: string | null;
   last_message?: {
     content: string | null;
     created_at: string;
@@ -79,6 +84,32 @@ export const createGroupRoom = (payload: CreateGroupRoomPayload): Promise<ChatRo
 
 export const getChatRoom = (roomId: string): Promise<ChatRoom> =>
   apiClient.get<ChatRoom>(`/chat/rooms/${roomId}`);
+
+export interface UpdateChatRoomPayload {
+  name: string;
+}
+
+export interface ChatRoomParticipant {
+  user_id: string;
+  name: string;
+  joined_at?: string;
+}
+
+export interface ChatRoomParticipantsResponse {
+  participants: ChatRoomParticipant[];
+}
+
+export const updateChatRoom = (roomId: string, payload: UpdateChatRoomPayload): Promise<ChatRoom> =>
+  apiClient.patch<ChatRoom>(`/chat/rooms/${roomId}`, payload);
+
+export const listChatRoomParticipants = (roomId: string): Promise<ChatRoomParticipantsResponse> =>
+  apiClient.get<ChatRoomParticipantsResponse>(`/chat/rooms/${roomId}/participants`);
+
+export const addChatRoomParticipants = (roomId: string, participantIds: string[]): Promise<ChatRoom> =>
+  apiClient.post<ChatRoom>(`/chat/rooms/${roomId}/participants`, { participant_ids: participantIds });
+
+export const removeChatRoomParticipant = (roomId: string, userId: string): Promise<void> =>
+  apiClient.delete<void>(`/chat/rooms/${roomId}/participants/${userId}`);
 
 export const listChatMessages = (roomId: string, limit = 50): Promise<ChatMessageListResponse> =>
   apiClient.get<ChatMessageListResponse>(`/chat/rooms/${roomId}/messages?limit=${limit}`);

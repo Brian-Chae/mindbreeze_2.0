@@ -7,6 +7,11 @@ import { ChatRoom } from '../../components/chat/ChatRoom';
 import { CreateRoomModal } from '../../components/chat/CreateRoomModal';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
+import { ChatSortToggle } from '../../components/chat/ChatSortToggle';
+import { RoomActionsMenu } from '../../components/chat/RoomActionsMenu';
+import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
+import { useChatSortPreference } from '../../hooks/useChatSortPreference';
+import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 function formatSessionDate(iso: string | null | undefined): string {
   if (!iso) return '세션 채팅';
@@ -21,15 +26,8 @@ function formatSessionDate(iso: string | null | undefined): string {
 function roomLabel(room: ChatRoomDto): string {
   const count = room.participant_count ?? 0;
   const countStr = count > 0 ? ` (${count}명)` : '';
-  
-  if (room.room_type === 'direct') {
-    return `${room.peer_name || '1:1 채팅'}${countStr}`;
-  }
-  if (room.room_type === 'group') {
-    return `${room.name || '그룹 채팅'}${countStr}`;
-  }
-  const label = room.session_title || '세션';
-  return `${label}${countStr}`;
+
+  return `${chatRoomDisplayName(room)}${countStr}`;
 }
 
 function roomSub(room: ChatRoomDto): string {
@@ -43,25 +41,42 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const rooms = useChatStore((s) => s.rooms);
   const setRooms = useChatStore((s) => s.setRooms);
+  const sortPreference = useChatSortPreference();
+  const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.mode, sortPreference.unreadFirst), [rooms, sortPreference.mode, sortPreference.unreadFirst]);
+  const [settingsRoom, setSettingsRoom] = useState<ChatRoomDto | null>(null);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
+    if (!status) return;
+    const timer = window.setTimeout(() => setStatus(''), 4000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listChatRooms()
+    let requestId = 0;
+    const refreshRooms = () => {
+      const currentRequest = ++requestId;
+      void listChatRooms()
       .then((res) => {
-        if (cancelled) return;
+        if (cancelled || currentRequest !== requestId) return;
+        setError(null);
         setRooms(res.rooms);
         setLoading(false);
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled || currentRequest !== requestId) return;
         setError(err instanceof Error ? err.message : '로딩 실패');
         setLoading(false);
       });
-    return () => { cancelled = true; };
+    };
+    refreshRooms();
+    window.addEventListener('focus', refreshRooms);
+    return () => { cancelled = true; window.removeEventListener('focus', refreshRooms); };
   }, [setRooms]);
 
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
@@ -108,6 +123,7 @@ export default function ChatPage() {
             </button>
           </div>
 
+          <ChatSortToggle {...sortPreference} />
           {loading ? (
             <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중…</div>
           ) : error ? (
@@ -119,14 +135,14 @@ export default function ChatPage() {
             </div>
           ) : (
             <ul className="divide-y divide-[#EFEFEF]">
-              {rooms.map((room) => {
+              {sortedRooms.map((room) => {
                 const isActive = room.id === paramRoomId;
                 return (
-                  <li key={room.id}>
+                  <li key={room.id} className={`flex items-center ${isActive ? 'bg-[#F5EDFC]' : ''}`}>
                     <button
                       type="button"
                       onClick={() => handleSelect(room)}
-                        className={`w-full text-left flex items-center gap-3 px-5 py-4 transition-colors ${isActive ? 'bg-[#F5EDFC]' : 'hover:bg-[#F8F8FB]'}`}
+                        className={`min-w-0 flex-1 text-left flex items-center gap-3 px-5 py-4 transition-colors ${isActive ? 'bg-[#F5EDFC]' : 'hover:bg-[#F8F8FB]'}`}
                     >
                       <div className="w-11 h-11 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold shrink-0">
                         {room.room_type === 'direct' ? '1:1' : '#'}
@@ -137,11 +153,11 @@ export default function ChatPage() {
                             {roomLabel(room)}
                           </span>
                           <span className="text-[11px] text-[#6F6F6F] font-mono shrink-0">
-                            {new Date(room.created_at).toLocaleDateString('ko-KR')}
+                            {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                           </span>
                         </div>
                         <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">
-                          {roomSub(room)}
+                          {lastMessagePreview(room, roomSub(room))}
                         </p>
                       </div>
                       {room.unread_count > 0 && (
@@ -150,6 +166,7 @@ export default function ChatPage() {
                         </span>
                       )}
                     </button>
+                    <RoomActionsMenu room={room} onSettings={() => setSettingsRoom(room)} />
                   </li>
                 );
               })}
@@ -190,6 +207,8 @@ export default function ChatPage() {
         </main>
       </div>
 
+      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white">{status}</p>}
+      {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} />}
       <CreateRoomModal open={showCreate} onClose={() => setShowCreate(false)} />
     </AppShell>
   );

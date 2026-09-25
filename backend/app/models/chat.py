@@ -22,6 +22,8 @@ class ChatRoom(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # SDD-090: 사용자 지정 표시 이름 — direct 방의 name(=내담자 ID 저장소)을 보존하기 위한 별도 컬럼
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     messages = relationship("ChatMessage", back_populates="room", cascade="all, delete-orphan")

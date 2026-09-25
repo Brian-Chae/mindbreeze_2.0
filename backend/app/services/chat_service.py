@@ -1,7 +1,7 @@
 """채팅 비즈니스 로직"""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -302,7 +302,68 @@ def _peer_name_for_direct(room: ChatRoom, user_id: UUID, db: DBSession) -> str |
     return peer.name if peer else None
 
 
-def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
+# _serialize_room의 last_msg 기본값 — 미전달 시 해당 방 1건만 단건 조회
+_LAST_MSG_UNSET = object()
+
+
+def _last_messages_for_rooms(room_ids: list[UUID], db: DBSession) -> dict[str, ChatMessage]:
+    """방별 최신 메시지 1건 일괄 조회 (SDD-090).
+
+    PostgreSQL은 DISTINCT ON 단일 쿼리, 그 외(테스트용 SQLite)는 조회 후 축약.
+    """
+    if not room_ids:
+        return {}
+    if db.get_bind().dialect.name == "postgresql":
+        rows = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.room_id.in_(room_ids))
+            .order_by(ChatMessage.room_id, ChatMessage.created_at.desc())
+            .distinct(ChatMessage.room_id)
+            .all()
+        )
+        return {str(r.room_id): r for r in rows}
+    # SQLite fallback: 오래된 순으로 순회하며 덮어쓰기 → 방별 마지막 값이 최신
+    result: dict[str, ChatMessage] = {}
+    for m in (
+        db.query(ChatMessage)
+        .filter(ChatMessage.room_id.in_(room_ids))
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    ):
+        result[str(m.room_id)] = m
+    return result
+
+
+def _last_message_preview(m: ChatMessage | None) -> tuple[dict | None, datetime | None]:
+    """마지막 메시지 → 미리보기 dict + 시각. image/file은 대체 문구로 내려준다."""
+    if not m:
+        return None, None
+    content = m.content
+    if m.type == "image":
+        content = "사진"
+    elif m.type == "file":
+        content = "파일"
+    created = m.created_at or datetime.utcnow()
+    return {"content": content, "created_at": created}, created
+
+
+def _can_rename_room(room: ChatRoom, uid: UUID) -> tuple[bool, str | None]:
+    """이름 변경 권한 계산 (SDD-090).
+
+    - session 방은 이름이 세션 제목을 따르므로 항상 변경 불가 (세션 host 여부는
+      Session.host_id 기준이지만, host라도 이 API로는 변경 금지).
+    - direct/group은 실제 host(상담사)만 허용. 기관·플랫폼 관리자 우회 없음.
+    """
+    if room.room_type == "session" or room.session_id:
+        return False, "session_managed"
+    if not room.host_id:
+        return False, "host_missing"
+    if room.host_id != uid:
+        return False, "not_host"
+    return True, None
+
+
+def _serialize_room(room: ChatRoom, user_id: str, db: DBSession, last_msg=_LAST_MSG_UNSET) -> dict:
     uid = _uuid(user_id)
     # 참여자 수 계산
     count = _participant_count(room, db)
@@ -314,19 +375,41 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
         if session:
             session_title = session.title
             session_scheduled_at = session.scheduled_at
+    # ── SDD-090: 마지막 메시지 (목록은 일괄 조회 결과 주입, 단건 경로는 여기서 조회) ──
+    if last_msg is _LAST_MSG_UNSET:
+        last_msg = _last_messages_for_rooms([room.id], db).get(str(room.id))
+    last_message, last_message_at = _last_message_preview(last_msg)
+    # ── SDD-090: 표시 이름·이름 변경 권한 계산 ──
+    peer_name = _peer_name_for_direct(room, uid, db)
+    can_rename, rename_disabled_reason = _can_rename_room(room, uid)
+    if room.room_type == "direct":
+        custom_name = room.display_name
+        display_name = custom_name or peer_name or "1:1 채팅"
+    elif room.room_type == "group":
+        custom_name = room.name
+        display_name = custom_name or "그룹 채팅"
+    else:
+        custom_name = None
+        display_name = session_title or "세션"
     return {
         "id": str(room.id),
         "session_id": str(room.session_id) if room.session_id else None,
         "room_type": room.room_type,
         "host_id": str(room.host_id) if room.host_id else None,
         "name": room.name,
-        "peer_name": _peer_name_for_direct(room, uid, db),
+        "peer_name": peer_name,
         "peer_id": _peer_id_for_direct(room, uid),
         "session_title": session_title,
         "session_scheduled_at": session_scheduled_at,
         "participant_count": count,
         "created_at": room.created_at or datetime.utcnow(),
         "unread_count": _unread_count(room, user_id, db),
+        "last_message": last_message,
+        "last_message_at": last_message_at,
+        "custom_name": custom_name,
+        "display_name": display_name,
+        "can_rename": can_rename,
+        "rename_disabled_reason": rename_disabled_reason,
     }
 
 
@@ -388,10 +471,9 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
         .all()
     )
     sessions = {s.id: s for s in hosted + participated}
-    result: list[dict] = []
+    rooms: list[ChatRoom] = []
     for s in sessions.values():
-        room = get_or_create_room_by_session(s.id, db)
-        result.append(_serialize_room(room, user_id, db))
+        rooms.append(get_or_create_room_by_session(s.id, db))
 
     # 직접방: 본인이 host(상담사) 이거나, link 상대(내담자)인 경우
     as_host = (
@@ -417,8 +499,7 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     direct_seen: dict[UUID, ChatRoom] = {}
     for r in as_host + as_client:
         direct_seen.setdefault(r.id, r)
-    for r in direct_seen.values():
-        result.append(_serialize_room(r, user_id, db))
+    rooms.extend(direct_seen.values())
 
     # 그룹방: 본인이 host(상담사) 이거나 ChatRoomParticipant 인 경우
     group_as_host = (
@@ -435,8 +516,23 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     group_seen: dict[UUID, ChatRoom] = {}
     for r in group_as_host + group_as_participant:
         group_seen.setdefault(r.id, r)
-    for r in group_seen.values():
-        result.append(_serialize_room(r, user_id, db))
+    rooms.extend(group_seen.values())
+
+    # ── SDD-090: 방별 마지막 메시지 일괄 조회 후 주입 (방마다 개별 쿼리 금지) ──
+    last_map = _last_messages_for_rooms([r.id for r in rooms], db)
+    result = [
+        _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id))) for r in rooms
+    ]
+
+    # ── SDD-090: 기본 정렬 — 최근 대화 시각(없으면 방 생성 시각) 내림차순 ──
+    def _sort_ts(r: dict) -> datetime:
+        ts = r["last_message_at"] or r["created_at"]
+        # naive/aware 혼재 시 비교 오류 방지 (SQLite naive ↔ PostgreSQL aware)
+        if ts.tzinfo is None:
+            return ts.replace(tzinfo=timezone.utc)
+        return ts
+
+    result.sort(key=_sort_ts, reverse=True)
     return result
 
 
@@ -447,6 +543,123 @@ def get_room(room_id: str, user_id: str, db: DBSession) -> dict:
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
     _ensure_member(room, user_id, db)
     return _serialize_room(room, user_id, db)
+
+
+_RENAME_DENY_DETAIL = {
+    "session_managed": "세션 채팅방 이름은 세션 제목을 따릅니다",
+    "host_missing": "이름을 변경할 수 있는 방장이 없습니다",
+    "not_host": "방장만 채팅방 이름을 변경할 수 있습니다",
+}
+
+
+def update_room(room_id: str, user_id: str, name: str, db: DBSession) -> dict:
+    """채팅방 이름 변경 (SDD-090).
+
+    - direct: name(=내담자 ID 저장소)은 절대 덮어쓰지 않고 display_name에 저장
+    - group: 기존 name 갱신
+    - session: 403 (세션 제목을 따름)
+    """
+    rid = _uuid(room_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    _ensure_member(room, user_id, db)
+    ok, reason = _can_rename_room(room, _uuid(user_id))
+    if not ok:
+        raise HTTPException(
+            status_code=403,
+            detail=_RENAME_DENY_DETAIL.get(reason, "이름 변경 권한이 없습니다"),
+        )
+    if room.room_type == "direct":
+        room.display_name = name
+    else:
+        room.name = name
+    db.commit()
+    db.refresh(room)
+    return _serialize_room(room, user_id, db)
+
+
+def _ensure_group_host(room_id: str, user_id: str, db: DBSession) -> tuple[ChatRoom, UUID]:
+    """그룹방 + host 검증 공통 처리 (참여자 관리 전용, SDD-090)."""
+    rid = _uuid(room_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    if room.room_type != "group":
+        raise HTTPException(status_code=403, detail="그룹 채팅방만 참여자를 관리할 수 있습니다")
+    uid = _uuid(user_id)
+    if room.host_id != uid:
+        raise HTTPException(status_code=403, detail="방장만 참여자를 관리할 수 있습니다")
+    return room, uid
+
+
+def add_room_participants(room_id: str, user_id: str, participant_ids: list[str], db: DBSession) -> dict:
+    """그룹방 참여자 추가 (SDD-090). 기존 생성 정책(Link OR 공유 기관) 재검증."""
+    room, uid = _ensure_group_host(room_id, user_id, db)
+    existing = {
+        p.user_id
+        for p in db.query(ChatRoomParticipant)
+        .filter(ChatRoomParticipant.room_id == room.id)
+        .all()
+    }
+    for pid in participant_ids:
+        puid = _uuid(pid)
+        if puid == uid or puid in existing:
+            continue
+        link = (
+            db.query(ClientCounselorLink)
+            .filter(
+                ClientCounselorLink.counselor_id == uid,
+                ClientCounselorLink.client_id == puid,
+            )
+            .first()
+        )
+        if not link and not _share_org(uid, puid, db):
+            raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
+        db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
+        existing.add(puid)
+    db.commit()
+    return _serialize_room(room, user_id, db)
+
+
+def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db: DBSession) -> None:
+    """그룹방 참여자 내보내기 (SDD-090). 제거 즉시 방 접근·메시지 수신에서 제외된다."""
+    room, uid = _ensure_group_host(room_id, user_id, db)
+    tuid = _uuid(target_user_id)
+    if tuid == uid:
+        raise HTTPException(status_code=422, detail="방장은 내보낼 수 없습니다")
+    row = (
+        db.query(ChatRoomParticipant)
+        .filter(
+            ChatRoomParticipant.room_id == room.id,
+            ChatRoomParticipant.user_id == tuid,
+        )
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+    db.delete(row)
+    db.commit()
+
+
+def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dict]:
+    """그룹방 참여자 명단 조회 (SDD-090). host 전용."""
+    room, _uid = _ensure_group_host(room_id, user_id, db)
+    rows = (
+        db.query(ChatRoomParticipant, User)
+        .join(User, User.id == ChatRoomParticipant.user_id)
+        .filter(ChatRoomParticipant.room_id == room.id)
+        .order_by(ChatRoomParticipant.joined_at)
+        .all()
+    )
+    return [
+        {
+            "user_id": str(p.user_id),
+            "name": u.name if u else "알 수 없음",
+            "joined_at": p.joined_at,
+        }
+        for p, u in rows
+    ]
 
 
 def list_messages(room_id: str, user_id: str, db: DBSession, limit: int = 50) -> list[dict]:

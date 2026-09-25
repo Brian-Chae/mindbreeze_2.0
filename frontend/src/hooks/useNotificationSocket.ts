@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useChatStore } from '../stores/chatStore';
+import { getChatRoom } from '../lib/api/chat';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -32,6 +33,7 @@ export function useNotificationSocket() {
     });
 
     socketRef.current = socket;
+    let disposed = false;
 
     socket.on('connect', () => {
       console.log('[WS] socket.io connected to', SOCKET_URL);
@@ -65,6 +67,18 @@ export function useNotificationSocket() {
           roomId,
         });
       }
+      // 미선택 방은 메시지 전문을 수신하지 않아 서버의 정확한 미리보기/시각을 조회한다.
+      if (data.type === 'chat' && roomId) {
+        void getChatRoom(roomId).then((room) => {
+          if (disposed) return;
+          const store = useChatStore.getState();
+          if (!store.rooms.some((item) => item.id === roomId)) {
+            store.setRooms([...store.rooms, room]);
+          } else if (room.last_message) {
+            store.updateRoomLastMessage(roomId, room.last_message);
+          }
+        }).catch(() => { /* 재진입 시 목록 조회로 복구한다. */ });
+      }
       // 채팅 알림이면 사이드바 채팅 unread도 증가 (보고 있는 방 제외)
       if (data.type === 'chat' && roomId && !isViewingRoom) {
         useChatStore.getState().incrementUnread(roomId);
@@ -75,6 +89,7 @@ export function useNotificationSocket() {
     fetch();
 
     return () => {
+      disposed = true;
       socket.off('new_notification');
       socket.off('connect');
       socket.off('connect_error');

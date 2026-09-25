@@ -358,3 +358,354 @@ def test_17_발신자_자동읽음_확인(client):
     assert body["unread_count"] == 0  # 발신자는 자동 읽음이므로 unread=0
     assert host["id"] in body["read_by"]
     assert body["recipient_count"] >= 1
+
+
+# ── SDD-090: 채팅방 정렬 · 설정(이름 변경) · 그룹 참여자 관리 ──
+
+
+def _test_db():
+    """테스트 DB 세션 획득 (test_10 패턴). (generator, session) 반환."""
+    from app.core.database import get_db
+    from app.main import app as fastapi_app
+
+    db_gen = fastapi_app.dependency_overrides[get_db]()
+    return db_gen, next(db_gen)
+
+
+def _close_db(db_gen):
+    try:
+        next(db_gen)
+    except StopIteration:
+        pass
+
+
+def _link(counselor_id: str, client_id: str):
+    """상담사-내담자 연결(ClientCounselorLink) 직접 생성."""
+    from app.models.client_counselor_link import ClientCounselorLink
+
+    db_gen, db = _test_db()
+    try:
+        db.add(ClientCounselorLink(client_id=client_id, counselor_id=counselor_id))
+        db.commit()
+    finally:
+        _close_db(db_gen)
+
+
+def _bump_last_message(room_id: str, minutes: int):
+    """방의 마지막 메시지 created_at을 미래로 이동 (SQLite 초 단위 동률 회피)."""
+    from datetime import datetime as dt, timedelta as td
+    from app.models.chat import ChatMessage
+
+    db_gen, db = _test_db()
+    try:
+        msg = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.room_id == room_id)
+            .order_by(ChatMessage.created_at.desc())
+            .first()
+        )
+        assert msg is not None
+        msg.created_at = dt.utcnow() + td(minutes=minutes)
+        db.commit()
+    finally:
+        _close_db(db_gen)
+
+
+def test_18_방목록_last_message_정렬(client):
+    """마지막 메시지가 최신인 방이 목록 최상단 + last_message 미리보기 포함"""
+    host = _register(client, "chat18@test.com")
+    s1 = _create_session(client, host["auth"], title="첫 세션")
+    s2 = _create_session(client, host["auth"], title="둘째 세션", scheduled_at=_future(240))
+    room1 = _room_for_session(client, host["auth"], s1["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{room1}/messages",
+        json={"content": "정렬 테스트", "type": "text"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201
+    _bump_last_message(room1, minutes=10)
+
+    rooms = client.get("/api/v1/chat/rooms", headers=host["auth"]).json()["rooms"]
+    assert rooms[0]["id"] == room1  # 최근 대화 방이 최상단
+    assert rooms[0]["last_message"]["content"] == "정렬 테스트"
+    assert rooms[0]["last_message_at"] is not None
+    # 메시지 없는 방은 last_message null (하위 호환 필드 유지)
+    room2 = next(r for r in rooms if r["session_id"] == s2["id"])
+    assert room2["last_message"] is None
+    assert room2["last_message_at"] is None
+
+
+def test_19_last_message_이미지_대체문구(client):
+    """마지막 메시지가 image면 미리보기 content는 '사진'"""
+    host = _register(client, "chat19@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/messages",
+        json={"content": "cat.png", "type": "image", "file_url": "https://x/cat.png"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201
+    rooms = client.get("/api/v1/chat/rooms", headers=host["auth"]).json()["rooms"]
+    target = next(r for r in rooms if r["id"] == room_id)
+    assert target["last_message"]["content"] == "사진"
+
+
+def test_20_그룹방_이름변경_host_성공(client):
+    host = _register(client, "chat20host@test.com")
+    member = _register(client, "chat20c@test.com", role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [member["id"]], "name": "원래 이름"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    room_id = res.json()["id"]
+    res = client.patch(
+        f"/api/v1/chat/rooms/{room_id}",
+        json={"name": "  새 그룹 이름  "},
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["name"] == "새 그룹 이름"  # group은 name 갱신 (trim 적용)
+    assert body["custom_name"] == "새 그룹 이름"
+    assert body["display_name"] == "새 그룹 이름"
+    assert body["can_rename"] is True
+    assert body["rename_disabled_reason"] is None
+
+
+def test_21_direct_이름변경_name필드_보존(client):
+    """direct 방 이름 변경 시 name(=내담자 ID)은 보존, display_name에만 저장"""
+    host = _register(client, "chat21host@test.com")
+    member = _register(client, "chat21c@test.com", role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "direct", "client_id": member["id"]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    room_id = res.json()["id"]
+    res = client.patch(
+        f"/api/v1/chat/rooms/{room_id}",
+        json={"name": "우리 상담방"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["name"] == member["id"]  # 내담자 ID 저장소 보존
+    assert body["custom_name"] == "우리 상담방"
+    assert body["display_name"] == "우리 상담방"
+    # 방 재사용 생성 요청이 이름을 덮어쓰지 않는지 회귀 확인
+    res2 = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "direct", "client_id": member["id"], "name": "다른이름"},
+        headers=host["auth"],
+    )
+    assert res2.status_code == 201
+    assert res2.json()["id"] == room_id
+    assert res2.json()["custom_name"] == "우리 상담방"
+
+
+def test_22_비host_이름변경_403(client):
+    """내담자(비 host)는 direct 방 이름 변경 불가 + can_rename 필드 확인"""
+    host = _register(client, "chat22host@test.com")
+    member = _register(client, "chat22c@test.com", role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "direct", "client_id": member["id"]},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    res = client.patch(
+        f"/api/v1/chat/rooms/{room_id}",
+        json={"name": "내 마음대로"},
+        headers=member["auth"],
+    )
+    assert res.status_code == 403
+    # 내담자 조회 시 can_rename=false / not_host
+    info = client.get(f"/api/v1/chat/rooms/{room_id}", headers=member["auth"]).json()
+    assert info["can_rename"] is False
+    assert info["rename_disabled_reason"] == "not_host"
+
+
+def test_23_session방_이름변경_403(client):
+    """session 방은 host여도 이름 변경 403 (세션 제목을 따름)"""
+    host = _register(client, "chat23@test.com")
+    s = _create_session(client, host["auth"])
+    room_id = _room_for_session(client, host["auth"], s["id"])
+    res = client.patch(
+        f"/api/v1/chat/rooms/{room_id}",
+        json={"name": "바꿔보기"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 403
+    info = client.get(f"/api/v1/chat/rooms/{room_id}", headers=host["auth"]).json()
+    assert info["can_rename"] is False
+    assert info["rename_disabled_reason"] == "session_managed"
+
+
+def test_24_이름_유효성_422(client):
+    host = _register(client, "chat24host@test.com")
+    member = _register(client, "chat24c@test.com", role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [member["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    # 공백만
+    assert client.patch(
+        f"/api/v1/chat/rooms/{room_id}", json={"name": "   "}, headers=host["auth"]
+    ).status_code == 422
+    # 121자
+    assert client.patch(
+        f"/api/v1/chat/rooms/{room_id}", json={"name": "가" * 121}, headers=host["auth"]
+    ).status_code == 422
+    # 줄바꿈 포함
+    assert client.patch(
+        f"/api/v1/chat/rooms/{room_id}", json={"name": "줄\n바꿈"}, headers=host["auth"]
+    ).status_code == 422
+    # 허용하지 않은 필드
+    assert client.patch(
+        f"/api/v1/chat/rooms/{room_id}",
+        json={"name": "정상", "host_id": host["id"]},
+        headers=host["auth"],
+    ).status_code == 422
+    # 120자는 성공
+    assert client.patch(
+        f"/api/v1/chat/rooms/{room_id}", json={"name": "가" * 120}, headers=host["auth"]
+    ).status_code == 200
+
+
+def test_25_그룹_참여자_추가(client):
+    host = _register(client, "chat25host@test.com")
+    m1 = _register(client, "chat25c1@test.com", role="client")
+    m2 = _register(client, "chat25c2@test.com", role="client")
+    _link(host["id"], m1["id"])
+    _link(host["id"], m2["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [m1["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    assert res.json()["participant_count"] == 2  # m1 + host
+
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/participants",
+        json={"participant_ids": [m2["id"]]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["participant_count"] == 3
+    # 추가된 참여자는 방 접근 가능
+    res = client.get(f"/api/v1/chat/rooms/{room_id}/messages", headers=m2["auth"])
+    assert res.status_code == 200
+    # 중복 추가는 무시 (참여자 수 불변)
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/participants",
+        json={"participant_ids": [m2["id"]]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 200
+    assert res.json()["participant_count"] == 3
+
+
+def test_26_참여자_추가_비host_403(client):
+    host = _register(client, "chat26host@test.com")
+    m1 = _register(client, "chat26c1@test.com", role="client")
+    m2 = _register(client, "chat26c2@test.com", role="client")
+    _link(host["id"], m1["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [m1["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/participants",
+        json={"participant_ids": [m2["id"]]},
+        headers=m1["auth"],
+    )
+    assert res.status_code == 403
+
+
+def test_27_참여자_내보내기_접근회수(client):
+    host = _register(client, "chat27host@test.com")
+    m1 = _register(client, "chat27c1@test.com", role="client")
+    _link(host["id"], m1["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [m1["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    assert client.get(f"/api/v1/chat/rooms/{room_id}/messages", headers=m1["auth"]).status_code == 200
+
+    res = client.delete(
+        f"/api/v1/chat/rooms/{room_id}/participants/{m1['id']}",
+        headers=host["auth"],
+    )
+    assert res.status_code == 204
+    # 내보낸 참여자는 즉시 접근 회수
+    assert client.get(f"/api/v1/chat/rooms/{room_id}/messages", headers=m1["auth"]).status_code == 403
+    # 이미 내보낸 참여자 재삭제는 404
+    res = client.delete(
+        f"/api/v1/chat/rooms/{room_id}/participants/{m1['id']}",
+        headers=host["auth"],
+    )
+    assert res.status_code == 404
+
+
+def test_28_direct방_참여자관리_403(client):
+    """direct/session 방은 참여자 관리 제외 (group 전용)"""
+    host = _register(client, "chat28host@test.com")
+    member = _register(client, "chat28c@test.com", role="client")
+    other = _register(client, "chat28o@test.com", role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "direct", "client_id": member["id"]},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/participants",
+        json={"participant_ids": [other["id"]]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 403
+    # session 방도 동일
+    s = _create_session(client, host["auth"])
+    session_room = _room_for_session(client, host["auth"], s["id"])
+    res = client.post(
+        f"/api/v1/chat/rooms/{session_room}/participants",
+        json={"participant_ids": [other["id"]]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 403
+
+
+def test_29_참여자_추가_미연결_403(client):
+    """연결(Link)도 공유 기관도 없는 사용자 추가는 403"""
+    host = _register(client, "chat29host@test.com")
+    m1 = _register(client, "chat29c1@test.com", role="client")
+    stranger = _register(client, "chat29s@test.com", role="client")
+    _link(host["id"], m1["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [m1["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    room_id = res.json()["id"]
+    res = client.post(
+        f"/api/v1/chat/rooms/{room_id}/participants",
+        json={"participant_ids": [stranger["id"]]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 403

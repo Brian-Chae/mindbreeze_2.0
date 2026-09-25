@@ -9,6 +9,8 @@ interface ChatState {
   activeRoomId: string | null;
 
   setRooms: (rooms: ChatRoom[]) => void;
+  updateRoom: (roomId: string, changes: Partial<ChatRoom>) => void;
+  updateRoomLastMessage: (roomId: string, preview: NonNullable<ChatRoom["last_message"]>) => void;
   setMessages: (roomId: string, messages: ChatMessage[]) => void;
   appendMessage: (roomId: string, message: ChatMessage) => void;
   setActiveRoom: (roomId: string | null) => void;
@@ -19,24 +21,40 @@ interface ChatState {
   markAllMessagesRead: (roomId: string, readerId?: string) => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   rooms: [],
   messagesByRoom: {},
   activeRoomId: null,
 
   setRooms: (rooms) => set({ rooms }),
+  updateRoom: (roomId, changes) => set((state) => ({
+    rooms: state.rooms.map((room) => room.id === roomId ? { ...room, ...changes, id: room.id } : room),
+  })),
+  updateRoomLastMessage: (roomId, preview) => set((state) => ({
+    rooms: state.rooms.map((room) => {
+      if (room.id !== roomId) return room;
+      const previous = room.last_message_at ?? room.last_message?.created_at;
+      if (previous && Date.parse(previous) > Date.parse(preview.created_at)) return room;
+      return { ...room, last_message: { ...preview }, last_message_at: preview.created_at };
+    }),
+  })),
   setMessages: (roomId, messages) =>
     set((state) => ({
       messagesByRoom: { ...state.messagesByRoom, [roomId]: messages },
     })),
-  appendMessage: (roomId, message) =>
+  appendMessage: (roomId, message) => {
+    get().updateRoomLastMessage(roomId, {
+      content: message.type === 'image' ? '사진' : message.type === 'file' ? '파일' : message.content,
+      created_at: message.created_at,
+    });
     set((state) => {
       const prev = state.messagesByRoom[roomId] ?? [];
       if (prev.some((m) => m.id === message.id)) return state;
       return {
         messagesByRoom: { ...state.messagesByRoom, [roomId]: [message, ...prev] },
       };
-    }),
+    });
+  },
   setActiveRoom: (roomId) => set({ activeRoomId: roomId }),
   clearRoomUnread: (roomId) =>
     set((state) => ({
