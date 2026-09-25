@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
 from app.models.session import Session, SessionParticipant
 from app.models.client_counselor_link import ClientCounselorLink
+from app.models.user_org_membership import UserOrgMembership
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,28 @@ def _uuid(v: str) -> UUID:
         return UUID(str(v))
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
+
+
+def _share_org(counselor_id, client_id, db: DBSession) -> bool:
+    """상담사와 내담자가 같은 기관(멤버십)에 소속되어 있는지 확인 (SDD-089).
+
+    - 상담사 소속 기관 = UserOrgMembership(status='active')의 org_id 집합
+    - 내담자 소속 기관 = User.org_id (단일)
+    """
+    client = db.query(User).filter(User.id == client_id).first()
+    client_org = client.org_id if client else None
+    if not client_org:
+        return False
+    counselor_org_ids = [
+        m.org_id
+        for m in db.query(UserOrgMembership)
+        .filter(
+            UserOrgMembership.user_id == counselor_id,
+            UserOrgMembership.status == "active",
+        )
+        .all()
+    ]
+    return client_org in counselor_org_ids
 
 
 def get_user_chat_room_ids(user_id: str, db: DBSession) -> list[str]:
@@ -104,7 +127,7 @@ def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | Non
             )
             .first()
         )
-        if not link:
+        if not link and not _share_org(room.host_id, uid, db):
             raise HTTPException(status_code=403, detail="채팅방 접근 권한이 없습니다")
         return None
     if room.room_type == "group":
@@ -205,7 +228,7 @@ def create_group_room(
             )
             .first()
         )
-        if not link:
+        if not link and not _share_org(host_uuid, puid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
         participant_uuids.append(puid)
     if not participant_uuids:
@@ -246,7 +269,7 @@ def create_room(
             )
             .first()
         )
-        if not link:
+        if not link and not _share_org(counselor_uuid, client_uuid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자입니다")
         room = get_or_create_direct_room(counselor_uuid, client_uuid, db)
         return _serialize_room(room, host_id, db)

@@ -88,6 +88,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: ICONS.home },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
+  { to: '/chat', label: '채팅', icon: ICONS.message },
   { to: '/reports', label: '리포트', icon: ICONS.report },
   { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
   { to: '/notifications', label: '알림', icon: ICONS.bell },
@@ -98,6 +99,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
+  { to: '/chat', label: '채팅', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
   { to: '/org/counselors', label: '상담사', icon: ICONS.users },
   { to: '/reports', label: '리포트', icon: ICONS.report },
@@ -108,6 +110,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home, end: true },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
   { to: '/app/notifications', label: '알림', icon: ICONS.bell },
   { to: '/app/profile', label: '설정', icon: ICONS.settings },
