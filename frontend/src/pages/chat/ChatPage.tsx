@@ -8,6 +8,16 @@ import { CreateRoomModal } from '../../components/chat/CreateRoomModal';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 
+function formatSessionDate(iso: string | null | undefined): string {
+  if (!iso) return '세션 채팅';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '세션 채팅';
+  const day = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  const hh = d.getHours();
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day}) ${hh}:${mm}`;
+}
+
 function roomLabel(room: ChatRoomDto): string {
   const count = room.participant_count ?? 0;
   const countStr = count > 0 ? ` (${count}명)` : '';
@@ -18,14 +28,14 @@ function roomLabel(room: ChatRoomDto): string {
   if (room.room_type === 'group') {
     return `${room.name || '그룹 채팅'}${countStr}`;
   }
-  const label = room.session_id ? `세션 ${room.session_id.slice(0, 8)}` : '채팅방';
+  const label = room.session_title || '세션';
   return `${label}${countStr}`;
 }
 
 function roomSub(room: ChatRoomDto): string {
   if (room.room_type === 'direct') return '1:1 대화';
   if (room.room_type === 'group') return '그룹 대화';
-  return '세션 채팅';
+  return formatSessionDate(room.session_scheduled_at);
 }
 
 export default function ChatPage() {

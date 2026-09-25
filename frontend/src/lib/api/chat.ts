@@ -29,6 +29,8 @@ export interface ChatRoom {
   name: string | null;
   peer_name: string | null;
   peer_id: string | null;
+  session_title: string | null;
+  session_scheduled_at: string | null;
   participant_count: number;
   created_at: string;
   unread_count: number;

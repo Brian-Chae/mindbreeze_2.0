@@ -20,13 +20,34 @@ function getInitials(name: string | null): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+/** 세션 일자 포맷 (M월 D일 (요일) HH:mm) */
+function formatSessionDate(iso: string | null | undefined): string {
+  if (!iso) return '세션 채팅';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '세션 채팅';
+  const day = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day}) ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** 방 표시 제목 */
+function roomDisplayName(room: ChatRoomDto): string {
+  if (room.room_type === 'direct') return room.peer_name || '1:1 채팅';
+  if (room.room_type === 'group') return room.name || '그룹 채팅';
+  return room.session_title || '세션';
+}
+
+/** 방 부제목 */
+function roomDisplaySub(room: ChatRoomDto): string {
+  if (room.room_type === 'direct') return '1:1 대화';
+  if (room.room_type === 'group') return '그룹 대화';
+  return formatSessionDate(room.session_scheduled_at);
+}
+
 /** 마지막 메시지 미리보기 (40자 제한) */
 function lastMessagePreview(room: ChatRoomDto): string {
   const content = room.last_message?.content;
   if (!content) {
-    if (room.room_type === 'direct') return '1:1 대화';
-    if (room.room_type === 'group') return '그룹 대화';
-    return '세션 채팅';
+    return roomDisplaySub(room);
   }
   return content.length > 40 ? content.slice(0, 40) + '...' : content;
 }
@@ -87,14 +108,12 @@ export default function ClientChatPage() {
 
   const headerTitle = useMemo(() => {
     if (!selectedRoom) return '채팅';
-    return selectedRoom.peer_name || selectedRoom.name || '채팅방';
+    return roomDisplayName(selectedRoom);
   }, [selectedRoom]);
 
   const headerSub = useMemo(() => {
     if (!selectedRoom) return 'MESSAGES';
-    if (selectedRoom.room_type === 'direct') return '1:1 대화';
-    if (selectedRoom.room_type === 'group') return '그룹 대화';
-    return '세션 채팅';
+    return roomDisplaySub(selectedRoom);
   }, [selectedRoom]);
 
   return (
@@ -157,7 +176,7 @@ export default function ClientChatPage() {
                         {/* 상담사 아바타 (이니셜) */}
                         <div className="w-11 h-11 rounded-full bg-[#EFEFEF] flex items-center justify-center shrink-0 ring-2 ring-[#5F0080]/20">
                           <span className="text-sm font-bold text-[#5F0080]">
-                            {getInitials(room.peer_name || room.name)}
+                            {room.room_type === 'direct' ? getInitials(room.peer_name || room.name) : '#'}
                           </span>
                         </div>
 
@@ -165,7 +184,7 @@ export default function ClientChatPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[14px] font-semibold text-[#1F1F1F] truncate">
-                              {room.peer_name || room.name || '채팅방'}
+                              {roomDisplayName(room)}
                             </span>
                             {room.last_message?.created_at && (
                               <span className="text-[11px] text-[#9CA0AE] shrink-0">

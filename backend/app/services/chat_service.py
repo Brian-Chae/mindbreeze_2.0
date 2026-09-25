@@ -306,6 +306,14 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
     uid = _uuid(user_id)
     # 참여자 수 계산
     count = _participant_count(room, db)
+    # 세션 방이면 세션 제목·일자 포함 (목록에서 세션 식별)
+    session_title = None
+    session_scheduled_at = None
+    if room.session_id:
+        session = db.query(Session).filter(Session.id == room.session_id).first()
+        if session:
+            session_title = session.title
+            session_scheduled_at = session.scheduled_at
     return {
         "id": str(room.id),
         "session_id": str(room.session_id) if room.session_id else None,
@@ -314,6 +322,8 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession) -> dict:
         "name": room.name,
         "peer_name": _peer_name_for_direct(room, uid, db),
         "peer_id": _peer_id_for_direct(room, uid),
+        "session_title": session_title,
+        "session_scheduled_at": session_scheduled_at,
         "participant_count": count,
         "created_at": room.created_at or datetime.utcnow(),
         "unread_count": _unread_count(room, user_id, db),
@@ -480,6 +490,24 @@ def _resolve_recipients(room: ChatRoom, sender_id: UUID, db: DBSession) -> list[
         ).all()
         for p in participants:
             recipients.append(str(p.user_id))
+    else:
+        # session 방: 세션 host + 참여자 중 발신자 제외
+        if room.session_id:
+            session = db.query(Session).filter(Session.id == room.session_id).first()
+            if session:
+                if session.host_id and session.host_id != sender_id:
+                    recipients.append(str(session.host_id))
+                participants = (
+                    db.query(SessionParticipant)
+                    .filter(
+                        SessionParticipant.session_id == room.session_id,
+                        SessionParticipant.user_id.isnot(None),
+                        SessionParticipant.user_id != sender_id,
+                    )
+                    .all()
+                )
+                for p in participants:
+                    recipients.append(str(p.user_id))
 
     return recipients
 
