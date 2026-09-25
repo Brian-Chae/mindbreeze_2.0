@@ -109,13 +109,17 @@ def fork_room(
 @router.get("/invitable-counselors", response_model=InvitableCounselorsResponse)
 def list_invitable_counselors(
     q: str | None = None,
+    page: int = 1,
+    size: int = 50,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     """초대 후보 상담사 조회 (SDD-092) — 요청자와 공유 기관의 active 상담사."""
-    counselors = chat_service.list_invitable_counselors(current_user["id"], q, db)
+    data = chat_service.list_invitable_counselors(current_user["id"], q, db, page, size)
     return InvitableCounselorsResponse(
-        counselors=[InvitableCounselorOut(**c) for c in counselors]
+        counselors=[InvitableCounselorOut(**c) for c in data["counselors"]],
+        total=data["total"],
+        page=data["page"],
     )
 
 

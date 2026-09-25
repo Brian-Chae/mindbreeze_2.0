@@ -763,7 +763,9 @@ def fork_group_room(
     return _serialize_room(new_room, user_id, db)
 
 
-def list_invitable_counselors(user_id: str, q: str | None, db: DBSession) -> list[dict]:
+def list_invitable_counselors(
+    user_id: str, q: str | None, db: DBSession, page: int = 1, size: int = 50
+) -> dict:
     """초대 후보 상담사 조회 (SDD-092) — 요청자와 공유 기관의 active 상담사.
 
     - 권한: counselor/org_admin (본인 멤버십 기반이라 org_id 파라미터 불필요)
@@ -784,7 +786,7 @@ def list_invitable_counselors(user_id: str, q: str | None, db: DBSession) -> lis
         .all()
     }
     if not my_org_ids:
-        return []
+        return {"counselors": [], "total": 0, "page": page}
     query = (
         db.query(User, Organization.name)
         .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
@@ -807,7 +809,14 @@ def list_invitable_counselors(user_id: str, q: str | None, db: DBSession) -> lis
         )
         if org_name not in entry["org_names"]:
             entry["org_names"].append(org_name)
-    return sorted(result.values(), key=lambda c: (c["name"], c["user_id"]))
+    counselors = sorted(result.values(), key=lambda c: (c["name"], c["user_id"]))
+    total = len(counselors)
+    start = (max(page, 1) - 1) * max(size, 1)
+    return {
+        "counselors": counselors[start : start + size],
+        "total": total,
+        "page": page,
+    }
 
 
 def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db: DBSession) -> None:
@@ -831,8 +840,8 @@ def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db:
 
 
 def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dict]:
-    """그룹방 참여자 명단 조회 (SDD-090). host 전용."""
-    room, _uid = _ensure_group_host(room_id, user_id, db)
+    """그룹방 참여자 명단 조회 (SDD-090/092). host 또는 기관 관리자."""
+    room, _uid = _ensure_invite_room(room_id, user_id, db, allow_direct=True)
     rows = (
         db.query(ChatRoomParticipant, User)
         .join(User, User.id == ChatRoomParticipant.user_id)

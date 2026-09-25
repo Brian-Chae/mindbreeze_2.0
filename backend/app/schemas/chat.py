@@ -86,8 +86,10 @@ class InvitableCounselorOut(BaseModel):
 
 
 class InvitableCounselorsResponse(BaseModel):
-    """SDD-092: 초대 후보 상담사 목록 응답"""
+    """SDD-092: 초대 후보 상담사 응답"""
     counselors: list[InvitableCounselorOut]
+    total: int = 0
+    page: int = 1
 
 
 class MessageCreateRequest(BaseModel):
