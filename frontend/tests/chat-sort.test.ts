@@ -15,27 +15,17 @@ describe('채팅방 정렬', () => {
     expect(ids(sortRooms([
       room('old'), room('message', { last_message_at: '2026-09-03T00:00:00Z' }),
       room('new', { created_at: '2026-09-04T00:00:00Z' }),
-    ], 'recent_message', false))).toEqual(['new', 'message', 'old']);
+    ], false))).toEqual(['new', 'message', 'old']);
   });
-  it('세션순은 일정 없는 세션도 비세션보다 앞에 둔다', () => {
-    expect(ids(sortRooms([
-      room('direct', { last_message_at: '2026-12-01T00:00:00Z' }),
-      room('undated', { room_type: 'session' }),
-      room('early', { room_type: 'session', session_scheduled_at: '2026-09-01T00:00:00Z' }),
-      room('late', { room_type: 'session', session_scheduled_at: '2026-09-02T00:00:00Z' }),
-    ], 'recent_session', false))).toEqual(['late', 'early', 'undated', 'direct']);
-  });
-  it('안읽음 우선을 두 정렬 기준보다 먼저 적용한다', () => {
-    for (const mode of ['recent_message', 'recent_session'] as const) {
-      expect(ids(sortRooms([room('read', { room_type: 'session' }), room('unread', { unread_count: 2 })], mode, true))).toEqual(['unread', 'read']);
-    }
+  it('안읽음 우선을 최신 대화순보다 먼저 적용한다', () => {
+    expect(ids(sortRooms([room('read'), room('unread', { unread_count: 2 })], true))).toEqual(['unread', 'read']);
   });
   it('시간대 오프셋이 달라도 실제 시각으로 비교한다', () => {
-    expect(ids(sortRooms([room('earlier', { last_message_at: '2026-09-01T09:00:00+09:00' }), room('later', { last_message_at: '2026-09-01T01:00:00Z' })], 'recent_message', false))).toEqual(['later', 'earlier']);
+    expect(ids(sortRooms([room('earlier', { last_message_at: '2026-09-01T09:00:00+09:00' }), room('later', { last_message_at: '2026-09-01T01:00:00Z' })], false))).toEqual(['later', 'earlier']);
   });
   it('원본 배열과 객체를 변경하지 않고 동률 순서를 유지한다', () => {
     const rooms = Object.freeze([Object.freeze(room('a')), Object.freeze(room('b'))]);
-    const sorted = sortRooms(rooms, 'recent_message', false);
+    const sorted = sortRooms(rooms, false);
     expect(ids(sorted)).toEqual(['a', 'b']);
     expect(sorted).not.toBe(rooms);
     expect(sorted[0]).toBe(rooms[0]);

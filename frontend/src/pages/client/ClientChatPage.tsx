@@ -48,7 +48,7 @@ export default function ClientChatPage() {
   const rooms = useChatStore((s) => s.rooms);
   const setRooms = useChatStore((s) => s.setRooms);
   const sortPreference = useChatSortPreference();
-  const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.mode, sortPreference.unreadFirst), [rooms, sortPreference.mode, sortPreference.unreadFirst]);
+  const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.unreadFirst), [rooms, sortPreference.unreadFirst]);
   const [settingsRoom, setSettingsRoom] = useState<ChatRoomDto | null>(null);
   const [status, setStatus] = useState('');
   const hasCounselors = (user?.counselors?.length ?? 0) > 0;

@@ -1,28 +1,16 @@
 import type { ChatRoom } from './api/chat';
 
-export type ChatSortMode = 'recent_message' | 'recent_session';
-
 function timestamp(value: string | null | undefined): number {
   const time = value ? Date.parse(value) : NaN;
   return Number.isFinite(time) ? time : 0;
 }
 
-/** 서버 배열을 보존하고 실제 시각 기준으로 안정 정렬한다. */
-export function sortRooms(rooms: readonly ChatRoom[], mode: ChatSortMode, unreadFirst: boolean): ChatRoom[] {
+/** 최신 대화순(기본) + 안읽음 우선 정렬. 세션방 제거(SDD-091)로 정렬 모드 없음. */
+export function sortRooms(rooms: readonly ChatRoom[], unreadFirst: boolean): ChatRoom[] {
   return [...rooms].sort((a, b) => {
     if (unreadFirst) {
       const unreadOrder = Number(b.unread_count > 0) - Number(a.unread_count > 0);
       if (unreadOrder) return unreadOrder;
-    }
-    if (mode === 'recent_session') {
-      const sessionOrder = Number(b.room_type === 'session') - Number(a.room_type === 'session');
-      if (sessionOrder) return sessionOrder;
-      if (a.room_type === 'session' && b.room_type === 'session') {
-        const scheduledOrder = Number(Boolean(b.session_scheduled_at)) - Number(Boolean(a.session_scheduled_at));
-        if (scheduledOrder) return scheduledOrder;
-        const timeOrder = timestamp(b.session_scheduled_at) - timestamp(a.session_scheduled_at);
-        if (timeOrder) return timeOrder;
-      }
     }
     return timestamp(b.last_message_at ?? b.created_at) - timestamp(a.last_message_at ?? a.created_at);
   });

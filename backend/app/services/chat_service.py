@@ -463,43 +463,28 @@ def _message_unread_count(msg: ChatMessage, room: ChatRoom, db: DBSession) -> in
 
 def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     uid = _uuid(user_id)
-    hosted = db.query(Session).filter(Session.host_id == uid).all()
-    participated = (
-        db.query(Session)
-        .join(SessionParticipant, SessionParticipant.session_id == Session.id)
-        .filter(SessionParticipant.user_id == uid)
-        .all()
-    )
-    sessions = {s.id: s for s in hosted + participated}
     rooms: list[ChatRoom] = []
-    for s in sessions.values():
-        rooms.append(get_or_create_room_by_session(s.id, db))
 
-    # 직접방: 본인이 host(상담사) 이거나, link 상대(내담자)인 경우
-    as_host = (
-        db.query(ChatRoom)
-        .filter(ChatRoom.room_type == "direct", ChatRoom.host_id == uid)
+    # ── SDD-091: 세션별 자동 채팅방 제거 → 회원별 1:1 개인방 기본 생성 ──
+    # 상담사: 연결된 내담자마다 개인(1:1) 방
+    linked_client_ids = [
+        l.client_id
+        for l in db.query(ClientCounselorLink)
+        .filter(ClientCounselorLink.counselor_id == uid)
         .all()
-    )
+    ]
+    for cid in linked_client_ids:
+        rooms.append(get_or_create_direct_room(uid, cid, db))
+
+    # 내담자: 연결된 상담사마다 개인(1:1) 방
     linked_counselor_ids = [
         l.counselor_id
-        for l in db.query(ClientCounselorLink).filter(ClientCounselorLink.client_id == uid).all()
+        for l in db.query(ClientCounselorLink)
+        .filter(ClientCounselorLink.client_id == uid)
+        .all()
     ]
-    as_client: list[ChatRoom] = []
-    if linked_counselor_ids:
-        as_client = (
-            db.query(ChatRoom)
-            .filter(
-                ChatRoom.room_type == "direct",
-                ChatRoom.host_id.in_(linked_counselor_ids),
-                ChatRoom.name == str(uid),
-            )
-            .all()
-        )
-    direct_seen: dict[UUID, ChatRoom] = {}
-    for r in as_host + as_client:
-        direct_seen.setdefault(r.id, r)
-    rooms.extend(direct_seen.values())
+    for cid in linked_counselor_ids:
+        rooms.append(get_or_create_direct_room(cid, uid, db))
 
     # 그룹방: 본인이 host(상담사) 이거나 ChatRoomParticipant 인 경우
     group_as_host = (
@@ -518,10 +503,16 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
         group_seen.setdefault(r.id, r)
     rooms.extend(group_seen.values())
 
+    # 중복 제거 (직접방이 양쪽 루프에서 겹치지 않지만 안전하게)
+    seen: dict[UUID, ChatRoom] = {}
+    for r in rooms:
+        seen.setdefault(r.id, r)
+
     # ── SDD-090: 방별 마지막 메시지 일괄 조회 후 주입 (방마다 개별 쿼리 금지) ──
-    last_map = _last_messages_for_rooms([r.id for r in rooms], db)
+    last_map = _last_messages_for_rooms([r.id for r in seen.values()], db)
     result = [
-        _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id))) for r in rooms
+        _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id)))
+        for r in seen.values()
     ]
 
     # ── SDD-090: 기본 정렬 — 최근 대화 시각(없으면 방 생성 시각) 내림차순 ──

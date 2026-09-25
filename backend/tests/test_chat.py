@@ -46,13 +46,29 @@ def _create_session(client, host_auth: dict, **overrides) -> dict:
     return res.json()
 
 
-def _room_for_session(client, host_auth: dict, session_id: str) -> str:
-    """세션의 채팅방 id 추출 (rooms 목록에서 검색)."""
-    rooms = client.get("/api/v1/chat/rooms", headers=host_auth).json()["rooms"]
-    for r in rooms:
-        if r["session_id"] == session_id:
-            return r["id"]
-    raise AssertionError("채팅방을 찾을 수 없음")
+def _direct_room(client, host: dict, host_email: str) -> str:
+    """host ↔ 새 내담자 1:1 개인방 생성 → room_id (SDD-091: 세션방 제거)."""
+    member = _register(client, host_email.replace("@", "+m@"), role="client")
+    _link(host["id"], member["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "direct", "client_id": member["id"]},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    return res.json()["id"]
+
+
+def _group_room(client, host: dict, participant: dict) -> str:
+    """host가 participant를 초대한 그룹방 생성 → room_id (SDD-091)."""
+    _link(host["id"], participant["id"])
+    res = client.post(
+        "/api/v1/chat/rooms",
+        json={"room_type": "group", "participant_ids": [participant["id"]], "name": "그룹"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    return res.json()["id"]
 
 
 def test_01_비로그인_방목록_401(client):
@@ -62,17 +78,16 @@ def test_01_비로그인_방목록_401(client):
 
 def test_02_방목록_조회_성공(client):
     host = _register(client, "chat02@test.com")
-    s = _create_session(client, host["auth"])
+    room_id = _direct_room(client, host, "chat02@test.com")
     res = client.get("/api/v1/chat/rooms", headers=host["auth"])
     assert res.status_code == 200
     rooms = res.json()["rooms"]
-    assert any(r["session_id"] == s["id"] for r in rooms)
+    assert any(r["id"] == room_id for r in rooms)
 
 
 def test_03_메시지_전송_REST(client):
     host = _register(client, "chat03@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat03@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "안녕하세요", "type": "text"},
@@ -86,8 +101,7 @@ def test_03_메시지_전송_REST(client):
 
 def test_04_메시지_내역_조회(client):
     host = _register(client, "chat04@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat04@test.com")
     client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "첫번째"},
@@ -108,8 +122,7 @@ def test_04_메시지_내역_조회(client):
 
 def test_05_빈_메시지_422(client):
     host = _register(client, "chat05@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat05@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "   "},
@@ -121,8 +134,7 @@ def test_05_빈_메시지_422(client):
 def test_06_타인_방_접근_403(client):
     host = _register(client, "chat06host@test.com")
     other = _register(client, "chat06other@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat06host@test.com")
     res = client.get(
         f"/api/v1/chat/rooms/{room_id}/messages", headers=other["auth"]
     )
@@ -132,18 +144,7 @@ def test_06_타인_방_접근_403(client):
 def test_07_읽음_처리(client):
     host = _register(client, "chat07host@test.com")
     participant = _register(client, "chat07p@test.com", role="client")
-    s = _create_session(
-        client,
-        host["auth"],
-        type="meditation",
-        max_participants=5,
-    )
-    client.post(
-        f"/api/v1/sessions/{s['id']}/invite",
-        json={"user_id": participant["id"]},
-        headers=host["auth"],
-    )
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _group_room(client, host, participant)
     client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "안내드립니다"},
@@ -153,7 +154,7 @@ def test_07_읽음_처리(client):
     rooms = client.get("/api/v1/chat/rooms", headers=participant["auth"]).json()[
         "rooms"
     ]
-    target = next(r for r in rooms if r["session_id"] == s["id"])
+    target = next(r for r in rooms if r["id"] == room_id)
     assert target["unread_count"] >= 1
     # 읽음 처리
     res = client.put(
@@ -163,7 +164,7 @@ def test_07_읽음_처리(client):
     rooms2 = client.get("/api/v1/chat/rooms", headers=participant["auth"]).json()[
         "rooms"
     ]
-    target2 = next(r for r in rooms2 if r["session_id"] == s["id"])
+    target2 = next(r for r in rooms2 if r["id"] == room_id)
     assert target2["unread_count"] == 0
 
 
@@ -220,16 +221,7 @@ def test_11_메시지_recipient_count_설정(client):
     """메시지 발송 시 recipient_count가 올바르게 설정되는지 확인"""
     host = _register(client, "chat11host@test.com")
     participant = _register(client, "chat11p@test.com", role="client")
-    s = _create_session(
-        client, host["auth"],
-        type="meditation", max_participants=5,
-    )
-    client.post(
-        f"/api/v1/sessions/{s['id']}/invite",
-        json={"user_id": participant["id"]},
-        headers=host["auth"],
-    )
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _group_room(client, host, participant)
     # 메시지 발송
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
@@ -247,16 +239,7 @@ def test_12_batch_메시지_읽음_처리(client):
     """POST /messages/read로 여러 메시지를 한 번에 읽음 처리"""
     host = _register(client, "chat12host@test.com")
     participant = _register(client, "chat12p@test.com", role="client")
-    s = _create_session(
-        client, host["auth"],
-        type="meditation", max_participants=5,
-    )
-    client.post(
-        f"/api/v1/sessions/{s['id']}/invite",
-        json={"user_id": participant["id"]},
-        headers=host["auth"],
-    )
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _group_room(client, host, participant)
     # 여러 메시지 발송
     msg_ids = []
     for i in range(3):
@@ -292,8 +275,7 @@ def test_13_unread_counts_권한_없는_사용자_403(client):
     """권한 없는 사용자가 unread-counts 호출 시 403"""
     host = _register(client, "chat13host@test.com")
     other = _register(client, "chat13other@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat13host@test.com")
     res = client.get(
         f"/api/v1/chat/rooms/{room_id}/unread-counts",
         headers=other["auth"],
@@ -304,8 +286,7 @@ def test_13_unread_counts_권한_없는_사용자_403(client):
 def test_14_mark_messages_read_빈_목록(client):
     """빈 message_ids로 읽음 처리 시도"""
     host = _register(client, "chat14host@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat14host@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages/read",
         json={"message_ids": []},
@@ -318,8 +299,7 @@ def test_14_mark_messages_read_빈_목록(client):
 def test_15_messages_read_없는_메시지_ID(client):
     """존재하지 않는 message_id를 포함한 읽음 처리"""
     host = _register(client, "chat15host@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat15host@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages/read",
         json={"message_ids": ["00000000-0000-0000-0000-000000000000"]},
@@ -332,8 +312,7 @@ def test_15_messages_read_없는_메시지_ID(client):
 def test_16_unread_counts_빈_방(client):
     """메시지가 없는 방의 unread-counts"""
     host = _register(client, "chat16@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat16@test.com")
     res = client.get(
         f"/api/v1/chat/rooms/{room_id}/unread-counts",
         headers=host["auth"],
@@ -346,8 +325,7 @@ def test_16_unread_counts_빈_방(client):
 def test_17_발신자_자동읽음_확인(client):
     """메시지 발신자는 자동으로 read_by에 포함되는지 확인"""
     host = _register(client, "chat17host@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat17host@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "테스트", "type": "text"},
@@ -355,7 +333,8 @@ def test_17_발신자_자동읽음_확인(client):
     )
     assert res.status_code == 201
     body = res.json()
-    assert body["unread_count"] == 0  # 발신자는 자동 읽음이므로 unread=0
+    # 발신자는 자동 읽음(read_by에 포함), 상대(내담자)는 아직 미수신 → unread=1
+    assert body["unread_count"] == 1
     assert host["id"] in body["read_by"]
     assert body["recipient_count"] >= 1
 
@@ -414,9 +393,8 @@ def _bump_last_message(room_id: str, minutes: int):
 def test_18_방목록_last_message_정렬(client):
     """마지막 메시지가 최신인 방이 목록 최상단 + last_message 미리보기 포함"""
     host = _register(client, "chat18@test.com")
-    s1 = _create_session(client, host["auth"], title="첫 세션")
-    s2 = _create_session(client, host["auth"], title="둘째 세션", scheduled_at=_future(240))
-    room1 = _room_for_session(client, host["auth"], s1["id"])
+    room1 = _direct_room(client, host, "chat18a@test.com")
+    room2 = _direct_room(client, host, "chat18b@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room1}/messages",
         json={"content": "정렬 테스트", "type": "text"},
@@ -430,16 +408,15 @@ def test_18_방목록_last_message_정렬(client):
     assert rooms[0]["last_message"]["content"] == "정렬 테스트"
     assert rooms[0]["last_message_at"] is not None
     # 메시지 없는 방은 last_message null (하위 호환 필드 유지)
-    room2 = next(r for r in rooms if r["session_id"] == s2["id"])
-    assert room2["last_message"] is None
-    assert room2["last_message_at"] is None
+    target2 = next(r for r in rooms if r["id"] == room2)
+    assert target2["last_message"] is None
+    assert target2["last_message_at"] is None
 
 
 def test_19_last_message_이미지_대체문구(client):
     """마지막 메시지가 image면 미리보기 content는 '사진'"""
     host = _register(client, "chat19@test.com")
-    s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    room_id = _direct_room(client, host, "chat19@test.com")
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/messages",
         json={"content": "cat.png", "type": "image", "file_url": "https://x/cat.png"},
@@ -533,10 +510,19 @@ def test_22_비host_이름변경_403(client):
 
 
 def test_23_session방_이름변경_403(client):
-    """session 방은 host여도 이름 변경 403 (세션 제목을 따름)"""
+    """session 방은 host여도 이름 변경 403 (세션 제목을 따름, 하위 호환 경로)"""
+    from uuid import UUID
+
+    from app.services.chat_service import get_or_create_room_by_session
+
     host = _register(client, "chat23@test.com")
     s = _create_session(client, host["auth"])
-    room_id = _room_for_session(client, host["auth"], s["id"])
+    db_gen, db = _test_db()
+    try:
+        room = get_or_create_room_by_session(UUID(s["id"]), db)
+        room_id = str(room.id)
+    finally:
+        _close_db(db_gen)
     res = client.patch(
         f"/api/v1/chat/rooms/{room_id}",
         json={"name": "바꿔보기"},
@@ -663,7 +649,7 @@ def test_27_참여자_내보내기_접근회수(client):
 
 
 def test_28_direct방_참여자관리_403(client):
-    """direct/session 방은 참여자 관리 제외 (group 전용)"""
+    """direct 방은 참여자 관리 제외 (group 전용)"""
     host = _register(client, "chat28host@test.com")
     member = _register(client, "chat28c@test.com", role="client")
     other = _register(client, "chat28o@test.com", role="client")
@@ -676,15 +662,6 @@ def test_28_direct방_참여자관리_403(client):
     room_id = res.json()["id"]
     res = client.post(
         f"/api/v1/chat/rooms/{room_id}/participants",
-        json={"participant_ids": [other["id"]]},
-        headers=host["auth"],
-    )
-    assert res.status_code == 403
-    # session 방도 동일
-    s = _create_session(client, host["auth"])
-    session_room = _room_for_session(client, host["auth"], s["id"])
-    res = client.post(
-        f"/api/v1/chat/rooms/{session_room}/participants",
         json={"participant_ids": [other["id"]]},
         headers=host["auth"],
     )
