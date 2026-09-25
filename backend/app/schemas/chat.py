@@ -45,12 +45,49 @@ class RoomParticipantOut(BaseModel):
     """SDD-090: 그룹방 참여자 정보"""
     user_id: str
     name: str
+    # SDD-092: 상담사/내담자 구분 (User.role 조회 시점 값 — 필드 추가만, 하위 호환)
+    role: str | None = None
     joined_at: datetime | None = None
 
 
 class RoomParticipantsResponse(BaseModel):
     """SDD-090: 그룹방 참여자 명단 응답"""
     participants: list[RoomParticipantOut]
+
+
+class RoomForkRequest(BaseModel):
+    """SDD-092: "새 방으로 만들기"(fork) 요청 — 새로 초대할 대상 + 새 방 이름(선택)"""
+    participant_ids: list[str] = Field(..., min_length=1, max_length=100)
+    name: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name(cls, v: str | None) -> str | None:
+        # 이름 규칙은 RoomUpdateRequest 와 동일 (120자, 제어문자 금지). 미지정은 서버 기본 이름
+        if v is None:
+            return v
+        v = v.strip()
+        if not v:
+            raise ValueError("채팅방 이름을 입력해 주세요")
+        if len(v) > 120:
+            raise ValueError("채팅방 이름은 120자 이하여야 합니다")
+        if any(ord(ch) < 32 or ord(ch) == 127 for ch in v):
+            raise ValueError("채팅방 이름에 줄바꿈이나 제어문자를 사용할 수 없습니다")
+        return v
+
+
+class InvitableCounselorOut(BaseModel):
+    """SDD-092: 초대 후보 상담사 정보"""
+    user_id: str
+    name: str
+    role: str
+    # 요청자와 공유하는 기관 이름만 (타 기관 소속 정보 비노출)
+    org_names: list[str] = []
+
+
+class InvitableCounselorsResponse(BaseModel):
+    """SDD-092: 초대 후보 상담사 목록 응답"""
+    counselors: list[InvitableCounselorOut]
 
 
 class MessageCreateRequest(BaseModel):

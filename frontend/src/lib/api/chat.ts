@@ -1,6 +1,7 @@
 // 채팅 REST API 클라이언트
 
 import { apiClient } from './client';
+import type { UserRole } from './auth';
 
 export type ChatMessageType = 'text' | 'image' | 'file' | 'system';
 export type RoomType = 'direct' | 'session' | 'group';
@@ -93,6 +94,7 @@ export interface ChatRoomParticipant {
   user_id: string;
   name: string;
   joined_at?: string;
+  role?: UserRole;
 }
 
 export interface ChatRoomParticipantsResponse {

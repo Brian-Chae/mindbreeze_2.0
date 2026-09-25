@@ -10,6 +10,9 @@ import { useChatStore } from '../../stores/chatStore';
 import { ChatSortToggle } from '../../components/chat/ChatSortToggle';
 import { RoomActionsMenu } from '../../components/chat/RoomActionsMenu';
 import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
+import { InviteMemberModal } from '../../components/chat/InviteMemberModal';
+import { canInviteToRoom } from '../../lib/api/chat-invite';
+import { useAuthStore } from '../../stores/authStore';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
@@ -44,10 +47,14 @@ export default function ChatPage() {
   const sortPreference = useChatSortPreference();
   const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.unreadFirst), [rooms, sortPreference.unreadFirst]);
   const [settingsRoom, setSettingsRoom] = useState<ChatRoomDto | null>(null);
+  const [inviteRoom, setInviteRoom] = useState<ChatRoomDto | null>(null);
+  const [returnToSettings, setReturnToSettings] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+
+  useEffect(() => { setInviteRoom(null); setSettingsRoom(null); }, [paramRoomId]);
 
   useEffect(() => {
     if (!status) return;
@@ -61,11 +68,12 @@ export default function ChatPage() {
     let requestId = 0;
     const refreshRooms = () => {
       const currentRequest = ++requestId;
+      const snapshot = useChatStore.getState().rooms;
       void listChatRooms()
       .then((res) => {
         if (cancelled || currentRequest !== requestId) return;
         setError(null);
-        setRooms(res.rooms);
+        setRooms(res.rooms, snapshot);
         setLoading(false);
       })
       .catch((err) => {
@@ -88,6 +96,13 @@ export default function ChatPage() {
       null
     );
   }, [rooms, paramRoomId]);
+
+  const openInvite = (room: ChatRoomDto, fromSettings = false): void => {
+    if (!canInviteToRoom(room, useAuthStore.getState().user)) return;
+    setReturnToSettings(fromSettings);
+    setSettingsRoom(null);
+    setInviteRoom(room);
+  };
 
   const handleSelect = (room: ChatRoomDto): void => {
     navigate(`/chat/${room.id}`);
@@ -166,7 +181,7 @@ export default function ChatPage() {
                         </span>
                       )}
                     </button>
-                    <RoomActionsMenu room={room} onSettings={() => setSettingsRoom(room)} />
+                    <RoomActionsMenu room={room} onSettings={() => setSettingsRoom(room)} onInvite={() => openInvite(room)} />
                   </li>
                 );
               })}
@@ -182,7 +197,7 @@ export default function ChatPage() {
         >
           {selectedRoom ? (
             <>
-              <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
+              <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
                 <button
                   type="button"
                   onClick={() => navigate('/chat')}
@@ -190,6 +205,7 @@ export default function ChatPage() {
                 >
                   ← 대화 목록
                 </button>
+                <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />
               </div>
               <div className="flex-1 min-h-0">
                 <ChatRoom roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
@@ -208,7 +224,20 @@ export default function ChatPage() {
       </div>
 
       {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white">{status}</p>}
-      {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} />}
+      {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} onInvite={(room) => openInvite(room, true)} />}
+      {inviteRoom && <InviteMemberModal key={inviteRoom.id} room={inviteRoom} onClose={() => {
+        if (returnToSettings) setSettingsRoom(useChatStore.getState().rooms.find((room) => room.id === inviteRoom.id) ?? inviteRoom);
+        setInviteRoom(null);
+      }} onSuccess={(result, mode) => {
+        setInviteRoom(null);
+        if (mode === 'fork') {
+          setStatus('새 그룹 채팅방을 만들었습니다. 기존 방은 그대로 유지됩니다.');
+          navigate(`/chat/${result.id}`);
+        } else {
+          setStatus('회원을 초대했습니다.');
+          if (returnToSettings) setSettingsRoom(result);
+        }
+      }} />}
       <CreateRoomModal open={showCreate} onClose={() => setShowCreate(false)} />
     </AppShell>
   );

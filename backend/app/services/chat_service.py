@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
 from app.models.session import Session, SessionParticipant
 from app.models.client_counselor_link import ClientCounselorLink
+from app.models.organization import Organization
 from app.models.user_org_membership import UserOrgMembership
 from app.models.user import User
 
@@ -43,6 +44,35 @@ def _share_org(counselor_id, client_id, db: DBSession) -> bool:
         .all()
     ]
     return client_org in counselor_org_ids
+
+
+def _share_org_counselor(host_id, target_id, db: DBSession) -> bool:
+    """host 상담사와 대상 상담사가 같은 기관에 소속되어 있는지 확인 (SDD-092).
+
+    내담자용 _share_org 와 달리 양쪽 모두 active UserOrgMembership 의
+    org_id 집합으로 비교한다 (교집합 존재 여부).
+    """
+    host_org_ids = {
+        m.org_id
+        for m in db.query(UserOrgMembership)
+        .filter(
+            UserOrgMembership.user_id == host_id,
+            UserOrgMembership.status == "active",
+        )
+        .all()
+    }
+    if not host_org_ids:
+        return False
+    target_org_ids = {
+        m.org_id
+        for m in db.query(UserOrgMembership)
+        .filter(
+            UserOrgMembership.user_id == target_id,
+            UserOrgMembership.status == "active",
+        )
+        .all()
+    }
+    return bool(host_org_ids & target_org_ids)
 
 
 def get_user_chat_room_ids(user_id: str, db: DBSession) -> list[str]:
@@ -584,9 +614,78 @@ def _ensure_group_host(room_id: str, user_id: str, db: DBSession) -> tuple[ChatR
     return room, uid
 
 
+def _can_invite_room(room: ChatRoom, uid: UUID, db: DBSession) -> bool:
+    """초대 권한 판별 (SDD-092) — ① 방의 host ② 기관 관리자(org_admin).
+
+    org_admin 은 host 와 같은 기관의 active 멤버십을 공유해야 한다.
+    """
+    if room.host_id == uid:
+        return True
+    if not room.host_id:
+        return False
+    actor = db.query(User).filter(User.id == uid).first()
+    if not actor or actor.role != "org_admin" or actor.status != "active":
+        return False
+    return _share_org_counselor(room.host_id, uid, db)
+
+
+def _ensure_invite_room(
+    room_id: str, user_id: str, db: DBSession, *, allow_direct: bool = False
+) -> tuple[ChatRoom, UUID]:
+    """초대 계열(참여자 추가/fork) 방·권한 검증 (SDD-092).
+
+    - allow_direct=False: group 방만 (기존 방에 추가)
+    - allow_direct=True: direct 방도 허용 (fork 전용 — direct 는 새 방으로만)
+    """
+    rid = _uuid(room_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    if room.room_type != "group" and not (allow_direct and room.room_type == "direct"):
+        raise HTTPException(status_code=403, detail="그룹 채팅방만 참여자를 관리할 수 있습니다")
+    uid = _uuid(user_id)
+    if not _can_invite_room(room, uid, db):
+        raise HTTPException(status_code=403, detail="방장 또는 기관 관리자만 참여자를 초대할 수 있습니다")
+    return room, uid
+
+
+def _validate_invitee(host_uuid: UUID, target_uuid: UUID, db: DBSession) -> None:
+    """초대 대상 검증 (SDD-092) — 서버가 User.role 로 분기.
+
+    - client: 기존 정책(Link OR 공유 기관) 그대로 — 에러 메시지 하위 호환
+    - counselor/org_admin: 계정 active + host 와 공유 기관 active 멤버십
+    - 그 외(platform_admin 등): 403
+    """
+    target = db.query(User).filter(User.id == target_uuid).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="초대할 사용자를 찾을 수 없습니다")
+    if target.role == "client":
+        link = (
+            db.query(ClientCounselorLink)
+            .filter(
+                ClientCounselorLink.counselor_id == host_uuid,
+                ClientCounselorLink.client_id == target_uuid,
+            )
+            .first()
+        )
+        if not link and not _share_org(host_uuid, target_uuid, db):
+            raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
+        return
+    if target.role in ("counselor", "org_admin"):
+        if target.status != "active" or not _share_org_counselor(host_uuid, target_uuid, db):
+            raise HTTPException(status_code=403, detail="같은 기관에 소속된 상담사만 초대할 수 있습니다")
+        return
+    raise HTTPException(status_code=403, detail="초대할 수 없는 사용자입니다")
+
+
 def add_room_participants(room_id: str, user_id: str, participant_ids: list[str], db: DBSession) -> dict:
-    """그룹방 참여자 추가 (SDD-090). 기존 생성 정책(Link OR 공유 기관) 재검증."""
-    room, uid = _ensure_group_host(room_id, user_id, db)
+    """그룹방 참여자 추가 (SDD-090, SDD-092 확장).
+
+    - 권한: host OR 기관 관리자(org_admin)
+    - 대상: 내담자(기존 경로 하위 호환) + 상담사(공유 기관 active)
+    - 검증 기준은 항상 방의 host — org_admin 이 초대해도 host 기준으로 판정한다
+    """
+    room, uid = _ensure_invite_room(room_id, user_id, db)
     existing = {
         p.user_id
         for p in db.query(ChatRoomParticipant)
@@ -595,22 +694,120 @@ def add_room_participants(room_id: str, user_id: str, participant_ids: list[str]
     }
     for pid in participant_ids:
         puid = _uuid(pid)
-        if puid == uid or puid in existing:
+        if puid == uid or puid == room.host_id or puid in existing:
             continue
-        link = (
-            db.query(ClientCounselorLink)
-            .filter(
-                ClientCounselorLink.counselor_id == uid,
-                ClientCounselorLink.client_id == puid,
-            )
-            .first()
-        )
-        if not link and not _share_org(uid, puid, db):
-            raise HTTPException(status_code=403, detail="연결되지 않은 내담자가 포함되어 있습니다")
+        _validate_invitee(room.host_id, puid, db)
         db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
         existing.add(puid)
     db.commit()
     return _serialize_room(room, user_id, db)
+
+
+def fork_group_room(
+    room_id: str, user_id: str, participant_ids: list[str], name: str | None, db: DBSession
+) -> dict:
+    """"새 방으로 만들기" (SDD-092) — 기존 참여자 승계 + 새 참여자 → 새 group 방.
+
+    - 대화 이력은 복사하지 않으며 기존 방은 그대로 유지한다
+    - direct 방도 fork 허용: host + 기존 상대(room.name=client_id) + 새 참여자 → 새 group 방
+    - 기존 참여자는 재검증 없이 승계 — 자격 상실 시에도 자동 제거하지 않는 현행 정책과 일관
+    - 새 방의 host 는 원본 방의 host 를 승계한다 (org_admin 이 fork 해도 동일)
+    """
+    room, uid = _ensure_invite_room(room_id, user_id, db, allow_direct=True)
+    host_uuid = room.host_id
+
+    if room.room_type == "direct":
+        # direct 방의 상대 내담자 식별자는 name 필드에 저장되어 있다
+        inherited = [_uuid(room.name)] if room.name else []
+    else:
+        inherited = [
+            p.user_id
+            for p in db.query(ChatRoomParticipant)
+            .filter(ChatRoomParticipant.room_id == room.id)
+            .all()
+        ]
+    carried = set(inherited)
+
+    new_uuids: list[UUID] = []
+    for pid in participant_ids:
+        puid = _uuid(pid)
+        if puid == host_uuid or puid in carried:
+            continue
+        _validate_invitee(host_uuid, puid, db)
+        new_uuids.append(puid)
+        carried.add(puid)
+    if not new_uuids:
+        raise HTTPException(status_code=422, detail="새로 초대할 참여자를 1명 이상 선택해야 합니다")
+
+    if not name:
+        # 서버 기본 이름 — 원본 표시 이름 기반, name 컬럼 길이(120자) 내로 절단
+        if room.room_type == "direct":
+            base = room.display_name or _peer_name_for_direct(room, host_uuid, db) or "1:1 채팅"
+        else:
+            base = room.name or "그룹 채팅"
+        suffix = " (새 채팅)"
+        name = base[: 120 - len(suffix)] + suffix
+
+    new_room = ChatRoom(
+        session_id=None,
+        room_type="group",
+        host_id=host_uuid,
+        name=name,
+    )
+    db.add(new_room)
+    db.commit()
+    db.refresh(new_room)
+    for puid in inherited + new_uuids:
+        db.add(ChatRoomParticipant(room_id=new_room.id, user_id=puid))
+    db.commit()
+    return _serialize_room(new_room, user_id, db)
+
+
+def list_invitable_counselors(user_id: str, q: str | None, db: DBSession) -> list[dict]:
+    """초대 후보 상담사 조회 (SDD-092) — 요청자와 공유 기관의 active 상담사.
+
+    - 권한: counselor/org_admin (본인 멤버십 기반이라 org_id 파라미터 불필요)
+    - 본인 제외, User.status='active' + active 멤버십만
+    - org_names 는 요청자와 공유하는 기관 이름만 담는다 (타 기관 소속 정보 비노출)
+    """
+    uid = _uuid(user_id)
+    me = db.query(User).filter(User.id == uid).first()
+    if not me or me.role not in ("counselor", "org_admin"):
+        raise HTTPException(status_code=403, detail="상담사만 초대 후보를 조회할 수 있습니다")
+    my_org_ids = {
+        m.org_id
+        for m in db.query(UserOrgMembership)
+        .filter(
+            UserOrgMembership.user_id == uid,
+            UserOrgMembership.status == "active",
+        )
+        .all()
+    }
+    if not my_org_ids:
+        return []
+    query = (
+        db.query(User, Organization.name)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
+        .join(Organization, Organization.id == UserOrgMembership.org_id)
+        .filter(
+            UserOrgMembership.org_id.in_(my_org_ids),
+            UserOrgMembership.status == "active",
+            User.status == "active",
+            User.role.in_(("counselor", "org_admin")),
+            User.id != uid,
+        )
+    )
+    if q and q.strip():
+        query = query.filter(User.name.ilike(f"%{q.strip()}%"))
+    result: dict[str, dict] = {}
+    for user, org_name in query.all():
+        entry = result.setdefault(
+            str(user.id),
+            {"user_id": str(user.id), "name": user.name, "role": user.role, "org_names": []},
+        )
+        if org_name not in entry["org_names"]:
+            entry["org_names"].append(org_name)
+    return sorted(result.values(), key=lambda c: (c["name"], c["user_id"]))
 
 
 def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db: DBSession) -> None:
@@ -647,6 +844,8 @@ def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dic
         {
             "user_id": str(p.user_id),
             "name": u.name if u else "알 수 없음",
+            # SDD-092: 상담사/내담자 구분 — 컬럼 추가 없이 User.role JOIN 값 노출
+            "role": u.role if u else None,
             "joined_at": p.joined_at,
         }
         for p, u in rows

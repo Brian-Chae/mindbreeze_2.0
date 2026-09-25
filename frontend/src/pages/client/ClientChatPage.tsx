@@ -74,11 +74,12 @@ export default function ClientChatPage() {
     let requestId = 0;
     const refreshRooms = () => {
       const currentRequest = ++requestId;
+      const snapshot = useChatStore.getState().rooms;
       void listChatRooms()
       .then((res) => {
         if (cancelled || currentRequest !== requestId) return;
         setError(null);
-        setRooms(res.rooms);
+        setRooms(res.rooms, snapshot);
         setLoading(false);
       })
       .catch((err) => {

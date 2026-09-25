@@ -29,3 +29,11 @@ it('전송 응답과 소켓 중복 수신에도 메시지는 하나이며 파일
   expect(useChatStore.getState().messagesByRoom.room).toHaveLength(1);
   expect(useChatStore.getState().rooms[0].last_message?.content).toBe('사진');
 });
+it('fork 전에 시작한 목록 조회가 늦게 와도 새 방과 이후 읽음 갱신을 보존한다', () => {
+  const snapshot = useChatStore.getState().rooms;
+  useChatStore.getState().upsertRoom({ ...room, id: 'new', unread_count: 0 });
+  useChatStore.getState().incrementUnread('room');
+  useChatStore.getState().setRooms([room], snapshot);
+  expect(useChatStore.getState().rooms.map((item) => item.id)).toEqual(['room', 'new']);
+  expect(useChatStore.getState().rooms[0].unread_count).toBe(4);
+});

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  addChatRoomParticipants, getChatRoom, listChatRoomParticipants,
+  getChatRoom, listChatRoomParticipants,
   removeChatRoomParticipant, updateChatRoom,
   type ChatRoom, type ChatRoomParticipant,
 } from '../../lib/api/chat';
-import { listClients, type ClientListItem } from '../../lib/api/clients';
+import { canInviteToRoom } from '../../lib/api/chat-invite';
 import { ApiError } from '../../lib/api/client';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatStore } from '../../stores/chatStore';
@@ -14,6 +14,7 @@ interface Props {
   room: ChatRoom;
   onClose: () => void;
   onSaved?: (message: string) => void;
+  onInvite?: (room: ChatRoom) => void;
 }
 
 const disabledReasons: Record<string, string> = {
@@ -47,8 +48,9 @@ function roomSettings(room: ChatRoom): Partial<ChatRoom> {
   };
 }
 
-export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
-  const userId = useAuthStore((state) => state.user?.id);
+export function RoomSettingsModal({ room, onClose, onSaved, onInvite }: Props) {
+  const user = useAuthStore((state) => state.user);
+  const userId = user?.id;
   const updateRoom = useChatStore((state) => state.updateRoom);
   const [detail, setDetail] = useState<ChatRoom | null>(null);
   const [name, setName] = useState('');
@@ -60,26 +62,21 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
   const [participantsLoading, setParticipantsLoading] = useState(false);
   const [participantsError, setParticipantsError] = useState<string | null>(null);
   const [participantsReady, setParticipantsReady] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [search, setSearch] = useState('');
-  const [clients, setClients] = useState<ClientListItem[]>([]);
-  const [clientsLoading, setClientsLoading] = useState(false);
-  const [clientsError, setClientsError] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [invitePending, setInvitePending] = useState(false);
   const [reload, setReload] = useState(0);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const mutationRef = useRef(false);
   const titleId = useId();
   const nameId = useId();
-  const searchId = useId();
   const trimmedName = name.trim();
   const originalName = detail?.custom_name ?? '';
   const dirty = trimmedName !== originalName;
   const nameLength = Array.from(trimmedName).length;
   const invalidName = nameLength < 1 || nameLength > 120 || /[\p{Cc}\p{Zl}\p{Zp}]/u.test(trimmedName);
   const canRename = detail?.can_rename === true && detail.room_type !== 'session';
-  const canManage = detail?.room_type === 'group' && detail.host_id === userId;
+  const canManage = detail?.room_type === 'group' && detail.host_id === userId && user?.role === 'counselor';
+  const canInvite = !!onInvite && !!detail && canInviteToRoom(detail, user);
 
   const requestClose = useCallback((): void => {
     if (mutationRef.current) return;
@@ -138,20 +135,6 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
 
   useEffect(() => { if (canManage) void loadParticipants(); }, [canManage, loadParticipants]);
 
-  useEffect(() => {
-    if (!adding || !canManage) return;
-    let active = true;
-    setClientsLoading(true);
-    setClientsError(null);
-    const timer = window.setTimeout(() => {
-      listClients({ q: search.trim() || undefined, size: 50 }).then((response) => {
-        if (active) setClients(response.clients);
-      }).catch(() => { if (active) setClientsError('추가할 내담자를 불러오지 못했습니다. 검색어를 변경하거나 다시 열어 주세요.'); })
-        .finally(() => { if (active) setClientsLoading(false); });
-    }, 250);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [adding, canManage, search]);
-
   const save = async (): Promise<void> => {
     if (!canRename || invalidName || !dirty || mutationRef.current) return;
     mutationRef.current = true;
@@ -163,7 +146,8 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
       updateRoom(room.id, roomSettings(fresh));
       setDetail(fresh);
       setName(fresh.custom_name ?? '');
-      if (onSaved) { onSaved('채팅방 이름을 변경했습니다.'); onClose(); }
+      if (invitePending && onInvite) { onSaved?.('채팅방 이름을 변경했습니다.'); onInvite(fresh); }
+      else if (onSaved) { onSaved('채팅방 이름을 변경했습니다.'); onClose(); }
       else setNotice('채팅방 이름을 변경했습니다.');
     } catch (cause) {
       setError(cause instanceof ApiError && cause.status === 403 ? '이름 변경 권한이 없습니다. 최신 권한을 확인해 주세요.' : '이름을 저장하지 못했습니다. 입력을 확인하고 다시 시도해 주세요.');
@@ -177,20 +161,16 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
     } finally { mutationRef.current = false; setBusy(false); }
   };
 
-  const changeParticipants = async (userIdToRemove?: string): Promise<void> => {
+  const changeParticipants = async (userIdToRemove: string): Promise<void> => {
     if (!canManage || !participantsReady || mutationRef.current) return;
     if (userIdToRemove && !window.confirm('이 참여자를 채팅방에서 내보내시겠습니까? 내보내면 채팅방에 접근할 수 없습니다.')) return;
-    if (!userIdToRemove && selectedIds.length === 0) return;
     mutationRef.current = true;
     setBusy(true);
     setParticipantsError(null);
     setNotice(null);
     try {
-      if (userIdToRemove) await removeChatRoomParticipant(room.id, userIdToRemove);
-      else await addChatRoomParticipants(room.id, selectedIds);
-      setSelectedIds([]);
-      setAdding(false);
-      setNotice(userIdToRemove ? '참여자를 내보냈습니다.' : '참여자를 추가했습니다.');
+      await removeChatRoomParticipant(room.id, userIdToRemove);
+      setNotice('참여자를 내보냈습니다.');
       await loadParticipants();
       const fresh = await getChatRoom(room.id);
       setDetail(fresh);
@@ -201,7 +181,6 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
     } finally { mutationRef.current = false; setBusy(false); }
   };
 
-  const candidates = clients.filter((client) => client.id !== detail?.host_id && !participants.some((participant) => participant.user_id === client.id));
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-busy={loading || busy}
@@ -229,15 +208,20 @@ export function RoomSettingsModal({ room, onClose, onSaved }: Props) {
             {canRename && dirty && invalidName && <p className="mt-2 text-xs text-red-600">공백만 있는 이름, 줄바꿈·제어문자는 사용할 수 없으며 이름은 1~120자여야 합니다.</p>}
             {canRename && <button type="submit" disabled={busy || invalidName || !dirty} className="mt-4 h-11 w-full rounded-xl bg-[#5F0080] text-sm font-semibold text-white hover:bg-[#4B0066] disabled:opacity-50">{busy ? '처리 중...' : '이름 저장'}</button>}
           </form>
+          {canInvite && <section aria-label="회원 초대" className="mt-6 border-t border-[#EFEFEF] pt-4">
+            {detail.room_type === 'direct' && <p className="mb-2 text-xs text-[#6F6F6F]">새 그룹방에 회원을 초대합니다. 기존 1:1 채팅은 유지됩니다.</p>}
+            <button type="button" disabled={busy} onClick={() => { if (dirty) setInvitePending(true); else onInvite?.(detail); }} className="rounded-lg px-3 py-2 text-sm font-semibold text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50">회원 초대</button>
+            {invitePending && dirty && <div role="status" className="mt-2 rounded-xl bg-[#F5EDFC] p-3 text-sm">
+              <p>이름 변경을 저장하거나 취소한 뒤 초대해 주세요.</p>
+              <button type="button" disabled={busy || invalidName} onClick={() => void save()} className="mr-3 mt-2 rounded-lg px-2 py-2 font-semibold text-[#5F0080] disabled:opacity-50">이름 저장 후 초대</button>
+              <button type="button" disabled={busy} onClick={() => { setName(originalName); onInvite?.(detail); }} className="mt-2 rounded-lg px-2 py-2 text-[#5F0080] disabled:opacity-50">변경 취소 후 초대</button>
+            </div>}
+          </section>}
           {canManage && <section aria-label="그룹 참여자 관리" className="mt-6 border-t border-[#EFEFEF] pt-4">
-            <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold">그룹 참여자</h3><button type="button" disabled={busy || !participantsReady} onClick={() => { setAdding((previous) => !previous); setSelectedIds([]); }} className="rounded-lg px-3 py-2 text-sm font-semibold text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50">{adding ? '추가 취소' : '참여자 추가'}</button></div>
+            <h3 className="mb-3 text-sm font-semibold">그룹 참여자</h3>
             <p className="mb-2 text-xs text-[#6F6F6F]">방장(나)은 내보낼 수 없습니다.</p>
             {participantsLoading ? <p role="status" className="text-sm text-[#6F6F6F]">참여자를 불러오는 중...</p> : participantsReady && <ul className="max-h-48 divide-y divide-[#EFEFEF] overflow-y-auto rounded-xl border border-[#EFEFEF]">{participants.map((participant) => <li key={participant.user_id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm"><span className="min-w-0 truncate">{participant.name || '이름 정보 없음'}{participant.user_id === detail.host_id ? ' (방장)' : ''}</span>{participant.user_id !== detail.host_id && <button type="button" disabled={busy} aria-label={`${participant.name || '참여자'} 내보내기`} onClick={() => void changeParticipants(participant.user_id)} className="shrink-0 rounded-lg px-2 py-2 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50">내보내기</button>}</li>)}{participants.length === 0 && <li className="p-3 text-sm text-[#6F6F6F]">등록된 참여자가 없습니다.</li>}</ul>}
             {participantsError && <div role="alert" className="mt-2 text-sm text-red-600">{participantsError}<button type="button" disabled={busy || participantsLoading} onClick={() => void loadParticipants()} className="ml-2 underline disabled:opacity-50">다시 조회</button></div>}
-            {adding && <div className="mt-3 rounded-xl bg-[#F8F8FB] p-3"><label htmlFor={searchId} className="mb-2 block text-xs text-[#6F6F6F]">추가할 내담자 검색</label><input id={searchId} value={search} onChange={(event) => setSearch(event.target.value)} disabled={busy} placeholder="이름 또는 이메일" className="w-full rounded-lg border border-[#DDDEE7] px-3 py-2 text-sm outline-none focus:border-[#5F0080]" />
-              {clientsLoading ? <p role="status" className="py-3 text-sm">검색 중...</p> : clientsError ? <p role="alert" className="py-3 text-sm text-red-600">{clientsError}</p> : <div className="mt-2 max-h-40 overflow-y-auto">{candidates.map((client) => <label key={client.id} className="flex items-center gap-2 py-2 text-sm"><input type="checkbox" checked={selectedIds.includes(client.id)} disabled={busy} onChange={() => setSelectedIds((previous) => previous.includes(client.id) ? previous.filter((id) => id !== client.id) : [...previous, client.id])} className="accent-[#5F0080]" /><span>{client.name}</span><span className="truncate text-xs text-[#6F6F6F]">{client.email}</span></label>)}{candidates.length === 0 && <p className="py-3 text-sm text-[#6F6F6F]">추가할 내담자가 없습니다.</p>}</div>}
-              <button type="button" disabled={busy || !participantsReady || selectedIds.length === 0} onClick={() => void changeParticipants()} className="mt-3 w-full rounded-lg bg-[#5F0080] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{selectedIds.length}명 추가</button>
-            </div>}
           </section>}
         </>}
         {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}

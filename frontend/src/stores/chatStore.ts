@@ -1,6 +1,7 @@
 // 채팅 전역 상태 (Zustand)
 
 import { create } from 'zustand';
+import { inviteRoomMetadata } from '../lib/api/chat-invite';
 import type { ChatMessage, ChatRoom } from '../lib/api/chat';
 
 interface ChatState {
@@ -8,7 +9,8 @@ interface ChatState {
   messagesByRoom: Record<string, ChatMessage[]>;
   activeRoomId: string | null;
 
-  setRooms: (rooms: ChatRoom[]) => void;
+  setRooms: (rooms: ChatRoom[], snapshot?: ChatRoom[]) => void;
+  upsertRoom: (room: ChatRoom) => void;
   updateRoom: (roomId: string, changes: Partial<ChatRoom>) => void;
   updateRoomLastMessage: (roomId: string, preview: NonNullable<ChatRoom["last_message"]>) => void;
   setMessages: (roomId: string, messages: ChatMessage[]) => void;
@@ -26,7 +28,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messagesByRoom: {},
   activeRoomId: null,
 
-  setRooms: (rooms) => set({ rooms }),
+  setRooms: (rooms, snapshot) => set((state) => {
+    if (!snapshot) return { rooms };
+    const before = new Map(snapshot.map((room) => [room.id, room]));
+    const current = new Map(state.rooms.map((room) => [room.id, room]));
+    const incomingIds = new Set(rooms.map((room) => room.id));
+    // 조회 시작 뒤 삽입·변경된 방을 과거 응답으로 되돌리지 않는다.
+    return { rooms: [
+      ...rooms.map((room) => {
+        const latest = current.get(room.id);
+        return latest && latest !== before.get(room.id) ? latest : room;
+      }),
+      ...state.rooms.filter((room) => !before.has(room.id) && !incomingIds.has(room.id)),
+    ] };
+  }),
+  upsertRoom: (incoming) => set((state) => ({
+    rooms: state.rooms.some((room) => room.id === incoming.id)
+      ? state.rooms.map((room) => room.id === incoming.id ? { ...room, ...inviteRoomMetadata(incoming) } : room)
+      : [...state.rooms, incoming],
+  })),
   updateRoom: (roomId, changes) => set((state) => ({
     rooms: state.rooms.map((room) => room.id === roomId ? { ...room, ...changes, id: room.id } : room),
   })),

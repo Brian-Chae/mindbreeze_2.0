@@ -6,11 +6,14 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.chat import (
+    InvitableCounselorOut,
+    InvitableCounselorsResponse,
     MarkMessagesReadRequest,
     MessageCreateRequest,
     MessageListResponse,
     MessageResponse,
     RoomCreateRequest,
+    RoomForkRequest,
     RoomListResponse,
     RoomParticipantsAddRequest,
     RoomParticipantOut,
@@ -83,6 +86,37 @@ def add_room_participants(
         room_id, current_user["id"], payload.participant_ids, db
     )
     return RoomResponse(**room)
+
+
+@router.post("/rooms/{room_id}/fork", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+def fork_room(
+    room_id: str,
+    payload: RoomForkRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """"새 방으로 만들기" (SDD-092) — 기존 참여자 승계 + 새 참여자로 새 group 방 생성.
+
+    대화 이력은 복사하지 않고 기존 방은 유지된다. direct 방은 fork 만 허용.
+    권한: host OR 기관 관리자(org_admin).
+    """
+    room = chat_service.fork_group_room(
+        room_id, current_user["id"], payload.participant_ids, payload.name, db
+    )
+    return RoomResponse(**room)
+
+
+@router.get("/invitable-counselors", response_model=InvitableCounselorsResponse)
+def list_invitable_counselors(
+    q: str | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """초대 후보 상담사 조회 (SDD-092) — 요청자와 공유 기관의 active 상담사."""
+    counselors = chat_service.list_invitable_counselors(current_user["id"], q, db)
+    return InvitableCounselorsResponse(
+        counselors=[InvitableCounselorOut(**c) for c in counselors]
+    )
 
 
 @router.get("/rooms/{room_id}/participants", response_model=RoomParticipantsResponse)
