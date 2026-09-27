@@ -25,16 +25,18 @@ def register_record_namespace(sio):
     @sio.event(namespace="/record")
     async def connect(sid, environ, auth):
         token = (auth or {}).get("token")
-        if not token:
-            return True
-        try:
-            from app.core.security import decode_token
-            payload = decode_token(token)
-            user_id = payload.get("sub")
-            if user_id:
-                logger.info("[WS /record] user %s connected (sid=%s)", user_id, sid)
-        except Exception:
-            pass
+        user_id = None
+        if token:
+            try:
+                from app.core.security import decode_token
+                payload = decode_token(token)
+                user_id = payload.get("sub")
+                if user_id:
+                    logger.info("[WS /record] user %s connected (sid=%s)", user_id, sid)
+            except Exception:
+                logger.warning("[WS /record] 잘못된 토큰 — 연결 거부 (sid=%s)", sid)
+                return False
+        await sio.save_session(sid, {"user_id": user_id}, namespace="/record")
         return True
 
     @sio.event(namespace="/record")
@@ -45,6 +47,26 @@ def register_record_namespace(sio):
     async def on_subscribe(sid, data):
         session_id = data.get("session_id")
         if not session_id:
+            return
+        # 보안: 세션 호스트/참여자만 구독 허용 (임의 session_id 도청 방지)
+        session = await sio.get_session(sid, namespace="/record")
+        user_id = (session or {}).get("user_id")
+        if not user_id:
+            logger.warning("[WS /record] 비인가 subscribe 거부 (sid=%s)", sid)
+            return
+        try:
+            from app.core.database import SessionLocal
+            from app.services.session_service import _get_session_for_participant
+
+            db = SessionLocal()
+            try:
+                _get_session_for_participant(session_id, user_id, db)
+            finally:
+                db.close()
+        except Exception:
+            logger.warning(
+                "[WS /record] 비참여자 subscribe 거부 (sid=%s, session=%s)", sid, session_id
+            )
             return
         room = f"session:{session_id}"
         await sio.enter_room(sid, room, namespace="/record")
