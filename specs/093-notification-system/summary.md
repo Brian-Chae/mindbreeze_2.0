@@ -47,9 +47,17 @@
 - **워커 첫 실행 실패 3건**: 테스트 fixture `SessionLocal`을 테스트 DB로 연결, 계정 정지 테스트는 동시각 알림 구분 위해 `system` 타입 필터 추가 → 해결.
 - **PYTHONPATH 간섭**: Hermes 3.14 site-packages가 venv(3.11)를 오염 → `unset PYTHONPATH`로 해소.
 
-## 남은 경계 (Out-of-scope, spec.md §Out-of-scope와 동일)
-- 트랜잭셔널 outbox·사건 레코드의 **물리 DB 테이블 신설** (논리 설계만, 동기 경로로 구현)
-- P02 개인상담소 "예약" 발화 (경계 미확정)
-- 플랫폼 관리자 검토 담당자 자동 배정
-- 알림 데이터 보관·파기 정책
-- 실서비스 이메일/WS 전달·배포·커밋 (미수행)
+## 후속 정리 (SDD-093 본편 이후)
+
+| # | 항목 | 결과 |
+|---|---|---|
+| 9 | 프론트 신규 테스트 직접 검증 | ✅ react 19.2.8 버그 수정 포함, vitest 50 passed |
+| 8 | WS 실시간 전달 | ✅ 동기/Celery 컨텍스트 미전달 결함 발견 → #1로 근본 해결 |
+| 1 | 트랜잭셔널 outbox 물리 테이블 | ✅ `notification_outbox` + WS 서버 루프 폴링 + Celery beat(10s) 이메일 |
+| 4 | 알림 보관·파기 정책 | ✅ 전체 90일 / 읽은 30일 (`cleanup_notifications` Celery 매일) |
+| 5 | 정지 계정 알림 열람 | ✅ 로그인 자체 차단으로 이미 해결 (조치 불필요) |
+| 6 | WS 개인 room 임의 가입 차단 | ✅ `_enter_room`/`on_message`에서 `user:<id>` 접근 차단 |
+| 3 | 플랫폼 관리자 검토 담당자 | ✅ 모든 active 플랫폼 관리자에게 `verification_requested` 알림 |
+| 2 | P02 개인상담소 "예약" | ✅ 스킵 (상시 보장 모델이라 폐쇄 시나리오 없음 — Brian 결정) |
+
+**정책 결정 (Brian):** 보관 90일·읽은 30일 / 플랫폼 관리자 전원 알림 / P02 스킵.
