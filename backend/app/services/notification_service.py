@@ -192,20 +192,25 @@ def notify_event(
     if prefs["in_app"].get(pref_key, True):
         notif = create_notification(user.id, notif_type, title, body_message, db, extra=extra)
         db.commit()  # 알림을 DB에 확정
-        # 실시간 알림 브로드캐스트
+        # 실시간 알림 브로드캐스트 (이벤트 루프 유무에 따라 분기)
         try:
             from app.ws.chat_namespace import broadcast_notification
             import asyncio
-            asyncio.create_task(broadcast_notification(
-                str(user.id),
-                {
-                    "id": str(notif.id),
-                    "type": notif_type,
-                    "title": title,
-                    "body": body_message,
-                    "extra": extra,
-                },
-            ))
+
+            payload = {
+                "id": str(notif.id),
+                "type": notif_type,
+                "title": title,
+                "body": body_message,
+                "extra": extra,
+            }
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # 동기 엔드포인트·Celery 컨텍스트: 실행 중인 루프가 없으므로 별도 루프에서 즉시 전달
+                asyncio.run(broadcast_notification(str(user.id), payload))
+            else:
+                loop.create_task(broadcast_notification(str(user.id), payload))
             logger.info(f"[NOTIF] broadcast sent to user:{user.id}")
         except Exception as e:
             logger.error(f"[NOTIF] broadcast failed: {e}", exc_info=True)
