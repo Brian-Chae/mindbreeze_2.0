@@ -161,6 +161,29 @@ def _build_email_content(event_type: str, data: dict[str, Any]) -> tuple[str, st
     return notif_type, subject, body
 
 
+def enqueue_outbox(
+    db: DBSession,
+    *,
+    user_id: str | UUID,
+    channel: str,
+    payload: dict[str, Any],
+    notification_id: str | UUID | None = None,
+    recipient: str | None = None,
+) -> None:
+    """트랜잭셔널 outbox에 전달 이벤트 기록. 실제 WS·이메일 전달은 워커가 처리."""
+    from app.models.notification_outbox import NotificationOutbox
+
+    db.add(NotificationOutbox(
+        user_id=_to_uuid(user_id),
+        channel=channel,
+        payload=payload,
+        notification_id=_to_uuid(notification_id) if notification_id else None,
+        recipient=recipient,
+        status="pending",
+        attempts=0,
+    ))
+
+
 def notify_event(
     event_type: str,
     user_id: str | UUID,
@@ -191,33 +214,31 @@ def notify_event(
     notif: Notification | None = None
     if prefs["in_app"].get(pref_key, True):
         notif = create_notification(user.id, notif_type, title, body_message, db, extra=extra)
-        db.commit()  # 알림을 DB에 확정
-        # 실시간 알림 브로드캐스트 (이벤트 루프 유무에 따라 분기)
-        try:
-            from app.ws.chat_namespace import broadcast_notification
-            import asyncio
-
-            payload = {
+        # 트랜잭셔널 outbox: WS 실시간 전달을 이벤트로 기록 (워커가 처리)
+        enqueue_outbox(
+            db,
+            user_id=user.id,
+            channel="ws",
+            notification_id=notif.id,
+            payload={
                 "id": str(notif.id),
                 "type": notif_type,
                 "title": title,
                 "body": body_message,
                 "extra": extra,
-            }
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                # 동기 엔드포인트·Celery 컨텍스트: 실행 중인 루프가 없으므로 별도 루프에서 즉시 전달
-                asyncio.run(broadcast_notification(str(user.id), payload))
-            else:
-                loop.create_task(broadcast_notification(str(user.id), payload))
-            logger.info(f"[NOTIF] broadcast sent to user:{user.id}")
-        except Exception as e:
-            logger.error(f"[NOTIF] broadcast failed: {e}", exc_info=True)
+            },
+        )
 
     if prefs["email"].get(pref_key, False) and user.email:
-        send_email_notification(user.email, subject, body_text or body_message or title)
+        enqueue_outbox(
+            db,
+            user_id=user.id,
+            channel="email",
+            recipient=user.email,
+            payload={"subject": subject, "body": body_text or body_message or title},
+        )
 
+    db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
     return notif
 
 

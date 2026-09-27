@@ -1,15 +1,46 @@
 """MIND BREEZE 2.0 — FastAPI Application Entry Point"""
 
+import asyncio
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import router as v1_router
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 
+logger = logging.getLogger(__name__)
+
+
+async def _outbox_ws_poll_loop() -> None:
+    """WS 서버 이벤트 루프에서 outbox(ws 채널)를 주기적으로 처리."""
+    from app.services.outbox_worker import poll_and_deliver_ws
+
+    while True:
+        try:
+            await poll_and_deliver_ws()
+        except Exception as e:
+            logger.error(f"[OUTBOX-WS] poll loop error: {e}", exc_info=True)
+        await asyncio.sleep(2)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_outbox_ws_poll_loop())
+    yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+
 app = FastAPI(
     title="MIND BREEZE 2.0",
     description="뇌파 기반 심리상담·명상 통합 서비스 플랫폼 API",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

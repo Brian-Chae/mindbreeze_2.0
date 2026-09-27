@@ -11,6 +11,7 @@ celery_app = Celery(
         "app.tasks.summary_task",
         "app.tasks.report_task",
         "app.tasks.upgrade_narrative_cache",
+        "app.tasks.outbox",
     ],
 )
 # 서사 캐시의 주기적 업그레이드는 upgrade_narrative_cache_cron.py가 cron에서 실행한다.
@@ -23,4 +24,5 @@ celery_app.conf.task_routes = {
 }
 celery_app.conf.beat_schedule = {
     'cleanup-data-exports': {'task': 'tasks.cleanup_data_exports', 'schedule': 60.0},
+    'process-email-outbox': {'task': 'tasks.process_email_outbox', 'schedule': 10.0},
 }
