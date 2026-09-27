@@ -50,6 +50,10 @@ async def _enter_room(sid, data):
     room_id = data.get("room_id")
     if not room_id:
         return
+    # 보안: 사용자 개인 알림 room(user:<id>)은 connect에서만 자동 가입. 임의 가입 차단
+    if str(room_id).startswith("user:"):
+        logger.warning(f"[WS] blocked join to user room (sid={sid}, room={room_id})")
+        return
     await sio.enter_room(sid, room_id, namespace="/chat")
     await sio.emit("joined", {"room_id": room_id}, to=sid, namespace="/chat")
 
@@ -84,6 +88,10 @@ async def on_leave_room(sid, data):
 async def on_message(sid, data):
     room_id = data.get("room_id")
     if not room_id:
+        return
+    # 보안: 사용자 개인 room(user:<id>)으로 임의 메시지 전송 차단
+    if str(room_id).startswith("user:"):
+        logger.warning(f"[WS] blocked message to user room (sid={sid}, room={room_id})")
         return
     await sio.emit("new_message", data, room=room_id, namespace="/chat")
 
