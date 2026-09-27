@@ -1004,20 +1004,44 @@ export default function ClassPlayerPage() {
         {elapsedLabel(classElapsedSec)}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            mediaPrefs.micOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
-          }`}
-        >
-          {mediaPrefs.micOn ? '🎙️ 마이크 ON' : '🔇 마이크 OFF'}
-        </span>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-            mediaPrefs.cameraOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
-          }`}
-        >
-          🎥 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}
-        </span>
+        {/* 음성 녹음 상태 — 실시간 */}
+        {!mediaPrefs.micOn ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50">
+            🔇 마이크 OFF · 녹음 없음
+          </span>
+        ) : recorder.state === 'recording' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B3261E]/40 px-3 py-1.5 text-xs font-semibold text-[#FFB3B0]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#F22121]" />
+            녹음 중 · {recorder.uploadedChunks} 청크
+          </span>
+        ) : recorder.state === 'paused' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
+            ⏸️ 녹음 일시정지
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+            🎙️ 녹음 대기
+          </span>
+        )}
+        {/* 카메라/영상 녹화 상태 — 실시간 */}
+        {!mediaPrefs.cameraOn ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50">
+            🎥 카메라 OFF
+          </span>
+        ) : videoRecorder.state === 'recording' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B3261E]/40 px-3 py-1.5 text-xs font-semibold text-[#FFB3B0]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#F22121]" />
+            영상 녹화 중 · {videoRecorder.uploadedChunks} 청크
+          </span>
+        ) : videoRecorder.state === 'paused' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
+            ⏸️ 영상 일시정지
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white">
+            🎥 카메라 ON
+          </span>
+        )}
         {!mediaPrefs.micOn ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-xs font-medium text-white/50">
             AI 분석 없음 (마이크 꺼짐)
@@ -1115,9 +1139,9 @@ export default function ClassPlayerPage() {
           </div>
         )}
 
-        {/* ③ 라이브 씬 — 좌: 카메라+호스트 상태 / 우: 참여자 피드백 (lg 미만은 세로 스택) */}
+        {/* ③ 라이브 씬 — 좌: 카메라+호스트 상태 / 우: 참여자 피드백 (md 미만은 세로 스택) */}
         {isRunning && isHost && (
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <div className="flex min-w-0 flex-col gap-3">
               {/* 셀프뷰 — 프리뷰 → 셀프뷰 자연 전환 (SDD-084/085) */}
               {mediaPrefs.cameraOn ? (
