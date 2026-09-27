@@ -305,6 +305,25 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
         # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
         report.status = "error"
         report.data_credibility = None
+        # SDD-093: 리포트 생성 실패 알림 발화 — 소유자(상담사/내담자)에게 통지
+        try:
+            from app.services import notification_service
+
+            if report.user_id:
+                notification_service.notify_event(
+                    "report_generation_failed",
+                    report.user_id,
+                    {
+                        "title": "리포트 생성에 실패했습니다",
+                        "body": f"'{session.title or '세션'}' 리포트 생성 중 오류가 발생했습니다.",
+                        "extra": notification_service.build_standard_extra(
+                            "report_generation_failed", "report", str(report.id),
+                        ),
+                    },
+                    db,
+                )
+        except Exception:  # noqa: BLE001 — 알림 실패가 리포트 상태 반영을 막지 않도록
+            pass
 
     # SDD-087: content 통째 교체로 기존 상담사 코멘트가 유실되지 않게 이월한다 (방어 가드)
     prev = report.content if isinstance(report.content, dict) else {}
