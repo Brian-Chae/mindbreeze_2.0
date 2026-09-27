@@ -3,7 +3,8 @@
 import uuid
 from datetime import date
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from redis.asyncio import Redis
 from sqlalchemy.orm import Session
@@ -61,6 +62,26 @@ from app.services import (
 from app.tasks.email import send_otp_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# ── refresh 토큰 httpOnly cookie (XSS 탈취 방지) ──────────────────────────────
+REFRESH_COOKIE_NAME = "mb_refresh_token"
+REFRESH_COOKIE_PATH = "/api/v1/auth"
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    response.set_cookie(
+        key=REFRESH_COOKIE_NAME,
+        value=refresh_token,
+        httponly=True,
+        secure=settings.environment == "production",
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def _clear_refresh_cookie(response: Response) -> None:
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
 
 
 def _ensure_login_role(user: User, requested_role: str | None) -> None:
@@ -161,11 +182,14 @@ async def login(
     _ensure_login_role(user, req.role)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access_token,
-        refresh_token=refresh_token,
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access_token,
+        ).model_dump(mode="json"),
     )
+    _set_refresh_cookie(response, refresh_token)
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -392,11 +416,15 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
             break
     db.commit()
 
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access,
-        refresh_token=refresh,
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access,
+        ).model_dump(mode="json"),
+        status_code=status.HTTP_201_CREATED,
     )
+    _set_refresh_cookie(response, refresh)
+    return response
 
 
 @router.post("/counselor-code/check", response_model=CounselorCodeCheckResponse)
@@ -444,9 +472,20 @@ def _decode_refresh(token: str) -> dict:
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(req: RefreshRequest, db: Session = Depends(get_db)):
+async def refresh(
+    request: Request,
+    db: Session = Depends(get_db),
+    req: RefreshRequest | None = None,
+):
     """Refresh 토큰 회전. 재사용 감지 시 사용자 전체 토큰 폐기."""
-    payload = _decode_refresh(req.refresh_token)
+    # refresh token: body(하위 호환) → httpOnly cookie 우선
+    refresh_token = (req.refresh_token if req and req.refresh_token else None) or request.cookies.get(REFRESH_COOKIE_NAME)
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="리프레시 토큰이 없습니다",
+        )
+    payload = _decode_refresh(refresh_token)
     jti = payload["jti"]
     user_id = payload["sub"]
 
@@ -477,27 +516,32 @@ async def refresh(req: RefreshRequest, db: Session = Depends(get_db)):
 
     new_refresh = refresh_token_service.rotate_refresh_token(jti, user_id, db)
     new_access = create_access_token(subject=user_id)
-    return TokenResponse(access_token=new_access, refresh_token=new_refresh)
+    response = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
+    _set_refresh_cookie(response, new_refresh)
+    return response
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
-    req: LogoutRequest,
+    request: Request,
     db: Session = Depends(get_db),
+    req: LogoutRequest | None = None,
     authorization: str | None = Header(default=None),
 ):
     """Access + Refresh 토큰 폐기"""
-    # Refresh 토큰 폐기
-    try:
-        payload = jwt.decode(
-            req.refresh_token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
-        )
-        jti = payload.get("jti")
-        if jti:
-            refresh_token_service.revoke_token(jti, db)
-    except JWTError:
-        # 이미 만료/위조여도 로그아웃은 성공 처리
-        pass
+    # Refresh 토큰 폐기 — body(하위 호환) → httpOnly cookie
+    refresh_token = (req.refresh_token if req and req.refresh_token else None) or request.cookies.get(REFRESH_COOKIE_NAME)
+    if refresh_token:
+        try:
+            payload = jwt.decode(
+                refresh_token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm]
+            )
+            jti = payload.get("jti")
+            if jti:
+                refresh_token_service.revoke_token(jti, db)
+        except JWTError:
+            # 이미 만료/위조여도 로그아웃은 성공 처리
+            pass
 
     # Access 토큰의 jti는 현재 토큰 구조에 포함되지 않음 → 식별만 검증
     if authorization and authorization.lower().startswith("bearer "):
@@ -507,7 +551,9 @@ async def logout(
         except JWTError:
             pass
 
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    _clear_refresh_cookie(response)
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -561,11 +607,14 @@ async def set_password(
     user = await org_invite_service.consume_invite(req.token, req.new_password, db, redis)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access_token,
-        refresh_token=refresh_token,
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access_token,
+        ).model_dump(mode="json"),
     )
+    _set_refresh_cookie(response, refresh_token)
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -687,11 +736,14 @@ async def google_auth(
     access_token = create_access_token(subject=str(user.id))
     refresh_token_str = refresh_token_service.issue_refresh_token(str(user.id), db)
 
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access_token,
-        refresh_token=refresh_token_str,
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access_token,
+        ).model_dump(mode="json"),
     )
+    _set_refresh_cookie(response, refresh_token_str)
+    return response
 
 
 # ---------------------------------------------------------------------------

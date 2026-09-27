@@ -308,7 +308,7 @@ def test_07_소비시_비밀번호변경_세션무효화_감사_기록(client, m
         json={"email": "primary078g@test.com", "password": VALID_PASSWORD},
     )
     assert login.status_code == 200, login.text
-    old_refresh = login.json()["refresh_token"]
+    old_refresh = login.cookies.get("mb_refresh_token")
 
     res = client.post(
         f"/api/v1/admin/orgs/{ctx['org_id']}/primary-admin/password-reset",
@@ -333,7 +333,7 @@ def test_07_소비시_비밀번호변경_세션무효화_감사_기록(client, m
     assert reuse.status_code == 401
 
     # 기존 세션 무효화 — 이전 리프레시 토큰으로 회전 불가
-    refresh = client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
+    refresh = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": old_refresh})
     assert refresh.status_code == 401
 
     # 새 비밀번호로 로그인 성공 + status는 active 유지

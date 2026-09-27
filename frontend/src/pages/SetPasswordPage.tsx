@@ -66,12 +66,11 @@ export default function SetPasswordPage() {
 
       let redirectPath = '/dashboard/org';
       if (isLoginResponse(response)) {
-        tokenStorage.set(response.access_token, response.refresh_token);
+        tokenStorage.set(response.access_token);
         localStorage.setItem('mb_user', JSON.stringify(response.user));
         useAuthStore.setState({
           user: response.user,
           accessToken: response.access_token,
-          refreshToken: response.refresh_token,
           isAuthenticated: true,
           isInitialized: true,
         });

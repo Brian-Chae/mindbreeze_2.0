@@ -19,7 +19,7 @@ export interface User {
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string | null;
   token_type: string;
 }
 
@@ -59,11 +59,10 @@ export const registerClient = (data: ClientRegisterPayload): Promise<LoginRespon
 export const login = (email: string, password: string, role?: UserRole): Promise<LoginResponse> =>
   apiClient.post('/auth/login', { email, password, role }, { skipAuth: true });
 
-export const refreshToken = (token: string): Promise<TokenResponse> =>
-  apiClient.post('/auth/refresh', { refresh_token: token }, { skipAuth: true });
+export const refreshToken = (): Promise<TokenResponse> =>
+  apiClient.post('/auth/refresh', undefined, { skipAuth: true });
 
-export const logout = (accessToken: string, refreshToken: string): Promise<void> =>
-  apiClient.post('/auth/logout', { access_token: accessToken, refresh_token: refreshToken });
+export const logout = (): Promise<void> => apiClient.post('/auth/logout', undefined);
 
 export const forgotPassword = (email: string): Promise<{ ok: boolean }> =>
   apiClient.post('/auth/password/forgot', { email }, { skipAuth: true });

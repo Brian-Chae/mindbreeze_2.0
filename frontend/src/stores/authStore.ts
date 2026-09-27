@@ -1,7 +1,8 @@
 // 인증 전역 상태 (Zustand)
+// access token은 메모리에만 보관, refresh token은 httpOnly cookie로 관리
 
 import { create } from 'zustand';
-import { ApiError, tokenStorage } from '../lib/api/client';
+import { ApiError, tokenStorage, refreshAccessToken } from '../lib/api/client';
 import {
   login as apiLogin,
   registerClient as apiRegisterClient,
@@ -20,7 +21,6 @@ const USER_KEY = 'mb_user';
 interface AuthState {
   user: User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
 
@@ -54,86 +54,72 @@ const applyLogin = (res: LoginResponse, requestedRole?: string): User => {
   if (requestedRole && res.user.role !== requestedRole) {
     throw new ApiError(403, '선택한 로그인 유형과 계정 유형이 다릅니다. 올바른 탭에서 다시 로그인해 주세요.', null);
   }
-  tokenStorage.set(res.access_token, res.refresh_token);
+  tokenStorage.set(res.access_token); // refresh는 httpOnly cookie로 백엔드가 설정
   persistUser(res.user);
   return res.user;
 };
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
-  refreshToken: null,
   isAuthenticated: false,
   isInitialized: false,
 
   initialize: (): void => {
-    const access = tokenStorage.getAccess();
-    const refresh = tokenStorage.getRefresh();
     const user = loadUser();
     set({
       user,
-      accessToken: access,
-      refreshToken: refresh,
-      isAuthenticated: Boolean(access && user),
+      accessToken: null,
+      isAuthenticated: Boolean(user),
       isInitialized: true,
     });
+    // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재
+    if (user) {
+      refreshAccessToken().then((token) => {
+        if (token) {
+          set({ accessToken: token, isAuthenticated: true });
+        } else {
+          tokenStorage.clear();
+          persistUser(null);
+          set({ user: null, accessToken: null, isAuthenticated: false });
+        }
+      });
+    }
   },
 
   login: async (email, password, role): Promise<User> => {
     const res = await apiLogin(email, password, role);
     const user = applyLogin(res, role);
-    set({
-      user,
-      accessToken: res.access_token,
-      refreshToken: res.refresh_token,
-      isAuthenticated: true,
-    });
+    set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
   },
 
-  loginGoogle: async (accessToken, inviteToken, role): Promise<User> => {
-    const res = await apiLoginGoogle({ access_token: accessToken, invite_token: inviteToken, role });
+  loginGoogle: async (idToken, inviteToken, role): Promise<User> => {
+    const res = await apiLoginGoogle({ access_token: idToken, invite_token: inviteToken, role });
     const user = applyLogin(res, role);
-    set({
-      user,
-      accessToken: res.access_token,
-      refreshToken: res.refresh_token,
-      isAuthenticated: true,
-    });
+    set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
   },
 
   devLogin: async (userId): Promise<User> => {
     const res = await loginDevUser(userId);
     const user = applyLogin(res);
-    set({
-      user,
-      accessToken: res.access_token,
-      refreshToken: res.refresh_token,
-      isAuthenticated: true,
-    });
+    set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
   },
 
   registerClient: async (data): Promise<User> => {
     const res = await apiRegisterClient(data);
     const user = applyLogin(res);
-    set({
-      user,
-      accessToken: res.access_token,
-      refreshToken: res.refresh_token,
-      isAuthenticated: true,
-    });
+    set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
   },
 
   refreshAuth: async (): Promise<boolean> => {
-    const refresh = get().refreshToken ?? tokenStorage.getRefresh();
-    if (!refresh) return false;
     try {
-      const res = await apiRefresh(refresh);
-      tokenStorage.set(res.access_token, res.refresh_token);
-      set({ accessToken: res.access_token, refreshToken: res.refresh_token });
+      const res = await apiRefresh();
+      tokenStorage.set(res.access_token);
+      set({ accessToken: res.access_token });
       return true;
     } catch {
       return false;
@@ -141,17 +127,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async (): Promise<void> => {
-    const { accessToken, refreshToken } = get();
-    if (accessToken && refreshToken) {
-      try {
-        await apiLogout(accessToken, refreshToken);
-      } catch {
-        // 서버 에러는 무시하고 로컬 상태만 정리
-      }
+    try {
+      await apiLogout();
+    } catch {
+      // 서버 에러는 무시하고 로컬 상태만 정리
     }
     tokenStorage.clear();
     persistUser(null);
-    set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
+    set({ user: null, accessToken: null, isAuthenticated: false });
   },
 
   setUser: (user): void => {

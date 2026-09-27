@@ -95,16 +95,16 @@ class LoginRequest(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str
+    refresh_token: str | None = None  # refresh는 httpOnly cookie로만 전달 (XSS 탈취 방지)
     token_type: str = "bearer"
 
 
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None  # 없으면 httpOnly cookie에서 읽음
 
 
 class LogoutRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
 
 
 class OtpRequestPayload(BaseModel):

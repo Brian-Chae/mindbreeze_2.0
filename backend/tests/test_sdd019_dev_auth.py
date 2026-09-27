@@ -111,7 +111,8 @@ def test_passwordless_login_returns_login_response(dev_client):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["access_token"]
-    assert body["refresh_token"]
+    # refresh token은 httpOnly cookie로 전달 (JSON 응답에서 제거)
+    assert body.get("refresh_token") in (None, "")
     assert body["token_type"] == "bearer"
     assert body["user"]["id"] == created["id"]
     assert body["user"]["role"] == "counselor"

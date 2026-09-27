@@ -12,10 +12,11 @@ import re
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from app.api.v1.auth import _to_user_response
+from app.api.v1.auth import _set_refresh_cookie, _to_user_response
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.models.organization import Organization
@@ -147,11 +148,14 @@ async def dev_login(req: DevLoginRequest, db: Session = Depends(get_db)):
     user = dev_user_service.get_dev_user(req.user_id, db)
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
-    return LoginResponse(
-        user=_to_user_response(user),
-        access_token=access_token,
-        refresh_token=refresh_token,
+    response = JSONResponse(
+        content=LoginResponse(
+            user=_to_user_response(user),
+            access_token=access_token,
+        ).model_dump(mode="json"),
     )
+    _set_refresh_cookie(response, refresh_token)
+    return response
 
 
 @router.post("/reset-fixtures", response_model=DevResetResponse)
