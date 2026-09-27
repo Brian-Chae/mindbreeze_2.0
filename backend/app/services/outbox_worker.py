@@ -3,7 +3,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from app.core.database import SessionLocal
 from app.models.notification_outbox import NotificationOutbox
 from app.ws.chat_namespace import broadcast_notification
 
@@ -14,6 +13,8 @@ MAX_ATTEMPTS = 5
 
 async def poll_and_deliver_ws(limit: int = 100) -> int:
     """pending ws outbox를 조회해 같은 이벤트 루프에서 emit."""
+    from app.core.database import SessionLocal
+
     db = SessionLocal()
     delivered = 0
     try:

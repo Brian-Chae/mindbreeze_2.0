@@ -39,3 +39,41 @@ def org_removed_notice_task(user_id: str, org_name: str, office_name: str) -> No
     with SessionLocal() as db:
         if deliver_org_removed_notice(user_id, org_name, office_name, db) == "failed":
             raise RuntimeError("기관 해제 안내 메일 발송 실패")
+
+
+# SDD-093: 알림 이메일 outbox 발송. email_app 에 등록해야 mindbreeze-email-worker 가
+# 소비한다. notify_event 가 outbox(email) 레코드를 commit 한 뒤 이 태스크를 큐에 적재하므로
+# Celery beat 에 의존하지 않는다.
+@email_app.task(name="tasks.notification_email", autoretry_for=(RuntimeError,),
+                retry_backoff=True, retry_kwargs={"max_retries": 3})
+def notification_email_task(outbox_id: str) -> None:
+    import uuid
+    from datetime import datetime, timezone
+
+    from app.core.database import SessionLocal
+    from app.models.notification_outbox import NotificationOutbox
+    from app.services.notification_service import send_email_notification
+
+    with SessionLocal() as db:
+        item = (
+            db.query(NotificationOutbox)
+            .filter(
+                NotificationOutbox.id == uuid.UUID(outbox_id),
+                NotificationOutbox.channel == "email",
+            )
+            .first()
+        )
+        if item is None:
+            return
+        payload = item.payload or {}
+        ok = send_email_notification(
+            item.recipient or "",
+            payload.get("subject", ""),
+            payload.get("body", ""),
+        )
+        if not ok:
+            raise RuntimeError("알림 메일 발송 실패")
+        item.status = "sent"
+        item.sent_at = datetime.now(timezone.utc)
+        item.last_error = None
+        db.commit()

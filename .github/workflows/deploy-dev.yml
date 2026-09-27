@@ -126,6 +126,9 @@ jobs:
             sleep 5
             sudo systemctl is-active mindbreeze-backend
 
+            # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
+            (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
+
             # 6. 헬스체크
             curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"
 

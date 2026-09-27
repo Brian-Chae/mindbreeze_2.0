@@ -231,16 +231,31 @@ def notify_event(
             },
         )
 
+    email_outbox_id = None
     if prefs["email"].get(pref_key, False) and user.email:
-        enqueue_outbox(
-            db,
+        from app.models.notification_outbox import NotificationOutbox
+
+        email_item = NotificationOutbox(
             user_id=user.id,
             channel="email",
             recipient=user.email,
             payload={"subject": subject, "body": body_text or body_message or title},
         )
+        db.add(email_item)
+        db.flush()  # id 확보 → commit 후 email_app 큐 적재용
+        email_outbox_id = email_item.id
 
     db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
+
+    # commit 후 email_app 큐에 적재 (Celery beat 불필요 — email worker가 즉시 소비)
+    if email_outbox_id is not None:
+        from app.tasks.report_email_task import notification_email_task
+
+        try:
+            notification_email_task.apply_async(args=[str(email_outbox_id)], retry=False)
+        except Exception as e:  # 브로커 장애 등 — outbox 레코드가 남으므로 추후 재시도 가능
+            logger.warning(f"[NOTIF EMAIL] 큐 적재 실패 (outbox={email_outbox_id}): {e}")
+
     return notif
 
 

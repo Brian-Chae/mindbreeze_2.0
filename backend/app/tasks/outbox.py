@@ -4,7 +4,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from app.core.celery_app import celery_app
-from app.core.database import SessionLocal
 from app.models.notification_outbox import NotificationOutbox
 from app.services.notification_service import send_email_notification
 
@@ -16,6 +15,8 @@ MAX_ATTEMPTS = 5
 @celery_app.task(name="tasks.process_email_outbox")
 def process_email_outbox(limit: int = 100) -> dict:
     """pending email outbox를 조회해 발송."""
+    from app.core.database import SessionLocal
+
     db = SessionLocal()
     processed = sent = failed = 0
     try:
@@ -65,6 +66,7 @@ def process_email_outbox(limit: int = 100) -> dict:
 @celery_app.task(name="tasks.cleanup_notifications")
 def cleanup_notifications() -> dict:
     """알림 보관·파기 정책: 읽은 알림 30일, 전체 90일, outbox 정리 30일."""
+    from app.core.database import SessionLocal
     from app.models.notification import Notification
 
     db = SessionLocal()

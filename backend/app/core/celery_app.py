@@ -24,6 +24,4 @@ celery_app.conf.task_routes = {
 }
 celery_app.conf.beat_schedule = {
     'cleanup-data-exports': {'task': 'tasks.cleanup_data_exports', 'schedule': 60.0},
-    'process-email-outbox': {'task': 'tasks.process_email_outbox', 'schedule': 10.0},
-    'cleanup-notifications': {'task': 'tasks.cleanup_notifications', 'schedule': 86400.0},
 }
