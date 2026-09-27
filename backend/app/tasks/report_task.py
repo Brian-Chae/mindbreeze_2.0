@@ -349,5 +349,22 @@ try:
             generate_report_inline(report_id, db)
         finally:
             db.close()
+
+    @shared_task(name="tasks.generate_reports_for_session")
+    def generate_reports_for_session(session_id: str) -> None:
+        """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출)."""
+        from app.core.database import SessionLocal
+        from app.models.session import Session
+        from app.services import report_service
+
+        db = SessionLocal()
+        try:
+            s = db.query(Session).filter(Session.id == UUID(session_id)).first()
+            if not s:
+                return
+            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
+            report_service.generate_client_reports_for_session(str(s.id), db)
+        finally:
+            db.close()
 except Exception:  # noqa: BLE001
     pass

@@ -153,15 +153,46 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
 
 
 def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
-    """세션 /end 시 자동 호출. 녹음 중이면 종료 처리."""
-    record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
-    if not record or record.status != "recording":
-        return
-    record.status = "processing"
-    record.recording_ended_at = _now()
-    db.commit()
-    from app.tasks.stt_task import run_stt_inline
-    from app.tasks.summary_task import run_summary_inline
+    """세션 /end 시 자동 호출. STT/요약/리포트 생성을 Celery chain 으로 비동기 처리.
 
-    run_stt_inline(str(session_id), db)
-    run_summary_inline(str(session_id), db)
+    세션 종료 API 가 STT(Whisper)·요약(LLM)·리포트 생성(LLM)을 동기 대기하지 않도록
+    chain(stt → summary → generate_reports) 으로 큐에 적재한다.
+    """
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
+    has_recording = record is not None and record.status == "recording"
+    if record is not None and record.status == "recording":
+        record.status = "processing"
+        record.recording_ended_at = _now()
+        db.commit()
+
+    try:
+        from celery import chain
+        from app.tasks.report_task import generate_reports_for_session
+
+        tasks = []
+        if has_recording:
+            from app.tasks.stt_task import stt_task
+            from app.tasks.summary_task import summary_task
+
+            tasks += [stt_task.si(str(session_id)), summary_task.si(str(session_id))]
+        tasks.append(generate_reports_for_session.si(str(session_id)))
+        chain(*tasks).apply_async()
+        logger.info(
+            "[audio] chain enqueued for session %s (recording=%s)", session_id, has_recording
+        )
+    except Exception:
+        # Celery 불가(개발/테스트) → 동기 fallback (기존 동작 유지)
+        logger.warning("[audio] Celery unavailable, running inline for session %s", session_id)
+        if has_recording:
+            from app.tasks.stt_task import run_stt_inline
+            from app.tasks.summary_task import run_summary_inline
+
+            run_stt_inline(str(session_id), db)
+            run_summary_inline(str(session_id), db)
+        from app.models.session import Session
+        from app.services import report_service
+
+        s = db.query(Session).filter(Session.id == session_id).first()
+        if s:
+            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
+            report_service.generate_client_reports_for_session(str(s.id), db)

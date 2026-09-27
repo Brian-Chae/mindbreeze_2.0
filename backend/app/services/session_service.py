@@ -411,17 +411,8 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         except Exception:
             pass
         # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
-        # best-effort: 리포트 생성 실패해도 세션 종료는 성공한다 (audio finalize 와 동일 패턴).
-        try:
-            from app.services import report_service
-            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
-        except Exception:
-            pass
-        try:
-            from app.services import report_service
-            report_service.generate_client_reports_for_session(str(s.id), db)
-        except Exception:
-            pass
+        # 리포트 생성은 audio_service.finalize_on_session_end 의 Celery chain(STT→요약→리포트)에서
+        # 비동기 처리된다. 여기서는 동기 생성하지 않아 세션 종료 API 응답을 지연시키지 않는다.
 
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
