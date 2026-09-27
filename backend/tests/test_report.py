@@ -72,7 +72,10 @@ def test_report_01_생성_상담사용(client):
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["type"] == "counselor"
-    assert "headline" in body["content"]
+    # AI 리뷰(headline/summary) 제거 — 1차는 영상+STT 기반으로 재구성
+    assert "headline" not in body["content"]
+    assert "transcript_segments" in body["content"]
+    assert "video" in body["content"]
 
 
 def test_report_02_생성_내담자용(client):

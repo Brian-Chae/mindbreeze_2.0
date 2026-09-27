@@ -133,7 +133,7 @@ def test_group_report_excludes_others(client, setup_email):
     db.commit()
     assert client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant)).status_code == 202
     report = db.query(Report).one()
-    assert report.content["summary"] is None
+    assert report.content.get("summary") is None
     assert report.content["eeg"] == {"status": "not_measured"}
     other_body = request_body(other)
     assert client.post(f"/api/v1/sessions/{session.id}/report-email", json=other_body).status_code == 202

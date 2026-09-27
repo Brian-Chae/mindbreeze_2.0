@@ -35,15 +35,6 @@ def _ai_summary(record: SessionRecord | None) -> dict:
     return summary if isinstance(summary, dict) else {}
 
 
-def _summary_text(summary: dict) -> str | None:
-    """ai_summary 에서 요약 문장을 추출. 없으면 None (0/빈문자 치환 금지)."""
-    for key in ("summary", "overview", "headline"):
-        v = summary.get(key)
-        if isinstance(v, str) and v.strip():
-            return v
-    return None
-
-
 def _ai_record_block(record: SessionRecord | None) -> dict:
     """음성/AI 요약 가용성 계약 — EEG `not_measured` 패턴 준용 (SDD-085).
 
@@ -194,40 +185,39 @@ def _build_eeg_content(
 
 
 def _counselor_content(session: Session, record: SessionRecord | None, eeg_block: dict) -> dict:
-    summary = _ai_summary(record)
+    # STT 발화자 구분 segments — Gemini diarization 결과(ai_summary.segments)
+    segments = _ai_summary(record).get("segments") if record else None
     return {
         "title": session.title or f"{session.type} 세션 리포트",
         "session_type": session.type,
         "scheduled_at": session.scheduled_at.isoformat() if session.scheduled_at else None,
-        # 하위호환: headline 유지 + summary 추가
-        "headline": summary.get("headline", "AI 리포트 (자동 생성)"),
-        "summary": _summary_text(summary),
-        "sections": summary.get("sections"),  # 없으면 None — {} 치환 금지
+        # AI 리뷰(summary/sections) 제거 — 1차는 원본 데이터(영상+STT) 기반으로 재구성
         "markers": _markers(record),
         "counselor_notes": (record.counselor_notes if record else None),
         "eeg": eeg_block,
         # SDD-085: 음성/AI 요약 가용성 — 마이크 오프 시 not_available + 사유
         "ai_record": _ai_record_block(record),
+        # 신규: STT 발화자 구분 기록지 + 영상 리플레이 소스
+        "transcript_segments": segments,
+        "video": (
+            {
+                "s3_key": record.video_s3_key,
+                "status": record.video_status,
+            }
+            if record
+            else None
+        ),
         "approved": False,
     }
 
 
 def _client_content(session: Session, record: SessionRecord | None, eeg_block: dict) -> dict:
-    summary = _ai_summary(record)
-    sections = summary.get("sections")
-    insights: list[str] = []
-    if isinstance(sections, dict):
-        for v in list(sections.values())[:3]:
-            insights.append(v if isinstance(v, str) else str(v))
     return {
         "title": session.title or "내 마음 리포트",
         "session_type": session.type,
         "scheduled_at": session.scheduled_at.isoformat() if session.scheduled_at else None,
-        # 하위호환: headline 유지 + summary 추가
-        "headline": "오늘의 인사이트",
-        "summary": _summary_text(summary),
+        # AI 리뷰(summary/insights) 제거 — 1차는 뇌파(EEG) 기반 분석 리포트로 재구성
         "greeting": "오늘 세션을 함께해주셔서 감사합니다.",
-        "insights": insights,
         "eeg": eeg_block,
         # SDD-085: 음성/AI 요약 가용성 — 마이크 오프 시 not_available + 사유
         "ai_record": _ai_record_block(record),

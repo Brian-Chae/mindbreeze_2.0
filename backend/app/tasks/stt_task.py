@@ -4,18 +4,24 @@
 WebSocket `/record` 네임스페이스로 각 단계 상태 브로드캐스트.
 """
 
+import base64
 import json
 import logging
 import os
+import shutil
+import tempfile
 from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.record import SessionRecord, AudioChunk
 
 logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
 def _call_whisper(chunk_paths: list[str]) -> dict:
@@ -78,10 +84,113 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         os.unlink(merged_path)
 
 
-def _call_gemini_fallback(chunk_paths: list[str]) -> dict:
-    """Whisper 실패 시 Gemini 폴백 (동일한 인터페이스). 현재 스텁."""
-    logger.warning("[stt_task] Gemini fallback invoked")
-    return _generate_stub(chunk_paths)
+def _call_gemini_transcribe(chunk_paths: list[str]) -> dict:
+    """Gemini Audio로 STT + 화자 구분(diarization).
+
+    오디오 청크를 병합해 Gemini에 inline_data로 전달하고,
+    프롬프트로 counselor/client 2화자 구분 + 타임스탬프 JSON 응답을 유도한다.
+    """
+    if not settings.gemini_api_key:
+        logger.warning("[stt_task] gemini_api_key 미설정")
+        raise RuntimeError("gemini_api_key not set")
+
+    # 1) 청크 병합 → base64
+    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
+    merged_path = merged.name
+    try:
+        with open(merged_path, "wb") as out:
+            for path in chunk_paths:
+                with open(path, "rb") as src:
+                    shutil.copyfileobj(src, out)
+        with open(merged_path, "rb") as f:
+            audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+    finally:
+        os.unlink(merged_path)
+
+    prompt = (
+        "이 오디오는 상담사(counselor)와 내담자(client)의 1:1 상담 대화 녹음입니다. "
+        "화자를 구분해 대화 전체를 전사하세요. "
+        "다른 말 없이 아래 JSON 배열만 출력하세요:\n"
+        '[{"speaker": "counselor" | "client", "text": "발화 내용", "start": 0.0, "end": 4.5}, ...]\n'
+        "start/end는 오디오 시작 기준 초(float)로 표기하세요."
+    )
+
+    import httpx
+
+    resp = httpx.post(
+        f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
+        headers={"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
+        json={
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {"inline_data": {"mime_type": "audio/webm", "data": audio_b64}},
+                    ]
+                }
+            ]
+        },
+        timeout=180,
+    )
+    resp.raise_for_status()
+    result = resp.json()
+
+    parts = (result.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+    if not text.strip():
+        raise RuntimeError("Gemini 응답에 텍스트 없음")
+
+    segments = _extract_segments_json(text)
+    raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
+    logger.info("[stt_task] Gemini success: %d segments, %d chars", len(segments), len(raw_text))
+    return {"segments": segments, "raw_text": raw_text}
+
+
+def _extract_segments_json(text: str) -> list[dict]:
+    """Gemini 응답에서 segments JSON 배열을 추출·검증한다. 실패 시 raise."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+    start = cleaned.find("[")
+    end = cleaned.rfind("]")
+    if start == -1 or end == -1 or end <= start:
+        raise ValueError("segments JSON 배열을 찾지 못함")
+
+    data = json.loads(cleaned[start : end + 1])
+    if not isinstance(data, list):
+        raise ValueError("segments가 배열이 아님")
+
+    segments: list[dict] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        speaker = str(item.get("speaker", "")).strip().lower()
+        if speaker in ("상담사", "counselor", "호스트"):
+            speaker = "counselor"
+        elif speaker in ("내담자", "client", "고객"):
+            speaker = "client"
+        else:
+            speaker = "speaker_0"
+        seg_text = str(item.get("text", "")).strip()
+        if not seg_text:
+            continue
+        try:
+            seg_start = float(item.get("start", 0.0))
+        except (TypeError, ValueError):
+            seg_start = 0.0
+        try:
+            seg_end = float(item.get("end", seg_start))
+        except (TypeError, ValueError):
+            seg_end = seg_start
+        segments.append({"speaker": speaker, "text": seg_text, "start": seg_start, "end": seg_end})
+
+    if not segments:
+        raise ValueError("유효한 segments 없음")
+    return segments
 
 
 def _generate_stub(chunk_paths: list[str]) -> dict:
@@ -143,10 +252,14 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
 
     asyncio.run(_emit_status(session_id, "transcribing"))
     try:
-        result = _call_whisper(chunk_paths)
+        result = _call_gemini_transcribe(chunk_paths)
     except Exception as exc:
-        logger.exception("[stt_task] Whisper failed, fallback: %s", exc)
-        result = _call_gemini_fallback(chunk_paths)
+        logger.exception("[stt_task] Gemini transcribe failed, Whisper fallback: %s", exc)
+        try:
+            result = _call_whisper(chunk_paths)
+        except Exception as exc2:
+            logger.exception("[stt_task] Whisper failed, stub fallback: %s", exc2)
+            result = _generate_stub(chunk_paths)
 
     asyncio.run(_emit_status(session_id, "diarizing"))
     segments = result.get("segments", [])
