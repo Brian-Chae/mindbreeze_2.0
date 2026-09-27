@@ -1108,34 +1108,74 @@ export default function ClassPlayerPage() {
           </>
         )}
 
-        {/* ② 대기실 씬 — open: 코드 대형 표시 + 참가자 실시간 그리드 */}
+        {/* ② 대기실 씬 — open: 좌(코드·호스트 카메라/음성) / 우(참가자 실시간 그리드) */}
         {isLobby && (
-          <div className="rounded-2xl bg-white/5 p-6 text-center">
-            <p className="text-sm text-white/60">클래스 코드</p>
-            <p className="mt-1 font-mono text-5xl font-black tracking-[0.2em] text-white">
-              {accessCode || '——————'}
-            </p>
-            <p className="mt-2 text-sm text-white/60">
-              회원에게 코드를 안내하세요. 입장한 회원의 밴드 착용·신호 상태가 아래에 실시간으로
-              표시됩니다.
-            </p>
-            {accessCode && (
-              <button
-                type="button"
-                onClick={() => void handleCopyCode()}
-                className="mt-3 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/20"
-              >
-                {codeCopied ? '복사 완료' : '코드 복사'}
-              </button>
-            )}
-            {session.opened_at && (
-              <div className="mt-5 border-t border-white/10 pt-4">
-                <p className="text-xs text-white/50">대기 시간</p>
-                <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-white">
-                  {elapsedLabel(lobbyElapsedSec)}
+          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+            {/* 좌측 — 클래스 코드 + 호스트 카메라·음성 상태 */}
+            <div className="flex min-w-0 flex-col gap-3">
+              <div className="rounded-2xl bg-white/5 p-5 text-center">
+                <p className="text-sm text-white/60">클래스 코드</p>
+                <p className="mt-1 font-mono text-4xl font-black tracking-[0.2em] text-white">
+                  {accessCode || '——————'}
                 </p>
+                <p className="mt-2 text-sm text-white/60">
+                  회원에게 코드를 안내하세요. 입장한 회원의 밴드 착용·신호 상태가 우측에
+                  실시간으로 표시됩니다.
+                </p>
+                {session.opened_at && (
+                  <p className="mt-2 font-mono text-lg font-bold tabular-nums text-white/70">
+                    대기 {elapsedLabel(lobbyElapsedSec)}
+                  </p>
+                )}
+                {accessCode && (
+                  <button
+                    type="button"
+                    onClick={() => void handleCopyCode()}
+                    className="mt-3 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/20"
+                  >
+                    {codeCopied ? '복사 완료' : '코드 복사'}
+                  </button>
+                )}
               </div>
-            )}
+
+              {/* 호스트 카메라 영상 — 세팅에서 확정한 카메라 설정 반영 */}
+              {mediaPrefs.cameraOn ? (
+                <SessionHostVideoView
+                  stream={videoRecorder.stream}
+                  facingMode={videoRecorder.facingMode}
+                  recording={false}
+                />
+              ) : (
+                <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
+                    🎥
+                  </span>
+                  <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
+                </div>
+              )}
+
+              {/* 음성·카메라 설정 상태 — 세팅에서 확정한 값 표시 */}
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/5 p-4">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                    mediaPrefs.micOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
+                  }`}
+                >
+                  {mediaPrefs.micOn ? '🎙️ 마이크 ON' : '🔇 마이크 OFF'}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
+                    mediaPrefs.cameraOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
+                  }`}
+                >
+                  🎥 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}
+                </span>
+                <span className="text-xs text-white/50">시작 시 녹음·녹화가 시작됩니다</span>
+              </div>
+            </div>
+
+            {/* 우측 — 내담자 상태 실시간 */}
+            <div className="min-w-0">{monitorPanel}</div>
           </div>
         )}
 
@@ -1164,8 +1204,8 @@ export default function ClassPlayerPage() {
           </div>
         )}
 
-        {/* 모니터링 — 대기실(핵심 목적: 착용·신호 확인)·비호스트 진행 화면은 전체 폭 */}
-        {(isLobby || (isRunning && !isHost)) && monitorPanel}
+        {/* 모니터링 — 비호스트 진행 화면은 전체 폭 (대기실은 위 좌우 그리드 우측에 표시) */}
+        {(isRunning && !isHost) && monitorPanel}
 
         {/* 오류 표시 */}
         {error && (
