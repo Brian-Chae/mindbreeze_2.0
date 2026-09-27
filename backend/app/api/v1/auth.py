@@ -63,10 +63,6 @@ from app.tasks.email import send_otp_email
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _is_looxidlabs_email(email: str) -> bool:
-    return email.strip().lower().endswith("@looxidlabs.com")
-
-
 def _ensure_login_role(user: User, requested_role: str | None) -> None:
     if requested_role is not None and user.role != requested_role:
         raise HTTPException(
@@ -619,27 +615,25 @@ async def google_auth(
     requested_role = req.role or ""
     wants_platform_admin = requested_role == "platform_admin"
 
-    if wants_platform_admin and not _is_looxidlabs_email(email):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="시스템 관리자는 looxidlabs.com Google 계정만 로그인할 수 있습니다",
-        )
-
     # 2. User find-or-create
     user = db.query(User).filter(User.email == email).first()
 
+    # platform_admin 은 명시적 지정만 허용 — Google OAuth 로는 자동 승격·신규 생성 금지.
+    # 룩시드랩스 소속이라도 상담을 받을 수 있으므로 도메인 기반 승격은 부적절하다.
+    if wants_platform_admin and (user is None or user.role != "platform_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="시스템 관리자는 관리자 지정 경로로만 등록할 수 있습니다",
+        )
+
     if user:
         # 역할 의도 검증은 계정 연결 변경과 토큰 발급보다 먼저 수행한다.
-        # 관리자 요청은 위의 기존 도메인 승인 정책으로 역할을 결정한다.
         if not wants_platform_admin:
             _ensure_login_role(user, req.role)
-        # 기존 사용자 — auth_provider 업데이트 + 필요 시 platform_admin 승격
+        # 기존 사용자 — auth_provider 업데이트
         updated = False
         if user.auth_provider == "email":
             user.auth_provider = "google"
-            updated = True
-        if wants_platform_admin and user.role != "platform_admin":
-            user.role = "platform_admin"
             updated = True
         if updated:
             db.commit()
@@ -651,8 +645,8 @@ async def google_auth(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="사전 등록된 계정이 없습니다. 관리자에게 문의하세요.",
             )
-        role = "platform_admin" if wants_platform_admin else "client"
-        # 신규 Google 사용자 생성 (내담자 / 시스템 관리자)
+        role = "client"
+        # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
             email=email,

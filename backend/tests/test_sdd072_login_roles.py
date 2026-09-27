@@ -90,9 +90,13 @@ def test_existing_google_matching_role_preserves_permissions(client, role):
     assert response.json()["access_token"]
 
 
-def test_explicit_admin_request_preserves_domain_approval_policy(client):
+def test_explicit_admin_request_rejects_domain_auto_promotion(client):
+    """platform_admin 은 명시적 지정만 허용 — Google OAuth 도메인 기반 자동 승격 금지."""
     _register(client, email="member@looxidlabs.com")
     with _google("member@looxidlabs.com"):
         response = client.post("/api/v1/auth/google", json={"access_token": "valid", "role": "platform_admin"})
-    assert response.status_code == 200
-    assert response.json()["user"]["role"] == "platform_admin"
+    assert response.status_code == 403
+    # 기존 role 유지 (승격 없음)
+    with _db() as db:
+        user = db.query(User).filter_by(email="member@looxidlabs.com").one()
+        assert user.role == "client"
