@@ -785,6 +785,28 @@ def fork_group_room(
     for puid in inherited + new_uuids:
         db.add(ChatRoomParticipant(room_id=new_room.id, user_id=puid))
     db.commit()
+    # SDD-093: 새 참여자에게 chat_room_invited 알림 발화 (best-effort)
+    for puid in new_uuids:
+        try:
+            from app.services.notification_service import notify_event, build_standard_extra
+
+            notify_event(
+                "chat_room_invited",
+                puid,
+                {
+                    "title": "채팅방에 초대되었습니다",
+                    "body": f"{new_room.name or '채팅방'}에 초대되었습니다.",
+                    "extra": build_standard_extra(
+                        "chat_room_invited",
+                        "chat_room",
+                        str(new_room.id),
+                        params={"inviter_id": str(uid)},
+                    ),
+                },
+                db,
+            )
+        except Exception:
+            pass
     return _serialize_room(new_room, user_id, db)
 
 
@@ -862,6 +884,27 @@ def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db:
         raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
     db.delete(row)
     db.commit()
+    # SDD-093: 내보내진 회원에게 chat_room_removed 알림 발화 (best-effort)
+    try:
+        from app.services.notification_service import notify_event, build_standard_extra
+
+        notify_event(
+            "chat_room_removed",
+            tuid,
+            {
+                "title": "채팅방에서 내보내졌습니다",
+                "body": f"{room.name or '채팅방'}에서 내보내졌습니다.",
+                "extra": build_standard_extra(
+                    "chat_room_removed",
+                    "notice",
+                    str(room.id),
+                    params={"removed_by": str(uid)},
+                ),
+            },
+            db,
+        )
+    except Exception:
+        pass
 
 
 def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dict]:
