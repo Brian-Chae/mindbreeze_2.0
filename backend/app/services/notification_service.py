@@ -47,9 +47,10 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "report_ready": {"type": "report", "target_type": "report"},
     "report_generation_failed": {"type": "report", "target_type": "report"},
     "report_email_failed": {"type": "report", "target_type": "report"},
-    # ── 검증 V01~V02 ──
+    # ── 검증 V01~V03 ──
     "verification_result": {"type": "verification", "target_type": "credentials"},
     "organization_verification_result": {"type": "verification", "target_type": "organization"},
+    "verification_requested": {"type": "verification", "target_type": "credentials"},
     # ── 기관 O01~O06 ──
     "organization_join_requested": {"type": "organization", "target_type": "organization"},
     "organization_join_result": {"type": "organization", "target_type": "notice"},

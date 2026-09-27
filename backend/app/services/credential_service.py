@@ -116,6 +116,25 @@ def upload_credential(
     db.add(credential)
     db.commit()
     db.refresh(credential)
+
+    # 모든 플랫폼 관리자에게 검증 요청 알림 (SDD-093 #3)
+    platform_admins = (
+        db.query(User)
+        .filter(User.role == "platform_admin", User.status == "active")
+        .all()
+    )
+    submitter = db.query(User).filter(User.id == user_id).first()
+    submitter_name = submitter.name if submitter else "상담사"
+    for admin in platform_admins:
+        notify_event("verification_requested", admin.id, {
+            "title": "새 자격 검증 요청이 도착했습니다",
+            "body": f"{submitter_name}님이 자격 증빙을 제출했습니다. 검토해주세요.",
+            "extra": build_standard_extra(
+                "verification_requested", "credentials", None,
+                params={"credential_id": str(credential.id), "submitter_id": str(user_id)},
+            ),
+        }, db)
+
     return credential
 
 
