@@ -168,6 +168,7 @@ export default function ClassPlayerPage() {
   const [error, setError] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<keyof MonitorSummaryCounts | null>(null);
@@ -474,6 +475,13 @@ export default function ClassPlayerPage() {
         }
       }
       await refreshMetrics();
+      // 클래스 시작 직후 바로 동의 팝업 → 동의 시 녹음·녹화 자동 시작 (마이크 ON인 경우)
+      if (mediaPrefs.micOn) {
+        if (updated.location_type === 'online') {
+          liveKit.connect();
+        }
+        setConsentOpen(true);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
     } finally {
@@ -538,6 +546,7 @@ export default function ClassPlayerPage() {
     try {
       await startVideo(id, true);
       await videoRecorder.start();
+      setRecordingStartedAt(Date.now());
     } catch (e) {
       setError(`영상 녹화 시작 실패: ${(e as Error).message}`);
     }
@@ -626,6 +635,20 @@ export default function ClassPlayerPage() {
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
   }, [session?.started_at]);
+
+  // 녹음/녹화 경과 타이머 — recordingStartedAt 기준 (일시정지 시에도 누적 경과 표시)
+  useEffect(() => {
+    if (!recordingStartedAt) {
+      setRecordingElapsedSec(0);
+      return undefined;
+    }
+    const tick = (): void => {
+      setRecordingElapsedSec(Math.max(0, Math.floor((Date.now() - recordingStartedAt) / 1000)));
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [recordingStartedAt]);
 
   // 대기실 경과 타이머 — opened_at 기준 (SDD-088)
   useEffect(() => {
@@ -1012,7 +1035,7 @@ export default function ClassPlayerPage() {
         ) : recorder.state === 'recording' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B3261E]/40 px-3 py-1.5 text-xs font-semibold text-[#FFB3B0]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#F22121]" />
-            녹음 중 · {recorder.uploadedChunks} 청크
+            녹음 중 · {elapsedLabel(recordingElapsedSec)}
           </span>
         ) : recorder.state === 'paused' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
@@ -1031,7 +1054,7 @@ export default function ClassPlayerPage() {
         ) : videoRecorder.state === 'recording' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#B3261E]/40 px-3 py-1.5 text-xs font-semibold text-[#FFB3B0]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#F22121]" />
-            영상 녹화 중 · {videoRecorder.uploadedChunks} 청크
+            영상 녹화 중 · {elapsedLabel(recordingElapsedSec)}
           </span>
         ) : videoRecorder.state === 'paused' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
@@ -1289,7 +1312,7 @@ export default function ClassPlayerPage() {
                                 무음 영상 녹화 중 (상담사 본인 · 음성 미포함)
                               </span>
                               <span className="text-xs text-[#6F6F6F]">
-                                업로드된 청크 {videoRecorder.uploadedChunks}개
+                                녹화 시간 {elapsedLabel(recordingElapsedSec)}
                               </span>
                               <button
                                 type="button"
@@ -1320,7 +1343,7 @@ export default function ClassPlayerPage() {
                     <>
                       <RecordingControls
                         state={recorder.state}
-                        uploadedChunks={recorder.uploadedChunks}
+                        elapsedSec={recordingElapsedSec}
                         onStart={handleStartClick}
                         onPause={() => {
                           recorder.pause();
@@ -1348,7 +1371,7 @@ export default function ClassPlayerPage() {
                               : '영상 녹화 일시정지'}
                           </span>
                           <span className="text-xs text-[#6F6F6F]">
-                            업로드된 청크 {videoRecorder.uploadedChunks}개 ·{' '}
+                            녹화 시간 {elapsedLabel(recordingElapsedSec)} ·{' '}
                             {videoRecorder.facingMode === 'user' ? '전면 카메라' : '후면 카메라'}
                           </span>
                           <button
