@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { useChatStore } from '../stores/chatStore';
 import { getChatRoom } from '../lib/api/chat';
+import type { NotificationExtra } from '../lib/api/notifications';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -51,7 +52,7 @@ export function useNotificationSocket() {
       useNotificationStore.getState().setWsConnected(false);
     });
 
-    socket.on('new_notification', (data: { id?: string; type?: string; title?: string; body?: string; extra?: { room_id?: string } }) => {
+    socket.on('new_notification', (data: { id?: string; type?: string; title?: string; body?: string; extra?: NotificationExtra | null }) => {
       // 알림 도착 → unread count 갱신
       fetch();
       const roomId = data.extra?.room_id;
@@ -65,6 +66,7 @@ export function useNotificationSocket() {
           title: data.title ?? '',
           body: data.body ?? '',
           roomId,
+          extra: data.extra ?? null,
         });
       }
       // 미선택 방은 메시지 전문을 수신하지 않아 서버의 정확한 미리보기/시각을 조회한다.

@@ -179,6 +179,10 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
     db.add(req)
     db.commit()
     db.refresh(req)
+    from app.services.org_management_service import notify_org_members
+
+    notify_org_members(org.id, user_uuid, "organization_join_requested", "새 소속 신청이 있습니다",
+                       "기관에서 소속 신청을 확인해주세요.", db, admins_only=True)
     return req
 
 
@@ -289,6 +293,16 @@ def handle_join_request(
 
     db.commit()
     db.refresh(req)
+    from app.services import notification_service
+
+    applicant = db.query(User).filter(User.id == req.user_id).first()
+    if applicant is not None and applicant.status == "active" and applicant.id != admin.id:
+        event_type = "organization_join_result"
+        notification_service.notify_event(event_type, applicant.id, {
+            "title": "소속 신청 결과가 도착했습니다", "body": "신청 결과를 확인해주세요.",
+            "extra": notification_service.build_standard_extra(event_type, "notice", None,
+                params={"result": new_status}, legacy={"org_id": str(req.org_id)}),
+        }, db)
     return req
 
 
@@ -493,10 +507,15 @@ def update_counselor_role(
             status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
         )
 
+    changed = user.role != new_role or membership.role != new_role
     user.role = new_role
     membership.role = new_role
     db.commit()
     db.refresh(user)
+    if changed:
+        from app.services.org_management_service import notify_role_changed
+
+        notify_role_changed(user, uuid.UUID(org_id), admin.id, db)
     return user
 
 

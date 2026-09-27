@@ -1,6 +1,6 @@
 // 채팅 REST API 클라이언트
 
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
 import type { UserRole } from './auth';
 
 export type ChatMessageType = 'text' | 'image' | 'file' | 'system';
@@ -125,3 +125,32 @@ export const markRoomRead = (roomId: string): Promise<void> =>
 /** 여러 메시지를 한 번에 읽음 처리 (IntersectionObserver 배치 전송) */
 export const markMessagesRead = (roomId: string, messageIds: string[]): Promise<void> =>
   apiClient.post<void>(`/chat/rooms/${roomId}/messages/read`, { message_ids: messageIds });
+
+interface ChatMessageContextResponse {
+  message: ChatMessage;
+  before: ChatMessage[];
+  after: ChatMessage[];
+  before_cursor: string | null;
+  after_cursor: string | null;
+}
+
+/** 주변 조회는 기존 메시지 저장소와 동일하게 최신순으로 반환한다. */
+export async function listChatMessagesAround(roomId: string, messageId: string): Promise<ChatMessageListResponse> {
+  const room = encodeURIComponent(roomId);
+  const message = encodeURIComponent(messageId);
+  try {
+    return await apiClient.get<ChatMessageListResponse>(
+      `/chat/rooms/${room}/messages-around?message_id=${message}`,
+    );
+  } catch (error) {
+    // SDD-093의 context 경로를 먼저 배포한 서버와 호환한다.
+    if (!(error instanceof ApiError) || error.status !== 404) throw error;
+    const context = await apiClient.get<ChatMessageContextResponse>(
+      `/chat/rooms/${room}/messages/${message}/context`,
+    );
+    return {
+      messages: [...context.before, context.message, ...context.after].reverse(),
+      next_cursor: context.before_cursor,
+    };
+  }
+}

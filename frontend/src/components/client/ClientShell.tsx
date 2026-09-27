@@ -11,6 +11,7 @@ import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
+import { resolveNotificationTarget } from '../../lib/api/notifications';
 
 export interface ClientShellProps {
   children: ReactNode;
@@ -54,8 +55,10 @@ export default function ClientShell({
   }, [setRooms]);
 
   const handleToastClick = () => {
-    if (toast?.roomId) {
-      navigate(`/app/chat?room=${toast.roomId}`);
+    // SDD-093: 토스트 클릭 → 딥링크 후속 행위 (내담자 라우트 기준)
+    if (toast) {
+      const target = resolveNotificationTarget(toast.extra, 'client');
+      if (target) navigate(target.path);
     }
     dismissToast();
   };

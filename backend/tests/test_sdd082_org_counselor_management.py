@@ -105,7 +105,7 @@ def test_ts1_suspend_상태변경_감사_알림_생성(client, monkeypatch, redi
     try:
         notif = (
             db.query(Notification)
-            .filter(Notification.user_id == uuid.UUID(counselor["id"]))
+            .filter(Notification.user_id == uuid.UUID(counselor["id"]), Notification.type == "system")
             .order_by(Notification.created_at.desc())
             .first()
         )

@@ -17,6 +17,7 @@ from app.models.credential import Credential, VerificationAudit
 from app.models.org_document import OrgDocument
 from app.models.organization import Organization
 from app.models.user import User
+from app.services.notification_service import build_standard_extra, notify_event
 
 VALID_ACTIONS = {"approve", "reject", "request_more"}
 REVIEW_STATUSES = {"pending", "needs_review"}
@@ -218,6 +219,7 @@ def process_review(
         if cred is None:
             raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
         snapshot = cred.ai_verdict if isinstance(cred.ai_verdict, dict) else None
+        previous_status = cred.status
         cred.status = new_status
         db.add(cred)
         audit = VerificationAudit(
@@ -235,6 +237,15 @@ def process_review(
         if action == "approve":
             from app.services import credential_service
             credential_service.recalculate_tier(cred.user_id, db)
+        if previous_status != new_status and new_status in ("approved", "rejected") and cred.user_id != admin_id:
+            notify_event("verification_result", cred.user_id, {
+                "title": "자격 검증 결과가 도착했습니다",
+                "body": "자격 화면에서 결과와 보완 사항을 확인해주세요.",
+                "extra": build_standard_extra(
+                    "verification_result", "credentials", None,
+                    params={"credential_id": str(cred.id), "result": new_status},
+                ),
+            }, db)
         return {"target_type": "credential", "id": str(cred.id), "status": cred.status, "action": action}
 
     doc = db.query(OrgDocument).filter(OrgDocument.id == target_id).first()
@@ -498,6 +509,7 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="플랫폼 관리자는 정지할 수 없습니다")
+    previous_status = user.status
     user.status = "suspended"
     db.add(user)
     db.add(VerificationAudit(
@@ -508,6 +520,15 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
         reason=reason,
     ))
     db.commit()
+    if previous_status != "suspended" and user.id != admin_id:
+        notify_event("account_suspended", user.id, {
+            "title": "계정이 비활성화되었습니다",
+            "body": "계정 이용 상태가 변경되었습니다.",
+            "extra": build_standard_extra(
+                "account_suspended", "notice", None,
+                legacy={"actor_kind": "platform_admin", "action": "suspend"},
+            ),
+        }, db)
     return {"id": str(user.id), "status": user.status}
 
 
@@ -515,6 +536,7 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    previous_status = user.status
     user.status = "active"
     db.add(user)
     db.add(VerificationAudit(
@@ -525,6 +547,15 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
         reason=None,
     ))
     db.commit()
+    if previous_status != "active" and user.id != admin_id:
+        notify_event("account_reactivated", user.id, {
+            "title": "계정이 다시 활성화되었습니다",
+            "body": "계정 이용 상태를 확인해주세요.",
+            "extra": build_standard_extra(
+                "account_reactivated", "notice", None,
+                legacy={"actor_kind": "platform_admin", "action": "unsuspend"},
+            ),
+        }, db)
     return {"id": str(user.id), "status": user.status}
 
 

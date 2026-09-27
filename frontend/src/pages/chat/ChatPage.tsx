@@ -1,7 +1,7 @@
 // 채팅 페이지 — 좌측 대화 목록 + 우측 채팅 영역. /chat 또는 /chat/:roomId
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import { ChatRoom } from '../../components/chat/ChatRoom';
 import { CreateRoomModal } from '../../components/chat/CreateRoomModal';
@@ -42,6 +42,15 @@ function roomSub(room: ChatRoomDto): string {
 export default function ChatPage() {
   const { roomId: paramRoomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetMessageId = searchParams.get('message') || undefined;
+  const showRecentMessages = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('message');
+      return next;
+    }, { replace: true });
+  };
   const rooms = useChatStore((s) => s.rooms);
   const setRooms = useChatStore((s) => s.setRooms);
   const sortPreference = useChatSortPreference();
@@ -208,7 +217,7 @@ export default function ChatPage() {
                 <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />
               </div>
               <div className="flex-1 min-h-0">
-                <ChatRoom roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
+                <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
               </div>
             </>
           ) : paramRoomId && !loading ? (

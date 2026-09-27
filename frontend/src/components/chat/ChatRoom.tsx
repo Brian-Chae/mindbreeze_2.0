@@ -1,6 +1,6 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listChatMessages, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
+import { listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -56,11 +56,13 @@ function DateSeparator({ iso }: { iso: string }) {
 
 interface Props {
   roomId: string;
+  targetMessageId?: string;
+  onShowRecent?: () => void;
   /** 상대방 이름 (직접 채팅에서 표시용). 미지정 시 sender_id 기반 "사용자" */
   peerName?: string;
 }
 
-export function ChatRoom({ roomId, peerName }: Props) {
+export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Props) {
   const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId]);
   // store는 최신순 저장 → 일반 flex-col용으로 오래된 순으로 뒤집기
@@ -71,6 +73,10 @@ export function ChatRoom({ roomId, peerName }: Props) {
   const clearRoomUnread = useChatStore((s) => s.clearRoomUnread);
   const setActiveRoom = useChatStore((s) => s.setActiveRoom);
 
+  const [dismissedTarget, setDismissedTarget] = useState<string | null>(null);
+  const target = dismissedTarget === `${roomId}:${targetMessageId}` ? undefined : targetMessageId;
+  const [targetError, setTargetError] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,26 +85,57 @@ export function ChatRoom({ roomId, peerName }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const keyboardHeight = useKeyboardHeight();
-  const { handleScroll, scrollToBottom } = useAutoScroll(listRef, [msgList.length, loading]);
+  const { handleScroll, scrollToBottom } = useAutoScroll(listRef, [msgList.length, loading], !target);
 
-  // 초기 메시지 로딩 + 최하단 스크롤 + 읽음 처리
+  useEffect(() => {
+    setDismissedTarget(null);
+  }, [roomId, targetMessageId]);
+
+  // 쿼리 변경마다 재탐색하고 이전 요청의 늦은 응답은 무시한다.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    listChatMessages(roomId)
-      .then((res) => {
-        if (!cancelled) {
-          setMessages(roomId, res.messages);
-          setLoading(false);
+    setTargetError(null);
+    setHighlightedId(null);
+    void (async () => {
+      try {
+        const recent = await listChatMessages(roomId);
+        if (cancelled) return;
+        if (!target || recent.messages.some((message) => message.id === target)) {
+          setMessages(roomId, recent.messages);
+          return;
         }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : '메시지 로딩 실패');
-          setLoading(false);
+        try {
+          const around = await listChatMessagesAround(roomId, target);
+          if (cancelled) return;
+          if (around.messages.some((message) => message.id === target)) {
+            setMessages(roomId, [...around.messages].sort((a, b) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+          } else {
+            setMessages(roomId, []);
+            setTargetError('해당 메시지를 찾을 수 없습니다');
+          }
+        } catch {
+          if (!cancelled) {
+            setMessages(roomId, []);
+            setTargetError('해당 메시지를 불러올 수 없습니다');
+          }
         }
-      });
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setMessages(roomId, []);
+          if (target) setTargetError('해당 메시지를 불러올 수 없습니다');
+          else setError(err instanceof Error ? err.message : '메시지 로딩 실패');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [roomId, target, setMessages]);
+
+  useEffect(() => {
     // 읽음 처리 — 사이드바 배지만 초기화 (내 메시지의 "1"은 messages_read 이벤트로만 사라짐)
     clearRoomUnread(roomId);
     markRoomRead(roomId)
@@ -107,7 +144,6 @@ export function ChatRoom({ roomId, peerName }: Props) {
     // 현재 보고 있는 방 활성화 (다른 방 메시지 unread 증가 방지)
     setActiveRoom(roomId);
     return () => {
-      cancelled = true;
       setActiveRoom(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,11 +151,11 @@ export function ChatRoom({ roomId, peerName }: Props) {
 
   // 메시지 로딩 완료 후 최하단 스크롤
   useEffect(() => {
-    if (!loading && msgList.length > 0) {
+    if (!target && !loading && msgList.length > 0) {
       const timer = setTimeout(() => scrollToBottom(), 100);
       return () => clearTimeout(timer);
     }
-  }, [loading, msgList.length, scrollToBottom]);
+  }, [target, loading, msgList.length, scrollToBottom]);
 
   // WebSocket 실시간 수신
   const token = useAuthStore((s) => s.accessToken);
@@ -182,6 +218,22 @@ export function ChatRoom({ roomId, peerName }: Props) {
   const readSentRef = useRef<Set<string>>(new Set());
   const readQueueRef = useRef<string[]>([]);
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (loading || !target || targetError) return;
+    const element = messageElRefs.current.get(target);
+    if (!element) return;
+    element.scrollIntoView({ block: 'center', behavior: 'instant' });
+    element.focus({ preventScroll: true });
+    setHighlightedId(target);
+    const timer = setTimeout(() => setHighlightedId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [roomId, target, loading, targetError]);
+
+  const showRecent = () => {
+    setDismissedTarget(`${roomId}:${targetMessageId}`);
+    onShowRecent?.();
+  };
 
   // 배치 요청: 300ms 동안 모아서 한 번에 전송
   const flushReadQueue = useCallback(() => {
@@ -246,7 +298,7 @@ export function ChatRoom({ roomId, peerName }: Props) {
 
   const handleSend = useCallback(async (): Promise<void> => {
     const content = input.trim();
-    if (!content) return;
+    if (!content || (target && (loading || targetError))) return;
     setInput('');
     try {
       const msg = await sendChatMessage(roomId, { content, type: 'text' });
@@ -255,10 +307,16 @@ export function ChatRoom({ roomId, peerName }: Props) {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '전송 실패');
     }
-  }, [input, roomId, appendMessage, scrollToBottom]);
+  }, [input, roomId, appendMessage, scrollToBottom, target, loading, targetError]);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
+      {target && !loading && (
+        <div className="px-4 py-2 text-sm bg-purple-50 shrink-0" role="status">
+          {targetError ?? '알림의 메시지 위치를 보고 있습니다.'}
+          <button type="button" onClick={showRecent} className="ml-3 text-[#5F0080] underline">최근 대화 보기</button>
+        </div>
+      )}
       {/* 메시지 리스트 */}
       <div
         ref={listRef}
@@ -266,8 +324,8 @@ export function ChatRoom({ roomId, peerName }: Props) {
         className="flex-1 min-h-0 overflow-y-auto px-4 py-2"
       >
         {loading ? (
-          <div className="text-center text-gray-500 py-4">메시지를 불러오는 중…</div>
-        ) : msgList.length === 0 ? (
+          <div className="text-center text-gray-500 py-4">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
+        ) : targetError ? null : msgList.length === 0 ? (
           <div className="text-center text-gray-500 py-4">아직 메시지가 없습니다</div>
         ) : (
           msgList.map((m, idx, arr) => {
@@ -302,12 +360,12 @@ export function ChatRoom({ roomId, peerName }: Props) {
                 messageElRefs.current.delete(m.id);
               }
             };
-            const wrapped = m.type !== 'system' ? (
-              <div key={m.id} ref={setRef} data-message-id={m.id}>
+            const wrapped = (
+              <div key={m.id} ref={setRef} data-message-id={m.id} tabIndex={-1}
+                className={highlightedId === m.id ? 'rounded-xl bg-purple-100 ring-2 ring-purple-300' : undefined}>
+                {highlightedId === m.id && <span className="px-2 text-xs text-[#5F0080]">알림의 메시지</span>}
                 {item}
               </div>
-            ) : (
-              <div key={m.id}>{item}</div>
             );
             return showDateSep ? (
               <div key={`group-${m.id}`}>
@@ -333,6 +391,7 @@ export function ChatRoom({ roomId, peerName }: Props) {
         <input
           ref={inputRef}
           type="text"
+          disabled={!!target && (loading || !!targetError)}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -347,7 +406,7 @@ export function ChatRoom({ roomId, peerName }: Props) {
         <button
           type="button"
           onClick={() => void handleSend()}
-          disabled={!input.trim()}
+          disabled={!input.trim() || (!!target && (loading || !!targetError))}
           className="mb-btn disabled:opacity-50"
         >
           전송

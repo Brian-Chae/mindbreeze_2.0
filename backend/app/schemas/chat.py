@@ -160,3 +160,12 @@ class RoomResponse(BaseModel):
 
 class RoomListResponse(BaseModel):
     rooms: list[RoomResponse]
+
+
+class MessageContextResponse(BaseModel):
+    """주변 구간은 시간순이며 커서는 다음 주변 조회의 앵커 ID다."""
+    message: MessageResponse
+    before: list[MessageResponse]
+    after: list[MessageResponse]
+    before_cursor: str | None = None
+    after_cursor: str | None = None

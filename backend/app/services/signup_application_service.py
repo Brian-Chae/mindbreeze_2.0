@@ -372,6 +372,9 @@ async def approve_application(
     if app_row.application_type == TYPE_INDIVIDUAL_COUNSELOR:
         user = db.query(User).filter(User.id == app_row.user_id).first()
         org = db.query(Organization).filter(Organization.id == app_row.organization_id).first()
+        from app.services import personal_office_service
+
+        personal_office_service.notify_personal_office_opened(db, user)
         invite_sent = await org_invite_service.issue_counselor_invite(user, org.name, redis)
 
     return app_row, invite_sent

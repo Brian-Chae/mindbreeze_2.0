@@ -219,6 +219,18 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         from app.services import chat_service
         chat_service.get_or_create_room_by_session(session.id, db)
 
+    # SDD-093: S01(예약)/S04(즉석 클래스 ready) 알림 발화
+    event_type = "session_booked" if initial_status == "scheduled" else "session_ready"
+    _notify_participants_event(
+        session,
+        event_type,
+        db,
+        recipient_ids=[_to_uuid(pid) for pid in payload.participant_ids],
+        include_waitlisted=True,
+        title="새 세션 예약" if initial_status == "scheduled" else "새 세션이 열렸습니다",
+        body=session.title or "세션",
+    )
+
     return _serialize(session)
 
 
@@ -330,11 +342,26 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
 
     db.commit()
     db.refresh(s)
+
+    # SDD-093: S02 세션 변경 알림
+    _notify_participants_event(
+        s, "session_updated", db,
+        title="세션 정보가 변경되었습니다",
+        body=s.title or "세션",
+    )
+
     return _serialize(s)
 
 
 def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     s = _get_session_as_host(session_id, host_id, db)
+    # SDD-093: S13 세션 삭제 알림 (삭제 전 발화 — participants 접근 필요)
+    _notify_participants_event(
+        s, "session_deleted", db,
+        include_waitlisted=True,
+        title="세션이 취소되었습니다",
+        body=s.title or "세션",
+    )
     db.delete(s)
     db.commit()
 
@@ -399,6 +426,32 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
 
+    # SDD-093: S03/S05~S09 상태 전이 알림 발화 (대기열은 시작/일시정지/재개/종료 제외)
+    _action_event = {
+        "open": "session_opened",
+        "start": "session_started",
+        "pause": "session_paused",
+        "resume": "session_resumed",
+        "end": "session_completed",
+        "cancel": "session_cancelled",
+    }
+    _action_title = {
+        "open": "세션이 오픈되었습니다",
+        "start": "세션이 시작되었습니다",
+        "pause": "세션이 일시정지되었습니다",
+        "resume": "세션이 재개되었습니다",
+        "end": "세션이 종료되었습니다",
+        "cancel": "세션이 취소되었습니다",
+    }
+    event_type = _action_event.get(action)
+    if event_type:
+        _notify_participants_event(
+            s, event_type, db,
+            include_waitlisted=(action == "cancel"),
+            title=_action_title.get(action, event_type),
+            body=s.title or "세션",
+        )
+
     return _serialize(s)
 
 
@@ -426,6 +479,55 @@ def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
     db.commit()
     db.refresh(s)
     return _serialize(s)
+
+
+def _notify_participants_event(
+    s: Session,
+    event_type: str,
+    db: DBSession,
+    *,
+    recipient_ids: list | None = None,
+    include_waitlisted: bool = False,
+    title: str,
+    body: str | None = None,
+) -> None:
+    """세션 참여자에게 인앱 알림을 best-effort 로 발화한다.
+
+    SDD-093 노티피케이션 재설계 — 이벤트 카탈로그(33종)의 세션 이벤트 발화 일원화.
+    수신자 기본값: 호스트 제외 + (include_waitlisted=False 시) 대기열 제외.
+    """
+    try:
+        from app.services import notification_service
+        from app.services.notification_service import build_standard_extra, EVENT_CATALOG
+
+        target_type = EVENT_CATALOG.get(event_type, {}).get("target_type", "session")
+        if recipient_ids is None:
+            recipient_ids = [
+                p.user_id for p in (s.participants or [])
+                if (include_waitlisted or not p.is_waitlisted) and p.user_id != s.host_id
+            ]
+        for uid in recipient_ids:
+            try:
+                notification_service.notify_event(
+                    event_type,
+                    uid,
+                    {
+                        "title": title,
+                        "body": body,
+                        "extra": build_standard_extra(
+                            event_type,
+                            target_type,
+                            str(s.id),
+                            params=None,
+                            legacy={"session_id": str(s.id)},
+                        ),
+                    },
+                    db,
+                )
+            except Exception:
+                pass
+    except Exception:
+        pass
 
 
 def _notify_session_state(s: Session) -> None:
@@ -469,23 +571,24 @@ def _next_waitlist_position(s: Session) -> int:
     return (max(positions) + 1) if positions else 1
 
 
-def _promote_waitlist(s: Session, db: DBSession) -> None:
-    """정원에 여유가 생기면 대기열 1순위를 자동 승격"""
+def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
+    """정원에 여유가 생기면 대기열 1순위를 자동 승격. 승격된 사용자 ID를 반환한다."""
     active = [p for p in (s.participants or []) if not p.is_waitlisted]
     if len(active) >= s.max_participants:
-        return
+        return None
     waiting = sorted(
         [p for p in (s.participants or []) if p.is_waitlisted],
         key=lambda p: p.waitlist_position or 0,
     )
     if not waiting:
-        return
+        return None
     promoted = waiting[0]
     promoted.is_waitlisted = False
     promoted.waitlist_position = None
     for idx, p in enumerate(waiting[1:], start=1):
         p.waitlist_position = idx
     db.flush()
+    return promoted.user_id
 
 
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
@@ -519,6 +622,16 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 
     db.commit()
     db.refresh(s)
+
+    # SDD-093: S10 세션 초대 알림
+    _notify_participants_event(
+        s, "session_invited", db,
+        recipient_ids=[target_uuid],
+        include_waitlisted=True,
+        title="세션에 초대되었습니다",
+        body=s.title or "세션",
+    )
+
     return _serialize(s)
 
 
@@ -542,6 +655,7 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     db.flush()
     db.refresh(s)
 
+    promoted_id: UUID | None = None
     if was_waitlisted and removed_position is not None:
         # 대기열에서 빠진 경우, 뒤 순번 당기기
         for p in (s.participants or []):
@@ -549,10 +663,28 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
                 p.waitlist_position -= 1
         db.flush()
     else:
-        _promote_waitlist(s, db)
+        promoted_id = _promote_waitlist(s, db)
 
     db.commit()
     db.refresh(s)
+
+    # SDD-093: S12 제거 알림
+    _notify_participants_event(
+        s, "session_participant_removed", db,
+        recipient_ids=[target_uuid],
+        include_waitlisted=True,
+        title="세션에서 제외되었습니다",
+        body=s.title or "세션",
+    )
+    # SDD-093: S11 대기열 승격 알림
+    if promoted_id:
+        _notify_participants_event(
+            s, "session_waitlist_promoted", db,
+            recipient_ids=[promoted_id],
+            title="대기열에서 참여자로 승격되었습니다",
+            body=s.title or "세션",
+        )
+
     return _serialize(s)
 
 

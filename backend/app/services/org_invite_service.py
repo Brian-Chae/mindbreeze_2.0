@@ -368,12 +368,16 @@ async def consume_invite(token: str, new_password: str, db: Session, redis: Redi
     # SDD-081: 상담사 가입 완료 시 개인 상담소 자동 개설(없으면) + active 소속 보장.
     # 초대 기관 membership 활성화 뒤에 호출해 주 소속은 초대 기관이 유지된다.
     # SDD-073 개인 신청 경로는 기존 개인 기관을 owner 기준으로 재사용한다.
+    office_created = False
     if user.role == "counselor":
         from app.services import personal_office_service
 
+        office_created = personal_office_service.get_personal_office(db, user) is None
         personal_office_service.ensure_personal_office(db, user)
     db.commit()
     db.refresh(user)
 
     await redis.delete(_invite_key(jti, token_type))
+    if office_created:
+        personal_office_service.notify_personal_office_opened(db, user)
     return user

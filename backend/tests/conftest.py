@@ -101,7 +101,7 @@ UUID.result_processor = _uuid_result_processor
 
 
 @pytest.fixture(scope="function")
-def app_client():
+def app_client(monkeypatch):
     from app.main import app as fastapi_app
     # 모든 모델을 import해야 Base.metadata에 등록됨
     from app.core.database import Base, get_db
@@ -115,6 +115,9 @@ def app_client():
     )
     Base.metadata.create_all(bind=engine)
     TestingSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # WS 후속 작업도 API와 같은 테스트 DB를 사용한다.
+    # get_db만 치환하면 SessionLocal을 직접 여는 프로필 브로드캐스트가 개발 DB에 접속한다.
+    monkeypatch.setattr("app.core.database.SessionLocal", TestingSession)
 
     fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
 

@@ -16,6 +16,48 @@ from app.models.credential import VerificationAudit
 from app.schemas.org import OrganizationPatch, OrganizationDeactivationImpact, OrganizationDeactivate, OrganizationReactivate
 
 
+def notify_org_members(org_id: uuid.UUID, actor_id: uuid.UUID, event_type: str,
+                       title: str, body: str, db: Session, *, admins_only: bool = False,
+                       changed_fields: list[str] | None = None) -> None:
+    """활성 소속과 계정으로 수신자를 결정하고 행위자를 제외한다."""
+    from app.services import notification_service
+
+    query = db.query(User).join(UserOrgMembership, UserOrgMembership.user_id == User.id).filter(
+        UserOrgMembership.org_id == org_id, UserOrgMembership.status == "active",
+        User.status == "active", User.id != actor_id,
+        UserOrgMembership.role.in_(["counselor", "org_admin"]),
+    )
+    if admins_only:
+        # 기관 상세 API는 현재 주 소속 기관 관리자에게만 접근을 허용한다.
+        query = query.filter(UserOrgMembership.role == "org_admin", User.role == "org_admin", User.org_id == org_id)
+    recipients = {user.id for user in query.all()}
+    for recipient_id in recipients:
+        notification_service.notify_event(event_type, recipient_id, {
+            "title": title, "body": body,
+            "extra": notification_service.build_standard_extra(
+                event_type, "organization" if admins_only else "notice",
+                str(org_id) if admins_only else None,
+                params={"changed_fields": changed_fields} if changed_fields is not None else {},
+                legacy={"org_id": str(org_id)},
+            ),
+        }, db)
+
+
+def notify_role_changed(user: User, org_id: uuid.UUID, actor_id: uuid.UUID, db: Session) -> None:
+    """역할 변경 당사자에게 본인 프로필 딥링크를 전달한다."""
+    from app.services import notification_service
+
+    if user.id == actor_id or user.status != "active":
+        return
+    event_type = "organization_role_changed"
+    notification_service.notify_event(event_type, user.id, {
+        "title": "기관 내 권한이 변경되었습니다",
+        "body": "현재 권한과 이용 가능한 기능을 확인해주세요.",
+        "extra": notification_service.build_standard_extra(event_type, "self_profile", None,
+            params={"role": user.role}, legacy={"org_id": str(org_id)}),
+    }, db)
+
+
 def lock_organization(org_id: uuid.UUID | str, db: Session) -> Organization:
     org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).populate_existing().with_for_update().first()
     if org is None:
@@ -79,7 +121,12 @@ def patch_organization(org_id: uuid.UUID, data: OrganizationPatch, if_match: str
         org.verified_at = datetime.now(timezone.utc) if values["verified"] else None
     for key, value in values.items():
         setattr(org, key, value)
-    return commit_change(org, before, "org_updated", data.reason, admin_id, db)
+    changed_fields = [key for key, value in values.items() if before.get(key) != value]
+    org = commit_change(org, before, "org_updated", data.reason, admin_id, db)
+    if changed_fields:
+        notify_org_members(org.id, admin_id, "organization_updated", "기관 정보가 변경되었습니다",
+                           "기관의 최신 정보를 확인해주세요.", db, admins_only=True, changed_fields=changed_fields)
+    return org
 
 
 def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivationImpact:
@@ -138,7 +185,10 @@ def deactivate(org_id: uuid.UUID, data: OrganizationDeactivate, if_match: str | 
     org.deactivated_at = datetime.now(timezone.utc)
     org.deactivated_by = admin_id
     org.deactivation_reason = data.reason
-    return commit_change(org, before, "org_deactivated", data.reason, admin_id, db)
+    org = commit_change(org, before, "org_deactivated", data.reason, admin_id, db)
+    notify_org_members(org.id, admin_id, "organization_deactivated", "기관 이용이 중지되었습니다",
+                       "소속 기관의 이용 상태를 확인해주세요.", db)
+    return org
 
 
 def reactivate(org_id: uuid.UUID, data: OrganizationReactivate, if_match: str | None, admin_id: uuid.UUID, db: Session) -> Organization:
@@ -152,7 +202,10 @@ def reactivate(org_id: uuid.UUID, data: OrganizationReactivate, if_match: str | 
     org.deactivated_at = None
     org.deactivated_by = None
     org.deactivation_reason = None
-    return commit_change(org, before, "org_reactivated", data.reason, admin_id, db)
+    org = commit_change(org, before, "org_reactivated", data.reason, admin_id, db)
+    notify_org_members(org.id, admin_id, "organization_reactivated", "기관 이용이 재개되었습니다",
+                       "소속 기관의 이용 상태를 확인해주세요.", db)
+    return org
 
 
 def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
@@ -223,6 +276,8 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     ))
     db.commit()
     db.refresh(user)
+    if role is not None:
+        notify_role_changed(user, org.id, admin_id, db)
     if office is not None:
         from app.services import personal_office_service
 

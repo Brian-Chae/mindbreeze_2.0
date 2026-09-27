@@ -91,6 +91,20 @@ def ensure_personal_office(db: Session, user: User) -> Organization:
     return office
 
 
+def notify_personal_office_opened(db: Session, user: User) -> None:
+    """최초 개설 또는 개인 가입 승인 업무를 커밋한 뒤 호출한다."""
+    from app.services import notification_service
+
+    if user.status != "active":
+        return
+    event_type = "personal_office_opened"
+    notification_service.notify_event(event_type, user.id, {
+        "title": "개인 상담소가 준비되었습니다",
+        "body": "개인 상담소 이용 정보를 확인해주세요.",
+        "extra": notification_service.build_standard_extra(event_type, "self_profile", None),
+    }, db)
+
+
 def fallback_to_personal_office(db: Session, user: User) -> Organization | None:
     """기관 해제 후 남은 기관 소속이 없으면 개인 상담소로 복귀 (T2).
 

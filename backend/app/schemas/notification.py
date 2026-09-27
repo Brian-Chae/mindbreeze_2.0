@@ -26,19 +26,11 @@ class UnreadCountResponse(BaseModel):
     unread: int
 
 
-class NotificationChannelPreferences(BaseModel):
-    session_booked: bool = True
-    session_cancelled: bool = True
-    chat_message: bool = True
-    report_ready: bool = True
-    verification_result: bool = True
-
-
 class NotificationPreferencesResponse(BaseModel):
-    email: NotificationChannelPreferences
-    in_app: NotificationChannelPreferences
+    email: dict[str, bool]
+    in_app: dict[str, bool]
 
 
 class NotificationPreferencesRequest(BaseModel):
-    email: NotificationChannelPreferences = Field(default_factory=NotificationChannelPreferences)
-    in_app: NotificationChannelPreferences = Field(default_factory=NotificationChannelPreferences)
+    email: dict[str, bool] = Field(default_factory=dict)
+    in_app: dict[str, bool] = Field(default_factory=dict)

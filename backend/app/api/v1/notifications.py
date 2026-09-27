@@ -32,8 +32,8 @@ def update_preferences(
 ):
     return notification_service.update_preferences(
         current_user["id"],
-        payload.email.model_dump(),
-        payload.in_app.model_dump(),
+        payload.email,
+        payload.in_app,
         db,
     )
 
@@ -51,11 +51,14 @@ def list_notifications(
     only_unread: bool = Query(False),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    type: str | None = Query(None),
+    event: str | None = Query(None),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     return notification_service.list_notifications(
-        current_user["id"], db, only_unread=only_unread, limit=limit, offset=offset
+        current_user["id"], db, only_unread=only_unread, limit=limit, offset=offset,
+        type=type, event=event,
     )
 
 

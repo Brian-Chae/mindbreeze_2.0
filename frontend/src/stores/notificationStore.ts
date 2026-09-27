@@ -1,7 +1,7 @@
 // 알림 전역 상태 — 읽지않음 카운트 + 실시간 이벤트
 
 import { create } from 'zustand';
-import { getUnreadCount } from '../lib/api/notifications';
+import { getUnreadCount, type NotificationExtra } from '../lib/api/notifications';
 
 export interface NotificationToast {
   id: string;
@@ -9,6 +9,7 @@ export interface NotificationToast {
   title: string;
   body: string;
   roomId?: string;
+  extra?: NotificationExtra | null;
 }
 
 interface NotificationState {

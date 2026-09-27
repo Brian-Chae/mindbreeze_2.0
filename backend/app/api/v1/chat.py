@@ -1,6 +1,6 @@
 """F6 채팅 REST API"""
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user
@@ -10,6 +10,7 @@ from app.schemas.chat import (
     InvitableCounselorsResponse,
     MarkMessagesReadRequest,
     MessageCreateRequest,
+    MessageContextResponse,
     MessageListResponse,
     MessageResponse,
     RoomCreateRequest,
@@ -157,6 +158,39 @@ def list_messages(
 ):
     msgs = chat_service.list_messages(room_id, current_user["id"], db, limit=limit)
     return MessageListResponse(messages=[MessageResponse(**m) for m in msgs])
+
+
+@router.get("/rooms/{room_id}/messages-around", response_model=MessageListResponse)
+def list_messages_around(
+    room_id: str,
+    message_id: str,
+    before: int = Query(20, ge=0, le=50),
+    after: int = Query(20, ge=0, le=50),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """기존 채팅 목록 소비자를 위한 최신순 주변 메시지 응답."""
+    context = chat_service.get_message_context(
+        room_id, message_id, current_user["id"], db, before=before, after=after,
+    )
+    return {
+        "messages": list(reversed([*context["before"], context["message"], *context["after"]])),
+        "next_cursor": context["before_cursor"],
+    }
+
+
+@router.get("/rooms/{room_id}/messages/{message_id}/context", response_model=MessageContextResponse)
+def get_message_context(
+    room_id: str,
+    message_id: str,
+    before: int = Query(20, ge=0, le=50),
+    after: int = Query(20, ge=0, le=50),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    return chat_service.get_message_context(
+        room_id, message_id, current_user["id"], db, before=before, after=after,
+    )
 
 
 @router.post("/rooms/{room_id}/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)

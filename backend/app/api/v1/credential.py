@@ -7,7 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.models.credential import Credential
 from app.models.user import User
@@ -87,11 +87,15 @@ def admin_verify(
     credential_id: str,
     req: AdminVerifyRequest,
     db: Session = Depends(get_db),
+    current_user: dict | None = Depends(get_current_user_optional),
 ):
     """관리자 승인/반려 (placeholder — 인증 미적용)."""
     try:
         cid = uuid.UUID(credential_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
-    cred = credential_service.admin_verify(cid, req.status, req.reason, db)
+    cred = credential_service.admin_verify(
+        cid, req.status, req.reason, db,
+        admin_id=_uid(current_user) if current_user is not None else None,
+    )
     return _serialize(cred)

@@ -25,7 +25,7 @@ from app.schemas.counselor_info import (
     CounselorInfoUpdate,
     PrimaryAdminProfilePatch,
 )
-from app.services.notification_service import create_notification
+from app.services.notification_service import build_standard_extra, notify_event
 
 # 알림·감사에 원문을 남기지 않는 개인정보 필드
 SENSITIVE_FIELDS = {"gender", "birth_date", "postal_code", "address_line1", "address_line2"}
@@ -279,13 +279,16 @@ def update_profile(
         ))
         labels = ", ".join(FIELD_LABELS.get(f, f) for f in sorted(changed.keys()))
         actor_label = ACTOR_LABELS.get(actor_kind, "관리자")
-        create_notification(
-            target.id, "system",
-            "내 정보가 수정되었습니다",
-            f"{actor_label}가 회원님의 정보({labels})를 수정했습니다. 사유: {reason}",
-            db,
-            extra={"changed_fields": sorted(changed.keys()), "actor_kind": actor_kind},
-        )
+        if target.id != actor_id:
+            notify_event("counselor_profile_updated", target.id, {
+                "title": "내 정보가 수정되었습니다",
+                "body": f"{actor_label}가 회원님의 정보({labels})를 수정했습니다. 변경 항목을 확인해주세요.",
+                "extra": build_standard_extra(
+                    "counselor_profile_updated", "self_profile", None,
+                    params={"changed_fields": sorted(changed.keys())},
+                    legacy={"changed_fields": sorted(changed.keys()), "actor_kind": actor_kind},
+                ),
+            }, db)
 
     db.commit()
     db.refresh(target)
@@ -343,13 +346,16 @@ def update_primary_admin_profile(
         },
     ))
     labels = ", ".join(FIELD_LABELS.get(f, f) for f in sorted(changed.keys()))
-    create_notification(
-        user.id, "system",
-        "내 정보가 수정되었습니다",
-        f"플랫폼 관리자가 회원님의 정보({labels})를 수정했습니다. 사유: {req.reason}",
-        db,
-        extra={"changed_fields": sorted(changed.keys()), "actor_kind": "platform_admin"},
-    )
+    if user.id != actor_id:
+        notify_event("primary_admin_profile_updated", user.id, {
+            "title": "내 정보가 수정되었습니다",
+            "body": f"플랫폼 관리자가 회원님의 정보({labels})를 수정했습니다. 변경 항목을 확인해주세요.",
+            "extra": build_standard_extra(
+                "primary_admin_profile_updated", "self_profile", None,
+                params={"changed_fields": sorted(changed.keys())},
+                legacy={"changed_fields": sorted(changed.keys()), "actor_kind": "platform_admin"},
+            ),
+        }, db)
     db.commit()
     db.refresh(user)
     return user

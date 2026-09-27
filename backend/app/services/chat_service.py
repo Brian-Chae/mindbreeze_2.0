@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
@@ -877,6 +878,67 @@ def list_messages(room_id: str, user_id: str, db: DBSession, limit: int = 50) ->
     return [_serialize_msg(m, db) for m in msgs]
 
 
+def get_message_context(
+    room_id: str, message_id: str, user_id: str, db: DBSession,
+    before: int = 20, after: int = 20,
+) -> dict:
+    """메시지 주변을 시간순으로 반환한다. 커서는 다음 조회의 앵커 메시지 ID다."""
+    rid = _uuid(room_id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
+    # 같은 상담사에게 연결된 다른 내담자는 이 1:1 방의 멤버가 아니다.
+    if room.room_type == "direct" and str(_uuid(user_id)) not in (str(room.host_id), room.name):
+        raise HTTPException(status_code=403, detail="채팅방 접근 권한이 없습니다")
+    _ensure_member(room, user_id, db)
+    # 메시지의 존재 여부를 확인하기 전에 방 접근 권한부터 검증한다.
+    mid = _uuid(message_id)
+    message = db.query(ChatMessage).filter(
+        ChatMessage.room_id == rid, ChatMessage.id == mid,
+    ).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="메시지를 찾을 수 없습니다")
+    if not 0 <= before <= 50 or not 0 <= after <= 50:
+        raise HTTPException(status_code=422, detail="주변 메시지 개수는 0~50이어야 합니다")
+    base = db.query(ChatMessage).filter(ChatMessage.room_id == rid)
+    previous = base.filter(or_(
+        ChatMessage.created_at < message.created_at,
+        and_(ChatMessage.created_at == message.created_at, ChatMessage.id < mid),
+    )).order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc()).limit(before + 1).all()
+    following = base.filter(or_(
+        ChatMessage.created_at > message.created_at,
+        and_(ChatMessage.created_at == message.created_at, ChatMessage.id > mid),
+    )).order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc()).limit(after + 1).all()
+    previous_page = list(reversed(previous[:before]))
+    following_page = following[:after]
+    return {
+        "message": _serialize_msg(message, db),
+        "before": [_serialize_msg(m, db) for m in previous_page],
+        "after": [_serialize_msg(m, db) for m in following_page],
+        "before_cursor": str(previous_page[0].id) if previous_page and len(previous) > before else None,
+        "after_cursor": str(following_page[-1].id) if following_page and len(following) > after else None,
+    }
+
+
+def _mark_message_notifications_read(
+    room_id: UUID, user_id: UUID, message_ids: list[UUID], db: DBSession,
+) -> None:
+    """실제로 읽은 메시지와 연결된 표준 알림만 갱신한다."""
+    from app.models.notification import Notification
+
+    if not message_ids:
+        return
+    db.query(Notification).filter(
+        Notification.user_id == user_id,
+        Notification.type == "chat",
+        Notification.is_read.is_(False),
+        Notification.extra["event_type"].astext == "chat_message",
+        Notification.extra["target_type"].astext == "chat_room",
+        Notification.extra["target_id"].astext == str(room_id),
+        Notification.extra["params"]["message_id"].astext.in_([str(mid) for mid in message_ids]),
+    ).update({"is_read": True}, synchronize_session=False)
+
+
 def _resolve_recipients(room: ChatRoom, sender_id: UUID, db: DBSession) -> list[str]:
     """채팅방에서 발신자를 제외한 모든 수신자 ID 목록 조회."""
     recipients: list[str] = []
@@ -952,7 +1014,7 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
 
     # ── 수신자 알림 생성 ──
     try:
-        from app.services.notification_service import notify_event
+        from app.services.notification_service import notify_event, build_standard_extra
         sender = db.query(User).filter(User.id == sender_uid).first()
         sender_display = sender.name if sender else "사용자"
         for recipient_id in recipients:
@@ -962,7 +1024,13 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
                 {
                     "title": f"{sender_display}님의 메시지",
                     "body": content[:100] if content else "새 메시지가 도착했습니다",
-                    "extra": {"room_id": str(rid), "sender_id": user_id},
+                    "extra": build_standard_extra(
+                        "chat_message",
+                        "chat_room",
+                        str(rid),
+                        params={"message_id": str(msg.id)},
+                        legacy={"room_id": str(rid), "sender_id": user_id},
+                    ),
                 },
                 db,
             )
@@ -997,20 +1065,11 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
         if m.id not in existing:
             db.add(ChatMessageRead(message_id=m.id, user_id=uid))
             # ── Phase 3a: read_by 배열에도 추가 (중복 방지) ──
-            current_read_by = m.read_by or []
+            current_read_by = list(m.read_by or [])
             if user_id not in current_read_by:
                 current_read_by.append(user_id)
                 m.read_by = current_read_by
-    db.commit()
-
-    # 같은 방의 채팅 알림도 읽음 처리
-    from app.models.notification import Notification
-    db.query(Notification).filter(
-        Notification.user_id == uid,
-        Notification.type == "chat",
-        Notification.is_read.is_(False),
-        Notification.extra["room_id"].astext == str(rid),
-    ).update({"is_read": True}, synchronize_session=False)
+    _mark_message_notifications_read(rid, uid, [m.id for m in msgs], db)
     db.commit()
 
     # 읽음 상태 실시간 브로드캐스트
@@ -1091,6 +1150,7 @@ async def mark_messages_read(room_id: str, user_id: str, message_ids: list[str],
             "read_by": read_by_list,
         })
 
+    _mark_message_notifications_read(rid, uid, [m.id for m in msgs], db)
     db.commit()
 
     # Socket.IO broadcast

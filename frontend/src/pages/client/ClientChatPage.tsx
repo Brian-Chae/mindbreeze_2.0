@@ -3,7 +3,7 @@
 // /app/chat 또는 /app/chat/:roomId
 
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import ClientShell from '../../components/client/ClientShell';
 import { ChatRoom } from '../../components/chat/ChatRoom';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
@@ -44,6 +44,15 @@ function roomDisplaySub(room: ChatRoomDto): string {
 export default function ClientChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetMessageId = searchParams.get('message') || undefined;
+  const showRecentMessages = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('message');
+      return next;
+    }, { replace: true });
+  };
   const user = useAuthStore((s) => s.user);
   const rooms = useChatStore((s) => s.rooms);
   const setRooms = useChatStore((s) => s.setRooms);
@@ -234,7 +243,7 @@ export default function ClientChatPage() {
                   </button>
                 </div>
                 <div className="flex-1 min-h-0">
-                  <ChatRoom roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
+                  <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
                 </div>
               </>
             ) : paramRoomId && !loading ? (

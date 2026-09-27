@@ -521,7 +521,13 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                 {
                     "title": "리포트가 도착했습니다",
                     "body": "세션 리포트가 승인되었습니다",
-                    "extra": {"report_id": str(report.id), "session_id": str(report.session_id)},
+                    "extra": notification_service.build_standard_extra(
+                        "report_ready",
+                        "report",
+                        str(report.id),
+                        params={"session_id": str(report.session_id)},
+                        legacy={"report_id": str(report.id), "session_id": str(report.session_id)},
+                    ),
                 },
                 db,
             )

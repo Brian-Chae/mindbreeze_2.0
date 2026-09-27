@@ -2,6 +2,7 @@
 // 상담사 연결 안 됨 → 코드 입력 화면
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
 
+import ClientNotificationPage from './ClientNotificationPage';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -257,7 +258,7 @@ export default function ClientAppPage() {
   const hasCounselors = counselors !== null && counselors.length > 0;
 
   // 상담사 연결 전 → 코드 입력 화면
-  if (!hasCounselors) {
+  if (!hasCounselors && !pathname.startsWith('/app/notifications')) {
     return <CounselorCodeScreen />;
   }
 
@@ -308,8 +309,7 @@ export default function ClientAppPage() {
       return <ClientReportListPage />;
     }
     if (pathname.startsWith('/app/notifications')) {
-      // 알림 페이지 — 추후 전용 페이지로 교체
-      return <ClientHomePage />;
+      return <ClientNotificationPage />;
     }
     if (pathname.startsWith('/app/profile')) {
       return <ClientSettingsPage />;

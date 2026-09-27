@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.models.credential import Credential
 from app.models.user import User
+from app.services.notification_service import build_standard_extra, notify_event
 
 # 업로드 루트 — backend/uploads/
 UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
@@ -199,6 +200,8 @@ def admin_verify(
     new_status: str,
     reason: str | None,
     db: Session,
+    *,
+    admin_id: uuid.UUID | None = None,
 ) -> Credential:
     """관리자 승인/반려 처리."""
     if new_status not in ("approved", "rejected"):
@@ -209,6 +212,7 @@ def admin_verify(
     cred = db.query(Credential).filter(Credential.id == credential_id).first()
     if cred is None:
         raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
+    previous_status = cred.status
     cred.status = new_status
     cred.ai_verdict = {"reason": reason} if reason else None
     db.add(cred)
@@ -218,4 +222,13 @@ def admin_verify(
     if new_status == "approved":
         recalculate_tier(cred.user_id, db)
 
+    if previous_status != new_status and cred.user_id != admin_id:
+        notify_event("verification_result", cred.user_id, {
+            "title": "자격 검증 결과가 도착했습니다",
+            "body": "자격 화면에서 결과와 보완 사항을 확인해주세요.",
+            "extra": build_standard_extra(
+                "verification_result", "credentials", None,
+                params={"credential_id": str(cred.id), "result": new_status},
+            ),
+        }, db)
     return cred

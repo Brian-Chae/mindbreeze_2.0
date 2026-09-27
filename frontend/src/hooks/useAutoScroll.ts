@@ -10,6 +10,7 @@ interface UseAutoScrollResult {
 export function useAutoScroll(
   listRef: RefObject<HTMLDivElement | null>,
   deps: ReadonlyArray<unknown>,
+  enabled = true,
 ): UseAutoScrollResult {
   const [userScrolledUp, setUserScrolledUp] = useState(false);
   const userScrolledUpRef = useRef(false);
@@ -35,14 +36,15 @@ export function useAutoScroll(
 
   // deps 변경 시 자동 스크롤 (단, 사용자가 위로 스크롤한 경우 억제)
   useEffect(() => {
-    if (userScrolledUpRef.current) return;
+    if (!enabled || userScrolledUpRef.current) return;
     const el = listRef.current;
     if (!el) return;
-    requestAnimationFrame(() => {
+    const frame = requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
     });
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, enabled]);
 
   return { handleScroll, scrollToBottom, userScrolledUp };
 }
