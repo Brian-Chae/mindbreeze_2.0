@@ -1,6 +1,7 @@
 """알림 서비스 — 인앱 + 이메일 라우팅"""
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -302,6 +303,7 @@ def mark_read(notification_id: str, user_id: str, db: DBSession) -> None:
     if notif.user_id != uid:
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     notif.is_read = True
+    notif.read_at = datetime.now(timezone.utc)
     db.commit()
 
 
@@ -315,6 +317,7 @@ def mark_all_read(user_id: str, db: DBSession) -> int:
     count = 0
     for n in items:
         n.is_read = True
+        n.read_at = datetime.now(timezone.utc)
         count += 1
     db.commit()
     return count

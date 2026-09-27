@@ -60,3 +60,47 @@ def process_email_outbox(limit: int = 100) -> dict:
     finally:
         db.close()
     return {"processed": processed, "sent": sent, "failed": failed}
+
+
+@celery_app.task(name="tasks.cleanup_notifications")
+def cleanup_notifications() -> dict:
+    """알림 보관·파기 정책: 읽은 알림 30일, 전체 90일, outbox 정리 30일."""
+    from app.models.notification import Notification
+
+    db = SessionLocal()
+    deleted_read = deleted_created = deleted_outbox = 0
+    try:
+        now = datetime.now(timezone.utc)
+        read_cutoff = now - timedelta(days=30)
+        created_cutoff = now - timedelta(days=90)
+        outbox_cutoff = now - timedelta(days=30)
+
+        deleted_read = (
+            db.query(Notification)
+            .filter(Notification.read_at.is_not(None), Notification.read_at < read_cutoff)
+            .delete(synchronize_session=False)
+        )
+        deleted_created = (
+            db.query(Notification)
+            .filter(Notification.created_at < created_cutoff)
+            .delete(synchronize_session=False)
+        )
+        deleted_outbox = (
+            db.query(NotificationOutbox)
+            .filter(
+                NotificationOutbox.status.in_(["sent", "failed"]),
+                NotificationOutbox.created_at < outbox_cutoff,
+            )
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+    finally:
+        db.close()
+    logger.info(
+        f"[NOTIF-CLEANUP] read={deleted_read} created={deleted_created} outbox={deleted_outbox}"
+    )
+    return {
+        "deleted_read": deleted_read,
+        "deleted_created": deleted_created,
+        "deleted_outbox": deleted_outbox,
+    }
