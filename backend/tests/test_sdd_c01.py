@@ -73,8 +73,8 @@ class TestGoogleAuth:
             assert data["user"]["email"] == "existing@test.com"
             assert data["user"]["auth_provider"] == "google"
 
-    def test_looxidlabs_Google_시스템관리자_신규생성_200(self, client):
-        """looxidlabs.com Google 계정은 시스템 관리자 로그인 시 자동 승인된다."""
+    def test_looxidlabs_Google_시스템관리자_신규생성_거부_403(self, client):
+        """platform_admin 은 명시적 지정만 허용 — Google OAuth 신규 생성 금지."""
         mock_get = self._userinfo_mock(
             200, {"email": "admin@looxidlabs.com", "name": "Looxid Admin"}
         )
@@ -83,14 +83,10 @@ class TestGoogleAuth:
                 "/api/v1/auth/google",
                 json={"access_token": "valid-token", "role": "platform_admin"},
             )
-            assert res.status_code == 200
-            data = res.json()
-            assert data["user"]["email"] == "admin@looxidlabs.com"
-            assert data["user"]["role"] == "platform_admin"
-            assert data["user"]["auth_provider"] == "google"
+            assert res.status_code == 403
 
     def test_외부도메인_Google_시스템관리자_거부_403(self, client):
-        """시스템 관리자 Google 로그인은 looxidlabs.com 도메인만 허용한다."""
+        """시스템 관리자 Google 로그인은 명시적 지정 경로만 허용한다 (도메인 무관 403)."""
         mock_get = self._userinfo_mock(
             200, {"email": "admin@example.com", "name": "External Admin"}
         )
@@ -100,7 +96,6 @@ class TestGoogleAuth:
                 json={"access_token": "valid-token", "role": "platform_admin"},
             )
             assert res.status_code == 403
-            assert "looxidlabs.com" in res.json()["detail"]
 
 
 class TestClientPortal:
