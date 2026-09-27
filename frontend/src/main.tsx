@@ -4,13 +4,16 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import './index.css'
 import './mb-tokens.css'
 import App from './App.tsx'
+import ErrorBoundary from './components/ErrorBoundary.tsx'
 
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId={googleClientId || ' '}>
-      <App />
-    </GoogleOAuthProvider>
+    <ErrorBoundary>
+      <GoogleOAuthProvider clientId={googleClientId || ' '}>
+        <App />
+      </GoogleOAuthProvider>
+    </ErrorBoundary>
   </StrictMode>,
 )
