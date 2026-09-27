@@ -900,9 +900,9 @@ export default function ClassPlayerPage() {
     </div>
   );
 
-  /* ─── 참여자 상태 피드백 패널 — 대기실(전체 폭)·라이브(우측 컬럼) 공용 ─── */
+  /* ─── 참여자 상태 피드백 패널 — 대기실·라이브(우측 컬럼) 공용 ─── */
   const monitorPanel = (isLobby || isRunning) && (
-    <div className="space-y-3 rounded-2xl bg-white p-4">
+    <div className="flex h-full flex-col space-y-3 rounded-2xl bg-white p-4">
       {liveStatusBar}
       <SessionMonitorSummary
         counts={summary}
@@ -910,7 +910,7 @@ export default function ClassPlayerPage() {
         onFilterToggle={handleFilterToggle}
       />
 
-      <div className="space-y-2">
+      <div className="flex min-h-0 flex-1 flex-col space-y-2">
         <div className="flex justify-end gap-1">
           {(
             [
