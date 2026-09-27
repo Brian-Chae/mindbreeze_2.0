@@ -112,6 +112,28 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
     return {"status": "queued", "message": "메일 발송을 예약했습니다"}
 
 
+def _notify_email_failed(report, db: DBSession) -> None:
+    """리포트 이메일 발송 실패를 소유자(상담사)에게 알린다 (best-effort)."""
+    try:
+        from app.services import notification_service
+
+        if report.user_id:
+            notification_service.notify_event(
+                "report_email_failed",
+                report.user_id,
+                {
+                    "title": "리포트 이메일 발송에 실패했습니다",
+                    "body": "내담자 리포트 이메일 발송 중 오류가 발생했습니다. 다시 발송해 주세요.",
+                    "extra": notification_service.build_standard_extra(
+                        "report_email_failed", "report", str(report.id),
+                    ),
+                },
+                db,
+            )
+    except Exception:  # noqa: BLE001 — 알림 실패가 발송 상태 반영을 막지 않도록
+        pass
+
+
 def deliver_report_email(report_id: str, db: DBSession) -> str:
     report = db.query(Report).filter(Report.id == UUID(report_id)).first()
     if not report or report.type != "client" or not report.participant_id:
@@ -139,6 +161,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
             report.session_id,
             participant.id,
         )
+        _notify_email_failed(report, db)
         return "failed"
     if not sent:
         participant.report_email_status = "failed"
@@ -149,6 +172,7 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
             report.session_id,
             participant.id,
         )
+        _notify_email_failed(report, db)
         return "failed"
     participant.report_email_status = "sent"
     participant.report_email_sent_at = datetime.now(timezone.utc)

@@ -693,6 +693,7 @@ def add_room_participants(room_id: str, user_id: str, participant_ids: list[str]
         .filter(ChatRoomParticipant.room_id == room.id)
         .all()
     }
+    invited_ids: list[UUID] = []
     for pid in participant_ids:
         puid = _uuid(pid)
         if puid == uid or puid == room.host_id or puid in existing:
@@ -700,7 +701,30 @@ def add_room_participants(room_id: str, user_id: str, participant_ids: list[str]
         _validate_invitee(room.host_id, puid, db)
         db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
         existing.add(puid)
+        invited_ids.append(puid)
     db.commit()
+    # SDD-093: 초대받은 회원에게 chat_room_invited 알림 발화 (best-effort)
+    for puid in invited_ids:
+        try:
+            from app.services.notification_service import notify_event, build_standard_extra
+
+            notify_event(
+                "chat_room_invited",
+                puid,
+                {
+                    "title": "채팅방에 초대되었습니다",
+                    "body": f"{room.name or '채팅방'}에 초대되었습니다.",
+                    "extra": build_standard_extra(
+                        "chat_room_invited",
+                        "chat_room",
+                        str(room.id),
+                        params={"inviter_id": str(uid)},
+                    ),
+                },
+                db,
+            )
+        except Exception:
+            pass
     return _serialize_room(room, user_id, db)
 
 
