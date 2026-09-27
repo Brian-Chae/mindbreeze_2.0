@@ -385,6 +385,11 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     session = db.query(Session).filter(Session.id == report.session_id).first()
     if not _can_access_report(user_id, session, db):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    # counselor 리포트(상담사 내부 메모 포함)는 내담자(client) 접근 차단 — defense in depth
+    if report.type == "counselor":
+        viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+        if viewer and viewer.role == "client":
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     participant = (
         db.query(SessionParticipant)
         .filter(SessionParticipant.id == report.participant_id)
