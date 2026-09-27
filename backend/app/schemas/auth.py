@@ -29,6 +29,11 @@ class RegisterRequest(BaseModel):
     email_verify_token: str | None = None
     consents: ConsentRequest | None = None
 
+    @field_validator("password")
+    @classmethod
+    def _check_password(cls, v: str) -> str:
+        return _validate_password(v)
+
 
 class _RegisterBase(BaseModel):
     email: EmailStr
