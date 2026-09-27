@@ -54,8 +54,31 @@ async def _enter_room(sid, data):
     if str(room_id).startswith("user:"):
         logger.warning(f"[WS] blocked join to user room (sid={sid}, room={room_id})")
         return
+    # 보안: 채팅방 room은 본인이 멤버인 방만 가입 허용 (도청 방지)
+    if not await _is_room_member(sid, str(room_id)):
+        logger.warning(f"[WS] blocked join to non-member room (sid={sid}, room={room_id})")
+        return
     await sio.enter_room(sid, room_id, namespace="/chat")
     await sio.emit("joined", {"room_id": room_id}, to=sid, namespace="/chat")
+
+
+async def _is_room_member(sid: str, room_id: str) -> bool:
+    """sid → user_id 역추적 후, 해당 room의 멤버인지 확인. 미인증·비멤버면 False."""
+    user_id = None
+    for uid, s in _user_sids.items():
+        if s == sid:
+            user_id = uid
+            break
+    if user_id is None:
+        return False
+    from app.core.database import SessionLocal
+    from app.services.chat_service import get_user_chat_room_ids
+
+    db = SessionLocal()
+    try:
+        return room_id in get_user_chat_room_ids(user_id, db)
+    finally:
+        db.close()
 
 
 @sio.on("join", namespace="/chat")
@@ -92,6 +115,10 @@ async def on_message(sid, data):
     # 보안: 사용자 개인 room(user:<id>)으로 임의 메시지 전송 차단
     if str(room_id).startswith("user:"):
         logger.warning(f"[WS] blocked message to user room (sid={sid}, room={room_id})")
+        return
+    # 보안: 채팅방 room 멤버십 검증 (임의 방으로 메시지 스푸핑 방지)
+    if not await _is_room_member(sid, str(room_id)):
+        logger.warning(f"[WS] blocked message to non-member room (sid={sid}, room={room_id})")
         return
     await sio.emit("new_message", data, room=room_id, namespace="/chat")
 
