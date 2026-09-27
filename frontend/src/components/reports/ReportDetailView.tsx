@@ -10,6 +10,7 @@ import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
+import TranscriptTimeline from './TranscriptTimeline';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import { useAuthStore } from '../../stores/authStore';
@@ -214,7 +215,7 @@ export default function ReportDetailView({
   }, [report.id, resendEmail]);
 
   const adapted = adaptReportContent(report.content, report.type);
-  const { summary, insights, markers, displayNarrative } = adapted;
+  const { markers, displayNarrative, transcriptSegments } = adapted;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
   const aiRecordReasonText =
@@ -342,38 +343,12 @@ export default function ReportDetailView({
         </div>
       )}
 
-      {!aiRecordUnavailable && summary && (
-        <SummaryCard title="AI 요약">
-          <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
-            {summary}
-          </p>
-        </SummaryCard>
-      )}
-
       {/* SDD-087 — 저장된 상담사 코멘트 (편집 카드 미노출 시 읽기 전용: 내담자 뷰 · completed) */}
       {report.type === 'client' && counselorComment && !showCommentEditor && (
         <SummaryCard title="상담사 코멘트">
           <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
             {counselorComment}
           </p>
-        </SummaryCard>
-      )}
-
-      {!aiRecordUnavailable && insights.length > 0 && (
-        <SummaryCard title="인사이트 카드">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {insights.map((insight, i) => (
-              <div
-                key={i}
-                className="bg-gradient-to-br from-[#F5EDFC] to-white border border-[#EFEFEF] rounded-xl p-4"
-              >
-                <div className="text-[12px] text-[#6F6F6F] font-mono mb-1">
-                  INSIGHT {String(i + 1).padStart(2, '0')}
-                </div>
-                <p className="text-[14px] text-[#1F1F1F] leading-relaxed">{insight}</p>
-              </div>
-            ))}
-          </div>
         </SummaryCard>
       )}
 
@@ -384,6 +359,13 @@ export default function ReportDetailView({
               <MarkerBadge key={i} label={m.label} value={m.value} />
             ))}
           </div>
+        </SummaryCard>
+      )}
+
+      {/* STT 발화자 구분 기록지 — counselor 리포트 (Gemini diarization 결과) */}
+      {isCounselor && transcriptSegments && (
+        <SummaryCard title="상담 기록지 (발화자 구분)">
+          <TranscriptTimeline segments={transcriptSegments} />
         </SummaryCard>
       )}
 

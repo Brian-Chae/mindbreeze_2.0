@@ -120,6 +120,20 @@ export interface ReportAiRecord {
   reason: string | null;
 }
 
+/** STT 발화자 구분 세그먼트 (counselor/client) */
+export interface TranscriptSegment {
+  speaker: string;
+  text: string;
+  start: number;
+  end: number;
+}
+
+/** 리포트 content.video — 영상 리플레이 소스 */
+export interface ReportVideo {
+  s3_key: string | null;
+  status: string | null;
+}
+
 /**
  * UI가 소비하는 단일 매핑 결과.
  * eeg_summary / eeg_timeline은 레거시 필드명과의 호환 뷰.
@@ -146,6 +160,10 @@ export interface AdaptedReportContent {
   displayNarrative: DisplayNarrative | null;
   /** SDD-085: ai_record 계약 — 레거시 리포트(키 없음)는 null (기존 동작 유지) */
   aiRecord: ReportAiRecord | null;
+  /** STT 발화자 구분 기록지 — counselor 리포트 전용 (없으면 null) */
+  transcriptSegments: TranscriptSegment[] | null;
+  /** 영상 리플레이 소스 (s3_key/status) */
+  video: ReportVideo | null;
 }
 
 const QUALITY_STATUSES: readonly EegQualityStatus[] = [
@@ -181,6 +199,31 @@ function parseAiRecord(value: unknown): ReportAiRecord | null {
   const status = value.status;
   if (status !== 'available' && status !== 'not_available') return null;
   return { status, reason: asString(value.reason) };
+}
+
+/** content.transcript_segments 파싱 — [{speaker, text, start, end}] */
+function parseTranscriptSegments(value: unknown): TranscriptSegment[] | null {
+  if (!Array.isArray(value)) return null;
+  const out: TranscriptSegment[] = [];
+  for (const item of value) {
+    if (!isRecord(item)) continue;
+    const text = asString(item.text);
+    if (!text) continue;
+    const speaker = asString(item.speaker) ?? 'speaker_0';
+    const start = asNullableNumber(item.start) ?? 0;
+    const end = asNullableNumber(item.end) ?? start;
+    out.push({ speaker, text, start, end });
+  }
+  return out.length > 0 ? out : null;
+}
+
+/** content.video 파싱 — {s3_key, status} */
+function parseVideo(value: unknown): ReportVideo | null {
+  if (!isRecord(value)) return null;
+  const s3Key = asString(value.s3_key);
+  const status = asString(value.status);
+  if (!s3Key && !status) return null;
+  return { s3_key: s3Key, status };
 }
 
 function asQualityStatus(value: unknown): EegQualityStatus | null {
@@ -376,6 +419,8 @@ export function adaptReportContent(
       eeg_timeline: [],
       displayNarrative: null,
       aiRecord: null,
+      transcriptSegments: null,
+      video: null,
     };
   }
 
@@ -422,6 +467,8 @@ export function adaptReportContent(
     eeg_timeline: eeg?.timeline ?? [],
     displayNarrative,
     aiRecord: parseAiRecord(content.ai_record),
+    transcriptSegments: parseTranscriptSegments(content.transcript_segments),
+    video: parseVideo(content.video),
   };
 }
 
