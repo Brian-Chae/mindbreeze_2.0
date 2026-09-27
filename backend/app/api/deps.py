@@ -21,6 +21,9 @@ async def get_current_user(
 
     try:
         payload = decode_token(token)
+        # JWT type 검증 — refresh token 을 access token 으로 오용하는 것 방지
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 토큰")
         user_id: str = payload.get("sub")
         if user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 토큰")
