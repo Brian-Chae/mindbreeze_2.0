@@ -18,7 +18,7 @@ import { ParticipantPicker, type SelectedParticipant } from '../../components/se
 export default function SessionCreatePage() {
   const navigate = useNavigate();
   const [type, setType] = useState<SessionType>('meditation');
-  const [locationType] = useState<LocationType>('offline');
+  const [locationType, setLocationType] = useState<LocationType>('offline');
   const [participantMode, setParticipantMode] = useState<ParticipantMode>('group');
   const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('optional');
   const [recordAudio, setRecordAudio] = useState(true);
@@ -155,6 +155,21 @@ export default function SessionCreatePage() {
                 <option value="meditation">명상수업</option>
                 <option value="clinical">임상심리상담</option>
               </select>
+            </div>
+
+            <div>
+              <label className={labelCls}>장소 유형</label>
+              <select
+                value={locationType}
+                onChange={(e) => setLocationType(e.target.value as LocationType)}
+                className={inputCls}
+              >
+                <option value="offline">오프라인 (대면)</option>
+                <option value="online">온라인 (원격)</option>
+              </select>
+              <p className="mt-1.5 text-xs text-[#6F6F6F]">
+                온라인은 상담사 영상·음성이 회원에게 실시간 스트리밍됩니다. 오프라인은 하울링 방지를 위해 회원 스피커가 기본 음소거됩니다.
+              </p>
             </div>
 
             <div>
