@@ -1,7 +1,7 @@
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
@@ -10,8 +10,7 @@ import EegQualityBanner from './EegQualityBanner';
 import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
-import TranscriptTimeline from './TranscriptTimeline';
-import { VideoPlayer, type VideoPlayerHandle } from './VideoPlayer';
+import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import { useAuthStore } from '../../stores/authStore';
@@ -133,7 +132,6 @@ export default function ReportDetailView({
   const [resendError, setResendError] = useState<string | null>(null);
   // SDD-087 — 코멘트 카드 미저장 변경 여부 (승인 confirm 소프트 가드)
   const [commentDirty, setCommentDirty] = useState(false);
-  const videoRef = useRef<VideoPlayerHandle>(null);
 
   useEffect(() => {
     setReport(initialReport);
@@ -364,20 +362,10 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
-      {/* 영상 리플레이어 — counselor 리포트 (영상 유무는 VideoPlayer가 API로 확인) */}
+      {/* 세션 영상 + 상담 기록지 결합 뷰 — counselor 리포트 (좌: 플레이어 / 우: 기록지) */}
       {isCounselor && (
-        <SummaryCard title="세션 영상 리플레이">
-          <VideoPlayer ref={videoRef} sessionId={report.session_id} />
-        </SummaryCard>
-      )}
-
-      {/* STT 발화자 구분 기록지 — counselor 리포트 (Gemini diarization 결과) */}
-      {isCounselor && transcriptSegments && (
-        <SummaryCard title="상담 기록지 (발화자 구분)">
-          <TranscriptTimeline
-            segments={transcriptSegments}
-            onSeek={(sec) => videoRef.current?.seekTo(sec)}
-          />
+        <SummaryCard title="세션 영상 & 상담 기록지">
+          <SessionReplayPanel sessionId={report.session_id} segments={transcriptSegments} />
         </SummaryCard>
       )}
 
