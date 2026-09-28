@@ -1,5 +1,6 @@
 // 상담사 라이브 영상 타일 — 회원/게스트 구독 전용 LiveKitRoom (video/audio 미발신)
 // 자연 배경 위에 올라가는 반투명 카드. 토큰이 없거나 원격 트랙이 없으면 준비 중 표시.
+// speakerOn=false면 상담사 오디오 볼륨 0 (하울링 방지 뮤트) — 오프라인 수업 기본 뮤트용.
 import { useEffect } from 'react';
 import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -10,6 +11,8 @@ interface CounselorLiveTileProps {
   code: string | null;
   participantId: string | null;
   participantToken?: string | null;
+  /** 스피커 on/off — false면 상담사 음성 음소거 (하울링 방지) */
+  speakerOn?: boolean;
   className?: string;
 }
 
@@ -41,6 +44,7 @@ export function CounselorLiveTile({
   code,
   participantId,
   participantToken,
+  speakerOn = true,
   className = '',
 }: CounselorLiveTileProps) {
   const { token, error, notReady, connect, serverUrl } = useMemberLiveKit({
@@ -87,7 +91,8 @@ export function CounselorLiveTile({
         className="h-full w-full"
       >
         <HostCamera />
-        <RoomAudioRenderer />
+        {/* speakerOn=false → 볼륨 0 (클라이언트측 즉시 뮤트, 재구독 지연 없음) */}
+        <RoomAudioRenderer volume={speakerOn ? 1 : 0} />
       </LiveKitRoom>
     </div>
   );

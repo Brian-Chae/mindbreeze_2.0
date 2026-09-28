@@ -15,6 +15,8 @@ interface MemberSessionSceneProps {
   classCode: string | null;
   /** 게스트 소유 증명 토큰 */
   participantToken?: string | null;
+  /** 클래스 장소 유형 — 오프라인은 스피커 기본 뮤트(하울링 방지) */
+  locationType?: 'online' | 'offline';
 }
 
 export function MemberSessionScene({
@@ -27,6 +29,7 @@ export function MemberSessionScene({
   onLeave,
   classCode,
   participantToken,
+  locationType,
 }: MemberSessionSceneProps) {
   return (
     <main className="min-h-screen bg-black">
@@ -39,6 +42,7 @@ export function MemberSessionScene({
         participantId={participantId}
         classCode={classCode}
         participantToken={participantToken}
+        locationType={locationType}
       />
       {error && (
         <p

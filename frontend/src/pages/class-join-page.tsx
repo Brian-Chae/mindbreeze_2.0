@@ -395,6 +395,7 @@ const ClassJoinPage: React.FC = () => {
         onLeave={resetJoin}
         classCode={code}
         participantToken={participantToken}
+        locationType={session.location_type}
       />
     );
   }
