@@ -466,10 +466,8 @@ export default function ClassPlayerPage() {
     try {
       const updated = await transitionSession(id, 'start');
       setSession(updated);
-      // 온라인 세션: 클래스 시작 즉시 화상 연결 — 상담사 영상·음성 라이브 송출 (녹화 여부와 무관)
-      if (updated.location_type === 'online') {
-        liveKit.connect();
-      }
+      // 클래스 시작 즉시 화상 연결 — 상담사 영상·음성 라이브 송출 (녹화·장소유형과 무관)
+      liveKit.connect();
       // SDD-085: 마이크 오프 결정을 서버에 선언 — consent_audio=false → status='manual'
       if (!mediaPrefs.micOn) {
         try {
@@ -518,7 +516,7 @@ export default function ClassPlayerPage() {
   const handleStartClick = () => {
     if (!mediaPrefs.micOn) return;
     setError(null);
-    if (session?.location_type === 'online' && !liveKit.token) {
+    if (!liveKit.token) {
       liveKit.connect();
     }
     setConsentOpen(true);
@@ -676,8 +674,6 @@ export default function ClassPlayerPage() {
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
   }, [isLobby, session?.opened_at]);
-
-  const isOnline = session?.location_type === 'online';
 
   const displayMetrics = useMemo(() => {
     const base =
@@ -1269,34 +1265,31 @@ export default function ClassPlayerPage() {
               <span className="text-sm text-[#5F0080]">{mediaOpen ? '접기' : '펼치기'}</span>
             </button>
 
-            {mediaOpen && (
-              <div className="space-y-5 border-t border-[#EFEFEF] px-5 pb-6 pt-5 sm:px-6">
-                {isOnline && (
-                  <div>
-                    <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                      화상 회의
-                    </div>
-                    {liveKit.loading && (
-                      <div className="flex min-h-[400px] items-center justify-center rounded-2xl bg-[#111]">
-                        <p className="text-sm text-[#9CA3AF]">화상 회의 연결 중...</p>
-                      </div>
-                    )}
-                    {liveKit.token && !liveKit.loading && (
-                      <VideoConference
-                        token={liveKit.token}
-                        serverUrl={liveKit.serverUrl}
-                        onDisconnected={() => setError('화상 회의 연결이 끊어졌습니다')}
-                      />
-                    )}
-                    {!liveKit.token && !liveKit.loading && (
-                      <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9]">
-                        <p className="text-sm text-[#6F6F6F]">
-                          녹음을 시작하면 화상 회의가 연결됩니다
-                        </p>
-                      </div>
-                    )}
+            <div className={`space-y-5 border-t border-[#EFEFEF] px-5 pb-6 pt-5 sm:px-6 ${mediaOpen ? '' : 'hidden'}`}>
+                <div>
+                  <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
+                    화상 회의
                   </div>
-                )}
+                  {liveKit.loading && (
+                    <div className="flex min-h-[400px] items-center justify-center rounded-2xl bg-[#111]">
+                      <p className="text-sm text-[#9CA3AF]">화상 회의 연결 중...</p>
+                    </div>
+                  )}
+                  {liveKit.token && !liveKit.loading && (
+                    <VideoConference
+                      token={liveKit.token}
+                      serverUrl={liveKit.serverUrl}
+                      onDisconnected={() => setError('화상 회의 연결이 끊어졌습니다')}
+                    />
+                  )}
+                  {!liveKit.token && !liveKit.loading && (
+                    <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9]">
+                      <p className="text-sm text-[#6F6F6F]">
+                        클래스 시작 시 화상이 연결됩니다
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 <div>
                   <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
@@ -1408,7 +1401,6 @@ export default function ClassPlayerPage() {
                   <MarkerButton sessionId={id ?? ''} startedAt={startedAtMs} />
                 </section>
               </div>
-            )}
           </div>
         )}
 
@@ -1469,7 +1461,6 @@ export default function ClassPlayerPage() {
         onConfirm={() => void handleConsentConfirm()}
         onCancel={() => {
           setConsentOpen(false);
-          if (isOnline) liveKit.disconnect();
         }}
       />
 

@@ -180,8 +180,9 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     if len(payload.participant_ids) > max_p:
         raise HTTPException(status_code=400, detail="참여자 수가 정원을 초과합니다")
 
-    # 온라인 세션은 WebRTC 룸 ID 자동 생성
-    webrtc_room_id = uuid.uuid4() if payload.location_type == "online" else None
+    # 회원 클라이언트 라이브 스트리밍을 위해 모든 세션에 WebRTC 룸을 생성한다
+    # (기존: location_type='online' 만. 상담사 영상·음성 라이브 송출은 장소유형과 무관)
+    webrtc_room_id = uuid.uuid4()
 
     session = Session(
         type=payload.type,
@@ -342,11 +343,9 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.record_video = payload.record_video
     if payload.location_type is not None:
         s.location_type = payload.location_type
-        # 온라인 전환 시 WebRTC 룸 자동 생성, 오프라인 전환 시 정리
-        if payload.location_type == "online" and not s.webrtc_room_id:
+        # 회원 라이브 스트리밍은 장소유형과 무관 — 룸이 없으면 항상 생성 (오프라인 전환 시에도 유지)
+        if not s.webrtc_room_id:
             s.webrtc_room_id = uuid.uuid4()
-        elif payload.location_type == "offline":
-            s.webrtc_room_id = None
 
     db.commit()
     db.refresh(s)
@@ -757,10 +756,6 @@ def _get_session_for_participant(session_id: str, user_id: str, db: DBSession) -
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = _get_session_for_participant(session_id, user_id, db)
-
-    # 오프라인 세션은 입장 불가
-    if s.location_type == "offline":
-        raise HTTPException(status_code=400, detail="오프라인 세션은 입장할 수 없습니다")
 
     # webrtc_room_id가 없으면 생성
     if not s.webrtc_room_id:

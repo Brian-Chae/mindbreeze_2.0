@@ -223,7 +223,8 @@ def test_16_기본_설정값_검증(client):
     assert body["participant_mode"] == "one_on_one"
     assert body["linkband_mode"] == "none"
     assert body["sfu_enabled"] is False
-    assert body["webrtc_room_id"] is None
+    # 회원 라이브 스트리밍을 위해 장소유형(online/offline)과 무관하게 WebRTC 룸을 생성한다
+    assert body["webrtc_room_id"] is not None
 
 
 def test_17_커스텀_유형_이름_누락_차단(client):
@@ -264,7 +265,7 @@ def test_19_온라인_세션_webrtc_room_자동생성(client):
     assert body["webrtc_room_id"] is not None
 
 
-def test_20_오프라인으로_수정시_webrtc_room_정리(client):
+def test_20_오프라인으로_수정시_webrtc_room_유지(client):
     host = _register(client, "host20@test.com")
     s = client.post(
         "/api/v1/sessions",
@@ -279,4 +280,5 @@ def test_20_오프라인으로_수정시_webrtc_room_정리(client):
     )
     assert upd.status_code == 200, upd.text
     assert upd.json()["location_type"] == "offline"
-    assert upd.json()["webrtc_room_id"] is None
+    # 회원 라이브 스트리밍은 장소유형과 무관 — 오프라인 전환 시에도 룸을 유지한다
+    assert upd.json()["webrtc_room_id"] is not None
