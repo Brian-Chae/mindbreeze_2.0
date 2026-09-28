@@ -6,6 +6,8 @@
 
 import logging
 import os
+import shutil
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -126,11 +128,85 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
     }
 
 
+def _merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
+    """영상 청크를 chunk_index 순서대로 병합해 하나의 .webm 파일로 저장한다.
+
+    S3 청크(object key)는 다운로드, 로컬 청크는 직접 읽어 병합한다.
+    성공 시 object_key(또는 로컬 경로)를 반환, 청크 없으면 None.
+    """
+    chunks = (
+        db.query(VideoChunk)
+        .filter(VideoChunk.session_id == session_id)
+        .order_by(VideoChunk.chunk_index.asc())
+        .all()
+    )
+    if not chunks:
+        return None
+
+    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
+    merged_path = merged.name
+    try:
+        with open(merged_path, "wb") as out:
+            for chunk in chunks:
+                path = chunk.file_path or ""
+                if path.startswith("video/"):  # S3 object key
+                    data = storage_service.download_bytes(path)
+                    if data:
+                        out.write(data)
+                elif os.path.exists(path):  # 로컬 경로
+                    with open(path, "rb") as src:
+                        shutil.copyfileobj(src, out)
+        merged.close()
+
+        with open(merged_path, "rb") as f:
+            content = f.read()
+        if not content:
+            return None
+
+        object_key = f"video/{session_id}/merged.webm"
+        if storage_service.upload_bytes(object_key, content, content_type="video/webm"):
+            logger.info("[video] 병합 영상 S3 업로드 완료: %s", object_key)
+            return object_key
+        # 로컬 폴백
+        VIDEO_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
+        final_path = VIDEO_CHUNK_DIR / f"{session_id}_merged.webm"
+        final_path.write_bytes(content)
+        logger.info("[video] 병합 영상 로컬 저장: %s", final_path)
+        return str(final_path)
+    finally:
+        if os.path.exists(merged_path):
+            os.unlink(merged_path)
+
+
 def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
-    """세션 /end 시 자동 호출. 영상 녹화 중이면 종료 처리."""
+    """세션 /end 시 자동 호출. 영상 녹화 중이면 종료 처리 + 청크 병합 → video_s3_key 설정."""
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
-    if not record or record.video_status != "recording":
+    if not record:
         return
-    record.video_status = "completed"
-    record.video_recording_ended_at = _now()
+    if record.video_status == "recording":
+        record.video_status = "completed"
+        record.video_recording_ended_at = _now()
+    # 영상 청크 병합 → video_s3_key (리포트 영상 리플레이 소스)
+    if record.video_status == "completed" and not record.video_s3_key:
+        merged_key = _merge_video_chunks(session_id, db)
+        if merged_key:
+            record.video_s3_key = merged_key
     db.commit()
+
+
+def get_presigned_video_url(session_id: UUID, db: DBSession) -> str | None:
+    """리포트 영상 리플레이용 presigned GET URL 발급. 영상 없으면 None."""
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
+    if not record or not record.video_s3_key:
+        return None
+    key = record.video_s3_key
+    if not key.startswith("video/"):
+        return None  # 로컬 폴백 경로는 스트리밍 미지원(배포 환경은 S3)
+    try:
+        return storage_service.generate_presigned_get(
+            key,
+            expires_in=300,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[video] presigned GET 발급 실패: %s", exc)
+        return None

@@ -23,11 +23,19 @@ export interface VideoStopResponse {
   ended_at: string | null;
 }
 
+export interface VideoUrlResponse {
+  url: string | null;
+}
+
 export const startVideo = (sessionId: string, consentVideo: boolean): Promise<VideoStartResponse> =>
   apiClient.post<VideoStartResponse>(`/sessions/${sessionId}/video/start`, { consent_video: consentVideo });
 
 export const stopVideo = (sessionId: string): Promise<VideoStopResponse> =>
   apiClient.post<VideoStopResponse>(`/sessions/${sessionId}/video/stop`);
+
+// 리포트 영상 리플레이용 presigned GET URL 조회
+export const getSessionVideoUrl = (sessionId: string): Promise<VideoUrlResponse> =>
+  apiClient.get<VideoUrlResponse>(`/sessions/${sessionId}/video/url`);
 
 // multipart 청크 업로드는 별도 fetch (apiClient는 JSON 전용)
 export async function uploadVideoChunk(

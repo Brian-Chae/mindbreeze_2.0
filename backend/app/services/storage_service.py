@@ -88,6 +88,26 @@ def upload_bytes(
         return False
 
 
+def download_bytes(object_key: str) -> bytes | None:
+    """S3 에서 object 를 다운로드한다. 자격증명 미설정/실패 시 None (로컬 폴백용)."""
+    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+        return None
+    try:
+        import boto3
+
+        client = boto3.client(
+            "s3",
+            region_name=settings.s3_region,
+            aws_access_key_id=settings.aws_access_key_id,
+            aws_secret_access_key=settings.aws_secret_access_key,
+        )
+        resp = client.get_object(Bucket=settings.s3_bucket, Key=object_key)
+        return resp["Body"].read()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] S3 다운로드 실패: %s", exc)
+        return None
+
+
 class ExportStorageError(RuntimeError):
     """내보내기 저장소는 미설정·실패를 성공 URL로 대체하지 않는다."""
 

@@ -1,7 +1,7 @@
 // 리포트 상세 본문 — 페이지/모달 공용 (SDD-064)
 // Cover → 서사 → 상담 본문 → EEG → 액션 → 재발송(client only)
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import CounselorCommentCard from './CounselorCommentCard';
@@ -11,6 +11,7 @@ import EegMetricsGrid from './EegMetricsGrid';
 import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import TranscriptTimeline from './TranscriptTimeline';
+import { VideoPlayer, type VideoPlayerHandle } from './VideoPlayer';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import { useAuthStore } from '../../stores/authStore';
@@ -132,6 +133,7 @@ export default function ReportDetailView({
   const [resendError, setResendError] = useState<string | null>(null);
   // SDD-087 — 코멘트 카드 미저장 변경 여부 (승인 confirm 소프트 가드)
   const [commentDirty, setCommentDirty] = useState(false);
+  const videoRef = useRef<VideoPlayerHandle>(null);
 
   useEffect(() => {
     setReport(initialReport);
@@ -215,7 +217,7 @@ export default function ReportDetailView({
   }, [report.id, resendEmail]);
 
   const adapted = adaptReportContent(report.content, report.type);
-  const { markers, displayNarrative, transcriptSegments } = adapted;
+  const { markers, displayNarrative, transcriptSegments, video } = adapted;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
   const aiRecordReasonText =
@@ -362,10 +364,24 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
+      {/* 영상 리플레이어 — counselor 리포트 (녹화 영상 + 음성 동기 재생) */}
+      {isCounselor && video?.s3_key && (
+        <SummaryCard title="세션 영상 리플레이">
+          <VideoPlayer
+            ref={videoRef}
+            sessionId={report.session_id}
+            hasVideo={Boolean(video.s3_key)}
+          />
+        </SummaryCard>
+      )}
+
       {/* STT 발화자 구분 기록지 — counselor 리포트 (Gemini diarization 결과) */}
       {isCounselor && transcriptSegments && (
         <SummaryCard title="상담 기록지 (발화자 구분)">
-          <TranscriptTimeline segments={transcriptSegments} />
+          <TranscriptTimeline
+            segments={transcriptSegments}
+            onSeek={(sec) => videoRef.current?.seekTo(sec)}
+          />
         </SummaryCard>
       )}
 
