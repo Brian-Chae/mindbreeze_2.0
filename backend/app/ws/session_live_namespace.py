@@ -16,11 +16,20 @@ SDD-026 P0 안전망:
 - 서버 내부 이벤트: session_state_changed / participant_changed / device_status_changed.
 
 클라이언트→서버: join(session_id[, participant_id]), leave(session_id), feature(data),
-                 class:signal(data), waiting_room(data)   ← 개선 5 무음 시그널 / 개선 3 대기실
+                 class:signal(data), waiting_room(data),   ← 개선 5 무음 시그널 / 개선 3 대기실
+                 class:audio_sync(data)                    ← 개선 10 가이드·BGM 재생 제어(상담사)
 서버→클라이언트: joined, join_denied, eeg_feature, class:signal(호스트 전용),
                  class:aggregate(호스트 전용 — 개선 8 그룹 익명 집계),
+                 class:audio_sync(세션 공용 룸 — 개선 10 동기 재생 타임코드),
                  session_state_changed, participant_changed, device_status_changed,
                  waiting_room_changed(호스트 전용)  ← 개선 3 대기실 입장/퇴장
+
+개선 10(명상 가이드·BGM 동기 재생): 상담사가 트는 가이드 음성·BGM 을 회원 화면에서 같은
+소스·같은 위치로 재생한다. 상담사 플레이어가 play/pause/seek/stop 을 올리면 서버가 재생
+타임코드(server_ts + position_sec)를 만들어 세션 공용 룸(호스트+참여자)에 브로드캐스트하고,
+회원은 서버 시계와의 오차를 보정해 position_sec 기준으로 정렬한다. 볼륨은 회원별 개별
+설정이라 payload 에 없다(회원이 각자 조절 — 스피커 뮤트와 무관하게 헤드셋 경유 재생).
+마지막 재생 상태는 세션별로 보관해 **늦게 입장한 회원**도 같은 위치로 합류한다.
 
 개선 5(무음 시그널): 기본 뮤트 1:N 수업에서 회원이 발언권(손들기) 없이도 "잘 따라가요 /
 조금 어려워요 / 잠시 쉴게요"를 상담사에게만 조용히 전달한다. DB 에 저장하지 않는 휘발성
@@ -36,6 +45,7 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timezone
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -309,6 +319,14 @@ def register_session_live_namespace(sio):
         if role == "host":
             await publish_group_aggregate(session_id, force=True, to=sid)
 
+        # 개선 10: 늦게 입장한 회원은 진행 중인 가이드·BGM 에 같은 위치로 합류한다.
+        # (상담사 본인은 자기 플레이어가 원본이므로 replay 하지 않는다 — 자기 명령을 되받을 필요 없음)
+        if role != "host":
+            state = audio_state_for(session_id)
+            if state is not None:
+                await sio.emit(AUDIO_SYNC_EVENT, state, to=sid, namespace=_NAMESPACE)
+                logger.info("[WS /session-live] %s replay → sid=%s", AUDIO_SYNC_EVENT, sid)
+
     @sio.on("leave", namespace=_NAMESPACE)
     async def on_leave(sid, data):
         data = data or {}
@@ -457,6 +475,82 @@ def register_session_live_namespace(sio):
             },
         )
 
+    @sio.on(AUDIO_SYNC_EVENT, namespace=_NAMESPACE)
+    async def on_class_audio_sync(sid, data):
+        """개선 10: 명상 가이드·BGM 재생 제어 → 세션 공용 룸 브로드캐스트(상담사 전용).
+
+        data = {
+            "session_id": str,
+            "action": "play" | "pause" | "seek" | "stop",
+            "track_id": str | None,        # 재생 소스 식별자(카탈로그 track_id)
+            "position_sec": float,         # 재생 위치(초) — 서버가 서버 시각과 함께 배포
+        }
+
+        - 상담사(role="host")만 제어할 수 있다 — 회원/게스트가 올린 제어는 무시한다
+          (아무나 클래스의 가이드·BGM 을 멈추거나 바꿀 수 없게 한다).
+        - join 으로 저장된 세션 컨텍스트와 session_id 가 일치해야 한다(타 세션 위조 차단).
+        - play 는 카탈로그에 등록된 track_id 만 허용한다(미등록 트랙 재생 차단).
+        - 위치는 서버가 정규화(0~24h, ms 단위)하고 서버 시각(server_ts/_ms)을 함께 내보낸다.
+        - 마지막 재생 상태는 세션별로 보관해 **늦게 입장한 회원**에게 같은 위치로 replay 한다.
+        """
+        data = data or {}
+        session_id = data.get("session_id")
+        action = data.get("action")
+        if not session_id or action not in AUDIO_SYNC_ACTIONS:
+            return
+
+        session = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        # 이 소켓이 join 한 세션과 일치해야 한다(타 세션 위조 차단)
+        if session.get("session_id") != str(session_id):
+            logger.warning("[WS /session-live] %s 무시 — join 불일치 (sid=%s)", AUDIO_SYNC_EVENT, sid)
+            return
+        # 상담사(호스트)만 — 회원/게스트의 재생 제어는 브로드캐스트하지 않는다
+        if session.get("role") != "host":
+            logger.warning("[WS /session-live] %s 무시 — 상담사 아님 (sid=%s)", AUDIO_SYNC_EVENT, sid)
+            return
+
+        track_id = data.get("track_id")
+        if track_id is not None and not isinstance(track_id, str):
+            return
+        # play 는 등록된 트랙만 — 없는 트랙을 재생하라고 지시하면 회원 화면이 무음이 된다
+        if action == "play" and not _is_known_audio_track(track_id):
+            logger.warning(
+                "[WS /session-live] %s 무시 — 미등록 트랙 (session=%s, track_id=%s)",
+                AUDIO_SYNC_EVENT,
+                session_id,
+                track_id,
+            )
+            return
+
+        position = audio_position_from_payload(data)
+        if position is None:
+            logger.warning("[WS /session-live] %s 무시 — 위치 값 부적합 (sid=%s)", AUDIO_SYNC_EVENT, sid)
+            return
+
+        try:
+            host = _resolve_audio_host(session_id, session.get("user_id"))
+        except Exception:
+            logger.warning(
+                "[WS /session-live] %s 발신자 검증 실패 (sid=%s, session=%s)",
+                AUDIO_SYNC_EVENT,
+                sid,
+                session_id,
+            )
+            return
+
+        if host.get("status") not in AUDIO_SYNC_SESSION_STATUSES:
+            logger.info(
+                "[WS /session-live] %s 무시 — 진행 단계 아님 (session=%s, status=%s)",
+                AUDIO_SYNC_EVENT,
+                session_id,
+                host.get("status"),
+            )
+            return
+
+        payload = build_audio_sync_payload(session_id, action, track_id, position)
+        record_audio_state(session_id, payload)
+        await broadcast_audio_sync(session_id, payload)
+
     logger.info("[WS /session-live] namespace registered")
 
 
@@ -486,6 +580,28 @@ def _resolve_quiet_signal_sender(session_id, participant_id, current_user_id):
         )
     finally:
         db.close()
+
+
+def _resolve_audio_host(session_id, current_user_id):
+    """개선 10: 재생 제어 발신자(세션 호스트) 검증을 서비스 레이어에 위임.
+
+    호스트가 아니거나 세션이 없으면 HTTPException 을 올린다
+    (호출측 핸들러가 예외를 흡수해 브로드캐스트하지 않는다).
+    """
+    from app.services import session_service
+
+    db = _open_db()
+    try:
+        return session_service.resolve_audio_sync_host(session_id, current_user_id, db)
+    finally:
+        db.close()
+
+
+def _is_known_audio_track(track_id) -> bool:
+    """카탈로그에 등록된 트랙인가 — play 명령의 미등록 track_id 차단용."""
+    from app.services import class_audio_service
+
+    return class_audio_service.is_known_track(track_id)
 
 
 def _store_feature(session_id, participant_id, current_user_id, feature):
@@ -620,6 +736,25 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
     logger.info("[WS /session-live] broadcast waiting_room_changed → %s", room)
 
 
+async def broadcast_audio_sync(session_id: str, payload: dict, *, to: str | None = None) -> None:
+    """개선 10: 가이드·BGM 재생 타임코드를 세션 공용 룸(호스트+참여자)에 브로드캐스트한다.
+
+    - 세션 공용 룸(`:all`)으로 내보내 회원 화면이 모두 같은 위치로 정렬되게 한다
+      (무음 시그널·집계와 달리 **참여자에게 반드시 전달되어야 하는** 이벤트다).
+    - payload 에는 볼륨이 없다 — 볼륨은 회원별 개별 설정이다.
+    - to 지정 시 해당 소켓 1개(늦게 입장한 회원 replay)로만 보낸다.
+    """
+    sio = _get_sio()
+    body = {"session_id": str(session_id), **payload}
+    if to:
+        await sio.emit(AUDIO_SYNC_EVENT, body, to=to, namespace=_NAMESPACE)
+        logger.info("[WS /session-live] emit %s → sid=%s", AUDIO_SYNC_EVENT, to)
+        return
+    room = _room_all(session_id)
+    await sio.emit(AUDIO_SYNC_EVENT, body, room=room, namespace=_NAMESPACE)
+    logger.info("[WS /session-live] broadcast %s → %s", AUDIO_SYNC_EVENT, room)
+
+
 # ---------------------------------------------------------------------------
 # 개선 8: 그룹 익명 집계(적응형 페이싱) — 상담사 전용
 # ---------------------------------------------------------------------------
@@ -681,6 +816,129 @@ async def publish_group_aggregate(
 
 
 # ---------------------------------------------------------------------------
+# 개선 10: 명상 가이드·BGM 동기 재생 — 재생 타임코드 브로드캐스트 (상담사 → 세션 룸)
+# ---------------------------------------------------------------------------
+
+# 재생 제어 이벤트명(클라이언트→서버 emit / 서버→세션 룸 브로드캐스트 공용)
+AUDIO_SYNC_EVENT = "class:audio_sync"
+
+# 재생 제어 액션 — play/pause/seek/stop 만 허용한다(그 외 값은 무시).
+# · seek 는 위치 이동과 정기 재동기(heartbeat)에 함께 쓴다 — 회원은 위치만 맞추면 된다.
+AUDIO_SYNC_ACTIONS: tuple[str, ...] = ("play", "pause", "seek", "stop")
+
+# 재생 제어를 허용하는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
+AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+
+# 위치 상한(초) — 비정상 값으로 payload 가 오염되지 않게 잘라 넣는다(24시간)
+AUDIO_SYNC_MAX_POSITION_SEC = 86400.0
+
+# 위치 소수 자릿수 — 밀리초 단위면 근사 동기에 충분하고 payload 크기도 작다
+AUDIO_SYNC_POSITION_DECIMALS = 3
+
+# 마지막 재생 상태를 늦게 입장한 회원에게 replay 해 주는 유효 시간(초).
+# 이보다 오래된 상태는 재생 중일 가능성이 낮아(호스트 이탈 등) replay 하지 않는다.
+AUDIO_SYNC_STATE_TTL_SEC = 3600.0
+
+# 세션별 마지막 재생 상태: session_id(str) -> (payload(dict), monotonic_ts)
+_audio_states: dict[str, tuple[dict, float]] = {}
+
+# 세션별 재생 명령 순번 — 역순 도착(네트워크 재정렬) 방어용. 회원은 더 큰 revision 만 적용한다.
+_audio_revisions: dict[str, int] = {}
+
+
+def normalize_audio_position(value) -> float | None:
+    """재생 위치(초)를 검증·정규화한다. 숫자가 아니면 None(호출측이 무시)."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if value != value:  # NaN
+        return None
+    try:
+        position = float(value)
+    except (TypeError, ValueError):
+        return None
+    if position < 0:
+        position = 0.0
+    if position > AUDIO_SYNC_MAX_POSITION_SEC:
+        position = AUDIO_SYNC_MAX_POSITION_SEC
+    return round(position, AUDIO_SYNC_POSITION_DECIMALS)
+
+
+def audio_position_from_payload(data: dict) -> float | None:
+    """클라이언트 payload 의 위치 필드(position_sec)를 읽는다(누락 시 0)."""
+    if "position_sec" not in data:
+        return 0.0
+    return normalize_audio_position(data.get("position_sec"))
+
+
+def next_audio_revision(session_id) -> int:
+    """세션별 재생 명령 순번을 1씩 올려 돌려준다."""
+    sid = str(session_id)
+    revision = _audio_revisions.get(sid, 0) + 1
+    _audio_revisions[sid] = revision
+    return revision
+
+
+def build_audio_sync_payload(
+    session_id,
+    action: str,
+    track_id: str | None = None,
+    position_sec: float = 0.0,
+    *,
+    now: datetime | None = None,
+) -> dict:
+    """재생 타임코드 payload 를 만든다.
+
+    서버가 시각을 찍는 이유: 클라이언트끼리 시계가 달라도 **서버 도착 시각**을 기준으로
+    경과 시간을 계산하면 상담사·회원의 재생 위치가 수렴한다(회원은 server_ts_ms 로
+    로컬 시계 오차를 보정한다).
+    """
+    stamp = now if now is not None else datetime.now(timezone.utc)
+    position = normalize_audio_position(position_sec)
+    return {
+        "session_id": str(session_id),
+        "action": action,
+        "track_id": track_id,
+        "position_sec": 0.0 if position is None else position,
+        # WS 직렬화 안전을 위해 ISO 문자열 + epoch(ms) 를 함께 내보낸다
+        "server_ts": stamp.isoformat(),
+        "server_ts_ms": int(stamp.timestamp() * 1000),
+        "revision": next_audio_revision(session_id),
+    }
+
+
+def record_audio_state(session_id, payload: dict, *, at: float | None = None) -> None:
+    """늦게 입장하는 회원에게 replay 할 마지막 재생 상태를 보관한다(휘발성 — DB 저장 없음).
+
+    stop 은 재생할 것이 없으므로 상태를 지운다(다음 입장자는 아무것도 듣지 않는다).
+    """
+    sid = str(session_id)
+    if payload.get("action") == "stop":
+        _audio_states.pop(sid, None)
+        return
+    _audio_states[sid] = (dict(payload), time.monotonic() if at is None else at)
+
+
+def clear_audio_states() -> None:
+    """재생 상태·순번 전역 초기화(테스트/세션 종료 정리용)."""
+    _audio_states.clear()
+    _audio_revisions.clear()
+
+
+def audio_state_for(session_id, *, now: float | None = None) -> dict | None:
+    """세션의 마지막 재생 상태(유효 시간 이내). 없으면 None."""
+    sid = str(session_id)
+    entry = _audio_states.get(sid)
+    if entry is None:
+        return None
+    payload, stored_at = entry
+    stamp = time.monotonic() if now is None else now
+    if stamp - stored_at >= AUDIO_SYNC_STATE_TTL_SEC:
+        _audio_states.pop(sid, None)
+        return None
+    return dict(payload)
+
+
+# ---------------------------------------------------------------------------
 # sync → async 브리지 (REST/서비스 레이어에서 이벤트 발행)
 # ---------------------------------------------------------------------------
 
@@ -713,3 +971,12 @@ def notify_device_status_changed(session_id: str, payload: dict) -> None:
 def notify_speaking_changed(session_id: str, payload: dict) -> None:
     """SDD-094: 발언권 변경 이벤트를 예약 발행한다(REST/서비스 레이어 → 호스트+본인 룸)."""
     _schedule(broadcast_speaking(session_id, _jsonify(payload)))
+
+
+def notify_audio_sync(session_id: str, payload: dict) -> None:
+    """개선 10: 재생 타임코드를 예약 발행한다(서비스 레이어 → 세션 공용 룸).
+
+    세션 종료 등으로 재생을 멈춰야 할 때 호출한다(호스트 브라우저가 닫힌 경우의 안전망).
+    """
+    body = cast("dict[str, Any]", _jsonify(payload))
+    _schedule(broadcast_audio_sync(session_id, body))

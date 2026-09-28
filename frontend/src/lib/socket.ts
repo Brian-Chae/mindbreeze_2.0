@@ -16,6 +16,12 @@ import {
   CLASS_AGGREGATE_EVENT,
   type ClassAggregateEvent,
 } from './class/group-aggregate';
+import {
+  CLASS_AUDIO_SYNC_EVENT,
+  parseAudioSyncEvent,
+  type AudioSyncEmit,
+  type AudioSyncEvent,
+} from './class/audio-sync';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -232,6 +238,8 @@ export type SessionStateChangedHandler = (event: SessionStateChangedEvent) => vo
 export type ParticipantChangedHandler = (event: ParticipantChangedEvent) => void;
 export type DeviceStatusChangedHandler = (event: DeviceStatusChangedEvent) => void;
 export type SpeakingChangedHandler = (event: SpeakingChangedEvent) => void;
+/** 개선 10: 재생 타임코드 수신 핸들러(회원 동기 재생용) */
+export type ClassAudioSyncHandler = (event: AudioSyncEvent) => void;
 
 let sessionLiveSocket: Socket | null = null;
 let sessionLiveToken: string | null | undefined = undefined;
@@ -425,6 +433,35 @@ export const subscribeClassAggregate = (
   socket.on(CLASS_AGGREGATE_EVENT, handler);
   return () => {
     socket.off(CLASS_AGGREGATE_EVENT, handler);
+  };
+};
+
+/**
+ * 개선 10: `class:audio_sync` emit — 상담사의 재생 제어(play/pause/seek/stop).
+ * 서버가 발신자를 세션 호스트로 검증하므로 회원/게스트가 보내도 무시된다.
+ * 미연결이면 false 를 돌려 호출측이 조용히 안내하게 한다.
+ */
+export const emitClassAudioSync = (socket: Socket, payload: AudioSyncEmit): boolean => {
+  if (!socket.connected) return false;
+  socket.emit(CLASS_AUDIO_SYNC_EVENT, payload);
+  return true;
+};
+
+/**
+ * 개선 10: `class:audio_sync` 구독 — 세션 공용 룸(상담사+회원) 재생 타임코드.
+ * 계약 밖 payload 는 parseAudioSyncEvent 가 걸러낸다(회원 화면이 깨지지 않게).
+ */
+export const subscribeClassAudioSync = (
+  socket: Socket,
+  handler: ClassAudioSyncHandler,
+): (() => void) => {
+  const listener = (raw: unknown): void => {
+    const event = parseAudioSyncEvent(raw);
+    if (event) handler(event);
+  };
+  socket.on(CLASS_AUDIO_SYNC_EVENT, listener);
+  return () => {
+    socket.off(CLASS_AUDIO_SYNC_EVENT, listener);
   };
 };
 

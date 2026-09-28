@@ -83,6 +83,9 @@ import {
   SIGNAL_ACTIVE_MS,
   type ActiveSignal,
 } from '../../lib/class/quiet-signal';
+// 개선 10: 명상 가이드·BGM 동기 재생 — 상담사 재생 패널(트랙 선택 + 재생 컨트롤 → class:audio_sync)
+import { ClassAudioPanel } from '../../components/class/ClassAudioPanel';
+import { useClassAudioPlayer } from '../../hooks/useClassAudioPlayer';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ClassChatPanel } from '../../components/chat/ClassChatPanel';
@@ -621,6 +624,16 @@ export default function ClassPlayerPage() {
     session?.location_type === 'online' &&
     session?.participant_mode === 'group' &&
     (session?.max_participants ?? 0) <= 20;
+
+  // ── 개선 10: 명상 가이드·BGM 동기 재생 (상담사 = 소스 원본) ────────
+  // 상담사가 트는 트랙·위치를 `class:audio_sync` 로 배포해 회원 화면이 같은 위치로 재생한다.
+  // 재생 제어는 대기실·진행 중에만 허용한다(서버도 open/in_progress/paused 에서만 수용).
+  // 상담사 본인은 자기 명령을 되받지 않는다 — 로컬 엔진이 기준이고 서버는 회원 배포 경로다.
+  const audioPlayer = useClassAudioPlayer({
+    sessionId: id,
+    enabled: Boolean(id && isHost && (isLobby || isRunning)),
+    publish: liveSocket.sendAudioSync,
+  });
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
@@ -1465,6 +1478,16 @@ export default function ClassPlayerPage() {
                 </span>
                 <span className="text-xs text-white/50">시작 시 녹음·녹화가 시작됩니다</span>
               </div>
+
+              {/* 개선 10: 대기실에서도 가이드·BGM 을 미리 틀 수 있다(입장한 회원이 같은 위치로 청취) */}
+              {isHost && (
+                <ClassAudioPanel
+                  state={audioPlayer.state}
+                  actions={audioPlayer.actions}
+                  enabled={isLobby}
+                  connected={liveSocket.isConnected}
+                />
+              )}
             </div>
 
             {/* 우측 — 내담자 상태 실시간 */}
@@ -1497,6 +1520,13 @@ export default function ClassPlayerPage() {
                 cuesheet={session.cuesheet}
                 elapsedSec={classElapsedSec}
                 paused={status === 'paused'}
+              />
+              {/* 개선 10: 가이드·BGM 재생 — 회원 화면이 같은 트랙·같은 위치로 동기 재생된다 */}
+              <ClassAudioPanel
+                state={audioPlayer.state}
+                actions={audioPlayer.actions}
+                enabled={Boolean(isHost && isRunning)}
+                connected={liveSocket.isConnected}
               />
             </div>
             <div className="min-w-0">{monitorPanel}</div>

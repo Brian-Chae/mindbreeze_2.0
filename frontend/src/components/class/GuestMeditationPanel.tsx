@@ -23,6 +23,10 @@ import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 import { QuietSignalButtons } from './QuietSignalButtons';
+// 개선 10: 명상 가이드·BGM 동기 재생 — 서버 타임코드(class:audio_sync)를 받아 동일 소스를 동기 재생
+import { GuestAudioPanel } from './GuestAudioPanel';
+import { useGuestAudioSync } from '../../hooks/useGuestAudioSync';
+import { type AudioSyncEvent } from '../../lib/class/audio-sync';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -245,12 +249,40 @@ export function GuestMeditationPanel({
   );
 
   // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
+  // 개선 10: 같은 소켓으로 class:audio_sync(재생 타임코드)를 받아 가이드·BGM 을 동기 재생한다.
+  // 재생 엔진은 이 컴포넌트(언마운트되지 않음)에 살아 있어 화면 끄기(몰입) 중에도 계속 재생된다.
+  const [audioSyncEvent, setAudioSyncEvent] = useState<AudioSyncEvent | null>(null);
+
+  const handleAudioSync = useCallback((event: AudioSyncEvent) => {
+    // 같은 명령을 중복 적용하지 않도록 revision 이 더 큰(또는 처음 보는) 이벤트만 상태에 반영한다.
+    // 트랙 id 가 비어 오는 명령(stop 등)은 직전 트랙을 유지한다 — 화면이 "재생 중이던 곡"을 잃지 않게.
+    setAudioSyncEvent((prev) => {
+      if (prev && event.revision > 0 && event.revision < prev.revision) return prev;
+      if (
+        prev &&
+        prev.revision === event.revision &&
+        prev.action === event.action &&
+        prev.server_ts_ms === event.server_ts_ms
+      ) {
+        return prev;
+      }
+      return { ...event, track_id: event.track_id ?? prev?.track_id ?? null };
+    });
+  }, []);
+
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
+    onClassAudioSync: handleAudioSync,
+  });
+
+  const audioSync = useGuestAudioSync({
+    sessionId,
+    enabled: Boolean(sessionId),
+    event: audioSyncEvent,
   });
 
   const isLive = band.connectionState === 'connected';
@@ -514,6 +546,24 @@ export function GuestMeditationPanel({
         {/* 개선 5: 무음 시그널 — 발언권과 독립. 소리·팝업 없이 상담사에게만 전달된다. */}
         <div className="mt-6 w-full max-w-3xl">
           <QuietSignalButtons onSend={liveSocket.sendSignal} />
+        </div>
+
+        {/* 개선 10: 가이드·BGM — 상담사가 트는 소리를 같은 위치로 재생한다.
+            볼륨은 회원별 개별 설정이며 스피커 뮤트(오프라인 기본 뮤트)와 무관하게 들린다.
+            아래 몰입(화면 끄기) 오버레이는 DOM 상 뒤에 덮일 뿐 이 패널은 마운트된 채 남으므로
+            화면을 꺼도 재생이 계속된다. */}
+        <div className="mt-4 flex w-full justify-center">
+          <GuestAudioPanel
+            trackTitle={audioSync.state.track?.title ?? null}
+            playing={audioSync.state.playing}
+            positionSec={audioSync.state.positionSec}
+            durationSec={audioSync.state.durationSec}
+            volume={audioSync.state.volume}
+            onVolumeChange={audioSync.setVolume}
+            blocked={audioSync.state.blocked}
+            onResume={audioSync.resume}
+            synced={audioSync.state.synced}
+          />
         </div>
 
         {/* 밴드 연결 보조 (최소화) */}

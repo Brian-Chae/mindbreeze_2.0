@@ -879,7 +879,11 @@ def _notify_participants_event(
 
 
 def _notify_session_state(s: Session) -> None:
-    """session_state_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op)."""
+    """session_state_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op).
+
+    개선 10: 클래스가 진행 단계를 벗어나면(완료·취소) 재생 중인 가이드·BGM 을 회원 화면에서도
+    멈춘다 — 상담사 브라우저가 닫혀 stop 명령이 오지 못한 경우의 안전망이다(재생 상태도 정리).
+    """
     try:
         from app.ws import session_live_namespace as live
 
@@ -892,6 +896,11 @@ def _notify_session_state(s: Session) -> None:
                 "ended_at": s.ended_at.isoformat() if s.ended_at else None,
             },
         )
+
+        if s.status not in AUDIO_SYNC_SESSION_STATUSES:
+            stop_payload = live.build_audio_sync_payload(str(s.id), "stop", None, 0.0)
+            live.record_audio_state(str(s.id), stop_payload)
+            live.notify_audio_sync(str(s.id), stop_payload)
     except Exception:
         pass
 
@@ -1542,6 +1551,39 @@ def resolve_signal_sender(
         "display_name": display_name or "익명",
         "status": s.status,
     }
+
+
+# ---------------------------------------------------------------------------
+# 개선 10: 명상 가이드·BGM 재생 제어 발신자 검증 (class:audio_sync)
+# ---------------------------------------------------------------------------
+
+# 재생 제어를 허용하는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
+AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+
+
+def resolve_audio_sync_host(
+    session_id: str,
+    current_user_id: str | None,
+    db: DBSession,
+) -> dict:
+    """class:audio_sync 발신자를 검증한다 — 재생 제어는 세션 호스트(상담사)만 가능하다.
+
+    회원·게스트가 올린 재생 제어는 브로드캐스트하면 안 되므로(아무나 남의 클래스
+    가이드·BGM 을 멈추거나 바꾸는 것을 차단), 여기서 호스트 여부를 서버가 판정한다.
+
+    - 세션 없음 404 / 미인증 403 / 호스트 아님 403.
+
+    반환: {"session_id": str, "status": str}
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if not current_user_id:
+        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    if s.host_id != _to_uuid(current_user_id):
+        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    return {"session_id": str(sid), "status": s.status}
 
 
 # ---------------------------------------------------------------------------

@@ -12,12 +12,14 @@ import {
   type ClassAggregateEvent,
 } from '../lib/class/group-aggregate';
 import {
+  emitClassAudioSync,
   emitClassSignal,
   getSessionLiveSocket,
   joinSessionLive,
   leaveSessionLive,
   normalizeJoinSnapshot,
   subscribeClassAggregate,
+  subscribeClassAudioSync,
   subscribeClassSignal,
   subscribeDeviceStatusChanged,
   subscribeParticipantChanged,
@@ -26,6 +28,7 @@ import {
   subscribeSessionStateChanged,
   subscribeSpeakingChanged,
   type ClassAggregateEventHandler,
+  type ClassAudioSyncHandler,
   type ClassSignalEvent,
   type ClassSignalHandler,
   type DeviceStatusChangedEvent,
@@ -41,6 +44,7 @@ import {
   type SpeakingChangedEvent,
   type SpeakingChangedHandler,
 } from '../lib/socket';
+import type { AudioSyncEmit, AudioSyncEvent } from '../lib/class/audio-sync';
 
 interface UseSessionLiveSocketOptions {
   sessionId: string | null | undefined;
@@ -60,6 +64,8 @@ interface UseSessionLiveSocketOptions {
   onClassSignal?: ClassSignalHandler;
   /** 개선 8: 그룹 익명 집계 수신 — 상담사 상단 단일 게이지 갱신용 */
   onClassAggregate?: ClassAggregateEventHandler;
+  /** 개선 10: 재생 타임코드 수신 — 회원 화면 동기 재생용 */
+  onClassAudioSync?: ClassAudioSyncHandler;
 }
 
 interface UseSessionLiveSocketResult {
@@ -75,6 +81,8 @@ interface UseSessionLiveSocketResult {
   lastEvent: SessionLiveEegFeatureEvent | null;
   /** 개선 5: 무음 시그널 전송 — 미연결이면 false(UI는 조용히 안내) */
   sendSignal: (signalType: ClassSignalType) => boolean;
+  /** 개선 10: 재생 제어 전송(상담사) — 미연결이면 false(UI는 조용히 안내) */
+  sendAudioSync: (payload: Omit<AudioSyncEmit, 'session_id'>) => boolean;
 }
 
 /**
@@ -94,6 +102,7 @@ export function useSessionLiveSocket({
   onSpeakingChanged,
   onClassSignal,
   onClassAggregate,
+  onClassAudioSync,
 }: UseSessionLiveSocketOptions): UseSessionLiveSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -116,6 +125,8 @@ export function useSessionLiveSocket({
   onClassSignalRef.current = onClassSignal;
   const onClassAggregateRef = useRef(onClassAggregate);
   onClassAggregateRef.current = onClassAggregate;
+  const onClassAudioSyncRef = useRef(onClassAudioSync);
+  onClassAudioSyncRef.current = onClassAudioSync;
   /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
   const socketRef = useRef<Socket | null>(null);
   const joinedSessionRef = useRef<string | null>(null);
@@ -242,6 +253,13 @@ export function useSessionLiveSocket({
       onClassAggregateRef.current?.(normalized);
     };
 
+    // 개선 10: 재생 타임코드(세션 공용 룸) — 계약 밖 payload는 subscribeClassAudioSync가 걸러낸다.
+    // session_id는 있을 때만 검증한다(스냅샷 replay 등 생략 가능 경로 대비).
+    const onAudioSync = (event: AudioSyncEvent): void => {
+      if (event.session_id && event.session_id !== sessionId) return;
+      onClassAudioSyncRef.current?.(event);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
@@ -253,6 +271,7 @@ export function useSessionLiveSocket({
     const unsubSpeaking = subscribeSpeakingChanged(socket, onSpeaking);
     const unsubSignal = subscribeClassSignal(socket, onSignal);
     const unsubAggregate = subscribeClassAggregate(socket, onAggregate);
+    const unsubAudioSync = subscribeClassAudioSync(socket, onAudioSync);
 
     if (socket.connected) {
       onConnect();
@@ -272,6 +291,7 @@ export function useSessionLiveSocket({
       unsubSpeaking();
       unsubSignal();
       unsubAggregate();
+      unsubAudioSync();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socketRef.current = null;
@@ -305,6 +325,20 @@ export function useSessionLiveSocket({
     [sessionId, participantId],
   );
 
+  /**
+   * 개선 10: 재생 제어 전송 — 상담사 플레이어가 재생/일시정지/정지/이동 시 호출한다.
+   * session_id 는 훅이 알고 있으므로 호출측은 나머지 필드만 넘긴다.
+   * 미연결(또는 세션 미확정)이면 false 를 돌려 호출측이 조용히 안내하게 한다.
+   */
+  const sendAudioSync = useCallback(
+    (payload: Omit<AudioSyncEmit, 'session_id'>): boolean => {
+      const socket = socketRef.current;
+      if (!socket || !sessionId) return false;
+      return emitClassAudioSync(socket, { ...payload, session_id: sessionId });
+    },
+    [sessionId],
+  );
+
   return {
     isConnected,
     hasSnapshot,
@@ -314,5 +348,6 @@ export function useSessionLiveSocket({
     /** 렌더 구독 없음 — onEegFeature로 증분 반영. 디버그/폴백용 최신값 */
     lastEvent: lastEventRef.current,
     sendSignal,
+    sendAudioSync,
   };
 }
