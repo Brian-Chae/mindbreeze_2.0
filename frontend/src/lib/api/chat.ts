@@ -134,6 +134,37 @@ interface ChatMessageContextResponse {
   after_cursor: string | null;
 }
 
+// ── SDD-095: 클래스(세션) 채팅 ──────────────────────────────────────
+
+/** 세션의 채팅방 — room_type="session" 방을 세션 기준으로 해석한 결과 */
+export interface SessionChatRoomResponse {
+  /** 방 미개설(마이그레이션 이전 세션 등)이면 null */
+  room_id: string | null;
+  room_type?: RoomType;
+  session_id?: string | null;
+  /** 서버가 함께 내려주면 세션 토글 상태로도 쓴다 */
+  chat_enabled?: boolean;
+}
+
+/** 세션 채팅방 조회 — 방이 아직 개설되지 않았으면 서버가 404를 낸다 */
+export const getSessionChatRoom = (sessionId: string): Promise<SessionChatRoomResponse> =>
+  apiClient.get<SessionChatRoomResponse>(`/sessions/${encodeURIComponent(sessionId)}/chat-room`);
+
+export interface SetSessionChatEnabledResponse {
+  chat_enabled: boolean;
+  room_id?: string | null;
+}
+
+/** 상담사(호스트) 채팅 켜기/끄기 — 서버가 호스트 권한을 검증한다 */
+export const setSessionChatEnabled = (
+  sessionId: string,
+  enabled: boolean,
+): Promise<SetSessionChatEnabledResponse> =>
+  apiClient.post<SetSessionChatEnabledResponse>(
+    `/sessions/${encodeURIComponent(sessionId)}/chat-enabled`,
+    { enabled },
+  );
+
 /** 주변 조회는 기존 메시지 저장소와 동일하게 최신순으로 반환한다. */
 export async function listChatMessagesAround(roomId: string, messageId: string): Promise<ChatMessageListResponse> {
   const room = encodeURIComponent(roomId);

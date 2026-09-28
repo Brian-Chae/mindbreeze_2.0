@@ -108,6 +108,27 @@ def get_user_chat_room_ids(user_id: str, db: DBSession) -> list[str]:
     ):
         result.add(str(r.id))
 
+    # 세션(클래스) 채팅방 — 세션 host 이거나 SessionParticipant 인 경우.
+    # SDD-091 로 개인(1:1) 방이 기본이 되었지만, 클래스 내 실시간 채팅은 여전히
+    # 세션 방을 쓰므로 WS 멤버십(user:<id>/room join)에 반드시 포함해야 한다.
+    for r in (
+        db.query(ChatRoom)
+        .join(Session, Session.id == ChatRoom.session_id)
+        .filter(
+            ChatRoom.room_type == "session",
+            or_(
+                Session.host_id == uid,
+                Session.id.in_(
+                    db.query(SessionParticipant.session_id).filter(
+                        SessionParticipant.user_id == uid
+                    )
+                ),
+            ),
+        )
+        .all()
+    ):
+        result.add(str(r.id))
+
     return list(result)
 
 
@@ -190,10 +211,39 @@ def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | Non
     return session
 
 
+def _ensure_session_chat_enabled(room: ChatRoom, user_id: str, db: DBSession) -> None:
+    """클래스(세션) 채팅 on/off 게이트 — 발신 전용.
+
+    세션 방에서 `Session.chat_enabled=False` 이면 참여자(비 host)의 발신을 막는다.
+    host 상담사는 항상 발신 가능하고, 과거 메시지·시스템 공지 조회(읽기)는 막지 않는다.
+    """
+    if room.room_type != "session" or not room.session_id:
+        return
+    session = db.query(Session).filter(Session.id == room.session_id).first()
+    if session is None or session.chat_enabled or session.host_id == _uuid(user_id):
+        return
+    raise HTTPException(status_code=403, detail="채팅이 꺼져 있는 클래스입니다")
+
+
+def get_room_by_session(session_id: UUID, db: DBSession) -> ChatRoom | None:
+    """세션 채팅방 조회(생성 없음) — 없으면 None."""
+    return db.query(ChatRoom).filter(ChatRoom.session_id == session_id).first()
+
+
 def get_or_create_room_by_session(session_id: UUID, db: DBSession) -> ChatRoom:
+    """세션 채팅방 멱등 개설 — 이미 있으면 그대로 반환한다.
+
+    방이 없으면 생성한다(host_id 는 세션 host). 세션 방 접근 권한은 ChatRoom.host_id 가
+    아니라 Session.host_id / SessionParticipant 기반으로 판정한다(_ensure_member 참조).
+    """
     room = db.query(ChatRoom).filter(ChatRoom.session_id == session_id).first()
     if not room:
-        room = ChatRoom(session_id=session_id, room_type="session")
+        session = db.query(Session).filter(Session.id == session_id).first()
+        room = ChatRoom(
+            session_id=session_id,
+            room_type="session",
+            host_id=session.host_id if session else None,
+        )
         db.add(room)
         db.commit()
         db.refresh(room)
@@ -1059,6 +1109,8 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     if not room:
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
     _ensure_member(room, user_id, db)
+    # 클래스 채팅 off 면 참여자 발신 차단 (host 는 예외)
+    _ensure_session_chat_enabled(room, user_id, db)
     if not content or not content.strip():
         raise HTTPException(status_code=422, detail="메시지 내용이 비어있습니다")
     msg = ChatMessage(

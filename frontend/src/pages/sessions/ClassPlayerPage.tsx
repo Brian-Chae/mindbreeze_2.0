@@ -20,6 +20,7 @@ import {
 } from '../../lib/api/session';
 import { startAudio, stopAudio } from '../../lib/api/audio';
 import { startVideo, stopVideo } from '../../lib/api/video';
+import { setSessionChatEnabled } from '../../lib/api/chat';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useVideoRecorder } from '../../hooks/useVideoRecorder';
 import { useBand } from '../../hooks/useBand';
@@ -65,6 +66,7 @@ import { SessionHostVideoView } from '../../components/session/SessionHostVideoV
 import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import { StatusBadge } from '../../components/session/StatusBadge';
+import { ClassChatPanel } from '../../components/chat/ClassChatPanel';
 import { EndSessionModal } from '../../components/player/EndSessionModal';
 import { LeaveGuardModal } from '../../components/player/LeaveGuardModal';
 import {
@@ -222,6 +224,10 @@ export default function ClassPlayerPage() {
   const [codeCopied, setCodeCopied] = useState(false);
   /** SDD-094: 발언권 부여/해제 요청 진행 중인 participant_id */
   const [speakingBusyId, setSpeakingBusyId] = useState<string | null>(null);
+  /** SDD-095: 상담사 채팅 토글 요청 진행 중 */
+  const [chatBusy, setChatBusy] = useState(false);
+  /** SDD-095: 채팅 패널 접힘 여부 — 켜면 펼치고 사용자가 접을 수 있다 */
+  const [chatExpanded, setChatExpanded] = useState(false);
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -449,6 +455,31 @@ export default function ClassPlayerPage() {
     },
     [id, recordSpeaking],
   );
+
+  /** SDD-095: 클래스 채팅 활성 여부(상담사 토글) — 세션 폴링·토글 응답으로 갱신된다 */
+  const chatEnabled = session?.chat_enabled === true;
+
+  /**
+   * SDD-095: 클래스 채팅 켜기/끄기 — 호스트만 노출되며 서버 권한 검증을 통과해야 한다.
+   * 응답의 chat_enabled를 즉시 반영해 회원 화면(폴링)보다 먼저 패널 상태를 확정한다.
+   */
+  const handleToggleChatEnabled = useCallback(async (): Promise<void> => {
+    if (!id) return;
+    setChatBusy(true);
+    setError(null);
+    try {
+      const next = !chatEnabled;
+      const res = await setSessionChatEnabled(id, next);
+      const value = res.chat_enabled ?? next;
+      setSession((prev) => (prev ? { ...prev, chat_enabled: value } : prev));
+      // 켜면 바로 펼쳐서 대화를 확인할 수 있게 한다
+      if (value) setChatExpanded(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '채팅 설정 변경에 실패했습니다');
+    } finally {
+      setChatBusy(false);
+    }
+  }, [id, chatEnabled]);
 
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
@@ -978,6 +1009,20 @@ export default function ClassPlayerPage() {
             클래스 종료
           </button>
         </>
+      )}
+      {/* SDD-095: 클래스 채팅 토글 — 대기실·진행 중에만 노출(상담사 전용) */}
+      {(isLobby || isRunning) && (
+        <button
+          type="button"
+          onClick={() => void handleToggleChatEnabled()}
+          disabled={chatBusy || transitioning}
+          aria-pressed={chatEnabled}
+          className={`mb-btn disabled:cursor-not-allowed ${
+            chatEnabled ? '' : 'mb-btn--ghost !text-white/80 hover:!text-white'
+          }`}
+        >
+          {chatBusy ? '변경 중...' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
+        </button>
       )}
     </div>
   ) : null;
@@ -1604,6 +1649,17 @@ export default function ClassPlayerPage() {
             }
           }}
           onLeaveKeepOpen={() => blocker.proceed?.()}
+        />
+      )}
+      {/* SDD-095: 클래스 채팅 패널 — chat_enabled일 때 우측 오버레이로 노출(대기실·진행 중) */}
+      {(isLobby || isRunning) && (
+        <ClassChatPanel
+          sessionId={id ?? ''}
+          enabled={chatEnabled}
+          roomId={session.chat_room_id ?? null}
+          collapsed={!chatExpanded}
+          onCollapsedChange={(next) => setChatExpanded(!next)}
+          title="클래스 채팅"
         />
       )}
     </main>

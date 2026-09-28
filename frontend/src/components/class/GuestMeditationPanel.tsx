@@ -13,12 +13,14 @@ import {
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
+import { getSession } from '../../lib/api/session';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { BrainChart } from './BrainChart';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
+import { ClassChatPanel } from '../chat/ClassChatPanel';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -66,6 +68,8 @@ const METRICS: readonly MetricDef[] = [
 
 const MAX_POINTS = 300;
 const AI_ANALYZING_MS = 15_000;
+/** SDD-095: 클래스 채팅 상태(chat_enabled) 폴링 주기 — 상담사 토글을 근실시간 반영 */
+const CHAT_STATE_POLL_MS = 5_000;
 
 type MetricSeries = Record<MetricKey, number[]>;
 
@@ -168,6 +172,50 @@ export function GuestMeditationPanel({
   // 로그인 회원의 참가자 행은 user_id가 있어 무토큰 업로드가 403(사칭 차단)으로 거부된다.
   // 회원은 반드시 토큰으로, 비로그인 게스트만 skipAuth로 연결한다.
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  // ── SDD-095: 클래스 채팅 ──
+  // 회원(로그인)만 세션 상세로 채팅 상태를 조회한다(게스트는 권한 없음 → 패널 미노출).
+  // 상담사가 명상 중에 켜면 5초 폴링으로 감지해 패널을 펼치고, 진입 시점에는 접힘(배지만)으로 둔다.
+  const [chatEnabled, setChatEnabled] = useState(false);
+  const [chatRoomId, setChatRoomId] = useState<string | null>(null);
+  const [chatStateReady, setChatStateReady] = useState(false);
+  const [chatExpanded, setChatExpanded] = useState(false);
+  /** 직전 관측값 — 세션별로 「진입 시 기본 접힘 / 진행 중 켜짐 = 펼침」을 판정한다 */
+  const lastChatEnabledRef = useRef<{ sessionId: string; value: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!isAuthenticated || !sessionId) return undefined;
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const detail = await getSession(sessionId);
+        if (cancelled) return;
+        setChatEnabled(Boolean(detail.chat_enabled));
+        setChatRoomId(detail.chat_room_id ?? null);
+        setChatStateReady(true);
+      } catch {
+        // 채팅 상태 조회 실패는 클래스 진행에 영향이 없어야 한다 — 패널만 미표시
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isAuthenticated, sessionId]);
+
+  // 명상 진행 중에는 기본 접힘(안읽음 배지만) — 진행 중 상담사가 켜면 그때 펼친다
+  useEffect(() => {
+    if (!chatStateReady) return;
+    const previous = lastChatEnabledRef.current;
+    lastChatEnabledRef.current = { sessionId, value: chatEnabled };
+    if (!previous || previous.sessionId !== sessionId) {
+      setChatExpanded(false);
+      return;
+    }
+    if (chatEnabled && !previous.value) setChatExpanded(true);
+  }, [chatStateReady, chatEnabled, sessionId]);
 
   const band = useBand({
     sessionId,
@@ -514,6 +562,18 @@ export function GuestMeditationPanel({
         isVisible={showLeadOffModal}
         leadOff={band.leadOff}
         onDismiss={() => setLeadOffDismissed(true)}
+      />
+
+      {/* SDD-095: 클래스 채팅 — chat_enabled일 때만 노출(패널 내부 게이트).
+          몰입(화면 끄기) 중에도 마운트를 유지해 안읽음 배지가 쌓이게 하되,
+          몰입 오버레이(z-50, DOM상 뒤)가 위를 덮어 시각·클릭을 가린다. */}
+      <ClassChatPanel
+        sessionId={sessionId}
+        enabled={chatEnabled}
+        roomId={chatRoomId}
+        collapsed={!chatExpanded}
+        onCollapsedChange={(next) => setChatExpanded(!next)}
+        title="클래스 채팅"
       />
 
       {/* 화면 끄기(몰입) 토글 — 우하단 FAB (1.0 절전 모드 패리티) */}

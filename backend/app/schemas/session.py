@@ -69,6 +69,8 @@ class SessionUpdateRequest(BaseModel):
     sfu_enabled: bool | None = None
     record_audio: bool | None = None
     record_video: bool | None = None
+    # 클래스 실시간 채팅 on/off — host 상담사만 변경 가능(세션 채팅방은 자동 개설 유지)
+    chat_enabled: bool | None = None
     force: bool = False
 
     @model_validator(mode="after")
@@ -132,6 +134,9 @@ class SessionResponse(BaseModel):
     sfu_enabled: bool = False
     record_audio: bool = True
     record_video: bool = True
+    # 클래스 실시간 채팅 사용 여부(상담사가 켠다) + 세션 채팅방 ID(프론트 실시간 채팅 연결용)
+    chat_enabled: bool = False
+    chat_room_id: str | None = None
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0
@@ -175,8 +180,30 @@ class SessionByCodeResponse(BaseModel):
     max_participants: int
     started_at: datetime | None = None
     scheduled_at: datetime | None = None
+    # 클래스 실시간 채팅 사용 여부 — 참여자가 입장 전에 채팅 가능 여부를 알 수 있게 노출
+    chat_enabled: bool = False
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# 클래스 실시간 채팅 (세션 채팅방 · on/off 토글)
+# ---------------------------------------------------------------------------
+
+
+class SessionChatEnabledRequest(BaseModel):
+    """클래스 채팅 켜기/끄기 요청 — host(상담사) 전용."""
+
+    enabled: bool
+
+
+class SessionChatRoomResponse(BaseModel):
+    """세션 채팅방 정보 — 프론트가 room_id 로 실시간 채팅(/chat 네임스페이스)에 연결한다."""
+
+    session_id: str
+    chat_enabled: bool = False
+    room_id: str | None = None
+    room_type: str = "session"
 
 
 class JoinByCodeRequest(BaseModel):
@@ -325,6 +352,8 @@ class GuestSessionStateResponse(BaseModel):
     stress_index: float | None = None
     signal_quality: float | None = None
     last_eeg_at: datetime | None = None
+    # 클래스 실시간 채팅 활성 여부 — 로그인 회원이 대기/명상 화면에서 채팅 가능 여부 판단용
+    chat_enabled: bool = False
 
 
 # ---------------------------------------------------------------------------

@@ -74,6 +74,8 @@ def _serialize(s: Session) -> dict:
         "sfu_enabled": s.sfu_enabled,
         "record_audio": s.record_audio,
         "record_video": s.record_video,
+        # 클래스 실시간 채팅 사용 여부(회원/상담사 UI 게이트용)
+        "chat_enabled": s.chat_enabled,
         "created_at": s.created_at or _now(),
         "participants": [
             {
@@ -103,6 +105,59 @@ def _serialize(s: Session) -> dict:
 
 
 _FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _with_chat_room(data: dict, session_id: UUID, db: DBSession) -> dict:
+    """단건 세션 응답에 chat_room_id 를 덧붙인다(목록 경로는 N+1 방지를 위해 제외)."""
+    from app.services import chat_service
+
+    room = chat_service.get_room_by_session(session_id, db)
+    data["chat_room_id"] = str(room.id) if room else None
+    return data
+
+
+def ensure_session_chat_room(session_id: UUID, db: DBSession):
+    """세션 채팅방 멱등 개설 — 클래스 생성/오픈 시 호출한다(기존 방이 있으면 그대로 사용)."""
+    from app.services import chat_service
+
+    return chat_service.get_or_create_room_by_session(session_id, db)
+
+
+def set_chat_enabled(session_id: str, host_id: str, enabled: bool, db: DBSession) -> dict:
+    """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용.
+
+    토글 시 세션 채팅방을 멱등 개설해 방이 없는 세션에서도 즉시 room_id 를 얻을 수 있다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    room = ensure_session_chat_room(s.id, db)
+    s.chat_enabled = bool(enabled)
+    db.commit()
+    db.refresh(s)
+    return {
+        "session_id": str(s.id),
+        "chat_enabled": s.chat_enabled,
+        "room_id": str(room.id),
+        "room_type": room.room_type,
+    }
+
+
+def get_session_chat_room(session_id: str, user_id: str, db: DBSession) -> dict:
+    """세션 채팅방 조회 — host 또는 참여자(비참여자 403).
+
+    아직 방이 없는 세션(마이그레이션 이전 생성)은 host 조회 시에만 멱등 개설한다.
+    """
+    s = _get_session_for_user(session_id, user_id, db)
+    from app.services import chat_service
+
+    room = chat_service.get_room_by_session(s.id, db)
+    if room is None and s.host_id == _to_uuid(user_id):
+        room = chat_service.get_or_create_room_by_session(s.id, db)
+    return {
+        "session_id": str(s.id),
+        "chat_enabled": bool(s.chat_enabled),
+        "room_id": str(room.id) if room else None,
+        "room_type": room.room_type if room else "session",
+    }
 
 
 def _sort_key(s: Session) -> datetime:
@@ -224,10 +279,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     db.commit()
     db.refresh(session)
 
-    # 그룹 세션(참여자 2인 이상)이면 채팅방 자동 생성
-    if len(payload.participant_ids) >= 2:
-        from app.services import chat_service
-        chat_service.get_or_create_room_by_session(session.id, db)
+    # 클래스 실시간 채팅방(room_type="session") 자동 개설 — 1:1/그룹 모두.
+    # 이전에는 그룹(참여자 2인 이상)만 개설했으나, 클래스 채팅은 방을 미리 개설해 두고
+    # Session.chat_enabled 로 발신 여부를 제어한다(개설은 멱등).
+    ensure_session_chat_room(session.id, db)
 
     # SDD-093: S01(예약)/S04(즉석 클래스 ready) 알림 발화
     event_type = "session_booked" if initial_status == "scheduled" else "session_ready"
@@ -241,7 +296,7 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         body=session.title or "세션",
     )
 
-    return _serialize(session)
+    return _with_chat_room(_serialize(session), session.id, db)
 
 
 def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
@@ -296,7 +351,8 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
 
 
 def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
-    return _serialize(_get_session_for_user(session_id, user_id, db))
+    s = _get_session_for_user(session_id, user_id, db)
+    return _with_chat_room(_serialize(s), s.id, db)
 
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
@@ -346,6 +402,9 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.record_audio = payload.record_audio
     if payload.record_video is not None:
         s.record_video = payload.record_video
+    # 클래스 실시간 채팅 on/off (SDD-… 클래스 채팅) — host 만 변경 가능(이 경로 자체가 host 전용)
+    if payload.chat_enabled is not None:
+        s.chat_enabled = bool(payload.chat_enabled)
     if payload.location_type is not None:
         s.location_type = payload.location_type
         # 회원 라이브 스트리밍은 장소유형과 무관 — 룸이 없으면 항상 생성 (오프라인 전환 시에도 유지)
@@ -362,7 +421,7 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         body=s.title or "세션",
     )
 
-    return _serialize(s)
+    return _with_chat_room(_serialize(s), s.id, db)
 
 
 def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
@@ -410,6 +469,11 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     db.commit()
     db.refresh(s)
 
+    # 클래스 오픈 시점에 세션 채팅방을 보장한다(생성 시 개설이 기본 — 기존 세션 대상 멱등 보완).
+    # 입장한 회원이 곧바로 room_id 를 받아 채팅에 참여할 수 있게 한다.
+    if action == "open":
+        ensure_session_chat_room(s.id, db)
+
     if action == "end":
         try:
             from app.services import audio_service
@@ -455,7 +519,7 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
             body=s.title or "세션",
         )
 
-    return _serialize(s)
+    return _with_chat_room(_serialize(s), s.id, db)
 
 
 # 새 실행(명시적)을 발급할 수 없는 상태 — 완료/취소된 세션은 즉시 재시작을 허용하지 않는다.
@@ -830,6 +894,8 @@ def get_session_by_code(code: str, db: DBSession) -> dict:
         "max_participants": s.max_participants,
         "started_at": s.started_at,
         "scheduled_at": s.scheduled_at,
+        # 클래스 실시간 채팅 사용 여부 — 참여 전 채팅 가능 여부 안내용
+        "chat_enabled": bool(s.chat_enabled),
     }
 
 
@@ -864,7 +930,7 @@ def join_session_by_code(
         uid = _to_uuid(user_id)
         if s.host_id == uid:
             # host 상담사는 참여자로 중복 등록하지 않는다
-            return {"session": _serialize(s), "participant_id": None, "is_guest": False}
+            return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": None, "is_guest": False}
         existing = (
             db.query(SessionParticipant)
             .filter(
@@ -884,7 +950,7 @@ def join_session_by_code(
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s)
-        return {"session": _serialize(s), "participant_id": str(existing.id), "is_guest": False}
+        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(existing.id), "is_guest": False}
 
     name = (guest_name or "").strip()
     if not name:
@@ -1298,6 +1364,8 @@ def get_guest_session_state(
         "stress_index": latest.stress_index if latest else None,
         "signal_quality": sq,
         "last_eeg_at": latest.created_at if latest else None,
+        # 클래스 실시간 채팅 활성 여부(회원 대기/명상 화면의 채팅 패널 게이트)
+        "chat_enabled": bool(s.chat_enabled),
     }
 
 

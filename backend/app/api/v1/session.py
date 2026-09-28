@@ -22,6 +22,8 @@ from app.schemas.session import (
     MemberLiveKitTokenResponse,
     RaiseHandRequest,
     SessionByCodeResponse,
+    SessionChatEnabledRequest,
+    SessionChatRoomResponse,
     SessionLiveMetricsResponse,
     MarkerRequest,
     SessionCreateRequest,
@@ -147,6 +149,34 @@ def delete_session(
 ):
     session_service.delete_session(session_id, current_user["id"], db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ── 클래스 실시간 채팅 (세션 채팅방 · on/off) ──
+# 주의: 아래 상태전이 라우트(POST /{session_id}/{action})보다 먼저 선언해야
+# "chat-enabled"가 action 으로 해석되지 않는다.
+
+
+@router.get("/{session_id}/chat-room", response_model=SessionChatRoomResponse)
+def get_session_chat_room(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """세션 채팅방 조회 — host 또는 참여자. 프론트는 room_id 로 /chat WS 에 연결한다."""
+    return session_service.get_session_chat_room(session_id, current_user["id"], db)
+
+
+@router.post("/{session_id}/chat-enabled", response_model=SessionChatRoomResponse)
+def set_session_chat_enabled(
+    session_id: str,
+    payload: SessionChatEnabledRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용. 참여자 호출은 403."""
+    return session_service.set_chat_enabled(
+        session_id, current_user["id"], payload.enabled, db
+    )
 
 
 def _make_transition_endpoint(action: str):

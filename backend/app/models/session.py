@@ -57,6 +57,10 @@ class Session(Base):
     # AI 클래스 분석 — 영상/음성 녹화 여부(기본 On). Off 시 해당 미디어 리포트 미생성
     record_audio: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     record_video: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    # 클래스 실시간 채팅 사용 여부 — 상담사가 클래스별로 켜고 끈다(기본 off).
+    # 세션 채팅방(ChatRoom.room_type="session")은 클래스 생성 시 자동 개설되며,
+    # chat_enabled=False 이면 참여자(비 host)의 발신이 차단된다(host 는 항상 가능).
+    chat_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])

@@ -56,6 +56,10 @@ export interface SessionDto {
   waitlist_count: number;
   /** SDD-028: 실행 회차 키(기본=session_id). 반복 실행 표시는 후순위 */
   run_id?: string | null;
+  /** SDD-095: 클래스 채팅 활성 여부(상담사 토글) */
+  chat_enabled?: boolean;
+  /** SDD-095: 세션 채팅방 id — 방 미개설 시 null */
+  chat_room_id?: string | null;
 }
 
 export interface SessionListResponse {
@@ -113,6 +117,10 @@ export interface SessionByCodeResponse {
   max_participants: number;
   started_at: string | null;
   scheduled_at: string | null;
+  /** SDD-095: 클래스 채팅 활성 여부 — 회원 입장 화면의 채팅 패널 노출 조건 */
+  chat_enabled?: boolean;
+  /** SDD-095: 세션 채팅방 id */
+  chat_room_id?: string | null;
 }
 
 export interface JoinByCodePayload {
@@ -245,6 +253,10 @@ export interface SessionByCodeStateResponse {
   stress_index?: number | null;
   signal_quality?: number | null;
   last_eeg_at?: string | null;
+  /** SDD-095: 클래스 채팅 활성 여부 */
+  chat_enabled?: boolean;
+  /** SDD-095: 세션 채팅방 id */
+  chat_room_id?: string | null;
 }
 
 export const listSessions = (): Promise<SessionListResponse> =>
