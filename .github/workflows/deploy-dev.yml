@@ -61,7 +61,8 @@ jobs:
             frontend/dist \
             backend/app \
             backend/alembic \
-            backend/requirements.txt
+            backend/requirements.txt \
+            backend/ensure_livekit_nginx.py
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -132,6 +133,12 @@ jobs:
             sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
             sleep 5
             sudo systemctl is-active mindbreeze-backend
+
+            # 5.1 LiveKit nginx 프록시 보장 — 시그널링 /livekit/ → 127.0.0.1:7880
+            if [ -f /etc/nginx/sites-enabled/mindbreeze-ssl ]; then
+              sudo python3 "$BASE/backend/ensure_livekit_nginx.py"
+              sudo nginx -t && sudo systemctl reload nginx
+            fi
 
             # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
             (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
