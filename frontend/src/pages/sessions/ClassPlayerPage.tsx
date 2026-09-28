@@ -475,12 +475,17 @@ export default function ClassPlayerPage() {
         }
       }
       await refreshMetrics();
-      // 클래스 시작 직후 바로 동의 팝업 → 동의 시 녹음·녹화 자동 시작 (마이크 ON인 경우)
-      if (mediaPrefs.micOn) {
+      const recordAudio = updated.record_audio !== false;
+      const recordVideo = updated.record_video !== false;
+      // 클래스 시작 직후 자동 녹음/녹화 (record_audio/record_video 기본 On)
+      if (recordAudio && mediaPrefs.micOn) {
         if (updated.location_type === 'online') {
           liveKit.connect();
         }
         setConsentOpen(true);
+      } else if (recordVideo && mediaPrefs.cameraOn) {
+        // 음성 녹화 Off + 영상 On → 영상만 즉시 시작
+        await handleVideoOnlyStart();
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : '클래스 시작에 실패했습니다');
@@ -518,21 +523,26 @@ export default function ClassPlayerPage() {
     setConsentOpen(true);
   };
 
-  /** 동의 모달 확인 — 오디오 녹음 + 상담사 영상 녹화 시작 */
+  /** 동의 모달 확인 — 오디오 녹음 + 상담사 영상 녹화 시작 (record_audio/record_video Off 시 생략) */
   const handleConsentConfirm = async () => {
     setConsentOpen(false);
     if (!id) return;
-    try {
-      await startAudio(id, true);
-      await recorder.start();
-      setRecordingStartedAt(Date.now());
-    } catch (e) {
-      setError((e as Error).message);
+    const recordAudio = session?.record_audio !== false;
+    const recordVideo = session?.record_video !== false;
+    if (recordAudio) {
+      try {
+        await startAudio(id, true);
+        await recorder.start();
+        setRecordingStartedAt(Date.now());
+      } catch (e) {
+        setError((e as Error).message);
+      }
     }
-    if (mediaPrefs.cameraOn) {
+    if (recordVideo && mediaPrefs.cameraOn) {
       try {
         await startVideo(id, true);
         await videoRecorder.start();
+        if (!recordAudio) setRecordingStartedAt(Date.now());
       } catch (e) {
         setError(`영상 녹화 시작 실패: ${(e as Error).message}`);
       }
@@ -542,6 +552,7 @@ export default function ClassPlayerPage() {
   /** SDD-085 조합 C(카메라 ON + 마이크 OFF): 무음 영상만 단독 녹화 시작/종료 */
   const handleVideoOnlyStart = async () => {
     if (!id) return;
+    if (session?.record_video === false) return; // 영상 녹화 Off 세션은 시작하지 않음
     setError(null);
     try {
       await startVideo(id, true);

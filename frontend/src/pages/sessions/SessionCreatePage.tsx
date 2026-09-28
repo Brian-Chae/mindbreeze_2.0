@@ -19,8 +19,10 @@ export default function SessionCreatePage() {
   const navigate = useNavigate();
   const [type, setType] = useState<SessionType>('meditation');
   const [locationType] = useState<LocationType>('offline');
-  const [participantMode, setParticipantMode] = useState<ParticipantMode>('one_on_one');
-  const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('none');
+  const [participantMode, setParticipantMode] = useState<ParticipantMode>('group');
+  const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('optional');
+  const [recordAudio, setRecordAudio] = useState(true);
+  const [recordVideo, setRecordVideo] = useState(true);
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
@@ -50,6 +52,8 @@ export default function SessionCreatePage() {
         participant_mode: participantMode,
         linkband_mode: linkbandMode,
         sfu_enabled: locationType === 'online' && participantMode === 'group',
+        record_audio: recordAudio,
+        record_video: recordVideo,
       };
       const created = await createSession(payload);
 
@@ -180,6 +184,31 @@ export default function SessionCreatePage() {
                 <option value="optional">선택</option>
                 <option value="required">필수</option>
               </select>
+            </div>
+
+            <div className="rounded-xl border border-[#E6E1DA] bg-[#FAF9F7] px-4 py-3">
+              <p className="text-sm font-semibold text-[#1F1F1F]">AI 클래스 분석</p>
+              <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
+                영상·음성을 녹화해 세션 종료 후 분석 리포트를 생성합니다. 끄면 해당 미디어 리포트가 생성되지 않습니다.
+              </p>
+              <label className="flex items-center justify-between py-2 cursor-pointer">
+                <span className="text-sm text-[#1F1F1F]">음성 녹화 (STT 발화자 기록지)</span>
+                <input
+                  type="checkbox"
+                  checked={recordAudio}
+                  onChange={(e) => setRecordAudio(e.target.checked)}
+                  className="h-4 w-4 accent-[#5F0080]"
+                />
+              </label>
+              <label className="flex items-center justify-between py-2 cursor-pointer">
+                <span className="text-sm text-[#1F1F1F]">영상 녹화 (리플레이)</span>
+                <input
+                  type="checkbox"
+                  checked={recordVideo}
+                  onChange={(e) => setRecordVideo(e.target.checked)}
+                  className="h-4 w-4 accent-[#5F0080]"
+                />
+              </label>
             </div>
 
             <div className="rounded-xl bg-[#F5EDFC] border border-[#DDD0EA] px-4 py-3">

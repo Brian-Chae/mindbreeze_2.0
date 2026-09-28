@@ -72,6 +72,8 @@ def _serialize(s: Session) -> dict:
         "linkband_mode": s.linkband_mode,
         "webrtc_room_id": str(s.webrtc_room_id) if s.webrtc_room_id else None,
         "sfu_enabled": s.sfu_enabled,
+        "record_audio": s.record_audio,
+        "record_video": s.record_video,
         "created_at": s.created_at or _now(),
         "participants": [
             {
@@ -199,6 +201,8 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         linkband_mode=payload.linkband_mode,
         webrtc_room_id=webrtc_room_id,
         sfu_enabled=payload.sfu_enabled,
+        record_audio=payload.record_audio,
+        record_video=payload.record_video,
     )
     db.add(session)
     db.flush()
@@ -332,6 +336,10 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.linkband_mode = payload.linkband_mode
     if payload.sfu_enabled is not None:
         s.sfu_enabled = payload.sfu_enabled
+    if payload.record_audio is not None:
+        s.record_audio = payload.record_audio
+    if payload.record_video is not None:
+        s.record_video = payload.record_video
     if payload.location_type is not None:
         s.location_type = payload.location_type
         # 온라인 전환 시 WebRTC 룸 자동 생성, 오프라인 전환 시 정리

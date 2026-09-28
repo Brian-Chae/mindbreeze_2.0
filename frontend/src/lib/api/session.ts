@@ -45,6 +45,8 @@ export interface SessionDto {
   linkband_mode: LinkbandMode;
   webrtc_room_id: string | null;
   sfu_enabled: boolean;
+  record_audio: boolean;
+  record_video: boolean;
   created_at: string;
   participants: SessionParticipant[];
   waitlist_count: number;
@@ -71,6 +73,9 @@ export interface CreateSessionPayload {
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
   sfu_enabled?: boolean;
+  /** AI 클래스 분석 — 영상/음성 녹화 여부(기본 On). Off 시 해당 미디어 리포트 미생성 */
+  record_audio?: boolean;
+  record_video?: boolean;
 }
 
 export interface UpdateSessionPayload {
@@ -85,6 +90,8 @@ export interface UpdateSessionPayload {
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
   sfu_enabled?: boolean;
+  record_audio?: boolean;
+  record_video?: boolean;
 }
 
 export interface SessionByCodeResponse {

@@ -54,6 +54,9 @@ class Session(Base):
     # 온라인(WebRTC) 설정 — location_type=online 시 자동 생성
     webrtc_room_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     sfu_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # AI 클래스 분석 — 영상/음성 녹화 여부(기본 On). Off 시 해당 미디어 리포트 미생성
+    record_audio: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    record_video: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])

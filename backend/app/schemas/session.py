@@ -30,6 +30,9 @@ class SessionCreateRequest(BaseModel):
     participant_mode: ParticipantMode = "one_on_one"
     linkband_mode: LinkbandMode = "none"
     sfu_enabled: bool = False
+    # AI 클래스 분석 — 영상/음성 녹화 여부(기본 On). Off 시 해당 미디어 리포트 미생성
+    record_audio: bool = True
+    record_video: bool = True
     participant_ids: list[str] = Field(default_factory=list)
     force: bool = False
 
@@ -53,6 +56,8 @@ class SessionUpdateRequest(BaseModel):
     participant_mode: ParticipantMode | None = None
     linkband_mode: LinkbandMode | None = None
     sfu_enabled: bool | None = None
+    record_audio: bool | None = None
+    record_video: bool | None = None
     force: bool = False
 
 
@@ -97,6 +102,8 @@ class SessionResponse(BaseModel):
     linkband_mode: LinkbandMode
     webrtc_room_id: str | None = None
     sfu_enabled: bool = False
+    record_audio: bool = True
+    record_video: bool = True
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0
