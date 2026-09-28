@@ -707,8 +707,18 @@ def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, d
 
 # ── LiveKit WebRTC ──────────────────────────────────────────────
 
-def generate_livekit_token(room_name: str, participant_name: str, participant_id: str) -> str:
-    """LiveKit 접근 토큰(JWT)을 발급합니다."""
+def generate_livekit_token(
+    room_name: str,
+    participant_name: str,
+    participant_id: str,
+    *,
+    can_publish: bool = True,
+    can_subscribe: bool = True,
+) -> str:
+    """LiveKit 접근 토큰(JWT)을 발급합니다.
+
+    can_publish=False 면 구독 전용 토큰(회원/게스트) — 상담사 영상·음성만 수신한다.
+    """
     token = (
         livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
         .with_identity(participant_id)
@@ -717,6 +727,8 @@ def generate_livekit_token(room_name: str, participant_name: str, participant_id
             livekit_api.VideoGrants(
                 room_join=True,
                 room=room_name,
+                can_publish=can_publish,
+                can_subscribe=can_subscribe,
             )
         )
     )
@@ -890,6 +902,57 @@ def join_session_by_code(
     from app.services.report_email_service import participant_token
     return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True,
             "participant_token": participant_token(participant)}
+
+
+def member_livekit_token(
+    code: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    participant_token: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """회원/게스트 구독 전용 LiveKit 토큰 발급 — 상담사 영상·음성만 수신(can_publish=False)."""
+    s = _get_session_by_code(code, db)
+    if not s.webrtc_room_id:
+        raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
+
+    pid = _to_uuid(participant_id)
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == s.id)
+        .first()
+    )
+    if participant is None:
+        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
+
+    if participant.user_id is None:
+        # 게스트 — participant_token 소유 증명 필수
+        from app.services.report_email_service import _decode
+        try:
+            claims = _decode(participant_token, "report_participant")
+        except HTTPException:
+            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+        if claims.get("sub") != str(participant.id):
+            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+    elif current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
+        # 로그인 회원 — 본인 참여 확인
+        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
+
+    name = participant.guest_name
+    if not name and participant.user_id:
+        from app.models.user import User
+        user = db.query(User).filter(User.id == participant.user_id).first()
+        name = user.name if user else None
+    name = name or "참여자"
+
+    token = generate_livekit_token(
+        room_name=str(s.webrtc_room_id),
+        participant_name=name,
+        participant_id=str(participant.id),
+        can_publish=False,
+    )
+    return {"livekit_token": token, "webrtc_room_id": str(s.webrtc_room_id)}
 
 
 # ---------------------------------------------------------------------------

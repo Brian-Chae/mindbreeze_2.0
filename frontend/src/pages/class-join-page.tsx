@@ -393,6 +393,8 @@ const ClassJoinPage: React.FC = () => {
         participantId={participantId}
         error={error}
         onLeave={resetJoin}
+        classCode={code}
+        participantToken={participantToken}
       />
     );
   }

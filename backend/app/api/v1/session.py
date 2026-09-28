@@ -18,6 +18,8 @@ from app.schemas.session import (
     InviteParticipantRequest,
     JoinByCodeRequest,
     JoinByCodeResponse,
+    MemberLiveKitTokenRequest,
+    MemberLiveKitTokenResponse,
     SessionByCodeResponse,
     SessionLiveMetricsResponse,
     MarkerRequest,
@@ -91,6 +93,25 @@ def get_guest_session_state(
 ):
     """게스트 상태 조회 — 인증 없이 세션/본인 상태를 확인한다(대기→명상 전이 감지)."""
     return session_service.get_guest_session_state(code, db, participant_id=participant_id)
+
+
+# 회원/게스트 구독 전용 LiveKit 토큰 — 상담사 영상·음성 라이브 수신용.
+# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
+@router.post("/by-code/{code}/livekit-token", response_model=MemberLiveKitTokenResponse)
+def get_member_livekit_token(
+    code: str,
+    payload: MemberLiveKitTokenRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """회원/게스트 구독 전용 LiveKit 토큰을 발급한다 (can_publish=False)."""
+    return session_service.member_livekit_token(
+        code,
+        payload.participant_id,
+        db,
+        participant_token=payload.participant_token,
+        current_user_id=current_user["id"] if current_user else None,
+    )
 
 
 @router.get("/{session_id}", response_model=SessionResponse)

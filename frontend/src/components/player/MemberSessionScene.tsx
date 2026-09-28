@@ -11,6 +11,10 @@ interface MemberSessionSceneProps {
   participantId: string | null;
   error: string | null;
   onLeave: () => void;
+  /** 클래스 코드 — 상담사 라이브 영상 구독용 */
+  classCode: string | null;
+  /** 게스트 소유 증명 토큰 */
+  participantToken?: string | null;
 }
 
 export function MemberSessionScene({
@@ -21,6 +25,8 @@ export function MemberSessionScene({
   participantId,
   error,
   onLeave,
+  classCode,
+  participantToken,
 }: MemberSessionSceneProps) {
   return (
     <main className="min-h-screen bg-black">
@@ -31,6 +37,8 @@ export function MemberSessionScene({
         onLeave={onLeave}
         sessionId={sessionId}
         participantId={participantId}
+        classCode={classCode}
+        participantToken={participantToken}
       />
       {error && (
         <p

@@ -297,6 +297,35 @@ export const joinSession = (id: string): Promise<SessionDto> =>
 export const getLiveKitToken = (id: string): Promise<{ livekit_token: string; webrtc_room_id: string }> =>
   apiClient.post<{ livekit_token: string; webrtc_room_id: string }>(`/sessions/${id}/livekit-token`);
 
+/** 회원/게스트 구독 전용 LiveKit 토큰 — 상담사 영상·음성 라이브 수신용 */
+export interface MemberLiveKitTokenResponse {
+  livekit_token: string;
+  webrtc_room_id: string;
+}
+
+export const getMemberLiveKitToken = async (
+  code: string,
+  participantId: string,
+  participantToken?: string | null,
+): Promise<MemberLiveKitTokenResponse> => {
+  const payload = { participant_id: participantId, participant_token: participantToken ?? null };
+  if (tokenStorage.getAccess()) {
+    const refreshedToken = await refreshAccessToken();
+    if (!refreshedToken) {
+      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
+    }
+    return apiClient.post<MemberLiveKitTokenResponse>(
+      `/sessions/by-code/${code}/livekit-token`,
+      payload,
+    );
+  }
+  return apiClient.post<MemberLiveKitTokenResponse>(
+    `/sessions/by-code/${code}/livekit-token`,
+    payload,
+    { skipAuth: true },
+  );
+};
+
 /** 호스트 콘솔용 참가자 라이브 지표 */
 export const getSessionLiveMetrics = async (
   id: string,

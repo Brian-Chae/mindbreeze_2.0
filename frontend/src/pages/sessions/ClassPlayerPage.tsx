@@ -466,6 +466,10 @@ export default function ClassPlayerPage() {
     try {
       const updated = await transitionSession(id, 'start');
       setSession(updated);
+      // 온라인 세션: 클래스 시작 즉시 화상 연결 — 상담사 영상·음성 라이브 송출 (녹화 여부와 무관)
+      if (updated.location_type === 'online') {
+        liveKit.connect();
+      }
       // SDD-085: 마이크 오프 결정을 서버에 선언 — consent_audio=false → status='manual'
       if (!mediaPrefs.micOn) {
         try {
@@ -479,9 +483,6 @@ export default function ClassPlayerPage() {
       const recordVideo = updated.record_video !== false;
       // 클래스 시작 직후 자동 녹음/녹화 (record_audio/record_video 기본 On)
       if (recordAudio && mediaPrefs.micOn) {
-        if (updated.location_type === 'online') {
-          liveKit.connect();
-        }
         setConsentOpen(true);
       } else if (recordVideo && mediaPrefs.cameraOn) {
         // 음성 녹화 Off + 영상 On → 영상만 즉시 시작
@@ -513,11 +514,11 @@ export default function ClassPlayerPage() {
     }
   };
 
-  /** 녹음 시작 버튼 — 온라인 세션이면 화상 연결 후 동의 확인 */
+  /** 녹음 시작 버튼 — 화상은 클래스 시작 시 이미 연결됨(온라인). 미연결 시에만 연결 후 동의 확인 */
   const handleStartClick = () => {
     if (!mediaPrefs.micOn) return;
     setError(null);
-    if (session?.location_type === 'online') {
+    if (session?.location_type === 'online' && !liveKit.token) {
       liveKit.connect();
     }
     setConsentOpen(true);

@@ -17,6 +17,7 @@ import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { BrainChart } from './BrainChart';
 import { LeadOffModal } from './LeadOffModal';
+import { CounselorLiveTile } from './CounselorLiveTile';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -25,6 +26,10 @@ interface GuestMeditationPanelProps {
   onLeave: () => void;
   sessionId: string;
   participantId: string | null;
+  /** 클래스 코드 — 상담사 라이브 영상 구독 토큰 요청용 */
+  classCode: string | null;
+  /** 게스트 소유 증명 토큰 (로그인 회원은 생략) */
+  participantToken?: string | null;
 }
 
 type MetricKey =
@@ -117,8 +122,12 @@ export function GuestMeditationPanel({
   onLeave,
   sessionId,
   participantId,
+  classCode,
+  participantToken,
 }: GuestMeditationPanelProps) {
   const [elapsedSec, setElapsedSec] = useState(0);
+  /** 화면 끄기(몰입) 모드 — 1.0 절전 모드 패리티 */
+  const [screenOff, setScreenOff] = useState(false);
   /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   /** LeadOff 해소 후 15초 "AI 분석중" */
@@ -349,15 +358,23 @@ export function GuestMeditationPanel({
       {/* 본문: 모바일 세로 스택 / 데스크톱 2컬럼 */}
       <div className="relative z-10 flex flex-1 flex-col px-4 pb-8 sm:px-8">
         <div className="flex flex-1 flex-col justify-center gap-10 md:grid md:grid-cols-2 md:items-center md:gap-8">
-          {/* 진행시간 */}
-          <div className="flex flex-col items-center text-center">
-            <p className={heroLabelClass}>진행시간</p>
-            <p className={`mt-2 ${heroNumberClass}`} aria-live="off">
-              {formatClock(elapsedSec)}
-            </p>
-            <p className="mt-2 text-sm text-white/50 tabular-nums">
-              / {formatClock(targetSec)}
-            </p>
+          {/* 좌측: 상담사 라이브 영상 + 진행시간 */}
+          <div className="flex flex-col items-stretch gap-6">
+            <CounselorLiveTile
+              code={classCode}
+              participantId={participantId}
+              participantToken={participantToken}
+              className="aspect-video w-full"
+            />
+            <div className="flex flex-col items-center text-center">
+              <p className={heroLabelClass}>진행시간</p>
+              <p className={`mt-2 ${heroNumberClass}`} aria-live="off">
+                {formatClock(elapsedSec)}
+              </p>
+              <p className="mt-2 text-sm text-white/50 tabular-nums">
+                / {formatClock(targetSec)}
+              </p>
+            </div>
           </div>
 
           {/* SDD-040: 6지표 순환 대형 수치 */}
@@ -499,6 +516,35 @@ export function GuestMeditationPanel({
         leadOff={band.leadOff}
         onDismiss={() => setLeadOffDismissed(true)}
       />
+
+      {/* 화면 끄기(몰입) 토글 — 우하단 FAB (1.0 절전 모드 패리티) */}
+      {!screenOff && (
+        <button
+          type="button"
+          onClick={() => setScreenOff(true)}
+          aria-label="화면 끄기"
+          className="fixed bottom-6 right-6 z-40 rounded-full bg-white/15 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
+        >
+          화면 끄기
+        </button>
+      )}
+
+      {/* 화면 끄기 오버레이 — 검정 + 타이머 + 가운데 켜기 (1500ms crossfade) */}
+      <div
+        className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-black transition-opacity duration-[1500ms] ${
+          screenOff ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        aria-hidden={!screenOff}
+      >
+        <p className="text-sm text-white/60 tabular-nums">{formatClock(elapsedSec)}</p>
+        <button
+          type="button"
+          onClick={() => setScreenOff(false)}
+          className="mt-6 rounded-full border border-white/30 px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-white/10"
+        >
+          화면 켜기
+        </button>
+      </div>
     </div>
   );
 }

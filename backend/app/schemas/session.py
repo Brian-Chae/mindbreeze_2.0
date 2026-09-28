@@ -166,6 +166,18 @@ class JoinByCodeResponse(BaseModel):
     is_guest: bool = False
 
 
+class MemberLiveKitTokenRequest(BaseModel):
+    """회원/게스트 구독 전용 LiveKit 토큰 요청 — 게스트는 participant_token 소유 증명."""
+
+    participant_id: str
+    participant_token: str | None = None
+
+
+class MemberLiveKitTokenResponse(BaseModel):
+    livekit_token: str
+    webrtc_room_id: str
+
+
 # ---------------------------------------------------------------------------
 # SDD-021: 클래스 시작 프로세스 1.0 패리티
 # ---------------------------------------------------------------------------
