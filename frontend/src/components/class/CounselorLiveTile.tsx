@@ -1,4 +1,5 @@
-// 상담사 라이브 영상 타일 — 회원/게스트 구독 전용 LiveKitRoom (video/audio 미발신)
+// 상담사 라이브 영상 타일 — 회원/게스트 LiveKitRoom
+// canPublish(온라인 양방향)면 회원 카메라/마이크를 송출하고, 아니면 수신 전용.
 // 자연 배경 위에 올라가는 반투명 카드. 토큰이 없거나 원격 트랙이 없으면 준비 중 표시.
 // speakerOn=false면 상담사 오디오 볼륨 0 (하울링 방지 뮤트) — 오프라인 수업 기본 뮤트용.
 import { useEffect } from 'react';
@@ -47,7 +48,7 @@ export function CounselorLiveTile({
   speakerOn = true,
   className = '',
 }: CounselorLiveTileProps) {
-  const { token, error, notReady, connect, serverUrl } = useMemberLiveKit({
+  const { token, canPublish, error, notReady, connect, serverUrl } = useMemberLiveKit({
     code,
     participantId,
     participantToken,
@@ -86,8 +87,9 @@ export function CounselorLiveTile({
         token={token}
         serverUrl={serverUrl}
         connect={true}
-        video={false}
-        audio={false}
+        // 온라인 양방향(canPublish)일 때만 로컬 카메라/마이크 캡처·발행
+        video={canPublish}
+        audio={canPublish}
         className="h-full w-full"
       >
         <HostCamera />

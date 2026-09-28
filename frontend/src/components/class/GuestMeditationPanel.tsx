@@ -33,6 +33,10 @@ interface GuestMeditationPanelProps {
   participantToken?: string | null;
   /** 클래스 장소 유형 — 오프라인은 스피커 기본 뮤트(하울링 방지) */
   locationType?: 'online' | 'offline';
+  /** 참여 방식 — 오프라인 그룹 대규모에서는 상담사 영상을 숨긴다 */
+  participantMode?: 'one_on_one' | 'group';
+  /** 정원 — 오프라인 그룹 20명 초과 시 상담사 영상 타일 미표시 */
+  maxParticipants?: number;
 }
 
 type MetricKey =
@@ -137,6 +141,8 @@ export function GuestMeditationPanel({
   classCode,
   participantToken,
   locationType,
+  participantMode,
+  maxParticipants,
 }: GuestMeditationPanelProps) {
   const [elapsedSec, setElapsedSec] = useState(0);
   /** 화면 끄기(몰입) 모드 — 1.0 절전 모드 패리티 */
@@ -319,6 +325,13 @@ export function GuestMeditationPanel({
             ? 'WebSocket으로 실시간 지표를 수신 중입니다'
             : 'LINK BAND 연결 시 표시됩니다';
 
+  // 오프라인 그룹 20명 초과 수업은 강당형 대면 진행 — 원격 상담사 영상 타일을 숨긴다
+  const showCounselorVideo = !(
+    locationType === 'offline' &&
+    participantMode === 'group' &&
+    (maxParticipants ?? 0) > 20
+  );
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-black text-white">
       <FadingImageBackground />
@@ -350,16 +363,18 @@ export function GuestMeditationPanel({
 
       {/* 본문: 가운데 상단 상담사 스크린 / 하단 진행시간·지표 */}
       <div className="relative z-10 flex flex-1 flex-col items-center px-4 pb-8 sm:px-8">
-        {/* 상담사 스크린 */}
-        <div className="w-full max-w-4xl">
-          <CounselorLiveTile
-            code={classCode}
-            participantId={participantId}
-            participantToken={participantToken}
-            speakerOn={speakerOn}
-            className="aspect-video w-full"
-          />
-        </div>
+        {/* 상담사 스크린 — 오프라인 그룹 20명 초과 수업에서는 숨김 */}
+        {showCounselorVideo && (
+          <div className="w-full max-w-4xl">
+            <CounselorLiveTile
+              code={classCode}
+              participantId={participantId}
+              participantToken={participantToken}
+              speakerOn={speakerOn}
+              className="aspect-video w-full"
+            />
+          </div>
+        )}
 
         {/* 진행시간 */}
         <div className="mt-6 flex flex-col items-center text-center">

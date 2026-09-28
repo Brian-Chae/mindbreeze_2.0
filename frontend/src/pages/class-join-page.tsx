@@ -396,6 +396,8 @@ const ClassJoinPage: React.FC = () => {
         classCode={code}
         participantToken={participantToken}
         locationType={session.location_type}
+        participantMode={session.participant_mode}
+        maxParticipants={session.max_participants}
       />
     );
   }

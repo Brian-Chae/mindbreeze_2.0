@@ -301,6 +301,8 @@ export const getLiveKitToken = (id: string): Promise<{ livekit_token: string; we
 export interface MemberLiveKitTokenResponse {
   livekit_token: string;
   webrtc_room_id: string;
+  /** 온라인 양방향 여부 — true면 회원도 카메라/마이크를 송출한다 */
+  can_publish: boolean;
 }
 
 export const getMemberLiveKitToken = async (

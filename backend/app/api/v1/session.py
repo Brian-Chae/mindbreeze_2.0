@@ -104,7 +104,10 @@ def get_member_livekit_token(
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
-    """회원/게스트 구독 전용 LiveKit 토큰을 발급한다 (can_publish=False)."""
+    """회원/게스트 LiveKit 토큰을 발급한다.
+
+    can_publish 는 온라인 세션 + (1:1 또는 그룹 20명 이하)일 때만 True.
+    """
     return session_service.member_livekit_token(
         code,
         payload.participant_id,

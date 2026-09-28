@@ -907,7 +907,11 @@ def member_livekit_token(
     participant_token: str | None = None,
     current_user_id: str | None = None,
 ) -> dict:
-    """회원/게스트 구독 전용 LiveKit 토큰 발급 — 상담사 영상·음성만 수신(can_publish=False)."""
+    """회원/게스트 구독 전용 LiveKit 토큰 발급.
+
+    can_publish 규칙: 온라인 세션이면서 1:1 이거나, 그룹이면 max_participants ≤ 20 일 때만 송신 허용.
+    그 외(오프라인, 온라인 그룹 20명 초과)는 구독 전용(can_publish=False).
+    """
     s = _get_session_by_code(code, db)
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
@@ -941,13 +945,26 @@ def member_livekit_token(
         name = user.name if user else None
     name = name or "참여자"
 
+    # 온라인 양방향 영상 규칙: 온라인 세션이면서 (1:1 이거나, 그룹이면 20명 이하)일 때만 송신 허용.
+    can_publish = (
+        s.location_type == "online"
+        and (
+            s.participant_mode == "one_on_one"
+            or (s.participant_mode == "group" and (s.max_participants or 0) <= 20)
+        )
+    )
+
     token = generate_livekit_token(
         room_name=str(s.webrtc_room_id),
         participant_name=name,
         participant_id=str(participant.id),
-        can_publish=False,
+        can_publish=can_publish,
     )
-    return {"livekit_token": token, "webrtc_room_id": str(s.webrtc_room_id)}
+    return {
+        "livekit_token": token,
+        "webrtc_room_id": str(s.webrtc_room_id),
+        "can_publish": can_publish,
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -43,6 +43,17 @@ class SessionCreateRequest(BaseModel):
             raise ValueError("기타 유형 선택 시 유형 이름을 입력해야 합니다")
         return self
 
+    @model_validator(mode="after")
+    def _validate_online_group_capacity(self) -> "SessionCreateRequest":
+        # 온라인 그룹 클래스는 양방향 영상 품질 보호를 위해 최대 50명까지 허용한다.
+        if (
+            self.location_type == "online"
+            and self.participant_mode == "group"
+            and self.max_participants > 50
+        ):
+            raise ValueError("온라인 그룹 클래스는 최대 50명까지 설정할 수 있습니다")
+        return self
+
 
 class SessionUpdateRequest(BaseModel):
     type: SessionType | None = None
@@ -59,6 +70,18 @@ class SessionUpdateRequest(BaseModel):
     record_audio: bool | None = None
     record_video: bool | None = None
     force: bool = False
+
+    @model_validator(mode="after")
+    def _validate_online_group_capacity(self) -> "SessionUpdateRequest":
+        # 온라인 그룹 클래스는 최대 50명 — 부분 수정이므로 max_participants 가 주어졌을 때만 검사한다.
+        if (
+            self.max_participants is not None
+            and self.location_type == "online"
+            and self.participant_mode == "group"
+            and self.max_participants > 50
+        ):
+            raise ValueError("온라인 그룹 클래스는 최대 50명까지 설정할 수 있습니다")
+        return self
 
 
 class ParticipantInfo(BaseModel):
@@ -176,6 +199,8 @@ class MemberLiveKitTokenRequest(BaseModel):
 class MemberLiveKitTokenResponse(BaseModel):
     livekit_token: str
     webrtc_room_id: str
+    # 온라인 양방향 영상 규칙에 따른 송신 가능 여부 — 프론트가 마이크/카메라 UI 제어에 사용.
+    can_publish: bool = False
 
 
 # ---------------------------------------------------------------------------

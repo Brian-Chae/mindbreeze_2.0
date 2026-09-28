@@ -17,6 +17,10 @@ interface MemberSessionSceneProps {
   participantToken?: string | null;
   /** 클래스 장소 유형 — 오프라인은 스피커 기본 뮤트(하울링 방지) */
   locationType?: 'online' | 'offline';
+  /** 참여 방식 — 오프라인 그룹 대규모에서는 상담사 영상을 숨긴다 */
+  participantMode?: 'one_on_one' | 'group';
+  /** 정원 — 오프라인 그룹 20명 초과 시 상담사 영상 타일 미표시 */
+  maxParticipants?: number;
 }
 
 export function MemberSessionScene({
@@ -30,6 +34,8 @@ export function MemberSessionScene({
   classCode,
   participantToken,
   locationType,
+  participantMode,
+  maxParticipants,
 }: MemberSessionSceneProps) {
   return (
     <main className="min-h-screen bg-black">
@@ -43,6 +49,8 @@ export function MemberSessionScene({
         classCode={classCode}
         participantToken={participantToken}
         locationType={locationType}
+        participantMode={participantMode}
+        maxParticipants={maxParticipants}
       />
       {error && (
         <p
