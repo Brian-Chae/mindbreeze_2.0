@@ -1,17 +1,23 @@
 // `/session-live` 네임스페이스 구독 훅 — 호스트/게스트 실시간 EEG + SDD-026 상태 계약
 // snapshot 적용 전에는 isReady=false → 호출측이 REST 폴백을 유지해야 한다.
 // SDD-028: eeg_feature는 setState 없이 콜백만 — 대규모 참여자 전체 재렌더 회피
+// 개선 8: class:aggregate(상담사 전용 그룹 익명 집계)도 콜백으로만 전달한다.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { tokenStorage } from '../lib/api/client';
 import { type ClassSignalType } from '../lib/class/quiet-signal';
 import {
+  normalizeAggregate,
+  type ClassAggregateEvent,
+} from '../lib/class/group-aggregate';
+import {
   emitClassSignal,
   getSessionLiveSocket,
   joinSessionLive,
   leaveSessionLive,
   normalizeJoinSnapshot,
+  subscribeClassAggregate,
   subscribeClassSignal,
   subscribeDeviceStatusChanged,
   subscribeParticipantChanged,
@@ -19,6 +25,7 @@ import {
   subscribeSessionLiveJoined,
   subscribeSessionStateChanged,
   subscribeSpeakingChanged,
+  type ClassAggregateEventHandler,
   type ClassSignalEvent,
   type ClassSignalHandler,
   type DeviceStatusChangedEvent,
@@ -51,6 +58,8 @@ interface UseSessionLiveSocketOptions {
   onSpeakingChanged?: SpeakingChangedHandler;
   /** 개선 5: 무음 시그널 수신 — 상담사 화면 카드 배지·집계 카운트 갱신용 */
   onClassSignal?: ClassSignalHandler;
+  /** 개선 8: 그룹 익명 집계 수신 — 상담사 상단 단일 게이지 갱신용 */
+  onClassAggregate?: ClassAggregateEventHandler;
 }
 
 interface UseSessionLiveSocketResult {
@@ -84,6 +93,7 @@ export function useSessionLiveSocket({
   onDeviceStatusChanged,
   onSpeakingChanged,
   onClassSignal,
+  onClassAggregate,
 }: UseSessionLiveSocketOptions): UseSessionLiveSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -104,6 +114,8 @@ export function useSessionLiveSocket({
   onSpeakingRef.current = onSpeakingChanged;
   const onClassSignalRef = useRef(onClassSignal);
   onClassSignalRef.current = onClassSignal;
+  const onClassAggregateRef = useRef(onClassAggregate);
+  onClassAggregateRef.current = onClassAggregate;
   /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
   const socketRef = useRef<Socket | null>(null);
   const joinedSessionRef = useRef<string | null>(null);
@@ -222,6 +234,14 @@ export function useSessionLiveSocket({
       onClassSignalRef.current?.(event);
     };
 
+    // 개선 8: 그룹 익명 집계(상담사 전용) — 계약 밖 payload는 normalizeAggregate가 걸러낸다
+    const onAggregate = (event: ClassAggregateEvent): void => {
+      const normalized = normalizeAggregate(event);
+      if (!normalized) return;
+      if (normalized.session_id && normalized.session_id !== sessionId) return;
+      onClassAggregateRef.current?.(normalized);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
@@ -232,6 +252,7 @@ export function useSessionLiveSocket({
     const unsubDevice = subscribeDeviceStatusChanged(socket, onDevice);
     const unsubSpeaking = subscribeSpeakingChanged(socket, onSpeaking);
     const unsubSignal = subscribeClassSignal(socket, onSignal);
+    const unsubAggregate = subscribeClassAggregate(socket, onAggregate);
 
     if (socket.connected) {
       onConnect();
@@ -250,6 +271,7 @@ export function useSessionLiveSocket({
       unsubDevice();
       unsubSpeaking();
       unsubSignal();
+      unsubAggregate();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       socketRef.current = null;

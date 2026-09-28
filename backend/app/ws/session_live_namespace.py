@@ -18,12 +18,18 @@ SDD-026 P0 안전망:
 클라이언트→서버: join(session_id[, participant_id]), leave(session_id), feature(data),
                  class:signal(data), waiting_room(data)   ← 개선 5 무음 시그널 / 개선 3 대기실
 서버→클라이언트: joined, join_denied, eeg_feature, class:signal(호스트 전용),
+                 class:aggregate(호스트 전용 — 개선 8 그룹 익명 집계),
                  session_state_changed, participant_changed, device_status_changed,
                  waiting_room_changed(호스트 전용)  ← 개선 3 대기실 입장/퇴장
 
 개선 5(무음 시그널): 기본 뮤트 1:N 수업에서 회원이 발언권(손들기) 없이도 "잘 따라가요 /
 조금 어려워요 / 잠시 쉴게요"를 상담사에게만 조용히 전달한다. DB 에 저장하지 않는 휘발성
 상태이며 참여자당 최신 1건만 TTL(_QUIET_SIGNAL_TTL_SEC) 동안 집계에 남는다.
+
+개선 8(그룹 익명 집계·적응형 페이싱): 밴드 착용자들의 이완도·집중도를 개인 baseline 대비
+상대값으로 익명 집계(평균 + 안정 비율)해 상담사에게만 `class:aggregate` 로 내보낸다.
+개인 점수·순위는 payload 에 존재하지 않으며, 착용자가 MIN_WEARERS 미만이면 점수를 만들지 않고
+sample_status="insufficient"(표본 적음)로 알린다. 계산은 AGGREGATE_INTERVAL_SEC 주기로 제한한다.
 """
 
 import asyncio
@@ -47,6 +53,37 @@ QUIET_SIGNAL_TTL_SEC = 10.0
 # 세션별 활성 신호: session_id(str) -> {participant_id(str): (signal_type, monotonic_ts)}
 # 참여자가 신호를 보낼 때마다 최신 1건으로 덮어쓴다(참여자당 1표 — 집계 왜곡 방지).
 _active_signals: dict[str, dict[str, tuple[str, float]]] = {}
+
+# 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 전용 이벤트명
+GROUP_AGGREGATE_EVENT = "class:aggregate"
+
+# 집계 브로드캐스트 주기(초). 참가자가 매초 feature 를 올리므로 그때마다 집계하면 DB 비용이
+# 참여자 수 × 초 만큼 늘어난다. 상담사 판단에 5초 지연은 충분히 짧다.
+AGGREGATE_INTERVAL_SEC = 5.0
+
+# 세션별 마지막 집계 발행 시각(monotonic) — throttle 상태
+_last_aggregate_at: dict[str, float] = {}
+
+
+def aggregate_due(session_id, *, at: float | None = None) -> bool:
+    """세션별 집계 발행 주기 판정(throttle).
+
+    판정과 동시에 발행 시각을 기록하므로, 호출측은 True 일 때만 실제 집계를 계산하면 된다
+    (매 feature 마다 그룹 전체를 다시 집계하지 않게 하는 것이 목적).
+    at 은 테스트 주입 지점 — 운영 경로에서는 단조 시각을 쓴다.
+    """
+    sid = str(session_id)
+    stamp = time.monotonic() if at is None else at
+    last = _last_aggregate_at.get(sid)
+    if last is not None and stamp - last < AGGREGATE_INTERVAL_SEC:
+        return False
+    _last_aggregate_at[sid] = stamp
+    return True
+
+
+def clear_group_aggregates() -> None:
+    """집계 throttle 상태 전역 초기화(테스트/세션 종료 정리용)."""
+    _last_aggregate_at.clear()
 
 # sync(REST) 컨텍스트에서 async 브로드캐스트를 예약하기 위한 이벤트 루프 참조.
 # connect 핸들러(루프 안에서 실행)에서 캡처한다. 캡처 전(테스트 등)에는 None → 발행 생략.
@@ -267,6 +304,11 @@ def register_session_live_namespace(sio):
             namespace=_NAMESPACE,
         )
 
+        # 개선 8: 상담사는 join 즉시 그룹 익명 집계 게이지를 받아야 한다 — throttle 을 건너뛰고
+        # 본인 소켓으로만 1건 발행한다(첫 feature 를 기다리면 게이지가 빈 채로 남는다).
+        if role == "host":
+            await publish_group_aggregate(session_id, force=True, to=sid)
+
     @sio.on("leave", namespace=_NAMESPACE)
     async def on_leave(sid, data):
         data = data or {}
@@ -320,6 +362,10 @@ def register_session_live_namespace(sio):
                 "saved": saved,
             },
         )
+
+        # 개선 8: 그룹 익명 집계(적응형 페이싱) — 주기(AGGREGATE_INTERVAL_SEC)마다 한 번만 계산해
+        # 상담사 룸에 브로드캐스트한다. 개인 점수는 payload 에 담지 않는다.
+        await publish_group_aggregate(session_id)
 
     @sio.on("class:signal", namespace=_NAMESPACE)
     async def on_quiet_signal(sid, data):
@@ -572,6 +618,66 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
         namespace=_NAMESPACE,
     )
     logger.info("[WS /session-live] broadcast waiting_room_changed → %s", room)
+
+
+# ---------------------------------------------------------------------------
+# 개선 8: 그룹 익명 집계(적응형 페이싱) — 상담사 전용
+# ---------------------------------------------------------------------------
+
+
+def _compute_group_aggregate(session_id) -> dict | None:
+    """집계 계산을 서비스 레이어에 위임(전용 DB 세션). 실패는 삼키고 집계만 생략한다."""
+    from app.services import group_aggregate as group_aggregate_service
+
+    db = _open_db()
+    try:
+        return group_aggregate_service.compute_group_aggregate(session_id, db)
+    except Exception:
+        logger.warning(
+            "[WS /session-live] 그룹 집계 계산 실패 (session=%s)", session_id, exc_info=True
+        )
+        return None
+    finally:
+        db.close()
+
+
+async def broadcast_group_aggregate(session_id: str, payload: dict, *, to: str | None = None) -> None:
+    """개선 8: 그룹 익명 집계를 상담사에게만 브로드캐스트한다.
+
+    - to 지정 시 해당 소켓 1개(상담사 join 직후), 미지정 시 호스트 룸 전체.
+    - 공용 룸(`:all`)·참여자 본인 룸으로는 절대 내보내지 않는다. 집계 평균은 개인 값을
+      역산할 수 있는 정보이므로 회원에게 노출하지 않는다(점수 경쟁 방지).
+    """
+    sio = _get_sio()
+    body = {"session_id": str(session_id), **payload}
+    if to:
+        await sio.emit(GROUP_AGGREGATE_EVENT, body, to=to, namespace=_NAMESPACE)
+        logger.info("[WS /session-live] emit %s → sid=%s", GROUP_AGGREGATE_EVENT, to)
+        return
+    room = _room_host(session_id)
+    await sio.emit(GROUP_AGGREGATE_EVENT, body, room=room, namespace=_NAMESPACE)
+    logger.info("[WS /session-live] broadcast %s → %s", GROUP_AGGREGATE_EVENT, room)
+
+
+async def publish_group_aggregate(
+    session_id, *, force: bool = False, to: str | None = None
+) -> dict | None:
+    """그룹 익명 집계를 계산해 (주기가 되었으면) 발행한다.
+
+    returns 발행 여부와 무관하게 계산된 payload(계산 실패 시 None).
+    - force=True: throttle 을 무시하고 즉시 발행(상담사 join 직후 1건).
+    """
+    if force:
+        _last_aggregate_at[str(session_id)] = time.monotonic()
+    elif not aggregate_due(session_id):
+        return None
+
+    payload = _compute_group_aggregate(session_id)
+    if payload is None:
+        return None
+
+    await broadcast_group_aggregate(session_id, payload, to=to)
+    return payload
 
 
 # ---------------------------------------------------------------------------

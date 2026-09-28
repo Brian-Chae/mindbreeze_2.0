@@ -83,6 +83,40 @@ def latest_feature_window(
     )
 
 
+def feature_windows_chronological(
+    db: DBSession,
+    session_id: UUID,
+    participant_id: UUID,
+    *,
+    limit: int | None = None,
+    newest_first: bool = False,
+) -> list:
+    """참가자의 EEGFeatureWindow 를 **created_at 기준** 시간순으로 조회한다.
+
+    개선 8(그룹 익명 집계): 개인 baseline(세션 초반 2분)과 최근 구간을 뽑으려면 실제 수신 순서가
+    필요하다. SDD-026 과 같은 이유로 window_index 정렬은 시간순이 아니다(pause/resume 시 0 부터
+    재시작). created_at 동률이면 window_index 로 안정 정렬한다.
+
+    - newest_first=True + limit=N → "최근 N개"(인덱스 + LIMIT 으로 전체 로딩 회피).
+    """
+    order = (
+        (EEGFeatureWindow.created_at.desc(), EEGFeatureWindow.window_index.desc())
+        if newest_first
+        else (EEGFeatureWindow.created_at.asc(), EEGFeatureWindow.window_index.asc())
+    )
+    q = (
+        db.query(EEGFeatureWindow)
+        .filter(
+            EEGFeatureWindow.session_id == session_id,
+            EEGFeatureWindow.participant_id == participant_id,
+        )
+        .order_by(*order)
+    )
+    if limit is not None:
+        q = q.limit(limit)
+    return q.all()
+
+
 def raw_chunks_in_range(
     db: DBSession,
     session_id: UUID,

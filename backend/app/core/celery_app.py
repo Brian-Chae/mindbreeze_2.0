@@ -12,6 +12,7 @@ celery_app = Celery(
         "app.tasks.report_task",
         "app.tasks.upgrade_narrative_cache",
         "app.tasks.outbox",
+        "app.tasks.reminder_task",
     ],
 )
 # 서사 캐시의 주기적 업그레이드는 upgrade_narrative_cache_cron.py가 cron에서 실행한다.
@@ -24,4 +25,6 @@ celery_app.conf.task_routes = {
 }
 celery_app.conf.beat_schedule = {
     'cleanup-data-exports': {'task': 'tasks.cleanup_data_exports', 'schedule': 60.0},
+    # SDD-097: 예약 클래스 리마인더 스윕 — ETA 유실/누락분을 주기적으로 보정한다.
+    'sweep-session-reminders': {'task': 'tasks.sweep_session_reminders', 'schedule': 300.0},
 }

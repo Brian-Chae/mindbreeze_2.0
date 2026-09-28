@@ -8,14 +8,18 @@ import {
   listSessionTemplates,
   saveSessionAsTemplate,
   type CreateSessionPayload,
+  type CuesheetStep,
   type LinkbandMode,
   type LocationType,
   type ParticipantMode,
   type SessionDto,
   type SessionType,
 } from '../../lib/api/session';
+import { normalizeCuesheet } from '../../lib/class/cuesheet';
+import { REMINDER_OFF_OPTION, REMINDER_ON_OPTIONS } from '../../lib/class/reminder';
 import AppShell from '../../components/layout/AppShell';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
+import { CuesheetEditor } from '../../components/session/CuesheetEditor';
 
 export default function SessionCreatePage() {
   const navigate = useNavigate();
@@ -29,6 +33,15 @@ export default function SessionCreatePage() {
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  // 개선 7: 진행 큐시트(타임라인 대본) — 단계별 라벨·목표시간(분)·메모
+  const [cuesheet, setCuesheet] = useState<CuesheetStep[]>([]);
+  // 개선 6: 예약 사전 안내(리마인더) 시점 — 기본 '하루 전'으로 켜 두어 회원이 잊지 않게 한다.
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>([1440]);
+  const toggleReminderOffset = (value: number): void => {
+    setReminderOffsets((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value].sort((a, b) => b - a),
+    );
+  };
   const [maxParticipants, setMaxParticipants] = useState(10);
   const [participants, setParticipants] = useState<SelectedParticipant[]>([]);
   const [createdSession, setCreatedSession] = useState<SessionDto | null>(null);
@@ -80,6 +93,8 @@ export default function SessionCreatePage() {
     setRecordVideo(tpl.record_video);
     setDurationMin(tpl.duration_min);
     setNotes(tpl.notes ?? '');
+    // 템플릿의 진행 큐시트도 불러온다(없으면 빈 타임라인).
+    setCuesheet(normalizeCuesheet(tpl.cuesheet));
     setTemplateHint(
       `템플릿 '${tpl.title || '제목 없음'}' 설정을 불러왔습니다. 일정과 제목을 확인한 뒤 생성하세요.`,
     );
@@ -103,6 +118,10 @@ export default function SessionCreatePage() {
         sfu_enabled: locationType === 'online' && participantMode === 'group',
         record_audio: recordAudio,
         record_video: recordVideo,
+        // 개선 7: 진행 큐시트 — 빈 라벨 등은 정규화 단계에서 걸러 서버 검증(422)을 피한다.
+        cuesheet: normalizeCuesheet(cuesheet),
+        // 개선 6: 예약 사전 안내 — 하루 전/1시간 전 시점(빈 배열이면 끔).
+        reminder_offsets: reminderOffsets,
       };
       const created = await createSession(payload);
 
@@ -320,6 +339,54 @@ export default function SessionCreatePage() {
               </select>
             </div>
 
+            {/* 개선 6: 예약 사전 안내(리마인더) — 참여코드·준비물·시작시간을 자동 공지 */}
+            <div className="rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] px-4 py-3">
+              <p className="text-sm font-semibold text-[#5F0080]">예약 사전 안내 (리마인더)</p>
+              <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
+                예약된 클래스 시작 전에 참여코드·준비물·브라우저 안내를 회원에게 자동으로 보냅니다.
+                회원 홈·앱 알림과 이메일로 도착합니다.
+              </p>
+              <div className="flex flex-wrap gap-2" data-testid="reminder-options">
+                <button
+                  type="button"
+                  aria-pressed={reminderOffsets.length === 0}
+                  onClick={() => setReminderOffsets([])}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                    reminderOffsets.length === 0
+                      ? 'bg-[#5F0080] text-white border-[#5F0080]'
+                      : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
+                  }`}
+                >
+                  {REMINDER_OFF_OPTION.label}
+                </button>
+                {REMINDER_ON_OPTIONS.map((opt) => {
+                  const active = reminderOffsets.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleReminderOffset(opt.value)}
+                      className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                        active
+                          ? 'bg-[#5F0080] text-white border-[#5F0080]'
+                          : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-[#6F6F6F]">
+                {reminderOffsets.length === 0
+                  ? '사전 안내를 보내지 않습니다.'
+                  : `${reminderOffsets
+                      .map((v) => REMINDER_ON_OPTIONS.find((o) => o.value === v)?.label ?? `${v}분 전`)
+                      .join(' · ')}에 안내합니다.`}
+              </p>
+            </div>
+
             <div className="rounded-xl border border-[#E6E1DA] bg-[#FAF9F7] px-4 py-3">
               <p className="text-sm font-semibold text-[#1F1F1F]">AI 클래스 분석</p>
               <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
@@ -394,6 +461,13 @@ export default function SessionCreatePage() {
               <label className={labelCls}>메모</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
             </div>
+
+            {/* 개선 7: 진행 큐시트 — 단계별 타임라인(라벨·목표시간·메모) */}
+            <CuesheetEditor
+              value={cuesheet}
+              onChange={setCuesheet}
+              classDurationMin={durationMin}
+            />
 
             <ParticipantPicker selected={participants} onChange={setParticipants} maxParticipants={pickerMax} />
 

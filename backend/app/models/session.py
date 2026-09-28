@@ -5,7 +5,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -50,6 +50,14 @@ class Session(Base):
     duration_min: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str | None] = mapped_column(String(200))
     notes: Mapped[str | None] = mapped_column(Text)
+    # 진행 큐시트(타임라인 대본) — 상담사가 명상/상담 흐름을 단계별로 미리 적어 두는 대본.
+    # 구조: [{"label": "도입 호흡", "duration_min": 5, "note": "4-7-8 호흡"}, ...]
+    # 목표 시간(duration_min)은 단계별 분(min)이며, 시작 시각 기준 누적 오프셋은
+    # 서버가 아니라 프론트(플레이어)가 계산한다(진행 위치는 세션 started_at 파생값).
+    # 미작성 시 빈 배열 — 프론트는 빈 배열이면 큐시트 패널을 숨긴다.
+    cuesheet: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
     max_participants: Mapped[int] = mapped_column(Integer, default=1)
     # 진행 형태 설정
     location_type: Mapped[str] = mapped_column(String(20), nullable=False, default="offline")  # online, offline
@@ -69,6 +77,12 @@ class Session(Base):
     # is_template=True 인 행은 실제 진행 대상이 아니다: 일정·참여코드·채팅방이 없고 일반 클래스
     # 목록에서 제외된다. 복제(duplicate) 산출물은 항상 is_template=False 인 실제 클래스다.
     is_template: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 목록 — 시작 시각 기준 N분 전 정수 목록.
+    # 예: [1440, 60] = 24시간 전·1시간 전. 빈 목록("[]") = 리마인더 끔.
+    # 일정(scheduled_at) 없는 즉석 클래스에서는 예약 시점이 없어 발송되지 않는다.
+    reminder_offsets: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
@@ -115,3 +129,35 @@ class SessionParticipant(Base):
     speaking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     session = relationship("Session", back_populates="participants")
+
+
+class SessionReminderLog(Base):
+    """SDD-097: 리마인더 발송 로그 — (세션, 시점, 수신자, 채널) 단위로 중복 발송을 막는다.
+
+    예약 클래스의 사전 안내는 ETA 태스크로 T-24h/T-1h 등에 발송되는데, 워커 재시도·스윕
+    폴백으로 같은 시점이 두 번 실행될 수 있다. 이 로그에 이미 기록된 (session, offset,
+    user, channel) 조합은 재발송하지 않는다.
+    """
+
+    __tablename__ = "session_reminder_logs"
+    __table_args__ = (
+        UniqueConstraint(
+            "session_id", "offset_min", "user_id", "channel",
+            name="uq_session_reminder_delivery",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    # 수신자 회원. 게스트(비회원)는 발송 대상이 아니므로 nullable 로 둔다.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+    # 리마인더 시점(시작 N분 전). scheduled_at - offset_min 이 발송 예정 시각.
+    offset_min: Mapped[int] = mapped_column(Integer, nullable=False)
+    channel: Mapped[str] = mapped_column(String(10), nullable=False)  # email | ws
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="sent")  # sent | failed
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

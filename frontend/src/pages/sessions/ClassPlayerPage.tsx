@@ -43,6 +43,7 @@ import {
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
 import type {
+  ClassAggregateEventHandler,
   ClassSignalEvent,
   DeviceStatusChangedEvent,
   ParticipantChangedEvent,
@@ -69,6 +70,11 @@ import { SessionHostVideoView } from '../../components/session/SessionHostVideoV
 import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
 // 개선 5: 무음 시그널 — 상단 집계 카운트(조용한 표시)
 import { QuietSignalSummary } from '../../components/session/QuietSignalSummary';
+// 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 상단 단일 게이지
+import { GroupAggregateGauge } from '../../components/session/GroupAggregateGauge';
+import { type ClassAggregateEvent } from '../../lib/class/group-aggregate';
+// 개선 7: 진행 큐시트 — 상담사 플레이어의 현재 단계 하이라이트·남은 시간 진행바
+import { CuesheetPanel } from '../../components/class/CuesheetPanel';
 import {
   countSignals,
   isClassSignalType,
@@ -525,6 +531,27 @@ export default function ClassPlayerPage() {
     [quietSignals],
   );
 
+  // ── 개선 8: 그룹 익명 집계(적응형 페이싱) ─────────────────────────
+  // 상담사에게만 오는 집계(개인 점수 없음)를 그대로 게이지에 반영한다 — 가공·재계산하지 않는다.
+  // 세션 id 를 함께 보관해, 세션이 바뀌면 이전 세션의 집계를 렌더하지 않는다
+  // (효과에서 상태를 되돌리는 대신 파생값으로 처리 — 불필요한 리렌더·연쇄 렌더 회피).
+  const [aggregatePayload, setAggregatePayload] = useState<{
+    sessionId: string;
+    event: ClassAggregateEvent;
+  } | null>(null);
+
+  const handleClassAggregate = useCallback<ClassAggregateEventHandler>(
+    (event) => {
+      if (!id) return;
+      if (event.session_id && event.session_id !== id) return;
+      setAggregatePayload({ sessionId: id, event });
+    },
+    [id],
+  );
+
+  const groupAggregate =
+    aggregatePayload && aggregatePayload.sessionId === id ? aggregatePayload.event : null;
+
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
@@ -536,6 +563,7 @@ export default function ClassPlayerPage() {
     onDeviceStatusChanged: handleDeviceStatus,
     onSpeakingChanged: handleSpeakingChanged,
     onClassSignal: handleQuietSignal,
+    onClassAggregate: handleClassAggregate,
   });
 
   const refreshSession = useCallback(async (): Promise<void> => {
@@ -1351,6 +1379,12 @@ export default function ClassPlayerPage() {
       </header>
 
       <div className="mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
+        {/* 개선 8: 그룹 익명 집계 게이지 — 상담사 전용. 개인 점수·순위 없이 그룹 전반 상태만
+            단일 게이지로 보여주고, 착용자가 부족하면 흐리게(표본 적음) 표시한다. */}
+        {isHost && (isLobby || isRunning) && (
+          <GroupAggregateGauge aggregate={groupAggregate} />
+        )}
+
         {/* ① 세팅 씬 — ready/scheduled: 미디어 프리뷰 + [클래스 오픈] */}
         {isSetup && isHost && (
           <>
@@ -1458,6 +1492,12 @@ export default function ClassPlayerPage() {
                 </div>
               )}
               {hostStatusPanel}
+              {/* 개선 7: 진행 큐시트 — 상담사 전용(현재 단계 하이라이트·남은 시간) */}
+              <CuesheetPanel
+                cuesheet={session.cuesheet}
+                elapsedSec={classElapsedSec}
+                paused={status === 'paused'}
+              />
             </div>
             <div className="min-w-0">{monitorPanel}</div>
           </div>

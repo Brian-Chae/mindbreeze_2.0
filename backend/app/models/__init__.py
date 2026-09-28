@@ -1,7 +1,7 @@
 """SQLAlchemy Models — All"""
 
 from app.models.user import User
-from app.models.session import Session, SessionParticipant
+from app.models.session import Session, SessionParticipant, SessionReminderLog
 from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.credential import Credential, VerificationAudit
@@ -38,6 +38,7 @@ __all__ = [
     "User",
     "Session",
     "SessionParticipant",
+    "SessionReminderLog",
     "SessionRecord",
     "EEGRecord",
     "EEGRawChunk",

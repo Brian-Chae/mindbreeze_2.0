@@ -12,6 +12,10 @@ import type {
 import type { LeadOffStatus } from './eeg/types/eeg';
 import type { SignalQualityLevel } from './session-live/signal-status';
 import { CLASS_SIGNAL_EVENT, type ClassSignalCounts, type ClassSignalType } from './class/quiet-signal';
+import {
+  CLASS_AGGREGATE_EVENT,
+  type ClassAggregateEvent,
+} from './class/group-aggregate';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -188,6 +192,13 @@ export interface ClassSignalEmit {
 }
 
 export type ClassSignalHandler = (event: ClassSignalEvent) => void;
+
+/**
+ * 개선 8: 그룹 익명 집계 상태 지표 — 상담사 화면 단일 게이지의 근거.
+ * 개인 점수·순위·식별자는 담기지 않으며 상담사(호스트)에게만 발행된다.
+ * 타입·표시 규칙은 `lib/class/group-aggregate` 가 단일 출처다.
+ */
+export type ClassAggregateEventHandler = (event: ClassAggregateEvent) => void;
 
 /** 서버 → 클라이언트: room broadcast `eeg_feature` */
 export interface SessionLiveEegFeatureEvent {
@@ -400,6 +411,20 @@ export const subscribeClassSignal = (
   socket.on(CLASS_SIGNAL_EVENT, handler);
   return () => {
     socket.off(CLASS_SIGNAL_EVENT, handler);
+  };
+};
+
+/**
+ * 개선 8: `class:aggregate` 구독 — 상담사(호스트) 전용 그룹 익명 집계.
+ * 서버가 호스트 룸/상담사 소켓으로만 발행하므로 회원 화면에는 전달되지 않는다.
+ */
+export const subscribeClassAggregate = (
+  socket: Socket,
+  handler: ClassAggregateEventHandler,
+): (() => void) => {
+  socket.on(CLASS_AGGREGATE_EVENT, handler);
+  return () => {
+    socket.off(CLASS_AGGREGATE_EVENT, handler);
   };
 };
 

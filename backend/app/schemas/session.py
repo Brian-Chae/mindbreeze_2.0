@@ -6,7 +6,7 @@ from uuid import UUID
 
 from app.schemas.eeg import HRVMotionFeatures
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 SessionType = Literal["clinical", "hypnosis", "meditation", "custom"]
 # SDD-015: 일정 없는 즉석 클래스의 대기 상태 "ready" 추가 (기존 "scheduled" 유지)
@@ -15,6 +15,18 @@ SessionStatus = Literal["ready", "scheduled", "open", "in_progress", "paused", "
 LocationType = Literal["online", "offline"]
 ParticipantMode = Literal["one_on_one", "group"]
 LinkbandMode = Literal["none", "required", "optional"]
+
+# 진행 큐시트(타임라인 대본) 단계 — 라벨·목표 시간(분)·메모.
+# 회원 화면에는 노출하지 않고 상담사 플레이어의 단계 진행 표시에만 쓴다.
+CUESHEET_MAX_STEPS = 30
+
+
+class CuesheetStep(BaseModel):
+    """큐시트 한 단계 — 예: {"label": "바디스캔", "duration_min": 15, "note": "발끝→머리"}"""
+
+    label: str = Field(..., min_length=1, max_length=80)
+    duration_min: int = Field(..., ge=1, le=600)
+    note: str | None = Field(None, max_length=500)
 
 
 class SessionCreateRequest(BaseModel):
@@ -37,6 +49,21 @@ class SessionCreateRequest(BaseModel):
     force: bool = False
     # SDD-095: 템플릿으로 저장 — true 면 일정·참여자·코드 없이 설정만 보관한다.
     is_template: bool = False
+    # 진행 큐시트(타임라인 대본) — 단계별 라벨·목표시간(분)·메모. 미작성 시 빈 배열.
+    cuesheet: list[CuesheetStep] = Field(default_factory=list, max_length=CUESHEET_MAX_STEPS)
+    # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록(예: [1440, 60]).
+    # 빈 배열([])이면 끔. 일정 없는 즉시 클래스에서는 저장만 되고 발송되지 않는다.
+    reminder_offsets: list[int] = Field(default_factory=list)
+
+    @field_validator("reminder_offsets")
+    @classmethod
+    def _normalize_reminder_offsets(cls, value: list[int]) -> list[int]:
+        # 5분~14일 범위만 허용하고, 중복 제거 후 큰 간격(이른 안내) 우선으로 정렬한다.
+        cleaned = {
+            int(v) for v in (value or [])
+            if isinstance(v, int) and 5 <= v <= 60 * 24 * 14
+        }
+        return sorted(cleaned, reverse=True)[:5]
 
     @model_validator(mode="after")
     def _validate_custom_type(self) -> "SessionCreateRequest":
@@ -74,6 +101,21 @@ class SessionUpdateRequest(BaseModel):
     # 클래스 실시간 채팅 on/off — host 상담사만 변경 가능(세션 채팅방은 자동 개설 유지)
     chat_enabled: bool | None = None
     force: bool = False
+    # 진행 큐시트(타임라인 대본) — 주어졌을 때만 통째 교체한다(None 이면 기존 유지).
+    cuesheet: list[CuesheetStep] | None = Field(None, max_length=CUESHEET_MAX_STEPS)
+    # SDD-097: 리마인더 시점 재설정 — 주어졌을 때만 교체하고 ETA 를 다시 예약한다(None 이면 기존 유지).
+    reminder_offsets: list[int] | None = None
+
+    @field_validator("reminder_offsets")
+    @classmethod
+    def _normalize_reminder_offsets(cls, value: list[int] | None) -> list[int] | None:
+        if value is None:
+            return None
+        cleaned = {
+            int(v) for v in value
+            if isinstance(v, int) and 5 <= v <= 60 * 24 * 14
+        }
+        return sorted(cleaned, reverse=True)[:5]
 
     @model_validator(mode="after")
     def _validate_online_group_capacity(self) -> "SessionUpdateRequest":
@@ -128,6 +170,8 @@ class SessionResponse(BaseModel):
     duration_min: int
     title: str | None = None
     notes: str | None = None
+    # 진행 큐시트(타임라인 대본) — 상담사 플레이어의 단계 진행 표시용. 회원 화면에는 미노출.
+    cuesheet: list[CuesheetStep] = []
     max_participants: int
     location_type: LocationType
     participant_mode: ParticipantMode
@@ -141,6 +185,8 @@ class SessionResponse(BaseModel):
     chat_room_id: str | None = None
     # SDD-095: 클래스 템플릿 여부 — true 면 실제 진행 대상이 아니라 "유형 설정 저장본"이다.
     is_template: bool = False
+    # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록. 빈 배열이면 끔.
+    reminder_offsets: list[int] = []
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0

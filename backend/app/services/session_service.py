@@ -14,7 +14,7 @@ from app.models.user import User
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
-from app.services import code_service, eeg_query
+from app.services import code_service, eeg_query, reminder_service as _reminder_service
 
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
@@ -66,6 +66,8 @@ def _serialize(s: Session) -> dict:
         "duration_min": s.duration_min,
         "title": s.title,
         "notes": s.notes,
+        # 진행 큐시트(타임라인 대본) — 미작성(마이그레이션 이전 행)은 빈 배열로 내린다.
+        "cuesheet": s.cuesheet or [],
         "max_participants": s.max_participants,
         "location_type": s.location_type,
         "participant_mode": s.participant_mode,
@@ -78,6 +80,8 @@ def _serialize(s: Session) -> dict:
         "chat_enabled": s.chat_enabled,
         # SDD-095: 클래스 템플릿 여부 — 프론트가 "템플릿에서 시작·복제" UI 를 게이트한다
         "is_template": bool(s.is_template),
+        # SDD-097: 예약 사전 안내(리마인더) 시점 목록 — 회원 홈 카드/상담사 폼 표시용
+        "reminder_offsets": list(s.reminder_offsets or []),
         "created_at": s.created_at or _now(),
         "participants": [
             {
@@ -209,6 +213,29 @@ def detect_conflict(
     return None
 
 
+def _cuesheet_steps(payload) -> list[dict]:
+    """생성/수정 payload 의 큐시트 단계를 JSONB 저장용 dict 목록으로 바꾼다.
+
+    CuesheetStep.model_dump() 로 라벨·목표시간(분)·메모만 남긴다(미작성 시 빈 목록).
+    """
+    steps = getattr(payload, "cuesheet", None) or []
+    return [step.model_dump() for step in steps]
+
+
+def _copy_cuesheet(value: list | None) -> list[dict]:
+    """복제/템플릿 저장 시 큐시트 단계를 원본과 분리된 dict 사본으로 옮긴다.
+
+    JSONB 값은 dict 참조를 공유하면 한쪽 수정이 다른 행에 새어나갈 수 있으므로
+    단계마다 얕은 복사본을 만든다(중첩 없는 평면 구조).
+    """
+    return [dict(step) for step in (value or [])]
+
+
+def normalize_reminder_offsets(value) -> list[int]:
+    """SDD-097: 리마인더 시점 정규화 — reminder_service 규칙 재사용(단일 진실)."""
+    return _reminder_service.normalize_reminder_offsets(value)
+
+
 def create_session(host_id: str, payload, db: DBSession) -> dict:
     host_uuid = _to_uuid(host_id)
     from app.services.org_management_service import require_active_user_org
@@ -262,6 +289,9 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
+        cuesheet=_cuesheet_steps(payload),
+        # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록.
+        reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=max_p,
         location_type=payload.location_type,
         participant_mode=payload.participant_mode,
@@ -302,6 +332,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         body=session.title or "세션",
     )
 
+    # SDD-097: 예약 클래스면 리마인더를 ETA 태스크로 예약한다(끔이면 아무것도 안 함).
+    if scheduled_at is not None:
+        _reminder_service.schedule_session_reminders(session, db)
+
     return _with_chat_room(_serialize(session), session.id, db)
 
 
@@ -324,6 +358,8 @@ _COPYABLE_CONFIG_FIELDS = (
     "record_audio",
     "record_video",
     "chat_enabled",
+    # SDD-097: 리마인더 시점도 유형 설정으로 함께 복사/템플릿화한다(일정만 새로 정한다).
+    "reminder_offsets",
 )
 
 
@@ -355,6 +391,8 @@ def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
+        cuesheet=_cuesheet_steps(payload),
+        reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=_normalized_max_participants(payload.type, payload.max_participants),
         location_type=payload.location_type,
         participant_mode=payload.participant_mode,
@@ -410,6 +448,7 @@ def _clone_session_config(
         access_code=None if is_template else generate_access_code(db),
         title=title,
         notes=source.notes,
+        cuesheet=_copy_cuesheet(source.cuesheet),
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
@@ -469,6 +508,9 @@ def duplicate_session(
 
     # 복제본도 실제 클래스이므로 채팅방을 개설한다(생성 경로와 동일한 멱등 개설).
     ensure_session_chat_room(clone.id, db)
+    # SDD-097: 복제본에 새 일정이 있으면 리마인더도 새 일정 기준으로 예약한다.
+    if new_scheduled_at is not None:
+        _reminder_service.schedule_session_reminders(clone, db)
     return _with_chat_room(_serialize(clone), clone.id, db)
 
 
@@ -608,6 +650,9 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.title = payload.title
     if payload.notes is not None:
         s.notes = payload.notes
+    # 진행 큐시트 — 주어졌을 때만 통째 교체(빈 배열이면 큐시트 삭제).
+    if payload.cuesheet is not None:
+        s.cuesheet = _cuesheet_steps(payload)
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
     if payload.type is not None:
@@ -636,8 +681,19 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         if not s.webrtc_room_id:
             s.webrtc_room_id = uuid.uuid4()
 
+    # SDD-097: 리마인더 시점 재설정 — 주어졌을 때만 교체.
+    reminders_changed = False
+    if getattr(payload, "reminder_offsets", None) is not None:
+        s.reminder_offsets = normalize_reminder_offsets(payload.reminder_offsets)
+        reminders_changed = True
+
     db.commit()
     db.refresh(s)
+
+    # SDD-097: 일정 또는 리마인더 시점이 바뀌면 ETA 태스크를 다시 예약한다.
+    # (이미 지난 시점은 예약되지 않고, 발송 로그가 중복 발송을 막는다.)
+    if reminders_changed or payload.scheduled_at is not None:
+        _reminder_service.schedule_session_reminders(s, db)
 
     # SDD-093: S02 세션 변경 알림
     _notify_participants_event(

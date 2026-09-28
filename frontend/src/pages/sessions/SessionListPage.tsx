@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { listSessions, createSession, type SessionDto, type SessionType, type CreateSessionPayload } from '../../lib/api/session';
+import { REMINDER_OFF_OPTION, REMINDER_ON_OPTIONS } from '../../lib/class/reminder';
 import { SessionListTable } from '../../components/session/SessionListTable';
 import { CalendarView } from '../../components/session/CalendarView';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
@@ -50,6 +51,13 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [notes, setNotes] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(10);
   const [force, setForce] = useState(false);
+  // 개선 6: 예약 사전 안내(리마인더) 시점 — 예약 시각이 있는 클래스에만 발송된다.
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>([1440]);
+  const toggleReminderOffset = (value: number): void => {
+    setReminderOffsets((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value].sort((a, b) => b - a),
+    );
+  };
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(true);
@@ -72,6 +80,8 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
         notes: combinedNotes || undefined,
         max_participants: maxParticipants,
         force,
+        // 개선 6: 예약 사전 안내 — 하루 전/1시간 전 시점(빈 배열이면 끔).
+        reminder_offsets: reminderOffsets,
       };
       await createSession(payload);
       onCreated();
@@ -92,6 +102,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
     setNotes('');
     setMaxParticipants(1);
     setForce(false);
+    setReminderOffsets([1440]);
     setIsOnline(true);
     onClose();
   };
@@ -419,6 +430,45 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           <div>
             <label className={labelCls}>설명</label>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} placeholder="세션에 대한 설명을 입력하세요" />
+          </div>
+          {/* 개선 6: 예약 사전 안내(리마인더) — 시작 전 참여코드·준비물·브라우저 안내 자동 발송 */}
+          <div className="rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] px-4 py-3">
+            <p className="text-sm font-semibold text-[#5F0080]">예약 사전 안내 (리마인더)</p>
+            <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
+              예약 시각 기준으로 회원에게 참여코드·준비물·브라우저 안내를 자동 발송합니다.
+            </p>
+            <div className="flex flex-wrap gap-2" data-testid="reminder-options">
+              <button
+                type="button"
+                aria-pressed={reminderOffsets.length === 0}
+                onClick={() => setReminderOffsets([])}
+                className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                  reminderOffsets.length === 0
+                    ? 'bg-[#5F0080] text-white border-[#5F0080]'
+                    : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
+                }`}
+              >
+                {REMINDER_OFF_OPTION.label}
+              </button>
+              {REMINDER_ON_OPTIONS.map((opt) => {
+                const active = reminderOffsets.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleReminderOffset(opt.value)}
+                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                      active
+                        ? 'bg-[#5F0080] text-white border-[#5F0080]'
+                        : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <label className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]">
             <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />

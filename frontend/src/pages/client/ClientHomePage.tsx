@@ -5,6 +5,11 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
+import {
+  describeReminderOffsets,
+  formatCountdown,
+  pickUpcomingClass,
+} from '../../lib/class/reminder';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 import { resolveReportGenerationStatus } from '../../lib/api/report-status';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
@@ -116,6 +121,9 @@ export default function ClientHomePage() {
   );
   const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
   const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
+
+  // SDD-097: 다가오는 클래스 — 아직 시작하지 않은 가장 임박한 예약 1건(사전 안내 카드용).
+  const upcomingClass = useMemo(() => pickUpcomingClass(filteredSessions), [filteredSessions]);
 
   // SDD-095: 생성 진행 중인 리포트 — 홈 배지('리포트 생성 중')에 쓴다.
   const processingReportCount = useMemo(
@@ -235,6 +243,67 @@ export default function ClientHomePage() {
         <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>
       ) : (
         <>
+          {/* SDD-097: 다가오는 클래스 — 참여코드·준비물·시작시간을 홈에서 놓치지 않게 */}
+          {upcomingClass && (
+            <section
+              className="bg-[#F5EDFC] border border-[#DDD0EA] rounded-2xl p-[22px] mb-6"
+              data-testid="upcoming-class-card"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3">
+                <div className={CARD_TITLE_CLS}>다가오는 클래스</div>
+                <div className={CARD_SUBTITLE_CLS}>
+                  {formatCountdown(upcomingClass.scheduled_at)}
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#1F1F1F] truncate">
+                    {upcomingClass.title || '클래스'}
+                  </p>
+                  <p className="text-[13px] text-[#4A3B5F] mt-1">
+                    {formatDate(upcomingClass.scheduled_at)}{' '}
+                    {upcomingClass.scheduled_at
+                      ? new Date(upcomingClass.scheduled_at).toLocaleTimeString('ko-KR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : ''}
+                    {getCounselorName(upcomingClass) ? ` · ${getCounselorName(upcomingClass)}` : ''}
+                  </p>
+                  <ul className="mt-2 text-[12px] text-[#6F6F6F] space-y-0.5">
+                    <li>· 조용한 공간과 헤드셋(마이크 포함)을 준비해 주세요</li>
+                    <li>· Chrome/Edge 권장 (Safari·Firefox는 LINK BAND 미지원)</li>
+                  </ul>
+                  {upcomingClass.reminder_offsets && upcomingClass.reminder_offsets.length > 0 && (
+                    <p
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#5F0080]"
+                      data-testid="upcoming-reminder-info"
+                    >
+                      사전 안내 {describeReminderOffsets(upcomingClass.reminder_offsets)} 자동 발송
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
+                  {upcomingClass.access_code && (
+                    <div className="rounded-xl bg-white border border-[#DDD0EA] px-3 py-2 text-center">
+                      <div className="text-[10px] text-[#6F6F6F] mb-0.5">참여코드</div>
+                      <div className="font-mono text-lg font-black tracking-[0.14em] text-[#5F0080]">
+                        {upcomingClass.access_code}
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/app/sessions/${upcomingClass.id}`)}
+                    className="mb-btn text-sm"
+                  >
+                    클래스 확인
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
           {instantSessions.length > 0 && (
             <section className={`${CARD_CLS} mb-6`}>
               <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3.5">
