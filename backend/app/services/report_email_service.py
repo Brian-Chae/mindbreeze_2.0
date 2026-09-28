@@ -12,6 +12,7 @@ from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import Report
 from app.models.user import User
+from app.services import record_service
 from app.services.report_service import _serialize
 from app.services.email_verify_service import verify_email_token
 from app.tasks.email import send_report_email
@@ -258,7 +259,14 @@ def get_report_view_content(token: str, db: DBSession) -> dict:
     session = db.query(Session).filter(Session.id == session_id).first()
     if not session:
         raise HTTPException(403, "리포트 접근 권한이 없습니다")
-    return _serialize(report, session, report_email=participant.report_email)
+    return _serialize(
+        report,
+        session,
+        report_email=participant.report_email,
+        subjective=record_service.resolve_subjective_state(
+            report.session_id, report.participant_id, db
+        ),
+    )
 
 
 def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:

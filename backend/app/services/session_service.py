@@ -1411,6 +1411,84 @@ def _notify_speaking_changed(sid: UUID, participant: SessionParticipant) -> None
 
 
 # ---------------------------------------------------------------------------
+# 개선 5: 무음 시그널(비언어적 상태 신호) — 발신자 검증
+# ---------------------------------------------------------------------------
+
+# 상태 신호 유형 — "잘 따라가요 / 조금 어려워요 / 잠시 쉴게요"
+QUIET_SIGNAL_TYPES: tuple[str, ...] = ("following", "difficult", "resting")
+
+# 시그널을 받을 수 있는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
+QUIET_SIGNAL_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+
+
+def resolve_signal_sender(
+    session_id: str,
+    participant_id: str | None,
+    current_user_id: str | None,
+    db: DBSession,
+) -> dict:
+    """무음 시그널 발신자를 검증한다 (SDD-026 소유 검증 규칙 재사용, EEG 동의와 무관).
+
+    - 인증 사용자: 본인 참가자 행으로만 발신. participant_id 를 명시하면 반드시
+      본인 소유여야 한다 → 타인 participant_id 대리 발신 차단(403).
+    - 미인증(게스트): participant_id 로만 식별하되 반드시 게스트 행(user_id IS NULL)이어야
+      한다 → 로그인 회원 참가자 사칭 차단(403).
+    - 세션 없음 404 / 비참가자·미식별 403.
+
+    반환: {"participant_id": str, "display_name": str, "status": str}
+    (상태 신호는 DB 에 저장하지 않는 휘발성 값이다 — 호스트 화면 표시용 메타만 만든다.)
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    participant: SessionParticipant | None = None
+    if current_user_id:
+        uid = _to_uuid(current_user_id)
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        # 명시 participant_id 는 반드시 본인 참가자와 일치해야 한다(대리 발신 방지)
+        if participant_id and (
+            participant is None or participant.id != _to_uuid(participant_id)
+        ):
+            raise HTTPException(status_code=403, detail="본인 참가자로만 신호를 보낼 수 있습니다")
+    elif participant_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(participant_id),
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id.is_(None),  # 게스트만 (회원 사칭 차단)
+            )
+            .first()
+        )
+
+    if participant is None:
+        raise HTTPException(status_code=403, detail="세션 참가자만 신호를 보낼 수 있습니다")
+
+    display_name = participant.guest_name
+    if participant.user_id is not None:
+        from app.models.user import User
+
+        user = db.query(User).filter(User.id == participant.user_id).first()
+        if user is not None and user.name:
+            display_name = user.name
+
+    return {
+        "participant_id": str(participant.id),
+        "display_name": display_name or "익명",
+        "status": s.status,
+    }
+
+
+# ---------------------------------------------------------------------------
 # SDD-021: 클래스 시작 프로세스 1.0 패리티
 # ---------------------------------------------------------------------------
 

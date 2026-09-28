@@ -1,4 +1,5 @@
-// 클래스 코드 참여 — code → details → waiting → meditation → complete (1.0 게스트 패리티)
+// 클래스 코드 참여 — code → details → lobby(입장 전 대기실·기기 셀프체크) → waiting → meditation → complete
+// (1.0 게스트 패리티 + 개선 3 대기실)
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -11,13 +12,19 @@ import {
 } from '../lib/api/session';
 import { useAuthStore } from '../stores/authStore';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
+// 개선 3: 코드 확인 직후 대기실에서 닉네임·기기·주변을 확인한 뒤 라이브로 들어간다
+import {
+  ClassWaitingRoom,
+  type ClassWaitingRoomEnterPayload,
+} from '../components/class/ClassWaitingRoom';
+import { clearStoredNickname } from '../lib/class/class-waiting-room';
 // SDD-088: waiting/meditation 렌더는 플레이어 씬 컴포넌트로 이전 (join 게이트는 이 페이지가 유지)
 import { MemberWaitingScene, type MemberWaitingStep } from '../components/player/MemberWaitingScene';
 import { MemberSessionScene } from '../components/player/MemberSessionScene';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 
-type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
+type JoinStep = 'code' | 'details' | 'lobby' | 'waiting' | 'meditation' | 'complete';
 /** waiting 내부 3단계 — Welcome → LINK BAND 착용 가이드 → 시작 대기 */
 type WaitingStep = MemberWaitingStep;
 
@@ -117,6 +124,8 @@ const ClassJoinPage: React.FC = () => {
   /** join 응답의 소유 증명 — 게스트 report-email 필수 */
   const [participantToken, setParticipantToken] = useState<string | null>(null);
   const [durationMin, setDurationMin] = useState(50);
+  // SDD-096: 세션 최신 EEG 두뇌휴식도 — 종료 화면이 주관 체크인과 병기한다(밴드 미착용이면 null)
+  const [relaxationIndex, setRelaxationIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   /** waiting 3단계: welcome → guide(착용 가이드) → wait(시작 대기) */
@@ -152,8 +161,8 @@ const ClassJoinPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryCode]);
 
-  // 대기·명상 중 화면 꺼짐 방지 (Wake Lock)
-  useWakeLock(step === 'waiting' || step === 'meditation');
+  // 대기·명상·입장 준비 중 화면 꺼짐 방지 (Wake Lock)
+  useWakeLock(step === 'lobby' || step === 'waiting' || step === 'meditation');
 
   // SDD-088: details 단계에서 아직 오픈 전이면 3초 폴링으로 오픈을 감지해 자동 활성화
   const sessionStatus = session?.status ?? null;
@@ -181,6 +190,20 @@ const ClassJoinPage: React.FC = () => {
   const handleGuideConfirm = useCallback(() => {
     setWaitingStep('wait');
   }, []);
+
+  /** 개선 3: 대기실 [입장] — 확정 닉네임을 반영하고 진행 중이면 바로 라이브로 들어간다 */
+  const handleWaitingRoomEnter = useCallback(
+    (payload: ClassWaitingRoomEnterPayload) => {
+      if (!isLoggedIn && payload.nickname) setGuestName(payload.nickname);
+      if (session?.status === 'in_progress') {
+        setStep('meditation');
+        return;
+      }
+      setWaitingStep('welcome');
+      setStep('waiting');
+    },
+    [isLoggedIn, session?.status],
+  );
 
   // waiting: 세션 상태 폴링 → in_progress 시 meditation으로 자동 전환
   useEffect(() => {
@@ -257,6 +280,9 @@ const ClassJoinPage: React.FC = () => {
         if (participantId) {
           try {
             const state = await getSessionByCodeState(code, participantId);
+            if (typeof state.relaxation_index === 'number') {
+              setRelaxationIndex(state.relaxation_index);
+            }
             if (state.status === 'completed' || state.guest_state === 'complete') {
               setStep('complete');
               return;
@@ -347,18 +373,17 @@ const ClassJoinPage: React.FC = () => {
       if (joined.session.duration_min > 0) {
         setDurationMin(joined.session.duration_min);
       }
-      // 이미 진행 중이면 바로 명상 화면
+      // 이미 진행 중이면 세션 상태만 반영한다 — 입장은 대기실 셀프체크(개선 3)를 거친 뒤 결정된다
       if (joined.session.status === 'in_progress' || session.status === 'in_progress') {
         setSession({
           ...session,
           status: 'in_progress',
           started_at: joined.session.started_at ?? session.started_at,
         });
-        setStep('meditation');
-      } else {
-        setWaitingStep('welcome');
-        setStep('waiting');
       }
+      // 코드 확인 직후 바로 라이브로 들어가지 않는다 — 대기실에서 닉네임·기기·주변을 확인한다
+      setWaitingStep('welcome');
+      setStep('lobby');
     } catch (joinError) {
       setError(errorMessage(joinError, '클래스 참여에 실패했습니다. 클래스 상태를 확인한 뒤 다시 시도해 주세요.'));
     } finally {
@@ -377,9 +402,12 @@ const ClassJoinPage: React.FC = () => {
     setParticipantId(null);
     setParticipantToken(null);
     setDurationMin(50);
+    setRelaxationIndex(null);
     setError(null);
     setWaitingStep('welcome');
     clearPersistedParticipant();
+    // 개선 3: 대기실에서 확정한 닉네임도 함께 정리 — 다음 참여는 입력 단계부터 시작한다
+    clearStoredNickname();
   };
 
   // 진행 씬 — 검정 풀블리드 immersive (SDD-029, SDD-088: 플레이어 씬으로 이전)
@@ -414,6 +442,24 @@ const ClassJoinPage: React.FC = () => {
         isLoggedIn={isLoggedIn}
         error={error}
         onReset={resetJoin}
+        relaxationIndex={relaxationIndex}
+      />
+    );
+  }
+
+  // 개선 3: 입장 전 대기실 — 닉네임 확정 + 기기·스피커·주변 셀프체크를 모두 확인해야 입장 가능
+  if (step === 'lobby' && session) {
+    return (
+      <ClassWaitingRoom
+        title={session.title}
+        classCode={code}
+        statusLabel={STATUS_LABELS[session.status]}
+        sessionId={session.id}
+        participantId={participantId}
+        memberName={isLoggedIn ? (user?.name ?? null) : null}
+        initialNickname={guestName}
+        onEnter={handleWaitingRoomEnter}
+        onLeave={resetJoin}
       />
     );
   }

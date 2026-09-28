@@ -394,6 +394,25 @@ function parseLegacyEeg(
 }
 
 /**
+ * SDD-096 — EEG 이완도(relaxation) 추이의 처음·마지막 유효값.
+ * 표본이 1개 이하이거나 모두 null 이면 null (추이를 가장하지 않는다).
+ */
+export function relaxationTrendFromTimeline(
+  points: readonly EegTimelinePoint[] | null | undefined,
+): { first: number; last: number } | null {
+  const values: number[] = [];
+  for (const point of points ?? []) {
+    const value = point?.relaxation;
+    if (typeof value === 'number' && Number.isFinite(value)) values.push(value);
+  }
+  if (values.length < 2) return null;
+  const first = values[0];
+  const last = values[values.length - 1];
+  if (first === undefined || last === undefined) return null;
+  return { first, last };
+}
+
+/**
  * 리포트 content → UI 단일 뷰.
  * @param reportType counselor=전체 지표, client=쉬운 라벨/상위 지표(컴포넌트에서 소비)
  */

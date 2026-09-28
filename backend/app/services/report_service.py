@@ -8,9 +8,9 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.client_profile import ClientProfile
-from app.models.record import Report
+from app.models.record import Report, SessionRecord
 from app.models.user import User
-from app.services import notification_service
+from app.services import notification_service, record_service
 from app.schemas.eeg import HRVMotionSummary
 
 
@@ -115,6 +115,7 @@ def _serialize(
     session: Session | None = None,
     report_email: str | None = None,
     participant_info: dict | None = None,
+    subjective: dict | None = None,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
     eeg = content.get("eeg")
@@ -134,6 +135,9 @@ def _serialize(
         "generation_status": report.generation_status or "pending",
         "data_credibility": report.data_credibility,
         "content": content,
+        # SDD-096: 셀프 체크인(주관 상태) 연계 — 내담자 리포트는 본인 슬롯(scope=participant),
+        # 상담사 리포트는 세션 전체(scope=session). 미입력이면 None(치환 금지).
+        "subjective_state": subjective,
         "pdf_url": report.pdf_url,
         "sent_at": report.sent_at,
         "is_read": bool(report.is_read),
@@ -148,6 +152,24 @@ def _serialize(
         "birth_date": participant_info.get("birth_date") if participant_info else None,
         "is_guest": participant_info.get("is_guest") if participant_info else None,
     }
+
+
+def _subjective_for_report(report: Report, db: DBSession) -> dict | None:
+    """SDD-096: 리포트에 연계할 주관 상태 — client 리포트는 본인 슬롯, 그 외는 세션 전체."""
+    if report.type == "client" and report.participant_id:
+        return record_service.resolve_subjective_state(report.session_id, report.participant_id, db)
+    record = (
+        db.query(SessionRecord).filter(SessionRecord.session_id == report.session_id).first()
+    )
+    return record_service.session_subjective_state(record)
+
+
+def _subjective_from_map(report: Report, records_map: dict) -> dict | None:
+    """목록 직렬화용 — 배치 조회한 레코드 맵에서 파생한다(N+1 방지)."""
+    record = records_map.get(report.session_id)
+    if report.type == "client" and report.participant_id:
+        return record_service.participant_subjective_state(record, report.participant_id)
+    return record_service.session_subjective_state(record)
 
 
 def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
@@ -217,7 +239,7 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
 
         ensure_auto_comment(report, db)
         return approve_report(str(report.id), host_id, db)
-    return _serialize(report, s)
+    return _serialize(report, s, subjective=_subjective_for_report(report, db))
 
 
 def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[dict]:
@@ -276,7 +298,9 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
             ensure_auto_comment(report, db)
             results.append(approve_report(str(report.id), str(s.host_id), db))
         else:
-            results.append(_serialize(report, s))
+            results.append(
+                _serialize(report, s, subjective=_subjective_for_report(report, db))
+            )
     return results
 
 
@@ -365,11 +389,17 @@ def list_reports(
             "is_guest": is_guest,
         }
 
+    # SDD-096: 주관 상태(셀프 체크인) — 배치 조회로 N+1 없이 파생한다.
+    records_map = record_service.subjective_state_map(
+        {report.session_id for report in items}, db
+    )
+
     result = [
         _serialize(
             report,
             sessions_map.get(report.session_id),
             participant_info=participant_info_map.get(report.participant_id),
+            subjective=_subjective_from_map(report, records_map),
         )
         for report in items
     ]
@@ -403,6 +433,7 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
         report,
         session,
         participant.report_email if participant else None,
+        subjective=_subjective_for_report(report, db),
     )
     # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
     # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
@@ -495,7 +526,7 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
         report.content = payload.content
     db.commit()
     db.refresh(report)
-    return _serialize(report, session)
+    return _serialize(report, session, subjective=_subjective_for_report(report, db))
 
 
 def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
@@ -544,4 +575,4 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     db.commit()
     db.refresh(report)
     # SDD-066: 수동/자동 승인 모두 메일을 예약하지 않는다. 발송은 별도 요청으로 처리한다.
-    return _serialize(report, session)
+    return _serialize(report, session, subjective=_subjective_for_report(report, db))

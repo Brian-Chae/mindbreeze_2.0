@@ -31,6 +31,13 @@ class SessionRecord(Base):
     video_s3_key: Mapped[str | None] = mapped_column(String(500))
     video_recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     video_recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # SDD-096: 세션 직후 1탭 셀프 체크인(주관 상태) — SAM 2축(각성·정서) 5단계 + 선택형 한 줄 소감.
+    # 구조: {"participants": {<participant_id>: {"before": <slot>|없음, "after": <slot>|없음,
+    #        "updated_at": iso}}, "updated_at": iso}
+    # slot = {"arousal": 1~5|None, "valence": 1~5|None, "note": str|None, "recorded_at": iso}
+    # 그룹 클래스에서 참여자별로 분리 저장한다(리포트에는 참여자 본인 슬롯만 노출).
+    # 미입력(스킵)이면 None — 빈 dict 로 치환하지 않는다.
+    subjective_state: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="record")

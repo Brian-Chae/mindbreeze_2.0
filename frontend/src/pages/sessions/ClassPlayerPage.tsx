@@ -27,6 +27,8 @@ import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useWakeLock } from '../../hooks/useWakeLock';
+// 개선 3: 대기실 인원 — 회원이 입장 전 준비(대기실)에 몇 명 있는지 실시간 표시
+import { useWaitingRoomCount } from '../../hooks/useWaitingRoomCount';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
@@ -41,6 +43,7 @@ import {
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
 import type {
+  ClassSignalEvent,
   DeviceStatusChangedEvent,
   ParticipantChangedEvent,
   SessionLiveEegFeatureEvent,
@@ -64,6 +67,16 @@ import {
 } from '../../components/session/SessionPreJoinPreview';
 import { SessionHostVideoView } from '../../components/session/SessionHostVideoView';
 import { SessionParticipantCardGrid } from '../../components/session/SessionParticipantCardGrid';
+// 개선 5: 무음 시그널 — 상단 집계 카운트(조용한 표시)
+import { QuietSignalSummary } from '../../components/session/QuietSignalSummary';
+import {
+  countSignals,
+  isClassSignalType,
+  pruneSignals,
+  recordSignal,
+  SIGNAL_ACTIVE_MS,
+  type ActiveSignal,
+} from '../../lib/class/quiet-signal';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ClassChatPanel } from '../../components/chat/ClassChatPanel';
@@ -483,6 +496,35 @@ export default function ClassPlayerPage() {
     }
   }, [id, chatEnabled]);
 
+  // ── 개선 5: 무음 시그널 ──────────────────────────────────────────
+  // 회원이 발언권 없이 보낸 상태 신호(휘발성)를 참여자별 최신 1건으로 보관한다.
+  // 카드 배지는 CSS 페이드(수 초)로 사라지고, 상단에는 유형별 집계만 남는다.
+  const [quietSignals, setQuietSignals] = useState<Record<string, ActiveSignal>>({});
+
+  const handleQuietSignal = useCallback(
+    (event: ClassSignalEvent) => {
+      if (!id || (event.session_id && event.session_id !== id)) return;
+      if (!event.participant_id || !isClassSignalType(event.signal_type)) return;
+      const at = Date.now();
+      setQuietSignals((prev) => recordSignal(prev, event.participant_id, event.signal_type, at));
+    },
+    [id],
+  );
+
+  // TTL(10초)이 지난 신호는 카드·집계에서 제거한다 — 변화가 없으면 상태 참조가 유지되어 리렌더가 없다.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setQuietSignals((prev) => pruneSignals(prev, Date.now(), SIGNAL_ACTIVE_MS));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  /** 상단 집계 — 활성(TTL 이내) 신호만 유형별로 센다 */
+  const quietSignalCounts = useMemo(
+    () => countSignals(quietSignals, Date.now(), SIGNAL_ACTIVE_MS),
+    [quietSignals],
+  );
+
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
@@ -493,6 +535,7 @@ export default function ClassPlayerPage() {
     onParticipantChanged: handleParticipantChanged,
     onDeviceStatusChanged: handleDeviceStatus,
     onSpeakingChanged: handleSpeakingChanged,
+    onClassSignal: handleQuietSignal,
   });
 
   const refreshSession = useCallback(async (): Promise<void> => {
@@ -553,6 +596,9 @@ export default function ClassPlayerPage() {
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
+
+  // 개선 3: 회원 대기실(입장 전 준비) 인원 — 대기실 씬에서만 구독한다
+  const waitingRoom = useWaitingRoomCount({ sessionId: id, enabled: Boolean(id && isLobby) });
 
   // SDD-095: 종료 씬(리포트 대기) 진행 스텝퍼 — 세션 종료 후에만 구독/REST 폴링한다.
   const reportProgress = useReportProgress(isEnded ? id ?? null : null);
@@ -1058,6 +1104,9 @@ export default function ClassPlayerPage() {
         </span>
       )}
 
+      {/* 개선 5: 무음 시그널 집계 — 유형별 카운트만 조용히(소리·팝업 없음, 0이면 미표시) */}
+      <QuietSignalSummary counts={quietSignalCounts} />
+
       {/* 밴드 스트리밍 상태 — 실시간 수신 중 인원 요약 */}
       {streamingCount > 0 ? (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#59CE9026] px-3 py-1.5 text-[12px] font-semibold text-[#2F9E68]">
@@ -1079,6 +1128,21 @@ export default function ClassPlayerPage() {
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F2212133] px-3 py-1.5 text-[12px] font-semibold text-[#F22121B2]">
           <span className="h-2 w-2 rounded-full bg-[#F22121]" />
           수신 끊김 {droppedCount}명
+        </span>
+      )}
+
+      {/* 개선 3: 대기실 인원 — 코드로 들어와 입장 전 준비(기기 셀프체크) 중인 회원 수 */}
+      {isLobby && (
+        <span
+          title={waitingRoom.nicknames.join(', ') || undefined}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#F5EDFC] px-3 py-1.5 text-[12px] font-semibold text-[#5F0080]"
+        >
+          <span
+            className={`h-2 w-2 rounded-full bg-[#5F0080] ${
+              waitingRoom.count > 0 ? 'animate-pulse' : 'opacity-40'
+            }`}
+          />
+          대기실 {waitingRoom.count}명 준비 중
         </span>
       )}
     </div>
@@ -1133,6 +1197,7 @@ export default function ClassPlayerPage() {
             filter={activeFilter}
             selectedId={selectedParticipantId}
             onSelect={handleSelectParticipant}
+            signals={quietSignals}
           />
         ) : (
           <SessionMonitorTable participants={displayMetrics} filter={activeFilter} />

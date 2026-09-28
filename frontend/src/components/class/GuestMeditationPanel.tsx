@@ -22,6 +22,7 @@ import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
+import { QuietSignalButtons } from './QuietSignalButtons';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -243,7 +244,8 @@ export function GuestMeditationPanel({
     [participantId, sessionId],
   );
 
-  useSessionLiveSocket({
+  // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
+  const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
@@ -507,6 +509,11 @@ export function GuestMeditationPanel({
               지표 차트는 LINK BAND 연결 후 표시됩니다
             </p>
           )}
+        </div>
+
+        {/* 개선 5: 무음 시그널 — 발언권과 독립. 소리·팝업 없이 상담사에게만 전달된다. */}
+        <div className="mt-6 w-full max-w-3xl">
+          <QuietSignalButtons onSend={liveSocket.sendSignal} />
         </div>
 
         {/* 밴드 연결 보조 (최소화) */}

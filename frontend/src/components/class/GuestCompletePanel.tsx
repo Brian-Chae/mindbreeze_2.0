@@ -7,6 +7,7 @@ import { ApiError } from '../../lib/api/client';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
 import { requestReportEmail } from '../../lib/api/session';
 import { InfiniteScrollingImages } from './InfiniteScrollingImages';
+import { SelfCheckinPanel } from './SelfCheckinPanel';
 
 type FormPhase = 'intro' | 'email' | 'otp' | 'success';
 
@@ -20,6 +21,8 @@ interface GuestCompletePanelProps {
   isLoggedIn: boolean;
   error: string | null;
   onReset: () => void;
+  /** SDD-096: 세션 EEG 두뇌휴식도 — 밴드 미착용이면 null(주관 값만 병기) */
+  relaxationIndex?: number | null;
 }
 
 function reportEmailErrorMessage(error: unknown): string {
@@ -46,6 +49,7 @@ export function GuestCompletePanel({
   isLoggedIn,
   error,
   onReset,
+  relaxationIndex = null,
 }: GuestCompletePanelProps) {
   const [phase, setPhase] = useState<FormPhase>('intro');
   const [email, setEmail] = useState(accountEmail ?? '');
@@ -144,6 +148,18 @@ export function GuestCompletePanel({
           </p>
           <div className="w-[4.5rem]" aria-hidden="true" />
         </header>
+
+        {/* SDD-096: 세션 직후 1탭 셀프 체크인 — 리포트 신청 단계와 무관하게 항상 노출되고,
+            리포트의 '수업 전 예상 ↔ 수업 후' 대비로 연계된다. */}
+        {sessionId && (
+          <SelfCheckinPanel
+            sessionId={sessionId}
+            participantId={participantId}
+            participantToken={participantToken}
+            isLoggedIn={isLoggedIn}
+            relaxationIndex={relaxationIndex}
+          />
+        )}
 
         {phase === 'success' ? (
           <section className="mt-16 text-center">

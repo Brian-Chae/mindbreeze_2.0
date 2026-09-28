@@ -15,18 +15,38 @@ SDD-026 P0 안전망:
 - join snapshot: status/state_version/started_at + (호스트)참가자 목록·집계 / (게스트)본인 상태.
 - 서버 내부 이벤트: session_state_changed / participant_changed / device_status_changed.
 
-클라이언트→서버: join(session_id[, participant_id]), leave(session_id), feature(data)
-서버→클라이언트: joined, join_denied, eeg_feature,
-                 session_state_changed, participant_changed, device_status_changed
+클라이언트→서버: join(session_id[, participant_id]), leave(session_id), feature(data),
+                 class:signal(data), waiting_room(data)   ← 개선 5 무음 시그널 / 개선 3 대기실
+서버→클라이언트: joined, join_denied, eeg_feature, class:signal(호스트 전용),
+                 session_state_changed, participant_changed, device_status_changed,
+                 waiting_room_changed(호스트 전용)  ← 개선 3 대기실 입장/퇴장
+
+개선 5(무음 시그널): 기본 뮤트 1:N 수업에서 회원이 발언권(손들기) 없이도 "잘 따라가요 /
+조금 어려워요 / 잠시 쉴게요"를 상담사에게만 조용히 전달한다. DB 에 저장하지 않는 휘발성
+상태이며 참여자당 최신 1건만 TTL(_QUIET_SIGNAL_TTL_SEC) 동안 집계에 남는다.
 """
 
 import asyncio
 import logging
-from datetime import datetime
+import time
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
 _NAMESPACE = "/session-live"
+
+# 개선 5: 무음 시그널 이벤트명(클라이언트→서버 emit / 서버→호스트 브로드캐스트 공용)
+QUIET_SIGNAL_EVENT = "class:signal"
+
+# 신호 유형 — "잘 따라가요 / 조금 어려워요 / 잠시 쉴게요"
+QUIET_SIGNAL_TYPES: tuple[str, ...] = ("following", "difficult", "resting")
+
+# 활성 신호 유지 시간(초) — 이 시간이 지난 신호는 집계에서 빠진다(카드 표시는 FE 가 더 짧게 처리)
+QUIET_SIGNAL_TTL_SEC = 10.0
+
+# 세션별 활성 신호: session_id(str) -> {participant_id(str): (signal_type, monotonic_ts)}
+# 참여자가 신호를 보낼 때마다 최신 1건으로 덮어쓴다(참여자당 1표 — 집계 왜곡 방지).
+_active_signals: dict[str, dict[str, tuple[str, float]]] = {}
 
 # sync(REST) 컨텍스트에서 async 브로드캐스트를 예약하기 위한 이벤트 루프 참조.
 # connect 핸들러(루프 안에서 실행)에서 캡처한다. 캡처 전(테스트 등)에는 None → 발행 생략.
@@ -73,6 +93,88 @@ def _room_host(session_id) -> str:
 def _room_self(session_id, participant_id) -> str:
     """참가자 본인 전용 룸"""
     return f"session:{session_id}:self:{participant_id}"
+
+
+# 개선 3: 대기실 닉네임 표시 상한 — 화면·툴팁에만 쓰이는 값이라 짧게 자른다.
+_WAITING_ROOM_NICKNAME_MAX = 20
+
+
+def _sanitize_nickname(value) -> str | None:
+    """대기실 표시용 닉네임을 정리한다(표시 전용 — 신원 판정에는 쓰지 않는다)."""
+    if not isinstance(value, str):
+        return None
+    cleaned = " ".join(value.split())[:_WAITING_ROOM_NICKNAME_MAX]
+    return cleaned or None
+
+
+# ---------------------------------------------------------------------------
+# 개선 5: 무음 시그널 — 활성 신호 집계 (DB 저장 없는 휘발성 상태)
+# ---------------------------------------------------------------------------
+
+
+def _prune_active_signals(session_id: str, now: float) -> None:
+    """TTL 이 지난 활성 신호를 제거한다(만료 시 세션 키도 정리 — 메모리 누수 방지)."""
+    entries = _active_signals.get(session_id)
+    if not entries:
+        return
+    for pid, (_, at) in list(entries.items()):
+        if now - at >= QUIET_SIGNAL_TTL_SEC:
+            del entries[pid]
+    if not entries:
+        _active_signals.pop(session_id, None)
+
+
+def record_quiet_signal(
+    session_id, participant_id, signal_type: str, *, at: float | None = None
+) -> None:
+    """참여자의 최신 무음 시그널을 활성 맵에 기록한다(참여자당 1건으로 덮어씀)."""
+    stamp = time.monotonic() if at is None else at
+    entries = _active_signals.setdefault(str(session_id), {})
+    entries[str(participant_id)] = (signal_type, stamp)
+
+
+def quiet_signal_counts(session_id, *, now: float | None = None) -> dict:
+    """활성(TTL 이내) 신호의 유형별 집계 — {"following", "difficult", "resting", "total"}."""
+    sid = str(session_id)
+    stamp = time.monotonic() if now is None else now
+    _prune_active_signals(sid, stamp)
+    entries = _active_signals.get(sid, {})
+    counts = {signal_type: 0 for signal_type in QUIET_SIGNAL_TYPES}
+    for signal_type, _ in entries.values():
+        if signal_type in counts:
+            counts[signal_type] += 1
+    counts["total"] = len(entries)
+    return counts
+
+
+def clear_quiet_signals() -> None:
+    """활성 신호 전역 초기화(테스트/세션 종료 정리용)."""
+    _active_signals.clear()
+
+
+def build_quiet_signal_payload(
+    session_id,
+    participant_id,
+    signal_type: str,
+    display_name: str | None = None,
+    *,
+    at: float | None = None,
+) -> dict:
+    """무음 시그널 브로드캐스트 payload 를 만든다 (집계 카운트 포함).
+
+    at 은 테스트용 주입 지점(TTL 검증) — 운영 경로에서는 단조 시각을 쓴다.
+    """
+    stamp = time.monotonic() if at is None else at
+    record_quiet_signal(session_id, participant_id, signal_type, at=stamp)
+    return {
+        "session_id": str(session_id),
+        "participant_id": str(participant_id),
+        "signal_type": signal_type,
+        "display_name": display_name,
+        # WS 직렬화 안전을 위해 ISO 문자열로 내보낸다 (datetime 객체 그대로 emit 금지)
+        "at": datetime.now(timezone.utc).isoformat(),
+        "counts": quiet_signal_counts(session_id, now=stamp),
+    }
 
 
 def register_session_live_namespace(sio):
@@ -219,6 +321,96 @@ def register_session_live_namespace(sio):
             },
         )
 
+    @sio.on("class:signal", namespace=_NAMESPACE)
+    async def on_quiet_signal(sid, data):
+        """개선 5: 무음 시그널 — 회원/게스트의 비언어 상태 신호를 상담사에게 전달한다.
+
+        data = {
+            "session_id": str,
+            "participant_id": str | None,   # 게스트 식별(로그인 회원은 connect 토큰의 user_id 사용)
+            "signal_type": "following" | "difficult" | "resting",
+        }
+
+        - 발언권(손들기/부여)과 독립 — 발언권 없이도 전송할 수 있고 발언권 상태를 바꾸지 않는다.
+        - DB 저장 없는 휘발성 신호이며 호스트 룸에만 브로드캐스트한다(다른 참여자에게 비노출).
+        - 진행 단계(open/in_progress/paused)에서만 반영하고, 그 외(완료·취소 등)는 무시한다.
+        """
+        data = data or {}
+        session_id = data.get("session_id")
+        signal_type = data.get("signal_type")
+        if not session_id or signal_type not in QUIET_SIGNAL_TYPES:
+            return
+
+        session = await sio.get_session(sid, namespace=_NAMESPACE)
+        current_user_id = (session or {}).get("user_id")
+        # join 이후에는 세션 컨텍스트의 participant_id 를 신뢰한다(게스트 본인 룸 스코프)
+        participant_id = data.get("participant_id") or (session or {}).get("participant_id")
+
+        try:
+            sender = _resolve_quiet_signal_sender(session_id, participant_id, current_user_id)
+        except Exception:
+            # 비참가자/미식별/사칭 → 브로드캐스트하지 않는다
+            logger.warning(
+                "[WS /session-live] class:signal 발신자 검증 실패 (sid=%s, session=%s)",
+                sid,
+                session_id,
+            )
+            return
+
+        from app.services import session_service
+
+        if sender.get("status") not in session_service.QUIET_SIGNAL_SESSION_STATUSES:
+            logger.info(
+                "[WS /session-live] class:signal 무시 — 진행 단계 아님 (session=%s, status=%s)",
+                session_id,
+                sender.get("status"),
+            )
+            return
+
+        payload = build_quiet_signal_payload(
+            session_id,
+            sender["participant_id"],
+            signal_type,
+            sender.get("display_name"),
+        )
+        await broadcast_quiet_signal(session_id, payload)
+
+    @sio.on("waiting_room", namespace=_NAMESPACE)
+    async def on_waiting_room(sid, data):
+        """개선 3: 대기실 입장/퇴장 알림 → 호스트(상담사) 룸 브로드캐스트.
+
+        data = {"session_id": str, "action": "join" | "leave", "nickname": str | None}
+
+        - 신원은 join 시 저장된 세션 컨텍스트(role/participant_id)로만 판정한다 —
+          클라이언트가 보낸 participant_id 를 신뢰하지 않으므로 대기 상태를 위조할 수 없다.
+        - 대기 목록은 서버에 저장하지 않는다(휘발성). 호스트 클라이언트가 heartbeat TTL 로
+          정리하므로 탭 강제 종료·단절에도 인원이 수렴한다.
+        """
+        data = data or {}
+        session_id = data.get("session_id")
+        action = data.get("action")
+        if not session_id or action not in ("join", "leave"):
+            return
+
+        session = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        # 이 소켓이 join 한 세션과 일치해야 한다(타 세션 위조 차단)
+        if session.get("session_id") != str(session_id):
+            logger.warning("[WS /session-live] waiting_room 무시 — join 불일치 (sid=%s)", sid)
+            return
+        # 참가자(회원/게스트)만 대상 — 호스트(role="host")는 대기 인원이 아니다
+        if session.get("role") != "participant" or not session.get("participant_id"):
+            logger.warning("[WS /session-live] waiting_room 무시 — 참가자 아님 (sid=%s)", sid)
+            return
+
+        await broadcast_waiting_room(
+            session_id,
+            {
+                "participant_id": session["participant_id"],
+                "action": action,
+                "nickname": _sanitize_nickname(data.get("nickname")),
+            },
+        )
+
     logger.info("[WS /session-live] namespace registered")
 
 
@@ -229,6 +421,23 @@ def _resolve_join(session_id, current_user_id, participant_id):
     db = _open_db()
     try:
         return session_service.resolve_live_join(session_id, current_user_id, participant_id, db)
+    finally:
+        db.close()
+
+
+def _resolve_quiet_signal_sender(session_id, participant_id, current_user_id):
+    """무음 시그널 발신자 검증을 서비스 레이어에 위임(전용 DB 세션).
+
+    비참가자·미식별·타인 participant_id 사칭이면 HTTPException 을 올린다
+    (호출측 핸들러가 예외를 흡수해 브로드캐스트하지 않는다).
+    """
+    from app.services import session_service
+
+    db = _open_db()
+    try:
+        return session_service.resolve_signal_sender(
+            session_id, participant_id, current_user_id, db
+        )
     finally:
         db.close()
 
@@ -330,6 +539,39 @@ async def broadcast_device_status(session_id: str, payload: dict) -> None:
             "device_status_changed", body, room=_room_self(session_id, pid), namespace=_NAMESPACE
         )
     logger.info("[WS /session-live] broadcast device_status_changed → session:%s", session_id)
+
+
+async def broadcast_quiet_signal(session_id: str, payload: dict) -> None:
+    """개선 5: 무음 시그널을 상담사(호스트) 룸에만 브로드캐스트한다.
+
+    기본 뮤트 1:N 수업에서 회원의 상태 신호는 상담사에게만 전달돼야 하므로
+    공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다(참여자 간 비노출).
+    """
+    sio = _get_sio()
+    room = _room_host(session_id)
+    await sio.emit(
+        QUIET_SIGNAL_EVENT,
+        {"session_id": str(session_id), **payload},
+        room=room,
+        namespace=_NAMESPACE,
+    )
+    logger.info("[WS /session-live] broadcast %s → %s", QUIET_SIGNAL_EVENT, room)
+
+
+async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
+    """개선 3: 대기실 입장/퇴장을 상담사(호스트) 룸에만 브로드캐스트한다.
+
+    대기 인원은 상담사 관제용이므로 공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다.
+    """
+    sio = _get_sio()
+    room = _room_host(session_id)
+    await sio.emit(
+        "waiting_room_changed",
+        {"session_id": str(session_id), **payload},
+        room=room,
+        namespace=_NAMESPACE,
+    )
+    logger.info("[WS /session-live] broadcast waiting_room_changed → %s", room)
 
 
 # ---------------------------------------------------------------------------

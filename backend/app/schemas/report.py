@@ -72,6 +72,9 @@ class ReportResponse(HRVMotionSummary):
     gender: str | None = None
     birth_date: date | None = None
     is_guest: bool | None = None
+    # SDD-096: 셀프 체크인(주관 상태) — 내담자 리포트는 본인 슬롯(scope=participant),
+    # 상담사 리포트는 세션 전체(scope=session). 미입력이면 None.
+    subjective_state: dict[str, Any] | None = None
 
 
 class ReportListResponse(BaseModel):

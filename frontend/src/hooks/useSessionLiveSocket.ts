@@ -3,18 +3,24 @@
 // SDD-028: eeg_feature는 setState 없이 콜백만 — 대규모 참여자 전체 재렌더 회피
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Socket } from 'socket.io-client';
 import { tokenStorage } from '../lib/api/client';
+import { type ClassSignalType } from '../lib/class/quiet-signal';
 import {
+  emitClassSignal,
   getSessionLiveSocket,
   joinSessionLive,
   leaveSessionLive,
   normalizeJoinSnapshot,
+  subscribeClassSignal,
   subscribeDeviceStatusChanged,
   subscribeParticipantChanged,
   subscribeSessionLiveEegFeature,
   subscribeSessionLiveJoined,
   subscribeSessionStateChanged,
   subscribeSpeakingChanged,
+  type ClassSignalEvent,
+  type ClassSignalHandler,
   type DeviceStatusChangedEvent,
   type DeviceStatusChangedHandler,
   type ParticipantChangedEvent,
@@ -43,6 +49,8 @@ interface UseSessionLiveSocketOptions {
   onDeviceStatusChanged?: DeviceStatusChangedHandler;
   /** SDD-094: 발언권 변경 — 호스트 화면 참여자 목록 갱신용 */
   onSpeakingChanged?: SpeakingChangedHandler;
+  /** 개선 5: 무음 시그널 수신 — 상담사 화면 카드 배지·집계 카운트 갱신용 */
+  onClassSignal?: ClassSignalHandler;
 }
 
 interface UseSessionLiveSocketResult {
@@ -56,6 +64,8 @@ interface UseSessionLiveSocketResult {
   version: number;
   /** 최신 수신 feature (참가자별 맵은 호출측에서 관리) */
   lastEvent: SessionLiveEegFeatureEvent | null;
+  /** 개선 5: 무음 시그널 전송 — 미연결이면 false(UI는 조용히 안내) */
+  sendSignal: (signalType: ClassSignalType) => boolean;
 }
 
 /**
@@ -73,6 +83,7 @@ export function useSessionLiveSocket({
   onParticipantChanged,
   onDeviceStatusChanged,
   onSpeakingChanged,
+  onClassSignal,
 }: UseSessionLiveSocketOptions): UseSessionLiveSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -91,6 +102,10 @@ export function useSessionLiveSocket({
   onDeviceRef.current = onDeviceStatusChanged;
   const onSpeakingRef = useRef(onSpeakingChanged);
   onSpeakingRef.current = onSpeakingChanged;
+  const onClassSignalRef = useRef(onClassSignal);
+  onClassSignalRef.current = onClassSignal;
+  /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
+  const socketRef = useRef<Socket | null>(null);
   const joinedSessionRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   /** SDD-028: feature는 콜백으로만 전달 — setState 하면 대규모 테이블 전체 재렌더 */
@@ -136,6 +151,7 @@ export function useSessionLiveSocket({
 
     const token = skipAuth ? null : tokenStorage.getAccess();
     const socket = getSessionLiveSocket(token);
+    socketRef.current = socket;
 
     const onConnect = (): void => {
       setIsConnected(true);
@@ -200,6 +216,12 @@ export function useSessionLiveSocket({
       onSpeakingRef.current?.(event);
     };
 
+    // 개선 5: 무음 시그널(호스트 룸 전용) — session_id가 생략될 수 있어 있을 때만 검증한다
+    const onSignal = (event: ClassSignalEvent): void => {
+      if (event.session_id && event.session_id !== sessionId) return;
+      onClassSignalRef.current?.(event);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
@@ -209,6 +231,7 @@ export function useSessionLiveSocket({
     const unsubParticipant = subscribeParticipantChanged(socket, onParticipant);
     const unsubDevice = subscribeDeviceStatusChanged(socket, onDevice);
     const unsubSpeaking = subscribeSpeakingChanged(socket, onSpeaking);
+    const unsubSignal = subscribeClassSignal(socket, onSignal);
 
     if (socket.connected) {
       onConnect();
@@ -226,8 +249,10 @@ export function useSessionLiveSocket({
       unsubParticipant();
       unsubDevice();
       unsubSpeaking();
+      unsubSignal();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socketRef.current = null;
       setIsConnected(false);
       setHasSnapshot(false);
     };
@@ -241,6 +266,23 @@ export function useSessionLiveSocket({
     acceptVersion,
   ]);
 
+  /**
+   * 개선 5: 무음 시그널 전송 — 발언권과 무관하게 언제든 보낼 수 있다.
+   * 미연결(또는 세션 미확정)이면 false 를 돌려 호출측이 조용히 안내하게 한다.
+   */
+  const sendSignal = useCallback(
+    (signalType: ClassSignalType): boolean => {
+      const socket = socketRef.current;
+      if (!socket || !sessionId) return false;
+      return emitClassSignal(socket, {
+        session_id: sessionId,
+        participant_id: participantId,
+        signal_type: signalType,
+      });
+    },
+    [sessionId, participantId],
+  );
+
   return {
     isConnected,
     hasSnapshot,
@@ -249,5 +291,6 @@ export function useSessionLiveSocket({
     version,
     /** 렌더 구독 없음 — onEegFeature로 증분 반영. 디버그/폴백용 최신값 */
     lastEvent: lastEventRef.current,
+    sendSignal,
   };
 }

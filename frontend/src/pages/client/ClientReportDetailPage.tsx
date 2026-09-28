@@ -8,9 +8,12 @@ import EegMetricsGrid from '../../components/reports/EegMetricsGrid';
 import EegTimeline from '../../components/reports/EegTimeline';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportCoverSection from '../../components/reports/ReportCoverSection';
+import SubjectiveCheckinCard from '../../components/reports/SubjectiveCheckinCard';
+import { parseSubjectiveState } from '../../lib/api/checkin';
 import {
   getReport,
   adaptReportContent,
+  relaxationTrendFromTimeline,
   type ReportDto,
 } from '../../lib/api/reports';
 
@@ -95,6 +98,12 @@ export default function ClientReportDetailPage() {
     adapted.aiRecord?.reason === 'mic_off'
       ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
       : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
+  // SDD-096 — 셀프 체크인(주관 상태): 참여자 스코프 슬롯 + EEG 두뇌휴식도 병기
+  const subjective = parseSubjectiveState(report.subjective_state);
+  const relaxationScore = eeg?.metrics?.relaxation_score ?? null;
+  const relaxationTrend = relaxationTrendFromTimeline(adapted.eeg_timeline);
+  const eegMeasured = adapted.showEegSection && eeg?.status !== 'not_measured';
+
   // SDD-087 — 상담사 코멘트 (내담자에게 전달되는 메시지)
   const counselorComment =
     (report.content?.counselor_comment as string | undefined)?.trim() || null;
@@ -124,6 +133,16 @@ export default function ClientReportDetailPage() {
               {counselorComment}
             </p>
           </SummaryCard>
+        )}
+
+        {/* SDD-096 — 주관 체크인 대비 (밴드 미착용이면 주관 값만) */}
+        {subjective && (
+          <SubjectiveCheckinCard
+            subjective={subjective}
+            relaxationScore={relaxationScore}
+            relaxationTrend={relaxationTrend}
+            eegMeasured={eegMeasured}
+          />
         )}
 
         {!aiRecordUnavailable && summary && (

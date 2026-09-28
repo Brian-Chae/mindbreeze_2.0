@@ -11,6 +11,7 @@ import type {
 } from './api/session';
 import type { LeadOffStatus } from './eeg/types/eeg';
 import type { SignalQualityLevel } from './session-live/signal-status';
+import { CLASS_SIGNAL_EVENT, type ClassSignalCounts, type ClassSignalType } from './class/quiet-signal';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -118,6 +119,24 @@ export interface ParticipantChangedEvent {
   participants: SessionLiveMetric[];
 }
 
+/** 개선 3: 대기실 입장/퇴장 알림 — 상담사가 대기 인원을 실시간으로 본다 */
+export interface WaitingRoomChangedEvent {
+  session_id: string;
+  participant_id: string;
+  action: 'join' | 'leave';
+  /** 표시용 닉네임(서버가 정리해 전달 — 신원 판정에는 쓰지 않는다) */
+  nickname?: string | null;
+}
+
+export type WaitingRoomChangedHandler = (event: WaitingRoomChangedEvent) => void;
+
+export interface WaitingRoomPresenceEmit {
+  session_id: string;
+  action: 'join' | 'leave';
+  nickname?: string | null;
+}
+
+
 export interface DeviceStatusChangedEvent {
   session_id: string;
   version: number;
@@ -143,6 +162,32 @@ export interface SpeakingChangedEvent {
   raise_hand?: boolean | null;
   version?: number;
 }
+
+/**
+ * 개선 5: 무음 시그널 — 회원의 비언어 상태 신호를 상담사에게 전달한다.
+ * 서버는 호스트 룸에만 브로드캐스트하므로 회원 소켓은 이 이벤트를 받지 않는다.
+ * 발언권(손들기/부여)과 독립이며 DB 저장 없는 휘발성 신호다.
+ */
+export interface ClassSignalEvent {
+  session_id?: string;
+  participant_id: string;
+  signal_type: ClassSignalType;
+  /** 표시용 이름(서버가 정리해 전달 — 신원 판정에는 쓰지 않는다) */
+  display_name?: string | null;
+  /** 서버 수신 시각(ISO) */
+  at?: string | null;
+  /** 전송 직후 유형별 집계(서버 기준 TTL 창) */
+  counts?: ClassSignalCounts | null;
+}
+
+/** 클라이언트 → 서버: `class:signal` emit payload */
+export interface ClassSignalEmit {
+  session_id: string;
+  participant_id?: string | null;
+  signal_type: ClassSignalType;
+}
+
+export type ClassSignalHandler = (event: ClassSignalEvent) => void;
 
 /** 서버 → 클라이언트: room broadcast `eeg_feature` */
 export interface SessionLiveEegFeatureEvent {
@@ -333,6 +378,53 @@ export const subscribeSpeakingChanged = (
   socket.on('speaking_changed', handler);
   return () => {
     socket.off('speaking_changed', handler);
+  };
+};
+
+/**
+ * 개선 5: 무음 시그널 emit — 회원/게스트가 상태 신호를 보낸다.
+ * 발언권 없이도 보낼 수 있고(독립), 연결이 없으면 false 를 돌려 UI 가 조용히 안내한다.
+ * participant_id 는 게스트 식별용이며 로그인 회원은 서버가 토큰(user_id)으로 해석한다.
+ */
+export const emitClassSignal = (socket: Socket, payload: ClassSignalEmit): boolean => {
+  if (!socket.connected) return false;
+  socket.emit(CLASS_SIGNAL_EVENT, payload);
+  return true;
+};
+
+/** 개선 5: `class:signal` 구독 — 상담사(호스트 룸) 전용 이벤트 */
+export const subscribeClassSignal = (
+  socket: Socket,
+  handler: ClassSignalHandler,
+): (() => void) => {
+  socket.on(CLASS_SIGNAL_EVENT, handler);
+  return () => {
+    socket.off(CLASS_SIGNAL_EVENT, handler);
+  };
+};
+
+/**
+ * 개선 3: 대기실 입장/퇴장 emit.
+ * 서버는 join 으로 저장된 세션 컨텍스트(role/participant_id)로만 신원을 판정하므로
+ * 클라이언트가 participant_id 를 보내지 않는다(사칭 차단).
+ */
+export const emitWaitingRoomPresence = (
+  socket: Socket,
+  payload: WaitingRoomPresenceEmit,
+): boolean => {
+  if (!socket.connected) return false;
+  socket.emit('waiting_room', payload);
+  return true;
+};
+
+/** 개선 3: `waiting_room_changed` 구독 — 호스트 룸 전용 이벤트 */
+export const subscribeWaitingRoomChanged = (
+  socket: Socket,
+  handler: WaitingRoomChangedHandler,
+): (() => void) => {
+  socket.on('waiting_room_changed', handler);
+  return () => {
+    socket.off('waiting_room_changed', handler);
   };
 };
 

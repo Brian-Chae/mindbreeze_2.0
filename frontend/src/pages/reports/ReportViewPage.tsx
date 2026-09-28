@@ -5,11 +5,14 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import NarrativeSections from '../../components/reports/NarrativeSections';
 import ReportCoverSection from '../../components/reports/ReportCoverSection';
+import SubjectiveCheckinCard from '../../components/reports/SubjectiveCheckinCard';
 import { downloadReportPdf } from '../../lib/report/print-report';
 import { ApiError } from '../../lib/api/client';
+import { parseSubjectiveState } from '../../lib/api/checkin';
 import {
   adaptReportContent,
   getReportView,
+  relaxationTrendFromTimeline,
   type ReportDto,
 } from '../../lib/api/reports';
 
@@ -125,6 +128,11 @@ export default function ReportViewPage() {
 
   const adapted = adaptReportContent(report.content, report.type);
   const { displayNarrative } = adapted;
+  // SDD-096 — 셀프 체크인(주관 상태) + EEG 두뇌휴식도 병기 (미착용이면 주관 값만)
+  const subjective = parseSubjectiveState(report.subjective_state);
+  const relaxationScore = adapted.eeg?.metrics?.relaxation_score ?? null;
+  const relaxationTrend = relaxationTrendFromTimeline(adapted.eeg_timeline);
+  const eegMeasured = adapted.showEegSection && adapted.eeg?.status !== 'not_measured';
 
   return (
     <div className="min-h-screen bg-[#FAFAFA]">
@@ -147,6 +155,14 @@ export default function ReportViewPage() {
         {downloadError && <p role="alert" className="text-sm text-red-600">{downloadError}</p>}
         <ReportCoverSection report={report} adapted={adapted} />
         {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
+        {subjective && (
+          <SubjectiveCheckinCard
+            subjective={subjective}
+            relaxationScore={relaxationScore}
+            relaxationTrend={relaxationTrend}
+            eegMeasured={eegMeasured}
+          />
+        )}
         <p className="text-center text-[11px] text-[#9B9B9B] pb-8">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>

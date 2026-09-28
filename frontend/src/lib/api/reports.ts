@@ -18,6 +18,7 @@ export {
   CLIENT_PRIMARY_METRIC_KEYS,
   COUNSELOR_METRIC_LABELS,
   EEG_METRIC_KEYS,
+  relaxationTrendFromTimeline,
   reliabilityLabel,
   resolveMetricLabel,
 } from './report';
@@ -53,6 +54,8 @@ export {
   reportProgressReasonLabel,
   resolveReportGenerationStatus,
 } from './report-status';
+
+import type { SubjectiveStateDto } from './checkin';
 
 export type ReportType = 'counselor' | 'client';
 
@@ -97,6 +100,11 @@ export interface ReportDto {
   birth_date?: string | null;
   /** SDD-065 — participant.user_id 없으면 true */
   is_guest?: boolean | null;
+  /**
+   * SDD-096 — 셀프 체크인(주관 상태).
+   * 내담자 리포트는 본인 슬롯(scope=participant), 상담사 리포트는 세션 전체(scope=session).
+   */
+  subjective_state?: SubjectiveStateDto | null;
 }
 
 export interface ReportListResponse {

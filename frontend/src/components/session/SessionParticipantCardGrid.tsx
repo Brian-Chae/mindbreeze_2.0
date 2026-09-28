@@ -4,6 +4,7 @@
 
 import { memo } from 'react';
 import type { SessionLiveMetric } from '../../lib/api/session';
+import type { ActiveSignal } from '../../lib/class/quiet-signal';
 import { isLowBattery } from '../../lib/session-live/signal-status';
 import {
   bandCardState,
@@ -14,6 +15,7 @@ import {
   matchesMonitorFilter,
 } from '../../lib/session-live/metric-display';
 import type { MonitorSummaryCounts } from './SessionMonitorSummary';
+import { QuietSignalBadge } from './QuietSignalBadge';
 
 interface SessionParticipantCardGridProps {
   participants: SessionLiveMetric[];
@@ -21,6 +23,8 @@ interface SessionParticipantCardGridProps {
   selectedId: string | null;
   /** 카드 클릭 → 상세 패널 열기 */
   onSelect: (participantId: string) => void;
+  /** 개선 5: 참여자별 최신 무음 시그널 — 수 초 표시 후 만료(TTL)로 사라진다 */
+  signals?: Readonly<Record<string, ActiveSignal>>;
 }
 
 const BAND_BADGE_CLASS: Record<ReturnType<typeof bandCardState>, string> = {
@@ -40,12 +44,15 @@ interface ParticipantCardProps {
   row: SessionLiveMetric;
   selected: boolean;
   onSelect: (participantId: string) => void;
+  /** 개선 5: 이 참여자의 최신 무음 시그널(없으면 undefined) */
+  signal?: ActiveSignal;
 }
 
 const ParticipantCard = memo(function ParticipantCard({
   row,
   selected,
   onSelect,
+  signal,
 }: ParticipantCardProps) {
   const bandState = bandCardState(row);
   const leadOff = row.device_status === 'lead_off';
@@ -89,6 +96,9 @@ const ParticipantCard = memo(function ParticipantCard({
                 🎤 발언 중
               </span>
             )}
+            {/* 개선 5: 무음 시그널 — 은은한 배지, 몇 초 후 페이드(소리·팝업 없음).
+                key 를 유형·수신시각으로 바꿔 같은 유형이 다시 와도 애니메이션이 재시작된다. */}
+            {signal && <QuietSignalBadge key={`${signal.type}-${signal.at}`} signal={signal} />}
           </div>
         </div>
         <span
@@ -157,6 +167,7 @@ export function SessionParticipantCardGrid({
   filter,
   selectedId,
   onSelect,
+  signals,
 }: SessionParticipantCardGridProps) {
   const rows = participants.filter((p) => matchesMonitorFilter(p, filter));
 
@@ -177,6 +188,7 @@ export function SessionParticipantCardGrid({
             row={row}
             selected={selectedId === row.participant_id}
             onSelect={onSelect}
+            signal={signals?.[row.participant_id]}
           />
         ))}
       </div>
