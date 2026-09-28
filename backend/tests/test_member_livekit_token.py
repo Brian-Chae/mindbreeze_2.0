@@ -163,7 +163,8 @@ def test_06_로그인회원_본인인증_발급(client):
 
 
 # ---------------------------------------------------------------------------
-# 온라인 양방향 영상 규칙: can_publish = online AND (one_on_one OR (group AND ≤20))
+# SDD-094 발언권 기반 규칙: can_publish = online AND (one_on_one OR (그룹≤20 AND speaking))
+# (구) 온라인 그룹≤20 무조건 True 는 발언권 부여 방식으로 대체됨 — 상세는 test_sdd094_speaking_rights.py
 # ---------------------------------------------------------------------------
 
 
@@ -177,13 +178,14 @@ def test_07_온라인1대1_can_publish_True(client):
     assert body["can_publish"] is True
 
 
-def test_08_온라인그룹_20명이하_can_publish_True(client):
+def test_08_온라인그룹_20명이하_기본뮤트_can_publish_False(client):
+    """SDD-094: 온라인 그룹≤20 회원은 기본 뮤트 — 발언권(speaking) 부여 전에는 송출 불가."""
     counselor = _register(client, "s089c08@test.com")
     cls, joined = _start_group_class(
         client, counselor, participant_mode="group", max_participants=20, title="그룹 명상"
     )
     body = _guest_token_body(client, cls, joined)
-    assert body["can_publish"] is True
+    assert body["can_publish"] is False
 
 
 def test_09_온라인그룹_21명_can_publish_False(client):

@@ -332,6 +332,13 @@ export function GuestMeditationPanel({
     (maxParticipants ?? 0) > 20
   );
 
+  // SDD-094: 온라인 그룹(≤20)만 발언권(손들기) 대상 —
+  // 온라인 1:1은 상시 송출(canPublish=true)이라 버튼이 뜨지 않고, 오프라인/>20은 대상 아님
+  const speakingManaged =
+    locationType === 'online' &&
+    participantMode === 'group' &&
+    (maxParticipants ?? 0) <= 20;
+
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-black text-white">
       <FadingImageBackground />
@@ -370,6 +377,8 @@ export function GuestMeditationPanel({
               code={classCode}
               participantId={participantId}
               participantToken={participantToken}
+              sessionId={sessionId}
+              speakingManaged={speakingManaged}
               speakerOn={speakerOn}
               className="aspect-video w-full"
             />

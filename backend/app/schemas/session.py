@@ -85,6 +85,8 @@ class SessionUpdateRequest(BaseModel):
 
 
 class ParticipantInfo(BaseModel):
+    # SDD-094: 게스트/회원 공통 식별자 — 상담사 UI가 참가자별 상태를 매핑하는 데 사용
+    participant_id: str
     # SDD-015: 게스트 참여자는 user_id가 없고 guest_name만 갖는다
     user_id: str | None = None
     guest_name: str | None = None
@@ -98,6 +100,9 @@ class ParticipantInfo(BaseModel):
     consent_eeg: bool = False
     is_waitlisted: bool = False
     waitlist_position: int | None = None
+    # SDD-094: 발언권 관리 — 손들기/발언권 부여 상태(상담사 UI 표시용)
+    raise_hand: bool = False
+    speaking: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -200,6 +205,33 @@ class MemberLiveKitTokenResponse(BaseModel):
     livekit_token: str
     webrtc_room_id: str
     # 온라인 양방향 영상 규칙에 따른 송신 가능 여부 — 프론트가 마이크/카메라 UI 제어에 사용.
+    can_publish: bool = False
+
+
+# ---------------------------------------------------------------------------
+# SDD-094: 발언권 관리 (손들기 → 부여/해제)
+# ---------------------------------------------------------------------------
+
+
+class SpeakingRequest(BaseModel):
+    """상담사 발언권 부여(granted=True)/해제(False) 요청."""
+
+    granted: bool
+
+
+class RaiseHandRequest(BaseModel):
+    """회원/게스트 손들기 요청 — 게스트는 participant_token 으로 소유를 증명한다."""
+
+    participant_token: str | None = None
+
+
+class SpeakingStateResponse(BaseModel):
+    """손들기/발언권 상태 응답 — 변경 결과를 호스트/회원 UI 에 되돌려준다."""
+
+    participant_id: str
+    raise_hand: bool = False
+    speaking: bool = False
+    # 부여 시 raise_hand 는 자동 해제된다(한 흐름) — 클라이언트 정합용으로 함께 내린다.
     can_publish: bool = False
 
 

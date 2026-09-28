@@ -302,6 +302,23 @@ async def broadcast_participant(session_id: str, payload: dict) -> None:
     logger.info("[WS /session-live] broadcast participant_changed → %s", room)
 
 
+async def broadcast_speaking(session_id: str, payload: dict) -> None:
+    """SDD-094: 발언권(손들기/부여·해제) 변경을 호스트 룸 + 해당 참가자 본인 룸에 브로드캐스트한다.
+
+    상담사는 참여자 목록의 손들기/발언권 표시를 갱신하고,
+    회원 본인은 speaking_changed 를 받아 LiveKit 토큰을 재발급(카메라/마이크 on/off)한다.
+    """
+    sio = _get_sio()
+    body = {"session_id": str(session_id), **payload}
+    await sio.emit("speaking_changed", body, room=_room_host(session_id), namespace=_NAMESPACE)
+    pid = payload.get("participant_id")
+    if pid:
+        await sio.emit(
+            "speaking_changed", body, room=_room_self(session_id, pid), namespace=_NAMESPACE
+        )
+    logger.info("[WS /session-live] broadcast speaking_changed → session:%s", session_id)
+
+
 async def broadcast_device_status(session_id: str, payload: dict) -> None:
     """기기 상태 변경(연결/배터리)을 호스트 룸 + 해당 참가자 본인 룸에 브로드캐스트한다."""
     sio = _get_sio()
@@ -343,3 +360,8 @@ def notify_participant_changed(session_id: str, payload: dict) -> None:
 
 def notify_device_status_changed(session_id: str, payload: dict) -> None:
     _schedule(broadcast_device_status(session_id, _jsonify(payload)))
+
+
+def notify_speaking_changed(session_id: str, payload: dict) -> None:
+    """SDD-094: 발언권 변경 이벤트를 예약 발행한다(REST/서비스 레이어 → 호스트+본인 룸)."""
+    _schedule(broadcast_speaking(session_id, _jsonify(payload)))

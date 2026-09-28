@@ -20,6 +20,10 @@ export interface SessionParticipant {
   consent_eeg: boolean;
   is_waitlisted: boolean;
   waitlist_position: number | null;
+  /** SDD-094: 손들기/발언권 상태 — 상담사 UI 표시용 */
+  raise_hand?: boolean;
+  /** SDD-094: 발언권(송출) 부여 상태 */
+  speaking?: boolean;
   user_name?: string;
   user_email?: string;
 }
@@ -167,6 +171,10 @@ export interface SessionLiveMetric {
   heart_rate?: number | null;
   /** 몸 지표 — 호흡수 breaths/min (산출 불가 시 null) */
   respiratory_rate?: number | null;
+  /** SDD-094: 손들기 상태 (온라인 그룹에서 기본 뮤트 → 손들기로 발언 요청) */
+  raise_hand?: boolean;
+  /** SDD-094: 발언권(송출) 부여 상태 — true면 can_publish */
+  speaking?: boolean;
 }
 
 export interface SessionLiveMetricsResponse {
@@ -327,6 +335,53 @@ export const getMemberLiveKitToken = async (
     { skipAuth: true },
   );
 };
+
+/** SDD-094: 회원/게스트 손들기 — 온라인 그룹에서 발언권을 요청한다 */
+export interface RaiseHandResponse {
+  participant_id: string;
+  raise_hand: boolean;
+  speaking?: boolean;
+}
+
+/** SDD-094: 상담사 발언권 부여/해제 응답 */
+export interface SetSpeakingResponse {
+  participant_id: string;
+  speaking: boolean;
+  raise_hand?: boolean;
+}
+
+/**
+ * 회원/게스트 손들기.
+ * 로그인 회원은 액세스 토큰으로, 비로그인 게스트는 participant_token 소유 증명으로 호출한다
+ * (member livekit token 과 동일한 인증 분기).
+ */
+export const raiseHand = async (
+  sessionId: string,
+  participantId: string,
+  participantToken?: string | null,
+): Promise<RaiseHandResponse> => {
+  const payload = { participant_token: participantToken ?? null };
+  const path = `/sessions/${sessionId}/participants/${participantId}/raise-hand`;
+  if (tokenStorage.getAccess()) {
+    const refreshedToken = await refreshAccessToken();
+    if (!refreshedToken) {
+      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
+    }
+    return apiClient.post<RaiseHandResponse>(path, payload);
+  }
+  return apiClient.post<RaiseHandResponse>(path, payload, { skipAuth: true });
+};
+
+/** 상담사(호스트) 발언권 부여/해제 — granted=false 면 회수 */
+export const setParticipantSpeaking = (
+  sessionId: string,
+  participantId: string,
+  granted: boolean,
+): Promise<SetSpeakingResponse> =>
+  apiClient.post<SetSpeakingResponse>(
+    `/sessions/${sessionId}/participants/${participantId}/speaking`,
+    { granted },
+  );
 
 /** 호스트 콘솔용 참가자 라이브 지표 */
 export const getSessionLiveMetrics = async (

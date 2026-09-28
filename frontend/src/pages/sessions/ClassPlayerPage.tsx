@@ -12,6 +12,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   getSession,
   getSessionLiveMetrics,
+  setParticipantSpeaking,
   transitionSession,
   type SessionDto,
   type SessionLiveMetric,
@@ -44,6 +45,7 @@ import type {
   SessionLiveEegFeatureEvent,
   SessionLiveJoinSnapshot,
   SessionStateChangedEvent,
+  SpeakingChangedEvent,
 } from '../../lib/socket';
 import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
@@ -54,6 +56,7 @@ import {
   type MonitorSummaryCounts,
 } from '../../components/session/SessionMonitorSummary';
 import { SessionMonitorTable } from '../../components/session/SessionMonitorTable';
+import { SpeakingRightsPanel } from '../../components/session/SpeakingRightsPanel';
 import {
   SessionPreJoinPreview,
   type PreJoinMediaPrefs,
@@ -113,7 +116,38 @@ function participantsToMetrics(session: SessionDto): SessionLiveMetric[] {
       current_efficiency: null,
       upload_status: null,
       last_eeg_at: null,
+      // SDD-094: 세션 상세에 실린 발언권 상태를 그대로 승계
+      // (게스트 id 는 실제 participant_id 가 아니므로 부여/해제 버튼은 패널에서 막힌다)
+      raise_hand: p.raise_hand ?? false,
+      speaking: p.speaking ?? false,
     }));
+}
+
+/** SDD-094: 참여자별 발언권 상태 — WS 이벤트/API 응답으로 갱신되는 오버레이 */
+interface SpeakingPatch {
+  raise_hand: boolean;
+  speaking: boolean;
+}
+
+/**
+ * SDD-094: 발언권 상태 오버레이.
+ * live-metrics 행에는 발언권 필드가 없을 수 있고 4초 폴링마다 행이 통째로 교체되므로,
+ * 이벤트/응답으로 받은 발언권 상태를 행 위에 덮어써 폴링에 지워지지 않게 한다.
+ */
+function applySpeakingOverlay(
+  rows: SessionLiveMetric[],
+  patch: Record<string, SpeakingPatch>,
+): SessionLiveMetric[] {
+  if (rows.length === 0) return rows;
+  let changed = false;
+  const next = rows.map((row) => {
+    const state = patch[row.participant_id];
+    if (!state) return row;
+    if (row.raise_hand === state.raise_hand && row.speaking === state.speaking) return row;
+    changed = true;
+    return { ...row, raise_hand: state.raise_hand, speaking: state.speaking };
+  });
+  return changed ? next : rows;
 }
 
 /** DashboardBox 집계 — EEG null이면 접촉/연결/배터리는 0 */
@@ -186,6 +220,8 @@ export default function ClassPlayerPage() {
     micOn: true,
   });
   const [codeCopied, setCodeCopied] = useState(false);
+  /** SDD-094: 발언권 부여/해제 요청 진행 중인 participant_id */
+  const [speakingBusyId, setSpeakingBusyId] = useState<string | null>(null);
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -365,6 +401,55 @@ export default function ClassPlayerPage() {
     [id],
   );
 
+  /** SDD-094: 참여자별 발언권 상태 오버레이 — WS 이벤트/API 응답에서만 갱신 */
+  const [speakingPatch, setSpeakingPatch] = useState<Record<string, SpeakingPatch>>({});
+
+  /**
+   * SDD-094: 발언권 상태 반영 — BE는 부여 시 손들기를 자동 해제하고
+   * 이벤트/응답에 raise_hand 를 함께 내린다(누락 시 손들기 표시를 지운다).
+   */
+  const recordSpeaking = useCallback(
+    (participantId: string, speaking: boolean, raiseHand?: boolean | null): void => {
+      setSpeakingPatch((prev) => {
+        const before = prev[participantId];
+        // BE는 부여 시 손들기를 자동 해제하고 이벤트/응답에 raise_hand 를 함께 내린다
+        const nextRaiseHand = raiseHand ?? false;
+        if (before && before.speaking === speaking && before.raise_hand === nextRaiseHand) {
+          return prev;
+        }
+        return { ...prev, [participantId]: { speaking, raise_hand: nextRaiseHand } };
+      });
+    },
+    [],
+  );
+
+  /** SDD-094: 발언권 변경(호스트 룸 수신) → 목록의 손들기/발언 상태 갱신 */
+  const handleSpeakingChanged = useCallback(
+    (event: SpeakingChangedEvent) => {
+      if (!id || (event.session_id && event.session_id !== id)) return;
+      recordSpeaking(event.participant_id, event.speaking, event.raise_hand);
+    },
+    [id, recordSpeaking],
+  );
+
+  /** SDD-094: 발언권 부여/해제 — 응답 즉시 반영(WS speaking_changed 가 뒤따라 확정) */
+  const handleSetSpeaking = useCallback(
+    async (participantId: string, granted: boolean): Promise<void> => {
+      if (!id) return;
+      setSpeakingBusyId(participantId);
+      setError(null);
+      try {
+        const res = await setParticipantSpeaking(id, participantId, granted);
+        recordSpeaking(res.participant_id ?? participantId, res.speaking, res.raise_hand);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '발언권 변경에 실패했습니다');
+      } finally {
+        setSpeakingBusyId(null);
+      }
+    },
+    [id, recordSpeaking],
+  );
+
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
@@ -374,6 +459,7 @@ export default function ClassPlayerPage() {
     onSessionStateChanged: handleSessionState,
     onParticipantChanged: handleParticipantChanged,
     onDeviceStatusChanged: handleDeviceStatus,
+    onSpeakingChanged: handleSpeakingChanged,
   });
 
   const refreshSession = useCallback(async (): Promise<void> => {
@@ -424,6 +510,13 @@ export default function ClassPlayerPage() {
   const isRunning = status === 'in_progress' || status === 'paused';
   const isEnded = status === 'completed';
   const isCancelled = status === 'cancelled';
+
+  // SDD-094: 온라인 그룹(≤20)에서만 발언권 관리 대상 —
+  // 온라인 1:1은 상시 송출, 오프라인/>20은 부여해도 can_publish=false 라 UI 를 띄우지 않는다
+  const speakingManaged =
+    session?.location_type === 'online' &&
+    session?.participant_mode === 'group' &&
+    (session?.max_participants ?? 0) <= 20;
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
@@ -675,9 +768,20 @@ export default function ClassPlayerPage() {
     return () => window.clearInterval(timer);
   }, [isLobby, session?.opened_at]);
 
+  /** 라이브 지표가 있으면 그것을, 없으면 세션 참가자로 만든 대체 행을 쓴다 */
+  const baseMetrics = useMemo(
+    () => (metrics.length > 0 ? metrics : session ? participantsToMetrics(session) : []),
+    [metrics, session],
+  );
+
+  /** SDD-094: 발언권 상태 오버레이 — 4초 폴링으로 행이 교체돼도 표시가 유지된다 */
+  const speakingMetrics = useMemo(
+    () => applySpeakingOverlay(baseMetrics, speakingPatch),
+    [baseMetrics, speakingPatch],
+  );
+
   const displayMetrics = useMemo(() => {
-    const base =
-      metrics.length > 0 ? metrics : session ? participantsToMetrics(session) : [];
+    const base = speakingMetrics;
 
     if (!hostParticipantId || band.connectionState !== 'connected') return base;
 
@@ -718,8 +822,7 @@ export default function ClassPlayerPage() {
     });
     return changed ? next : base;
   }, [
-    metrics,
-    session,
+    speakingMetrics,
     hostParticipantId,
     band.connectionState,
     band.lastEegAt,
@@ -940,6 +1043,16 @@ export default function ClassPlayerPage() {
         activeFilter={activeFilter}
         onFilterToggle={handleFilterToggle}
       />
+
+      {/* SDD-094: 발언권 관리 — 손든 참여자 우선 정렬 + 부여/해제 */}
+      {speakingManaged && (
+        <SpeakingRightsPanel
+          participants={displayMetrics}
+          busyId={speakingBusyId}
+          onGrant={(participantId) => void handleSetSpeaking(participantId, true)}
+          onRevoke={(participantId) => void handleSetSpeaking(participantId, false)}
+        />
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col space-y-2">
         <div className="flex justify-end gap-1">

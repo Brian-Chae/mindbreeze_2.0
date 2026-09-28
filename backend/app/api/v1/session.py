@@ -20,6 +20,7 @@ from app.schemas.session import (
     JoinByCodeResponse,
     MemberLiveKitTokenRequest,
     MemberLiveKitTokenResponse,
+    RaiseHandRequest,
     SessionByCodeResponse,
     SessionLiveMetricsResponse,
     MarkerRequest,
@@ -27,6 +28,8 @@ from app.schemas.session import (
     SessionListResponse,
     SessionResponse,
     SessionUpdateRequest,
+    SpeakingRequest,
+    SpeakingStateResponse,
 )
 from app.schemas.eeg import (
     EEGRollupResponse,
@@ -198,6 +201,52 @@ def remove_participant(
     db: DBSession = Depends(get_db),
 ):
     return session_service.remove_participant(session_id, current_user["id"], user_id, db)
+
+
+# SDD-094: 발언권 관리 — 회원/게스트 손들기
+@router.post(
+    "/{session_id}/participants/{participant_id}/raise-hand",
+    response_model=SpeakingStateResponse,
+)
+def raise_hand(
+    session_id: str,
+    participant_id: str,
+    payload: RaiseHandRequest | None = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """참여자 손들기 — raise_hand=True 로 표시.
+
+    로그인 회원은 본인 참여자만, 게스트는 body.participant_token 소유 증명이 필요하다.
+    """
+    return session_service.raise_hand(
+        session_id,
+        participant_id,
+        db,
+        participant_token=payload.participant_token if payload else None,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+# SDD-094: 발언권 관리 — 상담사 부여/해제
+@router.post(
+    "/{session_id}/participants/{participant_id}/speaking",
+    response_model=SpeakingStateResponse,
+)
+def set_speaking(
+    session_id: str,
+    participant_id: str,
+    payload: SpeakingRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """상담사 발언권 부여/해제 — speaking=granted. 호스트(상담사) 전용.
+
+    부여 시 손들기(raise_hand)는 자동 해제된다.
+    """
+    return session_service.set_speaking(
+        session_id, current_user["id"], participant_id, payload.granted, db
+    )
 
 
 @router.post("/{session_id}/markers")

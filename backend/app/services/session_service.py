@@ -77,6 +77,8 @@ def _serialize(s: Session) -> dict:
         "created_at": s.created_at or _now(),
         "participants": [
             {
+                # SDD-094: 참가자 공통 식별자(게스트 포함) — 상담사 UI 상태 매핑용
+                "participant_id": str(p.id),
                 # 게스트는 user_id가 없으므로 None으로 직렬화한다
                 "user_id": str(p.user_id) if p.user_id else None,
                 "guest_name": p.guest_name,
@@ -90,6 +92,9 @@ def _serialize(s: Session) -> dict:
                 "consent_eeg": p.consent_eeg,
                 "is_waitlisted": p.is_waitlisted,
                 "waitlist_position": p.waitlist_position,
+                # SDD-094: 발언권 관리 상태(상담사 UI 손들기 표시/부여 버튼용)
+                "raise_hand": p.raise_hand,
+                "speaking": p.speaking,
             }
             for p in parts
         ],
@@ -945,14 +950,8 @@ def member_livekit_token(
         name = user.name if user else None
     name = name or "참여자"
 
-    # 온라인 양방향 영상 규칙: 온라인 세션이면서 (1:1 이거나, 그룹이면 20명 이하)일 때만 송신 허용.
-    can_publish = (
-        s.location_type == "online"
-        and (
-            s.participant_mode == "one_on_one"
-            or (s.participant_mode == "group" and (s.max_participants or 0) <= 20)
-        )
-    )
+    # SDD-094: 발언권 기반 송신 규칙 — 온라인 + (1:1 상시 또는 그룹≤20 & speaking=True).
+    can_publish = _compute_can_publish(s, participant)
 
     token = generate_livekit_token(
         room_name=str(s.webrtc_room_id),
@@ -965,6 +964,159 @@ def member_livekit_token(
         "webrtc_room_id": str(s.webrtc_room_id),
         "can_publish": can_publish,
     }
+
+
+def _compute_can_publish(s: Session, participant: SessionParticipant) -> bool:
+    """SDD-094 송신 허용 규칙.
+
+    can_publish = (location_type=="online") AND
+                  (participant_mode=="one_on_one"
+                   OR (participant_mode=="group" AND max_participants<=20 AND participant.speaking))
+    온라인 1:1 은 상시 송출(True), 온라인 그룹≤20 은 손들기 후 상담사가 발언권을 부여(speaking=True)했을 때만
+    송출 허용. 그 외(오프라인, 온라인 그룹>20)는 항상 구독 전용(False).
+    """
+    if s.location_type != "online":
+        return False
+    if s.participant_mode == "one_on_one":
+        return True
+    if s.participant_mode == "group" and (s.max_participants or 0) <= 20:
+        return bool(participant.speaking)
+    return False
+
+
+# ---------------------------------------------------------------------------
+# SDD-094: 발언권 관리 (손들기 → 부여/해제)
+# ---------------------------------------------------------------------------
+
+
+def _get_participant_in_session(sid: UUID, participant_id: str, db: DBSession) -> SessionParticipant:
+    """세션에 속한 참여자 행을 조회한다(없으면 404)."""
+    try:
+        pid = _to_uuid(participant_id)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == sid)
+        .first()
+    )
+    if participant is None:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+    return participant
+
+
+def _authorize_participant_access(
+    participant: SessionParticipant,
+    *,
+    participant_token: str | None,
+    current_user_id: str | None,
+) -> None:
+    """참여자 본인(로그인 회원) 또는 게스트 토큰 소유를 검증한다(아니면 403).
+
+    - 로그인 회원 참여자: current_user_id 가 participant.user_id 와 일치해야 한다.
+    - 게스트 참여자: participant_token 소유 증명(sub == participant.id) 필수.
+    """
+    if participant.user_id is not None:
+        if current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
+            raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+        return
+    from app.services.report_email_service import _decode
+    try:
+        claims = _decode(participant_token, "report_participant")
+    except HTTPException:
+        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+    if claims.get("sub") != str(participant.id):
+        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+
+
+def raise_hand(
+    session_id: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    participant_token: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """SDD-094: 참여자 손들기 — raise_hand=True 로 표시하고 호스트/본인에게 통지한다.
+
+    참여자 본인(로그인) 또는 게스트 토큰 소유만 가능하다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+    _authorize_participant_access(
+        participant, participant_token=participant_token, current_user_id=current_user_id
+    )
+
+    participant.raise_hand = True
+    db.commit()
+    db.refresh(participant)
+
+    can_publish = _compute_can_publish(s, participant)
+    _notify_speaking_changed(sid, participant)
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": can_publish,
+    }
+
+
+def set_speaking(
+    session_id: str,
+    host_id: str,
+    participant_id: str,
+    granted: bool,
+    db: DBSession,
+) -> dict:
+    """SDD-094: 상담사 발언권 부여/해제 — speaking=granted. 호스트(상담사) 전용.
+
+    부여(granted=True) 시 손들기(raise_hand)를 자동 해제한다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.host_id != _to_uuid(host_id):
+        raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+
+    participant.speaking = bool(granted)
+    if granted:
+        participant.raise_hand = False
+    db.commit()
+    db.refresh(participant)
+
+    can_publish = _compute_can_publish(s, participant)
+    _notify_speaking_changed(sid, participant)
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": can_publish,
+    }
+
+
+def _notify_speaking_changed(sid: UUID, participant: SessionParticipant) -> None:
+    """speaking_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op)."""
+    try:
+        from app.ws import session_live_namespace as live
+
+        live.notify_speaking_changed(
+            str(sid),
+            {
+                "participant_id": str(participant.id),
+                "raise_hand": participant.raise_hand,
+                "speaking": participant.speaking,
+            },
+        )
+    except Exception:
+        # 이벤트 발행 실패가 상태 변경 성공을 되돌려서는 안 된다
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -1062,6 +1214,9 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "current_efficiency": current_efficiency,
                 "upload_status": upload_status,
                 "last_eeg_at": last_eeg_at,
+                # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
+                "raise_hand": p.raise_hand,
+                "speaking": p.speaking,
             }
         )
 

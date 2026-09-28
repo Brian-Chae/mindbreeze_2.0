@@ -131,6 +131,19 @@ export interface DeviceStatusChangedEvent {
   signal_quality_level?: SignalQualityLevel | null;
 }
 
+/**
+ * SDD-094: 발언권 변경 — 호스트 룸 + 해당 참가자 본인 룸에만 발행된다.
+ * 회원은 이 이벤트를 받아 토큰을 재발급(can_publish 재계산)한다.
+ */
+export interface SpeakingChangedEvent {
+  session_id?: string;
+  participant_id: string;
+  speaking: boolean;
+  /** 부여 시 BE가 손들기를 내린다 — 응답에 포함되면 그대로 반영 */
+  raise_hand?: boolean | null;
+  version?: number;
+}
+
 /** 서버 → 클라이언트: room broadcast `eeg_feature` */
 export interface SessionLiveEegFeatureEvent {
   session_id: string;
@@ -162,6 +175,7 @@ export type SessionLiveJoinedHandler = (event: SessionLiveJoinedEvent) => void;
 export type SessionStateChangedHandler = (event: SessionStateChangedEvent) => void;
 export type ParticipantChangedHandler = (event: ParticipantChangedEvent) => void;
 export type DeviceStatusChangedHandler = (event: DeviceStatusChangedEvent) => void;
+export type SpeakingChangedHandler = (event: SpeakingChangedEvent) => void;
 
 let sessionLiveSocket: Socket | null = null;
 let sessionLiveToken: string | null | undefined = undefined;
@@ -198,6 +212,12 @@ export const disconnectSessionLiveSocket = (): void => {
     sessionLiveToken = undefined;
   }
 };
+
+/**
+ * 이미 생성된 `/session-live` 소켓(없으면 null).
+ * 새 연결을 만들지 않고 기존 연결을 재사용/구독할 때 쓴다 (SDD-094 발언권 리스너).
+ */
+export const getActiveSessionLiveSocket = (): Socket | null => sessionLiveSocket;
 
 export interface SessionLiveJoinPayload {
   session_id: string;
@@ -302,6 +322,17 @@ export const subscribeDeviceStatusChanged = (
   socket.on('device_status_changed', handler);
   return () => {
     socket.off('device_status_changed', handler);
+  };
+};
+
+/** SDD-094: `speaking_changed` 구독 — 호스트/본인 룸에만 발행된다 */
+export const subscribeSpeakingChanged = (
+  socket: Socket,
+  handler: SpeakingChangedHandler,
+): (() => void) => {
+  socket.on('speaking_changed', handler);
+  return () => {
+    socket.off('speaking_changed', handler);
   };
 };
 

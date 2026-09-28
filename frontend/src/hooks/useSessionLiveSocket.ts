@@ -14,6 +14,7 @@ import {
   subscribeSessionLiveEegFeature,
   subscribeSessionLiveJoined,
   subscribeSessionStateChanged,
+  subscribeSpeakingChanged,
   type DeviceStatusChangedEvent,
   type DeviceStatusChangedHandler,
   type ParticipantChangedEvent,
@@ -24,6 +25,8 @@ import {
   type SessionLiveJoinedEvent,
   type SessionStateChangedEvent,
   type SessionStateChangedHandler,
+  type SpeakingChangedEvent,
+  type SpeakingChangedHandler,
 } from '../lib/socket';
 
 interface UseSessionLiveSocketOptions {
@@ -38,6 +41,8 @@ interface UseSessionLiveSocketOptions {
   onSessionStateChanged?: SessionStateChangedHandler;
   onParticipantChanged?: ParticipantChangedHandler;
   onDeviceStatusChanged?: DeviceStatusChangedHandler;
+  /** SDD-094: 발언권 변경 — 호스트 화면 참여자 목록 갱신용 */
+  onSpeakingChanged?: SpeakingChangedHandler;
 }
 
 interface UseSessionLiveSocketResult {
@@ -67,6 +72,7 @@ export function useSessionLiveSocket({
   onSessionStateChanged,
   onParticipantChanged,
   onDeviceStatusChanged,
+  onSpeakingChanged,
 }: UseSessionLiveSocketOptions): UseSessionLiveSocketResult {
   const [isConnected, setIsConnected] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState(false);
@@ -83,6 +89,8 @@ export function useSessionLiveSocket({
   onParticipantRef.current = onParticipantChanged;
   const onDeviceRef = useRef(onDeviceStatusChanged);
   onDeviceRef.current = onDeviceStatusChanged;
+  const onSpeakingRef = useRef(onSpeakingChanged);
+  onSpeakingRef.current = onSpeakingChanged;
   const joinedSessionRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   /** SDD-028: feature는 콜백으로만 전달 — setState 하면 대규모 테이블 전체 재렌더 */
@@ -185,6 +193,13 @@ export function useSessionLiveSocket({
       onDeviceRef.current?.(event);
     };
 
+    // SDD-094: 발언권 변경 — session_id가 생략될 수 있어 있을 때만 검증한다
+    const onSpeaking = (event: SpeakingChangedEvent): void => {
+      if (event.session_id && event.session_id !== sessionId) return;
+      if (typeof event.version === 'number' && !acceptVersion(event.version)) return;
+      onSpeakingRef.current?.(event);
+    };
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
 
@@ -193,6 +208,7 @@ export function useSessionLiveSocket({
     const unsubState = subscribeSessionStateChanged(socket, onState);
     const unsubParticipant = subscribeParticipantChanged(socket, onParticipant);
     const unsubDevice = subscribeDeviceStatusChanged(socket, onDevice);
+    const unsubSpeaking = subscribeSpeakingChanged(socket, onSpeaking);
 
     if (socket.connected) {
       onConnect();
@@ -209,6 +225,7 @@ export function useSessionLiveSocket({
       unsubState();
       unsubParticipant();
       unsubDevice();
+      unsubSpeaking();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
       setIsConnected(false);

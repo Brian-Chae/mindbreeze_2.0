@@ -61,7 +61,9 @@ const ParticipantCard = memo(function ParticipantCard({
       className={`flex flex-col gap-3 rounded-2xl border p-4 text-left transition hover:shadow-md ${
         alert
           ? 'border-[#F5C2C0] bg-[#FDECEC]'
-          : 'border-[#EFEFEF] bg-white'
+          : row.raise_hand
+            ? 'border-[#F5D48B] bg-[#FDF6E5]'
+            : 'border-[#EFEFEF] bg-white'
       } ${selected ? 'outline outline-2 outline-[#5F0080] outline-offset-0' : ''}`}
     >
       {/* 이름 + 게스트 표시 */}
@@ -70,11 +72,24 @@ const ParticipantCard = memo(function ParticipantCard({
           <p className="truncate text-[15px] font-bold text-[#1F1F1F]">
             {row.display_name || (row.is_guest ? '게스트' : '참가자')}
           </p>
-          {row.is_guest && (
-            <span className="mt-0.5 inline-block rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[10px] font-medium text-[#6F6F6F]">
-              게스트
-            </span>
-          )}
+          <div className="mt-0.5 flex flex-wrap items-center gap-1">
+            {row.is_guest && (
+              <span className="inline-block rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[10px] font-medium text-[#6F6F6F]">
+                게스트
+              </span>
+            )}
+            {/* SDD-094: 손들기/발언권 상태 — 부여·해제는 발언권 관리 패널에서 */}
+            {row.raise_hand && (
+              <span className="inline-block rounded-full bg-[#F5E2B8] px-2 py-0.5 text-[10px] font-semibold text-[#8A6B1F]">
+                🙋 손들기
+              </span>
+            )}
+            {row.speaking && (
+              <span className="inline-block rounded-full bg-[#59CE9026] px-2 py-0.5 text-[10px] font-semibold text-[#2F9E68]">
+                🎤 발언 중
+              </span>
+            )}
+          </div>
         </div>
         <span
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${BAND_BADGE_CLASS[bandState]}`}

@@ -2,6 +2,8 @@
 // canPublish(온라인 양방향)면 회원 카메라/마이크를 송출하고, 아니면 수신 전용.
 // 자연 배경 위에 올라가는 반투명 카드. 토큰이 없거나 원격 트랙이 없으면 준비 중 표시.
 // speakerOn=false면 상담사 오디오 볼륨 0 (하울링 방지 뮤트) — 오프라인 수업 기본 뮤트용.
+// SDD-094: 온라인 그룹(≤20)은 기본 뮤트 — [손 들기]로 발언권을 요청하고,
+// speaking_changed 수신 시 토큰이 재발급되면(canPublish=true) 카메라·마이크가 켜진다.
 import { useEffect } from 'react';
 import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack } from '@livekit/components-react';
 import '@livekit/components-styles';
@@ -12,6 +14,10 @@ interface CounselorLiveTileProps {
   code: string | null;
   participantId: string | null;
   participantToken?: string | null;
+  /** SDD-094: 손들기 API 경로용 세션 id */
+  sessionId?: string | null;
+  /** SDD-094: 온라인 그룹(≤20)에서만 true — 손들기 UI 노출 대상 */
+  speakingManaged?: boolean;
   /** 스피커 on/off — false면 상담사 음성 음소거 (하울링 방지) */
   speakerOn?: boolean;
   className?: string;
@@ -41,17 +47,45 @@ function HostCamera() {
   );
 }
 
+/** 발언권 부여 시 본인 카메라 확인용 셀프뷰 (송출 중일 때만 표시) */
+function MemberSelfView() {
+  const tracks = useTracks([Track.Source.Camera]);
+  const localCamera = tracks.find((t) => t.participant.isLocal);
+  if (!localCamera) return null;
+  return (
+    <VideoTrack
+      trackRef={localCamera}
+      className="absolute right-3 top-3 z-10 h-20 w-28 rounded-lg object-cover ring-1 ring-white/40"
+    />
+  );
+}
+
 export function CounselorLiveTile({
   code,
   participantId,
   participantToken,
+  sessionId = null,
+  speakingManaged = false,
   speakerOn = true,
   className = '',
 }: CounselorLiveTileProps) {
-  const { token, canPublish, error, notReady, connect, serverUrl } = useMemberLiveKit({
+  const {
+    token,
+    canPublish,
+    error,
+    notReady,
+    connect,
+    serverUrl,
+    raisedHand,
+    raising,
+    raiseHandError,
+    raiseHand,
+  } = useMemberLiveKit({
     code,
     participantId,
     participantToken,
+    sessionId,
+    listenSpeakingChanges: speakingManaged,
   });
 
   // 진입 시 연결 + 상담사 화상 미시작이면 5초 간격 재시도
@@ -84,6 +118,9 @@ export function CounselorLiveTile({
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-black/40 ${className}`}>
       <LiveKitRoom
+        // 발언권(송출 가능 여부)이 바뀌면 Room을 새로 만든다 — livekit-client의 Room.connect 는
+        // 이미 연결된 상태면 즉시 반환하므로, 토큰만 갈아끼우면 카메라·마이크 권한이 반영되지 않는다.
+        key={canPublish ? 'publish' : 'subscribe'}
         token={token}
         serverUrl={serverUrl}
         connect={true}
@@ -93,9 +130,42 @@ export function CounselorLiveTile({
         className="h-full w-full"
       >
         <HostCamera />
+        {canPublish && <MemberSelfView />}
         {/* speakerOn=false → 볼륨 0 (클라이언트측 즉시 뮤트, 재구독 지연 없음) */}
         <RoomAudioRenderer volume={speakerOn ? 1 : 0} />
       </LiveKitRoom>
+
+      {/* SDD-094: 발언권 UI — 온라인 그룹(≤20)에서만. 부여되면 버튼 대신 상태 표시 */}
+      {speakingManaged && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent p-3">
+          {canPublish ? (
+            <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#59CE90]/25 px-3 py-1.5 text-[12px] font-semibold text-[#B8F5D6]">
+              🎤 발언권 부여됨 · 카메라·마이크 켜짐
+            </span>
+          ) : raisedHand ? (
+            <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-amber-100/20 px-3 py-1.5 text-[12px] font-semibold text-amber-200">
+              🙋 손들기 완료 · 상담사 승인 대기
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void raiseHand()}
+              disabled={raising || !sessionId || !participantId}
+              className="pointer-events-auto rounded-full bg-white/20 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {raising ? '요청 중…' : '🙋 손 들기'}
+            </button>
+          )}
+          {raiseHandError && (
+            <p
+              role="alert"
+              className="pointer-events-auto max-w-sm text-center text-[11px] font-medium text-red-200"
+            >
+              {raiseHandError}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

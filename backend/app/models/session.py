@@ -97,5 +97,9 @@ class SessionParticipant(Base):
     consent_eeg: Mapped[bool] = mapped_column(Boolean, default=False)
     is_waitlisted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     waitlist_position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    # SDD-094: 발언권 관리 — 회원 손들기/상담사 발언권 부여 상태.
+    # online 그룹(≤20) 회원은 기본 뮤트이며 speaking=True 일 때만 송신(can_publish) 허용.
+    raise_hand: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    speaking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     session = relationship("Session", back_populates="participants")
