@@ -258,8 +258,12 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         try:
             result = _call_whisper(chunk_paths)
         except Exception as exc2:
-            logger.exception("[stt_task] Whisper failed, stub fallback: %s", exc2)
-            result = _generate_stub(chunk_paths)
+            # 가짜 stub 전사를 저장하지 않는다(SDD-085 G5 원칙) — 실패로 기록
+            logger.exception("[stt_task] Whisper failed — STT 실패 처리: %s", exc2)
+            record.status = "failed"
+            db.commit()
+            asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+            return
 
     asyncio.run(_emit_status(session_id, "diarizing"))
     segments = result.get("segments", [])

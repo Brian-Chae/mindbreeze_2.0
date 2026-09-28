@@ -37,6 +37,13 @@ export const stopVideo = (sessionId: string): Promise<VideoStopResponse> =>
 export const getSessionVideoUrl = (sessionId: string): Promise<VideoUrlResponse> =>
   apiClient.get<VideoUrlResponse>(`/sessions/${sessionId}/video/url`);
 
+/** stream 상대 경로("/api/v1/...") → API base origin과 결합해 절대 URL로 */
+export function resolveVideoUrl(url: string): string {
+  if (!url || url.startsWith('http')) return url;
+  const origin = BASE_URL.replace(/\/api\/v1\/?$/, '');
+  return `${origin}${url}`;
+}
+
 // multipart 청크 업로드는 별도 fetch (apiClient는 JSON 전용)
 export async function uploadVideoChunk(
   sessionId: string,

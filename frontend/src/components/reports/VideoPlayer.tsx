@@ -1,6 +1,6 @@
 // 리포트 영상 리플레이어 — presigned URL/stream 조회 + 기록지 타임스탬프 seek 동기화
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { getSessionVideoUrl } from '../../lib/api/video';
+import { getSessionVideoUrl, resolveVideoUrl } from '../../lib/api/video';
 import { tokenStorage } from '../../lib/api/client';
 
 export interface VideoPlayerHandle {
@@ -51,7 +51,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
           }
           // 로컬 폴백 stream endpoint는 Authorization 필요 → blob URL로 변환
           const playableUrl = res.url.includes('/video/stream')
-            ? await fetchVideoAsBlobUrl(res.url)
+            ? await fetchVideoAsBlobUrl(resolveVideoUrl(res.url))
             : res.url;
           if (cancelled) return;
           setUrl(playableUrl);

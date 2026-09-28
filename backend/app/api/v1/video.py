@@ -3,7 +3,7 @@
 import os
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session as DBSession
 
@@ -56,13 +56,13 @@ def stop_video(
 @router.get("/{session_id}/video/url")
 def get_video_url(
     session_id: str,
-    request: Request,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     """리포트 영상 리플레이용 재생 URL 발급 (호스트 상담사만).
 
-    S3 object key → presigned GET URL, 로컬 폴백 파일 → stream endpoint 절대 URL.
+    S3 object key → presigned GET URL, 로컬 폴백 파일 → stream 상대 경로
+    (프론트가 API base와 결합 — 프록시 뒤 request.base_url 오염 방지).
     """
     sid = UUID(session_id)
     session = db.query(Session).filter(Session.id == sid).first()
@@ -77,9 +77,8 @@ def get_video_url(
     key = record.video_s3_key
     if key.startswith("video/"):
         return {"url": video_service.get_presigned_video_url(sid, db)}
-    # 로컬 폴백 경로 → 스트리밍 endpoint 절대 URL
-    base = str(request.base_url).rstrip("/")
-    return {"url": f"{base}api/v1/sessions/{session_id}/video/stream"}
+    # 로컬 폴백 경로 → 스트리밍 endpoint 상대 경로
+    return {"url": f"/api/v1/sessions/{session_id}/video/stream"}
 
 
 @router.get("/{session_id}/video/stream")
