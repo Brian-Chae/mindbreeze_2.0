@@ -1,6 +1,7 @@
-// 리포트 영상 리플레이어 — presigned URL 조회 + 기록지 타임스탬프 seek 동기화
+// 리포트 영상 리플레이어 — presigned URL/stream 조회 + 기록지 타임스탬프 seek 동기화
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { getSessionVideoUrl } from '../../lib/api/video';
+import { tokenStorage } from '../../lib/api/client';
 
 export interface VideoPlayerHandle {
   seekTo: (sec: number) => void;
@@ -8,6 +9,17 @@ export interface VideoPlayerHandle {
 
 interface VideoPlayerProps {
   sessionId: string;
+}
+
+/** 로컬 폴백 stream endpoint는 인증 필요 → fetch로 blob URL 변환 */
+async function fetchVideoAsBlobUrl(url: string): Promise<string> {
+  const token = tokenStorage.getAccess();
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('영상을 불러오지 못했습니다.');
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
@@ -33,8 +45,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
         try {
           const res = await getSessionVideoUrl(sessionId);
           if (cancelled) return;
-          if (res.url) setUrl(res.url);
-          else setError('녹화된 영상이 없습니다.');
+          if (!res.url) {
+            setError('녹화된 영상이 없습니다.');
+            return;
+          }
+          // 로컬 폴백 stream endpoint는 Authorization 필요 → blob URL로 변환
+          const playableUrl = res.url.includes('/video/stream')
+            ? await fetchVideoAsBlobUrl(res.url)
+            : res.url;
+          if (cancelled) return;
+          setUrl(playableUrl);
         } catch (e) {
           if (!cancelled) setError(e instanceof Error ? e.message : '영상을 불러오지 못했습니다.');
         } finally {
