@@ -133,18 +133,18 @@ def test_narrative_cache_hit_skips_llm(monkeypatch, summary, narrative_db):
     cached = dict(journey="캐시 여정", body="캐시 몸", mind="캐시 마음", closing="캐시 마무리")
     narrative_db.add(NarrativeCache(signature="↓↓↑↑↑↑", narrative=cached))
     narrative_db.commit()
-    post = Mock()
-    monkeypatch.setattr(requests, "post", post)
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
+    call = Mock()
+    monkeypatch.setattr(summary_task, "_call_gemini_text", call)
 
     assert summary_task._call_narrative_llm(summary, narrative_db) == cached
-    post.assert_not_called()
+    call.assert_not_called()
 
 
 def test_narrative_cache_miss_saves_fallback(monkeypatch, summary, narrative_db):
     from app.models.narrative_cache import NarrativeCache
 
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "")
+    # Gemini 호출 실패(키 미설정 등) → 규칙 스텁 폴백
+    monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(side_effect=RuntimeError("gemini_api_key not set")))
     expected = fallback_narrative(summary)
     assert summary_task._call_narrative_llm(summary, narrative_db) == expected
     narrative_db.flush()
@@ -196,52 +196,60 @@ def test_seed_does_not_overwrite_llm_cache(narrative_db):
 
 
 def test_same_direction_pattern_reuses_first_narrative(monkeypatch, summary, narrative_db):
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
     generated = dict(journey="첫 여정", body="첫 몸", mind="첫 마음", closing="첫 마무리")
-    response = Mock()
-    response.json.return_value = {"choices": [{"message": {"content": json.dumps(generated)}}]}
-    post = Mock(return_value=response)
-    monkeypatch.setattr(requests, "post", post)
+    call = Mock(return_value=json.dumps(generated))
+    monkeypatch.setattr(summary_task, "_call_gemini_text", call)
 
     assert summary_task._call_narrative_llm(summary, narrative_db) == generated
     same_pattern = json.loads(json.dumps(summary))
     same_pattern["body"]["heart_rate"]["delta"] = -999
     assert summary_task._call_narrative_llm(same_pattern, narrative_db) == generated
-    assert post.call_count == 1
+    assert call.call_count == 1
 
 
-def test_deepseek_success(monkeypatch, summary):
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
+def test_gemini_success(monkeypatch, summary):
     expected = dict(journey="여정", body="몸", mind="마음", closing="마무리")
-    response = Mock()
-    response.json.return_value = {"choices": [{"message": {"content": '```json\n'+json.dumps(expected)+'\n```'}}]}
-    post = Mock(return_value=response)
-    monkeypatch.setattr(requests, "post", post)
+    call = Mock(return_value=json.dumps(expected))
+    monkeypatch.setattr(summary_task, "_call_gemini_text", call)
     assert summary_task._call_narrative_llm(summary) == expected
-    payload = post.call_args.kwargs
-    assert payload["timeout"] == 30
-    assert "점수" in payload["json"]["messages"][0]["content"]
-    assert "score" not in payload["json"]["messages"][0]["content"]
+    assert call.call_args.kwargs["timeout"] == 30
+    assert call.call_args.kwargs["json_mode"] is True
+    prompt = call.call_args.args[0]
+    assert "점수" in prompt
+    assert "score" not in prompt
 
 
 @pytest.mark.parametrize("content", ['{}', '[]', 'null', '{"journey":5}', 'broken'])
 def test_bad_responses_fallback(monkeypatch, summary, content):
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
-    response = Mock()
-    response.json.return_value = {"choices": [{"message": {"content": content}}]}
-    monkeypatch.setattr(requests, "post", Mock(return_value=response))
+    monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(return_value=content))
     assert summary_task._call_narrative_llm(summary) == fallback_narrative(summary)
 
 
 def test_timeout_and_no_key(monkeypatch, summary):
-    post = Mock(side_effect=requests.Timeout())
+    call = Mock(side_effect=requests.Timeout())
+    monkeypatch.setattr(summary_task, "_call_gemini_text", call)
+    assert summary_task._call_narrative_llm(summary) == fallback_narrative(summary)
+    assert call.call_count == 1
+
+    monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(side_effect=RuntimeError("gemini_api_key not set")))
+    assert summary_task._call_narrative_llm(summary) == fallback_narrative(summary)
+
+
+def test_gemini_text_no_key_raises_without_http(monkeypatch):
+    monkeypatch.setattr(summary_task.settings, "gemini_api_key", "")
+    post = Mock()
     monkeypatch.setattr(requests, "post", post)
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
-    assert summary_task._call_narrative_llm(summary) == fallback_narrative(summary)
-    post.reset_mock()
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "")
-    assert summary_task._call_narrative_llm(summary) == fallback_narrative(summary)
+    with pytest.raises(RuntimeError):
+        summary_task._call_gemini_text("test")
     post.assert_not_called()
+
+
+def test_gemini_text_parses_response(monkeypatch):
+    monkeypatch.setattr(summary_task.settings, "gemini_api_key", "test")
+    response = Mock()
+    response.json.return_value = {"candidates": [{"content": {"parts": [{"text": '{"a": 1}'}]}}]}
+    monkeypatch.setattr(requests, "post", Mock(return_value=response))
+    assert summary_task._call_gemini_text("test") == '{"a": 1}'
 
 
 def test_report_eeg_additive_contract(monkeypatch):

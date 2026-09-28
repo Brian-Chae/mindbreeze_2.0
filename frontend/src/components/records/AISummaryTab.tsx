@@ -13,6 +13,7 @@ interface Props {
 
 export function AISummaryTab({ aiSummary }: Props) {
   const summary = aiSummary as AISummaryData;
+  const summaryFailed = aiSummary.summary_failed === true;
   const sections = summary.sections ?? {};
   const keywords = summary.keywords ?? [];
   const riskFlags = summary.risk_flags ?? [];
@@ -70,8 +71,14 @@ export function AISummaryTab({ aiSummary }: Props) {
         </div>
       )}
 
-      {!summary.headline && Object.keys(sections).length === 0 && (
-        <p className="text-sm text-[#6F6F6F]">아직 AI 요약이 생성되지 않았습니다.</p>
+      {summaryFailed ? (
+        <p className="text-sm text-[#8A6B1F]">
+          AI 요약 생성에 실패했습니다. 전사문은 정상적으로 제공됩니다.
+        </p>
+      ) : (
+        !summary.headline && Object.keys(sections).length === 0 && (
+          <p className="text-sm text-[#6F6F6F]">아직 AI 요약이 생성되지 않았습니다.</p>
+        )
       )}
     </div>
   );

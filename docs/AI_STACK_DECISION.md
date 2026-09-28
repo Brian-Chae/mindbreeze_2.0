@@ -16,7 +16,7 @@
 | 용도 | 1차 (Primary) | 2차 (Fallback) | 비고 |
 |------|---------------|----------------|------|
 | **세션 STT + 화자 분리** | Google **Gemini** (Audio 멀티모달, 1회 호출) | OpenAI **Whisper** + **pyannote.audio** (분리 파이프라인) | 한국어 1:1 상담, NFR-03 목표 5분/30분 |
-| **상담 기록지·리포트 요약** | **Claude** (Anthropic) | **Gemini** (동일 프롬프트) | 세션 유형별 템플릿, §18 승인 후 발송 문구 |
+| **상담 기록지·리포트 요약** | Google **Gemini** (텍스트) | — (단독) | 세션 유형별 템플릿, §18 승인 후 발송 문구 |
 | **증빙 OCR·문서 분류·위변조 휴리스틱** | Google **Gemini** (Vision) | 수동 어드민 검토(F11) | F3.5 Celery 비동기 |
 | **자격 판정·반려 사유 초안** | 규칙 엔진 + Gemini 텍스트 | 어드민 최종 판정 | `auto_approve` / `needs_review` / `reject` |
 | **EEG 지표 분석** | **Looxid Labs SDK** (온프레미스/전용) | — | 외부 LLM 미사용 |
@@ -36,9 +36,7 @@
        ↓ (실패·타임아웃·품질 미달)
 [Celery] Whisper STT → pyannote diarization → segments 병합 (2차)
        ↓
-[Celery] Claude: 세션 유형별 기록지·요약 초안
-       ↓ (Claude 장애)
-[Celery] Gemini: 동일 템플릿 요약 (2차)
+[Celery] Gemini 텍스트: 세션 유형별 기록지·요약 초안 + EEG 서사
        ↓
 [상담사 편집·승인] → 리포트(F8) → §18 승인 후 발송
 ```
@@ -80,14 +78,14 @@ needs_review → F11 어드민 큐 | reject → LLM 사유 초안(Gemini)
 |------|------|
 | Gemini Audio (STT) | STT+diarization **단일 API**로 파이프라인 단순화·레이턴시. 기능명세서 F7.2와 정합 |
 | Whisper+pyannote (폴백) | 한국어·장애 시 **검증된 오픈 조합**, 종합기획 §9 아카이브와 호환 |
-| Claude (요약) | 장문 상담 요약·톤 제어 품질, "AI가 기록·사람이 결정" 원칙에 부합 |
+| Gemini 텍스트 (요약·서사) | STT와 **동일 스택**(gemini-2.5-flash)으로 운영 단순화·비용 절감, "AI가 기록·사람이 결정" 원칙에 부합 |
 | Gemini Vision (OCR) | 멀티모달 증빙·F3.5와 동일 스택으로 운영 단순화 |
 
 ---
 
 ## 4. 비용·보안 체크리스트 (착수 전)
 
-- [ ] Gemini·Claude·Whisper **월간 예상 토큰/분** 산정 (세션 30분 × 월 N건)
+- [ ] Gemini·Whisper **월간 예상 토큰/분** 산정 (세션 30분 × 월 N건)
 - [ ] DPA·no-train·리전(한국/해외) 계약 확인
 - [ ] POC: 한국어 상담 샘플 5건 STT+요약 E2E (MVP1 Sprint 0~1)
 - [ ] pyannote 모델 라이선스·GPU 워커 필요 여부

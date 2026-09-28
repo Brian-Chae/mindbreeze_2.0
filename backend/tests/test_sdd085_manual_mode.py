@@ -10,7 +10,7 @@
 
 import io
 
-from tests.test_audio_record import _register, _create_session, _upload_chunk
+from tests.test_audio_record import _register, _create_session, _upload_chunk, _mock_ai_pipeline
 
 
 def test_01_동의없음_manual_선언_200(client):
@@ -157,8 +157,9 @@ def test_08_리포트_ai_record_mic_off_계약(client):
     assert content["ai_record"] == {"status": "not_available", "reason": "mic_off"}
 
 
-def test_09_리포트_ai_record_정상세션_available(client):
+def test_09_리포트_ai_record_정상세션_available(client, monkeypatch):
     # QA-4 (하위 호환): 마이크 ON 세션은 ai_record.status=available
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "sdd085i@test.com")
     sid = _create_session(client, host)
     client.post(
@@ -200,3 +201,35 @@ def test_10_수동노트_마커는_manual에서도_정상(client):
     body = res.json()
     assert body["counselor_notes"] == "수동 기록 모드 상담사 노트"
     assert body["status"] == "manual"
+
+
+def test_11_저신뢰_리포트_low_confidence_전사문유지(client, monkeypatch):
+    # SDD-085 G5 확장: 비언어([잡음]/[무음]) 지배 오디오 → AI 요약 미제공 + 원본 전사문 유지
+    _mock_ai_pipeline(monkeypatch, confidence="low")
+    host = _register(client, "sdd085k@test.com")
+    sid = _create_session(client, host)
+    client.post(
+        f"/api/v1/sessions/{sid}/audio/start",
+        json={"consent_audio": True},
+        headers=host["auth"],
+    )
+    _upload_chunk(client, sid, host)
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
+
+    rec = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"]).json()
+    # STT는 완료(전사문 유지), AI 요약(headline)은 생성되지 않는다
+    assert rec["status"] == "completed"
+    assert rec["transcript"]
+    assert "headline" not in rec["ai_summary"]
+    assert rec["ai_summary"]["transcript_confidence"] == "low"
+
+    gen = client.post(
+        f"/api/v1/reports/generate/{sid}",
+        json={"type": "counselor"},
+        headers=host["auth"],
+    )
+    assert gen.status_code == 200, gen.text
+    content = gen.json()["content"]
+    assert content["ai_record"] == {"status": "not_available", "reason": "low_confidence"}
+    # 원본 전사문(transcript_segments)은 유지된다
+    assert content["transcript_segments"]

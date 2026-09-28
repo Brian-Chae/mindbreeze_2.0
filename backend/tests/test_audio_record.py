@@ -112,7 +112,8 @@ def test_05_청크_업로드_성공(client):
     assert body["total_chunks"] == 1
 
 
-def test_06_녹음_종료_파이프라인_트리거(client):
+def test_06_녹음_종료_파이프라인_트리거(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec06@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
@@ -141,7 +142,44 @@ def _upload_chunk(client, sid: str, host: dict, index: int = 0) -> None:
     assert res.status_code == 200, res.text
 
 
-def test_07_기록지_조회_파이프라인후(client):
+def _mock_ai_pipeline(monkeypatch, confidence: str = "high") -> None:
+    """STT·요약 외부 API를 모킹한다 (테스트 환경은 API 키가 없어 실패하므로).
+
+    confidence='high' → 정상 대화 세그먼트, 'low' → 비언어([잡음]/[무음]) 마커만.
+    """
+    from app.tasks import stt_task, summary_task
+
+    if confidence == "low":
+        segs = [
+            {"speaker": "speaker_0", "text": "[잡음]", "start": 0.0, "end": 1.0},
+            {"speaker": "speaker_0", "text": "[무음]", "start": 1.0, "end": 3.0},
+            {"speaker": "speaker_0", "text": "[잡음]", "start": 3.0, "end": 5.0},
+        ]
+    else:
+        segs = [
+            {"speaker": "counselor", "text": "안녕하세요, 오늘 어떤 이야기를 해볼까요?", "start": 0.0, "end": 3.0},
+            {"speaker": "client", "text": "요즘 스트레스가 많아서 힘들어요.", "start": 3.5, "end": 6.5},
+            {"speaker": "counselor", "text": "어떤 부분이 가장 힘드신가요?", "start": 7.0, "end": 9.0},
+        ]
+
+    def fake_transcribe(chunk_paths, session_type):
+        return {"segments": segs, "raw_text": "\n".join(f"[{s['speaker']}] {s['text']}" for s in segs)}
+
+    def fake_summary(session_type, transcript):
+        return {
+            "headline": "테스트 AI 요약",
+            "sections": {"요약": "요약 내용", "관찰": "관찰 내용"},
+            "keywords": ["키워드1"],
+            "risk_flags": [],
+            "transcript_present": True,
+        }
+
+    monkeypatch.setattr(stt_task, "_call_gemini_transcribe", fake_transcribe)
+    monkeypatch.setattr(summary_task, "_call_gemini_summary", fake_summary)
+
+
+def test_07_기록지_조회_파이프라인후(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec07@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
@@ -156,7 +194,8 @@ def test_07_기록지_조회_파이프라인후(client):
     assert "headline" in body["ai_summary"]
 
 
-def test_08_전사문_조회(client):
+def test_08_전사문_조회(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec08@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
@@ -205,7 +244,8 @@ def test_11_존재하지않는_세션_404(client):
     assert res.status_code == 404
 
 
-def test_12_세션_end_시_자동_finalize(client):
+def test_12_세션_end_시_자동_finalize(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec12@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])

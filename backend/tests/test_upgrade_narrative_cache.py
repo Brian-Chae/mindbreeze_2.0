@@ -60,10 +60,7 @@ def test_upgrade_replaces_rule_narrative_after_real_llm_success(monkeypatch, nar
     seed_narrative_cache(narrative_db, ["↓↓↑↑↑↑"])
     narrative_db.commit()
     generated = dict(journey="LLM 여정", body="LLM 몸", mind="LLM 마음", closing="LLM 마무리")
-    response = Mock()
-    response.json.return_value = {"choices": [{"message": {"content": json.dumps(generated)}}]}
-    monkeypatch.setattr("requests.post", Mock(return_value=response))
-    monkeypatch.setattr(summary_task, "DEEPSEEK_API_KEY", "test")
+    monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(return_value=json.dumps(generated)))
 
     assert upgrade_rule_narratives(narrative_db, limit=1) == 1
     cached = narrative_db.get(NarrativeCache, "↓↓↑↑↑↑")

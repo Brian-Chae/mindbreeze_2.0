@@ -1,23 +1,23 @@
 """AI 요약 — Celery 태스크 (SDD-013)
 
-1차: Deepseek → 2차: Gemini 폴백
+요약·서사 모두 Gemini 단독 (Deepseek 제거).
 WebSocket `/record` 네임스페이스로 완료 상태 브로드캐스트.
 """
 
 import json
 import logging
-import os
 from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session
 from app.models.record import SessionRecord
 
 logger = logging.getLogger(__name__)
 
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
-DEEPSEEK_BASE = "https://api.deepseek.com/v1"
+GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 TEMPLATE_BY_TYPE = {
     "clinical": ["주요 주제", "감정 분석", "상담사 소견", "권고사항", "진행 단계"],
@@ -26,13 +26,47 @@ TEMPLATE_BY_TYPE = {
 }
 
 
+def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120) -> str:
+    """Gemini 텍스트 생성 — 응답 텍스트(JSON 모드 시 JSON 문자열)를 반환.
+
+    키 미설정·네트워크·응답 형식 문제 시 예외를 그대로 전파한다 — 호출부가 폴백/실패를 결정.
+    """
+    if not settings.gemini_api_key:
+        raise RuntimeError("gemini_api_key not set")
+
+    import requests
+
+    body: dict = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.3},
+    }
+    if json_mode:
+        body["generationConfig"]["responseMimeType"] = "application/json"
+
+    resp = requests.post(
+        f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
+        headers={
+            "x-goog-api-key": settings.gemini_api_key,
+            "Content-Type": "application/json",
+        },
+        json=body,
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError, TypeError) as exc:
+        raise ValueError(f"Gemini 응답 형식 불일치: {exc}") from exc
+
+
 def _call_narrative_llm(
     metrics_summary: dict,
     db: DBSession | None = None,
     *,
     force_refresh: bool = False,
 ) -> dict:
-    """Deepseek 서사 생성. 키 누락/실패 시 규칙 스텁으로 안전하게 폴백한다."""
+    """Gemini 서사 생성. 실패 시 규칙 스텁(fallback_narrative)으로 안전하게 폴백한다."""
     from app.models.narrative_cache import NarrativeCache
     from app.services.report_narrative import build_narrative_signature, fallback_narrative
 
@@ -49,14 +83,12 @@ def _call_narrative_llm(
             db.flush()
         return narrative
 
-    if not DEEPSEEK_API_KEY or not any(
+    if not any(
         metric.get("direction") is not None
         for group in ("body", "mind")
         for metric in metrics_summary.get(group, {}).values()
     ):
         return cache(fallback, "rule")
-
-    import requests
 
     prompt = """세션 전반과 후반의 생체 지표 변화를 한국어 서사로 설명하세요.
 명상을 점수(0~100), 등급, 잘함/못함으로 평가하지 마세요.
@@ -69,18 +101,7 @@ journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마
 자료:
 """ + json.dumps(metrics_summary, ensure_ascii=False, allow_nan=False)
     try:
-        response = requests.post(
-            f"{DEEPSEEK_BASE}/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"},
-            json={"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}],
-                  "temperature": 0.3, "max_tokens": 1024,
-                  "response_format": {"type": "json_object"}},
-            timeout=30,
-        )
-        response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"].strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        content = _call_gemini_text(prompt, json_mode=True, timeout=30)
         parsed = json.loads(content)
         keys = ("journey", "body", "mind", "closing")
         if not isinstance(parsed, dict) or any(
@@ -94,14 +115,8 @@ journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마
         return cache(fallback, "rule")
 
 
-def _call_deepseek_summary(session_type: str, transcript: str | None) -> dict:
-    """Deepseek API — 구조화된 JSON 요약."""
-    if not DEEPSEEK_API_KEY:
-        logger.warning("[summary_task] DEEPSEEK_API_KEY not set, using stub")
-        return _generate_stub(session_type, transcript)
-
-    import requests
-
+def _call_gemini_summary(session_type: str, transcript: str | None) -> dict:
+    """Gemini API — 구조화된 JSON 요약. 실패 시 예외 전파(허위 요약 저장 금지)."""
     sections = TEMPLATE_BY_TYPE.get(session_type, ["요약", "관찰", "권고"])
     sections_format = ", ".join(f'"{s}": "내용"' for s in sections)
 
@@ -122,56 +137,11 @@ def _call_deepseek_summary(session_type: str, transcript: str | None) -> dict:
 전사 기록:
 {transcript or "(전사 기록 없음)"}"""
 
-    try:
-        resp = requests.post(
-            f"{DEEPSEEK_BASE}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "deepseek-chat",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3,
-                "max_tokens": 2048,
-            },
-            timeout=120,
-        )
-        resp.raise_for_status()
-        result = resp.json()
-        content = result["choices"][0]["message"]["content"]
-
-        # JSON 추출 (코드 블록 제거)
-        content = content.strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[-1]
-            if content.endswith("```"):
-                content = content[:-3]
-            content = content.strip()
-        if content.lower().startswith("json"):
-            content = content[4:].strip()
-
-        parsed = json.loads(content)
-        parsed["transcript_present"] = bool(transcript)
-        logger.info("[summary_task] Deepseek success: %s", parsed.get("headline", "")[:50])
-        return parsed
-
-    except (requests.RequestException, json.JSONDecodeError, KeyError) as exc:
-        logger.exception("[summary_task] Deepseek failed: %s", exc)
-        raise
-
-
-def _generate_stub(session_type: str, transcript: str | None) -> dict:
-    """API 키 없거나 실패 시 스텁."""
-    logger.info("[summary_task] Stub: type=%s", session_type)
-    sections = TEMPLATE_BY_TYPE.get(session_type, ["요약", "관찰", "권고"])
-    return {
-        "headline": f"{session_type} 세션 AI 요약 (자동 생성)",
-        "sections": {sec: f"{sec} 내용이 자동 생성되었습니다." for sec in sections},
-        "keywords": ["키워드1", "키워드2", "키워드3"],
-        "risk_flags": [],
-        "transcript_present": bool(transcript),
-    }
+    content = _call_gemini_text(prompt, json_mode=True, timeout=120)
+    parsed = json.loads(content)
+    parsed["transcript_present"] = bool(transcript)
+    logger.info("[summary_task] Gemini 요약 성공: %s", parsed.get("headline", "")[:50])
+    return parsed
 
 
 async def _emit_status(session_id: str, status: str, detail: dict | None = None):
@@ -207,13 +177,31 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         asyncio.run(_emit_status(session_id, "failed", {"reason": "no_transcript"}))
         return
 
+    # SDD-085 G5 확장: STT 신뢰도가 낮으면 AI 요약(분석)을 생성하지 않는다 — 원본 전사문은 유지.
+    # STT는 완료됐으므로 status는 completed 로 마감하고, 요약만 스킵한다.
+    confidence = (record.ai_summary or {}).get("transcript_confidence")
+    if confidence == "low":
+        logger.info("[summary_task] 신뢰도 낮음 — AI 요약 미실행: %s", session_id)
+        if record.status == "processing":
+            record.status = "completed"
+            db.commit()
+        asyncio.run(_emit_status(session_id, "completed", {"reason": "low_confidence"}))
+        return
+
     asyncio.run(_emit_status(session_id, "summarizing"))
 
     try:
-        result = _call_deepseek_summary(session.type, record.transcript)
+        result = _call_gemini_summary(session.type, record.transcript)
     except Exception as exc:
-        logger.exception("[summary_task] Deepseek failed: %s", exc)
-        result = _generate_stub(session.type, record.transcript)
+        # SDD-085 G5: 허위 요약을 저장하지 않는다 — 전사문은 유지하고 요약 실패로 마감.
+        logger.exception("[summary_task] Gemini 요약 실패: %s", exc)
+        summary = dict(record.ai_summary or {})
+        summary["summary_failed"] = True
+        record.ai_summary = summary
+        record.status = "completed"
+        db.commit()
+        asyncio.run(_emit_status(session_id, "completed", {"reason": "summary_failed"}))
+        return
 
     summary = dict(record.ai_summary or {})
     summary.update(result)

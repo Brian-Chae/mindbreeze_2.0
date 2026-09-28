@@ -46,6 +46,7 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "report_review_requested": {"type": "report", "target_type": "report"},
     "report_ready": {"type": "report", "target_type": "report"},
     "report_generation_failed": {"type": "report", "target_type": "report"},
+    "report_low_confidence": {"type": "report", "target_type": "session"},
     "report_email_failed": {"type": "report", "target_type": "report"},
     # ── 검증 V01~V03 ──
     "verification_result": {"type": "verification", "target_type": "credentials"},

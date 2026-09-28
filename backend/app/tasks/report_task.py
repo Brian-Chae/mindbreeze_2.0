@@ -40,9 +40,14 @@ def _ai_record_block(record: SessionRecord | None) -> dict:
 
     마이크 오프(manual) 세션은 status="not_available" + reason="mic_off" 로
     프론트가 요약 섹션을 숨기고 사유를 표기한다.
+    신뢰도 낮음(low_confidence)도 동일하게 not_available 로 내려 AI 요약을 숨기되,
+    원본 전사문(transcript_segments)은 별도 필드로 유지된다.
     """
     if record is not None and record.status == "manual":
         return {"status": "not_available", "reason": "mic_off"}
+    # SDD-085 G5 확장: 오디오 분석 신뢰도 낮음 — AI 요약 미제공(원본 전사문은 유지)
+    if record is not None and _ai_summary(record).get("transcript_confidence") == "low":
+        return {"status": "not_available", "reason": "low_confidence"}
     if record is None or not (record.transcript and record.transcript.strip()):
         return {"status": "not_available", "reason": "no_transcript"}
     return {"status": "available"}

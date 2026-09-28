@@ -15,7 +15,7 @@ from app.main import app
 from app.models.record import Report
 from app.models.session import SessionParticipant
 
-from tests.test_audio_record import _register, _create_session, _upload_chunk
+from tests.test_audio_record import _register, _create_session, _upload_chunk, _mock_ai_pipeline
 
 
 def _db():
@@ -146,7 +146,8 @@ def test_05_마이크오프_세션도_리포트_자동생성_ai_record_mic_off(c
         assert rp.status == "pending_review"
 
 
-def test_06_마이크온_세션_counselor_리포트_ai_record_available(client):
+def test_06_마이크온_세션_counselor_리포트_ai_record_available(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "sdd086f@test.com")
     sid = _create_session(client, host)
     client.post(
