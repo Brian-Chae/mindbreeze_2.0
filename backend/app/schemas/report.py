@@ -57,6 +57,8 @@ class ReportResponse(HRVMotionSummary):
     type: str
     # SDD-027: 리포트 상태머신(pending_analysis/pending_review/completed/error) + 데이터 신뢰도
     status: str = "pending_analysis"
+    # SDD-095: 생성 진행 상태(pending/processing/ready/partial) — 승인 상태와 독립 축
+    generation_status: str = "pending"
     data_credibility: str | None = None
     content: dict[str, Any] = Field(default_factory=dict)
     pdf_url: str | None = None
@@ -77,3 +79,30 @@ class ReportListResponse(BaseModel):
     total: int
     page: int | None = None
     limit: int | None = None
+
+
+# ── SDD-095: 리포트 생성 진행 상태 계약 ────────────────────────────────
+class ReportProgressStep(BaseModel):
+    """스텝퍼 1스텝 — key: save|stt|summary|ready, state: pending|active|done|skipped|failed."""
+
+    key: str
+    label: str
+    state: str
+
+
+class ReportStatusResponse(BaseModel):
+    """세션의 리포트 생성 진행 상태 — REST 조회/Socket.IO `report:progress` 공통 계약."""
+
+    session_id: str
+    # pending | processing | ready | partial
+    generation_status: str
+    # 현재 진행 단계 (save | stt | summary | ready)
+    stage: str
+    # 0~100 진행률
+    progress: int
+    # partial/차단 사유 (mic_off | low_confidence | no_transcript | stt_failed | summary_failed | report_failed)
+    reason: str | None = None
+    # 승인 게이트 상태(참고) — 리포트별 상태가 갈리면 null
+    report_status: str | None = None
+    steps: list[ReportProgressStep] = Field(default_factory=list)
+    updated_at: datetime | None = None

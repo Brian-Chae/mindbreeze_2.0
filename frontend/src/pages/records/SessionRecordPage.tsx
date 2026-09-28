@@ -9,6 +9,8 @@ import { RecordView } from '../../components/records/RecordView';
 import { getRecord, getTranscript, type RecordResponse, type TranscriptResponse } from '../../lib/api/audio';
 import { getSession, type SessionDto, type SessionType } from '../../lib/api/session';
 import { useRecordSocket, RECORD_STATUS_LABELS, type RecordStatus } from '../../hooks/useRecordSocket';
+import { useReportProgress } from '../../hooks/useReportProgress';
+import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
 
 const TYPE_LABELS: Record<SessionType, string> = {
   clinical: '임상심리상담',
@@ -197,6 +199,8 @@ export default function SessionRecordPage() {
   const [loading, setLoading] = useState(true);
 
   const { status: wsStatus, subscribe } = useRecordSocket();
+  // SDD-095: 리포트 생성 진행 스텝퍼(녹음 저장 → STT → 요약 → 완료)
+  const { progress: reportProgress } = useReportProgress(id ?? null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -293,7 +297,12 @@ export default function SessionRecordPage() {
       <div className="space-y-4 max-w-4xl">
         {session && <ClassMetaCard session={session} />}
 
-        {progressStatus && <StatusProgressBar status={progressStatus} />}
+        {/* SDD-095: 리포트 생성 진행 스텝퍼 우선 — 계약 미수신 시 기존 처리 표시로 폴백 */}
+        {reportProgress ? (
+          <ReportProgressStepper progress={reportProgress} tone="light" />
+        ) : (
+          progressStatus && <StatusProgressBar status={progressStatus} />
+        )}
 
         {/* SDD-085: 마이크 오프(수동 기록 모드) 안내 — §7 M-4 */}
         {record.status === 'manual' && (

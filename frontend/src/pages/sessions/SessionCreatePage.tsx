@@ -1,10 +1,12 @@
 // 세션 생성 페이지 (UI Kit)
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   createSession,
   inviteParticipant,
+  listSessionTemplates,
+  saveSessionAsTemplate,
   type CreateSessionPayload,
   type LinkbandMode,
   type LocationType,
@@ -18,6 +20,7 @@ import { ParticipantPicker, type SelectedParticipant } from '../../components/se
 export default function SessionCreatePage() {
   const navigate = useNavigate();
   const [type, setType] = useState<SessionType>('meditation');
+  const [customTypeName, setCustomTypeName] = useState('');
   const [locationType, setLocationType] = useState<LocationType>('offline');
   const [participantMode, setParticipantMode] = useState<ParticipantMode>('group');
   const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('optional');
@@ -33,9 +36,54 @@ export default function SessionCreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteWarning, setInviteWarning] = useState<string | null>(null);
+  // SDD-095: 클래스 템플릿 — 반복 클래스를 같은 설정으로 다시 만든다.
+  const [templates, setTemplates] = useState<SessionDto[]>([]);
+  const [templateId, setTemplateId] = useState('');
+  const [templateHint, setTemplateHint] = useState<string | null>(null);
+  const [templateSaved, setTemplateSaved] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   // 1:1 모드면 1명, 그룹이면 최대 참여자 수만큼 선택 가능
   const pickerMax = participantMode === 'one_on_one' ? 1 : maxParticipants;
+
+  useEffect(() => {
+    let cancelled = false;
+    listSessionTemplates()
+      .then((res) => {
+        if (!cancelled) setTemplates(res.sessions);
+      })
+      .catch(() => {
+        // 템플릿 조회 실패는 생성 자체를 막지 않는다(드롭다운만 비어 있음).
+        if (!cancelled) setTemplates([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** 선택한 템플릿의 유형 설정을 폼에 채운다(제목·일정은 사용자가 새로 정한다). */
+  const applyTemplate = (nextId: string): void => {
+    setTemplateId(nextId);
+    if (!nextId) {
+      setTemplateHint(null);
+      return;
+    }
+    const tpl = templates.find((t) => t.id === nextId);
+    if (!tpl) return;
+    setType(tpl.type);
+    setCustomTypeName(tpl.custom_type_name ?? '');
+    setLocationType(tpl.location_type);
+    setParticipantMode(tpl.participant_mode);
+    setMaxParticipants(tpl.max_participants);
+    setLinkbandMode(tpl.linkband_mode);
+    setRecordAudio(tpl.record_audio);
+    setRecordVideo(tpl.record_video);
+    setDurationMin(tpl.duration_min);
+    setNotes(tpl.notes ?? '');
+    setTemplateHint(
+      `템플릿 '${tpl.title || '제목 없음'}' 설정을 불러왔습니다. 일정과 제목을 확인한 뒤 생성하세요.`,
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -44,6 +92,7 @@ export default function SessionCreatePage() {
     try {
       const payload: CreateSessionPayload = {
         type,
+        custom_type_name: type === 'custom' ? customTypeName : undefined,
         duration_min: durationMin,
         title: title || undefined,
         notes: notes || undefined,
@@ -75,6 +124,21 @@ export default function SessionCreatePage() {
       setError(e instanceof Error ? e.message : '세션 생성에 실패했습니다');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /** SDD-095: 방금 만든 클래스 설정을 템플릿으로 저장 — 다음부터 원클릭 재사용. */
+  const handleSaveAsTemplate = async (): Promise<void> => {
+    if (!createdSession) return;
+    setSavingTemplate(true);
+    setError(null);
+    try {
+      await saveSessionAsTemplate(createdSession.id);
+      setTemplateSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '템플릿 저장에 실패했습니다');
+    } finally {
+      setSavingTemplate(false);
     }
   };
 
@@ -116,6 +180,21 @@ export default function SessionCreatePage() {
             >
               {copied ? '복사 완료' : '클래스 코드 복사'}
             </button>
+            {/* SDD-095: 반복 클래스 대비 — 이 설정을 템플릿으로 남긴다 */}
+            <div className="mt-4 rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] px-4 py-3 text-left">
+              <p className="text-sm font-semibold text-[#5F0080]">이 설정을 템플릿으로 저장</p>
+              <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
+                유형·정원·진행 형태·녹화 설정만 저장합니다. 다음 클래스부터는 같은 설정을 한 번에 불러올 수 있습니다.
+              </p>
+              <button
+                type="button"
+                onClick={handleSaveAsTemplate}
+                disabled={savingTemplate || templateSaved}
+                className="mb-btn mb-btn--ghost text-sm disabled:opacity-50"
+              >
+                {templateSaved ? '템플릿으로 저장됨' : savingTemplate ? '저장 중...' : '템플릿으로 저장'}
+              </button>
+            </div>
             {inviteWarning && (
               <p className="mt-3 text-sm text-[#B3261E] bg-[#FDF1F0] border border-[#F2C9C5] rounded-xl px-4 py-3 text-left">
                 {inviteWarning}
@@ -149,13 +228,53 @@ export default function SessionCreatePage() {
       <div className="max-w-[640px] mx-auto">
         <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-5 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* SDD-095: 내 템플릿에서 시작 — 저장해 둔 유형 설정을 폼에 채운다 */}
+            {templates.length > 0 && (
+              <div className="rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] px-4 py-3">
+                <label className={labelCls} htmlFor="session-template">
+                  내 템플릿에서 시작
+                </label>
+                <select
+                  id="session-template"
+                  value={templateId}
+                  onChange={(e) => applyTemplate(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="">템플릿 선택 안 함</option>
+                  {templates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.title || '제목 없음'}
+                    </option>
+                  ))}
+                </select>
+                {templateHint && <p className="mt-2 text-xs text-[#6F6F6F]">{templateHint}</p>}
+              </div>
+            )}
+
             <div>
               <label className={labelCls}>세션 유형</label>
               <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
                 <option value="meditation">명상수업</option>
                 <option value="clinical">임상심리상담</option>
+                <option value="hypnosis">최면심리상담</option>
+                <option value="custom">기타</option>
               </select>
             </div>
+
+            {type === 'custom' && (
+              <div>
+                <label className={labelCls}>유형 이름</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={30}
+                  value={customTypeName}
+                  onChange={(e) => setCustomTypeName(e.target.value)}
+                  className={inputCls}
+                  placeholder="예: 집단상담"
+                />
+              </div>
+            )}
 
             <div>
               <label className={labelCls}>장소 유형</label>

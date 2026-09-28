@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   deleteSession,
+  duplicateSession,
   getSession,
   inviteParticipant,
   removeParticipant,
+  saveSessionAsTemplate,
   transitionSession,
   type SessionAction,
   type SessionDto,
@@ -71,6 +73,8 @@ export default function SessionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  // SDD-095: 템플릿 저장 완료 표시
+  const [templateSaved, setTemplateSaved] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteSelected, setInviteSelected] = useState<SelectedParticipant[]>([]);
 
@@ -169,6 +173,35 @@ export default function SessionDetailPage() {
     }
   };
 
+  // SDD-095: 반복 클래스 재개설 — 유형 설정만 복사한 새 클래스로 이동한다.
+  const handleDuplicate = async (): Promise<void> => {
+    if (!id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const duplicated = await duplicateSession(id);
+      navigate(`/sessions/${duplicated.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '클래스 복제에 실패했습니다');
+      setBusy(false);
+    }
+  };
+
+  // SDD-095: 현재 설정을 템플릿으로 저장 — 생성 폼의 "내 템플릿에서 시작"에 나타난다.
+  const handleSaveAsTemplate = async (): Promise<void> => {
+    if (!id) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveSessionAsTemplate(id);
+      setTemplateSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '템플릿 저장에 실패했습니다');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (error && !session) {
     return (
       <AppShell title="세션 상세" sub="DETAIL">
@@ -192,6 +225,23 @@ export default function SessionDetailPage() {
 
   const rightSlot = (
     <div className="flex items-center gap-2">
+      {/* SDD-095: 템플릿으로 저장 / 복제 — 반복 클래스를 같은 설정으로 다시 만든다 */}
+      <button
+        type="button"
+        onClick={handleSaveAsTemplate}
+        disabled={busy || templateSaved}
+        className="mb-btn mb-btn--ghost text-sm disabled:opacity-50"
+      >
+        {templateSaved ? '템플릿 저장됨' : '템플릿으로 저장'}
+      </button>
+      <button
+        type="button"
+        onClick={handleDuplicate}
+        disabled={busy}
+        className="mb-btn mb-btn--ghost text-sm"
+      >
+        복제
+      </button>
       {/* SDD-088: [입장] 단일 버튼 — 플레이어가 상태에 맞는 씬을 전개한다 */}
       {ENTERABLE_STATUSES.includes(session.status) && (
         <button

@@ -17,11 +17,23 @@ from app.models.record import SessionRecord, Report
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.normalization_model import NormalizationModel
 from app.services import eeg_metrics
+from app.services import report_progress_service
 from app.services.eeg_rollup_service import summarize_hrv_motion
 from app.services.report_narrative import build_metrics_summary
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
+
+
+def _emit_report_progress(session_id: str, db: DBSession) -> None:
+    """SDD-095: 리포트 생성 진행 상태(`report:progress`) 브로드캐스트.
+
+    완료(ready/partial) 시점에 프론트가 조용한 토스트 1회를 띄울 수 있게 push 한다.
+    """
+    try:
+        report_progress_service.emit_report_progress(session_id, db)
+    except Exception:  # noqa: BLE001 — WS 실패가 리포트 생성을 막지 않는다.
+        logger.warning("[report_task] report:progress emit failed: %s", session_id)
 
 
 def _ai_summary(record: SessionRecord | None) -> dict:
@@ -264,6 +276,11 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).first()
 
+    # SDD-095: 리포트 생성 시작 — 진행 상태를 '처리 중'으로 반영한다.
+    # (프론트 종료 화면 스텝퍼의 '리포트 완료' 스텝이 active 로 표시된다)
+    report.generation_status = report_progress_service.GENERATION_PROCESSING
+    db.commit()
+
     try:
         # SDD-088: 대기실(open) 중 수집 EEG 제외 — started_at~ended_at 구간만 집계
         eeg_block = _build_eeg_content(
@@ -327,8 +344,12 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
         content["counselor_comment"] = prev_comment
 
     report.content = content
+    # SDD-095: 최종 생성 상태 — ai_record 가용(전사+요약)이면 ready, 아니면 partial.
+    # 승인 게이트(report.status)와는 독립 축이다.
+    report.generation_status = report_progress_service.generation_status_for_content(content, record)
     db.commit()
     db.refresh(report)
+    _emit_report_progress(str(report.session_id), db)
     return report
 
 
@@ -359,6 +380,9 @@ try:
                 return
             report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
             report_service.generate_client_reports_for_session(str(s.id), db)
+            # SDD-095: 세션의 모든 리포트 생성이 끝난 뒤 최종 진행 상태를 1회 push 한다.
+            # (개별 리포트 생성 중 발생한 이벤트를 최종 집계값으로 확정)
+            _emit_report_progress(str(s.id), db)
         finally:
             db.close()
 except Exception:  # noqa: BLE001

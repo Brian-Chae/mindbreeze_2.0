@@ -21,6 +21,7 @@ import { BrainChart } from './BrainChart';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
+import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -574,6 +575,14 @@ export function GuestMeditationPanel({
         collapsed={!chatExpanded}
         onCollapsedChange={(next) => setChatExpanded(!next)}
         title="클래스 채팅"
+      />
+
+      {/* 개선 9: 최초 1회 온보딩 코치마크 — 기본 뮤트·손들기·스피커·몰입 모드 안내.
+          localStorage로 재노출을 막고, [건너뛰기]/[다시 보지 않기]로 즉시 닫을 수 있다. */}
+      <ClassOnboardingCoachmarks
+        locationType={locationType}
+        participantMode={participantMode}
+        maxParticipants={maxParticipants}
       />
 
       {/* 화면 끄기(몰입) 토글 — 우하단 FAB (1.0 절전 모드 패리티) */}

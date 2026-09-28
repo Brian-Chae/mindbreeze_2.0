@@ -92,6 +92,17 @@ def get_transcript(session_id: str, user_id: str, db: DBSession) -> dict:
     }
 
 
+def get_report_status(session_id: str, user_id: str, db: DBSession) -> dict:
+    """SDD-095: 세션의 리포트 생성 진행 상태 — 접근 권한 검증 후 파생한다.
+
+    접근 규칙은 기록지 조회와 동일(세션 호스트 또는 참여자)하다.
+    """
+    from app.services import report_progress_service
+
+    s = _get_session_for_user(session_id, user_id, db)
+    return report_progress_service.compute_report_progress(s.id, db)
+
+
 def update_record(session_id: str, host_id: str, payload, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()

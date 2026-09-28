@@ -27,8 +27,10 @@ from app.schemas.session import (
     SessionLiveMetricsResponse,
     MarkerRequest,
     SessionCreateRequest,
+    SessionDuplicateRequest,
     SessionListResponse,
     SessionResponse,
+    SessionTemplateSaveRequest,
     SessionUpdateRequest,
     SpeakingRequest,
     SpeakingStateResponse,
@@ -122,6 +124,20 @@ def get_member_livekit_token(
     )
 
 
+# ── SDD-095: 클래스 템플릿 (설정 저장본) ──
+# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "templates"가 세션 ID로 해석되지 않는다.
+
+
+@router.get("/templates", response_model=SessionListResponse)
+def list_session_templates(
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """내 클래스 템플릿 목록 — 생성 폼의 '내 템플릿에서 시작' 드롭다운용."""
+    templates, total = session_service.list_templates(current_user["id"], db)
+    return SessionListResponse(sessions=templates, total=total)
+
+
 @router.get("/{session_id}", response_model=SessionResponse)
 def get_session(
     session_id: str,
@@ -211,6 +227,55 @@ def start_new_run(
     completed·cancelled 세션은 즉시 재시작할 수 없다(400). host 상담사 전용.
     """
     return session_service.start_new_run(session_id, current_user["id"], db)
+
+
+# ── SDD-095: 클래스 복제 · 템플릿 저장 ──
+
+
+@router.post(
+    "/{session_id}/duplicate",
+    response_model=SessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def duplicate_session(
+    session_id: str,
+    payload: SessionDuplicateRequest | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """클래스 복제 — 유형 설정만 복사해 새 클래스(참여코드/룸/회차 신규)를 만든다.
+
+    원본이 템플릿이어도 결과물은 항상 실제 클래스다. host 상담사 전용.
+    """
+    body = payload or SessionDuplicateRequest()
+    return session_service.duplicate_session(
+        session_id,
+        current_user["id"],
+        db,
+        scheduled_at=body.scheduled_at,
+        title=body.title,
+        force=body.force,
+    )
+
+
+@router.post(
+    "/{session_id}/save-as-template",
+    response_model=SessionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def save_session_as_template(
+    session_id: str,
+    payload: SessionTemplateSaveRequest | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """현재 클래스의 유형 설정을 재사용 가능한 템플릿(is_template=True)으로 저장한다."""
+    return session_service.save_as_template(
+        session_id,
+        current_user["id"],
+        db,
+        title=payload.title if payload else None,
+    )
 
 
 @router.post("/{session_id}/invite", response_model=SessionResponse)

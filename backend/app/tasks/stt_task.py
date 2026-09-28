@@ -267,6 +267,19 @@ async def _emit_status(session_id: str, status: str, detail: dict | None = None)
         logger.warning("[stt_task] WebSocket emit failed: %s", status)
 
 
+def _emit_report_progress(session_id: str, db: DBSession) -> None:
+    """SDD-095: 리포트 생성 진행 상태(`report:progress`) 브로드캐스트.
+
+    프론트 종료 화면 스텝퍼가 STT/요약 구간에서도 '처리 중'을 표시할 수 있게 한다.
+    """
+    try:
+        from app.services import report_progress_service
+
+        report_progress_service.emit_report_progress(session_id, db)
+    except Exception:
+        logger.warning("[stt_task] report:progress emit failed: %s", session_id)
+
+
 def _notify_low_confidence(session: Session | None, db: DBSession) -> None:
     """신뢰도 낮음 — 호스트(상담사)에게 AI 리포트 미제공을 통지한다.
 
@@ -310,6 +323,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     # SDD-085 가드 1: 수동 기록 모드(마이크 오프)는 STT 대상 아님
     if record.status == "manual":
         logger.info("[stt_task] manual 세션 — STT 스킵: %s", session_id)
+        _emit_report_progress(session_id, db)
         return
 
     # 세션 유형(프롬프트 분기) + 호스트(저신뢰 알림 대상) + 오디오 길이(신뢰도 판정)
@@ -320,6 +334,8 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         audio_duration_sec = (record.recording_ended_at - record.recording_started_at).total_seconds()
 
     asyncio.run(_emit_status(session_id, "merging"))
+    # SDD-095: 세션 종료 → 녹음 저장 완료/STT 진행을 진행 스텝퍼에 반영
+    _emit_report_progress(session_id, db)
 
     chunks = (
         db.query(AudioChunk)
@@ -336,9 +352,11 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
         record.status = "failed"
         db.commit()
         asyncio.run(_emit_status(session_id, "failed", {"reason": "no_audio_chunks"}))
+        _emit_report_progress(session_id, db)
         return
 
     asyncio.run(_emit_status(session_id, "transcribing"))
+    _emit_report_progress(session_id, db)
     try:
         result = _call_gemini_transcribe(chunk_paths, session_type)
     except Exception as exc:
@@ -351,6 +369,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
             record.status = "failed"
             db.commit()
             asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+            _emit_report_progress(session_id, db)
             return
 
     asyncio.run(_emit_status(session_id, "diarizing"))
@@ -366,6 +385,8 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     logger.info(
         "[stt_task] STT complete: %d segments, confidence=%s", len(segments), confidence
     )
+    # SDD-095: STT(전사·화자분리) 완료 → 다음 스텝(AI 요약) 진행 표시
+    _emit_report_progress(session_id, db)
 
     # SDD-085 G5 확장: 신뢰도 낮으면 AI 요약(분석)을 제공하지 않고 호스트에게 통지.
     # 원본 STT(전사문)는 위에서 저장했으므로 그대로 유지된다.

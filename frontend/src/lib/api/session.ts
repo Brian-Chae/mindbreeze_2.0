@@ -60,6 +60,8 @@ export interface SessionDto {
   chat_enabled?: boolean;
   /** SDD-095: 세션 채팅방 id — 방 미개설 시 null */
   chat_room_id?: string | null;
+  /** SDD-095: 클래스 템플릿 여부 — 템플릿은 실제 진행 대상이 아니며 일반 목록에서 제외된다 */
+  is_template?: boolean;
 }
 
 export interface SessionListResponse {
@@ -84,6 +86,15 @@ export interface CreateSessionPayload {
   /** AI 클래스 분석 — 영상/음성 녹화 여부(기본 On). Off 시 해당 미디어 리포트 미생성 */
   record_audio?: boolean;
   record_video?: boolean;
+  /** SDD-095: 템플릿으로 저장 — 일정·참여자·코드 없이 설정만 보관한다 */
+  is_template?: boolean;
+}
+
+/** SDD-095: 클래스 복제 요청 — 유형 설정은 원본에서 복사, 일정/제목만 선택적으로 덮어쓴다 */
+export interface DuplicateSessionPayload {
+  scheduled_at?: string;
+  title?: string;
+  force?: boolean;
 }
 
 export interface UpdateSessionPayload {
@@ -295,6 +306,35 @@ export const updateSession = (id: string, payload: UpdateSessionPayload): Promis
 
 export const deleteSession = (id: string): Promise<void> =>
   apiClient.delete<void>(`/sessions/${id}`);
+
+// ── SDD-095: 클래스 복제 · 템플릿 ──
+
+/**
+ * 클래스 복제 — 유형 설정만 복사해 새 클래스를 만든다.
+ * 참여코드·실행 회차·WebRTC 룸은 신규 발급되고, 참여자 명단은 복사되지 않는다.
+ * payload.scheduled_at 을 주면 그 일정의 예약 클래스로, 없으면 즉시 클래스(ready)로 생성된다.
+ */
+export const duplicateSession = (
+  id: string,
+  payload: DuplicateSessionPayload = {},
+): Promise<SessionDto> =>
+  apiClient.post<SessionDto>(`/sessions/${encodeURIComponent(id)}/duplicate`, payload);
+
+/** 현재 클래스의 유형 설정을 재사용 가능한 템플릿으로 저장한다 */
+export const saveSessionAsTemplate = (id: string, title?: string): Promise<SessionDto> =>
+  apiClient.post<SessionDto>(`/sessions/${encodeURIComponent(id)}/save-as-template`, {
+    title: title ?? null,
+  });
+
+/** 내 클래스 템플릿 목록 — 생성 폼의 '내 템플릿에서 시작' 드롭다운용 */
+export const listSessionTemplates = (): Promise<SessionListResponse> =>
+  apiClient.get<SessionListResponse>('/sessions/templates');
+
+/** 템플릿에서 실제 클래스 만들기 — 템플릿 복제와 동일한 경로를 사용한다 */
+export const createSessionFromTemplate = (
+  templateId: string,
+  payload: DuplicateSessionPayload = {},
+): Promise<SessionDto> => duplicateSession(templateId, payload);
 
 export type SessionAction = 'open' | 'start' | 'pause' | 'resume' | 'end' | 'cancel';
 

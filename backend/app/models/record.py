@@ -158,6 +158,13 @@ class Report(Base):
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
     # SDD-027: 리포트 상태머신 — pending_analysis → pending_review(승인 게이트) → completed / error
     status: Mapped[str] = mapped_column(String(30), default="pending_analysis", nullable=False)
+    # SDD-095: 리포트 '생성 진행' 상태머신 — 승인 게이트(status)와 독립 축.
+    # 세션 종료 후 STT→요약→리포트 생성이 Celery 로 수 분 걸리므로, 사용자에게
+    # '처리 중'을 명확히 보여주기 위한 진행 표시 전용 컬럼이다.
+    # pending(미시작) → processing(진행 중) → ready(완료) / partial(일부만 산출)
+    generation_status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending", nullable=False
+    )
     # SDD-027: 품질 게이트에서 파생한 데이터 신뢰도(high/medium/low). EEG 미측정이면 null(치환 금지).
     data_credibility: Mapped[str | None] = mapped_column(String(20))
     pdf_url: Mapped[str | None] = mapped_column(String(500))

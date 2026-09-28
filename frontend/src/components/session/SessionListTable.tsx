@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { transitionSession, type SessionDto } from '../../lib/api/session';
+import { duplicateSession, transitionSession, type SessionDto } from '../../lib/api/session';
 import { StatusBadge } from './StatusBadge';
 
 interface SessionListTableProps {
@@ -32,6 +32,8 @@ export function SessionListTable({
   // SDD-088: 목록에서 닫은(cancel) 세션의 로컬 반영 — 다음 목록 로드 전까지 상태 표시용
   const [closedIds, setClosedIds] = useState<ReadonlySet<string>>(new Set());
   const [closingId, setClosingId] = useState<string | null>(null);
+  // SDD-095: 복제 진행 중인 클래스 — 중복 클릭 방지
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const handleClose = async (sessionId: string): Promise<void> => {
     if (!window.confirm('오픈된 클래스를 닫을까요?\n대기실에 있는 회원들의 입장이 종료됩니다.')) {
@@ -48,6 +50,20 @@ export function SessionListTable({
     }
   };
 
+  /** SDD-095: 목록에서 바로 복제 — 유형 설정만 복사한 새 클래스로 이동한다. */
+  const handleDuplicate = async (sessionId: string): Promise<void> => {
+    setDuplicatingId(sessionId);
+    try {
+      const duplicated = await duplicateSession(sessionId);
+      navigate(`/sessions/${duplicated.id}`);
+    } catch {
+      // 실패 시 목록 유지 — 상세 화면에서 재시도할 수 있다
+      window.alert('클래스 복제에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
   return (
     <div className="overflow-hidden bg-[var(--mb-white)]">
       {/* 헤더 — 1.0 #F2F3F8 */}
@@ -57,7 +73,7 @@ export function SessionListTable({
         <span className="text-center font-medium">참여인원</span>
         <span className="text-center font-medium">상태</span>
         <span className="text-center font-medium">시간</span>
-        <span className="w-[9.5rem] text-center font-medium">동작</span>
+        <span className="w-[13rem] text-center font-medium">동작</span>
       </div>
 
       {loading && (
@@ -87,6 +103,15 @@ export function SessionListTable({
                   입장
                 </button>
               )}
+              {/* SDD-095: 복제 — 유형 설정만 복사한 새 클래스로 이동 */}
+              <button
+                type="button"
+                onClick={() => void handleDuplicate(session.id)}
+                disabled={duplicatingId === session.id}
+                className="mb-btn mb-btn--ghost px-3 py-1.5 text-xs disabled:cursor-not-allowed"
+              >
+                {duplicatingId === session.id ? '복제 중...' : '복제'}
+              </button>
               {isOpen && (
                 <button
                   type="button"
@@ -119,7 +144,7 @@ export function SessionListTable({
                 <span className="text-center font-mono text-[var(--mb-fg-muted)]">
                   {formatTime(session.scheduled_at ?? session.started_at ?? session.created_at)}
                 </span>
-                <div className="flex w-[9.5rem] items-center justify-end gap-2">{actionButtons}</div>
+                <div className="flex w-[13rem] items-center justify-end gap-2">{actionButtons}</div>
               </div>
 
               {/* 모바일: 동일 정보 1열 카드 (표 정보 유지) */}

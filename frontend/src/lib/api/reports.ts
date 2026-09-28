@@ -35,6 +35,25 @@ export {
   resolveReportStatus,
 } from './report-status';
 
+// SDD-095 — 리포트 생성 진행 상태(승인 상태와 독립 축)
+export type {
+  ReportGenerationStatus,
+  ReportProgressDto,
+  ReportProgressStep,
+  ReportProgressStepKey,
+  ReportStepState,
+} from './report-status';
+export {
+  REPORT_GENERATION_LABELS,
+  REPORT_PROGRESS_REASON_LABELS,
+  REPORT_PROGRESS_STEP_LABELS,
+  getSessionReportStatus,
+  isReportGenerationDone,
+  parseReportProgress,
+  reportProgressReasonLabel,
+  resolveReportGenerationStatus,
+} from './report-status';
+
 export type ReportType = 'counselor' | 'client';
 
 export interface ReportDto {
@@ -56,6 +75,11 @@ export interface ReportDto {
    * 미제공 시 resolveReportStatus가 sent_at 기준 폴백.
    */
   status?: string | null;
+  /**
+   * SDD-095 생성 진행 상태(pending/processing/ready/partial).
+   * 승인 상태(status)와 독립 축 — 홈 목록 배지가 '생성 중'을 표시한다.
+   */
+  generation_status?: string | null;
   /**
    * quality 게이트 파생 신뢰도(서버).
    * number(0~1/0~100) 또는 quality/라벨 문자열.

@@ -50,6 +50,16 @@ def _get_or_create_record(session_id: UUID, db: DBSession) -> SessionRecord:
     return record
 
 
+def _emit_report_progress(session_id: str, db: DBSession) -> None:
+    """SDD-095: 리포트 생성 진행 상태(`report:progress`) 브로드캐스트."""
+    try:
+        from app.services import report_progress_service
+
+        report_progress_service.emit_report_progress(session_id, db)
+    except Exception:  # noqa: BLE001 — WS 실패가 녹음 종료/파이프라인을 막지 않는다.
+        logger.warning("[audio] report:progress emit failed: %s", session_id)
+
+
 def start_recording(session_id: str, host_id: str, consent_audio: bool, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
     if s.status not in ("scheduled", "in_progress", "paused"):
@@ -117,6 +127,8 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
     # SDD-085: 수동 기록 모드(manual)에서는 stop이 no-op — STT/요약 파이프라인 미실행
     if record.status == "manual":
         total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
+        # SDD-095: 마이크 오프 세션도 진행 상태(부분 산출)를 알린다.
+        _emit_report_progress(str(s.id), db)
         return {
             "session_id": str(s.id),
             "status": record.status,
@@ -142,6 +154,9 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
         logger.warning("[audio] Celery unavailable, running inline for session %s", s.id)
         run_stt_inline(str(s.id), db)
         run_summary_inline(str(s.id), db)
+
+    # SDD-095: 녹음 저장 완료(STT 진행) 진행 상태 브로드캐스트
+    _emit_report_progress(str(s.id), db)
 
     db.refresh(record)
     return {
@@ -180,6 +195,8 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
         logger.info(
             "[audio] chain enqueued for session %s (recording=%s)", session_id, has_recording
         )
+        # SDD-095: 세션 종료 직후 '처리 중' 진행 상태를 즉시 push — 프론트 대기 화면 스텝퍼 기동
+        _emit_report_progress(str(session_id), db)
     except Exception:
         # Celery 불가(개발/테스트) → 동기 fallback (기존 동작 유지)
         logger.warning("[audio] Celery unavailable, running inline for session %s", session_id)
@@ -196,3 +213,5 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
         if s:
             report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
             report_service.generate_client_reports_for_session(str(s.id), db)
+        # SDD-095: 인라인 폴백에서도 최종 진행 상태를 push 한다.
+        _emit_report_progress(str(session_id), db)

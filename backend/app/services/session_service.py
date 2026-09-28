@@ -76,6 +76,8 @@ def _serialize(s: Session) -> dict:
         "record_video": s.record_video,
         # 클래스 실시간 채팅 사용 여부(회원/상담사 UI 게이트용)
         "chat_enabled": s.chat_enabled,
+        # SDD-095: 클래스 템플릿 여부 — 프론트가 "템플릿에서 시작·복제" UI 를 게이트한다
+        "is_template": bool(s.is_template),
         "created_at": s.created_at or _now(),
         "participants": [
             {
@@ -214,6 +216,10 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     if host is None:
         raise HTTPException(404, "사용자를 찾을 수 없습니다")
     org = require_active_user_org(host, db)
+    # SDD-095: 클래스 템플릿 저장 — 반복 클래스를 빠르게 다시 만들기 위한 "유형 설정 저장본".
+    # 일정·참여자·참여코드·WebRTC 룸·채팅방 없이 ready 상태로만 저장하고 알림도 발화하지 않는다.
+    if bool(getattr(payload, "is_template", False)):
+        return _create_template(host_uuid, org, payload, db)
     # SDD-015: scheduled_at 이 없으면 "즉석 클래스" — 과거 일시 검증·충돌 검사를 건너뛰고
     # status를 ready로 두어 상담사가 "시작"을 누를 때 진행중으로 전이한다.
     scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else None
@@ -299,14 +305,233 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     return _with_chat_room(_serialize(session), session.id, db)
 
 
-def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
+# ---------------------------------------------------------------------------
+# SDD-095: 클래스 템플릿 · 복제
+# ---------------------------------------------------------------------------
+
+# 복제/템플릿 저장 시 옮기는 "유형 설정" 필드.
+# 일정(scheduled_at)·상태(status)·참여코드(access_code)·WebRTC 룸·run_id·참여자 명단은
+# 복사하지 않는다 — 복제본은 항상 새 클래스로 신규 발급/초기화한다.
+_COPYABLE_CONFIG_FIELDS = (
+    "type",
+    "custom_type_name",
+    "duration_min",
+    "max_participants",
+    "location_type",
+    "participant_mode",
+    "linkband_mode",
+    "sfu_enabled",
+    "record_audio",
+    "record_video",
+    "chat_enabled",
+)
+
+
+def _normalized_max_participants(session_type: str, max_participants: int) -> int:
+    """유형별 정원 정규화 — 명상(그룹)은 입력값, 그 외는 최소 1명."""
+    if session_type == "meditation":
+        return max_participants
+    return max(max_participants, 1)
+
+
+def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
+    """클래스 템플릿 행 생성 — 실제 진행 대상이 아니므로 코드/룸/채팅방/알림이 없다."""
+    if payload.type == "custom" and not (payload.custom_type_name and payload.custom_type_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
+
+    template = Session(
+        type=payload.type,
+        custom_type_name=(
+            payload.custom_type_name.strip()
+            if (payload.type == "custom" and payload.custom_type_name)
+            else None
+        ),
+        status="ready",
+        host_id=host_uuid,
+        organization_id=org.id if org else None,
+        organization_attribution_known=True,
+        scheduled_at=None,
+        access_code=None,
+        duration_min=payload.duration_min,
+        title=payload.title,
+        notes=payload.notes,
+        max_participants=_normalized_max_participants(payload.type, payload.max_participants),
+        location_type=payload.location_type,
+        participant_mode=payload.participant_mode,
+        linkband_mode=payload.linkband_mode,
+        webrtc_room_id=None,
+        sfu_enabled=payload.sfu_enabled,
+        record_audio=payload.record_audio,
+        record_video=payload.record_video,
+        is_template=True,
+    )
+    db.add(template)
+    db.flush()
+    # SDD-028 정합: run_id 기본값 = 자기 id (템플릿은 실행되지 않으므로 그대로 유지)
+    template.run_id = template.id
+    db.commit()
+    db.refresh(template)
+    return _serialize(template)
+
+
+def _clone_session_config(
+    source: Session,
+    *,
+    host_uuid: UUID,
+    organization_id: UUID | None,
+    is_template: bool,
+    title: str | None,
+    scheduled_at: datetime | None,
+    db: DBSession,
+) -> Session:
+    """원본 클래스의 '유형 설정'만 복사해 새 Session 행을 만든다(commit 은 호출측 책임).
+
+    - 유형 설정(type/정원/진행형태/LINK BAND/녹화·채팅 설정/안내문)은 그대로 옮긴다.
+    - 일정·상태·참여코드·WebRTC 룸·run_id 는 신규 발급/초기화한다.
+    - 참여자 명단은 복사하지 않는다(복제본은 빈 클래스로 시작).
+    """
+    config = {field: getattr(source, field) for field in _COPYABLE_CONFIG_FIELDS}
+    if is_template:
+        # 템플릿은 일정도 코드도 갖지 않는다 — 항상 ready.
+        initial_status = "ready"
+        clone_scheduled_at = None
+    else:
+        clone_scheduled_at = _ensure_aware(scheduled_at) if scheduled_at else None
+        # SDD-015 정합: 일정이 없으면 "즉석 클래스"(ready), 있으면 예약(scheduled).
+        initial_status = "scheduled" if clone_scheduled_at else "ready"
+
+    clone = Session(
+        **config,
+        status=initial_status,
+        host_id=host_uuid,
+        organization_id=organization_id,
+        organization_attribution_known=True,
+        scheduled_at=clone_scheduled_at,
+        access_code=None if is_template else generate_access_code(db),
+        title=title,
+        notes=source.notes,
+        webrtc_room_id=None if is_template else uuid.uuid4(),
+        is_template=is_template,
+    )
+    db.add(clone)
+    db.flush()
+    # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
+    clone.run_id = clone.id
+    return clone
+
+
+def duplicate_session(
+    session_id: str,
+    host_id: str,
+    db: DBSession,
+    *,
+    scheduled_at: datetime | None = None,
+    title: str | None = None,
+    force: bool = False,
+) -> dict:
+    """SDD-095: 클래스 복제 — 유형 설정만 복사해 새 클래스를 만든다.
+
+    - 복사: 유형/커스텀 유형명/소요 시간/정원/진행 형태/LINK BAND/녹화·채팅 설정/제목·안내문
+    - 신규 발급: 참여코드, run_id, WebRTC 룸, 상태(예정)
+    - 제외: 참여자 명단, EEG·기록·리포트, 일정(요청 시 새 일정으로 덮어쓰기)
+    - 원본이 템플릿(is_template=True)이더라도 결과물은 항상 실제 클래스(is_template=False)다.
+    호스트 상담사만 호출할 수 있다.
+    """
+    source = _get_session_as_host(session_id, host_id, db)
+    host_uuid = _to_uuid(host_id)
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    from app.services.org_management_service import require_active_user_org
+
+    org = require_active_user_org(host, db)
+
+    new_scheduled_at = _ensure_aware(scheduled_at) if scheduled_at else None
+    if new_scheduled_at is not None:
+        if new_scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
+        if not force:
+            conflict = detect_conflict(host_uuid, new_scheduled_at, source.duration_min, None, db)
+            if conflict:
+                raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+
+    clone = _clone_session_config(
+        source,
+        host_uuid=host_uuid,
+        organization_id=org.id if org else None,
+        is_template=False,
+        title=title if title is not None else source.title,
+        scheduled_at=new_scheduled_at,
+        db=db,
+    )
+    db.commit()
+    db.refresh(clone)
+
+    # 복제본도 실제 클래스이므로 채팅방을 개설한다(생성 경로와 동일한 멱등 개설).
+    ensure_session_chat_room(clone.id, db)
+    return _with_chat_room(_serialize(clone), clone.id, db)
+
+
+def save_as_template(
+    session_id: str,
+    host_id: str,
+    db: DBSession,
+    *,
+    title: str | None = None,
+) -> dict:
+    """SDD-095: 기존 클래스의 유형 설정을 재사용 가능한 템플릿으로 저장한다(복제 + is_template)."""
+    source = _get_session_as_host(session_id, host_id, db)
+    host_uuid = _to_uuid(host_id)
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    from app.services.org_management_service import require_active_user_org
+
+    org = require_active_user_org(host, db)
+
+    template = _clone_session_config(
+        source,
+        host_uuid=host_uuid,
+        organization_id=org.id if org else None,
+        is_template=True,
+        title=(title or source.title),
+        scheduled_at=None,
+        db=db,
+    )
+    db.commit()
+    db.refresh(template)
+    return _serialize(template)
+
+
+def list_templates(user_id: str, db: DBSession) -> tuple[list[dict], int]:
+    """호스트가 저장한 클래스 템플릿 목록 (최신순) — 생성 폼의 '내 템플릿에서 시작' 용."""
     uid = _to_uuid(user_id)
-    hosted = db.query(Session).filter(Session.host_id == uid).all()
+    rows = (
+        db.query(Session)
+        .filter(Session.host_id == uid, Session.is_template.is_(True))
+        .all()
+    )
+    result = sorted(rows, key=_sort_key, reverse=True)
+    return [_serialize(s) for s in result], len(result)
+
+
+def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
+    """내 클래스 목록 — 템플릿(is_template=True)은 제외한다(별도 /sessions/templates)."""
+    uid = _to_uuid(user_id)
+    hosted = (
+        db.query(Session)
+        .filter(Session.host_id == uid, Session.is_template.is_(False))
+        .all()
+    )
     participated_ids = [
         p.session_id for p in db.query(SessionParticipant).filter(SessionParticipant.user_id == uid).all()
     ]
     participated = (
-        db.query(Session).filter(Session.id.in_(participated_ids)).all() if participated_ids else []
+        db.query(Session)
+        .filter(Session.id.in_(participated_ids), Session.is_template.is_(False))
+        .all()
+        if participated_ids
+        else []
     )
     seen: dict[UUID, Session] = {s.id: s for s in hosted}
     for s in participated:

@@ -64,6 +64,8 @@ def _classes(counselor_ids: list[uuid.UUID], db: DBSession) -> list[dict]:
         .filter(
             Session.host_id.in_(counselor_ids),
             Session.status.in_(PUBLIC_CLASS_STATUSES),
+            # SDD-095: 클래스 템플릿은 실제 진행 클래스가 아니다 — 공개 목록에서 제외(참여코드도 없다).
+            Session.is_template.is_(False),
         )
         .all()
     )

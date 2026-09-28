@@ -152,6 +152,16 @@ async def _emit_status(session_id: str, status: str, detail: dict | None = None)
         logger.warning("[summary_task] WebSocket emit failed: %s", status)
 
 
+def _emit_report_progress(session_id: str, db: DBSession) -> None:
+    """SDD-095: 리포트 생성 진행 상태(`report:progress`) 브로드캐스트."""
+    try:
+        from app.services import report_progress_service
+
+        report_progress_service.emit_report_progress(session_id, db)
+    except Exception:
+        logger.warning("[summary_task] report:progress emit failed: %s", session_id)
+
+
 def run_summary_inline(session_id: str, db: DBSession) -> None:
     import asyncio
 
@@ -165,6 +175,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
     # SDD-085 가드: 수동 기록 모드(마이크 오프)는 요약 대상 아님
     if record.status == "manual":
         logger.info("[summary_task] manual 세션 — 요약 스킵: %s", session_id)
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 가드: transcript 부재(None/공백) 시 LLM 호출·스텁 생성 없이 종료
@@ -175,6 +186,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
             record.status = "failed"
             db.commit()
         asyncio.run(_emit_status(session_id, "failed", {"reason": "no_transcript"}))
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 G5 확장: STT 신뢰도가 낮으면 AI 요약(분석)을 생성하지 않는다 — 원본 전사문은 유지.
@@ -186,9 +198,12 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
             record.status = "completed"
             db.commit()
         asyncio.run(_emit_status(session_id, "completed", {"reason": "low_confidence"}))
+        _emit_report_progress(session_id, db)
         return
 
     asyncio.run(_emit_status(session_id, "summarizing"))
+    # SDD-095: AI 요약 단계 진행 표시
+    _emit_report_progress(session_id, db)
 
     try:
         result = _call_gemini_summary(session.type, record.transcript)
@@ -201,6 +216,7 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
         record.status = "completed"
         db.commit()
         asyncio.run(_emit_status(session_id, "completed", {"reason": "summary_failed"}))
+        _emit_report_progress(session_id, db)
         return
 
     summary = dict(record.ai_summary or {})
@@ -211,6 +227,8 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
 
     asyncio.run(_emit_status(session_id, "completed", {"headline": result.get("headline")}))
     logger.info("[summary_task] Summary complete for session %s", session_id)
+    # SDD-095: 요약 완료 → 리포트 생성 단계로 넘어감을 진행 스텝퍼에 반영
+    _emit_report_progress(session_id, db)
 
 
 try:

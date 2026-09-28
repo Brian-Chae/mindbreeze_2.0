@@ -35,6 +35,8 @@ class SessionCreateRequest(BaseModel):
     record_video: bool = True
     participant_ids: list[str] = Field(default_factory=list)
     force: bool = False
+    # SDD-095: 템플릿으로 저장 — true 면 일정·참여자·코드 없이 설정만 보관한다.
+    is_template: bool = False
 
     @model_validator(mode="after")
     def _validate_custom_type(self) -> "SessionCreateRequest":
@@ -137,6 +139,8 @@ class SessionResponse(BaseModel):
     # 클래스 실시간 채팅 사용 여부(상담사가 켠다) + 세션 채팅방 ID(프론트 실시간 채팅 연결용)
     chat_enabled: bool = False
     chat_room_id: str | None = None
+    # SDD-095: 클래스 템플릿 여부 — true 면 실제 진행 대상이 아니라 "유형 설정 저장본"이다.
+    is_template: bool = False
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0
@@ -151,6 +155,28 @@ class SessionListResponse(BaseModel):
 
 class InviteParticipantRequest(BaseModel):
     user_id: str
+
+
+# ---------------------------------------------------------------------------
+# SDD-095: 클래스 템플릿 · 복제
+# ---------------------------------------------------------------------------
+
+
+class SessionDuplicateRequest(BaseModel):
+    """클래스 복제 요청 — 유형 설정은 원본에서 복사하고 일정/제목만 선택적으로 덮어쓴다.
+
+    scheduled_at 을 주면 그 일정으로 새 예약 클래스를 만든다(미지정 시 즉석 클래스 ready).
+    """
+
+    scheduled_at: datetime | None = None
+    title: str | None = Field(None, max_length=200)
+    force: bool = False
+
+
+class SessionTemplateSaveRequest(BaseModel):
+    """현재 클래스 설정을 템플릿으로 저장할 때의 선택 제목."""
+
+    title: str | None = Field(None, max_length=200)
 
 
 class MarkerRequest(BaseModel):

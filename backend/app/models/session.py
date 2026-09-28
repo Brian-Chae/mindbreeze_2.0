@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, func
+from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,10 @@ from app.core.database import Base
 
 class Session(Base):
     __tablename__ = "sessions"
+    # SDD-095: 일반 클래스 목록/템플릿 목록 조회를 (host_id, is_template) 로 좁힌다.
+    __table_args__ = (
+        Index("ix_sessions_host_is_template", "host_id", "is_template"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # SDD-028: 반복 실행 회차 식별자(경량 SessionRun). 기본값 = session_id.
@@ -61,6 +65,10 @@ class Session(Base):
     # 세션 채팅방(ChatRoom.room_type="session")은 클래스 생성 시 자동 개설되며,
     # chat_enabled=False 이면 참여자(비 host)의 발신이 차단된다(host 는 항상 가능).
     chat_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # SDD-095: 클래스 템플릿 여부 — 상담사가 반복 클래스를 빠르게 다시 만들기 위한 "유형 설정 저장본".
+    # is_template=True 인 행은 실제 진행 대상이 아니다: 일정·참여코드·채팅방이 없고 일반 클래스
+    # 목록에서 제외된다. 복제(duplicate) 산출물은 항상 is_template=False 인 실제 클래스다.
+    is_template: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])

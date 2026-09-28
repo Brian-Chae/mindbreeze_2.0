@@ -130,6 +130,8 @@ def _serialize(
         "type": report.type,
         # SDD-027: 리포트 상태머신 + 데이터 신뢰도(null 보존)
         "status": report.status,
+        # SDD-095: 생성 진행 상태(승인 상태와 독립 축) — 목록/홈 배지가 '생성 중'을 표시한다.
+        "generation_status": report.generation_status or "pending",
         "data_credibility": report.data_credibility,
         "content": content,
         "pdf_url": report.pdf_url,

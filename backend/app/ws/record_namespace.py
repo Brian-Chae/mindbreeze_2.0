@@ -5,6 +5,7 @@
 """
 
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,33 @@ def register_record_namespace(sio):
         logger.info("[WS /record] sid=%s unsubscribed from %s", sid, room)
 
     logger.info("[WS /record] namespace registered")
+
+
+async def broadcast_report_progress(session_id: str, payload: dict) -> None:
+    """리포트 생성 진행 상태(`report:progress`)를 세션 룸에 브로드캐스트한다.
+
+    SDD-095: 세션 종료 후 STT→요약→리포트 생성이 수 분 걸리는 구간에서
+    프론트 스텝퍼가 '처리 중'을 표시할 수 있도록 진행 계약을 push 한다.
+
+    Args:
+        session_id: 세션 UUID(문자열)
+        payload: report_progress_service.compute_report_progress() 산출 dict
+    """
+    sio = _get_sio()
+    body = dict(payload)
+    body["session_id"] = session_id
+    # datetime 은 socket.io 기본 serializer(JSON)로 직렬화되지 않는다 → ISO 문자열로 변환
+    updated_at = body.get("updated_at")
+    if isinstance(updated_at, datetime):
+        body["updated_at"] = updated_at.isoformat()
+    room = f"session:{session_id}"
+    await sio.emit("report:progress", body, room=room, namespace="/record")  # type: ignore
+    logger.info(
+        "[WS /record] report:progress %s (%s%%) → session:%s",
+        body.get("generation_status"),
+        body.get("progress"),
+        session_id,
+    )
 
 
 async def broadcast_record_status(session_id: str, status: str, detail: dict | None = None) -> None:

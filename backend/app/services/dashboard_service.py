@@ -98,7 +98,10 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
 
-    sessions = _sorted_sessions(db.query(Session).filter(Session.host_id == uid))
+    # SDD-095: 클래스 템플릿(is_template=True)은 실제 진행 클래스가 아니므로 집계·목록에서 제외한다.
+    sessions = _sorted_sessions(
+        db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(False))
+    )
     summaries = _build_summaries(sessions, db)
 
     org = db.query(Organization).filter(Organization.id == user.org_id).first() if user.org_id else None
@@ -138,7 +141,12 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
     counselor_ids = [m.id for m in counselors]
 
     sessions = (
-        _sorted_sessions(db.query(Session).filter(Session.host_id.in_(counselor_ids)))
+        _sorted_sessions(
+            db.query(Session).filter(
+                Session.host_id.in_(counselor_ids),
+                Session.is_template.is_(False),  # SDD-095: 템플릿은 기관 집계에서 제외
+            )
+        )
         if counselor_ids
         else []
     )

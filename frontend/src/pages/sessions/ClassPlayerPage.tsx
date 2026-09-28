@@ -69,6 +69,8 @@ import { StatusBadge } from '../../components/session/StatusBadge';
 import { ClassChatPanel } from '../../components/chat/ClassChatPanel';
 import { EndSessionModal } from '../../components/player/EndSessionModal';
 import { LeaveGuardModal } from '../../components/player/LeaveGuardModal';
+import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
+import { useReportProgress } from '../../hooks/useReportProgress';
 import {
   isConnectionFailed,
   isStreamingLive,
@@ -551,6 +553,9 @@ export default function ClassPlayerPage() {
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
+
+  // SDD-095: 종료 씬(리포트 대기) 진행 스텝퍼 — 세션 종료 후에만 구독/REST 폴링한다.
+  const reportProgress = useReportProgress(isEnded ? id ?? null : null);
 
   // SDD-088: 이탈 보수 처리 — 호스트 + open/in_progress/paused 에서만
   const bypassGuardRef = useRef(false);
@@ -1569,6 +1574,14 @@ export default function ClassPlayerPage() {
             <p className="text-sm text-white/60">
               녹음·녹화가 저장되었고 리포트가 자동 생성됩니다. 기록 페이지에서 확인하세요.
             </p>
+            {/* SDD-095: 리포트 생성 진행 스텝퍼 — 처리 중임을 명확히 보여준다 */}
+            <div className="w-full max-w-xl text-left">
+              <ReportProgressStepper
+                progress={reportProgress.progress}
+                tone="dark"
+                onViewReport={() => navigate(`/sessions/${id}/record`)}
+              />
+            </div>
             <div className="mt-2 flex gap-2">
               <button
                 type="button"

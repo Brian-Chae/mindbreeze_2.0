@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
 import { listReports, type ReportDto } from '../../lib/api/reports';
+import { resolveReportGenerationStatus } from '../../lib/api/report-status';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { SessionCard } from '../../components/session/SessionCard';
 
@@ -115,6 +116,15 @@ export default function ClientHomePage() {
   );
   const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
   const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
+
+  // SDD-095: 생성 진행 중인 리포트 — 홈 배지('리포트 생성 중')에 쓴다.
+  const processingReportCount = useMemo(
+    () =>
+      reports.filter(
+        (r) => resolveReportGenerationStatus(r.generation_status) === 'processing',
+      ).length,
+    [reports],
+  );
 
   // 최근 리포트 (최대 4개)
   const recentReports = useMemo(() => {
@@ -339,27 +349,55 @@ export default function ClientHomePage() {
             <div className={CARD_CLS}>
               <div className="flex justify-between items-baseline mb-3.5">
                 <div className={CARD_TITLE_CLS}>최근 리포트</div>
+                {/* SDD-095: 리포트 생성 진행 배지 — 처리 중임을 조용히 알린다 */}
+                {processingReportCount > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#F5EDFC] px-2.5 py-1 text-[11px] font-bold text-[#5F0080]"
+                    data-testid="report-processing-badge"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#5F0080] animate-pulse" aria-hidden />
+                    리포트 생성 중 {processingReportCount}건
+                  </span>
+                )}
               </div>
               {recentReports.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recentReports.map((r) => (
-                    <div
-                      key={r.id}
-                      className="bg-[#F8F4FC] rounded-xl p-4 flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-semibold text-[#1F1F1F] truncate">
-                          {r.session_title || '리포트'}
-                        </p>
-                        <p className={CARD_SUBTITLE_CLS}>
-                          {formatDate(r.created_at)}
-                        </p>
+                  {recentReports.map((r) => {
+                    const generation = resolveReportGenerationStatus(r.generation_status);
+                    return (
+                      <div
+                        key={r.id}
+                        className="bg-[#F8F4FC] rounded-xl p-4 flex items-center justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#1F1F1F] truncate">
+                            {r.session_title || '리포트'}
+                          </p>
+                          <p className={CARD_SUBTITLE_CLS}>
+                            {formatDate(r.created_at)}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          {generation === 'processing' && (
+                            <span
+                              className="text-[10px] font-bold text-[#8A6B1F] bg-[#FFF4DC] px-2 py-0.5 rounded-full"
+                              data-testid="report-generation-badge"
+                            >
+                              생성 중
+                            </span>
+                          )}
+                          {generation === 'partial' && (
+                            <span className="text-[10px] font-bold text-[#6F6F6F] bg-[#F2F3F8] px-2 py-0.5 rounded-full">
+                              일부 생성
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold text-[#5F0080] bg-[#F5EDFC] px-2 py-0.5 rounded-full">
+                            {r.type === 'counselor' ? '상담사용' : '내담자용'}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-bold text-[#5F0080] bg-[#F5EDFC] px-2 py-0.5 rounded-full shrink-0">
-                        {r.type === 'counselor' ? '상담사용' : '내담자용'}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-10 text-center">
