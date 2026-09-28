@@ -8,11 +8,10 @@ export interface VideoPlayerHandle {
 
 interface VideoPlayerProps {
   sessionId: string;
-  hasVideo: boolean;
 }
 
 export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
-  function VideoPlayer({ sessionId, hasVideo }, ref) {
+  function VideoPlayer({ sessionId }, ref) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [url, setUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -29,11 +28,6 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
     }));
 
     useEffect(() => {
-      if (!hasVideo) {
-        setLoading(false);
-        setError('녹화된 영상이 없습니다.');
-        return undefined;
-      }
       let cancelled = false;
       (async () => {
         try {
@@ -50,7 +44,7 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       return () => {
         cancelled = true;
       };
-    }, [sessionId, hasVideo]);
+    }, [sessionId]);
 
     if (loading) {
       return (

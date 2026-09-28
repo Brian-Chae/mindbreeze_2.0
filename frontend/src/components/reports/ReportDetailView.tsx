@@ -217,7 +217,7 @@ export default function ReportDetailView({
   }, [report.id, resendEmail]);
 
   const adapted = adaptReportContent(report.content, report.type);
-  const { markers, displayNarrative, transcriptSegments, video } = adapted;
+  const { markers, displayNarrative, transcriptSegments } = adapted;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
   const aiRecordReasonText =
@@ -364,14 +364,10 @@ export default function ReportDetailView({
         </SummaryCard>
       )}
 
-      {/* 영상 리플레이어 — counselor 리포트 (녹화 영상 + 음성 동기 재생) */}
-      {isCounselor && video?.s3_key && (
+      {/* 영상 리플레이어 — counselor 리포트 (영상 유무는 VideoPlayer가 API로 확인) */}
+      {isCounselor && (
         <SummaryCard title="세션 영상 리플레이">
-          <VideoPlayer
-            ref={videoRef}
-            sessionId={report.session_id}
-            hasVideo={Boolean(video.s3_key)}
-          />
+          <VideoPlayer ref={videoRef} sessionId={report.session_id} />
         </SummaryCard>
       )}
 
