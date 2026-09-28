@@ -25,10 +25,10 @@ interface AuthState {
   isInitialized: boolean;
 
   initialize: () => void;
-  login: (email: string, password: string, role?: UserRole) => Promise<User>;
-  loginGoogle: (idToken: string, inviteToken?: string, role?: string) => Promise<User>;
+  login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
-  registerClient: (data: ClientRegisterPayload) => Promise<User>;
+  registerClient: (data: ClientRegisterPayload, rememberMe?: boolean) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
@@ -87,15 +87,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  login: async (email, password, role): Promise<User> => {
-    const res = await apiLogin(email, password, role);
+  login: async (email, password, role, rememberMe = true): Promise<User> => {
+    const res = await apiLogin(email, password, role, rememberMe);
     const user = applyLogin(res, role);
     set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
   },
 
-  loginGoogle: async (idToken, inviteToken, role): Promise<User> => {
-    const res = await apiLoginGoogle({ access_token: idToken, invite_token: inviteToken, role });
+  loginGoogle: async (idToken, inviteToken, role, rememberMe = true): Promise<User> => {
+    const res = await apiLoginGoogle({ access_token: idToken, invite_token: inviteToken, role }, rememberMe);
     const user = applyLogin(res, role);
     set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;
@@ -108,8 +108,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     return user;
   },
 
-  registerClient: async (data): Promise<User> => {
-    const res = await apiRegisterClient(data);
+  registerClient: async (data, rememberMe = true): Promise<User> => {
+    const res = await apiRegisterClient(data, rememberMe);
     const user = applyLogin(res);
     set({ user, accessToken: res.access_token, isAuthenticated: true });
     return user;

@@ -11,7 +11,7 @@ get_current_user 가 DB 에서 role/org_id 를 다시 읽으므로 기존 role g
 import re
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
@@ -139,7 +139,7 @@ async def create_dev_user(req: DevUserCreateRequest, db: Session = Depends(get_d
 
 
 @router.post("/login", response_model=LoginResponse)
-async def dev_login(req: DevLoginRequest, db: Session = Depends(get_db)):
+async def dev_login(request: Request, req: DevLoginRequest, db: Session = Depends(get_db)):
     """user_id 로 비밀번호 없이 로그인 → 기존 LoginResponse 발급.
 
     시뮬레이션 계정이 아니면 404 로 거부해 실계정 무비번 로그인을 막는다.
@@ -154,7 +154,7 @@ async def dev_login(req: DevLoginRequest, db: Session = Depends(get_db)):
             access_token=access_token,
         ).model_dump(mode="json"),
     )
-    _set_refresh_cookie(response, refresh_token)
+    _set_refresh_cookie(response, refresh_token, request=request)
     return response
 
 

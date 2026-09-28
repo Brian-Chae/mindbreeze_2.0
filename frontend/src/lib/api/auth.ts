@@ -45,6 +45,8 @@ export interface ClientRegisterPayload {
   phone?: string;
   /** SDD-073: 초대한 상담사 코드 (invite_token 이 있으면 생략) */
   counselor_code?: string;
+  /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
+  remember_me?: boolean;
 }
 
 export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
@@ -53,11 +55,19 @@ export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
 export const verifyOtp = (email: string, code: string): Promise<OtpVerifyResponse> =>
   apiClient.post('/auth/email/verify-otp', { email, code }, { skipAuth: true });
 
-export const registerClient = (data: ClientRegisterPayload): Promise<LoginResponse> =>
-  apiClient.post('/auth/register/client', data, { skipAuth: true });
+export const registerClient = (
+  data: ClientRegisterPayload,
+  rememberMe: boolean = true,
+): Promise<LoginResponse> =>
+  apiClient.post('/auth/register/client', { ...data, remember_me: rememberMe }, { skipAuth: true });
 
-export const login = (email: string, password: string, role?: UserRole): Promise<LoginResponse> =>
-  apiClient.post('/auth/login', { email, password, role }, { skipAuth: true });
+export const login = (
+  email: string,
+  password: string,
+  role?: UserRole,
+  rememberMe: boolean = true,
+): Promise<LoginResponse> =>
+  apiClient.post('/auth/login', { email, password, role, remember_me: rememberMe }, { skipAuth: true });
 
 export const refreshToken = (): Promise<TokenResponse> =>
   apiClient.post('/auth/refresh', undefined, { skipAuth: true });
@@ -74,10 +84,12 @@ export interface GoogleLoginPayload {
   access_token: string;
   invite_token?: string;
   role?: string;
+  /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
+  remember_me?: boolean;
 }
 
-export const loginGoogle = (payload: GoogleLoginPayload): Promise<LoginResponse> =>
-  apiClient.post('/auth/google', payload, { skipAuth: true });
+export const loginGoogle = (payload: GoogleLoginPayload, rememberMe: boolean = true): Promise<LoginResponse> =>
+  apiClient.post('/auth/google', { ...payload, remember_me: rememberMe }, { skipAuth: true });
 
 // SDD-080: 자기 기본정보 수정 — 이름/전화/성별/생년월일만 허용 (이메일·역할 불변)
 export interface UpdateUserMePayload {

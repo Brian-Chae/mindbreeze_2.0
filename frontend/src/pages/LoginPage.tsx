@@ -14,7 +14,7 @@ const tabs = [
 ] as const;
 type PublicRole = typeof tabs[number]['role'];
 type LoginRole = PublicRole | 'platform_admin';
-interface LoginIntent { role: LoginRole; next: string | null }
+interface LoginIntent { role: LoginRole; next: string | null; rememberMe: boolean }
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -31,6 +31,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
+  // 「로그인 상태 유지」 — 기본 체크. 해제 시 백엔드가 세션 쿠키로 발급한다.
+  const [rememberMe, setRememberMe] = useState(true);
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
   const intent = useRef<LoginIntent | null>(null);
   const googleExchanging = useRef(false);
@@ -56,7 +58,7 @@ export default function LoginPage() {
   };
   const begin = (method: 'email' | 'google'): LoginIntent | null => {
     if (intent.current) return null;
-    const started = { role: loginRole, next };
+    const started = { role: loginRole, next, rememberMe };
     intent.current = started;
     setError(null);
     setPending(method);
@@ -68,7 +70,7 @@ export default function LoginPage() {
     const started = begin('email');
     if (!started) return;
     try {
-      const user = await login(email, password, started.role);
+      const user = await login(email, password, started.role, started.rememberMe);
       navigate(resolvePostLoginPath(user, started.next));
     } catch (err) {
       showError(err);
@@ -82,7 +84,7 @@ export default function LoginPage() {
       if (!started || googleExchanging.current) return;
       googleExchanging.current = true;
       try {
-        const user = await loginGoogle(response.access_token, undefined, started.role);
+        const user = await loginGoogle(response.access_token, undefined, started.role, started.rememberMe);
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
         showError(err);
@@ -124,6 +126,17 @@ export default function LoginPage() {
   );
   const divider = <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />또는<span className="h-px flex-1 bg-white/30" /></div>;
   const inputClass = 'h-[52px] w-full rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50';
+  const rememberMeField = (
+    <div className="flex flex-col gap-1">
+      <label htmlFor="login-remember" className="flex cursor-pointer items-center gap-2 text-sm text-white/90">
+        <input id="login-remember" type="checkbox" checked={rememberMe} disabled={busy}
+          onChange={(event) => setRememberMe(event.target.checked)} aria-describedby="login-remember-hint"
+          className="h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-50" />
+        로그인 상태 유지
+      </label>
+      <p id="login-remember-hint" className="pl-6 text-xs text-white/70">해제하면 브라우저를 닫을 때 로그아웃됩니다.</p>
+    </div>
+  );
 
   return (
     <div className="relative min-h-screen font-sans">
@@ -150,9 +163,11 @@ export default function LoginPage() {
               <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} className={inputClass} />
               <label htmlFor="login-password" className="text-sm">비밀번호</label>
               <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} className={inputClass} />
+              {rememberMeField}
               <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
             </form>}
             {loginRole === 'client' && divider}
+            {isAdmin && rememberMeField}
             {(loginRole === 'client' || isAdmin) && googleButton}
             {loginRole === 'counselor' && <>{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}

@@ -68,14 +68,42 @@ REFRESH_COOKIE_NAME = "mb_refresh_token"
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
-def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+def _request_is_https(request: Request | None) -> bool:
+    """요청이 HTTPS 로 들어왔는지 판별한다 (리버스 프록시 헤더 포함).
+
+    - scheme 이 https 이거나, 프록시가 붙인 ``X-Forwarded-Proto`` 첫 값이 https 이면 True.
+    - request 가 없으면(내부 호출) 기존과 같이 environment 로 폴백한다.
+    """
+    if request is None:
+        return settings.environment == "production"
+    scheme = request.url.scheme
+    forwarded = request.headers.get("x-forwarded-proto")
+    if forwarded:
+        scheme = forwarded.split(",")[0].strip()
+    return scheme.lower() == "https"
+
+
+def _set_refresh_cookie(
+    response: Response,
+    refresh_token: str,
+    remember_me: bool = True,
+    request: Request | None = None,
+) -> None:
+    """refresh 토큰 httpOnly 쿠키를 설정한다.
+
+    - ``remember_me=True``: ``max_age`` 를 지정해 14일 지속 쿠키 → 자동 로그인.
+    - ``remember_me=False``: ``max_age`` 를 생략해 세션 쿠키로 저장 → 창을 닫으면 로그아웃.
+    - ``secure``: 요청 scheme 이 https 일 때만 True. ``environment`` 문자열은 프록시
+      뒤 실제 접속 프로토콜과 어긋날 수 있어(예: 운영 프록시 뒤 http 프론트, 로컬 https),
+      요청 scheme 기준으로 판단해 http 로컬 개발에서 쿠키가 조용히 버려지는 문제를 막는다.
+    """
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,
         httponly=True,
-        secure=settings.environment == "production",
+        secure=_request_is_https(request),
         samesite="lax",
-        max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
+        max_age=settings.refresh_token_expire_days * 24 * 60 * 60 if remember_me else None,
         path=REFRESH_COOKIE_PATH,
     )
 
@@ -158,6 +186,7 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    request: Request,
     req: LoginRequest,
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
@@ -181,14 +210,18 @@ async def login(
 
     _ensure_login_role(user, req.role)
     access_token = create_access_token(subject=str(user.id))
-    refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
+    refresh_token = refresh_token_service.issue_refresh_token(
+        str(user.id), db, remember=req.remember_me
+    )
     response = JSONResponse(
         content=LoginResponse(
             user=_to_user_response(user),
             access_token=access_token,
         ).model_dump(mode="json"),
     )
-    _set_refresh_cookie(response, refresh_token)
+    _set_refresh_cookie(
+        response, refresh_token, remember_me=req.remember_me, request=request
+    )
     return response
 
 
@@ -249,6 +282,7 @@ def _create_user_with_role(
     name: str,
     consents: ConsentRequest,
     db: Session,
+    remember_me: bool = True,
 ) -> tuple[User, str, str]:
     """공통 가입 처리 — User + Consent 3종 생성, 토큰 발급."""
     if not email_verify_token:
@@ -290,7 +324,9 @@ def _create_user_with_role(
     db.refresh(user)
 
     access_token = create_access_token(subject=str(user.id))
-    refresh_token = refresh_token_service.issue_refresh_token(str(user.id), db)
+    refresh_token = refresh_token_service.issue_refresh_token(
+        str(user.id), db, remember=remember_me
+    )
     return user, access_token, refresh_token
 
 
@@ -331,7 +367,9 @@ def _parse_birth_date(value: str | None) -> date | None:
 
 
 @router.post("/register/client", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
-async def register_client(req: RegisterClientRequest, db: Session = Depends(get_db)):
+async def register_client(
+    request: Request, req: RegisterClientRequest, db: Session = Depends(get_db)
+):
     """내담자(회원) 가입.
 
     SDD-073: 가입 시점에 성별·생년월일·전화번호(선택)와 초대 상담사 코드를 함께 받는다.
@@ -358,6 +396,7 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
         name=req.name,
         consents=req.consents,
         db=db,
+        remember_me=req.remember_me,
     )
 
     # SDD-073: 가입 정보 저장 — User.phone + ClientProfile(gender/birth_date)
@@ -423,7 +462,7 @@ async def register_client(req: RegisterClientRequest, db: Session = Depends(get_
         ).model_dump(mode="json"),
         status_code=status.HTTP_201_CREATED,
     )
-    _set_refresh_cookie(response, refresh)
+    _set_refresh_cookie(response, refresh, remember_me=req.remember_me, request=request)
     return response
 
 
@@ -488,6 +527,9 @@ async def refresh(
     payload = _decode_refresh(refresh_token)
     jti = payload["jti"]
     user_id = payload["sub"]
+    # 로그인 시 "로그인 상태 유지" 선택을 remember 클레임으로 이어받는다.
+    # 클레임이 없는 기존 토큰은 True(기존 동작 = 14일 지속)로 폴백한다.
+    remember = bool(payload.get("remember", True))
 
     record = db.query(RefreshToken).filter(RefreshToken.jti == jti).first()
     if record is None:
@@ -514,10 +556,13 @@ async def refresh(
         )
     _ensure_account_active(user)
 
-    new_refresh = refresh_token_service.rotate_refresh_token(jti, user_id, db)
+    new_refresh = refresh_token_service.rotate_refresh_token(
+        jti, user_id, db, remember=remember
+    )
     new_access = create_access_token(subject=user_id)
     response = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
-    _set_refresh_cookie(response, new_refresh)
+    # 회전 시에도 최초 로그인의 "로그인 상태 유지" 선택을 유지한다.
+    _set_refresh_cookie(response, new_refresh, remember_me=remember, request=request)
     return response
 
 
@@ -584,6 +629,7 @@ async def password_reset(
 
 @router.post("/set-password")
 async def set_password(
+    request: Request,
     req: SetPasswordRequest,
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
@@ -613,7 +659,7 @@ async def set_password(
             access_token=access_token,
         ).model_dump(mode="json"),
     )
-    _set_refresh_cookie(response, refresh_token)
+    _set_refresh_cookie(response, refresh_token, request=request)
     return response
 
 
@@ -623,6 +669,7 @@ async def set_password(
 
 @router.post("/google", response_model=LoginResponse)
 async def google_auth(
+    request: Request,
     req: GoogleAuthRequest,
     db: Session = Depends(get_db),
 ):
@@ -734,7 +781,9 @@ async def google_auth(
 
     # 4. JWT 발급
     access_token = create_access_token(subject=str(user.id))
-    refresh_token_str = refresh_token_service.issue_refresh_token(str(user.id), db)
+    refresh_token_str = refresh_token_service.issue_refresh_token(
+        str(user.id), db, remember=req.remember_me
+    )
 
     response = JSONResponse(
         content=LoginResponse(
@@ -742,7 +791,9 @@ async def google_auth(
             access_token=access_token,
         ).model_dump(mode="json"),
     )
-    _set_refresh_cookie(response, refresh_token_str)
+    _set_refresh_cookie(
+        response, refresh_token_str, remember_me=req.remember_me, request=request
+    )
     return response
 
 

@@ -28,6 +28,9 @@ class RegisterRequest(BaseModel):
     role: str = Field(pattern="^(counselor|client)$")
     email_verify_token: str | None = None
     consents: ConsentRequest | None = None
+    # 자동 로그인(로그인 상태 유지) — True면 refresh 쿠키를 14일 지속 쿠키로,
+    # False면 브라우저 세션 쿠키로 발급한다. 미지정 시 기존 동작(지속)을 유지한다.
+    remember_me: bool = True
 
     @field_validator("password")
     @classmethod
@@ -41,6 +44,9 @@ class _RegisterBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email_verify_token: str
     consents: ConsentRequest
+    # 자동 로그인(로그인 상태 유지) — 가입 직후 세션의 refresh 쿠키 수명을 결정한다.
+    # True(기본)면 14일 지속 쿠키, False면 브라우저 세션 쿠키.
+    remember_me: bool = True
 
     @field_validator("password")
     @classmethod
@@ -91,6 +97,9 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
+    # 자동 로그인(로그인 상태 유지) — True(기본)면 refresh 쿠키 14일 지속,
+    # False면 브라우저 세션 쿠키(창을 닫으면 로그아웃).
+    remember_me: bool = True
 
 
 class TokenResponse(BaseModel):
@@ -142,6 +151,8 @@ class GoogleAuthRequest(BaseModel):
     access_token: str
     invite_token: str | None = None
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
+    # 자동 로그인(로그인 상태 유지) — 이메일 로그인과 동일한 refresh 쿠키 분기.
+    remember_me: bool = True
 
 
 class UpdateUserMeRequest(BaseModel):
