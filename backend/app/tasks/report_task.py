@@ -8,6 +8,7 @@
 """
 
 import logging
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
@@ -279,6 +280,9 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # SDD-095: 리포트 생성 시작 — 진행 상태를 '처리 중'으로 반영한다.
     # (프론트 종료 화면 스텝퍼의 '리포트 완료' 스텝이 active 로 표시된다)
     report.generation_status = report_progress_service.GENERATION_PROCESSING
+    # SDD-095 후속(워치독): processing 진입 시각 기록 — beat 스윕이 먹통을 감지하는 기준
+    if report.generation_started_at is None:
+        report.generation_started_at = datetime.now(timezone.utc)
     db.commit()
 
     try:
@@ -356,13 +360,28 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
 try:
     from celery import shared_task
 
-    @shared_task(name="tasks.report")
+    @shared_task(name="tasks.report", soft_time_limit=300, time_limit=360)
     def report_task(report_id: str) -> None:
         from app.core.database import SessionLocal
 
         db = SessionLocal()
         try:
             generate_report_inline(report_id, db)
+        finally:
+            db.close()
+
+    @shared_task(name="tasks.sweep_stale_reports")
+    def sweep_stale_reports_task() -> int:
+        """타임아웃 워치독 스윕 — beat 가 주기 호출한다. 마감한 세션 수를 반환한다."""
+        from app.core.database import SessionLocal
+        from app.services import report_progress_service
+
+        db = SessionLocal()
+        try:
+            affected = report_progress_service.sweep_stale_reports(db)
+            for session_id in affected:
+                report_progress_service.emit_report_progress(session_id, db)
+            return len(affected)
         finally:
             db.close()
 

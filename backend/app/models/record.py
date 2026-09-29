@@ -172,6 +172,10 @@ class Report(Base):
     generation_status: Mapped[str] = mapped_column(
         String(20), default="pending", server_default="pending", nullable=False
     )
+    # SDD-095 후속(워치독): 'processing' 진입 시각과 비정상 종료 사유.
+    # 파이프라인이 워커에서 중단되면 beat 스윕이 generation_started_at 경과로 먹통을 감지한다.
+    generation_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    generation_error: Mapped[str | None] = mapped_column(String(50))
     # SDD-027: 품질 게이트에서 파생한 데이터 신뢰도(high/medium/low). EEG 미측정이면 null(치환 금지).
     data_credibility: Mapped[str | None] = mapped_column(String(20))
     pdf_url: Mapped[str | None] = mapped_column(String(500))

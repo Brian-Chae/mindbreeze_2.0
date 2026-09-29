@@ -18,7 +18,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
@@ -77,6 +77,10 @@ REASON_NO_TRANSCRIPT = "no_transcript"
 REASON_STT_FAILED = "stt_failed"
 REASON_SUMMARY_FAILED = "summary_failed"
 REASON_REPORT_FAILED = "report_failed"
+REASON_TIMEOUT = "timeout"
+
+# 리포트 생성 타임아웃(워치독) — 'processing' 이 이 시간을 넘기면 beat 스윕이 마감한다.
+REPORT_GENERATION_TIMEOUT_SECONDS = 30 * 60
 
 
 def _sid(session_id: str | UUID) -> UUID:
@@ -114,6 +118,10 @@ def _derive_reason(record: SessionRecord | None, reports: list[Report]) -> str |
         return REASON_LOW_CONFIDENCE
     if summary.get("summary_failed"):
         return REASON_SUMMARY_FAILED
+    # SDD-095 후속(워치독): 타임아웃으로 마감된 리포트 — 중단 사유를 최우선 노출
+    for r in reports:
+        if getattr(r, "generation_error", None):
+            return REASON_TIMEOUT
     latest = _latest_report(reports)
     if latest is not None and latest.status == "error":
         return REASON_REPORT_FAILED
@@ -322,6 +330,53 @@ def generation_status_for_content(content: dict, record: SessionRecord | None) -
     if _ai_summary(record).get("summary_failed"):
         return GENERATION_PARTIAL
     return GENERATION_READY
+
+
+def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
+    """타임아웃 워치독 — 'processing'에 머문 리포트/세션 기록을 터미널 상태로 마감한다.
+
+    Celery 파이프라인이 워커에서 중단(SIGKILL·크래시·브로커 장애)되면 상태가
+    'processing'에 영구히 남는다. beat 스윕이 시작 시각 경과를 기준으로 먹통을
+    감지하고, 영향을 받은 세션 id 목록을 반환한다(브로드캐스트용).
+    """
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(seconds=REPORT_GENERATION_TIMEOUT_SECONDS)
+
+    affected: list[str] = []
+
+    # 1) 리포트 생성 단계 — generation_status=processing + 시작 시각 초과
+    stale_reports = (
+        db.query(Report)
+        .filter(
+            Report.generation_status == GENERATION_PROCESSING,
+            Report.generation_started_at.isnot(None),
+            Report.generation_started_at < cutoff,
+        )
+        .all()
+    )
+    for report in stale_reports:
+        report.generation_status = GENERATION_PARTIAL
+        report.generation_error = REASON_TIMEOUT
+        affected.append(str(report.session_id))
+
+    # 2) STT/요약 단계(리포트 행 생성 전) — 녹음 종료 후에도 processing 에 머문 기록
+    stale_records = (
+        db.query(SessionRecord)
+        .filter(
+            SessionRecord.status == "processing",
+            SessionRecord.recording_ended_at.isnot(None),
+            SessionRecord.recording_ended_at < cutoff,
+        )
+        .all()
+    )
+    for record in stale_records:
+        record.status = "failed"
+        affected.append(str(record.session_id))
+
+    if affected and commit:
+        db.commit()
+    # 세션 중복 제거(순서 보존)
+    return list(dict.fromkeys(affected))
 
 
 async def _broadcast(session_id: str, payload: dict) -> None:

@@ -179,6 +179,7 @@ export const REPORT_PROGRESS_REASON_LABELS: Record<string, string> = {
   stt_failed: '음성 인식에 실패해 AI 요약을 만들지 못했어요.',
   summary_failed: 'AI 요약 생성에 실패했어요. 전사문은 확인할 수 있어요.',
   report_failed: '리포트 생성 중 오류가 발생했어요.',
+  timeout: '리포트 생성 시간이 초과되어 일부만 완료됐어요.',
 };
 
 export function resolveReportGenerationStatus(value: unknown): ReportGenerationStatus {

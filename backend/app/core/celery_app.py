@@ -27,4 +27,6 @@ celery_app.conf.beat_schedule = {
     'cleanup-data-exports': {'task': 'tasks.cleanup_data_exports', 'schedule': 60.0},
     # SDD-097: 예약 클래스 리마인더 스윕 — ETA 유실/누락분을 주기적으로 보정한다.
     'sweep-session-reminders': {'task': 'tasks.sweep_session_reminders', 'schedule': 300.0},
+    # SDD-095 후속: 리포트 생성 타임아웃 워치독 — processing 먹통을 주기적으로 마감한다.
+    'sweep-stale-reports': {'task': 'tasks.sweep_stale_reports', 'schedule': 300.0},
 }
