@@ -31,7 +31,6 @@ from tests.test_sdd024_session_live_ws import (
 
 # 내장 카탈로그의 실제 트랙 id — 테스트가 상수를 복제하지 않고 카탈로그에서 얻는다
 TRACK_ID = "bgm-calm-drone-432"
-GUIDE_TRACK_ID = "guide-breath-4-6"
 
 
 @pytest.fixture(autouse=True)
@@ -410,11 +409,12 @@ def test_17_트랙목록_무인증_조회(client):
     body = res.json()
     assert body["count"] == len(body["tracks"]) >= 1
     ids = [t["track_id"] for t in body["tracks"]]
-    assert TRACK_ID in ids and GUIDE_TRACK_ID in ids
+    assert TRACK_ID in ids
     assert len(ids) == len(set(ids))  # 중복 트랙 금지
 
     for track in body["tracks"]:
-        assert track["kind"] in ("bgm", "guide")
+        # BGM만 제공 — 명상 가이드(나레이션) 트랙은 상담사 목소리(LiveKit)로만
+        assert track["kind"] == "bgm"
         assert track["source"] in ("url", "tone")
         assert track["title"]
         assert isinstance(track["loop"], bool)
@@ -425,11 +425,6 @@ def test_17_트랙목록_무인증_조회(client):
         else:
             assert track["url"]
             assert track["synth"] is None
-
-    # 가이드 트랙은 호흡 안내용 맥박 주기를 가진다
-    guide = next(t for t in body["tracks"] if t["track_id"] == GUIDE_TRACK_ID)
-    assert guide["kind"] == "guide"
-    assert guide["synth"]["pulse_sec"] and guide["synth"]["pulse_sec"] > 0
 
 
 def test_18_카탈로그_조회_API():

@@ -13,7 +13,7 @@ import {
   signalQualityLevelLabel,
 } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
-import { getSession } from '../../lib/api/session';
+import { getSession, getSessionByCodeState } from '../../lib/api/session';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
@@ -21,6 +21,7 @@ import { BrainChart } from './BrainChart';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
+import { GuestChatNotice } from '../chat/GuestChatNotice';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 import { QuietSignalButtons } from './QuietSignalButtons';
 // 개선 10: 명상 가이드·BGM 동기 재생 — 서버 타임코드(class:audio_sync)를 받아 동일 소스를 동기 재생
@@ -210,6 +211,31 @@ export function GuestMeditationPanel({
       window.clearInterval(timer);
     };
   }, [isAuthenticated, sessionId]);
+
+  // SDD-095 후속: 게스트는 채팅방 접근 권한이 없으므로, by-code 상태로 chat_enabled만 조회해
+  // '회원 전용' 안내(GuestChatNotice)를 노출한다 — 패널 대신 회원가입 유도.
+  const [guestChatEnabled, setGuestChatEnabled] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated || !classCode || !participantId) return undefined;
+    const code = classCode;
+    const pid = participantId;
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const state = await getSessionByCodeState(code, pid);
+        if (!cancelled) setGuestChatEnabled(Boolean(state.chat_enabled));
+      } catch {
+        // 상태 조회 실패는 무해 — 안내만 미표시
+      }
+    };
+    void load();
+    const timer = window.setInterval(() => void load(), CHAT_STATE_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [isAuthenticated, classCode, participantId]);
 
   // 명상 진행 중에는 기본 접힘(안읽음 배지만) — 진행 중 상담사가 켜면 그때 펼친다
   useEffect(() => {
@@ -633,6 +659,9 @@ export function GuestMeditationPanel({
         onCollapsedChange={(next) => setChatExpanded(!next)}
         title="클래스 채팅"
       />
+
+      {/* SDD-095 후속: 게스트에게 채팅방이 회원 전용임을 안내(회원가입 유도) */}
+      {!isAuthenticated && guestChatEnabled && <GuestChatNotice />}
 
       {/* 개선 9: 최초 1회 온보딩 코치마크 — 기본 뮤트·손들기·스피커·몰입 모드 안내.
           localStorage로 재노출을 막고, [건너뛰기]/[다시 보지 않기]로 즉시 닫을 수 있다. */}

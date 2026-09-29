@@ -19,8 +19,8 @@ import os
 
 logger = logging.getLogger(__name__)
 
-# 트랙 종류 — 배경음 / 가이드 음성
-AUDIO_TRACK_KINDS: tuple[str, ...] = ("bgm", "guide")
+# 트랙 종류 — 배경음(BGM)만 제공. 명상 가이드(나레이션)는 상담사의 목소리(LiveKit)로만.
+AUDIO_TRACK_KINDS: tuple[str, ...] = ("bgm",)
 
 # 소스 종류 — 외부 URL / 내장 톤
 AUDIO_SOURCE_KINDS: tuple[str, ...] = ("url", "tone")
@@ -64,7 +64,7 @@ def _tone(
     }
 
 
-# 기본 카탈로그 — 자산 없이 바로 재생 가능한 톤 소스 3종.
+# 기본 카탈로그 — 자산 없이 바로 재생 가능한 톤 소스 2종.
 _BUILTIN_TRACKS: tuple[dict, ...] = (
     _tone(
         "bgm-calm-drone-432",
@@ -83,15 +83,6 @@ _BUILTIN_TRACKS: tuple[dict, ...] = (
         freq_hz=528.0,
         detune_hz=0.7,
         gain=0.09,
-    ),
-    _tone(
-        "guide-breath-4-6",
-        "호흡 가이드 (4초 들숨·6초 날숨)",
-        "guide",
-        "10초 주기의 맥박음 — 들숨 4초·날숨 6초 호흡을 안내한다",
-        freq_hz=288.0,
-        pulse_sec=10.0,
-        gain=0.14,
     ),
 )
 
