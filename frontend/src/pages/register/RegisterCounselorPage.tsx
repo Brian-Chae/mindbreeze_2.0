@@ -10,6 +10,20 @@ import { ApiError } from '../../lib/api/client';
 
 type Mode = 'select' | 'org' | 'individual';
 
+/**
+ * OTP 요청·검증 실패 문구 — 서버 사유(err.message)를 우선 사용하고,
+ * 사유가 없거나 일반 폴백일 때만 상태코드별 안내로 대체한다.
+ */
+function otpErrorMessage(err: unknown, fallback: string): string {
+  const status = err instanceof ApiError ? err.status : null;
+  const serverMessage = err instanceof Error && err.message ? err.message : '';
+  const isGeneric = status !== null && serverMessage === `API 요청 실패 (${status})`;
+  if (serverMessage && !isGeneric) return serverMessage;
+  if (status === 429) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+  if (status === 410) return '인증 코드가 만료되었습니다. 코드를 다시 요청해 주세요.';
+  return fallback;
+}
+
 const inputClass =
   'w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60';
 
@@ -40,8 +54,8 @@ export default function RegisterCounselorPage() {
     try {
       await requestOtp(email);
       setOtpSent(true);
-    } catch {
-      setError('인증 코드 발송에 실패했습니다');
+    } catch (err) {
+      setError(otpErrorMessage(err, '인증 코드 발송에 실패했습니다'));
     } finally {
       setLoading(false);
     }
@@ -57,8 +71,8 @@ export default function RegisterCounselorPage() {
     try {
       const res = await verifyOtp(email, otp);
       setEmailVerifyToken(res.email_verify_token);
-    } catch {
-      setError('인증 코드가 올바르지 않습니다');
+    } catch (err) {
+      setError(otpErrorMessage(err, '인증 코드가 올바르지 않습니다'));
     } finally {
       setLoading(false);
     }

@@ -239,9 +239,14 @@ export function SessionPreJoinPreview({
 
   /** 마이크 OFF 확인 다이얼로그 (§7 M-2) */
   const micOffConfirmDialog = micOffConfirmOpen ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mic-off-confirm-title"
+    >
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h4 className="text-lg font-semibold text-[#1F1F1F]">
+        <h4 id="mic-off-confirm-title" className="text-lg font-semibold text-[#1F1F1F]">
           마이크가 꺼진 상태로 시작합니다
         </h4>
         <p className="mt-3 text-sm text-[#6F6F6F]">

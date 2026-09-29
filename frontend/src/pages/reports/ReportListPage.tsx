@@ -154,6 +154,8 @@ export default function ReportListPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** 에러 발생 시 '다시 시도'로 목록 재조회 트리거 */
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -193,7 +195,7 @@ export default function ReportListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page]);
+  }, [page, reloadKey]);
 
   useEffect(() => {
     getAutoApprove()
@@ -253,7 +255,7 @@ export default function ReportListPage() {
   const toggleDisabled = autoApproveLoading || autoApproveSaving;
 
   const autoApproveToggle = (
-    <div className="inline-flex items-center gap-2">
+    <div className="inline-flex items-center gap-2 p-2.5 -m-2.5">
       <span
         className={`text-[13px] font-semibold ${
           autoApprove ? 'text-[#5F0080]' : 'text-[#6F6F6F]'
@@ -401,13 +403,21 @@ export default function ReportListPage() {
           {sampleLink}
         </div>
       )}
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
       {autoApproveError && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
       )}
-      {loading && total === 0 ? (
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[14px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : total === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
@@ -561,7 +571,7 @@ export default function ReportListPage() {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page <= 1 || loading}
                     aria-label="이전"
-                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     이전
                   </button>
@@ -574,7 +584,7 @@ export default function ReportListPage() {
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages || loading}
                     aria-label="다음"
-                    className="h-9 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     다음
                   </button>

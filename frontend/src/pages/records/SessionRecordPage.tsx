@@ -196,6 +196,8 @@ export default function SessionRecordPage() {
   const [record, setRecord] = useState<RecordResponse | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** 세션 메타(getSession) 실패는 기록지 조회 실패와 분리해 표시한다 */
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const { status: wsStatus, subscribe } = useRecordSocket();
@@ -204,11 +206,24 @@ export default function SessionRecordPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!id) return;
+    if (!id) return null;
     try {
-      const [r, t] = await Promise.all([getRecord(id), getTranscript(id)]);
+      // 전사문(/transcript)은 아직 없을 때 404가 난다 — 기록지(/record)와 분리 조회해
+      // 전사문 실패가 기록지 전체 오류 화면으로 번지지 않게 한다.
+      const [recordResult, transcriptResult] = await Promise.allSettled([
+        getRecord(id),
+        getTranscript(id),
+      ]);
+
+      if (recordResult.status === 'rejected') {
+        throw recordResult.reason;
+      }
+
+      const r = recordResult.value;
       setRecord(r);
-      setTranscript(t);
+      setTranscript(transcriptResult.status === 'fulfilled' ? transcriptResult.value : null);
+      // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
+      setError(null);
       setLoading(false);
 
       // SDD-085: manual(마이크 오프 수동 기록)은 처리 파이프라인이 없으므로 폴링 불필요
@@ -220,7 +235,7 @@ export default function SessionRecordPage() {
       }
       return r;
     } catch (e) {
-      setError((e as Error).message);
+      setError(e instanceof Error ? e.message : '기록지를 불러오지 못했습니다');
       setLoading(false);
       return null;
     }
@@ -231,10 +246,18 @@ export default function SessionRecordPage() {
     try {
       const s = await getSession(id);
       setSession(s);
-    } catch {
-      /* 세션 메타 로드 실패 시 기록지는 계속 표시 */
+      setSessionError(null);
+    } catch (e) {
+      // 세션 메타 로드 실패 시 기록지는 계속 표시하되 상단에 사유를 안내한다
+      setSessionError(e instanceof Error ? e.message : '클래스 정보를 불러오지 못했습니다');
     }
   }, [id]);
+
+  const retryLoad = useCallback((): void => {
+    setLoading(true);
+    void fetchData();
+    void fetchSession();
+  }, [fetchData, fetchSession]);
 
   useEffect(() => {
     if (!id) return;
@@ -271,7 +294,14 @@ export default function SessionRecordPage() {
   if (error) {
     return (
       <AppShell title="AI 기록지" sub="클래스 기록">
-        <div className="p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
+        <div className="space-y-3">
+          <div role="alert" className="p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">
+            {error}
+          </div>
+          <button type="button" onClick={retryLoad} className="mb-btn text-sm">
+            다시 시도
+          </button>
+        </div>
       </AppShell>
     );
   }
@@ -287,7 +317,12 @@ export default function SessionRecordPage() {
   if (!record) {
     return (
       <AppShell title="AI 기록지" sub="클래스 기록">
-        <div className="text-sm text-[#6F6F6F]">기록지를 불러올 수 없습니다.</div>
+        <div className="space-y-3">
+          <p role="alert" className="text-sm text-[#6F6F6F]">기록지를 불러올 수 없습니다.</p>
+          <button type="button" onClick={retryLoad} className="mb-btn text-sm">
+            다시 시도
+          </button>
+        </div>
       </AppShell>
     );
   }
@@ -295,6 +330,17 @@ export default function SessionRecordPage() {
   return (
     <AppShell title="AI 기록지" sub="클래스 기록">
       <div className="space-y-4 max-w-4xl">
+        {sessionError && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E]"
+          >
+            <span>클래스 정보를 불러오지 못했습니다: {sessionError}</span>
+            <button type="button" onClick={() => void fetchSession()} className="underline">
+              다시 시도
+            </button>
+          </div>
+        )}
         {session && <ClassMetaCard session={session} />}
 
         {/* SDD-095: 리포트 생성 진행 스텝퍼 우선 — 계약 미수신 시 기존 처리 표시로 폴백 */}

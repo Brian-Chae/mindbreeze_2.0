@@ -70,9 +70,12 @@ export default function ClientReportListPage() {
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     listReports()
       .then((r) => {
         if (cancelled) return;
@@ -88,7 +91,7 @@ export default function ClientReportListPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   return (
     <div className="px-4 md:px-8 py-4 md:py-6">
@@ -98,12 +101,19 @@ export default function ClientReportListPage() {
         <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">AI REPORTS</p>
       </div>
 
-      {error && (
-        <div className="mx-4 mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
-
       {loading ? (
         <div className="text-[#6F6F6F] text-sm text-center py-12">불러오는 중...</div>
+      ) : error ? (
+        <div className="mx-4 my-6 p-6 rounded-2xl bg-red-50 text-center" role="alert">
+          <p className="text-sm text-red-700 mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
       ) : reports.length === 0 ? (
         <EmptyState />
       ) : (

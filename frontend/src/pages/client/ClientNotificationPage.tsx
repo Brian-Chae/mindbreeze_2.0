@@ -20,8 +20,12 @@ export default function ClientNotificationPage() {
     setError(null);
     void listNotifications(false, 50, 0).then((result) => {
       if (!cancelled) setNotifications(result.notifications);
-    }).catch(() => {
-      if (!cancelled) setError('알림을 불러오지 못했습니다. 다시 시도해 주세요.');
+    }).catch((err: unknown) => {
+      if (!cancelled) {
+        setError(err instanceof Error && err.message
+          ? err.message
+          : '알림을 불러오지 못했습니다. 다시 시도해 주세요.');
+      }
     }).finally(() => {
       if (!cancelled) setLoading(false);
     });
@@ -35,8 +39,8 @@ export default function ClientNotificationPage() {
         setNotifications((previous) => previous.map((item) =>
           item.id === notification.id ? { ...item, is_read: true } : item));
         void useNotificationStore.getState().fetch();
-      } catch {
-        setError('읽음 저장에 실패했습니다.');
+      } catch (err) {
+        setError(err instanceof Error && err.message ? err.message : '읽음 저장에 실패했습니다.');
       }
     }
     const target = resolveNotificationTarget(notification.extra, 'client');
@@ -50,8 +54,10 @@ export default function ClientNotificationPage() {
       await markAllRead();
       setNotifications((previous) => previous.map((item) => ({ ...item, is_read: true })));
       void useNotificationStore.getState().fetch();
-    } catch {
-      setError('전체 읽음 처리에 실패했습니다. 다시 시도해 주세요.');
+    } catch (err) {
+      setError(err instanceof Error && err.message
+        ? err.message
+        : '전체 읽음 처리에 실패했습니다. 다시 시도해 주세요.');
     } finally {
       setMarkingAll(false);
     }

@@ -145,6 +145,41 @@ function NotFoundView() {
   );
 }
 
+function ErrorView({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="min-h-screen bg-[#F5EDFC] flex flex-col">
+      <Nav />
+      <main className="flex-1 flex items-center justify-center px-8 py-16">
+        <div
+          className="max-w-md w-full bg-white border border-[#DDDEE7] rounded-2xl p-10 text-center"
+          role="alert"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">기관 정보를 불러오지 못했습니다</h1>
+          <p className="text-sm text-[#6F6F6F] mb-6">{message}</p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={onRetry}
+              className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
+            >
+              다시 시도
+            </button>
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#DDDEE7] hover:bg-[#F5EDFC] transition-colors"
+            >
+              홈으로 돌아가기
+            </Link>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
   const activeClasses = data.classes.filter((cls) => ACTIVE_STATUSES.has(cls.status));
 
@@ -248,6 +283,8 @@ const OrgPublicPage: React.FC = () => {
   const [data, setData] = useState<OrgPublicResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!orgCode) {
@@ -266,10 +303,11 @@ const OrgPublicPage: React.FC = () => {
       })
       .catch((err) => {
         if (cancelled) return;
+        // 404만 '존재하지 않는 기관', 그 외(500/네트워크 등)는 에러+재시도로 구분
         if (err instanceof ApiError && err.status === 404) {
           setNotFound(true);
         } else {
-          setNotFound(true);
+          setError(err instanceof ApiError ? err.message : '기관 정보를 불러오지 못했습니다');
         }
       })
       .finally(() => {
@@ -279,7 +317,7 @@ const OrgPublicPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [orgCode]);
+  }, [orgCode, reloadKey]);
 
   if (loading) {
     return (
@@ -295,7 +333,15 @@ const OrgPublicPage: React.FC = () => {
     );
   }
 
-  if (notFound || !data) {
+  if (notFound) {
+    return <NotFoundView />;
+  }
+
+  if (error && !data) {
+    return <ErrorView message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
+  }
+
+  if (!data) {
     return <NotFoundView />;
   }
 

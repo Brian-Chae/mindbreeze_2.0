@@ -131,11 +131,6 @@ export default function SignupApplicationsPage() {
 
   return (
     <AppShell title="가입 신청 관리" sub="SIGNUP APPLICATIONS">
-      {error && (
-        <div role="alert" className="mb-5 rounded-xl bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
       {message && (
         <div role="status" className="mb-5 rounded-xl bg-[#F5EDFC] p-3 text-sm text-[#5F0080]">
           {message}
@@ -166,7 +161,18 @@ export default function SignupApplicationsPage() {
         <span className="ml-auto text-[13px] text-[#6F6F6F]">총 {items.length}건</span>
       </section>
 
-      {loading ? (
+      {error ? (
+        <div role="alert" className="rounded-2xl border border-[#F5C2C2] bg-red-50 p-10 text-center">
+          <div className="text-sm text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="mt-4 inline-flex items-center rounded-full bg-[#5F0080] px-5 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#4B0066]"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="rounded-2xl border border-[#EFEFEF] p-10 text-center text-sm text-[#6F6F6F]">
           신청 목록을 불러오는 중...
         </div>
@@ -229,7 +235,7 @@ export default function SignupApplicationsPage() {
 
           <dl className="mt-4 grid gap-x-8 gap-y-2 text-[14px] md:grid-cols-2">
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">신청자</dt><dd className="text-[#1F1F1F]">{detail.contact_name}</dd></div>
-            <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">이메일</dt><dd className="text-[#1F1F1F]">{detail.email}</dd></div>
+            <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">이메일</dt><dd className="text-[#1F1F1F] min-w-0 break-all">{detail.email}</dd></div>
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">전화번호</dt><dd className="text-[#1F1F1F]">{detail.phone ?? '미입력'}</dd></div>
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">접수일</dt><dd className="text-[#1F1F1F]">{formatDateTime(detail.created_at)}</dd></div>
             {detail.specialties && (

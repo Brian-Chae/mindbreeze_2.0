@@ -149,7 +149,7 @@ function CounselorCodeScreen() {
   }, [code, user, setUser]);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-6">
+    <div className="flex flex-col items-center justify-center min-h-dvh bg-[#FAFAFA] px-6">
       <div className="text-center w-full max-w-sm">
         <h1 className="text-2xl font-bold text-[#1F1F1F] mb-2">
           상담사와 연결하기
@@ -159,7 +159,7 @@ function CounselorCodeScreen() {
         </p>
 
         {/* 6자리 코드 입력 */}
-        <div className="flex gap-3 justify-center mb-4">
+        <div className="flex gap-2 sm:gap-3 justify-center mb-4">
           {code.map((digit, i) => (
             <input
               key={i}
@@ -175,7 +175,7 @@ function CounselorCodeScreen() {
               onKeyDown={(e) => handleKeyDown(i, e)}
               onPaste={handlePaste}
               disabled={loading}
-              className={`w-10 h-12 text-center text-lg font-bold rounded-lg border-2 outline-none transition-colors ${
+              className={`w-9 sm:w-10 h-12 shrink-0 text-center text-lg font-bold rounded-lg border-2 outline-none transition-colors ${
                 error
                   ? 'border-red-400 bg-red-50'
                   : digit
@@ -214,13 +214,15 @@ export default function ClientAppPage() {
     // store에 이미 있으면 그걸로 초기화 (깜빡임 방지)
     return (user?.counselors?.length ?? 0) > 0 ? user!.counselors : null;
   });
-  const fetchError = null; // keep for future error handling
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [fetchKey, setFetchKey] = useState(0);
 
   // 마운트 시 상담사 목록 API 호출
   useEffect(() => {
     let cancelled = false;
 
     async function fetchCounselors() {
+      setFetchError(null);
       try {
         const res = await apiClient.get<
           Array<{ id: string; name: string; profile_image: string | null }>
@@ -237,14 +239,17 @@ export default function ClientAppPage() {
       } catch (err) {
         if (cancelled) return;
         console.error('Failed to fetch counselors:', err);
-        // GET 실패해도 counselors=[], 코드 입력 화면으로 넘어가기 (POST로 연결 시도 가능)
-        setCounselors([]);
+        // 실패 시 counselors를 null로 유지 — '상담사 코드 입력' 화면 오표시를 막고 에러+재시도 노출
+        setFetchError(
+          err instanceof Error ? err.message : '상담사 연결 정보를 불러오지 못했습니다',
+        );
       }
     }
 
     fetchCounselors();
     return () => { cancelled = true; };
-  }, []); // mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchKey]);
 
   // 로딩 중
   if (counselors === null && !fetchError) {
@@ -256,6 +261,25 @@ export default function ClientAppPage() {
   }
 
   const hasCounselors = counselors !== null && counselors.length > 0;
+
+  // 상담사 목록 조회 실패 + 캐시 없음 → 코드 입력 화면 대신 에러 + 재시도
+  if (counselors === null && fetchError && !pathname.startsWith('/app/notifications')) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-6">
+        <div className="w-full max-w-sm text-center">
+          <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">연결 정보를 불러오지 못했습니다</h1>
+          <p className="text-sm text-red-600 mb-6">{fetchError}</p>
+          <button
+            type="button"
+            onClick={() => setFetchKey((k) => k + 1)}
+            className="w-full py-3 rounded-xl bg-[#5F0080] text-white font-semibold hover:bg-[#4B0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // 상담사 연결 전 → 코드 입력 화면
   if (!hasCounselors && !pathname.startsWith('/app/notifications')) {
@@ -327,7 +351,7 @@ export default function ClientAppPage() {
     <button
       type="button"
       onClick={handleSessionRequest}
-      className="px-4 py-2 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
+      className="h-11 px-4 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
     >
       세션 신청하기
     </button>

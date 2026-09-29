@@ -205,7 +205,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           <button
             type="button"
             onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[#6F6F6F] hover:text-[#1F1F1F] hover:bg-[#F2F3F8] transition-colors"
+            className="w-11 h-11 flex items-center justify-center rounded-full text-[#6F6F6F] hover:text-[#1F1F1F] hover:bg-[#F2F3F8] transition-colors"
           >
             ✕
           </button>
@@ -442,7 +442,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
                 type="button"
                 aria-pressed={reminderOffsets.length === 0}
                 onClick={() => setReminderOffsets([])}
-                className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                className={`rounded-full min-h-[44px] px-4 py-2.5 text-sm font-medium border transition-colors ${
                   reminderOffsets.length === 0
                     ? 'bg-[#5F0080] text-white border-[#5F0080]'
                     : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
@@ -458,7 +458,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
                     type="button"
                     aria-pressed={active}
                     onClick={() => toggleReminderOffset(opt.value)}
-                    className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                    className={`rounded-full min-h-[44px] px-4 py-2.5 text-sm font-medium border transition-colors ${
                       active
                         ? 'bg-[#5F0080] text-white border-[#5F0080]'
                         : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
@@ -547,7 +547,7 @@ function MobileSection({
               key={m}
               type="button"
               onClick={() => setMode(m)}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              className={`px-4 py-2.5 text-sm rounded-full transition-colors ${
                 mode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
               }`}
             >
@@ -559,7 +559,7 @@ function MobileSection({
           <button
             type="button"
             onClick={() => onShift(-1)}
-            className="w-8 h-8 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+            className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
             aria-label="이전"
           >
             ‹
@@ -568,7 +568,7 @@ function MobileSection({
           <button
             type="button"
             onClick={() => onShift(1)}
-            className="w-8 h-8 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+            className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
             aria-label="다음"
           >
             ›
@@ -624,7 +624,11 @@ export default function SessionListPage() {
   const refreshSessions = useCallback(() => {
     setLoading(true);
     listSessions()
-      .then((res) => setSessions(res.sessions))
+      .then((res) => {
+        setSessions(res.sessions);
+        // 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
+        setError(null);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -797,7 +801,7 @@ export default function SessionListPage() {
                     <button
                       type="button"
                       onClick={() => onShift(-1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
                       aria-label="이전"
                     >
                       ‹
@@ -808,7 +812,7 @@ export default function SessionListPage() {
                     <button
                       type="button"
                       onClick={() => onShift(1)}
-                      className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
+                      className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--mb-bg-10)] text-[var(--mb-fg)] hover:bg-[#E6E7EE]"
                       aria-label="다음"
                     >
                       ›

@@ -354,19 +354,19 @@ export default function OrgManagementPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm" />
-          <select aria-label="기관 운영 상태" value={operationStatus} onChange={(event) => setOperationStatus(event.target.value as 'active' | 'inactive')} className="rounded-lg border px-3 py-2 text-sm"><option value="active">운영 기관</option><option value="inactive">비활성화 기관</option></select>
-          <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+          <input aria-label="기관 검색" placeholder="기관명·기관 코드 검색" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 rounded-lg border px-3 py-2.5 text-sm" />
+          <select aria-label="기관 운영 상태" value={operationStatus} onChange={(event) => setOperationStatus(event.target.value as 'active' | 'inactive')} className="rounded-lg border px-3 py-2.5 text-sm"><option value="active">운영 기관</option><option value="inactive">비활성화 기관</option></select>
+          <select aria-label="인증 여부" value={verification} onChange={(event) => setVerification(event.target.value)} className="rounded-lg border px-3 py-2.5 text-sm">
             <option value="">전체 인증</option><option value="verified">인증됨</option><option value="unverified">미인증</option>
           </select>
-          <select aria-label="기관 유형" value={kind} onChange={(event) => setKind(event.target.value)} className="rounded-lg border px-3 py-2 text-sm">
+          <select aria-label="기관 유형" value={kind} onChange={(event) => setKind(event.target.value)} className="rounded-lg border px-3 py-2.5 text-sm">
             <option value="">전체 유형</option><option value="institution">일반 기관</option><option value="individual">개인 기관</option>
           </select>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={grouped} onChange={(event) => setGrouped(event.target.checked)} />유형별 그룹핑</label>
-          <button type="button" onClick={resetFilters} className="rounded-lg border px-3 py-2 text-sm">검색 초기화</button>
+          <button type="button" onClick={resetFilters} className="rounded-lg border px-3 py-2.5 text-sm">검색 초기화</button>
         </div>
         {loading ? <p role="status" className="p-10 text-center text-sm">기관 목록을 불러오는 중...</p>
-          : listError ? <div role="alert" className="rounded-xl bg-red-50 p-5 text-sm">기관 목록 조회에 실패했습니다. <button type="button" onClick={() => { setListError(false); setLoading(true); setListAttempt((value) => value + 1); }} className="ml-3 rounded-lg border px-3 py-2">다시 시도</button></div>
+          : listError ? <div role="alert" className="rounded-xl bg-red-50 p-5 text-sm">기관 목록 조회에 실패했습니다. <button type="button" onClick={() => { setListError(false); setLoading(true); setListAttempt((value) => value + 1); }} className="ml-3 rounded-lg border px-3 py-2.5">다시 시도</button></div>
           : filteredOrganizations.length === 0 ? <p className="p-10 text-center text-sm">{organizations.length === 0 ? '등록된 기관이 없습니다.' : '검색 조건에 맞는 기관이 없습니다.'}</p>
           : groups.map((group) => <div key={group.label} className="mb-5">
             {group.label && <h3 className="mb-2 text-sm font-bold">{group.label} · {group.items.length}개</h3>}

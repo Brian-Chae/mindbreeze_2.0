@@ -156,13 +156,13 @@ export default function ClientSessionDetailPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#FAFAFA]">
+    <div className="flex flex-col min-h-dvh bg-[#FAFAFA]">
       {/* 상단 헤더 */}
       <header className="sticky top-0 z-40 h-14 bg-white border-b border-[#EFEFEF] flex items-center px-4 gap-3">
         <button
           type="button"
           onClick={handleBack}
-          className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[#EFEFEF] shrink-0 transition-colors"
+          className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-[#EFEFEF] shrink-0 transition-colors"
           aria-label="뒤로가기"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

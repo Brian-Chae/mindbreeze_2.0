@@ -69,7 +69,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-1.5 sm:gap-2 justify-center">
         {digits.map((d, idx) => (
           <input
             key={idx}
@@ -85,7 +85,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
             onChange={handleChange(idx)}
             onKeyDown={handleKeyDown(idx)}
             onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
+            className={`w-10 sm:w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
               error ? 'border-[var(--mb-danger)]' : 'border-[var(--mb-border)]'
             }`}
             aria-label={`OTP 자리 ${idx + 1}`}

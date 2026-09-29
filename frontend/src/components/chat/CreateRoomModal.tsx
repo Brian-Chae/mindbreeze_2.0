@@ -55,9 +55,12 @@ export function CreateRoomModal({ open, onClose }: Props) {
   }, [open, loadClients]);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    // 검색어 입력 디바운스 — 타이핑마다 API를 호출하지 않도록 300ms 지연
+    const timer = window.setTimeout(() => {
       loadClients(search);
-    }
+    }, 300);
+    return () => window.clearTimeout(timer);
   }, [search, open, loadClients]);
 
   const handleCreateDirect = async (client: ClientListItem): Promise<void> => {
@@ -113,14 +116,19 @@ export function CreateRoomModal({ open, onClose }: Props) {
   const selectedCount = selectedIds.size;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="새 채팅방"
+    >
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl max-h-[85dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-[#1F1F1F]">새 채팅방</h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#6F6F6F] flex items-center justify-center text-sm"
+            className="w-11 h-11 shrink-0 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#6F6F6F] flex items-center justify-center text-sm"
           >
             ✕
           </button>

@@ -141,7 +141,7 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="w-full h-10 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
+              className="w-full h-11 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
             >
               + 새 채팅방
             </button>
@@ -210,7 +210,7 @@ export default function ChatPage() {
                 <button
                   type="button"
                   onClick={() => navigate('/chat')}
-                  className="text-sm text-[#5F0080] font-medium"
+                  className="min-h-[44px] inline-flex items-center text-sm text-[#5F0080] font-medium"
                 >
                   ← 대화 목록
                 </button>
@@ -232,7 +232,7 @@ export default function ChatPage() {
         </main>
       </div>
 
-      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white">{status}</p>}
+      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white break-words">{status}</p>}
       {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} onInvite={(room) => openInvite(room, true)} />}
       {inviteRoom && <InviteMemberModal key={inviteRoom.id} room={inviteRoom} onClose={() => {
         if (returnToSettings) setSettingsRoom(useChatStore.getState().rooms.find((room) => room.id === inviteRoom.id) ?? inviteRoom);

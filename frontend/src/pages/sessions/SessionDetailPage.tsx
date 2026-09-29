@@ -87,7 +87,11 @@ export default function SessionDetailPage() {
     const loadSession = (): void => {
       getSession(id)
         .then((nextSession) => {
-          if (!cancelled) setSession(nextSession);
+          if (!cancelled) {
+            setSession(nextSession);
+            // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
+            setError(null);
+          }
         })
         .catch((e: Error) => {
           if (!cancelled) setError(e.message);
@@ -205,8 +209,20 @@ export default function SessionDetailPage() {
   if (error && !session) {
     return (
       <AppShell title="세션 상세" sub="DETAIL">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto" role="alert">
           <p className="text-[#B3261E]">{error}</p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => window.location.reload()} className="mb-btn text-sm">
+              다시 시도
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/sessions')}
+              className="mb-btn mb-btn--ghost text-sm"
+            >
+              목록으로
+            </button>
+          </div>
         </div>
       </AppShell>
     );
@@ -361,7 +377,7 @@ export default function SessionDetailPage() {
               type="button"
               onClick={() => setShowInvite(true)}
               disabled={busy}
-              className="text-xs text-[#5F0080] font-medium hover:underline"
+              className="inline-flex h-11 items-center px-3 -mx-3 text-sm text-[#5F0080] font-medium hover:underline"
             >
               + 참여자 초대
             </button>
@@ -384,7 +400,7 @@ export default function SessionDetailPage() {
                       type="button"
                       onClick={() => handleRemoveParticipant(p.user_id!)}
                       disabled={busy}
-                      className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
+                      className="inline-flex h-11 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
                     >
                       제거
                     </button>
@@ -414,7 +430,7 @@ export default function SessionDetailPage() {
                             type="button"
                             onClick={() => handleRemoveParticipant(p.user_id!)}
                             disabled={busy}
-                            className="text-xs text-[#B3261E] hover:underline disabled:opacity-50"
+                            className="inline-flex h-11 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
                           >
                             제거
                           </button>

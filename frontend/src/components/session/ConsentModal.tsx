@@ -9,9 +9,14 @@ interface Props {
 export function ConsentModal({ open, onConfirm, onCancel }: Props) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="consent-modal-title"
+    >
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-neutral-900">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+        <h2 id="consent-modal-title" className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
           음성 녹음 동의가 필요합니다
         </h2>
         <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
@@ -26,14 +31,14 @@ export function ConsentModal({ open, onConfirm, onCancel }: Props) {
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="min-h-11 rounded-lg border border-neutral-300 px-4 py-2 text-sm text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             취소
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            className="min-h-11 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             동의하고 녹음 시작
           </button>

@@ -76,7 +76,7 @@ function AccessCodeCell({ code }: { code: string | null }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="px-4 py-2.5 min-h-[44px] rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[13px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -252,7 +252,16 @@ export default function DashboardPage() {
       <OrgRemovedNoticeDialog />
 
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">{error}</div>
+        <div className="mb-4 flex flex-col gap-2 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E] sm:flex-row sm:items-center sm:justify-between">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => void fetchDashboard()}
+            className="shrink-0 self-start rounded-lg border border-[#B3261E]/40 bg-white px-3 py-1.5 text-[13px] font-semibold text-[#B3261E] transition-colors hover:bg-[#F9D9D9] sm:self-auto"
+          >
+            다시 시도
+          </button>
+        </div>
       )}
 
       {showProfileBanner && (
@@ -304,13 +313,13 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => void handleCopyCounselorCode()}
-                    className="rounded-lg border border-[#C9B0E8] bg-white px-3 py-1.5 text-[12px] font-semibold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
+                    className="rounded-lg border border-[#C9B0E8] bg-white min-h-[44px] px-4 text-sm font-semibold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
                   >
                     {codeCopied ? '복사됨' : '복사'}
                   </button>
                   <Link
                     to="/settings"
-                    className="text-[12px] font-semibold text-[#5F0080] hover:underline"
+                    className="inline-flex h-11 items-center text-[12px] font-semibold text-[#5F0080] hover:underline"
                   >
                     설정
                   </Link>

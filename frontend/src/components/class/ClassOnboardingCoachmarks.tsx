@@ -118,7 +118,7 @@ export function ClassOnboardingCoachmarks({
           <button
             type="button"
             onClick={skip}
-            className="rounded-lg px-2 py-1 text-xs font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            className="min-h-11 inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium text-white/60 transition-colors hover:bg-white/10 hover:text-white"
           >
             건너뛰기
           </button>

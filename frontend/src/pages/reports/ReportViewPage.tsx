@@ -148,7 +148,7 @@ export default function ReportViewPage() {
       <main className="max-w-4xl mx-auto px-5 py-8 space-y-6">
         <div className="flex justify-end">
           <button type="button" onClick={handleDownload} disabled={downloading} aria-busy={downloading}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium px-5 py-2.5 rounded-xl disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5F0080]">
+            className="inline-flex items-center min-h-[44px] border border-[#E8D9F5] bg-white text-[#5F0080] font-medium px-5 py-2.5 rounded-xl disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5F0080]">
             {downloading ? 'PDF 준비 중...' : 'PDF 다운로드'}
           </button>
         </div>

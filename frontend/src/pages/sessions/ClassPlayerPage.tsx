@@ -574,6 +574,8 @@ export default function ClassPlayerPage() {
     try {
       const next = await getSession(id);
       setSession(next);
+      // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
+      setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '세션을 불러오지 못했습니다');
     }
@@ -1041,8 +1043,36 @@ export default function ClassPlayerPage() {
       window.setTimeout(() => setCodeCopied(false), 2000);
     } catch {
       setCodeCopied(false);
+      // 클립보드 API 실패(권한·비보안 컨텍스트) 시 사용자가 직접 선택할 수 있게 안내
+      setError('클래스 코드를 복사하지 못했습니다. 코드를 직접 선택해 주세요.');
     }
   };
+
+  if (!session && error) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#12081C] p-6">
+        <div
+          role="alert"
+          className="w-full max-w-md space-y-4 rounded-2xl border border-[#F5C2C0] bg-[#FDECEC] p-5 text-sm text-[#B3261E]"
+        >
+          <p className="font-semibold">클래스에 입장하지 못했습니다</p>
+          <p className="break-words">{error}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => void refreshSession()} className="mb-btn text-sm">
+              다시 시도
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/sessions')}
+              className="mb-btn mb-btn--ghost text-sm"
+            >
+              목록으로
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!session) {
     return (
@@ -1222,7 +1252,7 @@ export default function ClassPlayerPage() {
               type="button"
               aria-pressed={monitorView === v.key}
               onClick={() => setMonitorView(v.key)}
-              className={`rounded-lg px-3 py-1.5 text-[12px] font-medium transition ${
+              className={`rounded-lg min-h-[44px] px-4 py-2.5 text-[12px] font-medium transition ${
                 monitorView === v.key
                   ? 'bg-[#5F0080] text-white'
                   : 'bg-[#F2F3F8] text-[#6F6F6F] hover:text-[#1F1F1F]'
@@ -1368,7 +1398,7 @@ export default function ClassPlayerPage() {
           <button
             type="button"
             onClick={() => navigate('/sessions')}
-            className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-sm font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
+            className="shrink-0 rounded-xl bg-white/10 h-11 px-4 text-sm font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
           >
             ← 나가기
           </button>
@@ -1437,7 +1467,7 @@ export default function ClassPlayerPage() {
                   <button
                     type="button"
                     onClick={() => void handleCopyCode()}
-                    className="mt-3 rounded-xl bg-white/10 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/20"
+                    className="mt-3 rounded-xl bg-white/10 h-11 px-4 text-sm font-medium text-white/80 transition hover:bg-white/20"
                   >
                     {codeCopied ? '복사 완료' : '코드 복사'}
                   </button>

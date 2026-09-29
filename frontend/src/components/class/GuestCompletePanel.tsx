@@ -182,7 +182,7 @@ export function GuestCompletePanel({
             <button
               type="button"
               onClick={onReset}
-              className="mt-4 w-full max-w-md py-2 text-sm font-semibold text-[color:var(--mb-fg-muted)]"
+              className="mt-4 min-h-11 w-full max-w-md py-2 text-sm font-semibold text-[color:var(--mb-fg-muted)]"
             >
               다른 클래스 코드 입력하기
             </button>
@@ -309,7 +309,7 @@ export function GuestCompletePanel({
                     setOtp('');
                     setFormError(null);
                   }}
-                  className="w-full py-2 text-sm font-semibold text-[color:var(--mb-fg-muted)]"
+                  className="min-h-11 w-full py-2 text-sm font-semibold text-[color:var(--mb-fg-muted)]"
                 >
                   이메일 다시 입력
                 </button>

@@ -222,7 +222,7 @@ export default function AdminReviewDetailPage() {
                   AI 검증 결과
                 </h3>
 
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   <div className="bg-[#F8FAFC] rounded-xl p-3 text-center border border-[#EFEFEF]">
                     <div className="text-[11px] text-[#6F6F6F] font-mono uppercase mb-1">위험도</div>
                     <div className="text-[20px] font-bold text-[#EF4444]">
@@ -247,7 +247,7 @@ export default function AdminReviewDetailPage() {
                 {extractedFields && Object.keys(extractedFields).length > 0 && (
                   <div className="mb-4">
                     <div className="text-[12px] font-bold text-[#6F6F6F] mb-2">추출 정보</div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {Object.entries(extractedFields).map(([k, v]) => (
                         <div key={k} className="flex items-center justify-between py-1.5 px-3 bg-[#F5EDFC] rounded-lg text-[13px]">
                           <span className="text-[#6F6F6F]">{k}</span>
@@ -283,7 +283,7 @@ export default function AdminReviewDetailPage() {
                   검토 처리
                 </h3>
 
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
                   <button
                     onClick={() => handleQuickAction('approve')}
                     disabled={submitting}

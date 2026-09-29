@@ -377,10 +377,6 @@ export default function ClientManagementPage() {
 
   return (
     <AppShell title="회원 관리" sub="CLIENT MANAGEMENT" rightSlot={addButton}>
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
-
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"
@@ -392,7 +388,18 @@ export default function ClientManagementPage() {
         <span className="text-[13px] text-[#6F6F6F]">총 {total}명</span>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[14px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => void fetchUsers()}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : users.length === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
@@ -423,21 +430,21 @@ export default function ClientManagementPage() {
                   {u.suspended ? (
                     <button
                       onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                      className="text-[13px] font-medium text-[#10B981] hover:underline"
+                      className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
                     >
                       해제
                     </button>
                   ) : (
                     <button
                       onClick={() => setModal({ user: u, action: 'suspend' })}
-                      className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                      className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
                     >
                       정지
                     </button>
                   )}
                   <button
                     onClick={() => setModal({ user: u, action: 'delete', step: 1 })}
-                    className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                    className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
                   >
                     삭제
                   </button>
@@ -446,8 +453,8 @@ export default function ClientManagementPage() {
             ))}
           </div>
 
-          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden">
-            <table className="w-full text-[14px]">
+          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[14px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이름</th>
@@ -462,7 +469,7 @@ export default function ClientManagementPage() {
                 {users.map((u) => (
                   <tr key={u.id} className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors">
                     <td className="px-6 py-4 font-medium text-[#1F1F1F]">{u.name}</td>
-                    <td className="px-6 py-4 text-[#6F6F6F]">{u.email}</td>
+                    <td className="px-6 py-4 text-[#6F6F6F] break-all">{u.email}</td>
                     <td className="px-6 py-4"><CounselorCell counselor={u.primary_counselor} /></td>
                     <td className="px-6 py-4"><StatusBadge suspended={u.suspended} /></td>
                     <td className="px-6 py-4 text-[#9B9B9B] font-mono text-[12px]">{formatDate(u.created_at)}</td>
@@ -471,14 +478,14 @@ export default function ClientManagementPage() {
                         {u.suspended ? (
                           <button
                             onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                            className="text-[13px] font-medium text-[#10B981] hover:underline"
+                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
                           >
                             해제
                           </button>
                         ) : (
                           <button
                             onClick={() => setModal({ user: u, action: 'suspend' })}
-                            className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
                             title="플랫폼 관리자에 의한 계정 정지(로그인 차단)"
                           >
                             정지
@@ -486,7 +493,7 @@ export default function ClientManagementPage() {
                         )}
                         <button
                           onClick={() => setModal({ user: u, action: 'delete', step: 1 })}
-                          className="text-[13px] font-medium text-[#EF4444] hover:underline"
+                          className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
                         >
                           삭제
                         </button>
@@ -503,7 +510,7 @@ export default function ClientManagementPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 이전
               </button>
@@ -511,7 +518,7 @@ export default function ClientManagementPage() {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 다음
               </button>
@@ -523,7 +530,7 @@ export default function ClientManagementPage() {
       {/* 정지/해제/삭제 모달 */}
       {modal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={() => {
             setModal(null);
             setReason('');
@@ -531,7 +538,7 @@ export default function ClientManagementPage() {
           }}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {modal.action === 'delete' && modal.step === 1 ? (

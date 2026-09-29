@@ -12,8 +12,13 @@ export default function InviteLandingPage() {
   const [info, setInfo] = useState<InviteInfoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    setLoading(true);
+    setError(null);
+    setErrorStatus(null);
     if (!token) {
       setError('잘못된 초대 링크입니다');
       setLoading(false);
@@ -27,6 +32,7 @@ export default function InviteLandingPage() {
       .catch((err) => {
         if (cancelled) return;
         setError(err instanceof ApiError ? err.message : '초대 정보를 확인할 수 없습니다');
+        setErrorStatus(err instanceof ApiError ? err.status : null);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -34,7 +40,9 @@ export default function InviteLandingPage() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, reloadKey]);
+
+  const isExpired = errorStatus === 404 || errorStatus === 410;
 
   const handleGoogleSuccess = (user: User | null): void => {
     if (!user) {
@@ -84,14 +92,26 @@ export default function InviteLandingPage() {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">초대가 만료되었습니다</h1>
+            <h1 className="text-xl font-bold text-[#1F1F1F] mb-2">
+              {isExpired ? '초대가 만료되었습니다' : '초대 정보를 불러오지 못했습니다'}
+            </h1>
             <p className="text-sm text-[#6F6F6F] mb-6">{error}</p>
-            <button
-              onClick={() => navigate('/')}
-              className="rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#D4D4D4] hover:bg-[#EFEFEF] transition-colors"
-            >
-              홈으로
-            </button>
+            <div className="flex flex-col gap-2">
+              {!isExpired && (
+                <button
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="rounded-xl px-6 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
+                >
+                  다시 시도
+                </button>
+              )}
+              <button
+                onClick={() => navigate('/')}
+                className="rounded-xl px-6 py-3 font-semibold bg-white text-[#6F6F6F] border border-[#D4D4D4] hover:bg-[#EFEFEF] transition-colors"
+              >
+                홈으로
+              </button>
+            </div>
           </>
         )}
 

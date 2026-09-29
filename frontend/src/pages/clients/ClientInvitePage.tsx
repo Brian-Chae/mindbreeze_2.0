@@ -45,7 +45,17 @@ export default function ClientInvitePage() {
     }
   };
 
-  if (!isInitialized) return null;
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <div
+          role="status"
+          aria-label="불러오는 중"
+          className="h-8 w-8 animate-spin rounded-full border-2 border-[#5F0080] border-t-transparent"
+        />
+      </div>
+    );
+  }
 
   if (user && user.role !== 'counselor') {
     return (

@@ -51,6 +51,38 @@ export async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/**
+ * FastAPI 오류 응답의 detail 을 사용자 문구로 변환한다.
+ * - detail 이 문자열이면 그대로 사용
+ * - 422 검증 오류처럼 객체 배열이면 각 항목의 loc(필드 경로)와 msg(사유)를 조합
+ */
+export function formatErrorDetail(detail: unknown): string | null {
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (!Array.isArray(detail)) return null;
+
+  const parts: string[] = [];
+  for (const item of detail) {
+    if (typeof item === 'string') {
+      if (item.trim()) parts.push(item.trim());
+      continue;
+    }
+    if (!item || typeof item !== 'object') continue;
+    const { loc, msg } = item as { loc?: unknown; msg?: unknown };
+    const field = Array.isArray(loc)
+      ? loc
+          .filter((segment) => typeof segment === 'string' || typeof segment === 'number')
+          .map((segment) => String(segment))
+          .filter((segment) => segment !== 'body' && segment !== 'query' && segment !== 'path')
+          .join('.')
+      : '';
+    const message = typeof msg === 'string' ? msg.trim() : '';
+    if (field && message) parts.push(`${field}: ${message}`);
+    else if (message) parts.push(message);
+    else if (field) parts.push(field);
+  }
+  return parts.length > 0 ? parts.join(' / ') : null;
+}
+
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, skipAuth = false, headers = {} } = options;
 
@@ -94,10 +126,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     } catch {
       // ignore
     }
-    const message =
-      (data && typeof data === 'object' && 'detail' in data && typeof (data as { detail: unknown }).detail === 'string'
-        ? (data as { detail: string }).detail
-        : null) ?? `API 요청 실패 (${res.status})`;
+    const payload = data && typeof data === 'object' ? (data as { detail?: unknown }) : null;
+    const message = formatErrorDetail(payload?.detail) ?? `API 요청 실패 (${res.status})`;
     throw new ApiError(res.status, message, data);
   }
 

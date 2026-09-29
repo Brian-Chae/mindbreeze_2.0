@@ -22,20 +22,33 @@ export default function ClientSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     getClientProfile()
       .then((p) => {
+        if (cancelled) return;
         setProfile(p);
         // authStore에도 이름 동기화
         if (user && p.name !== user.name) {
           setUser({ ...user, name: p.name });
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : '프로필 조회 실패'))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : '프로필 조회 실패');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reloadKey]);
 
   const handleSave = useCallback(
     async (data: ClientProfileUpdate): Promise<void> => {
@@ -58,8 +71,12 @@ export default function ClientSettingsPage() {
   );
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login?role=client');
+    try {
+      await logout();
+      navigate('/login?role=client');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '로그아웃에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   if (loading) {
@@ -71,10 +88,24 @@ export default function ClientSettingsPage() {
   }
 
   return (
-    <div className="px-4 md:px-8 py-4 md:py-6 pb-20">
+    <div className="px-4 md:px-8 py-4 md:py-6 pb-20 md:pb-6">
       <div className="max-w-2xl mx-auto space-y-6">
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+          <div
+            className="p-3 rounded-xl bg-red-50 text-red-700 text-sm flex items-center justify-between gap-3"
+            role="alert"
+          >
+            <span>{error}</span>
+            {!profile && (
+              <button
+                type="button"
+                onClick={() => setReloadKey((k) => k + 1)}
+                className="shrink-0 rounded-lg px-3 py-1.5 text-[13px] font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+              >
+                다시 시도
+              </button>
+            )}
+          </div>
         )}
         {saved && (
           <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>

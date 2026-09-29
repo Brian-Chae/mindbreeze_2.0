@@ -351,7 +351,7 @@ export default function SessionCreatePage() {
                   type="button"
                   aria-pressed={reminderOffsets.length === 0}
                   onClick={() => setReminderOffsets([])}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                  className={`rounded-full min-h-[44px] px-4 py-2.5 text-sm font-medium border transition-colors ${
                     reminderOffsets.length === 0
                       ? 'bg-[#5F0080] text-white border-[#5F0080]'
                       : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'
@@ -367,7 +367,7 @@ export default function SessionCreatePage() {
                       type="button"
                       aria-pressed={active}
                       onClick={() => toggleReminderOffset(opt.value)}
-                      className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                      className={`rounded-full min-h-[44px] px-4 py-2.5 text-sm font-medium border transition-colors ${
                         active
                           ? 'bg-[#5F0080] text-white border-[#5F0080]'
                           : 'bg-white text-[#1F1F1F] border-[#DDDEE7]'

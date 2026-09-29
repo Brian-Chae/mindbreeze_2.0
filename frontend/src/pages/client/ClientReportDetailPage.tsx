@@ -38,8 +38,14 @@ export default function ClientReportDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setError('리포트를 찾을 수 없습니다');
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     getReport(id)
       .then((r) => {
         if (cancelled) return;
@@ -70,11 +76,19 @@ export default function ClientReportDetailPage() {
     );
   }
 
-  if (error && !report) {
+  if (!report) {
     return (
       <div className="min-h-screen bg-[#FAFAFA] p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4">{error}</div>
+          {error ? (
+            <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4" role="alert">
+              {error}
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-white border border-[#EFEFEF] text-[#6F6F6F] text-sm mb-4">
+              표시할 리포트가 없습니다
+            </div>
+          )}
           <button
             onClick={() => navigate('/app/reports')}
             className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[14px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
@@ -85,8 +99,6 @@ export default function ClientReportDetailPage() {
       </div>
     );
   }
-
-  if (!report) return null;
 
   // 내담자 뷰로 강제 — 라벨·접힘 비대칭
   const adapted = adaptReportContent(report.content, 'client');

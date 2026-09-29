@@ -323,7 +323,7 @@ export function ClassWaitingRoom({
         <button
           type="button"
           onClick={onLeave}
-          className="rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+          className="min-h-11 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
         >
           나가기
         </button>
@@ -411,7 +411,7 @@ export function ClassWaitingRoom({
                       onClick={toggleCamera}
                       aria-pressed={cameraOn}
                       aria-label={cameraOn ? '카메라 끄기' : '카메라 켜기'}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-base transition ${
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-base transition ${
                         cameraOn ? 'bg-[#5F0080] text-white' : 'bg-[#3A3A3A] text-white/70'
                       }`}
                     >
@@ -422,7 +422,7 @@ export function ClassWaitingRoom({
                       onClick={toggleMic}
                       aria-pressed={micOn}
                       aria-label={micOn ? '마이크 끄기' : '마이크 켜기'}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-base transition ${
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-base transition ${
                         micOn ? 'bg-[#5F0080] text-white' : 'bg-[#3A3A3A] text-white/70'
                       }`}
                     >

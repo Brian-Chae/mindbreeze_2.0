@@ -72,7 +72,7 @@ export default function ReportSamplePage() {
       rightSlot={
         <Link
           to="/reports"
-          className="text-[13px] font-semibold text-[#5F0080] hover:underline"
+          className="inline-flex min-h-[44px] items-center text-[13px] font-semibold text-[#5F0080] hover:underline"
         >
           목록으로
         </Link>

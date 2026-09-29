@@ -42,6 +42,7 @@ export default function CredentialDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [type, setType] = useState<CredentialType>('id_card');
@@ -49,11 +50,13 @@ export default function CredentialDashboardPage() {
   const [uploading, setUploading] = useState(false);
 
   const fetchList = async (): Promise<void> => {
+    setListError(null);
+    setLoading(true);
     try {
       const res = await listCredentials();
       setData(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다');
+      setListError(err instanceof Error ? err.message : '목록을 불러오지 못했습니다');
     } finally {
       setLoading(false);
     }
@@ -232,13 +235,26 @@ export default function CredentialDashboardPage() {
             <p className="text-sm text-ink-tertiary text-center py-6">불러오는 중...</p>
           )}
 
-          {!loading && data && data.credentials.length === 0 && (
+          {!loading && listError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center" role="alert">
+              <p className="text-sm text-red-700 mb-3">{listError}</p>
+              <button
+                type="button"
+                onClick={() => void fetchList()}
+                className="rounded-lg px-3 py-1.5 text-[13px] font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+              >
+                다시 시도
+              </button>
+            </div>
+          )}
+
+          {!loading && !listError && data && data.credentials.length === 0 && (
             <p className="text-sm text-ink-tertiary text-center py-6">
               아직 업로드한 증빙이 없습니다
             </p>
           )}
 
-          {!loading && data && data.credentials.length > 0 && (
+          {!loading && !listError && data && data.credentials.length > 0 && (
             <div className="space-y-3">
               {data.credentials.map((c) => {
                 const status = STATUS_META[c.status];

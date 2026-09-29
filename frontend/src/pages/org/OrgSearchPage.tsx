@@ -36,7 +36,12 @@ export default function OrgSearchPage() {
     if (user?.role === 'counselor') {
       getMyRequests()
         .then(setMyRequests)
-        .catch(() => undefined);
+        .catch((err: unknown) => {
+          // 신청 내역 조회 실패를 삼키면 이미 신청한 센터에 중복 신청하게 된다 — 사유를 안내한다
+          setError(err instanceof Error && err.message
+            ? err.message
+            : '가입 신청 내역을 불러오지 못했습니다');
+        });
     }
   }, [isInitialized, isAuthenticated, user, navigate]);
 
@@ -78,7 +83,7 @@ export default function OrgSearchPage() {
   return (
     <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-light text-ink-primary">상담센터 검색</h1>
             <p className="text-sm text-ink-secondary mt-1">소속될 상담센터를 찾아 가입을 신청하세요</p>
@@ -153,7 +158,7 @@ export default function OrgSearchPage() {
                   type="button"
                   onClick={() => handleJoin(org.id)}
                   disabled={!canJoin || joiningId === org.id}
-                  className="shrink-0 h-9 px-4 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:bg-surface-sunken disabled:text-ink-disabled"
+                  className="shrink-0 h-11 px-4 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:bg-surface-sunken disabled:text-ink-disabled"
                 >
                   {alreadyRequested ? '신청 완료' : joiningId === org.id ? '신청 중...' : '가입 신청'}
                 </button>

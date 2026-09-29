@@ -74,7 +74,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
           <button
             type="button"
             onClick={() => onShiftMonth(-1)}
-            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
+            className="min-w-[44px] h-11 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
             aria-label="이전 월"
           >
             ‹
@@ -87,14 +87,14 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
                 onSelectDate(now);
               }
             }}
-            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+            className="min-w-[44px] h-11 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
           >
             오늘
           </button>
           <button
             type="button"
             onClick={() => onShiftMonth(1)}
-            className="min-w-[32px] h-8 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
+            className="min-w-[44px] h-11 px-2.5 rounded-[10px] font-semibold text-[13px] bg-[#F5EDFC] text-[#5F0080] hover:bg-[#EDE0F8] transition-colors"
             aria-label="다음 월"
           >
             ›

@@ -51,6 +51,7 @@ export default function ClientSessionListPage() {
   // 세션 신청 관련 상태
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -144,12 +145,15 @@ export default function ClientSessionListPage() {
   // 세션 신청 모달 열기 + 채팅방 목록 로딩
   const handleOpenRequest = async (): Promise<void> => {
     setShowRequestModal(true);
+    setRoomsError(null);
     try {
       const res = await listChatRooms();
       const directRooms = res.rooms.filter((r) => r.room_type === 'direct');
       setRooms(directRooms);
-    } catch {
+    } catch (e: unknown) {
+      // 조회 실패를 '채팅방 없음'으로 오인하지 않도록 별도 에러 상태로 분리
       setRooms([]);
+      setRoomsError(e instanceof Error ? e.message : '채팅방 목록을 불러오지 못했습니다');
     }
   };
 
@@ -330,7 +334,7 @@ export default function ClientSessionListPage() {
               <button
                 type="button"
                 onClick={() => onShift(-1)}
-                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
                 aria-label="이전"
               >
                 ‹
@@ -341,7 +345,7 @@ export default function ClientSessionListPage() {
               <button
                 type="button"
                 onClick={() => onShift(1)}
-                className="w-9 h-9 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
+                className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
                 aria-label="다음"
               >
                 ›
@@ -374,7 +378,18 @@ export default function ClientSessionListPage() {
               상담사에게 세션 신청 메시지를 보냅니다.
             </p>
 
-            {rooms.length === 0 ? (
+            {roomsError ? (
+              <div className="py-4 text-center" role="alert">
+                <p className="text-sm text-red-600 mb-3">{roomsError}</p>
+                <button
+                  type="button"
+                  onClick={() => void handleOpenRequest()}
+                  className="rounded-xl px-4 py-2 text-sm font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+                >
+                  다시 시도
+                </button>
+              </div>
+            ) : rooms.length === 0 ? (
               <p className="text-sm text-[#6F6F6F] py-4 text-center">
                 연결된 상담사 채팅방이 없습니다.
               </p>

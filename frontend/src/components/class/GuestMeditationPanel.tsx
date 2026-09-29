@@ -457,7 +457,7 @@ export function GuestMeditationPanel({
         <button
           type="button"
           onClick={onLeave}
-          className="rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+          className="min-h-11 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
         >
           종료
         </button>
@@ -617,7 +617,7 @@ export function GuestMeditationPanel({
               type="button"
               onClick={() => void band.connect()}
               disabled={!band.isSupported || band.connectionState === 'connecting'}
-              className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {band.connectionState === 'connecting'
                 ? '연결 중...'
@@ -629,7 +629,7 @@ export function GuestMeditationPanel({
             <button
               type="button"
               onClick={() => void band.disconnect()}
-              className="rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/20"
+              className="min-h-11 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/20"
             >
               연결 해제
             </button>

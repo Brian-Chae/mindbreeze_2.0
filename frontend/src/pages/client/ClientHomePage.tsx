@@ -68,6 +68,8 @@ export default function ClientHomePage() {
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // 캘린더 상태
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -78,14 +80,15 @@ export default function ClientHomePage() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setError(null);
       try {
-        const [sessRes, repRes] = await Promise.all([
-          listSessions().catch(() => ({ sessions: [] as SessionDto[], total: 0 })),
-          listReports().catch(() => ({ reports: [] as ReportDto[], total: 0 })),
-        ]);
+        const [sessRes, repRes] = await Promise.all([listSessions(), listReports()]);
         if (cancelled) return;
         setSessions(sessRes.sessions);
         setReports(repRes.reports);
+      } catch (e) {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : '데이터를 불러오지 못했습니다');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -94,7 +97,7 @@ export default function ClientHomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   // 상담사별 필터링
   const filteredSessions = useMemo(() => {
@@ -213,7 +216,7 @@ export default function ClientHomePage() {
         <div className="flex gap-2 min-w-max">
           <button
             type="button"
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+            className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
               selectedCounselorId === 'all'
                 ? 'bg-[#5F0080] text-white'
                 : 'bg-[#EFEFEF] text-[#1F1F1F]'
@@ -226,7 +229,7 @@ export default function ClientHomePage() {
             <button
               key={c.id}
               type="button"
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
                 selectedCounselorId === c.id
                   ? 'bg-[#5F0080] text-white'
                   : 'bg-[#EFEFEF] text-[#1F1F1F]'
@@ -241,6 +244,20 @@ export default function ClientHomePage() {
 
       {loading ? (
         <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>
+      ) : error ? (
+        <section
+          className="bg-white border border-[#DDDEE7] rounded-2xl p-[22px] text-center"
+          role="alert"
+        >
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </section>
       ) : (
         <>
           {/* SDD-097: 다가오는 클래스 — 참여코드·준비물·시작시간을 홈에서 놓치지 않게 */}

@@ -325,10 +325,12 @@ function OrgCodeCard({ orgCode }: { orgCode: string | null }) {
 function CounselorInviteSection({
   orgId,
   inviteList,
+  inviteListError,
   onRefresh,
 }: {
   orgId: string;
   inviteList: CounselorItem[];
+  inviteListError?: string | null;
   onRefresh: () => Promise<void>;
 }) {
   const [name, setName] = useState('');
@@ -472,7 +474,12 @@ function CounselorInviteSection({
           <span className="font-mono text-[11px] text-[#6F6F6F]">{sortedInviteList.length}명</span>
         </div>
 
-        {sortedInviteList.length === 0 ? (
+        {inviteListError ? (
+          <div className="rounded-2xl border border-[#F5C2C2] bg-red-50 p-8 text-center">
+            <p className="text-sm text-red-700">목록을 불러오지 못했습니다.</p>
+            <p className="mt-2 text-[13px] text-red-600">{inviteListError}</p>
+          </div>
+        ) : sortedInviteList.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center">
             <p className="text-sm text-[#6F6F6F]">아직 초대한 상담사가 없습니다.</p>
             <p className="mt-2 text-[13px] text-[#9B9B9B]">
@@ -592,15 +599,20 @@ function CounselorInviteSection({
 export default function OrgDashboardPage() {
   const [data, setData] = useState<OrgDashboardResponse | null>(null);
   const [inviteList, setInviteList] = useState<CounselorItem[]>([]);
+  const [inviteListError, setInviteListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCounselors = useCallback(async (orgId: string): Promise<void> => {
+    setInviteListError(null);
     try {
       const counselors = await listCounselors(orgId);
       setInviteList(counselors.filter((item) => item.role === 'counselor'));
-    } catch {
+    } catch (err) {
       setInviteList([]);
+      setInviteListError(
+        err instanceof Error ? err.message : '상담사 목록을 불러오지 못했습니다.',
+      );
     }
   }, []);
 
@@ -627,8 +639,12 @@ export default function OrgDashboardPage() {
       ]);
       setData(dashboardRes);
       setInviteList(counselors.filter((item) => item.role === 'counselor'));
+      setInviteListError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '목록을 새로고침하지 못했습니다');
+      setInviteListError(
+        err instanceof Error ? err.message : '상담사 목록을 불러오지 못했습니다.',
+      );
     }
   }, [data?.org_id]);
 
@@ -662,6 +678,7 @@ export default function OrgDashboardPage() {
           <CounselorInviteSection
             orgId={data.org_id}
             inviteList={inviteList}
+            inviteListError={inviteListError}
             onRefresh={refreshInviteData}
           />
 

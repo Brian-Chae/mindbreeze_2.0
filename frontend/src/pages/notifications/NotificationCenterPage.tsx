@@ -24,6 +24,7 @@ export default function NotificationCenterPage() {
   const [error, setError] = useState<string | null>(null);
   const [showPreferences, setShowPreferences] = useState(false);
   const [prefs, setPrefs] = useState<NotificationPreferencesResponse | null>(null);
+  const [prefsError, setPrefsError] = useState<string | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -37,11 +38,12 @@ export default function NotificationCenterPage() {
   }, []);
 
   const fetchPrefs = useCallback(async () => {
+    setPrefsError(null);
     try {
       const p = await getPreferences();
       setPrefs(p);
-    } catch {
-      // ignore
+    } catch (e) {
+      setPrefsError(e instanceof Error ? e.message : '알림 설정을 불러오지 못했습니다');
     }
   }, []);
 
@@ -133,7 +135,27 @@ export default function NotificationCenterPage() {
         </div>
 
         {/* 환경설정 패널 */}
-        {showPreferences && prefs && (
+        {showPreferences && prefsError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 mb-6" role="alert">
+            <p className="text-sm text-red-700 mb-1">알림 설정을 불러오지 못했습니다</p>
+            <p className="text-[12px] text-red-600 mb-3">{prefsError}</p>
+            <button
+              type="button"
+              onClick={() => void fetchPrefs()}
+              className="rounded-lg px-3 py-1.5 text-[13px] font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        )}
+
+        {showPreferences && !prefsError && !prefs && (
+          <div className="bg-[#F8FAFC] border border-[#EFEFEF] rounded-2xl p-5 mb-6 text-[13px] text-[#6F6F6F]">
+            알림 설정을 불러오는 중...
+          </div>
+        )}
+
+        {showPreferences && !prefsError && prefs && (
           <div className="bg-[#F8FAFC] border border-[#EFEFEF] rounded-2xl p-5 mb-6">
             <h3 className="text-[14px] font-bold text-[#1F1F1F] mb-4">메일 알림 설정</h3>
             <div className="space-y-4">

@@ -89,10 +89,6 @@ export default function AdminReviewListPage() {
 
   return (
     <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE">
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
-
       {/* 필터 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <select
@@ -108,7 +104,18 @@ export default function AdminReviewListPage() {
         <span className="text-[13px] text-[#6F6F6F]">총 {total}건</span>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[14px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => void fetchReviews()}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : items.length === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
@@ -140,7 +147,7 @@ export default function AdminReviewListPage() {
                     <div className="font-bold text-[15px] text-[#1F1F1F] mb-1">
                       {item.submitter_name ?? '이름 없음'}
                     </div>
-                    <div className="text-[12px] text-[#6F6F6F]">
+                    <div className="text-[12px] text-[#6F6F6F] break-all">
                       {item.submitter_email ?? ''}
                     </div>
                   </div>
@@ -160,7 +167,7 @@ export default function AdminReviewListPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 이전
               </button>
@@ -170,7 +177,7 @@ export default function AdminReviewListPage() {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 다음
               </button>

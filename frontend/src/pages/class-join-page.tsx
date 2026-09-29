@@ -584,7 +584,7 @@ const ClassJoinPage: React.FC = () => {
                         <label className="block text-sm font-semibold text-gray-800">
                           생년월일 <span className="font-normal text-gray-400">(선택)</span>
                         </label>
-                        <div className="mt-2 grid grid-cols-3 gap-2">
+                        <div className="mt-2 grid grid-cols-3 gap-2 max-[360px]:grid-cols-1">
                           <select
                             aria-label="생년"
                             value={guestBirthDate ? guestBirthDate.split('-')[0] : ''}
