@@ -306,8 +306,8 @@ export default function DashboardPage() {
                     내담자에게 이 코드를 공유하면 상담 관계가 연결됩니다.
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-2xl font-bold tracking-[0.25em] text-[#5F0080]">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <span className="font-mono text-xl font-bold tracking-[0.25em] text-[#5F0080] sm:text-2xl">
                     {counselorCode}
                   </span>
                   <button

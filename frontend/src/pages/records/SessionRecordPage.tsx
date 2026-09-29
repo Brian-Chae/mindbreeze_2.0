@@ -146,19 +146,20 @@ function StatusProgressBar({ status }: { status: RecordStatus }) {
 
   return (
     <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5">
-      <div className="flex flex-wrap items-center gap-1.5">
+      {/* 좁은 화면: 5단계 스텝퍼를 한 줄 가로 스크롤로 유지(라벨은 sm 이상에서만) */}
+      <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1">
         {steps.map((step, i) => {
           const isDone = i < currentIndex;
           const isCurrent = i === currentIndex;
           return (
-            <div key={step.key} className="flex items-center gap-1.5">
+            <div key={step.key} className="flex shrink-0 items-center gap-1.5">
               {i > 0 && (
                 <div
-                  className={`h-px w-6 ${isDone ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'}`}
+                  className={`h-px w-6 shrink-0 ${isDone ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'}`}
                 />
               )}
               <div
-                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
                   isDone
                     ? 'bg-[#5F0080] text-white'
                     : isCurrent
@@ -169,7 +170,7 @@ function StatusProgressBar({ status }: { status: RecordStatus }) {
                 {isDone ? '✓' : i + 1}
               </div>
               <span
-                className={`text-xs ${
+                className={`hidden shrink-0 text-xs sm:inline ${
                   isCurrent ? 'font-semibold text-[#5F0080]' : 'text-[#6F6F6F]'
                 }`}
               >

@@ -176,7 +176,7 @@ export default function AppShell({
 
         {/* 모바일 페이지 타이틀 */}
         {(title || sub || rightSlot) && (
-          <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
+          <div className="md:hidden px-4 pt-4 pb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
             <div className="min-w-0">
               {sub && (
                 <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
@@ -187,7 +187,14 @@ export default function AppShell({
                 {title}
               </div>
             </div>
-            {rightSlot && <div className="flex items-center gap-2 shrink-0">{rightSlot}</div>}
+            {/* 좁은 화면에서 rightSlot 버튼이 넘치지 않도록 줄바꿈을 허용한다.
+                (shrink-0 + flex-wrap 조합은 실제로 줄바꿈이 일어나지 않고 가로로 넘치므로
+                 min-w-0 + ml-auto 로 줄이 바뀌게 한다) */}
+            {rightSlot && (
+              <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 ml-auto">
+                {rightSlot}
+              </div>
+            )}
           </div>
         )}
 

@@ -53,7 +53,8 @@ function AxisPicker({
   return (
     <fieldset className="mt-4">
       <legend className="text-sm font-bold text-[color:var(--mb-label-70)]">{axis.label}</legend>
-      <div className="mt-2 grid grid-cols-5 gap-2">
+      {/* 좁은 화면(<360px)에서는 3+2 두 줄, 넓은 화면에서는 5단계 한 줄로 배치한다 */}
+      <div className="mt-2 grid grid-cols-3 gap-1.5 min-[360px]:grid-cols-5 min-[360px]:gap-2">
         {SAM_VALUES.map((step) => {
           const selected = value === step;
           return (

@@ -240,13 +240,16 @@ export default function SessionDetailPage() {
   const actions = ACTIONS_BY_STATUS[session.status];
 
   const rightSlot = (
-    <div className="flex items-center gap-2">
+    /* 모바일에서는 보조 버튼(템플릿/복제/삭제)을 감추고 [입장]/[취소]만 노출한다.
+       mb-tokens.css 의 .mb-btn{display:inline-flex} 가 Tailwind utilities 뒤에 로드되므로
+       hidden 유틸리티가 먹도록 !important 변형(!hidden / sm:!inline-flex)을 쓴다. */
+    <div className="flex flex-wrap items-center gap-2">
       {/* SDD-095: 템플릿으로 저장 / 복제 — 반복 클래스를 같은 설정으로 다시 만든다 */}
       <button
         type="button"
         onClick={handleSaveAsTemplate}
         disabled={busy || templateSaved}
-        className="mb-btn mb-btn--ghost text-sm disabled:opacity-50"
+        className="mb-btn mb-btn--ghost text-sm disabled:opacity-50 !hidden sm:!inline-flex"
       >
         {templateSaved ? '템플릿 저장됨' : '템플릿으로 저장'}
       </button>
@@ -254,7 +257,7 @@ export default function SessionDetailPage() {
         type="button"
         onClick={handleDuplicate}
         disabled={busy}
-        className="mb-btn mb-btn--ghost text-sm"
+        className="mb-btn mb-btn--ghost text-sm !hidden sm:!inline-flex"
       >
         복제
       </button>
@@ -284,7 +287,7 @@ export default function SessionDetailPage() {
         type="button"
         onClick={handleDelete}
         disabled={busy}
-        className="mb-btn mb-btn--ghost text-sm !text-[#B3261E]"
+        className="mb-btn mb-btn--ghost text-sm !text-[#B3261E] !hidden sm:!inline-flex"
       >
         삭제
       </button>
@@ -388,10 +391,10 @@ export default function SessionDetailPage() {
           ) : (
             <ul className="divide-y divide-[#EFEFEF] -mx-2">
               {activeParticipants.map((p, index) => (
-                <li key={p.user_id ?? `guest-${p.guest_name ?? index}`} className="flex items-center justify-between px-2 py-2.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#1F8A5B]" />
-                    <span className="text-sm text-[#1F1F1F]">
+                <li key={p.user_id ?? `guest-${p.guest_name ?? index}`} className="flex items-center justify-between gap-2 px-2 py-2.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <span className="w-2 h-2 shrink-0 rounded-full bg-[#1F8A5B]" />
+                    <span className="min-w-0 truncate text-sm text-[#1F1F1F]">
                       {participantLabel(p)}
                     </span>
                   </div>
@@ -400,7 +403,7 @@ export default function SessionDetailPage() {
                       type="button"
                       onClick={() => handleRemoveParticipant(p.user_id!)}
                       disabled={busy}
-                      className="inline-flex h-11 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
+                      className="inline-flex h-11 shrink-0 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
                     >
                       제거
                     </button>
@@ -415,13 +418,13 @@ export default function SessionDetailPage() {
                   {waitlisted
                     .sort((a, b) => (a.waitlist_position ?? 99) - (b.waitlist_position ?? 99))
                     .map((p, index) => (
-                      <li key={p.user_id ?? `waitlisted-guest-${p.guest_name ?? index}`} className="flex items-center justify-between px-2 py-2.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-2 h-2 rounded-full bg-[#E6A817]" />
-                          <span className="text-sm text-[#6F6F6F]">
+                      <li key={p.user_id ?? `waitlisted-guest-${p.guest_name ?? index}`} className="flex items-center justify-between gap-2 px-2 py-2.5">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                          <span className="w-2 h-2 shrink-0 rounded-full bg-[#E6A817]" />
+                          <span className="min-w-0 truncate text-sm text-[#6F6F6F]">
                             {participantLabel(p)}
                           </span>
-                          <span className="text-xs text-[#A0A0B0]">
+                          <span className="shrink-0 text-xs text-[#A0A0B0]">
                             {p.waitlist_position}순위
                           </span>
                         </div>
@@ -430,7 +433,7 @@ export default function SessionDetailPage() {
                             type="button"
                             onClick={() => handleRemoveParticipant(p.user_id!)}
                             disabled={busy}
-                            className="inline-flex h-11 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
+                            className="inline-flex h-11 shrink-0 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
                           >
                             제거
                           </button>

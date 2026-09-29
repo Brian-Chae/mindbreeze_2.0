@@ -64,7 +64,7 @@ export function ClassAudioPanel({ state, actions, enabled, connected }: ClassAud
           value={state.selectedTrackId ?? ''}
           onChange={(event) => actions.selectTrack(event.target.value)}
           disabled={!enabled || state.tracksLoading || state.tracks.length === 0}
-          className="min-w-[200px] flex-1 rounded-xl bg-white/10 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-w-0 flex-1 rounded-xl bg-white/10 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {state.tracks.length === 0 && <option value="">트랙 없음</option>}
           {state.tracks.map((track) => (

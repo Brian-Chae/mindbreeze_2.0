@@ -187,7 +187,7 @@ export default function SessionCreatePage() {
             </h1>
             <p className="text-sm text-[#6F6F6F] mb-2">참여자에게 아래 클래스 코드를 공유하세요</p>
             <div className="rounded-[20px] bg-[#F5EDFC] border border-[#DDD0EA] px-4 py-8 mb-4">
-              <div className="font-mono text-5xl sm:text-6xl font-black tracking-[0.18em] text-[#5F0080]">
+              <div className="font-mono text-4xl sm:text-5xl font-black tracking-[0.12em] sm:tracking-[0.18em] text-[#5F0080] break-all">
                 {createdSession.access_code || '------'}
               </div>
             </div>

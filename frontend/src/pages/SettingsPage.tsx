@@ -28,18 +28,24 @@ const EVENT_LABELS: Record<string, string> = {
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
-    <button
-      onClick={onChange}
-      className={`relative w-10 h-6 rounded-full transition-colors ${
-        enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-          enabled ? 'left-[18px]' : 'left-0.5'
+    // 히트영역 확장 — 시각 크기(w-10 h-6)는 유지하고 p-2.5/-m-2.5 로 터치영역만 44px 로 넓힌다
+    <span className="-m-2.5 inline-flex shrink-0 items-center p-2.5">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        onClick={onChange}
+        className={`relative w-10 h-6 rounded-full transition-colors ${
+          enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'
         }`}
-      />
-    </button>
+      >
+        <span
+          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+            enabled ? 'left-[18px]' : 'left-0.5'
+          }`}
+        />
+      </button>
+    </span>
   );
 }
 
@@ -150,17 +156,22 @@ export default function SettingsPage() {
     async (channel: 'email' | 'in_app', event: string) => {
       if (!prefs) return;
       setSaved(false);
+      setError(null);
+      const prevPrefs = prefs;
       const updated = {
         ...prefs,
         [channel]: { ...prefs[channel], [event]: !prefs[channel][event] },
       };
+      // 낙관적 업데이트 — 실패 시 이전 설정으로 롤백한다.
       setPrefs(updated);
       try {
-        await updatePreferences(updated);
+        const result = await updatePreferences(updated);
+        setPrefs(result);
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
-      } catch {
-        setError('설정 저장 실패');
+      } catch (e) {
+        setPrefs(prevPrefs);
+        setError(e instanceof Error ? e.message : '설정 저장 실패');
       }
     },
     [prefs],
@@ -170,7 +181,7 @@ export default function SettingsPage() {
     <AppShell title="설정" sub="SETTINGS">
       <div className="max-w-2xl mx-auto space-y-6">
         {error && (
-          <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+          <div role="alert" className="p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
         )}
 
         {/* 프로필 카드 */}

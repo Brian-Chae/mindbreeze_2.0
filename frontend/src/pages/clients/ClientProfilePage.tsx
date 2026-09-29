@@ -78,7 +78,7 @@ export default function ClientProfilePage() {
       <div className="max-w-3xl mx-auto">
         <button
           onClick={() => navigate('/clients')}
-          className="text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex h-11 items-center px-3 -ml-3 text-sm text-[#6F6F6F] hover:text-[#5F0080] mb-2"
         >
           ← 목록으로
         </button>
@@ -92,7 +92,7 @@ export default function ClientProfilePage() {
                 className="w-16 h-16 rounded-full object-cover"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-[#F5EDFC] flex items-center justify-center text-[#5F0080] text-xl font-semibold">
                 {profile.name.charAt(0)}
               </div>
             )}
@@ -129,7 +129,7 @@ export default function ClientProfilePage() {
               <dt className="text-sm text-gray-500 mb-2">고민</dt>
               <div className="flex flex-wrap gap-1">
                 {profile.concerns.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-full">
+                  <span key={tag} className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-xs rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -142,7 +142,7 @@ export default function ClientProfilePage() {
               <dt className="text-sm text-gray-500 mb-2">관심사</dt>
               <div className="flex flex-wrap gap-1">
                 {profile.interests.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                  <span key={tag} className="px-2 py-0.5 bg-[#EFE3FA] text-[#6E1A8C] text-xs rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -158,18 +158,18 @@ export default function ClientProfilePage() {
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080] text-sm"
             placeholder="상담 메모를 입력하세요"
           />
           <div className="flex items-center gap-3 mt-3">
             <button
               onClick={handleSaveMemo}
               disabled={saving}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-50"
+              className="px-4 py-2 bg-[#5F0080] text-white rounded-md hover:bg-[#4D0066] text-sm disabled:opacity-50"
             >
               {saving ? '저장 중...' : '저장'}
             </button>
-            {savedAt && <span className="text-sm text-emerald-600">저장되었습니다</span>}
+            {savedAt && <span className="text-sm text-[#5F0080]">저장되었습니다</span>}
             {error && <span className="text-sm text-red-600">{error}</span>}
           </div>
         </div>

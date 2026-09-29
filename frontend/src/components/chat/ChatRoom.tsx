@@ -80,6 +80,8 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 전송 실패한 본문을 보관한다 — 배너의 '다시보내기'가 같은 내용을 재전송한다.
+  const [failedContent, setFailedContent] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -296,18 +298,25 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
     readQueueRef.current = [];
   }, [roomId]);
 
-  const handleSend = useCallback(async (): Promise<void> => {
-    const content = input.trim();
-    if (!content || (target && (loading || targetError))) return;
-    setInput('');
-    try {
-      const msg = await sendChatMessage(roomId, { content, type: 'text' });
-      appendMessage(roomId, msg);
-      scrollToBottom();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : '전송 실패');
-    }
-  }, [input, roomId, appendMessage, scrollToBottom, target, loading, targetError]);
+  const handleSend = useCallback(
+    // overrideContent: 실패 배너의 '다시보내기'가 직전 본문을 그대로 재전송할 때 쓴다.
+    async (overrideContent?: string): Promise<void> => {
+      const content = (overrideContent ?? input).trim();
+      if (!content || (target && (loading || targetError))) return;
+      setInput('');
+      try {
+        const msg = await sendChatMessage(roomId, { content, type: 'text' });
+        appendMessage(roomId, msg);
+        setError(null);
+        setFailedContent(null);
+        scrollToBottom();
+      } catch (err: unknown) {
+        setFailedContent(content);
+        setError(err instanceof Error ? err.message : '전송 실패');
+      }
+    },
+    [input, roomId, appendMessage, scrollToBottom, target, loading, targetError],
+  );
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white">
@@ -380,7 +389,18 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       </div>
 
       {error && (
-        <div className="px-4 py-1 text-xs text-red-500 bg-red-50 shrink-0">{error}</div>
+        <div role="alert" className="px-4 py-1.5 text-xs text-red-600 bg-red-50 shrink-0 flex items-center justify-between gap-2">
+          <span className="min-w-0 flex-1 truncate">{error}</span>
+          {failedContent && (
+            <button
+              type="button"
+              onClick={() => void handleSend(failedContent)}
+              className="shrink-0 font-semibold text-red-700 underline"
+            >
+              다시보내기
+            </button>
+          )}
+        </div>
       )}
 
       {/* 입력창 */}
@@ -401,13 +421,13 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
             }
           }}
           placeholder="메시지를 입력하세요"
-          className="flex-1 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
+          className="flex-1 min-w-0 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
         />
         <button
           type="button"
           onClick={() => void handleSend()}
           disabled={!input.trim() || (!!target && (loading || !!targetError))}
-          className="mb-btn disabled:opacity-50"
+          className="mb-btn shrink-0 disabled:opacity-50"
         >
           전송
         </button>

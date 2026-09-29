@@ -295,3 +295,35 @@ p, .mb-body {
 }
 .mb-card--surface { background: var(--mb-bg-soft); }
 .mb-card--brand   { background: var(--mb-purple-100); color: var(--mb-fg-on-brand); }
+
+/* Range 슬라이더 (볼륨 등) — 시각 트랙은 4px 로 유지하고, 박스 자체를 44px 터치영역으로 쓴다.
+   (트랙을 별도 규칙으로 그리면 thumb 세로 정렬이 어긋나므로 박스 배경으로 그린다) */
+.mb-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(var(--mb-range-track, rgba(255, 255, 255, 0.22)), var(--mb-range-track, rgba(255, 255, 255, 0.22))) center / 100% 4px no-repeat;
+}
+.mb-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 9999px;
+  background: var(--mb-white, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.mb-range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--mb-range-track, rgba(255, 255, 255, 0.22));
+}
+.mb-range::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--mb-white, #fff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}

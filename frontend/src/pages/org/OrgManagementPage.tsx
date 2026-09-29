@@ -58,6 +58,10 @@ export default function OrgManagementPage() {
 
   const handleRoleChange = async (userId: string, role: CounselorRole) => {
     if (!orgId) return;
+    const current = counselors.find((c) => c.id === userId);
+    if (current?.role === role) return;
+    const roleLabel = role === 'org_admin' ? '관리자' : '상담사';
+    if (!confirm(`역할을 '${roleLabel}'(으)로 변경하시겠습니까?`)) return;
     setBusyUser(userId);
     try {
       const updated = await updateCounselor(orgId, userId, { role });
@@ -110,12 +114,15 @@ export default function OrgManagementPage() {
           </div>
         )}
 
-        {/* 가입 요청 관리 */}
-        <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-3">
-          <h2 className="text-lg font-medium text-ink-primary">가입 요청 관리</h2>
-          <p className="text-sm text-ink-tertiary">
-            가입 요청 목록 API 추가 예정 — 본 섹션의 UI는 API 연동 시 활성화됩니다.
-          </p>
+        {/* 가입 요청 관리 — 준비 중 (API 미연동) */}
+        <section className="rounded-xl border border-border-default bg-surface-raised p-6 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-medium text-ink-primary">가입 요청 관리</h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              준비 중
+            </span>
+          </div>
+          <p className="text-sm text-ink-tertiary">가입 요청 관리 기능은 준비 중입니다.</p>
         </section>
 
         {/* 소속 상담사 — 테이블 + 검색/상태 필터 + 정보 수정 (SDD-077) */}

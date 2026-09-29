@@ -54,7 +54,7 @@ function AccessCodeCopyButton({ code }: { code: string }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="inline-flex items-center justify-center min-h-[44px] px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -187,7 +187,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
     <div className="min-h-screen bg-[#F5EDFC] flex flex-col">
       <Nav />
 
-      <main className="flex-1 px-8 py-12">
+      <main className="flex-1 px-4 py-8 sm:px-8 sm:py-12">
         <div className="max-w-[960px] mx-auto flex flex-col gap-10">
           {/* 상단: 기관 정보 */}
           <section className="bg-white border border-[#DDDEE7] rounded-2xl p-8 md:p-10">

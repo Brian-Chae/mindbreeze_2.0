@@ -267,7 +267,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
                   </svg>
                 </button>
                 {showCalendar && (
-                  <div className="absolute top-full left-0 mt-2 z-50 w-[320px] shadow-xl animate-in fade-in zoom-in-95 origin-top">
+                  <div className="absolute top-full left-0 mt-2 z-50 w-[min(320px,calc(100vw-2.5rem))] max-w-full shadow-xl animate-in fade-in zoom-in-95 origin-top">
                     <MonthCalendar
                       sessions={[]}
                       currentDate={calendarNavDate}
@@ -302,7 +302,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
                   </svg>
                 </button>
                 {showTimePicker && (
-                  <div className="absolute top-full right-0 mt-2 z-50 w-[220px] bg-white rounded-[20px] border border-[#EFEFEF] shadow-xl p-4 animate-in fade-in zoom-in-95 origin-top">
+                  <div className="absolute top-full right-0 mt-2 z-50 w-[min(220px,calc(100vw-2.5rem))] max-w-full bg-white rounded-[20px] border border-[#EFEFEF] shadow-xl p-4 animate-in fade-in zoom-in-95 origin-top">
                     {/* AM/PM 토글 */}
                     <div className="flex justify-center mb-4">
                       <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
@@ -706,9 +706,9 @@ export default function SessionListPage() {
           />
         </div>
 
-        {/* 데스크톱: 좌측 캘린더 / 우측 표·타임라인 */}
-        <div className="hidden min-h-0 flex-1 gap-6 md:grid md:grid-cols-2">
-          <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+        {/* 데스크톱: 좌측 캘린더 / 우측 표·타임라인 (태블릿은 1열로 쌓아 가로 오버플로를 막는다) */}
+        <div className="hidden min-h-0 flex-1 gap-6 md:grid md:grid-cols-1 lg:grid lg:grid-cols-2">
+          <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto">
             <MonthCalendar
               sessions={sessions}
               currentDate={currentDate}
@@ -719,7 +719,7 @@ export default function SessionListPage() {
               }}
               onShiftMonth={shiftMonth}
             />
-            <div className="overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+            <div className="overflow-x-auto rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
               <div className="flex items-center justify-between border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
                 <h3 className="text-sm font-semibold text-[var(--mb-fg)]">
                   {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
@@ -761,9 +761,9 @@ export default function SessionListPage() {
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-col overflow-y-auto">
+          <div className="flex min-h-0 min-w-0 flex-col overflow-y-auto">
             {viewMode === 'list' ? (
-              <div className="overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
+              <div className="overflow-x-auto rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
                 <div className="border-b border-[var(--mb-divider)] bg-[var(--mb-bg-10)] px-4 py-3">
                   <h3 className="text-sm font-semibold text-[var(--mb-fg)]">전체 클래스 목록</h3>
                 </div>

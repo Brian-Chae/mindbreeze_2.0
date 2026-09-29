@@ -18,6 +18,13 @@ const statusColor: Record<JoinRequestStatus, string> = {
   rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
+// ISO 원문 노출 방지 — ko-KR 날짜로 포맷하고, 유효하지 않으면 '-'로 표시한다.
+function formatCreatedAt(iso: string | null | undefined): string {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('ko-KR');
+}
+
 export default function MyRequestsPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -67,7 +74,7 @@ export default function MyRequestsPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-ink-primary break-words">{r.org_name}</p>
-                    <p className="text-xs text-ink-tertiary mt-1">신청일: {r.created_at}</p>
+                    <p className="text-xs text-ink-tertiary mt-1">신청일: {formatCreatedAt(r.created_at)}</p>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded-full ${statusColor[r.status]}`}>
                     {statusLabel[r.status]}

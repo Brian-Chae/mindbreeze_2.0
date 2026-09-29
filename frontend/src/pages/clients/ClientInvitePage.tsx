@@ -70,7 +70,7 @@ export default function ClientInvitePage() {
       <div className="max-w-xl mx-auto">
         <button
           onClick={() => navigate('/clients')}
-          className="text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex h-11 items-center px-3 -ml-3 text-sm text-[#6F6F6F] hover:text-[#5F0080] mb-2"
         >
           ← 목록으로
         </button>
@@ -90,7 +90,7 @@ export default function ClientInvitePage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="client@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080]"
               />
             </div>
 
@@ -99,15 +99,15 @@ export default function ClientInvitePage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[#5F0080] text-white rounded-md hover:bg-[#4D0066] disabled:opacity-50"
             >
               {loading ? '생성 중...' : '초대 링크 생성'}
             </button>
           </form>
 
           {invite && (
-            <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-md">
-              <p className="text-sm font-medium text-emerald-900 mb-2">초대 링크가 생성되었습니다</p>
+            <div className="mt-6 p-4 bg-[#F5EDFC] border border-[#E8D9F5] rounded-md">
+              <p className="text-sm font-medium text-[#5F0080] mb-2">초대 링크가 생성되었습니다</p>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   readOnly

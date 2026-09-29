@@ -1084,31 +1084,37 @@ export default function ClassPlayerPage() {
 
   const accessCode = session.access_code ?? '';
 
-  /* ─── 씬별 상단 컨트롤 (상태 전이 버튼은 플레이어 안에만 존재) ─── */
+  /* ─── 씬별 상단 컨트롤 (상태 전이 버튼은 플레이어 안에만 존재) ───
+     모바일에서는 버튼이 3줄로 접히며 헤더를 잠식하므로, 좁은 화면에서는
+     한 줄 가로 스크롤(flex-nowrap + overflow-x-auto)로 유지하고 라벨은 감춘다(아이콘만). */
   const headerControls = isHost ? (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
       {isLobby && (
         <>
           <button
             type="button"
             onClick={() => void closeClass(false)}
             disabled={transitioning}
-            className="mb-btn mb-btn--ghost !text-white/80 hover:!text-white"
+            aria-label="클래스 닫기"
+            className="mb-btn mb-btn--ghost shrink-0 whitespace-nowrap gap-1.5 !text-white/80 hover:!text-white"
           >
-            클래스 닫기
+            <span aria-hidden="true">✕</span>
+            <span className="hidden sm:inline">클래스 닫기</span>
           </button>
           <button
             type="button"
             onClick={() => void startClass()}
             disabled={!canStart}
+            aria-label={transitioning ? '시작 중' : '클래스 시작하기'}
             title={
               !canStart && !transitioning
                 ? '참가자 1명 이상 입장 후 시작할 수 있습니다'
                 : undefined
             }
-            className="mb-btn disabled:cursor-not-allowed"
+            className="mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
           >
-            {transitioning ? '시작 중...' : '시작하기'}
+            <span aria-hidden="true">▶</span>
+            <span className="hidden sm:inline">{transitioning ? '시작 중...' : '시작하기'}</span>
           </button>
         </>
       )}
@@ -1118,17 +1124,21 @@ export default function ClassPlayerPage() {
             type="button"
             onClick={() => void pauseOrResume(session.status === 'paused' ? 'resume' : 'pause')}
             disabled={transitioning}
-            className="mb-btn mb-btn--ghost !text-white/80 hover:!text-white"
+            aria-label={session.status === 'paused' ? '클래스 재개' : '클래스 일시정지'}
+            className="mb-btn mb-btn--ghost shrink-0 whitespace-nowrap gap-1.5 !text-white/80 hover:!text-white"
           >
-            {session.status === 'paused' ? '재개' : '일시정지'}
+            <span aria-hidden="true">{session.status === 'paused' ? '▶' : '❚❚'}</span>
+            <span className="hidden sm:inline">{session.status === 'paused' ? '재개' : '일시정지'}</span>
           </button>
           <button
             type="button"
             onClick={() => setEndModalOpen(true)}
             disabled={transitioning}
-            className="mb-btn mb-btn--soft disabled:cursor-not-allowed"
+            aria-label="클래스 종료"
+            className="mb-btn mb-btn--soft shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
           >
-            클래스 종료
+            <span aria-hidden="true">■</span>
+            <span className="hidden sm:inline">클래스 종료</span>
           </button>
         </>
       )}
@@ -1139,11 +1149,15 @@ export default function ClassPlayerPage() {
           onClick={() => void handleToggleChatEnabled()}
           disabled={chatBusy || transitioning}
           aria-pressed={chatEnabled}
-          className={`mb-btn disabled:cursor-not-allowed ${
+          aria-label={chatBusy ? '채팅 상태 변경 중' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
+          className={`mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed ${
             chatEnabled ? '' : 'mb-btn--ghost !text-white/80 hover:!text-white'
           }`}
         >
-          {chatBusy ? '변경 중...' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
+          <span aria-hidden="true">{chatEnabled ? '💬' : '🚫'}</span>
+          <span className="hidden sm:inline">
+            {chatBusy ? '변경 중...' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
+          </span>
         </button>
       )}
     </div>
@@ -1393,7 +1407,7 @@ export default function ClassPlayerPage() {
   return (
     <main className="min-h-screen bg-[#12081C] pb-10">
       {/* 플레이어 헤더 — 풀스크린 셸 (AppShell 밖) */}
-      <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-white/10 bg-[#12081C]/95 px-4 py-3 backdrop-blur sm:px-6">
+      <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 bg-[#12081C]/95 px-4 py-3 backdrop-blur sm:flex-nowrap sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"

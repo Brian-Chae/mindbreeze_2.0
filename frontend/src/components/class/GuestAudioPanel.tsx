@@ -72,17 +72,20 @@ export function GuestAudioPanel({
         <label htmlFor="guest-audio-volume" className="text-xs text-white/60">
           볼륨
         </label>
-        <input
-          id="guest-audio-volume"
-          type="range"
-          aria-label="볼륨"
-          min={0}
-          max={100}
-          step={5}
-          value={percent}
-          onChange={(event) => onVolumeChange(Number(event.target.value) / 100)}
-          className="h-1 min-w-[120px] flex-1 cursor-pointer appearance-none rounded-full bg-white/20 accent-[#5F0080]"
-        />
+        {/* 터치영역 확장 — 감싼 요소 py-3 + 슬라이더 박스 자체를 44px(h-11) 로 만든다 */}
+        <div className="-my-3 flex min-w-0 flex-1 items-center py-3">
+          <input
+            id="guest-audio-volume"
+            type="range"
+            aria-label="볼륨"
+            min={0}
+            max={100}
+            step={5}
+            value={percent}
+            onChange={(event) => onVolumeChange(Number(event.target.value) / 100)}
+            className="mb-range h-11 min-w-0 w-full cursor-pointer"
+          />
+        </div>
         <span className="w-9 text-right font-mono text-xs tabular-nums text-white/60">
           {muted ? '음소거' : `${percent}%`}
         </span>

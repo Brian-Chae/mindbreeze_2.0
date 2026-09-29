@@ -85,18 +85,23 @@ export default function NotificationCenterPage() {
     }
   }, []);
 
+  // 낙관적 업데이트 — 실패하면 이전 설정으로 되돌리고 사용자에게 알린다.
   const handleTogglePref = useCallback(
     async (channel: 'email' | 'in_app', event: string) => {
       if (!prefs) return;
+      const prevPrefs = prefs;
       const updated = {
         ...prefs,
         [channel]: { ...prefs[channel], [event]: !prefs[channel][event] },
       };
+      setError(null);
+      setPrefs(updated);
       try {
         const result = await updatePreferences(updated);
         setPrefs(result);
-      } catch {
-        // ignore
+      } catch (e) {
+        setPrefs(prevPrefs);
+        setError(e instanceof Error ? e.message : '알림 설정 저장에 실패했습니다');
       }
     },
     [prefs],
@@ -107,7 +112,7 @@ export default function NotificationCenterPage() {
   return (
     <AppShell title="알림" sub="NOTIFICATIONS">
       {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+        <div role="alert" className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
       )}
 
       <div className="max-w-2xl mx-auto">
@@ -173,18 +178,24 @@ export default function NotificationCenterPage() {
                         <span className="text-[13px] text-[#1F1F1F]">
                           {EVENT_LABELS[event] ?? event}
                         </span>
-                        <button
-                          onClick={() => handleTogglePref(channel, event)}
-                          className={`relative w-10 h-6 rounded-full transition-colors ${
-                            enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'
-                          }`}
-                        >
-                          <span
-                            className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                              enabled ? 'left-[18px]' : 'left-0.5'
+                        <span className="-m-2.5 inline-flex shrink-0 items-center p-2.5">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={enabled}
+                            aria-label={`${EVENT_LABELS[event] ?? event} ${channel === 'email' ? '이메일' : '인앱'} 알림`}
+                            onClick={() => handleTogglePref(channel, event)}
+                            className={`relative w-10 h-6 rounded-full transition-colors ${
+                              enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'
                             }`}
-                          />
-                        </button>
+                          >
+                            <span
+                              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                                enabled ? 'left-[18px]' : 'left-0.5'
+                              }`}
+                            />
+                          </button>
+                        </span>
                       </label>
                     ))}
                   </div>

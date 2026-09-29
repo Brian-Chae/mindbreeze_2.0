@@ -128,9 +128,10 @@ export default function ClientReportDetailPage() {
         )}
 
         {/* Cover — 서사 우선, 종합점수 대형 노출 없음 (SDD-054) */}
+        {/* 이중 커버 방지: 커버는 ReportCoverSection이 담당하고 NarrativeSections는 본문만 렌더한다. */}
         <ReportCoverSection report={report} adapted={adapted} />
 
-        {displayNarrative && <NarrativeSections narrative={displayNarrative} />}
+        {displayNarrative && <NarrativeSections narrative={displayNarrative} showCover={false} />}
 
         {aiRecordUnavailable && (
           <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 text-sm text-[#6F6F6F]">

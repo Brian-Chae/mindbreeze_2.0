@@ -98,9 +98,11 @@ interface NarrativeSectionsProps {
   session?: ReportSessionInfo;
   /** 정본의 분포 예시는 샘플에서만 표시한다. */
   isSample?: boolean;
+  /** 상위에서 별도 커버(ReportCoverSection)를 노출할 때 내부 커버를 숨긴다. 기본값은 표시. */
+  showCover?: boolean;
 }
 
-export default function NarrativeSections({ narrative, session, isSample = false }: NarrativeSectionsProps) {
+export default function NarrativeSections({ narrative, session, isSample = false, showCover = true }: NarrativeSectionsProps) {
   const id = useId();
   const timeline = (narrative.timeline ?? []).filter((point) => point.min != null && Number.isFinite(point.min) && point.min >= 0).sort((a, b) => a.min! - b.min!);
   const duration = timeline.at(-1)?.min ?? 0;
@@ -110,18 +112,30 @@ export default function NarrativeSections({ narrative, session, isSample = false
     event.preventDefault();
     const target = event.currentTarget.hash.slice(1);
     const section = event.currentTarget.closest('.narrative-report')?.querySelector<HTMLElement>(`[data-section="${target}"]`);
-    section?.scrollIntoView({ block: 'start', behavior: 'instant' });
-    section?.focus({ preventScroll: true });
+    if (section) {
+      section.scrollIntoView({ block: 'start', behavior: 'instant' });
+      section.focus({ preventScroll: true });
+    } else if (target === 'cover') {
+      // 내부 커버를 숨긴 경우(showCover=false) 최상단으로 이동한다.
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
   return <div className="narrative-report" data-testid="narrative-sections">
     <header className="topbar"><a className="brand" href="#cover" onClick={navigateSection}>mind breeze<span style={{ fontWeight: 400 }}> / 몸·마음 리포트</span></a>{isSample && <span className="sample-tag">디자인 미리보기 · 예시 데이터</span>}</header>
     <div className="layout">
     <aside className="sidebar" aria-label="리포트 탐색">
       <p className="eyebrow">오늘의 명상 기록</p>
-      <nav>{[['cover', '나의 명상'], ['journey', '종합 여정'], ['body', '몸의 변화'], ['mind', '마음의 변화'], ['closing', '마무리']].map(([target, label], index) => <a key={target} href={`#${target}`} onClick={navigateSection}><span>0{index + 1}</span>{label}</a>)}</nav>
+      <nav>{[
+        { target: 'cover', label: '나의 명상', num: '01' },
+        { target: 'journey', label: '종합 여정', num: '02' },
+        { target: 'body', label: '몸의 변화', num: '03' },
+        { target: 'mind', label: '마음의 변화', num: '04' },
+        { target: 'closing', label: '마무리', num: '05' },
+      ].filter((item) => showCover || item.target !== 'cover').map((item) => <a key={item.target} href={`#${item.target}`} onClick={navigateSection}><span>{item.num}</span>{item.label}</a>)}</nav>
       <div className="side-note">나를 알아가는 시간,<br />그 작은 변화를 기록해요.<br /><br />{session?.shortDate ?? '날짜 정보 없음'}<br />{sessionDuration != null ? `${timeLabel(sessionDuration)} 호흡 명상` : '명상 기록'}</div>
     </aside>
     <div className="report-main">
+    {showCover && (
     <section id="cover" data-section="cover" tabIndex={-1} className="cover" aria-labelledby={`${id}-cover`}>
       <div className="eyebrow">MIND BREEZE · 명상 여정</div>
       <h1 id={`${id}-cover`}>나에게 돌아온 {durationLabel},<br />몸과 마음의 이야기</h1>
@@ -135,6 +149,7 @@ export default function NarrativeSections({ narrative, session, isSample = false
         <div><dt>비교 구간</dt><dd>{duration > 0 ? `명상 시작(전반) ${timeLabel(duration / 2)} ↔ 마무리(후반) ${timeLabel(duration / 2)}` : '비교 구간 정보 없음'}</dd></div>
       </dl><div className="quality"><span><span className="dot" />데이터 품질 안내</span><span>{session?.qualityLabel ?? '측정 품질 정보가 제공되지 않았어요.'}</span></div></div>
     </section>
+    )}
     <section id="journey" data-section="journey" tabIndex={-1} aria-labelledby={`${id}-journey`}>
       <div className="section-head"><p className="eyebrow">02 · 종합 여정</p><h2 id={`${id}-journey`}>서서히 느려진 호흡,<br />조금 더 머무른 마음</h2></div>
       <p className="journey-quote">{narrative.journey}</p>
