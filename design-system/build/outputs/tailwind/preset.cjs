@@ -237,6 +237,38 @@ module.exports = {
             strong: '#dddee7',
           },
         },
+
+      // 시맨틱 별칭 — 회원가입·온보딩 화면이 쓰는 신규 토큰 이름(surface/border/ink/brand).
+      // 기존 mb.* 토큰과 같은 값으로 매핑해 단일 소스로 유지한다.
+      surface: {
+        DEFAULT: '#ffffff',
+        raised: '#ffffff',
+        elevated: '#f2f3f8',
+        soft: '#f5edfc',
+      },
+      border: {
+        DEFAULT: '#dddee7',
+        default: '#dddee7',
+        strong: '#dddee7',
+        subtle: '#efefef',
+      },
+      ink: {
+        DEFAULT: '#1f1f1f',
+        primary: '#1f1f1f',
+        secondary: '#404040',
+        tertiary: '#6f6f6f',
+        muted: '#6f6f6f',
+        'on-brand': '#ffffff',
+        'on-brand-soft': '#c6aef6',
+      },
+      brand: {
+        DEFAULT: '#5f0080',
+        primary: '#5f0080',
+        deep: '#4c0066',
+        hover: '#4c0066',
+        soft: '#d2aefc',
+        pale: '#f5edfc',
+      },
       },
 
     extend: {
@@ -245,6 +277,7 @@ module.exports = {
         'mb-sans': fontSans,
         'mb-text': fontText,
         'mb-mono': fontMono,
+        display: fontSans,
       },
 
       fontSize: {
@@ -295,6 +328,7 @@ module.exports = {
         'mb-3xl': '42px',
         'mb-4xl': '48px',
         'mb-pill': '9999px',
+        pill: '9999px',
       },
 
       boxShadow: {

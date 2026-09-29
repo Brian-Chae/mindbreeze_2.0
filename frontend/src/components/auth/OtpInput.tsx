@@ -85,14 +85,14 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
             onChange={handleChange(idx)}
             onKeyDown={handleKeyDown(idx)}
             onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 ${
-              error ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)]'
+            className={`w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
+              error ? 'border-[var(--mb-danger)]' : 'border-[var(--mb-border)]'
             }`}
             aria-label={`OTP 자리 ${idx + 1}`}
           />
         ))}
       </div>
-      {error && <p className="text-sm text-[var(--color-danger)] text-center">{error}</p>}
+      {error && <p className="text-sm text-[var(--mb-danger)] text-center">{error}</p>}
     </div>
   );
 }

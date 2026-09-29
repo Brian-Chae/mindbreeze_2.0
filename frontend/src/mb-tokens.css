@@ -281,6 +281,12 @@ p, .mb-body {
 .mb-btn--ghost { background: transparent; color: var(--mb-fg); border: 1px solid var(--mb-label-70); }
 .mb-btn--ghost:hover { background: var(--mb-purple-cream); }
 
+/* 버튼 역할 변형 — 코드가 쓰는 이름(mb-btn-primary/secondary)과 정의를 일치시킨다 */
+.mb-btn-primary { background: var(--mb-primary); color: var(--mb-fg-on-brand); }
+.mb-btn-primary:hover { background: var(--mb-primary-hover); }
+.mb-btn-secondary { background: transparent; color: var(--mb-primary); border: 1px solid var(--mb-primary); }
+.mb-btn-secondary:hover { background: var(--mb-purple-cream); }
+
 /* Card */
 .mb-card {
   background: var(--mb-white);
