@@ -35,20 +35,33 @@ interface RequestOptions {
   responseType?: 'json' | 'blob';
 }
 
-export async function refreshAccessToken(): Promise<string | null> {
-  // refresh token은 httpOnly cookie로 자동 전송된다 (credentials: include)
-  try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { access_token: string };
-    tokenStorage.set(data.access_token);
-    return data.access_token;
-  } catch {
-    return null;
-  }
+// 단일 비행(single-flight): 동시 refresh 요청을 하나로 병합한다.
+// 페이지 새로고침 시 initialize()의 refresh와 여러 데이터 fetch의 401 재시도가
+// 같은 refresh token으로 동시에 /auth/refresh 를 호출하면, 백엔드의 refresh 토큰
+// 회전 + 재사용 감지가 "탈취"로 오판해 사용자 전체 토큰을 폐기 → 강제 로그아웃된다.
+// in-flight promise 를 공유해 동시 호출을 1건으로 줄인다.
+let refreshPromise: Promise<string | null> | null = null;
+
+export function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    // refresh token은 httpOnly cookie로 자동 전송된다 (credentials: include)
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = (await res.json()) as { access_token: string };
+      tokenStorage.set(data.access_token);
+      return data.access_token;
+    } catch {
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
 }
 
 /**

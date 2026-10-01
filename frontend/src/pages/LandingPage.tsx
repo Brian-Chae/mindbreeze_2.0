@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
+import { resolvePostLoginPath } from '../lib/auth-routing';
 import FeatureCards from '../components/landing/FeatureCards';
 import PeopleSection from '../components/landing/PeopleSection';
 import ReportPreviewSection from '../components/landing/ReportPreviewSection';
@@ -83,6 +85,19 @@ function LandingHero() {
 }
 
 export default function LandingPage() {
+  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const navigate = useNavigate();
+
+  // 이미 로그인된 사용자가 루트(/)로 들어오면 앱으로 자동 이동한다.
+  // /app 등은 인증 API 호출(401→refresh 재시도)로 세션을 복구하지만, 랜딩 페이지는
+  // 정적이라 refresh 결과를 아무도 소비하지 않아 "다시 로그인"처럼 보인다.
+  // initialize가 localStorage 사용자를 복원한 시점에 앱 경로로 리다이렉트한다.
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && user) {
+      navigate(resolvePostLoginPath(user), { replace: true });
+    }
+  }, [isInitialized, isAuthenticated, user, navigate]);
+
   return <div className="min-h-screen break-keep bg-white font-sans text-[#29212E]">
     <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-xl focus:bg-white focus:p-4 focus:text-[#5F0080]">본문으로 건너뛰기</a>
     <LandingNav />
