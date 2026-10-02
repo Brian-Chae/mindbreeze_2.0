@@ -31,7 +31,7 @@ export function ClassAudioPanel({ state, actions, enabled, connected }: ClassAud
     <section className="rounded-2xl bg-white/5 p-4" aria-label="명상 가이드·BGM">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[12px] font-mono uppercase tracking-wider text-white/50">
-          명상 가이드 · BGM
+          대기실 BGM
         </p>
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -154,8 +154,8 @@ export function ClassAudioPanel({ state, actions, enabled, connected }: ClassAud
       )}
 
       <p className="mt-3 text-xs leading-5 text-white/50">
-        회원 화면에서도 같은 트랙이 같은 위치로 재생됩니다. 회원은 각자 볼륨을 조절하며,
-        오프라인 수업(스피커 기본 뮤트)에서도 가이드·BGM 은 헤드셋으로 들립니다.
+        대기실에서 배경음이 자동 재생됩니다. 클래스를 시작하면 자동으로 페이드아웃되며,
+        진행 중에는 플랫폼이 배경음을 재생하지 않습니다(명상 전문가 자체 사운드).
       </p>
     </section>
   );

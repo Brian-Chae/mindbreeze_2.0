@@ -137,6 +137,36 @@ export function useClassAudioPlayer({
     [sessionId, publish],
   );
 
+  // ── 대기실(enabled) 진입 시 기본 트랙 자동 재생 ──────────────────
+  // BGM 은 대기실(open)에서 플랫폼이 자동으로 튼다. 진행(in_progress)에서는
+  // 명상 전문가가 자체 사운드를 실행하므로 자동 재생하지 않는다.
+  const autoPlayedRef = useRef(false);
+  useEffect(() => {
+    if (!enabled) {
+      autoPlayedRef.current = false;
+      return;
+    }
+    if (autoPlayedRef.current) return;
+    const engine = engineRef.current;
+    if (!engine) return; // 트랙 로드 전 — selectedTrack 확정 후 재시도
+    autoPlayedRef.current = true;
+    engine.play(0);
+    setPlaying(true);
+    setPositionSec(0);
+    setBlocked(engine.isBlocked());
+    send('play', engine.track.track_id, 0);
+  }, [enabled, selectedTrack, send]);
+
+  // ── 진행 전환(enabled → false) 시 페이드아웃 후 정지 ───────────────
+  useEffect(() => {
+    if (enabled) return;
+    const engine = engineRef.current;
+    if (engine && engine.isPlaying()) {
+      engine.fadeOut(1500);
+    }
+    setPlaying(false);
+  }, [enabled]);
+
   const play = useCallback((): void => {
     const engine = engineRef.current;
     if (!engine) return;

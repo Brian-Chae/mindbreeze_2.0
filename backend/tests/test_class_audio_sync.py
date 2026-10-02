@@ -29,8 +29,8 @@ from tests.test_sdd024_session_live_ws import (
     _wire,
 )
 
-# 내장 카탈로그의 실제 트랙 id — 테스트가 상수를 복제하지 않고 카탈로그에서 얻는다
-TRACK_ID = "bgm-calm-drone-432"
+# 기본 카탈로그의 실제 트랙 id — 테스트가 상수를 복제하지 않고 카탈로그에서 얻는다
+TRACK_ID = "bgm-ambient"
 
 
 @pytest.fixture(autouse=True)
@@ -432,13 +432,13 @@ def test_18_카탈로그_조회_API():
     assert class_audio_service.is_known_track("bgm-unknown") is False
     assert class_audio_service.is_known_track(None) is False
     builtin = class_audio_service.get_audio_track(TRACK_ID)
-    assert builtin is not None and builtin["source"] == "tone"
+    assert builtin is not None and builtin["source"] == "url"
     # 반환값은 복사본 — 호출측 변형이 카탈로그를 오염시키지 않는다
     tracks = class_audio_service.list_audio_tracks()
     tracks[0]["title"] = "변형"
     reread = class_audio_service.get_audio_track(tracks[0]["track_id"])
     assert reread is not None and reread["title"] != "변형"
-    assert class_audio_service.track_duration_sec(TRACK_ID) is None  # 무한 드론
+    assert class_audio_service.track_duration_sec(TRACK_ID) == 55.0  # seamless loop
 
 
 # ---------------------------------------------------------------------------

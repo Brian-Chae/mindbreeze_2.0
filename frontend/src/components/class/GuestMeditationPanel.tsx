@@ -25,10 +25,6 @@ import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { GuestChatNotice } from '../chat/GuestChatNotice';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 import { QuietSignalButtons } from './QuietSignalButtons';
-// 개선 10: 명상 가이드·BGM 동기 재생 — 서버 타임코드(class:audio_sync)를 받아 동일 소스를 동기 재생
-import { GuestAudioPanel } from './GuestAudioPanel';
-import { useGuestAudioSync } from '../../hooks/useGuestAudioSync';
-import { type AudioSyncEvent } from '../../lib/class/audio-sync';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -281,40 +277,12 @@ export function GuestMeditationPanel({
   );
 
   // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
-  // 개선 10: 같은 소켓으로 class:audio_sync(재생 타임코드)를 받아 가이드·BGM 을 동기 재생한다.
-  // 재생 엔진은 이 컴포넌트(언마운트되지 않음)에 살아 있어 화면 끄기(몰입) 중에도 계속 재생된다.
-  const [audioSyncEvent, setAudioSyncEvent] = useState<AudioSyncEvent | null>(null);
-
-  const handleAudioSync = useCallback((event: AudioSyncEvent) => {
-    // 같은 명령을 중복 적용하지 않도록 revision 이 더 큰(또는 처음 보는) 이벤트만 상태에 반영한다.
-    // 트랙 id 가 비어 오는 명령(stop 등)은 직전 트랙을 유지한다 — 화면이 "재생 중이던 곡"을 잃지 않게.
-    setAudioSyncEvent((prev) => {
-      if (prev && event.revision > 0 && event.revision < prev.revision) return prev;
-      if (
-        prev &&
-        prev.revision === event.revision &&
-        prev.action === event.action &&
-        prev.server_ts_ms === event.server_ts_ms
-      ) {
-        return prev;
-      }
-      return { ...event, track_id: event.track_id ?? prev?.track_id ?? null };
-    });
-  }, []);
-
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
-    onClassAudioSync: handleAudioSync,
-  });
-
-  const audioSync = useGuestAudioSync({
-    sessionId,
-    enabled: Boolean(sessionId),
-    event: audioSyncEvent,
   });
 
   const isLive = band.connectionState === 'connected';
@@ -560,12 +528,6 @@ export function GuestMeditationPanel({
             <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit}
               maxValue={activeMetric.chartMax} lowerIsBetter={activeMetric.lowerIsBetter} scaleNote={activeMetric.scaleNote} />
             <QuietSignalButtons onSend={liveSocket.sendSignal} />
-            <GuestAudioPanel compact
-              trackTitle={audioSync.state.track?.title ?? null} playing={audioSync.state.playing}
-              positionSec={audioSync.state.positionSec} durationSec={audioSync.state.durationSec}
-              volume={audioSync.state.volume} onVolumeChange={audioSync.setVolume}
-              blocked={audioSync.state.blocked} onResume={audioSync.resume} synced={audioSync.state.synced}
-            />
           </div>
         </div>
 

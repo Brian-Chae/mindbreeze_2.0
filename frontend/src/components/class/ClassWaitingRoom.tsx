@@ -14,7 +14,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FadingImageBackground } from './FadingImageBackground';
 import { WaitingRoomBandCheck } from './WaitingRoomBandCheck';
 import { PreCheckinPanel } from './PreCheckinPanel';
+import { LobbyBgmBar } from './LobbyBgmBar';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
+import { useLobbyBgm } from '../../hooks/useLobbyBgm';
 import { useAuthStore } from '../../stores/authStore';
 import type { WaitingRoomCheckin } from '../../lib/socket';
 import {
@@ -109,6 +111,9 @@ export function ClassWaitingRoom({
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
   });
+
+  // 대기실 BGM — 대기 중 플랫폼이 기본 트랙을 자동 재생(회원은 볼륨/음소거만 조절)
+  const lobbyBgm = useLobbyBgm(true);
 
   const stopVideoStream = useCallback((): void => {
     videoStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -316,6 +321,16 @@ export function ClassWaitingRoom({
             이름과 지금 기분을 가볍게 남겨 주세요. 마이크는 자동으로 확인하고,
             문제가 있을 때만 알려드려요.
           </p>
+        </div>
+
+        {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
+        <div className="mt-6">
+          <LobbyBgmBar
+            state={lobbyBgm.state}
+            onVolumeChange={lobbyBgm.setVolume}
+            onToggleMute={lobbyBgm.toggleMute}
+            onResume={lobbyBgm.resume}
+          />
         </div>
 
         <div className="mt-8 space-y-4">

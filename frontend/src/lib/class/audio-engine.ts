@@ -33,6 +33,8 @@ export interface AudioEngine {
   volume(): number;
   /** 자동재생 정책으로 막혔을 수 있다 — 사용자 제스처에서 호출하면 재개된다 */
   resume(): void;
+  /** 현재 볼륨에서 서서히 0으로 줄이며 정지(대기실 → 진행 전환 시 페이드아웃) */
+  fadeOut(durationMs: number): void;
   /** 자동재생 차단(무음) 여부 — 회원 패널이 "탭하여 소리 켜기"를 안내한다 */
   isBlocked(): boolean;
   dispose(): void;
@@ -124,6 +126,24 @@ function createElementEngine(track: MeditationTrack, url: string): AudioEngine {
           playing = false;
         });
       }
+    },
+    fadeOut: (durationMs: number) => {
+      if (!playing) return;
+      const startVolume = element.volume;
+      const startAt = performance.now();
+      const tick = (): void => {
+        const elapsed = performance.now() - startAt;
+        const progress = Math.min(1, elapsed / durationMs);
+        element.volume = startVolume * (1 - progress);
+        if (progress < 1 && playing) {
+          window.setTimeout(tick, 50);
+        } else {
+          playing = false;
+          element.pause();
+          element.volume = volume; // 다음 재생을 위해 원래 볼륨 복원
+        }
+      };
+      tick();
     },
     isBlocked: () => blocked,
     dispose: () => {
@@ -321,6 +341,18 @@ function createToneEngine(track: MeditationTrack, spec: AudioToneSpec): AudioEng
         );
       } else {
         blocked = ctx.state !== 'running';
+      }
+    },
+    fadeOut: (durationMs: number) => {
+      if (!playing) return;
+      reanchor();
+      playing = false;
+      clearTimer();
+      if (context && master) {
+        master.gain.setTargetAtTime(0.0001, context.currentTime, durationMs / 3000);
+        window.setTimeout(() => suspendNodes(), durationMs + 50);
+      } else {
+        suspendNodes();
       }
     },
     isBlocked: () => blocked,
