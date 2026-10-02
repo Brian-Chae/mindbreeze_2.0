@@ -61,17 +61,21 @@ interface MetricDef {
   key: MetricKey;
   label: string;
   unit: string;
-  /** 지표 차트 스케일 상한 */
+  /** 지표 차트 스케일 상한 (디자인 정본 비율 기준) */
   chartMax: number;
+  /** 낮을수록 좋은 지표(BPM·호흡) — 차트 방향 코멘트에 사용 */
+  lowerIsBetter?: boolean;
+  /** 차트 노트에 붙는 스케일 안내 (예: HRV "0–60ms 기준") */
+  scaleNote?: string;
 }
 
 const METRICS: readonly MetricDef[] = [
   { key: 'focus', label: '집중도', unit: '%', chartMax: 100 },
   { key: 'relaxation', label: '이완도', unit: '%', chartMax: 100 },
   { key: 'emotional', label: '정서안정도', unit: '%', chartMax: 100 },
-  { key: 'bpm', label: 'BPM', unit: 'bpm', chartMax: 150 },
-  { key: 'respiration', label: '호흡', unit: '회/분', chartMax: 40 },
-  { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 200 },
+  { key: 'bpm', label: 'BPM', unit: 'bpm', chartMax: 100, lowerIsBetter: true },
+  { key: 'respiration', label: '호흡', unit: '회/분', chartMax: 24, lowerIsBetter: true },
+  { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 60, scaleNote: '0–60ms 기준' },
 ] as const;
 
 const MAX_POINTS = 300;
@@ -503,9 +507,6 @@ export function GuestMeditationPanel({
 
           <div className="player-right">
             <div className="player-metric-status">
-              <span className="player-status-copy" title={statusHint}>
-                {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
-              </span>
               {isLive ? (
                 <div className="player-band-control">
                   <button type="button" className="player-band-toggle" aria-label="LINK BAND 상태"
@@ -526,7 +527,15 @@ export function GuestMeditationPanel({
                     </div>
                   )}
                 </div>
-              ) : <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />}
+              ) : (
+                <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />
+              )}
+              {/* 미연결 + 무데이터일 때는 안내 문구가 연결 버튼과 중복되므로 숨긴다 */}
+              {(isLive || remoteEfficiency !== null) && (
+                <span className="player-status-copy" title={statusHint}>
+                  {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
+                </span>
+              )}
               {!isLive && (
                 <button type="button" onClick={() => void band.connect()}
                   disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
@@ -541,14 +550,16 @@ export function GuestMeditationPanel({
                   aria-pressed={selectedKey === metric.key} aria-label={metric.label}
                   onClick={() => setSelectedKey(metric.key)}>
                   <span className="player-metric-name">{metric.label}</span>
-                  <span className="player-metric-value">{formatMetricValue(snapshot[metric.key])}
+                  <span className="player-metric-value" data-empty={snapshot[metric.key] === null}>
+                    {formatMetricValue(snapshot[metric.key])}
                     {snapshot[metric.key] !== null && <span className="player-metric-unit">{metric.unit}</span>}
                   </span>
                 </button>
               ))}
             </div>
-            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit} maxValue={activeMetric.chartMax} />
-            <div className="player-signals"><QuietSignalButtons onSend={liveSocket.sendSignal} /></div>
+            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit}
+              maxValue={activeMetric.chartMax} lowerIsBetter={activeMetric.lowerIsBetter} scaleNote={activeMetric.scaleNote} />
+            <QuietSignalButtons onSend={liveSocket.sendSignal} />
             <GuestAudioPanel compact
               trackTitle={audioSync.state.track?.title ?? null} playing={audioSync.state.playing}
               positionSec={audioSync.state.positionSec} durationSec={audioSync.state.durationSec}

@@ -48,11 +48,9 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
   const sentType = feedback?.ok ? feedback.type : null;
 
   return (
-    <section aria-label="조용한 상태 신호" className="flex w-full flex-col items-center gap-2">
-      <p className="text-xs font-medium text-white/50">
-        지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요
-      </p>
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <section className="player-signals" aria-label="조용한 상태 신호">
+      <p className="player-signals-hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
+      <div className="player-signals-row">
         {CLASS_SIGNAL_TYPES.map((type) => {
           const meta = CLASS_SIGNAL_META[type];
           const active = sentType === type;
@@ -60,23 +58,21 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
             <button
               key={type}
               type="button"
+              className="player-signal"
+              data-signal={type}
+              data-active={active}
               onClick={() => handleClick(type)}
               aria-pressed={active}
               title={meta.hint}
-              className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? `border-white/40 bg-white/20 ${meta.buttonClass}`
-                  : 'border-white/10 bg-white/5 text-white/80 hover:bg-white/15'
-              }`}
             >
-              <span aria-hidden="true">{meta.icon}</span>
+              <span className="player-signal-icon" aria-hidden="true">{meta.icon}</span>
               <span>{meta.label}</span>
             </button>
           );
         })}
       </div>
       {/* 조용한 확인 — 소리·팝업 없이 문구만 */}
-      <p role="status" aria-live="polite" className="min-h-[16px] text-[11px] text-white/50">
+      <p role="status" aria-live="polite" className="player-signals-status">
         {feedback
           ? feedback.ok
             ? '상담사에게 조용히 전달했어요'
