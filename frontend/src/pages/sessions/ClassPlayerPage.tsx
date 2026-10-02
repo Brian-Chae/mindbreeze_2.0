@@ -71,8 +71,6 @@ import { QuietSignalSummary } from '../../components/session/QuietSignalSummary'
 // 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 상단 단일 게이지
 import { GroupAggregateGauge } from '../../components/session/GroupAggregateGauge';
 import { type ClassAggregateEvent } from '../../lib/class/group-aggregate';
-// 개선 7: 진행 큐시트 — 상담사 플레이어의 현재 단계 하이라이트·남은 시간 진행바
-import { CuesheetPanel } from '../../components/class/CuesheetPanel';
 import {
   countSignals,
   isClassSignalType,
@@ -1629,12 +1627,6 @@ export default function ClassPlayerPage() {
                 </div>
               )}
               {hostStatusPanel}
-              {/* 개선 7: 진행 큐시트 — 상담사 전용(현재 단계 하이라이트·남은 시간) */}
-              <CuesheetPanel
-                cuesheet={session.cuesheet}
-                elapsedSec={classElapsedSec}
-                paused={status === 'paused'}
-              />
               {/* 개선 10: 가이드·BGM 재생 — 회원 화면이 같은 트랙·같은 위치로 동기 재생된다 */}
               <ClassAudioPanel
                 state={audioPlayer.state}

@@ -50,14 +50,6 @@ class Session(Base):
     duration_min: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str | None] = mapped_column(String(200))
     notes: Mapped[str | None] = mapped_column(Text)
-    # 진행 큐시트(타임라인 대본) — 상담사가 명상/상담 흐름을 단계별로 미리 적어 두는 대본.
-    # 구조: [{"label": "도입 호흡", "duration_min": 5, "note": "4-7-8 호흡"}, ...]
-    # 목표 시간(duration_min)은 단계별 분(min)이며, 시작 시각 기준 누적 오프셋은
-    # 서버가 아니라 프론트(플레이어)가 계산한다(진행 위치는 세션 started_at 파생값).
-    # 미작성 시 빈 배열 — 프론트는 빈 배열이면 큐시트 패널을 숨긴다.
-    cuesheet: Mapped[list] = mapped_column(
-        JSONB, nullable=False, default=list, server_default="[]"
-    )
     max_participants: Mapped[int] = mapped_column(Integer, default=1)
     # 진행 형태 설정
     location_type: Mapped[str] = mapped_column(String(20), nullable=False, default="offline")  # online, offline

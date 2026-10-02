@@ -28,16 +28,6 @@ export interface SessionParticipant {
   user_email?: string;
 }
 
-/** 진행 큐시트(타임라인 대본) 한 단계 — 라벨·목표 시간(분)·메모. 회원 화면에는 미노출. */
-export interface CuesheetStep {
-  label: string;
-  duration_min: number;
-  note?: string | null;
-}
-
-/** 큐시트 단계 최대 개수 — 백엔드 CUESHEET_MAX_STEPS 와 동일 */
-export const CUESHEET_MAX_STEPS = 30;
-
 export interface SessionDto {
   id: string;
   type: SessionType;
@@ -53,8 +43,6 @@ export interface SessionDto {
   duration_min: number;
   title: string | null;
   notes: string | null;
-  /** 진행 큐시트(타임라인 대본) — 상담사 플레이어의 단계 진행 표시용. 미작성이면 빈 배열 */
-  cuesheet?: CuesheetStep[];
   max_participants: number;
   location_type: LocationType;
   participant_mode: ParticipantMode;
@@ -102,8 +90,6 @@ export interface CreateSessionPayload {
   record_video?: boolean;
   /** SDD-095: 템플릿으로 저장 — 일정·참여자·코드 없이 설정만 보관한다 */
   is_template?: boolean;
-  /** 진행 큐시트(타임라인 대본) — 단계별 라벨·목표시간(분)·메모 */
-  cuesheet?: CuesheetStep[];
   /** SDD-097: 예약 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록(예: [1440, 60]). 빈 배열=끔 */
   reminder_offsets?: number[];
 }
@@ -129,8 +115,6 @@ export interface UpdateSessionPayload {
   sfu_enabled?: boolean;
   record_audio?: boolean;
   record_video?: boolean;
-  /** 진행 큐시트(타임라인 대본) — 주면 통째 교체, 생략하면 기존 유지 */
-  cuesheet?: CuesheetStep[];
   /** SDD-097: 리마인더 시점 — 주면 교체·재예약, 생략하면 기존 유지 */
   reminder_offsets?: number[];
 }

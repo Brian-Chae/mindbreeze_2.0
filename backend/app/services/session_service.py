@@ -66,8 +66,6 @@ def _serialize(s: Session) -> dict:
         "duration_min": s.duration_min,
         "title": s.title,
         "notes": s.notes,
-        # 진행 큐시트(타임라인 대본) — 미작성(마이그레이션 이전 행)은 빈 배열로 내린다.
-        "cuesheet": s.cuesheet or [],
         "max_participants": s.max_participants,
         "location_type": s.location_type,
         "participant_mode": s.participant_mode,
@@ -213,24 +211,6 @@ def detect_conflict(
     return None
 
 
-def _cuesheet_steps(payload) -> list[dict]:
-    """생성/수정 payload 의 큐시트 단계를 JSONB 저장용 dict 목록으로 바꾼다.
-
-    CuesheetStep.model_dump() 로 라벨·목표시간(분)·메모만 남긴다(미작성 시 빈 목록).
-    """
-    steps = getattr(payload, "cuesheet", None) or []
-    return [step.model_dump() for step in steps]
-
-
-def _copy_cuesheet(value: list | None) -> list[dict]:
-    """복제/템플릿 저장 시 큐시트 단계를 원본과 분리된 dict 사본으로 옮긴다.
-
-    JSONB 값은 dict 참조를 공유하면 한쪽 수정이 다른 행에 새어나갈 수 있으므로
-    단계마다 얕은 복사본을 만든다(중첩 없는 평면 구조).
-    """
-    return [dict(step) for step in (value or [])]
-
-
 def normalize_reminder_offsets(value) -> list[int]:
     """SDD-097: 리마인더 시점 정규화 — reminder_service 규칙 재사용(단일 진실)."""
     return _reminder_service.normalize_reminder_offsets(value)
@@ -289,7 +269,6 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
-        cuesheet=_cuesheet_steps(payload),
         # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록.
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=max_p,
@@ -391,7 +370,6 @@ def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
-        cuesheet=_cuesheet_steps(payload),
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=_normalized_max_participants(payload.type, payload.max_participants),
         location_type=payload.location_type,
@@ -448,7 +426,6 @@ def _clone_session_config(
         access_code=None if is_template else generate_access_code(db),
         title=title,
         notes=source.notes,
-        cuesheet=_copy_cuesheet(source.cuesheet),
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
@@ -650,9 +627,6 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.title = payload.title
     if payload.notes is not None:
         s.notes = payload.notes
-    # 진행 큐시트 — 주어졌을 때만 통째 교체(빈 배열이면 큐시트 삭제).
-    if payload.cuesheet is not None:
-        s.cuesheet = _cuesheet_steps(payload)
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
     if payload.type is not None:
