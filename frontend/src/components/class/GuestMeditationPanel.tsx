@@ -17,7 +17,8 @@ import { getSession, getSessionByCodeState } from '../../lib/api/session';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
-import { BrainChart } from './BrainChart';
+import { MetricBarChart } from './metric-bar-chart';
+import './member-class-player.css';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
@@ -60,7 +61,7 @@ interface MetricDef {
   key: MetricKey;
   label: string;
   unit: string;
-  /** BrainChart 스케일 상한 */
+  /** 지표 차트 스케일 상한 */
   chartMax: number;
 }
 
@@ -158,6 +159,7 @@ export function GuestMeditationPanel({
   const [elapsedSec, setElapsedSec] = useState(0);
   /** 화면 끄기(몰입) 모드 — 1.0 절전 모드 패리티 */
   const [screenOff, setScreenOff] = useState(false);
+  const [bandInfoOpen, setBandInfoOpen] = useState(false);
   /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   /** LeadOff 해소 후 15초 "AI 분석중" */
@@ -413,13 +415,12 @@ export function GuestMeditationPanel({
     return () => window.clearInterval(id);
   }, [startedAt]);
 
+  // 수집은 1Hz 그대로, 표시만 25초 단위로 고정해 막대가 매초 출렁이지 않게 한다.
+  const chartTick = seriesTick === 0 ? 0 : Math.max(1, Math.floor(seriesTick / 25) + 1);
   const chartValues = useMemo(() => {
-    void seriesTick;
+    void chartTick;
     return [...seriesRef.current[selectedKey]];
-  }, [selectedKey, seriesTick]);
-
-  const timerNumberClass =
-    'text-[clamp(40px,6vw,72px)] font-semibold leading-none text-white tabular-nums';
+  }, [selectedKey, chartTick]);
 
   const statusHint =
     band.deviceStatus === 'lead_off'
@@ -449,208 +450,17 @@ export function GuestMeditationPanel({
     (maxParticipants ?? 0) <= 20;
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-black text-white">
+    <div className="member-class-player">
       <FadingImageBackground />
-
-      {/* 헤더 */}
-      <header className="relative z-10 flex items-center justify-between gap-2 px-4 py-4 sm:px-8">
-        <button
-          type="button"
-          onClick={onLeave}
-          className="min-h-11 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
-        >
-          종료
-        </button>
-        <h1 className="truncate px-3 text-center text-base font-medium text-[#F2F3F8] sm:text-lg">
-          {title ?? '클래스'}
-        </h1>
-        {/* 스피커 온오프 토글 */}
-        <button
-          type="button"
-          onClick={() => setSpeakerOn((v) => !v)}
-          aria-pressed={speakerOn}
-          aria-label={speakerOn ? '스피커 음소거' : '스피커 켜기'}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl bg-white/20 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
-        >
-          <SpeakerIcon muted={!speakerOn} />
-          <span>{speakerOn ? '스피커' : '음소거'}</span>
-        </button>
-      </header>
-
-      {/* 본문: 가운데 상단 상담사 스크린 / 하단 진행시간·지표 */}
-      <div className="relative z-10 flex flex-1 flex-col items-center px-4 pb-8 sm:px-8">
-        {/* 상담사 스크린 — 오프라인 그룹 20명 초과 수업에서는 숨김 */}
-        {showCounselorVideo && (
-          <div className="w-full max-w-4xl">
-            <CounselorLiveTile
-              code={classCode}
-              participantId={participantId}
-              participantToken={participantToken}
-              sessionId={sessionId}
-              speakingManaged={speakingManaged}
-              speakerOn={speakerOn}
-              className="aspect-video w-full"
-            />
-          </div>
-        )}
-
-        {/* 진행시간 */}
-        <div className="mt-6 flex flex-col items-center text-center">
-          <p className="text-sm font-medium text-white/60">진행시간</p>
-          <p className={`mt-1 ${timerNumberClass}`} aria-live="off">
-            {formatClock(elapsedSec)}
-          </p>
-          <p className="mt-1 text-sm text-white/50 tabular-nums">
-            / {formatClock(targetSec)}
-          </p>
-        </div>
-
-        {/* 6지표 실시간 그리드 */}
-        <div className="mt-6 grid w-full max-w-4xl grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
-          {METRICS.map((m) => {
-            const v = snapshot[m.key];
-            const selected = selectedKey === m.key;
-            return (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => setSelectedKey(m.key)}
-                aria-pressed={selected}
-                aria-label={`${m.label} 차트 보기`}
-                className={`rounded-xl px-3 py-4 text-center transition-colors ${
-                  selected
-                    ? 'bg-white/20 ring-1 ring-white/40'
-                    : 'bg-white/5 hover:bg-white/10'
-                }`}
-              >
-                <p className="text-xs font-medium text-white/60">{m.label}</p>
-                <p className="mt-1.5 text-2xl font-semibold leading-none tabular-nums text-white">
-                  {v !== null ? (
-                    <>
-                      {formatMetricValue(v)}
-                      <span className="ml-0.5 text-xs font-normal text-white/60">
-                        {m.unit}
-                      </span>
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 상태 힌트 / AI 분석중 */}
-        <div className="mt-4 text-center">
-          {isAnalyzing ? (
-            <BlinkingText className="text-sm font-medium text-white">
-              AI 분석중
-            </BlinkingText>
-          ) : (
-            <p className="max-w-sm text-sm leading-6 text-white/70">{statusHint}</p>
-          )}
-        </div>
-
-        {/* 선택 지표 시계열 그래프 */}
-        <div className="mt-6 flex min-h-[160px] w-full max-w-3xl items-end justify-center">
-          {chartValues.length > 0 ? (
-            <BrainChart
-              values={chartValues}
-              maxValue={activeMetric.chartMax}
-              className="w-full"
-              height={200}
-              ariaLabel={`${activeMetric.label} 실시간 차트`}
-            />
-          ) : (
-            <p className="pb-8 text-center text-sm text-white/50">
-              지표 차트는 LINK BAND 연결 후 표시됩니다
-            </p>
-          )}
-        </div>
-
-        {/* 개선 5: 무음 시그널 — 발언권과 독립. 소리·팝업 없이 상담사에게만 전달된다. */}
-        <div className="mt-6 w-full max-w-3xl">
-          <QuietSignalButtons onSend={liveSocket.sendSignal} />
-        </div>
-
-        {/* 개선 10: 가이드·BGM — 상담사가 트는 소리를 같은 위치로 재생한다.
-            볼륨은 회원별 개별 설정이며 스피커 뮤트(오프라인 기본 뮤트)와 무관하게 들린다.
-            아래 몰입(화면 끄기) 오버레이는 DOM 상 뒤에 덮일 뿐 이 패널은 마운트된 채 남으므로
-            화면을 꺼도 재생이 계속된다. */}
-        <div className="mt-4 flex w-full justify-center">
-          <GuestAudioPanel
-            trackTitle={audioSync.state.track?.title ?? null}
-            playing={audioSync.state.playing}
-            positionSec={audioSync.state.positionSec}
-            durationSec={audioSync.state.durationSec}
-            volume={audioSync.state.volume}
-            onVolumeChange={audioSync.setVolume}
-            blocked={audioSync.state.blocked}
-            onResume={audioSync.resume}
-            synced={audioSync.state.synced}
-          />
-        </div>
-
-        {/* 밴드 연결 보조 (최소화) */}
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-xs text-white/60">
-          <span>
-            연결 ·{' '}
-            {band.connectionState === 'connected'
-              ? linkState === 'stale'
-                ? '전송 중단'
-                : '연결됨'
-              : band.connectionState === 'unsupported'
-                ? '브라우저 미지원'
-                : band.connectionState === 'connecting'
-                  ? '연결 중'
-                  : '미연결'}
-          </span>
-          <span>
-            배터리 ·{' '}
-            {band.battery !== null ? `${Math.round(band.battery)}%` : '—'}
-          </span>
-          <span>접촉 · {contactStatusLabel(band.deviceStatus)}</span>
-          <span>신호 · {signalQualityLevelLabel(band.signalQualityLevel)}</span>
-          {band.connectionState !== 'connected' ? (
-            <button
-              type="button"
-              onClick={() => void band.connect()}
-              disabled={!band.isSupported || band.connectionState === 'connecting'}
-              className="min-h-11 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {band.connectionState === 'connecting'
-                ? '연결 중...'
-                : band.isMock
-                  ? '시뮬레이션 시작'
-                  : 'LINK BAND 연결'}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void band.disconnect()}
-              className="min-h-11 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80 hover:bg-white/20"
-            >
-              연결 해제
-            </button>
-          )}
-        </div>
-        {band.error && (
-          <p role="alert" className="mt-2 text-center text-xs text-red-300">
-            {band.error}
-          </p>
-        )}
-      </div>
-
-      <LeadOffModal
-        isVisible={showLeadOffModal}
-        leadOff={band.leadOff}
-        onDismiss={() => setLeadOffDismissed(true)}
-      />
-
+      <div className="player-scrim" aria-hidden="true" />
+      <div className="player-screen" inert={screenOff}>
+        <header className="player-topbar">
+          <button type="button" onClick={onLeave} className="player-pill">← 종료</button>
+          <h1>{title ?? '클래스'}</h1>
       {/* SDD-095: 클래스 채팅 — chat_enabled일 때만 노출(패널 내부 게이트).
           몰입(화면 끄기) 중에도 마운트를 유지해 안읽음 배지가 쌓이게 하되,
           몰입 오버레이(z-50, DOM상 뒤)가 위를 덮어 시각·클릭을 가린다. */}
+      <div className="player-chat">
       <ClassChatPanel
         sessionId={sessionId}
         enabled={chatEnabled}
@@ -662,6 +472,97 @@ export function GuestMeditationPanel({
 
       {/* SDD-095 후속: 게스트에게 채팅방이 회원 전용임을 안내(회원가입 유도) */}
       {!isAuthenticated && guestChatEnabled && <GuestChatNotice />}
+      </div>
+
+
+          <button type="button" onClick={() => setSpeakerOn((v) => !v)}
+            aria-pressed={speakerOn} aria-label={speakerOn ? '스피커 음소거' : '스피커 켜기'} className="player-pill">
+            <SpeakerIcon muted={!speakerOn} />
+            <span className="player-desktop-label">{speakerOn ? '음소거' : '스피커 켜기'}</span>
+          </button>
+          <button type="button" onClick={() => setScreenOff(true)} aria-label="화면 끄기" className="player-pill">
+            <span aria-hidden="true">⏻</span><span className="player-desktop-label">화면 끄기</span>
+          </button>
+        </header>
+
+        <div className="player-body">
+          <div className="player-video">
+            <span className="player-video-label">{showCounselorVideo ? '상담사 라이브' : '함께하는 명상'}</span>
+            {showCounselorVideo ? (
+              <CounselorLiveTile
+                code={classCode} participantId={participantId} participantToken={participantToken}
+                sessionId={sessionId} speakingManaged={speakingManaged} speakerOn={speakerOn}
+                className="player-live-tile"
+              />
+            ) : <div className="player-hall">편안하게 호흡에 집중해 주세요</div>}
+            <div className="player-timer" aria-label="진행시간">
+              <span className="player-timer-now">{formatClock(elapsedSec)}</span>
+              <span className="player-timer-total">/ {formatClock(targetSec)}</span>
+            </div>
+          </div>
+
+          <div className="player-right">
+            <div className="player-metric-status">
+              <span className="player-status-copy" title={statusHint}>
+                {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
+              </span>
+              {isLive ? (
+                <div className="player-band-control">
+                  <button type="button" className="player-band-toggle" aria-label="LINK BAND 상태"
+                    aria-expanded={bandInfoOpen} onClick={() => setBandInfoOpen((open) => !open)}>
+                    <span className="player-band-dot" data-connected={!metricsBlocked} />
+                  </button>
+                  {bandInfoOpen && (
+                    <div className="player-band-popup" role="group" aria-label="LINK BAND 연결 관리"
+                      onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                          setBandInfoOpen(false);
+                          event.currentTarget.parentElement?.querySelector<HTMLButtonElement>('button')?.focus();
+                        }
+                      }}>
+                      <p>{statusHint}</p>
+                      <p>배터리 {band.battery ?? '—'}% · 접촉 {contactStatusLabel(band.deviceStatus)} · 신호 {signalQualityLevelLabel(band.signalQualityLevel)}</p>
+                      <button type="button" onClick={() => { setBandInfoOpen(false); void band.disconnect(); }}>연결 해제</button>
+                    </div>
+                  )}
+                </div>
+              ) : <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />}
+              {!isLive && (
+                <button type="button" onClick={() => void band.connect()}
+                  disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
+                  {!band.isSupported ? 'Chrome/Edge 필요' : band.connectionState === 'connecting' ? '연결 중...' : band.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
+                </button>
+              )}
+            </div>
+            {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
+            <div className="player-metrics" aria-label="실시간 지표">
+              {METRICS.map((metric) => (
+                <button key={metric.key} type="button" className="player-metric"
+                  aria-pressed={selectedKey === metric.key} aria-label={metric.label}
+                  onClick={() => setSelectedKey(metric.key)}>
+                  <span className="player-metric-name">{metric.label}</span>
+                  <span className="player-metric-value">{formatMetricValue(snapshot[metric.key])}
+                    {snapshot[metric.key] !== null && <span className="player-metric-unit">{metric.unit}</span>}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit} maxValue={activeMetric.chartMax} />
+            <div className="player-signals"><QuietSignalButtons onSend={liveSocket.sendSignal} /></div>
+            <GuestAudioPanel compact
+              trackTitle={audioSync.state.track?.title ?? null} playing={audioSync.state.playing}
+              positionSec={audioSync.state.positionSec} durationSec={audioSync.state.durationSec}
+              volume={audioSync.state.volume} onVolumeChange={audioSync.setVolume}
+              blocked={audioSync.state.blocked} onResume={audioSync.resume} synced={audioSync.state.synced}
+            />
+          </div>
+        </div>
+
+      <LeadOffModal
+        isVisible={showLeadOffModal}
+        leadOff={band.leadOff}
+        onDismiss={() => setLeadOffDismissed(true)}
+      />
 
       {/* 개선 9: 최초 1회 온보딩 코치마크 — 기본 뮤트·손들기·스피커·몰입 모드 안내.
           localStorage로 재노출을 막고, [건너뛰기]/[다시 보지 않기]로 즉시 닫을 수 있다. */}
@@ -671,17 +572,7 @@ export function GuestMeditationPanel({
         maxParticipants={maxParticipants}
       />
 
-      {/* 화면 끄기(몰입) 토글 — 우하단 FAB (1.0 절전 모드 패리티) */}
-      {!screenOff && (
-        <button
-          type="button"
-          onClick={() => setScreenOff(true)}
-          aria-label="화면 끄기"
-          className="fixed bottom-6 right-6 z-40 rounded-full bg-white/15 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/25"
-        >
-          화면 끄기
-        </button>
-      )}
+      </div>
 
       {/* 화면 끄기 오버레이 — 검정 + 타이머 + 가운데 켜기 (1500ms crossfade) */}
       <div
@@ -689,12 +580,13 @@ export function GuestMeditationPanel({
           screenOff ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
         aria-hidden={!screenOff}
+        inert={!screenOff}
       >
-        <p className="text-sm text-white/60 tabular-nums">{formatClock(elapsedSec)}</p>
+        <p className="text-[13px] text-white/60 tabular-nums">{formatClock(elapsedSec)}</p>
         <button
           type="button"
           onClick={() => setScreenOff(false)}
-          className="mt-6 rounded-full border border-white/30 px-8 py-3 text-base font-semibold text-white transition-colors hover:bg-white/10"
+          className="mt-6 rounded-full border border-white/30 px-8 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
         >
           화면 켜기
         </button>

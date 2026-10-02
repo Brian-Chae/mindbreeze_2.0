@@ -4,9 +4,12 @@
 // · 볼륨만 회원별 개별 설정(개인 청취 환경). 스피커 뮤트/헤드셋과 무관하게 엔진에 적용되므로
 //   오프라인 방송형(기본 뮤트)에서도 가이드·BGM 은 들린다 — 화면 끄기(몰입) 중에도 재생 유지.
 
+import { useId, useState } from 'react';
 import { formatClock, formatTrackDuration } from '../../lib/class/audio-sync';
 
 interface GuestAudioPanelProps {
+  /** 명상 1화면 전용 미니바 — 기존 패널 사용처는 유지 */
+  compact?: boolean;
   /** 상담사가 선택한 트랙 제목(없으면 대기 안내) */
   trackTitle: string | null;
   playing: boolean;
@@ -22,6 +25,7 @@ interface GuestAudioPanelProps {
 }
 
 export function GuestAudioPanel({
+  compact = false,
   trackTitle,
   playing,
   positionSec,
@@ -32,8 +36,50 @@ export function GuestAudioPanel({
   onResume,
   synced,
 }: GuestAudioPanelProps) {
+  const [volumeOpen, setVolumeOpen] = useState(false);
+  const popupId = useId();
   const percent = Math.round(volume * 100);
   const muted = percent === 0;
+
+  if (compact) {
+    return (
+      <section className="player-bgm" aria-label="가이드·BGM">
+        <div className="player-bgm-title">
+          <p>가이드 · BGM</p>
+          <span title={trackTitle ?? undefined}>{trackTitle ?? '상담사의 재생을 기다리고 있어요'}</span>
+        </div>
+        {blocked ? (
+          <button type="button" className="player-audio-resume" onClick={onResume}>소리 켜기</button>
+        ) : (
+          <span className="player-bgm-state" data-playing={playing}>
+            <span aria-hidden="true" />{playing ? '동기 재생 중' : synced ? '일시정지' : '대기'}
+          </span>
+        )}
+        <button type="button" className="player-volume-toggle" aria-label="BGM 볼륨"
+          aria-expanded={volumeOpen} aria-controls={popupId} onClick={() => setVolumeOpen((open) => !open)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M11 5 6 9H2v6h4l5 4V5zM16 8a6 6 0 0 1 0 8" />
+          </svg>
+        </button>
+        {volumeOpen && (
+          <div id={popupId} className="player-volume-popup" role="group" aria-label="BGM 볼륨 조절"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setVolumeOpen(false);
+                event.currentTarget.parentElement?.querySelector<HTMLButtonElement>('.player-volume-toggle')?.focus();
+              }
+            }}>
+            <div><span>나의 볼륨 · {muted ? '음소거' : `${percent}%`}</span>
+              <button type="button" onClick={() => setVolumeOpen(false)} aria-label="볼륨 닫기">닫기</button>
+            </div>
+            <input type="range" aria-label="볼륨" min={0} max={100} step={5} value={percent}
+              onChange={(event) => onVolumeChange(Number(event.target.value) / 100)} />
+            <p>{formatClock(positionSec)}{durationSec !== null && ` / ${formatTrackDuration(durationSec)}`} · 화면을 꺼도 재생은 계속됩니다</p>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section

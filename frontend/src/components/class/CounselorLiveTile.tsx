@@ -23,15 +23,21 @@ interface CounselorLiveTileProps {
   className?: string;
 }
 
+/** 대기·실패 상태도 영상 영역 안에서 같은 높이를 유지한다. */
+function CounselorPlaceholder({ message }: { message: string }) {
+  return <div className="player-video-placeholder flex h-full w-full flex-col items-center justify-center text-white/60">
+    <span className="player-video-avatar" aria-hidden="true">♙</span>
+    <p>{message}</p>
+  </div>;
+}
+
 /** 구독한 원격(상담사) 카메라 트랙만 렌더 */
 function HostCamera() {
   const tracks = useTracks([Track.Source.Camera]);
   const remoteCameras = tracks.filter((t) => !t.participant.isLocal);
   if (remoteCameras.length === 0) {
     return (
-      <div className="flex h-full w-full items-center justify-center text-sm text-white/70">
-        상담사 영상 연결 중…
-      </div>
+      <CounselorPlaceholder message="상담사 영상 연결 중…" />
     );
   }
   return (
@@ -102,7 +108,7 @@ export function CounselorLiveTile({
   if (error && !token) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <p className="text-sm text-white/60">상담사 영상을 불러오지 못했습니다</p>
+        <CounselorPlaceholder message="상담사 영상을 불러오지 못했습니다" />
       </div>
     );
   }
@@ -110,7 +116,7 @@ export function CounselorLiveTile({
   if (!token) {
     return (
       <div className={`flex items-center justify-center ${className}`}>
-        <p className="text-sm text-white/60">상담사 영상 준비 중…</p>
+        <CounselorPlaceholder message="상담사 영상을 기다리고 있어요" />
       </div>
     );
   }
@@ -137,7 +143,7 @@ export function CounselorLiveTile({
 
       {/* SDD-094: 발언권 UI — 온라인 그룹(≤20)에서만. 부여되면 버튼 대신 상태 표시 */}
       {speakingManaged && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent p-3">
+        <div className="player-speaking pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent p-3">
           {canPublish ? (
             <span className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-[#59CE90]/25 px-3 py-1.5 text-[12px] font-semibold text-[#B8F5D6]">
               🎤 발언권 부여됨 · 카메라·마이크 켜짐
