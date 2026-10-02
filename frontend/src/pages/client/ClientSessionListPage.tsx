@@ -109,7 +109,13 @@ export default function ClientSessionListPage() {
     [sessionInvites],
   );
   const invitedSessions = useMemo(
-    () => sessions.filter((s) => invitedSessionIds.has(s.id)),
+    () =>
+      sessions.filter(
+        (s) =>
+          invitedSessionIds.has(s.id) &&
+          s.status !== 'completed' &&
+          s.status !== 'cancelled',
+      ),
     [sessions, invitedSessionIds],
   );
 
