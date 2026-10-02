@@ -476,6 +476,8 @@ const ClassJoinPage: React.FC = () => {
         participantId={participantId}
         memberName={isLoggedIn ? (user?.name ?? null) : null}
         initialNickname={guestName}
+        participantToken={participantToken}
+        isLoggedIn={isLoggedIn}
         onEnter={handleWaitingRoomEnter}
         onLeave={resetJoin}
       />

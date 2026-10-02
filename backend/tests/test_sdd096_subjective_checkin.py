@@ -3,7 +3,7 @@
 검증 시나리오:
 - TS1: 로그인 회원 체크인 → 200 + SessionRecord.subjective_state 저장 + 기록지 노출
 - TS2: 밴드 미착용(세션 레코드 없음) 세션도 체크인 시 레코드가 생성된다
-- TS3: 각성·정서 둘 다 없으면 422 (스킵은 클라이언트가 호출하지 않는 방식)
+- TS3: 내용이 아무것도 없으면 422 (메시지(note)만 남기는 것은 입장 전 체크인에서 허용)
 - TS4: 1~5 범위 밖 값은 422
 - TS5: 소감 길이 초과(200자 초과)는 422
 - TS6: 취소된 세션은 409
@@ -115,15 +115,26 @@ def test_02_밴드미착용_레코드없음_체크인시_레코드_생성(client
     assert next(iter(rec["subjective_state"]["participants"].values()))["after"]["arousal"] == 4
 
 
-def test_03_두축_모두없으면_422(client):
+def test_03_메시지만_허용_내용없으면_422(client):
+    # 입장 전 체크인에서는 '상담사에게 전할 말'만 남기는 것도 허용한다(SAM 축 없이 note 만).
     host = _register(client, "sdd096c@test.com")
     cls = _start_class(client, host)
     member = _register(client, "sdd096c-member@test.com", role="client")
     _join_member(client, cls, member)
 
-    res = client.post(
-        _checkin_url(cls["id"]), json={"note": "소감만"}, headers=member["h"]
+    note_only = client.post(
+        _checkin_url(cls["id"]), json={"phase": "before", "note": "오늘 목이 안 좋아요"}, headers=member["h"]
     )
+    assert note_only.status_code == 200, note_only.text
+    assert note_only.json()["subjective_state"]["before"]["note"] == "오늘 목이 안 좋아요"
+    assert note_only.json()["subjective_state"]["before"]["arousal"] is None
+
+    # 아무 내용도 없으면 422
+    res = client.post(_checkin_url(cls["id"]), json={}, headers=member["h"])
+    assert res.status_code == 422, res.text
+
+    # 공백만 있는 소감도 None 으로 정규화 → 422
+    res = client.post(_checkin_url(cls["id"]), json={"note": "   "}, headers=member["h"])
     assert res.status_code == 422, res.text
 
 

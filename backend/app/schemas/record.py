@@ -114,9 +114,12 @@ class CheckinRequest(BaseModel):
 
     @model_validator(mode="after")
     def _require_axis(self) -> "CheckinRequest":
-        """두 축이 모두 없으면 체크인할 내용이 없다 — 422."""
-        if self.arousal is None and self.valence is None:
-            raise ValueError("각성·정서 중 최소 한 축을 선택해 주세요")
+        """두 축이 모두 없고 메시지도 없으면 체크인할 내용이 없다 — 422.
+
+        입장 전 체크인에서는 '상담사에게 전할 말'만 남기는 경우도 허용한다.
+        """
+        if self.arousal is None and self.valence is None and not self.note:
+            raise ValueError("각성·정서 중 최소 한 축을 선택하거나 메시지를 입력해 주세요")
         return self
 
 

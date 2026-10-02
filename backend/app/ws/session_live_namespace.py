@@ -154,6 +154,38 @@ def _sanitize_nickname(value) -> str | None:
     return cleaned or None
 
 
+# 입장 전 체크인 요약(기분 SAM 2축 + 상담사 전달 메시지) — 대기실 실시간 표시 전용.
+# 저장은 REST(/sessions/{id}/checkin)가 하고, WS 는 상담사 화면에 요약만 흘린다.
+_WAITING_ROOM_CHECKIN_NOTE_MAX = 200
+
+
+def _sanitize_checkin(value) -> dict | None:
+    """입장 전 체크인 요약을 정리한다(표시 전용 — 신원 판정·저장에는 쓰지 않는다).
+
+    value = {"arousal": 1~5|None, "valence": 1~5|None, "note": str|None}
+    세 값이 모두 비면 None 을 돌려 대기실 이벤트에 실리지 않게 한다.
+    """
+    if not isinstance(value, dict):
+        return None
+
+    def _sam(v) -> int | None:
+        if isinstance(v, bool) or not isinstance(v, int):
+            return None
+        return v if 1 <= v <= 5 else None
+
+    arousal = _sam(value.get("arousal"))
+    valence = _sam(value.get("valence"))
+
+    note_raw = value.get("note")
+    note: str | None = None
+    if isinstance(note_raw, str):
+        note = " ".join(note_raw.split())[:_WAITING_ROOM_CHECKIN_NOTE_MAX] or None
+
+    if arousal is None and valence is None and note is None:
+        return None
+    return {"arousal": arousal, "valence": valence, "note": note}
+
+
 # ---------------------------------------------------------------------------
 # 개선 5: 무음 시그널 — 활성 신호 집계 (DB 저장 없는 휘발성 상태)
 # ---------------------------------------------------------------------------
@@ -472,6 +504,7 @@ def register_session_live_namespace(sio):
                 "participant_id": session["participant_id"],
                 "action": action,
                 "nickname": _sanitize_nickname(data.get("nickname")),
+                "checkin": _sanitize_checkin(data.get("checkin")),
             },
         )
 

@@ -4,13 +4,17 @@
 // 판정하므로 클라이언트는 participant_id 를 보내지 않는다(사칭 차단).
 // 상담사가 늦게 접속해도 인원이 수렴하도록 15초 heartbeat 로 join 을 반복한다
 // — 서버에 대기 상태를 저장하지 않고 클라이언트 TTL(useWaitingRoomCount)로 정리한다.
+//
+// 입장 전 체크인(기분 SAM 2축 + 상담사 전달 메시지): 저장은 REST(/sessions/{id}/checkin)가
+// 하고, 여기서는 그 요약을 join 이벤트에 실어 상담사 화면에 실시간으로 흘린다.
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { tokenStorage } from '../lib/api/client';
 import {
   emitWaitingRoomPresence,
   getSessionLiveSocket,
   joinSessionLive,
+  type WaitingRoomCheckin,
 } from '../lib/socket';
 
 /** join heartbeat 주기 — 상담사 화면 인원 수렴 지연 상한 */
@@ -21,6 +25,8 @@ interface UseWaitingRoomPresenceOptions {
   participantId: string | null | undefined;
   /** 표시용 닉네임(상담사 화면 참고용 — 서버는 신원 판정에 쓰지 않는다) */
   nickname?: string | null;
+  /** 입장 전 체크인 요약 — 저장 후 함께 실어 보내 상담사가 실시간으로 본다 */
+  checkin?: WaitingRoomCheckin | null;
   enabled: boolean;
   /** 게스트(비로그인) 연결 */
   skipAuth?: boolean;
@@ -34,9 +40,21 @@ export function useWaitingRoomPresence({
   sessionId,
   participantId,
   nickname = null,
+  checkin = null,
   enabled,
   skipAuth = false,
 }: UseWaitingRoomPresenceOptions): void {
+  // 닉네임·체크인은 ref 로 들고 있어 effect 재실행(leave/join 플리커) 없이
+  // heartbeat 가 최신 값을 실어 보낸다. 체크인은 변경 즉시 별도 재전송한다.
+  const nicknameRef = useRef<string | null | undefined>(nickname);
+  const checkinRef = useRef<WaitingRoomCheckin | null | undefined>(checkin);
+  useEffect(() => {
+    nicknameRef.current = nickname;
+  }, [nickname]);
+  useEffect(() => {
+    checkinRef.current = checkin;
+  }, [checkin]);
+
   useEffect(() => {
     if (!enabled || !sessionId || !participantId) return undefined;
 
@@ -46,7 +64,12 @@ export function useWaitingRoomPresence({
     const announce = (action: 'join' | 'leave'): void => {
       if (!socket.connected) return;
       if (action === 'join') joinSessionLive(socket, sessionId, participantId);
-      emitWaitingRoomPresence(socket, { session_id: sessionId, action, nickname });
+      emitWaitingRoomPresence(socket, {
+        session_id: sessionId,
+        action,
+        nickname: nicknameRef.current,
+        checkin: action === 'join' ? checkinRef.current : null,
+      });
     };
 
     const onConnect = (): void => {
@@ -65,5 +88,20 @@ export function useWaitingRoomPresence({
       // 대기실을 벗어나면(입장·나가기) 인원에서 제거한다 — 실패해도 TTL 로 정리된다.
       if (announced) announce('leave');
     };
-  }, [enabled, sessionId, participantId, nickname, skipAuth]);
+  }, [enabled, sessionId, participantId, skipAuth]);
+
+  // 체크인이 저장되면 즉시 join 을 재전송해 상담사 화면을 갱신한다(15초 heartbeat 대기 없이).
+  useEffect(() => {
+    if (!enabled || !sessionId || !participantId || !checkin) return undefined;
+    const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
+    if (!socket.connected) return undefined;
+    joinSessionLive(socket, sessionId, participantId);
+    emitWaitingRoomPresence(socket, {
+      session_id: sessionId,
+      action: 'join',
+      nickname: nicknameRef.current,
+      checkin,
+    });
+    return undefined;
+  }, [checkin, enabled, sessionId, participantId, skipAuth]);
 }
