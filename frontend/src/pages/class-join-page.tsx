@@ -337,8 +337,8 @@ const ClassJoinPage: React.FC = () => {
     }
   };
 
-  const handleJoinSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
+  // 실제 참여(join) 수행 — 게스트는 이름 검증 후, 회원은 자동 참여 경로에서도 공용으로 쓴다
+  const performJoin = useCallback(async (): Promise<void> => {
     if (!session) return;
 
     const trimmedGuestName = guestName.trim();
@@ -389,7 +389,25 @@ const ClassJoinPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [session, isLoggedIn, guestName, guestGender, guestBirthDate, code]);
+
+  const handleJoinSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    await performJoin();
   };
+
+  // 로그인 회원은 details 단계에서 자동 참여 — "세션 입장하기"→"클래스 참여하기" 이중 확인 제거.
+  // 오픈 전이면 3초 폴링이 session.status 를 갱신해 이 effect가 재실행되며 자동 입장된다.
+  useEffect(() => {
+    if (step !== 'details' || !session || !isLoggedIn) return;
+    if (isClosed(session) || isPreOpen(session)) return;
+    // effect 본문에서 동기 setState를 호출하지 않도록 다음 틱으로 미룬다(react-hooks/set-state-in-effect 회피).
+    const timer = window.setTimeout(() => {
+      void performJoin();
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, session?.id, session?.status, isLoggedIn]);
 
   const resetJoin = (): void => {
     // 명시적 종료 시 전역 BLE 연결 정리 (unmount에선 끊지 않으므로 여기서 명시적으로 해제)
@@ -487,24 +505,24 @@ const ClassJoinPage: React.FC = () => {
   }
 
   return (
-    <main className="min-h-screen bg-[#F8F6FA] px-5 py-10 sm:px-8">
+    <main className="min-h-screen bg-[#FAFAFA] px-5 py-10 sm:px-8">
       <div className="mx-auto w-full max-w-xl">
-        <Link to="/" className="inline-flex items-center text-sm font-semibold text-purple-900 hover:text-purple-700">
+        <Link to="/" className="inline-flex items-center text-sm font-semibold text-[#5F0080] hover:text-[#4B0066]">
           ← Mind Breeze 홈으로
         </Link>
 
-        <section className="mt-8 rounded-3xl border border-purple-100 bg-white p-6 shadow-sm sm:p-10">
+        <section className="mt-8 rounded-[20px] border border-[#EFEFEF] bg-white p-6 sm:p-10">
           {step === 'code' && (
             <>
-              <p className="text-sm font-bold text-purple-800">클래스 코드 참여</p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950">클래스에 바로 참여하세요</h1>
-              <p className="mt-3 text-base leading-7 text-gray-600">
+              <p className="text-sm font-bold text-[#5F0080]">클래스 코드 참여</p>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight text-[#1F1F1F]">클래스에 바로 참여하세요</h1>
+              <p className="mt-3 text-base leading-7 text-[#6F6F6F]">
                 진행자에게 받은 6자리 클래스 코드를 입력하면, 로그인 또는 게스트로 참여할 수 있습니다.
               </p>
 
               <form className="mt-8 space-y-5" onSubmit={(e) => void handleCodeSubmit(e)}>
                 <div>
-                  <label htmlFor="class-code" className="block text-sm font-semibold text-gray-800">
+                  <label htmlFor="class-code" className="block text-sm font-semibold text-[#1F1F1F]">
                     클래스 코드
                   </label>
                   <input
@@ -514,7 +532,7 @@ const ClassJoinPage: React.FC = () => {
                     placeholder="예: A1B2C3"
                     maxLength={6}
                     autoComplete="off"
-                    className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-4 text-center font-mono text-2xl font-bold tracking-[0.35em] text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
+                    className="mt-2 w-full rounded-xl border border-[#D4D4D4] px-4 py-4 text-center font-mono text-2xl font-bold tracking-[0.35em] text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC]"
                   />
                 </div>
                 {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
@@ -531,137 +549,165 @@ const ClassJoinPage: React.FC = () => {
 
           {step === 'details' && session && (
             <>
-              <p className="text-sm font-bold text-purple-800">참여할 클래스</p>
-              <h1 className="mt-3 text-3xl font-bold tracking-tight text-gray-950">
+              <p className="text-sm font-bold text-[#5F0080]">참여할 클래스</p>
+              <h1 className="mt-3 text-2xl font-bold tracking-tight text-[#1F1F1F]">
                 {session.title ?? '제목 없는 클래스'}
               </h1>
-              <div className="mt-6 space-y-3 rounded-2xl bg-purple-50 p-5 text-sm text-gray-700">
-                <p><span className="font-semibold text-gray-900">유형</span> · {session.custom_type_name ?? TYPE_LABELS[session.type]}</p>
-                <p><span className="font-semibold text-gray-900">진행자</span> · {session.host_name ?? '진행자'}</p>
-                <p><span className="font-semibold text-gray-900">상태</span> · {STATUS_LABELS[session.status]}</p>
-                <p><span className="font-semibold text-gray-900">참여 인원</span> · {session.participant_count} / {session.max_participants}명</p>
+              <div className="mt-6 space-y-3 rounded-2xl bg-[#F5EDFC] p-5 text-sm text-[#1F1F1F]">
+                <p><span className="font-semibold">유형</span> · {session.custom_type_name ?? TYPE_LABELS[session.type]}</p>
+                <p><span className="font-semibold">진행자</span> · {session.host_name ?? '진행자'}</p>
+                <p><span className="font-semibold">상태</span> · {STATUS_LABELS[session.status]}</p>
+                <p><span className="font-semibold">참여 인원</span> · {session.participant_count} / {session.max_participants}명</p>
               </div>
 
-              <form className="mt-7 space-y-5" onSubmit={(e) => void handleJoinSubmit(e)}>
-                {!isLoggedIn && (
-                  <>
-                    <div>
-                      <label htmlFor="guest-name" className="block text-sm font-semibold text-gray-800">
-                        이름
-                      </label>
-                      <input
-                        id="guest-name"
-                        value={guestName}
-                        onChange={(event) => setGuestName(event.target.value)}
-                        placeholder="클래스에서 사용할 이름"
-                        maxLength={80}
-                        autoComplete="name"
-                        className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
-                      />
-                      <p className="mt-2 text-xs leading-5 text-gray-500">로그인하지 않아도 이름만 입력하면 게스트로 참여할 수 있습니다.</p>
-                    </div>
-
-                    {/* SDD-062: 성별·생년월일 — 선택 필드, 온보딩 값 규약 동일 / 모바일 1열·md+ 2열 */}
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                      <div>
-                        <label htmlFor="guest-gender" className="block text-sm font-semibold text-gray-800">
-                          성별 <span className="font-normal text-gray-400">(선택)</span>
-                        </label>
-                        <select
-                          id="guest-gender"
-                          value={guestGender}
-                          onChange={(event) => setGuestGender(event.target.value)}
-                          className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100"
-                        >
-                          <option value="">선택해주세요</option>
-                          <option value="male">남성</option>
-                          <option value="female">여성</option>
-                          <option value="other">기타</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-800">
-                          생년월일 <span className="font-normal text-gray-400">(선택)</span>
-                        </label>
-                        <div className="mt-2 grid grid-cols-3 gap-2 max-[360px]:grid-cols-1">
-                          <select
-                            aria-label="생년"
-                            value={guestBirthDate ? guestBirthDate.split('-')[0] : ''}
-                            onChange={(event) => {
-                              const [, m, d] = (guestBirthDate || '--').split('-');
-                              setGuestBirthDate(`${event.target.value}-${m || ''}-${d || ''}`);
-                            }}
-                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
-                          >
-                            <option value="">년</option>
-                            {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
-                              <option key={y} value={y}>{y}년</option>
-                            ))}
-                          </select>
-                          <select
-                            aria-label="생월"
-                            value={guestBirthDate ? guestBirthDate.split('-')[1] : ''}
-                            onChange={(event) => {
-                              const [y, , d] = (guestBirthDate || '--').split('-');
-                              setGuestBirthDate(`${y || ''}-${event.target.value}-${d || ''}`);
-                            }}
-                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
-                          >
-                            <option value="">월</option>
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                              <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
-                            ))}
-                          </select>
-                          <select
-                            aria-label="생일"
-                            value={guestBirthDate ? guestBirthDate.split('-')[2] : ''}
-                            onChange={(event) => {
-                              const [y, m] = (guestBirthDate || '--').split('-');
-                              setGuestBirthDate(`${y || ''}-${m || ''}-${event.target.value}`);
-                            }}
-                            className="w-full rounded-xl border border-gray-300 px-2 py-3 text-center text-sm text-gray-900 outline-none transition focus:border-purple-700 focus:ring-2 focus:ring-purple-100 sm:text-base"
-                          >
-                            <option value="">일</option>
-                            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-                              <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-                {isLoggedIn && (
-                  <p className="rounded-xl bg-purple-50 px-4 py-3 text-sm text-purple-900">
+              {isLoggedIn ? (
+                <div className="mt-7 space-y-4">
+                  <p className="rounded-xl bg-[#F5EDFC] px-4 py-3 text-sm text-[#5F0080]">
                     {user?.name
                       ? `프로필에 등록된 이름(${user.name})으로 참여합니다`
                       : '로그인된 계정으로 참여합니다.'}
                   </p>
-                )}
-                {/* SDD-088: 오픈 전에는 입장 차단 — 3초 폴링으로 오픈을 감지하면 자동 활성화 */}
-                {isPreOpen(session) && (
-                  <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-                    상담사가 아직 클래스를 열지 않았습니다. 클래스가 열리면 자동으로 참여
-                    버튼이 활성화됩니다.
-                  </p>
-                )}
-                {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={isLoading || isPreOpen(session)}
-                  className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isLoading
-                    ? '참여 처리 중...'
-                    : isPreOpen(session)
-                      ? '클래스 오픈 대기 중...'
-                      : '클래스 참여하기'}
-                </button>
-                <button type="button" onClick={resetJoin} className="w-full py-2 text-sm font-semibold text-gray-500 hover:text-gray-800">
-                  다른 코드 입력하기
-                </button>
-              </form>
+                  {/* SDD-088: 오픈 전에는 입장 차단 — 3초 폴링으로 오픈을 감지하면 자동 입장 */}
+                  {isPreOpen(session) && (
+                    <p className="rounded-xl bg-[#FFF4DC] px-4 py-3 text-sm font-medium text-[#8A6B1F]">
+                      상담사가 아직 클래스를 열지 않았습니다. 클래스가 열리면 자동으로 입장합니다.
+                    </p>
+                  )}
+                  {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+                  <div className="flex items-center justify-center gap-2 py-2 text-sm text-[#6F6F6F]">
+                    {isLoading && (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#5F0080] border-t-transparent" />
+                        참여 처리 중...
+                      </>
+                    )}
+                    {!isLoading && isPreOpen(session) && '클래스 오픈 대기 중...'}
+                  </div>
+                  {error && !isLoading && (
+                    <button
+                      type="button"
+                      onClick={() => void performJoin()}
+                      className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base"
+                    >
+                      다시 시도
+                    </button>
+                  )}
+                  <button type="button" onClick={resetJoin} className="w-full py-2 text-sm font-semibold text-[#6F6F6F] hover:text-[#1F1F1F]">
+                    다른 코드 입력하기
+                  </button>
+                </div>
+              ) : (
+                <form className="mt-7 space-y-5" onSubmit={(e) => void handleJoinSubmit(e)}>
+                  <div>
+                    <label htmlFor="guest-name" className="block text-sm font-semibold text-[#1F1F1F]">
+                      이름
+                    </label>
+                    <input
+                      id="guest-name"
+                      value={guestName}
+                      onChange={(event) => setGuestName(event.target.value)}
+                      placeholder="클래스에서 사용할 이름"
+                      maxLength={80}
+                      autoComplete="name"
+                      className="mt-2 w-full rounded-xl border border-[#D4D4D4] px-4 py-3 text-base text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC]"
+                    />
+                    <p className="mt-2 text-xs leading-5 text-[#6F6F6F]">로그인하지 않아도 이름만 입력하면 게스트로 참여할 수 있습니다.</p>
+                  </div>
+
+                  {/* SDD-062: 성별·생년월일 — 선택 필드, 온보딩 값 규약 동일 / 모바일 1열·md+ 2열 */}
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                    <div>
+                      <label htmlFor="guest-gender" className="block text-sm font-semibold text-[#1F1F1F]">
+                        성별 <span className="font-normal text-[#9B9B9B]">(선택)</span>
+                      </label>
+                      <select
+                        id="guest-gender"
+                        value={guestGender}
+                        onChange={(event) => setGuestGender(event.target.value)}
+                        className="mt-2 w-full rounded-xl border border-[#D4D4D4] px-4 py-3 text-base text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC]"
+                      >
+                        <option value="">선택해주세요</option>
+                        <option value="male">남성</option>
+                        <option value="female">여성</option>
+                        <option value="other">기타</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-[#1F1F1F]">
+                        생년월일 <span className="font-normal text-[#9B9B9B]">(선택)</span>
+                      </label>
+                      <div className="mt-2 grid grid-cols-3 gap-2 max-[360px]:grid-cols-1">
+                        <select
+                          aria-label="생년"
+                          value={guestBirthDate ? guestBirthDate.split('-')[0] : ''}
+                          onChange={(event) => {
+                            const [, m, d] = (guestBirthDate || '--').split('-');
+                            setGuestBirthDate(`${event.target.value}-${m || ''}-${d || ''}`);
+                          }}
+                          className="w-full rounded-xl border border-[#D4D4D4] px-2 py-3 text-center text-sm text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC] sm:text-base"
+                        >
+                          <option value="">년</option>
+                          {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
+                            <option key={y} value={y}>{y}년</option>
+                          ))}
+                        </select>
+                        <select
+                          aria-label="생월"
+                          value={guestBirthDate ? guestBirthDate.split('-')[1] : ''}
+                          onChange={(event) => {
+                            const [y, , d] = (guestBirthDate || '--').split('-');
+                            setGuestBirthDate(`${y || ''}-${event.target.value}-${d || ''}`);
+                          }}
+                          className="w-full rounded-xl border border-[#D4D4D4] px-2 py-3 text-center text-sm text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC] sm:text-base"
+                        >
+                          <option value="">월</option>
+                          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                            <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
+                          ))}
+                        </select>
+                        <select
+                          aria-label="생일"
+                          value={guestBirthDate ? guestBirthDate.split('-')[2] : ''}
+                          onChange={(event) => {
+                            const [y, m] = (guestBirthDate || '--').split('-');
+                            setGuestBirthDate(`${y || ''}-${m || ''}-${event.target.value}`);
+                          }}
+                          className="w-full rounded-xl border border-[#D4D4D4] px-2 py-3 text-center text-sm text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC] sm:text-base"
+                        >
+                          <option value="">일</option>
+                          {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                            <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SDD-088: 오픈 전에는 입장 차단 — 3초 폴링으로 오픈을 감지하면 자동 활성화 */}
+                  {isPreOpen(session) && (
+                    <p className="rounded-xl bg-[#FFF4DC] px-4 py-3 text-sm font-medium text-[#8A6B1F]">
+                      상담사가 아직 클래스를 열지 않았습니다. 클래스가 열리면 자동으로 참여
+                      버튼이 활성화됩니다.
+                    </p>
+                  )}
+                  {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+                  <button
+                    type="submit"
+                    disabled={isLoading || isPreOpen(session)}
+                    className="mb-btn h-[52px] w-full justify-center rounded-xl px-6 text-base disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoading
+                      ? '참여 처리 중...'
+                      : isPreOpen(session)
+                        ? '클래스 오픈 대기 중...'
+                        : '클래스 참여하기'}
+                  </button>
+                  <button type="button" onClick={resetJoin} className="w-full py-2 text-sm font-semibold text-[#6F6F6F] hover:text-[#1F1F1F]">
+                    다른 코드 입력하기
+                  </button>
+                </form>
+              )}
             </>
           )}
         </section>
