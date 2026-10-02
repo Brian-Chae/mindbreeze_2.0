@@ -1,38 +1,17 @@
 // 내담자 세션 상세 페이지
 // 세션 정보, 상태별 액션 버튼, 뒤로가기
+// SDD-088: 입장 버튼 단일화 + open 상태 대기실 반영
+// 실시간 반영: 상담사가 원격에서 상태를 바꾸면 /session-live WS(session_state_changed)로 즉시 갱신,
+// WS 미연결 시 5초 폴링 폴백으로 자동 갱신(수동 새로고침 불필요).
 
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { getSession, type SessionDto } from '../../lib/api/session';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getSession, type SessionDto, type SessionStatus } from '../../lib/api/session';
 import { useAuthStore } from '../../stores/authStore';
-
-/** 상태 한글 라벨 */
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'ready': return '준비';
-    case 'scheduled': return '예정';
-    case 'open': return '입장 가능';
-    case 'in_progress': return '진행중';
-    case 'paused': return '일시정지';
-    case 'completed': return '완료';
-    case 'cancelled': return '취소';
-    default: return status;
-  }
-}
-
-/** 상태별 뱃지 클래스 */
-function statusBadgeClass(status: string): string {
-  switch (status) {
-    case 'ready': return 'bg-[#EAF2FF] text-[#1F4FB3]';
-    case 'scheduled': return 'bg-[#F5EDFC] text-[#5F0080]';
-    case 'open': return 'bg-[#E0F5F1] text-[#0F766E]';
-    case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
-    case 'paused': return 'bg-[#FFF4DC] text-[#8A6B1F]';
-    case 'completed': return 'bg-[#F2F3F8] text-[#6F6F6F]';
-    case 'cancelled': return 'bg-[#FDECEC] text-[#B3261E]';
-    default: return 'bg-[#F2F3F8] text-[#6F6F6F]';
-  }
-}
+import ClientShell from '../../components/client/ClientShell';
+import { StatusBadge } from '../../components/session/StatusBadge';
+import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import type { SessionLiveJoinSnapshot, SessionStateChangedEvent } from '../../lib/socket';
 
 /** 날짜/시간 포맷 */
 function formatDateTime(iso: string | null): string {
@@ -49,6 +28,7 @@ function typeLabel(type: string): string {
     case 'clinical': return '임상심리상담';
     case 'hypnosis': return '최면심리상담';
     case 'meditation': return '명상수업';
+    case 'custom': return '기타';
     default: return type;
   }
 }
@@ -82,6 +62,60 @@ export default function ClientSessionDetailPage() {
       });
     return () => { cancelled = true; };
   }, [id]);
+
+  // 실시간 상태 반영 — join snapshot(초기 상태)과 session_state_changed(전이)를 세션 상태에 머지
+  const applyStatus = useCallback(
+    (status: SessionStatus | string, started_at?: string | null, ended_at?: string | null) => {
+      setSession((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: status as SessionStatus,
+              started_at: started_at ?? prev.started_at,
+              ended_at: ended_at ?? prev.ended_at,
+            }
+          : prev,
+      );
+    },
+    [],
+  );
+
+  const handleSnapshot = useCallback(
+    (snap: SessionLiveJoinSnapshot) => {
+      applyStatus(snap.status, snap.started_at, snap.ended_at);
+    },
+    [applyStatus],
+  );
+
+  const handleSessionStateChanged = useCallback(
+    (event: SessionStateChangedEvent) => {
+      applyStatus(event.status, event.started_at, event.ended_at);
+    },
+    [applyStatus],
+  );
+
+  const { isReady } = useSessionLiveSocket({
+    sessionId: id,
+    onSnapshot: handleSnapshot,
+    onSessionStateChanged: handleSessionStateChanged,
+  });
+
+  // WS 폴백: 스냅샷을 아직 못 받으면(미연결·비참가자) 5초 폴링으로 상태 자동 갱신
+  useEffect(() => {
+    if (!id || isReady) return;
+    let cancelled = false;
+    const timer = window.setInterval(() => {
+      getSession(id)
+        .then((s) => {
+          if (!cancelled) setSession(s);
+        })
+        .catch(() => { /* 조용히 실패 — 다음 주기에 재시도 */ });
+    }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [id, isReady]);
 
   // 상담사 이름 찾기
   const counselorName = (() => {
@@ -156,27 +190,20 @@ export default function ClientSessionDetailPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-dvh bg-[#FAFAFA]">
-      {/* 상단 헤더 */}
-      <header className="sticky top-0 z-40 h-14 bg-white border-b border-[#EFEFEF] flex items-center px-4 gap-3">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="w-11 h-11 flex items-center justify-center rounded-full hover:bg-[#EFEFEF] shrink-0 transition-colors"
-          aria-label="뒤로가기"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12l4.58-4.59Z"
-              fill="#1F1F1F"
-            />
-          </svg>
-        </button>
-        <h1 className="text-base font-bold text-[#1F1F1F] truncate">세션 상세</h1>
-      </header>
+    <ClientShell title="세션 상세" sub="SESSION DETAIL">
+      <div className="max-w-3xl mx-auto space-y-4">
+        {/* 뒤로 가기 + 상태 뱃지 */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="text-sm text-[#6F6F6F] hover:text-[#1F1F1F] transition-colors"
+          >
+            ← 세션 목록으로
+          </button>
+          {session && <StatusBadge status={session.status} />}
+        </div>
 
-      {/* 콘텐츠 */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 max-w-3xl mx-auto md:px-8">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-sm text-[#6F6F6F]">
             불러오는 중...
@@ -193,26 +220,18 @@ export default function ClientSessionDetailPage() {
             </button>
           </div>
         ) : session ? (
-          <div className="space-y-4">
+          <>
             {/* 세션 정보 카드 */}
-            <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-              {/* 유형 + 상태 */}
+            <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-6 space-y-4">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080]">
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#F5EDFC] text-[#5F0080]">
                   {typeLabel(session.type)}
                 </span>
-                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusBadgeClass(session.status)}`}>
-                  {statusLabel(session.status)}
-                </span>
               </div>
-
-              {/* 제목 */}
-              <h2 className="text-xl font-bold text-[#1F1F1F]">
+              <h1 className="text-xl font-bold text-[#1F1F1F]">
                 {session.title || '제목 없음'}
-              </h2>
-
-              {/* 세션 상세 정보 */}
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              </h1>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <dt className="text-xs text-[#6F6F6F] mb-0.5">상담사</dt>
                   <dd className="text-sm text-[#1F1F1F] font-medium">{counselorName}</dd>
@@ -240,9 +259,9 @@ export default function ClientSessionDetailPage() {
 
             {/* 액션 버튼 */}
             {renderActions()}
-          </div>
+          </>
         ) : null}
       </div>
-    </div>
+    </ClientShell>
   );
 }
