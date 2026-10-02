@@ -777,6 +777,50 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     return _with_chat_room(_serialize(s), s.id, db)
 
 
+# SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
+STALE_OPEN_SESSION_MAX_AGE_HOURS = 24
+
+
+def sweep_stale_open_sessions(
+    db: DBSession,
+    *,
+    max_age_hours: int = STALE_OPEN_SESSION_MAX_AGE_HOURS,
+) -> list[str]:
+    """open 상태로 일정 시간 방치된 세션을 자동 cancel 처리한다.
+
+    - 대상: status == 'open' and is_template == False and opened_at <= now - max_age_hours
+    - 전이: transition_status(..., 'cancel', db) 재사용 → 참가자 알림·이벤트·state_version 일관성 유지
+    - 개별 세션 실패(host 삭제 등)는 try/except 로 격리해 스윕 전체를 중단시키지 않는다.
+
+    반환: 취소 처리된 세션 id 목록.
+    """
+    now = _now()
+    cutoff = now - timedelta(hours=max_age_hours)
+    cancelled: list[str] = []
+
+    candidates = (
+        db.query(Session)
+        .filter(
+            Session.is_template.is_(False),
+            Session.status == "open",
+            Session.opened_at.is_not(None),
+            Session.opened_at <= cutoff,
+        )
+        .all()
+    )
+
+    for s in candidates:
+        try:
+            transition_status(str(s.id), str(s.host_id), "cancel", db)
+            cancelled.append(str(s.id))
+        except Exception:
+            # 호스트 삭제·동시 전이 등으로 실패한 건은 건너뛰고 다음 세션을 처리한다.
+            db.rollback()
+            continue
+
+    return cancelled
+
+
 # 새 실행(명시적)을 발급할 수 없는 상태 — 완료/취소된 세션은 즉시 재시작을 허용하지 않는다.
 _NON_RESTARTABLE_STATUSES = ("completed", "cancelled")
 

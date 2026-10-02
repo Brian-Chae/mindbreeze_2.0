@@ -13,6 +13,7 @@ celery_app = Celery(
         "app.tasks.upgrade_narrative_cache",
         "app.tasks.outbox",
         "app.tasks.reminder_task",
+        "app.tasks.session_task",
     ],
 )
 # 서사 캐시의 주기적 업그레이드는 upgrade_narrative_cache_cron.py가 cron에서 실행한다.
@@ -29,4 +30,6 @@ celery_app.conf.beat_schedule = {
     'sweep-session-reminders': {'task': 'tasks.sweep_session_reminders', 'schedule': 300.0},
     # SDD-095 후속: 리포트 생성 타임아웃 워치독 — processing 먹통을 주기적으로 마감한다.
     'sweep-stale-reports': {'task': 'tasks.sweep_stale_reports', 'schedule': 300.0},
+    # SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
+    'sweep-stale-open-sessions': {'task': 'tasks.sweep_stale_open_sessions', 'schedule': 300.0},
 }
