@@ -7,6 +7,7 @@ from app.models.eeg_feature import EEGFeatureWindow
 from app.models.credential import Credential, VerificationAudit
 from app.models.notification import Notification
 from app.models.notification_outbox import NotificationOutbox
+from app.models.pipeline_outbox import PipelineOutbox
 from app.models.refresh_token import RefreshToken
 from app.models.consent import Consent
 from app.models.onboarding_progress import OnboardingProgress
@@ -50,6 +51,7 @@ __all__ = [
     "VerificationAudit",
     "Notification",
     "NotificationOutbox",
+    "PipelineOutbox",
     "RefreshToken",
     "Consent",
     "OnboardingProgress",

@@ -167,5 +167,8 @@ export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVi
     setState('stopped');
   }, [stopRecorder, cleanup]);
 
-  return { state, facingMode, stream, start, pause, resume, stop, switchCamera, uploadedChunks };
+  /** SDD-101 C4: 녹화가 생성한 총 청크 수(업로드 성공 여부와 무관) — 종료 시 expected_count 로 전달 */
+  const getExpectedCount = useCallback(() => indexRef.current, []);
+
+  return { state, facingMode, stream, start, pause, resume, stop, switchCamera, uploadedChunks, getExpectedCount };
 }

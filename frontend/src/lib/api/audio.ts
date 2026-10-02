@@ -1,6 +1,7 @@
 // AI 자동 기록 API 클라이언트
 
-import { apiClient, tokenStorage, ApiError } from './client';
+import { apiClient } from './client';
+import { uploadFormWithRetry } from './upload-helper';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
 
@@ -46,6 +47,10 @@ export interface RecordResponse {
   markers: Array<Record<string, unknown>>;
   is_edited: boolean;
   edit_history: Array<Record<string, unknown>>;
+  // SDD-101 D1: 영상 저장 무결성 — merge_failed/누락 표시용
+  video_status?: string;
+  video_expected_chunks?: number | null;
+  video_actual_chunks?: number | null;
 }
 
 export const startAudio = (sessionId: string, consentAudio: boolean): Promise<AudioStartResponse> =>
@@ -75,23 +80,6 @@ export async function uploadChunk(
   fd.append('chunk_index', String(chunkIndex));
   fd.append('file', blob, `chunk_${chunkIndex}.webm`);
 
-  const token = tokenStorage.getAccess();
-  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/audio/chunk`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-  if (!res.ok) {
-    let data: unknown = null;
-    try {
-      data = await res.json();
-    } catch {
-      // ignore
-    }
-    const msg = (data && typeof data === 'object' && 'detail' in data && typeof (data as { detail: unknown }).detail === 'string')
-      ? (data as { detail: string }).detail
-      : `청크 업로드 실패 (${res.status})`;
-    throw new ApiError(res.status, msg, data);
-  }
-  return (await res.json()) as ChunkUploadResponse;
+  // SDD-101 C3: timeout·재시도(5xx/타임아웃만) 적용
+  return uploadFormWithRetry<ChunkUploadResponse>(`${BASE_URL}/sessions/${sessionId}/audio/chunk`, fd);
 }

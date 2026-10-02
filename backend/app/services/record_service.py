@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
-from app.models.record import SessionRecord
+from app.models.record import SessionRecord, VideoChunk
 from app.schemas.record import SubjectiveSlot
 
 
@@ -134,7 +134,10 @@ def subjective_state_map(session_ids, db: DBSession) -> dict:
 
 
 def _serialize(
-    record: SessionRecord | None, session_id: UUID, subjective_state: dict | None = None
+    record: SessionRecord | None,
+    session_id: UUID,
+    subjective_state: dict | None = None,
+    video_actual_chunks: int | None = None,
 ) -> dict:
     if record is None:
         return {
@@ -147,6 +150,10 @@ def _serialize(
             "is_edited": False,
             "edit_history": [],
             "subjective_state": subjective_state,
+            # SDD-101 D1: 영상 저장 무결성 — merge_failed/누락 표시용
+            "video_status": "idle",
+            "video_expected_chunks": None,
+            "video_actual_chunks": video_actual_chunks,
         }
     return {
         "session_id": str(session_id),
@@ -158,12 +165,18 @@ def _serialize(
         "is_edited": bool(record.is_edited),
         "edit_history": list(record.edit_history or []),
         "subjective_state": subjective_state,
+        # SDD-101 D1: 영상 저장 무결성 — merge_failed/누락 표시용
+        "video_status": record.video_status or "idle",
+        "video_expected_chunks": record.video_expected_chunks,
+        "video_actual_chunks": video_actual_chunks,
     }
 
 
 def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_for_user(session_id, user_id, db)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
+    # SDD-101 D1: 영상 청크 실제 수신 수 — 누락 여부 판정용.
+    video_actual = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
     # SDD-096: 호스트는 세션 전체, 참여자는 본인 슬롯만 본다(다른 참여자 소감 비노출).
     if s.host_id == _to_uuid(user_id):
         subjective = session_subjective_state(record)
@@ -174,7 +187,7 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
             .first()
         )
         subjective = participant_subjective_state(record, participant.id if participant else None)
-    return _serialize(record, s.id, subjective)
+    return _serialize(record, s.id, subjective, video_actual_chunks=video_actual)
 
 
 def get_transcript(session_id: str, user_id: str, db: DBSession) -> dict:

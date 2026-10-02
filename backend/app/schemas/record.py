@@ -41,10 +41,17 @@ class VideoStartResponse(BaseModel):
     started_at: datetime | None = None
 
 
+class VideoStopRequest(BaseModel):
+    # SDD-101 C4: 클라이언트가 녹화한 예상 청크 수 — 병합 50% 규칙의 정확한 분모.
+    expected_count: int | None = None
+
+
 class VideoStopResponse(BaseModel):
     session_id: str
     status: str
     total_chunks: int
+    expected_chunks: int | None = None
+    missing_chunks: list[int] = []
     ended_at: datetime | None = None
 
 
@@ -74,6 +81,10 @@ class RecordResponse(BaseModel):
     # SDD-096: 셀프 체크인(주관 상태) — 상담사(호스트)는 세션 전체(scope=session),
     # 참여자는 본인 슬롯만(scope=participant). 미입력이면 None.
     subjective_state: dict[str, Any] | None = None
+    # SDD-101 D1: 영상 저장 무결성 — merge_failed/누락 표시용
+    video_status: str = "idle"
+    video_expected_chunks: int | None = None
+    video_actual_chunks: int | None = None
 
 
 class RecordUpdateRequest(BaseModel):

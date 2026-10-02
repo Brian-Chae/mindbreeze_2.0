@@ -358,9 +358,9 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
 
 
 try:
-    from celery import shared_task
+    from app.core.celery_app import celery_app
 
-    @shared_task(name="tasks.report", soft_time_limit=300, time_limit=360)
+    @celery_app.task(name="tasks.report", soft_time_limit=300, time_limit=360)
     def report_task(report_id: str) -> None:
         from app.core.database import SessionLocal
 
@@ -370,7 +370,7 @@ try:
         finally:
             db.close()
 
-    @shared_task(name="tasks.sweep_stale_reports")
+    @celery_app.task(name="tasks.sweep_stale_reports")
     def sweep_stale_reports_task() -> int:
         """타임아웃 워치독 스윕 — beat 가 주기 호출한다. 마감한 세션 수를 반환한다."""
         from app.core.database import SessionLocal
@@ -385,7 +385,7 @@ try:
         finally:
             db.close()
 
-    @shared_task(name="tasks.generate_reports_for_session")
+    @celery_app.task(name="tasks.generate_reports_for_session")
     def generate_reports_for_session(session_id: str) -> None:
         """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출)."""
         from app.core.database import SessionLocal

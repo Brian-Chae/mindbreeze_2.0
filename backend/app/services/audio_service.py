@@ -12,8 +12,6 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
-from app.tasks.stt_task import run_stt_inline
-from app.tasks.summary_task import run_summary_inline
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +97,19 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
     if record.status not in ("recording", "processing"):
         raise HTTPException(status_code=400, detail="녹음이 시작되지 않았습니다")
 
+    # SDD-101 C1: 멱등 업로드 — 동일 (session_id, chunk_index) 청크가 이미 있으면
+    # 중복 저장하지 않는다(네트워크 재시도로 인한 중복 청크 방지).
+    existing = db.query(AudioChunk).filter(
+        AudioChunk.session_id == s.id, AudioChunk.chunk_index == chunk_index
+    ).first()
+    if existing:
+        total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
+        return {
+            "chunk_index": chunk_index,
+            "received_bytes": existing.size_bytes,
+            "total_chunks": total,
+        }
+
     CHUNK_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     file_path = CHUNK_STORAGE_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}.bin"
     file_path.write_bytes(content)
@@ -142,18 +153,10 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
 
     total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
 
-    # Celery 체인으로 STT/요약 태스크 실행 (비동기)
-    try:
-        from celery import chain
-        chain(
-            stt_task.si(str(s.id)),
-            summary_task.si(str(s.id)),
-        ).apply_async()
-        logger.info("[audio] Celery chain started for session %s", s.id)
-    except Exception:
-        logger.warning("[audio] Celery unavailable, running inline for session %s", s.id)
-        run_stt_inline(str(s.id), db)
-        run_summary_inline(str(s.id), db)
+    # SDD-101 Phase A: STT/요약 발행은 finalize_on_session_end 1곳으로 단일화.
+    # stop은 recording_ended_at 기록 + processing 마킹만 한다(발행 없음).
+    # (기존에는 여기서 stt_task/summary_task 미import로 NameError → 인라인 동기 실행되어
+    #  /audio/stop 이 STT+요약을 동기 대기하는 지연 버그가 있었다.)
 
     # SDD-095: 녹음 저장 완료(STT 진행) 진행 상태 브로드캐스트
     _emit_report_progress(str(s.id), db)
@@ -167,51 +170,103 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
     }
 
 
+def _build_pipeline_tasks(session_id, has_recording, needs_video_merge, needs_report):
+    """종료 파이프라인 체인의 태스크 목록을 만든다."""
+    from app.tasks.report_task import generate_reports_for_session
+
+    tasks = []
+    if needs_video_merge:
+        from app.tasks.video_task import merge_video_chunks_task
+
+        tasks.append(merge_video_chunks_task.si(str(session_id)))
+    if has_recording:
+        from app.tasks.stt_task import stt_task
+        from app.tasks.summary_task import summary_task
+
+        tasks += [stt_task.si(str(session_id)), summary_task.si(str(session_id))]
+    if needs_report:
+        tasks.append(generate_reports_for_session.si(str(session_id)))
+    return tasks
+
+
+def publish_pipeline(session_id, has_recording, needs_video_merge, needs_report) -> bool:
+    """종료 파이프라인 체인을 Celery에 적재한다. 실패 시 예외를 던진다(호출측이 pending 유지)."""
+    from celery import chain
+
+    tasks = _build_pipeline_tasks(session_id, has_recording, needs_video_merge, needs_report)
+    print("DEBUG app=", tasks[0].app.main if tasks else None, "eager=", tasks[0].app.conf.task_always_eager if tasks else None)
+    if not tasks:
+        return False
+    chain(*tasks).apply_async()
+    return True
+
+
 def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
     """세션 /end 시 자동 호출. STT/요약/리포트 생성을 Celery chain 으로 비동기 처리.
 
     세션 종료 API 가 STT(Whisper)·요약(LLM)·리포트 생성(LLM)을 동기 대기하지 않도록
     chain(stt → summary → generate_reports) 으로 큐에 적재한다.
+    SDD-088 후속: 영상 청크 병합이 필요하면 chain 선두에 삽입해 리포트 생성 전에
+    video_s3_key 가 준비되도록 한다.
     """
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
-    has_recording = record is not None and record.status == "recording"
+    # SDD-101 Phase A: stop_recording이 이미 'processing'으로 마킹한 경우도 녹음으로 취급.
+    # (direct /end 는 'recording', 정상 handleStop 경로는 'processing' 상태로 여기 도달)
+    has_recording = record is not None and record.status in ("recording", "processing")
     if record is not None and record.status == "recording":
         record.status = "processing"
         record.recording_ended_at = _now()
         db.commit()
 
-    try:
-        from celery import chain
-        from app.tasks.report_task import generate_reports_for_session
+    # SDD-088 후속: 영상 병합 필요 여부 — 리포트가 video_s3_key 를 읽으므로
+    # generate_reports_for_session 보다 선행 태스크로 넣는다.
+    from app.services import video_service
 
-        tasks = []
-        if has_recording:
-            from app.tasks.stt_task import stt_task
-            from app.tasks.summary_task import summary_task
+    needs_video_merge = video_service.video_merge_needed(session_id, db)
 
-            tasks += [stt_task.si(str(session_id)), summary_task.si(str(session_id))]
-        tasks.append(generate_reports_for_session.si(str(session_id)))
-        chain(*tasks).apply_async()
-        logger.info(
-            "[audio] chain enqueued for session %s (recording=%s)", session_id, has_recording
-        )
-        # SDD-095: 세션 종료 직후 '처리 중' 진행 상태를 즉시 push — 프론트 대기 화면 스텝퍼 기동
-        _emit_report_progress(str(session_id), db)
-    except Exception:
-        # Celery 불가(개발/테스트) → 동기 fallback (기존 동작 유지)
-        logger.warning("[audio] Celery unavailable, running inline for session %s", session_id)
-        if has_recording:
-            from app.tasks.stt_task import run_stt_inline
-            from app.tasks.summary_task import run_summary_inline
+    # SDD-101 Phase A: 리포트는 실제 데이터(녹음·영상·세션 진행)가 있을 때만 생성.
+    # (빈 세션 — 시작조차 안 한 open/scheduled — 에 빈 리포트를 양산하지 않도록)
+    session = db.query(Session).filter(Session.id == session_id).first()
+    has_data = has_recording or needs_video_merge or (session is not None and session.started_at is not None)
 
-            run_stt_inline(str(session_id), db)
-            run_summary_inline(str(session_id), db)
-        from app.models.session import Session
-        from app.services import report_service
+    # SDD-101 Phase A4: 발행 의도를 세션 상태와 같은 트랜잭션으로 durable 기록(아웃박스).
+    # 발행 실패·프로세스 사망 시에도 beat 스윕이 미발행(pending) 건을 재발행한다.
+    if has_data:
+        from app.models.pipeline_outbox import PipelineOutbox
 
-        s = db.query(Session).filter(Session.id == session_id).first()
-        if s:
-            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
-            report_service.generate_client_reports_for_session(str(s.id), db)
-        # SDD-095: 인라인 폴백에서도 최종 진행 상태를 push 한다.
-        _emit_report_progress(str(session_id), db)
+        outbox = db.query(PipelineOutbox).filter(PipelineOutbox.session_id == session_id).first()
+        if outbox is None:
+            outbox = PipelineOutbox(
+                session_id=session_id,
+                has_recording=has_recording,
+                needs_video_merge=needs_video_merge,
+                needs_report=has_data,
+            )
+            db.add(outbox)
+        else:
+            outbox.has_recording = has_recording
+            outbox.needs_video_merge = needs_video_merge
+            outbox.needs_report = has_data
+            outbox.status = "pending"
+            outbox.attempts = 0
+            outbox.available_at = _now()
+        db.commit()
+
+        try:
+            publish_pipeline(str(session_id), has_recording, needs_video_merge, has_data)
+            outbox.status = "published"
+            db.commit()
+            logger.info(
+                "[audio] chain enqueued for session %s (recording=%s, video_merge=%s)",
+                session_id,
+                has_recording,
+                needs_video_merge,
+            )
+        except Exception as exc:
+            # 발행 실패 — pending 유지(운영 인라인 폴백 제거). beat 스윕이 재발행.
+            logger.exception("[audio] pipeline publish failed (outbox pending): %s", exc)
+    else:
+        logger.info("[audio] finalize skipped (no data) for session %s", session_id)
+
+    # SDD-095: 세션 종료 직후 '처리 중' 진행 상태를 즉시 push — 프론트 대기 화면 스텝퍼 기동
+    _emit_report_progress(str(session_id), db)

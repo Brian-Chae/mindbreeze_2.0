@@ -15,6 +15,7 @@ from app.schemas.record import (
     ChunkUploadResponse,
     VideoStartRequest,
     VideoStartResponse,
+    VideoStopRequest,
     VideoStopResponse,
 )
 from app.services import video_service
@@ -47,10 +48,12 @@ async def upload_video_chunk(
 @router.post("/{session_id}/video/stop", response_model=VideoStopResponse)
 def stop_video(
     session_id: str,
+    payload: VideoStopRequest | None = None,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return video_service.stop_recording(session_id, current_user["id"], db)
+    expected_count = payload.expected_count if payload else None
+    return video_service.stop_recording(session_id, current_user["id"], expected_count, db)
 
 
 @router.get("/{session_id}/video/url")

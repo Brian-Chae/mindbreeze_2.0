@@ -240,6 +240,8 @@ export default function ClassPlayerPage() {
   const [lobbyElapsedSec, setLobbyElapsedSec] = useState(0);
   /** SDD-088: 종료 2단계 확인 모달 */
   const [endModalOpen, setEndModalOpen] = useState(false);
+  /** SDD-101 D3: 종료(end) 확정 실패 — 재시도 CTA 노출 */
+  const [endFailed, setEndFailed] = useState(false);
   /** SDD-085: 프리뷰에서 확정한 카메라/마이크 사용 여부 — 세션 전체(녹음·녹화)에 적용 */
   const [mediaPrefs, setMediaPrefs] = useState<PreJoinMediaPrefs>({
     cameraOn: true,
@@ -824,7 +826,8 @@ export default function ClassPlayerPage() {
     if (videoRecorder.state === 'recording' || videoRecorder.state === 'paused') {
       try {
         await videoRecorder.stop();
-        await stopVideo(id);
+        // SDD-101 C4: 녹화 총 청크 수를 종료 시 선언해 서버가 누락 인덱스를 계산하도록 한다
+        await stopVideo(id, videoRecorder.getExpectedCount());
       } catch (e) {
         setError(`영상 녹화 종료 실패: ${(e as Error).message}`);
       }
@@ -836,6 +839,7 @@ export default function ClassPlayerPage() {
     if (!id) return;
     setTransitioning(true);
     setError(null);
+    setEndFailed(false);
     try {
       if (
         recorder.state === 'recording' ||
@@ -851,7 +855,9 @@ export default function ClassPlayerPage() {
       bypassGuardRef.current = true;
       navigate(leaveTo ?? `/sessions/${id}/record`);
     } catch (e) {
+      // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
       setError((e as Error).message);
+      setEndFailed(true);
     } finally {
       setTransitioning(false);
     }
@@ -1638,7 +1644,20 @@ export default function ClassPlayerPage() {
         {/* 오류 표시 */}
         {error && (
           <div className="rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
-            {error}
+            <p>{error}</p>
+            {/* SDD-101 D3: 종료 확정 실패 시 재시도 CTA */}
+            {endFailed && (
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={transitioning}
+                  onClick={() => void finishSession()}
+                  className="rounded-lg bg-[#5F0080] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  종료 재시도
+                </button>
+              </div>
+            )}
           </div>
         )}
 

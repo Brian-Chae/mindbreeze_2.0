@@ -1,11 +1,13 @@
 """세션 관리 비즈니스 로직"""
 
+import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from livekit import api as livekit_api
+from sqlalchemy import case, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -15,6 +17,8 @@ from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.services import code_service, eeg_query, reminder_service as _reminder_service
+
+logger = logging.getLogger(__name__)
 
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
@@ -692,6 +696,25 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     db.commit()
 
 
+def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
+    """cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan) 데이터를 막는다(BUG-4).
+
+    - 음성: recording → failed(중단), recording_ended_at 기록.
+    - 영상: recording → completed(종료), video_recording_ended_at 기록.
+    (실제 데이터 폐기·상담사 확인 플로우는 SDD-101 Phase D 에서 별도 처리.)
+    """
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
+    if record is None:
+        return
+    if record.status == "recording":
+        record.status = "failed"
+        record.recording_ended_at = _now()
+    if record.video_status == "recording":
+        record.video_status = "completed"
+        record.video_recording_ended_at = _now()
+    db.commit()
+
+
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
@@ -721,6 +744,30 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         s.ended_at = _now()
     # SDD-026: 상태 계약 버전 증가 — 클라이언트의 중복/역순 이벤트 판정 기준
     s.state_version = (s.state_version or 0) + 1
+
+    # SDD-101 B1: CAS(compare-and-set) — read-modify-write 대신 조건부 UPDATE로
+    # 동시 전이 경합(이중 finalize·이벤트 발행)을 원자적으로 막는다.
+    # 동일 시점 두 요청이 같은 상태를 읽어 둘 다 통과하던 버그(BUG-3) 해결.
+    now = _now()
+    values = {
+        "status": target,
+        "state_version": (s.state_version or 0) + 1,
+    }
+    if action == "open":
+        values["opened_at"] = case((Session.opened_at.is_(None), now), else_=Session.opened_at)
+    elif action == "start":
+        values["started_at"] = case((Session.started_at.is_(None), now), else_=Session.started_at)
+    elif action == "end":
+        values["ended_at"] = now
+
+    result = db.execute(
+        update(Session)
+        .where(Session.id == s.id, Session.status.in_(allowed_from))
+        .values(**values)
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
     db.commit()
     db.refresh(s)
 
@@ -730,20 +777,25 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         ensure_session_chat_room(s.id, db)
 
     if action == "end":
-        try:
-            from app.services import audio_service
-            audio_service.finalize_on_session_end(s.id, db)
-        except Exception:
-            pass
-        # SDD-084: 영상 녹화도 세션 종료 시 자동 종료 (audio finalize 실패와 무관하게 시도)
+        # SDD-088 후속: 영상 종료를 먼저 수행해 audio finalize 가 video_merge_needed()
+        # 로 병합 필요 여부를 판별할 수 있게 한다(종료 응답은 비동기 체인이라 지연 없음).
         try:
             from app.services import video_service
             video_service.finalize_on_session_end(s.id, db)
         except Exception:
             pass
+        try:
+            from app.services import audio_service
+            audio_service.finalize_on_session_end(s.id, db)
+        except Exception as exc:
+            # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
+            logger.exception("[session] audio finalize failed (best-effort): %s", exc)
         # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
         # 리포트 생성은 audio_service.finalize_on_session_end 의 Celery chain(STT→요약→리포트)에서
         # 비동기 처리된다. 여기서는 동기 생성하지 않아 세션 종료 API 응답을 지연시키지 않는다.
+    elif action == "cancel":
+        # SDD-101 B3: cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan)를 막는다.
+        _close_out_media_on_cancel(s, db)
 
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
@@ -1134,18 +1186,32 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = _get_session_for_participant(session_id, user_id, db)
 
-    # webrtc_room_id가 없으면 생성
+    # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
         s.webrtc_room_id = uuid.uuid4()
+        db.commit()
+        db.refresh(s)
 
-    # 상태 전이: scheduled → in_progress (host만 가능)
+    # SDD-101 B2: scheduled → in_progress 전이를 직접 대입(s.status=...) 대신 CAS UPDATE로.
+    # 직접 대입은 started_at·state_version 기록을 우회해 종료 시 has_data 판정이 깨졌다(BUG-2).
     if s.status == "scheduled" and s.host_id == _to_uuid(user_id):
-        s.status = "in_progress"
+        now = _now()
+        result = db.execute(
+            update(Session)
+            .where(Session.id == s.id, Session.status == "scheduled")
+            .values(
+                status="in_progress",
+                state_version=(s.state_version or 0) + 1,
+                started_at=case((Session.started_at.is_(None), now), else_=Session.started_at),
+            )
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
+        db.commit()
+        db.refresh(s)
     elif s.status not in ("in_progress", "paused"):
         raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
-
-    db.commit()
-    db.refresh(s)
 
     # LiveKit 토큰 발급
     room_name = str(s.webrtc_room_id)
