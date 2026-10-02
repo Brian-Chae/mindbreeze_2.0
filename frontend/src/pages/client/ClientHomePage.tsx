@@ -12,8 +12,11 @@ import {
 } from '../../lib/class/reminder';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 import { resolveReportGenerationStatus } from '../../lib/api/report-status';
+import { markRead } from '../../lib/api/notifications';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { SessionCard } from '../../components/session/SessionCard';
+import { InvitedSessionCard } from '../../components/client/InvitedSessionCard';
 
 type Counselor = { id: string; name: string; profile_image: string | null };
 
@@ -62,6 +65,8 @@ export default function ClientHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors: Counselor[] = user?.counselors ?? [];
+  const sessionInvites = useNotificationStore((s) => s.sessionInvites);
+  const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 
   // 데이터 / 필터 상태
   const [selectedCounselorId, setSelectedCounselorId] = useState<string>('all');
@@ -191,6 +196,42 @@ export default function ClientHomePage() {
     [counselors],
   );
 
+  // ── 초대된 클래스 ──────────────────────────────────────────────
+  const invitedSessionIds = useMemo(
+    () => new Set(sessionInvites.map((i) => i.sessionId)),
+    [sessionInvites],
+  );
+  const invitedSessions = useMemo(
+    () => sessions.filter((s) => invitedSessionIds.has(s.id)),
+    [sessions, invitedSessionIds],
+  );
+
+  // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
+  useEffect(() => {
+    if (sessionInvites.length === 0) return;
+    const missing = sessionInvites.some((inv) => !sessions.some((s) => s.id === inv.sessionId));
+    if (!missing) return;
+    let cancelled = false;
+    listSessions()
+      .then((res) => {
+        if (!cancelled) setSessions(res.sessions);
+      })
+      .catch(() => { /* 조용히 실패 — 다음 초대/재조회에서 복구 */ });
+    return () => { cancelled = true; };
+  }, [sessionInvites, sessions]);
+
+  const handleConfirmInvite = useCallback(
+    (sessionId: string) => {
+      const invite = sessionInvites.find((i) => i.sessionId === sessionId);
+      if (invite?.notificationId) {
+        void markRead(invite.notificationId).catch(() => { /* 조용히 실패 */ });
+      }
+      removeSessionInvite(sessionId);
+      navigate(`/app/sessions/${sessionId}`);
+    },
+    [sessionInvites, removeSessionInvite, navigate],
+  );
+
   // 캘린더 월 이동
   const handleShiftMonth = useCallback((direction: 1 | -1) => {
     setCurrentDate((prev) => {
@@ -260,6 +301,26 @@ export default function ClientHomePage() {
         </section>
       ) : (
         <>
+          {/* 초대된 클래스 — 신규 세션 초대를 강조해 확인 유도 */}
+          {invitedSessions.length > 0 && (
+            <section className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
+                <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {invitedSessions.map((s) => (
+                  <InvitedSessionCard
+                    key={s.id}
+                    session={s}
+                    counselorName={getCounselorName(s)}
+                    onConfirm={() => handleConfirmInvite(s.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* SDD-097: 다가오는 클래스 — 참여코드·준비물·시작시간을 홈에서 놓치지 않게 */}
           {upcomingClass && (
             <section

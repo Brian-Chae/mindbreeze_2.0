@@ -6,9 +6,12 @@ import { useNavigate } from 'react-router-dom';
 import { listSessions, type SessionDto } from '../../lib/api/session';
 import { listChatRooms, sendChatMessage, type ChatRoom } from '../../lib/api/chat';
 import { useAuthStore } from '../../stores/authStore';
+import { markRead } from '../../lib/api/notifications';
+import { useNotificationStore } from '../../stores/notificationStore';
 import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
+import { InvitedSessionCard } from '../../components/client/InvitedSessionCard';
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
 const COUNSELOR_COLORS = ['#5F0080', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
@@ -40,6 +43,8 @@ export default function ClientSessionListPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors = user?.counselors ?? [];
+  const sessionInvites = useNotificationStore((s) => s.sessionInvites);
+  const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +102,39 @@ export default function ClientSessionListPage() {
     });
     return map;
   }, [counselors]);
+
+  // ── 초대된 클래스 ──────────────────────────────────────────────
+  const invitedSessionIds = useMemo(
+    () => new Set(sessionInvites.map((i) => i.sessionId)),
+    [sessionInvites],
+  );
+  const invitedSessions = useMemo(
+    () => sessions.filter((s) => invitedSessionIds.has(s.id)),
+    [sessions, invitedSessionIds],
+  );
+
+  // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
+  useEffect(() => {
+    if (sessionInvites.length === 0) return;
+    const missing = sessionInvites.some((inv) => !sessions.some((s) => s.id === inv.sessionId));
+    if (!missing) return;
+    let cancelled = false;
+    listSessions()
+      .then((res) => {
+        if (!cancelled) setSessions(res.sessions);
+      })
+      .catch(() => { /* 조용히 실패 */ });
+    return () => { cancelled = true; };
+  }, [sessionInvites, sessions]);
+
+  const handleConfirmInvite = (sessionId: string): void => {
+    const invite = sessionInvites.find((i) => i.sessionId === sessionId);
+    if (invite?.notificationId) {
+      void markRead(invite.notificationId).catch(() => { /* 조용히 실패 */ });
+    }
+    removeSessionInvite(sessionId);
+    navigate(`/app/sessions/${sessionId}`);
+  };
 
   // 특정 날짜의 세션 목록
   const sessionsOnDay = (day: Date): SessionDto[] =>
@@ -239,6 +277,26 @@ export default function ClientSessionListPage() {
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#1F1F1F] text-white text-sm px-5 py-2.5 rounded-full shadow-lg animate-fade-in">
           {toast}
         </div>
+      )}
+
+      {/* 초대된 클래스 — 신규 세션 초대를 강조해 확인 유도 */}
+      {!loading && !error && invitedSessions.length > 0 && (
+        <section className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[17px] font-bold text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
+            <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {invitedSessions.map((s) => (
+              <InvitedSessionCard
+                key={s.id}
+                session={s}
+                counselorName={counselorNameMap[s.host_id] || undefined}
+                onConfirm={() => handleConfirmInvite(s.id)}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {!loading && !error && instantSessions.length > 0 && (

@@ -40,6 +40,8 @@ export function useNotificationSocket() {
       console.log('[WS] socket.io connected to', SOCKET_URL);
       useNotificationStore.getState().setWsConnected(true);
       fetch();
+      // 세션 초대 목록도 연결 시 새로고침 — 홈/세션 화면의 "초대된 클래스" 카드용
+      void useNotificationStore.getState().refreshSessionInvites();
     });
 
     socket.on('connect_error', (err) => {
@@ -55,6 +57,21 @@ export function useNotificationSocket() {
     socket.on('new_notification', (data: { id?: string; type?: string; title?: string; body?: string; extra?: NotificationExtra | null }) => {
       // 알림 도착 → unread count 갱신
       fetch();
+      // 세션 초대 알림 → 홈/세션 화면 "초대된 클래스" 카드에 실시간 반영
+      if (data.extra?.event_type === 'session_invited') {
+        const sessionId =
+          typeof data.extra.target_id === 'string'
+            ? data.extra.target_id
+            : typeof data.extra.session_id === 'string'
+              ? data.extra.session_id
+              : undefined;
+        if (sessionId) {
+          useNotificationStore.getState().addSessionInvite({
+            sessionId,
+            notificationId: data.id ?? '',
+          });
+        }
+      }
       const roomId = data.extra?.room_id;
       const { activeRoomId } = useChatStore.getState();
       const isViewingRoom = roomId && activeRoomId === roomId;
@@ -87,8 +104,9 @@ export function useNotificationSocket() {
       }
     });
 
-    // 최초 카운트
+    // 최초 카운트 + 초대 목록 (연결 전에도 초기 시드)
     fetch();
+    void useNotificationStore.getState().refreshSessionInvites();
 
     return () => {
       disposed = true;
