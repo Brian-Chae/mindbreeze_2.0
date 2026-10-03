@@ -229,19 +229,17 @@ function buttonByLabel(label: string): HTMLButtonElement {
 }
 
 describe('SelfCheckinPanel', () => {
-  it('사전(수업 전)·사후(수업 후) 각 3축 × 5단계 버튼을 렌더하고 선택 전에는 저장을 막는다', async () => {
+  it('사후(수업 후) 3축 × 5단계 버튼을 렌더하고 선택 전에는 저장을 막는다', async () => {
     await renderPanel();
     expect(container.querySelector('[data-testid="self-checkin"]')).not.toBeNull();
-    expect(container.textContent).toContain('오늘의 클래스는 어떠셨나요?');
-    expect(container.textContent).toContain('수업 전에는 어땠나요?');
-    expect(container.textContent).toContain('수업 후에는 어땠나요?');
+    expect(container.textContent).toContain('오늘 수업 이후 어떠신가요?');
+    // 수업 전 질문은 제거되었다
+    expect(container.textContent).not.toContain('수업 전에는 어땠나요?');
 
-    // 사전·사후 × 3축(집중·편안함·감정) × 5단계 = 30개
-    for (const phase of ['수업 전 ', '수업 후 ']) {
-      expect(container.querySelectorAll(`button[aria-label^="${phase}집중"]`).length).toBe(5);
-      expect(container.querySelectorAll(`button[aria-label^="${phase}편안함"]`).length).toBe(5);
-      expect(container.querySelectorAll(`button[aria-label^="${phase}감정"]`).length).toBe(5);
-    }
+    // 사후 3축(집중·편안함·감정) × 5단계 = 15개
+    expect(container.querySelectorAll('button[aria-label^="수업 후 집중"]').length).toBe(5);
+    expect(container.querySelectorAll('button[aria-label^="수업 후 편안함"]').length).toBe(5);
+    expect(container.querySelectorAll('button[aria-label^="수업 후 감정"]').length).toBe(5);
 
     const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '설문 남기기')!;
     expect(submit.disabled).toBe(true);
@@ -264,28 +262,6 @@ describe('SelfCheckinPanel', () => {
     expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
     expect(container.querySelector('[data-testid="self-checkin-done"]')).toBeNull();
     expect(onSubmitted).toHaveBeenCalled();
-  });
-
-  it('사전·사후 모두 남기면 after → before 순서로 2회 POST 한다(사전·사후 변화 저장)', async () => {
-    await renderPanel();
-
-    // 사전: 집중 3 · 편안함 2
-    await act(async () => buttonByLabel('수업 전 집중 3단계 보통').click());
-    await act(async () => buttonByLabel('수업 전 편안함 2단계 불편').click());
-    // 사후: 집중 4 · 감정 5
-    await act(async () => buttonByLabel('수업 후 집중 4단계 집중').click());
-    await act(async () => buttonByLabel('수업 후 감정 5단계 매우 긍정적').click());
-    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '설문 남기기')!;
-    await act(async () => submit.click());
-
-    const checkinCalls = calls.filter((call) => call.url.includes('/checkin'));
-    expect(checkinCalls).toHaveLength(2);
-    // 사후(수업 후)를 먼저 저장한다
-    expect(checkinCalls[0].body).toMatchObject({ phase: 'after', arousal: 4, valence: null, emotion: 5 });
-    // 사전(수업 전)을 이어 저장한다(사전 슬롯에는 소감을 싣지 않는다)
-    expect(checkinCalls[1].body).toMatchObject({ phase: 'before', arousal: 3, valence: 2, emotion: null, note: null });
-
-    expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
   });
 
   it('건너뛰기는 저장 호출 없이 패널을 숨기고 다시 묻지 않도록 기록한다', async () => {

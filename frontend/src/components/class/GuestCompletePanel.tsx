@@ -149,7 +149,7 @@ export function GuestCompletePanel({
           <div className="w-[4.5rem]" aria-hidden="true" />
         </header>
 
-        {/* 사전·사후 설문: 세션 직후 '오늘의 클래스는 어떠셨나요?'(수업 전·후 비교) — 리포트 신청 단계와 무관하게 항상 노출된다. */}
+        {/* 사후 설문: 세션 직후 '오늘 수업 이후 어떠신가요?' — 리포트 신청 단계와 무관하게 항상 노출된다. */}
         {sessionId && (
           <SelfCheckinPanel
             sessionId={sessionId}

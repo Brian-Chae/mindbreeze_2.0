@@ -1,7 +1,8 @@
-// 세션 종료 후 사전·사후 설문 — '오늘의 클래스는 어떠셨나요?'
+// 세션 종료 후 사후 설문 — '오늘 수업 이후 어떠신가요?'
 //
-// 수업 전(사전)과 수업 후(사후)를 같은 축(집중·편안함·감정)으로 물어 변화를 비교한다.
-// 완료 후에는 별도 카드 없이 종료 화면의 '수업이 종료되었습니다' 안내만 남긴다. 스킵 가능.
+// 수업 후 느낌을 집중·편안함·감정 3축으로 물어 리포트에 남긴다. 스킵 가능.
+// (수업 전 설문은 입장 전 체크인에서 이미 물었으므로 종료 화면에서는 묻지 않는다.)
+// 완료 후에는 별도 카드 없이 종료 화면의 '수업이 종료되었습니다' 안내만 남긴다.
 
 import { useState } from 'react';
 import { ApiError } from '../../lib/api/client';
@@ -99,7 +100,6 @@ export function SelfCheckinPanel({
   isLoggedIn,
   onSubmitted,
 }: SelfCheckinPanelProps) {
-  const [before, setBefore] = useState<MoodState>(EMPTY_MOOD);
   const [after, setAfter] = useState<MoodState>(EMPTY_MOOD);
   const [note, setNote] = useState('');
   const [phase, setPhase] = useState<'input' | 'done' | 'skipped'>(() => {
@@ -114,10 +114,8 @@ export function SelfCheckinPanel({
   const [error, setError] = useState<string | null>(null);
 
   const trimmedNote = note.trim();
-  const hasValue = hasMoodValue(before) || hasMoodValue(after);
+  const hasValue = hasMoodValue(after);
 
-  const setBeforeAxis = (key: AxisKey, value: SamValue): void =>
-    setBefore((prev) => ({ ...prev, [key]: value }));
   const setAfterAxis = (key: AxisKey, value: SamValue): void =>
     setAfter((prev) => ({ ...prev, [key]: value }));
 
@@ -139,19 +137,13 @@ export function SelfCheckinPanel({
 
   const handleSubmit = async (): Promise<void> => {
     if (!hasValue) {
-      setError('수업 전·후 중 최소 한 항목을 선택해 주세요.');
+      setError('수업 후 느낌을 최소 한 항목 선택해 주세요.');
       return;
     }
     setError(null);
     setIsSubmitting(true);
     try {
-      // 사후(수업 후)를 먼저, 사전(수업 전)은 남겼을 때만 저장해 '사전 → 사후' 변화를 만든다.
-      if (hasMoodValue(after)) {
-        await postPhase('after', after);
-      }
-      if (hasMoodValue(before)) {
-        await postPhase('before', before);
-      }
+      await postPhase('after', after);
       setPhase('done');
       onSubmitted?.();
     } catch (submitError) {
@@ -178,21 +170,11 @@ export function SelfCheckinPanel({
       data-testid="self-checkin"
       className="mx-auto mt-8 max-w-md rounded-2xl border border-[color:var(--mb-border,#E8D9EF)] bg-white p-5 text-left"
     >
-      <h2 className="text-base font-bold text-[color:var(--mb-label-70)]">오늘의 클래스는 어떠셨나요?</h2>
+      <h2 className="text-base font-bold text-[color:var(--mb-label-70)]">오늘 수업 이후 어떠신가요?</h2>
       <p className="mt-1 text-sm leading-6 text-[color:var(--mb-fg-muted)]">
-        수업 전과 수업 후를 비교할 수 있도록 두 번 기록해 주세요. 뇌파를 측정하지 않아도 이 기록은 리포트에 남습니다.
+        뇌파를 측정하지 않아도 이 기록은 리포트에 남습니다.
       </p>
 
-      <h3 className="mt-5 text-sm font-bold text-[color:var(--mb-label-70)]">수업 전에는 어땠나요?</h3>
-      <MoodAxes
-        mood={before}
-        onChange={setBeforeAxis}
-        idPrefix="checkin-before"
-        ariaPrefix="수업 전 "
-        disabled={isSubmitting}
-      />
-
-      <h3 className="mt-5 text-sm font-bold text-[color:var(--mb-label-70)]">수업 후에는 어땠나요?</h3>
       <MoodAxes
         mood={after}
         onChange={setAfterAxis}
