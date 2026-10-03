@@ -84,6 +84,13 @@ export interface ReportDto {
    */
   generation_status?: string | null;
   /**
+   * SDD-101 생성 실패 사유(50자 이하 코드·메시지).
+   * null이면 실패 아님. /reports 목록에서 실패 로그로 노출한다.
+   */
+  generation_error?: string | null;
+  /** SDD-101 생성 시작 시각(processing 진입 시각). */
+  generation_started_at?: string | null;
+  /**
    * quality 게이트 파생 신뢰도(서버).
    * number(0~1/0~100) 또는 quality/라벨 문자열.
    */

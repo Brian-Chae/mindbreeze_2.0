@@ -5,6 +5,7 @@ import { ReportSampleModal } from './ReportSamplePage';
 import { ReportDetailModal } from './ReportDetailModal';
 import AppShell from '../../components/layout/AppShell';
 import { ReportStatusChip } from '../../components/reports/ReportStatusBadge';
+import GenerationStatusBadge from '../../components/reports/GenerationStatusBadge';
 import {
   getAutoApprove,
   listReports,
@@ -339,6 +340,14 @@ export default function ReportListPage() {
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </td>
       <td className="px-5 py-3.5">
+        <GenerationStatusBadge
+          status={r.status}
+          generationStatus={r.generation_status}
+          generationError={r.generation_error}
+          generationStartedAt={r.generation_started_at}
+        />
+      </td>
+      <td className="px-5 py-3.5">
         <button
           type="button"
           onClick={(e) => {
@@ -375,6 +384,14 @@ export default function ReportListPage() {
       <div className="text-[12px] text-[#6F6F6F]">
         {sessionTypeLabel(r.session_type)} · {formatDate(reportDateIso(r))}
       </div>
+      <div className="mt-2">
+        <GenerationStatusBadge
+          status={r.status}
+          generationStatus={r.generation_status}
+          generationError={r.generation_error}
+          generationStartedAt={r.generation_started_at}
+        />
+      </div>
     </button>
   );
 
@@ -390,6 +407,7 @@ export default function ReportListPage() {
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">세션유형</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">날짜</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">상태</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생성 상태</th>
         <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">액션</th>
       </tr>
     </thead>
