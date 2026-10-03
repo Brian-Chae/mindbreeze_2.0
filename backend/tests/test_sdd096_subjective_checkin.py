@@ -76,7 +76,7 @@ def test_01_회원_체크인_저장_및_기록지_노출(client):
 
     res = client.post(
         _checkin_url(cls["id"]),
-        json={"phase": "after", "arousal": 2, "valence": 5, "note": "몸이 가벼워졌어요"},
+        json={"phase": "after", "arousal": 2, "valence": 5, "emotion": 4, "note": "몸이 가벼워졌어요"},
         headers=member["h"],
     )
     assert res.status_code == 200, res.text
@@ -84,7 +84,7 @@ def test_01_회원_체크인_저장_및_기록지_노출(client):
     assert body["phase"] == "after"
     assert body["participant_id"] == pid
     slot = body["subjective_state"]["after"]
-    assert slot["arousal"] == 2 and slot["valence"] == 5
+    assert slot["arousal"] == 2 and slot["valence"] == 5 and slot["emotion"] == 4
     assert slot["note"] == "몸이 가벼워졌어요"
     assert slot["recorded_at"]
     assert body["subjective_state"]["before"] is None
@@ -93,6 +93,7 @@ def test_01_회원_체크인_저장_및_기록지_노출(client):
     rec = client.get(f"/api/v1/sessions/{cls['id']}/record", headers=member["h"]).json()
     assert rec["subjective_state"]["scope"] == "participant"
     assert rec["subjective_state"]["after"]["valence"] == 5
+    assert rec["subjective_state"]["after"]["emotion"] == 4
 
 
 def test_02_밴드미착용_레코드없음_체크인시_레코드_생성(client):
@@ -144,7 +145,7 @@ def test_04_범위밖_값은_422(client):
     member = _register(client, "sdd096d-member@test.com", role="client")
     _join_member(client, cls, member)
 
-    for bad in ({"arousal": 6}, {"arousal": 0}, {"valence": 9}):
+    for bad in ({"arousal": 6}, {"arousal": 0}, {"valence": 9}, {"emotion": 6}):
         res = client.post(_checkin_url(cls["id"]), json=bad, headers=member["h"])
         assert res.status_code == 422, f"{bad} → {res.status_code}"
 

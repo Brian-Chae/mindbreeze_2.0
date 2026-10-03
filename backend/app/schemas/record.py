@@ -110,6 +110,7 @@ class CheckinRequest(BaseModel):
     phase: Literal["before", "after"] = "after"
     arousal: int | None = Field(default=None, ge=1, le=5)
     valence: int | None = Field(default=None, ge=1, le=5)
+    emotion: int | None = Field(default=None, ge=1, le=5)
     note: str | None = Field(default=None, max_length=200)
     participant_id: str | None = None
     participant_token: str | None = None
@@ -129,8 +130,8 @@ class CheckinRequest(BaseModel):
 
         입장 전 체크인에서는 '상담사에게 전할 말'만 남기는 경우도 허용한다.
         """
-        if self.arousal is None and self.valence is None and not self.note:
-            raise ValueError("각성·정서 중 최소 한 축을 선택하거나 메시지를 입력해 주세요")
+        if self.arousal is None and self.valence is None and self.emotion is None and not self.note:
+            raise ValueError("최소 한 항목을 선택하거나 메시지를 입력해 주세요")
         return self
 
 
@@ -139,6 +140,7 @@ class SubjectiveSlot(BaseModel):
 
     arousal: int | None = Field(default=None, ge=1, le=5)
     valence: int | None = Field(default=None, ge=1, le=5)
+    emotion: int | None = Field(default=None, ge=1, le=5)
     note: str | None = None
     recorded_at: datetime | None = None
 

@@ -137,6 +137,7 @@ export interface ParticipantChangedEvent {
 export interface WaitingRoomCheckin {
   arousal: number | null;
   valence: number | null;
+  emotion: number | null;
   note: string | null;
 }
 

@@ -1,8 +1,8 @@
-// 입장 전 체크인 — 대기실에서 기분(SAM 2축) + 상담사에게 전할 말을 가볍게 남긴다.
+// 입장 전 체크인(사전) — 대기실에서 수업 전 기분(집중·편안함·감정 3축) + 상담사에게 전할 말을 남긴다.
 //
-// 개선 3 대기실의 기기 단계별 셀프체크를 대신하는 핵심 입력. 저장은 REST(/sessions/{id}/checkin,
-// phase='before')가 하고, onSubmitted 로 요약을 부모(대기실)에 전달해 WS 대기실 이벤트로
-// 상담사 화면에 실시간 흘린다. 스킵 가능(입장을 막지 않는다).
+// 사후 설문(수업 후)과 동일한 3축을 써서 '수업 전 → 수업 후' 변화를 비교할 수 있게 한다.
+// 저장은 REST(/sessions/{id}/checkin, phase='before')가 하고, onSubmitted 로 요약을 부모(대기실)에
+// 전달해 WS 대기실 이벤트로 상담사 화면에 실시간 흘린다. 스킵 가능(입장을 막지 않는다).
 
 import { useState } from 'react';
 import { ApiError } from '../../lib/api/client';
@@ -24,6 +24,9 @@ interface PreCheckinPanelProps {
   onSkipped?: () => void;
 }
 
+type AxisKey = 'arousal' | 'valence' | 'emotion';
+type MoodState = Record<AxisKey, SamValue | null>;
+
 const NOTE_MAX = 200;
 
 function errorMessage(error: unknown): string {
@@ -43,15 +46,19 @@ export function PreCheckinPanel({
   onSubmitted,
   onSkipped,
 }: PreCheckinPanelProps) {
-  const [arousal, setArousal] = useState<SamValue | null>(null);
-  const [valence, setValence] = useState<SamValue | null>(null);
+  const [mood, setMood] = useState<MoodState>({ arousal: null, valence: null, emotion: null });
   const [note, setNote] = useState('');
   const [phase, setPhase] = useState<'input' | 'done' | 'skipped'>('input');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const trimmedNote = note.trim();
-  const hasValue = arousal !== null || valence !== null || trimmedNote.length > 0;
+  const hasValue =
+    mood.arousal !== null || mood.valence !== null || mood.emotion !== null || trimmedNote.length > 0;
+
+  const setAxis = (key: AxisKey, value: SamValue): void => {
+    setMood((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleSubmit = async (): Promise<void> => {
     if (!hasValue) {
@@ -65,8 +72,9 @@ export function PreCheckinPanel({
         sessionId,
         {
           phase: 'before',
-          arousal,
-          valence,
+          arousal: mood.arousal,
+          valence: mood.valence,
+          emotion: mood.emotion,
           note: trimmedNote || null,
           participant_id: participantId,
           participant_token: isLoggedIn ? null : participantToken,
@@ -74,7 +82,12 @@ export function PreCheckinPanel({
         { skipAuth: !isLoggedIn },
       );
       setPhase('done');
-      onSubmitted?.({ arousal, valence, note: trimmedNote || null });
+      onSubmitted?.({
+        arousal: mood.arousal,
+        valence: mood.valence,
+        emotion: mood.emotion,
+        note: trimmedNote || null,
+      });
     } catch (submitError) {
       setError(errorMessage(submitError));
     } finally {
@@ -99,9 +112,16 @@ export function PreCheckinPanel({
           <h2 className="text-xl font-semibold tracking-tight text-white">지금, 어떤 기분인가요?</h2>
         </div>
         <p className="mt-3 text-sm leading-6 text-white/70">
-          {arousal !== null || valence !== null ? (
+          {mood.arousal !== null || mood.valence !== null || mood.emotion !== null ? (
             <>
-              기분 · 각성 {arousal ?? '-'} · 정서 {valence ?? '-'}
+              기분{' '}
+              {SAM_AXES.map((axis) =>
+                mood[axis.key] !== null ? (
+                  <span key={axis.key} className="mr-1.5 inline-block">
+                    {axis.label} {mood[axis.key]}
+                  </span>
+                ) : null,
+              )}
               {trimmedNote ? <span className="block">상담사에게 전할 말: “{trimmedNote}”</span> : null}
             </>
           ) : trimmedNote ? (
@@ -118,27 +138,22 @@ export function PreCheckinPanel({
         <h2 className="text-xl font-semibold tracking-tight text-white">지금, 어떤 기분인가요?</h2>
       </div>
       <p className="mt-2 text-[13px] leading-6 text-white/70">
-        지금 기분을 가볍게 남겨 주세요. 상담사가 입장 전에 확인하고 세션을 준비합니다.
+        수업 전 기분을 가볍게 남겨 주세요. 수업 후 느낌과 비교해 드립니다.
       </p>
 
       <div className="mt-4 space-y-4">
         {SAM_AXES.map((axis) => (
           <fieldset key={axis.key}>
-            <legend className="text-[13px] font-medium text-white/70">
-              {axis.label === '각성' ? '지금 몸의 긴장도(각성)' : '지금 기분(정서)'}
-            </legend>
+            <legend className="text-[13px] font-medium text-white/70">지금 {axis.label}</legend>
             <div className="mt-2 grid grid-cols-5 gap-1.5">
               {SAM_VALUES.map((step) => {
-                const selected =
-                  (axis.key === 'arousal' ? arousal : valence) === step;
+                const selected = mood[axis.key] === step;
                 return (
                   <button
                     key={step}
                     type="button"
                     aria-pressed={selected}
-                    onClick={() =>
-                      axis.key === 'arousal' ? setArousal(step) : setValence(step)
-                    }
+                    onClick={() => setAxis(axis.key, step)}
                     disabled={isSubmitting}
                     className={`flex flex-col items-center justify-center rounded-xl border py-2 text-base font-bold transition ${
                       selected

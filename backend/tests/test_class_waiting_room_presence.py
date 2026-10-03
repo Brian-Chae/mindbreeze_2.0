@@ -199,7 +199,7 @@ def test_닉네임_정리_공백_길이_비문자열(monkeypatch):
 
 
 def test_체크인_요약_정리_및_전달(monkeypatch):
-    """입장 전 체크인(SAM 2축 + 메시지) 요약이 정리되어 전달된다. 전부 비면 None."""
+    """입장 전 체크인(3축: 집중·편안함·감정 + 메시지) 요약이 정리되어 전달된다. 전부 비면 None."""
     fake = _wire(monkeypatch, {"sid-1": _participant_session()})
     fake.call(
         "waiting_room",
@@ -208,11 +208,11 @@ def test_체크인_요약_정리_및_전달(monkeypatch):
             "session_id": "sess-1",
             "action": "join",
             "nickname": "민지",
-            "checkin": {"arousal": 4, "valence": 2, "note": "  목이   불편해요  "},
+            "checkin": {"arousal": 4, "valence": 2, "emotion": 3, "note": "  목이   불편해요  "},
         },
     )
     e = fake.events("waiting_room_changed")[0]["data"]
-    assert e["checkin"] == {"arousal": 4, "valence": 2, "note": "목이 불편해요"}
+    assert e["checkin"] == {"arousal": 4, "valence": 2, "emotion": 3, "note": "목이 불편해요"}
 
     # 범위 밖·비정상 값은 걸러내고, 세 값이 모두 비면 checkin 은 None 이 된다
     fake.call(

@@ -1,21 +1,17 @@
-// SDD-096 — 세션 직후 1탭 셀프 체크인 패널 (SAM 2축 5단계 + 선택형 한 줄 소감)
+// 세션 종료 후 사전·사후 설문 — '오늘의 클래스는 어떠셨나요?'
 //
-// 문제: 리포트에 EEG 객관 지표만 있어 밴드 미착용 회원은 남는 기록이 거의 없다.
-// 해결: 종료 화면에서 각성·정서 2축을 1탭씩 남기게 하고, 선택형 소감·수업 전 예상을
-//       함께 저장해 리포트의 '수업 전 예상 ↔ 수업 후' 대비로 연계한다. 스킵 가능.
+// 수업 전(사전)과 수업 후(사후)를 같은 축(집중·편안함·감정)으로 물어 변화를 비교한다.
+// 완료 후에는 별도 카드 없이 종료 화면의 '수업이 종료되었습니다' 안내만 남긴다. 스킵 가능.
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ApiError } from '../../lib/api/client';
 import {
   CHECKIN_SKIP_STORAGE_KEY,
   SAM_AXES,
   SAM_VALUES,
-  buildSubjectiveComparison,
-  parseSubjectiveState,
   submitCheckin,
   type CheckinPhase,
   type SamValue,
-  type SubjectiveStateDto,
 } from '../../lib/api/checkin';
 
 interface SelfCheckinPanelProps {
@@ -24,74 +20,76 @@ interface SelfCheckinPanelProps {
   participantToken: string | null;
   /** 로그인 회원이면 액세스 토큰으로 본인 확인, 게스트면 participant_token 소유 증명 */
   isLoggedIn: boolean;
-  /** EEG 두뇌휴식도 — 밴드 미착용이면 null(주관 값만 병기) */
+  /** EEG 두뇌휴식도 — 완료 카드 제거로 현재 미사용(호환 유지) */
   relaxationIndex?: number | null;
-  /** 체크인 완료 통지 — 종료 화면이 완료 상태를 유지/안내하는 데 쓴다 */
-  onSubmitted?: (state: SubjectiveStateDto) => void;
+  /** 설문 제출 통지 */
+  onSubmitted?: () => void;
 }
 
-interface AxisPickerProps {
-  axisKey: 'arousal' | 'valence';
-  value: SamValue | null;
-  onChange: (next: SamValue) => void;
+type AxisKey = 'arousal' | 'valence' | 'emotion';
+type MoodState = Record<AxisKey, SamValue | null>;
+
+const EMPTY_MOOD: MoodState = { arousal: null, valence: null, emotion: null };
+
+function hasMoodValue(mood: MoodState): boolean {
+  return mood.arousal !== null || mood.valence !== null || mood.emotion !== null;
+}
+
+interface MoodAxesProps {
+  mood: MoodState;
+  onChange: (key: AxisKey, value: SamValue) => void;
   idPrefix: string;
-  disabled?: boolean;
-  /** 같은 축이 두 시점(수업 전/후)에 나타나므로 접근성 라벨을 구분한다 */
-  ariaLabelPrefix?: string;
+  ariaPrefix: string;
+  disabled: boolean;
 }
 
-function AxisPicker({
-  axisKey,
-  value,
-  onChange,
-  idPrefix,
-  disabled,
-  ariaLabelPrefix = '',
-}: AxisPickerProps) {
-  const axis = SAM_AXES.find((item) => item.key === axisKey);
-  if (!axis) return null;
+function MoodAxes({ mood, onChange, idPrefix, ariaPrefix, disabled }: MoodAxesProps) {
   return (
-    <fieldset className="mt-4">
-      <legend className="text-sm font-bold text-[color:var(--mb-label-70)]">{axis.label}</legend>
-      {/* 좁은 화면(<360px)에서는 3+2 두 줄, 넓은 화면에서는 5단계 한 줄로 배치한다 */}
-      <div className="mt-2 grid grid-cols-3 gap-1.5 min-[360px]:grid-cols-5 min-[360px]:gap-2">
-        {SAM_VALUES.map((step) => {
-          const selected = value === step;
-          return (
-            <button
-              key={step}
-              type="button"
-              id={`${idPrefix}-${axisKey}-${step}`}
-              aria-pressed={selected}
-              aria-label={`${ariaLabelPrefix}${axis.label} ${step}단계 ${axis.steps[step]}`}
-              disabled={disabled}
-              onClick={() => onChange(step)}
-              className={`flex h-14 flex-col items-center justify-center rounded-xl border text-base font-bold transition ${
-                selected
-                  ? 'border-transparent bg-[color:var(--mb-primary,#5F0080)] text-white'
-                  : 'border-[color:var(--mb-border,#E8D9EF)] bg-white text-[color:var(--mb-label-70)] hover:border-[color:var(--mb-primary,#5F0080)]'
-              } disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <span aria-hidden="true">{step}</span>
-              <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80" aria-hidden="true">
-                {axis.steps[step]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </fieldset>
+    <>
+      {SAM_AXES.map((axis) => (
+        <fieldset key={axis.key} className="mt-4">
+          <legend className="text-sm font-bold text-[color:var(--mb-label-70)]">{axis.label}</legend>
+          {/* 좁은 화면(<360px)에서는 3+2 두 줄, 넓은 화면에서는 5단계 한 줄로 배치한다 */}
+          <div className="mt-2 grid grid-cols-3 gap-1.5 min-[360px]:grid-cols-5 min-[360px]:gap-2">
+            {SAM_VALUES.map((step) => {
+              const selected = mood[axis.key] === step;
+              return (
+                <button
+                  key={step}
+                  type="button"
+                  id={`${idPrefix}-${axis.key}-${step}`}
+                  aria-pressed={selected}
+                  aria-label={`${ariaPrefix}${axis.label} ${step}단계 ${axis.steps[step]}`}
+                  disabled={disabled}
+                  onClick={() => onChange(axis.key, step)}
+                  className={`flex h-14 flex-col items-center justify-center rounded-xl border text-base font-bold transition ${
+                    selected
+                      ? 'border-transparent bg-[color:var(--mb-primary,#5F0080)] text-white'
+                      : 'border-[color:var(--mb-border,#E8D9EF)] bg-white text-[color:var(--mb-label-70)] hover:border-[color:var(--mb-primary,#5F0080)]'
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  <span aria-hidden="true">{step}</span>
+                  <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80" aria-hidden="true">
+                    {axis.steps[step]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      ))}
+    </>
   );
 }
 
 function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 403) return '클래스 참여 확인에 실패해 체크인을 저장하지 못했습니다.';
-    if (error.status === 409) return '종료된 클래스에서만 체크인할 수 있습니다.';
-    if (error.status === 422) return '체크인 값을 다시 확인해 주세요.';
+    if (error.status === 403) return '클래스 참여 확인에 실패해 설문을 저장하지 못했습니다.';
+    if (error.status === 409) return '종료된 클래스에서만 설문에 응답할 수 있습니다.';
+    if (error.status === 422) return '설문 값을 다시 확인해 주세요.';
     if (error.message) return error.message;
   }
-  return '체크인 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+  return '설문 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
 export function SelfCheckinPanel({
@@ -99,15 +97,11 @@ export function SelfCheckinPanel({
   participantId,
   participantToken,
   isLoggedIn,
-  relaxationIndex = null,
   onSubmitted,
 }: SelfCheckinPanelProps) {
-  const [arousal, setArousal] = useState<SamValue | null>(null);
-  const [valence, setValence] = useState<SamValue | null>(null);
+  const [before, setBefore] = useState<MoodState>(EMPTY_MOOD);
+  const [after, setAfter] = useState<MoodState>(EMPTY_MOOD);
   const [note, setNote] = useState('');
-  const [showBefore, setShowBefore] = useState(false);
-  const [beforeArousal, setBeforeArousal] = useState<SamValue | null>(null);
-  const [beforeValence, setBeforeValence] = useState<SamValue | null>(null);
   const [phase, setPhase] = useState<'input' | 'done' | 'skipped'>(() => {
     // 이미 건너뛴 세션이면 다시 묻지 않는다(새로고침 포함).
     try {
@@ -118,65 +112,48 @@ export function SelfCheckinPanel({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState<SubjectiveStateDto | null>(null);
 
   const trimmedNote = note.trim();
-  const hasAfterValue = arousal !== null || valence !== null;
-  const hasBeforeValue = beforeArousal !== null || beforeValence !== null;
-  const comparison = useMemo(
-    () => buildSubjectiveComparison(saved?.before ?? null, saved?.after ?? null),
-    [saved],
-  );
+  const hasValue = hasMoodValue(before) || hasMoodValue(after);
 
-  const postPhase = async (target: CheckinPhase): Promise<SubjectiveStateDto | null> => {
-    const res = await submitCheckin(
+  const setBeforeAxis = (key: AxisKey, value: SamValue): void =>
+    setBefore((prev) => ({ ...prev, [key]: value }));
+  const setAfterAxis = (key: AxisKey, value: SamValue): void =>
+    setAfter((prev) => ({ ...prev, [key]: value }));
+
+  const postPhase = async (target: CheckinPhase, mood: MoodState): Promise<void> => {
+    await submitCheckin(
       sessionId,
       {
         phase: target,
-        arousal: target === 'after' ? arousal : beforeArousal,
-        valence: target === 'after' ? valence : beforeValence,
-        note: target === 'after' ? (trimmedNote || null) : null,
+        arousal: mood.arousal,
+        valence: mood.valence,
+        emotion: mood.emotion,
+        note: target === 'after' ? trimmedNote || null : null,
         participant_id: participantId,
         participant_token: isLoggedIn ? null : participantToken,
       },
       { skipAuth: !isLoggedIn },
     );
-    return parseSubjectiveState(res.subjective_state);
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!hasAfterValue) {
-      setError('지금 느낌을 각성·정서 중 최소 한 축 선택해 주세요.');
+    if (!hasValue) {
+      setError('수업 전·후 중 최소 한 항목을 선택해 주세요.');
       return;
     }
     setError(null);
     setIsSubmitting(true);
     try {
-      const afterState = await postPhase('after');
-      // 수업 전 예상은 선택 — 남겼을 때만 추가 저장해 '예상 ↔ 결과' 대비를 만든다.
-      if (hasBeforeValue) {
-        await postPhase('before');
+      // 사후(수업 후)를 먼저, 사전(수업 전)은 남겼을 때만 저장해 '사전 → 사후' 변화를 만든다.
+      if (hasMoodValue(after)) {
+        await postPhase('after', after);
       }
-      const merged: SubjectiveStateDto = {
-        scope: 'participant',
-        before: hasBeforeValue
-          ? {
-              arousal: beforeArousal,
-              valence: beforeValence,
-              note: null,
-              recorded_at: afterState?.before?.recorded_at ?? null,
-            }
-          : null,
-        after: afterState?.after ?? {
-          arousal,
-          valence,
-          note: trimmedNote || null,
-          recorded_at: null,
-        },
-      };
-      setSaved(merged);
+      if (hasMoodValue(before)) {
+        await postPhase('before', before);
+      }
       setPhase('done');
-      onSubmitted?.(merged);
+      onSubmitted?.();
     } catch (submitError) {
       setError(errorMessage(submitError));
     } finally {
@@ -185,7 +162,6 @@ export function SelfCheckinPanel({
   };
 
   const handleSkip = (): void => {
-    // 스킵은 존중한다 — 이 브라우저에서 다시 묻지 않도록 기록만 남긴다.
     try {
       window.localStorage.setItem(CHECKIN_SKIP_STORAGE_KEY, sessionId);
     } catch {
@@ -194,58 +170,34 @@ export function SelfCheckinPanel({
     setPhase('skipped');
   };
 
-  if (phase === 'skipped') return null;
-
-  if (phase === 'done') {
-    return (
-      <section
-        data-testid="self-checkin-done"
-        className="mx-auto mt-8 max-w-md rounded-2xl border border-[color:var(--mb-border,#E8D9EF)] bg-white p-5 text-left"
-      >
-        <h2 className="text-base font-bold text-[color:var(--mb-label-70)]">체크인을 남겼어요</h2>
-        <p className="mt-2 text-sm leading-6 text-[color:var(--mb-fg-muted)]">
-          {comparison.hasBefore
-            ? comparison.summary
-            : saved?.after?.arousal != null || saved?.after?.valence != null
-              ? `수업 후 · 각성 ${saved?.after?.arousal ?? '-'} · 정서 ${saved?.after?.valence ?? '-'}`
-              : '수업 후 느낌을 기록했습니다.'}
-        </p>
-        {saved?.after?.note && (
-          <p className="mt-2 rounded-xl bg-[color:var(--mb-purple-cream,#F5EDFC)] px-4 py-3 text-sm text-[color:var(--mb-label-70)]">
-            “{saved.after.note}”
-          </p>
-        )}
-        <p className="mt-3 text-xs leading-5 text-[color:var(--mb-fg-muted)]">
-          {relaxationIndex !== null
-            ? `두뇌휴식도 ${relaxationIndex} 와 함께 리포트에 표시됩니다.`
-            : 'LINK BAND 미착용 세션이라 주관 기록만 리포트에 표시됩니다.'}
-        </p>
-      </section>
-    );
-  }
+  // 스킵·완료 모두 카드 없이 숨긴다 — 종료 화면의 '수업이 종료되었습니다' 안내만 남긴다.
+  if (phase === 'skipped' || phase === 'done') return null;
 
   return (
     <section
       data-testid="self-checkin"
       className="mx-auto mt-8 max-w-md rounded-2xl border border-[color:var(--mb-border,#E8D9EF)] bg-white p-5 text-left"
     >
-      <h2 className="text-base font-bold text-[color:var(--mb-label-70)]">지금 어떤가요?</h2>
+      <h2 className="text-base font-bold text-[color:var(--mb-label-70)]">오늘의 클래스는 어떠셨나요?</h2>
       <p className="mt-1 text-sm leading-6 text-[color:var(--mb-fg-muted)]">
-        한 번만 눌러 주세요. 뇌파를 측정하지 않아도 이 기록은 리포트에 남습니다.
+        수업 전과 수업 후를 비교할 수 있도록 두 번 기록해 주세요. 뇌파를 측정하지 않아도 이 기록은 리포트에 남습니다.
       </p>
 
-      <AxisPicker
-        axisKey="arousal"
-        value={arousal}
-        onChange={setArousal}
-        idPrefix="checkin"
+      <h3 className="mt-5 text-sm font-bold text-[color:var(--mb-label-70)]">수업 전에는 어땠나요?</h3>
+      <MoodAxes
+        mood={before}
+        onChange={setBeforeAxis}
+        idPrefix="checkin-before"
+        ariaPrefix="수업 전 "
         disabled={isSubmitting}
       />
-      <AxisPicker
-        axisKey="valence"
-        value={valence}
-        onChange={setValence}
-        idPrefix="checkin"
+
+      <h3 className="mt-5 text-sm font-bold text-[color:var(--mb-label-70)]">수업 후에는 어땠나요?</h3>
+      <MoodAxes
+        mood={after}
+        onChange={setAfterAxis}
+        idPrefix="checkin-after"
+        ariaPrefix="수업 후 "
         disabled={isSubmitting}
       />
 
@@ -262,40 +214,6 @@ export function SelfCheckinPanel({
         className="mt-2 w-full rounded-xl border border-[color:var(--mb-border,#E8D9EF)] bg-white px-4 py-3 text-sm text-[color:var(--mb-label-70)] outline-none focus:border-[color:var(--mb-primary,#5F0080)]"
       />
 
-      <button
-        type="button"
-        onClick={() => setShowBefore((prev) => !prev)}
-        aria-expanded={showBefore}
-        disabled={isSubmitting}
-        className="mt-4 text-xs font-semibold text-[color:var(--mb-fg-muted)] underline"
-      >
-        {showBefore ? '수업 전 예상 접기' : '수업 전 예상도 남기기 (선택)'}
-      </button>
-
-      {showBefore && (
-        <div data-testid="checkin-before" className="mt-2 rounded-xl bg-[color:var(--mb-purple-cream,#F5EDFC)] p-4">
-          <p className="text-xs leading-5 text-[color:var(--mb-fg-muted)]">
-            수업 전에 기대한 느낌을 함께 남기면 리포트에서 ‘수업 전 예상 ↔ 수업 후’를 비교해 볼 수 있어요.
-          </p>
-          <AxisPicker
-            axisKey="arousal"
-            value={beforeArousal}
-            onChange={setBeforeArousal}
-            idPrefix="checkin-before"
-            ariaLabelPrefix="수업 전 "
-            disabled={isSubmitting}
-          />
-          <AxisPicker
-            axisKey="valence"
-            value={beforeValence}
-            onChange={setBeforeValence}
-            idPrefix="checkin-before"
-            ariaLabelPrefix="수업 전 "
-            disabled={isSubmitting}
-          />
-        </div>
-      )}
-
       {error && (
         <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
           {error}
@@ -306,10 +224,10 @@ export function SelfCheckinPanel({
         <button
           type="button"
           onClick={() => void handleSubmit()}
-          disabled={isSubmitting || !hasAfterValue}
+          disabled={isSubmitting || !hasValue}
           className="mb-btn h-[48px] flex-1 justify-center rounded-xl px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? '저장 중...' : '체크인 남기기'}
+          {isSubmitting ? '저장 중...' : '설문 남기기'}
         </button>
         <button
           type="button"

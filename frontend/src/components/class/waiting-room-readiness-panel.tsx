@@ -55,7 +55,7 @@ export function WaitingRoomReadinessPanel({ sessionId, entries, isConnected }: W
         return <li key={entry.participantId} className={`waiting-readiness-person rounded-xl border p-3 ${count < 3 ? 'border-[#dcb5ee]/30 bg-[#dcb5ee]/10' : 'border-white/10'}`}>
           <div className="waiting-readiness-name flex items-center justify-between gap-3"><p className="min-w-0 break-words text-sm">{count < 3 && <span aria-hidden="true" className="mr-2 text-[#F2A93B]">●</span>}{entry.nickname || '참가자'}</p><span className="waiting-readiness-count text-xs text-[#dcb5ee]">{count}/3</span></div>
           <div className="waiting-readiness-badges mt-3 grid grid-cols-3 gap-2">{steps.map(step => <span key={step.key} className={`rounded-lg border px-1 py-1.5 text-center text-xs ${readiness[step.key] ? 'border-[#dcb5ee]/30 bg-[#dcb5ee]/10 text-[#F7F4F0]' : 'border-white/10 text-[#bcaec5]'}`}><span aria-hidden="true">{readiness[step.key] ? '✓' : '○'}</span> {step.label}<span className="sr-only"> {readiness[step.key] ? '확인 완료' : '확인 전'}</span></span>)}</div>
-          {entry.checkin && <div className="waiting-readiness-checkin mt-3"><CheckinSummary arousal={entry.checkin.arousal} valence={entry.checkin.valence} note={entry.checkin.note} /></div>}
+          {entry.checkin && <div className="waiting-readiness-checkin mt-3"><CheckinSummary arousal={entry.checkin.arousal} valence={entry.checkin.valence} emotion={entry.checkin.emotion} note={entry.checkin.note} /></div>}
         </li>;
       })}</ul>
       <p className="mt-4 text-xs leading-5 text-[#bcaec5]">✓ 확인 완료 (건너뛰기·미사용 포함)　○ 확인 전</p>

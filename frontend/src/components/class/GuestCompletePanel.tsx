@@ -149,8 +149,7 @@ export function GuestCompletePanel({
           <div className="w-[4.5rem]" aria-hidden="true" />
         </header>
 
-        {/* SDD-096: 세션 직후 1탭 셀프 체크인 — 리포트 신청 단계와 무관하게 항상 노출되고,
-            리포트의 '수업 전 예상 ↔ 수업 후' 대비로 연계된다. */}
+        {/* 사전·사후 설문: 세션 직후 '오늘의 클래스는 어떠셨나요?'(수업 전·후 비교) — 리포트 신청 단계와 무관하게 항상 노출된다. */}
         {sessionId && (
           <SelfCheckinPanel
             sessionId={sessionId}

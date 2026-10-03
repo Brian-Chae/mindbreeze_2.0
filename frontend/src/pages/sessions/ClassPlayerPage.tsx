@@ -1754,6 +1754,7 @@ export default function ClassPlayerPage() {
                       <CheckinSummary
                         arousal={entry.checkin.arousal}
                         valence={entry.checkin.valence}
+                        emotion={entry.checkin.emotion}
                         note={entry.checkin.note}
                       />
                     </div>

@@ -1,16 +1,12 @@
-// SDD-096 — 내담자 리포트: '수업 전 예상 ↔ 수업 후' 주관 대비 + EEG 두뇌휴식도 병기
+// 내담자 리포트: '수업 전 → 수업 후' 사전·사후 설문(집중·편안함·감정 3축) 변화 + EEG 두뇌휴식도 병기
 //
+// 사전(before)·사후(after)가 같은 축이므로 차이(delta)를 보여 변화를 읽게 한다.
 // 밴드 미착용(EEG not_measured) 세션은 주관 값만 보여준다 — 없는 지표를 해석하지 않는다.
 
-import {
-  SAM_AXES,
-  buildSubjectiveComparison,
-  type SubjectiveSlotDto,
-  type SubjectiveStateDto,
-} from '../../lib/api/checkin';
+import { SAM_AXES, type SubjectiveStateDto } from '../../lib/api/checkin';
 
 interface SubjectiveCheckinCardProps {
-  /** 참여자 스코프 주관 상태(셀프 체크인). 미입력이면 부모가 카드를 마운트하지 않는다. */
+  /** 참여자 스코프 주관 상태(사전·사후 설문). 미입력이면 부모가 카드를 마운트하지 않는다. */
   subjective: SubjectiveStateDto;
   /** 두뇌휴식도(relaxation_score) — 미측정이면 null */
   relaxationScore?: number | null;
@@ -20,43 +16,53 @@ interface SubjectiveCheckinCardProps {
   eegMeasured?: boolean;
 }
 
-function AxisRow({ axisKey, before, after }: {
-  axisKey: 'arousal' | 'valence';
+type AxisKey = 'arousal' | 'valence' | 'emotion';
+
+function AxisDeltaRow({
+  axisKey,
+  before,
+  after,
+}: {
+  axisKey: AxisKey;
   before: number | null;
   after: number | null;
 }) {
   const axis = SAM_AXES.find((item) => item.key === axisKey);
-  if (!axis) return null;
-  const hasDelta = before !== null && after !== null;
-  const delta = hasDelta ? after - before : null;
+  if (!axis || (before === null && after === null)) return null;
+
+  const delta = before !== null && after !== null ? after - before : null;
   const deltaLabel = delta === null ? null : delta > 0 ? `+${delta}` : `${delta}`;
 
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-[#EFEFEF] bg-white px-4 py-3">
-      <div className="min-w-0">
-        <p className="text-[12px] font-semibold text-[#6F6F6F]">{axis.label}</p>
-        <p className="mt-1 text-[13px] text-[#1F1F1F]">
-          {before === null ? (
-            <span className="text-[#9B9B9B]">수업 전 예상 없음</span>
-          ) : (
-            <span>예상 {before}단계</span>
-          )}
-          <span aria-hidden="true" className="mx-2 text-[#9B9B9B]">→</span>
-          {after === null ? (
-            <span className="text-[#9B9B9B]">수업 후 기록 없음</span>
-          ) : (
-            <span className="font-bold">수업 후 {after}단계</span>
-          )}
-        </p>
+      <p className="text-[12px] font-semibold text-[#6F6F6F]">{axis.label}</p>
+      <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
+        {before !== null && (
+          <span className="text-[12px] text-[#9B9B9B]">
+            수업 전 <span className="font-bold text-[#1F1F1F]">{before}단계</span>
+          </span>
+        )}
+        {before !== null && after !== null && <span className="text-[#9B9B9B]">→</span>}
+        {after !== null && (
+          <span className="text-[12px] text-[#9B9B9B]">
+            수업 후 <span className="font-bold text-[#1F1F1F]">{after}단계</span>
+            <span className="ml-1 text-[#9B9B9B]">{axis.steps[after as 1 | 2 | 3 | 4 | 5]}</span>
+          </span>
+        )}
+        {deltaLabel !== null && (
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+              delta! > 0
+                ? 'bg-[#F1FAF5] text-[#1F7A4C]'
+                : delta! < 0
+                  ? 'bg-[#FDF2F2] text-[#B3433C]'
+                  : 'bg-[#F5F5F5] text-[#6F6F6F]'
+            }`}
+          >
+            {deltaLabel}
+          </span>
+        )}
       </div>
-      {deltaLabel && (
-        <span
-          data-testid={`checkin-delta-${axisKey}`}
-          className="shrink-0 rounded-full bg-[#F5EDFC] px-3 py-1 text-[12px] font-bold text-[#5F0080]"
-        >
-          {deltaLabel}
-        </span>
-      )}
     </div>
   );
 }
@@ -67,10 +73,16 @@ export default function SubjectiveCheckinCard({
   relaxationTrend = null,
   eegMeasured = false,
 }: SubjectiveCheckinCardProps) {
-  const before: SubjectiveSlotDto | null = subjective.before;
-  const after: SubjectiveSlotDto | null = subjective.after;
-  const comparison = buildSubjectiveComparison(before, after);
-  const note = after?.note ?? before?.note ?? null;
+  const before = subjective.before;
+  const after = subjective.after;
+  const note = after?.note ?? null;
+  const hasAnyValue =
+    (before?.arousal ?? null) !== null ||
+    (before?.valence ?? null) !== null ||
+    (before?.emotion ?? null) !== null ||
+    (after?.arousal ?? null) !== null ||
+    (after?.valence ?? null) !== null ||
+    (after?.emotion ?? null) !== null;
 
   return (
     <section
@@ -79,21 +91,20 @@ export default function SubjectiveCheckinCard({
     >
       <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-1 flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-sm bg-[#5F0080]" />
-        수업 전 예상 ↔ 수업 후
+        수업 전 → 수업 후
       </h3>
       <p className="mb-4 text-[12px] leading-5 text-[#6F6F6F]">
-        회원님이 직접 남긴 체크인 기록입니다. 뇌파 지표와 함께 읽어보세요.
+        회원님이 남긴 사전·사후 설문 기록입니다. 수업 전 대비 수업 후의 변화를 함께 읽어보세요.
       </p>
 
-      <div className="space-y-2">
-        <AxisRow axisKey="arousal" before={before?.arousal ?? null} after={after?.arousal ?? null} />
-        <AxisRow axisKey="valence" before={before?.valence ?? null} after={after?.valence ?? null} />
-      </div>
-
-      {comparison.summary && (
-        <p data-testid="checkin-comparison-summary" className="mt-3 text-[13px] font-semibold text-[#5F0080]">
-          {comparison.summary}
-        </p>
+      {hasAnyValue ? (
+        <div className="space-y-2">
+          <AxisDeltaRow axisKey="arousal" before={before?.arousal ?? null} after={after?.arousal ?? null} />
+          <AxisDeltaRow axisKey="valence" before={before?.valence ?? null} after={after?.valence ?? null} />
+          <AxisDeltaRow axisKey="emotion" before={before?.emotion ?? null} after={after?.emotion ?? null} />
+        </div>
+      ) : (
+        <p className="text-[12px] text-[#9B9B9B]">설문 기록이 없습니다.</p>
       )}
 
       {note && (
@@ -109,7 +120,7 @@ export default function SubjectiveCheckinCard({
             <span className="rounded-full bg-[#F1FAF5] px-3 py-1 font-bold text-[#1F7A4C]">{relaxationScore}</span>
             {relaxationTrend && (
               <span className="text-[12px] text-[#6F6F6F]">
-                시작 {relaxationTrend.first} → 마음 {relaxationTrend.last}
+                시작 {relaxationTrend.first} → 마지막 {relaxationTrend.last}
               </span>
             )}
             <span className="w-full text-[11px] leading-5 text-[#9B9B9B]">

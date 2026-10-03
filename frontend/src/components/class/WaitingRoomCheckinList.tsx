@@ -45,6 +45,7 @@ export function WaitingRoomCheckinList({ entries }: WaitingRoomCheckinListProps)
                 <CheckinSummary
                   arousal={entry.checkin.arousal}
                   valence={entry.checkin.valence}
+                  emotion={entry.checkin.emotion}
                   note={entry.checkin.note}
                 />
               </div>

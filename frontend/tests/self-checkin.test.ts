@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-// SDD-096 — 세션 직후 1탭 셀프 체크인: 계약 파싱 · 비교 파생 · API 호출 · SAM 패널 렌더/스킵
+// 사전·사후 설문(집중·편안함·감정 3축) — 계약 파싱 · API 호출 · 패널 렌더/스킵
 
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  buildSubjectiveComparison,
   parseSubjectiveState,
   parseSubjectiveSlot,
   submitCheckin,
@@ -46,6 +45,7 @@ function mockFetch(): void {
       const slot = {
         arousal: sent.arousal ?? null,
         valence: sent.valence ?? null,
+        emotion: sent.emotion ?? null,
         note: sent.note ?? null,
         recorded_at: '2026-09-29T12:00:00+00:00',
       };
@@ -92,8 +92,8 @@ describe('subjective_state 계약', () => {
   it('참여자 스코프 슬롯을 파싱하고 빈 값은 null 로 보존한다', () => {
     const state = parseSubjectiveState({
       scope: 'participant',
-      before: { arousal: 4, valence: 2, note: '긴장될 것 같아요', recorded_at: 't1' },
-      after: { arousal: null, valence: 5, note: null, recorded_at: 't2' },
+      before: { arousal: 4, valence: 2, emotion: null, note: '긴장될 것 같아요', recorded_at: 't1' },
+      after: { arousal: null, valence: 5, emotion: 4, note: null, recorded_at: 't2' },
     });
     expect(state).not.toBeNull();
     expect(state!.scope).toBe('participant');
@@ -101,6 +101,7 @@ describe('subjective_state 계약', () => {
     // 미입력 축은 0 으로 치환하지 않는다
     expect(state!.after?.arousal).toBeNull();
     expect(state!.after?.valence).toBe(5);
+    expect(state!.after?.emotion).toBe(4);
   });
 
   it('두 시점 모두 비어 있으면 null (카드 미노출)', () => {
@@ -113,13 +114,14 @@ describe('subjective_state 계약', () => {
     const state = parseSubjectiveState({
       scope: 'session',
       participants: {
-        'p-1': { before: null, after: { arousal: 3, valence: 4, note: null, recorded_at: 't' } },
+        'p-1': { before: null, after: { arousal: 3, valence: 4, emotion: 2, note: null, recorded_at: 't' } },
         'p-2': { before: null, after: null },
       },
     });
     expect(state?.scope).toBe('session');
     expect(Object.keys(state?.participants ?? {})).toEqual(['p-1', 'p-2']);
     expect(state?.participants?.['p-1'].after?.valence).toBe(4);
+    expect(state?.participants?.['p-1'].after?.emotion).toBe(2);
     expect(state?.participants?.['p-2'].after).toBeNull();
   });
 
@@ -127,32 +129,10 @@ describe('subjective_state 계약', () => {
     expect(parseSubjectiveSlot({ arousal: 9, valence: 2, note: null })).toEqual({
       arousal: null,
       valence: 2,
+      emotion: null,
       note: null,
       recorded_at: null,
     });
-  });
-});
-
-describe('예상 ↔ 결과 대비', () => {
-  it('두 시점이 모두 있으면 델타 요약을 만든다', () => {
-    const result = buildSubjectiveComparison(
-      { arousal: 4, valence: 2, note: null, recorded_at: null },
-      { arousal: 2, valence: 5, note: '가라앉았어요', recorded_at: null },
-    );
-    expect(result.hasBefore).toBe(true);
-    expect(result.arousalDelta).toBe(-2);
-    expect(result.valenceDelta).toBe(3);
-    expect(result.summary).toBe('각성 4 → 2 (-2) · 정서 2 → 5 (+3)');
-  });
-
-  it('한쪽 값이 비면 그 축은 대비에서 제외한다(허수 대비 금지)', () => {
-    const result = buildSubjectiveComparison(
-      { arousal: 4, valence: null, note: null, recorded_at: null },
-      { arousal: null, valence: 5, note: null, recorded_at: null },
-    );
-    expect(result.hasBefore).toBe(false);
-    expect(result.summary).toBeNull();
-    expect(result.arousalDelta).toBeNull();
   });
 });
 
@@ -182,6 +162,7 @@ describe('POST /sessions/{id}/checkin', () => {
       phase: 'after',
       arousal: 2,
       valence: 5,
+      emotion: 4,
       note: '몸이 가벼워졌어요',
       participant_id: PARTICIPANT_ID,
       participant_token: 'guest-token',
@@ -196,6 +177,7 @@ describe('POST /sessions/{id}/checkin', () => {
       phase: 'after',
       arousal: 2,
       valence: 5,
+      emotion: 4,
       note: '몸이 가벼워졌어요',
       participant_id: PARTICIPANT_ID,
       participant_token: 'guest-token',
@@ -216,6 +198,7 @@ describe('POST /sessions/{id}/checkin', () => {
       phase: 'before',
       arousal: 4,
       valence: null,
+      emotion: null,
       note: null,
       participant_id: null,
       participant_token: null,
@@ -223,7 +206,7 @@ describe('POST /sessions/{id}/checkin', () => {
   });
 });
 
-// ── 3. 종료 화면 SAM 패널 ────────────────────────────────────────────────
+// ── 3. 종료 화면 사전·사후 설문 패널 ─────────────────────────────────────
 
 async function renderPanel(onSubmitted = vi.fn()): Promise<void> {
   await act(async () => {
@@ -233,7 +216,6 @@ async function renderPanel(onSubmitted = vi.fn()): Promise<void> {
         participantId: PARTICIPANT_ID,
         participantToken: 'guest-token',
         isLoggedIn: false,
-        relaxationIndex: 42,
         onSubmitted,
       }),
     );
@@ -247,57 +229,63 @@ function buttonByLabel(label: string): HTMLButtonElement {
 }
 
 describe('SelfCheckinPanel', () => {
-  it('각성·정서 2축 × 5단계 버튼을 렌더하고 선택 전에는 저장을 막는다', async () => {
+  it('사전(수업 전)·사후(수업 후) 각 3축 × 5단계 버튼을 렌더하고 선택 전에는 저장을 막는다', async () => {
     await renderPanel();
     expect(container.querySelector('[data-testid="self-checkin"]')).not.toBeNull();
-    // 2축 × 5단계 = 10개 (수업 전 예상은 접힘 상태)
-    expect(container.querySelectorAll('button[aria-label^="각성"]').length).toBe(5);
-    expect(container.querySelectorAll('button[aria-label^="정서"]').length).toBe(5);
-    expect(container.querySelector('[data-testid="checkin-before"]')).toBeNull();
+    expect(container.textContent).toContain('오늘의 클래스는 어떠셨나요?');
+    expect(container.textContent).toContain('수업 전에는 어땠나요?');
+    expect(container.textContent).toContain('수업 후에는 어땠나요?');
 
-    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '체크인 남기기')!;
+    // 사전·사후 × 3축(집중·편안함·감정) × 5단계 = 30개
+    for (const phase of ['수업 전 ', '수업 후 ']) {
+      expect(container.querySelectorAll(`button[aria-label^="${phase}집중"]`).length).toBe(5);
+      expect(container.querySelectorAll(`button[aria-label^="${phase}편안함"]`).length).toBe(5);
+      expect(container.querySelectorAll(`button[aria-label^="${phase}감정"]`).length).toBe(5);
+    }
+
+    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '설문 남기기')!;
     expect(submit.disabled).toBe(true);
   });
 
-  it('1탭 선택 후 저장하면 수업 후 슬롯만 POST 하고 완료 뷰를 보여준다', async () => {
+  it('사후만 선택하면 after 슬롯만 POST 하고 완료 시 카드 없이 패널을 숨긴다', async () => {
     const onSubmitted = vi.fn();
     await renderPanel(onSubmitted);
 
-    await act(async () => buttonByLabel('각성 2단계 조용해요').click());
-    await act(async () => buttonByLabel('정서 5단계 아주 좋아요').click());
-    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '체크인 남기기')!;
+    await act(async () => buttonByLabel('수업 후 집중 2단계 산만').click());
+    await act(async () => buttonByLabel('수업 후 편안함 5단계 매우 편안').click());
+    await act(async () => buttonByLabel('수업 후 감정 4단계 긍정적').click());
+    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '설문 남기기')!;
     await act(async () => submit.click());
 
     expect(calls.filter((call) => call.url.includes('/checkin'))).toHaveLength(1);
-    expect(calls[0].body).toMatchObject({ phase: 'after', arousal: 2, valence: 5 });
+    expect(calls[0].body).toMatchObject({ phase: 'after', arousal: 2, valence: 5, emotion: 4 });
 
-    expect(container.querySelector('[data-testid="self-checkin-done"]')).not.toBeNull();
-    expect(container.textContent).toContain('두뇌휴식도 42');
-    expect(container.textContent).toContain('수업 후 · 각성 2 · 정서 5');
-    const state = onSubmitted.mock.calls[0][0];
-    expect(state.after.valence).toBe(5);
-    expect(state.before).toBeNull();
+    // 완료 카드 제거 — 패널 자체가 사라지고 종료 화면의 '수업이 종료되었습니다'만 남는다
+    expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
+    expect(container.querySelector('[data-testid="self-checkin-done"]')).toBeNull();
+    expect(onSubmitted).toHaveBeenCalled();
   });
 
-  it('수업 전 예상을 남기면 두 시점을 따로 저장하고 대비 요약을 보여준다', async () => {
+  it('사전·사후 모두 남기면 after → before 순서로 2회 POST 한다(사전·사후 변화 저장)', async () => {
     await renderPanel();
 
-    await act(async () => buttonByLabel('각성 2단계 조용해요').click());
-    await act(async () => buttonByLabel('정서 5단계 아주 좋아요').click());
-    const toggle = [...container.querySelectorAll('button')].find(
-      (b) => b.textContent === '수업 전 예상도 남기기 (선택)',
-    )!;
-    await act(async () => toggle.click());
-    // 수업 전 슬롯은 같은 축이 두 번 나타나므로 라벨로 구분한다
-    await act(async () => buttonByLabel('수업 전 각성 4단계 조금 긴장돼요').click());
-    await act(async () => buttonByLabel('수업 전 정서 2단계 불편해요').click());
-
-    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '체크인 남기기')!;
+    // 사전: 집중 3 · 편안함 2
+    await act(async () => buttonByLabel('수업 전 집중 3단계 보통').click());
+    await act(async () => buttonByLabel('수업 전 편안함 2단계 불편').click());
+    // 사후: 집중 4 · 감정 5
+    await act(async () => buttonByLabel('수업 후 집중 4단계 집중').click());
+    await act(async () => buttonByLabel('수업 후 감정 5단계 매우 긍정적').click());
+    const submit = [...container.querySelectorAll('button')].find((b) => b.textContent === '설문 남기기')!;
     await act(async () => submit.click());
 
     const checkinCalls = calls.filter((call) => call.url.includes('/checkin'));
-    expect(checkinCalls.map((call) => call.body?.phase)).toEqual(['after', 'before']);
-    expect(container.textContent).toContain('각성 4 → 2 (-2) · 정서 2 → 5 (+3)');
+    expect(checkinCalls).toHaveLength(2);
+    // 사후(수업 후)를 먼저 저장한다
+    expect(checkinCalls[0].body).toMatchObject({ phase: 'after', arousal: 4, valence: null, emotion: 5 });
+    // 사전(수업 전)을 이어 저장한다(사전 슬롯에는 소감을 싣지 않는다)
+    expect(checkinCalls[1].body).toMatchObject({ phase: 'before', arousal: 3, valence: 2, emotion: null, note: null });
+
+    expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
   });
 
   it('건너뛰기는 저장 호출 없이 패널을 숨기고 다시 묻지 않도록 기록한다', async () => {

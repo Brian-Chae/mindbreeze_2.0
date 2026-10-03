@@ -175,15 +175,16 @@ def _sanitize_checkin(value) -> dict | None:
 
     arousal = _sam(value.get("arousal"))
     valence = _sam(value.get("valence"))
+    emotion = _sam(value.get("emotion"))
 
     note_raw = value.get("note")
     note: str | None = None
     if isinstance(note_raw, str):
         note = " ".join(note_raw.split())[:_WAITING_ROOM_CHECKIN_NOTE_MAX] or None
 
-    if arousal is None and valence is None and note is None:
+    if arousal is None and valence is None and emotion is None and note is None:
         return None
-    return {"arousal": arousal, "valence": valence, "note": note}
+    return {"arousal": arousal, "valence": valence, "emotion": emotion, "note": note}
 
 
 # ---------------------------------------------------------------------------

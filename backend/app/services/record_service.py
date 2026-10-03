@@ -64,12 +64,13 @@ def _slot(raw) -> dict | None:
         slot = SubjectiveSlot(
             arousal=raw.get("arousal"),
             valence=raw.get("valence"),
+            emotion=raw.get("emotion"),
             note=raw.get("note"),
             recorded_at=raw.get("recorded_at"),
         )
     except ValidationError:
         return None
-    if slot.arousal is None and slot.valence is None and not slot.note:
+    if slot.arousal is None and slot.valence is None and slot.emotion is None and not slot.note:
         return None
     return slot.model_dump(mode="json")
 
@@ -327,6 +328,7 @@ def submit_checkin(session_id: str, payload, user_id: str | None, db: DBSession)
     entry[payload.phase] = {
         "arousal": payload.arousal,
         "valence": payload.valence,
+        "emotion": payload.emotion,
         "note": payload.note,
         "recorded_at": _now().isoformat(),
     }
