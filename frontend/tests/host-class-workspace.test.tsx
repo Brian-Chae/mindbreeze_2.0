@@ -170,14 +170,14 @@ it('상세 모달은 목록 외의 미디어·도구도 비활성화하고 닫�
 });
 
 // 대기 상태 분기를 잃거나 오디오를 중복 렌더하면 실패한다.
-it.each(['open', 'in_progress', 'paused'] as const)('%s 상태에서 BGM과 그룹 흐름의 위치를 유지한다', async status => {
+it.each(['open', 'in_progress', 'paused'] as const)('%s 상태에서 대기에만 BGM을 표시하고 진행에는 그룹 흐름을 유지한다', async status => {
   await render(undefined, 100, {
     status, audio: createElement('section', { 'aria-label': '명상 가이드·BGM' }, 'BGM'),
   });
-  expect(container.querySelectorAll('[aria-label="명상 가이드·BGM"]')).toHaveLength(1);
+  expect(container.querySelectorAll('[aria-label="명상 가이드·BGM"]')).toHaveLength(status === 'open' ? 1 : 0);
   expect(container.querySelector('.hcp-group') === null).toBe(status === 'open');
-  const target = status === 'open' ? '.hcp-lobby-audio' : '.hcp-host';
-  expect(container.querySelector(`${target} [aria-label="명상 가이드·BGM"]`)).not.toBeNull();
+  expect(container.querySelector('.hcp-host [aria-label="명상 가이드·BGM"]')).toBeNull();
+  if (status === 'open') expect(container.querySelector('.hcp-lobby-audio [aria-label="명상 가이드·BGM"]')).not.toBeNull();
   expect(container.querySelector('.hcp-controls')).toBeNull();
 });
 it('몰입과 사용 안내를 기존처럼 켜고 끌 수 있다', async () => {
