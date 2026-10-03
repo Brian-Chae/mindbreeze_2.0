@@ -1,32 +1,32 @@
-// 개선 3: 클래스 입장 전 대기실 — 코드로 참여한 뒤 라이브 뷰로 들어가기 전 준비 단계.
+// 입장 전 대기실 — 코드로 참여한 뒤 라이브 뷰로 들어가기 전 준비 단계.
 //
-// 코드 입력 직후 바로 라이브로 들어가 기기 문제를 진행 중에 발견하던 불편을 없앤다.
-// 여기서 (1) 닉네임 확정 (2) 카메라·마이크 미리보기 (3) 마이크 입력 레벨 (4) 스피커 테스트 톤
-// (5) LINK BAND 연결 상태(선택) (6) 조용한 공간·이어폰 셀프체크를 모두 확인해야 [입장]이 열린다.
+// 개선 3 재설계: 기기 단계별 셀프체크(카메라·마이크·스피커·주변)를 강제하던 구조를 걷어내고
+// (1) 참여 이름(필수) (2) 입장 전 체크인(기분·상담사 전달 말, 스킵 가능) 만 중심에 둔다.
+// 카메라·마이크는 시스템이 자동 확인하고 문제가 있을 때만 안내한다(입장 차단 없음).
+// LINK BAND 는 opt-in 유지 — 미연결이어도 항상 입장할 수 있다.
 //
 // 원칙:
-//   · 기기 미비(미지원·권한 거부)는 입장을 영구 차단하지 않는다 — 사실을 확인하면 진행 가능.
-//   · LINK BAND 는 opt-in 유지 — 미연결이어도 항상 입장할 수 있다.
+//   · 기기 미비(미지원·권한 거부)는 입장을 영구 차단하지 않는다 — 문제만 알리고 진행 가능.
 //   · 미리보기 영상·음성은 저장·전송되지 않는다(입장 시 즉시 중지).
 //   · 게스트(user_id NULL)와 로그인 회원 모두 동작한다(회원은 이름 입력 없이 프로필 이름 고정).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FadingImageBackground } from './FadingImageBackground';
 import { WaitingRoomBandCheck } from './WaitingRoomBandCheck';
+import { PreCheckinPanel } from './PreCheckinPanel';
+import { LobbyBgmBar } from './LobbyBgmBar';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
+import { useLobbyBgm } from '../../hooks/useLobbyBgm';
 import { useAuthStore } from '../../stores/authStore';
+import type { WaitingRoomCheckin } from '../../lib/socket';
 import {
-  areDevicesResolved,
   deviceStateLabel,
-  emptyCheckState,
   isNicknameValid,
   mediaErrorMessage,
   normalizeNickname,
   readStoredNickname,
   resolveWaitingRoomGate,
   storeNickname,
-  WAITING_ROOM_CHECKLIST,
-  type WaitingRoomCheckState,
   type WaitingRoomDeviceState,
 } from '../../lib/class/class-waiting-room';
 
@@ -47,27 +47,14 @@ interface ClassWaitingRoomProps {
   memberName: string | null;
   /** 게스트가 참여 단계에서 입력한 이름(초기값) */
   initialNickname: string;
+  /** 게스트 체크인 소유 증명 — participant_token(회원은 null) */
+  participantToken: string | null;
+  /** 로그인 회원 여부 — 체크인 인증 분기(회원 액세스 토큰 / 게스트 토큰) */
+  isLoggedIn: boolean;
   /** [입장] 클릭 — 확정 값과 함께 라이브 뷰로 진입 */
   onEnter: (payload: ClassWaitingRoomEnterPayload) => void;
   /** [나가기] — 코드 입력 단계로 복귀 */
   onLeave: () => void;
-}
-
-/** 단계 제목 — 차분한 톤 유지 */
-function StepHeading({ index, title, done }: { index: number; title: string; done: boolean }): React.ReactElement {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        aria-hidden="true"
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-          done ? 'bg-[#5F0080] text-white' : 'bg-white/10 text-white/70'
-        }`}
-      >
-        {done ? '✓' : index}
-      </span>
-      <h2 className="text-[15px] font-semibold text-white">{title}</h2>
-    </div>
-  );
 }
 
 export function ClassWaitingRoom({
@@ -78,6 +65,8 @@ export function ClassWaitingRoom({
   participantId,
   memberName,
   initialNickname,
+  participantToken,
+  isLoggedIn,
   onEnter,
   onLeave,
 }: ClassWaitingRoomProps): React.ReactElement {
@@ -101,9 +90,7 @@ export function ClassWaitingRoom({
   const [nickname, setNickname] = useState(() =>
     normalizeNickname(initialNickname || readStoredNickname() || ''),
   );
-  const [cameraState, setCameraState] = useState<WaitingRoomDeviceState>(
-    mediaSupported ? 'pending' : 'unsupported',
-  );
+  const [cameraState, setCameraState] = useState<WaitingRoomDeviceState>('off');
   const [micState, setMicState] = useState<WaitingRoomDeviceState>(
     mediaSupported ? 'pending' : 'unsupported',
   );
@@ -111,20 +98,22 @@ export function ClassWaitingRoom({
   const [micError, setMicError] = useState<string | null>(null);
   /** 마이크 입력 레벨 0~1 (RMS) */
   const [micLevel, setMicLevel] = useState(0);
-  /** [기기 확인 완료] — 프리뷰(또는 미지원 사실)를 확인했음 */
-  const [devicesChecked, setDevicesChecked] = useState(false);
-  /** 스피커 테스트 톤 재생 완료 */
-  const [speakerVerified, setSpeakerVerified] = useState(false);
-  const [checks, setChecks] = useState<WaitingRoomCheckState>(emptyCheckState);
+  /** 입장 전 체크인 요약 — 저장되면 대기실 WS 로 상담사 화면에 흘린다 */
+  const [checkin, setCheckin] = useState<WaitingRoomCheckin | null>(null);
 
   // 상담사 대기 인원 표시용 참여 알림(입장·퇴장) — 라이브 뷰로 넘어가면 해제된다.
+  // 체크인 요약을 실어 보내 상담사가 입장 전에 기분·전달 말을 실시간으로 본다.
   useWaitingRoomPresence({
     sessionId,
     participantId,
     nickname: memberName ?? (isNicknameValid(nickname) ? normalizeNickname(nickname) : null),
+    checkin,
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
   });
+
+  // 대기실 BGM — 대기 중 플랫폼이 기본 트랙을 자동 재생(회원은 볼륨/음소거만 조절)
+  const lobbyBgm = useLobbyBgm(true);
 
   const stopVideoStream = useCallback((): void => {
     videoStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -178,7 +167,7 @@ export function ClassWaitingRoom({
     }
   }, []);
 
-  /** 카메라 열기 — 오디오와 분리 요청해 부분 권한 거부를 개별 상태로 매핑 */
+  /** 카메라 열기 — 오디오와 분리 요청해 부분 권한 거부를 개별 상태로 매핑 (선택·비강제) */
   const openCamera = useCallback(async (): Promise<void> => {
     stopVideoStream();
     setCameraState('pending');
@@ -200,7 +189,7 @@ export function ClassWaitingRoom({
     }
   }, [stopVideoStream]);
 
-  /** 마이크 열기 — 비디오와 분리 요청 */
+  /** 마이크 열기 — 비디오와 분리 요청 (필수 자동 확인) */
   const openMic = useCallback(async (): Promise<void> => {
     stopAudioStream();
     setMicState('pending');
@@ -216,19 +205,17 @@ export function ClassWaitingRoom({
     }
   }, [startMeter, stopAudioStream]);
 
-  // 최초 마운트 시 미리보기 시작 + 언마운트 정리(캡처 표시등 끄기).
-  // 시작 호출은 다음 태스크로 미룬다 — effect 본문에서 동기 setState(pending)를 피해
-  // cascading render 를 만들지 않는다(react-hooks/set-state-in-effect).
+  // 최초 마운트 시 마이크만 자동 확인한다 — 카메라는 선택(명상·상담은 오디오 중심)이므로
+  // 불필요한 권한 요청을 피하고, 문제(거부·미탐지)가 있을 때만 안내한다.
   useEffect(() => {
     if (!mediaSupported) return undefined;
     const startId = window.setTimeout(() => {
-      void openCamera();
       void openMic();
     }, 0);
     return () => {
       window.clearTimeout(startId);
-      stopVideoStream();
       stopAudioStream();
+      stopVideoStream();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 마운트 1회
   }, [mediaSupported]);
@@ -259,7 +246,7 @@ export function ClassWaitingRoom({
     void openMic();
   };
 
-  /** 스피커 테스트 톤 — C5(523.25Hz) 0.9초, 부드러운 fade in/out */
+  /** 스피커 테스트 톤 — C5(523.25Hz) 0.9초, 부드러운 fade in/out (선택·비강제) */
   const playTestTone = useCallback(async (): Promise<void> => {
     try {
       if (!speakerSupported) return;
@@ -277,30 +264,17 @@ export function ClassWaitingRoom({
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 1);
-      setSpeakerVerified(true);
     } catch {
-      // 재생 실패는 입장을 막지 않는다(다음 단계에서 다시 확인 가능)
-      setSpeakerVerified(true);
+      /* 재생 실패는 입장을 막지 않는다 */
     }
   }, [speakerSupported]);
 
-  const toggleCheck = (id: (typeof WAITING_ROOM_CHECKLIST)[number]['id']): void => {
-    setChecks((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
   const cameraOn = cameraState === 'on';
   const micOn = micState === 'on';
-  const devicesResolved = areDevicesResolved(cameraState, micState);
 
   /** 회원은 프로필 이름 고정 — 게스트만 입력한 이름을 확정한다 */
   const effectiveNickname = memberName ?? normalizeNickname(nickname);
-  const gate = resolveWaitingRoomGate({
-    nickname: effectiveNickname,
-    devicesChecked,
-    speakerVerified,
-    speakerSupported,
-    checks,
-  });
+  const gate = resolveWaitingRoomGate({ nickname: effectiveNickname });
 
   /** 입장 — 미리보기 스트림을 즉시 중지하고 라이브 뷰로 넘긴다 */
   const handleEnter = (): void => {
@@ -313,7 +287,7 @@ export function ClassWaitingRoom({
   };
 
   const nicknameDone = isNicknameValid(effectiveNickname);
-  const speakerDone = !speakerSupported || speakerVerified;
+  const micProblem = micState === 'denied' || micState === 'unsupported';
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
@@ -344,15 +318,35 @@ export function ClassWaitingRoom({
             입장 전 준비
           </h2>
           <p className="mt-3 text-sm leading-6 text-white/70">
-            기기와 주변을 확인한 뒤 입장하세요. 확인하는 동안 미리보기 영상·음성은 저장되지 않고,
-            입장하면 바로 정리됩니다.
+            이름과 지금 기분을 가볍게 남겨 주세요. 마이크는 자동으로 확인하고,
+            문제가 있을 때만 알려드려요.
           </p>
+        </div>
+
+        {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
+        <div className="mt-6">
+          <LobbyBgmBar
+            state={lobbyBgm.state}
+            onVolumeChange={lobbyBgm.setVolume}
+            onToggleMute={lobbyBgm.toggleMute}
+            onResume={lobbyBgm.resume}
+          />
         </div>
 
         <div className="mt-8 space-y-4">
           {/* (1) 이름 확인 — 회원은 프로필 이름 고정 */}
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <StepHeading index={1} title="참여 이름" done={nicknameDone} />
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                  nicknameDone ? 'bg-[#5F0080] text-white' : 'bg-white/10 text-white/70'
+                }`}
+              >
+                {nicknameDone ? '✓' : '1'}
+              </span>
+              <h2 className="text-[15px] font-semibold text-white">참여 이름</h2>
+            </div>
             {isGuest ? (
               <>
                 <label htmlFor="waiting-room-nickname" className="mt-3 block text-[13px] text-white/70">
@@ -367,9 +361,6 @@ export function ClassWaitingRoom({
                   autoComplete="off"
                   className="mt-2 w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-base text-white outline-none transition focus:border-[#B373EF] focus:ring-2 focus:ring-[#5F0080]"
                 />
-                <p className="mt-2 text-[12px] text-white/50">
-                  참여 단계에서 입력한 이름을 그대로 쓰거나, 여기서 확정할 수 있어요.
-                </p>
               </>
             ) : (
               <p className="mt-3 text-sm text-white/80">
@@ -379,192 +370,133 @@ export function ClassWaitingRoom({
             )}
           </section>
 
-          {/* (2)(3) 카메라·마이크 미리보기 + 마이크 입력 레벨 */}
+          {/* (2) 입장 전 체크인 — 기분 + 상담사 전달 말 (스킵 가능) */}
+          <PreCheckinPanel
+            sessionId={sessionId}
+            participantId={participantId}
+            participantToken={participantToken}
+            isLoggedIn={isLoggedIn}
+            onSubmitted={setCheckin}
+          />
+
+          {/* (3) 마이크 — 시스템 자동 확인. 문제가 있을 때만 안내한다. */}
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <StepHeading index={2} title="카메라·마이크 확인" done={devicesChecked} />
-
-            {mediaSupported ? (
-              <div className="mt-4 grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
-                <div className="relative aspect-video overflow-hidden rounded-xl bg-[#111]">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className={`h-full w-full -scale-x-100 object-cover ${cameraOn ? '' : 'invisible'}`}
-                  />
-                  {!cameraOn && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-                      <span aria-hidden="true" className="text-2xl">
-                        🎥
-                      </span>
-                      <p className="text-[13px] text-white/60">
-                        {cameraState === 'pending'
-                          ? '카메라 권한 확인 중…'
-                          : deviceStateLabel(cameraState, '카메라')}
-                      </p>
-                    </div>
-                  )}
-                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
-                    <button
-                      type="button"
-                      onClick={toggleCamera}
-                      aria-pressed={cameraOn}
-                      aria-label={cameraOn ? '카메라 끄기' : '카메라 켜기'}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full text-base transition ${
-                        cameraOn ? 'bg-[#5F0080] text-white' : 'bg-[#3A3A3A] text-white/70'
-                      }`}
-                    >
-                      {cameraOn ? '🎥' : '🚫'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={toggleMic}
-                      aria-pressed={micOn}
-                      aria-label={micOn ? '마이크 끄기' : '마이크 켜기'}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full text-base transition ${
-                        micOn ? 'bg-[#5F0080] text-white' : 'bg-[#3A3A3A] text-white/70'
-                      }`}
-                    >
-                      {micOn ? '🎤' : '🔇'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex flex-col justify-between gap-3">
-                  <div>
-                    <p className="text-[12px] font-medium text-white/70">마이크 입력</p>
-                    <div
-                      className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10"
-                      role="meter"
-                      aria-label="마이크 입력 레벨"
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={Math.round(micLevel * 100)}
-                    >
-                      <div
-                        className="h-full rounded-full bg-[#59CE90] transition-[width] duration-100"
-                        style={{ width: `${Math.round(micLevel * 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[11px] text-white/50">
-                      {micOn ? '말해보면 초록 막대가 움직입니다' : deviceStateLabel(micState, '마이크')}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setDevicesChecked(true)}
-                    disabled={!devicesResolved || devicesChecked}
-                    aria-pressed={devicesChecked}
-                    className={`h-11 w-full rounded-xl px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed ${
-                      devicesChecked
-                        ? 'bg-white/10 text-white/70'
-                        : 'bg-[#5F0080] text-white hover:bg-[#4C0066] disabled:opacity-50'
-                    }`}
-                  >
-                    기기 확인 완료
-                  </button>
-                </div>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[15px] font-semibold text-white">마이크</h2>
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  micOn
+                    ? 'bg-[#59CE9026] text-[#B8F5D6]'
+                    : micProblem
+                      ? 'bg-[#F2212133] text-[#F7C6C6]'
+                      : 'bg-white/10 text-white/70'
+                }`}
+              >
+                {micOn ? '정상' : micState === 'pending' ? '확인 중' : deviceStateLabel(micState, '마이크')}
+              </span>
+            </div>
+            <div className="mt-3">
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+                role="meter"
+                aria-label="마이크 입력 레벨"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(micLevel * 100)}
+              >
+                <div
+                  className="h-full rounded-full bg-[#59CE90] transition-[width] duration-100"
+                  style={{ width: `${Math.round(micLevel * 100)}%` }}
+                />
               </div>
-            ) : (
-              <div className="mt-4 rounded-xl bg-white/5 p-4 text-[13px] leading-6 text-white/70">
-                이 브라우저는 카메라·마이크 미리보기를 지원하지 않습니다(Chrome/Edge 권장). 미리보기
-                없이도 입장할 수 있어요.
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <p className="text-[12px] text-white/50">
+                  {micOn ? '말해보면 초록 막대가 움직입니다' : '입장하면 상담사와 소통할 수 있어요'}
+                </p>
                 <button
                   type="button"
-                  onClick={() => setDevicesChecked(true)}
-                  disabled={devicesChecked}
-                  aria-pressed={devicesChecked}
-                  className="mb-btn mt-3 h-11 w-full justify-center rounded-xl px-4 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={toggleMic}
+                  aria-pressed={micOn}
+                  aria-label={micOn ? '마이크 끄기' : '마이크 켜기'}
+                  className={`flex h-9 w-9 items-center justify-center rounded-full text-base transition ${
+                    micOn ? 'bg-[#5F0080] text-white' : 'bg-[#3A3A3A] text-white/70'
+                  }`}
                 >
-                  기기 확인 완료
+                  {micOn ? '🎤' : '🔇'}
                 </button>
               </div>
-            )}
-
-            {cameraError && (
-              <p role="alert" className="mt-3 text-[12px] text-[#F7C6C6]">
-                {cameraError}
-              </p>
-            )}
+            </div>
             {micError && (
-              <p role="alert" className="mt-3 text-[12px] text-[#F7C6C6]">
-                {micError}
-              </p>
-            )}
-            {devicesChecked && (
-              <p className="mt-3 text-[12px] text-[#B8F5D6]">
-                확인 완료 · 카메라 {cameraOn ? '켜짐' : '꺼짐'} · 마이크 {micOn ? '켜짐' : '꺼짐'}
+              <p role="alert" className="mt-3 rounded-xl bg-[#F2212133] px-4 py-3 text-[12px] leading-5 text-[#F7C6C6]">
+                {micError} 입장은 가능하며, 입장 후에도 다시 확인할 수 있어요.
               </p>
             )}
           </section>
 
-          {/* (4) 스피커 테스트 톤 */}
+          {/* (4) 카메라 — 선택(명상·상담은 오디오 중심). 기본 꺼짐. */}
           <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <StepHeading index={3} title="스피커 확인" done={speakerDone} />
-            {speakerSupported ? (
-              <>
-                <p className="mt-3 text-[13px] leading-6 text-white/70">
-                  테스트음을 재생해 소리가 들리는지 확인하세요. 이어폰·헤드셋을 착용했다면 이 상태로
-                  재생됩니다.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void playTestTone()}
-                    className="h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
-                  >
-                    {speakerVerified ? '테스트음 다시 듣기' : '테스트음 재생'}
-                  </button>
-                  {speakerVerified && <span className="text-[12px] text-[#B8F5D6]">재생 완료</span>}
-                </div>
-              </>
-            ) : (
-              <p className="mt-3 text-[13px] leading-6 text-white/60">
-                이 브라우저에서는 테스트음을 재생할 수 없습니다. 이 단계는 건너뛸 수 있습니다.
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[15px] font-semibold text-white">
+                카메라 <span className="font-normal text-white/50">(선택)</span>
+              </h2>
+              <button
+                type="button"
+                onClick={toggleCamera}
+                aria-pressed={cameraOn}
+                className={`h-11 rounded-xl px-4 text-sm font-semibold transition ${
+                  cameraOn
+                    ? 'bg-[#5F0080] text-white'
+                    : 'border border-white/20 text-white/80 hover:bg-white/10'
+                }`}
+              >
+                {cameraOn ? '카메라 끄기' : '카메라 켜기'}
+              </button>
+            </div>
+            {cameraOn && (
+              <div className="relative mt-3 aspect-video overflow-hidden rounded-xl bg-[#111]">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="h-full w-full -scale-x-100 object-cover"
+                />
+              </div>
+            )}
+            {cameraError && (
+              <p role="alert" className="mt-3 rounded-xl bg-[#F2212133] px-4 py-3 text-[12px] leading-5 text-[#F7C6C6]">
+                {cameraError} 카메라 없이도 참여할 수 있어요.
               </p>
             )}
           </section>
 
-          {/* (5) LINK BAND — 선택(opt-in). 미연결이어도 입장은 항상 가능하다. */}
+          {/* (5) 스피커 — 선택 테스트(비강제) */}
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+            <h2 className="text-[15px] font-semibold text-white">스피커</h2>
+            <p className="mt-2 text-[13px] leading-6 text-white/70">
+              입장하면 상담사의 목소리·가이드가 들립니다. 이어폰·헤드셋 착용을 권장해요.
+            </p>
+            {speakerSupported && (
+              <button
+                type="button"
+                onClick={() => void playTestTone()}
+                className="mt-3 h-11 rounded-xl border border-white/20 px-4 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
+              >
+                테스트음 듣기
+              </button>
+            )}
+          </section>
+
+          {/* (6) LINK BAND — 선택(opt-in). 미연결이어도 입장은 항상 가능하다. */}
           <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} />
 
-          {/* (6) 조용한 공간·이어폰 셀프체크 */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <StepHeading
-              index={4}
-              title="주변 점검"
-              done={WAITING_ROOM_CHECKLIST.every((item) => checks[item.id])}
-            />
-            <ul className="mt-3 space-y-3">
-              {WAITING_ROOM_CHECKLIST.map((item) => (
-                <li key={item.id}>
-                  <label className="flex cursor-pointer items-start gap-3 rounded-xl bg-black/20 p-3">
-                    <input
-                      type="checkbox"
-                      checked={checks[item.id]}
-                      onChange={() => toggleCheck(item.id)}
-                      className="mt-1 h-4 w-4 accent-[#B373EF]"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-white">
-                        <span aria-hidden="true" className="mr-1.5">
-                          {item.icon}
-                        </span>
-                        {item.label}
-                      </span>
-                      <span className="mt-1 block text-[12px] leading-5 text-white/60">
-                        {item.hint}
-                      </span>
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {/* 주변 안내 — 강제 체크 대신 한 줄 권장 */}
+          <p className="px-1 text-[13px] leading-6 text-white/60">
+            🤫 조용한 공간에서 참여하고, 휴대폰은 무음으로 두면 몰입에 도움이 됩니다.
+          </p>
         </div>
 
-        {/* 입장 게이트 — 모두 확인해야 활성화 */}
+        {/* 입장 게이트 — 이름만 필수(체크인·기기는 스킵 가능) */}
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5">
           {!gate.canEnter && (
             <p className="mb-3 text-[13px] leading-6 text-white/60">
@@ -581,7 +513,7 @@ export function ClassWaitingRoom({
             입장하기
           </button>
           <p className="mt-3 text-center text-[12px] text-white/50">
-            LINK BAND는 선택 사항입니다 — 미연결이어도 입장할 수 있어요.
+            체크인과 LINK BAND는 선택 사항입니다 — 건너뛰고 바로 입장할 수 있어요.
           </p>
         </div>
       </div>

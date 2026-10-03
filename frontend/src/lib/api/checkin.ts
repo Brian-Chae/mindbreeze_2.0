@@ -78,6 +78,14 @@ export const SAM_AXES: readonly SamAxisDef[] = [
 
 export const SAM_VALUES: readonly SamValue[] = [1, 2, 3, 4, 5] as const;
 
+/** SAM 값(1~5) → 단계 라벨(예: 각성 4 → '조금 긴장돼요'). null/무효면 null. */
+export function samStepLabel(key: 'arousal' | 'valence', value: number | null): string | null {
+  if (value === null || value === undefined) return null;
+  const axis = SAM_AXES.find((a) => a.key === key);
+  if (!axis) return null;
+  return axis.steps[value as SamValue] ?? null;
+}
+
 export const CHECKIN_SKIP_STORAGE_KEY = 'mb_checkin_skipped';
 
 function isRecord(value: unknown): value is Record<string, unknown> {

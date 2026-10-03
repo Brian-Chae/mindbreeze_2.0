@@ -1,6 +1,7 @@
 // SDD-084 — 세션 영상 녹화 API 클라이언트 (audio.ts 패턴 복제)
 
-import { apiClient, tokenStorage, ApiError } from './client';
+import { apiClient } from './client';
+import { uploadFormWithRetry } from './upload-helper';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
 
@@ -30,8 +31,11 @@ export interface VideoUrlResponse {
 export const startVideo = (sessionId: string, consentVideo: boolean): Promise<VideoStartResponse> =>
   apiClient.post<VideoStartResponse>(`/sessions/${sessionId}/video/start`, { consent_video: consentVideo });
 
-export const stopVideo = (sessionId: string): Promise<VideoStopResponse> =>
-  apiClient.post<VideoStopResponse>(`/sessions/${sessionId}/video/stop`);
+export const stopVideo = (sessionId: string, expectedCount?: number): Promise<VideoStopResponse> =>
+  apiClient.post<VideoStopResponse>(
+    `/sessions/${sessionId}/video/stop`,
+    expectedCount !== undefined ? { expected_count: expectedCount } : undefined,
+  );
 
 // 리포트 영상 리플레이용 presigned GET URL 조회
 export const getSessionVideoUrl = (sessionId: string): Promise<VideoUrlResponse> =>
@@ -54,23 +58,6 @@ export async function uploadVideoChunk(
   fd.append('chunk_index', String(chunkIndex));
   fd.append('file', blob, `chunk_${chunkIndex}.webm`);
 
-  const token = tokenStorage.getAccess();
-  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/video/chunk`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: fd,
-  });
-  if (!res.ok) {
-    let data: unknown = null;
-    try {
-      data = await res.json();
-    } catch {
-      // ignore
-    }
-    const msg = (data && typeof data === 'object' && 'detail' in data && typeof (data as { detail: unknown }).detail === 'string')
-      ? (data as { detail: string }).detail
-      : `영상 청크 업로드 실패 (${res.status})`;
-    throw new ApiError(res.status, msg, data);
-  }
-  return (await res.json()) as VideoChunkUploadResponse;
+  // SDD-101 C3: timeout·재시도(5xx/타임아웃만) 적용
+  return uploadFormWithRetry<VideoChunkUploadResponse>(`${BASE_URL}/sessions/${sessionId}/video/chunk`, fd);
 }

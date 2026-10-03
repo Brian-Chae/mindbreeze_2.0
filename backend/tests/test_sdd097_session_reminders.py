@@ -71,7 +71,10 @@ def _create_scheduled_class(client, host_headers, member_ids, *, offsets, minute
         "force": True,
     }
     payload.update(overrides)
-    with patch("app.tasks.report_email_task.notification_email_task.apply_async"):
+    # SDD-101: eager 모드에서 ETA 예약 리마인더가 즉시 발송되지 않도록 스케줄 발행을 mock.
+    # (테스트는 run_reminder 를 직접 호출해 발송/중복방지를 검증한다)
+    with patch("app.tasks.report_email_task.notification_email_task.apply_async"), \
+         patch("app.tasks.reminder_task.send_session_reminder_task.apply_async"):
         res = client.post("/api/v1/sessions", json=payload, headers=host_headers)
     assert res.status_code == 201, res.text
     return res.json()

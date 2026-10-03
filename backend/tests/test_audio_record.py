@@ -178,13 +178,15 @@ def _mock_ai_pipeline(monkeypatch, confidence: str = "high") -> None:
     monkeypatch.setattr(summary_task, "_call_gemini_summary", fake_summary)
 
 
-def test_07_기록지_조회_파이프라인후(client, monkeypatch):
+def test_07_기록지_조회_파이프라인후(client, monkeypatch, celery_eager):
     _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec07@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
     _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
+    # SDD-101: 종료는 /audio/stop(마킹) → /end(파이프라인 발행) 순서. stop 단독으로는 STT 미실행.
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"])
     assert res.status_code == 200
@@ -194,13 +196,15 @@ def test_07_기록지_조회_파이프라인후(client, monkeypatch):
     assert "headline" in body["ai_summary"]
 
 
-def test_08_전사문_조회(client, monkeypatch):
+def test_08_전사문_조회(client, monkeypatch, celery_eager):
     _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec08@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
     _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
+    # SDD-101: 종료는 /audio/stop(마킹) → /end(파이프라인 발행) 순서.
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/transcript", headers=host["auth"])
     assert res.status_code == 200
@@ -244,7 +248,7 @@ def test_11_존재하지않는_세션_404(client):
     assert res.status_code == 404
 
 
-def test_12_세션_end_시_자동_finalize(client, monkeypatch):
+def test_12_세션_end_시_자동_finalize(client, monkeypatch, celery_eager):
     _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec12@test.com")
     sid = _create_session(client, host)

@@ -1,11 +1,9 @@
-// 개선 3: 클래스 입장 전 대기실 — 순수 로직(닉네임 확정 · 셀프체크 · 입장 게이트).
-// 컴포넌트(ClassWaitingRoom.tsx)와 테스트가 함께 사용한다.
+// 입장 전 대기실 — 순수 로직(닉네임 확정 · 입장 게이트).
+// 컴포넌트(ClassWaitingRoom.tsx)와 함께 사용한다.
 //
-// 게이트 설계 원칙(차분한 UX — 입장을 막되 갇히게 하지 않는다):
-//   · 기기(카메라·마이크)·스피커는 "확인했는가"만 판정한다. 장치가 없거나 권한이 거부돼도
-//     사용자가 그 사실을 확인하면 입장할 수 있다(기기 미비로 영구 차단 금지).
-//   · LINK BAND는 선택(opt-in)이므로 게이트에 포함하지 않는다 — 미연결이어도 항상 입장 가능.
-//   · 조용한 공간·이어폰은 몰입 품질을 위한 자기 점검이며 모두 체크해야 입장할 수 있다.
+// 개선 3 재설계: 기기(카메라·마이크·스피커)·주변 단계별 셀프체크를 제거하고
+// 입장 게이트는 이름 확인만 남긴다. 카메라·마이크는 시스템이 자동 확인하고
+// 문제가 있을 때만 안내한다(입장을 막지 않는다). LINK BAND 는 선택(opt-in).
 
 /** 확정한 게스트 닉네임 보관 키(sessionStorage) — 새로고침 시에도 대기실 입력이 유지된다. */
 export const WAITING_ROOM_NICKNAME_KEY = 'mb_waiting_room_nickname';
@@ -20,39 +18,6 @@ export type WaitingRoomDeviceState =
   | 'off'
   | 'denied'
   | 'unsupported';
-
-export type WaitingRoomChecklistId = 'space' | 'headset';
-
-export interface WaitingRoomChecklistItem {
-  id: WaitingRoomChecklistId;
-  /** 안내 아이콘(이모지) */
-  icon: string;
-  label: string;
-  hint: string;
-}
-
-/** 조용한 공간 · 이어폰 셀프체크 — 두 항목 모두 체크해야 입장할 수 있다. */
-export const WAITING_ROOM_CHECKLIST: readonly WaitingRoomChecklistItem[] = [
-  {
-    id: 'space',
-    icon: '🤫',
-    label: '조용한 공간에서 참여하나요?',
-    hint: '주변 소음이 적은 곳이면 몰입에 도움이 됩니다. 휴대폰은 무음으로 두어 주세요.',
-  },
-  {
-    id: 'headset',
-    icon: '🎧',
-    label: '이어폰·헤드셋을 착용했나요?',
-    hint: '스피커로 들으면 하울링(삐—)이 생길 수 있어요. 이어폰 착용을 권장합니다.',
-  },
-] as const;
-
-/** 셀프체크 체크 상태(항목 id → 체크 여부) */
-export type WaitingRoomCheckState = Record<WaitingRoomChecklistId, boolean>;
-
-export function emptyCheckState(): WaitingRoomCheckState {
-  return { space: false, headset: false };
-}
 
 /** 앞뒤 공백·연속 공백을 정리하고 길이를 제한한다(빈 이름은 유효하지 않다). */
 export function normalizeNickname(value: string): string {
@@ -95,14 +60,6 @@ export function clearStoredNickname(): void {
 export interface WaitingRoomGateInput {
   /** 확정한 닉네임(회원은 프로필 이름) */
   nickname: string;
-  /** 카메라·마이크 프리뷰를 확인하고 [기기 확인 완료]를 눌렀는가 */
-  devicesChecked: boolean;
-  /** 스피커 테스트 톤을 재생했는가 */
-  speakerVerified: boolean;
-  /** 스피커 테스트 지원 여부 — 미지원 브라우저는 확인 없이도 통과시킨다 */
-  speakerSupported: boolean;
-  /** 셀프체크(조용한 공간·이어폰) 체크 상태 */
-  checks: WaitingRoomCheckState;
 }
 
 export interface WaitingRoomGateResult {
@@ -111,15 +68,10 @@ export interface WaitingRoomGateResult {
   missing: string[];
 }
 
-/** 입장 가능 여부와 부족한 항목을 계산한다. LINK BAND 는 판정 대상이 아니다(opt-in). */
+/** 입장 가능 여부를 계산한다 — 이름 확인만 필수(기기·체크인은 전부 스킵 가능). */
 export function resolveWaitingRoomGate(input: WaitingRoomGateInput): WaitingRoomGateResult {
   const missing: string[] = [];
   if (!isNicknameValid(input.nickname)) missing.push('이름 확인');
-  if (!input.devicesChecked) missing.push('카메라·마이크 확인');
-  if (input.speakerSupported && !input.speakerVerified) missing.push('스피커 테스트');
-  for (const item of WAITING_ROOM_CHECKLIST) {
-    if (!input.checks[item.id]) missing.push(item.label);
-  }
   return { canEnter: missing.length === 0, missing };
 }
 
@@ -157,12 +109,4 @@ export function mediaErrorMessage(err: unknown, device: '카메라' | '마이크
 /** Web Bluetooth 지원 여부 — LINK BAND 확인 카드의 안내 분기용(게이트와 무관) */
 export function isBluetoothSupported(): boolean {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
-}
-
-/** 카메라·마이크 상태가 확정되었는가 — [기기 확인 완료] 버튼 활성 조건 */
-export function areDevicesResolved(
-  camera: WaitingRoomDeviceState,
-  mic: WaitingRoomDeviceState,
-): boolean {
-  return camera !== 'pending' && mic !== 'pending';
 }

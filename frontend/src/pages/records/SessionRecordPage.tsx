@@ -292,6 +292,13 @@ export default function SessionRecordPage() {
       ? (recordStatus as RecordStatus)
       : null;
 
+  // SDD-101 D1: 영상 저장 무결성 — 병합 실패 또는 누락 청크 여부
+  const videoMissing =
+    record?.video_expected_chunks != null && record?.video_actual_chunks != null
+      ? record.video_expected_chunks - record.video_actual_chunks
+      : 0;
+  const videoIncomplete = record?.video_status === 'merge_failed' || videoMissing > 0;
+
   if (error) {
     return (
       <AppShell title="AI 기록지" sub="클래스 기록">
@@ -358,6 +365,18 @@ export default function SessionRecordPage() {
             <p className="mt-1">
               이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 없습니다. 아래에
               상담사 노트를 직접 작성해주세요.
+            </p>
+          </div>
+        )}
+
+        {/* SDD-101 D1: 영상 저장 미완료 안내 — 병합 실패/누락 청크 */}
+        {videoIncomplete && (
+          <div className="rounded-2xl border border-[#F5C2C0] bg-[#FDECEC] p-5 text-sm text-[#B3261E]">
+            <p className="font-semibold">영상 일부가 저장되지 않았습니다</p>
+            <p className="mt-1">
+              {record.video_status === 'merge_failed'
+                ? '영상 청크가 절반 미만이라 영상이 생성되지 않았습니다.'
+                : `${videoMissing}개 청크가 누락되었습니다 (${record.video_actual_chunks ?? 0}/${record.video_expected_chunks ?? 0} 수신).`}
             </p>
           </div>
         )}

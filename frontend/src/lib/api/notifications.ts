@@ -33,13 +33,42 @@ export const listNotifications = (
   onlyUnread?: boolean,
   limit?: number,
   offset?: number,
+  type?: string,
+  event?: string,
 ): Promise<NotificationListResponse> => {
   const params = new URLSearchParams();
   if (onlyUnread) params.set('only_unread', 'true');
   if (limit) params.set('limit', String(limit));
   if (offset) params.set('offset', String(offset));
+  if (type) params.set('type', type);
+  if (event) params.set('event', event);
   const qs = params.toString();
   return apiClient.get<NotificationListResponse>(`/notifications${qs ? `?${qs}` : ''}`);
+};
+
+/** 초대된 세션 참조 — 홈/세션 화면의 "초대된 클래스" 카드용 */
+export interface SessionInviteRef {
+  sessionId: string;
+  notificationId: string;
+}
+
+/**
+ * 읽지 않은 세션 초대(session_invited) 알림을 조회해 (세션 id, 알림 id) 목록을 돌려준다.
+ * 홈/세션 화면에서 신규 초대 클래스를 강조·확인하는 데 쓴다.
+ */
+export const listUnreadSessionInvites = async (): Promise<SessionInviteRef[]> => {
+  const res = await listNotifications(true, 200, 0, undefined, 'session_invited');
+  const refs: SessionInviteRef[] = [];
+  for (const n of res.notifications) {
+    const sid =
+      typeof n.extra?.target_id === 'string'
+        ? n.extra.target_id
+        : typeof n.extra?.session_id === 'string'
+          ? n.extra.session_id
+          : undefined;
+    if (sid) refs.push({ sessionId: sid, notificationId: n.id });
+  }
+  return refs;
 };
 
 export const getUnreadCount = (): Promise<UnreadCountResponse> =>

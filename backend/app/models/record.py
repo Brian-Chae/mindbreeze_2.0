@@ -31,6 +31,8 @@ class SessionRecord(Base):
     video_s3_key: Mapped[str | None] = mapped_column(String(500))
     video_recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     video_recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # SDD-101 C4: 클라이언트가 종료 시 선언한 예상 청크 수 — 병합 50% 규칙의 정확한 분모.
+    video_expected_chunks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # SDD-096: 세션 직후 1탭 셀프 체크인(주관 상태) — SAM 2축(각성·정서) 5단계 + 선택형 한 줄 소감.
     # 구조: {"participants": {<participant_id>: {"before": <slot>|없음, "after": <slot>|없음,
     #        "updated_at": iso}}, "updated_at": iso}
@@ -45,6 +47,10 @@ class SessionRecord(Base):
 
 class AudioChunk(Base):
     __tablename__ = "audio_chunks"
+    __table_args__ = (
+        # SDD-101 C1: (session_id, chunk_index) 유일 — 동일 청크 재업로드를 멱등 처리한다.
+        UniqueConstraint("session_id", "chunk_index", name="uq_audio_chunk_session_idx"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -62,6 +68,10 @@ class VideoChunk(Base):
     """
 
     __tablename__ = "video_chunks"
+    __table_args__ = (
+        # SDD-101 C1: (session_id, chunk_index) 유일 — 동일 청크 재업로드를 멱등 처리한다.
+        UniqueConstraint("session_id", "chunk_index", name="uq_video_chunk_session_idx"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)

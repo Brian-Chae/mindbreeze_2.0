@@ -113,7 +113,7 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 
 ## 7-Stage SDD (Spec-Driven Development) (2026-06-05~)
 
-> 모든 Linear 프로젝트에 적용되는 7-Stage 방법론. `sdd-workflow` 스킬 기반.
+> 모든 프로젝트에 적용되는 7-Stage 방법론. `sdd-workflow` 스킬 기반.
 > **Stage ③ Verify는 구현 전 필수 게이트** — 건너뛰면 안 됨.
 
 | # | Stage | 산출물 | 설명 | Brian 개입 |
@@ -126,21 +126,10 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 | ⑥ | **Summary** | `specs/NNN/summary.md` | 구현 결과, 디버깅, 테스트 정리 | ❌ 자동 |
 | ⑦ | **Review** | 승인 | Brian 최종 리뷰 → Done | ✅ 승인 |
 
-### Linear 상태 매핑
-
-| Stage | Linear 상태 |
-|-------|------------|
-| ① Spec | Backlog → Todo |
-| ②~③ Plan + Verify | Todo → In Progress |
-| ④~⑤ Implement + Test | In Progress |
-| ⑥ Summary | In Progress → In Review |
-| ⑦ Review | In Review → Done |
-
 ### 핵심 규칙
 
 - **spec + plan + verify + summary 4종 모두 존재해야 SDD 완료**
 - **Stage ③ Verify는 구현 전에만 작성. 사후 작성 금지.**
-- **각 Stage 완료 시 Linear 코멘트에 해당 문서 전문 게시**
 - Git commit: `feat(sdd-NNN):` / `fix(sdd-NNN):` 태그 포함
 - 스펙 번호는 `specs/.sdd-counter`로 관리 (NNN 순차 증가)
 

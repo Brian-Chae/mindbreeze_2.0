@@ -196,3 +196,28 @@ def test_닉네임_정리_공백_길이_비문자열(monkeypatch):
     assert names[0] == "김 민지"
     assert names[1] == "가" * ns._WAITING_ROOM_NICKNAME_MAX
     assert names[2] is None
+
+
+def test_체크인_요약_정리_및_전달(monkeypatch):
+    """입장 전 체크인(SAM 2축 + 메시지) 요약이 정리되어 전달된다. 전부 비면 None."""
+    fake = _wire(monkeypatch, {"sid-1": _participant_session()})
+    fake.call(
+        "waiting_room",
+        "sid-1",
+        {
+            "session_id": "sess-1",
+            "action": "join",
+            "nickname": "민지",
+            "checkin": {"arousal": 4, "valence": 2, "note": "  목이   불편해요  "},
+        },
+    )
+    e = fake.events("waiting_room_changed")[0]["data"]
+    assert e["checkin"] == {"arousal": 4, "valence": 2, "note": "목이 불편해요"}
+
+    # 범위 밖·비정상 값은 걸러내고, 세 값이 모두 비면 checkin 은 None 이 된다
+    fake.call(
+        "waiting_room",
+        "sid-1",
+        {"session_id": "sess-1", "action": "join", "checkin": {"arousal": 9, "valence": "x"}},
+    )
+    assert fake.events("waiting_room_changed")[-1]["data"]["checkin"] is None

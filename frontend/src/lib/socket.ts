@@ -130,12 +130,22 @@ export interface ParticipantChangedEvent {
 }
 
 /** 개선 3: 대기실 입장/퇴장 알림 — 상담사가 대기 인원을 실시간으로 본다 */
+
+/** 입장 전 체크인 요약 — 대기실 실시간 표시 전용(저장은 REST checkin). 세 값 모두 비면 미전송. */
+export interface WaitingRoomCheckin {
+  arousal: number | null;
+  valence: number | null;
+  note: string | null;
+}
+
 export interface WaitingRoomChangedEvent {
   session_id: string;
   participant_id: string;
   action: 'join' | 'leave';
   /** 표시용 닉네임(서버가 정리해 전달 — 신원 판정에는 쓰지 않는다) */
   nickname?: string | null;
+  /** 입장 전 체크인 요약(기분 SAM 2축 + 상담사 전달 메시지). 미제출이면 없음. */
+  checkin?: WaitingRoomCheckin | null;
 }
 
 export type WaitingRoomChangedHandler = (event: WaitingRoomChangedEvent) => void;
@@ -144,6 +154,8 @@ export interface WaitingRoomPresenceEmit {
   session_id: string;
   action: 'join' | 'leave';
   nickname?: string | null;
+  /** 입장 전 체크인 요약 — 체크인 저장 후 재전송으로 상담사 화면에 갱신된다 */
+  checkin?: WaitingRoomCheckin | null;
 }
 
 

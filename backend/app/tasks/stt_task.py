@@ -395,9 +395,9 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
 
 
 try:
-    from celery import shared_task
+    from app.core.celery_app import celery_app
 
-    @shared_task(name="tasks.stt")
+    @celery_app.task(name="tasks.stt")
     def stt_task(session_id: str) -> None:
         from app.core.database import SessionLocal
 

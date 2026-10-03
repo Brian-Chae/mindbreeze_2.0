@@ -62,7 +62,8 @@ jobs:
             backend/app \
             backend/alembic \
             backend/requirements.txt \
-            backend/ensure_livekit_nginx.py
+            backend/ensure_livekit_nginx.py \
+            backend/sweep_stale_open_sessions_cron.py
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -142,6 +143,9 @@ jobs:
 
             # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
             (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
+
+            # 5.6 SDD-100: open 상태 방치 세션 자동 취소 cron 등록 (매 5분, celery beat 대체)
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_open_sessions_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E "^DATABASE_URL=" ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E "^REDIS_URL=" ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_open_sessions_cron.py >> /var/log/mindbreeze-stale-open-sessions.log 2>&1') | crontab -
 
             # 6. 헬스체크
             curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"

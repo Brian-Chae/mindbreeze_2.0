@@ -509,7 +509,7 @@ describe('ClassAudioPanel (상담사)', () => {
       createElement(ClassAudioPanel, { state: playerState(), actions, enabled: true, connected: true }),
     );
 
-    expect(text()).toContain('명상 가이드 · BGM');
+    expect(text()).toContain('대기실 BGM');
     const select = container.querySelector('select') as HTMLSelectElement;
     expect(select.value).toBe(URL_TRACK.track_id);
     expect([...select.options].map((o) => o.value)).toEqual([TONE_TRACK.track_id, URL_TRACK.track_id]);

@@ -232,9 +232,9 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
 
 
 try:
-    from celery import shared_task
+    from app.core.celery_app import celery_app
 
-    @shared_task(name="tasks.summary")
+    @celery_app.task(name="tasks.summary")
     def summary_task(session_id: str) -> None:
         from app.core.database import SessionLocal
 

@@ -1,7 +1,12 @@
-// 알림 전역 상태 — 읽지않음 카운트 + 실시간 이벤트
+// 알림 전역 상태 — 읽지않음 카운트 + 실시간 이벤트 + 세션 초대
 
 import { create } from 'zustand';
-import { getUnreadCount, type NotificationExtra } from '../lib/api/notifications';
+import {
+  getUnreadCount,
+  listUnreadSessionInvites,
+  type NotificationExtra,
+  type SessionInviteRef,
+} from '../lib/api/notifications';
 
 export interface NotificationToast {
   id: string;
@@ -16,18 +21,24 @@ interface NotificationState {
   unread: number;
   toast: NotificationToast | null;
   wsConnected: boolean;
+  /** 읽지 않은 세션 초대 목록 — 홈/세션 화면의 "초대된 클래스" 카드 표시용 */
+  sessionInvites: SessionInviteRef[];
   fetch: () => Promise<void>;
   showToast: (t: NotificationToast) => void;
   dismissToast: () => void;
   increment: (n?: number) => void;
   reset: () => void;
   setWsConnected: (v: boolean) => void;
+  refreshSessionInvites: () => Promise<void>;
+  addSessionInvite: (invite: SessionInviteRef) => void;
+  removeSessionInvite: (sessionId: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
   unread: 0,
   toast: null,
   wsConnected: false,
+  sessionInvites: [],
 
   fetch: async () => {
     try {
@@ -54,4 +65,24 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   reset: () => set({ unread: 0 }),
 
   setWsConnected: (v) => set({ wsConnected: v }),
+
+  refreshSessionInvites: async () => {
+    try {
+      const invites = await listUnreadSessionInvites();
+      set({ sessionInvites: invites });
+    } catch {
+      // 조용히 실패
+    }
+  },
+
+  addSessionInvite: (invite) =>
+    set((s) => {
+      if (s.sessionInvites.some((i) => i.sessionId === invite.sessionId)) return {};
+      return { sessionInvites: [...s.sessionInvites, invite] };
+    }),
+
+  removeSessionInvite: (sessionId) =>
+    set((s) => ({
+      sessionInvites: s.sessionInvites.filter((i) => i.sessionId !== sessionId),
+    })),
 }));

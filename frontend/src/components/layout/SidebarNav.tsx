@@ -179,8 +179,6 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
             width={28}
             height={13}
             alt=""
-            className="hue-rotate-[271deg] saturate-[5.38] brightness-[0.93] contrast-[1.03] invert-[0.13] sepia-[0.48]"
-            style={{ filter: 'brightness(0) saturate(100%) invert(13%) sepia(48%) saturate(5380%) hue-rotate(271deg) brightness(93%) contrast(103%)' }}
           />
           <span className="font-extrabold text-[17px] text-[#5F0080] tracking-tight">
             Mind&nbsp;Breeze

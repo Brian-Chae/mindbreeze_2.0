@@ -1,11 +1,13 @@
 """세션 관리 비즈니스 로직"""
 
+import logging
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from livekit import api as livekit_api
+from sqlalchemy import case, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -16,6 +18,8 @@ from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.services import code_service, eeg_query, reminder_service as _reminder_service
+
+logger = logging.getLogger(__name__)
 
 
 # SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
@@ -67,8 +71,6 @@ def _serialize(s: Session) -> dict:
         "duration_min": s.duration_min,
         "title": s.title,
         "notes": s.notes,
-        # 진행 큐시트(타임라인 대본) — 미작성(마이그레이션 이전 행)은 빈 배열로 내린다.
-        "cuesheet": s.cuesheet or [],
         "max_participants": s.max_participants,
         "location_type": s.location_type,
         "participant_mode": s.participant_mode,
@@ -214,24 +216,6 @@ def detect_conflict(
     return None
 
 
-def _cuesheet_steps(payload) -> list[dict]:
-    """생성/수정 payload 의 큐시트 단계를 JSONB 저장용 dict 목록으로 바꾼다.
-
-    CuesheetStep.model_dump() 로 라벨·목표시간(분)·메모만 남긴다(미작성 시 빈 목록).
-    """
-    steps = getattr(payload, "cuesheet", None) or []
-    return [step.model_dump() for step in steps]
-
-
-def _copy_cuesheet(value: list | None) -> list[dict]:
-    """복제/템플릿 저장 시 큐시트 단계를 원본과 분리된 dict 사본으로 옮긴다.
-
-    JSONB 값은 dict 참조를 공유하면 한쪽 수정이 다른 행에 새어나갈 수 있으므로
-    단계마다 얕은 복사본을 만든다(중첩 없는 평면 구조).
-    """
-    return [dict(step) for step in (value or [])]
-
-
 def normalize_reminder_offsets(value) -> list[int]:
     """SDD-097: 리마인더 시점 정규화 — reminder_service 규칙 재사용(단일 진실)."""
     return _reminder_service.normalize_reminder_offsets(value)
@@ -290,7 +274,6 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
-        cuesheet=_cuesheet_steps(payload),
         # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록.
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=max_p,
@@ -392,7 +375,6 @@ def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
-        cuesheet=_cuesheet_steps(payload),
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=_normalized_max_participants(payload.type, payload.max_participants),
         location_type=payload.location_type,
@@ -449,7 +431,6 @@ def _clone_session_config(
         access_code=None if is_template else generate_access_code(db),
         title=title,
         notes=source.notes,
-        cuesheet=_copy_cuesheet(source.cuesheet),
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
@@ -651,9 +632,6 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.title = payload.title
     if payload.notes is not None:
         s.notes = payload.notes
-    # 진행 큐시트 — 주어졌을 때만 통째 교체(빈 배열이면 큐시트 삭제).
-    if payload.cuesheet is not None:
-        s.cuesheet = _cuesheet_steps(payload)
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
     if payload.type is not None:
@@ -719,6 +697,25 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     db.commit()
 
 
+def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
+    """cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan) 데이터를 막는다(BUG-4).
+
+    - 음성: recording → failed(중단), recording_ended_at 기록.
+    - 영상: recording → completed(종료), video_recording_ended_at 기록.
+    (실제 데이터 폐기·상담사 확인 플로우는 SDD-101 Phase D 에서 별도 처리.)
+    """
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
+    if record is None:
+        return
+    if record.status == "recording":
+        record.status = "failed"
+        record.recording_ended_at = _now()
+    if record.video_status == "recording":
+        record.video_status = "completed"
+        record.video_recording_ended_at = _now()
+    db.commit()
+
+
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
@@ -748,6 +745,30 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         s.ended_at = _now()
     # SDD-026: 상태 계약 버전 증가 — 클라이언트의 중복/역순 이벤트 판정 기준
     s.state_version = (s.state_version or 0) + 1
+
+    # SDD-101 B1: CAS(compare-and-set) — read-modify-write 대신 조건부 UPDATE로
+    # 동시 전이 경합(이중 finalize·이벤트 발행)을 원자적으로 막는다.
+    # 동일 시점 두 요청이 같은 상태를 읽어 둘 다 통과하던 버그(BUG-3) 해결.
+    now = _now()
+    values = {
+        "status": target,
+        "state_version": (s.state_version or 0) + 1,
+    }
+    if action == "open":
+        values["opened_at"] = case((Session.opened_at.is_(None), now), else_=Session.opened_at)
+    elif action == "start":
+        values["started_at"] = case((Session.started_at.is_(None), now), else_=Session.started_at)
+    elif action == "end":
+        values["ended_at"] = now
+
+    result = db.execute(
+        update(Session)
+        .where(Session.id == s.id, Session.status.in_(allowed_from))
+        .values(**values)
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
     db.commit()
     db.refresh(s)
 
@@ -757,20 +778,25 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         ensure_session_chat_room(s.id, db)
 
     if action == "end":
-        try:
-            from app.services import audio_service
-            audio_service.finalize_on_session_end(s.id, db)
-        except Exception:
-            pass
-        # SDD-084: 영상 녹화도 세션 종료 시 자동 종료 (audio finalize 실패와 무관하게 시도)
+        # SDD-088 후속: 영상 종료를 먼저 수행해 audio finalize 가 video_merge_needed()
+        # 로 병합 필요 여부를 판별할 수 있게 한다(종료 응답은 비동기 체인이라 지연 없음).
         try:
             from app.services import video_service
             video_service.finalize_on_session_end(s.id, db)
         except Exception:
             pass
+        try:
+            from app.services import audio_service
+            audio_service.finalize_on_session_end(s.id, db)
+        except Exception as exc:
+            # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
+            logger.exception("[session] audio finalize failed (best-effort): %s", exc)
         # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
         # 리포트 생성은 audio_service.finalize_on_session_end 의 Celery chain(STT→요약→리포트)에서
         # 비동기 처리된다. 여기서는 동기 생성하지 않아 세션 종료 API 응답을 지연시키지 않는다.
+    elif action == "cancel":
+        # SDD-101 B3: cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan)를 막는다.
+        _close_out_media_on_cancel(s, db)
 
     # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
     _notify_session_state(s)
@@ -802,6 +828,50 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         )
 
     return _with_chat_room(_serialize(s), s.id, db)
+
+
+# SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
+STALE_OPEN_SESSION_MAX_AGE_HOURS = 24
+
+
+def sweep_stale_open_sessions(
+    db: DBSession,
+    *,
+    max_age_hours: int = STALE_OPEN_SESSION_MAX_AGE_HOURS,
+) -> list[str]:
+    """open 상태로 일정 시간 방치된 세션을 자동 cancel 처리한다.
+
+    - 대상: status == 'open' and is_template == False and opened_at <= now - max_age_hours
+    - 전이: transition_status(..., 'cancel', db) 재사용 → 참가자 알림·이벤트·state_version 일관성 유지
+    - 개별 세션 실패(host 삭제 등)는 try/except 로 격리해 스윕 전체를 중단시키지 않는다.
+
+    반환: 취소 처리된 세션 id 목록.
+    """
+    now = _now()
+    cutoff = now - timedelta(hours=max_age_hours)
+    cancelled: list[str] = []
+
+    candidates = (
+        db.query(Session)
+        .filter(
+            Session.is_template.is_(False),
+            Session.status == "open",
+            Session.opened_at.is_not(None),
+            Session.opened_at <= cutoff,
+        )
+        .all()
+    )
+
+    for s in candidates:
+        try:
+            transition_status(str(s.id), str(s.host_id), "cancel", db)
+            cancelled.append(str(s.id))
+        except Exception:
+            # 호스트 삭제·동시 전이 등으로 실패한 건은 건너뛰고 다음 세션을 처리한다.
+            db.rollback()
+            continue
+
+    return cancelled
 
 
 # 새 실행(명시적)을 발급할 수 없는 상태 — 완료/취소된 세션은 즉시 재시작을 허용하지 않는다.
@@ -1117,18 +1187,32 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = _get_session_for_participant(session_id, user_id, db)
 
-    # webrtc_room_id가 없으면 생성
+    # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
         s.webrtc_room_id = uuid.uuid4()
+        db.commit()
+        db.refresh(s)
 
-    # 상태 전이: scheduled → in_progress (host만 가능)
+    # SDD-101 B2: scheduled → in_progress 전이를 직접 대입(s.status=...) 대신 CAS UPDATE로.
+    # 직접 대입은 started_at·state_version 기록을 우회해 종료 시 has_data 판정이 깨졌다(BUG-2).
     if s.status == "scheduled" and s.host_id == _to_uuid(user_id):
-        s.status = "in_progress"
+        now = _now()
+        result = db.execute(
+            update(Session)
+            .where(Session.id == s.id, Session.status == "scheduled")
+            .values(
+                status="in_progress",
+                state_version=(s.state_version or 0) + 1,
+                started_at=case((Session.started_at.is_(None), now), else_=Session.started_at),
+            )
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
+        db.commit()
+        db.refresh(s)
     elif s.status not in ("in_progress", "paused"):
         raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
-
-    db.commit()
-    db.refresh(s)
 
     # LiveKit 토큰 발급
     room_name = str(s.webrtc_room_id)

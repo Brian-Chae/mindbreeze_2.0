@@ -27,8 +27,6 @@ import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useWakeLock } from '../../hooks/useWakeLock';
-// 개선 3: 대기실 인원 — 회원이 입장 전 준비(대기실)에 몇 명 있는지 실시간 표시
-import { useWaitingRoomCount } from '../../hooks/useWaitingRoomCount';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
@@ -73,8 +71,6 @@ import { QuietSignalSummary } from '../../components/session/QuietSignalSummary'
 // 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 상단 단일 게이지
 import '../../components/class/host-class-player.css';
 import { type ClassAggregateEvent } from '../../lib/class/group-aggregate';
-// 개선 7: 진행 큐시트 — 상담사 플레이어의 현재 단계 하이라이트·남은 시간 진행바
-import { CuesheetPanel } from '../../components/class/CuesheetPanel';
 import {
   countSignals,
   isClassSignalType,
@@ -85,6 +81,10 @@ import {
 } from '../../lib/class/quiet-signal';
 // 개선 10: 명상 가이드·BGM 동기 재생 — 상담사 재생 패널(트랙 선택 + 재생 컨트롤 → class:audio_sync)
 import { ClassAudioPanel } from '../../components/class/ClassAudioPanel';
+// 개선 3 재설계: 입장 전 체크인 — 대기실 실시간 목록 + 세션 시작 카드
+import { WaitingRoomCheckinList } from '../../components/class/WaitingRoomCheckinList';
+import { CheckinSummary } from '../../components/class/CheckinSummary';
+import { useWaitingRoomCount, type WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
 import { useClassAudioPlayer } from '../../hooks/useClassAudioPlayer';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import { StatusBadge } from '../../components/session/StatusBadge';
@@ -498,6 +498,8 @@ export default function ClassPlayerPage() {
   const [lobbyElapsedSec, setLobbyElapsedSec] = useState(0);
   /** SDD-088: 종료 2단계 확인 모달 */
   const [endModalOpen, setEndModalOpen] = useState(false);
+  /** SDD-101 D3: 종료(end) 확정 실패 — 재시도 CTA 노출 */
+  const [endFailed, setEndFailed] = useState(false);
   /** SDD-085: 프리뷰에서 확정한 카메라/마이크 사용 여부 — 세션 전체(녹음·녹화)에 적용 */
   const [mediaPrefs, setMediaPrefs] = useState<PreJoinMediaPrefs>({
     cameraOn: true,
@@ -510,6 +512,10 @@ export default function ClassPlayerPage() {
   const [chatBusy, setChatBusy] = useState(false);
   /** SDD-095: 채팅 패널 접힘 여부 — 켜면 펼치고 사용자가 접을 수 있다 */
   const [chatExpanded, setChatExpanded] = useState(false);
+  /** (B) 세션 시작 카드 — 대기실에서 받은 입장 전 체크인을 라이브 전환 후에도 유지 */
+  const retainedCheckinsRef = useRef<Map<string, WaitingRoomEntry>>(new Map());
+  const [sessionCheckins, setSessionCheckins] = useState<WaitingRoomEntry[]>([]);
+  const [checkinCardDismissed, setCheckinCardDismissed] = useState(false);
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -903,7 +909,7 @@ export default function ClassPlayerPage() {
   // 상담사 본인은 자기 명령을 되받지 않는다 — 로컬 엔진이 기준이고 서버는 회원 배포 경로다.
   const audioPlayer = useClassAudioPlayer({
     sessionId: id,
-    enabled: Boolean(id && isHost && (isLobby || isRunning)),
+    enabled: Boolean(id && isHost && isLobby),
     publish: liveSocket.sendAudioSync,
   });
 
@@ -912,6 +918,25 @@ export default function ClassPlayerPage() {
 
   // 개선 3: 회원 대기실(입장 전 준비) 인원 — 대기실 씬에서만 구독한다
   const waitingRoom = useWaitingRoomCount({ sessionId: id, enabled: Boolean(id && isLobby) });
+
+  // (B) 대기실에서 받은 체크인을 라이브 전환 후에도 유지한다 — 세션 시작 카드에 쓴다.
+  // WS 는 휘발성(입장 시 leave 로 사라짐)이므로 체크인만 별도 ref 로 누적한다.
+  useEffect(() => {
+    let changed = false;
+    for (const entry of waitingRoom.entries) {
+      if (!entry.checkin) continue;
+      const prev = retainedCheckinsRef.current.get(entry.participantId);
+      if (
+        !prev ||
+        JSON.stringify(prev.checkin) !== JSON.stringify(entry.checkin) ||
+        prev.nickname !== entry.nickname
+      ) {
+        retainedCheckinsRef.current.set(entry.participantId, entry);
+        changed = true;
+      }
+    }
+    if (changed) setSessionCheckins([...retainedCheckinsRef.current.values()]);
+  }, [waitingRoom.entries]);
 
   // SDD-095: 종료 씬(리포트 대기) 진행 스텝퍼 — 세션 종료 후에만 구독/REST 폴링한다.
   const reportProgress = useReportProgress(isEnded ? id ?? null : null);
@@ -1071,7 +1096,8 @@ export default function ClassPlayerPage() {
     if (videoRecorder.state === 'recording' || videoRecorder.state === 'paused') {
       try {
         await videoRecorder.stop();
-        await stopVideo(id);
+        // SDD-101 C4: 녹화 총 청크 수를 종료 시 선언해 서버가 누락 인덱스를 계산하도록 한다
+        await stopVideo(id, videoRecorder.getExpectedCount());
       } catch (e) {
         setError(`영상 녹화 종료 실패: ${(e as Error).message}`);
       }
@@ -1083,6 +1109,7 @@ export default function ClassPlayerPage() {
     if (!id) return;
     setTransitioning(true);
     setError(null);
+    setEndFailed(false);
     try {
       if (
         recorder.state === 'recording' ||
@@ -1098,7 +1125,9 @@ export default function ClassPlayerPage() {
       bypassGuardRef.current = true;
       navigate(leaveTo ?? `/sessions/${id}/record`);
     } catch (e) {
+      // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
       setError((e as Error).message);
+      setEndFailed(true);
     } finally {
       setTransitioning(false);
     }
@@ -1679,6 +1708,48 @@ export default function ClassPlayerPage() {
           </>
         )}
 
+        {/* (B) 세션 시작 — 입장 전 체크인 요약 카드(닫기 가능) */}
+        {isRunning && isHost && sessionCheckins.length > 0 && !checkinCardDismissed && (
+          <div className="rounded-2xl border border-[#5F0080]/30 bg-[#5F0080]/10 p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  입장 전 체크인 · {sessionCheckins.length}명
+                </h3>
+                <p className="mt-1 text-xs text-white/60">
+                  회원이 입장 전에 남긴 기분·전달 말입니다. 세션 진행에 참고해 주세요.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckinCardDismissed(true)}
+                aria-label="체크인 카드 닫기"
+                className="shrink-0 rounded-lg px-2 py-1 text-xs text-white/60 hover:bg-white/10"
+              >
+                닫기
+              </button>
+            </div>
+            <ul className="mt-3 space-y-2">
+              {sessionCheckins.map((entry) => (
+                <li key={entry.participantId} className="rounded-xl bg-black/20 p-3">
+                  <p className="text-sm font-semibold text-white">
+                    {entry.nickname ?? '참가자'}
+                  </p>
+                  {entry.checkin && (
+                    <div className="mt-1.5">
+                      <CheckinSummary
+                        arousal={entry.checkin.arousal}
+                        valence={entry.checkin.valence}
+                        note={entry.checkin.note}
+                      />
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {isHost && (isLobby || isRunning) && <HostClassWorkspace
           rows={displayMetrics} extras={hostExtras} signals={quietSignals} aggregate={groupAggregate}
           elapsed={classElapsedSec} running={isRunning} statusBar={liveStatusBar} filter={activeFilter}
@@ -1741,11 +1812,12 @@ export default function ClassPlayerPage() {
               <span>마이크 {mediaPrefs.micOn ? 'ON' : 'OFF'} · 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}</span>
             </div>
             {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}>녹음 · 녹화 · 마이크 · 카메라 설정 {mediaOpen ? '접기' : '펼치기'}</button>}
-            <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby || isRunning} connected={liveSocket.isConnected} />
+            {isLobby && <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} />}
             <div className="hcp-selfview"><p>나의 화면 · 호스트</p>{mediaPrefs.cameraOn ? <SessionHostVideoView stream={videoRecorder.stream} facingMode={videoRecorder.facingMode} recording={videoRecorder.state === 'recording'} /> : <div className="hcp-camera-off">카메라 꺼짐 · 녹화 안 함</div>}</div>
             {isLobby && <div className="hcp-code"><small>클래스 코드 · 대기 {elapsedLabel(lobbyElapsedSec)}</small><strong>{accessCode || '——————'}</strong><button onClick={() => void handleCopyCode()}>{codeCopied ? '복사 완료' : '코드 복사'}</button></div>}
+            {isLobby && <WaitingRoomCheckinList entries={waitingRoom.entries} />}
             <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
-            <details><summary>녹화 · AI 상태 · 진행 큐시트</summary>{hostStatusPanel}<CuesheetPanel cuesheet={session.cuesheet} elapsedSec={classElapsedSec} paused={status === 'paused'} /></details>
+            <details><summary>녹화 · AI 상태</summary>{hostStatusPanel}</details>
           </>}
         />}
         {isLobby && !isHost && monitorPanel}
@@ -1756,7 +1828,20 @@ export default function ClassPlayerPage() {
         {/* 오류 표시 */}
         {error && (
           <div className="rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
-            {error}
+            <p>{error}</p>
+            {/* SDD-101 D3: 종료 확정 실패 시 재시도 CTA */}
+            {endFailed && (
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={transitioning}
+                  onClick={() => void finishSession()}
+                  className="rounded-lg bg-[#5F0080] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  종료 재시도
+                </button>
+              </div>
+            )}
           </div>
         )}
 

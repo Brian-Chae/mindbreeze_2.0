@@ -119,7 +119,7 @@ def test_06_recording중_동의철회는_400(client):
     assert res.status_code == 400
 
 
-def test_07_청크0개_recording_세션_스텁_금지(client):
+def test_07_청크0개_recording_세션_스텁_금지(client, celery_eager):
     # 녹음을 시작했지만 청크가 하나도 없으면 스텁 가짜 전사 대신 failed 처리
     host = _register(client, "sdd085g@test.com")
     sid = _create_session(client, host)
@@ -129,6 +129,8 @@ def test_07_청크0개_recording_세션_스텁_금지(client):
         headers=host["auth"],
     )
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
+    # SDD-101: 종료는 /audio/stop(마킹) → /end(파이프라인 발행) 순서.
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     rec = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"]).json()
     assert rec["status"] == "failed"
@@ -157,7 +159,7 @@ def test_08_리포트_ai_record_mic_off_계약(client):
     assert content["ai_record"] == {"status": "not_available", "reason": "mic_off"}
 
 
-def test_09_리포트_ai_record_정상세션_available(client, monkeypatch):
+def test_09_리포트_ai_record_정상세션_available(client, monkeypatch, celery_eager):
     # QA-4 (하위 호환): 마이크 ON 세션은 ai_record.status=available
     _mock_ai_pipeline(monkeypatch)
     host = _register(client, "sdd085i@test.com")
@@ -203,7 +205,7 @@ def test_10_수동노트_마커는_manual에서도_정상(client):
     assert body["status"] == "manual"
 
 
-def test_11_저신뢰_리포트_low_confidence_전사문유지(client, monkeypatch):
+def test_11_저신뢰_리포트_low_confidence_전사문유지(client, monkeypatch, celery_eager):
     # SDD-085 G5 확장: 비언어([잡음]/[무음]) 지배 오디오 → AI 요약 미제공 + 원본 전사문 유지
     _mock_ai_pipeline(monkeypatch, confidence="low")
     host = _register(client, "sdd085k@test.com")

@@ -108,6 +108,13 @@ def app_client(monkeypatch):
     from app.core.redis import get_redis
     import app.models  # noqa: F401
 
+    # SDD-101: 파이프라인(Celery 체인)을 테스트에서 결정적으로 인라인 실행.
+    # (인라인 폴백 제거로 워커 없는 테스트에서 파이프라인 검증하려면 eager 필요)
+    from app.core.celery_app import celery_app
+
+    celery_app.conf.task_always_eager = True
+    celery_app.conf.task_eager_propagates = True
+
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -144,6 +151,22 @@ def app_client(monkeypatch):
 @pytest.fixture
 def client(app_client):
     return app_client[0]
+
+
+@pytest.fixture
+def celery_eager():
+    """SDD-101: Celery 체인을 테스트에서 결정적으로 인라인 실행한다(파이프라인 검증용).
+
+    전역 eager는 ETA 예약 태스크(리마인더 등)를 즉시 실행시켜 예약 로직 테스트를 깨므로,
+    파이프라인 종료(STT→요약→리포트) 검증이 필요한 테스트만 이 fixture를 opt-in 한다.
+    """
+    from app.core.celery_app import celery_app
+
+    celery_app.conf.task_always_eager = True
+    celery_app.conf.task_eager_propagates = True
+    yield
+    celery_app.conf.task_always_eager = False
+    celery_app.conf.task_eager_propagates = False
 
 
 @pytest.fixture

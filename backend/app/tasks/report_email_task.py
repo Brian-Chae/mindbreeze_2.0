@@ -3,7 +3,10 @@ from celery import Celery
 from app.config import settings
 
 # 명시적 Redis 브로커로 실행: celery -A app.tasks.report_email_task:email_app worker
-email_app = Celery("report_email", broker=settings.redis_url)
+# set_as_current=False: email_app 이 celery._state.current_app 을 가로채지 않게 한다.
+# (가로채면 @shared_task 로 정의된 stt/summary/report/video 파이프라인 태스크가
+#  celery_app 이 아닌 email_app 에 바인딩되어 eager 모드·태스크 등록이 어긋난다.)
+email_app = Celery("report_email", broker=settings.redis_url, set_as_current=False)
 email_app.conf.broker_connection_timeout = 3
 
 

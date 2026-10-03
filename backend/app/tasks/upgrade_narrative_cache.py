@@ -39,9 +39,9 @@ def upgrade_rule_narratives(db: DBSession, limit: int = 5) -> int:
 
 
 try:
-    from celery import shared_task
+    from app.core.celery_app import celery_app
 
-    @shared_task(name="tasks.upgrade_narrative_cache")
+    @celery_app.task(name="tasks.upgrade_narrative_cache")
     def upgrade_narrative_cache_task(limit: int = 5) -> int:
         from app.core.database import SessionLocal
 

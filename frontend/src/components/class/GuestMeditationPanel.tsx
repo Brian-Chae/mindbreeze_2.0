@@ -25,10 +25,6 @@ import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { GuestChatNotice } from '../chat/GuestChatNotice';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 import { QuietSignalButtons } from './QuietSignalButtons';
-// 개선 10: 명상 가이드·BGM 동기 재생 — 서버 타임코드(class:audio_sync)를 받아 동일 소스를 동기 재생
-import { GuestAudioPanel } from './GuestAudioPanel';
-import { useGuestAudioSync } from '../../hooks/useGuestAudioSync';
-import { type AudioSyncEvent } from '../../lib/class/audio-sync';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -61,17 +57,21 @@ interface MetricDef {
   key: MetricKey;
   label: string;
   unit: string;
-  /** 지표 차트 스케일 상한 */
+  /** 지표 차트 스케일 상한 (디자인 정본 비율 기준) */
   chartMax: number;
+  /** 낮을수록 좋은 지표(BPM·호흡) — 차트 방향 코멘트에 사용 */
+  lowerIsBetter?: boolean;
+  /** 차트 노트에 붙는 스케일 안내 (예: HRV "0–60ms 기준") */
+  scaleNote?: string;
 }
 
 const METRICS: readonly MetricDef[] = [
   { key: 'focus', label: '집중도', unit: '%', chartMax: 100 },
   { key: 'relaxation', label: '이완도', unit: '%', chartMax: 100 },
   { key: 'emotional', label: '정서안정도', unit: '%', chartMax: 100 },
-  { key: 'bpm', label: 'BPM', unit: 'bpm', chartMax: 150 },
-  { key: 'respiration', label: '호흡', unit: '회/분', chartMax: 40 },
-  { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 200 },
+  { key: 'bpm', label: 'BPM', unit: 'bpm', chartMax: 100, lowerIsBetter: true },
+  { key: 'respiration', label: '호흡', unit: '회/분', chartMax: 24, lowerIsBetter: true },
+  { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 60, scaleNote: '0–60ms 기준' },
 ] as const;
 
 const MAX_POINTS = 300;
@@ -277,40 +277,12 @@ export function GuestMeditationPanel({
   );
 
   // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
-  // 개선 10: 같은 소켓으로 class:audio_sync(재생 타임코드)를 받아 가이드·BGM 을 동기 재생한다.
-  // 재생 엔진은 이 컴포넌트(언마운트되지 않음)에 살아 있어 화면 끄기(몰입) 중에도 계속 재생된다.
-  const [audioSyncEvent, setAudioSyncEvent] = useState<AudioSyncEvent | null>(null);
-
-  const handleAudioSync = useCallback((event: AudioSyncEvent) => {
-    // 같은 명령을 중복 적용하지 않도록 revision 이 더 큰(또는 처음 보는) 이벤트만 상태에 반영한다.
-    // 트랙 id 가 비어 오는 명령(stop 등)은 직전 트랙을 유지한다 — 화면이 "재생 중이던 곡"을 잃지 않게.
-    setAudioSyncEvent((prev) => {
-      if (prev && event.revision > 0 && event.revision < prev.revision) return prev;
-      if (
-        prev &&
-        prev.revision === event.revision &&
-        prev.action === event.action &&
-        prev.server_ts_ms === event.server_ts_ms
-      ) {
-        return prev;
-      }
-      return { ...event, track_id: event.track_id ?? prev?.track_id ?? null };
-    });
-  }, []);
-
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
-    onClassAudioSync: handleAudioSync,
-  });
-
-  const audioSync = useGuestAudioSync({
-    sessionId,
-    enabled: Boolean(sessionId),
-    event: audioSyncEvent,
   });
 
   const isLive = band.connectionState === 'connected';
@@ -503,9 +475,6 @@ export function GuestMeditationPanel({
 
           <div className="player-right">
             <div className="player-metric-status">
-              <span className="player-status-copy" title={statusHint}>
-                {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
-              </span>
               {isLive ? (
                 <div className="player-band-control">
                   <button type="button" className="player-band-toggle" aria-label="LINK BAND 상태"
@@ -526,7 +495,15 @@ export function GuestMeditationPanel({
                     </div>
                   )}
                 </div>
-              ) : <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />}
+              ) : (
+                <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />
+              )}
+              {/* 미연결 + 무데이터일 때는 안내 문구가 연결 버튼과 중복되므로 숨긴다 */}
+              {(isLive || remoteEfficiency !== null) && (
+                <span className="player-status-copy" title={statusHint}>
+                  {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
+                </span>
+              )}
               {!isLive && (
                 <button type="button" onClick={() => void band.connect()}
                   disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
@@ -541,20 +518,16 @@ export function GuestMeditationPanel({
                   aria-pressed={selectedKey === metric.key} aria-label={metric.label}
                   onClick={() => setSelectedKey(metric.key)}>
                   <span className="player-metric-name">{metric.label}</span>
-                  <span className="player-metric-value">{formatMetricValue(snapshot[metric.key])}
+                  <span className="player-metric-value" data-empty={snapshot[metric.key] === null}>
+                    {formatMetricValue(snapshot[metric.key])}
                     {snapshot[metric.key] !== null && <span className="player-metric-unit">{metric.unit}</span>}
                   </span>
                 </button>
               ))}
             </div>
-            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit} maxValue={activeMetric.chartMax} />
-            <div className="player-signals"><QuietSignalButtons onSend={liveSocket.sendSignal} /></div>
-            <GuestAudioPanel compact
-              trackTitle={audioSync.state.track?.title ?? null} playing={audioSync.state.playing}
-              positionSec={audioSync.state.positionSec} durationSec={audioSync.state.durationSec}
-              volume={audioSync.state.volume} onVolumeChange={audioSync.setVolume}
-              blocked={audioSync.state.blocked} onResume={audioSync.resume} synced={audioSync.state.synced}
-            />
+            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit}
+              maxValue={activeMetric.chartMax} lowerIsBetter={activeMetric.lowerIsBetter} scaleNote={activeMetric.scaleNote} />
+            <QuietSignalButtons onSend={liveSocket.sendSignal} />
           </div>
         </div>
 

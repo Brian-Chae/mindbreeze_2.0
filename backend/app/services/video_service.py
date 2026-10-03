@@ -9,6 +9,7 @@ import os
 import shutil
 import tempfile
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -82,6 +83,19 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
     if record.video_status != "recording":
         raise HTTPException(status_code=400, detail="영상 녹화가 시작되지 않았습니다")
 
+    # SDD-101 C1: 멱등 업로드 — 동일 (session_id, chunk_index) 청크가 이미 있으면
+    # 중복 저장하지 않는다(네트워크 재시도로 인한 중복 청크 방지).
+    existing = db.query(VideoChunk).filter(
+        VideoChunk.session_id == s.id, VideoChunk.chunk_index == chunk_index
+    ).first()
+    if existing:
+        total = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
+        return {
+            "chunk_index": chunk_index,
+            "received_bytes": existing.size_bytes,
+            "total_chunks": total,
+        }
+
     # S3 우선 저장(file_path = object key). 자격증명 미설정 시 로컬 폴백(audio와 동일 방식).
     object_key = f"video/{s.id}/{chunk_index}_{uuid.uuid4().hex}.webm"
     if storage_service.upload_bytes(object_key, content, content_type="video/webm"):
@@ -109,30 +123,43 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
     }
 
 
-def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
+def stop_recording(session_id: str, host_id: str, expected_count: int | None, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
     record = _get_or_create_record(s.id, db)
     # 멱등 종료 — 녹화 중일 때만 상태를 전이한다(중복 stop/미시작 stop 허용)
     if record.video_status == "recording":
         record.video_status = "completed"
         record.video_recording_ended_at = _now()
+        # SDD-101 C4: 클라이언트가 선언한 예상 청크 수 저장(병합 50% 규칙의 정확한 분모)
+        if expected_count is not None:
+            record.video_expected_chunks = expected_count
         db.commit()
         db.refresh(record)
 
-    total = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
+    present = {c[0] for c in db.query(VideoChunk.chunk_index).filter(VideoChunk.session_id == s.id).all()}
+    total = len(present)
+    expected = record.video_expected_chunks
+    missing = [i for i in range(expected) if i not in present] if expected is not None else []
     return {
         "session_id": str(s.id),
         "status": record.video_status,
         "total_chunks": total,
+        "expected_chunks": expected,
+        "missing_chunks": missing,
         "ended_at": record.video_recording_ended_at,
     }
 
 
-def _merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
+def merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
     """영상 청크를 chunk_index 순서대로 병합해 하나의 .webm 파일로 저장한다.
 
     S3 청크(object key)는 다운로드, 로컬 청크는 직접 읽어 병합한다.
     성공 시 object_key(또는 로컬 경로)를 반환, 청크 없으면 None.
+
+    SDD-088 후속 개선:
+      - 다운로드는 스레드 풀(최대 8)로 병렬화해 순차 S3 GET N회 지연을 줄인다.
+      - 업로드는 storage_service.upload_file(멀티파트 스트리밍)로 — 전체 파일을
+        메모리에 통째로 올리지 않는다(기존 f.read() 대용량 버퍼·OOM 위험 제거).
     """
     chunks = (
         db.query(VideoChunk)
@@ -143,34 +170,80 @@ def _merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
     if not chunks:
         return None
 
-    merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
-    merged_path = merged.name
+    # SDD-101 C5: chunk_index 갭(누락 청크) 감지 — 부분 실패를 '잘린 영상 성공' 처리하지 않는다.
+    # 분모: 클라이언트 선언(video_expected_chunks, C4) 우선, 없으면 최대 인덱스 기반 추정.
+    # 50% 미만만 존재하면 merge_failed 로 마킹하고 video_s3_key 를 보류한다(결정 #2).
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
+    indices = [c.chunk_index for c in chunks]
+    present = len(indices)
+    declared = record.video_expected_chunks if record else None
+    expected = declared if declared is not None else (max(indices) + 1)
+    missing = expected - present
+    if missing > 0:
+        ratio = present / expected if expected > 0 else 1.0
+        logger.warning(
+            "[video] 청크 누락 감지: present=%d, expected=%d (%.0f%%)",
+            present, expected, ratio * 100,
+        )
+        if ratio < 0.5:
+            if record:
+                record.video_status = "merge_failed"
+                db.commit()
+            return None
+
+    def _load(chunk: VideoChunk) -> bytes | None:
+        path = chunk.file_path or ""
+        if path.startswith("video/"):  # S3 object key
+            return storage_service.download_bytes(path)
+        if os.path.exists(path):  # 로컬 폴백 경로
+            with open(path, "rb") as src:
+                return src.read()
+        return None
+
+    fd, merged_path = tempfile.mkstemp(suffix=".webm")
+    os.close(fd)
     try:
         with open(merged_path, "wb") as out:
-            for chunk in chunks:
-                path = chunk.file_path or ""
-                if path.startswith("video/"):  # S3 object key
-                    data = storage_service.download_bytes(path)
+            if len(chunks) <= 2:
+                # 청크가 적으면 병렬화 오버헤드가 커 순차 처리한다.
+                for chunk in chunks:
+                    data = _load(chunk)
                     if data:
                         out.write(data)
-                elif os.path.exists(path):  # 로컬 경로
-                    with open(path, "rb") as src:
-                        shutil.copyfileobj(src, out)
-        merged.close()
+            else:
+                # 병렬 다운로드 + 입력 순서대로 스트리밍 기록.
+                # as_completed 는 완료 순서로 yield 하므로, pending 딕셔너리에
+                # 보관했다가 순서가 맞는 청크부터 순차 flush 해 메모리 사용을
+                # (미완료 선행 청크 수준으로) 제한하면서 병렬 왕복을 얻는다.
+                with ThreadPoolExecutor(max_workers=8) as pool:
+                    futures = {pool.submit(_load, chunk): i for i, chunk in enumerate(chunks)}
+                    pending: dict[int, bytes] = {}
+                    next_idx = 0
+                    for fut in as_completed(futures):
+                        idx = futures[fut]
+                        try:
+                            data = fut.result()
+                        except Exception:  # noqa: BLE001 — 단일 청크 실패는 건너뛴다
+                            data = None
+                        if data:
+                            pending[idx] = data
+                        while next_idx in pending:
+                            d = pending.pop(next_idx)
+                            if d:
+                                out.write(d)
+                            next_idx += 1
 
-        with open(merged_path, "rb") as f:
-            content = f.read()
-        if not content:
+        if os.path.getsize(merged_path) == 0:
             return None
 
         object_key = f"video/{session_id}/merged.webm"
-        if storage_service.upload_bytes(object_key, content, content_type="video/webm"):
-            logger.info("[video] 병합 영상 S3 업로드 완료: %s", object_key)
+        if storage_service.upload_file(merged_path, object_key, content_type="video/webm"):
+            logger.info("[video] 병합 영상 S3 업로드 완료(스트리밍): %s", object_key)
             return object_key
         # 로컬 폴백
         VIDEO_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
         final_path = VIDEO_CHUNK_DIR / f"{session_id}_merged.webm"
-        final_path.write_bytes(content)
+        shutil.copyfile(merged_path, final_path)
         logger.info("[video] 병합 영상 로컬 저장: %s", final_path)
         return str(final_path)
     finally:
@@ -178,19 +251,33 @@ def _merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
             os.unlink(merged_path)
 
 
+def video_merge_needed(session_id: UUID, db: DBSession) -> bool:
+    """세션 종료 후 영상 병합이 필요한지 판별한다(비동기 체인 구성용).
+
+    영상이 완료됐고(video_status=completed) 아직 병합본(video_s3_key)이 없으며,
+    청크가 1개 이상 존재할 때만 True.
+    """
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
+    if not record or record.video_s3_key:
+        return False
+    if record.video_status != "completed":
+        return False
+    return db.query(VideoChunk).filter(VideoChunk.session_id == session_id).count() > 0
+
+
 def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
-    """세션 /end 시 자동 호출. 영상 녹화 중이면 종료 처리 + 청크 병합 → video_s3_key 설정."""
+    """세션 /end 시 자동 호출. 영상 녹화 중이면 종료 처리(상태 전이)만 수행한다.
+
+    청크 병합은 비동기 체인(video_task.merge_video_chunks_task)에서 실행해 세션
+    종료 API 응답을 지연시키지 않는다. 병합 필요 여부는 audio_service 가
+    video_merge_needed() 로 판별해 리포트 체인의 선행 태스크로 삽입한다.
+    """
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
     if not record:
         return
     if record.video_status == "recording":
         record.video_status = "completed"
         record.video_recording_ended_at = _now()
-    # 영상 청크 병합 → video_s3_key (리포트 영상 리플레이 소스)
-    if record.video_status == "completed" and not record.video_s3_key:
-        merged_key = _merge_video_chunks(session_id, db)
-        if merged_key:
-            record.video_s3_key = merged_key
     db.commit()
 
 

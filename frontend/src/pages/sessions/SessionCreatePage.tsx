@@ -8,18 +8,15 @@ import {
   listSessionTemplates,
   saveSessionAsTemplate,
   type CreateSessionPayload,
-  type CuesheetStep,
   type LinkbandMode,
   type LocationType,
   type ParticipantMode,
   type SessionDto,
   type SessionType,
 } from '../../lib/api/session';
-import { normalizeCuesheet } from '../../lib/class/cuesheet';
 import { REMINDER_OFF_OPTION, REMINDER_ON_OPTIONS } from '../../lib/class/reminder';
 import AppShell from '../../components/layout/AppShell';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
-import { CuesheetEditor } from '../../components/session/CuesheetEditor';
 
 export default function SessionCreatePage() {
   const navigate = useNavigate();
@@ -33,8 +30,6 @@ export default function SessionCreatePage() {
   const [durationMin, setDurationMin] = useState(50);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
-  // 개선 7: 진행 큐시트(타임라인 대본) — 단계별 라벨·목표시간(분)·메모
-  const [cuesheet, setCuesheet] = useState<CuesheetStep[]>([]);
   // 개선 6: 예약 사전 안내(리마인더) 시점 — 기본 '하루 전'으로 켜 두어 회원이 잊지 않게 한다.
   const [reminderOffsets, setReminderOffsets] = useState<number[]>([1440]);
   const toggleReminderOffset = (value: number): void => {
@@ -93,8 +88,6 @@ export default function SessionCreatePage() {
     setRecordVideo(tpl.record_video);
     setDurationMin(tpl.duration_min);
     setNotes(tpl.notes ?? '');
-    // 템플릿의 진행 큐시트도 불러온다(없으면 빈 타임라인).
-    setCuesheet(normalizeCuesheet(tpl.cuesheet));
     setTemplateHint(
       `템플릿 '${tpl.title || '제목 없음'}' 설정을 불러왔습니다. 일정과 제목을 확인한 뒤 생성하세요.`,
     );
@@ -118,8 +111,6 @@ export default function SessionCreatePage() {
         sfu_enabled: locationType === 'online' && participantMode === 'group',
         record_audio: recordAudio,
         record_video: recordVideo,
-        // 개선 7: 진행 큐시트 — 빈 라벨 등은 정규화 단계에서 걸러 서버 검증(422)을 피한다.
-        cuesheet: normalizeCuesheet(cuesheet),
         // 개선 6: 예약 사전 안내 — 하루 전/1시간 전 시점(빈 배열이면 끔).
         reminder_offsets: reminderOffsets,
       };
@@ -461,13 +452,6 @@ export default function SessionCreatePage() {
               <label className={labelCls}>메모</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
             </div>
-
-            {/* 개선 7: 진행 큐시트 — 단계별 타임라인(라벨·목표시간·메모) */}
-            <CuesheetEditor
-              value={cuesheet}
-              onChange={setCuesheet}
-              classDurationMin={durationMin}
-            />
 
             <ParticipantPicker selected={participants} onChange={setParticipants} maxParticipants={pickerMax} />
 
