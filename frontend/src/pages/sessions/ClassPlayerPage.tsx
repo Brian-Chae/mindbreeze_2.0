@@ -316,10 +316,10 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
     {mind && detail ? <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small> : <span className="hcp-delta">{change}</span>}
   </article>;
 }
-export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, controls }: {
+export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, status = 'in_progress', audio }: {
   rows: SessionLiveMetric[]; extras: Record<string, HostExtra>; signals: Record<string, ActiveSignal>;
   aggregate: ClassAggregateEvent | null; elapsed: number; running: boolean;
-  controls?: ReactNode; left: ReactNode; tools: ReactNode; statusBar: ReactNode; filter: keyof MonitorSummaryCounts | null;
+  status?: SessionStatus; audio?: ReactNode; left: ReactNode; tools: ReactNode; statusBar: ReactNode; filter: keyof MonitorSummaryCounts | null;
 }) {
   const [metricKey, setMetricKey] = useState<HostMetricKey>('relaxation');
   const [sortKey, setSortKey] = useState<HostMetricKey>('relaxation');
@@ -335,6 +335,22 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
   const sheetRef = useRef<HTMLElement>(null);
   const detailTriggerRef = useRef<HTMLElement | null>(null);
   const rosterRef = useRef<HTMLElement>(null);
+  const rosterListRef = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState<number | null>(null);
+  useEffect(() => {
+    const list = rosterListRef.current;
+    if (!list || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!window.matchMedia('(min-width: 761px)').matches) { setPageSize(null); return; }
+      const { width, height } = entry.contentRect;
+      const columns = Math.max(1, Math.floor((width + 8) / 182));
+      const cardHeight = Number.parseFloat(getComputedStyle(list).getPropertyValue('--hcp-card-height')) || 152;
+      setPageSize(table ? Math.max(1, Math.floor((height - 40) / 52)) : columns * Math.max(1, Math.floor((height + 8) / (cardHeight + 8))));
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [table]);
   const openDetail = (id: string, trigger: HTMLElement) => {
     detailTriggerRef.current = trigger;
     setSelected(id);
@@ -422,6 +438,9 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
     if (bv === null) return -1;
     return (av - bv) * (table && manualSort?.descending ? -1 : 1);
   });
+  const pageCount = pageSize === null ? 1 : Math.max(1, Math.ceil(ordered.length / pageSize));
+  const currentPage = Math.min(page, pageCount - 1);
+  const visibleRows = pageSize === null ? ordered : ordered.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   const selectedRow = rows.find(row => row.participant_id === selected);
   const validRows = rows.filter(row => row.band_connected && canShowCurrentMetrics(row));
   const minSample = aggregate?.min_wearers ?? 3;
@@ -445,15 +464,15 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
       {(['following', 'difficult', 'resting'] as const).map((key, i) => <div className="hcp-signal-row" key={key}><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="10" />{i === 0 ? <path d="m7 12 3 3 6-6" /> : i === 1 ? <path d="M9 9a3 3 0 1 1 4 3c-1 1-1 1-1 2m0 3h.01" /> : <path d="M9 8v8m6-8v8" />}</svg>{['잘 따라가요', '조금 어려워요', '잠시 쉴게요'][i]}</span><b className={counts[key] ? '' : 'hcp-zero'}>{counts[key]}</b></div>)}
     </div>
     <div className="hcp-notice">{unread > 0 && <button className="hcp-unread" onClick={() => setAckAt(Date.now())}><i />미확인 새 신호 {unread}건 ›</button>}<button onClick={() => setImmersed(v => !v)} aria-pressed={immersed}>{immersed ? '몰입 해제' : '몰입'}</button><button onClick={() => setHelp(v => !v)} aria-expanded={help}>사용 안내</button></div>
-    <section className="hcp-group"><div className="hcp-heading"><div><h2>그룹 흐름</h2><p className="hcp-muted">지난 3분 평균 대비</p></div><small>유효 표본 {validRows.length}명{!groupAvailable && (validRows.length ? ' · 표본 적음' : ' · 표본 없음')}</small></div>{validRows.length ? metricSections() : <p className="hcp-group-empty" role="status">표본 없음<small>밴드 측정 데이터가 수신되면 그룹 흐름을 표시합니다.</small></p>}<p className="hcp-muted">{aggregate?.pace_hint}</p></section>
-    <aside className="hcp-host">{left}</aside>
+    {status === 'open' ? <div className="hcp-lobby-audio">{audio}</div> : <section className="hcp-group"><div className="hcp-heading"><div><h2>그룹 흐름</h2><p className="hcp-muted">지난 3분 평균 대비</p></div><small>유효 표본 {validRows.length}명{!groupAvailable && (validRows.length ? ' · 표본 적음' : ' · 표본 없음')}</small></div>{validRows.length ? metricSections() : <p className="hcp-group-empty" role="status">표본 없음<small>밴드 측정 데이터가 수신되면 그룹 흐름을 표시합니다.</small></p>}<p className="hcp-muted">{aggregate?.pace_hint}</p></section>}
+    <aside className="hcp-host">{left}{status !== 'open' && audio}</aside>
     <section ref={rosterRef} className="hcp-roster"><div className="hcp-heading"><h2>참가자 <small>{rows.length}</small></h2><small>발언 요청 {rows.filter(r => r.raise_hand).length} · 발언 중 {rows.filter(r => r.speaking).length}</small></div>
       {help && <div className="hcp-coach" role="status">지표는 10초마다 순환합니다. 칩을 선택하면 해당 지표로 정렬하며, 순환은 정렬 기준을 바꾸지 않습니다. 3분 미만은 현재값, 이후는 실제 3분 평균 대비 변화량 오름차순입니다. 카드나 참가자 이름을 누르면 상세를 볼 수 있습니다.<button onClick={() => setHelp(false)}>확인</button></div>}
       <div className="hcp-toolbar"><button aria-pressed={table} onClick={() => { setTable(true); setManualSort(null); }}>모두</button>{HOST_METRICS.map(m => <button key={m.key} aria-pressed={!table && metricKey === m.key} onClick={() => { setTable(false); setMetricKey(m.key); setSortKey(m.key); }}>{m.label}</button>)}</div>
       <div className="hcp-sort"><span>{table ? '헤더를 눌러 수동 정렬' : `${HOST_METRICS.find(m => m.key === sortKey)?.label} · ${late ? '3분 변화량' : '현재값'} 자동 정렬`}</span><button aria-pressed={rotating} onClick={() => setRotating(v => !v)} disabled={table}>10초 순환 {rotating ? '켜짐' : '꺼짐'}</button><select aria-label="정렬 시점" value={phase} onChange={e => setPhase(e.target.value as typeof phase)}><option value="auto">시간에 따라 자동</option><option value="early">3분 미만</option><option value="late">3분 이후</option></select></div>
-      <div className="hcp-roster-list"><div className="hcp-roster-content" inert={Boolean(selectedRow)}>
+      <div ref={rosterListRef} className="hcp-roster-list"><div className="hcp-roster-content" inert={Boolean(selectedRow)}>
         {!ordered.length && <p className="hcp-empty" role="status">{rows.length ? '선택한 상태의 참가자가 없습니다.' : '아직 참가자가 없습니다. 입장하면 이곳에 표시됩니다.'}</p>}
-        {!ordered.length ? null : table ? <div className="hcp-table-wrap"><table><thead><tr><th><button onClick={() => setManualSort(null)}>참가자 · 입장순</button></th>{HOST_METRICS.map(m => <th key={m.key} aria-sort={manualSort?.key === m.key ? manualSort.descending ? 'descending' : 'ascending' : 'none'}><button onClick={() => setManualSort(v => ({ key: m.key, descending: v?.key === m.key ? !v.descending : false }))}>{m.label}{manualSort?.key === m.key ? manualSort.descending ? ' ↓' : ' ↑' : ''}</button></th>)}</tr></thead><tbody>{ordered.map(row => <tr key={row.participant_id} onClick={event => openDetail(row.participant_id, event.currentTarget.querySelector<HTMLButtonElement>('button')!)}><th scope="row"><button className="hcp-table-person">{row.display_name}<HostDemographics row={row} /></button></th>{HOST_METRICS.map(m => <td key={m.key}>{valuesFor(row)[m.key] === null ? <small>{hostMissingLabel(row)}</small> : <>{hostValueLabel(valuesFor(row)[m.key])}<small>{m.unit}</small></>}</td>)}</tr>)}</tbody></table></div> : <div className="hcp-people">{ordered.map(row => {
+        {!ordered.length ? null : table ? <div className="hcp-table-wrap"><table><thead><tr><th><button onClick={() => setManualSort(null)}>참가자 · 입장순</button></th>{HOST_METRICS.map(m => <th key={m.key} aria-sort={manualSort?.key === m.key ? manualSort.descending ? 'descending' : 'ascending' : 'none'}><button onClick={() => setManualSort(v => ({ key: m.key, descending: v?.key === m.key ? !v.descending : false }))}>{m.label}{manualSort?.key === m.key ? manualSort.descending ? ' ↓' : ' ↑' : ''}</button></th>)}</tr></thead><tbody>{visibleRows.map(row => <tr key={row.participant_id} onClick={event => openDetail(row.participant_id, event.currentTarget.querySelector<HTMLButtonElement>('button')!)}><th scope="row"><button className="hcp-table-person">{row.display_name}<HostDemographics row={row} /></button></th>{HOST_METRICS.map(m => <td key={m.key}>{valuesFor(row)[m.key] === null ? <small>{hostMissingLabel(row)}</small> : <>{hostValueLabel(valuesFor(row)[m.key])}<small>{m.unit}</small></>}</td>)}</tr>)}</tbody></table></div> : <div className="hcp-people">{visibleRows.map(row => {
           const value = valuesFor(row)[metricKey], previous = previousFor(row, metricKey);
           const delta = value !== null && previous !== null ? Math.round(value - previous) : null;
           const bandLabel = row.device_status === 'lead_off' ? '접촉 확인 · 리드오프' : bandCardState(row) === 'disconnected' ? '수신 끊김' : bandCardStateLabel(bandCardState(row));
@@ -466,10 +485,9 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
         })}</div>}
       </div>
       {selectedRow && <><button className="hcp-backdrop" aria-label="참가자 상세 닫기" tabIndex={-1} onClick={() => setSelected(null)} /><aside ref={sheetRef} className="hcp-sheet" role="dialog" aria-modal="true" aria-labelledby="hcp-detail-title"><header className="hcp-heading"><div><h2 id="hcp-detail-title">{selectedRow.display_name}<HostDemographics row={selectedRow} /></h2><p className="hcp-muted">{bandCardState(selectedRow) === 'connected' ? '밴드 연결됨' : hostMissingLabel(selectedRow)} · 접촉 {contactStatusLabel(selectedRow.device_status)} · 신호 {signalQualityLevelLabel(selectedRow.signal_quality_level ?? signalQualityLevel(selectedRow.signal_quality))}</p></div><button onClick={() => setSelected(null)}>닫기</button></header><div className="hcp-sheet-content">{hostParticipantProfile(selectedRow).concerns && <section className="hcp-survey"><h3>사전 설문</h3><p>{hostParticipantProfile(selectedRow).concerns}</p></section>}{metricSections(selectedRow)}<div className="hcp-body-legend" aria-label="몸 추이 범례"><span><svg viewBox="0 0 20 8" aria-hidden="true"><path className="hcp-average-line" d="M0 4H20" /></svg>그룹 평균</span><span><svg viewBox="0 0 20 8" aria-hidden="true"><rect className="hcp-range-band" width="20" height="8" /></svg>최근 수신 범위</span></div></div><footer className="hcp-legend" aria-label="지표 범례">링: 현재값 · 막대: 최근 수신값 · 증감: 3분 대비</footer></aside></>}
-      </div><div className="hcp-roster-foot">{table ? '모두 · 테이블 보기' : `${selectedMetric.label} · ${rotating ? '10초 순환' : '순환 정지'}`}<span>개인 순위 없음</span></div>
+      </div><div className="hcp-roster-foot">{table ? '모두 · 테이블 보기' : `${selectedMetric.label} · ${rotating ? '10초 순환' : '순환 정지'}`}<nav className="hcp-pagination" aria-label="참가자 페이지"><button aria-label="이전 참가자 페이지" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>‹</button><span>{currentPage + 1} / {pageCount}</span><button aria-label="다음 참가자 페이지" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>›</button></nav><span>개인 순위 없음</span></div>
       <details className="hcp-tools"><summary>연결 상태 · 발언권 · 호스트 밴드</summary>{statusBar}{tools}</details>
     </section>
-    {controls && <footer className="hcp-controls" aria-label="클래스 진행 제어"><span>호스트 클래스</span>{controls}</footer>}
   </section>;
 }
 
@@ -1661,7 +1679,7 @@ export default function ClassPlayerPage() {
   );
 
   return (
-    <main className={`min-h-screen bg-[#12081C] pb-10 ${isHost ? 'host-class-player' : ''}`}>
+    <main className={`min-h-screen bg-[#12081C] pb-10 ${isHost ? `host-class-player${isLobby || isRunning ? ' hcp-active' : ''}` : ''}`}>
       {/* 플레이어 헤더 — 풀스크린 셸 (AppShell 밖) */}
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 bg-[#12081C]/95 px-4 py-3 backdrop-blur sm:flex-nowrap sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -1688,10 +1706,10 @@ export default function ClassPlayerPage() {
           </div>
           <StatusBadge status={session.status} />
         </div>
-        {!isHost && headerControls}
+        {headerControls}
       </header>
 
-      <div className="mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
+      <div className="hcp-page-content mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
         {/* ① 세팅 씬 — ready/scheduled: 미디어 프리뷰 + [클래스 오픈] */}
         {isSetup && isHost && (
           <>
@@ -1710,7 +1728,7 @@ export default function ClassPlayerPage() {
 
         {/* (B) 세션 시작 — 입장 전 체크인 요약 카드(닫기 가능) */}
         {isRunning && isHost && sessionCheckins.length > 0 && !checkinCardDismissed && (
-          <div className="rounded-2xl border border-[#5F0080]/30 bg-[#5F0080]/10 p-5">
+          <div className="hcp-checkin-card rounded-2xl border border-[#5F0080]/30 bg-[#5F0080]/10 p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-bold text-white">
@@ -1800,22 +1818,22 @@ export default function ClassPlayerPage() {
         </div>
       )}
           </>}
-          controls={headerControls}
+          status={session.status}
+          audio={<ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} />}
           left={<>
             <div className="hcp-media-controls" role="group" aria-label="호스트 미디어 제어">
               <button disabled={!isRunning || !mediaPrefs.micOn} onClick={() => {
                 if (recorder.state === 'recording') { recorder.pause(); videoRecorder.pause(); }
                 else if (recorder.state === 'paused') { recorder.resume(); videoRecorder.resume(); }
                 else handleStartClick();
-              }} aria-pressed={recorder.state === 'recording'}>{recorder.state === 'recording' ? '녹음 일시정지' : recorder.state === 'paused' ? '녹음 재개' : '녹음 시작'}</button>
-              <button disabled={!isRunning || !mediaPrefs.cameraOn || mediaPrefs.micOn} onClick={() => void (videoRecorder.state === 'recording' || videoRecorder.state === 'paused' ? handleVideoOnlyStop() : handleVideoOnlyStart())} aria-pressed={videoRecorder.state === 'recording'} title={mediaPrefs.micOn ? '영상은 음성 녹음과 함께 제어됩니다' : '무음 영상 녹화 제어'}>영상 녹화 {videoRecorder.state === 'recording' ? '중' : '대기'}</button>
+              }} aria-pressed={recorder.state === 'recording'}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8" /></svg><span>{recorder.state === 'recording' ? '녹음 일시정지' : recorder.state === 'paused' ? '녹음 재개' : '녹음 시작'}</span></button>
+              <button disabled={!isRunning || !mediaPrefs.cameraOn || mediaPrefs.micOn} onClick={() => void (videoRecorder.state === 'recording' || videoRecorder.state === 'paused' ? handleVideoOnlyStop() : handleVideoOnlyStart())} aria-pressed={videoRecorder.state === 'recording'} title={mediaPrefs.micOn ? '영상은 음성 녹음과 함께 제어됩니다' : '무음 영상 녹화 제어'}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2" /><path d="m15 9 7-4v14l-7-4" /></svg><span>영상 녹화 {videoRecorder.state === 'recording' ? '중' : '대기'}</span></button>
               <span>마이크 {mediaPrefs.micOn ? 'ON' : 'OFF'} · 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}</span>
             </div>
-            {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}>녹음 · 녹화 · 마이크 · 카메라 설정 {mediaOpen ? '접기' : '펼치기'}</button>}
-            {isLobby && <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} />}
+            {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V3h14l-3 5 3 5H5" /></svg><span>녹음 · 화상 · 마커</span><span>{mediaOpen ? '접기' : '설정'}</span></button>}
             <div className="hcp-selfview"><p>나의 화면 · 호스트</p>{mediaPrefs.cameraOn ? <SessionHostVideoView stream={videoRecorder.stream} facingMode={videoRecorder.facingMode} recording={videoRecorder.state === 'recording'} /> : <div className="hcp-camera-off">카메라 꺼짐 · 녹화 안 함</div>}</div>
             {isLobby && <div className="hcp-code"><small>클래스 코드 · 대기 {elapsedLabel(lobbyElapsedSec)}</small><strong>{accessCode || '——————'}</strong><button onClick={() => void handleCopyCode()}>{codeCopied ? '복사 완료' : '코드 복사'}</button></div>}
-            {isLobby && <WaitingRoomCheckinList entries={waitingRoom.entries} />}
+            {isLobby && waitingRoom.entries.length > 0 && <details><summary>입장 전 체크인 · {waitingRoom.entries.length}명</summary><WaitingRoomCheckinList entries={waitingRoom.entries} /></details>}
             <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
             <details><summary>녹화 · AI 상태</summary>{hostStatusPanel}</details>
           </>}
@@ -1825,9 +1843,10 @@ export default function ClassPlayerPage() {
         {/* 모니터링 — 비호스트 진행 화면은 전체 폭 (대기실은 위 좌우 그리드 우측에 표시) */}
         {(isRunning && !isHost) && monitorPanel}
 
-        {/* 오류 표시 */}
+        {/* 오류는 한 묶음으로 표시해 종료 재시도와 화상 오류가 서로 가리지 않게 한다. */}
+        {(error || liveKit.error) && <div className="hcp-errors">
         {error && (
-          <div className="rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
+          <div className="hcp-error rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
             <p>{error}</p>
             {/* SDD-101 D3: 종료 확정 실패 시 재시도 CTA */}
             {endFailed && (
@@ -1846,14 +1865,16 @@ export default function ClassPlayerPage() {
         )}
 
         {liveKit.error && (
-          <div className="rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
+          <div className="hcp-error rounded-xl border border-[#F5C2C0] bg-[#FDECEC] p-3.5 text-sm text-[#B3261E]">
             화상 연결 오류: {liveKit.error}
           </div>
         )}
 
+        </div>}
+
         {/* ③ 라이브 씬 보조 — 녹음 / 화상 / 마커 (접기) */}
         {isRunning && isHost && (
-          <div className="rounded-xl bg-white">
+          <div className={`hcp-media-panel rounded-xl bg-white ${mediaOpen ? 'is-open' : ''}`}>
             <button
               type="button"
               onClick={() => setMediaOpen((v) => !v)}
