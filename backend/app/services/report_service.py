@@ -133,6 +133,9 @@ def _serialize(
         "status": report.status,
         # SDD-095: 생성 진행 상태(승인 상태와 독립 축) — 목록/홈 배지가 '생성 중'을 표시한다.
         "generation_status": report.generation_status or "pending",
+        # SDD-101: 생성 실패 사유·시작 시각 — /reports 목록에서 로그로 노출
+        "generation_error": report.generation_error,
+        "generation_started_at": report.generation_started_at,
         "data_credibility": report.data_credibility,
         "content": content,
         # SDD-096: 셀프 체크인(주관 상태) 연계 — 내담자 리포트는 본인 슬롯(scope=participant),

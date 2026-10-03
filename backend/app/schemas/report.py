@@ -59,6 +59,9 @@ class ReportResponse(HRVMotionSummary):
     status: str = "pending_analysis"
     # SDD-095: 생성 진행 상태(pending/processing/ready/partial) — 승인 상태와 독립 축
     generation_status: str = "pending"
+    # SDD-101: 생성 실패 사유·시작 시각 — /reports 목록에서 로그로 노출
+    generation_error: str | None = None
+    generation_started_at: datetime | None = None
     data_credibility: str | None = None
     content: dict[str, Any] = Field(default_factory=dict)
     pdf_url: str | None = None

@@ -321,6 +321,8 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
         # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
         report.status = "error"
         report.data_credibility = None
+        # SDD-101: 실패 사유를 generation_error 에 기록(50자) — /reports 목록에서 로그로 노출.
+        report.generation_error = (f"{type(exc).__name__}: {exc}")[:50]
         # SDD-093: 리포트 생성 실패 알림 발화 — 소유자(상담사/내담자)에게 통지
         try:
             from app.services import notification_service

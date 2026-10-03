@@ -1,0 +1,23 @@
+# MIND BREEZE 2.0 — 메인 Celery 워커 (STT·요약·리포트·영상 병합 파이프라인)
+# 설치 전 경로와 환경 파일을 배포 환경에 맞게 검토한다.
+#   · 기본 큐(celery)를 소비해 tasks.stt / tasks.summary / tasks.report /
+#     tasks.generate_reports_for_session / tasks.merge_video_chunks 를 처리한다.
+#   · email 전용 워커(mindbreeze-email-worker)와는 별도 앱이라 큐가 분리된다.
+[Unit]
+Description=MIND BREEZE pipeline worker (STT/summary/report/video merge)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app worker --loglevel=INFO --prefetch-multiplier=1
+Restart=on-failure
+RestartSec=5
+PrivateTmp=true
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
