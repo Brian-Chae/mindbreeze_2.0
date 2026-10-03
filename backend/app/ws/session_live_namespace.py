@@ -47,6 +47,8 @@ import time
 from datetime import datetime, timezone
 from typing import Any, cast
 
+from socketio.exceptions import ConnectionRefusedError
+
 logger = logging.getLogger(__name__)
 
 _NAMESPACE = "/session-live"
@@ -279,10 +281,10 @@ def register_session_live_namespace(sio):
                 user_id = payload.get("sub")
             except Exception:
                 logger.warning("[WS /session-live] 잘못된 토큰 — 연결 거부 (sid=%s)", sid)
-                return False
+                raise ConnectionRefusedError("token_expired")
             if not user_id:
                 logger.warning("[WS /session-live] 토큰에 sub 없음 — 연결 거부 (sid=%s)", sid)
-                return False
+                raise ConnectionRefusedError("token_expired")
             logger.info("[WS /session-live] user %s connected (sid=%s)", user_id, sid)
 
         await sio.save_session(sid, {"user_id": user_id}, namespace=_NAMESPACE)
@@ -302,7 +304,9 @@ def register_session_live_namespace(sio):
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
 
-        resolved = _resolve_join(session_id, current_user_id, participant_id)
+        resolved = await asyncio.to_thread(
+            _resolve_join, session_id, current_user_id, participant_id
+        )
         if resolved is None:
             # SDD-026: 비인가 join — 어떤 room 에도 입장시키지 않고 거부를 통지한다.
             logger.warning("[WS /session-live] join 거부 (sid=%s, session=%s)", sid, session_id)
@@ -395,8 +399,8 @@ def register_session_live_namespace(sio):
         current_user_id = (session or {}).get("user_id")
 
         try:
-            saved, resolved_participant_id, feature_out = _store_feature(
-                session_id, participant_id, current_user_id, feature
+            saved, resolved_participant_id, feature_out = await asyncio.to_thread(
+                _store_feature, session_id, participant_id, current_user_id, feature
             )
         except Exception:
             # 비참가자/미식별/대리 업로드/미동의 등 저장 실패 시 브로드캐스트하지 않는다
@@ -444,7 +448,9 @@ def register_session_live_namespace(sio):
         participant_id = data.get("participant_id") or (session or {}).get("participant_id")
 
         try:
-            sender = _resolve_quiet_signal_sender(session_id, participant_id, current_user_id)
+            sender = await asyncio.to_thread(
+                _resolve_quiet_signal_sender, session_id, participant_id, current_user_id
+            )
         except Exception:
             # 비참가자/미식별/사칭 → 브로드캐스트하지 않는다
             logger.warning(
@@ -522,7 +528,9 @@ def register_session_live_namespace(sio):
         if not isinstance(targets, list) or not targets or len(targets) > 500 or not all(isinstance(pid, str) for pid in targets):
             return {"ok": False, "error": "대상 참가자를 확인해 주세요."}
         try:
-            resolved = _resolve_join(session_id, session.get("user_id"), None)
+            resolved = await asyncio.to_thread(
+                _resolve_join, session_id, session.get("user_id"), None
+            )
             if not resolved or resolved.get("role") != "host":
                 return {"ok": False, "error": "상담사 권한을 확인해 주세요."}
             allowed = {str(p["participant_id"]) for p in resolved["snapshot"].get("participants", [])}
@@ -592,7 +600,9 @@ def register_session_live_namespace(sio):
             return
 
         try:
-            host = _resolve_audio_host(session_id, session.get("user_id"))
+            host = await asyncio.to_thread(
+                _resolve_audio_host, session_id, session.get("user_id")
+            )
         except Exception:
             logger.warning(
                 "[WS /session-live] %s 발신자 검증 실패 (sid=%s, session=%s)",
@@ -871,7 +881,7 @@ async def publish_group_aggregate(
     elif not aggregate_due(session_id):
         return None
 
-    payload = _compute_group_aggregate(session_id)
+    payload = await asyncio.to_thread(_compute_group_aggregate, session_id)
     if payload is None:
         return None
 

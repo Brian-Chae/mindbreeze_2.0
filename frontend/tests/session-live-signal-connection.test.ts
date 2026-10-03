@@ -81,18 +81,37 @@ it('단절 중 신호를 버퍼링했다가 재join 확정 시 일괄 flush 한�
 
   socket.connected = false; await receive('disconnect');
   expect(live.sendSignal('difficult')).toBe('queued');
+  expect(live.sendSignal('following')).toBe('queued'); // 다른 유형도 버퍼링
 
   socket.connected = true; await receive('connect');
-  expect(live.sendSignal('difficult')).toBe('queued'); // 재join 전 → 여전히 버퍼링
+  expect(live.sendSignal('resting')).toBe('queued'); // 재join 전 → 여전히 버퍼링
 
   await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
-  // 단절 중 눌린 2회가 모두 flush 됐다
+  // 단절 중 눌린 유형들이 모두 flush 됐다
   const calls = signalCalls();
-  expect(calls).toHaveLength(2);
+  expect(calls).toHaveLength(3);
   expect(calls[0]).toEqual(['class:signal', signalPayload('difficult', 'p1')]);
-  expect(calls[1]).toEqual(['class:signal', signalPayload('difficult', 'p1')]);
+  expect(calls[1]).toEqual(['class:signal', signalPayload('following', 'p1')]);
+  expect(calls[2]).toEqual(['class:signal', signalPayload('resting', 'p1')]);
   // 이후 즉시 전송
   expect(live.sendSignal('following')).toBe('sent');
+});
+
+it('단절 중 같은 유형은 최신 1건으로 압축한다(중복 flush 방지)', async () => {
+  await act(async () => root.render(createElement(Probe)));
+  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+
+  socket.connected = false; await receive('disconnect');
+  expect(live.sendSignal('difficult')).toBe('queued');
+  expect(live.sendSignal('difficult')).toBe('queued');
+  expect(live.sendSignal('difficult')).toBe('queued'); // 3회 연타
+
+  socket.connected = true; await receive('connect');
+  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+
+  const calls = signalCalls();
+  expect(calls).toHaveLength(1); // 유형별 최신 1건
+  expect(calls[0]).toEqual(['class:signal', signalPayload('difficult', 'p1')]);
 });
 
 it('참가자 미확정이면 버퍼링하되 flush 하지 않는다', async () => {

@@ -136,6 +136,8 @@ export function useSessionLiveSocket({
   const signalParticipantRef = useRef<string | null>(null);
   /** 단절 중 눌린 신호를 보관 — 재join 확정 후 확정된 본인 id로 flush한다 */
   const pendingSignalsRef = useRef<ClassSignalType[]>([]);
+  /** 신호 버퍼가 속한 세션 — 세션이 바뀔 때만 버퍼를 폐기한다 */
+  const pendingSessionRef = useRef<string | null>(null);
   /** join 거부 상태 — 이 상태에서는 신호를 전송하지 않는다 */
   const joinDeniedRef = useRef(false);
   const versionRef = useRef(0);
@@ -179,6 +181,14 @@ export function useSessionLiveSocket({
     // 재join 시 snapshot 재수신 전까지 폴백 유지
     setHasSnapshot(false);
     setSnapshot(null);
+
+    // SDD-107: 세션이 바뀔 때만 신호 버퍼를 폐기한다.
+    // cleanup 에서 버퍼를 지우지 않으므로 리렌더·재연결에도 유지된다.
+    if (pendingSessionRef.current !== sessionId) {
+      pendingSessionRef.current = sessionId;
+      pendingSignalsRef.current = [];
+      joinDeniedRef.current = false;
+    }
 
     const token = skipAuth ? null : tokenStorage.getAccess();
     const socket = getSessionLiveSocket(token);
@@ -337,7 +347,6 @@ export function useSessionLiveSocket({
       socket.off('disconnect', onDisconnect);
       socket.off('join_denied', onJoinDenied);
       signalParticipantRef.current = null;
-      pendingSignalsRef.current = [];
       joinDeniedRef.current = false;
       socketRef.current = null;
       setIsConnected(false);
@@ -373,7 +382,10 @@ export function useSessionLiveSocket({
         });
         return 'sent';
       }
-      pendingSignalsRef.current.push(signalType);
+      // 유형별 최신 1건만 유지한다(같은 유형 연타 시 버퍼가 커지지 않게).
+      if (!pendingSignalsRef.current.includes(signalType)) {
+        pendingSignalsRef.current.push(signalType);
+      }
       return 'queued';
     },
     [sessionId],

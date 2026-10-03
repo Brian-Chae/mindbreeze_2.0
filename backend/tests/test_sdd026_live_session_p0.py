@@ -24,6 +24,9 @@
 
 import asyncio
 
+import pytest
+from socketio.exceptions import ConnectionRefusedError
+
 import app.ws.session_live_namespace as ns
 from app.services import email_verify_service
 from tests.conftest import create_test_org
@@ -160,8 +163,9 @@ def _wire(monkeypatch):
 
 def test_01_connect_잘못된_토큰_연결거부(client, monkeypatch):
     fake = _wire(monkeypatch)
-    result = fake.call("connect", "sidBad", {}, {"token": "not-a-valid-jwt"})
-    assert result is False
+    with pytest.raises(ConnectionRefusedError) as exc_info:
+        fake.call("connect", "sidBad", {}, {"token": "not-a-valid-jwt"})
+    assert "token_expired" in str(exc_info.value)
 
 
 def test_02_connect_무토큰_게스트_허용(client, monkeypatch):

@@ -2,7 +2,12 @@
 
 import socketio
 
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins="*",
+    ping_interval=20,
+    ping_timeout=40,
+)
 
 from app.ws import chat_namespace  # noqa: F401,E402
 from app.ws.record_namespace import register_record_namespace  # noqa: E402

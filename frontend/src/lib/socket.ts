@@ -22,6 +22,7 @@ import {
   type AudioSyncEmit,
   type AudioSyncEvent,
 } from './class/audio-sync';
+import { refreshAccessToken } from './api/client';
 
 const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
@@ -266,22 +267,32 @@ export type ClassAudioSyncHandler = (event: AudioSyncEvent) => void;
 
 let sessionLiveSocket: Socket | null = null;
 let sessionLiveToken: string | null | undefined = undefined;
+/** connect_error 시 만료 토큰 refresh 1회 가드 (성공 재연결 시 리셋) */
+let sessionLiveTokenRefreshAttempted = false;
 
 /**
  * `/session-live` 싱글톤 소켓.
  * 게스트(비로그인)는 token=null 로 연결한다 (record 네임스페이스와 동일 정책).
  */
 export const getSessionLiveSocket = (token: string | null = null): Socket => {
-  // 토큰이 바뀌면 재연결
-  if (sessionLiveSocket && sessionLiveToken === token) {
+  // SDD-107: 살아있는 소켓은 재사용하고, 토큰이 바뀌어도 끊지 않는다 — auth만 갱신한다.
+  // (재연결이 필요해지면 다음 핸드셰이크에서 새 토큰이 적용된다. 토큰 갱신 시 disconnect가
+  //  다른 훅의 리스너를 고아로 만들어 flapping 을 일으키던 문제를 제거한다.)
+  if (sessionLiveSocket && !sessionLiveSocket.disconnected) {
+    if (sessionLiveToken !== token) {
+      sessionLiveToken = token;
+      sessionLiveSocket.auth = token ? { token } : {};
+    }
     return sessionLiveSocket;
   }
+
   if (sessionLiveSocket) {
     sessionLiveSocket.disconnect();
     sessionLiveSocket = null;
   }
 
   sessionLiveToken = token;
+  sessionLiveTokenRefreshAttempted = false;
   sessionLiveSocket = io(`${SOCKET_URL}/session-live`, {
     path: '/socket.io',
     transports: ['websocket', 'polling'],
@@ -294,6 +305,29 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
     reconnectionDelayMax: 5000,
     timeout: 20000,
   });
+
+  // SDD-107: 만료 토큰 거부 시 1회 refresh 후 재연결한다 (무한 재시도 busy-loop 방지).
+  sessionLiveSocket.on('connect', () => {
+    sessionLiveTokenRefreshAttempted = false;
+  });
+  sessionLiveSocket.on('connect_error', (err: Error) => {
+    console.warn('[session-live] connect_error:', err?.message);
+    if (err?.message !== 'token_expired' || sessionLiveTokenRefreshAttempted) return;
+    sessionLiveTokenRefreshAttempted = true;
+    refreshAccessToken().then((newToken) => {
+      if (!sessionLiveSocket) return;
+      if (!newToken) {
+        // refresh 실패 → 더 이상 유효한 세션이 없음. 재시도를 멈춘다(무한 루프 방지).
+        console.error('[session-live] 토큰 refresh 실패 — 연결 재시도 중단');
+        sessionLiveSocket.disconnect();
+        return;
+      }
+      // 소켓을 버리지 않고 auth만 갱신 → connect()가 새 토큰으로 재핸드셰이크한다.
+      sessionLiveSocket.auth = { token: newToken };
+      sessionLiveSocket.connect();
+    });
+  });
+
   return sessionLiveSocket;
 };
 
