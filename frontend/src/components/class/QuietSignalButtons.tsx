@@ -10,18 +10,19 @@ import {
   CLASS_SIGNAL_TYPES,
   type ClassSignalType,
 } from '../../lib/class/quiet-signal';
+import type { SignalSendResult } from '../../hooks/useSessionLiveSocket';
 
 /** 확인 문구 표시 시간(ms) — 성공/실패 모두 짧게만 남긴다 */
 const FEEDBACK_MS = 4000;
 
 interface QuietSignalButtonsProps {
-  /** 신호 전송 — 미연결이면 false 를 돌려준다 */
-  onSend: (signalType: ClassSignalType) => boolean;
+  /** 신호 전송 — 'sent' 즉시 / 'queued' 버퍼링(재연결 후 전송) / 'failed' 실패 */
+  onSend: (signalType: ClassSignalType) => SignalSendResult;
 }
 
 interface SignalFeedback {
   type: ClassSignalType;
-  ok: boolean;
+  result: SignalSendResult;
 }
 
 export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
@@ -36,8 +37,8 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
   );
 
   const handleClick = (type: ClassSignalType): void => {
-    const ok = onSend(type);
-    setFeedback({ type, ok });
+    const result = onSend(type);
+    setFeedback({ type, result });
     if (timerRef.current != null) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
       setFeedback(null);
@@ -45,7 +46,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
     }, FEEDBACK_MS);
   };
 
-  const sentType = feedback?.ok ? feedback.type : null;
+  const sentType = feedback?.result === 'sent' ? feedback.type : null;
 
   return (
     <section className="player-signals" aria-label="조용한 상태 신호">
@@ -74,9 +75,11 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
       {/* 조용한 확인 — 소리·팝업 없이 문구만 */}
       <p role="status" aria-live="polite" className="player-signals-status">
         {feedback
-          ? feedback.ok
+          ? feedback.result === 'sent'
             ? '상담사에게 조용히 전달했어요'
-            : '전송하지 못했어요 — 연결을 확인해 주세요'
+            : feedback.result === 'queued'
+              ? '연결을 복구하는 중이에요 — 복구되면 전달할게요'
+              : '전송하지 못했어요 — 연결을 확인해 주세요'
           : ''}
       </p>
     </section>

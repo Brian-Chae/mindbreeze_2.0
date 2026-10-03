@@ -31,41 +31,83 @@ function Probe({ participantId = 'p1' }: { participantId?: string | null }) {
 async function receive(event: string, payload?: unknown) {
   await act(async () => { listeners.get(event)?.forEach((handler) => handler(payload)); });
 }
+const signalPayload = (signal_type: string, participant_id: string) => ({
+  session_id: 's1',
+  participant_id,
+  signal_type,
+});
+/** class:signal emit 만 추린다(join/leave 등과 구분) */
+const signalCalls = () => socket.emit.mock.calls.filter((c: unknown[]) => c[0] === 'class:signal');
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   listeners.clear(); socket.connected = true; socket.emit.mockClear();
   container = document.createElement('div'); root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); });
-it('transport 연결만으로 전송 성공을 표시하지 않고 join 완료 후 전송한다', async () => {
+
+it('transport 연결만으로는 전송하지 않고 버퍼링한다(join 확정 전)', async () => {
   await act(async () => root.render(createElement(Probe)));
-  expect(live.sendSignal('following')).toBe(false);
-  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
-  expect(live.sendSignal('following')).toBe(true);
-  expect(socket.emit).toHaveBeenCalledWith('class:signal', { session_id: 's1', participant_id: 'p1', signal_type: 'following' });
+  expect(live.sendSignal('following')).toBe('queued');
+  expect(signalCalls()).toHaveLength(0);
 });
-it('서버가 join에서 확정한 본인 참가자 id로 전송한다', async () => {
+
+it('join 확정 시 버퍼된 신호를 확정된 본인 id로 flush 한다', async () => {
+  await act(async () => root.render(createElement(Probe)));
+  live.sendSignal('following');
+  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+  expect(signalCalls()).toHaveLength(1);
+  expect(socket.emit).toHaveBeenCalledWith('class:signal', signalPayload('following', 'p1'));
+  // 이후에는 즉시 전송된다
+  expect(live.sendSignal('resting')).toBe('sent');
+});
+
+it('연결 + 확정 후에는 즉시 전송한다(sent)', async () => {
+  await act(async () => root.render(createElement(Probe)));
+  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+  expect(live.sendSignal('resting')).toBe('sent');
+  expect(socket.emit).toHaveBeenCalledWith('class:signal', signalPayload('resting', 'p1'));
+});
+
+it('서버가 확정한 본인 id로 전송한다(요청 id와 다를 수 있음)', async () => {
   await act(async () => root.render(createElement(Probe, { participantId: null })));
   await receive('joined', { session_id: 's1', participant_id: 'resolved-member', version: 1 });
-  expect(live.sendSignal('resting')).toBe(true);
-  expect(socket.emit).toHaveBeenCalledWith('class:signal', { session_id: 's1', participant_id: 'resolved-member', signal_type: 'resting' });
+  expect(live.sendSignal('resting')).toBe('sent');
+  expect(socket.emit).toHaveBeenCalledWith('class:signal', signalPayload('resting', 'resolved-member'));
 });
-it('참가자 미확정 또는 join 거부 상태에서는 전송하지 않는다', async () => {
-  await act(async () => root.render(createElement(Probe, { participantId: null })));
-  await receive('joined', { session_id: 's1', version: 1 });
-  expect(live.sendSignal('resting')).toBe(false);
-  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
-  await receive('join_denied', { session_id: 's1' });
-  expect(live.sendSignal('resting')).toBe(false);
-  expect(live.isReady).toBe(false);
-});
-it('단절 후 재연결해도 새 join 승인 전에는 전송하지 않는다', async () => {
+
+it('단절 중 신호를 버퍼링했다가 재join 확정 시 일괄 flush 한다', async () => {
   await act(async () => root.render(createElement(Probe)));
   await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+
   socket.connected = false; await receive('disconnect');
-  expect(live.sendSignal('difficult')).toBe(false);
+  expect(live.sendSignal('difficult')).toBe('queued');
+
   socket.connected = true; await receive('connect');
-  expect(live.sendSignal('difficult')).toBe(false);
+  expect(live.sendSignal('difficult')).toBe('queued'); // 재join 전 → 여전히 버퍼링
+
   await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
-  expect(live.sendSignal('difficult')).toBe(true);
+  // 단절 중 눌린 2회가 모두 flush 됐다
+  const calls = signalCalls();
+  expect(calls).toHaveLength(2);
+  expect(calls[0]).toEqual(['class:signal', signalPayload('difficult', 'p1')]);
+  expect(calls[1]).toEqual(['class:signal', signalPayload('difficult', 'p1')]);
+  // 이후 즉시 전송
+  expect(live.sendSignal('following')).toBe('sent');
+});
+
+it('참가자 미확정이면 버퍼링하되 flush 하지 않는다', async () => {
+  await act(async () => root.render(createElement(Probe, { participantId: null })));
+  await receive('joined', { session_id: 's1', version: 1 }); // participant_id 없음
+  expect(live.sendSignal('resting')).toBe('queued');
+  expect(signalCalls()).toHaveLength(0);
+});
+
+it('join 거부 상태에서는 전송하지 않는다(failed), 재join 시 복구', async () => {
+  await act(async () => root.render(createElement(Probe)));
+  await receive('join_denied', { session_id: 's1' });
+  expect(live.sendSignal('resting')).toBe('failed');
+  expect(live.isReady).toBe(false);
+  // 재join 확정 시 정상 복구
+  await receive('joined', { session_id: 's1', participant_id: 'p1', version: 1 });
+  expect(live.sendSignal('resting')).toBe('sent');
 });

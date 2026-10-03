@@ -67,7 +67,7 @@ afterEach(async () => {
 
 describe('QuietSignalButtons', () => {
   it('3종 버튼을 렌더하고 클릭 시 해당 신호를 전송한다', async () => {
-    const onSend = vi.fn(() => true);
+    const onSend = vi.fn(() => 'sent' as const);
     await render(createElement(QuietSignalButtons, { onSend }));
 
     expect(button('🌿잘 따라가요')).toBeDefined();
@@ -86,7 +86,7 @@ describe('QuietSignalButtons', () => {
   });
 
   it('미연결(전송 실패)이면 팝업 없이 조용한 안내 문구만 보여준다', async () => {
-    const onSend = vi.fn(() => false);
+    const onSend = vi.fn(() => 'failed' as const);
     await render(createElement(QuietSignalButtons, { onSend }));
 
     await act(async () => {
@@ -96,6 +96,19 @@ describe('QuietSignalButtons', () => {
     expect(onSend).toHaveBeenCalledWith('resting');
     expect(text()).toContain('전송하지 못했어요');
     expect(text()).not.toContain('상담사에게 조용히 전달했어요');
+  });
+
+  it('단절(버퍼링)이면 복구 안내 문구를 보여준다', async () => {
+    const onSend = vi.fn(() => 'queued' as const);
+    await render(createElement(QuietSignalButtons, { onSend }));
+
+    await act(async () => {
+      button('💧조금 어려워요')?.click();
+    });
+
+    expect(onSend).toHaveBeenCalledWith('difficult');
+    expect(text()).toContain('연결을 복구하는 중이에요');
+    expect(text()).not.toContain('전송하지 못했어요');
   });
 });
 
