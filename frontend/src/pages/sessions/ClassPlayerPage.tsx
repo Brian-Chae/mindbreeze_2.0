@@ -1819,6 +1819,7 @@ export default function ClassPlayerPage() {
           audio={isLobby ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
           left={isSetup ? (
             <SessionPreJoinPreview
+              dark
               onStart={(prefs) => void openClass(prefs)}
               starting={transitioning}
               canStart={!transitioning}

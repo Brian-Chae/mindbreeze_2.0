@@ -1023,6 +1023,12 @@ def notify_session_state_changed(session_id: str, payload: dict) -> None:
     _schedule(broadcast_session_state(session_id, _jsonify(payload)))
 
 
+def notify_session_eeg(session_id: str, payload: dict) -> None:
+    """REST 폴백 저장 이후 호스트 EEG 표시와 기존 주기의 그룹 집계를 발행한다."""
+    _schedule(broadcast_session_eeg(session_id, _jsonify(payload)))
+    _schedule(publish_group_aggregate(session_id))
+
+
 def notify_participant_changed(session_id: str, payload: dict) -> None:
     _schedule(broadcast_participant(session_id, _jsonify(payload)))
 
