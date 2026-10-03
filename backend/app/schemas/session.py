@@ -359,6 +359,9 @@ class SessionLiveMetric(BaseModel):
     user_id: str | None = None
     is_guest: bool = False
     display_name: str
+    gender: str | None = None
+    birth_date: date | None = None
+    concerns: list[str] = []
     # 자리번호: 기본 생략, 운영자 장비 배정용으로 nullable 만 선반영 (현재 항상 None)
     seat_number: int | None = None
     consent_eeg: bool = False

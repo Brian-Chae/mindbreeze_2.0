@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.models.user import User
+from app.models.client_profile import ClientProfile
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
@@ -1620,9 +1621,14 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
 
     user_ids = [p.user_id for p in active if p.user_id]
     names: dict = {}
+    profiles: dict[UUID, ClientProfile] = {}
     if user_ids:
         for u in db.query(User).filter(User.id.in_(user_ids)).all():
             names[u.id] = u.name
+        profiles = {
+            profile.user_id: profile
+            for profile in db.query(ClientProfile).filter(ClientProfile.user_id.in_(user_ids)).all()
+        }
 
     log_state = _participant_log_state(s.status)
     # 참가자별 EEG feature 집계(최신 윈도우 + 평균 두뇌휴식도)
@@ -1634,6 +1640,9 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     band_low = 0
     for p in active:
         display_name = names.get(p.user_id) if p.user_id else p.guest_name
+        profile = profiles.get(p.user_id) if p.user_id else None
+        gender = p.gender or (profile.gender if profile else None)
+        birth_date = p.birth_date or (profile.birth_date if profile else None)
         st = stats.get(p.id)
         if st is None:
             # feature 미수집 — placeholder 유지 (null 보존)
@@ -1669,6 +1678,10 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "user_id": str(p.user_id) if p.user_id else None,
                 "is_guest": p.user_id is None,
                 "display_name": display_name or "익명",
+                "gender": gender,
+                # REST와 호스트 소켓 스냅샷 모두 JSON으로 전달한다.
+                "birth_date": birth_date.isoformat() if birth_date else None,
+                "concerns": list(profile.concerns or []) if profile else [],
                 "seat_number": None,  # Phase 2: 좌석 배정
                 "consent_eeg": p.consent_eeg,
                 "session_log_state": log_state,

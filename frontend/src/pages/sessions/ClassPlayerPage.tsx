@@ -7,7 +7,7 @@
 // 상태 전이 버튼은 이 플레이어 안에만 존재한다(목록·상세는 [입장] 단일 버튼).
 // 기존 SessionLivePage 의 모니터링·녹음·마커·밴드 로직을 씬으로 분해 이전했다 (SDD-024/026/028/083~085 유지).
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useId, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   getSession,
@@ -71,7 +71,7 @@ import { SessionParticipantCardGrid } from '../../components/session/SessionPart
 // 개선 5: 무음 시그널 — 상단 집계 카운트(조용한 표시)
 import { QuietSignalSummary } from '../../components/session/QuietSignalSummary';
 // 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 상단 단일 게이지
-import { GroupAggregateGauge } from '../../components/session/GroupAggregateGauge';
+import '../../components/class/host-class-player.css';
 import { type ClassAggregateEvent } from '../../lib/class/group-aggregate';
 // 개선 7: 진행 큐시트 — 상담사 플레이어의 현재 단계 하이라이트·남은 시간 진행바
 import { CuesheetPanel } from '../../components/class/CuesheetPanel';
@@ -94,6 +94,10 @@ import { LeaveGuardModal } from '../../components/player/LeaveGuardModal';
 import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
 import { useReportProgress } from '../../hooks/useReportProgress';
 import {
+  bandCardState,
+  bandCardStateLabel,
+  canShowCurrentMetrics,
+  matchesMonitorFilter,
   isConnectionFailed,
   isStreamingLive,
   type ParticipantHistoryPoint,
@@ -216,11 +220,265 @@ function elapsedLabel(sec: number): string {
   return `${mm}분 ${ss}초`;
 }
 
+type HostMetricKey = 'focus' | 'relaxation' | 'emotionalStability' | 'heartRate' | 'respiratoryRate' | 'hrv';
+type HostValues = Record<HostMetricKey, number | null>;
+interface HostExtra { at: number; focus: number | null; emotionalStability: number | null; hrv: number | null }
+interface HostPoint { at: number; values: HostValues }
+const HOST_METRICS: { key: HostMetricKey; label: string; unit: string }[] = [
+  { key: 'focus', label: '집중도', unit: '%' },
+  { key: 'relaxation', label: '이완도', unit: '%' },
+  { key: 'emotionalStability', label: '정서안정도', unit: '%' },
+  { key: 'heartRate', label: 'BPM', unit: 'bpm' },
+  { key: 'respiratoryRate', label: '호흡수', unit: '회/분' },
+  { key: 'hrv', label: 'HRV', unit: 'ms' },
+];
+const finiteValue = (value: number | null | undefined): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null;
+const hostValueLabel = (value: number | null): string => value === null ? '—' : String(Math.round(value));
+function hostValues(row: SessionLiveMetric, extra?: HostExtra): HostValues {
+  const valid = row.band_connected && canShowCurrentMetrics(row);
+  const extraValid = valid && extra && Date.now() - extra.at < 10000;
+  return {
+    relaxation: valid ? finiteValue(row.current_efficiency) : null,
+    heartRate: valid ? finiteValue(row.heart_rate) : null,
+    respiratoryRate: valid ? finiteValue(row.respiratory_rate) : null,
+    focus: extraValid ? extra.focus : null,
+    emotionalStability: extraValid ? extra.emotionalStability : null,
+    hrv: extraValid ? extra.hrv : null,
+  };
+}
+interface HostParticipantProfile { demographics: string; concerns: string }
+function hostParticipantProfile(row: SessionLiveMetric): HostParticipantProfile {
+  const gender = row.gender === 'male' ? '남' : row.gender === 'female' ? '여' : row.gender === 'other' ? '기타' : '';
+  let age = '';
+  if (row.birth_date && /^\d{4}-\d{2}-\d{2}$/.test(row.birth_date)) {
+    const [year, month, day] = row.birth_date.split('-').map(Number);
+    // ISO 날짜의 UTC 해석으로 생일이 하루 이동하지 않도록 날짜 부분을 직접 비교한다.
+    const birth = new Date(year, month - 1, day);
+    const today = new Date();
+    if (birth.getFullYear() === year && birth.getMonth() === month - 1 && birth.getDate() === day && birth <= today) {
+      const beforeBirthday = today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day);
+      age = `${today.getFullYear() - year - (beforeBirthday ? 1 : 0)}세`;
+    }
+  }
+  return {
+    demographics: [gender, age].filter(Boolean).join(' · '),
+    concerns: row.is_guest ? '' : (row.concerns ?? []).join(' · '),
+  };
+}
+function HostDemographics({ row }: { row: SessionLiveMetric }) {
+  const { demographics } = hostParticipantProfile(row);
+  return demographics ? <small className="hcp-demographics">{demographics}</small> : null;
+}
+function hostMean(values: (number | null)[]): number | null {
+  const valid = values.filter((v): v is number => v !== null);
+  return valid.length ? valid.reduce((sum, v) => sum + v, 0) / valid.length : null;
+}
+function hostMissingLabel(row: SessionLiveMetric): string {
+  const state = bandCardState(row);
+  if (state === 'none') return '밴드 미사용';
+  if (state === 'disconnected') return '수신 끊김';
+  return row.device_status === 'lead_off' ? '접촉 확인' : '측정 대기';
+}
+function HostMetricDisplay({ metric, value, previous, series = [], average = null, detail = false, missingLabel = '표본 대기' }: {
+  metric: typeof HOST_METRICS[number]; value: number | null; previous: number | null; series?: (number | null)[];
+  average?: number | null; detail?: boolean; missingLabel?: string;
+}) {
+  const gradientId = useId();
+  const mind = metric.unit === '%';
+  const delta = value !== null && previous !== null ? Math.round(value - previous) : null;
+  const change = value === null ? missingLabel : delta === null ? '추이 대기' : `${delta > 0 ? '+' : ''}${delta} · 3분대비`;
+  const samples = series.slice(-20);
+  const valid = samples.filter((v): v is number => v !== null);
+  const domain = [...valid, ...(average === null ? [] : [average]), ...(value === null ? [] : [value])];
+  const min = domain.length ? Math.min(...domain) : 0;
+  const max = domain.length ? Math.max(...domain) : 1;
+  const padding = Math.max((max - min) * .12, .5);
+  const y = (v: number) => 58 - (v - min + padding) / (max - min + 2 * padding) * 52;
+  const angle = ((average ?? 0) / 100 * 360 - 90) * Math.PI / 180;
+  return <article className={`hcp-metric ${mind ? 'hcp-mind' : 'hcp-body'}`}>
+    <p>{metric.label}</p>
+    <div className={mind ? 'hcp-dial' : 'hcp-reading'}>
+      {mind && <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs><linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#A16BBC" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
+        <circle cx="60" cy="60" r="51" className="hcp-track" />
+        {value !== null && <circle cx="60" cy="60" r="51" className="hcp-arc" style={{ stroke: `url(#${gradientId})` }} pathLength="100" strokeDasharray={`${Math.max(0, Math.min(100, value))} 100`} transform="rotate(-90 60 60)" />}
+        {detail && average !== null && <line className="hcp-tick" x1={60 + 47 * Math.cos(angle)} y1={60 + 47 * Math.sin(angle)} x2={60 + 55 * Math.cos(angle)} y2={60 + 55 * Math.sin(angle)} />}
+      </svg>}
+      <strong>{hostValueLabel(value)}<small>{metric.unit}</small></strong>
+      {mind && detail && <span className="hcp-delta">{change}</span>}
+    </div>
+    {!mind && <svg className="hcp-bars" viewBox="0 0 240 64" preserveAspectRatio="none" aria-label={`${metric.label} 최근 수신 추이${average === null ? '' : `, 그룹 평균 ${hostValueLabel(average)}`}`}>
+      <g>{samples.map((v, i) => v !== null && <rect key={i} x={4 + (20 - samples.length + i) * 11.6} y={y(v)} width={7.5} height={58 - y(v)} rx="1" />)}</g>
+      {valid.length > 1 && <rect className="hcp-range-band" x="4" y={y(Math.max(...valid))} width="232" height={Math.max(1, y(Math.min(...valid)) - y(Math.max(...valid)))} />}
+      {average !== null && <path className="hcp-average-line" d={`M4 ${y(average)}H236`} />}
+    </svg>}
+    {mind && detail ? <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small> : <span className="hcp-delta">{change}</span>}
+  </article>;
+}
+export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, controls }: {
+  rows: SessionLiveMetric[]; extras: Record<string, HostExtra>; signals: Record<string, ActiveSignal>;
+  aggregate: ClassAggregateEvent | null; elapsed: number; running: boolean;
+  controls?: ReactNode; left: ReactNode; tools: ReactNode; statusBar: ReactNode; filter: keyof MonitorSummaryCounts | null;
+}) {
+  const [metricKey, setMetricKey] = useState<HostMetricKey>('relaxation');
+  const [sortKey, setSortKey] = useState<HostMetricKey>('relaxation');
+  const [table, setTable] = useState(false);
+  const [rotating, setRotating] = useState(true);
+  const [manualSort, setManualSort] = useState<{ key: HostMetricKey; descending: boolean } | null>(null);
+  const [phase, setPhase] = useState<'auto' | 'early' | 'late'>('auto');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [ackAt, setAckAt] = useState(0);
+  const [immersed, setImmersed] = useState(false);
+  const [help, setHelp] = useState(false);
+  const [history, setHistory] = useState<Record<string, HostPoint[]>>({});
+  const sheetRef = useRef<HTMLElement>(null);
+  const detailTriggerRef = useRef<HTMLElement | null>(null);
+  const rosterRef = useRef<HTMLElement>(null);
+  const openDetail = (id: string, trigger: HTMLElement) => {
+    detailTriggerRef.current = trigger;
+    setSelected(id);
+  };
+  const counts = countSignals(signals, Date.now());
+  const unread = Object.values(signals).filter(signal => signal.at > ackAt && Date.now() - signal.at < SIGNAL_ACTIVE_MS).length;
+  useEffect(() => {
+    if (selected && !rows.some(row => row.participant_id === selected)) setSelected(null);
+  }, [rows, selected]);
+  const late = phase === 'late' || (phase === 'auto' && elapsed >= 180);
+  useEffect(() => {
+    if (!rotating || table || selected) return;
+    const timer = window.setInterval(() => setMetricKey(key => HOST_METRICS[(HOST_METRICS.findIndex(m => m.key === key) + 1) % HOST_METRICS.length].key), 10000);
+    return () => window.clearInterval(timer);
+  }, [rotating, table, selected]);
+  useEffect(() => {
+    if (!running) return;
+    const now = Date.now();
+    setHistory(previous => {
+      const next = { ...previous };
+      for (const row of rows) {
+        const points = previous[row.participant_id] ?? [];
+        const last = points.at(-1);
+        if (last && now - last.at < HISTORY_MIN_INTERVAL_MS) continue;
+        next[row.participant_id] = [...points.filter(p => now - p.at <= 190000), { at: now, values: hostValues(row, extras[row.participant_id]) }];
+      }
+      return next;
+    });
+  }, [rows, extras, running]);
+  useEffect(() => {
+    if (!selected) return;
+    const previousFocus = detailTriggerRef.current;
+    const sheet = sheetRef.current;
+    sheet?.querySelector<HTMLButtonElement>('button')?.focus();
+    // aria-modal에 맞게 플레이어 배경 전체를 비활성화하되 백드롭 닫기는 유지한다.
+    const boundary = sheet?.closest('.host-class-player') ?? sheet?.closest('.hcp-workspace');
+    const disabled: HTMLElement[] = [];
+    let branch: HTMLElement | null = sheet;
+    while (branch && branch !== boundary) {
+      const parent: HTMLElement | null = branch.parentElement;
+      for (const sibling of parent?.children ?? []) {
+        if (sibling instanceof HTMLElement && sibling !== branch && !sibling.classList.contains('hcp-backdrop') && !sibling.hasAttribute('inert')) {
+          sibling.setAttribute('inert', '');
+          disabled.push(sibling);
+        }
+      }
+      branch = parent;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setSelected(null);
+      if (event.key === 'Tab') {
+        const elements = sheetRef.current?.querySelectorAll<HTMLElement>('button, [href], [tabindex="0"]');
+        if (!elements?.length) return;
+        const first = elements[0], last = elements[elements.length - 1];
+        if (!sheet?.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
+        else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); disabled.forEach(element => element.removeAttribute('inert')); (previousFocus?.isConnected ? previousFocus : rosterRef.current?.querySelector<HTMLElement>('.hcp-toolbar button'))?.focus({ preventScroll: true }); };
+  }, [selected]);
+  const valuesFor = (row: SessionLiveMetric) => hostValues(row, extras[row.participant_id]);
+  const previousFor = (row: SessionLiveMetric, key: HostMetricKey): number | null => {
+    const points = history[row.participant_id] ?? [];
+    const now = Date.now();
+    if (!points.length || now - points[0].at < 180000) return null;
+    const windowPoints = points.filter(p => now - p.at <= 180000 && now - p.at >= 3000);
+    const valid = windowPoints.filter(p => p.values[key] !== null);
+    // 일시적인 단절 이후의 짧은 표본을 3분 평균으로 표시하지 않는다.
+    if (valid.length < 45) return null;
+    return hostMean(valid.map(p => p.values[key]));
+  };
+  const ordered = rows.filter(row => matchesMonitorFilter(row, filter)).sort((a, b) => {
+    if (table && !manualSort) return 0;
+    const key = table && manualSort ? manualSort.key : sortKey;
+    const sortValue = (row: SessionLiveMetric) => {
+      const current = valuesFor(row)[key];
+      if (table || !late || current === null) return current;
+      const previous = previousFor(row, key);
+      return previous === null ? null : current - previous;
+    };
+    const av = sortValue(a), bv = sortValue(b);
+    if (av === null) return bv === null ? 0 : 1;
+    if (bv === null) return -1;
+    return (av - bv) * (table && manualSort?.descending ? -1 : 1);
+  });
+  const selectedRow = rows.find(row => row.participant_id === selected);
+  const validRows = rows.filter(row => row.band_connected && canShowCurrentMetrics(row));
+  const minSample = aggregate?.min_wearers ?? 3;
+  const groupAvailable = validRows.length >= minSample && aggregate?.sample_status !== 'insufficient';
+  const selectedMetric = HOST_METRICS.find(m => m.key === metricKey)!;
+  const metricSections = (row?: SessionLiveMetric) => <div className="hcp-metric-sections">
+    {[{ label: '마음', english: 'MIND', items: HOST_METRICS.slice(0, 3) }, { label: '몸', english: 'BODY', items: HOST_METRICS.slice(3) }].map(({ label, english, items }) => <section key={english}>
+      <h3>{label} <small>{english}</small></h3><div className="hcp-metric-items">
+        {items.map(metric => {
+          const usable = groupAvailable ? validRows.filter(r => valuesFor(r)[metric.key] !== null) : [];
+          const value = row ? valuesFor(row)[metric.key] : usable.length >= minSample ? hostMean(usable.map(r => valuesFor(r)[metric.key])) : null;
+          const previous = row ? previousFor(row, metric.key) : usable.length >= minSample && usable.every(r => previousFor(r, metric.key) !== null) ? hostMean(usable.map(r => previousFor(r, metric.key))) : null;
+          const series = row ? (history[row.participant_id] ?? []).map(p => p.values[metric.key]) : Array.from({ length: 20 }, (_, i) => usable.length >= minSample ? hostMean(usable.map(r => history[r.participant_id]?.at(i - 20)?.values[metric.key] ?? null)) : null);
+          const average = usable.length >= minSample ? hostMean(usable.map(r => valuesFor(r)[metric.key])) : null;
+          return <HostMetricDisplay key={metric.key} metric={metric} value={value} previous={previous} series={series} average={average} detail={Boolean(row)} missingLabel={row ? hostMissingLabel(row) : '표본 대기'} />;
+        })}
+      </div></section>)}
+  </div>;
+  return <section className={`hcp-workspace ${immersed ? 'hcp-immersed' : ''}`}>
+    <div className="hcp-signals"><div className="hcp-heading"><h2>조용한 신호</h2><small>응답 {counts.total}·{rows.length}명</small></div><p className="hcp-muted">익명 · 최근 10초</p>
+      {(['following', 'difficult', 'resting'] as const).map((key, i) => <div className="hcp-signal-row" key={key}><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="10" />{i === 0 ? <path d="m7 12 3 3 6-6" /> : i === 1 ? <path d="M9 9a3 3 0 1 1 4 3c-1 1-1 1-1 2m0 3h.01" /> : <path d="M9 8v8m6-8v8" />}</svg>{['잘 따라가요', '조금 어려워요', '잠시 쉴게요'][i]}</span><b className={counts[key] ? '' : 'hcp-zero'}>{counts[key]}</b></div>)}
+    </div>
+    <div className="hcp-notice">{unread > 0 && <button className="hcp-unread" onClick={() => setAckAt(Date.now())}><i />미확인 새 신호 {unread}건 ›</button>}<button onClick={() => setImmersed(v => !v)} aria-pressed={immersed}>{immersed ? '몰입 해제' : '몰입'}</button><button onClick={() => setHelp(v => !v)} aria-expanded={help}>사용 안내</button></div>
+    <section className="hcp-group"><div className="hcp-heading"><div><h2>그룹 흐름</h2><p className="hcp-muted">지난 3분 평균 대비</p></div><small>유효 표본 {validRows.length}명{!groupAvailable && (validRows.length ? ' · 표본 적음' : ' · 표본 없음')}</small></div>{validRows.length ? metricSections() : <p className="hcp-group-empty" role="status">표본 없음<small>밴드 측정 데이터가 수신되면 그룹 흐름을 표시합니다.</small></p>}<p className="hcp-muted">{aggregate?.pace_hint}</p></section>
+    <aside className="hcp-host">{left}</aside>
+    <section ref={rosterRef} className="hcp-roster"><div className="hcp-heading"><h2>참가자 <small>{rows.length}</small></h2><small>발언 요청 {rows.filter(r => r.raise_hand).length} · 발언 중 {rows.filter(r => r.speaking).length}</small></div>
+      {help && <div className="hcp-coach" role="status">지표는 10초마다 순환합니다. 칩을 선택하면 해당 지표로 정렬하며, 순환은 정렬 기준을 바꾸지 않습니다. 3분 미만은 현재값, 이후는 실제 3분 평균 대비 변화량 오름차순입니다. 카드나 참가자 이름을 누르면 상세를 볼 수 있습니다.<button onClick={() => setHelp(false)}>확인</button></div>}
+      <div className="hcp-toolbar"><button aria-pressed={table} onClick={() => { setTable(true); setManualSort(null); }}>모두</button>{HOST_METRICS.map(m => <button key={m.key} aria-pressed={!table && metricKey === m.key} onClick={() => { setTable(false); setMetricKey(m.key); setSortKey(m.key); }}>{m.label}</button>)}</div>
+      <div className="hcp-sort"><span>{table ? '헤더를 눌러 수동 정렬' : `${HOST_METRICS.find(m => m.key === sortKey)?.label} · ${late ? '3분 변화량' : '현재값'} 자동 정렬`}</span><button aria-pressed={rotating} onClick={() => setRotating(v => !v)} disabled={table}>10초 순환 {rotating ? '켜짐' : '꺼짐'}</button><select aria-label="정렬 시점" value={phase} onChange={e => setPhase(e.target.value as typeof phase)}><option value="auto">시간에 따라 자동</option><option value="early">3분 미만</option><option value="late">3분 이후</option></select></div>
+      <div className="hcp-roster-list"><div className="hcp-roster-content" inert={Boolean(selectedRow)}>
+        {!ordered.length && <p className="hcp-empty" role="status">{rows.length ? '선택한 상태의 참가자가 없습니다.' : '아직 참가자가 없습니다. 입장하면 이곳에 표시됩니다.'}</p>}
+        {!ordered.length ? null : table ? <div className="hcp-table-wrap"><table><thead><tr><th><button onClick={() => setManualSort(null)}>참가자 · 입장순</button></th>{HOST_METRICS.map(m => <th key={m.key} aria-sort={manualSort?.key === m.key ? manualSort.descending ? 'descending' : 'ascending' : 'none'}><button onClick={() => setManualSort(v => ({ key: m.key, descending: v?.key === m.key ? !v.descending : false }))}>{m.label}{manualSort?.key === m.key ? manualSort.descending ? ' ↓' : ' ↑' : ''}</button></th>)}</tr></thead><tbody>{ordered.map(row => <tr key={row.participant_id} onClick={event => openDetail(row.participant_id, event.currentTarget.querySelector<HTMLButtonElement>('button')!)}><th scope="row"><button className="hcp-table-person">{row.display_name}<HostDemographics row={row} /></button></th>{HOST_METRICS.map(m => <td key={m.key}>{valuesFor(row)[m.key] === null ? <small>{hostMissingLabel(row)}</small> : <>{hostValueLabel(valuesFor(row)[m.key])}<small>{m.unit}</small></>}</td>)}</tr>)}</tbody></table></div> : <div className="hcp-people">{ordered.map(row => {
+          const value = valuesFor(row)[metricKey], previous = previousFor(row, metricKey);
+          const delta = value !== null && previous !== null ? Math.round(value - previous) : null;
+          const bandLabel = row.device_status === 'lead_off' ? '접촉 확인 · 리드오프' : bandCardState(row) === 'disconnected' ? '수신 끊김' : bandCardStateLabel(bandCardState(row));
+          return <button className={`hcp-person${value === null ? ' hcp-unmeasured' : ''}`} key={row.participant_id} aria-pressed={selected === row.participant_id} aria-label={`${row.display_name} ${selectedMetric.label} 상세 보기`} onClick={event => openDetail(row.participant_id, event.currentTarget)}>
+            <span className="hcp-person-top"><span className="hcp-person-name">{row.display_name}</span><HostDemographics row={row} /><i className={`hcp-dot ${bandCardState(row)}`} role="img" aria-label={bandLabel} title={bandLabel} /></span>
+            <span className="hcp-person-label">{selectedMetric.label}<span>{row.speaking ? '발언 중' : row.raise_hand ? '발언 요청' : ''}</span></span>
+            <span className="hcp-value-row"><span className="hcp-person-value">{hostValueLabel(value)}<small>{selectedMetric.unit}</small></span><span className="hcp-person-change">{value === null ? hostMissingLabel(row) : delta === null ? '추이 대기' : `${delta > 0 ? '+' : ''}${delta}`}<small>{delta !== null && ' 3분대비'}</small></span></span>
+            <span className="hcp-band">{bandLabel}{isLowBattery(row.band_battery) && ' · 배터리 부족'}</span>
+          </button>;
+        })}</div>}
+      </div>
+      {selectedRow && <><button className="hcp-backdrop" aria-label="참가자 상세 닫기" tabIndex={-1} onClick={() => setSelected(null)} /><aside ref={sheetRef} className="hcp-sheet" role="dialog" aria-modal="true" aria-labelledby="hcp-detail-title"><header className="hcp-heading"><div><h2 id="hcp-detail-title">{selectedRow.display_name}<HostDemographics row={selectedRow} /></h2><p className="hcp-muted">{bandCardState(selectedRow) === 'connected' ? '밴드 연결됨' : hostMissingLabel(selectedRow)} · 접촉 {contactStatusLabel(selectedRow.device_status)} · 신호 {signalQualityLevelLabel(selectedRow.signal_quality_level ?? signalQualityLevel(selectedRow.signal_quality))}</p></div><button onClick={() => setSelected(null)}>닫기</button></header><div className="hcp-sheet-content">{hostParticipantProfile(selectedRow).concerns && <section className="hcp-survey"><h3>사전 설문</h3><p>{hostParticipantProfile(selectedRow).concerns}</p></section>}{metricSections(selectedRow)}<div className="hcp-body-legend" aria-label="몸 추이 범례"><span><svg viewBox="0 0 20 8" aria-hidden="true"><path className="hcp-average-line" d="M0 4H20" /></svg>그룹 평균</span><span><svg viewBox="0 0 20 8" aria-hidden="true"><rect className="hcp-range-band" width="20" height="8" /></svg>최근 수신 범위</span></div></div><footer className="hcp-legend" aria-label="지표 범례">링: 현재값 · 막대: 최근 수신값 · 증감: 3분 대비</footer></aside></>}
+      </div><div className="hcp-roster-foot">{table ? '모두 · 테이블 보기' : `${selectedMetric.label} · ${rotating ? '10초 순환' : '순환 정지'}`}<span>개인 순위 없음</span></div>
+      <details className="hcp-tools"><summary>연결 상태 · 발언권 · 호스트 밴드</summary>{statusBar}{tools}</details>
+    </section>
+    {controls && <footer className="hcp-controls" aria-label="클래스 진행 제어"><span>호스트 클래스</span>{controls}</footer>}
+  </section>;
+}
+
 export default function ClassPlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDto | null>(null);
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
+  const [hostExtras, setHostExtras] = useState<Record<string, HostExtra>>({});
   const lastFeaturePatchAtRef = useRef(0);
   const featureBufferRef = useRef<
     Map<string, { efficiency: number[]; heartRate: number[]; respiratoryRate: number[] }>
@@ -290,6 +548,18 @@ export default function ClassPlayerPage() {
       // last_eeg_at을 되돌리고(→ false "수신끊김") 구간 평균을 오염시키므로 무시한다.
       if (event.saved === 0) return;
       const now = Date.now();
+      const focus = finiteValue(event.focus_index ?? event.feature?.focus_index);
+      const emotional = finiteValue(event.feature?.emotional_stability);
+      const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : event.feature?.timestamp ?? now;
+      setHostExtras(previous => {
+        if (previous[event.participant_id]?.at > at) return previous;
+        return { ...previous, [event.participant_id]: {
+          at: Number.isFinite(at) ? at : now,
+          focus: focus === null ? null : scoreIndices({ focusIndex: focus }).focusIndex,
+          emotionalStability: emotional === null ? null : scoreIndices({ emotionalStability: emotional }).emotionalStability,
+          hrv: finiteValue(event.feature?.rmssd),
+        } };
+      });
       const rawEfficiency =
         event.current_efficiency ??
         event.relaxation_index ??
@@ -1289,50 +1559,7 @@ export default function ClassPlayerPage() {
         )}
       </div>
 
-      {/* 호스트 LINK BAND — 보조 영역 */}
-      {isHost && (
-        <div className="flex flex-col gap-3 rounded-xl bg-[#F2F3F8] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-[#1F1F1F]">LINK BAND (호스트)</p>
-            <p className="mt-1 text-sm text-[#6F6F6F]">
-              {band.connectionState === 'connected'
-                ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
-                : band.connectionState === 'unsupported'
-                  ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
-                  : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
-            </p>
-            {band.error && <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>}
-          </div>
-          <div className="flex gap-2">
-            {band.connectionState !== 'connected' ? (
-              <button
-                type="button"
-                onClick={() => void band.connect()}
-                disabled={
-                  !band.isSupported ||
-                  !hostParticipantId ||
-                  band.connectionState === 'connecting'
-                }
-                className="mb-btn disabled:cursor-not-allowed"
-              >
-                {band.connectionState === 'connecting'
-                  ? '연결 중...'
-                  : band.isMock
-                    ? '시뮬레이션 시작'
-                    : '밴드 연결'}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void band.disconnect()}
-                className="mb-btn mb-btn--ghost"
-              >
-                연결 해제
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 
@@ -1405,7 +1632,7 @@ export default function ClassPlayerPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#12081C] pb-10">
+    <main className={`min-h-screen bg-[#12081C] pb-10 ${isHost ? 'host-class-player' : ''}`}>
       {/* 플레이어 헤더 — 풀스크린 셸 (AppShell 밖) */}
       <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-white/10 bg-[#12081C]/95 px-4 py-3 backdrop-blur sm:flex-nowrap sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
@@ -1432,16 +1659,10 @@ export default function ClassPlayerPage() {
           </div>
           <StatusBadge status={session.status} />
         </div>
-        {headerControls}
+        {!isHost && headerControls}
       </header>
 
       <div className="mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
-        {/* 개선 8: 그룹 익명 집계 게이지 — 상담사 전용. 개인 점수·순위 없이 그룹 전반 상태만
-            단일 게이지로 보여주고, 착용자가 부족하면 흐리게(표본 적음) 표시한다. */}
-        {isHost && (isLobby || isRunning) && (
-          <GroupAggregateGauge aggregate={groupAggregate} />
-        )}
-
         {/* ① 세팅 씬 — ready/scheduled: 미디어 프리뷰 + [클래스 오픈] */}
         {isSetup && isHost && (
           <>
@@ -1458,124 +1679,76 @@ export default function ClassPlayerPage() {
           </>
         )}
 
-        {/* ② 대기실 씬 — open: 좌(코드·호스트 카메라/음성) / 우(참가자 실시간 그리드) */}
-        {isLobby && (
-          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            {/* 좌측 — 클래스 코드 + 호스트 카메라·음성 상태 */}
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="rounded-2xl bg-white/5 p-5 text-center">
-                <p className="text-sm text-white/60">클래스 코드</p>
-                <p className="mt-1 font-mono text-4xl font-black tracking-[0.2em] text-white">
-                  {accessCode || '——————'}
-                </p>
-                <p className="mt-2 text-sm text-white/60">
-                  회원에게 코드를 안내하세요. 입장한 회원의 밴드 착용·신호 상태가 우측에
-                  실시간으로 표시됩니다.
-                </p>
-                {session.opened_at && (
-                  <p className="mt-2 font-mono text-lg font-bold tabular-nums text-white/70">
-                    대기 {elapsedLabel(lobbyElapsedSec)}
-                  </p>
-                )}
-                {accessCode && (
-                  <button
-                    type="button"
-                    onClick={() => void handleCopyCode()}
-                    className="mt-3 rounded-xl bg-white/10 h-11 px-4 text-sm font-medium text-white/80 transition hover:bg-white/20"
-                  >
-                    {codeCopied ? '복사 완료' : '코드 복사'}
-                  </button>
-                )}
-              </div>
-
-              {/* 호스트 카메라 영상 — 세팅에서 확정한 카메라 설정 반영 */}
-              {mediaPrefs.cameraOn ? (
-                <SessionHostVideoView
-                  stream={videoRecorder.stream}
-                  facingMode={videoRecorder.facingMode}
-                  recording={false}
-                />
-              ) : (
-                <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
-                    🎥
-                  </span>
-                  <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
-                </div>
-              )}
-
-              {/* 음성·카메라 설정 상태 — 세팅에서 확정한 값 표시 */}
-              <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/5 p-4">
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-                    mediaPrefs.micOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
-                  }`}
-                >
-                  {mediaPrefs.micOn ? '🎙️ 마이크 ON' : '🔇 마이크 OFF'}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium ${
-                    mediaPrefs.cameraOn ? 'bg-white/10 text-white' : 'bg-white/5 text-white/50'
-                  }`}
-                >
-                  🎥 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}
-                </span>
-                <span className="text-xs text-white/50">시작 시 녹음·녹화가 시작됩니다</span>
-              </div>
-
-              {/* 개선 10: 대기실에서도 가이드·BGM 을 미리 틀 수 있다(입장한 회원이 같은 위치로 청취) */}
-              {isHost && (
-                <ClassAudioPanel
-                  state={audioPlayer.state}
-                  actions={audioPlayer.actions}
-                  enabled={isLobby}
-                  connected={liveSocket.isConnected}
-                />
-              )}
-            </div>
-
-            {/* 우측 — 내담자 상태 실시간 */}
-            <div className="min-w-0">{monitorPanel}</div>
+        {isHost && (isLobby || isRunning) && <HostClassWorkspace
+          rows={displayMetrics} extras={hostExtras} signals={quietSignals} aggregate={groupAggregate}
+          elapsed={classElapsedSec} running={isRunning} statusBar={liveStatusBar} filter={activeFilter}
+          tools={<><SessionMonitorSummary counts={summary} activeFilter={activeFilter} onFilterToggle={handleFilterToggle} />
+            {speakingManaged && <SpeakingRightsPanel participants={displayMetrics} busyId={speakingBusyId} onGrant={pid => void handleSetSpeaking(pid, true)} onRevoke={pid => void handleSetSpeaking(pid, false)} />}
+      {/* 호스트 LINK BAND — 보조 영역 */}
+      {isHost && (
+        <div className="flex flex-col gap-3 rounded-xl bg-[#F2F3F8] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-[#1F1F1F]">LINK BAND (호스트)</p>
+            <p className="mt-1 text-sm text-[#6F6F6F]">
+              {band.connectionState === 'connected'
+                ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
+                : band.connectionState === 'unsupported'
+                  ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
+                  : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
+            </p>
+            {band.error && <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>}
           </div>
-        )}
-
-        {/* ③ 라이브 씬 — 좌: 카메라+호스트 상태 / 우: 참여자 피드백 (md 미만은 세로 스택) */}
-        {isRunning && isHost && (
-          <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <div className="flex min-w-0 flex-col gap-3">
-              {/* 셀프뷰 — 프리뷰 → 셀프뷰 자연 전환 (SDD-084/085) */}
-              {mediaPrefs.cameraOn ? (
-                <SessionHostVideoView
-                  stream={videoRecorder.stream}
-                  facingMode={videoRecorder.facingMode}
-                  recording={videoRecorder.state === 'recording'}
-                />
-              ) : (
-                <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#111] p-6 text-center">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xl">
-                    🎥
-                  </span>
-                  <p className="text-sm text-[#9CA3AF]">카메라 꺼짐 · 녹화 안 함</p>
-                </div>
-              )}
-              {hostStatusPanel}
-              {/* 개선 7: 진행 큐시트 — 상담사 전용(현재 단계 하이라이트·남은 시간) */}
-              <CuesheetPanel
-                cuesheet={session.cuesheet}
-                elapsedSec={classElapsedSec}
-                paused={status === 'paused'}
-              />
-              {/* 개선 10: 가이드·BGM 재생 — 회원 화면이 같은 트랙·같은 위치로 동기 재생된다 */}
-              <ClassAudioPanel
-                state={audioPlayer.state}
-                actions={audioPlayer.actions}
-                enabled={Boolean(isHost && isRunning)}
-                connected={liveSocket.isConnected}
-              />
-            </div>
-            <div className="min-w-0">{monitorPanel}</div>
+          <div className="flex gap-2">
+            {band.connectionState !== 'connected' ? (
+              <button
+                type="button"
+                onClick={() => void band.connect()}
+                disabled={
+                  !band.isSupported ||
+                  !hostParticipantId ||
+                  band.connectionState === 'connecting'
+                }
+                className="mb-btn disabled:cursor-not-allowed"
+              >
+                {band.connectionState === 'connecting'
+                  ? '연결 중...'
+                  : band.isMock
+                    ? '시뮬레이션 시작'
+                    : '밴드 연결'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void band.disconnect()}
+                className="mb-btn mb-btn--ghost"
+              >
+                연결 해제
+              </button>
+            )}
           </div>
-        )}
+        </div>
+      )}
+          </>}
+          controls={headerControls}
+          left={<>
+            <div className="hcp-media-controls" role="group" aria-label="호스트 미디어 제어">
+              <button disabled={!isRunning || !mediaPrefs.micOn} onClick={() => {
+                if (recorder.state === 'recording') { recorder.pause(); videoRecorder.pause(); }
+                else if (recorder.state === 'paused') { recorder.resume(); videoRecorder.resume(); }
+                else handleStartClick();
+              }} aria-pressed={recorder.state === 'recording'}>{recorder.state === 'recording' ? '녹음 일시정지' : recorder.state === 'paused' ? '녹음 재개' : '녹음 시작'}</button>
+              <button disabled={!isRunning || !mediaPrefs.cameraOn || mediaPrefs.micOn} onClick={() => void (videoRecorder.state === 'recording' || videoRecorder.state === 'paused' ? handleVideoOnlyStop() : handleVideoOnlyStart())} aria-pressed={videoRecorder.state === 'recording'} title={mediaPrefs.micOn ? '영상은 음성 녹음과 함께 제어됩니다' : '무음 영상 녹화 제어'}>영상 녹화 {videoRecorder.state === 'recording' ? '중' : '대기'}</button>
+              <span>마이크 {mediaPrefs.micOn ? 'ON' : 'OFF'} · 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}</span>
+            </div>
+            {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}>녹음 · 녹화 · 마이크 · 카메라 설정 {mediaOpen ? '접기' : '펼치기'}</button>}
+            <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby || isRunning} connected={liveSocket.isConnected} />
+            <div className="hcp-selfview"><p>나의 화면 · 호스트</p>{mediaPrefs.cameraOn ? <SessionHostVideoView stream={videoRecorder.stream} facingMode={videoRecorder.facingMode} recording={videoRecorder.state === 'recording'} /> : <div className="hcp-camera-off">카메라 꺼짐 · 녹화 안 함</div>}</div>
+            {isLobby && <div className="hcp-code"><small>클래스 코드 · 대기 {elapsedLabel(lobbyElapsedSec)}</small><strong>{accessCode || '——————'}</strong><button onClick={() => void handleCopyCode()}>{codeCopied ? '복사 완료' : '코드 복사'}</button></div>}
+            <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
+            <details><summary>녹화 · AI 상태 · 진행 큐시트</summary>{hostStatusPanel}<CuesheetPanel cuesheet={session.cuesheet} elapsedSec={classElapsedSec} paused={status === 'paused'} /></details>
+          </>}
+        />}
+        {isLobby && !isHost && monitorPanel}
 
         {/* 모니터링 — 비호스트 진행 화면은 전체 폭 (대기실은 위 좌우 그리드 우측에 표시) */}
         {(isRunning && !isHost) && monitorPanel}
@@ -1795,7 +1968,7 @@ export default function ClassPlayerPage() {
         )}
 
         {/* 카드 클릭 → 현재 상태 + 상태 변화 시계열 (SDD-083) */}
-        {selectedRow && (
+        {selectedRow && !isHost && (
           <SessionParticipantDetailPanel
             row={selectedRow}
             history={selectedHistory}
