@@ -63,7 +63,8 @@ jobs:
             backend/alembic \
             backend/requirements.txt \
             backend/ensure_livekit_nginx.py \
-            backend/sweep_stale_open_sessions_cron.py
+            backend/sweep_stale_open_sessions_cron.py \
+            backend/deploy/mindbreeze-worker.service
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -129,11 +130,19 @@ jobs:
             export REDIS_URL=$(grep -E '^REDIS_URL=' ./.env.dev | head -1 | cut -d= -f2-)
             venv/bin/alembic upgrade head
 
+            # 4.8 메인 Celery 워커 systemd 서비스 설치(파이프라인: STT·요약·리포트·영상 병합)
+            #     — 이 워커가 없으면 종료 체인(리포트 생성 등)이 큐에 쌓인 채 실행되지 않는다.
+            sudo cp "$BASE/backend/deploy/mindbreeze-worker.service" /etc/systemd/system/mindbreeze-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-worker 2>/dev/null || true
+
             # 5. 서비스 재시작
             sudo systemctl restart mindbreeze-backend
             sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
+            sudo systemctl restart mindbreeze-worker
             sleep 5
             sudo systemctl is-active mindbreeze-backend
+            sudo systemctl is-active mindbreeze-worker
 
             # 5.1 LiveKit nginx 프록시 보장 — 시그널링 /livekit/ → 127.0.0.1:7880
             if [ -f /etc/nginx/sites-enabled/mindbreeze-ssl ]; then

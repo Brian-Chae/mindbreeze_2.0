@@ -194,7 +194,6 @@ def publish_pipeline(session_id, has_recording, needs_video_merge, needs_report)
     from celery import chain
 
     tasks = _build_pipeline_tasks(session_id, has_recording, needs_video_merge, needs_report)
-    print("DEBUG app=", tasks[0].app.main if tasks else None, "eager=", tasks[0].app.conf.task_always_eager if tasks else None)
     if not tasks:
         return False
     chain(*tasks).apply_async()
