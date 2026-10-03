@@ -1,0 +1,16 @@
+[Unit]
+Description=Mind Breeze Report Email Worker (Celery)
+After=network.target
+
+[Service]
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=-/home/ubuntu/mindbreeze/backend/.env.dev
+# 2026-10-03: -Q email 로 email 전용 큐만 소비.
+# 기본(celery) 큐를 소비하면 메인 워커(celery_app)와 큐를 공유해
+# 서로의 태스크를 가로채 "Received unregistered task"로 버린다.
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.tasks.report_email_task:email_app worker -Q email --loglevel=info --concurrency=2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

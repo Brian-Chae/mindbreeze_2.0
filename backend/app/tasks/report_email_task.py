@@ -8,8 +8,13 @@ from app.config import settings
 #  celery_app 이 아닌 email_app 에 바인딩되어 eager 모드·태스크 등록이 어긋난다.)
 email_app = Celery("report_email", broker=settings.redis_url, set_as_current=False)
 email_app.conf.broker_connection_timeout = 3
-
-
+# 2026-10-03: email_app 전용 큐 분리.
+# 기본 큐가 "celery"라 메인 워커(celery_app)와 큐를 공유해 서로의 태스크를 가로채
+# "Received unregistered task"로 버렸다(리포트 파이프라인 체인이 끊긴 원인).
+# email 전용 워커는 -Q email 로 이 큐만 소비해야 한다.
+email_app.conf.task_default_queue = "email"
+email_app.conf.task_default_exchange = "email"
+email_app.conf.task_default_routing_key = "email"
 @email_app.task(name="tasks.report_email", autoretry_for=(RuntimeError,), retry_backoff=True,
                 retry_kwargs={"max_retries": 3})
 def report_email_task(report_id: str) -> None:

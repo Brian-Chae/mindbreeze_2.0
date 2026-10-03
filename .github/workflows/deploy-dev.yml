@@ -64,7 +64,8 @@ jobs:
             backend/requirements.txt \
             backend/ensure_livekit_nginx.py \
             backend/sweep_stale_open_sessions_cron.py \
-            backend/deploy/mindbreeze-worker.service
+            backend/deploy/mindbreeze-worker.service \
+            backend/deploy/mindbreeze-email-worker.service
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -135,6 +136,11 @@ jobs:
             sudo cp "$BASE/backend/deploy/mindbreeze-worker.service" /etc/systemd/system/mindbreeze-worker.service
             sudo systemctl daemon-reload
             sudo systemctl enable mindbreeze-worker 2>/dev/null || true
+
+            # 4.9 이메일 전용 워커 systemd 서비스 설치 (email 큐 분리 — 메인 워커와 큐 공유 방지)
+            sudo cp "$BASE/backend/deploy/mindbreeze-email-worker.service" /etc/systemd/system/mindbreeze-email-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-email-worker 2>/dev/null || true
 
             # 5. 서비스 재시작
             sudo systemctl restart mindbreeze-backend
