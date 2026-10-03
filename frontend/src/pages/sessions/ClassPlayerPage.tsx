@@ -459,13 +459,13 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
         })}
       </div></section>)}
   </div>;
-  return <section className={`hcp-workspace ${immersed ? 'hcp-immersed' : ''}`}>
+  return <section data-status={status} className={`hcp-workspace ${immersed ? 'hcp-immersed' : ''}`}>
     <div className="hcp-signals"><div className="hcp-heading"><h2>조용한 신호</h2><small>응답 {counts.total}·{rows.length}명</small></div><p className="hcp-muted">익명 · 최근 10초</p>
       {(['following', 'difficult', 'resting'] as const).map((key, i) => <div className="hcp-signal-row" key={key}><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="10" />{i === 0 ? <path d="m7 12 3 3 6-6" /> : i === 1 ? <path d="M9 9a3 3 0 1 1 4 3c-1 1-1 1-1 2m0 3h.01" /> : <path d="M9 8v8m6-8v8" />}</svg>{['잘 따라가요', '조금 어려워요', '잠시 쉴게요'][i]}</span><b className={counts[key] ? '' : 'hcp-zero'}>{counts[key]}</b></div>)}
     </div>
     <div className="hcp-notice">{unread > 0 && <button className="hcp-unread" onClick={() => setAckAt(Date.now())}><i />미확인 새 신호 {unread}건 ›</button>}<button onClick={() => setImmersed(v => !v)} aria-pressed={immersed}>{immersed ? '몰입 해제' : '몰입'}</button><button onClick={() => setHelp(v => !v)} aria-expanded={help}>사용 안내</button></div>
     {status === 'open' ? <div className="hcp-lobby-audio">{audio}</div> : <section className="hcp-group"><div className="hcp-heading"><div><h2>그룹 흐름</h2><p className="hcp-muted">지난 3분 평균 대비</p></div><small>유효 표본 {validRows.length}명{!groupAvailable && (validRows.length ? ' · 표본 적음' : ' · 표본 없음')}</small></div>{validRows.length ? metricSections() : <p className="hcp-group-empty" role="status">표본 없음<small>밴드 측정 데이터가 수신되면 그룹 흐름을 표시합니다.</small></p>}<p className="hcp-muted">{aggregate?.pace_hint}</p></section>}
-    <aside className="hcp-host">{left}{status !== 'open' && audio}</aside>
+    <aside className="hcp-host">{left}</aside>
     <section ref={rosterRef} className="hcp-roster"><div className="hcp-heading"><h2>참가자 <small>{rows.length}</small></h2><small>발언 요청 {rows.filter(r => r.raise_hand).length} · 발언 중 {rows.filter(r => r.speaking).length}</small></div>
       {help && <div className="hcp-coach" role="status">지표는 10초마다 순환합니다. 칩을 선택하면 해당 지표로 정렬하며, 순환은 정렬 기준을 바꾸지 않습니다. 3분 미만은 현재값, 이후는 실제 3분 평균 대비 변화량 오름차순입니다. 카드나 참가자 이름을 누르면 상세를 볼 수 있습니다.<button onClick={() => setHelp(false)}>확인</button></div>}
       <div className="hcp-toolbar"><button aria-pressed={table} onClick={() => { setTable(true); setManualSort(null); }}>모두</button>{HOST_METRICS.map(m => <button key={m.key} aria-pressed={!table && metricKey === m.key} onClick={() => { setTable(false); setMetricKey(m.key); setSortKey(m.key); }}>{m.label}</button>)}</div>
@@ -1819,7 +1819,7 @@ export default function ClassPlayerPage() {
       )}
           </>}
           status={session.status}
-          audio={<ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} />}
+          audio={isLobby ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
           left={<>
             <div className="hcp-media-controls" role="group" aria-label="호스트 미디어 제어">
               <button disabled={!isRunning || !mediaPrefs.micOn} onClick={() => {
