@@ -1,5 +1,5 @@
 // 실행: NODE_PATH=<playwright 설치 경로> node --test tests/member-class-player.browser.cjs
-// Vite 개발 서버(기본 5176) 필요. 외부 BLE/WS/오디오만 대체하고 실제 화면을 검증한다.
+// 페이지와 번들을 라우팅 fixture로 제공한다. 외부 BLE/WS만 대체하고 실제 화면을 검증한다.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
@@ -27,14 +27,6 @@ async function mount(page, mode = 'online') {
     ['useSessionLiveSocket.ts', `
     export function useSessionLiveSocket() { return { sendSignal: type => {window.sentSignal = type; return true;} }; }
   `],
-    ['useGuestAudioSync.ts', `
-    import { useState } from 'react';
-    export function useGuestAudioSync() {
-      const [volume, setVolume] = useState(.6);
-      const [blocked, setBlocked] = useState(false);
-      window.blockAudio = setBlocked;
-      return { state: {track:{title:'빗소리 명상 가이드'},playing:!blocked,positionSec:92,durationSec:300,volume,blocked,synced:true}, setVolume, resume:()=>setBlocked(false) };
-    }`]
   ]);
   const path = require('node:path');
   const fs = require('node:fs');
@@ -51,7 +43,7 @@ async function mount(page, mode = 'online') {
       }));`, resolveDir:frontend, loader:'tsx'},
     bundle:true, write:false, format:'esm', jsx:'automatic', define:{'import.meta.env':'{}','process.env.NODE_ENV':'"production"'},
     plugins:[{name:'player-test-boundaries',setup(build){
-      build.onLoad({filter:/\/use(Band|SessionLiveSocket|GuestAudioSync)\.ts$/}, args => ({contents:moduleMocks.get(path.basename(args.path)),loader:'js',resolveDir:frontend}));
+      build.onLoad({filter:/\/use(Band|SessionLiveSocket)\.ts$/}, args => ({contents:moduleMocks.get(path.basename(args.path)),loader:'js',resolveDir:frontend}));
       build.onLoad({filter:/\.css$/}, () => ({contents:'',loader:'js'}));
     }}]
   });
@@ -69,7 +61,7 @@ async function assertLayout(page) {
   const layout = await page.evaluate(() => {
     const root = document.querySelector('.member-class-player');
     const frame = document.querySelector('.player-body').getBoundingClientRect();
-    const selectors = ['.player-video', '.player-metric-status', '.player-metrics', '.player-chart', '.player-signals', '.player-bgm'];
+    const selectors = ['.player-video', '.player-metric-status', '.player-metrics', '.player-chart', '.player-signals'];
     return { viewport: [innerWidth, innerHeight], document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
       root: [root.scrollWidth, root.scrollHeight], videoHeight: document.querySelector('.player-video').getBoundingClientRect().height,
       outside: selectors.filter(selector => {const r = document.querySelector(selector).getBoundingClientRect(); return r.bottom > frame.bottom + 1 || r.right > frame.right + 1;}),
@@ -85,7 +77,7 @@ async function assertLayout(page) {
 }
 
 for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
-  test(`${viewport.width}×${viewport.height}: 1화면·지표·볼륨·시그널·몰입`, async () => {
+  test(`${viewport.width}×${viewport.height}: 1화면·지표·시그널·몰입`, async () => {
     const browser = await chromium.launch({ channel: 'chrome', headless: true });
     try {
       const page = await browser.newPage({ viewport });
@@ -109,24 +101,15 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
       }
       await assertLayout(page);
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-connected.png`});
-      await page.getByRole('button',{name:'BGM 볼륨',exact:true}).click();
-      await page.getByRole('slider',{name:'볼륨',exact:true}).fill('20');
-      assert.match(await page.locator('.player-volume-popup').innerText(),/20%/);
-      await page.getByRole('slider',{name:'볼륨',exact:true}).press('Escape');
-      assert.equal(await page.locator('.player-volume-popup').count(),0);
       await page.getByRole('button',{name:/잘 따라가요/}).click();
       assert.equal(await page.evaluate(() => window.sentSignal),'following');
       await page.getByRole('button',{name:'스피커 음소거',exact:true}).click();
       assert.equal(await page.getByRole('button',{name:'스피커 켜기',exact:true}).getAttribute('aria-pressed'),'false');
       await page.getByRole('button',{name:'화면 끄기',exact:true}).click();
       assert.equal(await page.locator('.player-screen').getAttribute('inert'),'');
-      assert.equal(await page.locator('.player-bgm').count(),1);
+      // 진행 중에는 BGM을 재생하지 않는다(fd93da24 정책).
+      assert.equal(await page.locator('.player-bgm').count(),0);
       await page.getByRole('button',{name:'화면 켜기',exact:true}).click();
-      await page.evaluate(() => window.blockAudio(true));
-      await page.getByRole('button',{name:'소리 켜기',exact:true}).click();
-      await page.getByText('동기 재생 중',{exact:true}).waitFor();
-      await page.emulateMedia({reducedMotion:'reduce'});
-      assert.equal(await page.locator('.player-bgm-state > span').evaluate(el => getComputedStyle(el).animationName),'none');
     } finally { await browser.close(); }
   });
 }
@@ -142,3 +125,26 @@ test('강당형은 영상 없이 타이머·기본 뮤트 유지', async () => {
     await assertLayout(page);
   } finally { await browser.close(); }
 });
+
+for (const viewport of [{ width: 390, height: 600 }, { width: 1280, height: 420 }]) {
+  test(`${viewport.width}×${viewport.height}: 짧은 화면에서 조용한 신호에 접근해 전송한다`, async () => {
+    const browser = await chromium.launch({ channel: 'chrome', headless: true });
+    try {
+      const page = await browser.newPage({ viewport });
+      await mount(page);
+      for (const [label, signal] of [['잘 따라가요', 'following'], ['조금 어려워요', 'difficult'], ['잠시 쉴게요', 'resting']]) {
+        const button = page.getByRole('button', { name: new RegExp(label) });
+        await page.mouse.move(viewport.width - 40, viewport.height - 80);
+        await page.mouse.wheel(0, 1000);
+        await page.waitForTimeout(100);
+        const reachable = await button.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.top >= 0 && rect.bottom <= innerHeight && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)?.closest('button') === element;
+        });
+        assert.equal(reachable, true, `${label} 버튼이 화면 안에서 클릭 가능해야 한다`);
+        await button.click();
+        assert.equal(await page.evaluate(() => window.sentSignal), signal);
+      }
+    } finally { await browser.close(); }
+  });
+}

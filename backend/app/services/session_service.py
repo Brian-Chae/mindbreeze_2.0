@@ -17,6 +17,7 @@ from app.models.client_profile import ClientProfile
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
+from app.schemas.session import EEGFeatureItem
 from app.services import code_service, eeg_query, reminder_service as _reminder_service
 
 logger = logging.getLogger(__name__)
@@ -2173,6 +2174,16 @@ def persist_feature_windows(
     (b) 유니크 제약 경합(동시 커밋)은 SAVEPOINT + IntegrityError 로 흡수한다.
     실제 저장한 윈도우 수를 반환한다.
     """
+    return len(_persist_feature_items(sid, participant, features, db))
+
+
+def _persist_feature_items(
+    sid: UUID,
+    participant: SessionParticipant,
+    features: list[EEGFeatureItem],
+    db: DBSession,
+) -> list[EEGFeatureItem]:
+    """저장에 성공한 항목만 반환해 중복 입력의 미저장 값이 라이브로 발행되지 않게 한다."""
     # SDD-026: 멱등 키를 (play_group_id, window_index) 로 확장한다.
     # pause/resume 으로 second_offset 이 0 부터 재시작해도 실행 세그먼트(play_group_id)가 다르면
     # 별개 키가 되어 skip 되지 않는다(데이터 보존). 레거시(play_group_id=None)는 기존과 동일 동작.
@@ -2188,7 +2199,7 @@ def persist_feature_windows(
         .all()
     }
 
-    saved = 0
+    saved: list[EEGFeatureItem] = []
     seen_in_batch: set = set()
     latest_battery = None
     for f in features:
@@ -2237,7 +2248,7 @@ def persist_feature_windows(
             with db.begin_nested():
                 db.add(row)
                 db.flush()
-            saved += 1
+            saved.append(f)
         except IntegrityError:
             # WS 1초 + REST 5초 폴백이 같은 window_index 를 거의 동시에 저장한 경우 — 멱등 skip
             continue
@@ -2297,5 +2308,36 @@ def ingest_features(
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
     participant = resolve_upload_participant(sid, payload.participant_id, current_user_id, db)
-    saved = persist_feature_windows(sid, participant, payload.features, db)
+    saved_features = _persist_feature_items(sid, participant, payload.features, db)
+    saved = len(saved_features)
+    # WS가 끊겨 REST 폴백만 성공해도 상담사의 참가자 카드와 그룹 집계를 갱신한다.
+    # WS로 이미 저장된 재전송은 발행하지 않아 과거 배치로 실시간 표시가 되돌아가지 않게 한다.
+    if saved:
+        from app.ws import session_live_namespace as live
+
+        latest = max(
+            saved_features,
+            key=lambda feature: (feature.timestamp is not None, feature.timestamp or 0, feature.second_offset),
+        )
+        newer = db.query(EEGFeatureWindow.id).filter(
+            EEGFeatureWindow.session_id == sid,
+            EEGFeatureWindow.participant_id == participant.id,
+        )
+        if latest.timestamp is not None:
+            newer = newer.filter(EEGFeatureWindow.device_timestamp_ms > latest.timestamp)
+        else:
+            # 레거시 입력은 실행 세그먼트 내 순서만 비교할 수 있다.
+            newer = newer.filter(
+                EEGFeatureWindow.play_group_id == latest.play_group_id,
+                EEGFeatureWindow.window_index > latest.second_offset,
+            )
+        if newer.first() is None:
+            live.notify_session_eeg(
+                str(sid),
+                {
+                    "participant_id": str(participant.id),
+                    "feature": latest.model_dump(),
+                    "saved": saved,
+                },
+            )
     return {"session_id": str(sid), "saved": saved}

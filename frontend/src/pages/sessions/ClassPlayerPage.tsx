@@ -1718,6 +1718,7 @@ export default function ClassPlayerPage() {
               코드로 입장해 대기실에서 밴드를 착용할 수 있습니다.
             </div>
             <SessionPreJoinPreview
+              dark
               onStart={(prefs) => void openClass(prefs)}
               starting={transitioning}
               canStart={!transitioning}

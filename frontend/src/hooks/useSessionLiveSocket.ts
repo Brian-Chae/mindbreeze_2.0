@@ -130,6 +130,7 @@ export function useSessionLiveSocket({
   /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
   const socketRef = useRef<Socket | null>(null);
   const joinedSessionRef = useRef<string | null>(null);
+  const signalParticipantRef = useRef<string | null>(null);
   const versionRef = useRef(0);
   /** SDD-028: feature는 콜백으로만 전달 — setState 하면 대규모 테이블 전체 재렌더 */
   const lastEventRef = useRef<SessionLiveEegFeatureEvent | null>(null);
@@ -177,6 +178,7 @@ export function useSessionLiveSocket({
     socketRef.current = socket;
 
     const onConnect = (): void => {
+      signalParticipantRef.current = null;
       setIsConnected(true);
       // 연결만으로 hasSnapshot을 true로 만들지 않음
       joinSessionLive(socket, sessionId, participantId);
@@ -184,6 +186,7 @@ export function useSessionLiveSocket({
     };
 
     const onDisconnect = (): void => {
+      signalParticipantRef.current = null;
       setIsConnected(false);
       // 단절 시 snapshot 무효 → 폴백 재개
       setHasSnapshot(false);
@@ -191,11 +194,20 @@ export function useSessionLiveSocket({
 
     const onJoined = (event: SessionLiveJoinedEvent): void => {
       if (event.session_id && event.session_id !== sessionId) return;
+      // 서버가 확정한 본인 id를 사용한다. 구 서버의 joined는 요청 id로 호환한다.
+      signalParticipantRef.current = event.participant_id === undefined ? participantId : event.participant_id;
       const normalized = normalizeJoinSnapshot(event);
       if (normalized) {
         applySnapshot(normalized);
       }
       // snapshot 없는 joined(구 BE) → hasSnapshot 유지 false, 폴백 계속
+    };
+
+    const onJoinDenied = (event: { session_id?: string }): void => {
+      if (event.session_id && event.session_id !== sessionId) return;
+      signalParticipantRef.current = null;
+      setHasSnapshot(false);
+      setSnapshot(null);
     };
 
     const onState = (event: SessionStateChangedEvent): void => {
@@ -262,6 +274,7 @@ export function useSessionLiveSocket({
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('join_denied', onJoinDenied);
 
     const unsubJoined = subscribeSessionLiveJoined(socket, onJoined);
     const unsubFeature = subscribeSessionLiveEegFeature(socket, handleFeature);
@@ -294,6 +307,8 @@ export function useSessionLiveSocket({
       unsubAudioSync();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('join_denied', onJoinDenied);
+      signalParticipantRef.current = null;
       socketRef.current = null;
       setIsConnected(false);
       setHasSnapshot(false);
@@ -315,10 +330,11 @@ export function useSessionLiveSocket({
   const sendSignal = useCallback(
     (signalType: ClassSignalType): boolean => {
       const socket = socketRef.current;
-      if (!socket || !sessionId) return false;
+      const signalParticipantId = signalParticipantRef.current;
+      if (!socket || !sessionId || !signalParticipantId) return false;
       return emitClassSignal(socket, {
         session_id: sessionId,
-        participant_id: participantId,
+        participant_id: signalParticipantId,
         signal_type: signalType,
       });
     },

@@ -105,6 +105,8 @@ export interface SessionLiveJoinSnapshot {
 
 export interface SessionLiveJoinedEvent {
   session_id: string;
+  /** 서버가 join 권한 검증 후 확정한 본인 참가자 */
+  participant_id?: string | null;
   /** SDD-026: snapshot이 포함되면 폴백 중단 가능 */
   snapshot?: SessionLiveJoinSnapshot | null;
   version?: number;

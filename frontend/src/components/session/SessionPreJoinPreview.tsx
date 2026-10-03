@@ -28,6 +28,8 @@ interface SessionPreJoinPreviewProps {
   startDisabledReason?: string;
   /** SDD-088: 확정 버튼 라벨 오버라이드 (플레이어 세팅 씬은 "클래스 오픈") */
   startLabel?: string;
+  /** 클래스 플레이어의 다크 퍼플 테마 (기본은 라이트) */
+  dark?: boolean;
 }
 
 /** getUserMedia 오류 → 사용자 안내 문구 */
@@ -59,7 +61,11 @@ export function SessionPreJoinPreview({
   canStart,
   startDisabledReason,
   startLabel = '세션 시작',
+  dark = false,
 }: SessionPreJoinPreviewProps) {
+  const secondaryButtonClass = dark
+    ? 'rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50'
+    : 'mb-btn mb-btn--ghost';
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const audioStreamRef = useRef<MediaStream | null>(null);
@@ -245,11 +251,11 @@ export function SessionPreJoinPreview({
       aria-modal="true"
       aria-labelledby="mic-off-confirm-title"
     >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h4 id="mic-off-confirm-title" className="text-lg font-semibold text-[#1F1F1F]">
+      <div className={dark ? "w-full max-w-md rounded-2xl bg-[#211329] p-6 shadow-xl" : "w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"}>
+        <h4 id="mic-off-confirm-title" className={dark ? "text-lg font-semibold text-white" : "text-lg font-semibold text-[#1F1F1F]"}>
           마이크가 꺼진 상태로 시작합니다
         </h4>
-        <p className="mt-3 text-sm text-[#6F6F6F]">
+        <p className={dark ? "mt-3 text-sm text-white/70" : "mt-3 text-sm text-[#6F6F6F]"}>
           이 세션에서는 음성 녹음과 AI 자동 기록·요약이 제공되지 않으며, 기록지는 직접
           작성해야 합니다. 계속할까요?
         </p>
@@ -260,7 +266,7 @@ export function SessionPreJoinPreview({
               setMicOffConfirmOpen(false);
               toggleMic();
             }}
-            className="mb-btn mb-btn--ghost"
+            className={secondaryButtonClass}
           >
             마이크 켜기
           </button>
@@ -273,16 +279,16 @@ export function SessionPreJoinPreview({
   ) : null;
 
   return (
-    <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5 sm:p-6">
+    <section className={dark ? "rounded-2xl border border-white/10 bg-[#211329] p-5 sm:p-6" : "rounded-2xl border border-[#EFEFEF] bg-white p-5 sm:p-6"}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
+          <p className={dark ? "font-mono text-[11px] uppercase tracking-widest text-[#DEC0EB]" : "font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70"}>
             pre-join preview
           </p>
-          <h3 className="mt-1 text-[15px] font-bold text-[#1F1F1F]">
+          <h3 className={dark ? "mt-1 text-[15px] font-bold text-white" : "mt-1 text-[15px] font-bold text-[#1F1F1F]"}>
             시작 전 카메라·마이크 확인
           </h3>
-          <p className="mt-1 text-[12px] text-[#6F6F6F]">
+          <p className={dark ? "mt-1 text-[12px] text-white/70" : "mt-1 text-[12px] text-[#6F6F6F]"}>
             내 모습과 마이크 입력을 확인한 뒤 세션을 시작하세요. 프리뷰 영상은
             저장·전송되지 않습니다.
           </p>
@@ -292,11 +298,11 @@ export function SessionPreJoinPreview({
       {micOffConfirmDialog}
 
       {micState === 'unsupported' && cameraState === 'unsupported' ? (
-        <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9] p-6 text-center">
-          <p className="text-sm text-[#6F6F6F]">
+        <div className={dark ? "flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center" : "flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9] p-6 text-center"}>
+          <p className={dark ? "text-sm text-white/70" : "text-sm text-[#6F6F6F]"}>
             이 브라우저는 카메라/마이크 미리보기를 지원하지 않습니다 (Chrome/Edge 권장).
           </p>
-          <p className="text-xs text-[#9B9B9B]">
+          <p className={dark ? "text-xs text-white/50" : "text-xs text-[#9B9B9B]"}>
             프리뷰 없이도 세션은 시작할 수 있습니다.
           </p>
           <button
@@ -304,15 +310,15 @@ export function SessionPreJoinPreview({
             onClick={confirmStart}
             disabled={!canStart || starting}
             title={!canStart && !starting ? startDisabledReason : undefined}
-            className="mb-btn mb-btn--soft disabled:cursor-not-allowed"
+            className={dark ? secondaryButtonClass : 'mb-btn mb-btn--soft disabled:cursor-not-allowed'}
           >
             {starting ? '시작 중...' : '그래도 시작'}
           </button>
         </div>
       ) : allBlocked ? (
-        <div className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9] p-6 text-center">
-          <p className="text-sm text-[#6F6F6F]">{cameraError ?? micError}</p>
-          <p className="text-xs text-[#9B9B9B]">
+        <div className={dark ? "flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/5 p-6 text-center" : "flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9] p-6 text-center"}>
+          <p className={dark ? "text-sm text-white/70" : "text-sm text-[#6F6F6F]"}>{cameraError ?? micError}</p>
+          <p className={dark ? "text-xs text-white/50" : "text-xs text-[#9B9B9B]"}>
             브라우저 주소창의 권한 설정에서 카메라/마이크를 허용한 뒤 새로고침하거나,
             프리뷰 없이 시작할 수 있습니다 (녹화·녹음·AI 분석 없이 수동 기록 모드).
           </p>
@@ -321,7 +327,7 @@ export function SessionPreJoinPreview({
             onClick={confirmStart}
             disabled={!canStart || starting}
             title={!canStart && !starting ? startDisabledReason : undefined}
-            className="mb-btn mb-btn--soft disabled:cursor-not-allowed"
+            className={dark ? secondaryButtonClass : 'mb-btn mb-btn--soft disabled:cursor-not-allowed'}
           >
             {starting ? '시작 중...' : '그래도 시작'}
           </button>
@@ -403,7 +409,7 @@ export function SessionPreJoinPreview({
 
             {/* SDD-085: 마이크 OFF 경고 배너 (§7 M-1) — AI 분석 제한 즉시 안내 */}
             {!micOn && micState !== 'pending' && (
-              <div className="rounded-xl border border-[#F5E2B8] bg-amber-50 p-3.5 text-sm text-[#8A6B1F]">
+              <div className={dark ? "rounded-xl border border-amber-300/20 bg-amber-300/10 p-3.5 text-sm text-amber-200" : "rounded-xl border border-[#F5E2B8] bg-amber-50 p-3.5 text-sm text-[#8A6B1F]"}>
                 <p className="font-semibold">마이크를 끄면 AI 분석이 제한됩니다.</p>
                 <p className="mt-1">
                   음성이 녹음되지 않아 자동 전사(STT)·AI 요약·AI 기록지가 생성되지
@@ -422,13 +428,13 @@ export function SessionPreJoinPreview({
 
             {/* SDD-085: 카메라 OFF 정보 배너 (§7 C-1) — AI 분석 무관, 경고 톤 미사용 */}
             {!cameraOn && cameraState !== 'pending' && (
-              <div className="rounded-xl border border-[#E5E5E5] bg-[#F9F9F9] p-3.5 text-sm text-[#6F6F6F]">
+              <div className={dark ? "rounded-xl border border-white/10 bg-white/5 p-3.5 text-sm text-white/70" : "rounded-xl border border-[#E5E5E5] bg-[#F9F9F9] p-3.5 text-sm text-[#6F6F6F]"}>
                 <p>
                   카메라를 끄면 이 세션의 영상이 녹화되지 않습니다. 음성 녹음과 AI 분석은
                   정상 제공됩니다.
                 </p>
                 {cameraBlocked && (
-                  <p className="mt-1 text-[12px] text-[#9B9B9B]">
+                  <p className={dark ? "mt-1 text-[12px] text-white/50" : "mt-1 text-[12px] text-[#9B9B9B]"}>
                     {cameraState === 'unsupported'
                       ? '이 브라우저는 카메라를 지원하지 않습니다 (Chrome/Edge 권장).'
                       : cameraError ??
@@ -442,23 +448,23 @@ export function SessionPreJoinPreview({
           <div className="flex w-full flex-col justify-between gap-4 lg:w-64">
             <div className="space-y-3">
               <div>
-                <p className="text-[12px] font-medium text-[#6F6F6F]">마이크 입력</p>
+                <p className={dark ? "text-[12px] font-medium text-white/70" : "text-[12px] font-medium text-[#6F6F6F]"}>마이크 입력</p>
                 {micOn ? (
                   <>
-                    <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#F2F3F8]">
+                    <div className={dark ? "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10" : "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#F2F3F8]"}>
                       <div
                         className="h-full rounded-full bg-[#59CE90] transition-[width] duration-100"
                         style={{ width: `${Math.round(micLevel * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-1 text-[11px] text-[#9B9B9B]">
+                    <p className={dark ? "mt-1 text-[11px] text-white/50" : "mt-1 text-[11px] text-[#9B9B9B]"}>
                       말해보면 초록 막대가 움직입니다
                     </p>
                   </>
                 ) : (
                   <>
-                    <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#E5E5E5]" />
-                    <p className="mt-1 text-[11px] text-[#9B9B9B]">마이크 꺼짐</p>
+                    <div className={dark ? "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10" : "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#E5E5E5]"} />
+                    <p className={dark ? "mt-1 text-[11px] text-white/50" : "mt-1 text-[11px] text-[#9B9B9B]"}>마이크 꺼짐</p>
                   </>
                 )}
               </div>
@@ -466,19 +472,19 @@ export function SessionPreJoinPreview({
                 type="button"
                 onClick={handleFacingSwitch}
                 disabled={!cameraOn}
-                className="mb-btn mb-btn--ghost w-full disabled:cursor-not-allowed"
+                className={`${secondaryButtonClass} w-full disabled:cursor-not-allowed`}
               >
                 {facingMode === 'user' ? '후면 카메라로 전환' : '전면 카메라로 전환'}
               </button>
             </div>
             <div className="flex flex-col gap-2">
               {/* SDD-085: 현재 조합 요약 라인 (§7 S-1~S-4) */}
-              <p className="text-center text-[11px] leading-relaxed text-[#6F6F6F]">
+              <p className={dark ? "text-center text-[11px] leading-relaxed text-white/70" : "text-center text-[11px] leading-relaxed text-[#6F6F6F]"}>
                 {startSummaryLine(cameraOn, micOn)}
               </p>
               {startButton}
               {!canStart && !starting && startDisabledReason && (
-                <p className="text-center text-[11px] text-[#9B9B9B]">
+                <p className={dark ? "text-center text-[11px] text-white/50" : "text-center text-[11px] text-[#9B9B9B]"}>
                   {startDisabledReason}
                 </p>
               )}

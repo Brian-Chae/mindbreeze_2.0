@@ -28,7 +28,8 @@
 .member-class-player .player-speaking { left: auto; max-width: 60%; align-items: flex-end; }
 .member-class-player .player-speaking button { min-height: 44px; font-size: 13px; }
 .member-class-player .player-speaking span { font-size: 11px; }
-.player-right { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; border-radius: 16px; background: linear-gradient(#060507cc, #060507f0); }
+/* 짧은 화면에서도 하단 상태 신호를 스크롤해 누를 수 있게 한다. */
+.player-right { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; border-radius: 16px; background: linear-gradient(#060507cc, #060507f0); }
 .player-metric-status { display: flex; align-items: center; gap: 8px; min-height: 18px; font-size: 11px; color: #bfb3c6; }
 .player-status-copy { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-band-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: #b9adbf; }
@@ -100,7 +101,7 @@
   .player-topbar h1 { font-size: 13px; letter-spacing: -.02em; }
   .player-pill { padding: 0 8px; font-size: 11px; }
   .player-desktop-label { display: none; }
-  .player-body { display: flex; flex-direction: column; gap: 8px; padding: 0 12px max(20px, env(safe-area-inset-bottom)); }
+  .player-body { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 0 12px max(20px, env(safe-area-inset-bottom)); }
   .player-video { flex: 1; min-height: 180px; }
   .player-right { display: contents; }
   .player-metric-status { min-height: 18px; flex-shrink: 0; }
