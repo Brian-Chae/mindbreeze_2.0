@@ -726,12 +726,15 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
 
     # SDD-021: 1.0 "클래스 시작" 패리티 — 그룹 수업은 active 참가자(대기열 제외) 1명 이상이어야
     # 시작할 수 있다. 1:1 세션은 내담자가 암묵적으로 지정되므로 기존 상태전이 동작을 유지한다.
+    # SDD-101(Brian 요청): 참여자 0명이어도 상담사가 단독으로 클래스를 시작·종료하고
+    # 상담사 리포트를 생성할 수 있도록 그룹 시작 제약을 완화한다(단독 리허설·테스트·보고용).
     if action == "start" and s.participant_mode == "group":
         active = [p for p in (s.participants or []) if not p.is_waitlisted]
         if len(active) < 1:
-            raise HTTPException(
-                status_code=400,
-                detail="참가자가 1명 이상 있어야 클래스를 시작할 수 있습니다",
+            logger.info(
+                "[session] 참여자 0명 그룹 클래스 단독 시작 허용(SDD-101): session=%s host=%s",
+                s.id,
+                s.host_id,
             )
 
     s.status = target

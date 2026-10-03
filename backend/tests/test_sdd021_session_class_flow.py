@@ -68,13 +68,15 @@ def _join_guest(client, code: str, name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_01_그룹_클래스_참가자0명_시작거부(client):
+def test_01_그룹_클래스_참가자0명_단독시작허용(client):
+    """SDD-101(Brian 요청): 참여자 0명이어도 상담사가 단독으로 그룹 클래스를 시작할 수 있다.
+    (단독 리허설·테스트·보고용 — 시작해야 종료 후 상담사 리포트가 생성된다.)"""
     counselor = _register(client, "s021c01@test.com")
     cls = _create_group_class(client, counselor["h"])
 
     res = client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
-    assert res.status_code in (400, 409), res.text
-    assert "참가자" in res.json()["detail"]
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "in_progress"
 
 
 def test_02_그룹_클래스_참가자1명_시작허용(client):

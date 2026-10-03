@@ -144,6 +144,14 @@ jobs:
             sudo systemctl is-active mindbreeze-backend
             sudo systemctl is-active mindbreeze-worker
 
+            # 5.0 진단: 워커·백엔드 최근 로그 (파이프라인 소비 여부 확인용)
+            echo "=== [진단] mindbreeze-worker 상태 ==="
+            sudo systemctl status mindbreeze-worker --no-pager -l || true
+            echo "=== [진단] mindbreeze-worker 최근 로그 ==="
+            sudo journalctl -u mindbreeze-worker -n 40 --no-pager || true
+            echo "=== [진단] mindbreeze-backend 최근 로그 (pipeline publish) ==="
+            sudo journalctl -u mindbreeze-backend -n 40 --no-pager | grep -iE "pipeline|outbox|redis|celery|report|error" || true
+
             # 5.1 LiveKit nginx 프록시 보장 — 시그널링 /livekit/ → 127.0.0.1:7880
             if [ -f /etc/nginx/sites-enabled/mindbreeze-ssl ]; then
               sudo python3 "$BASE/backend/ensure_livekit_nginx.py"
