@@ -123,16 +123,17 @@ it('밴드 미사용·수신 끊김·3분 미만 추이를 구분하고 0건 미
   await click(cards[1]);
   expect(container.querySelector('.hcp-sheet')?.textContent).not.toContain('추이 대기');
 });
-it('상세 평균 틱과 점선은 유효 그룹 표본이 있을 때만 표시한다', async () => {
+it('상세 평균 틱과 점선은 밴드 착용자가 1명이라도 있으면 표시한다', async () => {
   const rows = [row('가람', 60), row('나래', 70), row('다온', 80)];
   await render(rows); await click(container.querySelector('.hcp-person'));
   expect(container.querySelectorAll('.hcp-sheet .hcp-tick')).toHaveLength(1);
   expect(container.querySelector('.hcp-sheet .hcp-average-label')?.textContent).toContain('—');
   expect(container.querySelectorAll('.hcp-sheet .hcp-bars .hcp-average-line')).toHaveLength(2);
   expect(container.querySelector('.hcp-body-legend')?.textContent).toContain('최근 수신 범위');
+  // 1명이라도 착용하면 그룹 표본으로 본다(소규모 1:1·그룹 대응)
   await render(rows.slice(0, 2));
-  expect(container.querySelector('.hcp-sheet .hcp-tick')).toBeNull();
-  expect(container.querySelector('.hcp-sheet .hcp-bars .hcp-average-line')).toBeNull();
+  expect(container.querySelector('.hcp-sheet .hcp-tick')).not.toBeNull();
+  expect(container.querySelector('.hcp-sheet .hcp-bars .hcp-average-line')).not.toBeNull();
 });
 
 it('참가자 0명에서는 상태 안내만 보이고 빈 테이블은 숨긴다', async () => {
