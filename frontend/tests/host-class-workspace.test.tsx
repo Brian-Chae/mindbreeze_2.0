@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement } from 'react';
+import { act, createElement, type ComponentProps } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { HostClassWorkspace } from '../src/pages/sessions/ClassPlayerPage';
@@ -12,10 +12,10 @@ const row = (id: string, value: number | null): SessionLiveMetric => ({
   device_status: 'ok', band_battery: 80, avg_efficiency: null, current_efficiency: value,
   upload_status: 'completed', last_eeg_at: new Date().toISOString(), heart_rate: 70, respiratory_rate: 14,
 });
-async function render(rows = [row('가람', 70), row('나래', 40), row('다온', null)], elapsed = 100) {
+async function render(rows = [row('가람', 70), row('나래', 40), row('다온', null)], elapsed = 100, overrides: Partial<ComponentProps<typeof HostClassWorkspace>> = {}) {
   await act(async () => root.render(createElement(HostClassWorkspace, {
     rows, extras: {}, signals: {}, aggregate: null, elapsed, running: true,
-    left: null, tools: null, statusBar: null, filter: null,
+    left: null, tools: null, statusBar: null, filter: null, ...overrides,
   })));
 }
 async function click(element: Element | null) {
@@ -167,4 +167,53 @@ it('상세 모달은 목록 외의 미디어·도구도 비활성화하고 닫�
   await click(button('닫기'));
   expect(container.querySelector('.hcp-host')?.hasAttribute('inert')).toBe(false);
   expect(container.querySelector('.hcp-toolbar')?.hasAttribute('inert')).toBe(false);
+});
+
+// 대기 상태 분기를 잃거나 오디오를 중복 렌더하면 실패한다.
+it.each(['open', 'in_progress', 'paused'] as const)('%s 상태에서 BGM과 그룹 흐름의 위치를 유지한다', async status => {
+  await render(undefined, 100, {
+    status, audio: createElement('section', { 'aria-label': '명상 가이드·BGM' }, 'BGM'),
+  });
+  expect(container.querySelectorAll('[aria-label="명상 가이드·BGM"]')).toHaveLength(1);
+  expect(container.querySelector('.hcp-group') === null).toBe(status === 'open');
+  const target = status === 'open' ? '.hcp-lobby-audio' : '.hcp-host';
+  expect(container.querySelector(`${target} [aria-label="명상 가이드·BGM"]`)).not.toBeNull();
+  expect(container.querySelector('.hcp-controls')).toBeNull();
+});
+it('몰입과 사용 안내를 기존처럼 켜고 끌 수 있다', async () => {
+  await render();
+  await click(button('몰입'));
+  expect(container.querySelector('.hcp-immersed')).not.toBeNull();
+  await click(button('사용 안내'));
+  expect(container.querySelector('.hcp-coach')).not.toBeNull();
+  await click(button('확인'));
+  expect(container.querySelector('.hcp-coach')).toBeNull();
+  await click(button('몰입 해제'));
+  expect(container.querySelector('.hcp-immersed')).toBeNull();
+});
+
+it('데스크톱의 작은 목록 영역에서도 페이지 이동으로 모든 참가자에 접근한다', async () => {
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private readonly callback: ResizeObserverCallback) {}
+    observe(target: Element) {
+      this.callback([{ target, contentRect: { width: 400, height: 180 } } as ResizeObserverEntry], this);
+    }
+    unobserve() {}
+    disconnect() {}
+  });
+  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+  try {
+    await render();
+    expect(names()).toEqual(['나래', '가람']);
+    await click(container.querySelector('[aria-label="다음 참가자 페이지"]'));
+    expect(names()).toEqual(['다온']);
+    await click(container.querySelector('[aria-label="이전 참가자 페이지"]'));
+    await click(button('모두'));
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
+    await click(container.querySelector('[aria-label="다음 참가자 페이지"]'));
+    expect(container.querySelector('tbody')?.textContent).toContain('다온');
+    await click(button('이완도'));
+    await render([row('가람', 70)]);
+    expect(names()).toEqual(['가람']);
+  } finally { vi.unstubAllGlobals(); }
 });
