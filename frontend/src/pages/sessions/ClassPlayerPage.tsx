@@ -82,7 +82,7 @@ import {
 // 개선 10: 명상 가이드·BGM 동기 재생 — 상담사 재생 패널(트랙 선택 + 재생 컨트롤 → class:audio_sync)
 import { ClassAudioPanel } from '../../components/class/ClassAudioPanel';
 // 개선 3 재설계: 입장 전 체크인 — 대기실 실시간 목록 + 세션 시작 카드
-import { WaitingRoomCheckinList } from '../../components/class/WaitingRoomCheckinList';
+import { WaitingRoomReadinessPanel } from '../../components/class/waiting-room-readiness-panel';
 import { CheckinSummary } from '../../components/class/CheckinSummary';
 import { useWaitingRoomCount, type WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
 import { useClassAudioPlayer } from '../../hooks/useClassAudioPlayer';
@@ -316,10 +316,10 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
     {mind && detail ? <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small> : <span className="hcp-delta">{change}</span>}
   </article>;
 }
-export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, status = 'in_progress', audio }: {
+export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, status = 'in_progress', audio, readinessPanel }: {
   rows: SessionLiveMetric[]; extras: Record<string, HostExtra>; signals: Record<string, ActiveSignal>;
   aggregate: ClassAggregateEvent | null; elapsed: number; running: boolean;
-  status?: SessionStatus; audio?: ReactNode; left: ReactNode; tools: ReactNode; statusBar: ReactNode; filter: keyof MonitorSummaryCounts | null;
+  status?: SessionStatus; audio?: ReactNode; readinessPanel?: ReactNode; left: ReactNode; tools: ReactNode; statusBar: ReactNode; filter: keyof MonitorSummaryCounts | null;
 }) {
   const [metricKey, setMetricKey] = useState<HostMetricKey>('relaxation');
   const [sortKey, setSortKey] = useState<HostMetricKey>('relaxation');
@@ -466,7 +466,7 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
     <div className="hcp-notice">{unread > 0 && <button className="hcp-unread" onClick={() => setAckAt(Date.now())}><i />미확인 새 신호 {unread}건 ›</button>}<button onClick={() => setImmersed(v => !v)} aria-pressed={immersed}>{immersed ? '몰입 해제' : '몰입'}</button><button onClick={() => setHelp(v => !v)} aria-expanded={help}>사용 안내</button></div>
     {status === 'open' ? <div className="hcp-lobby-audio">{audio}</div> : <section className="hcp-group"><div className="hcp-heading"><div><h2>그룹 흐름</h2><p className="hcp-muted">지난 3분 평균 대비</p></div><small>유효 표본 {validRows.length}명{!groupAvailable && (validRows.length ? ' · 표본 적음' : ' · 표본 없음')}</small></div>{validRows.length ? metricSections() : <p className="hcp-group-empty" role="status">표본 없음<small>밴드 측정 데이터가 수신되면 그룹 흐름을 표시합니다.</small></p>}<p className="hcp-muted">{aggregate?.pace_hint}</p></section>}
     <aside className="hcp-host">{left}</aside>
-    <section ref={rosterRef} className="hcp-roster"><div className="hcp-heading"><h2>참가자 <small>{rows.length}</small></h2><small>발언 요청 {rows.filter(r => r.raise_hand).length} · 발언 중 {rows.filter(r => r.speaking).length}</small></div>
+    <section ref={rosterRef} className={`hcp-roster${status === 'open' && readinessPanel ? ' hcp-roster-with-readiness' : ''}`}>{status === 'open' && readinessPanel}<div className="hcp-heading"><h2>참가자 <small>{rows.length}</small></h2><small>발언 요청 {rows.filter(r => r.raise_hand).length} · 발언 중 {rows.filter(r => r.speaking).length}</small></div>
       {help && <div className="hcp-coach" role="status">지표는 10초마다 순환합니다. 칩을 선택하면 해당 지표로 정렬하며, 순환은 정렬 기준을 바꾸지 않습니다. 3분 미만은 현재값, 이후는 실제 3분 평균 대비 변화량 오름차순입니다. 카드나 참가자 이름을 누르면 상세를 볼 수 있습니다.<button onClick={() => setHelp(false)}>확인</button></div>}
       <div className="hcp-toolbar"><button aria-pressed={table} onClick={() => { setTable(true); setManualSort(null); }}>모두</button>{HOST_METRICS.map(m => <button key={m.key} aria-pressed={!table && metricKey === m.key} onClick={() => { setTable(false); setMetricKey(m.key); setSortKey(m.key); }}>{m.label}</button>)}</div>
       <div className="hcp-sort"><span>{table ? '헤더를 눌러 수동 정렬' : `${HOST_METRICS.find(m => m.key === sortKey)?.label} · ${late ? '3분 변화량' : '현재값'} 자동 정렬`}</span><button aria-pressed={rotating} onClick={() => setRotating(v => !v)} disabled={table}>10초 순환 {rotating ? '켜짐' : '꺼짐'}</button><select aria-label="정렬 시점" value={phase} onChange={e => setPhase(e.target.value as typeof phase)}><option value="auto">시간에 따라 자동</option><option value="early">3분 미만</option><option value="late">3분 이후</option></select></div>
@@ -1815,6 +1815,7 @@ export default function ClassPlayerPage() {
       )}
           </>}
           status={session.status}
+          readinessPanel={isLobby && id ? <WaitingRoomReadinessPanel sessionId={id} entries={waitingRoom.entries} isConnected={liveSocket.isConnected} /> : undefined}
           audio={isLobby ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
           left={isSetup ? (
             <SessionPreJoinPreview
@@ -1838,7 +1839,6 @@ export default function ClassPlayerPage() {
             {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V3h14l-3 5 3 5H5" /></svg><span>녹음 · 화상 · 마커</span><span>{mediaOpen ? '접기' : '설정'}</span></button>}
             <div className="hcp-selfview"><p>나의 화면 · 호스트</p>{mediaPrefs.cameraOn ? <SessionHostVideoView stream={videoRecorder.stream} facingMode={videoRecorder.facingMode} recording={videoRecorder.state === 'recording'} /> : <div className="hcp-camera-off">카메라 꺼짐 · 녹화 안 함</div>}</div>
             {isLobby && <div className="hcp-code"><small>클래스 코드 · 대기 {elapsedLabel(lobbyElapsedSec)}</small><strong>{accessCode || '——————'}</strong><button onClick={() => void handleCopyCode()}>{codeCopied ? '복사 완료' : '코드 복사'}</button></div>}
-            {isLobby && waitingRoom.entries.length > 0 && <details><summary>입장 전 체크인 · {waitingRoom.entries.length}명</summary><WaitingRoomCheckinList entries={waitingRoom.entries} /></details>}
             <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
             <details><summary>녹화 · AI 상태</summary>{hostStatusPanel}</details>
           </>)}

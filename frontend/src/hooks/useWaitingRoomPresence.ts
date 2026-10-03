@@ -15,6 +15,7 @@ import {
   getSessionLiveSocket,
   joinSessionLive,
   type WaitingRoomCheckin,
+  type WaitingRoomReadiness,
 } from '../lib/socket';
 
 /** join heartbeat 주기 — 상담사 화면 인원 수렴 지연 상한 */
@@ -27,6 +28,7 @@ interface UseWaitingRoomPresenceOptions {
   nickname?: string | null;
   /** 입장 전 체크인 요약 — 저장 후 함께 실어 보내 상담사가 실시간으로 본다 */
   checkin?: WaitingRoomCheckin | null;
+  readiness?: WaitingRoomReadiness | null;
   enabled: boolean;
   /** 게스트(비로그인) 연결 */
   skipAuth?: boolean;
@@ -41,6 +43,7 @@ export function useWaitingRoomPresence({
   participantId,
   nickname = null,
   checkin = null,
+  readiness = null,
   enabled,
   skipAuth = false,
 }: UseWaitingRoomPresenceOptions): void {
@@ -48,6 +51,8 @@ export function useWaitingRoomPresence({
   // heartbeat 가 최신 값을 실어 보낸다. 체크인은 변경 즉시 별도 재전송한다.
   const nicknameRef = useRef<string | null | undefined>(nickname);
   const checkinRef = useRef<WaitingRoomCheckin | null | undefined>(checkin);
+  const readinessRef = useRef(readiness);
+  useEffect(() => { readinessRef.current = readiness; }, [readiness]);
   useEffect(() => {
     nicknameRef.current = nickname;
   }, [nickname]);
@@ -69,6 +74,7 @@ export function useWaitingRoomPresence({
         action,
         nickname: nicknameRef.current,
         checkin: action === 'join' ? checkinRef.current : null,
+        readiness: action === 'join' ? readinessRef.current : null,
       });
     };
 
@@ -92,7 +98,7 @@ export function useWaitingRoomPresence({
 
   // 체크인이 저장되면 즉시 join 을 재전송해 상담사 화면을 갱신한다(15초 heartbeat 대기 없이).
   useEffect(() => {
-    if (!enabled || !sessionId || !participantId || !checkin) return undefined;
+    if (!enabled || !sessionId || !participantId || (!checkin && !readiness)) return undefined;
     const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
     if (!socket.connected) return undefined;
     joinSessionLive(socket, sessionId, participantId);
@@ -101,7 +107,8 @@ export function useWaitingRoomPresence({
       action: 'join',
       nickname: nicknameRef.current,
       checkin,
+      readiness,
     });
     return undefined;
-  }, [checkin, enabled, sessionId, participantId, skipAuth]);
+  }, [checkin, readiness, nickname, enabled, sessionId, participantId, skipAuth]);
 }

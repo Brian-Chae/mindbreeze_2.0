@@ -138,6 +138,12 @@ export interface WaitingRoomCheckin {
   note: string | null;
 }
 
+export interface WaitingRoomReadiness {
+  surveyDone: boolean;
+  bandDone: boolean;
+  deviceDone: boolean;
+}
+
 export interface WaitingRoomChangedEvent {
   session_id: string;
   participant_id: string;
@@ -146,6 +152,7 @@ export interface WaitingRoomChangedEvent {
   nickname?: string | null;
   /** 입장 전 체크인 요약(기분 SAM 2축 + 상담사 전달 메시지). 미제출이면 없음. */
   checkin?: WaitingRoomCheckin | null;
+  readiness?: WaitingRoomReadiness | null;
 }
 
 export type WaitingRoomChangedHandler = (event: WaitingRoomChangedEvent) => void;
@@ -156,6 +163,7 @@ export interface WaitingRoomPresenceEmit {
   nickname?: string | null;
   /** 입장 전 체크인 요약 — 체크인 저장 후 재전송으로 상담사 화면에 갱신된다 */
   checkin?: WaitingRoomCheckin | null;
+  readiness?: WaitingRoomReadiness | null;
 }
 
 
@@ -531,3 +539,26 @@ export function normalizeJoinSnapshot(
 }
 
 export { SOCKET_URL };
+
+export interface WaitingRoomReminderEvent {
+  session_id: string;
+  message: string;
+}
+
+export interface WaitingRoomReminderAck {
+  ok: boolean;
+  sent?: number;
+  error?: string;
+}
+
+/** 서버 수락을 확인하며, 응답이 없으면 실패로 처리한다. */
+export function requestWaitingRoomReminder(socket: Socket, sessionId: string, participantIds: string[]): Promise<WaitingRoomReminderAck> {
+  if (!socket.connected) return Promise.reject(new Error('연결이 끊겼어요. 다시 연결한 뒤 시도해 주세요.'));
+  return new Promise((resolve, reject) => {
+    socket.timeout(5000).emit('waiting_room_remind', { session_id: sessionId, participant_ids: participantIds },
+      (error: Error | null, result?: WaitingRoomReminderAck) => {
+        if (error || !result?.ok) reject(new Error(result?.error ?? '안내를 보내지 못했어요. 다시 시도해 주세요.'));
+        else resolve(result);
+      });
+  });
+}

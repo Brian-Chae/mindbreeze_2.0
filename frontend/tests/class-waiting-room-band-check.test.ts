@@ -116,3 +116,23 @@ it('Web Bluetooth 미지원 브라우저에는 밴드 없이 진행할 수 있�
   expect(container.textContent).toContain('밴드 없이 진행할 수 있어요');
   expect(button('LINK BAND 연결')).toBeUndefined();
 });
+
+it('밴드 미사용도 준비 완료로 알리며 실제 연결로 표시하지 않는다', async () => {
+  withBluetooth(true);
+  vi.mocked(useBand).mockReturnValue(bandResult());
+  const onCompleted = vi.fn();
+  await render(createElement(WaitingRoomBandCheck, { sessionId: 'session-1', participantId: 'p1', onCompleted }));
+  await click(button('밴드 없이 진행하기'));
+  expect(onCompleted).toHaveBeenCalledTimes(1);
+  expect(container.textContent).toContain('밴드 미사용으로 준비를 마쳤습니다');
+  expect(container.textContent).not.toContain('연결됨');
+});
+
+it('연결 성공 시 준비 완료를 한 번 알린다', async () => {
+  withBluetooth(true);
+  vi.mocked(useBand).mockReturnValue(bandResult({ connectionState: 'connected' }));
+  const onCompleted = vi.fn();
+  await render(createElement(WaitingRoomBandCheck, { sessionId: 'session-1', participantId: 'p1', onCompleted }));
+  expect(onCompleted).toHaveBeenCalledTimes(1);
+  expect(container.querySelector('img')?.getAttribute('src')).toBe('/linkband-detail-1.png');
+});
