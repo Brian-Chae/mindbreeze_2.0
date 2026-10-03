@@ -6,6 +6,7 @@ from app.config import settings
 celery_app = Celery(
     "mindbreeze",
     broker=settings.redis_url,
+    backend=settings.redis_url,
     include=[
         "app.tasks.stt_task",
         "app.tasks.summary_task",

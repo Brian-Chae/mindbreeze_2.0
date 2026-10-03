@@ -15,7 +15,9 @@ EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
 ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app worker --loglevel=INFO --prefetch-multiplier=1
 Restart=on-failure
 RestartSec=5
-PrivateTmp=true
+# PrivateTmp=true 제거(2026-10-03): 오디오 청크가 /tmp/mindbreeze_audio(백엔드가 쓰는 호스트 /tmp)에
+# 저장되는데, PrivateTmp가 워커 /tmp를 격리해 STT가 청크를 찾지 못해 "No such file"로 실패했다.
+# 백엔드(uvicorn)도 PrivateTmp 없이 호스트 /tmp를 쓰므로 워커도 동일하게 맞춘다.
 UMask=0077
 NoNewPrivileges=true
 
