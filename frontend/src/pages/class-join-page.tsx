@@ -1,5 +1,4 @@
-// 클래스 코드 참여 — code → details → lobby(입장 전 대기실·기기 셀프체크) → waiting → meditation → complete
-// (1.0 게스트 패리티 + 개선 3 대기실)
+// 클래스 코드 참여 — code → details → waiting(3단계 준비·시작 대기) → meditation → complete
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -12,21 +11,15 @@ import {
 } from '../lib/api/session';
 import { useAuthStore } from '../stores/authStore';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
-// 개선 3: 코드 확인 직후 대기실에서 닉네임·기기·주변을 확인한 뒤 라이브로 들어간다
-import {
-  ClassWaitingRoom,
-  type ClassWaitingRoomEnterPayload,
-} from '../components/class/ClassWaitingRoom';
+import { type ClassWaitingRoomEnterPayload } from '../components/class/ClassWaitingRoom';
 import { clearStoredNickname } from '../lib/class/class-waiting-room';
 // SDD-088: waiting/meditation 렌더는 플레이어 씬 컴포넌트로 이전 (join 게이트는 이 페이지가 유지)
-import { MemberWaitingScene, type MemberWaitingStep } from '../components/player/MemberWaitingScene';
+import { MemberWaitingScene } from '../components/player/MemberWaitingScene';
 import { MemberSessionScene } from '../components/player/MemberSessionScene';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 
-type JoinStep = 'code' | 'details' | 'lobby' | 'waiting' | 'meditation' | 'complete';
-/** waiting 내부 3단계 — Welcome → LINK BAND 착용 가이드 → 시작 대기 */
-type WaitingStep = MemberWaitingStep;
+type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 
 const TYPE_LABELS: Record<SessionByCodeResponse['type'], string> = {
   clinical: '임상심리상담',
@@ -128,8 +121,6 @@ const ClassJoinPage: React.FC = () => {
   const [relaxationIndex, setRelaxationIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  /** waiting 3단계: welcome → guide(착용 가이드) → wait(시작 대기) */
-  const [waitingStep, setWaitingStep] = useState<WaitingStep>('welcome');
 
   const isLoggedIn = isInitialized && isAuthenticated;
 
@@ -162,7 +153,7 @@ const ClassJoinPage: React.FC = () => {
   }, [queryCode]);
 
   // 대기·명상·입장 준비 중 화면 꺼짐 방지 (Wake Lock)
-  useWakeLock(step === 'lobby' || step === 'waiting' || step === 'meditation');
+  useWakeLock(step === 'waiting' || step === 'meditation');
 
   // SDD-088: details 단계에서 아직 오픈 전이면 3초 폴링으로 오픈을 감지해 자동 활성화
   const sessionStatus = session?.status ?? null;
@@ -183,14 +174,6 @@ const ClassJoinPage: React.FC = () => {
     return () => window.clearInterval(intervalId);
   }, [step, sessionStatus, sessionId, code]);
 
-  const handleWelcomeFinish = useCallback(() => {
-    setWaitingStep('guide');
-  }, []);
-
-  const handleGuideConfirm = useCallback(() => {
-    setWaitingStep('wait');
-  }, []);
-
   /** 개선 3: 대기실 [입장] — 확정 닉네임을 반영하고 진행 중이면 바로 라이브로 들어간다 */
   const handleWaitingRoomEnter = useCallback(
     (payload: ClassWaitingRoomEnterPayload) => {
@@ -199,8 +182,7 @@ const ClassJoinPage: React.FC = () => {
         setStep('meditation');
         return;
       }
-      setWaitingStep('welcome');
-      setStep('waiting');
+      // 시작 전에는 같은 대기실 인스턴스와 준비 상태를 유지한다.
     },
     [isLoggedIn, session?.status],
   );
@@ -209,27 +191,28 @@ const ClassJoinPage: React.FC = () => {
   useEffect(() => {
     if (step !== 'waiting' || !session) return undefined;
 
+    let cancelled = false;
     const refresh = async (): Promise<void> => {
       try {
         // participant_id가 있으면 by-code/state 우선 사용
         if (participantId) {
           try {
             const state = await getSessionByCodeState(code, participantId);
+            if (cancelled) return;
             setSession((prev) =>
               prev
                 ? {
                     ...prev,
-                    status: state.status,
+                    status:
+                      state.guest_state === 'meditation' && !['completed', 'cancelled'].includes(state.status)
+                        ? 'in_progress'
+                        : state.status,
                     started_at: state.started_at ?? prev.started_at,
                     title: state.title ?? prev.title,
                   }
                 : prev,
             );
 
-            if (state.status === 'in_progress' || state.guest_state === 'meditation') {
-              setStep('meditation');
-              return;
-            }
             if (state.status === 'completed' || state.guest_state === 'complete') {
               setStep('complete');
               return;
@@ -244,6 +227,7 @@ const ClassJoinPage: React.FC = () => {
         }
 
         const refreshed = await getSessionByCode(code);
+        if (cancelled) return;
         setSession(refreshed);
         if (isClosed(refreshed)) {
           if (refreshed.status === 'completed') {
@@ -253,10 +237,8 @@ const ClassJoinPage: React.FC = () => {
           }
           return;
         }
-        if (refreshed.status === 'in_progress') {
-          setStep('meditation');
-        }
       } catch (refreshError) {
+        if (cancelled) return;
         if (refreshError instanceof ApiError && refreshError.status === 404) {
           setError('클래스 정보를 더 이상 찾을 수 없습니다.');
         }
@@ -268,7 +250,7 @@ const ClassJoinPage: React.FC = () => {
       void refresh();
     }, 3000);
 
-    return () => window.clearInterval(intervalId);
+    return () => { cancelled = true; window.clearInterval(intervalId); };
   }, [code, participantId, session?.id, step]);
 
   // meditation 중 completed 감지
@@ -382,8 +364,7 @@ const ClassJoinPage: React.FC = () => {
         });
       }
       // 코드 확인 직후 바로 라이브로 들어가지 않는다 — 대기실에서 닉네임·기기·주변을 확인한다
-      setWaitingStep('welcome');
-      setStep('lobby');
+      setStep('waiting');
     } catch (joinError) {
       setError(errorMessage(joinError, '클래스 참여에 실패했습니다. 클래스 상태를 확인한 뒤 다시 시도해 주세요.'));
     } finally {
@@ -422,7 +403,6 @@ const ClassJoinPage: React.FC = () => {
     setDurationMin(50);
     setRelaxationIndex(null);
     setError(null);
-    setWaitingStep('welcome');
     clearPersistedParticipant();
     // 개선 3: 대기실에서 확정한 닉네임도 함께 정리 — 다음 참여는 입력 단계부터 시작한다
     clearStoredNickname();
@@ -465,10 +445,10 @@ const ClassJoinPage: React.FC = () => {
     );
   }
 
-  // 개선 3: 입장 전 대기실 — 닉네임 확정 + 기기·스피커·주변 셀프체크를 모두 확인해야 입장 가능
-  if (step === 'lobby' && session) {
+  // 준비와 시작 대기는 하나의 씬으로 유지해 설문·BLE·미리보기 상태를 보존한다.
+  if (step === 'waiting' && session) {
     return (
-      <ClassWaitingRoom
+      <MemberWaitingScene
         title={session.title}
         classCode={code}
         statusLabel={STATUS_LABELS[session.status]}
@@ -478,29 +458,9 @@ const ClassJoinPage: React.FC = () => {
         initialNickname={guestName}
         participantToken={participantToken}
         isLoggedIn={isLoggedIn}
-        onEnter={handleWaitingRoomEnter}
-        onLeave={resetJoin}
-      />
-    );
-  }
-
-  // 대기실 씬 — Welcome → LINK BAND 착용 가이드 → 시작 대기 (1.0 3단계 패리티, SDD-088: 플레이어 씬으로 이전)
-  if (step === 'waiting' && session) {
-    const displayName =
-      (isLoggedIn ? user?.name : null) || guestName.trim() || null;
-
-    return (
-      <MemberWaitingScene
-        title={session.title}
-        waitingStep={waitingStep}
-        sessionId={session.id}
-        participantId={participantId}
-        displayName={displayName}
-        classCode={code}
-        statusLabel={STATUS_LABELS[session.status]}
+        sessionLive={session.status === 'in_progress'}
         error={error}
-        onWelcomeFinish={handleWelcomeFinish}
-        onGuideConfirm={handleGuideConfirm}
+        onEnter={handleWaitingRoomEnter}
         onLeave={resetJoin}
       />
     );

@@ -19,6 +19,7 @@ import {
 } from '../src/lib/class/class-waiting-room';
 
 // 대기실 게이트와 무관한 외부 의존성(밴드·체크인·BGM·소켓)은 mock 으로 대체한다.
+vi.mock('../src/components/class/waiting-room-reminder', () => ({ WaitingRoomReminder: () => null }));
 vi.mock('../src/components/class/WaitingRoomBandCheck', () => ({
   WaitingRoomBandCheck: () => 'BAND_CHECK',
 }));
@@ -163,7 +164,7 @@ it('게스트는 이름이 비면 입장할 수 없고 사유가 표시된다', 
   await render(createElement(ClassWaitingRoom, props));
   expect(button('입장하기')?.disabled).toBe(true);
   expect(container.textContent).toContain('이름 확인');
-  expect(container.textContent).toContain('입장 전 준비');
+  expect(container.textContent).toContain('잠시 후 시작합니다');
   // 체크인·밴드는 선택 항목으로 노출되지만 게이트를 막지 않는다
   expect(container.textContent).toContain('CHECKIN');
   expect(container.textContent).toContain('BAND_CHECK');
@@ -261,7 +262,9 @@ it('마이크는 자동 확인되고 켜지면 확정 값에 반영한다(카메
       cameraOn: false,
       micOn: true,
     });
-    // 입장 시 미리보기 트랙을 즉시 중지한다(저장·전송 없음)
+    // 세션이 시작되기 전에는 같은 대기실의 미리보기를 유지한다.
+    expect(track.stop).not.toHaveBeenCalled();
+    await render(createElement(ClassWaitingRoom, { ...props, sessionLive: true }));
     expect(track.stop).toHaveBeenCalled();
   } finally {
     Reflect.deleteProperty(navigator, 'mediaDevices');
@@ -307,6 +310,7 @@ it('카메라는 선택 — 켜기를 누를 때만 켜지고 확정 값에 반�
 
     await click(button('카메라 켜기'));
     await flushPreview();
+    expect(container.querySelector('video')?.srcObject).toBe(stream);
     await click(button('입장하기'));
 
     expect(props.onEnter).toHaveBeenCalledWith({
@@ -367,4 +371,36 @@ it('스피커 테스트는 선택 — 재생 여부와 무관하게 입장할 �
   } finally {
     (window as unknown as { AudioContext?: unknown }).AudioContext = original;
   }
+});
+
+it('세 준비 탭을 표시하고 기기 건너뛰기를 완료로 전달한다', async () => {
+  await render(createElement(ClassWaitingRoom, baseProps()));
+  expect(container.querySelectorAll('[role="tab"]')).toHaveLength(3);
+  await click([...container.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2]);
+  await click(button('기기 테스트 건너뛰기'));
+  expect(container.textContent).toContain('1/3 완료');
+  expect(vi.mocked(useWaitingRoomPresence).mock.lastCall?.[0]).toMatchObject({
+    readiness: { surveyDone: false, bandDone: false, deviceDone: true },
+  });
+});
+
+it('상담사가 시작하면 이름이 있는 회원을 자동 입장시킨다', async () => {
+  const props = baseProps();
+  await render(createElement(ClassWaitingRoom, props));
+  expect(props.onEnter).not.toHaveBeenCalled();
+  await render(createElement(ClassWaitingRoom, { ...props, sessionLive: true }));
+  expect(props.onEnter).toHaveBeenCalledWith(expect.objectContaining({ nickname: '김민지' }));
+});
+
+it('언마운트 후 늦게 허용된 마이크 트랙을 즉시 중지한다', async () => {
+  let resolveStream: (stream: MediaStream) => void = () => {};
+  const stop = vi.fn();
+  Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: {
+    getUserMedia: vi.fn(() => new Promise<MediaStream>((resolve) => { resolveStream = resolve; })),
+  }});
+  await render(createElement(ClassWaitingRoom, baseProps()));
+  await flushPreview();
+  await render(null);
+  await act(async () => resolveStream({ getTracks: () => [{ stop }] } as unknown as MediaStream));
+  expect(stop).toHaveBeenCalledTimes(1);
 });

@@ -1,0 +1,15 @@
+.waiting-readiness { container-type: inline-size; }
+@container (min-width: 520px) {
+  .waiting-readiness-person { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(235px, 1.7fr) 32px; gap: 10px; align-items: center; }
+  .waiting-readiness-name { display: contents; }
+  .waiting-readiness-name > p { grid-column: 1; grid-row: 1; }
+  .waiting-readiness-count { grid-column: 3; grid-row: 1; text-align: right; }
+  .waiting-readiness-badges { grid-column: 2; grid-row: 1; margin-top: 0; }
+  .waiting-readiness-checkin { grid-column: 1 / -1; margin-top: 0; }
+}
+/* 대기실에서는 준비 현황과 기존 참가자 제어를 함께 스크롤한다. */
+.hcp-active .hcp-roster.hcp-roster-with-readiness { display: block; overflow-y: auto; }
+.hcp-roster-with-readiness > .waiting-readiness { margin-bottom: 20px; }
+.hcp-roster-with-readiness > .hcp-heading { margin-bottom: 12px; }
+.hcp-active .hcp-roster-with-readiness .hcp-roster-list { min-height: 240px; flex: none; }
+.hcp-active .hcp-roster-with-readiness .hcp-roster-content { min-height: 200px; }

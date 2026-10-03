@@ -8,14 +8,10 @@ import {
   useWaitingRoomPresence,
   WAITING_ROOM_HEARTBEAT_MS,
 } from '../src/hooks/useWaitingRoomPresence';
+import type { WaitingRoomChangedEvent } from '../src/lib/socket';
 import { useWaitingRoomCount } from '../src/hooks/useWaitingRoomCount';
 
-type ChangedHandler = (event: {
-  session_id: string;
-  participant_id: string;
-  action: 'join' | 'leave';
-  nickname?: string | null;
-}) => void;
+type ChangedHandler = (event: WaitingRoomChangedEvent) => void;
 
 const socketLib = vi.hoisted(() => {
   const state = { handlers: [] as ChangedHandler[] };
@@ -182,4 +178,40 @@ it('대기실 씬이 아니면(enabled=false) 구독하지 않고 0 을 반환�
     deliver({ session_id: 'session-1', participant_id: 'p1', action: 'join' });
   });
   expect(container.textContent).toBe('count:0|');
+});
+
+it('준비 상태 변경을 leave 없이 즉시 보내고 heartbeat에 유지한다', async () => {
+  vi.useFakeTimers();
+  function ReadyHarness({ done }: { done: boolean }) {
+    useWaitingRoomPresence({ sessionId: 'session-1', participantId: 'p1', enabled: true,
+      readiness: { surveyDone: done, bandDone: done, deviceDone: done } });
+    return null;
+  }
+  await render(createElement(ReadyHarness, { done: false }));
+  await render(createElement(ReadyHarness, { done: true }));
+  expect(socketLib.emitWaitingRoomPresence).toHaveBeenLastCalledWith(socketLib.fakeSocket,
+    expect.objectContaining({ readiness: { surveyDone: true, bandDone: true, deviceDone: true } }));
+  await act(async () => vi.advanceTimersByTime(WAITING_ROOM_HEARTBEAT_MS));
+  expect(socketLib.emitWaitingRoomPresence).toHaveBeenLastCalledWith(socketLib.fakeSocket,
+    expect.objectContaining({ readiness: { surveyDone: true, bandDone: true, deviceDone: true } }));
+  expect(socketLib.emitWaitingRoomPresence.mock.calls.some(call => (call[1] as { action: string }).action === 'leave')).toBe(false);
+  await unmount();
+});
+
+
+it('준비 상태 수신·구버전 payload·45초 TTL을 유지한다', async () => {
+  vi.useFakeTimers();
+  function EntriesHarness() {
+    const { entries } = useWaitingRoomCount({ sessionId: 'session-1', enabled: true });
+    return createElement('div', null, JSON.stringify(entries));
+  }
+  await render(createElement(EntriesHarness));
+  await act(async () => deliver({ session_id: 'session-1', participant_id: 'p1', action: 'join',
+    readiness: { surveyDone: true, bandDone: true, deviceDone: true } }));
+  expect(container.textContent).toContain('"deviceDone":true');
+  await act(async () => deliver({ session_id: 'session-1', participant_id: 'p2', action: 'join' }));
+  expect(JSON.parse(container.textContent ?? '[]')).toHaveLength(2);
+  await act(async () => vi.advanceTimersByTime(60_000));
+  expect(container.textContent).toBe('[]');
+  await unmount();
 });

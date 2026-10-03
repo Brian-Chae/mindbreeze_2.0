@@ -1,19 +1,9 @@
-// 입장 전 대기실 — 코드로 참여한 뒤 라이브 뷰로 들어가기 전 준비 단계.
-//
-// 개선 3 재설계: 기기 단계별 셀프체크(카메라·마이크·스피커·주변)를 강제하던 구조를 걷어내고
-// (1) 참여 이름(필수) (2) 입장 전 체크인(기분·상담사 전달 말, 스킵 가능) 만 중심에 둔다.
-// 카메라·마이크는 시스템이 자동 확인하고 문제가 있을 때만 안내한다(입장 차단 없음).
-// LINK BAND 는 opt-in 유지 — 미연결이어도 항상 입장할 수 있다.
-//
-// 원칙:
-//   · 기기 미비(미지원·권한 거부)는 입장을 영구 차단하지 않는다 — 문제만 알리고 진행 가능.
-//   · 미리보기 영상·음성은 저장·전송되지 않는다(입장 시 즉시 중지).
-//   · 게스트(user_id NULL)와 로그인 회원 모두 동작한다(회원은 이름 입력 없이 프로필 이름 고정).
+// SDD-105: 설문·링크밴드·기기 준비를 한 대기실에서 유지한다. 이름만 입장 필수 조건이다.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { FadingImageBackground } from './FadingImageBackground';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { WaitingRoomBandCheck } from './WaitingRoomBandCheck';
 import { PreCheckinPanel } from './PreCheckinPanel';
+import { WaitingRoomReminder } from './waiting-room-reminder';
 import { LobbyBgmBar } from './LobbyBgmBar';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
 import { useLobbyBgm } from '../../hooks/useLobbyBgm';
@@ -37,7 +27,9 @@ export interface ClassWaitingRoomEnterPayload {
   micOn: boolean;
 }
 
-interface ClassWaitingRoomProps {
+export interface ClassWaitingRoomProps {
+  sessionLive?: boolean;
+  error?: string | null;
   title: string | null;
   classCode: string;
   statusLabel: string;
@@ -69,9 +61,27 @@ export function ClassWaitingRoom({
   isLoggedIn,
   onEnter,
   onLeave,
+  sessionLive = false,
+  error = null,
 }: ClassWaitingRoomProps): React.ReactElement {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isGuest = !isAuthenticated && !memberName;
+
+  const mediaActiveRef = useRef(true);
+  const cameraRequestRef = useRef(0);
+  const micRequestRef = useRef(0);
+  const autoEnteredRef = useRef(false);
+  const [activeStep, setActiveStep] = useState(0);
+  const [readiness, setReadiness] = useState({ surveyDone: false, bandDone: false, deviceDone: false });
+  const completeSurvey = useCallback(() => {
+    setReadiness((value) => ({ ...value, surveyDone: true }));
+    setActiveStep(1);
+  }, []);
+  const completeBand = useCallback(() => {
+    setReadiness((value) => ({ ...value, bandDone: true }));
+    setActiveStep((current) => current === 1 ? 2 : current);
+  }, []);
+  const completeDevices = (): void => setReadiness((value) => ({ ...value, deviceDone: true }));
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
@@ -108,6 +118,7 @@ export function ClassWaitingRoom({
     participantId,
     nickname: memberName ?? (isNicknameValid(nickname) ? normalizeNickname(nickname) : null),
     checkin,
+    readiness,
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
   });
@@ -116,6 +127,7 @@ export function ClassWaitingRoom({
   const lobbyBgm = useLobbyBgm(true);
 
   const stopVideoStream = useCallback((): void => {
+    cameraRequestRef.current += 1;
     videoStreamRef.current?.getTracks().forEach((track) => track.stop());
     videoStreamRef.current = null;
     if (videoRef.current) {
@@ -136,6 +148,7 @@ export function ClassWaitingRoom({
   }, []);
 
   const stopAudioStream = useCallback((): void => {
+    micRequestRef.current += 1;
     audioStreamRef.current?.getTracks().forEach((track) => track.stop());
     audioStreamRef.current = null;
     stopMeter();
@@ -170,10 +183,15 @@ export function ClassWaitingRoom({
   /** 카메라 열기 — 오디오와 분리 요청해 부분 권한 거부를 개별 상태로 매핑 (선택·비강제) */
   const openCamera = useCallback(async (): Promise<void> => {
     stopVideoStream();
+    const requestId = cameraRequestRef.current;
     setCameraState('pending');
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      if (!mediaActiveRef.current || requestId !== cameraRequestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       videoStreamRef.current = stream;
       if (videoRef.current) {
         try {
@@ -184,6 +202,7 @@ export function ClassWaitingRoom({
       }
       setCameraState('on');
     } catch (err) {
+      if (!mediaActiveRef.current || requestId !== cameraRequestRef.current) return;
       setCameraState('denied');
       setCameraError(mediaErrorMessage(err, '카메라'));
     }
@@ -192,14 +211,20 @@ export function ClassWaitingRoom({
   /** 마이크 열기 — 비디오와 분리 요청 (필수 자동 확인) */
   const openMic = useCallback(async (): Promise<void> => {
     stopAudioStream();
+    const requestId = micRequestRef.current;
     setMicState('pending');
     setMicError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!mediaActiveRef.current || requestId !== micRequestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       audioStreamRef.current = stream;
       setMicState('on');
       startMeter(stream);
     } catch (err) {
+      if (!mediaActiveRef.current || requestId !== micRequestRef.current) return;
       setMicState('denied');
       setMicError(mediaErrorMessage(err, '마이크'));
     }
@@ -208,11 +233,12 @@ export function ClassWaitingRoom({
   // 최초 마운트 시 마이크만 자동 확인한다 — 카메라는 선택(명상·상담은 오디오 중심)이므로
   // 불필요한 권한 요청을 피하고, 문제(거부·미탐지)가 있을 때만 안내한다.
   useEffect(() => {
-    if (!mediaSupported) return undefined;
+    mediaActiveRef.current = true;
     const startId = window.setTimeout(() => {
-      void openMic();
+      if (mediaSupported && mediaActiveRef.current) void openMic();
     }, 0);
     return () => {
+      mediaActiveRef.current = false;
       window.clearTimeout(startId);
       stopAudioStream();
       stopVideoStream();
@@ -276,111 +302,104 @@ export function ClassWaitingRoom({
   const effectiveNickname = memberName ?? normalizeNickname(nickname);
   const gate = resolveWaitingRoomGate({ nickname: effectiveNickname });
 
-  /** 입장 — 미리보기 스트림을 즉시 중지하고 라이브 뷰로 넘긴다 */
-  const handleEnter = (): void => {
+  /** 시작 전에는 대기를 유지하고, 실제 라이브 전환에만 미리보기 자원을 정리한다. */
+  const handleEnter = useCallback((): void => {
     if (!gate.canEnter) return;
     const finalNickname = normalizeNickname(effectiveNickname);
     storeNickname(finalNickname);
-    stopVideoStream();
-    stopAudioStream();
+    if (sessionLive) {
+      mediaActiveRef.current = false;
+      stopVideoStream();
+      stopAudioStream();
+      void toneCtxRef.current?.close().catch(() => undefined);
+      toneCtxRef.current = null;
+    }
     onEnter({ nickname: finalNickname, cameraOn, micOn });
-  };
+  }, [sessionLive, gate.canEnter, effectiveNickname, stopVideoStream, stopAudioStream, onEnter, cameraOn, micOn]);
+
+  useEffect(() => {
+    if (sessionLive && gate.canEnter && !autoEnteredRef.current) {
+      autoEnteredRef.current = true;
+      handleEnter();
+    }
+  }, [sessionLive, gate.canEnter, handleEnter]);
+
+  useEffect(() => {
+    if (videoRef.current && cameraOn) videoRef.current.srcObject = videoStreamRef.current;
+  }, [cameraOn]);
 
   const nicknameDone = isNicknameValid(effectiveNickname);
   const micProblem = micState === 'denied' || micState === 'unsupported';
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden bg-black text-white">
-      <FadingImageBackground />
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#12081C] text-[#F7F4F0]" style={{ backgroundImage: 'radial-gradient(ellipse at 65% 20%, #34144255, transparent 60%)' }}>
 
-      <header className="relative z-10 flex items-center justify-between gap-2 px-4 py-4 sm:px-8">
+      <header className="relative z-10 mx-auto flex w-full max-w-[1200px] items-center gap-3 border-b border-white/10 px-4 py-5 sm:px-6">
         <button
           type="button"
           onClick={onLeave}
-          className="min-h-11 rounded-xl bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+          className="min-h-11 rounded-lg px-2 py-2 text-xs font-medium text-[#bcaec5] transition-colors hover:bg-white/10"
         >
           나가기
         </button>
-        <h1 className="truncate px-3 text-center text-base font-medium text-white/80 sm:text-lg">
+        <h1 className="truncate border-l border-white/10 px-4 text-sm font-medium text-white/80">
           {title ?? '클래스'}
         </h1>
-        <span className="shrink-0 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white/70">
+        <span className="ml-auto shrink-0 rounded-full border border-[#dcb5ee]/20 bg-[#dcb5ee]/5 px-3 py-1 text-[11px] text-[#dcb5ee]">
           {statusLabel}
         </span>
       </header>
 
-      <div className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-4 pb-16 sm:px-6">
-        <div className="text-center">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-[#B373EF]">
-            waiting room · {classCode}
+      <div className="relative z-10 mx-auto w-full max-w-[1200px] flex-1 px-4 pb-16 sm:px-6">
+        <div className="pt-5 text-left">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-[#dcb5ee]">
+            A MOMENT FOR YOURSELF
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            입장 전 준비
+            잠시 후 시작합니다
           </h2>
           <p className="mt-3 text-sm leading-6 text-white/70">
-            이름과 지금 기분을 가볍게 남겨 주세요. 마이크는 자동으로 확인하고,
-            문제가 있을 때만 알려드려요.
+            오늘의 나를 가볍게 살펴보고, 편안하게 참여할 준비를 해주세요.
           </p>
         </div>
 
-        {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
-        <div className="mt-6">
-          <LobbyBgmBar
-            state={lobbyBgm.state}
-            onVolumeChange={lobbyBgm.setVolume}
-            onToggleMute={lobbyBgm.toggleMute}
-            onResume={lobbyBgm.resume}
-          />
-        </div>
-
-        <div className="mt-8 space-y-4">
-          {/* (1) 이름 확인 — 회원은 프로필 이름 고정 */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                  nicknameDone ? 'bg-[#5F0080] text-white' : 'bg-white/10 text-white/70'
-                }`}
-              >
-                {nicknameDone ? '✓' : '1'}
-              </span>
-              <h2 className="text-[15px] font-semibold text-white">참여 이름</h2>
+        <div className="mt-4"><WaitingRoomReminder sessionId={sessionId} skipAuth={!isAuthenticated} /></div>
+        <div className="mt-8 grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_285px]">
+          <div className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#21132b] to-[#1d1026]">
+            <div role="tablist" aria-label="입장 전 준비 단계" className="flex items-center gap-2 border-b border-white/10 px-4 py-5 sm:gap-3 sm:px-7">
+              {['설문', '링크밴드', '기기 테스트'].map((label, index) => {
+                const done = [readiness.surveyDone, readiness.bandDone, readiness.deviceDone][index];
+                return <Fragment key={label}>
+                  {index > 0 && <span aria-hidden="true" className="h-px min-w-2 flex-1 bg-white/20" />}
+                  <button type="button" role="tab" id={`preparation-tab-${index}`} aria-controls={`preparation-panel-${index}`} aria-selected={activeStep === index}
+                    tabIndex={activeStep === index ? 0 : -1}
+                    onClick={() => setActiveStep(index)}
+                    onKeyDown={(event) => {
+                      const next = event.key === 'ArrowRight' ? (index + 1) % 3 : event.key === 'ArrowLeft' ? (index + 2) % 3 : event.key === 'Home' ? 0 : event.key === 'End' ? 2 : null;
+                      if (next === null) return;
+                      event.preventDefault(); setActiveStep(next);
+                      document.getElementById(`preparation-tab-${next}`)?.focus();
+                    }}
+                    className={`flex min-h-11 items-center gap-2 whitespace-nowrap rounded-lg text-xs outline-none focus-visible:ring-2 focus-visible:ring-[#dcb5ee] ${activeStep === index ? 'text-[#F7F4F0]' : 'text-[#bcaec5]'}`}>
+                    <span aria-hidden="true" className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs ${done || activeStep === index ? 'border-[#dcb5ee] bg-[#dcb5ee] text-[#12081C]' : 'border-white/20'}`}>{done ? '✓' : index + 1}</span>
+                    {label}<span className="sr-only">{done ? ' 완료' : ''}</span>
+                  </button>
+                </Fragment>;
+              })}
             </div>
-            {isGuest ? (
-              <>
-                <label htmlFor="waiting-room-nickname" className="mt-3 block text-[13px] text-white/70">
-                  클래스에서 불릴 이름
-                </label>
-                <input
-                  id="waiting-room-nickname"
-                  value={nickname}
-                  onChange={(event) => setNickname(normalizeNickname(event.target.value))}
-                  maxLength={20}
-                  placeholder="예: 김민지"
-                  autoComplete="off"
-                  className="mt-2 w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-base text-white outline-none transition focus:border-[#B373EF] focus:ring-2 focus:ring-[#5F0080]"
-                />
-              </>
-            ) : (
-              <p className="mt-3 text-sm text-white/80">
-                <span className="font-semibold text-white">{effectiveNickname}</span> 이름으로
-                참여합니다.
-              </p>
-            )}
-          </section>
-
-          {/* (2) 입장 전 체크인 — 기분 + 상담사 전달 말 (스킵 가능) */}
-          <PreCheckinPanel
-            sessionId={sessionId}
-            participantId={participantId}
-            participantToken={participantToken}
-            isLoggedIn={isLoggedIn}
-            onSubmitted={setCheckin}
-          />
-
+            <div role="tabpanel" id="preparation-panel-0" aria-labelledby="preparation-tab-0" hidden={activeStep !== 0} className="min-h-[418px] p-4 sm:px-7 sm:py-6">
+              <PreCheckinPanel sessionId={sessionId} participantId={participantId} participantToken={participantToken} isLoggedIn={isLoggedIn}
+                onSubmitted={(value) => { setCheckin(value); completeSurvey(); }} onSkipped={completeSurvey} />
+            </div>
+            <div role="tabpanel" id="preparation-panel-1" aria-labelledby="preparation-tab-1" hidden={activeStep !== 1} className="min-h-[418px] p-4 sm:px-7 sm:py-6">
+              <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} onCompleted={completeBand} />
+            </div>
+            <div role="tabpanel" id="preparation-panel-2" aria-labelledby="preparation-tab-2" hidden={activeStep !== 2} className="min-h-[418px] space-y-4 p-4 sm:px-7 sm:py-6">
+              <h2 className="text-xl font-semibold tracking-tight text-[#F7F4F0]">목소리와 소리를 확인해요</h2>
+              <p className="text-xs text-[#bcaec5]">마이크는 자동으로 확인해요. 카메라와 스피커 테스트는 선택입니다.</p>
           {/* (3) 마이크 — 시스템 자동 확인. 문제가 있을 때만 안내한다. */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <section className="border-b border-white/10 pb-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[15px] font-semibold text-white">마이크</h2>
               <span
@@ -434,7 +453,7 @@ export function ClassWaitingRoom({
           </section>
 
           {/* (4) 카메라 — 선택(명상·상담은 오디오 중심). 기본 꺼짐. */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <section className="border-b border-white/10 pb-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[15px] font-semibold text-white">
                 카메라 <span className="font-normal text-white/50">(선택)</span>
@@ -471,7 +490,7 @@ export function ClassWaitingRoom({
           </section>
 
           {/* (5) 스피커 — 선택 테스트(비강제) */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <section className="border-b border-white/10 pb-4">
             <h2 className="text-[15px] font-semibold text-white">스피커</h2>
             <p className="mt-2 text-[13px] leading-6 text-white/70">
               입장하면 상담사의 목소리·가이드가 들립니다. 이어폰·헤드셋 착용을 권장해요.
@@ -487,17 +506,21 @@ export function ClassWaitingRoom({
             )}
           </section>
 
-          {/* (6) LINK BAND — 선택(opt-in). 미연결이어도 입장은 항상 가능하다. */}
-          <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} />
-
-          {/* 주변 안내 — 강제 체크 대신 한 줄 권장 */}
-          <p className="px-1 text-[13px] leading-6 text-white/60">
-            🤫 조용한 공간에서 참여하고, 휴대폰은 무음으로 두면 몰입에 도움이 됩니다.
-          </p>
-        </div>
+              <div className="flex flex-wrap justify-end gap-3">
+                <button type="button" onClick={completeDevices} className="min-h-11 px-3 text-sm text-[#bcaec5]">기기 테스트 건너뛰기</button>
+                <button type="button" onClick={completeDevices} className="min-h-11 rounded-xl bg-[#5F0080] px-5 text-sm font-semibold">{readiness.deviceDone ? '확인 완료 ✓' : '기기 확인 완료'}</button>
+              </div>
+            </div>
+          </div>
+          <div role="status" className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#1d1026] p-5">
+            <div><p className="text-sm text-[#F7F4F0]">{Object.values(readiness).every(Boolean) ? '준비 완료' : '준비 현황'} <strong className="ml-3 text-[#dcb5ee]">{Object.values(readiness).filter(Boolean).length}/3 완료</strong></p>
+              <p className="mt-1 text-xs text-[#bcaec5]">상담사가 시작하면 자동으로 입장됩니다</p></div>
+            <div aria-hidden="true" className="flex gap-1">{Object.values(readiness).map((done, index) => <span key={index} className={`h-1 w-4 rounded-full sm:w-7 ${done ? 'bg-[#dcb5ee]' : 'bg-white/10'}`} />)}</div>
+          </div>
 
         {/* 입장 게이트 — 이름만 필수(체크인·기기는 스킵 가능) */}
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5">
+          {error && <p role="alert" className="mb-3 text-sm text-[#F7C6C6]">{error}</p>}
           {!gate.canEnter && (
             <p className="mb-3 text-[13px] leading-6 text-white/60">
               아직 확인하지 않은 항목이 있어요 · {gate.missing.join(' · ')}
@@ -515,6 +538,68 @@ export function ClassWaitingRoom({
           <p className="mt-3 text-center text-[12px] text-white/50">
             체크인과 LINK BAND는 선택 사항입니다 — 건너뛰고 바로 입장할 수 있어요.
           </p>
+        </div>
+          </div>
+          <aside aria-label="클래스 정보와 참여 설정" className="space-y-4">
+            <section className="rounded-2xl border border-white/10 bg-[#1d1026] p-5">
+              <div aria-hidden="true" className="relative mb-5 flex h-28 items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(ellipse_at_50%_115%,#9163a166,#32203d_55%,#1b1024)]">
+                <div className="absolute h-48 w-48 rounded-full border border-[#dcb5ee]/10" />
+                <div className="absolute h-36 w-36 rounded-full border border-[#dcb5ee]/15" />
+                <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#dcb5ee]/25 text-4xl font-extralight text-[#dcb5ee]">✧</div>
+              </div>
+              <p className="text-[9px] tracking-[0.2em] text-[#dcb5ee]">YOUR SESSION</p>
+              <h2 className="mt-2 text-lg font-medium text-[#F7F4F0]">{title ?? '클래스'}</h2>
+              <p className="mt-2 text-xs text-[#bcaec5]">참여 코드 · {classCode}</p>
+            </section>
+          {/* (1) 이름 확인 — 회원은 프로필 이름 고정 */}
+          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                  nicknameDone ? 'bg-[#5F0080] text-white' : 'bg-white/10 text-white/70'
+                }`}
+              >
+                {nicknameDone ? '✓' : '1'}
+              </span>
+              <h2 className="text-[15px] font-semibold text-white">참여 이름</h2>
+            </div>
+            {isGuest ? (
+              <>
+                <label htmlFor="waiting-room-nickname" className="mt-3 block text-[13px] text-white/70">
+                  클래스에서 불릴 이름
+                </label>
+                <input
+                  id="waiting-room-nickname"
+                  value={nickname}
+                  onChange={(event) => setNickname(normalizeNickname(event.target.value))}
+                  maxLength={20}
+                  placeholder="예: 김민지"
+                  autoComplete="off"
+                  className="mt-2 w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-base text-white outline-none transition focus:border-[#B373EF] focus:ring-2 focus:ring-[#5F0080]"
+                />
+              </>
+            ) : (
+              <p className="mt-3 text-sm text-white/80">
+                <span className="font-semibold text-white">{effectiveNickname}</span> 이름으로
+                참여합니다.
+              </p>
+            )}
+          </section>
+
+        {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
+        <div className="rounded-2xl border border-white/10 bg-[#1d1026] p-4">
+          <LobbyBgmBar
+            state={lobbyBgm.state}
+            onVolumeChange={lobbyBgm.setVolume}
+            onToggleMute={lobbyBgm.toggleMute}
+            onResume={lobbyBgm.resume}
+          />
+        </div>
+
+
+            <p className="px-1 text-xs leading-7 text-[#bcaec5]"><strong className="block font-medium text-[#dcb5ee]">편안한 참여를 위한 작은 준비</strong>조용한 공간에서 참여하고, 휴대폰은 무음으로 두면 몰입에 도움이 됩니다.</p>
+          </aside>
         </div>
       </div>
     </main>

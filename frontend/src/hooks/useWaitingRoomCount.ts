@@ -11,6 +11,7 @@ import {
   subscribeWaitingRoomChanged,
   type WaitingRoomChangedEvent,
   type WaitingRoomCheckin,
+  type WaitingRoomReadiness,
 } from '../lib/socket';
 
 /** 마지막 heartbeat 이후 이 시간이 지나면 대기실에서 나간 것으로 본다. */
@@ -28,6 +29,7 @@ export interface WaitingRoomEntry {
   participantId: string;
   nickname: string | null;
   checkin: WaitingRoomCheckin | null;
+  readiness?: WaitingRoomReadiness | null;
 }
 
 export interface WaitingRoomCountResult {
@@ -51,7 +53,7 @@ export function useWaitingRoomCount({
   const [checkins, setCheckins] = useState<Record<string, WaitingRoomCheckin>>({});
   const [entries, setEntries] = useState<WaitingRoomEntry[]>([]);
   /** participant_id → 마지막 신호 시각·닉네임·체크인 */
-  const seenRef = useRef<Map<string, { at: number; nickname: string | null; checkin: WaitingRoomCheckin | null }>>(
+  const seenRef = useRef<Map<string, { at: number; nickname: string | null; checkin: WaitingRoomCheckin | null; readiness?: WaitingRoomReadiness | null }>>(
     new Map(),
   );
   /** 대기실(호스트 대기 씬)에서만 구독한다 */
@@ -79,6 +81,7 @@ export function useWaitingRoomCount({
           participantId: id,
           nickname: entry.nickname,
           checkin: entry.checkin,
+          readiness: entry.readiness,
         });
       }
       setCount(seen.size);
@@ -96,6 +99,7 @@ export function useWaitingRoomCount({
           at: Date.now(),
           nickname: event.nickname ?? null,
           checkin: event.checkin ?? null,
+          readiness: event.readiness ?? null,
         });
       }
       publish();

@@ -505,8 +505,38 @@ def register_session_live_namespace(sio):
                 "action": action,
                 "nickname": _sanitize_nickname(data.get("nickname")),
                 "checkin": _sanitize_checkin(data.get("checkin")),
+                "readiness": _sanitize_readiness(data.get("readiness")),
             },
         )
+
+    @sio.on("waiting_room_remind", namespace=_NAMESPACE)
+    async def on_waiting_room_remind(sid, data):
+        if not isinstance(data, dict):
+            return {"ok": False, "error": "잘못된 요청입니다."}
+        session_id = data.get("session_id")
+        session = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        if session.get("role") != "host" or session.get("session_id") != session_id:
+            return {"ok": False, "error": "상담사만 안내를 보낼 수 있습니다."}
+        targets = data.get("participant_ids")
+        if not isinstance(targets, list) or not targets or len(targets) > 500 or not all(isinstance(pid, str) for pid in targets):
+            return {"ok": False, "error": "대상 참가자를 확인해 주세요."}
+        try:
+            resolved = _resolve_join(session_id, session.get("user_id"), None)
+            if not resolved or resolved.get("role") != "host":
+                return {"ok": False, "error": "상담사 권한을 확인해 주세요."}
+            allowed = {str(p["participant_id"]) for p in resolved["snapshot"].get("participants", [])}
+            targets = list(dict.fromkeys(targets))
+            if not set(targets).issubset(allowed):
+                return {"ok": False, "error": "이 세션의 참가자만 선택해 주세요."}
+            for participant_id in targets:
+                await sio.emit("waiting_room_reminder", {
+                    "session_id": session_id,
+                    "message": "상담사가 준비 상태 확인을 부탁했어요. 설문·링크밴드·기기를 확인해 주세요. 건너뛰어도 괜찮아요.",
+                }, room=_room_self(session_id, participant_id), namespace=_NAMESPACE)
+            return {"ok": True, "sent": len(targets)}
+        except Exception:
+            logger.exception("대기실 리마인드 전송 실패")
+            return {"ok": False, "error": "안내를 보내지 못했습니다. 다시 시도해 주세요."}
 
     @sio.on(AUDIO_SYNC_EVENT, namespace=_NAMESPACE)
     async def on_class_audio_sync(sid, data):
@@ -1013,3 +1043,11 @@ def notify_audio_sync(session_id: str, payload: dict) -> None:
     """
     body = cast("dict[str, Any]", _jsonify(payload))
     _schedule(broadcast_audio_sync(session_id, body))
+
+
+def _sanitize_readiness(value):
+    """완료 여부는 실제 boolean 세 필드가 모두 있을 때만 신뢰한다."""
+    fields = ("surveyDone", "bandDone", "deviceDone")
+    if not isinstance(value, dict) or not all(type(value.get(key)) is bool for key in fields):
+        return None
+    return {key: value[key] for key in fields}

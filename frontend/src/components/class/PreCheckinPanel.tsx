@@ -21,6 +21,7 @@ interface PreCheckinPanelProps {
   isLoggedIn: boolean;
   /** 저장 성공 시 — 체크인 요약을 대기실(WS)로 흘린다 */
   onSubmitted?: (checkin: WaitingRoomCheckin) => void;
+  onSkipped?: () => void;
 }
 
 const NOTE_MAX = 200;
@@ -40,6 +41,7 @@ export function PreCheckinPanel({
   participantToken,
   isLoggedIn,
   onSubmitted,
+  onSkipped,
 }: PreCheckinPanelProps) {
   const [arousal, setArousal] = useState<SamValue | null>(null);
   const [valence, setValence] = useState<SamValue | null>(null);
@@ -80,16 +82,21 @@ export function PreCheckinPanel({
     }
   };
 
-  if (phase === 'skipped') return null;
+  if (phase === 'skipped') return (
+    <section className="rounded-xl border border-white/10 p-5 text-sm text-[#bcaec5]">
+      <p>설문을 건너뛰었습니다. 준비를 마쳤어요.</p>
+      <button type="button" onClick={() => setPhase('input')} className="mt-3 min-h-11 text-[#dcb5ee]">설문 작성하기</button>
+    </section>
+  );
 
   if (phase === 'done') {
     return (
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <section>
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5F0080] text-[11px] font-bold text-white">
             ✓
           </span>
-          <h2 className="text-[15px] font-semibold text-white">입장 전 체크인</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-white">지금, 어떤 기분인가요?</h2>
         </div>
         <p className="mt-3 text-sm leading-6 text-white/70">
           {arousal !== null || valence !== null ? (
@@ -106,12 +113,9 @@ export function PreCheckinPanel({
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+    <section>
       <div className="flex items-center gap-2">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-white/70">
-          1
-        </span>
-        <h2 className="text-[15px] font-semibold text-white">입장 전 체크인</h2>
+        <h2 className="text-xl font-semibold tracking-tight text-white">지금, 어떤 기분인가요?</h2>
       </div>
       <p className="mt-2 text-[13px] leading-6 text-white/70">
         지금 기분을 가볍게 남겨 주세요. 상담사가 입장 전에 확인하고 세션을 준비합니다.
@@ -138,12 +142,12 @@ export function PreCheckinPanel({
                     disabled={isSubmitting}
                     className={`flex flex-col items-center justify-center rounded-xl border py-2 text-base font-bold transition ${
                       selected
-                        ? 'border-transparent bg-[#5F0080] text-white'
-                        : 'border-white/15 bg-black/20 text-white/70 hover:border-[#B373EF]'
+                        ? 'border-[#dcb5ee]/60 bg-[#dcb5ee]/10 text-[#F7F4F0]'
+                        : 'border-white/15 bg-transparent text-[#bcaec5] hover:border-[#dcb5ee]'
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
-                    <span aria-hidden="true">{step}</span>
-                    <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80" aria-hidden="true">
+                    <span>{step}</span>
+                    <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80">
                       {axis.steps[step]}
                     </span>
                   </button>
@@ -190,7 +194,7 @@ export function PreCheckinPanel({
         </button>
         <button
           type="button"
-          onClick={() => setPhase('skipped')}
+          onClick={() => { setPhase('skipped'); onSkipped?.(); }}
           disabled={isSubmitting}
           className="h-11 px-3 text-sm font-semibold text-white/60"
         >
