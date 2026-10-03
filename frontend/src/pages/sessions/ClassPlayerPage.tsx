@@ -471,7 +471,7 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
       <div className="hcp-toolbar"><button aria-pressed={table} onClick={() => { setTable(true); setManualSort(null); }}>모두</button>{HOST_METRICS.map(m => <button key={m.key} aria-pressed={!table && metricKey === m.key} onClick={() => { setTable(false); setMetricKey(m.key); setSortKey(m.key); }}>{m.label}</button>)}</div>
       <div className="hcp-sort"><span>{table ? '헤더를 눌러 수동 정렬' : `${HOST_METRICS.find(m => m.key === sortKey)?.label} · ${late ? '3분 변화량' : '현재값'} 자동 정렬`}</span><button aria-pressed={rotating} onClick={() => setRotating(v => !v)} disabled={table}>10초 순환 {rotating ? '켜짐' : '꺼짐'}</button><select aria-label="정렬 시점" value={phase} onChange={e => setPhase(e.target.value as typeof phase)}><option value="auto">시간에 따라 자동</option><option value="early">3분 미만</option><option value="late">3분 이후</option></select></div>
       <div ref={rosterListRef} className="hcp-roster-list"><div className="hcp-roster-content" inert={Boolean(selectedRow)}>
-        {!ordered.length && <p className="hcp-empty" role="status">{rows.length ? '선택한 상태의 참가자가 없습니다.' : '아직 참가자가 없습니다. 입장하면 이곳에 표시됩니다.'}</p>}
+        {!ordered.length && <p className="hcp-empty" role="status">{rows.length ? '선택한 상태의 참가자가 없습니다.' : (status === 'ready' || status === 'scheduled') ? '아직 클래스를 오픈하지 않았습니다. 오픈하면 회원이 입장할 수 있습니다.' : '아직 참가자가 없습니다. 입장하면 이곳에 표시됩니다.'}</p>}
         {!ordered.length ? null : table ? <div className="hcp-table-wrap"><table><thead><tr><th><button onClick={() => setManualSort(null)}>참가자 · 입장순</button></th>{HOST_METRICS.map(m => <th key={m.key} aria-sort={manualSort?.key === m.key ? manualSort.descending ? 'descending' : 'ascending' : 'none'}><button onClick={() => setManualSort(v => ({ key: m.key, descending: v?.key === m.key ? !v.descending : false }))}>{m.label}{manualSort?.key === m.key ? manualSort.descending ? ' ↓' : ' ↑' : ''}</button></th>)}</tr></thead><tbody>{visibleRows.map(row => <tr key={row.participant_id} onClick={event => openDetail(row.participant_id, event.currentTarget.querySelector<HTMLButtonElement>('button')!)}><th scope="row"><button className="hcp-table-person">{row.display_name}<HostDemographics row={row} /></button></th>{HOST_METRICS.map(m => <td key={m.key}>{valuesFor(row)[m.key] === null ? <small>{hostMissingLabel(row)}</small> : <>{hostValueLabel(valuesFor(row)[m.key])}<small>{m.unit}</small></>}</td>)}</tr>)}</tbody></table></div> : <div className="hcp-people">{visibleRows.map(row => {
           const value = valuesFor(row)[metricKey], previous = previousFor(row, metricKey);
           const delta = value !== null && previous !== null ? Math.round(value - previous) : null;
@@ -1406,6 +1406,18 @@ export default function ClassPlayerPage() {
      한 줄 가로 스크롤(flex-nowrap + overflow-x-auto)로 유지하고 라벨은 감춘다(아이콘만). */
   const headerControls = isHost ? (
     <div className="flex w-full flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 sm:w-auto sm:flex-wrap sm:overflow-visible sm:pb-0">
+      {isSetup && (
+        <button
+          type="button"
+          onClick={() => void openClass(mediaPrefs)}
+          disabled={transitioning}
+          aria-label={transitioning ? '오픈 중' : '클래스 오픈'}
+          className="mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
+        >
+          <span aria-hidden="true">🔓</span>
+          <span className="hidden sm:inline">{transitioning ? '오픈 중...' : '클래스 오픈'}</span>
+        </button>
+      )}
       {isLobby && (
         <>
           <button
@@ -1710,22 +1722,6 @@ export default function ClassPlayerPage() {
       </header>
 
       <div className="hcp-page-content mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
-        {/* ① 세팅 씬 — ready/scheduled: 미디어 프리뷰 + [클래스 오픈] */}
-        {isSetup && isHost && (
-          <>
-            <div className="rounded-2xl bg-white/5 p-4 text-sm text-white/80">
-              카메라·마이크를 확인한 뒤 <b className="text-white">클래스를 오픈</b>하면 회원들이
-              코드로 입장해 대기실에서 밴드를 착용할 수 있습니다.
-            </div>
-            <SessionPreJoinPreview
-              onStart={(prefs) => void openClass(prefs)}
-              starting={transitioning}
-              canStart={!transitioning}
-              startLabel="클래스 오픈"
-            />
-          </>
-        )}
-
         {/* (B) 세션 시작 — 입장 전 체크인 요약 카드(닫기 가능) */}
         {isRunning && isHost && sessionCheckins.length > 0 && !checkinCardDismissed && (
           <div className="hcp-checkin-card rounded-2xl border border-[#5F0080]/30 bg-[#5F0080]/10 p-5">
@@ -1768,7 +1764,7 @@ export default function ClassPlayerPage() {
           </div>
         )}
 
-        {isHost && (isLobby || isRunning) && <HostClassWorkspace
+        {isHost && (isSetup || isLobby || isRunning) && <HostClassWorkspace
           rows={displayMetrics} extras={hostExtras} signals={quietSignals} aggregate={groupAggregate}
           elapsed={classElapsedSec} running={isRunning} statusBar={liveStatusBar} filter={activeFilter}
           tools={<><SessionMonitorSummary counts={summary} activeFilter={activeFilter} onFilterToggle={handleFilterToggle} />
@@ -1820,7 +1816,16 @@ export default function ClassPlayerPage() {
           </>}
           status={session.status}
           audio={isLobby ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
-          left={<>
+          left={isSetup ? (
+            <SessionPreJoinPreview
+              onStart={(prefs) => void openClass(prefs)}
+              starting={transitioning}
+              canStart={!transitioning}
+              startLabel="클래스 오픈"
+              compact
+              onPrefsChange={setMediaPrefs}
+            />
+          ) : (<>
             <div className="hcp-media-controls" role="group" aria-label="호스트 미디어 제어">
               <button disabled={!isRunning || !mediaPrefs.micOn} onClick={() => {
                 if (recorder.state === 'recording') { recorder.pause(); videoRecorder.pause(); }
@@ -1836,7 +1841,7 @@ export default function ClassPlayerPage() {
             {isLobby && waitingRoom.entries.length > 0 && <details><summary>입장 전 체크인 · {waitingRoom.entries.length}명</summary><WaitingRoomCheckinList entries={waitingRoom.entries} /></details>}
             <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
             <details><summary>녹화 · AI 상태</summary>{hostStatusPanel}</details>
-          </>}
+          </>)}
         />}
         {isLobby && !isHost && monitorPanel}
 

@@ -28,6 +28,10 @@ interface SessionPreJoinPreviewProps {
   startDisabledReason?: string;
   /** SDD-088: 확정 버튼 라벨 오버라이드 (플레이어 세팅 씬은 "클래스 오픈") */
   startLabel?: string;
+  /** SDD-104: 좁은 좌측 패널용 — 항상 세로 스택(가로 병렬 해제) */
+  compact?: boolean;
+  /** SDD-104: 현재 카메라/마이크 토글 상태를 부모로 보고 (헤더 [클래스 오픈] 확정 prefs 용) */
+  onPrefsChange?: (prefs: PreJoinMediaPrefs) => void;
 }
 
 /** getUserMedia 오류 → 사용자 안내 문구 */
@@ -59,6 +63,8 @@ export function SessionPreJoinPreview({
   canStart,
   startDisabledReason,
   startLabel = '세션 시작',
+  compact = false,
+  onPrefsChange,
 }: SessionPreJoinPreviewProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
@@ -208,6 +214,12 @@ export function SessionPreJoinPreview({
   /** 둘 다 거부/미지원 — 기존 폴백 화면 유지 (D 조합으로 시작, §4.3) */
   const allBlocked = cameraBlocked && micBlocked;
 
+  /** SDD-104: 토글 상태를 부모로 보고 — 헤더의 [클래스 오픈]이 확정 prefs 를 쓸 수 있게 */
+  useEffect(() => {
+    onPrefsChange?.({ cameraOn, micOn });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cameraOn/micOn 파생값 변경 시에만
+  }, [cameraOn, micOn, onPrefsChange]);
+
   /** 시작 확정 — 프리뷰 스트림 정리 후 토글 확정 값 전달 */
   const confirmStart = (): void => {
     setMicOffConfirmOpen(false);
@@ -327,9 +339,9 @@ export function SessionPreJoinPreview({
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-4 lg:flex-row">
+        <div className={`flex flex-col gap-4 ${compact ? '' : 'lg:flex-row'}`}>
           <div className="flex flex-1 flex-col gap-3">
-            <div className="relative min-h-[240px] overflow-hidden rounded-2xl bg-[#111]">
+            <div className={`relative ${compact ? 'min-h-[160px]' : 'min-h-[240px]'} overflow-hidden rounded-2xl bg-[#111]`}>
               <video
                 ref={videoRef}
                 autoPlay
@@ -439,7 +451,7 @@ export function SessionPreJoinPreview({
             )}
           </div>
 
-          <div className="flex w-full flex-col justify-between gap-4 lg:w-64">
+          <div className={`flex w-full flex-col justify-between gap-4 ${compact ? '' : 'lg:w-64'}`}>
             <div className="space-y-3">
               <div>
                 <p className="text-[12px] font-medium text-[#6F6F6F]">마이크 입력</p>
@@ -462,22 +474,24 @@ export function SessionPreJoinPreview({
                   </>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={handleFacingSwitch}
-                disabled={!cameraOn}
-                className="mb-btn mb-btn--ghost w-full disabled:cursor-not-allowed"
-              >
-                {facingMode === 'user' ? '후면 카메라로 전환' : '전면 카메라로 전환'}
-              </button>
+              {!compact && (
+                <button
+                  type="button"
+                  onClick={handleFacingSwitch}
+                  disabled={!cameraOn}
+                  className="mb-btn mb-btn--ghost w-full disabled:cursor-not-allowed"
+                >
+                  {facingMode === 'user' ? '후면 카메라로 전환' : '전면 카메라로 전환'}
+                </button>
+              )}
             </div>
             <div className="flex flex-col gap-2">
               {/* SDD-085: 현재 조합 요약 라인 (§7 S-1~S-4) */}
               <p className="text-center text-[11px] leading-relaxed text-[#6F6F6F]">
                 {startSummaryLine(cameraOn, micOn)}
               </p>
-              {startButton}
-              {!canStart && !starting && startDisabledReason && (
+              {!compact && startButton}
+              {!compact && !canStart && !starting && startDisabledReason && (
                 <p className="text-center text-[11px] text-[#9B9B9B]">
                   {startDisabledReason}
                 </p>
