@@ -70,6 +70,9 @@ class FakeSio:
     def eeg_emits(self):
         return [e for e in self.emits if e["event"] == "eeg_feature"]
 
+    def feature_ack_emits(self):
+        return [e for e in self.emits if e["event"] == "feature_ack"]
+
 
 # ---------------------------------------------------------------------------
 # 공통 셋업
@@ -212,6 +215,64 @@ def test_03_게스트_feature_emit_저장_broadcast(client, monkeypatch):
     m = res.json()["metrics"][0]
     assert abs(m["current_efficiency"] - 0.6) < 1e-6
     assert m["device_status"] == "ok"
+
+
+def test_03b_feature_ack_저장성공_발신자에게_emit(client, monkeypatch):
+    counselor = _register(client, "s024c03b@test.com")
+    cls = _create_group_class(client, counselor["h"])
+    pid = _join_guest(client, cls["access_code"], "게스트Ack")
+    fake = _wire(monkeypatch)
+
+    fake.call("connect", "sidG", {}, {})  # 게스트: 무토큰
+    fake.call(
+        "feature",
+        "sidG",
+        {
+            "session_id": cls["id"],
+            "participant_id": pid,
+            "stream_id": "stream-1",
+            "sequence": 3,
+            "feature": _feature(3, relaxation_index=0.6, signal_quality=0.9),
+        },
+    )
+
+    acks = fake.feature_ack_emits()
+    assert len(acks) == 1
+    a = acks[0]
+    assert a["to"] == "sidG"
+    assert a["namespace"] == "/session-live"
+    assert a["data"]["session_id"] == cls["id"]
+    assert a["data"]["stream_id"] == "stream-1"
+    assert a["data"]["sequence"] == 3
+    assert a["data"]["participant_id"] == pid
+    assert a["data"]["second_offset"] == 3
+    assert a["data"]["saved"] == 1
+
+
+def test_03c_feature_ack_저장실패_saved_0(client, monkeypatch):
+    counselor = _register(client, "s024c03c@test.com")
+    other = _register(client, "s024o03c@test.com", role="client")  # 세션 미참여
+    cls = _create_group_class(client, counselor["h"])
+    fake = _wire(monkeypatch)
+
+    fake.call("connect", "sidX", {}, {"token": other["token"]})
+    fake.call(
+        "feature",
+        "sidX",
+        {
+            "session_id": cls["id"],
+            "stream_id": "stream-2",
+            "sequence": 1,
+            "feature": _feature(1, relaxation_index=0.5),
+        },
+    )
+
+    acks = fake.feature_ack_emits()
+    assert len(acks) == 1
+    assert acks[0]["to"] == "sidX"
+    assert acks[0]["data"]["saved"] == 0
+    # 저장 실패 시 호스트 브로드캐스트 없음
+    assert fake.eeg_emits() == []
 
 
 def test_04_로그인_참가자_토큰_user_id로_저장(client, monkeypatch):

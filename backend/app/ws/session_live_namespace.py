@@ -381,13 +381,18 @@ def register_session_live_namespace(sio):
 
     @sio.on("feature", namespace=_NAMESPACE)
     async def on_feature(sid, data):
-        """참가자가 보낸 1초 EEG feature → 저장 + 호스트 룸 브로드캐스트.
+        """참가자가 보낸 1초 EEG feature → 저장 + 호스트 룸 브로드캐스트 + 발신자 ACK.
 
         data = {
             "session_id": str,
             "participant_id": str | None,   # 게스트 식별 (로그인 참가자는 connect 토큰의 user_id 사용)
+            "stream_id": str,               # 영속 스트림 식별자 (ACK 반환용)
+            "sequence": int,                # 스트림 내 단조증가(= second_offset)
             "feature": { second_offset, delta_power, ..., signal_quality, play_group_id, band_battery }
         }
+
+        저장 성공/실패 모두 발신자(sid)에게 `feature_ack`를 돌려준다(SDD-108) —
+        참가자가 WS 저장 확정을 알게 해 REST 5초 배치의 상시 중복 재전송을 없앤다.
         """
         data = data or {}
         session_id = data.get("session_id")
@@ -395,6 +400,8 @@ def register_session_live_namespace(sio):
         if not session_id or not feature:
             return
         participant_id = data.get("participant_id")
+        stream_id = data.get("stream_id")
+        sequence = data.get("sequence")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
 
@@ -405,7 +412,35 @@ def register_session_live_namespace(sio):
         except Exception:
             # 비참가자/미식별/대리 업로드/미동의 등 저장 실패 시 브로드캐스트하지 않는다
             logger.warning("[WS /session-live] feature 저장 실패 (sid=%s, session=%s)", sid, session_id)
+            # 저장 실패 ACK — 클라이언트가 REST 폴백을 유지하게 한다.
+            await sio.emit(
+                "feature_ack",
+                {
+                    "session_id": str(session_id),
+                    "stream_id": stream_id,
+                    "sequence": sequence,
+                    "saved": 0,
+                },
+                to=sid,
+                namespace=_NAMESPACE,
+            )
             return
+
+        # SDD-108: 저장 성공 ACK — 발신자(참가자)에게 WS 저장 확정을 실시간으로 알린다.
+        await sio.emit(
+            "feature_ack",
+            {
+                "session_id": str(session_id),
+                "stream_id": stream_id,
+                "sequence": sequence,
+                "participant_id": resolved_participant_id,
+                "second_offset": feature_out.get("second_offset"),
+                "feature": feature_out,
+                "saved": saved,
+            },
+            to=sid,
+            namespace=_NAMESPACE,
+        )
 
         # SDD-026: 전체 참가자 EEG 는 호스트 전체 수신 룸으로만 브로드캐스트한다.
         # 게스트는 이 룸에 없으므로 타 참가자 EEG 가 노출되지 않는다(게스트 간 비노출).
