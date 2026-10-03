@@ -10,7 +10,7 @@ null 보존 원칙: 산출 불가한 feature 는 NULL 로 저장하며 0 으로 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Float, Integer, String, DateTime, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import Float, Integer, String, DateTime, ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,15 @@ class EEGFeatureWindow(Base):
         Index(
             "ix_eeg_feature_window_batch_key",
             "session_id", "participant_id", "window_index",
+        ),
+        # SDD-109: play_group_id NULL(레거시·FE 미전송) 행은 위 유니크 제약이 NULL != NULL 로
+        # 무효화되므로, NULL 세그먼트 전용 부분 유니크 인덱스로 동시 저장 중복을 DB 레벨에서 차단한다.
+        Index(
+            "uq_eeg_feature_window_null_pg",
+            "session_id", "participant_id", "window_index",
+            unique=True,
+            postgresql_where=text("play_group_id IS NULL"),
+            sqlite_where=text("play_group_id IS NULL"),
         ),
     )
 
