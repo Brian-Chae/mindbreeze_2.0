@@ -179,6 +179,9 @@ export interface SessionLiveMetric {
   participant_id: string;
   user_id?: string | null;
   display_name: string;
+  gender?: string | null;
+  birth_date?: string | null;
+  concerns?: string[];
   is_guest: boolean;
   band_connected: boolean;
   /** 접촉(LeadOff) — SQI와 분리. unknown을 ok로 표시하지 않음 */

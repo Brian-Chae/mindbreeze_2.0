@@ -1,0 +1,138 @@
+[
+  {
+    "width": 1280,
+    "layout": {
+      "columns": "300px 928px",
+      "valueSize": "40px",
+      "viewport": 1280,
+      "document": 1280,
+      "cards": [
+        {
+          "x": 336,
+          "y": 416.1875,
+          "width": 174,
+          "height": 152
+        },
+        {
+          "x": 518,
+          "y": 416.1875,
+          "width": 174,
+          "height": 152
+        },
+        {
+          "x": 700,
+          "y": 416.1875,
+          "width": 174,
+          "height": 152
+        },
+        {
+          "x": 882,
+          "y": 416.1875,
+          "width": 174,
+          "height": 152
+        },
+        {
+          "x": 1064,
+          "y": 416.1875,
+          "width": 174,
+          "height": 152
+        },
+        {
+          "x": 336,
+          "y": 576.1875,
+          "width": 174,
+          "height": 152
+        }
+      ],
+      "group": {
+        "x": 336,
+        "y": 92,
+        "width": 928,
+        "height": 200,
+        "top": 92,
+        "right": 1264,
+        "bottom": 292,
+        "left": 336
+      }
+    },
+    "detail": {
+      "x": 764,
+      "y": 150.1875,
+      "width": 500,
+      "height": 578
+    },
+    "detailContent": {
+      "height": 576,
+      "content": 576
+    },
+    "errors": []
+  },
+  {
+    "width": 390,
+    "layout": {
+      "columns": "148px 218px",
+      "valueSize": "28px",
+      "viewport": 390,
+      "document": 390,
+      "cards": [
+        {
+          "x": 9,
+          "y": 530.5625,
+          "width": 183,
+          "height": 96
+        },
+        {
+          "x": 198,
+          "y": 530.5625,
+          "width": 183,
+          "height": 96
+        },
+        {
+          "x": 9,
+          "y": 632.5625,
+          "width": 183,
+          "height": 96
+        },
+        {
+          "x": 198,
+          "y": 632.5625,
+          "width": 183,
+          "height": 96
+        },
+        {
+          "x": 9,
+          "y": 734.5625,
+          "width": 183,
+          "height": 96
+        },
+        {
+          "x": 198,
+          "y": 734.5625,
+          "width": 183,
+          "height": 96
+        }
+      ],
+      "group": {
+        "x": 163,
+        "y": 90,
+        "width": 218,
+        "height": 294,
+        "top": 90,
+        "right": 381,
+        "bottom": 384,
+        "left": 163
+      }
+    },
+    "detail": {
+      "x": 9,
+      "y": 140.5625,
+      "width": 372,
+      "height": 690
+    },
+    "detailContent": {
+      "height": 688,
+      "content": 688
+    },
+    "errors": []
+  }
+]
