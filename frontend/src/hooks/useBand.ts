@@ -87,6 +87,12 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
 const FEATURE_FLUSH_MS = 5000;
 /** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
 const RETRANSMIT_BATCH_MAX = 60;
+/** SDD-113: 세션 경과시간 기반 window_index 영속 base 키 */
+const EEG_OFFSET_BASE_KEY = 'mindbreeze:eeg-offset-base:';
+
+function eegOffsetBaseKey(sessionId: string, participantId: string | null): string {
+  return `${EEG_OFFSET_BASE_KEY}${sessionId}:${participantId ?? 'anon'}`;
+}
 const MOCK_TICK_MS = 1000;
 const CHART_MAX_POINTS = 60;
 /** 종료 drain 최대 대기 */
@@ -330,6 +336,8 @@ export function useBand({
 
   const streamRef = useRef<StreamProcessor | null>(null);
   const secondOffsetRef = useRef(0);
+  /** SDD-113: 경과시간 base(첫 샘플 wall-clock) — remount에도 유지 */
+  const baseOffsetRef = useRef<number | null>(null);
   const streamIdRef = useRef<string>('');
   const cursorReadyRef = useRef(false);
   const collectingRef = useRef(false);
@@ -541,7 +549,18 @@ export function useBand({
       const signal01 = sqi == null ? null : toApiSignalQuality(sqi);
 
       if (!observation && sessionId && streamIdRef.current && cursorReadyRef.current) {
-        const offset = secondOffsetRef.current++;
+        // SDD-113: 세션 경과시간 기반 window_index — remount 시 0으로 재시작해
+        // 이전 구간과 window_index가 충돌(서버 멱등 폐기)하던 것을 방지.
+        if (baseOffsetRef.current == null) {
+          const key = eegOffsetBaseKey(sessionId, participantIdRef.current);
+          const stored = Number(localStorage.getItem(key));
+          const base = Number.isFinite(stored) && stored > 0 ? stored : Date.now();
+          localStorage.setItem(key, String(base));
+          baseOffsetRef.current = base;
+        }
+        const elapsedOffset = Math.max(0, Math.floor((Date.now() - baseOffsetRef.current) / 1000));
+        const offset = Math.max(elapsedOffset, secondOffsetRef.current);
+        secondOffsetRef.current = offset + 1;
         const feature = metricsToFeature(metrics, offset, powers, sqi);
 
         // 전송 전 IndexedDB 큐 적재 (emit 성공 ≠ 저장 성공)
