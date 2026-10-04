@@ -230,6 +230,7 @@ def test_16_리포트_EEG는_started_ended_구간만_집계(client):
         for i in range(5):
             db.add(EEGFeatureWindow(
                 session_id=s.id, participant_id=pid, window_index=100 + i,
+                device_timestamp_ms=1000.0 + i * 1000.0,
                 quality="valid", relaxation_index=0.5, created_at=during,
             ))
         db.commit()
@@ -244,9 +245,9 @@ def test_16_리포트_EEG는_started_ended_구간만_집계(client):
         block = _build_eeg_content(
             s.id, db, pid, started_at=s.started_at, ended_at=s.ended_at
         )
-        # 진행 중 5건만 집계 — 타임라인 t 는 진행 중 window_index(100~104)만 포함
+        # 진행 중 5건만 집계 — 타임라인 t 는 device_timestamp_ms 기준 상대 초 (SDD-114)
         ts = [p["t"] for p in block["timeline"]]
-        assert ts == [100, 101, 102, 103, 104]
+        assert ts == [0.0, 1.0, 2.0, 3.0, 4.0]
         # 경계 미전달(레거시) 시 전체 8건 유지 — 하위 호환
         legacy = _build_eeg_content(s.id, db, pid)
         assert len(legacy["timeline"]) == 8

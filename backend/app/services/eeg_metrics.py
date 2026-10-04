@@ -233,6 +233,53 @@ def weighted_total(scores: dict[str, Optional[float]],
 
 
 # ─────────────────────────────────────────────────────────────
+# per-window 정규화 (SDD-114) — 타임라인 표시용 0~100 점수
+#   compute_session_metrics 가 세션 대표값에 쓰는 매핑(어떤 score_* 함수 +
+#   어떤 코호트 상수)을 그대로 읽어 단일 윈도우 값에 적용한다. 세션 집계가
+#   아니라 윈도우 1개가 입력이라는 점만 다르다.
+#   ★ null 입력 → null (0 치환 금지). 결과는 score_* 가 0~100 으로 clamp.
+# ─────────────────────────────────────────────────────────────
+def normalize_focus(
+    focus_index, constants: Optional[NormalizationConstants] = None,
+) -> Optional[float]:
+    """집중 지수 → 0~100 (compute_session_metrics 의 focus_level_score 와 동일 매핑)."""
+    c = constants or get_constants()
+    fi = c.index("focusIndex")
+    return _round(score_trapezoid(
+        focus_index, fi.get("p5"), fi.get("p25"), fi.get("p75"), fi.get("p95")))
+
+
+def normalize_relaxation(
+    relaxation_index, constants: Optional[NormalizationConstants] = None,
+) -> Optional[float]:
+    """이완 지수 → 0~100 (relaxation_score 와 동일 매핑)."""
+    c = constants or get_constants()
+    ri = c.index("relaxationIndex")
+    return _round(score_relaxation(
+        relaxation_index, ri.get("p10"), ri.get("p60"), ri.get("p95")))
+
+
+def normalize_stress(
+    stress_index, constants: Optional[NormalizationConstants] = None,
+) -> Optional[float]:
+    """스트레스 지수 → 0~100 (stress_score 와 동일 매핑, 낮을수록 좋음 → 역선형)."""
+    c = constants or get_constants()
+    si = c.index("stressIndex")
+    return _round(score_inverse_linear(
+        stress_index, si.get("p5"), si.get("p95")))
+
+
+def normalize_emotional_stability(
+    emotional_stability, constants: Optional[NormalizationConstants] = None,
+) -> Optional[float]:
+    """감정안정도 → 0~100 (emotional_stability_score 와 동일 매핑)."""
+    c = constants or get_constants()
+    es = c.index("emotionalStability")
+    return _round(score_linear(
+        emotional_stability, es.get("p5"), es.get("p95")))
+
+
+# ─────────────────────────────────────────────────────────────
 # 세션 지표 산출 (§A2 + §A4.4)
 # ─────────────────────────────────────────────────────────────
 class SessionMetrics:

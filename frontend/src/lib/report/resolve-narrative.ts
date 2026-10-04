@@ -43,6 +43,8 @@ export interface TimelineLikePoint {
   concentration?: number | null;
   relaxation?: number | null;
   stress?: number | null;
+  /** 감정안정도 — 백엔드 0~100 정규화값 (stress 역산 프록시 제거, SDD-114) */
+  emotional_stability?: number | null;
   heart_rate?: number | null;
   respiratory_rate?: number | null;
   sdnn?: number | null;
@@ -131,7 +133,7 @@ function halfSeries(
 
 /**
  * 타임라인에서 전반/후반 평균 유도.
- * emotional_stability 시계열이 없으면 stress 역수(100−)로 근사.
+ * SDD-114: emotional_stability 는 백엔드 0~100 정규화값을 직접 사용(stress 역산 제거).
  */
 export function deriveChangesFromTimeline(
   timeline: TimelineLikePoint[],
@@ -147,14 +149,7 @@ export function deriveChangesFromTimeline(
     },
     { id: 'focus', half: halfSeries(timeline, (p) => p.concentration) },
     { id: 'relaxation', half: halfSeries(timeline, (p) => p.relaxation) },
-    {
-      id: 'emotional_stability',
-      half: halfSeries(timeline, (p) => {
-        if (p.stress === null || p.stress === undefined) return null;
-        // stress 가 0~1 이면 역수, 0~100 이면 100−
-        return p.stress <= 1 ? 1 - p.stress : 100 - p.stress;
-      }),
-    },
+    { id: 'emotional_stability', half: halfSeries(timeline, (p) => p.emotional_stability) },
   ];
 
   const changes: MetricChangeInput[] = [];

@@ -83,6 +83,8 @@ export interface EegTimelinePoint {
   concentration: number | null;
   relaxation: number | null;
   stress: number | null;
+  /** 감정안정도 — 백엔드 0~100 정규화값 직접 수신(stress 역산 프록시 제거, SDD-114) */
+  emotional_stability?: number | null;
   /** 몸 지표(선택) — 서사 변화량 유도용 */
   heart_rate?: number | null;
   respiratory_rate?: number | null;
@@ -233,15 +235,6 @@ function asQualityStatus(value: unknown): EegQualityStatus | null {
     : null;
 }
 
-/** 0~1 비율이면 0~100으로, 이미 퍼센트면 그대로 */
-function toDisplayScale(value: number | null): number | null {
-  if (value === null) return null;
-  if (value >= 0 && value <= 1) {
-    return Math.round(value * 1000) / 10;
-  }
-  return value;
-}
-
 function emptyMetrics(): Record<EegMetricKey, number | null> {
   return {
     focus_index_stability_score: null,
@@ -285,9 +278,11 @@ function parseTimeline(raw: unknown): EegTimelinePoint[] {
     if (x === null) continue;
     points.push({
       min: x,
-      concentration: toDisplayScale(asNullableNumber(item.concentration)),
-      relaxation: toDisplayScale(asNullableNumber(item.relaxation)),
-      stress: toDisplayScale(asNullableNumber(item.stress)),
+      // SDD-114: 백엔드가 0~100 정규화를 보장 — 프론트 재스케일 없이 그대로 사용.
+      concentration: asNullableNumber(item.concentration),
+      relaxation: asNullableNumber(item.relaxation),
+      stress: asNullableNumber(item.stress),
+      emotional_stability: asNullableNumber(item.emotional_stability),
       heart_rate: asNullableNumber(item.heart_rate),
       respiratory_rate: asNullableNumber(item.respiratory_rate),
       sdnn: asNullableNumber(item.sdnn),

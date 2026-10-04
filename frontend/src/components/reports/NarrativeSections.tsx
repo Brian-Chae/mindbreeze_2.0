@@ -10,17 +10,39 @@ const BODY_RANGES: Partial<Record<MetricId, readonly [number, number, string]>> 
 };
 
 function metricValue(point: TimelineLikePoint, id: MetricId): number | null {
+  // SDD-114: emotional_stability 는 백엔드 0~100 정규화값을 직접 사용(stress 역산 제거).
   const value = id === 'hrv' ? point.sdnn ?? point.hrv
     : id === 'focus' ? point.concentration
-    : id === 'emotional_stability' ? point.stress
+    : id === 'emotional_stability' ? point.emotional_stability
     : point[id];
   if (value == null || !Number.isFinite(value)) return null;
-  // 기존 서사 계산과 동일한 스트레스 역방향 근사이며 직접 감정 측정값이 아니다.
-  return id === 'emotional_stability' ? (value <= 1 ? 1 : 100) - value : value;
+  return value;
 }
 
 function timeLabel(minutes: number): string {
   return `${Number(minutes.toFixed(1))}분`;
+}
+
+/**
+ * 1초 윈도우의 잡음을 눌러 전체 추이를 보여주는 중심 이동평균.
+ * 결측(null)은 유지하고 평균에서 건너뛰어 결측 구간을 잇지 않는다.
+ * half = 윈도우의 한쪽 반경(초). 짧은 세션도 최소 2초 반경을 유지한다.
+ */
+function smoothSeries(values: (number | null)[], half: number): (number | null)[] {
+  const out: (number | null)[] = new Array(values.length);
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] === null) { out[i] = null; continue; }
+    let sum = 0;
+    let count = 0;
+    const start = Math.max(0, i - half);
+    const end = Math.min(values.length - 1, i + half);
+    for (let j = start; j <= end; j++) {
+      const v = values[j];
+      if (v !== null) { sum += v; count += 1; }
+    }
+    out[i] = count > 0 ? sum / count : null;
+  }
+  return out;
 }
 
 function TrendChart({ metric, timeline, duration }: {
@@ -32,6 +54,9 @@ function TrendChart({ metric, timeline, duration }: {
   if (valid.length < 2 || duration <= 0) {
     return <p className="chart-empty">추이를 분석할 데이터가 부족해요.</p>;
   }
+  // 1초 윈도우의 잡음을 눌러 전체 추이를 보여준다(대략 전체 길이의 5% 반경).
+  const half = Math.max(2, Math.round(valid.length * 0.05));
+  const smoothed = smoothSeries(values, half);
   const range = BODY_RANGES[metric.id];
   const low = Math.min(range?.[0] ?? Math.min(...valid), ...valid);
   const high = Math.max(range?.[1] ?? Math.max(...valid), ...valid);
@@ -39,7 +64,7 @@ function TrendChart({ metric, timeline, duration }: {
   const segments: string[][] = [[]];
   let endpoint: { x: number; y: number } | null = null;
   timeline.forEach((point, index) => {
-    const value = values[index];
+    const value = smoothed[index];
     if (value === null) { segments.push([]); return; }
     const x = 16 + (point.min! / duration) * 284;
     const y = high === low ? 88 : 158 - ((value - low) / span) * 140;

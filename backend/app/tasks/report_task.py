@@ -168,13 +168,30 @@ def _build_eeg_content(
 
     # 7지표 — null 보존 (0 치환 금지)
     metrics = {k: getattr(m, k) for k in eeg_metrics.DEFAULT_SCORE_WEIGHTS}
-    # 마음·몸 지표 타임라인 (t=초 인덱스, 원천 feature 그대로 — 스케일링은 프론트 담당)
+    # 마음·몸 지표 타임라인 (SDD-114)
+    #   X축 t: device_timestamp_ms 기준 상대 초. window_index(≈10Hz 스트림 순번
+    #   카운터, 1당 ~100.9ms)를 초로 오해해 시간축이 ~10배 과장되던 버그를 제거한다.
+    #   디바이스 타임스탬프가 없으면 t=None (프론트가 레거시 축으로 폴백).
+    #   마음 지표(집중/이완/스트레스/감정안정도)는 원천 스케일이 제각각(0~100·0~1·
+    #   0.7~4853·0.0002~24.8)이라, compute_session_metrics 와 동일한 매핑으로 윈도우마다
+    #   0~100 정규화해 내려준다(프론트의 반쪽 정규화·stress 역산 프록시 제거).
+    base_ts = min(
+        (w.device_timestamp_ms for w in windows if w.device_timestamp_ms is not None),
+        default=None,
+    )
     timeline = [
         {
-            "t": w.window_index,
-            "concentration": w.focus_index,
-            "relaxation": w.relaxation_index,
-            "stress": w.stress_index,
+            "t": (
+                (w.device_timestamp_ms - base_ts) / 1000.0
+                if (base_ts is not None and w.device_timestamp_ms is not None)
+                else None
+            ),
+            "concentration": eeg_metrics.normalize_focus(w.focus_index),
+            "relaxation": eeg_metrics.normalize_relaxation(w.relaxation_index),
+            "stress": eeg_metrics.normalize_stress(w.stress_index),
+            "emotional_stability": eeg_metrics.normalize_emotional_stability(
+                w.emotional_stability
+            ),
             "heart_rate": w.heart_rate,
             "respiratory_rate": w.respiratory_rate,
             "sdnn": w.sdnn,
