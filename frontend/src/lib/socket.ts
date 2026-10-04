@@ -298,7 +298,7 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
   sessionLiveTokenRefreshAttempted = false;
   sessionLiveSocket = io(`${SOCKET_URL}/session-live`, {
     path: '/socket.io',
-    transports: ['websocket', 'polling'],
+    transports: ['websocket'],
     auth: token ? { token } : {},
     autoConnect: true,
     // 안정적인 연결 유지: 자동 재연결을 명시적으로 켜고, 빠르게 시작해 지수 백오프로 완화한다.

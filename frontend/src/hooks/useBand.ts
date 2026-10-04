@@ -85,6 +85,8 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
 }
 
 const FEATURE_FLUSH_MS = 5000;
+/** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
+const RETRANSMIT_BATCH_MAX = 60;
 const MOCK_TICK_MS = 1000;
 const CHART_MAX_POINTS = 60;
 /** 종료 drain 최대 대기 */
@@ -343,6 +345,8 @@ export function useBand({
   const mountedRef = useRef(true);
   const wsConnectedRef = useRef(false);
   const drainingRef = useRef(false);
+  /** SDD-112: 재전송 in-flight 가드 — 5초 타이머·재연결 중복 호출 방지 */
+  const retransmitInFlightRef = useRef(false);
   const observationOnlyRef = useRef(observationOnly);
   observationOnlyRef.current = observationOnly;
   const participantIdRef = useRef(participantId);
@@ -409,13 +413,17 @@ export function useBand({
    * WS 1초 실시간 emit과 이중 전송해도 안전하다.
    */
   const retransmitPending = useCallback(async (): Promise<void> => {
-    if (!sessionId || drainingRef.current) return;
+    // SDD-112: in-flight 가드 — 5초 타이머·재연결 중복 호출이 동시 재전송하지 않게 한다.
+    if (!sessionId || drainingRef.current || retransmitInFlightRef.current) return;
+    retransmitInFlightRef.current = true;
     try {
       const pending = await listPendingFeatures(sessionId, participantIdRef.current);
       if (mountedRef.current) setPendingCount(pending.length);
       if (pending.length === 0) return;
 
-      const batch = pending.map((p) => p.feature);
+      // SDD-112: 배치 상한 — 거대 큐를 한 번에 보내지 않고 5초 주기로 나눠 drain한다.
+      const chunk = pending.slice(0, RETRANSMIT_BATCH_MAX);
+      const batch = chunk.map((p) => p.feature);
       if (!wsConnectedRef.current) setUploadStatus('delayed');
       await postSessionFeatures(
         sessionId,
@@ -425,7 +433,7 @@ export function useBand({
         },
         { skipAuth },
       );
-      for (const item of pending) {
+      for (const item of chunk) {
         await removeAckedFeature(
           {
             stream_id: item.streamId,
@@ -444,6 +452,8 @@ export function useBand({
         setUploadStatus('failed');
         setError(err instanceof Error ? err.message : 'EEG feature 업로드 실패');
       }
+    } finally {
+      retransmitInFlightRef.current = false;
     }
   }, [refreshPendingCount, sessionId, skipAuth]);
 
