@@ -32,6 +32,12 @@ import {
   type QueuedFeatureItem,
 } from '../lib/session-live/feature-queue';
 import {
+  encodeRawChunk,
+  RAW_SAMPLES_PER_CHUNK,
+  type RawEegSample,
+} from '../lib/session-live/raw-encoder';
+import { useEegRawUpload } from './useEegRawUpload';
+import {
   deviceStatusFromLeadOff,
   normalizeSignalQuality01,
   signalQualityLevel,
@@ -359,6 +365,57 @@ export function useBand({
   observationOnlyRef.current = observationOnly;
   const participantIdRef = useRef(participantId);
   participantIdRef.current = participantId;
+
+  // SDD-117: raw EEG → S3 업로드 배선.
+  // 샘플을 1초(250샘플) 청크로 버퍼링 → interleaved float32 인코딩 → 영속 큐 → presign/S3/ack.
+  const rawUpload = useEegRawUpload({
+    sessionId,
+    participantId,
+    enabled: !observationOnly && Boolean(sessionId && participantId),
+    skipAuth,
+  });
+  const rawEnqueueRef = useRef(rawUpload.enqueueChunk);
+  rawEnqueueRef.current = rawUpload.enqueueChunk;
+  const rawDrainRef = useRef(rawUpload.drain);
+  rawDrainRef.current = rawUpload.drain;
+
+  const rawSamplesRef = useRef<RawEegSample[]>([]);
+  const rawChunkIndexRef = useRef(0);
+  const rawChunkStartMsRef = useRef<number | null>(null);
+
+  const flushRawChunk = useCallback(() => {
+    const samples = rawSamplesRef.current;
+    if (samples.length === 0 || !streamIdRef.current) return;
+    const startMs = rawChunkStartMsRef.current ?? Date.now();
+    const endMs = Date.now();
+    const payload = encodeRawChunk(samples);
+    void rawEnqueueRef
+      .current({
+        streamId: streamIdRef.current,
+        chunkIndex: rawChunkIndexRef.current,
+        startedAt: new Date(startMs).toISOString(),
+        endedAt: new Date(endMs).toISOString(),
+        payload,
+      })
+      .catch((err) => logger.warn('raw chunk 적재 실패', err));
+    rawChunkIndexRef.current += 1;
+    rawSamplesRef.current = [];
+    rawChunkStartMsRef.current = null;
+  }, []);
+
+  const handleRawEegData = useCallback(
+    (data: { fp1: number; fp2: number }[]) => {
+      if (observationOnlyRef.current || !streamIdRef.current) return;
+      if (rawChunkStartMsRef.current == null) rawChunkStartMsRef.current = Date.now();
+      for (const s of data) {
+        rawSamplesRef.current.push({ fp1: s.fp1, fp2: s.fp2 });
+      }
+      if (rawSamplesRef.current.length >= RAW_SAMPLES_PER_CHUNK) {
+        flushRawChunk();
+      }
+    },
+    [flushRawChunk],
+  );
 
   const eegWaveformRef = useRef<BandEegWaveform>({ fp1: [], fp2: [] });
   const ppgWaveformRef = useRef<BandPpgWaveform>({ red: [], ir: [] });
@@ -881,7 +938,9 @@ export function useBand({
     }
 
     if (!observationOnlyRef.current) {
+      flushRawChunk();
       await drainPendingQueue();
+      await rawDrainRef.current(15_000);
     }
 
     if (mountedRef.current) {
@@ -991,6 +1050,7 @@ export function useBand({
           if (mountedRef.current) setError(err.message);
         },
         onStoreUpdate: handleStoreUpdate,
+        onEEGData: handleRawEegData,
       });
       stream.setStoreCallbacks({
         updateBatteryData: (data) => {

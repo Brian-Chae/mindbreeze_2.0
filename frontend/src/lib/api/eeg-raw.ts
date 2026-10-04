@@ -1,46 +1,67 @@
 /**
- * SDD-027 — EEG raw chunk API (presigned PUT + ack)
+ * SDD-117 — EEG raw chunk API (presigned PUT + ack)
  *
- * 흐름: 로컬 큐 적재 → presign → S3 PUT → ack → 큐 삭제
- * 게스트는 skipAuth + participant_id 로 소유 검증(SDD-026 재사용 전제).
+ * BE 계약(schemas/eeg.py, api/v1/session.py)과 정렬:
+ * - presign: POST /sessions/{id}/eeg-raw/presign  body={participant_id, play_group_id, chunks:[…]}
+ * - ack:     POST /sessions/{id}/eeg-raw/ack       body={participant_id, play_group_id, chunks:[{chunk_id, checksum, size_bytes}]}
+ * - S3 PUT:  presigned URL에 raw 바이트(application/octet-stream)
  */
 
 import { apiClient } from './client';
 
-/** presign 요청 — manifest 메타 */
-export interface EegRawPresignRequest {
-  participant_id: string | null;
+/** presign 요청 — raw 재해석 계약 메타 1건 */
+export interface EegRawChunkMeta {
   stream_id: string;
   chunk_index: number;
-  started_at: string;
-  ended_at: string;
+  start_ms: number | null;
+  end_ms: number | null;
   sample_rate: number;
-  channels: string[];
+  channel_count: number;
   unit: string;
   schema_version: string;
-  checksum: string;
-  byte_size: number;
-  content_type?: string;
+  checksum: string | null;
+  size_bytes: number | null;
+  content_type: string;
+}
+
+export interface EegRawPresignRequest {
+  participant_id: string | null;
+  play_group_id?: string | null;
+  chunks: EegRawChunkMeta[];
+}
+
+export interface EegRawPresignItem {
+  chunk_id: string;
+  stream_id: string;
+  chunk_index: number;
+  object_key: string;
+  upload_url: string;
+  upload_status: string;
 }
 
 export interface EegRawPresignResponse {
+  session_id: string;
+  participant_id: string | null;
+  chunks: EegRawPresignItem[];
+}
+
+export interface EegRawAckItem {
   chunk_id: string;
-  upload_url: string;
-  object_key: string;
-  /** S3 PUT에 포함할 추가 헤더(있으면 그대로 전달) */
-  headers?: Record<string, string> | null;
-  expires_at?: string | null;
+  checksum: string | null;
+  size_bytes: number | null;
 }
 
 export interface EegRawAckRequest {
-  checksum: string;
-  byte_size: number;
-  participant_id?: string | null;
+  participant_id: string | null;
+  play_group_id?: string | null;
+  chunks: EegRawAckItem[];
 }
 
 export interface EegRawAckResponse {
-  chunk_id: string;
-  status: string;
+  session_id: string;
+  acked: number;
+  eeg_record_id: string | null;
+  file_count: number;
 }
 
 export const requestEegRawPresign = (
@@ -54,14 +75,13 @@ export const requestEegRawPresign = (
     { skipAuth: options?.skipAuth ?? false },
   );
 
-export const ackEegRawChunk = (
+export const ackEegRawChunks = (
   sessionId: string,
-  chunkId: string,
   body: EegRawAckRequest,
   options?: { skipAuth?: boolean },
 ): Promise<EegRawAckResponse> =>
   apiClient.post<EegRawAckResponse>(
-    `/sessions/${sessionId}/eeg-raw/${chunkId}/ack`,
+    `/sessions/${sessionId}/eeg-raw/ack`,
     body,
     { skipAuth: options?.skipAuth ?? false },
   );

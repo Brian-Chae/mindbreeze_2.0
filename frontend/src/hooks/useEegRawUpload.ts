@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ackEegRawChunk,
+  ackEegRawChunks,
   putEegRawToPresignedUrl,
   requestEegRawPresign,
 } from '../lib/api/eeg-raw';
@@ -130,34 +130,43 @@ export function useEegRawUpload(
           item.sessionId,
           {
             participant_id: item.participantId,
-            stream_id: item.streamId,
-            chunk_index: item.chunkIndex,
-            started_at: item.startedAt,
-            ended_at: item.endedAt,
-            sample_rate: item.sampleRate,
-            channels: item.channels,
-            unit: item.unit,
-            schema_version: item.schemaVersion,
-            checksum: item.checksum,
-            byte_size: item.byteSize,
-            content_type: item.contentType,
+            chunks: [
+              {
+                stream_id: item.streamId,
+                chunk_index: item.chunkIndex,
+                start_ms: item.startedAt ? new Date(item.startedAt).getTime() : null,
+                end_ms: item.endedAt ? new Date(item.endedAt).getTime() : null,
+                sample_rate: item.sampleRate,
+                channel_count: item.channels.length,
+                unit: item.unit,
+                schema_version: item.schemaVersion,
+                checksum: item.checksum,
+                size_bytes: item.byteSize,
+                content_type: item.contentType,
+              },
+            ],
           },
           { skipAuth: skipAuthRef.current },
         );
 
-        await putEegRawToPresignedUrl(
-          presign.upload_url,
-          item.payload,
-          presign.headers,
-        );
+        const chunk = presign.chunks[0];
+        if (!chunk) {
+          throw new Error('raw presign 응답에 chunk가 없습니다');
+        }
 
-        await ackEegRawChunk(
+        await putEegRawToPresignedUrl(chunk.upload_url, item.payload);
+
+        await ackEegRawChunks(
           item.sessionId,
-          presign.chunk_id,
           {
-            checksum: item.checksum,
-            byte_size: item.byteSize,
             participant_id: item.participantId,
+            chunks: [
+              {
+                chunk_id: chunk.chunk_id,
+                checksum: item.checksum,
+                size_bytes: item.byteSize,
+              },
+            ],
           },
           { skipAuth: skipAuthRef.current },
         );
