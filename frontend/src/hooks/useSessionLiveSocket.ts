@@ -373,7 +373,9 @@ export function useSessionLiveSocket({
       const socket = socketRef.current;
       if (!socket || !sessionId) return 'failed';
       if (joinDeniedRef.current) return 'failed';
-      const signalParticipantId = signalParticipantRef.current;
+      // joined 이벤트를 아직 못 받았어도 participantId prop(참가자 id)이 있으면 전송한다.
+      // useBand 와 동일 소켓을 공유해 join dedup 으로 joined 를 놓치는 경우에도 신호가 전달되게 한다.
+      const signalParticipantId = signalParticipantRef.current || participantId;
       if (socket.connected && signalParticipantId) {
         emitClassSignal(socket, {
           session_id: sessionId,
@@ -388,7 +390,7 @@ export function useSessionLiveSocket({
       }
       return 'queued';
     },
-    [sessionId],
+    [sessionId, participantId],
   );
 
   /**
