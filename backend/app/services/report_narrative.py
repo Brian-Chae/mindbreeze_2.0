@@ -145,3 +145,34 @@ def seed_narrative_cache(db: DBSession, patterns: list[str] | None = None) -> in
         db.flush()
         inserted += 1
     return inserted
+
+
+# ── LLM 지표 문장 검수(SDD-068 확장) ──────────────────────────────
+# Gemini 가 생성한 지표별 문장이 일반 사용자 눈높이를 벗어나거나
+# 방향과 모순되는 표현을 담으면 규칙 문장으로 폴백한다.
+FORBIDDEN_TERMS = (
+    "SDNN", "RMSSD", "PPG", "LF/HF", "LFHF",
+    "정규화", "표준화", "시그모이드", "백분위",
+    "스코어", "점수", "원천", "원시", "0~100",
+)
+# direction=down(하락) 지표를 회복·개선으로 잘못 쓰는 고신호 표현
+RECOVERY_WORDS = ("몰입을 되찾", "안정을 찾", "편안함을 찾", "회복", "개선")
+
+MAX_METRIC_SENTENCE_LEN = 60
+
+
+def validate_metric_sentence(sentence: str, direction: str | None) -> bool:
+    """LLM 지표 문장 한 건 검수. 금지 용어·길이·방향 모순이면 False(규칙 폴백)."""
+    if direction not in ("up", "down", "stable"):
+        return False
+    if not isinstance(sentence, str):
+        return False
+    s = sentence.strip()
+    if not s or len(s) > MAX_METRIC_SENTENCE_LEN:
+        return False
+    upper = s.upper()
+    if any(term.upper() in upper for term in FORBIDDEN_TERMS):
+        return False
+    if direction == "down" and any(w in s for w in RECOVERY_WORDS):
+        return False
+    return True

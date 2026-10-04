@@ -88,6 +88,26 @@ test('저장된 LLM 서사도 쉽게 표시하며 원본과 결측은 보존한�
   assert.deepEqual(content, original);
 });
 
+test('LLM 지표 문장이 있으면 규칙 문장을 덮어쓴다', () => {
+  const ids = ['respiratory_rate', 'heart_rate', 'hrv', 'focus', 'relaxation', 'emotional_stability'];
+  const changes = ids.map((id) => ({ id, early: 50, late: 60 }));
+  const content = {
+    eeg: {
+      status: 'valid',
+      changes,
+      narrative: {
+        journey: '여정',
+        metrics: { focus: '후반부에 집중이 깊어졌어요', respiratory_rate: '숨이 점점 빨라졌어요' },
+      },
+    },
+  };
+  const view = adaptReportContent(content).displayNarrative;
+  const html = renderToStaticMarkup(React.createElement(NarrativeSections, { narrative: view }));
+  assert.match(html, /후반부에 집중이 깊어졌어요/);  // LLM 문장(focus)
+  assert.match(html, /숨이 점점 빨라졌어요/);  // LLM 문장(호흡수)
+  assert.match(html, /심박이 빨라졌어요/);  // LLM 미제공 → 규칙 문장(심박수)
+});
+
 test('웹 보조 카드의 집중 안정과 정서 안정 정의는 서사 근사와 구별한다', () => {
   const EegMetricsGrid = require('../src/components/reports/EegMetricsGrid.tsx').default;
   const eeg = adaptReportContent(raw).eeg;

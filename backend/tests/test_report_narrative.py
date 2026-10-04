@@ -219,6 +219,45 @@ def test_gemini_success(monkeypatch, summary):
     assert "score" not in prompt
 
 
+def test_validate_metric_sentence_blocks_jargon_and_contradiction():
+    from app.services.report_narrative import validate_metric_sentence
+
+    # 정상 문장
+    assert validate_metric_sentence("후반부에 집중이 높아졌어요", "up") is True
+    assert validate_metric_sentence("후반부에 집중이 흔들렸어요", "down") is True
+    assert validate_metric_sentence("집중이 유지됐어요", "stable") is True
+    # 금지 용어(전문 약어·기술 용어)
+    assert validate_metric_sentence("SDNN 수치가 낮아졌어요", "down") is False
+    assert validate_metric_sentence("집중 점수가 하락했어요", "down") is False
+    # 방향 모순: 하락(down)인데 회복·개선으로 서술
+    assert validate_metric_sentence("후반부에 몰입을 되찾았습니다", "down") is False
+    assert validate_metric_sentence("후반부에 회복했어요", "down") is False
+    # 길이·방향·공백 검증
+    assert validate_metric_sentence("집" * 61, "up") is False
+    assert validate_metric_sentence("문장", "sideways") is False
+    assert validate_metric_sentence("   ", "up") is False
+
+
+def test_narrative_llm_validates_metric_sentences(monkeypatch, summary):
+    generated = {
+        "journey": "여정", "body": "몸", "mind": "마음", "closing": "마무리",
+        "metrics": {
+            "respiratory_rate": "호흡이 느려졌어요",
+            "heart_rate": "심박이 빨라졌어요",
+            "hrv": "심박변이가 늘었어요",
+            "focus": "SDNN 스코어가 올랐어요",  # 금지 용어 → 거부
+            "relaxation": "이완이 깊어졌어요",
+            "emotional_stability": "감정이 평온해졌어요",
+        },
+    }
+    monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(return_value=json.dumps(generated)))
+    result = summary_task._call_narrative_llm(summary)
+    assert result["journey"] == "여정"
+    assert result.get("metrics") is not None
+    assert result["metrics"]["respiratory_rate"] == "호흡이 느려졌어요"
+    assert "focus" not in result["metrics"]  # 금지 용어 문장은 제거돼 규칙 폴백을 남긴다
+
+
 @pytest.mark.parametrize("content", ['{}', '[]', 'null', '{"journey":5}', 'broken'])
 def test_bad_responses_fallback(monkeypatch, summary, content):
     monkeypatch.setattr(summary_task, "_call_gemini_text", Mock(return_value=content))

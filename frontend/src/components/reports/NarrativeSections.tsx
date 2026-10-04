@@ -75,6 +75,8 @@ function DualBarChart({ metric }: { metric: MetricNarrative }) {
   const w2 = Math.max(3, (late / max) * scale);
   const rowY1 = H / 2 - barH - gap / 2;
   const rowY2 = H / 2 + gap / 2;
+  // 전반 막대 끝을 기준선으로 삼아 후반 막대가 길어졌는지 짧아졌는지 한눈에 보이게 한다.
+  const baselineX = pad + labelW + w1;
   return <figure className="dual-bar">
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby={`${id}-title`}>
       <title id={`${id}-title`}>{`${metric.label} 전반 vs 후반 평균`}</title>
@@ -84,8 +86,9 @@ function DualBarChart({ metric }: { metric: MetricNarrative }) {
       <text x={pad} y={rowY2 + barH / 2} fontSize="10" fill="#6b6570" dominantBaseline="middle">후반</text>
       <rect x={pad + labelW} y={rowY2} width={w2} height={barH} rx="5" fill="#5F0080" />
       <text x={pad + labelW + w2 + 6} y={rowY2 + barH / 2} fontSize="11" fontWeight="700" fill="#5F0080" dominantBaseline="middle">{late}{unit}</text>
+      <line x1={baselineX} y1={rowY1 - 5} x2={baselineX} y2={rowY2 + barH + 5} stroke="#c9bcd8" strokeDasharray="3 4" strokeWidth="1" />
     </svg>
-    <figcaption>전반 vs 후반</figcaption>
+    <figcaption>전반 vs 후반 <span className={`bar-dir ${metric.direction}`}>{metric.arrow}</span></figcaption>
   </figure>;
 }
 
@@ -105,6 +108,13 @@ function TrendLineChart({ metric, timeline, duration }: {
   const low = Math.min(range?.[0] ?? Math.min(...valid), ...valid);
   const high = Math.max(range?.[1] ?? Math.max(...valid), ...valid);
   const span = high - low || 1;
+  // 몸 지표만 참고 범위 밴드를 그린다(마음 지표는 정규화 신호라 기준 범위가 없다).
+  let band: { y: number; height: number } | null = null;
+  if (range) {
+    const bandTop = 158 - ((range[1] - low) / span) * 140;
+    const bandBottom = 158 - ((range[0] - low) / span) * 140;
+    band = { y: bandTop, height: Math.max(0, bandBottom - bandTop) };
+  }
   const segments: string[][] = [[]];
   let endpoint: { x: number; y: number } | null = null;
   timeline.forEach((point, index) => {
@@ -124,6 +134,7 @@ function TrendLineChart({ metric, timeline, duration }: {
       <rect x="16" y="18" width="142" height="140" fill="#f3eff7" />
       <rect x="158" y="18" width="142" height="140" fill="#efe6f6" />
       <path d="M158 18V158" stroke="#c9bcd8" strokeDasharray="3 5" />
+      {band && <rect x="16" y={band.y} width="284" height={band.height} fill="#e0f5ee" opacity="0.55" />}
       {segments.filter((segment) => segment.length > 1).map((segment, i) => <polyline key={i} points={segment.join(' ')} fill="none" stroke="#5F0080" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />)}
       {lastPoint && <circle cx={lastPoint.x} cy={lastPoint.y} r="4" fill="#5F0080" stroke="white" strokeWidth="2" />}
       <g fill="#5A5A5A" fontSize="11">

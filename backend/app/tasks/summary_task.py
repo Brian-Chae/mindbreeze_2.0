@@ -97,9 +97,13 @@ def _call_narrative_llm(
 - 호흡수·심박수처럼 자연스러운 단위(회/분) 수치는 써도 좋지만, 집중·이완·감정안정도의 소수점 원천값은 쓰지 마세요.
 null은 측정/비교 불가이므로 안정, 개선, 0으로 해석하지 마세요.
 생체 지표로 감정, 질병, 자율신경 회복, 호흡 깊이, 치료 효과를 확정하지 마세요.
-용어는 일반 사용자 눈높이로 쓰세요: HRV는 "심박변이", emotional_stability는 "감정안정도"로 통일하고 SDNN·RMSSD·PPG 같은 전문 약어는 쓰지 마세요.
+용어는 일반 사용자 눈높이로 쓰세요: HRV는 "심박변이", emotional_stability는 "감정안정도"로 통일하고 SDNN·RMSSD·PPG·LF/HF 같은 전문 약어와 "정규화", "점수", "스코어", "원천", "원시" 같은 기술 용어는 쓰지 마세요.
 journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마무리)의
-네 키를 가진 JSON 객체만 반환하세요. 각 값은 비어 있지 않은 짧은 문자열입니다.
+네 키와 metrics(지표별 한 문장 설명) 키를 가진 JSON 객체만 반환하세요. 각 값은 비어 있지 않은 짧은 문자열입니다.
+metrics 는 "respiratory_rate", "heart_rate", "hrv", "focus", "relaxation", "emotional_stability"
+여섯 키를 가진 객체이며, 각 값은 해당 지표의 변화를 주어진 direction(up/down/stable)에 맞게 설명하는 60자 이내 문장입니다.
+direction 이 down(하락)인 지표를 "몰입을 되찾았다", "회복했다", "편안함을 찾았다"처럼 개선·회복으로 쓰면 안 됩니다.
+direction 이 up(상승)인 지표를 "흔들렸다", "산만해졌다"처럼 악화로 쓰면 안 됩니다.
 자료:
 """ + json.dumps(metrics_summary, ensure_ascii=False, allow_nan=False)
     try:
@@ -111,10 +115,31 @@ journey(종합 여정), body(몸의 변화), mind(마음의 변화), closing(마
             for key in keys
         ):
             raise ValueError("서사 JSON 계약 불일치")
-        return cache({key: parsed[key].strip() for key in keys}, "llm")
+        narrative = {key: parsed[key].strip() for key in keys}
+        # 지표별 문장 검수 — 금지 용어·길이·방향 모순은 걸러 규칙 문장 폴백을 남긴다.
+        metric_sentences = _validate_metric_sentences(metrics_summary, parsed.get("metrics"))
+        if metric_sentences:
+            narrative["metrics"] = metric_sentences
+        return cache(narrative, "llm")
     except Exception:  # 공급자 오류가 리포트 생성 자체를 실패시키지 않는다.
         logger.warning("[summary_task] 서사 생성 실패: 규칙 스텁 사용")
         return cache(fallback, "rule")
+
+
+def _validate_metric_sentences(metrics_summary: dict, raw: object) -> dict[str, str] | None:
+    """LLM metrics 객체 검수 — 방향·금지 용어·길이를 통과한 지표 문장만 반환한다."""
+    from app.services.report_narrative import validate_metric_sentence
+
+    if not isinstance(raw, dict):
+        return None
+    result: dict[str, str] = {}
+    for group in ("body", "mind"):
+        for key, metric in metrics_summary.get(group, {}).items():
+            sentence = raw.get(key)
+            direction = metric.get("direction")
+            if isinstance(sentence, str) and validate_metric_sentence(sentence, direction):
+                result[key] = sentence.strip()
+    return result or None
 
 
 def _call_gemini_summary(session_type: str, transcript: str | None) -> dict:

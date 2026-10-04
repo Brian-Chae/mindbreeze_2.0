@@ -22,6 +22,8 @@ export interface LlmNarrativePayload {
   closing?: string | null;
   /** 선택: 전반/후반 평균 (규칙 폴백·변화량 표시용) */
   changes?: MetricChangeInput[] | null;
+  /** 지표별 LLM 문장(id → 문장). 없으면 규칙 문장 폴백. */
+  metrics?: Record<string, string> | null;
 }
 
 export interface DisplayNarrative {
@@ -84,12 +86,27 @@ export function parseLlmNarrative(raw: unknown): LlmNarrativePayload | null {
   const mind = asString(raw.mind) ?? asString(raw.mind_text);
   const closing = asString(raw.closing) ?? asString(raw.closing_text);
   const changes = parseMetricChanges(raw.changes);
+  const metrics = parseMetricSentences(raw.metrics);
 
   if (!journey && !body && !mind && !closing && (!changes || changes.length === 0)) {
     return null;
   }
 
-  return { journey, body, mind, closing, changes };
+  return { journey, body, mind, closing, changes, metrics };
+}
+
+export function parseMetricSentences(raw: unknown): Record<string, string> | null {
+  if (!isRecord(raw)) return null;
+  const out: Record<string, string> = {};
+  let count = 0;
+  for (const id of ALL_IDS) {
+    const value = raw[id];
+    if (typeof value === 'string' && value.trim()) {
+      out[id] = value.trim();
+      count += 1;
+    }
+  }
+  return count > 0 ? out : null;
 }
 
 export function parseMetricChanges(raw: unknown): MetricChangeInput[] | null {
@@ -193,6 +210,18 @@ function emptyMetricsFromChanges(changes: MetricChangeInput[]): {
   return { body: built.body, mind: built.mind };
 }
 
+/** LLM 지표 문장(검수 통과분)이 있으면 규칙 문장을 덮어쓴다. */
+function applyLlmSentences(
+  metrics: MetricNarrative[],
+  llmMetrics: Record<string, string> | null | undefined,
+): MetricNarrative[] {
+  if (!llmMetrics) return metrics;
+  return metrics.map((metric) => {
+    const sentence = llmMetrics[metric.id];
+    return sentence ? { ...metric, sentence } : metric;
+  });
+}
+
 /**
  * LLM 서사 우선, 없으면 규칙 폴백.
  * 서사 텍스트·변화량 모두 없으면 null (섹션 미노출).
@@ -216,6 +245,10 @@ export function resolveDisplayNarrative(input: {
       ? emptyMetricsFromChanges(changes)
       : null;
 
+  // LLM 지표 문장(검수 통과분)이 있으면 규칙 문장을 덮어쓴다.
+  const body = applyLlmSentences(metrics?.body ?? [], llm?.metrics);
+  const mind = applyLlmSentences(metrics?.mind ?? [], llm?.metrics);
+
   const journey = llm?.journey ?? rule?.journey ?? null;
   const bodyText = llm?.body ?? null;
   const mindText = llm?.mind ?? null;
@@ -234,8 +267,8 @@ export function resolveDisplayNarrative(input: {
     bodyText: bodyText ? simplifyReportTerms(bodyText) : null,
     mindText: mindText ? simplifyReportTerms(mindText) : null,
     closing: simplifyReportTerms(closing ?? '오늘의 작은 쉼을 마음에 담아 보세요.'),
-    body: metrics?.body ?? [],
-    mind: metrics?.mind ?? [],
+    body,
+    mind,
     source,
     timeline: input.timeline ? input.timeline.map((point) => ({ ...point })) : [],
   };

@@ -48,3 +48,8 @@
 .narrative-report .badge.up{color:#00b394;background:rgba(1,240,200,.22)}
 .narrative-report .badge.down{color:#e5484d;background:rgba(229,72,77,.12)}
 .narrative-report .badge.flat{color:var(--gray);background:#f0edf3}
+/* 전반 vs 후반 방향 화살표(↑/↓/→) 색상 */
+.narrative-report .dual-bar .bar-dir{font-weight:700}
+.narrative-report .dual-bar .bar-dir.up{color:#00b394}
+.narrative-report .dual-bar .bar-dir.down{color:#e5484d}
+.narrative-report .dual-bar .bar-dir.stable{color:var(--gray)}
