@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getSession, type SessionDto, type SessionStatus } from '../../lib/api/session';
 import { useAuthStore } from '../../stores/authStore';
+import { ClientReportDetailModal } from './ClientReportDetailModal';
 import ClientShell from '../../components/client/ClientShell';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
@@ -41,6 +42,7 @@ export default function ClientSessionDetailPage() {
   const user = useAuthStore((s) => s.user);
   const counselors = user?.counselors ?? [];
 
+  const [reportOpen, setReportOpen] = useState(false);
   const [session, setSession] = useState<SessionDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -164,7 +166,8 @@ export default function ClientSessionDetailPage() {
         <div className="flex flex-col md:flex-row gap-2">
           <button
             type="button"
-            onClick={() => navigate(`/app/reports/${session.id}`)}
+            aria-haspopup="dialog"
+            onClick={() => setReportOpen(true)}
             className="w-full rounded-xl bg-[#5F0080] text-white text-sm font-semibold py-3 active:scale-[0.98] transition-transform"
           >
             리포트 보기
@@ -262,6 +265,9 @@ export default function ClientSessionDetailPage() {
           </>
         ) : null}
       </div>
+      {reportOpen && session && (
+        <ClientReportDetailModal sessionId={session.id} onClose={() => setReportOpen(false)} />
+      )}
     </ClientShell>
   );
 }

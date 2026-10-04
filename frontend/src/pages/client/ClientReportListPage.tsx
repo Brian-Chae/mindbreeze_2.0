@@ -2,7 +2,7 @@
 // AppShell 없이 ClientShell 내에서 동작
 
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 
 function formatDate(iso: string | null): string {
@@ -67,6 +67,7 @@ function EmptyState() {
 }
 
 export default function ClientReportListPage() {
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,10 +122,13 @@ export default function ClientReportListPage() {
           {reports.map((r) => {
             const headline = (r.content?.headline as string) ?? '리포트';
             return (
-              <Link
-                key={r.id}
-                to={`/app/reports/${r.id}`}
-                className="block bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all"
+              <button
+                key={r.id ?? r.session_id}
+                type="button"
+                aria-haspopup="dialog"
+                disabled={!r.id}
+                onClick={() => setSelectedReportId(r.id)}
+                className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all"
               >
                 <div className="flex items-center justify-between mb-2">
                   <TypeBadge type={r.type} />
@@ -136,10 +140,13 @@ export default function ClientReportListPage() {
                 <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
                   {r.session_type ?? '-'} · {formatDate(r.scheduled_at ?? r.created_at)}
                 </div>
-              </Link>
+              </button>
             );
           })}
         </div>
+      )}
+      {selectedReportId && (
+        <ClientReportDetailModal reportId={selectedReportId} onClose={() => setSelectedReportId(null)} />
       )}
     </div>
   );
