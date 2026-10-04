@@ -140,6 +140,13 @@ export default function ClientShell({
             </button>
             {/* 토스트 팝업 */}
             {toast && (
+              <div
+                className="fixed inset-0 z-40"
+                onClick={dismissToast}
+                aria-hidden="true"
+              />
+            )}
+            {toast && (
               <button
                 type="button"
                 onClick={handleToastClick}
