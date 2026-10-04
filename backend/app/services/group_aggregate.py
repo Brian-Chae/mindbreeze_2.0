@@ -362,6 +362,93 @@ def compute_group_aggregate(session_id, db: DBSession, *, at: datetime | None = 
     }
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# SDD-124: 절대 그룹 평균(회원 노출용)
+# ─────────────────────────────────────────────────────────────────────────
+
+# 절대 평균 집계 지표 → EEGFeatureWindow 원시 필드.
+# 마음 지표는 raw(0~1), 몸 지표는 절대값 — 회원 화면과 동일 스케일(HRV 는 회원 기준 sdnn).
+_ABSOLUTE_METRIC_FIELDS: tuple[tuple[str, str], ...] = (
+    ("focus_index", "focus_index"),
+    ("relaxation_index", "relaxation_index"),
+    ("emotional_stability", "emotional_stability"),
+    ("heart_rate", "heart_rate"),
+    ("respiratory_rate", "respiratory_rate"),
+    ("sdnn", "sdnn"),
+)
+
+
+def _wearer_recent_mean(windows: Sequence, field: str) -> Optional[float]:
+    """참가자 1인의 최근 윈도우에서 특정 지표의 평균(null 보존)."""
+    values: list[float] = []
+    for w in windows:
+        v = getattr(w, field, None)
+        if isinstance(v, (int, float)):
+            values.append(float(v))
+    return mean(values)
+
+
+def _group_average_payload(
+    session_id, stamp: str, wearer_means: dict[str, list], *, wearer_count: int
+) -> dict:
+    """익명 절대 평균 payload — 표본 부족(MIN_WEARERS 미만)이면 mean 전부 null.
+
+    개인 식별자·개인 점수·순위는 어떤 형태로도 담지 않는다(기존 익명 집계 원칙 유지).
+    """
+    sufficient = wearer_count >= MIN_WEARERS
+    metrics: dict[str, dict] = {}
+    for _, field in _ABSOLUTE_METRIC_FIELDS:
+        values = wearer_means.get(field, [])
+        metrics[field] = {"mean": _round(mean(values), 2) if sufficient else None}
+    return {
+        "session_id": str(session_id),
+        "at": stamp,
+        "wearer_count": wearer_count,
+        "min_wearers": MIN_WEARERS,
+        "sample_status": "ok" if sufficient else "insufficient",
+        "metrics": metrics,
+    }
+
+
+def compute_group_average(session_id, db: DBSession, *, at: datetime | None = None) -> dict:
+    """밴드 착용자들의 최근 구간 **절대** 그룹 평균(6지표) — 회원 노출용.
+
+    기존 `class:aggregate`(baseline 상대값, 상담사 전용)와 별개로, 회원이 "그룹 평균 대비
+    내 위치"를 보기 위한 익명 절대 평균이다. 착용자별 최근 RECENT_SEC 윈도우의 지표 평균을
+    구한 뒤 착용자 간 평균을 낸다. 착용자가 MIN_WEARERS 미만이면 평균을 만들지 않는다
+    (소수 표본의 평균 = 개인값 역산 방지).
+    """
+    from app.models.session import Session
+
+    sid = _to_session_uuid(session_id)
+    stamp = (at or datetime.now(timezone.utc)).isoformat()
+    if sid is None:
+        return _group_average_payload(session_id, stamp, {}, wearer_count=0)
+
+    session = db.query(Session).filter(Session.id == sid).first()
+    if session is None:
+        return _group_average_payload(session_id, stamp, {}, wearer_count=0)
+
+    participants = [
+        p
+        for p in (session.participants or [])
+        if not p.is_waitlisted and (session.host_id is None or p.user_id != session.host_id)
+    ]
+
+    wearer_means: dict[str, list] = {field: [] for _, field in _ABSOLUTE_METRIC_FIELDS}
+    wearer_count = 0
+    for p in participants:
+        windows = _participant_windows(sid, p.id, db)
+        if not windows:
+            continue
+        wearer_count += 1
+        recent = windows[-RECENT_SEC:]
+        for _, field in _ABSOLUTE_METRIC_FIELDS:
+            wearer_means[field].append(_wearer_recent_mean(recent, field))
+
+    return _group_average_payload(sid, stamp, wearer_means, wearer_count=wearer_count)
+
+
 def _to_session_uuid(value):
     """세션 식별자를 UUID 로 정규화한다. 해석 불가면 None(호출측이 빈 집계로 응답)."""
     from uuid import UUID

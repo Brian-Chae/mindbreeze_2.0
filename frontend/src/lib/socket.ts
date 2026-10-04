@@ -17,6 +17,10 @@ import {
   type ClassAggregateEvent,
 } from './class/group-aggregate';
 import {
+  GROUP_AVERAGE_EVENT,
+  type GroupAverageEvent,
+} from './class/group-average';
+import {
   CLASS_AUDIO_SYNC_EVENT,
   parseAudioSyncEvent,
   type AudioSyncEmit,
@@ -229,6 +233,13 @@ export type ClassSignalHandler = (event: ClassSignalEvent) => void;
  * 타입·표시 규칙은 `lib/class/group-aggregate` 가 단일 출처다.
  */
 export type ClassAggregateEventHandler = (event: ClassAggregateEvent) => void;
+
+/**
+ * SDD-124: 절대 그룹 평균 — 회원 화면 "그룹 평균 대비 내 위치"의 근거.
+ * 개인 식별자·점수·순위는 담기지 않으며 공용 룸(호스트+전체 참가자)으로 발행된다.
+ * 타입·정규화 규칙은 `lib/class/group-average` 가 단일 출처다.
+ */
+export type GroupAverageEventHandler = (event: GroupAverageEvent) => void;
 
 /** 서버 → 클라이언트: room broadcast `eeg_feature` */
 export interface SessionLiveEegFeatureEvent {
@@ -520,6 +531,20 @@ export const subscribeClassAggregate = (
   socket.on(CLASS_AGGREGATE_EVENT, handler);
   return () => {
     socket.off(CLASS_AGGREGATE_EVENT, handler);
+  };
+};
+
+/**
+ * SDD-124: `class:group_average` 구독 — 공용 룸(호스트+전체 참가자) 절대 그룹 평균.
+ * 회원 화면에서 "그룹 평균 대비 내 위치"를 표시하는 데 쓴다.
+ */
+export const subscribeGroupAverage = (
+  socket: Socket,
+  handler: GroupAverageEventHandler,
+): (() => void) => {
+  socket.on(GROUP_AVERAGE_EVENT, handler);
+  return () => {
+    socket.off(GROUP_AVERAGE_EVENT, handler);
   };
 };
 

@@ -3,22 +3,20 @@
 // 데이터 계약(useBand/WS)은 SDD-024/026 유지 — 표현층만 교체
 // 오프라인 수업은 스피커 기본 뮤트(하울링 방지), 온라인은 기본 ON + 스피커 온오프 토글
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useAuthStore } from '../../stores/authStore';
-import {
-  contactStatusLabel,
-  resolveBandLinkState,
-  signalQualityLevelLabel,
-} from '../../lib/session-live/signal-status';
+import { resolveBandLinkState } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
+import { toDisplayGroupAverage, type GroupAverageDisplay, type GroupAverageEvent } from '../../lib/class/group-average';
 import { getSession, getSessionByCodeState } from '../../lib/api/session';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
-import { MetricBarChart } from './metric-bar-chart';
 import { MemberMetricDial } from './MemberMetricDial';
+import { MemberRawData } from './MemberRawData';
+import { MemberDeviceStrip } from './MemberDeviceStrip';
 import './member-class-player.css';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
@@ -161,7 +159,6 @@ export function GuestMeditationPanel({
   const [elapsedSec, setElapsedSec] = useState(0);
   /** 화면 끄기(몰입) 모드 — 1.0 절전 모드 패리티 */
   const [screenOff, setScreenOff] = useState(false);
-  const [bandInfoOpen, setBandInfoOpen] = useState(false);
   /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   /** LeadOff 해소 후 15초 "AI 분석중" */
@@ -170,12 +167,12 @@ export function GuestMeditationPanel({
   const [leadOffDismissed, setLeadOffDismissed] = useState(false);
   /** 스피커 온오프 — 오프라인 기본 뮤트(하울링 방지), 온라인 기본 ON */
   const [speakerOn, setSpeakerOn] = useState(locationType === 'online');
-  /** 시계열 차트로 볼 지표 */
-  const [selectedKey, setSelectedKey] = useState<MetricKey>('focus');
+  /** SDD-124: 절대 그룹 평균(표시 스케일) — class:group_average 수신 */
+  const [groupAverage, setGroupAverage] = useState<GroupAverageDisplay | null>(null);
   const wasLeadOffRef = useRef(false);
   const analyzingTimerRef = useRef<number | null>(null);
-  /** 링버퍼 갱신 시 차트 리렌더 */
-  const [seriesTick, setSeriesTick] = useState(0);
+  /** 링버퍼 갱신 시 리렌더 트리거(미니바 갱신용) — 값 자체는 사용하지 않는다 */
+  const [, setSeriesTick] = useState(0);
   const seriesRef = useRef<MetricSeries>(emptySeries());
   const bandRef = useRef<ReturnType<typeof useBand> | null>(null);
   const targetSec = Math.max(1, durationMin) * 60;
@@ -278,6 +275,12 @@ export function GuestMeditationPanel({
     [participantId, sessionId],
   );
 
+  // SDD-124: 절대 그룹 평균 수신 — 마음 0~1 → 0~100 정규화, 몸 절대값 그대로.
+  // payload 는 정규화(계약 검증)를 통과한 GroupAverageEvent. 개인 식별자·순위 없음.
+  const handleGroupAverage = useCallback((event: GroupAverageEvent) => {
+    setGroupAverage(toDisplayGroupAverage(event));
+  }, []);
+
   // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
   const liveSocket = useSessionLiveSocket({
     sessionId,
@@ -285,6 +288,7 @@ export function GuestMeditationPanel({
     enabled: Boolean(sessionId && participantId),
     skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
+    onGroupAverage: handleGroupAverage,
   });
 
   const isLive = band.connectionState === 'connected';
@@ -322,18 +326,6 @@ export function GuestMeditationPanel({
   }, [metricsBlocked, remoteEfficiency]);
 
   const snapshot = readSnapshot();
-  const activeMetric =
-    METRICS.find((m) => m.key === selectedKey) ?? METRICS[0];
-
-  /** SDD-123: 직전 1초 대비 변화량 (매초) — 링버퍼 마지막 두 유효값 차이 */
-  const deltaFor = (key: MetricKey): number | null => {
-    const arr = seriesRef.current[key];
-    if (arr.length < 2) return null;
-    const last = arr[arr.length - 1];
-    const prev = arr[arr.length - 2];
-    if (!Number.isFinite(last) || !Number.isFinite(prev)) return null;
-    return Math.round(last - prev);
-  };
 
   // 1Hz 링버퍼 — 6지표 시계열
   useEffect(() => {
@@ -399,25 +391,6 @@ export function GuestMeditationPanel({
     return () => window.clearInterval(id);
   }, [startedAt]);
 
-  // 수집·표시 모두 1Hz — 숫자·변화량 매초 실시간 (SDD-123: 25초 스로틀 제거)
-  const chartValues = useMemo(() => {
-    void seriesTick;
-    return [...seriesRef.current[selectedKey]];
-  }, [selectedKey, seriesTick]);
-
-  const statusHint =
-    band.deviceStatus === 'lead_off'
-      ? leadOffDismissed
-        ? '접촉 불량 — 위치를 조정하거나 연결을 확인해 주세요'
-        : '접촉 불량 감지'
-      : linkState === 'stale'
-        ? '최근 뇌파 수신이 없습니다 — 연결을 확인해 주세요'
-        : isLive
-          ? 'LINK BAND에서 실시간으로 측정 중입니다'
-          : remoteEfficiency !== null
-            ? 'WebSocket으로 실시간 지표를 수신 중입니다'
-            : 'LINK BAND 연결 시 표시됩니다';
-
   // 오프라인 그룹 20명 초과 수업은 강당형 대면 진행 — 원격 상담사 영상 타일을 숨긴다
   const showCounselorVideo = !(
     locationType === 'offline' &&
@@ -468,90 +441,79 @@ export function GuestMeditationPanel({
           </button>
         </header>
 
-        <div className="player-body">
-          <div className="player-video">
-            <span className="player-video-label">{showCounselorVideo ? '상담사 라이브' : '함께하는 명상'}</span>
-            {showCounselorVideo ? (
-              <CounselorLiveTile
-                code={classCode} participantId={participantId} participantToken={participantToken}
-                sessionId={sessionId} speakingManaged={speakingManaged} speakerOn={speakerOn}
-                className="player-live-tile"
-              />
-            ) : <div className="player-hall">편안하게 호흡에 집중해 주세요</div>}
-            <div className="player-timer" aria-label="진행시간">
-              <span className="player-timer-now">{formatClock(elapsedSec)}</span>
-              <span className="player-timer-total">/ {formatClock(targetSec)}</span>
-            </div>
+        <div className="player-body member-2col">
+          {/* 좌측: "지금 나를 알려요" 시그널 + 상담사 영상 + 함께한 시간 */}
+          <div className="member-left">
+            <section className="member-signal-card" aria-label="지금 나를 알려요">
+              <h3 className="member-card-title">지금 나를 알려요</h3>
+              <QuietSignalButtons onSend={liveSocket.sendSignal} />
+            </section>
+            <section className="member-video-card" aria-label="상담사 영상">
+              <span className="player-video-label">{showCounselorVideo ? '상담사 라이브' : '함께하는 명상'}</span>
+              {showCounselorVideo ? (
+                <CounselorLiveTile
+                  code={classCode} participantId={participantId} participantToken={participantToken}
+                  sessionId={sessionId} speakingManaged={speakingManaged} speakerOn={speakerOn}
+                  className="player-live-tile"
+                />
+              ) : <div className="player-hall">편안하게 호흡에 집중해 주세요</div>}
+              <div className="player-timer" aria-label="진행시간">
+                <span className="player-timer-now">{formatClock(elapsedSec)}</span>
+                <span className="player-timer-total">/ {formatClock(targetSec)}</span>
+              </div>
+            </section>
           </div>
 
-          <div className="player-right">
-            <div className="player-metric-status">
-              {isLive ? (
-                <div className="player-band-control">
-                  <button type="button" className="player-band-toggle" aria-label="LINK BAND 상태"
-                    aria-expanded={bandInfoOpen} onClick={() => setBandInfoOpen((open) => !open)}>
-                    <span className="player-band-dot" data-connected={!metricsBlocked} />
-                  </button>
-                  {bandInfoOpen && (
-                    <div className="player-band-popup" role="group" aria-label="LINK BAND 연결 관리"
-                      onKeyDown={(event) => {
-                        if (event.key === 'Escape') {
-                          setBandInfoOpen(false);
-                          event.currentTarget.parentElement?.querySelector<HTMLButtonElement>('button')?.focus();
-                        }
-                      }}>
-                      <p>{statusHint}</p>
-                      <p>배터리 {band.battery ?? '—'}% · 접촉 {contactStatusLabel(band.deviceStatus)} · 신호 {signalQualityLevelLabel(band.signalQualityLevel)}</p>
-                      <button type="button" onClick={() => { setBandInfoOpen(false); void band.disconnect(); }}>연결 해제</button>
+          {/* 우측: 나의 상태(마음3+몸3, 그룹 평균 대비) + 디바이스/raw */}
+          <div className="member-right">
+            <section className="member-metrics-card" aria-label="나의 상태">
+              <div className="player-metric-sections">
+                {METRIC_SECTIONS.map((section) => (
+                  <section key={section.key} className="player-metric-section" aria-label={section.label}>
+                    <h3>{section.label}<small>{section.english}</small></h3>
+                    <div className="player-metric-items">
+                      {section.keys.map((key) => {
+                        const metric = METRICS.find((m) => m.key === key)!;
+                        return (
+                          <MemberMetricDial
+                            key={key}
+                            label={metric.label}
+                            value={snapshot[key]}
+                            unit={metric.unit}
+                            maxValue={metric.chartMax}
+                            series={seriesRef.current[key]}
+                            average={groupAverage?.[key] ?? null}
+                          />
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              ) : (
-                <span className="player-band-dot" role="img" aria-label="LINK BAND 미연결" />
-              )}
-              {/* 미연결 + 무데이터일 때는 안내 문구가 연결 버튼과 중복되므로 숨긴다 */}
-              {(isLive || remoteEfficiency !== null) && (
-                <span className="player-status-copy" title={statusHint}>
-                  {isAnalyzing ? <BlinkingText>AI 분석중</BlinkingText> : statusHint}
-                </span>
-              )}
-              {!isLive && (
-                <button type="button" onClick={() => void band.connect()}
-                  disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
-                  {!band.isSupported ? 'Chrome/Edge 필요' : band.connectionState === 'connecting' ? '연결 중...' : band.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
-                </button>
-              )}
-            </div>
-            {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
-            <div className="player-metric-sections" aria-label="실시간 지표">
-              {METRIC_SECTIONS.map((section) => (
-                <section key={section.key} className="player-metric-section" aria-label={section.label}>
-                  <h3>{section.label}<small>{section.english}</small></h3>
-                  <div className="player-metric-items">
-                    {section.keys.map((key) => {
-                      const metric = METRICS.find((m) => m.key === key)!;
-                      return (
-                        <MemberMetricDial
-                          key={key}
-                          label={metric.label}
-                          value={snapshot[key]}
-                          unit={metric.unit}
-                          maxValue={metric.chartMax}
-                          hero={selectedKey === key}
-                          selected={selectedKey === key}
-                          delta={deltaFor(key)}
-                          series={seriesRef.current[key]}
-                          onClick={() => setSelectedKey(key)}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
-            <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit}
-              maxValue={activeMetric.chartMax} lowerIsBetter={activeMetric.lowerIsBetter} scaleNote={activeMetric.scaleNote} />
-            <QuietSignalButtons onSend={liveSocket.sendSignal} />
+                  </section>
+                ))}
+              </div>
+            </section>
+
+            <section className="member-device-raw-card" aria-label="디바이스 및 원시 데이터">
+              <div className="member-device-head">
+                <MemberDeviceStrip
+                  connected={isLive}
+                  battery={band.battery}
+                  deviceStatus={band.deviceStatus}
+                  signalQualityLevel={band.signalQualityLevel}
+                  connectedElapsedSec={band.connectedElapsedSec}
+                />
+                {isLive ? (
+                  <button type="button" onClick={() => void band.disconnect()} className="player-connect">연결 해제</button>
+                ) : (
+                  <button type="button" onClick={() => void band.connect()}
+                    disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
+                    {!band.isSupported ? 'Chrome/Edge 필요' : band.connectionState === 'connecting' ? '연결 중...' : band.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
+                  </button>
+                )}
+              </div>
+              {isAnalyzing && <span className="player-analyzing"><BlinkingText>AI 분석중</BlinkingText></span>}
+              {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
+              <MemberRawData band={band} />
+            </section>
           </div>
         </div>
 

@@ -12,6 +12,10 @@ import {
   type ClassAggregateEvent,
 } from '../lib/class/group-aggregate';
 import {
+  normalizeGroupAverage,
+  type GroupAverageEvent,
+} from '../lib/class/group-average';
+import {
   emitClassAudioSync,
   emitClassSignal,
   getSessionLiveSocket,
@@ -22,6 +26,7 @@ import {
   subscribeClassAudioSync,
   subscribeClassSignal,
   subscribeDeviceStatusChanged,
+  subscribeGroupAverage,
   subscribeParticipantChanged,
   subscribeSessionLiveEegFeature,
   subscribeSessionLiveJoined,
@@ -33,6 +38,7 @@ import {
   type ClassSignalHandler,
   type DeviceStatusChangedEvent,
   type DeviceStatusChangedHandler,
+  type GroupAverageEventHandler,
   type ParticipantChangedEvent,
   type ParticipantChangedHandler,
   type SessionLiveEegFeatureEvent,
@@ -64,6 +70,8 @@ interface UseSessionLiveSocketOptions {
   onClassSignal?: ClassSignalHandler;
   /** 개선 8: 그룹 익명 집계 수신 — 상담사 상단 단일 게이지 갱신용 */
   onClassAggregate?: ClassAggregateEventHandler;
+  /** SDD-124: 절대 그룹 평균 수신 — 회원 화면 "그룹 평균 대비 내 위치" 갱신용 */
+  onGroupAverage?: GroupAverageEventHandler;
   /** 개선 10: 재생 타임코드 수신 — 회원 화면 동기 재생용 */
   onClassAudioSync?: ClassAudioSyncHandler;
 }
@@ -105,6 +113,7 @@ export function useSessionLiveSocket({
   onSpeakingChanged,
   onClassSignal,
   onClassAggregate,
+  onGroupAverage,
   onClassAudioSync,
 }: UseSessionLiveSocketOptions): UseSessionLiveSocketResult {
   const [isConnected, setIsConnected] = useState(false);
@@ -128,6 +137,8 @@ export function useSessionLiveSocket({
   onClassSignalRef.current = onClassSignal;
   const onClassAggregateRef = useRef(onClassAggregate);
   onClassAggregateRef.current = onClassAggregate;
+  const onGroupAverageRef = useRef(onGroupAverage);
+  onGroupAverageRef.current = onGroupAverage;
   const onClassAudioSyncRef = useRef(onClassAudioSync);
   onClassAudioSyncRef.current = onClassAudioSync;
   /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
@@ -303,6 +314,14 @@ export function useSessionLiveSocket({
       onClassAggregateRef.current?.(normalized);
     };
 
+    // SDD-124: 절대 그룹 평균(공용 룸) — 계약 밖 payload는 normalizeGroupAverage가 걸러낸다
+    const onGroupAverageEvent = (event: GroupAverageEvent): void => {
+      const normalized = normalizeGroupAverage(event);
+      if (!normalized) return;
+      if (normalized.session_id && normalized.session_id !== sessionId) return;
+      onGroupAverageRef.current?.(normalized);
+    };
+
     // 개선 10: 재생 타임코드(세션 공용 룸) — 계약 밖 payload는 subscribeClassAudioSync가 걸러낸다.
     // session_id는 있을 때만 검증한다(스냅샷 replay 등 생략 가능 경로 대비).
     const onAudioSync = (event: AudioSyncEvent): void => {
@@ -322,6 +341,7 @@ export function useSessionLiveSocket({
     const unsubSpeaking = subscribeSpeakingChanged(socket, onSpeaking);
     const unsubSignal = subscribeClassSignal(socket, onSignal);
     const unsubAggregate = subscribeClassAggregate(socket, onAggregate);
+    const unsubGroupAverage = subscribeGroupAverage(socket, onGroupAverageEvent);
     const unsubAudioSync = subscribeClassAudioSync(socket, onAudioSync);
 
     if (socket.connected) {
@@ -342,6 +362,7 @@ export function useSessionLiveSocket({
       unsubSpeaking();
       unsubSignal();
       unsubAggregate();
+      unsubGroupAverage();
       unsubAudioSync();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);

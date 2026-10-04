@@ -1,298 +1,1868 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>회원 클래스 화면 UI 목업 · 루프 3 (SDD-123)</title>
-<style>
-  button,input{font:inherit}
-  :root{--purple:#5F0080;--cream:#F7F4F0;--mint:#01f0c8;--bg:#12081C;--surface:#1D1027;--selected-bg:#2B1637;--selected-border:#B78CCA;--lavender:#DCB5EE;--muted:#BCAEC5}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo',sans-serif;background:#100d14;color:var(--cream);padding:32px 24px;font-size:13px}
-  .page-head{max-width:1440px;margin:0 0 24px}
-  .page-head h1{font-size:21px;font-weight:700;letter-spacing:-.02em}
-  .page-head p{color:#b9a8cc;font-size:13px;margin-top:6px;line-height:1.6}
-  .badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-  .badge{font-size:11px;padding:4px 10px;border-radius:999px;background:rgba(95,0,128,.35);color:#e9d5ff;border:1px solid rgba(95,0,128,.5)}
-  .frames{display:flex;flex-wrap:nowrap;width:max-content;min-width:100%;gap:32px;align-items:flex-start;justify-content:center}
-  .frame-wrap{text-align:center}
-  .frame-label{font-size:11px;color:#b9a8cc;margin-bottom:10px;font-weight:600;letter-spacing:.08em}
-  .frame{position:relative;overflow:hidden;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);background:linear-gradient(rgba(25,8,34,.85),rgba(18,8,28,.95)),radial-gradient(ellipse at 25% 12%,rgba(168,85,247,.5),transparent 62%),radial-gradient(ellipse 85% 45% at 12% 72%,#2c1a3a 0%,transparent 72%),radial-gradient(ellipse 90% 50% at 95% 85%,#1d1027 0%,transparent 70%),#12081C}
-  .screen{position:relative;width:100%;height:100%;display:flex;flex-direction:column}
-  .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:12px;padding:20px 24px;flex-shrink:0}
-  .topbar .title{flex:1;text-align:center;font-size:15px;font-weight:500;color:#f2f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pillbtn{display:inline-flex;align-items:center;gap:4px;height:40px;padding:0 14px;border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,.1);white-space:nowrap;cursor:pointer;backdrop-filter:blur(4px)}
-  .video{position:relative;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#382047 0%,transparent 58%),#1b1025;border:1px solid rgba(255,255,255,.1)}
-  .video .avatar{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .video .avatar .circle{width:64px;height:64px;border-radius:50%;background:rgba(247,244,240,.06);display:flex;align-items:center;justify-content:center;font-size:26px;color:#a996b2;box-shadow:0 0 0 0 rgba(1,240,200,.14);animation:breathe 4s ease-in-out infinite}
-  .video .wait{font-size:11px;color:#a996b2;margin-top:12px}
-  .video .label{position:absolute;left:16px;top:16px;font-size:11px;color:var(--muted);letter-spacing:.05em}
-  .video .label::before{content:'';display:inline-block;width:6px;height:6px;background:var(--mint);border-radius:50%;margin-right:7px}
-  .timer{display:flex;flex-direction:column;align-items:center;line-height:1}
-  .timer .now{font-variant-numeric:tabular-nums;font-weight:500;color:#fff}
-  .timer .total{font-variant-numeric:tabular-nums;color:rgba(255,255,255,.5)}
-  /* ── MIND/BODY 다이얼 ── */
-  .metric-sections{display:flex;flex-direction:column;gap:8px}
-  .metric-section{display:flex;flex-direction:column;gap:8px}
-  .metric-section + .metric-section{border-top:1px solid rgba(255,255,255,.05);padding-top:12px}
-  .metric-section h3{display:flex;align-items:baseline;gap:6px;font-size:12px;font-weight:500;color:var(--cream)}
-  .metric-section h3 small{font-size:10px;font-weight:500;letter-spacing:1.5px;color:var(--lavender)}
-  .metric-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-  .metric{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;position:relative;text-align:center;padding:8px 4px;border:1px solid transparent;border-radius:12px;background:transparent;cursor:pointer}
-  .metric input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
-  .metric .k{font-size:10px;color:var(--muted);order:2}
-  .metric .delta{display:none;font-size:10px;color:#C9AED7;order:3;font-variant-numeric:tabular-nums}
-  .dial{position:relative;width:48px;height:48px;flex-shrink:0}
-  .dial svg{width:100%;height:100%}
-  .dial .track{fill:none;stroke:rgba(212,181,227,.07);stroke-width:6}
-  .dial .arc{fill:none;stroke:#A16BBC;stroke-width:6;stroke-linecap:round}
-  .dial .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
-  .dial .num b{font-size:15px;font-weight:500;color:var(--cream);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
-  .dial .num small{font-size:8px;font-weight:400;color:var(--lavender);margin-top:1px}
-  .metric:has(input:checked){background:var(--selected-bg);border-color:var(--selected-border);box-shadow:inset 0 0 0 1px rgba(183,140,202,.18)}
-  .metric:has(input:checked) .k{color:var(--lavender)}
-  .metric:has(input:checked) .dial{width:84px;height:84px;filter:drop-shadow(0 0 6px rgba(95,0,128,.4))}
-  .metric:has(input:checked) .dial .num b{font-size:34px;letter-spacing:-1px}
-  .metric:has(input:checked) .dial .num small{font-size:11px}
-  .metric:has(input:checked) .delta{display:block}
-  /* ── 차트 ── */
-  .chartbox{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:12px;display:none}
-  .chartbox .charthead{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
-  .chartbox .charthead .cap{font-size:11px;color:var(--muted);letter-spacing:0}
-  .chartbox .charthead strong{font-weight:500;color:var(--cream)}
-  .chartbox .charthead .cur{font-size:11px;color:rgba(255,255,255,.6)}
-  .chartbox .charthead .cur b{color:#fff;font-size:15px;font-weight:500;margin-right:3px}
-  .chart-note{font-size:10px;color:#b2a3bc;text-align:left;margin-bottom:10px}
-  .bars{display:flex;align-items:flex-end;gap:4px;height:72px;border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:2px}
-  .bars .bar{flex:1;min-width:0;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,#5F0080 0%,#A16BBC 100%);opacity:.55;min-height:4px}
-  .bars .bar.now{background:linear-gradient(180deg,#D4B5E3 0%,#5F0080 100%);opacity:.95}
-  .axis{display:flex;justify-content:space-between;font-size:10px;color:#b3a5ba;margin-top:8px}
-  .axis span:last-child{color:var(--lavender)}
-  .hint{font-size:11px;color:var(--muted);text-align:center;line-height:1.5}
-  .signal{display:flex;align-items:center;gap:4px;height:40px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.85);font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
-  .bgm{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:12px 14px}
-  .bgm .t{min-width:0;flex:1}
-  .bgm .t .cap{font-size:10px;color:#b4a7be;letter-spacing:.06em;margin-bottom:3px}
-  .bgm .t .name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bgm .state{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--mint);background:rgba(1,240,200,.12);border-radius:999px;padding:3px 9px;white-space:nowrap}
-  .bgm .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);animation:pulse 2.4s ease-in-out infinite}
-  .desktop{width:1280px;height:720px}
-  .desktop .body{position:relative;z-index:4;flex:1;min-height:0;display:grid;grid-template-columns:1.55fr 400px;gap:20px;padding:0 20px 20px}
-  .desktop .video{height:100%}
-  .desktop .video .timer-overlay{position:absolute;left:16px;bottom:16px;background:rgba(18,8,28,.65);backdrop-filter:blur(6px);border-radius:12px;padding:10px 18px;border:1px solid rgba(255,255,255,.1)}
-  .desktop .timer-overlay .now{font-size:38px}
-  .desktop .timer-overlay .total{font-size:13px;margin-top:4px}
-  .desktop .rightcol{display:flex;flex-direction:column;gap:12px;min-width:0;height:100%;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px}
-  .desktop .rightcol .status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-shrink:0}
-  .desktop .rightcol .status .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px rgba(1,240,200,.25)}
-  .desktop .metric-sections{flex:1;min-height:0}
-  .desktop .chartbox{flex:0 0 auto}
-  .desktop .signals{display:flex;gap:8px;justify-content:center}
-  .desktop .signals .signal{flex:1;justify-content:center}
-  .mobile{width:390px;height:844px}
-  .mobile .topbar{padding:12px;gap:8px}
-  .mobile .topbar .title{font-size:13px;letter-spacing:-.02em}
-  .mobile .pillbtn{height:44px;padding:0 8px;font-size:11px;min-width:44px;justify-content:center}
-  .mobile .body{position:relative;z-index:4;flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:0 12px 20px}
-  .mobile .video{flex:1;min-height:180px}
-  .mobile .video .timer-overlay{position:absolute;left:12px;bottom:12px;background:rgba(18,8,28,.65);backdrop-filter:blur(6px);border-radius:12px;padding:7px 18px;border:1px solid rgba(255,255,255,.1)}
-  .mobile .timer-overlay .now{font-size:26px}
-  .mobile .timer-overlay .total{font-size:11px;margin-top:2px}
-  .mobile .rightcol{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px}
-  .mobile .rightcol .status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-shrink:0}
-  .mobile .rightcol .status .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px rgba(1,240,200,.25)}
-  .mobile .metric{padding:6px 2px}
-  .mobile .dial{width:40px;height:40px}
-  .mobile .metric:has(input:checked) .dial{width:72px;height:72px}
-  .mobile .metric:has(input:checked) .dial .num b{font-size:28px}
-  .mobile .metric:has(input:checked) .dial .num small{font-size:10px}
-  .mobile .signals{display:flex;gap:8px;flex-shrink:0}
-  .mobile .signals .signal{flex:1;justify-content:center;font-size:11px;padding:0 4px;height:44px;gap:4px}
-  .mobile .bgm{flex-shrink:0}
-  /* 모바일: 차트 숨김 — 현재 상태만 */
-  .mobile .chartbox{display:none !important}
-  button:focus-visible,.metric:has(input:focus-visible){outline:2px solid var(--lavender);outline-offset:3px}
-  .body:has(input[value="focus"]:checked) .chart-focus{display:block}
-  .body:has(input[value="relax"]:checked) .chart-relax{display:block}
-  .body:has(input[value="emotion"]:checked) .chart-emotion{display:block}
-  .body:has(input[value="pulse"]:checked) .chart-pulse{display:block}
-  .body:has(input[value="breath"]:checked) .chart-breath{display:block}
-  .body:has(input[value="hrv"]:checked) .chart-hrv{display:block}
-  @keyframes breathe{50%{box-shadow:0 0 0 22px rgba(1,240,200,0)}}
-  @keyframes pulse{50%{opacity:.3}}
-  @media (prefers-reduced-motion:reduce){.bgm .dot,.video .avatar .circle{animation:none}}
-  /* 넓은 창에서는 두 목업 비교, 목표 해상도에서는 해당 화면만 표시한다. */
-  @media (max-width:1280px){
-    body{padding:0}
-    .page-head,.frame-label{display:none}
-    .frames{width:100%;min-width:0;display:block}
-    .frame-wrap:has(.mobile){display:none}
-    .frame{border-radius:0;box-shadow:none}
-    .desktop{width:100vw;height:100dvh}
-  }
-  @media (max-width:600px){
-    .frame-wrap:has(.desktop){display:none}
-    .frame-wrap:has(.mobile){display:block}
-    .mobile{width:100vw;height:100dvh}
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MIND BREEZE 2.0 · 회원 클래스 화면 목업</title>
+  <style>
+    /* ==========================================================================
+       DESIGN TOKENS & RESET (정확히 준수)
+       ========================================================================== */
+    :root {
+      --bg: #12081C;            /* 캔버스 */
+      --purple: #5F0080;        /* 브랜드 퍼플 */
+      --cream: #F7F4F0;         /* 주 텍스트 */
+      --muted: #bcaec5;         /* 보조 텍스트 */
+      --lavender: #dcb5ee;      /* 라벤더 하이라이트 */
+      --border-container: #ffffff1A;
+      --border-divider: #ffffff0D;
+      --radius-container: 12px;
+      --selected-bg: #2b1637;
+
+      /* 보조 서피스 & 상태 토큰 */
+      --surface: #190c24;
+      --surface-card: #20112d;
+      --surface-elevated: #281438;
+      --mint: #01f0c8;          /* 연결/재생 상태 점 전용 */
+      --red: #ff4d4f;
+      --font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--cream);
+      font-family: var(--font-family);
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(ellipse 70% 40% at 20% 15%, rgba(95, 0, 128, 0.22) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 85% 80%, rgba(43, 22, 55, 0.45) 0%, transparent 60%);
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+      outline: none;
+    }
+
+    button:focus-visible {
+      outline: 2px solid var(--lavender);
+      outline-offset: 2px;
+    }
+
+    /* ==========================================================================
+       LAYOUT SHELL
+       ========================================================================== */
+    .app-screen {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 16px 16px;
+    }
+
+    /* TOPBAR */
+    .topbar {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-divider);
+      padding: 0 4px;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+      gap: 12px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 1.2px;
+      color: var(--cream);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(95, 0, 128, 0.45);
+      border: 1px solid rgba(220, 181, 238, 0.3);
+      color: var(--lavender);
+    }
+
+    .topbar-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .class-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+      letter-spacing: -0.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .class-sub {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 1px;
+      white-space: nowrap;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .live-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cream);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-container);
+      white-space: nowrap;
+    }
+
+    .status-dot-mint {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 8px var(--mint);
+      animation: pulse-dot 2s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+
+    .exit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-container);
+      color: var(--cream);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .exit-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    /* 디바이스 상태 pill (topbar 우측) */
+    .device-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cream);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-container);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .device-pill-name {
+      font-weight: 600;
+    }
+    .device-pill-sep {
+      color: var(--muted);
+    }
+    .device-pill-meta {
+      color: var(--muted);
+    }
+    .device-pill-meta b {
+      color: var(--cream);
+      font-weight: 600;
+    }
+    .device-pill-battery {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      color: var(--cream);
+    }
+
+    /* 2-COLUMN WORKSPACE */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 30% 1fr;
+      gap: 14px;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* BASE CARD STYLES */
+    .column-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .glass-card {
+      background: var(--surface);
+      border: 1px solid var(--border-container);
+      border-radius: var(--radius-container);
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .card-title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--cream);
+      letter-spacing: -0.2px;
+    }
+
+    .card-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ==========================================================================
+       LEFT COLUMN (좁음 ~28%)
+       1. "지금 나를 알려요" (상단)
+       2. 상담사 영상 타일 (하단)
+       3. 함께한 시간
+       ========================================================================== */
+    .signal-box {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .signal-hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 2px;
+      line-height: 1.4;
+    }
+
+    .signal-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    /* Lucide 스타일 인라인 SVG stroke 기반 아이콘 3버튼 */
+    .signal-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-container);
+      color: var(--cream);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      user-select: none;
+    }
+
+    .signal-pill:hover {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: rgba(255, 255, 255, 0.22);
+      transform: translateY(-1px);
+    }
+
+    .signal-pill.active {
+      background: var(--selected-bg);
+      border-color: var(--lavender);
+      box-shadow: 0 0 16px rgba(95, 0, 128, 0.5), inset 0 0 0 1px rgba(220, 181, 238, 0.3);
+      color: #ffffff;
+    }
+
+    .signal-pill.active .signal-icon svg {
+      stroke: var(--lavender);
+      filter: drop-shadow(0 0 4px rgba(220, 181, 238, 0.6));
+    }
+
+    .signal-icon {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .signal-icon svg {
+      width: 17px;
+      height: 17px;
+      stroke: var(--muted);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      transition: stroke 0.2s ease;
+    }
+
+    .signal-label {
+      flex: 1;
+      text-align: left;
+    }
+
+    .signal-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.3;
+      transition: all 0.2s;
+    }
+
+    .signal-pill.active .signal-check {
+      background: var(--lavender);
+      border-color: var(--lavender);
+      opacity: 1;
+    }
+
+    .signal-check svg {
+      width: 10px;
+      height: 10px;
+      stroke: #12081C;
+      stroke-width: 2.5;
+      fill: none;
+    }
+
+    .signal-feedback-msg {
+      font-size: 11px;
+      color: var(--lavender);
+      min-height: 16px;
+      text-align: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .signal-feedback-msg.show {
+      opacity: 1;
+    }
+
+    /* 상담사 영상 타일 (호스트 플레이어와 동일한 규격 언어) */
+    .video-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      min-height: 230px;
+      padding: 0;
+      background: radial-gradient(ellipse 90% 70% at 50% 35%, #351c44 0%, #1c0e27 65%, #13081c 100%);
+      border: 1px solid var(--border-container);
+      border-radius: var(--radius-container);
+      overflow: hidden;
+    }
+
+    .video-top-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .rec-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(18, 8, 28, 0.75);
+      backdrop-filter: blur(8px);
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--cream);
+    }
+
+    .rec-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px rgba(255, 77, 79, 0.8);
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    .video-content-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      gap: 12px;
+      position: relative;
+    }
+
+    .host-silhouette {
+      position: relative;
+      width: 90px;
+      height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .host-silhouette-halo {
+      position: absolute;
+      inset: -10px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(161, 107, 188, 0.25) 0%, transparent 70%);
+      animation: breathe-halo 5s ease-in-out infinite;
+    }
+
+    .host-avatar-icon {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(220, 181, 238, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lavender);
+      backdrop-filter: blur(4px);
+    }
+
+    .host-avatar-icon svg {
+      width: 40px;
+      height: 40px;
+      opacity: 0.85;
+    }
+
+    .host-info-tag {
+      text-align: center;
+    }
+
+    .host-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cream);
+      letter-spacing: -0.2px;
+    }
+
+    .host-role {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* 함께한 시간 박스 */
+    .session-time-box {
+      margin-top: auto;
+      background: rgba(18, 8, 28, 0.82);
+      border-top: 1px solid var(--border-container);
+      padding: 10px 14px;
+      backdrop-filter: blur(8px);
+    }
+
+    .time-meta-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+
+    .time-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .time-digits {
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .time-digits .elapsed {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--cream);
+      letter-spacing: -0.5px;
+    }
+
+    .time-digits .total {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .time-progress-bar {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+
+    .time-progress-fill {
+      height: 100%;
+      width: 48.6%;
+      background: linear-gradient(90deg, var(--purple), var(--lavender));
+      border-radius: 9999px;
+      transition: width 1s linear;
+    }
+
+    /* ==========================================================================
+       CENTER COLUMN (넓음 ~44%)
+       "나의 상태" + "그룹 평균 대비"
+       MIND 3지표 + BODY 3지표
+       ========================================================================== */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .metrics-container-card {
+      flex: 3;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    /* 디바이스 상태 + raw data 카드 (하단, 지표:아래 = 3:2) */
+    .device-raw-card {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .device-strip {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--cream);
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: #0d0614;
+      border: 1px solid var(--border-container);
+    }
+    .device-strip-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .device-strip-sep {
+      color: var(--muted);
+    }
+    .device-strip-item {
+      color: var(--muted);
+    }
+    .device-strip-item b {
+      color: var(--cream);
+      font-weight: 600;
+    }
+
+    .raw-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+    }
+    .raw-grid .raw-stream-block {
+      height: 100%;
+    }
+    .raw-grid .raw-canvas-wrap {
+      flex: 1;
+      height: auto;
+      min-height: 48px;
+    }
+
+    .metrics-section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-divider);
+    }
+
+    .metrics-group-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      color: var(--lavender);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .metrics-group-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 11px;
+      background: var(--purple);
+      border-radius: 2px;
+    }
+
+    .metrics-group-note {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .metrics-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    /* 개별 지표 카드 */
+    .metric-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-container);
+      border-radius: 10px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .metric-card:hover {
+      background: var(--surface-elevated);
+      border-color: rgba(220, 181, 238, 0.25);
+    }
+
+    .metric-card-top {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2px;
+      padding: 0 4px;
+    }
+
+    .metric-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cream);
+    }
+
+    .metric-unit {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* SVG ARC RING GAUGE (270도 정밀 기하학) */
+    .arc-gauge-wrap {
+      position: relative;
+      width: 98px;
+      height: 98px;
+      margin: 2px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arc-gauge-wrap svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .arc-track {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 6.5;
+      stroke-linecap: round;
+    }
+
+    .arc-value {
+      fill: none;
+      stroke: url(#arcGradient);
+      stroke-width: 6.5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    /* 그룹 평균 틱 (아크 위 마커) */
+    .arc-avg-tick {
+      stroke: var(--lavender);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      opacity: 0.95;
+      filter: drop-shadow(0 0 3px rgba(220, 181, 238, 0.8));
+    }
+
+    .gauge-center-val {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .gauge-num {
+      font-size: 25px;
+      font-weight: 600;
+      color: var(--cream);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+
+    .gauge-avg-tag {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 최근 수신 막대 (12개 세로바) */
+    .recent-bars-container {
+      width: 100%;
+      margin: 6px 0 5px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 2.5px;
+      height: 22px;
+      padding: 2px 4px;
+      background: rgba(0, 0, 0, 0.22);
+      border-radius: 5px;
+    }
+
+    .mini-bar {
+      flex: 1;
+      min-width: 2px;
+      max-width: 5px;
+      border-radius: 2px 2px 1px 1px;
+      background: linear-gradient(180deg, rgba(161, 107, 188, 0.7) 0%, rgba(95, 0, 128, 0.7) 100%);
+      transition: height 0.4s ease;
+      min-height: 3px;
+    }
+
+    .mini-bar.latest {
+      background: linear-gradient(180deg, var(--lavender) 0%, #A16BBC 100%);
+      box-shadow: 0 0 4px rgba(220, 181, 238, 0.4);
+    }
+
+    /* 중립 관찰 문구 라벨 ("그룹 평균보다 ±N") */
+    .metric-delta-badge {
+      width: 100%;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3.5px 4px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-divider);
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric-delta-badge .delta-num {
+      color: var(--cream);
+      font-weight: 600;
+    }
+
+    /* ==========================================================================
+       RIGHT COLUMN (좁음 ~28%)
+       1. 디바이스 상태 (LINK BAND 2.0)
+       2. raw data (뇌파 EEG + 심박 PPG 실시간 파형)
+       ========================================================================== */
+    .device-card {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .device-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--mint);
+      background: rgba(1, 240, 200, 0.1);
+      border: 1px solid rgba(1, 240, 200, 0.25);
+      padding: 2px 7px;
+      border-radius: 9999px;
+    }
+
+    .device-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .device-meta-item {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-divider);
+      border-radius: 7px;
+      padding: 7px 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .device-meta-label {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .device-meta-val {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--cream);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .battery-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .battery-icon-svg {
+      width: 14px;
+      height: 14px;
+      stroke: var(--cream);
+      fill: none;
+    }
+
+    /* RAW DATA SECTION */
+    .rawdata-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .raw-stream-block {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .raw-stream-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .raw-stream-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--cream);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .signal-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      background: rgba(1, 240, 200, 0.12);
+      border: 1px solid rgba(1, 240, 200, 0.3);
+      color: var(--mint);
+    }
+
+    .raw-canvas-wrap {
+      width: 100%;
+      height: 64px;
+      background: #0d0614;
+      border: 1px solid var(--border-container);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .raw-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-grid-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.04);
+      pointer-events: none;
+    }
+
+    .raw-meta-foot {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      padding: 0 2px;
+    }
+
+    /* ==========================================================================
+       KEYFRAME ANIMATIONS
+       ========================================================================== */
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    @keyframes breathe-halo {
+      0%, 100% { transform: scale(1); opacity: 0.35; }
+      50% { transform: scale(1.18); opacity: 0.65; }
+    }
+
+    /* ==========================================================================
+       RESPONSIVE DESIGN
+       데스크톱: 1280x720 3컬럼 그리드
+       모바일: 390x844 단일 컬럼 스택
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .app-screen {
+        padding: 0 12px 20px;
+      }
+
+      .topbar {
+        padding: 0 2px;
+      }
+
+      .video-card {
+        min-height: 200px;
+      }
+
+      .metrics-grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        height: 50px;
+        margin-bottom: 10px;
+      }
+
+      .topbar-center {
+        display: none;
+      }
+
+      .brand-logo {
+        font-size: 13px;
+      }
+
+      .live-status {
+        padding: 3px 8px;
+        font-size: 10px;
+      }
+
+      .exit-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+
+      .metrics-grid-3 {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .metrics-grid-3 > :last-child {
+        grid-column: span 2;
+      }
+
+      .raw-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .raw-grid .raw-canvas-wrap {
+        flex: none;
+        height: 64px;
+      }
+      .metrics-container-card,
+      .device-raw-card {
+        flex: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="page-head">
-    <h1>회원 클래스 화면 — 몰입을 위한 명상 화면 · 루프 3 (SDD-123)</h1>
-    <p>상담사 화면의 <b>보라 틴트 + MIND/BODY 아크 링 다이얼</b>을 이식하고 밀도를 낮췄습니다.<br>
-    숫자·변화량은 <b>매초 실시간</b>(1Hz), 선택 지표는 <b>히어로 다이얼</b>+<b>직전 1초 증감</b>. 데스크톱은 <b>지난 5분 막대 그래프</b>, 모바일은 <b>현재 상태만</b>.</p>
-    <div class="badges">
-      <span class="badge">보라 틴트 #12081C</span>
-      <span class="badge">MIND/BODY 다이얼</span>
-      <span class="badge">매초 실시간</span>
-      <span class="badge">히어로 + 직전 1초 증감</span>
-      <span class="badge">데스크톱 5분 막대 · 모바일 현재값만</span>
-    </div>
-  </div>
 
-  <div class="frames">
+  <!-- GLOBAL SVG DEFS (그라데이션) -->
+  <svg style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
+    <defs>
+      <!-- 아크 링 그라데이션: #5F0080 -> #A16BBC -> #D4B5E3 -->
+      <linearGradient id="arcGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#5F0080" />
+        <stop offset="50%" stop-color="#A16BBC" />
+        <stop offset="100%" stop-color="#D4B5E3" />
+      </linearGradient>
+    </defs>
+  </svg>
 
-    <!-- ═══ 데스크탑 ═══ -->
-    <div class="frame-wrap">
-      <div class="frame-label">데스크탑 · 1280 × 720</div>
-      <div class="frame desktop">
-        <div class="screen">
-          <div class="topbar">
-            <button class="pillbtn ghost">← 종료</button>
-            <div class="title">마음챙김 명상 4주차</div>
-            <button class="pillbtn">🔇 음소거</button>
-            <button class="pillbtn ghost">⏻ 화면 끄기</button>
+  <div class="app-screen">
+    <!-- TOP NAVIGATION BAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="brand-logo">
+          <span>Mind Breeze</span>
+          <span class="brand-badge">2.0</span>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <h1 class="class-title">마음챙김 명상 클래스: 호흡과 자각</h1>
+        <div class="class-sub">
+          <span>호스트 이도연 상담사</span>
+          <span>·</span>
+          <span>회원 전용 몰입 화면</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="live-status">
+          <span class="status-dot-mint"></span>
+          <span>진행 중</span>
+        </div>
+        <button class="exit-btn" id="exitClassBtn" title="클래스 화면 종료">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>나가기</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN 3-COLUMN WORKSPACE -->
+    <main class="workspace-grid">
+
+      <!-- ====================================================================
+           LEFT COLUMN: 조용한 신호 + 상담사 영상 + 함께한 시간 (~28%)
+           ==================================================================== -->
+      <aside class="column-panel">
+        
+        <!-- 1. "지금 나를 알려요" (상단) -->
+        <section class="glass-card signal-box" aria-label="지금 나를 알려요">
+          <div class="card-header-row" style="margin-bottom: 2px;">
+            <div class="card-title-group">
+              <h2 class="card-title">지금 나를 알려요</h2>
+            </div>
+            <span class="card-subtitle">상담사만 확인해요</span>
           </div>
-          <div class="body">
-            <div class="video">
-              <div class="label">상담사 라이브</div>
-              <div class="avatar"><div class="circle">👤</div><div class="wait">상담사 영상을 기다리고 있어요</div></div>
-              <div class="timer-overlay timer">
-                <span class="now">01:32</span>
+          <p class="signal-hint">말없이 탭하여 현재 컨디션을 상담사에게 전달하세요.</p>
+
+          <div class="signal-buttons" role="group" aria-label="조용한 신호 3버튼">
+            <!-- 1. 잎(Leaf) "잘 따라가요" (Lucide SVG 인라인 라인 아이콘) -->
+            <button type="button" class="signal-pill" data-signal="follow" aria-pressed="false">
+              <span class="signal-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
+                  <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
+                </svg>
+              </span>
+              <span class="signal-label">잘 따라가요</span>
+              <span class="signal-check">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+            </button>
+
+            <!-- 2. 물방울(Droplet) "조금 어려워요" (Lucide SVG 인라인 라인 아이콘) -->
+            <button type="button" class="signal-pill" data-signal="difficult" aria-pressed="false">
+              <span class="signal-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"></path>
+                </svg>
+              </span>
+              <span class="signal-label">조금 어려워요</span>
+              <span class="signal-check">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+            </button>
+
+            <!-- 3. 달(Moon) "잠시 쉴게요" (Lucide SVG 인라인 라인 아이콘) -->
+            <button type="button" class="signal-pill" data-signal="rest" aria-pressed="false">
+              <span class="signal-icon">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                </svg>
+              </span>
+              <span class="signal-label">잠시 쉴게요</span>
+              <span class="signal-check">
+                <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              </span>
+            </button>
+          </div>
+
+          <div class="signal-feedback-msg" id="signalFeedback">신호가 전달되었습니다.</div>
+        </section>
+
+        <!-- 2. 상담사 영상 타일 (하단) + 함께한 시간 -->
+        <section class="video-card" aria-label="상담사 영상 및 세션 시간">
+          <!-- 좌상단 오버레이: 빨간 점 + "녹화 중 · 상담사" -->
+          <div class="video-top-overlay">
+            <div class="rec-badge">
+              <span class="rec-dot"></span>
+              <span>녹화 중 · 상담사</span>
+            </div>
+          </div>
+
+          <!-- 영상 플레이스홀더 (그라데이션 및 실루엣) -->
+          <div class="video-content-placeholder">
+            <div class="host-silhouette">
+              <div class="host-silhouette-halo"></div>
+              <div class="host-avatar-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+            </div>
+            <div class="host-info-tag">
+              <div class="host-name">이도연 상담사</div>
+              <div class="host-role">명상 지도사 · 호스트</div>
+            </div>
+          </div>
+
+          <!-- 3. 함께한 시간 -->
+          <div class="session-time-box">
+            <div class="time-meta-row">
+              <span class="time-label">함께한 시간</span>
+              <div class="time-digits">
+                <span class="elapsed" id="elapsedTimer">24:18</span>
                 <span class="total">/ 50:00</span>
               </div>
             </div>
-            <div class="rightcol">
-              <div class="status"><span class="dot"></span><span>LINK BAND에서 실시간으로 측정 중입니다</span></div>
-              <div class="metric-sections">
-                <section class="metric-section">
-                  <h3>마음 <small>MIND</small></h3>
-                  <div class="metric-items">
-                    <label class="metric"><input type="radio" name="desktop-metric" value="focus" aria-label="집중도" checked><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="87 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>87</b><small>%</small></span></span><span class="k">집중도</span><span class="delta">+3 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="desktop-metric" value="relax" aria-label="이완도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="64 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>64</b><small>%</small></span></span><span class="k">이완도</span><span class="delta">+1 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="desktop-metric" value="emotion" aria-label="정서안정도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="71 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>71</b><small>%</small></span></span><span class="k">정서안정도</span><span class="delta">변화 없음</span></label>
+            <div class="time-progress-bar">
+              <div class="time-progress-fill" id="sessionProgressFill"></div>
+            </div>
+          </div>
+        </section>
+
+      </aside>
+
+      <!-- ====================================================================
+           CENTER COLUMN: "나의 상태" + MIND & BODY 6지표 (~44%)
+           ==================================================================== -->
+      <section class="column-panel center-column">
+        <div class="glass-card metrics-container-card">
+          
+          <!-- 카드 상단 헤더 -->
+          <div class="card-header-row" style="margin-bottom: 4px;">
+            <div>
+              <h2 class="card-title" style="font-size: 15px;">나의 상태</h2>
+              <p class="card-subtitle" style="margin-top: 1px;">그룹 평균 대비 실시간 흐름</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted);">
+              <span class="status-dot-mint" style="width: 5px; height: 5px;"></span>
+              <span>1초 실시간 갱신</span>
+            </div>
+          </div>
+
+          <!-- 1. 마음 MIND 3지표 -->
+          <div>
+            <div class="metrics-section-heading">
+              <div class="metrics-group-title">마음 MIND</div>
+              <div class="metrics-group-note">뇌파 인지 상태 지표</div>
+            </div>
+
+            <div class="metrics-grid-3" style="margin-top: 8px;">
+              <!-- 1-1. 집중도 (86%, 그룹 79%, 대비 +7) -->
+              <article class="metric-card" id="card-focus">
+                <div class="metric-card-top">
+                  <span class="metric-name">집중도</span>
+                  <span class="metric-unit">%</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-focus">
+                    <!-- 270도 호 (둘레 238.8 중 179) -->
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-focus-val" cx="50" cy="50" r="38" stroke-dasharray="153.9 300" transform="rotate(135 50 50)"></circle>
+                    <!-- 그룹 평균 틱 마커 (79%) -->
+                    <line class="arc-avg-tick" id="tick-focus"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-focus">86</span>
+                    <span class="gauge-avg-tag">그룹 79</span>
                   </div>
-                </section>
-                <section class="metric-section">
-                  <h3>몸 <small>BODY</small></h3>
-                  <div class="metric-items">
-                    <label class="metric"><input type="radio" name="desktop-metric" value="pulse" aria-label="BPM"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="72 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>72</b><small>bpm</small></span></span><span class="k">BPM</span><span class="delta">-1 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="desktop-metric" value="breath" aria-label="호흡"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="58 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>14</b><small>회/분</small></span></span><span class="k">호흡</span><span class="delta">변화 없음</span></label>
-                    <label class="metric"><input type="radio" name="desktop-metric" value="hrv" aria-label="HRV"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="70 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>42</b><small>ms</small></span></span><span class="k">HRV</span><span class="delta">+1 · 직전 1초</span></label>
+                </div>
+                <!-- 최근 수신 막대 12개 -->
+                <div class="recent-bars-container" id="bars-focus"></div>
+                <!-- 중립 관찰 문구 -->
+                <div class="metric-delta-badge" id="delta-focus">그룹 평균보다 <span class="delta-num">+7</span></div>
+              </article>
+
+              <!-- 1-2. 이완도 (23%, 그룹 41%, 대비 -18) -->
+              <article class="metric-card" id="card-relax">
+                <div class="metric-card-top">
+                  <span class="metric-name">이완도</span>
+                  <span class="metric-unit">%</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-relax">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-relax-val" cx="50" cy="50" r="38" stroke-dasharray="41.2 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-relax"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-relax">23</span>
+                    <span class="gauge-avg-tag">그룹 41</span>
                   </div>
-                </section>
+                </div>
+                <div class="recent-bars-container" id="bars-relax"></div>
+                <div class="metric-delta-badge" id="delta-relax">그룹 평균보다 <span class="delta-num">-18</span></div>
+              </article>
+
+              <!-- 1-3. 정서안정도 (19%, 그룹 35%, 대비 -16) -->
+              <article class="metric-card" id="card-emotion">
+                <div class="metric-card-top">
+                  <span class="metric-name">정서안정도</span>
+                  <span class="metric-unit">%</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-emotion">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-emotion-val" cx="50" cy="50" r="38" stroke-dasharray="34.0 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-emotion"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-emotion">19</span>
+                    <span class="gauge-avg-tag">그룹 35</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-emotion"></div>
+                <div class="metric-delta-badge" id="delta-emotion">그룹 평균보다 <span class="delta-num">-16</span></div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 2. 몸 BODY 3지표 -->
+          <div style="margin-top: 2px;">
+            <div class="metrics-section-heading">
+              <div class="metrics-group-title">몸 BODY</div>
+              <div class="metrics-group-note">자율신경 및 활력 지표</div>
+            </div>
+
+            <div class="metrics-grid-3" style="margin-top: 8px;">
+              <!-- 2-1. BPM (78, 그룹 72, 대비 +6) -->
+              <article class="metric-card" id="card-bpm">
+                <div class="metric-card-top">
+                  <span class="metric-name">BPM</span>
+                  <span class="metric-unit">bpm</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-bpm">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-bpm-val" cx="50" cy="50" r="38" stroke-dasharray="68.0 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-bpm"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-bpm">78</span>
+                    <span class="gauge-avg-tag">그룹 72</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-bpm"></div>
+                <div class="metric-delta-badge" id="delta-bpm">그룹 평균보다 <span class="delta-num">+6</span></div>
+              </article>
+
+              <!-- 2-2. 호흡 (14, 그룹 15, 대비 -1) -->
+              <article class="metric-card" id="card-resp">
+                <div class="metric-card-top">
+                  <span class="metric-name">호흡</span>
+                  <span class="metric-unit">회/분</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-resp">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-resp-val" cx="50" cy="50" r="38" stroke-dasharray="64.4 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-resp"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-resp">14</span>
+                    <span class="gauge-avg-tag">그룹 15</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-resp"></div>
+                <div class="metric-delta-badge" id="delta-resp">그룹 평균보다 <span class="delta-num">-1</span></div>
+              </article>
+
+              <!-- 2-3. HRV (48, 그룹 52, 대비 -4) -->
+              <article class="metric-card" id="card-hrv">
+                <div class="metric-card-top">
+                  <span class="metric-name">HRV</span>
+                  <span class="metric-unit">ms</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-hrv">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-hrv-val" cx="50" cy="50" r="38" stroke-dasharray="75.6 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-hrv"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-hrv">48</span>
+                    <span class="gauge-avg-tag">그룹 52</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-hrv"></div>
+                <div class="metric-delta-badge" id="delta-hrv">그룹 평균보다 <span class="delta-num">-4</span></div>
+              </article>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 디바이스 상태 + raw data (지표 아래, 3:2) -->
+        <div class="glass-card device-raw-card">
+          <!-- 디바이스 상태 (컴팩트 스트립) -->
+          <div class="device-strip">
+            <span class="device-strip-title">
+              <span class="status-dot-mint"></span>
+              <span>LINK BAND 2.0</span>
+            </span>
+            <span class="device-strip-sep">·</span>
+            <span class="device-strip-item">배터리 <b>85%</b></span>
+            <span class="device-strip-sep">·</span>
+            <span class="device-strip-item">신호 <b>양호 (98%)</b></span>
+            <span class="device-strip-sep">·</span>
+            <span class="device-strip-item">전극 <b>Fp1·Fp2 정상</b></span>
+            <span class="device-strip-sep">·</span>
+            <span class="device-strip-item">연결 <b>24분</b></span>
+          </div>
+
+          <!-- raw data (EEG · PPG · ACC 3컬럼) -->
+          <div class="raw-grid">
+            <!-- 뇌파 EEG -->
+            <div class="raw-stream-block">
+              <div class="raw-stream-header">
+                <span class="raw-stream-title">
+                  <span>뇌파 EEG</span>
+                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(2ch · 250Hz)</span>
+                </span>
+                <span class="signal-status-badge">
+                  <span class="status-dot-mint"></span>
+                  <span>정상</span>
+                </span>
               </div>
-              <section class="chartbox chart-focus" aria-label="집중도 최근 5분">
-                <div class="charthead"><span class="cap"><strong>집중도</strong> · 시간 변화</span><span class="cur">▲ 5분간 <b>+32</b></span></div>
-                <p class="chart-note">최근 5분</p>
-                <div class="bars" role="img" aria-label="집중도 최근 5분: 55, 58, 60, 61, 64, 66, 68, 70, 73, 78, 82, 87 %"><div class="bar" style="height:55%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:64%"></div><div class="bar" style="height:66%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:73%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:82%"></div><div class="bar now" style="height:87%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-relax" aria-label="이완도 최근 5분">
-                <div class="charthead"><span class="cap"><strong>이완도</strong> · 시간 변화</span><span class="cur"><b>64</b>%</span></div>
-                <p class="chart-note">최근 5분</p>
-                <div class="bars" role="img" aria-label="이완도 최근 5분: 43, 45, 48, 50, 52, 53, 55, 57, 59, 61, 62, 64 %"><div class="bar" style="height:43%"></div><div class="bar" style="height:45%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:50%"></div><div class="bar" style="height:52%"></div><div class="bar" style="height:53%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:57%"></div><div class="bar" style="height:59%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:62%"></div><div class="bar now" style="height:64%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-emotion" aria-label="정서안정도 최근 5분">
-                <div class="charthead"><span class="cap"><strong>정서안정도</strong> · 시간 변화</span><span class="cur"><b>71</b>%</span></div>
-                <p class="chart-note">최근 5분</p>
-                <div class="bars" role="img" aria-label="정서안정도 최근 5분: 60, 62, 61, 64, 65, 66, 65, 67, 68, 70, 70, 71 %"><div class="bar" style="height:60%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:64%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:66%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:70%"></div><div class="bar now" style="height:71%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-pulse" aria-label="BPM 최근 5분">
-                <div class="charthead"><span class="cap"><strong>BPM</strong> · 시간 변화</span><span class="cur"><b>72</b>bpm</span></div>
-                <p class="chart-note">최근 5분 · 천천히 낮아지는 중</p>
-                <div class="bars" role="img" aria-label="BPM 최근 5분: 79, 78, 78, 77, 76, 76, 75, 74, 74, 73, 72, 72 bpm"><div class="bar" style="height:79%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:77%"></div><div class="bar" style="height:76%"></div><div class="bar" style="height:76%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:74%"></div><div class="bar" style="height:74%"></div><div class="bar" style="height:73%"></div><div class="bar" style="height:72%"></div><div class="bar now" style="height:72%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-breath" aria-label="호흡 최근 5분">
-                <div class="charthead"><span class="cap"><strong>호흡</strong> · 시간 변화</span><span class="cur"><b>14</b>회/분</span></div>
-                <p class="chart-note">최근 5분 · 천천히 낮아지는 중</p>
-                <div class="bars" role="img" aria-label="호흡 최근 5분: 19, 18, 18, 17, 17, 16, 16, 15, 15, 14, 14, 14 회/분"><div class="bar" style="height:79%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:71%"></div><div class="bar" style="height:71%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:58%"></div><div class="bar now" style="height:58%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-hrv" aria-label="HRV 최근 5분">
-                <div class="charthead"><span class="cap"><strong>HRV</strong> · 시간 변화</span><span class="cur"><b>42</b>ms</span></div>
-                <p class="chart-note">최근 5분 · 0–60ms 기준</p>
-                <div class="bars" role="img" aria-label="HRV 최근 5분: 32, 33, 33, 35, 34, 36, 37, 38, 39, 40, 41, 42 ms"><div class="bar" style="height:53%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:57%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:63%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:68%"></div><div class="bar now" style="height:70%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <p class="hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
-              <div class="signals">
-                <button class="signal">🌱 잘 따라가요</button>
-                <button class="signal">💧 조금 어려워요</button>
-                <button class="signal">🌙 잠시 쉴게요</button>
+              <div class="raw-canvas-wrap">
+                <div class="canvas-grid-line"></div>
+                <canvas id="eegCanvas"></canvas>
+              </div>
+              <div class="raw-meta-foot">
+                <span>Ch1: α 10.2Hz</span>
+                <span>Ch2: β 17.8Hz</span>
+              </div>
+            </div>
+
+            <!-- 심박 PPG -->
+            <div class="raw-stream-block">
+              <div class="raw-stream-header">
+                <span class="raw-stream-title">
+                  <span>심박 PPG</span>
+                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(BPM ~78)</span>
+                </span>
+                <span class="signal-status-badge">
+                  <span class="status-dot-mint"></span>
+                  <span>정상</span>
+                </span>
+              </div>
+              <div class="raw-canvas-wrap">
+                <div class="canvas-grid-line"></div>
+                <canvas id="ppgCanvas"></canvas>
+              </div>
+              <div class="raw-meta-foot">
+                <span>광용적맥파 펄스</span>
+                <span id="ppgBpmMeta">78 bpm</span>
+              </div>
+            </div>
+
+            <!-- 움직임 ACC -->
+            <div class="raw-stream-block">
+              <div class="raw-stream-header">
+                <span class="raw-stream-title">
+                  <span>움직임 ACC</span>
+                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(3축 · 30Hz)</span>
+                </span>
+                <span class="signal-status-badge">
+                  <span class="status-dot-mint"></span>
+                  <span>정상</span>
+                </span>
+              </div>
+              <div class="raw-canvas-wrap">
+                <div class="canvas-grid-line"></div>
+                <canvas id="accCanvas"></canvas>
+              </div>
+              <div class="raw-meta-foot">
+                <span>X·Y·Z 자세 안정</span>
+                <span>움직임 적음</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- ═══ 모바일 ═══ -->
-    <div class="frame-wrap">
-      <div class="frame-label">모바일 · 390 × 844</div>
-      <div class="frame mobile">
-        <div class="screen">
-          <div class="topbar">
-            <button class="pillbtn ghost">← 종료</button>
-            <div class="title">마음챙김 명상 4주차</div>
-            <button class="pillbtn" aria-label="음소거">🔇</button>
-            <button class="pillbtn ghost" aria-label="화면 끄기">⏻</button>
-          </div>
-          <div class="body">
-            <div class="video">
-              <div class="label">상담사 라이브</div>
-              <div class="avatar"><div class="circle">👤</div><div class="wait">상담사 영상을 기다리고 있어요</div></div>
-              <div class="timer-overlay timer">
-                <span class="now">01:32</span>
-                <span class="total">/ 50:00</span>
-              </div>
-            </div>
-            <div class="rightcol">
-              <div class="status"><span class="dot"></span><span>LINK BAND에서 실시간으로 측정 중입니다</span></div>
-              <div class="metric-sections">
-                <section class="metric-section">
-                  <h3>마음 <small>MIND</small></h3>
-                  <div class="metric-items">
-                    <label class="metric"><input type="radio" name="mobile-metric" value="focus" aria-label="집중도" checked><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="87 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>87</b><small>%</small></span></span><span class="k">집중도</span><span class="delta">+3 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="mobile-metric" value="relax" aria-label="이완도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="64 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>64</b><small>%</small></span></span><span class="k">이완도</span><span class="delta">+1 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="mobile-metric" value="emotion" aria-label="정서안정도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="71 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>71</b><small>%</small></span></span><span class="k">정서안정도</span><span class="delta">변화 없음</span></label>
-                  </div>
-                </section>
-                <section class="metric-section">
-                  <h3>몸 <small>BODY</small></h3>
-                  <div class="metric-items">
-                    <label class="metric"><input type="radio" name="mobile-metric" value="pulse" aria-label="BPM"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="72 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>72</b><small>bpm</small></span></span><span class="k">BPM</span><span class="delta">-1 · 직전 1초</span></label>
-                    <label class="metric"><input type="radio" name="mobile-metric" value="breath" aria-label="호흡"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="58 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>14</b><small>회/분</small></span></span><span class="k">호흡</span><span class="delta">변화 없음</span></label>
-                    <label class="metric"><input type="radio" name="mobile-metric" value="hrv" aria-label="HRV"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="70 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>42</b><small>ms</small></span></span><span class="k">HRV</span><span class="delta">+1 · 직전 1초</span></label>
-                  </div>
-                </section>
-              </div>
-              <p class="hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
-              <div class="signals">
-                <button class="signal">🌱 잘 따라가요</button>
-                <button class="signal">💧 조금 어려워요</button>
-                <button class="signal">🌙 잠시 쉴게요</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    </main>
   </div>
+
+  <!-- JAVASCRIPT: 인터랙션, 실시간 데이터 갱신, CANVAS 파형 렌더러 -->
+  <script>
+    (function() {
+      'use strict';
+
+      /* ========================================================================
+         1. 조용한 신호 3버튼 인터랙션
+         ======================================================================== */
+      const signalButtons = document.querySelectorAll('.signal-pill');
+      const feedbackMsg = document.getElementById('signalFeedback');
+      let feedbackTimeout = null;
+
+      const signalLabels = {
+        follow: '상담사에게 "잘 따라가요" 신호를 보냈어요.',
+        difficult: '상담사에게 "조금 어려워요" 신호를 보냈어요.',
+        rest: '상담사에게 "잠시 쉴게요" 신호를 보냈어요.'
+      };
+
+      signalButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const isCurrentActive = btn.classList.contains('active');
+
+          signalButtons.forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+          });
+
+          if (!isCurrentActive) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-pressed', 'true');
+            const type = btn.getAttribute('data-signal');
+            showFeedback(signalLabels[type] || '신호를 전달했습니다.');
+          } else {
+            showFeedback('신호 전송을 해제했습니다.');
+          }
+        });
+      });
+
+      function showFeedback(text) {
+        feedbackMsg.textContent = text;
+        feedbackMsg.classList.add('show');
+        clearTimeout(feedbackTimeout);
+        feedbackTimeout = setTimeout(() => {
+          feedbackMsg.classList.remove('show');
+        }, 3000);
+      }
+
+      /* ========================================================================
+         2. 함께한 시간 및 연결 시간 타이머 (1초마다 갱신)
+         ======================================================================== */
+      let elapsedSeconds = 24 * 60 + 18; // 24분 18초 기준
+      const totalSessionSeconds = 50 * 60; // 50분
+
+      const elapsedTimerElem = document.getElementById('elapsedTimer');
+      const sessionProgressElem = document.getElementById('sessionProgressFill');
+      const deviceUptimeElem = document.getElementById('deviceUptime');
+
+      function updateTimers() {
+        elapsedSeconds++;
+        const mins = Math.floor(elapsedSeconds / 60);
+        const secs = elapsedSeconds % 60;
+        const formatted = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        
+        if (elapsedTimerElem) elapsedTimerElem.textContent = formatted;
+        if (deviceUptimeElem) deviceUptimeElem.textContent = mins + '분 ' + secs + '초';
+
+        if (sessionProgressElem) {
+          const pct = Math.min(100, (elapsedSeconds / totalSessionSeconds) * 100);
+          sessionProgressElem.style.width = pct.toFixed(1) + '%';
+        }
+      }
+
+      /* ========================================================================
+         3. 6개 지표 데모 데이터 및 1초 지터 갱신
+         ======================================================================== */
+      const metricsState = {
+        focus: { base: 86, avg: 79, min: 0, max: 100, val: 86, unit: '%', history: [82, 84, 85, 83, 84, 86, 85, 87, 85, 86, 87, 86] },
+        relax: { base: 23, avg: 41, min: 0, max: 100, val: 23, unit: '%', history: [26, 25, 24, 25, 23, 22, 24, 23, 22, 23, 24, 23] },
+        emotion: { base: 19, avg: 35, min: 0, max: 100, val: 19, unit: '%', history: [22, 21, 20, 21, 19, 18, 19, 20, 19, 18, 19, 19] },
+        bpm: { base: 78, avg: 72, min: 40, max: 140, val: 78, unit: 'bpm', history: [76, 77, 77, 78, 79, 78, 77, 78, 79, 78, 77, 78] },
+        resp: { base: 14, avg: 15, min: 5, max: 30, val: 14, unit: '회/분', history: [15, 14, 14, 15, 14, 13, 14, 14, 15, 14, 14, 14] },
+        hrv: { base: 48, avg: 52, min: 10, max: 100, val: 48, unit: 'ms', history: [50, 49, 48, 47, 49, 48, 48, 49, 47, 48, 49, 48] }
+      };
+
+      const ARC_TOTAL_LENGTH = 179.0; // 270도 호 기준 길이 (2*PI*38 * 270/360 ≈ 179.07)
+
+      // 그룹 평균 틱 마커 정밀 기하학 계산
+      function setupAvgTick(key) {
+        const item = metricsState[key];
+        const tick = document.getElementById('tick-' + key);
+        if (!tick) return;
+
+        // 시작 각도 135도에서 270도 회전 스팬
+        const ratio = (item.avg - item.min) / (item.max - item.min);
+        const angleDeg = 135 + ratio * 270;
+        const rad = (angleDeg * Math.PI) / 180;
+        
+        // 중심 (50, 50), 아크 반지름 r=38
+        const cx = 50, cy = 50, r = 38;
+        const x1 = cx + (r - 6.5) * Math.cos(rad);
+        const y1 = cy + (r - 6.5) * Math.sin(rad);
+        const x2 = cx + (r + 6.5) * Math.cos(rad);
+        const y2 = cy + (r + 6.5) * Math.sin(rad);
+
+        tick.setAttribute('x1', x1.toFixed(1));
+        tick.setAttribute('y1', y1.toFixed(1));
+        tick.setAttribute('x2', x2.toFixed(1));
+        tick.setAttribute('y2', y2.toFixed(1));
+      }
+
+      // 12개 미니 막대 초기 렌더링
+      function initMiniBars(key) {
+        const item = metricsState[key];
+        const container = document.getElementById('bars-' + key);
+        if (!container) return;
+
+        container.innerHTML = '';
+        item.history.forEach((val, index) => {
+          const bar = document.createElement('div');
+          bar.className = 'mini-bar' + (index === item.history.length - 1 ? ' latest' : '');
+          const ratio = (val - item.min) / (item.max - item.min);
+          const heightPx = Math.max(3, Math.round(ratio * 18));
+          bar.style.height = heightPx + 'px';
+          container.appendChild(bar);
+        });
+      }
+
+      // 지표 갱신
+      function updateMetricDisplay(key) {
+        const item = metricsState[key];
+        const valElem = document.getElementById('val-' + key);
+        const arcElem = document.getElementById('arc-' + key + '-val');
+        const deltaElem = document.getElementById('delta-' + key);
+
+        if (valElem) valElem.textContent = Math.round(item.val);
+
+        // 아크 계산
+        if (arcElem) {
+          const ratio = Math.max(0, Math.min(1, (item.val - item.min) / (item.max - item.min)));
+          const fillLength = (ratio * ARC_TOTAL_LENGTH).toFixed(1);
+          arcElem.setAttribute('stroke-dasharray', `${fillLength} 300`);
+        }
+
+        // 중립 관찰 문구 계산 ("그룹 평균보다 ±N" 또는 "그룹 평균과 비슷")
+        if (deltaElem) {
+          const diff = Math.round(item.val - item.avg);
+          if (diff === 0) {
+            deltaElem.innerHTML = '그룹 평균과 <span class="delta-num">비슷함</span>';
+          } else if (diff > 0) {
+            deltaElem.innerHTML = `그룹 평균보다 <span class="delta-num">+${diff}</span>`;
+          } else {
+            deltaElem.innerHTML = `그룹 평균보다 <span class="delta-num">${diff}</span>`;
+          }
+        }
+
+        // 미니 막대 갱신
+        const container = document.getElementById('bars-' + key);
+        if (container) {
+          const bars = container.children;
+          for (let i = 0; i < bars.length; i++) {
+            const hVal = item.history[i];
+            const ratio = (hVal - item.min) / (item.max - item.min);
+            const heightPx = Math.max(3, Math.round(ratio * 18));
+            bars[i].style.height = heightPx + 'px';
+            if (i === bars.length - 1) {
+              bars[i].classList.add('latest');
+            } else {
+              bars[i].classList.remove('latest');
+            }
+          }
+        }
+      }
+
+      // 초기화
+      Object.keys(metricsState).forEach(key => {
+        setupAvgTick(key);
+        initMiniBars(key);
+        updateMetricDisplay(key);
+      });
+
+      // 1초 주기 시뮬레이션 지터 루프
+      function stepMetrics() {
+        Object.keys(metricsState).forEach(key => {
+          const item = metricsState[key];
+          // 베이스 값 기준 ±1~2 무작위 지터
+          const jitter = (Math.random() - 0.5) * 2.2;
+          let newVal = Math.round(item.base + jitter);
+          newVal = Math.max(item.min, Math.min(item.max, newVal));
+          item.val = newVal;
+
+          // 히스토리 12개 슬라이딩
+          item.history.shift();
+          item.history.push(newVal);
+
+          updateMetricDisplay(key);
+        });
+
+        // 우측 PPG BPM 메타 갱신
+        const ppgBpmMeta = document.getElementById('ppgBpmMeta');
+        if (ppgBpmMeta) {
+          ppgBpmMeta.textContent = `${Math.round(metricsState.bpm.val)} bpm`;
+        }
+      }
+
+      // 1초 타이머 시작
+      setInterval(() => {
+        updateTimers();
+        stepMetrics();
+      }, 1000);
+
+
+      /* ========================================================================
+         4. RAW DATA 실시간 CANVAS 파형 렌더러 (EEG & PPG)
+         ======================================================================== */
+      const eegCanvas = document.getElementById('eegCanvas');
+      const ppgCanvas = document.getElementById('ppgCanvas');
+      const accCanvas = document.getElementById('accCanvas');
+
+      function resizeCanvas(canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return { width: rect.width, height: rect.height, ctx };
+      }
+
+      let eegInfo = resizeCanvas(eegCanvas);
+      let ppgInfo = resizeCanvas(ppgCanvas);
+      let accInfo = resizeCanvas(accCanvas);
+
+      window.addEventListener('resize', () => {
+        eegInfo = resizeCanvas(eegCanvas);
+        ppgInfo = resizeCanvas(ppgCanvas);
+        accInfo = resizeCanvas(accCanvas);
+      });
+
+      let animTime = 0;
+
+      function renderWaveforms() {
+        animTime += 0.035;
+
+        // -------------------------------------------------------------
+        // 4-A. EEG 2채널 파형 (알파 10Hz + 베타 18Hz 합성, 250Hz 감각)
+        // -------------------------------------------------------------
+        const { width: eW, height: eH, ctx: eCtx } = eegInfo;
+        eCtx.clearRect(0, 0, eW, eH);
+
+        // Ch1: Fp1 (라벤더 라인, 알파파 우세)
+        eCtx.beginPath();
+        eCtx.lineWidth = 1.4;
+        eCtx.strokeStyle = '#dcb5ee';
+        const midY1 = eH * 0.38;
+
+        for (let x = 0; x < eW; x++) {
+          const t = animTime + x * 0.055;
+          const y = midY1 + 
+            Math.sin(t * 3.2) * 8.0 + 
+            Math.sin(t * 6.5) * 3.5 + 
+            Math.sin(t * 11.2) * 1.5;
+          if (x === 0) eCtx.moveTo(x, y);
+          else eCtx.lineTo(x, y);
+        }
+        eCtx.stroke();
+
+        // Ch2: Fp2 (퍼플 핑크 라인, 베타파 우세)
+        eCtx.beginPath();
+        eCtx.lineWidth = 1.2;
+        eCtx.strokeStyle = '#a16bbc';
+        const midY2 = eH * 0.68;
+
+        for (let x = 0; x < eW; x++) {
+          const t = animTime + x * 0.06 + 2.5;
+          const y = midY2 + 
+            Math.sin(t * 3.4) * 6.0 + 
+            Math.sin(t * 7.8) * 4.2 + 
+            Math.sin(t * 13.5) * 2.0;
+          if (x === 0) eCtx.moveTo(x, y);
+          else eCtx.lineTo(x, y);
+        }
+        eCtx.stroke();
+
+
+        // -------------------------------------------------------------
+        // 4-B. PPG 심박 펄스 파형 (BPM ~78, Dicrotic Notch 합성)
+        // -------------------------------------------------------------
+        const { width: pW, height: pH, ctx: pCtx } = ppgInfo;
+        pCtx.clearRect(0, 0, pW, pH);
+
+        pCtx.beginPath();
+        pCtx.lineWidth = 2.0;
+        pCtx.strokeStyle = '#dcb5ee';
+        pCtx.shadowColor = 'rgba(220, 181, 238, 0.4)';
+        pCtx.shadowBlur = 4;
+
+        const pMidY = pH * 0.52;
+        const wavelength = 58; // 심박 주기 폭
+
+        for (let x = 0; x < pW; x++) {
+          const phase = ((x - animTime * 48) % wavelength + wavelength) % wavelength;
+          const normPhase = phase / wavelength; // 0 ~ 1
+
+          let pulseY = 0;
+          if (normPhase < 0.22) {
+            // 수축기 상승 (Systolic upstroke)
+            pulseY = -Math.sin((normPhase / 0.22) * Math.PI) * 20;
+          } else if (normPhase >= 0.22 && normPhase < 0.38) {
+            // 수축기 하강 및 Dicrotic Notch 형성
+            const sub = (normPhase - 0.22) / 0.16;
+            pulseY = -20 * (1 - sub * 0.85);
+          } else if (normPhase >= 0.38 && normPhase < 0.52) {
+            // 중복맥박 반동 (Dicrotic wave rebound)
+            const sub = (normPhase - 0.38) / 0.14;
+            pulseY = -7 + Math.sin(sub * Math.PI) * 4.0;
+          } else {
+            // 확장기 기저선 복귀 (Diastolic runoff)
+            const sub = (normPhase - 0.52) / 0.48;
+            pulseY = -3.5 * (1 - sub);
+          }
+
+          const y = pMidY + pulseY;
+          if (x === 0) pCtx.moveTo(x, y);
+          else pCtx.lineTo(x, y);
+        }
+        pCtx.stroke();
+        pCtx.shadowBlur = 0; // 복원
+
+
+        // -------------------------------------------------------------
+        // 4-C. ACC 3축 움직임 파형 (30Hz 감각, 완만한 저주파 진동 — 움직임 버스트 없음)
+        // -------------------------------------------------------------
+        const { width: aW, height: aH, ctx: aCtx } = accInfo;
+        aCtx.clearRect(0, 0, aW, aH);
+
+        const accChannels = [
+          { color: '#dcb5ee', mid: 0.28, amp: 2.2, freq: 1.6, phase: 0 },
+          { color: '#a16bbc', mid: 0.52, amp: 2.6, freq: 2.1, phase: 1.8 },
+          { color: '#6f4d8f', mid: 0.76, amp: 2.0, freq: 1.3, phase: 3.4 },
+        ];
+
+        accChannels.forEach((ch) => {
+          aCtx.beginPath();
+          aCtx.lineWidth = 1.3;
+          aCtx.strokeStyle = ch.color;
+          for (let x = 0; x < aW; x++) {
+            const t = animTime * 1.4 + x * 0.04 + ch.phase;
+            const y = ch.mid * aH + Math.sin(t * ch.freq) * ch.amp + Math.sin(t * ch.freq * 0.37) * 1.1;
+            if (x === 0) aCtx.moveTo(x, y);
+            else aCtx.lineTo(x, y);
+          }
+          aCtx.stroke();
+        });
+
+        requestAnimationFrame(renderWaveforms);
+      }
+
+      // 파형 렌더링 루프 가동
+      requestAnimationFrame(renderWaveforms);
+
+      // 나가기 버튼 피드백
+      document.getElementById('exitClassBtn').addEventListener('click', () => {
+        showFeedback('목업: 클래스 나가기 버튼이 클릭되었습니다.');
+      });
+
+    })();
+  </script>
 </body>
 </html>

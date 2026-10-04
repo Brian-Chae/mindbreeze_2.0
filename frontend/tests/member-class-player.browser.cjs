@@ -21,11 +21,17 @@ async function mount(page, mode = 'online') {
         lastEegAt: new Date().toISOString(), battery: 80, signalQualityLevel: 'ok', isSupported: true, isMock: false,
         leadOff: {ch1: leadOff, ch2: false}, error: null,
         scoredIndices: { focusIndex: window.focusValue ?? 80, relaxationIndex: 60, emotionalStability: 70 },
-        heartRate: 72, respiratoryRate: 14, sdnn: 42,
+        heartRate: 72, respiratoryRate: 14, sdnn: 42, connectedElapsedSec: 92,
+        acc: { magnitude: [0, 1, 0.5, 2, 1] },
+        getEegWaveformSamples: () => ({ fp1: [0, 1, 2, 1, 0, -1, -2, -1], fp2: [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5] }),
+        getPpgWaveformSamples: () => ({ red: [0, 1, 2, 1, 0, -1, -2, -1], ir: [0, 0.5, 1, 0.5, 0, -0.5, -1, -0.5] }),
         connect: async () => setConnected(true), disconnect: async () => setConnected(false) };
     }`],
     ['useSessionLiveSocket.ts', `
-    export function useSessionLiveSocket() { return { sendSignal: type => {window.sentSignal = type; return true;} }; }
+    export function useSessionLiveSocket(opts) {
+      window.emitGroupAverage = (event) => opts?.onGroupAverage?.(event);
+      return { sendSignal: type => {window.sentSignal = type; return true;} };
+    }
   `],
   ]);
   const path = require('node:path');
@@ -41,14 +47,14 @@ async function mount(page, mode = 'online') {
         sessionId:'qa-session', participantId:'qa-participant', classCode:null,
         locationType:'${mode}', participantMode:'group', maxParticipants:${mode === 'offline' ? 30 : 12}, onLeave:()=>{window.leftClass=true;}
       }));`, resolveDir:frontend, loader:'tsx'},
-    bundle:true, write:false, format:'esm', jsx:'automatic', define:{'import.meta.env':'{}','process.env.NODE_ENV':'"production"'},
+    bundle:true, write:false, format:'esm', jsx:'automatic', define:{'import.meta.env':'{}','process.env.NODE_ENV':'\"production\"'},
     plugins:[{name:'player-test-boundaries',setup(build){
       build.onLoad({filter:/\/use(Band|SessionLiveSocket)\.ts$/}, args => ({contents:moduleMocks.get(path.basename(args.path)),loader:'js',resolveDir:frontend}));
       build.onLoad({filter:/\.css$/}, () => ({contents:'',loader:'js'}));
     }}]
   });
   const styleFile = fs.readdirSync(path.join(frontend,'dist/assets')).find(name => name.startsWith('style-') && name.endsWith('.css'));
-  const css = fs.readFileSync(path.join(frontend,'dist/assets',styleFile),'utf8') + '\n' + fs.readFileSync(path.join(frontend,'src/components/class/member-class-player.css'),'utf8');
+  const css = fs.readFileSync(path.join(frontend,'dist/assets',styleFile),'utf8') + '\\n' + fs.readFileSync(path.join(frontend,'src/components/class/member-class-player.css'),'utf8');
   await page.route('**/player-fixture.js', route => route.fulfill({contentType:'application/javascript',body:bundle.outputFiles[0].text}));
   await page.route('**/member-player-test', route => route.fulfill({contentType:'text/html; charset=utf-8',body:`
     <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
@@ -61,9 +67,11 @@ async function assertLayout(page) {
   const layout = await page.evaluate(() => {
     const root = document.querySelector('.member-class-player');
     const frame = document.querySelector('.player-body').getBoundingClientRect();
-    const selectors = ['.player-video', '.player-metric-status', '.player-metric-sections', '.player-chart', '.player-signals'];
+    // 우측 컬럼(.member-right)은 모바일에서 내부 스크롤 — 디바이스/raw 카드는 스크롤 영역이므로
+    // '한 화면' 검증 대상은 스크롤되지 않는 좌측 카드 + 우측 상단 지표 카드로 한정한다.
+    const selectors = ['.member-video-card', '.member-signal-card', '.member-metrics-card'];
     return { viewport: [innerWidth, innerHeight], document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
-      root: [root.scrollWidth, root.scrollHeight], videoHeight: document.querySelector('.player-video').getBoundingClientRect().height,
+      root: [root.scrollWidth, root.scrollHeight], videoHeight: document.querySelector('.member-video-card').getBoundingClientRect().height,
       outside: selectors.filter(selector => {const r = document.querySelector(selector).getBoundingClientRect(); return r.bottom > frame.bottom + 1 || r.right > frame.right + 1;}),
       smallButtons: [...document.querySelectorAll('.player-screen button')].filter(b => b.getBoundingClientRect().height > 0 && b.getBoundingClientRect().height < 44).map(b => b.textContent)
     };
@@ -86,23 +94,33 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
       await assertLayout(page);
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-disconnected.png`});
       await page.getByRole('button', {name:'LINK BAND 연결', exact:true}).click();
-      await page.clock.runFor(300 * 1000);
+      // SDD-124: rAF raw 파형이 fake clock에서 수만 프레임을 동기 실행해 느려지므로
+      // runFor를 최소(2초)로 제한 — 1Hz 지표 갱신 2틱이면 다이얼/그룹 평균 검증에 충분.
+      await page.clock.runFor(2000);
+      // SDD-124: 마음3+몸3 = 6개 다이얼 + 디바이스/raw 3블록
+      assert.equal(await page.locator('.player-metric').count(), 6);
+      assert.equal(await page.locator('.member-raw-block').count(), 3);
       if (viewport.width >= 768) {
-        await page.locator('.player-bar').first().waitFor();
-        assert.equal(await page.locator('.player-bar').count(),12);
-        const initial = await page.locator('.player-bars').getAttribute('aria-label');
-        await page.evaluate(() => { window.focusValue = 20; });
-        // SDD-123: 매초 갱신 — 25초 스로틀 제거. 2초 안에 반영되어야 한다.
-        await page.clock.runFor(2000);
-        assert.notEqual(await page.locator('.player-bars').getAttribute('aria-label'),initial);
-        for (const name of ['이완도','정서안정도','BPM','호흡','HRV','집중도']) {
-          await page.getByRole('button',{name:new RegExp('^'+name)}).click();
-          assert.match(await page.locator('.player-bars').getAttribute('aria-label'),new RegExp(name));
-        }
-      } else {
-        // SDD-123: 모바일은 차트 숨김 — 현재 상태(다이얼)만 노출
-        assert.equal(await page.locator('.player-chart').isVisible(), false);
-        assert.equal(await page.locator('.player-metric').first().isVisible(), true);
+        // 그룹 평균 수신 → 각 다이얼에 "그룹 N" 태그 + "그룹 평균보다 ±N" 배지
+        await page.evaluate(() => window.emitGroupAverage({
+          session_id: 'qa-session', wearer_count: 5, min_wearers: 3, sample_status: 'ok',
+          metrics: {
+            focus_index: { mean: 0.5 }, relaxation_index: { mean: 0.4 }, emotional_stability: { mean: 0.45 },
+            heart_rate: { mean: 70 }, respiratory_rate: { mean: 12 }, sdnn: { mean: 40 },
+          },
+        }));
+        assert.equal(await page.locator('.player-dial-avg').count(), 6);
+        assert.match(await page.locator('.player-average').first().textContent(), /그룹 평균/);
+        // 표본 부족 → 배지가 "표본 부족"으로 접힌다
+        await page.evaluate(() => window.emitGroupAverage({
+          session_id: 'qa-session', wearer_count: 1, min_wearers: 3, sample_status: 'insufficient',
+          metrics: {
+            focus_index: { mean: null }, relaxation_index: { mean: null }, emotional_stability: { mean: null },
+            heart_rate: { mean: null }, respiratory_rate: { mean: null }, sdnn: { mean: null },
+          },
+        }));
+        assert.equal(await page.locator('.player-dial-avg').count(), 0);
+        assert.match(await page.locator('.player-average').first().textContent(), /표본 부족/);
       }
       await assertLayout(page);
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-connected.png`});

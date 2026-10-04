@@ -20,6 +20,7 @@ SDD-026 P0 안전망:
                  class:audio_sync(data)                    ← 개선 10 가이드·BGM 재생 제어(상담사)
 서버→클라이언트: joined, join_denied, eeg_feature, class:signal(호스트 전용),
                  class:aggregate(호스트 전용 — 개선 8 그룹 익명 집계),
+                 class:group_average(공용 룸 — SDD-124 절대 그룹 평균),
                  class:audio_sync(세션 공용 룸 — 개선 10 동기 재생 타임코드),
                  session_state_changed, participant_changed, device_status_changed,
                  waiting_room_changed(호스트 전용)  ← 개선 3 대기실 입장/퇴장
@@ -69,12 +70,18 @@ _active_signals: dict[str, dict[str, tuple[str, float]]] = {}
 # 개선 8: 그룹 익명 집계 상태 지표(적응형 페이싱) — 상담사 전용 이벤트명
 GROUP_AGGREGATE_EVENT = "class:aggregate"
 
+# SDD-124: 절대 그룹 평균(회원 노출용) 이벤트명 — 공용 룸(호스트+전체 참가자) 브로드캐스트
+GROUP_AVERAGE_EVENT = "class:group_average"
+
 # 집계 브로드캐스트 주기(초). 참가자가 매초 feature 를 올리므로 그때마다 집계하면 DB 비용이
 # 참여자 수 × 초 만큼 늘어난다. 상담사 판단에 5초 지연은 충분히 짧다.
 AGGREGATE_INTERVAL_SEC = 5.0
 
 # 세션별 마지막 집계 발행 시각(monotonic) — throttle 상태
 _last_aggregate_at: dict[str, float] = {}
+
+# SDD-124: 절대 그룹 평균 전용 throttle 상태(class:aggregate 와 독립 — 동시 발행 보장)
+_last_group_average_at: dict[str, float] = {}
 
 
 def aggregate_due(session_id, *, at: float | None = None) -> bool:
@@ -93,9 +100,21 @@ def aggregate_due(session_id, *, at: float | None = None) -> bool:
     return True
 
 
+def group_average_due(session_id, *, at: float | None = None) -> bool:
+    """SDD-124: 절대 그룹 평균 발행 주기 판정(class:aggregate 와 독립 throttle)."""
+    sid = str(session_id)
+    stamp = time.monotonic() if at is None else at
+    last = _last_group_average_at.get(sid)
+    if last is not None and stamp - last < AGGREGATE_INTERVAL_SEC:
+        return False
+    _last_group_average_at[sid] = stamp
+    return True
+
+
 def clear_group_aggregates() -> None:
     """집계 throttle 상태 전역 초기화(테스트/세션 종료 정리용)."""
     _last_aggregate_at.clear()
+    _last_group_average_at.clear()
 
 # sync(REST) 컨텍스트에서 async 브로드캐스트를 예약하기 위한 이벤트 루프 참조.
 # connect 핸들러(루프 안에서 실행)에서 캡처한다. 캡처 전(테스트 등)에는 None → 발행 생략.
@@ -363,6 +382,8 @@ def register_session_live_namespace(sio):
             if state is not None:
                 await sio.emit(AUDIO_SYNC_EVENT, state, to=sid, namespace=_NAMESPACE)
                 logger.info("[WS /session-live] %s replay → sid=%s", AUDIO_SYNC_EVENT, sid)
+            # SDD-124: 늦게 입장한 회원도 즉시 절대 그룹 평균을 받는다(본인 소켓으로 1건).
+            await publish_group_average(session_id, force=True, to=sid)
 
     @sio.on("leave", namespace=_NAMESPACE)
     async def on_leave(sid, data):
@@ -456,6 +477,9 @@ def register_session_live_namespace(sio):
         # 개선 8: 그룹 익명 집계(적응형 페이싱) — 주기(AGGREGATE_INTERVAL_SEC)마다 한 번만 계산해
         # 상담사 룸에 브로드캐스트한다. 개인 점수는 payload 에 담지 않는다.
         await publish_group_aggregate(session_id)
+
+        # SDD-124: 절대 그룹 평균(회원 노출용) — 공용 룸(호스트+전체 참가자)으로 브로드캐스트.
+        await publish_group_average(session_id)
 
     @sio.on("class:signal", namespace=_NAMESPACE)
     async def on_quiet_signal(sid, data):
@@ -921,6 +945,62 @@ async def publish_group_aggregate(
         return None
 
     await broadcast_group_aggregate(session_id, payload, to=to)
+    return payload
+
+
+def _compute_group_average(session_id) -> dict | None:
+    """SDD-124: 절대 그룹 평균 계산을 서비스 레이어에 위임(전용 DB 세션)."""
+    from app.services import group_aggregate as group_aggregate_service
+
+    db = _open_db()
+    try:
+        return group_aggregate_service.compute_group_average(session_id, db)
+    except Exception:
+        logger.warning(
+            "[WS /session-live] 그룹 평균 계산 실패 (session=%s)", session_id, exc_info=True
+        )
+        return None
+    finally:
+        db.close()
+
+
+async def broadcast_group_average(
+    session_id: str, payload: dict, *, to: str | None = None
+) -> None:
+    """SDD-124: 절대 그룹 평균을 공용 룸(호스트+전체 참가자)으로 브로드캐스트한다.
+
+    - to 지정 시 해당 소켓 1개(참가자 join 직후), 미지정 시 공용 룸(:all) 전체.
+    - payload 는 익명 집계 평균뿐(개인 식별자·개인 점수·순위 없음).
+    """
+    sio = _get_sio()
+    body = {"session_id": str(session_id), **payload}
+    if to:
+        await sio.emit(GROUP_AVERAGE_EVENT, body, to=to, namespace=_NAMESPACE)
+        logger.info("[WS /session-live] emit %s → sid=%s", GROUP_AVERAGE_EVENT, to)
+        return
+    room = _room_all(session_id)
+    await sio.emit(GROUP_AVERAGE_EVENT, body, room=room, namespace=_NAMESPACE)
+    logger.info("[WS /session-live] broadcast %s → %s", GROUP_AVERAGE_EVENT, room)
+
+
+async def publish_group_average(
+    session_id, *, force: bool = False, to: str | None = None
+) -> dict | None:
+    """SDD-124: 절대 그룹 평균을 계산해 (주기가 되었으면) 발행한다.
+
+    returns 발행 여부와 무관하게 계산된 payload(계산 실패 시 None).
+    - force=True: throttle 을 무시하고 즉시 발행(참가자 join 직후 1건).
+    """
+    if force:
+        _last_group_average_at[str(session_id)] = time.monotonic()
+    elif not group_average_due(session_id):
+        return None
+
+    payload = await asyncio.to_thread(_compute_group_average, session_id)
+    if payload is None:
+        return None
+
+    await broadcast_group_average(session_id, payload, to=to)
     return payload
 
 

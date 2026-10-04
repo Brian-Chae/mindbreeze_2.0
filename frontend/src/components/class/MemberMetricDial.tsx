@@ -1,5 +1,5 @@
-// SDD-123: 회원용 지표 다이얼 — 상담사 화면(HostMetricDisplay)의 아크 링 + 최근 수신 막대를 이식.
-// 값은 snapshot(1Hz)을 그대로 표시(매초 실시간). 25초 스로틀 없음.
+// SDD-123 + SDD-124: 회원용 지표 다이얼 — 아크 링 + 그룹 평균 틱 마커 + 최근 수신 막대.
+// 값은 snapshot(1Hz)을 그대로 표시(매초 실시간). 하단 배지는 "그룹 평균보다 ±N"(그룹 평균 대비 위치).
 
 import { useId } from 'react';
 
@@ -7,16 +7,12 @@ interface MemberMetricDialProps {
   label: string;
   value: number | null;
   unit: string;
-  /** 0~100 스케일 상한 — % 지표는 100, 비율 지표는 METRICS[].chartMax */
+  /** 스케일 상한 — % 지표는 100, 비율 지표는 METRICS[].chartMax */
   maxValue: number;
-  /** 선택 지표 — 히어로(큰 다이얼) + 증감 표시 */
-  hero: boolean;
-  selected: boolean;
-  /** 직전 1초 대비 변화량 (hero에서만 표시) */
-  delta: number | null;
   /** 최근 수신값 시계열(1Hz 링버퍼) — 막대 그래프 표시용 */
   series: readonly (number | null)[];
-  onClick: () => void;
+  /** SDD-124: 그룹 평균(표시 스케일). null = 표본 부족/미수신 */
+  average?: number | null;
 }
 
 const BAR_COUNT = 12;
@@ -28,16 +24,18 @@ export function MemberMetricDial({
   value,
   unit,
   maxValue,
-  hero,
-  selected,
-  delta,
   series,
-  onClick,
+  average = null,
 }: MemberMetricDialProps) {
   const uid = useId();
   const dialGradientId = `${uid}-dial`;
   const barsGradientId = `${uid}-bars`;
   const gauge = value === null ? null : Math.max(0, Math.min(100, (value / maxValue) * 100));
+  const averageGauge =
+    average === null ? null : Math.max(0, Math.min(100, (average / maxValue) * 100));
+  const tickAngle =
+    averageGauge === null ? null : ((averageGauge / 100) * 360 - 90) * (Math.PI / 180);
+  const groupDelta = value !== null && average !== null ? Math.round(value - average) : null;
 
   const samples = series.slice(-BAR_COUNT);
   const hasSeries = samples.some((v) => v !== null);
@@ -45,13 +43,11 @@ export function MemberMetricDial({
   const barW = slot * 0.55;
 
   return (
-    <button
-      type="button"
-      className={`player-metric${selected ? ' is-selected' : ''}`}
-      data-hero={hero || undefined}
-      aria-pressed={selected}
-      aria-label={`${label} ${value === null ? '미측정' : `${Math.round(value)} ${unit}`}`}
-      onClick={onClick}
+    <article
+      className="player-metric"
+      aria-label={`${label} ${value === null ? '미측정' : `${Math.round(value)} ${unit}`}${
+        average !== null ? `, 그룹 평균 ${Math.round(average)}` : ''
+      }`}
     >
       <span className="player-dial" aria-hidden="true">
         <svg viewBox="0 0 120 120">
@@ -75,10 +71,20 @@ export function MemberMetricDial({
               transform="rotate(-90 60 60)"
             />
           )}
+          {tickAngle !== null && (
+            <line
+              className="player-dial-average"
+              x1={60 + 43 * Math.cos(tickAngle)}
+              y1={60 + 43 * Math.sin(tickAngle)}
+              x2={60 + 56 * Math.cos(tickAngle)}
+              y2={60 + 56 * Math.sin(tickAngle)}
+            />
+          )}
         </svg>
         <span className="player-dial-num">
           <b>{value === null ? '—' : Math.round(value)}</b>
           {value !== null && <small>{unit}</small>}
+          {average !== null && <em className="player-dial-avg">그룹 {Math.round(average)}</em>}
         </span>
       </span>
 
@@ -116,11 +122,13 @@ export function MemberMetricDial({
       )}
 
       <span className="player-metric-name">{label}</span>
-      {hero && delta !== null && (
-        <span className="player-delta">
-          {delta === 0 ? '변화 없음 · 직전 1초' : `${delta > 0 ? '+' : ''}${delta} · 직전 1초`}
-        </span>
-      )}
-    </button>
+      <span className={`player-average${groupDelta === null ? ' is-empty' : ''}`}>
+        {groupDelta === null
+          ? '그룹 평균 표본 부족'
+          : groupDelta === 0
+            ? '그룹 평균과 같음'
+            : `그룹 평균보다 ${groupDelta > 0 ? '+' : ''}${groupDelta}`}
+      </span>
+    </article>
   );
 }

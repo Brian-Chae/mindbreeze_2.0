@@ -28,7 +28,7 @@
 .player-topbar h1 { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-size: 15px; font-weight: 500; }
 .player-pill { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex-shrink: 0; min-height: 44px; min-width: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--player-border); background: var(--player-fill); color: var(--player-cream); font-size: 13px; font-weight: 500; }
 .player-pill:hover { background: var(--player-fill-hover); }
-.player-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) 400px; gap: 20px; padding: 0 20px 20px; }
+.player-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 30%) minmax(0, 1fr); gap: 20px; padding: 0 20px 20px; }
 .player-video { position: relative; min-height: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--player-border); background: radial-gradient(ellipse at 50% 30%, #382047, #1b1025 75%); }
 .player-video-label { position: absolute; left: 16px; top: 16px; z-index: 2; font-size: 11px; color: var(--player-muted); }
 .player-video-label::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--player-mint); margin-right: 7px; }
@@ -132,6 +132,42 @@
 .player-chat aside button { min-height: 44px; }
 @keyframes player-breathe { 50% { box-shadow: 0 0 0 22px #01f0c800; } }
 @keyframes player-pulse { 50% { opacity: .3; } }
+
+/* ── SDD-124: 회원 2열 레이아웃 (좌 시그널+영상 / 우 지표+디바이스) ── */
+.member-left { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow-y: auto; }
+.member-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.member-signal-card { flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--player-border); border-radius: 12px; background: var(--player-surface); }
+.member-card-title { margin: 0; font-size: 12px; font-weight: 500; color: var(--player-cream); }
+.member-video-card { position: relative; flex: 1; min-height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid var(--player-border); background: radial-gradient(ellipse at 50% 30%, #382047, #1b1025 75%); }
+.member-metrics-card { flex: 3; min-height: 0; padding: 16px; border: 1px solid var(--player-border); border-radius: 12px; background: var(--player-surface); overflow-y: auto; }
+.member-device-raw-card { flex: 2; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--player-border); border-radius: 12px; background: var(--player-surface); overflow-y: auto; }
+.member-device-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.player-analyzing { display: block; font-size: 11px; color: var(--player-lavender); }
+
+/* 디바이스 상태 스트립 */
+.member-device-strip { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--player-muted); }
+.member-device-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--player-cream); }
+.member-device-name b { font-size: 10px; font-weight: 500; color: var(--player-mint); }
+.member-device-name.is-off b { color: var(--player-muted); }
+.member-device-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--player-mint); box-shadow: 0 0 8px #01f0c840; flex-shrink: 0; }
+.member-device-name.is-off .member-device-dot { background: var(--player-muted); box-shadow: none; }
+
+/* raw 데이터 파형 */
+.member-raw-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; flex: 1; min-height: 0; }
+.member-raw-block { display: flex; flex-direction: column; gap: 6px; min-width: 0; min-height: 0; padding: 10px; border: 1px solid var(--player-border); border-radius: 10px; background: var(--player-fill); }
+.member-raw-head { display: flex; align-items: center; justify-content: space-between; }
+.member-raw-title { font-size: 11px; font-weight: 500; color: var(--player-cream); }
+.member-raw-status { font-size: 10px; color: var(--player-mint); }
+.member-raw-status.is-idle { color: var(--player-muted); }
+.member-raw-wave { position: relative; display: block; flex: 1; min-height: 48px; }
+.member-raw-wave canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.member-raw-foot { font-size: 10px; color: var(--player-muted); }
+
+/* 다이얼 그룹 평균 마커 + 배지 */
+.player-dial-average { stroke: var(--player-mint); stroke-width: 2.5; stroke-linecap: round; }
+.player-dial-avg { font-style: normal; font-size: 9px; font-weight: 500; color: var(--player-mint); margin-top: 1px; line-height: 1; }
+.player-average { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--player-lavender); order: 3; }
+.player-average.is-empty { color: var(--player-muted); }
 @media (max-width: 767px) {
   .player-topbar { padding: 0 12px; gap: 8px; }
   .player-topbar h1 { font-size: 13px; letter-spacing: -.02em; }
@@ -139,6 +175,13 @@
   .player-desktop-label { display: none; }
   .player-body { overflow-y: hidden; display: flex; flex-direction: column; gap: 8px; padding: 0 12px max(20px, env(safe-area-inset-bottom)); }
   .player-video { flex: 1; min-height: 180px; }
+  .member-left { flex: none; overflow-y: visible; }
+  .member-video-card { flex: none; min-height: 180px; }
+  .member-signal-card { flex-shrink: 0; }
+  .member-right { flex: 1; overflow-y: auto; min-height: 0; }
+  .member-metrics-card, .member-device-raw-card { flex: none; }
+  .member-raw-grid { grid-template-columns: 1fr; gap: 8px; }
+  .member-raw-wave { flex: none; height: 64px; min-height: 64px; }
   .player-right { display: flex; flex-direction: column; overflow-y: auto; min-height: 0; flex-shrink: 1; padding: 12px; }
   .player-metric-sections { flex: none; }
   .player-metric-status { min-height: 24px; flex-shrink: 0; }
