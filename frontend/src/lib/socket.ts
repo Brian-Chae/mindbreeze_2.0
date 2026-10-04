@@ -269,6 +269,9 @@ let sessionLiveSocket: Socket | null = null;
 let sessionLiveToken: string | null | undefined = undefined;
 /** connect_error 시 만료 토큰 refresh 1회 가드 (성공 재연결 시 리셋) */
 let sessionLiveTokenRefreshAttempted = false;
+/** SDD-110: 현재 join된 세션 + 마지막 joined 스냅샷 캐시 (join dedup / 후발 구독자 재배달) */
+let liveCurrentSession: string | null = null;
+let liveSnapshotCache: SessionLiveJoinedEvent | null = null;
 
 /**
  * `/session-live` 싱글톤 소켓.
@@ -328,6 +331,16 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
     });
   });
 
+  // SDD-110: 마지막 joined 스냅샷 캐시 — 후발 구독자에게 재배달한다.
+  sessionLiveSocket.on('joined', (event: SessionLiveJoinedEvent) => {
+    liveSnapshotCache = event;
+  });
+  // SDD-110: 단절 시 join 상태 클리어 — 재연결 join이 dedup에 막히지 않게 한다.
+  sessionLiveSocket.on('disconnect', () => {
+    liveCurrentSession = null;
+    liveSnapshotCache = null;
+  });
+
   return sessionLiveSocket;
 };
 
@@ -356,10 +369,13 @@ export const joinSessionLive = (
   sessionId: string,
   participantId?: string | null,
 ): void => {
+  // SDD-110: 이미 같은 세션에 join된 상태면 재emit하지 않는다(재연결 join N회 → 1회).
+  if (liveCurrentSession === sessionId && !socket.disconnected) return;
   const payload: SessionLiveJoinPayload = {
     session_id: sessionId,
     ...(participantId ? { participant_id: participantId } : {}),
   };
+  liveCurrentSession = sessionId;
   if (socket.connected) {
     socket.emit('join', payload);
   } else {
@@ -371,6 +387,11 @@ export const joinSessionLive = (
 
 /** room 퇴장 */
 export const leaveSessionLive = (socket: Socket, sessionId: string): void => {
+  // SDD-110: join 상태/스냅샷 캐시 클리어 — 다음 세션 join이 정상 emit되게 한다.
+  if (liveCurrentSession === sessionId) {
+    liveCurrentSession = null;
+  }
+  liveSnapshotCache = null;
   if (!socket.connected) return;
   socket.emit('leave', { session_id: sessionId });
 };
@@ -393,6 +414,10 @@ export const subscribeSessionLiveJoined = (
   socket: Socket,
   handler: SessionLiveJoinedHandler,
 ): (() => void) => {
+  // SDD-110: 이미 join된 세션의 후발 구독자에게 캐시된 스냅샷을 즉시 1회 재배달한다.
+  if (liveSnapshotCache) {
+    handler(liveSnapshotCache);
+  }
   socket.on('joined', handler);
   return () => {
     socket.off('joined', handler);
