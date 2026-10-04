@@ -114,21 +114,24 @@ function avg(values: number[]): number | null {
 function halfSeries(
   points: TimelineLikePoint[],
   pick: (p: TimelineLikePoint) => number | null | undefined,
-): { early: number; late: number } | null {
+): { early: number; late: number; overall: number } | null {
   if (points.length < 2) return null;
   const mid = Math.floor(points.length / 2);
   const earlyVals: number[] = [];
   const lateVals: number[] = [];
+  const allVals: number[] = [];
   points.forEach((p, i) => {
     const v = pick(p);
     if (v === null || v === undefined || Number.isNaN(v)) return;
+    allVals.push(v);
     if (i < mid) earlyVals.push(v);
     else lateVals.push(v);
   });
   const early = avg(earlyVals);
   const late = avg(lateVals);
-  if (early === null || late === null) return null;
-  return { early, late };
+  const overall = avg(allVals);
+  if (early === null || late === null || overall === null) return null;
+  return { early, late, overall };
 }
 
 /**
@@ -140,7 +143,7 @@ export function deriveChangesFromTimeline(
 ): MetricChangeInput[] | null {
   if (!timeline || timeline.length < 2) return null;
 
-  const pairs: Array<{ id: MetricId; half: { early: number; late: number } | null }> = [
+  const pairs: Array<{ id: MetricId; half: { early: number; late: number; overall: number } | null }> = [
     { id: 'respiratory_rate', half: halfSeries(timeline, (p) => p.respiratory_rate) },
     { id: 'heart_rate', half: halfSeries(timeline, (p) => p.heart_rate) },
     {
@@ -164,7 +167,7 @@ export function deriveChangesFromTimeline(
   const changes: MetricChangeInput[] = [];
   for (const { id, half } of pairs) {
     if (!half) return null; // 6지표 모두 필요 (규칙 빌더 계약)
-    changes.push({ id, early: half.early, late: half.late });
+    changes.push({ id, early: half.early, late: half.late, overall: half.overall });
   }
   return changes;
 }

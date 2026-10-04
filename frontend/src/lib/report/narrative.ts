@@ -22,6 +22,8 @@ export interface MetricChangeInput {
   early: number;
   /** 후반 평균 */
   late: number;
+  /** 전체 평균 (전반/후반 통합) — 마음 지표 3단계 서사용 */
+  overall?: number;
 }
 
 export interface MetricNarrative {
@@ -188,6 +190,67 @@ export function sentenceFor(id: MetricId, direction: Direction): string {
   return SENTENCE_TEMPLATES[id][direction];
 }
 
+/** 수준 판정(0~100): 높음 ≥70, 보통 40~70, 낮음 <40 */
+type Zone = 'high' | 'mid' | 'low';
+
+function zoneOf(score: number): Zone {
+  if (score >= 70) return 'high';
+  if (score >= 40) return 'mid';
+  return 'low';
+}
+
+type MindMetricId = 'focus' | 'relaxation' | 'emotional_stability';
+
+const MIND_LEVEL_ADVERBS: Record<
+  MindMetricId,
+  { overall: Record<Zone, string>; early: Record<Zone, string>; late: Record<Zone, string> }
+> = {
+  emotional_stability: {
+    overall: { high: '안정적으로', mid: '대체로', low: '불안정하게' },
+    early: { high: '차분하게', mid: '대체로', low: '다소' },
+    late: { high: '차분하게', mid: '안정적으로', low: '다소' },
+  },
+  relaxation: {
+    overall: { high: '깊게', mid: '대체로', low: '다소' },
+    early: { high: '깊게', mid: '대체로', low: '다소' },
+    late: { high: '더욱 깊게', mid: '안정적으로', low: '다소' },
+  },
+  focus: {
+    overall: { high: '깊게', mid: '대체로', low: '다소' },
+    early: { high: '깊게', mid: '대체로', low: '다소' },
+    late: { high: '더욱 깊게', mid: '안정적으로', low: '다소' },
+  },
+};
+
+const MIND_SENTENCE: Record<
+  MindMetricId,
+  (overall: string, early: string, late: string, delta: string, verb: string) => string
+> = {
+  emotional_stability: (o, e, l, delta, verb) =>
+    `전체적으로는 ${o} 편안한 상태였고, 전반부에는 ${e} 감정적으로 불안정했지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 안정을 찾았습니다.`,
+  relaxation: (o, e, l, delta, verb) =>
+    `전체적으로는 ${o} 이완된 상태였고, 전반부에는 ${e} 긴장이 남아 있었지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 편안함을 찾았습니다.`,
+  focus: (o, e, l, delta, verb) =>
+    `전체적으로는 ${o} 집중된 상태였고, 전반부에는 ${e} 산만했지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 몰입을 되찾았습니다.`,
+};
+
+/** 마음 지표: "전체 → 전반 → 후반" 3단계 서사 */
+function mindSentence(
+  id: MindMetricId,
+  overall: number,
+  early: number,
+  late: number,
+  deltaLabel: string,
+  direction: Direction,
+): string {
+  const adverbs = MIND_LEVEL_ADVERBS[id];
+  const o = adverbs.overall[zoneOf(overall)];
+  const e = adverbs.early[zoneOf(early)];
+  const l = adverbs.late[zoneOf(late)];
+  const verb = direction === 'up' ? '상승' : direction === 'down' ? '하락' : '유지';
+  return MIND_SENTENCE[id](o, e, l, deltaLabel, verb);
+}
+
 function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
   const direction = resolveDirection(input);
   const rawDelta = input.late - input.early;
@@ -200,6 +263,13 @@ function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
     ? `${Math.abs(round1(rawDelta))}`
     : formatUnitDelta(input.id as 'respiratory_rate' | 'heart_rate' | 'hrv', Math.abs(delta));
 
+  const isMind =
+    input.id === 'focus' || input.id === 'relaxation' || input.id === 'emotional_stability';
+  const overall = input.overall ?? (input.early + input.late) / 2;
+  const sentence = isMind
+    ? mindSentence(input.id as MindMetricId, overall, input.early, input.late, deltaLabel, direction)
+    : sentenceFor(input.id, direction);
+
   return {
     id: input.id,
     label: METRIC_LABELS[input.id],
@@ -207,7 +277,7 @@ function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
     delta,
     deltaLabel,
     arrow: arrowFor(direction),
-    sentence: sentenceFor(input.id, direction),
+    sentence,
   };
 }
 

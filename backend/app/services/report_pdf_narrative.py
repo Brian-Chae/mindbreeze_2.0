@@ -44,6 +44,43 @@ SENTENCE_TEMPLATES = {
   },
 }
 
+def zone_of(score):
+    if score >= 70:
+        return 'high'
+    if score >= 40:
+        return 'mid'
+    return 'low'
+
+MIND_LEVEL_ADVERBS = {
+    'emotional_stability': {
+        'overall': {'high': '안정적으로', 'mid': '대체로', 'low': '불안정하게'},
+        'early': {'high': '차분하게', 'mid': '대체로', 'low': '다소'},
+        'late': {'high': '차분하게', 'mid': '안정적으로', 'low': '다소'},
+    },
+    'relaxation': {
+        'overall': {'high': '깊게', 'mid': '대체로', 'low': '다소'},
+        'early': {'high': '깊게', 'mid': '대체로', 'low': '다소'},
+        'late': {'high': '더욱 깊게', 'mid': '안정적으로', 'low': '다소'},
+    },
+    'focus': {
+        'overall': {'high': '깊게', 'mid': '대체로', 'low': '다소'},
+        'early': {'high': '깊게', 'mid': '대체로', 'low': '다소'},
+        'late': {'high': '더욱 깊게', 'mid': '안정적으로', 'low': '다소'},
+    },
+}
+
+def mind_sentence(metric, overall, early, late, delta_label, direction):
+    adv = MIND_LEVEL_ADVERBS[metric]
+    o = adv['overall'][zone_of(overall)]
+    e = adv['early'][zone_of(early)]
+    l = adv['late'][zone_of(late)]
+    verb = {'up': '상승', 'down': '하락', 'stable': '유지'}[direction]
+    if metric == 'emotional_stability':
+        return f'전체적으로는 {o} 편안한 상태였고, 전반부에는 {e} 감정적으로 불안정했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 안정을 찾았습니다.'
+    if metric == 'relaxation':
+        return f'전체적으로는 {o} 이완된 상태였고, 전반부에는 {e} 긴장이 남아 있었지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 편안함을 찾았습니다.'
+    return f'전체적으로는 {o} 집중된 상태였고, 전반부에는 {e} 산만했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 몰입을 되찾았습니다.'
+
 JOURNEY_TEMPLATES = {
   "relax": {
     "calm": '몸은 점차 이완으로, 마음은 차분한 안정으로 흘렀습니다.',
@@ -110,7 +147,7 @@ def simplify(text):
     return re.sub(r'(\d)\s*bpm\b', r'\1회/분', text, flags=re.I)
 
 
-def build_metric_narrative(metric, early, late):
+def build_metric_narrative(metric, early, late, overall=None):
     raw = late - early
     # 방향 판단은 변화율 기준 유지(정규화 5% 임계, 단위는 지표별 임계)
     rate = (raw / abs(early) * 100) if early else (0 if raw == 0 else 100 if raw > 0 else -100)
@@ -120,9 +157,14 @@ def build_metric_narrative(metric, early, late):
     # 표시 변화량은 절대 차이(단위 지표는 단위, 정규화 지표는 포인트) — 변화율 %는 0 근처에서 왜곡
     rounded = math.floor(raw * 10 + .5) / 10
     label = f'{abs(rounded):g}{"밀리초" if metric == "hrv" else "회/분"}' if metric in THRESHOLDS else f'{abs(rounded):g}'
+    if metric in ('focus', 'relaxation', 'emotional_stability'):
+        ov = overall if overall is not None else (early + late) / 2
+        sentence = mind_sentence(metric, ov, early, late, label, direction)
+    else:
+        sentence = SENTENCE_TEMPLATES[metric][direction]
     return dict(id=metric, label=METRIC_LABELS[metric], direction=direction, delta=rounded,
                 deltaLabel=label, arrow={'up': '↑', 'down': '↓', 'stable': '→'}[direction],
-                sentence=SENTENCE_TEMPLATES[metric][direction])
+                sentence=sentence)
 
 
 def interpretation(metric):
@@ -187,10 +229,14 @@ def resolve_pdf_narrative(content):
     if not changes and len(timeline) >= 2:
         mid = len(timeline) // 2
         for metric in IDS:
-            halves = [[metric_value(p, metric) for p in half if metric_value(p, metric) is not None]
-                      for half in (timeline[:mid], timeline[mid:])]
+            all_vals = [v for v in (metric_value(p, metric) for p in timeline) if v is not None]
+            halves = [
+                [v for v in (metric_value(p, metric) for p in half) if v is not None]
+                for half in (timeline[:mid], timeline[mid:])
+            ]
             if all(halves):
-                changes[metric] = tuple(sum(values) / len(values) for values in halves)
+                overall = sum(all_vals) / len(all_vals)
+                changes[metric] = tuple(sum(values) / len(values) for values in halves) + (overall,)
     metrics = [build_metric_narrative(metric, *changes[metric]) for metric in IDS] if all(metric in changes for metric in IDS) else []
     body, mind = metrics[:3], metrics[3:]
     body_vote = sum((1 if m['direction'] == ('up' if m['id'] == 'hrv' else 'down') else -1) for m in body if m['direction'] != 'stable')
