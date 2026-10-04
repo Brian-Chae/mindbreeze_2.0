@@ -9,12 +9,14 @@ open 상태로 방치된 세션을 Celery beat 스윕이 24시간 경과 시 자
 | Edit | `backend/app/services/session_service.py` | `sweep_stale_open_sessions(db, max_age_hours=24)` + `STALE_OPEN_SESSION_MAX_AGE_HOURS` 상수 |
 | Create | `backend/app/tasks/session_task.py` | `sweep_stale_open_sessions_task` Celery 진입점 |
 | Edit | `backend/app/core/celery_app.py` | `include` + `beat_schedule['sweep-stale-open-sessions']`(300초) 등록 |
+| Create | `backend/sweep_stale_open_sessions_cron.py` | cron 실행 진입점 (celery beat 대체) |
+| Edit | `.github/workflows/deploy-dev.yml` | cron 스크립트 번들 포함 + `*/5` cron 등록 |
 | Create | `backend/tests/test_stale_open_session.py` | 만료/미만료/경계/상태제외/템플릿/opened_at없음/state_version 7건 |
 
 ### 동작
 ```
-Celery beat (300초) → tasks.sweep_stale_open_sessions
-  → session_service.sweep_stale_open_sessions(db, max_age_hours=24)
+cron (*/5분) → sweep_stale_open_sessions_cron.py
+  → tasks.sweep_stale_open_sessions → session_service.sweep_stale_open_sessions(db, max_age_hours=24)
     → open + is_template=False + opened_at <= now-24h 세션에 대해
       transition_status(session_id, host_id, 'cancel', db) 재사용
         (session_cancelled 알림·state_version 증가 일관성)
@@ -32,6 +34,8 @@ Celery beat (300초) → tasks.sweep_stale_open_sessions
 
 ## Debugging Journey
 
+- **⚠️ celery beat 미구동 (인프라 이슈 발견)**: 배포 후 MXFU8Y 가 정리되지 않아 조사한 결과, dev 서버에 Celery beat 프로세스가 없다(uvicorn + email-worker 만 구동). 즉 `beat_schedule` 기반 스윕은 한 번도 실행된 적이 없었다. 프로젝트는 이미 "celery beat 대체" cron 패턴(`cleanup_notifications_cron.py`)을 쓰고 있어, 본 SDD-100 도 cron 방식으로 전환(`sweep_stale_open_sessions_cron.py` + `*/5` cron 등록)했다.
+- **기존 스윕도 동일 문제**: `sweep-stale-reports`(SDD-095), `sweep-session-reminders`(SDD-097) 도 beat_schedule 에만 등록되고 cron 대체가 없어 미실행 중이다. 별도 수정 필요(리마인더는 ETA 태스크로 핵심 기능은 동작).
 - **전이 재사용 vs 직접 status 변경**: `transition_status('cancel')` 재사용 시 호스트 검증(`_get_session_as_host`)을 거치므로 host 삭제 세션은 404로 실패할 수 있음 → 개별 try/except + `db.rollback()` 으로 격리해 한 건 실패가 전체 스윕을 중단시키지 않게 처리.
 - **`opened_at` None 비정상 케이스**: open 상태인데 opened_at 이 없는 세션은 만료 기준이 없으므로 `opened_at.is_not(None)` 필터로 안전하게 건너뜀(테스트 test_07).
 - **경계 값**: `<=` 비교로 정확히 24h 도 포함(테스트 test_04).
