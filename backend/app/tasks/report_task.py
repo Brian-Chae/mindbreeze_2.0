@@ -21,6 +21,7 @@ from app.services import eeg_metrics
 from app.services import report_progress_service
 from app.services.eeg_rollup_service import summarize_hrv_motion
 from app.services.report_narrative import build_metrics_summary
+from app.services.normalization_score import sigmoid_score
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,15 @@ def _build_eeg_content(
         (w.device_timestamp_ms for w in windows if w.device_timestamp_ms is not None),
         default=None,
     )
+    # SDD-114 회귀 수정: 마음 지표 타임라인도 세션 스코어와 동일하게
+    # 표준 모델(sigmoid) 우선, 코호트 상수(percentile) fallback (SDD-041).
+    std_params = normalization_params if isinstance(normalization_params, dict) else {}
+
+    def mind_score(key: str, raw, fallback):
+        """마음 지표 정규화: 표준 모델(sigmoid) 우선, 코호트 상수 fallback."""
+        score = sigmoid_score(key, raw, std_params.get(key))
+        return score if score is not None else fallback(raw)
+
     timeline = [
         {
             "t": (
@@ -186,11 +196,11 @@ def _build_eeg_content(
                 if (base_ts is not None and w.device_timestamp_ms is not None)
                 else None
             ),
-            "concentration": eeg_metrics.normalize_focus(w.focus_index),
-            "relaxation": eeg_metrics.normalize_relaxation(w.relaxation_index),
-            "stress": eeg_metrics.normalize_stress(w.stress_index),
-            "emotional_stability": eeg_metrics.normalize_emotional_stability(
-                w.emotional_stability
+            "concentration": mind_score("focusIndex", w.focus_index, eeg_metrics.normalize_focus),
+            "relaxation": mind_score("relaxationIndex", w.relaxation_index, eeg_metrics.normalize_relaxation),
+            "stress": mind_score("stressIndex", w.stress_index, eeg_metrics.normalize_stress),
+            "emotional_stability": mind_score(
+                "emotionalStability", w.emotional_stability, eeg_metrics.normalize_emotional_stability
             ),
             "heart_rate": w.heart_rate,
             "respiratory_rate": w.respiratory_rate,
