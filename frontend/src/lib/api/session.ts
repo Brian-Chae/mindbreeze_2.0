@@ -199,6 +199,8 @@ export interface SessionLiveMetric {
   heart_rate?: number | null;
   /** 몸 지표 — 호흡수 breaths/min (산출 불가 시 null) */
   respiratory_rate?: number | null;
+  /** 몸 지표 — HRV RMSSD ms (산출 불가 시 null) */
+  rmssd?: number | null;
   /** SDD-094: 손들기 상태 (온라인 그룹에서 기본 뮤트 → 손들기로 발언 요청) */
   raise_hand?: boolean;
   /** SDD-094: 발언권(송출) 부여 상태 — true면 can_publish */

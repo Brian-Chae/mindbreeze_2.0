@@ -222,7 +222,7 @@ function elapsedLabel(sec: number): string {
 
 type HostMetricKey = 'focus' | 'relaxation' | 'emotionalStability' | 'heartRate' | 'respiratoryRate' | 'hrv';
 type HostValues = Record<HostMetricKey, number | null>;
-interface HostExtra { at: number; focus: number | null; emotionalStability: number | null; hrv: number | null }
+interface HostExtra { at: number; focus: number | null; emotionalStability: number | null; hrv: number | null; heartRate: number | null; respiratoryRate: number | null }
 interface HostPoint { at: number; values: HostValues }
 const HOST_METRICS: { key: HostMetricKey; label: string; unit: string }[] = [
   { key: 'focus', label: '집중도', unit: '%' },
@@ -240,11 +240,13 @@ function hostValues(row: SessionLiveMetric, extra?: HostExtra): HostValues {
   const extraValid = valid && extra && Date.now() - extra.at < 10000;
   return {
     relaxation: valid ? finiteValue(row.current_efficiency) : null,
-    heartRate: valid ? finiteValue(row.heart_rate) : null,
-    respiratoryRate: valid ? finiteValue(row.respiratory_rate) : null,
+    // BPM·호흡수·HRV는 행(4초 폴링) 우선, extras(WS·마지막 유효값 hold) 폴백 —
+    // 폴링이 WS 패치를 덮어도 깜빡이지 않는다.
+    heartRate: valid ? finiteValue(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null,
+    respiratoryRate: valid ? finiteValue(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null,
     focus: extraValid ? extra.focus : null,
     emotionalStability: extraValid ? extra.emotionalStability : null,
-    hrv: extraValid ? extra.hrv : null,
+    hrv: valid ? finiteValue(row.rmssd) ?? (extraValid ? extra.hrv : null) : null,
   };
 }
 interface HostParticipantProfile { demographics: string; concerns: string }
@@ -300,7 +302,7 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
     <p>{metric.label}</p>
     <div className={mind ? 'hcp-dial' : 'hcp-reading'}>
       {mind && <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs><linearGradient id={gradientId} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#A16BBC" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
+        <defs><linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%"><stop stopColor="#5F0080" /><stop offset=".45" stopColor="#A16BBC" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
         <circle cx="60" cy="60" r="51" className="hcp-track" />
         {value !== null && <circle cx="60" cy="60" r="51" className="hcp-arc" style={{ stroke: `url(#${gradientId})` }} pathLength="100" strokeDasharray={`${Math.max(0, Math.min(100, value))} 100`} transform="rotate(-90 60 60)" />}
         {detail && average !== null && <line className="hcp-tick" x1={60 + 47 * Math.cos(angle)} y1={60 + 47 * Math.sin(angle)} x2={60 + 55 * Math.cos(angle)} y2={60 + 55 * Math.sin(angle)} />}
@@ -309,9 +311,10 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
       {mind && detail && <span className="hcp-delta">{change}</span>}
     </div>
     {!mind && <svg className="hcp-bars" viewBox="0 0 240 64" preserveAspectRatio="none" aria-label={`${metric.label} 최근 수신 추이${average === null ? '' : `, 그룹 평균 ${hostValueLabel(average)}`}`}>
-      <g>{samples.map((v, i) => v !== null && <rect key={i} x={4 + (20 - samples.length + i) * 11.6} y={y(v)} width={7.5} height={58 - y(v)} rx="1" />)}</g>
-      {valid.length > 1 && <rect className="hcp-range-band" x="4" y={y(Math.max(...valid))} width="232" height={Math.max(1, y(Math.min(...valid)) - y(Math.max(...valid)))} />}
+      <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="0" y1="58" x2="0" y2="6"><stop stopColor="#5F0080" stopOpacity=".55" /><stop offset=".5" stopColor="#A16BBC" stopOpacity=".8" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
+      {valid.length > 1 && <rect className="hcp-range-band" x="4" y={y(Math.max(...valid))} width="232" height={Math.max(1, y(Math.min(...valid)) - y(Math.max(...valid)))} rx="3" />}
       {average !== null && <path className="hcp-average-line" d={`M4 ${y(average)}H236`} />}
+      <g style={{ fill: `url(#${gradientId})` }}>{samples.map((v, i) => v !== null && <rect key={i} x={4 + (20 - samples.length + i) * 11.6} y={y(v)} width={7.5} height={58 - y(v)} rx="3.75" />)}</g>
     </svg>}
     {mind && detail ? <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small> : <span className="hcp-delta">{change}</span>}
   </article>;
@@ -575,14 +578,21 @@ export default function ClassPlayerPage() {
       const now = Date.now();
       const focus = finiteValue(event.focus_index ?? event.feature?.focus_index);
       const emotional = finiteValue(event.feature?.emotional_stability);
+      const heartRate = event.feature?.heart_rate ?? null;
+      const respiratoryRate = event.feature?.respiratory_rate ?? null;
       const at = event.last_eeg_at ? Date.parse(event.last_eeg_at) : event.feature?.timestamp ?? now;
       setHostExtras(previous => {
         if (previous[event.participant_id]?.at > at) return previous;
+        const prev = previous[event.participant_id];
         return { ...previous, [event.participant_id]: {
           at: Number.isFinite(at) ? at : now,
           focus: focus === null ? null : scoreIndices({ focusIndex: focus }).focusIndex,
           emotionalStability: emotional === null ? null : scoreIndices({ emotionalStability: emotional }).emotionalStability,
           hrv: finiteValue(event.feature?.rmssd),
+          // BPM·호흡수는 밴드가 1초 윈도우에서 산출 실패 시 null 을 보내므로
+          // 마지막 유효값을 유지(hold)해 몸 지표가 깜빡이지 않게 한다.
+          heartRate: finiteValue(heartRate) ?? prev?.heartRate ?? null,
+          respiratoryRate: finiteValue(respiratoryRate) ?? prev?.respiratoryRate ?? null,
         } };
       });
       const rawEfficiency =
@@ -592,8 +602,6 @@ export default function ClassPlayerPage() {
         null;
       // feature 계약은 raw 비율 — 표시 버퍼에는 정규화 점수(0~100)로 적재
       const efficiency = scoreEfficiency(rawEfficiency);
-      const heartRate = event.feature?.heart_rate ?? null;
-      const respiratoryRate = event.feature?.respiratory_rate ?? null;
       if (event.participant_id) {
         const buf = featureBufferRef.current.get(event.participant_id) ?? {
           efficiency: [],

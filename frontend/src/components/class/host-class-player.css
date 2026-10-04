@@ -70,12 +70,17 @@
 .hcp-metric-sections h3 small{font-size:9px}
 .hcp-group .hcp-metric>p{color:#d8c9df}
 .hcp-track,.hcp-arc{stroke-width:7}
-.hcp-tick{stroke:var(--cream);stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.hcp-track{stroke:#d4b5e312}
+.hcp-arc{stroke:#b98bce;stroke-linecap:round;filter:drop-shadow(0 0 2px #a16bbc40);transition:stroke-dasharray 300ms ease}
+.hcp-dial strong,.hcp-reading strong{color:#f7f4f0;font-variant-numeric:tabular-nums;letter-spacing:-.5px;transition:color 300ms ease}
+.hcp-dial strong small,.hcp-reading strong small{color:#d4b5e3;font-weight:400;letter-spacing:0}
+.hcp-delta{color:#c9aed7;font-variant-numeric:tabular-nums;transition:color 300ms ease}
+.hcp-tick{stroke:var(--cream);stroke-opacity:.7;stroke-width:2;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .hcp-bars{border:0}
-.hcp-bars g rect{fill:#d8bce7;fill-opacity:.65}
-.hcp-bars g rect:last-child{fill:var(--cream);fill-opacity:.9}
-.hcp-bars .hcp-range-band,.hcp-range-band{fill:#c19ad31a;fill-opacity:1}
-.hcp-average-line{fill:none;stroke:#b991cf;stroke-dasharray:3 3;stroke-width:.8}
+.hcp-bars g rect,.hcp-bars g rect:last-child{fill:inherit;fill-opacity:.85;transition:y 300ms ease,height 300ms ease,fill-opacity 300ms ease}
+.hcp-bars .hcp-range-band,.hcp-range-band{fill:#c19ad312;fill-opacity:1;transition:y 300ms ease,height 300ms ease}
+.hcp-average-line{fill:none;stroke:#c5a3d5;stroke-opacity:.5;stroke-dasharray:3 4;stroke-width:.8;stroke-linecap:round;transition:d 300ms ease}
+@media(prefers-reduced-motion:reduce){.hcp-arc,.hcp-dial strong,.hcp-reading strong,.hcp-delta,.hcp-bars g rect,.hcp-bars .hcp-range-band,.hcp-range-band,.hcp-average-line{transition:none}}
 .hcp-sheet{padding:0;background:var(--bg);font-variant-numeric:tabular-nums}
 .hcp-sheet>.hcp-heading{top:0;padding:8px 16px;gap:12px;background:#12081Cf5;border-bottom:1px solid var(--border-divider)}
 .hcp-sheet h2{font-size:21px;line-height:1.3;letter-spacing:-.6px;font-weight:500}
@@ -96,7 +101,7 @@
 .hcp-sheet .hcp-dial strong{font-size:25px;line-height:1.1;letter-spacing:-1px;bottom:14px;font-weight:400}
 .hcp-sheet .hcp-dial strong small{font-size:11px;letter-spacing:0}
 .hcp-sheet .hcp-dial>.hcp-delta{position:absolute;left:0;right:0;top:55%;font-size:11px;text-align:center;letter-spacing:0}
-.hcp-average-label{display:block;margin-top:5px;font-size:10px;color:var(--muted)}
+.hcp-average-label{display:block;margin-top:5px;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;letter-spacing:.1px}
 .hcp-sheet .hcp-body{min-height:88px;grid-template-rows:16px 32px 16px;gap:0 12px;grid-template-columns:128px minmax(0,240px);justify-content:space-between;padding:4px 0}
 .hcp-sheet .hcp-body:last-child{border:0}
 .hcp-sheet .hcp-body strong{font-size:27px;line-height:32px;font-weight:400}
@@ -233,6 +238,9 @@
  .hcp-active .hcp-group .hcp-metric-sections{margin-top:4px}
  .hcp-active .hcp-group .hcp-metric-sections h3{margin-bottom:0}
  .hcp-active .hcp-group .hcp-dial{width:48px;height:48px}
+ .hcp-active .hcp-group .hcp-metric strong{font-size:16px}
+ .hcp-active .hcp-group .hcp-bars{height:20px;margin:0}
+ .hcp-active .hcp-group .hcp-reading{margin:0}
  .hcp-active .hcp-roster-list{--hcp-card-height:152px}
  .hcp-active .hcp-person{height:var(--hcp-card-height)}
 }

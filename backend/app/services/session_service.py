@@ -1741,6 +1741,9 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             current_efficiency = None
             upload_status = "idle"
             last_eeg_at = None
+            heart_rate = None
+            respiratory_rate = None
+            rmssd = None
         else:
             device_status = st["device_status"]
             signal_quality = st["signal_quality"]
@@ -1750,6 +1753,9 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
             # SDD-026: staleness(disconnected)면 업로드가 지연/중단된 상태로 표기한다.
             upload_status = "delayed" if device_status == "disconnected" else "streaming"
             last_eeg_at = st["last_eeg_at"]
+            heart_rate = st["heart_rate"]
+            respiratory_rate = st["respiratory_rate"]
+            rmssd = st["rmssd"]
             # SDD-026: 접촉 실패(lead_off)와 기기 단절(disconnected)을 분리 집계한다.
             if device_status == "lead_off":
                 contact_fail += 1
@@ -1782,6 +1788,10 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
                 "current_efficiency": current_efficiency,
                 "upload_status": upload_status,
                 "last_eeg_at": last_eeg_at,
+                # SDD-xxx: 몸 지표(BPM·호흡수·HRV) 최신값 — 호스트 4초 폴링이 WS 패치를 덮지 않도록 포함.
+                "heart_rate": heart_rate,
+                "respiratory_rate": respiratory_rate,
+                "rmssd": rmssd,
                 # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
                 "raise_hand": p.raise_hand,
                 "speaking": p.speaking,
@@ -2096,6 +2106,10 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
             "signal_state": _signal_state_from_signal(latest.signal_quality),
             "device_status": _device_status_live(latest.signal_quality, latest.created_at, now),
             "last_eeg_at": latest.created_at,
+            # SDD-xxx: 몸 지표(BPM·호흡수·HRV) 최신값 — 호스트 4초 폴링이 WS 패치를 덮지 않도록 포함.
+            "heart_rate": latest.heart_rate,
+            "respiratory_rate": latest.respiratory_rate,
+            "rmssd": latest.rmssd,
         }
     return result
 

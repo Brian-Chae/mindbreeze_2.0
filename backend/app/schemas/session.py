@@ -359,6 +359,10 @@ class SessionLiveMetric(BaseModel):
     current_efficiency: float | None = None
     upload_status: UploadStatus = "idle"
     last_eeg_at: datetime | None = None
+    # SDD-xxx: 몸 지표(BPM·호흡수·HRV) 최신값 — 호스트 4초 폴링이 WS 패치를 덮지 않도록 포함.
+    heart_rate: float | None = None
+    respiratory_rate: float | None = None
+    rmssd: float | None = None
 
 
 class SessionLiveMetricsSummary(BaseModel):
