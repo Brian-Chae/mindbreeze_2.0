@@ -185,7 +185,21 @@ def upload_export(path: str, object_key: str) -> None:
         raise ExportStorageError('upload_failed') from exc
 
 
-def generate_presigned_get(object_key: str, *, expires_in: int = 300, expires_at: datetime | None = None) -> str:
+def generate_presigned_get(
+    object_key: str,
+    *,
+    expires_in: int = 300,
+    expires_at: datetime | None = None,
+    content_type: str = "application/zip",
+    content_disposition: str | None = 'attachment; filename="mindbreeze-data.zip"',
+) -> str:
+    """S3 GET 프리사인드 URL 을 발급한다 (데이터 익스포트/영상 리플레이 공용).
+
+    content_type/content_disposition 은 객체 종류에 따라 오버라이드한다:
+      - 데이터 익스포트(zip): 기본값(application/zip + attachment) 유지.
+      - 영상 리플레이: content_type="video/webm", content_disposition=None.
+        attachment 로 발급하면 <video> 태그가 재생하지 못하고 다운로드를 시도한다.
+    """
     if not 1 <= expires_in <= 300:
         raise ExportStorageError('invalid_expiry')
     try:
@@ -195,11 +209,12 @@ def generate_presigned_get(object_key: str, *, expires_in: int = 300, expires_at
             expires_in = min(expires_in, int((expires_at - datetime.now(timezone.utc)).total_seconds()))
             if expires_in < 1:
                 raise ExportStorageError('package_expired')
-        return client.generate_presigned_url('get_object', Params={
-            'Bucket': settings.s3_bucket, 'Key': object_key,
-            'ResponseContentType': 'application/zip',
-            'ResponseContentDisposition': 'attachment; filename="mindbreeze-data.zip"',
-        }, ExpiresIn=expires_in)
+        params = {'Bucket': settings.s3_bucket, 'Key': object_key}
+        if content_type:
+            params['ResponseContentType'] = content_type
+        if content_disposition:
+            params['ResponseContentDisposition'] = content_disposition
+        return client.generate_presigned_url('get_object', Params=params, ExpiresIn=expires_in)
     except Exception as exc:
         raise ExportStorageError('presign_failed') from exc
 

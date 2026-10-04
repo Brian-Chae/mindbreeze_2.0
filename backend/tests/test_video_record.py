@@ -182,3 +182,54 @@ def test_12_오디오_상태와_분리(client):
     res = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"])
     assert res.status_code == 200
     assert res.json()["status"] == "idle"
+
+
+def test_13_영상_presigned_url은_video_webm으로_발급(client, monkeypatch):
+    """영상 리플레이 presigned GET은 video/webm(attachment 아님)으로 발급돼야 한다.
+
+    generate_presigned_get 을 zip export(application/zip + attachment) 기본값으로
+    재사용하면 <video> 태그가 재생하지 못하고 다운로드를 시도한다 — 회귀 방지.
+    """
+    from uuid import UUID
+
+    from app.core.database import get_db
+    from app.main import app as fastapi_app
+    from app.models.record import SessionRecord
+    from app.services import storage_service, video_service
+
+    host = _register(client, "vid13@test.com")
+    sid = _create_session(client, host)
+    sid_uuid = UUID(sid)
+
+    db = next(fastapi_app.dependency_overrides[get_db]())
+    try:
+        record = db.query(SessionRecord).filter(SessionRecord.session_id == sid_uuid).first()
+        if record is None:
+            record = SessionRecord(session_id=sid_uuid, status="idle", markers=[], edit_history=[], ai_summary={})
+            db.add(record)
+            db.flush()
+        record.video_s3_key = f"video/{sid}/merged.webm"
+        db.commit()
+
+        captured = {}
+
+        def fake_presigned_get(
+            key,
+            *,
+            expires_in=300,
+            expires_at=None,
+            content_type="application/zip",
+            content_disposition='attachment; filename="mindbreeze-data.zip"',
+        ):
+            captured["content_type"] = content_type
+            captured["content_disposition"] = content_disposition
+            return "https://s3.example/video-url"
+
+        monkeypatch.setattr(storage_service, "generate_presigned_get", fake_presigned_get)
+        url = video_service.get_presigned_video_url(sid_uuid, db)
+
+        assert url == "https://s3.example/video-url"
+        assert captured["content_type"] == "video/webm"
+        assert captured["content_disposition"] is None
+    finally:
+        db.close()

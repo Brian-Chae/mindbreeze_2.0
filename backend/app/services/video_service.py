@@ -293,6 +293,8 @@ def get_presigned_video_url(session_id: UUID, db: DBSession) -> str | None:
         return storage_service.generate_presigned_get(
             key,
             expires_in=300,
+            content_type="video/webm",
+            content_disposition=None,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[video] presigned GET 발급 실패: %s", exc)
