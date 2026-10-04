@@ -14,6 +14,12 @@ export class WebBluetoothProvider implements BluetoothProvider {
   private device: BluetoothDevice | null = null;
   private server: BluetoothRemoteGATTServer | null = null;
 
+  private onConnectionLostCb: (() => void) | null = null;
+
+  private handleDisconnected = (): void => {
+    this.onConnectionLostCb?.();
+  };
+
   async initialize(): Promise<void> {
     if (!navigator.bluetooth) {
       throw new Error('Web Bluetooth API is not available in this browser');
@@ -43,8 +49,19 @@ export class WebBluetoothProvider implements BluetoothProvider {
 
   async connect(_deviceId: string): Promise<void> {
     if (!this.device) throw new Error('No device selected. Call requestDevice() first.');
-    
+
+    // 예기치 않은 연결 해제 감지 — Provider 내부 책임.
+    // (이전에는 bluetoothService.performConnectionLossHandling 에서 처리했으나,
+    //  Provider 추상화 후 이곳에서 gattserverdisconnected 를 감지해 콜백을 발화한다.)
+    // remove-before-add 로 재연결 시 리스너 중복 등록을 방지한다.
+    this.device.removeEventListener('gattserverdisconnected', this.handleDisconnected);
+    this.device.addEventListener('gattserverdisconnected', this.handleDisconnected);
+
     this.server = await this.device.gatt!.connect();
+  }
+
+  onConnectionLost(callback: () => void): void {
+    this.onConnectionLostCb = callback;
   }
 
   async disconnect(_deviceId: string): Promise<void> {

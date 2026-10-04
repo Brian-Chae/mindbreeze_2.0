@@ -81,6 +81,9 @@ export interface BluetoothProvider {
   /** 연결 상태 확인 */
   isConnected(deviceId: string): Promise<boolean>;
 
+  /** 연결이 예기치 않게 끊겼을 때 호출할 콜백 등록 (gattserverdisconnected 등) */
+  onConnectionLost(callback: () => void): void;
+
   /** 배터리 레벨 읽기 (Battery Service 0x180F) */
   getBatteryLevel(deviceId: string): Promise<number>;
 }

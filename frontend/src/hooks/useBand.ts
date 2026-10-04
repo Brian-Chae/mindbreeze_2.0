@@ -980,11 +980,18 @@ export function useBand({
       // 전역(singleton) BLE 연결이 이미 살아있으면 scan/connect를 건너뛰고 스트림만 재시작한다.
       const alreadyConnected = !isMock && bluetoothService.isConnected();
       if (!isMock && !alreadyConnected) {
-        const devices = await bluetoothService.scan();
-        if (devices.length === 0) {
-          throw new Error('LINK BAND 디바이스를 찾지 못했습니다');
+        // 재연결(SDD-120): 예기치 않은 끊김 후 캐시된 디바이스가 있으면
+        // 재선택 다이얼로그(requestDevice)를 건너뛰고 같은 디바이스로 재연결한다.
+        const cachedId = bluetoothService.getCachedDeviceId();
+        if (cachedId) {
+          selectedDeviceId = cachedId;
+        } else {
+          const devices = await bluetoothService.scan();
+          if (devices.length === 0) {
+            throw new Error('LINK BAND 디바이스를 찾지 못했습니다');
+          }
+          selectedDeviceId = devices[0].id;
         }
-        selectedDeviceId = devices[0].id;
       }
 
       if (observationOnly) {
@@ -1080,6 +1087,13 @@ export function useBand({
           collectingRef.current = false;
           setError('LINK BAND 연결이 끊어졌습니다');
           setSensors(INITIAL_SENSORS);
+        }
+        // 예기치 않은 끊김에도 raw/feature 데이터 보존 (SDD-120):
+        // in-memory raw 버퍼 flush + pending 큐 drain — 재연결/재접속 시 재전송된다.
+        if (!observationOnlyRef.current) {
+          flushRawChunk();
+          void drainPendingQueue();
+          void rawDrainRef.current(15_000);
         }
       });
 

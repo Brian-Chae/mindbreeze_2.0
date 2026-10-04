@@ -91,6 +91,8 @@ export interface BluetoothEEGService {
   getBatteryLevel(): Promise<number>;
   getDeviceName(): string;
   getDeviceId(): string;
+  /** 재연결용 — 예기치 않은 끊김 후 같은 디바이스로 재연결하기 위한 캐시 ID */
+  getCachedDeviceId(): string | null;
   clearDeviceCache(): void;
 }
 
@@ -103,6 +105,8 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   private deviceId: string | null = null;
   private deviceName: string | null = null;
   private connected: boolean = false;
+  // 재연결용 — 예기치 않은 끊김(cleanup)에서는 유지, 수동 해제(forceCleanup)에서만 초기화.
+  private lastDeviceId: string | null = null;
 
   // discoverServices() 로 찾은 characteristic UUID (이전의 Characteristic 객체 보유를 대체).
   private eegCharUuid: string | null = null;
@@ -451,6 +455,10 @@ class LinkBandBluetoothService implements BluetoothEEGService {
     try {
       const provider = await this.ensureProvider();
 
+      // 예기치 않은 연결 해제 감지 — Provider(gattserverdisconnected) 콜백을
+      // performConnectionLossHandling() 에 배선한다 (SDD-120: 이전엔 dead code였음).
+      provider.onConnectionLost(() => this.performConnectionLossHandling());
+
       // 같은 디바이스에 이미 연결되어 있다면 그대로 둔다.
       if (this.deviceId === deviceId && this.connected && (await provider.isConnected(deviceId))) {
         return;
@@ -475,6 +483,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       }
 
       this.deviceId = targetId;
+      this.lastDeviceId = targetId;
 
       // 연결 시작 시간 기록
       this.connectionStartTime = Date.now();
@@ -713,9 +722,9 @@ class LinkBandBluetoothService implements BluetoothEEGService {
   /**
    * 실제 연결 해제 처리 로직.
    *
-   * 이전에는 `gattserverdisconnected` 이벤트에서 호출했으나, 연결 해제 감지는
-   * 이제 Provider 내부 책임이다. BluetoothProvider 인터페이스에 연결 해제 콜백
-   * 등록 수단이 추가되면 이 메서드를 다시 배선한다(현재는 보존만).
+   * SDD-120: WebBluetoothProvider 가 gattserverdisconnected 를 감지해
+   * provider.onConnectionLost() 로 이 메서드를 호출하도록 connect() 에서 배선한다.
+   * cleanup + connectionLostCallback + onError 를 순서대로 발화한다.
    */
   private performConnectionLossHandling(): void {
     // 정리 작업 수행
@@ -855,6 +864,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       this.connectionLostCallback = null;
       this.onDataReceived = null;
       this.systemCallbacks = {};
+      this.lastDeviceId = null;
       
       // 3. StreamProcessor 정리
       if (this.streamProcessor) {
@@ -946,6 +956,18 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       return '';
     }
     return this.deviceId;
+  }
+
+  /**
+   * 재연결용 캐시 디바이스 ID 가져오기.
+   *
+   * 예기치 않은 끊김(cleanup)에서는 lastDeviceId 를 유지하므로,
+   * 재연결 시 디바이스 선택 다이얼로그(requestDevice)를 건너뛰고
+   * 같은 디바이스로 gatt.connect() 를 재호출할 수 있다.
+   * 수동 해제(forceCleanup) 후에는 null 을 반환해 정상 스캔을 유도한다.
+   */
+  getCachedDeviceId(): string | null {
+    return this.lastDeviceId;
   }
 }
 

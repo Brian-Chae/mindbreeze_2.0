@@ -1792,9 +1792,11 @@ export default function ClassPlayerPage() {
             <p className="mt-1 text-sm text-[#6F6F6F]">
               {band.connectionState === 'connected'
                 ? `연결됨 · 배터리 ${band.battery !== null ? `${Math.round(band.battery)}%` : '—'} · 접촉 ${contactStatusLabel(band.deviceStatus)} · 신호 ${signalQualityLevelLabel(band.signalQualityLevel)}`
-                : band.connectionState === 'unsupported'
-                  ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
-                  : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
+                : band.connectionState === 'disconnected'
+                  ? '연결이 끊어졌습니다 · 재연결하세요'
+                  : band.connectionState === 'unsupported'
+                    ? '이 브라우저는 Web Bluetooth를 지원하지 않습니다 (Chrome/Edge 권장)'
+                    : '호스트 밴드를 연결하면 본인 행에 실시간 지표가 표시됩니다'}
             </p>
             {band.error && <p className="mt-1 text-xs text-[#B3261E]">{band.error}</p>}
           </div>
@@ -1812,9 +1814,11 @@ export default function ClassPlayerPage() {
               >
                 {band.connectionState === 'connecting'
                   ? '연결 중...'
-                  : band.isMock
-                    ? '시뮬레이션 시작'
-                    : '밴드 연결'}
+                  : band.connectionState === 'disconnected'
+                    ? '재연결'
+                    : band.isMock
+                      ? '시뮬레이션 시작'
+                      : '밴드 연결'}
               </button>
             ) : (
               <button

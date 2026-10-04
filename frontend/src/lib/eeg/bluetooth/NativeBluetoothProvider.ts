@@ -75,6 +75,10 @@ export class NativeBluetoothProvider implements BluetoothProvider {
     return false;
   }
 
+  onConnectionLost(_callback: () => void): void {
+    // 네이티브 BLE 미지원 스텁 — 연결 해제 감지 없음.
+  }
+
   async getBatteryLevel(_deviceId: string): Promise<number> {
     throw new Error(UNSUPPORTED);
   }
