@@ -68,6 +68,12 @@ export class AnalysisMetricsService {
   private readonly MAX_HISTORY_SIZE = 120;
   private readonly LF_HF_BUFFER_SIZE = 120;
   private readonly LF_HF_CALCULATION_INTERVAL = 1000;
+  // PPG 초기 불안정 보정 — 시간 평활화·고정 윈도우·경과시간 게이트
+  private readonly TIME_DOMAIN_WINDOW_RR = 60;        // SDNN/RMSSD 고정 슬라이딩 윈도우(≈60초)
+  private readonly RESPIRATORY_MIN_WINDOW_MS = 60000; // 호흡수 최소 경과시간 60초(개수 게이트 대체)
+  private readonly RESPIRATORY_MEDIAN_WINDOW = 5;     // 호흡수 지배주파수 중앙값 필터(최근 N회)
+  private readonly EMA_ALPHA_HEART_RATE = 0.3;        // 맥박수 EMA 평활화 계수
+  private readonly EMA_ALPHA_FREQ = 0.3;              // LF/HF EMA 평활화 계수
 
   private bpmBuffer: number[] = [];
   private rrIntervalBuffer: number[] = [];
@@ -90,6 +96,10 @@ export class AnalysisMetricsService {
   private currentMotion: number | null = null;
   /** PPG RSA 호흡수(breaths/min). 불가 시 null (0 치환 금지) */
   private currentRespiratoryRate: number | null = null;
+  /** 맥박수 EMA 평활화 상태 (초기 점프 방지) */
+  private smoothedHeartRate: number | null = null;
+  /** 호흡수 지배주파수 중앙값 필터용 최근 N회 히스토리 */
+  private respiratoryRateHistory: number[] = [];
 
   private hasTimeDomainMetrics = false;
   private hasFrequencyDomainMetrics = false;
@@ -186,8 +196,7 @@ export class AnalysisMetricsService {
   ): Promise<void> {
     const hr = ppgAnalysisResult.vitals.heartRate;
     if (hr > 40 && hr < 200) {
-      this.currentHeartRate = hr;
-      this.updateBpmBuffer(hr);
+      this.updateHeartRate(hr);
     }
 
     if (rrIntervals && rrIntervals.length > 0) {
@@ -353,20 +362,46 @@ export class AnalysisMetricsService {
     }
   }
 
+  /** 맥박수 EMA 평활화 — 청크 간 무상태 재계산으로 인한 초기 점프 제거 */
+  private updateHeartRate(hr: number): void {
+    if (this.smoothedHeartRate == null) {
+      this.smoothedHeartRate = hr;
+    } else {
+      this.smoothedHeartRate =
+        this.smoothedHeartRate * (1 - this.EMA_ALPHA_HEART_RATE) +
+        hr * this.EMA_ALPHA_HEART_RATE;
+    }
+    this.currentHeartRate = Math.round(this.smoothedHeartRate);
+    this.updateBpmBuffer(this.currentHeartRate);
+  }
+
+  /** 소수 배열 중앙값 (호흡수 필터용) */
+  private medianOf(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  /** 주파수 도메인 지표(LF/HF) EMA 평활화 — 미초기화(≤0)면 그대로 반환 */
+  private smoothFreqValue(value: number, current: number): number {
+    if (current <= 0 || !Number.isFinite(current)) return value;
+    return current * (1 - this.EMA_ALPHA_FREQ) + value * this.EMA_ALPHA_FREQ;
+  }
+
   /** RR 버퍼 기반 전체 HRV 분석 (시간·스트레스·심박통계·주파수·호흡수) */
   private calculateLFHF(): void {
     const currentTime = Date.now();
 
     if (this.rrIntervalBuffer.length < 30) {
-      // 버퍼 부족 시 호흡수는 null 유지 (0 치환 금지)
-      this.currentRespiratoryRate = null;
       return;
     }
 
-    if (this.rrIntervalBuffer.length >= this.LF_HF_BUFFER_SIZE) {
-      if (currentTime - this.lastLfHfCalculation < this.LF_HF_CALCULATION_INTERVAL) {
-        return;
-      }
+    // 버퍼 크기와 무관하게 최소 1초 간격으로만 재계산 — 초기 churn·지표 점프 방지
+    if (currentTime - this.lastLfHfCalculation < this.LF_HF_CALCULATION_INTERVAL) {
+      return;
     }
 
     try {
@@ -388,8 +423,12 @@ export class AnalysisMetricsService {
    * 생리 범위 6~40 breaths/min 밖·산출 불가는 null.
    */
   private calculateRespiratoryRate(rrIntervals: number[]): void {
-    if (rrIntervals.length < 30) {
+    // 개수(30박) 게이트 → 경과시간 게이트로 교체.
+    // 90bpm이면 30박≈20초에 불과해 주파수 해상도가 3.75회/분으로 너무 거칠다.
+    const totalDurationMs = rrIntervals.reduce((sum, val) => sum + val, 0);
+    if (totalDurationMs < this.RESPIRATORY_MIN_WINDOW_MS) {
       this.currentRespiratoryRate = null;
+      this.respiratoryRateHistory = [];
       return;
     }
 
@@ -397,6 +436,7 @@ export class AnalysisMetricsService {
     const resampledRR = this.resampleRRIntervals(rrIntervals, resamplingFs);
     if (resampledRR.length < 16) {
       this.currentRespiratoryRate = null;
+      this.respiratoryRateHistory = [];
       return;
     }
 
@@ -419,19 +459,33 @@ export class AnalysisMetricsService {
 
     if (dominantFreq == null || !(maxPower > 0) || !Number.isFinite(dominantFreq)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryRateHistory = [];
       return;
     }
 
     const rate = dominantFreq * 60;
     if (rate < 6 || rate > 40 || !Number.isFinite(rate)) {
       this.currentRespiratoryRate = null;
+      this.respiratoryRateHistory = [];
       return;
     }
 
-    this.currentRespiratoryRate = rate;
+    // 지배주파수 bin 점프 제거: 최근 N회 중앙값 필터
+    this.respiratoryRateHistory.push(rate);
+    if (this.respiratoryRateHistory.length > this.RESPIRATORY_MEDIAN_WINDOW) {
+      this.respiratoryRateHistory.shift();
+    }
+    this.currentRespiratoryRate = this.medianOf(this.respiratoryRateHistory);
   }
 
   private calculateTimeDomainMetrics(rrIntervals: number[]): void {
+    // 고정 길이 슬라이딩 윈도우(최근 60 RR)로 계산해, 버퍼가 차오르며
+    // SDNN/RMSSD가 드리프트하는 것을 방지한다(성장 버퍼 → 고정 윈도우).
+    rrIntervals =
+      rrIntervals.length > this.TIME_DOMAIN_WINDOW_RR
+        ? rrIntervals.slice(-this.TIME_DOMAIN_WINDOW_RR)
+        : rrIntervals;
+
     // 최소 30초 분량의 RR 간격을 보장한다.
     // 간격 "개수"가 아닌 실제 경과 시간(RR 간격 합) 기준 — 90 BPM이면 30개라도 ~20초에 불과하기 때문.
     // 30초 미만이면 SDNN/RMSSD 산출 불가로 간주하고 getter가 null을 반환하도록 플래그를 내린다 (0 치환 금지).
@@ -614,17 +668,18 @@ export class AnalysisMetricsService {
       }
     }
 
-    const newLfPower = this.getValidValue(lfPower, this.currentLfPower, 0.1);
-    const newHfPower = this.getValidValue(hfPower, this.currentHfPower, 0.1);
-    const newLfHfRatio =
+    const rawLfPower = this.getValidValue(lfPower, this.currentLfPower, 0.1);
+    const rawHfPower = this.getValidValue(hfPower, this.currentHfPower, 0.1);
+    const newLfPower = this.smoothFreqValue(rawLfPower, this.currentLfPower);
+    const newHfPower = this.smoothFreqValue(rawHfPower, this.currentHfPower);
+    const rawLfHfRatio =
       newHfPower > 0 ? newLfPower / newHfPower : this.currentLfHfRatio;
 
     this.currentLfPower = newLfPower;
     this.currentHfPower = newHfPower;
-    this.currentLfHfRatio = this.getValidValue(
-      newLfHfRatio,
+    this.currentLfHfRatio = this.smoothFreqValue(
+      this.getValidValue(rawLfHfRatio, this.currentLfHfRatio, 0.1),
       this.currentLfHfRatio,
-      0.1,
     );
     this.hasFrequencyDomainMetrics = [
       this.currentLfPower,

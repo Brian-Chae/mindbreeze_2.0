@@ -175,12 +175,15 @@ export class PPGSignalProcessor {
 
     try {
 
-    // 🔧 1600샘플 처리: 앞의 100샘플 제외하고 1400샘플 사용
+    // IIR 밴드패스 필터 transient(링잉) 제거를 위해 선두 2초(100샘플@50Hz)를 트리밍한다.
+    // - steady state(≥500샘플): 앞뒤 2초씩 제외 (선두 transient + 말미 불완전 구간)
+    // - warm-up(<500샘플): 선두 2초만 제외. 단 150샘플 이하(3초 미만)는 그대로 둔다.
+    const FILTER_WARMUP_SAMPLES = 100; // 50Hz × 2초
     let processedData = data;
-    if (data.length === 500) {
-      processedData = data.slice(100, 500); // 100~1499 인덱스 사용 (1400샘플)
-    } else if (data.length > 500) {
-      processedData = data.slice(100, data.length - 100); // 앞뒤 100샘플씩 제외
+    if (data.length >= 500) {
+      processedData = data.slice(FILTER_WARMUP_SAMPLES, data.length - FILTER_WARMUP_SAMPLES);
+    } else if (data.length > FILTER_WARMUP_SAMPLES + 50) {
+      processedData = data.slice(FILTER_WARMUP_SAMPLES);
     }
 
     // Red와 IR 채널 데이터 분리
@@ -648,7 +651,7 @@ export class PPGSignalProcessor {
   private detectPeaksAdaptiveThreshold(data: number[]): number[] {
     const peaks: number[] = [];
     const windowSize = Math.floor(this.ppgSamplingRate * 0.5); // 0.5초 윈도우
-    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.4); // 0.4초 최소 간격 (150 BPM 대응)
+    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.3); // 0.3초 최소 간격 (200 BPM 대응)
     
     for (let i = windowSize; i < data.length - windowSize; i++) {
       // 지역 윈도우에서 동적 임계값 계산
@@ -679,7 +682,7 @@ export class PPGSignalProcessor {
    */
   private detectPeaksDerivativeBased(data: number[]): number[] {
     const peaks: number[] = [];
-    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.4);
+    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.3);
     
     // 1차 미분 계산
     const firstDerivative = [];
@@ -726,7 +729,7 @@ export class PPGSignalProcessor {
    */
   private detectPeaksTemplateMatching(data: number[]): number[] {
     const peaks: number[] = [];
-    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.4);
+    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.3);
     
     // 간단한 PPG 템플릿 생성 (가우시안 형태)
     const templateSize = Math.floor(this.ppgSamplingRate * 0.2); // 0.2초 템플릿
@@ -938,17 +941,17 @@ export class PPGSignalProcessor {
   /**
    * 불응기 + 적응 임계값 기반 피크 검출 (이중 피크·고조파 제거)
    *
-   * - 불응기: 직전 허용 피크로부터 250ms 환산 샘플 수 이내의 후보는 무시.
-   *   (심박 최대 ~240 BPM에 해당하므로 정상 심박은 보존 — 숄더 피크는 ~100~150ms 뒤라 제거됨)
+   * - 불응기: 직전 허용 피크로부터 300ms 환산 샘플 수 이내의 후보는 무시.
+   *   (심박 최대 ~200 BPM에 해당하므로 정상 심박은 보존 — 숄더 피크는 ~100~150ms 뒤라 제거됨)
    * - 적응 임계값: 고정 전역 max 비율 대신 최근 허용 피크 진폭 이동평균의 비율(국소 진폭 기반)을 사용.
    *   부트스트랩은 단일 잡음 스파이크에 둔감한 상위 백분위(p90) 기반.
    * - 불응기 내 더 높은 후보가 나오면 주 피크를 교체 → 더 낮은 2차 피크(숄더/고조파) 제거.
    */
-  private detectPeaksWithRefractory(normalized: number[], thresholdRatio: number, refractoryMs = 250): number[] {
+  private detectPeaksWithRefractory(normalized: number[], thresholdRatio: number, refractoryMs = 300): number[] {
     const peaks: number[] = [];
     if (normalized.length < 3) return peaks;
 
-    // 250ms(기본)를 샘플 수로 환산 (고정 샘플 수 → 샘플링레이트 기반 환산치)
+    // 300ms(기본)를 샘플 수로 환산 (고정 샘플 수 → 샘플링레이트 기반 환산치)
     const refractorySamples = Math.max(1, Math.round(refractoryMs * (this.ppgSamplingRate / 1000)));
 
     // 부트스트랩 임계값: 상위 백분위(p90)로 단일 스파이크 영향 최소화
@@ -1001,7 +1004,7 @@ export class PPGSignalProcessor {
   private calculateHRV(data: number[]): number {
     if (data.length < 30) return 0; // 최소 데이터 요구사항 완화 (100 → 30)
 
-    // 피크 검출 — 불응기(~250ms) + 적응 임계값으로 이중 피크(숄더/고조파) 제거
+    // 피크 검출 — 불응기(~300ms) + 적응 임계값으로 이중 피크(숄더/고조파) 제거
     // (기존: 고정 max×0.5 임계값 + 15샘플 고정 간격 → 비정상적으로 짧은 RR 간격 혼입)
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
@@ -1194,7 +1197,7 @@ export class PPGSignalProcessor {
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
 
-    // 불응기(~250ms) + 적응 임계값으로 이중 피크 제거
+    // 불응기(~300ms) + 적응 임계값으로 이중 피크 제거
     // (기존: 0.2초 고정 간격 + 고정 max×0.4 임계값)
     return this.detectPeaksWithRefractory(normalized, 0.4);
   }
@@ -1255,9 +1258,9 @@ export class PPGSignalProcessor {
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
 
-    // 2. 불응기(400ms, 원래 0.4초 유지) + 적응 임계값으로 이중 피크(딕로틱 노치/고조파) 제거
+    // 2. 불응기(300ms) + 적응 임계값으로 이중 피크(딕로틱 노치/고조파) 제거
     //    기존: 고정 max×0.5 임계값 + 0.4초 간격 → RR 간격에 비정상적으로 짧은 값이 섞여 SDNN/RMSSD 폭증
-    return this.detectPeaksWithRefractory(normalized, 0.5, 400);
+    return this.detectPeaksWithRefractory(normalized, 0.5, 300);
   }
 
   /**
