@@ -10,10 +10,17 @@ const BODY_RANGES: Partial<Record<MetricId, readonly [number, number, string]>> 
 };
 
 function metricValue(point: TimelineLikePoint, id: MetricId): number | null {
-  // SDD-114: emotional_stability 는 백엔드 0~100 정규화값을 직접 사용(stress 역산 제거).
+  if (id === 'emotional_stability') {
+    // 신규: 백엔드 0~100 정규화값 직접 사용
+    if (point.emotional_stability != null && Number.isFinite(point.emotional_stability)) {
+      return point.emotional_stability;
+    }
+    // 레거시 폴백: 구 리포트(emotional_stability 없음)는 stress 역산으로 하위호환
+    if (point.stress == null || !Number.isFinite(point.stress)) return null;
+    return point.stress <= 1 ? 1 - point.stress : 100 - point.stress;
+  }
   const value = id === 'hrv' ? point.sdnn ?? point.hrv
     : id === 'focus' ? point.concentration
-    : id === 'emotional_stability' ? point.emotional_stability
     : point[id];
   if (value == null || !Number.isFinite(value)) return null;
   return value;

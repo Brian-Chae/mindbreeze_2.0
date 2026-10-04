@@ -149,7 +149,16 @@ export function deriveChangesFromTimeline(
     },
     { id: 'focus', half: halfSeries(timeline, (p) => p.concentration) },
     { id: 'relaxation', half: halfSeries(timeline, (p) => p.relaxation) },
-    { id: 'emotional_stability', half: halfSeries(timeline, (p) => p.emotional_stability) },
+    {
+      id: 'emotional_stability',
+      half: halfSeries(timeline, (p) => {
+        // 신규: 백엔드 0~100 정규화값 직접 사용
+        if (p.emotional_stability != null) return p.emotional_stability;
+        // 레거시 폴백: 구 리포트(emotional_stability 없음)는 stress 역산으로 하위호환
+        if (p.stress == null) return null;
+        return p.stress <= 1 ? 1 - p.stress : 100 - p.stress;
+      }),
+    },
   ];
 
   const changes: MetricChangeInput[] = [];
