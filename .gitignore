@@ -15,3 +15,8 @@ frontend/node_modules/
 
 # Codex 에이전트 로컬 설정
 .codex/
+
+# 루트 의존성·Paseo 워크스페이스·에이전트 임시 산출물
+node_modules/
+paseo.json
+.hermes-tmp/
