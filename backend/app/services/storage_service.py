@@ -37,9 +37,12 @@ def generate_presigned_put(
     try:
         import boto3
 
+        # boto3 가 region_name 만으로는 virtual-hosted presigned URL 을 us-east-1(s3.amazonaws.com)로
+        # 잘못 생성해 307 리다이렉트가 나는 문제(SDD-027 후속)가 있어, 리전 endpoint 를 명시해 고정한다.
         client = boto3.client(
             "s3",
             region_name=settings.s3_region,
+            endpoint_url=f"https://s3.{settings.s3_region}.amazonaws.com",
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
         )
