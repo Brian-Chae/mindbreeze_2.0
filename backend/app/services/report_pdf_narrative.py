@@ -99,6 +99,10 @@ def number(value):
 
 def simplify(text):
     text = re.sub(r'\bHRV\b', METRIC_LABELS['hrv'], text, flags=re.I)
+    text = re.sub(r'PPG 기반 SDNN', METRIC_LABELS['hrv'], text, flags=re.I)
+    text = re.sub(r'PPG 기반', '', text, flags=re.I)
+    text = re.sub(r'\bSDNN\b|\bRMSSD\b', METRIC_LABELS['hrv'], text, flags=re.I)
+    text = re.sub(r'정서적 안정|정서 안정', METRIC_LABELS['emotional_stability'], text, flags=re.I)
     text = text.replace('세션', '명상 시간').replace('지표', '몸·마음 신호')
     text = re.sub(r'전반(?!적|부|\))', '명상 시작(전반)', text)
     text = re.sub(r'후반(?!부|\))', '마무리(후반)', text)
@@ -122,15 +126,15 @@ def interpretation(metric):
     if metric['direction'] == 'stable':
         return '비슷하게 유지됐어요'
     preferred = 'down' if metric['id'] in ('respiratory_rate', 'heart_rate') else 'up'
-    return '명상 중 참고하는 방향으로 좋아졌어요' if metric['direction'] == preferred else '변화에 주의가 필요해요'
+    return '좋아졌어요' if metric['direction'] == preferred else '주의가 필요해요'
 
 
 def direction_guide(metric):
     if metric in ('respiratory_rate', 'heart_rate'):
-        return '명상 중에는 감소(↓)를 차분해지는 방향으로 참고해요. 낮을수록 무조건 좋은 것은 아니에요.'
+        return '명상 중에는 낮아지는(↓) 쪽이 차분해지는 신호예요.'
     if metric == 'hrv':
-        return '명상 중에는 증가(↑)를 편안해지는 방향으로 참고해요. 높을수록 무조건 좋은 것은 아니에요.'
-    return '명상 중에는 증가(↑)를 집중·안정에 가까워지는 방향으로 참고해요.'
+        return '명상 중에는 높아지는(↑) 쪽이 편안해지는 신호예요.'
+    return '명상 중에는 높아지는(↑) 쪽이 집중·안정에 가까운 신호예요.'
 
 
 def parse_timeline(raw):
@@ -199,18 +203,39 @@ def resolve_pdf_narrative(content):
     return fields, body, mind, sorted((p for p in timeline if p['min'] >= 0), key=lambda p: p['min'])
 
 
+def _smooth(values, half):
+    """웹 smoothSeries 와 동일한 중심 이동평균 — 결측(None)은 유지하고 건너뛴다."""
+    out = [None] * len(values)  # type: list[float | None]
+    n = len(values)
+    for i, v in enumerate(values):
+        if v is None:
+            continue
+        total = 0.0
+        cnt = 0
+        for j in range(max(0, i - half), min(n, i + half + 1)):
+            x = values[j]
+            if x is not None:
+                total += x
+                cnt += 1
+        out[i] = total / cnt if cnt else None
+    return out
+
+
 def trend_svg(metric, timeline):
-    """실측만 연결하며 웹과 동일한 범위와 결측 단절을 사용한다."""
+    """실측만 연결하며 웹과 동일한 범위와 결측 단절·스무딩을 사용한다."""
     from html import escape
     duration = timeline[-1]['min'] if timeline else 0
-    valid = [metric_value(p, metric) for p in timeline if metric_value(p, metric) is not None]
+    raw = [metric_value(p, metric) for p in timeline]
+    valid = [v for v in raw if v is not None]
     if len(valid) < 2 or duration <= 0:
         return '<p class="chart-empty">추이를 분석할 데이터가 부족해요.</p>'
+    half = max(2, round(len(valid) * 0.05))
+    smoothed = _smooth(raw, half)
     ranges = {'respiratory_rate': (10, 20), 'heart_rate': (55, 90), 'hrv': (20, 80)}
     low, high = min(*valid, *ranges.get(metric, ())), max(*valid, *ranges.get(metric, ()))
     segments, last = [[]], None
-    for point in timeline:
-        value = metric_value(point, metric)
+    for idx, point in enumerate(timeline):
+        value = smoothed[idx]
         if value is None:
             segments.append([])
             continue

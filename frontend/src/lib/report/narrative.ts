@@ -322,24 +322,28 @@ export const METRIC_DEFINITIONS: Record<MetricId, string> = {
 
 export function metricDirectionGuide(id: MetricId): string {
   if (id === 'respiratory_rate' || id === 'heart_rate') {
-    return '명상 중에는 감소(↓)를 차분해지는 방향으로 참고해요. 낮을수록 무조건 좋은 것은 아니에요.';
+    return '명상 중에는 낮아지는(↓) 쪽이 차분해지는 신호예요.';
   }
   if (id === 'hrv') {
-    return '명상 중에는 증가(↑)를 편안해지는 방향으로 참고해요. 높을수록 무조건 좋은 것은 아니에요.';
+    return '명상 중에는 높아지는(↑) 쪽이 편안해지는 신호예요.';
   }
-  return '명상 중에는 증가(↑)를 집중·안정에 가까워지는 방향으로 참고해요.';
+  return '명상 중에는 높아지는(↑) 쪽이 집중·안정에 가까운 신호예요.';
 }
 
 export function metricChangeInterpretation(id: MetricId, direction: Direction): string {
   if (direction === 'stable') return '비슷하게 유지됐어요';
   const preferred = id === 'respiratory_rate' || id === 'heart_rate' ? 'down' : 'up';
-  return direction === preferred ? '명상 중 참고하는 방향으로 좋아졌어요' : '변화에 주의가 필요해요';
+  return direction === preferred ? '좋아졌어요' : '주의가 필요해요';
 }
 
 /** 저장된 서사는 유지하고 리포트 표시에서만 용어를 풀어 쓴다. */
 export function simplifyReportTerms(text: string): string {
   return text
     .replace(/\bHRV\b/gi, '심박변이(심장 박동 간격의 변화)')
+    .replace(/PPG 기반 SDNN/gi, '심박변이(심장 박동 간격의 변화)')
+    .replace(/PPG 기반/gi, '')
+    .replace(/\bSDNN\b|\bRMSSD\b/gi, '심박변이(심장 박동 간격의 변화)')
+    .replace(/정서적 안정|정서 안정/gi, '감정안정도')
     .replace(/세션/g, '명상 시간')
     .replace(/지표/g, '몸·마음 신호')
     .replace(/전반(?!적|부|\))/g, '명상 시작(전반)')
