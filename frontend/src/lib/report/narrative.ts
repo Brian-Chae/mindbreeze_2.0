@@ -233,11 +233,11 @@ const MIND_SENTENCE: Record<
   (overall: string, early: string, late: string, delta: string, verb: string) => string
 > = {
   emotional_stability: (o, e, l, delta, verb) =>
-    `전체적으로는 ${o} 편안한 상태였고, 전반부에는 ${e} 감정적으로 불안정했지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 안정을 찾았습니다.`,
+    `전체적으로는 ${o} 편안한 상태였고, 전반부에는 ${e} 감정적으로 불안정했지만, 후반부에는 ${l} ${delta}만큼 ${verb}.`,
   relaxation: (o, e, l, delta, verb) =>
-    `전체적으로는 ${o} 이완된 상태였고, 전반부에는 ${e} 긴장이 남아 있었지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 편안함을 찾았습니다.`,
+    `전체적으로는 ${o} 이완된 상태였고, 전반부에는 ${e} 긴장이 남아 있었지만, 후반부에는 ${l} ${delta}만큼 ${verb}.`,
   focus: (o, e, l, delta, verb) =>
-    `전체적으로는 ${o} 집중된 상태였고, 전반부에는 ${e} 산만했지만, 후반부에는 ${l} ${delta}만큼 ${verb}하여 몰입을 되찾았습니다.`,
+    `전체적으로는 ${o} 집중된 상태였고, 전반부에는 ${e} 산만했지만, 후반부에는 ${l} ${delta}만큼 ${verb}.`,
 };
 
 /** 마음 지표: "전체 → 전반 → 후반" 3단계 서사 */
@@ -253,7 +253,7 @@ function mindSentence(
   const o = adverbs.overall[zoneOf(overall)];
   const e = adverbs.early[zoneOf(early)];
   const l = adverbs.late[zoneOf(late)];
-  const verb = direction === 'up' ? '상승' : direction === 'down' ? '하락' : '유지';
+  const verb = direction === 'up' ? '상승했습니다' : direction === 'down' ? '하락했습니다' : '유지됐습니다';
   return MIND_SENTENCE[id](o, e, l, deltaLabel, verb);
 }
 
