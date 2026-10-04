@@ -30,11 +30,13 @@ function DarkWaveform({ series, supplier, active, hasSignal, chips }: DarkWavefo
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const supplierRef = useRef(supplier);
   const activeRef = useRef(active);
+  const seriesRef = useRef(series);
   const scaleRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     supplierRef.current = supplier;
     activeRef.current = active;
+    seriesRef.current = series;
   });
 
   useEffect(() => {
@@ -75,10 +77,10 @@ function DarkWaveform({ series, supplier, active, hasSignal, chips }: DarkWavefo
       }
 
       const data = supplierRef.current();
-      const trackCount = Math.max(1, series.length);
+      const trackCount = Math.max(1, seriesRef.current.length);
       const trackHeight = h / trackCount;
 
-      series.forEach((s, trackIndex) => {
+      seriesRef.current.forEach((s, trackIndex) => {
         const values = data[s.id];
         if (!values || values.length < 2) return;
         const top = trackHeight * trackIndex;
@@ -131,7 +133,7 @@ function DarkWaveform({ series, supplier, active, hasSignal, chips }: DarkWavefo
       cancelAnimationFrame(raf);
       observer.disconnect();
     };
-  }, [series]);
+  }, []);
 
   return (
     <span className={`member-raw-wave${hasSignal ? '' : ' is-idle'}`}>
