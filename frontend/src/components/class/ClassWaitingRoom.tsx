@@ -5,6 +5,7 @@ import { WaitingRoomBandCheck } from './WaitingRoomBandCheck';
 import { PreCheckinPanel } from './PreCheckinPanel';
 import { WaitingRoomReminder } from './waiting-room-reminder';
 import { LobbyBgmBar } from './LobbyBgmBar';
+import { WaitingForStart } from './WaitingForStart';
 import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
 import { useLobbyBgm } from '../../hooks/useLobbyBgm';
 import { useAuthStore } from '../../stores/authStore';
@@ -73,6 +74,8 @@ export function ClassWaitingRoom({
   const autoEnteredRef = useRef(false);
   const [activeStep, setActiveStep] = useState(0);
   const [readiness, setReadiness] = useState({ surveyDone: false, bandDone: false, deviceDone: false });
+  /** 대기 화면에서 [준비 다시 확인]으로 3단계 준비 화면에 돌아온 상태 */
+  const [recheckingPrep, setRecheckingPrep] = useState(false);
   const completeSurvey = useCallback(() => {
     setReadiness((value) => ({ ...value, surveyDone: true }));
     setActiveStep(1);
@@ -330,6 +333,23 @@ export function ClassWaitingRoom({
 
   const nicknameDone = isNicknameValid(effectiveNickname);
   const micProblem = micState === 'denied' || micState === 'unsupported';
+
+  // 3단계 준비를 모두 마쳤고 상담사가 아직 시작하지 않았다면 — 자연 배경 대기 화면으로 전환한다.
+  // (상담사가 시작하면 아래 auto-enter effect가 meditation으로 바로 넘긴다.)
+  const allReady = Object.values(readiness).every(Boolean);
+  if (allReady && gate.canEnter && !sessionLive && !recheckingPrep) {
+    return (
+      <WaitingForStart
+        title={title}
+        statusLabel={statusLabel}
+        onLeave={onLeave}
+        onRecheck={() => {
+          setRecheckingPrep(true);
+          setActiveStep(0);
+        }}
+      />
+    );
+  }
 
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#12081C] text-[#F7F4F0]" style={{ backgroundImage: 'radial-gradient(ellipse at 65% 20%, #34144255, transparent 60%)' }}>
