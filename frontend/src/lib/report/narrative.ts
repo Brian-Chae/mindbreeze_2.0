@@ -73,7 +73,7 @@ const UNIT_THRESHOLDS: Record<'respiratory_rate' | 'heart_rate' | 'hrv', number>
 const METRIC_LABELS: Record<MetricId, string> = {
   respiratory_rate: '호흡수',
   heart_rate: '심박수',
-  hrv: '심박변이(심장 박동 간격의 변화)',
+  hrv: '심박변이',
   focus: '집중도',
   relaxation: '이완도',
   emotional_stability: '감정안정도',

@@ -44,3 +44,7 @@
 .narrative-report .metric-charts .dual-bar svg{width:100%;height:auto;display:block}
 .narrative-report .metric-charts .trend{width:100%;height:auto}
 @media(max-width:560px){.narrative-report .metric-charts{grid-template-columns:1fr}}
+/* 증가·감소·유지 chip 색상을 변화량 pill과 통일(감소=빨강, 증가=민트, 유지=회색) */
+.narrative-report .badge.up{color:#00b394;background:rgba(1,240,200,.22)}
+.narrative-report .badge.down{color:#e5484d;background:rgba(229,72,77,.12)}
+.narrative-report .badge.flat{color:var(--gray);background:#f0edf3}

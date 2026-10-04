@@ -70,7 +70,7 @@ test('여섯 신호의 개선·반대·유지 방향을 카드에서 구분한�
       assert.match(card, /metric-definition/);
       assert.match(card, /명상 시작\(전반\).*마무리\(후반\)/);
     }
-    assert.match(html, /심박변이\(심장 박동 간격의 변화\)/);
+    assert.match(html, /<h3>심박변이<\/h3>/);
     assert.match(html, /밀리초/);
     // useId()의 랜덤 식별자에 "ms"가 우연히 포함될 수 있어 id/aria-labelledby 속성을 제거한 뒤 검사한다.
     assert.doesNotMatch(html.replace(/aria-labelledby="[^"]*"/g, '').replace(/ id="[^"]*"/g, ''), /HRV|\dms|bpm/);

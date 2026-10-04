@@ -63,12 +63,14 @@ function smoothSeries(values: (number | null)[], half: number): (number | null)[
 
 function DualBarChart({ metric }: { metric: MetricNarrative }) {
   const id = useId();
-  const max = BAR_MAX[metric.id];
   const unit = UNIT_LABELS[metric.id];
   const early = metric.early;
   const late = metric.late;
+  // 상한을 실제 값까지 확장해 막대가 컴포넌트 밖으로 넘어가지 않게 한다(예: HRV 138.5 > 기본 상한 80).
+  const max = Math.max(BAR_MAX[metric.id], early, late);
   const W = 250, H = 92, pad = 6, barH = 22, gap = 14, labelW = 32;
-  const scale = W - 2 * pad - labelW - 50;
+  // 값 라벨("138.5밀리초" 등)이 잘리지 않도록 오른쪽 여백을 확보한다.
+  const scale = W - 2 * pad - labelW - 72;
   const w1 = Math.max(3, (early / max) * scale);
   const w2 = Math.max(3, (late / max) * scale);
   const rowY1 = H / 2 - barH - gap / 2;
@@ -140,7 +142,7 @@ function MetricChangeCard({ metric, timeline, duration }: {
   const dirClass = metric.direction === 'up' ? 'up' : metric.direction === 'down' ? 'down' : 'flat';
   return <article className="metric">
     <div className="metric-copy">
-      <div className="metric-title"><h3>{metric.label}</h3><span className="badge">{metric.direction === 'up' ? '증가' : metric.direction === 'down' ? '감소' : '유지'}</span></div>
+      <div className="metric-title"><h3>{metric.label}</h3><span className={`badge ${dirClass}`}>{metric.direction === 'up' ? '증가' : metric.direction === 'down' ? '감소' : '유지'}</span></div>
       <div className="avg-row"><span className="avg-value">{metric.overall}</span><span className="avg-unit">{unit}</span><span className="avg-label">명상 전체 평균</span></div>
       <div className="delta-row"><span>전반 <b>{metric.early}</b></span><span className="arrow">→</span><span>후반 <b>{metric.late}</b></span><span className={`delta-pill ${dirClass}`}>{sign}{Math.abs(metric.delta)}</span></div>
       <p className="change-interpretation">{metric.arrow} {metricChangeInterpretation(metric.id, metric.direction)}</p>
