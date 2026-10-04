@@ -2190,6 +2190,10 @@ def _persist_feature_items(
     # SDD-026: 멱등 키를 (play_group_id, window_index) 로 확장한다.
     # pause/resume 으로 second_offset 이 0 부터 재시작해도 실행 세그먼트(play_group_id)가 다르면
     # 별개 키가 되어 skip 되지 않는다(데이터 보존). 레거시(play_group_id=None)는 기존과 동일 동작.
+    # SDD-111: 참가자 누적 전체 키 로드(O(T²)) 대신 현재 배치 window_index만 조회한다.
+    # dedup 키 (play_group_id, second_offset) 검사는 현재 배치 second_offset에만 필요하므로
+    # (session_id, participant_id, window_index) 복합 인덱스를 타는 범위 조회로 O(배치)로 줄인다.
+    batch_offsets = {f.second_offset for f in features}
     existing_keys = {
         (pg, idx)
         for (pg, idx) in db.query(
@@ -2198,6 +2202,7 @@ def _persist_feature_items(
         .filter(
             EEGFeatureWindow.session_id == sid,
             EEGFeatureWindow.participant_id == participant.id,
+            EEGFeatureWindow.window_index.in_(batch_offsets),
         )
         .all()
     }
