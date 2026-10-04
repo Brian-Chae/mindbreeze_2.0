@@ -306,7 +306,8 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
             db.add(report)
             db.flush()
         # 이미 승인 게이트를 지난 리포트(pending_review/completed)는 재생성하지 않는다 — 멱등.
-        if report.status in ("pending_analysis", "error"):
+        # 단, STT 복구 등으로 생성 상태가 partial(ai_record 미가용)인 경우엔 전사·요약을 반영해 갱신한다.
+        if report.status in ("pending_analysis", "error") or report.generation_status == "partial":
             report = generate_report_inline(str(report.id), db) or report
         if report.status == "pending_review" and auto_approve:
             # SDD-087: 자동 승인 시 코멘트가 없으면 AI 초안을 생성해 저장 후 승인한다
