@@ -118,7 +118,7 @@ def _mock_ai_pipeline(monkeypatch, confidence: str = "high") -> None:
     monkeypatch.setattr(
         stt_task,
         "_call_gemini_transcribe",
-        lambda chunk_paths, session_type: {
+        lambda chunk_paths, session_type, audio_duration_sec=None: {
             "segments": segs,
             "raw_text": "\n".join(f"[{s['speaker']}] {s['text']}" for s in segs),
         },

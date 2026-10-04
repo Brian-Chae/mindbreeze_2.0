@@ -7,6 +7,7 @@ WebSocket `/record` 네임스페이스로 각 단계 상태 브로드캐스트.
 import base64
 import json
 import logging
+import math
 import os
 import re
 import shutil
@@ -24,6 +25,8 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
+GEMINI_TIMEOUT = 300  # SDD-121: 4분+ 오디오도 처리 — 기존 180초 타임아웃 완화
+GEMINI_SEGMENT_SECONDS = 90  # 이 이상이면 세그먼트 분할(단일 요청 크기/시간 초과 방지)
 
 
 def _call_whisper(chunk_paths: list[str]) -> dict:
@@ -87,18 +90,8 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         os.unlink(merged_path)
 
 
-def _call_gemini_transcribe(chunk_paths: list[str], session_type: str) -> dict:
-    """Gemini Audio로 STT (발화자 구분은 1:1 유형에서만 유도).
-
-    오디오 청크를 병합해 Gemini에 inline_data로 전달하고, 유형에 맞는
-    중립 프롬프트로 전사한다. 상담 대화로 단정하지 않아야 실제 오디오와
-    무관한 대화를 지어내는 환각(1:1 상담 프레임 강제)을 막을 수 있다.
-    말이 아닌 소리는 [잡음]/[무음] 마커로 표기해 후속 신뢰도 판정에 쓴다.
-    """
-    if not settings.gemini_api_key:
-        logger.warning("[stt_task] gemini_api_key 미설정")
-        raise RuntimeError("gemini_api_key not set")
-
+def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[dict], str]:
+    """청크 배치 하나를 병합해 Gemini 로 전사한다. segments(상대 시각) + raw_text 반환."""
     # 1) 청크 병합 → base64
     merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
     merged_path = merged.name
@@ -145,7 +138,7 @@ def _call_gemini_transcribe(chunk_paths: list[str], session_type: str) -> dict:
                 }
             ]
         },
-        timeout=180,
+        timeout=GEMINI_TIMEOUT,
     )
     resp.raise_for_status()
     result = resp.json()
@@ -157,6 +150,53 @@ def _call_gemini_transcribe(chunk_paths: list[str], session_type: str) -> dict:
 
     segments = _extract_segments_json(text)
     raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
+    return segments, raw_text
+
+
+def _call_gemini_transcribe(
+    chunk_paths: list[str], session_type: str, audio_duration_sec: float | None = None
+) -> dict:
+    """Gemini Audio로 STT (발화자 구분은 1:1 유형에서만 유도).
+
+    오디오 청크를 병합해 Gemini에 inline_data로 전달하고, 유형에 맞는
+    중립 프롬프트로 전사한다. 상담 대화로 단정하지 않아야 실제 오디오와
+    무관한 대화를 지어내는 환각(1:1 상담 프레임 강제)을 막을 수 있다.
+    말이 아닌 소리는 [잡음]/[무음] 마커로 표기해 후속 신뢰도 판정에 쓴다.
+
+    SDD-121: 긴 오디오(> GEMINI_SEGMENT_SECONDS)는 세그먼트로 분할해 전사한다.
+    단일 요청에 긴 오디오를 통째로 넣으면 타임아웃(180초 초과)이 발생하므로,
+    세그먼트별 요청으로 크기·시간을 줄이고 타임스탬프 오프셋을 누적해 병합한다.
+    """
+    if not settings.gemini_api_key:
+        logger.warning("[stt_task] gemini_api_key 미설정")
+        raise RuntimeError("gemini_api_key not set")
+
+    # 총 길이 추정 — 녹음 시작/종료 시각이 있으면 정확값, 없으면 청크당 5초로 근사.
+    total_duration = audio_duration_sec or (len(chunk_paths) * 5.0)
+
+    if total_duration > GEMINI_SEGMENT_SECONDS and len(chunk_paths) > 1:
+        n_segments = max(1, int(math.ceil(total_duration / GEMINI_SEGMENT_SECONDS)))
+        per_segment = int(math.ceil(len(chunk_paths) / n_segments))
+        segments: list[dict] = []
+        offset = 0.0
+        batch_duration = total_duration / n_segments
+        for i in range(0, len(chunk_paths), per_segment):
+            batch = chunk_paths[i : i + per_segment]
+            batch_segments, _ = _transcribe_batch(batch, session_type)
+            for s in batch_segments:
+                s = dict(s)
+                s["start"] = round(float(s.get("start", 0.0)) + offset, 2)
+                s["end"] = round(float(s.get("end", 0.0)) + offset, 2)
+                segments.append(s)
+            offset += batch_duration
+        raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
+        logger.info(
+            "[stt_task] Gemini success(분할 %d): %d segments, %d chars",
+            n_segments, len(segments), len(raw_text),
+        )
+        return {"segments": segments, "raw_text": raw_text}
+
+    segments, raw_text = _transcribe_batch(chunk_paths, session_type)
     logger.info("[stt_task] Gemini success: %d segments, %d chars", len(segments), len(raw_text))
     return {"segments": segments, "raw_text": raw_text}
 
@@ -358,7 +398,7 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     asyncio.run(_emit_status(session_id, "transcribing"))
     _emit_report_progress(session_id, db)
     try:
-        result = _call_gemini_transcribe(chunk_paths, session_type)
+        result = _call_gemini_transcribe(chunk_paths, session_type, audio_duration_sec)
     except Exception as exc:
         logger.exception("[stt_task] Gemini transcribe failed, Whisper fallback: %s", exc)
         try:

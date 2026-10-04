@@ -162,7 +162,7 @@ def _mock_ai_pipeline(monkeypatch, confidence: str = "high") -> None:
             {"speaker": "counselor", "text": "어떤 부분이 가장 힘드신가요?", "start": 7.0, "end": 9.0},
         ]
 
-    def fake_transcribe(chunk_paths, session_type):
+    def fake_transcribe(chunk_paths, session_type, audio_duration_sec=None):
         return {"segments": segs, "raw_text": "\n".join(f"[{s['speaker']}] {s['text']}" for s in segs)}
 
     def fake_summary(session_type, transcript):
