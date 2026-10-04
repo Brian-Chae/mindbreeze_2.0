@@ -7,6 +7,9 @@ sio = socketio.AsyncServer(
     cors_allowed_origins="*",
     ping_interval=20,
     ping_timeout=40,
+    # [DIAG] 조용한 신호 flapping 원인 파악용 — 원인 확정 후 제거
+    logger=True,
+    engineio_logger=True,
 )
 
 from app.ws import chat_namespace  # noqa: F401,E402
