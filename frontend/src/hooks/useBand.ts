@@ -357,6 +357,9 @@ export function useBand({
   const connectedAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  /** SDD-120 후속: 밴드 끊김(gattserverdisconnected) 시 자동 재연결 */
+  const autoReconnectRef = useRef(true);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wsConnectedRef = useRef(false);
   const drainingRef = useRef(false);
   /** SDD-112: 재전송 in-flight 가드 — 5초 타이머·재연결 중복 호출 방지 */
@@ -923,6 +926,13 @@ export function useBand({
       clearInterval(elapsedTimerRef.current);
       elapsedTimerRef.current = null;
     }
+    // 자동 재연결 타이머 정리 (SDD-120 후속)
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    // 수동 해제 시 자동 재연결 중단 — 예기치 않은 끊김(gattserverdisconnected)만 자동 재연결한다.
+    autoReconnectRef.current = false;
     connectedAtRef.current = null;
 
     if (streamRef.current) {
@@ -971,6 +981,8 @@ export function useBand({
     }
 
     setError(null);
+    // 연결 시도 시 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
+    autoReconnectRef.current = true;
     setConnectionState('connecting');
 
     try {
@@ -1085,7 +1097,7 @@ export function useBand({
         if (mountedRef.current) {
           setConnectionState('disconnected');
           collectingRef.current = false;
-          setError('LINK BAND 연결이 끊어졌습니다');
+          setError('LINK BAND 연결이 끊어졌습니다 — 자동 재연결 시도 중');
           setSensors(INITIAL_SENSORS);
         }
         // 예기치 않은 끊김에도 raw/feature 데이터 보존 (SDD-120):
@@ -1094,6 +1106,13 @@ export function useBand({
           flushRawChunk();
           void drainPendingQueue();
           void rawDrainRef.current(15_000);
+        }
+        // SDD-120 후속: 자동 재연결 — 캐시된 디바이스로 재선택 다이얼로그 없이 gatt.connect() 재호출.
+        if (autoReconnectRef.current && mountedRef.current) {
+          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            void connect();
+          }, 1500);
         }
       });
 
