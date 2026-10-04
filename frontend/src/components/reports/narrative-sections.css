@@ -39,7 +39,7 @@
 .narrative-report .metric-copy .delta-pill.up{background:rgba(1,240,200,.22);color:#00b394}
 .narrative-report .metric-copy .delta-pill.down{background:rgba(229,72,77,.12);color:#e5484d}
 .narrative-report .metric-copy .delta-pill.flat{background:#f0edf3;color:var(--gray)}
-.narrative-report .metric-charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;margin-top:14px}
+.narrative-report .metric-charts{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:14px}
 .narrative-report .metric-charts figure{margin:0}
 .narrative-report .metric-charts .dual-bar svg{width:100%;height:auto;display:block}
 .narrative-report .metric-charts .trend{width:100%;height:auto}
