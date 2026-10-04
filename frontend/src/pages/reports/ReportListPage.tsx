@@ -14,7 +14,8 @@ import {
   type ReportDto,
 } from '../../lib/api/reports';
 
-type StatusFilter = 'all' | 'pending' | 'approved';
+type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
+type ReportTypeFilter = 'all' | 'counselor' | 'client';
 type SortKey = 'newest' | 'oldest' | 'title';
 
 /** SDD-058 — 페이지당 건수 */
@@ -81,8 +82,11 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-/** SDD-065 — 회원(보라) / 비회원(회색) */
+/** SDD-065 — 회원(보라) / 비회원(회색). 미생성 합성 항목(is_guest=null)은 '—'. */
 function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
+  if (isGuest === null || isGuest === undefined) {
+    return <span className="text-[13px] text-[#9B9B9B]">—</span>;
+  }
   const guest = isGuest === true;
   return (
     <span
@@ -95,19 +99,28 @@ function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
   );
 }
 
+/** SDD-101 — 생성/분석 실패 여부 (status=error 또는 generation_error 존재). */
+function isGenerationFailed(r: ReportDto): boolean {
+  return r.status === 'error' || !!r.generation_error;
+}
+
 function filterAndSortReports(
   reports: ReportDto[],
   search: string,
   statusFilter: StatusFilter,
   sortKey: SortKey,
   sessionFilter: string,
+  typeFilter: ReportTypeFilter,
 ): ReportDto[] {
   const q = search.trim().toLowerCase();
 
   let filtered = reports.filter((r) => {
     const pipeline = resolveReportStatus(r);
-    if (statusFilter === 'pending' && pipeline === 'completed') return false;
+    const failed = isGenerationFailed(r);
+    if (statusFilter === 'pending' && (pipeline === 'completed' || failed)) return false;
     if (statusFilter === 'approved' && pipeline !== 'completed') return false;
+    if (statusFilter === 'failed' && !failed) return false;
+    if (typeFilter !== 'all' && r.type !== typeFilter) return false;
     if (sessionFilter && r.session_id !== sessionFilter) return false;
     if (!q) return true;
     const title = reportTitle(r).toLowerCase();
@@ -160,8 +173,10 @@ export default function ReportListPage() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<ReportTypeFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [groupByClass, setGroupByClass] = useState(false);
+  // 세션별 리스트가 기본 뷰
+  const [groupByClass, setGroupByClass] = useState(true);
   const [sessionFilter, setSessionFilter] = useState('');
 
   // SDD-049 — 자동 승인 토글
@@ -237,8 +252,8 @@ export default function ReportListPage() {
   }, [reports]);
 
   const filtered = useMemo(
-    () => filterAndSortReports(reports, search, statusFilter, sortKey, sessionFilter),
-    [reports, search, statusFilter, sortKey, sessionFilter],
+    () => filterAndSortReports(reports, search, statusFilter, sortKey, sessionFilter, typeFilter),
+    [reports, search, statusFilter, sortKey, sessionFilter, typeFilter],
   );
 
   const grouped = useMemo(
@@ -251,7 +266,7 @@ export default function ReportListPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter, sessionFilter, sortKey]);
+  }, [search, statusFilter, sessionFilter, sortKey, typeFilter]);
 
   const toggleDisabled = autoApproveLoading || autoApproveSaving;
 
@@ -306,19 +321,34 @@ export default function ReportListPage() {
 
   const openReportModal = (id: string) => setSelectedReportId(id);
 
-  const renderRow = (r: ReportDto) => (
+  // 리포트 미생성 합성 항목(id=null)은 상세 열람이 없다 — 안정 키·가드용 헬퍼.
+  const reportKey = (r: ReportDto) => r.id ?? `missing:${r.session_id}:${r.type}`;
+  const openIfPresent = (r: ReportDto) => {
+    if (r.id) openReportModal(r.id);
+  };
+
+  const renderRow = (r: ReportDto) => {
+    const missing = !r.id;
+    const interactive = !missing;
+    return (
     <tr
-      key={r.id}
-      role="button"
-      tabIndex={0}
-      onClick={() => openReportModal(r.id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          openReportModal(r.id);
-        }
-      }}
-      className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors cursor-pointer"
+      key={reportKey(r)}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? () => openIfPresent(r) : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openIfPresent(r);
+              }
+            }
+          : undefined
+      }
+      className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${
+        interactive ? 'hover:bg-[#F8FAFC] cursor-pointer' : 'bg-[#FDFDFD]'
+      }`}
     >
       <td className="px-5 py-3.5">
         <div className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</div>
@@ -348,26 +378,33 @@ export default function ReportListPage() {
         />
       </td>
       <td className="px-5 py-3.5">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            openReportModal(r.id);
-          }}
-          className="text-[13px] font-semibold text-[#5F0080] hover:underline"
-        >
-          보기
-        </button>
+        {interactive ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openIfPresent(r);
+            }}
+            className="text-[13px] font-semibold text-[#5F0080] hover:underline"
+          >
+            보기
+          </button>
+        ) : (
+          <span className="text-[13px] text-[#BDBDBD]">—</span>
+        )}
       </td>
     </tr>
-  );
+    );
+  };
 
   const renderMobileCard = (r: ReportDto) => (
     <button
-      key={r.id}
+      key={reportKey(r)}
       type="button"
-      onClick={() => openReportModal(r.id)}
-      className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:border-[#5F0080]/30 hover:shadow-sm transition-all"
+      onClick={r.id ? () => openIfPresent(r) : undefined}
+      className={`block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 transition-all ${
+        r.id ? 'hover:border-[#5F0080]/30 hover:shadow-sm' : 'bg-[#FDFDFD]'
+      }`}
     >
       <div className="flex items-center justify-between mb-2 gap-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -467,6 +504,7 @@ export default function ReportListPage() {
                   ['all', '전체'],
                   ['pending', '검토중'],
                   ['approved', '승인됨'],
+                  ['failed', '실패'],
                 ] as const
               ).map(([value, label]) => (
                 <button
@@ -475,7 +513,9 @@ export default function ReportListPage() {
                   onClick={() => setStatusFilter(value)}
                   className={`h-10 px-3.5 text-[13px] font-semibold transition-colors ${
                     statusFilter === value
-                      ? 'bg-[#5F0080] text-white'
+                      ? value === 'failed'
+                        ? 'bg-[#C62828] text-white'
+                        : 'bg-[#5F0080] text-white'
                       : 'text-[#6F6F6F] hover:bg-[#F8FAFC]'
                   }`}
                 >
@@ -483,6 +523,16 @@ export default function ReportListPage() {
                 </button>
               ))}
             </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as ReportTypeFilter)}
+              aria-label="타입 필터"
+              className={selectClass}
+            >
+              <option value="all">전체 타입</option>
+              <option value="counselor">상담사용</option>
+              <option value="client">회원용</option>
+            </select>
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
@@ -532,6 +582,7 @@ export default function ReportListPage() {
                 onClick={() => {
                   setSearch('');
                   setStatusFilter('all');
+                  setTypeFilter('all');
                   setSessionFilter('');
                 }}
                 className="mt-3 text-[13px] font-semibold text-[#5F0080] hover:underline"

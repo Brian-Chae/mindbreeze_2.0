@@ -60,7 +60,7 @@ export default function CounselorCommentCard({
     setSuccess(null);
     setError(null);
     try {
-      const { draft } = await generateCommentDraft(report.id);
+      const { draft } = await generateCommentDraft(report.id!);
       setText(draft.slice(0, COMMENT_MAX_LENGTH));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'AI 초안 생성에 실패했습니다.');
@@ -76,7 +76,7 @@ export default function CounselorCommentCard({
     setError(null);
     try {
       const value = text.trim();
-      const updated = await updateReportComment(report.id, value ? value : null);
+      const updated = await updateReportComment(report.id!, value ? value : null);
       onReportChange(updated);
       setText(value);
       setSuccess(value ? '코멘트를 저장했습니다.' : '코멘트를 삭제했습니다.');

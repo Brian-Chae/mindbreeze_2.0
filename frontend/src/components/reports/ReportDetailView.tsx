@@ -171,9 +171,9 @@ export default function ReportDetailView({
     setApproving(true);
     setError(null);
     try {
-      await approveReport(report.id);
+      await approveReport(report.id!);
       setApproved(true);
-      const updated = await getReport(report.id);
+      const updated = await getReport(report.id!);
       updateReport(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : '승인 처리 실패');
@@ -187,7 +187,7 @@ export default function ReportDetailView({
     setPrinting(true);
     setError(null);
     try {
-      await downloadReportPdf({ reportId: report.id });
+      await downloadReportPdf({ reportId: report.id! });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'PDF 다운로드에 실패했습니다.');
     } finally {
@@ -205,7 +205,7 @@ export default function ReportDetailView({
     }
     setResending(true);
     try {
-      await resendReportEmail(report.id, email);
+      await resendReportEmail(report.id!, email);
       setResendSuccess(`${email}로 리포트 메일을 발송했습니다.`);
     } catch (e) {
       setResendError(e instanceof Error ? e.message : '메일 발송에 실패했습니다.');
