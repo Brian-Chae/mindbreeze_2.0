@@ -75,7 +75,7 @@ class EEGRollupResponse(BaseModel):
 class RawChunkMeta(BaseModel):
     """presigned 발급 요청 1건 — raw 재해석 계약 메타데이터. 시간범위는 null 보존."""
 
-    stream_id: str = Field("default", max_length=64)
+    stream_id: str = Field("default", max_length=128)
     chunk_index: int = Field(..., ge=0)
     start_ms: float | None = None
     end_ms: float | None = None

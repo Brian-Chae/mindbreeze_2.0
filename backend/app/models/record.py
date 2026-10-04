@@ -139,7 +139,8 @@ class EEGRawChunk(Base):
     )
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     # 스트림 식별자(디바이스/세그먼트 단위). 기본 'default'.
-    stream_id: Mapped[str] = mapped_column(String(64), default="default", nullable=False)
+    # 형식: eeg:{session_uuid}:{participant_uuid} (77자) — 128자로 충분히 수용.
+    stream_id: Mapped[str] = mapped_column(String(128), default="default", nullable=False)
     # 스트림 내 0-based 청크 순번
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     # 청크 시간 범위(디바이스 ms epoch) — null 보존
