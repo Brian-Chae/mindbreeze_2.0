@@ -54,14 +54,14 @@ async function mount(page, mode = 'online') {
     <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}</style></head>
     <body><div id="root"></div><script type="module" src="/player-fixture.js"></script></body></html>`}));
   await page.goto(`${baseUrl}/member-player-test`);
-  await page.getByRole('button',{name:'집중도',exact:true}).waitFor();
+  await page.locator('.player-metric').first().waitFor();
 }
 
 async function assertLayout(page) {
   const layout = await page.evaluate(() => {
     const root = document.querySelector('.member-class-player');
     const frame = document.querySelector('.player-body').getBoundingClientRect();
-    const selectors = ['.player-video', '.player-metric-status', '.player-metrics', '.player-chart', '.player-signals'];
+    const selectors = ['.player-video', '.player-metric-status', '.player-metric-sections', '.player-chart', '.player-signals'];
     return { viewport: [innerWidth, innerHeight], document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
       root: [root.scrollWidth, root.scrollHeight], videoHeight: document.querySelector('.player-video').getBoundingClientRect().height,
       outside: selectors.filter(selector => {const r = document.querySelector(selector).getBoundingClientRect(); return r.bottom > frame.bottom + 1 || r.right > frame.right + 1;}),
@@ -87,17 +87,22 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-disconnected.png`});
       await page.getByRole('button', {name:'LINK BAND 연결', exact:true}).click();
       await page.clock.runFor(300 * 1000);
-      await page.locator('.player-bar').first().waitFor();
-      assert.equal(await page.locator('.player-bar').count(),12);
-      const initial = await page.locator('.player-bars').getAttribute('aria-label');
-      await page.evaluate(() => { window.focusValue = 20; });
-      await page.clock.runFor(5000);
-      assert.equal(await page.locator('.player-bars').getAttribute('aria-label'),initial);
-      await page.clock.runFor(25000);
-      assert.notEqual(await page.locator('.player-bars').getAttribute('aria-label'),initial);
-      for (const name of ['이완도','정서안정도','BPM','호흡','HRV','집중도']) {
-        await page.getByRole('button',{name,exact:true}).click();
-        assert.match(await page.locator('.player-bars').getAttribute('aria-label'),new RegExp(name));
+      if (viewport.width >= 768) {
+        await page.locator('.player-bar').first().waitFor();
+        assert.equal(await page.locator('.player-bar').count(),12);
+        const initial = await page.locator('.player-bars').getAttribute('aria-label');
+        await page.evaluate(() => { window.focusValue = 20; });
+        // SDD-123: 매초 갱신 — 25초 스로틀 제거. 2초 안에 반영되어야 한다.
+        await page.clock.runFor(2000);
+        assert.notEqual(await page.locator('.player-bars').getAttribute('aria-label'),initial);
+        for (const name of ['이완도','정서안정도','BPM','호흡','HRV','집중도']) {
+          await page.getByRole('button',{name:new RegExp('^'+name)}).click();
+          assert.match(await page.locator('.player-bars').getAttribute('aria-label'),new RegExp(name));
+        }
+      } else {
+        // SDD-123: 모바일은 차트 숨김 — 현재 상태(다이얼)만 노출
+        assert.equal(await page.locator('.player-chart').isVisible(), false);
+        assert.equal(await page.locator('.player-metric').first().isVisible(), true);
       }
       await assertLayout(page);
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-connected.png`});

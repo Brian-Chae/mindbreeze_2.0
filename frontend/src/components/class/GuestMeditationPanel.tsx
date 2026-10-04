@@ -18,6 +18,7 @@ import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { MetricBarChart } from './metric-bar-chart';
+import { MemberMetricDial } from './MemberMetricDial';
 import './member-class-player.css';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
@@ -74,6 +75,12 @@ const METRICS: readonly MetricDef[] = [
   { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 60, scaleNote: '0–60ms 기준' },
 ] as const;
 
+/** SDD-123: MIND/BODY 섹션 — 상담사 화면의 MIND/BODY 구분을 이식 (표시 순서 유지) */
+const METRIC_SECTIONS = [
+  { key: 'mind', label: '마음', english: 'MIND', keys: ['focus', 'relaxation', 'emotional'] as const },
+  { key: 'body', label: '몸', english: 'BODY', keys: ['bpm', 'respiration', 'hrv'] as const },
+] as const;
+
 const MAX_POINTS = 300;
 const AI_ANALYZING_MS = 15_000;
 /** SDD-095: 클래스 채팅 상태(chat_enabled) 폴링 주기 — 상담사 토글을 근실시간 반영 */
@@ -100,12 +107,7 @@ function formatClock(totalSec: number): string {
   return `${mm}:${ss}`;
 }
 
-/** 지표 수치 표시 — null은 대시 (0 치환 금지) */
-function formatMetricValue(value: number | null, digits = 0): string {
-  if (value === null || Number.isNaN(value)) return '—';
-  return digits > 0 ? value.toFixed(digits) : `${Math.round(value)}`;
-}
-
+/** 링버퍼에 1포인트 추가 — MAX_POINTS 초과 시 가장 오래된 값 제거 */
 function pushRingPoint(buf: number[], value: number): void {
   buf.push(value);
   if (buf.length > MAX_POINTS) {
@@ -323,6 +325,16 @@ export function GuestMeditationPanel({
   const activeMetric =
     METRICS.find((m) => m.key === selectedKey) ?? METRICS[0];
 
+  /** SDD-123: 직전 1초 대비 변화량 (매초) — 링버퍼 마지막 두 유효값 차이 */
+  const deltaFor = (key: MetricKey): number | null => {
+    const arr = seriesRef.current[key];
+    if (arr.length < 2) return null;
+    const last = arr[arr.length - 1];
+    const prev = arr[arr.length - 2];
+    if (!Number.isFinite(last) || !Number.isFinite(prev)) return null;
+    return Math.round(last - prev);
+  };
+
   // 1Hz 링버퍼 — 6지표 시계열
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -387,12 +399,11 @@ export function GuestMeditationPanel({
     return () => window.clearInterval(id);
   }, [startedAt]);
 
-  // 수집은 1Hz 그대로, 표시만 25초 단위로 고정해 막대가 매초 출렁이지 않게 한다.
-  const chartTick = seriesTick === 0 ? 0 : Math.max(1, Math.floor(seriesTick / 25) + 1);
+  // 수집·표시 모두 1Hz — 숫자·변화량 매초 실시간 (SDD-123: 25초 스로틀 제거)
   const chartValues = useMemo(() => {
-    void chartTick;
+    void seriesTick;
     return [...seriesRef.current[selectedKey]];
-  }, [selectedKey, chartTick]);
+  }, [selectedKey, seriesTick]);
 
   const statusHint =
     band.deviceStatus === 'lead_off'
@@ -512,17 +523,29 @@ export function GuestMeditationPanel({
               )}
             </div>
             {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
-            <div className="player-metrics" aria-label="실시간 지표">
-              {METRICS.map((metric) => (
-                <button key={metric.key} type="button" className="player-metric"
-                  aria-pressed={selectedKey === metric.key} aria-label={metric.label}
-                  onClick={() => setSelectedKey(metric.key)}>
-                  <span className="player-metric-name">{metric.label}</span>
-                  <span className="player-metric-value" data-empty={snapshot[metric.key] === null}>
-                    {formatMetricValue(snapshot[metric.key])}
-                    {snapshot[metric.key] !== null && <span className="player-metric-unit">{metric.unit}</span>}
-                  </span>
-                </button>
+            <div className="player-metric-sections" aria-label="실시간 지표">
+              {METRIC_SECTIONS.map((section) => (
+                <section key={section.key} className="player-metric-section" aria-label={section.label}>
+                  <h3>{section.label}<small>{section.english}</small></h3>
+                  <div className="player-metric-items">
+                    {section.keys.map((key) => {
+                      const metric = METRICS.find((m) => m.key === key)!;
+                      return (
+                        <MemberMetricDial
+                          key={key}
+                          label={metric.label}
+                          value={snapshot[key]}
+                          unit={metric.unit}
+                          maxValue={metric.chartMax}
+                          hero={selectedKey === key}
+                          selected={selectedKey === key}
+                          delta={deltaFor(key)}
+                          onClick={() => setSelectedKey(key)}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
               ))}
             </div>
             <MetricBarChart values={chartValues} label={activeMetric.label} unit={activeMetric.unit}

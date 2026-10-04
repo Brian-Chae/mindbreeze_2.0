@@ -26,7 +26,7 @@ function buildNote(
   trend: number | null,
   hasData: boolean,
 ): string {
-  const parts = ['최근 5분 · 25초 구간 평균'];
+  const parts = ['최근 5분'];
   if (scaleNote) parts.push(scaleNote);
   if (hasData && lowerIsBetter && trend !== null) {
     parts.push(trend < 0 ? '천천히 낮아지는 중 · 안정' : '다소 높아지는 중');
