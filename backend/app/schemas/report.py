@@ -48,7 +48,8 @@ class ReportAutoApproveSetting(BaseModel):
 class ReportResponse(HRVMotionSummary):
     """몸 지표 평균·심박수 최소/최대는 공통 요약 계약을 상속한다."""
 
-    id: str
+    # 리포트 미생성 세션 합성 노출 시 id 는 null 이다(목록에서 '생성 실패' 상태로 표시).
+    id: str | None = None
     session_id: str
     # SDD-027: 게스트 리포트는 user_id 가 없다(participant_id 로 소유)
     user_id: str | None = None
@@ -56,7 +57,7 @@ class ReportResponse(HRVMotionSummary):
     report_email: str | None = None
     type: str
     # SDD-027: 리포트 상태머신(pending_analysis/pending_review/completed/error) + 데이터 신뢰도
-    status: str = "pending_analysis"
+    status: str | None = None
     # SDD-095: 생성 진행 상태(pending/processing/ready/partial) — 승인 상태와 독립 축
     generation_status: str = "pending"
     # SDD-101: 생성 실패 사유·시작 시각 — /reports 목록에서 로그로 노출
@@ -69,6 +70,7 @@ class ReportResponse(HRVMotionSummary):
     is_read: bool = False
     created_at: datetime | None = None
     session_title: str | None = None
+    counselor_name: str | None = None
     session_type: str | None = None
     scheduled_at: datetime | None = None
     participant_name: str | None = None

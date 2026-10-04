@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 
-function formatDate(iso: string | null): string {
+function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
   const d = new Date(iso);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  if (Number.isNaN(d.getTime())) return '-';
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function TypeBadge({ type }: { type: string }) {
@@ -76,6 +77,16 @@ function reportTitle(report: ReportDto): string {
   return report.session_title || (typeof report.content?.headline === 'string' ? report.content.headline : '리포트');
 }
 
+function reportSummary(report: ReportDto): string {
+  const summary = report.content?.summary;
+  if (typeof summary === 'string' && summary.trim()) return summary;
+  return typeof report.content?.headline === 'string' ? report.content.headline : '';
+}
+
+function counselorName(report: ReportDto): string {
+  return report.counselor_name || '상담사';
+}
+
 function reportKey(report: ReportDto): string {
   return report.id ?? `${report.session_id}-${report.type}-${report.participant_id ?? report.user_id ?? 'unknown'}`;
 }
@@ -85,7 +96,7 @@ function filterAndSortReports(reports: ReportDto[], search: string, sortKey: Sor
   const query = search.trim().toLowerCase();
   return reports.filter((report) => {
     const headline = typeof report.content?.headline === 'string' ? report.content.headline : '';
-    return !query || [reportTitle(report), report.session_title ?? '', headline]
+    return !query || [reportTitle(report), report.session_title ?? '', headline, reportSummary(report)]
       .some((text) => text.toLowerCase().includes(query));
   }).sort((a, b) => {
     if (sortKey === 'title') return reportTitle(a).localeCompare(reportTitle(b), 'ko');
@@ -95,14 +106,14 @@ function filterAndSortReports(reports: ReportDto[], search: string, sortKey: Sor
   });
 }
 
-function groupBySession(reports: ReportDto[]) {
-  const groups = new Map<string, { sessionId: string; label: string; items: ReportDto[] }>();
+function groupReportsByCounselor(reports: ReportDto[]) {
+  const groups = new Map<string, { counselorName: string; label: string; items: ReportDto[] }>();
   for (const report of reports) {
-    const key = report.session_id || reportKey(report);
+    const key = counselorName(report);
     const existing = groups.get(key);
     groups.set(key, {
-      sessionId: key,
-      label: existing?.label ?? reportTitle(report),
+      counselorName: key,
+      label: key,
       items: [...(existing?.items ?? []), report],
     });
   }
@@ -119,7 +130,7 @@ export default function ClientReportListPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [groupByClass, setGroupByClass] = useState(true);
+  const [groupByCounselor, setGroupByCounselor] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,7 +155,7 @@ export default function ClientReportListPage() {
   }, [page, reloadKey]);
 
   const filtered = useMemo(() => filterAndSortReports(reports, search, sortKey), [reports, search, sortKey]);
-  const grouped = useMemo(() => groupByClass ? groupBySession(filtered) : null, [groupByClass, filtered]);
+  const grouped = useMemo(() => groupByCounselor ? groupReportsByCounselor(filtered) : null, [groupByCounselor, filtered]);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
   const controlClass = 'h-10 px-4 rounded-xl text-[13px] border border-[#EFEFEF] bg-white text-[#6F6F6F] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
   const pageButtonClass = 'h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
@@ -156,11 +167,16 @@ export default function ClientReportListPage() {
       className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all disabled:cursor-default"
     >
       <div className="flex items-center justify-between mb-2">
-        <TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} />
+        <span className="text-[12px] font-semibold text-[#5F0080]">{counselorName(report)}</span>
+        <span className="flex gap-2"><TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} /></span>
       </div>
       <div className="font-bold text-[15px] text-[#1F1F1F] mb-1 truncate">{reportTitle(report)}</div>
-      <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-        {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'} · {formatDate(report.scheduled_at ?? report.created_at)}
+      <div className="text-[13px] font-bold text-[#1F1F1F] font-mono">
+        {formatDateTime(report.scheduled_at)}
+      </div>
+      <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+      <div className="mt-2 text-[11px] text-[#6F6F6F]">
+        {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}
       </div>
     </button>
   );
@@ -169,8 +185,8 @@ export default function ClientReportListPage() {
     <table className="w-full text-[14px] min-w-[640px] table-fixed">
       <thead>
         <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
-          {['제목', '세션유형', '날짜', '상태', '액션'].map((label, index) => (
-            <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[32%]' : index === 4 ? 'w-[12%]' : ''}`}>{label}</th>
+          {['제목', '세션유형', '날짜·시간', '상태', '액션'].map((label, index) => (
+            <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[34%]' : index === 2 ? 'w-[25%]' : index === 4 ? 'w-[10%]' : ''}`}>{label}</th>
           ))}
         </tr>
       </thead>
@@ -189,9 +205,11 @@ export default function ClientReportListPage() {
             }}
             className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${report.id ? 'hover:bg-[#F8FAFC] cursor-pointer' : ''}`}
           >
-            <td className="px-5 py-3.5"><div className="font-medium text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</div></td>
+            <td className="px-5 py-3.5"><div className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</div>
+              <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+            </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
-            <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(report.scheduled_at ?? report.created_at)}</td>
+            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at)}</td>
             <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} /></td>
             <td className="px-5 py-3.5">
               <button type="button" aria-haspopup="dialog" disabled={!report.id}
@@ -212,17 +230,17 @@ export default function ClientReportListPage() {
         <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">AI REPORTS</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 py-4">
-        <input type="search" aria-label="제목·세션 검색" placeholder="제목·세션 검색"
+        <input type="search" aria-label="제목·요약 검색" placeholder="제목·요약 검색"
           value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
           className={`${controlClass} w-full md:w-64`} />
         <select aria-label="정렬" value={sortKey}
           onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={controlClass}>
           <option value="newest">최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option>
         </select>
-        <button type="button" role="switch" aria-checked={groupByClass}
-          onClick={() => setGroupByClass((value) => !value)}
-          className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByClass ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
-        >세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}</button>
+        <button type="button" role="switch" aria-checked={groupByCounselor}
+          onClick={() => setGroupByCounselor((value) => !value)}
+          className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
+        >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
         {!loading && !error && <span className="text-[13px] text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}
       </div>
       {loading ? (
@@ -244,7 +262,7 @@ export default function ClientReportListPage() {
         <>
           <div className="block md:hidden space-y-3">
             {grouped ? grouped.map((group) => (
-              <div key={group.sessionId} className="space-y-2">
+              <div key={group.counselorName} className="space-y-2">
                 <div className="px-1 pt-2 text-[12px] font-bold text-[#5F0080]">
                   {group.label}<span className="ml-2 text-[#9B9B9B] font-normal">{group.items.length}건</span>
                 </div>
@@ -254,7 +272,7 @@ export default function ClientReportListPage() {
           </div>
           <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden overflow-x-auto">
             {grouped ? grouped.map((group) => (
-              <div key={group.sessionId}>
+              <div key={group.counselorName}>
                 <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] font-bold text-[#5F0080]">
                   {group.label}<span className="ml-2 font-normal text-[#6F6F6F]">{group.items.length}건</span>
                 </div>

@@ -60,7 +60,8 @@ import type { SubjectiveStateDto } from './checkin';
 export type ReportType = 'counselor' | 'client';
 
 export interface ReportDto {
-  id: string;
+  /** 리포트 미생성 세션 합성 항목은 null(목록에서 '생성 실패' 상태로 표시). */
+  id: string | null;
   session_id: string;
   /** 게스트 리포트 시 null 가능(SDD-027) */
   user_id: string | null;
@@ -71,6 +72,7 @@ export interface ReportDto {
   is_read: boolean;
   created_at: string | null;
   session_title: string | null;
+  counselor_name?: string | null;
   session_type: string | null;
   scheduled_at: string | null;
   /**

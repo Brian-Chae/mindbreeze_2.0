@@ -110,12 +110,25 @@ def normalize_report_content(content, report_type: str = "counselor") -> dict:
     return out
 
 
+def _counselor_name(
+    session: Session | None, counselor_names: dict[UUID, str] | None = None,
+) -> str | None:
+    if session is None:
+        return None
+    # 목록은 빈 맵이어도 관계를 지연 로딩하지 않는다.
+    if counselor_names is not None:
+        return counselor_names.get(session.host_id)
+    host = session.host
+    return host.name if host else None
+
+
 def _serialize(
     report: Report,
     session: Session | None = None,
     report_email: str | None = None,
     participant_info: dict | None = None,
     subjective: dict | None = None,
+    counselor_names: dict[UUID, str] | None = None,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
     eeg = content.get("eeg")
@@ -146,6 +159,7 @@ def _serialize(
         "is_read": bool(report.is_read),
         "created_at": report.created_at,
         "session_title": session.title if session else None,
+        "counselor_name": _counselor_name(session, counselor_names),
         "session_type": session.type if session else None,
         "scheduled_at": session.scheduled_at if session else None,
         "participant_name": (
@@ -322,6 +336,54 @@ def update_auto_approve_setting(user_id: str, enabled: bool, db: DBSession) -> d
     return {"enabled": user.auto_approve_report}
 
 
+# 리포트가 생성되어야 하는 세션 상태 — 이 상태면 리포트가 기대된다(미생성 시 목록에 '생성 실패'로 노출).
+_REPORT_RELEVANT_STATUSES = ("in_progress", "paused", "completed")
+
+
+def _synthesize_missing_report(
+    session: Session,
+    report_type: str,
+    *,
+    user_id: UUID | None = None,
+    counselor_names: dict[UUID, str] | None = None,
+) -> dict:
+    """리포트 행이 없는 세션을 목록에 노출하기 위한 합성 항목(읽기 전용, id=None).
+
+    종료됐는데도 리포트가 없으면 '생성 실패'로, 아직 진행 중이면 '준비 중'으로 표시한다.
+    """
+    completed = session.status == "completed"
+    return {
+        "id": None,
+        "session_id": str(session.id),
+        "user_id": str(user_id) if user_id else None,
+        "participant_id": None,
+        "report_email": None,
+        "type": report_type,
+        # 종료됐는데 리포트가 없으면 실패, 진행 중이면 아직 생성 전(오류 아님).
+        "status": "error" if completed else None,
+        "generation_status": "pending",
+        "generation_error": (
+            "세션이 종료됐지만 리포트가 생성되지 않았습니다" if completed else None
+        ),
+        "generation_started_at": None,
+        "data_credibility": None,
+        "content": {},
+        "subjective_state": None,
+        "pdf_url": None,
+        "sent_at": None,
+        "is_read": False,
+        "created_at": session.created_at,
+        "session_title": session.title,
+        "counselor_name": _counselor_name(session, counselor_names),
+        "session_type": session.type,
+        "scheduled_at": session.scheduled_at,
+        "participant_name": None,
+        "gender": None,
+        "birth_date": None,
+        "is_guest": None,
+    }
+
+
 def list_reports(
     user_id: str,
     db: DBSession,
@@ -330,35 +392,36 @@ def list_reports(
 ) -> dict:
     uid = _to_uuid(user_id)
     user = db.query(User).filter(User.id == uid).first()
+    is_staff = bool(user and user.role in ("counselor", "org_admin"))
 
-    if user and user.role in ("counselor", "org_admin"):
+    # 세션 + 리포트 조회 (직원 = 본인 세션 전체 리포트, 내담자 = 본인 리포트만)
+    if is_staff:
+        assert user is not None  # is_staff 가 참이면 user 는 반드시 존재
         host_ids = [uid] if user.role == "counselor" else [
             row[0] for row in db.query(User.id).filter(User.org_id == user.org_id).all()
         ]
         sessions = db.query(Session).filter(Session.host_id.in_(host_ids)).all()
         sids = [s.id for s in sessions]
         sessions_map = {s.id: s for s in sessions}
-        if sids:
-            query = db.query(Report).filter(Report.session_id.in_(sids))
-        else:
-            query = db.query(Report).filter(False)
+        report_rows = (
+            db.query(Report).filter(Report.session_id.in_(sids)).all() if sids else []
+        )
     else:
-        query = db.query(Report).filter(Report.user_id == uid)
+        report_rows = db.query(Report).filter(Report.user_id == uid).all()
+        session_ids = {r.session_id for r in report_rows}
+        sessions = (
+            db.query(Session).filter(Session.id.in_(session_ids)).all() if session_ids else []
+        )
+        sessions_map = {s.id: s for s in sessions}
 
-    total = query.count()
-    query = query.order_by(Report.created_at.desc(), Report.id.desc())
-    if page is not None and limit is not None:
-        query = query.offset((page - 1) * limit).limit(limit)
-    items = query.all()
+    # SDD-119: 실제·합성 리포트 모두 상담사 이름을 한 번에 조회한다.
+    counselor_ids = {session.host_id for session in sessions}
+    counselor_names = dict(
+        db.query(User.id, User.name).filter(User.id.in_(counselor_ids)).all()
+    ) if counselor_ids else {}
 
-    if not (user and user.role in ("counselor", "org_admin")):
-        session_ids = {r.session_id for r in items}
-        sessions_map = {
-            s.id: s
-            for s in db.query(Session).filter(Session.id.in_(session_ids)).all()
-        } if session_ids else {}
-
-    participant_ids = {r.participant_id for r in items if r.participant_id}
+    # 참여자 정보(이름/성별/생년월일/회원·비회원) 배치 조회
+    participant_ids = {r.participant_id for r in report_rows if r.participant_id}
     participants_map = {
         participant.id: participant
         for participant in db.query(SessionParticipant)
@@ -372,8 +435,8 @@ def list_reports(
         if participant.user_id
     }
     member_info_map = {
-        user.id: (user, profile)
-        for user, profile in db.query(User, ClientProfile)
+        member.id: (member, profile)
+        for member, profile in db.query(User, ClientProfile)
         .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
         .filter(User.id.in_(participant_user_ids))
         .all()
@@ -382,9 +445,9 @@ def list_reports(
     participant_info_map = {}
     for participant_id, participant in participants_map.items():
         is_guest = participant.user_id is None
-        user, profile = member_info_map.get(participant.user_id, (None, None))
+        member, profile = member_info_map.get(participant.user_id, (None, None))
         participant_info_map[participant_id] = {
-            "participant_name": participant.guest_name if is_guest else (user.name if user else None),
+            "participant_name": participant.guest_name if is_guest else (member.name if member else None),
             "gender": participant.gender if is_guest else (profile.gender if profile else None),
             "birth_date": (
                 participant.birth_date if is_guest else (profile.birth_date if profile else None)
@@ -394,7 +457,7 @@ def list_reports(
 
     # SDD-096: 주관 상태(셀프 체크인) — 배치 조회로 N+1 없이 파생한다.
     records_map = record_service.subjective_state_map(
-        {report.session_id for report in items}, db
+        {report.session_id for report in report_rows}, db
     )
 
     result = [
@@ -403,9 +466,40 @@ def list_reports(
             sessions_map.get(report.session_id),
             participant_info=participant_info_map.get(report.participant_id),
             subjective=_subjective_from_map(report, records_map),
+            counselor_names=counselor_names,
         )
-        for report in items
+        for report in report_rows
     ]
+
+    # 리포트가 기대되지만 미생성인 세션 합성 노출 — 상담사(직원) 목록에서만.
+    if is_staff:
+        reported_sids = {r.session_id for r in report_rows}
+        for session in sessions:
+            if getattr(session, "is_template", False):
+                continue
+            if session.status not in _REPORT_RELEVANT_STATUSES:
+                continue
+            if session.id in reported_sids:
+                continue
+            result.append(
+                _synthesize_missing_report(
+                    session, "counselor", user_id=session.host_id,
+                    counselor_names=counselor_names,
+                )
+            )
+
+    # 정렬(최신순 — 세션 일정 기준, 없으면 생성 시각) + 메모리 페이지네이션
+    # 프론트 '최신순' 정렬(reportDateIso = scheduled_at ?? created_at)과 정합을 맞춘다.
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    result.sort(
+        key=lambda entry: entry.get("scheduled_at") or entry.get("created_at") or epoch,
+        reverse=True,
+    )
+    total = len(result)
+    if page is not None and limit is not None:
+        start = (page - 1) * limit
+        result = result[start:start + limit]
+
     response = {"reports": result, "total": total}
     if page is not None and limit is not None:
         response.update({"page": page, "limit": limit})

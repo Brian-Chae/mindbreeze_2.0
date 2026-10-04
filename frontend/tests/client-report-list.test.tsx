@@ -10,12 +10,12 @@ const base: ReportDto = {
   id: 'a', session_id: 'session-a', user_id: 'client', type: 'client',
   content: { headline: 'Calm 기록' }, pdf_url: null, sent_at: '2026-10-01',
   is_read: false, created_at: '2026-10-01', session_title: '가 명상',
-  session_type: 'meditation', scheduled_at: '2026-10-03',
+  session_type: 'meditation', scheduled_at: '2026-10-03T14:05:00', counselor_name: '김상담',
 };
 const reports: ReportDto[] = [
   base,
-  { ...base, id: 'b', session_id: 'session-b', session_title: '나 상담', scheduled_at: '2026-10-01', sent_at: null },
-  { ...base, id: 'c', scheduled_at: '2026-10-02' },
+  { ...base, counselor_name: '이상담', id: 'b', session_id: 'session-b', session_title: '나 상담', scheduled_at: '2026-10-01', sent_at: null },
+  { ...base, id: 'c', session_id: 'session-c', scheduled_at: '2026-10-02', content: { headline: 'Calm 기록', summary: '호흡으로 긴장을 풀었어요' } },
 ];
 let root: Root;
 let container: HTMLDivElement;
@@ -44,9 +44,9 @@ async function sort(value: string) {
   await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
 }
 function titles() {
-  return Array.from(container.querySelectorAll('tbody tr')).map((r) => r.querySelector('td')?.textContent);
+  return Array.from(container.querySelectorAll('tbody tr')).map((r) => r.querySelector('td > div')?.textContent);
 }
-it('20건 페이지 요청과 반응형 목록, 기본 세션 그룹 및 회원 상태를 표시한다', async () => {
+it('20건 페이지 요청과 반응형 목록, 기본 상담사 그룹 및 회원 상태를 표시한다', async () => {
   await render();
   expect(listReports).toHaveBeenCalledWith({ page: 1, limit: 20 });
   expect(container.querySelector('.hidden.md\\:block table')).not.toBeNull();
@@ -54,7 +54,7 @@ it('20건 페이지 요청과 반응형 목록, 기본 세션 그룹 및 회원 
   expect(container.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true');
   expect(container.querySelectorAll('table')).toHaveLength(2);
   expect(Array.from(container.querySelector('table')!.querySelectorAll('th')).map((el) => el.textContent))
-    .toEqual(['제목', '세션유형', '날짜', '상태', '액션']);
+    .toEqual(['제목', '세션유형', '날짜·시간', '상태', '액션']);
   expect(container.textContent).toContain('확인 가능');
   expect(container.textContent).toContain('대기');
   expect(container.textContent).toContain('3 / 3건');
@@ -74,7 +74,7 @@ it('세션 제목과 숨겨진 headline도 공백과 대소문자를 정리해 �
 });
 it('그룹핑을 끄고 날짜 및 제목 순서를 바꾼다', async () => {
   await render();
-  await act(async () => button('세션별 그룹핑').click());
+  await act(async () => button('상담사별 그룹핑').click());
   expect(container.querySelectorAll('table')).toHaveLength(1);
   expect(titles()).toEqual(['가 명상', '가 명상', '나 상담']);
   await sort('oldest');
@@ -136,4 +136,33 @@ it('필터 변경으로 돌아온 페이지를 이전 페이지의 늦은 응답
   await act(async () => resolveOld({ reports: [{ ...base, session_title: '이전 페이지' }], total: 21 }));
   expect(titles()).toEqual(['가 명상']);
   expect(button('이전').disabled).toBe(true);
+});
+
+it('상담사별로 다른 세션을 묶고 예약 시간과 요약을 두 화면에 표시한다', async () => {
+  await render();
+  const tables = container.querySelectorAll('table');
+  expect(tables[0].querySelectorAll('tbody tr')).toHaveLength(2);
+  expect(tables[0].parentElement?.textContent).toContain('김상담');
+  expect(tables[1].parentElement?.textContent).toContain('이상담');
+  for (const selector of ['.hidden.md\\:block', '.block.md\\:hidden']) {
+    const view = container.querySelector(selector)!;
+    expect(view.textContent).toContain('2026.10.03 14:05');
+    expect(view.textContent).toContain('호흡으로 긴장을 풀었어요');
+    expect(view.textContent).toContain('Calm 기록');
+  }
+  const card = container.querySelector('.block.md\\:hidden button')!;
+  expect(card.textContent).toContain('김상담');
+  await search('  호흡으로  ');
+  expect(titles()).toEqual(['가 명상']);
+});
+it('상담사와 요약이 없으면 이름과 headline을 폴백하고 잘못된 날짜를 숨긴다', async () => {
+  vi.mocked(listReports).mockResolvedValue({ reports: [
+    { ...base, counselor_name: null, scheduled_at: 'invalid', content: { headline: '폴백 요약', summary: { text: '객체' } } },
+  ], total: 1 });
+  await render();
+  const table = container.querySelector('table')!;
+  expect(table.parentElement?.textContent).toContain('상담사');
+  expect(table.textContent).toContain('폴백 요약');
+  expect(table.textContent).not.toContain('NaN');
+  expect(table.querySelectorAll('tbody td')[2].textContent).toBe('-');
 });
