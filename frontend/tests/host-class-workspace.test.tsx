@@ -90,8 +90,9 @@ it('상세는 버튼·바깥·Esc로 닫히고 카드 포커스를 복구한다'
   await render(); const card = container.querySelector<HTMLButtonElement>('.hcp-person')!;
   for (const method of ['button', 'outside', 'escape']) {
     card.focus(); await click(card);
-    expect(container.querySelectorAll('.hcp-sheet .hcp-mind')).toHaveLength(3);
-    expect(container.querySelectorAll('.hcp-sheet .hcp-body')).toHaveLength(3);
+    expect(container.querySelectorAll('.hcp-sheet .hcp-metric')).toHaveLength(6);
+    expect(container.querySelectorAll('.hcp-sheet .hcp-dial')).toHaveLength(6);
+    expect(container.querySelectorAll('.hcp-sheet .hcp-bars')).toHaveLength(6);
     if (method === 'escape') await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })));
     else await click(method === 'button' ? button('닫기') : container.querySelector('.hcp-backdrop'));
     expect(container.querySelector('[role="dialog"]')).toBeNull();
@@ -126,9 +127,9 @@ it('밴드 미사용·수신 끊김·3분 미만 추이를 구분하고 0건 미
 it('상세 평균 틱과 점선은 밴드 착용자가 1명이라도 있으면 표시한다', async () => {
   const rows = [row('가람', 60), row('나래', 70), row('다온', 80)];
   await render(rows); await click(container.querySelector('.hcp-person'));
-  expect(container.querySelectorAll('.hcp-sheet .hcp-tick')).toHaveLength(1);
-  expect(container.querySelector('.hcp-sheet .hcp-average-label')?.textContent).toContain('—');
-  expect(container.querySelectorAll('.hcp-sheet .hcp-bars .hcp-average-line')).toHaveLength(2);
+  expect(container.querySelectorAll('.hcp-sheet .hcp-tick')).toHaveLength(3);
+  expect(container.querySelector('.hcp-sheet .hcp-average-label')?.textContent).toContain('그룹 평균');
+  expect(container.querySelectorAll('.hcp-sheet .hcp-bars .hcp-average-line')).toHaveLength(3);
   expect(container.querySelector('.hcp-body-legend')?.textContent).toContain('최근 수신 범위');
   // 1명이라도 착용하면 그룹 표본으로 본다(소규모 1:1·그룹 대응)
   await render(rows.slice(0, 2));

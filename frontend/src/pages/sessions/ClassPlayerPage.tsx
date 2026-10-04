@@ -286,7 +286,9 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
   metric: typeof HOST_METRICS[number]; value: number | null; previous: number | null; series?: (number | null)[];
   average?: number | null; detail?: boolean; missingLabel?: string;
 }) {
-  const gradientId = useId();
+  const uid = useId();
+  const dialGradientId = `${uid}-dial`;
+  const barsGradientId = `${uid}-bars`;
   const mind = metric.unit === '%';
   const delta = value !== null && previous !== null ? Math.round(value - previous) : null;
   const change = value === null ? missingLabel : delta === null ? '추이 대기' : `${delta > 0 ? '+' : ''}${delta} · 3분대비`;
@@ -297,26 +299,29 @@ function HostMetricDisplay({ metric, value, previous, series = [], average = nul
   const max = domain.length ? Math.max(...domain) : 1;
   const padding = Math.max((max - min) * .12, .5);
   const y = (v: number) => 58 - (v - min + padding) / (max - min + 2 * padding) * 52;
-  const angle = ((average ?? 0) / 100 * 360 - 90) * Math.PI / 180;
-  return <article className={`hcp-metric ${mind ? 'hcp-mind' : 'hcp-body'}`}>
+  // 게이지 0~100 정규화: 마음=백분율 그대로, 몸=최근 표본 범위 내 상대 위치(추이 그래프와 동일 스케일)
+  const normalize = (v: number) => mind ? Math.max(0, Math.min(100, v)) : Math.max(0, Math.min(100, (v - min + padding) / (max - min + 2 * padding) * 100));
+  const gauge = value === null ? null : normalize(value);
+  const tickAngle = average === null ? null : (normalize(average) / 100 * 360 - 90) * Math.PI / 180;
+  return <article className="hcp-metric">
     <p>{metric.label}</p>
-    <div className={mind ? 'hcp-dial' : 'hcp-reading'}>
-      {mind && <svg viewBox="0 0 120 120" aria-hidden="true">
-        <defs><linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%"><stop stopColor="#5F0080" /><stop offset=".45" stopColor="#A16BBC" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
+    <div className="hcp-dial">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <defs><linearGradient id={dialGradientId} x1="0%" y1="100%" x2="100%" y2="0%"><stop stopColor="#5F0080" /><stop offset=".45" stopColor="#A16BBC" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
         <circle cx="60" cy="60" r="51" className="hcp-track" />
-        {value !== null && <circle cx="60" cy="60" r="51" className="hcp-arc" style={{ stroke: `url(#${gradientId})` }} pathLength="100" strokeDasharray={`${Math.max(0, Math.min(100, value))} 100`} transform="rotate(-90 60 60)" />}
-        {detail && average !== null && <line className="hcp-tick" x1={60 + 47 * Math.cos(angle)} y1={60 + 47 * Math.sin(angle)} x2={60 + 55 * Math.cos(angle)} y2={60 + 55 * Math.sin(angle)} />}
-      </svg>}
-      <strong>{hostValueLabel(value)}<small>{metric.unit}</small></strong>
-      {mind && detail && <span className="hcp-delta">{change}</span>}
+        {gauge !== null && <circle cx="60" cy="60" r="51" className="hcp-arc" style={{ stroke: `url(#${dialGradientId})` }} pathLength="100" strokeDasharray={`${gauge} 100`} transform="rotate(-90 60 60)" />}
+        {detail && tickAngle !== null && <line className="hcp-tick" x1={60 + 47 * Math.cos(tickAngle)} y1={60 + 47 * Math.sin(tickAngle)} x2={60 + 55 * Math.cos(tickAngle)} y2={60 + 55 * Math.sin(tickAngle)} />}
+      </svg>
+      <span className="hcp-dial-num"><b>{hostValueLabel(value)}</b><small>{metric.unit}</small></span>
     </div>
-    {!mind && <svg className="hcp-bars" viewBox="0 0 240 64" preserveAspectRatio="none" aria-label={`${metric.label} 최근 수신 추이${average === null ? '' : `, 그룹 평균 ${hostValueLabel(average)}`}`}>
-      <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="0" y1="58" x2="0" y2="6"><stop stopColor="#5F0080" stopOpacity=".55" /><stop offset=".5" stopColor="#A16BBC" stopOpacity=".8" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
+    <svg className="hcp-bars" viewBox="0 0 240 64" preserveAspectRatio="none" aria-label={`${metric.label} 최근 수신 추이${average === null ? '' : `, 그룹 평균 ${hostValueLabel(average)}`}`}>
+      <defs><linearGradient id={barsGradientId} gradientUnits="userSpaceOnUse" x1="0" y1="58" x2="0" y2="6"><stop stopColor="#5F0080" stopOpacity=".55" /><stop offset=".5" stopColor="#A16BBC" stopOpacity=".8" /><stop offset="1" stopColor="#D4B5E3" /></linearGradient></defs>
       {valid.length > 1 && <rect className="hcp-range-band" x="4" y={y(Math.max(...valid))} width="232" height={Math.max(1, y(Math.min(...valid)) - y(Math.max(...valid)))} rx="3" />}
       {average !== null && <path className="hcp-average-line" d={`M4 ${y(average)}H236`} />}
-      <g style={{ fill: `url(#${gradientId})` }}>{samples.map((v, i) => v !== null && <rect key={i} x={4 + (20 - samples.length + i) * 11.6} y={y(v)} width={7.5} height={58 - y(v)} rx="3.75" />)}</g>
-    </svg>}
-    {mind && detail ? <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small> : <span className="hcp-delta">{change}</span>}
+      <g style={{ fill: `url(#${barsGradientId})` }}>{samples.map((v, i) => v !== null && <rect key={i} x={4 + (20 - samples.length + i) * 11.6} y={y(v)} width={7.5} height={58 - y(v)} rx="3.75" />)}</g>
+    </svg>
+    {detail && average !== null && <small className="hcp-average-label">그룹 평균 {hostValueLabel(average)}</small>}
+    <span className="hcp-delta">{change}</span>
   </article>;
 }
 export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, running, left, tools, statusBar, filter, status = 'in_progress', audio, readinessPanel }: {

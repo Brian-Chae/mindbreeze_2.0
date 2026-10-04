@@ -280,3 +280,37 @@
  .hcp-active .hcp-workspace:has(.hcp-lobby-audio button.mt-3){grid-template-rows:28px 160px minmax(0,1fr)}
  .hcp-active .hcp-lobby-audio>section>button.mt-3{grid-column:1/-1}
 }
+
+/* 루프5: 마음·몸 모든 지표에 다이얼 + 숫자 + 추이 그래프 통일 */
+.hcp-dial-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;line-height:1;pointer-events:none}
+.hcp-dial-num>b{font-size:16px;font-weight:600;color:#f7f4f0;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1}
+.hcp-dial-num>small{font-size:8px;font-weight:400;color:#d4b5e3;letter-spacing:0;margin-top:1px;line-height:1}
+.hcp-metric .hcp-delta{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcp-average-label{display:block;font-size:9px;margin:2px 0 0;color:var(--muted);font-variant-numeric:tabular-nums}
+/* 그룹 흐름: 다이얼·막대 함께 압축 */
+.hcp-group .hcp-dial{width:48px;height:48px;margin:2px auto}
+.hcp-group .hcp-dial-num>b{font-size:14px}
+.hcp-group .hcp-dial-num>small{font-size:7px}
+.hcp-group .hcp-bars{height:16px;margin:3px 0 0}
+/* 상세 시트: 몸 섹션 3열 통일 + 막대 높이 */
+.hcp-sheet .hcp-metric-sections>section:last-child .hcp-metric-items{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.hcp-sheet .hcp-dial-num>b{font-size:20px}
+.hcp-sheet .hcp-dial-num>small{font-size:9px}
+.hcp-sheet .hcp-bars{height:24px}
+/* 활성(진행 중) 그룹 흐름: 숫자·막대 더 압축 */
+@media(min-width:761px){
+ .hcp-active .hcp-group .hcp-dial-num>b{font-size:13px}
+ .hcp-active .hcp-group .hcp-dial-num>small{font-size:7px}
+ .hcp-active .hcp-group .hcp-bars{height:12px;margin-top:2px}
+}
+@media(min-width:761px) and (max-height:700px){
+ .hcp-active .hcp-group .hcp-dial-num>b{font-size:11px}
+ .hcp-active .hcp-group .hcp-dial-num>small{font-size:6px}
+}
+/* 모바일: 세로 스택으로 단순화 */
+@media(max-width:760px){
+ .hcp-group .hcp-metric{display:flex;flex-direction:column;align-items:center;text-align:center}
+ .hcp-group .hcp-dial{grid-column:auto;grid-row:auto;margin:0 auto}
+ .hcp-group .hcp-delta{grid-column:auto;grid-row:auto}
+ .hcp-group .hcp-bars{width:100%;height:14px}
+}
