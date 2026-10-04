@@ -280,9 +280,10 @@ function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
     id: input.id,
     label: METRIC_LABELS[input.id],
     direction,
-    overall,
-    early: input.early,
-    late: input.late,
+    // 평균·전반·후반은 소수점 1자리까지만 표시(원시 float 노출 방지). 서사 분류는 위에서 원시값으로 이미 계산.
+    overall: round1(overall),
+    early: round1(input.early),
+    late: round1(input.late),
     delta,
     deltaLabel,
     arrow: arrowFor(direction),
