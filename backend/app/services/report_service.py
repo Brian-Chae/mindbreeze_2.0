@@ -344,6 +344,24 @@ def update_auto_approve_setting(user_id: str, enabled: bool, db: DBSession) -> d
 # 리포트가 생성되어야 하는 세션 상태 — 이 상태면 리포트가 기대된다(미생성 시 목록에 '생성 실패'로 노출).
 _REPORT_RELEVANT_STATUSES = ("in_progress", "paused", "completed")
 
+# 리포트 생성 파이프라인이 아직 진행 중인지 판단할 녹음 상태(STT·요약이 이 상태면 생성 중).
+_IN_FLIGHT_RECORD_STATUSES = ("recording", "processing")
+
+
+def _report_generation_in_flight(record, outbox) -> bool:
+    """리포트 행이 없는 세션이 아직 생성 진행 중인지 판별한다.
+
+    - 녹음·STT·요약이 진행 중(record.status=recording/processing)이면 생성 중.
+    - 발행 의도가 pending(미발행·재시도 대기)이면 생성 대기 중.
+    published 는 체인 완료 후에도 남으므로 '진행 중' 신호로 쓰지 않는다
+    (파이프라인 먹통 시 영구히 '생성 중'으로 오표기되는 것을 방지).
+    """
+    if record is not None and record.status in _IN_FLIGHT_RECORD_STATUSES:
+        return True
+    if outbox is not None and outbox.needs_report and outbox.status == "pending":
+        return True
+    return False
+
 
 def _synthesize_missing_report(
     session: Session,
@@ -351,12 +369,16 @@ def _synthesize_missing_report(
     *,
     user_id: UUID | None = None,
     counselor_names: dict[UUID, str] | None = None,
+    generating: bool = False,
 ) -> dict:
     """리포트 행이 없는 세션을 목록에 노출하기 위한 합성 항목(읽기 전용, id=None).
 
-    종료됐는데도 리포트가 없으면 '생성 실패'로, 아직 진행 중이면 '준비 중'으로 표시한다.
+    종료됐는데도 리포트가 없으면 '생성 실패'로 표시하되, 생성 파이프라인이 아직
+    진행 중(generating=True)이면 '생성 중'으로 표시한다(비동기 STT·요약 지연을
+    실패로 오인하지 않도록). 진행 중(in_progress/paused)이면 '준비 중'.
     """
     completed = session.status == "completed"
+    failed = completed and not generating
     return {
         "id": None,
         "session_id": str(session.id),
@@ -364,11 +386,11 @@ def _synthesize_missing_report(
         "participant_id": None,
         "report_email": None,
         "type": report_type,
-        # 종료됐는데 리포트가 없으면 실패, 진행 중이면 아직 생성 전(오류 아님).
-        "status": "error" if completed else None,
-        "generation_status": "pending",
+        # 종료됐는데 리포트가 없으면 실패, 생성 파이프라인 진행 중이면 '생성 중', 그 외 준비 중.
+        "status": "error" if failed else None,
+        "generation_status": "processing" if (completed and generating) else "pending",
         "generation_error": (
-            "세션이 종료됐지만 리포트가 생성되지 않았습니다" if completed else None
+            "세션이 종료됐지만 리포트가 생성되지 않았습니다" if failed else None
         ),
         "generation_started_at": None,
         "data_credibility": None,
@@ -479,19 +501,39 @@ def list_reports(
     # 리포트가 기대되지만 미생성인 세션 합성 노출 — 상담사(직원) 목록에서만.
     if is_staff:
         reported_sids = {r.session_id for r in report_rows}
-        for session in sessions:
-            if getattr(session, "is_template", False):
-                continue
-            if session.status not in _REPORT_RELEVANT_STATUSES:
-                continue
-            if session.id in reported_sids:
-                continue
-            result.append(
-                _synthesize_missing_report(
-                    session, "counselor", user_id=session.host_id,
-                    counselor_names=counselor_names,
+        missing = [
+            session
+            for session in sessions
+            if not getattr(session, "is_template", False)
+            and session.status in _REPORT_RELEVANT_STATUSES
+            and session.id not in reported_sids
+        ]
+        if missing:
+            from app.models.pipeline_outbox import PipelineOutbox
+
+            missing_sids = [s.id for s in missing]
+            records_map = {
+                r.session_id: r
+                for r in db.query(SessionRecord)
+                .filter(SessionRecord.session_id.in_(missing_sids))
+                .all()
+            }
+            outboxes_map = {
+                o.session_id: o
+                for o in db.query(PipelineOutbox)
+                .filter(PipelineOutbox.session_id.in_(missing_sids))
+                .all()
+            }
+            for session in missing:
+                generating = _report_generation_in_flight(
+                    records_map.get(session.id), outboxes_map.get(session.id)
                 )
-            )
+                result.append(
+                    _synthesize_missing_report(
+                        session, "counselor", user_id=session.host_id,
+                        counselor_names=counselor_names, generating=generating,
+                    )
+                )
 
     # 정렬(최신순 — 세션 일정 기준, 없으면 생성 시각) + 메모리 페이지네이션
     # 프론트 '최신순' 정렬(reportDateIso = scheduled_at ?? created_at)과 정합을 맞춘다.
