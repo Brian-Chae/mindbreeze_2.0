@@ -1,7 +1,7 @@
 // 내담자용 리포트 목록 페이지
 // AppShell 없이 ClientShell 내에서 동작
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 
@@ -28,13 +28,13 @@ function StatusBadge({ sentAt }: { sentAt: string | null }) {
   if (sentAt) {
     return (
       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E0F2FE] text-[#075985]">
-        승인됨
+        확인 가능
       </span>
     );
   }
   return (
     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#92400E]">
-      검토중
+      대기
     </span>
   );
 }
@@ -66,88 +66,215 @@ function EmptyState() {
   );
 }
 
+type SortKey = 'newest' | 'oldest' | 'title';
+const PAGE_LIMIT = 20;
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  clinical: '임상심리상담', hypnosis: '최면심리상담', meditation: '명상수업', custom: '기타',
+};
+
+function reportTitle(report: ReportDto): string {
+  return report.session_title || (typeof report.content?.headline === 'string' ? report.content.headline : '리포트');
+}
+
+function reportKey(report: ReportDto): string {
+  return report.id ?? `${report.session_id}-${report.type}-${report.participant_id ?? report.user_id ?? 'unknown'}`;
+}
+
+/** 상담사용 목록과 동일하게 현재 조회 페이지를 검색·정렬한다. */
+function filterAndSortReports(reports: ReportDto[], search: string, sortKey: SortKey): ReportDto[] {
+  const query = search.trim().toLowerCase();
+  return reports.filter((report) => {
+    const headline = typeof report.content?.headline === 'string' ? report.content.headline : '';
+    return !query || [reportTitle(report), report.session_title ?? '', headline]
+      .some((text) => text.toLowerCase().includes(query));
+  }).sort((a, b) => {
+    if (sortKey === 'title') return reportTitle(a).localeCompare(reportTitle(b), 'ko');
+    const aTime = new Date(a.scheduled_at ?? a.created_at ?? 0).getTime();
+    const bTime = new Date(b.scheduled_at ?? b.created_at ?? 0).getTime();
+    return sortKey === 'newest' ? bTime - aTime : aTime - bTime;
+  });
+}
+
+function groupBySession(reports: ReportDto[]) {
+  const groups = new Map<string, { sessionId: string; label: string; items: ReportDto[] }>();
+  for (const report of reports) {
+    const key = report.session_id || reportKey(report);
+    const existing = groups.get(key);
+    groups.set(key, {
+      sessionId: key,
+      label: existing?.label ?? reportTitle(report),
+      items: [...(existing?.items ?? []), report],
+    });
+  }
+  return Array.from(groups.values());
+}
+
 export default function ClientReportListPage() {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportDto[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('newest');
+  const [groupByClass, setGroupByClass] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    listReports()
-      .then((r) => {
+    listReports({ page, limit: PAGE_LIMIT })
+      .then((result) => {
         if (cancelled) return;
-        setReports(r.reports);
+        setTotal(result.total);
+        // 상담사용 화면과 동일하게 페이지네이션 미적용 서버도 지원한다.
+        const start = (page - 1) * PAGE_LIMIT;
+        setReports(result.reports.length > PAGE_LIMIT
+          ? result.reports.slice(start, start + PAGE_LIMIT) : result.reports);
       })
-      .catch((e) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : '리포트 조회 실패');
+      .catch((e: unknown) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : '리포트 조회 실패');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [reloadKey]);
+    return () => { cancelled = true; };
+  }, [page, reloadKey]);
+
+  const filtered = useMemo(() => filterAndSortReports(reports, search, sortKey), [reports, search, sortKey]);
+  const grouped = useMemo(() => groupByClass ? groupBySession(filtered) : null, [groupByClass, filtered]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+  const controlClass = 'h-10 px-4 rounded-xl text-[13px] border border-[#EFEFEF] bg-white text-[#6F6F6F] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
+  const pageButtonClass = 'h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors';
+
+  const renderMobileCard = (report: ReportDto) => (
+    <button
+      key={reportKey(report)} type="button" aria-haspopup="dialog" disabled={!report.id}
+      onClick={() => setSelectedReportId(report.id)}
+      className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all disabled:cursor-default"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} />
+      </div>
+      <div className="font-bold text-[15px] text-[#1F1F1F] mb-1 truncate">{reportTitle(report)}</div>
+      <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
+        {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'} · {formatDate(report.scheduled_at ?? report.created_at)}
+      </div>
+    </button>
+  );
+
+  const renderTable = (items: ReportDto[]) => (
+    <table className="w-full text-[14px] min-w-[640px] table-fixed">
+      <thead>
+        <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
+          {['제목', '세션유형', '날짜', '상태', '액션'].map((label, index) => (
+            <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[32%]' : index === 4 ? 'w-[12%]' : ''}`}>{label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((report) => (
+          <tr
+            key={reportKey(report)} tabIndex={report.id ? 0 : undefined}
+            aria-label={report.id ? `${reportTitle(report)} 리포트 보기` : undefined}
+            aria-haspopup={report.id ? 'dialog' : undefined}
+            onClick={() => { if (report.id) setSelectedReportId(report.id); }}
+            onKeyDown={(event) => {
+              if (event.target === event.currentTarget && report.id && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                setSelectedReportId(report.id);
+              }
+            }}
+            className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${report.id ? 'hover:bg-[#F8FAFC] cursor-pointer' : ''}`}
+          >
+            <td className="px-5 py-3.5"><div className="font-medium text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</div></td>
+            <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
+            <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(report.scheduled_at ?? report.created_at)}</td>
+            <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} /></td>
+            <td className="px-5 py-3.5">
+              <button type="button" aria-haspopup="dialog" disabled={!report.id}
+                onClick={(event) => { event.stopPropagation(); setSelectedReportId(report.id); }}
+                className="text-[13px] font-semibold text-[#5F0080] hover:underline disabled:text-[#BDBDBD] disabled:no-underline"
+              >보기</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 
   return (
     <div className="px-4 md:px-8 py-4 md:py-6">
-      {/* 헤더 */}
       <div className="pt-4 pb-2 md:flex md:justify-between md:items-center">
         <h2 className="text-lg font-bold text-[#1F1F1F]">리포트</h2>
         <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">AI REPORTS</p>
       </div>
-
+      <div className="flex flex-wrap items-center gap-2 py-4">
+        <input type="search" aria-label="제목·세션 검색" placeholder="제목·세션 검색"
+          value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+          className={`${controlClass} w-full md:w-64`} />
+        <select aria-label="정렬" value={sortKey}
+          onChange={(event) => { setSortKey(event.target.value as SortKey); setPage(1); }} className={controlClass}>
+          <option value="newest">최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option>
+        </select>
+        <button type="button" role="switch" aria-checked={groupByClass}
+          onClick={() => setGroupByClass((value) => !value)}
+          className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByClass ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
+        >세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}</button>
+        {!loading && !error && <span className="text-[13px] text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}
+      </div>
       {loading ? (
-        <div className="text-[#6F6F6F] text-sm text-center py-12">불러오는 중...</div>
+        <div role="status" className="text-[#6F6F6F] text-sm text-center py-12">불러오는 중...</div>
       ) : error ? (
         <div className="mx-4 my-6 p-6 rounded-2xl bg-red-50 text-center" role="alert">
           <p className="text-sm text-red-700 mb-4">{error}</p>
-          <button
-            type="button"
-            onClick={() => setReloadKey((k) => k + 1)}
+          <button type="button" onClick={() => setReloadKey((key) => key + 1)}
             className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
-          >
-            다시 시도
-          </button>
+          >다시 시도</button>
         </div>
-      ) : reports.length === 0 ? (
-        <EmptyState />
+      ) : total === 0 ? <EmptyState /> : filtered.length === 0 ? (
+        <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-10 text-center">
+          <p className="text-[#6F6F6F] text-sm">조건에 맞는 리포트가 없습니다.</p>
+          <button type="button" onClick={() => { setSearch(''); setPage(1); }}
+            className="mt-3 text-[13px] font-semibold text-[#5F0080] hover:underline">필터 초기화</button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reports.map((r) => {
-            const headline = (r.content?.headline as string) ?? '리포트';
-            return (
-              <button
-                key={r.id ?? r.session_id}
-                type="button"
-                aria-haspopup="dialog"
-                disabled={!r.id}
-                onClick={() => setSelectedReportId(r.id)}
-                className="block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 hover:shadow-md hover:border-[#5F0080]/30 transition-all"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <TypeBadge type={r.type} />
-                  <StatusBadge sentAt={r.sent_at} />
+        <>
+          <div className="block md:hidden space-y-3">
+            {grouped ? grouped.map((group) => (
+              <div key={group.sessionId} className="space-y-2">
+                <div className="px-1 pt-2 text-[12px] font-bold text-[#5F0080]">
+                  {group.label}<span className="ml-2 text-[#9B9B9B] font-normal">{group.items.length}건</span>
                 </div>
-                <div className="font-bold text-[15px] text-[#1F1F1F] mb-1 truncate">
-                  {r.session_title || headline}
+                {group.items.map(renderMobileCard)}
+              </div>
+            )) : filtered.map(renderMobileCard)}
+          </div>
+          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden overflow-x-auto">
+            {grouped ? grouped.map((group) => (
+              <div key={group.sessionId}>
+                <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] font-bold text-[#5F0080]">
+                  {group.label}<span className="ml-2 font-normal text-[#6F6F6F]">{group.items.length}건</span>
                 </div>
-                <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
-                  {r.session_type ?? '-'} · {formatDate(r.scheduled_at ?? r.created_at)}
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                {renderTable(group.items)}
+              </div>
+            )) : renderTable(filtered)}
+          </div>
+        </>
       )}
-      {selectedReportId && (
-        <ClientReportDetailModal reportId={selectedReportId} onClose={() => setSelectedReportId(null)} />
+      {/* 검색 결과가 없어도 다른 페이지로 이동할 수 있다. */}
+      {totalPages > 1 && (
+        <nav aria-label="리포트 페이지" className="flex items-center justify-center gap-3 pt-4">
+          <button type="button" aria-label="이전" disabled={page <= 1 || loading}
+            onClick={() => setPage((value) => Math.max(1, value - 1))} className={pageButtonClass}>이전</button>
+          <span className="text-[13px] text-[#6F6F6F] font-mono tabular-nums">{page} / {totalPages}</span>
+          <button type="button" aria-label="다음" disabled={page >= totalPages || loading}
+            onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className={pageButtonClass}>다음</button>
+        </nav>
       )}
+      {selectedReportId && <ClientReportDetailModal reportId={selectedReportId} onClose={() => setSelectedReportId(null)} />}
     </div>
   );
 }

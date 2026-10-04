@@ -132,3 +132,20 @@ it('닫힌 모달의 늦은 응답은 다시 열린 리포트를 덮어쓰지 �
   expect(document.querySelector('dialog')?.textContent).toContain('명상 수업');
   expect(document.querySelector('dialog')?.textContent).not.toContain('이전 리포트');
 });
+
+it.each(['row', 'view', 'Enter', ' '])('데스크톱 %s 동작은 기존 모달을 열고 포커스를 복원한다', async (method) => {
+  await act(async () => root.render(<MemoryRouter initialEntries={['/app/reports']}><ClientReportListPage /><Location /></MemoryRouter>));
+  const trigger = method === 'view'
+    ? container.querySelector<HTMLButtonElement>('tbody button')!
+    : container.querySelector<HTMLTableRowElement>('tbody tr')!;
+  trigger.focus();
+  await act(async () => {
+    if (method === 'Enter' || method === ' ') {
+      trigger.dispatchEvent(new KeyboardEvent('keydown', { key: method, bubbles: true }));
+    } else trigger.click();
+  });
+  expect(document.querySelector('dialog')?.textContent).toContain('편안한 하루 보내세요');
+  expect(container.querySelector('output')?.textContent).toBe('/app/reports');
+  await act(async () => document.querySelector<HTMLButtonElement>('[aria-label="리포트 닫기"]')!.click());
+  expect(document.activeElement).toBe(trigger);
+});
