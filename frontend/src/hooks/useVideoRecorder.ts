@@ -30,7 +30,8 @@ export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVi
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const indexRef = useRef(0);
-  const pendingRef = useRef<Blob[]>([]);
+  // 업로드 실패 청크 버퍼 — {index, blob} 으로 보관해 종료 시 원래 인덱스로 재전송한다.
+  const pendingRef = useRef<Array<{ index: number; blob: Blob }>>([]);
   // 종료 시 잔여 청크 유실 방지 — 진행 중 업로드를 stop()에서 대기한다
   const inflightRef = useRef<Set<Promise<void>>>(new Set());
 
@@ -66,8 +67,8 @@ export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVi
               setUploadedChunks((n) => n + 1);
             })
             .catch((err) => {
-              // 네트워크 실패 시 로컬 버퍼링 (audio와 동일 정책)
-              pendingRef.current.push(ev.data);
+              // 네트워크 실패 시 인덱스와 함께 로컬 버퍼링 — 종료 시 재전송한다
+              pendingRef.current.push({ index: idx, blob: ev.data });
               onError?.(err as Error);
             });
           inflightRef.current.add(task);
@@ -159,13 +160,33 @@ export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVi
     }
   }, []);
 
+  /** 업로드 실패로 pendingRef 에 쌓인 청크를 원래 인덱스로 재전송한다.
+
+      서버 save_chunk 는 (session_id, chunk_index) 멱등이므로 재전송해도 중복 저장되지 않는다.
+      재전송 실패 청크는 다시 pendingRef 로 돌려보내 다음 기회에 재시도한다. */
+  const retryPendingChunks = useCallback(() => {
+    const pending = pendingRef.current.splice(0);
+    for (const { index, blob } of pending) {
+      const task = uploadVideoChunk(sessionId, index, blob)
+        .then(() => {
+          setUploadedChunks((n) => n + 1);
+        })
+        .catch(() => {
+          pendingRef.current.push({ index, blob });
+        });
+      inflightRef.current.add(task);
+      void task.finally(() => inflightRef.current.delete(task));
+    }
+  }, [sessionId]);
+
   /** 녹화 종료 — 마지막 청크 업로드까지 대기 후 완료 (서버 stop 호출 전 사용) */
   const stop = useCallback(async () => {
     await stopRecorder();
     cleanup();
+    retryPendingChunks();
     await Promise.allSettled([...inflightRef.current]);
     setState('stopped');
-  }, [stopRecorder, cleanup]);
+  }, [stopRecorder, cleanup, retryPendingChunks]);
 
   /** SDD-101 C4: 녹화가 생성한 총 청크 수(업로드 성공 여부와 무관) — 종료 시 expected_count 로 전달 */
   const getExpectedCount = useCallback(() => indexRef.current, []);

@@ -28,7 +28,10 @@ async function parseError(res: Response): Promise<ApiError> {
 function isRetryable(err: unknown): boolean {
   if (err instanceof ApiError) return err.status >= 500;
   if (err instanceof DOMException && err.name === 'AbortError') return true;
-  return false;
+  // 네트워크 오류(TypeError: Failed to fetch — 연결 리셋·CORS·413 본문 등)도 재시도한다.
+  // 413 응답에는 CORS 헤더가 없어 브라우저에서 TypeError 로 보이므로 여기서 걸러야
+  // 재시도가 동작한다(기존에는 즉시 실패 → 청크 유실).
+  return err instanceof TypeError;
 }
 
 export async function uploadFormWithRetry<T>(url: string, formData: FormData): Promise<T> {

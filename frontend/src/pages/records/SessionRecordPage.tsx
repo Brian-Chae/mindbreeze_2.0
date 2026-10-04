@@ -292,12 +292,9 @@ export default function SessionRecordPage() {
       ? (recordStatus as RecordStatus)
       : null;
 
-  // SDD-101 D1: 영상 저장 무결성 — 병합 실패 또는 누락 청크 여부
-  const videoMissing =
-    record?.video_expected_chunks != null && record?.video_actual_chunks != null
-      ? record.video_expected_chunks - record.video_actual_chunks
-      : 0;
-  const videoIncomplete = record?.video_status === 'merge_failed' || videoMissing > 0;
+  // SDD-101 D1: 영상 저장 무결성 — 병합 실패 시에만 에러 표시.
+  // 병합이 정상이면 청크 1~2개가 누락돼도 영상은 생성되므로 에러로 표시하지 않는다.
+  const videoIncomplete = record?.video_status === 'merge_failed';
 
   if (error) {
     return (
@@ -369,15 +366,11 @@ export default function SessionRecordPage() {
           </div>
         )}
 
-        {/* SDD-101 D1: 영상 저장 미완료 안내 — 병합 실패/누락 청크 */}
+        {/* SDD-101 D1: 영상 저장 무결성 — 병합 실패 시에만 에러 표시 */}
         {videoIncomplete && (
           <div className="rounded-2xl border border-[#F5C2C0] bg-[#FDECEC] p-5 text-sm text-[#B3261E]">
-            <p className="font-semibold">영상 일부가 저장되지 않았습니다</p>
-            <p className="mt-1">
-              {record.video_status === 'merge_failed'
-                ? '영상 청크가 절반 미만이라 영상이 생성되지 않았습니다.'
-                : `${videoMissing}개 청크가 누락되었습니다 (${record.video_actual_chunks ?? 0}/${record.video_expected_chunks ?? 0} 수신).`}
-            </p>
+            <p className="font-semibold">영상이 저장되지 않았습니다</p>
+            <p className="mt-1">영상 청크가 절반 미만이라 영상이 생성되지 않았습니다.</p>
           </div>
         )}
 
