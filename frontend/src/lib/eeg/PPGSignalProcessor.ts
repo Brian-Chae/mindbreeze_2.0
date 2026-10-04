@@ -936,27 +936,77 @@ export class PPGSignalProcessor {
   }
 
   /**
+   * 불응기 + 적응 임계값 기반 피크 검출 (이중 피크·고조파 제거)
+   *
+   * - 불응기: 직전 허용 피크로부터 250ms 환산 샘플 수 이내의 후보는 무시.
+   *   (심박 최대 ~240 BPM에 해당하므로 정상 심박은 보존 — 숄더 피크는 ~100~150ms 뒤라 제거됨)
+   * - 적응 임계값: 고정 전역 max 비율 대신 최근 허용 피크 진폭 이동평균의 비율(국소 진폭 기반)을 사용.
+   *   부트스트랩은 단일 잡음 스파이크에 둔감한 상위 백분위(p90) 기반.
+   * - 불응기 내 더 높은 후보가 나오면 주 피크를 교체 → 더 낮은 2차 피크(숄더/고조파) 제거.
+   */
+  private detectPeaksWithRefractory(normalized: number[], thresholdRatio: number, refractoryMs = 250): number[] {
+    const peaks: number[] = [];
+    if (normalized.length < 3) return peaks;
+
+    // 250ms(기본)를 샘플 수로 환산 (고정 샘플 수 → 샘플링레이트 기반 환산치)
+    const refractorySamples = Math.max(1, Math.round(refractoryMs * (this.ppgSamplingRate / 1000)));
+
+    // 부트스트랩 임계값: 상위 백분위(p90)로 단일 스파이크 영향 최소화
+    const sorted = [...normalized].sort((a, b) => a - b);
+    const p90 = sorted[Math.floor((sorted.length - 1) * 0.9)];
+    const bootstrapThreshold = Math.max(0, p90 * thresholdRatio);
+
+    const recentAmplitudes: number[] = [];
+    const ADAPTIVE_WINDOW = 8; // 최근 8개 피크 진폭으로 이동평균 계산
+
+    for (let i = 1; i < normalized.length - 1; i++) {
+      // 국소 극대값 조건
+      if (!(normalized[i] > normalized[i - 1] && normalized[i] >= normalized[i + 1])) {
+        continue;
+      }
+
+      // 적응 임계값: 최근 피크 진폭 평균 비율(국소 진폭 기반), 초기엔 부트스트랩 사용
+      let adaptiveThreshold = bootstrapThreshold;
+      if (recentAmplitudes.length >= 3) {
+        const avgAmp = recentAmplitudes.reduce((s, v) => s + v, 0) / recentAmplitudes.length;
+        adaptiveThreshold = avgAmp * thresholdRatio;
+      }
+      if (normalized[i] < adaptiveThreshold) continue;
+
+      const lastPeak = peaks.length > 0 ? peaks[peaks.length - 1] : -Infinity;
+      if (i - lastPeak < refractorySamples) {
+        // 불응기 이내 — 더 높은 후보면 주 피크 교체(낮은 2차 피크 제거)
+        if (peaks.length > 0 && normalized[i] > normalized[peaks[peaks.length - 1]]) {
+          peaks[peaks.length - 1] = i;
+          if (recentAmplitudes.length > 0) {
+            recentAmplitudes[recentAmplitudes.length - 1] = normalized[i];
+          }
+        }
+        continue;
+      }
+
+      peaks.push(i);
+      recentAmplitudes.push(normalized[i]);
+      if (recentAmplitudes.length > ADAPTIVE_WINDOW) {
+        recentAmplitudes.shift();
+      }
+    }
+
+    return peaks;
+  }
+
+  /**
    * HRV 계산 (BasicSignalProcessor.ts와 동일한 RMSSD 방식)
    */
   private calculateHRV(data: number[]): number {
     if (data.length < 30) return 0; // 최소 데이터 요구사항 완화 (100 → 30)
-    
-    // 피크 검출 (심박수 계산과 동일한 방식)
+
+    // 피크 검출 — 불응기(~250ms) + 적응 임계값으로 이중 피크(숄더/고조파) 제거
+    // (기존: 고정 max×0.5 임계값 + 15샘플 고정 간격 → 비정상적으로 짧은 RR 간격 혼입)
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
-    const threshold = Math.max(...normalized) * 0.5; // 임계값 완화 (0.6 → 0.5)
-    const peaks: number[] = [];
-    
-    for (let i = 1; i < normalized.length - 1; i++) {
-      if (normalized[i] > threshold && 
-          normalized[i] > normalized[i-1] && 
-          normalized[i] > normalized[i+1]) {
-        if (peaks.length === 0 || i - peaks[peaks.length - 1] >= 15) { // 간격 완화
-          peaks.push(i);
-        }
-      }
-    }
-    
+    const peaks = this.detectPeaksWithRefractory(normalized, 0.5);
+
     if (peaks.length < 2) return 0; // 최소 피크 요구사항 완화 (3 → 2)
     
     // RR 간격 계산 (밀리초)
@@ -1140,29 +1190,13 @@ export class PPGSignalProcessor {
    * 피크 검출 (BasicSignalProcessor.ts와 동일한 방식으로 업데이트)
    */
   private detectPeaks(data: number[]): number[] {
-    const peaks: number[] = [];
-    const minPeakDistance = 10; // 최소 피크 간격 (0.2초) - BasicSignalProcessor.ts와 동일
-    
     // 신호 정규화 (BasicSignalProcessor.ts와 동일)
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
-    
-    // 동적 임계값 설정 (BasicSignalProcessor.ts와 동일)
-    const max = Math.max(...normalized);
-    const threshold = max * 0.4; // 임계값 완화 (0.5 → 0.4)
-    
-    for (let i = 1; i < normalized.length - 1; i++) {
-      if (normalized[i] > threshold && 
-          normalized[i] > normalized[i-1] && 
-          normalized[i] > normalized[i+1]) {
-        // 최소 거리 확인
-        if (peaks.length === 0 || i - peaks[peaks.length - 1] >= minPeakDistance) {
-          peaks.push(i);
-        }
-      }
-    }
-    
-    return peaks;
+
+    // 불응기(~250ms) + 적응 임계값으로 이중 피크 제거
+    // (기존: 0.2초 고정 간격 + 고정 max×0.4 임계값)
+    return this.detectPeaksWithRefractory(normalized, 0.4);
   }
 
   /**
@@ -1220,32 +1254,10 @@ export class PPGSignalProcessor {
     // 1. 신호 정규화
     const mean = data.reduce((sum, val) => sum + val, 0) / data.length;
     const normalized = data.map(val => val - mean);
-    
-    // 2. 동적 임계값 설정 (Python 코어와 동일)
-    const max = Math.max(...normalized);
-    const min = Math.min(...normalized);
-    const range = max - min;
-    const threshold = max * 0.5; // 50% 임계값
-    
 
-
-    const peaks: number[] = [];
-    const minPeakDistance = Math.floor(this.ppgSamplingRate * 0.4); // 0.4초 최소 간격 (150 BPM 대응)
-    
-    for (let i = 1; i < normalized.length - 1; i++) {
-      if (normalized[i] > threshold && 
-          normalized[i] > normalized[i-1] && 
-          normalized[i] > normalized[i+1]) {
-        // 최소 거리 확인
-        if (peaks.length === 0 || i - peaks[peaks.length - 1] >= minPeakDistance) {
-          peaks.push(i);
-        }
-      }
-    }
-    
-
-    
-    return peaks;
+    // 2. 불응기(400ms, 원래 0.4초 유지) + 적응 임계값으로 이중 피크(딕로틱 노치/고조파) 제거
+    //    기존: 고정 max×0.5 임계값 + 0.4초 간격 → RR 간격에 비정상적으로 짧은 값이 섞여 SDNN/RMSSD 폭증
+    return this.detectPeaksWithRefractory(normalized, 0.5, 400);
   }
 
   /**

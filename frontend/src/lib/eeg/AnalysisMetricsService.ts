@@ -432,7 +432,13 @@ export class AnalysisMetricsService {
   }
 
   private calculateTimeDomainMetrics(rrIntervals: number[]): void {
-    if (rrIntervals.length < 10) {
+    // 최소 30초 분량의 RR 간격을 보장한다.
+    // 간격 "개수"가 아닌 실제 경과 시간(RR 간격 합) 기준 — 90 BPM이면 30개라도 ~20초에 불과하기 때문.
+    // 30초 미만이면 SDNN/RMSSD 산출 불가로 간주하고 getter가 null을 반환하도록 플래그를 내린다 (0 치환 금지).
+    const MIN_WINDOW_MS = 30000; // 30초
+    const totalDurationMs = rrIntervals.reduce((sum, val) => sum + val, 0);
+    if (rrIntervals.length < 10 || totalDurationMs < MIN_WINDOW_MS) {
+      this.hasTimeDomainMetrics = false;
       return;
     }
 
