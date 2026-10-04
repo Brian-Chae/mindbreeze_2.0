@@ -1,8 +1,10 @@
-// SDD-105: 설문·링크밴드·기기 준비를 한 대기실에서 유지한다. 이름만 입장 필수 조건이다.
+// SDD-105: 설문·링크밴드·기기 준비를 한 대기실에서 유지한다.
+// 입장 게이트는 이름 확인 + 3단계 준비 완료(각 단계 건너뛰기 포함)다.
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { WaitingRoomBandCheck } from './WaitingRoomBandCheck';
 import { PreCheckinPanel } from './PreCheckinPanel';
+import { EMPTY_CHECKIN_DRAFT, type CheckinDraft } from '../../lib/api/checkin';
 import { WaitingRoomReminder } from './waiting-room-reminder';
 import { LobbyBgmBar } from './LobbyBgmBar';
 import { WaitingForStart } from './WaitingForStart';
@@ -76,6 +78,9 @@ export function ClassWaitingRoom({
   const [readiness, setReadiness] = useState({ surveyDone: false, bandDone: false, deviceDone: false });
   /** 대기 화면에서 [준비 다시 확인]으로 3단계 준비 화면에 돌아온 상태 */
   const [recheckingPrep, setRecheckingPrep] = useState(false);
+  /** 설문 초안·밴드 스킵 — 대기 화면(WaitingForStart) 왕복에도 선택·입력 값을 유지한다 */
+  const [surveyDraft, setSurveyDraft] = useState<CheckinDraft>(EMPTY_CHECKIN_DRAFT);
+  const [bandSkipped, setBandSkipped] = useState(false);
   const completeSurvey = useCallback(() => {
     setReadiness((value) => ({ ...value, surveyDone: true }));
     setActiveStep(1);
@@ -303,7 +308,7 @@ export function ClassWaitingRoom({
 
   /** 회원은 프로필 이름 고정 — 게스트만 입력한 이름을 확정한다 */
   const effectiveNickname = memberName ?? normalizeNickname(nickname);
-  const gate = resolveWaitingRoomGate({ nickname: effectiveNickname });
+  const gate = resolveWaitingRoomGate({ nickname: effectiveNickname, readiness });
 
   /** 시작 전에는 대기를 유지하고, 실제 라이브 전환에만 미리보기 자원을 정리한다. */
   const handleEnter = useCallback((): void => {
@@ -410,10 +415,11 @@ export function ClassWaitingRoom({
             </div>
             <div role="tabpanel" id="preparation-panel-0" aria-labelledby="preparation-tab-0" hidden={activeStep !== 0} className="min-h-[418px] p-4 sm:px-7 sm:py-6">
               <PreCheckinPanel sessionId={sessionId} participantId={participantId} participantToken={participantToken} isLoggedIn={isLoggedIn}
+                draft={surveyDraft} onDraftChange={setSurveyDraft}
                 onSubmitted={(value) => { setCheckin(value); completeSurvey(); }} onSkipped={completeSurvey} />
             </div>
             <div role="tabpanel" id="preparation-panel-1" aria-labelledby="preparation-tab-1" hidden={activeStep !== 1} className="min-h-[418px] p-4 sm:px-7 sm:py-6">
-              <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} onCompleted={completeBand} />
+              <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} skipped={bandSkipped} onSkippedChange={setBandSkipped} onCompleted={completeBand} />
             </div>
             <div role="tabpanel" id="preparation-panel-2" aria-labelledby="preparation-tab-2" hidden={activeStep !== 2} className="min-h-[418px] space-y-4 p-4 sm:px-7 sm:py-6">
               <h2 className="text-xl font-semibold tracking-tight text-[#F7F4F0]">목소리와 소리를 확인해요</h2>
@@ -538,7 +544,7 @@ export function ClassWaitingRoom({
             <div aria-hidden="true" className="flex gap-1">{Object.values(readiness).map((done, index) => <span key={index} className={`h-1 w-4 rounded-full sm:w-7 ${done ? 'bg-[#dcb5ee]' : 'bg-white/10'}`} />)}</div>
           </div>
 
-        {/* 입장 게이트 — 이름만 필수(체크인·기기는 스킵 가능) */}
+        {/* 입장 게이트 — 이름 + 3단계 준비(설문·링크밴드·기기)를 모두 마쳐야 입장 */}
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5">
           {error && <p role="alert" className="mb-3 text-sm text-[#F7C6C6]">{error}</p>}
           {!gate.canEnter && (
@@ -556,7 +562,7 @@ export function ClassWaitingRoom({
             입장하기
           </button>
           <p className="mt-3 text-center text-[12px] text-white/50">
-            체크인과 LINK BAND는 선택 사항입니다 — 건너뛰고 바로 입장할 수 있어요.
+            설문·링크밴드·기기 테스트를 모두 마치면 입장할 수 있어요. 각 단계는 건너뛰어도 됩니다.
           </p>
         </div>
           </div>

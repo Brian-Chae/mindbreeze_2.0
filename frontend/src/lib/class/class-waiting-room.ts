@@ -1,8 +1,8 @@
 // 입장 전 대기실 — 순수 로직(닉네임 확정 · 입장 게이트).
 // 컴포넌트(ClassWaitingRoom.tsx)와 함께 사용한다.
 //
-// 개선 3 재설계: 기기(카메라·마이크·스피커)·주변 단계별 셀프체크를 제거하고
-// 입장 게이트는 이름 확인만 남긴다. 카메라·마이크는 시스템이 자동 확인하고
+// 입장 게이트는 이름 확인 + 3단계 준비(설문·링크밴드·기기)를 모두 마쳐야 통과한다.
+// 각 단계는 건너뛰기로도 완료 처리된다. 카메라·마이크는 시스템이 자동 확인하고
 // 문제가 있을 때만 안내한다(입장을 막지 않는다). LINK BAND 는 선택(opt-in).
 
 /** 확정한 게스트 닉네임 보관 키(sessionStorage) — 새로고침 시에도 대기실 입력이 유지된다. */
@@ -60,6 +60,12 @@ export function clearStoredNickname(): void {
 export interface WaitingRoomGateInput {
   /** 확정한 닉네임(회원은 프로필 이름) */
   nickname: string;
+  /** 3단계 준비(설문·링크밴드·기기) 완료 여부 — 모두 완료해야 입장 버튼이 활성화된다 */
+  readiness?: {
+    surveyDone: boolean;
+    bandDone: boolean;
+    deviceDone: boolean;
+  };
 }
 
 export interface WaitingRoomGateResult {
@@ -68,10 +74,16 @@ export interface WaitingRoomGateResult {
   missing: string[];
 }
 
-/** 입장 가능 여부를 계산한다 — 이름 확인만 필수(기기·체크인은 전부 스킵 가능). */
+/**
+ * 입장 가능 여부를 계산한다 — 이름 확인 + 3단계 준비(설문·링크밴드·기기)를 모두 마쳐야 입장한다.
+ * 각 단계는 건너뛰기로도 완료 처리되므로 '작성'이 필수가 아니라 '단계 통과'가 필수다.
+ */
 export function resolveWaitingRoomGate(input: WaitingRoomGateInput): WaitingRoomGateResult {
   const missing: string[] = [];
   if (!isNicknameValid(input.nickname)) missing.push('이름 확인');
+  if (!input.readiness?.surveyDone) missing.push('설문');
+  if (!input.readiness?.bandDone) missing.push('링크밴드');
+  if (!input.readiness?.deviceDone) missing.push('기기 테스트');
   return { canEnter: missing.length === 0, missing };
 }
 

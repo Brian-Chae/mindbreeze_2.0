@@ -20,12 +20,20 @@ import {
 
 // 대기실 게이트와 무관한 외부 의존성(밴드·체크인·BGM·소켓)은 mock 으로 대체한다.
 vi.mock('../src/components/class/waiting-room-reminder', () => ({ WaitingRoomReminder: () => null }));
-vi.mock('../src/components/class/WaitingRoomBandCheck', () => ({
-  WaitingRoomBandCheck: () => 'BAND_CHECK',
-}));
-vi.mock('../src/components/class/PreCheckinPanel', () => ({
-  PreCheckinPanel: () => 'CHECKIN',
-}));
+vi.mock('../src/components/class/WaitingRoomBandCheck', async () => {
+  const { createElement } = await import('react');
+  return {
+    WaitingRoomBandCheck: ({ onCompleted }: { onCompleted?: () => void }) =>
+      createElement('button', { type: 'button', onClick: () => onCompleted?.() }, '밴드 완료'),
+  };
+});
+vi.mock('../src/components/class/PreCheckinPanel', async () => {
+  const { createElement } = await import('react');
+  return {
+    PreCheckinPanel: ({ onSkipped }: { onSkipped?: () => void }) =>
+      createElement('button', { type: 'button', onClick: () => onSkipped?.() }, '설문 건너뛰기'),
+  };
+});
 vi.mock('../src/components/class/LobbyBgmBar', () => ({
   LobbyBgmBar: () => 'BGM_BAR',
 }));
@@ -66,6 +74,14 @@ async function flushPreview(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
   await act(async () => {});
+}
+
+/** 3단계 준비를 건너뛰기로 완료하고, 대기 화면 → [준비 다시 확인] 복귀까지 수행한다 */
+async function completePreparationAndRecheck(): Promise<void> {
+  await click(button('설문 건너뛰기'));
+  await click(button('밴드 완료'));
+  await click(button('기기 테스트 건너뛰기'));
+  await click(button('준비 다시 확인하기'));
 }
 
 function baseProps(overrides: Partial<Parameters<typeof ClassWaitingRoom>[0]> = {}) {
@@ -133,27 +149,29 @@ describe('닉네임 정리', () => {
 // ── 순수 로직: 입장 게이트 (이름만 필수) ────────────────────────────
 
 describe('입장 게이트', () => {
-  it('이름이 있으면 입장할 수 있다', () => {
-    expect(resolveWaitingRoomGate({ nickname: '민지' })).toEqual({
+  const READY = { surveyDone: true, bandDone: true, deviceDone: true };
+
+  it('이름과 3단계 준비를 모두 마치면 입장할 수 있다', () => {
+    expect(resolveWaitingRoomGate({ nickname: '민지', readiness: READY })).toEqual({
       canEnter: true,
       missing: [],
     });
   });
 
-  it('이름이 비면 사유와 함께 막는다', () => {
+  it('이름이 비면 이름 확인과 함께 막는다', () => {
     expect(resolveWaitingRoomGate({ nickname: '   ' })).toEqual({
       canEnter: false,
-      missing: ['이름 확인'],
+      missing: ['이름 확인', '설문', '링크밴드', '기기 테스트'],
     });
   });
 
-  it('기기·체크인·LINK BAND 는 게이트 항목이 아니다 — 이름만 필수', () => {
-    // 게이트 입력에 이름 외 필드가 아예 없다 = 기기/체크인으로 인한 차단이 구조적으로 불가능
-    const gate = resolveWaitingRoomGate({ nickname: '민지' });
-    expect(gate.canEnter).toBe(true);
-    expect(gate.missing).not.toContain('카메라·마이크 확인');
-    expect(gate.missing).not.toContain('스피커 테스트');
-    expect(gate.missing).not.toContain('LINK BAND 연결');
+  it('3단계 준비 중 하나라도 남아 있으면 해당 사유와 함께 막는다', () => {
+    const gate = resolveWaitingRoomGate({
+      nickname: '민지',
+      readiness: { surveyDone: true, bandDone: false, deviceDone: false },
+    });
+    expect(gate.canEnter).toBe(false);
+    expect(gate.missing).toEqual(['링크밴드', '기기 테스트']);
   });
 });
 
@@ -164,13 +182,14 @@ it('게스트는 이름이 비면 입장할 수 없고 사유가 표시된다', 
   await render(createElement(ClassWaitingRoom, props));
   expect(button('입장하기')?.disabled).toBe(true);
   expect(container.textContent).toContain('이름 확인');
+  expect(container.textContent).toContain('아직 확인하지 않은 항목이 있어요');
   expect(container.textContent).toContain('잠시 후 시작합니다');
-  // 체크인·밴드는 선택 항목으로 노출되지만 게이트를 막지 않는다
-  expect(container.textContent).toContain('CHECKIN');
-  expect(container.textContent).toContain('BAND_CHECK');
+  // 설문·밴드 단계도 노출된다(게이트를 모두 통과해야 입장 가능)
+  expect(container.textContent).toContain('설문 건너뛰기');
+  expect(container.textContent).toContain('밴드 완료');
 });
 
-it('게스트가 이름을 입력하면 입장할 수 있다', async () => {
+it('게스트가 이름을 입력해도 3단계 준비를 마치기 전에는 입장할 수 없다', async () => {
   const props = baseProps({ initialNickname: '' });
   await render(createElement(ClassWaitingRoom, props));
 
@@ -188,6 +207,10 @@ it('게스트가 이름을 입력하면 입장할 수 있다', async () => {
     input?.dispatchEvent(new Event('input', { bubbles: true }));
   });
 
+  // 이름을 입력해도 3단계 준비 전에는 여전히 비활성
+  expect(button('입장하기')?.disabled).toBe(true);
+
+  await completePreparationAndRecheck();
   expect(button('입장하기')?.disabled).toBe(false);
   await click(button('입장하기'));
   expect(props.onEnter).toHaveBeenCalledTimes(1);
@@ -196,15 +219,17 @@ it('게스트가 이름을 입력하면 입장할 수 있다', async () => {
   expect(readStoredNickname()).toBe('지우');
 });
 
-it('회원은 프로필 이름이 고정되어 이름 입력 없이 바로 입장할 수 있다', async () => {
+it('회원은 프로필 이름이 고정되어 이름 입력 없이 3단계 완료 후 입장할 수 있다', async () => {
   const props = baseProps({ memberName: '채용욱', initialNickname: '' });
   await render(createElement(ClassWaitingRoom, props));
 
   expect(container.querySelector('#waiting-room-nickname')).toBeNull();
   expect(container.textContent).toContain('채용욱');
-  // 이름만 게이트 → 기기·체크인 없이도 즉시 입장 가능
-  expect(button('입장하기')?.disabled).toBe(false);
+  // 이름은 고정이지만 3단계 준비를 마치기 전에는 입장할 수 없다
+  expect(button('입장하기')?.disabled).toBe(true);
 
+  await completePreparationAndRecheck();
+  expect(button('입장하기')?.disabled).toBe(false);
   await click(button('입장하기'));
   expect(props.onEnter).toHaveBeenCalledWith({
     nickname: '채용욱',
@@ -256,6 +281,7 @@ it('마이크는 자동 확인되고 켜지면 확정 값에 반영한다(카메
     expect(container.querySelector('[role="meter"]')).not.toBeNull();
     expect(container.textContent).toContain('말해보면 초록 막대가 움직입니다');
 
+    await completePreparationAndRecheck();
     await click(button('입장하기'));
     expect(props.onEnter).toHaveBeenCalledWith({
       nickname: '채용욱',
@@ -281,6 +307,7 @@ it('마이크를 끄면 확정 값이 micOn=false 로 전달된다', async () =>
     await render(createElement(ClassWaitingRoom, props));
     await flushPreview();
 
+    await completePreparationAndRecheck();
     await click(container.querySelector<HTMLButtonElement>('[aria-label="마이크 끄기"]') ?? undefined);
     await click(button('입장하기'));
 
@@ -308,6 +335,7 @@ it('카메라는 선택 — 켜기를 누를 때만 켜지고 확정 값에 반�
     expect(button('카메라 켜기')).toBeDefined();
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
 
+    await completePreparationAndRecheck();
     await click(button('카메라 켜기'));
     await flushPreview();
     expect(container.querySelector('video')?.srcObject).toBe(stream);
@@ -365,7 +393,9 @@ it('스피커 테스트는 선택 — 재생 여부와 무관하게 입장할 �
     await render(createElement(ClassWaitingRoom, props));
 
     expect(button('테스트음 듣기')).toBeDefined();
-    // 스피커 테스트를 하지 않아도(이름만 게이트) 입장 가능
+    // 스피커 테스트를 하지 않아도 되지만, 입장은 3단계 준비를 마쳐야 가능하다
+    expect(button('입장하기')?.disabled).toBe(true);
+    await completePreparationAndRecheck();
     expect(button('입장하기')?.disabled).toBe(false);
     expect(container.textContent).toContain('스피커');
   } finally {
@@ -384,10 +414,17 @@ it('세 준비 탭을 표시하고 기기 건너뛰기를 완료로 전달한다
   });
 });
 
-it('상담사가 시작하면 이름이 있는 회원을 자동 입장시킨다', async () => {
+it('상담사가 시작하면 3단계를 마친 회원을 자동 입장시킨다', async () => {
   const props = baseProps();
   await render(createElement(ClassWaitingRoom, props));
   expect(props.onEnter).not.toHaveBeenCalled();
+
+  await click(button('설문 건너뛰기'));
+  await click(button('밴드 완료'));
+  await click(button('기기 테스트 건너뛰기'));
+  // 3단계 완료 → 대기 화면으로 전환된다
+  expect(button('준비 다시 확인하기')).toBeDefined();
+
   await render(createElement(ClassWaitingRoom, { ...props, sessionLive: true }));
   expect(props.onEnter).toHaveBeenCalledWith(expect.objectContaining({ nickname: '김민지' }));
 });

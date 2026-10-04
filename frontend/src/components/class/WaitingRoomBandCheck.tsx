@@ -14,14 +14,24 @@ interface WaitingRoomBandCheckProps {
   sessionId: string;
   participantId: string | null;
   onCompleted?: () => void;
+  /** 부모(대기실)가 보존하는 스킵 상태 — 없으면 내부 상태로 동작한다 */
+  skipped?: boolean;
+  onSkippedChange?: (skipped: boolean) => void;
 }
 
 export function WaitingRoomBandCheck({
   sessionId,
   participantId,
   onCompleted,
+  skipped: skippedProp,
+  onSkippedChange,
 }: WaitingRoomBandCheckProps): React.ReactElement {
-  const [skipped, setSkipped] = useState(false);
+  const [internalSkipped, setInternalSkipped] = useState(false);
+  const skipped = skippedProp !== undefined ? skippedProp : internalSkipped;
+  const setSkipped = (value: boolean): void => {
+    if (skippedProp !== undefined) onSkippedChange?.(value);
+    else setInternalSkipped(value);
+  };
   const completionReported = useRef(false);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const band = useBand({

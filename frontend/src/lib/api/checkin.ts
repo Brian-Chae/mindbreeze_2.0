@@ -95,6 +95,28 @@ export const SAM_AXES: readonly SamAxisDef[] = [
 
 export const SAM_VALUES: readonly SamValue[] = [1, 2, 3, 4, 5] as const;
 
+/** SAM 축 키 — 집중(arousal)·편안함(valence)·감정(emotion) */
+export type AxisKey = 'arousal' | 'valence' | 'emotion';
+
+/** 설문 3축 선택 상태 — 각 축 1~5 또는 미선택(null) */
+export type MoodState = Record<AxisKey, SamValue | null>;
+
+/** 설문 UI 단계 — 입력 / 저장 완료 / 건너뛰기 */
+export type CheckinDraftPhase = 'input' | 'done' | 'skipped';
+
+/** 설문 초안 — 대기 화면↔준비 재확인 왕복에도 선택·입력 값을 유지하기 위해 부모가 보존한다 */
+export interface CheckinDraft {
+  mood: MoodState;
+  note: string;
+  phase: CheckinDraftPhase;
+}
+
+export const EMPTY_CHECKIN_DRAFT: CheckinDraft = {
+  mood: { arousal: null, valence: null, emotion: null },
+  note: '',
+  phase: 'input',
+};
+
 /** SAM 값(1~5) → 단계 라벨(예: 집중 4 → '집중'). null/무효면 null. */
 export function samStepLabel(key: 'arousal' | 'valence' | 'emotion', value: number | null): string | null {
   if (value === null || value === undefined) return null;

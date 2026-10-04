@@ -3,13 +3,19 @@
 // 사후 설문(수업 후)과 동일한 3축을 써서 '수업 전 → 수업 후' 변화를 비교할 수 있게 한다.
 // 저장은 REST(/sessions/{id}/checkin, phase='before')가 하고, onSubmitted 로 요약을 부모(대기실)에
 // 전달해 WS 대기실 이벤트로 상담사 화면에 실시간 흘린다. 스킵 가능(입장을 막지 않는다).
+//
+// 대기실이 3단계 준비 완료 후 대기 화면(WaitingForStart)으로 갔다가 [준비 다시 확인]으로 돌아와도
+// 선택·입력 값이 그대로 보이도록, 초안(draft)을 부모(ClassWaitingRoom)가 보존하는 제어 모드를 지원한다.
 
 import { useState } from 'react';
 import { ApiError } from '../../lib/api/client';
 import {
+  EMPTY_CHECKIN_DRAFT,
   SAM_AXES,
   SAM_VALUES,
   submitCheckin,
+  type AxisKey,
+  type CheckinDraft,
   type SamValue,
 } from '../../lib/api/checkin';
 import type { WaitingRoomCheckin } from '../../lib/socket';
@@ -22,10 +28,10 @@ interface PreCheckinPanelProps {
   /** 저장 성공 시 — 체크인 요약을 대기실(WS)로 흘린다 */
   onSubmitted?: (checkin: WaitingRoomCheckin) => void;
   onSkipped?: () => void;
+  /** 부모(대기실)가 보존하는 제어 초안 — 없으면 내부 상태로 동작한다 */
+  draft?: CheckinDraft;
+  onDraftChange?: (draft: CheckinDraft) => void;
 }
-
-type AxisKey = 'arousal' | 'valence' | 'emotion';
-type MoodState = Record<AxisKey, SamValue | null>;
 
 const NOTE_MAX = 200;
 
@@ -45,19 +51,26 @@ export function PreCheckinPanel({
   isLoggedIn,
   onSubmitted,
   onSkipped,
+  draft,
+  onDraftChange,
 }: PreCheckinPanelProps) {
-  const [mood, setMood] = useState<MoodState>({ arousal: null, valence: null, emotion: null });
-  const [note, setNote] = useState('');
-  const [phase, setPhase] = useState<'input' | 'done' | 'skipped'>('input');
+  const [internalDraft, setInternalDraft] = useState<CheckinDraft>(EMPTY_CHECKIN_DRAFT);
+  const isControlled = draft !== undefined;
+  const currentDraft: CheckinDraft = isControlled ? (draft as CheckinDraft) : internalDraft;
+  const commitDraft = (next: CheckinDraft): void => {
+    if (isControlled) onDraftChange?.(next);
+    else setInternalDraft(next);
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { mood, note, phase } = currentDraft;
   const trimmedNote = note.trim();
   const hasValue =
     mood.arousal !== null || mood.valence !== null || mood.emotion !== null || trimmedNote.length > 0;
 
   const setAxis = (key: AxisKey, value: SamValue): void => {
-    setMood((prev) => ({ ...prev, [key]: value }));
+    commitDraft({ ...currentDraft, mood: { ...mood, [key]: value } });
   };
 
   const handleSubmit = async (): Promise<void> => {
@@ -81,7 +94,7 @@ export function PreCheckinPanel({
         },
         { skipAuth: !isLoggedIn },
       );
-      setPhase('done');
+      commitDraft({ ...currentDraft, phase: 'done' });
       onSubmitted?.({
         arousal: mood.arousal,
         valence: mood.valence,
@@ -98,7 +111,7 @@ export function PreCheckinPanel({
   if (phase === 'skipped') return (
     <section className="rounded-xl border border-white/10 p-5 text-sm text-[#bcaec5]">
       <p>설문을 건너뛰었습니다. 준비를 마쳤어요.</p>
-      <button type="button" onClick={() => setPhase('input')} className="mt-3 min-h-11 text-[#dcb5ee]">설문 작성하기</button>
+      <button type="button" onClick={() => commitDraft({ ...currentDraft, phase: 'input' })} className="mt-3 min-h-11 text-[#dcb5ee]">설문 작성하기</button>
     </section>
   );
 
@@ -184,7 +197,7 @@ export function PreCheckinPanel({
             value={note}
             maxLength={NOTE_MAX}
             disabled={isSubmitting}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => commitDraft({ ...currentDraft, note: event.target.value })}
             placeholder="예: 오늘 목이 좀 불편해서 소리를 내기 어려워요"
             rows={2}
             className="mt-2 w-full resize-none rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[#B373EF] focus:ring-2 focus:ring-[#5F0080]"
@@ -209,7 +222,7 @@ export function PreCheckinPanel({
         </button>
         <button
           type="button"
-          onClick={() => { setPhase('skipped'); onSkipped?.(); }}
+          onClick={() => { commitDraft({ ...currentDraft, phase: 'skipped' }); onSkipped?.(); }}
           disabled={isSubmitting}
           className="h-11 px-3 text-sm font-semibold text-white/60"
         >

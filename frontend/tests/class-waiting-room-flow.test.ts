@@ -16,6 +16,11 @@ let container: HTMLDivElement;
 let props: ClassWaitingRoomProps;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  if (!window.matchMedia) {
+    Object.assign(window, {
+      matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }),
+    });
+  }
   vi.resetAllMocks(); localStorage.clear();
   useAuthStore.setState({ isAuthenticated: false, accessToken: null, user: null });
   container = document.createElement('div'); document.body.append(container); root = createRoot(container);
@@ -30,17 +35,40 @@ async function click(text: string) {
 async function tab(index: number) {
   await act(async () => container.querySelectorAll<HTMLButtonElement>('[role="tab"]')[index].click());
 }
-it('설문·밴드·기기 건너뛰기가 단계 이동과 3/3 준비 완료로 이어진다', async () => {
+it('설문·밴드·기기 건너뛰기가 단계 이동과 대기 화면 전환으로 이어진다', async () => {
   await render();
   await click('건너뛰기');
   expect(container.querySelector('[aria-selected="true"]')?.textContent).toContain('링크밴드');
   await click('밴드 없이 진행하기');
   expect(container.querySelector('[aria-selected="true"]')?.textContent).toContain('기기 테스트');
   await click('기기 테스트 건너뛰기');
-  expect(container.textContent).toContain('3/3 완료');
-  await tab(0);
-  expect(container.textContent).toContain('설문을 건너뛰었습니다');
+  // 3단계 완료 → 대기 화면으로 자동 전환된다
+  expect(container.textContent).toContain('잠시만 기다려주세요');
   expect(submitCheckin).not.toHaveBeenCalled();
+});
+
+it('대기 화면에 다녀와도 설문 선택값·밴드 스킵 상태가 그대로 유지된다', async () => {
+  vi.mocked(submitCheckin).mockResolvedValue({} as Awaited<ReturnType<typeof submitCheckin>>);
+  await render();
+
+  // 설문: 집중 4를 선택하고 저장한다
+  await act(async () => {
+    container.querySelectorAll('fieldset')[0]?.querySelectorAll('button')[3]?.click();
+  });
+  await click('체크인 남기기');
+  expect(container.querySelector('[aria-selected="true"]')?.textContent).toContain('링크밴드');
+
+  // 밴드·기기는 건너뛰기로 완료 → 대기 화면
+  await click('밴드 없이 진행하기');
+  await click('기기 테스트 건너뛰기');
+  expect(container.textContent).toContain('잠시만 기다려주세요');
+
+  // [준비 다시 확인] → 기존 선택값·상태가 그대로 보인다
+  await click('준비 다시 확인하기');
+  expect(container.textContent).toContain('3/3 완료');
+  expect(container.textContent).toContain('집중 4');
+  await tab(1);
+  expect(container.textContent).toContain('밴드 미사용으로 준비를 마쳤습니다');
 });
 it('탭 이동으로 설문 초안이 사라지지 않으며 숨긴 패널은 hidden이다', async () => {
   await render();
