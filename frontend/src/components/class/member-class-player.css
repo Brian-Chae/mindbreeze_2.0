@@ -75,6 +75,8 @@
 .player-metric[data-hero] .player-dial-num b { font-size: 34px; letter-spacing: -1px; }
 .player-metric[data-hero] .player-dial-num small { font-size: 11px; }
 .player-delta { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 400; color: #C9AED7; font-variant-numeric: tabular-nums; order: 3; }
+.player-mini-bars { width: 100%; height: 28px; flex-shrink: 0; display: block; }
+.player-mini-bars g rect { fill: inherit; transition: y 300ms ease, height 300ms ease; }
 /* ── 차트 (SVG 막대) ── */
 .player-chart { flex-shrink: 0; border: 1px solid var(--player-divider); border-radius: 12px; padding: 12px; background: #ffffff04; }
 .player-chart-head { line-height: 18px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; font-size: 11px; color: var(--player-muted); }
@@ -95,7 +97,7 @@
 .player-signal { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: 1; min-height: 44px; padding: 0 4px; border-radius: 999px; border: 1px solid var(--player-border); background: var(--player-fill); color: var(--player-cream); font-size: 13px; font-weight: 500; white-space: nowrap; }
 .player-signal:hover { background: var(--player-fill-hover); }
 .player-signal[data-active=true] { border-color: var(--player-selected-border); background: var(--player-selected-bg); }
-.player-signal-icon { font-size: 14px; line-height: 1; }
+.player-signal-icon { flex-shrink: 0; display: inline-flex; line-height: 1; }
 .player-signal[data-signal=following] .player-signal-icon { color: #9BE7C4; }
 .player-signal[data-signal=difficult] .player-signal-icon { color: #F5D48B; }
 .player-signal[data-signal=resting] .player-signal-icon { color: #CFC3F5; }

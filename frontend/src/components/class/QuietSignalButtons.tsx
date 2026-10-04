@@ -5,12 +5,20 @@
 // 짧은 확인 문구만 남긴다(실패 시에만 조용한 안내). 상담사에게만 전달된다.
 
 import { useEffect, useRef, useState } from 'react';
+import { Droplet, Leaf, Moon, type LucideIcon } from 'lucide-react';
 import {
   CLASS_SIGNAL_META,
   CLASS_SIGNAL_TYPES,
   type ClassSignalType,
 } from '../../lib/class/quiet-signal';
 import type { SignalSendResult } from '../../hooks/useSessionLiveSocket';
+
+/** SDD-123: 이모지(🌿💧🌙)를 Lucide 정식 아이콘으로 교체 */
+const SIGNAL_ICONS: Record<ClassSignalType, LucideIcon> = {
+  following: Leaf,
+  difficult: Droplet,
+  resting: Moon,
+};
 
 /** 확인 문구 표시 시간(ms) — 성공/실패 모두 짧게만 남긴다 */
 const FEEDBACK_MS = 4000;
@@ -54,6 +62,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
       <div className="player-signals-row">
         {CLASS_SIGNAL_TYPES.map((type) => {
           const meta = CLASS_SIGNAL_META[type];
+          const Icon = SIGNAL_ICONS[type];
           const active = sentType === type;
           return (
             <button
@@ -66,7 +75,7 @@ export function QuietSignalButtons({ onSend }: QuietSignalButtonsProps) {
               aria-pressed={active}
               title={meta.hint}
             >
-              <span className="player-signal-icon" aria-hidden="true">{meta.icon}</span>
+              <Icon className="player-signal-icon" size={16} strokeWidth={2} aria-hidden="true" />
               <span>{meta.label}</span>
             </button>
           );

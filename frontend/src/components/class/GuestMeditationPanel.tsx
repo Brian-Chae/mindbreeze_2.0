@@ -540,6 +540,7 @@ export function GuestMeditationPanel({
                           hero={selectedKey === key}
                           selected={selectedKey === key}
                           delta={deltaFor(key)}
+                          series={seriesRef.current[key]}
                           onClick={() => setSelectedKey(key)}
                         />
                       );
