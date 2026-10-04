@@ -129,6 +129,24 @@
 .legend-swatch.legend-bar { background: linear-gradient(180deg, #A16BBC 0%, #5F0080 100%); height: 8px; }
 .legend-swatch.legend-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--player-lavender); }
 
+/* ── SDD-125 후속: 지난 5분 추이 그래프 뷰어 ── */
+.member-trend { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--player-divider); flex-shrink: 0; }
+.member-trend-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.member-trend-title { font-size: 11px; font-weight: 600; color: var(--player-cream); }
+.member-trend-current { font-size: 11px; color: var(--player-muted); font-variant-numeric: tabular-nums; }
+.member-trend-current b { font-size: 14px; font-weight: 600; color: var(--player-cream); margin: 0 2px; }
+.member-trend-current small { font-size: 10px; color: var(--player-muted); }
+.member-trend-selector { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.member-trend-selector button { min-height: 26px; padding: 0 4px; border-radius: 7px; border: 1px solid var(--player-border); background: var(--player-fill); color: var(--player-muted); font-size: 10px; font-weight: 500; white-space: nowrap; }
+.member-trend-selector button:hover { background: var(--player-fill-hover); color: var(--player-cream); }
+.member-trend-selector button.is-active { background: var(--player-selected-bg); border-color: var(--player-selected-border); color: var(--player-cream); }
+.member-trend-chart { position: relative; height: 96px; border: 1px solid var(--player-border); border-radius: 8px; background: #0d0614; overflow: hidden; }
+.member-trend-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.member-trend-line { fill: none; stroke: var(--player-lavender); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.member-trend-average { stroke: var(--player-mint); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.7; vector-effect: non-scaling-stroke; }
+.member-trend-axis { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: space-between; padding: 0 6px; font-size: 9px; color: rgba(255,255,255,0.4); pointer-events: none; }
+.member-trend-empty { position: absolute; inset: 0; display: grid; place-items: center; font-size: 11px; color: var(--player-muted); }
+
 /* ── 피드백(지금 나를 알려요) ── */
 .member-signal-card { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px; }
 .member-card-title { margin: 0; font-size: 12px; font-weight: 500; color: var(--player-cream); }
@@ -160,14 +178,14 @@
 .member-device-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--player-mint); box-shadow: 0 0 8px #01f0c840; flex-shrink: 0; }
 .member-device-name.is-off .member-device-dot { background: var(--player-muted); box-shadow: none; }
 
-/* raw 데이터 파형 (EEG 2ch + PPG IR/RED) */
-.member-raw-grid { display: grid; grid-template-columns: 1fr; gap: 10px; flex: 1; min-height: 0; }
-.member-raw-block { display: flex; flex-direction: column; gap: 5px; min-width: 0; min-height: 0; }
+/* raw 데이터 파형 (EEG 2ch + PPG IR/RED + ACC magnitude) — EEG:PPG:ACC = 2:1:1 */
+.member-raw-grid { display: grid; grid-template-rows: 2fr 1fr 1fr; gap: 10px; flex: 1; min-height: 0; }
+.member-raw-block { display: flex; flex-direction: column; gap: 5px; min-width: 0; min-height: 0; overflow: hidden; }
 .member-raw-head { display: flex; align-items: center; justify-content: space-between; }
 .member-raw-title { font-size: 11px; font-weight: 600; color: var(--player-cream); display: flex; align-items: center; gap: 5px; }
 .member-raw-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 9999px; background: rgba(1,240,200,0.12); border: 1px solid rgba(1,240,200,0.3); color: var(--player-mint); }
 .member-raw-status.is-idle { background: var(--player-fill); border-color: var(--player-border); color: var(--player-muted); }
-.member-raw-wave { position: relative; display: block; height: 64px; flex-shrink: 0; background: #0d0614; border: 1px solid var(--player-border); border-radius: 8px; overflow: hidden; }
+.member-raw-wave { position: relative; display: block; flex: 1; min-height: 0; min-width: 0; background: #0d0614; border: 1px solid var(--player-border); border-radius: 8px; overflow: hidden; }
 .member-raw-wave canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .member-raw-chips { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; z-index: 6; pointer-events: none; }
 .member-raw-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 9999px; font-size: 10px; color: var(--player-muted); background: rgba(18,8,28,0.72); border: 1px solid var(--player-border); backdrop-filter: blur(4px); white-space: nowrap; }
@@ -212,7 +230,9 @@
   .col-device { order: 3; }
   .member-video-card { flex: none; min-height: 200px; }
   .member-metrics-card, .member-device-raw-card { flex: none; overflow-y: visible; }
-  .member-raw-wave { height: 64px; }
+  .member-raw-grid { min-height: 0; }
+  .member-raw-wave { flex: none; height: 64px; }
+  .member-raw-block:nth-child(1) .member-raw-wave { height: 120px; }
 }
 @media (max-width: 640px) {
   .player-topbar { padding: 0 12px; gap: 8px; }

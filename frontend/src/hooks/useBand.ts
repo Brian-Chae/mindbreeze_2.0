@@ -210,6 +210,8 @@ export interface UseBandResult {
   getEegWaveformSamples: () => { fp1: number[]; fp2: number[] };
   /** WaveformCanvas용 — 최신 PPG IR/RED */
   getPpgWaveformSamples: () => BandPpgWaveform;
+  /** WaveformCanvas용 — 최신 ACC magnitude */
+  getAccWaveformSamples: () => number[];
   clearBuffers: () => void;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
@@ -257,6 +259,7 @@ function metricsToFeature(
   secondOffset: number,
   bandPowers: BandPowers | null,
   signalQuality0to100: number | null,
+  battery: number | null,
 ): EegFeatureItem {
   // HRV는 AnalysisMetricsService RR 버퍼 기반 getter에서 읽음 (null 보존)
   const hrv = AnalysisMetricsService.getInstance();
@@ -287,6 +290,7 @@ function metricsToFeature(
     heart_rate: hrv.getCurrentHeartRate(),
     respiratory_rate: hrv.getCurrentRespiratoryRate(),
     motion: hrv.getCurrentMotion(),
+    band_battery: battery,
   };
 }
 
@@ -621,7 +625,7 @@ export function useBand({
         const elapsedOffset = Math.max(0, Math.floor((Date.now() - baseOffsetRef.current) / 1000));
         const offset = Math.max(elapsedOffset, secondOffsetRef.current);
         secondOffsetRef.current = offset + 1;
-        const feature = metricsToFeature(metrics, offset, powers, sqi);
+        const feature = metricsToFeature(metrics, offset, powers, sqi, batteryRef.current);
 
         // 전송 전 IndexedDB 큐 적재 (emit 성공 ≠ 저장 성공)
         void (async () => {
@@ -827,6 +831,8 @@ export function useBand({
   );
 
   const getPpgWaveformSamples = useCallback(() => ({ ...ppgWaveformRef.current }), []);
+
+  const getAccWaveformSamples = useCallback(() => accRef.current.magnitude, []);
 
   const handleStoreUpdate = useCallback((action: string, ...args: unknown[]) => {
     if (action === 'updateEEGGraphData') {
@@ -1396,6 +1402,7 @@ export function useBand({
     connectedElapsedSec,
     getEegWaveformSamples,
     getPpgWaveformSamples,
+    getAccWaveformSamples,
     clearBuffers,
     connect,
     disconnect,

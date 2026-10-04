@@ -245,6 +245,8 @@ export interface EegFeatureItem {
   respiratory_rate?: number | null;
   /** 움직임 활동도 0~1 */
   motion?: number | null;
+  /** 밴드 배터리(%) — 프레임에 실릴 때만. null 보존(0 치환 금지) */
+  band_battery?: number | null;
 }
 
 export interface EegFeatureBatchPayload {

@@ -17,6 +17,7 @@ import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { MemberMetricDial } from './MemberMetricDial';
 import { MemberRawData } from './MemberRawData';
+import { MemberTrendGraph } from './MemberTrendGraph';
 import { MemberDeviceStrip } from './MemberDeviceStrip';
 import { MemberClassInfoCard } from './MemberClassInfoCard';
 import { MemberProfileCard } from './MemberProfileCard';
@@ -185,6 +186,8 @@ export function GuestMeditationPanel({
   const [leftW, setLeftW] = useState(LEFT_W);
   const [rightW, setRightW] = useState(RIGHT_W);
   const [resizing, setResizing] = useState(false);
+  /** SDD-125 후속: 추이 그래프 선택 지표 */
+  const [selectedTrend, setSelectedTrend] = useState<MetricKey>('focus');
   const dragRef = useRef<{ side: 'left' | 'right'; startX: number; startW: number } | null>(null);
 
   const wasLeadOffRef = useRef(false);
@@ -546,6 +549,13 @@ export function GuestMeditationPanel({
                   </div>
                 </section>
               ))}
+              <MemberTrendGraph
+                metrics={METRICS}
+                selected={selectedTrend}
+                onSelect={(k) => setSelectedTrend(k as MetricKey)}
+                series={seriesRef.current}
+                average={groupAverage?.[selectedTrend] ?? null}
+              />
               <div className="metric-legend">
                 <span className="legend-item"><span className="legend-swatch legend-ring" aria-hidden="true" /> 링: 현재값</span>
                 <span className="legend-item"><span className="legend-swatch legend-bar" aria-hidden="true" /> 막대: 최근 수신값</span>

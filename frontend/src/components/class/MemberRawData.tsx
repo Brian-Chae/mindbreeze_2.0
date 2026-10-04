@@ -1,7 +1,8 @@
-// SDD-125: 회원용 raw 데이터 파형 — 뇌파(EEG 2ch)·심박(PPG IR/RED overlap) 다크 캔버스.
-// ACC(움직임)는 제거. EEG 위 CHIP(집중·이완·감정균형), PPG 위 CHIP(BPM·HRV·호흡수).
-// useBand 의 supplier(getEegWaveformSamples/getPpgWaveformSamples)를 rAF 루프에서 직접 읽어
-// React 리렌더 없이 그린다(250Hz 렌더 부하 최소화). ResizeObserver로 패널 폭 변경 시 자동 재할당.
+// SDD-125 후속: 회원용 raw 데이터 파형 — 뇌파(EEG 2ch)·심박(PPG IR/RED)·움직임(ACC magnitude).
+// 우측 디바이스 패널에서 EEG:PPG:ACC = 2:1:1 높이 비율로 노출한다(member-class-player.css).
+// EEG 위 CHIP(집중·이완·감정균형), PPG 위 CHIP(BPM·HRV·호흡수),
+// ACC 위 CHIP(움직임·활동·안정도). useBand 의 supplier(get*WaveformSamples)를 rAF 루프에서 직접
+// 읽어 React 리렌더 없이 그린다(250Hz 렌더 부하 최소화). ResizeObserver로 패널 폭 변경 시 자동 재할당.
 
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { UseBandResult } from '../../hooks/useBand';
@@ -189,11 +190,22 @@ function RawBlock({
 const fmt = (v: number | null | undefined): string =>
   v === null || v === undefined || !Number.isFinite(v) ? '—' : String(Math.round(v));
 
+/** ACC 활동 상태 한국어 라벨 (stationary/sitting/walking/running) */
+const ACC_ACTIVITY_LABEL: Record<string, string> = {
+  stationary: '정지',
+  sitting: '앉음',
+  walking: '걷기',
+  running: '달리기',
+};
+
 export function MemberRawData({ band }: { band: UseBandResult }) {
   const connected = band.connectionState === 'connected';
   const eeg = band.getEegWaveformSamples();
   const ppg = band.getPpgWaveformSamples();
+  const acc = band.getAccWaveformSamples();
+  const accSnapshot = band.acc;
   const s = band.scoredIndices;
+  const activityLabel = ACC_ACTIVITY_LABEL[accSnapshot.activityType] ?? accSnapshot.activityType;
 
   return (
     <div className="member-raw-grid">
@@ -242,6 +254,25 @@ export function MemberRawData({ band }: { band: UseBandResult }) {
               <span className="meta-dot" style={{ background: '#ffa657' }} />
               IR 940nm
             </span>
+          </>
+        }
+      />
+      <RawBlock
+        label="움직임 ACC"
+        sub="(magnitude · 30Hz)"
+        series={[{ id: 'mag', color: '#FFD166' }]}
+        supplier={() => ({ mag: band.getAccWaveformSamples() })}
+        active={connected}
+        hasSignal={connected && acc.length > 1}
+        chips={[
+          { label: '움직임', value: fmt(accSnapshot.avgMovement) },
+          { label: '활동', value: activityLabel },
+          { label: '안정도', value: fmt(accSnapshot.stability) },
+        ]}
+        foot={
+          <>
+            <span>3축 가속도 크기(중력 제거)</span>
+            <span>{activityLabel}</span>
           </>
         }
       />
