@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>회원 클래스 화면 UI 목업 · 루프 2</title>
+<title>회원 클래스 화면 UI 목업 · 루프 3 (SDD-123)</title>
 <style>
   button,input{font:inherit}
-  :root{--purple:#5F0080;--cream:#F7F4F0;--mint:#01f0c8}
+  :root{--purple:#5F0080;--cream:#F7F4F0;--mint:#01f0c8;--bg:#12081C;--surface:#1D1027;--selected-bg:#2B1637;--selected-border:#B78CCA;--lavender:#DCB5EE;--muted:#BCAEC5}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:system-ui,-apple-system,'Apple SD Gothic Neo',sans-serif;background:#100d14;color:var(--cream);padding:32px 24px;font-size:13px}
   .page-head{max-width:1440px;margin:0 0 24px}
@@ -17,52 +17,76 @@
   .frames{display:flex;flex-wrap:nowrap;width:max-content;min-width:100%;gap:32px;align-items:flex-start;justify-content:center}
   .frame-wrap{text-align:center}
   .frame-label{font-size:11px;color:#b9a8cc;margin-bottom:10px;font-weight:600;letter-spacing:.08em}
-  .frame{position:relative;overflow:hidden;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);background:linear-gradient(rgba(6,5,7,.72),rgba(6,5,7,.9)),radial-gradient(ellipse at 25% 12%,rgba(168,85,247,.85),transparent 62%),radial-gradient(ellipse 85% 45% at 12% 72%,#704183 0%,transparent 72%),radial-gradient(ellipse 90% 50% at 95% 85%,#40254e 0%,transparent 70%),#060507}
+  .frame{position:relative;overflow:hidden;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);background:linear-gradient(rgba(25,8,34,.85),rgba(18,8,28,.95)),radial-gradient(ellipse at 25% 12%,rgba(168,85,247,.5),transparent 62%),radial-gradient(ellipse 85% 45% at 12% 72%,#2c1a3a 0%,transparent 72%),radial-gradient(ellipse 90% 50% at 95% 85%,#1d1027 0%,transparent 70%),#12081C}
   .screen{position:relative;width:100%;height:100%;display:flex;flex-direction:column}
   .topbar{position:relative;z-index:5;display:flex;align-items:center;gap:12px;padding:20px 24px;flex-shrink:0}
-  .topbar .title{flex:1;text-align:center;font-size:15px;font-weight:600;color:#f2f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pillbtn{display:inline-flex;align-items:center;gap:4px;height:40px;padding:0 14px;border-radius:12px;background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,.08);white-space:nowrap;cursor:pointer;backdrop-filter:blur(4px)}
-  .video{position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(ellipse at 25% 20%,#382640 0%,transparent 58%),radial-gradient(ellipse at 75% 85%,#291936 0%,transparent 60%),#100d15;border:1px solid rgba(255,255,255,.08)}
+  .topbar .title{flex:1;text-align:center;font-size:15px;font-weight:500;color:#f2f3f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pillbtn{display:inline-flex;align-items:center;gap:4px;height:40px;padding:0 14px;border-radius:8px;background:rgba(255,255,255,.04);color:#fff;font-size:13px;font-weight:500;border:1px solid rgba(255,255,255,.1);white-space:nowrap;cursor:pointer;backdrop-filter:blur(4px)}
+  .video{position:relative;border-radius:12px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#382047 0%,transparent 58%),#1b1025;border:1px solid rgba(255,255,255,.1)}
   .video .avatar{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .video .avatar .circle{width:64px;height:64px;border-radius:50%;background:rgba(247,244,240,.06);display:flex;align-items:center;justify-content:center;font-size:26px;color:#a996b2;box-shadow:0 0 0 0 rgba(1,240,200,.14);animation:breathe 4s ease-in-out infinite}
   .video .wait{font-size:11px;color:#a996b2;margin-top:12px}
-  .video .label{position:absolute;left:16px;top:16px;font-size:11px;color:#d9cddd;letter-spacing:.05em}
+  .video .label{position:absolute;left:16px;top:16px;font-size:11px;color:var(--muted);letter-spacing:.05em}
+  .video .label::before{content:'';display:inline-block;width:6px;height:6px;background:var(--mint);border-radius:50%;margin-right:7px}
   .timer{display:flex;flex-direction:column;align-items:center;line-height:1}
-  .timer .now{font-variant-numeric:tabular-nums;font-weight:600;color:#fff}
+  .timer .now{font-variant-numeric:tabular-nums;font-weight:500;color:#fff}
   .timer .total{font-variant-numeric:tabular-nums;color:rgba(255,255,255,.5)}
-  .metric{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);border-radius:14px;cursor:pointer;position:relative;text-align:center}
-  .metric .k{font-size:11px;color:#c5baca}
-  .metric .v{font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;color:var(--cream)}
-  .metric .v .u{font-size:10px;font-weight:400;color:rgba(255,255,255,.6);margin-left:2px}
-  .metric:has(input:checked){background:rgba(95,0,128,.65);border-color:#bc80d2;box-shadow:inset 0 0 0 1px rgba(188,128,210,.18)}
-  .metric:has(input:checked) .k{color:#e9d5ff}
-  .chartbox{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:12px;display:none}
+  /* ── MIND/BODY 다이얼 ── */
+  .metric-sections{display:flex;flex-direction:column;gap:8px}
+  .metric-section{display:flex;flex-direction:column;gap:8px}
+  .metric-section + .metric-section{border-top:1px solid rgba(255,255,255,.05);padding-top:12px}
+  .metric-section h3{display:flex;align-items:baseline;gap:6px;font-size:12px;font-weight:500;color:var(--cream)}
+  .metric-section h3 small{font-size:10px;font-weight:500;letter-spacing:1.5px;color:var(--lavender)}
+  .metric-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .metric{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;position:relative;text-align:center;padding:8px 4px;border:1px solid transparent;border-radius:12px;background:transparent;cursor:pointer}
+  .metric input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+  .metric .k{font-size:10px;color:var(--muted);order:2}
+  .metric .delta{display:none;font-size:10px;color:#C9AED7;order:3;font-variant-numeric:tabular-nums}
+  .dial{position:relative;width:48px;height:48px;flex-shrink:0}
+  .dial svg{width:100%;height:100%}
+  .dial .track{fill:none;stroke:rgba(212,181,227,.07);stroke-width:6}
+  .dial .arc{fill:none;stroke:#A16BBC;stroke-width:6;stroke-linecap:round}
+  .dial .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+  .dial .num b{font-size:15px;font-weight:500;color:var(--cream);font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .dial .num small{font-size:8px;font-weight:400;color:var(--lavender);margin-top:1px}
+  .metric:has(input:checked){background:var(--selected-bg);border-color:var(--selected-border);box-shadow:inset 0 0 0 1px rgba(183,140,202,.18)}
+  .metric:has(input:checked) .k{color:var(--lavender)}
+  .metric:has(input:checked) .dial{width:84px;height:84px;filter:drop-shadow(0 0 6px rgba(95,0,128,.4))}
+  .metric:has(input:checked) .dial .num b{font-size:34px;letter-spacing:-1px}
+  .metric:has(input:checked) .dial .num small{font-size:11px}
+  .metric:has(input:checked) .delta{display:block}
+  /* ── 차트 ── */
+  .chartbox{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:12px;display:none}
   .chartbox .charthead{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
-  .chartbox .charthead .cap{font-size:11px;color:#b9adbf;letter-spacing:0}
+  .chartbox .charthead .cap{font-size:11px;color:var(--muted);letter-spacing:0}
+  .chartbox .charthead strong{font-weight:500;color:var(--cream)}
   .chartbox .charthead .cur{font-size:11px;color:rgba(255,255,255,.6)}
-  .chartbox .charthead .cur b{color:#fff;font-size:15px;font-weight:600;margin-right:3px}
-  .bars{display:flex;align-items:flex-end;gap:8px;height:100px;width:max-content;margin:0 auto;background:repeating-linear-gradient(to top,rgba(255,255,255,.06) 0 1px,transparent 1px 25px)}
-  .bars .bar{flex:0 0 20px;width:20px;border-radius:4px 4px 2px 2px;background:rgba(203,187,215,.42);min-height:4px}
-  .bars .bar.now{background:linear-gradient(180deg, #01f0c8 0%, #a855f7 70%, #7b2a9e 100%)}
-  .axis{display:flex;justify-content:space-between;font-size:10px;color:#b3a5ba;width:328px;margin:8px auto 0}
-  .hint{font-size:11px;color:#bfb3c6;text-align:center;line-height:1.5}
-  .signal{display:flex;align-items:center;gap:4px;height:40px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);color:rgba(255,255,255,.85);font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
-  .bgm{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px}
+  .chartbox .charthead .cur b{color:#fff;font-size:15px;font-weight:500;margin-right:3px}
+  .chart-note{font-size:10px;color:#b2a3bc;text-align:left;margin-bottom:10px}
+  .bars{display:flex;align-items:flex-end;gap:4px;height:72px;border-bottom:1px solid rgba(255,255,255,.05);padding-bottom:2px}
+  .bars .bar{flex:1;min-width:0;border-radius:3px 3px 1px 1px;background:linear-gradient(180deg,#5F0080 0%,#A16BBC 100%);opacity:.55;min-height:4px}
+  .bars .bar.now{background:linear-gradient(180deg,#D4B5E3 0%,#5F0080 100%);opacity:.95}
+  .axis{display:flex;justify-content:space-between;font-size:10px;color:#b3a5ba;margin-top:8px}
+  .axis span:last-child{color:var(--lavender)}
+  .hint{font-size:11px;color:var(--muted);text-align:center;line-height:1.5}
+  .signal{display:flex;align-items:center;gap:4px;height:40px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.85);font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer}
+  .bgm{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:12px 14px}
   .bgm .t{min-width:0;flex:1}
   .bgm .t .cap{font-size:10px;color:#b4a7be;letter-spacing:.06em;margin-bottom:3px}
   .bgm .t .name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bgm .state{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:var(--mint);background:rgba(1,240,200,.12);border-radius:999px;padding:3px 9px;white-space:nowrap}
   .bgm .dot{width:6px;height:6px;border-radius:50%;background:var(--mint);animation:pulse 2.4s ease-in-out infinite}
   .desktop{width:1280px;height:720px}
-  .desktop .body{position:relative;z-index:4;flex:1;min-height:0;display:grid;grid-template-columns:1.5fr 1fr;gap:24px;padding:0 24px 36px}
+  .desktop .body{position:relative;z-index:4;flex:1;min-height:0;display:grid;grid-template-columns:1.55fr 400px;gap:20px;padding:0 20px 20px}
   .desktop .video{height:100%}
-  .desktop .video .timer-overlay{position:absolute;left:16px;bottom:16px;background:rgba(0,0,0,.42);backdrop-filter:blur(6px);border-radius:14px;padding:10px 18px;border:1px solid rgba(255,255,255,.08)}
+  .desktop .video .timer-overlay{position:absolute;left:16px;bottom:16px;background:rgba(18,8,28,.65);backdrop-filter:blur(6px);border-radius:12px;padding:10px 18px;border:1px solid rgba(255,255,255,.1)}
   .desktop .timer-overlay .now{font-size:38px}
   .desktop .timer-overlay .total{font-size:13px;margin-top:4px}
-  .desktop .rightcol{display:flex;flex-direction:column;gap:10px;min-width:0;height:100%;background:linear-gradient(180deg,rgba(6,5,7,.80),rgba(6,5,7,.94));border-radius:16px}
-  .desktop .metrics{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;flex:1;min-height:240px}
+  .desktop .rightcol{display:flex;flex-direction:column;gap:12px;min-width:0;height:100%;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:16px}
+  .desktop .rightcol .status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-shrink:0}
+  .desktop .rightcol .status .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px rgba(1,240,200,.25)}
+  .desktop .metric-sections{flex:1;min-height:0}
   .desktop .chartbox{flex:0 0 auto}
-  .desktop .bars{height:84px}
   .desktop .signals{display:flex;gap:8px;justify-content:center}
   .desktop .signals .signal{flex:1;justify-content:center}
   .mobile{width:390px;height:844px}
@@ -71,27 +95,23 @@
   .mobile .pillbtn{height:44px;padding:0 8px;font-size:11px;min-width:44px;justify-content:center}
   .mobile .body{position:relative;z-index:4;flex:1;min-height:0;display:flex;flex-direction:column;gap:8px;padding:0 12px 20px}
   .mobile .video{flex:1;min-height:180px}
-  .mobile .video .timer-overlay{position:absolute;left:12px;bottom:12px;background:rgba(0,0,0,.42);backdrop-filter:blur(6px);border-radius:14px;padding:7px 18px;border:1px solid rgba(255,255,255,.08)}
+  .mobile .video .timer-overlay{position:absolute;left:12px;bottom:12px;background:rgba(18,8,28,.65);backdrop-filter:blur(6px);border-radius:12px;padding:7px 18px;border:1px solid rgba(255,255,255,.1)}
   .mobile .timer-overlay .now{font-size:26px}
   .mobile .timer-overlay .total{font-size:11px;margin-top:2px}
-  .mobile .metrics{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;flex:0 0 auto}
-  .mobile .metric{height:76px}
-  .mobile .metric .v{font-size:21px}
-  .mobile .chartbox{flex:0 0 auto}
-  .mobile .bars{height:100px}
-  .mobile .bars .bar{flex-basis:20px;width:20px}
+  .mobile .rightcol{display:flex;flex-direction:column;gap:8px;background:var(--surface);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px}
+  .mobile .rightcol .status{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);flex-shrink:0}
+  .mobile .rightcol .status .dot{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px rgba(1,240,200,.25)}
+  .mobile .metric{padding:6px 2px}
+  .mobile .dial{width:40px;height:40px}
+  .mobile .metric:has(input:checked) .dial{width:72px;height:72px}
+  .mobile .metric:has(input:checked) .dial .num b{font-size:28px}
+  .mobile .metric:has(input:checked) .dial .num small{font-size:10px}
   .mobile .signals{display:flex;gap:8px;flex-shrink:0}
   .mobile .signals .signal{flex:1;justify-content:center;font-size:11px;padding:0 4px;height:44px;gap:4px}
   .mobile .bgm{flex-shrink:0}
-  button:focus-visible,.metric:has(input:focus-visible){outline:2px solid var(--mint);outline-offset:3px}
-  .video .label::before{content:'';display:inline-block;width:6px;height:6px;background:var(--mint);border-radius:50%;margin-right:7px}
-  .metric input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
-  .metric:has(input:checked)::after{content:'';position:absolute;right:10px;top:10px;width:5px;height:5px;border-radius:50%;background:#dec0eb}
-  .charthead strong{font-weight:600;color:#e2d5e9}
-  .chart-note{font-size:10px;color:#b2a3bc;text-align:left;margin-bottom:10px}
-  .axis span:last-child{color:#81ddcd}
-  .mobile .axis{width:328px}
-  .mobile .hint{font-size:11px}
+  /* 모바일: 차트 숨김 — 현재 상태만 */
+  .mobile .chartbox{display:none !important}
+  button:focus-visible,.metric:has(input:focus-visible){outline:2px solid var(--lavender);outline-offset:3px}
   .body:has(input[value="focus"]:checked) .chart-focus{display:block}
   .body:has(input[value="relax"]:checked) .chart-relax{display:block}
   .body:has(input[value="emotion"]:checked) .chart-emotion{display:block}
@@ -119,15 +139,15 @@
 </head>
 <body>
   <div class="page-head">
-    <h1>회원 클래스 화면 — 몰입을 위한 명상 화면 · 루프 2</h1>
-    <p>6지표 <b>대형 카드</b>를 유지하고, 바로 아래 <b>막대 그래프</b>를 붙여 지표 하나를 탭하면 그 지표의 시간 변화를 보여줍니다.<br>
-    막대는 1초 튀는 값 대신 <b>최근 구간 평균</b>(12구간)으로 차분하게 표시. 데스크탑은 좌(영상)/우(카드+차트), 모바일은 영상 축소 후 카드+차트로 한 화면 수렴.</p>
+    <h1>회원 클래스 화면 — 몰입을 위한 명상 화면 · 루프 3 (SDD-123)</h1>
+    <p>상담사 화면의 <b>보라 틴트 + MIND/BODY 아크 링 다이얼</b>을 이식하고 밀도를 낮췄습니다.<br>
+    숫자·변화량은 <b>매초 실시간</b>(1Hz), 선택 지표는 <b>히어로 다이얼</b>+<b>직전 1초 증감</b>. 데스크톱은 <b>지난 5분 막대 그래프</b>, 모바일은 <b>현재 상태만</b>.</p>
     <div class="badges">
-      <span class="badge">6지표 대형 카드 유지</span>
-      <span class="badge">탭 → 막대 그래프 갱신</span>
-      <span class="badge">막대 = 구간 평균(차분)</span>
-      <span class="badge">타이머 → 영상 오버레이</span>
-      <span class="badge">BGM → 미니바</span>
+      <span class="badge">보라 틴트 #12081C</span>
+      <span class="badge">MIND/BODY 다이얼</span>
+      <span class="badge">매초 실시간</span>
+      <span class="badge">히어로 + 직전 1초 증감</span>
+      <span class="badge">데스크톱 5분 막대 · 모바일 현재값만</span>
     </div>
   </div>
 
@@ -154,114 +174,59 @@
               </div>
             </div>
             <div class="rightcol">
-              <div class="metrics">
-                <label class="metric"><input type="radio" name="desktop-metric" value="focus" aria-label="집중도" checked><span class="k">집중도</span><span class="v">87<span class="u">%</span></span></label>
-                <label class="metric"><input type="radio" name="desktop-metric" value="relax" aria-label="이완도"><span class="k">이완도</span><span class="v">64<span class="u">%</span></span></label>
-                <label class="metric"><input type="radio" name="desktop-metric" value="emotion" aria-label="정서안정"><span class="k">정서안정</span><span class="v">71<span class="u">%</span></span></label>
-                <label class="metric"><input type="radio" name="desktop-metric" value="pulse" aria-label="BPM"><span class="k">BPM</span><span class="v">72<span class="u">bpm</span></span></label>
-                <label class="metric"><input type="radio" name="desktop-metric" value="breath" aria-label="호흡"><span class="k">호흡</span><span class="v">14<span class="u">회/분</span></span></label>
-                <label class="metric"><input type="radio" name="desktop-metric" value="hrv" aria-label="HRV"><span class="k">HRV</span><span class="v">42<span class="u">ms</span></span></label>
+              <div class="status"><span class="dot"></span><span>LINK BAND에서 실시간으로 측정 중입니다</span></div>
+              <div class="metric-sections">
+                <section class="metric-section">
+                  <h3>마음 <small>MIND</small></h3>
+                  <div class="metric-items">
+                    <label class="metric"><input type="radio" name="desktop-metric" value="focus" aria-label="집중도" checked><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="87 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>87</b><small>%</small></span></span><span class="k">집중도</span><span class="delta">+3 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="desktop-metric" value="relax" aria-label="이완도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="64 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>64</b><small>%</small></span></span><span class="k">이완도</span><span class="delta">+1 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="desktop-metric" value="emotion" aria-label="정서안정도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="71 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>71</b><small>%</small></span></span><span class="k">정서안정도</span><span class="delta">변화 없음</span></label>
+                  </div>
+                </section>
+                <section class="metric-section">
+                  <h3>몸 <small>BODY</small></h3>
+                  <div class="metric-items">
+                    <label class="metric"><input type="radio" name="desktop-metric" value="pulse" aria-label="BPM"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="72 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>72</b><small>bpm</small></span></span><span class="k">BPM</span><span class="delta">-1 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="desktop-metric" value="breath" aria-label="호흡"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="58 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>14</b><small>회/분</small></span></span><span class="k">호흡</span><span class="delta">변화 없음</span></label>
+                    <label class="metric"><input type="radio" name="desktop-metric" value="hrv" aria-label="HRV"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="70 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>42</b><small>ms</small></span></span><span class="k">HRV</span><span class="delta">+1 · 직전 1초</span></label>
+                  </div>
+                </section>
               </div>
-              <section class="chartbox chart-focus" aria-label="집중도 최근 5분 구간 평균">
+              <section class="chartbox chart-focus" aria-label="집중도 최근 5분">
                 <div class="charthead"><span class="cap"><strong>집중도</strong> · 시간 변화</span><span class="cur">▲ 5분간 <b>+32</b></span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="집중도 12구간 평균: 55, 58, 60, 61, 64, 66, 68, 70, 73, 78, 82, 87 %"><div class="bar" style="height:55%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:60%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:64%"></div>
-<div class="bar" style="height:66%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar" style="height:73%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:82%"></div>
-<div class="bar now" style="height:87%"></div></div>
+                <p class="chart-note">최근 5분</p>
+                <div class="bars" role="img" aria-label="집중도 최근 5분: 55, 58, 60, 61, 64, 66, 68, 70, 73, 78, 82, 87 %"><div class="bar" style="height:55%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:64%"></div><div class="bar" style="height:66%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:73%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:82%"></div><div class="bar now" style="height:87%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
-              <section class="chartbox chart-relax" aria-label="이완도 최근 5분 구간 평균">
+              <section class="chartbox chart-relax" aria-label="이완도 최근 5분">
                 <div class="charthead"><span class="cap"><strong>이완도</strong> · 시간 변화</span><span class="cur"><b>64</b>%</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="이완도 12구간 평균: 43, 45, 48, 50, 52, 53, 55, 57, 59, 61, 62, 64 %"><div class="bar" style="height:43%"></div>
-<div class="bar" style="height:45%"></div>
-<div class="bar" style="height:48%"></div>
-<div class="bar" style="height:50%"></div>
-<div class="bar" style="height:52%"></div>
-<div class="bar" style="height:53%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:57%"></div>
-<div class="bar" style="height:59%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar now" style="height:64%"></div></div>
+                <p class="chart-note">최근 5분</p>
+                <div class="bars" role="img" aria-label="이완도 최근 5분: 43, 45, 48, 50, 52, 53, 55, 57, 59, 61, 62, 64 %"><div class="bar" style="height:43%"></div><div class="bar" style="height:45%"></div><div class="bar" style="height:48%"></div><div class="bar" style="height:50%"></div><div class="bar" style="height:52%"></div><div class="bar" style="height:53%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:57%"></div><div class="bar" style="height:59%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:62%"></div><div class="bar now" style="height:64%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
-              <section class="chartbox chart-emotion" aria-label="정서안정 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>정서안정</strong> · 시간 변화</span><span class="cur"><b>71</b>%</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="정서안정 12구간 평균: 60, 62, 61, 64, 65, 66, 65, 67, 68, 70, 70, 71 %"><div class="bar" style="height:60%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:64%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:66%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar now" style="height:71%"></div></div>
+              <section class="chartbox chart-emotion" aria-label="정서안정도 최근 5분">
+                <div class="charthead"><span class="cap"><strong>정서안정도</strong> · 시간 변화</span><span class="cur"><b>71</b>%</span></div>
+                <p class="chart-note">최근 5분</p>
+                <div class="bars" role="img" aria-label="정서안정도 최근 5분: 60, 62, 61, 64, 65, 66, 65, 67, 68, 70, 70, 71 %"><div class="bar" style="height:60%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:61%"></div><div class="bar" style="height:64%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:66%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:68%"></div><div class="bar" style="height:70%"></div><div class="bar" style="height:70%"></div><div class="bar now" style="height:71%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
-              <section class="chartbox chart-pulse" aria-label="BPM 최근 5분 구간 평균">
+              <section class="chartbox chart-pulse" aria-label="BPM 최근 5분">
                 <div class="charthead"><span class="cap"><strong>BPM</strong> · 시간 변화</span><span class="cur"><b>72</b>bpm</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균<br>천천히 낮아지는 중 · 안정</p>
-                <div class="bars" role="img" aria-label="BPM 12구간 평균: 79, 78, 78, 77, 76, 76, 75, 74, 74, 73, 72, 72 bpm"><div class="bar" style="height:79%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:77%"></div>
-<div class="bar" style="height:76%"></div>
-<div class="bar" style="height:76%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:74%"></div>
-<div class="bar" style="height:74%"></div>
-<div class="bar" style="height:73%"></div>
-<div class="bar" style="height:72%"></div>
-<div class="bar now" style="height:72%"></div></div>
+                <p class="chart-note">최근 5분 · 천천히 낮아지는 중</p>
+                <div class="bars" role="img" aria-label="BPM 최근 5분: 79, 78, 78, 77, 76, 76, 75, 74, 74, 73, 72, 72 bpm"><div class="bar" style="height:79%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:78%"></div><div class="bar" style="height:77%"></div><div class="bar" style="height:76%"></div><div class="bar" style="height:76%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:74%"></div><div class="bar" style="height:74%"></div><div class="bar" style="height:73%"></div><div class="bar" style="height:72%"></div><div class="bar now" style="height:72%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
-              <section class="chartbox chart-breath" aria-label="호흡 최근 5분 구간 평균">
+              <section class="chartbox chart-breath" aria-label="호흡 최근 5분">
                 <div class="charthead"><span class="cap"><strong>호흡</strong> · 시간 변화</span><span class="cur"><b>14</b>회/분</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균<br>천천히 낮아지는 중 · 안정</p>
-                <div class="bars" role="img" aria-label="호흡 12구간 평균: 19, 18, 18, 17, 17, 16, 16, 15, 15, 14, 14, 14 회/분"><div class="bar" style="height:79%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:71%"></div>
-<div class="bar" style="height:71%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar now" style="height:58%"></div></div>
+                <p class="chart-note">최근 5분 · 천천히 낮아지는 중</p>
+                <div class="bars" role="img" aria-label="호흡 최근 5분: 19, 18, 18, 17, 17, 16, 16, 15, 15, 14, 14, 14 회/분"><div class="bar" style="height:79%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:75%"></div><div class="bar" style="height:71%"></div><div class="bar" style="height:71%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:58%"></div><div class="bar now" style="height:58%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
-              <section class="chartbox chart-hrv" aria-label="HRV 최근 5분 구간 평균">
+              <section class="chartbox chart-hrv" aria-label="HRV 최근 5분">
                 <div class="charthead"><span class="cap"><strong>HRV</strong> · 시간 변화</span><span class="cur"><b>42</b>ms</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균 · 0–60ms 기준</p>
-                <div class="bars" role="img" aria-label="HRV 12구간 평균: 32, 33, 33, 35, 34, 36, 37, 38, 39, 40, 41, 42 ms"><div class="bar" style="height:53%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:57%"></div>
-<div class="bar" style="height:60%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:63%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar now" style="height:70%"></div></div>
+                <p class="chart-note">최근 5분 · 0–60ms 기준</p>
+                <div class="bars" role="img" aria-label="HRV 최근 5분: 32, 33, 33, 35, 34, 36, 37, 38, 39, 40, 41, 42 ms"><div class="bar" style="height:53%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:55%"></div><div class="bar" style="height:58%"></div><div class="bar" style="height:57%"></div><div class="bar" style="height:60%"></div><div class="bar" style="height:62%"></div><div class="bar" style="height:63%"></div><div class="bar" style="height:65%"></div><div class="bar" style="height:67%"></div><div class="bar" style="height:68%"></div><div class="bar now" style="height:70%"></div></div>
                 <div class="axis"><span>5분 전</span><span>지금</span></div>
               </section>
               <p class="hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
@@ -269,13 +234,6 @@
                 <button class="signal">🌱 잘 따라가요</button>
                 <button class="signal">💧 조금 어려워요</button>
                 <button class="signal">🌙 잠시 쉴게요</button>
-              </div>
-              <div class="bgm">
-                <div class="t">
-                  <div class="cap">가이드 · BGM</div>
-                  <div class="name">빗소리 명상 가이드</div>
-                </div>
-                <span class="state"><span class="dot"></span>동기 재생 중</span>
               </div>
             </div>
           </div>
@@ -303,128 +261,32 @@
                 <span class="total">/ 50:00</span>
               </div>
             </div>
-            <div class="metrics">
-              <label class="metric"><input type="radio" name="mobile-metric" value="focus" aria-label="집중도" checked><span class="k">집중도</span><span class="v">87<span class="u">%</span></span></label>
-              <label class="metric"><input type="radio" name="mobile-metric" value="relax" aria-label="이완도"><span class="k">이완도</span><span class="v">64<span class="u">%</span></span></label>
-              <label class="metric"><input type="radio" name="mobile-metric" value="emotion" aria-label="정서안정"><span class="k">정서안정</span><span class="v">71<span class="u">%</span></span></label>
-              <label class="metric"><input type="radio" name="mobile-metric" value="pulse" aria-label="BPM"><span class="k">BPM</span><span class="v">72<span class="u">bpm</span></span></label>
-              <label class="metric"><input type="radio" name="mobile-metric" value="breath" aria-label="호흡"><span class="k">호흡</span><span class="v">14<span class="u">회/분</span></span></label>
-              <label class="metric"><input type="radio" name="mobile-metric" value="hrv" aria-label="HRV"><span class="k">HRV</span><span class="v">42<span class="u">ms</span></span></label>
-            </div>
-            <section class="chartbox chart-focus" aria-label="집중도 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>집중도</strong> · 시간 변화</span><span class="cur">▲ 5분간 <b>+32</b></span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="집중도 12구간 평균: 55, 58, 60, 61, 64, 66, 68, 70, 73, 78, 82, 87 %"><div class="bar" style="height:55%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:60%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:64%"></div>
-<div class="bar" style="height:66%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar" style="height:73%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:82%"></div>
-<div class="bar now" style="height:87%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-relax" aria-label="이완도 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>이완도</strong> · 시간 변화</span><span class="cur"><b>64</b>%</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="이완도 12구간 평균: 43, 45, 48, 50, 52, 53, 55, 57, 59, 61, 62, 64 %"><div class="bar" style="height:43%"></div>
-<div class="bar" style="height:45%"></div>
-<div class="bar" style="height:48%"></div>
-<div class="bar" style="height:50%"></div>
-<div class="bar" style="height:52%"></div>
-<div class="bar" style="height:53%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:57%"></div>
-<div class="bar" style="height:59%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar now" style="height:64%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-emotion" aria-label="정서안정 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>정서안정</strong> · 시간 변화</span><span class="cur"><b>71</b>%</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균</p>
-                <div class="bars" role="img" aria-label="정서안정 12구간 평균: 60, 62, 61, 64, 65, 66, 65, 67, 68, 70, 70, 71 %"><div class="bar" style="height:60%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:61%"></div>
-<div class="bar" style="height:64%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:66%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar" style="height:70%"></div>
-<div class="bar now" style="height:71%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-pulse" aria-label="BPM 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>BPM</strong> · 시간 변화</span><span class="cur"><b>72</b>bpm</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균<br>천천히 낮아지는 중 · 안정</p>
-                <div class="bars" role="img" aria-label="BPM 12구간 평균: 79, 78, 78, 77, 76, 76, 75, 74, 74, 73, 72, 72 bpm"><div class="bar" style="height:79%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:78%"></div>
-<div class="bar" style="height:77%"></div>
-<div class="bar" style="height:76%"></div>
-<div class="bar" style="height:76%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:74%"></div>
-<div class="bar" style="height:74%"></div>
-<div class="bar" style="height:73%"></div>
-<div class="bar" style="height:72%"></div>
-<div class="bar now" style="height:72%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-breath" aria-label="호흡 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>호흡</strong> · 시간 변화</span><span class="cur"><b>14</b>회/분</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균<br>천천히 낮아지는 중 · 안정</p>
-                <div class="bars" role="img" aria-label="호흡 12구간 평균: 19, 18, 18, 17, 17, 16, 16, 15, 15, 14, 14, 14 회/분"><div class="bar" style="height:79%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:75%"></div>
-<div class="bar" style="height:71%"></div>
-<div class="bar" style="height:71%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar now" style="height:58%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-              <section class="chartbox chart-hrv" aria-label="HRV 최근 5분 구간 평균">
-                <div class="charthead"><span class="cap"><strong>HRV</strong> · 시간 변화</span><span class="cur"><b>42</b>ms</span></div>
-                <p class="chart-note">최근 5분 · 25초 구간 평균 · 0–60ms 기준</p>
-                <div class="bars" role="img" aria-label="HRV 12구간 평균: 32, 33, 33, 35, 34, 36, 37, 38, 39, 40, 41, 42 ms"><div class="bar" style="height:53%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:55%"></div>
-<div class="bar" style="height:58%"></div>
-<div class="bar" style="height:57%"></div>
-<div class="bar" style="height:60%"></div>
-<div class="bar" style="height:62%"></div>
-<div class="bar" style="height:63%"></div>
-<div class="bar" style="height:65%"></div>
-<div class="bar" style="height:67%"></div>
-<div class="bar" style="height:68%"></div>
-<div class="bar now" style="height:70%"></div></div>
-                <div class="axis"><span>5분 전</span><span>지금</span></div>
-              </section>
-            <p class="hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
-            <div class="signals">
-              <button class="signal">🌱 잘 따라가요</button>
-              <button class="signal">💧 조금 어려워요</button>
-              <button class="signal">🌙 잠시 쉴게요</button>
-            </div>
-            <div class="bgm">
-              <div class="t">
-                <div class="cap">가이드 · BGM</div>
-                <div class="name">빗소리 명상 가이드</div>
+            <div class="rightcol">
+              <div class="status"><span class="dot"></span><span>LINK BAND에서 실시간으로 측정 중입니다</span></div>
+              <div class="metric-sections">
+                <section class="metric-section">
+                  <h3>마음 <small>MIND</small></h3>
+                  <div class="metric-items">
+                    <label class="metric"><input type="radio" name="mobile-metric" value="focus" aria-label="집중도" checked><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="87 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>87</b><small>%</small></span></span><span class="k">집중도</span><span class="delta">+3 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="mobile-metric" value="relax" aria-label="이완도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="64 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>64</b><small>%</small></span></span><span class="k">이완도</span><span class="delta">+1 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="mobile-metric" value="emotion" aria-label="정서안정도"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="71 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>71</b><small>%</small></span></span><span class="k">정서안정도</span><span class="delta">변화 없음</span></label>
+                  </div>
+                </section>
+                <section class="metric-section">
+                  <h3>몸 <small>BODY</small></h3>
+                  <div class="metric-items">
+                    <label class="metric"><input type="radio" name="mobile-metric" value="pulse" aria-label="BPM"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="72 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>72</b><small>bpm</small></span></span><span class="k">BPM</span><span class="delta">-1 · 직전 1초</span></label>
+                    <label class="metric"><input type="radio" name="mobile-metric" value="breath" aria-label="호흡"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="58 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>14</b><small>회/분</small></span></span><span class="k">호흡</span><span class="delta">변화 없음</span></label>
+                    <label class="metric"><input type="radio" name="mobile-metric" value="hrv" aria-label="HRV"><span class="dial"><svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="51"/><circle class="arc" cx="60" cy="60" r="51" pathLength="100" stroke-dasharray="70 100" transform="rotate(-90 60 60)"/></svg><span class="num"><b>42</b><small>ms</small></span></span><span class="k">HRV</span><span class="delta">+1 · 직전 1초</span></label>
+                  </div>
+                </section>
               </div>
-              <span class="state"><span class="dot"></span>동기 재생 중</span>
+              <p class="hint">지금 상태를 조용히 알려 주세요 · 상담사에게만 보여요</p>
+              <div class="signals">
+                <button class="signal">🌱 잘 따라가요</button>
+                <button class="signal">💧 조금 어려워요</button>
+                <button class="signal">🌙 잠시 쉴게요</button>
+              </div>
             </div>
           </div>
         </div>
