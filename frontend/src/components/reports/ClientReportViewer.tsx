@@ -5,6 +5,7 @@ import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
+import { ENABLE_STT_AI_RECORD } from '../../lib/features';
 import { parseSubjectiveState } from '../../lib/api/checkin';
 import {
   adaptReportContent,
@@ -83,7 +84,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
           />
         )}
 
-        {!aiRecordUnavailable && summary && (
+        {!aiRecordUnavailable && ENABLE_STT_AI_RECORD && summary && (
           <SummaryCard title="AI 요약">
             <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {summary}
@@ -91,7 +92,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
           </SummaryCard>
         )}
 
-        {!aiRecordUnavailable && insights.length > 0 && (
+        {!aiRecordUnavailable && ENABLE_STT_AI_RECORD && insights.length > 0 && (
           <SummaryCard title="인사이트 카드">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {insights.map((insight, i) => (

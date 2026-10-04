@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { RecordResponse, TranscriptResponse } from '../../lib/api/audio';
+import { ENABLE_STT_AI_RECORD } from '../../lib/features';
 import { AISummaryTab } from './AISummaryTab';
 import { TranscriptTab } from './TranscriptTab';
 import { CounselorNotesTab } from './CounselorNotesTab';
@@ -19,24 +20,30 @@ export function RecordView({ record, transcript, onUpdated }: Props) {
   const isManual = record.status === 'manual';
   // SDD-085 G5 확장: 오디오 분석 신뢰도 낮으면 AI 요약 탭 숨김 — 원본 전사문·상담사 메모만
   const isLowConfidence = record.ai_summary?.transcript_confidence === 'low';
+  // STT AI 기록 MVP 비활성 — AI 요약·전사문 탭을 노출하지 않고 상담사 메모만 남긴다.
+  const showSttTabs = ENABLE_STT_AI_RECORD;
   const [tab, setTab] = useState<TabId>(
-    isManual ? 'notes' : isLowConfidence ? 'transcript' : 'summary',
+    showSttTabs ? (isManual ? 'notes' : isLowConfidence ? 'transcript' : 'summary') : 'notes',
   );
 
-  const tabs: { id: TabId; label: string }[] = isManual
+  const tabs: { id: TabId; label: string }[] = !showSttTabs
     ? [{ id: 'notes', label: '상담사 메모' }]
-    : [
-        ...(isLowConfidence ? [] : [{ id: 'summary' as TabId, label: 'AI 요약' }]),
-        { id: 'transcript', label: '전사문' },
-        { id: 'notes', label: '상담사 메모' },
-      ];
+    : isManual
+      ? [{ id: 'notes', label: '상담사 메모' }]
+      : [
+          ...(isLowConfidence ? [] : [{ id: 'summary' as TabId, label: 'AI 요약' }]),
+          { id: 'transcript', label: '전사문' },
+          { id: 'notes', label: '상담사 메모' },
+        ];
 
   // 상태가 나중에 manual/low 로 갱신돼도 존재하지 않는 탭이 남지 않도록 보정
-  const activeTab: TabId = isManual
+  const activeTab: TabId = !showSttTabs
     ? 'notes'
-    : isLowConfidence && tab === 'summary'
-      ? 'transcript'
-      : tab;
+    : isManual
+      ? 'notes'
+      : isLowConfidence && tab === 'summary'
+        ? 'transcript'
+        : tab;
 
   return (
     <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 space-y-4">
@@ -48,7 +55,7 @@ export function RecordView({ record, transcript, onUpdated }: Props) {
         </div>
       )}
 
-      {isLowConfidence && (
+      {showSttTabs && isLowConfidence && (
         <div className="rounded-xl border border-[#F5E2B8] bg-amber-50 px-4 py-3 text-sm text-[#8A6B1F]">
           오디오 분석 신뢰도가 낮아 AI 요약을 제공하지 않습니다. 아래 전사문은 녹음 원본을 그대로
           옮긴 것입니다.
