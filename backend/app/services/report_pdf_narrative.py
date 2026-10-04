@@ -272,6 +272,12 @@ def _smooth(values, half):
     return out
 
 
+def _axis_label(value):
+    """y축 눈금값을 읽기 좋게 정리한다(정수면 정수, 아니면 소수 1자리)."""
+    text = f'{value:.1f}'
+    return text.rstrip('0').rstrip('.') if '.' in text else text
+
+
 def trend_svg(metric, timeline):
     """실측만 연결하며 웹과 동일한 범위와 결측 단절·스무딩을 사용한다."""
     from html import escape
@@ -284,18 +290,24 @@ def trend_svg(metric, timeline):
     smoothed = _smooth(raw, half)
     ranges = {'respiratory_rate': (10, 20), 'heart_rate': (55, 90), 'hrv': (20, 80)}
     low, high = min(*valid, *ranges.get(metric, ())), max(*valid, *ranges.get(metric, ()))
+    unit = {'hrv': '밀리초', 'respiratory_rate': '회/분', 'heart_rate': '회/분'}.get(metric, '점')
+    # y축 눈금(단위 포함)을 왼쪽에 두기 위해 플롯 왼쪽 여백을 확보한다(웹 TrendLineChart와 동일).
+    top, bottom, left, right = 18, 158, 48, 300
+    mid = (left + right) // 2
+    half_width = (right - left) // 2
     segments, last = [[]], None
     for idx, point in enumerate(timeline):
         value = smoothed[idx]
         if value is None:
             segments.append([])
             continue
-        x, y = 16 + point['min'] / duration * 284, 88 if high == low else 158 - (value - low) / (high - low) * 140
+        x = left + point['min'] / duration * (right - left)
+        y = (top + bottom) / 2 if high == low else bottom - (value - low) / (high - low) * (bottom - top)
         last = (x, y)
         segments[-1].append(f'{x:.1f},{y:.1f}')
     lines = ''.join(f'<polyline points="{" ".join(segment)}" fill="none" stroke="#5F0080" stroke-width="2.8"/>' for segment in segments if len(segment) > 1)
     endpoint = f'<circle cx="{last[0]:.1f}" cy="{last[1]:.1f}" r="4" fill="#5F0080"/>' if last else ''
-    return f'<figure><svg viewBox="0 0 350 195"><title>{escape(METRIC_LABELS[metric])}의 명상 시간 중 변화</title><rect x="16" y="18" width="142" height="140" fill="#f3eff7"/><rect x="158" y="18" width="142" height="140" fill="#efe6f6"/><path d="M158 18V158" stroke="#c9bcd8" stroke-dasharray="3 5"/>{lines}{endpoint}<g fill="#63566B" font-size="11"><text x="16" y="181">시작</text><text x="158" y="181" text-anchor="middle">{duration / 2:g}분</text><text x="300" y="181" text-anchor="end">{duration:g}분</text></g></svg><figcaption>명상 시간 중 {METRIC_LABELS[metric]} 흐름</figcaption></figure>'
+    return f'<figure><svg viewBox="0 0 350 195"><title>{escape(METRIC_LABELS[metric])}의 명상 시간 중 변화</title><rect x="{left}" y="{top}" width="{half_width}" height="{bottom - top}" fill="#f3eff7"/><rect x="{mid}" y="{top}" width="{half_width}" height="{bottom - top}" fill="#efe6f6"/><path d="M{mid} {top}V{bottom}" stroke="#c9bcd8" stroke-dasharray="3 5"/>{lines}{endpoint}<g fill="#63566B" font-size="10"><text x="{left - 6}" y="{top + 9}" text-anchor="end">{_axis_label(high)}{unit}</text><text x="{left - 6}" y="{bottom - 3}" text-anchor="end">{_axis_label(low)}{unit}</text></g><g fill="#63566B" font-size="11"><text x="{left}" y="181">시작</text><text x="{mid}" y="181" text-anchor="middle">{duration / 2:g}분</text><text x="{right}" y="181" text-anchor="end">{duration:g}분</text></g></svg><figcaption>명상 시간 중 {METRIC_LABELS[metric]} 흐름</figcaption></figure>'
 
 
 def dual_bar_svg(m):

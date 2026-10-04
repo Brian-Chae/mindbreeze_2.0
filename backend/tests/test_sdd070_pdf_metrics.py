@@ -66,7 +66,8 @@ def test_timeline_gaps_hrv_alias_and_no_score_fabrication():
     timeline[1]['hrv'] = None
     svg = trend_svg('hrv', timeline)
     assert svg.count('<polyline') == 1
-    assert '16.0,' not in svg.split('<polyline')[1].split('/>')[0]
+    # 결측(min=1) 앞의 min=0 지점은 연결하지 않는다 — 플롯 왼쪽 시작 x(48)가 polyline에 없어야 한다.
+    assert '48.0,' not in svg.split('<polyline')[1].split('/>')[0]
     content['eeg']['timeline'] = []
     content['eeg']['metrics'] = {'focus': 99, 'relaxation': 99, 'stress': 0}
     _, body, mind, _ = resolve_pdf_narrative(content)

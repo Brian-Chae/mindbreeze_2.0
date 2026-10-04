@@ -4,8 +4,17 @@ import { METRIC_DEFINITIONS, metricChangeInterpretation, metricDirectionGuide, t
 import { chipLabel, type DisplayNarrative, type TimelineLikePoint } from '../../lib/report/resolve-narrative';
 import './narrative-sections.css';
 
+// 권장(정상) 범위 — 차트 배경 밴드로 표시. 호흡수·심박수는 안정 시 성인 정상범위,
+// 심박변이(SDNN)는 코드베이스 참조("정상 SDNN: 30-100ms")를 따른다.
 const BODY_RANGES: Partial<Record<MetricId, readonly [number, number, string]>> = {
-  respiratory_rate: [10, 20, '회/분'], heart_rate: [55, 90, '회/분'], hrv: [20, 80, '밀리초'],
+  respiratory_rate: [12, 20, '회/분'], heart_rate: [60, 100, '회/분'], hrv: [30, 100, '밀리초'],
+};
+
+// 표시용 고정 스케일(y축) — 측정값이 정상범위를 벗어나도 변동이 과장되지 않도록
+// 지표별 생리학적 전체 범위로 고정한다(자동 스케일 제거). 마음 지표는 정규화 신호라
+// 세션 내 상대 변화가 의미 있어 기존처럼 자동 스케일을 유지한다.
+const BODY_SCALE: Partial<Record<MetricId, readonly [number, number]>> = {
+  respiratory_rate: [6, 24], heart_rate: [40, 120], hrv: [0, 200],
 };
 
 const UNIT_LABELS: Record<MetricId, string> = {
@@ -37,6 +46,11 @@ function metricValue(point: TimelineLikePoint, id: MetricId): number | null {
 
 function timeLabel(minutes: number): string {
   return `${Number(minutes.toFixed(1))}분`;
+}
+
+/** y축 눈금값을 읽기 좋게 정리한다(정수면 정수, 아니면 소수 1자리). */
+function axisLabel(value: number): string {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(1)));
 }
 
 /**
@@ -104,15 +118,27 @@ function TrendLineChart({ metric, timeline, duration }: {
   // 1초 윈도우의 잡음을 눌러 전체 추이를 보여준다(대략 전체 길이의 5% 반경).
   const half = Math.max(2, Math.round(valid.length * 0.05));
   const smoothed = smoothSeries(values, half);
+  const scale = BODY_SCALE[metric.id];
   const range = BODY_RANGES[metric.id];
-  const low = Math.min(range?.[0] ?? Math.min(...valid), ...valid);
-  const high = Math.max(range?.[1] ?? Math.max(...valid), ...valid);
+  const unit = UNIT_LABELS[metric.id];
+  // 몸 지표는 고정 스케일(y축)로 그려 작은 변동이 과장되지 않게 한다. 마음 지표는 자동 스케일 유지.
+  const low = scale ? scale[0] : Math.min(...valid);
+  const high = scale ? scale[1] : Math.max(...valid);
   const span = high - low || 1;
-  // 몸 지표만 참고 범위 밴드를 그린다(마음 지표는 정규화 신호라 기준 범위가 없다).
+  // 플롯 영역 — 왼쪽에 y축 눈금(단위 포함)을 둘 공간을 확보한다.
+  const TOP = 18, BOTTOM = 158, LEFT = 48, RIGHT = 300;
+  const MID = (LEFT + RIGHT) / 2;
+  const toX = (min: number) => LEFT + (min / duration) * (RIGHT - LEFT);
+  // 고정 스케일을 벗어난 측정값은 차트 가장자리에 붙여(클램프) 선이 밖으로 넘치지 않게 한다.
+  const toY = (value: number) => {
+    const clamped = Math.min(high, Math.max(low, value));
+    return high === low ? (TOP + BOTTOM) / 2 : BOTTOM - ((clamped - low) / span) * (BOTTOM - TOP);
+  };
+  // 몸 지표만 권장(정상) 범위 밴드를 그린다(마음 지표는 정규화 신호라 기준 범위가 없다).
   let band: { y: number; height: number } | null = null;
   if (range) {
-    const bandTop = 158 - ((range[1] - low) / span) * 140;
-    const bandBottom = 158 - ((range[0] - low) / span) * 140;
+    const bandTop = BOTTOM - ((range[1] - low) / span) * (BOTTOM - TOP);
+    const bandBottom = BOTTOM - ((range[0] - low) / span) * (BOTTOM - TOP);
     band = { y: bandTop, height: Math.max(0, bandBottom - bandTop) };
   }
   const segments: string[][] = [[]];
@@ -120,28 +146,33 @@ function TrendLineChart({ metric, timeline, duration }: {
   timeline.forEach((point, index) => {
     const value = smoothed[index];
     if (value === null) { segments.push([]); return; }
-    const x = 16 + (point.min! / duration) * 284;
-    const y = high === low ? 88 : 158 - ((value - low) / span) * 140;
+    const x = toX(point.min!);
+    const y = toY(value);
     segments[segments.length - 1].push(`${x.toFixed(1)},${y.toFixed(1)}`);
     endpoint = { x, y };
   });
   // 결측 구간은 연결하지 않으며 마지막 유효 측정값에만 끝점을 표시한다.
   const lastPoint = endpoint as { x: number; y: number } | null;
+  const rangeLabel = range ? ` · 권장 범위 ${range[0]}~${range[1]}${range[2]}` : '';
   return <figure>
     <svg className="trend" viewBox="0 0 350 195" role="img" aria-labelledby={`${id}-title ${id}-desc`}>
       <title id={`${id}-title`}>{`${metric.label}의 명상 시간 중 변화`}</title>
-      <desc id={`${id}-desc`}>실제 측정값의 흐름입니다. 배경은 전반·후반 구간 구분이며 임상 기준이 아닙니다. 결측 구간은 연결하지 않습니다.</desc>
-      <rect x="16" y="18" width="142" height="140" fill="#f3eff7" />
-      <rect x="158" y="18" width="142" height="140" fill="#efe6f6" />
-      <path d="M158 18V158" stroke="#c9bcd8" strokeDasharray="3 5" />
-      {band && <rect x="16" y={band.y} width="284" height={band.height} fill="#e0f5ee" opacity="0.55" />}
+      <desc id={`${id}-desc`}>실제 측정값의 흐름입니다. 왼쪽 y축은 측정 범위(단위 포함), 배경은 전반·후반 구간 구분, 연두색 띠는 권장(정상) 범위입니다. 결측 구간은 연결하지 않습니다.</desc>
+      <rect x={LEFT} y={TOP} width={(RIGHT - LEFT) / 2} height={BOTTOM - TOP} fill="#f3eff7" />
+      <rect x={MID} y={TOP} width={(RIGHT - LEFT) / 2} height={BOTTOM - TOP} fill="#efe6f6" />
+      <path d={`M${MID} ${TOP}V${BOTTOM}`} stroke="#c9bcd8" strokeDasharray="3 5" />
+      {band && <rect x={LEFT} y={band.y} width={RIGHT - LEFT} height={band.height} fill="#e0f5ee" opacity="0.55" />}
       {segments.filter((segment) => segment.length > 1).map((segment, i) => <polyline key={i} points={segment.join(' ')} fill="none" stroke="#5F0080" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" />)}
       {lastPoint && <circle cx={lastPoint.x} cy={lastPoint.y} r="4" fill="#5F0080" stroke="white" strokeWidth="2" />}
+      <g fill="#6b6570" fontSize="10">
+        <text x={LEFT - 6} y={TOP + 9} textAnchor="end">{axisLabel(high)}{unit}</text>
+        <text x={LEFT - 6} y={BOTTOM - 3} textAnchor="end">{axisLabel(low)}{unit}</text>
+      </g>
       <g fill="#5A5A5A" fontSize="11">
-        <text x="16" y="181">시작</text><text x="158" y="181" textAnchor="middle">{timeLabel(duration / 2)}</text><text x="300" y="181" textAnchor="end">{timeLabel(duration)}</text>
+        <text x={LEFT} y="181">시작</text><text x={MID} y="181" textAnchor="middle">{timeLabel(duration / 2)}</text><text x={RIGHT} y="181" textAnchor="end">{timeLabel(duration)}</text>
       </g>
     </svg>
-    <figcaption>명상 시간 중 {metric.label} 흐름</figcaption>
+    <figcaption>명상 시간 중 {metric.label} 흐름{rangeLabel}</figcaption>
   </figure>;
 }
 
