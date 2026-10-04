@@ -15,7 +15,7 @@ def measured_content():
 
 def test_pdf_contains_web_cards_and_chips():
     html = render_report_html({"content": measured_content()})
-    for text in ("3회/분", "6회/분", "8밀리초", "30%", "50%", "40%",
+    for text in ("3회/분", "6회/분", "8밀리초", "15", "20",
                  "명상 시작(전반) 평균 대비 마무리(후반) 평균", "1분 동안 숨을 쉬는 횟수예요.",
                  "journey-summary", "metric-card", "polyline", "1.5분", "3분"):
         assert text in html
@@ -34,9 +34,9 @@ def test_missing_metric_does_not_invent_stability():
     ("respiratory_rate", 18, 17, "down", "1회/분"),
     ("heart_rate", 70, 72.9, "stable", "2.9회/분"),
     ("hrv", 40, 45, "up", "5밀리초"),
-    ("focus", 100, 95, "down", "5%"),
-    ("focus", 200, 195, "stable", "2%"),
-    ("focus", 0, 1, "up", "100%"),
+    ("focus", 100, 95, "down", "5"),
+    ("focus", 200, 195, "stable", "5"),
+    ("focus", 0, 1, "up", "1"),
 ])
 def test_web_direction_and_js_rounding(metric, early, late, direction, label):
     from app.services.report_pdf_narrative import build_metric_narrative
@@ -85,6 +85,6 @@ def test_real_pdf_metric_pages():
     texts = [p.extract_text() for p in reader.pages]
     for expected in ('3회/분', '6회/분', '8밀리초', '1분 동안 숨을 쉬는 횟수예요.'):
         assert expected in texts[1]
-    for expected in ('30%', '50%', '40%', '실제 감정을 직접 측정하지 않아요.'):
+    for expected in ('15', '20', '실제 감정을 직접 측정하지 않아요.'):
         assert expected in texts[2]
     assert '1.5분' in texts[0] and '3분' in texts[0]

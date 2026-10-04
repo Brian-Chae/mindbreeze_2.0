@@ -28,7 +28,7 @@ export interface MetricNarrative {
   id: MetricId;
   label: string;
   direction: Direction;
-  /** 부호 있는 변화량(단위) 또는 변화율(%) */
+  /** 부호 있는 변화량(단위 지표는 단위, 정규화 지표는 포인트) */
   delta: number;
   /** 표시용 변화량 라벨 (단위/%만, 방향 기호 제외) */
   deltaLabel: string;
@@ -193,25 +193,12 @@ function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
   const rawDelta = input.late - input.early;
   const isNormalized = NORMALIZED_IDS.has(input.id);
 
-  let delta: number;
-  let deltaLabel: string;
-
-  if (isNormalized) {
-    const ratePct =
-      input.early === 0
-        ? rawDelta === 0
-          ? 0
-          : rawDelta > 0
-            ? 100
-            : -100
-        : (rawDelta / Math.abs(input.early)) * 100;
-    delta = round1(ratePct);
-    deltaLabel = `${Math.abs(Math.round(ratePct))}%`;
-  } else {
-    const unitId = input.id as 'respiratory_rate' | 'heart_rate' | 'hrv';
-    delta = round1(rawDelta);
-    deltaLabel = formatUnitDelta(unitId, Math.abs(delta));
-  }
+  // 정규화 지표(0~100)는 변화율(%) 대신 절대 포인트 차이로 표기한다.
+  // 0에 가까운 전반값으로 나누면 변화율이 수백 %로 왜곡되기 때문(예: 감정안정도 389%).
+  const delta = round1(rawDelta);
+  const deltaLabel = isNormalized
+    ? `${Math.abs(round1(rawDelta))}`
+    : formatUnitDelta(input.id as 'respiratory_rate' | 'heart_rate' | 'hrv', Math.abs(delta));
 
   return {
     id: input.id,

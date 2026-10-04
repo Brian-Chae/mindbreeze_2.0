@@ -112,11 +112,14 @@ def simplify(text):
 
 def build_metric_narrative(metric, early, late):
     raw = late - early
-    delta = raw if metric in THRESHOLDS else ((raw / abs(early) * 100) if early else (0 if raw == 0 else 100 if raw > 0 else -100))
+    # 방향 판단은 변화율 기준 유지(정규화 5% 임계, 단위는 지표별 임계)
+    rate = (raw / abs(early) * 100) if early else (0 if raw == 0 else 100 if raw > 0 else -100)
+    delta_for_direction = raw if metric in THRESHOLDS else rate
     threshold = THRESHOLDS.get(metric, 5)
-    direction = 'stable' if abs(delta) < threshold else 'up' if delta > 0 else 'down'
-    rounded = math.floor(delta * 10 + .5) / 10
-    label = f'{abs(rounded):g}{"밀리초" if metric == "hrv" else "회/분"}' if metric in THRESHOLDS else f'{abs(math.floor(delta + .5))}%'
+    direction = 'stable' if abs(delta_for_direction) < threshold else 'up' if delta_for_direction > 0 else 'down'
+    # 표시 변화량은 절대 차이(단위 지표는 단위, 정규화 지표는 포인트) — 변화율 %는 0 근처에서 왜곡
+    rounded = math.floor(raw * 10 + .5) / 10
+    label = f'{abs(rounded):g}{"밀리초" if metric == "hrv" else "회/분"}' if metric in THRESHOLDS else f'{abs(rounded):g}'
     return dict(id=metric, label=METRIC_LABELS[metric], direction=direction, delta=rounded,
                 deltaLabel=label, arrow={'up': '↑', 'down': '↓', 'stable': '→'}[direction],
                 sentence=SENTENCE_TEMPLATES[metric][direction])
