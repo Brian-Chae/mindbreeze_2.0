@@ -81,10 +81,22 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 .narrative-copy {{ font-size: {9 * scale}pt; margin-bottom: 3mm; }}
 .metric-card {{ display: table; width: 100%; padding: {3 * scale}mm; margin: 3mm 0; border: 1px solid #D1EADB; border-radius: 3mm; background: #F1FAF5; break-inside: avoid; font-size: {8.5 * scale}pt; line-height: 1.5; }}
 .mind .metric-card {{ background: #F5EFF9; border-color: #E8D9EF; }}
-.metric-copy {{ display: table-cell; width: 65%; vertical-align: middle; padding-right: 3mm; }}
+.metric-copy {{ display: table-cell; width: 60%; vertical-align: middle; padding-right: 3mm; }}
 .metric-card h3 {{ font-size: {10 * scale}pt; margin: 0 0 1mm; }}
-.metric-card figure {{ display: table-cell; width: 35%; margin: 0; vertical-align: middle; }}
+.metric-charts {{ display: table-cell; width: 40%; vertical-align: middle; }}
+.metric-charts figure {{ margin: 0 0 1mm; }}
 .metric-card svg {{ width: 100%; }}
+.metric-copy .avg-row {{ margin: 1mm 0; }}
+.metric-copy .avg-value {{ font-size: {19 * scale}pt; color: #5F0080; font-weight: 800; line-height: 1.2; }}
+.metric-copy .avg-unit {{ font-size: 9pt; color: #302537; }}
+.metric-copy .avg-label {{ font-size: 7pt; color: #63566B; }}
+.metric-copy .delta-row {{ margin: 1mm 0; font-size: {8.5 * scale}pt; }}
+.metric-copy .delta-row b {{ font-weight: 700; }}
+.metric-copy .delta-row .arrow {{ color: #63566B; }}
+.metric-copy .delta-pill {{ font-weight: 700; font-size: 7pt; padding: .5mm 2mm; border-radius: 2mm; }}
+.metric-copy .delta-pill.up {{ background: #E0FBF3; color: #00b394; }}
+.metric-copy .delta-pill.down {{ background: #FDE7E6; color: #e5484d; }}
+.metric-copy .delta-pill.flat {{ background: #F0EDF3; color: #63566B; }}
 .metric-card figcaption,.caption {{ font-size: {7 * scale}pt; color: #63566B; }}
 .delta {{ font-size: {19 * scale}pt; color: #5F0080; font-weight: 700; line-height: 1.3; }}
 .definition,.guide {{ margin-top: 1mm; color: #63566B; }}
@@ -107,7 +119,7 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 <p class="note">몸의 신호가 오르거나 내렸다는 사실만으로 건강 상태나 명상의 효과를 판단하지 않아요. 측정 자료가 부족한 항목은 비교할 수 없어요.</p></section>
 <section class="mind"><p class="eyebrow">04 · 마음의 변화</p><h2>지금 이 순간에<br>조금 더 가까이</h2><p class="lead">마음의 신호가 어떻게 흘렀는지, 나의 느낌과 함께 읽어보세요.</p><div class="rule"></div>
 <p class="copy narrative-copy">{fields['mind']}</p>{mind_cards}
-<p class="note">%는 명상 시작(전반) 평균 대비 마무리(후반) 평균의 상대 변화율입니다. 감정안정도 흐름은 스트레스 신호의 역방향 근사이며, 실제로 느낀 감정을 직접 측정한 값은 아닙니다. 측정 결과보다 나의 경험을 우선하여 읽어 주세요.</p></section>
+<p class="note">변화량은 명상 시작(전반) 평균과 마무리(후반) 평균의 차이입니다. 감정안정도 흐름은 스트레스 신호의 역방향 근사이며, 실제로 느낀 감정을 직접 측정한 값은 아닙니다. 측정 결과보다 나의 경험을 우선하여 읽어 주세요.</p></section>
 <section><p class="eyebrow">05 · 마무리</p><h2>오늘의 작은 쉼을,<br>내일의 나에게도</h2><p class="lead">명상마다 흐름은 달라질 수 있어요.<br>오늘 느꼈던 나의 감각 하나를 기억해 두면 어떨까요?</p>
 <div class="practice"><p class="eyebrow">몸을 위한 다음 제안</p><h3>시작할 때, 몸이 머무를 시간을 주세요</h3><p>다음에는 처음 1분을 편안히 자리 잡는 시간으로 가져보세요. 어깨의 힘을 내려놓고, 평소의 호흡이 오가는 감각을 느껴봐요.</p></div>
 <div class="practice mind"><p class="eyebrow">마음을 위한 다음 제안</p><h3>알아차린 순간, 다시 호흡으로 돌아와요</h3><p>5분만 나에게 머물러보세요. 생각이 다른 곳으로 향해도 괜찮아요. 알아차렸다면, 지금의 호흡에 부드럽게 주의를 돌려봐요.</p></div>

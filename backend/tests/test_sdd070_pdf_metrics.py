@@ -15,7 +15,7 @@ def measured_content():
 
 def test_pdf_contains_web_cards_and_chips():
     html = render_report_html({"content": measured_content()})
-    for text in ("3회/분", "6회/분", "8밀리초", "15", "20",
+    for text in ("회/분", "밀리초", "명상 전체 평균", "전반", "후반", "15", "20",
                  "명상 시작(전반) 평균 대비 마무리(후반) 평균", "1분 동안 숨을 쉬는 횟수예요.",
                  "journey-summary", "metric-card", "polyline", "1.5분", "3분"):
         assert text in html
@@ -83,7 +83,7 @@ def test_real_pdf_metric_pages():
     reader = PdfReader(BytesIO(generate_report_pdf({'content': measured_content()})))
     assert len(reader.pages) == 4
     texts = [p.extract_text() for p in reader.pages]
-    for expected in ('3회/분', '6회/분', '8밀리초', '1분 동안 숨을 쉬는 횟수예요.'):
+    for expected in ('회/분', '밀리초', '1분 동안 숨을 쉬는 횟수예요.'):
         assert expected in texts[1]
     for expected in ('15', '20', '실제 감정을 직접 측정하지 않아요.'):
         assert expected in texts[2]

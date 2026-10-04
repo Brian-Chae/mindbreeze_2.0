@@ -157,13 +157,15 @@ def build_metric_narrative(metric, early, late, overall=None):
     # 표시 변화량은 절대 차이(단위 지표는 단위, 정규화 지표는 포인트) — 변화율 %는 0 근처에서 왜곡
     rounded = math.floor(raw * 10 + .5) / 10
     label = f'{abs(rounded):g}{"밀리초" if metric == "hrv" else "회/분"}' if metric in THRESHOLDS else f'{abs(rounded):g}'
+    ov = overall if overall is not None else (early + late) / 2
     if metric in ('focus', 'relaxation', 'emotional_stability'):
-        ov = overall if overall is not None else (early + late) / 2
         sentence = mind_sentence(metric, ov, early, late, label, direction)
     else:
         sentence = SENTENCE_TEMPLATES[metric][direction]
-    return dict(id=metric, label=METRIC_LABELS[metric], direction=direction, delta=rounded,
-                deltaLabel=label, arrow={'up': '↑', 'down': '↓', 'stable': '→'}[direction],
+    unit = {'hrv': '밀리초', 'respiratory_rate': '회/분', 'heart_rate': '회/분'}.get(metric, '점')
+    return dict(id=metric, label=METRIC_LABELS[metric], direction=direction, overall=round(ov, 1),
+                early=early, late=late, delta=rounded, deltaLabel=label,
+                arrow={'up': '↑', 'down': '↓', 'stable': '→'}[direction], unit=unit,
                 sentence=sentence)
 
 
@@ -291,11 +293,31 @@ def trend_svg(metric, timeline):
         x, y = 16 + point['min'] / duration * 284, 88 if high == low else 158 - (value - low) / (high - low) * 140
         last = (x, y)
         segments[-1].append(f'{x:.1f},{y:.1f}')
-    bands = ''.join(f'<rect x="16" y="{18 + i * 28}" width="284" height="28" fill="{color}" opacity=".24"/>' for i, color in enumerate(('#59CE90', '#93E5B9', '#E8E8E8', '#FFC9C7', '#F9746B')))
     lines = ''.join(f'<polyline points="{" ".join(segment)}" fill="none" stroke="#5F0080" stroke-width="2.8"/>' for segment in segments if len(segment) > 1)
     endpoint = f'<circle cx="{last[0]:.1f}" cy="{last[1]:.1f}" r="4" fill="#5F0080"/>' if last else ''
-    caption = f'{low:g}~{high:g}{"밀리초" if metric == "hrv" else "회/분"} 범위' if metric in ranges else '상대적 높낮이 (개인 기준)'
-    return f'<figure><svg viewBox="0 0 350 195"><title>{escape(METRIC_LABELS[metric])}의 명상 시간 중 변화</title>{bands}<path d="M158 18V158" stroke="#aaa" stroke-dasharray="3 5"/>{lines}{endpoint}<g fill="#63566B" font-size="11"><text x="310" y="40">높음</text><text x="310" y="92">보통</text><text x="310" y="148">낮음</text><text x="16" y="181">시작</text><text x="158" y="181" text-anchor="middle">{duration / 2:g}분</text><text x="300" y="181" text-anchor="end">{duration:g}분</text></g></svg><figcaption>{caption}</figcaption></figure>'
+    return f'<figure><svg viewBox="0 0 350 195"><title>{escape(METRIC_LABELS[metric])}의 명상 시간 중 변화</title><rect x="16" y="18" width="142" height="140" fill="#f3eff7"/><rect x="158" y="18" width="142" height="140" fill="#efe6f6"/><path d="M158 18V158" stroke="#c9bcd8" stroke-dasharray="3 5"/>{lines}{endpoint}<g fill="#63566B" font-size="11"><text x="16" y="181">시작</text><text x="158" y="181" text-anchor="middle">{duration / 2:g}분</text><text x="300" y="181" text-anchor="end">{duration:g}분</text></g></svg><figcaption>명상 시간 중 {METRIC_LABELS[metric]} 흐름</figcaption></figure>'
+
+
+def dual_bar_svg(m):
+    """웹 DualBarChart 와 동일한 전반 vs 후반 이중 막대."""
+    from html import escape
+    max_map = {'respiratory_rate': 20, 'heart_rate': 90, 'hrv': 80, 'focus': 100, 'relaxation': 100, 'emotional_stability': 100}
+    unit, mx = m['unit'], max_map[m['id']]
+    early, late = m['early'], m['late']
+    W, H, pad, barH, gap, labelW = 250, 92, 6, 22, 14, 32
+    scale = W - 2 * pad - labelW - 50
+    w1 = max(3, early / mx * scale)
+    w2 = max(3, late / mx * scale)
+    rowY1 = H / 2 - barH - gap / 2
+    rowY2 = H / 2 + gap / 2
+    return (f'<figure class="dual-bar"><svg viewBox="0 0 {W} {H}"><title>{escape(m["label"])} 전반 vs 후반 평균</title>'
+            f'<text x="{pad}" y="{rowY1 + barH / 2:.0f}" font-size="10" fill="#6b6570">전반</text>'
+            f'<rect x="{pad + labelW}" y="{rowY1}" width="{w1:.1f}" height="{barH}" rx="5" fill="#d9d2e2"/>'
+            f'<text x="{pad + labelW + w1 + 6:.1f}" y="{rowY1 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#2a2430">{early}{unit}</text>'
+            f'<text x="{pad}" y="{rowY2 + barH / 2:.0f}" font-size="10" fill="#6b6570">후반</text>'
+            f'<rect x="{pad + labelW}" y="{rowY2}" width="{w2:.1f}" height="{barH}" rx="5" fill="#5F0080"/>'
+            f'<text x="{pad + labelW + w2 + 6:.1f}" y="{rowY2 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#5F0080">{late}{unit}</text>'
+            f'</svg><figcaption>전반 vs 후반</figcaption></figure>')
 
 
 def render_cards(metrics, timeline, group):
@@ -305,10 +327,14 @@ def render_cards(metrics, timeline, group):
     cards = []
     for m in metrics:
         badge = {'up': '증가', 'down': '감소', 'stable': '유지'}[m['direction']]
+        sign = {'up': '+', 'down': '−', 'stable': ''}[m['direction']]
+        dir_class = {'up': 'up', 'down': 'down', 'stable': 'flat'}[m['direction']]
         cards.append(f'''<article class="metric-card"><div class="metric-copy"><h3>{escape(m['label'])} <span class="badge">{badge}</span></h3>
-<p class="interpretation">{m['arrow']} {interpretation(m)}</p><p class="delta">{m['deltaLabel']}</p><p>{m['sentence']}</p>
+<div class="avg-row"><span class="avg-value">{m['overall']:g}</span><span class="avg-unit">{m['unit']}</span><span class="avg-label">명상 전체 평균</span></div>
+<div class="delta-row"><span>전반 <b>{m['early']:g}</b></span><span class="arrow">→</span><span>후반 <b>{m['late']:g}</b></span><span class="delta-pill {dir_class}">{sign}{abs(m['delta']):g}</span></div>
+<p class="interpretation">{m['arrow']} {interpretation(m)}</p><p class="metric-sentence">{m['sentence']}</p>
 <p class="definition">{METRIC_DEFINITIONS[m['id']]}</p><p class="guide">{direction_guide(m['id'])}</p>
-<p class="caption">명상 시작(전반) 평균 대비 마무리(후반) 평균</p></div>{trend_svg(m['id'], timeline)}</article>''')
+<p class="caption">명상 시작(전반) 평균 대비 마무리(후반) 평균</p></div><div class="metric-charts">{dual_bar_svg(m)}{trend_svg(m['id'], timeline)}</div></article>''')
     return ''.join(cards)
 
 

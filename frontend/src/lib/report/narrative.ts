@@ -30,6 +30,12 @@ export interface MetricNarrative {
   id: MetricId;
   label: string;
   direction: Direction;
+  /** 명상 전체 평균 */
+  overall: number;
+  /** 전반 평균 */
+  early: number;
+  /** 후반 평균 */
+  late: number;
   /** 부호 있는 변화량(단위 지표는 단위, 정규화 지표는 포인트) */
   delta: number;
   /** 표시용 변화량 라벨 (단위/%만, 방향 기호 제외) */
@@ -274,6 +280,9 @@ function buildMetricNarrative(input: MetricChangeInput): MetricNarrative {
     id: input.id,
     label: METRIC_LABELS[input.id],
     direction,
+    overall,
+    early: input.early,
+    late: input.late,
     delta,
     deltaLabel,
     arrow: arrowFor(direction),

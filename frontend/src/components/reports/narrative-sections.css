@@ -27,3 +27,20 @@
 .narrative-report .metric-copy>.change-interpretation{margin-top:12px;color:var(--green-ink);font-size:.8125rem;font-weight:600}
 .narrative-report .metric-copy>.metric-definition{margin-top:12px;font-size:.8125rem}
 .narrative-report .metric-copy>.metric-direction-guide{margin-top:6px;font-size:.75rem;color:var(--gray)}
+/* 평균 + 변화량 동시 표시 (SDD-068 후속) */
+.narrative-report .metric-copy .avg-row{display:flex;align-items:baseline;gap:8px;margin:14px 0 2px}
+.narrative-report .metric-copy .avg-value{font-size:2rem;font-weight:800;color:var(--purple);line-height:1}
+.narrative-report .metric-copy .avg-unit{font-size:.875rem;font-weight:600;color:var(--ink)}
+.narrative-report .metric-copy .avg-label{font-size:.75rem;color:var(--gray)}
+.narrative-report .metric-copy .delta-row{display:flex;align-items:center;gap:6px;font-size:.875rem;margin:6px 0 0;color:var(--ink)}
+.narrative-report .metric-copy .delta-row b{font-weight:700}
+.narrative-report .metric-copy .delta-row .arrow{color:var(--gray)}
+.narrative-report .metric-copy .delta-pill{font-weight:700;font-size:.75rem;padding:2px 8px;border-radius:7px}
+.narrative-report .metric-copy .delta-pill.up{background:rgba(1,240,200,.22);color:#00b394}
+.narrative-report .metric-copy .delta-pill.down{background:rgba(229,72,77,.12);color:#e5484d}
+.narrative-report .metric-copy .delta-pill.flat{background:#f0edf3;color:var(--gray)}
+.narrative-report .metric-charts{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:14px;margin-top:14px}
+.narrative-report .metric-charts figure{margin:0}
+.narrative-report .metric-charts .dual-bar svg{width:100%;height:auto;display:block}
+.narrative-report .metric-charts .trend{width:100%;height:auto}
+@media(max-width:560px){.narrative-report .metric-charts{grid-template-columns:1fr}}
