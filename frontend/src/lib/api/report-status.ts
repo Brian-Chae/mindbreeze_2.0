@@ -70,10 +70,22 @@ export function credibilityFromQuality(
       return { value: 'low', label: '신뢰도 낮음 (invalid)' };
     case 'insufficient':
       return { value: 'insufficient', label: '데이터 부족 (insufficient)' };
+    case 'lost':
+      // SDD-122: 유실 → 신뢰도 매우 낮음(B2).
+      return { value: 'very_low', label: '신뢰도 매우 낮음 (데이터 유실)' };
     default:
       return null;
   }
 }
+
+/** 서버 data_credibility 문자열 값 → 표시 라벨 */
+const CREDIBILITY_VALUE_LABELS: Record<string, string> = {
+  high: '신뢰도 높음',
+  medium: '신뢰도 주의',
+  low: '신뢰도 낮음',
+  very_low: '신뢰도 매우 낮음 (데이터 유실)',
+  insufficient: '데이터 부족',
+};
 
 /**
  * 서버 data_credibility 우선, 없으면 EEG quality에서 파생.
@@ -95,6 +107,9 @@ export function resolveDataCredibility(
     // 서버가 quality status를 그대로 내려준 경우
     const fromQuality = credibilityFromQuality(trimmed as EegQualityStatus);
     if (fromQuality) return fromQuality;
+    // 서버가 신뢰도 문자열(high/medium/low/very_low/insufficient)을 내려준 경우
+    const label = CREDIBILITY_VALUE_LABELS[trimmed];
+    if (label) return { value: trimmed, label };
     return { value: trimmed, label: `데이터 신뢰도: ${trimmed}` };
   }
   return credibilityFromQuality(eegStatus);

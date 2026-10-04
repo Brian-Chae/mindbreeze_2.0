@@ -13,7 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.session import Session
+from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, Report
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.normalization_model import NormalizationModel
@@ -95,6 +95,51 @@ def _longest_usable_run(windows: list[EEGFeatureWindow]) -> int:
     return longest
 
 
+# SDD-122: 리포트 데이터 유실 표시 기반 — 유실(비정상)과 미측정(정상) 구분.
+def _measurement_intent(
+    session_id: UUID,
+    participant_id: UUID | None,
+    windows: list[EEGFeatureWindow],
+    db: DBSession,
+) -> str:
+    """밴드 측정 시도 여부 — 윈도우 존재 OR 실제 연결(band_connected) 기록.
+
+    LINK BAND는 자체 저장소가 없어(실시간 스트리밍만) 연결이 끊기면 그 구간은 즉시
+    영구 유실된다. 미측정(밴드 미연결 = 정상)과 유실(연결했으나 윈도우 0 = 비정상)을
+    구분하는 근거가 된다.
+    """
+    if windows:
+        return "yes"
+    conditions = [SessionParticipant.session_id == session_id]
+    if participant_id is not None:
+        conditions.append(SessionParticipant.id == participant_id)
+    conditions.append(SessionParticipant.band_connected.is_(True))
+    return "yes" if db.query(SessionParticipant).filter(*conditions).first() else "no"
+
+
+def _coverage_ratio(windows: list[EEGFeatureWindow], started_at, ended_at) -> float | None:
+    """유효(valid/degraded) 측정 비율 — 유효 윈도우 시간 / 세션 유효 시간.
+
+    세션 경계(started_at~ended_at)가 없으면 None — 신뢰도 하향 판정을 못 하도록
+    (과잉 라벨 방지). 윈도우는 1개 ≈ 1초(0-based 초 인덱스).
+    """
+    usable = sum(1 for w in windows if w.quality in ("valid", "degraded"))
+    if started_at is not None and ended_at is not None:
+        seconds = (ended_at - started_at).total_seconds()
+        if seconds > 0:
+            return min(1.0, round(usable / seconds, 4))
+    return None
+
+
+def _loss_reason(windows: list[EEGFeatureWindow]) -> str | None:
+    """품질 하향 사유(윈도우 존재 시) — valid 없이 저품질뿐이면 low_quality."""
+    if not windows:
+        return "band_disconnect"
+    if not any(w.quality == "valid" for w in windows):
+        return "low_quality"
+    return None
+
+
 def _build_eeg_content(
     session_id: UUID,
     db: DBSession,
@@ -119,7 +164,16 @@ def _build_eeg_content(
     if ended_at is not None:
         q = q.filter(EEGFeatureWindow.created_at <= ended_at)
     windows = q.order_by(EEGFeatureWindow.window_index).all()
+    # SDD-122: 유실(비정상)과 미측정(정상) 구분 — 밴드 연결/시도 여부로 판정.
+    intent = _measurement_intent(session_id, participant_id, windows, db)
     if not windows:
+        if intent == "yes":
+            # 연결했으나 윈도우 0 → 전 구간 유실(lost). 숨기지 않고 표시한다.
+            return {
+                "status": "lost",
+                "loss_reason": "band_disconnect",
+                "coverage_ratio": 0.0,
+            }
         return {"status": "not_measured"}
 
     def series(attr: str) -> list:
@@ -216,6 +270,8 @@ def _build_eeg_content(
     return {
         **summarize_hrv_motion(windows),
         "status": m.session_status,
+        "loss_reason": _loss_reason(windows),
+        "coverage_ratio": _coverage_ratio(windows, started_at, ended_at),
         "reliability": m.eeg_reliability,
         "drowsiness_flag": bool(m.drowsiness_flag),
         "score": m.meditation_total_score,  # 종합점수 — null 보존
@@ -272,19 +328,32 @@ def _client_content(session: Session, record: SessionRecord | None, eeg_block: d
 
 # SDD-027: EEG 품질 게이트(§A4.4) status → 데이터 신뢰도(data_credibility) 파생.
 # not_measured(EEG 미측정)는 신뢰도 개념이 없으므로 None 유지(0/'low' 치환 금지).
+# SDD-122: 유실(lost)과 커버리지<50%는 "very_low" 추가(신뢰도 매우 낮음).
 _CREDIBILITY_BY_EEG_STATUS = {
     "valid": "high",
     "degraded": "medium",
     "invalid": "low",
     "insufficient": "low",
+    "lost": "very_low",
 }
 
 
 def _derive_data_credibility(eeg_block: dict) -> str | None:
-    """content.eeg 품질 게이트에서 데이터 신뢰도를 파생한다(미측정이면 None)."""
+    """content.eeg 품질 게이트에서 데이터 신뢰도를 파생한다(미측정이면 None).
+
+    SDD-122(B2): 유실(lost)이거나 유효 커버리지 < 50%면 "very_low" 로 하향한다.
+    """
     if not isinstance(eeg_block, dict):
         return None
-    return _CREDIBILITY_BY_EEG_STATUS.get(eeg_block.get("status"))
+    status = eeg_block.get("status")
+    if status == "not_measured":
+        return None
+    if status == "lost":
+        return "very_low"
+    coverage = eeg_block.get("coverage_ratio")
+    if coverage is not None and coverage < 0.5:
+        return "very_low"
+    return _CREDIBILITY_BY_EEG_STATUS.get(status or "")
 
 
 def generate_report_inline(report_id: str, db: DBSession) -> Report | None:

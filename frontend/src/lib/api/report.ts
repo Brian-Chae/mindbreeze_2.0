@@ -15,12 +15,13 @@ import {
 /** reports.ts 와 동일 — 순환 import 방지용 로컬 별칭 */
 export type ReportViewType = 'counselor' | 'client';
 
-/** 품질 게이트 4상태 + LINK BAND 미측정 */
+/** 품질 게이트 4상태 + LINK BAND 미측정/유실 */
 export type EegQualityStatus =
   | 'valid'
   | 'degraded'
   | 'invalid'
   | 'insufficient'
+  | 'lost'
   | 'not_measured';
 
 /** 하루밴드 7지표 키 (순서 고정) */
@@ -106,6 +107,10 @@ export interface ReportEegContent {
   narrative: LlmNarrativePayload | null;
   /** 전반/후반 평균 변화량 (서사 폴백·델타 표시) */
   changes: MetricChangeInput[] | null;
+  /** SDD-122: 유실/품질 하향 사유 (band_disconnect/ws_drop/backend_error/low_quality) */
+  loss_reason: string | null;
+  /** SDD-122: 유효 측정 비율(0~1). 세션 경계 없으면 null. */
+  coverage_ratio: number | null;
 }
 
 export interface ReportMarker {
@@ -173,6 +178,7 @@ const QUALITY_STATUSES: readonly EegQualityStatus[] = [
   'degraded',
   'invalid',
   'insufficient',
+  'lost',
   'not_measured',
 ];
 
@@ -320,6 +326,8 @@ function coverReasonForStatus(status: EegQualityStatus): string | null {
       return '품질 미달 · 점수 미제공';
     case 'insufficient':
       return '데이터 부족 · 점수 미제공';
+    case 'lost':
+      return '데이터 유실';
     default:
       return null;
   }
@@ -347,6 +355,8 @@ function parseEegBlock(raw: unknown): ReportEegContent | null {
     normalization_version: asString(raw.normalization_version),
     narrative,
     changes,
+    loss_reason: asString(raw.loss_reason),
+    coverage_ratio: asNullableNumber(raw.coverage_ratio),
   };
 }
 
@@ -385,6 +395,8 @@ function parseLegacyEeg(
     normalization_version: null,
     narrative: null,
     changes: null,
+    loss_reason: null,
+    coverage_ratio: null,
   };
 }
 

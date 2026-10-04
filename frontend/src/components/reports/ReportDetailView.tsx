@@ -38,6 +38,8 @@ function eegQualitySummaryLabel(status: EegQualityStatus): string | null {
       return '품질 미달';
     case 'insufficient':
       return '데이터 부족';
+    case 'lost':
+      return '데이터 유실';
     default:
       return null;
   }

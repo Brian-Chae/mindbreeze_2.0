@@ -1,5 +1,6 @@
 // EEG 품질 게이트 배너 — mindbreeze 라이트 토큰
-// valid/degraded/invalid/insufficient (+ not_measured는 부모에서 미마운트)
+// valid/degraded/invalid/insufficient/lost (+ not_measured는 부모에서 미마운트)
+// SDD-122: 유실(lost) 배너 + 사유 칩 + 커버리지 + "신뢰도 매우 낮음" 고지(B2)
 
 import type { EegQualityStatus, ReportEegContent } from '../../lib/api/report';
 import { reliabilityLabel } from '../../lib/api/report';
@@ -57,7 +58,32 @@ function statusCopy(
             : '이번 세션은 뇌파 참고를 생략했어요.',
         toneClass: 'border-orange-200 bg-orange-50 text-orange-800',
       };
+    case 'lost':
+      // SDD-122(A1): 내담자에겐 차분한 문구 + 이유, 상담사에겐 관리 문구.
+      return {
+        title:
+          reportType === 'counselor'
+            ? '뇌파 데이터가 유실되었습니다'
+            : '뇌파가 측정되지 않았어요',
+        body:
+          reportType === 'counselor'
+            ? '측정을 시도했으나 연결이 끊겨 유효한 뇌파 데이터가 수집되지 않았습니다.'
+            : '측정을 시작했지만 중간에 연결이 끊겨 이번에는 뇌파 데이터가 기록되지 않았어요. 측정된 구간으로 안내드릴게요.',
+        toneClass: 'border-rose-200 bg-rose-50 text-rose-800',
+      };
   }
+}
+
+const LOSS_REASON_LABELS: Record<string, string> = {
+  band_disconnect: '연결 끊김',
+  ws_drop: '통신 단절',
+  backend_error: '시스템 오류',
+  low_quality: '저품질 신호',
+};
+
+function lossReasonLabel(reason: string | null): string | null {
+  if (!reason) return null;
+  return LOSS_REASON_LABELS[reason] ?? null;
 }
 
 export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerProps) {
@@ -70,6 +96,13 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
       : reportType === 'client'
         ? reliabilityLabel(eeg.reliability)
         : null;
+
+  const reasonChip = lossReasonLabel(eeg.loss_reason);
+  // SDD-122(B2): 유효 커버리지 < 50%면 "참고용 + 신뢰도 매우 낮음" 고지.
+  const veryLowConfidence =
+    eeg.status !== 'lost' &&
+    eeg.coverage_ratio !== null &&
+    eeg.coverage_ratio < 0.5;
 
   return (
     <div
@@ -87,6 +120,27 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
           </span>
         )}
       </div>
+
+      {(reasonChip || (reportType === 'counselor' && eeg.coverage_ratio !== null)) && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {reasonChip && (
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-[11px] font-medium">
+              {reasonChip}
+            </span>
+          )}
+          {reportType === 'counselor' && eeg.coverage_ratio !== null && (
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 font-mono text-[11px]">
+              커버리지 {Math.round(eeg.coverage_ratio * 100)}%
+            </span>
+          )}
+        </div>
+      )}
+
+      {veryLowConfidence && (
+        <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] text-amber-800">
+          데이터 유실로 신뢰도가 매우 낮은 상태입니다. 아래 지표는 경향 참고용입니다.
+        </p>
+      )}
 
       {eeg.drowsiness_flag && (
         <p className="mt-2 rounded-lg border border-amber-200 bg-white/70 px-3 py-2 text-[12px] text-amber-800">
