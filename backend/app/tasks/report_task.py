@@ -376,6 +376,10 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # SDD-095: 리포트 생성 시작 — 진행 상태를 '처리 중'으로 반영한다.
     # (프론트 종료 화면 스텝퍼의 '리포트 완료' 스텝이 active 로 표시된다)
     report.generation_status = report_progress_service.GENERATION_PROCESSING
+    # SDD-101 후속: 이전 실패 잔재(status=error / generation_error)를 리셋한다.
+    # 재생성 진행 중에도 /reports 목록이 '생성 실패'로 오표시되지 않도록 승인 게이트를 대기로 되돌린다.
+    report.status = "pending_analysis"
+    report.generation_error = None
     # SDD-095 후속(워치독): processing 진입 시각 기록 — beat 스윕이 먹통을 감지하는 기준
     if report.generation_started_at is None:
         report.generation_started_at = datetime.now(timezone.utc)
