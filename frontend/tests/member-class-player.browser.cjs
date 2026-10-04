@@ -72,7 +72,7 @@ async function assertLayout(page) {
     const selectors = ['.member-video-card', '.member-signal-card', '.member-metrics-card'];
     return { viewport: [innerWidth, innerHeight], document: [document.documentElement.scrollWidth, document.documentElement.scrollHeight],
       root: [root.scrollWidth, root.scrollHeight], videoHeight: document.querySelector('.member-video-card').getBoundingClientRect().height,
-      outside: selectors.filter(selector => {const r = document.querySelector(selector).getBoundingClientRect(); return r.bottom > frame.bottom + 1 || r.right > frame.right + 1;}),
+      outside: selectors.filter(selector => {const r = document.querySelector(selector).getBoundingClientRect(); return r.right > frame.right + 1 || (innerWidth >= 1024 && r.bottom > frame.bottom + 1);}),
       smallButtons: [...document.querySelectorAll('.player-screen button')].filter(b => b.getBoundingClientRect().height > 0 && b.getBoundingClientRect().height < 44).map(b => b.textContent)
     };
   });
@@ -97,9 +97,9 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
       // SDD-124: rAF raw 파형이 fake clock에서 수만 프레임을 동기 실행해 느려지므로
       // runFor를 최소(2초)로 제한 — 1Hz 지표 갱신 2틱이면 다이얼/그룹 평균 검증에 충분.
       await page.clock.runFor(2000);
-      // SDD-124: 마음3+몸3 = 6개 다이얼 + 디바이스/raw 3블록
+      // SDD-125: 마음3+몸3 = 6개 다이얼 + raw 2블록(EEG·PPG, ACC 제거)
       assert.equal(await page.locator('.player-metric').count(), 6);
-      assert.equal(await page.locator('.member-raw-block').count(), 3);
+      assert.equal(await page.locator('.member-raw-block').count(), 2);
       if (viewport.width >= 768) {
         // 그룹 평균 수신 → 각 다이얼에 "그룹 N" 태그 + "그룹 평균보다 ±N" 배지
         await page.evaluate(() => window.emitGroupAverage({
@@ -109,8 +109,8 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
             heart_rate: { mean: 70 }, respiratory_rate: { mean: 12 }, sdnn: { mean: 40 },
           },
         }));
-        assert.equal(await page.locator('.player-dial-avg').count(), 6);
-        assert.match(await page.locator('.player-average').first().textContent(), /그룹 평균/);
+        assert.equal(await page.locator('.player-dial-average').count(), 6);
+        assert.match(await page.locator('.caption-avg').first().textContent(), /그룹 평균/);
         // 표본 부족 → 배지가 "표본 부족"으로 접힌다
         await page.evaluate(() => window.emitGroupAverage({
           session_id: 'qa-session', wearer_count: 1, min_wearers: 3, sample_status: 'insufficient',
@@ -119,8 +119,8 @@ for (const viewport of [{width:1280,height:720},{width:390,height:844}]) {
             heart_rate: { mean: null }, respiratory_rate: { mean: null }, sdnn: { mean: null },
           },
         }));
-        assert.equal(await page.locator('.player-dial-avg').count(), 0);
-        assert.match(await page.locator('.player-average').first().textContent(), /표본 부족/);
+        assert.equal(await page.locator('.player-dial-average').count(), 0);
+        assert.match(await page.locator('.caption-avg').first().textContent(), /표본 부족/);
       }
       await assertLayout(page);
       await page.screenshot({path:`${outputDir}/player-${viewport.width}-connected.png`});

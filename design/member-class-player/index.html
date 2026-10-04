@@ -69,10 +69,11 @@
     .app-screen {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      height: 100vh;
       max-width: 1600px;
       margin: 0 auto;
       padding: 0 16px 16px;
+      overflow: hidden;
     }
 
     /* TOPBAR */
@@ -195,6 +196,27 @@
       background: rgba(255, 255, 255, 0.1);
       border-color: rgba(255, 255, 255, 0.25);
     }
+    .topbar-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-container);
+      color: var(--cream);
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+    .topbar-icon-btn svg {
+      width: 15px;
+      height: 15px;
+    }
+    .topbar-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
 
     /* 디바이스 상태 pill (topbar 우측) */
     .device-pill {
@@ -231,22 +253,59 @@
       color: var(--cream);
     }
 
-    /* 2-COLUMN WORKSPACE */
+    /* 3-COLUMN WORKSPACE — 중앙(상담사 라이브+채팅) MAIN, 좌/우 SUB, 드래그 리사이즈 */
     .workspace-grid {
-      display: grid;
-      grid-template-columns: 30% 1fr;
-      gap: 14px;
+      display: flex;
+      gap: 0;
       flex: 1;
       min-height: 0;
+      min-width: 0;
     }
 
     /* BASE CARD STYLES */
     .column-panel {
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 10px;
       min-width: 0;
+      min-height: 0;
     }
+    /* SUB 패널 고정폭 + MAIN 중앙 flex */
+    .col-metrics { width: 460px; min-width: 250px; max-width: 460px; flex: 0 0 auto; }
+    .col-live { flex: 1 1 auto; min-width: 220px; }
+    .col-device { width: 420px; min-width: 220px; max-width: 420px; flex: 0 0 auto; }
+    .resize-handle {
+      width: 12px;
+      flex: 0 0 12px;
+      cursor: col-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      touch-action: none;
+    }
+    .resize-handle::after {
+      content: '';
+      width: 4px;
+      height: 30px;
+      border-radius: 3px;
+      background:
+        radial-gradient(circle at 50% 16.67%, rgba(255, 255, 255, 0.55) 0 1.5px, transparent 2.2px),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.55) 0 1.5px, transparent 2.2px),
+        radial-gradient(circle at 50% 83.33%, rgba(255, 255, 255, 0.55) 0 1.5px, transparent 2.2px),
+        rgba(255, 255, 255, 0.07);
+      transition: background 0.15s ease;
+    }
+    .resize-handle:hover::after,
+    .resize-handle.active::after {
+      background:
+        radial-gradient(circle at 50% 16.67%, var(--lavender) 0 1.5px, transparent 2.2px),
+        radial-gradient(circle at 50% 50%, var(--lavender) 0 1.5px, transparent 2.2px),
+        radial-gradient(circle at 50% 83.33%, var(--lavender) 0 1.5px, transparent 2.2px),
+        rgba(220, 181, 238, 0.16);
+    }
+    body.resizing { cursor: col-resize; user-select: none; }
+    body.resizing * { cursor: col-resize !important; }
 
     .glass-card {
       background: var(--surface);
@@ -286,6 +345,117 @@
     }
 
     /* ==========================================================================
+       RIGHT COLUMN — 개인 프로필 카드 (상담사 상세 슬라이드뷰 헤더 참조)
+       ========================================================================== */
+    .member-profile-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 9px;
+      flex-shrink: 0;
+    }
+    .member-profile-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lavender);
+      flex-shrink: 0;
+    }
+    .member-profile-avatar svg {
+      width: 19px;
+      height: 19px;
+    }
+    .member-profile-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--cream);
+      line-height: 1.2;
+    }
+    .member-profile-demo {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .member-profile-band {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--mint);
+      white-space: nowrap;
+    }
+    .class-info-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 7px 9px;
+      flex-shrink: 0;
+    }
+    .class-info-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .class-info-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--lavender);
+      flex-shrink: 0;
+    }
+    .class-info-avatar svg {
+      width: 17px;
+      height: 17px;
+    }
+    .class-info-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cream);
+      line-height: 1.2;
+    }
+    .class-info-role {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .class-info-stats {
+      display: flex;
+      gap: 8px;
+    }
+    .class-info-stat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 4px 3px;
+      border-radius: 8px;
+      background: var(--surface-card);
+      border: 1px solid var(--border-container);
+    }
+    .class-info-stat b {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--cream);
+    }
+    .class-info-stat span {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ==========================================================================
        LEFT COLUMN (좁음 ~28%)
        1. "지금 나를 알려요" (상단)
        2. 상담사 영상 타일 (하단)
@@ -294,28 +464,26 @@
     .signal-box {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
+      padding: 10px 12px;
     }
 
     .signal-hint {
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 2px;
-      line-height: 1.4;
+      display: none;
     }
 
     .signal-buttons {
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 4px;
     }
 
     /* Lucide 스타일 인라인 SVG stroke 기반 아이콘 3버튼 */
     .signal-pill {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 9px 12px;
+      gap: 8px;
+      padding: 4px 10px;
       border-radius: 9999px;
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border-container);
@@ -400,7 +568,7 @@
     .signal-feedback-msg {
       font-size: 11px;
       color: var(--lavender);
-      min-height: 16px;
+      min-height: 10px;
       text-align: center;
       opacity: 0;
       transition: opacity 0.3s ease;
@@ -409,6 +577,78 @@
     .signal-feedback-msg.show {
       opacity: 1;
     }
+    /* 채팅창 (상담사 라이브 아래) */
+    .chat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 9px 11px;
+      flex-shrink: 0;
+      height: 160px;
+    }
+    .chat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .chat-title { font-size: 13px; font-weight: 600; color: var(--cream); }
+    .chat-sub { font-size: 11px; color: var(--muted); }
+    .chat-messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    .chat-msg { display: flex; flex-direction: column; gap: 2px; }
+    .chat-msg-name { font-size: 10px; color: var(--lavender); }
+    .chat-msg-text {
+      font-size: 12px;
+      color: var(--cream);
+      background: var(--surface-card);
+      border: 1px solid var(--border-container);
+      border-radius: 8px;
+      padding: 6px 9px;
+      align-self: flex-start;
+      max-width: 85%;
+    }
+    .chat-msg-me { align-items: flex-end; }
+    .chat-msg-me .chat-msg-text {
+      align-self: flex-end;
+      background: rgba(95, 0, 128, 0.4);
+      border-color: rgba(220, 181, 238, 0.3);
+    }
+    .chat-input {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .chat-input input {
+      flex: 1;
+      min-width: 0;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-container);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      color: var(--cream);
+      outline: none;
+    }
+    .chat-input input::placeholder { color: var(--muted); }
+    .chat-send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--purple);
+      border: 1px solid rgba(220, 181, 238, 0.3);
+      color: var(--cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-send-btn svg { width: 15px; height: 15px; }
 
     /* 상담사 영상 타일 (호스트 플레이어와 동일한 규격 언어) */
     .video-card {
@@ -416,7 +656,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      min-height: 230px;
+      min-height: 160px;
       padding: 0;
       background: radial-gradient(ellipse 90% 70% at 50% 35%, #351c44 0%, #1c0e27 65%, #13081c 100%);
       border: 1px solid var(--border-container);
@@ -591,16 +831,17 @@
     }
 
     .metrics-container-card {
-      flex: 3;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 9px;
       min-height: 0;
+      overflow-y: auto;
     }
 
-    /* 디바이스 상태 + raw data 카드 (하단, 지표:아래 = 3:2) */
+    /* 디바이스 상태 + raw data 카드 (좌측 컬럼 전용) */
     .device-raw-card {
-      flex: 2;
+      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -638,7 +879,8 @@
 
     .raw-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr;
+      grid-template-rows: repeat(2, 1fr);
       gap: 10px;
       flex: 1;
       min-height: 0;
@@ -656,7 +898,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-bottom: 6px;
+      padding-bottom: 4px;
       border-bottom: 1px solid var(--border-divider);
     }
 
@@ -696,7 +938,7 @@
       background: var(--surface-card);
       border: 1px solid var(--border-container);
       border-radius: 10px;
-      padding: 10px 8px;
+      padding: 5px 4px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -720,22 +962,17 @@
     }
 
     .metric-name {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--cream);
-    }
-
-    .metric-unit {
-      font-size: 10px;
-      color: var(--muted);
     }
 
     /* SVG ARC RING GAUGE (270도 정밀 기하학) */
     .arc-gauge-wrap {
       position: relative;
-      width: 98px;
-      height: 98px;
-      margin: 2px 0;
+      width: 62px;
+      height: 62px;
+      margin: 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -762,13 +999,13 @@
       transition: stroke-dashoffset 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
-    /* 그룹 평균 틱 (아크 위 마커) */
+    /* 그룹 평균 틱 마커 (아크 위) */
     .arc-avg-tick {
       stroke: var(--lavender);
-      stroke-width: 2.5;
+      stroke-width: 4;
       stroke-linecap: round;
-      opacity: 0.95;
-      filter: drop-shadow(0 0 3px rgba(220, 181, 238, 0.8));
+      opacity: 1;
+      filter: drop-shadow(0 0 4px rgba(220, 181, 238, 0.9));
     }
 
     .gauge-center-val {
@@ -782,7 +1019,7 @@
     }
 
     .gauge-num {
-      font-size: 25px;
+      font-size: 13px;
       font-weight: 600;
       color: var(--cream);
       font-variant-numeric: tabular-nums;
@@ -790,23 +1027,23 @@
       line-height: 1;
     }
 
-    .gauge-avg-tag {
+    .gauge-unit-label {
       font-size: 10px;
       color: var(--muted);
-      margin-top: 3px;
+      margin-top: 1px;
       font-variant-numeric: tabular-nums;
     }
 
     /* 최근 수신 막대 (12개 세로바) */
     .recent-bars-container {
       width: 100%;
-      margin: 6px 0 5px;
+      margin: 2px 0 2px;
       display: flex;
       align-items: flex-end;
       justify-content: center;
       gap: 2.5px;
-      height: 22px;
-      padding: 2px 4px;
+      height: 12px;
+      padding: 1px 4px;
       background: rgba(0, 0, 0, 0.22);
       border-radius: 5px;
     }
@@ -826,25 +1063,68 @@
       box-shadow: 0 0 4px rgba(220, 181, 238, 0.4);
     }
 
-    /* 중립 관찰 문구 라벨 ("그룹 평균보다 ±N") */
-    .metric-delta-badge {
+    /* 지표 캡션: 그룹 평균 + 추이 (참고 디자인 스타일) */
+    .metric-caption {
       width: 100%;
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3.5px 4px;
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border-divider);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 2px 4px;
+      margin-top: 2px;
+      font-size: 9px;
       color: var(--muted);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
-
-    .metric-delta-badge .delta-num {
+    .metric-caption .caption-avg b {
       color: var(--cream);
       font-weight: 600;
+    }
+    .metric-caption .caption-trend {
+      color: var(--lavender);
+    }
+
+    /* 범례 */
+    .metric-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding-top: 6px;
+      margin-top: 2px;
+      border-top: 1px solid var(--border-divider);
+      font-size: 9px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    .metric-legend .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-swatch {
+      display: inline-block;
+      width: 10px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .legend-swatch.legend-ring {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 2px solid var(--lavender);
+      background: transparent;
+    }
+    .legend-swatch.legend-bar {
+      background: linear-gradient(180deg, #A16BBC 0%, #5F0080 100%);
+      height: 8px;
+    }
+    .legend-swatch.legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--lavender);
     }
 
     /* ==========================================================================
@@ -971,6 +1251,35 @@
       height: 100%;
       display: block;
     }
+    .raw-chips {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      right: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      z-index: 6;
+      pointer-events: none;
+    }
+    .raw-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-size: 10px;
+      color: var(--muted);
+      background: rgba(18, 8, 28, 0.72);
+      border: 1px solid var(--border-container);
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+    }
+    .raw-chip b {
+      color: var(--cream);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
 
     .canvas-grid-line {
       position: absolute;
@@ -988,6 +1297,14 @@
       font-size: 10px;
       color: var(--muted);
       padding: 0 2px;
+    }
+    .meta-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
     }
 
     /* ==========================================================================
@@ -1010,11 +1327,27 @@
        ========================================================================== */
     @media (max-width: 1024px) {
       .workspace-grid {
-        grid-template-columns: 1fr;
+        flex-direction: column;
         gap: 14px;
       }
 
+      /* 모바일: 리사이즈 핸들 숨김 + 컬럼 전체 폭으로 */
+      .resize-handle {
+        display: none;
+      }
+      .col-metrics,
+      .col-live,
+      .col-device {
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        flex: none;
+      }
+
       .app-screen {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
         padding: 0 12px 20px;
       }
 
@@ -1029,6 +1362,11 @@
       .metrics-grid-3 {
         grid-template-columns: repeat(3, 1fr);
       }
+
+      /* 모바일 스택 순서: 상담사 연결 → 나의 상태 → 디바이스/raw */
+      .col-live { order: 1; }
+      .col-metrics { order: 2; }
+      .col-device { order: 3; }
     }
 
     @media (max-width: 640px) {
@@ -1066,6 +1404,7 @@
 
       .raw-grid {
         grid-template-columns: 1fr;
+        grid-template-rows: none;
         gap: 8px;
       }
       .raw-grid .raw-canvas-wrap {
@@ -1113,6 +1452,15 @@
       </div>
 
       <div class="topbar-right">
+        <button class="topbar-icon-btn" title="채팅" aria-label="채팅">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+        <button class="topbar-icon-btn" title="디바이스 연결" aria-label="디바이스 연결">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg>
+        </button>
+        <button class="topbar-icon-btn" title="설정" aria-label="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+        </button>
         <div class="live-status">
           <span class="status-dot-mint"></span>
           <span>진행 중</span>
@@ -1131,12 +1479,215 @@
     <!-- MAIN 3-COLUMN WORKSPACE -->
     <main class="workspace-grid">
 
+
+
+
       <!-- ====================================================================
-           LEFT COLUMN: 조용한 신호 + 상담사 영상 + 함께한 시간 (~28%)
+           LEFT COLUMN: 개인 프로필 + 나의 상태 + 조용한 피드백 (~40%)
            ==================================================================== -->
-      <aside class="column-panel">
-        
-        <!-- 1. "지금 나를 알려요" (상단) -->
+      <section class="column-panel col-metrics">
+        <!-- 클래스 정보 (상담사 + 그룹) -->
+        <div class="glass-card class-info-card">
+          <div class="class-info-head">
+            <div class="class-info-avatar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div>
+              <div class="class-info-name">이도연 상담사</div>
+              <div class="class-info-role">명상 지도사 · 호스트</div>
+            </div>
+          </div>
+          <div class="class-info-stats">
+            <div class="class-info-stat"><b>8명</b><span>참여자</span></div>
+            <div class="class-info-stat"><b>5명</b><span>밴드 착용</span></div>
+            <div class="class-info-stat"><b>79%</b><span>그룹 집중도</span></div>
+          </div>
+        </div>
+
+        <!-- 개인 프로필 (상담사 상세 슬라이드뷰 헤더 참조) -->
+        <div class="glass-card member-profile-card">
+          <div class="member-profile-avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div>
+            <div class="member-profile-name">채용욱</div>
+            <div class="member-profile-demo">남 · 44세</div>
+          </div>
+          <span class="member-profile-band"><span class="status-dot-mint"></span>밴드 연결됨</span>
+        </div>
+        <div class="glass-card metrics-container-card">
+          
+          <!-- 카드 상단 헤더 -->
+          <div class="card-header-row" style="margin-bottom: 4px;">
+            <div>
+              <h2 class="card-title" style="font-size: 15px;">나의 상태</h2>
+              <p class="card-subtitle" style="margin-top: 1px;">그룹 평균 대비 실시간 흐름</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted);">
+              <span class="status-dot-mint" style="width: 5px; height: 5px;"></span>
+              <span>1초 실시간 갱신</span>
+            </div>
+          </div>
+
+          <!-- 1. 마음 MIND 3지표 -->
+          <div>
+            <div class="metrics-section-heading">
+              <div class="metrics-group-title">마음 MIND</div>
+              <div class="metrics-group-note">뇌파 인지 상태 지표</div>
+            </div>
+
+            <div class="metrics-grid-3" style="margin-top: 8px;">
+              <!-- 1-1. 집중도 (86%, 그룹 79%, 대비 +7) -->
+              <article class="metric-card" id="card-focus">
+                <div class="metric-card-top">
+                  <span class="metric-name">집중도</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-focus">
+                    <!-- 270도 호 (둘레 238.8 중 179) -->
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-focus-val" cx="50" cy="50" r="38" stroke-dasharray="153.9 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-focus"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-focus">86</span>
+                    <span class="gauge-unit-label">%</span>
+                  </div>
+                </div>
+                <!-- 최근 수신 막대 12개 -->
+                <div class="recent-bars-container" id="bars-focus"></div>
+                <!-- 중립 관찰 문구 -->
+                <div class="metric-caption" id="caption-focus"><span class="caption-avg">그룹 평균 <b id="avg-focus">79</b></span><span class="caption-trend" id="trend-focus">추이 대기</span></div>
+              </article>
+
+              <!-- 1-2. 이완도 (23%, 그룹 41%, 대비 -18) -->
+              <article class="metric-card" id="card-relax">
+                <div class="metric-card-top">
+                  <span class="metric-name">이완도</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-relax">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-relax-val" cx="50" cy="50" r="38" stroke-dasharray="41.2 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-relax"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-relax">23</span>
+                    <span class="gauge-unit-label">%</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-relax"></div>
+                <div class="metric-caption" id="caption-relax"><span class="caption-avg">그룹 평균 <b id="avg-relax">41</b></span><span class="caption-trend" id="trend-relax">추이 대기</span></div>
+              </article>
+
+              <!-- 1-3. 감정균형도 (58%, 그룹 35%, 대비 +23) -->
+              <article class="metric-card" id="card-emotion">
+                <div class="metric-card-top">
+                  <span class="metric-name">감정균형도</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-emotion">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-emotion-val" cx="50" cy="50" r="38" stroke-dasharray="34.0 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-emotion"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-emotion">19</span>
+                    <span class="gauge-unit-label">%</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-emotion"></div>
+                <div class="metric-caption" id="caption-emotion"><span class="caption-avg">그룹 평균 <b id="avg-emotion">35</b></span><span class="caption-trend" id="trend-emotion">추이 대기</span></div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 2. 몸 BODY 3지표 -->
+          <div style="margin-top: 2px;">
+            <div class="metrics-section-heading">
+              <div class="metrics-group-title">몸 BODY</div>
+              <div class="metrics-group-note">자율신경 및 활력 지표</div>
+            </div>
+
+            <div class="metrics-grid-3" style="margin-top: 8px;">
+              <!-- 2-1. BPM (78, 그룹 72, 대비 +6) -->
+              <article class="metric-card" id="card-bpm">
+                <div class="metric-card-top">
+                  <span class="metric-name">BPM</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-bpm">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-bpm-val" cx="50" cy="50" r="38" stroke-dasharray="68.0 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-bpm"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-bpm">78</span>
+                    <span class="gauge-unit-label">bpm</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-bpm"></div>
+                <div class="metric-caption" id="caption-bpm"><span class="caption-avg">그룹 평균 <b id="avg-bpm">72</b></span><span class="caption-trend" id="trend-bpm">추이 대기</span></div>
+              </article>
+
+              <!-- 2-2. 호흡 (14, 그룹 15, 대비 -1) -->
+              <article class="metric-card" id="card-resp">
+                <div class="metric-card-top">
+                  <span class="metric-name">호흡</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-resp">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-resp-val" cx="50" cy="50" r="38" stroke-dasharray="64.4 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-resp"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-resp">14</span>
+                    <span class="gauge-unit-label">회/분</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-resp"></div>
+                <div class="metric-caption" id="caption-resp"><span class="caption-avg">그룹 평균 <b id="avg-resp">15</b></span><span class="caption-trend" id="trend-resp">추이 대기</span></div>
+              </article>
+
+              <!-- 2-3. HRV (48, 그룹 52, 대비 -4) -->
+              <article class="metric-card" id="card-hrv">
+                <div class="metric-card-top">
+                  <span class="metric-name">HRV</span>
+                </div>
+                <div class="arc-gauge-wrap">
+                  <svg viewBox="0 0 100 100" id="svg-hrv">
+                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
+                    <circle class="arc-value" id="arc-hrv-val" cx="50" cy="50" r="38" stroke-dasharray="75.6 300" transform="rotate(135 50 50)"></circle>
+                    <line class="arc-avg-tick" id="tick-hrv"></line>
+                  </svg>
+                  <div class="gauge-center-val">
+                    <span class="gauge-num" id="val-hrv">48</span>
+                    <span class="gauge-unit-label">ms</span>
+                  </div>
+                </div>
+                <div class="recent-bars-container" id="bars-hrv"></div>
+                <div class="metric-caption" id="caption-hrv"><span class="caption-avg">그룹 평균 <b id="avg-hrv">52</b></span><span class="caption-trend" id="trend-hrv">추이 대기</span></div>
+              </article>
+            </div>
+          </div>
+
+          <!-- 범례: 링/막대/증감 의미 -->
+          <div class="metric-legend">
+            <span class="legend-item"><span class="legend-swatch legend-ring"></span>링: 현재값</span>
+            <span class="legend-item"><span class="legend-swatch legend-bar"></span>막대: 최근 수신값</span>
+            <span class="legend-item"><span class="legend-swatch legend-dot"></span>증감: 3분 대비</span>
+          </div>
+
+        </div>
+
+        <!-- "지금 나를 알려요" (나의 상태 아래) -->
         <section class="glass-card signal-box" aria-label="지금 나를 알려요">
           <div class="card-header-row" style="margin-bottom: 2px;">
             <div class="card-title-group">
@@ -1191,6 +1742,17 @@
           <div class="signal-feedback-msg" id="signalFeedback">신호가 전달되었습니다.</div>
         </section>
 
+      </section>
+
+      <!-- ====================================================================
+           MIDDLE COLUMN: 상담사 라이브 뷰 + 채팅 (~35%)
+           ==================================================================== -->
+      <div class="resize-handle" data-side="left" aria-hidden="true"></div>
+
+      <section class="column-panel col-live">
+        
+
+
         <!-- 2. 상담사 영상 타일 (하단) + 함께한 시간 -->
         <section class="video-card" aria-label="상담사 영상 및 세션 시간">
           <!-- 좌상단 오버레이: 빨간 점 + "녹화 중 · 상담사" -->
@@ -1233,179 +1795,46 @@
           </div>
         </section>
 
-      </aside>
+        <!-- 채팅창 -->
+        <section class="glass-card chat-card" aria-label="채팅">
+          <div class="chat-header">
+            <span class="chat-title">채팅</span>
+            <span class="chat-sub">그룹 · 12</span>
+          </div>
+          <div class="chat-messages">
+            <div class="chat-msg">
+              <span class="chat-msg-name">이도연 상담사</span>
+              <span class="chat-msg-text">숨을 천천히 내쉬어 보세요.</span>
+            </div>
+            <div class="chat-msg chat-msg-me">
+              <span class="chat-msg-name">나</span>
+              <span class="chat-msg-text">네, 알겠습니다.</span>
+            </div>
+            <div class="chat-msg">
+              <span class="chat-msg-name">김민지</span>
+              <span class="chat-msg-text">호흡이 편안해졌어요.</span>
+            </div>
+          </div>
+          <div class="chat-input">
+            <input type="text" placeholder="메시지를 입력하세요" />
+            <button class="chat-send-btn" aria-label="전송">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </section>
+
+      </section>
+
+
+
 
       <!-- ====================================================================
-           CENTER COLUMN: "나의 상태" + MIND & BODY 6지표 (~44%)
+           RIGHT COLUMN: 디바이스 상태 + raw data (~25%)
            ==================================================================== -->
-      <section class="column-panel center-column">
-        <div class="glass-card metrics-container-card">
-          
-          <!-- 카드 상단 헤더 -->
-          <div class="card-header-row" style="margin-bottom: 4px;">
-            <div>
-              <h2 class="card-title" style="font-size: 15px;">나의 상태</h2>
-              <p class="card-subtitle" style="margin-top: 1px;">그룹 평균 대비 실시간 흐름</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted);">
-              <span class="status-dot-mint" style="width: 5px; height: 5px;"></span>
-              <span>1초 실시간 갱신</span>
-            </div>
-          </div>
+      <div class="resize-handle" data-side="right" aria-hidden="true"></div>
 
-          <!-- 1. 마음 MIND 3지표 -->
-          <div>
-            <div class="metrics-section-heading">
-              <div class="metrics-group-title">마음 MIND</div>
-              <div class="metrics-group-note">뇌파 인지 상태 지표</div>
-            </div>
-
-            <div class="metrics-grid-3" style="margin-top: 8px;">
-              <!-- 1-1. 집중도 (86%, 그룹 79%, 대비 +7) -->
-              <article class="metric-card" id="card-focus">
-                <div class="metric-card-top">
-                  <span class="metric-name">집중도</span>
-                  <span class="metric-unit">%</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-focus">
-                    <!-- 270도 호 (둘레 238.8 중 179) -->
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-focus-val" cx="50" cy="50" r="38" stroke-dasharray="153.9 300" transform="rotate(135 50 50)"></circle>
-                    <!-- 그룹 평균 틱 마커 (79%) -->
-                    <line class="arc-avg-tick" id="tick-focus"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-focus">86</span>
-                    <span class="gauge-avg-tag">그룹 79</span>
-                  </div>
-                </div>
-                <!-- 최근 수신 막대 12개 -->
-                <div class="recent-bars-container" id="bars-focus"></div>
-                <!-- 중립 관찰 문구 -->
-                <div class="metric-delta-badge" id="delta-focus">그룹 평균보다 <span class="delta-num">+7</span></div>
-              </article>
-
-              <!-- 1-2. 이완도 (23%, 그룹 41%, 대비 -18) -->
-              <article class="metric-card" id="card-relax">
-                <div class="metric-card-top">
-                  <span class="metric-name">이완도</span>
-                  <span class="metric-unit">%</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-relax">
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-relax-val" cx="50" cy="50" r="38" stroke-dasharray="41.2 300" transform="rotate(135 50 50)"></circle>
-                    <line class="arc-avg-tick" id="tick-relax"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-relax">23</span>
-                    <span class="gauge-avg-tag">그룹 41</span>
-                  </div>
-                </div>
-                <div class="recent-bars-container" id="bars-relax"></div>
-                <div class="metric-delta-badge" id="delta-relax">그룹 평균보다 <span class="delta-num">-18</span></div>
-              </article>
-
-              <!-- 1-3. 정서안정도 (19%, 그룹 35%, 대비 -16) -->
-              <article class="metric-card" id="card-emotion">
-                <div class="metric-card-top">
-                  <span class="metric-name">정서안정도</span>
-                  <span class="metric-unit">%</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-emotion">
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-emotion-val" cx="50" cy="50" r="38" stroke-dasharray="34.0 300" transform="rotate(135 50 50)"></circle>
-                    <line class="arc-avg-tick" id="tick-emotion"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-emotion">19</span>
-                    <span class="gauge-avg-tag">그룹 35</span>
-                  </div>
-                </div>
-                <div class="recent-bars-container" id="bars-emotion"></div>
-                <div class="metric-delta-badge" id="delta-emotion">그룹 평균보다 <span class="delta-num">-16</span></div>
-              </article>
-            </div>
-          </div>
-
-          <!-- 2. 몸 BODY 3지표 -->
-          <div style="margin-top: 2px;">
-            <div class="metrics-section-heading">
-              <div class="metrics-group-title">몸 BODY</div>
-              <div class="metrics-group-note">자율신경 및 활력 지표</div>
-            </div>
-
-            <div class="metrics-grid-3" style="margin-top: 8px;">
-              <!-- 2-1. BPM (78, 그룹 72, 대비 +6) -->
-              <article class="metric-card" id="card-bpm">
-                <div class="metric-card-top">
-                  <span class="metric-name">BPM</span>
-                  <span class="metric-unit">bpm</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-bpm">
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-bpm-val" cx="50" cy="50" r="38" stroke-dasharray="68.0 300" transform="rotate(135 50 50)"></circle>
-                    <line class="arc-avg-tick" id="tick-bpm"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-bpm">78</span>
-                    <span class="gauge-avg-tag">그룹 72</span>
-                  </div>
-                </div>
-                <div class="recent-bars-container" id="bars-bpm"></div>
-                <div class="metric-delta-badge" id="delta-bpm">그룹 평균보다 <span class="delta-num">+6</span></div>
-              </article>
-
-              <!-- 2-2. 호흡 (14, 그룹 15, 대비 -1) -->
-              <article class="metric-card" id="card-resp">
-                <div class="metric-card-top">
-                  <span class="metric-name">호흡</span>
-                  <span class="metric-unit">회/분</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-resp">
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-resp-val" cx="50" cy="50" r="38" stroke-dasharray="64.4 300" transform="rotate(135 50 50)"></circle>
-                    <line class="arc-avg-tick" id="tick-resp"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-resp">14</span>
-                    <span class="gauge-avg-tag">그룹 15</span>
-                  </div>
-                </div>
-                <div class="recent-bars-container" id="bars-resp"></div>
-                <div class="metric-delta-badge" id="delta-resp">그룹 평균보다 <span class="delta-num">-1</span></div>
-              </article>
-
-              <!-- 2-3. HRV (48, 그룹 52, 대비 -4) -->
-              <article class="metric-card" id="card-hrv">
-                <div class="metric-card-top">
-                  <span class="metric-name">HRV</span>
-                  <span class="metric-unit">ms</span>
-                </div>
-                <div class="arc-gauge-wrap">
-                  <svg viewBox="0 0 100 100" id="svg-hrv">
-                    <circle class="arc-track" cx="50" cy="50" r="38" stroke-dasharray="179 300" transform="rotate(135 50 50)"></circle>
-                    <circle class="arc-value" id="arc-hrv-val" cx="50" cy="50" r="38" stroke-dasharray="75.6 300" transform="rotate(135 50 50)"></circle>
-                    <line class="arc-avg-tick" id="tick-hrv"></line>
-                  </svg>
-                  <div class="gauge-center-val">
-                    <span class="gauge-num" id="val-hrv">48</span>
-                    <span class="gauge-avg-tag">그룹 52</span>
-                  </div>
-                </div>
-                <div class="recent-bars-container" id="bars-hrv"></div>
-                <div class="metric-delta-badge" id="delta-hrv">그룹 평균보다 <span class="delta-num">-4</span></div>
-              </article>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- 디바이스 상태 + raw data (지표 아래, 3:2) -->
+      <aside class="column-panel col-device">
+        <!-- 디바이스 상태 + raw data (좌측 컬럼 전용) -->
         <div class="glass-card device-raw-card">
           <!-- 디바이스 상태 (컴팩트 스트립) -->
           <div class="device-strip">
@@ -1423,7 +1852,7 @@
             <span class="device-strip-item">연결 <b>24분</b></span>
           </div>
 
-          <!-- raw data (EEG · PPG · ACC 3컬럼) -->
+          <!-- raw data (EEG · PPG 2컬럼) -->
           <div class="raw-grid">
             <!-- 뇌파 EEG -->
             <div class="raw-stream-block">
@@ -1440,6 +1869,11 @@
               <div class="raw-canvas-wrap">
                 <div class="canvas-grid-line"></div>
                 <canvas id="eegCanvas"></canvas>
+                <div class="raw-chips">
+                  <span class="raw-chip">집중도 <b>86</b></span>
+                  <span class="raw-chip">이완도 <b>23</b></span>
+                  <span class="raw-chip">감정균형도 <b>58</b></span>
+                </div>
               </div>
               <div class="raw-meta-foot">
                 <span>Ch1: α 10.2Hz</span>
@@ -1452,7 +1886,7 @@
               <div class="raw-stream-header">
                 <span class="raw-stream-title">
                   <span>심박 PPG</span>
-                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(BPM ~78)</span>
+                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(IR · RED)</span>
                 </span>
                 <span class="signal-status-badge">
                   <span class="status-dot-mint"></span>
@@ -1462,37 +1896,21 @@
               <div class="raw-canvas-wrap">
                 <div class="canvas-grid-line"></div>
                 <canvas id="ppgCanvas"></canvas>
+                <div class="raw-chips">
+                  <span class="raw-chip">BPM <b>78</b></span>
+                  <span class="raw-chip">HRV <b>48</b></span>
+                  <span class="raw-chip">호흡수 <b>14</b></span>
+                </div>
               </div>
               <div class="raw-meta-foot">
-                <span>광용적맥파 펄스</span>
-                <span id="ppgBpmMeta">78 bpm</span>
+                <span><span class="meta-dot" style="background:#ff5c7a;"></span>RED 660nm</span>
+                <span><span class="meta-dot" style="background:#ffa657;"></span>IR 940nm</span>
               </div>
             </div>
 
-            <!-- 움직임 ACC -->
-            <div class="raw-stream-block">
-              <div class="raw-stream-header">
-                <span class="raw-stream-title">
-                  <span>움직임 ACC</span>
-                  <span style="font-size: 10px; font-weight: 400; color: var(--muted);">(3축 · 30Hz)</span>
-                </span>
-                <span class="signal-status-badge">
-                  <span class="status-dot-mint"></span>
-                  <span>정상</span>
-                </span>
-              </div>
-              <div class="raw-canvas-wrap">
-                <div class="canvas-grid-line"></div>
-                <canvas id="accCanvas"></canvas>
-              </div>
-              <div class="raw-meta-foot">
-                <span>X·Y·Z 자세 안정</span>
-                <span>움직임 적음</span>
-              </div>
-            </div>
           </div>
         </div>
-      </section>
+      </aside>
 
     </main>
   </div>
@@ -1583,6 +2001,7 @@
 
       const ARC_TOTAL_LENGTH = 179.0; // 270도 호 기준 길이 (2*PI*38 * 270/360 ≈ 179.07)
 
+
       // 그룹 평균 틱 마커 정밀 기하학 계산
       function setupAvgTick(key) {
         const item = metricsState[key];
@@ -1593,13 +2012,13 @@
         const ratio = (item.avg - item.min) / (item.max - item.min);
         const angleDeg = 135 + ratio * 270;
         const rad = (angleDeg * Math.PI) / 180;
-        
+
         // 중심 (50, 50), 아크 반지름 r=38
         const cx = 50, cy = 50, r = 38;
-        const x1 = cx + (r - 6.5) * Math.cos(rad);
-        const y1 = cy + (r - 6.5) * Math.sin(rad);
-        const x2 = cx + (r + 6.5) * Math.cos(rad);
-        const y2 = cy + (r + 6.5) * Math.sin(rad);
+        const x1 = cx + (r - 8) * Math.cos(rad);
+        const y1 = cy + (r - 8) * Math.sin(rad);
+        const x2 = cx + (r + 8) * Math.cos(rad);
+        const y2 = cy + (r + 8) * Math.sin(rad);
 
         tick.setAttribute('x1', x1.toFixed(1));
         tick.setAttribute('y1', y1.toFixed(1));
@@ -1629,7 +2048,6 @@
         const item = metricsState[key];
         const valElem = document.getElementById('val-' + key);
         const arcElem = document.getElementById('arc-' + key + '-val');
-        const deltaElem = document.getElementById('delta-' + key);
 
         if (valElem) valElem.textContent = Math.round(item.val);
 
@@ -1640,17 +2058,9 @@
           arcElem.setAttribute('stroke-dasharray', `${fillLength} 300`);
         }
 
-        // 중립 관찰 문구 계산 ("그룹 평균보다 ±N" 또는 "그룹 평균과 비슷")
-        if (deltaElem) {
-          const diff = Math.round(item.val - item.avg);
-          if (diff === 0) {
-            deltaElem.innerHTML = '그룹 평균과 <span class="delta-num">비슷함</span>';
-          } else if (diff > 0) {
-            deltaElem.innerHTML = `그룹 평균보다 <span class="delta-num">+${diff}</span>`;
-          } else {
-            deltaElem.innerHTML = `그룹 평균보다 <span class="delta-num">${diff}</span>`;
-          }
-        }
+        // 캡션 갱신: 그룹 평균 절대값 + 추이 상태
+        const avgElem = document.getElementById('avg-' + key);
+        if (avgElem) avgElem.textContent = Math.round(item.avg);
 
         // 미니 막대 갱신
         const container = document.getElementById('bars-' + key);
@@ -1694,11 +2104,6 @@
           updateMetricDisplay(key);
         });
 
-        // 우측 PPG BPM 메타 갱신
-        const ppgBpmMeta = document.getElementById('ppgBpmMeta');
-        if (ppgBpmMeta) {
-          ppgBpmMeta.textContent = `${Math.round(metricsState.bpm.val)} bpm`;
-        }
       }
 
       // 1초 타이머 시작
@@ -1713,7 +2118,6 @@
          ======================================================================== */
       const eegCanvas = document.getElementById('eegCanvas');
       const ppgCanvas = document.getElementById('ppgCanvas');
-      const accCanvas = document.getElementById('accCanvas');
 
       function resizeCanvas(canvas) {
         const dpr = window.devicePixelRatio || 1;
@@ -1727,13 +2131,21 @@
 
       let eegInfo = resizeCanvas(eegCanvas);
       let ppgInfo = resizeCanvas(ppgCanvas);
-      let accInfo = resizeCanvas(accCanvas);
 
-      window.addEventListener('resize', () => {
-        eegInfo = resizeCanvas(eegCanvas);
-        ppgInfo = resizeCanvas(ppgCanvas);
-        accInfo = resizeCanvas(accCanvas);
-      });
+      // 패널 폭 변경(드래그)·창 리사이즈 모두 자동 반영
+      if (window.ResizeObserver) {
+        const resizeObserver = new ResizeObserver(() => {
+          eegInfo = resizeCanvas(eegCanvas);
+          ppgInfo = resizeCanvas(ppgCanvas);
+        });
+        resizeObserver.observe(eegCanvas);
+        resizeObserver.observe(ppgCanvas);
+      } else {
+        window.addEventListener('resize', () => {
+          eegInfo = resizeCanvas(eegCanvas);
+          ppgInfo = resizeCanvas(ppgCanvas);
+        });
+      }
 
       let animTime = 0;
 
@@ -1782,74 +2194,58 @@
 
 
         // -------------------------------------------------------------
-        // 4-B. PPG 심박 펄스 파형 (BPM ~78, Dicrotic Notch 합성)
+        // 4-B. PPG 심박 펄스 파형 — IR(940nm) + RED(660nm) 2채널 overlap
         // -------------------------------------------------------------
         const { width: pW, height: pH, ctx: pCtx } = ppgInfo;
         pCtx.clearRect(0, 0, pW, pH);
 
-        pCtx.beginPath();
-        pCtx.lineWidth = 2.0;
-        pCtx.strokeStyle = '#dcb5ee';
-        pCtx.shadowColor = 'rgba(220, 181, 238, 0.4)';
-        pCtx.shadowBlur = 4;
+        const ppgChannels = [
+          { color: '#ff5c7a', scale: 1.0 },   // RED 660nm (진폭 큼)
+          { color: '#ffa657', scale: 0.78 },  // IR 940nm (진폭 약간 작음)
+        ];
 
         const pMidY = pH * 0.52;
         const wavelength = 58; // 심박 주기 폭
 
-        for (let x = 0; x < pW; x++) {
-          const phase = ((x - animTime * 48) % wavelength + wavelength) % wavelength;
-          const normPhase = phase / wavelength; // 0 ~ 1
+        ppgChannels.forEach((ch, idx) => {
+          pCtx.beginPath();
+          pCtx.lineWidth = idx === 0 ? 1.9 : 1.7;
+          pCtx.strokeStyle = ch.color;
+          pCtx.globalAlpha = idx === 0 ? 0.95 : 0.8;
+          pCtx.shadowColor = ch.color + '66';
+          pCtx.shadowBlur = 3;
 
-          let pulseY = 0;
-          if (normPhase < 0.22) {
-            // 수축기 상승 (Systolic upstroke)
-            pulseY = -Math.sin((normPhase / 0.22) * Math.PI) * 20;
-          } else if (normPhase >= 0.22 && normPhase < 0.38) {
-            // 수축기 하강 및 Dicrotic Notch 형성
-            const sub = (normPhase - 0.22) / 0.16;
-            pulseY = -20 * (1 - sub * 0.85);
-          } else if (normPhase >= 0.38 && normPhase < 0.52) {
-            // 중복맥박 반동 (Dicrotic wave rebound)
-            const sub = (normPhase - 0.38) / 0.14;
-            pulseY = -7 + Math.sin(sub * Math.PI) * 4.0;
-          } else {
-            // 확장기 기저선 복귀 (Diastolic runoff)
-            const sub = (normPhase - 0.52) / 0.48;
-            pulseY = -3.5 * (1 - sub);
+          for (let x = 0; x < pW; x++) {
+            const phase = ((x - animTime * 48) % wavelength + wavelength) % wavelength;
+            const normPhase = phase / wavelength; // 0 ~ 1
+
+            let pulseY = 0;
+            if (normPhase < 0.22) {
+              // 수축기 상승 (Systolic upstroke)
+              pulseY = -Math.sin((normPhase / 0.22) * Math.PI) * 20 * ch.scale;
+            } else if (normPhase >= 0.22 && normPhase < 0.38) {
+              // 수축기 하강 및 Dicrotic Notch 형성
+              const sub = (normPhase - 0.22) / 0.16;
+              pulseY = -20 * ch.scale * (1 - sub * 0.85);
+            } else if (normPhase >= 0.38 && normPhase < 0.52) {
+              // 중복맥박 반동 (Dicrotic wave rebound)
+              const sub = (normPhase - 0.38) / 0.14;
+              pulseY = -7 * ch.scale + Math.sin(sub * Math.PI) * 4.0 * ch.scale;
+            } else {
+              // 확장기 기저선 복귀 (Diastolic runoff)
+              const sub = (normPhase - 0.52) / 0.48;
+              pulseY = -3.5 * ch.scale * (1 - sub);
+            }
+
+            const y = pMidY + pulseY;
+            if (x === 0) pCtx.moveTo(x, y);
+            else pCtx.lineTo(x, y);
           }
-
-          const y = pMidY + pulseY;
-          if (x === 0) pCtx.moveTo(x, y);
-          else pCtx.lineTo(x, y);
-        }
-        pCtx.stroke();
-        pCtx.shadowBlur = 0; // 복원
-
-
-        // -------------------------------------------------------------
-        // 4-C. ACC 3축 움직임 파형 (30Hz 감각, 완만한 저주파 진동 — 움직임 버스트 없음)
-        // -------------------------------------------------------------
-        const { width: aW, height: aH, ctx: aCtx } = accInfo;
-        aCtx.clearRect(0, 0, aW, aH);
-
-        const accChannels = [
-          { color: '#dcb5ee', mid: 0.28, amp: 2.2, freq: 1.6, phase: 0 },
-          { color: '#a16bbc', mid: 0.52, amp: 2.6, freq: 2.1, phase: 1.8 },
-          { color: '#6f4d8f', mid: 0.76, amp: 2.0, freq: 1.3, phase: 3.4 },
-        ];
-
-        accChannels.forEach((ch) => {
-          aCtx.beginPath();
-          aCtx.lineWidth = 1.3;
-          aCtx.strokeStyle = ch.color;
-          for (let x = 0; x < aW; x++) {
-            const t = animTime * 1.4 + x * 0.04 + ch.phase;
-            const y = ch.mid * aH + Math.sin(t * ch.freq) * ch.amp + Math.sin(t * ch.freq * 0.37) * 1.1;
-            if (x === 0) aCtx.moveTo(x, y);
-            else aCtx.lineTo(x, y);
-          }
-          aCtx.stroke();
+          pCtx.stroke();
+          pCtx.shadowBlur = 0;
         });
+        pCtx.globalAlpha = 1;
+
 
         requestAnimationFrame(renderWaveforms);
       }
@@ -1860,6 +2256,36 @@
       // 나가기 버튼 피드백
       document.getElementById('exitClassBtn').addEventListener('click', () => {
         showFeedback('목업: 클래스 나가기 버튼이 클릭되었습니다.');
+      });
+
+
+      // ===== 좌/우 SUB 패널 폭 드래그 리사이즈 =====
+      document.querySelectorAll('.resize-handle').forEach(function (handle) {
+        handle.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          var side = handle.getAttribute('data-side');
+          var panel = side === 'left' ? handle.previousElementSibling : handle.nextElementSibling;
+          var startX = e.clientX;
+          var startW = panel.getBoundingClientRect().width;
+          var minW = parseInt(getComputedStyle(panel).minWidth) || 200;
+          var maxW = parseInt(getComputedStyle(panel).maxWidth) || 9999;
+          handle.classList.add('active');
+          document.body.classList.add('resizing');
+          function onMove(ev) {
+            var dx = side === 'left' ? (ev.clientX - startX) : (startX - ev.clientX);
+            var newW = Math.max(minW, Math.min(maxW, startW + dx));
+            panel.style.width = newW + 'px';
+            panel.style.flex = '0 0 ' + newW + 'px';
+          }
+          function onUp() {
+            handle.classList.remove('active');
+            document.body.classList.remove('resizing');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
       });
 
     })();

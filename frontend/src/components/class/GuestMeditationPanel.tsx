@@ -1,7 +1,7 @@
-// 게스트 명상 화면 — 1.0 디자인 패리티 (SDD-029 P0) + SDD-040 6지표
-// 검정 풀블리드 + FadingImageBackground + 상담사 라이브(상단) + 진행시간·6지표(하단)
-// 데이터 계약(useBand/WS)은 SDD-024/026 유지 — 표현층만 교체
-// 오프라인 수업은 스피커 기본 뮤트(하울링 방지), 온라인은 기본 ON + 스피커 온오프 토글
+// 게스트 명상 화면 — SDD-029 P0 + SDD-040 6지표 + SDD-124 그룹 평균 + SDD-125 3열.
+// 디자인 정본: design/member-class-player/index.html (3열: 좌=클래스정보·프로필·지표·피드백 /
+// 중=상담사 라이브·채팅 / 우=디바이스·raw). 좌우 SUB 폭 리사이즈 가능(기본=최대폭).
+// 데이터 계약(useBand/WS)은 SDD-024/026 유지 — 표현층만 교체.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
@@ -10,13 +10,16 @@ import { useAuthStore } from '../../stores/authStore';
 import { resolveBandLinkState } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
 import { toDisplayGroupAverage, type GroupAverageDisplay, type GroupAverageEvent } from '../../lib/class/group-average';
-import { getSession, getSessionByCodeState } from '../../lib/api/session';
+import { getSession, getSessionByCode, getSessionByCodeState } from '../../lib/api/session';
+import { getClientProfile } from '../../lib/api/client-profile';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
 import { BlinkingText } from './BlinkingText';
 import { MemberMetricDial } from './MemberMetricDial';
 import { MemberRawData } from './MemberRawData';
 import { MemberDeviceStrip } from './MemberDeviceStrip';
+import { MemberClassInfoCard } from './MemberClassInfoCard';
+import { MemberProfileCard } from './MemberProfileCard';
 import './member-class-player.css';
 import { LeadOffModal } from './LeadOffModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
@@ -56,33 +59,35 @@ interface MetricDef {
   key: MetricKey;
   label: string;
   unit: string;
-  /** 지표 차트 스케일 상한 (디자인 정본 비율 기준) */
-  chartMax: number;
-  /** 낮을수록 좋은 지표(BPM·호흡) — 차트 방향 코멘트에 사용 */
-  lowerIsBetter?: boolean;
-  /** 차트 노트에 붙는 스케일 안내 (예: HRV "0–60ms 기준") */
-  scaleNote?: string;
+  /** 표시 스케일 하한/상한 (목업 정본 기준) */
+  min: number;
+  max: number;
 }
 
 const METRICS: readonly MetricDef[] = [
-  { key: 'focus', label: '집중도', unit: '%', chartMax: 100 },
-  { key: 'relaxation', label: '이완도', unit: '%', chartMax: 100 },
-  { key: 'emotional', label: '정서안정도', unit: '%', chartMax: 100 },
-  { key: 'bpm', label: 'BPM', unit: 'bpm', chartMax: 100, lowerIsBetter: true },
-  { key: 'respiration', label: '호흡', unit: '회/분', chartMax: 24, lowerIsBetter: true },
-  { key: 'hrv', label: 'HRV', unit: 'ms', chartMax: 60, scaleNote: '0–60ms 기준' },
+  { key: 'focus', label: '집중도', unit: '%', min: 0, max: 100 },
+  { key: 'relaxation', label: '이완도', unit: '%', min: 0, max: 100 },
+  { key: 'emotional', label: '감정균형도', unit: '%', min: 0, max: 100 },
+  { key: 'bpm', label: 'BPM', unit: 'bpm', min: 40, max: 140 },
+  { key: 'respiration', label: '호흡', unit: '회/분', min: 5, max: 30 },
+  { key: 'hrv', label: 'HRV', unit: 'ms', min: 10, max: 100 },
 ] as const;
 
-/** SDD-123: MIND/BODY 섹션 — 상담사 화면의 MIND/BODY 구분을 이식 (표시 순서 유지) */
+/** SDD-123: MIND/BODY 섹션 — 상담사 화면의 MIND/BODY 구분 이식 (표시 순서 유지) */
 const METRIC_SECTIONS = [
-  { key: 'mind', label: '마음', english: 'MIND', keys: ['focus', 'relaxation', 'emotional'] as const },
-  { key: 'body', label: '몸', english: 'BODY', keys: ['bpm', 'respiration', 'hrv'] as const },
+  { key: 'mind', label: '마음', english: 'MIND', note: '뇌파 인지 상태 지표', keys: ['focus', 'relaxation', 'emotional'] as const },
+  { key: 'body', label: '몸', english: 'BODY', note: '자율신경 및 활력 지표', keys: ['bpm', 'respiration', 'hrv'] as const },
 ] as const;
 
 const MAX_POINTS = 300;
 const AI_ANALYZING_MS = 15_000;
-/** SDD-095: 클래스 채팅 상태(chat_enabled) 폴링 주기 — 상담사 토글을 근실시간 반영 */
+/** SDD-095: 클래스 채팅 상태(chat_enabled) 폴링 주기 */
 const CHAT_STATE_POLL_MS = 5_000;
+/** SDD-125: 좌/우 SUB 패널 폭 (기본=최대폭) */
+const LEFT_W = 460;
+const LEFT_MIN = 250;
+const RIGHT_W = 420;
+const RIGHT_MIN = 220;
 
 type MetricSeries = Record<MetricKey, number[]>;
 
@@ -169,27 +174,78 @@ export function GuestMeditationPanel({
   const [speakerOn, setSpeakerOn] = useState(locationType === 'online');
   /** SDD-124: 절대 그룹 평균(표시 스케일) — class:group_average 수신 */
   const [groupAverage, setGroupAverage] = useState<GroupAverageDisplay | null>(null);
+  /** SDD-125: 밴드 착용자 수(그룹 평균 이벤트 payload) */
+  const [wearerCount, setWearerCount] = useState<number | null>(null);
+  /** SDD-125: 클래스 정보(상담사명·참여자수) */
+  const [counselorName, setCounselorName] = useState<string | null>(null);
+  const [participantCount, setParticipantCount] = useState<number | null>(null);
+  /** SDD-125: 내 프로필(성별·생년월일) */
+  const [profile, setProfile] = useState<{ gender?: string | null; birthDate?: string | null } | null>(null);
+  /** SDD-125: 좌/우 패널 폭 */
+  const [leftW, setLeftW] = useState(LEFT_W);
+  const [rightW, setRightW] = useState(RIGHT_W);
+  const [resizing, setResizing] = useState(false);
+  const dragRef = useRef<{ side: 'left' | 'right'; startX: number; startW: number } | null>(null);
+
   const wasLeadOffRef = useRef(false);
   const analyzingTimerRef = useRef<number | null>(null);
-  /** 링버퍼 갱신 시 리렌더 트리거(미니바 갱신용) — 값 자체는 사용하지 않는다 */
+  /** 링버퍼 갱신 시 리렌더 트리거(미니바 갱신용) */
   const [, setSeriesTick] = useState(0);
   const seriesRef = useRef<MetricSeries>(emptySeries());
   const bandRef = useRef<ReturnType<typeof useBand> | null>(null);
   const targetSec = Math.max(1, durationMin) * 60;
 
-  // 로그인 회원의 참가자 행은 user_id가 있어 무토큰 업로드가 403(사칭 차단)으로 거부된다.
-  // 회원은 반드시 토큰으로, 비로그인 게스트만 skipAuth로 연결한다.
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
+
+  // ── SDD-125: 클래스 정보(상담사명·참여자수) — 회원/게스트 경로 분기 ──
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        if (isAuthenticated) {
+          const detail = await getSession(sessionId);
+          if (cancelled) return;
+          const host = user?.counselors?.find((c) => c.id === detail.host_id)?.name ?? null;
+          setCounselorName(host);
+          setParticipantCount(detail.participants?.length ?? null);
+        } else if (classCode) {
+          const byCode = await getSessionByCode(classCode);
+          if (cancelled) return;
+          setCounselorName(byCode.host_name);
+          setParticipantCount(byCode.participant_count);
+        }
+      } catch {
+        // 클래스 정보 조회 실패는 무해 — 카드 최소 표기
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, classCode, isAuthenticated, user]);
+
+  // ── SDD-125: 내 프로필(성별·생년월일) — 회원만 ──
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    getClientProfile()
+      .then((p) => {
+        if (!cancelled) setProfile({ gender: p.gender, birthDate: p.birth_date });
+      })
+      .catch(() => {
+        // 프로필 조회 실패는 무해 — 이름만 표기
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
 
   // ── SDD-095: 클래스 채팅 ──
-  // 회원(로그인)만 세션 상세로 채팅 상태를 조회한다(게스트는 권한 없음 → 패널 미노출).
-  // 상담사가 명상 중에 켜면 5초 폴링으로 감지해 패널을 펼치고, 진입 시점에는 접힘(배지만)으로 둔다.
   const [chatEnabled, setChatEnabled] = useState(false);
   const [chatRoomId, setChatRoomId] = useState<string | null>(null);
-  const [chatStateReady, setChatStateReady] = useState(false);
-  const [chatExpanded, setChatExpanded] = useState(false);
-  /** 직전 관측값 — 세션별로 「진입 시 기본 접힘 / 진행 중 켜짐 = 펼침」을 판정한다 */
-  const lastChatEnabledRef = useRef<{ sessionId: string; value: boolean } | null>(null);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !sessionId) return undefined;
@@ -200,7 +256,6 @@ export function GuestMeditationPanel({
         if (cancelled) return;
         setChatEnabled(Boolean(detail.chat_enabled));
         setChatRoomId(detail.chat_room_id ?? null);
-        setChatStateReady(true);
       } catch {
         // 채팅 상태 조회 실패는 클래스 진행에 영향이 없어야 한다 — 패널만 미표시
       }
@@ -213,8 +268,7 @@ export function GuestMeditationPanel({
     };
   }, [isAuthenticated, sessionId]);
 
-  // SDD-095 후속: 게스트는 채팅방 접근 권한이 없으므로, by-code 상태로 chat_enabled만 조회해
-  // '회원 전용' 안내(GuestChatNotice)를 노출한다 — 패널 대신 회원가입 유도.
+  // 게스트는 채팅방 접근 권한이 없으므로 by-code 상태로 chat_enabled만 조회
   const [guestChatEnabled, setGuestChatEnabled] = useState(false);
 
   useEffect(() => {
@@ -227,7 +281,7 @@ export function GuestMeditationPanel({
         const state = await getSessionByCodeState(code, pid);
         if (!cancelled) setGuestChatEnabled(Boolean(state.chat_enabled));
       } catch {
-        // 상태 조회 실패는 무해 — 안내만 미표시
+        // 상태 조회 실패는 무해
       }
     };
     void load();
@@ -237,18 +291,6 @@ export function GuestMeditationPanel({
       window.clearInterval(timer);
     };
   }, [isAuthenticated, classCode, participantId]);
-
-  // 명상 진행 중에는 기본 접힘(안읽음 배지만) — 진행 중 상담사가 켜면 그때 펼친다
-  useEffect(() => {
-    if (!chatStateReady) return;
-    const previous = lastChatEnabledRef.current;
-    lastChatEnabledRef.current = { sessionId, value: chatEnabled };
-    if (!previous || previous.sessionId !== sessionId) {
-      setChatExpanded(false);
-      return;
-    }
-    if (chatEnabled && !previous.value) setChatExpanded(true);
-  }, [chatStateReady, chatEnabled, sessionId]);
 
   const band = useBand({
     sessionId,
@@ -268,20 +310,17 @@ export function GuestMeditationPanel({
         event.feature?.relaxation_index ??
         null;
       if (typeof efficiency === 'number') {
-        // feature 계약은 raw 비율(0~1) — 표시 전 표준모델/코호트 정규화(0~100)
         setRemoteEfficiency(scoreIndices({ relaxationIndex: efficiency }).relaxationIndex);
       }
     },
     [participantId, sessionId],
   );
 
-  // SDD-124: 절대 그룹 평균 수신 — 마음 0~1 → 0~100 정규화, 몸 절대값 그대로.
-  // payload 는 정규화(계약 검증)를 통과한 GroupAverageEvent. 개인 식별자·순위 없음.
   const handleGroupAverage = useCallback((event: GroupAverageEvent) => {
     setGroupAverage(toDisplayGroupAverage(event));
+    setWearerCount(event.wearer_count);
   }, []);
 
-  // 개선 5: 무음 시그널 — 기본 뮤트(온라인 1:N)에서도 발언권 없이 상태를 조용히 전달한다.
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
@@ -391,6 +430,39 @@ export function GuestMeditationPanel({
     return () => window.clearInterval(id);
   }, [startedAt]);
 
+  // SDD-125: 리사이즈 핸들 드래그 (좌/우 SUB 폭 조정)
+  const onHandlePointerDown = (side: 'left' | 'right') => (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    dragRef.current = { side, startX: e.clientX, startW: side === 'left' ? leftW : rightW };
+    setResizing(true);
+  };
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent): void => {
+      const drag = dragRef.current;
+      if (!drag) return;
+      const dx = e.clientX - drag.startX;
+      const next = drag.side === 'left' ? drag.startW + dx : drag.startW - dx;
+      if (drag.side === 'left') {
+        setLeftW(Math.max(LEFT_MIN, Math.min(LEFT_W, next)));
+      } else {
+        setRightW(Math.max(RIGHT_MIN, Math.min(RIGHT_W, next)));
+      }
+    };
+    const onUp = (): void => {
+      dragRef.current = null;
+      setResizing(false);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, []);
+
   // 오프라인 그룹 20명 초과 수업은 강당형 대면 진행 — 원격 상담사 영상 타일을 숨긴다
   const showCounselorVideo = !(
     locationType === 'offline' &&
@@ -398,39 +470,23 @@ export function GuestMeditationPanel({
     (maxParticipants ?? 0) > 20
   );
 
-  // SDD-094: 온라인 그룹(≤20)만 발언권(손들기) 대상 —
-  // 온라인 1:1은 상시 송출(canPublish=true)이라 버튼이 뜨지 않고, 오프라인/>20은 대상 아님
+  // 온라인 그룹(≤20)만 발언권(손들기) 대상
   const speakingManaged =
     locationType === 'online' &&
     participantMode === 'group' &&
     (maxParticipants ?? 0) <= 20;
 
   return (
-    <div className="member-class-player">
+    <div
+      className={`member-class-player${resizing ? ' resizing' : ''}`}
+      style={{ '--col-metrics-w': `${leftW}px`, '--col-device-w': `${rightW}px` } as React.CSSProperties}
+    >
       <FadingImageBackground />
       <div className="player-scrim" aria-hidden="true" />
       <div className="player-screen" inert={screenOff}>
         <header className="player-topbar">
           <button type="button" onClick={onLeave} className="player-pill">← 종료</button>
           <h1>{title ?? '클래스'}</h1>
-      {/* SDD-095: 클래스 채팅 — chat_enabled일 때만 노출(패널 내부 게이트).
-          몰입(화면 끄기) 중에도 마운트를 유지해 안읽음 배지가 쌓이게 하되,
-          몰입 오버레이(z-50, DOM상 뒤)가 위를 덮어 시각·클릭을 가린다. */}
-      <div className="player-chat">
-      <ClassChatPanel
-        sessionId={sessionId}
-        enabled={chatEnabled}
-        roomId={chatRoomId}
-        collapsed={!chatExpanded}
-        onCollapsedChange={(next) => setChatExpanded(!next)}
-        title="클래스 채팅"
-      />
-
-      {/* SDD-095 후속: 게스트에게 채팅방이 회원 전용임을 안내(회원가입 유도) */}
-      {!isAuthenticated && guestChatEnabled && <GuestChatNotice />}
-      </div>
-
-
           <button type="button" onClick={() => setSpeakerOn((v) => !v)}
             aria-pressed={speakerOn} aria-label={speakerOn ? '스피커 음소거' : '스피커 켜기'} className="player-pill">
             <SpeakerIcon muted={!speakerOn} />
@@ -441,13 +497,78 @@ export function GuestMeditationPanel({
           </button>
         </header>
 
-        <div className="player-body member-2col">
-          {/* 좌측: "지금 나를 알려요" 시그널 + 상담사 영상 + 함께한 시간 */}
-          <div className="member-left">
-            <section className="member-signal-card" aria-label="지금 나를 알려요">
+        <div className="player-body">
+          {/* 좌측 SUB: 클래스 정보 + 프로필 + 나의 상태 + 피드백 */}
+          <div className="column-panel col-metrics">
+            <MemberClassInfoCard
+              counselorName={counselorName}
+              participantCount={participantCount}
+              wearerCount={wearerCount}
+              groupFocus={groupAverage?.focus ?? null}
+            />
+            <MemberProfileCard
+              name={user?.name ?? null}
+              gender={profile?.gender}
+              birthDate={profile?.birthDate}
+              bandConnected={isLive}
+            />
+
+            <section className="glass-card member-metrics-card" aria-label="나의 상태">
+              <div className="card-header-row" style={{ marginBottom: 4 }}>
+                <div className="card-title-group">
+                  <h2 className="card-title" style={{ fontSize: 15 }}>나의 상태</h2>
+                  <p className="card-subtitle" style={{ marginTop: 1 }}>그룹 평균 대비 실시간 흐름</p>
+                </div>
+                <span className="member-device-dot" aria-hidden="true" style={isLive ? undefined : { background: 'var(--player-muted)', boxShadow: 'none' }} />
+              </div>
+              {METRIC_SECTIONS.map((section) => (
+                <section key={section.key} className="player-metric-section" aria-label={section.label}>
+                  <div className="metrics-section-heading">
+                    <span className="metrics-group-title">{section.label} {section.english}</span>
+                    <span className="metrics-group-note">{section.note}</span>
+                  </div>
+                  <div className="metrics-grid-3">
+                    {section.keys.map((key) => {
+                      const metric = METRICS.find((m) => m.key === key)!;
+                      return (
+                        <MemberMetricDial
+                          key={key}
+                          label={metric.label}
+                          value={snapshot[key]}
+                          unit={metric.unit}
+                          min={metric.min}
+                          max={metric.max}
+                          series={seriesRef.current[key]}
+                          average={groupAverage?.[key] ?? null}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+              <div className="metric-legend">
+                <span className="legend-item"><span className="legend-swatch legend-ring" aria-hidden="true" /> 링: 현재값</span>
+                <span className="legend-item"><span className="legend-swatch legend-bar" aria-hidden="true" /> 막대: 최근 수신값</span>
+                <span className="legend-item"><span className="legend-swatch legend-dot" aria-hidden="true" /> 증감: 3분 대비</span>
+              </div>
+            </section>
+
+            <section className="glass-card member-signal-card" aria-label="지금 나를 알려요">
               <h3 className="member-card-title">지금 나를 알려요</h3>
               <QuietSignalButtons onSend={liveSocket.sendSignal} />
             </section>
+          </div>
+
+          <div
+            className="resize-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="좌측 패널 폭 조절"
+            onPointerDown={onHandlePointerDown('left')}
+          />
+
+          {/* 중앙 MAIN: 상담사 라이브 + 채팅 */}
+          <div className="column-panel col-live">
             <section className="member-video-card" aria-label="상담사 영상">
               <span className="player-video-label">{showCounselorVideo ? '상담사 라이브' : '함께하는 명상'}</span>
               {showCounselorVideo ? (
@@ -462,37 +583,36 @@ export function GuestMeditationPanel({
                 <span className="player-timer-total">/ {formatClock(targetSec)}</span>
               </div>
             </section>
+
+            {(chatEnabled || (!isAuthenticated && guestChatEnabled)) && (
+              <section className="glass-card member-chat-card" aria-label="클래스 채팅">
+                {isAuthenticated ? (
+                  <ClassChatPanel
+                    sessionId={sessionId}
+                    enabled={chatEnabled}
+                    roomId={chatRoomId}
+                    collapsed={chatCollapsed}
+                    onCollapsedChange={setChatCollapsed}
+                    title="클래스 채팅"
+                  />
+                ) : (
+                  <GuestChatNotice />
+                )}
+              </section>
+            )}
           </div>
 
-          {/* 우측: 나의 상태(마음3+몸3, 그룹 평균 대비) + 디바이스/raw */}
-          <div className="member-right">
-            <section className="member-metrics-card" aria-label="나의 상태">
-              <div className="player-metric-sections">
-                {METRIC_SECTIONS.map((section) => (
-                  <section key={section.key} className="player-metric-section" aria-label={section.label}>
-                    <h3>{section.label}<small>{section.english}</small></h3>
-                    <div className="player-metric-items">
-                      {section.keys.map((key) => {
-                        const metric = METRICS.find((m) => m.key === key)!;
-                        return (
-                          <MemberMetricDial
-                            key={key}
-                            label={metric.label}
-                            value={snapshot[key]}
-                            unit={metric.unit}
-                            maxValue={metric.chartMax}
-                            series={seriesRef.current[key]}
-                            average={groupAverage?.[key] ?? null}
-                          />
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            </section>
+          <div
+            className="resize-handle"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="우측 패널 폭 조절"
+            onPointerDown={onHandlePointerDown('right')}
+          />
 
-            <section className="member-device-raw-card" aria-label="디바이스 및 원시 데이터">
+          {/* 우측 SUB: 디바이스 + raw */}
+          <div className="column-panel col-device">
+            <section className="glass-card member-device-raw-card" aria-label="디바이스 및 원시 데이터">
               <div className="member-device-head">
                 <MemberDeviceStrip
                   connected={isLive}
@@ -517,20 +637,17 @@ export function GuestMeditationPanel({
           </div>
         </div>
 
-      <LeadOffModal
-        isVisible={showLeadOffModal}
-        leadOff={band.leadOff}
-        onDismiss={() => setLeadOffDismissed(true)}
-      />
+        <LeadOffModal
+          isVisible={showLeadOffModal}
+          leadOff={band.leadOff}
+          onDismiss={() => setLeadOffDismissed(true)}
+        />
 
-      {/* 개선 9: 최초 1회 온보딩 코치마크 — 기본 뮤트·손들기·스피커·몰입 모드 안내.
-          localStorage로 재노출을 막고, [건너뛰기]/[다시 보지 않기]로 즉시 닫을 수 있다. */}
-      <ClassOnboardingCoachmarks
-        locationType={locationType}
-        participantMode={participantMode}
-        maxParticipants={maxParticipants}
-      />
-
+        <ClassOnboardingCoachmarks
+          locationType={locationType}
+          participantMode={participantMode}
+          maxParticipants={maxParticipants}
+        />
       </div>
 
       {/* 화면 끄기 오버레이 — 검정 + 타이머 + 가운데 켜기 (1500ms crossfade) */}

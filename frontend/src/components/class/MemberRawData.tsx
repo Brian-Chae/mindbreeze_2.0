@@ -1,14 +1,14 @@
-// SDD-124: 회원용 raw 데이터 파형 — 뇌파(EEG 2ch)·심박(PPG 2ch)·움직임(ACC) 다크 캔버스.
-// useBand 의 supplier(getEegWaveformSamples/getPpgWaveformSamples)와 acc state 를
-// rAF 루프에서 직접 읽어 React 리렌더 없이 그린다(250Hz 렌더 부하 최소화).
+// SDD-125: 회원용 raw 데이터 파형 — 뇌파(EEG 2ch)·심박(PPG IR/RED overlap) 다크 캔버스.
+// ACC(움직임)는 제거. EEG 위 CHIP(집중·이완·감정균형), PPG 위 CHIP(BPM·HRV·호흡수).
+// useBand 의 supplier(getEegWaveformSamples/getPpgWaveformSamples)를 rAF 루프에서 직접 읽어
+// React 리렌더 없이 그린다(250Hz 렌더 부하 최소화). ResizeObserver로 패널 폭 변경 시 자동 재할당.
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { UseBandResult } from '../../hooks/useBand';
 
 interface DarkWaveformSeries {
   id: string;
   color: string;
-  label?: string;
 }
 
 type WaveformSupplier = () => Record<string, ArrayLike<number>>;
@@ -20,11 +20,13 @@ interface DarkWaveformProps {
   active: boolean;
   /** 파형이 유효한지(정상 여부 배지용) */
   hasSignal: boolean;
+  /** 캔버스 위 오버레이 CHIP (라벨 + 현재값) */
+  chips?: { label: string; value: string }[];
 }
 
 const GRID_COLOR = 'rgba(255,255,255,0.06)';
 
-function DarkWaveform({ series, supplier, active, hasSignal }: DarkWaveformProps) {
+function DarkWaveform({ series, supplier, active, hasSignal, chips }: DarkWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const supplierRef = useRef(supplier);
   const activeRef = useRef(active);
@@ -134,64 +136,88 @@ function DarkWaveform({ series, supplier, active, hasSignal }: DarkWaveformProps
   return (
     <span className={`member-raw-wave${hasSignal ? '' : ' is-idle'}`}>
       <canvas ref={canvasRef} aria-hidden="true" />
+      {chips && chips.length > 0 && (
+        <span className="member-raw-chips">
+          {chips.map((c) => (
+            <span key={c.label} className="member-raw-chip">
+              {c.label} <b>{c.value}</b>
+            </span>
+          ))}
+        </span>
+      )}
     </span>
   );
 }
 
 function RawBlock({
   label,
-  detail,
+  sub,
   series,
   supplier,
   active,
   hasSignal,
+  chips,
+  foot,
 }: {
   label: string;
-  detail: string;
+  sub: string;
   series: DarkWaveformSeries[];
   supplier: WaveformSupplier;
   active: boolean;
   hasSignal: boolean;
+  chips?: { label: string; value: string }[];
+  foot: ReactNode;
 }) {
   return (
     <div className="member-raw-block">
       <header className="member-raw-head">
-        <span className="member-raw-title">{label}</span>
+        <span className="member-raw-title">
+          {label} <small style={{ fontSize: 10, fontWeight: 400, color: 'var(--player-muted)' }}>{sub}</small>
+        </span>
         <span className={`member-raw-status${hasSignal ? '' : ' is-idle'}`}>
           {hasSignal ? '정상' : '대기'}
         </span>
       </header>
-      <DarkWaveform series={series} supplier={supplier} active={active} hasSignal={hasSignal} />
-      <footer className="member-raw-foot">{detail}</footer>
+      <DarkWaveform series={series} supplier={supplier} active={active} hasSignal={hasSignal} chips={chips} />
+      <footer className="member-raw-foot">{foot}</footer>
     </div>
   );
 }
+
+const fmt = (v: number | null | undefined): string =>
+  v === null || v === undefined || !Number.isFinite(v) ? '—' : String(Math.round(v));
 
 export function MemberRawData({ band }: { band: UseBandResult }) {
   const connected = band.connectionState === 'connected';
   const eeg = band.getEegWaveformSamples();
   const ppg = band.getPpgWaveformSamples();
-  const accMagnitude = band.acc.magnitude;
+  const s = band.scoredIndices;
 
   return (
     <div className="member-raw-grid">
       <RawBlock
         label="뇌파 EEG"
-        detail="Fp1 · Fp2 · 250Hz"
+        sub="(2ch · 250Hz)"
         series={[
-          { id: 'fp1', color: '#DCB5EE', label: 'Fp1' },
-          { id: 'fp2', color: '#01f0c8', label: 'Fp2' },
+          { id: 'fp1', color: '#DCB5EE' },
+          { id: 'fp2', color: '#01f0c8' },
         ]}
         supplier={() => band.getEegWaveformSamples()}
         active={connected}
         hasSignal={connected && eeg.fp1.length > 1}
+        chips={[
+          { label: '집중도', value: fmt(s?.focusIndex) },
+          { label: '이완도', value: fmt(s?.relaxationIndex) },
+          { label: '감정균형도', value: fmt(s?.emotionalStability) },
+        ]}
+        foot={<>Fp1 · Fp2 · 250Hz</>}
       />
       <RawBlock
         label="심박 PPG"
-        detail="IR · RED · 50Hz"
+        sub="(IR · RED)"
         series={[
-          { id: 'ir', color: '#fbbf24' },
-          { id: 'red', color: '#f472b6' },
+          { id: 'ir', color: '#ffa657' },
+          { id: 'red', color: '#ff5c7a' },
         ]}
         supplier={() => {
           const p = band.getPpgWaveformSamples();
@@ -199,14 +225,23 @@ export function MemberRawData({ band }: { band: UseBandResult }) {
         }}
         active={connected}
         hasSignal={connected && ppg.ir.length > 1}
-      />
-      <RawBlock
-        label="움직임 ACC"
-        detail="Magnitude · 30Hz"
-        series={[{ id: 'mag', color: '#DCB5EE' }]}
-        supplier={() => ({ mag: accMagnitude })}
-        active={connected}
-        hasSignal={connected && accMagnitude.length > 1}
+        chips={[
+          { label: 'BPM', value: fmt(band.heartRate) },
+          { label: 'HRV', value: fmt(band.sdnn) },
+          { label: '호흡수', value: fmt(band.respiratoryRate) },
+        ]}
+        foot={
+          <>
+            <span>
+              <span className="meta-dot" style={{ background: '#ff5c7a' }} />
+              RED 660nm
+            </span>
+            <span>
+              <span className="meta-dot" style={{ background: '#ffa657' }} />
+              IR 940nm
+            </span>
+          </>
+        }
       />
     </div>
   );
