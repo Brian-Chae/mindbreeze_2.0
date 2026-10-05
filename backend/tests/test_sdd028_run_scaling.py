@@ -101,12 +101,12 @@ def test_02_새_실행은_새_run_id를_발급한다(client):
     assert body["id"] == cls["id"]  # 같은 세션(정의) 유지
 
 
-def test_03_pause_resume는_run_id를_유지한다(client):
+def test_03_start는_run_id를_유지한다(client):
     counselor = _register(client, "s028c03@test.com")
     cls = _create_group_class(client, counselor["h"])
     _join_guest(client, cls["access_code"], "유지게스트")
 
-    # 명시적 새 실행으로 run_id 를 한 번 바꿔 "이어하기가 유지하는" 대상을 명확히 한다
+    # 명시적 새 실행으로 run_id 를 한 번 바꿔 "start가 유지하는" 대상을 명확히 한다
     run_id = client.post(
         f"/api/v1/sessions/{cls['id']}/new-run", headers=counselor["h"]
     ).json()["run_id"]
@@ -114,16 +114,8 @@ def test_03_pause_resume는_run_id를_유지한다(client):
 
     started = client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
     assert started.status_code == 200, started.text
+    # start(이어하기) → 기존 run_id 유지(새 회차 아님)
     assert started.json()["run_id"] == run_id
-
-    paused = client.post(f"/api/v1/sessions/{cls['id']}/pause", headers=counselor["h"])
-    assert paused.status_code == 200, paused.text
-    assert paused.json()["run_id"] == run_id
-
-    resumed = client.post(f"/api/v1/sessions/{cls['id']}/resume", headers=counselor["h"])
-    assert resumed.status_code == 200, resumed.text
-    # 이어하기(resume) → 기존 run_id 유지(새 회차 아님)
-    assert resumed.json()["run_id"] == run_id
 
 
 def test_04_completed_세션은_즉시_재시작할_수_없다(client):

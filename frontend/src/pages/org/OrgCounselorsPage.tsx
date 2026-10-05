@@ -24,7 +24,6 @@ type DisplayStatus = 'active' | 'pending' | 'suspended';
 const SESSION_STATUS_LABELS: Record<string, string> = {
   scheduled: '예정',
   in_progress: '진행중',
-  paused: '일시정지',
   completed: '완료',
   canceled: '취소',
   cancelled: '취소',

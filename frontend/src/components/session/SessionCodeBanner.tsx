@@ -4,8 +4,8 @@ import { useState } from 'react';
 
 interface SessionCodeBannerProps {
   accessCode: string;
-  /** 대기 / 진행 / 일시정지 */
-  mode: 'waiting' | 'running' | 'paused';
+  /** 대기 / 진행 */
+  mode: 'waiting' | 'running';
   /** 진행시간 표시 문자열 (예: 03분 12초) */
   elapsedText?: string;
   onRefresh?: () => void;
@@ -37,9 +37,7 @@ export function SessionCodeBanner({
   const statusLine =
     mode === 'waiting'
       ? `아직 수업이 시작되지 않았어요. 수강생에게 세션코드(${accessCode})를 알려주세요.`
-      : mode === 'paused'
-        ? `수업이 일시정지되었어요. 경과시간: ${elapsedText ?? '—'}`
-        : `수업을 시작했어요. 진행시간: ${elapsedText ?? '—'}`;
+      : `수업을 시작했어요. 진행시간: ${elapsedText ?? '—'}`;
 
   return (
     <div className="rounded-xl bg-[#F2F3F8] p-4">

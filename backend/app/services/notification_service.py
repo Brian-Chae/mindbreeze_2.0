@@ -30,8 +30,6 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "session_ready": {"type": "session", "target_type": "session"},
     "session_opened": {"type": "session", "target_type": "session"},
     "session_started": {"type": "session", "target_type": "session"},
-    "session_paused": {"type": "session", "target_type": "session"},
-    "session_resumed": {"type": "session", "target_type": "session"},
     "session_completed": {"type": "session", "target_type": "session"},
     "session_invited": {"type": "session", "target_type": "session"},
     "session_waitlist_promoted": {"type": "session", "target_type": "session"},

@@ -493,7 +493,7 @@ def register_session_live_namespace(sio):
 
         - 발언권(손들기/부여)과 독립 — 발언권 없이도 전송할 수 있고 발언권 상태를 바꾸지 않는다.
         - DB 저장 없는 휘발성 신호이며 호스트 룸에만 브로드캐스트한다(다른 참여자에게 비노출).
-        - 진행 단계(open/in_progress/paused)에서만 반영하고, 그 외(완료·취소 등)는 무시한다.
+        - 진행 단계(open/in_progress)에서만 반영하고, 그 외(완료·취소 등)는 무시한다.
         """
         data = data or {}
         session_id = data.get("session_id")
@@ -781,7 +781,7 @@ async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
 
 
 async def broadcast_session_state(session_id: str, payload: dict) -> None:
-    """세션 상태 변경(start/pause/resume/end/cancel)을 공용 룸에 브로드캐스트한다."""
+    """세션 상태 변경(start/end/cancel)을 공용 룸에 브로드캐스트한다."""
     sio = _get_sio()
     room = _room_all(session_id)
     await sio.emit(
@@ -1016,7 +1016,7 @@ AUDIO_SYNC_EVENT = "class:audio_sync"
 AUDIO_SYNC_ACTIONS: tuple[str, ...] = ("play", "pause", "seek", "stop")
 
 # 재생 제어를 허용하는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
-AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress")
 
 # 위치 상한(초) — 비정상 값으로 payload 가 오염되지 않게 잘라 넣는다(24시간)
 AUDIO_SYNC_MAX_POSITION_SEC = 86400.0

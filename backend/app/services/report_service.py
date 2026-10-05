@@ -342,7 +342,7 @@ def update_auto_approve_setting(user_id: str, enabled: bool, db: DBSession) -> d
 
 
 # 리포트가 생성되어야 하는 세션 상태 — 이 상태면 리포트가 기대된다(미생성 시 목록에 '생성 실패'로 노출).
-_REPORT_RELEVANT_STATUSES = ("in_progress", "paused", "completed")
+_REPORT_RELEVANT_STATUSES = ("in_progress", "completed")
 
 # 리포트 생성 파이프라인이 아직 진행 중인지 판단할 녹음 상태(STT·요약이 이 상태면 생성 중).
 _IN_FLIGHT_RECORD_STATUSES = ("recording", "processing")
@@ -375,7 +375,7 @@ def _synthesize_missing_report(
 
     종료됐는데도 리포트가 없으면 '생성 실패'로 표시하되, 생성 파이프라인이 아직
     진행 중(generating=True)이면 '생성 중'으로 표시한다(비동기 STT·요약 지연을
-    실패로 오인하지 않도록). 진행 중(in_progress/paused)이면 '준비 중'.
+    실패로 오인하지 않도록). 진행 중이면 '준비 중'.
     """
     completed = session.status == "completed"
     failed = completed and not generating

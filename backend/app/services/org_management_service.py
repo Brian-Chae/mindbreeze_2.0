@@ -140,7 +140,7 @@ def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivat
     candidates = db.query(CounselingSession).filter(or_(CounselingSession.organization_id == org.id, unknown))
     # SDD-088: open(오픈/대기)은 아직 시작 전이므로 예정 집계에 포함한다
     scheduled = candidates.filter(CounselingSession.status.in_(["ready", "scheduled", "open"])).count()
-    ongoing = candidates.filter(CounselingSession.status.in_(["in_progress", "paused"])).count()
+    ongoing = candidates.filter(CounselingSession.status.in_(["in_progress"])).count()
     # 귀속 불명 차단은 "이 기관 소속자"의 미확정 세션으로 한정한다.
     # 타 기관·미소속의 미확정 세션은 이 기관 비활성화를 차단하지 않는다.
     unknown_count = db.query(CounselingSession).filter(
@@ -155,7 +155,7 @@ def deactivation_impact(org: Organization, db: Session) -> OrganizationDeactivat
     if org.kind != "institution":
         blockers.append("개인 기관 또는 유형이 확인되지 않은 기관은 비활성화할 수 없습니다")
     if scheduled or ongoing:
-        blockers.append("진행·일시정지·예정·대기 세션을 먼저 정리해주세요")
+        blockers.append("진행·예정·대기 세션을 먼저 정리해주세요")
     if active_links:
         blockers.append("활성 내담자 연결을 먼저 이관하거나 종료해주세요")
     if unknown_count:
@@ -239,10 +239,10 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     if role is None:
         active_session = db.query(CounselingSession.id).filter(
             CounselingSession.host_id == user.id,
-            CounselingSession.status.in_(["ready", "scheduled", "open", "in_progress", "paused"]),
+            CounselingSession.status.in_(["ready", "scheduled", "open", "in_progress"]),
         ).first()
         if active_session:
-            raise HTTPException(409, "진행·일시정지·예정·대기 세션을 먼저 정리해주세요")
+            raise HTTPException(409, "진행·예정·대기 세션을 먼저 정리해주세요")
         active_link = db.query(ClientCounselorLink.id).filter(
             ClientCounselorLink.status == "active",
             or_(ClientCounselorLink.counselor_id == user.id, ClientCounselorLink.client_id == user.id),

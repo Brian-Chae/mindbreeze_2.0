@@ -29,7 +29,6 @@ const statusLabel = (status: SessionStatus): string => {
     case 'ready': return '준비';
     case 'scheduled': return '예정';
     case 'in_progress': return '진행중';
-    case 'paused': return '일시정지';
     case 'completed': return '완료';
     case 'cancelled': return '취소';
     default: return status;
@@ -41,7 +40,6 @@ const statusBadge = (status: SessionStatus): string => {
     case 'ready':       return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled':   return 'bg-[#F5EDFC] text-[#5F0080]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
-    case 'paused':      return 'bg-[#FFF4DC] text-[#8A6B1F]';
     case 'completed':   return 'bg-[#F2F3F8] text-[#6F6F6F]';
     case 'cancelled':   return 'bg-[#FDECEC] text-[#B3261E]';
     default:            return 'bg-[#F2F3F8] text-[#6F6F6F]';

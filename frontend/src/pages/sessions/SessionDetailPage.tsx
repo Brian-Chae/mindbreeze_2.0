@@ -31,7 +31,6 @@ const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {
   scheduled: ['cancel'],
   open: ['cancel'],
   in_progress: ['cancel'],
-  paused: ['cancel'],
   completed: [],
   cancelled: [],
 };
@@ -39,8 +38,6 @@ const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {
 const ACTION_LABELS: Record<SessionAction, string> = {
   open: '오픈',
   start: '시작',
-  pause: '일시정지',
-  resume: '재개',
   end: '종료',
   cancel: '취소',
 };
@@ -56,7 +53,6 @@ const ENTERABLE_STATUSES: SessionDto['status'][] = [
   'scheduled',
   'open',
   'in_progress',
-  'paused',
   'completed',
 ];
 

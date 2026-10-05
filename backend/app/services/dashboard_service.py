@@ -12,7 +12,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.models.organization import Organization
 
-_IN_PROGRESS = ("in_progress", "paused")
+_IN_PROGRESS = ("in_progress",)
 
 
 def _to_uuid(value: str) -> uuid.UUID:

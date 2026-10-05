@@ -206,7 +206,7 @@ def _make_transition_endpoint(action: str):
 
 
 # SDD-088: "open"(클래스 오픈) 액션 추가 — ready/scheduled → open
-for _action in ("open", "start", "pause", "resume", "end", "cancel"):
+for _action in ("open", "start", "end", "cancel"):
     router.add_api_route(
         f"/{{session_id}}/{_action}",
         _make_transition_endpoint(_action),

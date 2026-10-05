@@ -27,18 +27,16 @@ logger = logging.getLogger(__name__)
 # 기존 예약형 세션의 "scheduled" 는 그대로 유지해 하위 호환을 지킨다.
 # SDD-088: "open"(오픈/대기)은 상담사가 준비를 마치고 회원 입장을 받는 상태 —
 # 진행 중으로 간주해 중복 개설 방지·목록 필터에 포함한다.
-ACTIVE_STATUSES = ("ready", "scheduled", "open", "in_progress", "paused")
+ACTIVE_STATUSES = ("ready", "scheduled", "open", "in_progress")
 
 # SDD-088: ready/scheduled → open(오픈/대기) → in_progress → completed.
 # start 출발에 ready/scheduled 를 남기는 것은 과도기 하위 호환(구 클라이언트·1:1 즉석 세션).
-# 오픈된 방의 정상 퇴로는 cancel(=클래스 닫기)이며, end 는 진행중/일시정지에서만 가능하다.
+# 오픈된 방의 정상 퇴로는 cancel(=클래스 닫기)이며, end 는 진행중에서만 가능하다.
 TRANSITIONS = {
     "open": ({"ready", "scheduled"}, "open"),
     "start": ({"ready", "scheduled", "open"}, "in_progress"),
-    "pause": ({"in_progress"}, "paused"),
-    "resume": ({"paused"}, "in_progress"),
-    "end": ({"in_progress", "paused"}, "completed"),
-    "cancel": ({"ready", "scheduled", "open", "in_progress", "paused"}, "cancelled"),
+    "end": ({"in_progress"}, "completed"),
+    "cancel": ({"ready", "scheduled", "open", "in_progress"}, "cancelled"),
 }
 
 
@@ -809,16 +807,12 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     _action_event = {
         "open": "session_opened",
         "start": "session_started",
-        "pause": "session_paused",
-        "resume": "session_resumed",
         "end": "session_completed",
         "cancel": "session_cancelled",
     }
     _action_title = {
         "open": "세션이 오픈되었습니다",
         "start": "세션이 시작되었습니다",
-        "pause": "세션이 일시정지되었습니다",
-        "resume": "세션이 재개되었습니다",
         "end": "세션이 종료되었습니다",
         "cancel": "세션이 취소되었습니다",
     }
@@ -1122,7 +1116,7 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 
 def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
-    if s.status not in ("in_progress", "paused"):
+    if s.status != "in_progress":
         raise HTTPException(status_code=400, detail="진행 중인 세션에서만 마커를 추가할 수 있습니다")
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
@@ -1215,7 +1209,7 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
             raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
         db.commit()
         db.refresh(s)
-    elif s.status not in ("in_progress", "paused"):
+    elif s.status != "in_progress":
         raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
 
     # LiveKit 토큰 발급
@@ -1572,7 +1566,7 @@ def _notify_speaking_changed(sid: UUID, participant: SessionParticipant) -> None
 QUIET_SIGNAL_TYPES: tuple[str, ...] = ("following", "difficult", "resting")
 
 # 시그널을 받을 수 있는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
-QUIET_SIGNAL_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+QUIET_SIGNAL_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress")
 
 
 def resolve_signal_sender(
@@ -1647,7 +1641,7 @@ def resolve_signal_sender(
 # ---------------------------------------------------------------------------
 
 # 재생 제어를 허용하는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
-AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress", "paused")
+AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress")
 
 
 def resolve_audio_sync_host(
@@ -1687,7 +1681,7 @@ def _participant_log_state(status: str) -> str:
     """
     if status == "completed":
         return "COMPLETED"
-    if status in ("in_progress", "paused"):
+    if status == "in_progress":
         return "STARTED"
     return "READY"
 

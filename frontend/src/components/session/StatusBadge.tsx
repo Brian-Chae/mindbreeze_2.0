@@ -7,7 +7,6 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
   scheduled: '예정',
   open: '오픈',
   in_progress: '진행중',
-  paused: '일시정지',
   completed: '완료',
   cancelled: '취소됨',
 };
@@ -17,7 +16,6 @@ const STATUS_CLASSES: Record<SessionStatus, string> = {
   scheduled: 'bg-[#F5EDFC] text-[#5F0080]',
   open: 'bg-[#E0F5F1] text-[#0F766E]',
   in_progress: 'bg-[#E6F8F3] text-[#1F8A5B]',
-  paused: 'bg-[#FFF4DC] text-[#8A6B1F]',
   completed: 'bg-[#F2F3F8] text-[#6F6F6F]',
   cancelled: 'bg-[#FDECEC] text-[#B3261E]',
 };

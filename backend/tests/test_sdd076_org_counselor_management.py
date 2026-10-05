@@ -81,7 +81,7 @@ def test_last_active_admin(client, org_data, method, other_status):
     assert r.status_code == ((200 if method == "PATCH" else 204) if other_status == "active" else 409)
 
 
-@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress", "paused"])
+@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress"])
 def test_active_sessions_block_removal(client, org_data, state):
     db, org, _, users = org_data
     db.add(Session(host_id=users[2].id, type="clinical", duration_min=30, status=state))

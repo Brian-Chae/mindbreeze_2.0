@@ -33,7 +33,6 @@ const STATUS_LABELS: Record<SessionByCodeResponse['status'], string> = {
   scheduled: '예정',
   open: '입장 가능',
   in_progress: '진행 중',
-  paused: '일시 정지',
   completed: '종료됨',
   cancelled: '취소됨',
 };

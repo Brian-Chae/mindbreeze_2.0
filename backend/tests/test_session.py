@@ -123,16 +123,6 @@ def test_08_start_전이(client):
     assert res.json()["status"] == "in_progress"
 
 
-def test_09_pause_resume_전이(client):
-    host = _register(client, "host09@test.com")
-    s = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()
-    client.post(f"/api/v1/sessions/{s['id']}/start", headers=host["auth"])
-    r1 = client.post(f"/api/v1/sessions/{s['id']}/pause", headers=host["auth"])
-    assert r1.status_code == 200 and r1.json()["status"] == "paused"
-    r2 = client.post(f"/api/v1/sessions/{s['id']}/resume", headers=host["auth"])
-    assert r2.status_code == 200 and r2.json()["status"] == "in_progress"
-
-
 def test_10_end_전이(client):
     host = _register(client, "host10@test.com")
     s = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()

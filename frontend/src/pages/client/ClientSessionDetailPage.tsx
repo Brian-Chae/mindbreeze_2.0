@@ -130,10 +130,10 @@ export default function ClientSessionDetailPage() {
   const renderActions = (): React.ReactNode => {
     if (!session) return null;
 
-    if (session.status === 'ready' || session.status === 'scheduled' || session.status === 'open' || session.status === 'in_progress' || session.status === 'paused') {
+    if (session.status === 'ready' || session.status === 'scheduled' || session.status === 'open' || session.status === 'in_progress') {
       // SDD-088: 입장 활성 조건 — 오픈(대기실 개방) 이후부터. ready/scheduled 는 "아직 열리지 않음".
       const canEnter =
-        session.status === 'open' || session.status === 'in_progress' || session.status === 'paused';
+        session.status === 'open' || session.status === 'in_progress';
       return (
         <div className="flex flex-col md:flex-row gap-2">
           {canEnter ? (

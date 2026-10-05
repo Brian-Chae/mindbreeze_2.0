@@ -100,7 +100,7 @@ def test_lifecycle_preserves_data_and_filters(client, org_data):
     assert db.query(VerificationAudit).count() == 2
 
 
-@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress", "paused", "completed"])
+@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress", "completed"])
 def test_legacy_session_blocks_conservatively(client, org_data, state):
     db, org, _, users = org_data
     db.add(Session(host_id=users[2].id, type="clinical", duration_min=30, status=state))
@@ -190,7 +190,7 @@ def test_invite_rejected_before_password_change(client, org_data, redis):
     assert users[1].password_hash == old_hash and users[1].status == "pending"
 
 
-@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress", "paused"])
+@pytest.mark.parametrize("state", ["ready", "scheduled", "in_progress"])
 def test_known_session_snapshot_blocks_even_after_host_moves(client, org_data, state):
     db, org, other, users = org_data
     db.add(Session(host_id=users[2].id, type="clinical", duration_min=30, status=state,

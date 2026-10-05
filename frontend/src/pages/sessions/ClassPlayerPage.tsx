@@ -2,7 +2,7 @@
 // 풀스크린(AppShell 밖) 단일 페이지. 상담사(host) 씬:
 //   ① 세팅(ready/scheduled): 미디어 프리뷰 + [클래스 오픈]
 //   ② 대기실(open): 코드 대형 표시 + 참가자 실시간 그리드 + [시작하기] + [클래스 닫기]
-//   ③ 라이브(in_progress/paused): 모니터링·녹음·마커 + [종료](2단계 확인)
+//   ③ 라이브(in_progress): 모니터링·녹음·마커 + [종료](2단계 확인)
 //   ④ 종료(completed): [기록 보기]
 // 상태 전이 버튼은 이 플레이어 안에만 존재한다(목록·상세는 [입장] 단일 버튼).
 // 기존 SessionLivePage 의 모니터링·녹음·마커·밴드 로직을 씬으로 분해 이전했다 (SDD-024/026/028/083~085 유지).
@@ -111,7 +111,7 @@ const HISTORY_MIN_INTERVAL_MS = 3000;
 const HISTORY_MAX_POINTS = 1200;
 
 /** 이탈 보수 처리 대상 상태 — 오픈/진행중/일시정지 */
-const GUARDED_STATUSES: SessionStatus[] = ['open', 'in_progress', 'paused'];
+const GUARDED_STATUSES: SessionStatus[] = ['open', 'in_progress'];
 
 /** 서버 raw 두뇌휴식도(α/(α+β), 0~1 비율) → 표시용 정규화 점수(0~100).
  * 서버·DB 계약은 raw 유지 — % 표시 직전에만 표준모델(없으면 코호트)로 점수화한다.
@@ -924,7 +924,7 @@ export default function ClassPlayerPage() {
   const status: SessionStatus | null = session?.status ?? null;
   const isSetup = status === 'ready' || status === 'scheduled';
   const isLobby = status === 'open';
-  const isRunning = status === 'in_progress' || status === 'paused';
+  const isRunning = status === 'in_progress';
   const isEnded = status === 'completed';
   const isCancelled = status === 'cancelled';
 
@@ -937,7 +937,7 @@ export default function ClassPlayerPage() {
 
   // ── 개선 10: 명상 가이드·BGM 동기 재생 (상담사 = 소스 원본) ────────
   // 상담사가 트는 트랙·위치를 `class:audio_sync` 로 배포해 회원 화면이 같은 위치로 재생한다.
-  // 재생 제어는 대기실·진행 중에만 허용한다(서버도 open/in_progress/paused 에서만 수용).
+  // 재생 제어는 대기실·진행 중에만 허용한다(서버도 open/in_progress 에서만 수용).
   // 상담사 본인은 자기 명령을 되받지 않는다 — 로컬 엔진이 기준이고 서버는 회원 배포 경로다.
   const audioPlayer = useClassAudioPlayer({
     sessionId: id,
@@ -973,7 +973,7 @@ export default function ClassPlayerPage() {
   // SDD-095: 종료 씬(리포트 대기) 진행 스텝퍼 — 세션 종료 후에만 구독/REST 폴링한다.
   const reportProgress = useReportProgress(isEnded ? id ?? null : null);
 
-  // SDD-088: 이탈 보수 처리 — 호스트 + open/in_progress/paused 에서만
+  // SDD-088: 이탈 보수 처리 — 호스트 + open/in_progress 에서만
   const bypassGuardRef = useRef(false);
   const sessionStatusRef = useRef<SessionStatus | null>(null);
   sessionStatusRef.current = status;
@@ -1160,19 +1160,6 @@ export default function ClassPlayerPage() {
       // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
       setError((e as Error).message);
       setEndFailed(true);
-    } finally {
-      setTransitioning(false);
-    }
-  };
-
-  const pauseOrResume = async (action: 'pause' | 'resume'): Promise<void> => {
-    if (!id) return;
-    setTransitioning(true);
-    try {
-      const updated = await transitionSession(id, action);
-      setSession(updated);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '상태 변경에 실패했습니다');
     } finally {
       setTransitioning(false);
     }
@@ -1465,16 +1452,6 @@ export default function ClassPlayerPage() {
         <>
           <button
             type="button"
-            onClick={() => void pauseOrResume(session.status === 'paused' ? 'resume' : 'pause')}
-            disabled={transitioning}
-            aria-label={session.status === 'paused' ? '클래스 재개' : '클래스 일시정지'}
-            className="mb-btn mb-btn--ghost shrink-0 whitespace-nowrap gap-1.5 !text-white/80 hover:!text-white"
-          >
-            <span aria-hidden="true">{session.status === 'paused' ? '▶' : '❚❚'}</span>
-            <span className="hidden sm:inline">{session.status === 'paused' ? '재개' : '일시정지'}</span>
-          </button>
-          <button
-            type="button"
             onClick={() => setEndModalOpen(true)}
             disabled={transitioning}
             aria-label="클래스 종료"
@@ -1642,7 +1619,7 @@ export default function ClassPlayerPage() {
   const hostStatusPanel = (
     <div className="rounded-2xl bg-white/5 p-4">
       <p className="text-xs text-white/50">
-        {status === 'paused' ? '일시정지됨' : '진행 시간'}
+        진행 시간
       </p>
       <p className="mt-1 font-mono text-4xl font-bold tabular-nums text-white">
         {elapsedLabel(classElapsedSec)}
@@ -2126,7 +2103,7 @@ export default function ClassPlayerPage() {
         onCancel={() => setEndModalOpen(false)}
       />
 
-      {/* SDD-088: SPA 라우팅 이탈 확인 — open/in_progress/paused */}
+      {/* SDD-088: SPA 라우팅 이탈 확인 — open/in_progress */}
       {blocker.state === 'blocked' && (
         <LeaveGuardModal
           status={session.status}

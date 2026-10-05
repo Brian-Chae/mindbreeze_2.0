@@ -4,7 +4,7 @@ import { ApiError, apiClient, refreshAccessToken, tokenStorage } from './client'
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 /** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
-export type SessionStatus = 'ready' | 'scheduled' | 'open' | 'in_progress' | 'paused' | 'completed' | 'cancelled';
+export type SessionStatus = 'ready' | 'scheduled' | 'open' | 'in_progress' | 'completed' | 'cancelled';
 export type LocationType = 'online' | 'offline';
 export type ParticipantMode = 'one_on_one' | 'group';
 export type LinkbandMode = 'none' | 'required' | 'optional';
@@ -349,7 +349,7 @@ export const createSessionFromTemplate = (
   payload: DuplicateSessionPayload = {},
 ): Promise<SessionDto> => duplicateSession(templateId, payload);
 
-export type SessionAction = 'open' | 'start' | 'pause' | 'resume' | 'end' | 'cancel';
+export type SessionAction = 'open' | 'start' | 'end' | 'cancel';
 
 export const transitionSession = (id: string, action: SessionAction): Promise<SessionDto> =>
   apiClient.post<SessionDto>(`/sessions/${id}/${action}`);

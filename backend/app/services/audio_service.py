@@ -60,7 +60,7 @@ def _emit_report_progress(session_id: str, db: DBSession) -> None:
 
 def start_recording(session_id: str, host_id: str, consent_audio: bool, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
-    if s.status not in ("scheduled", "in_progress", "paused"):
+    if s.status not in ("scheduled", "in_progress"):
         raise HTTPException(status_code=400, detail="종료된 세션은 녹음할 수 없습니다")
 
     record = _get_or_create_record(s.id, db)

@@ -379,7 +379,7 @@ def test_15_재생상태_TTL_만료():
 def test_16_액션_계약_상수():
     assert ns.AUDIO_SYNC_EVENT == "class:audio_sync"
     assert ns.AUDIO_SYNC_ACTIONS == ("play", "pause", "seek", "stop")
-    assert ns.AUDIO_SYNC_SESSION_STATUSES == ("open", "in_progress", "paused")
+    assert ns.AUDIO_SYNC_SESSION_STATUSES == ("open", "in_progress")
 
 
 def test_17_클래스_종료시_재생상태_정리(client, monkeypatch):

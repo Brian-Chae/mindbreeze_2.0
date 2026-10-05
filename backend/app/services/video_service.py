@@ -62,7 +62,7 @@ def start_recording(session_id: str, host_id: str, consent_video: bool, db: DBSe
         raise HTTPException(status_code=400, detail="영상 녹화 동의가 필요합니다")
 
     s = _get_host_session(session_id, host_id, db)
-    if s.status not in ("scheduled", "in_progress", "paused"):
+    if s.status not in ("scheduled", "in_progress"):
         raise HTTPException(status_code=400, detail="종료된 세션은 녹화할 수 없습니다")
 
     record = _get_or_create_record(s.id, db)

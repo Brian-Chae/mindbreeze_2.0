@@ -376,11 +376,8 @@ def test_13_상태전이_version_증가(client, monkeypatch):
     v0 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
     assert client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"]).status_code == 200
     v1 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
-    assert client.post(f"/api/v1/sessions/{cls['id']}/pause", headers=counselor["h"]).status_code == 200
-    v2 = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()["version"]
 
     assert v1 == v0 + 1
-    assert v2 == v1 + 1
 
 
 def test_14_broadcast_session_state_공용룸(client, monkeypatch):

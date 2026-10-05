@@ -1,5 +1,5 @@
 // SDD-088: 상담사 이탈 보수 처리 훅 — beforeunload(브라우저 이탈) + useBlocker(SPA 라우팅 이탈)
-// open/in_progress/paused 상태의 호스트 플레이어에서만 활성화한다.
+// open/in_progress 상태의 호스트 플레이어에서만 활성화한다.
 // useBlocker 는 데이터 라우터(createBrowserRouter) 전용 — App 라우터가 데이터 라우터여야 한다.
 
 import { useEffect, useRef } from 'react';

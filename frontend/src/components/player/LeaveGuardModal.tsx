@@ -1,6 +1,6 @@
 // SDD-088: SPA 라우팅 이탈 확인 모달 — useLeaveGuard 의 blocker 상태로 렌더한다.
 // open: [클래스 닫기]/[계속 진행]/[나가기(상태 유지)]
-// in_progress/paused: [클래스 종료 후 나가기]/[계속 진행] — 단순 나가기 없음(최고 강도)
+// in_progress: [클래스 종료 후 나가기]/[계속 진행] — 단순 나가기 없음(최고 강도)
 
 import type { SessionStatus } from '../../lib/api/session';
 
