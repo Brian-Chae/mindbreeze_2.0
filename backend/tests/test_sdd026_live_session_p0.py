@@ -328,15 +328,23 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     # 회원 초대 → 정원 초과이므로 대기열 편입(is_waitlisted=True)
     m1 = _register(client, "s026m11a@test.com", role="client")
     client.post(f"/api/v1/sessions/{cls['id']}/invite", json={"user_id": m1["id"]}, headers=counselor["h"])
-    # 회원이 코드로 참여 → 동의(consent_eeg)는 True 로 기록되지만 대기열 상태는 유지된다
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m1["h"])
-    # 대기열 상태이므로(동의는 완료) 업로드는 대기열 게이트로 차단되어야 한다
+    # 대기열 상태(초대만 받고 미입장)에서는 업로드가 대기열 게이트로 차단되어야 한다
     up = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=m1["h"],
     )
     assert up.status_code == 403
+
+    # SDD-126: 대기열 회원이 코드로 자발 입장 → is_waitlisted 해제 → 업로드 허용
+    j = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m1["h"])
+    assert j.status_code == 200
+    up2 = client.post(
+        f"/api/v1/sessions/{cls['id']}/features",
+        json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
+        headers=m1["h"],
+    )
+    assert up2.status_code == 200
 
 
 # ---------------------------------------------------------------------------

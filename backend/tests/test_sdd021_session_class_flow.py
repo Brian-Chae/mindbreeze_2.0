@@ -254,3 +254,70 @@ def test_12_게스트_state_participant_id_없이도_세션상태조회(client):
 def test_13_게스트_state_잘못된_코드_404(client):
     res = client.get("/api/v1/sessions/by-code/ZZZZZZ/state")
     assert res.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# SDD-126 — 참여자 데이터 정합 (게스트 멱등 · 대기열 해제)
+# ---------------------------------------------------------------------------
+
+def test_14_게스트_재참여_멱등(client):
+    counselor = _register(client, "s021c14@test.com")
+    cls = _create_group_class(client, counselor["h"])
+
+    first = client.post(
+        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
+        json={"name": "멱등게스트"},
+    )
+    assert first.status_code == 200, first.text
+    pid = first.json()["participant_id"]
+    token = first.json()["participant_token"]
+    assert token
+
+    # 같은 participant_token으로 재참여 → 기존 행 재사용(유령 방지)
+    second = client.post(
+        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
+        json={"name": "멱등게스트", "participant_token": token},
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["participant_id"] == pid
+
+
+def test_15_대기열_회원_코드입장_해제(client):
+    counselor = _register(client, "s021c15@test.com")
+    members = [_register(client, f"s021m15_{i}@test.com", role="client") for i in range(3)]
+    cls = _create_group_class(client, counselor["h"], max_participants=2)
+
+    # 정원 2명 초대 → 그 다음 1명은 대기열
+    for m in members[:2]:
+        r = client.post(
+            f"/api/v1/sessions/{cls['id']}/invite",
+            json={"user_id": m["id"]},
+            headers=counselor["h"],
+        )
+        assert r.status_code == 200, r.text
+    r3 = client.post(
+        f"/api/v1/sessions/{cls['id']}/invite",
+        json={"user_id": members[2]["id"]},
+        headers=counselor["h"],
+    )
+    assert r3.status_code == 200
+    waitlisted = [p for p in r3.json()["participants"] if p["is_waitlisted"]]
+    assert len(waitlisted) == 1
+    assert waitlisted[0]["user_id"] == members[2]["id"]
+
+    # 대기열 회원이 코드로 자발 입장 → is_waitlisted 해제
+    j = client.post(
+        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
+        json={},
+        headers=members[2]["h"],
+    )
+    assert j.status_code == 200, j.text
+
+    detail = client.get(f"/api/v1/sessions/{cls['id']}", headers=counselor["h"]).json()
+    for p in detail["participants"]:
+        if p["user_id"] == members[2]["id"]:
+            assert p["is_waitlisted"] is False
+            assert p["waitlist_position"] is None
+            break
+    else:
+        raise AssertionError("대기열 회원 참여자 행을 찾지 못함")

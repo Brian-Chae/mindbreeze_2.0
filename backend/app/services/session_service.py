@@ -1280,6 +1280,7 @@ def join_session_by_code(
     guest_name: str | None = None,
     gender: str | None = None,
     birth_date: date | None = None,
+    participant_token: str | None = None,
 ) -> dict:
     """클래스 코드로 참여.
 
@@ -1320,6 +1321,10 @@ def join_session_by_code(
             db.add(existing)
         else:
             existing.consent_eeg = True
+            # SDD-126: 대기열 회원이 코드로 자발 입장 시 is_waitlisted 해제(관제·좌석·인원 집계 반영)
+            if existing.is_waitlisted:
+                existing.is_waitlisted = False
+                existing.waitlist_position = None
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s)
@@ -1329,18 +1334,48 @@ def join_session_by_code(
     if not name:
         raise HTTPException(status_code=400, detail="게스트 참여에는 이름이 필요합니다")
 
-    # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
-    participant = SessionParticipant(
-        session_id=s.id, user_id=None, guest_name=name[:100],
-        gender=gender, birth_date=birth_date, consent_eeg=True,
-    )
-    db.add(participant)
+    # SDD-126: participant_token 기반 게스트 멱등 — 재접속 시 기존 행 재사용(유령 방지)
+    participant = None
+    if participant_token:
+        from app.services.report_email_service import _decode
+        try:
+            claims = _decode(participant_token, "report_participant")
+            if claims.get("sub"):
+                participant = (
+                    db.query(SessionParticipant)
+                    .filter(
+                        SessionParticipant.id == _to_uuid(claims["sub"]),
+                        SessionParticipant.session_id == s.id,
+                    )
+                    .first()
+                )
+        except HTTPException:
+            participant = None
+
+    if participant is None:
+        # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
+        participant = SessionParticipant(
+            session_id=s.id, user_id=None, guest_name=name[:100],
+            gender=gender, birth_date=birth_date, consent_eeg=True,
+        )
+        db.add(participant)
+    else:
+        # 기존 행 재사용 — 이름·성별·생년월일 갱신 + 대기열 해제
+        participant.guest_name = name[:100]
+        if gender is not None:
+            participant.gender = gender
+        if birth_date is not None:
+            participant.birth_date = birth_date
+        participant.consent_eeg = True
+        participant.is_waitlisted = False
+        participant.waitlist_position = None
+
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s)
-    from app.services.report_email_service import participant_token
+    from app.services.report_email_service import participant_token as make_token
     return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True,
-            "participant_token": participant_token(participant)}
+            "participant_token": make_token(participant)}
 
 
 def member_livekit_token(

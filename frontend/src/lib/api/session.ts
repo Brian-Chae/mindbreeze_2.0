@@ -146,6 +146,8 @@ export interface JoinByCodePayload {
   gender?: string;
   /** SDD-062: 게스트 생년월일 YYYY-MM-DD */
   birth_date?: string;
+  /** SDD-126: 게스트 멱등 — 재참여 시 기존 행 재사용용 소유 증명 */
+  participant_token?: string | null;
 }
 
 export interface JoinByCodeResponse {

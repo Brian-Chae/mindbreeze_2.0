@@ -76,6 +76,17 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+function restoreStoredParticipant(code: string): StoredJoinContext | null {
+  try {
+    const raw = sessionStorage.getItem(PARTICIPANT_STORAGE_KEY);
+    if (!raw) return null;
+    const ctx = JSON.parse(raw) as StoredJoinContext;
+    return ctx.code === code ? ctx : null;
+  } catch {
+    return null;
+  }
+}
+
 function persistParticipant(
   code: string,
   participantId: string,
@@ -112,9 +123,13 @@ const ClassJoinPage: React.FC = () => {
   const [guestGender, setGuestGender] = useState('');
   const [guestBirthDate, setGuestBirthDate] = useState('');
   const [session, setSession] = useState<SessionByCodeResponse | null>(null);
-  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(
+    () => restoreStoredParticipant(code)?.participantId ?? null,
+  );
   /** join 응답의 소유 증명 — 게스트 report-email 필수 */
-  const [participantToken, setParticipantToken] = useState<string | null>(null);
+  const [participantToken, setParticipantToken] = useState<string | null>(
+    () => restoreStoredParticipant(code)?.participantToken ?? null,
+  );
   const [durationMin, setDurationMin] = useState(50);
   // SDD-096: 세션 최신 EEG 두뇌휴식도 — 종료 화면이 주관 체크인과 병기한다(밴드 미착용이면 null)
   const [relaxationIndex, setRelaxationIndex] = useState<number | null>(null);
@@ -342,6 +357,7 @@ const ClassJoinPage: React.FC = () => {
               name: trimmedGuestName,
               ...(guestGender ? { gender: guestGender } : {}),
               ...(birthDateComplete ? { birth_date: birthDateComplete } : {}),
+              ...(participantToken ? { participant_token: participantToken } : {}),
             },
       );
       const nextParticipantId = joined.participant_id;

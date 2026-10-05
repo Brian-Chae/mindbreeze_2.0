@@ -88,6 +88,7 @@ def join_session_by_code(
         guest_name=name,
         gender=payload.gender if payload and not current_user else None,
         birth_date=_parse_date(payload.birth_date) if payload and not current_user else None,
+        participant_token=payload.participant_token if payload and not current_user else None,
     )
 
 

@@ -265,6 +265,7 @@ class JoinByCodeRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=100)
     gender: Literal["male", "female", "other"] | None = None
     birth_date: str | None = None
+    participant_token: str | None = None
 
 
 class JoinByCodeResponse(BaseModel):
