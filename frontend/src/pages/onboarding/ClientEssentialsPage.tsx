@@ -127,7 +127,6 @@ export default function ClientEssentialsPage() {
                 <option value="male">남성</option>
                 <option value="female">여성</option>
                 <option value="other">기타</option>
-                <option value="prefer_not_to_say">선택 안 함</option>
               </select>
             </div>
 

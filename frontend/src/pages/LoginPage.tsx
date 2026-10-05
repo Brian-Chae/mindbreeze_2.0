@@ -118,8 +118,9 @@ export default function LoginPage() {
   });
   const handleGoogleClick = () => {
     if (loginRole === 'org_admin' || !hasGoogleClientId || !begin('google')) return;
-    // SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다. 미동의 시 차단.
-    if (!googleConsent) {
+    // SEC-04: 약관·민감정보 동의는 신규 가입이 가능한 회원(client) 역할에만 필수다.
+    // 상담사·관리자 탭은 기존 사용자 로그인이므로 동의 게이트를 적용하지 않는다(회귀 방지).
+    if (loginRole === 'client' && !googleConsent) {
       setError('Google로 가입·로그인하려면 이용약관·개인정보 처리방침·민감정보 처리에 동의해주세요.');
       finish();
       return;

@@ -141,14 +141,13 @@ const ClassJoinPage: React.FC = () => {
     skipAuth: !isLoggedIn,
     enabled: Boolean(session?.id),
     onSessionStateChanged: (event) => {
+      // 대기실 게이트 우회 방지: 소켓은 session.status 만 갱신하고 step 은 건드리지 않는다.
+      // 라이브(meditation) 전환은 대기실 3단계 준비 게이트를 통과한 명시적 입장 경로에서만 일어난다.
       setSession((prev) =>
         prev
           ? { ...prev, status: event.status as SessionByCodeResponse['status'], started_at: event.started_at ?? prev.started_at }
           : prev,
       );
-      if (event.status === 'in_progress') setStep('meditation');
-      else if (event.status === 'completed') setStep('complete');
-      else if (event.status === 'cancelled') setError('이 클래스는 이미 종료되었거나 취소되었습니다.');
     },
   });
 

@@ -516,6 +516,12 @@ export default function ClassPlayerPage() {
   const featureBufferRef = useRef<
     Map<string, { efficiency: number[]; heartRate: number[]; respiratoryRate: number[] }>
   >(new Map());
+  /**
+   * MB2-01: 참가자별 마지막 eeg_feature 엔벨로프.
+   * 3초 평균 flush 시 다른 참가자의 signal_quality/device_status/last_eeg_at/band_* 등을
+   * 재사용하지 않고 각 pid 의 자기 엔벨로프로 averaged 를 구성하기 위해 보관한다.
+   */
+  const lastFeatureEnvelopeRef = useRef<Map<string, SessionLiveEegFeatureEvent>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
@@ -586,6 +592,10 @@ export default function ClassPlayerPage() {
       // saved=0 은 이미 저장된 window의 재전송 중복(멱등 skip) — 과거 timestamp가
       // last_eeg_at을 되돌리고(→ false "수신끊김") 구간 평균을 오염시키므로 무시한다.
       if (event.saved === 0) return;
+      // MB2-01: 참가자별 마지막 엔벨로프 보관 — 평균 flush 는 이 값으로 재구성한다.
+      if (event.participant_id) {
+        lastFeatureEnvelopeRef.current.set(event.participant_id, event);
+      }
       const now = Date.now();
       const focus = finiteValue(event.focus_index ?? event.feature?.focus_index);
       const emotional = finiteValue(event.feature?.emotional_stability);
@@ -641,14 +651,18 @@ export default function ClassPlayerPage() {
           const avgEff = avgOf(values.efficiency);
           const avgHr = avgOf(values.heartRate);
           const avgRr = avgOf(values.respiratoryRate);
+          // MB2-01: 현재 수신 이벤트가 아니라 해당 pid 의 마지막 엔벨로프를 기준으로 구성한다.
+          // signal_quality/device_status/last_eeg_at/band_connected/band_battery/upload_status 와
+          // feature.timestamp/feature.rmssd 는 그 참가자 자신의 값이 유지된다.
+          const envelope = lastFeatureEnvelopeRef.current.get(pid) ?? event;
           const averaged: SessionLiveEegFeatureEvent = {
-            ...event,
+            ...envelope,
             participant_id: pid,
             current_efficiency: avgEff,
             relaxation_index: avgEff,
             feature: {
-              ...event.feature,
-              second_offset: event.feature?.second_offset ?? 0,
+              ...envelope.feature,
+              second_offset: envelope.feature?.second_offset ?? 0,
               relaxation_index: avgEff,
               heart_rate: avgHr,
               respiratory_rate: avgRr,
