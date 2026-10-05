@@ -139,6 +139,7 @@ export default function SignupApplicationsPage() {
 
       <section className="mb-5 flex flex-wrap items-center gap-3">
         <select
+          aria-label="신청 유형 필터"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
           className="rounded-xl border border-[#EFEFEF] bg-white px-3 py-2 text-[13px]"
@@ -148,6 +149,7 @@ export default function SignupApplicationsPage() {
           <option value="individual_counselor">개인 상담사</option>
         </select>
         <select
+          aria-label="신청 상태 필터"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="rounded-xl border border-[#EFEFEF] bg-white px-3 py-2 text-[13px]"
@@ -198,7 +200,15 @@ export default function SignupApplicationsPage() {
               {items.map((item) => (
                 <tr
                   key={item.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => void openDetail(item.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      void openDetail(item.id);
+                    }
+                  }}
                   className={`cursor-pointer border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] ${detail?.id === item.id ? 'bg-[#F5EDFC]' : ''}`}
                 >
                   <td className="px-5 py-4 text-[#1F1F1F]">{TYPE_LABELS[item.application_type]}</td>

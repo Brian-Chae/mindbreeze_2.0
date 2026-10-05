@@ -16,7 +16,7 @@ export function useNotificationSocket() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    console.log('[WS] useEffect running, hasToken:', !!token);
+    if (import.meta.env.DEV) console.log('[WS] useEffect running, hasToken:', !!token);
     if (!token) {
       console.warn('[WS] no token, skipping socket connection');
       return;
@@ -34,7 +34,7 @@ export function useNotificationSocket() {
     let disposed = false;
 
     socket.on('connect', () => {
-      console.log('[WS] socket.io connected to', SOCKET_URL);
+      if (import.meta.env.DEV) console.log('[WS] socket.io connected to', SOCKET_URL);
       useNotificationStore.getState().setWsConnected(true);
       fetch();
       // 세션 초대 목록도 연결 시 새로고침 — 홈/세션 화면의 "초대된 클래스" 카드용

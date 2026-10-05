@@ -374,7 +374,16 @@ export default function OrgManagementPage() {
               <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-[#F8FAFC] text-xs text-[#6F6F6F]"><tr>{['기관명', '유형', '기관 코드', '전화번호', '인증', '생성일 (KST)', '초대'].map((label) => <th key={label} className="px-4 py-3">{label}</th>)}</tr></thead>
                 <tbody>{group.items.map((organization) => <tr key={organization.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={(event) => openOrg(organization, event.currentTarget.querySelector<HTMLButtonElement>('[data-org-opener]'))}
+                  onKeyDown={(event) => {
+                    // 행 내부의 버튼(기관명·복사·초대 재발송) 키 입력은 행 열기로 전파하지 않는다.
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    openOrg(organization, event.currentTarget.querySelector<HTMLButtonElement>('[data-org-opener]'));
+                  }}
                   className="cursor-pointer border-t border-[#EFEFEF] hover:bg-[#F8FAFC]">
                   <td className="px-4 py-4"><button type="button" data-org-opener data-org-id={organization.id}
                     onClick={(event) => { event.stopPropagation(); openOrg(organization, event.currentTarget); }}

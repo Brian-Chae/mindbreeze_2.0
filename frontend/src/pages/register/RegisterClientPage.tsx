@@ -446,6 +446,7 @@ export default function RegisterClientPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="영문+숫자+특수문자 8자 이상"
                   disabled={loading}
+                  autoComplete="new-password"
                   className={inputClass}
                 />
               </div>
@@ -460,6 +461,7 @@ export default function RegisterClientPage() {
                   value={passwordConfirm}
                   onChange={(e) => setPasswordConfirm(e.target.value)}
                   disabled={loading}
+                  autoComplete="new-password"
                   className={inputClass}
                 />
               </div>

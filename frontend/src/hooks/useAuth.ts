@@ -15,7 +15,13 @@ export const useAuth = () => {
   return { user, isAuthenticated, isInitialized, login, logout };
 };
 
-// 미인증 시 로그인 페이지로 리다이렉트
+/**
+ * 미인증 시 로그인 페이지로 리다이렉트한다.
+ *
+ * role 인자는 로그인 유도 경로(loginPathForRole)를 고르는 용도일 뿐,
+ * "인증된 사용자의 역할 불일치" 검증·차단은 담당하지 않는다. 역할 차단이
+ * 필요하면 useRequireRole을 함께 사용해야 한다(예: ClientProfilePage).
+ */
 export const useRequireAuth = (role?: UserRole): void => {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);

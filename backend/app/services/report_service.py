@@ -294,6 +294,10 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
       (session_id, participant_id, type="client") 기준 — 멱등, 중복 생성 방지.
     - 게스트는 user_id 가 없으므로(None) participant_id 로 소유를 보완한다 (SDD-027).
     - auto_approve_report 가 켜진 상담사는 생성 직후 자동 승인한다 (기존 정책 유지).
+    - RPT-03: 참가자마다 리포트·기록을 반복 조회하던 N+1 을 제거한다 — 세션의 기존 client
+      리포트와 세션 기록(SessionRecord)을 배치로 1회씩 미리 읽고, 같은 세션의 모든 client
+      리포트가 공유하는 주관 상태(서사 소스)는 그 맵에서 파생한다. 신규 생성이 필요한
+      경우에만 _get_or_create_report 로 조회한다(경합 안전·멱등 유지).
     """
     sid = _to_uuid(session_id)
     s = db.query(Session).filter(Session.id == sid).first()
@@ -311,24 +315,39 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
     host = db.query(User).filter(User.id == s.host_id).first()
     auto_approve = bool(host and host.role == "counselor" and host.auto_approve_report)
 
+    # RPT-03: 세션의 기존 client 리포트를 배치로 1회 조회한다(participant_id → Report).
+    # 존재하는 리포트는 재조회 없이 재사용하고, 없는 경우에만 생성 헬퍼를 호출한다.
+    existing_reports = {
+        report.participant_id: report
+        for report in db.query(Report)
+        .filter(Report.session_id == s.id, Report.type == "client")
+        .all()
+    }
+    # 같은 세션의 모든 client 리포트는 동일한 SessionRecord(주관 상태 = 서사 소스)를 공유한다.
+    # 기록도 1회 배치 조회해 파생을 공유한다(N+1 제거).
+    records_map = record_service.subjective_state_map({s.id}, db)
+
     results: list[dict] = []
     for participant in participants:
-        report = _get_or_create_report(
-            db,
-            filters={
-                "session_id": s.id,
-                "participant_id": participant.id,
-                "type": "client",
-            },
-            defaults={
-                "session_id": s.id,
-                "user_id": participant.user_id,
-                "participant_id": participant.id,
-                "type": "client",
-                "status": "pending_analysis",
-                "content": {"status": "generating"},
-            },
-        )
+        report = existing_reports.get(participant.id)
+        if report is None:
+            report = _get_or_create_report(
+                db,
+                filters={
+                    "session_id": s.id,
+                    "participant_id": participant.id,
+                    "type": "client",
+                },
+                defaults={
+                    "session_id": s.id,
+                    "user_id": participant.user_id,
+                    "participant_id": participant.id,
+                    "type": "client",
+                    "status": "pending_analysis",
+                    "content": {"status": "generating"},
+                },
+            )
+            existing_reports[participant.id] = report
         # 이미 승인 게이트를 지난 리포트(pending_review/completed)는 재생성하지 않는다 — 멱등.
         # 단, STT 복구 등으로 생성 상태가 partial(ai_record 미가용)인 경우엔 전사·요약을 반영해 갱신한다.
         # (그룹 세션 client 리포트는 다른 참가자 노출 방지를 위해 ai_record 를 의도적으로 제외하므로 예외.)
@@ -345,7 +364,7 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
             results.append(approve_report(str(report.id), str(s.host_id), db))
         else:
             results.append(
-                _serialize(report, s, subjective=_subjective_for_report(report, db))
+                _serialize(report, s, subjective=_subjective_from_map(report, records_map))
             )
     return results
 

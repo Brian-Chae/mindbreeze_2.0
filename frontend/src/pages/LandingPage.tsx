@@ -85,7 +85,9 @@ function LandingHero() {
 }
 
 export default function LandingPage() {
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
   const navigate = useNavigate();
 
   // 이미 로그인된 사용자가 루트(/)로 들어오면 앱으로 자동 이동한다.

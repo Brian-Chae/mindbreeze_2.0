@@ -7,6 +7,7 @@ import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
 import { ENABLE_STT_AI_RECORD } from '../../lib/features';
 import { parseSubjectiveState } from '../../lib/api/checkin';
+import { useNotificationStore } from '../../stores/notificationStore';
 import {
   adaptReportContent,
   relaxationTrendFromTimeline,
@@ -30,6 +31,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
   onClose: () => void;
   closeLabel?: string;
 }) {
+  const showToast = useNotificationStore((s) => s.showToast);
   // 내담자 뷰로 강제 — 라벨·접힘 비대칭
   const adapted = adaptReportContent(report.content, 'client');
   const { summary, insights, displayNarrative } = adapted;
@@ -142,10 +144,18 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
             </a>
           ) : report.sent_at ? (
             <button
-              onClick={() => alert('PDF 생성 기능은 추후 제공됩니다.')}
+              type="button"
+              onClick={() =>
+                showToast({
+                  id: `pdf-pending-${Date.now()}`,
+                  type: 'info',
+                  title: 'PDF 준비 중',
+                  body: 'PDF 생성 기능은 추후 제공됩니다.',
+                })
+              }
               className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[14px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
-              PDF 생성
+              PDF 생성 (준비 중)
             </button>
           ) : null}
         </div>

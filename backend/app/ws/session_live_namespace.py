@@ -40,6 +40,19 @@ SDD-026 P0 안전망:
 상대값으로 익명 집계(평균 + 안정 비율)해 상담사에게만 `class:aggregate` 로 내보낸다.
 개인 점수·순위는 payload 에 존재하지 않으며, 착용자가 MIN_WEARERS 미만이면 점수를 만들지 않고
 sample_status="insufficient"(표본 적음)로 알린다. 계산은 AGGREGATE_INTERVAL_SEC 주기로 제한한다.
+
+배포 제약 — 단일 워커 전제 (WS-01):
+- 이 모듈의 휘발성 세션 상태(_active_signals / _last_aggregate_at / _last_group_average_at /
+  _audio_states / _audio_revisions)는 **프로세스 전역 dict** 이며 공유 저장소에 두지 않는다.
+  따라서 **단일 워커(프로세스) 배포에서만 정합**하다.
+- 수평 확장(uvicorn/gunicorn 다중 워커, 다중 인스턴스)에서는 참가자·호스트가 서로 다른
+  워커에 붙으면 상태가 전달되지 않는다(예: 집계 throttle 은 워커별로 따로 누적되고, 늦게
+  입장한 회원은 다른 워커에 붙으면 재생 상태 replay 를 못 받는다). room/emit 을 공유하려면
+  Socket.IO `AsyncRedisManager` 가 필요하고, 위 휘발성 상태도 Redis 등 외부 저장소로
+  옮겨야 한다(현재 미적용 — 단일 워커 전제).
+- 메모리 누수 방지: 위 5개 dict 는 세션이 끝나도 세션 키가 남으면 장기 구동 시 누수된다.
+  세션 종료(마지막 소켓 disconnect/leave)와 세션 close(완료·취소) 시
+  `clear_session_state()` 가 이 프로세스(워커)에 남은 세션 키를 정리한다.
 """
 
 import asyncio
@@ -115,6 +128,75 @@ def clear_group_aggregates() -> None:
     """집계 throttle 상태 전역 초기화(테스트/세션 종료 정리용)."""
     _last_aggregate_at.clear()
     _last_group_average_at.clear()
+
+
+# 세션 종료 시 정리해야 하는 프로세스 전역(워커 로컬) 세션 스코프 상태:
+#   _active_signals(무음 시그널), _last_aggregate_at / _last_group_average_at(집계 throttle),
+#   _audio_states / _audio_revisions(가이드·BGM 재생 상태).
+# 세션이 끝나도 세션 키가 남으면 장기 구동 시 메모리 누수이므로 clear_session_state 로 지운다.
+# (다중 워커 제약은 모듈 docstring 참고 — 이 dict 들은 프로세스 로컬이다.)
+_TERMINAL_SESSION_STATUSES: tuple[str, ...] = ("completed", "cancelled")
+
+# 세션별 활성 소켓 수 — 마지막 소켓 이탈(= 세션 종료) 판정용. join 에서 +1,
+# leave/disconnect 에서 -1, 0 이 되면 그 세션의 휘발성 상태를 정리한다.
+_session_socket_counts: dict[str, int] = {}
+
+# sid → join 한 session_id(str). 같은 소켓의 leave 후 disconnect 가 중복 감소시키지 않게
+# 하는 매핑이며, 세션 상태를 지울 때 대상 session 을 식별하는 데에도 쓴다.
+_sid_session_ids: dict[str, str] = {}
+
+def clear_session_state(session_id) -> None:
+    """세션 종료 시 해당 세션의 휘발성 상태 키만 정리한다(메모리 누수 방지).
+
+    위 5개 프로세스 전역 dict 에서 session_id 키만 제거하며 다른 세션 상태는 건드리지 않는다.
+    (전역 초기화 헬퍼 clear_quiet_signals/clear_group_aggregates/clear_audio_states 와 달리
+    세션 스코프다.) 세션 close(완료·취소)와 마지막 소켓 이탈(disconnect/leave)에서 호출한다.
+    """
+    sid = str(session_id)
+    _active_signals.pop(sid, None)
+    _last_aggregate_at.pop(sid, None)
+    _last_group_average_at.pop(sid, None)
+    _audio_states.pop(sid, None)
+    _audio_revisions.pop(sid, None)
+
+
+def _release_session_socket(sid) -> str | None:
+    """소켓 이탈을 세션 추적에 반영하고, 세션의 마지막 소켓이면 정리할 session_id 를 돌려준다.
+
+    leave/disconnect 양쪽에서 호출되어도 한 소켓은 한 번만 감소한다(멱등) — 이미 반영된
+    sid 면 None 을 돌려준다.
+    """
+    sid_s = str(sid)
+    session_id = _sid_session_ids.pop(sid_s, None)
+    if session_id is None:
+        return None
+    count = _session_socket_counts.get(session_id, 0) - 1
+    if count <= 0:
+        _session_socket_counts.pop(session_id, None)
+        return session_id
+    _session_socket_counts[session_id] = count
+    return None
+
+
+def _register_session_socket(sid, session_id) -> None:
+    """join 한 소켓을 세션 추적에 등록한다(같은 sid 재-join 시 이전 세션은 정리)."""
+    sid_s = str(sid)
+    sid_session = str(session_id)
+    prev = _sid_session_ids.get(sid_s)
+    if prev == sid_session:
+        return
+    if prev is not None:
+        _clear_session_if_last_socket(sid_s)
+    _sid_session_ids[sid_s] = sid_session
+    _session_socket_counts[sid_session] = _session_socket_counts.get(sid_session, 0) + 1
+
+
+def _clear_session_if_last_socket(sid) -> None:
+    """마지막 소켓 이탈이면 세션 상태를 정리하는 공통 훅(disconnect/leave 공용)."""
+    ended = _release_session_socket(sid)
+    if ended is not None:
+        clear_session_state(ended)
+
 
 # sync(REST) 컨텍스트에서 async 브로드캐스트를 예약하기 위한 이벤트 루프 참조.
 # connect 핸들러(루프 안에서 실행)에서 캡처한다. 캡처 전(테스트 등)에는 None → 발행 생략.
@@ -311,7 +393,8 @@ def register_session_live_namespace(sio):
 
     @sio.event(namespace=_NAMESPACE)
     async def disconnect(sid):
-        pass
+        # WS-01: 마지막 소켓이 끊기면(세션 종료) 세션 스코프 휘발성 상태를 정리한다(메모리 누수 방지).
+        _clear_session_if_last_socket(sid)
 
     @sio.on("join", namespace=_NAMESPACE)
     async def on_join(sid, data):
@@ -357,6 +440,9 @@ def register_session_live_namespace(sio):
         else:
             await sio.enter_room(sid, _room_self(session_id, pid), namespace=_NAMESPACE)
 
+        # WS-01: 세션별 활성 소켓 추적 — 마지막 소켓 이탈(disconnect/leave) 시 세션 상태를 지운다.
+        _register_session_socket(sid, session_id)
+
         logger.info("[WS /session-live] sid=%s joined session=%s as %s", sid, session_id, role)
         await sio.emit(
             "joined",
@@ -399,6 +485,8 @@ def register_session_live_namespace(sio):
         if pid:
             await sio.leave_room(sid, _room_self(session_id, pid), namespace=_NAMESPACE)
         logger.info("[WS /session-live] sid=%s left session=%s", sid, session_id)
+        # WS-01: 마지막 소켓이 퇴장하면 세션 휘발성 상태를 정리한다(메모리 누수 방지).
+        _clear_session_if_last_socket(sid)
 
     @sio.on("feature", namespace=_NAMESPACE)
     async def on_feature(sid, data):
@@ -1146,6 +1234,10 @@ def _schedule(coro) -> None:
 
 
 def notify_session_state_changed(session_id: str, payload: dict) -> None:
+    # WS-01: 세션이 종료(완료·취소)되면 프로세스에 남은 휘발성 세션 상태를 정리한다(세션 close 트리거).
+    status = payload.get("status") if isinstance(payload, dict) else None
+    if status in _TERMINAL_SESSION_STATUSES:
+        clear_session_state(session_id)
     _schedule(broadcast_session_state(session_id, _jsonify(payload)))
 
 

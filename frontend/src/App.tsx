@@ -81,7 +81,9 @@ function buildLoginRedirect(pathname: string, search: string): string {
 
 /** 로그인 후 역할에 따라 라우팅 */
 function RoleRouter() {
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
 
   if (!isInitialized) return null;
 
@@ -94,7 +96,9 @@ function RoleRouter() {
 
 function PlatformAdminRoute({ children }: { children: ReactElement }) {
   const location = useLocation();
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
 
   if (!isInitialized) return null;
 

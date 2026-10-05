@@ -1,6 +1,6 @@
 // 플랫폼 관리자 회원(내담자) 관리 페이지
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import { ApiError } from '../../lib/api/client';
 import {
@@ -107,7 +107,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
 
   const selectableResults = results.filter((c) => !c.suspended);
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (!open) {
       if (event.key === 'ArrowDown' || event.key === 'Enter') setOpen(true);
       return;
@@ -270,19 +270,50 @@ export default function ClientManagementPage() {
     void fetchUsers();
   }, [fetchUsers]);
 
-  const resetAddForm = () => {
+  const resetAddForm = useCallback(() => {
     setAddName('');
     setAddEmail('');
     setAddCounselor(null);
     setSendInvite(true);
     setAddError(null);
     setAddFieldErrors({});
-  };
+  }, []);
 
-  const closeAddModal = () => {
+  const closeAddModal = useCallback(() => {
     setAddOpen(false);
     resetAddForm();
-  };
+  }, [resetAddForm]);
+
+  // A11Y-01: 액션 모달(정지/해제/삭제)과 회원 추가 모달 각각
+  // 열릴 때 패널로 포커스를 옮기고 Escape로 닫는다.
+  const actionDialogRef = useRef<HTMLDivElement>(null);
+  const addDialogRef = useRef<HTMLDivElement>(null);
+
+  const closeActionModal = useCallback(() => {
+    setModal(null);
+    setReason('');
+    setDeleteEmailConfirm('');
+  }, []);
+
+  useEffect(() => {
+    if (!modal) return;
+    actionDialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') closeActionModal();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [modal, closeActionModal]);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    addDialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') closeAddModal();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [addOpen, closeAddModal]);
 
   const handleAddSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -393,6 +424,7 @@ export default function ClientManagementPage() {
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"
+          aria-label="회원 검색"
           placeholder="이름 또는 이메일 검색..."
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
@@ -551,12 +583,23 @@ export default function ClientManagementPage() {
           }}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
+            ref={actionDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={
+              modal.action === 'delete' && modal.step === 1
+                ? 'client-delete-step1-title'
+                : modal.action === 'delete' && modal.step === 2
+                  ? 'client-delete-step2-title'
+                  : 'client-action-title'
+            }
+            tabIndex={-1}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             {modal.action === 'delete' && modal.step === 1 ? (
               <>
-                <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">회원 삭제</h3>
+                <h3 id="client-delete-step1-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">회원 삭제</h3>
                 <p className="text-[14px] text-[#6F6F6F] mb-2">
                   &quot;{modal.user.name}&quot; ({modal.user.email}) 님을 삭제하시겠습니까?
                 </p>
@@ -581,7 +624,7 @@ export default function ClientManagementPage() {
               </>
             ) : modal.action === 'delete' && modal.step === 2 ? (
               <>
-                <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">삭제 확인</h3>
+                <h3 id="client-delete-step2-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">삭제 확인</h3>
                 <p className="text-[14px] text-[#6F6F6F] mb-4">
                   삭제하려면 아래에 회원 이메일을 정확히 입력하세요.
                 </p>
@@ -610,7 +653,7 @@ export default function ClientManagementPage() {
               </>
             ) : (
               <>
-                <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">
+                <h3 id="client-action-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">
                   {modal.action === 'suspend' ? '회원 정지' : '정지 해제'}
                 </h3>
                 <p className="text-[14px] text-[#6F6F6F] mb-4">
@@ -657,10 +700,15 @@ export default function ClientManagementPage() {
           onClick={closeAddModal}
         >
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
+            ref={addDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="client-add-modal-title"
+            tabIndex={-1}
+            className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-1">회원 추가</h3>
+            <h3 id="client-add-modal-title" className="text-[17px] font-bold text-[#1F1F1F] mb-1">회원 추가</h3>
             <p className="text-[13px] text-[#6F6F6F] mb-5">내담자(client) 계정을 생성하고 담당 상담사를 배정합니다.</p>
 
             {addError && (

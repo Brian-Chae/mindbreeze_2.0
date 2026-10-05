@@ -110,12 +110,25 @@ export default function UserManagementPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
+  // A11Y-01: 모달이 열리면 패널로 포커스를 옮기고 Escape로 닫는다.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!modal) return;
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setModal(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [modal]);
+
   return (
     <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT">
       {/* 필터 */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"
+          aria-label="상담사 검색"
           placeholder="이름 또는 이메일 검색..."
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
@@ -262,10 +275,15 @@ export default function UserManagementPage() {
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModal(null)}>
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-action-modal-title"
+            tabIndex={-1}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">
+            <h3 id="user-action-modal-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">
               {modal.action === 'suspend' ? '사용자 정지' : modal.action === 'delete' ? '사용자 삭제' : '정지 해제'}
             </h3>
             <p className="text-[14px] text-[#6F6F6F] mb-4">

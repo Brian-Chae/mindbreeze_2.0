@@ -16,7 +16,9 @@ function initials(name: string): string {
 
 export default function ClientListPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
 
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');

@@ -62,7 +62,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, length);
     if (!pasted) return;
-    onChange(pasted.padEnd(0, ''));
+    onChange(pasted);
     const focusIdx = Math.min(pasted.length, length - 1);
     inputsRef.current[focusIdx]?.focus();
   };
