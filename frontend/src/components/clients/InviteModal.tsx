@@ -15,6 +15,13 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<InviteCreateResponse | null>(null);
 
+  // UX-02: 초대 링크 base URL — 하드코딩 도메인 제거. 현재 접속 오리진(또는 배포 설정값)을 쓴다.
+  // 표시(input value)와 복사(clipboard)가 같은 inviteLink 하나를 공유한다.
+  const inviteBaseUrl =
+    (import.meta.env.VITE_PUBLIC_APP_URL as string | undefined)?.replace(/\/+$/, '') ||
+    window.location.origin;
+  const inviteLink = result ? `${inviteBaseUrl}${result.invite_url}` : '';
+
   if (!open) return null;
 
   const handleSubmit = async (e: FormEvent) => {
@@ -92,13 +99,14 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
               <div className="flex items-center gap-2">
                 <input
                   readOnly
-                  value={`http://dev.mindbreeze.looxidlabs.com${result.invite_url}`}
+                  value={inviteLink}
                   className="flex-1 px-3 py-2 bg-white border border-[#DDDEE7] rounded-lg text-[13px] text-[#1F1F1F] outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const text = `https://dev.mindbreeze.looxidlabs.com${result.invite_url}`;
+                    // 표시 값과 동일한 단일 URL을 복사한다(도메인 불일치 제거).
+                    const text = inviteLink;
                     if (navigator.clipboard) {
                       navigator.clipboard.writeText(text);
                     } else {

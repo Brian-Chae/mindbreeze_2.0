@@ -28,7 +28,8 @@ import {
 } from './class/audio-sync';
 import { refreshAccessToken } from './api/client';
 
-const SOCKET_URL =
+// FE-RT-002: 소켓 URL 단일 출처 — /chat · /session-live · /record 네임스페이스가 모두 이 값을 쓴다.
+export const SOCKET_URL =
   (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/api\/v1\/?$/, '') ??
   'http://localhost:8000';
@@ -133,7 +134,12 @@ export interface SessionStateChangedEvent {
 export interface ParticipantChangedEvent {
   session_id: string;
   version: number;
-  participants: SessionLiveMetric[];
+  /** 서버가 참여자 배열을 실어 보낼 때만 존재(현재 BE 는 카운트만 전송) */
+  participants?: SessionLiveMetric[];
+  /** 활성 참여자 수(배열 미포함 시 이 값으로 목록 재조회를 판단) */
+  participant_count?: number;
+  /** 대기열 인원 — 상세 화면 대기 표시 실시간 반영용 */
+  waitlist_count?: number;
 }
 
 /** 개선 3: 대기실 입장/퇴장 알림 — 상담사가 대기 인원을 실시간으로 본다 */
@@ -629,8 +635,6 @@ export function normalizeJoinSnapshot(
   }
   return null;
 }
-
-export { SOCKET_URL };
 
 export interface WaitingRoomReminderEvent {
   session_id: string;

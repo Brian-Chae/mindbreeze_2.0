@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session as DBSession
@@ -81,14 +82,26 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     ]
 
 
+_FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _ensure_aware(dt: datetime) -> datetime:
+    """naive/aware 혼합 비교로 인한 TypeError 를 막기 위해 UTC aware 로 정규화한다."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _activity_sort_key(s: Session) -> datetime:
+    """최근 활동 시각 — started_at > scheduled_at > created_at(aware 정규화)."""
+    value = s.started_at or s.scheduled_at or s.created_at
+    return _ensure_aware(value) if value is not None else _FALLBACK_SORT_TIME
+
+
 def _sorted_sessions(query) -> list[Session]:
-    """최근 활동 순 정렬 — started_at > scheduled_at > created_at 순으로 대체."""
+    """최근 활동 순 정렬 — 실제 타임스탬프를 키로 써서 정렬이 무력화되지 않게 한다."""
     sessions = query.all()
-    return sorted(
-        sessions,
-        key=lambda s: (s.started_at or s.scheduled_at or s.created_at) is not None,
-        reverse=True,
-    )
+    return sorted(sessions, key=_activity_sort_key, reverse=True)
 
 
 def counselor_dashboard(user_id: str, db: DBSession) -> dict:

@@ -7,9 +7,9 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from livekit import api as livekit_api
-from sqlalchemy import case, update
+from sqlalchemy import case, func, or_, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import Session as DBSession, selectinload
 
 from app.config import settings
 from app.models.user import User
@@ -526,42 +526,71 @@ def save_as_template(
     return _serialize(template)
 
 
-def list_templates(user_id: str, db: DBSession) -> tuple[list[dict], int]:
+def _sorted_session_query(base, *, page: int | None, limit: int | None):
+    """목록 쿼리에 DB 정렬·페이지 창을 적용한다.
+
+    정렬 키는 scheduled_at 우선, 없으면 created_at 이며, ORDER BY/LIMIT/OFFSET 을
+    DB 로 내려 무제한 로드와 후처리 슬라이스를 없앤다.
+    """
+    activity = func.coalesce(Session.scheduled_at, Session.created_at)
+    query = base.order_by(activity.desc(), Session.created_at.desc())
+    if page is not None and limit is not None:
+        query = query.offset((page - 1) * limit).limit(limit)
+    return query
+
+
+def list_templates(
+    user_id: str,
+    db: DBSession,
+    *,
+    page: int | None = None,
+    limit: int | None = None,
+) -> tuple[list[dict], int]:
     """호스트가 저장한 클래스 템플릿 목록 (최신순) — 생성 폼의 '내 템플릿에서 시작' 용."""
     uid = _to_uuid(user_id)
+    base = db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(True))
+    total = base.count()
+    # participants 를 selectinload 로 즉시 로딩해 직렬화 N+1 을 제거한다.
     rows = (
-        db.query(Session)
-        .filter(Session.host_id == uid, Session.is_template.is_(True))
+        _sorted_session_query(base, page=page, limit=limit)
+        .options(selectinload(Session.participants))
         .all()
     )
-    result = sorted(rows, key=_sort_key, reverse=True)
-    return [_serialize(s) for s in result], len(result)
+    # 창 적용 시 DB 순서를, 미적용 시 기존 파이썬 정렬과 동일한 순서를 보장한다.
+    rows = sorted(rows, key=_sort_key, reverse=True)
+    return [_serialize(s) for s in rows], total
 
 
-def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
+def list_sessions(
+    user_id: str,
+    db: DBSession,
+    *,
+    page: int | None = None,
+    limit: int | None = None,
+) -> tuple[list[dict], int]:
     """내 클래스 목록 — 템플릿(is_template=True)은 제외한다(별도 /sessions/templates)."""
     uid = _to_uuid(user_id)
-    hosted = (
-        db.query(Session)
-        .filter(Session.host_id == uid, Session.is_template.is_(False))
+    # host 이거나 참여자인 세션을 단일 쿼리로 모은다(중복 제거 포함).
+    participates = (
+        db.query(SessionParticipant.id)
+        .filter(
+            SessionParticipant.session_id == Session.id,
+            SessionParticipant.user_id == uid,
+        )
+        .exists()
+    )
+    base = db.query(Session).filter(
+        Session.is_template.is_(False),
+        or_(Session.host_id == uid, participates),
+    )
+    total = base.count()
+    rows = (
+        _sorted_session_query(base, page=page, limit=limit)
+        .options(selectinload(Session.participants))
         .all()
     )
-    participated_ids = [
-        p.session_id for p in db.query(SessionParticipant).filter(SessionParticipant.user_id == uid).all()
-    ]
-    participated = (
-        db.query(Session)
-        .filter(Session.id.in_(participated_ids), Session.is_template.is_(False))
-        .all()
-        if participated_ids
-        else []
-    )
-    seen: dict[UUID, Session] = {s.id: s for s in hosted}
-    for s in participated:
-        seen.setdefault(s.id, s)
-    # scheduled_at 이 없는 즉석 클래스는 created_at 으로 정렬한다
-    result = sorted(seen.values(), key=_sort_key, reverse=True)
-    return [_serialize(s) for s in result], len(result)
+    rows = sorted(rows, key=_sort_key, reverse=True)
+    return [_serialize(s) for s in rows], total
 
 
 def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:

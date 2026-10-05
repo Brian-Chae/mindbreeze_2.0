@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -444,25 +445,84 @@ def list_reports(
     user = db.query(User).filter(User.id == uid).first()
     is_staff = bool(user and user.role in ("counselor", "org_admin"))
 
-    # 세션 + 리포트 조회 (직원 = 본인 세션 전체 리포트, 내담자 = 본인 리포트만)
+    # 정렬 키(활동 시각) — 세션 일정이 있으면 그 시각, 없으면 생성 시각.
+    # 프론트 '최신순'(reportDateIso = scheduled_at ?? created_at)과 정합.
+    activity = func.coalesce(Session.scheduled_at, Session.created_at)
+
+    # page·limit 이 모두 주어졌을 때만 DB 레벨 창을 적용한다.
+    window = page is not None and limit is not None
+    offset = 0
+    if page is not None and limit is not None:
+        offset = (page - 1) * limit
+
     if is_staff:
         assert user is not None  # is_staff 가 참이면 user 는 반드시 존재
         host_ids = [uid] if user.role == "counselor" else [
             row[0] for row in db.query(User.id).filter(User.org_id == user.org_id).all()
         ]
-        sessions = db.query(Session).filter(Session.host_id.in_(host_ids)).all()
-        sids = [s.id for s in sessions]
-        sessions_map = {s.id: s for s in sessions}
-        report_rows = (
-            db.query(Report).filter(Report.session_id.in_(sids)).all() if sids else []
+        # 세션 LEFT JOIN 리포트 — 리포트가 있으면 리포트 행, 없지만 리포트 대상 상태면
+        # 합성(미생성) 행 1개. 템플릿·비대상 상태의 무리포트 세션은 제외한다.
+        # ORDER BY/LIMIT/OFFSET 을 DB 로 내려 무제한 로드·메모리 슬라이스를 제거한다.
+        base = (
+            db.query(
+                Report.id.label("report_id"),
+                Session.id.label("session_id"),
+                activity.label("activity_ts"),
+            )
+            .select_from(Session)
+            .outerjoin(Report, Report.session_id == Session.id)
+            .filter(Session.host_id.in_(host_ids))
+            .filter(
+                or_(
+                    Report.id.isnot(None),
+                    and_(
+                        Session.is_template.is_(False),
+                        Session.status.in_(_REPORT_RELEVANT_STATUSES),
+                    ),
+                )
+            )
         )
     else:
-        report_rows = db.query(Report).filter(Report.user_id == uid).all()
-        session_ids = {r.session_id for r in report_rows}
-        sessions = (
-            db.query(Session).filter(Session.id.in_(session_ids)).all() if session_ids else []
+        # 내담자 = 본인 리포트만. 합성 노출 없음.
+        base = (
+            db.query(
+                Report.id.label("report_id"),
+                Report.session_id.label("session_id"),
+                activity.label("activity_ts"),
+            )
+            .select_from(Report)
+            .join(Session, Session.id == Report.session_id)
+            .filter(Report.user_id == uid)
         )
-        sessions_map = {s.id: s for s in sessions}
+
+    # 페이지네이션 total 은 별도 count 쿼리로 산출한다(창과 무관한 전체 건수).
+    total = base.count()
+
+    rows = base.order_by(activity.desc(), Report.created_at.desc())
+    if window:
+        rows = rows.offset(offset).limit(limit)
+    rows = rows.all()
+
+    page_report_ids = [row.report_id for row in rows if row.report_id is not None]
+    page_missing_sids = [row.session_id for row in rows if row.report_id is None]
+
+    # 한 페이지 분량의 리포트·세션을 일괄(in_) 조회해 N+1 을 제거한다.
+    report_rows = (
+        db.query(Report).filter(Report.id.in_(page_report_ids)).all()
+        if page_report_ids else []
+    )
+    reports_by_id = {r.id: r for r in report_rows}
+    missing_sessions = (
+        db.query(Session).filter(Session.id.in_(page_missing_sids)).all()
+        if page_missing_sids else []
+    )
+    missing_by_id = {s.id: s for s in missing_sessions}
+
+    session_ids = {r.session_id for r in report_rows} | set(page_missing_sids)
+    sessions = (
+        db.query(Session).filter(Session.id.in_(session_ids)).all() if session_ids else []
+    )
+    sessions_map = {s.id: s for s in sessions}
 
     # SDD-119: 실제·합성 리포트 모두 상담사 이름을 한 번에 조회한다.
     counselor_ids = {session.host_id for session in sessions}
@@ -510,68 +570,57 @@ def list_reports(
         {report.session_id for report in report_rows}, db
     )
 
-    result = [
-        _serialize(
-            report,
-            sessions_map.get(report.session_id),
-            participant_info=participant_info_map.get(report.participant_id),
-            subjective=_subjective_from_map(report, records_map),
-            counselor_names=counselor_names,
-        )
-        for report in report_rows
-    ]
+    # 합성 대상(미생성) 세션의 기록·아웃박스도 배치로 조회한다(생성 진행 판정용).
+    missing_records_map: dict = {}
+    outboxes_map: dict = {}
+    if page_missing_sids:
+        from app.models.pipeline_outbox import PipelineOutbox
 
-    # 리포트가 기대되지만 미생성인 세션 합성 노출 — 상담사(직원) 목록에서만.
-    if is_staff:
-        reported_sids = {r.session_id for r in report_rows}
-        missing = [
-            session
-            for session in sessions
-            if not getattr(session, "is_template", False)
-            and session.status in _REPORT_RELEVANT_STATUSES
-            and session.id not in reported_sids
-        ]
-        if missing:
-            from app.models.pipeline_outbox import PipelineOutbox
+        missing_records_map = {
+            r.session_id: r
+            for r in db.query(SessionRecord)
+            .filter(SessionRecord.session_id.in_(page_missing_sids))
+            .all()
+        }
+        outboxes_map = {
+            o.session_id: o
+            for o in db.query(PipelineOutbox)
+            .filter(PipelineOutbox.session_id.in_(page_missing_sids))
+            .all()
+        }
 
-            missing_sids = [s.id for s in missing]
-            records_map = {
-                r.session_id: r
-                for r in db.query(SessionRecord)
-                .filter(SessionRecord.session_id.in_(missing_sids))
-                .all()
-            }
-            outboxes_map = {
-                o.session_id: o
-                for o in db.query(PipelineOutbox)
-                .filter(PipelineOutbox.session_id.in_(missing_sids))
-                .all()
-            }
-            for session in missing:
-                generating = _report_generation_in_flight(
-                    records_map.get(session.id), outboxes_map.get(session.id)
+    # DB 정렬 순서를 그대로 보존해 직렬화한다(추가 메모리 정렬 불필요).
+    result: list[dict] = []
+    for row in rows:
+        if row.report_id is not None:
+            report = reports_by_id.get(row.report_id)
+            if report is None:
+                continue
+            result.append(
+                _serialize(
+                    report,
+                    sessions_map.get(report.session_id),
+                    participant_info=participant_info_map.get(report.participant_id),
+                    subjective=_subjective_from_map(report, records_map),
+                    counselor_names=counselor_names,
                 )
-                result.append(
-                    _synthesize_missing_report(
-                        session, "counselor", user_id=session.host_id,
-                        counselor_names=counselor_names, generating=generating,
-                    )
+            )
+        else:
+            session = missing_by_id.get(row.session_id)
+            if session is None:
+                continue
+            generating = _report_generation_in_flight(
+                missing_records_map.get(session.id), outboxes_map.get(session.id)
+            )
+            result.append(
+                _synthesize_missing_report(
+                    session, "counselor", user_id=session.host_id,
+                    counselor_names=counselor_names, generating=generating,
                 )
-
-    # 정렬(최신순 — 세션 일정 기준, 없으면 생성 시각) + 메모리 페이지네이션
-    # 프론트 '최신순' 정렬(reportDateIso = scheduled_at ?? created_at)과 정합을 맞춘다.
-    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-    result.sort(
-        key=lambda entry: entry.get("scheduled_at") or entry.get("created_at") or epoch,
-        reverse=True,
-    )
-    total = len(result)
-    if page is not None and limit is not None:
-        start = (page - 1) * limit
-        result = result[start:start + limit]
+            )
 
     response = {"reports": result, "total": total}
-    if page is not None and limit is not None:
+    if window:
         response.update({"page": page, "limit": limit})
     return response
 

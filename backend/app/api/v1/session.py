@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, get_current_user_optional
@@ -49,10 +49,14 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 @router.get("", response_model=SessionListResponse)
 def list_sessions(
+    page: int | None = Query(default=None, ge=1),
+    limit: int | None = Query(default=None, ge=1),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    sessions, total = session_service.list_sessions(current_user["id"], db)
+    sessions, total = session_service.list_sessions(
+        current_user["id"], db, page=page, limit=limit
+    )
     return SessionListResponse(sessions=sessions, total=total)
 
 
@@ -131,11 +135,15 @@ def get_member_livekit_token(
 
 @router.get("/templates", response_model=SessionListResponse)
 def list_session_templates(
+    page: int | None = Query(default=None, ge=1),
+    limit: int | None = Query(default=None, ge=1),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
     """내 클래스 템플릿 목록 — 생성 폼의 '내 템플릿에서 시작' 드롭다운용."""
-    templates, total = session_service.list_templates(current_user["id"], db)
+    templates, total = session_service.list_templates(
+        current_user["id"], db, page=page, limit=limit
+    )
     return SessionListResponse(sessions=templates, total=total)
 
 

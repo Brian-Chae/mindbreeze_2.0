@@ -64,6 +64,8 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarNavDate, setCalendarNavDate] = useState(new Date());
   const calendarRef = useRef<HTMLDivElement>(null);
+  // 시간 피커 상태 — handleClose 에서 함께 초기화하기 위해 상단에 선언한다.
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,10 +102,15 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
     setDurationMin(50);
     setTitle('');
     setNotes('');
-    setMaxParticipants(1);
+    // FE-UI-001: 초기값(10)과 통일 — 1로 리셋되어 다음 생성 시 잘못된 값이 남던 버그 수정.
+    setMaxParticipants(10);
     setForce(false);
     setReminderOffsets([1440]);
     setIsOnline(true);
+    // 열려 있던 캘린더/시간 피커와 캘린더 내비게이션 날짜를 초기화한다.
+    setShowCalendar(false);
+    setShowTimePicker(false);
+    setCalendarNavDate(new Date());
     onClose();
   };
 
@@ -133,7 +140,6 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
     setShowCalendar(false);
   };
 
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const timePickerRef = useRef<HTMLDivElement>(null);
   const hourScrollRef = useRef<HTMLDivElement>(null);
   const minuteScrollRef = useRef<HTMLDivElement>(null);

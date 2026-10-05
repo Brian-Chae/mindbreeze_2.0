@@ -28,6 +28,8 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
     const [url, setUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    // FE-VID-001: createObjectURL 로 만든 blob URL을 추적해 cleanup 시 해제한다.
+    const blobUrlRef = useRef<string | null>(null);
 
     useImperativeHandle(ref, () => ({
       seekTo: (sec: number) => {
@@ -41,6 +43,10 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
 
     useEffect(() => {
       let cancelled = false;
+      // FE-VID-001: sessionId 변경 시 이전 상태를 리셋한다(직전 blob URL 노출 방지).
+      setLoading(true);
+      setError(null);
+      setUrl(null);
       (async () => {
         try {
           const res = await getSessionVideoUrl(sessionId);
@@ -50,10 +56,16 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
             return;
           }
           // 로컬 폴백 stream endpoint는 Authorization 필요 → blob URL로 변환
-          const playableUrl = res.url.includes('/video/stream')
+          const isBlob = res.url.includes('/video/stream');
+          const playableUrl = isBlob
             ? await fetchVideoAsBlobUrl(resolveVideoUrl(res.url))
             : res.url;
-          if (cancelled) return;
+          if (cancelled) {
+            // 응답 도착 전 세션이 바뀌었으면 방금 만든 blob URL을 즉시 해제한다(누수 방지).
+            if (isBlob) URL.revokeObjectURL(playableUrl);
+            return;
+          }
+          if (isBlob) blobUrlRef.current = playableUrl;
           setUrl(playableUrl);
         } catch (e) {
           if (!cancelled) setError(e instanceof Error ? e.message : '영상을 불러오지 못했습니다.');
@@ -63,6 +75,11 @@ export const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(
       })();
       return () => {
         cancelled = true;
+        // FE-VID-001: 생성한 blob URL을 unmount/sessionId 변경 시 해제한다.
+        if (blobUrlRef.current) {
+          URL.revokeObjectURL(blobUrlRef.current);
+          blobUrlRef.current = null;
+        }
       };
     }, [sessionId]);
 

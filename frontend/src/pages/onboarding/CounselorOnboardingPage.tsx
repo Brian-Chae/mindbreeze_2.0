@@ -123,20 +123,27 @@ export default function CounselorOnboardingPage() {
         markCompleted(1);
         setStep(2);
       } else if (step === 2) {
-        if (form.gender && form.birthDate && form.experienceYears) {
-          await saveCounselorStep2({
-            gender: form.gender,
-            birth_date: form.birthDate,
-            years_of_experience: Number(form.experienceYears),
-            specialties: form.specialties,
-          });
+        // UX-03: 성별·생년월일·경력연수는 필수 — 미충족 시 저장/진행을 막고 오류를 표시한다.
+        // (ClientOnboardingPage 의 검증-후-진행 패턴과 동일)
+        if (!form.gender || !form.birthDate || !form.experienceYears) {
+          setError('성별, 생년월일, 경력연수를 모두 입력해주세요');
+          return;
         }
+        await saveCounselorStep2({
+          gender: form.gender,
+          birth_date: form.birthDate,
+          years_of_experience: Number(form.experienceYears),
+          specialties: form.specialties,
+        });
         markCompleted(2);
         setStep(3);
       } else if (step === 3) {
-        if (form.affiliationType) {
-          await saveCounselorStep3({ affiliation_type: form.affiliationType });
+        // UX-03: 소속형태는 필수 — 미충족 시 저장/진행을 막고 오류를 표시한다.
+        if (!form.affiliationType) {
+          setError('소속형태를 선택해주세요');
+          return;
         }
+        await saveCounselorStep3({ affiliation_type: form.affiliationType });
         markCompleted(3);
         setStep(4);
       } else if (step === 4) {

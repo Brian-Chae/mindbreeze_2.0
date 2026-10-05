@@ -3,8 +3,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { tokenStorage } from '../lib/api/client';
-
-const WS_URL = (import.meta.env.VITE_WS_URL as string | undefined) ?? 'http://localhost:8000';
+// FE-RT-002: 소켓 URL 단일 출처 — /session-live·/chat 과 동일한 값을 쓴다.
+import { SOCKET_URL } from '../lib/socket';
 
 export type RecordStatus =
   | 'merging'
@@ -50,7 +50,7 @@ export function useRecordSocket(): UseRecordSocketReturn {
     if (socketRef.current) return;
 
     const token = tokenStorage.getAccess();
-    const socket = io(`${WS_URL}/record`, {
+    const socket = io(`${SOCKET_URL}/record`, {
       path: '/socket.io',
       auth: token ? { token } : {},
       transports: ['websocket', 'polling'],

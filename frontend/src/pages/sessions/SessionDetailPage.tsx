@@ -1,6 +1,6 @@
 // 세션 상세 페이지 (UI Kit)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   deleteSession,
@@ -12,7 +12,10 @@ import {
   transitionSession,
   type SessionAction,
   type SessionDto,
+  type SessionLiveMetric,
+  type SessionParticipant,
 } from '../../lib/api/session';
+import type { ParticipantChangedEvent } from '../../lib/socket';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
@@ -63,6 +66,21 @@ const participantLabel = (participant: SessionDto['participants'][number]): stri
   || participant.guest_name
   || (participant.user_id ? participant.user_id.slice(0, 8) : '게스트');
 
+/** FE-RT-003: WS 참여자 메트릭을 상세 화면 참여자 스키마로 매핑한다(활성 참여자 기준). */
+const toSessionParticipant = (metric: SessionLiveMetric): SessionParticipant => ({
+  user_id: metric.user_id ?? null,
+  guest_name: metric.is_guest ? metric.display_name : null,
+  is_guest: metric.is_guest,
+  band_connected: metric.band_connected,
+  linkband_device_id: null,
+  webrtc_peer_id: null,
+  consent_audio: false,
+  consent_eeg: false,
+  is_waitlisted: false,
+  waitlist_position: null,
+  user_name: metric.display_name,
+});
+
 export default function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -78,6 +96,41 @@ export default function SessionDetailPage() {
   const activeParticipants = (session?.participants ?? []).filter((p) => !p.is_waitlisted);
   const waitlisted = (session?.participants ?? []).filter((p) => p.is_waitlisted);
 
+  // FE-RT-003: WS 참여자 변경 구독 — 추가/제거/대기열 변동을 session 상태에 반영한다.
+  const handleParticipantChanged = useCallback(
+    (event: ParticipantChangedEvent) => {
+      if (!id || event.session_id !== id) return;
+      setSession((prev) => {
+        if (!prev) return prev;
+        const liveActive =
+          event.participants && event.participants.length > 0
+            ? event.participants.map(toSessionParticipant)
+            : null;
+        // 서버가 배열을 실어 보내면 활성 목록만 교체하고 대기열은 기존 값을 유지한다.
+        const nextParticipants = liveActive
+          ? [...liveActive, ...prev.participants.filter((p) => p.is_waitlisted)]
+          : prev.participants;
+        return {
+          ...prev,
+          participants: nextParticipants,
+          waitlist_count: event.waitlist_count ?? prev.waitlist_count,
+        };
+      });
+      // 배열 없이 변경만 알리는 서버 계약에서는 REST 스냅샷으로 목록·대기열을 보완한다.
+      if (!event.participants || event.participants.length === 0) {
+        void getSession(id)
+          .then((next) => {
+            setSession(next);
+            setError(null);
+          })
+          .catch(() => {
+            /* 다음 participant_changed/상태 이벤트에서 복구 */
+          });
+      }
+    },
+    [id],
+  );
+
   // SDD-129(③-8): WS 구독으로 세션 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
   const { isReady } = useSessionLiveSocket({
     sessionId: id,
@@ -88,6 +141,7 @@ export default function SessionDetailPage() {
           : prev,
       );
     },
+    onParticipantChanged: handleParticipantChanged,
   });
 
   useEffect(() => {

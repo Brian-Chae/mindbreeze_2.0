@@ -7,11 +7,8 @@ import { useNotificationStore } from '../stores/notificationStore';
 import { useChatStore } from '../stores/chatStore';
 import { getChatRoom } from '../lib/api/chat';
 import type { NotificationExtra } from '../lib/api/notifications';
-
-const SOCKET_URL =
-  (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/api\/v1\/?$/, '') ??
-  'http://localhost:8000';
+// FE-RT-002: 소켓 URL 단일 출처 — /session-live·/record 와 동일한 값을 쓴다.
+import { SOCKET_URL } from '../lib/socket';
 
 export function useNotificationSocket() {
   const token = useAuthStore((s) => s.accessToken);

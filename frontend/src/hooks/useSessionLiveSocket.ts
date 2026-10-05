@@ -281,7 +281,12 @@ export function useSessionLiveSocket({
       if (!acceptVersion(event.version)) return;
       setSnapshot((prev) =>
         prev
-          ? { ...prev, version: event.version, participants: event.participants }
+          ? {
+              ...prev,
+              version: event.version,
+              // 서버가 목록을 생략하면 기존 참여자 목록을 유지한다(카운트만 갱신되는 계약 대비).
+              participants: event.participants ?? prev.participants,
+            }
           : prev,
       );
       onParticipantRef.current?.(event);

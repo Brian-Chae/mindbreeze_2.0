@@ -16,11 +16,8 @@ import {
   type ReportProgressDto,
 } from '../lib/api/report-status';
 import { useNotificationStore } from '../stores/notificationStore';
-
-const WS_URL =
-  (import.meta.env.VITE_WS_URL as string | undefined) ??
-  (import.meta.env.VITE_SOCKET_URL as string | undefined) ??
-  'http://localhost:8000';
+// FE-RT-002: 소켓 URL 단일 출처 — /session-live·/chat 과 동일한 값을 쓴다.
+import { SOCKET_URL } from '../lib/socket';
 
 /** 폴링 기본 주기 — 소켓이 살아 있어도 진행률 누락을 복구한다. */
 const DEFAULT_POLL_MS = 5000;
@@ -139,7 +136,7 @@ export function useReportProgress(
     if (!sessionId) return;
 
     const token = tokenStorage.getAccess();
-    const socket = io(`${WS_URL}/record`, {
+    const socket = io(`${SOCKET_URL}/record`, {
       path: '/socket.io',
       auth: token ? { token } : {},
       transports: ['websocket', 'polling'],
