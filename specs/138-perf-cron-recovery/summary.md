@@ -21,6 +21,7 @@
   - `process_pipeline_outbox_cron.py` (파이프라인 아웃박스 재발행, 1분)
   - `cleanup_data_exports_cron.py` (export 만료 정리, 5분)
 - `sweep_stale_open_sessions` 는 기존 cron(`*/5`)이 이미 담당 → 변경 없음.
+- `.github/workflows/deploy-dev.yml` 수정: 배포 번들에 cron 스크립트 6개 포함 + 주기 스윕 cron 등록 4개 추가(5분×3, 1분×1).
 
 ## 검증 결과
 
