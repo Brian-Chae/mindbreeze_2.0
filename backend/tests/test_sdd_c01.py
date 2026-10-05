@@ -48,7 +48,11 @@ class TestGoogleAuth:
         with patch("httpx.AsyncClient.get", mock_get):
             res = client.post(
                 "/api/v1/auth/google",
-                json={"access_token": "valid-token"},
+                json={
+                    "access_token": "valid-token",
+                    # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                    "consents": {"tos": True, "privacy": True, "sensitive": True},
+                },
             )
             assert res.status_code == 200
             data = res.json()
@@ -58,23 +62,39 @@ class TestGoogleAuth:
             assert data["user"]["role"] == "client"
             assert data["user"]["counselors"] == []
 
-    def test_기존_이메일_사용자_Google_로그인_200(self, client):
-        """기존 이메일 사용자가 Google로 로그인 → auth_provider 업데이트"""
-        # 먼저 이메일로 사용자 생성
-        client.post(
-            "/api/v1/auth/register",
-            json={
-                "email": "existing@test.com",
-                "password": "Test1234!",
-                "name": "Existing User",
-                "role": "client",
-            },
+    def test_신규_Google_가입_동의_없으면_422(self, client):
+        """SEC-04: 약관·민감정보 동의 없이 신규 가입 → 422 거부."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "no-consent@test.com", "name": "No Consent"}
         )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token"},
+            )
+            assert res.status_code == 422
 
+    def test_기존_이메일_사용자_Google_로그인_200(self, client):
+        """기존 Google 가입 사용자가 다시 Google로 로그인 → consents 없이도 200."""
+        # 1차: consents 와 함께 신규 Google 가입 (register 레거시 경로는 SDD-139 에서 차단됨)
         mock_get = self._userinfo_mock(
             200, {"email": "existing@test.com", "name": "Existing User"}
         )
         with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={
+                    "access_token": "valid-token",
+                    "consents": {"tos": True, "privacy": True, "sensitive": True},
+                },
+            )
+            assert res.status_code == 200
+
+        # 2차: 기존 사용자 재로그인 — 동의 없이도 성공, auth_provider 유지
+        mock_get2 = self._userinfo_mock(
+            200, {"email": "existing@test.com", "name": "Existing User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get2):
             res = client.post(
                 "/api/v1/auth/google",
                 json={"access_token": "valid-token"},

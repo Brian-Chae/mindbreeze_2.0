@@ -86,6 +86,8 @@ export interface GoogleLoginPayload {
   access_token: string;
   invite_token?: string;
   role?: string;
+  /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
+  consents?: { tos: boolean; privacy: boolean; sensitive: boolean };
   /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
   remember_me?: boolean;
 }

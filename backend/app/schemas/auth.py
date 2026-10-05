@@ -151,6 +151,9 @@ class GoogleAuthRequest(BaseModel):
     access_token: str
     invite_token: str | None = None
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
+    # SEC-04: 신규 Google 가입 시 약관·민감정보 동의. 기존 사용자 로그인은 불필요.
+    # 신규 계정 생성 경로에서는 필수(누락/미동의 시 422).
+    consents: ConsentRequest | None = None
     # 자동 로그인(로그인 상태 유지) — 이메일 로그인과 동일한 refresh 쿠키 분기.
     remember_me: bool = True
 

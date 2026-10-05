@@ -226,7 +226,12 @@ def test_구글가입_초대토큰_상담사_자동연결(client):
     with patch("httpx.AsyncClient.get", mock):
         res = client.post(
             "/api/v1/auth/google",
-            json={"access_token": "valid", "invite_token": invite},
+            json={
+                "access_token": "valid",
+                "invite_token": invite,
+                # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                "consents": {"tos": True, "privacy": True, "sensitive": True},
+            },
         )
     assert res.status_code == 200, res.text
     assert _counselor_client_count(client, counselor_token) == 1
@@ -243,7 +248,12 @@ def test_구글가입_이메일_불일치시_연결안됨(client):
     with patch("httpx.AsyncClient.get", mock):
         res = client.post(
             "/api/v1/auth/google",
-            json={"access_token": "valid", "invite_token": invite},
+            json={
+                "access_token": "valid",
+                "invite_token": invite,
+                # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                "consents": {"tos": True, "privacy": True, "sensitive": True},
+            },
         )
     assert res.status_code == 200, res.text  # 로그인은 성공
     assert _counselor_client_count(client, counselor_token) == 0
@@ -254,7 +264,14 @@ def test_구글_초대토큰_없는_기존흐름_회귀없음(client):
     """invite_token 없는 기존 구글 로그인은 그대로 동작한다."""
     mock = _userinfo_mock(200, {"email": "plain-google@test.com", "name": "일반"})
     with patch("httpx.AsyncClient.get", mock):
-        res = client.post("/api/v1/auth/google", json={"access_token": "valid"})
+        res = client.post(
+            "/api/v1/auth/google",
+            json={
+                "access_token": "valid",
+                # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                "consents": {"tos": True, "privacy": True, "sensitive": True},
+            },
+        )
     assert res.status_code == 200, res.text
     data = res.json()
     assert data["user"]["email"] == "plain-google@test.com"

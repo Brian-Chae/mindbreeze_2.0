@@ -38,6 +38,8 @@ export default function LoginPage() {
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
   // 「로그인 상태 유지」 — 기본 체크. 해제 시 백엔드가 세션 쿠키로 발급한다.
   const [rememberMe, setRememberMe] = useState(true);
+  // SEC-04: Google 가입 시 약관·민감정보 동의 — 신규 가입자에게 필수(개인정보보호법).
+  const [googleConsent, setGoogleConsent] = useState(false);
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
   const intent = useRef<LoginIntent | null>(null);
   const googleExchanging = useRef(false);
@@ -89,7 +91,14 @@ export default function LoginPage() {
       if (!started || googleExchanging.current) return;
       googleExchanging.current = true;
       try {
-        const user = await loginGoogle(response.access_token, undefined, started.role, started.rememberMe);
+        // SEC-04: 동의 체크 상태를 서버에 전달해 신규 가입 시 명시적 동의로 기록한다.
+        const user = await loginGoogle(
+          response.access_token,
+          undefined,
+          started.role,
+          started.rememberMe,
+          { tos: googleConsent, privacy: googleConsent, sensitive: googleConsent },
+        );
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
         showError(err);
@@ -109,6 +118,12 @@ export default function LoginPage() {
   });
   const handleGoogleClick = () => {
     if (loginRole === 'org_admin' || !hasGoogleClientId || !begin('google')) return;
+    // SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다. 미동의 시 차단.
+    if (!googleConsent) {
+      setError('Google로 가입·로그인하려면 이용약관·개인정보 처리방침·민감정보 처리에 동의해주세요.');
+      finish();
+      return;
+    }
     try { googleLogin(); } catch (err) { showError(err); finish(); }
   };
   const selectTab = (index: number) => {
@@ -133,6 +148,15 @@ export default function LoginPage() {
       <img src="/mb-design/assets/icons/icon_google.svg" width={20} height={20} alt="" aria-hidden="true" />
       {pending === 'google' ? '연결 중…' : isAdmin ? 'Google Workspace로 로그인' : `Google로 ${config.label} 로그인`}
     </button>
+  );
+  // SEC-04: Google 로그인 동의 체크박스 — 신규 가입 시 약관·민감정보 처리에 대한 명시적 동의.
+  const googleConsentField = (
+    <label htmlFor="google-consent" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
+      <input id="google-consent" type="checkbox" checked={googleConsent} disabled={busy}
+        onChange={(event) => setGoogleConsent(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50" />
+      <span>Google로 가입·로그인하면 <span className="underline">이용약관</span>, <span className="underline">개인정보 처리방침</span>, <span className="underline">민감정보 처리</span>에 동의합니다.</span>
+    </label>
   );
   const divider = <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />또는<span className="h-px flex-1 bg-white/30" /></div>;
   const inputClass = 'h-[52px] w-full rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50';
@@ -179,7 +203,7 @@ export default function LoginPage() {
           </div>}
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {!isAdmin && loginRole === 'client' && <>{googleButton}{divider}{emailForm}</>}
+            {!isAdmin && loginRole === 'client' && <>{googleButton}{googleConsentField}{divider}{emailForm}</>}
             {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
             {isAdmin && <>{rememberMeField}{googleButton}</>}

@@ -242,7 +242,12 @@ def test_google_로그인_remember_me_false_세션쿠키(client):
     with _google("google@test.com"):
         res = client.post(
             "/api/v1/auth/google",
-            json={"access_token": "valid", "remember_me": False},
+            json={
+                "access_token": "valid",
+                "remember_me": False,
+                # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                "consents": {"tos": True, "privacy": True, "sensitive": True},
+            },
         )
     assert res.status_code == 200, res.text
     header = _refresh_cookie_header(res).lower()
@@ -254,7 +259,12 @@ def test_google_로그인_remember_me_true_지속쿠키(client):
     with _google("google2@test.com"):
         res = client.post(
             "/api/v1/auth/google",
-            json={"access_token": "valid", "remember_me": True},
+            json={
+                "access_token": "valid",
+                "remember_me": True,
+                # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                "consents": {"tos": True, "privacy": True, "sensitive": True},
+            },
         )
     assert res.status_code == 200, res.text
     assert f"max-age={EXPECTED_MAX_AGE}" in _refresh_cookie_header(res).lower()

@@ -796,6 +796,16 @@ async def google_auth(
                 detail="사전 등록된 계정이 없습니다. 관리자에게 문의하세요.",
             )
         role = "client"
+        # SEC-04: 신규 Google 가입은 약관·민감정보 동의를 명시적으로 확인해야 한다.
+        #   동의 없이 True 일괄 기록하던 기존 동작은 민감정보 처리 동의(개인정보보호법)를
+        #   사용자 확인 없이 취득하는 문제가 있어 차단한다.
+        if req.consents is None or not (
+            req.consents.tos and req.consents.privacy and req.consents.sensitive
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="서비스 이용약관·개인정보 처리방침·민감정보 처리에 모두 동의해야 가입할 수 있습니다",
+            )
         # 신규 Google 사용자 생성 (내담자)
         rand_pw = secrets.token_urlsafe(32)
         user = User(
@@ -809,9 +819,13 @@ async def google_auth(
         db.add(user)
         db.flush()
 
-        # 약관 동의 (Google 가입 시 암묵적 동의)
-        for ctype in ("tos", "privacy", "sensitive"):
-            db.add(Consent(user_id=user.id, type=ctype, agreed=True))
+        # 약관 동의 — 사용자가 명시적으로 동의한 항목만 기록한다.
+        for ctype, agreed in (
+            ("tos", req.consents.tos),
+            ("privacy", req.consents.privacy),
+            ("sensitive", req.consents.sensitive),
+        ):
+            db.add(Consent(user_id=user.id, type=ctype, agreed=agreed))
         db.commit()
         db.refresh(user)
 
