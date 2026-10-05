@@ -3,6 +3,8 @@
 // 띄워 잠시 명상을 하며 기다릴 수 있게 한다.
 import { useEffect, useState } from 'react';
 import { FadingImageBackground } from './FadingImageBackground';
+import { LobbyBgmBar } from './LobbyBgmBar';
+import type { useLobbyBgm } from '../../hooks/useLobbyBgm';
 
 /** 명상과 관련된 짧은 지식·명언 — 8초마다 부드럽게 교체한다. */
 const MEDITATION_QUOTES: readonly string[] = [
@@ -26,6 +28,8 @@ interface WaitingForStartProps {
   onLeave: () => void;
   /** [준비 다시 확인] — 3단계 준비 화면으로 돌아간다 */
   onRecheck: () => void;
+  /** SDD-133(①-3): 시작 대기 중에도 BGM 볼륨/음소거 조절 */
+  lobbyBgm?: ReturnType<typeof useLobbyBgm>;
 }
 
 export function WaitingForStart({
@@ -33,6 +37,7 @@ export function WaitingForStart({
   statusLabel,
   onLeave,
   onRecheck,
+  lobbyBgm,
 }: WaitingForStartProps): React.ReactElement {
   const [quoteIndex, setQuoteIndex] = useState(() =>
     Math.floor(Math.random() * MEDITATION_QUOTES.length),
@@ -57,7 +62,7 @@ export function WaitingForStart({
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#12081C] text-[#F7F4F0]">
       <FadingImageBackground />
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-black/45 via-black/55 to-black/70" aria-hidden="true" />
+      <div className="absolute inset-0 z-0" aria-hidden="true" style={{ background: 'linear-gradient(#190822D9, #12081CF2)' }} />
 
       <header className="relative z-10 mx-auto flex w-full max-w-[1200px] items-center gap-3 border-b border-white/10 px-4 py-5 sm:px-6">
         <button
@@ -106,6 +111,17 @@ export function WaitingForStart({
         >
           준비 다시 확인하기
         </button>
+
+        {lobbyBgm && (
+          <div className="mt-8 w-full max-w-md">
+            <LobbyBgmBar
+              state={lobbyBgm.state}
+              onVolumeChange={lobbyBgm.setVolume}
+              onToggleMute={lobbyBgm.toggleMute}
+              onResume={lobbyBgm.resume}
+            />
+          </div>
+        )}
       </div>
     </main>
   );

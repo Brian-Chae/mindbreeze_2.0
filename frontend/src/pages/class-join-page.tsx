@@ -1,6 +1,6 @@
 // 클래스 코드 참여 — code → details → waiting(3단계 준비·시작 대기) → meditation → complete
 
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../lib/api/client';
 import {
@@ -344,9 +344,13 @@ const ClassJoinPage: React.FC = () => {
     }
   };
 
+  // SDD-133(①-7): in-flight 중복 join 방지(실패 시에만 해제)
+  const joinStartedRef = useRef(false);
+
   // 실제 참여(join) 수행 — 게스트는 이름 검증 후, 회원은 자동 참여 경로에서도 공용으로 쓴다
   const performJoin = useCallback(async (): Promise<void> => {
-    if (!session) return;
+    if (!session || joinStartedRef.current) return;
+    joinStartedRef.current = true;
 
     const trimmedGuestName = guestName.trim();
     if (!isLoggedIn && !trimmedGuestName) {
@@ -392,11 +396,12 @@ const ClassJoinPage: React.FC = () => {
       // 코드 확인 직후 바로 라이브로 들어가지 않는다 — 대기실에서 닉네임·기기·주변을 확인한다
       setStep('waiting');
     } catch (joinError) {
+      joinStartedRef.current = false;
       setError(errorMessage(joinError, '클래스 참여에 실패했습니다. 클래스 상태를 확인한 뒤 다시 시도해 주세요.'));
     } finally {
       setIsLoading(false);
     }
-  }, [session, isLoggedIn, guestName, guestGender, guestBirthDate, code]);
+  }, [session, isLoggedIn, guestName, guestGender, guestBirthDate, code, participantToken]);
 
   const handleJoinSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();

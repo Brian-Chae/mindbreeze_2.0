@@ -59,13 +59,17 @@ export function MemberMetricDial({
   return (
     <article
       className="player-metric"
+      role="meter"
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value === null ? undefined : Math.round(value)}
       aria-label={`${label} ${value === null ? '미측정' : `${Math.round(value)} ${unit}`}${
         average !== null ? `, 그룹 평균 ${Math.round(average)}` : ''
       }`}
     >
       <span className="player-metric-name">{label}</span>
-      <span className="player-dial" aria-hidden="true">
-        <svg viewBox="0 0 100 100">
+      <span className="player-dial">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
           <defs>
             <linearGradient id={dialGradientId} x1="0%" y1="100%" x2="100%" y2="0%">
               <stop stopColor="#5F0080" />

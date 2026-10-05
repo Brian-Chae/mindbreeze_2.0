@@ -359,6 +359,7 @@ export function ClassWaitingRoom({
           setRecheckingPrep(true);
           setActiveStep(0);
         }}
+        lobbyBgm={lobbyBgm}
       />
     );
   }
@@ -406,8 +407,8 @@ export function ClassWaitingRoom({
 
         <div className="mt-4"><WaitingRoomReminder sessionId={sessionId} skipAuth={!isAuthenticated} /></div>
         <div className="mt-8 grid items-start gap-5 md:grid-cols-[minmax(0,1fr)_285px]">
-          <div className="min-w-0 space-y-4">
-          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#21132b] to-[#1d1026]">
+          <div className="order-2 min-w-0 space-y-4 md:order-none">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#21132B] to-[#1D1027]">
             <div role="tablist" aria-label="입장 전 준비 단계" className="flex items-center gap-2 border-b border-white/10 px-4 py-5 sm:gap-3 sm:px-7">
               {['설문', '링크밴드', '기기 테스트'].map((label, index) => {
                 const done = [readiness.surveyDone, readiness.bandDone, readiness.deviceDone][index];
@@ -435,7 +436,8 @@ export function ClassWaitingRoom({
                 onSubmitted={(value) => { setCheckin(value); completeSurvey(); }} onSkipped={completeSurvey} />
             </div>
             <div role="tabpanel" id="preparation-panel-1" aria-labelledby="preparation-tab-1" hidden={activeStep !== 1} className="min-h-[418px] p-4 sm:px-7 sm:py-6">
-              <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} skipped={bandSkipped} onSkippedChange={setBandSkipped} onCompleted={completeBand} />
+              {/* SDD-133(①-12): 탭 활성일 때만 마운트해 비활성 탭의 자동 BLE 연결을 막는다 */}
+              {activeStep === 1 && <WaitingRoomBandCheck sessionId={sessionId} participantId={participantId} skipped={bandSkipped} onSkippedChange={setBandSkipped} onCompleted={completeBand} />}
             </div>
             <div role="tabpanel" id="preparation-panel-2" aria-labelledby="preparation-tab-2" hidden={activeStep !== 2} className="min-h-[418px] space-y-4 p-4 sm:px-7 sm:py-6">
               <h2 className="text-xl font-semibold tracking-tight text-[#F7F4F0]">목소리와 소리를 확인해요</h2>
@@ -459,17 +461,17 @@ export function ClassWaitingRoom({
             <div className="mt-3">
               <div
                 className="h-2 w-full overflow-hidden rounded-full bg-white/10"
-                role="meter"
-                aria-label="마이크 입력 레벨"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(micLevel * 100)}
+                aria-hidden="true"
               >
                 <div
                   className="h-full rounded-full bg-[#59CE90] transition-[width] duration-100"
                   style={{ width: `${Math.round(micLevel * 100)}%` }}
                 />
               </div>
+              {/* SDD-132(①-15): 매 tick 변하는 미터는 SR에서 분리, 상태 전이 시에만 안내 */}
+              <span className="sr-only" role="status">
+                {micOn ? '마이크 입력 정상' : '마이크 꺼짐'}
+              </span>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <p className="text-[12px] text-white/50">
                   {micOn ? '말해보면 초록 막대가 움직입니다' : '입장하면 상담사와 소통할 수 있어요'}
@@ -554,14 +556,14 @@ export function ClassWaitingRoom({
               </div>
             </div>
           </div>
-          <div role="status" className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#1d1026] p-5">
+          <div role="status" className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#1D1027] p-5">
             <div><p className="text-sm text-[#F7F4F0]">{Object.values(readiness).every(Boolean) ? '준비 완료' : '준비 현황'} <strong className="ml-3 text-[#dcb5ee]">{Object.values(readiness).filter(Boolean).length}/3 완료</strong></p>
               <p className="mt-1 text-xs text-[#bcaec5]">상담사가 시작하면 자동으로 입장됩니다</p></div>
             <div aria-hidden="true" className="flex gap-1">{Object.values(readiness).map((done, index) => <span key={index} className={`h-1 w-4 rounded-full sm:w-7 ${done ? 'bg-[#dcb5ee]' : 'bg-white/10'}`} />)}</div>
           </div>
 
         {/* 입장 게이트 — 이름 + 3단계 준비(설문·링크밴드·기기)를 모두 마쳐야 입장 */}
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5">
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.06] p-5">
           {error && <p role="alert" className="mb-3 text-sm text-[#F7C6C6]">{error}</p>}
           {!gate.canEnter && (
             <p className="mb-3 text-[13px] leading-6 text-white/60">
@@ -582,8 +584,8 @@ export function ClassWaitingRoom({
           </p>
         </div>
           </div>
-          <aside aria-label="클래스 정보와 참여 설정" className="space-y-4">
-            <section className="rounded-2xl border border-white/10 bg-[#1d1026] p-5">
+          <aside aria-label="클래스 정보와 참여 설정" className="order-1 space-y-4 md:order-none">
+            <section className="rounded-2xl border border-white/10 bg-[#1D1027] p-5">
               <div aria-hidden="true" className="relative mb-5 flex h-28 items-center justify-center overflow-hidden rounded-xl bg-[radial-gradient(ellipse_at_50%_115%,#9163a166,#32203d_55%,#1b1024)]">
                 <div className="absolute h-48 w-48 rounded-full border border-[#dcb5ee]/10" />
                 <div className="absolute h-36 w-36 rounded-full border border-[#dcb5ee]/15" />
@@ -594,7 +596,7 @@ export function ClassWaitingRoom({
               <p className="mt-2 text-xs text-[#bcaec5]">참여 코드 · {classCode}</p>
             </section>
           {/* (1) 이름 확인 — 회원은 프로필 이름 고정 */}
-          <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+          <section className="rounded-2xl border border-white/10 bg-white/[0.06] p-5">
             <div className="flex items-center gap-2">
               <span
                 aria-hidden="true"
@@ -630,7 +632,7 @@ export function ClassWaitingRoom({
           </section>
 
         {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
-        <div className="rounded-2xl border border-white/10 bg-[#1d1026] p-4">
+        <div className="rounded-2xl border border-white/10 bg-[#1D1027] p-4">
           <LobbyBgmBar
             state={lobbyBgm.state}
             onVolumeChange={lobbyBgm.setVolume}

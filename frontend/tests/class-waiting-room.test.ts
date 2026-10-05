@@ -186,7 +186,7 @@ it('게스트는 이름이 비면 입장할 수 없고 사유가 표시된다', 
   expect(container.textContent).toContain('잠시 후 시작합니다');
   // 설문·밴드 단계도 노출된다(게이트를 모두 통과해야 입장 가능)
   expect(container.textContent).toContain('설문 건너뛰기');
-  expect(container.textContent).toContain('밴드 완료');
+  expect(container.textContent).toContain('링크밴드');
 });
 
 it('게스트가 이름을 입력해도 3단계 준비를 마치기 전에는 입장할 수 없다', async () => {
@@ -278,7 +278,7 @@ it('마이크는 자동 확인되고 켜지면 확정 값에 반영한다(카메
     // 마이크만 자동 확인(1회) — 카메라는 선택이라 마운트 시 요청하지 않는다
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({ audio: true });
-    expect(container.querySelector('[role="meter"]')).not.toBeNull();
+    expect(container.textContent).toContain('마이크 입력 정상');
     expect(container.textContent).toContain('말해보면 초록 막대가 움직입니다');
 
     await completePreparationAndRecheck();

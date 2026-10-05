@@ -80,6 +80,7 @@ export function CounselorLiveTile({
     canPublish,
     error,
     notReady,
+    attemptCount,
     connect,
     serverUrl,
     raisedHand,
@@ -99,11 +100,13 @@ export function CounselorLiveTile({
     void connect();
   }, [connect]);
 
+  // SDD-131(②-17): 상담사 화상 미시작 시 지수 백오프 재시도(5s→10s→20s→40s, 최대 5회)
   useEffect(() => {
-    if (!notReady) return;
-    const id = window.setInterval(() => void connect(), 5000);
-    return () => window.clearInterval(id);
-  }, [notReady, connect]);
+    if (!notReady || attemptCount >= 5) return;
+    const delay = Math.min(5000 * 2 ** attemptCount, 30000);
+    const id = window.setTimeout(() => void connect(), delay);
+    return () => window.clearTimeout(id);
+  }, [notReady, connect, attemptCount]);
 
   if (error && !token) {
     return (
@@ -115,8 +118,17 @@ export function CounselorLiveTile({
 
   if (!token) {
     return (
-      <div className={`flex items-center justify-center ${className}`}>
+      <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
         <CounselorPlaceholder message="상담사 영상을 기다리고 있어요" />
+        {notReady && attemptCount >= 5 && (
+          <button
+            type="button"
+            onClick={() => void connect()}
+            className="rounded-full bg-white/20 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/30"
+          >
+            영상 다시 시도
+          </button>
+        )}
       </div>
     );
   }

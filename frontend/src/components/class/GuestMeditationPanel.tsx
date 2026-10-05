@@ -23,6 +23,7 @@ import { MemberClassInfoCard } from './MemberClassInfoCard';
 import { MemberProfileCard } from './MemberProfileCard';
 import './member-class-player.css';
 import { LeadOffModal } from './LeadOffModal';
+import { LeaveConfirmModal } from '../player/LeaveConfirmModal';
 import { CounselorLiveTile } from './CounselorLiveTile';
 import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { GuestChatNotice } from '../chat/GuestChatNotice';
@@ -169,8 +170,12 @@ export function GuestMeditationPanel({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   /** 접촉불량 모달 — 사용자가 「무시하기」하면 닫힘 */
   const [leadOffDismissed, setLeadOffDismissed] = useState(false);
+  /** SDD-131(②-20): 종료 확인 */
+  const [confirmLeave, setConfirmLeave] = useState(false);
   /** 스피커 온오프 — 오프라인 기본 뮤트(하울링 방지), 온라인 기본 ON */
-  const [speakerOn, setSpeakerOn] = useState(locationType === 'online');
+  const [speakerOn, setSpeakerOn] = useState(locationType !== 'offline');
+  /** SDD-131(②-18): 수동 토글 여부 — locationType 늦게 도착해도 자동 동기화 */
+  const speakerTouchedRef = useRef(false);
   /** SDD-124: 절대 그룹 평균(표시 스케일) — class:group_average 수신 */
   const [groupAverage, setGroupAverage] = useState<GroupAverageDisplay | null>(null);
   /** SDD-125: 밴드 착용자 수(그룹 평균 이벤트 payload) */
@@ -436,6 +441,12 @@ export function GuestMeditationPanel({
     };
   }, []);
 
+  // SDD-131(②-18): locationType 확정 전 수동 토글 없으면 계약(online=ON/offline=OFF)대로 동기화
+  useEffect(() => {
+    if (speakerTouchedRef.current) return;
+    setSpeakerOn(locationType !== 'offline');
+  }, [locationType]);
+
   useEffect(() => {
     const startedMs = startedAt ? new Date(startedAt).getTime() : Date.now();
 
@@ -503,9 +514,9 @@ export function GuestMeditationPanel({
       <div className="player-scrim" aria-hidden="true" />
       <div className="player-screen" inert={screenOff}>
         <header className="player-topbar">
-          <button type="button" onClick={onLeave} className="player-pill">← 종료</button>
+          <button type="button" onClick={() => setConfirmLeave(true)} className="player-pill">← 종료</button>
           <h1>{title ?? '클래스'}</h1>
-          <button type="button" onClick={() => setSpeakerOn((v) => !v)}
+          <button type="button" onClick={() => { speakerTouchedRef.current = true; setSpeakerOn((v) => !v); }}
             aria-pressed={speakerOn} aria-label={speakerOn ? '스피커 음소거' : '스피커 켜기'} className="player-pill">
             <SpeakerIcon muted={!speakerOn} />
             <span className="player-desktop-label">{speakerOn ? '음소거' : '스피커 켜기'}</span>
@@ -589,6 +600,17 @@ export function GuestMeditationPanel({
             role="separator"
             aria-orientation="vertical"
             aria-label="좌측 패널 폭 조절"
+            aria-valuenow={leftW}
+            aria-valuemin={LEFT_MIN}
+            aria-valuemax={LEFT_W}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              const step = e.shiftKey ? 2 : 10;
+              if (e.key === 'ArrowLeft') setLeftW((w) => Math.max(LEFT_MIN, w - step));
+              else if (e.key === 'ArrowRight') setLeftW((w) => Math.min(LEFT_W, w + step));
+              else if (e.key === 'Home') setLeftW(LEFT_MIN);
+              else if (e.key === 'End') setLeftW(LEFT_W);
+            }}
             onPointerDown={onHandlePointerDown('left')}
           />
 
@@ -632,6 +654,17 @@ export function GuestMeditationPanel({
             role="separator"
             aria-orientation="vertical"
             aria-label="우측 패널 폭 조절"
+            aria-valuenow={rightW}
+            aria-valuemin={RIGHT_MIN}
+            aria-valuemax={RIGHT_W}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              const step = e.shiftKey ? 2 : 10;
+              if (e.key === 'ArrowLeft') setRightW((w) => Math.max(RIGHT_MIN, w - step));
+              else if (e.key === 'ArrowRight') setRightW((w) => Math.min(RIGHT_W, w + step));
+              else if (e.key === 'Home') setRightW(RIGHT_MIN);
+              else if (e.key === 'End') setRightW(RIGHT_W);
+            }}
             onPointerDown={onHandlePointerDown('right')}
           />
 
@@ -666,6 +699,15 @@ export function GuestMeditationPanel({
           isVisible={showLeadOffModal}
           leadOff={band.leadOff}
           onDismiss={() => setLeadOffDismissed(true)}
+        />
+
+        <LeaveConfirmModal
+          open={confirmLeave}
+          onConfirm={() => {
+            setConfirmLeave(false);
+            onLeave();
+          }}
+          onCancel={() => setConfirmLeave(false)}
         />
 
         <ClassOnboardingCoachmarks

@@ -110,5 +110,5 @@ export function useWaitingRoomPresence({
       readiness,
     });
     return undefined;
-  }, [checkin, readiness, nickname, enabled, sessionId, participantId, skipAuth]);
+  }, [checkin, readiness, enabled, sessionId, participantId, skipAuth]);
 }

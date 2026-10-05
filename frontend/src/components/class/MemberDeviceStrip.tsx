@@ -30,18 +30,24 @@ export function MemberDeviceStrip({
   connectedElapsedSec,
 }: MemberDeviceStripProps) {
   return (
-    <div className="member-device-strip" role="status" aria-label="LINK BAND 상태">
+    <div className="member-device-strip" aria-label="LINK BAND 상태">
       <span className={`member-device-name${connected ? '' : ' is-off'}`}>
         <i className="member-device-dot" aria-hidden="true" />
         LINK BAND 2.0
         <b>{connected ? '연결됨' : '미연결'}</b>
       </span>
-      <span className="member-device-item">배터리 {battery ?? '—'}%</span>
+      <span className="member-device-item">배터리 {battery === null ? '—' : `${Math.round(battery)}%`}</span>
       <span className="member-device-item">접촉 {contactStatusLabel(deviceStatus)}</span>
       <span className="member-device-item">신호 {signalQualityLevelLabel(signalQualityLevel)}</span>
       {connected && (
-        <span className="member-device-item">연결 {formatDuration(connectedElapsedSec)}</span>
+        <span className="member-device-item" aria-hidden="true">연결 {formatDuration(connectedElapsedSec)}</span>
       )}
+      {/* SDD-132(②-6): 상태 전이 시에만 안내 — 매초 경과 시간은 제외 */}
+      <span className="sr-only" role="status">
+        {connected
+          ? `LINK BAND 연결됨 · 접촉 ${contactStatusLabel(deviceStatus)} · 신호 ${signalQualityLevelLabel(signalQualityLevel)}`
+          : 'LINK BAND 미연결'}
+      </span>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 // 개선 3: 대기실 LINK BAND 확인 카드 — 선택(opt-in).
 //
-// 연결 여부와 무관하게 입장은 항상 가능하다(게이트에 포함되지 않는다).
+// 밴드 단계는 3단계 준비 게이트에 포함된다 — 연결하거나 '밴드 없이 진행하기'로 건너뛰어야 통과한다.
 // 여기서 연결하면 전역(singleton) BLE 연결이 유지되어 다음 단계(착용 가이드)에서
 // 센서 접촉 확인으로 이어진다 — 별도 재연결이 필요 없다.
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useAuthStore } from '../../stores/authStore';
 import { isBluetoothSupported } from '../../lib/class/class-waiting-room';
@@ -42,12 +42,7 @@ export function WaitingRoomBandCheck({
   });
 
   const isConnected = band.connectionState === 'connected';
-  useEffect(() => {
-    if (isConnected && !completionReported.current) {
-      completionReported.current = true;
-      onCompleted?.();
-    }
-  }, [isConnected, onCompleted]);
+  // SDD-133(①-13): 연결 시 자동 완료 제거 — 완료는 '기기 테스트로' 버튼(명시적 확정)에서만 수행
   // 브라우저 지원 여부를 직접 확인한다 — 연결 시도 전에도 미지원 안내를 확실히 보여준다
   const isUnsupported =
     !isBluetoothSupported() || band.connectionState === 'unsupported' || !band.isSupported;

@@ -88,8 +88,21 @@ export function MemberTrendGraph({
             type="button"
             role="tab"
             aria-selected={m.key === selected}
+            tabIndex={m.key === selected ? 0 : -1}
             className={m.key === selected ? 'is-active' : undefined}
             onClick={() => onSelect(m.key)}
+            onKeyDown={(e) => {
+              const idx = metrics.findIndex((x) => x.key === m.key);
+              let next: number | null = null;
+              if (e.key === 'ArrowRight') next = (idx + 1) % metrics.length;
+              else if (e.key === 'ArrowLeft') next = (idx - 1 + metrics.length) % metrics.length;
+              else if (e.key === 'Home') next = 0;
+              else if (e.key === 'End') next = metrics.length - 1;
+              if (next !== null) {
+                e.preventDefault();
+                onSelect(metrics[next].key);
+              }
+            }}
           >
             {m.label}
           </button>

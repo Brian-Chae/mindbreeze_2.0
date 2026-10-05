@@ -1,13 +1,14 @@
 // 완료 화면 — 1.0 GuestCompleteScreen 패리티 + 2.0 리포트 메일(OTP)
 // 배경 #F5EDFC, 리포트 마퀴, 이메일 OTP → report-email
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../../lib/api/client';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
 import { requestReportEmail } from '../../lib/api/session';
 import { InfiniteScrollingImages } from './InfiniteScrollingImages';
 import { SelfCheckinPanel } from './SelfCheckinPanel';
+import { LeaveConfirmModal } from '../player/LeaveConfirmModal';
 
 type FormPhase = 'intro' | 'email' | 'otp' | 'success';
 
@@ -59,6 +60,10 @@ export function GuestCompletePanel({
     '상담사 승인 후 메일로 발송됩니다',
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // SDD-131(②-20): 종료/이탈 확인
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  // SDD-131(②-15): 인증 코드 재발송 쿨다운(초)
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const canRequest =
     Boolean(sessionId && participantId) &&
@@ -132,13 +137,40 @@ export function GuestCompletePanel({
     }
   };
 
+  // SDD-131(②-15): 인증 코드 재발송 (이메일 다시 입력 단계로 되돌아가지 않아도 바로 재발송)
+  const handleResendOtp = async (): Promise<void> => {
+    const trimmed = email.trim();
+    if (!trimmed || resendCooldown > 0) return;
+    setFormError(null);
+    setResendCooldown(30);
+    try {
+      await requestOtp(trimmed);
+    } catch (err) {
+      setFormError(
+        err instanceof ApiError && err.message
+          ? err.message
+          : '인증 코드 재발송에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = window.setInterval(() => {
+      setResendCooldown((c) => (c > 1 ? c - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [resendCooldown]);
+
+  const step = phase === 'success' ? 3 : phase === 'intro' ? 1 : 2;
+
   return (
     <main className="min-h-screen bg-[color:var(--mb-purple-cream)] px-5 py-12 sm:px-8">
       <div className="mx-auto w-full max-w-3xl">
         <header className="flex items-center justify-between">
           <button
             type="button"
-            onClick={onReset}
+            onClick={() => setConfirmLeave(true)}
             className="rounded-xl bg-white/60 px-4 py-2 text-sm font-medium text-[color:var(--mb-label-70)]"
           >
             종료
@@ -148,6 +180,37 @@ export function GuestCompletePanel({
           </p>
           <div className="w-[4.5rem]" aria-hidden="true" />
         </header>
+
+        {/* SDD-131(②-16): 리포트 신청 단계 표시 */}
+        {phase !== 'success' && (
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm" aria-label="리포트 신청 단계">
+            {['리포트 안내', '이메일·인증', '완료'].map((label, i) => {
+              const n = i + 1;
+              const active = n === step;
+              const done = n < step;
+              return (
+                <div key={label} className="flex items-center gap-2">
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                      active
+                        ? 'bg-[color:var(--mb-primary)] text-white'
+                        : done
+                          ? 'bg-[color:var(--mb-primary)]/40 text-white'
+                          : 'bg-white/60 text-[color:var(--mb-fg-muted)]'
+                    }`}
+                  >
+                    {done ? '✓' : n}
+                  </span>
+                  <span className={active ? 'font-semibold text-[color:var(--mb-label-70)]' : 'text-[color:var(--mb-fg-muted)]'}>
+                    {label}
+                  </span>
+                  {n < 3 && <span className="mx-1 h-px w-6 bg-[color:var(--mb-border)]" aria-hidden="true" />}
+                </div>
+              );
+            })}
+            <span className="ml-2 text-xs text-[color:var(--mb-fg-muted)]">{step}/3 단계</span>
+          </div>
+        )}
 
         {/* 사후 설문: 세션 직후 '오늘 수업 이후 어떠신가요?' — 리포트 신청 단계와 무관하게 항상 노출된다. */}
         {sessionId && (
@@ -303,6 +366,14 @@ export function GuestCompletePanel({
                 </button>
                 <button
                   type="button"
+                  onClick={() => void handleResendOtp()}
+                  disabled={resendCooldown > 0}
+                  className="min-h-11 w-full py-2 text-sm font-semibold text-[color:var(--mb-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {resendCooldown > 0 ? `인증 코드 재발송 (${resendCooldown}초)` : '인증 코드 재발송'}
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setPhase('email');
                     setOtp('');
@@ -337,6 +408,14 @@ export function GuestCompletePanel({
           </div>
         )}
       </div>
+      <LeaveConfirmModal
+        open={confirmLeave}
+        onConfirm={() => {
+          setConfirmLeave(false);
+          onReset();
+        }}
+        onCancel={() => setConfirmLeave(false)}
+      />
     </main>
   );
 }

@@ -88,6 +88,22 @@ export function ClassOnboardingCoachmarks({
       if (event.key === 'Escape') skip();
       else if (event.key === 'ArrowRight') goNext();
       else if (event.key === 'ArrowLeft') goPrev();
+      else if (event.key === 'Tab') {
+        // SDD-132(②-14): 포커스 트랩 — Tab이 배경 화면으로 새지 않게 순환
+        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, input, [tabindex]:not([tabindex="-1"])',
+        );
+        if (!focusables || focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);

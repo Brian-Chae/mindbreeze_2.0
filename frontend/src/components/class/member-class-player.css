@@ -221,7 +221,7 @@
 @keyframes player-pulse { 50% { opacity: .3; } }
 
 /* ── 반응형 ── */
-@media (max-width: 1024px) {
+@media (max-width: 1164px) {
   .player-body { flex-direction: column; gap: 14px; overflow-y: auto; }
   .resize-handle { display: none; }
   .col-metrics, .col-live, .col-device { width: auto; min-width: 0; max-width: none; flex: none; }

@@ -44,6 +44,8 @@ export function useMemberLiveKit({
   const [loading, setLoading] = useState(false);
   /** 상담사 화상이 아직 시작되지 않아 토큰이 없는 상태 (폴링 재시도 대상) */
   const [notReady, setNotReady] = useState(true);
+  /** SDD-131(②-17): 재시도 횟수 — 지수 백오프 상한 판단 */
+  const [attemptCount, setAttemptCount] = useState(0);
   /** SDD-094: 손들기 요청 완료 — 상담사가 발언권을 부여하면 BE가 내린다 */
   const [raisedHand, setRaisedHand] = useState(false);
   /** SDD-094: 발언권(송출) 부여 상태 — speaking_changed 로 갱신 */
@@ -61,6 +63,7 @@ export function useMemberLiveKit({
       setRoomId(res.webrtc_room_id);
       setCanPublish(res.can_publish);
       setNotReady(false);
+      setAttemptCount(0);
     } catch (e) {
       setToken(null);
       setRoomId(null);
@@ -69,6 +72,7 @@ export function useMemberLiveKit({
       if (e instanceof ApiError && e.status === 400) {
         // 상담사 화상 미시작 — 재시도 유지
         setNotReady(true);
+        setAttemptCount((c) => c + 1);
       } else {
         setNotReady(false);
         setError((e as Error).message);
@@ -150,6 +154,7 @@ export function useMemberLiveKit({
     error,
     loading,
     notReady,
+    attemptCount,
     connect,
     disconnect,
     serverUrl: LIVEKIT_URL,

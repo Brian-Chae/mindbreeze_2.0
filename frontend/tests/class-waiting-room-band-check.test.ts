@@ -128,11 +128,15 @@ it('밴드 미사용도 준비 완료로 알리며 실제 연결로 표시하지
   expect(container.textContent).not.toContain('연결됨');
 });
 
-it('연결 성공 시 준비 완료를 한 번 알린다', async () => {
+it('연결 성공 시 자동 완료하지 않고 기기 테스트 버튼으로 완료한다', async () => {
   withBluetooth(true);
   vi.mocked(useBand).mockReturnValue(bandResult({ connectionState: 'connected' }));
   const onCompleted = vi.fn();
   await render(createElement(WaitingRoomBandCheck, { sessionId: 'session-1', participantId: 'p1', onCompleted }));
-  expect(onCompleted).toHaveBeenCalledTimes(1);
+  // SDD-133(①-13): 연결만으로 자동 완료하지 않는다
+  expect(onCompleted).not.toHaveBeenCalled();
   expect(container.querySelector('img')?.getAttribute('src')).toBe('/linkband-detail-1.png');
+  // '기기 테스트로' 버튼을 눌러야 완료된다
+  await click(button('기기 테스트로'));
+  expect(onCompleted).toHaveBeenCalledTimes(1);
 });
