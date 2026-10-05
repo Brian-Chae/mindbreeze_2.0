@@ -23,8 +23,9 @@ from app.services import storage_service
 
 logger = logging.getLogger(__name__)
 
-# S3 자격증명 미설정 환경(로컬/테스트) 폴백 저장 위치 — audio(CHUNK_STORAGE_DIR)와 동일 방식
-VIDEO_CHUNK_DIR = Path(os.environ.get("VIDEO_CHUNK_DIR", "/tmp/mindbreeze_video"))
+# S3 자격증명 미설정/일시 실패 시 폴백 저장 위치 — audio(CHUNK_STORAGE_DIR)와 동일 방식.
+# /tmp 는 EC2 재시작·디스크 정리 시 삭제되므로 영속 디스크(/var/lib/mindbreeze)를 기본으로 한다.
+VIDEO_CHUNK_DIR = Path(os.environ.get("VIDEO_CHUNK_DIR", "/var/lib/mindbreeze/video"))
 
 
 def _to_uuid(value: str) -> UUID:

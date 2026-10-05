@@ -15,7 +15,8 @@ from app.models.record import SessionRecord, AudioChunk
 
 logger = logging.getLogger(__name__)
 
-CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/tmp/mindbreeze_audio"))
+# S3 자격증명 미설정/일시 실패 시 폴백 저장 위치. /tmp 는 재시작 시 삭제되므로 영속 디스크 사용.
+CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/var/lib/mindbreeze/audio"))
 
 
 def _to_uuid(value: str) -> UUID:
