@@ -111,12 +111,10 @@ function formatClock(totalSec: number): string {
   return `${mm}:${ss}`;
 }
 
-/** 링버퍼에 1포인트 추가 — MAX_POINTS 초과 시 가장 오래된 값 제거 */
-function pushRingPoint(buf: number[], value: number): void {
-  buf.push(value);
-  if (buf.length > MAX_POINTS) {
-    buf.splice(0, buf.length - MAX_POINTS);
-  }
+/** 링버퍼에 1포인트 추가 — 불변 업데이트로 새 배열 반환(그래프 useMemo 갱신 보장). MAX_POINTS 초과 시 가장 오래된 값 제거 */
+function pushRingPoint(buf: number[], value: number): number[] {
+  const next = [...buf, value];
+  return next.length > MAX_POINTS ? next.slice(next.length - MAX_POINTS) : next;
 }
 
 /** 스피커 아이콘 (음소거 시 X) */
@@ -370,20 +368,25 @@ export function GuestMeditationPanel({
   const snapshot = readSnapshot();
 
   // 1Hz 링버퍼 — 6지표 시계열
+  // SDD-127: readSnapshot을 ref로 안정화해 타이머를 1회만 생성(서버 신호에 의한 리셋·샘플 누락 방지)
+  const readSnapshotRef = useRef(readSnapshot);
+  useEffect(() => {
+    readSnapshotRef.current = readSnapshot;
+  });
   useEffect(() => {
     const id = window.setInterval(() => {
-      const sample = readSnapshot();
+      const sample = readSnapshotRef.current();
       const series = seriesRef.current;
       for (const def of METRICS) {
         const v = sample[def.key];
         if (v !== null && Number.isFinite(v)) {
-          pushRingPoint(series[def.key], v);
+          series[def.key] = pushRingPoint(series[def.key], v);
         }
       }
       setSeriesTick((t) => t + 1);
     }, 1000);
     return () => window.clearInterval(id);
-  }, [readSnapshot]);
+  }, []);
 
   // LeadOff 해소 → 15초 AI 분석중 + 모달 재표시 준비
   useEffect(() => {

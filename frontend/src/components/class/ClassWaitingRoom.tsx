@@ -97,6 +97,7 @@ export function ClassWaitingRoom({
   const meterCtxRef = useRef<AudioContext | null>(null);
   const toneCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number>(0);
+  const lastMeterSetRef = useRef(0);
 
   const mediaSupported = Boolean(
     typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia,
@@ -179,7 +180,13 @@ export function ClassWaitingRoom({
           const v = (buf[i] - 128) / 128;
           sum += v * v;
         }
-        setMicLevel(Math.min(1, Math.sqrt(sum / buf.length) * 3));
+        const level = Math.min(1, Math.sqrt(sum / buf.length) * 3);
+        // SDD-130: setState를 10Hz로 하향 — 매 프레임(60fps) 전체 리렌더 방지
+        const now = performance.now();
+        if (now - lastMeterSetRef.current >= 100) {
+          lastMeterSetRef.current = now;
+          setMicLevel(level);
+        }
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
@@ -367,6 +374,15 @@ export function ClassWaitingRoom({
         >
           나가기
         </button>
+        {recheckingPrep && (
+          <button
+            type="button"
+            onClick={() => setRecheckingPrep(false)}
+            className="min-h-11 rounded-lg px-2 py-2 text-xs font-medium text-[#dcb5ee] transition-colors hover:bg-white/10"
+          >
+            대기 화면으로
+          </button>
+        )}
         <h1 className="truncate border-l border-white/10 px-4 text-sm font-medium text-white/80">
           {title ?? '클래스'}
         </h1>
