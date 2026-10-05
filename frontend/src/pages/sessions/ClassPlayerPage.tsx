@@ -504,6 +504,12 @@ export default function ClassPlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDto | null>(null);
+  // FE-PERF-002: setSession 업데이터 내부에서 setMetrics 를 호출하면 updater 가 부수효과를
+  // 갖게 된다(StrictMode 이중 호출 위험). 최신 세션은 ref 로 읽어 updater 밖에서 갱신한다.
+  const sessionRef = useRef<SessionDto | null>(null);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
   const [hostExtras, setHostExtras] = useState<Record<string, HostExtra>>({});
   const lastFeaturePatchAtRef = useRef(0);
@@ -895,10 +901,9 @@ export default function ClassPlayerPage() {
       const res = await getSessionLiveMetrics(id);
       setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
     } catch {
-      setSession((prev) => {
-        if (prev) setMetrics(participantsToMetrics(prev));
-        return prev;
-      });
+      // FE-PERF-002: sessionRef 에서 최신 세션을 읽어 setMetrics 를 직접 호출한다.
+      const current = sessionRef.current;
+      if (current) setMetrics(participantsToMetrics(current));
     }
   }, [id]);
 

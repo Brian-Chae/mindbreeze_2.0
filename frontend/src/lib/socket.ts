@@ -60,6 +60,67 @@ export const disconnectChatSocket = (): void => {
   }
 };
 
+// ── /record (FE-RT-004) ─────────────────────────────────────────────
+//
+// `useRecordSocket` 과 `useReportProgress` 가 각자 `io(SOCKET_URL + '/record')` 를 호출해
+// 기록 화면에서 `/record` 네임스페이스가 2중 연결되던 문제를 제거하기 위한 싱글톤이다.
+// BLE 와 마찬가지로 네임스페이스당 소켓은 하나만 두고, 참조 카운트로 마지막 사용자가
+// 해제할 때만 연결을 닫는다. 각 훅은 자기 리스너만 등록/해제한다.
+
+let recordSocket: Socket | null = null;
+let recordToken: string | null | undefined = undefined;
+let recordRefCount = 0;
+
+/**
+ * `/record` 네임스페이스 소켓 획득(참조 카운트 +1).
+ * 이미 살아있는 연결은 재사용하고 토큰만 갱신한다(다른 훅의 리스너를 고아로 만들지 않음).
+ */
+export const acquireRecordSocket = (token: string | null = null): Socket => {
+  recordRefCount += 1;
+  if (recordSocket && !recordSocket.disconnected) {
+    if (recordToken !== token) {
+      recordToken = token;
+      recordSocket.auth = token ? { token } : {};
+    }
+    return recordSocket;
+  }
+
+  if (recordSocket) {
+    recordSocket.disconnect();
+    recordSocket = null;
+  }
+
+  recordToken = token;
+  recordSocket = io(`${SOCKET_URL}/record`, {
+    path: '/socket.io',
+    transports: ['websocket', 'polling'],
+    auth: token ? { token } : {},
+    autoConnect: true,
+    reconnection: true,
+  });
+  return recordSocket;
+};
+
+/** `/record` 소켓 반환(참조 카운트 -1) — 마지막 사용자면 연결을 닫고 정리한다. */
+export const releaseRecordSocket = (): void => {
+  recordRefCount = Math.max(0, recordRefCount - 1);
+  if (recordRefCount === 0 && recordSocket) {
+    recordSocket.disconnect();
+    recordSocket = null;
+    recordToken = undefined;
+  }
+};
+
+/** 강제 정리(로그아웃 등) — 남은 참조와 무관하게 연결을 닫는다. */
+export const disconnectRecordSocket = (): void => {
+  recordRefCount = 0;
+  if (recordSocket) {
+    recordSocket.disconnect();
+    recordSocket = null;
+    recordToken = undefined;
+  }
+};
+
 // ── /session-live (SDD-024 / SDD-026) ───────────────────────────────
 
 /** 클라이언트 → 서버: 1초 EEG feature emit */
@@ -288,6 +349,8 @@ let sessionLiveToken: string | null | undefined = undefined;
 let sessionLiveTokenRefreshAttempted = false;
 /** SDD-110: 현재 join된 세션 + 마지막 joined 스냅샷 캐시 (join dedup / 후발 구독자 재배달) */
 let liveCurrentSession: string | null = null;
+/** FE-RT-001: join dedup 키 확장 — 세션뿐 아니라 참여자 확정 여부까지 비교한다 */
+let liveCurrentParticipant: string | null = null;
 let liveSnapshotCache: SessionLiveJoinedEvent | null = null;
 
 /**
@@ -355,6 +418,7 @@ export const getSessionLiveSocket = (token: string | null = null): Socket => {
   // SDD-110: 단절 시 join 상태 클리어 — 재연결 join이 dedup에 막히지 않게 한다.
   sessionLiveSocket.on('disconnect', () => {
     liveCurrentSession = null;
+    liveCurrentParticipant = null;
     liveSnapshotCache = null;
   });
 
@@ -387,12 +451,21 @@ export const joinSessionLive = (
   participantId?: string | null,
 ): void => {
   // SDD-110: 이미 같은 세션에 join된 상태면 재emit하지 않는다(재연결 join N회 → 1회).
-  if (liveCurrentSession === sessionId && !socket.disconnected) return;
+  // FE-RT-001: dedup 키를 (session_id, participant_id)로 확장한다. 참여자 확정 후
+  // participant_id 를 붙여 재join 해도 막히지 않도록, participant_id 가 있는 재join 은
+  // 강제 emit 한다. 반대로 participant_id 없는 재join(호스트 컨텍스트 등)은 기존 세션
+  // dedup 을 유지해 신원 다운그레이드를 일으키지 않는다.
+  const nextParticipant = participantId ?? null;
+  const hasParticipant = Boolean(participantId);
+  if (liveCurrentSession === sessionId && !socket.disconnected) {
+    if (!hasParticipant || liveCurrentParticipant === nextParticipant) return;
+  }
   const payload: SessionLiveJoinPayload = {
     session_id: sessionId,
     ...(participantId ? { participant_id: participantId } : {}),
   };
   liveCurrentSession = sessionId;
+  liveCurrentParticipant = nextParticipant;
   if (socket.connected) {
     socket.emit('join', payload);
   } else {
@@ -407,6 +480,7 @@ export const leaveSessionLive = (socket: Socket, sessionId: string): void => {
   // SDD-110: join 상태/스냅샷 캐시 클리어 — 다음 세션 join이 정상 emit되게 한다.
   if (liveCurrentSession === sessionId) {
     liveCurrentSession = null;
+    liveCurrentParticipant = null;
   }
   liveSnapshotCache = null;
   if (!socket.connected) return;

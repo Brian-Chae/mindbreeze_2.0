@@ -1,7 +1,29 @@
 // API 기본 클라이언트: Bearer 토큰 자동 첨부 + 401 시 refresh 재시도 1회
 // access token은 메모리에만 보관(XSS 탈취 방지), refresh token은 httpOnly cookie로 관리
 
+import { loginPathForRole } from '../auth-routing';
+import type { UserRole } from './auth';
+
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
+
+// SEC-04: 401 리다이렉트는 하드코딩 '/login' 대신 역할별 로그인 경로를 쓴다.
+// authStore 와의 순환 import 를 피하기 위해 persist 된 사용자(mb_user)에서 역할만 읽는다.
+const PERSISTED_USER_KEY = 'mb_user';
+
+function loginRedirectPath(): string {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const raw = localStorage.getItem(PERSISTED_USER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { role?: UserRole };
+        if (parsed?.role) return loginPathForRole(parsed.role);
+      }
+    }
+  } catch {
+    /* 손상된 저장값은 무시하고 기본 로그인 화면으로 이동한다 */
+  }
+  return '/login';
+}
 
 // access token은 localStorage가 아닌 모듈 메모리에만 보관한다.
 // 페이지 새로고침 시 소멸하고, refresh(httpOnly cookie)로 자동 복구된다.
@@ -130,9 +152,12 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       token = newToken;
       res = await doFetch(token);
     } else {
-      // refresh 실패 → 토큰 클리어 + 로그인 페이지로 강제 이동
+      // refresh 실패 확정 → 토큰 클리어 후 역할별 로그인 화면으로 이동한다.
       tokenStorage.clear();
-      window.location.href = '/login';
+      // 이미 로그인 화면이면 리다이렉트 루프를 만들지 않는다.
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+        window.location.href = loginRedirectPath();
+      }
       throw new ApiError(401, '인증이 만료되었습니다.', null);
     }
   }

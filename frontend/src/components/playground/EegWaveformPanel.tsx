@@ -2,7 +2,7 @@
  * P3 — EEG 파형 패널 (Canvas 2D).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BandEegWaveform } from '../../types/playground';
 import { StrokeIcon } from '../layout/SidebarNav';
 import { CHART_COLORS } from './chart-theme';
@@ -31,9 +31,14 @@ export function EegWaveformPanel({ connected, eegWaveform, getSamples }: Props) 
 
   const supplier = useCallback(() => getSamples(), [getSamples]);
 
+  // FE-PERF-001: interval 은 mount 1회만 둔다. 파형 prop 은 고빈도로 갱신되므로
+  // deps 에 넣으면 매 갱신마다 타이머가 재생성된다 → 최신값은 ref 로 참조한다.
+  const eegWaveformRef = useRef(eegWaveform);
+  eegWaveformRef.current = eegWaveform;
+
   useEffect(() => {
     const id = setInterval(() => {
-      const fp1 = eegWaveform.fp1;
+      const fp1 = eegWaveformRef.current.fp1;
       let rate = 0;
       if (fp1.length >= 2) {
         const span = fp1[fp1.length - 1].timestamp - fp1[0].timestamp;
@@ -42,7 +47,7 @@ export function EegWaveformPanel({ connected, eegWaveform, getSamples }: Props) 
       setStats({ samples: fp1.length, sampleRate: rate });
     }, 1000);
     return () => clearInterval(id);
-  }, [eegWaveform]);
+  }, []);
 
   const panelState = !connected ? 'disconnected' : stats.samples === 0 ? 'waiting' : 'ready';
   const yRange = useMemo(() => (autoScale ? undefined : FIXED_RANGE), [autoScale]);

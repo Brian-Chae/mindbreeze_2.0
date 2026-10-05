@@ -97,8 +97,14 @@ export function useWaitingRoomPresence({
   }, [enabled, sessionId, participantId, skipAuth]);
 
   // 체크인이 저장되면 즉시 join 을 재전송해 상담사 화면을 갱신한다(15초 heartbeat 대기 없이).
+  //
+  // FE-PRESENCE-001: checkin/readiness 는 객체 타입이라 부모가 매 렌더 새 객체를 만들면
+  // deps 비교가 실패해 join 이 반복된다. 값 내용을 직렬화한 키로만 트리거하고, 실제 payload 는
+  // 위에서 갱신되는 ref 에서 읽는다(플리커 방지).
+  const checkinKey = checkin ? JSON.stringify(checkin) : '';
+  const readinessKey = readiness ? JSON.stringify(readiness) : '';
   useEffect(() => {
-    if (!enabled || !sessionId || !participantId || (!checkin && !readiness)) return undefined;
+    if (!enabled || !sessionId || !participantId || (!checkinKey && !readinessKey)) return undefined;
     const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
     if (!socket.connected) return undefined;
     joinSessionLive(socket, sessionId, participantId);
@@ -106,9 +112,9 @@ export function useWaitingRoomPresence({
       session_id: sessionId,
       action: 'join',
       nickname: nicknameRef.current,
-      checkin,
-      readiness,
+      checkin: checkinRef.current,
+      readiness: readinessRef.current,
     });
     return undefined;
-  }, [checkin, readiness, enabled, sessionId, participantId, skipAuth]);
+  }, [checkinKey, readinessKey, enabled, sessionId, participantId, skipAuth]);
 }

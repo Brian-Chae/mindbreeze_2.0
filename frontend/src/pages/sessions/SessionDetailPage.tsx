@@ -201,16 +201,28 @@ export default function SessionDetailPage() {
     if (!id || inviteSelected.length === 0) return;
     setBusy(true);
     setError(null);
+    let invited = 0;
     try {
       let updated = session;
       for (const s of inviteSelected) {
         updated = await inviteParticipant(id, s.userId);
+        // FE-DETAIL-001: 초대는 순차 실행이라 중간 실패 시 앞선 성공이 화면에 반영되지 않는다.
+        // 성공한 초대마다 즉시 setSession 해 부분 성공을 유지한다.
+        setSession(updated);
+        invited += 1;
       }
-      setSession(updated);
       setShowInvite(false);
       setInviteSelected([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : '초대에 실패했습니다');
+      // 중간 실패로 서버 상태와 어긋날 수 있어, 성공분 반영 후 최신 세션을 재조회한다.
+      if (invited > 0) {
+        try {
+          setSession(await getSession(id));
+        } catch {
+          /* 폴링/WS 이벤트가 다음 기회에 복구한다 */
+        }
+      }
     } finally {
       setBusy(false);
     }

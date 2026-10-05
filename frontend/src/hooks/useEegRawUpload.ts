@@ -201,11 +201,20 @@ export function useEegRawUpload(
 
       let hadFailure = false;
       let lastMsg: string | null = null;
+      // FE-EEG-002: 최대 재시도를 넘긴 청크를 큐에 영구 잔류시키지 않고 dead-letter로 분리 제거한다.
+      let deadLettered = 0;
 
       for (const item of pending) {
         if (item.attemptCount >= MAX_ATTEMPTS) {
+          // 남겨두면 매 flush 마다 실패로 집계돼 'failed' 상태가 영구화되고 진짜 오류가 묻힌다.
           hadFailure = true;
+          deadLettered += 1;
           lastMsg = item.lastError ?? '최대 재시도 초과';
+          try {
+            await removeRawChunk(item.streamId, item.chunkIndex, item.sessionId);
+          } catch (err) {
+            logger.warn('dead-letter raw chunk 제거 실패', item.id, err);
+          }
           continue;
         }
         try {
@@ -217,12 +226,22 @@ export function useEegRawUpload(
         }
       }
 
+      if (deadLettered > 0) {
+        // dead-letter 표면화 — 큐에서 제거했음을 진단 로그로 남긴다(알림 문구는 lastError로 전달).
+        logger.error(
+          `raw chunk ${deadLettered}건 최대 재시도 초과 — dead-letter로 분리 제거했습니다`,
+        );
+      }
+
       const remaining = await refreshPendingCount();
       if (!mountedRef.current) return;
 
       if (remaining === 0) {
-        setUploadStatus('idle');
-        setLastError(null);
+        // dead-letter 를 정리한 경우에도 사용자가 인지할 수 있게 lastError 를 남긴다.
+        setUploadStatus(deadLettered > 0 ? 'failed' : 'idle');
+        setLastError(
+          deadLettered > 0 ? (lastMsg ?? '최대 재시도 초과 청크를 정리했습니다') : null,
+        );
       } else if (hadFailure) {
         setUploadStatus(
           pending.some((p) => p.attemptCount + 1 >= MAX_ATTEMPTS)

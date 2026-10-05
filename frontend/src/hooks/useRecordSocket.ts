@@ -1,10 +1,13 @@
 // WebSocket `/record` 네임스페이스 — AI 처리 상태 실시간 구독
+// FE-RT-004: io() 직접 생성 대신 lib/socket.ts 싱글톤을 쓴다 — useReportProgress 와
+// 연결을 공유해 기록 화면에서 /record 가 2중 연결되는 문제를 제거한다. 이 훅은 자기
+// 리스너만 해제하고, 소켓 수명은 acquire/release 참조 카운트가 관리한다.
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { tokenStorage } from '../lib/api/client';
-// FE-RT-002: 소켓 URL 단일 출처 — /session-live·/chat 과 동일한 값을 쓴다.
-import { SOCKET_URL } from '../lib/socket';
+// FE-RT-002/FE-RT-004: 소켓 URL·/record 싱글톤 단일 출처.
+import { acquireRecordSocket, releaseRecordSocket } from '../lib/socket';
 
 export type RecordStatus =
   | 'merging'
@@ -45,43 +48,49 @@ export function useRecordSocket(): UseRecordSocketReturn {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const sessionRef = useRef<string | null>(null);
+  /** 이 훅이 등록한 리스너만 해제하기 위한 정리 함수(공유 소켓에서 다른 훅 리스너를 건드리지 않음) */
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  const connect = useCallback(() => {
-    if (socketRef.current) return;
+  const ensureSocket = useCallback((): Socket => {
+    const existing = socketRef.current;
+    if (existing) return existing;
 
     const token = tokenStorage.getAccess();
-    const socket = io(`${SOCKET_URL}/record`, {
-      path: '/socket.io',
-      auth: token ? { token } : {},
-      transports: ['websocket', 'polling'],
-    });
+    const socket = acquireRecordSocket(token);
+    socketRef.current = socket;
 
-    socket.on('connect', () => {
+    const onConnect = (): void => {
       setIsConnected(true);
       // SDD-137: 재연결 시 기존 구독 방을 자동 재구독 — 끊겼다 복구되면 기록 갱신이 멈추지 않도록
       const sid = sessionRef.current;
-      if (sid) {
-        socket.emit('subscribe', { session_id: sid });
-      }
-    });
-    socket.on('disconnect', () => setIsConnected(false));
-
-    socket.on('record_status', (event: RecordStatusEvent) => {
+      if (sid) socket.emit('subscribe', { session_id: sid });
+    };
+    const onDisconnect = (): void => setIsConnected(false);
+    const onRecordStatus = (event: RecordStatusEvent): void => {
       if (event.session_id === sessionRef.current) {
         setStatus(event.status);
         setDetail(event.detail ?? null);
       }
-    });
+    };
 
-    socketRef.current = socket;
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('record_status', onRecordStatus);
+    cleanupRef.current = () => {
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('record_status', onRecordStatus);
+    };
+
+    // 이미 연결된 공유 소켓을 즉시 재사용한 경우에도 상태를 반영한다.
+    if (socket.connected) setIsConnected(true);
+    return socket;
   }, []);
 
   const subscribe = useCallback(
     (sessionId: string) => {
       sessionRef.current = sessionId;
-      if (!socketRef.current) connect();
-      const socket = socketRef.current;
-      if (!socket) return;
+      const socket = ensureSocket();
 
       if (socket.connected) {
         socket.emit('subscribe', { session_id: sessionId });
@@ -93,7 +102,7 @@ export function useRecordSocket(): UseRecordSocketReturn {
       setStatus(null);
       setDetail(null);
     },
-    [connect],
+    [ensureSocket],
   );
 
   const unsubscribe = useCallback(() => {
@@ -109,11 +118,14 @@ export function useRecordSocket(): UseRecordSocketReturn {
 
   useEffect(() => {
     return () => {
-      const socket = socketRef.current;
-      if (socket) {
-        socket.disconnect();
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+      // acquire 했을 때만 release — 소켓은 useReportProgress 와 공유되므로 참조 카운트로 정리한다.
+      if (socketRef.current) {
+        releaseRecordSocket();
         socketRef.current = null;
       }
+      setIsConnected(false);
     };
   }, []);
 

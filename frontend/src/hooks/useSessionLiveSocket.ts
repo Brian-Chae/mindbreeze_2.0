@@ -88,7 +88,13 @@ interface UseSessionLiveSocketResult {
   isReady: boolean;
   snapshot: SessionLiveJoinSnapshot | null;
   version: number;
-  /** 최신 수신 feature (참가자별 맵은 호출측에서 관리) */
+  /**
+   * 최신 수신 feature 의 마지막 값.
+   *
+   * FE-RT-005: ref 로만 보관되어 값이 바뀌어도 렌더를 트리거하지 않는다(대규모 테이블
+   * 전체 재렌더 방지). 따라서 **디버그/폴백 진단 전용**이며, 상태 변화에 반응해야 하는
+   * 소비처는 반드시 `onEegFeature` 콜백을 사용해야 한다. 이 값을 렌더에 직접 쓰지 말 것.
+   */
   lastEvent: SessionLiveEegFeatureEvent | null;
   /** 개선 5: 무음 시그널 전송 — 즉시 전송되거나 단절 중이면 버퍼링(재연결 후 flush)된다 */
   sendSignal: (signalType: ClassSignalType) => SignalSendResult;
@@ -442,7 +448,7 @@ export function useSessionLiveSocket({
     isReady: hasSnapshot,
     snapshot,
     version,
-    /** 렌더 구독 없음 — onEegFeature로 증분 반영. 디버그/폴백용 최신값 */
+    // FE-RT-005: 렌더 구독 없음(디버그/진단 전용) — 증분 반영은 onEegFeature 콜백을 쓴다.
     lastEvent: lastEventRef.current,
     sendSignal,
     sendAudioSync,

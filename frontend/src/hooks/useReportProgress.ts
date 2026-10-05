@@ -6,7 +6,7 @@
 //  · 완료(ready/partial)로 '전이'될 때 조용한 토스트를 1회만 띄운다(요란한 팝업 금지).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { tokenStorage } from '../lib/api/client';
 import {
   getSessionReportStatus,
@@ -16,8 +16,8 @@ import {
   type ReportProgressDto,
 } from '../lib/api/report-status';
 import { useNotificationStore } from '../stores/notificationStore';
-// FE-RT-002: 소켓 URL 단일 출처 — /session-live·/chat 과 동일한 값을 쓴다.
-import { SOCKET_URL } from '../lib/socket';
+// FE-RT-004: 소켓 URL·/record 싱글톤 단일 출처 — useRecordSocket 과 연결을 공유한다.
+import { acquireRecordSocket, releaseRecordSocket } from '../lib/socket';
 
 /** 폴링 기본 주기 — 소켓이 살아 있어도 진행률 누락을 복구한다. */
 const DEFAULT_POLL_MS = 5000;
@@ -136,34 +136,38 @@ export function useReportProgress(
     if (!sessionId) return;
 
     const token = tokenStorage.getAccess();
-    const socket = io(`${SOCKET_URL}/record`, {
-      path: '/socket.io',
-      auth: token ? { token } : {},
-      transports: ['websocket', 'polling'],
-    });
+    // FE-RT-004: /record 싱글톤을 공유한다 — useRecordSocket 과 2중 연결하지 않는다.
+    const socket = acquireRecordSocket(token);
     socketRef.current = socket;
 
     const subscribe = (): void => {
       socket.emit('subscribe', { session_id: sessionId });
     };
 
-    socket.on('connect', () => {
+    const onConnect = (): void => {
       setIsConnected(true);
       subscribe();
-    });
-    socket.on('disconnect', () => setIsConnected(false));
-    socket.on('report:progress', (payload: unknown) => {
+    };
+    const onDisconnect = (): void => setIsConnected(false);
+    const onProgress = (payload: unknown): void => {
       const parsed = parseReportProgress(payload);
       if (!parsed) return;
       if (parsed.session_id && parsed.session_id !== sessionId) return;
       apply(parsed, sessionId);
-    });
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    socket.on('report:progress', onProgress);
+    // 이미 연결된 공유 소켓이면 connect 이벤트를 기다리지 않고 즉시 구독한다.
+    if (socket.connected) onConnect();
 
     return () => {
-      socket.off('report:progress');
-      socket.off('connect');
-      socket.off('disconnect');
-      socket.disconnect();
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
+      socket.off('report:progress', onProgress);
+      // 소켓은 useRecordSocket 과 공유되므로 참조 카운트를 반환한다(마지막 사용자가 닫음).
+      releaseRecordSocket();
       socketRef.current = null;
       setIsConnected(false);
     };

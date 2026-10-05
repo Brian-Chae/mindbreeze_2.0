@@ -79,7 +79,7 @@ export function applyEegFeatureToMetricsDetailed(
     if (!Number.isFinite(rowMs)) return lastAt;
     return nextMs >= rowMs ? lastAt : (rowAt as string);
   };
-  const bandConnected = event.band_connected ?? true;
+  const bandConnected = event.band_connected;
   const heartRate =
     event.feature?.heart_rate ?? null;
   const respiratoryRate =
@@ -92,12 +92,14 @@ export function applyEegFeatureToMetricsDetailed(
     found = true;
     const patched: SessionLiveMetric = {
       ...row,
-      band_connected: bandConnected,
+      // FE-EEG-001: 필드가 없으면 '연결됨/스트리밍'으로 단정하지 않는다.
+      // 이벤트에 값이 없으면 기존 행 값을 유지하고(신규 행은 보수적 기본값), 과표기를 막는다.
+      band_connected: bandConnected ?? row.band_connected,
       device_status: contactStatus ?? row.device_status,
       band_battery: event.band_battery ?? row.band_battery,
       current_efficiency:
         typeof efficiency === 'number' ? efficiency : row.current_efficiency,
-      upload_status: event.upload_status ?? 'streaming',
+      upload_status: event.upload_status ?? row.upload_status,
       last_eeg_at: newerLastAt(row.last_eeg_at),
       signal_quality: sq01 ?? row.signal_quality ?? null,
       signal_quality_level: sqLevel,
@@ -118,13 +120,14 @@ export function applyEegFeatureToMetricsDetailed(
       participant_id: event.participant_id,
       display_name: '참가자',
       is_guest: false,
-      band_connected: bandConnected,
+      // FE-EEG-001: 신규 행도 미보고 필드를 '연결됨/스트리밍'으로 단정하지 않는다.
+      band_connected: bandConnected ?? false,
       // unknown을 ok로 승격하지 않음
       device_status: contactStatus ?? 'unknown',
       band_battery: event.band_battery ?? null,
       avg_efficiency: null,
       current_efficiency: typeof efficiency === 'number' ? efficiency : null,
-      upload_status: event.upload_status ?? 'streaming',
+      upload_status: event.upload_status ?? 'idle',
       last_eeg_at: lastAt,
       signal_quality: sq01,
       signal_quality_level: sqLevel,

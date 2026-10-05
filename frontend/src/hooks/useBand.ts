@@ -67,6 +67,18 @@ import { refreshActiveModel, scoreIndices } from '../lib/eeg/eegPersonalScore';
 
 const logger = createLogger('useBand');
 
+/**
+ * FE-BAND-001: useBand 중복 mount 감지용 모듈 레벨 가드.
+ *
+ * BLE 연결(bluetoothService)은 singleton 을 재사용하지만 훅 상태(스트림·큐·타이머)는
+ * 인스턴스마다 따로 산다. WaitingRoomBandCheck / GuestMeditationPanel / PlaygroundPage /
+ * ClassPlayerPage 가 각각 호출하므로, 두 인스턴스가 동시에 살아 있으면 연결·업로드가
+ * 이중화된다. 활성 소유자 수를 추적해 중복 mount 를 경고하고, 동시 connect() 는 1건만
+ * 진행되게 차단한다.
+ */
+let activeBandOwners = 0;
+let bandConnectInFlight = false;
+
 /** raw indices → 표시용 0~100 정규화 (활성 모델 > 코호트 B0) */
 function toScoredIndices(raw: BandRawIndices): BandRawIndices {
   const scores = scoreIndices({
@@ -372,6 +384,19 @@ export function useBand({
   observationOnlyRef.current = observationOnly;
   const participantIdRef = useRef(participantId);
   participantIdRef.current = participantId;
+
+  // FE-BAND-001: 활성 소유자 등록 — 동시에 둘 이상 mount 되면 경고한다.
+  useEffect(() => {
+    activeBandOwners += 1;
+    if (import.meta.env.DEV && activeBandOwners > 1) {
+      console.warn(
+        `[useBand] 중복 인스턴스 감지(${activeBandOwners}) — BLE singleton 을 공유하므로 연결/업로드가 이중화될 수 있습니다.`,
+      );
+    }
+    return () => {
+      activeBandOwners = Math.max(0, activeBandOwners - 1);
+    };
+  }, []);
 
   // SDD-117: raw EEG → S3 업로드 배선.
   // 샘플을 1초(250샘플) 청크로 버퍼링 → interleaved float32 인코딩 → 영속 큐 → presign/S3/ack.
@@ -986,6 +1011,14 @@ export function useBand({
       return;
     }
 
+    // FE-BAND-001: 동시 connect 차단 — 중복 인스턴스가 각자 스트림을 시작하는 것을 막는다.
+    // (싱글톤 BLE 연결에 다중 StreamProcessor/큐가 붙으면 업로드가 이중화된다.)
+    if (bandConnectInFlight) {
+      logger.warn('중복 connect 무시 — 연결 시도가 이미 진행 중입니다');
+      return;
+    }
+    bandConnectInFlight = true;
+
     setError(null);
     // 연결 시도 시 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
     autoReconnectRef.current = true;
@@ -1135,6 +1168,9 @@ export function useBand({
         setConnectionState('error');
         setError(err instanceof Error ? err.message : 'LINK BAND 연결 실패');
       }
+    } finally {
+      // FE-BAND-001: 성공/실패와 무관하게 in-flight 가드를 해제한다.
+      bandConnectInFlight = false;
     }
   }, [
     disconnect,
