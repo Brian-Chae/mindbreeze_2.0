@@ -2111,29 +2111,42 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
 
     반환: {participant_id(UUID): {current_relaxation, avg_relaxation, device_status, last_eeg_at}}
     윈도우가 없는 참가자는 키를 포함하지 않는다(호출측에서 placeholder 처리).
+
+    SDD-138: 매 4초 폴링마다 세션 전체 윈도우를 Python 으로 로드하던 것을 DB 집계로 이관한다.
+    - 평균 두뇌휴식도는 SQL AVG(참가자별 GROUP BY)로, 최신 윈도우는 LIMIT 1 로 구해
+      참가자 수가 많아도 부하가 참가자 수에 선형으로만 증가한다.
     """
     if not participant_ids:
         return {}
 
-    # SDD-028: batch key 기반 조회 헬퍼로 라우팅한다. 범위 미지정이므로 전체 스캔과 동일 결과이며
-    # (session_id, participant_id, window_index) 복합 인덱스를 타 참가자별 범위 스캔이 된다.
-    rows = eeg_query.feature_windows_in_range(
-        db, session_id, participant_ids=participant_ids
-    )
+    from sqlalchemy import func
 
-    grouped: dict = {}
-    for w in rows:
-        grouped.setdefault(w.participant_id, []).append(w)
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    # (1) 참가자별 평균 두뇌휴식도 — null 제외 평균은 SQL AVG 와 동일 의미
+    avg_rows = {
+        pid: avg
+        for pid, avg in db.query(
+            EEGFeatureWindow.participant_id, func.avg(EEGFeatureWindow.relaxation_index)
+        )
+        .filter(
+            EEGFeatureWindow.session_id == session_id,
+            EEGFeatureWindow.participant_id.in_(participant_ids),
+            EEGFeatureWindow.relaxation_index.isnot(None),
+        )
+        .group_by(EEGFeatureWindow.participant_id)
+        .all()
+    }
 
     now = _now()
     result: dict = {}
-    for pid, windows in grouped.items():
-        # SDD-026: 실제 최신은 created_at 기준(pause/resume 로 window_index 가 재시작할 수 있으므로
-        # window_index 최대값이 곧 최신이 아니다). 동률이면 window_index 로 안정 정렬.
-        latest = max(windows, key=lambda w: (_ensure_aware(w.created_at) if w.created_at else now, w.window_index))
-        # 평균 두뇌휴식도 — null 은 제외해 평균한다(0 치환 금지)
-        rel_values = [w.relaxation_index for w in windows if w.relaxation_index is not None]
-        avg_relaxation = round(sum(rel_values) / len(rel_values), 4) if rel_values else None
+    for pid in participant_ids:
+        # (2) 최신 윈도우 — created_at DESC, window_index DESC LIMIT 1 (pause/resume 재시작 대응)
+        latest = eeg_query.latest_feature_window(db, session_id, pid)
+        if latest is None:
+            continue
+        raw_avg = avg_rows.get(pid)
+        avg_relaxation = round(float(raw_avg), 4) if raw_avg is not None else None
         result[pid] = {
             "current_relaxation": latest.relaxation_index,
             "avg_relaxation": avg_relaxation,
