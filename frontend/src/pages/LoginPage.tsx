@@ -138,6 +138,17 @@ export default function LoginPage() {
     </div>
   );
 
+  const emailForm = (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <label htmlFor="login-email" className="text-sm">이메일</label>
+      <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} className={inputClass} />
+      <label htmlFor="login-password" className="text-sm">비밀번호</label>
+      <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} className={inputClass} />
+      {rememberMeField}
+      <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
+    </form>
+  );
+
   return (
     <div className="relative min-h-screen font-sans">
       <img src="/mb-design/assets/images/background3.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -158,18 +169,10 @@ export default function LoginPage() {
           </div>}
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {!isAdmin && <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              <label htmlFor="login-email" className="text-sm">이메일</label>
-              <input id="login-email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} disabled={busy} className={inputClass} />
-              <label htmlFor="login-password" className="text-sm">비밀번호</label>
-              <input id="login-password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} className={inputClass} />
-              {rememberMeField}
-              <button type="submit" disabled={busy || !email || !password} className="mt-1 h-[52px] rounded-full bg-[#5F0080] text-[15px] font-semibold hover:bg-[#4B0066] disabled:opacity-60">{pending === 'email' ? '로그인 중…' : config.submit}</button>
-            </form>}
-            {loginRole === 'client' && divider}
-            {isAdmin && rememberMeField}
-            {(loginRole === 'client' || isAdmin) && googleButton}
-            {loginRole === 'counselor' && <>{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
+            {!isAdmin && loginRole === 'client' && <>{googleButton}{divider}{emailForm}</>}
+            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
+            {!isAdmin && loginRole === 'org_admin' && emailForm}
+            {isAdmin && <>{rememberMeField}{googleButton}</>}
             {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}
             {!isAdmin && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {(loginRole === 'client' || loginRole === 'counselor') && <Link to={`/register?role=${loginRole}`} className="text-center text-sm font-semibold underline">{loginRole === 'client' ? '회원가입' : '상담사 가입'}</Link>}

@@ -333,6 +333,13 @@ export function useSessionLiveSocket({
     socket.on('disconnect', onDisconnect);
     socket.on('join_denied', onJoinDenied);
 
+    // onConnect 를 구독보다 먼저 호출한다 — SDD-110 snapshot 캐시 재배달(subscribeSessionLiveJoined)이
+    // onConnect 의 signalParticipantRef 초기화보다 나중에 실행되어, 이미 join된 세션(join dedup 으로
+    // joined 를 새로 받지 못하는 경우)에서도 확정된 본인 id가 복원되게 한다.
+    if (socket.connected) {
+      onConnect();
+    }
+
     const unsubJoined = subscribeSessionLiveJoined(socket, onJoined);
     const unsubFeature = subscribeSessionLiveEegFeature(socket, handleFeature);
     const unsubState = subscribeSessionStateChanged(socket, onState);
@@ -343,10 +350,6 @@ export function useSessionLiveSocket({
     const unsubAggregate = subscribeClassAggregate(socket, onAggregate);
     const unsubGroupAverage = subscribeGroupAverage(socket, onGroupAverageEvent);
     const unsubAudioSync = subscribeClassAudioSync(socket, onAudioSync);
-
-    if (socket.connected) {
-      onConnect();
-    }
 
     return () => {
       const joined = joinedSessionRef.current;
@@ -394,9 +397,9 @@ export function useSessionLiveSocket({
       const socket = socketRef.current;
       if (!socket || !sessionId) return 'failed';
       if (joinDeniedRef.current) return 'failed';
-      // joined 이벤트를 아직 못 받았어도 participantId prop(참가자 id)이 있으면 전송한다.
-      // useBand 와 동일 소켓을 공유해 join dedup 으로 joined 를 놓치는 경우에도 신호가 전달되게 한다.
-      const signalParticipantId = signalParticipantRef.current || participantId;
+      // join 확정(joined 수신) 전에는 participantId prop 이 있어도 전송하지 않고 버퍼링한다.
+      // (join dedup 으로 joined 를 놓친 경우는 SDD-110 snapshot 캐시 재배달로 복구된다.)
+      const signalParticipantId = signalParticipantRef.current;
       if (socket.connected && signalParticipantId) {
         emitClassSignal(socket, {
           session_id: sessionId,
@@ -411,7 +414,7 @@ export function useSessionLiveSocket({
       }
       return 'queued';
     },
-    [sessionId, participantId],
+    [sessionId],
   );
 
   /**

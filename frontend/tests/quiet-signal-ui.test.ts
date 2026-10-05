@@ -70,19 +70,20 @@ describe('QuietSignalButtons', () => {
     const onSend = vi.fn(() => 'sent' as const);
     await render(createElement(QuietSignalButtons, { onSend }));
 
-    expect(button('🌿잘 따라가요')).toBeDefined();
-    expect(button('💧조금 어려워요')).toBeDefined();
-    expect(button('🌙잠시 쉴게요')).toBeDefined();
+    // 라벨은 메타 정본(signal icon은 Lucide, 텍스트는 라벨만)
+    expect(button('잘 따라가요')).toBeDefined();
+    expect(button('조금 어려워요')).toBeDefined();
+    expect(button('잠시 쉴게요')).toBeDefined();
     // 발언권과 독립 — 비활성 조건 없이 항상 누를 수 있다
-    expect(button('🌿잘 따라가요')?.disabled).toBe(false);
+    expect(button('잘 따라가요')?.disabled).toBe(false);
 
     await act(async () => {
-      button('🌿잘 따라가요')?.click();
+      button('잘 따라가요')?.click();
     });
 
     expect(onSend).toHaveBeenCalledWith('following');
     expect(text()).toContain('상담사에게 조용히 전달했어요');
-    expect(button('🌿잘 따라가요')?.getAttribute('aria-pressed')).toBe('true');
+    expect(button('잘 따라가요')?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('미연결(전송 실패)이면 팝업 없이 조용한 안내 문구만 보여준다', async () => {
@@ -90,7 +91,7 @@ describe('QuietSignalButtons', () => {
     await render(createElement(QuietSignalButtons, { onSend }));
 
     await act(async () => {
-      button('🌙잠시 쉴게요')?.click();
+      button('잠시 쉴게요')?.click();
     });
 
     expect(onSend).toHaveBeenCalledWith('resting');
@@ -103,7 +104,7 @@ describe('QuietSignalButtons', () => {
     await render(createElement(QuietSignalButtons, { onSend }));
 
     await act(async () => {
-      button('💧조금 어려워요')?.click();
+      button('조금 어려워요')?.click();
     });
 
     expect(onSend).toHaveBeenCalledWith('difficult');

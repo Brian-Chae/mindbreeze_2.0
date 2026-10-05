@@ -1,4 +1,9 @@
-const { test } = require('node:test');
+// 테스트 하네스 호환: 기본은 node:test(`node --test tests/*.test.cjs`)로 실행한다.
+// vitest(`npx vitest run`)는 CJS 파일에서 require('vitest') 를 지원하지 않으므로
+// vite.config.ts 의 `test.globals=true` 가 주입한 전역 test 를 사용한다.
+const test = process.env.VITEST && typeof globalThis.test === 'function'
+  ? globalThis.test
+  : require('node:test').test;
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');

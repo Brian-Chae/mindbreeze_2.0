@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
@@ -14,6 +15,10 @@ export default defineConfig({
   },
   build: {
     cssCodeSplit: false,
+  },
+  test: {
+    // CJS 테스트에서도 vitest 전역(test/expect)을 쓸 수 있게 한다.
+    globals: true,
   },
   server: {
     host: true,

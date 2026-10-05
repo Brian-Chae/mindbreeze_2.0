@@ -27,7 +27,8 @@ test('일치한 역할은 요청으로 전달하고 인증을 저장한다', asy
   global.fetch = async (_url, options) => { payload = JSON.parse(options.body); return { ok: true, status: 200, json: async () => response('org_admin') }; };
   await useAuthStore.getState().login('x@test.com', 'pw', 'org_admin');
   assert.equal(payload.role, 'org_admin');
-  assert.equal(values.get('mb_access_token'), 'access');
+  // access token은 XSS 방지를 위해 localStorage가 아닌 스토어 메모리에만 보관한다 (6627231d).
+  assert.equal(useAuthStore.getState().accessToken, 'access');
   assert.equal(useAuthStore.getState().user.role, 'org_admin');
 });
 test('공통 이동은 온보딩과 관리자 next 경계를 지킨다', () => {

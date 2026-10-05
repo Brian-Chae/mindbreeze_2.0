@@ -2,7 +2,20 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
-const { browserHash } = JSON.parse(require('node:fs').readFileSync(require('node:path').join(__dirname, '../node_modules/.vite/deps/_metadata.json'), 'utf8'));
+
+const baseUrl = process.env.REPORT_TEST_BASE_URL || 'http://127.0.0.1:5175';
+
+// 개발 서버가 현재 사용하는 dep 브라우저 해시를 실시간으로 읽는다.
+// _metadata.json 파일은 다른 도구가 덮어쓸 수 있어(스테일 → 504 Outdated Optimize Dep),
+// 반드시 실행 중인 서버가 계산한 값을 써서 앱과 동일한 모듈 인스턴스를 import해야 한다.
+async function liveBrowserHash() {
+  try {
+    const res = await fetch(`${baseUrl}/node_modules/.vite/deps/_metadata.json`);
+    if (res.ok) { const meta = await res.json(); if (meta.browserHash) return meta.browserHash; }
+  } catch { /* fallthrough */ }
+  const src = await (await fetch(`${baseUrl}/src/main.tsx`)).text();
+  return src.match(/\?v=([a-f0-9]+)/)?.[1] ?? '';
+}
 
 test('기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화', async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -81,6 +94,7 @@ test('목록 상태 필터와 저장 후 포커스 복귀', async () => {
     const page = await browser.newPage({ permissions: ['local-network-access'] });
     page.on('pageerror', error => console.error('브라우저 오류:', error.message));
     page.setDefaultTimeout(7000);
+    const browserHash = await liveBrowserHash();
     let org = { id: 'org2', name: '목록 기관', org_code: 'ORG002', phone: null, address: null, verified: false, kind: 'institution', has_primary_admin: false, created_at: '2026-09-17', version: 1, deactivated_at: null, primary_admin: null, owner: null, verified_at: null };
     const filters = [];
     await page.route('**/api/v1/**', async route => {
