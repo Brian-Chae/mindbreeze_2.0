@@ -1,6 +1,7 @@
 """내담자 관리 비즈니스 로직"""
 
 import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -11,6 +12,23 @@ from app.models.client_invite import ClientInvite
 from app.models.client_profile import ClientProfile
 from app.models.counselor_profile import CounselorProfile
 from app.models.user import User
+
+# DATA-04: 초대 토큰 만료 정책 — status 컬럼만으로는 초대가 영구 유효해진다.
+#   created_at 기준 7일이 지나면 만료로 간주한다(DB 마이그레이션 없이 처리).
+INVITE_TTL_DAYS = 7
+
+
+def _invite_is_expired(invite: ClientInvite) -> bool:
+    """초대 만료 여부 — status='expired' 이거나 created_at 기준 7일 경과 시 True."""
+    if invite.status == "expired":
+        return True
+    created_at = invite.created_at
+    if created_at is None:
+        return False
+    # SQLite 등에서는 naive datetime 으로 반환될 수 있어 UTC 로 보정한다.
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - created_at > timedelta(days=INVITE_TTL_DAYS)
 
 
 def assign_counselor(
@@ -104,6 +122,8 @@ def list_clients(
         .join(ClientCounselorLink, ClientCounselorLink.client_id == User.id)
         .outerjoin(ClientProfile, ClientProfile.user_id == User.id)
         .filter(ClientCounselorLink.counselor_id == UUID(counselor_id))
+        # SEC-09: 종료(ended)된 연결의 내담자는 목록에서 제외한다 (IDOR 방지).
+        .filter(ClientCounselorLink.status == "active")
     )
 
     if q:
@@ -144,6 +164,8 @@ def get_client_profile(
         .filter(
             ClientCounselorLink.client_id == UUID(client_id),
             ClientCounselorLink.counselor_id == UUID(counselor_id),
+            # SEC-09: active 연결만 허용 — 종료된 연결로는 접근 불가 (IDOR 방지).
+            ClientCounselorLink.status == "active",
         )
         .first()
     )
@@ -182,6 +204,8 @@ def update_memo(client_id: str, counselor_id: str, memo: str, db: Session):
         .filter(
             ClientCounselorLink.client_id == client_id,
             ClientCounselorLink.counselor_id == counselor_id,
+            # SEC-09: active 연결만 메모 수정 허용 (종료된 연결 IDOR 방지).
+            ClientCounselorLink.status == "active",
         )
         .first()
     )
@@ -266,7 +290,14 @@ def link_invited_client(
         .first()
     )
     # 존재하지 않거나 이미 만료된 초대는 무효
-    if invite is None or invite.status == "expired":
+    if invite is None:
+        return None
+    # DATA-04: status='expired' 뿐 아니라 created_at 7일 경과도 만료로 처리한다.
+    #   만료 판정 시 status 를 'expired' 로 전환해 이후 재사용을 차단한다.
+    if _invite_is_expired(invite):
+        if invite.status != "expired":
+            invite.status = "expired"
+            db.commit()
         return None
 
     # 이메일 일치 검증 — 초대 대상 이메일과 가입 이메일이 같아야만 연결한다

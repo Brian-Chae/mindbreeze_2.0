@@ -67,23 +67,28 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: (): void => {
     const user = loadUser();
+    // SDD-139: localStorage(mb_user) 존재만으로 인증을 확정하지 않는다.
+    // 서버 refresh 검증 성공 전까지 isInitialized=false 로 두어 UI 게이트가
+    // 통과하지 못하게 하고, 검증 완료 후에만 isAuthenticated 를 확정한다.
     set({
       user,
       accessToken: null,
-      isAuthenticated: Boolean(user),
-      isInitialized: true,
+      isAuthenticated: false,
+      isInitialized: false,
     });
-    // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재
     if (user) {
+      // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재
       refreshAccessToken().then((token) => {
         if (token) {
-          set({ accessToken: token, isAuthenticated: true });
+          set({ accessToken: token, isAuthenticated: true, isInitialized: true });
         } else {
           tokenStorage.clear();
           persistUser(null);
-          set({ user: null, accessToken: null, isAuthenticated: false });
+          set({ user: null, accessToken: null, isAuthenticated: false, isInitialized: true });
         }
       });
+    } else {
+      set({ isInitialized: true });
     }
   },
 

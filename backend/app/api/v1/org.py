@@ -22,7 +22,7 @@ from app.schemas.org import (
     JoinRequestUpdate,
     MembershipInviteAcceptRequest,
     MembershipInviteAcceptResponse,
-    OrganizationResponse,
+    OrganizationPublicResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
     PasswordResetIssueRequest,
@@ -83,14 +83,16 @@ def _counselor_to_response(u, membership=None, *, has_personal_office: bool = Fa
     )
 
 
-def _serialize_org(org) -> OrganizationResponse:
-    return OrganizationResponse(
+def _serialize_org(org) -> OrganizationPublicResponse:
+    """SEC-08 — 무인증 공개 상세 직렬화.
+
+    GET /{org_id} 는 인증 없이 호출되므로 공개 가능한 필드만 반환한다.
+    대표자명(ceo_name)·사업자번호(biz_number)·연락처(phone)는 응답에서 제거한다.
+    """
+    return OrganizationPublicResponse(
         id=str(org.id),
         name=org.name,
-        ceo_name=org.ceo_name,
-        biz_number=org.biz_number,
         address=org.address,
-        phone=org.phone,
         org_code=org.org_code,
         verified=org.verified,
         verified_at=org.verified_at.isoformat() if org.verified_at else None,
@@ -154,9 +156,9 @@ async def org_join_requests(
     return [OrgJoinRequestDetail(**r) for r in rows]
 
 
-@router.get("/{org_id}", response_model=OrganizationResponse)
+@router.get("/{org_id}", response_model=OrganizationPublicResponse)
 async def get_org(org_id: str, db: Session = Depends(get_db)):
-    """센터 상세 조회."""
+    """센터 상세 조회 (무인증 공개) — SEC-08: 민감 필드 제외."""
     org = org_service.get_organization(org_id, db)
     return _serialize_org(org)
 

@@ -16,6 +16,8 @@ from app.models.user import User
 from app.tasks.email import send_password_reset_email
 
 RESET_TTL_MINUTES = 30
+# SEC-07: 이메일 단위 쿨다운(초) — 반복 요청에 의한 재설정 메일 폭탄 방지
+RESET_EMAIL_COOLDOWN_SECONDS = 60
 TOKEN_TYPE = "password_reset"
 _PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
 
@@ -32,8 +34,17 @@ def _reset_key(jti: str) -> str:
     return f"pwd_reset:{jti}"
 
 
+def _reset_cooldown_key(email: str) -> str:
+    # SEC-07: 이메일별 재설정 요청 쿨다운 키
+    return f"pwd_reset_cooldown:{email.lower()}"
+
+
 async def initiate_reset(email: str, db: Session, redis: Redis) -> None:
     """사용자 존재 시 reset_token 발급 + 이메일 발송. 미존재여도 조용히 통과."""
+    # SEC-07: 메일 폭탄 방지 — 쿨다운 중이면 조용히 통과(사용자 존재 노출 방지).
+    if await redis.get(_reset_cooldown_key(email)):
+        return
+
     user = db.query(User).filter(User.email == email).first()
     if user is None:
         # 사용자 존재 노출 방지 — 조용히 통과
@@ -45,8 +56,11 @@ async def initiate_reset(email: str, db: Session, redis: Redis) -> None:
     token = jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
     await redis.setex(_reset_key(jti), RESET_TTL_MINUTES * 60, str(user.id))
+    await redis.setex(_reset_cooldown_key(email), RESET_EMAIL_COOLDOWN_SECONDS, "1")
 
-    reset_link = f"/auth/password/reset?token={token}"
+    # SEC-07: 프론트 base URL 을 붙인 절대 URL 로 생성한다.
+    #   기존 상대경로('/auth/...')는 메일 클라이언트에서 열 수 없어 링크가 깨졌다.
+    reset_link = f"{settings.frontend_base_url.rstrip('/')}/auth/password/reset?token={token}"
     send_password_reset_email(email, reset_link)
 
 

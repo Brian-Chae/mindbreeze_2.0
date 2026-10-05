@@ -160,6 +160,10 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
     SDD-016: 이 경로로는 상담사를 만들 수 없다. 상담사는 반드시 기관에 소속되어야 하므로
     기관 코드를 검증하는 /register/counselor 만 허용한다.
+
+    SEC-11: 이 경로가 OTP 이메일 검증과 약관/민감정보 동의를 우회해 client 계정을
+    생성할 수 있었다. 신규 /register/client 와 동일하게 email_verify_token·consents 를
+    필수로 요구하고 같은 검증(_create_user_with_role)을 거치게 한다.
     """
     if req.role == "counselor":
         # SDD-017: 상담사는 직접 가입하지 않고 기관 담당자의 초대로 계정이 생성된다.
@@ -168,19 +172,29 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
             detail="상담사는 직접 가입할 수 없습니다. 소속 기관 담당자에게 초대를 요청하세요",
         )
 
-    existing = db.query(User).filter(User.email == req.email).first()
-    if existing:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다")
+    # SEC-11: 이메일 OTP 검증 토큰 필수 — 없으면 우회 가입으로 간주해 차단.
+    if not req.email_verify_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="이메일 검증 토큰이 필요합니다",
+        )
+    # SEC-11: 약관·민감정보 동의 필수 — 신규 /register/client 와 동일 정책.
+    if req.consents is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="서비스 이용약관/개인정보 처리방침 동의는 필수입니다",
+        )
 
-    user = User(
-        email=req.email,
-        password_hash=hash_password(req.password),
+    user, _access_token, _refresh_token = _create_user_with_role(
+        role="client",
+        email_verify_token=req.email_verify_token,
+        request_email=req.email,
+        password=req.password,
         name=req.name,
-        role=req.role,
+        consents=req.consents,
+        db=db,
+        remember_me=req.remember_me,
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
     return user
 
 

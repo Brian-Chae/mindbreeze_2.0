@@ -93,7 +93,7 @@ def _classes(counselor_ids: list[uuid.UUID], db: DBSession) -> list[dict]:
             "id": str(s.id),
             "title": s.title,
             "type": s.type,
-            "access_code": s.access_code,
+            # SEC-10: 공개 페이지에는 참여 코드(access_code)를 노출하지 않는다 — 무단 입장 방지.
             "status": s.status,
             "participant_mode": s.participant_mode,
             "started_at": s.started_at,

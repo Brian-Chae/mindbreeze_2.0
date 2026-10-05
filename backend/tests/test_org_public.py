@@ -108,7 +108,8 @@ def test_01_기관코드로_공개페이지_조회(client):
     assert k["title"] == "아침 명상"
     assert k["type"] == "meditation"
     assert k["status"] == "ready"
-    assert k["access_code"] == cls["access_code"]
+    # SEC-10: 참여 코드(access_code)는 무인증 공개 응답에 노출하지 않는다.
+    assert "access_code" not in k
     assert k["max_participants"] == 20
     assert k["participant_count"] == 0
 

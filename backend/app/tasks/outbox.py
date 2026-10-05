@@ -21,14 +21,23 @@ def process_email_outbox(limit: int = 100) -> dict:
     processed = sent = failed = 0
     try:
         now = datetime.now(timezone.utc)
-        items = (
+        # OUT-01: pending 조회 시 행 잠금 없이 읽으면 동시 워커가 같은 행을 집어
+        # 이메일이 이중 발송될 수 있다. PostgreSQL은 FOR UPDATE SKIP LOCKED 로
+        # 원자적으로 선점한다. SQLite(테스트)는 FOR UPDATE 를 지원하지 않으므로
+        # dialect 를 확인해 테스트 환경에서는 잠금 없이 조회한다(fallback).
+        query = (
             db.query(NotificationOutbox)
             .filter(
                 NotificationOutbox.status == "pending",
                 NotificationOutbox.channel == "email",
                 NotificationOutbox.available_at <= now,
             )
-            .order_by(NotificationOutbox.created_at)
+        )
+        bind = db.get_bind()
+        if bind is not None and bind.dialect.name == "postgresql":
+            query = query.with_for_update(skip_locked=True)
+        items = (
+            query.order_by(NotificationOutbox.created_at)
             .limit(limit)
             .all()
         )

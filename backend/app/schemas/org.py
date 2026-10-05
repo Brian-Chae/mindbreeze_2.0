@@ -34,6 +34,26 @@ class OrganizationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class OrganizationPublicResponse(BaseModel):
+    """SEC-08 — 무인증 공개 상세 응답 전용 스키마.
+
+    GET /org/{org_id} 는 인증 없이 호출 가능하므로, 대표자명(ceo_name)·
+    사업자번호(biz_number)·연락처(phone) 등 민감 필드는 아예 담지 않고
+    이름·주소·인증여부 등 공개 가능한 정보만 노출한다.
+    내부용(관리자) 응답은 기존 OrganizationResponse 를 그대로 사용한다.
+    """
+
+    id: str
+    name: str
+    address: str | None = None
+    org_code: str | None = None
+    verified: bool
+    verified_at: str | None = None
+    created_at: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class OrganizationAdminCreate(BaseModel):
     """SDD-015/016 — system_admin 기관 등록.
 

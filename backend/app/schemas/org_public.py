@@ -17,12 +17,15 @@ class PublicCounselor(BaseModel):
 
 
 class PublicClass(BaseModel):
-    """공개용 클래스 정보 — 참여 전 확인에 필요한 최소 정보만 노출한다."""
+    """공개용 클래스 정보 — 참여 전 확인에 필요한 최소 정보만 노출한다.
+
+    SEC-10: access_code(참여 코드)는 무인증 공개 페이지에 노출하지 않는다.
+    코드를 알면 승인 없이 클래스에 입장할 수 있어 무단 입장 위험이 크다.
+    """
 
     id: str
     title: str | None = None
     type: str
-    access_code: str | None = None
     status: str
     participant_mode: str
     started_at: datetime | None = None

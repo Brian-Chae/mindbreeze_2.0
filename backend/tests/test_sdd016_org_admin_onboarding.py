@@ -427,7 +427,11 @@ def test_19_레거시_register로_상담사_가입_차단(client):
         db.close()
 
 
-def test_20_레거시_register의_client는_계속_허용(client):
+def test_20_레거시_register_client는_이메일검증_동의_필수(client):
+    """SEC-11: 레거시 /register 도 OTP 검증·동의 없이는 가입 불가(우회 차단)."""
+    from app.models.user import User
+
+    # 1) email_verify_token 없이 호출 → 401, 계정 미생성
     res = client.post(
         "/api/v1/auth/register",
         json={
@@ -437,7 +441,28 @@ def test_20_레거시_register의_client는_계속_허용(client):
             "role": "client",
         },
     )
-    assert res.status_code == 201
+    assert res.status_code == 401
+    db = _db()
+    try:
+        assert db.query(User).filter(User.email == "legacy20@test.com").first() is None
+    finally:
+        db.close()
+
+    # 2) 검증 토큰·동의를 갖추면 정상 가입(신규 /register/client 와 동일 검증)
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "legacy20@test.com",
+            "password": VALID_PASSWORD,
+            "name": "내담자",
+            "role": "client",
+            "email_verify_token": email_verify_service.generate_email_verify_token(
+                "legacy20@test.com"
+            ),
+            "consents": _consents(),
+        },
+    )
+    assert res.status_code == 201, res.text
     assert res.json()["role"] == "client"
 
 
