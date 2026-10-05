@@ -113,7 +113,12 @@ export default function LoginPage() {
   };
   const selectTab = (index: number) => {
     if (intent.current) return;
-    setSearchParams({ role: tabs[index].role });
+    // next·초대 등 기존 쿼리 파라미터를 유지한 채 role 만 갱신한다.
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('role', tabs[index].role);
+      return next;
+    });
     tabRefs.current[index]?.focus();
   };
   const handleTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {

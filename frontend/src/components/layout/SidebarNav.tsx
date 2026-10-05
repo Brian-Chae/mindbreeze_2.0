@@ -131,7 +131,7 @@ interface SidebarNavProps {
   chatBadge?: number;
 }
 
-export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }: SidebarNavProps) {
+export default function SidebarNav({ onNavigate, role = 'counselor', notificationBadge, chatBadge }: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
@@ -159,10 +159,12 @@ export default function SidebarNav({ onNavigate, role = 'counselor', chatBadge }
   };
 
   const getBadge = (label: string): React.ReactNode => {
-    if (label === '채팅' && (chatBadge ?? 0) > 0) {
+    // 채팅/알림 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
+    const count = label === '채팅' ? chatBadge ?? 0 : label === '알림' ? notificationBadge ?? 0 : 0;
+    if (count > 0) {
       return (
         <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#EF4444] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
-          {(chatBadge ?? 0) > 9 ? '9+' : chatBadge}
+          {count > 9 ? '9+' : count}
         </span>
       );
     }

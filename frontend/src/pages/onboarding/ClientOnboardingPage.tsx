@@ -326,12 +326,14 @@ export default function ClientOnboardingPage() {
       // 매칭/연결된 상담사 정보로 authStore 업데이트 → /app 에서 연결됨으로 인식
       if (matchedCounselor?.matched_counselor && user) {
         const mc = matchedCounselor.matched_counselor;
+        const existing = user.counselors ?? [];
+        // UX-06: 이미 연결된 상담사면 중복 추가하지 않고 정보만 갱신한다 (id 기준 upsert).
+        const counselors = existing.some((c) => c.id === mc.id)
+          ? existing.map((c) => (c.id === mc.id ? { ...c, name: mc.name, profile_image: mc.profile_image } : c))
+          : [...existing, { id: mc.id, name: mc.name, profile_image: mc.profile_image }];
         setUser({
           ...user,
-          counselors: [
-            ...(user.counselors ?? []),
-            { id: mc.id, name: mc.name, profile_image: mc.profile_image },
-          ],
+          counselors,
           onboarding_completed: true,
         });
       } else if (user) {

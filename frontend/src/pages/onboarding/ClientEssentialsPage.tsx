@@ -40,7 +40,9 @@ export default function ClientEssentialsPage() {
     setError(null);
     setLoading(true);
     try {
-      // PATCH /api/v1/auth/users/me — 필수 정보 저장 + 온보딩 완료
+      // PATCH /api/v1/auth/users/me — 필수 정보만 저장한다.
+      // API-01: onboarding_completed 는 백엔드 UpdateUserMeRequest 에 없는 필드이며
+      // 온보딩 완료는 전용 엔드포인트(/onboarding/client/complete)로만 처리한다.
       const updatedUser = await apiClient.patch<{
         id: string;
         email: string;
@@ -55,7 +57,6 @@ export default function ClientEssentialsPage() {
         gender: form.gender,
         birth_date: form.birthDate,
         phone: form.phone || undefined,
-        onboarding_completed: true,
       });
 
       // authStore 사용자 정보 갱신

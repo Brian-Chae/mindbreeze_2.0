@@ -65,6 +65,7 @@ const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage')
 const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
 const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
@@ -231,6 +232,8 @@ const router = createBrowserRouter(
         <Route path="/notifications" element={<NotificationCenterPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/playground" element={<PlaygroundPage />} />
+        {/* 정의되지 않은 경로는 전역 404 화면으로 처리한다 */}
+        <Route path="*" element={<NotFoundPage />} />
     </Route>,
   ),
 );

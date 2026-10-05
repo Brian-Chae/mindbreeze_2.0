@@ -46,6 +46,12 @@ def enqueue_report_email(report_id: str) -> None:
     report_email_task.apply_async(args=[report_id], retry=False)
 
 
+def enqueue_report_generation(report_id: str) -> None:
+    """PERF-03: 리포트 생성(LLM 서사·지표)을 요청 스레드가 아닌 Celery 워커로 위임한다."""
+    from app.tasks.report_task import report_task
+    report_task.apply_async(args=[report_id], retry=False)
+
+
 def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str | None) -> dict:
     session = db.query(Session).filter(Session.id == session_id).with_for_update().first()
     if not session:
@@ -89,9 +95,24 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
         db.add(report)
         db.flush()
     db.commit()
+    # PERF-03: 리포트 생성(LLM 서사·지표 산출)을 요청 스레드에서 동기 실행하면 수초~수십초
+    # 동안 HTTP 요청이 블로킹된다. 생성이 필요한 경우 Celery 워커로 위임하고 즉시 응답한다.
+    # 워커가 완료하면 report.status 가 pending_review 로 전이되므로, 이후 재요청 시 발송된다.
     if report.status in ("pending_analysis", "error"):
-        from app.tasks.report_task import generate_report_inline
-        generate_report_inline(str(report.id), db)
+        try:
+            enqueue_report_generation(str(report.id))
+        except Exception:
+            logger.exception(
+                "[report_email] report generation enqueue failed: report_id=%s session_id=%s",
+                report.id,
+                session.id,
+            )
+            raise HTTPException(503, "리포트 생성 예약에 실패했습니다. 다시 요청해주세요")
+        # Celery eager(테스트)/워커가 즉시 완료했을 수 있으므로 상태를 다시 읽는다.
+        db.refresh(report)
+        if report.status in ("pending_analysis", "error"):
+            # 아직 생성 중 — 요청 스레드를 블로킹하지 않고 즉시 응답한다.
+            return {"status": "generating", "message": "리포트를 생성 중입니다. 완료 후 이메일로 발송됩니다"}
     if report.status == "error":
         raise HTTPException(503, "리포트 생성에 실패했습니다. 다시 요청해주세요")
     if report.status != "completed":

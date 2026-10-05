@@ -141,7 +141,7 @@ export default function OrgSearchPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Link
-                      to={`/org/${org.id}/info`}
+                      to={`/org/${org.id}`}
                       className="font-medium text-ink-primary hover:text-brand-primary truncate"
                     >
                       {org.name}

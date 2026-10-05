@@ -26,6 +26,32 @@ from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
 
+# RPT-02: content.eeg.timeline 이 세션 길이에 선형으로 비대해져 장시간 수업에서 DB 행이
+# 커지는 것을 막는다. 포인트 수가 이 값을 넘으면 인접 윈도우를 균등 버킷으로 묶어
+# 평균값으로 다운샘플한다(짧은 세션은 원본 유지 → 해상도 손실 없음).
+TIMELINE_MAX_POINTS = 300
+
+
+def _downsample_timeline(points: list[dict], max_points: int = TIMELINE_MAX_POINTS) -> list[dict]:
+    """타임라인 포인트가 max_points 를 넘으면 균등 버킷 평균으로 축약한다.
+
+    null 보존 — 버킷 내 해당 필드가 전부 null 이면 결과도 None(0 치환 금지).
+    """
+    n = len(points)
+    if n <= max_points:
+        return points
+    bucket_size = -(-n // max_points)  # ceil(n / max_points)
+    keys = list(points[0].keys())
+    result: list[dict] = []
+    for start in range(0, n, bucket_size):
+        chunk = points[start:start + bucket_size]
+        averaged: dict = {}
+        for key in keys:
+            values = [c[key] for c in chunk if c.get(key) is not None]
+            averaged[key] = round(sum(values) / len(values), 4) if values else None
+        result.append(averaged)
+    return result
+
 
 def _emit_report_progress(session_id: str, db: DBSession) -> None:
     """SDD-095: 리포트 생성 진행 상태(`report:progress`) 브로드캐스트.
@@ -243,7 +269,7 @@ def _build_eeg_content(
         score = sigmoid_score(key, raw, std_params.get(key))
         return score if score is not None else fallback(raw)
 
-    timeline = [
+    timeline = _downsample_timeline([
         {
             "t": (
                 (w.device_timestamp_ms - base_ts) / 1000.0
@@ -266,7 +292,7 @@ def _build_eeg_content(
             "motion": w.motion,
         }
         for w in windows
-    ]
+    ])
     return {
         **summarize_hrv_motion(windows),
         "status": m.session_status,

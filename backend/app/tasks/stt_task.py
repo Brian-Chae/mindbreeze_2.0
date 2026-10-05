@@ -62,16 +62,14 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
 
     # 청크 파일들을 읽어서 하나의 파일로 병합 후 Whisper에 전송
     # Whisper는 multipart/form-data로 파일 업로드
-    import tempfile
-    import shutil
-
     merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
     merged_path = merged.name
     try:
-        for path in existing:
-            with open(path, "rb") as src:
-                shutil.copyfileobj(src, merged)
-        merged.close()
+        # STT-02: 병합 파일 핸들을 with 로 관리해 병합 중 예외가 나도 반드시 닫히게 한다.
+        with merged:
+            for path in existing:
+                with open(path, "rb") as src:
+                    shutil.copyfileobj(src, merged)
 
         with open(merged_path, "rb") as f:
             resp = requests.post(
@@ -103,11 +101,16 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         logger.info("[stt_task] Whisper success: %d segments, %d chars", len(segments), len(raw_text))
         return {"segments": segments, "raw_text": raw_text, "missing_chunks": len(missing)}
 
-    except (requests.RequestException, KeyError) as exc:
+    except (requests.RequestException, KeyError, OSError, ValueError) as exc:
+        # STT-02: 파일 I/O(OSError)·JSON 파싱(ValueError) 오류도 명시적으로 잡아
+        # 로그를 남기고 상위(run_stt_inline)에서 실패로 마감되도록 re-raise 한다.
         logger.exception("[stt_task] Whisper API failed: %s", exc)
         raise
     finally:
-        os.unlink(merged_path)
+        try:
+            os.unlink(merged_path)
+        except FileNotFoundError:
+            pass
 
 
 def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[dict], str, int]:

@@ -7,7 +7,7 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import text
+from sqlalchemy import Float, String, func, literal, select, text, union_all
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -82,28 +82,107 @@ def get_review_queue(
     page: int = 1,
     size: int = 20,
 ) -> dict[str, Any]:
-    cred_q = db.query(Credential).filter(Credential.status.in_(list(REVIEW_STATUSES)))
-    doc_q = db.query(OrgDocument).filter(OrgDocument.status.in_(list(REVIEW_STATUSES)))
+    """PERF-01: 검토 큐를 전부 적재하지 않고 DB에서 위험도 정렬·LIMIT/OFFSET 한다.
 
+    자격(Credential)+센터문서(OrgDocument) 두 소스를 union 한 뒤 위험도(JSON 의
+    risk_score) 기준으로 정렬한다. risk_score 는 DB에서 수치로 캐스팅해 정렬·필터한다.
+    """
+    # 허용되지 않은 risk_level 은 기존 로직과 동일하게 일치 항목 0건으로 처리한다.
+    if risk_level and risk_level not in ("high", "medium", "low"):
+        return {"items": [], "total": 0, "page": page, "size": size}
+
+    sub = _review_cards_subquery(document_type)
+    condition = _risk_level_filter(sub.c.risk_score, risk_level) if risk_level else None
+
+    count_stmt = select(func.count()).select_from(sub)
+    rows_stmt = select(sub).order_by(sub.c.risk_score.desc(), sub.c.created_at.asc())
+    if condition is not None:
+        count_stmt = count_stmt.where(condition)
+        rows_stmt = rows_stmt.where(condition)
+
+    total = int(db.execute(count_stmt).scalar() or 0)
+    rows = db.execute(rows_stmt.offset((page - 1) * size).limit(size)).all()
+    return {
+        "items": [_review_row_to_card(row) for row in rows],
+        "total": total,
+        "page": page,
+        "size": size,
+    }
+
+
+def _risk_score_expr(ai_verdict_col):
+    """ai_verdict(JSON) 의 risk_score 를 DB에서 수치로 캐스팅한다(없으면 0.0)."""
+    return func.coalesce(ai_verdict_col["risk_score"].as_float(), 0.0)
+
+
+def _risk_level_filter(risk_col, risk_level: str):
+    """risk_level → DB 비교 조건. _risk_level(high>=0.7, medium>=0.4, low<0.4) 과 동일."""
+    if risk_level == "high":
+        return risk_col >= 0.7
+    if risk_level == "medium":
+        return (risk_col >= 0.4) & (risk_col < 0.7)
+    return risk_col < 0.4
+
+
+def _review_cards_subquery(document_type: str | None):
+    """자격+센터문서를 회원/센터와 조인해 단일 카드 형태로 union 한 서브쿼리."""
+    cred_sel = (
+        select(
+            literal("credential").label("target_type"),
+            Credential.id.label("id"),
+            Credential.type.label("document_type"),
+            Credential.status.label("status"),
+            User.name.label("submitter_name"),
+            User.email.label("submitter_email"),
+            _risk_score_expr(Credential.ai_verdict).label("risk_score"),
+            Credential.ai_verdict.label("ai_verdict"),
+            Credential.file_name.label("file_name"),
+            Credential.created_at.label("created_at"),
+        )
+        .select_from(Credential)
+        .join(User, User.id == Credential.user_id)
+        .where(Credential.status.in_(list(REVIEW_STATUSES)))
+    )
+    doc_sel = (
+        select(
+            literal("org_document").label("target_type"),
+            OrgDocument.id.label("id"),
+            OrgDocument.type.label("document_type"),
+            OrgDocument.status.label("status"),
+            Organization.name.label("submitter_name"),
+            literal(None, type_=String).label("submitter_email"),
+            _risk_score_expr(OrgDocument.ai_verdict).label("risk_score"),
+            OrgDocument.ai_verdict.label("ai_verdict"),
+            OrgDocument.file_name.label("file_name"),
+            OrgDocument.created_at.label("created_at"),
+        )
+        .select_from(OrgDocument)
+        .join(Organization, Organization.id == OrgDocument.org_id)
+        .where(OrgDocument.status.in_(list(REVIEW_STATUSES)))
+    )
     if document_type:
-        cred_q = cred_q.filter(Credential.type == document_type)
-        doc_q = doc_q.filter(OrgDocument.type == document_type)
+        cred_sel = cred_sel.where(Credential.type == document_type)
+        doc_sel = doc_sel.where(OrgDocument.type == document_type)
+    return union_all(cred_sel, doc_sel).subquery()
 
-    cards: list[dict[str, Any]] = []
-    for c in cred_q.all():
-        cards.append(_credential_card(c, db))
-    for d in doc_q.all():
-        cards.append(_org_document_card(d, db))
 
-    if risk_level:
-        cards = [c for c in cards if _risk_level(c["risk_score"]) == risk_level]
-
-    cards.sort(key=lambda x: (-x["risk_score"], x["created_at"] or ""))
-
-    total = len(cards)
-    start = (page - 1) * size
-    end = start + size
-    return {"items": cards[start:end], "total": total, "page": page, "size": size}
+def _review_row_to_card(row) -> dict[str, Any]:
+    """union 행 → 검토 큐 카드 계약으로 변환한다(기존 _credential/_org_document_card 와 동일 필드)."""
+    m = row._mapping
+    risk = m["risk_score"]
+    created = m["created_at"]
+    return {
+        "target_type": m["target_type"],
+        "id": str(m["id"]),
+        "document_type": m["document_type"],
+        "status": m["status"],
+        "submitter_name": m["submitter_name"],
+        "submitter_email": m["submitter_email"],
+        "risk_score": float(risk) if risk is not None else 0.0,
+        "ai_verdict": m["ai_verdict"],
+        "file_name": m["file_name"],
+        "created_at": created.isoformat() if hasattr(created, "isoformat") else (created or None),
+    }
 
 
 def get_credential_review_detail(credential_id: uuid.UUID, db: Session) -> dict[str, Any]:
@@ -350,6 +429,36 @@ def list_users(
         .limit(size)
         .all()
     )
+
+    # PERF-01: 회원마다 대표 상담사를 개별 조회(N+1)하지 않고, 목록에 포함된 client id 를
+    # 한 번에 조회해 client_id → 대표 상담사(가장 먼저 연결된 active) 매핑을 만든다.
+    client_ids = [u.id for u in rows if u.role == "client"]
+    counselor_by_client: dict[Any, dict[str, Any]] = {}
+    if client_ids:
+        link_rows = (
+            db.query(
+                ClientCounselorLink.client_id,
+                User.id,
+                User.name,
+                User.email,
+            )
+            .join(User, User.id == ClientCounselorLink.counselor_id)
+            .filter(
+                ClientCounselorLink.client_id.in_(client_ids),
+                ClientCounselorLink.status == "active",
+            )
+            .order_by(ClientCounselorLink.client_id, ClientCounselorLink.matched_at.asc())
+            .all()
+        )
+        for client_id, counselor_id, counselor_name, counselor_email in link_rows:
+            # 정렬상 첫 행(가장 먼저 연결된 active 상담사)만 대표로 채택한다.
+            if client_id not in counselor_by_client:
+                counselor_by_client[client_id] = {
+                    "id": str(counselor_id),
+                    "name": counselor_name,
+                    "email": counselor_email,
+                }
+
     return {
         "items": [
             {
@@ -363,7 +472,7 @@ def list_users(
                 "verified_tier": u.verified_tier,
                 # 회원 관리 화면의 핵심 요구사항 — 담당 상담사 표시 (client 만 조회)
                 "primary_counselor": (
-                    _primary_counselor_summary(u.id, db) if u.role == "client" else None
+                    counselor_by_client.get(u.id) if u.role == "client" else None
                 ),
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }

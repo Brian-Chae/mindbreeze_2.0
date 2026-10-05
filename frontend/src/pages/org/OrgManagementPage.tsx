@@ -35,9 +35,9 @@ export default function OrgManagementPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   // org_admin 가드는 백엔드에서 강제됨. 프런트에서는 안내만.
-  // org_admin 가드는 백엔드에서 강제됨. UserRole 타입에 'org_admin'이 아직 없어 문자열 비교로 처리.
   const role = (user?.role ?? '') as string;
-  const isOrgAdmin = role === 'org_admin' || role === 'counselor';
+  // UX-07: 관리자 권한은 org_admin 만 해당한다 (상담사는 관리자 아님).
+  const isOrgAdmin = role === 'org_admin';
 
   useEffect(() => {
     if (!orgId) return;

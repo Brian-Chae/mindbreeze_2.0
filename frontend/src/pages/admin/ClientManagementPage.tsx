@@ -222,6 +222,7 @@ export default function ClientManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState<ActionModal | null>(null);
   const [reason, setReason] = useState('');
@@ -237,21 +238,33 @@ export default function ClientManagementPage() {
   const [addError, setAddError] = useState<string | null>(null);
   const [addFieldErrors, setAddFieldErrors] = useState<{ email?: string; counselor?: string }>({});
 
+  // PERF-01: 타이핑마다 요청이 나가지 않도록 300ms 디바운스한다.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  // 경쟁 상태 가드 — 가장 최근 요청의 응답만 화면에 반영한다.
+  const requestSeq = useRef(0);
+
   const fetchUsers = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
       const params: Record<string, string | number> = { page, size: 20, role: 'client' };
-      if (q) params.q = q;
+      if (debouncedQ) params.q = debouncedQ;
       const res = await listUsers(params as { role?: string; q?: string; page?: number; size?: number });
+      if (seq !== requestSeq.current) return;
       setUsers(res.items);
       setTotal(res.total);
     } catch (e) {
+      if (seq !== requestSeq.current) return;
       setError(e instanceof Error ? e.message : '회원 조회 실패');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [page, q]);
+  }, [page, debouncedQ]);
 
   useEffect(() => {
     void fetchUsers();

@@ -37,6 +37,9 @@ function isPreOpen(session: SessionByCodeResponse): boolean {
 
 const PARTICIPANT_STORAGE_KEY = 'mb_join_participant';
 
+/** FE-JOIN-002: 게스트 생년월일 연도 선택지 — 현재 연도를 기준으로 100년치를 동적 생성한다. */
+const BIRTH_YEARS = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
+
 interface StoredJoinContext {
   code: string;
   participantId: string;
@@ -644,7 +647,7 @@ const ClassJoinPage: React.FC = () => {
                           className="w-full rounded-xl border border-[#D4D4D4] px-2 py-3 text-center text-sm text-[#1F1F1F] outline-none transition focus:border-[#5F0080] focus:ring-2 focus:ring-[#F5EDFC] sm:text-base"
                         >
                           <option value="">년</option>
-                          {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
+                          {BIRTH_YEARS.map((y) => (
                             <option key={y} value={y}>{y}년</option>
                           ))}
                         </select>
