@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.organization import Organization
@@ -638,7 +639,7 @@ def create_org_with_admin(
         )
 
     email = (admin_email or "").strip().lower()
-    if db.query(User).filter(User.email == email).first() is not None:
+    if db.query(User).filter(func.lower(User.email) == email).first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 등록된 이메일입니다",
@@ -732,7 +733,7 @@ async def invite_counselor(
 
     # 중복/분기 검사(409)를 레이트리밋(429)보다 먼저 수행한다 — 대소문자 변형 재초대는
     # 항상 409 로 응답해야 하며, 쿨다운이 이를 가려서는 안 된다.
-    existing = db.query(User).filter(User.email == email_norm).first()
+    existing = db.query(User).filter(func.lower(User.email) == email_norm).first()
     if existing is not None:
         # SDD-079 분기: 기존 계정 — 상담사면 "소속 추가 초대", 아니면 409.
         # 계정 생성·CounselorProfile 발급 없이 membership(invited)만 추가한다.

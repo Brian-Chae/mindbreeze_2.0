@@ -520,7 +520,7 @@ def create_client(
         )
 
     # 2. 이메일 중복 검사
-    existing = db.query(User).filter(User.email == normalized_email).first()
+    existing = db.query(User).filter(func.lower(User.email) == normalized_email).first()
     if existing is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다"

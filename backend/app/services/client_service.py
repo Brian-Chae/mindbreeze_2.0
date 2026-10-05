@@ -227,6 +227,8 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
     from app.tasks.email import send_invite_email
 
     logger = logging.getLogger(__name__)
+    # MB2-AUTH-02: 초대 이메일도 대소문자 정규화 — 가입 이메일과 동일 기준으로 비교되도록.
+    email = (email or "").strip().lower()
     token = secrets.token_urlsafe(32)
     # TODO(CFG-01): 초대 토큰을 평문으로 저장 중이다. 링크 해시 저장(단방향)으로
     # 전환하려면 기존 발급 링크 호환(마이그레이션·이중 조회)이 필요해 이번 범위에서는

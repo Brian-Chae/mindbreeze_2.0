@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from redis.asyncio import Redis
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -41,11 +42,13 @@ def _reset_cooldown_key(email: str) -> str:
 
 async def initiate_reset(email: str, db: Session, redis: Redis) -> None:
     """사용자 존재 시 reset_token 발급 + 이메일 발송. 미존재여도 조용히 통과."""
+    # MB2-AUTH-02: 이메일 대소문자 정규화 — 조회·토큰·쿨다운 키를 동일 기준으로 맞춘다.
+    email = (email or "").strip().lower()
     # SEC-07: 메일 폭탄 방지 — 쿨다운 중이면 조용히 통과(사용자 존재 노출 방지).
     if await redis.get(_reset_cooldown_key(email)):
         return
 
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
     if user is None:
         # 사용자 존재 노출 방지 — 조용히 통과
         return
@@ -100,7 +103,7 @@ async def complete_reset(
         )
 
     jti = payload.get("jti")
-    email = payload.get("sub")
+    email = (payload.get("sub") or "").strip().lower()
     if not jti or not email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,7 +117,7 @@ async def complete_reset(
             detail="이미 사용되었거나 만료된 재설정 토큰입니다",
         )
 
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

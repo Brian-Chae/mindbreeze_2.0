@@ -15,6 +15,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -135,7 +136,7 @@ def create_individual_counselor_application(
             detail="이름을 입력해야 합니다",
         )
 
-    if db.query(User).filter(User.email == email_norm).first() is not None:
+    if db.query(User).filter(func.lower(User.email) == email_norm).first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="이미 등록된 이메일입니다",

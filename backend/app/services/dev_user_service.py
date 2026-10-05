@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -126,7 +126,7 @@ def create_dev_user(
         )
 
     # 실계정 병합·승격 위험을 막기 위해 이메일 중복은 기존 가입과 동일하게 409.
-    if db.query(User).filter(User.email == email_norm).first() is not None:
+    if db.query(User).filter(func.lower(User.email) == email_norm).first() is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다"
         )

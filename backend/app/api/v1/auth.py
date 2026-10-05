@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from jose import JWTError, jwt
 from redis.asyncio import Redis
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -209,7 +210,9 @@ async def login(
     client_ip = request.client.host if request.client else None
     await login_attempt_service.check_login_lock(req.email, redis, client_ip)
 
-    user = db.query(User).filter(User.email == req.email).first()
+    # MB2-AUTH-02: 이메일 대소문자 정규화 — 'John@x.com' 과 'john@x.com' 을 같은 계정으로 취급.
+    email_norm = req.email.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == email_norm).first()
     if not user or not verify_password(req.password, user.password_hash):
         await login_attempt_service.record_failed_attempt(req.email, redis, client_ip)
         raise HTTPException(
@@ -311,7 +314,9 @@ def _create_user_with_role(
             detail="이메일 검증 토큰이 필요합니다",
         )
     verified_email = email_verify_service.verify_email_token(email_verify_token)
-    if verified_email.lower() != request_email.lower():
+    # MB2-AUTH-02: 대소문자·공백 정규화 후 비교·저장 — 'John@x.com' == 'john@x.com'.
+    verified_email = verified_email.strip().lower()
+    if verified_email != (request_email or "").strip().lower():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 검증 토큰과 가입 이메일이 일치하지 않습니다",
@@ -319,7 +324,7 @@ def _create_user_with_role(
 
     _validate_consents(consents)
 
-    existing = db.query(User).filter(User.email == verified_email).first()
+    existing = db.query(User).filter(func.lower(User.email) == verified_email).first()
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다")
 
@@ -753,20 +758,21 @@ async def google_auth(
             detail="Google 인증 서버와 통신할 수 없습니다",
         )
 
-    email = user_info.get("email")
-    name = user_info.get("name", email.split("@")[0] if email else "")
-
-    if not email:
+    raw_email = user_info.get("email")
+    if not raw_email:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Google 계정에서 이메일을 확인할 수 없습니다",
         )
+    # MB2-AUTH-02: Google 이메일도 대소문자·공백 정규화 — 기존 계정과 동일 취급.
+    email = raw_email.strip().lower()
+    name = user_info.get("name", email.split("@")[0])
 
     requested_role = req.role or ""
     wants_platform_admin = requested_role == "platform_admin"
 
     # 2. User find-or-create
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(func.lower(User.email) == email).first()
 
     # platform_admin 은 명시적 지정만 허용 — Google OAuth 로는 자동 승격·신규 생성 금지.
     # 룩시드랩스 소속이라도 상담을 받을 수 있으므로 도메인 기반 승격은 부적절하다.
@@ -777,6 +783,9 @@ async def google_auth(
         )
 
     if user:
+        # MB2-AUTH-01: 기존 계정도 로그인/refresh 와 동일하게 suspended/pending 을 차단한다.
+        # (비활성화 실효성 — Google OAuth 로 정지 계정 세션을 발급하지 못하게 한다.)
+        _ensure_account_active(user)
         # 역할 의도 검증은 계정 연결 변경과 토큰 발급보다 먼저 수행한다.
         if not wants_platform_admin:
             _ensure_login_role(user, req.role)
