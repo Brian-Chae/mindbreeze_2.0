@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
 import { ApiError } from '../../lib/api/client';
+import { sessionStatusLabel } from '../../lib/session-status';
 import { getOrgDashboard } from '../../lib/api/dashboard';
 import {
   getCounselorActivity,
@@ -20,14 +21,6 @@ import {
 } from '../../lib/api/counselor-info';
 
 type DisplayStatus = 'active' | 'pending' | 'suspended';
-
-const SESSION_STATUS_LABELS: Record<string, string> = {
-  scheduled: '예정',
-  in_progress: '진행중',
-  completed: '완료',
-  canceled: '취소',
-  cancelled: '취소',
-};
 
 const REPORT_STATUS_LABELS: Record<string, string> = {
   pending_analysis: '분석 중',
@@ -262,7 +255,7 @@ function CounselorDetailPanel({
                   <tr key={s.id} className="border-b border-[#EFEFEF] last:border-0">
                     <td className="px-3 py-2.5 font-medium text-[#1F1F1F]">{s.title || '제목 없음'}</td>
                     <td className="px-3 py-2.5 text-[#6F6F6F]">{SESSION_TYPE_LABELS[s.type] ?? s.type}</td>
-                    <td className="px-3 py-2.5 text-[#6F6F6F]">{SESSION_STATUS_LABELS[s.status] ?? s.status}</td>
+                    <td className="px-3 py-2.5 text-[#6F6F6F]">{sessionStatusLabel(s.status)}</td>
                     <td className="px-3 py-2.5 font-mono text-[12px] text-[#6F6F6F]">
                       {formatDateTime(s.scheduled_at ?? s.started_at)}
                     </td>

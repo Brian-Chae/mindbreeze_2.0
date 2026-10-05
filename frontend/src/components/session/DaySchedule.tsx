@@ -2,6 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import type { SessionDto, SessionType, SessionStatus } from '../../lib/api/session';
+import { sessionStatusLabel } from '../../lib/session-status';
 
 const sameDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -21,17 +22,6 @@ const typeBadge = (type: SessionType): string => {
     case 'hypnosis': return 'bg-[#FFF4DC] text-[#8A6B1F]';
     case 'meditation': return 'bg-[#E6F8F3] text-[#1F8A5B]';
     default: return 'bg-[#F2F3F8] text-[#6F6F6F]';
-  }
-};
-
-const statusLabel = (status: SessionStatus): string => {
-  switch (status) {
-    case 'ready': return '준비';
-    case 'scheduled': return '예정';
-    case 'in_progress': return '진행중';
-    case 'completed': return '완료';
-    case 'cancelled': return '취소';
-    default: return status;
   }
 };
 
@@ -95,7 +85,7 @@ export function DaySchedule({ sessions, selectedDate }: Props) {
                   {s.title || `${typeLabel(s.type)} 세션`}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusBadge(s.status)}`}>
-                  {statusLabel(s.status)}
+                  {sessionStatusLabel(s.status)}
                 </span>
               </Link>
             </li>

@@ -9,6 +9,7 @@ import {
   joinSessionByCode,
   type SessionByCodeResponse,
 } from '../lib/api/session';
+import { sessionStatusLabel } from '../lib/session-status';
 import { useAuthStore } from '../stores/authStore';
 import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
 import { type ClassWaitingRoomEnterPayload } from '../components/class/ClassWaitingRoom';
@@ -18,6 +19,7 @@ import { MemberWaitingScene } from '../components/player/MemberWaitingScene';
 import { MemberSessionScene } from '../components/player/MemberSessionScene';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
+import { useSessionLiveSocket } from '../hooks/useSessionLiveSocket';
 
 type JoinStep = 'code' | 'details' | 'waiting' | 'meditation' | 'complete';
 
@@ -26,15 +28,6 @@ const TYPE_LABELS: Record<SessionByCodeResponse['type'], string> = {
   hypnosis: '최면심리상담',
   meditation: '명상 수업',
   custom: '맞춤 클래스',
-};
-
-const STATUS_LABELS: Record<SessionByCodeResponse['status'], string> = {
-  ready: '오픈 전',
-  scheduled: '예정',
-  open: '입장 가능',
-  in_progress: '진행 중',
-  completed: '종료됨',
-  cancelled: '취소됨',
 };
 
 /** SDD-088: 상담사가 아직 클래스를 열지 않은 상태 — 입장 게이트에서 차단 + 자동 재시도 */
@@ -137,6 +130,24 @@ const ClassJoinPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const isLoggedIn = isInitialized && isAuthenticated;
+
+  // SDD-129(①-6): WS로 시작·종료를 즉시 감지해 3~4초 폴링 지연을 제거한다.
+  useSessionLiveSocket({
+    sessionId: session?.id,
+    participantId,
+    skipAuth: !isLoggedIn,
+    enabled: Boolean(session?.id),
+    onSessionStateChanged: (event) => {
+      setSession((prev) =>
+        prev
+          ? { ...prev, status: event.status as SessionByCodeResponse['status'], started_at: event.started_at ?? prev.started_at }
+          : prev,
+      );
+      if (event.status === 'in_progress') setStep('meditation');
+      else if (event.status === 'completed') setStep('complete');
+      else if (event.status === 'cancelled') setError('이 클래스는 이미 종료되었거나 취소되었습니다.');
+    },
+  });
 
   // 회원 세션 상세 "세션 입장하기"에서 /join?code=... 로 진입 시 자동 클래스 확인
   useEffect(() => {
@@ -466,7 +477,7 @@ const ClassJoinPage: React.FC = () => {
       <MemberWaitingScene
         title={session.title}
         classCode={code}
-        statusLabel={STATUS_LABELS[session.status]}
+        statusLabel={sessionStatusLabel(session.status)}
         sessionId={session.id}
         participantId={participantId}
         memberName={isLoggedIn ? (user?.name ?? null) : null}
@@ -533,7 +544,7 @@ const ClassJoinPage: React.FC = () => {
               <div className="mt-6 space-y-3 rounded-2xl bg-[#F5EDFC] p-5 text-sm text-[#1F1F1F]">
                 <p><span className="font-semibold">유형</span> · {session.custom_type_name ?? TYPE_LABELS[session.type]}</p>
                 <p><span className="font-semibold">진행자</span> · {session.host_name ?? '진행자'}</p>
-                <p><span className="font-semibold">상태</span> · {STATUS_LABELS[session.status]}</p>
+                <p><span className="font-semibold">상태</span> · {sessionStatusLabel(session.status)}</p>
                 <p><span className="font-semibold">참여 인원</span> · {session.participant_count} / {session.max_participants}명</p>
               </div>
 

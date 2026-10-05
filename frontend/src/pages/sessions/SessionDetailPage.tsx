@@ -16,6 +16,7 @@ import {
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
+import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 
 const TYPE_LABELS: Record<string, string> = {
   clinical: '임상심리상담',
@@ -77,8 +78,21 @@ export default function SessionDetailPage() {
   const activeParticipants = (session?.participants ?? []).filter((p) => !p.is_waitlisted);
   const waitlisted = (session?.participants ?? []).filter((p) => p.is_waitlisted);
 
+  // SDD-129(③-8): WS 구독으로 세션 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
+  const { isReady } = useSessionLiveSocket({
+    sessionId: id,
+    onSessionStateChanged: (event) => {
+      setSession((prev) =>
+        prev
+          ? { ...prev, status: event.status as SessionDto['status'], started_at: event.started_at ?? prev.started_at }
+          : prev,
+      );
+    },
+  });
+
   useEffect(() => {
     if (!id) return;
+    if (isReady) return; // WS 실시간 수신 중 — 폴링 중단
     let cancelled = false;
     const loadSession = (): void => {
       getSession(id)
@@ -100,7 +114,7 @@ export default function SessionDetailPage() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [id]);
+  }, [id, isReady]);
 
   const handleAction = async (action: SessionAction): Promise<void> => {
     if (!id) return;

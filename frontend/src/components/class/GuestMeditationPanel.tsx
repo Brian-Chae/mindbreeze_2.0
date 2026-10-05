@@ -342,10 +342,22 @@ export function GuestMeditationPanel({
   /** 현재 시점 6지표 스냅샷 (null 보존) */
   const readSnapshot = useCallback((): Record<MetricKey, number | null> => {
     const b = bandRef.current;
-    if (!b || metricsBlocked) {
+    if (!b) {
+      // 밴드 미착용 — 원격(서버) 값 뷰: 이완도만 원격값으로 표시
       return {
         focus: null,
         relaxation: remoteEfficiency,
+        emotional: null,
+        bpm: null,
+        respiration: null,
+        hrv: null,
+      };
+    }
+    if (metricsBlocked) {
+      // SDD-128(②-21): 접촉불량/링크 stale — 전 지표 미측정(null)으로 일관 표시
+      return {
+        focus: null,
+        relaxation: null,
         emotional: null,
         bpm: null,
         respiration: null,

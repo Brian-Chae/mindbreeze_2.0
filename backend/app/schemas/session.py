@@ -397,6 +397,7 @@ class GuestSessionStateResponse(BaseModel):
 
     session_id: str
     status: SessionStatus
+    guest_state: Literal["waiting", "meditation", "complete", "cancelled"] = "waiting"
     in_progress: bool = False
     ended: bool = False
     participant_state: ParticipantLogState | None = None

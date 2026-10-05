@@ -478,11 +478,9 @@ export function useBand({
 
   /** 미확정 큐 REST 배치 flush (재연결·주기 flush).
    *
-   * 게스트는 서버 eeg_feature 브로드캐스트(호스트 룸 전용)를 받지 못해 WS ACK가
-   * 오지 않으므로, WS 재전송으로는 큐가 영원히 drain되지 않고 무한 증식한다
-   * (과거 feature 재브로드캐스트 → 호스트 관제 last_eeg_at 회귀 → "수신끊김" 깜빡임).
-   * REST 배치는 저장 성공이 곧 확정이며 서버가 window_index 멱등 skip하므로
-   * WS 1초 실시간 emit과 이중 전송해도 안전하다.
+   * SDD-108 이후 게스트도 feature_ack를 직접 수신하므로 WS 정상 연결 시에는
+   * 1초 실시간 emit + ack로 큐가 drain된다. REST 배치는 WS 미연결(오프라인 폴백)
+   * 시에만 주기 flush하여 이중 전송을 막는다(타이머 호출부 가드 참조).
    */
   const retransmitPending = useCallback(async (): Promise<void> => {
     // SDD-112: in-flight 가드 — 5초 타이머·재연결 중복 호출이 동시 재전송하지 않게 한다.
@@ -576,6 +574,8 @@ export function useBand({
   const handleFeatureAck = useCallback(
     async (ack: SessionLiveFeatureAck): Promise<void> => {
       if (ack.session_id && ack.session_id !== sessionId) return;
+      // SDD-128(②-22): 실패 ACK(saved=0)는 큐에서 제거하지 않아 REST 폴백이 재시도하게 한다.
+      if (ack.saved === 0) return;
       try {
         const removed = await removeAckedFeature(
           {
@@ -1027,7 +1027,9 @@ export function useBand({
         // REST 폴백 플러시 타이머 (미확정 큐 재전송)
         if (flushTimerRef.current) clearInterval(flushTimerRef.current);
         flushTimerRef.current = setInterval(() => {
-          void retransmitPending();
+          // SDD-128(②-22): WS 정상 연결 시 REST 주기 flush 중지(이중 전송 제거).
+          // 오프라인 폴백은 재연결 시 직접 retransmitPending이 처리한다.
+          if (!wsConnectedRef.current) void retransmitPending();
         }, FEATURE_FLUSH_MS);
       }
 

@@ -1,15 +1,7 @@
 // 세션 상태 뱃지 (UI Kit)
 
 import type { SessionStatus } from '../../lib/api/session';
-
-const STATUS_LABELS: Record<SessionStatus, string> = {
-  ready: '준비',
-  scheduled: '예정',
-  open: '오픈',
-  in_progress: '진행중',
-  completed: '완료',
-  cancelled: '취소됨',
-};
+import { sessionStatusLabel } from '../../lib/session-status';
 
 const STATUS_CLASSES: Record<SessionStatus, string> = {
   ready: 'bg-[#EAF2FF] text-[#1F4FB3]',
@@ -29,7 +21,7 @@ export function StatusBadge({ status }: Props) {
     <span
       className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${STATUS_CLASSES[status]}`}
     >
-      {STATUS_LABELS[status]}
+      {sessionStatusLabel(status)}
     </span>
   );
 }

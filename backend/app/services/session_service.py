@@ -1892,6 +1892,13 @@ def get_guest_session_state(
     return {
         "session_id": str(s.id),
         "status": s.status,
+        # SDD-129(③-2): FE가 guest_state 파생 계약을 가정하므로 서버가 파생값을 내려 죽은 분기를 살린다.
+        "guest_state": (
+            "meditation" if s.status == "in_progress"
+            else "complete" if s.status == "completed"
+            else "cancelled" if s.status == "cancelled"
+            else "waiting"
+        ),
         "version": s.state_version or 0,
         "in_progress": s.status == "in_progress",
         "ended": s.status in _CLOSED_STATUSES,
