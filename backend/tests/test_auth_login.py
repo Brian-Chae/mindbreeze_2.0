@@ -56,11 +56,10 @@ def test_잠금_해제_후_로그인_성공(client, redis):
             "/api/v1/auth/login",
             json={"email": "user@test.com", "password": "Wrong123!"},
         )
-    # 관리자 잠금 해제 시나리오를 시뮬레이션 — 키 삭제
+    # 관리자 잠금 해제 시나리오를 시뮬레이션 — AUTHZ-04: 이메일+IP 복합 키.
+    # IP 는 요청 클라이언트마다 달라질 수 있으므로 이 테스트 전용 fakeredis 의 키를 비운다.
     import asyncio
-    asyncio.get_event_loop().run_until_complete(
-        redis.delete("lock:user@test.com", "attempt:user@test.com")
-    )
+    asyncio.run(redis.flushall())
     res = client.post(
         "/api/v1/auth/login",
         json={"email": "user@test.com", "password": VALID_PASSWORD},

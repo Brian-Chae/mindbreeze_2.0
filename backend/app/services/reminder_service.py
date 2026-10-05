@@ -214,7 +214,12 @@ def _already_sent(db: DBSession, session_id: UUID, offset_min: int, user_id: UUI
 
 def _log_delivery(
     db: DBSession, *, session_id: UUID, offset_min: int, user_id: UUID | None, channel: str
-) -> None:
+) -> bool:
+    """REM-01: 발송 로그를 원자적 INSERT 로 선점한다.
+
+    반환 True = 이 실행이 선점 성공(실제 발송 진행), False = 이미 기록됨(중복).
+    로그를 먼저 선점해야 동시 실행(워커 중복)이 겹쳐도 성공한 실행만 발송한다.
+    """
     try:
         with db.begin_nested():
             db.add(SessionReminderLog(
@@ -224,12 +229,14 @@ def _log_delivery(
                 channel=channel,
                 status="sent",
             ))
+        return True
     except IntegrityError:
-        # 동시 실행(워커 중복)으로 이미 기록됨 — 정상 경합이므로 무시한다.
+        # 동시 실행(워커 중복)으로 이미 선점됨 — 이 실행은 발송하지 않는다.
         logger.info(
-            "[REMINDER] 이미 발송 로그 존재 (session=%s, offset=%s, user=%s, channel=%s)",
+            "[REMINDER] 이미 발송 선점됨 (session=%s, offset=%s, user=%s, channel=%s)",
             session_id, offset_min, user_id, channel,
         )
+        return False
 
 
 def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: DBSession) -> int:
@@ -245,8 +252,9 @@ def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: D
     )
     sent = 0
 
-    # 인앱 알림 + WS 실시간 알림(웹푸시) — 아직 안 보낸 경우에만
-    if not _already_sent(db, session.id, offset_min, user_id, "ws"):
+    # 인앱 알림 + WS 실시간 알림(웹푸시) — REM-01: 먼저 로그를 원자적으로 선점한
+    # 실행만 실제 발송한다(중복 워커가 겹쳐도 1회만).
+    if _log_delivery(db, session_id=session.id, offset_min=offset_min, user_id=user_id, channel="ws"):
         notif = notification_service.create_notification(
             user_id, "session",
             message["subject"].replace("[MIND BREEZE] ", ""),
@@ -267,12 +275,13 @@ def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: D
             },
             status="pending",
         ))
-        _log_delivery(db, session_id=session.id, offset_min=offset_min, user_id=user_id, channel="ws")
         sent += 1
 
-    # 이메일 — 기존 이메일 서비스/워커 재사용
+    # 이메일 — 기존 이메일 서비스/워커 재사용. 로그 선점 성공 시에만 발송한다.
     email = recipient.get("email")
-    if email and not _already_sent(db, session.id, offset_min, user_id, "email"):
+    if email and _log_delivery(
+        db, session_id=session.id, offset_min=offset_min, user_id=user_id, channel="email"
+    ):
         email_item = NotificationOutbox(
             user_id=user_id,
             channel="email",
@@ -286,7 +295,6 @@ def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: D
         )
         db.add(email_item)
         db.flush()
-        _log_delivery(db, session_id=session.id, offset_min=offset_min, user_id=user_id, channel="email")
         try:
             from app.tasks.report_email_task import notification_email_task
 

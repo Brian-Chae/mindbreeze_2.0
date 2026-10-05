@@ -8,6 +8,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
@@ -121,8 +122,25 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
         file_path=str(file_path),
         size_bytes=len(content),
     )
-    db.add(chunk)
-    db.commit()
+    # CONC-01: 유일 제약(uq_audio_chunk_session_idx)을 savepoint 로 감싼다.
+    # '기존 조회 후 삽입'은 동시 재시도(네트워크 중복)에서 둘 다 조회를 통과해
+    # IntegrityError(500)가 날 수 있다. 충돌 시 기존 행을 반환해 멱등을 보장한다.
+    try:
+        with db.begin_nested():
+            db.add(chunk)
+        db.commit()
+    except IntegrityError:
+        existing = db.query(AudioChunk).filter(
+            AudioChunk.session_id == s.id, AudioChunk.chunk_index == chunk_index
+        ).first()
+        if existing is None:
+            raise
+        total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
+        return {
+            "chunk_index": chunk_index,
+            "received_bytes": existing.size_bytes,
+            "total_chunks": total,
+        }
 
     total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
     return {

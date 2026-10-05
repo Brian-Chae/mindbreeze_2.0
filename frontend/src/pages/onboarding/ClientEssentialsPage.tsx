@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
 import { apiClient, ApiError } from '../../lib/api/client';
+import type { VerifiedTier } from '../../lib/api/auth';
 
 interface EssentialsForm {
   name: string;
@@ -63,7 +64,7 @@ export default function ClientEssentialsPage() {
         email: updatedUser.email,
         name: updatedUser.name,
         role: updatedUser.role as 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin',
-        verified_tier: updatedUser.verified_tier as 'unverified' | 'email_verified' | 'fully_verified',
+        verified_tier: updatedUser.verified_tier as VerifiedTier,
         onboarding_completed: updatedUser.onboarding_completed,
         auth_provider: updatedUser.auth_provider,
         counselors: updatedUser.counselors,

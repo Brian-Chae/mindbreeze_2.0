@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 import { resolvePostLoginPath } from '../lib/auth-routing';
-import DevRoleSimulationPanel from '../components/auth/DevRoleSimulationPanel';
+
+// SEC-05: 역할 시뮬레이션 패널은 DEV 빌드에서만 조건부 동적 import 한다.
+// 프로덕션에서는 import.meta.env.DEV===false 로 분기가 제거되어 번들에 포함되지 않는다.
+const DevRoleSimulationPanel = import.meta.env.DEV
+  ? lazy(() => import('../components/auth/DevRoleSimulationPanel'))
+  : null;
 
 const isRoleSimEnabled = import.meta.env.VITE_ENABLE_ROLE_SIM === 'true';
 const tabs = [
@@ -178,7 +183,11 @@ export default function LoginPage() {
             {(loginRole === 'client' || loginRole === 'counselor') && <Link to={`/register?role=${loginRole}`} className="text-center text-sm font-semibold underline">{loginRole === 'client' ? '회원가입' : '상담사 가입'}</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
           </section>
-          {isRoleSimEnabled && <DevRoleSimulationPanel onLoginSuccess={(user) => navigate(resolvePostLoginPath(user, next))} />}
+          {DevRoleSimulationPanel && isRoleSimEnabled && (
+            <Suspense fallback={null}>
+              <DevRoleSimulationPanel onLoginSuccess={(user) => navigate(resolvePostLoginPath(user, next))} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

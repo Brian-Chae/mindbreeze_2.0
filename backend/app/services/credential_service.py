@@ -21,6 +21,20 @@ UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
 ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/jpg", "image/png"}
 
+# SEC-12: 매직바이트(파일 시그니처) 화이트리스트 — 확장자·content_type 만으로는
+# 위장 업로드(예: 스크립트/HTML 을 .png 로)를 막지 못한다. 외부 의존성 없이
+# 표준 라이브러리로 파일 헤더만 검사한다.
+ALLOWED_SIGNATURES: tuple[bytes, ...] = (
+    b"%PDF",               # PDF
+    b"\xff\xd8\xff",       # JPEG
+    b"\x89PNG\r\n\x1a\n",  # PNG
+)
+
+
+def _signature_allowed(header: bytes) -> bool:
+    """파일 헤더가 허용 시그니처(PDF/JPEG/PNG) 중 하나로 시작하는지."""
+    return any(header.startswith(sig) for sig in ALLOWED_SIGNATURES)
+
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_CREDENTIALS_PER_USER = 10
 
@@ -56,6 +70,17 @@ def upload_credential(
             detail="PDF, JPG, PNG 파일만 업로드 가능합니다",
         )
     if file.content_type and file.content_type not in ALLOWED_MIME:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="PDF, JPG, PNG 파일만 업로드 가능합니다",
+        )
+
+    # SEC-12: content_type 유무와 무관하게 실제 파일 시그니처를 강제 검증한다.
+    # (content_type 미전송 시 검사를 건너뛰던 우회 차단)
+    file.file.seek(0)
+    header = file.file.read(8)
+    file.file.seek(0)
+    if not _signature_allowed(header):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="PDF, JPG, PNG 파일만 업로드 가능합니다",

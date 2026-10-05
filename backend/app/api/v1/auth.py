@@ -205,18 +205,19 @@ async def login(
     db: Session = Depends(get_db),
     redis: Redis = Depends(get_redis),
 ):
-    """로그인 → JWT 발급. 5회 실패 시 15분 잠금."""
-    await login_attempt_service.check_login_lock(req.email, redis)
+    """로그인 → JWT 발급. 5회 실패 시 15분 잠금(이메일+IP 복합 키, AUTHZ-04)."""
+    client_ip = request.client.host if request.client else None
+    await login_attempt_service.check_login_lock(req.email, redis, client_ip)
 
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.password_hash):
-        await login_attempt_service.record_failed_attempt(req.email, redis)
+        await login_attempt_service.record_failed_attempt(req.email, redis, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="이메일 또는 비밀번호가 일치하지 않습니다",
         )
 
-    await login_attempt_service.reset_attempts(req.email, redis)
+    await login_attempt_service.reset_attempts(req.email, redis, client_ip)
 
     # SDD-020: 비활성화 실효성 — suspended/pending 계정은 비밀번호가 맞아도 로그인 차단.
     # (비밀번호 검증 이후에 확인해 계정 존재 여부를 노출하지 않는다.)

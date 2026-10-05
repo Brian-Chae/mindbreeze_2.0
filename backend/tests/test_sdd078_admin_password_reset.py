@@ -5,6 +5,7 @@ spec.md §2~§4: 발급 권한/상태 검증, TTL 24h 일회용 토큰, 재발�
 """
 
 import uuid
+from datetime import datetime, timezone
 
 from app.services import email_verify_service
 
@@ -59,11 +60,23 @@ def _platform_admin(client, email: str) -> dict:
 
 def _set_status(user_id: str, status: str) -> None:
     from app.models.user import User
+    from app.models.user_org_membership import UserOrgMembership
 
     db = _db()
     try:
         user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
         user.status = status
+        # AUTHZ-02: 관리자 판정이 membership 기준 — active 전환 시 초대(invited) 소속도
+        # 초대 수락에 해당하는 active 로 맞춘다.
+        if status == "active":
+            for membership in (
+                db.query(UserOrgMembership)
+                .filter(UserOrgMembership.user_id == user.id)
+                .all()
+            ):
+                if membership.status == "invited":
+                    membership.status = "active"
+                    membership.joined_at = membership.joined_at or datetime.now(timezone.utc)
         db.commit()
     finally:
         db.close()

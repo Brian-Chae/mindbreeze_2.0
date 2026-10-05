@@ -19,8 +19,19 @@ def _activate(db, user):
     'org_admin 경계/전체 접근' 자체를 검증하는 것이 목적이므로, 행위자(actor)로 쓰이는
     users[1](pending)·users[2](suspended) 를 해당 테스트에서만 active 로 활성화한다.
     공유 픽스처(org_data)는 다른 테스트 파일과 공유되므로 절대 수정하지 않는다.
+
+    AUTHZ-02: 관리자 판정이 membership 기준이 되었으므로, 초대(invited) 소속도
+    active 로 함께 전환한다(실제 초대 수락에 해당). 초대 수락 시각도 채워준다.
     """
+    from app.models.user_org_membership import UserOrgMembership
+
     user.status = "active"
+    for membership in (
+        db.query(UserOrgMembership).filter(UserOrgMembership.user_id == user.id).all()
+    ):
+        if membership.status == "invited":
+            membership.status = "active"
+            membership.joined_at = membership.joined_at or datetime.now(timezone.utc)
     db.commit()
 
 

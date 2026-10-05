@@ -144,7 +144,16 @@ def test_inactive_entry_points(client, org_data, redis):
     # SEC-02: get_current_user 는 이제 pending/suspended 계정을 모든 요청에서 403 으로 차단한다.
     # 이 테스트의 의도는 'org 비활성화 시 진입점이 409'이므로, org_admin 인 users[1] 을
     # 이 테스트에서만 active 로 전환해 인증 게이트를 통과시킨다 (공유 픽스처는 수정하지 않음).
+    # AUTHZ-02: 관리자 판정이 membership 기준이므로 초대(invited) 소속도 active 로 전환한다.
+    from app.models.user_org_membership import UserOrgMembership
+
     users[1].status = "active"
+    for membership in (
+        db.query(UserOrgMembership).filter(UserOrgMembership.user_id == users[1].id).all()
+    ):
+        if membership.status == "invited":
+            membership.status = "active"
+            membership.joined_at = membership.joined_at or datetime.now(timezone.utc)
     db.commit()
     token = asyncio.run(org_invite_service._issue(users[1], redis, token_type="org_admin_invite")).split("token=", 1)[1]
     org.deactivated_at = datetime.now(timezone.utc)

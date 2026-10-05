@@ -190,8 +190,15 @@ def notify_event(
     user_id: str | UUID,
     data: dict[str, Any],
     db: DBSession,
+    *,
+    commit: bool = True,
 ) -> Notification | None:
-    """이벤트 → 인앱 알림 + (설정 시) 이메일 발송"""
+    """이벤트 → 인앱 알림 + (설정 시) 이메일 발송
+
+    TXN-01: commit=False 면 알림·outbox 를 flush 만 하고 커밋은 호출자에게 맡긴다.
+    상위 흐름이 아직 확정하지 않은 변경을 조기 커밋하는 것을 막는다.
+    (commit=False 호출자는 커밋 후 outbox beat 가 이메일을 발송하도록 남겨둔다.)
+    """
     user = db.query(User).filter(User.id == _to_uuid(user_id)).first()
     if not user:
         return None
@@ -244,10 +251,15 @@ def notify_event(
         db.flush()  # id 확보 → commit 후 email_app 큐 적재용
         email_outbox_id = email_item.id
 
-    db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
+    if commit:
+        db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
+    else:
+        # TXN-01: 호출자가 트랜잭션을 소유 — 조기 커밋 대신 flush 만.
+        db.flush()
 
     # commit 후 email_app 큐에 적재 (Celery beat 불필요 — email worker가 즉시 소비)
-    if email_outbox_id is not None:
+    # commit=False 인 경우 호출자가 커밋한 뒤 outbox beat(process_email_outbox)가 발송한다.
+    if email_outbox_id is not None and commit:
         from app.tasks.report_email_task import notification_email_task
 
         try:

@@ -14,7 +14,6 @@ import {
   type ClientRegisterPayload,
   type LoginResponse,
 } from '../lib/api/auth';
-import { loginDevUser } from '../lib/api/devAuth';
 
 const USER_KEY = 'mb_user';
 
@@ -106,7 +105,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     return user;
   },
 
+  // SEC-05: dev 인증 모듈은 프로덕션 번들에서 제외한다.
+  // import.meta.env.DEV 게이트 + 동적 import로 dev 빌드에서만 로드된다.
   devLogin: async (userId): Promise<User> => {
+    if (!import.meta.env.DEV) {
+      throw new ApiError(404, 'dev 로그인은 개발 환경에서만 사용할 수 있습니다.', null);
+    }
+    const { loginDevUser } = await import('../lib/api/devAuth');
     const res = await loginDevUser(userId);
     const user = applyLogin(res);
     set({ user, accessToken: res.access_token, isAuthenticated: true });

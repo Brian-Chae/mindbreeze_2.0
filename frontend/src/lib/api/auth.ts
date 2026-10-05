@@ -1,9 +1,11 @@
 // 인증 관련 API 호출
 
 import { apiClient } from './client';
+import type { VerifiedTier } from './credentials';
 
 export type UserRole = 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin';
-export type VerifiedTier = 'unverified' | 'email_verified' | 'fully_verified';
+// 인증 등급은 credentials.ts(백엔드 계약)의 단일 정의를 재사용한다.
+export type { VerifiedTier };
 
 export interface User {
   id: string;

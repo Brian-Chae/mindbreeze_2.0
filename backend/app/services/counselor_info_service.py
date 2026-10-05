@@ -280,6 +280,8 @@ def update_profile(
         labels = ", ".join(FIELD_LABELS.get(f, f) for f in sorted(changed.keys()))
         actor_label = ACTOR_LABELS.get(actor_kind, "관리자")
         if target.id != actor_id:
+            # TXN-01: 프로필 변경·감사 로그와 같은 트랜잭션으로 묶기 위해 flush 만 하고,
+            # 아래 함수 말미의 db.commit() 이 한 번에 확정한다.
             notify_event("counselor_profile_updated", target.id, {
                 "title": "내 정보가 수정되었습니다",
                 "body": f"{actor_label}가 회원님의 정보({labels})를 수정했습니다. 변경 항목을 확인해주세요.",
@@ -288,7 +290,7 @@ def update_profile(
                     params={"changed_fields": sorted(changed.keys())},
                     legacy={"changed_fields": sorted(changed.keys()), "actor_kind": actor_kind},
                 ),
-            }, db)
+            }, db, commit=False)
 
     db.commit()
     db.refresh(target)
@@ -347,6 +349,7 @@ def update_primary_admin_profile(
     ))
     labels = ", ".join(FIELD_LABELS.get(f, f) for f in sorted(changed.keys()))
     if user.id != actor_id:
+        # TXN-01: 담당자 프로필 변경·감사 로그와 함께 아래 db.commit() 으로 확정한다.
         notify_event("primary_admin_profile_updated", user.id, {
             "title": "내 정보가 수정되었습니다",
             "body": f"플랫폼 관리자가 회원님의 정보({labels})를 수정했습니다. 변경 항목을 확인해주세요.",
@@ -355,7 +358,7 @@ def update_primary_admin_profile(
                 params={"changed_fields": sorted(changed.keys())},
                 legacy={"changed_fields": sorted(changed.keys()), "actor_kind": "platform_admin"},
             ),
-        }, db)
+        }, db, commit=False)
     db.commit()
     db.refresh(user)
     return user

@@ -39,9 +39,15 @@ from app.services import (
 router = APIRouter(prefix="/org", tags=["org"])
 
 
-def _require_org_admin(current_user: dict, org_id: str) -> None:
-    """본인 기관의 org_admin 만 통과. 아니면 403."""
-    if current_user.get("role") != "org_admin" or str(current_user.get("org_id") or "") != str(org_id):
+def _require_org_admin(db: Session, current_user: dict, org_id: str) -> None:
+    """본인 기관의 org_admin 만 통과. 아니면 403.
+
+    AUTHZ-02: User.org_id 미러(주 소속 1개)가 아니라 membership 을 판정 기준으로 쓴다.
+    다중 기관 상담사가 주 소속이 아닌 기관의 org_admin 인 경우에도 통과한다.
+    """
+    if not membership_service.is_member(
+        db, current_user["id"], org_id, role="org_admin", status="active"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="센터 관리자만 접근할 수 있습니다",
@@ -149,10 +155,8 @@ async def org_join_requests(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """센터의 가입 요청 목록 — OrgAdmin 전용."""
-    if current_user.get("role") != "org_admin" or str(current_user.get("org_id", "")) != str(org_id):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="센터 관리자만 조회할 수 있습니다")
+    """센터의 가입 요청 목록 — OrgAdmin 전용. membership 기반 (AUTHZ-02)."""
+    _require_org_admin(db, current_user, org_id)
     rows = org_service.list_org_join_requests(org_id, db)
     return [OrgJoinRequestDetail(**r) for r in rows]
 
@@ -213,7 +217,7 @@ async def list_counselors(
     db: Session = Depends(get_db),
 ):
     """센터 소속 상담사 목록 — OrgAdmin 전용. membership 기반 (SDD-079)."""
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     rows = org_service.get_counselors(org_id, db)
     # SDD-082: 개인 상담소(kind=individual) 소속 여부를 1쿼리로 계산해 배지로 구분한다
     personal_owner_ids: set = set()
@@ -256,7 +260,7 @@ async def invite_counselor(
     신규 이메일은 pending 계정 + 초대 메일, 기존 상담사는 소속 추가 초대 메일.
     응답 형태는 두 경우 동일 — 계정 존재 여부를 문구로 노출하지 않는다.
     """
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     user, invite_sent = await org_service.invite_counselor(
         org_id, req.name, str(req.email), redis, db
     )
@@ -278,7 +282,7 @@ async def resend_counselor_invite(
     redis: Redis = Depends(get_redis),
 ):
     """상담사 초대 재발송 — OrgAdmin 전용. membership invited 상태만 허용 (SDD-079)."""
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     user, invite_sent = await org_service.resend_counselor_invite(
         org_id, user_id, redis, db
     )
@@ -302,7 +306,7 @@ async def update_counselor(
     org_management_service.change_counselor 로 위임해 마지막 활성 기관 관리자
     강등을 방지하고 VerificationAudit 를 기록한다.
     """
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     user = org_service.update_counselor_role(
         org_id, user_id, req.role, current_user["id"], db, reason=req.reason
     )
@@ -329,7 +333,7 @@ async def get_org_counselor_profile(
     db: Session = Depends(get_db),
 ):
     """소속 상담사 정보 조회 — OrgAdmin 전용. 성별/생년월일/전화/주소 포함(정책 확정)."""
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     target = counselor_info_service.get_target_counselor(_parse_target_uuid(user_id), db, org_id=org_id)
     return counselor_info_service.serialize(target)
 
@@ -347,7 +351,7 @@ async def patch_org_counselor_profile(
     기관 관리자 계정(org_admin)은 이 경로로 수정할 수 없다 — 본인 설정 또는
     플랫폼 관리자 수정만 허용한다.
     """
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).first()
     if org is None:
         raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
@@ -387,7 +391,7 @@ async def reset_org_counselor_password(
     """
     from app.models.user import User
 
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).first()
     if org is None:
         raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
@@ -429,7 +433,7 @@ async def suspend_org_counselor(
     계정 상태만 suspended 로 변경한다 (데이터 삭제 아님). 정지된 계정은 기존
     suspended 로직으로 로그인이 차단된다. counselor 만 대상 — 자기 자신·org_admin 은 403.
     """
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     user = org_service.set_counselor_suspension(
         org_id, user_id, req.reason, current_user["id"], suspend=True, db=db
     )
@@ -445,7 +449,7 @@ async def unsuspend_org_counselor(
     db: Session = Depends(get_db),
 ):
     """소속 상담사 활성화(정지 해제) — OrgAdmin 전용. 사유 필수 + 감사 + 대상자 알림."""
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     user = org_service.set_counselor_suspension(
         org_id, user_id, req.reason, current_user["id"], suspend=False, db=db
     )
@@ -460,7 +464,7 @@ async def get_org_counselor_activity(
     db: Session = Depends(get_db),
 ):
     """소속 상담사 최근 이력 — OrgAdmin 전용. 세션/리포트 메타데이터만 (내용 미노출)."""
-    _require_org_admin(current_user, org_id)
+    _require_org_admin(db, current_user, org_id)
     data = org_service.get_counselor_activity(org_id, user_id, db)
     return CounselorActivityResponse(**data)
 

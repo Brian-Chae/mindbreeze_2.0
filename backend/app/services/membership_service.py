@@ -30,17 +30,20 @@ def get_membership(
     org_id: uuid.UUID | str,
     *,
     statuses: tuple[str, ...] = ALIVE_STATUSES,
+    role: str | None = None,
 ) -> UserOrgMembership | None:
-    """user × org 의 살아있는 membership 조회 (기본: invited/active)."""
-    return (
-        db.query(UserOrgMembership)
-        .filter(
-            UserOrgMembership.user_id == _to_uuid(user_id),
-            UserOrgMembership.org_id == _to_uuid(org_id),
-            UserOrgMembership.status.in_(statuses),
-        )
-        .first()
+    """user × org 의 살아있는 membership 조회 (기본: invited/active).
+
+    role 을 주면 해당 역할의 소속만 조회한다 (예: org_admin 판정).
+    """
+    query = db.query(UserOrgMembership).filter(
+        UserOrgMembership.user_id == _to_uuid(user_id),
+        UserOrgMembership.org_id == _to_uuid(org_id),
+        UserOrgMembership.status.in_(statuses),
     )
+    if role is not None:
+        query = query.filter(UserOrgMembership.role == role)
+    return query.first()
 
 
 def is_member(
@@ -48,9 +51,16 @@ def is_member(
     user_id: uuid.UUID | str,
     org_id: uuid.UUID | str,
     *,
-    statuses: tuple[str, ...] = ("active",),
+    role: str | None = None,
+    status: str = "active",
 ) -> bool:
-    return get_membership(db, user_id, org_id, statuses=statuses) is not None
+    """user 가 org 에 지정 상태(기본 active)·역할로 소속돼 있는지 판정.
+
+    AUTHZ-02: User.org_id 미러(주 소속 1개) 대신 membership 을 진실 원천으로 쓴다.
+    """
+    return (
+        get_membership(db, user_id, org_id, statuses=(status,), role=role) is not None
+    )
 
 
 def get_active_org_ids(db: Session, user_id: uuid.UUID | str) -> list[uuid.UUID]:

@@ -3,11 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { getClientProfile, updateMemo, type ClientProfile } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
+import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
 
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAuthenticated, isInitialized } = useAuthStore();
+
+  // SEC-07: 내담자 프로필 상세는 상담사 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
+  useRequireAuth();
+  useRequireRole('counselor');
 
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [memo, setMemo] = useState('');
@@ -15,12 +20,6 @@ export default function ClientProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (isInitialized && !isAuthenticated) {
-      navigate('/login?role=counselor');
-    }
-  }, [isInitialized, isAuthenticated, navigate]);
 
   useEffect(() => {
     if (!id || !isAuthenticated) return;

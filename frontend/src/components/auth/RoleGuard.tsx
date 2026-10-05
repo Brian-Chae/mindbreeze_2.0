@@ -34,7 +34,7 @@ export function RoleGuard({ role, requireFullyVerified = false, children }: Role
   }
 
   // 미인증 상담사는 온보딩으로 강제 이동
-  if (requireFullyVerified && user.verified_tier !== 'fully_verified') {
+  if (requireFullyVerified && user.verified_tier !== 'verified') {
     const onboardingPath = user.role === 'counselor' ? '/onboarding/counselor' : '/onboarding/client';
     return <Navigate to={onboardingPath} replace />;
   }

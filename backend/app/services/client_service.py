@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models.client_counselor_link import ClientCounselorLink
 from app.models.client_invite import ClientInvite
 from app.models.client_profile import ClientProfile
@@ -227,6 +228,9 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
 
     logger = logging.getLogger(__name__)
     token = secrets.token_urlsafe(32)
+    # TODO(CFG-01): 초대 토큰을 평문으로 저장 중이다. 링크 해시 저장(단방향)으로
+    # 전환하려면 기존 발급 링크 호환(마이그레이션·이중 조회)이 필요해 이번 범위에서는
+    # 보류한다. 적용 시 ClientInvite.token_hash 도입 + 기존 token 병행 조회.
     invite = ClientInvite(
         counselor_id=UUID(counselor_id), email=email, token=token
     )
@@ -234,7 +238,8 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
     db.commit()
     db.refresh(invite)
 
-    invite_url = f"https://dev.mindbreeze.looxidlabs.com/invite/{token}"
+    # CFG-01: 하드코딩 대신 설정된 프론트 base URL 사용 (환경별 도메인 대응)
+    invite_url = f"{settings.frontend_base_url.rstrip('/')}/invite/{token}"
 
     # 상담사 이름 조회 (상담사 코드는 더 이상 사용하지 않음)
     counselor = db.query(User).filter(User.id == UUID(counselor_id)).first()

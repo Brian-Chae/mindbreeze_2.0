@@ -15,6 +15,7 @@ from pathlib import Path
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session
@@ -113,8 +114,25 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
         file_path=file_path,
         size_bytes=len(content),
     )
-    db.add(chunk)
-    db.commit()
+    # CONC-01: 유일 제약(uq_video_chunk_session_idx)을 savepoint 로 감싼다.
+    # 동시 재시도에서 둘 다 기존 조회를 통과하면 IntegrityError(500)가 나므로,
+    # 충돌 시 기존 행을 반환해 멱등을 보장한다.
+    try:
+        with db.begin_nested():
+            db.add(chunk)
+        db.commit()
+    except IntegrityError:
+        existing = db.query(VideoChunk).filter(
+            VideoChunk.session_id == s.id, VideoChunk.chunk_index == chunk_index
+        ).first()
+        if existing is None:
+            raise
+        total = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
+        return {
+            "chunk_index": chunk_index,
+            "received_bytes": existing.size_bytes,
+            "total_chunks": total,
+        }
 
     total = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
     return {

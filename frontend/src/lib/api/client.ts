@@ -35,6 +35,11 @@ interface RequestOptions {
   responseType?: 'json' | 'blob';
 }
 
+// SEC-06: FormData는 브라우저가 boundary 포함 Content-Type을 자동 설정하므로
+// JSON 직렬화·Content-Type 수동 지정을 하지 않는다.
+const isFormDataBody = (value: unknown): value is FormData =>
+  typeof FormData !== 'undefined' && value instanceof FormData;
+
 // 단일 비행(single-flight): 동시 refresh 요청을 하나로 병합한다.
 // 페이지 새로고침 시 initialize()의 refresh와 여러 데이터 fetch의 401 재시도가
 // 같은 refresh token으로 동시에 /auth/refresh 를 호출하면, 백엔드의 refresh 토큰
@@ -101,7 +106,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   const buildHeaders = (token: string | null): Record<string, string> => {
     const h: Record<string, string> = { ...headers };
-    if (body !== undefined) h['Content-Type'] = 'application/json';
+    if (body !== undefined && !isFormDataBody(body)) h['Content-Type'] = 'application/json';
     if (!skipAuth && token) h.Authorization = `Bearer ${token}`;
     return h;
   };
@@ -110,7 +115,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     return fetch(`${BASE_URL}${path}`, {
       method,
       headers: buildHeaders(token),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? (isFormDataBody(body) ? body : JSON.stringify(body)) : undefined,
       credentials: 'include',
     });
   };
@@ -161,6 +166,9 @@ export const apiClient = {
     request<T>(path, { ...options, method: 'GET' }),
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> =>
     request<T>(path, { ...options, method: 'POST', body }),
+  // SEC-06: multipart/form-data 업로드 전용 — 토큰·401 refresh·에러 포맷을 post와 동일하게 재사용한다.
+  postForm: <T>(path: string, formData: FormData, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> =>
+    request<T>(path, { ...options, method: 'POST', body: formData }),
   put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> =>
     request<T>(path, { ...options, method: 'PUT', body }),
   delete: <T>(path: string, options?: Omit<RequestOptions, 'method'>): Promise<T> =>
