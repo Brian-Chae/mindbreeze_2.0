@@ -7,7 +7,7 @@ import { useAuthStore } from '../../stores/authStore';
 import type { UserRole } from '../../lib/api/auth';
 
 interface RoleGuardProps {
-  role?: UserRole;
+  role?: UserRole | UserRole[];
   requireFullyVerified?: boolean;
   children: ReactNode;
 }
@@ -23,11 +23,14 @@ export function RoleGuard({ role, requireFullyVerified = false, children }: Role
   }
 
   if (!isAuthenticated || !user) {
-    return <Navigate to={loginPathForRole(role)} replace />;
+    return <Navigate to={loginPathForRole(Array.isArray(role) ? role[0] : role)} replace />;
   }
 
-  if (role && user.role !== role) {
-    return <Navigate to="/" replace />;
+  if (role) {
+    const roles = Array.isArray(role) ? role : [role];
+    if (!roles.includes(user.role)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   // 미인증 상담사는 온보딩으로 강제 이동

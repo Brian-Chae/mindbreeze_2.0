@@ -12,6 +12,18 @@ from app.models.user import User
 from tests.test_sdd074_admin_org_detail import org_data, headers
 
 
+def _activate(db, user):
+    """SEC-02: get_current_user 가 suspended/pending 계정을 매 요청 403으로 차단한다.
+
+    본 파일의 실패 테스트들은 '정상 계정의 본인 프로필 조회/수정' 및
+    'org_admin 경계/전체 접근' 자체를 검증하는 것이 목적이므로, 행위자(actor)로 쓰이는
+    users[1](pending)·users[2](suspended) 를 해당 테스트에서만 active 로 활성화한다.
+    공유 픽스처(org_data)는 다른 테스트 파일과 공유되므로 절대 수정하지 않는다.
+    """
+    user.status = "active"
+    db.commit()
+
+
 @pytest.fixture
 def solo_counselor(org_data):
     """미소속 상담사 — 플랫폼 관리자 목록/수정 경계 검증용."""
@@ -34,6 +46,7 @@ def solo_counselor(org_data):
 def test_me_profile_new_fields_and_version_roundtrip(client, org_data):
     db, _, _, users = org_data
     me = users[2]
+    _activate(db, me)  # SEC-02: suspended(users[2]) → active 로 활성화해야 본인 프로필 접근 가능
     r = client.get("/api/v1/auth/counselors/me/profile", headers=headers(me))
     assert r.status_code == 200
     body = r.json()
@@ -80,6 +93,7 @@ def test_me_profile_new_fields_and_version_roundtrip(client, org_data):
 ])
 def test_me_profile_rejects_forbidden_and_invalid(client, org_data, body, code):
     db, _, _, users = org_data
+    _activate(db, users[2])  # SEC-02: 403(금지필드)/422(검증) 를 구분하려면 계정이 active 여야 함
     r = client.patch("/api/v1/auth/counselors/me/profile", headers=headers(users[2]), json=body)
     assert r.status_code == code, r.text
     db.refresh(users[2])
@@ -172,6 +186,7 @@ def test_admin_career_validation(client, org_data):
 
 def test_org_admin_full_access_same_org(client, org_data):
     db, org, _, users = org_data
+    _activate(db, users[1])  # SEC-02: pending org_admin(users[1]) → active 로 활성화
     org_admin = headers(users[1])
     url = f"/api/v1/org/{org.id}/counselors/{users[2].id}/profile"
 
@@ -196,6 +211,7 @@ def test_org_admin_full_access_same_org(client, org_data):
 
 def test_org_admin_boundaries(client, org_data):
     db, org, other, users = org_data
+    _activate(db, users[1])  # SEC-02: pending org_admin(users[1]) → active 로 활성화
     org_admin = headers(users[1])
     # 타 기관 URL → 403 (본인 기관 아님)
     assert client.get(f"/api/v1/org/{other.id}/counselors/{users[4].id}/profile",

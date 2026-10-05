@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1 import router as v1_router
+from app.config import settings
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,9 @@ async def _outbox_ws_poll_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # SDD-136: JWT 서명 키 미설정/기본값은 기동 중단 — 임의 토큰 위조 방지.
+    if not settings.jwt_secret_key:
+        raise RuntimeError("JWT_SECRET_KEY가 설정되지 않았습니다. 배포 전 반드시 환경변수로 설정하세요.")
     task = asyncio.create_task(_outbox_ws_poll_loop())
     yield
     task.cancel()

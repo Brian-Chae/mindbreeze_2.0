@@ -1,5 +1,15 @@
 """테스트 공통 설정 — SQLite 인메모리 DB + fakeredis"""
 
+import os
+import tempfile
+
+# SDD-135: 영상·오디오 S3 폴백 경로 기본값을 영속 디스크(/var/lib/mindbreeze)로 바꿨으나,
+# 로컬 테스트는 root 권한이 없어 임시 경로를 쓴다(모듈 import 전에 설정해야 반영됨).
+os.environ.setdefault("VIDEO_CHUNK_DIR", tempfile.mkdtemp(prefix="mb-test-video-"))
+os.environ.setdefault("AUDIO_CHUNK_DIR", tempfile.mkdtemp(prefix="mb-test-audio-"))
+# SDD-136: Google OAuth audience 검증용 테스트 클라이언트 ID.
+os.environ.setdefault("GOOGLE_CLIENT_ID", "test-client-id")
+
 import fakeredis.aioredis
 import pytest
 from fastapi.testclient import TestClient

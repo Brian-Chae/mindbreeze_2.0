@@ -35,6 +35,14 @@ async def get_current_user(
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="사용자를 찾을 수 없습니다")
+    # SDD-136: 정지/대기 계정은 토큰이 유효해도 매 요청 차단 — 로그인 시에만 검사하던 것을 강화.
+    if user.status == "suspended":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="정지된 계정입니다. 관리자에게 문의하세요.")
+    if user.status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="초대 수락(비밀번호 설정)이 완료되지 않은 계정입니다.",
+        )
     return {
         "id": str(user.id),
         "role": user.role,

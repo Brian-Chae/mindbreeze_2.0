@@ -105,6 +105,11 @@ def test_legacy_credential_api_excludes_authenticated_owner(client, org_data, ac
         json={"status": "approved"},
         headers=headers(users[actor]) if actor is not None else {},
     )
-    assert response.status_code == 200
-    assert response.json()["status"] == "approved"
-    assert db.query(Notification).filter_by(user_id=owner.id).count() == (0 if actor == 4 else 1)
+    # SDD-136: 증빙 승인은 플랫폼 관리자 전용 — 무인증 401, 비관리자 403.
+    if actor is None:
+        assert response.status_code == 401
+    elif actor != 0:
+        assert response.status_code == 403
+    else:
+        assert response.status_code == 200
+        assert response.json()["status"] == "approved"

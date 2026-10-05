@@ -15,6 +15,13 @@ def change(client, org, user, admin, method="PATCH", **body):
 def test_role_change_audit_and_existing_token_permissions(client, org_data):
     db, org, _, users = org_data
     target = users[2]
+    # SEC-02: get_current_user 가 suspended 계정을 전 요청 403 으로 차단하므로,
+    # 역할 변경 후 기존 토큰 권한을 검증하려면 대상이 active 여야 한다.
+    # 또한 users[1](org_admin)은 pending 이라 target 강등 시 "마지막 활성 기관 관리자"
+    # 보호(409)에 걸리므로, 두 계정을 이 테스트에서만 active 로 전환한다 (공유 픽스처는 불변).
+    target.status = "active"
+    users[1].status = "active"
+    db.commit()
     r = change(client, org, target, users[0], role="org_admin")
     assert r.status_code == 200, r.text
     assert r.json()["role"] == "org_admin"

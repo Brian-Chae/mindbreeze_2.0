@@ -9,6 +9,12 @@ def test_org_admin_me_profile_get_and_basic_patch(client, org_data):  # noqa: F8
     """순수 기관 관리자(상담사 프로필 없음)도 본인 조회 + 기본 정보(이름/전화) 수정 가능."""
     db, _, _, users = org_data
     admin = users[1]
+    # SEC-02: get_current_user 가 pending·suspended 계정을 매 요청 403으로 차단한다.
+    # 본 테스트는 '순수 기관 관리자의 본인 프로필 조회/수정' 자체를 검증하므로,
+    # 행위자인 pending org_admin(users[1]) 을 이 테스트에서만 active 로 활성화한다.
+    # (공유 픽스처 org_data 는 다른 파일과 공유되므로 수정하지 않는다.)
+    admin.status = "active"
+    db.commit()
 
     r = client.get("/api/v1/auth/counselors/me/profile", headers=headers(admin))
     assert r.status_code == 200, r.text

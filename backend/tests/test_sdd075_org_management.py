@@ -141,6 +141,11 @@ def test_inactive_entry_points(client, org_data, redis):
     import asyncio
     from app.services import org_invite_service, client_service
     db, org, _, users = org_data
+    # SEC-02: get_current_user 는 이제 pending/suspended 계정을 모든 요청에서 403 으로 차단한다.
+    # 이 테스트의 의도는 'org 비활성화 시 진입점이 409'이므로, org_admin 인 users[1] 을
+    # 이 테스트에서만 active 로 전환해 인증 게이트를 통과시킨다 (공유 픽스처는 수정하지 않음).
+    users[1].status = "active"
+    db.commit()
     token = asyncio.run(org_invite_service._issue(users[1], redis, token_type="org_admin_invite")).split("token=", 1)[1]
     org.deactivated_at = datetime.now(timezone.utc)
     db.commit()

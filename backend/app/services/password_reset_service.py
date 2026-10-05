@@ -112,4 +112,9 @@ async def complete_reset(
     db.add(PasswordHistory(user_id=user.id, password_hash=new_hash))
     db.commit()
 
+    # SDD-136: 비밀번호 변경 시 기존 세션(리프레시 토큰) 전부 무효화 — 관리자 재설정과 동일 정책.
+    from app.services import refresh_token_service
+
+    refresh_token_service.revoke_all_user_tokens(str(user.id), db)
+
     await redis.delete(_reset_key(jti))

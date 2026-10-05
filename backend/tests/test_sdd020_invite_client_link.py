@@ -202,10 +202,18 @@ def test_초대가입_후_온보딩_step4없이_완료_가능(client):
 # ---------------------------------------------------------------------------
 
 def _userinfo_mock(status_code, payload=None):
-    resp = MagicMock()
-    resp.status_code = status_code
-    resp.json.return_value = payload or {}
-    return AsyncMock(return_value=resp)
+    # SDD-136: OAuth 검증이 userinfo + tokeninfo(audience)를 순차 호출하므로 URL 로 구분.
+    def _side_effect(url, **kwargs):
+        resp = MagicMock()
+        if "userinfo" in str(url):
+            resp.status_code = status_code
+            resp.json.return_value = payload or {}
+        else:  # tokeninfo
+            resp.status_code = 200
+            resp.json.return_value = {"aud": "test-client-id"}
+        return resp
+
+    return AsyncMock(side_effect=_side_effect)
 
 
 def test_구글가입_초대토큰_상담사_자동연결(client):

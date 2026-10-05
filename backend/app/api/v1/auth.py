@@ -691,6 +691,22 @@ async def google_auth(
                     detail="유효하지 않은 Google 인증 토큰입니다",
                 )
             user_info = resp.json()
+            # SDD-136: audience 검증 — access token 이 우리 앱(client_id)용인지 확인.
+            # config 에 google_client_id 가 없으면 OAuth 를 신뢰할 수 없으므로 차단.
+            if not settings.google_client_id:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Google OAuth 설정이 누락되었습니다",
+                )
+            tok = await client.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"access_token": req.access_token},
+            )
+            if tok.status_code != 200 or tok.json().get("aud") != settings.google_client_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Google 토큰의 대상(앱)이 일치하지 않습니다",
+                )
     except HTTPException:
         raise
     except Exception:

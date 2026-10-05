@@ -20,6 +20,23 @@ def _headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def _platform_admin_token(client):
+    # SDD-136: 증빙 승인은 플랫폼 관리자 전용 — 테스트용 관리자 토큰을 직접 발급.
+    from app.core.database import get_db
+    from app.core.security import create_access_token
+    from app.main import app
+    from app.models.user import User
+
+    db = next(app.dependency_overrides[get_db]())
+    admin = User(
+        email="platform-admin@test.com", password_hash="x", name="플랫폼관리자",
+        role="platform_admin", status="active", verified_tier="fully_verified",
+    )
+    db.add(admin)
+    db.commit()
+    return create_access_token(subject=str(admin.id))
+
+
 def _png_bytes(size: int = 100) -> bytes:
     # 더미 PNG 페이로드 — 확장자 기반 검증이므로 실제 디코딩은 불필요
     return b"\x89PNG\r\n\x1a\n" + b"0" * max(0, size - 8)
@@ -93,16 +110,18 @@ def test_목록_조회_및_verified_tier(client):
 def test_관리자_승인_시_verified_tier_갱신(client):
     token = _register_counselor(client, "c-admin@test.com")
     h = _headers(token)
+    admin_h = _headers(_platform_admin_token(client))
     r1 = _upload(client, token, _png_bytes(), "id.png", "id_card")
     r2 = _upload(client, token, _png_bytes(), "lic.png", "license")
     id1 = r1.json()["id"]
     id2 = r2.json()["id"]
 
-    # 두 건 모두 승인
+    # 두 건 모두 승인 — SDD-136: 플랫폼 관리자만 가능.
     for cid in (id1, id2):
         r = client.put(
             f"/api/v1/credentials/admin/{cid}",
             json={"status": "approved"},
+            headers=admin_h,
         )
         assert r.status_code == 200, r.text
 

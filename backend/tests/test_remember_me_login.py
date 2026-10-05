@@ -60,9 +60,16 @@ def _https_client() -> TestClient:
 
 
 def _google(email: str):
-    response = MagicMock(status_code=200)
-    response.json.return_value = {"email": email, "name": "테스트"}
-    return patch("httpx.AsyncClient.get", AsyncMock(return_value=response))
+    # SDD-136: OAuth 검증이 userinfo + tokeninfo(audience)를 순차 호출하므로 URL 로 구분.
+    def _side_effect(url, **kwargs):
+        resp = MagicMock(status_code=200)
+        if "userinfo" in str(url):
+            resp.json.return_value = {"email": email, "name": "테스트"}
+        else:  # tokeninfo
+            resp.json.return_value = {"aud": "test-client-id"}
+        return resp
+
+    return patch("httpx.AsyncClient.get", AsyncMock(side_effect=_side_effect))
 
 
 # ---------------------------------------------------------------------------

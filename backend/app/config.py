@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
-    # JWT
-    jwt_secret_key: str = "dev-secret-change-me"
+    # JWT — 기본값 없음. 미설정 시 기동 중단(main.py lifespan fail-fast).
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 2880  # 48시간
     refresh_token_expire_days: int = 14

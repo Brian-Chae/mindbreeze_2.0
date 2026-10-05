@@ -102,9 +102,10 @@ def get_one(
 def update(
     report_id: str,
     payload: ReportUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
+    # SDD-136: 리포트 본문 수정은 상담사/기관관리자만 — 내담자·게스트의 덮어쓰기 차단.
     return report_service.update_report(report_id, current_user["id"], payload, db)
 
 

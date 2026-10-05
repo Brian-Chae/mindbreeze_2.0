@@ -137,8 +137,8 @@ const router = createBrowserRouter(
         <Route path="/register/organization" element={<RegisterOrganizationPage />} />
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
         <Route path="/role-redirect" element={<RoleRouter />} />
-        <Route path="/app" element={<ClientAppPage />} />
-        <Route path="/app/*" element={<ClientAppPage />} />
+        <Route path="/app" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
+        <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
@@ -148,9 +148,9 @@ const router = createBrowserRouter(
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
-        <Route path="/clients" element={<ClientListPage />} />
-        <Route path="/clients/invite" element={<ClientInvitePage />} />
-        <Route path="/clients/:id" element={<ClientProfilePage />} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><ClientListPage /></RoleGuard>} />
+        <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
+        <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
         <Route path="/report-view" element={<ReportViewPage />} />
         <Route path="/org/search" element={<OrgSearchPage />} />
@@ -160,10 +160,10 @@ const router = createBrowserRouter(
         {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
         <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
-        <Route path="/credentials" element={<CredentialDashboardPage />} />
-        <Route path="/sessions" element={<SessionListPage />} />
-        <Route path="/sessions/new" element={<SessionCreatePage />} />
-        <Route path="/sessions/:id" element={<SessionDetailPage />} />
+        <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
+        <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><SessionListPage /></RoleGuard>} />
+        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><SessionCreatePage /></RoleGuard>} />
+        <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
@@ -177,9 +177,9 @@ const router = createBrowserRouter(
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
-        <Route path="/reports" element={<ReportListPage />} />
+        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
-        <Route path="/reports/:id" element={<ReportDetailPage />} />
+        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
         <Route
           path="/admin/reviews"
           element={(

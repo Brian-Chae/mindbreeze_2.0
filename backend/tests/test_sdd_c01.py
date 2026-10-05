@@ -13,11 +13,22 @@ class TestGoogleAuth:
 
     @staticmethod
     def _userinfo_mock(status_code: int, payload: dict | None = None):
-        """Google userinfo 응답을 흉내내는 AsyncMock 생성"""
-        resp = MagicMock()
-        resp.status_code = status_code
-        resp.json.return_value = payload or {}
-        return AsyncMock(return_value=resp)
+        """Google userinfo + tokeninfo 응답을 URL 로 구분해 흉내낸다.
+
+        SDD-136 이후 OAuth 검증이 userinfo(사용자 정보)와 tokeninfo(audience)를
+        순차 호출하므로, 같은 AsyncClient.get mock 이 URL 에 따라 다른 응답을 준다.
+        """
+        def _side_effect(url, **kwargs):
+            resp = MagicMock()
+            if "userinfo" in str(url):
+                resp.status_code = status_code
+                resp.json.return_value = payload or {}
+            else:  # tokeninfo — audience 검증 통과용
+                resp.status_code = 200
+                resp.json.return_value = {"aud": "test-client-id"}
+            return resp
+
+        return AsyncMock(side_effect=_side_effect)
 
     def test_위조_토큰_401(self, client):
         """Google access token 위조 시 401"""
