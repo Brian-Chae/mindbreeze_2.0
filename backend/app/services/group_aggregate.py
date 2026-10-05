@@ -399,7 +399,13 @@ def _group_average_payload(
     metrics: dict[str, dict] = {}
     for _, field in _ABSOLUTE_METRIC_FIELDS:
         values = wearer_means.get(field, [])
-        metrics[field] = {"mean": _round(mean(values), 2) if sufficient else None}
+        # 지표별 실제 표본 — 미보고(null) 착용자를 제외한 뒤 최소 착용자 수를 넘을 때만 평균을 낸다.
+        # 착용자 총수만 보고 평균하면, 기여자가 1명뿐인 지표의 개인값이 그대로 그룹 평균이 되어
+        # 익명성이 깨진다(mean 은 None 을 제거하므로).
+        non_null = [v for v in values if v is not None]
+        metrics[field] = {
+            "mean": _round(mean(non_null), 2) if len(non_null) >= MIN_WEARERS else None
+        }
     return {
         "session_id": str(session_id),
         "at": stamp,

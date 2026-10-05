@@ -330,3 +330,76 @@ def test_ts14_목록에_코드와_개인상담소_여부_포함(client, monkeypa
     finally:
         db.close()
     assert row["has_personal_office"] is has_office
+
+
+# ---------------------------------------------------------------------------
+# MB2-ORG-01: 소속 해제 보호 가드 (자기 자신·주 담당자·마지막 기관 관리자)
+# ---------------------------------------------------------------------------
+
+
+def test_mb2_org01_주담당자_자기소속해제_409(client, monkeypatch, redis):
+    """기관 관리자가 자기 자신(주 담당자)을 소속 해제하려 하면 409 — change_counselor 가드 공유."""
+    ctx = _make_org_admin(
+        client, monkeypatch, sys_email="s82m@test.com", admin_email="a82m@test.com"
+    )
+    from app.models.user import User
+
+    db = _db()
+    try:
+        admin = db.query(User).filter(User.email == "a82m@test.com").first()
+        assert admin is not None
+        admin_id = str(admin.id)
+        org_id = str(admin.org_id)
+    finally:
+        db.close()
+
+    res = client.delete(
+        f"/api/v1/org/{org_id}/counselors/{admin_id}", headers=ctx["h"]
+    )
+    assert res.status_code == 409, res.text
+
+    # 소속이 그대로 유지된다
+    db = _db()
+    try:
+        admin = db.query(User).filter(User.id == uuid.UUID(admin_id)).first()
+        assert admin.org_id is not None
+    finally:
+        db.close()
+
+
+def test_mb2_org01_주담당자를_다른관리자가_해제_409(client, monkeypatch, redis):
+    """비(非)주담당 org_admin 이 주 담당자를 해제하려 하면 409."""
+    ctx = _make_org_admin(
+        client, monkeypatch, sys_email="s82n@test.com", admin_email="a82n@test.com"
+    )
+    counselor = _invite_and_activate(client, monkeypatch, ctx, "c82n@test.com")
+
+    from app.models.user import User
+    from app.models.user_org_membership import UserOrgMembership
+
+    db = _db()
+    try:
+        cu = db.query(User).filter(User.id == uuid.UUID(counselor["id"])).first()
+        assert cu is not None
+        cu.role = "org_admin"  # 두 번째 기관 관리자로 승격
+        mem = (
+            db.query(UserOrgMembership)
+            .filter(
+                UserOrgMembership.user_id == cu.id,
+                UserOrgMembership.org_id == uuid.UUID(ctx["org_id"]),
+            )
+            .first()
+        )
+        if mem is not None:
+            mem.role = "org_admin"
+        primary = db.query(User).filter(User.email == "a82n@test.com").first()
+        assert primary is not None
+        primary_id = str(primary.id)
+        db.commit()
+    finally:
+        db.close()
+
+    res = client.delete(
+        f"/api/v1/org/{ctx['org_id']}/counselors/{primary_id}", headers=counselor["h"]
+    )
+    assert res.status_code == 409, res.text

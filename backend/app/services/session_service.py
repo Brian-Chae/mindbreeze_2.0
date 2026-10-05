@@ -187,6 +187,13 @@ def _ensure_aware(dt: datetime) -> datetime:
     return dt
 
 
+def _same_instant(a: datetime | None, b: datetime | None) -> bool:
+    """두 시각이 같은 순간인지(tz 정규화 후) 비교한다. 둘 다 None 이면 같음."""
+    if a is None or b is None:
+        return a is None and b is None
+    return _ensure_aware(a) == _ensure_aware(b)
+
+
 def detect_conflict(
     host_id: UUID,
     scheduled_at: datetime,
@@ -637,6 +644,10 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
+    # FUNC-01: 변경 전 예약 시각·리마인더 시점을 보관 — 변경 후 옛 ETA 태스크를 취소한다.
+    _old_scheduled_at = s.scheduled_at
+    _old_reminder_offsets = normalize_reminder_offsets(s.reminder_offsets)
+
     _current_scheduled = _ensure_aware(s.scheduled_at) if s.scheduled_at else None
     new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _current_scheduled
     new_duration = payload.duration_min if payload.duration_min is not None else s.duration_min
@@ -697,9 +708,21 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     db.commit()
     db.refresh(s)
 
-    # SDD-097: 일정 또는 리마인더 시점이 바뀌면 ETA 태스크를 다시 예약한다.
-    # (이미 지난 시점은 예약되지 않고, 발송 로그가 중복 발송을 막는다.)
+    # SDD-097 / FUNC-01: 일정 또는 리마인더 시점이 바뀌면 옛 ETA 를 취소하고 다시 예약한다.
+    # (이미 지난 시점은 예약되지 않고, 발송 로그가 중복 발송을 막는다. 남은 옛 ETA 가 잘못된
+    #  시각에 발송하는 것은 run_reminder 의 offset/ETA due 게이트가 추가로 차단한다.)
     if reminders_changed or payload.scheduled_at is not None:
+        _scheduled_changed = not _same_instant(s.scheduled_at, _old_scheduled_at)
+        if _scheduled_changed:
+            # 일정이 바뀌면 옛 일정 기준 task_id 전체가 새 예약과 겹치지 않는다.
+            _reminder_service.revoke_session_reminders(
+                s.id, _old_reminder_offsets, _old_scheduled_at
+            )
+        elif reminders_changed:
+            # 일정은 그대로, 시점만 바뀐 경우 — 제거된 시점의 옛 ETA 만 취소한다.
+            _new_offsets = normalize_reminder_offsets(s.reminder_offsets)
+            _removed = [o for o in _old_reminder_offsets if o not in _new_offsets]
+            _reminder_service.revoke_session_reminders(s.id, _removed, _old_scheduled_at)
         _reminder_service.schedule_session_reminders(s, db)
 
     # SDD-093: S02 세션 변경 알림
@@ -2074,10 +2097,12 @@ _SIGNAL_QUALITY_DEGRADED = 0.4
 def _quality_from_signal(signal_quality: float | None) -> str:
     """signal_quality(0~1) 에서 품질 문자열을 파생한다.
 
-    값이 없으면(null) 판정 불가이므로 모델 기본값 'valid' 를 유지한다(0 치환 금지).
+    값이 없으면(null) 판정 불가이므로 'unknown' 으로 둔다 — 'valid' 로 승격하지 않는다.
+    report 게이트(report_task)가 quality == 'valid' 개수로 reliability/coverage 를
+    계산하므로, null 을 valid 로 세면 품질이 과대평가된다(0 치환 금지).
     """
     if signal_quality is None:
-        return "valid"
+        return "unknown"
     if signal_quality >= _SIGNAL_QUALITY_VALID:
         return "valid"
     if signal_quality >= _SIGNAL_QUALITY_DEGRADED:

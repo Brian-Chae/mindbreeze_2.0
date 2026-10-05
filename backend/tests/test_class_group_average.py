@@ -237,3 +237,36 @@ def test_06_이벤트명과_throttle_계약():
     assert ns.group_average_due(sid, at=100.0) is True  # 독립 상태
     assert ns.group_average_due(sid, at=100.0 + ns.AGGREGATE_INTERVAL_SEC - 0.1) is False
     assert ns.group_average_due(sid, at=100.0 + ns.AGGREGATE_INTERVAL_SEC) is True
+
+
+# ---------------------------------------------------------------------------
+# TS7 — GROUP-AVG-ANON: 지표별 표본 게이트
+# ---------------------------------------------------------------------------
+
+
+def test_07_지표별_표본부족이면_그_지표만_null(client):
+    """착용자 총수는 충분해도, 개별 지표를 실제로 보고한 사람이 MIN_WEARERS 미만이면
+    그 지표 평균은 null 이어야 한다(1명 기여 → 개인값 역산 방지)."""
+    counselor = _register(client, "ga124f@test.com")
+    cls = _started_group_class(client, counselor)
+    pids = [_join_guest(client, cls["access_code"], f"착용자{i}") for i in range(3)]
+
+    # 3명 모두 focus_index 보고 / relaxation_index 는 2명만 → relaxation 은 mean null
+    _seed_full_windows(cls["id"], pids[0], count=140, focus_index=1.0, relaxation_index=0.2)
+    _seed_full_windows(cls["id"], pids[1], count=140, focus_index=0.6, relaxation_index=0.4)
+    _seed_full_windows(cls["id"], pids[2], count=140, focus_index=0.4)
+
+    db = _db()
+    try:
+        payload = ga.compute_group_average(cls["id"], db)
+    finally:
+        db.close()
+
+    assert payload["wearer_count"] == 3
+    m = payload["metrics"]
+    # focus: 3명 모두 보고 → 평균 산출 (payload 는 소수 2자리로 반올림)
+    assert m["focus_index"]["mean"] == pytest.approx(0.67, abs=1e-6)
+    # relaxation: 2명만 보고(2 < MIN_WEARERS=3) → null
+    assert m["relaxation_index"]["mean"] is None
+    # 미보고(heart_rate 등) 지표도 null
+    assert m["heart_rate"]["mean"] is None

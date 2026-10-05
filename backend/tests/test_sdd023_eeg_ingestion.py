@@ -315,3 +315,44 @@ def test_13_그룹세션_다참가자_동일초인덱스_공존(client):
     metrics = {m["display_name"]: m for m in res.json()["metrics"]}
     assert abs(metrics["게스트1"]["current_efficiency"] - 0.5) < 1e-6
     assert abs(metrics["게스트2"]["current_efficiency"] - 0.8) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# 6. EEG-QUALITY-NULL: null SQI 는 'valid' 로 승격하지 않는다
+# ---------------------------------------------------------------------------
+
+
+def test_14_signal_quality_null이면_quality_unknown(client):
+    """signal_quality 미보고(null) → 윈도우 quality 는 'unknown' (valid 로 세지 않음)."""
+    import uuid as _uuid
+
+    from app.core.database import SessionLocal
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    counselor = _register(client, "s023c14@test.com")
+    cls = _create_group_class(client, counselor["h"])
+    pid = _join_guest(client, cls["access_code"], "널SQI게스트")
+
+    # signal_quality 미지정 → None. relaxation 만 보고.
+    res = client.post(
+        f"/api/v1/sessions/{cls['id']}/features",
+        json={"participant_id": pid, "features": [_feature(0, relaxation_index=0.5)]},
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["saved"] == 1
+
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(EEGFeatureWindow)
+            .filter(
+                EEGFeatureWindow.session_id == _uuid.UUID(cls["id"]),
+                EEGFeatureWindow.participant_id == _uuid.UUID(pid),
+            )
+            .first()
+        )
+        assert row is not None
+        assert row.signal_quality is None
+        assert row.quality == "unknown"  # null → 'valid' 승격 금지
+    finally:
+        db.close()

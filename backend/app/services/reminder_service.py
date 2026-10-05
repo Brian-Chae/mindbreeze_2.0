@@ -37,6 +37,9 @@ MIN_OFFSET_MIN = 5
 MAX_OFFSET_MIN = 60 * 24 * 14
 # 한 클래스에 붙일 수 있는 시점 개수 상한(폭주 방지).
 MAX_OFFSETS = 5
+# ETA 태스크가 예정 시각보다 아주 약간 일찍 깨어나도 발송하도록 두는 허용 오차(초).
+# 이보다 이르면 "아직 발송 시점이 아님"으로 보고 건너뛴다(FUNC-01).
+REMINDER_DUE_TOLERANCE_SEC = 60
 
 # 사전 안내에 항상 포함하는 브라우저 안내 — LINK BAND/실시간 연결 제약.
 BROWSER_GUIDE = (
@@ -324,19 +327,33 @@ def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict
     if session.scheduled_at is None:
         return {"status": "skipped", "reason": "no_schedule"}
 
+    # FUNC-01: 이 시점(offset_min)이 지금 클래스에 유효하게 예약돼 있고 실제 도래했는지 검증한다.
+    # 일정/시점이 바뀐 뒤 남아 있던 옛 ETA 태스크가 엉뚱한 시각에 발송하는 것을 막는다.
+    try:
+        offset = int(offset_min)
+    except (TypeError, ValueError):
+        return {"status": "skipped", "reason": "invalid_offset"}
+    offsets = normalize_reminder_offsets(session.reminder_offsets)
+    if offset not in offsets:
+        return {"status": "skipped", "reason": "offset_not_scheduled"}
+    eta = _ensure_aware(session.scheduled_at) - timedelta(minutes=offset)
+    now = datetime.now(timezone.utc)
+    if eta > now + timedelta(seconds=REMINDER_DUE_TOLERANCE_SEC):
+        return {"status": "skipped", "reason": "not_due", "eta": eta.isoformat()}
+
     recipients = reminder_recipients(session, db)
     if not recipients:
         return {"status": "skipped", "reason": "no_recipients"}
 
     total_sent = 0
     for recipient in recipients:
-        total_sent += _dispatch_channels(session, offset_min, recipient, db)
+        total_sent += _dispatch_channels(session, offset, recipient, db)
     db.commit()
 
     result = {
         "status": "sent" if total_sent else "duplicate",
         "session_id": str(session.id),
-        "offset_min": offset_min,
+        "offset_min": offset,
         "recipients": len(recipients),
         "delivered": total_sent,
     }
@@ -357,12 +374,50 @@ def due_offsets(session: Session, now: datetime | None = None) -> list[int]:
     return due
 
 
+def _reminder_task_id(session_id: object, offset_min: int, scheduled_at: datetime) -> str:
+    """(세션, 시점, 일정) 별 결정적 Celery task_id.
+
+    일정(scheduled_at)을 포함하므로 일정이 바뀌면 새 task_id 가 되어 옛 ETA 와 충돌하지 않는다.
+    같은 조건 재예약은 같은 id 로 들어가며, 발송은 session_reminder_logs 중복 로그로 1회만 된다.
+    """
+    epoch = int(_ensure_aware(scheduled_at).timestamp())
+    return f"session-reminder:{session_id}:{offset_min}:{epoch}"
+
+
+def revoke_session_reminders(
+    session_id: object, offsets: list[int], scheduled_at: datetime | None
+) -> int:
+    """옛 ETA 태스크를 task_id 로 취소한다(베스트에포트).
+
+    - 일정이 바뀌면 옛 일정 기준 task_id 는 새 예약과 겹치지 않아 안전하게 취소된다.
+    - 이미 발송/실행된 task_id 취소는 무해한 no-op 이다.
+    - 브로커 장애·eager(워커 없음) 환경에서는 조용히 건너뛴다. 실제 무효화는
+      run_reminder 의 offset/ETA due 게이트가 보장한다(방어 로직).
+    """
+    if not offsets or scheduled_at is None:
+        return 0
+    from app.core.celery_app import celery_app
+
+    if celery_app.conf.task_always_eager:
+        return 0
+    revoked = 0
+    for offset in offsets:
+        task_id = _reminder_task_id(session_id, offset, scheduled_at)
+        try:
+            celery_app.control.revoke(task_id, terminate=False, reply=False, timeout=1.0)
+            revoked += 1
+        except Exception as e:  # noqa: BLE001 — 브로커 장애 시에도 예약 자체는 진행
+            logger.warning("[REMINDER] ETA 취소 실패 (task_id=%s): %s", task_id, e)
+    return revoked
+
+
 def schedule_session_reminders(session: Session, db: DBSession) -> list[dict]:
     """예약 클래스의 리마인더를 Celery ETA 태스크로 예약한다.
 
     - reminder_offsets 가 비었거나 일정이 없으면 아무것도 하지 않는다(리마인더 끔).
     - 이미 지난 시점(발송 시각 과거)은 예약하지 않는다 — 스윕이 누락분을 보정한다.
     - 브로커 장애로 큐 적재가 실패해도 클래스 생성/수정은 막지 않는다(스윕 폴백).
+    - (세션·시점·일정) 결정적 task_id 로 적재해, 일정 변경 시 옛 ETA 를 revoke 로 취소할 수 있다.
     """
     from app.tasks.reminder_task import send_session_reminder_task
 
@@ -378,7 +433,10 @@ def schedule_session_reminders(session: Session, db: DBSession) -> list[dict]:
             continue  # 이미 지난 시점 — 스윕 대상
         try:
             send_session_reminder_task.apply_async(
-                args=[str(session.id), offset], eta=eta, retry=False
+                args=[str(session.id), offset],
+                eta=eta,
+                task_id=_reminder_task_id(session.id, offset, scheduled),
+                retry=False,
             )
             scheduled_jobs.append({"offset_min": offset, "eta": eta.isoformat()})
         except Exception as e:  # noqa: BLE001

@@ -186,7 +186,10 @@ def test_리마인더_발송_인앱이메일_그리고_중복방지(client):
 
     host = _register(client, "rem-host5@test.com")
     member = _register(client, "rem-mem5@test.com", role="client")
-    created = _create_scheduled_class(client, host["h"], [member["id"]], offsets=[60])
+    # FUNC-01: ETA(시작 60분 전)가 이미 도래한 클래스에서만 발송된다 — 시작까지 30분 남은 예약.
+    created = _create_scheduled_class(
+        client, host["h"], [member["id"]], offsets=[60], minutes_from_now=30
+    )
 
     first = _run_reminder(created["id"], 60)
     assert first["status"] == "sent"
@@ -295,3 +298,99 @@ def test_일정_과거면_eta_예약하지_않는다(client):
     finally:
         db.close()
     assert jobs == []
+
+
+# ── 5. FUNC-01: 무효화 · 시점 검증 ───────────────────────────────
+
+
+def test_run_reminder_아직_도래하지_않은_시점은_skip(client):
+    """예정 시각(EtA)이 지나지 않은 offset 은 발송하지 않는다(옛 ETA 태스크 방어)."""
+    host = _register(client, "rem-host10@test.com")
+    member = _register(client, "rem-mem10@test.com", role="client")
+    # 시작 200분 뒤 → offset 60(EtA = 140분 뒤)은 아직 도래하지 않음
+    created = _create_scheduled_class(client, host["h"], [member["id"]], offsets=[60])
+
+    result = _run_reminder(created["id"], 60)
+    assert result["status"] == "skipped"
+    assert result["reason"] == "not_due"
+
+
+def test_run_reminder_예약에_없는_시점은_skip(client):
+    """현재 reminder_offsets 에 없는 시점은 발송하지 않는다(해제된 시점 방어)."""
+    host = _register(client, "rem-host11@test.com")
+    member = _register(client, "rem-mem11@test.com", role="client")
+    created = _create_scheduled_class(
+        client, host["h"], [member["id"]], offsets=[60], minutes_from_now=30
+    )
+
+    result = _run_reminder(created["id"], 1440)
+    assert result["status"] == "skipped"
+    assert result["reason"] == "offset_not_scheduled"
+
+
+def test_update_일정변경시_옛_ETA_revoke_후_재예약(client, monkeypatch):
+    """일정이 바뀌면 옛 일정 기준 ETA task_id 를 취소하고 새로 예약한다."""
+    host = _register(client, "rem-host12@test.com")
+    member = _register(client, "rem-mem12@test.com", role="client")
+    created = _create_scheduled_class(client, host["h"], [member["id"]], offsets=[1440])
+
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        reminder_service,
+        "revoke_session_reminders",
+        lambda session_id, offsets, scheduled_at: calls.append(
+            {"offsets": list(offsets), "scheduled_at": scheduled_at}
+        ),
+    )
+
+    import uuid
+
+    from app.models.session import Session
+
+    from datetime import datetime, timedelta, timezone
+
+    db = _db()
+    try:
+        session = db.query(Session).filter(Session.id == uuid.UUID(created["id"])).first()
+        assert session is not None
+    finally:
+        db.close()
+
+    new_scheduled = datetime.now(timezone.utc) + timedelta(hours=5)
+    with patch("app.tasks.reminder_task.send_session_reminder_task.apply_async"), \
+         patch("app.tasks.report_email_task.notification_email_task.apply_async"):
+        res = client.put(
+            f"/api/v1/sessions/{created['id']}",
+            json={"scheduled_at": new_scheduled.isoformat()},
+            headers=host["h"],
+        )
+    assert res.status_code == 200, res.text
+    assert len(calls) == 1
+    assert calls[0]["offsets"] == [1440]
+    assert calls[0]["scheduled_at"] is not None
+
+
+def test_update_시점제거시_제거된_시점만_revoke(client, monkeypatch):
+    """일정이 그대로면 제거된 시점의 옛 ETA 만 취소한다(남은 시점은 유지)."""
+    host = _register(client, "rem-host13@test.com")
+    member = _register(client, "rem-mem13@test.com", role="client")
+    created = _create_scheduled_class(
+        client, host["h"], [member["id"]], offsets=[1440, 60]
+    )
+
+    calls: list[list] = []
+    monkeypatch.setattr(
+        reminder_service,
+        "revoke_session_reminders",
+        lambda session_id, offsets, scheduled_at: calls.append(list(offsets)),
+    )
+
+    with patch("app.tasks.reminder_task.send_session_reminder_task.apply_async"), \
+         patch("app.tasks.report_email_task.notification_email_task.apply_async"):
+        res = client.put(
+            f"/api/v1/sessions/{created['id']}",
+            json={"reminder_offsets": [60]},
+            headers=host["h"],
+        )
+    assert res.status_code == 200, res.text
+    assert calls == [[1440]]

@@ -523,31 +523,22 @@ def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session)
             detail="해당 센터의 관리자만 해제할 수 있습니다",
         )
 
-    from app.services import membership_service, personal_office_service
+    from app.services import org_management_service
 
-    org = require_active_org(org_id, db)
-    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
-    membership = (
-        membership_service.get_membership(db, user.id, org_id) if user is not None else None
+    # MB2-ORG-01: 소속 해제도 역할 변경(change_counselor)과 동일한 보호 가드를 공유한다.
+    #  - 자기 자신(주 담당자) 제거 방지 → 409
+    #  - 마지막 활성 org_admin 제거 방지 → 409
+    #  - 진행/예정 세션·활성 내담자 연결 존재 시 해제 차단 → 409
+    #  - membership status='left' + User.org_id 미러 동기 + 감사(VerificationAudit) + 안내 알림
+    # role=None 은 소속 해제를 뜻한다.
+    org_management_service.change_counselor(
+        uuid.UUID(str(org_id)),
+        uuid.UUID(str(user_id)),
+        admin.id,
+        "상담사 소속 해제",
+        db,
+        role=None,
     )
-    if user is None or membership is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
-        )
-
-    # SDD-079: 소속 해제 = membership status='left' + left_at. User.org_id 미러는
-    # leave_membership 이 동기 갱신한다 (주 소속 해제 시 남은 소속 자동 승격).
-    membership_service.leave_membership(db, user, org_id)
-    # OrgAdmin이었다면 일반 상담사로 강등
-    if user.role == "org_admin":
-        user.role = "counselor"
-    # SDD-081: 남은 active 소속이 없으면 개인 상담소로 복귀 (무소속 차단) + 안내 알림
-    office = personal_office_service.fallback_to_personal_office(db, user)
-    if office is not None:
-        personal_office_service.create_org_removed_notification(db, user, org.name, office)
-    db.commit()
-    if office is not None:
-        personal_office_service.enqueue_org_removed_notice(user.id, org.name, office.name)
 
 
 # ---------------------------------------------------------------------------
