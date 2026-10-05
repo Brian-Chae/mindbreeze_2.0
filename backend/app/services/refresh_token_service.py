@@ -30,17 +30,24 @@ def _encode(user_id: str, jti: str, expire: datetime, remember: bool = True) -> 
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def issue_refresh_token(user_id: str, db: Session, remember: bool = True) -> str:
+def issue_refresh_token(
+    user_id: str, db: Session, remember: bool = True, *, commit: bool = True
+) -> str:
     """신규 Refresh 토큰 발급 + DB 기록.
 
     remember=False 로 발급된 토큰은 refresh 회전 시에도 세션 쿠키로 재발급된다.
+    DATA-03: commit=False 이면 flush 만 수행한다 — 가입 트랜잭션에 합류해
+    요청 단위 단일 커밋이 되도록 한다.
     """
     jti = uuid.uuid4().hex
     expire = _now() + timedelta(days=settings.refresh_token_expire_days)
     token = _encode(user_id, jti, expire, remember=remember)
 
     db.add(RefreshToken(jti=jti, user_id=uuid.UUID(user_id), expires_at=expire))
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     return token
 
 

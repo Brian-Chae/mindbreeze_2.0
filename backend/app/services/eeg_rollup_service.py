@@ -1,7 +1,8 @@
 """SDD-027 T1 — 60초 롤업 집계.
 
 EEGFeatureWindow(1초 원천)에서 60초 버킷을 온디맨드로 파생한다(물화 없음, P2 과제).
-버킷 인덱스는 `window_index // resolution_sec` 로 계산한다.
+버킷 인덱스는 `window_index // resolution_sec` 로 계산하되, EEG-01 에 따라 버킷 키에
+`play_group_id`(pause/resume 실행 세그먼트)를 포함해 세그먼트별 시간축을 분리한다.
 
 핵심 원칙(SDD-022/026 계승)
   1. null 보존 — 산출 불가/미수신 값은 None 이며 0 으로 치환하지 않는다. 평균은 비-null 샘플만 대상.
@@ -81,8 +82,14 @@ def _algorithm_version() -> int | None:
         return None
 
 
-def _bucket_payload(bucket_index: int, windows: list, resolution_sec: int) -> dict:
-    """단일 버킷(예: 60초) 집계 payload 를 만든다."""
+def _bucket_payload(bucket_index: int, windows: list, resolution_sec: int,
+                    play_group_id: str | None = None) -> dict:
+    """단일 버킷(예: 60초) 집계 payload 를 만든다.
+
+    EEG-01: 버킷은 실행 세그먼트(play_group_id)별 시간축으로 분리된다. pause/resume 로
+    window_index 가 0 부터 재시작하므로 start_sec/end_sec 은 해당 세그먼트 시작(0초) 기준
+    상대 시각이다 — 서로 다른 실행 구간을 같은 버킷으로 합산하지 않는다.
+    """
     sample_count = len(windows)
     # valid_count 는 품질 게이트(§A4.4)의 'valid' 윈도우 수 — coverage 산출 기준.
     valid_count = sum(1 for w in windows if w.quality == "valid")
@@ -96,6 +103,8 @@ def _bucket_payload(bucket_index: int, windows: list, resolution_sec: int) -> di
 
     return {
         "bucket_index": bucket_index,
+        # 세그먼트 식별자 — window_index 가 세그먼트마다 재시작하므로 버킷의 소속 구간을 명시한다.
+        "play_group_id": play_group_id,
         "start_sec": bucket_index * resolution_sec,
         "end_sec": (bucket_index + 1) * resolution_sec,
         "sample_count": sample_count,
@@ -139,14 +148,21 @@ def compute_rollup(
         end_index=end_index,
     )
 
-    # 버킷 그룹핑(window_index // resolution_sec)
-    grouped: dict[int, list] = {}
+    # 버킷 그룹핑 — EEG-01: play_group_id(pause/resume 실행 세그먼트)를 버킷 키에 포함한다.
+    # window_index 는 세그먼트마다 0 부터 재시작하므로 이를 키에서 빼면 서로 다른 실행 구간이
+    # 같은 버킷으로 합쳐져 그래프가 왜곡된다. (play_group_id, window_index//resolution) 로 분리한다.
+    grouped: dict[tuple[str | None, int], list] = {}
     for w in windows:
-        grouped.setdefault(w.window_index // resolution_sec, []).append(w)
+        play_group_id = getattr(w, "play_group_id", None)
+        grouped.setdefault(
+            (play_group_id, w.window_index // resolution_sec), []
+        ).append(w)
 
+    # 세그먼트(play_group_id) 우선, 그 안에서 버킷 인덱스 순으로 정렬한다. None(레거시)은
+    # 단일 세그먼트로 취급되어 기존 정렬·결과가 유지된다.
     buckets = [
-        _bucket_payload(bucket_index, grouped[bucket_index], resolution_sec)
-        for bucket_index in sorted(grouped)
+        _bucket_payload(key[1], grouped[key], resolution_sec, play_group_id=key[0])
+        for key in sorted(grouped, key=lambda k: (k[0] or "", k[1]))
     ]
 
     # 전체 평균 = 유효 샘플 수 가중(= 전 구간 비-null 샘플의 전역 평균).

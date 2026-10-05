@@ -16,7 +16,11 @@ _MAX_CODE_RETRY = code_service.MAX_CODE_RETRY
 
 
 def get_progress(user_id: str, db: Session) -> OnboardingProgress:
-    """현재 진행 상태 조회 — 없으면 생성."""
+    """현재 진행 상태 조회 — 없으면 생성.
+
+    DATA-03: 서비스 계층은 flush 만 수행한다. commit 은 요청(트랜잭션) 단위로
+    API 계층에서 1회만 호출해 가입 전체가 원자적으로 묶이도록 한다.
+    """
     progress = (
         db.query(OnboardingProgress)
         .filter(OnboardingProgress.user_id == user_id)
@@ -25,13 +29,15 @@ def get_progress(user_id: str, db: Session) -> OnboardingProgress:
     if progress is None:
         progress = OnboardingProgress(user_id=user_id, current_step=1, steps={}, completed=False)
         db.add(progress)
-        db.commit()
-        db.refresh(progress)
+        db.flush()
     return progress
 
 
 def save_step(user_id: str, step: int, data: dict, db: Session) -> OnboardingProgress:
-    """step_data 업데이트 + current_step 갱신."""
+    """step_data 업데이트 + current_step 갱신.
+
+    DATA-03: commit 하지 않고 flush 만 수행한다 — 호출부(요청)가 트랜잭션을 소유한다.
+    """
     progress = get_progress(user_id, db)
     steps = dict(progress.steps or {})
     steps[f"step{step}"] = {
@@ -42,19 +48,20 @@ def save_step(user_id: str, step: int, data: dict, db: Session) -> OnboardingPro
     if step > (progress.current_step or 1):
         progress.current_step = step
     db.add(progress)
-    db.commit()
-    db.refresh(progress)
+    db.flush()
     return progress
 
 
 def complete_onboarding(user_id: str, db: Session) -> OnboardingProgress:
-    """온보딩 완료 처리."""
+    """온보딩 완료 처리.
+
+    DATA-03: commit 하지 않고 flush 만 수행한다 — 호출부(요청)가 트랜잭션을 소유한다.
+    """
     progress = get_progress(user_id, db)
     progress.completed = True
     progress.completed_at = datetime.now(timezone.utc)
     db.add(progress)
-    db.commit()
-    db.refresh(progress)
+    db.flush()
     return progress
 
 

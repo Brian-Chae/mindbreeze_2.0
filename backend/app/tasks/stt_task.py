@@ -29,6 +29,20 @@ GEMINI_TIMEOUT = 300  # SDD-121: 4분+ 오디오도 처리 — 기존 180초 타
 GEMINI_SEGMENT_SECONDS = 90  # 이 이상이면 세그먼트 분할(단일 요청 크기/시간 초과 방지)
 
 
+def _split_existing_chunks(chunk_paths: list[str]) -> tuple[list[str], list[str]]:
+    """청크 경로를 존재/누락으로 분리한다.
+
+    STT-01: 일부 청크 파일이 유실돼도 전사 전체가 실패하지 않도록, 존재하는 청크만
+    병합 대상으로 삼고 누락분은 로그·결과에 표시한다(결손 구간 보존).
+    반환: (존재 경로, 누락 경로).
+    """
+    existing: list[str] = []
+    missing: list[str] = []
+    for path in chunk_paths:
+        (existing if os.path.exists(path) else missing).append(path)
+    return existing, missing
+
+
 def _call_whisper(chunk_paths: list[str]) -> dict:
     """OpenAI Whisper API — STT. 실제 API 호출."""
     if not OPENAI_API_KEY:
@@ -38,7 +52,13 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
 
     import requests
 
-    logger.info("[stt_task] Whisper API: %d chunks", len(chunk_paths))
+    # STT-01: 일부 청크가 누락돼도 전사 전체를 실패시키지 않는다 — 존재 청크만 병합.
+    existing, missing = _split_existing_chunks(chunk_paths)
+    if not existing:
+        raise RuntimeError("전사 가능한 청크 없음 — 전부 누락")
+    if missing:
+        logger.warning("[stt_task] [청크 누락] Whisper %d개 건너뜀: %s", len(missing), missing)
+    logger.info("[stt_task] Whisper API: %d chunks(누락 %d)", len(existing), len(missing))
 
     # 청크 파일들을 읽어서 하나의 파일로 병합 후 Whisper에 전송
     # Whisper는 multipart/form-data로 파일 업로드
@@ -48,7 +68,7 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
     merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
     merged_path = merged.name
     try:
-        for path in chunk_paths:
+        for path in existing:
             with open(path, "rb") as src:
                 shutil.copyfileobj(src, merged)
         merged.close()
@@ -81,7 +101,7 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
 
         raw_text = result.get("text", "")
         logger.info("[stt_task] Whisper success: %d segments, %d chars", len(segments), len(raw_text))
-        return {"segments": segments, "raw_text": raw_text}
+        return {"segments": segments, "raw_text": raw_text, "missing_chunks": len(missing)}
 
     except (requests.RequestException, KeyError) as exc:
         logger.exception("[stt_task] Whisper API failed: %s", exc)
@@ -90,14 +110,26 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         os.unlink(merged_path)
 
 
-def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[dict], str]:
-    """청크 배치 하나를 병합해 Gemini 로 전사한다. segments(상대 시각) + raw_text 반환."""
-    # 1) 청크 병합 → base64
+def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[dict], str, int]:
+    """청크 배치 하나를 병합해 Gemini 로 전사한다.
+
+    반환: (segments(배치 상대 시각), raw_text, 누락 청크 수).
+    STT-01: 누락 청크는 건너뛰고 존재하는 청크만 병합하므로 일부 결손이 있어도
+    배치 전사 자체는 실패하지 않는다.
+    """
+    # 0) 누락 청크 분리 — 하나라도 없으면 전사 전체가 실패하던 문제 방지(STT-01)
+    existing, missing = _split_existing_chunks(chunk_paths)
+    if not existing:
+        raise RuntimeError("전사 가능한 청크 없음 — 전부 누락")
+    if missing:
+        logger.warning("[stt_task] [청크 누락] %d개 건너뜀: %s", len(missing), missing)
+
+    # 1) 존재하는 청크만 병합 → base64
     merged = tempfile.NamedTemporaryFile(suffix=".webm", delete=False)
     merged_path = merged.name
     try:
         with open(merged_path, "wb") as out:
-            for path in chunk_paths:
+            for path in existing:
                 with open(path, "rb") as src:
                     shutil.copyfileobj(src, out)
         with open(merged_path, "rb") as f:
@@ -150,7 +182,7 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
 
     segments = _extract_segments_json(text)
     raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
-    return segments, raw_text
+    return segments, raw_text, len(missing)
 
 
 def _call_gemini_transcribe(
@@ -177,28 +209,40 @@ def _call_gemini_transcribe(
     if total_duration > GEMINI_SEGMENT_SECONDS and len(chunk_paths) > 1:
         n_segments = max(1, int(math.ceil(total_duration / GEMINI_SEGMENT_SECONDS)))
         per_segment = int(math.ceil(len(chunk_paths) / n_segments))
+        # 청크당 길이(초). 오프셋을 '추정 총길이 / n_segments' 로 누적하면 배치별 청크 수가
+        # 다를 때(마지막 배치 등) 실제 발화 시각과 어긋난다. STT-01: 실제 배치 청크 수에
+        # 청크당 길이를 곱해 누적함으로써 세그먼트 오프셋을 실제 구간 길이에 맞춘다.
+        per_chunk_sec = total_duration / len(chunk_paths) if len(chunk_paths) else 0.0
         segments: list[dict] = []
+        missing_total = 0
         offset = 0.0
-        batch_duration = total_duration / n_segments
         for i in range(0, len(chunk_paths), per_segment):
             batch = chunk_paths[i : i + per_segment]
-            batch_segments, _ = _transcribe_batch(batch, session_type)
+            # 배치 청크가 전부 누락이면 API 호출 없이 건너뛰고 시간축만 전진한다.
+            if not any(os.path.exists(p) for p in batch):
+                missing_total += len(batch)
+                logger.warning("[stt_task] [청크 누락] 배치 %d개 전부 누락 — 건너뜀", len(batch))
+                offset += len(batch) * per_chunk_sec
+                continue
+            batch_segments, _, batch_missing = _transcribe_batch(batch, session_type)
+            missing_total += batch_missing
             for s in batch_segments:
                 s = dict(s)
                 s["start"] = round(float(s.get("start", 0.0)) + offset, 2)
                 s["end"] = round(float(s.get("end", 0.0)) + offset, 2)
                 segments.append(s)
-            offset += batch_duration
+            # 다음 배치 오프셋 = 이번 배치의 실제 구간 길이(청크 수 × 청크당 길이)만큼 전진.
+            offset += len(batch) * per_chunk_sec
         raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
         logger.info(
-            "[stt_task] Gemini success(분할 %d): %d segments, %d chars",
-            n_segments, len(segments), len(raw_text),
+            "[stt_task] Gemini success(분할 %d): %d segments, %d chars, 누락 %d",
+            n_segments, len(segments), len(raw_text), missing_total,
         )
-        return {"segments": segments, "raw_text": raw_text}
+        return {"segments": segments, "raw_text": raw_text, "missing_chunks": missing_total}
 
-    segments, raw_text = _transcribe_batch(chunk_paths, session_type)
+    segments, raw_text, missing_chunks = _transcribe_batch(chunk_paths, session_type)
     logger.info("[stt_task] Gemini success: %d segments, %d chars", len(segments), len(raw_text))
-    return {"segments": segments, "raw_text": raw_text}
+    return {"segments": segments, "raw_text": raw_text, "missing_chunks": missing_chunks}
 
 
 def _extract_segments_json(text: str) -> list[dict]:
@@ -416,14 +460,28 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     segments = result.get("segments", [])
     confidence = _assess_transcript_confidence(segments, audio_duration_sec)
 
-    record.transcript = result.get("raw_text")
+    # STT-01: 누락 청크가 있으면 존재 청크만으로 전사하고 결손 구간을 결과에 표시한다.
+    missing_chunks = int(result.get("missing_chunks") or 0)
+    raw_text = result.get("raw_text")
+    if missing_chunks:
+        logger.warning(
+            "[stt_task] [청크 누락] %d개 — 존재 청크만으로 전사 완료: %s",
+            missing_chunks, session_id,
+        )
+        note = f"[청크 누락 {missing_chunks}개]"
+        raw_text = f"{raw_text}\n{note}" if raw_text else note
+
+    record.transcript = raw_text
     summary = dict(record.ai_summary or {})
     summary["segments"] = segments
     summary["transcript_confidence"] = confidence
+    if missing_chunks:
+        summary["stt_missing_chunks"] = missing_chunks
     record.ai_summary = summary
     db.commit()
     logger.info(
-        "[stt_task] STT complete: %d segments, confidence=%s", len(segments), confidence
+        "[stt_task] STT complete: %d segments, confidence=%s, 누락청크=%d",
+        len(segments), confidence, missing_chunks,
     )
     # SDD-095: STT(전사·화자분리) 완료 → 다음 스텝(AI 요약) 진행 표시
     _emit_report_progress(session_id, db)

@@ -48,9 +48,9 @@ def assign_counselor(
     - ended 링크가 있으면 active 로 재활성화한다.
     - 신규 생성 시 create_room=True 면 상담사-내담자 1:1 채팅방을 만든다.
 
-    참고: get_or_create_direct_room 은 내부에서 db.commit() 을 수행하므로,
-    이 함수를 호출하면 진행 중인 트랜잭션이 함께 커밋될 수 있다. 호출부는
-    링크 생성 직전까지의 변경(User/ClientProfile 등)이 flush 되어 있어야 한다.
+    참고: create_room=True 이면 get_or_create_direct_room 이 내부에서 commit 을 수행한다.
+    create_room=False(가입 트랜잭션에 합류하는 경로)에서는 링크만 flush 하고 커밋은
+    상위 요청이 단일 트랜잭션으로 처리한다(DATA-03).
 
     Args:
         client_id: 내담자 User.id (UUID 또는 str).
@@ -90,7 +90,8 @@ def assign_counselor(
             existing.status = "active"
             existing.ended_at = None
             db.add(existing)
-            db.commit()
+            # DATA-03: commit 하지 않고 flush 만 수행 — 호출부(요청)가 트랜잭션을 소유한다.
+            db.flush()
             db.refresh(existing)
         return existing
 
@@ -104,7 +105,8 @@ def assign_counselor(
         # 채팅방 생성 함수가 내부에서 commit 하므로 링크도 함께 영속화된다.
         get_or_create_direct_room(counselor_uuid, client_uuid, db)
     else:
-        db.commit()
+        # DATA-03: 채팅방을 만들지 않는 경로는 flush 만 — 상위 요청이 단일 커밋한다.
+        db.flush()
     db.refresh(link)
     return link
 
@@ -254,7 +256,7 @@ def create_invite(counselor_id: str, email: str, db: Session) -> dict:
 
 
 def link_invited_client(
-    invite_token: str, client: User, db: Session
+    invite_token: str, client: User, db: Session, *, create_room: bool = True
 ) -> ClientInvite | None:
     """초대 토큰으로 내담자를 초대한 상담사에 자동 연결한다.
 
@@ -271,6 +273,8 @@ def link_invited_client(
         invite_token: 초대 토큰(ClientInvite.token). 빈 값이면 아무 것도 하지 않음.
         client: 방금 가입한 내담자 User (이메일은 이미 검증된 상태).
         db: DB 세션.
+        create_room: 신규 링크일 때 1:1 채팅방을 즉시 생성할지 여부.
+            False 면 링크만 flush 하고 커밋/채팅방 생성은 호출부(가입 트랜잭션)가 처리한다(DATA-03).
 
     Returns:
         연결 성공(또는 동일 사용자의 idempotent 재수락) 시 ClientInvite.
@@ -297,7 +301,8 @@ def link_invited_client(
     if _invite_is_expired(invite):
         if invite.status != "expired":
             invite.status = "expired"
-            db.commit()
+            # DATA-03: 커밋은 요청 단위로 — 여기서는 flush 만.
+            db.flush()
         return None
 
     # 이메일 일치 검증 — 초대 대상 이메일과 가입 이메일이 같아야만 연결한다
@@ -322,9 +327,13 @@ def link_invited_client(
             status="active",
         )
         db.add(link)
-        # 수동 코드 매칭(onboarding.client_step4_match)과 동일하게
-        # 상담사-내담자 1:1 채팅방을 자동 생성한다
-        get_or_create_direct_room(counselor_id, client.id, db)
+        if create_room:
+            # 수동 코드 매칭(onboarding.client_step4_match)과 동일하게
+            # 상담사-내담자 1:1 채팅방을 자동 생성한다
+            get_or_create_direct_room(counselor_id, client.id, db)
+        else:
+            # DATA-03: 가입 트랜잭션에 합류하는 경로 — 링크만 flush, 채팅방은 커밋 이후 생성.
+            db.flush()
 
     # single-use: 초대 수락 처리
     invite.status = "accepted"
@@ -345,7 +354,8 @@ def link_invited_client(
         db,
     )
 
-    db.commit()
+    # DATA-03: 커밋은 요청 단위로 통일 — 가입 트랜잭션이 함께 커밋하도록 flush 만 한다.
+    db.flush()
     return invite
 
 

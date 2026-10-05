@@ -745,8 +745,11 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
         s.started_at = _now()
     elif action == "end":
         s.ended_at = _now()
-    # SDD-026: 상태 계약 버전 증가 — 클라이언트의 중복/역순 이벤트 판정 기준
-    s.state_version = (s.state_version or 0) + 1
+    # SDD-026: 상태 계약 버전 — 전이마다 정확히 +1 증가(계약: SDD-026).
+    # STATE-01: 인메모리 선반영(s.state_version += 1) 후 CAS values 에서 다시 +1 을
+    # 계산해 DB 에 +2 가 반영되던 문제를 제거한다. 원본 값을 스냅샷해 1회만 증가시킨다.
+    # (인메모리 속성을 건드리지 않으므로 commit flush 가 CAS 결과를 덮어쓰지 않는다.)
+    prev_state_version = s.state_version or 0
 
     # SDD-101 B1: CAS(compare-and-set) — read-modify-write 대신 조건부 UPDATE로
     # 동시 전이 경합(이중 finalize·이벤트 발행)을 원자적으로 막는다.
@@ -754,7 +757,7 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
     now = _now()
     values = {
         "status": target,
-        "state_version": (s.state_version or 0) + 1,
+        "state_version": prev_state_version + 1,
     }
     if action == "open":
         values["opened_at"] = case((Session.opened_at.is_(None), now), else_=Session.opened_at)

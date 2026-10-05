@@ -73,21 +73,47 @@ def build_narrative_signature(summary: dict) -> str | None:
 def build_metrics_summary(windows: list, session_status: str) -> dict:
     """시간 범위의 중간을 기준으로 나누며, 지표별 결측 제거는 분할 후 수행한다.
 
+    EEG-01: window_index 는 pause/resume 실행 세그먼트(play_group_id)마다 0 부터
+    재시작하므로 세그먼트별로 독립된 시간축에서 중간점을 구해 전후를 나눈다. 세그먼트를
+    합쳐 window_index 로만 분할하면 서로 다른 실행 구간이 섞여 전후 방향이 왜곡된다.
+
     몸 지표는 EEG 품질과 독립적이다. 여러 참가자를 한 사람의 전후 변화로
     해석하지 않도록 혼합 집계에서는 방향을 산출하지 않는다.
     """
-    midpoint = ((min(w.window_index for w in windows) + max(w.window_index for w in windows)) / 2
-                if windows else 0)
     mixed = len({getattr(w, "participant_id", None) for w in windows}) > 1
-    halves = ([w for w in windows if w.window_index < midpoint],
-              [w for w in windows if w.window_index >= midpoint])
+
+    # 실행 세그먼트(play_group_id)별로 분리한다 — None(레거시)은 단일 세그먼트로 취급.
+    segments: dict[str | None, list] = {}
+    for w in windows:
+        segments.setdefault(getattr(w, "play_group_id", None), []).append(w)
+
+    # 실행 세그먼트(play_group_id)별 (early, late) 윈도우 — 세그먼트마다 독립 시간축의 중간점.
+    # None(레거시)은 단일 세그먼트로 취급되어 기존 결과가 유지된다.
+    segment_halves: list[tuple[list, list]] = []
+    for seg_windows in segments.values():
+        midpoint = ((min(w.window_index for w in seg_windows)
+                     + max(w.window_index for w in seg_windows)) / 2
+                    if seg_windows else 0)
+        segment_halves.append((
+            [w for w in seg_windows if w.window_index < midpoint],
+            [w for w in seg_windows if w.window_index >= midpoint],
+        ))
+
+    def _half_mean(half: list, attr: str, group: str):
+        return mean([
+            getattr(w, attr, None) for w in half
+            if not mixed and (group == "body" or (
+                session_status in ("valid", "degraded")
+                and w.quality in ("valid", "degraded")))
+        ])
+
     result = {"session_status": session_status, "body": {}, "mind": {}}
     for group, mapping in METRICS.items():
         for key, (attr, threshold) in mapping.items():
-            early, late = [mean([getattr(w, attr, None) for w in half
-                                if not mixed and (group == "body" or (
-                                    session_status in ("valid", "degraded")
-                                    and w.quality in ("valid", "degraded")))]) for half in halves]
+            # 세그먼트별로 평균을 낸 뒤 세그먼트 평균을 동일 가중으로 합친다. 세그먼트를
+            # 합쳐 원천을 평균하면 실행 구간 간 표본 수 차이가 전후 방향을 왜곡한다.
+            early = mean([_half_mean(eh, attr, group) for eh, _ in segment_halves])
+            late = mean([_half_mean(lh, attr, group) for _, lh in segment_halves])
             delta = late - early if early is not None and late is not None else None
             pct = delta / abs(early) * 100 if delta is not None and early != 0 else None
             direction = None

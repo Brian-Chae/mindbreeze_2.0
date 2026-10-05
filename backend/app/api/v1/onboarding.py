@@ -105,6 +105,8 @@ def get_my_progress(
 ):
     """현재 온보딩 진행 상태 조회."""
     progress = onboarding_service.get_progress(_uid(current_user), db)
+    # DATA-03: 서비스가 flush 만 하므로 조회 시점에 생성된 진행 레코드는 여기서 커밋한다.
+    db.commit()
     return _progress_response(progress)
 
 
@@ -129,6 +131,8 @@ def counselor_step1(
         user.phone = req.phone
     db.add(user)
     progress = onboarding_service.save_step(user_id, 1, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -147,6 +151,8 @@ def counselor_step2(
     profile.specialties = list(req.specialties or [])
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 2, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -162,6 +168,8 @@ def counselor_step3(
     profile.affiliation_type = req.affiliation_type
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 3, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -178,6 +186,8 @@ def counselor_step4(
     profile.bio = req.bio
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 4, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -204,6 +214,8 @@ def counselor_complete(
     db.add(user)
 
     onboarding_service.complete_onboarding(user_id, db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
 
     return CounselorCompleteResponse(
         counselor_code=profile.counselor_code,
@@ -232,6 +244,8 @@ def client_step1(
         user.phone = req.phone
     db.add(user)
     progress = onboarding_service.save_step(user_id, 1, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -250,6 +264,8 @@ def client_step2(
     profile.interests = list(req.interests or [])
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 2, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -266,6 +282,8 @@ def client_step3(
     profile.bio = req.bio
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 3, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -324,6 +342,8 @@ def client_step4_match(
         {"counselor_code": req.counselor_code, "counselor_id": str(counselor.id)},
         db,
     )
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
 
     return ClientMatchResponse(
         matched_counselor=MatchedCounselor(
@@ -352,4 +372,6 @@ def client_complete(
                 detail=f"{required} 단계를 완료해야 합니다",
             )
     progress = onboarding_service.complete_onboarding(user_id, db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)

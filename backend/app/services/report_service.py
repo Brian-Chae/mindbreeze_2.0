@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
@@ -199,6 +200,38 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
     return s
 
 
+def _get_or_create_report(db: DBSession, *, filters: dict, defaults: dict) -> Report:
+    """DATA-01: 리포트 조회 후 없으면 생성하는 멱등 헬퍼.
+
+    동시 생성 경합으로 Report 부분 유일 인덱스(uq_report_session_participant_type /
+    uq_report_session_type)를 위반하면 IntegrityError 를 흡수하고 먼저 커밋된 기존
+    행을 재사용한다. 생성 flush 는 SAVEPOINT(begin_nested)로 격리해 바깥 트랜잭션을
+    오염시키지 않는다.
+    """
+    def _find() -> Report | None:
+        query = db.query(Report)
+        for column, value in filters.items():
+            query = query.filter(getattr(Report, column) == value)
+        return query.first()
+
+    report = _find()
+    if report is not None:
+        return report
+
+    report = Report(**defaults)
+    try:
+        with db.begin_nested():
+            db.add(report)
+            db.flush()
+        return report
+    except IntegrityError:
+        # 다른 트랜잭션이 먼저 생성/커밋한 경우 — 기존 행을 재사용한다.
+        existing = _find()
+        if existing is None:
+            raise
+        return existing
+
+
 def generate_report(session_id: str, host_id: str, report_type: str, db: DBSession) -> dict:
     if report_type not in ("counselor", "client"):
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
@@ -223,25 +256,19 @@ def generate_report(session_id: str, host_id: str, report_type: str, db: DBSessi
         else:
             owner_uuid = s.host_id
 
-    existing = (
-        db.query(Report)
-        .filter(Report.session_id == s.id, Report.type == report_type)
-        .first()
-    )
-    if existing:
-        report = existing
-    else:
-        report = Report(
-            session_id=s.id,
-            user_id=owner_uuid,
-            participant_id=owner_participant_id,
-            type=report_type,
+    report = _get_or_create_report(
+        db,
+        filters={"session_id": s.id, "type": report_type},
+        defaults={
+            "session_id": s.id,
+            "user_id": owner_uuid,
+            "participant_id": owner_participant_id,
+            "type": report_type,
             # SDD-027: 상태머신 시작점 — 분석 대기(pending_analysis)
-            status="pending_analysis",
-            content={"status": "generating"},
-        )
-        db.add(report)
-        db.flush()
+            "status": "pending_analysis",
+            "content": {"status": "generating"},
+        },
+    )
 
     report = generate_report_inline(str(report.id), db) or report
     host = db.query(User).filter(User.id == s.host_id).first()
@@ -285,26 +312,22 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
 
     results: list[dict] = []
     for participant in participants:
-        report = (
-            db.query(Report)
-            .filter(
-                Report.session_id == s.id,
-                Report.participant_id == participant.id,
-                Report.type == "client",
-            )
-            .first()
+        report = _get_or_create_report(
+            db,
+            filters={
+                "session_id": s.id,
+                "participant_id": participant.id,
+                "type": "client",
+            },
+            defaults={
+                "session_id": s.id,
+                "user_id": participant.user_id,
+                "participant_id": participant.id,
+                "type": "client",
+                "status": "pending_analysis",
+                "content": {"status": "generating"},
+            },
         )
-        if not report:
-            report = Report(
-                session_id=s.id,
-                user_id=participant.user_id,
-                participant_id=participant.id,
-                type="client",
-                status="pending_analysis",
-                content={"status": "generating"},
-            )
-            db.add(report)
-            db.flush()
         # 이미 승인 게이트를 지난 리포트(pending_review/completed)는 재생성하지 않는다 — 멱등.
         # 단, STT 복구 등으로 생성 상태가 partial(ai_record 미가용)인 경우엔 전사·요약을 반영해 갱신한다.
         # (그룹 세션 client 리포트는 다른 참가자 노출 방지를 위해 ai_record 를 의도적으로 제외하므로 예외.)

@@ -22,6 +22,7 @@ from app.schemas.org import (
     JoinRequestUpdate,
     MembershipInviteAcceptRequest,
     MembershipInviteAcceptResponse,
+    OrganizationCounselorPatch,
     OrganizationPublicResponse,
     OrganizationSearchResult,
     OrgJoinRequestDetail,
@@ -291,14 +292,19 @@ async def resend_counselor_invite(
 async def update_counselor(
     org_id: str,
     user_id: str,
-    body: dict,
+    req: OrganizationCounselorPatch,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 권한 조정 — OrgAdmin 전용. body: {"role": "counselor"|"org_admin"}"""
-    new_role = body.get("role", "")
+    """상담사 권한 조정 — OrgAdmin 전용 (AUTHZ-03).
+
+    body: {"role": "counselor"|"org_admin", "reason": "..."} — 사유 필수.
+    org_management_service.change_counselor 로 위임해 마지막 활성 기관 관리자
+    강등을 방지하고 VerificationAudit 를 기록한다.
+    """
+    _require_org_admin(current_user, org_id)
     user = org_service.update_counselor_role(
-        org_id, user_id, new_role, current_user["id"], db
+        org_id, user_id, req.role, current_user["id"], db, reason=req.reason
     )
     return _counselor_to_response(user)
 

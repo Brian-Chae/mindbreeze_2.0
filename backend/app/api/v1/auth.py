@@ -297,8 +297,13 @@ def _create_user_with_role(
     consents: ConsentRequest,
     db: Session,
     remember_me: bool = True,
+    commit: bool = True,
 ) -> tuple[User, str, str]:
-    """공통 가입 처리 — User + Consent 3종 생성, 토큰 발급."""
+    """공통 가입 처리 — User + Consent 3종 생성, 토큰 발급.
+
+    DATA-03: commit=False 이면 User/Consent/RefreshToken 을 flush 만 하고,
+    호출부(register_client)가 나머지 가입 단계와 함께 단일 트랜잭션으로 커밋한다.
+    """
     if not email_verify_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -334,12 +339,16 @@ def _create_user_with_role(
     ):
         db.add(Consent(user_id=user.id, type=ctype, agreed=agreed))
 
-    db.commit()
-    db.refresh(user)
+    if commit:
+        db.commit()
+        db.refresh(user)
+    else:
+        # DATA-03: 커밋을 상위 요청으로 위임 — 여기서는 flush 만.
+        db.flush()
 
     access_token = create_access_token(subject=str(user.id))
     refresh_token = refresh_token_service.issue_refresh_token(
-        str(user.id), db, remember=remember_me
+        str(user.id), db, remember=remember_me, commit=commit
     )
     return user, access_token, refresh_token
 
@@ -402,6 +411,8 @@ async def register_client(
             req.counselor_code, db
         )
 
+    # DATA-03: User·Consent·RefreshToken 생성도 커밋하지 않고 flush 로만 참여시켜
+    # 가입 전체를 단일 트랜잭션으로 묶는다(중간 실패 시 부분 상태 방지).
     user, access, refresh = _create_user_with_role(
         role="client",
         email_verify_token=req.email_verify_token,
@@ -411,6 +422,7 @@ async def register_client(
         consents=req.consents,
         db=db,
         remember_me=req.remember_me,
+        commit=False,
     )
 
     # SDD-073: 가입 정보 저장 — User.phone + ClientProfile(gender/birth_date)
@@ -422,9 +434,8 @@ async def register_client(
         profile.gender = req.gender
         profile.birth_date = birth
         db.add(profile)
-    db.commit()
 
-    # 온보딩 중복 입력 제거 — 가입에서 받은 값으로 step1·2를 미리 마킹한다
+    # 온보딩 중복 입력 제거 — 가입에서 받은 값으로 step1·2를 미리 마킹한다 (flush)
     onboarding_service.save_step(str(user.id), 1, {"name": user.name, "phone": phone}, db)
     if req.gender or birth:
         onboarding_service.save_step(
@@ -434,19 +445,22 @@ async def register_client(
             db,
         )
 
-    # 초대 토큰이 있으면 상담사 자동 연결.
+    # 초대 토큰이 있으면 상담사 자동 연결(링크만 flush, 채팅방은 커밋 이후 생성).
     # 이메일 불일치/만료/무효 토큰이면 조용히 스킵되고(가입은 성공),
     # 내담자는 온보딩에서 상담사 코드를 수동 입력하는 폴백을 따른다.
+    room_counselor_id = None
     if req.invite_token:
-        client_service.link_invited_client(req.invite_token, user, db)
-        # 새로 생성된 링크가 응답 관계에 반영되도록 사용자 재조회
-        db.refresh(user)
+        invite = client_service.link_invited_client(
+            req.invite_token, user, db, create_room=False
+        )
+        if invite is not None:
+            room_counselor_id = invite.counselor_id
     elif matched_counselor is not None:
-        # 최종 가입 시 코드 재검증 후 연결 (중복 방지·재활성화·채팅방 생성 공용 규칙 재사용)
+        # 최종 가입 시 코드 재검증 후 연결 (중복 방지·재활성화 공용 규칙 재사용)
         matched_counselor, matched_profile, _ = signup_application_service.validate_counselor_code(
             req.counselor_code, db
         )
-        client_service.assign_counselor(user.id, matched_counselor.id, db)
+        client_service.assign_counselor(user.id, matched_counselor.id, db, create_room=False)
         onboarding_service.save_step(
             str(user.id),
             4,
@@ -456,7 +470,7 @@ async def register_client(
             },
             db,
         )
-        db.refresh(user)
+        room_counselor_id = matched_counselor.id
 
     # 온보딩 재개 지점 보정 — save_step 은 current_step 을 최대값으로 올리므로
     # (예: 가입에서 step1·2·4 저장 시 4), 첫 미완료 단계(step3 프로필)로 되돌려
@@ -467,7 +481,16 @@ async def register_client(
         if f"step{n}" not in saved_steps:
             progress.current_step = n
             break
+
+    # DATA-03: 가입 전체를 단일 트랜잭션으로 커밋 — 여기까지 실패하면 전부 롤백된다.
     db.commit()
+    db.refresh(user)
+
+    # 커밋 이후 외부 부수효과 분리 — 1:1 채팅방 생성(실패해도 가입은 유지).
+    if room_counselor_id is not None:
+        from app.services.chat_service import get_or_create_direct_room
+
+        get_or_create_direct_room(room_counselor_id, user.id, db)
 
     response = JSONResponse(
         content=LoginResponse(
@@ -837,13 +860,27 @@ async def update_user_me(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """현재 사용자의 기본정보(name, phone, gender, birth_date)를 업데이트하고 온보딩 완료 처리합니다."""
+    """현재 사용자의 기본정보(name, phone, gender, birth_date)를 업데이트합니다.
+
+    AUTHZ-01: 이 엔드포인트는 온보딩을 완료 처리하지 않는다. 온보딩 완료는
+    필수 단계 검증을 수행하는 /onboarding/client/complete · /onboarding/counselor/complete
+    전용 엔드포인트로만 가능하다(게이트 우회 차단).
+    또한 성별·생년월일(내담자 프로필)은 client 역할만 수정할 수 있다.
+    """
     user_id = uuid.UUID(current_user["id"])
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="사용자를 찾을 수 없습니다",
+        )
+
+    # AUTHZ-01: 역할별 허용 필드 게이트 — 성별/생년월일은 내담자 전용.
+    # 상담사·기관 관리자의 인적사항은 /auth/counselors/me/profile 경로로만 수정한다.
+    if (req.gender is not None or req.birth_date is not None) and user.role != "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="성별·생년월일은 내담자만 수정할 수 있습니다",
         )
 
     # User 필드 업데이트
@@ -855,7 +892,7 @@ async def update_user_me(
     if req.phone is not None:
         user.phone = req.phone
 
-    # ClientProfile 필드 업데이트 (gender, birth_date)
+    # ClientProfile 필드 업데이트 (gender, birth_date) — client 역할만 도달한다
     if req.gender is not None or req.birth_date is not None:
         profile = db.query(ClientProfile).filter(ClientProfile.user_id == user_id).first()
         if profile is None:
@@ -874,9 +911,7 @@ async def update_user_me(
                     detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
                 )
 
-    # 온보딩 완료 처리
-    onboarding_service.complete_onboarding(str(user_id), db)
-
+    # AUTHZ-01: 온보딩 완료 플래그는 여기서 세우지 않는다 (전용 완료 엔드포인트로만 처리).
     db.commit()
     db.refresh(user)
 

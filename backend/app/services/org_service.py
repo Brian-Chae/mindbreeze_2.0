@@ -479,9 +479,14 @@ def get_counselor_activity(org_id: str, user_id: str, db: Session, *, limit: int
 
 
 def update_counselor_role(
-    org_id: str, user_id: str, new_role: str, admin_user_id: str, db: Session
+    org_id: str, user_id: str, new_role: str, admin_user_id: str, db: Session,
+    *, reason: str | None = None,
 ) -> User:
-    """상담사 권한 조정 (counselor ↔ org_admin)."""
+    """상담사 권한 조정 (counselor ↔ org_admin).
+
+    AUTHZ-03: 마지막 활성 기관 관리자 강등 방지 가드 + VerificationAudit 기록을 위해
+    org_management_service.change_counselor 로 통일한다. 기존의 org_admin 검증은 유지한다.
+    """
     if new_role not in ("counselor", "org_admin"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -495,28 +500,17 @@ def update_counselor_role(
             detail="해당 센터의 관리자만 변경할 수 있습니다",
         )
 
-    from app.services import membership_service
+    from app.services import org_management_service
 
-    require_active_org(org_id, db)
-    user = db.query(User).filter(User.id == uuid.UUID(user_id)).first()
-    membership = (
-        membership_service.get_membership(db, user.id, org_id) if user is not None else None
+    # 마지막 활성 org_admin 강등 가드·감사(VerificationAudit)·역할 알림을 공용 로직에 위임한다.
+    return org_management_service.change_counselor(
+        uuid.UUID(str(org_id)),
+        uuid.UUID(str(user_id)),
+        admin.id,
+        reason or "상담사 권한 조정",
+        db,
+        role=new_role,
     )
-    if user is None or membership is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="대상 상담사를 찾을 수 없습니다"
-        )
-
-    changed = user.role != new_role or membership.role != new_role
-    user.role = new_role
-    membership.role = new_role
-    db.commit()
-    db.refresh(user)
-    if changed:
-        from app.services.org_management_service import notify_role_changed
-
-        notify_role_changed(user, uuid.UUID(org_id), admin.id, db)
-    return user
 
 
 def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session) -> None:

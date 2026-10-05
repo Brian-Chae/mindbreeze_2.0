@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func
+from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -164,6 +164,33 @@ class EEGRawChunk(Base):
 
 class Report(Base):
     __tablename__ = "reports"
+    # DATA-01: 리포트 중복 생성을 DB 레벨에서 차단하는 부분 유일 인덱스.
+    # 종료 파이프라인(generate_reports_for_session)·재생성 API·재시도 아웃박스가
+    # 경합해도 (세션, 참여자, 유형) 당 1건만 존재하도록 보장한다.
+    # - (session_id, participant_id, type): 참여자별 client 리포트 및 participant 가
+    #   지정된 counselor 리포트(SDD-065).
+    # - (session_id, type) WHERE participant_id IS NULL: 참여자 없는 리포트.
+    #   PostgreSQL/SQLite 모두 NULL 은 유일성 비교에서 서로 다른 값으로 취급되므로
+    #   부분 인덱스를 별도로 둔다(방언별 where 로 DDL 호환).
+    __table_args__ = (
+        Index(
+            "uq_report_session_participant_type",
+            "session_id",
+            "participant_id",
+            "type",
+            unique=True,
+            postgresql_where=text("participant_id IS NOT NULL"),
+            sqlite_where=text("participant_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_report_session_type",
+            "session_id",
+            "type",
+            unique=True,
+            postgresql_where=text("participant_id IS NULL"),
+            sqlite_where=text("participant_id IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
