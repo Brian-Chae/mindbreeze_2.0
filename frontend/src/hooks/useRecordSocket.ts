@@ -56,7 +56,14 @@ export function useRecordSocket(): UseRecordSocketReturn {
       transports: ['websocket', 'polling'],
     });
 
-    socket.on('connect', () => setIsConnected(true));
+    socket.on('connect', () => {
+      setIsConnected(true);
+      // SDD-137: 재연결 시 기존 구독 방을 자동 재구독 — 끊겼다 복구되면 기록 갱신이 멈추지 않도록
+      const sid = sessionRef.current;
+      if (sid) {
+        socket.emit('subscribe', { session_id: sid });
+      }
+    });
     socket.on('disconnect', () => setIsConnected(false));
 
     socket.on('record_status', (event: RecordStatusEvent) => {

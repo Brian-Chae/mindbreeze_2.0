@@ -223,11 +223,12 @@ def merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
                     for fut in as_completed(futures):
                         idx = futures[fut]
                         try:
-                            data = fut.result()
+                            data = fut.result() or b''
                         except Exception:  # noqa: BLE001 — 단일 청크 실패는 건너뛴다
-                            data = None
-                        if data:
-                            pending[idx] = data
+                            # SDD-137: 실패 청크도 b'' 로 표시해 순차 flush 가 멈추지 않게 한다
+                            # (앞선 청크 하나가 실패해도 뒤 청크들은 계속 기록)
+                            data = b''
+                        pending[idx] = data
                         while next_idx in pending:
                             d = pending.pop(next_idx)
                             if d:

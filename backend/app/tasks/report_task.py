@@ -381,8 +381,8 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     report.status = "pending_analysis"
     report.generation_error = None
     # SDD-095 후속(워치독): processing 진입 시각 기록 — beat 스윕이 먹통을 감지하는 기준
-    if report.generation_started_at is None:
-        report.generation_started_at = datetime.now(timezone.utc)
+    # SDD-137: 재생성 시에도 시작 시각을 리셋 — 이전 시각이 남아 워치독이 즉시 '먹통'으로 오판하는 것을 방지.
+    report.generation_started_at = datetime.now(timezone.utc)
     db.commit()
 
     try:

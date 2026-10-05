@@ -1119,7 +1119,8 @@ export default function ClassPlayerPage() {
 
   const handleStop = async () => {
     if (!id) return;
-    recorder.stop();
+    // SDD-137: 오디오 마지막 청크 flush 를 기다린 뒤 서버 stop 호출
+    await recorder.stop();
     try {
       await stopAudio(id);
     } catch (e) {

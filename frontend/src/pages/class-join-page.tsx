@@ -354,6 +354,7 @@ const ClassJoinPage: React.FC = () => {
 
     const trimmedGuestName = guestName.trim();
     if (!isLoggedIn && !trimmedGuestName) {
+      joinStartedRef.current = false; // SDD-137: 이름 미입력 early-return 시 잠금 해제 — 영구 차단 방지
       setError('게스트 참여를 위해 이름을 입력해 주세요.');
       return;
     }
@@ -422,6 +423,8 @@ const ClassJoinPage: React.FC = () => {
   }, [step, session?.id, session?.status, isLoggedIn]);
 
   const resetJoin = (): void => {
+    // SDD-137: 참여 잠금 해제 — 다음 참여가 영구 차단되지 않도록
+    joinStartedRef.current = false;
     // 명시적 종료 시 전역 BLE 연결 정리 (unmount에선 끊지 않으므로 여기서 명시적으로 해제)
     void bluetoothService.disconnect().catch(() => undefined);
     setStep('code');

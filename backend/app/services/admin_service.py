@@ -574,9 +574,9 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
 
     uid = str(user_id)
 
-    # 1. 기관의 primary_admin_id 참조 해제 (SET NULL)
+    # 1. 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
     db.execute(
-        text("UPDATE organizations SET primary_admin_id = NULL WHERE primary_admin_id = :id"),
+        text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
         {"id": uid},
     )
 
@@ -604,6 +604,9 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
         ("client_profiles", ["user_id"]),
         ("qualifications", ["user_id"]),
         ("careers", ["user_id"]),
+        # SDD-137: 소속·가입신청 정리 누락 보완
+        ("user_org_memberships", ["user_id"]),
+        ("signup_applications", ["user_id", "reviewed_by"]),
     ]
     for table, cols in child_tables:
         for col in cols:
