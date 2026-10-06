@@ -41,10 +41,8 @@ jobs:
           npx tsc --noEmit
 
       - name: Lint
-        # 기존 코드에 lint 위반이 ~200건 쌓여 있어 게이트를 막고 있음.
-        # React Compiler 규칙은 비활성했고, 나머지(@typescript-eslint 등)는
-        # 점진 정리 전까지 어드바이저리(비차단)로 전환.
-        continue-on-error: true
+        # lint 부채 정리 완료(0건) — 차단 게이트로 승격.
+        # exhaustive-deps·only-export-components도 error로 올렸다.
         run: |
           cd frontend
           npx eslint src/
