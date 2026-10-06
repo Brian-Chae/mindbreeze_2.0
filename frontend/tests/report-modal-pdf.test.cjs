@@ -28,7 +28,7 @@ for (const savedEmail of ['saved@example.com', null]) test(`하단 액션과 본
    const url=route.request().url();
    if(url.endsWith('/pdf')) return route.fulfill({contentType:'application/pdf',body:'%PDF-1.7\nserver-pdf'});
    if(url.includes('/reports/pdf-test')){
-    if(url.endsWith('/resend-email')) { deliveries++; assert.equal(route.request().postDataJSON().email,'new@example.com'); }
+    if(url.endsWith('/resend-email')) { deliveries++; assert.equal(route.request().postDataJSON().email,'new@example.com'); return route.fulfill({json:{success:true, sent:true, message:'메일을 발송했습니다'}}); }
     else if(route.request().method()==='POST'){approvals++; report.status='completed'; report.sent_at='2026-09-16';}
     return route.fulfill({json:report});
    }

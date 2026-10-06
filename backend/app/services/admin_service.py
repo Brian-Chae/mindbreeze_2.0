@@ -287,6 +287,19 @@ def _action_to_status(action: str) -> str:
     }[action]
 
 
+# ADM-STATE-01: 검토 상태머신 — 승인/반려로 종결된 항목은 재검토 액션으로 되돌릴 수 없다.
+_REVIEW_TERMINAL_STATUSES = {"approved", "rejected"}
+
+
+def _ensure_review_action_allowed(current_status: str) -> None:
+    """이미 승인/반려(종결)된 검토 항목에 대한 재검토 액션을 409 로 차단한다."""
+    if current_status in _REVIEW_TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 처리된 검토 항목입니다",
+        )
+
+
 def process_review(
     target_type: str,
     target_id: uuid.UUID,
@@ -307,6 +320,7 @@ def process_review(
         cred = db.query(Credential).filter(Credential.id == target_id).first()
         if cred is None:
             raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
+        _ensure_review_action_allowed(cred.status)
         snapshot = cred.ai_verdict if isinstance(cred.ai_verdict, dict) else None
         previous_status = cred.status
         cred.status = new_status
@@ -341,6 +355,7 @@ def process_review(
     doc = db.query(OrgDocument).filter(OrgDocument.id == target_id).first()
     if doc is None:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    _ensure_review_action_allowed(doc.status)
     snapshot = doc.ai_verdict if isinstance(doc.ai_verdict, dict) else None
     doc.status = new_status
     db.add(doc)
@@ -707,6 +722,27 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
     )
 
     # 2. users.id 를 참조하는 자식 테이블 정리
+    #   AUTH4-06: 세션을 삭제하기 전에 세션 자식 레코드를 먼저 정리한다.
+    #   session_records/reports/eeg_records/eeg_feature_windows/session_participants 등은
+    #   sessions.id 를 참조하지만 ON DELETE CASCADE 가 없어, 호스트 세션을 지우기 전에
+    #   명시적으로 삭제하지 않으면 FK 제약 위반으로 삭제가 실패한다.
+    session_child_tables: list[str] = [
+        "session_records",
+        "reports",
+        "eeg_records",
+        "eeg_raw_chunks",
+        "audio_chunks",
+        "video_chunks",
+        "eeg_feature_windows",
+        "session_reminder_logs",
+        "session_participants",
+    ]
+    for table in session_child_tables:
+        db.execute(
+            text(f"DELETE FROM {table} WHERE session_id IN (SELECT id FROM sessions WHERE host_id = :id)"),
+            {"id": uid},
+        )
+
     child_tables: list[tuple[str, list[str]]] = [
         ("client_counselor_links", ["client_id", "counselor_id"]),
         ("client_invites", ["counselor_id"]),
@@ -716,6 +752,9 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
         ("chat_rooms", ["host_id"]),
         ("credentials", ["user_id"]),
         ("eeg_records", ["user_id"]),
+        # AUTH4-06: 사용자 참조 자식 테이블 누락 보완
+        ("eeg_feature_windows", ["user_id"]),
+        ("session_reminder_logs", ["user_id"]),
         ("notifications", ["user_id"]),
         ("org_join_requests", ["user_id"]),
         ("reports", ["user_id"]),

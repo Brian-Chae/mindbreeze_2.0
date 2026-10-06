@@ -261,11 +261,15 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     # membership 미보유라도 org_id 미러가 이 기관이면 기존 계약(role 422 등)을 유지한다
     if user is None or (membership is None and user.org_id != org.id):
         raise HTTPException(404, "대상 상담사를 찾을 수 없습니다")
-    if user.role not in ("counselor", "org_admin") or role not in (None, "counselor", "org_admin"):
+    # AUTH4-02: 역할 판정·중복 단락은 전역 User.role 이 아니라 이 기관의 membership role 을 기준으로
+    #   한다. 다기관 소속에서 미러(전역 role)는 주 소속 기관 역할만 반영하므로, 부 소속에서의
+    #   role 비교가 틀어져 멱등 요청이 오판되거나 불필요한 변경이 일어난다.
+    current_role = membership.role if membership is not None else user.role
+    if current_role not in ("counselor", "org_admin") or role not in (None, "counselor", "org_admin"):
         raise HTTPException(422, "상담사와 기관 관리자 역할만 변경할 수 있습니다")
     if org.kind == "individual" and org.owner_user_id == user.id:
         raise HTTPException(409, "개인 기관 소유자는 역할 변경이나 소속 해제를 할 수 없습니다")
-    if role == user.role:
+    if role == current_role:
         return user
     if org.primary_admin_id == user.id:
         raise HTTPException(409, "주 담당자를 먼저 교체해주세요")
@@ -290,8 +294,12 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
         ).first()
         if active_link:
             raise HTTPException(409, "활성 내담자 연결을 먼저 이관하거나 종료해주세요")
-    before = {"org_id": str(org.id), "role": user.role}
-    user.role = role or "counselor"
+    before = {"org_id": str(org.id), "role": current_role}
+    # AUTH4-02: 전역 User.role 은 '주 소속 기관'의 역할 미러이므로, 주 소속 기관에서의 변경일 때만
+    #   동기화한다. 다기관 소속 상담사의 부 소속(비주 소속)에서 역할을 바꿔도 전역 role 을 오염시키지
+    #   않는다(membership.role 만 갱신).
+    if user.org_id == org.id:
+        user.role = role or "counselor"
     office = None
     if role is None:
         # SDD-079: 소속 해제 = membership left (+ User.org_id 미러 동기 갱신)
@@ -313,7 +321,8 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
         target_type="user", target_id=user.id, admin_id=admin_id,
         action="org_counselor_removed" if role is None else "org_counselor_role_changed",
         reason=reason, extra={"org_id": str(org.id), "before": before,
-                              "after": {"org_id": str(user.org_id) if user.org_id else None, "role": user.role}},
+                              "after": {"org_id": str(user.org_id) if user.org_id else None,
+                                        "role": role if role is not None else "counselor"}},
     ))
     db.commit()
     db.refresh(user)

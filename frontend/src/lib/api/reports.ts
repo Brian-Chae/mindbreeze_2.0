@@ -186,11 +186,11 @@ export const getAutoApprove = (): Promise<AutoApproveResponse> =>
 export const setAutoApprove = (enabled: boolean): Promise<AutoApproveResponse> =>
   apiClient.patch<AutoApproveResponse>('/reports/auto-approve', { enabled });
 
-/** SDD-050 — 리포트 메일 재발송 */
+/** SDD-050 / RPT-EMAIL-CONTRACT-004 — 리포트 메일 재발송 응답 계약: {success, sent, message} */
 export interface ResendReportEmailResponse {
-  ok?: boolean;
-  email?: string;
-  message?: string;
+  success: boolean;
+  sent: boolean;
+  message: string;
 }
 
 export const resendReportEmail = (

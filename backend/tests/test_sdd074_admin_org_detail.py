@@ -104,6 +104,8 @@ def test_missing_invalid_and_empty(client, org_data, suffix):
     if suffix:
         for user in users[1:]:
             user.org_id = None
+        # AUTH4-05: 구성원 판정이 membership 기준이므로 소속도 함께 비워야 '구성원 없음'이 된다.
+        db.query(UserOrgMembership).filter(UserOrgMembership.org_id == org.id).delete()
         db.commit()
         assert client.get(f"/api/v1/admin/orgs/{org.id}{suffix}", headers=auth).json() == []
 

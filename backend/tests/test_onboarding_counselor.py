@@ -61,7 +61,9 @@ def test_상담사_온보딩_전체_플로우(client):
     body = res.json()
     assert len(body["counselor_code"]) == 6
     assert body["counselor_code"].isalnum() and body["counselor_code"].isupper()
-    assert body["verified_tier"] == "verified"
+    # AUTH4-01: 온보딩 완료는 자격 등급을 직접 'verified' 로 상향하지 않는다.
+    #   verified 등급은 자격 증빙 승인(credential) 경로에서만 부여된다.
+    assert body["verified_tier"] != "verified"
 
 
 def test_상담사_step3_미완료_시_complete_400(client):

@@ -8,7 +8,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
 from app.models.client_profile import ClientProfile
 from app.models.counselor_profile import CounselorProfile
@@ -125,7 +125,7 @@ def get_my_progress(
 @router.put("/counselor/step1", response_model=OnboardingProgressResponse)
 def counselor_step1(
     req: CounselorStep1Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step1 — 기본 정보(이름·연락처)."""
@@ -147,7 +147,7 @@ def counselor_step1(
 @router.put("/counselor/step2", response_model=OnboardingProgressResponse)
 def counselor_step2(
     req: CounselorStep2Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step2 — 인적사항·전문분야."""
@@ -167,7 +167,7 @@ def counselor_step2(
 @router.put("/counselor/step3", response_model=OnboardingProgressResponse)
 def counselor_step3(
     req: CounselorStep3Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step3 — 자격 증빙. 파일 업로드는 F3에서 처리."""
@@ -184,7 +184,7 @@ def counselor_step3(
 @router.put("/counselor/step4", response_model=OnboardingProgressResponse)
 def counselor_step4(
     req: CounselorStep4Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step4 — 프로필(이미지·소개)."""
@@ -201,10 +201,16 @@ def counselor_step4(
 
 @router.post("/counselor/complete", response_model=CounselorCompleteResponse)
 def counselor_complete(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
-    """상담사 온보딩 완료 — 상담사 코드 확정 + 인증 등급 상향."""
+    """상담사 온보딩 완료 — 상담사 코드 확정.
+
+    AUTH4-01: 온보딩 완료는 자격 등급을 'verified' 로 직접 상향하지 않는다.
+    verified 등급은 자격 증빙(신분증+자격증/학위) 승인 경로
+    (credential_service.recalculate_tier)에서만 부여된다. 여기서는 코드 확정과
+    온보딩 완료만 처리하고 현재 등급을 그대로 반환한다.
+    """
     user_id = _uid(current_user)
     progress = onboarding_service.get_progress(user_id, db)
     steps = progress.steps or {}
@@ -218,8 +224,6 @@ def counselor_complete(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    user.verified_tier = "verified"
-    db.add(user)
 
     onboarding_service.complete_onboarding(user_id, db)
     # DATA-03: 요청 단위 단일 커밋

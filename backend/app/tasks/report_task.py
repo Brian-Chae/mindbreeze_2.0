@@ -467,12 +467,22 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).first()
 
+    # RPT-REGEN-005: 재생성 전 승인 게이트/내용을 스냅샷한다.
+    #   완료(승인) 리포트를 재생성해도 승인(status="completed")이 취소되지 않도록 한다.
+    previous_status = report.status
+    previous_content = report.content
+    previous_credibility = report.data_credibility
+    previous_generation_status = report.generation_status
+    was_approved = previous_status == "completed"
+
     # SDD-095: 리포트 생성 시작 — 진행 상태를 '처리 중'으로 반영한다.
     # (프론트 종료 화면 스텝퍼의 '리포트 완료' 스텝이 active 로 표시된다)
     report.generation_status = report_progress_service.GENERATION_PROCESSING
     # SDD-101 후속: 이전 실패 잔재(status=error / generation_error)를 리셋한다.
     # 재생성 진행 중에도 /reports 목록이 '생성 실패'로 오표시되지 않도록 승인 게이트를 대기로 되돌린다.
-    report.status = "pending_analysis"
+    # RPT-REGEN-005: 단, 이미 승인(completed)된 리포트는 승인 게이트를 되돌리지 않는다.
+    if not was_approved:
+        report.status = "pending_analysis"
     report.generation_error = None
     # SDD-095 후속(워치독): processing 진입 시각 기록 — beat 스윕이 먹통을 감지하는 기준
     # SDD-137: 재생성 시에도 시작 시각을 리셋 — 이전 시각이 남아 워치독이 즉시 '먹통'으로 오판하는 것을 방지.
@@ -499,7 +509,8 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             content = _counselor_content(session, record, eeg_block)
         # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생
         report.data_credibility = _derive_data_credibility(eeg_block)
-        report.status = "pending_review"
+        # RPT-REGEN-005: 이미 승인된 리포트는 재생성 후에도 승인(completed)을 유지한다.
+        report.status = "completed" if was_approved else "pending_review"
     except Exception as exc:  # noqa: BLE001
         logger.exception(
             "[report_task] generate failed: report_id=%s session_id=%s participant_id=%s error=%s",
@@ -509,17 +520,24 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             exc,
         )
         error_message = str(exc)
-        content = {
-            "headline": "리포트 생성 실패",
-            "error": error_message,
-            "error_message": error_message,
-            "fallback": True,
-        }
-        # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
-        report.status = "error"
-        report.data_credibility = None
         # SDD-101: 실패 사유를 generation_error 에 기록(50자) — /reports 목록에서 로그로 노출.
         report.generation_error = (f"{type(exc).__name__}: {exc}")[:50]
+        if was_approved:
+            # RPT-REGEN-005: 승인 리포트 재생성 실패 — 기존 승인 내용을 보존한다(덮어쓰기 금지).
+            report.status = "completed"
+            report.data_credibility = previous_credibility
+            report.generation_status = previous_generation_status
+            content = previous_content if isinstance(previous_content, dict) else {}
+        else:
+            content = {
+                "headline": "리포트 생성 실패",
+                "error": error_message,
+                "error_message": error_message,
+                "fallback": True,
+            }
+            # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
+            report.status = "error"
+            report.data_credibility = None
         # SDD-093: 리포트 생성 실패 알림 발화 — 소유자(상담사/내담자)에게 통지
         try:
             from app.services import notification_service

@@ -12,6 +12,14 @@ import { createLogger } from "./logger";
 
 
 const logger = createLogger("StreamProc");
+
+/**
+ * STREAM-PERF-001: 고급 EEG 재분석(Morlet 45주파수 × 버퍼 전체 ≤1250샘플)은 메인스레드를
+ * 수백 ms 블로킹한다. BLE 패킷(수십 ms 주기)마다 버퍼 전체를 재분석하면 UI가 멈추므로,
+ * 최소 간격(1초)마다 1회만 배치 재분석한다. (1초 feature 주기와 정합)
+ */
+const EEG_ANALYSIS_MIN_INTERVAL_MS = 1000;
+
 /**
  * Phase 1.7: 단순화된 스트림 처리기
  * 
@@ -70,6 +78,11 @@ export class StreamProcessor {
   private performanceMetrics: PerformanceMetrics;
   private bluetoothService: any = null;
   private isStarted: boolean = false;
+
+  /** STREAM-PERF-001: 고급 EEG(Morlet) 재분석 in-flight 가드 */
+  private isAnalyzingEEG: boolean = false;
+  /** STREAM-PERF-001: 마지막 고급 EEG 재분석 시각(performance.now()) — 최소 간격 쓰로틀 */
+  private lastEegAnalysisAt: number = 0;
 
   // 타임스탬프 동기화
   private timestampSynchronizer: TimestampSynchronizer;
@@ -300,8 +313,14 @@ export class StreamProcessor {
       // 3) 충분한 데이터가 있을 때 비동기로 고급 신호 처리
       const bufferData = this.eegBuffer.toArray();
       
-      if (bufferData.length >= 500) {
-        this.performAdvancedEEGProcessing(bufferData);
+      if (
+        bufferData.length >= 500 &&
+        !this.isAnalyzingEEG &&
+        startTime - this.lastEegAnalysisAt >= EEG_ANALYSIS_MIN_INTERVAL_MS
+      ) {
+        // STREAM-PERF-001: 쓰로틀 — 최소 간격(1초)마다 & 이전 분석이 끝난 뒤에만 실행.
+        this.lastEegAnalysisAt = startTime;
+        void this.performAdvancedEEGProcessing(bufferData);
       }
       
       // 성능 메트릭 업데이트
@@ -521,6 +540,8 @@ export class StreamProcessor {
    * 고급 EEG 처리 (비동기) - 직접 ProcessedDataStore 업데이트
    */
   private async performAdvancedEEGProcessing(bufferData: EEGDataPoint[]): Promise<void> {
+    // STREAM-PERF-001: Morlet 재분석은 메인스레드를 블로킹한다 — in-flight 가드로 중복 방지.
+    this.isAnalyzingEEG = true;
     try {
       // bufferData는 이미 EEGDataPoint[]이므로 직접 사용
       const result = await this.eegProcessor.processEEGData(bufferData);
@@ -644,6 +665,8 @@ export class StreamProcessor {
                 relaxationIndex: result.indices.relaxationIndex,
                 stressIndex: result.indices.stressIndex,
                 hemisphericBalance: result.indices.hemisphericBalance,
+                // EEG-NUM-002: 좌우뇌 균형 점수화 정본 입력 FAA(로그비) — null(미측정) 보존.
+                faa: result.indices.faa,
                 cognitiveLoad: result.indices.cognitiveLoad,
                 emotionalStability: result.indices.emotionalStability,
                 attentionLevel: result.indices.focusIndex, // focusIndex를 attentionLevel로 사용
@@ -666,6 +689,8 @@ export class StreamProcessor {
         error instanceof Error ? error.message : '고급 EEG 처리 오류',
         'StreamProcessor.performAdvancedEEGProcessing'
       );
+    } finally {
+      this.isAnalyzingEEG = false;
     }
   }
 

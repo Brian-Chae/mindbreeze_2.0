@@ -34,6 +34,11 @@ export interface EEGAnalysisMetrics {
   emotionalStability: number;
   attentionLevel: number;
   meditationLevel: number;
+  /**
+   * EEG-NUM-002: FAA = ln(α_fp2) − ln(α_fp1) (로그비). 좌우뇌 균형 점수화 정본 입력.
+   * hemisphericBalance(-1~1 비율)와 스케일이 다르므로 점수화에는 이 값을 쓴다.
+   */
+  faa?: number | null;
   movingAverageValues: {
     totalPower: number;
     emotionalBalance: number;

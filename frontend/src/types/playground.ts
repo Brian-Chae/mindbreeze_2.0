@@ -80,6 +80,12 @@ export interface BandRawIndices {
   emotionalStability: number;
   hemisphericBalance: number;
   totalNeuralActivity: number;
+  /**
+   * FAA = ln(α_fp2) − ln(α_fp1) (로그비). 좌우뇌 균형 점수화(scoreHemisphericBalance)의
+   * 정본 입력이다. EEG -1~1 비율(hemisphericBalance)과 스케일이 다르므로, 값이 있으면
+   * 반드시 이 값을 점수화에 사용한다(EEG-NUM-002). 미측정이면 null, 미제공이면 undefined.
+   */
+  faa?: number | null;
 }
 
 export interface BandEegWaveform {

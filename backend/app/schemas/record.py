@@ -41,9 +41,15 @@ class VideoStartResponse(BaseModel):
     started_at: datetime | None = None
 
 
+# VIDEO-EXPECTED-COUNT-DOS: expected_count 는 병합 누락 청크 계산(누락 인덱스 range)의
+# 분모로 쓰인다. 비현실적으로 큰 값(예: 1e9)을 허용하면 range(expected) 가 메모리를
+# 폭발시켜 OOM 이 된다. 청크 하나가 대략 수 초이므로 매우 넉넉하되 상한을 둔다.
+MAX_VIDEO_EXPECTED_CHUNKS = 100_000
+
+
 class VideoStopRequest(BaseModel):
     # SDD-101 C4: 클라이언트가 녹화한 예상 청크 수 — 병합 50% 규칙의 정확한 분모.
-    expected_count: int | None = None
+    expected_count: int | None = Field(default=None, ge=0, le=MAX_VIDEO_EXPECTED_CHUNKS)
 
 
 class VideoStopResponse(BaseModel):

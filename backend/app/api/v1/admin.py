@@ -7,11 +7,13 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
 from pydantic import BaseModel
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
 from app.models.organization import Organization
 from app.models.counselor_profile import CounselorProfile
 from app.core.redis import get_redis
@@ -43,6 +45,7 @@ from app.services import (
     org_invite_service,
     org_service,
     org_management_service,
+    membership_service,
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -407,16 +410,38 @@ def admin_get_org_counselors(
     db: Session = Depends(get_db),
 ):
     org = _admin_org_or_404(org_id, db)
+    # AUTH4-05: 기관 구성원은 membership(user_org_memberships) 기준으로 판정한다.
+    #   User.org_id 미러는 주 소속 1개만 가리키므로, 다기관 소속 상담사는 부 소속 기관 목록에서
+    #   누락되거나 타 기관 소속으로 오인된다. 미러만 있고 membership 이 없는 레거시 계정은
+    #   org_id 로 합집합 보존한다.
+    member_user_ids = (
+        db.query(UserOrgMembership.user_id)
+        .filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        )
+    )
     # 코드 조회를 outer join으로 묶어 프로필 없는 담당자도 보존한다.
     members = (
         db.query(User, CounselorProfile.counselor_code)
         .outerjoin(CounselorProfile, CounselorProfile.user_id == User.id)
-        .filter(User.org_id == org_id, User.role.in_(["counselor", "org_admin"]))
+        .filter(
+            User.role.in_(["counselor", "org_admin"]),
+            or_(User.id.in_(member_user_ids), User.org_id == org_id),
+        )
         .order_by(User.created_at.asc(), User.id.asc()).all()
     )
+    # 표시 역할은 이 기관의 membership role 을 우선한다(전역 미러는 주 소속 역할만 반영).
+    member_roles = {
+        m.user_id: m.role
+        for m in db.query(UserOrgMembership).filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        ).all()
+    }
     return [OrganizationAdminCounselor(
         id=str(user.id), name=user.name, email=user.email, counselor_code=code,
-        role=user.role, status=user.status,
+        role=(member_roles.get(user.id) or user.role), status=user.status,
         is_primary_admin=user.id == org.primary_admin_id,
         is_owner=user.id == org.owner_user_id,
     ) for user, code in members]
@@ -457,9 +482,11 @@ def admin_patch_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: Organi
     user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason or "상담사 권한 조정", db, role=req.role)
     org = _admin_org_or_404(org_id, db)
     code = db.query(CounselorProfile.counselor_code).filter(CounselorProfile.user_id == user.id).scalar()
+    # AUTH4-02/05: 응답 역할은 이 기관의 membership role 을 우선한다(전역 미러 오염 방지).
+    membership = membership_service.get_membership(db, user.id, org_id)
     return OrganizationAdminCounselor(
         id=str(user.id), name=user.name, email=user.email, counselor_code=code,
-        role=user.role, status=user.status,
+        role=(membership.role if membership is not None else user.role), status=user.status,
         is_primary_admin=user.id == org.primary_admin_id, is_owner=user.id == org.owner_user_id,
     )
 
@@ -491,13 +518,24 @@ def admin_list_counselors(
         .outerjoin(Organization, Organization.id == User.org_id)
         .filter(User.role.in_(["counselor", "org_admin"]))
     )
+    # AUTH4-05: 소속 필터는 membership 기준으로 판정한다. User.org_id 미러는 주 소속 1개만 반영하므로
+    #   부 소속 기관으로 조회하면 다기관 상담사가 누락된다. 미러만 있는 레거시 계정은 합집합 보존한다.
+    filter_org_id: uuid.UUID | None = None
     if org_id in ("none", "unassigned"):
-        query = query.filter(User.org_id.is_(None))
+        alive_member_ids = db.query(UserOrgMembership.user_id).filter(
+            UserOrgMembership.status.in_(["active", "invited"])
+        )
+        query = query.filter(User.org_id.is_(None), ~User.id.in_(alive_member_ids))
     elif org_id:
         try:
-            query = query.filter(User.org_id == uuid.UUID(org_id))
+            filter_org_id = uuid.UUID(org_id)
         except ValueError:
             raise HTTPException(status_code=422, detail="org_id 형식이 올바르지 않습니다")
+        org_member_ids = db.query(UserOrgMembership.user_id).filter(
+            UserOrgMembership.org_id == filter_org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        )
+        query = query.filter(or_(User.org_id == filter_org_id, User.id.in_(org_member_ids)))
     if q:
         like = f"%{q.strip()}%"
         query = query.filter(
@@ -506,11 +544,18 @@ def admin_list_counselors(
     if status_filter:
         query = query.filter(User.status == status_filter)
     rows = query.order_by(User.created_at.asc(), User.id.asc()).all()
+    # 특정 기관으로 필터하면 표시 소속을 요청 기관 기준으로 정정한다(부 소속 상담사 오인 방지).
+    filter_org_name = (
+        db.query(Organization.name).filter(Organization.id == filter_org_id).scalar()
+        if filter_org_id is not None else None
+    )
     return AdminCounselorListResponse(
         items=[AdminCounselorListItem(
             id=str(user.id), name=user.name, email=user.email, counselor_code=code,
             role=user.role, status=user.status,
-            org_id=str(user.org_id) if user.org_id else None, org_name=org_name,
+            org_id=(str(filter_org_id) if filter_org_id is not None
+                    else (str(user.org_id) if user.org_id else None)),
+            org_name=(filter_org_name if filter_org_id is not None else org_name),
         ) for user, code, org_name in rows],
         total=len(rows),
     )
@@ -612,11 +657,12 @@ async def admin_reset_org_counselor_password(
     """기관 소속 상담사(active)에게 비밀번호 재설정 링크를 발송한다."""
     org = _admin_org_or_404(org_id, db)
     _require_active_org_for_reset(org)
-    target = db.query(User).filter(
-        User.id == user_id, User.org_id == org.id,
-        User.role.in_(["counselor", "org_admin"]),
-    ).first()
-    if target is None:
+    # AUTH4-05: 소속 판정은 membership 기준 — User.org_id 미러는 다기관 상담사에서 타 기관을 가리킨다.
+    target = db.query(User).filter(User.id == user_id).first()
+    membership = (
+        membership_service.get_membership(db, user_id, org.id) if target is not None else None
+    )
+    if target is None or membership is None or membership.role not in ("counselor", "org_admin"):
         raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
     email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
         target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",

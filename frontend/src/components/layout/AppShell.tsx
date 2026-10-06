@@ -56,7 +56,9 @@ export default function AppShell({
   const handleToastClick = () => {
     // SDD-093: 토스트 클릭 → 딥링크 후속 행위 (표준 extra 기반)
     if (toast) {
-      const target = resolveNotificationTarget(toast.extra);
+      // NOTIF-FE-03: role 을 전달해야 client 가 상담사 경로(/chat, /sessions)가 아닌
+      // 본인 경로(/app/...)로 이동한다. (알림 센터 딥링크와 동일 규칙)
+      const target = resolveNotificationTarget(toast.extra, userRole);
       if (target) navigate(target.path);
     }
     dismissToast();

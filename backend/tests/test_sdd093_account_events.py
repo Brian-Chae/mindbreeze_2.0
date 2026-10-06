@@ -17,24 +17,33 @@ def mute_email(monkeypatch):
 def test_verification_final_changes_have_standard_extra(org_data, route):
     db, _, _, users = org_data
     owner = users[4]
-    cred = Credential(user_id=owner.id, type="license", s3_key="test", status="pending")
-    db.add(cred)
+    # ADM-STATE-01: 종결(approved/rejected)된 항목은 재검토할 수 없으므로,
+    # 승인·반려 두 결과의 표준 계약을 각각 별도 증빙으로 검증한다.
+    approved_cred = Credential(user_id=owner.id, type="license", s3_key="test", status="pending")
+    rejected_cred = Credential(user_id=owner.id, type="license", s3_key="test2", status="pending")
+    db.add_all([approved_cred, rejected_cred])
     db.commit()
-    def review(result):
+
+    def review(cred, result):
         if route == "credential":
             credential_service.admin_verify(cred.id, result, None, db)
         else:
-            admin_service.process_review("credential", cred.id, {"approved": "approve", "rejected": "reject"}[result], None, users[0].id, db)
-    review("approved")
-    review("approved")
-    review("rejected")
+            admin_service.process_review(
+                "credential", cred.id, {"approved": "approve", "rejected": "reject"}[result],
+                None, users[0].id, db,
+            )
+
+    review(approved_cred, "approved")
+    review(rejected_cred, "rejected")
     notifications = db.query(Notification).filter_by(user_id=owner.id).all()
     assert len(notifications) == 2
-    assert [n.extra["params"]["result"] for n in notifications] == ["approved", "rejected"]
+    assert sorted(n.extra["params"]["result"] for n in notifications) == ["approved", "rejected"]
     for n in notifications:
         assert n.type == "verification"
         assert n.extra["target_type"] == "credentials" and n.extra["target_id"] is None
-        assert n.extra["params"]["credential_id"] == str(cred.id)
+    assert {n.extra["params"]["credential_id"] for n in notifications} == {
+        str(approved_cred.id), str(rejected_cred.id)
+    }
 
 
 def test_account_events_only_on_changes_and_exclude_actor(org_data):

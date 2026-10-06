@@ -410,9 +410,18 @@ def register_session_live_namespace(sio):
         prev_session_id = (session or {}).get("session_id")
         prev_participant_id = (session or {}).get("participant_id")
 
-        resolved = await asyncio.to_thread(
-            _resolve_join, session_id, current_user_id, participant_id
-        )
+        # WS-JOIN-HOST-EXCEPTION: _resolve_join 이 DB 오류 등으로 예외를 던져도 소켓 join
+        #   핸들러 전체가 죽지 않도록 포착한다. 예외 시 resolved=None 으로 강등해 아래에서
+        #   join_denied 를 통지하고 room 에 입장시키지 않는다(비인가 join 과 동일 처리).
+        try:
+            resolved = await asyncio.to_thread(
+                _resolve_join, session_id, current_user_id, participant_id
+            )
+        except Exception:
+            logger.exception(
+                "[WS /session-live] join 해석 중 예외 (sid=%s, session=%s)", sid, session_id
+            )
+            resolved = None
         if resolved is None:
             # SDD-026: 비인가 join — 어떤 room 에도 입장시키지 않고 거부를 통지한다.
             logger.warning("[WS /session-live] join 거부 (sid=%s, session=%s)", sid, session_id)

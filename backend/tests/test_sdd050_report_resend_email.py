@@ -123,7 +123,10 @@ def test_resend_api_requires_host_and_valid_email(client, monkeypatch):
             headers=host["auth"],
         )
         assert sent.status_code == 200, sent.text
-        assert sent.json() == {"success": True}
+        # RPT-EMAIL-CONTRACT-004: {success, sent, message} 계약
+        resend_body = sent.json()
+        assert resend_body["success"] is True and resend_body["sent"] is True
+        assert resend_body["message"]
         db.refresh(participant)
         assert participant.report_email == "new@example.com"
     finally:

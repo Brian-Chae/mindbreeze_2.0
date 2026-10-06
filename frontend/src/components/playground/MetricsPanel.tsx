@@ -130,8 +130,8 @@ export function MetricsPanel({
         />
         <ValueCard label="강도" value={acc.intensity} pending={!connected} />
         <ValueCard label="안정성" value={acc.stability} pending={!connected} />
-        <ValueCard label="평균 움직임" value={acc.avgMovement} unit="g" pending={!connected} />
-        <ValueCard label="최대 움직임" value={acc.maxMovement} unit="g" pending={!connected} />
+        <ValueCard label="평균 움직임" value={acc.avgMovement} unit="centi-g" pending={!connected} />
+        <ValueCard label="최대 움직임" value={acc.maxMovement} unit="centi-g" pending={!connected} />
       </div>
     </PanelShell>
   );

@@ -50,7 +50,8 @@ export function scoreStressIndex(stressIndex: number): number {
 
 /**
  * §A2 — 좌우뇌 균형: FAA = ln(α_fp2) − ln(α_fp1), 0에 가까울수록 좋음.
- * null 이면 0점(측정 불가).
+ * ⚠️ 입력은 반드시 로그비 FAA 다. hemisphericBalance(-1~1 비율)를 넘기면 스케일이
+ *    달라 점수가 붕괴한다(EEG-NUM-002). null 이면 0점(측정 불가).
  */
 export function scoreHemisphericBalance(faa: number | null): number {
   if (faa === null || !Number.isFinite(faa)) return 0;

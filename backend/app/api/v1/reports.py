@@ -160,4 +160,13 @@ def resend_email(
         str(payload.email),
         db,
     )
-    return {"success": success}
+    # RPT-EMAIL-CONTRACT-004: {success, sent, message} 계약 — 프론트가 성공/실패를 구분할 수 있게 한다.
+    return {
+        "success": success,
+        "sent": success,
+        "message": (
+            f"{payload.email}로 리포트 메일을 발송했습니다"
+            if success
+            else "메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요."
+        ),
+    }

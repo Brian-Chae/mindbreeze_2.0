@@ -69,10 +69,10 @@ export function AccPanel({ connected, acc }: Props) {
             <AreaChart data={chartData} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
               <CartesianGrid stroke={CHART_COLORS.grid} vertical={false} />
               <XAxis dataKey="i" tick={AXIS_TICK} hide />
-              <YAxis tick={AXIS_TICK} unit="g" width={44} />
+              <YAxis tick={AXIS_TICK} unit="centi-g" width={48} />
               <Tooltip
                 contentStyle={TOOLTIP_STYLE}
-                formatter={(v) => [Number(v ?? 0).toFixed(4), 'magnitude (g)']}
+                formatter={(v) => [Number(v ?? 0).toFixed(2), 'magnitude (centi-g)']}
               />
               <Area
                 type="monotone"
@@ -90,8 +90,8 @@ export function AccPanel({ connected, acc }: Props) {
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <ValueCard label="강도" value={acc.intensity} pending={!connected} />
         <ValueCard label="안정성" value={acc.stability} pending={!connected} />
-        <ValueCard label="평균 움직임" value={acc.avgMovement} unit="g" pending={!connected} />
-        <ValueCard label="최대 움직임" value={acc.maxMovement} unit="g" pending={!connected} />
+        <ValueCard label="평균 움직임" value={acc.avgMovement} unit="centi-g" pending={!connected} />
+        <ValueCard label="최대 움직임" value={acc.maxMovement} unit="centi-g" pending={!connected} />
       </div>
     </PanelShell>
   );

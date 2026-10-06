@@ -246,7 +246,6 @@ def notify_event(
             },
         )
 
-    email_outbox_id = None
     if prefs["email"].get(pref_key, False) and user.email:
         from app.models.notification_outbox import NotificationOutbox
 
@@ -257,8 +256,7 @@ def notify_event(
             payload={"subject": subject, "body": body_text or body_message or title},
         )
         db.add(email_item)
-        db.flush()  # id 확보 → commit 후 email_app 큐 적재용
-        email_outbox_id = email_item.id
+        db.flush()  # outbox 행을 같은 트랜잭션에 확정
 
     if commit:
         db.commit()  # 알림 + outbox 이벤트를 원자적으로 확정
@@ -266,16 +264,10 @@ def notify_event(
         # TXN-01: 호출자가 트랜잭션을 소유 — 조기 커밋 대신 flush 만.
         db.flush()
 
-    # commit 후 email_app 큐에 적재 (Celery beat 불필요 — email worker가 즉시 소비)
-    # commit=False 인 경우 호출자가 커밋한 뒤 outbox beat(process_email_outbox)가 발송한다.
-    if email_outbox_id is not None and commit:
-        from app.tasks.report_email_task import notification_email_task
-
-        try:
-            notification_email_task.apply_async(args=[str(email_outbox_id)], retry=False)
-        except Exception as e:  # 브로커 장애 등 — outbox 레코드가 남으므로 추후 재시도 가능
-            logger.warning(f"[NOTIF EMAIL] 큐 적재 실패 (outbox={email_outbox_id}): {e}")
-
+    # OUTBOX-DUP-003: 이메일 채널은 여기서 직접 큐 적재하지 않는다.
+    #   과거엔 email_app 큐에 바로 넣는 동시에 beat/cron 의 process_email_outbox 가
+    #   같은 pending 행을 집어 이중 발송됐다. 단일 소비자(process_email_outbox, 행
+    #   선점 잠금)만 이메일 outbox 를 처리하도록 일원화한다.
     return notif
 
 

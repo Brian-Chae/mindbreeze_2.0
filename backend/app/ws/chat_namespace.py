@@ -116,6 +116,9 @@ async def on_leave_room(sid, data):
     await _exit_room(sid, data)
 
 
+_MAX_MESSAGE_LEN = 4000
+
+
 @sio.on("message", namespace="/chat")
 async def on_message(sid, data):
     data = data if isinstance(data, dict) else {}
@@ -130,7 +133,37 @@ async def on_message(sid, data):
     if not await _is_room_member(sid, str(room_id)):
         logger.warning(f"[WS] blocked message to non-member room (sid={sid}, room={room_id})")
         return
-    await sio.emit("new_message", data, room=room_id, namespace="/chat")
+
+    # CHAT-WS-MESSAGE-SPOOF: 렌더링/저장 가능한 payload 계약을 서버가 강제한다.
+    #   (1) sender_id 는 클라이언트가 보낸 값을 신뢰하지 않고 인증된 소켓의 user_id 로 고정한다
+    #       — 타인 명의 사칭(sender/created_at 위조) 차단.
+    #   (2) content/type 을 검증한다 — 빈/비문자/과길이/비-text 메시지는 브로드캐스트하지 않는다.
+    sender_id = _sid_users.get(sid)
+    if not sender_id:
+        logger.warning(f"[WS] blocked message from unauthenticated sid (sid={sid})")
+        return
+    content = data.get("content")
+    if not isinstance(content, str) or not content.strip():
+        logger.warning(f"[WS] blocked empty/invalid message content (sid={sid})")
+        return
+    content = content.strip()
+    if len(content) > _MAX_MESSAGE_LEN:
+        logger.warning(f"[WS] blocked oversized message (sid={sid}, len={len(content)})")
+        return
+    if data.get("type") not in (None, "text"):
+        logger.warning(f"[WS] blocked unsupported message type (sid={sid}, type={data.get('type')})")
+        return
+
+    payload: dict = {
+        "room_id": str(room_id),
+        "sender_id": sender_id,
+        "content": content,
+        "type": "text",
+    }
+    # 클라이언트 임시 키(에코 매칭용)가 있으면 보존하되 서버 값으로 덮지 않는다.
+    if data.get("client_id") is not None:
+        payload["client_id"] = data.get("client_id")
+    await sio.emit("new_message", payload, room=room_id, namespace="/chat")
 
 
 async def broadcast_message(room_id: str, payload: dict) -> None:

@@ -40,7 +40,11 @@ class ReportEmailResendRequest(BaseModel):
 
 
 class ReportEmailResendResponse(BaseModel):
+    # RPT-EMAIL-CONTRACT-004: 발송 결과 계약을 {success, sent, message} 로 통일한다.
+    #   실패 시에도 200 이지만 success/sent=false 이므로, 프론트는 이 값을 반드시 확인해야 한다.
     success: bool
+    sent: bool
+    message: str
 
 
 class ReportAutoApproveSetting(BaseModel):

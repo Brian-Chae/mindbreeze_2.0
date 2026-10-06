@@ -16,6 +16,7 @@ from app.models.record import Report
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.models.user import User
 from app.services.chat_service import get_or_create_direct_room
+from app.services import code_service, org_management_service
 from app.schemas.client import (
     AddCounselorRequest,
     ClientHomeResponse,
@@ -95,10 +96,14 @@ def add_counselor_by_code(
     """상담사 코드로 연결 추가"""
     user = _get_user_from_token(current_user, db)
 
+    # AUTH4-03: 가입·온보딩 매칭 경로와 동일하게 공백 제거·대문자화 후 조회한다.
+    #   정규화가 없으면 소문자/공백 포함 입력이 유효한 코드와 미매칭(404)된다.
+    normalized = code_service.normalize_code(req.code)
+
     # 상담사 코드로 CounselorProfile 검색
     profile = (
         db.query(CounselorProfile)
-        .filter(CounselorProfile.counselor_code == req.code)
+        .filter(CounselorProfile.counselor_code == normalized)
         .first()
     )
 
@@ -121,6 +126,17 @@ def add_counselor_by_code(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
         )
+
+    # AUTH4-04: 인증 미완료(자격 증빙 없음) 상담사는 연결 불가 — 온보딩 매칭(step4)과 동일 기준.
+    if counselor.verified_tier == "unverified":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 상담사는 아직 인증이 완료되지 않아 연결할 수 없습니다",
+        )
+
+    # AUTH4-04: 비활성화된 기관 소속 상담사는 연결 불가(활성 기관 소속 검증).
+    if counselor.org_id is not None:
+        org_management_service.require_active_org(counselor.org_id, db)
 
     # 이미 연결되어 있는지 확인
     existing = (

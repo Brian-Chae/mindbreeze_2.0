@@ -89,7 +89,10 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
     cognitiveLoad: raw.cognitiveLoad,
     emotionalStability: raw.emotionalStability,
     hemisphericBalance: raw.hemisphericBalance,
-    faa: raw.hemisphericBalance,
+    // EEG-NUM-002: 좌우뇌 균형 점수화는 -1~1 비율(hemisphericBalance)이 아니라
+    // FAA(로그비)로 정규화해야 한다(FAA_ABS_P90 = 로그비 p90). faa 미제공이면
+    // scoreIndices 가 hemisphericBalance 로 폴백한다.
+    faa: raw.faa,
   });
   return {
     focusIndex: scores.focusIndex,
@@ -694,6 +697,9 @@ export function useBand({
         emotionalStability: metrics.emotionalStability,
         hemisphericBalance: metrics.hemisphericBalance,
         totalNeuralActivity: metrics.totalPower,
+        // EEG-NUM-002: 좌우뇌 균형 점수화 정본 입력 FAA(로그비). 없으면 undefined 유지 →
+        // scoreIndices 가 hemisphericBalance 로 폴백한다.
+        faa: metrics.faa,
       };
       setRawIndices(raw);
       const scored = toScoredIndices(raw);
@@ -903,6 +909,11 @@ export function useBand({
           emotionalStability: Number(payload.indices.emotionalStability ?? 0),
           hemisphericBalance: Number(payload.indices.hemisphericBalance ?? 0),
           totalNeuralActivity: Number(payload.indices.totalNeuralActivity ?? 0),
+          // EEG-NUM-002: 실파이프라인 indices.faa(로그비)를 그대로 실어 보낸다.
+          faa:
+            payload.indices.faa === null || payload.indices.faa === undefined
+              ? payload.indices.faa
+              : Number(payload.indices.faa),
         };
         setRawIndices(raw);
         const scored = toScoredIndices(raw);
@@ -1390,6 +1401,12 @@ export function useBand({
       mountedRef.current = false;
       collectingRef.current = false;
       stopMock();
+      // BAND-LIFE-002: 예기치 않은 끊김으로 예약된 자동 재연결 타이머를 언마운트 시 해제한다.
+      // 해제하지 않으면 죽은 컴포넌트에서 connect()가 실행되어 리스너·스트림이 누수된다.
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       if (flushTimerRef.current) {
         clearInterval(flushTimerRef.current);
         flushTimerRef.current = null;

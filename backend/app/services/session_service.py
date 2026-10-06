@@ -51,7 +51,7 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _serialize(s: Session) -> dict:
+def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
     parts = list(s.participants or [])
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
@@ -92,8 +92,11 @@ def _serialize(s: Session) -> dict:
                 # 게스트는 user_id가 없으므로 None으로 직렬화한다
                 "user_id": str(p.user_id) if p.user_id else None,
                 "guest_name": p.guest_name,
-                "gender": p.gender,
-                "birth_date": p.birth_date,
+                # AUTHZ-PARTICIPANT-PII: 생년월일/성별 등 참여자 PII 는 host(상담사)에게만 노출한다.
+                #   참여자(내담자)가 GET /sessions/{id} 로 조회할 때 타인 PII 가 새지 않도록
+                #   비host 뷰에서는 null 로 강등한다.
+                "gender": p.gender if include_participant_pii else None,
+                "birth_date": p.birth_date if include_participant_pii else None,
                 "is_guest": p.user_id is None,
                 "band_connected": p.band_connected,
                 "linkband_device_id": p.linkband_device_id,
@@ -636,7 +639,11 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
 
 def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_for_user(session_id, user_id, db)
-    return _with_chat_room(_serialize(s), s.id, db)
+    # AUTHZ-PARTICIPANT-PII: 호스트만 참여자 PII(생년월일·성별)를 본다. 참여자 본인 조회에서는 제외.
+    is_host = s.host_id == _to_uuid(user_id)
+    return _with_chat_room(
+        _serialize(s, include_participant_pii=is_host), s.id, db
+    )
 
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
@@ -1092,20 +1099,54 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
         pass
 
 
-def _next_waitlist_position(s: Session) -> int:
-    positions = [p.waitlist_position or 0 for p in (s.participants or []) if p.is_waitlisted]
+def _next_waitlist_position(s: Session, db: DBSession) -> int:
+    """대기열 다음 순번 — DB 기준으로 조회해 캐시된 컬렉션 오염을 피한다."""
+    rows = (
+        db.query(SessionParticipant.waitlist_position)
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.is_waitlisted.is_(True),
+        )
+        .all()
+    )
+    positions = [row[0] or 0 for row in rows]
     return (max(positions) + 1) if positions else 1
 
 
-def _has_capacity(s: Session) -> bool:
+def _active_participant_count(s: Session, db: DBSession) -> int:
+    """정원 판정용 active(대기열 제외) 인원 — 로드된 컬렉션 대신 DB 카운트로 센다."""
+    return (
+        db.query(func.count(SessionParticipant.id))
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+
+
+def _has_capacity(s: Session, db: DBSession) -> bool:
     """FUNC-03: active(대기열 제외) 인원이 정원(max_participants) 미만인지 판정한다.
 
     정원 미설정(0/None)은 제한 없음으로 본다.
     """
     if not s.max_participants:
         return True
-    active = sum(1 for p in (s.participants or []) if not p.is_waitlisted)
-    return active < s.max_participants
+    return _active_participant_count(s, db) < s.max_participants
+
+
+def _lock_session_for_capacity(s_id: UUID, db: DBSession) -> Session | None:
+    """정원 검사~참여자 삽입 사이를 직렬화하기 위해 세션 행을 잠근다(CONC-CAPACITY-RACE).
+
+    PostgreSQL 은 SELECT ... FOR UPDATE 로 같은 세션으로의 동시 입장을 직렬화한다.
+    SQLite(테스트)는 FOR UPDATE 를 지원하지 않으므로 일반 조회로 폴백한다(단일 커넥션).
+    """
+    query = db.query(Session).filter(Session.id == s_id)
+    bind = db.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        query = query.with_for_update()
+    return query.populate_existing().first()
 
 
 def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
@@ -1134,6 +1175,12 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         raise HTTPException(status_code=400, detail="종료된 세션에는 초대할 수 없습니다")
 
     target_uuid = _to_uuid(user_id)
+
+    # CONC-CAPACITY-RACE: 정원 검사~삽입 사이를 세션 행 잠금으로 직렬화한다.
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
     existing = (
         db.query(SessionParticipant)
         .filter(
@@ -1145,17 +1192,25 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     if existing:
         raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
 
-    active = [p for p in (s.participants or []) if not p.is_waitlisted]
-    if len(active) >= s.max_participants:
-        position = _next_waitlist_position(s)
-        db.add(SessionParticipant(
+    # FUNC-03: 정원이 차 있으면 대기열에 등록한다.
+    if not _has_capacity(s, db):
+        position = _next_waitlist_position(s, db)
+        new_participant = SessionParticipant(
             session_id=s.id,
             user_id=target_uuid,
             is_waitlisted=True,
             waitlist_position=position,
-        ))
+        )
     else:
-        db.add(SessionParticipant(session_id=s.id, user_id=target_uuid))
+        new_participant = SessionParticipant(session_id=s.id, user_id=target_uuid)
+
+    # CONC-DUP-JOIN-INVITE: 동시 초대 경합 — unique(session_id, user_id) 위반 시
+    # IntegrityError(500) 대신 기존과 동일하게 409 로 멱등 응답한다.
+    try:
+        with db.begin_nested():
+            db.add(new_participant)
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
 
     db.commit()
     db.refresh(s)
@@ -1411,11 +1466,19 @@ def join_session_by_code(
                 detail="아직 오픈 전인 클래스입니다. 상담사가 클래스를 열면 입장할 수 있습니다",
             )
 
-    if user_id:
-        uid = _to_uuid(user_id)
-        if s.host_id == uid:
-            # host 상담사는 참여자로 중복 등록하지 않는다
-            return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": None, "is_guest": False}
+    # host 상담사는 참여자로 중복 등록하지 않는다(잠금·삽입 불필요).
+    member_uid = _to_uuid(user_id) if user_id else None
+    if member_uid is not None and s.host_id == member_uid:
+        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": None, "is_guest": False}
+
+    # CONC-CAPACITY-RACE: 이 시점부터 정원 검사·참여자 삽입을 세션 행 잠금 하에 수행한다.
+    # (PostgreSQL SELECT ... FOR UPDATE 로 같은 세션 동시 입장을 직렬화)
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
+    if member_uid is not None:
+        uid = member_uid
         existing = (
             db.query(SessionParticipant)
             .filter(
@@ -1429,20 +1492,38 @@ def join_session_by_code(
             # 호스트가 초대(invite_participant)한 참가자는 consent_eeg=False 로 남아, 본인이
             # 참여 동의를 거치기 전에는 업로드가 차단된다.
             # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
-            has_room = _has_capacity(s)
-            existing = SessionParticipant(
+            has_room = _has_capacity(s, db)
+            new_participant = SessionParticipant(
                 session_id=s.id,
                 user_id=uid,
                 consent_eeg=True,
                 is_waitlisted=not has_room,
-                waitlist_position=_next_waitlist_position(s) if not has_room else None,
+                waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
             )
-            db.add(existing)
+            # CONC-DUP-JOIN-INVITE: 동시 입장 경합 — unique(session_id, user_id) 위반 시
+            # IntegrityError(500) 대신 먼저 커밋된 행을 재사용해 멱등 처리한다.
+            try:
+                with db.begin_nested():
+                    db.add(new_participant)
+            except IntegrityError:
+                existing = (
+                    db.query(SessionParticipant)
+                    .filter(
+                        SessionParticipant.session_id == s.id,
+                        SessionParticipant.user_id == uid,
+                    )
+                    .first()
+                )
+                if existing is None:
+                    raise
+                existing.consent_eeg = True
+            else:
+                existing = new_participant
         else:
             existing.consent_eeg = True
             # SDD-126: 대기열 회원이 코드로 자발 입장 시 is_waitlisted 해제(관제·좌석·인원 집계 반영)
             # FUNC-03: 정원 여유가 있을 때만 해제한다(정원 초과 입장 방지).
-            if existing.is_waitlisted and _has_capacity(s):
+            if existing.is_waitlisted and _has_capacity(s, db):
                 existing.is_waitlisted = False
                 existing.waitlist_position = None
         db.commit()
@@ -1475,12 +1556,12 @@ def join_session_by_code(
     if participant is None:
         # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
         # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
-        has_room = _has_capacity(s)
+        has_room = _has_capacity(s, db)
         participant = SessionParticipant(
             session_id=s.id, user_id=None, guest_name=name[:100],
             gender=gender, birth_date=birth_date, consent_eeg=True,
             is_waitlisted=not has_room,
-            waitlist_position=_next_waitlist_position(s) if not has_room else None,
+            waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
         )
         db.add(participant)
     else:
@@ -1492,7 +1573,7 @@ def join_session_by_code(
             participant.birth_date = birth_date
         participant.consent_eeg = True
         # FUNC-03: 정원 여유가 있을 때만 대기열에서 해제한다.
-        if participant.is_waitlisted and _has_capacity(s):
+        if participant.is_waitlisted and _has_capacity(s, db):
             participant.is_waitlisted = False
             participant.waitlist_position = None
 
@@ -1969,7 +2050,11 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
         "version": s.state_version or 0,
         "started_at": s.started_at,
         "access_code": s.access_code,
+        # WS-SNAPSHOT-METRICS-KEY: join 스냅샷 소비자 계약이 'metrics'(백엔드 내부 핸들러)와
+        #   'participants'(프론트 SessionLiveJoinSnapshot)로 갈려 있어 둘 다 노출한다.
+        #   REST(/live-metrics)는 response_model 이 'metrics' 만 남기므로 무영향.
         "metrics": metrics,
+        "participants": metrics,
         # DashboardBox 4종 집계 — 접촉/단절/저전력을 분리 파생
         "summary": {
             "participant_count": len(metrics),
@@ -2474,12 +2559,19 @@ def _persist_feature_items(
 
     # SDD-026: 밴드 연결 전이/배터리 변화는 device_status_changed 이벤트로 발행(commit 후, best-effort)
     if became_connected or latest_battery is not None:
-        _notify_device_status(sid, participant)
+        # WS-CONTRACT-DEVICE-VERSION: 프론트 DeviceStatusChangedEvent 는 version(number, 필수)을
+        #   요구한다. 세션 상태 버전을 함께 실어 보낸다(누락 시 프론트 파서가 이벤트를 버린다).
+        state_version = (
+            db.query(Session.state_version).filter(Session.id == sid).scalar() or 0
+        )
+        _notify_device_status(sid, participant, version=state_version)
 
     return saved
 
 
-def _notify_device_status(sid: UUID, participant: SessionParticipant) -> None:
+def _notify_device_status(
+    sid: UUID, participant: SessionParticipant, *, version: int | None = None
+) -> None:
     """device_status_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op)."""
     try:
         from app.ws import session_live_namespace as live
@@ -2490,6 +2582,8 @@ def _notify_device_status(sid: UUID, participant: SessionParticipant) -> None:
                 "participant_id": str(participant.id),
                 "band_connected": participant.band_connected,
                 "band_battery": participant.band_battery,
+                # WS-CONTRACT-DEVICE-VERSION: 상태 계약 버전 — 프론트 필수 필드.
+                "version": version if version is not None else 0,
             },
         )
     except Exception:

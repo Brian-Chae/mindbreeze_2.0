@@ -717,9 +717,16 @@ export class EEGSignalProcessor {
   private calculateAmplitudeSQI(data: number[]): number[] {
     const windowSize = 125;
     const sqi = new Array(data.length).fill(0);
-    
-    for (let i = 0; i <= data.length - windowSize; i++) {
-      const window = data.slice(i, i + windowSize);
+    if (data.length === 0) return sqi;
+
+    // EEG-NUM-003: 마지막 window 미만 꼬리 구간도 계산한다.
+    // - data.length >= windowSize: 겹침 sweep(stride=1)의 마지막 window 가 꼬리를 덮는다.
+    // - data.length <  windowSize: 전체를 하나의 부분 window 로 평가해 꼬리가 0으로 남지 않게 한다.
+    const windowLength = Math.min(windowSize, data.length);
+    const lastStart = Math.max(0, data.length - windowLength);
+
+    for (let i = 0; i <= lastStart; i++) {
+      const window = data.slice(i, i + windowLength);
       
       // 각 샘플에 대해 절대값 기반 품질 점수 계산
       const qualityScores = window.map(sample => {
@@ -741,7 +748,7 @@ export class EEGSignalProcessor {
       // 윈도우 내 평균 품질 점수 계산
       const qualityScore = qualityScores.reduce((sum, score) => sum + score, 0) / qualityScores.length;
       
-      for (let j = i; j < i + windowSize && j < data.length; j++) {
+      for (let j = i; j < i + windowLength && j < data.length; j++) {
         sqi[j] = qualityScore;
       }
     }
@@ -755,13 +762,18 @@ export class EEGSignalProcessor {
   private calculateFrequencySQI(data: number[]): number[] {
     const windowSize = 125;
     const sqi = new Array(data.length).fill(0);
-    
-    for (let i = 0; i <= data.length - windowSize; i++) {
-      const window = data.slice(i, i + windowSize);
+    if (data.length === 0) return sqi;
+
+    // EEG-NUM-003: 진폭 SQI 와 동일하게 마지막 window 미만 꼬리 구간까지 계산한다.
+    const windowLength = Math.min(windowSize, data.length);
+    const lastStart = Math.max(0, data.length - windowLength);
+
+    for (let i = 0; i <= lastStart; i++) {
+      const window = data.slice(i, i + windowLength);
       const variance = this.calculateVariance(window);
       const qualityScore = Math.max(0, Math.min(1, 1.0 - variance / 1000));
       
-      for (let j = i; j < i + windowSize && j < data.length; j++) {
+      for (let j = i; j < i + windowLength && j < data.length; j++) {
         sqi[j] = qualityScore;
       }
     }

@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
@@ -235,23 +236,50 @@ def get_or_create_room_by_session(session_id: UUID, db: DBSession) -> ChatRoom:
 
     방이 없으면 생성한다(host_id 는 세션 host). 세션 방 접근 권한은 ChatRoom.host_id 가
     아니라 Session.host_id / SessionParticipant 기반으로 판정한다(_ensure_member 참조).
+
+    CHAT-DIRECT-ROOM-RACE: '조회 후 삽입'은 동시 개설 시 unique(session_id) 위반이
+    IntegrityError(500) 로 새어나간다. savepoint 로 감싸 충돌 시 기존 행을 재사용한다.
     """
     room = db.query(ChatRoom).filter(ChatRoom.session_id == session_id).first()
-    if not room:
-        session = db.query(Session).filter(Session.id == session_id).first()
-        room = ChatRoom(
-            session_id=session_id,
-            room_type="session",
-            host_id=session.host_id if session else None,
-        )
-        db.add(room)
+    if room:
+        return room
+    session = db.query(Session).filter(Session.id == session_id).first()
+    new_room = ChatRoom(
+        session_id=session_id,
+        room_type="session",
+        host_id=session.host_id if session else None,
+    )
+    try:
+        with db.begin_nested():
+            db.add(new_room)
         db.commit()
-        db.refresh(room)
-    return room
+        db.refresh(new_room)
+        return new_room
+    except IntegrityError:
+        existing = db.query(ChatRoom).filter(ChatRoom.session_id == session_id).first()
+        if existing is None:
+            raise
+        return existing
+
+
+def _lock_direct_room_pair(counselor_id: UUID, client_id: UUID, db: DBSession) -> None:
+    """direct 채팅방 개설을 (상담사, 내담자) 조합 단위로 직렬화한다(CHAT-DIRECT-ROOM-RACE).
+
+    direct 방은 unique 제약이 없어 '조회 후 삽입' 경합 시 중복 방이 생긴다. PostgreSQL
+    트랜잭션 스코프 advisory lock 으로 같은 조합의 동시 개설을 한 줄로 세운 뒤 재조회한다.
+    SQLite(테스트) 등 미지원 dialect 는 no-op.
+    """
+    bind = db.get_bind()
+    if bind is None or bind.dialect.name != "postgresql":
+        return
+    key = f"chat_direct:{counselor_id}:{client_id}"
+    db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"), {"k": key})
 
 
 def get_or_create_direct_room(counselor_id: UUID, client_id: UUID, db: DBSession) -> ChatRoom:
     # 직접방의 상대 내담자 식별은 name 필드에 client_id를 저장하여 관리
+    # CHAT-DIRECT-ROOM-RACE: (상담사, 내담자) 조합 잠금 후 재조회한다.
+    _lock_direct_room_pair(counselor_id, client_id, db)
     existing = (
         db.query(ChatRoom)
         .filter(
@@ -269,10 +297,25 @@ def get_or_create_direct_room(counselor_id: UUID, client_id: UUID, db: DBSession
         host_id=counselor_id,
         name=str(client_id),
     )
-    db.add(new_room)
-    db.commit()
-    db.refresh(new_room)
-    return new_room
+    try:
+        with db.begin_nested():
+            db.add(new_room)
+        db.commit()
+        db.refresh(new_room)
+        return new_room
+    except IntegrityError:
+        existing = (
+            db.query(ChatRoom)
+            .filter(
+                ChatRoom.room_type == "direct",
+                ChatRoom.host_id == counselor_id,
+                ChatRoom.name == str(client_id),
+            )
+            .first()
+        )
+        if existing is None:
+            raise
+        return existing
 
 
 def create_direct_room(counselor_id: str, client_id: str, name: str | None = None, db: DBSession = None) -> dict:

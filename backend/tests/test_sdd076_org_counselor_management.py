@@ -81,6 +81,19 @@ def test_primary_and_owner_protected(client, org_data, method):
 def test_last_active_admin(client, org_data, method, other_status):
     db, org, _, users = org_data
     users[2].role, users[2].status = "org_admin", "active"
+    # AUTH4-02: 역할 판정이 전역 User.role 이 아니라 membership role 기준이 되었으므로,
+    #   이 기관의 소속 역할도 org_admin 으로 맞춘다(미러만 바꾸면 멱등 요청으로 오판된다).
+    from app.models.user_org_membership import UserOrgMembership
+
+    membership = (
+        db.query(UserOrgMembership)
+        .filter(
+            UserOrgMembership.user_id == users[2].id,
+            UserOrgMembership.org_id == org.id,
+        )
+        .first()
+    )
+    membership.role = "org_admin"
     users[1].status = other_status
     db.commit()
     body = {"role": "counselor"} if method == "PATCH" else {}

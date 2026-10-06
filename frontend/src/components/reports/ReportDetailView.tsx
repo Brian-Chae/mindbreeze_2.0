@@ -207,8 +207,14 @@ export default function ReportDetailView({
     }
     setResending(true);
     try {
-      await resendReportEmail(report.id!, email);
-      setResendSuccess(`${email}로 리포트 메일을 발송했습니다.`);
+      // RPT-EMAIL-CONTRACT-004: 서버는 실패 시에도 200 + success/sent=false 를 반환하므로
+      //   응답 계약 {success, sent, message}를 반드시 확인해 성공/실패를 구분한다.
+      const res = await resendReportEmail(report.id!, email);
+      if (!res.success || !res.sent) {
+        setResendError(res.message || '메일 발송에 실패했습니다.');
+        return;
+      }
+      setResendSuccess(res.message || `${email}로 리포트 메일을 발송했습니다.`);
     } catch (e) {
       setResendError(e instanceof Error ? e.message : '메일 발송에 실패했습니다.');
     } finally {

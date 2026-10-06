@@ -121,6 +121,8 @@ export function setActiveModelFromDto(dto: NormalizationModelDto | null): void {
 
 /** 코호트 상수 기반 점수 (fallback) */
 function cohortScores(idx: RawIndexInput): EEGScoreSet {
+  // EEG-NUM-002: 좌우뇌 균형은 FAA(로그비)로 점수화한다. faa 가 없을 때만
+  // hemisphericBalance(-1~1 비율)를 대리 입력으로 쓴다(모의/레거시 경로).
   const faa =
     idx.faa !== undefined
       ? idx.faa

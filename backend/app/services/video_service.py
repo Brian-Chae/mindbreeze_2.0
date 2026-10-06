@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session
 from app.models.record import SessionRecord, VideoChunk
+from app.schemas.record import MAX_VIDEO_EXPECTED_CHUNKS
 from app.services import storage_service
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,10 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
 def stop_recording(session_id: str, host_id: str, expected_count: int | None, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
     record = _get_or_create_record(s.id, db)
+    # VIDEO-EXPECTED-COUNT-DOS: 스키마 상한을 우회한 직접 호출·기존 오염값을 방어한다.
+    # 비정상적으로 큰 expected_count 는 저장하지 않고 422 로 거부한다(누락 range OOM 방지).
+    if expected_count is not None and not (0 <= expected_count <= MAX_VIDEO_EXPECTED_CHUNKS):
+        raise HTTPException(status_code=422, detail="expected_count 값이 허용 범위를 벗어났습니다")
     # 멱등 종료 — 녹화 중일 때만 상태를 전이한다(중복 stop/미시작 stop 허용)
     if record.video_status == "recording":
         record.video_status = "completed"
@@ -158,6 +163,9 @@ def stop_recording(session_id: str, host_id: str, expected_count: int | None, db
     present = {c[0] for c in db.query(VideoChunk.chunk_index).filter(VideoChunk.session_id == s.id).all()}
     total = len(present)
     expected = record.video_expected_chunks
+    # 과거에 저장된 오염값(상한 초과)이 있어도 range() 폭발을 막는다.
+    if expected is not None and not (0 <= expected <= MAX_VIDEO_EXPECTED_CHUNKS):
+        expected = None
     missing = [i for i in range(expected) if i not in present] if expected is not None else []
     return {
         "session_id": str(s.id),
