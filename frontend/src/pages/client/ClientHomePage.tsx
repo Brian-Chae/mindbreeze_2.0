@@ -57,7 +57,7 @@ function sameWeek(a: Date, b: Date): boolean {
 
 // ── 공통 스타일 ──────────────────────────────────────────────────
 
-const SECTION_TITLE_CLS = 'font-bold text-[17px] text-[#1F1F1F] tracking-tight';
+const SECTION_TITLE_CLS = 'font-extrabold text-[18px] text-[#1F1F1F] tracking-tight';
 const SECTION_HEAD_CLS = 'flex items-center justify-between mb-4';
 const LINK_CLS = 'text-[13px] font-semibold text-[#5F0080] hover:underline shrink-0';
 
@@ -186,7 +186,7 @@ function SummaryTiles({
           key={t.label}
           type="button"
           onClick={t.onClick}
-          className="rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8]"
+          className="rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8]"
         >
           <div className="text-[12px] font-semibold text-[#6F6F6F]">{t.label}</div>
           <div className={`mt-1 text-[26px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
@@ -401,7 +401,7 @@ export default function ClientHomePage() {
 
   if (error) {
     return (
-      <section className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-center" role="alert">
+      <section className="bg-white border border-[#E8E3EC] rounded-2xl p-6 text-center" role="alert">
         <p className="text-sm text-red-600 mb-4">{error}</p>
         <button
           type="button"
@@ -467,7 +467,7 @@ export default function ClientHomePage() {
                     key={r.id ?? r.session_id}
                     type="button"
                     onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#FBF8FD]"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#FBF8FD]"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -497,7 +497,7 @@ export default function ClientHomePage() {
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
+            <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm text-[#6F6F6F]">
               아직 리포트가 없어요
             </div>
           )}
@@ -512,7 +512,7 @@ export default function ClientHomePage() {
             </button>
           </div>
           {weekSessions.length > 0 ? (
-            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
               {weekSessions.map((s) => (
                 <button
                   key={s.id}
@@ -583,7 +583,7 @@ export default function ClientHomePage() {
                 상담 신청 ›
               </button>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#E8E3EC] bg-white p-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
                 {primaryCounselor.name?.charAt(0) ?? '상'}
               </div>
@@ -604,7 +604,7 @@ export default function ClientHomePage() {
             </button>
           </div>
           {recentChats.length > 0 ? (
-            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
               {recentChats.map((room) => (
                 <button
                   key={room.id}
@@ -637,14 +637,14 @@ export default function ClientHomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+            <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
               대화가 없습니다
             </div>
           )}
         </section>
 
         {/* 새 알림 */}
-        <section>
+        <section className="flex flex-1 flex-col">
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
             <button type="button" onClick={() => navigate('/app/notifications')} className={LINK_CLS}>
@@ -652,7 +652,7 @@ export default function ClientHomePage() {
             </button>
           </div>
           {recentNotifications.length > 0 ? (
-            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+            <div className="flex flex-1 flex-col rounded-2xl border border-[#E8E3EC] bg-white px-5">
               {recentNotifications.map((n) => (
                 <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0">
                   <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
@@ -665,7 +665,7 @@ export default function ClientHomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
               새로운 알림이 없습니다
             </div>
           )}

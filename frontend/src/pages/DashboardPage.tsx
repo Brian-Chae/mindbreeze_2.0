@@ -105,7 +105,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
   const isLive = cls.status === 'in_progress' || cls.status === 'open';
   const showRecordLink = cls.has_record || cls.has_summary;
   return (
-    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-4 space-y-3">
+    <div className="bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <Link to={`/sessions/${cls.id}`} className="font-bold text-[14px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
           {cls.title || '제목 없음'}
@@ -338,9 +338,9 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 lg:gap-8 min-w-0">
             {/* 지금 할 일 (Action Queue) */}
             <section>
-              <h2 className="mb-4 font-bold text-[17px] text-[#1F1F1F] tracking-tight">지금 할 일</h2>
+              <h2 className="mb-4 font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">지금 할 일</h2>
               {liveClasses.length === 0 && pendingReviewCount === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-8 text-center text-sm text-[#6F6F6F]">
+                <div className="rounded-2xl border border-dashed border-[#E8E3EC] p-8 text-center text-sm text-[#6F6F6F]">
                   지금 처리할 일이 없습니다
                 </div>
               ) : (
@@ -409,11 +409,11 @@ export default function DashboardPage() {
             {/* 오늘·다가오는 일정 */}
             <section>
               <div className="mb-4 flex items-baseline justify-between">
-                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">오늘 · 다가오는 일정</h2>
+                <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">오늘 · 다가오는 일정</h2>
                 <span className="font-mono text-[11px] text-[#6F6F6F]">오늘 {todaySessions.length}건</span>
               </div>
               {upcomingSessions.length > 0 ? (
-                <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+                <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
                   {upcomingSessions.map((cls) => {
                     const isToday = cls.scheduled_at
                       ? new Date(cls.scheduled_at).toDateString() === new Date().toDateString()
@@ -448,7 +448,7 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
+                <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-10 text-center text-sm text-[#6F6F6F]">
                   예정된 일정이 없습니다
                 </div>
               )}
@@ -457,13 +457,13 @@ export default function DashboardPage() {
             {/* 내 클래스 */}
             <section>
               <div className="mb-4 flex items-baseline justify-between">
-                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">내 클래스</h2>
+                <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">내 클래스</h2>
                 <Link to="/sessions" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
                   전체 보기
                 </Link>
               </div>
               {data.classes.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#DDDEE7] p-12 text-center">
+                <div className="rounded-2xl border border-dashed border-[#E8E3EC] p-12 text-center">
                   <p className="text-[#6F6F6F] text-sm mb-4">아직 진행한 클래스가 없습니다.</p>
                   <Link
                     to="/sessions/new"
@@ -509,28 +509,28 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 lg:gap-6 min-w-0">
             {/* 요약 타일 */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-[#DDDEE7] bg-white p-4">
+              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">진행 중</div>
                 <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F8A5B]">
                   {data.in_progress_classes}
                 </div>
                 <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">입장하기 →</div>
               </div>
-              <div className="rounded-2xl border border-[#DDDEE7] bg-white p-4">
+              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">검토 대기</div>
                 <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#5F0080]">
                   {pendingReviewCount}
                 </div>
                 <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">리포트 검토 →</div>
               </div>
-              <div className="rounded-2xl border border-[#DDDEE7] bg-white p-4">
+              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">오늘 예정</div>
                 <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {todaySessions.length}
                 </div>
                 <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">일정 보기 →</div>
               </div>
-              <div className="rounded-2xl border border-[#DDDEE7] bg-white p-4">
+              <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">총 참여자</div>
                 <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {data.total_participants.toLocaleString('ko-KR')}
@@ -542,13 +542,13 @@ export default function DashboardPage() {
             {/* 최근 대화 */}
             <section>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">최근 대화</h2>
+                <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">최근 대화</h2>
                 <Link to="/chat" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
                   전체
                 </Link>
               </div>
               {recentChats.length > 0 ? (
-                <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+                <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
                   {recentChats.map((room) => (
                     <Link
                       key={room.id}
@@ -580,7 +580,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+                <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
                   대화가 없습니다
                 </div>
               )}
@@ -589,13 +589,13 @@ export default function DashboardPage() {
             {/* 새 알림 */}
             <section>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">새 알림</h2>
+                <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">새 알림</h2>
                 <Link to="/notifications" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
                   전체
                 </Link>
               </div>
               {recentNotifications.length > 0 ? (
-                <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+                <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
                   {recentNotifications.map((n) => (
                     <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0">
                       <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
@@ -608,7 +608,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+                <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
                   새로운 알림이 없습니다
                 </div>
               )}
@@ -616,7 +616,7 @@ export default function DashboardPage() {
 
             {/* 상담사 코드 (접이식) */}
             {counselorCode && (
-              <section className="rounded-2xl border border-[#DDDEE7] bg-white p-5">
+              <section className="rounded-2xl border border-[#E8E3EC] bg-white p-5">
                 <button
                   type="button"
                   onClick={() => setCodeOpen((v) => !v)}
