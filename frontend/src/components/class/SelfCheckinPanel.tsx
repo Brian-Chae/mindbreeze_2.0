@@ -4,7 +4,7 @@
 // (수업 전 설문은 입장 전 체크인에서 이미 물었으므로 종료 화면에서는 묻지 않는다.)
 // 완료 후에는 별도 카드 없이 종료 화면의 '수업이 종료되었습니다' 안내만 남긴다.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ApiError } from '../../lib/api/client';
 import {
   CHECKIN_SKIP_STORAGE_KEY,
@@ -93,6 +93,44 @@ function errorMessage(error: unknown): string {
   return '설문 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
+// MB2-07: 건너뛴 세션을 JSON 배열(id 목록)로 누적 저장한다.
+// 단일 값으로 덮어쓰면 다른 세션을 건너뛸 때 이전 세션의 스킵 기록이 사라져
+// 그 세션에서 설문을 다시 묻게 된다. 세션 id 별로 독립 보존한다.
+function readSkippedSessions(): string[] {
+  try {
+    const raw = window.localStorage.getItem(CHECKIN_SKIP_STORAGE_KEY);
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((id): id is string => typeof id === 'string' && id.length > 0);
+      }
+      if (typeof parsed === 'string' && parsed.length > 0) return [parsed];
+    } catch {
+      // JSON 이 아니면 구버전 단일 세션 id(원시 문자열)로 취급한다.
+      return [raw];
+    }
+    return [];
+  } catch {
+    // localStorage 미가용(사생활 보호 모드) — 건너뛰기 기록을 읽지 못한다.
+    return [];
+  }
+}
+
+function isSessionSkipped(sessionId: string): boolean {
+  return readSkippedSessions().includes(sessionId);
+}
+
+function markSessionSkipped(sessionId: string): void {
+  try {
+    const sessions = readSkippedSessions();
+    if (!sessions.includes(sessionId)) sessions.push(sessionId);
+    window.localStorage.setItem(CHECKIN_SKIP_STORAGE_KEY, JSON.stringify(sessions));
+  } catch {
+    // localStorage 미가용(사생활 보호 모드) — 이번 세션에서만 숨긴다.
+  }
+}
+
 export function SelfCheckinPanel({
   sessionId,
   participantId,
@@ -103,15 +141,17 @@ export function SelfCheckinPanel({
   const [after, setAfter] = useState<MoodState>(EMPTY_MOOD);
   const [note, setNote] = useState('');
   const [phase, setPhase] = useState<'input' | 'done' | 'skipped'>(() => {
-    // 이미 건너뛴 세션이면 다시 묻지 않는다(새로고침 포함).
-    try {
-      return window.localStorage.getItem(CHECKIN_SKIP_STORAGE_KEY) === sessionId ? 'skipped' : 'input';
-    } catch {
-      return 'input';
-    }
+    // 이미 건너뛴 세션이면 다시 묻지 않는다(새로고침 포함). 세션별로 독립 판정한다.
+    return isSessionSkipped(sessionId) ? 'skipped' : 'input';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // MB2-07: 세션(라우트)이 바뀌면 이전 세션의 스킵/완료 상태를 새 세션에 이월하지 않는다.
+  // 컴포넌트가 재사용돼도 새 세션 기준으로 다시 판정한다(초기값은 lazy init 과 동일해 깜빡임 없음).
+  useEffect(() => {
+    setPhase(isSessionSkipped(sessionId) ? 'skipped' : 'input');
+  }, [sessionId]);
 
   const trimmedNote = note.trim();
   const hasValue = hasMoodValue(after);
@@ -154,11 +194,7 @@ export function SelfCheckinPanel({
   };
 
   const handleSkip = (): void => {
-    try {
-      window.localStorage.setItem(CHECKIN_SKIP_STORAGE_KEY, sessionId);
-    } catch {
-      // localStorage 미가용(사생활 보호 모드) — 이번 세션에서만 숨긴다.
-    }
+    markSessionSkipped(sessionId);
     setPhase('skipped');
   };
 

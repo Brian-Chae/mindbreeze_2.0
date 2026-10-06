@@ -10,6 +10,7 @@ import type { SessionLiveEegFeatureEvent } from '../socket';
 import {
   normalizeSignalQuality01,
   signalQualityLevel,
+  type SignalQualityLevel,
 } from './signal-status';
 
 /** 증분 패치 결과 — 변경 없으면 same=true 로 호출측이 setState 스킵 가능 */
@@ -63,7 +64,12 @@ export function applyEegFeatureToMetricsDetailed(
   const sq01 = normalizeSignalQuality01(
     event.signal_quality ?? feature?.signal_quality ?? null,
   );
-  const sqLevel = event.signal_quality_level ?? signalQualityLevel(sq01);
+  // MB2-08: 이벤트에 signal_quality도 없고 명시 레벨도 없으면
+  // signalQualityLevel(null)='unknown' 으로 강등되어 이전 ok/bad 표시를 덮어쓴다.
+  // 새 관측이 없으므로 레벨을 null 로 두고 호출부에서 기존 행 값을 유지(hold)한다.
+  const explicitLevel = event.signal_quality_level ?? null;
+  const sqLevel: SignalQualityLevel | null =
+    explicitLevel ?? (sq01 != null ? signalQualityLevel(sq01) : null);
   // device_status는 접촉(LeadOff). SQI로 ok/lead_off 추정 금지.
   const contactStatus = event.device_status ?? null;
   const lastAt =
@@ -102,7 +108,7 @@ export function applyEegFeatureToMetricsDetailed(
       upload_status: event.upload_status ?? row.upload_status,
       last_eeg_at: newerLastAt(row.last_eeg_at),
       signal_quality: sq01 ?? row.signal_quality ?? null,
-      signal_quality_level: sqLevel,
+      signal_quality_level: sqLevel ?? row.signal_quality_level ?? null,
       heart_rate:
         typeof heartRate === 'number' ? heartRate : row.heart_rate ?? null,
       respiratory_rate:
@@ -130,7 +136,7 @@ export function applyEegFeatureToMetricsDetailed(
       upload_status: event.upload_status ?? 'idle',
       last_eeg_at: lastAt,
       signal_quality: sq01,
-      signal_quality_level: sqLevel,
+      signal_quality_level: sqLevel ?? 'unknown',
       heart_rate: typeof heartRate === 'number' ? heartRate : null,
       respiratory_rate:
         typeof respiratoryRate === 'number' ? respiratoryRate : null,

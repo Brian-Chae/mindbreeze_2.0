@@ -38,8 +38,10 @@ export default function LoginPage() {
   const [pending, setPending] = useState<'email' | 'google' | null>(null);
   // 「로그인 상태 유지」 — 기본 체크. 해제 시 백엔드가 세션 쿠키로 발급한다.
   const [rememberMe, setRememberMe] = useState(true);
-  // SEC-04: Google 가입 시 약관·민감정보 동의 — 신규 가입자에게 필수(개인정보보호법).
+  // SEC-04 / FUNC-10: Google 동의 — 백엔드는 '신규 가입'에만 동의를 요구한다.
+  // 기존 사용자는 체크 없이 통과하므로, 신규 가입 422를 받은 뒤에만 체크박스를 노출한다.
   const [googleConsent, setGoogleConsent] = useState(false);
+  const [needsGoogleConsent, setNeedsGoogleConsent] = useState(false);
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
   const intent = useRef<LoginIntent | null>(null);
   const googleExchanging = useRef(false);
@@ -50,6 +52,7 @@ export default function LoginPage() {
   useEffect(() => {
     setPassword('');
     setError(null);
+    setNeedsGoogleConsent(false);
   }, [loginRole]);
 
   const finish = () => {
@@ -101,7 +104,17 @@ export default function LoginPage() {
         );
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
-        showError(err);
+        // FUNC-10: 백엔드 google_auth 는 '신규 가입'에만 동의 미비 422를 반환한다.
+        // 기존 사용자는 동의 없이 통과하므로, 422일 때만 동의 체크박스를 노출해 재시도한다.
+        if (err instanceof ApiError && err.status === 422) {
+          setNeedsGoogleConsent(true);
+          setError(
+            err.message ||
+              'Google로 처음 가입하는 경우 이용약관·개인정보 처리방침·민감정보 처리에 동의가 필요합니다.',
+          );
+        } else {
+          showError(err);
+        }
       } finally {
         finish();
       }
@@ -118,13 +131,8 @@ export default function LoginPage() {
   });
   const handleGoogleClick = () => {
     if (loginRole === 'org_admin' || !hasGoogleClientId || !begin('google')) return;
-    // SEC-04: 약관·민감정보 동의는 신규 가입이 가능한 회원(client) 역할에만 필수다.
-    // 상담사·관리자 탭은 기존 사용자 로그인이므로 동의 게이트를 적용하지 않는다(회귀 방지).
-    if (loginRole === 'client' && !googleConsent) {
-      setError('Google로 가입·로그인하려면 이용약관·개인정보 처리방침·민감정보 처리에 동의해주세요.');
-      finish();
-      return;
-    }
+    // FUNC-10: 동의 여부와 무관하게 먼저 로그인을 시도한다. 기존 사용자는 그대로 통과하고,
+    // 신규 가입은 백엔드가 422(동의 필요)를 주면 그때 체크박스를 노출한다.
     try { googleLogin(); } catch (err) { showError(err); finish(); }
   };
   const selectTab = (index: number) => {
@@ -150,7 +158,8 @@ export default function LoginPage() {
       {pending === 'google' ? '연결 중…' : isAdmin ? 'Google Workspace로 로그인' : `Google로 ${config.label} 로그인`}
     </button>
   );
-  // SEC-04: Google 로그인 동의 체크박스 — 신규 가입 시 약관·민감정보 처리에 대한 명시적 동의.
+  // SEC-04 / FUNC-10: Google 동의 체크박스 — 신규 가입 422를 받은 뒤에만 노출한다.
+  // 기존 사용자는 동의 없이 로그인되므로 처음부터 강제하지 않는다.
   const googleConsentField = (
     <label htmlFor="google-consent" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
       <input id="google-consent" type="checkbox" checked={googleConsent} disabled={busy}
@@ -204,7 +213,7 @@ export default function LoginPage() {
           </div>}
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {!isAdmin && loginRole === 'client' && <>{googleButton}{googleConsentField}{divider}{emailForm}</>}
+            {!isAdmin && loginRole === 'client' && <>{googleButton}{needsGoogleConsent && googleConsentField}{divider}{emailForm}</>}
             {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
             {isAdmin && <>{rememberMeField}{googleButton}</>}

@@ -208,11 +208,11 @@ describe('POST /sessions/{id}/checkin', () => {
 
 // ── 3. 종료 화면 사전·사후 설문 패널 ─────────────────────────────────────
 
-async function renderPanel(onSubmitted = vi.fn()): Promise<void> {
+async function renderPanel(onSubmitted = vi.fn(), sessionId = SESSION_ID): Promise<void> {
   await act(async () => {
     root.render(
       createElement(SelfCheckinPanel, {
-        sessionId: SESSION_ID,
+        sessionId,
         participantId: PARTICIPANT_ID,
         participantToken: 'guest-token',
         isLoggedIn: false,
@@ -273,7 +273,8 @@ describe('SelfCheckinPanel', () => {
 
     expect(calls.filter((call) => call.url.includes('/checkin'))).toHaveLength(0);
     expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
-    expect(window.localStorage.getItem(CHECKIN_SKIP_STORAGE_KEY)).toBe(SESSION_ID);
+    // MB2-07: 건너뛴 세션은 JSON 배열(id 목록)로 누적 저장된다.
+    expect(JSON.parse(window.localStorage.getItem(CHECKIN_SKIP_STORAGE_KEY) ?? '[]')).toEqual([SESSION_ID]);
 
     // 새로고침(재마운트)해도 다시 묻지 않는다
     await act(async () => root.unmount());
@@ -283,5 +284,16 @@ describe('SelfCheckinPanel', () => {
     root = createRoot(container);
     await renderPanel();
     expect(container.querySelector('[data-testid="self-checkin"]')).toBeNull();
+
+    // MB2-07: 다른 세션은 여전히 묻고, 다른 세션을 건너뛰어도 앞선 세션 기록이 유지된다.
+    const otherSession = 'session-097';
+    await renderPanel(undefined, otherSession);
+    expect(container.querySelector('[data-testid="self-checkin"]')).not.toBeNull();
+    const skipOther = [...container.querySelectorAll('button')].find((b) => b.textContent === '건너뛰기')!;
+    await act(async () => skipOther.click());
+    expect(JSON.parse(window.localStorage.getItem(CHECKIN_SKIP_STORAGE_KEY) ?? '[]')).toEqual([
+      SESSION_ID,
+      otherSession,
+    ]);
   });
 });

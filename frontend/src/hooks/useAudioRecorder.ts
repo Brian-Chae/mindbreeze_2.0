@@ -35,7 +35,12 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
   useEffect(() => () => cleanup(), [cleanup]);
 
   const start = useCallback(async () => {
-    if (state === 'recording') return;
+    // MB2-10: idle/stopped/error 에서만 시작을 허용한다. recording/paused 등
+    // 진행 중 상태에서 재진입하면 기존 recorder·stream 을 정리하지 않고 ref 를
+    // 덮어써 중복 스트림이 새므로 차단한다.
+    if (state !== 'idle' && state !== 'stopped' && state !== 'error') return;
+    // error 등으로 남아 있을 수 있는 이전 recorder/stream 을 먼저 정리한다.
+    cleanup();
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('이 브라우저는 마이크 녹음을 지원하지 않습니다');
@@ -76,7 +81,7 @@ export function useAudioRecorder({ sessionId, onError }: UseAudioRecorderOptions
       setState('error');
       onError?.(err as Error);
     }
-  }, [sessionId, state, onError]);
+  }, [sessionId, state, onError, cleanup]);
 
   const pause = useCallback(() => {
     if (recorderRef.current && recorderRef.current.state === 'recording') {

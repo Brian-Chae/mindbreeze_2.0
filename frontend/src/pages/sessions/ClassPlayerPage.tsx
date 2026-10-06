@@ -230,7 +230,7 @@ const HOST_METRICS: { key: HostMetricKey; label: string; unit: string }[] = [
   { key: 'emotionalStability', label: '정서안정도', unit: '%' },
   { key: 'heartRate', label: 'BPM', unit: 'bpm' },
   { key: 'respiratoryRate', label: '호흡수', unit: '회/분' },
-  { key: 'hrv', label: 'HRV', unit: 'ms' },
+  { key: 'hrv', label: 'HRV(SDNN)', unit: 'ms' },
 ];
 const finiteValue = (value: number | null | undefined): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
@@ -246,7 +246,8 @@ function hostValues(row: SessionLiveMetric, extra?: HostExtra): HostValues {
     respiratoryRate: valid ? finiteValue(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null,
     focus: extraValid ? extra.focus : null,
     emotionalStability: extraValid ? extra.emotionalStability : null,
-    hrv: valid ? finiteValue(row.rmssd) ?? (extraValid ? extra.hrv : null) : null,
+    // MB2-09: HRV는 회원 화면과 동일한 SDNN 기준으로 통일한다(rmssd 혼용 금지).
+    hrv: valid ? finiteValue(row.sdnn) ?? (extraValid ? extra.hrv : null) : null,
   };
 }
 interface HostParticipantProfile { demographics: string; concerns: string }
@@ -659,7 +660,8 @@ export default function ClassPlayerPage() {
           at: Number.isFinite(at) ? at : now,
           focus: focus === null ? null : scoreIndices({ focusIndex: focus }).focusIndex,
           emotionalStability: emotional === null ? null : scoreIndices({ emotionalStability: emotional }).emotionalStability,
-          hrv: finiteValue(event.feature?.rmssd),
+          // MB2-09: 상담사 관제도 회원 기준 SDNN 을 쓴다(같은 세션·참가자 동일 지표).
+          hrv: finiteValue(event.feature?.sdnn),
           // BPM·호흡수는 밴드가 1초 윈도우에서 산출 실패 시 null 을 보내므로
           // 마지막 유효값을 유지(hold)해 몸 지표가 깜빡이지 않게 한다.
           heartRate: finiteValue(heartRate) ?? prev?.heartRate ?? null,
