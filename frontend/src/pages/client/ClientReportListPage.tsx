@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
-import { listReports, type ReportDto } from '../../lib/api/reports';
+import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -132,6 +132,22 @@ export default function ClientReportListPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
+
+  // 내담자 리포트 전체 읽음 — 서버 전체 마킹 후 목록 로컬 상태도 즉시 갱신.
+  const handleMarkAllRead = async () => {
+    if (markingAllRead) return;
+    setMarkingAllRead(true);
+    setError(null);
+    try {
+      await markAllReportsRead();
+      setReports((prev) => prev.map((r) => ({ ...r, is_read: true })));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '전체 읽음 처리 실패');
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
 
   // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -287,6 +303,11 @@ export default function ClientReportListPage() {
           onClick={() => setGroupByCounselor((value) => !value)}
           className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
         >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
+        {reports.some((r) => !r.is_read) && (
+          <button type="button" onClick={() => void handleMarkAllRead()} disabled={markingAllRead}
+            className="h-10 px-4 rounded-xl text-[13px] font-semibold border border-[#E8D9F5] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50 transition-colors"
+          >{markingAllRead ? '처리 중...' : '전체 읽음'}</button>
+        )}
         {!loading && !error && <span className="text-[13px] text-[#6F6F6F] md:ml-auto">{filtered.length} / {total}건</span>}
       </div>
       {loading ? (

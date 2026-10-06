@@ -929,3 +929,38 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
         _enqueue_client_email_on_approval(report, db)
 
     return _serialize(report, session, subjective=_subjective_for_report(report, db))
+
+
+def mark_all_read(user_id: str, db: DBSession) -> int:
+    """내담자 본인의 미읽음 리포트를 모두 읽음 처리하고 변경 건수를 반환한다.
+
+    is_read 마킹은 상세 열람(get_report) 시 1건씩 이뤄지지만, 목록에서 '전체 읽음'으로
+    쌓인 미열람 리포트를 한 번에 처리하기 위한 배치 경로다. 본인(user_id) 소유 리포트만
+    대상이므로 counselor 리포트(상담사 소유)는 자연히 제외된다.
+    """
+    uid = _to_uuid(user_id)
+    updated = (
+        db.query(Report)
+        .filter(Report.user_id == uid, Report.is_read.is_(False))
+        .update({"is_read": True}, synchronize_session=False)
+    )
+    db.commit()
+    return updated
+
+
+def approve_all_reports(host_id: str, db: DBSession) -> dict:
+    """상담사(host)가 소유한 세션의 '검토중(pending_review)' 리포트를 모두 승인한다.
+
+    코멘트 없이 일괄 승인하며, client 리포트는 기존 단일 승인 흐름과 동일하게
+    메일 발송이 예약된다. 이미 승인·분석 미완 건은 대상에서 제외(멱등). 승인 건수를 반환한다.
+    """
+    hid = _to_uuid(host_id)
+    pending = (
+        db.query(Report)
+        .join(Session, Session.id == Report.session_id)
+        .filter(Session.host_id == hid, Report.status == "pending_review")
+        .all()
+    )
+    for report in pending:
+        approve_report(str(report.id), host_id, db)
+    return {"approved": len(pending)}

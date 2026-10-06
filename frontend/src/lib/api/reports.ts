@@ -198,3 +198,19 @@ export const resendReportEmail = (
   email: string,
 ): Promise<ResendReportEmailResponse> =>
   apiClient.post<ResendReportEmailResponse>(`/reports/${reportId}/resend-email`, { email });
+
+/** 내담자 리포트 전체 읽음 — 쌓인 미열람 리포트를 한 번에 처리 */
+export interface MarkAllReportsReadResponse {
+  count: number;
+}
+
+export const markAllReportsRead = (): Promise<MarkAllReportsReadResponse> =>
+  apiClient.put<MarkAllReportsReadResponse>('/reports/read-all');
+
+/** 상담사 일괄 승인 — 검토중(pending_review) 리포트를 코멘트 없이 모두 승인·발송 */
+export interface ApproveAllReportsResponse {
+  approved: number;
+}
+
+export const approveAllReports = (): Promise<ApproveAllReportsResponse> =>
+  apiClient.post<ApproveAllReportsResponse>('/reports/approve-all');

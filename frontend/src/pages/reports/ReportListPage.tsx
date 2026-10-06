@@ -8,12 +8,14 @@ import AppShell from '../../components/layout/AppShell';
 import { ReportStatusChip } from '../../components/reports/ReportStatusBadge';
 import GenerationStatusBadge from '../../components/reports/GenerationStatusBadge';
 import {
+  approveAllReports,
   getAutoApprove,
   listReports,
   resolveReportStatus,
   setAutoApprove,
   type ReportDto,
 } from '../../lib/api/reports';
+import BulkApproveModal from '../../components/reports/BulkApproveModal';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -189,6 +191,8 @@ export default function ReportListPage() {
   const [autoApproveLoading, setAutoApproveLoading] = useState(true);
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
+  // 일괄 승인 (검토중 리포트 코멘트 없이 일괄 발송)
+  const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
 
   // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
   useEffect(() => {
@@ -268,6 +272,11 @@ export default function ReportListPage() {
     }
   };
 
+  const handleBulkApprove = async () => {
+    await approveAllReports();
+    setReloadKey((k) => k + 1);
+  };
+
   const sessionOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const r of reports) {
@@ -282,6 +291,12 @@ export default function ReportListPage() {
   const filtered = useMemo(
     () => filterAndSortReports(reports, search, statusFilter, sortKey, sessionFilter, typeFilter),
     [reports, search, statusFilter, sortKey, sessionFilter, typeFilter],
+  );
+
+  // 일괄 승인 대상 — 현재 목록에서 검토중(pending_review) 상태 개수.
+  const pendingCount = useMemo(
+    () => reports.filter((r) => resolveReportStatus(r) === 'pending_review').length,
+    [reports],
   );
 
   const grouped = useMemo(
@@ -337,9 +352,20 @@ export default function ReportListPage() {
     </button>
   );
 
+  const bulkApproveButton = pendingCount > 0 ? (
+    <button
+      type="button"
+      onClick={() => setBulkApproveOpen(true)}
+      className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+    >
+      일괄 승인 ({pendingCount})
+    </button>
+  ) : null;
+
   const rightSlot = (
     <div className="inline-flex items-center gap-3">
       {autoApproveToggle}
+      {bulkApproveButton}
       {sampleLink}
     </div>
   );
@@ -493,6 +519,7 @@ export default function ReportListPage() {
       {!loading && (
         <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
           {autoApproveToggle}
+          {bulkApproveButton}
           {sampleLink}
         </div>
       )}
@@ -704,6 +731,13 @@ export default function ReportListPage() {
         </div>
       )}
       {sampleOpen && <ReportSampleModal onClose={() => setSampleOpen(false)} />}
+      {bulkApproveOpen && (
+        <BulkApproveModal
+          pendingCount={pendingCount}
+          onConfirm={handleBulkApprove}
+          onClose={() => setBulkApproveOpen(false)}
+        />
+      )}
       {selectedReportId && (
         <ReportDetailModal
           reportId={selectedReportId}

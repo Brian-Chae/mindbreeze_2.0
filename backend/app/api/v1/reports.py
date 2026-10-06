@@ -83,6 +83,25 @@ def list_all(
     return report_service.list_reports(current_user["id"], db, page, limit)
 
 
+@router.put("/read-all")
+def mark_all_read(
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """내담자 리포트 전체 읽음 — 쌓인 미열람 리포트를 한 번에 처리한다."""
+    count = report_service.mark_all_read(current_user["id"], db)
+    return {"count": count}
+
+
+@router.post("/approve-all")
+def approve_all(
+    current_user: dict = Depends(require_roles("counselor")),
+    db: DBSession = Depends(get_db),
+):
+    """상담사 일괄 승인 — 검토중(pending_review) 리포트를 코멘트 없이 모두 승인·발송한다."""
+    return report_service.approve_all_reports(current_user["id"], db)
+
+
 @router.get("/{report_id}/pdf")
 def download_pdf(
     report_id: str,
