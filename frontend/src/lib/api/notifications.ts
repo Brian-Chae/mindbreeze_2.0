@@ -156,7 +156,13 @@ export function resolveNotificationTarget(
       return { path: `${isClient ? '/app' : ''}/sessions/${targetId}` };
     case 'report':
       if (!targetId) return null;
-      return { path: isClient ? `/app/reports/${targetId}` : `/reports/${targetId}` };
+      // 리포트 알림 → 목록 페이지로 이동해 팝업으로 연다 (전면 페이지 대신).
+      // 목록 페이지는 ?report= 쿼리를 읽어 해당 리포트 모달을 즉시 띄운다.
+      return {
+        path: isClient
+          ? `/app/reports?report=${encodeURIComponent(targetId)}`
+          : `/reports?report=${encodeURIComponent(targetId)}`,
+      };
     case 'credentials':
       return { path: '/credentials' };
     case 'self_profile':

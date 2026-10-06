@@ -1,6 +1,7 @@
 // AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ReportSampleModal } from './ReportSamplePage';
 import { ReportDetailModal } from './ReportDetailModal';
 import AppShell from '../../components/layout/AppShell';
@@ -184,6 +185,20 @@ export default function ReportListPage() {
   const [autoApproveLoading, setAutoApproveLoading] = useState(true);
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
+
+  // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const reportId = searchParams.get('report');
+    if (!reportId) return;
+    setSelectedReportId(reportId);
+    // URL을 정리해 뒤로가기·새로고침 시 팝업이 다시 열리지 않게 한다.
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('report');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // FUNC-05: 검색·상태·세션·타입 필터는 서버 쿼리(page/limit만 지원)로 내려갈 수 없어
   // 필터 활성 시 무페이지네이션 전체 로드로 전 페이지를 대상으로 필터/정렬한다.

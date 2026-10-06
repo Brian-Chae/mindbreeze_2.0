@@ -38,6 +38,15 @@ it('정보형 알림을 클릭하면 전체 내용을 표시하고 센터에 머
   expect(container.querySelector('p')?.textContent).toBe('알림 본문');
   expect(container.querySelector('output')?.textContent).toBe('/app/notifications');
 });
+it('리포트 알림을 클릭하면 전면 페이지 대신 목록 팝업 경로로 이동한다', async () => {
+  vi.mocked(listNotifications).mockResolvedValue({
+    notifications: [{ ...notification, type: 'report', title: '리포트 발행', extra: { schema_version: 1, target_type: 'report', target_id: 'report-1' } }],
+    total: 1, unread: 1,
+  });
+  await render();
+  await act(async () => [...container.querySelectorAll('button')].find((item) => item.textContent?.includes('리포트 발행'))!.click());
+  expect(container.querySelector('output')?.textContent).toBe('/app/reports?report=report-1');
+});
 it('목록 오류는 정상 빈 상태와 구분하고 재시도한다', async () => {
   vi.mocked(listNotifications).mockRejectedValueOnce(new Error('오프라인'));
   await render();

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import ClientReportListPage from '../src/pages/client/ClientReportListPage';
 import { listReports, type ReportDto } from '../src/lib/api/reports';
@@ -26,7 +27,7 @@ beforeEach(() => {
   root = createRoot(container);
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
-async function render() { await act(async () => root.render(<ClientReportListPage />)); }
+async function render() { await act(async () => root.render(<MemoryRouter><ClientReportListPage /></MemoryRouter>)); }
 function button(label: string) {
   return Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.includes(label))!;
 }

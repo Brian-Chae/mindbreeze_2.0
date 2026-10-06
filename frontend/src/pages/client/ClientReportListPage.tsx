@@ -2,6 +2,7 @@
 // AppShell 없이 ClientShell 내에서 동작
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 
@@ -131,6 +132,20 @@ export default function ClientReportListPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
+
+  // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const reportId = searchParams.get('report');
+    if (!reportId) return;
+    setSelectedReportId(reportId);
+    // URL을 정리해 뒤로가기·새로고침 시 팝업이 다시 열리지 않게 한다.
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('report');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // FUNC-06: 검색어는 서버 쿼리로 내려갈 수 없다(백엔드는 page/limit만 지원).
   // 검색 활성 시 무페이지네이션 전체 로드를 함께 조회해 전 페이지를 대상으로 필터한다.
