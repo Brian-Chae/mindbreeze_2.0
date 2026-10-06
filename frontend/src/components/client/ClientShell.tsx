@@ -68,7 +68,7 @@ export default function ClientShell({
   };
 
   return (
-    <div className="h-full w-full bg-white font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
+    <div className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
         <SidebarNav role="client" notificationBadge={unread} chatBadge={chatUnread} />
@@ -203,7 +203,7 @@ export default function ClientShell({
         )}
 
         <div
-          className={`flex-1 min-h-0 bg-white ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
+          className={`flex-1 min-h-0 bg-[#F7F4F0] ${noScroll ? '' : 'overflow-auto'} ${contentPad} ${noBottomPad ? '' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} md:pb-0`}
         >
           {children}
         </div>
