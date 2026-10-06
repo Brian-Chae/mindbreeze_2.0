@@ -185,6 +185,9 @@ _CELERY_EAGER_MODULES = frozenset({
     "test_sdd086_auto_report.py",
     "test_sdd087_counselor_comment.py",
     "test_sdd095_report_progress.py",
+    # SDD-101: 아웃박스 발행·스윕 재발행 검증 — 발행(apply_async)이 인라인으로 돌아야
+    # 워커/브로커 없이 pending→published 전이를 검증할 수 있다.
+    "test_sdd101_pipeline_outbox.py",
 })
 
 
