@@ -10,9 +10,11 @@ import '../../components/reports/narrative-sections.css';
 interface ReportDetailModalProps {
   reportId: string;
   onClose: () => void;
+  /** 승인·코멘트 저장 등으로 리포트가 갱신될 때 목록에 전파 */
+  onReportChange?: (report: ReportDto) => void;
 }
 
-export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps) {
+export function ReportDetailModal({ reportId, onClose, onReportChange }: ReportDetailModalProps) {
   const [actionContainer, setActionContainer] = useState<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [report, setReport] = useState<ReportDto | null>(null);
@@ -100,7 +102,10 @@ export function ReportDetailModal({ reportId, onClose }: ReportDetailModalProps)
           <div className="px-4 py-5 sm:px-6 md:px-8">
             <ReportDetailView
               report={report}
-              onReportChange={setReport}
+              onReportChange={(next) => {
+                setReport(next);
+                onReportChange?.(next);
+              }}
               error={error}
               actionContainer={actionContainer}
             />

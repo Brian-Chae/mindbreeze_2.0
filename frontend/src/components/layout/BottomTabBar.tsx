@@ -4,7 +4,7 @@ import { ICONS, StrokeIcon } from './SidebarNav';
 import type { UserRole } from '../../lib/api/auth';
 import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { listReports } from '../../lib/api/reports';
+import { listReports, resolveReportStatus } from '../../lib/api/reports';
 
 interface TabItem {
   to: string;
@@ -28,7 +28,7 @@ function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
     { to: homePathForRole(role), label: '홈', icon: ICONS.home },
     { to: '/sessions', label: '세션', icon: ICONS.calendar },
     { to: '/chat', label: '채팅', icon: ICONS.message },
-    { to: '/reports', label: '리포트', icon: ICONS.report },
+    { to: '/reports?status=pending', label: '리포트', icon: ICONS.report },
   ];
 }
 
@@ -52,7 +52,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
     listReports({ limit: 50 })
       .then((res) => {
         if (cancelled) return;
-        setReportUnread(res.reports.filter((r) => !r.is_read).length);
+        setReportUnread(res.reports.filter((r) => resolveReportStatus(r) === 'pending_review').length);
       })
       .catch(() => {
         /* 조용히 실패 */

@@ -118,7 +118,7 @@ function filterAndSortReports(
   let filtered = reports.filter((r) => {
     const pipeline = resolveReportStatus(r);
     const failed = isGenerationFailed(r);
-    if (statusFilter === 'pending' && (pipeline === 'completed' || failed)) return false;
+    if (statusFilter === 'pending' && pipeline !== 'pending_review') return false;
     if (statusFilter === 'approved' && pipeline !== 'completed') return false;
     if (statusFilter === 'failed' && !failed) return false;
     if (typeFilter !== 'all' && r.type !== typeFilter) return false;
@@ -172,8 +172,12 @@ export default function ReportListPage() {
   /** 에러 발생 시 '다시 시도'로 목록 재조회 트리거 */
   const [reloadKey, setReloadKey] = useState(0);
 
+  // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    searchParams.get('status') === 'pending' ? 'pending' : 'all',
+  );
   const [typeFilter, setTypeFilter] = useState<ReportTypeFilter>('all');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   // 세션별 리스트가 기본 뷰
@@ -187,7 +191,6 @@ export default function ReportListPage() {
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
 
   // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
-  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const reportId = searchParams.get('report');
     if (!reportId) return;
@@ -695,6 +698,10 @@ export default function ReportListPage() {
         <ReportDetailModal
           reportId={selectedReportId}
           onClose={() => setSelectedReportId(null)}
+          onReportChange={(next) => {
+            // 승인·코멘트 저장 등으로 갱신된 리포트를 목록에 즉시 반영 (새로고침 없이).
+            setReports((prev) => prev.map((r) => (r.id === next.id ? next : r)));
+          }}
         />
       )}
     </AppShell>
