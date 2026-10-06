@@ -1,5 +1,5 @@
 // 내담자 홈 — 행동 중심 재설계 (SDD-187)
-// 위계: 다음 세션 히어로 → 초대(조건부) → 내 리포트 → 이번 주 일정 → 요약 타일 → 담당 상담사 → 대화/알림
+// 데스크톱 2컬럼: 좌측(다음 세션 히어로 → 초대 → 내 리포트 → 이번 주 일정) / 우측(요약 타일 → 담당 상담사 → 대화 → 알림)
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -89,7 +89,7 @@ function HeroCard({
   };
 
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] sm:p-6">
       <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
       <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[22px] md:text-[24px]">
         {session.title || '세션'}
@@ -134,6 +134,29 @@ function HeroCard({
   );
 }
 
+// ── 세션 없음 히어로 ─────────────────────────────────────────────
+
+function EmptyHero({ onBook }: { onBook: () => void }) {
+  return (
+    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] sm:p-6">
+      <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
+      <h2 className="mt-1 text-[20px] font-extrabold leading-tight tracking-tight sm:text-[24px]">
+        아직 예약된 세션이 없어요
+      </h2>
+      <p className="mt-1 text-[13px] opacity-90">
+        상담사와 상담·명상 세션을 예약하고 변화를 시작해보세요.
+      </p>
+      <button
+        type="button"
+        onClick={onBook}
+        className="mt-4 w-full sm:w-auto rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors"
+      >
+        세션 예약하기 →
+      </button>
+    </section>
+  );
+}
+
 // ── 요약 타일 ────────────────────────────────────────────────────
 
 function SummaryTiles({
@@ -163,7 +186,7 @@ function SummaryTiles({
           key={t.label}
           type="button"
           onClick={t.onClick}
-          className={`rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] ${t.purple ? '' : ''}`}
+          className="rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8]"
         >
           <div className="text-[12px] font-semibold text-[#6F6F6F]">{t.label}</div>
           <div className={`mt-1 text-[26px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
@@ -279,7 +302,7 @@ export default function ClientHomePage() {
 
   const primaryCounselor = counselors[0];
 
-  // 최근 대화 (unread 있는 방 우선)
+  // 최근 대화 (최신순)
   const recentChats = useMemo(() => {
     return [...chatRooms]
       .sort((a, b) => {
@@ -290,7 +313,7 @@ export default function ClientHomePage() {
       .slice(0, 3);
   }, [chatRooms]);
 
-  // 최근 알림 (읽지 않은 것 우선)
+  // 최근 알림 (최신순)
   const recentNotifications = useMemo(() => {
     return [...notifications]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -392,170 +415,187 @@ export default function ClientHomePage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-6 md:max-w-[760px] lg:max-w-[1200px] lg:gap-8">
-      {/* 다음 세션 히어로 */}
-      {heroSession && (
-        <HeroCard
-          session={heroSession}
-          counselorName={getCounselorName(heroSession)}
-          onEnter={() => navigate(`/app/sessions/${heroSession.id}`)}
-        />
-      )}
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-8">
+      {/* ── 좌측 컬럼 ── */}
+      <div className="flex min-w-0 flex-col gap-6 lg:gap-8">
+        {/* 다음 세션 히어로 (항상 표시) */}
+        {heroSession ? (
+          <HeroCard
+            session={heroSession}
+            counselorName={getCounselorName(heroSession)}
+            onEnter={() => navigate(`/app/sessions/${heroSession.id}`)}
+          />
+        ) : (
+          <EmptyHero onBook={() => navigate('/app/sessions')} />
+        )}
 
-      {/* 초대된 클래스 (조건부) */}
-      {invitedSessions.length > 0 && (
+        {/* 초대된 클래스 (조건부) */}
+        {invitedSessions.length > 0 && (
+          <section>
+            <div className={SECTION_HEAD_CLS}>
+              <h2 className={SECTION_TITLE_CLS}>초대된 클래스</h2>
+              <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+            </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {invitedSessions.map((s) => (
+                <InvitedSessionCard
+                  key={s.id}
+                  session={s}
+                  counselorName={getCounselorName(s)}
+                  onConfirm={() => handleConfirmInvite(s.id)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 내 리포트 */}
         <section>
           <div className={SECTION_HEAD_CLS}>
-            <h2 className={SECTION_TITLE_CLS}>초대된 클래스</h2>
-            <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {invitedSessions.map((s) => (
-              <InvitedSessionCard
-                key={s.id}
-                session={s}
-                counselorName={getCounselorName(s)}
-                onConfirm={() => handleConfirmInvite(s.id)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 내 리포트 */}
-      <section>
-        <div className={SECTION_HEAD_CLS}>
-          <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
-          <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
-            전체 보기
-          </button>
-        </div>
-        {clientReports.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {clientReports.map((r) => {
-              const generation = resolveReportGenerationStatus(r.generation_status);
-              const isNew = !r.is_read;
-              return (
-                <button
-                  key={r.id ?? r.session_id}
-                  type="button"
-                  onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-[#DDDEE7] bg-[#FBF8FD] p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#F5EDFC]"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      {isNew && (
-                        <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[10px] font-bold text-white">
-                          NEW
-                        </span>
-                      )}
-                      <span className="truncate text-[14px] font-bold text-[#1F1F1F]">
-                        {r.session_title || '리포트'}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[12px] text-[#6F6F6F]">
-                      {formatDate(r.created_at)} · 몸·마음 변화 리포트
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    {generation === 'processing' && (
-                      <span className="rounded-full bg-[#FFF4DC] px-2 py-0.5 text-[10px] font-bold text-[#8A6B1F]">
-                        생성 중
-                      </span>
-                    )}
-                    <span className="text-[#9B9B9B]" aria-hidden>›</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
-            아직 리포트가 없어요
-          </div>
-        )}
-      </section>
-
-      {/* 이번 주 일정 */}
-      <section>
-        <div className={SECTION_HEAD_CLS}>
-          <h2 className={SECTION_TITLE_CLS}>이번 주 일정</h2>
-          <button type="button" onClick={() => navigate('/app/sessions')} className={LINK_CLS}>
-            달력 보기
-          </button>
-        </div>
-        {weekSessions.length > 0 ? (
-          <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
-            {weekSessions.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => navigate(`/app/sessions/${s.id}`)}
-                className="flex w-full items-center gap-3 border-b border-[#F0ECF2] py-4 text-left last:border-0"
-              >
-                <div className="w-[76px] shrink-0">
-                  <div className="text-[14.5px] font-extrabold text-[#1F1F1F]">
-                    {formatTime(s.scheduled_at)}
-                  </div>
-                  <div className="text-[11px] font-semibold text-[#767676]">
-                    {s.scheduled_at
-                      ? `${new Date(s.scheduled_at).getMonth() + 1}/${new Date(s.scheduled_at).getDate()}`
-                      : ''}
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[14px] font-bold text-[#1F1F1F]">
-                    {s.title || '세션'}
-                  </div>
-                  <div className="truncate text-[12px] text-[#6F6F6F]">
-                    {getCounselorName(s) ?? ''}
-                  </div>
-                </div>
-                <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[11px] font-bold text-[#6F6F6F]">
-                  예정
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
-            이번 주 예정된 세션이 없습니다
-          </div>
-        )}
-      </section>
-
-      {/* 요약 타일 */}
-      <SummaryTiles
-        dDay={dDay}
-        newReportCount={newReportCount}
-        weekSessionCount={weekSessionCount}
-        completedCount={completedCount}
-        onCopyCode={handleCopyHeroCode}
-      />
-
-      {/* 담당 상담사 */}
-      {primaryCounselor && (
-        <section>
-          <div className={SECTION_HEAD_CLS}>
-            <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
-            <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-              상담 신청 ›
+            <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
+            <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
+              전체 보기
             </button>
           </div>
-          <div className="flex items-center gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
-              {primaryCounselor.name?.charAt(0) ?? '상'}
+          {clientReports.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {clientReports.map((r) => {
+                const generation = resolveReportGenerationStatus(r.generation_status);
+                const isNew = !r.is_read;
+                return (
+                  <button
+                    key={r.id ?? r.session_id}
+                    type="button"
+                    onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#FBF8FD]"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        {isNew && (
+                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[10px] font-bold text-white">
+                            NEW
+                          </span>
+                        )}
+                        <span className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                          {r.session_title || '리포트'}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[12px] text-[#6F6F6F]">
+                        {formatDate(r.created_at)} · 몸·마음 변화 리포트
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {generation === 'processing' && (
+                        <span className="rounded-full bg-[#FFF4DC] px-2 py-0.5 text-[10px] font-bold text-[#8A6B1F]">
+                          생성 중
+                        </span>
+                      )}
+                      <span className="text-[#9B9B9B]" aria-hidden>›</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-            <div className="min-w-0">
-              <div className="text-[14px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
-              <div className="text-[12px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
+              아직 리포트가 없어요
             </div>
-          </div>
+          )}
         </section>
-      )}
 
-      {/* 최근 대화 + 새 알림 */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
+        {/* 이번 주 일정 */}
+        <section>
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>이번 주 일정</h2>
+            <button type="button" onClick={() => navigate('/app/sessions')} className={LINK_CLS}>
+              달력 보기
+            </button>
+          </div>
+          {weekSessions.length > 0 ? (
+            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+              {weekSessions.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => navigate(`/app/sessions/${s.id}`)}
+                  className="flex w-full items-center gap-3 border-b border-[#F0ECF2] py-4 text-left last:border-0"
+                >
+                  <div className="w-[76px] shrink-0">
+                    <div className="text-[14.5px] font-extrabold text-[#1F1F1F]">
+                      {formatTime(s.scheduled_at)}
+                    </div>
+                    <div className="text-[11px] font-semibold text-[#767676]">
+                      {s.scheduled_at
+                        ? `${new Date(s.scheduled_at).getMonth() + 1}/${new Date(s.scheduled_at).getDate()}`
+                        : ''}
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                      {s.title || '세션'}
+                    </div>
+                    <div className="truncate text-[12px] text-[#6F6F6F]">
+                      {getCounselorName(s) ?? ''}
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[11px] font-bold text-[#6F6F6F]">
+                    예정
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-[#DDD0EA] bg-[#FBF8FD] p-6 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F5EDFC] text-[20px]">
+                📅
+              </div>
+              <p className="text-[14px] font-bold text-[#1F1F1F]">이번 주 예정된 세션이 없습니다</p>
+              <p className="mt-1 text-[12px] text-[#6F6F6F]">상담사에게 세션을 신청해보세요.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/app/sessions')}
+                className="mt-4 rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
+              >
+                세션 신청하기
+              </button>
+            </div>
+          )}
+        </section>
+      </div>
+
+      {/* ── 우측 레일 ── */}
+      <div className="flex min-w-0 flex-col gap-6 lg:gap-6">
+        {/* 요약 타일 */}
+        <SummaryTiles
+          dDay={dDay}
+          newReportCount={newReportCount}
+          weekSessionCount={weekSessionCount}
+          completedCount={completedCount}
+          onCopyCode={handleCopyHeroCode}
+        />
+
+        {/* 담당 상담사 */}
+        {primaryCounselor && (
+          <section>
+            <div className={SECTION_HEAD_CLS}>
+              <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
+              <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
+                상담 신청 ›
+              </button>
+            </div>
+            <div className="flex items-center gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
+                {primaryCounselor.name?.charAt(0) ?? '상'}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[14px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
+                <div className="text-[12px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 최근 대화 */}
         <section>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>최근 대화</h2>
@@ -603,6 +643,7 @@ export default function ClientHomePage() {
           )}
         </section>
 
+        {/* 새 알림 */}
         <section>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
