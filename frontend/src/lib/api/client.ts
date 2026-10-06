@@ -29,15 +29,54 @@ function loginRedirectPath(): string {
 // 페이지 새로고침 시 소멸하고, refresh(httpOnly cookie)로 자동 복구된다.
 let accessToken: string | null = null;
 
+/** access token 변경 구독자 — 단일 저장소의 변경을 외부 상태(authStore)로 동기화한다. */
+type AccessTokenListener = (token: string | null) => void;
+const accessTokenListeners = new Set<AccessTokenListener>();
+
+function setAccessToken(next: string | null): void {
+  accessToken = next;
+  // API7-03: tokenStorage 를 access token 의 단일 소스로 두고, 변경을 구독자에게 전파한다.
+  // (authStore.accessToken 미러가 401 자동 갱신을 놓쳐 소켓이 만료 토큰을 들고 있던 문제 해소)
+  for (const listener of accessTokenListeners) {
+    try {
+      listener(next);
+    } catch {
+      // 구독자 오류가 토큰 저장/전파를 막아서는 안 된다.
+    }
+  }
+}
+
 export const tokenStorage = {
   getAccess: (): string | null => accessToken,
-  set: (access: string): void => {
-    accessToken = access;
-  },
-  clear: (): void => {
-    accessToken = null;
+  set: (access: string): void => setAccessToken(access),
+  clear: (): void => setAccessToken(null),
+  /** access token 변경 구독(해제 함수 반환). */
+  subscribe: (listener: AccessTokenListener): (() => void) => {
+    accessTokenListeners.add(listener);
+    return () => {
+      accessTokenListeners.delete(listener);
+    };
   },
 };
+
+/** 토큰/영속 사용자 정리 후 역할별 로그인 화면으로 보낸다(순환 import 회피용 커스텀 이벤트 사용). */
+function terminateSession(): void {
+  // 리다이렉트 경로는 persist 된 사용자(mb_user)에서 읽으므로 지우기 전에 계산한다.
+  const redirectPath = loginRedirectPath();
+  tokenStorage.clear();
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(PERSISTED_USER_KEY);
+  } catch {
+    /* 손상된 저장값은 무시한다 */
+  }
+  if (typeof window !== 'undefined') {
+    // authStore 가 구독해 user/isAuthenticated 를 초기화한다.
+    window.dispatchEvent(new CustomEvent('mb:session-expired'));
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = redirectPath;
+    }
+  }
+}
 
 export class ApiError extends Error {
   status: number;
@@ -228,13 +267,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     if (refresh.ok) {
       token = refresh.token;
       res = await doFetch(token);
+      // API7-05: 갱신 후 재시도도 401이면 세션이 실제로 무효다.
+      // 초기 401(무효 refresh) 경로와 동일하게 정리·로그인 이동을 수행해야
+      // '인증됨' 상태로 남아 401만 반복되는 상태에 빠지지 않는다.
+      if (res.status === 401) {
+        terminateSession();
+        throw new ApiError(401, '인증이 만료되었습니다.', null);
+      }
     } else if (refresh.reason === 'invalid') {
       // refresh 토큰이 실제로 만료/폐기된 경우에만 세션을 폐기하고 로그인 화면으로 보낸다.
-      tokenStorage.clear();
-      // 이미 로그인 화면이면 리다이렉트 루프를 만들지 않는다.
-      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-        window.location.href = loginRedirectPath();
-      }
+      terminateSession();
       throw new ApiError(401, '인증이 만료되었습니다.', null);
     } else {
       // API7-01: 네트워크/서버 오류는 세션 만료가 아니다.

@@ -8,6 +8,12 @@ import {
   refreshAccessTokenResult,
   type RefreshFailureReason,
 } from '../lib/api/client';
+// API7-07: 로그아웃 시 실시간 네임스페이스(/chat·/record·/session-live) 연결을 정리한다.
+import {
+  disconnectChatSocket,
+  disconnectRecordSocket,
+  disconnectSessionLiveSocket,
+} from '../lib/socket';
 import {
   login as apiLogin,
   registerClient as apiRegisterClient,
@@ -83,6 +89,13 @@ const applyLogin = (res: LoginResponse, requestedRole?: string): User => {
   persistUser(res.user);
   return res.user;
 };
+
+/** API7-07: 남아 있는 모든 실시간 네임스페이스 소켓을 닫는다(로그아웃·세션 만료 공용). */
+function disconnectAllSockets(): void {
+  disconnectChatSocket();
+  disconnectRecordSocket();
+  disconnectSessionLiveSocket();
+}
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -200,6 +213,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     tokenStorage.clear();
     persistUser(null);
     set({ user: null, accessToken: null, isAuthenticated: false, sessionError: null });
+    // API7-07: 로그아웃 후에도 이전 사용자 토큰으로 연결된 채 남던 실시간 소켓을 닫는다.
+    disconnectAllSockets();
 
     // STORE-07: 로그아웃 시 사용자 종속 스토어(알림·채팅)를 초기화하여
     // 이전 사용자의 알림/메시지가 다음 로그인 사용자에게 노출되지 않게 한다.
@@ -222,3 +237,46 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user });
   },
 }));
+
+// ── API7-03/05/06: 토큰 단일 소스 동기화 · 세션 만료 · 다중 탭 ────────────────
+//
+// tokenStorage(모듈 메모리)를 access token 의 단일 소스로 두고, 변경을 authStore 로
+// 미러링한다. 401 자동 갱신이 tokenStorage 만 갱신해 authStore.accessToken(소켓 인증에
+// 사용)이 만료 토큰으로 남던 문제(API7-03)를 해소한다.
+tokenStorage.subscribe((token) => {
+  if (useAuthStore.getState().accessToken !== token) {
+    useAuthStore.setState({ accessToken: token });
+  }
+});
+
+/** 세션 만료(API7-05) — client.ts 의 terminateSession 이 발행한다. */
+function handleSessionExpired(): void {
+  tokenStorage.clear();
+  disconnectAllSockets();
+  useAuthStore.setState({ user: null, isAuthenticated: false, sessionError: null });
+}
+
+/** 다른 탭의 로그아웃/로그인(API7-06) — storage 이벤트는 다른 탭에서만 발생한다. */
+function handleAuthStorageEvent(event: StorageEvent): void {
+  if (event.key !== USER_KEY) return;
+  if (event.newValue === null) {
+    // 다른 탭에서 로그아웃 → 이 탭도 즉시 정리한다.
+    handleSessionExpired();
+    return;
+  }
+  if (event.newValue === event.oldValue) return;
+  // 다른 탭에서 사용자 전환/로그인 → 사용자 정보를 갱신하고, 메모리 토큰은 비워
+  // 다음 요청에서 새 사용자로 refresh 되게 한다(이전 사용자 토큰 오사용 방지).
+  try {
+    const nextUser = JSON.parse(event.newValue) as User;
+    tokenStorage.clear();
+    useAuthStore.setState({ user: nextUser, isAuthenticated: true, sessionError: null });
+  } catch {
+    // 손상된 저장값은 무시한다.
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('mb:session-expired', handleSessionExpired);
+  window.addEventListener('storage', handleAuthStorageEvent);
+}

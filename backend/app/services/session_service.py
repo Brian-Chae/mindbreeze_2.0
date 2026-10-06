@@ -863,8 +863,11 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
         try:
             from app.services import video_service
             video_service.finalize_on_session_end(s.id, db)
-        except Exception:
-            pass
+        except Exception as exc:
+            # MB-ERR-002: 영상 finalize 실패도 무음 삼키지 않는다(audio 경로와 대칭).
+            # best-effort 이므로 종료 API 는 계속 진행하되, 실패 트랜잭션은 정리한다.
+            logger.exception("[session] video finalize failed (best-effort): %s", exc)
+            db.rollback()
         try:
             from app.services import audio_service
             audio_service.finalize_on_session_end(s.id, db)
@@ -1022,10 +1025,15 @@ def _notify_participants_event(
                     },
                     db,
                 )
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as exc:
+                # MB-ERR-003: 알림 1건 실패를 무음 삼키지 않고 로깅 + 실패 트랜잭션 정리.
+                logger.warning(
+                    "[session] notify_event failed event=%s user=%s: %s", event_type, uid, exc
+                )
+                db.rollback()
+    except Exception as exc:
+        # MB-ERR-003: best-effort 알림 발행 전체 실패도 로그로 남긴다.
+        logger.warning("[session] notify participants event failed event=%s: %s", event_type, exc)
 
 
 def _notify_session_state(s: Session) -> None:
@@ -1051,8 +1059,9 @@ def _notify_session_state(s: Session) -> None:
             stop_payload = live.build_audio_sync_payload(str(s.id), "stop", None, 0.0)
             live.record_audio_state(str(s.id), stop_payload)
             live.notify_audio_sync(str(s.id), stop_payload)
-    except Exception:
-        pass
+    except Exception as exc:
+        # MB-ERR-003: best-effort 이벤트 발행 실패를 로그로 남긴다(상태 변경은 유지).
+        logger.warning("[session] session_state_changed 발행 실패 session=%s: %s", s.id, exc)
 
 
 def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None:
@@ -1108,8 +1117,9 @@ def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None
                 "participants": participants,
             },
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        # MB-ERR-003: best-effort 이벤트 발행 실패를 로그로 남긴다.
+        logger.warning("[session] participant_changed 발행 실패 session=%s: %s", s.id, exc)
 
 
 def _next_waitlist_position(s: Session, db: DBSession) -> int:
@@ -1833,9 +1843,9 @@ def _notify_speaking_changed(sid: UUID, participant: SessionParticipant) -> None
                 "speaking": participant.speaking,
             },
         )
-    except Exception:
-        # 이벤트 발행 실패가 상태 변경 성공을 되돌려서는 안 된다
-        pass
+    except Exception as exc:
+        # MB-ERR-003: 이벤트 발행 실패가 상태 변경 성공을 되돌려서는 안 되지만, 무음 삼키지 않는다.
+        logger.warning("[session] speaking_changed 발행 실패 session=%s: %s", sid, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -2623,9 +2633,9 @@ def _notify_device_status(
                 "version": version if version is not None else 0,
             },
         )
-    except Exception:
-        # 이벤트 발행 실패가 저장 성공을 되돌려서는 안 된다
-        pass
+    except Exception as exc:
+        # MB-ERR-003: 이벤트 발행 실패가 저장 성공을 되돌려서는 안 되지만, 무음 삼키지 않는다.
+        logger.warning("[session] device_status_changed 발행 실패 session=%s: %s", sid, exc)
 
 
 def _has_newer_feature(

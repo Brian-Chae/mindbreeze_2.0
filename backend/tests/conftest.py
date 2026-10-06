@@ -136,13 +136,9 @@ def app_client(monkeypatch):
     from app.core.redis import get_redis
     import app.models  # noqa: F401
 
-    # SDD-101: 파이프라인(Celery 체인)을 테스트에서 결정적으로 인라인 실행.
-    # (인라인 폴백 제거로 워커 없는 테스트에서 파이프라인 검증하려면 eager 필요)
-    from app.core.celery_app import celery_app
-
-    celery_app.conf.task_always_eager = True
-    celery_app.conf.task_eager_propagates = True
-
+    # TQ-04: Celery eager 설정은 여기서 전역으로 켜지 않는다. 전역 eager 는 ETA(예약) 태스크를
+    #   테스트 안에서 즉시 실행시켜 태스크 격리를 깬다(리마인더 등). 인라인 실행이 필요한
+    #   테스트/모듈만 `celery_eager` fixture 또는 _CELERY_EAGER_MODULES 로 opt-in 한다.
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -181,20 +177,54 @@ def client(app_client):
     return app_client[0]
 
 
+# TQ-04: Celery eager(인라인 실행)에 의존하는 기존 테스트 모듈 목록.
+#   전역 eager 를 없앤 뒤, 파이프라인(STT→요약→리포트)이 인라인으로 돌아야 하는 모듈만
+#   여기서 opt-in 한다(개별 테스트 제어). 신규 테스트는 `celery_eager` fixture 를 직접 요청한다.
+_CELERY_EAGER_MODULES = frozenset({
+    "test_report_email.py",
+    "test_sdd086_auto_report.py",
+    "test_sdd087_counselor_comment.py",
+    "test_sdd095_report_progress.py",
+})
+
+
+@pytest.fixture(autouse=True)
+def _celery_conf_isolation(request):
+    """TQ-04: Celery 설정을 테스트 경계마다 격리한다.
+
+    - 기본은 non-eager 다 — ETA 예약 태스크(리마인더 등)가 즉시 실행되지 않는다.
+    - `celery_eager` fixture 또는 _CELERY_EAGER_MODULES 에 등록된 모듈만 eager 를 켠다.
+    - 테스트가 끝나면 이전 설정으로 복원해 다음 테스트로 설정이 새지 않게 한다(누수 방지).
+    """
+    from app.core.celery_app import celery_app
+
+    prev = (celery_app.conf.task_always_eager, celery_app.conf.task_eager_propagates)
+    node_path = getattr(request.node, "fspath", None)
+    module_name = os.path.basename(str(node_path)) if node_path is not None else ""
+    if module_name in _CELERY_EAGER_MODULES:
+        celery_app.conf.task_always_eager = True
+        celery_app.conf.task_eager_propagates = True
+    yield
+    celery_app.conf.task_always_eager = prev[0]
+    celery_app.conf.task_eager_propagates = prev[1]
+
+
 @pytest.fixture
 def celery_eager():
     """SDD-101: Celery 체인을 테스트에서 결정적으로 인라인 실행한다(파이프라인 검증용).
 
-    전역 eager는 ETA 예약 태스크(리마인더 등)를 즉시 실행시켜 예약 로직 테스트를 깨므로,
+    전역 eager 는 ETA 예약 태스크(리마인더 등)를 즉시 실행시켜 예약 로직 테스트를 깨므로,
     파이프라인 종료(STT→요약→리포트) 검증이 필요한 테스트만 이 fixture를 opt-in 한다.
+    종료 시 이전 설정으로 복원한다.
     """
     from app.core.celery_app import celery_app
 
+    prev = (celery_app.conf.task_always_eager, celery_app.conf.task_eager_propagates)
     celery_app.conf.task_always_eager = True
     celery_app.conf.task_eager_propagates = True
     yield
-    celery_app.conf.task_always_eager = False
-    celery_app.conf.task_eager_propagates = False
+    celery_app.conf.task_always_eager = prev[0]
+    celery_app.conf.task_eager_propagates = prev[1]
 
 
 @pytest.fixture

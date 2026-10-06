@@ -4,8 +4,11 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1 import router as v1_router
 from app.config import settings
@@ -65,6 +68,28 @@ app.add_middleware(
 )
 
 app.include_router(v1_router)
+
+
+# ---------------------------------------------------------------------------
+# MB-ERR-013: 전역 예외 핸들러 — 응답 봉투 통일 + 서버측 로깅
+# ---------------------------------------------------------------------------
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """요청 검증 실패(422)를 FastAPI 기본과 동일한 봉투로 반환하고 경로를 로깅한다."""
+    logger.warning("[422] %s %s — 요청 검증 실패", request.method, request.url.path)
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """처리되지 않은 500 을 구조화된 봉투로 반환한다.
+
+    스택 등 민감 정보는 응답에 싣지 않고 서버 로그에만 남긴다(운영 스택 비노출).
+    """
+    logger.exception("[500] %s %s — 처리되지 않은 예외", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "서버 내부 오류가 발생했습니다"})
 
 
 @app.get("/health")

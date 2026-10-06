@@ -16,6 +16,19 @@ logger = logging.getLogger(__name__)
 # TLS 필수(데이터 프라이버시 규칙) — 스텁 URL 도 https 로 구성한다.
 _STUB_HOST = f"https://{settings.s3_bucket}.s3.{settings.s3_region}.amazonaws.com"
 
+# STG-07: 개발/템플릿에 박힌 더미 자격증명. 이 값을 실제 자격증명으로 오인하면
+#   storage_configured()=True 가 되어 스텁 폴백이 꺼지고, 존재하지 않는 버킷·키로
+#   실제 AWS 서명/업로드를 시도해 조용히 실패한다. 더미는 '미설정'으로 취급한다.
+_DUMMY_CREDENTIALS = {"dev", "test", "dummy", "changeme", "minio", "minioadmin", "local", "example"}
+
+
+class StorageUploadError(RuntimeError):
+    """STG-12: 프로덕션에서 S3 업로드가 실패했는데 조용히 로컬 폴백하는 것을 금지한다.
+
+    운영 환경에서 로컬 폴백은 (a) 사용자에게 성공으로 보이지만 실제 S3 객체가 없고,
+    (b) 다중 인스턴스에서 파일이 유실되는 원인이 된다. 설정된 S3 업로드 실패는 숨기지 않는다.
+    """
+
 
 class StorageSigningError(RuntimeError):
     """자격증명이 설정된 배포 환경에서 presigned 서명이 실패했을 때 발생한다.
@@ -25,6 +38,35 @@ class StorageSigningError(RuntimeError):
     """
 
 
+def _has_real_credentials() -> bool:
+    """실제 S3 자격증명이 설정되었는지(더미 아님) 판정한다.
+
+    STG-07: dev 더미(dev/dev 등)는 실제 서명이 불가하므로 미설정으로 본다 — 스텁 유지.
+    """
+    key = (settings.aws_access_key_id or "").strip()
+    secret = (settings.aws_secret_access_key or "").strip()
+    if not key or not secret:
+        return False
+    if key.lower() in _DUMMY_CREDENTIALS and secret.lower() in _DUMMY_CREDENTIALS:
+        return False
+    return True
+
+
+def _endpoint_url() -> str | None:
+    """STG-06: 설정된 S3 호환 엔드포인트. 미설정이면 None(AWS 표준)."""
+    url = (getattr(settings, "s3_endpoint_url", "") or "").strip()
+    return url or None
+
+
+def should_fail_on_upload_failure() -> bool:
+    """STG-12: 업로드 실패를 로컬 폴백으로 숨기지 않고 명시적으로 실패시켜야 하는지.
+
+    프로덕션이면서 실제 S3 자격증명이 설정된 경우에만 True. (dev/스텁 환경은 기존
+    로컬 폴백을 유지해 테스트·로컬 개발 흐름을 깨지 않는다.)
+    """
+    return settings.environment == "production" and _has_real_credentials()
+
+
 def _stub_url(object_key: str) -> str:
     return f"{_STUB_HOST}/{object_key}?stub=1"
 
@@ -32,10 +74,10 @@ def _stub_url(object_key: str) -> str:
 def storage_configured() -> bool:
     """S3 자격증명이 설정되어 실제 서명/조회가 가능한지 여부.
 
-    미설정(로컬/테스트) 환경은 스텁으로 흐름만 검증하며, 검증·서명 실패를
-    실제 오류로 취급하지 않는다.
+    미설정(로컬/테스트)·더미 자격증명(STG-07) 환경은 스텁으로 흐름만 검증하며,
+    검증·서명 실패를 실제 오류로 취급하지 않는다.
     """
-    return bool(settings.aws_access_key_id and settings.aws_secret_access_key)
+    return _has_real_credentials()
 
 
 def generate_presigned_put(
@@ -57,10 +99,11 @@ def generate_presigned_put(
 
         # boto3 가 region_name 만으로는 virtual-hosted presigned URL 을 us-east-1(s3.amazonaws.com)로
         # 잘못 생성해 307 리다이렉트가 나는 문제(SDD-027 후속)가 있어, 리전 endpoint 를 명시해 고정한다.
+        # STG-06: s3_endpoint_url 이 설정되면(MinIO 등) 그 엔드포인트를 우선 사용한다.
         client = boto3.client(
             "s3",
             region_name=settings.s3_region,
-            endpoint_url=f"https://s3.{settings.s3_region}.amazonaws.com",
+            endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
         )
@@ -112,9 +155,10 @@ def _s3_client():
     """S3 클라이언트(프로세스당 1회 생성·재사용).
 
     boto3 client는 스레드 안전하므로 병렬 다운로드/업로드에서 공유해도 안전하다.
-    자격증명 미설정 시 None 을 반환한다(호출부가 로컬 폴백 결정).
+    자격증명 미설정(또는 더미, STG-07) 시 None 을 반환한다(호출부가 로컬 폴백 결정).
+    STG-06: s3_endpoint_url 설정 시 해당 엔드포인트(MinIO 등)로 연결한다.
     """
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not _has_real_credentials():
         return None
     try:
         import boto3
@@ -122,11 +166,31 @@ def _s3_client():
         return boto3.client(
             "s3",
             region_name=settings.s3_region,
+            endpoint_url=_endpoint_url(),
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] S3 클라이언트 생성 실패: %s", exc)
+        return None
+
+
+def open_object_stream(object_key: str):
+    """STG-08: S3 객체를 스트리밍용 file-like(Body)로 연다 — 전량 메모리 적재 금지.
+
+    자격증명 미설정/조회 실패 시 None 을 반환한다(호출부가 누락 청크로 판정).
+    호출측은 반드시 close() 해야 한다.
+    """
+    if not _has_real_credentials():
+        return None
+    client = _s3_client()
+    if client is None:
+        return None
+    try:
+        resp = client.get_object(Bucket=settings.s3_bucket, Key=object_key)
+        return resp["Body"]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] S3 스트림 열기 실패: %s (%s)", object_key, exc)
         return None
 
 
@@ -141,7 +205,7 @@ def upload_bytes(
     자격증명 미설정/실패 시 False 를 반환한다 — 호출부가 로컬 폴백을 결정한다
     (기존 audio 청크와 동일하게 로컬 저장으로 흐름을 유지 가능하게).
     """
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not _has_real_credentials():
         return False
     try:
         client = _s3_client()
@@ -163,7 +227,7 @@ def upload_bytes(
 
 def download_bytes(object_key: str) -> bytes | None:
     """S3 에서 object 를 다운로드한다. 자격증명 미설정/실패 시 None (로컬 폴백용)."""
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not _has_real_credentials():
         return None
     try:
         client = _s3_client()
@@ -188,7 +252,7 @@ def upload_file(
     자동 멀티파트로 디스크에서 직접 읽어 올린다(대용량 병합 영상 업로드용).
     자격증명 미설정/실패 시 False 를 반환한다.
     """
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not _has_real_credentials():
         return False
     try:
         client = _s3_client()
@@ -211,13 +275,14 @@ class ExportStorageError(RuntimeError):
 
 
 def _export_client():
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not _has_real_credentials():
         raise ExportStorageError('storage_not_configured')
     try:
         import boto3
         from botocore.config import Config
         return boto3.client(
             's3', region_name=settings.s3_region,
+            endpoint_url=_endpoint_url(),
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
             config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=60, retries={'max_attempts': 2}),

@@ -72,7 +72,17 @@ def process_email_outbox(limit: int = 100) -> dict:
                     f"[OUTBOX-EMAIL] delivery failed (id={item.id}, attempt={item.attempts}): {e}"
                 )
             processed += 1
-        db.commit()
+            # CEL-OUTBOX-02: 배치 전체를 루프 종료 후 1회만 커밋하면, 중간에 워커가
+            # 죽었을 때 이미 발송된 행의 status='sent'가 유실돼 다음 스윕에서 이중 발송된다.
+            # 행 단위로 커밋해 발송 사실을 즉시 durable 하게 남긴다.
+            try:
+                db.commit()
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "[OUTBOX-EMAIL] 행 단위 커밋 실패 (id=%s) — 롤백 후 다음 행 진행", item.id
+                )
+                db.rollback()
+
     finally:
         db.close()
     return {"processed": processed, "sent": sent, "failed": failed}

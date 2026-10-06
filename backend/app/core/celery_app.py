@@ -3,6 +3,16 @@ from celery import Celery
 
 from app.config import settings
 
+
+class RetryableTaskError(RuntimeError):
+    """CEL-RETRY-01: 일시적 인프라/공급자 오류 — Celery autoretry_for 재시도 대상.
+
+    stt/summary/video 태스크는 autoretry_for=(RuntimeError,) 를 걸어두었지만, 파이프라인
+    함수가 모든 예외를 내부에서 catch 해 실패를 마킹하고 return 하면 재시도가 발동하지
+    않는다(autoretry 무력). 복구 가능한 일시 오류는 이 예외로 전파해 백오프 재시도를 받게 한다.
+    """
+
+
 celery_app = Celery(
     "mindbreeze",
     broker=settings.redis_url,

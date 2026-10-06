@@ -1,5 +1,6 @@
 """상담센터(Organization) API 라우터"""
 
+import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -369,8 +370,14 @@ async def patch_org_counselor_profile(
         target, req, db, actor_id=uuid.UUID(current_user["id"]), actor_kind="org_admin"
     )
     if name_changed:
+        # MB-ERR-006: 커밋 이후 best-effort WS 브로드캐스트 — 실패를 격리해 저장 성공을 유지한다.
         from app.ws.chat_namespace import broadcast_profile_updated
-        await broadcast_profile_updated(str(target.id), target.name)
+        try:
+            await broadcast_profile_updated(str(target.id), target.name)
+        except Exception as exc:  # noqa: BLE001 — best-effort 실패 격리
+            logging.getLogger(__name__).warning(
+                "[org] broadcast_profile_updated failed user=%s: %s", target.id, exc
+            )
     return counselor_info_service.serialize(target)
 
 

@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # S3
     s3_bucket: str = "mindbreeze-dev"
     s3_region: str = "ap-northeast-1"
+    # STG-06: S3 호환 엔드포인트(MinIO 등)를 설정으로 주입한다. 빈 값이면 AWS 표준
+    #   엔드포인트를 사용한다. 하드코딩된 AWS 엔드포인트로는 MinIO/온프레미스 S3 에
+    #   붙을 수 없어 presigned URL·업로드가 리전 밖으로 새는 문제를 막는다.
+    s3_endpoint_url: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
 

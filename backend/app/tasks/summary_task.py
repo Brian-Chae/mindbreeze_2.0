@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
+from app.core.celery_app import RetryableTaskError
 from app.models.session import Session
 from app.models.record import SessionRecord
 
@@ -53,6 +54,11 @@ def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120
         json=body,
         timeout=timeout,
     )
+    # CEL-RETRY-01: 5xx/429·네트워크 오류는 일시적이므로 재시도 가능한 예외로 구분한다.
+    # 4xx(요청 오류)는 영구 오류로 남겨 백오프 재시도로 호출을 낭비하지 않는다.
+    status = getattr(resp, "status_code", None)
+    if isinstance(status, int) and (status == 429 or status >= 500):
+        raise RetryableTaskError(f"gemini_http_{status}")
     resp.raise_for_status()
     data = resp.json()
     try:
@@ -288,6 +294,13 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
 
     try:
         result = _call_gemini_summary(session.type, record.transcript)
+    except RetryableTaskError:
+        # CEL-RETRY-01: 5xx/429·네트워크 등 일시 오류는 summary_failed 로 굳히지 않고
+        # 전파해 Celery autoretry(backoff)로 재시도한다. status 는 processing 으로 남겨
+        # 재시도가 이어받을 수 있게 한다(영구 실패가 아니므로 completed 마킹 금지).
+        logger.warning("[summary_task] Gemini 일시 오류 — 재시도 위임: %s", session_id)
+        asyncio.run(_emit_status(session_id, "summarizing", {"retryable": True}))
+        raise
     except Exception as exc:
         # SDD-085 G5: 허위 요약을 저장하지 않는다 — 전사문은 유지하고 요약 실패로 마감.
         logger.exception("[summary_task] Gemini 요약 실패: %s", exc)

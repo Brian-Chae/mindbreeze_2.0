@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any, Literal
 
@@ -602,8 +603,14 @@ async def admin_patch_counselor_profile(
         target, req, db, actor_id=admin.id, actor_kind="platform_admin"
     )
     if name_changed:
+        # MB-ERR-006: 커밋 이후 best-effort WS 브로드캐스트 — 실패를 격리해 저장 성공을 유지한다.
         from app.ws.chat_namespace import broadcast_profile_updated
-        await broadcast_profile_updated(str(target.id), target.name)
+        try:
+            await broadcast_profile_updated(str(target.id), target.name)
+        except Exception as exc:  # noqa: BLE001 — best-effort 실패 격리
+            logging.getLogger(__name__).warning(
+                "[admin] broadcast_profile_updated failed user=%s: %s", target.id, exc
+            )
     return counselor_info_service.serialize(target)
 
 

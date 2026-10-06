@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
-import { tokenStorage } from '../lib/api/client';
+import { useAuthStore } from '../stores/authStore';
 import { type ClassSignalType } from '../lib/class/quiet-signal';
 import {
   normalizeAggregate,
@@ -128,6 +128,12 @@ export function useSessionLiveSocket({
   const [snapshot, setSnapshot] = useState<SessionLiveJoinSnapshot | null>(null);
   const [version, setVersion] = useState(0);
 
+  // API7-08: 부트스트랩 인증 복구(initialize→refresh)를 소켓 연결의 선행 조건으로 둔다.
+  // RoleGuard 없는 라우트(/live·/player·/record)는 하드 리프레시 시 토큰 복구 전에
+  // 마운트되어, null 토큰으로 게스트 핸드셰이크되고 복구 후에도 재인증되지 않았다.
+  const authInitialized = useAuthStore((s) => s.isInitialized);
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   const onFeatureRef = useRef(onEegFeature);
   onFeatureRef.current = onEegFeature;
   const onSnapshotRef = useRef(onSnapshot);
@@ -231,7 +237,11 @@ export function useSessionLiveSocket({
       joinDeniedRef.current = false;
     }
 
-    const token = skipAuth ? null : tokenStorage.getAccess();
+    // API7-08: 인증 복구 완료 전에는 연결하지 않는다. 복구가 끝나면(의존성 변경)
+    // 이 effect 가 다시 실행되어 확정된 토큰으로 소켓을 만든다.
+    if (!skipAuth && !authInitialized) return undefined;
+
+    const token = skipAuth ? null : accessToken;
     const socket = getSessionLiveSocket(token);
     socketRef.current = socket;
     // WS-09: 공유 싱글톤의 세션 room 참조를 획득한다 — 이 훅의 unmount 가 다른 훅
@@ -421,6 +431,8 @@ export function useSessionLiveSocket({
     sessionId,
     participantId,
     skipAuth,
+    authInitialized,
+    accessToken,
     handleFeature,
     applySnapshot,
     acceptVersion,

@@ -12,6 +12,8 @@ from uuid import UUID
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.celery_app import RetryableTaskError
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,11 +52,15 @@ def run_video_merge_inline(session_id: str, db: DBSession) -> None:
         logger.exception("[video_task] 영상 병합 시간 초과: %s", session_id)
         _mark_merge_failed(session_id, db)
         raise
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
         # VID-5TH-09: 예외를 삼키면 잘린 영상이 조용히 방치된다 — merge_failed 마킹 후 재전파.
         logger.exception("[video_task] 영상 병합 실패: %s", session_id)
         _mark_merge_failed(session_id, db)
-        raise
+        # CEL-RETRY-01: autoretry_for=(RuntimeError,) 는 RuntimeError 계열만 잡는다.
+        # S3/botocore 등 비-RuntimeError 인프라 예외도 재시도되도록 RetryableTaskError 로 승격한다.
+        if isinstance(exc, RetryableTaskError):
+            raise
+        raise RetryableTaskError("video_merge_failed") from exc
     if key:
         record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
         if record and not record.video_s3_key:

@@ -5,7 +5,12 @@
 넘으면 즉시 413 으로 거부하고, 빈 파일(0바이트)은 422 로 거부한다.
 """
 
+import logging
+
 from fastapi import HTTPException, UploadFile, status
+
+# MB-ERR-009: 크기 상한 초과/빈 청크 거부를 무음 처리하지 않고 로그로 남긴다.
+logger = logging.getLogger(__name__)
 
 # 한 번에 읽는 조각 크기(1MiB) — 스트리밍으로 메모리 사용을 상한 내로 제한한다.
 READ_CHUNK_SIZE = 1024 * 1024
@@ -30,12 +35,20 @@ async def read_upload_bounded(file: UploadFile, *, max_bytes: int) -> bytes:
             break
         total += len(piece)
         if total > max_bytes:
+            # MB-ERR-009: 상한 거부 사유를 로그로 남긴다(메모리 OOM/DoS 시도 가시화).
+            logger.warning(
+                "[upload] 청크 크기 상한 초과 거부: total=%d bytes, max=%d bytes (filename=%s)",
+                total,
+                max_bytes,
+                file.filename,
+            )
             raise HTTPException(
                 status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                 detail=f"청크 크기가 허용 상한({max_bytes // (1024 * 1024)}MB)을 초과했습니다",
             )
         chunks.append(piece)
     if total == 0:
+        logger.warning("[upload] 빈 청크 업로드 거부 (filename=%s)", file.filename)
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="빈 청크는 업로드할 수 없습니다",

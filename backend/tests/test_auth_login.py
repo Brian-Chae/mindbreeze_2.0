@@ -33,6 +33,7 @@ def test_잘못된_비밀번호_401(client):
         json={"email": "user@test.com", "password": "Wrong123!"},
     )
     assert res.status_code == 401
+    assert res.json()["detail"] == "이메일 또는 비밀번호가 일치하지 않습니다"
 
 
 def test_5회_실패_시_잠금_423(client):
@@ -47,6 +48,7 @@ def test_5회_실패_시_잠금_423(client):
         json={"email": "user@test.com", "password": VALID_PASSWORD},
     )
     assert res.status_code == 423
+    assert "잠겼습니다" in res.json()["detail"]
 
 
 def test_잠금_해제_후_로그인_성공(client, redis):
@@ -65,3 +67,9 @@ def test_잠금_해제_후_로그인_성공(client, redis):
         json={"email": "user@test.com", "password": VALID_PASSWORD},
     )
     assert res.status_code == 200
+    body = res.json()
+    assert body["access_token"]
+    assert body["user"]["email"] == "user@test.com"
+    assert body["user"]["role"] == "client"
+    # refresh 토큰은 httpOnly 쿠키로만 전달된다(XSS 탈취 방지)
+    assert client.cookies.get("mb_refresh_token")

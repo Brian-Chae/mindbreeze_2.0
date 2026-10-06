@@ -17,6 +17,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
+from app.core.celery_app import RetryableTaskError
 from app.models.record import SessionRecord, AudioChunk
 from app.models.session import Session
 
@@ -537,7 +538,10 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
             db.commit()
             asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
             _emit_report_progress(session_id, db)
-            return
+            # CEL-RETRY-01: 일시 오류(공급자 다운 등)로 폴백까지 실패한 경우, 실패를
+            # durable 하게 마킹한 뒤 재시도 가능한 예외를 전파한다 — 여기서 조용히 return 하면
+            # autoretry_for 가 발동하지 않아 일시 장애가 영구 실패로 굳는다.
+            raise RetryableTaskError("stt_transient_failed") from exc2
     except Exception as exc:
         # 영구 오류 — Whisper 재전사는 비용만 2배로 늘리고 결과가 없을 가능성이 높다.
         logger.exception("[stt_task] Gemini 영구 오류 — STT 실패 처리(폴백 생략): %s", exc)

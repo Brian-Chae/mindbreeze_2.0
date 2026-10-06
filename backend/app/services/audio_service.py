@@ -99,6 +99,15 @@ def start_recording(session_id: str, host_id: str, consent_audio: bool, db: DBSe
     }
 
 
+def _discard_local_file(path: str) -> None:
+    """STG-02: 유일 제약 충돌로 채택되지 않은 요청이 쓴 로컬 파일을 정리한다(best-effort)."""
+    try:
+        if path and os.path.exists(path):
+            os.unlink(path)
+    except OSError:
+        logger.warning("[audio] 미채택 청크 파일 정리 실패: %s", path)
+
+
 def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, db: DBSession) -> dict:
     s = _get_host_session(session_id, host_id, db)
     record = _get_or_create_record(s.id, db)
@@ -136,6 +145,9 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
             db.add(chunk)
         db.commit()
     except IntegrityError:
+        # STG-02: 진 요청이 쓴 로컬 파일은 채택되지 않았으므로 정리한다(고아 파일 방지).
+        _discard_local_file(str(file_path))
+        db.rollback()
         existing = db.query(AudioChunk).filter(
             AudioChunk.session_id == s.id, AudioChunk.chunk_index == chunk_index
         ).first()

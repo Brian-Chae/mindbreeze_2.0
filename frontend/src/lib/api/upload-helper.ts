@@ -1,7 +1,7 @@
 // SDD-101 C3 — multipart 청크 업로드 timeout·재시도 공용 헬퍼
 // 4xx(400/413/409 등)는 재시도해도 동일하므로 즉시 throw, 5xx/타임아웃만 재시도한다.
 
-import { ApiError, tokenStorage } from './client';
+import { ApiError, refreshAccessToken, tokenStorage } from './client';
 
 const UPLOAD_TIMEOUT_MS = 15_000;
 const MAX_ATTEMPTS = 3;
@@ -35,8 +35,11 @@ function isRetryable(err: unknown): boolean {
 }
 
 export async function uploadFormWithRetry<T>(url: string, formData: FormData): Promise<T> {
-  const token = tokenStorage.getAccess();
+  // API7-09: 시작 시 토큰을 한 번만 캡처하지 않고, 401 을 받으면 갱신해 재시도한다.
+  // (별도 fetch 라 공통 클라이언트의 401 자동 갱신을 우회 → 긴 녹음 중 청크 유실)
+  let token = tokenStorage.getAccess();
   let lastErr: unknown = null;
+  let refreshAttempted = false;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const controller = new AbortController();
@@ -48,6 +51,14 @@ export async function uploadFormWithRetry<T>(url: string, formData: FormData): P
         body: formData,
         signal: controller.signal,
       });
+      if (res.status === 401 && !refreshAttempted) {
+        refreshAttempted = true;
+        const refreshedToken = await refreshAccessToken();
+        if (refreshedToken) {
+          token = refreshedToken;
+          continue;
+        }
+      }
       if (!res.ok) throw await parseError(res);
       return (await res.json()) as T;
     } catch (err) {

@@ -9,7 +9,6 @@ import os
 import shutil
 import tempfile
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -28,6 +27,80 @@ logger = logging.getLogger(__name__)
 # S3 자격증명 미설정/일시 실패 시 폴백 저장 위치 — audio(CHUNK_STORAGE_DIR)와 동일 방식.
 # /tmp 는 EC2 재시작·디스크 정리 시 삭제되므로 영속 디스크(/var/lib/mindbreeze)를 기본으로 한다.
 VIDEO_CHUNK_DIR = Path(os.environ.get("VIDEO_CHUNK_DIR", "/var/lib/mindbreeze/video"))
+
+
+def _discard_written_media(file_path: str, uploaded_to_s3: bool) -> None:
+    """STG-02: 유일 제약 충돌로 채택되지 않은 요청이 쓴 로컬 파일/S3 객체를 정리한다.
+
+    조회-후-삽입 경합에서 진 요청이 남긴 고아 미디어(스토리지 비용·프라이버시)를 제거한다.
+    정리 실패가 원래 응답(멱등 결과 반환)을 막지 않도록 best-effort 로 처리한다.
+    """
+    try:
+        if uploaded_to_s3:
+            storage_service.delete_object(file_path)
+        elif file_path and os.path.exists(file_path):
+            os.unlink(file_path)
+    except Exception:  # noqa: BLE001
+        logger.warning("[video] 미채택 청크 미디어 정리 실패: %s", file_path)
+
+
+def _stream_chunk_to(chunk: VideoChunk, out) -> bool:
+    """STG-08/09: 청크 1개를 순차 스트리밍으로 병합 파일에 기록한다.
+
+    전체를 메모리에 올리지 않고 조각(copyfileobj)으로 복사해 메모리 사용을 상한 내로
+    유지한다. 로드 실패(로컬 파일 없음/S3 객체 없음)는 False 로 알려 호출측이 누락으로
+    판정하게 한다 — b'' 로 패딩해 잘린 영상을 성공으로 위장하지 않는다.
+
+    반환: True(기록됨) / False(미디어 없음·로드 실패).
+    """
+    path = chunk.file_path or ""
+    if path.startswith("video/"):  # S3 object key
+        stream = storage_service.open_object_stream(path)
+        if stream is None:
+            # MB-ERR-012: S3 객체 로드 실패를 무음(False)으로만 알리지 않고 로그로 남긴다.
+            logger.warning(
+                "[video] 청크 로드 실패(S3 객체 없음): index=%d key=%s", chunk.chunk_index, path
+            )
+            return False
+        try:
+            shutil.copyfileobj(stream, out, length=64 * 1024)
+        finally:
+            try:
+                stream.close()
+            except Exception:  # noqa: BLE001
+                pass
+        return True
+    if path and os.path.exists(path):  # 로컬 폴백 경로
+        with open(path, "rb") as src:
+            shutil.copyfileobj(src, out, length=64 * 1024)
+        return True
+    # MB-ERR-012: 로컬 파일 부재를 무음으로 건너뛰지 않는다(실패 청크 인덱스 기록).
+    logger.warning("[video] 청크 로드 실패(로컬 파일 없음): index=%d path=%s", chunk.chunk_index, path)
+    return False
+
+
+def _cleanup_source_chunks(chunks: list[VideoChunk], db: DBSession) -> None:
+    """STG-04: 병합 성공 후 원본 청크 미디어(S3 객체/로컬 파일)와 행을 정리한다.
+
+    병합본이 만들어졌는데 원본을 남기면 동일 데이터를 두 번 보관해 스토리지 비용이
+    배가되고, 삭제 시 추적이 어려운 고아가 된다. 정리 실패가 병합 성공을 막지 않도록
+    best-effort 로 처리한다.
+    """
+    try:
+        for chunk in chunks:
+            path = chunk.file_path or ""
+            if path.startswith("video/"):
+                storage_service.delete_object(path)
+            elif path and os.path.exists(path):
+                try:
+                    os.unlink(path)
+                except OSError:
+                    logger.warning("[video] 원본 청크 파일 삭제 실패: %s", path)
+            db.delete(chunk)
+        db.commit()
+    except Exception:  # noqa: BLE001
+        logger.warning("[video] 원본 청크 정리 실패", exc_info=True)
+        db.rollback()
 
 
 def _to_uuid(value: str) -> UUID:
@@ -101,9 +174,19 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
 
     # S3 우선 저장(file_path = object key). 자격증명 미설정 시 로컬 폴백(audio와 동일 방식).
     object_key = f"video/{s.id}/{chunk_index}_{uuid.uuid4().hex}.webm"
-    if storage_service.upload_bytes(object_key, content, content_type="video/webm"):
+    uploaded_to_s3 = storage_service.upload_bytes(object_key, content, content_type="video/webm")
+    if uploaded_to_s3:
         file_path = object_key
     else:
+        # STG-12: 프로덕션에서 실제 S3 업로드가 실패했는데 조용히 로컬 폴백하면
+        #   사용자는 성공으로 보지만 S3 객체는 없고(다중 인스턴스 유실) 프라이버시 요건도 깨진다.
+        #   자격증명이 설정된 프로덕션이면 실패를 명시적으로 드러낸다(503).
+        if storage_service.should_fail_on_upload_failure():
+            logger.error("[video] 프로덕션 S3 청크 업로드 실패 — 로컬 폴백 금지: %s", object_key)
+            raise HTTPException(
+                status_code=503,
+                detail="영상 저장소 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+            )
         VIDEO_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
         local_path = VIDEO_CHUNK_DIR / f"{s.id}_{chunk_index}_{uuid.uuid4().hex}.webm"
         local_path.write_bytes(content)
@@ -123,6 +206,9 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
             db.add(chunk)
         db.commit()
     except IntegrityError:
+        # STG-02: 진 요청이 S3/로컬에 쓴 미디어는 채택되지 않았으므로 정리한다(고아 방지).
+        _discard_written_media(file_path, uploaded_to_s3)
+        db.rollback()
         existing = db.query(VideoChunk).filter(
             VideoChunk.session_id == s.id, VideoChunk.chunk_index == chunk_index
         ).first()
@@ -184,9 +270,12 @@ def merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
     성공 시 object_key(또는 로컬 경로)를 반환, 청크 없으면 None.
 
     SDD-088 후속 개선:
-      - 다운로드는 스레드 풀(최대 8)로 병렬화해 순차 S3 GET N회 지연을 줄인다.
+      - STG-08: 청크를 chunk_index 순서대로 하나씩 스트리밍(copyfileobj) 병합해 전체 청크를
+        동시에 메모리에 보관하지 않는다.
       - 업로드는 storage_service.upload_file(멀티파트 스트리밍)로 — 전체 파일을
         메모리에 통째로 올리지 않는다(기존 f.read() 대용량 버퍼·OOM 위험 제거).
+      - STG-09: 로드 실패(누락 미디어) 청크는 b'' 로 패딩하지 않고 병합을 보류한다.
+      - STG-04: 병합 성공 후 원본 청크 미디어/행을 정리한다.
     """
     chunks = (
         db.query(VideoChunk)
@@ -218,48 +307,30 @@ def merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
                 db.commit()
             return None
 
-    def _load(chunk: VideoChunk) -> bytes | None:
-        path = chunk.file_path or ""
-        if path.startswith("video/"):  # S3 object key
-            return storage_service.download_bytes(path)
-        if os.path.exists(path):  # 로컬 폴백 경로
-            with open(path, "rb") as src:
-                return src.read()
-        return None
+    failed_indices: list[int] = []
 
     fd, merged_path = tempfile.mkstemp(suffix=".webm")
     os.close(fd)
     try:
+        # STG-08: 청크를 chunk_index 순서대로 하나씩 스트리밍 기록한다 — 전체 청크를
+        #   동시에 메모리에 보관하지 않고(기존 ThreadPool 8 동시 보관) 상한 내에서 처리한다.
         with open(merged_path, "wb") as out:
-            if len(chunks) <= 2:
-                # 청크가 적으면 병렬화 오버헤드가 커 순차 처리한다.
-                for chunk in chunks:
-                    data = _load(chunk)
-                    if data:
-                        out.write(data)
-            else:
-                # 병렬 다운로드 + 입력 순서대로 스트리밍 기록.
-                # as_completed 는 완료 순서로 yield 하므로, pending 딕셔너리에
-                # 보관했다가 순서가 맞는 청크부터 순차 flush 해 메모리 사용을
-                # (미완료 선행 청크 수준으로) 제한하면서 병렬 왕복을 얻는다.
-                with ThreadPoolExecutor(max_workers=8) as pool:
-                    futures = {pool.submit(_load, chunk): i for i, chunk in enumerate(chunks)}
-                    pending: dict[int, bytes] = {}
-                    next_idx = 0
-                    for fut in as_completed(futures):
-                        idx = futures[fut]
-                        try:
-                            data = fut.result() or b''
-                        except Exception:  # noqa: BLE001 — 단일 청크 실패는 건너뛴다
-                            # SDD-137: 실패 청크도 b'' 로 표시해 순차 flush 가 멈추지 않게 한다
-                            # (앞선 청크 하나가 실패해도 뒤 청크들은 계속 기록)
-                            data = b''
-                        pending[idx] = data
-                        while next_idx in pending:
-                            d = pending.pop(next_idx)
-                            if d:
-                                out.write(d)
-                            next_idx += 1
+            for chunk in chunks:
+                if not _stream_chunk_to(chunk, out):
+                    failed_indices.append(chunk.chunk_index)
+
+        # STG-09: DB 에 있으나 실제 미디어 로드에 실패한 청크는 b'' 패딩으로 성공 위장하지
+        #   않는다 — 누락 미디어가 하나라도 있으면 잘린 영상을 '성공'으로 마감하지 않고
+        #   merge_failed 로 보류한다(무결성 게이트 강화).
+        if failed_indices:
+            logger.warning(
+                "[video] 청크 로드 실패(누락 미디어) — 병합 보류: indices=%s",
+                sorted(failed_indices),
+            )
+            if record:
+                record.video_status = "merge_failed"
+                db.commit()
+            return None
 
         if os.path.getsize(merged_path) == 0:
             return None
@@ -267,12 +338,21 @@ def merge_video_chunks(session_id: UUID, db: DBSession) -> str | None:
         object_key = f"video/{session_id}/merged.webm"
         if storage_service.upload_file(merged_path, object_key, content_type="video/webm"):
             logger.info("[video] 병합 영상 S3 업로드 완료(스트리밍): %s", object_key)
+            _cleanup_source_chunks(chunks, db)
             return object_key
-        # 로컬 폴백
+        # STG-12: 프로덕션에서 설정된 S3 업로드 실패를 조용히 로컬 폴백으로 숨기지 않는다.
+        if storage_service.should_fail_on_upload_failure():
+            logger.error("[video] 프로덕션 S3 병합 업로드 실패 — 로컬 폴백 금지: %s", object_key)
+            if record:
+                record.video_status = "merge_failed"
+                db.commit()
+            raise storage_service.StorageUploadError("merged_video_upload_failed")
+        # 로컬 폴백(dev/스텁 환경)
         VIDEO_CHUNK_DIR.mkdir(parents=True, exist_ok=True)
         final_path = VIDEO_CHUNK_DIR / f"{session_id}_merged.webm"
         shutil.copyfile(merged_path, final_path)
         logger.info("[video] 병합 영상 로컬 저장: %s", final_path)
+        _cleanup_source_chunks(chunks, db)
         return str(final_path)
     finally:
         if os.path.exists(merged_path):

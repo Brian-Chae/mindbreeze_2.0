@@ -7,7 +7,24 @@
  * - S3 PUT:  presigned URL에 raw 바이트(application/octet-stream)
  */
 
-import { apiClient } from './client';
+import { ApiError, apiClient } from './client';
+
+const RAW_PUT_TIMEOUT_MS = 20_000;
+const RAW_PUT_MAX_ATTEMPTS = 3;
+const RAW_PUT_RETRY_BASE_DELAY_MS = 500;
+
+function putSleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 5xx/408/429·타임아웃·네트워크 오류만 재시도한다(4xx 서명 만료는 호출측 재-presign 대상). */
+function isRetryablePutError(err: unknown): boolean {
+  if (err instanceof ApiError) {
+    return err.status >= 500 || err.status === 408 || err.status === 429;
+  }
+  if (err instanceof DOMException && err.name === 'AbortError') return true;
+  return err instanceof TypeError;
+}
 
 /** presign 요청 — raw 재해석 계약 메타 1건 */
 export interface EegRawChunkMeta {
@@ -99,12 +116,34 @@ export async function putEegRawToPresignedUrl(
     'Content-Type': 'application/octet-stream',
     ...(headers ?? {}),
   };
-  const res = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: merged,
-    body: payload,
-  });
-  if (!res.ok) {
-    throw new Error(`raw S3 PUT 실패 (${res.status})`);
+  // API7-09: presigned PUT 은 토큰 없이 별도 fetch 로 나가 공통 클라이언트의 타임아웃·재시도를
+  // 우회한다. 응답이 없으면 영구 pending 되고 순단 실패가 청크 유실로 이어지므로 상한·재시도를 둔다.
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < RAW_PUT_MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), RAW_PUT_TIMEOUT_MS);
+    try {
+      const res = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: merged,
+        body: payload,
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        // 4xx(서명 만료 포함)는 재시도해도 동일 — 호출측이 새 presign 으로 재시도한다.
+        throw new ApiError(res.status, `raw S3 PUT 실패 (${res.status})`, null);
+      }
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < RAW_PUT_MAX_ATTEMPTS - 1 && isRetryablePutError(err)) {
+        await putSleep(RAW_PUT_RETRY_BASE_DELAY_MS * 2 ** attempt);
+        continue;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
   }
+  throw lastErr;
 }

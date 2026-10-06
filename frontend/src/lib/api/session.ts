@@ -1,6 +1,20 @@
 // 세션 관리 API
 
-import { ApiError, apiClient, refreshAccessToken, tokenStorage } from './client';
+import { apiClient, refreshAccessToken, tokenStorage } from './client';
+import { isAccessTokenExpiring } from './token-expiry';
+
+/**
+ * API7-04: 만료 임박/만료 토큰만 1회 선제 갱신한다.
+ * 유효한 토큰은 그대로 사용하고(불필요한 refresh 왕복 제거), 갱신이 네트워크/서버 오류로
+ * 실패해도 예외를 던지지 않는다 — 이어지는 요청의 401 경로(apiClient)가 invalid 여부를
+ * 구분해 세션 폐기/재시도를 결정하므로, 일시적 장애가 '로그인 만료'로 오인되지 않는다.
+ */
+async function ensureMemberToken(): Promise<void> {
+  const accessToken = tokenStorage.getAccess();
+  if (accessToken && isAccessTokenExpiring(accessToken)) {
+    await refreshAccessToken();
+  }
+}
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 /** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
@@ -301,10 +315,7 @@ export const joinSessionByCode = async (
   payload: JoinByCodePayload = {},
 ): Promise<JoinByCodeResponse> => {
   if (tokenStorage.getAccess()) {
-    const refreshedToken = await refreshAccessToken();
-    if (!refreshedToken) {
-      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
-    }
+    await ensureMemberToken();
     return apiClient.post<JoinByCodeResponse>(`/sessions/by-code/${code}/join`, payload);
   }
 
@@ -389,10 +400,7 @@ export const getMemberLiveKitToken = async (
 ): Promise<MemberLiveKitTokenResponse> => {
   const payload = { participant_id: participantId, participant_token: participantToken ?? null };
   if (tokenStorage.getAccess()) {
-    const refreshedToken = await refreshAccessToken();
-    if (!refreshedToken) {
-      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
-    }
+    await ensureMemberToken();
     return apiClient.post<MemberLiveKitTokenResponse>(
       `/sessions/by-code/${code}/livekit-token`,
       payload,
@@ -432,10 +440,7 @@ export const raiseHand = async (
   const payload = { participant_token: participantToken ?? null };
   const path = `/sessions/${sessionId}/participants/${participantId}/raise-hand`;
   if (tokenStorage.getAccess()) {
-    const refreshedToken = await refreshAccessToken();
-    if (!refreshedToken) {
-      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
-    }
+    await ensureMemberToken();
     return apiClient.post<RaiseHandResponse>(path, payload);
   }
   return apiClient.post<RaiseHandResponse>(path, payload, { skipAuth: true });

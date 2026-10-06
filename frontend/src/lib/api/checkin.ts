@@ -4,7 +4,8 @@
 // 기록지·리포트가 같은 계약(subjective_state)을 공유한다.
 // 미입력은 null 로 보존한다(0/빈 문자열 치환 금지).
 
-import { ApiError, apiClient, refreshAccessToken, tokenStorage } from './client';
+import { apiClient, refreshAccessToken, tokenStorage } from './client';
+import { isAccessTokenExpiring } from './token-expiry';
 
 /** 체크인 시점 — after(세션 직후 사후 설문, 기본) / before(입장 전 체크인) */
 export type CheckinPhase = 'before' | 'after';
@@ -202,10 +203,13 @@ export async function submitCheckin(
   if (options?.skipAuth) {
     return apiClient.post<CheckinResponse>(path, body, { skipAuth: true });
   }
-  if (tokenStorage.getAccess()) {
-    const refreshedToken = await refreshAccessToken();
-    if (!refreshedToken) {
-      throw new ApiError(401, '로그인이 만료되었습니다. 다시 로그인해주세요.', null);
+  const accessToken = tokenStorage.getAccess();
+  if (accessToken) {
+    // API7-04: 유효한 access token 은 그대로 사용한다. 만료 임박/만료 토큰만 1회 선제 갱신하고,
+    // 갱신 실패(네트워크·서버)를 '로그인 만료'로 단정하지 않는다 — apiClient 의 401 경로가
+    // invalid/ network / server 를 구분해 처리한다.
+    if (isAccessTokenExpiring(accessToken)) {
+      await refreshAccessToken();
     }
     return apiClient.post<CheckinResponse>(path, body);
   }

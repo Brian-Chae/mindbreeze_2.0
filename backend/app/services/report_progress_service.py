@@ -359,6 +359,12 @@ def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
     for report in stale_reports:
         report.generation_status = GENERATION_PARTIAL
         report.generation_error = REASON_TIMEOUT
+        # CEL-WATCHDOG-01: 생성 진행(generation_status)만 partial 로 마감하고 승인 게이트
+        #   (Report.status)를 그대로 두면, 'pending_analysis' 에 영구히 멈춰 승인 큐에
+        #   나타나지도 않고 재시도 대상도 되지 않는다. 승인 게이트도 실패로 마감해
+        #   파이프라인 종료를 명시한다(이미 승인 완료된 리포트는 보존).
+        if report.status != "completed":
+            report.status = "error"
         affected.append(str(report.session_id))
 
     # 2) STT/요약 단계(리포트 행 생성 전) — 녹음 종료 후에도 processing 에 머문 기록
@@ -374,6 +380,13 @@ def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
     for record in stale_records:
         record.status = "failed"
         affected.append(str(record.session_id))
+        # CEL-WATCHDOG-01: 이 세션에 이미 생성된 리포트 행이 있으면 승인 게이트도 마감한다.
+        for report in db.query(Report).filter(Report.session_id == record.session_id).all():
+            if report.status != "completed":
+                report.status = "error"
+                report.generation_status = GENERATION_PARTIAL
+                if not report.generation_error:
+                    report.generation_error = REASON_TIMEOUT
 
     if affected and commit:
         db.commit()

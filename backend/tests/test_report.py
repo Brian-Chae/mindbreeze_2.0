@@ -120,6 +120,7 @@ def test_report_03_생성_타인_403(client):
         headers=other["auth"],
     )
     assert res.status_code == 403
+    assert res.json()["detail"] == "host 상담사만 가능합니다"
 
 
 def test_report_04_목록_조회(client):
@@ -219,6 +220,7 @@ def test_report_07_승인_알림이벤트(client):
 def test_report_08_비로그인_401(client):
     res = client.get("/api/v1/reports")
     assert res.status_code == 401
+    assert res.json()["detail"] == "인증이 필요합니다"
 
 
 def test_report_09_자동승인_설정_조회와_변경(client):
@@ -252,6 +254,8 @@ def test_report_10_자동승인_설정은_상담사만_변경(client):
 
     assert get_res.status_code == 403
     assert patch_res.status_code == 403
+    assert get_res.json()["detail"] == "이 작업을 수행할 권한이 없습니다"
+    assert patch_res.json()["detail"] == "이 작업을 수행할 권한이 없습니다"
 
 
 def test_report_11_자동승인_ON이면_생성_직후_발행(client):

@@ -223,13 +223,22 @@ async def broadcast_message(room_id: str, payload: dict) -> None:
 
 
 async def broadcast_profile_updated(user_id: str, new_name: str) -> None:
-    """프로필(이름) 변경 시 연결된 모든 채팅방에 실시간 브로드캐스트."""
-    # WS-08: 동기 DB 조회(채팅방 목록)는 별도 스레드로 위임해 이벤트 루프 블로킹을 막는다.
-    room_ids = await asyncio.to_thread(_user_chat_room_ids, user_id)
+    """프로필(이름) 변경 시 연결된 모든 채팅방에 실시간 브로드캐스트.
 
-    payload = {"type": "profile_updated", "user_id": user_id, "name": new_name}
-    for rid in room_ids:
-        await sio.emit("profile_updated", payload, room=rid, namespace="/chat")
+    MB-ERR-006: 이 브로드캐스트는 프로필 저장(커밋) 이후의 best-effort 부수효과다.
+    실패를 밖으로 던지면 이미 저장된 변경과 무관하게 엔드포인트가 500 이 되고
+    클라이언트는 실패로 오인해 중복 재시도하게 된다. 따라서 내부에서 실패를 격리하고
+    로그만 남긴다(WS 루프/DB 없으면 no-op).
+    """
+    try:
+        # WS-08: 동기 DB 조회(채팅방 목록)는 별도 스레드로 위임해 이벤트 루프 블로킹을 막는다.
+        room_ids = await asyncio.to_thread(_user_chat_room_ids, user_id)
+
+        payload = {"type": "profile_updated", "user_id": user_id, "name": new_name}
+        for rid in room_ids:
+            await sio.emit("profile_updated", payload, room=rid, namespace="/chat")
+    except Exception as exc:  # noqa: BLE001 — best-effort 실패 격리
+        logger.warning("[WS /chat] profile_updated broadcast failed (user=%s): %s", user_id, exc)
 
 
 def _user_chat_room_ids(user_id: str) -> list[str]:

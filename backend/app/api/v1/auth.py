@@ -1,5 +1,6 @@
 """Auth API Router — Register, Login, Refresh, Logout, OTP"""
 
+import logging
 import uuid
 from datetime import date
 
@@ -63,6 +64,23 @@ from app.services import (
 from app.tasks.email import send_otp_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
+
+
+async def _safe_broadcast_profile_updated(user_id, new_name: str) -> None:
+    """MB-ERR-006: 이름 변경 WS 브로드캐스트 실패를 격리한다(프로필 저장 성공 유지).
+
+    프로필 수정은 이미 커밋된 뒤이므로 브로드캐스트 실패가 요청 전체를 500 으로
+    만들면 클라이언트는 성공한 저장을 실패로 오인하고 중복 재시도하게 된다.
+    """
+    try:
+        from app.ws.chat_namespace import broadcast_profile_updated
+
+        await broadcast_profile_updated(str(user_id), new_name)
+    except Exception as exc:  # noqa: BLE001 — best-effort 실패 격리
+        logger.warning("[auth] broadcast_profile_updated failed user=%s: %s", user_id, exc)
+
 
 # ── refresh 토큰 httpOnly cookie (XSS 탈취 방지) ──────────────────────────────
 REFRESH_COOKIE_NAME = "mb_refresh_token"
@@ -752,10 +770,26 @@ async def google_auth(
                 )
     except HTTPException:
         raise
-    except Exception:
+    except httpx.TimeoutException as exc:
+        # MB-ERR-008: 서버측 지연은 401(인증 실패)이 아니라 503(일시 장애)로 구분한다.
+        logger.warning("[auth] Google OAuth 타임아웃: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google 인증 서버 응답이 지연되고 있습니다. 잠시 후 다시 시도하세요",
+        )
+    except httpx.HTTPError as exc:
+        # MB-ERR-008: 네트워크/HTTP 오류는 502(게이트웨이 오류)로 — 인증 실패와 구분.
+        logger.exception("[auth] Google OAuth 통신 오류: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Google 인증 서버와 통신할 수 없습니다",
+        )
+    except Exception as exc:
+        # MB-ERR-008: 응답 파싱 등 예기치 못한 서버측 오류도 4xx 인증 실패로 위장하지 않는다.
+        logger.exception("[auth] Google OAuth 응답 처리 실패: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Google 인증 서버 응답을 처리할 수 없습니다",
         )
 
     raw_email = user_info.get("email")
@@ -934,9 +968,9 @@ async def update_user_me(
     db.refresh(user)
 
     # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    # MB-ERR-006: 커밋 이후의 best-effort 부수효과 — 실패를 격리해 저장 성공을 유지한다.
     if name_changed:
-        from app.ws.chat_namespace import broadcast_profile_updated
-        await broadcast_profile_updated(str(user.id), user.name)
+        await _safe_broadcast_profile_updated(user.id, user.name)
 
     return _to_user_response(user)
 
@@ -982,9 +1016,9 @@ async def update_counselor_profile(
     )
 
     # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    # MB-ERR-006: 커밋 이후의 best-effort 부수효과 — 실패를 격리해 저장 성공을 유지한다.
     if name_changed:
-        from app.ws.chat_namespace import broadcast_profile_updated
-        await broadcast_profile_updated(str(user.id), user.name)
+        await _safe_broadcast_profile_updated(user.id, user.name)
 
     return counselor_info_service.serialize(user)
 
@@ -1071,8 +1105,8 @@ async def update_client_profile(
     db.refresh(user)
 
     # 이름 변경 시 실시간 브로드캐스트 (모든 채팅방)
+    # MB-ERR-006: 커밋 이후의 best-effort 부수효과 — 실패를 격리해 저장 성공을 유지한다.
     if name_changed:
-        from app.ws.chat_namespace import broadcast_profile_updated
-        await broadcast_profile_updated(str(user.id), user.name)
+        await _safe_broadcast_profile_updated(user.id, user.name)
 
     return await get_client_profile(current_user, db)
