@@ -75,11 +75,30 @@ def mind_sentence(metric, overall, early, late, delta_label, direction):
     e = adv['early'][zone_of(early)]
     l = adv['late'][zone_of(late)]
     verb = {'up': '상승', 'down': '하락', 'stable': '유지'}[direction]
+    # PDF-NARR-001: 하락(down) 세션에 '찾았습니다/되찾았습니다' 같은 개선 어휘를 쓰면 모순이다.
+    # 방향별로 마무리 어휘를 분기해 하락은 하락으로 서술한다.
+    closing = {
+        'emotional_stability': {
+            'up': '안정을 찾았습니다',
+            'stable': '안정을 유지했습니다',
+            'down': '안정이 흔들렸습니다',
+        },
+        'relaxation': {
+            'up': '편안함을 찾았습니다',
+            'stable': '편안함을 유지했습니다',
+            'down': '편안함이 줄었습니다',
+        },
+        'focus': {
+            'up': '몰입을 되찾았습니다',
+            'stable': '몰입을 유지했습니다',
+            'down': '몰입이 흔들렸습니다',
+        },
+    }[metric][direction]
     if metric == 'emotional_stability':
-        return f'전체적으로는 {o} 편안한 상태였고, 전반부에는 {e} 감정적으로 불안정했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 안정을 찾았습니다.'
+        return f'전체적으로는 {o} 편안한 상태였고, 전반부에는 {e} 감정적으로 불안정했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 {closing}.'
     if metric == 'relaxation':
-        return f'전체적으로는 {o} 이완된 상태였고, 전반부에는 {e} 긴장이 남아 있었지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 편안함을 찾았습니다.'
-    return f'전체적으로는 {o} 집중된 상태였고, 전반부에는 {e} 산만했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 몰입을 되찾았습니다.'
+        return f'전체적으로는 {o} 이완된 상태였고, 전반부에는 {e} 긴장이 남아 있었지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 {closing}.'
+    return f'전체적으로는 {o} 집중된 상태였고, 전반부에는 {e} 산만했지만, 후반부에는 {l} {delta_label}만큼 {verb}하여 {closing}.'
 
 JOURNEY_TEMPLATES = {
   "relax": {
@@ -207,7 +226,14 @@ def metric_value(point, metric):
     if metric == 'hrv':
         return point.get('sdnn') if point.get('sdnn') is not None else point.get('hrv')
     value = point.get({'focus': 'concentration', 'emotional_stability': 'stress'}.get(metric, metric))
-    return (1 if value <= 1 else 100) - value if metric == 'emotional_stability' and value is not None else value
+    if metric == 'emotional_stability' and value is not None:
+        # PDF-METRIC-002: 감정안정도는 스트레스 신호의 역방향 근사다. parse_timeline 이 0~1 비율을
+        # 0~100 으로 환산해 넘기므로 스트레스는 0~100 스케일이다. 종전
+        # `(1 if value <= 1 else 100) - value` 는 낮은 스트레스(≤1)를 0~1 비율로 오인해
+        # 역전(스트레스 0 → 안정도 ~1)시키고 경계(1)에서 불연속을 만들었다.
+        # 0~100 으로 클램프한 뒤 100 - stress 로 연속 매핑한다(낮은 스트레스 = 높은 안정).
+        return 100.0 - min(max(value, 0.0), 100.0)
+    return value
 
 
 def parse_changes(raw):

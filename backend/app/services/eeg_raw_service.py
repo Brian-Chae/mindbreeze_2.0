@@ -8,10 +8,11 @@
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -251,3 +252,111 @@ def _sync_eeg_record(
         if play_group_id is not None:
             record.play_group_id = play_group_id
     return record
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# EEG-RAW-03 / EEG-RET-01: 스테일·고아 raw 청크 및 보관 기간 정리
+# ─────────────────────────────────────────────────────────────────────────
+
+# presigned 발급(pending) 후 이 시간 내 ack 되지 않은 청크는 고아(orphan)로 정리한다.
+EEG_RAW_PENDING_TTL_HOURS = 24
+# ack 무결성 검증 실패(failed)로 방치된 청크 정리 기준.
+EEG_RAW_FAILED_TTL_HOURS = 24
+# 업로드 완료(uploaded) raw 청크 보관 기간(일) — 개인정보 보관 정책. 경과분은 삭제한다.
+EEG_RAW_RETENTION_DAYS = 90
+
+
+def _refresh_eeg_record_file_count(sid: UUID, participant_id: UUID | None, db: DBSession) -> None:
+    """보관 만료 삭제로 어긋난 EEGRecord.file_count 를 남은 uploaded 청크 수로 재계산한다."""
+    if participant_id is None:
+        return
+    uploaded = (
+        db.query(EEGRawChunk)
+        .filter(
+            EEGRawChunk.session_id == sid,
+            EEGRawChunk.participant_id == participant_id,
+            EEGRawChunk.upload_status == "uploaded",
+        )
+        .count()
+    )
+    record = (
+        db.query(EEGRecord)
+        .filter(EEGRecord.session_id == sid, EEGRecord.participant_id == participant_id)
+        .first()
+    )
+    if record is not None:
+        record.file_count = uploaded
+
+
+def sweep_stale_eeg_raw(
+    db: DBSession,
+    *,
+    now: datetime | None = None,
+    pending_ttl_hours: int = EEG_RAW_PENDING_TTL_HOURS,
+    failed_ttl_hours: int = EEG_RAW_FAILED_TTL_HOURS,
+    retention_days: int = EEG_RAW_RETENTION_DAYS,
+) -> dict:
+    """스테일/고아 raw 청크와 보관 기간 경과 업로드분을 정리한다 (EEG-RAW-03, EEG-RET-01).
+
+    - pending: 발급 후 pending_ttl_hours 내 ack 되지 않은 고아 → 행 삭제(객체는 best-effort).
+    - failed: 검증 실패로 방치된 청크(failed_ttl_hours 초과) → 행 삭제.
+    - uploaded: 보관 기간(retention_days) 경과분 → 행 삭제 + S3 객체 삭제(개인정보 보관 정책).
+
+    삭제 행 수를 {pending_deleted, failed_deleted, expired_deleted} 로 반환한다.
+    """
+    moment = now or _now()
+    # SQLite/Postgres 저장값과 비교 시 tz 혼용을 피하려고 naive UTC 로 정규화한다.
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(timezone.utc).replace(tzinfo=None)
+
+    pending_cutoff = moment - timedelta(hours=pending_ttl_hours)
+    failed_cutoff = moment - timedelta(hours=failed_ttl_hours)
+    retention_cutoff = moment - timedelta(days=retention_days)
+
+    pending_query = db.query(EEGRawChunk).filter(
+        EEGRawChunk.upload_status == "pending",
+        EEGRawChunk.created_at.is_not(None),
+        EEGRawChunk.created_at < pending_cutoff,
+    )
+    failed_query = db.query(EEGRawChunk).filter(
+        EEGRawChunk.upload_status == "failed",
+        EEGRawChunk.created_at.is_not(None),
+        EEGRawChunk.created_at < failed_cutoff,
+    )
+    # uploaded 는 uploaded_at(있으면) 또는 created_at 기준으로 보관 기간을 판정한다.
+    expired_query = db.query(EEGRawChunk).filter(
+        EEGRawChunk.upload_status == "uploaded",
+        func.coalesce(EEGRawChunk.uploaded_at, EEGRawChunk.created_at) < retention_cutoff,
+    )
+
+    # 보관 만료 대상의 (세션, 참가자) — 삭제 후 file_count 재계산이 필요하다.
+    affected_pairs = {
+        (c.session_id, c.participant_id) for c in expired_query.all()
+    }
+
+    def _delete(query) -> int:
+        chunks = query.all()
+        object_keys = [c.object_key for c in chunks if c.object_key]
+        for chunk in chunks:
+            db.delete(chunk)
+        db.flush()
+        # S3 객체 삭제는 best-effort — 실패해도 DB 정리는 유지한다.
+        for key in object_keys:
+            storage_service.delete_object(key)
+        return len(chunks)
+
+    pending_deleted = _delete(pending_query)
+    failed_deleted = _delete(failed_query)
+    expired_deleted = _delete(expired_query)
+    db.commit()
+
+    for sid, participant_id in affected_pairs:
+        _refresh_eeg_record_file_count(sid, participant_id, db)
+    if affected_pairs:
+        db.commit()
+
+    return {
+        "pending_deleted": pending_deleted,
+        "failed_deleted": failed_deleted,
+        "expired_deleted": expired_deleted,
+    }

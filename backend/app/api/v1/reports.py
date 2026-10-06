@@ -1,6 +1,6 @@
 """AI 리포트 API"""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, require_roles
@@ -26,8 +26,12 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 
 @router.get("/view", response_model=ReportResponse)
-def view(token: str, db: DBSession = Depends(get_db)):
+def view(token: str, response: Response, db: DBSession = Depends(get_db)):
     """이메일 report_view 토큰으로 내담자 리포트를 공개 열람한다."""
+    # VIEW-HTTP-004: 공개 열람 JSON — PII 유출 방지를 위해 캐시·리퍼러 노출을 차단한다.
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return report_email_service.get_report_view_content(token, db)
 
 

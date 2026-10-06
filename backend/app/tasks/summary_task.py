@@ -261,7 +261,13 @@ def run_summary_inline(session_id: str, db: DBSession) -> None:
 try:
     from app.core.celery_app import celery_app
 
-    @celery_app.task(name="tasks.summary")
+    # STT-5TH-04: 미처리 인프라 오류(일시)에 대한 Celery 레벨 재시도 — report_email_task 패턴.
+    @celery_app.task(
+        name="tasks.summary",
+        autoretry_for=(RuntimeError,),
+        retry_backoff=True,
+        retry_kwargs={"max_retries": 3},
+    )
     def summary_task(session_id: str) -> None:
         from app.core.database import SessionLocal
 

@@ -115,6 +115,12 @@ def send_invite_email(to_email: str, invite_url: str, counselor_name: str):
         f"MIND BREEZE 팀"
     )
 
+    # EMAIL-XSS-003: 사용자 입력(상담사 이름)과 링크를 HTML 이스케이프해 본문 주입을 막는다.
+    from html import escape
+
+    counselor_name = escape(counselor_name)
+    invite_url = escape(invite_url, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">
@@ -205,6 +211,14 @@ def send_org_invite_email(
         f"· 본인이 요청하지 않았다면 이 메일을 무시해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
+
+    # EMAIL-XSS-003: 사용자 입력(담당자·기관 이름)과 링크를 HTML 이스케이프.
+    from html import escape
+
+    admin_name = escape(admin_name)
+    org_name = escape(org_name)
+    invite_link = escape(invite_link, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">
@@ -299,6 +313,14 @@ def send_counselor_invite_email(
         f"· 본인이 요청하지 않았다면 이 메일을 무시해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
+
+    # EMAIL-XSS-003: 사용자 입력(상담사·기관 이름)과 링크를 HTML 이스케이프.
+    from html import escape
+
+    admin_name = escape(admin_name)
+    org_name = escape(org_name)
+    invite_link = escape(invite_link, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">
@@ -392,6 +414,14 @@ def send_membership_invite_email(
         f"· 초대를 원하지 않으시면 이 메일을 무시해 주세요. 소속은 추가되지 않습니다.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
+
+    # EMAIL-XSS-003: 사용자 입력(상담사·기관 이름)과 링크를 HTML 이스케이프.
+    from html import escape
+
+    counselor_name = escape(counselor_name)
+    org_name = escape(org_name)
+    invite_link = escape(invite_link, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">
@@ -487,6 +517,14 @@ def send_client_invite_email(
         f"· 본인이 요청하지 않았다면 이 메일을 무시해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
+
+    # EMAIL-XSS-003: 사용자 입력(내담자·상담사 이름)과 링크를 HTML 이스케이프.
+    from html import escape
+
+    client_name = escape(client_name)
+    counselor_name = escape(counselor_name)
+    invite_link = escape(invite_link, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">
@@ -665,6 +703,15 @@ def send_admin_password_reset_email(
         f"· 본인이 요청하지 않았다면 관리자에게 문의해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
+
+    # EMAIL-XSS-003: 사용자 입력(대상자·관리자 이름·역할 라벨)과 링크를 HTML 이스케이프.
+    from html import escape
+
+    target_name = escape(target_name)
+    admin_name = escape(admin_name)
+    admin_role_label = escape(admin_role_label)
+    reset_link = escape(reset_link, quote=True)
+
     body_html = f"""\
 <!DOCTYPE html>
 <html lang="ko">

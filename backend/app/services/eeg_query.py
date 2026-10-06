@@ -13,6 +13,7 @@
 
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.eeg_feature import EEGFeatureWindow
@@ -115,6 +116,54 @@ def feature_windows_chronological(
     if limit is not None:
         q = q.limit(limit)
     return q.all()
+
+
+def feature_windows_chronological_for_participants(
+    db: DBSession,
+    session_id: UUID,
+    participant_ids: list,
+    *,
+    limit: int | None = None,
+    newest_first: bool = False,
+) -> dict:
+    """참가자 목록의 시간순 윈도우를 **단일 쿼리**로 일괄 조회한다 (EEG-QRY-02 N+1 방지).
+
+    기존에는 참가자마다 feature_windows_chronological 을 두 번씩(초반/최근) 호출해
+    참가자 수에 비례하는 쿼리(N+1)가 발생했다. 창 함수(ROW_NUMBER PARTITION BY
+    participant_id)로 참가자별 상위 limit 개를 한 번에 뽑아 쿼리 수를 상수로 고정한다.
+
+    반환: {participant_id: [windows...]} — 각 참가자별 created_at 기준 정렬(동률 시 window_index).
+    """
+    if not participant_ids:
+        return {}
+
+    order = (
+        (EEGFeatureWindow.created_at.desc(), EEGFeatureWindow.window_index.desc())
+        if newest_first
+        else (EEGFeatureWindow.created_at.asc(), EEGFeatureWindow.window_index.asc())
+    )
+    rank = func.row_number().over(
+        partition_by=EEGFeatureWindow.participant_id,
+        order_by=list(order),
+    ).label("rn")
+    inner = (
+        select(EEGFeatureWindow.id.label("id"), rank)
+        .where(EEGFeatureWindow.session_id == session_id)
+        .where(EEGFeatureWindow.participant_id.in_(participant_ids))
+    )
+    sub = inner.subquery()
+    q = (
+        db.query(EEGFeatureWindow)
+        .join(sub, EEGFeatureWindow.id == sub.c.id)
+        .order_by(EEGFeatureWindow.participant_id.asc(), *order)
+    )
+    if limit is not None:
+        q = q.filter(sub.c.rn <= limit)
+
+    grouped: dict = {}
+    for window in q.all():
+        grouped.setdefault(window.participant_id, []).append(window)
+    return grouped
 
 
 def raw_chunks_in_range(

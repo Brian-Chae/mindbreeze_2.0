@@ -304,17 +304,33 @@ def summarize_group(relatives: Sequence[ParticipantRelative], *, wearer_count: i
 
 
 def _participant_windows(session_id, participant_id, db: DBSession) -> list:
-    """개인 baseline(초반)과 최근 구간만 남기고 시간순으로 합친다(쿼리 예산 bounded)."""
-    earliest = eeg_query.feature_windows_chronological(
-        db, session_id, participant_id, limit=CALIBRATION_SEC
+    """단일 참가자의 (baseline + 최근) 윈도우 — 일괄 조회 헬퍼의 단일 참가자 래퍼."""
+    return _participants_windows(session_id, [participant_id], db).get(participant_id, [])
+
+
+def _participants_windows(session_id, participant_ids, db: DBSession) -> dict:
+    """참가자 목록의 (baseline + 최근) 윈도우를 **쿼리 2회**로 일괄 조회한다 (EEG-QRY-02).
+
+    기존에는 참가자마다 feature_windows_chronological 을 2회씩 호출해 참가자 수에 비례하는
+    N+1 쿼리가 발생했다. 창 함수 기반 일괄 조회로 쿼리 수를 참가자 수와 무관하게 고정한다.
+
+    반환: {participant_id: [시간순 윈도우...]} — 캘리브레이션(baseline)과 최근 구간을 병합.
+    """
+    if not participant_ids:
+        return {}
+    earliest = eeg_query.feature_windows_chronological_for_participants(
+        db, session_id, participant_ids, limit=CALIBRATION_SEC
     )
-    latest = eeg_query.feature_windows_chronological(
-        db, session_id, participant_id, limit=_QUERY_BUDGET, newest_first=True
+    latest = eeg_query.feature_windows_chronological_for_participants(
+        db, session_id, participant_ids, limit=_QUERY_BUDGET, newest_first=True
     )
     merged: dict = {}
-    for w in list(earliest) + list(latest):
-        merged[w.id] = w
-    return sorted(merged.values(), key=_chrono_key)
+    for source in (earliest, latest):
+        for pid, windows in source.items():
+            bucket = merged.setdefault(pid, {})
+            for w in windows:
+                bucket[w.id] = w
+    return {pid: sorted(bucket.values(), key=_chrono_key) for pid, bucket in merged.items()}
 
 
 def compute_group_aggregate(session_id, db: DBSession, *, at: datetime | None = None) -> dict:
@@ -346,8 +362,10 @@ def compute_group_aggregate(session_id, db: DBSession, *, at: datetime | None = 
 
     relatives: list[ParticipantRelative] = []
     wearer_count = 0
+    # EEG-QRY-02: 참가자별 N+1 대신 전 참가자 윈도우를 일괄 조회(쿼리 2회)한다.
+    windows_by_participant = _participants_windows(sid, [p.id for p in participants], db)
     for p in participants:
-        windows = _participant_windows(sid, p.id, db)
+        windows = windows_by_participant.get(p.id, [])
         if not windows:
             continue
         wearer_count += 1
@@ -443,8 +461,10 @@ def compute_group_average(session_id, db: DBSession, *, at: datetime | None = No
 
     wearer_means: dict[str, list] = {field: [] for _, field in _ABSOLUTE_METRIC_FIELDS}
     wearer_count = 0
+    # EEG-QRY-02: 참가자별 N+1 대신 전 참가자 윈도우를 일괄 조회(쿼리 2회)한다.
+    windows_by_participant = _participants_windows(sid, [p.id for p in participants], db)
     for p in participants:
-        windows = _participant_windows(sid, p.id, db)
+        windows = windows_by_participant.get(p.id, [])
         if not windows:
             continue
         wearer_count += 1

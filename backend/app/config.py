@@ -1,10 +1,34 @@
 """Application Configuration — Pydantic Settings"""
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 
 
+def _resolve_env_files() -> tuple[str, ...]:
+    """환경파일 소스 선택 (INFRA-11).
+
+    - 서버(dev): backend/.env 가 없으므로 backend/.env.dev 를 읽는다
+      → systemd 유닛(EnvironmentFile=.env.dev)과 소스가 일치한다(불일치 해소).
+    - 로컬 개발: backend/.env 가 있으면 그것을 읽는다(저장소 기본값·테스트 격리 유지,
+      서버 전용 자격증명이 로컬로 새어들지 않게 한다).
+    어느 경우든 실제 환경변수(env var)는 env_file 값보다 항상 우선한다(pydantic-settings 기본).
+    """
+    backend_dir = Path(__file__).resolve().parent.parent  # .../backend
+    if (backend_dir / ".env").is_file():
+        return (str(backend_dir / ".env"),)
+    if (backend_dir / ".env.dev").is_file():
+        return (str(backend_dir / ".env.dev"),)
+    return (".env",)
+
+
 class Settings(BaseSettings):
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    # INFRA-11: env_file 은 _resolve_env_files() 가 서버 표준(.env.dev)/로컬(.env)을 선택한다.
+    model_config = {
+        "env_file": _resolve_env_files(),
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
     # Database
     database_url: str = "postgresql://localhost:5432/mindbreeze_dev"
@@ -50,6 +74,9 @@ class Settings(BaseSettings):
 
     # SDD-087: Gemini — 상담사 코멘트 AI 초안 생성 (키 부재 시 규칙 템플릿 폴백)
     gemini_api_key: str = ""
+
+    # STT-5TH-02: Whisper 폴백용 OpenAI 키 — os.environ 직접 조회 대신 설정으로 관리한다.
+    openai_api_key: str = ""
 
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"

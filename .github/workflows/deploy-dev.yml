@@ -12,6 +12,12 @@ on:
   push:
     branches: [develop]
 
+# INFRA-05: 동시 배포 방지 — 워크플로 동시 실행을 그룹으로 직렬화한다.
+#   cancel-in-progress=false: 진행 중 배포를 중간에 취소하면 반쪽 상태가 남으므로 취소하지 않는다.
+concurrency:
+  group: deploy-dev-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   frontend:
     runs-on: ubuntu-latest
@@ -61,6 +67,7 @@ jobs:
             frontend/dist \
             backend/app \
             backend/alembic \
+            backend/alembic.ini \
             backend/requirements.txt \
             backend/ensure_livekit_nginx.py \
             backend/sweep_stale_open_sessions_cron.py \
@@ -98,6 +105,31 @@ jobs:
             set -e
             BASE=/home/ubuntu/mindbreeze
             cd "$BASE"
+
+            # 0. INFRA-04: 이전 버전 백업 (실패 시 롤백 대비)
+            BACKUP_DIR="$BASE/.deploy-backup"
+            rm -rf "$BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            [ -d dist ]            && cp -r dist "$BACKUP_DIR/dist" || true
+            [ -d backend/app ]     && cp -r backend/app "$BACKUP_DIR/app" || true
+            [ -d backend/alembic ] && cp -r backend/alembic "$BACKUP_DIR/alembic" || true
+
+            # 롤백 트랩: 스크립트가 실패(set -e 로 조기 종료)하면 이전 버전을 복원한다.
+            # 성공 경로에서는 DEPLOY_OK=1 로 확정해 롤백을 막는다.
+            DEPLOY_OK=0
+            rollback() {
+              if [ "$DEPLOY_OK" != "1" ]; then
+                echo "!!! 배포 실패 — 이전 버전으로 롤백합니다."
+                if [ -d "$BACKUP_DIR/dist" ]; then rm -rf dist; cp -r "$BACKUP_DIR/dist" dist; fi
+                if [ -d "$BACKUP_DIR/app" ]; then rm -rf backend/app; cp -r "$BACKUP_DIR/app" backend/app; fi
+                if [ -d "$BACKUP_DIR/alembic" ]; then rm -rf backend/alembic; cp -r "$BACKUP_DIR/alembic" backend/alembic; fi
+                sudo systemctl restart mindbreeze-backend 2>/dev/null || true
+                sudo systemctl restart mindbreeze-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
+              fi
+            }
+            trap rollback EXIT
 
             # 1. 번들 압축 해제 (디렉토리 구조 보존)
             tar xzf deploy-bundle.tar.gz
@@ -184,7 +216,9 @@ jobs:
             fi
 
             # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
-            (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
+            #     INFRA-03: DB·Redis 접속 정보(env)를 명시 export 해야 config 기본값(localhost)으로
+            #     떨어지지 않는다 — 다른 cron 들과 동일한 규약을 적용한다.
+            (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
 
             # 5.6 SDD-100: open 상태 방치 세션 자동 취소 cron 등록 (매 5분, celery beat 대체)
             (crontab -l 2>/dev/null | grep -v 'sweep_stale_open_sessions_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E "^DATABASE_URL=" ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E "^REDIS_URL=" ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_open_sessions_cron.py >> /var/log/mindbreeze-stale-open-sessions.log 2>&1') | crontab -
@@ -197,8 +231,18 @@ jobs:
             (crontab -l 2>/dev/null | grep -v 'process_email_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_API_KEY=$(grep -E ^RESEND_API_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_FROM_EMAIL=$(grep -E ^RESEND_FROM_EMAIL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_email_outbox_cron.py >> /var/log/mindbreeze-email-outbox.log 2>&1') | crontab -
             (crontab -l 2>/dev/null | grep -v 'cleanup_data_exports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_data_exports_cron.py >> /var/log/mindbreeze-exports.log 2>&1') | crontab -
 
+            # 5.9 SDD-048/INFRA-02: 서사 캐시 주기 업그레이드 cron 등록 (매일 05:00, celery beat 대체)
+            #     번들에는 포함(upgrade_narrative_cache_cron.py)되나 crontab 등록이 누락돼
+            #     실행되지 않던 항목을 보완한다.
+            (crontab -l 2>/dev/null | grep -v 'upgrade_narrative_cache_cron'; echo '0 5 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python upgrade_narrative_cache_cron.py >> /var/log/mindbreeze-narrative-cache.log 2>&1') | crontab -
+
             # 6. 헬스체크
             curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"
+
+            # 7. INFRA-04: 배포 성공 확정 → 롤백 트랩 해제, 백업 정리
+            DEPLOY_OK=1
+            rm -rf "$BACKUP_DIR"
+            echo "✅ 배포 완료"
 
       - name: Health check (public)
         run: |

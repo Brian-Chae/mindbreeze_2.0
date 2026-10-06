@@ -110,6 +110,24 @@ UUID.bind_processor = _uuid_bind_processor
 UUID.result_processor = _uuid_result_processor
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_external_storage_credentials():
+    """테스트는 실제 S3/AWS 자격증명을 쓰지 않는다 (INFRA-11 회귀 방지).
+
+    config 의 env_file 이 .env.dev 까지 로드하면서 개발 머신의 실제 AWS 키가 활성화되면,
+    ack 무결성 검증(storage_service.verify_object)이 실제 S3 HEAD(403)를 호출해 청크를
+    failed 로 오판한다. 테스트 세션에서는 자격증명을 비워 스텁 경로(검증 건너뜀/스텁 URL)를
+    쓰게 해 외부 서비스 의존을 제거한다.
+    """
+    from app.config import settings
+
+    saved = (settings.aws_access_key_id, settings.aws_secret_access_key)
+    settings.aws_access_key_id = ""
+    settings.aws_secret_access_key = ""
+    yield
+    settings.aws_access_key_id, settings.aws_secret_access_key = saved
+
+
 @pytest.fixture(scope="function")
 def app_client(monkeypatch):
     from app.main import app as fastapi_app

@@ -8,9 +8,13 @@ name: CI — Feature Branch
 on:
   push:
     branches:
+      - develop
       - 'feature/**'
       - 'fix/**'
       - 'sdd/**'
+  pull_request:
+    branches:
+      - develop
 
 jobs:
   frontend:
@@ -39,7 +43,7 @@ jobs:
       - name: Lint
         run: |
           cd frontend
-          npx eslint src/ --max-warnings 0 2>/dev/null || true
+          npx eslint src/ --max-warnings 0
 
       - name: Build
         run: |
@@ -71,4 +75,4 @@ jobs:
       - name: Test
         run: |
           cd backend
-          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py || true
+          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py

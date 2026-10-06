@@ -89,12 +89,22 @@ def _bucket_payload(bucket_index: int, windows: list, resolution_sec: int,
     EEG-01: 버킷은 실행 세그먼트(play_group_id)별 시간축으로 분리된다. pause/resume 로
     window_index 가 0 부터 재시작하므로 start_sec/end_sec 은 해당 세그먼트 시작(0초) 기준
     상대 시각이다 — 서로 다른 실행 구간을 같은 버킷으로 합산하지 않는다.
+
+    EEG-RUP-02: participant_id 필터 없이 세션 전체를 집계하면 한 버킷에 여러 참가자의
+    윈도우가 함께 담긴다. 이때 coverage 를 유효 초 / resolution 으로만 계산하면 참가자가
+    늘수록 1.0 으로 포화돼 실제 커버리지가 왜곡된다. 버킷에 나타난 참가자 수로 정규화한다.
     """
     sample_count = len(windows)
     # valid_count 는 품질 게이트(§A4.4)의 'valid' 윈도우 수 — coverage 산출 기준.
     valid_count = sum(1 for w in windows if w.quality == "valid")
-    # coverage = 유효(valid) 초 / 해상도(초). 최대 1.0 으로 캡.
-    coverage = round(min(valid_count / resolution_sec, 1.0), 4)
+    # 버킷에 포함된 실제 참가자 수(최소 1) — 세션 전체 집계의 coverage 정규화 분모.
+    bucket_participants = {
+        getattr(w, "participant_id", None) for w in windows
+    }
+    bucket_participants.discard(None)
+    participant_count = max(len(bucket_participants), 1)
+    # coverage = 유효(valid) 초 / (해상도(초) × 참가자 수). 최대 1.0 으로 캡.
+    coverage = round(min(valid_count / (resolution_sec * participant_count), 1.0), 4)
 
     metrics = {
         key: _mean_non_null([getattr(w, key) for w in windows])

@@ -143,12 +143,13 @@ def test_org_role_change_blank_reason_still_422():
         OrganizationCounselorPatch(role="counselor", reason="   ")
 
 
-# ── NOTIF-03/OUTBOX-001: beat 등록 + cron 대체 스크립트 ────────────────────
-def test_process_email_outbox_registered_in_beat_schedule():
+# ── NOTIF-03/OUTBOX-001 + INFRA-08: 주기 작업은 cron 단일 소스 ─────────────
+def test_periodic_sweeps_use_cron_not_beat_schedule():
     from app.core.celery_app import celery_app
 
-    tasks = {v["task"] for v in celery_app.conf.beat_schedule.values()}
-    assert "tasks.process_email_outbox" in tasks
+    # INFRA-08: celery beat_schedule 을 제거하고 OS cron 을 주기 작업의 단일 소스로 둔다.
+    #   (export-beat 가 전체 스케줄을 중복 실행하는 문제로 beat 스케줄은 비어 있어야 한다.)
+    assert not celery_app.conf.beat_schedule
 
 
 def test_process_email_outbox_cron_script_importable():

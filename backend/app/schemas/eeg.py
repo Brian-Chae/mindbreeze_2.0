@@ -40,6 +40,9 @@ class EEGRollupBucket(BaseModel):
     """단일 버킷(예: 60초) 집계. metrics 값은 유효 샘플 없으면 null(0 치환 금지)."""
 
     bucket_index: int
+    # EEG-RUP-01: pause/resume 실행 세그먼트 식별자 — window_index 가 세그먼트마다 재시작하므로
+    # 응답에서 이 값이 빠지면 서로 다른 실행 구간의 버킷을 구분할 수 없다(레거시는 null).
+    play_group_id: str | None = None
     start_sec: int
     end_sec: int
     sample_count: int

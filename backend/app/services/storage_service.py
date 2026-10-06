@@ -262,6 +262,23 @@ def generate_presigned_get(
         raise ExportStorageError('presign_failed') from exc
 
 
+def delete_object(object_key: str) -> bool:
+    """S3 객체를 삭제한다 — 보관 기간 경과 raw 정리(EEG-RET-01) 등 best-effort 용도.
+
+    자격증명 미설정(로컬/테스트) 환경에서는 삭제할 실제 객체가 없으므로 False 를 반환한다
+    (DB 정리는 계속 진행되어야 하므로 예외를 올리지 않는다).
+    """
+    client = _s3_client()
+    if client is None:
+        return False
+    try:
+        client.delete_object(Bucket=settings.s3_bucket, Key=object_key)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] S3 객체 삭제 실패: %s (%s)", object_key, exc)
+        return False
+
+
 def delete_export(object_key: str) -> None:
     try:
         _export_client().delete_object(Bucket=settings.s3_bucket, Key=object_key)

@@ -22,11 +22,61 @@ from app.models.session import Session
 
 logger = logging.getLogger(__name__)
 
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 GEMINI_TIMEOUT = 300  # SDD-121: 4분+ 오디오도 처리 — 기존 180초 타임아웃 완화
 GEMINI_SEGMENT_SECONDS = 90  # 이 이상이면 세그먼트 분할(단일 요청 크기/시간 초과 방지)
+
+# STT-5TH-01: Gemini STT 실패를 일시/영구로 구분한다.
+#   - 일시(transient): 네트워크 오류/타임아웃/429/5xx — backoff 재시도 후에도 실패하면 Whisper 폴백.
+#   - 영구(permanent): 4xx(요청·인증 오류)/응답 계약 위반 — 재시도·폴백 없이 즉시 실패.
+# 예외를 구분하지 않으면 어떤 실패에도 전체 Whisper 재전사(비용 2배)가 발생하던 문제를 막는다.
+GEMINI_RETRY_ATTEMPTS = 3          # 최초 시도 포함 총 시도 횟수
+GEMINI_RETRY_BACKOFF_SEC = 1.0     # 지수 backoff 기준(1s → 2s)
+GEMINI_TRANSIENT_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+class GeminiTransientError(RuntimeError):
+    """Gemini 일시 오류(네트워크/타임아웃/429/5xx) — backoff 재시도·Whisper 폴백 대상."""
+
+
+def _gemini_request_once(url: str, headers: dict, body: dict, timeout: int) -> dict:
+    """Gemini POST 1회. 일시 오류는 GeminiTransientError, 영구 오류는 그대로 전파한다."""
+    import httpx
+
+    try:
+        resp = httpx.post(url, headers=headers, json=body, timeout=timeout)
+    except httpx.TransportError as exc:  # 타임아웃/연결/읽기 오류 = 일시
+        raise GeminiTransientError(f"transport: {exc}") from exc
+
+    if resp.status_code in GEMINI_TRANSIENT_STATUS:
+        raise GeminiTransientError(f"HTTP {resp.status_code}")
+    # 그 외 4xx(400/401/403/404/422 등)는 영구 오류 — raise_for_status 가 HTTPStatusError 로 전파.
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _gemini_post_with_retry(url: str, headers: dict, body: dict, timeout: int) -> dict:
+    """일시 오류만 지수 backoff 로 재시도한다. 소진 시 GeminiTransientError 전파."""
+    import time
+
+    for attempt in range(1, GEMINI_RETRY_ATTEMPTS + 1):
+        try:
+            return _gemini_request_once(url, headers, body, timeout)
+        except GeminiTransientError as exc:
+            if attempt >= GEMINI_RETRY_ATTEMPTS:
+                logger.warning(
+                    "[stt_task] Gemini 일시 오류 재시도 소진(%d회): %s", attempt, exc
+                )
+                raise
+            delay = GEMINI_RETRY_BACKOFF_SEC * (2 ** (attempt - 1))
+            logger.warning(
+                "[stt_task] Gemini 일시 오류(재시도 %d/%d, %.1fs 후): %s",
+                attempt, GEMINI_RETRY_ATTEMPTS, delay, exc,
+            )
+            time.sleep(delay)
+    raise GeminiTransientError("Gemini 재시도 루프 비정상 종료")  # 도달 불가(방어)
+
 
 
 def _split_existing_chunks(chunk_paths: list[str]) -> tuple[list[str], list[str]]:
@@ -44,8 +94,15 @@ def _split_existing_chunks(chunk_paths: list[str]) -> tuple[list[str], list[str]
 
 
 def _call_whisper(chunk_paths: list[str]) -> dict:
-    """OpenAI Whisper API — STT. 실제 API 호출."""
-    if not OPENAI_API_KEY:
+    """OpenAI Whisper API — STT. 실제 API 호출.
+
+    STT-5TH-02: 키는 settings.openai_api_key 에서 읽는다(os.environ 직접 조회 제거).
+    STT-5TH-03: Whisper 는 화자분리를 지원하지 않아 모든 세그먼트가 speaker_0 으로
+    고정된다 — 폴백 사실을 결과에 diarization_fallback=True 로 명시해 상담사/내담자
+    구분이 소실됐음을 상위에서 기록할 수 있게 한다.
+    """
+    openai_api_key = settings.openai_api_key
+    if not openai_api_key:
         # SDD-085 G5: 키 미설정 시 가짜 stub 전사를 만들지 않는다 — 실패로 처리해
         # 상위(run_stt_inline)에서 record.status='failed' 로 마감한다.
         raise RuntimeError("OPENAI_API_KEY not set")
@@ -74,7 +131,7 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
         with open(merged_path, "rb") as f:
             resp = requests.post(
                 "https://api.openai.com/v1/audio/transcriptions",
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+                headers={"Authorization": f"Bearer {openai_api_key}"},
                 files={"file": ("audio.webm", f, "audio/webm")},
                 data={
                     "model": "whisper-1",
@@ -99,7 +156,13 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
 
         raw_text = result.get("text", "")
         logger.info("[stt_task] Whisper success: %d segments, %d chars", len(segments), len(raw_text))
-        return {"segments": segments, "raw_text": raw_text, "missing_chunks": len(missing)}
+        # STT-5TH-03: 화자분리 소실(모든 speaker_0) — 폴백 사실을 결과에 명시한다.
+        return {
+            "segments": segments,
+            "raw_text": raw_text,
+            "missing_chunks": len(missing),
+            "diarization_fallback": True,
+        }
 
     except (requests.RequestException, KeyError, OSError, ValueError) as exc:
         # STT-02: 파일 I/O(OSError)·JSON 파싱(ValueError) 오류도 명시적으로 잡아
@@ -158,12 +221,12 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
         "start/end는 오디오 시작 기준 초(float)로 표기하세요."
     )
 
-    import httpx
-
-    resp = httpx.post(
+    # STT-5TH-01: JSON 응답을 강제(responseMimeType=application/json)해 마크다운/부가 텍스트
+    # 혼입으로 인한 파싱 실패(→ 불필요한 Whisper 폴백)를 줄인다. 일시 오류는 backoff 재시도.
+    result = _gemini_post_with_retry(
         f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
-        json={
+        {"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
+        {
             "contents": [
                 {
                     "parts": [
@@ -171,12 +234,11 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
                         {"inline_data": {"mime_type": "audio/webm", "data": audio_b64}},
                     ]
                 }
-            ]
+            ],
+            "generationConfig": {"responseMimeType": "application/json", "temperature": 0.0},
         },
-        timeout=GEMINI_TIMEOUT,
+        GEMINI_TIMEOUT,
     )
-    resp.raise_for_status()
-    result = resp.json()
 
     parts = (result.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
     text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
@@ -444,10 +506,13 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
 
     asyncio.run(_emit_status(session_id, "transcribing"))
     _emit_report_progress(session_id, db)
+    # STT-5TH-01: Gemini 실패를 일시/영구로 구분한다.
+    #   - 일시 오류(backoff 재시도 소진 후): Whisper 폴백(비용 발생) 수행.
+    #   - 영구 오류(4xx/응답 계약 위반): 전체 Whisper 재전사(비용 2배) 없이 즉시 실패 처리.
     try:
         result = _call_gemini_transcribe(chunk_paths, session_type, audio_duration_sec)
-    except Exception as exc:
-        logger.exception("[stt_task] Gemini transcribe failed, Whisper fallback: %s", exc)
+    except GeminiTransientError as exc:
+        logger.exception("[stt_task] Gemini 일시 오류 재시도 소진 — Whisper 폴백: %s", exc)
         try:
             result = _call_whisper(chunk_paths)
         except Exception as exc2:
@@ -458,6 +523,14 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
             asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
             _emit_report_progress(session_id, db)
             return
+    except Exception as exc:
+        # 영구 오류 — Whisper 재전사는 비용만 2배로 늘리고 결과가 없을 가능성이 높다.
+        logger.exception("[stt_task] Gemini 영구 오류 — STT 실패 처리(폴백 생략): %s", exc)
+        record.status = "failed"
+        db.commit()
+        asyncio.run(_emit_status(session_id, "failed", {"reason": "stt_failed"}))
+        _emit_report_progress(session_id, db)
+        return
 
     asyncio.run(_emit_status(session_id, "diarizing"))
     segments = result.get("segments", [])
@@ -480,6 +553,13 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     summary["transcript_confidence"] = confidence
     if missing_chunks:
         summary["stt_missing_chunks"] = missing_chunks
+    # STT-5TH-03: Whisper 폴백이면 화자분리가 소실됐음을 결과·요약에 기록한다.
+    if result.get("diarization_fallback"):
+        summary["diarization_fallback"] = True
+        summary["diarization_note"] = (
+            "Whisper 폴백으로 전사 — 화자 분리(상담사/내담자) 소실, "
+            "모든 발화가 speaker_0 로 통합됨"
+        )
     record.ai_summary = summary
     db.commit()
     logger.info(
@@ -498,7 +578,14 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
 try:
     from app.core.celery_app import celery_app
 
-    @celery_app.task(name="tasks.stt")
+    # STT-5TH-04: 미처리 인프라 오류(일시)에 대해 Celery 레벨 재시도를 둔다.
+    # report_email_task 와 동일 패턴(autoretry_for + retry_backoff + max_retries).
+    @celery_app.task(
+        name="tasks.stt",
+        autoretry_for=(RuntimeError,),
+        retry_backoff=True,
+        retry_kwargs={"max_retries": 3},
+    )
     def stt_task(session_id: str) -> None:
         from app.core.database import SessionLocal
 

@@ -17,9 +17,14 @@ celery_app = Celery(
         "app.tasks.reminder_task",
         "app.tasks.session_task",
         "app.tasks.pipeline_outbox_task",
+        # EEG-RAW-03 / EEG-RET-01: 스테일·보관기간 경과 raw 청크 정리 스윕.
+        "app.tasks.eeg_raw_task",
     ],
 )
-# 서사 캐시의 주기적 업그레이드는 upgrade_narrative_cache_cron.py가 cron에서 실행한다.
+# INFRA-08: 주기 작업의 단일 소스는 OS cron(배포 시 등록)이다.
+#   — celery beat_schedule 은 제거했다. export-beat 서비스가 전체 스케줄을 중복 실행해
+#     cron 과 이중 실행되는 문제가 있었고, 실제 실행 주체는 아래 *_cron.py 들이다
+#     (upgrade_narrative_cache_cron.py 포함).
 
 # SDD-071: 생체 데이터 패키지 생성은 별도 큐에서 실행한다.
 celery_app.conf.include = list(celery_app.conf.include) + ['app.tasks.export_task']
@@ -27,17 +32,4 @@ celery_app.conf.task_routes = {
     'tasks.generate_data_export': {'queue': 'exports'},
     'tasks.cleanup_data_exports': {'queue': 'exports'},
 }
-celery_app.conf.beat_schedule = {
-    'cleanup-data-exports': {'task': 'tasks.cleanup_data_exports', 'schedule': 60.0},
-    # SDD-097: 예약 클래스 리마인더 스윕 — ETA 유실/누락분을 주기적으로 보정한다.
-    'sweep-session-reminders': {'task': 'tasks.sweep_session_reminders', 'schedule': 300.0},
-    # SDD-095 후속: 리포트 생성 타임아웃 워치독 — processing 먹통을 주기적으로 마감한다.
-    'sweep-stale-reports': {'task': 'tasks.sweep_stale_reports', 'schedule': 300.0},
-    # SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
-    'sweep-stale-open-sessions': {'task': 'tasks.sweep_stale_open_sessions', 'schedule': 300.0},
-    # SDD-101: 종료 파이프라인 발행 아웃박스 재발행 — 발행 유실 복구.
-    'process-pipeline-outbox': {'task': 'tasks.process_pipeline_outbox', 'schedule': 30.0},
-    # NOTIF-03/OUTBOX-001: 이메일 아웃박스 발송 — commit=False 로 커밋된 알림 메일을
-    # 주기적으로 소비한다. beat 미가동 환경을 위해 process_email_outbox_cron.py 도 제공한다.
-    'process-email-outbox': {'task': 'tasks.process_email_outbox', 'schedule': 30.0},
-}
+
