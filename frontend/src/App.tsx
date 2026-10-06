@@ -161,7 +161,7 @@ const router = createBrowserRouter(
         <Route path="/org/search" element={<OrgSearchPage />} />
         {/* SDD-073: /org/register 자가 등록 경로 제거 — 기관 가입 상담 신청으로 대체 */}
         <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
-        <Route path="/org/requests" element={<MyRequestsPage />} />
+        <Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />
         {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
         <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
@@ -173,8 +173,8 @@ const router = createBrowserRouter(
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:roomId" element={<ChatPage />} />
+        <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
+        <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
         <Route path="/design" element={<DesignIndexPage />} />
         <Route path="/design/homepage" element={<HomepagePage />} />
         <Route path="/design/app" element={<OperatorAppPage />} />
@@ -233,9 +233,9 @@ const router = createBrowserRouter(
             </PlatformAdminRoute>
           )}
         />
-        <Route path="/notifications" element={<NotificationCenterPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/playground" element={<PlaygroundPage />} />
+        <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
+        <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
+        <Route path="/playground" element={<RoleGuard><PlaygroundPage /></RoleGuard>} />
         {/* 정의되지 않은 경로는 전역 404 화면으로 처리한다 */}
         <Route path="*" element={<NotFoundPage />} />
     </Route>,

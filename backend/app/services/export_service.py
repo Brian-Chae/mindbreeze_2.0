@@ -127,7 +127,9 @@ def get_job(db: DBSession, export_id: UUID, user_id: UUID) -> DataExportJob:
     job = db.query(DataExportJob).populate_existing().filter_by(id=export_id, user_id=user_id).first()
     if not job:
         raise HTTPException(404, '작업을 찾을 수 없습니다')
-    _, _, participant = authorize(db, user_id, job.session_id, job.participant_id, lock=True)
+    # EXPORT-LOCK-007: 상태 조회(GET)는 읽기 전용 경로다. 매 폴링마다 User/Session/Participant
+    #   행에 FOR UPDATE 를 걸면 다운로드 상태 폴링이 서로 잠금 경합을 일으킨다 → lock=False.
+    _, _, participant = authorize(db, user_id, job.session_id, job.participant_id, lock=False)
     if job.consent_eeg and not participant.consent_eeg:
         raise HTTPException(403, 'EEG 동의가 변경되어 다운로드할 수 없습니다')
     if utc(job.expires_at) <= now() and job.status != 'expired':

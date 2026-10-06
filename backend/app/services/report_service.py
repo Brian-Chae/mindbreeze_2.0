@@ -715,36 +715,47 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
 
 
 def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
-    """세션의 client 리포트별 상담사 코멘트 목록 — [{participant_id, participant_name, comment}]."""
+    """세션의 client 리포트별 상담사 코멘트 목록 — [{participant_id, participant_name, comment}].
+
+    RPT-NPLUS1-009: 리포트마다 participant·user 를 개별 조회(N+1)하지 않는다. 코멘트가
+    있는 리포트만 추린 뒤 참여자 목록과 로그인 참여자의 이름을 각각 한 번씩 배치 조회한다.
+    """
     client_reports = (
         db.query(Report)
         .filter(Report.session_id == session_id, Report.type == "client")
         .all()
     )
+    commented = [
+        cr
+        for cr in client_reports
+        if isinstance(cr.content, dict)
+        and isinstance(cr.content.get("counselor_comment"), str)
+        and cr.content["counselor_comment"].strip()
+    ]
+    if not commented:
+        return []
+
+    participant_ids = [cr.participant_id for cr in commented if cr.participant_id]
+    participants = {
+        p.id: p
+        for p in db.query(SessionParticipant)
+        .filter(SessionParticipant.id.in_(participant_ids))
+        .all()
+    }
+    user_ids = [p.user_id for p in participants.values() if p.user_id]
+    names = {u.id: u.name for u in db.query(User).filter(User.id.in_(user_ids)).all()}
+
     comments: list[dict] = []
-    for cr in client_reports:
-        content = cr.content if isinstance(cr.content, dict) else {}
-        comment = content.get("counselor_comment")
-        if not (isinstance(comment, str) and comment.strip()):
-            continue
+    for cr in commented:
+        participant = participants.get(cr.participant_id) if cr.participant_id else None
         name = None
-        if cr.participant_id:
-            participant = (
-                db.query(SessionParticipant)
-                .filter(SessionParticipant.id == cr.participant_id)
-                .first()
-            )
-            if participant:
-                if participant.user_id:
-                    user = db.query(User).filter(User.id == participant.user_id).first()
-                    name = user.name if user else None
-                else:
-                    name = participant.guest_name
+        if participant is not None:
+            name = names.get(participant.user_id) if participant.user_id else participant.guest_name
         comments.append(
             {
                 "participant_id": str(cr.participant_id) if cr.participant_id else None,
                 "participant_name": name,
-                "comment": comment,
+                "comment": cr.content["counselor_comment"],
             }
         )
     return comments

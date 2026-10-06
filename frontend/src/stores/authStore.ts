@@ -148,6 +148,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     tokenStorage.clear();
     persistUser(null);
     set({ user: null, accessToken: null, isAuthenticated: false });
+
+    // STORE-07: 로그아웃 시 사용자 종속 스토어(알림·채팅)를 초기화하여
+    // 이전 사용자의 알림/메시지가 다음 로그인 사용자에게 노출되지 않게 한다.
+    // authStore ↔ notificationStore/chatStore 순환 import 를 피하려고
+    // 정적 import 대신 동적 import 로 지연 로드한다.
+    try {
+      const [{ useNotificationStore }, { useChatStore }] = await Promise.all([
+        import('./notificationStore'),
+        import('./chatStore'),
+      ]);
+      useNotificationStore.getState().reset();
+      useChatStore.getState().reset();
+    } catch (error) {
+      console.warn('로그아웃 중 클라이언트 스토어 초기화 실패:', error);
+    }
   },
 
   setUser: (user): void => {

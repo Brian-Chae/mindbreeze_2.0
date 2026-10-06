@@ -152,12 +152,16 @@ def _measurement_intent(
 
 
 def _coverage_ratio(windows: list[EEGFeatureWindow], started_at, ended_at) -> float | None:
-    """유효(valid/degraded) 측정 비율 — 유효 윈도우 시간 / 세션 유효 시간.
+    """유효(valid) 측정 비율 — 유효 윈도우 시간 / 세션 유효 시간.
+
+    EEG-COVERAGE-008: 'coverage' 의 유효구간 정의를 eeg_rollup_service(coverage =
+    valid_count / resolution, quality == 'valid' 만)와 통일한다. 이전에는 여기서만
+    degraded 를 유효로 셈해 두 화면의 coverage 가 어긋났다.
 
     세션 경계(started_at~ended_at)가 없으면 None — 신뢰도 하향 판정을 못 하도록
     (과잉 라벨 방지). 윈도우는 1개 ≈ 1초(0-based 초 인덱스).
     """
-    usable = sum(1 for w in windows if w.quality in ("valid", "degraded"))
+    usable = sum(1 for w in windows if w.quality == "valid")
     if started_at is not None and ended_at is not None:
         seconds = (ended_at - started_at).total_seconds()
         if seconds > 0:

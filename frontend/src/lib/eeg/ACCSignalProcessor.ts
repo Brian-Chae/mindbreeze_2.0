@@ -46,8 +46,8 @@ export class ACCSignalProcessor {
     }
 
     try {
-      // 1. 데이터 필터링
-      // const filteredData = this.applyLowPassFilter(data);
+      // 1. 데이터 필터링 (노이즈 제거)
+      const filteredData = this.applyLowPassFilter(data);
       
       // 2. 가속도 크기 계산
       const magnitudeData = this.calculateMagnitude(data);
@@ -62,28 +62,18 @@ export class ACCSignalProcessor {
       const postureAnalysis = this.analyzePosture(data);
       
       // 6. 신호 품질 평가
-      // const signalQuality = this.evaluateSignalQuality(data, filteredData);
-      
-      // console.log('🔧 ACC 처리 완료:', {
-      //   inputLength: data.length,
-      //   // filteredLength: filteredData.length,
-      //   magnitudeLength: magnitudeData.length,
-      //   activityType: activityClassification.type,
-      //   avgMovement: movementAnalysis.avgMovement.toFixed(2),
-      //   maxMovement: movementAnalysis.maxMovement.toFixed(2)
-      // });
+      // ACC-NUM-002: 이전 구현은 signalQuality 를 0 으로 하드코딩하고
+      // evaluateSignalQuality 를 호출하지 않아 죽은 코드로 남겨두었다.
+      // 실제 평가 결과를 연결해 반환한다.
+      const signalQuality = this.evaluateSignalQuality(data, filteredData);
       
       return {
-        filteredData: [],
+        filteredData,
         magnitude: magnitudeData,
         activity: activityClassification,
         movement: movementAnalysis,
         posture: postureAnalysis,
-        signalQuality: {
-          overall: 0,
-          reliability: 0,
-          consistency: 0
-        }
+        signalQuality
       };
       
     } catch (error) {

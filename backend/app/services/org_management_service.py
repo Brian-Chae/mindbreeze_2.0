@@ -59,7 +59,13 @@ def notify_role_changed(user: User, org_id: uuid.UUID, actor_id: uuid.UUID, db: 
 
 
 def lock_organization(org_id: uuid.UUID | str, db: Session) -> Organization:
-    org = db.query(Organization).filter(Organization.id == uuid.UUID(str(org_id))).populate_existing().with_for_update().first()
+    # AUTH4-07: 경로 파라미터가 UUID 형식이 아니면 uuid.UUID() 가 ValueError 로 터져
+    #   미처리 500 이 된다. 잘못된 형식은 400 으로 명시 거부한다.
+    try:
+        org_uuid = uuid.UUID(str(org_id))
+    except (TypeError, ValueError):
+        raise HTTPException(400, "잘못된 기관 ID 형식입니다")
+    org = db.query(Organization).filter(Organization.id == org_uuid).populate_existing().with_for_update().first()
     if org is None:
         raise HTTPException(404, "기관을 찾을 수 없습니다")
     return org
@@ -253,7 +259,9 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
     """기관 잠금 안에서 역할/소속과 감사 이력을 함께 변경한다. role=None은 소속 해제."""
     from app.services import membership_service
 
-    org = lock_organization(org_id, db)
+    # AUTH4-08: 비활성화(deactivated)된 기관에서는 역할 변경/소속 해제를 허용하지 않는다
+    #   (409). lock 만 걸던 이전 로직은 비활성 기관에서도 변경이 통과했다.
+    org = require_active_org(org_id, db)
     user = db.query(User).filter(User.id == user_id).populate_existing().with_for_update().first()
     membership = (
         membership_service.get_membership(db, user_id, org.id) if user is not None else None

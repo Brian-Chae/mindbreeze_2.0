@@ -780,12 +780,17 @@ def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
     db.commit()
 
 
-def transition_status(session_id: str, host_id: str, action: str, db: DBSession) -> dict:
+def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
+                      *, restrict_from: set[str] | None = None) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = _get_session_as_host(session_id, host_id, db)
     allowed_from, target = TRANSITIONS[action]
-    if s.status not in allowed_from:
+    # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
+    #   cancel). effective_from 을 사전 검사와 CAS WHERE 절 양쪽에 사용해, 조회 이후 다른
+    #   전이로 상태가 바뀐 경우에도 원자적으로 취소되지 않게 한다(rowcount==0 → 409).
+    effective_from = set(allowed_from) & set(restrict_from) if restrict_from is not None else set(allowed_from)
+    if s.status not in effective_from:
         raise HTTPException(status_code=400, detail="잘못된 상태 전이입니다")
 
     # SDD-021: 1.0 "클래스 시작" 패리티 — 그룹 수업은 active 참가자(대기열 제외) 1명 이상이어야
@@ -833,7 +838,7 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession)
 
     result = db.execute(
         update(Session)
-        .where(Session.id == s.id, Session.status.in_(allowed_from))
+        .where(Session.id == s.id, Session.status.in_(effective_from))
         .values(**values)
     )
     if result.rowcount == 0:
@@ -930,7 +935,10 @@ def sweep_stale_open_sessions(
 
     for s in candidates:
         try:
-            transition_status(str(s.id), str(s.host_id), "cancel", db)
+            # STATE-SWEEP-TOCTOU: 조회(open)와 전이 사이에 세션이 in_progress 등으로
+            #   바뀌었을 수 있다. restrict_from={"open"} 로 출발 상태를 재검증해 CAS 에서
+            #   차단되면(409) 취소하지 않는다 — 진행중 클래스를 잘못 취소하지 않도록.
+            transition_status(str(s.id), str(s.host_id), "cancel", db, restrict_from={"open"})
             cancelled.append(str(s.id))
         except Exception:
             # 호스트 삭제·동시 전이 등으로 실패한 건은 건너뛰고 다음 세션을 처리한다.
@@ -1581,7 +1589,9 @@ def join_session_by_code(
     db.refresh(s)
     _notify_participant_changed(s, db)
     from app.services.report_email_service import participant_token as make_token
-    return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True,
+    # CONTRACT-GUEST-CHAT-ROOM-ID: 회원 경로와 동일하게 게스트 join 응답에도 chat_room_id 를
+    #   포함한다(누락 시 게스트 클라이언트가 채팅방에 입장하지 못한다).
+    return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(participant.id), "is_guest": True,
             "participant_token": make_token(participant)}
 
 
@@ -1626,6 +1636,11 @@ def member_livekit_token(
     elif current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
         # 로그인 회원 — 본인 참여 확인
         raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
+
+    # AUTHZ-WAITLIST-SPEAKING: 대기열(waitlisted) 참여자는 아직 입장 허용되지 않았으므로
+    #   LiveKit(음성 송수신) 토큰을 발급하지 않는다 — 정원 초과 대기자의 매체 접근 차단.
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=403, detail="대기 중인 참여자입니다")
 
     name = participant.guest_name
     if not name and participant.user_id:
@@ -1738,6 +1753,10 @@ def raise_hand(
         participant, participant_token=participant_token, current_user_id=current_user_id
     )
 
+    # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 좌석이 없어 발언 요청(손들기)을 할 수 없다.
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=403, detail="대기 중인 참여자는 손을 들 수 없습니다")
+
     participant.raise_hand = True
     db.commit()
     db.refresh(participant)
@@ -1774,6 +1793,11 @@ def set_speaking(
         raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
 
     participant = _get_participant_in_session(sid, participant_id, db)
+
+    # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 입장 전이므로 발언권을 부여할 수 없다
+    #   (입장 허용 전에 speaking=True 로 송출 권한이 새는 것을 막는다).
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=409, detail="대기 중인 참여자에게는 발언권을 부여할 수 없습니다")
 
     participant.speaking = bool(granted)
     if granted:

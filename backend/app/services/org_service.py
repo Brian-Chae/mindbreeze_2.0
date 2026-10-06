@@ -123,7 +123,14 @@ def search_organizations(
 
 
 def get_organization(org_id: str, db: Session) -> Organization:
-    org = db.query(Organization).filter(Organization.id == uuid.UUID(org_id)).first()
+    # AUTH4-07: UUID 형식이 아닌 org_id 가 uuid.UUID() 에서 ValueError(500)가 되던 문제.
+    try:
+        org_uuid = uuid.UUID(str(org_id))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="잘못된 기관 ID 형식입니다"
+        )
+    org = db.query(Organization).filter(Organization.id == org_uuid).first()
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="센터를 찾을 수 없습니다")
     return org
@@ -144,8 +151,14 @@ def _eligible_for_join(user: User, db: Session) -> bool:
 
 def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequest:
     """가입 신청 (중복·기소속 체크)."""
-    org_uuid = uuid.UUID(org_id)
-    user_uuid = uuid.UUID(user_id)
+    # AUTH4-07: 형식이 잘못된 id 가 uuid.UUID() 에서 ValueError(500)가 되지 않도록 가드.
+    try:
+        org_uuid = uuid.UUID(str(org_id))
+        user_uuid = uuid.UUID(str(user_id))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="잘못된 ID 형식입니다"
+        )
 
     org = require_active_org(org_uuid, db)
     if not org:

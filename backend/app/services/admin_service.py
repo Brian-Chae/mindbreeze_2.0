@@ -644,6 +644,14 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="플랫폼 관리자는 정지할 수 없습니다")
+    # ADM-STATE-02: 초대 미수락(pending) 계정을 정지하면 previous_status 가 pending→suspended 로
+    #   덮여, 이어지는 unsuspend 가 그 계정을 active 로 강제 활성화한다(비밀번호 미설정 우회).
+    #   org_service.set_counselor_suspension 과 동일하게 pending 은 정지 대상에서 제외한다.
+    if user.status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="초대 미수락(대기) 상태의 계정은 정지할 수 없습니다",
+        )
     previous_status = user.status
     user.status = "suspended"
     db.add(user)

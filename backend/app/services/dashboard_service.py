@@ -59,7 +59,16 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     ids = [s.id for s in sessions]
 
     parts_by_session: dict[uuid.UUID, list[SessionParticipant]] = {sid: [] for sid in ids}
-    for p in db.query(SessionParticipant).filter(SessionParticipant.session_id.in_(ids)).all():
+    # DASH-WAITLIST-006: 대시보드 참여자/게스트 수는 실제 입장(active) 참여자만 센다 —
+    #   대기열(is_waitlisted=True) 은 좌석을 차지하지 않으므로 제외한다.
+    for p in (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.session_id.in_(ids),
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .all()
+    ):
         parts_by_session.setdefault(p.session_id, []).append(p)
 
     records_by_session = {

@@ -1074,26 +1074,17 @@ export class PPGSignalProcessor {
     // 5. R 값 계산 (Red/IR 비율)
     const R = redRatio / irRatio;
     
-    // 6. 개선된 SpO2 계산 공식 (실제 맥박산소측정법 기반)
-    // 여러 연구 결과를 종합한 보정된 공식
-    let spo2;
-    
-    if (R < 0.5) {
-      // 매우 높은 산소포화도 영역
-      spo2 = 100;
-    } else if (R < 0.7) {
-      // 정상 범위 (선형 보간)
-      spo2 = 104 - 17 * R;
-    } else if (R < 1.0) {
-      // 중간 범위 (비선형 보정)
-      spo2 = 112 - 25 * R;
-    } else if (R < 2.0) {
-      // 낮은 산소포화도 영역
-      spo2 = 120 - 35 * R;
-    } else {
-      // 매우 낮은 산소포화도
-      spo2 = Math.max(70, 100 - 15 * R);
-    }
+    // 6. SpO2 계산 — 연속 보정 곡선 (PPG-NUM-001)
+    // 이전 구현은 R 구간마다 서로 다른 직선식을 사용해 경계(R=0.5/0.7/1.0/2.0)에서
+    // 값이 계단식으로 점프했다(예: R=0.7 에서 92.1 → 94.5). 구간 경계 값이 일치하는
+    // knot 을 정의하고 선형 보간하여 R 전 구간에서 연속·단조 감소하도록 한다.
+    //   R=0.4 → 100%,  R=1.0 → 85%,  R=1.6 → 70%   (표준 Beer-Lambert 보정 SpO2 ≈ 110 - 25R)
+    const spo2Knots: Array<{ r: number; spo2: number }> = [
+      { r: 0.4, spo2: 100 },
+      { r: 1.0, spo2: 85 },
+      { r: 1.6, spo2: 70 },
+    ];
+    let spo2 = this.interpolateSpO2(R, spo2Knots);
     
     // 7. 신호 품질 기반 보정
     const qualityFactor = Math.min(redStd, irStd) / Math.max(redStd, irStd);
@@ -1103,9 +1094,35 @@ export class PPGSignalProcessor {
     }
     
     // 8. 최종 범위 제한 및 반올림
-    const finalSpO2 = Math.round(Math.max(85, Math.min(100, spo2)));
+    // PPG-NUM-001: 하한을 85 → 70 으로 조정한다. 85 하한은 85% 미만의 저산소 상태를
+    // 모두 85로 눌러 심각한 저산소를 은폐했다. 70% 미만은 맥박산소측정 보정이
+    // 신뢰할 수 없는 영역이므로 70에서 클램프한다.
+    const finalSpO2 = Math.round(Math.max(70, Math.min(100, spo2)));
     
     return finalSpO2;
+  }
+
+  /**
+   * R(Red/IR 비율) → SpO2(%) 연속 선형 보간 (PPG-NUM-001)
+   * knot 구간 밖은 양 끝값으로 클램프하여 불연속(계단)을 만들지 않는다.
+   */
+  private interpolateSpO2(R: number, knots: Array<{ r: number; spo2: number }>): number {
+    if (knots.length === 0) return 0;
+    if (R <= knots[0].r) return knots[0].spo2;
+    
+    const last = knots[knots.length - 1];
+    if (R >= last.r) return last.spo2;
+    
+    for (let i = 1; i < knots.length; i++) {
+      const a = knots[i - 1];
+      const b = knots[i];
+      if (R <= b.r) {
+        const t = (R - a.r) / (b.r - a.r);
+        return a.spo2 + t * (b.spo2 - a.spo2);
+      }
+    }
+    
+    return last.spo2;
   }
 
   /**

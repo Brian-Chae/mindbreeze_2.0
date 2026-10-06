@@ -168,10 +168,25 @@ export const createAdminClient = (
 export const listAdminOrganizations = (status: 'active' | 'inactive' = 'active'): Promise<AdminOrganizationDto[]> =>
   apiClient.get<AdminOrganizationDto[]>(`/admin/orgs?status=${status}`);
 
+// CONTRACT-09: 기관 등록(POST /admin/orgs) 응답은 평면 AdminOrganizationDto 가 아니라
+//   백엔드 OrganizationWithAdminResponse({org, admin, invite_sent}) 구조다. 타입을 정합화한다.
+export interface OrgAdminSummaryDto {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+}
+
+export interface OrganizationWithAdminResponseDto {
+  org: AdminOrganizationDto;
+  admin: OrgAdminSummaryDto | null;
+  invite_sent: boolean;
+}
+
 export const createAdminOrganization = (
   payload: AdminOrganizationCreatePayload,
-): Promise<AdminOrganizationDto> =>
-  apiClient.post<AdminOrganizationDto>('/admin/orgs', payload);
+): Promise<OrganizationWithAdminResponseDto> =>
+  apiClient.post<OrganizationWithAdminResponseDto>('/admin/orgs', payload);
 
 // ---------------------------------------------------------------------------
 // SDD-073: 가입 신청(기관 상담 / 개인 상담사) 관리

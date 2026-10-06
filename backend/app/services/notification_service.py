@@ -369,6 +369,15 @@ def update_preferences(
     user = db.query(User).filter(User.id == uid).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    # NOTIF-CONF-08: 임의 event key 저장 금지 — 이벤트 카탈로그(EVENT_CATALOG)에 존재하는
+    #   키만 허용한다. 화이트리스트 없이 저장하면 임의 키가 영속화되고, 오타/미지원 키가
+    #   조용히 누적돼 실제 이벤트 설정을 우회한다.
+    unknown = sorted((set(email_prefs) | set(in_app_prefs)) - set(EVENT_CATALOG))
+    if unknown:
+        raise HTTPException(
+            status_code=422,
+            detail=f"지원하지 않는 알림 이벤트입니다: {', '.join(unknown)}",
+        )
     # 기존 저장값을 보존한 뒤 제출 키만 덮어쓴다 (미제출 event key는 리셋 금지)
     current = get_user_preferences(user)
     user.notification_preferences = {

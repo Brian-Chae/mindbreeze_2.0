@@ -14,6 +14,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.organization import Organization
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
 from app.services import code_service
 
 # 공개 페이지에 노출하는 클래스 상태 — 완료/취소는 제외한다.
@@ -22,12 +23,19 @@ PUBLIC_CLASS_STATUSES = ("ready", "scheduled", "open", "in_progress")
 
 
 def _counselors(org_id: uuid.UUID, db: DBSession) -> tuple[list[dict], list[uuid.UUID]]:
-    """기관 소속 활성 상담사 목록 + 전문분야. (공개 정보, 개인 식별 정보 제외)"""
+    """기관 소속 활성 상담사 목록 + 전문분야. (공개 정보, 개인 식별 정보 제외)
+
+    AUTH4-10: 소속 판정은 User.org_id 미러가 아니라 membership(user_org_memberships)
+    기준으로 한다 — 다기관 소속 상담사는 미러가 주 소속만 가리켜 부 소속 기관의 공개
+    페이지에서 누락된다.
+    """
     users = (
         db.query(User)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
         .filter(
-            User.org_id == org_id,
-            User.role == "counselor",
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.role == "counselor",
+            UserOrgMembership.status == "active",
             User.status == "active",
         )
         .order_by(User.name.asc())

@@ -358,9 +358,28 @@ export class TimestampSynchronizer {
   private performResync(): void {
     const now = Date.now();
     
-    // 오프셋 재계산
+    // 오프셋 재계산 + 정규화 매핑 재기준
     if (this.lastDeviceTime > 0) {
+      const oldOffset = this.metrics.deviceTimeOffset;
       const newOffset = now - this.lastDeviceTime;
+      
+      // TIMESYNC-001: 정규화 매핑(masterTimeBase/deviceTimeBase)을 재앵커링한다.
+      // 이전 구현은 metrics.deviceTimeOffset 만 갱신하고 performBasicNormalization 이
+      // 실제로 참조하는 masterTimeBase/deviceTimeBase 를 그대로 두어, 재동기화가
+      // 정규화 결과에 전혀 반영되지 않았다(누적 드리프트가 계속 증가).
+      const oldMasterTimeBase = this.masterTimeBase;
+      const oldDeviceTimeBase = this.deviceTimeBase;
+      this.masterTimeBase = now;
+      this.deviceTimeBase = this.lastDeviceTime;
+      
+      // 매핑이 바뀌므로 센서별 직전 샘플 시각도 새 시간축으로 재변환한다.
+      // (구 시간축 값을 그대로 두면 다음 샘플에서 간격이 비정상적으로 점프한다.)
+      this.lastSampleTimes.forEach((oldSampleTime, sensorType) => {
+        const deviceSampleTime = oldDeviceTimeBase + (oldSampleTime - oldMasterTimeBase);
+        const remappedSampleTime = this.masterTimeBase + (deviceSampleTime - this.deviceTimeBase);
+        this.lastSampleTimes.set(sensorType, remappedSampleTime);
+      });
+      
       this.metrics.deviceTimeOffset = newOffset;
       this.metrics.lastSyncTime = now;
       
@@ -370,8 +389,8 @@ export class TimestampSynchronizer {
       
       console.log('타임스탬프 재동기화 수행:', {
         newOffset,
-        oldOffset: this.metrics.deviceTimeOffset,
-        drift: newOffset - this.metrics.deviceTimeOffset
+        oldOffset,
+        drift: newOffset - oldOffset
       });
     }
   }

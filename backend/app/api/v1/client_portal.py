@@ -93,8 +93,16 @@ def add_counselor_by_code(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """상담사 코드로 연결 추가"""
+    """상담사 코드로 연결 추가 — AUTHZ-05: 내담자(client) 전용."""
     user = _get_user_from_token(current_user, db)
+
+    # AUTHZ-05: 내담자 포털 경로는 client 역할 전용이다. 상담사·기관 관리자 등이
+    #   자기 계정으로 내담자 연결/채팅방을 생성하지 못하도록 역할을 강제한다.
+    if user.role != "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="내담자만 상담사를 추가할 수 있습니다",
+        )
 
     # AUTH4-03: 가입·온보딩 매칭 경로와 동일하게 공백 제거·대문자화 후 조회한다.
     #   정규화가 없으면 소문자/공백 포함 입력이 유효한 코드와 미매칭(404)된다.
@@ -155,10 +163,15 @@ def add_counselor_by_code(
                 detail="이미 연결된 상담사입니다",
             )
         else:
-            # ended 상태면 재활성화
+            # ended 상태면 재활성화 — AUTH4-09: status 만 되돌리고 ended_at 을 초기화하지
+            #   않으면 'active 인데 ended_at 존재'라는 모순 상태가 남고, 재연결 시 채팅방도
+            #   생성되지 않았다. client_service.assign_counselor 와 동일하게 ended_at 을 비우고
+            #   다이렉트 채팅방을 멱등 보장한다.
             existing.status = "active"
+            existing.ended_at = None
             db.commit()
             db.refresh(existing)
+            get_or_create_direct_room(counselor.id, user.id, db)
     else:
         link = ClientCounselorLink(
             client_id=user.id,

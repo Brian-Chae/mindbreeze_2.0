@@ -62,7 +62,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   increment: (n = 1) =>
     set((s) => ({ unread: Math.max(0, s.unread + n) })),
 
-  reset: () => set({ unread: 0 }),
+  reset: () => set({ unread: 0, toast: null, wsConnected: false, sessionInvites: [] }),
 
   setWsConnected: (v) => set({ wsConnected: v }),
 

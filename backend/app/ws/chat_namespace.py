@@ -18,6 +18,27 @@ _user_sids: dict[str, str] = {}  # user_id → latest sid
 _sid_users: dict[str, str] = {}
 
 
+def _user_is_active(user_id: str) -> bool:
+    """알림 room 입장 자격 — active 계정만 허용(정지/대기/삭제 계정 제외).
+
+    WS-AUTHZ-06: Socket.IO connect 는 REST 의 get_current_user 상태 게이트를 우회하므로
+    여기서 계정 상태를 직접 확인한다. 조회가 불가한 환경(테스트 스텁 등)에서는 알림
+    수신을 임의로 막지 않도록 허용한다(best-effort).
+    """
+    from app.core.database import SessionLocal
+    from app.models.user import User as UserModel
+
+    db = SessionLocal()
+    try:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"[WS] account status check failed (user={user_id}): {exc}")
+        return True
+    finally:
+        db.close()
+    return user is not None and user.status == "active"
+
+
 @sio.event(namespace="/chat")
 async def connect(sid, environ, auth):
     """JWT 토큰으로 인증 → user:<user_id> room join"""
@@ -28,17 +49,30 @@ async def connect(sid, environ, auth):
     try:
         from app.core.security import decode_token
         payload = decode_token(token)
-        user_id = payload.get("sub")
-        if user_id:
-            # user-specific room에 join (알림 수신용)
-            room = f"user:{user_id}"
-            await sio.enter_room(sid, room, namespace="/chat")
-            _user_sids[user_id] = sid
-            _sid_users[sid] = user_id
-            logger.info(f"[WS] user {user_id} joined notification room (sid={sid})")
     except Exception:
-        pass  # 토큰 만료/위조여도 채팅 연결은 허용
+        return True  # 토큰 만료/위조여도 채팅 연결은 허용 (하위 호환)
 
+    user_id = payload.get("sub")
+    # WS-AUTHZ-06: access 토큰만 인정 — refresh 등 비-access 토큰으로 알림 room(user:<id>)에
+    #   무단 입장하는 것을 막는다(type 미표기 토큰은 레거시 호환으로 허용).
+    token_type = payload.get("type")
+    if token_type not in (None, "access"):
+        logger.warning(f"[WS] blocked non-access token (sid={sid}, type={token_type})")
+        return True
+    if not user_id:
+        return True
+
+    # WS-AUTHZ-06: 정지(suspended)/대기(pending)/삭제 계정은 토큰이 유효해도 알림 room 에 입장하지 않는다.
+    if not _user_is_active(user_id):
+        logger.warning(f"[WS] blocked connect for non-active account (sid={sid}, user={user_id})")
+        return True
+
+    # user-specific room에 join (알림 수신용)
+    room = f"user:{user_id}"
+    await sio.enter_room(sid, room, namespace="/chat")
+    _user_sids[user_id] = sid
+    _sid_users[sid] = user_id
+    logger.info(f"[WS] user {user_id} joined notification room (sid={sid})")
     return True
 
 

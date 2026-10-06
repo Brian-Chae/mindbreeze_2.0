@@ -21,6 +21,7 @@ interface ChatState {
   updateSenderName: (senderId: string, newName: string) => void;
   updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number, readBy?: string[]) => void;
   markAllMessagesRead: (roomId: string, readerId?: string) => void;
+  reset: () => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -141,4 +142,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       };
     }),
+
+  // STORE-07: 로그아웃 시 사용자 종속 채팅 상태를 초기화한다.
+  // (이전 사용자의 방/메시지가 다음 로그인 사용자에게 노출되는 것을 막는다.)
+  reset: () => set({ rooms: [], messagesByRoom: {}, activeRoomId: null }),
 }));
