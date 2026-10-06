@@ -148,7 +148,7 @@ function EmptyHero({ onBook }: { onBook: () => void }) {
       <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
         아직 예약된 세션이 없어요
       </h2>
-      <p className="mt-1 text-[13.5px] opacity-90">
+      <p className="mt-1 text-[13.5px] text-white">
         상담사와 상담·명상 세션을 예약하고 변화를 시작해보세요.
       </p>
       <button
