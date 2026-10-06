@@ -11,6 +11,7 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:chat": "NODE_ENV=test vitest run tests/chat-*.test.ts",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
     "test": "vitest run"
   },
   "dependencies": {
