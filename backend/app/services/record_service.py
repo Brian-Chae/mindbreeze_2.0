@@ -139,7 +139,15 @@ def _serialize(
     session_id: UUID,
     subjective_state: dict | None = None,
     video_actual_chunks: int | None = None,
+    *,
+    include_internal: bool = True,
 ) -> dict:
+    """기록지를 직렬화한다.
+
+    include_internal=False 는 비host(참여자) 시점 — 상담사 내부 메모(counselor_notes)와
+    세션 전체 전사문(transcript)·AI 요약(ai_summary)을 제외해 1:N 그룹에서 다른
+    참여자 발화가 노출되지 않게 한다(REC-PRIV-001). 본인 슬롯(subjective_state)은 유지한다.
+    """
     if record is None:
         return {
             "session_id": str(session_id),
@@ -159,9 +167,9 @@ def _serialize(
     return {
         "session_id": str(session_id),
         "status": record.status or "idle",
-        "transcript": record.transcript,
-        "ai_summary": record.ai_summary or {},
-        "counselor_notes": record.counselor_notes,
+        "transcript": record.transcript if include_internal else None,
+        "ai_summary": (record.ai_summary or {}) if include_internal else {},
+        "counselor_notes": record.counselor_notes if include_internal else None,
         "markers": list(record.markers or []),
         "is_edited": bool(record.is_edited),
         "edit_history": list(record.edit_history or []),
@@ -179,7 +187,9 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
     # SDD-101 D1: 영상 청크 실제 수신 수 — 누락 여부 판정용.
     video_actual = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
     # SDD-096: 호스트는 세션 전체, 참여자는 본인 슬롯만 본다(다른 참여자 소감 비노출).
-    if s.host_id == _to_uuid(user_id):
+    # REC-PRIV-001: 상담사 내부 메모·전사문·AI 요약은 호스트만 열람한다(참여자는 본인 슬롯까지).
+    is_host = s.host_id == _to_uuid(user_id)
+    if is_host:
         subjective = session_subjective_state(record)
     else:
         participant = (
@@ -188,19 +198,25 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
             .first()
         )
         subjective = participant_subjective_state(record, participant.id if participant else None)
-    return _serialize(record, s.id, subjective, video_actual_chunks=video_actual)
+    return _serialize(
+        record, s.id, subjective,
+        video_actual_chunks=video_actual,
+        include_internal=is_host,
+    )
 
 
 def get_transcript(session_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_for_user(session_id, user_id, db)
+    # REC-PRIV-001: 전사문(원문·세그먼트)은 상담사(호스트) 전용 — 참여자에게는 노출하지 않는다.
+    is_host = s.host_id == _to_uuid(user_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
-    summary = (record.ai_summary or {}) if record else {}
+    summary = (record.ai_summary or {}) if (record and is_host) else {}
     segments = summary.get("segments", []) if isinstance(summary, dict) else []
     return {
         "session_id": str(s.id),
         "status": (record.status if record else "idle") or "idle",
         "segments": segments,
-        "raw_text": record.transcript if record else None,
+        "raw_text": record.transcript if (record and is_host) else None,
     }
 
 

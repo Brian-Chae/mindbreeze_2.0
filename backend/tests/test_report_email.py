@@ -147,7 +147,8 @@ def test_member_cannot_be_claimed_by_guest(client, setup_email):
     assert client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant)).status_code == 403
 
 
-def test_approval_does_not_enqueue_email(client, setup_email, monkeypatch):
+def test_approval_enqueues_client_email(client, setup_email, monkeypatch):
+    """RPT-EMAIL-SEND-002: 승인으로 completed 전이하면 내담자 메일 발송을 (재)예약한다."""
     from app.services import report_email_service, report_service
     db, session, participant = setup_email
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
@@ -155,8 +156,8 @@ def test_approval_does_not_enqueue_email(client, setup_email, monkeypatch):
     enqueue = Mock()
     monkeypatch.setattr(report_email_service, "enqueue_report_email", enqueue)
     report_service.approve_report(str(report.id), str(session.host_id), db)
-    enqueue.assert_not_called()
     assert report.status == "completed"
+    enqueue.assert_called_once_with(str(report.id))
 
 
 def test_expired_link_rejected(client, setup_email):
@@ -229,7 +230,11 @@ def test_branded_view_preserves_private_content_and_missing_values(client, setup
     assert response.headers["cache-control"] == "no-store"
 
 
-def test_auto_approval_does_not_send_email(client, setup_email, monkeypatch):
+def test_auto_approval_enqueues_client_email(client, setup_email, monkeypatch):
+    """RPT-EMAIL-SEND-002: 자동 승인도 completed 전이이므로 내담자 메일을 예약한다.
+
+    (실제 발송은 enqueue 가 소비하는 워커가 수행하므로 여기선 예약 호출만 검증한다.)
+    """
     from app.models.user import User
     from app.services import report_email_service, report_service
     db, session, participant = setup_email
@@ -253,6 +258,6 @@ def test_auto_approval_does_not_send_email(client, setup_email, monkeypatch):
         str(session.id), str(session.host_id), "client", db, str(participant.id)
     )
     assert result["status"] == "completed"
-    enqueue.assert_not_called()
+    enqueue.assert_called_once()
     sender.assert_not_called()
     assert participant.report_email_sent_at is None

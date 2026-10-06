@@ -357,10 +357,6 @@ export class EEGSignalProcessor {
     const ch1Total = ch1.delta + ch1.theta + ch1.alpha + ch1.beta + ch1.gamma;
     const ch2Total = ch2.delta + ch2.theta + ch2.alpha + ch2.beta + ch2.gamma;
 
-    // 인지 부하 = 4~45Hz(세타~감마) 총합 — 전두엽 전체 부하량 (델타 제외)
-    const ch1Load = ch1.theta + ch1.alpha + ch1.beta + ch1.gamma;
-    const ch2Load = ch2.theta + ch2.alpha + ch2.beta + ch2.gamma;
-
     let faa: number | null = null;
     if (ch1Valid && ch2Valid && ch1.alpha > 0 && ch2.alpha > 0) {
       faa = Math.log(ch2.alpha) - Math.log(ch1.alpha);
@@ -375,7 +371,10 @@ export class EEGSignalProcessor {
       focusIndex: beta / (alpha + theta + EPS),
       relaxationIndex: alpha / (alpha + beta + EPS),
       stressIndex: (beta + gamma) / (alpha + theta + EPS),
-      cognitiveLoad: (ch1Load + ch2Load) / 2,
+      // EEG-NUM-001: 인지 부하 = 전두엽 θ/α 비율 (높을수록 부하↑).
+      // eegScore.scoreCognitiveLoadRealtime / mockDataGenerator 가 θ/α 스케일(p5≈1.607·p95≈4.808)을
+      // 전제하므로 절대 파워 합(μV²)이 아니라 비율로 산출해야 점수가 0으로 붕괴하지 않는다.
+      cognitiveLoad: theta / (alpha + EPS),
       emotionalStability: (alpha + theta) / (gamma + EPS),
       totalNeuralActivity: (ch1Total + ch2Total) / 2,
       faa,

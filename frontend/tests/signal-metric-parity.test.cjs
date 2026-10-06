@@ -49,7 +49,8 @@ test('비대칭 채널 raw 수치와 FAA가 정본과 일치한다', async () =>
   near(indices.relaxationIndex, alpha / (alpha + beta + 1e-10));
   near(indices.stressIndex, (beta + gamma) / (alpha + theta + 1e-10));
   near(indices.emotionalStability, (alpha + theta) / (gamma + 1e-10));
-  near(indices.cognitiveLoad, 78);
+  // EEG-NUM-001: 인지 부하는 절대 파워 합(μV²)이 아니라 전두엽 θ/α 비율 정본이다.
+  near(indices.cognitiveLoad, theta / (alpha + 1e-10));
   near(indices.totalPower, 83);
   near(indices.totalNeuralActivity, 83);
   near(indices.faa, Math.log(9));

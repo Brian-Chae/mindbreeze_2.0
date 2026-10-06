@@ -1102,6 +1102,12 @@ export function useBand({
         },
       });
 
+      // STREAM-LIFE-001: 자동 재연결로 connect()가 재진입할 때 이전 StreamProcessor를 먼저 정리한다.
+      // cleanup() 없이 교체하면 ppgResetTimer(setInterval)와 BLE onDataReceived 리스너가 영구 누수된다.
+      if (streamRef.current) {
+        streamRef.current.cleanup();
+        streamRef.current = null;
+      }
       const stream = new StreamProcessor();
       streamRef.current = stream;
       stream.setBluetoothService(bluetoothService);

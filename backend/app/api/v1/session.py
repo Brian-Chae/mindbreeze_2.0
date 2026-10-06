@@ -459,10 +459,15 @@ def get_livekit_token(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    """현재 사용자에게 LiveKit 접근 토큰을 발급합니다."""
-    s = session_service._get_session_for_participant(session_id, current_user["id"], db)
+    """LiveKit 접근 토큰 발급 — host 전용 (SEC-LIVEKIT-PUBLISH-BYPASS).
+
+    일반 참여자(대기열 포함)에게 can_publish=True 토큰이 발급되면 SDD-094 발언권
+    게이트(speaking)를 우회해 발언할 수 있다. 참여자용 구독 토큰은 by-code
+    livekit-token(_compute_can_publish 적용) 경로로만 발급한다.
+    """
+    from fastapi import HTTPException
+    s = session_service._get_session_as_host(session_id, current_user["id"], db)
     if not s.webrtc_room_id:
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="WebRTC 룸이 아직 생성되지 않았습니다")
     token = session_service.generate_livekit_token(
         room_name=str(s.webrtc_room_id),

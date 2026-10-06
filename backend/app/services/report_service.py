@@ -1,5 +1,6 @@
 """AI 리포트 서비스"""
 
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -14,6 +15,8 @@ from app.models.record import Report, SessionRecord
 from app.models.user import User
 from app.services import notification_service, record_service
 from app.schemas.eeg import HRVMotionSummary
+
+logger = logging.getLogger(__name__)
 
 
 def generate_report_inline(report_id: str, db: DBSession):
@@ -798,6 +801,40 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
     return _serialize(report, session, subjective=_subjective_for_report(report, db))
 
 
+def _enqueue_client_email_on_approval(report: Report, db: DBSession) -> None:
+    """승인 완료 전이 시 신청된 내담자에게 리포트 메일 발송을 (재)예약한다 (best-effort).
+
+    대상은 client 리포트 + participant.report_email 설정 + 미발송 건에 한한다.
+    생성 시점(FUNC-04)에 예약된 태스크는 deliver_report_email 이 status!=completed 라
+    실발송 없이 소비되므로, 승인으로 completed 가 되면 여기서 재예약해야 발송이 이어진다.
+    브로커 장애 등 예약 실패는 승인 자체를 막지 않는다.
+    """
+    if report.type != "client" or not report.participant_id:
+        return
+    participant = (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.id == report.participant_id,
+            SessionParticipant.session_id == report.session_id,
+        )
+        .first()
+    )
+    if participant is None or not participant.report_email:
+        return
+    if participant.report_email_sent_at is not None:
+        return
+    try:
+        from app.services.report_email_service import enqueue_report_email
+
+        enqueue_report_email(str(report.id))
+    except Exception:  # noqa: BLE001 — 예약 실패가 승인을 막지 않도록
+        logger.exception(
+            "[report_service] 내담자 리포트 메일 예약 실패: report_id=%s participant_id=%s",
+            report.id,
+            report.participant_id,
+        )
+
+
 def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
@@ -843,5 +880,12 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
 
     db.commit()
     db.refresh(report)
-    # SDD-066: 수동/자동 승인 모두 메일을 예약하지 않는다. 발송은 별도 요청으로 처리한다.
+
+    # RPT-EMAIL-SEND-002: 승인으로 completed 전이한 경우 신청된 내담자 메일을 (재)예약한다.
+    # 생성 시점에 예약된 태스크는 미승인(pending_review) 상태라 실발송되지 않으므로,
+    # 여기서 재예약해야 "승인하면 자동 발송" 흐름이 이어진다. 재승인(already_completed)은
+    # 중복 예약하지 않는다.
+    if not already_completed:
+        _enqueue_client_email_on_approval(report, db)
+
     return _serialize(report, session, subjective=_subjective_for_report(report, db))
