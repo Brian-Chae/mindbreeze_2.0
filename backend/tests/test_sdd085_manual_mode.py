@@ -4,7 +4,7 @@
 - consent_audio=false → status='manual' + 200 (400 아님)
 - manual 세션: 청크 업로드 차단, STT/요약 미실행, 스텁 가짜 전사 미저장 (G5)
 - manual → consent_audio=true 재시작 시 recording 전이 허용
-- 청크 0개 recording 세션: 스텁 저장 금지 (failed 처리)
+- 청크 0개 recording 세션: 스텁 저장 금지 (manual 처리)
 - 리포트 ai_record 계약: manual → not_available/mic_off, 정상 → available
 """
 
@@ -120,7 +120,7 @@ def test_06_recording중_동의철회는_400(client):
 
 
 def test_07_청크0개_recording_세션_스텁_금지(client, celery_eager):
-    # 녹음을 시작했지만 청크가 하나도 없으면 스텁 가짜 전사 대신 failed 처리
+    # 녹음을 시작했지만 청크가 하나도 없으면 스텁 가짜 전사 대신 manual(기록 없음) 처리
     host = _register(client, "sdd085g@test.com")
     sid = _create_session(client, host)
     client.post(
@@ -133,7 +133,7 @@ def test_07_청크0개_recording_세션_스텁_금지(client, celery_eager):
     client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     rec = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"]).json()
-    assert rec["status"] == "failed"
+    assert rec["status"] == "manual"
     assert rec["transcript"] is None
     assert "headline" not in rec["ai_summary"]
 

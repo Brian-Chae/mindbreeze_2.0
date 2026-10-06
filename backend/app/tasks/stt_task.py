@@ -524,11 +524,14 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     logger.info("[stt_task] Merged %d chunks for session %s", len(chunks), session_id)
 
     # SDD-085 가드 2(G5): 청크 0개면 스텁 가짜 전사를 저장하지 않는다 — 데이터 무결성
+    # INT-VERIFY-E2E: 오디오 0개는 '처리 실패'가 아니라 '기록 없음'(마이크 오프/권한 거부)이다.
+    #   failed로 마킹하면 UI가 'AI 기록 처리 실패'로 보여 혼란 → manual로 정규화해
+    #   리포트가 mic_off(마이크 오프)로 정확히 표기되게 한다.
     if not chunks:
-        logger.warning("[stt_task] 오디오 청크 없음 — STT 미실행(failed): %s", session_id)
-        record.status = "failed"
+        logger.warning("[stt_task] 오디오 청크 없음 — STT 미실행(manual, 기록 없음): %s", session_id)
+        record.status = "manual"
         db.commit()
-        asyncio.run(_emit_status(session_id, "failed", {"reason": "no_audio_chunks"}))
+        asyncio.run(_emit_status(session_id, "manual", {"reason": "no_audio_chunks"}))
         _emit_report_progress(session_id, db)
         return
 
