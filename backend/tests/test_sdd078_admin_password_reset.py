@@ -99,9 +99,13 @@ def _create_org_with_admin(client, admin_headers, org_name: str, admin_email: st
 
 
 def _add_counselor(org_id: str, email: str, name: str = "김상담", status: str = "active") -> str:
-    """기관 소속 상담사를 DB 직접 생성 (SDD-073으로 직접 가입 차단됨)."""
+    """기관 소속 상담사를 DB 직접 생성 (SDD-073으로 직접 가입 차단됨).
+
+    MB2-ORG-02: 소속 판정이 membership 기준이므로 active 소속도 함께 만든다.
+    """
     from app.core.security import hash_password
     from app.models.user import User
+    from app.services import membership_service
 
     db = _db()
     try:
@@ -115,6 +119,8 @@ def _add_counselor(org_id: str, email: str, name: str = "김상담", status: str
             org_id=uuid.UUID(org_id),
         )
         db.add(user)
+        db.flush()
+        membership_service.add_membership(db, user, org_id, status_="active")
         db.commit()
         db.refresh(user)
         return str(user.id)

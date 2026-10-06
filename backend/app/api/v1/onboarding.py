@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.client_counselor_link import ClientCounselorLink
 from app.models.client_profile import ClientProfile
 from app.models.counselor_profile import CounselorProfile
 from app.models.user import User
@@ -318,23 +317,12 @@ def client_step4_match(
             detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
         )
 
-    existing_link = (
-        db.query(ClientCounselorLink)
-        .filter(
-            ClientCounselorLink.client_id == user_id,
-            ClientCounselorLink.counselor_id == counselor.id,
-        )
-        .first()
-    )
-    if existing_link is None:
-        link = ClientCounselorLink(
-            client_id=user_id,
-            counselor_id=counselor.id,
-            status="active",
-        )
-        db.add(link)
-        # 상담사 매칭 시 채팅방 자동 생성
-        get_or_create_direct_room(counselor.id, user_id, db)
+    # MB2-ONB-01: ended 연결은 재활성화하고, 신규·재활성화 모두 1:1 채팅방을 보장한다.
+    #   assign_counselor 가 중복 방지·ended 재활성화·active 상태 규칙을 단일화한다.
+    from app.services import client_service
+
+    client_service.assign_counselor(user_id, counselor.id, db, create_room=False)
+    get_or_create_direct_room(counselor.id, user_id, db)
 
     onboarding_service.save_step(
         user_id,

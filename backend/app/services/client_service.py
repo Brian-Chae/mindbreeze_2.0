@@ -196,12 +196,12 @@ def get_client_profile(
         "interests": profile.interests if profile else [],
         "bio": profile.bio if profile else None,
         "profile_image_url": profile.profile_image_url if profile else None,
-        "memo": link.memo if hasattr(link, "memo") else None,
+        "memo": link.memo,
     }
 
 
-def update_memo(client_id: str, counselor_id: str, memo: str, db: Session):
-    """상담사 비공개 메모 수정"""
+def update_memo(client_id: str, counselor_id: str, memo: str, db: Session) -> None:
+    """상담사 비공개 메모 수정 — active 연결에만 저장 허용 (MB2-CLIENT-01)."""
     link = (
         db.query(ClientCounselorLink)
         .filter(
@@ -216,8 +216,8 @@ def update_memo(client_id: str, counselor_id: str, memo: str, db: Session):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="접근 권한이 없습니다"
         )
-    # ClientCounselorLink에 memo 컬럼이 없으면 일단 skip
-    # 추후 모델에 추가
+    link.memo = memo
+    db.commit()
 
 
 def create_invite(counselor_id: str, email: str, db: Session) -> dict:

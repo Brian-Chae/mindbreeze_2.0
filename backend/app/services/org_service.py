@@ -11,7 +11,7 @@ from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user import User
 from app.schemas.org import OrganizationCreate
-from app.services import code_service
+from app.services import code_service, membership_service
 from app.services.org_management_service import require_active_org
 
 
@@ -154,6 +154,12 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
     user = db.query(User).filter(User.id == user_uuid).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다")
+    # MB2-ORG-04: 소속 신청은 상담사·기관 관리자만 허용한다 (내담자 등 역할 제한).
+    if user.role not in ("counselor", "org_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="상담사·기관 관리자만 소속 신청을 할 수 있습니다",
+        )
     if not _eligible_for_join(user, db):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -251,8 +257,13 @@ def handle_join_request(
             detail="status는 approved 또는 rejected만 허용됩니다",
         )
 
+    from app.services import membership_service
+
     admin = db.query(User).filter(User.id == uuid.UUID(admin_user_id)).first()
-    if not admin or admin.role != "org_admin" or str(admin.org_id) != str(org_id):
+    # MB2-ORG-03: User.org_id 미러가 아니라 membership(active org_admin) 으로 판정한다.
+    if admin is None or not membership_service.is_member(
+        db, admin.id, org_id, role="org_admin", status="active"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 센터의 관리자만 처리할 수 있습니다",
@@ -288,8 +299,9 @@ def handle_join_request(
             from app.services import membership_service
 
             if membership_service.get_membership(db, applicant.id, req.org_id) is None:
+                # MB2-ORG-04: 승인 시 역할은 counselor 로 고정한다 (신청자 role 미러 금지).
                 membership_service.add_membership(
-                    db, applicant, req.org_id, status_="active", role=applicant.role
+                    db, applicant, req.org_id, status_="active", role="counselor"
                 )
 
     db.commit()
@@ -495,7 +507,10 @@ def update_counselor_role(
         )
 
     admin = db.query(User).filter(User.id == uuid.UUID(admin_user_id)).first()
-    if not admin or admin.role != "org_admin" or str(admin.org_id) != str(org_id):
+    # MB2-ORG-03: User.org_id 미러가 아니라 membership(active org_admin) 으로 판정한다.
+    if admin is None or not membership_service.is_member(
+        db, admin.id, org_id, role="org_admin", status="active"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 센터의 관리자만 변경할 수 있습니다",
@@ -517,7 +532,10 @@ def update_counselor_role(
 def remove_counselor(org_id: str, user_id: str, admin_user_id: str, db: Session) -> None:
     """상담사 소속 해제."""
     admin = db.query(User).filter(User.id == uuid.UUID(admin_user_id)).first()
-    if not admin or admin.role != "org_admin" or str(admin.org_id) != str(org_id):
+    # MB2-ORG-03: User.org_id 미러가 아니라 membership(active org_admin) 으로 판정한다.
+    if admin is None or not membership_service.is_member(
+        db, admin.id, org_id, role="org_admin", status="active"
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 센터의 관리자만 해제할 수 있습니다",

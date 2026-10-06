@@ -397,10 +397,11 @@ async def reset_org_counselor_password(
         raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
     if org.deactivated_at is not None:
         raise HTTPException(status_code=409, detail="비활성화된 기관에서는 이 작업을 수행할 수 없습니다")
-    target = db.query(User).filter(
-        User.id == _parse_target_uuid(user_id), User.org_id == org.id,
-    ).first()
-    if target is None:
+    target = db.query(User).filter(User.id == _parse_target_uuid(user_id)).first()
+    # MB2-ORG-02: User.org_id 미러가 아니라 membership(active) 으로 소속을 검증한다.
+    if target is None or membership_service.get_membership(
+        db, target.id, org.id, statuses=("active",)
+    ) is None:
         raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
     if target.role != "counselor":
         raise HTTPException(

@@ -124,6 +124,13 @@ async def complete_reset(
             detail="사용자를 찾을 수 없습니다",
         )
 
+    # MB2-AUTH-03: 본인 재설정도 직전 3개 비밀번호 재사용을 차단한다 (관리자 재설정과 동일 정책).
+    if not check_password_history(str(user.id), new_password, db):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="직전에 사용한 비밀번호는 재사용할 수 없습니다",
+        )
+
     new_hash = hash_password(new_password)
     user.password_hash = new_hash
     db.add(PasswordHistory(user_id=user.id, password_hash=new_hash))

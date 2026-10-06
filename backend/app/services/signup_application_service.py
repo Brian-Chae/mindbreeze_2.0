@@ -73,6 +73,76 @@ def _reject_open_duplicate(email: str, application_type: str, db: Session) -> No
         )
 
 
+def _purge_individual_counselor_account(
+    db: Session, user: User, org: Organization | None
+) -> None:
+    """반려·재신청 시 남은 미승인 개인 상담사 계정·개인 기관을 정리한다 (MB2-SIGNUP-01).
+
+    - 프로필·소속(membership) 행 삭제
+    - 신청(SignupApplication) 참조 해제는 호출부가 먼저 수행한다(FK)
+    - User.org_id 해제 후 User·개인 Organization 삭제
+
+    commit 은 호출부가 한 트랜잭션으로 수행한다.
+    """
+    from app.models.counselor_profile import CounselorProfile
+    from app.models.user_org_membership import UserOrgMembership
+
+    db.query(CounselorProfile).filter(
+        CounselorProfile.user_id == user.id
+    ).delete(synchronize_session=False)
+    db.query(UserOrgMembership).filter(
+        UserOrgMembership.user_id == user.id
+    ).delete(synchronize_session=False)
+    if org is not None:
+        if org.owner_user_id == user.id:
+            org.owner_user_id = None
+        if org.primary_admin_id == user.id:
+            org.primary_admin_id = None
+    user.org_id = None
+    db.flush()
+    db.delete(user)
+    db.flush()
+    if org is not None and org.kind == "individual":
+        db.delete(org)
+
+
+def _detach_application_refs(
+    db: Session, user_id: uuid.UUID | None, org_id: uuid.UUID | None
+) -> None:
+    """신청 행의 사용자·기관 참조를 해제한다 — 계정·기관 삭제 전 FK 정리용."""
+    if user_id is not None:
+        db.query(SignupApplication).filter(
+            SignupApplication.user_id == user_id
+        ).update({SignupApplication.user_id: None}, synchronize_session=False)
+    if org_id is not None:
+        db.query(SignupApplication).filter(
+            SignupApplication.organization_id == org_id
+        ).update(
+            {SignupApplication.organization_id: None}, synchronize_session=False
+        )
+
+
+def _is_reusable_individual_orphan(user: User, db: Session) -> bool:
+    """이전 반려로 남은 미승인 개인 상담사 계정인지 판정 (MB2-SIGNUP-01).
+
+    같은 이메일 재신청 시 409 로 영구 차단하지 않고 정리·재사용하기 위한 조건:
+    role=counselor + status pending/rejected + 개인 상담사 신청이 모두 종료(열린 신청 없음).
+    """
+    if user.role != "counselor" or user.status not in ("pending", "rejected"):
+        return False
+    apps = (
+        db.query(SignupApplication)
+        .filter(SignupApplication.user_id == user.id)
+        .all()
+    )
+    if not apps or any(a.status in OPEN_STATUSES for a in apps):
+        return False
+    return any(
+        a.application_type == TYPE_INDIVIDUAL_COUNSELOR and a.status == "rejected"
+        for a in apps
+    )
+
+
 def create_organization_application(
     *,
     organization_name: str,
@@ -136,11 +206,28 @@ def create_individual_counselor_application(
             detail="이름을 입력해야 합니다",
         )
 
-    if db.query(User).filter(func.lower(User.email) == email_norm).first() is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="이미 등록된 이메일입니다",
+    existing_user = (
+        db.query(User).filter(func.lower(User.email) == email_norm).first()
+    )
+    if existing_user is not None:
+        # MB2-SIGNUP-01: 이전 반려로 남은 미승인 개인 상담사 계정(고아)은 정리 후 새로 생성한다.
+        #   (그 외 실제 사용 중 계정은 기존대로 409)
+        if not _is_reusable_individual_orphan(existing_user, db):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 등록된 이메일입니다",
+            )
+        orphan_org = (
+            db.query(Organization)
+            .filter(Organization.id == existing_user.org_id)
+            .first()
+            if existing_user.org_id is not None
+            else None
         )
+        _detach_application_refs(
+            db, existing_user.id, orphan_org.id if orphan_org is not None else None
+        )
+        _purge_individual_counselor_account(db, existing_user, orphan_org)
     _reject_open_duplicate(email_norm, TYPE_INDIVIDUAL_COUNSELOR, db)
 
     org_name = (display_name or "").strip() or f"{clean_name} 개인 상담실"
@@ -384,7 +471,11 @@ async def approve_application(
 def reject_application(
     application_id: str, admin_id: uuid.UUID, reason: str | None, db: Session
 ) -> SignupApplication:
-    """반려 — 개인 상담사 신청의 대기 계정은 pending 으로 남아 로그인·코드 연결이 불가하다."""
+    """반려 — 개인 상담사 신청이 함께 만든 pending 계정·개인 기관은 정리한다 (MB2-SIGNUP-01).
+
+    그대로 남기면 같은 이메일 재신청이 '이미 등록된 이메일' 409 로 영구 차단된다.
+    신청 행 자체는 반려 이력으로 보존하되 계정·기관 참조는 해제한다.
+    """
     app_row = _get_application(application_id, db)
     if app_row.status not in OPEN_STATUSES:
         raise HTTPException(
@@ -396,6 +487,26 @@ def reject_application(
     app_row.reviewed_by = admin_id
     app_row.reviewed_at = datetime.now(timezone.utc)
     app_row.review_note = (reason or "").strip() or None
+
+    if app_row.application_type == TYPE_INDIVIDUAL_COUNSELOR:
+        user = (
+            db.query(User).filter(User.id == app_row.user_id).first()
+            if app_row.user_id is not None
+            else None
+        )
+        org = (
+            db.query(Organization)
+            .filter(Organization.id == app_row.organization_id)
+            .first()
+            if app_row.organization_id is not None
+            else None
+        )
+        # FK(신청 → 사용자/기관) 해제 후 계정·기관 삭제
+        app_row.user_id = None
+        app_row.organization_id = None
+        if user is not None:
+            _purge_individual_counselor_account(db, user, org)
+
     db.commit()
     db.refresh(app_row)
     return app_row

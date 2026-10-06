@@ -309,13 +309,23 @@ def test_개인상담사_승인전_코드사용불가_승인후_사용가능(cli
     assert res.status_code == 409
 
 
-def test_개인상담사_반려시_계정은_pending_유지(client):
-    from app.models.user import User
+def test_개인상담사_반려시_계정_정리_재신청_가능(client, monkeypatch):
+    """MB2-SIGNUP-01 — 반려 시 pending 계정·개인 기관을 정리해 같은 이메일 재신청이 가능하다."""
+    from unittest.mock import AsyncMock
 
+    from app.models.organization import Organization
+    from app.models.user import User
+    from app.services import signup_application_service as svc
+
+    # 재신청 쿨다운(429)은 이 테스트의 관심사가 아니므로 우회한다
+    monkeypatch.setattr(svc, "check_submit_cooldown", AsyncMock())
+
+    email = "reject-ind@test.com"
     res = client.post(
         "/api/v1/signup-applications/individual-counselor",
-        json=_counselor_application_payload(email="reject-ind@test.com"),
+        json=_counselor_application_payload(email=email),
     )
+    assert res.status_code == 201, res.text
     app_id = res.json()["application_id"]
 
     admin = _platform_admin(client)
@@ -329,12 +339,22 @@ def test_개인상담사_반려시_계정은_pending_유지(client):
 
     db = _db()
     try:
-        user = db.query(User).filter(User.email == "reject-ind@test.com").first()
-        assert user.status == "pending"  # 반려 후에도 로그인·코드 연결 불가
+        # 고아 계정·개인 기관이 정리되어 같은 이메일 재신청을 막지 않는다
+        assert db.query(User).filter(User.email == email).first() is None
+        assert (
+            db.query(Organization).filter(Organization.kind == "individual").count() == 0
+        )
     finally:
         db.close()
 
-    # 반려 후 승인 시도 → 409
+    # 같은 이메일로 재신청 → 이전에는 409 영구 차단이었으나 이제 201
+    again = client.post(
+        "/api/v1/signup-applications/individual-counselor",
+        json=_counselor_application_payload(email=email),
+    )
+    assert again.status_code == 201, again.text
+
+    # 반려된 신청 재승인 시도 → 409
     res = client.post(f"/api/v1/admin/signup-applications/{app_id}/approve", headers=admin["h"])
     assert res.status_code == 409
 
