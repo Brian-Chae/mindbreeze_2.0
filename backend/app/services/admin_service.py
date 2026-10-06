@@ -240,6 +240,14 @@ def get_org_document_review_detail(doc_id: uuid.UUID, db: Session) -> dict[str, 
         .order_by(VerificationAudit.created_at.desc())
         .all()
     )
+    # ADMIN-01: 상세 화면은 목록과 동일하게 제출자(기관 담당자) 정보를 노출한다.
+    # 기관 서류의 제출자는 주 담당자(primary_admin)이며, 없으면 소유자(owner)를 사용한다.
+    # 프론트 ReviewDetailResponse.submitter_name/submitter_email 계약을 채운다.
+    submitter = None
+    if org is not None:
+        submitter_id = org.primary_admin_id or org.owner_user_id
+        if submitter_id is not None:
+            submitter = db.query(User).filter(User.id == submitter_id).first()
     return {
         "target_type": "org_document",
         "id": str(doc.id),
@@ -247,6 +255,8 @@ def get_org_document_review_detail(doc_id: uuid.UUID, db: Session) -> dict[str, 
         "status": doc.status,
         "file_name": doc.file_name,
         "s3_key": doc.s3_key,
+        "submitter_name": submitter.name if submitter else None,
+        "submitter_email": submitter.email if submitter else None,
         "org": {
             "id": str(org.id) if org else None,
             "name": org.name if org else None,
@@ -313,7 +323,8 @@ def process_review(
         db.add(audit)
         db.commit()
         db.refresh(cred)
-        if action == "approve":
+        # MB2-CRED-TIER-DOWNGRADE: 승인·반려 모두 재계산한다(반려 시 강등).
+        if new_status in ("approved", "rejected"):
             from app.services import credential_service
             credential_service.recalculate_tier(cred.user_id, db)
         if previous_status != new_status and new_status in ("approved", "rejected") and cred.user_id != admin_id:

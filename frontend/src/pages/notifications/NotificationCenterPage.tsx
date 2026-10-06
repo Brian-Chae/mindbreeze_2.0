@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { NotificationCard, EVENT_LABELS } from '../../components/notifications/NotificationCard';
 import AppShell from '../../components/layout/AppShell';
 import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 import {
   listNotifications,
   markRead,
@@ -63,6 +64,8 @@ export default function NotificationCenterPage() {
           setNotifications((prev) =>
             prev.map((x) => (x.id === n.id ? { ...x, is_read: true } : x)),
           );
+          // NOTIF-01: 상단 헤더·사이드바 배지는 전역 unread 를 쓴다 — 읽음 처리 후 재조회한다.
+          void useNotificationStore.getState().fetch();
         } catch {
           // 읽음 저장 실패해도 이동은 허용
         }
@@ -80,6 +83,8 @@ export default function NotificationCenterPage() {
     try {
       await markAllRead();
       setNotifications((prev) => prev.map((x) => ({ ...x, is_read: true })));
+      // NOTIF-01: 전체 읽음 처리 후에도 전역 배지를 즉시 갱신한다.
+      void useNotificationStore.getState().fetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : '전체 읽음 처리 실패');
     }

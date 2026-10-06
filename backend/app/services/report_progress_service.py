@@ -118,10 +118,12 @@ def _derive_reason(record: SessionRecord | None, reports: list[Report]) -> str |
         return REASON_LOW_CONFIDENCE
     if summary.get("summary_failed"):
         return REASON_SUMMARY_FAILED
-    # SDD-095 후속(워치독): 타임아웃으로 마감된 리포트 — 중단 사유를 최우선 노출
+    # SDD-095 후속(워치독): 생성 실패 사유를 최우선 노출. generation_error 가
+    # 타임아웃(REASON_TIMEOUT)이면 시간초과, 그 외(생성 예외 메시지)는 실패로 구분한다.
     for r in reports:
-        if getattr(r, "generation_error", None):
-            return REASON_TIMEOUT
+        generation_error = getattr(r, "generation_error", None)
+        if generation_error:
+            return REASON_TIMEOUT if generation_error == REASON_TIMEOUT else REASON_REPORT_FAILED
     latest = _latest_report(reports)
     if latest is not None and latest.status == "error":
         return REASON_REPORT_FAILED

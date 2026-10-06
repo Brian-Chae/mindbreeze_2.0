@@ -454,7 +454,7 @@ def admin_reactivate_org(org_id: uuid.UUID, req: OrganizationReactivate,
 @router.patch("/orgs/{org_id}/counselors/{user_id}", response_model=OrganizationAdminCounselor)
 def admin_patch_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorPatch,
                               admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
-    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason, db, role=req.role)
+    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason or "상담사 권한 조정", db, role=req.role)
     org = _admin_org_or_404(org_id, db)
     code = db.query(CounselorProfile.counselor_code).filter(CounselorProfile.user_id == user.id).scalar()
     return OrganizationAdminCounselor(

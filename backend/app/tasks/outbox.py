@@ -44,11 +44,17 @@ def process_email_outbox(limit: int = 100) -> dict:
         for item in items:
             try:
                 payload = item.payload or {}
-                send_email_notification(
+                # OUTBOX-002: send_email_notification 반환값(bool)을 확인한다.
+                # 실패(False)를 sent 로 마킹하지 않고 예외로 올려 재시도·failed 처리한다.
+                # payload['html'] 이 있으면 HTML 본문까지 전달한다(report_email_task 정합).
+                ok = send_email_notification(
                     item.recipient or "",
                     payload.get("subject", ""),
                     payload.get("body", ""),
+                    payload.get("html"),
                 )
+                if not ok:
+                    raise RuntimeError("이메일 발송 실패")
                 item.status = "sent"
                 item.sent_at = now
                 item.last_error = None

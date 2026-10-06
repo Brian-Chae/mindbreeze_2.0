@@ -200,7 +200,12 @@ def delete_credential(credential_id: uuid.UUID, user_id: uuid.UUID, db: Session)
 
 
 def recalculate_tier(user_id: uuid.UUID, db: Session) -> str:
-    """승인된 증빙 기반으로 verified_tier 재산정."""
+    """승인된 증빙 기반으로 verified_tier 재산정(승격·강등 모두).
+
+    신분증 + (자격증·학위·경력) 1종 이상이 모두 approved 면 verified,
+    그렇지 않으면 unverified 로 되돌린다. 반려·폐기로 잔여 approved 증빙이
+    요건을 못 채우면 등급이 유지되지 않고 강등된다(MB2-CRED-TIER-DOWNGRADE).
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         return "unverified"
@@ -213,8 +218,11 @@ def recalculate_tier(user_id: uuid.UUID, db: Session) -> str:
     has_id_card = any(c.type == "id_card" for c in approved)
     has_qualification = any(c.type in ("license", "diploma", "career") for c in approved)
 
-    if has_id_card and has_qualification:
-        user.verified_tier = "verified"
+    # verified_tier 계약값: 'unverified' | 'email' | 'verified' (프론트 VerifiedTier).
+    # 두 요건을 모두 충족할 때만 verified, 아니면 강등(unverified).
+    new_tier = "verified" if (has_id_card and has_qualification) else "unverified"
+    if user.verified_tier != new_tier:
+        user.verified_tier = new_tier
         db.add(user)
         db.commit()
 
@@ -263,7 +271,9 @@ def admin_verify(
     db.commit()
     db.refresh(cred)
 
-    if new_status == "approved":
+    # MB2-CRED-TIER-DOWNGRADE: 승인·반려 모두 등급을 재계산한다. 반려 시 잔여
+    # approved 증빙 기준으로 강등되어 verified 가 유지되지 않는다.
+    if new_status in ("approved", "rejected"):
         recalculate_tier(cred.user_id, db)
 
     if previous_status != new_status and cred.user_id != admin_id:

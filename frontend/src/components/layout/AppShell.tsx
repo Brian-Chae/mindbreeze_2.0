@@ -5,6 +5,7 @@ import MobileDrawer from './MobileDrawer';
 import BottomTabBar from './BottomTabBar';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
+import { useAuthStore } from '../../stores/authStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
 import { resolveNotificationTarget } from '../../lib/api/notifications';
@@ -35,6 +36,8 @@ export default function AppShell({
   const unread = useNotificationStore((s) => s.unread);
   const toast = useNotificationStore((s) => s.toast);
   const dismissToast = useNotificationStore((s) => s.dismissToast);
+  // NAV-01: 하단 탭 홈 경로를 역할에 맞춘다(org_admin → /dashboard/org).
+  const userRole = useAuthStore((s) => s.user?.role);
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
@@ -213,7 +216,7 @@ export default function AppShell({
       </section>
 
       <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} />}
+      {!hideBottomTab && <BottomTabBar onMoreClick={() => setDrawerOpen(true)} role={userRole} />}
     </div>
   );
 }

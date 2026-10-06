@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { ICONS, StrokeIcon } from './SidebarNav';
+import type { UserRole } from '../../lib/api/auth';
 
 interface TabItem {
   to: string;
@@ -7,23 +8,39 @@ interface TabItem {
   icon: string[];
 }
 
-const TAB_ITEMS: TabItem[] = [
-  { to: '/dashboard', label: '홈', icon: ICONS.home },
-  { to: '/sessions', label: '세션', icon: ICONS.calendar },
-  { to: '/reports', label: '리포트', icon: ICONS.report },
-];
+/**
+ * NAV-01: 역할별 홈 경로.
+ * /dashboard 는 counselor 전용 RoleGuard 라 org_admin·platform_admin 이 탭을 누르면
+ * 불일치로 '/'로 리다이렉트된다. 역할이 자기 홈으로 가도록 동적으로 만든다.
+ */
+function homePathForRole(role: UserRole | null | undefined): string {
+  if (role === 'org_admin') return '/dashboard/org';
+  if (role === 'platform_admin') return '/admin/orgs';
+  return '/dashboard';
+}
+
+function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
+  return [
+    { to: homePathForRole(role), label: '홈', icon: ICONS.home },
+    { to: '/sessions', label: '세션', icon: ICONS.calendar },
+    { to: '/reports', label: '리포트', icon: ICONS.report },
+  ];
+}
 
 interface BottomTabBarProps {
   onMoreClick: () => void;
+  /** 현재 사용자 역할 — 하단 탭 홈 경로를 역할에 맞춘다(NAV-01) */
+  role?: UserRole | null;
 }
 
-export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
+export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
+  const tabItems = tabItemsForRole(role);
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#EFEFEF] flex items-stretch justify-around"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {TAB_ITEMS.map((item) => (
+      {tabItems.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

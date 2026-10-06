@@ -37,4 +37,7 @@ celery_app.conf.beat_schedule = {
     'sweep-stale-open-sessions': {'task': 'tasks.sweep_stale_open_sessions', 'schedule': 300.0},
     # SDD-101: 종료 파이프라인 발행 아웃박스 재발행 — 발행 유실 복구.
     'process-pipeline-outbox': {'task': 'tasks.process_pipeline_outbox', 'schedule': 30.0},
+    # NOTIF-03/OUTBOX-001: 이메일 아웃박스 발송 — commit=False 로 커밋된 알림 메일을
+    # 주기적으로 소비한다. beat 미가동 환경을 위해 process_email_outbox_cron.py 도 제공한다.
+    'process-email-outbox': {'task': 'tasks.process_email_outbox', 'schedule': 30.0},
 }

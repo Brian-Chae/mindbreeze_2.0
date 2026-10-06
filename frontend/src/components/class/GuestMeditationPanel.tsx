@@ -6,10 +6,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBand } from '../../hooks/useBand';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
+import { useGuestAudioSync } from '../../hooks/useGuestAudioSync';
 import { useAuthStore } from '../../stores/authStore';
 import { resolveBandLinkState } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
 import { toDisplayGroupAverage, type GroupAverageDisplay, type GroupAverageEvent } from '../../lib/class/group-average';
+import type { AudioSyncEvent } from '../../lib/class/audio-sync';
 import { getSession, getSessionByCode, getSessionByCodeState } from '../../lib/api/session';
 import { getClientProfile } from '../../lib/api/client-profile';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
@@ -29,6 +31,7 @@ import { ClassChatPanel } from '../chat/ClassChatPanel';
 import { GuestChatNotice } from '../chat/GuestChatNotice';
 import { ClassOnboardingCoachmarks } from './ClassOnboardingCoachmarks';
 import { QuietSignalButtons } from './QuietSignalButtons';
+import { GuestAudioPanel } from './GuestAudioPanel';
 
 interface GuestMeditationPanelProps {
   title: string | null;
@@ -327,6 +330,20 @@ export function GuestMeditationPanel({
     setWearerCount(event.wearer_count);
   }, []);
 
+  /**
+   * 개선 10(LIVE-02): 상담사 재생 제어(class:audio_sync) 수신 — 회원/게스트 기기 동기 재생.
+   * 서버가 세션 공용 룸으로 브로드캐스트(늦은 입장은 replay)하므로 마지막 타임코드를 보관해
+   * useGuestAudioSync 로 같은 소스·같은 위치로 재생한다.
+   */
+  const [audioSyncEvent, setAudioSyncEvent] = useState<AudioSyncEvent | null>(null);
+  const handleClassAudioSync = useCallback(
+    (event: AudioSyncEvent) => {
+      if (event.session_id && event.session_id !== sessionId) return;
+      setAudioSyncEvent(event);
+    },
+    [sessionId],
+  );
+
   const liveSocket = useSessionLiveSocket({
     sessionId,
     participantId,
@@ -334,6 +351,14 @@ export function GuestMeditationPanel({
     skipAuth: !isAuthenticated,
     onEegFeature: handleEegFeature,
     onGroupAverage: handleGroupAverage,
+    onClassAudioSync: handleClassAudioSync,
+  });
+
+  // 회원 동기 재생 엔진 — 상담사 타임코드를 적용해 같은 위치로 재생한다(볼륨은 개별 설정).
+  const guestAudio = useGuestAudioSync({
+    sessionId,
+    enabled: Boolean(sessionId),
+    event: audioSyncEvent,
   });
 
   const isLive = band.connectionState === 'connected';
@@ -630,6 +655,21 @@ export function GuestMeditationPanel({
                 <span className="player-timer-total">/ {formatClock(targetSec)}</span>
               </div>
             </section>
+
+            {/* 개선 10(LIVE-02): 상담사가 트는 가이드·BGM 동기 재생 상태(수신 시에만 표시) */}
+            {(guestAudio.state.synced || guestAudio.state.blocked) && (
+              <GuestAudioPanel
+                trackTitle={guestAudio.state.track?.title ?? null}
+                playing={guestAudio.state.playing}
+                positionSec={guestAudio.state.positionSec}
+                durationSec={guestAudio.state.durationSec}
+                volume={guestAudio.state.volume}
+                onVolumeChange={guestAudio.setVolume}
+                blocked={guestAudio.state.blocked}
+                onResume={guestAudio.resume}
+                synced={guestAudio.state.synced}
+              />
+            )}
 
             {(chatEnabled || (!isAuthenticated && guestChatEnabled)) && (
               <section className="glass-card member-chat-card" aria-label="클래스 채팅">

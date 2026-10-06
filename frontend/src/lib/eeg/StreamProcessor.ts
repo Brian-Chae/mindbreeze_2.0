@@ -87,6 +87,9 @@ export class StreamProcessor {
   // 🔧 분석 지표 서비스
   private analysisMetricsService: AnalysisMetricsService;
 
+  /** EEG-SP-001: PPG 처리 플래그 강제 리셋 타이머 — dispose/cleanup 에서 반드시 해제한다 */
+  private ppgResetTimer: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     this.timestampSynchronizer = new TimestampSynchronizer();
     
@@ -116,12 +119,21 @@ export class StreamProcessor {
     };
     
     // PPG 처리 플래그 강제 리셋 타이머 (5초마다로 단축)
-    setInterval(() => {
+    // EEG-SP-001: 타이머 id를 보관해 stop/cleanup/dispose 에서 해제한다(누적 방지).
+    this.ppgResetTimer = setInterval(() => {
       if (this.isProcessingPPG) {
         // PPG processing flag force-reset (5s timeout)
         this.isProcessingPPG = false;
       }
     }, 5000);
+  }
+
+  /** EEG-SP-001: 강제 리셋 타이머 해제 (중복 호출 안전) */
+  private clearPpgResetTimer(): void {
+    if (this.ppgResetTimer !== null) {
+      clearInterval(this.ppgResetTimer);
+      this.ppgResetTimer = null;
+    }
   }
 
   /**
@@ -177,6 +189,8 @@ export class StreamProcessor {
         this.bluetoothService.onDataReceived = null;
       }
 
+      // EEG-SP-001: 스트림 정지 시 강제 리셋 타이머도 해제
+      this.clearPpgResetTimer();
       this.isStarted = false;
       logger.debug('StreamProcessor stopped successfully');
     } catch (error) {
@@ -190,6 +204,9 @@ export class StreamProcessor {
    */
   cleanup(): void {
     this.stop();
+    // EEG-SP-001: stop 이 이미 타이머를 해제하지만, isStarted=false 상태에서 cleanup 만
+    // 호출된 경우에도 누수가 없도록 한 번 더 보장한다.
+    this.clearPpgResetTimer();
     this.clearBuffers();
     this.bluetoothService = null;
     this.systemCallbacks = {};
@@ -494,6 +511,8 @@ export class StreamProcessor {
   }
 
   dispose(): void {
+    // EEG-SP-001: 타이머 누적 방지 — dispose 에서도 반드시 해제한다.
+    this.clearPpgResetTimer();
     this.clearBuffers();
     this.storeCallbacks = {};
   }

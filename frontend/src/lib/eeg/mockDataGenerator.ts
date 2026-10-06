@@ -71,19 +71,35 @@ export class MockDataGenerator {
 
   /**
    * EEG Analysis Metrics 생성
+   *
+   * EEG-MOCK-001/002: 값은 코호트(B0) 백분위 정규화 스케일과 맞춘 **raw 지표**여야 한다.
+   * eegScore.ts 의 정규화(예: focus β/(α+θ) p5=0.381·p95=5.608, stress (β+γ)/(α+θ)
+   * p5=0.462·p95=8.721, FAA p90=0.800)가 포화(0/100)되지 않도록 실제 raw 대역으로 생성한다.
+   * (0~100 표시값을 넣으면 toRatioScale 이 100으로 나눠 focus 0~9점·stress 100점·균형 0점이 된다.)
    */
   generateEEGAnalysis(): EEGAnalysisMetrics {
     const baseValues = {
-      totalPower: 500 + Math.random() * 500,
+      /** μV² — TNA p5=18.5 · p95=9298 */
+      totalPower: 1000 + Math.random() * 6000,
+      /** 0~100 표시용(미채점) */
       emotionalBalance: 50 + Math.random() * 30,
+      /** 0~100 표시용(미채점) */
       attention: 60 + Math.random() * 30,
-      cognitiveLoad: 40 + Math.random() * 30,
-      focusIndex: 55 + Math.random() * 30,
-      relaxationIndex: 50 + Math.random() * 30,
-      stressIndex: 30 + Math.random() * 20,
-      hemisphericBalance: 45 + Math.random() * 20,
-      emotionalStability: 60 + Math.random() * 25,
+      /** θ/α — p5=1.607 · p95=4.808 (낮을수록 좋음) */
+      cognitiveLoad: 1.8 + Math.random() * 2.5,
+      /** β/(α+θ) — p5=0.381 · p95=5.608 */
+      focusIndex: 1.0 + Math.random() * 3.5,
+      /** α/(α+β) — 사다리꼴 a=0.098·b=0.260·c=0.429 */
+      relaxationIndex: 0.12 + Math.random() * 0.25,
+      /** (β+γ)/(α+θ) — p5=0.462 · p95=8.721 (낮을수록 좋음) */
+      stressIndex: 1.0 + Math.random() * 4.5,
+      /** FAA = ln(α_fp2)−ln(α_fp1) — |FAA| p90=0.800 (0에 가까울수록 좋음) */
+      hemisphericBalance: (Math.random() * 2 - 1) * 0.6,
+      /** (α+θ)/γ — p5=0.235 · p95=7.241 */
+      emotionalStability: 1.0 + Math.random() * 5.0,
+      /** 0~100 표시용(미채점) */
       attentionLevel: 65 + Math.random() * 25,
+      /** 0~100 표시용(미채점) */
       meditationLevel: 45 + Math.random() * 30
     };
 

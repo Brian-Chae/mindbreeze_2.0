@@ -330,5 +330,10 @@ class CounselorActivityResponse(BaseModel):
     reports: list[CounselorActivityReport]
 
 
-class OrganizationCounselorPatch(OrganizationCounselorRemove):
+class OrganizationCounselorPatch(BaseModel):
+    # MB2-ORG-ROLE-REASON: 역할 변경은 사유가 선택이다. 프론트(updateCounselor)가
+    # role 만 전송하므로 reason 미전송(None)을 허용한다. 값이 오면 공백-only 는
+    # 여전히 422 로 거부해 감사 사유 무결성을 지킨다.
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    reason: str | None = Field(default=None, min_length=1, max_length=2000)
     role: Literal["counselor", "org_admin"]
