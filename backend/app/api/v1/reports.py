@@ -63,7 +63,9 @@ def generate(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return report_service.generate_report(session_id, current_user["id"], payload.type, db)
+    return report_service.generate_report(
+        session_id, current_user["id"], payload.type, db, payload.participant_id
+    )
 
 
 @router.get("", response_model=ReportListResponse)

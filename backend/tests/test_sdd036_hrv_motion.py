@@ -59,7 +59,7 @@ def test_report_generation_and_read_preserve_means(client, values):
     upload(client, session, pid, [{'second_offset': 0, **values}])
     other = _join_guest(client, session['access_code'], '리포트 제외 참가자')
     upload(client, session, other, [{'second_offset': 0, **dict.fromkeys(FIELDS, 1)}])
-    response = client.post(f"/api/v1/reports/generate/{session['id']}", json={'type': 'client'}, headers=host['h'])
+    response = client.post(f"/api/v1/reports/generate/{session['id']}", json={'type': 'client', 'participant_id': pid}, headers=host['h'])
     assert response.status_code == 200, response.text
     report = response.json()
     for field in MEANS:
@@ -87,7 +87,7 @@ def test_websocket_feature_storage_and_normalized_payload(client, monkeypatch):
     _, session, pid = setup_session(client)
     monkeypatch.setattr(session_live_namespace, '_open_db', _db)
     values = dict(zip(FIELDS, (20, None, 120, 60, 2, 72, 0)))
-    saved, resolved, payload = session_live_namespace._store_feature(
+    saved, resolved, payload, _is_latest = session_live_namespace._store_feature(
         session['id'], pid, None, {'second_offset': 0, **values},
     )
     assert saved == 1 and resolved == pid

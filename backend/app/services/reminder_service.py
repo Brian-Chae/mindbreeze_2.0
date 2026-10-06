@@ -242,8 +242,18 @@ def _log_delivery(
         return False
 
 
-def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: DBSession) -> int:
-    """한 수신자에게 인앱+WS+이메일 리마인더 발송하고 로그를 남긴다(발송 건수 반환)."""
+def _dispatch_channels(
+    session: Session,
+    offset_min: int,
+    recipient: dict,
+    db: DBSession,
+    pending_emails: list[str] | None = None,
+) -> int:
+    """한 수신자에게 인앱+WS+이메일 리마인더 발송하고 로그를 남긴다(발송 건수 반환).
+
+    FUNC-05: 이메일 outbox 는 commit 이후에 큐 적재해야 한다. pending_emails 가 주어지면
+    outbox id 만 모아두고(호출자가 commit 후 enqueue), 아니면 기존처럼 즉시 적재한다.
+    """
     from app.models.notification_outbox import NotificationOutbox
     from app.services import notification_service
 
@@ -298,15 +308,24 @@ def _dispatch_channels(session: Session, offset_min: int, recipient: dict, db: D
         )
         db.add(email_item)
         db.flush()
-        try:
-            from app.tasks.report_email_task import notification_email_task
-
-            notification_email_task.apply_async(args=[str(email_item.id)], retry=False)
-        except Exception as e:  # noqa: BLE001 — 브로커 장애 시 outbox 에 남아 추후 재시도
-            logger.warning("[REMINDER] 이메일 큐 적재 실패 (outbox=%s): %s", email_item.id, e)
+        if pending_emails is not None:
+            # FUNC-05: commit 은 호출자(run_reminder)가 루프 종료 후 수행 — 그 뒤에 큐 적재.
+            pending_emails.append(str(email_item.id))
+        else:
+            _enqueue_notification_email(str(email_item.id))
         sent += 1
 
     return sent
+
+
+def _enqueue_notification_email(outbox_id: str) -> None:
+    """알림 이메일 outbox 를 큐에 적재한다(best-effort — 브로커 장애 시 outbox 에 남긴다)."""
+    try:
+        from app.tasks.report_email_task import notification_email_task
+
+        notification_email_task.apply_async(args=[outbox_id], retry=False)
+    except Exception as e:  # noqa: BLE001 — 브로커 장애 시 outbox 에 남아 추후 재시도
+        logger.warning("[REMINDER] 이메일 큐 적재 실패 (outbox=%s): %s", outbox_id, e)
 
 
 def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict:
@@ -346,9 +365,16 @@ def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict
         return {"status": "skipped", "reason": "no_recipients"}
 
     total_sent = 0
+    pending_emails: list[str] = []
     for recipient in recipients:
-        total_sent += _dispatch_channels(session, offset, recipient, db)
+        total_sent += _dispatch_channels(
+            session, offset, recipient, db, pending_emails=pending_emails
+        )
+    # FUNC-05: outbox 를 먼저 commit 한 뒤 큐에 적재한다 — 워커가 커밋 전에 행을 찾지 못해
+    # 메일이 유실되는 경합을 막는다.
     db.commit()
+    for outbox_id in pending_emails:
+        _enqueue_notification_email(outbox_id)
 
     result = {
         "status": "sent" if total_sent else "duplicate",

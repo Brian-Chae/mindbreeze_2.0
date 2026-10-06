@@ -259,7 +259,7 @@ def test_09_참여자별_분리저장_및_기록지_스코프(client):
 def test_10_수업전예상과_수업후_대비가_리포트에_연계(client):
     host = _register(client, "sdd096j@test.com")
     member = _register(client, "sdd096j-member@test.com", role="client")
-    cls, _pid = _start_one_on_one(client, host, member)
+    cls, pid = _start_one_on_one(client, host, member)
     _complete(client, cls, host)
 
     before = client.post(
@@ -280,7 +280,7 @@ def test_10_수업전예상과_수업후_대비가_리포트에_연계(client):
     assert state["after"]["arousal"] == 2 and state["after"]["valence"] == 5
 
     gen = client.post(
-        f"/api/v1/reports/generate/{cls['id']}", json={"type": "client"}, headers=host["h"]
+        f"/api/v1/reports/generate/{cls['id']}", json={"type": "client", "participant_id": pid}, headers=host["h"]
     )
     assert gen.status_code == 200, gen.text
     report = gen.json()
@@ -292,11 +292,11 @@ def test_10_수업전예상과_수업후_대비가_리포트에_연계(client):
 def test_11_체크인없는_리포트는_null(client):
     host = _register(client, "sdd096k@test.com")
     member = _register(client, "sdd096k-member@test.com", role="client")
-    cls, _pid = _start_one_on_one(client, host, member)
+    cls, pid = _start_one_on_one(client, host, member)
     _complete(client, cls, host)
 
     gen = client.post(
-        f"/api/v1/reports/generate/{cls['id']}", json={"type": "client"}, headers=host["h"]
+        f"/api/v1/reports/generate/{cls['id']}", json={"type": "client", "participant_id": pid}, headers=host["h"]
     )
     assert gen.status_code == 200, gen.text
     # 미입력은 None — 빈 dict/0 치환 금지

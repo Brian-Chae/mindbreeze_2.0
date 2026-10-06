@@ -249,7 +249,9 @@ def test_auto_approval_does_not_send_email(client, setup_email, monkeypatch):
         return report
 
     monkeypatch.setattr(report_service, "generate_report_inline", generated)
-    result = report_service.generate_report(str(session.id), str(session.host_id), "client", db)
+    result = report_service.generate_report(
+        str(session.id), str(session.host_id), "client", db, str(participant.id)
+    )
     assert result["status"] == "completed"
     enqueue.assert_not_called()
     sender.assert_not_called()

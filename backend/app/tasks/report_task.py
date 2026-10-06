@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
@@ -25,6 +26,13 @@ from app.services.normalization_score import sigmoid_score
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_aware_dt(dt):
+    """naive datetime 을 UTC 로 간주한다 — epoch(ms) 변환 시 로컬 오프셋 오염 방지."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
 
 # RPT-02: content.eeg.timeline 이 세션 길이에 선형으로 비대해져 장시간 수업에서 DB 행이
 # 커지는 것을 막는다. 포인트 수가 이 값을 넘으면 인접 윈도우를 균등 버킷으로 묶어
@@ -173,22 +181,46 @@ def _build_eeg_content(
     *,
     started_at=None,
     ended_at=None,
+    session_wide: bool = False,
 ) -> dict:
     """EEGFeatureWindow 시계열 → content.eeg 단일 계약 블록.
 
     윈도우가 없으면(미착용/미수집) status="not_measured" — 프론트에서 섹션 숨김.
     SDD-088: 오픈(대기실) 중 수집된 EEG는 표시용일 뿐 분석 대상이 아니므로,
     started_at ~ ended_at 구간의 윈도우만 집계한다(경계 미전달 시 전체 유지 — 하위 호환).
+    FUNC-06: participant_id 가 주어지면 해당 참가자만 집계한다(counselor 포함).
+    세션 전체 합산은 session_wide=True 로 명시한다.
+    FUNC-05(EEG-REPORT-BOUNDARY): 경계는 device_timestamp_ms(디바이스 측정 시각)를
+    우선 사용하고, 없으면 created_at(서버 저장 시각)으로 폴백한다 — 오프라인 큐/지연
+    업로드로 서버 저장이 세션 종료 이후가 된 윈도우가 누락되지 않게 한다.
     """
-    q = (
-        db.query(EEGFeatureWindow)
-        .filter(EEGFeatureWindow.session_id == session_id)
-        .filter(EEGFeatureWindow.participant_id == participant_id if participant_id else True)
-    )
+    q = db.query(EEGFeatureWindow).filter(EEGFeatureWindow.session_id == session_id)
+    if participant_id is not None and not session_wide:
+        q = q.filter(EEGFeatureWindow.participant_id == participant_id)
     if started_at is not None:
-        q = q.filter(EEGFeatureWindow.created_at >= started_at)
+        start_ms = int(_ensure_aware_dt(started_at).timestamp() * 1000)
+        q = q.filter(or_(
+            and_(
+                EEGFeatureWindow.device_timestamp_ms.isnot(None),
+                EEGFeatureWindow.device_timestamp_ms >= start_ms,
+            ),
+            and_(
+                EEGFeatureWindow.device_timestamp_ms.is_(None),
+                EEGFeatureWindow.created_at >= started_at,
+            ),
+        ))
     if ended_at is not None:
-        q = q.filter(EEGFeatureWindow.created_at <= ended_at)
+        end_ms = int(_ensure_aware_dt(ended_at).timestamp() * 1000)
+        q = q.filter(or_(
+            and_(
+                EEGFeatureWindow.device_timestamp_ms.isnot(None),
+                EEGFeatureWindow.device_timestamp_ms <= end_ms,
+            ),
+            and_(
+                EEGFeatureWindow.device_timestamp_ms.is_(None),
+                EEGFeatureWindow.created_at <= ended_at,
+            ),
+        ))
     windows = q.order_by(EEGFeatureWindow.window_index).all()
     # SDD-122: 유실(비정상)과 미측정(정상) 구분 — 밴드 연결/시도 여부로 판정.
     intent = _measurement_intent(session_id, participant_id, windows, db)
@@ -382,6 +414,42 @@ def _derive_data_credibility(eeg_block: dict) -> str | None:
     return _CREDIBILITY_BY_EEG_STATUS.get(status or "")
 
 
+def _maybe_enqueue_client_report_email(report: Report, db: DBSession) -> None:
+    """FUNC-04: 리포트 생성 완료 시 신청된 내담자에게 메일 발송을 예약한다.
+
+    대상은 client 리포트 + participant.report_email 이 설정된 경우에 한한다.
+    승인 전(pending_review)이면 deliver_report_email 이 상태 문자열만 반환하고
+    실발송하지 않으므로, 승인 후 재요청 없이도 발송 경로가 이어진다.
+    브로커 장애 등 예약 실패는 리포트 생성 자체를 막지 않는다(best-effort).
+    """
+    if report.type != "client" or not report.participant_id:
+        return
+    if report.status not in ("pending_review", "completed"):
+        return
+    participant = (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.id == report.participant_id,
+            SessionParticipant.session_id == report.session_id,
+        )
+        .first()
+    )
+    if participant is None or not participant.report_email:
+        return
+    if participant.report_email_sent_at is not None:
+        return
+    try:
+        from app.services.report_email_service import enqueue_report_email
+
+        enqueue_report_email(str(report.id))
+    except Exception:  # noqa: BLE001 — 브로커 장애 시에도 리포트 생성은 완료로 유지
+        logger.exception(
+            "[report_task] 내담자 리포트 메일 예약 실패: report_id=%s participant_id=%s",
+            report.id,
+            report.participant_id,
+        )
+
+
 def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     rid = UUID(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
@@ -413,12 +481,15 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
 
     try:
         # SDD-088: 대기실(open) 중 수집 EEG 제외 — started_at~ended_at 구간만 집계
+        # FUNC-06: counselor 도 report.participant_id 로 집계 대상을 좁힌다(전체 참여자
+        # 혼합 방지). 참여자 미지정 세션 단위 집계는 session_wide=True 로 명시한다.
         eeg_block = _build_eeg_content(
             session.id,
             db,
-            report.participant_id if report.type == "client" else None,
+            report.participant_id,
             started_at=session.started_at,
             ended_at=session.ended_at,
+            session_wide=report.participant_id is None,
         )
         if report.type == "client":
             # 그룹 세션의 공통 녹음 요약은 다른 참가자의 상담 내용을 포함할 수 있다.
@@ -482,6 +553,8 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     db.commit()
     db.refresh(report)
     _emit_report_progress(str(report.session_id), db)
+    # FUNC-04: 비동기 생성 완료 — 신청된 내담자(client) 리포트면 메일 발송을 예약한다.
+    _maybe_enqueue_client_report_email(report, db)
     return report
 
 

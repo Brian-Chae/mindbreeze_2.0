@@ -382,8 +382,12 @@ def test_08_동일_window_index_재전송_멱등_skip(client, monkeypatch):
     assert emits[1]["data"]["saved"] == 0  # 중복 → skip
 
 
-def test_09_REST_배치후_WS_동일인덱스_이중저장_방지(client, monkeypatch):
-    """REST 5초 배치로 0~2 저장 후, WS 로 초 1 재전송 → 멱등 skip(saved=0)."""
+def test_09_REST_배치후_WS_동일인덱스_재전송_과거값_발행안함(client, monkeypatch):
+    """REST 5초 배치로 0~2 저장 후, WS 로 초 1 재전송 → 멱등 skip(saved=0) + 과거값 미발행.
+
+    WS-FEATURE-DUP: 이미 더 새로운 창(초 2)이 저장돼 있으므로 재전송된 초 1 은 실시간
+    브로드캐스트하지 않는다(상담사 화면이 과거로 되돌아가지 않게).
+    """
     counselor = _register(client, "s024c09@test.com")
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "이중저장게스트")
@@ -401,5 +405,68 @@ def test_09_REST_배치후_WS_동일인덱스_이중저장_방지(client, monkey
         {"session_id": cls["id"], "participant_id": pid, "feature": _feature(1, relaxation_index=0.9, signal_quality=0.9)},
     )
 
+    # 중복 재전송(saved=0)이라 저장은 skip, 더 새로운 초 2 가 있으므로 eeg_feature 미발행
+    assert fake.eeg_emits() == []
+    ack = fake.feature_ack_emits()
+    assert len(ack) == 1 and ack[0]["data"]["saved"] == 0
+
+
+def test_10_WS_뒤늦은_과거오프셋_재전송_발행안함(client, monkeypatch):
+    """WS-FEATURE-DUP: 과거 오프셋이 뒤늦게 도착해도(신규 저장) 최신보다 과거면 발행 안 함."""
+    counselor = _register(client, "s024c10@test.com")
+    cls = _create_group_class(client, counselor["h"])
+    pid = _join_guest(client, cls["access_code"], "뒤늦은게스트")
+    fake = _wire(monkeypatch)
+
+    fake.call("connect", "sidG", {}, {})
+    # 최신 초 5 먼저 저장 → 브로드캐스트됨
+    fake.call(
+        "feature", "sidG",
+        {"session_id": cls["id"], "participant_id": pid, "feature": _feature(5, relaxation_index=0.7, signal_quality=0.9)},
+    )
+    # 뒤늦게 도착한 과거 초 2(신규 저장이지만 더 새로운 초 5 가 있음) → 발행 생략
+    fake.call(
+        "feature", "sidG",
+        {"session_id": cls["id"], "participant_id": pid, "feature": _feature(2, relaxation_index=0.1, signal_quality=0.9)},
+    )
+
     emits = fake.eeg_emits()
-    assert len(emits) == 1 and emits[0]["data"]["saved"] == 0
+    assert len(emits) == 1
+    assert emits[0]["data"]["feature"]["second_offset"] == 5
+    # 과거값(초 2)은 어떤 eeg_feature 로도 나가지 않는다
+    assert all(e["data"]["feature"]["second_offset"] != 2 for e in emits)
+
+
+def test_11_재join_다른세션_이전룸_이탈(client, monkeypatch):
+    """WS-JOIN-STALE-ROOM: 같은 소켓이 다른 세션으로 join 하면 이전 세션 룸에서 이탈한다."""
+    counselor = _register(client, "s024c11@test.com")
+    cls_a = _create_group_class(client, counselor["h"], title="A반")
+    cls_b = _create_group_class(client, counselor["h"], title="B반")
+    fake = _wire(monkeypatch)
+
+    fake.call("connect", "sidH", {}, {"token": counselor["token"]})
+    fake.call("join", "sidH", {"session_id": cls_a["id"]})
+    assert f"session:{cls_a['id']}" in fake.rooms[("/session-live", "sidH")]
+
+    fake.call("join", "sidH", {"session_id": cls_b["id"]})
+    rooms = fake.rooms[("/session-live", "sidH")]
+    assert f"session:{cls_b['id']}" in rooms
+    assert f"session:{cls_b['id']}:all" in rooms
+    # 이전 세션 룸(호스트 + 공용)은 남아 있지 않다
+    assert f"session:{cls_a['id']}" not in rooms
+    assert f"session:{cls_a['id']}:all" not in rooms
+
+
+def test_12_같은세션_재join_룸_유지(client, monkeypatch):
+    """같은 세션 재-join 은 이전 룸 이탈 로직을 타지 않고 룸을 그대로 유지한다."""
+    counselor = _register(client, "s024c12@test.com")
+    cls = _create_group_class(client, counselor["h"])
+    fake = _wire(monkeypatch)
+
+    fake.call("connect", "sidH", {}, {"token": counselor["token"]})
+    fake.call("join", "sidH", {"session_id": cls["id"]})
+    fake.call("join", "sidH", {"session_id": cls["id"]})
+
+    rooms = fake.rooms[("/session-live", "sidH")]
+    assert f"session:{cls['id']}" in rooms
+    assert f"session:{cls['id']}:all" in rooms

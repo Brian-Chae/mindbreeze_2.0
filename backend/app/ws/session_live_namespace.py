@@ -405,6 +405,10 @@ def register_session_live_namespace(sio):
         participant_id = data.get("participant_id")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
+        # WS-JOIN-STALE-ROOM: 같은 소켓이 이전에 입장했던 세션 컨텍스트를 미리 보관한다.
+        # (아래 save_session 이 덮어쓰기 전에 읽어야 이전 room 을 이탈할 수 있다.)
+        prev_session_id = (session or {}).get("session_id")
+        prev_participant_id = (session or {}).get("participant_id")
 
         resolved = await asyncio.to_thread(
             _resolve_join, session_id, current_user_id, participant_id
@@ -420,6 +424,20 @@ def register_session_live_namespace(sio):
         role = resolved["role"]
         pid = resolved["participant_id"]
         snapshot = _jsonify(resolved["snapshot"])
+
+        # WS-JOIN-STALE-ROOM: 같은 소켓이 다른 세션으로 재-join 하면 이전 세션 룸에 그대로 남아
+        # 이전 세션 브로드캐스트(EEG·상태·오디오)를 계속 수신한다. 새 룸 입장 전에 이전 룸을
+        # 퇴장시킨다(멱등 — 없으면 무시). 같은 세션 재-join 은 유지한다.
+        if prev_session_id and str(prev_session_id) != str(session_id):
+            await sio.leave_room(sid, _room_host(prev_session_id), namespace=_NAMESPACE)
+            await sio.leave_room(sid, _room_all(prev_session_id), namespace=_NAMESPACE)
+            if prev_participant_id:
+                await sio.leave_room(
+                    sid, _room_self(prev_session_id, prev_participant_id), namespace=_NAMESPACE
+                )
+            logger.info(
+                "[WS /session-live] sid=%s left stale session=%s", sid, prev_session_id
+            )
 
         # leave/feature 판정에 쓰도록 세션 컨텍스트 갱신
         await sio.save_session(
@@ -515,7 +533,7 @@ def register_session_live_namespace(sio):
         current_user_id = (session or {}).get("user_id")
 
         try:
-            saved, resolved_participant_id, feature_out = await asyncio.to_thread(
+            saved, resolved_participant_id, feature_out, is_latest = await asyncio.to_thread(
                 _store_feature, session_id, participant_id, current_user_id, feature
             )
         except Exception:
@@ -553,14 +571,18 @@ def register_session_live_namespace(sio):
 
         # SDD-026: 전체 참가자 EEG 는 호스트 전체 수신 룸으로만 브로드캐스트한다.
         # 게스트는 이 룸에 없으므로 타 참가자 EEG 가 노출되지 않는다(게스트 간 비노출).
-        await broadcast_session_eeg(
-            session_id,
-            {
-                "participant_id": resolved_participant_id,
-                "feature": feature_out,
-                "saved": saved,
-            },
-        )
+        # WS-FEATURE-DUP: 더 새로운 창이 이미 있으면(is_latest=False) 발행을 생략한다.
+        # 재전송·뒤늦은 오프라인 배치가 과거 값으로 화면을 되돌리지 않게 한다
+        # (REST ingest_features 의 newer 가드와 동일 규칙).
+        if is_latest:
+            await broadcast_session_eeg(
+                session_id,
+                {
+                    "participant_id": resolved_participant_id,
+                    "feature": feature_out,
+                    "saved": saved,
+                },
+            )
 
         # 개선 8: 그룹 익명 집계(적응형 페이싱) — 주기(AGGREGATE_INTERVAL_SEC)마다 한 번만 계산해
         # 상담사 룸에 브로드캐스트한다. 개인 점수는 payload 에 담지 않는다.
@@ -828,7 +850,10 @@ def _is_known_audio_track(track_id) -> bool:
 def _store_feature(session_id, participant_id, current_user_id, feature):
     """단일 EEG feature 를 검증·저장한다(SDD-023 ingestion 로직 재사용).
 
-    반환: (saved_count, resolved_participant_id(str), normalized_feature(dict))
+    반환: (saved_count, resolved_participant_id(str), normalized_feature(dict), is_latest(bool))
+
+    is_latest 는 이 feature 보다 더 새로운 윈도우가 이미 저장돼 있지 않은지(WS-FEATURE-DUP).
+    False 면 뒤늦게 도착한 과거 값이므로 실시간 브로드캐스트를 생략해 표시가 되돌아가지 않게 한다.
     """
     from app.models.session import Session
     from app.schemas.session import EEGFeatureItem
@@ -843,8 +868,9 @@ def _store_feature(session_id, participant_id, current_user_id, feature):
             raise ValueError("세션을 찾을 수 없습니다")
         participant = session_service.resolve_upload_participant(sid, participant_id, current_user_id, db)
         saved = session_service.persist_feature_windows(sid, participant, [item], db)
+        is_latest = not session_service._has_newer_feature(sid, participant.id, item, db)
         # 공통 입력 계약 전체를 전송: 마음 지표 + BPM·호흡수·HRV, 미측정은 null.
-        return saved, str(participant.id), item.model_dump()
+        return saved, str(participant.id), item.model_dump(), is_latest
     finally:
         db.close()
 

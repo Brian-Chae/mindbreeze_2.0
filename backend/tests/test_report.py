@@ -60,6 +60,24 @@ def _run_pipeline(client, host, sid: str) -> None:
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
 
 
+def _add_participant(client, sid: str) -> str:
+    """FUNC-02: client 리포트는 participant_id 가 필수 — 세션에 게스트 참가자를 직접 추가한다."""
+    from uuid import UUID
+
+    from app.core.database import get_db
+    from app.main import app
+    from app.models.session import SessionParticipant
+
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        participant = SessionParticipant(session_id=UUID(sid), guest_name="내담자")
+        db.add(participant)
+        db.commit()
+        return str(participant.id)
+    finally:
+        db.close()
+
+
 def test_report_01_생성_상담사용(client):
     host = _register(client, "rep01@test.com")
     sid = _create_session(client, host)
@@ -82,9 +100,10 @@ def test_report_02_생성_내담자용(client):
     host = _register(client, "rep02@test.com")
     sid = _create_session(client, host)
     _run_pipeline(client, host, sid)
+    pid = _add_participant(client, sid)
     res = client.post(
         f"/api/v1/reports/generate/{sid}",
-        json={"type": "client"},
+        json={"type": "client", "participant_id": pid},
         headers=host["auth"],
     )
     assert res.status_code == 200, res.text
@@ -183,7 +202,12 @@ def test_report_06_수정_상담사전용(client):
 def test_report_07_승인_알림이벤트(client):
     host = _register(client, "rep07@test.com")
     sid = _create_session(client, host)
-    gen = client.post(f"/api/v1/reports/generate/{sid}", json={"type": "client"}, headers=host["auth"]).json()
+    pid = _add_participant(client, sid)
+    gen = client.post(
+        f"/api/v1/reports/generate/{sid}",
+        json={"type": "client", "participant_id": pid},
+        headers=host["auth"],
+    ).json()
     rid = gen["id"]
     res = client.post(f"/api/v1/reports/{rid}/approve", json={}, headers=host["auth"])
     assert res.status_code == 200, res.text

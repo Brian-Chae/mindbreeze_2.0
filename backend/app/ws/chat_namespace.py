@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 # ── 유저 ID → sid 매핑 (알림 브로드캐스트용) ──
 _user_sids: dict[str, str] = {}  # user_id → latest sid
+# 멀티탭: sid → user_id 매핑. 한 사용자가 탭을 여러 개 열어도 각 소켓 sid 로 본인을
+# 역추적할 수 있어야 한다. latest sid 만 남기면 먼저 연 탭의 sid 역추적이 불가해
+# 방 입장/메시지 전송이 차단된다(탭 2개 이상).
+_sid_users: dict[str, str] = {}
 
 
 @sio.event(namespace="/chat")
@@ -30,6 +34,7 @@ async def connect(sid, environ, auth):
             room = f"user:{user_id}"
             await sio.enter_room(sid, room, namespace="/chat")
             _user_sids[user_id] = sid
+            _sid_users[sid] = user_id
             logger.info(f"[WS] user {user_id} joined notification room (sid={sid})")
     except Exception:
         pass  # 토큰 만료/위조여도 채팅 연결은 허용
@@ -39,7 +44,9 @@ async def connect(sid, environ, auth):
 
 @sio.event(namespace="/chat")
 async def disconnect(sid):
-    # sid로 등록된 user_id 정리
+    # 멀티탭: 이 소켓의 sid→user 매핑을 먼저 정리한다(다른 탭 sid 매핑은 유지).
+    _sid_users.pop(sid, None)
+    # sid로 등록된 user_id 정리 (latest sid 일 때만 제거 — 다른 탭이 남아 있으면 유지)
     for uid, s in list(_user_sids.items()):
         if s == sid:
             del _user_sids[uid]
@@ -63,12 +70,12 @@ async def _enter_room(sid, data):
 
 
 async def _is_room_member(sid: str, room_id: str) -> bool:
-    """sid → user_id 역추적 후, 해당 room의 멤버인지 확인. 미인증·비멤버면 False."""
-    user_id = None
-    for uid, s in _user_sids.items():
-        if s == sid:
-            user_id = uid
-            break
+    """sid → user_id 역추적 후, 해당 room의 멤버인지 확인. 미인증·비멤버면 False.
+
+    멀티탭 대응: latest sid 만 담는 `_user_sids` 대신 sid→user_id 직접 매핑(`_sid_users`)으로
+    역추적한다. 탭을 2개 이상 열어도 모든 sid 가 정확히 본인 user_id 로 해석된다.
+    """
+    user_id = _sid_users.get(sid)
     if user_id is None:
         return False
     from app.core.database import SessionLocal

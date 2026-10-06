@@ -323,8 +323,12 @@ def test_10_초대회원_동의미완료_업로드_403(client, monkeypatch):
 def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     counselor = _register(client, "s026c11@test.com")
     cls = _create_group_class(client, counselor["h"], max_participants=1)
-    # 정원 1 을 게스트로 채운다(active=1)
-    _join_guest(client, cls["access_code"], "정원게스트")
+    # 정원 1 을 회원으로 채운다(active=1)
+    filler = _register(client, "s026m11fill@test.com", role="client")
+    jf = client.post(
+        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=filler["h"]
+    )
+    assert jf.status_code == 200, jf.text
     # 회원 초대 → 정원 초과이므로 대기열 편입(is_waitlisted=True)
     m1 = _register(client, "s026m11a@test.com", role="client")
     client.post(f"/api/v1/sessions/{cls['id']}/invite", json={"user_id": m1["id"]}, headers=counselor["h"])
@@ -336,7 +340,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     )
     assert up.status_code == 403
 
-    # SDD-126: 대기열 회원이 코드로 자발 입장 → is_waitlisted 해제 → 업로드 허용
+    # FUNC-03: 정원이 찬 상태에서 코드로 자발 입장해도 대기열 유지 → 여전히 차단
     j = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m1["h"])
     assert j.status_code == 200
     up2 = client.post(
@@ -344,7 +348,19 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=m1["h"],
     )
-    assert up2.status_code == 200
+    assert up2.status_code == 403
+
+    # 정원 여유가 생기면(선행 회원 제거 → 대기열 자동 승격) 업로드 허용
+    rem = client.delete(
+        f"/api/v1/sessions/{cls['id']}/participants/{filler['id']}", headers=counselor["h"]
+    )
+    assert rem.status_code == 200, rem.text
+    up3 = client.post(
+        f"/api/v1/sessions/{cls['id']}/features",
+        json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
+        headers=m1["h"],
+    )
+    assert up3.status_code == 200, up3.text
 
 
 # ---------------------------------------------------------------------------

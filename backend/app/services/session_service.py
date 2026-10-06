@@ -1052,6 +1052,17 @@ def _next_waitlist_position(s: Session) -> int:
     return (max(positions) + 1) if positions else 1
 
 
+def _has_capacity(s: Session) -> bool:
+    """FUNC-03: active(대기열 제외) 인원이 정원(max_participants) 미만인지 판정한다.
+
+    정원 미설정(0/None)은 제한 없음으로 본다.
+    """
+    if not s.max_participants:
+        return True
+    active = sum(1 for p in (s.participants or []) if not p.is_waitlisted)
+    return active < s.max_participants
+
+
 def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
     """정원에 여유가 생기면 대기열 1순위를 자동 승격. 승격된 사용자 ID를 반환한다."""
     active = [p for p in (s.participants or []) if not p.is_waitlisted]
@@ -1372,12 +1383,21 @@ def join_session_by_code(
             # SDD-026: 코드로 자발 참여 = EEG 수집 opt-in 으로 기록(consent_eeg=True).
             # 호스트가 초대(invite_participant)한 참가자는 consent_eeg=False 로 남아, 본인이
             # 참여 동의를 거치기 전에는 업로드가 차단된다.
-            existing = SessionParticipant(session_id=s.id, user_id=uid, consent_eeg=True)
+            # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
+            has_room = _has_capacity(s)
+            existing = SessionParticipant(
+                session_id=s.id,
+                user_id=uid,
+                consent_eeg=True,
+                is_waitlisted=not has_room,
+                waitlist_position=_next_waitlist_position(s) if not has_room else None,
+            )
             db.add(existing)
         else:
             existing.consent_eeg = True
             # SDD-126: 대기열 회원이 코드로 자발 입장 시 is_waitlisted 해제(관제·좌석·인원 집계 반영)
-            if existing.is_waitlisted:
+            # FUNC-03: 정원 여유가 있을 때만 해제한다(정원 초과 입장 방지).
+            if existing.is_waitlisted and _has_capacity(s):
                 existing.is_waitlisted = False
                 existing.waitlist_position = None
         db.commit()
@@ -1409,21 +1429,27 @@ def join_session_by_code(
 
     if participant is None:
         # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
+        # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
+        has_room = _has_capacity(s)
         participant = SessionParticipant(
             session_id=s.id, user_id=None, guest_name=name[:100],
             gender=gender, birth_date=birth_date, consent_eeg=True,
+            is_waitlisted=not has_room,
+            waitlist_position=_next_waitlist_position(s) if not has_room else None,
         )
         db.add(participant)
     else:
-        # 기존 행 재사용 — 이름·성별·생년월일 갱신 + 대기열 해제
+        # 기존 행 재사용 — 이름·성별·생년월일 갱신 + 대기열 해제(정원 여유 시)
         participant.guest_name = name[:100]
         if gender is not None:
             participant.gender = gender
         if birth_date is not None:
             participant.birth_date = birth_date
         participant.consent_eeg = True
-        participant.is_waitlisted = False
-        participant.waitlist_position = None
+        # FUNC-03: 정원 여유가 있을 때만 대기열에서 해제한다.
+        if participant.is_waitlisted and _has_capacity(s):
+            participant.is_waitlisted = False
+            participant.waitlist_position = None
 
     db.commit()
     db.refresh(s)
@@ -2417,6 +2443,33 @@ def _notify_device_status(sid: UUID, participant: SessionParticipant) -> None:
         pass
 
 
+def _has_newer_feature(
+    sid: UUID,
+    participant_id,
+    latest: EEGFeatureItem,
+    db: DBSession,
+) -> bool:
+    """주어진 feature(방금 저장했거나 재전송된 값)보다 더 새로운 EEGFeatureWindow 가 이미 있는가.
+
+    REST 5초 배치와 WS 1초 실시간이 공유하는 '과거값 되돌림 방지' 가드.
+    더 새로운 창이 이미 저장돼 있으면 실시간 발행을 생략해, 뒤늦게 도착한 과거 feature 가
+    상담사 화면을 과거 값으로 되돌리지 않게 한다.
+    """
+    newer = db.query(EEGFeatureWindow.id).filter(
+        EEGFeatureWindow.session_id == sid,
+        EEGFeatureWindow.participant_id == participant_id,
+    )
+    if latest.timestamp is not None:
+        newer = newer.filter(EEGFeatureWindow.device_timestamp_ms > latest.timestamp)
+    else:
+        # 레거시 입력은 실행 세그먼트 내 순서만 비교할 수 있다.
+        newer = newer.filter(
+            EEGFeatureWindow.play_group_id == latest.play_group_id,
+            EEGFeatureWindow.window_index > latest.second_offset,
+        )
+    return newer.first() is not None
+
+
 def ingest_features(
     session_id: str,
     payload,
@@ -2447,19 +2500,9 @@ def ingest_features(
             saved_features,
             key=lambda feature: (feature.timestamp is not None, feature.timestamp or 0, feature.second_offset),
         )
-        newer = db.query(EEGFeatureWindow.id).filter(
-            EEGFeatureWindow.session_id == sid,
-            EEGFeatureWindow.participant_id == participant.id,
-        )
-        if latest.timestamp is not None:
-            newer = newer.filter(EEGFeatureWindow.device_timestamp_ms > latest.timestamp)
-        else:
-            # 레거시 입력은 실행 세그먼트 내 순서만 비교할 수 있다.
-            newer = newer.filter(
-                EEGFeatureWindow.play_group_id == latest.play_group_id,
-                EEGFeatureWindow.window_index > latest.second_offset,
-            )
-        if newer.first() is None:
+        # 더 새로운 창이 이미 있으면(WS가 앞서 저장) 발행을 생략 — 과거 배치로 실시간 표시가
+        # 되돌아가지 않게 한다(WS on_feature 와 동일한 newer 가드).
+        if not _has_newer_feature(sid, participant.id, latest, db):
             live.notify_session_eeg(
                 str(sid),
                 {

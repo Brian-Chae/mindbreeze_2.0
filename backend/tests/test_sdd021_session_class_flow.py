@@ -282,7 +282,7 @@ def test_14_게스트_재참여_멱등(client):
     assert second.json()["participant_id"] == pid
 
 
-def test_15_대기열_회원_코드입장_해제(client):
+def test_15_대기열_회원_코드입장_정원여유시에만_해제(client):
     counselor = _register(client, "s021c15@test.com")
     members = [_register(client, f"s021m15_{i}@test.com", role="client") for i in range(3)]
     cls = _create_group_class(client, counselor["h"], max_participants=2)
@@ -305,7 +305,7 @@ def test_15_대기열_회원_코드입장_해제(client):
     assert len(waitlisted) == 1
     assert waitlisted[0]["user_id"] == members[2]["id"]
 
-    # 대기열 회원이 코드로 자발 입장 → is_waitlisted 해제
+    # FUNC-03: 정원이 찬 상태에서 코드로 자발 입장해도 대기열 유지(초과 입장 방지)
     j = client.post(
         f"/api/v1/sessions/by-code/{cls['access_code']}/join",
         json={},
@@ -316,8 +316,44 @@ def test_15_대기열_회원_코드입장_해제(client):
     detail = client.get(f"/api/v1/sessions/{cls['id']}", headers=counselor["h"]).json()
     for p in detail["participants"]:
         if p["user_id"] == members[2]["id"]:
-            assert p["is_waitlisted"] is False
-            assert p["waitlist_position"] is None
+            assert p["is_waitlisted"] is True
+            assert p["waitlist_position"] == 1
             break
     else:
         raise AssertionError("대기열 회원 참여자 행을 찾지 못함")
+
+
+def test_15b_대기열_회원_코드입장_정원여유시_해제(client):
+    """FUNC-03: 정원 여유가 있으면 코드 입장 시 대기열에서 해제된다."""
+    from uuid import UUID
+
+    from app.core.database import get_db
+    from app.main import app
+    from app.models.session import SessionParticipant
+
+    counselor = _register(client, "s021c15b@test.com")
+    member = _register(client, "s021m15b@test.com", role="client")
+    cls = _create_group_class(client, counselor["h"], max_participants=5)
+
+    # 정원 여유가 있는데도 대기열로 시딩된 참가자(경계 상황을 직접 만든다)
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        db.add(SessionParticipant(
+            session_id=UUID(cls["id"]), user_id=UUID(member["id"]),
+            is_waitlisted=True, waitlist_position=1,
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    j = client.post(
+        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
+        json={},
+        headers=member["h"],
+    )
+    assert j.status_code == 200, j.text
+
+    detail = client.get(f"/api/v1/sessions/{cls['id']}", headers=counselor["h"]).json()
+    row = next(p for p in detail["participants"] if p["user_id"] == member["id"])
+    assert row["is_waitlisted"] is False
+    assert row["waitlist_position"] is None

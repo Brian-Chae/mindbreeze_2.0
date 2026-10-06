@@ -65,7 +65,7 @@ def test_rollup_and_report_body_statistics(client):
     assert rollup['buckets'][0]['metrics']['respiratory_rate'] == 15
     assert rollup['overall']['metrics']['respiratory_rate'] == 20
     response = client.post(f"/api/v1/reports/generate/{session['id']}",
-                           json={'type': 'client'}, headers=host['h'])
+                           json={'type': 'client', 'participant_id': pid}, headers=host['h'])
     assert response.status_code == 200, response.text
     report = response.json()
     fetched = client.get(f"/api/v1/reports/{report['id']}", headers=host['h']).json()
@@ -84,7 +84,7 @@ def test_unmeasured_body_summaries_stay_null(client, with_windows):
     if with_windows:
         upload(client, session, pid, [{'second_offset': 0}])
     response = client.post(f"/api/v1/reports/generate/{session['id']}",
-                           json={'type': 'client'}, headers=host['h'])
+                           json={'type': 'client', 'participant_id': pid}, headers=host['h'])
     assert response.status_code == 200, response.text
     for key in NEW_SUMMARY:
         assert response.json()[key] is None

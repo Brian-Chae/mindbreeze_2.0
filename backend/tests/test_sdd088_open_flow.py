@@ -217,21 +217,28 @@ def test_16_리포트_EEG는_started_ended_구간만_집계(client):
     db = _db()
     try:
         s = db.get(SessionModel, UUID(cls["id"]))
-        started_at = s.started_at
-        ended_at = s.ended_at
-        # 대기 중(시작 전) 윈도우 3건 + 진행 중 윈도우 5건을 created_at 으로 구분해 삽입
-        before = started_at - timedelta(seconds=30)
-        during = started_at + (ended_at - started_at) / 2
+        # FUNC-05(EEG-REPORT-BOUNDARY): 세션 경계를 10초 창으로 고정하고
+        # device_timestamp_ms(디바이스 측정 시각) 기준으로 구간을 검증한다.
+        base = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        s.started_at = base
+        s.ended_at = base + timedelta(seconds=10)
+        start_ms = int(base.timestamp() * 1000)
+        # (a) 시작 전 윈도우 3건 — device_timestamp_ms 기준으로도 경계 밖
         for i in range(3):
             db.add(EEGFeatureWindow(
                 session_id=s.id, participant_id=pid, window_index=i,
-                quality="valid", relaxation_index=0.9, created_at=before,
+                quality="valid", relaxation_index=0.9,
+                device_timestamp_ms=start_ms - (i + 1) * 1000.0,
+                created_at=base - timedelta(seconds=30),
             ))
+        # (b) 세션 중 윈도우 5건 — 지연 업로드로 created_at 은 종료 이후지만
+        #     device_timestamp_ms 는 세션 구간 내 → device 기준으로만 집계돼야 한다.
         for i in range(5):
             db.add(EEGFeatureWindow(
                 session_id=s.id, participant_id=pid, window_index=100 + i,
-                device_timestamp_ms=1000.0 + i * 1000.0,
-                quality="valid", relaxation_index=0.5, created_at=during,
+                device_timestamp_ms=start_ms + i * 1000.0,
+                quality="valid", relaxation_index=0.5,
+                created_at=base + timedelta(seconds=60),
             ))
         db.commit()
     finally:
@@ -245,7 +252,7 @@ def test_16_리포트_EEG는_started_ended_구간만_집계(client):
         block = _build_eeg_content(
             s.id, db, pid, started_at=s.started_at, ended_at=s.ended_at
         )
-        # 진행 중 5건만 집계 — 타임라인 t 는 device_timestamp_ms 기준 상대 초 (SDD-114)
+        # 세션 중 5건만 집계 — created_at(지연 업로드) 아니라 device_timestamp_ms 기준 (FUNC-05)
         ts = [p["t"] for p in block["timeline"]]
         assert ts == [0.0, 1.0, 2.0, 3.0, 4.0]
         # 경계 미전달(레거시) 시 전체 8건 유지 — 하위 호환

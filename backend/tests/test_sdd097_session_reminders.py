@@ -394,3 +394,48 @@ def test_update_시점제거시_제거된_시점만_revoke(client, monkeypatch):
         )
     assert res.status_code == 200, res.text
     assert calls == [[1440]]
+
+
+def test_FUNC05_이메일_outbox는_커밋후_큐적재(client):
+    """FUNC-05: 이메일 outbox 가 commit 된 뒤에 apply_async 가 호출돼야 한다.
+
+    워커가 커밋 전에 큐를 소비해 outbox 행을 찾지 못하는 메일 유실을 막는다.
+    워커 관점(새 DB 세션)에서 행이 조회되는지로 순서를 검증한다.
+    """
+    import uuid
+
+    from app.models.notification_outbox import NotificationOutbox
+
+    host = _register(client, "rem-func05@test.com")
+    member = _register(client, "rem-func05-mem@test.com", role="client")
+    created = _create_scheduled_class(
+        client, host["h"], [member["id"]], offsets=[60], minutes_from_now=30
+    )
+
+    observed: dict = {}
+
+    def _fake_apply_async(args=None, **kwargs):
+        outbox_id = (args or [None])[0]
+        worker_db = _db()
+        try:
+            row = (
+                worker_db.query(NotificationOutbox)
+                .filter(NotificationOutbox.id == uuid.UUID(str(outbox_id)),
+                        NotificationOutbox.channel == "email")
+                .first()
+            )
+            observed["found"] = row is not None
+        finally:
+            worker_db.close()
+
+    with patch(
+        "app.tasks.report_email_task.notification_email_task.apply_async", _fake_apply_async
+    ):
+        db = _db()
+        try:
+            result = reminder_service.run_reminder(created["id"], 60, db)
+        finally:
+            db.close()
+
+    assert result["status"] == "sent"
+    assert observed.get("found") is True

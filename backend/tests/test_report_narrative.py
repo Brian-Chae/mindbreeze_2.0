@@ -296,7 +296,7 @@ def test_report_eeg_additive_contract(monkeypatch):
     windows = [EEGFeatureWindow(window_index=i, quality="valid", heart_rate=80-i/10,
                                focus_index=1, relaxation_index=1) for i in range(80)]
     db = Mock()
-    db.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = windows
+    db.query.return_value.filter.return_value.order_by.return_value.all.return_value = windows
     db.query.return_value.filter.return_value.first.return_value = None
     narrative = dict(journey="여정", body="몸", mind="마음", closing="마무리")
     call = Mock(return_value=narrative)
@@ -306,7 +306,7 @@ def test_report_eeg_additive_contract(monkeypatch):
     assert {"score", "metrics", "timeline", "status"} <= block.keys()
     assert len(block["timeline"]) == 80
     assert call.call_args.args[0]["body"]["heart_rate"]["direction"] == "down"
-    db.query.return_value.filter.return_value.filter.return_value.order_by.return_value.all.return_value = []
+    db.query.return_value.filter.return_value.order_by.return_value.all.return_value = []
     call.reset_mock()
     assert report_task._build_eeg_content(uuid4(), db) == {"status": "not_measured"}
     call.assert_not_called()

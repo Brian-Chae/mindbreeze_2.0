@@ -233,33 +233,59 @@ def _get_or_create_report(db: DBSession, *, filters: dict, defaults: dict) -> Re
         return existing
 
 
-def generate_report(session_id: str, host_id: str, report_type: str, db: DBSession) -> dict:
+def generate_report(
+    session_id: str,
+    host_id: str,
+    report_type: str,
+    db: DBSession,
+    participant_id: str | None = None,
+) -> dict:
     if report_type not in ("counselor", "client"):
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
     s = _get_session_as_host(session_id, host_id, db)
 
-    owner_participant_id = None
-    first_participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == s.id)
-        .first()
-    )
-    if report_type == "counselor":
+    if report_type == "client":
+        # FUNC-02: client 리포트는 대상 participant 를 명시해야 한다.
+        # 미지정 시 first_participant 로 임의 오귀속되는 것을 막는다.
+        if not participant_id:
+            raise HTTPException(
+                status_code=400, detail="client 리포트는 participant_id가 필요합니다"
+            )
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(participant_id),
+                SessionParticipant.session_id == s.id,
+            )
+            .first()
+        )
+        if participant is None:
+            raise HTTPException(status_code=404, detail="해당 세션의 참가자를 찾을 수 없습니다")
+        # SDD-027: 게스트 내담자는 user_id 가 없다(None) — participant_id 로 소유를 보완한다.
+        owner_uuid = participant.user_id
+        owner_participant_id = participant.id
+        # FUNC-02: filters 에 participant_id 를 포함해 다른 참가자의 리포트를 재사용하지 않는다.
+        filters = {
+            "session_id": s.id,
+            "type": report_type,
+            "participant_id": participant.id,
+        }
+    else:
         owner_uuid = s.host_id
+        owner_participant_id = None
+        first_participant = (
+            db.query(SessionParticipant)
+            .filter(SessionParticipant.session_id == s.id)
+            .first()
+        )
         # SDD-065: counselor 리포트도 참여자 정보(이름/성별/생년월일/회원·비회원) 표시를 위해 participant_id 설정
         if first_participant:
             owner_participant_id = first_participant.id
-    else:
-        if first_participant:
-            # SDD-027: 게스트 내담자는 user_id 가 없다(None) — participant_id 로 소유를 보완한다.
-            owner_uuid = first_participant.user_id
-            owner_participant_id = first_participant.id
-        else:
-            owner_uuid = s.host_id
+        filters = {"session_id": s.id, "type": report_type}
 
     report = _get_or_create_report(
         db,
-        filters={"session_id": s.id, "type": report_type},
+        filters=filters,
         defaults={
             "session_id": s.id,
             "user_id": owner_uuid,

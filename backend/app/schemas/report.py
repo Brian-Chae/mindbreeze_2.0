@@ -10,6 +10,8 @@ from app.schemas.eeg import HRVMotionSummary
 
 class ReportCreate(BaseModel):
     type: str = "counselor"  # counselor | client
+    # FUNC-02: client 리포트는 대상 참가자를 명시한다(미지정 시 400).
+    participant_id: str | None = None
 
 
 class ReportUpdate(BaseModel):

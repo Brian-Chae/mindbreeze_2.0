@@ -398,7 +398,7 @@ def test_17_게스트_client_report_nullable_user_id(client):
     cls = _create_group_class(client, host["h"])
     pid = _join_guest(client, cls["access_code"], "게스트내담자")
 
-    res = client.post(f"/api/v1/reports/generate/{cls['id']}", json={"type": "client"}, headers=host["h"])
+    res = client.post(f"/api/v1/reports/generate/{cls['id']}", json={"type": "client", "participant_id": pid}, headers=host["h"])
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["user_id"] is None
