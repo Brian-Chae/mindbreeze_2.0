@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     # STT-5TH-02: Whisper 폴백용 OpenAI 키 — os.environ 직접 조회 대신 설정으로 관리한다.
     openai_api_key: str = ""
 
+    # GEN-5TH-10: AI 모델명은 하드코딩하지 않고 설정으로 관리한다(모델 교체·롤백 시 재배포 불필요).
+    #   - gemini_model: STT·요약·상담사 코멘트 초안에 쓰는 Gemini 모델
+    #   - whisper_model: Gemini 실패 시 폴백 전사에 쓰는 Whisper 모델
+    gemini_model: str = "gemini-2.5-flash"
+    whisper_model: str = "whisper-1"
+
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"
     livekit_api_key: str = "devkey"

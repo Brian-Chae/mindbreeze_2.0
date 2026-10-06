@@ -66,7 +66,15 @@ def generate_presigned_put(
         )
         return client.generate_presigned_url(
             "put_object",
-            Params={"Bucket": settings.s3_bucket, "Key": object_key, "ContentType": content_type},
+            Params={
+                "Bucket": settings.s3_bucket,
+                "Key": object_key,
+                "ContentType": content_type,
+                # EEG-STO-01: raw EEG(민감 데이터) presigned PUT 에도 서버측 암호화를 강제한다.
+                # 이 값을 서명 파라미터에 포함하면 클라이언트가 같은 헤더를 보내야 PUT 이 성사되어,
+                # 평문 저장이 원천 차단된다(upload_bytes/upload_file 의 SSE 와 동일 정책).
+                "ServerSideEncryption": "AES256",
+            },
             ExpiresIn=expires_in,
         )
     except Exception as exc:  # noqa: BLE001

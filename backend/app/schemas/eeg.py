@@ -2,6 +2,10 @@
 
 from pydantic import BaseModel, Field
 
+# EEG-QRY-03: presign/ack 요청 1건이 담을 수 있는 raw 청크 최대 개수.
+# 상한이 없으면 한 요청이 무한정 큰 목록을 보내 서버가 청크 수에 비례해 조회·서명을 수행한다.
+_RAW_CHUNK_BATCH_MAX = 500
+
 
 class HRVMotionFeatures(BaseModel):
     """PPG HRV·ACC 움직임 입력 계약. 미수신·산출 불가는 null 보존."""
@@ -94,7 +98,8 @@ class RawChunkMeta(BaseModel):
 class RawPresignRequest(BaseModel):
     participant_id: str | None = None
     play_group_id: str | None = Field(None, max_length=64)
-    chunks: list[RawChunkMeta] = Field(..., min_length=1)
+    # EEG-QRY-03: 한 요청의 청크 수를 상한으로 제한한다(개별 SELECT 폭주·과대 요청 방지).
+    chunks: list[RawChunkMeta] = Field(..., min_length=1, max_length=_RAW_CHUNK_BATCH_MAX)
 
 
 class RawPresignItem(BaseModel):
@@ -123,7 +128,8 @@ class RawAckItem(BaseModel):
 class RawAckRequest(BaseModel):
     participant_id: str | None = None
     play_group_id: str | None = Field(None, max_length=64)
-    chunks: list[RawAckItem] = Field(..., min_length=1)
+    # EEG-QRY-03: 한 요청의 청크 수를 상한으로 제한한다(개별 SELECT 폭주·과대 요청 방지).
+    chunks: list[RawAckItem] = Field(..., min_length=1, max_length=_RAW_CHUNK_BATCH_MAX)
 
 
 class RawAckResponse(BaseModel):

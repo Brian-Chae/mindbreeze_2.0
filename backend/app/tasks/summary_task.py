@@ -8,6 +8,7 @@ import json
 import logging
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
@@ -16,7 +17,7 @@ from app.models.record import SessionRecord
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+# GEN-5TH-10: 모델명은 settings.gemini_model 에서 읽는다(호출 시점 참조).
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 TEMPLATE_BY_TYPE = {
@@ -44,7 +45,7 @@ def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120
         body["generationConfig"]["responseMimeType"] = "application/json"
 
     resp = requests.post(
-        f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
+        f"{GEMINI_BASE}/models/{settings.gemini_model}:generateContent",
         headers={
             "x-goog-api-key": settings.gemini_api_key,
             "Content-Type": "application/json",
@@ -60,6 +61,26 @@ def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120
         raise ValueError(f"Gemini 응답 형식 불일치: {exc}") from exc
 
 
+def _partial_narrative_signature(metrics_summary: dict) -> str:
+    """direction 결측을 '?' 로 표시한 6지표 캐시 키 (SUM-5TH-08).
+
+    전체 시그니처(build_narrative_signature)는 한 지표라도 결측이면 None 이라 캐시를 쓸 수
+    없었다. 부분 키로 캐시를 허용하되 결측('?')을 stable('→')로 치환하지 않아, 서로 다른
+    결측 조합이 같은 키로 섞이지 않는다(NarrativeCache.signature 는 6자 고정).
+    """
+    from app.services.report_narrative import SIGNATURE_DIRECTION, SIGNATURE_METRICS
+
+    parts: list[str] = []
+    for group, metric in SIGNATURE_METRICS:
+        group_summary = metrics_summary.get(group)
+        metric_summary = (
+            group_summary.get(metric) if isinstance(group_summary, dict) else None
+        )
+        direction = metric_summary.get("direction") if isinstance(metric_summary, dict) else None
+        parts.append(SIGNATURE_DIRECTION.get(direction, "?") if isinstance(direction, str) else "?")
+    return "".join(parts)
+
+
 def _call_narrative_llm(
     metrics_summary: dict,
     db: DBSession | None = None,
@@ -71,16 +92,36 @@ def _call_narrative_llm(
     from app.services.report_narrative import build_narrative_signature, fallback_narrative
 
     fallback = fallback_narrative(metrics_summary)
+    # SUM-5TH-08: 일부 지표의 direction 이 None(비교 불가)이면 전체 시그니처가 None 이 되어
+    # 캐시를 아예 쓰지 못했다(같은 입력을 매번 재계산·폴백 재생성). 결측을 '?' 로 표시한
+    # 부분 시그니처로도 캐시 키를 만들어 반복 호출을 막는다(null 을 stable 로 오인하지 않는다).
     signature = build_narrative_signature(metrics_summary)
+    if signature is None:
+        signature = _partial_narrative_signature(metrics_summary)
+    cache_ok = True
     if db is not None and signature is not None and not force_refresh:
-        cached = db.get(NarrativeCache, signature)
+        # 캐시는 best-effort — 조회 실패(예: 아직 마이그레이션 전이라 narrative_cache 테이블이
+        # 없음)가 리포트 생성 자체를 막아선 안 된다.
+        try:
+            cached = db.get(NarrativeCache, signature)
+        except SQLAlchemyError:
+            cached = None
+            cache_ok = False
+            logger.warning("[summary_task] 서사 캐시 조회 실패 — 캐시 없이 진행")
         if cached is not None:
             return dict(cached.narrative)
 
     def cache(narrative: dict, source: str) -> dict:
-        if db is not None and signature is not None:
-            db.merge(NarrativeCache(signature=signature, narrative=narrative, source=source))
-            db.flush()
+        if db is not None and signature is not None and cache_ok:
+            # SAVEPOINT 로 감싸 저장 실패가 호출측 트랜잭션(진행 중인 flush)을 되돌리지 않게 한다.
+            try:
+                with db.begin_nested():
+                    db.merge(
+                        NarrativeCache(signature=signature, narrative=narrative, source=source)
+                    )
+                    db.flush()
+            except SQLAlchemyError:
+                logger.warning("[summary_task] 서사 캐시 저장 실패 — 결과는 반환")
         return narrative
 
     if not any(
@@ -166,6 +207,19 @@ def _call_gemini_summary(session_type: str, transcript: str | None) -> dict:
 
     content = _call_gemini_text(prompt, json_mode=True, timeout=120)
     parsed = json.loads(content)
+    # SUM-5TH-07: 필수 키 계약(headline/sections/keywords/risk_flags)을 검증한다. 검증 없이
+    # 통과시키면 빈/불완전 요약이 그대로 저장돼 리포트가 허위 내용을 담는다. 계약 위반은 예외로
+    # 전파해 호출측(run_summary_inline)이 summary_failed 로 마킹하게 한다.
+    if not isinstance(parsed, dict):
+        raise ValueError("요약 응답이 JSON 객체가 아님")
+    if not isinstance(parsed.get("headline"), str) or not parsed["headline"].strip():
+        raise ValueError("요약 필수 키 누락/형식 오류: headline")
+    if not isinstance(parsed.get("sections"), dict) or not parsed["sections"]:
+        raise ValueError("요약 필수 키 누락/형식 오류: sections")
+    if not isinstance(parsed.get("keywords"), list):
+        raise ValueError("요약 필수 키 누락/형식 오류: keywords")
+    if not isinstance(parsed.get("risk_flags"), list):
+        raise ValueError("요약 필수 키 누락/형식 오류: risk_flags")
     parsed["transcript_present"] = bool(transcript)
     logger.info("[summary_task] Gemini 요약 성공: %s", parsed.get("headline", "")[:50])
     return parsed

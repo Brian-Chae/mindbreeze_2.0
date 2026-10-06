@@ -52,7 +52,7 @@ def test_report_detail_exposes_nullable_participant_email(client):
         provider.close()
 
 
-def test_resend_service_uses_new_email_and_updates_default_only_on_success(client, monkeypatch):
+def test_resend_service_uses_new_email_but_keeps_registered_report_email(client, monkeypatch):
     _, db, provider, report, participant = _client_report(client)
     sender = Mock(return_value=False)
     monkeypatch.setattr(report_email_service, "send_report_email", sender)
@@ -68,13 +68,18 @@ def test_resend_service_uses_new_email_and_updates_default_only_on_success(clien
             str(report.id), "new@example.com", db
         ) is True
         db.refresh(participant)
-        assert participant.report_email == "new@example.com"
+        # RESEND-006: 등록된 report_email 은 불변 — 재발송은 '전달 주소'만 지정하고
+        # 등록 이메일을 덮어쓰지 않는다(request_report_email 의 409 불변 계약과 정합).
+        assert participant.report_email == "before@example.com"
         # FUNC-06: 재발송 성공 시에도 최초 발송과 동일하게 상태·시각을 갱신한다.
         assert participant.report_email_status == "sent"
         assert participant.report_email_sent_at is not None
         sent_email, link = sender.call_args.args
         assert sent_email == "new@example.com"
         assert link.startswith("https://dev.mindbreeze.looxidlabs.com/report-view?token=")
+        # 링크 토큰의 수신자 검증값은 등록 이메일을 유지한다(열람 게이트와 일치).
+        token = link.split("token=", 1)[1]
+        assert report_email_service._decode(token, "report_view").get("email") == "before@example.com"
     finally:
         provider.close()
 
@@ -128,6 +133,7 @@ def test_resend_api_requires_host_and_valid_email(client, monkeypatch):
         assert resend_body["success"] is True and resend_body["sent"] is True
         assert resend_body["message"]
         db.refresh(participant)
-        assert participant.report_email == "new@example.com"
+        # RESEND-006: 등록된 report_email 은 불변 — 재발송이 덮어쓰지 않는다.
+        assert participant.report_email == "before@example.com"
     finally:
         provider.close()

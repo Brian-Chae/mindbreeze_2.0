@@ -13,7 +13,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.record import Report
 from app.models.user import User
 from app.services import record_service
-from app.services.report_service import _serialize
+from app.services.report_service import _serialize, normalize_report_content
 from app.services.email_verify_service import verify_email_token
 from app.tasks.email import send_report_email
 
@@ -224,11 +224,16 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
     if not participant:
         raise HTTPException(400, "리포트 참가자를 찾을 수 없습니다")
 
+    # RESEND-006: report_email 은 '등록된 수신 이메일'로 불변이다(request_report_email 이
+    # 이후 변경을 409 로 막는 계약). 재발송은 '전달 주소'만 지정하므로 report_email 을 덮어쓰지
+    # 않는다. 토큰의 수신자 검증값도 등록된 report_email 을 유지해 열람 게이트와 일치시킨다.
+    # (아직 등록 이메일이 없는 경우에만 이번 주소를 최초 등록으로 채운다 — 불변 대상이 없음)
+    registered_email = participant.report_email or email
     token = _token(
         "report_view",
         str(report.id),
         str(report.session_id),
-        email=email,
+        email=registered_email,
     )
     link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
     try:
@@ -251,7 +256,9 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
         return False
 
     # FUNC-06: 최초 발송(deliver_report_email)과 동일하게 상태·시각도 함께 갱신한다.
-    participant.report_email = email
+    # RESEND-006: report_email 은 불변 — 등록 전(None)이었을 때만 최초 등록으로 채운다.
+    if not participant.report_email:
+        participant.report_email = email
     participant.report_email_status = "sent"
     participant.report_email_sent_at = datetime.now(timezone.utc)
     db.commit()
@@ -304,10 +311,23 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
     report = db.query(Report).filter(Report.id == report_id, Report.session_id == session_id,
                                    Report.type == "client", Report.status == "completed").first()
     participant = db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first() if report else None
-    if not participant or participant.report_email != claims.get("email"):
+    if not report or not participant or participant.report_email != claims.get("email"):
         raise HTTPException(403, "리포트 접근 권한이 없습니다")
     # 링크 열람에는 허용한 내담자 필드만 사용하며 HTML을 이스케이프한다.
-    content = report.content or {}
+    # VIEW-NORM-005: JSON 뷰(_serialize)와 동일한 정규화를 적용한다. 정규화 없이 raw content 를
+    # 읽으면 content.eeg 가 dict 가 아닐 때 eeg.get(...) 이 AttributeError(500)를 낸다.
+    raw_content = report.content if isinstance(report.content, dict) else {}
+    content = normalize_report_content(raw_content, report.type)
+    # 정규화가 status/available 미지정 레거시 eeg 를 not_measured 로 축약해 실제 지표(metrics)를
+    # 잃는 경우엔 원본 eeg 를 유지해 측정값을 계속 노출한다(기존 열람 동작 보존).
+    raw_eeg = raw_content.get("eeg")
+    normalized_eeg = content.get("eeg")
+    if (
+        isinstance(raw_eeg, dict)
+        and raw_eeg.get("metrics")
+        and not (isinstance(normalized_eeg, dict) and normalized_eeg.get("metrics"))
+    ):
+        content = {**content, "eeg": raw_eeg}
     title = escape(str(content.get("title") or "내 마음 리포트"))
     summary = escape(str(content.get("summary") or "오늘 세션에 참여해주셔서 감사합니다."))
     insights = content.get("insights") or []
@@ -329,8 +349,10 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
             'border-radius:0 12px 12px 0;color:#1F1F1F;font-size:15px;line-height:1.9;white-space:pre-wrap;">'
             f'{escape(counselor_comment)}</p></section>'
         )
-    eeg = content.get("eeg") or {}
-    metrics = eeg.get("metrics") or {}
+    eeg = content.get("eeg")
+    eeg = eeg if isinstance(eeg, dict) else {}
+    metrics = eeg.get("metrics")
+    metrics = metrics if isinstance(metrics, dict) else {}
     labels = {"focus_index_stability_score": "집중 안정도", "total_neural_activity_score": "신경 활동도",
               "cognitive_load_stability_score": "인지 부하 안정도", "stress_score": "스트레스",
               "hemispheric_balance_score": "좌우 균형", "emotional_stability_score": "정서 안정도",

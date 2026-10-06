@@ -1,4 +1,8 @@
 """SDD-070: 승인된 리포트의 안전한 4페이지 서사형 PDF 렌더링."""
+import hashlib
+import json
+from datetime import date as date_type
+from datetime import datetime
 from html import escape
 from pathlib import Path
 
@@ -9,6 +13,25 @@ from app.services.report_pdf_narrative import resolve_pdf_narrative, render_card
 
 FONT_PATH = Path(__file__).resolve().parents[1] / "assets/fonts/NotoSansKR.ttf"
 FONT_URL = "https://report.invalid/fonts/NotoSansKR.ttf"
+
+# PDF-PERF-010: 동일 content 재렌더 방지 캐시. content 해시 → 완성 PDF 바이트.
+# 프로세스 로컬·크기 상한(가장 오래된 항목부터 축출). 렌더는 CPU·시간 비용이 큰데
+# 다운로드/발송 재시도는 같은 content 로 반복 호출되므로 그대로 재사용한다.
+_PDF_CACHE: dict[str, bytes] = {}
+_PDF_CACHE_MAX = 32
+
+
+def _content_cache_key(report: dict) -> str:
+    """리포트 dict 의 결정적 해시 키 — 직렬화 불가 값은 default=str 로 안정 직렬화한다."""
+    payload = json.dumps(report, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _remember_pdf(key: str, pdf: bytes) -> None:
+    _PDF_CACHE[key] = pdf
+    if len(_PDF_CACHE) > _PDF_CACHE_MAX:
+        for stale in list(_PDF_CACHE)[: len(_PDF_CACHE) - _PDF_CACHE_MAX]:
+            _PDF_CACHE.pop(stale, None)
 
 
 def _font_fetcher(url: str) -> dict:
@@ -43,9 +66,15 @@ def render_report_html(report: dict, scale: float = 1) -> str:
     title = escape(_text(report.get("session_title"), "나를 위한 명상 기록")[:300])
     name = escape(_text(report.get("participant_name"), "나를 위한 기록")[:100])
     date = report.get("scheduled_at")
-    if hasattr(date, "strftime"):
+    # PDF-DATE-009: scheduled_at 이 datetime.date(시각·tzinfo 없음)여도 AttributeError 없이
+    # 포맷한다. datetime 은 date 의 하위형이므로 먼저 검사한다.
+    if isinstance(date, datetime):
         from zoneinfo import ZoneInfo
-        date = date.astimezone(ZoneInfo("Asia/Seoul")).strftime("%Y.%m.%d %H:%M") if date.tzinfo else date.strftime("%Y.%m.%d %H:%M")
+        if date.tzinfo:
+            date = date.astimezone(ZoneInfo("Asia/Seoul"))
+        date = date.strftime("%Y.%m.%d %H:%M")
+    elif isinstance(date, date_type):
+        date = date.strftime("%Y.%m.%d")
     date_label = escape(str(date)[:40]) if date else "날짜 정보 없음"
     return f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>MIND BREEZE 몸·마음 리포트</title>
 <style>
@@ -128,6 +157,11 @@ h3 {{ font-size: {13 * scale}pt; margin-bottom: 3mm; }}
 
 
 def generate_report_pdf(report: dict) -> bytes:
+    # PDF-PERF-010: 동일 content 는 재렌더 없이 캐시 바이트를 재사용한다(다운로드/발송 재시도).
+    key = _content_cache_key(report)
+    cached = _PDF_CACHE.get(key)
+    if cached is not None:
+        return cached
     # 시스템 라이브러리 누락이 일반 리포트 API의 시작까지 막지 않도록 지연 import한다.
     try:
         from weasyprint import HTML
@@ -141,7 +175,11 @@ def generate_report_pdf(report: dict) -> bytes:
     for scale in (1, .9, .8):
         document = HTML(string=render_report_html(report, scale), url_fetcher=_font_fetcher).render(font_config=fonts)
         if len(document.pages) == 4:
-            return document.write_pdf()
+            pdf = document.write_pdf()
+            if pdf is None:  # 방어 — WeasyPrint 반환형 방어(정상 경로에서는 None 아님)
+                raise HTTPException(500, "PDF 생성에 실패했습니다.")
+            _remember_pdf(key, pdf)
+            return pdf
     raise HTTPException(422, "리포트 본문이 너무 길어 4페이지 PDF로 만들 수 없습니다. 본문 길이를 확인해 주세요.")
 
 

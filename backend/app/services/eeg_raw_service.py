@@ -65,19 +65,30 @@ def presign_upload(
     )
     prefix = _object_prefix(sid, participant, payload.play_group_id)
 
-    items: list[dict] = []
-    for meta in payload.chunks:
-        # 동일 (session, participant, stream, chunk_index) 는 멱등 — 기존 행 재사용(재발급).
-        existing = (
+    # EEG-QRY-03: 청크별 개별 SELECT(N+1) 대신 요청에 담긴 (stream_id, chunk_index) 를 한 번의
+    # SELECT 로 조회한다. chunk_index/stream_id 로 범위를 좁혀 요청 크기에 비례하되 쿼리 수는
+    # 1회로 고정한다. 상한(max_length)은 스키마에서 강제한다.
+    stream_ids = {meta.stream_id for meta in payload.chunks}
+    chunk_indices = {meta.chunk_index for meta in payload.chunks}
+    existing_map: dict[tuple[str, int], EEGRawChunk] = {}
+    if stream_ids and chunk_indices:
+        rows = (
             db.query(EEGRawChunk)
             .filter(
                 EEGRawChunk.session_id == sid,
                 EEGRawChunk.participant_id == participant.id,
-                EEGRawChunk.stream_id == meta.stream_id,
-                EEGRawChunk.chunk_index == meta.chunk_index,
+                EEGRawChunk.stream_id.in_(stream_ids),
+                EEGRawChunk.chunk_index.in_(chunk_indices),
             )
-            .first()
+            .all()
         )
+        existing_map = {(c.stream_id, c.chunk_index): c for c in rows}
+
+    items: list[dict] = []
+    for meta in payload.chunks:
+        key = (meta.stream_id, meta.chunk_index)
+        # 동일 (session, participant, stream, chunk_index) 는 멱등 — 기존 행 재사용(재발급).
+        existing = existing_map.get(key)
         if existing is not None:
             chunk = existing
             object_key = chunk.object_key
@@ -116,7 +127,11 @@ def presign_upload(
                     )
                     .first()
                 )
+                if chunk is None:  # 방어 — 유니크 위반인데 기존 행이 없으면 재전파
+                    raise
                 object_key = chunk.object_key
+            # 한 요청 안에 중복 키가 있어도 방금 만든 행을 재사용하도록 맵을 갱신한다.
+            existing_map[key] = chunk
 
         upload_url = storage_service.generate_presigned_put(
             object_key, content_type=meta.content_type
@@ -153,18 +168,24 @@ def ack_upload(
         sid, payload.participant_id, current_user_id, db
     )
 
+    # EEG-QRY-03: 청크별 개별 SELECT(N+1) 대신 id 목록을 한 번의 SELECT 로 조회한다.
+    # 세션·참가자 조건을 함께 걸어 타 참가자/세션 청크는 조회 결과에서 제외한다(소유 위반 → 404).
+    wanted_ids = [_to_uuid(item.chunk_id) for item in payload.chunks]
+    rows = (
+        db.query(EEGRawChunk)
+        .filter(
+            EEGRawChunk.id.in_(wanted_ids),
+            EEGRawChunk.session_id == sid,
+            EEGRawChunk.participant_id == participant.id,
+        )
+        .all()
+    )
+    by_id = {row.id: row for row in rows}
+
     acked = 0
     failed = 0
-    for item in payload.chunks:
-        chunk = (
-            db.query(EEGRawChunk)
-            .filter(
-                EEGRawChunk.id == _to_uuid(item.chunk_id),
-                EEGRawChunk.session_id == sid,
-                EEGRawChunk.participant_id == participant.id,
-            )
-            .first()
-        )
+    for item, chunk_id in zip(payload.chunks, wanted_ids):
+        chunk = by_id.get(chunk_id)
         if chunk is None:
             # 타 참가자/세션 청크 확인 시도 차단 (소유 위반)
             raise HTTPException(status_code=404, detail="raw 청크를 찾을 수 없습니다")
@@ -245,8 +266,26 @@ def _sync_eeg_record(
             s3_key=prefix,
             file_count=uploaded_count,
         )
-        db.add(record)
-        db.flush()
+        try:
+            with db.begin_nested():
+                db.add(record)
+                db.flush()
+        except IntegrityError:
+            # EEG-RAW-04: 동시 ack 경합 — (session, participant) 유니크 제약 위반 시 SAVEPOINT 가
+            # 롤백되므로 기존 행을 재조회해 file_count 만 갱신한다(중복 레코드 방지).
+            record = (
+                db.query(EEGRecord)
+                .filter(
+                    EEGRecord.session_id == sid,
+                    EEGRecord.participant_id == participant.id,
+                )
+                .first()
+            )
+            if record is None:  # 방어 — 유니크 위반인데 기존 행이 없으면 재전파
+                raise
+            record.file_count = uploaded_count
+            if play_group_id is not None:
+                record.play_group_id = play_group_id
     else:
         record.file_count = uploaded_count
         if play_group_id is not None:

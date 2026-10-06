@@ -22,10 +22,14 @@ from app.models.session import Session
 
 logger = logging.getLogger(__name__)
 
-GEMINI_MODEL = "gemini-2.5-flash"
+# GEN-5TH-10: STT/Whisper 모델명은 하드코딩하지 않고 설정(settings.gemini_model /
+# settings.whisper_model)에서 읽는다. 호출 시점에 참조해 런타임 설정·테스트 monkeypatch 가 반영된다.
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 GEMINI_TIMEOUT = 300  # SDD-121: 4분+ 오디오도 처리 — 기존 180초 타임아웃 완화
 GEMINI_SEGMENT_SECONDS = 90  # 이 이상이면 세그먼트 분할(단일 요청 크기/시간 초과 방지)
+# STT-5TH-05: 업로드 오디오 청크 1개의 길이(초). 프론트 녹음기(useAudioRecorder)가
+# 5000ms 간격으로 청크를 만들므로 실제 오디오 길이 근사에 쓴다.
+AUDIO_CHUNK_SECONDS = 5.0
 
 # STT-5TH-01: Gemini STT 실패를 일시/영구로 구분한다.
 #   - 일시(transient): 네트워크 오류/타임아웃/429/5xx — backoff 재시도 후에도 실패하면 Whisper 폴백.
@@ -134,7 +138,7 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
                 headers={"Authorization": f"Bearer {openai_api_key}"},
                 files={"file": ("audio.webm", f, "audio/webm")},
                 data={
-                    "model": "whisper-1",
+                    "model": settings.whisper_model,
                     "language": "ko",
                     "response_format": "verbose_json",
                     "timestamp_granularities": ["segment"],
@@ -224,7 +228,7 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
     # STT-5TH-01: JSON 응답을 강제(responseMimeType=application/json)해 마크다운/부가 텍스트
     # 혼입으로 인한 파싱 실패(→ 불필요한 Whisper 폴백)를 줄인다. 일시 오류는 backoff 재시도.
     result = _gemini_post_with_retry(
-        f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
+        f"{GEMINI_BASE}/models/{settings.gemini_model}:generateContent",
         {"x-goog-api-key": settings.gemini_api_key, "Content-Type": "application/json"},
         {
             "contents": [
@@ -268,8 +272,15 @@ def _call_gemini_transcribe(
         logger.warning("[stt_task] gemini_api_key 미설정")
         raise RuntimeError("gemini_api_key not set")
 
-    # 총 길이 추정 — 녹음 시작/종료 시각이 있으면 정확값, 없으면 청크당 5초로 근사.
-    total_duration = audio_duration_sec or (len(chunk_paths) * 5.0)
+    # STT-5TH-05: 분할 기준은 '실제 오디오 길이'다. recording_started_at~ended_at(벽시계)은
+    # 일시정지·업로드 공백·재연결 시간을 포함해 실제 오디오보다 길 수 있고, 그만큼 세그먼트를
+    # 과다 분할해 Gemini 호출(비용)을 늘린다. 업로드된 청크 수 × 청크당 초로 실제 길이를 근사한다.
+    chunk_based_sec = len(chunk_paths) * AUDIO_CHUNK_SECONDS
+    if audio_duration_sec and audio_duration_sec > 0:
+        # 벽시계가 실제 오디오보다 길 수 있으므로 더 짧은(실제에 가까운) 쪽을 분할 기준으로 쓴다.
+        total_duration = min(audio_duration_sec, chunk_based_sec)
+    else:
+        total_duration = chunk_based_sec
 
     if total_duration > GEMINI_SEGMENT_SECONDS and len(chunk_paths) > 1:
         n_segments = max(1, int(math.ceil(total_duration / GEMINI_SEGMENT_SECONDS)))
@@ -283,11 +294,12 @@ def _call_gemini_transcribe(
         offset = 0.0
         for i in range(0, len(chunk_paths), per_segment):
             batch = chunk_paths[i : i + per_segment]
-            # 배치 청크가 전부 누락이면 API 호출 없이 건너뛰고 시간축만 전진한다.
+            # 배치 청크가 전부 누락이면 API 호출 없이 건너뛴다.
             if not any(os.path.exists(p) for p in batch):
                 missing_total += len(batch)
                 logger.warning("[stt_task] [청크 누락] 배치 %d개 전부 누락 — 건너뜀", len(batch))
-                offset += len(batch) * per_chunk_sec
+                # STT-5TH-06: 오디오가 없는 배치는 시간축을 전진시키지 않는다(누락분만큼
+                # 오프셋이 밀려 뒤 구간 타임스탬프가 실제보다 늦어지던 문제 방지).
                 continue
             batch_segments, _, batch_missing = _transcribe_batch(batch, session_type)
             missing_total += batch_missing
@@ -296,8 +308,11 @@ def _call_gemini_transcribe(
                 s["start"] = round(float(s.get("start", 0.0)) + offset, 2)
                 s["end"] = round(float(s.get("end", 0.0)) + offset, 2)
                 segments.append(s)
-            # 다음 배치 오프셋 = 이번 배치의 실제 구간 길이(청크 수 × 청크당 길이)만큼 전진.
-            offset += len(batch) * per_chunk_sec
+            # STT-5TH-06: 병합 오디오에는 존재하는 청크만 들어가므로, 다음 배치 오프셋은
+            # '존재한 청크 수 × 청크당 길이'만큼만 전진시킨다. 배치 전체 길이로 전진하면
+            # 누락 청크 수만큼 오프셋이 누적되어 이후 발화 타임스탬프가 어긋난다.
+            present_count = len(batch) - batch_missing
+            offset += present_count * per_chunk_sec
         raw_text = "\n".join(f"[{s['speaker']}] {s['text']}" for s in segments)
         logger.info(
             "[stt_task] Gemini success(분할 %d): %d segments, %d chars, 누락 %d",

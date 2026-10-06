@@ -19,7 +19,6 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 COMMENT_MAX_LENGTH = 1000
-GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_TIMEOUT_SECONDS = 15.0
 
 _SESSION_TYPE_LABELS = {
@@ -233,7 +232,7 @@ def _call_gemini(prompt: str) -> str | None:
 
     try:
         resp = httpx.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+            f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],

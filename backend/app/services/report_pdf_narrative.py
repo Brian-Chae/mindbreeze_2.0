@@ -351,10 +351,10 @@ def dual_bar_svg(m):
     return (f'<figure class="dual-bar"><svg viewBox="0 0 {W} {H}"><title>{escape(m["label"])} 전반 vs 후반 평균</title>'
             f'<text x="{pad}" y="{rowY1 + barH / 2:.0f}" font-size="10" fill="#6b6570">전반</text>'
             f'<rect x="{pad + labelW}" y="{rowY1}" width="{w1:.1f}" height="{barH}" rx="5" fill="#d9d2e2"/>'
-            f'<text x="{pad + labelW + w1 + 6:.1f}" y="{rowY1 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#2a2430">{early}{unit}</text>'
+            f'<text x="{pad + labelW + w1 + 6:.1f}" y="{rowY1 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#2a2430">{early:g}{unit}</text>'
             f'<text x="{pad}" y="{rowY2 + barH / 2:.0f}" font-size="10" fill="#6b6570">후반</text>'
             f'<rect x="{pad + labelW}" y="{rowY2}" width="{w2:.1f}" height="{barH}" rx="5" fill="#5F0080"/>'
-            f'<text x="{pad + labelW + w2 + 6:.1f}" y="{rowY2 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#5F0080">{late}{unit}</text>'
+            f'<text x="{pad + labelW + w2 + 6:.1f}" y="{rowY2 + barH / 2:.0f}" font-size="11" font-weight="700" fill="#5F0080">{late:g}{unit}</text>'
             f'</svg><figcaption>전반 vs 후반</figcaption></figure>')
 
 

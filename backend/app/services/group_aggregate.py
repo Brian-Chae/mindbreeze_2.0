@@ -413,7 +413,7 @@ def _group_average_payload(
 
     개인 식별자·개인 점수·순위는 어떤 형태로도 담지 않는다(기존 익명 집계 원칙 유지).
     """
-    sufficient = wearer_count >= MIN_WEARERS
+    sufficient_metrics = 0
     metrics: dict[str, dict] = {}
     for _, field in _ABSOLUTE_METRIC_FIELDS:
         values = wearer_means.get(field, [])
@@ -421,15 +421,19 @@ def _group_average_payload(
         # 착용자 총수만 보고 평균하면, 기여자가 1명뿐인 지표의 개인값이 그대로 그룹 평균이 되어
         # 익명성이 깨진다(mean 은 None 을 제거하므로).
         non_null = [v for v in values if v is not None]
-        metrics[field] = {
-            "mean": _round(mean(non_null), 2) if len(non_null) >= MIN_WEARERS else None
-        }
+        enough = len(non_null) >= MIN_WEARERS
+        if enough:
+            sufficient_metrics += 1
+        metrics[field] = {"mean": _round(mean(non_null), 2) if enough else None}
+    # EEG-AGG-01: sample_status 를 per-metric 게이트와 일관되게 만든다. 착용자 총수만 보면
+    # 모든 지표가 실제로는 표본 부족인데도 "ok" 로 표시되어, 회원 화면이 근거 없는 '그룹 평균'을
+    # 보여주는 것처럼 오인하게 한다. 평균을 산출한 지표가 하나라도 있어야(표본 충족) "ok" 다.
     return {
         "session_id": str(session_id),
         "at": stamp,
         "wearer_count": wearer_count,
         "min_wearers": MIN_WEARERS,
-        "sample_status": "ok" if sufficient else "insufficient",
+        "sample_status": "ok" if sufficient_metrics > 0 else "insufficient",
         "metrics": metrics,
     }
 

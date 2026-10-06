@@ -55,7 +55,14 @@ def _send_email(to_email: str, subject: str, body_text: str, body_html: str | No
                 json=payload,
             )
         if resp.is_success:
-            logger.info(f"[EMAIL] 발송 성공 → {_mask_email(to_email)} (id={resp.json().get('id', '?')})")
+            # EMAIL-SEND-008: 발송 성공(2xx) 응답 본문이 JSON 이 아니어서 resp.json() 이 예외를
+            # 내도 '발송 실패'로 뒤집지 않는다. 본문 파싱 실패가 실패로 보고되면 호출측이
+            # 재발송(중복 발송)을 시도한다. 식별자는 로그용이므로 실패 시 '?' 로 대체한다.
+            try:
+                email_id = resp.json().get("id", "?")
+            except Exception:  # noqa: BLE001 — 본문 형식 오류는 발송 결과와 무관
+                email_id = "?"
+            logger.info(f"[EMAIL] 발송 성공 → {_mask_email(to_email)} (id={email_id})")
             return True
         else:
             logger.error(f"[EMAIL] 발송 실패 → {_mask_email(to_email)}: {resp.status_code}")

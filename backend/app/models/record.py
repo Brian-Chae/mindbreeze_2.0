@@ -83,6 +83,16 @@ class VideoChunk(Base):
 
 class EEGRecord(Base):
     __tablename__ = "eeg_records"
+    __table_args__ = (
+        # EEG-RAW-04: raw ack 경합(get-or-create)이 중복 EEGRecord 를 만들지 않도록
+        # (session_id, participant_id) 를 DB 레벨에서 유일하게 강제한다. 이 제약이 없으면
+        # 동시 ack 시 두 요청이 각각 INSERT 해 중복 행(file_count 분산)이 생긴다.
+        # participant_id 는 nullable 이지만 NULL 은 유일성 비교에서 서로 다른 값으로 취급되므로
+        # 참여자 없는(레거시) 레코드의 다중 생성을 막지 않는다.
+        UniqueConstraint(
+            "session_id", "participant_id", name="uq_eeg_record_session_participant",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
