@@ -702,7 +702,13 @@ def register_session_live_namespace(sio):
             )
             if not resolved or resolved.get("role") != "host":
                 return {"ok": False, "error": "상담사 권한을 확인해 주세요."}
-            allowed = {str(p["participant_id"]) for p in resolved["snapshot"].get("participants", [])}
+            # LIVE-01: 호스트 join 스냅샷(get_live_metrics)은 'metrics' 키에 참가자 목록을 담는다.
+            #   기존 'participants' 키는 존재하지 않아 허용 집합이 항상 비어 리마인드가 100% 실패했다.
+            allowed = {
+                str(m["participant_id"])
+                for m in resolved["snapshot"].get("metrics", [])
+                if m.get("participant_id")
+            }
             targets = list(dict.fromkeys(targets))
             if not set(targets).issubset(allowed):
                 return {"ok": False, "error": "이 세션의 참가자만 선택해 주세요."}

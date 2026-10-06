@@ -62,6 +62,10 @@ export default function ClientEssentialsPage() {
 
       // FUNC-03: 필수 정보 저장 후 전용 완료 엔드포인트를 호출해야
       // onboarding_completed 가 true 로 전환된다(PATCH 로는 갱신되지 않음).
+      //
+      // MB2-ONB-GOOGLE-ESSENTIALS: 백엔드 client_complete 는 auth_provider=google
+      //   내담자에 대해 step1~4 강제를 면제하므로, 이 페이지는 step 을 기록하지 않고
+      //   PATCH 로 저장한 필수 정보만으로 바로 완료 처리한다(에러 시 재시도 가능).
       await completeClientOnboarding();
 
       // authStore 사용자 정보 갱신 (완료 상태 반영)

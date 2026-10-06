@@ -16,9 +16,19 @@ export class WebBluetoothProvider implements BluetoothProvider {
 
   private onConnectionLostCb: (() => void) | null = null;
 
+  // EEG-BLE-001: characteristicvaluechanged 리스너를 characteristic 별로 보관한다.
+  // 재연결(reconnect) 시 startNotifications 가 같은 characteristic 에 리스너를 다시
+  // 등록하면 데이터가 N배로 중복 emit 되므로, stopNotifications/disconnect 에서
+  // removeEventListener 로 반드시 해제해 누적을 막는다.
+  private valueChangedHandlers = new Map<string, (event: Event) => void>();
+
   private handleDisconnected = (): void => {
     this.onConnectionLostCb?.();
   };
+
+  private listenerKey(serviceUuid: string, characteristicUuid: string): string {
+    return `${serviceUuid}::${characteristicUuid}`;
+  }
 
   async initialize(): Promise<void> {
     if (!navigator.bluetooth) {
@@ -56,6 +66,10 @@ export class WebBluetoothProvider implements BluetoothProvider {
     // remove-before-add 로 재연결 시 리스너 중복 등록을 방지한다.
     this.device.removeEventListener('gattserverdisconnected', this.handleDisconnected);
     this.device.addEventListener('gattserverdisconnected', this.handleDisconnected);
+
+    // EEG-BLE-001: gatt 재연결 시 이전 characteristic 객체는 무효화되므로
+    // 보관하던 값-변경 핸들러도 함께 폐기한다(재등록은 startNotifications 에서 수행).
+    this.valueChangedHandlers.clear();
 
     this.server = await this.device.gatt!.connect();
   }
@@ -105,11 +119,20 @@ export class WebBluetoothProvider implements BluetoothProvider {
     const characteristic = await service.getCharacteristic(characteristicUuid);
     
     await characteristic.startNotifications();
-    
-    characteristic.addEventListener('characteristicvaluechanged', (event) => {
+
+    // EEG-BLE-001: 같은 characteristic 에 대해 remove-before-add 로 중복 등록을 막는다.
+    const key = this.listenerKey(serviceUuid, characteristicUuid);
+    const previous = this.valueChangedHandlers.get(key);
+    if (previous) {
+      characteristic.removeEventListener('characteristicvaluechanged', previous);
+    }
+
+    const handler = (event: Event): void => {
       const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
       if (value) onData(value);
-    });
+    };
+    characteristic.addEventListener('characteristicvaluechanged', handler);
+    this.valueChangedHandlers.set(key, handler);
   }
 
   async stopNotifications(
@@ -121,6 +144,16 @@ export class WebBluetoothProvider implements BluetoothProvider {
 
     const service = await this.server.getPrimaryService(serviceUuid);
     const characteristic = await service.getCharacteristic(characteristicUuid);
+
+    // EEG-BLE-001: stopNotifications 만 호출하면 JS 리스너가 남아 재연결 시
+    // 중복 emit 된다. 등록 시 보관한 핸들러를 removeEventListener 로 해제한다.
+    const key = this.listenerKey(serviceUuid, characteristicUuid);
+    const handler = this.valueChangedHandlers.get(key);
+    if (handler) {
+      characteristic.removeEventListener('characteristicvaluechanged', handler);
+      this.valueChangedHandlers.delete(key);
+    }
+
     await characteristic.stopNotifications();
   }
 

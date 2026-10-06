@@ -678,11 +678,10 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     session = db.query(Session).filter(Session.id == report.session_id).first()
     if not _can_access_report(user_id, session, db):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()
     # counselor 리포트(상담사 내부 메모 포함)는 내담자(client) 접근 차단 — defense in depth
-    if report.type == "counselor":
-        viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()
-        if viewer and viewer.role == "client":
-            raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    if report.type == "counselor" and viewer and viewer.role == "client":
+        raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     participant = (
         db.query(SessionParticipant)
         .filter(SessionParticipant.id == report.participant_id)
@@ -690,6 +689,15 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
         if report.participant_id
         else None
     )
+    # RPT-IDOR-001: client 리포트는 '본인 것'만 열람 가능하다. 세션 참여자라는 이유만으로
+    #   같은 세션(그룹 클래스)의 다른 참여자 리포트를 탈취하지 못하도록 소유자 검사를 한다.
+    #   소유자 = report.participant_id 의 SessionParticipant.user_id (게스트 리포트 user_id 는 None).
+    if report.type == "client" and viewer and viewer.role == "client":
+        owner_uid = participant.user_id if participant else None
+        if owner_uid is None:
+            owner_uid = report.user_id
+        if owner_uid != _to_uuid(user_id):
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     result = _serialize(
         report,
         session,

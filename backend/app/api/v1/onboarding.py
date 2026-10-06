@@ -355,14 +355,20 @@ def client_complete(
 ):
     """내담자 온보딩 완료."""
     user_id = _uid(current_user)
+    user = db.query(User).filter(User.id == user_id).first()
     progress = onboarding_service.get_progress(user_id, db)
     steps = progress.steps or {}
-    for required in ("step1", "step2", "step3", "step4"):
-        if required not in steps:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{required} 단계를 완료해야 합니다",
-            )
+    # MB2-ONB-GOOGLE-ESSENTIALS: Google 가입 내담자는 4단계 온보딩 대신 필수정보(essentials)만
+    #   입력한다(프론트 /onboarding/client/essentials → PATCH /auth/users/me 로 저장되고
+    #   step 은 기록되지 않는다). 따라서 Google 가입자는 step1~4 강제를 면제한다.
+    #   이메일 가입자는 가입 시 step1·2·4 가 마킹되므로 기존 step1~4 강제를 그대로 유지한다.
+    if user is None or user.auth_provider != "google":
+        for required in ("step1", "step2", "step3", "step4"):
+            if required not in steps:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{required} 단계를 완료해야 합니다",
+                )
     progress = onboarding_service.complete_onboarding(user_id, db)
     # DATA-03: 요청 단위 단일 커밋
     db.commit()

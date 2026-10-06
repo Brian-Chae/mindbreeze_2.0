@@ -63,7 +63,9 @@ async def initiate_reset(email: str, db: Session, redis: Redis) -> None:
 
     # SEC-07: 프론트 base URL 을 붙인 절대 URL 로 생성한다.
     #   기존 상대경로('/auth/...')는 메일 클라이언트에서 열 수 없어 링크가 깨졌다.
-    reset_link = f"{settings.frontend_base_url.rstrip('/')}/auth/password/reset?token={token}"
+    # MB2-AUTH-RESET-LINK: 프론트 라우트는 /reset-password (App.tsx) — /auth/password/reset 은
+    #   존재하지 않아 404 였다. 실제 라우트로 링크를 생성한다.
+    reset_link = f"{settings.frontend_base_url.rstrip('/')}/reset-password?token={token}"
     send_password_reset_email(email, reset_link)
 
 
