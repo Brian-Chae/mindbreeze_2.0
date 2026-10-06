@@ -730,6 +730,11 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
     if report.type == "counselor":
         result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
+    # 신규 리포트 배지용: 최초 열람 시 is_read=true 마킹
+    if not report.is_read:
+        report.is_read = True
+        db.add(report)
+        db.commit()
     return result
 
 
