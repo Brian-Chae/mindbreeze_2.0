@@ -926,14 +926,8 @@ async def update_user_me(
         if req.gender is not None:
             profile.gender = req.gender
         if req.birth_date is not None:
-            try:
-                from datetime import date
-                profile.birth_date = date.fromisoformat(req.birth_date)
-            except ValueError:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
-                )
+            # MB2-AUTH-04: 가입 경로와 동일하게 미래 날짜를 차단한다 (_parse_birth_date 단일 진실).
+            profile.birth_date = _parse_birth_date(req.birth_date)
 
     # AUTHZ-01: 온보딩 완료 플래그는 여기서 세우지 않는다 (전용 완료 엔드포인트로만 처리).
     db.commit()
@@ -1066,13 +1060,8 @@ async def update_client_profile(
     if req.gender is not None:
         profile.gender = req.gender
     if req.birth_date is not None:
-        try:
-            profile.birth_date = date.fromisoformat(req.birth_date)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
-            )
+        # MB2-AUTH-04: 가입 경로와 동일하게 미래 날짜를 차단한다 (_parse_birth_date 단일 진실).
+        profile.birth_date = _parse_birth_date(req.birth_date)
     if req.concerns is not None:
         profile.concerns = req.concerns
     if req.interests is not None:

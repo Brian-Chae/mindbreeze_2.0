@@ -312,6 +312,12 @@ def link_invited_client(
             db.flush()
         return None
 
+    # MB2-CLIENT-03: single-use 강화 — 최초 수락(pending)일 때만 연결한다.
+    #   'accepted' 등 이미 사용된 초대는 재사용을 차단한다(초대 링크 무한 재사용 방지).
+    #   최초 수락 시에만 아래에서 링크/step4 를 기록하고 status='accepted' 로 전환한다.
+    if invite.status != "pending":
+        return None
+
     # 이메일 일치 검증 — 초대 대상 이메일과 가입 이메일이 같아야만 연결한다
     if (invite.email or "").strip().lower() != (client.email or "").strip().lower():
         return None
@@ -377,6 +383,14 @@ def get_invite(token: str, db: Session) -> dict:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="초대 링크가 유효하지 않습니다",
+        )
+
+    # MB2-CLIENT-02: 공개 조회에서도 만료·사용 완료를 검증한다.
+    #   만료(status='expired'/7일 경과) 또는 이미 수락(accepted)된 초대는 노출하지 않는다.
+    if invite.status != "pending" or _invite_is_expired(invite):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="초대 링크가 만료되었거나 이미 사용되었습니다",
         )
 
     counselor = db.query(User).filter(User.id == invite.counselor_id).first()

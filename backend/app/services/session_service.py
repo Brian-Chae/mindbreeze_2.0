@@ -652,6 +652,12 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _current_scheduled
     new_duration = payload.duration_min if payload.duration_min is not None else s.duration_min
 
+    # FUNC-08: 생성(create_session)과 동일하게 과거 일시 수정을 차단한다.
+    #   payload.scheduled_at 이 실제로 전달된 경우에만 검증한다(부분 수정 보존).
+    if payload.scheduled_at is not None and new_scheduled_at is not None:
+        if new_scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시로는 세션을 수정할 수 없습니다")
+
     if not payload.force and new_scheduled_at is not None and (payload.scheduled_at or payload.duration_min):
         conflict = detect_conflict(s.host_id, new_scheduled_at, new_duration, s.id, db)
         if conflict:

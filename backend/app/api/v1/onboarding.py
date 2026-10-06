@@ -28,6 +28,7 @@ from app.schemas.onboarding import (
     OnboardingProgressResponse,
 )
 from app.services import onboarding_service
+from app.services import code_service
 from app.services.chat_service import get_or_create_direct_room
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
@@ -294,9 +295,12 @@ def client_step4_match(
 ):
     """Step4 — 상담사 코드 매칭."""
     user_id = _uid(current_user)
+    # MB2-ONB-02: 가입 경로(signup_application_service.validate_counselor_code)와 동일하게
+    #   공백 제거·대문자화 정규화 후 조회한다. 정규화 없으면 소문자/공백 입력이 미매칭된다.
+    normalized = code_service.normalize_code(req.counselor_code)
     profile = (
         db.query(CounselorProfile)
-        .filter(CounselorProfile.counselor_code == req.counselor_code)
+        .filter(CounselorProfile.counselor_code == normalized)
         .first()
     )
     if profile is None:
@@ -327,7 +331,7 @@ def client_step4_match(
     onboarding_service.save_step(
         user_id,
         4,
-        {"counselor_code": req.counselor_code, "counselor_id": str(counselor.id)},
+        {"counselor_code": normalized, "counselor_id": str(counselor.id)},
         db,
     )
     # DATA-03: 요청 단위 단일 커밋
