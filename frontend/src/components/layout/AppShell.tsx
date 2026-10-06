@@ -26,7 +26,7 @@ export default function AppShell({
   title,
   sub,
   rightSlot,
-  contentPad = 'px-4 py-4 md:px-8 md:py-6',
+  contentPad = 'px-4 py-4 md:px-8 md:py-6 lg:px-10 lg:pt-8 lg:pb-10',
   noScroll = false,
   noBottomPad = false,
   hideBottomTab = false,

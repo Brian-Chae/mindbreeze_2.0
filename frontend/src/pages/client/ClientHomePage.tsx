@@ -57,9 +57,10 @@ function sameWeek(a: Date, b: Date): boolean {
 
 // ── 공통 스타일 ──────────────────────────────────────────────────
 
-const SECTION_TITLE_CLS = 'font-extrabold text-[18px] text-[#1F1F1F] tracking-tight';
+const SECTION_TITLE_CLS = 'font-extrabold text-[18px] text-[#1F1F1F] tracking-[-0.01em]';
 const SECTION_HEAD_CLS = 'flex items-center justify-between mb-4';
-const LINK_CLS = 'text-[13px] font-semibold text-[#5F0080] hover:underline shrink-0';
+const LINK_CLS = 'text-[13px] font-bold text-[#5F0080] hover:underline shrink-0';
+const CARD_CLS = 'rounded-2xl border border-[#E8E3EC] bg-white shadow-sm';
 
 // ── 다음 세션 히어로 ─────────────────────────────────────────────
 
@@ -89,43 +90,47 @@ function HeroCard({
   };
 
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] sm:p-6">
-      <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[22px] md:text-[24px]">
-        {session.title || '세션'}
-      </h2>
-      <p className="mt-1 text-[13px] opacity-90">
-        {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
-        {counselorName ? ` · ${counselorName}` : ''}
-      </p>
+    <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:flex lg:min-h-[168px] lg:items-center lg:justify-between lg:gap-6 lg:p-6">
+      {/* 좌측 콘텐츠 */}
+      <div className="min-w-0 lg:flex-1">
+        <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
+        <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
+          {session.title || '세션'}
+        </h2>
+        <p className="mt-1 text-[13.5px] opacity-90">
+          {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
+          {counselorName ? ` · ${counselorName}` : ''}
+        </p>
 
-      {session.access_code && (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 border border-white/25 px-3 py-2 font-mono text-[15px] font-extrabold tracking-[0.12em]">
-            {session.access_code}
-          </span>
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            className="rounded-lg bg-white/15 border border-white/25 px-3 py-2 text-[12px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
-          >
-            {copied ? '복사됨' : '참여코드 복사'}
-          </button>
-        </div>
-      )}
+        {session.access_code && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-xl bg-white/15 border border-white/25 px-3.5 py-2 font-mono text-[16px] font-extrabold tracking-[0.12em]">
+              {session.access_code}
+            </span>
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              className="rounded-xl bg-white/15 border border-white/25 px-[13px] py-2 text-[12.5px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
+            >
+              {copied ? '복사됨' : '참여코드 복사'}
+            </button>
+          </div>
+        )}
 
-      <p className="mt-3 text-[12px] opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
+        <p className="mt-3 text-[12px] opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
+      </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
+      {/* 우측 액션 */}
+      <div className="mt-4 flex flex-col items-start gap-3 lg:mt-0 lg:shrink-0 lg:items-end">
         {countdown && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-[12.5px] font-bold">
             {countdown}
           </span>
         )}
         <button
           type="button"
           onClick={onEnter}
-          className="mt-1 w-full sm:w-auto rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors"
+          className="w-full rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors lg:mt-0 lg:w-auto lg:min-w-[160px]"
         >
           {isLive ? '지금 입장하기 →' : '입장하기 →'}
         </button>
@@ -138,18 +143,18 @@ function HeroCard({
 
 function EmptyHero({ onBook }: { onBook: () => void }) {
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] sm:p-6">
+    <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:p-6">
       <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-      <h2 className="mt-1 text-[20px] font-extrabold leading-tight tracking-tight sm:text-[24px]">
+      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
         아직 예약된 세션이 없어요
       </h2>
-      <p className="mt-1 text-[13px] opacity-90">
+      <p className="mt-1 text-[13.5px] opacity-90">
         상담사와 상담·명상 세션을 예약하고 변화를 시작해보세요.
       </p>
       <button
         type="button"
         onClick={onBook}
-        className="mt-4 w-full sm:w-auto rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors"
+        className="mt-4 w-full rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors lg:w-auto lg:min-w-[160px]"
       >
         세션 예약하기 →
       </button>
@@ -186,13 +191,13 @@ function SummaryTiles({
           key={t.label}
           type="button"
           onClick={t.onClick}
-          className="rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8]"
+          className="rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left shadow-sm transition-all hover:border-[#DDD0EA] hover:shadow-md hover:-translate-y-0.5"
         >
           <div className="text-[12px] font-semibold text-[#6F6F6F]">{t.label}</div>
-          <div className={`mt-1 text-[26px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
+          <div className={`mt-2 text-[30px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
             {t.value}
           </div>
-          <div className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#5F0080]">
+          <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#5F0080]">
             {t.action} <span aria-hidden>→</span>
           </div>
         </button>
@@ -415,9 +420,9 @@ export default function ClientHomePage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-8">
+    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       {/* ── 좌측 컬럼 ── */}
-      <div className="flex min-w-0 flex-col gap-6 lg:gap-8">
+      <div className="flex min-w-0 flex-col gap-6">
         {/* 다음 세션 히어로 (항상 표시) */}
         {heroSession ? (
           <HeroCard
@@ -454,11 +459,11 @@ export default function ClientHomePage() {
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
             <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
-              전체 보기
+              전체 보기 <span aria-hidden>›</span>
             </button>
           </div>
           {clientReports.length > 0 ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {clientReports.map((r) => {
                 const generation = resolveReportGenerationStatus(r.generation_status);
                 const isNew = !r.is_read;
@@ -467,12 +472,12 @@ export default function ClientHomePage() {
                     key={r.id ?? r.session_id}
                     type="button"
                     onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
-                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E3EC] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#FBF8FD]"
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E3EC] bg-[#FBF8FD] p-4 text-left transition-all hover:border-[#DDD0EA] hover:bg-[#F5EDFC]"
                   >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         {isNew && (
-                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[10px] font-bold text-white">
+                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">
                             NEW
                           </span>
                         )}
@@ -486,11 +491,12 @@ export default function ClientHomePage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {generation === 'processing' && (
-                        <span className="rounded-full bg-[#FFF4DC] px-2 py-0.5 text-[10px] font-bold text-[#8A6B1F]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] font-bold text-[#5F0080]">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
                           생성 중
                         </span>
                       )}
-                      <span className="text-[#9B9B9B]" aria-hidden>›</span>
+                      <span className="text-[#767676]" aria-hidden>›</span>
                     </div>
                   </button>
                 );
@@ -507,12 +513,16 @@ export default function ClientHomePage() {
         <section>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>이번 주 일정</h2>
-            <button type="button" onClick={() => navigate('/app/sessions')} className={LINK_CLS}>
+            <button
+              type="button"
+              onClick={() => navigate('/app/sessions')}
+              className="rounded-lg border border-[#DDD0EA] bg-white px-3 py-2 text-[12.5px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
+            >
               달력 보기
             </button>
           </div>
           {weekSessions.length > 0 ? (
-            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
+            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5 py-2 shadow-sm">
               {weekSessions.map((s) => (
                 <button
                   key={s.id}
@@ -554,7 +564,7 @@ export default function ClientHomePage() {
               <button
                 type="button"
                 onClick={() => navigate('/app/sessions')}
-                className="mt-4 rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
+                className="mt-4 rounded-lg border border-[#DDD0EA] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
               >
                 세션 신청하기
               </button>
@@ -564,7 +574,7 @@ export default function ClientHomePage() {
       </div>
 
       {/* ── 우측 레일 ── */}
-      <div className="flex min-w-0 flex-col gap-6 lg:gap-6">
+      <div className="flex min-w-0 flex-col gap-6 lg:gap-5">
         {/* 요약 타일 */}
         <SummaryTiles
           dDay={dDay}
@@ -576,43 +586,43 @@ export default function ClientHomePage() {
 
         {/* 담당 상담사 */}
         {primaryCounselor && (
-          <section>
+          <section className={`${CARD_CLS} p-5`}>
             <div className={SECTION_HEAD_CLS}>
               <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
               <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-                상담 신청 ›
+                상담 신청 <span aria-hidden>›</span>
               </button>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-[#E8E3EC] bg-white p-4">
+            <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
                 {primaryCounselor.name?.charAt(0) ?? '상'}
               </div>
               <div className="min-w-0">
-                <div className="text-[14px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
-                <div className="text-[12px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
+                <div className="text-[15px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
+                <div className="text-[13px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
               </div>
             </div>
           </section>
         )}
 
         {/* 최근 대화 */}
-        <section>
+        <section className={`${CARD_CLS} p-5`}>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>최근 대화</h2>
             <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-              전체
+              전체 <span aria-hidden>›</span>
             </button>
           </div>
           {recentChats.length > 0 ? (
-            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
+            <div>
               {recentChats.map((room) => (
                 <button
                   key={room.id}
                   type="button"
                   onClick={() => openChat(room.id)}
-                  className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0"
+                  className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3 text-left last:border-0"
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[12px] font-bold text-white">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
                     {(room.display_name || room.peer_name || '상').charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -621,12 +631,12 @@ export default function ClientHomePage() {
                         {room.display_name || room.peer_name || '상담사'}
                       </span>
                       {(room.unread_count ?? 0) > 0 && (
-                        <span className="rounded-full bg-[#5F0080] px-1.5 text-[10px] font-extrabold text-white">
+                        <span className="rounded-full bg-[#5F0080] px-1.5 text-[10.5px] font-extrabold text-white">
                           {room.unread_count}
                         </span>
                       )}
                     </div>
-                    <div className="truncate text-[13px] text-[#6F6F6F]">
+                    <div className="mt-0.5 truncate text-[13px] text-[#6F6F6F]">
                       {room.last_message?.content || '새로운 대화가 없습니다'}
                     </div>
                   </div>
@@ -637,24 +647,22 @@ export default function ClientHomePage() {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
-              대화가 없습니다
-            </div>
+            <div className="py-8 text-center text-sm text-[#6F6F6F]">대화가 없습니다</div>
           )}
         </section>
 
         {/* 새 알림 */}
-        <section className="flex flex-1 flex-col">
+        <section className={`${CARD_CLS} flex flex-1 flex-col p-5`}>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
             <button type="button" onClick={() => navigate('/app/notifications')} className={LINK_CLS}>
-              전체
+              전체 <span aria-hidden>›</span>
             </button>
           </div>
           {recentNotifications.length > 0 ? (
-            <div className="flex flex-1 flex-col rounded-2xl border border-[#E8E3EC] bg-white px-5">
+            <div className="flex flex-1 flex-col">
               {recentNotifications.map((n) => (
-                <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0">
+                <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3 last:border-0">
                   <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
@@ -665,7 +673,7 @@ export default function ClientHomePage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[#E8E3EC] py-8 text-center text-sm text-[#6F6F6F]">
+            <div className="flex flex-1 items-center justify-center py-8 text-center text-sm text-[#6F6F6F]">
               새로운 알림이 없습니다
             </div>
           )}

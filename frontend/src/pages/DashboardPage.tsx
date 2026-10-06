@@ -134,7 +134,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
       {showRecordLink && (
         <Link
           to={`/sessions/${cls.id}/record`}
-          className="inline-flex text-[13px] font-semibold text-[#5F0080] hover:underline"
+          className="inline-flex text-[13px] font-bold text-[#5F0080] hover:underline"
         >
           기록 보기 →
         </Link>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
       {showProfileBanner && (
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[14px] font-semibold text-[#5F0080]">프로필을 완성해보세요</p>
+            <p className="text-[14px] font-bold text-[#5F0080]">프로필을 완성해보세요</p>
             <p className="mt-1 text-[13px] text-[#6F6F6F]">
               자격증명·경력 등은 원하실 때 설정에서 입력하실 수 있습니다.
             </p>
@@ -458,7 +458,7 @@ export default function DashboardPage() {
             <section>
               <div className="mb-4 flex items-baseline justify-between">
                 <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">내 클래스</h2>
-                <Link to="/sessions" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
+                <Link to="/sessions" className="text-[13px] font-bold text-[#5F0080] hover:underline">
                   전체 보기
                 </Link>
               </div>
@@ -511,31 +511,31 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">진행 중</div>
-                <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F8A5B]">
+                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F8A5B]">
                   {data.in_progress_classes}
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">입장하기 →</div>
+                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">입장하기 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">검토 대기</div>
-                <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#5F0080]">
+                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#5F0080]">
                   {pendingReviewCount}
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">리포트 검토 →</div>
+                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">리포트 검토 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">오늘 예정</div>
-                <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F1F1F]">
+                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {todaySessions.length}
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">일정 보기 →</div>
+                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">일정 보기 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">총 참여자</div>
-                <div className="mt-1 text-[26px] font-extrabold tracking-tight text-[#1F1F1F]">
+                <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {data.total_participants.toLocaleString('ko-KR')}
                 </div>
-                <div className="mt-0.5 text-[11px] font-bold text-[#5F0080]">내담자 관리 →</div>
+                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">내담자 관리 →</div>
               </div>
             </div>
 
@@ -543,7 +543,7 @@ export default function DashboardPage() {
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">최근 대화</h2>
-                <Link to="/chat" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
+                <Link to="/chat" className="text-[13px] font-bold text-[#5F0080] hover:underline">
                   전체
                 </Link>
               </div>
@@ -590,7 +590,7 @@ export default function DashboardPage() {
             <section>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">새 알림</h2>
-                <Link to="/notifications" className="text-[13px] font-semibold text-[#5F0080] hover:underline">
+                <Link to="/notifications" className="text-[13px] font-bold text-[#5F0080] hover:underline">
                   전체
                 </Link>
               </div>
@@ -635,7 +635,7 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       onClick={() => void handleCopyCounselorCode()}
-                      className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 min-h-[44px] text-sm font-semibold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
+                      className="rounded-lg border border-[#C9B0E8] bg-white px-4 py-2 min-h-[44px] text-sm font-bold text-[#5F0080] hover:bg-[#EFE3FA] transition-colors"
                     >
                       {codeCopied ? '복사됨' : '복사'}
                     </button>
