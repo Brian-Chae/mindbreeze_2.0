@@ -35,6 +35,13 @@ class EEGFeatureWindow(Base):
             "ix_eeg_feature_window_batch_key",
             "session_id", "participant_id", "window_index",
         ),
+        # EEG-QRY-01: 최신값 조회(latest_feature_window)·시간순 조회
+        # (feature_windows_chronological)가 created_at 정렬을 사용한다. (session_id, participant_id,
+        # created_at) 복합 인덱스로 전체 로딩 후 정렬이 아니라 인덱스 범위 스캔 + LIMIT 을 지원한다.
+        Index(
+            "ix_eeg_feature_window_participant_created",
+            "session_id", "participant_id", "created_at",
+        ),
         # SDD-109: play_group_id NULL(레거시·FE 미전송) 행은 위 유니크 제약이 NULL != NULL 로
         # 무효화되므로, NULL 세그먼트 전용 부분 유니크 인덱스로 동시 저장 중복을 DB 레벨에서 차단한다.
         Index(

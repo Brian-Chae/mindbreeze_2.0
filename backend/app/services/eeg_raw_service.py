@@ -153,6 +153,7 @@ def ack_upload(
     )
 
     acked = 0
+    failed = 0
     for item in payload.chunks:
         chunk = (
             db.query(EEGRawChunk)
@@ -172,6 +173,17 @@ def ack_upload(
         if item.size_bytes is not None:
             chunk.size_bytes = item.size_bytes
         if chunk.upload_status != "uploaded":
+            # EEG-RAW-02: ack 확정 전 S3 객체 존재·크기(HEAD)를 검증한다. 검증 없이 uploaded 로
+            # 확정하면 실제 유실된 청크가 성공으로 기록된다. 자격증명 미설정(스텁)은 None → 건너뜀.
+            verified = storage_service.verify_object(
+                chunk.object_key, expected_size=chunk.size_bytes
+            )
+            if verified is False:
+                # 객체 없음/크기 불일치 — uploaded 로 확정하지 않고 failed 로 마킹.
+                chunk.upload_status = "failed"
+                chunk.uploaded_at = None
+                failed += 1
+                continue
             chunk.upload_status = "uploaded"
             chunk.uploaded_at = _now()
             acked += 1
@@ -185,6 +197,7 @@ def ack_upload(
     return {
         "session_id": str(sid),
         "acked": acked,
+        "failed": failed,
         "eeg_record_id": str(record.id) if record else None,
         "file_count": record.file_count if record else 0,
     }

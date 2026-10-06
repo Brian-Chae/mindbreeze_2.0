@@ -126,5 +126,7 @@ class RawAckRequest(BaseModel):
 class RawAckResponse(BaseModel):
     session_id: str
     acked: int
+    # EEG-RAW-02: S3 HEAD 검증 실패(객체 없음/크기 불일치)로 failed 마킹된 청크 수.
+    failed: int = 0
     eeg_record_id: str | None = None
     file_count: int

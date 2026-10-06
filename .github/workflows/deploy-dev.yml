@@ -72,7 +72,8 @@ jobs:
             backend/cleanup_notifications_cron.py \
             backend/upgrade_narrative_cache_cron.py \
             backend/deploy/mindbreeze-worker.service \
-            backend/deploy/mindbreeze-email-worker.service
+            backend/deploy/mindbreeze-email-worker.service \
+            backend/deploy/mindbreeze-export-worker.service
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -149,13 +150,24 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable mindbreeze-email-worker 2>/dev/null || true
 
+            # 4.10 INFRA-01: 데이터 export 전용 워커 systemd 서비스 설치 (exports 큐 소비)
+            #      — 이 워커가 없으면 tasks.generate_data_export/cleanup_data_exports 가 큐에
+            #        쌓인 채 실행되지 않아 내보내기 zip 이 영원히 준비되지 않는다.
+            #      — export-beat 는 **전체** beat 스케줄을 중복 실행하므로 dev 에서는 설치하지 않는다
+            #        (주기 작업은 아래 cron 들이 대체). beat 중복 조정은 INFRA-08 후속.
+            sudo cp "$BASE/backend/deploy/mindbreeze-export-worker.service" /etc/systemd/system/mindbreeze-export-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-export-worker 2>/dev/null || true
+
             # 5. 서비스 재시작
             sudo systemctl restart mindbreeze-backend
             sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
+            sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
             sudo systemctl restart mindbreeze-worker
             sleep 5
             sudo systemctl is-active mindbreeze-backend
             sudo systemctl is-active mindbreeze-worker
+            sudo systemctl is-active mindbreeze-export-worker 2>/dev/null || true
 
             # 5.0 진단: 워커·백엔드 최근 로그 (파이프라인 소비 여부 확인용)
             echo "=== [진단] mindbreeze-worker 상태 ==="

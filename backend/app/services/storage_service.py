@@ -17,8 +17,25 @@ logger = logging.getLogger(__name__)
 _STUB_HOST = f"https://{settings.s3_bucket}.s3.{settings.s3_region}.amazonaws.com"
 
 
+class StorageSigningError(RuntimeError):
+    """자격증명이 설정된 배포 환경에서 presigned 서명이 실패했을 때 발생한다.
+
+    스텁 URL 로 조용히 폴백하면 클라이언트가 실제로는 PUT 불가한 가짜 URL 을 받아
+    업로드가 유실되므로, 자격증명이 있는 환경에서는 실패를 숨기지 않고 전파한다.
+    """
+
+
 def _stub_url(object_key: str) -> str:
     return f"{_STUB_HOST}/{object_key}?stub=1"
+
+
+def storage_configured() -> bool:
+    """S3 자격증명이 설정되어 실제 서명/조회가 가능한지 여부.
+
+    미설정(로컬/테스트) 환경은 스텁으로 흐름만 검증하며, 검증·서명 실패를
+    실제 오류로 취급하지 않는다.
+    """
+    return bool(settings.aws_access_key_id and settings.aws_secret_access_key)
 
 
 def generate_presigned_put(
@@ -29,9 +46,10 @@ def generate_presigned_put(
 ) -> str:
     """S3 PUT 프리사인드 URL 을 발급한다.
 
-    자격증명 미설정/오류 시 스텁 URL 로 폴백한다(예외를 전파하지 않는다).
+    - 자격증명 미설정(로컬/테스트): 실제 서명이 불가하므로 결정적 스텁 URL 을 반환한다(현행 유지).
+    - 자격증명 설정(배포): 서명 실패를 스텁으로 숨기지 않고 StorageSigningError 로 전파한다.
     """
-    if not (settings.aws_access_key_id and settings.aws_secret_access_key):
+    if not storage_configured():
         # 자격증명 미설정 — 로컬/테스트. 실제 서명 없이 스텁 URL 반환.
         return _stub_url(object_key)
     try:
@@ -52,8 +70,33 @@ def generate_presigned_put(
             ExpiresIn=expires_in,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.warning("[storage] presigned 발급 실패, 스텁 URL 폴백: %s", exc)
-        return _stub_url(object_key)
+        logger.error("[storage] presigned 발급 실패(자격증명 설정됨), 스텁 폴백 금지: %s", exc)
+        raise StorageSigningError("presigned_url_failed") from exc
+
+
+def verify_object(object_key: str, *, expected_size: int | None = None) -> bool | None:
+    """S3 객체 존재(및 크기 일치)를 HEAD 로 검증한다(ack 확정 전 무결성 게이트).
+
+    반환값:
+      - None: 자격증명 미설정 → 검증 불가(스텁 환경, 건너뜀). 기존 로컬/테스트 흐름 유지.
+      - True: 객체 존재(및 expected_size 지정 시 크기 일치).
+      - False: 객체 없음/크기 불일치/조회 실패(자격증명 설정됨) → 호출측이 failed 로 마킹.
+    """
+    if not storage_configured():
+        return None
+    try:
+        client = _s3_client()
+        if client is None:
+            # 자격증명은 있으나 클라이언트 생성 실패 — 검증 불가를 성공으로 치지 않는다.
+            return False
+        resp = client.head_object(Bucket=settings.s3_bucket, Key=object_key)
+        if expected_size is not None and int(resp.get("ContentLength", -1)) != int(expected_size):
+            logger.warning("[storage] S3 객체 크기 불일치: %s", object_key)
+            return False
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[storage] S3 HEAD 검증 실패: %s (%s)", object_key, exc)
+        return False
 
 
 @lru_cache(maxsize=1)
