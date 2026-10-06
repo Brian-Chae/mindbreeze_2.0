@@ -27,6 +27,11 @@ TEMPLATE_BY_TYPE = {
     "meditation": ["수업 흐름", "참여자 반응", "권고"],
 }
 
+# CEL-RETRY-02: 요약 태스크에 soft/time 상한을 둔다 — 무한 대기(공급자 지연)로 워커가
+#   점유되는 것을 막고, soft 초과 시 정리 경로(soft time limit 예외)를 태운다.
+SUMMARY_SOFT_TIME_LIMIT = 540   # 9분
+SUMMARY_TIME_LIMIT = 600        # 10분(soft + 1분)
+
 
 def _call_gemini_text(prompt: str, *, json_mode: bool = True, timeout: int = 120) -> str:
     """Gemini 텍스트 생성 — 응답 텍스트(JSON 모드 시 JSON 문자열)를 반환.
@@ -334,6 +339,8 @@ try:
         autoretry_for=(RuntimeError,),
         retry_backoff=True,
         retry_kwargs={"max_retries": 3},
+        soft_time_limit=SUMMARY_SOFT_TIME_LIMIT,
+        time_limit=SUMMARY_TIME_LIMIT,
     )
     def summary_task(session_id: str) -> None:
         from app.core.database import SessionLocal

@@ -5,9 +5,10 @@ raw EEG 청크는 서버를 거치지 않고 클라이언트가 S3 로 직접 PU
 (실제 업로드는 배포 환경 자격증명이 있을 때 동작한다).
 """
 
+import hashlib
 import logging
+import threading
 from datetime import datetime, timezone
-from functools import lru_cache
 
 from app.config import settings
 
@@ -20,6 +21,11 @@ _STUB_HOST = f"https://{settings.s3_bucket}.s3.{settings.s3_region}.amazonaws.co
 #   storage_configured()=True 가 되어 스텁 폴백이 꺼지고, 존재하지 않는 버킷·키로
 #   실제 AWS 서명/업로드를 시도해 조용히 실패한다. 더미는 '미설정'으로 취급한다.
 _DUMMY_CREDENTIALS = {"dev", "test", "dummy", "changeme", "minio", "minioadmin", "local", "example"}
+
+# STG-10: presigned PUT 유효기간 — 기본 1시간은 과도하게 길고 상한이 없어 URL 유출 시 악용 창이
+#   넓다. raw EEG 업로드는 발급 직후 수행되므로 기본 10분, 상한 15분으로 축소한다.
+PRESIGNED_PUT_DEFAULT_EXPIRES_IN = 600
+PRESIGNED_PUT_MAX_EXPIRES_IN = 900
 
 
 class StorageUploadError(RuntimeError):
@@ -84,13 +90,16 @@ def generate_presigned_put(
     object_key: str,
     *,
     content_type: str = "application/octet-stream",
-    expires_in: int = 3600,
+    expires_in: int = PRESIGNED_PUT_DEFAULT_EXPIRES_IN,
 ) -> str:
     """S3 PUT 프리사인드 URL 을 발급한다.
 
     - 자격증명 미설정(로컬/테스트): 실제 서명이 불가하므로 결정적 스텁 URL 을 반환한다(현행 유지).
     - 자격증명 설정(배포): 서명 실패를 스텁으로 숨기지 않고 StorageSigningError 로 전파한다.
+    - STG-10: 유효기간은 항상 1초~상한(15분)으로 클램프한다.
     """
+    # STG-10: 호출측이 큰 값을 넘겨도 상한을 넘기지 못하게 한다.
+    expires_in = max(1, min(int(expires_in), PRESIGNED_PUT_MAX_EXPIRES_IN))
     if not storage_configured():
         # 자격증명 미설정 — 로컬/테스트. 실제 서명 없이 스텁 URL 반환.
         return _stub_url(object_key)
@@ -150,20 +159,42 @@ def verify_object(object_key: str, *, expected_size: int | None = None) -> bool 
         return False
 
 
-@lru_cache(maxsize=1)
+# STG-14: 자격증명 회전·설정 변경을 반영하기 위해 클라이언트를 '설정 지문' 기준으로 캐시한다.
+#   @lru_cache(maxsize=1) 로 프로세스당 영구 고정하면 자격증명/엔드포인트가 바뀌어도 이전
+#   클라이언트가 계속 재사용돼 회전 자격증명이 반영되지 않는다(인증 실패·폐기 자격증명 잔존).
+_s3_client_lock = threading.Lock()
+_s3_client_state = None  # (fingerprint, client) — 설정 지문이 바뀌면 재생성
+
+
+def _s3_client_fingerprint() -> tuple:
+    """클라이언트 캐시 키 — 리전·엔드포인트·키 ID·비밀값 해시(비밀 원문은 보관·노출하지 않는다)."""
+    return (
+        settings.s3_region,
+        _endpoint_url() or "",
+        settings.aws_access_key_id or "",
+        hashlib.sha256((settings.aws_secret_access_key or "").encode()).hexdigest(),
+    )
+
+
 def _s3_client():
-    """S3 클라이언트(프로세스당 1회 생성·재사용).
+    """S3 클라이언트 — 설정(자격증명·엔드포인트·리전) 지문 기준 캐시.
 
     boto3 client는 스레드 안전하므로 병렬 다운로드/업로드에서 공유해도 안전하다.
     자격증명 미설정(또는 더미, STG-07) 시 None 을 반환한다(호출부가 로컬 폴백 결정).
     STG-06: s3_endpoint_url 설정 시 해당 엔드포인트(MinIO 등)로 연결한다.
+    STG-14: 설정 지문이 바뀌면(자격증명 회전 등) 새 클라이언트를 생성해 반영한다.
     """
+    global _s3_client_state
     if not _has_real_credentials():
         return None
+    fingerprint = _s3_client_fingerprint()
+    state = _s3_client_state
+    if state is not None and state[0] == fingerprint:
+        return state[1]
     try:
         import boto3
 
-        return boto3.client(
+        client = boto3.client(
             "s3",
             region_name=settings.s3_region,
             endpoint_url=_endpoint_url(),
@@ -173,6 +204,9 @@ def _s3_client():
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] S3 클라이언트 생성 실패: %s", exc)
         return None
+    with _s3_client_lock:
+        _s3_client_state = (fingerprint, client)
+    return client
 
 
 def open_object_stream(object_key: str):

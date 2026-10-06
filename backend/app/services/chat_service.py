@@ -1047,8 +1047,13 @@ def add_room_participants(room_id: str, user_id: str, participant_ids: list[str]
                 },
                 db,
             )
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            # MB-ERR-004: 초대 알림 발화 실패를 삼키지 않고 로그로 남긴다.
+            logger.exception(
+                "[chat_service] 채팅방 초대 알림 발화 실패: room_id=%s user_id=%s",
+                room.id,
+                puid,
+            )
     return _serialize_room(room, user_id, db)
 
 
@@ -1129,8 +1134,13 @@ def fork_group_room(
                 },
                 db,
             )
-        except Exception:
-            pass
+        except Exception:  # noqa: BLE001
+            # MB-ERR-004: 새 방 초대 알림 발화 실패를 삼키지 않고 로그로 남긴다.
+            logger.exception(
+                "[chat_service] 채팅방 초대 알림 발화 실패: room_id=%s user_id=%s",
+                new_room.id,
+                puid,
+            )
     return _serialize_room(new_room, user_id, db)
 
 
@@ -1255,8 +1265,13 @@ def remove_room_participant(room_id: str, user_id: str, target_user_id: str, db:
             },
             db,
         )
-    except Exception:
-        pass
+    except Exception:  # noqa: BLE001
+        # MB-ERR-004: 내보내기 알림 발화 실패를 삼키지 않고 로그로 남긴다.
+        logger.exception(
+            "[chat_service] 채팅방 내보내기 알림 발화 실패: room_id=%s user_id=%s",
+            room.id,
+            tuid,
+        )
 
 
 def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dict]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from datetime import date, datetime
@@ -13,6 +14,8 @@ from sqlalchemy.orm import Session
 from app.models.credential import Credential
 from app.models.user import User
 from app.services.notification_service import build_standard_extra, notify_event
+
+logger = logging.getLogger(__name__)
 
 # 업로드 루트 — backend/uploads/
 UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
@@ -192,8 +195,15 @@ def delete_credential(credential_id: uuid.UUID, user_id: uuid.UUID, db: Session)
     try:
         if cred.s3_key and os.path.exists(cred.s3_key):
             os.remove(cred.s3_key)
-    except OSError:
-        pass
+    except OSError as exc:
+        # MB-ERR-010: 로컬 파일 제거 실패(권한·잠금 등)를 조용히 무시하면 개인정보 파일이
+        # 잔존해도 알 수 없다. DB 삭제는 진행하되 실패를 로그로 남긴다.
+        logger.warning(
+            "[credential] 증빙 로컬 파일 삭제 실패: credential_id=%s path=%s (%s)",
+            credential_id,
+            cred.s3_key,
+            exc,
+        )
 
     db.delete(cred)
     db.commit()

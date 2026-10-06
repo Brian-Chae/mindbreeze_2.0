@@ -948,9 +948,15 @@ def sweep_stale_open_sessions(
             #   차단되면(409) 취소하지 않는다 — 진행중 클래스를 잘못 취소하지 않도록.
             transition_status(str(s.id), str(s.host_id), "cancel", db, restrict_from={"open"})
             cancelled.append(str(s.id))
-        except Exception:
+        except Exception as exc:
             # 호스트 삭제·동시 전이 등으로 실패한 건은 건너뛰고 다음 세션을 처리한다.
+            # MB-ERR-011: 개별 실패를 조용히 삼키지 않고 로그로 남겨 스윕 누락을 진단 가능하게 한다.
             db.rollback()
+            logger.warning(
+                "[STALE-OPEN-SESSION] 세션 취소 실패 — 건너뜀: session_id=%s (%s)",
+                s.id,
+                exc,
+            )
             continue
 
     return cancelled

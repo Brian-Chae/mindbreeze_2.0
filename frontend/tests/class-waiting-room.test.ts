@@ -68,10 +68,10 @@ async function click(el: HTMLElement | undefined): Promise<void> {
   });
 }
 
-/** 마이크 자동 확인은 다음 태스크로 미뤄지므로 타이머·권한 프라미스를 흘려보낸다 */
+/** 마이크 자동 확인은 setTimeout(0) 으로 미뤄지므로 가짜 타이머를 진행시켜 흘려보낸다 */
 async function flushPreview(): Promise<void> {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.advanceTimersByTimeAsync(0);
   });
   await act(async () => {});
 }
@@ -102,6 +102,8 @@ function baseProps(overrides: Partial<Parameters<typeof ClassWaitingRoom>[0]> = 
 }
 
 beforeEach(() => {
+  // TQ-15: 마이크 자동 확인의 setTimeout(0) 에 의존하지 않도록 가짜 타이머로 시간을 통제한다.
+  vi.useFakeTimers();
   vi.clearAllMocks();
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   if (!window.matchMedia) {
@@ -124,6 +126,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
   sessionStorage.clear();
+  vi.useRealTimers();
 });
 
 // ── 순수 로직: 닉네임 ────────────────────────────────────────────────

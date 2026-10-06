@@ -897,7 +897,12 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                 db,
             )
         except Exception:  # noqa: BLE001
-            pass
+            # MB-ERR-005: 승인 완료 알림 발화 실패를 삼키지 않고 로그로 남긴다.
+            logger.exception(
+                "[report_service] 리포트 승인 알림 발화 실패: report_id=%s user_id=%s",
+                report.id,
+                report.user_id,
+            )
 
     db.commit()
     db.refresh(report)

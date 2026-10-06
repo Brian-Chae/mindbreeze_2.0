@@ -68,7 +68,7 @@ function progressPayload(overrides: Partial<ReportProgressDto> = {}): ReportProg
 /** 첫 REST 조회(kickoff 타이머)까지 흘려보낸다. */
 async function flushInitialLoad(): Promise<void> {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.advanceTimersByTimeAsync(0);
   });
 }
 
@@ -76,6 +76,8 @@ let root: Root;
 let container: HTMLDivElement;
 
 beforeEach(() => {
+  // TQ-15: kickoff setTimeout(0) 에 의존하지 않도록 가짜 타이머로 시간을 통제한다.
+  vi.useFakeTimers();
   vi.clearAllMocks();
   for (const key of Object.keys(listeners)) delete listeners[key];
   ioCalls.length = 0;
@@ -89,6 +91,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.useRealTimers();
 });
 
 // ── 1. 계약 파싱 ────────────────────────────────────────────────────────

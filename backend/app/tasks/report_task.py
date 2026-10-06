@@ -364,7 +364,10 @@ def _counselor_content(session: Session, record: SessionRecord | None, eeg_block
         "transcript_segments": segments,
         "video": (
             {
-                "s3_key": record.video_s3_key,
+                # STG-13: 내부 S3 object key 는 클라이언트에 노출하지 않는다. 재생은
+                # /sessions/{id}/video/url 이 권한 확인 후 presigned URL 을 발급한다.
+                # content 에는 가용 여부(available)와 상태만 담는다.
+                "available": bool(record.video_s3_key),
                 "status": record.video_status,
             }
             if record
@@ -560,7 +563,12 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
                     db,
                 )
         except Exception:  # noqa: BLE001 — 알림 실패가 리포트 상태 반영을 막지 않도록
-            pass
+            # MB-ERR-005: 알림 발화 실패를 삼키지 않고 로그로 남긴다(원인 진단 가능하게).
+            logger.exception(
+                "[report_task] 리포트 생성 실패 알림 발화 실패: report_id=%s user_id=%s",
+                report.id,
+                report.user_id,
+            )
 
     # SDD-087: content 통째 교체로 기존 상담사 코멘트가 유실되지 않게 이월한다 (방어 가드)
     prev = report.content if isinstance(report.content, dict) else {}

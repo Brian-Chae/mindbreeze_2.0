@@ -40,6 +40,11 @@ GEMINI_RETRY_ATTEMPTS = 3          # 최초 시도 포함 총 시도 횟수
 GEMINI_RETRY_BACKOFF_SEC = 1.0     # 지수 backoff 기준(1s → 2s)
 GEMINI_TRANSIENT_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
 
+# CEL-RETRY-02: STT 는 장시간 오디오(다수 세그먼트 × 재시도)로 오래 걸릴 수 있어 상한을 둔다.
+#   soft 초과 시 SoftTimeLimitExceeded 로 정리 경로를 태우고, time 초과 시 워커가 강제 종료한다.
+STT_SOFT_TIME_LIMIT = 1500   # 25분
+STT_TIME_LIMIT = 1800        # 30분(soft + 5분)
+
 
 class GeminiTransientError(RuntimeError):
     """Gemini 일시 오류(네트워크/타임아웃/429/5xx) — backoff 재시도·Whisper 폴백 대상."""
@@ -604,6 +609,8 @@ try:
         autoretry_for=(RuntimeError,),
         retry_backoff=True,
         retry_kwargs={"max_retries": 3},
+        soft_time_limit=STT_SOFT_TIME_LIMIT,
+        time_limit=STT_TIME_LIMIT,
     )
     def stt_task(session_id: str) -> None:
         from app.core.database import SessionLocal

@@ -7,6 +7,7 @@
 소유 검증은 SDD-026 resolve_upload_participant 를 재사용한다(게스트 raw 지원 — participant_id 기반).
 """
 
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -46,8 +47,25 @@ def _object_prefix(sid: UUID, participant: SessionParticipant, play_group_id: st
     return f"eeg-raw/{sid}/{participant.id}/{seg}"
 
 
+# STG-11: S3 key 에 삽입되는 stream_id 허용 문자(영숫자·.·_·-).
+_STREAM_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def _validate_stream_id(stream_id: str) -> str:
+    """STG-11: stream_id 를 S3 key 에 삽입하기 전 허용 문자를 검증한다.
+
+    stream_id 는 클라이언트 입력이며 object key 에 그대로 들어간다. ``../``·``/`` 같은
+    문자가 허용되면 다른 prefix(참가자·세션 경계)로 키가 이탈하거나 예기치 않은 객체를
+    덮어쓸 수 있다. 허용: 영숫자와 ``.``·``_``·``-`` (1~128자).
+    """
+    if not isinstance(stream_id, str) or not _STREAM_ID_RE.fullmatch(stream_id):
+        raise HTTPException(status_code=422, detail="stream_id 형식이 올바르지 않습니다")
+    return stream_id
+
+
 def _build_object_key(prefix: str, stream_id: str, chunk_index: int) -> str:
     # 재발급 시 결정적으로 재사용할 수 있게 (stream_id, chunk_index) 로 키를 구성한다.
+    _validate_stream_id(stream_id)
     return f"{prefix}/{stream_id}/{chunk_index:08d}.bin"
 
 
@@ -86,6 +104,8 @@ def presign_upload(
 
     items: list[dict] = []
     for meta in payload.chunks:
+        # STG-11: 재사용 경로를 포함해 모든 stream_id 를 key 삽입 전에 검증한다.
+        _validate_stream_id(meta.stream_id)
         key = (meta.stream_id, meta.chunk_index)
         # 동일 (session, participant, stream, chunk_index) 는 멱등 — 기존 행 재사용(재발급).
         existing = existing_map.get(key)

@@ -196,19 +196,15 @@ export async function refreshAccessToken(): Promise<string | null> {
 /**
  * FastAPI 오류 응답의 detail 을 사용자 문구로 변환한다.
  * - detail 이 문자열이면 그대로 사용
+ * - 단일 객체({ msg, type } 등)면 loc/msg 를 조합
  * - 422 검증 오류처럼 객체 배열이면 각 항목의 loc(필드 경로)와 msg(사유)를 조합
  */
 export function formatErrorDetail(detail: unknown): string | null {
   if (typeof detail === 'string' && detail.trim()) return detail;
-  if (!Array.isArray(detail)) return null;
 
-  const parts: string[] = [];
-  for (const item of detail) {
-    if (typeof item === 'string') {
-      if (item.trim()) parts.push(item.trim());
-      continue;
-    }
-    if (!item || typeof item !== 'object') continue;
+  const formatItem = (item: unknown): string | null => {
+    if (typeof item === 'string') return item.trim() || null;
+    if (!item || typeof item !== 'object') return null;
     const { loc, msg } = item as { loc?: unknown; msg?: unknown };
     const field = Array.isArray(loc)
       ? loc
@@ -218,11 +214,24 @@ export function formatErrorDetail(detail: unknown): string | null {
           .join('.')
       : '';
     const message = typeof msg === 'string' ? msg.trim() : '';
-    if (field && message) parts.push(`${field}: ${message}`);
-    else if (message) parts.push(message);
-    else if (field) parts.push(field);
+    if (field && message) return `${field}: ${message}`;
+    if (message) return message;
+    if (field) return field;
+    return null;
+  };
+
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map(formatItem)
+      .filter((part): part is string => part !== null);
+    return parts.length > 0 ? parts.join(' / ') : null;
   }
-  return parts.length > 0 ? parts.join(' / ') : null;
+
+  // API7-10: 단일 객체 detail({ msg, type } 등)도 파싱한다.
+  // FastAPI 는 검증 오류를 배열로 주지만, 커스텀 핸들러는 단일 객체로 줄 수 있다.
+  if (detail && typeof detail === 'object') return formatItem(detail);
+
+  return null;
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {

@@ -115,6 +115,10 @@ def create_export(db: DBSession, user_id: UUID, session_id: UUID, participant_id
     try:
         generate_data_export.apply_async(args=[str(job.id)], queue='exports')
     except Exception:
+        # MB-ERR-007: 큐 게시 실패를 조용히 failed 로만 남기지 않고 원인을 로그로 기록한다.
+        logger.exception(
+            "[export] 큐 게시 실패 — export_id=%s (브로커 상태 확인 필요)", job.id
+        )
         job.status = 'failed'
         job.error_code = 'queue_unavailable'
         job.updated_at = now()

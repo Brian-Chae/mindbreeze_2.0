@@ -153,10 +153,17 @@ def test_03_24h_미경과_open_세션은_유지(client):
     assert _status(sid) == "open"
 
 
-def test_04_경계_정확히_24h는_포함(client):
+def test_04_경계_정확히_24h는_포함(client, monkeypatch):
+    # TQ-13: wall clock 의존 제거 — 스윕의 'now' 를 고정해 opened_at == now-24h 경계를
+    # 결정적으로 검증한다(실행 시각 오차로 경계 판정이 흔들리지 않도록).
+    from app.services import session_service
+
+    frozen = datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(session_service, "_now", lambda: frozen)
+
     host = _register(client, "stale04@test.com")
     sid = _create_open_session(client, host)
-    _set_opened_at(sid, datetime.now(timezone.utc) - timedelta(hours=24))
+    _set_opened_at(sid, frozen - timedelta(hours=24))
 
     cancelled = _sweep()
 
