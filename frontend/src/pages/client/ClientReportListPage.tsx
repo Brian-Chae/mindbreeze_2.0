@@ -206,7 +206,12 @@ export default function ClientReportListPage() {
         <span className="text-[12px] font-semibold text-[#5F0080]">{counselorName(report)}</span>
         <span className="flex gap-2"><TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} /></span>
       </div>
-      <div className="font-bold text-[15px] text-[#1F1F1F] mb-1 truncate">{reportTitle(report)}</div>
+      <div className="flex items-center gap-1.5 mb-1">
+        {!report.is_read && (
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+        )}
+        <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
+      </div>
       <div className="text-[13px] font-bold text-[#1F1F1F] font-mono">
         {formatDateTime(report.scheduled_at)}
       </div>
@@ -241,7 +246,12 @@ export default function ClientReportListPage() {
             }}
             className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${report.id ? 'hover:bg-[#F8FAFC] cursor-pointer' : ''}`}
           >
-            <td className="px-5 py-3.5"><div className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</div>
+            <td className="px-5 py-3.5"><div className="flex items-center gap-1.5">
+              {!report.is_read && (
+                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+              )}
+              <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
+            </div>
               <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
             </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>

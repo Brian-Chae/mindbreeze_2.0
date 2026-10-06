@@ -379,7 +379,12 @@ export default function ReportListPage() {
       }`}
     >
       <td className="px-5 py-3.5">
-        <div className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</div>
+        <div className="flex items-center gap-1.5">
+          {!r.is_read && (
+            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+          )}
+          <span className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</span>
+        </div>
       </td>
       <td className="px-5 py-3.5">
         <div className="font-medium text-[#1F1F1F] truncate max-w-[120px]">{participantDisplayName(r)}</div>
@@ -441,7 +446,12 @@ export default function ReportListPage() {
         </div>
         <ReportStatusChip status={r.status} sentAt={r.sent_at} />
       </div>
-      <div className="font-bold text-[15px] text-[#1F1F1F] truncate mb-1">{reportTitle(r)}</div>
+      <div className="flex items-center gap-1.5 mb-1">
+        {!r.is_read && (
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+        )}
+        <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(r)}</span>
+      </div>
       <div className="text-[13px] text-[#1F1F1F] mb-1">
         {participantDisplayName(r)}
         <span className="text-[#9B9B9B] font-normal"> · {genderLabel(r.gender)} · {formatBirthDate(r.birth_date)}</span>
