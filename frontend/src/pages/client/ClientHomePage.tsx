@@ -471,7 +471,7 @@ export default function ClientHomePage() {
                   <button
                     key={r.id ?? r.session_id}
                     type="button"
-                    onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
+                    onClick={() => r.id && navigate(`/app/reports?report=${r.id}`)}
                     className="flex items-center justify-between gap-3 rounded-2xl border border-[#E8E3EC] bg-[#FBF8FD] p-4 text-left transition-all hover:border-[#DDD0EA] hover:bg-[#F5EDFC]"
                   >
                     <div className="min-w-0">

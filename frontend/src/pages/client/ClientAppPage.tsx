@@ -14,7 +14,6 @@ import ClientSessionListPage from './ClientSessionListPage';
 import ClientSessionDetailPage from './ClientSessionDetailPage';
 import ClientSettingsPage from '../settings/ClientSettingsPage';
 import ClientReportListPage from './ClientReportListPage';
-import ClientReportDetailPage from './ClientReportDetailPage';
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────
 
@@ -295,12 +294,6 @@ export default function ClientAppPage() {
   const sessionDetailMatch = pathname.match(/^\/app\/sessions\/([^/]+)$/);
   if (sessionDetailMatch) {
     return <ClientSessionDetailPage />;
-  }
-
-  // /app/reports/:id → 리포트 상세 (ClientShell 없이 풀스크린)
-  const reportDetailMatch = pathname.match(/^\/app\/reports\/([^/]+)$/);
-  if (reportDetailMatch) {
-    return <ClientReportDetailPage />;
   }
 
   // 탭별 콘텐츠 + ClientShell (AppShell과 동일 구조)
