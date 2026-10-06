@@ -61,7 +61,7 @@ export function WaitingRoomReadinessPanel({ sessionId, entries, isConnected }: W
           {entry.checkin && <div className="waiting-readiness-checkin mt-3"><CheckinSummary arousal={entry.checkin.arousal} valence={entry.checkin.valence} emotion={entry.checkin.emotion} note={entry.checkin.note} /></div>}
         </li>;
       })}</ul>
-      <p className="mt-4 text-xs leading-5 text-[#bcaec5]">✓ 확인 완료 (건너뛰기·미사용 포함)　○ 확인 전</p>
+      <p className="mt-4 text-xs leading-5 text-[#bcaec5]">✓ 확인 완료 (건너뛰기·미사용 포함) ○ 확인 전</p>
       <button type="button" onClick={() => void remind()} disabled={!available || sending || !pending.length} className="mt-4 w-full rounded-xl border border-[#dcb5ee]/20 bg-[#5F0080] px-4 py-3 text-sm disabled:cursor-default disabled:opacity-40">{sending ? '안내 보내는 중…' : `미완 ${pending.length}명 리마인드`}</button>
       {!available && <p className="mt-2 text-xs text-[#bcaec5]">연결되면 준비 안내를 보낼 수 있어요.</p>}
       {message && <p role="status" className="mt-2 text-xs text-[#dcb5ee]">{message}</p>}

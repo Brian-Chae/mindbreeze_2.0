@@ -277,7 +277,7 @@ export class StreamProcessor {
   /**
    * EEG 데이터 독립 처리
    */
-  processEEGData(data: any[], metadata?: ChunkMetadata): void {
+  processEEGData(data: any[], _metadata?: ChunkMetadata): void {
     const startTime = performance.now();
     
     if (this.isProcessing) {
@@ -339,7 +339,7 @@ export class StreamProcessor {
   /**
    * PPG 데이터 독립 처리
    */
-  processPPGData(data: any[], metadata?: ChunkMetadata): void {
+  processPPGData(data: any[], _metadata?: ChunkMetadata): void {
     const startTime = performance.now();
     
     // PPG는 별도 처리 플래그 사용 (EEG와 독립적)
@@ -393,7 +393,7 @@ export class StreamProcessor {
   /**
    * ACC 데이터 독립 처리
    */
-  processACCData(data: any[], metadata?: ChunkMetadata): void {
+  processACCData(data: any[], _metadata?: ChunkMetadata): void {
     const startTime = performance.now();
     
     if (this.isProcessing) {
@@ -642,9 +642,6 @@ export class StreamProcessor {
         // EEG 분석 지표 생성 및 저장 (SQI 값 포함)
         if (result.indices && result.bandPowers) {
           try {
-            // EEG SQI 값 계산 (overall SQI 사용)
-            const eegSQI = result.signalQuality?.overall || 0;
-            
             await this.analysisMetricsService.processEEGAnalysisMetrics(
               {
                 timestamp: Date.now(),

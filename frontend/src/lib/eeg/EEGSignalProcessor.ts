@@ -3,7 +3,7 @@ import type { EEGDataPoint } from './SimpleCircularBuffer';
 import type { ProcessedEEGData, BandPowers, BrainStateAnalysis, SignalQuality } from './types/eeg';
 
 // BiquadFilters.js 라이브러리 추가 - EEG 전용 고품질 신호 처리
-import { Biquad, makeNotchFilter, makeBandpassFilter } from 'biquadjs';
+import { makeNotchFilter, makeBandpassFilter } from 'biquadjs';
 
 /** Morlet 웨이블렛 복소수 샘플 */
 interface ComplexSample {
@@ -226,7 +226,6 @@ export class EEGSignalProcessor {
     // 품질 분석 계산
     const avgCh1SQI = ch1SQI.reduce((a, b) => a + b, 0) / ch1SQI.length;
     const avgCh2SQI = ch2SQI.reduce((a, b) => a + b, 0) / ch2SQI.length;
-    const qualityPercentage = (goodQualitySamples / ch1Clean.length) * 100;
 
     // 4. 주파수 분석 수행 (품질 관계없이 항상 수행)
     let ch1Power: number[] = [];
@@ -283,10 +282,7 @@ export class EEGSignalProcessor {
       merged, ch1BandPowers, ch2BandPowers,
       avgCh1SQI >= qualityThreshold, avgCh2SQI >= qualityThreshold,
     );
-    const {
-      focusIndex, relaxationIndex, stressIndex, hemisphericBalance,
-      cognitiveLoad, emotionalStability,
-    } = indices;
+    const { focusIndex, relaxationIndex } = indices;
 
     // 신호 품질 평가 (이미 퍼센트 값으로 계산됨)
     const signalQuality: SignalQuality = {
@@ -485,7 +481,7 @@ export class EEGSignalProcessor {
         
         qualityScore *= (overallSQI / 100);
         
-      } catch (error) {
+      } catch {
         issues.push('품질 분석 실패');
         qualityScore *= 0.7;
       }

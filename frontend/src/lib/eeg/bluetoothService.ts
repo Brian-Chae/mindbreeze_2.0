@@ -437,7 +437,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       // 사용자가 취소한 경우 특별 처리 (에러로 처리하지 않음)
       if (error instanceof Error && error.name === 'NotFoundError' && 
           error.message.includes('User cancelled')) {
-        throw new Error('디바이스 선택이 취소되었습니다');
+        throw new Error('디바이스 선택이 취소되었습니다', { cause: error });
       }
       
       logger.error('디바이스 스캔 실패:', error);
@@ -447,7 +447,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
         stack: error instanceof Error ? error.stack : undefined
       });
       
-      throw new Error(`디바이스 스캔에 실패했습니다: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`디바이스 스캔에 실패했습니다: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
   }
 
@@ -511,11 +511,11 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       // 사용자가 취소한 경우 특별 처리 (에러로 처리하지 않음)
       if (error instanceof Error && error.name === 'NotFoundError' &&
           error.message.includes('User cancelled')) {
-        throw new Error('디바이스 연결이 취소되었습니다');
+        throw new Error('디바이스 연결이 취소되었습니다', { cause: error });
       }
 
       logger.error('LINK BAND 연결 실패:', error);
-      throw new Error(`디바이스 연결에 실패했습니다: ${error instanceof Error ? error.message : error}`);
+      throw new Error(`디바이스 연결에 실패했습니다: ${error instanceof Error ? error.message : error}`, { cause: error });
     }
   }
 
@@ -560,7 +560,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
       }
     } catch (error) {
       logger.error('❌ 서비스 연결 실패:', error);
-      throw new Error(`서비스 연결 실패: ${error}`);
+      throw new Error(`서비스 연결 실패: ${error}`, { cause: error });
     }
   }
 
@@ -600,7 +600,7 @@ class LinkBandBluetoothService implements BluetoothEEGService {
 
     } catch (error) {
       logger.error('❌ 데이터 스트림 시작 실패:', error);
-      throw new Error(`데이터 스트림 시작 실패: ${error}`);
+      throw new Error(`데이터 스트림 시작 실패: ${error}`, { cause: error });
     }
   }
 

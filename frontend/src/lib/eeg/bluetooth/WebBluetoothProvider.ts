@@ -6,7 +6,7 @@
  * 실제 패킷 파싱은 bluetoothService.ts 에서 그대로 처리합니다.
  */
 
-import type { BluetoothProvider, BluetoothDeviceInfo, BLEService, BLECharacteristic, RequestDeviceOptions } from './BluetoothProvider';
+import type { BluetoothProvider, BluetoothDeviceInfo, BLEService, RequestDeviceOptions } from './BluetoothProvider';
 
 export class WebBluetoothProvider implements BluetoothProvider {
   readonly platform = 'web' as const;

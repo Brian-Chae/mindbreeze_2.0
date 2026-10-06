@@ -123,7 +123,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
           const isWeekHighlight = weekHighlight ? inSameWeek(d, weekHighlight) : false;
           const items = sessionsOn(d);
 
-          let cellBg = '';
+          let cellBg: string;
           if (isSelected) cellBg = 'bg-[#5F0080] text-white font-bold';
           else if (isToday) cellBg = 'bg-[#F5EDFC] text-[#5F0080] font-bold';
           else if (isWeekHighlight && inMonth) cellBg = 'bg-[#F5EDFC]/40 text-[#1F1F1F]';

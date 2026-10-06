@@ -25,6 +25,8 @@ let root: Root;
 let container: HTMLDivElement;
 let live: ReturnType<typeof useSessionLiveSocket>;
 function Probe({ participantId = 'p1' }: { participantId?: string | null }) {
+  // 테스트 프로브 컴포넌트: 훅 반환값을 외부 변수에 캡처한다(렌더 사이드이펙트 의도).
+  // eslint-disable-next-line react-hooks/globals
   live = useSessionLiveSocket({ sessionId: 's1', participantId, skipAuth: true });
   return null;
 }

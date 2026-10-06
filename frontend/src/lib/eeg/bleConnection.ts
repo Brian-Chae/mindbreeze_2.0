@@ -82,8 +82,8 @@ export async function discoverServices(
   const eegService = await server.getPrimaryService(uuids.EEG_SERVICE);
   const eegCharacteristic = await eegService.getCharacteristic(uuids.EEG_CHARACTERISTIC);
 
-  let ppgService: BluetoothRemoteGATTService | null = null;
-  let ppgCharacteristic: BluetoothRemoteGATTCharacteristic | null = null;
+  let ppgService: BluetoothRemoteGATTService | null;
+  let ppgCharacteristic: BluetoothRemoteGATTCharacteristic | null;
   try {
     ppgService = await server.getPrimaryService(uuids.PPG_SERVICE);
     ppgCharacteristic = await ppgService.getCharacteristic(uuids.PPG_CHARACTERISTIC);

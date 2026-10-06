@@ -253,7 +253,7 @@ export default function ClientOnboardingPage() {
     // 숫자만 추출
     const digits = value.replace(/\D/g, '');
     // 자동 형식: 010-XXXX-XXXX
-    let formatted = '';
+    let formatted: string;
     if (digits.length <= 3) {
       formatted = digits;
     } else if (digits.length <= 7) {

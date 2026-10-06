@@ -4,7 +4,7 @@ import type { ProcessedEEGData, BandPowers, BrainStateAnalysis, SignalQuality, B
 import type { EEGDataPoint, PPGDataPoint } from './SimpleCircularBuffer';
 
 // BiquadFilters.js 라이브러리 추가 - PPG 전용 고품질 신호 처리
-import { Biquad, makeNotchFilter, makeBandpassFilter } from 'biquadjs';
+import { makeBandpassFilter } from 'biquadjs';
 
 /**
  * Phase 1: JavaScript 기반 기본 신호 처리기
@@ -48,8 +48,6 @@ export class BasicSignalProcessor {
     // 채널별 데이터 추출 (Python과 동일)
     const ch1Data = data.map(point => point.fp1);
     const ch2Data = data.map(point => point.fp2);
-    const ch1Leadoff = data.map(point => point.leadOff?.ch1 || false);
-    const ch2Leadoff = data.map(point => point.leadOff?.ch2 || false);
 
     // 1. 필터링 적용 (Python과 동일: Notch + Bandpass)
     const ch1Notched = this.applyNotchFilter(ch1Data, 60); // 60Hz 노치 필터
@@ -1075,7 +1073,7 @@ export class BasicSignalProcessor {
       const amplitude = Math.max(...window) - Math.min(...window);
       
       // 진폭이 적정 범위(10-100μV)에 있으면 좋은 품질
-      let qualityScore = 0;
+      let qualityScore: number;
       if (amplitude >= 10 && amplitude <= 100) {
         qualityScore = 1.0;
       } else if (amplitude < 10) {

@@ -182,7 +182,7 @@ export class TimestampSynchronizer {
   private validateTimestamp(
     normalizedTime: number, 
     sensorType: 'EEG' | 'PPG' | 'ACC',
-    originalDeviceTime: number
+    _originalDeviceTime: number
   ): TimestampValidationResult {
     const issues: string[] = [];
     let correctedTime = normalizedTime;

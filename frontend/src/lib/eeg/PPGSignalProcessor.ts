@@ -1234,7 +1234,7 @@ export class PPGSignalProcessor {
   /**
    * 고급 HRV 분석 (🔧 AnalysisMetricsService에서 3000개 버퍼로 계산)
    */
-  private calculateAdvancedHRV(data: number[]): {
+  private calculateAdvancedHRV(_data: number[]): {
     sdnn: number;
     pnn50: number;
     lfPower: number;
@@ -1367,7 +1367,7 @@ export class PPGSignalProcessor {
    * HR Max/Min 계산 (Heart Rate Maximum/Minimum)
    * 🔧 AnalysisMetricsService의 BPM 버퍼에서 계산되므로 여기서는 0 반환
    */
-  private computeHRMaxMin(rrIntervals: number[]): { hrMax: number; hrMin: number } {
+  private computeHRMaxMin(_rrIntervals: number[]): { hrMax: number; hrMin: number } {
     // 🔧 AnalysisMetricsService의 BPM 버퍼에서 실시간으로 Max/Min 추적
     // 여기서는 0을 반환하여 큐 합계 계산에 영향주지 않음
     
@@ -1560,13 +1560,11 @@ export class PPGSignalProcessor {
     highFreq: number
   ): number {
     let power = 0;
-    let count = 0;
     
     for (let i = 0; i < frequencies.length; i++) {
       const freq = frequencies[i];
       if (freq >= lowFreq && freq <= highFreq) {
         power += powerSpectralDensity[i];
-        count++;
       }
     }
     

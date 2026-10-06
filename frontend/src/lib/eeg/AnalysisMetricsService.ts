@@ -660,7 +660,7 @@ export class AnalysisMetricsService {
       0.4,
     );
 
-    let lfPower = lfPowerRaw * 1000000;
+    const lfPower = lfPowerRaw * 1000000;
     let hfPower = hfPowerRaw * 1000000;
 
     if (hfPower < 1 && lfPower > 10) {

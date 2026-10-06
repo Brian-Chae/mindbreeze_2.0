@@ -200,7 +200,7 @@ export class ACCSignalProcessor {
     const { avgMovement, stdMovement, maxMovement } = movement;
     
     // 활동 강도 계산 (0-100)
-    let intensity = 0;
+    let intensity: number;
     if (avgMovement <= 5) {
       intensity = avgMovement * 4; // 0-20%
     } else if (avgMovement <= 15) {
@@ -211,7 +211,7 @@ export class ACCSignalProcessor {
     
     // 활동 상태 분류
     let activityType: 'stationary' | 'sitting' | 'walking' | 'running';
-    let confidence = 0;
+    let confidence: number;
     
     if (avgMovement < 3 && maxMovement < 10) {
       activityType = 'stationary';
