@@ -757,6 +757,11 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
         title="세션이 취소되었습니다",
         body=s.title or "세션",
     )
+    # STG-05: DB 행만 지우면 S3 객체·로컬 파일(음성/영상/raw)이 잔존한다 — 실제 미디어도 삭제.
+    # (행 삭제 전에 파일 참조를 수집해야 하므로 여기서 호출한다.)
+    from app.services import media_cleanup_service
+
+    media_cleanup_service.delete_session_media([s.id], db)
     db.delete(s)
     db.commit()
 

@@ -11,7 +11,7 @@ from app.schemas.record import (
     AudioStopResponse,
     ChunkUploadResponse,
 )
-from app.services import audio_service
+from app.services import audio_service, upload_service
 
 router = APIRouter(prefix="/sessions", tags=["audio"])
 
@@ -35,7 +35,10 @@ async def upload_chunk(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    content = await file.read()
+    # STG-01: 전체 메모리 읽기 + 무제한 크기 대신 스트리밍 조각 읽기로 상한을 강제한다.
+    content = await upload_service.read_upload_bounded(
+        file, max_bytes=upload_service.MAX_AUDIO_CHUNK_BYTES
+    )
     return audio_service.save_chunk(session_id, current_user["id"], chunk_index, content, db)
 
 

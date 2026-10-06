@@ -396,11 +396,12 @@ def test_update_시점제거시_제거된_시점만_revoke(client, monkeypatch):
     assert calls == [[1440]]
 
 
-def test_FUNC05_이메일_outbox는_커밋후_큐적재(client):
-    """FUNC-05: 이메일 outbox 가 commit 된 뒤에 apply_async 가 호출돼야 한다.
+def test_CEL_OUTBOX_01_이메일은_단일소비자만_처리(client):
+    """CEL-OUTBOX-01: 리마인더는 이메일 outbox 행만 남기고 직접 큐 적재하지 않는다.
 
-    워커가 커밋 전에 큐를 소비해 outbox 행을 찾지 못하는 메일 유실을 막는다.
-    워커 관점(새 DB 세션)에서 행이 조회되는지로 순서를 검증한다.
+    직접 notification_email_task 로 적재하면 1분 cron process_email_outbox 가 같은 pending
+    행을 집어 이중 발송된다. 단일 소비자(행 선점)에게만 맡기고, 커밋된 pending 행이
+    소비자(새 DB 세션)에게 조회되는지 검증한다.
     """
     import uuid
 
@@ -412,25 +413,9 @@ def test_FUNC05_이메일_outbox는_커밋후_큐적재(client):
         client, host["h"], [member["id"]], offsets=[60], minutes_from_now=30
     )
 
-    observed: dict = {}
-
-    def _fake_apply_async(args=None, **kwargs):
-        outbox_id = (args or [None])[0]
-        worker_db = _db()
-        try:
-            row = (
-                worker_db.query(NotificationOutbox)
-                .filter(NotificationOutbox.id == uuid.UUID(str(outbox_id)),
-                        NotificationOutbox.channel == "email")
-                .first()
-            )
-            observed["found"] = row is not None
-        finally:
-            worker_db.close()
-
     with patch(
-        "app.tasks.report_email_task.notification_email_task.apply_async", _fake_apply_async
-    ):
+        "app.tasks.report_email_task.notification_email_task.apply_async"
+    ) as apply_async:
         db = _db()
         try:
             result = reminder_service.run_reminder(created["id"], 60, db)
@@ -438,4 +423,21 @@ def test_FUNC05_이메일_outbox는_커밋후_큐적재(client):
             db.close()
 
     assert result["status"] == "sent"
-    assert observed.get("found") is True
+    # 직접 큐 적재하지 않는다 → 단일 소비자(process_email_outbox)만 처리(이중 발송 방지)
+    apply_async.assert_not_called()
+
+    # 소비자(새 DB 세션)가 커밋된 pending 행을 조회할 수 있어야 한다.
+    worker_db = _db()
+    try:
+        row = (
+            worker_db.query(NotificationOutbox)
+            .filter(
+                NotificationOutbox.user_id == uuid.UUID(member["id"]),
+                NotificationOutbox.channel == "email",
+            )
+            .first()
+        )
+        assert row is not None
+        assert row.status == "pending"
+    finally:
+        worker_db.close()

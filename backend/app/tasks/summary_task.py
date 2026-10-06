@@ -330,5 +330,6 @@ try:
             run_summary_inline(session_id, db)
         finally:
             db.close()
-except Exception:
-    pass
+except Exception:  # noqa: BLE001
+    # MB-ERR-001: 등록 예외를 삼키면 태스크 미등록으로 파이프라인이 조용히 끊긴다.
+    logger.exception("[summary_task] Celery 태스크 등록 실패 — tasks.summary 미등록 가능")

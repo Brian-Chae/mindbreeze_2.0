@@ -580,6 +580,30 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     return report
 
 
+def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> None:
+    """CEL-CHAIN-01: 리포트 체인 최종 실패를 durable 하게 마킹한다.
+
+    실패를 조용히 유실하지 않도록 리포트(status=error + generation_error)와
+    세션 기록(status=failed)에 남긴다. 마킹 자체의 실패가 원 예외 전파를 막지 않는다.
+    """
+    try:
+        sid = UUID(str(session_id))
+        reason = f"{type(exc).__name__}: {exc}"[:50]
+        for report in db.query(Report).filter(Report.session_id == sid).all():
+            # 이미 승인(completed)된 리포트 내용·상태는 보존한다.
+            if report.status == "completed":
+                continue
+            report.status = "error"
+            report.generation_status = report_progress_service.GENERATION_PARTIAL
+            report.generation_error = reason
+        record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
+        if record is not None and record.status not in ("completed", "manual"):
+            record.status = "failed"
+        db.commit()
+    except Exception:  # noqa: BLE001 — 마킹 실패가 원 예외 전파를 막지 않게 한다.
+        logger.exception("[report_task] 실패 상태 마킹 실패: session_id=%s", session_id)
+
+
 try:
     from app.core.celery_app import celery_app
 
@@ -608,9 +632,18 @@ try:
         finally:
             db.close()
 
-    @celery_app.task(name="tasks.generate_reports_for_session")
+    @celery_app.task(
+        name="tasks.generate_reports_for_session",
+        autoretry_for=(Exception,),
+        retry_backoff=True,
+        retry_kwargs={"max_retries": 3},
+    )
     def generate_reports_for_session(session_id: str) -> None:
-        """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출)."""
+        """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출).
+
+        CEL-CHAIN-01: 중간 단계 실패를 조용히 유실하지 않도록 Celery 자동 재시도(backoff,
+        max_retries=3)를 걸고, 최종 실패 시 리포트/세션 기록에 실패를 마킹한다.
+        """
         from app.core.database import SessionLocal
         from app.models.session import Session
         from app.services import report_service
@@ -620,12 +653,19 @@ try:
             s = db.query(Session).filter(Session.id == UUID(session_id)).first()
             if not s:
                 return
-            report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
-            report_service.generate_client_reports_for_session(str(s.id), db)
-            # SDD-095: 세션의 모든 리포트 생성이 끝난 뒤 최종 진행 상태를 1회 push 한다.
-            # (개별 리포트 생성 중 발생한 이벤트를 최종 집계값으로 확정)
-            _emit_report_progress(str(s.id), db)
+            try:
+                report_service.generate_report(str(s.id), str(s.host_id), "counselor", db)
+                report_service.generate_client_reports_for_session(str(s.id), db)
+                # SDD-095: 세션의 모든 리포트 생성이 끝난 뒤 최종 진행 상태를 1회 push 한다.
+                # (개별 리포트 생성 중 발생한 이벤트를 최종 집계값으로 확정)
+                _emit_report_progress(str(s.id), db)
+            except Exception as exc:  # noqa: BLE001
+                # 재시도 전에 실패를 기록하고 재전파한다(autoretry 가 재시도).
+                # 재시도가 모두 소진되면 마지막 시도의 실패 마킹이 남아 유실되지 않는다.
+                _mark_pipeline_failure(session_id, db, exc)
+                raise
         finally:
             db.close()
 except Exception:  # noqa: BLE001
-    pass
+    # MB-ERR-001: 등록 예외를 삼키면 리포트 태스크가 미등록된 채 조용히 유실된다.
+    logger.exception("[report_task] Celery 태스크 등록 실패 — 리포트 태스크 미등록 가능")

@@ -3,7 +3,7 @@
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 
 # S3 자격증명 미설정/일시 실패 시 폴백 저장 위치. /tmp 는 재시작 시 삭제되므로 영속 디스크 사용.
 CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/var/lib/mindbreeze/audio"))
+
+# CEL-CHAIN-02: published 파이프라인 아웃박스의 재드라이브 판정 지연(초).
+# status='published' 로 표시한 뒤 중간 태스크가 죽어 체인이 끝나지 않으면 워치독이 재발행한다.
+# 정상 수행 시간을 확보하기 위해 이 시간이 지난 뒤에만 재드라이브 대상으로 본다
+# (진행 중인 체인을 중복 발행하지 않는다).
+PIPELINE_REDRIVE_DELAY_SECONDS = 30 * 60
 
 
 def _to_uuid(value: str) -> UUID:
@@ -276,6 +282,10 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
         try:
             publish_pipeline(str(session_id), has_recording, needs_video_merge, has_data)
             outbox.status = "published"
+            # CEL-CHAIN-02: 이 시점 이후 체인이 미완료(중간 태스크 크래시 등)면 워치독이
+            # 재발행한다. available_at 을 재드라이브 판정 시각으로 밀어 정상 진행 중인
+            # 체인을 중복 발행하지 않게 한다.
+            outbox.available_at = _now() + timedelta(seconds=PIPELINE_REDRIVE_DELAY_SECONDS)
             db.commit()
             logger.info(
                 "[audio] chain enqueued for session %s (recording=%s, video_merge=%s)",

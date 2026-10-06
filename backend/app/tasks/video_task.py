@@ -84,4 +84,5 @@ try:
         finally:
             db.close()
 except Exception:  # noqa: BLE001
-    pass
+    # MB-ERR-001: 등록 예외를 삼키면 영상 병합 태스크가 미등록된 채 조용히 유실된다.
+    logger.exception("[video_task] Celery 태스크 등록 실패 — 태스크 미등록 가능")

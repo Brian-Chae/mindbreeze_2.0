@@ -2,7 +2,12 @@
 // access token은 메모리에만 보관, refresh token은 httpOnly cookie로 관리
 
 import { create } from 'zustand';
-import { ApiError, tokenStorage, refreshAccessToken } from '../lib/api/client';
+import {
+  ApiError,
+  tokenStorage,
+  refreshAccessTokenResult,
+  type RefreshFailureReason,
+} from '../lib/api/client';
 import {
   login as apiLogin,
   registerClient as apiRegisterClient,
@@ -17,13 +22,34 @@ import {
 
 const USER_KEY = 'mb_user';
 
+/**
+ * API7-01: 세션 복구 실패 안내. network/server 는 세션 만료가 아니므로
+ * 사용자에게 안내하고 재시도할 수 있게 한다(invalid 는 즉시 로그아웃이라 노출하지 않는다).
+ */
+export interface SessionRecoveryNotice {
+  reason: RefreshFailureReason;
+  message: string;
+}
+
+const recoveryNotice = (reason: RefreshFailureReason): SessionRecoveryNotice => ({
+  reason,
+  message:
+    reason === 'server'
+      ? '서버가 일시적으로 응답하지 않아 로그인 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+      : '네트워크 연결이 불안정해 로그인 상태를 확인하지 못했습니다. 연결을 확인한 후 다시 시도해 주세요.',
+});
+
 interface AuthState {
   user: User | null;
   accessToken: string | null;
   isAuthenticated: boolean;
   isInitialized: boolean;
+  /** 세션 복구(초기 refresh) 실패 안내. 정상/세션 만료 시 null. */
+  sessionError: SessionRecoveryNotice | null;
 
   initialize: () => void;
+  /** 세션 복구 재시도 — initialize() 를 다시 실행한다. */
+  retryInitialize: () => void;
   login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
   loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: { tos: boolean; privacy: boolean; sensitive: boolean }) => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
@@ -58,11 +84,12 @@ const applyLogin = (res: LoginResponse, requestedRole?: string): User => {
   return res.user;
 };
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
   isInitialized: false,
+  sessionError: null,
 
   initialize: (): void => {
     const user = loadUser();
@@ -74,27 +101,52 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: null,
       isAuthenticated: false,
       isInitialized: false,
+      sessionError: null,
     });
-    if (user) {
-      // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재
-      refreshAccessToken().then((token) => {
-        if (token) {
-          set({ accessToken: token, isAuthenticated: true, isInitialized: true });
-        } else {
-          tokenStorage.clear();
-          persistUser(null);
-          set({ user: null, accessToken: null, isAuthenticated: false, isInitialized: true });
-        }
-      });
-    } else {
+    if (!user) {
       set({ isInitialized: true });
+      return;
     }
+    // access token 복구 — refresh(httpOnly cookie)로 메모리 재적재.
+    // API7-01: 실패 원인을 구분한다. 네트워크/서버 문제로 null 이 왔다고
+    // 세션을 폐기(persistUser(null))하면, 일시적 장애에 사용자가 강제 로그아웃된다.
+    void refreshAccessTokenResult().then((result) => {
+      if (result.ok) {
+        set({ accessToken: result.token, isAuthenticated: true, isInitialized: true, sessionError: null });
+        return;
+      }
+      if (result.reason === 'invalid') {
+        // refresh 토큰이 실제로 만료/폐기된 경우(4xx)에만 세션을 폐기한다.
+        tokenStorage.clear();
+        persistUser(null);
+        set({
+          user: null,
+          accessToken: null,
+          isAuthenticated: false,
+          isInitialized: true,
+          sessionError: null,
+        });
+        return;
+      }
+      // network/server: 세션 만료가 아니므로 사용자 정보를 유지한 채 안내 + 재시도를 노출한다.
+      // 메모리 access token 은 없지만, 연결이 복구되면 다음 API 401 이 refresh 로 자가 복구된다.
+      set({
+        accessToken: null,
+        isAuthenticated: true,
+        isInitialized: true,
+        sessionError: recoveryNotice(result.reason),
+      });
+    });
+  },
+
+  retryInitialize: (): void => {
+    get().initialize();
   },
 
   login: async (email, password, role, rememberMe = true): Promise<User> => {
     const res = await apiLogin(email, password, role, rememberMe);
     const user = applyLogin(res, role);
-    set({ user, accessToken: res.access_token, isAuthenticated: true });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
     return user;
   },
 
@@ -104,7 +156,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       rememberMe,
     );
     const user = applyLogin(res, role);
-    set({ user, accessToken: res.access_token, isAuthenticated: true });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
     return user;
   },
 
@@ -117,14 +169,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     const { loginDevUser } = await import('../lib/api/devAuth');
     const res = await loginDevUser(userId);
     const user = applyLogin(res);
-    set({ user, accessToken: res.access_token, isAuthenticated: true });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
     return user;
   },
 
   registerClient: async (data, rememberMe = true): Promise<User> => {
     const res = await apiRegisterClient(data, rememberMe);
     const user = applyLogin(res);
-    set({ user, accessToken: res.access_token, isAuthenticated: true });
+    set({ user, accessToken: res.access_token, isAuthenticated: true, sessionError: null });
     return user;
   },
 
@@ -132,7 +184,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await apiRefresh();
       tokenStorage.set(res.access_token);
-      set({ accessToken: res.access_token });
+      set({ accessToken: res.access_token, sessionError: null });
       return true;
     } catch {
       return false;
@@ -147,7 +199,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     tokenStorage.clear();
     persistUser(null);
-    set({ user: null, accessToken: null, isAuthenticated: false });
+    set({ user: null, accessToken: null, isAuthenticated: false, sessionError: null });
 
     // STORE-07: 로그아웃 시 사용자 종속 스토어(알림·채팅)를 초기화하여
     // 이전 사용자의 알림/메시지가 다음 로그인 사용자에게 노출되지 않게 한다.

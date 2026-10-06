@@ -609,5 +609,7 @@ try:
             run_stt_inline(session_id, db)
         finally:
             db.close()
-except Exception:
-    pass
+except Exception:  # noqa: BLE001
+    # MB-ERR-001: 태스크 등록 실패를 조용히 삼키면 워커가 이 태스크를 미등록으로
+    # 처리해 파이프라인이 끊긴다. 원인을 남겨 진단 가능하게 한다.
+    logger.exception("[stt_task] Celery 태스크 등록 실패 — tasks.stt 미등록 가능")

@@ -1,9 +1,13 @@
 """SDD-048 규칙 기반 서사 캐시를 소량씩 LLM 서사로 업그레이드한다."""
+import logging
+
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.narrative_cache import NarrativeCache
 from app.services.report_narrative import summary_from_signature
 from app.tasks.summary_task import _call_narrative_llm
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_narrative_for_upgrade(row: NarrativeCache, db: DBSession) -> dict | None:
@@ -50,5 +54,6 @@ try:
             return upgrade_rule_narratives(db, limit=limit)
         finally:
             db.close()
-except Exception:  # Celery 미설치 환경에서도 순수 함수를 사용할 수 있다.
-    pass
+except Exception:  # noqa: BLE001
+    # MB-ERR-001: 등록 예외를 삼키면 캐시 업그레이드 태스크가 미등록된 채 유실된다.
+    logger.exception("[upgrade_narrative_cache] Celery 태스크 등록 실패 — 태스크 미등록 가능")

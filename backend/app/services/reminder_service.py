@@ -6,10 +6,14 @@
 
 발송 채널:
 - 인앱 알림(Notification) + 실시간 웹푸시(WS outbox → Socket.IO new_notification)
-- 이메일(outbox → Resend, 기존 notification_email_task 재사용)
+- 이메일(outbox → process_email_outbox 단일 소비자가 Resend 발송)
 
 중복 방지: session_reminder_logs 에 (session_id, offset_min, user_id, channel) 로 기록하고
 이미 발송된 조합은 건너뛴다. 워커 재시도·스윕 폴백이 겹쳐도 1회만 발송된다.
+
+CEL-OUTBOX-01: 이메일 outbox 는 notification_email_task 로 직접 큐 적재하지 않는다.
+1분 cron process_email_outbox 가 같은 pending 행을 집어 이중 발송되던 문제를 막기 위해
+단일 소비자(process_email_outbox, 행 선점)에게만 맡긴다.
 """
 
 from __future__ import annotations
@@ -247,12 +251,11 @@ def _dispatch_channels(
     offset_min: int,
     recipient: dict,
     db: DBSession,
-    pending_emails: list[str] | None = None,
 ) -> int:
     """한 수신자에게 인앱+WS+이메일 리마인더 발송하고 로그를 남긴다(발송 건수 반환).
 
-    FUNC-05: 이메일 outbox 는 commit 이후에 큐 적재해야 한다. pending_emails 가 주어지면
-    outbox id 만 모아두고(호출자가 commit 후 enqueue), 아니면 기존처럼 즉시 적재한다.
+    CEL-OUTBOX-01: 이메일은 outbox 행만 pending 으로 남긴다. 직접 큐 적재하지 않고
+    단일 소비자(process_email_outbox)가 커밋 후 행을 선점해 발송하게 해 이중 발송을 막는다.
     """
     from app.models.notification_outbox import NotificationOutbox
     from app.services import notification_service
@@ -290,7 +293,8 @@ def _dispatch_channels(
         ))
         sent += 1
 
-    # 이메일 — 기존 이메일 서비스/워커 재사용. 로그 선점 성공 시에만 발송한다.
+    # 이메일 — outbox 행만 pending 으로 남기고 단일 소비자(process_email_outbox)에게 맡긴다.
+    #   CEL-OUTBOX-01: 로그 선점 성공 시에만 행을 만든다(중복 워커 방어).
     email = recipient.get("email")
     if email and _log_delivery(
         db, session_id=session.id, offset_min=offset_min, user_id=user_id, channel="email"
@@ -308,24 +312,9 @@ def _dispatch_channels(
         )
         db.add(email_item)
         db.flush()
-        if pending_emails is not None:
-            # FUNC-05: commit 은 호출자(run_reminder)가 루프 종료 후 수행 — 그 뒤에 큐 적재.
-            pending_emails.append(str(email_item.id))
-        else:
-            _enqueue_notification_email(str(email_item.id))
         sent += 1
 
     return sent
-
-
-def _enqueue_notification_email(outbox_id: str) -> None:
-    """알림 이메일 outbox 를 큐에 적재한다(best-effort — 브로커 장애 시 outbox 에 남긴다)."""
-    try:
-        from app.tasks.report_email_task import notification_email_task
-
-        notification_email_task.apply_async(args=[outbox_id], retry=False)
-    except Exception as e:  # noqa: BLE001 — 브로커 장애 시 outbox 에 남아 추후 재시도
-        logger.warning("[REMINDER] 이메일 큐 적재 실패 (outbox=%s): %s", outbox_id, e)
 
 
 def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict:
@@ -365,16 +354,11 @@ def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict
         return {"status": "skipped", "reason": "no_recipients"}
 
     total_sent = 0
-    pending_emails: list[str] = []
     for recipient in recipients:
-        total_sent += _dispatch_channels(
-            session, offset, recipient, db, pending_emails=pending_emails
-        )
-    # FUNC-05: outbox 를 먼저 commit 한 뒤 큐에 적재한다 — 워커가 커밋 전에 행을 찾지 못해
-    # 메일이 유실되는 경합을 막는다.
+        total_sent += _dispatch_channels(session, offset, recipient, db)
+    # CEL-OUTBOX-01: 이메일 아웃박스 행을 먼저 commit 한 뒤, 단일 소비자(process_email_outbox)가
+    # pending 행을 선점해 발송한다. 여기서 직접 큐 적재하지 않는다(이중 발송 방지).
     db.commit()
-    for outbox_id in pending_emails:
-        _enqueue_notification_email(outbox_id)
 
     result = {
         "status": "sent" if total_sent else "duplicate",

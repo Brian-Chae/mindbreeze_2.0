@@ -62,33 +62,96 @@ interface RequestOptions {
 const isFormDataBody = (value: unknown): value is FormData =>
   typeof FormData !== 'undefined' && value instanceof FormData;
 
+// 요청 타임아웃(API7-02). 네트워크/서버가 응답을 주지 않으면 fetch 가 영구 pending 되어
+// 앱 전체가 고착된다. AbortController 로 요청을 중단해 상한을 둔다.
+const REQUEST_TIMEOUT_MS = 15_000;
+// blob(PDF 등) 다운로드는 생성·전송에 시간이 걸릴 수 있어 여유를 둔다.
+const BLOB_TIMEOUT_MS = 60_000;
+
+/** AbortController 기반 타임아웃 signal 을 만든다. 사용 후 반드시 clear() 로 타이머를 해제한다. */
+function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timer),
+  };
+}
+
+/** abort(타임아웃) 로 인한 오류인지 판별한다. */
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    (error as { name?: unknown }).name === 'AbortError'
+  );
+}
+
+/**
+ * refresh 실패 원인(API7-01). 실패를 한 덩어리로 뭉뚱그리지 않고 구분한다.
+ * - invalid: refresh 토큰 자체가 만료/폐기됨(4xx) → 세션을 폐기해야 하는 유일한 경우
+ * - network: 네트워크 단절·타임아웃 → 세션 유지, 재시도 대상
+ * - server: 서버 5xx·비정상 응답 → 세션 유지, 재시도 대상
+ */
+export type RefreshFailureReason = 'invalid' | 'network' | 'server';
+
+export type RefreshResult =
+  | { ok: true; token: string; reason: null }
+  | { ok: false; token: null; reason: RefreshFailureReason };
+
 // 단일 비행(single-flight): 동시 refresh 요청을 하나로 병합한다.
 // 페이지 새로고침 시 initialize()의 refresh와 여러 데이터 fetch의 401 재시도가
 // 같은 refresh token으로 동시에 /auth/refresh 를 호출하면, 백엔드의 refresh 토큰
 // 회전 + 재사용 감지가 "탈취"로 오판해 사용자 전체 토큰을 폐기 → 강제 로그아웃된다.
 // in-flight promise 를 공유해 동시 호출을 1건으로 줄인다.
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<RefreshResult> | null = null;
 
-export function refreshAccessToken(): Promise<string | null> {
+/** refresh 를 실행하고 성공/실패 원인을 판별해 반환한다. */
+export function refreshAccessTokenResult(): Promise<RefreshResult> {
   if (refreshPromise) return refreshPromise;
-  refreshPromise = (async () => {
+  refreshPromise = (async (): Promise<RefreshResult> => {
     // refresh token은 httpOnly cookie로 자동 전송된다 (credentials: include)
+    const { signal, clear } = createTimeoutSignal(REQUEST_TIMEOUT_MS);
     try {
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
+        signal,
       });
-      if (!res.ok) return null;
-      const data = (await res.json()) as { access_token: string };
-      tokenStorage.set(data.access_token);
-      return data.access_token;
+      if (res.ok) {
+        const data = (await res.json()) as { access_token?: string };
+        if (!data?.access_token) {
+          // 200 이지만 토큰이 없는 비정상 응답 → 세션 폐기 대상이 아니다.
+          return { ok: false, token: null, reason: 'server' };
+        }
+        tokenStorage.set(data.access_token);
+        return { ok: true, token: data.access_token, reason: null };
+      }
+      // 4xx: refresh 토큰이 실제로 만료/폐기됨 → 세션 폐기가 맞다.
+      if (res.status >= 400 && res.status < 500) {
+        return { ok: false, token: null, reason: 'invalid' };
+      }
+      // 5xx: 서버 일시 장애 → 세션 유지
+      return { ok: false, token: null, reason: 'server' };
     } catch {
-      return null;
+      // 네트워크 오류·타임아웃(AbortError) → 세션 유지
+      return { ok: false, token: null, reason: 'network' };
     } finally {
+      clear();
       refreshPromise = null;
     }
   })();
   return refreshPromise;
+}
+
+/**
+ * 하위 호환 래퍼: 토큰 또는 null 만 필요한 기존 호출부(socket/session/checkin)용.
+ * 판별 결과가 필요하면 refreshAccessTokenResult() 를 쓴다.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  const result = await refreshAccessTokenResult();
+  return result.ok ? result.token : null;
 }
 
 /**
@@ -134,12 +197,26 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   };
 
   const doFetch = async (token: string | null): Promise<Response> => {
-    return fetch(`${BASE_URL}${path}`, {
-      method,
-      headers: buildHeaders(token),
-      body: body !== undefined ? (isFormDataBody(body) ? body : JSON.stringify(body)) : undefined,
-      credentials: 'include',
-    });
+    // API7-02: 응답이 오지 않으면 상한 시간 후 요청을 중단한다.
+    const { signal, clear } = createTimeoutSignal(
+      options.responseType === 'blob' ? BLOB_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
+    );
+    try {
+      return await fetch(`${BASE_URL}${path}`, {
+        method,
+        headers: buildHeaders(token),
+        body: body !== undefined ? (isFormDataBody(body) ? body : JSON.stringify(body)) : undefined,
+        credentials: 'include',
+        signal,
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new ApiError(408, '요청 시간이 초과되었습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.', null);
+      }
+      throw error;
+    } finally {
+      clear();
+    }
   };
 
   let token = tokenStorage.getAccess();
@@ -147,18 +224,28 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   // 401 → refresh 재시도 1회
   if (res.status === 401 && !skipAuth) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      token = newToken;
+    const refresh = await refreshAccessTokenResult();
+    if (refresh.ok) {
+      token = refresh.token;
       res = await doFetch(token);
-    } else {
-      // refresh 실패 확정 → 토큰 클리어 후 역할별 로그인 화면으로 이동한다.
+    } else if (refresh.reason === 'invalid') {
+      // refresh 토큰이 실제로 만료/폐기된 경우에만 세션을 폐기하고 로그인 화면으로 보낸다.
       tokenStorage.clear();
       // 이미 로그인 화면이면 리다이렉트 루프를 만들지 않는다.
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = loginRedirectPath();
       }
       throw new ApiError(401, '인증이 만료되었습니다.', null);
+    } else {
+      // API7-01: 네트워크/서버 오류는 세션 만료가 아니다.
+      // 토큰을 폐기하거나 로그인 화면으로 쫓아내지 않고, 재시도 가능한 오류로 알린다.
+      throw new ApiError(
+        503,
+        refresh.reason === 'server'
+          ? '서버가 일시적으로 응답하지 않아 인증을 갱신하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          : '네트워크 연결이 불안정해 인증을 갱신하지 못했습니다. 연결을 확인한 후 다시 시도해 주세요.',
+        null,
+      );
     }
   }
 

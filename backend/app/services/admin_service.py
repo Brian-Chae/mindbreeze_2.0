@@ -723,6 +723,12 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
 
     uid = str(user_id)
 
+    # STG-05: 세션 자식 행을 지우기 전에 실제 미디어(S3 객체·로컬 파일)를 먼저 삭제한다.
+    # DB 행만 삭제하면 상담 음성·영상·뇌파 바이트가 스토리지에 잔존한다.
+    from app.services import media_cleanup_service
+
+    media_cleanup_service.delete_user_media(user_id, db)
+
     # 1. 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
     db.execute(
         text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
