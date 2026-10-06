@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NotificationCard, eventLabel } from '../../components/notifications/NotificationCard';
+import { NotificationCard } from '../../components/notifications/NotificationCard';
+import { eventLabel } from '../../lib/notification-format';
 import AppShell from '../../components/layout/AppShell';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';

@@ -43,7 +43,8 @@ function formatWeekRange(date: Date): string {
 export default function ClientSessionListPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const counselors = user?.counselors ?? [];
+  // user?.counselors 가 nullish 일 때 매 렌더 새 배열이 생성되어 useMemo deps 가 흔들리는 것을 막기 위해 useMemo 로 안정화한다.
+  const counselors = useMemo(() => user?.counselors ?? [], [user?.counselors]);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 

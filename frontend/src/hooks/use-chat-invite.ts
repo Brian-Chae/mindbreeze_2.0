@@ -104,6 +104,7 @@ export function useChatInvite(room: ChatRoom, onSuccess: (room: ChatRoom, mode: 
     }).catch(() => { if (active) setRoomError('기존 참여자 또는 초대 권한을 확인하지 못했습니다.'); })
       .finally(() => { if (active) setLoadingRoom(false); });
     return () => { active = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- room·user는 객체라 참조가 바뀌면 불필요한 재조회가 생기므로, 실제로 읽는 원시값(room.host_id·room.room_type·user?.id·user?.role)만 의존성으로 사용한다.
   }, [room.id, room.host_id, room.room_type, user?.id, user?.role, reload]);
 
   useEffect(() => {
@@ -134,6 +135,7 @@ export function useChatInvite(room: ChatRoom, onSuccess: (room: ChatRoom, mode: 
       });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- search 객체를 의존성에 넣으면 검색 결과 setSearches로 참조가 매번 새로 생겨 effect 재실행 루프가 발생하므로, 실제로 읽는 search.query·search.page만 의존성으로 사용한다.
   }, [tab, search.query, search.page, searchReload, permitted, blocked]);
 
   const setQuery = (query: string): void => {

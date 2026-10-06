@@ -9,7 +9,7 @@ interface WaitingRoomReadinessPanelProps { sessionId: string; entries: WaitingRo
 const steps: { key: keyof WaitingRoomReadiness; label: string }[] = [
   { key: 'surveyDone', label: '설문' }, { key: 'bandDone', label: '링크밴드' }, { key: 'deviceDone', label: '기기' },
 ];
-export function getWaitingRoomReadiness(entry: WaitingRoomEntry): WaitingRoomReadiness {
+function getWaitingRoomReadiness(entry: WaitingRoomEntry): WaitingRoomReadiness {
   return entry.readiness ?? { surveyDone: Boolean(entry.checkin), bandDone: false, deviceDone: false };
 }
 

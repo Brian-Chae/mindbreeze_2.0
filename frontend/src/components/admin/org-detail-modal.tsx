@@ -11,19 +11,12 @@ import PasswordResetConfirm from './password-reset-confirm';
 import PrimaryAdminEdit from './primary-admin-edit';
 import CounselorInfoEditor from '../counselor/counselor-info-editor';
 import { getAdminCounselorProfile, patchAdminCounselorProfile } from '../../lib/api/counselor-info';
+import { orgKindLabel, orgDate } from '../../lib/org-format';
 
-export const orgKindLabel = (kind: string): string =>
-  ({ institution: '일반 기관', individual: '개인 기관' })[kind] ?? '확인 필요';
 const statusLabel = (status: string): string =>
   ({ active: '활성', pending: '가입 대기', suspended: '정지' })[status] ?? '확인 필요';
 const roleLabel = (role: string): string =>
   ({ org_admin: '기관 관리자', counselor: '상담사' })[role] ?? '확인 필요';
-export function orgDate(iso: string): string {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? '확인 필요' : new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(date);
-}
 const control = 'rounded-lg border border-[#DDDEE7] bg-white px-3 py-2 text-sm';
 
 type LoadState<T> = { status: 'loading' } | { status: 'error' } | { status: 'success'; data: T };

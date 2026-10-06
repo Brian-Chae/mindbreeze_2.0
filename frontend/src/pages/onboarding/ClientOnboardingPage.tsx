@@ -143,7 +143,8 @@ export default function ClientOnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // autoCode(초대 코드)와 user?.name 을 실제로 읽으므로 deps 에 포함한다(마운트 시 진행 상태 1회 초기화).
+  }, [autoCode, user?.name]);
 
   // 초대 경로 Step 4: 연결된 상담사 조회 후 확인 카드 표시 (코드 입력 없음)
   useEffect(() => {
@@ -238,6 +239,7 @@ export default function ClientOnboardingPage() {
     }
     autoMatchTriggered.current = true;
     handleMatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleMatch 는 렌더마다 새로 생성되는 함수라 deps 에 넣으면 effect 가 매 렌더 실행된다. autoMatchTriggered ref 로 1회 실행을 보장한다.
   }, [step, form.counselorCode, inviteSource, matchedCounselor]);
 
   const toggleItem = (field: 'concerns' | 'interests', item: string): void => {

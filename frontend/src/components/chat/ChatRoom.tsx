@@ -216,7 +216,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       socket.off('connect', handleReconnect);
       socket.emit('leave_room', { room_id: roomId });
     };
-  }, [roomId, token, appendMessage, updateSenderName]);
+  }, [roomId, token, appendMessage, updateSenderName, user]);
 
   // ── IntersectionObserver: 스크롤 읽음 처리 ──
   const messageElRefs = useRef<Map<string, HTMLDivElement>>(new Map());

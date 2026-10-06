@@ -1003,7 +1003,7 @@ export function useBand({
       setConnectedElapsedSec(0);
       setSensors(INITIAL_SENSORS);
     }
-  }, [drainPendingQueue, isSupported, stopMock]);
+  }, [drainPendingQueue, flushRawChunk, isSupported, stopMock]);
 
   const markConnected = useCallback(() => {
     connectedAtRef.current = Date.now();
@@ -1191,9 +1191,13 @@ export function useBand({
       // FE-BAND-001: 성공/실패와 무관하게 in-flight 가드를 해제한다.
       bandConnectInFlight = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- enabled는 BLE 연결 게이트였던 잔여 의존성으로 connect 본문에서 더 이상 직접 읽지 않는다. 다만 기존 의존성 항목을 제거하지 않는 원칙에 따라 유지한다(제거 시 connect identity 안정성이 달라짐).
   }, [
     disconnect,
+    drainPendingQueue,
     enabled,
+    flushRawChunk,
+    handleRawEegData,
     handleStoreUpdate,
     ingestMetrics,
     isMock,

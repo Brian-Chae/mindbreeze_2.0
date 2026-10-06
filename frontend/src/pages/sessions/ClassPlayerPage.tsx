@@ -420,6 +420,7 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
       }
     };
     window.addEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rosterRef 는 참조가 안정적인 ref 이므로 deps 에 넣지 않는다. cleanup 에서 최신 DOM 을 읽으려고 .current 로 접근한다.
     return () => { window.removeEventListener('keydown', onKey); disabled.forEach(element => element.removeAttribute('inert')); (previousFocus?.isConnected ? previousFocus : rosterRef.current?.querySelector<HTMLElement>('.hcp-toolbar button'))?.focus({ preventScroll: true }); };
   }, [selected]);
   const valuesFor = (row: SessionLiveMetric) => hostValues(row, extras[row.participant_id]);
@@ -961,6 +962,7 @@ export default function ClassPlayerPage() {
       void refreshMetrics();
     }, LIVE_METRICS_POLL_MS);
     return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session 은 폴링마다 새 객체로 setSession 되므로 deps 에 넣으면 effect 가 매 폴링 재실행된다. session?.status 로 상태 변화만 감지한다.
   }, [id, session?.status, refreshMetrics]);
 
   const status: SessionStatus | null = session?.status ?? null;

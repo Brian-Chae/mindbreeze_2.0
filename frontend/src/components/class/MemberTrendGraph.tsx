@@ -25,6 +25,8 @@ const WINDOW_POINTS = 300; // 1Hz × 300초 = 5분
 const CHART_W = 300;
 const CHART_H = 90;
 const PAD_X = 2;
+// 시계열이 없을 때 매 렌더 새 배열([])이 생성되면 useMemo 의존성이 매번 바뀌므로 안정 참조를 재사용한다.
+const EMPTY_SERIES: number[] = [];
 
 export function MemberTrendGraph({
   metrics,
@@ -34,7 +36,7 @@ export function MemberTrendGraph({
   average = null,
 }: MemberTrendGraphProps) {
   const metric = metrics.find((m) => m.key === selected) ?? metrics[0];
-  const data = series[selected] ?? [];
+  const data = series[selected] ?? EMPTY_SERIES;
 
   const points = useMemo(() => {
     if (!metric || data.length < 2) return [];

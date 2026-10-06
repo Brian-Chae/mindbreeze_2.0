@@ -28,7 +28,7 @@ export default defineConfig([globalIgnores(['dist']), {
     'react-hooks/immutability': 'off',
     'react-hooks/preserve-manual-memoization': 'off',
     // 컴포넌트+헬퍼 혼합 export는 흔한 패턴 — Fast Refresh 규칙은 경고로 완화
-    'react-refresh/only-export-components': 'warn',
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     'react-hooks/exhaustive-deps': 'warn',
     // 이식된 EEG/DSP 라이브러리(src/lib/eeg/*)는 의도적으로 @ts-nocheck 사용 — 파일 단위
     // 타입 검증을 끄는 포팅 산출물이므로 ban-ts-comment의 ts-nocheck 플래그만 허용.

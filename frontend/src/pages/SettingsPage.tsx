@@ -16,7 +16,7 @@ import SelfInfoSection, { type SelfInfoValue } from '../components/settings/Self
 import { updateUserMe, type UpdateUserMePayload } from '../lib/api/auth';
 import { getClientProfile } from '../lib/api/client-profile';
 import { useAuthStore } from '../stores/authStore';
-import { eventLabel } from '../components/notifications/NotificationCard';
+import { eventLabel } from '../lib/notification-format';
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (

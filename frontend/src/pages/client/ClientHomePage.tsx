@@ -64,7 +64,8 @@ const CARD_SUBTITLE_CLS = 'font-mono text-[11px] text-[#6F6F6F]';
 export default function ClientHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const counselors: Counselor[] = user?.counselors ?? [];
+  // user?.counselors 가 nullish 일 때 매 렌더 새 배열이 생성되어 useCallback deps 가 흔들리는 것을 막기 위해 useMemo 로 안정화한다.
+  const counselors: Counselor[] = useMemo(() => user?.counselors ?? [], [user?.counselors]);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 

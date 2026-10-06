@@ -1,7 +1,8 @@
 // 플랫폼 관리자용 기관 코드 발급 및 기관 목록 관리
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import OrgDetailModal, { orgKindLabel, orgDate } from '../../components/admin/org-detail-modal';
+import OrgDetailModal from '../../components/admin/org-detail-modal';
+import { orgKindLabel, orgDate } from '../../lib/org-format';
 import AppShell from '../../components/layout/AppShell';
 import { apiClient } from '../../lib/api/client';
 import {

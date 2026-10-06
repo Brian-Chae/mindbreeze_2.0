@@ -223,7 +223,6 @@ export function SessionPreJoinPreview({
   /** SDD-104: 토글 상태를 부모로 보고 — 헤더의 [클래스 오픈]이 확정 prefs 를 쓸 수 있게 */
   useEffect(() => {
     onPrefsChange?.({ cameraOn, micOn });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- cameraOn/micOn 파생값 변경 시에만
   }, [cameraOn, micOn, onPrefsChange]);
 
   /** 시작 확정 — 프리뷰 스트림 정리 후 토글 확정 값 전달 */

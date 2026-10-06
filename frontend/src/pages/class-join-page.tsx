@@ -181,7 +181,6 @@ const ClassJoinPage: React.FC = () => {
         if (!cancelled) setIsLoading(false);
       });
     return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryCode]);
 
   // 대기·명상·입장 준비 중 화면 꺼짐 방지 (Wake Lock)
@@ -287,6 +286,7 @@ const ClassJoinPage: React.FC = () => {
     }, 3000);
 
     return () => { cancelled = true; window.clearInterval(intervalId); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session은 객체라 폴링 중 setSession으로 매번 새 참조가 생겨 effect 재구독 루프 위험이 있으므로, 안정적인 원시값 session?.id만 의존성으로 사용한다.
   }, [code, participantId, session?.id, step]);
 
   // meditation 중 completed 감지
@@ -328,6 +328,7 @@ const ClassJoinPage: React.FC = () => {
       void refresh();
     }, 4000);
     return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session은 객체라 폴링 중 setSession으로 매번 새 참조가 생겨 effect 재구독 루프 위험이 있으므로, 안정적인 원시값 session?.id만 의존성으로 사용한다.
   }, [code, participantId, session?.id, step]);
 
   const handleCodeSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
