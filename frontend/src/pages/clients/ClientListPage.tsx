@@ -36,7 +36,7 @@ export default function ClientListPage() {
   }, [isInitialized, isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'counselor') return;
+    if (!isAuthenticated || (user?.role !== 'counselor' && user?.role !== 'org_admin')) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -66,13 +66,13 @@ export default function ClientListPage() {
 
   if (!isInitialized) return null;
 
-  if (user && user.role !== 'counselor') {
+  if (user && user.role !== 'counselor' && user.role !== 'org_admin') {
     return (
       <AppShell title="내담자">
         <div className="flex items-center justify-center py-24">
           <div className="max-w-md text-center">
             <h1 className="text-xl font-bold mb-2 text-[#1F1F1F]">접근 권한이 없습니다</h1>
-            <p className="text-sm text-[#6F6F6F]">상담사 전용 페이지입니다.</p>
+            <p className="text-sm text-[#6F6F6F]">상담사·기관관리자 전용 페이지입니다.</p>
           </div>
         </div>
       </AppShell>

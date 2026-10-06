@@ -34,20 +34,23 @@ export const useRequireAuth = (role?: UserRole): void => {
   }, [isInitialized, isAuthenticated, navigate, role]);
 };
 
-// 역할 불일치 시 루트로 리다이렉트
-export const useRequireRole = (role: UserRole): void => {
+// 역할 불일치 시 루트로 리다이렉트. 복수 역할(예: counselor·org_admin)도 허용한다.
+export const useRequireRole = (role: UserRole | UserRole[]): void => {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isInitialized = useAuthStore((s) => s.isInitialized);
+  const roles = Array.isArray(role) ? role : [role];
 
   useEffect(() => {
     if (!isInitialized) return;
     if (!user) {
-      navigate(loginPathForRole(role), { replace: true });
+      navigate(loginPathForRole(roles[0]), { replace: true });
       return;
     }
-    if (user.role !== role) {
+    if (!roles.includes(user.role)) {
       navigate('/', { replace: true });
     }
-  }, [isInitialized, user, role, navigate]);
+    // roles 는 렌더마다 새 배열이므로 직렬화한 키로 의존성을 안정화한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized, user, roles.join(','), navigate]);
 };

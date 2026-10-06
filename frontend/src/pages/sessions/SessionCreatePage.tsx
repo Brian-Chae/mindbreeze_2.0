@@ -83,6 +83,11 @@ export default function SessionCreatePage() {
     setLocationType(tpl.location_type);
     setParticipantMode(tpl.participant_mode);
     setMaxParticipants(tpl.max_participants);
+    // MB2-06: 템플릿의 최대 인원으로 줄어들면 선택된 참여자도 그 수에 맞게 정리한다
+    // (1:1 전환·수동 최대 인원 변경과 동일한 trim 규약).
+    setParticipants((prev) =>
+      prev.length > tpl.max_participants ? prev.slice(0, tpl.max_participants) : prev,
+    );
     setLinkbandMode(tpl.linkband_mode);
     setRecordAudio(tpl.record_audio);
     setRecordVideo(tpl.record_video);

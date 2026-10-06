@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
 import { apiClient, ApiError } from '../../lib/api/client';
+import { completeClientOnboarding } from '../../lib/api/onboarding';
 import type { VerifiedTier } from '../../lib/api/auth';
 
 interface EssentialsForm {
@@ -59,14 +60,18 @@ export default function ClientEssentialsPage() {
         phone: form.phone || undefined,
       });
 
-      // authStore 사용자 정보 갱신
+      // FUNC-03: 필수 정보 저장 후 전용 완료 엔드포인트를 호출해야
+      // onboarding_completed 가 true 로 전환된다(PATCH 로는 갱신되지 않음).
+      await completeClientOnboarding();
+
+      // authStore 사용자 정보 갱신 (완료 상태 반영)
       setUser({
         id: updatedUser.id,
         email: updatedUser.email,
         name: updatedUser.name,
         role: updatedUser.role as 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin',
         verified_tier: updatedUser.verified_tier as VerifiedTier,
-        onboarding_completed: updatedUser.onboarding_completed,
+        onboarding_completed: true,
         auth_provider: updatedUser.auth_provider,
         counselors: updatedUser.counselors,
       });

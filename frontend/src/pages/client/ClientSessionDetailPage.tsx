@@ -134,28 +134,47 @@ export default function ClientSessionDetailPage() {
       // SDD-088: 입장 활성 조건 — 오픈(대기실 개방) 이후부터. ready/scheduled 는 "아직 열리지 않음".
       const canEnter =
         session.status === 'open' || session.status === 'in_progress';
+      // FUNC-09: 오픈 상태라도 참여 코드(access_code)가 없으면 입장할 수 없다 —
+      // 버튼을 비활성화하고 사유를 안내한다(코드 없이 클릭해도 아무 동작이 없던 문제).
+      const hasAccessCode = Boolean(session.access_code);
       return (
-        <div className="flex flex-col md:flex-row gap-2">
-          {canEnter ? (
-            <button
-              type="button"
-              onClick={() => {
-                if (session.access_code) {
-                  navigate(`/join?code=${session.access_code}`);
-                }
-              }}
-              className="w-full rounded-xl bg-[#5F0080] text-white text-sm font-semibold py-3 active:scale-[0.98] transition-transform"
-            >
-              세션 입장하기
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="w-full rounded-xl bg-[#D4D4D4] text-white text-sm font-semibold py-3 cursor-not-allowed"
-            >
-              세션 입장하기 (아직 열리지 않음)
-            </button>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col md:flex-row gap-2">
+            {canEnter && hasAccessCode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (session.access_code) {
+                    navigate(`/join?code=${session.access_code}`);
+                  }
+                }}
+                className="w-full rounded-xl bg-[#5F0080] text-white text-sm font-semibold py-3 active:scale-[0.98] transition-transform"
+              >
+                세션 입장하기
+              </button>
+            ) : canEnter ? (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                className="w-full rounded-xl bg-[#D4D4D4] text-white text-sm font-semibold py-3 cursor-not-allowed"
+              >
+                세션 입장하기
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-xl bg-[#D4D4D4] text-white text-sm font-semibold py-3 cursor-not-allowed"
+              >
+                세션 입장하기 (아직 열리지 않음)
+              </button>
+            )}
+          </div>
+          {canEnter && !hasAccessCode && (
+            <p role="status" className="text-xs leading-5 text-[#8A6B1F]">
+              참여 코드가 아직 발급되지 않아 입장할 수 없습니다. 상담사에게 문의해 주세요.
+            </p>
           )}
         </div>
       );

@@ -132,27 +132,48 @@ export default function ClientReportListPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
 
+  // FUNC-06: 검색어는 서버 쿼리로 내려갈 수 없다(백엔드는 page/limit만 지원).
+  // 검색 활성 시 무페이지네이션 전체 로드를 함께 조회해 전 페이지를 대상으로 필터한다.
+  const searchActive = search.trim() !== '';
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    listReports({ page, limit: PAGE_LIMIT })
-      .then((result) => {
+    (async () => {
+      try {
+        // 검색 활성 시 전체 로드(전 페이지 검색 보장).
+        const full = searchActive ? await listReports() : null;
+        // 페이지네이션 계약 유지 — 현재 페이지도 항상 조회한다.
+        const result = await listReports({ page, limit: PAGE_LIMIT });
         if (cancelled) return;
-        setTotal(result.total);
-        // 상담사용 화면과 동일하게 페이지네이션 미적용 서버도 지원한다.
-        const start = (page - 1) * PAGE_LIMIT;
-        setReports(result.reports.length > PAGE_LIMIT
-          ? result.reports.slice(start, start + PAGE_LIMIT) : result.reports);
-      })
-      .catch((e: unknown) => {
+        if (full) {
+          // 현재 페이지 결과를 우선하고 전체 로드 결과를 뒤에 병합·중복 제거한다.
+          // (같은 id 는 현재 페이지 값이 최신이므로 먼저 둔다)
+          const seen = new Set<string>();
+          const merged = [...result.reports, ...full.reports].filter((report) => {
+            const key = reportKey(report);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          setReports(merged);
+          setTotal(Math.max(full.total, result.total, merged.length));
+        } else {
+          setTotal(result.total);
+          // 상담사용 화면과 동일하게 페이지네이션 미적용 서버도 지원한다.
+          const start = (page - 1) * PAGE_LIMIT;
+          setReports(result.reports.length > PAGE_LIMIT
+            ? result.reports.slice(start, start + PAGE_LIMIT) : result.reports);
+        }
+      } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : '리포트 조회 실패');
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
     return () => { cancelled = true; };
-  }, [page, reloadKey]);
+  }, [page, reloadKey, searchActive]);
 
   const filtered = useMemo(() => filterAndSortReports(reports, search, sortKey), [reports, search, sortKey]);
   const grouped = useMemo(() => groupByCounselor ? groupReportsByCounselor(filtered) : null, [groupByCounselor, filtered]);

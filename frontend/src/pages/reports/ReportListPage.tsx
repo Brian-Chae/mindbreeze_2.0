@@ -185,16 +185,26 @@ export default function ReportListPage() {
   const [autoApproveSaving, setAutoApproveSaving] = useState(false);
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
 
-  // SDD-058 — page/limit 조회. BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
+  // FUNC-05: 검색·상태·세션·타입 필터는 서버 쿼리(page/limit만 지원)로 내려갈 수 없어
+  // 필터 활성 시 무페이지네이션 전체 로드로 전 페이지를 대상으로 필터/정렬한다.
+  const hasActiveFilter =
+    search.trim() !== '' ||
+    statusFilter !== 'all' ||
+    typeFilter !== 'all' ||
+    sessionFilter !== '';
+
+  // SDD-058 — page/limit 조회. 필터 활성 시 전체 조회, BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    listReports({ page, limit: PAGE_LIMIT })
+    const request = hasActiveFilter ? listReports() : listReports({ page, limit: PAGE_LIMIT });
+    request
       .then((r) => {
         if (cancelled) return;
         setTotal(r.total);
-        if (r.reports.length > PAGE_LIMIT) {
+        // 전체 로드(필터 활성)에서는 슬라이스하지 않고 전체를 그대로 사용한다.
+        if (!hasActiveFilter && r.reports.length > PAGE_LIMIT) {
           const start = (page - 1) * PAGE_LIMIT;
           setReports(r.reports.slice(start, start + PAGE_LIMIT));
         } else {
@@ -211,7 +221,7 @@ export default function ReportListPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, reloadKey]);
+  }, [page, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
     getAutoApprove()
@@ -472,21 +482,7 @@ export default function ReportListPage() {
             다시 시도
           </button>
         </div>
-      ) : loading ? (
-        <div className="text-[#6F6F6F]">불러오는 중...</div>
-      ) : total === 0 ? (
-        <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
-          <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
-          <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
-          <button
-            type="button"
-            onClick={() => setSampleOpen(true)}
-            className="inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
-          >
-            샘플 리포트 보기
-          </button>
-        </div>
-      ) : (
+      ) : hasActiveFilter || total > 0 ? (
         <div className="space-y-4">
           {/* 툴바: 검색 / 상태 / 정렬 / 세션 / 그룹핑 */}
           <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
@@ -574,7 +570,9 @@ export default function ReportListPage() {
             </span>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-[#6F6F6F]">불러오는 중...</div>
+          ) : filtered.length === 0 ? (
             <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-10 text-center">
               <div className="text-[#6F6F6F] text-sm">조건에 맞는 리포트가 없습니다.</div>
               <button
@@ -632,8 +630,8 @@ export default function ReportListPage() {
                 )}
               </div>
 
-              {/* SDD-058 — 페이지네이션 */}
-              {totalPages > 1 && (
+              {/* SDD-058 — 페이지네이션(필터 활성 시 전체 로드이므로 숨김) */}
+              {!hasActiveFilter && totalPages > 1 && (
                 <div className="flex items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
@@ -661,6 +659,20 @@ export default function ReportListPage() {
               )}
             </>
           )}
+        </div>
+      ) : loading ? (
+        <div className="text-[#6F6F6F]">불러오는 중...</div>
+      ) : (
+        <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
+          <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
+          <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
+          <button
+            type="button"
+            onClick={() => setSampleOpen(true)}
+            className="inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            샘플 리포트 보기
+          </button>
         </div>
       )}
       {sampleOpen && <ReportSampleModal onClose={() => setSampleOpen(false)} />}

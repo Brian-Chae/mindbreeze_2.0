@@ -500,6 +500,58 @@ export function HostClassWorkspace({ rows, extras, signals, aggregate, elapsed, 
   </section>;
 }
 
+/** MB2-02: 3초 평균 표시 버퍼 — pid별 efficiency/BPM/호흡수 원시 샘플 */
+type FeatureSampleBuffer = { efficiency: number[]; heartRate: number[]; respiratoryRate: number[] };
+
+/**
+ * MB2-02: 3초 평균 flush 계산 — 버퍼/엔벨로프 스냅샷만으로 다음 metrics 행을 만드는 순수 함수.
+ * setMetrics 업데이터가 순수해야 하므로(StrictMode 이중 호출·렌더 폐기 시 안전) 부수효과 없이
+ * 입력만으로 결과를 계산한다. 버퍼 비우기(ref 초기화)는 호출측이 커밋 밖에서 수행한다.
+ * 변경이 없으면 입력 배열 참조를 그대로 돌려 불필요 재렌더를 막는다.
+ */
+function mergeFeatureBufferAverages(
+  prev: SessionLiveMetric[],
+  buffer: Map<string, FeatureSampleBuffer>,
+  envelopes: Map<string, SessionLiveEegFeatureEvent>,
+): SessionLiveMetric[] {
+  let next = prev;
+  let changed = false;
+  for (const [pid, values] of buffer) {
+    const hasAny =
+      values.efficiency.length > 0 ||
+      values.heartRate.length > 0 ||
+      values.respiratoryRate.length > 0;
+    if (!hasAny) continue;
+    // MB2-01: 다른 참가자의 엔벨로프를 재사용하지 않는다 — 해당 pid 의 마지막 엔벨로프로 구성한다.
+    const envelope = envelopes.get(pid);
+    if (!envelope) continue;
+    const avgOf = (arr: number[]): number | null =>
+      arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+    const avgEff = avgOf(values.efficiency);
+    const avgHr = avgOf(values.heartRate);
+    const avgRr = avgOf(values.respiratoryRate);
+    const averaged: SessionLiveEegFeatureEvent = {
+      ...envelope,
+      participant_id: pid,
+      current_efficiency: avgEff,
+      relaxation_index: avgEff,
+      feature: {
+        ...envelope.feature,
+        second_offset: envelope.feature?.second_offset ?? 0,
+        relaxation_index: avgEff,
+        heart_rate: avgHr,
+        respiratory_rate: avgRr,
+      },
+    };
+    const { rows, unchanged } = applyEegFeatureToMetricsDetailed(next, averaged);
+    if (!unchanged) {
+      next = rows;
+      changed = true;
+    }
+  }
+  return changed ? next : prev;
+}
+
 export default function ClassPlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -513,9 +565,7 @@ export default function ClassPlayerPage() {
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
   const [hostExtras, setHostExtras] = useState<Record<string, HostExtra>>({});
   const lastFeaturePatchAtRef = useRef(0);
-  const featureBufferRef = useRef<
-    Map<string, { efficiency: number[]; heartRate: number[]; respiratoryRate: number[] }>
-  >(new Map());
+  const featureBufferRef = useRef<Map<string, FeatureSampleBuffer>>(new Map());
   /**
    * MB2-01: 참가자별 마지막 eeg_feature 엔벨로프.
    * 3초 평균 flush 시 다른 참가자의 signal_quality/device_status/last_eeg_at/band_* 등을
@@ -637,46 +687,17 @@ export default function ClassPlayerPage() {
       // 3초 간격으로 버퍼의 평균값을 반영 — 매 초 튀는 최신값 대신 구간 평균 표시
       if (now - lastFeaturePatchAtRef.current < 3000) return;
       lastFeaturePatchAtRef.current = now;
-      setMetrics((prev) => {
-        let next = prev;
-        let changed = false;
-        for (const [pid, values] of featureBufferRef.current) {
-          const hasAny =
-            values.efficiency.length > 0 ||
-            values.heartRate.length > 0 ||
-            values.respiratoryRate.length > 0;
-          if (!hasAny) continue;
-          const avgOf = (arr: number[]): number | null =>
-            arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
-          const avgEff = avgOf(values.efficiency);
-          const avgHr = avgOf(values.heartRate);
-          const avgRr = avgOf(values.respiratoryRate);
-          // MB2-01: 현재 수신 이벤트가 아니라 해당 pid 의 마지막 엔벨로프를 기준으로 구성한다.
-          // signal_quality/device_status/last_eeg_at/band_connected/band_battery/upload_status 와
-          // feature.timestamp/feature.rmssd 는 그 참가자 자신의 값이 유지된다.
-          const envelope = lastFeatureEnvelopeRef.current.get(pid) ?? event;
-          const averaged: SessionLiveEegFeatureEvent = {
-            ...envelope,
-            participant_id: pid,
-            current_efficiency: avgEff,
-            relaxation_index: avgEff,
-            feature: {
-              ...envelope.feature,
-              second_offset: envelope.feature?.second_offset ?? 0,
-              relaxation_index: avgEff,
-              heart_rate: avgHr,
-              respiratory_rate: avgRr,
-            },
-          };
-          const { rows, unchanged } = applyEegFeatureToMetricsDetailed(next, averaged);
-          if (!unchanged) {
-            next = rows;
-            changed = true;
-          }
-        }
-        featureBufferRef.current = new Map();
-        return changed ? next : prev;
-      });
+      // MB2-02: setMetrics 업데이터는 순수해야 한다(StrictMode 이중 호출·렌더 폐기 시 안전).
+      // 버퍼·엔벨로프 스냅샷을 커밋 전에 확보하고 ref를 비운 뒤(부수효과는 updater 밖),
+      // 다음 행 계산은 순수 함수 mergeFeatureBufferAverages 에 위임한다.
+      const bufferSnapshot = featureBufferRef.current;
+      featureBufferRef.current = new Map();
+      const envelopeSnapshot = new Map<string, SessionLiveEegFeatureEvent>();
+      for (const pid of bufferSnapshot.keys()) {
+        const envelope = lastFeatureEnvelopeRef.current.get(pid);
+        if (envelope) envelopeSnapshot.set(pid, envelope);
+      }
+      setMetrics((prev) => mergeFeatureBufferAverages(prev, bufferSnapshot, envelopeSnapshot));
     },
     [id],
   );

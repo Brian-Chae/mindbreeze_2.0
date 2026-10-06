@@ -83,6 +83,8 @@ export default function ClientOnboardingPage() {
   const [matchedCounselor, setMatchedCounselor] = useState<MatchInfo | null>(null);
   const [inviteConfirmLoading, setInviteConfirmLoading] = useState(false);
   const [done, setDone] = useState(false);
+  /** FUNC-07: 초대 연결 확인 실패 시 재시도 트리거 */
+  const [inviteRetryKey, setInviteRetryKey] = useState(0);
 
   // 초대 경로 또는 이미 연결된 상담사가 있는 경우 Step 4 코드 입력 생략
   const hasLinkedCounselor = (user?.counselors?.length ?? 0) > 0;
@@ -202,7 +204,7 @@ export default function ClientOnboardingPage() {
     return () => {
       cancelled = true;
     };
-  }, [step, isInviteFlow, hasLinkedCounselor, user, autoCode]);
+  }, [step, isInviteFlow, hasLinkedCounselor, user, autoCode, inviteRetryKey]);
 
   // 일반 가입 ?code= 자동 매칭 (초대 source=invite 경로는 제외)
   useEffect(() => {
@@ -352,6 +354,13 @@ export default function ClientOnboardingPage() {
   const handlePrev = (): void => {
     setError(null);
     if (step > 1) setStep(step - 1);
+  };
+
+  /** FUNC-07: 초대 연결 확인 실패 시 가드를 리셋하고 다시 조회한다. */
+  const handleRetryInvite = (): void => {
+    setError(null);
+    inviteFetchTriggered.current = false;
+    setInviteRetryKey((k) => k + 1);
   };
 
   if (done) {
@@ -682,9 +691,19 @@ export default function ClientOnboardingPage() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-[13px] text-white/60 text-center">
-                      상담사 연결 정보를 확인할 수 없습니다.
-                    </p>
+                    <div className="space-y-3">
+                      <p className="text-[13px] text-white/60 text-center">
+                        상담사 연결 정보를 확인할 수 없습니다.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRetryInvite}
+                        disabled={inviteConfirmLoading}
+                        className="w-full h-[44px] rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 disabled:opacity-50 text-white/90 font-semibold text-[15px] transition-colors"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
                   )}
                 </>
               ) : !matchedCounselor ? (

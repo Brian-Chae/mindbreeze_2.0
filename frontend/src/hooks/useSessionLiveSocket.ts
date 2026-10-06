@@ -158,6 +158,12 @@ export function useSessionLiveSocket({
   /** join 거부 상태 — 이 상태에서는 신호를 전송하지 않는다 */
   const joinDeniedRef = useRef(false);
   const versionRef = useRef(0);
+  /**
+   * MB2-05: 마지막으로 적용한 joined 스냅샷.
+   * version 이벤트(onState/participant)와 무관하게 joined 스냅샷을 반드시 적용/병합하기 위한
+   * 동기 참조. setSnapshot 상태와 같은 값으로 유지한다.
+   */
+  const snapshotRef = useRef<SessionLiveJoinSnapshot | null>(null);
   /** SDD-028: feature는 콜백으로만 전달 — setState 하면 대규모 테이블 전체 재렌더 */
   const lastEventRef = useRef<SessionLiveEegFeatureEvent | null>(null);
 
@@ -169,14 +175,29 @@ export function useSessionLiveSocket({
     return true;
   }, []);
 
+  /**
+   * MB2-05: joined 스냅샷 적용.
+   * version 비교로 스냅샷을 폐기하지 않는다 — onState/participant 등이 먼저 수신되어
+   * versionRef 를 올린 뒤(이벤트 역순 replay) 더 낮은 version 의 joined 가 도착해도,
+   * 스냅샷 자체는 반드시 적용해야 hasSnapshot/isReady 가 승격되어 REST 폴백이 멈춘다.
+   * 이미 더 최신 version 의 스냅샷을 보유 중이면 그 데이터를 유지하고 version 만 단조 증가시켜 병합한다.
+   */
   const applySnapshot = useCallback(
     (next: SessionLiveJoinSnapshot): void => {
-      if (!acceptVersion(next.version)) return;
-      setSnapshot(next);
+      const prev = snapshotRef.current;
+      const version = Math.max(next.version, versionRef.current);
+      const merged: SessionLiveJoinSnapshot =
+        prev && prev.version > next.version
+          ? { ...prev, version: Math.max(prev.version, version) }
+          : { ...next, version };
+      snapshotRef.current = merged;
+      versionRef.current = version;
+      setVersion(version);
+      setSnapshot(merged);
       setHasSnapshot(true);
-      onSnapshotRef.current?.(next);
+      onSnapshotRef.current?.(merged);
     },
-    [acceptVersion],
+    [],
   );
 
   const handleFeature = useCallback((event: SessionLiveEegFeatureEvent) => {
@@ -190,6 +211,7 @@ export function useSessionLiveSocket({
       setIsConnected(false);
       setHasSnapshot(false);
       setSnapshot(null);
+      snapshotRef.current = null;
       versionRef.current = 0;
       setVersion(0);
       return undefined;
@@ -198,6 +220,7 @@ export function useSessionLiveSocket({
     // 재join 시 snapshot 재수신 전까지 폴백 유지
     setHasSnapshot(false);
     setSnapshot(null);
+    snapshotRef.current = null;
 
     // SDD-107: 세션이 바뀔 때만 신호 버퍼를 폐기한다.
     // cleanup 에서 버퍼를 지우지 않으므로 리렌더·재연결에도 유지된다.
@@ -263,38 +286,42 @@ export function useSessionLiveSocket({
       pendingSignalsRef.current = [];
       setHasSnapshot(false);
       setSnapshot(null);
+      snapshotRef.current = null;
     };
 
     const onState = (event: SessionStateChangedEvent): void => {
       if (event.session_id !== sessionId) return;
       if (!acceptVersion(event.version)) return;
-      setSnapshot((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: event.status,
-              version: event.version,
-              started_at: event.started_at ?? prev.started_at,
-              ended_at: event.ended_at ?? prev.ended_at,
-            }
-          : prev,
-      );
+      // MB2-05: snapshotRef 를 setSnapshot 상태와 동기 유지 — applySnapshot 의 version 병합 기준.
+      const prev = snapshotRef.current;
+      if (prev) {
+        const updated: SessionLiveJoinSnapshot = {
+          ...prev,
+          status: event.status,
+          version: event.version,
+          started_at: event.started_at ?? prev.started_at,
+          ended_at: event.ended_at ?? prev.ended_at,
+        };
+        snapshotRef.current = updated;
+        setSnapshot(updated);
+      }
       onStateRef.current?.(event);
     };
 
     const onParticipant = (event: ParticipantChangedEvent): void => {
       if (event.session_id !== sessionId) return;
       if (!acceptVersion(event.version)) return;
-      setSnapshot((prev) =>
-        prev
-          ? {
-              ...prev,
-              version: event.version,
-              // 서버가 목록을 생략하면 기존 참여자 목록을 유지한다(카운트만 갱신되는 계약 대비).
-              participants: event.participants ?? prev.participants,
-            }
-          : prev,
-      );
+      const prev = snapshotRef.current;
+      if (prev) {
+        const updated: SessionLiveJoinSnapshot = {
+          ...prev,
+          version: event.version,
+          // 서버가 목록을 생략하면 기존 참여자 목록을 유지한다(카운트만 갱신되는 계약 대비).
+          participants: event.participants ?? prev.participants,
+        };
+        snapshotRef.current = updated;
+        setSnapshot(updated);
+      }
       onParticipantRef.current?.(event);
     };
 

@@ -4,7 +4,7 @@
  */
 
 import {
-  buildReportNarrative,
+  buildPartialReportNarrative,
   metricChangeInterpretation,
   simplifyReportTerms,
   type Direction,
@@ -183,22 +183,17 @@ export function deriveChangesFromTimeline(
 
   const changes: MetricChangeInput[] = [];
   for (const { id, half } of pairs) {
-    if (!half) return null; // 6지표 모두 필요 (규칙 빌더 계약)
+    // FUNC-08: 결측 지표(타임라인 상 유효 구간 부족)는 건너뛰고
+    // 가용한 지표만으로 부분 서사를 생성한다(전체 null 로 소실하지 않는다).
+    if (!half) continue;
     changes.push({ id, early: half.early, late: half.late, overall: half.overall });
   }
-  return changes;
+  return changes.length > 0 ? changes : null;
 }
 
 function tryBuildRuleNarrative(changes: MetricChangeInput[]): ReportNarrative | null {
-  const byId = new Map(changes.map((c) => [c.id, c]));
-  for (const id of ALL_IDS) {
-    if (!byId.has(id)) return null;
-  }
-  try {
-    return buildReportNarrative(ALL_IDS.map((id) => byId.get(id)!));
-  } catch {
-    return null;
-  }
+  // FUNC-08: 부분 입력도 허용하는 빌더로 가용 지표 서사를 만든다.
+  return buildPartialReportNarrative(changes);
 }
 
 function emptyMetricsFromChanges(changes: MetricChangeInput[]): {

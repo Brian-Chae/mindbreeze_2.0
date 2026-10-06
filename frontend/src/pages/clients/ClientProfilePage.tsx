@@ -10,9 +10,9 @@ export default function ClientProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, isInitialized } = useAuthStore();
 
-  // SEC-07: 내담자 프로필 상세는 상담사 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
+  // SEC-07: 내담자 프로필 상세는 상담사·기관관리자 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
   useRequireAuth();
-  useRequireRole('counselor');
+  useRequireRole(['counselor', 'org_admin']);
 
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [memo, setMemo] = useState('');

@@ -148,6 +148,11 @@ const ClassJoinPage: React.FC = () => {
           ? { ...prev, status: event.status as SessionByCodeResponse['status'], started_at: event.started_at ?? prev.started_at }
           : prev,
       );
+      // MB2-04: 취소는 예외 — 대기·상세 단계에서 취소되면 코드 입력 단계로 되돌려 대기 화면에 갇히지 않게 한다.
+      if (event.status === 'cancelled' && (step === 'waiting' || step === 'details')) {
+        setError('이 클래스는 이미 종료되었거나 취소되었습니다.');
+        setStep('code');
+      }
     },
   });
 
@@ -245,7 +250,9 @@ const ClassJoinPage: React.FC = () => {
               return;
             }
             if (state.status === 'cancelled') {
+              // MB2-04: 취소 수신 시 대기 화면에 머무르지 않고 코드 입력 단계로 되돌린다.
               setError('이 클래스는 이미 종료되었거나 취소되었습니다.');
+              setStep('code');
             }
             return;
           } catch {
@@ -260,7 +267,9 @@ const ClassJoinPage: React.FC = () => {
           if (refreshed.status === 'completed') {
             setStep('complete');
           } else {
+            // MB2-04: 취소는 대기 화면에 머무르지 않도록 코드 입력 단계로 되돌린다.
             setError('이 클래스는 이미 종료되었거나 취소되었습니다.');
+            setStep('code');
           }
           return;
         }

@@ -377,6 +377,31 @@ export function buildReportNarrative(inputs: MetricChangeInput[]): ReportNarrati
   };
 }
 
+/**
+ * FUNC-08: 가용한 지표만으로 부분 서사를 생성한다.
+ * 결측 지표는 건너뛰고, 존재하는 지표만으로 여정·마무리를 계산한다.
+ * 입력이 하나도 없으면 null 을 반환한다(섹션 미노출).
+ */
+export function buildPartialReportNarrative(inputs: MetricChangeInput[]): ReportNarrative | null {
+  const byId = new Map(inputs.map((i) => [i.id, i]));
+  const body = BODY_ORDER.filter((id) => byId.has(id)).map((id) => buildMetricNarrative(byId.get(id)!));
+  const mind = MIND_ORDER.filter((id) => byId.has(id)).map((id) => buildMetricNarrative(byId.get(id)!));
+
+  if (body.length === 0 && mind.length === 0) return null;
+
+  const bodyTrend = resolveBodyTrend(body);
+  const mindTrend = resolveMindTrend(mind);
+
+  return {
+    journey: journeySentence(bodyTrend, mindTrend),
+    bodyTrend,
+    mindTrend,
+    body,
+    mind,
+    closing: closingSentence(bodyTrend, mindTrend),
+  };
+}
+
 /** 설명은 화면과 PDF에서 동일하게 표시하며 계산식과 판정 임계값은 바꾸지 않는다. */
 export const METRIC_DEFINITIONS: Record<MetricId, string> = {
   respiratory_rate: '1분 동안 숨을 쉬는 횟수예요.',
