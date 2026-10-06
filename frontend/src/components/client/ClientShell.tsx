@@ -84,17 +84,22 @@ export default function ClientShell({
         >
           <StrokeIcon d={ICONS.hamburger} size={22} />
         </button>
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-label="홈으로 이동"
+          onClick={() => navigate('/app')}
+          className="flex items-center gap-2"
+        >
           <img
             src="/mb-design/assets/logo_symbol_dark.svg"
-            width={24}
-            height={11}
+            width={30}
+            height={14}
             alt=""
           />
-          <span className="font-extrabold text-[15px] text-[#5F0080] tracking-tight">
+          <span className="font-extrabold text-[18px] text-[#5F0080] tracking-tight">
             Mind&nbsp;Breeze
           </span>
-        </div>
+        </button>
         <button
           type="button"
           aria-label="알림"
