@@ -74,6 +74,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install PDF system deps
+        # deploy-dev.yml과 동일 — WeasyPrint(Cairo/Pango/HarfBuzz) + 한글 폰트.
+        # libharfbuzz-subset0이 없으면 @font-face NotoSansKR 로드가 실패해
+        # 페이지 수가 어긋나 test_real_pdf_metric_pages가 깨진다.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+
       - name: Install
         run: |
           cd backend
