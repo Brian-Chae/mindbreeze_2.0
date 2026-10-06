@@ -145,7 +145,7 @@ function EmptyHero({ onBook }: { onBook: () => void }) {
   return (
     <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:p-6">
       <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
+      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight text-white sm:text-[20px] md:text-[22px] lg:text-[30px]">
         아직 예약된 세션이 없어요
       </h2>
       <p className="mt-1 text-[13.5px] text-white">
