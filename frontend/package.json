@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "test:chat": "NODE_ENV=test vitest run tests/chat-*.test.ts"
+    "test:chat": "NODE_ENV=test vitest run tests/chat-*.test.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",
