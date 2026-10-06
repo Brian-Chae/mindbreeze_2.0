@@ -196,7 +196,7 @@ def parse_timeline(raw):
         point = {'min': minutes}
         for key in ('concentration', 'relaxation', 'stress', 'heart_rate', 'respiratory_rate', 'sdnn', 'hrv'):
             value = number(item.get(key))
-            if key in ('concentration', 'relaxation', 'stress') and value is not None and 0 <= value <= 1:
+            if key in ('concentration', 'relaxation', 'stress') and value is not None and 0 <= value < 1:
                 value = math.floor(value * 1000 + .5) / 10
             point[key] = value
         points.append(point)

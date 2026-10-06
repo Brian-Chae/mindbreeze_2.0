@@ -105,7 +105,10 @@ def _to_uuid(value: str | UUID) -> UUID:
 
 
 def _get_pref_event_key(event_type: str) -> str:
-    return event_type.replace("session_updated", "session_booked")
+    # NOTIF-04: session_updated → session_booked 치환을 제거한다.
+    #   프론트가 저장한 session_updated 설정을 그대로 읽어야 토글이 실제 발송에 반영된다
+    #   (치환하면 session_updated 를 꺼도 session_booked 기본값 True 를 읽어 무효화된다).
+    return event_type
 
 
 def get_user_preferences(user: User) -> dict[str, dict[str, bool]]:

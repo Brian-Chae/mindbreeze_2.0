@@ -46,12 +46,20 @@ def _parse_date(value: str | None) -> date | None:
     if not value:
         return None
     try:
-        return date.fromisoformat(value)
+        parsed = date.fromisoformat(value)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
         )
+    # MB2-ONB-BIRTHDATE-FUTURE: step2 저장 경로도 미래 생년월일을 거부한다
+    #   (PATCH /users/me 경로와 동일한 가드).
+    if parsed > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="생년월일은 미래 날짜일 수 없습니다",
+        )
+    return parsed
 
 
 def _progress_response(progress) -> OnboardingProgressResponse:

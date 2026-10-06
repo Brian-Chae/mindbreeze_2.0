@@ -6,7 +6,7 @@ import type { ACCDataPoint } from './SimpleCircularBuffer';
  * 3축 가속도 데이터를 처리하여 움직임 분석, 활동 상태 분류, 자세 분석 등을 수행
  */
 export class ACCSignalProcessor {
-  private samplingRate: number = 50; // 50Hz
+  private samplingRate: number = 30; // 30Hz (StreamProcessor/blePacketParser 의 ACC 실측 레이트와 일치)
   private gravityConstant: number = 9.81; // m/s²
   
   constructor() {
@@ -308,7 +308,7 @@ export class ACCSignalProcessor {
     
     // 2. 일관성: 타임스탬프 간격 확인
     let consistentTimestamps = 0;
-    const expectedInterval = 1000 / this.samplingRate; // 20ms for 50Hz
+    const expectedInterval = 1000 / this.samplingRate; // 33.3ms for 30Hz
     
     for (let i = 1; i < rawData.length; i++) {
       const interval = rawData[i].timestamp - rawData[i-1].timestamp;

@@ -16,15 +16,7 @@ import SelfInfoSection, { type SelfInfoValue } from '../components/settings/Self
 import { updateUserMe, type UpdateUserMePayload } from '../lib/api/auth';
 import { getClientProfile } from '../lib/api/client-profile';
 import { useAuthStore } from '../stores/authStore';
-
-const EVENT_LABELS: Record<string, string> = {
-  session_booked: '세션 예약',
-  session_updated: '세션 변경',
-  session_cancelled: '세션 취소',
-  chat_message: '채팅 메시지',
-  report_ready: '리포트 발행',
-  verification_result: '검증 결과',
-};
+import { eventLabel } from '../components/notifications/NotificationCard';
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
@@ -298,7 +290,7 @@ export default function SettingsPage() {
                       className="flex items-center justify-between py-2.5 px-3 hover:bg-[#F8FAFC] rounded-xl cursor-pointer transition-colors"
                     >
                       <span className="text-[14px] text-[#1F1F1F]">
-                        {EVENT_LABELS[event] ?? event}
+                        {eventLabel(event)}
                       </span>
                       <Toggle enabled={enabled} onChange={() => handleToggle(channel, event)} />
                     </label>

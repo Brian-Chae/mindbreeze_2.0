@@ -208,6 +208,46 @@ def reactivate(org_id: uuid.UUID, data: OrganizationReactivate, if_match: str | 
     return org
 
 
+def _has_other_active_org_admin(db: Session, org_id: uuid.UUID, exclude_user_id: uuid.UUID) -> bool:
+    """이 기관의 '다른' 활성 기관 관리자가 존재하는지 membership 기준으로 판정한다.
+
+    membership(role=org_admin, invited/active) + 활성 계정을 우선 기준으로 삼고,
+    멤버십이 없는 레거시 미러(User.org_id/role) 계정도 잔여 관리자로 집계한다.
+    다기관 소속에서 미러가 다른 기관을 가리켜 생기는 오판을 막는다.
+    """
+    member_admin = (
+        db.query(UserOrgMembership.id)
+        .join(User, User.id == UserOrgMembership.user_id)
+        .filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.user_id != exclude_user_id,
+            UserOrgMembership.role == "org_admin",
+            UserOrgMembership.status.in_(("invited", "active")),
+            User.status == "active",
+        )
+        .first()
+    )
+    if member_admin is not None:
+        return True
+    legacy_admin = (
+        db.query(User.id)
+        .filter(
+            User.org_id == org_id,
+            User.id != exclude_user_id,
+            User.role == "org_admin",
+            User.status == "active",
+            ~User.id.in_(
+                db.query(UserOrgMembership.user_id).filter(
+                    UserOrgMembership.org_id == org_id,
+                    UserOrgMembership.status != "left",
+                )
+            ),
+        )
+        .first()
+    )
+    return legacy_admin is not None
+
+
 def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
                      reason: str, db: Session, *, role: str | None = None) -> User:
     """기관 잠금 안에서 역할/소속과 감사 이력을 함께 변경한다. role=None은 소속 해제."""
@@ -229,12 +269,13 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
         return user
     if org.primary_admin_id == user.id:
         raise HTTPException(409, "주 담당자를 먼저 교체해주세요")
-    if user.role == "org_admin" and user.status == "active":
-        remaining = db.query(User.id).filter(
-            User.org_id == org.id, User.id != user.id,
-            User.role == "org_admin", User.status == "active",
-        ).first()
-        if remaining is None:
+    # MB2-ORG-LASTADMIN-MIRROR: '마지막 활성 관리자' 보호는 User.org_id/User.role 미러가 아니라
+    #   membership(user_org_memberships) 기준으로 판정한다. 다기관 소속에서 미러가 다른 기관을
+    #   가리키면 관리자 여부·잔여 인원을 오판한다(미러는 주 소속 기관에만 유효).
+    if user.status == "active":
+        membership_admin = membership is not None and membership.role == "org_admin"
+        mirror_admin = user.role == "org_admin" and user.org_id == org.id  # 레거시(멤버십 미보유) 호환
+        if (membership_admin or mirror_admin) and not _has_other_active_org_admin(db, org.id, user.id):
             raise HTTPException(409, "마지막 활성 기관 관리자는 강등하거나 소속 해제할 수 없습니다")
     if role is None:
         active_session = db.query(CounselingSession.id).filter(

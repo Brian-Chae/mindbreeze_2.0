@@ -1035,18 +1035,57 @@ def _notify_session_state(s: Session) -> None:
         pass
 
 
-def _notify_participant_changed(s: Session) -> None:
-    """participant_changed 이벤트를 best-effort 로 발행한다(호스트 룸 전용)."""
+def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None:
+    """participant_changed 이벤트를 best-effort 로 발행한다(호스트 룸 전용).
+
+    LIVE-05: 프론트(ClassPlayerPage/SessionDetailPage)가 event.participants 를 기대하므로
+    활성 참여자 식별 정보 배열을 함께 실어 보낸다. 배열이 없으면 프론트 실시간 목록 갱신이
+    죽은 코드가 되므로, participantsToMetrics 폴백과 동일한 SessionLiveMetric 형태로 채운다.
+    """
     try:
         from app.ws import session_live_namespace as live
 
         active = [p for p in (s.participants or []) if not p.is_waitlisted]
+        names: dict = {}
+        if db is not None:
+            from app.models.user import User
+
+            uids = [p.user_id for p in active if p.user_id]
+            if uids:
+                for u in db.query(User).filter(User.id.in_(uids)).all():
+                    names[u.id] = u.name
+
+        participants = []
+        for p in active:
+            if p.user_id:
+                display_name = names.get(p.user_id) or "참여자"
+            else:
+                display_name = p.guest_name or "게스트"
+            participants.append(
+                {
+                    "participant_id": str(p.id),
+                    "user_id": str(p.user_id) if p.user_id else None,
+                    "display_name": display_name,
+                    "is_guest": p.user_id is None,
+                    "band_connected": p.band_connected,
+                    "device_status": None,
+                    "band_battery": p.band_battery,
+                    "avg_efficiency": None,
+                    "current_efficiency": None,
+                    "upload_status": None,
+                    "last_eeg_at": None,
+                    "raise_hand": p.raise_hand,
+                    "speaking": p.speaking,
+                }
+            )
+
         live.notify_participant_changed(
             str(s.id),
             {
                 "version": s.state_version or 0,
                 "participant_count": len(active),
                 "waitlist_count": sum(1 for p in (s.participants or []) if p.is_waitlisted),
+                "participants": participants,
             },
         )
     except Exception:
@@ -1408,7 +1447,7 @@ def join_session_by_code(
                 existing.waitlist_position = None
         db.commit()
         db.refresh(s)
-        _notify_participant_changed(s)
+        _notify_participant_changed(s, db)
         return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(existing.id), "is_guest": False}
 
     name = (guest_name or "").strip()
@@ -1459,7 +1498,7 @@ def join_session_by_code(
 
     db.commit()
     db.refresh(s)
-    _notify_participant_changed(s)
+    _notify_participant_changed(s, db)
     from app.services.report_email_service import participant_token as make_token
     return {"session": _serialize(s), "participant_id": str(participant.id), "is_guest": True,
             "participant_token": make_token(participant)}
@@ -1479,6 +1518,9 @@ def member_livekit_token(
     그 외(오프라인, 온라인 그룹 20명 초과)는 구독 전용(can_publish=False).
     """
     s = _get_session_by_code(code, db)
+    # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
 
@@ -1606,6 +1648,9 @@ def raise_hand(
     s = db.query(Session).filter(Session.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    # LIVE-04: 완료/취소된 세션에서는 발언권 상태를 변경할 수 없다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
 
     participant = _get_participant_in_session(sid, participant_id, db)
     _authorize_participant_access(
@@ -1641,6 +1686,9 @@ def set_speaking(
     s = db.query(Session).filter(Session.id == sid).first()
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    # LIVE-04: 완료/취소된 세션에서는 발언권을 부여/해제할 수 없다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
     if s.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
 

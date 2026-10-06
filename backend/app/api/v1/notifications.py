@@ -68,7 +68,8 @@ def mark_all_read(
     db: DBSession = Depends(get_db),
 ):
     count = notification_service.mark_all_read(current_user["id"], db)
-    return {"marked": count}
+    # NOTIF-02: 프론트 계약(lib/api/notifications.ts → Promise<{count:number}>)과 키를 일치시킨다.
+    return {"count": count}
 
 
 @router.put("/{notification_id}/read")

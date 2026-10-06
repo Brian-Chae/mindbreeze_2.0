@@ -56,6 +56,10 @@ export class TimestampSynchronizer {
   private deviceTimeBase: number = 0;
   private lastDeviceTime: number = 0;
   
+  // 센서별 직전 "샘플" 타임스탬프. 재동기화 시각(Date.now 벽시계)이 아니라
+  // 같은 시간축(정규화 masterTime)의 직전 샘플을 기준으로 간격을 계산하기 위함.
+  private lastSampleTimes: Map<string, number> = new Map();
+  
   // 드리프트 추적
   private driftHistory: Array<{ time: number; drift: number }> = [];
   private readonly MAX_DRIFT_HISTORY = 100;
@@ -184,22 +188,26 @@ export class TimestampSynchronizer {
     let correctedTime = normalizedTime;
     let confidence = 1.0;
     
-    // 1. 순서 검증 (이전 시간보다 이후여야 함)
+    // 1. 순서 검증 (직전 "샘플"보다 이후여야 함)
+    //    lastSyncTime 은 Date.now() 벽시계라 정규화 masterTime 과 기준이 달라
+    //    normalizedTime - lastSyncTime 이 항상 음수가 되어 매 샘플이 과거로 오판된다.
+    //    따라서 센서별 직전 샘플 시각을 기준으로 삼는다.
     const sensorTiming = this.sensorTimings.get(sensorType);
     if (sensorTiming) {
       const expectedInterval = sensorTiming.expectedInterval;
-      const timeSinceLastSync = normalizedTime - this.metrics.lastSyncTime;
+      const lastSampleTime = this.lastSampleTimes.get(sensorType) ?? 0;
+      const timeSinceLastSample = lastSampleTime > 0 ? normalizedTime - lastSampleTime : 0;
       
       // 너무 과거의 타임스탬프
-      if (timeSinceLastSync < -expectedInterval * 2) {
-        issues.push(`과거 타임스탬프 감지: ${timeSinceLastSync}ms`);
+      if (timeSinceLastSample < -expectedInterval * 2) {
+        issues.push(`과거 타임스탬프 감지: ${timeSinceLastSample}ms`);
         this.metrics.outOfOrderPackets++;
         confidence *= 0.5;
       }
       
       // 너무 미래의 타임스탬프
-      if (timeSinceLastSync > expectedInterval * 10) {
-        issues.push(`미래 타임스탬프 감지: ${timeSinceLastSync}ms`);
+      if (timeSinceLastSample > expectedInterval * 10) {
+        issues.push(`미래 타임스탬프 감지: ${timeSinceLastSample}ms`);
         confidence *= 0.7;
       }
     }
@@ -246,12 +254,13 @@ export class TimestampSynchronizer {
     if (!sensorTiming) return normalizedTime;
     
     const expectedInterval = sensorTiming.expectedInterval;
-    const lastSyncTime = this.metrics.lastSyncTime;
+    const lastSampleTime = this.lastSampleTimes.get(sensorType) ?? 0;
+    if (lastSampleTime <= 0) return normalizedTime;
     
-    // 예상 시간 계산
-    const timeSinceLastSync = normalizedTime - lastSyncTime;
-    const expectedSteps = Math.round(timeSinceLastSync / expectedInterval);
-    const correctedTime = lastSyncTime + (expectedSteps * expectedInterval);
+    // 예상 시간 계산 (재동기화 시각이 아니라 직전 샘플 기준으로 격자에 스냅)
+    const timeSinceLastSample = normalizedTime - lastSampleTime;
+    const expectedSteps = Math.round(timeSinceLastSample / expectedInterval);
+    const correctedTime = lastSampleTime + (expectedSteps * expectedInterval);
     
     console.log('ACC 타임스탬프 보정:', {
       original: normalizedTime,
@@ -269,7 +278,7 @@ export class TimestampSynchronizer {
     const sensorTiming = this.sensorTimings.get(sensorType);
     if (!sensorTiming) return;
     
-    const lastTime = this.metrics.lastSyncTime;
+    const lastTime = this.lastSampleTimes.get(sensorType) ?? 0;
     if (lastTime > 0) {
       const actualInterval = normalizedTime - lastTime;
       const expectedInterval = sensorTiming.expectedInterval;
@@ -288,6 +297,9 @@ export class TimestampSynchronizer {
       
       this.sensorTimings.set(sensorType, sensorTiming);
     }
+    
+    // 다음 간격 계산을 위해 직전 샘플 시각 갱신 (첫 샘플도 기록)
+    this.lastSampleTimes.set(sensorType, normalizedTime);
   }
   
   /**
@@ -459,6 +471,7 @@ export class TimestampSynchronizer {
     this.masterTimeBase = 0;
     this.deviceTimeBase = 0;
     this.lastDeviceTime = 0;
+    this.lastSampleTimes.clear();
     this.driftHistory = [];
     
     this.metrics = {

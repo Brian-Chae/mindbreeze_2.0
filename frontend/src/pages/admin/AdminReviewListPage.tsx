@@ -28,7 +28,8 @@ function RiskBadge({ score }: { score: number }) {
   if (score >= 0.7) {
     color = 'bg-red-50 text-red-700';
     label = '고위험';
-  } else if (score >= 0.3) {
+  } else if (score >= 0.4) {
+    // 백엔드 admin_service._risk_level(high>=0.7, medium>=0.4, low<0.4)과 일치시킨다.
     color = 'bg-yellow-50 text-yellow-700';
     label = '중간';
   } else {

@@ -657,7 +657,13 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     previous_status = user.status
-    user.status = "active"
+    # ADMIN-03: 초대 미수락(pending) 계정은 정지 해제로 강제 활성화하지 않는다.
+    #   pending → active 로 전환하면 초대 수락(비밀번호 설정) 가드를 우회할 수 있다.
+    #   org_service.set_counselor_suspension 과 동일하게 상태를 복원한다.
+    if previous_status == "pending":
+        user.status = "pending"
+    else:
+        user.status = "active"
     db.add(user)
     db.add(VerificationAudit(
         target_type="user",
@@ -667,7 +673,7 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
         reason=None,
     ))
     db.commit()
-    if previous_status != "active" and user.id != admin_id:
+    if previous_status not in ("active", "pending") and user.id != admin_id:
         notify_event("account_reactivated", user.id, {
             "title": "계정이 다시 활성화되었습니다",
             "body": "계정 이용 상태를 확인해주세요.",

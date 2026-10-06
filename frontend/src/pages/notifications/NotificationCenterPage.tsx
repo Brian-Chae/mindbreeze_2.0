@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NotificationCard, EVENT_LABELS } from '../../components/notifications/NotificationCard';
+import { NotificationCard, eventLabel } from '../../components/notifications/NotificationCard';
 import AppShell from '../../components/layout/AppShell';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -181,14 +181,14 @@ export default function NotificationCenterPage() {
                         className="flex items-center justify-between py-2 px-3 bg-white rounded-xl border border-[#EFEFEF] cursor-pointer"
                       >
                         <span className="text-[13px] text-[#1F1F1F]">
-                          {EVENT_LABELS[event] ?? event}
+                          {eventLabel(event)}
                         </span>
                         <span className="-m-2.5 inline-flex shrink-0 items-center p-2.5">
                           <button
                             type="button"
                             role="switch"
                             aria-checked={enabled}
-                            aria-label={`${EVENT_LABELS[event] ?? event} ${channel === 'email' ? '이메일' : '인앱'} 알림`}
+                            aria-label={`${eventLabel(event)} ${channel === 'email' ? '이메일' : '인앱'} 알림`}
                             onClick={() => handleTogglePref(channel, event)}
                             className={`relative w-10 h-6 rounded-full transition-colors ${
                               enabled ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'

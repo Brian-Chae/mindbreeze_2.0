@@ -166,9 +166,12 @@ def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
             "ended_at": record.recording_ended_at,
         }
 
-    record.status = "processing"
-    record.recording_ended_at = _now()
-    db.commit()
+    # AUD-03: 멱등 종료 — 녹음 중일 때만 상태를 전이한다(video_service 와 동일).
+    #   중복 stop / 미시작 stop 이 processing 으로 오전이하지 않도록 현재 상태를 확인한다.
+    if record.status == "recording":
+        record.status = "processing"
+        record.recording_ended_at = _now()
+        db.commit()
 
     total = db.query(AudioChunk).filter(AudioChunk.session_id == s.id).count()
 
