@@ -350,3 +350,33 @@ def test_celery_worker_loads_exports_in_fresh_process():
     result = subprocess.run([sys.executable, '-c', "from app.core.celery_app import celery_app; celery_app.loader.import_default_modules(); assert 'tasks.generate_data_export' in celery_app.tasks; assert 'tasks.cleanup_data_exports' in celery_app.tasks"],
                             cwd=Path(__file__).parents[1], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+def test_download_url_records_role_when_user_missing(export_env, monkeypatch):
+    """EXPORT-AUDIT-USER-NPE: 발급 시점에 요청자 행이 없어도 500 없이 감사에 요청 역할을 남긴다."""
+    from app.models.data_export import DataExportAudit, DataExportJob
+    from app.models.user import User as UserModel
+    from app.services import export_service, storage_service
+    from app.tasks.export_task import generate_data_export
+    monkeypatch.setattr(generate_data_export, 'apply_async', lambda *a, **k: None)
+    monkeypatch.setattr(storage_service, 'upload_export', lambda *a: None)
+    client, db, _, _, _, _ = export_env
+    export_id = UUID(create_export(export_env).json()['export_id'])
+    export_service.run_export(export_id, db)
+    job = db.get(DataExportJob, export_id)
+    job.expires_at = datetime.now(timezone.utc) + timedelta(seconds=60)
+    db.commit()
+
+    real_get = db.get
+
+    def fake_get(entity, ident, *args, **kwargs):
+        if entity is UserModel:
+            return None
+        return real_get(entity, ident, *args, **kwargs)
+
+    monkeypatch.setattr(db, 'get', fake_get)
+    monkeypatch.setattr(storage_service, 'generate_presigned_get', lambda key, **kw: 'https://s3.example/signed')
+    res = client.post(f'/api/v1/data-exports/{export_id}/download-url')
+    assert res.status_code == 200, res.text
+    event = db.query(DataExportAudit).filter_by(export_id=export_id, event='url_issued').one()
+    assert event.role == job.requester_role

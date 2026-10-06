@@ -54,6 +54,7 @@ async def disconnect(sid):
 
 
 async def _enter_room(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get("room_id")
     if not room_id:
         return
@@ -99,6 +100,7 @@ async def on_join_room(sid, data):
 
 
 async def _exit_room(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get("room_id")
     if room_id:
         await sio.leave_room(sid, room_id, namespace="/chat")
@@ -116,6 +118,7 @@ async def on_leave_room(sid, data):
 
 @sio.on("message", namespace="/chat")
 async def on_message(sid, data):
+    data = data if isinstance(data, dict) else {}
     room_id = data.get("room_id")
     if not room_id:
         return

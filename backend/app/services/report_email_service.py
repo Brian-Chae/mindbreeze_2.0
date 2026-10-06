@@ -250,7 +250,10 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
         )
         return False
 
+    # FUNC-06: 최초 발송(deliver_report_email)과 동일하게 상태·시각도 함께 갱신한다.
     participant.report_email = email
+    participant.report_email_status = "sent"
+    participant.report_email_sent_at = datetime.now(timezone.utc)
     db.commit()
     return True
 

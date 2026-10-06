@@ -107,6 +107,43 @@ def test_notification_email_task_발송성공(client):
         db.close()
 
 
+def test_notification_email_task_html_본문_전달(client):
+    """FUNC-07: outbox payload['html'] 이 실제 발송 함수까지 전달된다."""
+    u = _register(client, "outbox-html@test.com")
+    db = _db()
+    try:
+        item = NotificationOutbox(
+            user_id=uuid.UUID(u["id"]),
+            channel="email",
+            recipient="outbox-html@test.com",
+            payload={
+                "subject": "[MIND BREEZE] 클래스 안내",
+                "body": "평문 본문",
+                "html": "<p>HTML 본문</p>",
+            },
+            status="pending",
+        )
+        db.add(item)
+        db.commit()
+        outbox_id = str(item.id)
+    finally:
+        db.close()
+
+    from app.tasks.report_email_task import notification_email_task
+
+    with patch.object(
+        notification_service, "send_email_notification", return_value=True
+    ) as sender:
+        notification_email_task(outbox_id)
+
+    sender.assert_called_once()
+    args = sender.call_args.args
+    assert args[0] == "outbox-html@test.com"
+    assert args[1] == "[MIND BREEZE] 클래스 안내"
+    assert args[2] == "평문 본문"
+    assert args[3] == "<p>HTML 본문</p>"
+
+
 def test_poll_and_deliver_ws_전달성공(client):
     u = _register(client, "outbox4@test.com")
     db = _db()

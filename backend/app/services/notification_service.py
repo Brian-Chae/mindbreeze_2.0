@@ -141,10 +141,16 @@ def create_notification(
     return notif
 
 
-def send_email_notification(to_email: str, subject: str, body: str) -> bool:
+def send_email_notification(
+    to_email: str, subject: str, body: str, body_html: str | None = None
+) -> bool:
+    """알림 이메일 발송. body_html 이 있으면 HTML 본문을 함께 전달한다.
+
+    FUNC-07: 리마인더 등 outbox payload['html'] 계약을 실제 발송까지 전달한다.
+    """
     for attempt in range(3):
         try:
-            ok = _send_email(to_email, subject, body)
+            ok = _send_email(to_email, subject, body, body_html)
             if ok:
                 return True
         except Exception as e:  # noqa: BLE001

@@ -233,3 +233,11 @@ def test_13_영상_presigned_url은_video_webm으로_발급(client, monkeypatch)
         assert captured["content_disposition"] is None
     finally:
         db.close()
+
+
+def test_14_영상_url_형식오류_sessionid_400(client):
+    """VIDEO-UUID-500: 형식 오류 session_id 는 500 대신 400 을 반환한다."""
+    host = _register(client, "vid14@test.com")
+    for path in ("url", "stream"):
+        res = client.get(f"/api/v1/sessions/not-a-uuid/video/{path}", headers=host["auth"])
+        assert res.status_code == 400, (path, res.text)

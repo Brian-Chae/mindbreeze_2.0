@@ -78,6 +78,7 @@ def notification_email_task(outbox_id: str) -> None:
             item.recipient or "",
             payload.get("subject", ""),
             payload.get("body", ""),
+            payload.get("html"),
         )
         if not ok:
             raise RuntimeError("알림 메일 발송 실패")

@@ -67,7 +67,10 @@ def get_video_url(
     S3 object key → presigned GET URL, 로컬 폴백 파일 → stream 상대 경로
     (프론트가 API base와 결합 — 프록시 뒤 request.base_url 오염 방지).
     """
-    sid = UUID(session_id)
+    # FUNC/VIDEO-UUID-500: 형식 오류 session_id 는 500 대신 400 으로 반환한다.
+    from app.services.session_service import _to_uuid
+
+    sid = _to_uuid(session_id)
     session = db.query(Session).filter(Session.id == sid).first()
     if not session:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
@@ -91,7 +94,10 @@ def stream_video(
     db: DBSession = Depends(get_db),
 ):
     """로컬 폴백 저장된 병합 영상을 스트리밍한다 (dev/자격증명 미설정 환경)."""
-    sid = UUID(session_id)
+    # FUNC/VIDEO-UUID-500: 형식 오류 session_id 는 500 대신 400 으로 반환한다.
+    from app.services.session_service import _to_uuid
+
+    sid = _to_uuid(session_id)
     session = db.query(Session).filter(Session.id == sid).first()
     if not session:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")

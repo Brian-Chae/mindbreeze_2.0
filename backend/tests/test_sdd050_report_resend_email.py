@@ -69,6 +69,9 @@ def test_resend_service_uses_new_email_and_updates_default_only_on_success(clien
         ) is True
         db.refresh(participant)
         assert participant.report_email == "new@example.com"
+        # FUNC-06: 재발송 성공 시에도 최초 발송과 동일하게 상태·시각을 갱신한다.
+        assert participant.report_email_status == "sent"
+        assert participant.report_email_sent_at is not None
         sent_email, link = sender.call_args.args
         assert sent_email == "new@example.com"
         assert link.startswith("https://dev.mindbreeze.looxidlabs.com/report-view?token=")

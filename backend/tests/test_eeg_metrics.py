@@ -59,6 +59,35 @@ def test_seven_metrics_computed_on_valid_session():
     assert m.drowsiness_flag is False  # 정상대 → 졸음 아님(0/None 아님)
 
 
+# ── 2b. 졸음 플래그 (EEG-DROWSY-GUARD) ─────────────────────────
+def test_drowsy_flag_true_on_high_relaxation_low_activity():
+    """이완 상단(>ri.p95) + 신경활동 하단(<tna.p25) 패턴 → 졸음 플래그 True."""
+    series = _valid_series(50)
+    series["relaxation_index"] = [0.5] * 50        # ri.p95(0.428846) 초과
+    series["total_neural_activity"] = [50.0] * 50  # tna.p25(110.555984) 미만
+    m = em.compute_session_metrics(**series)
+    assert m.drowsiness_flag is True
+
+
+def test_drowsy_flag_guard_ignores_unused_focusindex_percentile(monkeypatch):
+    """가드가 미사용 focusIndex p75 에 의존하지 않는다(복붙 오류 회귀 방지).
+
+    focusIndex 백분위가 없어도(이후 계산에 미사용) flag 는 ri.p95/tna.p25 로 산출된다.
+    """
+    c = em.get_constants()
+    original_index = c.index
+
+    def _patched_index(name):
+        return {} if name == "focusIndex" else original_index(name)
+
+    monkeypatch.setattr(c, "index", _patched_index)
+    series = _valid_series(50)
+    series["relaxation_index"] = [0.5] * 50
+    series["total_neural_activity"] = [50.0] * 50
+    m = em.compute_session_metrics(**series, constants=c)
+    assert m.drowsiness_flag is True
+
+
 # ── 3. null 입력 → null 반환 (0 치환 금지) ─────────────────────
 def test_null_input_preserved_not_zeroed():
     series = _valid_series(50)

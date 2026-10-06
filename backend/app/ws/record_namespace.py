@@ -46,6 +46,7 @@ def register_record_namespace(sio):
 
     @sio.on("subscribe", namespace="/record")
     async def on_subscribe(sid, data):
+        data = data if isinstance(data, dict) else {}
         session_id = data.get("session_id")
         if not session_id:
             return
@@ -76,6 +77,7 @@ def register_record_namespace(sio):
 
     @sio.on("unsubscribe", namespace="/record")
     async def on_unsubscribe(sid, data):
+        data = data if isinstance(data, dict) else {}
         session_id = data.get("session_id")
         if not session_id:
             return

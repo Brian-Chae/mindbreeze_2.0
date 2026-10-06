@@ -159,7 +159,9 @@ def download_url(db: DBSession, job: DataExportJob) -> dict:
         db.commit()
         raise HTTPException(503, '다운로드 저장소를 사용할 수 없습니다. 잠시 후 다시 시도해 주세요') from None
     # URL 문자열은 감사 원장이나 로그에 기록하지 않는다.
-    audit(db, job, 'url_issued', 'issued', db.get(User, job.user_id).role)
+    # FUNC/EXPORT-AUDIT-USER-NPE: 삭제된 사용자라도 500 대신 요청 시점 역할로 기록한다.
+    user = db.get(User, job.user_id)
+    audit(db, job, 'url_issued', 'issued', user.role if user else job.requester_role)
     db.commit()
     return {'url': url, 'expires_at': min(now() + timedelta(seconds=ttl), utc(job.expires_at))}
 

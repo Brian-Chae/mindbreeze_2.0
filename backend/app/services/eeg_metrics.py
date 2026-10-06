@@ -427,9 +427,14 @@ def compute_session_metrics(
     rel_m, cog_m, tna_m = (out["relaxation_index_mean"],
                            out["cognitive_load_mean"],
                            out["total_neural_activity_mean"])
-    if None not in (rel_m, cog_m, tna_m) and None not in (
-            ri.get("p95"), fi.get("p75"), tna.get("p25")):
-        cog_p75 = (c.index("cognitiveLoad") or {}).get("p75")
+    # EEG-DROWSY-GUARD: 가드는 flag 계산에 실제로 쓰이는 백분위를 검사한다.
+    # 기존 가드가 검사하던 focusIndex p75 는 이후 계산에 쓰이지 않는 복붙 오류였다.
+    # cognitiveLoad p75 는 상수에 없을 수 있어(None) 존재할 때만 가드에 포함한다.
+    cog_p75 = (c.index("cognitiveLoad") or {}).get("p75")
+    required_percentiles = [ri.get("p95"), tna.get("p25")]
+    if cog_p75 is not None:
+        required_percentiles.append(cog_p75)
+    if None not in (rel_m, cog_m, tna_m) and None not in required_percentiles:
         out["drowsiness_flag"] = bool(
             rel_m > ri["p95"] and tna_m < tna["p25"]
             and (cog_p75 is None or cog_m > cog_p75))
