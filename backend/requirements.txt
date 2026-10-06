@@ -1,43 +1,44 @@
 # MIND BREEZE 2.0 — Backend Dependencies
 # Python ≥3.11
+# 의존성은 로컬 검증 venv 버전으로 고정 (CI 드리프트 방지 — SQLAlchemy 2.1의 psycopg3 기본 전환 등 회귀 차단)
 
 # Web Framework
-fastapi>=0.115,<1
-uvicorn[standard]>=0.30
-python-socketio>=5.11
-python-multipart>=0.0.9
+fastapi==0.136.1
+uvicorn[standard]==0.47.0
+python-socketio==5.16.1
+python-multipart==0.0.29
 
 # Database
-sqlalchemy>=2.0
-alembic>=1.13
-psycopg2-binary>=2.9
-asyncpg>=0.29
+sqlalchemy==2.0.49
+alembic==1.18.4
+psycopg2-binary==2.9.12
+asyncpg==0.31.0
 
 # Async Tasks
-celery[redis]>=5.4
-redis>=5.0
+celery[redis]==5.6.3
+redis==6.4.0
 
 # Auth
-python-jose[cryptography]>=3.3
-passlib[argon2]>=1.7
-python-dotenv>=1.0
-google-auth>=2.36
+python-jose[cryptography]==3.5.0
+passlib[argon2]==1.7.4
+python-dotenv==1.2.2
+google-auth==2.53.0
 
 # AWS / Storage
-boto3>=1.35
+boto3==1.43.9
 
 # Validation
-pydantic>=2.9
-pydantic-settings>=2.5
-email-validator>=2.2
+pydantic==2.13.4
+pydantic-settings==2.14.1
+email-validator==2.3.0
 
 # HTTP Client
-httpx>=0.27
-requests>=2.31
+httpx==0.28.1
+requests==2.34.2
 
 # WebRTC / LiveKit
-livekit>=1.0
-livekit-api>=0.8
+livekit==1.1.16
+livekit-api==1.2.0
 
 # AI/ML (worker only)
 # google-generativeai  # Gemini
@@ -45,11 +46,10 @@ livekit-api>=0.8
 # openai-whisper       # Whisper fallback
 
 # Testing
-pytest>=8.3
-pytest-asyncio>=0.24
-fakeredis>=2.35  # 테스트용 인메모리 Redis (tests/conftest.py)
-httpx>=0.27
+pytest==9.0.3
+pytest-asyncio==1.3.0
+fakeredis==2.35.1  # 테스트용 인메모리 Redis (tests/conftest.py)
 
 # 서버 PDF (시스템 Pango/Cairo + app/assets/fonts 한글 글꼴 필요)
 weasyprint==68.1
-pypdf>=6,<7
+pypdf==6.18.1
