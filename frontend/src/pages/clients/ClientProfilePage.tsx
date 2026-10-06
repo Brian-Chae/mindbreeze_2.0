@@ -154,9 +154,12 @@ export default function ClientProfilePage() {
           <h2 className="text-lg font-semibold mb-2">상담사 비공개 메모</h2>
           <p className="text-xs text-gray-500 mb-3">내담자에게 공개되지 않습니다.</p>
           <textarea
+            id="client-memo"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={6}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'client-memo-error' : undefined}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080] text-sm"
             placeholder="상담 메모를 입력하세요"
           />
@@ -168,8 +171,8 @@ export default function ClientProfilePage() {
             >
               {saving ? '저장 중...' : '저장'}
             </button>
-            {savedAt && <span className="text-sm text-[#5F0080]">저장되었습니다</span>}
-            {error && <span className="text-sm text-red-600">{error}</span>}
+            {savedAt && <span role="status" className="text-sm text-[#5F0080]">저장되었습니다</span>}
+            {error && <span id="client-memo-error" role="alert" className="text-sm text-red-600">{error}</span>}
           </div>
         </div>
       </div>

@@ -37,12 +37,31 @@ export const SOCKET_URL =
 // ── /chat ──────────────────────────────────────────────────────────
 
 let chatSocket: Socket | null = null;
+let chatToken: string | null | undefined = undefined;
 
 export const getChatSocket = (token: string): Socket => {
-  if (chatSocket && chatSocket.connected) return chatSocket;
   if (chatSocket) {
+    // WS-04: 이미 연결된 소켓이 있으면 토큰을 갱신하지 않고 반환하던 버그 수정.
+    // 로그아웃/사용자 전환으로 토큰이 바뀌면 새 토큰으로 재핸드셰이크한다.
+    if (chatToken !== token) {
+      chatToken = token;
+      chatSocket.auth = { token };
+      // 소켓 인스턴스는 유지한다(다른 컴포넌트의 리스너를 고아로 만들지 않음).
+      // auth 만 바꾸면 서버는 핸드셰이크 때 받은 구 토큰으로 계속 인식하므로,
+      // 같은 인스턴스를 끊고 다시 연결해 새 토큰으로 인증한다.
+      if (!chatSocket.disconnected) {
+        chatSocket.disconnect().connect();
+      } else {
+        chatSocket.connect();
+      }
+      return chatSocket;
+    }
+    if (!chatSocket.disconnected) return chatSocket;
+    // 끊긴 상태로 남아 있으면 재사용하지 않고 새로 연결한다(토큰 반영).
     chatSocket.disconnect();
+    chatSocket = null;
   }
+  chatToken = token;
   chatSocket = io(`${SOCKET_URL}/chat`, {
     path: '/socket.io',
     transports: ['websocket'],
@@ -54,6 +73,7 @@ export const getChatSocket = (token: string): Socket => {
 };
 
 export const disconnectChatSocket = (): void => {
+  chatToken = undefined;
   if (chatSocket) {
     chatSocket.disconnect();
     chatSocket = null;

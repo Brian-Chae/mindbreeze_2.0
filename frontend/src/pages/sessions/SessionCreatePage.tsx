@@ -267,8 +267,8 @@ export default function SessionCreatePage() {
             )}
 
             <div>
-              <label className={labelCls}>세션 유형</label>
-              <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
+              <label className={labelCls} htmlFor="session-type">세션 유형</label>
+              <select id="session-type" value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
                 <option value="meditation">명상수업</option>
                 <option value="clinical">임상심리상담</option>
                 <option value="hypnosis">최면심리상담</option>
@@ -278,8 +278,9 @@ export default function SessionCreatePage() {
 
             {type === 'custom' && (
               <div>
-                <label className={labelCls}>유형 이름</label>
+                <label className={labelCls} htmlFor="session-custom-type">유형 이름</label>
                 <input
+                  id="session-custom-type"
                   type="text"
                   required
                   maxLength={30}
@@ -292,8 +293,9 @@ export default function SessionCreatePage() {
             )}
 
             <div>
-              <label className={labelCls}>장소 유형</label>
+              <label className={labelCls} htmlFor="session-location">장소 유형</label>
               <select
+                id="session-location"
                 value={locationType}
                 onChange={(e) => setLocationType(e.target.value as LocationType)}
                 className={inputCls}
@@ -307,8 +309,9 @@ export default function SessionCreatePage() {
             </div>
 
             <div>
-              <label className={labelCls}>인원</label>
+              <label className={labelCls} htmlFor="session-participant-mode">인원</label>
               <select
+                id="session-participant-mode"
                 value={participantMode}
                 onChange={(e) => {
                   const nextMode = e.target.value as ParticipantMode;
@@ -327,8 +330,8 @@ export default function SessionCreatePage() {
             </div>
 
             <div>
-              <label className={labelCls}>LINK BAND</label>
-              <select value={linkbandMode} onChange={(e) => setLinkbandMode(e.target.value as LinkbandMode)} className={inputCls}>
+              <label className={labelCls} htmlFor="session-linkband-mode">LINK BAND</label>
+              <select id="session-linkband-mode" value={linkbandMode} onChange={(e) => setLinkbandMode(e.target.value as LinkbandMode)} className={inputCls}>
                 <option value="none">미사용</option>
                 <option value="optional">선택</option>
                 <option value="required">필수</option>
@@ -417,8 +420,9 @@ export default function SessionCreatePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelCls}>소요 시간(분)</label>
+                <label className={labelCls} htmlFor="session-duration">소요 시간(분)</label>
                 <input
+                  id="session-duration"
                   type="number"
                   min={1}
                   max={600}
@@ -429,8 +433,9 @@ export default function SessionCreatePage() {
                 />
               </div>
               <div>
-                <label className={labelCls}>최대 참여자 수</label>
+                <label className={labelCls} htmlFor="session-max-participants">최대 참여자 수</label>
                 <input
+                  id="session-max-participants"
                   type="number"
                   min={1}
                   max={participantMode === 'one_on_one' ? 1 : 100}
@@ -449,18 +454,18 @@ export default function SessionCreatePage() {
             </div>
 
             <div>
-              <label className={labelCls}>제목</label>
-              <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+              <label className={labelCls} htmlFor="session-title">제목</label>
+              <input id="session-title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
             </div>
 
             <div>
-              <label className={labelCls}>메모</label>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
+              <label className={labelCls} htmlFor="session-notes">메모</label>
+              <textarea id="session-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} />
             </div>
 
             <ParticipantPicker selected={participants} onChange={setParticipants} maxParticipants={pickerMax} />
 
-            {error && <p className="text-sm text-[#B3261E]">{error}</p>}
+            {error && <p role="alert" className="text-sm text-[#B3261E]">{error}</p>}
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <button type="submit" disabled={submitting} className="mb-btn w-full sm:w-auto">

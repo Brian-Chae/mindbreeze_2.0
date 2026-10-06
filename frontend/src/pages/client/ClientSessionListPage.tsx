@@ -12,6 +12,7 @@ import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { SessionCard } from '../../components/session/SessionCard';
 import { CalendarView } from '../../components/session/CalendarView';
 import { InvitedSessionCard } from '../../components/client/InvitedSessionCard';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
 const COUNSELOR_COLORS = ['#5F0080', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
@@ -59,6 +60,8 @@ export default function ClientSessionListPage() {
   const [roomsError, setRoomsError] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const requestModalRef = useDialogA11y(showRequestModal, () => setShowRequestModal(false));
 
   // 세션 데이터 로딩
   useEffect(() => {
@@ -436,8 +439,15 @@ export default function ClientSessionListPage() {
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowRequestModal(false)}
           />
-          <div className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-[#EFEFEF]">
-            <h2 className="text-lg font-bold text-[#1F1F1F] mb-2">세션 신청하기</h2>
+          <div
+            ref={requestModalRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="session-request-title"
+            className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-[#EFEFEF]"
+          >
+            <h2 id="session-request-title" className="text-lg font-bold text-[#1F1F1F] mb-2">세션 신청하기</h2>
             <p className="text-sm text-[#6F6F6F] mb-4">
               상담사에게 세션 신청 메시지를 보냅니다.
             </p>

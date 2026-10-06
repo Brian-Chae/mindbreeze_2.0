@@ -110,7 +110,7 @@ export default function ClientListPage() {
         {loading && (
           <p className="text-center text-[#6F6F6F] py-8">불러오는 중...</p>
         )}
-        {error && <p className="text-center text-red-600 py-8">{error}</p>}
+        {error && <p role="alert" className="text-center text-red-600 py-8">{error}</p>}
 
         {!loading && !error && clients.length === 0 && (
           <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-12 text-center text-[#6F6F6F]">

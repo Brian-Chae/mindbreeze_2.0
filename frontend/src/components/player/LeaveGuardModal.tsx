@@ -3,6 +3,7 @@
 // in_progress: [클래스 종료 후 나가기]/[계속 진행] — 단순 나가기 없음(최고 강도)
 
 import type { SessionStatus } from '../../lib/api/session';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface LeaveGuardModalProps {
   status: SessionStatus;
@@ -23,10 +24,18 @@ export function LeaveGuardModal({
   onLeaveKeepOpen,
 }: LeaveGuardModalProps) {
   const isOpen = status === 'open';
+  const dialogRef = useDialogA11y(true, onStay);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h4 className="text-lg font-semibold text-[#1F1F1F]">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leave-guard-title"
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+      >
+        <h4 id="leave-guard-title" className="text-lg font-semibold text-[#1F1F1F]">
           {isOpen ? '클래스가 오픈된 상태입니다' : '클래스가 진행 중입니다'}
         </h4>
         <p className="mt-3 text-sm text-[#6F6F6F]">

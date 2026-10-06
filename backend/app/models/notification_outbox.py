@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, func
+from sqlalchemy import String, Text, Integer, DateTime, ForeignKey, Index, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +12,16 @@ from app.core.database import Base
 
 class NotificationOutbox(Base):
     __tablename__ = "notification_outbox"
+    # MB2-ORM-IDX-06: 폴링 워커가 (status='pending', channel=..., available_at<=now)로 조회하므로
+    # 복합 인덱스로 풀스캔을 방지한다.
+    __table_args__ = (
+        Index(
+            "ix_notification_outbox_status_channel_available",
+            "status",
+            "channel",
+            "available_at",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # WS 채널은 연관 알림 ID를, 이메일 채널은 대상 사용자를 참조

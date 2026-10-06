@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { createInvite, type InviteCreateResponse } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface InviteModalProps {
   open: boolean;
@@ -22,6 +23,15 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
     window.location.origin;
   const inviteLink = result ? `${inviteBaseUrl}${result.invite_url}` : '';
 
+  const handleClose = () => {
+    setEmail('');
+    setError(null);
+    setResult(null);
+    onClose();
+  };
+
+  const dialogRef = useDialogA11y(open, handleClose);
+
   if (!open) return null;
 
   const handleSubmit = async (e: FormEvent) => {
@@ -38,19 +48,8 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
     }
   };
 
-  const handleClose = () => {
-    setEmail('');
-    setError(null);
-    setResult(null);
-    onClose();
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -58,7 +57,14 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
       />
 
       {/* modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl border border-[#EFEFEF] w-full max-w-md mx-4 p-6">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invite-modal-title"
+        className="relative bg-white rounded-2xl shadow-xl border border-[#EFEFEF] w-full max-w-md mx-4 p-6"
+      >
         {/* 닫기 버튼 */}
         <button
           onClick={handleClose}
@@ -71,7 +77,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
 
         {/* 헤더 */}
         <div className="mb-6">
-          <h2 className="text-[17px] font-bold text-[#1F1F1F] flex items-center gap-2">
+          <h2 id="invite-modal-title" className="text-[17px] font-bold text-[#1F1F1F] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
             내담자 초대
           </h2>
@@ -138,21 +144,24 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
           /* 입력 폼 */
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
+              <label htmlFor="invite-modal-email" className="block text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
                 이메일
               </label>
               <input
+                id="invite-modal-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'invite-modal-error' : undefined}
                 placeholder="client@example.com"
                 className="w-full h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-[14px] text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
               />
             </div>
 
             {error && (
-              <p className="text-[13px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+              <p id="invite-modal-error" role="alert" className="text-[13px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
             )}
 
             <button

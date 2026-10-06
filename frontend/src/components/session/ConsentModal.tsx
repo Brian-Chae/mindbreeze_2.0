@@ -1,5 +1,7 @@
 // 음성 녹음 동의 모달
 
+import { useDialogA11y } from '../../hooks/useDialogA11y';
+
 interface Props {
   open: boolean;
   onConfirm: () => void;
@@ -7,9 +9,12 @@ interface Props {
 }
 
 export function ConsentModal({ open, onConfirm, onCancel }: Props) {
+  const dialogRef = useDialogA11y(open, onCancel);
   if (!open) return null;
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
       role="dialog"
       aria-modal="true"

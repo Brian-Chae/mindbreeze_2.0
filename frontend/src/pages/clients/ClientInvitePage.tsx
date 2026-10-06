@@ -83,18 +83,21 @@ export default function ClientInvitePage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+              <label htmlFor="invite-email" className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
               <input
+                id="invite-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'invite-error' : undefined}
                 placeholder="client@example.com"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080]"
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p id="invite-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"

@@ -202,7 +202,7 @@ export default function RegisterOrganizationPage() {
               </span>
             </label>
 
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
             <button
               type="submit"

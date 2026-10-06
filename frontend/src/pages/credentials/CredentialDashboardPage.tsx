@@ -208,12 +208,12 @@ export default function CredentialDashboardPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+            <p id="credential-upload-error" role="alert" className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
               {error}
             </p>
           )}
           {success && (
-            <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+            <p role="status" className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
               {success}
             </p>
           )}

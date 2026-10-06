@@ -11,6 +11,7 @@ import { MonthCalendar } from '../../components/session/MonthCalendar';
 import { MobileTimetable } from '../../components/session/MobileTimetable';
 import { useSessionStore } from '../../stores/sessionStore';
 import AppShell from '../../components/layout/AppShell';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -200,14 +201,23 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const dialogRef = useDialogA11y(open, handleClose);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative bg-white rounded-[20px] shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 border border-[#EFEFEF]">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-session-modal-title"
+        className="relative bg-white rounded-[20px] shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 border border-[#EFEFEF]"
+      >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-[#1F1F1F]">새 세션 생성</h2>
+          <h2 id="create-session-modal-title" className="text-lg font-bold text-[#1F1F1F]">새 세션 생성</h2>
           <button
             type="button"
             onClick={handleClose}
@@ -218,8 +228,8 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={labelCls}>세션 유형</label>
-            <select value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
+            <label className={labelCls} htmlFor="create-session-type">세션 유형</label>
+            <select id="create-session-type" value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
               <option value="clinical">임상심리상담</option>
               <option value="hypnosis">최면심리상담</option>
               <option value="meditation">명상수업</option>
@@ -227,10 +237,11 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           </div>
 
           <div>
-            <label className={labelCls}>진행 방식</label>
-            <div className="flex rounded-xl bg-[#F2F3F8] p-1">
+            <span id="create-session-delivery-label" className={labelCls}>진행 방식</span>
+            <div role="group" aria-labelledby="create-session-delivery-label" className="flex rounded-xl bg-[#F2F3F8] p-1">
               <button
                 type="button"
+                aria-pressed={isOnline}
                 onClick={() => setIsOnline(true)}
                 className={`flex-1 px-5 py-2 text-sm rounded-[10px] font-medium transition-colors ${
                   isOnline ? 'bg-[#5F0080] text-white' : 'text-[#1F1F1F] hover:bg-[#E6E7EE]'
@@ -240,6 +251,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
               </button>
               <button
                 type="button"
+                aria-pressed={!isOnline}
                 onClick={() => setIsOnline(false)}
                 className={`flex-1 px-5 py-2 text-sm rounded-[10px] font-medium transition-colors ${
                   !isOnline ? 'bg-[#5F0080] text-white' : 'text-[#1F1F1F] hover:bg-[#E6E7EE]'
@@ -250,8 +262,8 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
             </div>
           </div>
           <div>
-            <label className={labelCls}>일시</label>
-            <div className="flex flex-col gap-2">
+            <span id="create-session-schedule-label" className={labelCls}>일시</span>
+            <div role="group" aria-labelledby="create-session-schedule-label" className="flex flex-col gap-2">
               {/* 날짜 선택 필드 (통합) */}
               <div className="relative flex-1" ref={calendarRef}>
                 <button
@@ -399,8 +411,9 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>소요 시간(분)</label>
+              <label className={labelCls} htmlFor="create-session-duration">소요 시간(분)</label>
               <input
+                id="create-session-duration"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -414,8 +427,9 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
               />
             </div>
             <div>
-              <label className={labelCls}>최대 참여자 수</label>
+              <label className={labelCls} htmlFor="create-session-max-participants">최대 참여자 수</label>
               <input
+                id="create-session-max-participants"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -430,12 +444,12 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
             </div>
           </div>
           <div>
-            <label className={labelCls}>제목</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="예: 1차 상담, 스트레스 관리 명상" />
+            <label className={labelCls} htmlFor="create-session-title">제목</label>
+            <input id="create-session-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} placeholder="예: 1차 상담, 스트레스 관리 명상" />
           </div>
           <div>
-            <label className={labelCls}>설명</label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} placeholder="세션에 대한 설명을 입력하세요" />
+            <label className={labelCls} htmlFor="create-session-notes">설명</label>
+            <textarea id="create-session-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={inputCls} placeholder="세션에 대한 설명을 입력하세요" />
           </div>
           {/* 개선 6: 예약 사전 안내(리마인더) — 시작 전 참여코드·준비물·브라우저 안내 자동 발송 */}
           <div className="rounded-xl border border-[#DDD0EA] bg-[#F5EDFC] px-4 py-3">
@@ -480,7 +494,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
             <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)} />
             시간 충돌 무시
           </label>
-          {error && <p className="text-sm text-[#B3261E]">{error}</p>}
+          {error && <p role="alert" className="text-sm text-[#B3261E]">{error}</p>}
           <div className="flex gap-2 pt-2">
             <button type="submit" disabled={submitting} className="mb-btn">
               {submitting ? '생성 중...' : '생성'}

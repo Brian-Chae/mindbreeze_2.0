@@ -106,7 +106,16 @@ async def broadcast_report_progress(session_id: str, payload: dict) -> None:
     if isinstance(updated_at, datetime):
         body["updated_at"] = updated_at.isoformat()
     room = f"session:{session_id}"
-    await sio.emit("report:progress", body, room=room, namespace="/record")  # type: ignore
+    try:
+        await sio.emit("report:progress", body, room=room, namespace="/record")  # type: ignore
+    except Exception:
+        # WS-01: Redis manager 가 런타임에 끊겨도 리포트 생성 파이프라인을 중단시키지 않는다.
+        logger.warning(
+            "[WS /record] report:progress emit 실패 — 로깅만 하고 계속 (session=%s)",
+            session_id,
+            exc_info=True,
+        )
+        return
     logger.info(
         "[WS /record] report:progress %s (%s%%) → session:%s",
         body.get("generation_status"),
@@ -128,5 +137,15 @@ async def broadcast_record_status(session_id: str, status: str, detail: dict | N
     if detail:
         payload["detail"] = detail  # type: ignore
     room = f"session:{session_id}"
-    await sio.emit("record_status", payload, room=room, namespace="/record")  # type: ignore
+    try:
+        await sio.emit("record_status", payload, room=room, namespace="/record")  # type: ignore
+    except Exception:
+        # WS-01: Redis manager 장애 시에도 상태 브로드캐스트가 파이프라인을 깨지 않도록 로깅만 한다.
+        logger.warning(
+            "[WS /record] record_status emit 실패 — 로깅만 하고 계속 (status=%s, session=%s)",
+            status,
+            session_id,
+            exc_info=True,
+        )
+        return
     logger.info("[WS /record] broadcast %s → session:%s", status, session_id)

@@ -355,7 +355,7 @@ export default function CounselorOnboardingPage() {
             </div>
           )}
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
           <div className="flex gap-3">
             <button

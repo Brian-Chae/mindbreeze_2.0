@@ -4,6 +4,7 @@ import { createDirectRoom, createGroupRoom } from '../../lib/api/chat';
 import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../../lib/api/client';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 type RoomMode = 'direct' | 'group';
 
@@ -111,20 +112,24 @@ export function CreateRoomModal({ open, onClose }: Props) {
     }
   };
 
+  const dialogRef = useDialogA11y(open, onClose);
+
   if (!open) return null;
 
   const selectedCount = selectedIds.size;
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="새 채팅방"
+      aria-labelledby="create-room-title"
     >
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl max-h-[85dvh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-[#1F1F1F]">새 채팅방</h2>
+          <h2 id="create-room-title" className="text-lg font-bold text-[#1F1F1F]">새 채팅방</h2>
           <button
             type="button"
             onClick={onClose}

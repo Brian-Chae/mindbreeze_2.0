@@ -19,6 +19,7 @@ import {
   patchOrgCounselorProfile,
   type CounselorInfoDto,
 } from '../../lib/api/counselor-info';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 type DisplayStatus = 'active' | 'pending' | 'suspended';
 
@@ -93,10 +94,18 @@ function StatusChangeDialog({
 }) {
   const [reason, setReason] = useState('');
   const isSuspend = mode === 'suspend';
+  const dialogRef = useDialogA11y(true, onCancel);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h3 className="text-[17px] font-bold text-[#1F1F1F]">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="status-change-title"
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+      >
+        <h3 id="status-change-title" className="text-[17px] font-bold text-[#1F1F1F]">
           {isSuspend ? '상담사 비활성화' : '상담사 활성화'}
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#6F6F6F]">

@@ -461,7 +461,8 @@ class EEGFeatureBatchRequest(BaseModel):
     """
 
     participant_id: str | None = None
-    features: list[EEGFeatureItem] = Field(..., min_length=1)
+    # VB-02: 배치 순회 DoS 방지 — 1회 업로드 윈도우 수 상한(초당 1개).
+    features: list[EEGFeatureItem] = Field(..., min_length=1, max_length=5000)
 
 
 class EEGFeatureBatchResponse(BaseModel):

@@ -1,6 +1,8 @@
 // 회원 이탈 확인 모달 — SDD-131(②-20): 종료/이탈 버튼 확인 없이 즉시 종료되던 문제 해결.
 // 상담사 EndSessionModal 2단계 확인 패턴과 동일한 구조로, 진행 중 이탈 시 뇌파·리포트 중단을 고지한다.
 
+import { useDialogA11y } from '../../hooks/useDialogA11y';
+
 interface LeaveConfirmModalProps {
   open: boolean;
   onConfirm: () => void;
@@ -8,10 +10,13 @@ interface LeaveConfirmModalProps {
 }
 
 export function LeaveConfirmModal({ open, onConfirm, onCancel }: LeaveConfirmModalProps) {
+  const dialogRef = useDialogA11y(open, onCancel);
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"

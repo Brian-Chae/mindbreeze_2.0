@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { listNotifications, markRead, type NotificationDto } from '../../lib/api/notifications';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 function extraString(notice: NotificationDto, key: string): string | null {
   const value = notice.extra?.[key];
@@ -30,24 +31,36 @@ export default function OrgRemovedNoticeDialog() {
     };
   }, []);
 
+  const handleConfirm = async (): Promise<void> => {
+    const current = notice;
+    if (current) {
+      try {
+        await markRead(current.id);
+      } catch {
+        /* 읽음 처리 실패해도 이번 세션에서는 닫는다 */
+      }
+    }
+    setNotice(null);
+  };
+
+  const dialogRef = useDialogA11y(Boolean(notice), () => void handleConfirm());
+
   if (!notice) return null;
 
   const orgName = extraString(notice, 'org_name');
   const officeName = extraString(notice, 'office_name');
 
-  const handleConfirm = async (): Promise<void> => {
-    try {
-      await markRead(notice.id);
-    } catch {
-      /* 읽음 처리 실패해도 이번 세션에서는 닫는다 */
-    }
-    setNotice(null);
-  };
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 max-w-md mx-4 w-full">
-        <h2 className="text-[17px] font-bold text-[#1F1F1F] mb-3">소속 변경 안내</h2>
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="org-removed-title"
+        className="bg-white rounded-2xl p-6 max-w-md mx-4 w-full"
+      >
+        <h2 id="org-removed-title" className="text-[17px] font-bold text-[#1F1F1F] mb-3">소속 변경 안내</h2>
         <p className="text-[14px] leading-relaxed text-[#4A4A4A] whitespace-pre-line">
           {orgName ? `'${orgName}' 기관에서 소속이 해제되어` : '기관 소속이 해제되어'}
           {'\n'}

@@ -509,8 +509,9 @@ export default function ClientOnboardingPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">이름</label>
+                <label htmlFor="onboarding-name" className="block text-[13px] text-white/60 mb-1.5 ml-1">이름</label>
                 <input
+                  id="onboarding-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -519,10 +520,11 @@ export default function ClientOnboardingPage() {
                 />
               </div>
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                <label htmlFor="onboarding-phone" className="block text-[13px] text-white/60 mb-1.5 ml-1">
                   연락처
                 </label>
                 <input
+                  id="onboarding-phone"
                   type="tel"
                   value={form.phone}
                   onChange={(e) => handlePhoneChange(e.target.value)}
@@ -538,8 +540,9 @@ export default function ClientOnboardingPage() {
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">성별</label>
+                <label htmlFor="onboarding-gender" className="block text-[13px] text-white/60 mb-1.5 ml-1">성별</label>
                 <select
+                  id="onboarding-gender"
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
                   className={inputClass}
@@ -551,9 +554,11 @@ export default function ClientOnboardingPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">생년월일</label>
+                <label htmlFor="onboarding-birth-year" className="block text-[13px] text-white/60 mb-1.5 ml-1">생년월일</label>
                 <div className="flex gap-2">
                   <select
+                    id="onboarding-birth-year"
+                    aria-label="출생 연도"
                     value={form.birthDate ? form.birthDate.split('-')[0] : ''}
                     onChange={(e) => {
                       const [_, m, d] = (form.birthDate || '--').split('-');
@@ -567,6 +572,8 @@ export default function ClientOnboardingPage() {
                     ))}
                   </select>
                   <select
+                    id="onboarding-birth-month"
+                    aria-label="출생 월"
                     value={form.birthDate ? form.birthDate.split('-')[1] : ''}
                     onChange={(e) => {
                       const [y, _, d] = (form.birthDate || '--').split('-');
@@ -580,6 +587,8 @@ export default function ClientOnboardingPage() {
                     ))}
                   </select>
                   <select
+                    id="onboarding-birth-day"
+                    aria-label="출생 일"
                     value={form.birthDate ? form.birthDate.split('-')[2] : ''}
                     onChange={(e) => {
                       const [y, m] = (form.birthDate || '--').split('-');
@@ -631,10 +640,11 @@ export default function ClientOnboardingPage() {
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                <label htmlFor="onboarding-profile-image" className="block text-[13px] text-white/60 mb-1.5 ml-1">
                   프로필 사진 URL <span className="text-white/30">(선택)</span>
                 </label>
                 <input
+                  id="onboarding-profile-image"
                   type="url"
                   value={form.profileImageUrl}
                   onChange={(e) => setForm({ ...form, profileImageUrl: e.target.value })}
@@ -643,10 +653,11 @@ export default function ClientOnboardingPage() {
                 />
               </div>
               <div>
-                <label className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                <label htmlFor="onboarding-bio" className="block text-[13px] text-white/60 mb-1.5 ml-1">
                   한줄 소개 <span className="text-white/30">(선택)</span>
                 </label>
                 <textarea
+                  id="onboarding-bio"
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   rows={3}
@@ -709,10 +720,11 @@ export default function ClientOnboardingPage() {
               ) : !matchedCounselor ? (
                 <>
                   <div>
-                    <label className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                    <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/60 mb-1.5 ml-1">
                       상담사 코드 (6자리)
                     </label>
                     <input
+                      id="onboarding-counselor-code"
                       type="text"
                       maxLength={6}
                       value={form.counselorCode}

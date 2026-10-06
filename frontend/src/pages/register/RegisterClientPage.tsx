@@ -329,7 +329,7 @@ export default function RegisterClientPage() {
                 </div>
               )}
 
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
               <button
                 type="button"
@@ -346,7 +346,7 @@ export default function RegisterClientPage() {
           {step === 2 && (
             <div className="space-y-4">
               <ConsentCheckList consents={consents} onChange={setConsents} />
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -513,7 +513,7 @@ export default function RegisterClientPage() {
                 </div>
               )}
 
-              {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+              {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
               <div className="flex gap-3">
                 <button
