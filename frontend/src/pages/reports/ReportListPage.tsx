@@ -16,6 +16,7 @@ import {
   type ReportDto,
 } from '../../lib/api/reports';
 import BulkApproveModal from '../../components/reports/BulkApproveModal';
+import { useReportStore } from '../../stores/reportStore';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -193,6 +194,7 @@ export default function ReportListPage() {
   const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
   // 일괄 승인 (검토중 리포트 코멘트 없이 일괄 발송)
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+  const setReportPendingReview = useReportStore((s) => s.setPendingReview);
 
   // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
   useEffect(() => {
@@ -274,6 +276,7 @@ export default function ReportListPage() {
 
   const handleBulkApprove = async () => {
     await approveAllReports();
+    setReportPendingReview(0);
     setReloadKey((k) => k + 1);
   };
 

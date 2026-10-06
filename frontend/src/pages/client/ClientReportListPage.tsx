@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
+import { useReportStore } from '../../stores/reportStore';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -133,6 +134,8 @@ export default function ClientReportListPage() {
   const [sortKey, setSortKey] = useState<SortKey>('newest');
   const [groupByCounselor, setGroupByCounselor] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const setReportUnread = useReportStore((s) => s.setUnread);
+  const refreshReports = useReportStore((s) => s.refresh);
 
   // 내담자 리포트 전체 읽음 — 서버 전체 마킹 후 목록 로컬 상태도 즉시 갱신.
   const handleMarkAllRead = async () => {
@@ -142,6 +145,7 @@ export default function ClientReportListPage() {
     try {
       await markAllReportsRead();
       setReports((prev) => prev.map((r) => ({ ...r, is_read: true })));
+      setReportUnread(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : '전체 읽음 처리 실패');
     } finally {
@@ -364,8 +368,9 @@ export default function ClientReportListPage() {
           reportId={selectedReportId}
           onClose={() => setSelectedReportId(null)}
           onReportChange={(next) => {
-            // 열람 시 서버가 is_read를 마킹 — 목록의 NEW 배지를 즉시 갱신.
+            // 열람 시 서버가 is_read를 마킹 — 목록의 NEW 배지와 하단 탭 배지를 즉시 갱신.
             setReports((prev) => prev.map((r) => (r.id === next.id ? { ...r, is_read: true } : r)));
+            void refreshReports();
           }}
         />
       )}

@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ICONS, StrokeIcon } from './SidebarNav';
 import type { UserRole } from '../../lib/api/auth';
 import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { listReports, resolveReportStatus } from '../../lib/api/reports';
+import { useReportStore } from '../../stores/reportStore';
 
 interface TabItem {
   to: string;
@@ -20,21 +19,23 @@ interface TabItem {
 function homePathForRole(role: UserRole | null | undefined): string {
   if (role === 'org_admin') return '/dashboard/org';
   if (role === 'platform_admin') return '/admin/orgs';
+  if (role === 'client') return '/app';
   return '/dashboard';
 }
 
 function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
+  const isClient = role === 'client';
   return [
     { to: homePathForRole(role), label: '홈', icon: ICONS.home },
-    { to: '/sessions', label: '세션', icon: ICONS.calendar },
-    { to: '/chat', label: '채팅', icon: ICONS.message },
-    { to: '/reports?status=pending', label: '리포트', icon: ICONS.report },
+    { to: isClient ? '/app/sessions' : '/sessions', label: '세션', icon: ICONS.calendar },
+    { to: isClient ? '/app/chat' : '/chat', label: '채팅', icon: ICONS.message },
+    { to: isClient ? '/app/reports' : '/reports?status=pending', label: '리포트', icon: ICONS.report },
   ];
 }
 
 interface BottomTabBarProps {
   onMoreClick: () => void;
-  /** 현재 사용자 역할 — 하단 탭 홈 경로를 역할에 맞춘다(NAV-01) */
+  /** 현재 사용자 역할 — 하단 탭 홈 경로·리포트 배지 기준을 역할에 맞춘다(NAV-01) */
   role?: UserRole | null;
 }
 
@@ -43,24 +44,12 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
-  const unread = useNotificationStore((s) => s.unread);
-  const [reportUnread, setReportUnread] = useState(0);
+  const sessionInvites = useNotificationStore((s) => s.sessionInvites);
+  const reportUnread = useReportStore((s) => s.unread);
+  const pendingReviewCount = useReportStore((s) => s.pendingReview);
 
-  // 신규(미확인) 리포트 수 — 알림(리포트 도착) 변화 시 재계산
-  useEffect(() => {
-    let cancelled = false;
-    listReports({ limit: 50 })
-      .then((res) => {
-        if (cancelled) return;
-        setReportUnread(res.reports.filter((r) => resolveReportStatus(r) === 'pending_review').length);
-      })
-      .catch(() => {
-        /* 조용히 실패 */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [unread]);
+  // role별 리포트 배지: 내담자=미열람(is_read), 상담사=검토중(pending_review)
+  const reportBadge = role === 'client' ? reportUnread : pendingReviewCount;
 
   return (
     <nav
@@ -68,7 +57,14 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {tabItems.map((item) => {
-        const unread = item.label === '채팅' ? chatUnread : item.label === '리포트' ? reportUnread : 0;
+        const unread =
+          item.label === '채팅'
+            ? chatUnread
+            : item.label === '리포트'
+              ? reportBadge
+              : item.label === '세션'
+                ? sessionInvites.length
+                : 0;
         return (
           <NavLink
             key={item.to}

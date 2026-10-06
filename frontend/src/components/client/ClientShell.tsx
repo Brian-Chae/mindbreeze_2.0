@@ -9,6 +9,7 @@ import MobileDrawer from '../layout/MobileDrawer';
 import BottomTabBar from './BottomTabBar';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useChatStore } from '../../stores/chatStore';
+import { useReportStore } from '../../stores/reportStore';
 import { useNotificationSocket } from '../../hooks/useNotificationSocket';
 import { listChatRooms } from '../../lib/api/chat';
 import { resolveNotificationTarget } from '../../lib/api/notifications';
@@ -39,9 +40,12 @@ export default function ClientShell({
   const unread = useNotificationStore((s) => s.unread);
   const toast = useNotificationStore((s) => s.toast);
   const dismissToast = useNotificationStore((s) => s.dismissToast);
+  const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
+  const reportUnread = useReportStore((s) => s.unread);
+  const refreshReports = useReportStore((s) => s.refresh);
 
   // Socket.IO 실시간 알림 리스너 + 최초 fetch
   useNotificationSocket();
@@ -53,6 +57,11 @@ export default function ClientShell({
       .then((res) => setRooms(res.rooms))
       .catch(() => { /* 조용히 실패 */ });
   }, [setRooms]);
+
+  // 리포트 미읽음 수 초기 로드 (사이드바·하단 탭 공용 배지)
+  useEffect(() => {
+    void refreshReports();
+  }, [refreshReports]);
 
   const handleToastClick = () => {
     // SDD-093: 토스트 클릭 → 딥링크 후속 행위 (내담자 라우트 기준)
@@ -71,7 +80,13 @@ export default function ClientShell({
     <div className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
-        <SidebarNav role="client" notificationBadge={unread} chatBadge={chatUnread} />
+        <SidebarNav
+          role="client"
+          notificationBadge={unread}
+          chatBadge={chatUnread}
+          reportBadge={reportUnread}
+          sessionBadge={sessionInvites.length}
+        />
       </aside>
 
       {/* 모바일 헤더 */}
