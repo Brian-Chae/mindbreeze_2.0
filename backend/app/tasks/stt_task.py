@@ -245,7 +245,14 @@ def _transcribe_batch(chunk_paths: list[str], session_type: str) -> tuple[list[d
                     ]
                 }
             ],
-            "generationConfig": {"responseMimeType": "application/json", "temperature": 0.0},
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.0,
+                # INT-VERIFY-02: 긴 전사(한글) 응답이 기본 maxOutputTokens(8192)에 걸려
+                # json.loads "Unterminated string" 실패 → Whisper 폴백(비용 2배)이 발생했다.
+                # 한글은 토큰 수가 문자 수보다 많으므로 상한을 넉넉히 확보한다.
+                "maxOutputTokens": 32768,
+            },
         },
         GEMINI_TIMEOUT,
     )

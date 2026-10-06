@@ -252,9 +252,21 @@ def finalize_on_session_end(session_id: UUID, db: DBSession) -> None:
     # SDD-101 Phase A: stop_recording이 이미 'processing'으로 마킹한 경우도 녹음으로 취급.
     # (direct /end 는 'recording', 정상 handleStop 경로는 'processing' 상태로 여기 도달)
     has_recording = record is not None and record.status in ("recording", "processing")
-    if record is not None and record.status == "recording":
+    # INT-VERIFY-01: 녹음이 전혀 없던 세션(record 없음 또는 idle)이 종료되면 AI 기록이
+    # 없다는 뜻으로 manual 로 마감한다. 방치하면 session_record 가 idle(미생성 시 GET 이
+    # idle 기본 반환)로 영구 정지해 UI 가 '처리 중'으로 표시된다.
+    if record is None:
+        record = SessionRecord(
+            session_id=session_id, status="manual", markers=[], edit_history=[], ai_summary={}
+        )
+        db.add(record)
+        db.commit()
+    elif record.status == "recording":
         record.status = "processing"
         record.recording_ended_at = _now()
+        db.commit()
+    elif record.status == "idle":
+        record.status = "manual"
         db.commit()
 
     # SDD-088 후속: 영상 병합 필요 여부 — 리포트가 video_s3_key 를 읽으므로
