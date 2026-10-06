@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { ICONS, StrokeIcon } from './SidebarNav';
 import type { UserRole } from '../../lib/api/auth';
+import { useChatStore } from '../../stores/chatStore';
 
 interface TabItem {
   to: string;
@@ -23,6 +24,7 @@ function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
   return [
     { to: homePathForRole(role), label: '홈', icon: ICONS.home },
     { to: '/sessions', label: '세션', icon: ICONS.calendar },
+    { to: '/chat', label: '채팅', icon: ICONS.message },
     { to: '/reports', label: '리포트', icon: ICONS.report },
   ];
 }
@@ -35,32 +37,46 @@ interface BottomTabBarProps {
 
 export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
   const tabItems = tabItemsForRole(role);
+  const chatUnread = useChatStore((s) =>
+    s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
+  );
+
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#EFEFEF] flex items-stretch justify-around"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {tabItems.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          className={({ isActive }) =>
-            `relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 ${
-              isActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
-            }`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#5F0080]" />
-              )}
-              <StrokeIcon d={item.icon} size={22} />
-              <span>{item.label}</span>
-            </>
-          )}
-        </NavLink>
-      ))}
+      {tabItems.map((item) => {
+        const unread = item.label === '채팅' ? chatUnread : 0;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              `relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 ${
+                isActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
+              }`
+            }
+          >
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#5F0080]" />
+                )}
+                <span className="relative">
+                  <StrokeIcon d={item.icon} size={22} />
+                  {unread > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center">
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </span>
+                <span>{item.label}</span>
+              </>
+            )}
+          </NavLink>
+        );
+      })}
       <button
         type="button"
         onClick={onMoreClick}
