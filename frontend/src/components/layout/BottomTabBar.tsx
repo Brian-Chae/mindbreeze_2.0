@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ICONS, StrokeIcon } from './SidebarNav';
 import type { UserRole } from '../../lib/api/auth';
 import { useChatStore } from '../../stores/chatStore';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { listReports } from '../../lib/api/reports';
 
 interface TabItem {
   to: string;
@@ -40,6 +43,24 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
+  const unread = useNotificationStore((s) => s.unread);
+  const [reportUnread, setReportUnread] = useState(0);
+
+  // 신규(미확인) 리포트 수 — 알림(리포트 도착) 변화 시 재계산
+  useEffect(() => {
+    let cancelled = false;
+    listReports({ limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        setReportUnread(res.reports.filter((r) => !r.is_read).length);
+      })
+      .catch(() => {
+        /* 조용히 실패 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [unread]);
 
   return (
     <nav
@@ -47,7 +68,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {tabItems.map((item) => {
-        const unread = item.label === '채팅' ? chatUnread : 0;
+        const unread = item.label === '채팅' ? chatUnread : item.label === '리포트' ? reportUnread : 0;
         return (
           <NavLink
             key={item.to}

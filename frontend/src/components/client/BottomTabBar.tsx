@@ -1,9 +1,12 @@
 // 하단 탭바: 홈 / 세션 / 채팅 / 리포트 / 더보기
 // useLocation으로 현재 경로 기반 활성 탭 판단
 
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import { useChatStore } from '../../stores/chatStore';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { listReports } from '../../lib/api/reports';
 
 interface TabItem {
   to: string;
@@ -28,6 +31,24 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
+  const unread = useNotificationStore((s) => s.unread);
+  const [reportUnread, setReportUnread] = useState(0);
+
+  // 신규(미확인) 리포트 수 — 알림(리포트 도착) 변화 시 재계산
+  useEffect(() => {
+    let cancelled = false;
+    listReports({ limit: 50 })
+      .then((res) => {
+        if (cancelled) return;
+        setReportUnread(res.reports.filter((r) => !r.is_read).length);
+      })
+      .catch(() => {
+        /* 조용히 실패 */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [unread]);
 
   const isActive = (path: string): boolean => {
     if (path === '/app') return pathname === '/app';
@@ -41,7 +62,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
     >
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
-        const unread = tab.label === '채팅' ? chatUnread : 0;
+        const unread = tab.label === '채팅' ? chatUnread : tab.label === '리포트' ? reportUnread : 0;
 
         return (
           <button
