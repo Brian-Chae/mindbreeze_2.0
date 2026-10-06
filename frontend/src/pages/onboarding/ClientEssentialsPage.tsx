@@ -16,6 +16,15 @@ interface EssentialsForm {
   phone: string;
 }
 
+// FORM-02: 휴대전화 형식(010-XXXX-XXXX) — 온보딩과 동일 규칙으로 검증한다.
+const PHONE_REGEX = /^010-\d{4}-\d{4}$/;
+const formatPhone = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+};
+
 export default function ClientEssentialsPage() {
   useRequireAuth();
   const navigate = useNavigate();
@@ -37,6 +46,10 @@ export default function ClientEssentialsPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
+    if (form.phone.trim() && !PHONE_REGEX.test(form.phone.trim())) {
+      setError('연락처를 010-0000-0000 형식으로 입력해주세요');
+      return;
+    }
 
     setError(null);
     setLoading(true);
@@ -160,9 +173,11 @@ export default function ClientEssentialsPage() {
               </label>
               <input
                 type="tel"
+                inputMode="numeric"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
                 placeholder="010-0000-0000"
+                maxLength={13}
                 disabled={loading}
                 className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white placeholder:text-[#9A9BA8] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
               />

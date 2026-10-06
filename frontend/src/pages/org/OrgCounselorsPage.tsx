@@ -418,7 +418,7 @@ export default function OrgCounselorsPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-[#6F6F6F]">불러오는 중...</div>
+        <div role="status" className="text-sm text-[#6F6F6F]">불러오는 중...</div>
       ) : (
         <div className="space-y-6">
           {/* SDD-077 재사용 — 상담사 정보 수정 */}

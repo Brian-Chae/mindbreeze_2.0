@@ -13,6 +13,15 @@ import { ApiError } from '../../lib/api/client';
 // 비밀번호 정책: 영문 + 숫자 + 특수문자, 8자 이상
 const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
+// FORM-02: 휴대전화 형식(010-XXXX-XXXX) — 온보딩(ClientOnboardingPage)과 동일 규칙으로 검증한다.
+const PHONE_REGEX = /^010-\d{4}-\d{4}$/;
+const formatPhone = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+};
+
 const GENDER_OPTIONS = [
   { value: 'male', label: '남성' },
   { value: 'female', label: '여성' },
@@ -186,6 +195,10 @@ export default function RegisterClientPage() {
     }
     if (!birthDate) {
       setError('생년월일을 입력해주세요');
+      return;
+    }
+    if (phone.trim() && !PHONE_REGEX.test(phone.trim())) {
+      setError('연락처를 010-0000-0000 형식으로 입력해주세요');
       return;
     }
     if (!PASSWORD_REGEX.test(password)) {
@@ -426,10 +439,11 @@ export default function RegisterClientPage() {
                 <input
                   id="phone"
                   type="tel"
+                  inputMode="numeric"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
                   placeholder="010-0000-0000"
-                  maxLength={20}
+                  maxLength={13}
                   disabled={loading}
                   className={inputClass}
                 />

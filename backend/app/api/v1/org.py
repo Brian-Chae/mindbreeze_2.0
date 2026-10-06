@@ -109,12 +109,14 @@ def _serialize_org(org) -> OrganizationPublicResponse:
 
 @router.get("/search", response_model=list[OrganizationSearchResult])
 async def search_orgs(
-    q: str | None = Query(default=None),
-    region: str | None = Query(default=None),
+    # VB-13: 무인증 공개 검색 — q 길이 상한 + 결과 개수 상한(page/size 대신 limit)을 둔다.
+    q: str | None = Query(default=None, max_length=100),
+    region: str | None = Query(default=None, max_length=100),
+    limit: int = Query(default=20, ge=1, le=50),
     db: Session = Depends(get_db),
 ):
     """센터 검색 — 이름/주소 부분 일치."""
-    orgs = org_service.search_organizations(q, region, db)
+    orgs = org_service.search_organizations(q, region, db, limit=limit)
     return [
         OrganizationSearchResult(
             id=str(o.id), name=o.name, address=o.address, verified=o.verified

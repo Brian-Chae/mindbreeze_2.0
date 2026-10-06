@@ -8,6 +8,7 @@ import { tokenStorage } from '../lib/api/client';
 import {
   getActiveSessionLiveSocket,
   getSessionLiveSocket,
+  joinSessionLive,
   subscribeWaitingRoomChanged,
   type WaitingRoomChangedEvent,
   type WaitingRoomCheckin,
@@ -58,14 +59,28 @@ export function useWaitingRoomCount({
   );
   /** 대기실(호스트 대기 씬)에서만 구독한다 */
   const active = Boolean(enabled && sessionId);
+  /** 이 훅이 마지막으로 초기화한 세션 — skipAuth 변경 재구독 시 명부를 유지하기 위한 키 */
+  const seenSessionRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!active || !sessionId) return undefined;
+
+    // HOOK-STATE-06: 실제 세션이 바뀔 때만 대기 명부를 초기화한다.
+    // (skipAuth 토글로 effect 가 재실행돼도 이전 세션의 명부를 보존한다.)
+    if (seenSessionRef.current !== sessionId) {
+      seenSessionRef.current = sessionId;
+      seenRef.current.clear();
+    }
 
     const socket =
       getActiveSessionLiveSocket() ?? getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
     /** 이 effect 인스턴스가 다루는 대기 명부(맵 인스턴스는 고정) */
     const seen = seenRef.current;
+
+    // WS-10: 호스트 대기실 구독 훅이 소켓 join 상태를 보장한다 — 다른 컴포넌트의
+    // join 타이밍에 의존하지 않도록 waiting_room_changed 수신 전에 room join 을 요청한다.
+    // (joinSessionLive 는 세션 dedup 을 하므로 이미 join 된 소켓에는 중복 emit 하지 않는다.)
+    joinSessionLive(socket, sessionId);
 
     const publish = (): void => {
       const now = Date.now();
@@ -107,11 +122,15 @@ export function useWaitingRoomCount({
 
     const unsubscribe = subscribeWaitingRoomChanged(socket, onChanged);
     const prune = window.setInterval(publish, PRUNE_INTERVAL_MS);
+    // 재구독(세션 유지) 시 현재 명부를 즉시 반영한다.
+    publish();
 
     return () => {
       window.clearInterval(prune);
       unsubscribe();
-      seen.clear();
+      // HOOK-STATE-06: cleanup 에서 공유 seenRef 를 clear 하지 않는다.
+      // skipAuth 변경으로 인한 재구독 시 명부가 통째로 비워지던 문제를 막고,
+      // 세션 변경 시에만 effect 본문에서 초기화한다.
     };
   }, [active, sessionId, skipAuth]);
 

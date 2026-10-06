@@ -133,6 +133,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
+            aria-label="채팅방 생성 닫기"
             className="w-11 h-11 shrink-0 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#6F6F6F] flex items-center justify-center text-sm"
           >
             ✕

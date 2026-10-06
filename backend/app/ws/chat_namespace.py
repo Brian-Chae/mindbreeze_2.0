@@ -6,6 +6,8 @@
 
 import asyncio
 import logging
+import uuid
+from datetime import datetime, timezone
 
 from app.ws import sio
 
@@ -203,6 +205,11 @@ async def on_message(sid, data):
         "sender_id": sender_id,
         "content": content,
         "type": "text",
+        # WS-12: REST 저장 경로(broadcast_message)와 동일 이벤트명(new_message)을 공유하므로
+        # id/created_at 을 포함해 클라이언트의 키·정렬·날짜 렌더가 깨지지 않게 한다.
+        "id": str(uuid.uuid4()),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "sender_name": None,
     }
     # 클라이언트 임시 키(에코 매칭용)가 있으면 보존하되 서버 값으로 덮지 않는다.
     if data.get("client_id") is not None:

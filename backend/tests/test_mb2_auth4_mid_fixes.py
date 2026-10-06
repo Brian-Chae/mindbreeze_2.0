@@ -348,7 +348,10 @@ def test_chat_ws_message_forces_sender_and_validates(monkeypatch):
     )
     msgs = [e for e in fake.emits if e["event"] == "new_message"]
     assert msgs and msgs[-1]["data"]["sender_id"] == "user-1"
-    assert "created_at" not in msgs[-1]["data"]
+    # 클라이언트가 보낸 created_at("1970")은 신뢰하지 않는다 — 서버가 새로 찍는다(WS-12).
+    assert msgs[-1]["data"]["created_at"] != "1970"
+    assert msgs[-1]["data"]["id"]
+    assert msgs[-1]["data"]["created_at"]
 
     # 빈/공백 content 는 브로드캐스트하지 않는다
     before = len(fake.emits)

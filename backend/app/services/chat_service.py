@@ -394,12 +394,14 @@ def create_group_room(
         host_id=host_uuid,
         name=name,
     )
+    # MB2-ORM-TXN-14: 방 생성과 참여자 등록을 단일 트랜잭션으로 커밋한다.
+    # 분리 커밋이면 참여자 등록 중 실패 시 참여자 없는 고아 방이 영속된다.
     db.add(room)
-    db.commit()
-    db.refresh(room)
+    db.flush()  # commit 전에 room.id 확보
     for puid in participant_uuids:
         db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
     db.commit()
+    db.refresh(room)
     return _serialize_room(room, host_id, db)
 
 
@@ -755,6 +757,59 @@ def _message_unread_count(msg: ChatMessage, room: ChatRoom, db: DBSession) -> in
         .count()
     )
     return max(total_participants - read_count, 0)
+
+
+def _legacy_unread_counts(msgs: list[ChatMessage], room: ChatRoom, db: DBSession) -> dict[str, int]:
+    """recipient_count==0 인 레거시 메시지의 미읽음 수를 배치 계산한다 (MB2-ORM-N1-04).
+
+    기존 `_message_unread_count` 를 메시지마다 호출하면 메시지 1건당 ChatMessageRead
+    count + (그룹/세션) 참여자 count 쿼리가 발생해 행 수에 비례한 N+1 이었다.
+    message_id IN 1회 GROUP BY 로 읽음 수를, 참여자 수는 방 단위 1회로 산출해 공유한다.
+    반환 맵은 원 함수와 동일한 의미(직접방 2 − 읽음, 그룹/세션 참여자 − 읽음)를 갖는다.
+    """
+    legacy = [m for m in msgs if not (m.recipient_count or 0)]
+    if not legacy:
+        return {}
+    ids = [m.id for m in legacy]
+    read_counts = {
+        mid: int(cnt)
+        for mid, cnt in db.query(ChatMessageRead.message_id, func.count())
+        .filter(ChatMessageRead.message_id.in_(ids))
+        .group_by(ChatMessageRead.message_id)
+        .all()
+    }
+    if room.room_type == "direct":
+        return {
+            str(m.id): max(2 - read_counts.get(m.id, 0), 0) for m in legacy
+        }
+    total_participants = _participant_count(room, db)
+    return {
+        str(m.id): max(total_participants - read_counts.get(m.id, 0), 0)
+        for m in legacy
+    }
+
+
+def _refresh_read_cache(msgs: list[ChatMessage], db: DBSession) -> None:
+    """read_by(JSONB 캐시)를 chat_message_reads(단일 진실원)에서 재계산한다 (MB2-ORM-MODEL-16).
+
+    읽음 상태의 단일 진실원은 chat_message_reads 테이블이며, chat_messages.read_by 는
+    조회 성능을 위한 파생 캐시다. 기존에는 mark_read/mark_messages_read 가 read_by 를
+    직접 append 하고 테이블에도 별도로 기록해 두 저장소가 어긋날 수 있었다. 모든 읽음
+    갱신 경로가 이 함수 하나로 캐시를 재구성하므로 두 저장소가 항상 일치한다.
+    """
+    if not msgs:
+        return
+    ids = [m.id for m in msgs]
+    rows = (
+        db.query(ChatMessageRead.message_id, ChatMessageRead.user_id)
+        .filter(ChatMessageRead.message_id.in_(ids))
+        .all()
+    )
+    by_msg: dict = {}
+    for mid, uid in rows:
+        by_msg.setdefault(mid, []).append(str(uid))
+    for m in msgs:
+        m.read_by = by_msg.get(m.id, [])
 
 
 def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
@@ -1376,16 +1431,21 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
         content=content,
         file_url=file_url,
     )
+    # MB2-ORM-TXN-13: 본문 저장과 읽음 메타(recipient_count/read_by/ChatMessageRead)를
+    # 단일 트랜잭션으로 커밋한다. 분리 커밋이면 두 커밋 사이 실패 시
+    # recipient_count=0·read_by=None 인 부분 상태 메시지가 남는다.
     db.add(msg)
-    db.commit()
-    db.refresh(msg)
-    # 본인 메시지는 자동 읽음 + recipient_count 설정
+    db.flush()  # commit 전에 msg.id 확보
     sender_uid = _uuid(user_id)
     recipients = _resolve_recipients(room, sender_uid, db)
     msg.recipient_count = len(recipients) + 1  # 발신자 포함 전체 인원
-    msg.read_by = [user_id]  # 발신자는 자동 읽음
+    # 읽음 상태의 단일 진실원은 chat_message_reads — 발신자 자동 읽음을 테이블에 기록하고
+    # read_by 캐시를 여기서 파생한다 (MB2-ORM-MODEL-16).
     db.add(ChatMessageRead(message_id=msg.id, user_id=sender_uid))
+    db.flush()
+    _refresh_read_cache([msg], db)
     db.commit()
+    db.refresh(msg)
 
     # ── 수신자 알림 생성 ──
     try:
@@ -1439,11 +1499,9 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
     for m in msgs:
         if m.id not in existing:
             db.add(ChatMessageRead(message_id=m.id, user_id=uid))
-            # ── Phase 3a: read_by 배열에도 추가 (중복 방지) ──
-            current_read_by = list(m.read_by or [])
-            if user_id not in current_read_by:
-                current_read_by.append(user_id)
-                m.read_by = current_read_by
+    # MB2-ORM-MODEL-16: read_by 캐시를 단일 진실원(chat_message_reads)에서 재구성한다.
+    db.flush()
+    _refresh_read_cache(msgs, db)
     _mark_message_notifications_read(rid, uid, [m.id for m in msgs], db)
     db.commit()
 
@@ -1503,17 +1561,17 @@ async def mark_messages_read(room_id: str, user_id: str, message_ids: list[str],
     }
 
     user_id_str = str(uid)
-    updates = []
     for m in msgs:
-        # ChatMessageRead 테이블에 기록
+        # ChatMessageRead 테이블에 기록 (단일 진실원)
         if m.id not in existing:
             db.add(ChatMessageRead(message_id=m.id, user_id=uid))
-            # read_by 배열 업데이트
-            current_read_by = list(m.read_by or [])
-            if user_id_str not in current_read_by:
-                current_read_by.append(user_id_str)
-                m.read_by = current_read_by
 
+    # MB2-ORM-MODEL-16: read_by 캐시를 단일 진실원(chat_message_reads)에서 재구성한다.
+    db.flush()
+    _refresh_read_cache(msgs, db)
+
+    updates = []
+    for m in msgs:
         # broadcast용 업데이트 데이터 계산
         read_by_list = m.read_by or []
         rc = m.recipient_count or 0
@@ -1549,6 +1607,8 @@ def get_unread_counts(room_id: str, user_id: str, db: DBSession) -> dict[str, in
     _ensure_member(room, user_id, db)
 
     msgs = db.query(ChatMessage).filter(ChatMessage.room_id == rid).all()
+    # MB2-ORM-N1-04: 레거시(recipient_count==0) 메시지 미읽음 수를 배치로 1회 계산한다.
+    legacy_counts = _legacy_unread_counts(msgs, room, db)
     result: dict[str, int] = {}
     for m in msgs:
         read_by_list = m.read_by or []
@@ -1556,7 +1616,6 @@ def get_unread_counts(room_id: str, user_id: str, db: DBSession) -> dict[str, in
         if rc > 0:
             result[str(m.id)] = max(rc - len(read_by_list), 0)
         else:
-            # 하위 호환: recipient_count가 0인 경우 ChatMessageRead 기반 계산
-            unread = _message_unread_count(m, room, db)
-            result[str(m.id)] = unread
+            # 하위 호환: recipient_count가 0인 경우 ChatMessageRead 기반 계산(배치 맵)
+            result[str(m.id)] = legacy_counts.get(str(m.id), 0)
     return result

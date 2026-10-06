@@ -6,7 +6,7 @@ import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -65,20 +65,27 @@ def require_platform_admin(
     return user
 
 
+# VB-11: 검토 액션은 서비스 허용값(admin_service.VALID_ACTIONS)과 동일한 Literal 로 제한한다.
+ReviewAction = Literal["approve", "reject", "request_more"]
+
+# VB-11: 단일 배치 요청에 담을 수 있는 검토 항목 수 상한(대량 배치 제출 방지).
+MAX_BATCH_REVIEW_ITEMS = 100
+
+
 class ReviewActionRequest(BaseModel):
-    action: str
-    reason: str | None = None
+    action: ReviewAction
+    reason: str | None = Field(None, max_length=2000)
 
 
 class BatchReviewItem(BaseModel):
-    target_type: str
-    target_id: str
-    action: str
-    reason: str | None = None
+    target_type: str = Field(..., max_length=30)
+    target_id: str = Field(..., max_length=64)
+    action: ReviewAction
+    reason: str | None = Field(None, max_length=2000)
 
 
 class BatchReviewRequest(BaseModel):
-    items: list[BatchReviewItem]
+    items: list[BatchReviewItem] = Field(..., min_length=1, max_length=MAX_BATCH_REVIEW_ITEMS)
 
 
 class SuspendRequest(BaseModel):

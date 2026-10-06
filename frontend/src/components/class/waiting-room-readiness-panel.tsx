@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { tokenStorage } from '../../lib/api/client';
 import type { WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
-import { getActiveSessionLiveSocket, requestWaitingRoomReminder, type WaitingRoomReadiness } from '../../lib/socket';
+import { getActiveSessionLiveSocket, getSessionLiveSocket, requestWaitingRoomReminder, type WaitingRoomReadiness } from '../../lib/socket';
 import { CheckinSummary } from './CheckinSummary';
 import './waiting-room-readiness-panel.css';
 
@@ -19,8 +20,10 @@ export function WaitingRoomReadinessPanel({ sessionId, entries, isConnected }: W
   const [error, setError] = useState('');
   const sendingRef = useRef(false);
   useEffect(() => {
-    const socket = getActiveSessionLiveSocket();
-    if (!socket) return;
+    // WS-13: mount 시 아직 소켓이 없으면(getActiveSessionLiveSocket()===null) 새로 연결해
+    // connect/disconnect 구독과 연결 표시를 실제 소켓 수명에 묶는다.
+    const socket = getActiveSessionLiveSocket() ?? getSessionLiveSocket(tokenStorage.getAccess());
+    setConnected(Boolean(socket.connected));
     const online = () => setConnected(true);
     const offline = () => setConnected(false);
     socket.on('connect', online);

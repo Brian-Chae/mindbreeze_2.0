@@ -267,11 +267,12 @@ def test_eeg_qry_01_마이그레이션_헤드_단일_연결():
     cfg.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
     script = ScriptDirectory.from_config(cfg)
 
-    # 6차 중(中) 후속: e036a0000034(인덱스·org_join 유니크) 마이그레이션이 새 헤드로 연결됨.
-    assert script.get_heads() == ["e036a0000034"]
-    head_rev = script.get_revision("e036a0000034")
+    # 6차 하(下): e036a0000035(credentials/chat_reads/org_join 인덱스)가 새 헤드이며,
+    # e036a0000034(인덱스·org_join 유니크)는 그 부모로 연결된다.
+    assert script.get_heads() == ["e036a0000035"]
+    head_rev = script.get_revision("e036a0000035")
     assert head_rev is not None
-    assert head_rev.down_revision == "e036a0000033"
+    assert head_rev.down_revision == "e036a0000034"
     rev = script.get_revision("e036a0000033")
     assert rev is not None
     assert rev.down_revision == "e036a0000032"

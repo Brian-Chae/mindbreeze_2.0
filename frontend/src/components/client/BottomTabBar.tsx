@@ -42,6 +42,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             key={tab.to}
             type="button"
             onClick={() => navigate(tab.to)}
+            aria-current={active ? 'page' : undefined}
             className={`relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 ${
               active ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
             }`}

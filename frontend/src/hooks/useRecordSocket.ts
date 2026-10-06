@@ -92,12 +92,11 @@ export function useRecordSocket(): UseRecordSocketReturn {
       sessionRef.current = sessionId;
       const socket = ensureSocket();
 
+      // HOOK-STATE-07: 미연결 시 'connect' once 리스너를 중복 등록하지 않는다.
+      // ensureSocket 의 영구 onConnect 가 sessionRef 기반으로 재구독하므로,
+      // 연결되면 그 경로에서 정확히 1회 subscribe 가 emit 된다.
       if (socket.connected) {
         socket.emit('subscribe', { session_id: sessionId });
-      } else {
-        socket.once('connect', () => {
-          socket.emit('subscribe', { session_id: sessionId });
-        });
       }
       setStatus(null);
       setDetail(null);

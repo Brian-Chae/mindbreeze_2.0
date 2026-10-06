@@ -517,9 +517,10 @@ def test_orm_인덱스_마이그레이션_헤드연결():
     cfg = Config(str(_BACKEND_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert "e036a0000034" in script.get_heads()
-    rev = script.get_revision("e036a0000034")
-    assert rev.down_revision == "e036a0000033"
+    # 6차 하(下) 인덱스 마이그레이션이 새 헤드로 연결된다.
+    assert "e036a0000035" in script.get_heads()
+    rev = script.get_revision("e036a0000035")
+    assert rev.down_revision == "e036a0000034"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

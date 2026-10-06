@@ -139,6 +139,7 @@ export function ParticipantPicker({ selected, onChange, maxParticipants }: Props
               <button
                 type="button"
                 onClick={() => removeSelected(s.userId)}
+                aria-label={`${s.name} 선택 취소`}
                 className="text-[#9CA0AE] hover:text-[#5F0080] ml-0.5"
               >
                 ×

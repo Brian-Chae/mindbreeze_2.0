@@ -177,13 +177,15 @@ class PasswordForgotRequest(BaseModel):
 class SetPasswordRequest(BaseModel):
     """SDD-016 — 초대 토큰으로 최초 비밀번호를 설정한다."""
 
-    token: str = Field(min_length=1)
-    new_password: str = Field(min_length=8)
+    # VB-12: 토큰 문자열 상한 — 매우 긴 토큰이 JWT 디코드/해시 경로로 전달되는 것을 막는다.
+    token: str = Field(min_length=1, max_length=512)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 class PasswordResetRequest(BaseModel):
-    token: str
-    new_password: str = Field(min_length=8)
+    # VB-12: 재설정 토큰 상한(과도한 길이의 토큰 입력 시 파싱 부하 방지).
+    token: str = Field(min_length=1, max_length=512)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 # ---------------------------------------------------------------------------

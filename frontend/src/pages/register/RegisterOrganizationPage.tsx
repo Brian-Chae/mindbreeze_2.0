@@ -1,10 +1,13 @@
 // 기관 가입 상담 신청 — 접수만 하며 계정·기관을 만들지 않는다 (SDD-073)
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import { submitOrganizationApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
+
+// FORM-03: 기관 담당자 연락처(휴대전화·유선) 형식 검증 — 임의 문자열 접수를 막는다.
+const PHONE_REGEX = /^0\d{1,2}-\d{3,4}-\d{4}$/;
 
 const inputClass =
   'w-full h-11 px-4 rounded-xl bg-surface-raised border border-border-default text-sm text-ink-primary placeholder:text-ink-tertiary outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/15 disabled:opacity-60';
@@ -19,9 +22,13 @@ export default function RegisterOrganizationPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applicationId, setApplicationId] = useState<string | null>(null);
+  /** FORM-03: 제출 중 재클릭(이중 접수)을 막는 동기 가드 */
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
+    // 이미 제출 중이면 무시 — loading 상태 반영(리렌더) 전 재클릭을 차단한다.
+    if (submittingRef.current) return;
     setError(null);
     if (!organizationName.trim() || !contactName.trim()) {
       setError('기업/기관명과 담당자 이름을 입력해주세요');
@@ -31,10 +38,15 @@ export default function RegisterOrganizationPage() {
       setError('올바른 업무 이메일을 입력해주세요');
       return;
     }
+    if (phone.trim() && !PHONE_REGEX.test(phone.trim())) {
+      setError('연락처 형식을 확인해주세요 (예: 02-0000-0000, 010-0000-0000)');
+      return;
+    }
     if (!privacyAgreed) {
       setError('개인정보 수집·이용에 동의해야 신청할 수 있습니다');
       return;
     }
+    submittingRef.current = true;
     setLoading(true);
     try {
       const res = await submitOrganizationApplication({
@@ -45,6 +57,7 @@ export default function RegisterOrganizationPage() {
         inquiry: inquiry.trim() || undefined,
         consents: { privacy: true },
       });
+      // FORM-03: 접수 성공 시 applicationId 를 갱신해 폼을 완료 화면으로 전환한다.
       setApplicationId(res.application_id);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -59,6 +72,7 @@ export default function RegisterOrganizationPage() {
         setError('네트워크 오류가 발생했습니다');
       }
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };
@@ -148,10 +162,11 @@ export default function RegisterOrganizationPage() {
               <input
                 id="org-phone"
                 type="tel"
+                inputMode="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="02-0000-0000"
-                maxLength={20}
+                maxLength={13}
                 disabled={loading}
                 className={inputClass}
               />

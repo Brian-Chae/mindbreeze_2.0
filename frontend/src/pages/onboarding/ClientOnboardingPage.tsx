@@ -532,7 +532,7 @@ export default function ClientOnboardingPage() {
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label htmlFor="onboarding-name" className="block text-[13px] text-white/60 mb-1.5 ml-1">이름</label>
+                <label htmlFor="onboarding-name" className="block text-[13px] text-white/70 mb-1.5 ml-1">이름</label>
                 <input
                   id="onboarding-name"
                   type="text"
@@ -543,7 +543,7 @@ export default function ClientOnboardingPage() {
                 />
               </div>
               <div>
-                <label htmlFor="onboarding-phone" className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                <label htmlFor="onboarding-phone" className="block text-[13px] text-white/70 mb-1.5 ml-1">
                   연락처
                 </label>
                 <input
@@ -563,7 +563,7 @@ export default function ClientOnboardingPage() {
           {step === 2 && (
             <div className="space-y-4">
               <div>
-                <label htmlFor="onboarding-gender" className="block text-[13px] text-white/60 mb-1.5 ml-1">성별</label>
+                <label htmlFor="onboarding-gender" className="block text-[13px] text-white/70 mb-1.5 ml-1">성별</label>
                 <select
                   id="onboarding-gender"
                   value={form.gender}
@@ -577,7 +577,7 @@ export default function ClientOnboardingPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="onboarding-birth-year" className="block text-[13px] text-white/60 mb-1.5 ml-1">생년월일</label>
+                <label htmlFor="onboarding-birth-year" className="block text-[13px] text-white/70 mb-1.5 ml-1">생년월일</label>
                 <div className="flex gap-2">
                   <select
                     id="onboarding-birth-year"
@@ -663,8 +663,8 @@ export default function ClientOnboardingPage() {
           {step === 3 && (
             <div className="space-y-4">
               <div>
-                <label htmlFor="onboarding-profile-image" className="block text-[13px] text-white/60 mb-1.5 ml-1">
-                  프로필 사진 URL <span className="text-white/30">(선택)</span>
+                <label htmlFor="onboarding-profile-image" className="block text-[13px] text-white/70 mb-1.5 ml-1">
+                  프로필 사진 URL <span className="text-white/70">(선택)</span>
                 </label>
                 <input
                   id="onboarding-profile-image"
@@ -676,8 +676,8 @@ export default function ClientOnboardingPage() {
                 />
               </div>
               <div>
-                <label htmlFor="onboarding-bio" className="block text-[13px] text-white/60 mb-1.5 ml-1">
-                  한줄 소개 <span className="text-white/30">(선택)</span>
+                <label htmlFor="onboarding-bio" className="block text-[13px] text-white/70 mb-1.5 ml-1">
+                  한줄 소개 <span className="text-white/70">(선택)</span>
                 </label>
                 <textarea
                   id="onboarding-bio"
@@ -697,7 +697,7 @@ export default function ClientOnboardingPage() {
               {isInviteFlow ? (
                 <>
                   {inviteConfirmLoading ? (
-                    <p className="text-[13px] text-white/60 text-center py-4">
+                    <p className="text-[13px] text-white/70 text-center py-4">
                       상담사 연결을 확인하는 중...
                     </p>
                   ) : matchedCounselor ? (
@@ -708,25 +708,25 @@ export default function ClientOnboardingPage() {
                       <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
                         <p className="text-sm font-semibold text-[#C38BFF]">연결된 상담사</p>
                         <div>
-                          <p className="text-xs text-white/40">이름</p>
+                          <p className="text-xs text-white/70">이름</p>
                           <p className="text-lg font-semibold text-white">
                             {matchedCounselor.matched_counselor?.name}
                           </p>
                         </div>
                         {matchedCounselor.counselor_code && (
                           <div>
-                            <p className="text-xs text-white/40">코드</p>
+                            <p className="text-xs text-white/70">코드</p>
                             <p className="text-base font-mono text-white tracking-widest">
                               {matchedCounselor.counselor_code}
                             </p>
                           </div>
                         )}
-                        <p className="text-xs text-white/50">초대를 통해 자동 연결됨</p>
+                        <p className="text-xs text-white/70">초대를 통해 자동 연결됨</p>
                       </div>
                     </>
                   ) : (
                     <div className="space-y-3">
-                      <p className="text-[13px] text-white/60 text-center">
+                      <p className="text-[13px] text-white/70 text-center">
                         상담사 연결 정보를 확인할 수 없습니다.
                       </p>
                       <button
@@ -743,7 +743,7 @@ export default function ClientOnboardingPage() {
               ) : !matchedCounselor ? (
                 <>
                   <div>
-                    <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/60 mb-1.5 ml-1">
+                    <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/70 mb-1.5 ml-1">
                       상담사 코드 (6자리)
                     </label>
                     <input
@@ -761,7 +761,7 @@ export default function ClientOnboardingPage() {
                       className="w-full h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-center text-xl font-bold tracking-[0.3em] text-[#1F1F1F] placeholder:text-[#9A9BA8] placeholder:tracking-normal outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
                     />
                   </div>
-                  <p className="text-[13px] text-white/60 text-center">
+                  <p className="text-[13px] text-white/70 text-center">
                     상담사로부터 전달받은 6자리 코드를 입력해주세요.
                   </p>
                 </>
@@ -769,14 +769,14 @@ export default function ClientOnboardingPage() {
                 <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
                   <p className="text-sm font-semibold text-[#C38BFF]">매칭된 상담사</p>
                   <div>
-                    <p className="text-xs text-white/40">이름</p>
+                    <p className="text-xs text-white/70">이름</p>
                     <p className="text-lg font-semibold text-white">
                       {matchedCounselor.matched_counselor?.name}
                     </p>
                   </div>
                   {matchedCounselor.counselor_code && (
                     <div>
-                      <p className="text-xs text-white/40">코드</p>
+                      <p className="text-xs text-white/70">코드</p>
                       <p className="text-base font-mono text-white tracking-widest">
                         {matchedCounselor.counselor_code}
                       </p>
@@ -784,7 +784,7 @@ export default function ClientOnboardingPage() {
                   )}
                   {matchedCounselor.specialties && matchedCounselor.specialties.length > 0 && (
                     <div>
-                      <p className="text-xs text-white/40">전문분야</p>
+                      <p className="text-xs text-white/70">전문분야</p>
                       <p className="text-sm text-white/80">
                         {matchedCounselor.specialties.join(', ')}
                       </p>

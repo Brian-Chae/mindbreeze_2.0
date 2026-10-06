@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Text, ForeignKey, Integer, func, UniqueConstraint
+from sqlalchemy import String, DateTime, Text, ForeignKey, Integer, Index, func, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,6 +66,9 @@ class ChatRoomParticipant(Base):
 
 class ChatMessageRead(Base):
     __tablename__ = "chat_message_reads"
+    # MB2-ORM-IDX-09: PK 가 (message_id, user_id) 라 user_id 단독 필터를 커버하지 못한다.
+    #   user_id 기준 조회·조인용 보조 인덱스로 접근 경로를 인덱스화한다.
+    __table_args__ = (Index("ix_chat_message_reads_user_id", "user_id", "message_id"),)
 
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="CASCADE"), primary_key=True

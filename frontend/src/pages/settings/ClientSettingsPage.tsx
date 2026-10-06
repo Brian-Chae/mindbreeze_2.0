@@ -108,7 +108,7 @@ export default function ClientSettingsPage() {
           </div>
         )}
         {saved && (
-          <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
+          <div role="status" className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
         )}
 
         {/* 계정 정보 (읽기 전용 요약) */}

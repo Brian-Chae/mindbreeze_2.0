@@ -610,6 +610,30 @@ def register_session_live_namespace(sio):
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
 
+        # WS-07: 이 소켓이 join 한 세션 컨텍스트와 payload session_id 를 대조한다.
+        # 이미 다른 세션에 join 한 소켓이 타 세션으로 feature 를 올리는 것을 막는다.
+        # (join 전 feature 는 저장 시 resolve_upload_participant 가 참가자 소유를 검증하므로
+        #  기존 흐름을 유지한다 — 세션 컨텍스트가 있을 때만 불일치를 거부한다.)
+        ctx_session_id = (session or {}).get("session_id")
+        if ctx_session_id is not None and str(ctx_session_id) != str(session_id):
+            logger.warning(
+                "[WS /session-live] feature 무시 — join 불일치 (sid=%s, session=%s)",
+                sid,
+                session_id,
+            )
+            await sio.emit(
+                "feature_ack",
+                {
+                    "session_id": str(session_id),
+                    "stream_id": stream_id,
+                    "sequence": sequence,
+                    "saved": 0,
+                },
+                to=sid,
+                namespace=_NAMESPACE,
+            )
+            return
+
         try:
             saved, resolved_participant_id, feature_out, is_latest = await asyncio.to_thread(
                 _store_feature, session_id, participant_id, current_user_id, feature
@@ -1352,9 +1376,15 @@ def notify_session_state_changed(session_id: str, payload: dict) -> None:
 
 
 def notify_session_eeg(session_id: str, payload: dict) -> None:
-    """REST 폴백 저장 이후 호스트 EEG 표시와 기존 주기의 그룹 집계를 발행한다."""
+    """REST 폴백 저장 이후 호스트 EEG 표시와 기존 주기의 그룹 집계를 발행한다.
+
+    WS-11: WS `feature` 경로는 `class:aggregate`(상담사)와 `class:group_average`(회원)를
+    모두 발행하지만 REST 5초 폴백은 group_average 를 누락했다. WS 가 끊긴 참가자(오프라인
+    큐→REST 폴백)의 데이터가 회원 화면의 그룹 평균에 반영되지 않던 비대칭을 없앤다.
+    """
     _schedule(broadcast_session_eeg(session_id, _jsonify(payload)))
     _schedule(publish_group_aggregate(session_id))
+    _schedule(publish_group_average(session_id))
 
 
 def notify_participant_changed(session_id: str, payload: dict) -> None:

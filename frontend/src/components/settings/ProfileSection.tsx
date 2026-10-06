@@ -209,6 +209,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                     <button
                       type="button"
                       onClick={() => removeQualification(idx)}
+                      aria-label={`${q.name || '자격'} 삭제`}
                       className="px-3 text-[13px] text-[#EF4444] font-medium shrink-0"
                     >
                       삭제
@@ -262,6 +263,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                     <button
                       type="button"
                       onClick={() => removeCareer(idx)}
+                      aria-label={`${c.organization || '이력'} 삭제`}
                       className="px-3 text-[13px] text-[#EF4444] font-medium shrink-0"
                     >
                       삭제

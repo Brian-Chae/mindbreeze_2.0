@@ -390,9 +390,10 @@ def ingest_eeg_features(
 def get_eeg_rollup(
     session_id: str,
     participant_id: str | None = None,
-    resolution: int = 60,
-    start_bucket: int | None = None,
-    end_bucket: int | None = None,
+    # VB-14: resolution/버킷 범위를 FastAPI 레벨에서 검증한다(서비스의 부분 가드 의존 제거).
+    resolution: int = Query(60, ge=1, le=3600),
+    start_bucket: int | None = Query(None, ge=0),
+    end_bucket: int | None = Query(None, ge=0),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):

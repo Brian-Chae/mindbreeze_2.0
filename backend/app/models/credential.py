@@ -3,7 +3,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import String, Date, Text, DateTime, ForeignKey, func
+from sqlalchemy import String, Date, Text, DateTime, ForeignKey, Index, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +12,8 @@ from app.core.database import Base
 
 class Credential(Base):
     __tablename__ = "credentials"
+    # MB2-ORM-IDX-08: 증빙 목록·보유 개수 제한·승인 상태 조회가 모두 user_id 로 필터한다.
+    __table_args__ = (Index("ix_credentials_user_id", "user_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

@@ -108,9 +108,12 @@ def create_organization(
 
 
 def search_organizations(
-    q: str | None, region: str | None, db: Session
+    q: str | None, region: str | None, db: Session, limit: int = 50
 ) -> list[Organization]:
-    """센터 검색 (이름·주소 LIKE 검색). 개인 상담소(kind=individual)는 숨긴다 (SDD-081)."""
+    """센터 검색 (이름·주소 LIKE 검색). 개인 상담소(kind=individual)는 숨긴다 (SDD-081).
+
+    VB-13: 결과 개수 상한을 넘지 않게 한다(호출측 limit, 기본 50 이며 하드 상한 50).
+    """
     query = db.query(Organization).filter(
         Organization.deactivated_at.is_(None),
         Organization.kind != "individual",
@@ -120,7 +123,8 @@ def search_organizations(
         query = query.filter((Organization.name.ilike(like)) | (Organization.address.ilike(like)))
     if region:
         query = query.filter(Organization.address.ilike(f"%{region}%"))
-    return query.order_by(Organization.created_at.desc()).limit(50).all()
+    capped = max(1, min(int(limit or 50), 50))
+    return query.order_by(Organization.created_at.desc()).limit(capped).all()
 
 
 def get_organization(org_id: str, db: Session) -> Organization:

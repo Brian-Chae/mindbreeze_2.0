@@ -94,7 +94,7 @@ export default function OrgManagementPage() {
 
   if (!isInitialized || loading) {
     return (
-      <div className="min-h-screen bg-surface-canvas p-8 text-sm text-ink-tertiary">로딩 중...</div>
+      <div role="status" className="min-h-screen bg-surface-canvas p-8 text-sm text-ink-tertiary">로딩 중...</div>
     );
   }
 

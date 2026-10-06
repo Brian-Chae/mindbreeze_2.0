@@ -140,7 +140,7 @@ export default function SetPasswordPage() {
         <h1 className="text-[36px] font-extrabold text-white tracking-tighter leading-tight">
           {isReset ? '새 비밀번호 설정' : isCounselorInvite ? '상담사 계정 활성화' : '비밀번호 설정'}
         </h1>
-        <div className="text-[15px] text-white/60 mb-7 text-center">
+        <div className="text-[15px] text-white/70 mb-7 text-center">
           {isReset ? (
             <>
               관리자가 요청한 비밀번호 재설정 링크로 접속하셨습니다.
@@ -177,7 +177,7 @@ export default function SetPasswordPage() {
             </Link>
           </div>
         ) : (
-          <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col items-center gap-3">
+          <form onSubmit={(event) => void handleSubmit(event)} className="flex w-full max-w-[280px] flex-col items-center gap-3">
             <label htmlFor="set-password-new" className="sr-only">새 비밀번호</label>
             <input
               id="set-password-new"
@@ -187,7 +187,7 @@ export default function SetPasswordPage() {
               placeholder="새 비밀번호"
               disabled={loading}
               autoComplete="new-password"
-              className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+              className="h-[52px] w-full rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
             />
             <label htmlFor="set-password-confirm" className="sr-only">비밀번호 확인</label>
             <input
@@ -198,7 +198,7 @@ export default function SetPasswordPage() {
               placeholder="비밀번호 확인"
               disabled={loading}
               autoComplete="new-password"
-              className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
+              className="h-[52px] w-full rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
             />
 
             {error && (
@@ -210,7 +210,7 @@ export default function SetPasswordPage() {
             <button
               type="submit"
               disabled={loading || !password || !passwordConfirm}
-              className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+              className="h-[52px] w-full rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
             >
               {loading ? '설정 중…' : '비밀번호 설정 완료'}
             </button>

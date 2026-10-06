@@ -197,8 +197,8 @@ def test_notification_outbox_인덱스_마이그레이션_헤드연결():
     script = ScriptDirectory.from_config(cfg)
 
     heads = script.get_heads()
-    # 6차 중(中) 후속: e036a0000034 가 새 헤드이며, IDX-06(e036a0000033)은 그 부모로 연결된다.
-    assert heads == ["e036a0000034"], f"알렸 헤드 목록: {heads}"
+    # 6차 하(下): e036a0000035 가 새 헤드이며, IDX-06(e036a0000033)은 그 조상으로 연결된다.
+    assert heads == ["e036a0000035"], f"알렸 헤드 목록: {heads}"
 
     rev = script.get_revision("e036a0000033")
     assert rev.down_revision == "e036a0000032"

@@ -24,6 +24,9 @@ class OrganizationJoinRequest(Base):
             postgresql_where=text("status = 'pending'"),
             sqlite_where=text("status = 'pending'"),
         ),
+        # MB2-ORM-IDX-10: user_id/org_id/status 반복 조회 + org_id/created_at 목록 조회를 인덱스화한다.
+        Index("ix_org_join_requests_user_org_status", "user_id", "org_id", "status"),
+        Index("ix_org_join_requests_org_created", "org_id", "created_at"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

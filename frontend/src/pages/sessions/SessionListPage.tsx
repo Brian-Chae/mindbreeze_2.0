@@ -221,6 +221,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
           <button
             type="button"
             onClick={handleClose}
+            aria-label="세션 생성 닫기"
             className="w-11 h-11 flex items-center justify-center rounded-full text-[#6F6F6F] hover:text-[#1F1F1F] hover:bg-[#F2F3F8] transition-colors"
           >
             ✕

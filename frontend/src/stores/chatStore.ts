@@ -90,13 +90,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateSenderName: (senderId, newName) =>
     set((state) => {
       const updated: Record<string, ChatMessage[]> = {};
+      // HOOK-STATE-04: Array.map 은 매번 새 배열을 반환하므로 참조 비교로는 '변경'을 판정할 수
+      // 없다. 실제로 이름이 바뀐 메시지가 있을 때만 방별 배열을 교체한다(불필요 리렌더 방지).
       let changed = false;
       for (const [roomId, msgs] of Object.entries(state.messagesByRoom)) {
-        const newMsgs = msgs.map((m) =>
+        const hasTarget = msgs.some(
+          (m) => m.sender_id === senderId && m.sender_name !== newName,
+        );
+        if (!hasTarget) {
+          updated[roomId] = msgs;
+          continue;
+        }
+        changed = true;
+        updated[roomId] = msgs.map((m) =>
           m.sender_id === senderId ? { ...m, sender_name: newName } : m,
         );
-        if (newMsgs !== msgs) changed = true;
-        updated[roomId] = newMsgs;
       }
       if (!changed) return state;
       return { messagesByRoom: updated };

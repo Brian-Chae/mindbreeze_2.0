@@ -240,7 +240,7 @@ export default function SettingsPage() {
         {isCounselorLike && profile && (
           <>
             {profileSaved && (
-              <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
+              <div role="status" className="text-[12px] text-[#10B981] font-medium text-right">✓ 프로필 저장됨</div>
             )}
             <AccountSection profile={profile} onSave={handleProfileSave} />
             {/* 순수 기관 관리자(상담사 프로필 없음)는 기본 정보만 수정 — 프로필 생성을 유발하지 않는다 */}
@@ -257,7 +257,7 @@ export default function SettingsPage() {
         {basicInfo && (
           <>
             {profileSaved && (
-              <div className="text-[12px] text-[#10B981] font-medium text-right">✓ 저장됨</div>
+              <div role="status" className="text-[12px] text-[#10B981] font-medium text-right">✓ 저장됨</div>
             )}
             <SelfInfoSection value={basicInfo} showPersonal={isClient} onSave={handleBasicInfoSave} />
           </>
@@ -274,7 +274,7 @@ export default function SettingsPage() {
                 메일 알림 설정
               </h3>
               {saved && (
-                <span className="text-[12px] text-[#10B981] font-medium">✓ 저장됨</span>
+                <span role="status" className="text-[12px] text-[#10B981] font-medium">✓ 저장됨</span>
               )}
             </div>
 
