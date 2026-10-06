@@ -338,7 +338,16 @@ export default function ClientReportListPage() {
             onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className={pageButtonClass}>다음</button>
         </nav>
       )}
-      {selectedReportId && <ClientReportDetailModal reportId={selectedReportId} onClose={() => setSelectedReportId(null)} />}
+      {selectedReportId && (
+        <ClientReportDetailModal
+          reportId={selectedReportId}
+          onClose={() => setSelectedReportId(null)}
+          onReportChange={(next) => {
+            // 열람 시 서버가 is_read를 마킹 — 목록의 NEW 배지를 즉시 갱신.
+            setReports((prev) => prev.map((r) => (r.id === next.id ? { ...r, is_read: true } : r)));
+          }}
+        />
+      )}
     </div>
   );
 }

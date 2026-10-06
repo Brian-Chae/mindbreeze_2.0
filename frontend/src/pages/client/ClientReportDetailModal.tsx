@@ -7,11 +7,17 @@ import '../../components/reports/narrative-sections.css';
 
 type ClientReportDetailModalProps = {
   onClose: () => void;
+  /** 리포트 로드(열람 → is_read 마킹) 후 목록에 전파 */
+  onReportChange?: (report: ReportDto) => void;
 } & ({ reportId: string; sessionId?: never } | { sessionId: string; reportId?: never });
 
-export function ClientReportDetailModal({ reportId, sessionId, onClose }: ClientReportDetailModalProps) {
+export function ClientReportDetailModal({ reportId, sessionId, onClose, onReportChange }: ClientReportDetailModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const onReportChangeRef = useRef(onReportChange);
+  useEffect(() => {
+    onReportChangeRef.current = onReportChange;
+  }, [onReportChange]);
   const [report, setReport] = useState<ReportDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +36,9 @@ export function ClientReportDetailModal({ reportId, sessionId, onClose }: Client
         if (cancelled) return;
         if (!id) throw new Error('리포트를 찾을 수 없습니다');
         const result = await getReport(id);
-        if (!cancelled) setReport(result);
+        if (cancelled) return;
+        setReport(result);
+        onReportChangeRef.current?.(result);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : '리포트 조회 실패');
       } finally {
