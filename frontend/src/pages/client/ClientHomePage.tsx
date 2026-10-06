@@ -1,21 +1,16 @@
-// 내담자 홈 화면 — 상담사 대시보드와 동일한 디자인 패턴
-// 캘린더 + 오늘 세션 + 최근 활동 피드 + 최근 리포트
+// 내담자 홈 — 행동 중심 재설계 (SDD-187)
+// 위계: 다음 세션 히어로 → 초대(조건부) → 내 리포트 → 이번 주 일정 → 요약 타일 → 담당 상담사 → 대화/알림
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
-import {
-  describeReminderOffsets,
-  formatCountdown,
-  pickUpcomingClass,
-} from '../../lib/class/reminder';
+import { formatCountdown, pickUpcomingClass } from '../../lib/class/reminder';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 import { resolveReportGenerationStatus } from '../../lib/api/report-status';
-import { markRead } from '../../lib/api/notifications';
+import { markRead, listNotifications, type NotificationDto } from '../../lib/api/notifications';
+import { listChatRooms, type ChatRoom } from '../../lib/api/chat';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { MonthCalendar } from '../../components/session/MonthCalendar';
-import { SessionCard } from '../../components/session/SessionCard';
 import { InvitedSessionCard } from '../../components/client/InvitedSessionCard';
 
 type Counselor = { id: string; name: string; profile_image: string | null };
@@ -27,6 +22,11 @@ function formatDate(iso: string | null): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+}
+
+function formatTime(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function relativeTime(iso: string | null): string {
@@ -43,43 +43,157 @@ function relativeTime(iso: string | null): string {
   return formatDate(iso);
 }
 
-function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function sameWeek(a: Date, b: Date): boolean {
+  const startOfWeek = (d: Date) => {
+    const copy = new Date(d);
+    const day = copy.getDay(); // 0=일
+    const diff = copy.getDate() - day + (day === 0 ? -6 : 1); // 월요일 시작
+    copy.setDate(diff);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  };
+  return startOfWeek(a).getTime() === startOfWeek(b).getTime();
 }
 
-interface Activity {
-  message: string;
-  time: string;
-  timestamp: number;
+// ── 공통 스타일 ──────────────────────────────────────────────────
+
+const SECTION_TITLE_CLS = 'font-bold text-[17px] text-[#1F1F1F] tracking-tight';
+const SECTION_HEAD_CLS = 'flex items-center justify-between mb-4';
+const LINK_CLS = 'text-[13px] font-semibold text-[#5F0080] hover:underline shrink-0';
+
+// ── 다음 세션 히어로 ─────────────────────────────────────────────
+
+function HeroCard({
+  session,
+  counselorName,
+  onEnter,
+}: {
+  session: SessionDto;
+  counselorName?: string;
+  onEnter: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const isLive = session.status === 'in_progress' || session.status === 'open' || session.status === 'ready';
+  const countdown = session.scheduled_at ? formatCountdown(session.scheduled_at) : null;
+
+  const handleCopy = async (): Promise<void> => {
+    if (!session.access_code) return;
+    try {
+      await navigator.clipboard.writeText(session.access_code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* 클립보드 실패 시 무시 */
+    }
+  };
+
+  return (
+    <section className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+      <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
+      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[22px] md:text-[24px]">
+        {session.title || '세션'}
+      </h2>
+      <p className="mt-1 text-[13px] opacity-90">
+        {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
+        {counselorName ? ` · ${counselorName}` : ''}
+      </p>
+
+      {session.access_code && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white/15 border border-white/25 px-3 py-2 font-mono text-[15px] font-extrabold tracking-[0.12em]">
+            {session.access_code}
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleCopy()}
+            className="rounded-lg bg-white/15 border border-white/25 px-3 py-2 text-[12px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
+          >
+            {copied ? '복사됨' : '참여코드 복사'}
+          </button>
+        </div>
+      )}
+
+      <p className="mt-3 text-[12px] opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {countdown && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold">
+            {countdown}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={onEnter}
+          className="mt-1 w-full sm:w-auto rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors"
+        >
+          {isLive ? '지금 입장하기 →' : '입장하기 →'}
+        </button>
+      </div>
+    </section>
+  );
 }
 
-// ── 공통 카드/타이틀 스타일 (대시보드 디자인) ─────────────────
+// ── 요약 타일 ────────────────────────────────────────────────────
 
-const CARD_CLS = 'bg-white border border-[#DDDEE7] rounded-2xl p-[22px]';
-const CARD_TITLE_CLS = 'font-bold text-[17px] text-[#1F1F1F] tracking-tight';
-const CARD_SUBTITLE_CLS = 'font-mono text-[11px] text-[#6F6F6F]';
+function SummaryTiles({
+  dDay,
+  newReportCount,
+  weekSessionCount,
+  completedCount,
+  onCopyCode,
+}: {
+  dDay: string;
+  newReportCount: number;
+  weekSessionCount: number;
+  completedCount: number;
+  onCopyCode: () => void;
+}) {
+  const tiles = [
+    { label: '다음 세션까지', value: dDay, action: '참여코드 복사', onClick: onCopyCode, purple: true },
+    { label: '새 리포트', value: String(newReportCount), action: '바로 확인', purple: true },
+    { label: '이번 주 세션', value: String(weekSessionCount), action: '일정 보기' },
+    { label: '완료 세션', value: String(completedCount), action: '리포트 보기' },
+  ];
 
-// ── 컴포넌트 ──────────────────────────────────────────────────────
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {tiles.map((t) => (
+        <button
+          key={t.label}
+          type="button"
+          onClick={t.onClick}
+          className={`rounded-2xl border border-[#DDDEE7] bg-white p-4 text-left transition-colors hover:border-[#C9B0E8] ${t.purple ? '' : ''}`}
+        >
+          <div className="text-[12px] font-semibold text-[#6F6F6F]">{t.label}</div>
+          <div className={`mt-1 text-[26px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
+            {t.value}
+          </div>
+          <div className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#5F0080]">
+            {t.action} <span aria-hidden>→</span>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── 메인 ──────────────────────────────────────────────────────────
 
 export default function ClientHomePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  // user?.counselors 가 nullish 일 때 매 렌더 새 배열이 생성되어 useCallback deps 가 흔들리는 것을 막기 위해 useMemo 로 안정화한다.
   const counselors: Counselor[] = useMemo(() => user?.counselors ?? [], [user?.counselors]);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
 
-  // 데이터 / 필터 상태
-  const [selectedCounselorId, setSelectedCounselorId] = useState<string>('all');
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [reports, setReports] = useState<ReportDto[]>([]);
+  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  // 캘린더 상태
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // 데이터 로딩
   useEffect(() => {
@@ -88,10 +202,17 @@ export default function ClientHomePage() {
       setLoading(true);
       setError(null);
       try {
-        const [sessRes, repRes] = await Promise.all([listSessions(), listReports()]);
+        const [sessRes, repRes, chatRes, notifRes] = await Promise.all([
+          listSessions(),
+          listReports(),
+          listChatRooms().catch(() => ({ rooms: [] as ChatRoom[] })),
+          listNotifications(undefined, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
+        ]);
         if (cancelled) return;
         setSessions(sessRes.sessions);
         setReports(repRes.reports);
+        setChatRooms(chatRes.rooms);
+        setNotifications(notifRes.notifications);
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : '데이터를 불러오지 못했습니다');
@@ -105,90 +226,77 @@ export default function ClientHomePage() {
     };
   }, [reloadKey]);
 
-  // 상담사별 필터링
-  const filteredSessions = useMemo(() => {
-    if (selectedCounselorId === 'all') return sessions;
-    return sessions.filter((s) =>
-      s.participants?.some((p) => p.user_id === selectedCounselorId),
+  // ── 파생 데이터 ────────────────────────────────────────────────
+
+  // 다음 세션: 진행중/오픈/ready 최우선, 없으면 가장 임박한 예약
+  const upcomingClass = useMemo(() => pickUpcomingClass(sessions), [sessions]);
+  const heroSession = useMemo(() => {
+    const live = sessions.find(
+      (s) => s.status === 'in_progress' || s.status === 'open' || s.status === 'ready',
     );
-  }, [sessions, selectedCounselorId]);
+    return live ?? upcomingClass ?? null;
+  }, [sessions, upcomingClass]);
 
-  // 선택된 날짜의 세션
-  const todaySessions = useMemo(() => {
-    return filteredSessions
-      .filter((s): s is SessionDto & { scheduled_at: string } => (
-        Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), selectedDate)
-      ))
-      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-  }, [filteredSessions, selectedDate]);
-
-  const instantSessions = useMemo(
-    () => filteredSessions.filter((session) => (
-      !session.scheduled_at && (session.status === 'ready' || session.status === 'open' || session.status === 'in_progress')
-    )),
-    [filteredSessions],
-  );
-  const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
-  const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
-
-  // SDD-097: 다가오는 클래스 — 아직 시작하지 않은 가장 임박한 예약 1건(사전 안내 카드용).
-  const upcomingClass = useMemo(() => pickUpcomingClass(filteredSessions), [filteredSessions]);
-
-  // SDD-095: 생성 진행 중인 리포트 — 홈 배지('리포트 생성 중')에 쓴다.
-  const processingReportCount = useMemo(
+  // 내담자용 리포트만
+  const clientReports = useMemo(
     () =>
-      reports.filter(
-        (r) => resolveReportGenerationStatus(r.generation_status) === 'processing',
-      ).length,
+      reports
+        .filter((r) => r.type === 'client')
+        .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+        .slice(0, 3),
     [reports],
   );
 
-  // 최근 리포트 (최대 4개)
-  const recentReports = useMemo(() => {
-    return [...reports]
-      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
-      .slice(0, 4);
-  }, [reports]);
-
-  // 최근 활동 피드: 리포트 + 예정 세션 시간순 조합
-  const activities = useMemo(() => {
-    const items: Activity[] = [];
-
-    for (const r of reports.slice(0, 5)) {
-      const ts = new Date(r.created_at ?? 0).getTime();
-      if (ts > 0) {
-        items.push({
-          message: `'${r.session_title || '리포트'}' 리포트가 발급되었습니다`,
-          time: relativeTime(r.created_at),
-          timestamp: ts,
-        });
-      }
-    }
-
-    const upcoming = filteredSessions
-      .filter((s) => s.status === 'ready' || s.status === 'scheduled' || s.status === 'in_progress')
-      .sort((a, b) => new Date(a.scheduled_at ?? a.created_at).getTime() - new Date(b.scheduled_at ?? b.created_at).getTime())
+  // 이번 주 일정 (예약 세션, 시간순)
+  const weekSessions = useMemo(() => {
+    const now = new Date();
+    return sessions
+      .filter((s) => s.scheduled_at && sameWeek(new Date(s.scheduled_at), now) && s.status !== 'cancelled')
+      .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime())
       .slice(0, 5);
-    for (const s of upcoming) {
-      const ts = new Date(s.created_at).getTime();
-      const sessionTitle = s.title || '세션';
-      const message = s.status === 'ready'
-        ? `'${sessionTitle}' 클래스가 시작 대기 중입니다. 지금 참여할 수 있습니다`
-        : s.status === 'in_progress'
-          ? `'${sessionTitle}' 클래스가 진행 중입니다`
-          : `'${sessionTitle}' 세션이 예정되었습니다 (${formatDate(s.scheduled_at)})`;
-      items.push({
-        message,
-        time: relativeTime(s.created_at),
-        timestamp: ts,
-      });
-    }
+  }, [sessions]);
 
-    items.sort((a, b) => b.timestamp - a.timestamp);
-    return items.slice(0, 6);
-  }, [reports, filteredSessions]);
+  // 요약 타일 데이터
+  const dDay = useMemo(() => {
+    if (!heroSession) return '-';
+    if (!heroSession.scheduled_at) return 'NOW';
+    const diff = new Date(heroSession.scheduled_at).getTime() - Date.now();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days > 0 ? `D-${days}` : days === 0 ? 'D-DAY' : 'NOW';
+  }, [heroSession]);
 
-  // 세션 호스트(상담사) 이름 찾기
+  const newReportCount = useMemo(
+    () => reports.filter((r) => r.type === 'client' && !r.is_read).length,
+    [reports],
+  );
+
+  const weekSessionCount = useMemo(() => weekSessions.length, [weekSessions]);
+
+  const completedCount = useMemo(
+    () => sessions.filter((s) => s.status === 'completed').length,
+    [sessions],
+  );
+
+  const primaryCounselor = counselors[0];
+
+  // 최근 대화 (unread 있는 방 우선)
+  const recentChats = useMemo(() => {
+    return [...chatRooms]
+      .sort((a, b) => {
+        const at = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const bt = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return bt - at;
+      })
+      .slice(0, 3);
+  }, [chatRooms]);
+
+  // 최근 알림 (읽지 않은 것 우선)
+  const recentNotifications = useMemo(() => {
+    return [...notifications]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 3);
+  }, [notifications]);
+
   const getCounselorName = useCallback(
     (session: SessionDto): string | undefined => {
       if (!session.host_id) return undefined;
@@ -197,7 +305,7 @@ export default function ClientHomePage() {
     [counselors],
   );
 
-  // ── 초대된 클래스 ──────────────────────────────────────────────
+  // ── 초대된 클래스 (기존 로직 보존) ─────────────────────────────
   const invitedSessionIds = useMemo(
     () => new Set(sessionInvites.map((i) => i.sessionId)),
     [sessionInvites],
@@ -206,18 +314,15 @@ export default function ClientHomePage() {
     () =>
       sessions.filter(
         (s) =>
-          invitedSessionIds.has(s.id) &&
-          s.status !== 'completed' &&
-          s.status !== 'cancelled',
+          invitedSessionIds.has(s.id) && s.status !== 'completed' && s.status !== 'cancelled',
       ),
     [sessions, invitedSessionIds],
   );
 
-  // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
-  // HOOK-STATE-03: sessions 를 deps 로 두면 재조회로 sessions 가 갱신될 때마다 effect 가
-  // 다시 돌아 반영이 지연·중복된다. 최신 sessions 는 ref 로 읽고, 초대 id 별로 1회만 재조회한다.
   const sessionsRef = useRef(sessions);
-  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
   const refetchedInviteIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (sessionInvites.length === 0) return;
@@ -227,7 +332,6 @@ export default function ClientHomePage() {
         !refetchedInviteIdsRef.current.has(inv.sessionId),
     );
     if (pending.length === 0) return;
-    // 재조회 중 중복 요청 방지 — 실패하면 마킹을 되돌려 다음 기회에 재시도한다.
     pending.forEach((inv) => refetchedInviteIdsRef.current.add(inv.sessionId));
     let cancelled = false;
     listSessions()
@@ -237,14 +341,18 @@ export default function ClientHomePage() {
       .catch(() => {
         pending.forEach((inv) => refetchedInviteIdsRef.current.delete(inv.sessionId));
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [sessionInvites]);
 
   const handleConfirmInvite = useCallback(
     (sessionId: string) => {
       const invite = sessionInvites.find((i) => i.sessionId === sessionId);
       if (invite?.notificationId) {
-        void markRead(invite.notificationId).catch(() => { /* 조용히 실패 */ });
+        void markRead(invite.notificationId).catch(() => {
+          /* 조용히 실패 */
+        });
       }
       removeSessionInvite(sessionId);
       navigate(`/app/sessions/${sessionId}`);
@@ -252,347 +360,276 @@ export default function ClientHomePage() {
     [sessionInvites, removeSessionInvite, navigate],
   );
 
-  // 캘린더 월 이동
-  const handleShiftMonth = useCallback((direction: 1 | -1) => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() + direction);
-      return d;
-    });
-  }, []);
+  const handleCopyHeroCode = useCallback(() => {
+    if (!heroSession?.access_code) return;
+    void navigator.clipboard.writeText(heroSession.access_code).catch(() => {});
+  }, [heroSession]);
 
-  const handleToday = useCallback(() => {
-    setCurrentDate(new Date());
-    setSelectedDate(new Date());
-  }, []);
+  const openChat = useCallback(
+    (roomId: string) => navigate(`/app/chat/${roomId}`),
+    [navigate],
+  );
 
-  const isSelectedToday = sameDay(selectedDate, new Date());
+  // ── 렌더 ────────────────────────────────────────────────────────
 
-  // ── 렌더 ──────────────────────────────────────────────────────
+  if (loading) {
+    return <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>;
+  }
+
+  if (error) {
+    return (
+      <section className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-center" role="alert">
+        <p className="text-sm text-red-600 mb-4">{error}</p>
+        <button
+          type="button"
+          onClick={() => setReloadKey((k) => k + 1)}
+          className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
+        >
+          다시 시도
+        </button>
+      </section>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* 상담사 필터 (좌우 스크롤 pill) */}
-      <div className="overflow-x-auto no-scrollbar mb-6">
-        <div className="flex gap-2 min-w-max" role="group" aria-label="상담사 필터">
-          <button
-            type="button"
-            aria-pressed={selectedCounselorId === 'all'}
-            className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
-              selectedCounselorId === 'all'
-                ? 'bg-[#5F0080] text-white'
-                : 'bg-[#EFEFEF] text-[#1F1F1F]'
-            }`}
-            onClick={() => setSelectedCounselorId('all')}
-          >
-            전체
-          </button>
-          {counselors.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              aria-pressed={selectedCounselorId === c.id}
-              className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
-                selectedCounselorId === c.id
-                  ? 'bg-[#5F0080] text-white'
-                  : 'bg-[#EFEFEF] text-[#1F1F1F]'
-              }`}
-              onClick={() => setSelectedCounselorId(c.id)}
-            >
-              {c.name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="py-12 text-center text-[#6F6F6F] text-sm">불러오는 중...</div>
-      ) : error ? (
-        <section
-          className="bg-white border border-[#DDDEE7] rounded-2xl p-[22px] text-center"
-          role="alert"
-        >
-          <p className="text-sm text-red-600 mb-4">{error}</p>
-          <button
-            type="button"
-            onClick={() => setReloadKey((k) => k + 1)}
-            className="rounded-xl px-5 py-2.5 text-sm font-semibold bg-[#5F0080] text-white hover:bg-[#4B0066] transition-colors"
-          >
-            다시 시도
-          </button>
-        </section>
-      ) : (
-        <>
-          {/* 초대된 클래스 — 신규 세션 초대를 강조해 확인 유도 */}
-          {invitedSessions.length > 0 && (
-            <section className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
-                <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {invitedSessions.map((s) => (
-                  <InvitedSessionCard
-                    key={s.id}
-                    session={s}
-                    counselorName={getCounselorName(s)}
-                    onConfirm={() => handleConfirmInvite(s.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* SDD-097: 다가오는 클래스 — 참여코드·준비물·시작시간을 홈에서 놓치지 않게 */}
-          {upcomingClass && (
-            <section
-              className="bg-[#F5EDFC] border border-[#DDD0EA] rounded-2xl p-[22px] mb-6"
-              data-testid="upcoming-class-card"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3">
-                <div className={CARD_TITLE_CLS}>다가오는 클래스</div>
-                <div className={CARD_SUBTITLE_CLS}>
-                  {formatCountdown(upcomingClass.scheduled_at)}
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-[#1F1F1F] truncate">
-                    {upcomingClass.title || '클래스'}
-                  </p>
-                  <p className="text-[13px] text-[#4A3B5F] mt-1">
-                    {formatDate(upcomingClass.scheduled_at)}{' '}
-                    {upcomingClass.scheduled_at
-                      ? new Date(upcomingClass.scheduled_at).toLocaleTimeString('ko-KR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : ''}
-                    {getCounselorName(upcomingClass) ? ` · ${getCounselorName(upcomingClass)}` : ''}
-                  </p>
-                  <ul className="mt-2 text-[12px] text-[#6F6F6F] space-y-0.5">
-                    <li>· 조용한 공간과 헤드셋(마이크 포함)을 준비해 주세요</li>
-                    <li>· Chrome/Edge 권장 (Safari·Firefox는 LINK BAND 미지원)</li>
-                  </ul>
-                  {upcomingClass.reminder_offsets && upcomingClass.reminder_offsets.length > 0 && (
-                    <p
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#5F0080]"
-                      data-testid="upcoming-reminder-info"
-                    >
-                      사전 안내 {describeReminderOffsets(upcomingClass.reminder_offsets)} 자동 발송
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-col items-stretch sm:items-end gap-2 shrink-0">
-                  {upcomingClass.access_code && (
-                    <div className="rounded-xl bg-white border border-[#DDD0EA] px-3 py-2 text-center">
-                      <div className="text-[10px] text-[#6F6F6F] mb-0.5">참여코드</div>
-                      <div className="font-mono text-lg font-black tracking-[0.14em] text-[#5F0080]">
-                        {upcomingClass.access_code}
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/app/sessions/${upcomingClass.id}`)}
-                    className="mb-btn text-sm"
-                  >
-                    클래스 확인
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {instantSessions.length > 0 && (
-            <section className={`${CARD_CLS} mb-6`}>
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3.5">
-                <div className={CARD_TITLE_CLS}>즉시 클래스</div>
-                <div className={CARD_SUBTITLE_CLS}>
-                  시작 대기 {readyInstantCount}건 · 진행 중 {inProgressInstantCount}건
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {instantSessions.map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    onClick={() => navigate(`/app/sessions/${session.id}`)}
-                    counselorName={getCounselorName(session)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* 캘린더 + 오늘 세션 (2열) */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6 mb-6">
-            {/* 좌측: 캘린더 */}
-            <MonthCalendar
-              sessions={filteredSessions}
-              currentDate={currentDate}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              onShiftMonth={handleShiftMonth}
-              onToday={handleToday}
-            />
-
-            {/* 우측: 오늘 세션 — 대시보드 TodaySessions 스타일 */}
-            <div className={`${CARD_CLS} flex flex-col gap-3`}>
-              <div className="flex justify-between items-baseline">
-                <div className={CARD_TITLE_CLS}>
-                  {isSelectedToday
-                    ? `오늘의 세션 · ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일`
-                    : `${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 세션`}
-                </div>
-                <div className={CARD_SUBTITLE_CLS}>
-                  세션 {todaySessions.length}건
-                </div>
-              </div>
-              {todaySessions.length > 0 ? (
-                <div className="flex flex-col gap-3">
-                  {todaySessions.map((s) => (
-                    <SessionCard
-                      key={s.id}
-                      session={s}
-                      counselorName={getCounselorName(s)}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="py-10 text-center">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#9B9B9B"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mx-auto mb-3"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                  <p className="text-sm text-[#6F6F6F]">
-                    {isSelectedToday
-                      ? '오늘 예정된 세션이 없습니다'
-                      : '예정된 세션이 없습니다'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 최근 활동 피드 — 대시보드 RecentClients 스타일 */}
-          {activities.length > 0 && (
-            <div className="mb-6">
-              <div className={CARD_CLS}>
-                <div className="flex justify-between items-baseline mb-3.5">
-                  <div className={CARD_TITLE_CLS}>최근 활동</div>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {activities.map((a, i) => (
-                    <div key={i} className="flex gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-[#5F0080] mt-1.5 shrink-0 ring-4 ring-[#5F0080]/15" />
-                      <div className="flex-1">
-                        <div className="text-[13px] text-[#1F1F1F] leading-tight">
-                          {a.message}
-                        </div>
-                        <div className={CARD_SUBTITLE_CLS}>
-                          {a.time}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 최근 리포트 — 대시보드 스타일 */}
-          <div className="mb-6">
-            <div className={CARD_CLS}>
-              <div className="flex justify-between items-baseline mb-3.5">
-                <div className={CARD_TITLE_CLS}>최근 리포트</div>
-                {/* SDD-095: 리포트 생성 진행 배지 — 처리 중임을 조용히 알린다 */}
-                {processingReportCount > 0 && (
-                  <span
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#F5EDFC] px-2.5 py-1 text-[11px] font-bold text-[#5F0080]"
-                    data-testid="report-processing-badge"
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#5F0080] animate-pulse" aria-hidden />
-                    리포트 생성 중 {processingReportCount}건
-                  </span>
-                )}
-              </div>
-              {recentReports.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {recentReports.map((r) => {
-                    const generation = resolveReportGenerationStatus(r.generation_status);
-                    return (
-                      <div
-                        key={r.id}
-                        className="bg-[#F8F4FC] rounded-xl p-4 flex items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-[#1F1F1F] truncate">
-                            {r.session_title || '리포트'}
-                          </p>
-                          <p className={CARD_SUBTITLE_CLS}>
-                            {formatDate(r.created_at)}
-                          </p>
-                        </div>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          {generation === 'processing' && (
-                            <span
-                              className="text-[10px] font-bold text-[#8A6B1F] bg-[#FFF4DC] px-2 py-0.5 rounded-full"
-                              data-testid="report-generation-badge"
-                            >
-                              생성 중
-                            </span>
-                          )}
-                          {generation === 'partial' && (
-                            <span className="text-[10px] font-bold text-[#6F6F6F] bg-[#F2F3F8] px-2 py-0.5 rounded-full">
-                              일부 생성
-                            </span>
-                          )}
-                          <span className="text-[10px] font-bold text-[#5F0080] bg-[#F5EDFC] px-2 py-0.5 rounded-full">
-                            {r.type === 'counselor' ? '상담사용' : '내담자용'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-10 text-center">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#9B9B9B"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mx-auto mb-3"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="16" y1="13" x2="8" y2="13" />
-                    <line x1="16" y1="17" x2="8" y2="17" />
-                  </svg>
-                  <p className="text-sm text-[#6F6F6F]">아직 리포트가 없어요</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
+    <div className="mx-auto flex max-w-[560px] flex-col gap-6 md:max-w-[760px] lg:max-w-[1200px] lg:gap-8">
+      {/* 다음 세션 히어로 */}
+      {heroSession && (
+        <HeroCard
+          session={heroSession}
+          counselorName={getCounselorName(heroSession)}
+          onEnter={() => navigate(`/app/sessions/${heroSession.id}`)}
+        />
       )}
+
+      {/* 초대된 클래스 (조건부) */}
+      {invitedSessions.length > 0 && (
+        <section>
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>초대된 클래스</h2>
+            <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {invitedSessions.map((s) => (
+              <InvitedSessionCard
+                key={s.id}
+                session={s}
+                counselorName={getCounselorName(s)}
+                onConfirm={() => handleConfirmInvite(s.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 내 리포트 */}
+      <section>
+        <div className={SECTION_HEAD_CLS}>
+          <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
+          <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
+            전체 보기
+          </button>
+        </div>
+        {clientReports.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {clientReports.map((r) => {
+              const generation = resolveReportGenerationStatus(r.generation_status);
+              const isNew = !r.is_read;
+              return (
+                <button
+                  key={r.id ?? r.session_id}
+                  type="button"
+                  onClick={() => r.id && navigate(`/app/reports/${r.id}`)}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-[#DDDEE7] bg-[#FBF8FD] p-4 text-left transition-colors hover:border-[#C9B0E8] hover:bg-[#F5EDFC]"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      {isNew && (
+                        <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[10px] font-bold text-white">
+                          NEW
+                        </span>
+                      )}
+                      <span className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                        {r.session_title || '리포트'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[12px] text-[#6F6F6F]">
+                      {formatDate(r.created_at)} · 몸·마음 변화 리포트
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {generation === 'processing' && (
+                      <span className="rounded-full bg-[#FFF4DC] px-2 py-0.5 text-[10px] font-bold text-[#8A6B1F]">
+                        생성 중
+                      </span>
+                    )}
+                    <span className="text-[#9B9B9B]" aria-hidden>›</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
+            아직 리포트가 없어요
+          </div>
+        )}
+      </section>
+
+      {/* 이번 주 일정 */}
+      <section>
+        <div className={SECTION_HEAD_CLS}>
+          <h2 className={SECTION_TITLE_CLS}>이번 주 일정</h2>
+          <button type="button" onClick={() => navigate('/app/sessions')} className={LINK_CLS}>
+            달력 보기
+          </button>
+        </div>
+        {weekSessions.length > 0 ? (
+          <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+            {weekSessions.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => navigate(`/app/sessions/${s.id}`)}
+                className="flex w-full items-center gap-3 border-b border-[#F0ECF2] py-4 text-left last:border-0"
+              >
+                <div className="w-[76px] shrink-0">
+                  <div className="text-[14.5px] font-extrabold text-[#1F1F1F]">
+                    {formatTime(s.scheduled_at)}
+                  </div>
+                  <div className="text-[11px] font-semibold text-[#767676]">
+                    {s.scheduled_at
+                      ? `${new Date(s.scheduled_at).getMonth() + 1}/${new Date(s.scheduled_at).getDate()}`
+                      : ''}
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                    {s.title || '세션'}
+                  </div>
+                  <div className="truncate text-[12px] text-[#6F6F6F]">
+                    {getCounselorName(s) ?? ''}
+                  </div>
+                </div>
+                <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[11px] font-bold text-[#6F6F6F]">
+                  예정
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-10 text-center text-sm text-[#6F6F6F]">
+            이번 주 예정된 세션이 없습니다
+          </div>
+        )}
+      </section>
+
+      {/* 요약 타일 */}
+      <SummaryTiles
+        dDay={dDay}
+        newReportCount={newReportCount}
+        weekSessionCount={weekSessionCount}
+        completedCount={completedCount}
+        onCopyCode={handleCopyHeroCode}
+      />
+
+      {/* 담당 상담사 */}
+      {primaryCounselor && (
+        <section>
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
+            <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
+              상담 신청 ›
+            </button>
+          </div>
+          <div className="flex items-center gap-3 rounded-2xl border border-[#DDDEE7] bg-white p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[13px] font-bold text-white">
+              {primaryCounselor.name?.charAt(0) ?? '상'}
+            </div>
+            <div className="min-w-0">
+              <div className="text-[14px] font-bold text-[#1F1F1F]">{primaryCounselor.name}</div>
+              <div className="text-[12px] text-[#6F6F6F]">임상·최면심리상담 전문</div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 최근 대화 + 새 알림 */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-6">
+        <section>
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>최근 대화</h2>
+            <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
+              전체
+            </button>
+          </div>
+          {recentChats.length > 0 ? (
+            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+              {recentChats.map((room) => (
+                <button
+                  key={room.id}
+                  type="button"
+                  onClick={() => openChat(room.id)}
+                  className="flex w-full items-start gap-3 border-b border-[#F0ECF2] py-3.5 text-left last:border-0"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5F0080] to-[#8A4FB8] text-[12px] font-bold text-white">
+                    {(room.display_name || room.peer_name || '상').charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-bold text-[#1F1F1F]">
+                        {room.display_name || room.peer_name || '상담사'}
+                      </span>
+                      {(room.unread_count ?? 0) > 0 && (
+                        <span className="rounded-full bg-[#5F0080] px-1.5 text-[10px] font-extrabold text-white">
+                          {room.unread_count}
+                        </span>
+                      )}
+                    </div>
+                    <div className="truncate text-[13px] text-[#6F6F6F]">
+                      {room.last_message?.content || '새로운 대화가 없습니다'}
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-[#767676]">
+                    {relativeTime(room.last_message_at ?? null)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+              대화가 없습니다
+            </div>
+          )}
+        </section>
+
+        <section>
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
+            <button type="button" onClick={() => navigate('/app/notifications')} className={LINK_CLS}>
+              전체
+            </button>
+          </div>
+          {recentNotifications.length > 0 ? (
+            <div className="rounded-2xl border border-[#DDDEE7] bg-white px-5">
+              {recentNotifications.map((n) => (
+                <div key={n.id} className="flex items-start gap-3 border-b border-[#F0ECF2] py-3.5 last:border-0">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5F0080]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
+                    {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
+                    <div className="text-[11px] text-[#767676]">{relativeTime(n.created_at)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-[#DDDEE7] py-8 text-center text-sm text-[#6F6F6F]">
+              새로운 알림이 없습니다
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
