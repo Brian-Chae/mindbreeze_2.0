@@ -78,6 +78,8 @@ jobs:
             backend/cleanup_data_exports_cron.py \
             backend/cleanup_notifications_cron.py \
             backend/upgrade_narrative_cache_cron.py \
+            backend/sweep_stale_eeg_raw_cron.py \
+            backend/sweep_stale_media_cron.py \
             backend/deploy/mindbreeze-worker.service \
             backend/deploy/mindbreeze-email-worker.service \
             backend/deploy/mindbreeze-export-worker.service
@@ -247,6 +249,11 @@ jobs:
             #     번들에는 포함(upgrade_narrative_cache_cron.py)되나 crontab 등록이 누락돼
             #     실행되지 않던 항목을 보완한다.
             (crontab -l 2>/dev/null | grep -v 'upgrade_narrative_cache_cron'; echo '0 5 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python upgrade_narrative_cache_cron.py >> /var/log/mindbreeze-narrative-cache.log 2>&1') | crontab -
+
+            # 5.10 INT-VERIFY-2AXIS: EEG raw 고아·보관기간 정리 + 미디어 고아 정리 cron 등록.
+            #     스크립트는 존재했으나 배포 번들·crontab 등록이 누락돼 실행되지 않던 항목.
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_eeg_raw_cron'; echo '30 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_eeg_raw_cron.py >> /var/log/mindbreeze-eeg-raw.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_media_cron'; echo '45 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_media_cron.py >> /var/log/mindbreeze-media-sweep.log 2>&1') | crontab -
 
             # 6. 헬스체크
             curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"
