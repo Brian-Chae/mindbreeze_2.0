@@ -1,8 +1,9 @@
-// 하단 탭바: 홈 / 세션 / 리포트 / 더보기
+// 하단 탭바: 홈 / 세션 / 채팅 / 리포트 / 더보기
 // useLocation으로 현재 경로 기반 활성 탭 판단
 
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ICONS, StrokeIcon } from '../layout/SidebarNav';
+import { useChatStore } from '../../stores/chatStore';
 
 interface TabItem {
   to: string;
@@ -13,6 +14,7 @@ interface TabItem {
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
 ];
 
@@ -23,6 +25,9 @@ interface BottomTabBarProps {
 export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
+  const chatUnread = useChatStore((s) =>
+    s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
+  );
 
   const isActive = (path: string): boolean => {
     if (path === '/app') return pathname === '/app';
@@ -36,6 +41,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
     >
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
+        const unread = tab.label === '채팅' ? chatUnread : 0;
 
         return (
           <button
@@ -50,7 +56,14 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             {active && (
               <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#5F0080]" />
             )}
-            <StrokeIcon d={tab.icon} size={22} />
+            <span className="relative">
+              <StrokeIcon d={tab.icon} size={22} />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full bg-[#EF4444] text-white text-[10px] font-bold flex items-center justify-center">
+                  {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+            </span>
             <span>{tab.label}</span>
           </button>
         );
