@@ -1,6 +1,6 @@
 // 개인정보 섹션 (성별/생년월일/주소) — SDD-077. 선택 입력이며 미입력 상태로도 이용 가능.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { CounselorProfile, CounselorProfileUpdate } from '../../lib/api/counselor';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -36,6 +36,8 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
   const [draft, setDraft] = useState<PersonalDraft>(() => toDraft(profile));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // A11Y-04: 입력 라벨을 <label htmlFor> 로 연결하기 위한 id
+  const fid = useId();
 
   const startEdit = (): void => {
     setDraft(toDraft(profile));
@@ -111,8 +113,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
         <div className="space-y-4 text-[14px]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <div className={FIELD_LABEL}>성별</div>
+              <label htmlFor={`${fid}-gender`} className={FIELD_LABEL}>성별</label>
               <select
+                id={`${fid}-gender`}
                 className={INPUT_CLASS}
                 value={draft.gender}
                 onChange={(e) => update('gender', e.target.value)}
@@ -124,8 +127,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
               </select>
             </div>
             <div>
-              <div className={FIELD_LABEL}>생년월일</div>
+              <label htmlFor={`${fid}-birth`} className={FIELD_LABEL}>생년월일</label>
               <input
+                id={`${fid}-birth`}
                 type="date"
                 className={INPUT_CLASS}
                 value={draft.birth_date}
@@ -135,8 +139,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <div className={FIELD_LABEL}>우편번호</div>
+              <label htmlFor={`${fid}-postal`} className={FIELD_LABEL}>우편번호</label>
               <input
+                id={`${fid}-postal`}
                 className={INPUT_CLASS}
                 value={draft.postal_code}
                 onChange={(e) => update('postal_code', e.target.value)}
@@ -144,8 +149,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
               />
             </div>
             <div>
-              <div className={FIELD_LABEL}>주소</div>
+              <label htmlFor={`${fid}-address1`} className={FIELD_LABEL}>주소</label>
               <input
+                id={`${fid}-address1`}
                 className={INPUT_CLASS}
                 value={draft.address_line1}
                 onChange={(e) => update('address_line1', e.target.value)}
@@ -154,8 +160,9 @@ export default function PersonalInfoSection({ profile, onSave }: PersonalInfoSec
             </div>
           </div>
           <div>
-            <div className={FIELD_LABEL}>상세 주소</div>
+            <label htmlFor={`${fid}-address2`} className={FIELD_LABEL}>상세 주소</label>
             <input
+              id={`${fid}-address2`}
               className={INPUT_CLASS}
               value={draft.address_line2}
               onChange={(e) => update('address_line2', e.target.value)}

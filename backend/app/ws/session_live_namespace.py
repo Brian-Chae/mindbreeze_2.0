@@ -219,6 +219,29 @@ def _open_db():
     return SessionLocal()
 
 
+def _account_is_active(user_id) -> bool:
+    """WS-03: 계정 상태를 확인한다 — active 계정만 WS 기능을 쓸 수 있다.
+
+    Socket.IO connect/join 은 REST 의 get_current_user 상태 게이트를 우회하므로
+    정지(suspended)/대기(pending)/삭제 계정을 여기서 직접 차단한다.
+    반드시 `asyncio.to_thread` 로 호출해 이벤트 루프를 막지 않는다(WS-08).
+    조회가 불가하면(예외) 보수적으로 비활성 취급해 연결을 막는다.
+    """
+    from app.models.user import User as UserModel
+
+    db = _open_db()
+    try:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    except Exception:
+        logger.warning(
+            "[WS /session-live] 계정 상태 조회 실패 — 연결 거부 (user=%s)", user_id, exc_info=True
+        )
+        return False
+    finally:
+        db.close()
+    return user is not None and user.status == "active"
+
+
 def _jsonify(value):
     """datetime 등을 JSON 직렬화 가능한 형태로 재귀 변환(WS emit 안전)."""
     if isinstance(value, datetime):
@@ -386,6 +409,24 @@ def register_session_live_namespace(sio):
             if not user_id:
                 logger.warning("[WS /session-live] 토큰에 sub 없음 — 연결 거부 (sid=%s)", sid)
                 raise ConnectionRefusedError("token_expired")
+            # WS-02: access 토큰만 인정 — refresh 등 비-access 토큰으로 소켓을 열지 못하게 한다.
+            if payload.get("type") != "access":
+                logger.warning(
+                    "[WS /session-live] 비-access 토큰 — 연결 거부 (sid=%s, type=%s)",
+                    sid,
+                    payload.get("type"),
+                )
+                raise ConnectionRefusedError("invalid_token_type")
+            # WS-03: 정지/대기/삭제 계정은 토큰이 유효해도 소켓을 열지 못하게 한다.
+            try:
+                active = await asyncio.to_thread(_account_is_active, user_id)
+            except Exception:
+                active = False
+            if not active:
+                logger.warning(
+                    "[WS /session-live] 비활성 계정 — 연결 거부 (sid=%s, user=%s)", sid, user_id
+                )
+                raise ConnectionRefusedError("account_inactive")
             logger.info("[WS /session-live] user %s connected (sid=%s)", user_id, sid)
 
         await sio.save_session(sid, {"user_id": user_id}, namespace=_NAMESPACE)
@@ -405,6 +446,23 @@ def register_session_live_namespace(sio):
         participant_id = data.get("participant_id")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
+        # WS-03: connect 이후 계정이 정지·대기·삭제로 바뀐 경우에도 join 을 허용하지 않는다
+        # (정지 계정이 유효 토큰 소켓으로 세션 room 에 들어오는 것을 막는다).
+        if current_user_id:
+            try:
+                account_active = await asyncio.to_thread(_account_is_active, current_user_id)
+            except Exception:
+                account_active = False
+            if not account_active:
+                logger.warning(
+                    "[WS /session-live] 비활성 계정 join 거부 (sid=%s, user=%s)",
+                    sid,
+                    current_user_id,
+                )
+                await sio.emit(
+                    "join_denied", {"session_id": str(session_id)}, to=sid, namespace=_NAMESPACE
+                )
+                return
         # WS-JOIN-STALE-ROOM: 같은 소켓이 이전에 입장했던 세션 컨텍스트를 미리 보관한다.
         # (아래 save_session 이 덮어쓰기 전에 읽어야 이전 room 을 이탈할 수 있다.)
         prev_session_id = (session or {}).get("session_id")
@@ -505,6 +563,17 @@ def register_session_live_namespace(sio):
         if not session_id:
             return
         session = await sio.get_session(sid, namespace=_NAMESPACE)
+        ctx_session_id = (session or {}).get("session_id")
+        # WS-06: payload 의 session_id 를 신뢰하지 않는다 — 이 소켓이 실제로 join 한
+        #   세션 컨텍스트와 일치할 때만 퇴장시킨다(임의 session_id 로 타 세션 room 을
+        #   조작하거나 room 퇴장을 유발하는 것을 막는다).
+        if not ctx_session_id or str(ctx_session_id) != str(session_id):
+            logger.warning(
+                "[WS /session-live] leave 무시 — join 불일치 (sid=%s, session=%s)",
+                sid,
+                session_id,
+            )
+            return
         pid = (session or {}).get("participant_id")
         # 입장했을 수 있는 모든 룸에서 퇴장(멱등 — 없으면 무시)
         await sio.leave_room(sid, _room_host(session_id), namespace=_NAMESPACE)

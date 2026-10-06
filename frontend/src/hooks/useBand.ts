@@ -48,6 +48,8 @@ import {
   emitSessionLiveFeature,
   getSessionLiveSocket,
   joinSessionLive,
+  releaseSessionLiveRoom,
+  retainSessionLiveRoom,
   subscribeSessionLiveEegFeature,
   subscribeSessionLiveFeatureAck,
   type SessionLiveEegFeatureEvent,
@@ -1232,6 +1234,9 @@ export function useBand({
 
     const token = skipAuth ? null : tokenStorage.getAccess();
     const socket = getSessionLiveSocket(token);
+    // WS-09: 세션 room 참조를 획득한다 — useSessionLiveSocket(UI)이 먼저 unmount 되어도
+    // 이 훅(수집)이 room 을 계속 필요로 하는 동안 조기 leave 가 나가지 않게 한다.
+    retainSessionLiveRoom(sessionId);
 
     const onConnect = (): void => {
       wsConnectedRef.current = true;
@@ -1343,7 +1348,9 @@ export function useBand({
     }
 
     return () => {
-      // room leave 는 useSessionLiveSocket(UI)가 담당 — 싱글톤 공유 시 조기 leave 방지
+      // WS-09: room 참조를 반환한다 — 마지막 보유자일 때만 실제 leave 가 emit 된다.
+      // (useSessionLiveSocket 이 먼저 leave 를 시도해도 이 훅의 참조가 남아 있으면 보류된다.)
+      releaseSessionLiveRoom(socket, sessionId);
       unsubAck();
       unsubscribe();
       socket.off('connect', onConnect);

@@ -4,6 +4,7 @@
 서버→클라이언트: new_message, joined, new_notification
 """
 
+import asyncio
 import logging
 
 from app.ws import sio
@@ -63,7 +64,8 @@ async def connect(sid, environ, auth):
         return True
 
     # WS-AUTHZ-06: 정지(suspended)/대기(pending)/삭제 계정은 토큰이 유효해도 알림 room 에 입장하지 않는다.
-    if not _user_is_active(user_id):
+    #   동기 DB 조회이므로 이벤트 루프 블로킹을 피해 별도 스레드로 위임한다(WS-08).
+    if not await asyncio.to_thread(_user_is_active, user_id):
         logger.warning(f"[WS] blocked connect for non-active account (sid={sid}, user={user_id})")
         return True
 
@@ -109,10 +111,18 @@ async def _is_room_member(sid: str, room_id: str) -> bool:
 
     멀티탭 대응: latest sid 만 담는 `_user_sids` 대신 sid→user_id 직접 매핑(`_sid_users`)으로
     역추적한다. 탭을 2개 이상 열어도 모든 sid 가 정확히 본인 user_id 로 해석된다.
+
+    WS-08: 멤버십 조회는 동기 SQLAlchemy 세션이므로 이벤트 루프에서 직접 실행하지 않고
+    별도 스레드(`asyncio.to_thread`)로 위임해 루프 블로킹을 막는다.
     """
     user_id = _sid_users.get(sid)
     if user_id is None:
         return False
+    return await asyncio.to_thread(_room_membership_check, user_id, room_id)
+
+
+def _room_membership_check(user_id: str, room_id: str) -> bool:
+    """동기 DB 세션으로 채팅방 멤버십을 확인한다(`_is_room_member` 가 스레드로 호출)."""
     from app.core.database import SessionLocal
     from app.services.chat_service import get_user_chat_room_ids
 
@@ -207,18 +217,24 @@ async def broadcast_message(room_id: str, payload: dict) -> None:
 
 async def broadcast_profile_updated(user_id: str, new_name: str) -> None:
     """프로필(이름) 변경 시 연결된 모든 채팅방에 실시간 브로드캐스트."""
+    # WS-08: 동기 DB 조회(채팅방 목록)는 별도 스레드로 위임해 이벤트 루프 블로킹을 막는다.
+    room_ids = await asyncio.to_thread(_user_chat_room_ids, user_id)
+
+    payload = {"type": "profile_updated", "user_id": user_id, "name": new_name}
+    for rid in room_ids:
+        await sio.emit("profile_updated", payload, room=rid, namespace="/chat")
+
+
+def _user_chat_room_ids(user_id: str) -> list[str]:
+    """사용자가 속한 채팅방 id 목록(동기 DB — `broadcast_profile_updated` 가 스레드로 호출)."""
     from app.core.database import SessionLocal
 
     db = SessionLocal()
     try:
         from app.services.chat_service import get_user_chat_room_ids
-        room_ids = get_user_chat_room_ids(user_id, db)
+        return get_user_chat_room_ids(user_id, db)
     finally:
         db.close()
-
-    payload = {"type": "profile_updated", "user_id": user_id, "name": new_name}
-    for rid in room_ids:
-        await sio.emit("profile_updated", payload, room=rid, namespace="/chat")
 
 
 async def broadcast_notification(user_id: str, notif_data: dict) -> None:

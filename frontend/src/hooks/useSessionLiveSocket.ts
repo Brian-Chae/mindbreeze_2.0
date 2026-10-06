@@ -20,8 +20,9 @@ import {
   emitClassSignal,
   getSessionLiveSocket,
   joinSessionLive,
-  leaveSessionLive,
   normalizeJoinSnapshot,
+  releaseSessionLiveRoom,
+  retainSessionLiveRoom,
   subscribeClassAggregate,
   subscribeClassAudioSync,
   subscribeClassSignal,
@@ -233,6 +234,9 @@ export function useSessionLiveSocket({
     const token = skipAuth ? null : tokenStorage.getAccess();
     const socket = getSessionLiveSocket(token);
     socketRef.current = socket;
+    // WS-09: 공유 싱글톤의 세션 room 참조를 획득한다 — 이 훅의 unmount 가 다른 훅
+    // (useBand 등)의 join 을 조기 해제하지 않도록 cleanup 에서 참조만 반환한다.
+    retainSessionLiveRoom(sessionId);
 
     const onConnect = (): void => {
       signalParticipantRef.current = null;
@@ -390,11 +394,9 @@ export function useSessionLiveSocket({
     const unsubAudioSync = subscribeClassAudioSync(socket, onAudioSync);
 
     return () => {
-      const joined = joinedSessionRef.current;
-      if (joined) {
-        leaveSessionLive(socket, joined);
-        joinedSessionRef.current = null;
-      }
+      // WS-09: room 참조만 반환한다 — 같은 세션의 마지막 보유자일 때만 실제 leave 가 emit 된다.
+      releaseSessionLiveRoom(socket, sessionId);
+      joinedSessionRef.current = null;
       unsubJoined();
       unsubFeature();
       unsubState();

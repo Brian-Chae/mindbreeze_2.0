@@ -1,6 +1,6 @@
 // 계정정보 섹션 (이름/이메일/전화번호/프로필사진/소개글)
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { CounselorProfile, CounselorProfileUpdate } from '../../lib/api/counselor';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -32,6 +32,8 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
   const [draft, setDraft] = useState<AccountDraft>(() => toDraft(profile));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // A11Y-04: 입력 라벨을 <label htmlFor> 로 연결하기 위한 id
+  const fid = useId();
 
   const startEdit = (): void => {
     setDraft(toDraft(profile));
@@ -100,8 +102,9 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
       {editing ? (
         <div className="space-y-4 text-[14px]">
           <div>
-            <div className={FIELD_LABEL}>이름</div>
+            <label htmlFor={`${fid}-name`} className={FIELD_LABEL}>이름</label>
             <input
+              id={`${fid}-name`}
               className={INPUT_CLASS}
               value={draft.name}
               onChange={(e) => update('name', e.target.value)}
@@ -114,8 +117,9 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
             </div>
           </div>
           <div>
-            <div className={FIELD_LABEL}>전화번호</div>
+            <label htmlFor={`${fid}-phone`} className={FIELD_LABEL}>전화번호</label>
             <input
+              id={`${fid}-phone`}
               className={INPUT_CLASS}
               value={draft.phone}
               onChange={(e) => update('phone', e.target.value)}
@@ -123,8 +127,9 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>프로필 사진 (URL)</div>
+            <label htmlFor={`${fid}-image`} className={FIELD_LABEL}>프로필 사진 (URL)</label>
             <input
+              id={`${fid}-image`}
               className={INPUT_CLASS}
               value={draft.profile_image}
               onChange={(e) => update('profile_image', e.target.value)}
@@ -132,8 +137,9 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>소개글</div>
+            <label htmlFor={`${fid}-bio`} className={FIELD_LABEL}>소개글</label>
             <textarea
+              id={`${fid}-bio`}
               className={`${INPUT_CLASS} min-h-[80px] resize-y`}
               value={draft.bio}
               onChange={(e) => update('bio', e.target.value)}

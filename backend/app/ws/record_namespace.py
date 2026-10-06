@@ -4,6 +4,7 @@
 서버→클라이언트: record_status (merging→transcribing→diarizing→summarizing→completed/failed)
 """
 
+import asyncio
 import logging
 from datetime import datetime
 
@@ -14,6 +15,54 @@ def _get_sio():
     """Lazy import to avoid circular dependency with app.ws.__init__"""
     from app.ws import sio
     return sio
+
+
+def _open_db():
+    """WS 핸들러용 DB 세션 팩토리.
+
+    Socket.IO 핸들러는 FastAPI 의존성 주입을 쓸 수 없으므로 SessionLocal 로 직접 연다.
+    테스트에서는 이 함수를 monkeypatch 하여 인메모리 세션을 주입한다.
+    """
+    from app.core.database import SessionLocal
+    return SessionLocal()
+
+
+def _account_is_active(user_id) -> bool:
+    """WS-03: 계정 상태를 확인한다 — active 계정만 /record 소켓을 쓸 수 있다.
+
+    Socket.IO connect 는 REST 의 get_current_user 상태 게이트를 우회하므로
+    정지(suspended)/대기(pending)/삭제 계정을 여기서 직접 차단한다.
+    반드시 `asyncio.to_thread` 로 호출해 이벤트 루프를 막지 않는다(WS-08).
+    조회가 불가하면(예외) 보수적으로 비활성 취급해 연결을 막는다.
+    """
+    from app.models.user import User as UserModel
+
+    db = _open_db()
+    try:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    except Exception:
+        logger.warning(
+            "[WS /record] 계정 상태 조회 실패 — 연결 거부 (user=%s)", user_id, exc_info=True
+        )
+        return False
+    finally:
+        db.close()
+    return user is not None and user.status == "active"
+
+
+def _authorize_subscribe(session_id, user_id) -> None:
+    """SDD-095 구독 권한 검증(동기) — 세션 호스트/참여자만 허용한다.
+
+    `on_subscribe`(async) 안에서 직접 동기 DB 를 호출하면 이벤트 루프가 블로킹되므로
+    이 함수를 `asyncio.to_thread` 로 위임한다(WS-08). 비참여자·세션 없음이면 예외를 올린다.
+    """
+    from app.services.session_service import _get_session_for_participant
+
+    db = _open_db()
+    try:
+        _get_session_for_participant(session_id, user_id, db)
+    finally:
+        db.close()
 
 
 # Socket.IO 이벤트 핸들러 — sio.on 데코레이터를 모듈 레벨에서 사용할 수 없으므로
@@ -32,11 +81,31 @@ def register_record_namespace(sio):
                 from app.core.security import decode_token
                 payload = decode_token(token)
                 user_id = payload.get("sub")
-                if user_id:
-                    logger.info("[WS /record] user %s connected (sid=%s)", user_id, sid)
             except Exception:
                 logger.warning("[WS /record] 잘못된 토큰 — 연결 거부 (sid=%s)", sid)
                 return False
+            if not user_id:
+                logger.warning("[WS /record] 토큰에 sub 없음 — 연결 거부 (sid=%s)", sid)
+                return False
+            # WS-02: access 토큰만 인정 — refresh 등 비-access 토큰으로 소켓을 열지 못하게 한다.
+            if payload.get("type") != "access":
+                logger.warning(
+                    "[WS /record] 비-access 토큰 — 연결 거부 (sid=%s, type=%s)",
+                    sid,
+                    payload.get("type"),
+                )
+                return False
+            # WS-03: 정지/대기/삭제 계정은 토큰이 유효해도 소켓을 열지 못하게 한다.
+            try:
+                active = await asyncio.to_thread(_account_is_active, user_id)
+            except Exception:
+                active = False
+            if not active:
+                logger.warning(
+                    "[WS /record] 비활성 계정 — 연결 거부 (sid=%s, user=%s)", sid, user_id
+                )
+                return False
+            logger.info("[WS /record] user %s connected (sid=%s)", user_id, sid)
         await sio.save_session(sid, {"user_id": user_id}, namespace="/record")
         return True
 
@@ -57,14 +126,7 @@ def register_record_namespace(sio):
             logger.warning("[WS /record] 비인가 subscribe 거부 (sid=%s)", sid)
             return
         try:
-            from app.core.database import SessionLocal
-            from app.services.session_service import _get_session_for_participant
-
-            db = SessionLocal()
-            try:
-                _get_session_for_participant(session_id, user_id, db)
-            finally:
-                db.close()
+            await asyncio.to_thread(_authorize_subscribe, session_id, user_id)
         except Exception:
             logger.warning(
                 "[WS /record] 비참여자 subscribe 거부 (sid=%s, session=%s)", sid, session_id

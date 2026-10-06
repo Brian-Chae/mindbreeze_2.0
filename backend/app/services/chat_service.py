@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import and_, or_, text
+from sqlalchemy import and_, func, or_, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
@@ -133,24 +133,55 @@ def get_user_chat_room_ids(user_id: str, db: DBSession) -> list[str]:
     return list(result)
 
 
-def _serialize_msg(m: ChatMessage, db=None) -> dict:
+def _sender_names_for_messages(messages: list[ChatMessage], db: DBSession) -> dict[str, str]:
+    """메시지 목록의 발신자 이름을 단일 IN 조회로 일괄 매핑한다 (MB2-ORM-N1-01).
+
+    기존에는 `_serialize_msg` 가 메시지 1건마다 User 를 개별 조회해
+    페이지 50건이면 ~50회의 N+1 이 발생했다.
+    """
+    sender_ids = {m.sender_id for m in messages if m.sender_id}
+    if not sender_ids:
+        return {}
+    return {
+        str(uid): name
+        for uid, name in db.query(User.id, User.name).filter(User.id.in_(sender_ids)).all()
+    }
+
+
+def _serialize_msg(
+    m: ChatMessage,
+    db=None,
+    *,
+    sender_names: dict[str, str] | None = None,
+    room: ChatRoom | None = None,
+) -> dict:
+    """메시지 1건 직렬화.
+
+    MB2-ORM-N1-01: `sender_names`(발신자 id→이름 맵)·`room`(해당 방)을 배치 호출부가
+    주입하면 메시지 단위 개별 조회를 하지 않는다. 전달되지 않은 경우에만 단건 조회로 폴백한다.
+    """
     created = m.created_at or datetime.utcnow()
     sender_name = None
-    if db and m.sender_id:
-        from app.models.user import User as UserModel
-        sender = db.query(UserModel).filter(UserModel.id == m.sender_id).first()
-        if sender:
-            sender_name = sender.name
+    if m.sender_id:
+        if sender_names is not None:
+            sender_name = sender_names.get(str(m.sender_id))
+        elif db:
+            from app.models.user import User as UserModel
+            sender = db.query(UserModel).filter(UserModel.id == m.sender_id).first()
+            if sender:
+                sender_name = sender.name
     # ── 읽음 상태 추적 (Phase 3a): read_by / recipient_count 우선, 없으면 ChatMessageRead 하위호환 ──
     unread_count = 0
     read_by_list = m.read_by or []
     rc = m.recipient_count or 0
     if rc > 0:
         unread_count = max(rc - len(read_by_list), 0)
-    elif db and m.room_id:
-        room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
-        if room:
-            unread_count = _message_unread_count(m, room, db)
+    else:
+        resolved_room = room
+        if resolved_room is None and db and m.room_id:
+            resolved_room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
+        if resolved_room is not None and db is not None:
+            unread_count = _message_unread_count(m, resolved_room, db)
     return {
         "id": str(m.id),
         "room_id": str(m.room_id),
@@ -471,6 +502,120 @@ def _last_message_preview(m: ChatMessage | None) -> tuple[dict | None, datetime 
     return {"content": content, "created_at": created}, created
 
 
+def _peer_ids_for_direct(room: ChatRoom, uid: UUID) -> str | None:
+    """direct 방에서 uid 기준 상대방(peer)의 식별자 문자열을 반환한다.
+
+    host(상담사)면 room.name(내담자 id), 내담자면 host_id. direct 가 아니면 None.
+    """
+    if room.room_type != "direct":
+        return None
+    if room.host_id == uid:
+        return room.name
+    return str(room.host_id) if room.host_id else None
+
+
+def _build_room_serialize_cache(
+    rooms: list[ChatRoom], user_id: str, db: DBSession
+) -> dict:
+    """방 목록을 `_serialize_room` 으로 일괄 직렬화하기 위한 배치 조회 캐시 (MB2-ORM-N1-03).
+
+    방마다 개별 실행되던 상대 이름(User)·참여자 수·미읽음 수·세션 조회를 방 ID 집합 기준의
+    단일 쿼리들로 한 번에 산출한다. 반환된 맵은 `_serialize_room(..., cache=...)` 에 주입한다.
+    """
+    uid = _uuid(user_id)
+    room_ids = [r.id for r in rooms]
+    peer_ids: set[UUID] = set()
+    group_ids: list[UUID] = []
+    session_ids: set[UUID] = set()
+    for r in rooms:
+        if r.room_type == "direct":
+            pid = _peer_ids_for_direct(r, uid)
+            if pid:
+                peer_ids.add(_uuid(pid))
+        elif r.room_type == "group":
+            group_ids.append(r.id)
+        elif r.session_id:
+            session_ids.add(r.session_id)
+
+    peer_names: dict[str, str] = {}
+    if peer_ids:
+        peer_names = {
+            str(u.id): u.name
+            for u in db.query(User).filter(User.id.in_(peer_ids)).all()
+        }
+
+    # 참여자 수 — 방 유형별(원 `_participant_count` 와 동일 의미)
+    participant_counts: dict[str, int] = {}
+    group_counts: dict = {}
+    if group_ids:
+        group_counts = {
+            row[0]: row[1]
+            for row in db.query(ChatRoomParticipant.room_id, func.count())
+            .filter(ChatRoomParticipant.room_id.in_(group_ids))
+            .group_by(ChatRoomParticipant.room_id)
+            .all()
+        }
+    session_counts: dict = {}
+    if session_ids:
+        session_counts = {
+            row[0]: row[1]
+            for row in db.query(SessionParticipant.session_id, func.count())
+            .filter(SessionParticipant.session_id.in_(session_ids))
+            .group_by(SessionParticipant.session_id)
+            .all()
+        }
+    for r in rooms:
+        if r.room_type == "direct":
+            participant_counts[str(r.id)] = 2  # host + client
+        elif r.room_type == "group":
+            participant_counts[str(r.id)] = int(group_counts.get(r.id, 0)) + (
+                1 if r.host_id else 0
+            )
+        elif r.session_id:
+            participant_counts[str(r.id)] = int(session_counts.get(r.session_id, 0))
+        else:
+            participant_counts[str(r.id)] = 0
+
+    sessions: dict = {}
+    if session_ids:
+        sessions = {
+            str(s.id): s for s in db.query(Session).filter(Session.id.in_(session_ids)).all()
+        }
+
+    # 미읽음 수 = 방 전체 메시지 수 − 사용자가 읽은 메시지 수 (원 `_unread_count` 와 동일)
+    unread_counts: dict[str, int] = {}
+    if room_ids:
+        totals = {
+            row[0]: row[1]
+            for row in db.query(ChatMessage.room_id, func.count())
+            .filter(ChatMessage.room_id.in_(room_ids))
+            .group_by(ChatMessage.room_id)
+            .all()
+        }
+        reads = {
+            row[0]: row[1]
+            for row in db.query(ChatMessage.room_id, func.count())
+            .join(ChatMessageRead, ChatMessageRead.message_id == ChatMessage.id)
+            .filter(
+                ChatMessage.room_id.in_(room_ids),
+                ChatMessageRead.user_id == uid,
+            )
+            .group_by(ChatMessage.room_id)
+            .all()
+        }
+        for rid in room_ids:
+            unread_counts[str(rid)] = max(
+                int(totals.get(rid, 0)) - int(reads.get(rid, 0)), 0
+            )
+
+    return {
+        "peer_names": peer_names,
+        "participant_counts": participant_counts,
+        "unread_counts": unread_counts,
+        "sessions": sessions,
+    }
+
+
 def _can_rename_room(room: ChatRoom, uid: UUID) -> tuple[bool, str | None]:
     """이름 변경 권한 계산 (SDD-090).
 
@@ -487,15 +632,34 @@ def _can_rename_room(room: ChatRoom, uid: UUID) -> tuple[bool, str | None]:
     return True, None
 
 
-def _serialize_room(room: ChatRoom, user_id: str, db: DBSession, last_msg=_LAST_MSG_UNSET) -> dict:
+def _serialize_room(
+    room: ChatRoom,
+    user_id: str,
+    db: DBSession,
+    last_msg=_LAST_MSG_UNSET,
+    *,
+    cache: dict | None = None,
+) -> dict:
+    """방 1건 직렬화.
+
+    MB2-ORM-N1-03: `cache`(=`_build_room_serialize_cache` 결과)를 주입하면
+    상대 이름·참여자 수·미읽음 수·세션 조회를 방 단위 개별 쿼리 없이 맵에서 꺼낸다.
+    미주입 시(단건 경로) 기존과 동일하게 개별 조회로 폴백한다.
+    """
     uid = _uuid(user_id)
     # 참여자 수 계산
-    count = _participant_count(room, db)
+    if cache is not None:
+        count = cache["participant_counts"].get(str(room.id), 0)
+    else:
+        count = _participant_count(room, db)
     # 세션 방이면 세션 제목·일자 포함 (목록에서 세션 식별)
     session_title = None
     session_scheduled_at = None
     if room.session_id:
-        session = db.query(Session).filter(Session.id == room.session_id).first()
+        if cache is not None:
+            session = cache["sessions"].get(str(room.session_id))
+        else:
+            session = db.query(Session).filter(Session.id == room.session_id).first()
         if session:
             session_title = session.title
             session_scheduled_at = session.scheduled_at
@@ -504,7 +668,10 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession, last_msg=_LAST_
         last_msg = _last_messages_for_rooms([room.id], db).get(str(room.id))
     last_message, last_message_at = _last_message_preview(last_msg)
     # ── SDD-090: 표시 이름·이름 변경 권한 계산 ──
-    peer_name = _peer_name_for_direct(room, uid, db)
+    if cache is not None:
+        peer_name = cache["peer_names"].get(_peer_ids_for_direct(room, uid) or "")
+    else:
+        peer_name = _peer_name_for_direct(room, uid, db)
     can_rename, rename_disabled_reason = _can_rename_room(room, uid)
     if room.room_type == "direct":
         custom_name = room.display_name
@@ -515,6 +682,11 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession, last_msg=_LAST_
     else:
         custom_name = None
         display_name = session_title or "세션"
+    unread = (
+        cache["unread_counts"].get(str(room.id), 0)
+        if cache is not None
+        else _unread_count(room, user_id, db)
+    )
     return {
         "id": str(room.id),
         "session_id": str(room.session_id) if room.session_id else None,
@@ -527,7 +699,7 @@ def _serialize_room(room: ChatRoom, user_id: str, db: DBSession, last_msg=_LAST_
         "session_scheduled_at": session_scheduled_at,
         "participant_count": count,
         "created_at": room.created_at or datetime.utcnow(),
-        "unread_count": _unread_count(room, user_id, db),
+        "unread_count": unread,
         "last_message": last_message,
         "last_message_at": last_message_at,
         "custom_name": custom_name,
@@ -633,10 +805,14 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
         seen.setdefault(r.id, r)
 
     # ── SDD-090: 방별 마지막 메시지 일괄 조회 후 주입 (방마다 개별 쿼리 금지) ──
-    last_map = _last_messages_for_rooms([r.id for r in seen.values()], db)
+    # MB2-ORM-N1-03: 상대 이름·참여자 수·미읽음 수·세션도 캐시로 일괄 산출해
+    # _serialize_room 이 방마다 개별 쿼리(N+1)를 하지 않게 한다.
+    room_list = list(seen.values())
+    last_map = _last_messages_for_rooms([r.id for r in room_list], db)
+    cache = _build_room_serialize_cache(room_list, user_id, db)
     result = [
-        _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id)))
-        for r in seen.values()
+        _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id)), cache=cache)
+        for r in room_list
     ]
 
     # ── SDD-090: 기본 정렬 — 최근 대화 시각(없으면 방 생성 시각) 내림차순 ──
@@ -941,8 +1117,38 @@ def list_invitable_counselors(
     )
     if q and q.strip():
         query = query.filter(User.name.ilike(f"%{q.strip()}%"))
+    # VB-04: 필터된 전체를 .all() 로 메모리에 적재한 뒤 파이썬 슬라이스하던 것을
+    # DB 레벨 LIMIT/OFFSET 페이징으로 이관한다. total 은 중복 제거된 사용자 수.
+    total = query.with_entities(User.id).distinct().count()
+    page = max(page, 1)
+    size = max(size, 1)
+    page_ids = [
+        row[0]
+        for row in (
+            query.with_entities(User.id)
+            .distinct()
+            .order_by(User.name.asc(), User.id.asc())
+            .offset((page - 1) * size)
+            .limit(size)
+            .all()
+        )
+    ]
+    if not page_ids:
+        return {"counselors": [], "total": total, "page": page}
+    # 요청 페이지의 사용자만 대상으로 (사용자, 기관명) 행을 조회해 org_names 를 구성한다.
+    rows = (
+        db.query(User, Organization.name)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
+        .join(Organization, Organization.id == UserOrgMembership.org_id)
+        .filter(
+            UserOrgMembership.org_id.in_(my_org_ids),
+            UserOrgMembership.status == "active",
+            User.id.in_(page_ids),
+        )
+        .all()
+    )
     result: dict[str, dict] = {}
-    for user, org_name in query.all():
+    for user, org_name in rows:
         entry = result.setdefault(
             str(user.id),
             {"user_id": str(user.id), "name": user.name, "role": user.role, "org_names": []},
@@ -950,10 +1156,8 @@ def list_invitable_counselors(
         if org_name not in entry["org_names"]:
             entry["org_names"].append(org_name)
     counselors = sorted(result.values(), key=lambda c: (c["name"], c["user_id"]))
-    total = len(counselors)
-    start = (max(page, 1) - 1) * max(size, 1)
     return {
-        "counselors": counselors[start : start + size],
+        "counselors": counselors,
         "total": total,
         "page": page,
     }
@@ -1035,7 +1239,9 @@ def list_messages(room_id: str, user_id: str, db: DBSession, limit: int = 50) ->
         .limit(limit)
         .all()
     )
-    return [_serialize_msg(m, db) for m in msgs]
+    # MB2-ORM-N1-01: 발신자 이름을 1회 배치 조회하고 방 1건을 재사용해 N+1 을 제거한다.
+    sender_names = _sender_names_for_messages(msgs, db)
+    return [_serialize_msg(m, db, sender_names=sender_names, room=room) for m in msgs]
 
 
 def get_message_context(
@@ -1071,10 +1277,17 @@ def get_message_context(
     )).order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc()).limit(after + 1).all()
     previous_page = list(reversed(previous[:before]))
     following_page = following[:after]
+    # MB2-ORM-N1-01: 응답 내 모든 메시지의 발신자 이름을 1회 배치 조회한다.
+    all_msgs = [message, *previous_page, *following_page]
+    sender_names = _sender_names_for_messages(all_msgs, db)
     return {
-        "message": _serialize_msg(message, db),
-        "before": [_serialize_msg(m, db) for m in previous_page],
-        "after": [_serialize_msg(m, db) for m in following_page],
+        "message": _serialize_msg(message, db, sender_names=sender_names, room=room),
+        "before": [
+            _serialize_msg(m, db, sender_names=sender_names, room=room) for m in previous_page
+        ],
+        "after": [
+            _serialize_msg(m, db, sender_names=sender_names, room=room) for m in following_page
+        ],
         "before_cursor": str(previous_page[0].id) if previous_page and len(previous) > before else None,
         "after_cursor": str(following_page[-1].id) if following_page and len(following) > after else None,
     }

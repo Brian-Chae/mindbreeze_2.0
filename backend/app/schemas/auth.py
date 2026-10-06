@@ -260,9 +260,11 @@ class ClientProfileResponse(BaseModel):
 
 class ClientProfileUpdate(BaseModel):
     """내담자 프로필 수정 요청"""
-    name: str | None = None
-    phone: str | None = None
-    profile_image: str | None = None
+    # VB-07: DB 컬럼 길이(User.name String(100)/phone String(20)/profile_image String(500))를
+    # 초과하는 입력은 422 로 거른다(무가공 대입 500 방지).
+    name: str | None = Field(None, max_length=100)
+    phone: str | None = Field(None, max_length=20)
+    profile_image: str | None = Field(None, max_length=500)
     bio: str | None = None
     gender: str | None = None
     birth_date: str | None = None

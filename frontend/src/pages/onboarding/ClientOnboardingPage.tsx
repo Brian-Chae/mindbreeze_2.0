@@ -32,6 +32,25 @@ const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전�
 
 const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '상담사 매칭'];
 
+/**
+ * FORM-01: YYYY-MM-DD 문자열이 실제로 존재하는 달력 날짜인지 검증한다.
+ * 정규식만으로는 2025-02-31, 2025-13-01 처럼 존재하지 않는 날짜가 통과하므로 Date 로 역검증한다.
+ */
+function isValidBirthDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 interface FormState {
   name: string;
   phone: string;
@@ -263,8 +282,12 @@ export default function ClientOnboardingPage() {
         markCompleted(1);
         setStep(2);
       } else if (step === 2) {
-        if (!form.gender || !form.birthDate || !/^\d{4}-\d{2}-\d{2}$/.test(form.birthDate)) {
+        if (!form.gender || !form.birthDate) {
           setError('성별과 생년월일을 모두 선택해주세요');
+          return;
+        }
+        if (!isValidBirthDate(form.birthDate)) {
+          setError('생년월일을 올바른 날짜로 선택해주세요');
           return;
         }
         await saveClientStep2({

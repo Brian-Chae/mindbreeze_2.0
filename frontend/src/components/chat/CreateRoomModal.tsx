@@ -186,6 +186,7 @@ export function CreateRoomModal({ open, onClose }: Props) {
 
         <input
           type="text"
+          aria-label="내담자 이름 또는 이메일 검색"
           placeholder="내담자 이름 또는 이메일 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}

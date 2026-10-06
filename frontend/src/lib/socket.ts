@@ -495,7 +495,7 @@ export const joinSessionLive = (
   }
 };
 
-/** room 퇴장 */
+/** room 퇴장 — 참조 카운트가 남아 있으면 실제 leave 를 보내지 않는다(releaseSessionLiveRoom 경유 권장) */
 export const leaveSessionLive = (socket: Socket, sessionId: string): void => {
   // SDD-110: join 상태/스냅샷 캐시 클리어 — 다음 세션 join이 정상 emit되게 한다.
   if (liveCurrentSession === sessionId) {
@@ -505,6 +505,30 @@ export const leaveSessionLive = (socket: Socket, sessionId: string): void => {
   liveSnapshotCache = null;
   if (!socket.connected) return;
   socket.emit('leave', { session_id: sessionId });
+};
+
+/**
+ * WS-09: `/session-live` room 은 하나의 싱글톤 소켓을 여러 훅(useSessionLiveSocket·useBand·
+ * 대기실 훅 등)이 공유한다. 한 훅의 unmount(cleanup)가 다른 훅의 join 을 조기 해제(leave)하지
+ * 않도록 세션별 참조 카운트를 둔다. retain 한 훅만 release 하며, 같은 세션의 마지막 보유자가
+ * 해제할 때만 실제 leave 를 emit 한다.
+ */
+const sessionLiveRoomRefs = new Map<string, number>();
+
+/** 세션 room 참조 획득(+1). effect 본문(join 시점)에서 호출한다. */
+export const retainSessionLiveRoom = (sessionId: string): void => {
+  sessionLiveRoomRefs.set(sessionId, (sessionLiveRoomRefs.get(sessionId) ?? 0) + 1);
+};
+
+/** 세션 room 참조 반환(-1). 마지막 보유자일 때만 leave 를 emit 한다. */
+export const releaseSessionLiveRoom = (socket: Socket, sessionId: string): void => {
+  const remaining = Math.max(0, (sessionLiveRoomRefs.get(sessionId) ?? 1) - 1);
+  if (remaining > 0) {
+    sessionLiveRoomRefs.set(sessionId, remaining);
+    return;
+  }
+  sessionLiveRoomRefs.delete(sessionId);
+  leaveSessionLive(socket, sessionId);
 };
 
 /**

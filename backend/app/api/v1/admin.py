@@ -6,7 +6,7 @@ import uuid
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -89,7 +89,8 @@ class ClientCreateRequest(BaseModel):
     """SDD-020 회원(내담자) 수동 추가 요청."""
 
     name: str
-    email: str
+    # VB-06: 형식 미검증 str → EmailStr 로 교체(잘못된 이메일로 pending 계정·초대 메일 생성 차단).
+    email: EmailStr
     counselor_id: str
     phone: str | None = None
     send_invite: bool = True
@@ -508,6 +509,9 @@ def admin_list_counselors(
     org_id: str | None = Query(default=None, description="기관 UUID 또는 'none'(미소속)"),
     q: str | None = Query(default=None),
     status_filter: str | None = Query(default=None, alias="status"),
+    # VB-05: 전체 .all() 반환 → page/size 로 DB 페이징(total 은 필터 후 전체 건수).
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=20, ge=1, le=100),
     _admin: User = Depends(require_platform_admin),
     db: Session = Depends(get_db),
 ):
@@ -543,7 +547,14 @@ def admin_list_counselors(
         )
     if status_filter:
         query = query.filter(User.status == status_filter)
-    rows = query.order_by(User.created_at.asc(), User.id.asc()).all()
+    # VB-05: 필터 적용 후 전체 건수를 먼저 산출하고(페이지 개념), 요청 페이지만 DB 에서 조회한다.
+    total = query.count()
+    rows = (
+        query.order_by(User.created_at.asc(), User.id.asc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
     # 특정 기관으로 필터하면 표시 소속을 요청 기관 기준으로 정정한다(부 소속 상담사 오인 방지).
     filter_org_name = (
         db.query(Organization.name).filter(Organization.id == filter_org_id).scalar()
@@ -557,7 +568,7 @@ def admin_list_counselors(
                     else (str(user.org_id) if user.org_id else None)),
             org_name=(filter_org_name if filter_org_id is not None else org_name),
         ) for user, code, org_name in rows],
-        total=len(rows),
+        total=total,
     )
 
 

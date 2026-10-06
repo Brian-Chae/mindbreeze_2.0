@@ -1,6 +1,6 @@
 // SDD-082: 기관 관리자 — 상담사 관리 페이지 (조회/검색/상태 관리/이력/활성화·비활성화)
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import AppShell from '../../components/layout/AppShell';
 import CounselorInfoEditor from '../../components/counselor/counselor-info-editor';
 import { ApiError } from '../../lib/api/client';
@@ -163,6 +163,8 @@ function CounselorDetailPanel({
   const [activity, setActivity] = useState<CounselorActivity | null>(null);
   const [tab, setTab] = useState<'sessions' | 'reports'>('sessions');
   const [error, setError] = useState<string | null>(null);
+  // A11Y-11: 최근 세션/리포트 탭 시맨틱스용 id
+  const tabsId = useId();
 
   useEffect(() => {
     let cancelled = false;
@@ -224,17 +226,32 @@ function CounselorDetailPanel({
       </dl>
 
       {/* 최근 이력 탭 */}
-      <div className="mt-5 flex gap-1 border-b border-[#EFEFEF]">
+      <div className="mt-5 flex gap-1 border-b border-[#EFEFEF]" role="tablist" aria-label="최근 이력">
         {(
           [
             ['sessions', `최근 세션 (${activity?.sessions.length ?? 0})`],
             ['reports', `최근 리포트 (${activity?.reports.length ?? 0})`],
           ] as const
-        ).map(([key, label]) => (
+        ).map(([key, label], index, arr) => (
           <button
             key={key}
+            id={`${tabsId}-tab-${key}`}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
+            aria-controls={`${tabsId}-panel-${key}`}
+            tabIndex={tab === key ? 0 : -1}
             onClick={() => setTab(key)}
+            onKeyDown={(event) => {
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+              event.preventDefault();
+              const nextIndex = event.key === 'ArrowRight'
+                ? (index + 1) % arr.length
+                : (index - 1 + arr.length) % arr.length;
+              const nextKey = arr[nextIndex][0];
+              setTab(nextKey);
+              document.getElementById(`${tabsId}-tab-${nextKey}`)?.focus();
+            }}
             className={`px-4 py-2.5 text-[13px] font-semibold transition-colors ${
               tab === key
                 ? 'border-b-2 border-[#5F0080] text-[#5F0080]'
@@ -246,6 +263,13 @@ function CounselorDetailPanel({
         ))}
       </div>
 
+      <div
+        role="tabpanel"
+        id={`${tabsId}-panel-${tab}`}
+        aria-labelledby={`${tabsId}-tab-${tab}`}
+        tabIndex={0}
+        className="focus:outline-none"
+      >
       {activity == null && !error ? (
         <p className="py-6 text-center text-[13px] text-[#6F6F6F]">이력을 불러오는 중…</p>
       ) : tab === 'sessions' ? (
@@ -302,6 +326,7 @@ function CounselorDetailPanel({
       ) : (
         <p className="py-6 text-center text-[13px] text-[#6F6F6F]">최근 리포트가 없습니다.</p>
       )}
+      </div>
     </section>
   );
 }

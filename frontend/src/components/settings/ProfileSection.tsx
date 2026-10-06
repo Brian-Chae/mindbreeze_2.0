@@ -1,6 +1,6 @@
 // 프로필정보 섹션 (소속센터/전문분야/경력연수/자격정보/이력정보)
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type {
   CounselorProfile,
   CounselorProfileUpdate,
@@ -39,6 +39,8 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
   const [draft, setDraft] = useState<ProfileDraft>(() => toDraft(profile));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // A11Y-04: 입력 라벨을 <label htmlFor> 로 연결하기 위한 id
+  const fid = useId();
 
   const startEdit = (): void => {
     setDraft(toDraft(profile));
@@ -151,16 +153,18 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
       {editing ? (
         <div className="space-y-4 text-[14px]">
           <div>
-            <div className={FIELD_LABEL}>소속 센터</div>
+            <label htmlFor={`${fid}-affiliation`} className={FIELD_LABEL}>소속 센터</label>
             <input
+              id={`${fid}-affiliation`}
               className={INPUT_CLASS}
               value={draft.affiliation_type}
               onChange={(e) => setDraft((d) => ({ ...d, affiliation_type: e.target.value }))}
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>전문분야 (쉼표로 구분)</div>
+            <label htmlFor={`${fid}-specialties`} className={FIELD_LABEL}>전문분야 (쉼표로 구분)</label>
             <input
+              id={`${fid}-specialties`}
               className={INPUT_CLASS}
               value={draft.specialties}
               onChange={(e) => setDraft((d) => ({ ...d, specialties: e.target.value }))}
@@ -168,8 +172,9 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>경력연수</div>
+            <label htmlFor={`${fid}-years`} className={FIELD_LABEL}>경력연수</label>
             <input
+              id={`${fid}-years`}
               type="number"
               min="0"
               className={INPUT_CLASS}
@@ -196,6 +201,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                   <div className="flex gap-2">
                     <input
                       className={INPUT_CLASS}
+                      aria-label="자격명"
                       value={q.name}
                       onChange={(e) => updateQualification(idx, 'name', e.target.value)}
                       placeholder="자격명"
@@ -210,6 +216,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                   </div>
                   <input
                     className={INPUT_CLASS}
+                    aria-label="발급기관"
                     value={q.issuer ?? ''}
                     onChange={(e) => updateQualification(idx, 'issuer', e.target.value)}
                     placeholder="발급기관"
@@ -217,6 +224,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                   <input
                     type="date"
                     className={INPUT_CLASS}
+                    aria-label="발급일"
                     value={q.issued_at ?? ''}
                     onChange={(e) => updateQualification(idx, 'issued_at', e.target.value)}
                   />
@@ -246,6 +254,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                   <div className="flex gap-2">
                     <input
                       className={INPUT_CLASS}
+                      aria-label="근무지"
                       value={c.organization}
                       onChange={(e) => updateCareer(idx, 'organization', e.target.value)}
                       placeholder="근무지"
@@ -260,6 +269,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                   </div>
                   <input
                     className={INPUT_CLASS}
+                    aria-label="역할/직책"
                     value={c.role ?? ''}
                     onChange={(e) => updateCareer(idx, 'role', e.target.value)}
                     placeholder="역할/직책"
@@ -268,12 +278,14 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
                     <input
                       type="date"
                       className={INPUT_CLASS}
+                      aria-label="시작일"
                       value={c.started_at ?? ''}
                       onChange={(e) => updateCareer(idx, 'started_at', e.target.value)}
                     />
                     <input
                       type="date"
                       className={INPUT_CLASS}
+                      aria-label="종료일"
                       value={c.ended_at ?? ''}
                       onChange={(e) => updateCareer(idx, 'ended_at', e.target.value)}
                       disabled={c.is_current}

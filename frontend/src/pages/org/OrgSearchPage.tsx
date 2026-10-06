@@ -105,6 +105,7 @@ export default function OrgSearchPage() {
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
+            aria-label="센터명 검색"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="센터명 검색"

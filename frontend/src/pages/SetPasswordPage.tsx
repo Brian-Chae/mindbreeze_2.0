@@ -178,7 +178,9 @@ export default function SetPasswordPage() {
           </div>
         ) : (
           <form onSubmit={(event) => void handleSubmit(event)} className="flex flex-col items-center gap-3">
+            <label htmlFor="set-password-new" className="sr-only">새 비밀번호</label>
             <input
+              id="set-password-new"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -187,7 +189,9 @@ export default function SetPasswordPage() {
               autoComplete="new-password"
               className="h-[52px] w-[280px] rounded-full bg-white border border-[#DDDEE7] px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/15 disabled:opacity-50"
             />
+            <label htmlFor="set-password-confirm" className="sr-only">비밀번호 확인</label>
             <input
+              id="set-password-confirm"
               type="password"
               value={passwordConfirm}
               onChange={(event) => setPasswordConfirm(event.target.value)}

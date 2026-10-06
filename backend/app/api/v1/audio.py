@@ -29,7 +29,8 @@ def start_audio(
 @router.post("/{session_id}/audio/chunk", response_model=ChunkUploadResponse)
 async def upload_chunk(
     session_id: str,
-    chunk_index: int = Form(...),
+    # VB-10: 음수 chunk_index 허용 → ge=0 으로 차단.
+    chunk_index: int = Form(..., ge=0),
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),

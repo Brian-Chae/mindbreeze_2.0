@@ -151,6 +151,7 @@ export function ParticipantPicker({ selected, onChange, maxParticipants }: Props
       {/* 검색 */}
       <input
         type="text"
+        aria-label="내담자 검색"
         placeholder="내담자 검색..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}

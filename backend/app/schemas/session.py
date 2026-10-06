@@ -22,7 +22,8 @@ class SessionCreateRequest(BaseModel):
     # SDD-015: 즉석 클래스는 일정 없이 생성 가능 (None 이면 status=ready)
     scheduled_at: datetime | None = None
     duration_min: int = Field(..., ge=1, le=600)
-    title: str | None = None
+    # VB-01: DB 컬럼이 String(200) — 초과 입력은 422 로 거른다(무가공 저장 500 방지).
+    title: str | None = Field(None, max_length=200)
     notes: str | None = None
     max_participants: int = Field(10, ge=1, le=100)
     location_type: LocationType = "offline"
@@ -74,7 +75,8 @@ class SessionUpdateRequest(BaseModel):
     custom_type_name: str | None = Field(None, max_length=30)
     scheduled_at: datetime | None = None
     duration_min: int | None = Field(None, ge=1, le=600)
-    title: str | None = None
+    # VB-01: DB 컬럼 String(200) — 수정 시에도 상한을 적용한다.
+    title: str | None = Field(None, max_length=200)
     notes: str | None = None
     max_participants: int | None = Field(None, ge=1, le=100)
     location_type: LocationType | None = None

@@ -276,9 +276,19 @@ def generate_report(
     else:
         owner_uuid = s.host_id
         owner_participant_id = None
+        # MB2-ORM-UNQ-12: 앱 레벨 멱등키는 (session_id, type) 인데 저장 시 participant_id 를
+        # ORDER BY 없는 .first() (=비결정적) 로 채워 DB 유니크 인덱스가
+        # (session_id, participant_id, type) 로만 적용되어, 동시 생성 시 서로 다른 participant_id 로
+        # 중복 counselor 리포트가 생길 수 있었다. created_at·id 로 결정적으로 정렬해
+        # participant_id 를 세션당 상수로 고정 → (session_id, participant_id, type) 유니크가
+        # 앱 키 (session_id, type) 와 동일하게 동작하도록 통일한다.
         first_participant = (
             db.query(SessionParticipant)
             .filter(SessionParticipant.session_id == s.id)
+            .order_by(
+                SessionParticipant.joined_at.asc(),
+                SessionParticipant.id.asc(),
+            )
             .first()
         )
         # SDD-065: counselor 리포트도 참여자 정보(이름/성별/생년월일/회원·비회원) 표시를 위해 participant_id 설정

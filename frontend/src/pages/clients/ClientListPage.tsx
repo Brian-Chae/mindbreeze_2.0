@@ -97,6 +97,7 @@ export default function ClientListPage() {
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
+            aria-label="내담자 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 또는 이메일 검색"

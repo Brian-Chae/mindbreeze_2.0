@@ -1,6 +1,6 @@
 // 내담자 프로필정보 섹션 (성별/생년월일/고민분야/관심분야)
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { ClientProfile, ClientProfileUpdate } from '../../lib/api/client-profile';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -45,6 +45,8 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
   const [draft, setDraft] = useState<Draft>(() => toDraft(profile));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // A11Y-04: 입력 라벨을 <label htmlFor> 로 연결하기 위한 id
+  const fid = useId();
 
   const startEdit = (): void => {
     setDraft(toDraft(profile));
@@ -119,8 +121,9 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
       {editing ? (
         <div className="space-y-4 text-[14px]">
           <div>
-            <div className={FIELD_LABEL}>성별</div>
+            <label htmlFor={`${fid}-gender`} className={FIELD_LABEL}>성별</label>
             <select
+              id={`${fid}-gender`}
               className={INPUT_CLASS}
               value={draft.gender}
               onChange={(e) => update('gender', e.target.value)}
@@ -133,8 +136,9 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
             </select>
           </div>
           <div>
-            <div className={FIELD_LABEL}>생년월일</div>
+            <label htmlFor={`${fid}-birth`} className={FIELD_LABEL}>생년월일</label>
             <input
+              id={`${fid}-birth`}
               className={INPUT_CLASS}
               type="date"
               value={draft.birth_date}
@@ -142,8 +146,9 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>고민 분야 (쉼표로 구분)</div>
+            <label htmlFor={`${fid}-concerns`} className={FIELD_LABEL}>고민 분야 (쉼표로 구분)</label>
             <input
+              id={`${fid}-concerns`}
               className={INPUT_CLASS}
               value={draft.concerns}
               onChange={(e) => update('concerns', e.target.value)}
@@ -151,8 +156,9 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
             />
           </div>
           <div>
-            <div className={FIELD_LABEL}>관심 분야 (쉼표로 구분)</div>
+            <label htmlFor={`${fid}-interests`} className={FIELD_LABEL}>관심 분야 (쉼표로 구분)</label>
             <input
+              id={`${fid}-interests`}
               className={INPUT_CLASS}
               value={draft.interests}
               onChange={(e) => update('interests', e.target.value)}

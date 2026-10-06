@@ -205,7 +205,10 @@ class Report(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
     # SDD-027: 게스트 리포트 지원 — user_id nullable, 소유는 participant_id 로 보완한다.
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # MB2-ORM-IDX-07: 내담자 리포트 목록이 Report.user_id 로 필터/조인하므로 인덱스를 둔다.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
     participant_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=True, index=True,
     )

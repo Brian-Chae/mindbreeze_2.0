@@ -36,6 +36,7 @@ export function TranscriptTab({ segments, status }: Props) {
       <div className="relative">
         <input
           type="text"
+          aria-label="전사문 검색"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="전사문 검색..."

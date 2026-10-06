@@ -267,14 +267,17 @@ def test_eeg_qry_01_마이그레이션_헤드_단일_연결():
     cfg.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
     script = ScriptDirectory.from_config(cfg)
 
-    # MB2-ORM-IDX-06(6차): notification_outbox 복합 인덱스 마이그레이션이 헤드로 연결됨.
-    assert script.get_heads() == ["e036a0000033"]
-    head_rev = script.get_revision("e036a0000033")
+    # 6차 중(中) 후속: e036a0000034(인덱스·org_join 유니크) 마이그레이션이 새 헤드로 연결됨.
+    assert script.get_heads() == ["e036a0000034"]
+    head_rev = script.get_revision("e036a0000034")
     assert head_rev is not None
-    assert head_rev.down_revision == "e036a0000032"
-    rev = script.get_revision("e036a0000032")
+    assert head_rev.down_revision == "e036a0000033"
+    rev = script.get_revision("e036a0000033")
     assert rev is not None
-    assert rev.down_revision == "e036a0000031"
+    assert rev.down_revision == "e036a0000032"
+    rev2 = script.get_revision("e036a0000032")
+    assert rev2 is not None
+    assert rev2.down_revision == "e036a0000031"
 
 
 def test_eeg_qry_01_마이그레이션_인덱스_정의():

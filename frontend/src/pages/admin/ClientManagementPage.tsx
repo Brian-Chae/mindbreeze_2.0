@@ -159,6 +159,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
       <div className="relative">
         <input
           type="text"
+          aria-label="상담사 검색"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

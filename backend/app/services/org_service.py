@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.organization import Organization
@@ -196,8 +197,18 @@ def request_join(org_id: str, user_id: str, db: Session) -> OrganizationJoinRequ
         )
 
     req = OrganizationJoinRequest(user_id=user_uuid, org_id=org_uuid, status="pending")
-    db.add(req)
-    db.commit()
+    try:
+        db.add(req)
+        db.commit()
+    except IntegrityError:
+        # MB2-ORM-UNQ-11: 'pending 조회 후 삽입' 경합으로 동시 요청이 통과할 수 있었다.
+        # 부분 유니크 인덱스(uq_org_join_request_pending)가 두 번째 삽입을 막으면
+        # 기존 pending 신청이 있다는 뜻이므로 멱등하게 409 로 응답한다.
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 가입 신청이 진행 중입니다",
+        )
     db.refresh(req)
     from app.services.org_management_service import notify_org_members
 

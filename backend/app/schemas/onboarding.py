@@ -16,8 +16,9 @@ class OnboardingProgressResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class CounselorStep1Request(BaseModel):
-    name: str | None = None
-    phone: str | None = None
+    # VB-08: User.name(String(100))/phone(String(20)) 대입 — 초과 입력 422 차단.
+    name: str | None = Field(None, max_length=100)
+    phone: str | None = Field(None, max_length=20)
 
 
 class CounselorStep2Request(BaseModel):
@@ -47,8 +48,9 @@ class CounselorCompleteResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 class ClientStep1Request(BaseModel):
-    name: str | None = None
-    phone: str | None = None
+    # VB-08: User.name(String(100))/phone(String(20)) 대입 — 초과 입력 422 차단.
+    name: str | None = Field(None, max_length=100)
+    phone: str | None = Field(None, max_length=20)
 
 
 class ClientStep2Request(BaseModel):

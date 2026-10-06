@@ -1,7 +1,7 @@
 // 내담자 세션 캘린더 + 목록 페이지
 // 월간 캘린더 뷰 + 선택일 세션 리스트 + 세션 신청 + 일간/주간/월간 뷰 모드
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listSessions, type SessionDto } from '../../lib/api/session';
 import { listChatRooms, sendChatMessage, type ChatRoom } from '../../lib/api/chat';
@@ -123,18 +123,31 @@ export default function ClientSessionListPage() {
   );
 
   // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
+  // HOOK-STATE-03: sessions 를 deps 로 두면 재조회로 sessions 가 갱신될 때마다 effect 가
+  // 다시 돌아 반영이 지연·중복된다. 최신 sessions 는 ref 로 읽고, 초대 id 별로 1회만 재조회한다.
+  const sessionsRef = useRef(sessions);
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+  const refetchedInviteIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (sessionInvites.length === 0) return;
-    const missing = sessionInvites.some((inv) => !sessions.some((s) => s.id === inv.sessionId));
-    if (!missing) return;
+    const pending = sessionInvites.filter(
+      (inv) =>
+        !sessionsRef.current.some((s) => s.id === inv.sessionId) &&
+        !refetchedInviteIdsRef.current.has(inv.sessionId),
+    );
+    if (pending.length === 0) return;
+    // 재조회 중 중복 요청 방지 — 실패하면 마킹을 되돌려 다음 기회에 재시도한다.
+    pending.forEach((inv) => refetchedInviteIdsRef.current.add(inv.sessionId));
     let cancelled = false;
     listSessions()
       .then((res) => {
         if (!cancelled) setSessions(res.sessions);
       })
-      .catch(() => { /* 조용히 실패 */ });
+      .catch(() => {
+        pending.forEach((inv) => refetchedInviteIdsRef.current.delete(inv.sessionId));
+      });
     return () => { cancelled = true; };
-  }, [sessionInvites, sessions]);
+  }, [sessionInvites]);
 
   const handleConfirmInvite = (sessionId: string): void => {
     const invite = sessionInvites.find((i) => i.sessionId === sessionId);

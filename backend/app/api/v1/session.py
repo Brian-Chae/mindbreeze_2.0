@@ -50,7 +50,8 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 @router.get("", response_model=SessionListResponse)
 def list_sessions(
     page: int | None = Query(default=None, ge=1),
-    limit: int | None = Query(default=None, ge=1),
+    # VB-09: limit 상한(le) 미지정 → 초과 limit 대량 반환 차단.
+    limit: int | None = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
@@ -136,7 +137,8 @@ def get_member_livekit_token(
 @router.get("/templates", response_model=SessionListResponse)
 def list_session_templates(
     page: int | None = Query(default=None, ge=1),
-    limit: int | None = Query(default=None, ge=1),
+    # VB-09: limit 상한(le) 미지정 → 초과 limit 대량 반환 차단.
+    limit: int | None = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):

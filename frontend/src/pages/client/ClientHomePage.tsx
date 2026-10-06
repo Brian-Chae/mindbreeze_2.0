@@ -1,7 +1,7 @@
 // 내담자 홈 화면 — 상담사 대시보드와 동일한 디자인 패턴
 // 캘린더 + 오늘 세션 + 최근 활동 피드 + 최근 리포트
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
@@ -213,18 +213,31 @@ export default function ClientHomePage() {
   );
 
   // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
+  // HOOK-STATE-03: sessions 를 deps 로 두면 재조회로 sessions 가 갱신될 때마다 effect 가
+  // 다시 돌아 반영이 지연·중복된다. 최신 sessions 는 ref 로 읽고, 초대 id 별로 1회만 재조회한다.
+  const sessionsRef = useRef(sessions);
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+  const refetchedInviteIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (sessionInvites.length === 0) return;
-    const missing = sessionInvites.some((inv) => !sessions.some((s) => s.id === inv.sessionId));
-    if (!missing) return;
+    const pending = sessionInvites.filter(
+      (inv) =>
+        !sessionsRef.current.some((s) => s.id === inv.sessionId) &&
+        !refetchedInviteIdsRef.current.has(inv.sessionId),
+    );
+    if (pending.length === 0) return;
+    // 재조회 중 중복 요청 방지 — 실패하면 마킹을 되돌려 다음 기회에 재시도한다.
+    pending.forEach((inv) => refetchedInviteIdsRef.current.add(inv.sessionId));
     let cancelled = false;
     listSessions()
       .then((res) => {
         if (!cancelled) setSessions(res.sessions);
       })
-      .catch(() => { /* 조용히 실패 — 다음 초대/재조회에서 복구 */ });
+      .catch(() => {
+        pending.forEach((inv) => refetchedInviteIdsRef.current.delete(inv.sessionId));
+      });
     return () => { cancelled = true; };
-  }, [sessionInvites, sessions]);
+  }, [sessionInvites]);
 
   const handleConfirmInvite = useCallback(
     (sessionId: string) => {
@@ -260,9 +273,10 @@ export default function ClientHomePage() {
     <div className="max-w-6xl mx-auto">
       {/* 상담사 필터 (좌우 스크롤 pill) */}
       <div className="overflow-x-auto no-scrollbar mb-6">
-        <div className="flex gap-2 min-w-max">
+        <div className="flex gap-2 min-w-max" role="group" aria-label="상담사 필터">
           <button
             type="button"
+            aria-pressed={selectedCounselorId === 'all'}
             className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
               selectedCounselorId === 'all'
                 ? 'bg-[#5F0080] text-white'
@@ -276,6 +290,7 @@ export default function ClientHomePage() {
             <button
               key={c.id}
               type="button"
+              aria-pressed={selectedCounselorId === c.id}
               className={`rounded-full px-4 py-2.5 min-h-[44px] text-sm font-medium transition-colors whitespace-nowrap ${
                 selectedCounselorId === c.id
                   ? 'bg-[#5F0080] text-white'

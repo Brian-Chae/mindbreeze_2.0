@@ -75,7 +75,8 @@ def generate(
 @router.get("", response_model=ReportListResponse)
 def list_all(
     page: int | None = Query(default=None, ge=1),
-    limit: int | None = Query(default=None, ge=1),
+    # VB-09: limit 상한(le) 미지정 → 초대형 limit 대량 조회 차단.
+    limit: int | None = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):

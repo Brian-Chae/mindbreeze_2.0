@@ -2359,8 +2359,10 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
     윈도우가 없는 참가자는 키를 포함하지 않는다(호출측에서 placeholder 처리).
 
     SDD-138: 매 4초 폴링마다 세션 전체 윈도우를 Python 으로 로드하던 것을 DB 집계로 이관한다.
-    - 평균 두뇌휴식도는 SQL AVG(참가자별 GROUP BY)로, 최신 윈도우는 LIMIT 1 로 구해
-      참가자 수가 많아도 부하가 참가자 수에 선형으로만 증가한다.
+    - 평균 두뇌휴식도는 SQL AVG(참가자별 GROUP BY)로 구하고,
+    - MB2-ORM-N1-02: 최신 윈도우는 참가자마다 LIMIT 1 을 개별 호출(N회 쿼리)하지 않고
+      창 함수(ROW_NUMBER PARTITION BY participant_id) 단일 쿼리로 참가자 전체의 최신 1건을
+      한 번에 뽑아 참가자 수와 무관하게 쿼리 수를 상수로 고정한다.
     """
     if not participant_ids:
         return {}
@@ -2384,13 +2386,19 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
         .all()
     }
 
+    # (2) 참가자 전체의 최신 윈도우 1건씩을 단일 쿼리로 일괄 조회.
+    #     정렬은 latest_feature_window 와 동일(created_at DESC, window_index DESC).
+    latest_by_participant = eeg_query.feature_windows_chronological_for_participants(
+        db, session_id, participant_ids, limit=1, newest_first=True,
+    )
+
     now = _now()
     result: dict = {}
     for pid in participant_ids:
-        # (2) 최신 윈도우 — created_at DESC, window_index DESC LIMIT 1 (pause/resume 재시작 대응)
-        latest = eeg_query.latest_feature_window(db, session_id, pid)
-        if latest is None:
+        windows = latest_by_participant.get(pid)
+        if not windows:
             continue
+        latest = windows[0]
         raw_avg = avg_rows.get(pid)
         avg_relaxation = round(float(raw_avg), 4) if raw_avg is not None else None
         result[pid] = {

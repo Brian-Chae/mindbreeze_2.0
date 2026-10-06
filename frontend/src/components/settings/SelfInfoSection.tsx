@@ -1,7 +1,7 @@
 // SDD-080: 내 정보 섹션 (이름/전화 + 선택적으로 성별/생년월일) — PATCH /auth/users/me 기반.
 // 회원(client) 및 상담사 프로필이 없는 기관 관리자(org_admin)의 자기 정보 수정에 사용한다.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { UpdateUserMePayload } from '../../lib/api/auth';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -45,6 +45,8 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
   const [draft, setDraft] = useState<Draft>(() => toDraft(value));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // A11Y-04: 입력 라벨을 <label htmlFor> 로 연결하기 위한 id
+  const fid = useId();
 
   const startEdit = (): void => {
     setDraft(toDraft(value));
@@ -124,8 +126,9 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
       {editing ? (
         <div className="space-y-4 text-[14px]">
           <div>
-            <div className={FIELD_LABEL}>이름</div>
+            <label htmlFor={`${fid}-name`} className={FIELD_LABEL}>이름</label>
             <input
+              id={`${fid}-name`}
               className={INPUT_CLASS}
               value={draft.name}
               onChange={(e) => update('name', e.target.value)}
@@ -138,8 +141,9 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
             </div>
           </div>
           <div>
-            <div className={FIELD_LABEL}>전화번호</div>
+            <label htmlFor={`${fid}-phone`} className={FIELD_LABEL}>전화번호</label>
             <input
+              id={`${fid}-phone`}
               className={INPUT_CLASS}
               value={draft.phone}
               onChange={(e) => update('phone', e.target.value)}
@@ -149,8 +153,9 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
           {showPersonal && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <div className={FIELD_LABEL}>성별</div>
+                <label htmlFor={`${fid}-gender`} className={FIELD_LABEL}>성별</label>
                 <select
+                  id={`${fid}-gender`}
                   className={INPUT_CLASS}
                   value={draft.gender}
                   onChange={(e) => update('gender', e.target.value)}
@@ -162,8 +167,9 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
                 </select>
               </div>
               <div>
-                <div className={FIELD_LABEL}>생년월일</div>
+                <label htmlFor={`${fid}-birth`} className={FIELD_LABEL}>생년월일</label>
                 <input
+                  id={`${fid}-birth`}
                   type="date"
                   className={INPUT_CLASS}
                   value={draft.birth_date}

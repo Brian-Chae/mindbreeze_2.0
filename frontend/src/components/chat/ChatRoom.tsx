@@ -1,5 +1,5 @@
 // 채팅방 — iOS 모바일 대응 재구현 + WebSocket 실시간
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listChatMessages, listChatMessagesAround, sendChatMessage, markRoomRead, markMessagesRead, type ChatMessage } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -66,7 +66,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const user = useAuthStore((s) => s.user);
   const messages = useChatStore((s) => s.messagesByRoom[roomId]);
   // store는 최신순 저장 → 일반 flex-col용으로 오래된 순으로 뒤집기
-  const msgList = messages ? [...messages].reverse() : [];
+  // HOOK-STATE-02: 렌더마다 새 배열을 만들면 아래 IntersectionObserver effect 가
+  // msgList 참조 변화로 매 렌더 재생성된다 — messages 기준으로 안정 참조를 유지한다.
+  const msgList = useMemo(() => (messages ? [...messages].reverse() : []), [messages]);
   const setMessages = useChatStore((s) => s.setMessages);
   const appendMessage = useChatStore((s) => s.appendMessage);
   const updateSenderName = useChatStore((s) => s.updateSenderName);

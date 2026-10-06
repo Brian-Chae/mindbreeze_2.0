@@ -110,8 +110,9 @@ def fork_room(
 @router.get("/invitable-counselors", response_model=InvitableCounselorsResponse)
 def list_invitable_counselors(
     q: str | None = None,
-    page: int = 1,
-    size: int = 50,
+    # VB-04: page/size 검증 + 서비스에서 DB LIMIT/OFFSET 페이징.
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
@@ -152,7 +153,8 @@ def remove_room_participant(
 @router.get("/rooms/{room_id}/messages", response_model=MessageListResponse)
 def list_messages(
     room_id: str,
-    limit: int = 50,
+    # VB-03: ge/le 검증이 없어 큰 limit 으로 방 전체를 반환받을 수 있었다.
+    limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
