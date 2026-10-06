@@ -134,8 +134,16 @@ def _serialize(
     participant_info: dict | None = None,
     subjective: dict | None = None,
     counselor_names: dict[UUID, str] | None = None,
+    strip_timeline: bool = False,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
+    # RPT-PAYLOAD-01: 목록 조회는 EEG 시계열(eeg.timeline, 최대 수 MB)을 제외한다.
+    # 목록 카드는 headline/summary 요약만 쓰므로 대용량 timeline 을 내려보내는 건
+    # 직렬화·전송 낭비(45건 × 수백 KB → 수 초 지연)다. 상세 조회(get_report)만 전체를 담는다.
+    if strip_timeline:
+        eeg_block = content.get("eeg")
+        if isinstance(eeg_block, dict) and "timeline" in eeg_block:
+            content["eeg"] = {**eeg_block, "timeline": None}
     eeg = content.get("eeg")
     summary = HRVMotionSummary.model_validate(eeg if isinstance(eeg, dict) else {})
     return {
@@ -661,6 +669,7 @@ def list_reports(
                     participant_info=participant_info_map.get(report.participant_id),
                     subjective=_subjective_from_map(report, records_map),
                     counselor_names=counselor_names,
+                    strip_timeline=True,
                 )
             )
         else:
