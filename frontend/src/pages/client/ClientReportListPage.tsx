@@ -291,10 +291,6 @@ export default function ClientReportListPage() {
 
   return (
     <div className="px-4 md:px-8 py-4 md:py-6">
-      <div className="pt-4 pb-2 md:flex md:justify-between md:items-center">
-        <h2 className="text-lg font-bold text-[#1F1F1F]">리포트</h2>
-        <p className="text-xs text-[#6F6F6F] font-mono uppercase tracking-wider">AI REPORTS</p>
-      </div>
       <div className="flex flex-wrap items-center gap-2 py-4">
         <input type="search" aria-label="제목·요약 검색" placeholder="제목·요약 검색"
           value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }}
