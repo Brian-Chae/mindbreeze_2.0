@@ -162,7 +162,7 @@ export default function DashboardPage() {
       const [res, chatRes, notifRes] = await Promise.all([
         getCounselorDashboard(),
         listChatRooms().catch(() => ({ rooms: [] as ChatRoom[] })),
-        listNotifications(undefined, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
+        listNotifications(true, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
       ]);
       setData(res);
       setChatRooms(chatRes.rooms);
@@ -232,6 +232,7 @@ export default function DashboardPage() {
 
   const recentNotifications = useMemo(() => {
     return [...notifications]
+      .filter((n) => !n.is_read)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3);
   }, [notifications]);

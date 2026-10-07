@@ -234,7 +234,7 @@ export default function ClientHomePage() {
           listSessions(),
           listReports(),
           listChatRooms().catch(() => ({ rooms: [] as ChatRoom[] })),
-          listNotifications(undefined, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
+          listNotifications(true, 5).catch(() => ({ notifications: [] as NotificationDto[], total: 0, unread: 0 })),
         ]);
         if (cancelled) return;
         setSessions(sessRes.sessions);
@@ -319,8 +319,10 @@ export default function ClientHomePage() {
   }, [chatRooms]);
 
   // 최근 알림 (최신순)
+  // 새 알림 = 아직 읽지 않은 알림만 노출 (읽은 알림은 제외해 안읽음 포인터 혼선 방지)
   const recentNotifications = useMemo(() => {
     return [...notifications]
+      .filter((n) => !n.is_read)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .slice(0, 3);
   }, [notifications]);
