@@ -215,6 +215,17 @@ export default function DashboardPage() {
     () => data?.classes.filter((c) => c.status === 'scheduled' || c.status === 'ready') ?? [],
     [data],
   );
+
+  // ── 다음 세션 (포인트 카드) ────────────────────────────────────
+  // 진행 중/오픈 세션이 최우선, 없으면 가장 임박한 예정 세션 1개.
+  const nextSession = useMemo<ClassSummary | null>(() => {
+    if (!data) return null;
+    if (liveClasses.length > 0) return liveClasses[0];
+    const upcoming = data.classes
+      .filter((c) => c.scheduled_at && new Date(c.scheduled_at) >= new Date() && c.status !== 'cancelled')
+      .sort((a, b) => new Date(a.scheduled_at!).getTime() - new Date(b.scheduled_at!).getTime());
+    return upcoming[0] ?? null;
+  }, [data, liveClasses]);
   const pastClasses = useMemo(
     () => data?.classes.filter((c) => c.status === 'completed' || c.status === 'cancelled') ?? [],
     [data],
@@ -336,50 +347,73 @@ export default function DashboardPage() {
             {/* 지금 할 일 (Action Queue) */}
             <section>
               <h2 className="mb-4 font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">지금 할 일</h2>
-              {liveClasses.length === 0 && pendingReviewCount === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#E8E3EC] p-8 text-center text-sm text-[#6F6F6F]">
-                  지금 처리할 일이 없습니다
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {liveClasses.map((cls) => (
-                    <div
-                      key={cls.id}
-                      className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]"
-                    >
-                      <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
-                        <span className="h-2 w-2 rounded-full bg-[#01f0c8]" />
-                        진행 중
-                      </div>
-                      <h3 className="mt-1 text-[18px] font-extrabold leading-tight sm:text-[20px]">
-                        {cls.title || '제목 없음'}
-                      </h3>
-                      <p className="mt-1 text-[13px] opacity-90">
-                        참여자 {cls.participant_count}명
-                        {cls.started_at ? ` · 시작 ${formatTime(cls.started_at)}` : ''}
-                        {cls.access_code ? ` · 코드 ${cls.access_code}` : ''}
-                      </p>
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
-                        {cls.access_code && (
-                          <button
-                            type="button"
-                            onClick={() => void navigator.clipboard.writeText(cls.access_code ?? '')}
-                            className="rounded-lg bg-white/15 border border-white/25 px-3 py-2 text-[12px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
-                          >
-                            코드 복사
-                          </button>
-                        )}
+              <div className="flex flex-col gap-3">
+                {nextSession ? (
+                  <div className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
+                      <span className="h-2 w-2 rounded-full bg-[#01f0c8]" />
+                      {nextSession.status === 'in_progress' || nextSession.status === 'open'
+                        ? '진행 중'
+                        : '다음 세션'}
+                    </div>
+                    <h3 className="mt-1 text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
+                      {nextSession.title || '제목 없음'}
+                    </h3>
+                    <p className="mt-1 text-[13px] text-white">
+                      {nextSession.scheduled_at ? `${formatDateTime(nextSession.scheduled_at)} · ` : ''}
+                      참여자 {nextSession.participant_count}명
+                      {nextSession.access_code ? ` · 코드 ${nextSession.access_code}` : ''}
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      {nextSession.access_code && (
                         <button
                           type="button"
-                          onClick={() => handleEnterLive(cls.id)}
+                          onClick={() => void navigator.clipboard.writeText(nextSession.access_code ?? '')}
+                          className="rounded-lg bg-white/15 border border-white/25 px-3 py-2 text-[12px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
+                        >
+                          코드 복사
+                        </button>
+                      )}
+                      {nextSession.status === 'in_progress' || nextSession.status === 'open' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleEnterLive(nextSession.id)}
                           className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                         >
                           입장
                         </button>
-                      </div>
+                      ) : (
+                        <Link
+                          to={`/sessions/${nextSession.id}`}
+                          className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+                        >
+                          상세 보기
+                        </Link>
+                      )}
                     </div>
-                  ))}
-                  {pendingReviewCount > 0 && (
+                  </div>
+                ) : (
+                  <div className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
+                      다음 세션
+                    </div>
+                    <h3 className="mt-1 text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
+                      아직 예정된 세션이 없어요
+                    </h3>
+                    <p className="mt-1 text-[13px] text-white">
+                      클래스를 바로 열어 내담자와 세션을 시작해보세요.
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <Link
+                        to="/sessions/new"
+                        className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+                      >
+                        클래스 바로 열기
+                      </Link>
+                    </div>
+                  </div>
+                )}
+                {pendingReviewCount > 0 && (
                     <div className="rounded-2xl border border-[#DDD0EA] bg-white p-5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -400,7 +434,6 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-              )}
             </section>
 
             {/* 오늘·다가오는 일정 */}
