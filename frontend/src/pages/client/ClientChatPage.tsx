@@ -129,7 +129,7 @@ export default function ClientChatPage() {
   }, [selectedRoom]);
 
   return (
-    <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab noBottomPad>
+    <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
       {/* 상담사 연결 전 안내 */}
       {!hasCounselors ? (
         <div className="flex flex-col items-center justify-center flex-1 min-h-[60vh] px-6">
