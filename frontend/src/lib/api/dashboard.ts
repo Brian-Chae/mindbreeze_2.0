@@ -21,6 +21,7 @@ export interface ClassSummary {
   record_status: string | null;
   has_summary: boolean;
   report_count: number;
+  pending_review_count: number;
 }
 
 export interface CounselorDashboardResponse {
@@ -34,6 +35,7 @@ export interface CounselorDashboardResponse {
   in_progress_classes: number;
   completed_classes: number;
   total_participants: number;
+  pending_review_count: number;
   classes: ClassSummary[];
 }
 

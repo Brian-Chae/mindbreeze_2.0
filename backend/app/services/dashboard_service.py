@@ -28,6 +28,7 @@ def _class_summary(
     *,
     record: SessionRecord | None,
     report_count: int,
+    pending_review_count: int,
     participants: list[SessionParticipant],
 ) -> dict:
     guest_count = sum(1 for p in participants if p.user_id is None)
@@ -49,6 +50,7 @@ def _class_summary(
         "record_status": record.status if record else None,
         "has_summary": bool(record.ai_summary) if record else False,
         "report_count": report_count,
+        "pending_review_count": pending_review_count,
     }
 
 
@@ -77,14 +79,18 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     }
 
     report_counts: dict[uuid.UUID, int] = {}
+    pending_review_counts: dict[uuid.UUID, int] = {}
     for rep in db.query(Report).filter(Report.session_id.in_(ids)).all():
         report_counts[rep.session_id] = report_counts.get(rep.session_id, 0) + 1
+        if rep.status == "pending_review":
+            pending_review_counts[rep.session_id] = pending_review_counts.get(rep.session_id, 0) + 1
 
     return [
         _class_summary(
             s,
             record=records_by_session.get(s.id),
             report_count=report_counts.get(s.id, 0),
+            pending_review_count=pending_review_counts.get(s.id, 0),
             participants=parts_by_session.get(s.id, []),
         )
         for s in sessions
@@ -139,6 +145,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "total_participants": sum(c["participant_count"] for c in summaries),
+        "pending_review_count": sum(c["pending_review_count"] for c in summaries),
         "classes": summaries,
     }
 

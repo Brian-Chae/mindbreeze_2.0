@@ -183,13 +183,9 @@ export default function DashboardPage() {
     () => data?.classes.filter((c) => c.status === 'in_progress' || c.status === 'open') ?? [],
     [data],
   );
-  const pendingReviewCount = useMemo(
-    () =>
-      data?.classes.filter(
-        (c) => c.status === 'completed' && c.has_record && c.report_count > 0,
-      ).length ?? 0,
-    [data],
-  );
+  // 검토 대기 = 승인 게이트(pending_review)에 있는 리포트 수 (백엔드 집계).
+  // 클래스 완료 여부·기록 존재 여부와 무관하게 실제 검토중 리포트 수와 일치해야 한다.
+  const pendingReviewCount = data?.pending_review_count ?? 0;
   const todaySessions = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
