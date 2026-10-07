@@ -85,7 +85,7 @@ export function SessionListTable({
         <span className="text-center font-medium">참여인원</span>
         <span className="text-center font-medium">상태</span>
         <span className="text-center font-medium">시간</span>
-        <span className="w-[13rem] text-center font-medium">동작</span>
+        <span className="w-[10rem] min-w-[10rem] text-center font-medium">동작</span>
       </div>
 
       {loading && (
@@ -111,7 +111,7 @@ export function SessionListTable({
                 <button
                   type="button"
                   onClick={() => navigate(`/sessions/${session.id}/player`)}
-                  className="mb-btn px-3 py-1.5 text-xs"
+                  className="mb-btn px-2.5 py-1 text-xs"
                 >
                   입장
                 </button>
@@ -121,7 +121,7 @@ export function SessionListTable({
                 type="button"
                 onClick={() => void handleDuplicate(session.id)}
                 disabled={duplicatingId === session.id}
-                className="mb-btn mb-btn--ghost px-3 py-1.5 text-xs disabled:cursor-not-allowed"
+                className="mb-btn mb-btn--ghost px-2.5 py-1 text-xs disabled:cursor-not-allowed"
               >
                 {duplicatingId === session.id ? '복제 중...' : '복제'}
               </button>
@@ -130,7 +130,7 @@ export function SessionListTable({
                   type="button"
                   onClick={() => void handleClose(session.id)}
                   disabled={closingId === session.id}
-                  className="mb-btn mb-btn--ghost px-3 py-1.5 text-xs !text-[#B3261E] disabled:cursor-not-allowed"
+                  className="mb-btn mb-btn--ghost px-2.5 py-1 text-xs !text-[#B3261E] disabled:cursor-not-allowed"
                 >
                   {closingId === session.id ? '닫는 중...' : '닫기'}
                 </button>
@@ -157,8 +157,8 @@ export function SessionListTable({
                 <span className="text-center font-mono text-[var(--mb-fg-muted)]">
                   {formatTime(session.scheduled_at ?? session.started_at ?? session.created_at)}
                 </span>
-                <div className="flex w-[13rem] flex-col items-end gap-1">
-                  <div className="flex items-center justify-end gap-2">{actionButtons}</div>
+                <div className="flex w-[10rem] min-w-[10rem] flex-col items-end gap-1">
+                  <div className="flex items-center justify-end gap-1.5">{actionButtons}</div>
                   {duplicateError && (
                     <p role="alert" className="text-right text-xs text-[#B3261E]">
                       {duplicateError}

@@ -360,7 +360,7 @@ export default function ClientSessionListPage() {
       </div>
 
       {/* ===== 데스크톱: 좌측 캘린더+목록 / 우측 타임라인 (50:50) ===== */}
-      <div className="hidden md:grid grid-cols-2 gap-6 min-h-0">
+      <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-6 min-h-0">
         {/* 좌측: 캘린더 + 선택일 세션 목록 */}
         <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
           <MonthCalendar
@@ -395,7 +395,7 @@ export default function ClientSessionListPage() {
         </div>
 
         {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
-        <div className="flex flex-col min-h-0">
+        <div className="flex flex-col min-h-0 overflow-y-auto">
           <div className="flex items-center justify-between shrink-0 mb-3">
             <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
               {(['daily', 'weekly'] as const).map((m) => (

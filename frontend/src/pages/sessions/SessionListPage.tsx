@@ -728,7 +728,7 @@ export default function SessionListPage() {
         </div>
 
         {/* 데스크톱: 좌측 캘린더 / 우측 표·타임라인 (태블릿은 1열로 쌓아 가로 오버플로를 막는다) */}
-        <div className="hidden min-h-0 flex-1 gap-6 md:grid md:grid-cols-1 lg:grid lg:grid-cols-2">
+        <div className="hidden min-h-0 flex-1 gap-6 md:grid md:grid-cols-1 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-y-auto">
             <MonthCalendar
               sessions={sessions}
