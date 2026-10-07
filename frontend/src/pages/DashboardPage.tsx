@@ -346,10 +346,9 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-6 lg:gap-8 min-w-0">
             {/* 지금 할 일 (Action Queue) */}
             <section>
-              <h2 className="mb-4 font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">지금 할 일</h2>
               <div className="flex flex-col gap-3">
                 {nextSession ? (
-                  <div className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+                  <div className="flex flex-col rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:min-h-[248px]">
                     <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
                       <span className="h-2 w-2 rounded-full bg-[#01f0c8]" />
                       {nextSession.status === 'in_progress' || nextSession.status === 'open'
@@ -364,7 +363,7 @@ export default function DashboardPage() {
                       참여자 {nextSession.participant_count}명
                       {nextSession.access_code ? ` · 코드 ${nextSession.access_code}` : ''}
                     </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       {nextSession.access_code && (
                         <button
                           type="button"
@@ -393,7 +392,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)]">
+                  <div className="flex flex-col rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:min-h-[248px]">
                     <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
                       다음 세션
                     </div>
@@ -403,7 +402,7 @@ export default function DashboardPage() {
                     <p className="mt-1 text-[13px] text-white">
                       클래스를 바로 열어 내담자와 세션을 시작해보세요.
                     </p>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       <Link
                         to="/sessions/new"
                         className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"

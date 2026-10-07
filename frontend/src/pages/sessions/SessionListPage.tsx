@@ -701,7 +701,7 @@ export default function SessionListPage() {
 
   return (
     <AppShell title="클래스 목록" sub="SESSIONS" rightSlot={rightSlot} noScroll>
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col bg-[var(--mb-white)]">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col">
         {/* 즉시 클래스 — 1.0 평평한 표 */}
         {instantSessions.length > 0 && (
           <section className="mb-4 shrink-0 overflow-hidden rounded-[var(--mb-radius-md)] border border-[var(--mb-divider)] bg-[var(--mb-white)]">
