@@ -57,7 +57,7 @@ interface AuthState {
   /** 세션 복구 재시도 — initialize() 를 다시 실행한다. */
   retryInitialize: () => void;
   login: (email: string, password: string, role?: UserRole, rememberMe?: boolean) => Promise<User>;
-  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: { tos: boolean; privacy: boolean; sensitive: boolean }) => Promise<User>;
+  loginGoogle: (idToken: string, inviteToken?: string, role?: string, rememberMe?: boolean, consents?: { tos: boolean; privacy: boolean; sensitive: boolean }, tokenKind?: 'access_token' | 'id_token') => Promise<User>;
   devLogin: (userId: string) => Promise<User>;
   registerClient: (data: ClientRegisterPayload, rememberMe?: boolean) => Promise<User>;
   refreshAuth: () => Promise<boolean>;
@@ -163,9 +163,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return user;
   },
 
-  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents): Promise<User> => {
+  loginGoogle: async (idToken, inviteToken, role, rememberMe = true, consents, tokenKind = 'access_token'): Promise<User> => {
     const res = await apiLoginGoogle(
-      { access_token: idToken, invite_token: inviteToken, role, consents },
+      { [tokenKind]: idToken, invite_token: inviteToken, role, consents },
       rememberMe,
     );
     const user = applyLogin(res, role);

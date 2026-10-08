@@ -75,6 +75,8 @@ class Settings(BaseSettings):
 
     # Google OAuth
     google_client_id: str = ""
+    # 네이티브 앱 id_token 의 추가 허용 aud(쉼표 구분) — Firebase 웹 클라이언트 ID 등
+    google_extra_client_ids: str = ""
 
     # SDD-087: Gemini — 상담사 코멘트 AI 초안 생성 (키 부재 시 규칙 템플릿 폴백)
     gemini_api_key: str = ""

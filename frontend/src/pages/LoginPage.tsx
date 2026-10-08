@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useGoogleLogin } from '@react-oauth/google';
+import { isNativeApp } from '../lib/native/platform';
+import { nativeGoogleIdToken } from '../lib/native/google';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 import { resolvePostLoginPath } from '../lib/auth-routing';
@@ -129,8 +131,33 @@ export default function LoginPage() {
       finish();
     },
   });
+  // 네이티브 앱: 시스템 계정 선택기로 id_token 획득 → 서버 교환
+  const nativeGoogleLogin = async () => {
+    const started = intent.current;
+    if (!started) return;
+    try {
+      const idToken = await nativeGoogleIdToken();
+      const user = await loginGoogle(
+        idToken, undefined, started.role, started.rememberMe,
+        { tos: googleConsent, privacy: googleConsent, sensitive: googleConsent }, 'id_token',
+      );
+      navigate(resolvePostLoginPath(user, started.next));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        setNeedsGoogleConsent(true);
+        setError(err.message || 'Google로 처음 가입하는 경우 이용약관·개인정보 처리방침·민감정보 처리에 동의가 필요합니다.');
+      } else if (err instanceof ApiError) {
+        showError(err);
+      } else {
+        setError('Google 로그인이 취소되었거나 실패했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      finish();
+    }
+  };
   const handleGoogleClick = () => {
-    if (loginRole === 'org_admin' || !hasGoogleClientId || !begin('google')) return;
+    if (loginRole === 'org_admin' || (!hasGoogleClientId && !isNativeApp()) || !begin('google')) return;
+    if (isNativeApp()) { void nativeGoogleLogin(); return; }
     // FUNC-10: 동의 여부와 무관하게 먼저 로그인을 시도한다. 기존 사용자는 그대로 통과하고,
     // 신규 가입은 백엔드가 422(동의 필요)를 주면 그때 체크박스를 노출한다.
     try { googleLogin(); } catch (err) { showError(err); finish(); }
@@ -152,7 +179,7 @@ export default function LoginPage() {
     if (target !== null) { event.preventDefault(); selectTab(target); }
   };
   const googleButton = (
-    <button type="button" onClick={handleGoogleClick} disabled={busy || !hasGoogleClientId}
+    <button type="button" onClick={handleGoogleClick} disabled={busy || (!hasGoogleClientId && !isNativeApp())}
       className={`flex h-[52px] w-full items-center justify-center gap-3 rounded-full border border-white/30 px-4 text-[15px] font-semibold transition-colors disabled:opacity-50 ${loginRole === 'client' || loginRole === 'counselor' ? 'bg-white text-[#5F0080] hover:bg-white/90' : 'bg-white/10 text-white hover:bg-white/20'}`}>
       <img src="/mb-design/assets/icons/icon_google.svg" width={20} height={20} alt="" aria-hidden="true" />
       {pending === 'google' ? '연결 중…' : isAdmin ? 'Google Workspace로 로그인' : `Google로 ${config.label} 로그인`}

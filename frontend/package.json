@@ -18,6 +18,14 @@
     "cap:ios": "npm run build && cap sync ios && cap open ios"
   },
   "dependencies": {
+    "@capacitor-community/bluetooth-le": "8.2.0",
+    "@capacitor/android": "8.3.4",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "8.3.4",
+    "@capacitor/core": "8.3.4",
+    "@capacitor/ios": "8.3.4",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capgo/capacitor-social-login": "^8.5.13",
     "@livekit/components-react": "^2.9.21",
     "@livekit/components-styles": "^1.2.0",
     "@react-oauth/google": "^0.13.5",
@@ -30,14 +38,7 @@
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1",
     "socket.io-client": "^4.8.3",
-    "zustand": "^5.0.13",
-    "@capacitor/core": "8.3.4",
-    "@capacitor/cli": "8.3.4",
-    "@capacitor/android": "8.3.4",
-    "@capacitor/ios": "8.3.4",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/push-notifications": "^8.0.0",
-    "@capacitor-community/bluetooth-le": "8.2.0"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

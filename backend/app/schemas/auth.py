@@ -3,7 +3,7 @@
 import re
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_serializer, field_validator, model_validator
 
 _PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
 
@@ -148,7 +148,10 @@ class UserResponse(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    access_token: str
+    # 웹: access_token(userinfo+tokeninfo aud 검증) / 네이티브 앱(Capacitor): id_token(tokeninfo aud·email_verified 검증).
+    # 둘 중 정확히 하나가 필요하다.
+    access_token: str | None = None
+    id_token: str | None = None
     invite_token: str | None = None
     role: str | None = Field(None, pattern="^(client|counselor|org_admin|platform_admin)$")
     # SEC-04: 신규 Google 가입 시 약관·민감정보 동의. 기존 사용자 로그인은 불필요.
@@ -156,6 +159,12 @@ class GoogleAuthRequest(BaseModel):
     consents: ConsentRequest | None = None
     # 자동 로그인(로그인 상태 유지) — 이메일 로그인과 동일한 refresh 쿠키 분기.
     remember_me: bool = True
+
+    @model_validator(mode="after")
+    def _require_one_token(self):
+        if bool(self.access_token) == bool(self.id_token):
+            raise ValueError("access_token 또는 id_token 중 하나만 전달해야 합니다")
+        return self
 
 
 class UpdateUserMeRequest(BaseModel):

@@ -83,7 +83,9 @@ export const resetPassword = (token: string, newPassword: string): Promise<{ ok:
   apiClient.post('/auth/password/reset', { token, new_password: newPassword }, { skipAuth: true });
 
 export interface GoogleLoginPayload {
-  access_token: string;
+  /** 웹: access_token / 네이티브 앱: id_token (둘 중 하나) */
+  access_token?: string;
+  id_token?: string;
   invite_token?: string;
   role?: string;
   /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
