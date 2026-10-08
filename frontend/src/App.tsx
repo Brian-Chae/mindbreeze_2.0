@@ -20,7 +20,6 @@ import { RoleGuard } from './components/auth/RoleGuard';
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
-const CounselorAgentPage = lazy(() => import('./pages/agent/counselor-agent-page'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
@@ -98,6 +97,12 @@ function RoleRouter() {
 }
 
 /** 루트 진입: 네이티브 앱은 랜딩 없이 로그인(또는 로그인 상태면 역할별 홈)으로 바로 이동 */
+/** 구 AI 대화 경로(/agent, 푸시 딥링크) → 채팅 목록의 루시(AI) 채널 */
+function LegacyAgentRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/chat/lucy${location.search}`} replace />;
+}
+
 function EntryRoute() {
   if (isNativeApp()) return <RoleRouter />;
   return <LandingPage />;
@@ -158,7 +163,7 @@ const router = createBrowserRouter(
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/membership-invite" element={<MembershipInvitePage />} />
-        <Route path="/agent" element={<RoleGuard role="counselor"><CounselorAgentPage /></RoleGuard>} />
+        <Route path="/agent" element={<RoleGuard role="counselor"><LegacyAgentRedirect /></RoleGuard>} />
         <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />

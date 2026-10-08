@@ -18,7 +18,6 @@ interface TabItem {
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
-  { to: '/app/ai', label: 'AI 대화', icon: ICONS.message },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
 ];
@@ -50,8 +49,8 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
         const unread =
-          tab.label === 'AI 대화' ? agentUnread : tab.label === '채팅'
-            ? chatUnread
+          tab.label === '채팅'
+            ? chatUnread + agentUnread
             : tab.label === '리포트'
               ? reportUnread
               : tab.label === '세션'

@@ -248,7 +248,7 @@ def test_TS15_안부_푸시_payload_에_이름과_감정이_없다(client):
     ]
     assert len(rows) == 1, rows
     payload = rows[0]["payload"]
-    assert payload["title"] == "AI 비서"
+    assert payload["title"] == "루시 (AI)"
     assert payload["deeplink"] == "/app/ai"
     serialized = str(payload)
     for token in ("박내담", "안부가 궁금", "불안", "우울", "위험"):

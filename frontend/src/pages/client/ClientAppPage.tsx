@@ -2,10 +2,9 @@
 // 상담사 연결 안 됨 → 코드 입력 화면
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
 
-import AiAgentPage from './ai-agent-page';
 import ClientNotificationPage from './ClientNotificationPage';
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { apiClient } from '../../lib/api/client';
 import ClientShell from '../../components/client/ClientShell';
@@ -251,7 +250,10 @@ export default function ClientAppPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
 
-  if (pathname === '/app/ai' || pathname === '/app/ai/') return <AiAgentPage key={user?.id} />;
+  // AI 대화는 채팅 목록의 루시(AI) 채널로 통합 — 구 경로·푸시 딥링크는 리다이렉트
+  if (pathname === '/app/ai' || pathname === '/app/ai/') return <Navigate to="/app/chat/lucy" replace />;
+  // 채팅(루시 채널 포함)은 상담사 연결 전에도 접근 가능 — 코드 입력 게이트보다 먼저 처리
+  if (pathname.startsWith('/app/chat')) return <ClientChatPage />;
 
   // 로딩 중
   if (counselors === null && !fetchError) {

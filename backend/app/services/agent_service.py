@@ -45,10 +45,10 @@ AGENT_DEEPLINK = "/app/ai"
 COUNSELOR_AGENT_DEEPLINK = "/agent"
 
 # 푸시 비식별 고정 문구 — 이름·상담 내용·리포트 문장을 담지 않는다.
-PUSH_TITLE = "AI 비서"
-PUSH_BODY = "AI 비서가 메시지를 보냈어요"
+PUSH_TITLE = "루시 (AI)"
+PUSH_BODY = "루시가 메시지를 보냈어요"
 # SDD-189 브리핑 푸시 문구 — 내담자 이름·상담 내용이 잠금화면에 보이면 안 된다.
-PUSH_BODY_BRIEFING = "AI 비서가 브리핑을 보냈어요"
+PUSH_BODY_BRIEFING = "루시가 브리핑을 보냈어요"
 
 # 채널 식별자 — AgentConversation.channel 값.
 CHANNEL_CLIENT = "client"
@@ -900,7 +900,7 @@ def _handle_request_change(
                 host_id,
                 {
                     "title": "일정 변경 문의가 접수되었습니다",
-                    "body": "내담자가 예약 일정 변경을 문의했습니다. AI 비서 중계 내용을 확인해 주세요.",
+                    "body": "내담자가 예약 일정 변경을 문의했습니다. 루시(AI) 중계 내용을 확인해 주세요.",
                     "extra": notification_service.build_standard_extra(
                         "schedule_change_request",
                         "session",

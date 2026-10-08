@@ -46,7 +46,7 @@ def test_TS7_위험_표현에_상담사_알림이_한_벌_생성된다(client):
     assert H.cta_ids(alerts[0]) == {"open_client", "open_risk_signals"}
 
     # 3) 인앱 알림 이벤트 — 본문 비식별
-    notices = H.notifications_of(counselor["id"], title="AI 비서")
+    notices = H.notifications_of(counselor["id"], title="루시 (AI)")
     assert len(notices) == 1, notices
     assert notices[0]["extra"].get("event_type") == agent_risk.RISK_NOTIFICATION_EVENT
     for token in ("박내담", "죽고", agent_risk.LEVEL_HIGH):

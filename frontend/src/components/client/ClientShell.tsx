@@ -58,7 +58,7 @@ export default function ClientShell({
   useEffect(() => {
     let cancelled = false;
     // 대화 페이지에서는 실제 읽음 API 응답으로 배지를 갱신한다.
-    if (pathname.startsWith('/app/ai')) return;
+    if (pathname.startsWith('/app/chat/lucy')) return;
     const refresh = () => {
       void getUnreadCount().then((result) => {
         if (!cancelled) useAgentStore.getState().setUnread(result.unread);

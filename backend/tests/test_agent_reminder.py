@@ -285,7 +285,7 @@ def test_TS15_푸시_outbox_는_pending_이고_PII_가_없다(client):
     assert len(rows) == 1
     row = rows[0]
     assert row["status"] == "pending"
-    assert row["payload"]["body"] == "AI 비서가 메시지를 보냈어요"
+    assert row["payload"]["body"] == "루시가 메시지를 보냈어요"
     assert row["payload"]["deeplink"] == "/app/ai"
     serialized = str(row["payload"])
     for secret in ("박내담", "김상담", ADDRESS, "임상심리상담"):

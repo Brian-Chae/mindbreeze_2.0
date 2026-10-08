@@ -355,8 +355,8 @@ def test_TS10_푸시_Outbox는_pending이고_이름_상담내용이_없다(clien
     row = rows[0]
     assert row["status"] == "pending"
     payload = row["payload"]
-    assert payload["title"] == "AI 비서"
-    assert payload["body"] == "AI 비서가 브리핑을 보냈어요"
+    assert payload["title"] == "루시 (AI)"
+    assert payload["body"] == "루시가 브리핑을 보냈어요"
     assert payload["deeplink"] == "/agent"
     assert payload["message_id"]
     # payload 전체에 내담자 이름·상담 내용이 없다

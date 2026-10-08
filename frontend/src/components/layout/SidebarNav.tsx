@@ -89,7 +89,6 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: ICONS.home },
-  { to: '/agent', label: 'AI 대화', icon: ICONS.message },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
@@ -114,7 +113,6 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home, end: true },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
-  { to: '/app/ai', label: 'AI 대화', icon: ICONS.message },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
   { to: '/app/notifications', label: '알림', icon: ICONS.bell },
@@ -211,8 +209,8 @@ export default function SidebarNav({
   const getBadge = (label: string): React.ReactNode => {
     // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
     const count =
-      label === 'AI 대화' ? (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0) : label === '채팅'
-        ? chatBadge ?? 0
+      label === '채팅'
+        ? (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0)
         : label === '알림'
           ? notificationBadge ?? 0
           : label === '리포트'

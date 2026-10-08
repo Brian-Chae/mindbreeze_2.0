@@ -407,8 +407,8 @@ def notify_counselor(
             RISK_NOTIFICATION_EVENT,
             counselor_id,
             {
-                "title": "AI 비서",
-                "body": "확인이 필요한 알림이 있어요. AI 비서 화면에서 확인해 주세요.",
+                "title": "루시 (AI)",
+                "body": "확인이 필요한 알림이 있어요. 루시(AI) 채널에서 확인해 주세요.",
                 "extra": notification_service.build_standard_extra(
                     RISK_NOTIFICATION_EVENT,
                     "notice",

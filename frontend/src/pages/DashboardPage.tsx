@@ -297,8 +297,8 @@ export default function DashboardPage() {
       }
     >
       <OrgRemovedNoticeDialog />
-      <Link to="/agent" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
-        <span><strong>AI 대화·브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
+      <Link to="/chat/lucy" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
+        <span><strong>루시 (AI) 브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
       </Link>
 
       {error && (

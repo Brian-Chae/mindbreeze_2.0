@@ -8,7 +8,7 @@ import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import BriefingSettingsSheet from './briefing-settings-sheet';
 import { feedbackLabel, mergeMessages, resolveCounselorCta, sortRelayEvents } from './counselor-agent-utils';
 
-export default function CounselorAgentPage() {
+export default function CounselorAgentPage({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const riskTab = params.get('tab') === 'risk';
@@ -77,12 +77,14 @@ export default function CounselorAgentPage() {
       requestAnimationFrame(() => { if (scroller.current) scroller.current.scrollTop = top + scroller.current.scrollHeight - height; });
     } catch (err) { fail(err); } finally { setOlderBusy(false); }
   };
-  return <AppShell title="AI 대화" sub="AI ASSISTANT" noScroll rightSlot={<button onClick={() => setSettingsOpen(true)} className="rounded-xl border bg-white px-4 py-2 text-sm">브리핑 설정</button>}>
-    <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-3">
-      <div className="flex flex-wrap gap-2" aria-label="AI 채널 메뉴">
+  const settingsButton = <button onClick={() => setSettingsOpen(true)} className="rounded-xl border bg-white px-4 py-2 text-sm">브리핑 설정</button>;
+  const content = <>
+    <div className={`mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-3 ${embedded ? 'px-4 py-3 md:px-8 md:py-6' : ''}`}>
+      <div className="flex flex-wrap items-center gap-2" aria-label="AI 채널 메뉴">
         <button aria-pressed={!relayTab && !riskTab} onClick={() => setParams({})} className={`rounded-xl px-4 py-2 ${!relayTab && !riskTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>대화·브리핑</button>
         <button aria-pressed={relayTab} onClick={() => setParams({ tab: 'relay' })} className={`rounded-xl px-4 py-2 ${relayTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>내담자 피드백·일정 변경 문의</button>
         <button aria-pressed={riskTab} onClick={() => setParams({ tab: 'risk' })} className={`rounded-xl px-4 py-2 ${riskTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>위험 신호{openRisk > 0 ? ` · 미처리 ${openRisk}` : ''}</button>
+        {embedded && <span className="ml-auto">{settingsButton}</span>}
       </div>
       {error && <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}<button onClick={() => { setError(''); setReload((value) => value + 1); }} className="ml-2 underline">다시 시도</button></div>}
       {loading && <p role="status">불러오는 중…</p>}
@@ -109,7 +111,7 @@ export default function CounselorAgentPage() {
           {!loading && !messages.length && <p className="py-8 text-center text-sm">오늘 일정이나 지난 상담 요약을 물어보세요.</p>}
           {messages.map((message) => <article key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${message.kind === 'risk_alert' ? 'border-2 border-amber-300 bg-amber-50 text-[#1F1F1F]' : message.sender === 'user' ? 'bg-[#5F0080] text-white' : 'bg-white text-[#1F1F1F]'}`}>
-              <p className="mb-2 text-xs opacity-70">{message.kind === 'risk_alert' ? '위험 알림' : message.kind === 'briefing_morning' ? '아침 브리핑' : message.kind === 'briefing_evening' ? '저녁 상담 정리' : message.sender === 'user' ? '나' : 'AI 비서'}</p>
+              <p className="mb-2 text-xs opacity-70">{message.kind === 'risk_alert' ? '위험 알림' : message.kind === 'briefing_morning' ? '아침 브리핑' : message.kind === 'briefing_evening' ? '저녁 상담 정리' : message.sender === 'user' ? '나' : '루시 (AI)'}</p>
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
               <div className="mt-3 flex flex-wrap gap-2">{message.cta.map((cta) => {
                 const target = resolveCounselorCta(cta);
@@ -133,5 +135,7 @@ export default function CounselorAgentPage() {
       </>}
     </div>
     {settingsOpen && <BriefingSettingsSheet onClose={() => setSettingsOpen(false)} />}
-  </AppShell>;
+  </>;
+  if (embedded) return content;
+  return <AppShell title="루시 (AI)" sub="AI ASSISTANT" noScroll rightSlot={settingsButton}>{content}</AppShell>;
 }

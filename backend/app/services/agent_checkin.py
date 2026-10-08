@@ -49,7 +49,7 @@ KIND_CHECKIN = "checkin"
 KIND_CHECKIN_CLOSING = "checkin_closing"
 
 # 푸시 비식별 문구 — 이름·감정·대화 내용을 담지 않는다(TS15).
-PUSH_BODY_CHECKIN = "AI 비서가 안부를 물었어요"
+PUSH_BODY_CHECKIN = "루시가 안부를 물었어요"
 
 # 발송 로그 kind — ref_id = 내담자 id, offset_min = KST 날짜의 ordinal(하루 1회 보장).
 DELIVERY_KIND = "checkin"

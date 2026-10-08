@@ -11,7 +11,7 @@ import { getSession } from '../../lib/api/session';
 import { canAccessAgent, isCtaDisabled, mergeAgentMessages, resolveCta } from '../../lib/agent/actions';
 import { useAgentStore } from '../../stores/agent-store';
 
-export default function AiAgentPage() {
+export default function AiAgentPage({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const [consent, setConsent] = useState<AgentConsent | null>(null);
   const [declined, setDeclined] = useState(false);
@@ -138,14 +138,13 @@ export default function AiAgentPage() {
     });
   };
 
-  return <ClientShell title="AI 대화" sub="AI ASSISTANT" noScroll contentPad="px-4 py-3 md:px-8 md:py-6">
-    <div className="mx-auto flex h-full min-h-0 max-w-2xl flex-col gap-3 font-sans">
+  const body = <div className={`mx-auto flex h-full min-h-0 max-w-2xl flex-col gap-3 font-sans ${embedded ? 'px-4 py-3 md:px-8 md:py-6' : ''}`}>
       {error && <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}
         <button className="ml-2 underline" onClick={() => setReload((value) => value + 1)}>다시 시도</button>
       </div>}
       {loading ? <p role="status">동의 상태를 확인하고 있어요…</p> : !access ? (
         <section aria-labelledby="agent-consent-title" className="my-auto rounded-3xl bg-white p-6 shadow-sm">
-          <span className="inline-block rounded-full bg-[#01f0c8] px-3 py-1 text-sm">마음 곁의 AI 비서</span>
+          <span className="inline-block rounded-full bg-[#01f0c8] px-3 py-1 text-sm">마음 곁의 루시 (AI)</span>
           <h2 id="agent-consent-title" className="mt-4 text-xl font-bold">AI 대화를 시작하기 전에</h2>
           <ul className="my-5 space-y-3 text-sm leading-relaxed">
             <li>AI가 예약 안내와 리포트에 관해 먼저 연락합니다.</li>
@@ -168,7 +167,7 @@ export default function AiAgentPage() {
           {!messages.length && <p className="py-8 text-center text-sm text-[#6F6F6F]">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</p>}
           {messages.map((message) => <article key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${message.sender === 'user' ? 'bg-[#5F0080] text-white' : 'bg-white text-[#1F1F1F]'}`}>
-              <p className="mb-1 text-xs opacity-70">{message.sender === 'user' ? '나' : message.sender === 'system' ? '안내' : 'AI 비서'}</p>
+              <p className="mb-1 text-xs opacity-70">{message.sender === 'user' ? '나' : message.sender === 'system' ? '안내' : '루시 (AI)'}</p>
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
               <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} />
               <time className="mt-2 block text-right text-xs opacity-60" dateTime={message.created_at}>{new Date(message.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</time>
@@ -208,6 +207,7 @@ export default function AiAgentPage() {
           </div>
         </form>
       </div>}
-    </div>
-  </ClientShell>;
+    </div>;
+  if (embedded) return body;
+  return <ClientShell title="루시 (AI)" sub="AI ASSISTANT" noScroll contentPad="px-4 py-3 md:px-8 md:py-6">{body}</ClientShell>;
 }

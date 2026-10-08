@@ -13,6 +13,8 @@ import { ChatSortToggle } from '../../components/chat/ChatSortToggle';
 import { RoomActionsMenu } from '../../components/chat/RoomActionsMenu';
 import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
+import AiAgentPage from './ai-agent-page';
+import { useAgentStore } from '../../stores/agent-store';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 /** 상담사 이름에서 이니셜 추출 (최대 2글자) */
@@ -41,6 +43,9 @@ function roomDisplaySub(room: ChatRoomDto): string {
   return formatSessionDate(room.session_scheduled_at);
 }
 
+/** AI 채널(루시) 고정 방 ID — 경로 /app/chat/lucy */
+export const LUCY_ROOM_ID = 'lucy';
+
 export default function ClientChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -61,6 +66,7 @@ export default function ClientChatPage() {
   const [settingsRoom, setSettingsRoom] = useState<ChatRoomDto | null>(null);
   const [status, setStatus] = useState('');
   const hasCounselors = (user?.counselors?.length ?? 0) > 0;
+  const agentUnread = useAgentStore((state) => state.unread);
 
   // /app/chat/:roomId 에서 roomId 추출 (Route가 /app/* 이므로 useParams 사용 불가)
   const paramRoomId = useMemo(() => {
@@ -105,8 +111,9 @@ export default function ClientChatPage() {
     };
   }, [setRooms]);
 
+  const isLucy = paramRoomId === LUCY_ROOM_ID;
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
-    if (!paramRoomId) return null;
+    if (!paramRoomId || paramRoomId === LUCY_ROOM_ID) return null;
     return (
       rooms.find((r) => r.id === paramRoomId) ??
       rooms.find((r) => r.session_id === paramRoomId) ??
@@ -119,36 +126,20 @@ export default function ClientChatPage() {
   };
 
   const headerTitle = useMemo(() => {
+    if (isLucy) return '루시 (AI)';
     if (!selectedRoom) return '채팅';
     return chatRoomDisplayName(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   const headerSub = useMemo(() => {
+    if (isLucy) return 'AI ASSISTANT';
     if (!selectedRoom) return 'MESSAGES';
     return roomDisplaySub(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   return (
     <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
-      {/* 상담사 연결 전 안내 */}
-      {!hasCounselors ? (
-        <div className="flex flex-col items-center justify-center flex-1 min-h-[60vh] px-6">
-          <div className="w-16 h-16 rounded-full bg-[#EFEFEF] flex items-center justify-center mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2Z"
-                fill="#6F6F6F"
-              />
-            </svg>
-          </div>
-          <p className="text-[#6F6F6F] text-sm text-center">
-            상담사와 연결 후 채팅이 가능합니다
-          </p>
-          <p className="text-[#9CA0AE] text-xs mt-1 text-center">
-            상담사에게 받은 코드를 입력하여 연결을 시작하세요
-          </p>
-        </div>
-      ) : (
+      {(
         <div className="h-full flex flex-col md:flex-row">
           {/* 좌측 대화 목록 */}
           <aside
@@ -157,11 +148,33 @@ export default function ClientChatPage() {
             }`}
           >
             <ChatSortToggle {...sortPreference} />
+            <button
+              type="button"
+              onClick={() => navigate(`/app/chat/${LUCY_ROOM_ID}`)}
+              aria-current={isLucy ? 'page' : undefined}
+              className={`flex items-center gap-3 px-4 md:px-5 py-3.5 md:py-4 text-left border-b border-[#EFEFEF] transition-colors ${isLucy ? 'bg-[#F5EDFC]' : 'bg-[#FBF8FD] hover:bg-[#F5EDFC]'}`}
+            >
+              <div className="w-11 h-11 rounded-full bg-[#5F0080] flex items-center justify-center shrink-0 ring-2 ring-[#01f0c8]/60">
+                <span className="text-sm font-bold text-white">루시</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-[14px] font-semibold text-[#1F1F1F]">루시 (AI)</span>
+                <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">예약 안내 · 리포트 이야기 · 안부</p>
+              </div>
+              {agentUnread > 0 && (
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
+                  {agentUnread > 99 ? '99+' : agentUnread}
+                </span>
+              )}
+            </button>
             {loading ? (
               <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
             ) : error ? (
               <div className="p-6 text-center text-sm text-red-500">{error}</div>
             ) : rooms.length === 0 ? (
+              !hasCounselors ? (
+                <div className="px-6 py-10 text-center text-sm text-[#6F6F6F]">상담사와 연결하면 상담사와의 1:1 채팅이 여기에 표시돼요.</div>
+              ) : (
               <div className="flex flex-col items-center justify-center flex-1 min-h-[40vh] px-6">
                 <div className="w-16 h-16 rounded-full bg-[#EFEFEF] flex items-center justify-center mb-4">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -173,6 +186,7 @@ export default function ClientChatPage() {
                 </div>
                 <p className="text-[#6F6F6F] text-sm">아직 대화가 없어요</p>
               </div>
+              )
             ) : (
               <ul className="divide-y divide-[#EFEFEF]">
                 {sortedRooms.map((room) => {
@@ -231,7 +245,16 @@ export default function ClientChatPage() {
               paramRoomId ? 'flex' : 'hidden md:flex'
             }`}
           >
-            {selectedRoom ? (
+            {isLucy ? (
+              <>
+                <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
+                  <button type="button" onClick={() => navigate('/app/chat')} className="text-sm text-[#5F0080] font-medium">← 대화 목록</button>
+                </div>
+                <div className="flex-1 min-h-0 bg-[#F7F4F0]">
+                  <AiAgentPage key={user?.id} embedded />
+                </div>
+              </>
+            ) : selectedRoom ? (
               <>
                 <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
                   <button

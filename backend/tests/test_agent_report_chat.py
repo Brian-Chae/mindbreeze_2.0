@@ -431,7 +431,7 @@ def test_리포트_메시지도_푸시_outbox_가_비식별이다(client):
 
     rows = H.outbox_rows("push")
     assert len(rows) == 1
-    assert rows[0]["payload"]["body"] == "AI 비서가 메시지를 보냈어요"
+    assert rows[0]["payload"]["body"] == "루시가 메시지를 보냈어요"
     assert "민감한 상담 요약 문장" not in str(rows[0]["payload"])
     assert "박내담" not in str(rows[0]["payload"])
 

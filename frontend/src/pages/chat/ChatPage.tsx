@@ -14,6 +14,8 @@ import { InviteMemberModal } from '../../components/chat/InviteMemberModal';
 import { canInviteToRoom } from '../../lib/api/chat-invite';
 import { useAuthStore } from '../../stores/authStore';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
+import CounselorAgentPage from '../agent/counselor-agent-page';
+import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 function formatSessionDate(iso: string | null | undefined): string {
@@ -39,6 +41,9 @@ function roomSub(room: ChatRoomDto): string {
   return formatSessionDate(room.session_scheduled_at);
 }
 
+/** AI 채널(루시) 고정 방 ID — 경로 /chat/lucy */
+const LUCY_ROOM_ID = 'lucy';
+
 export default function ChatPage() {
   const { roomId: paramRoomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
@@ -52,6 +57,8 @@ export default function ChatPage() {
     }, { replace: true });
   };
   const rooms = useChatStore((s) => s.rooms);
+  const agentUnread = useCounselorAgentStore((state) => state.unread + state.openRisk);
+  const isLucy = paramRoomId === LUCY_ROOM_ID;
   const setRooms = useChatStore((s) => s.setRooms);
   const sortPreference = useChatSortPreference();
   const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.unreadFirst), [rooms, sortPreference.unreadFirst]);
@@ -97,7 +104,7 @@ export default function ChatPage() {
   }, [setRooms]);
 
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
-    if (!paramRoomId) return null;
+    if (!paramRoomId || paramRoomId === LUCY_ROOM_ID) return null;
     // room.id 또는 session_id로 검색 (하위 호환)
     return (
       rooms.find((r) => r.id === paramRoomId) ??
@@ -118,14 +125,16 @@ export default function ChatPage() {
   };
 
   const headerTitle = useMemo(() => {
+    if (isLucy) return '루시 (AI)';
     if (!selectedRoom) return '채팅';
     return roomLabel(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   const headerSub = useMemo(() => {
+    if (isLucy) return 'AI ASSISTANT';
     if (!selectedRoom) return 'MESSAGES';
     return roomSub(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   return (
     <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
@@ -148,6 +157,23 @@ export default function ChatPage() {
           </div>
 
           <ChatSortToggle {...sortPreference} />
+          <button
+            type="button"
+            onClick={() => navigate(`/chat/${LUCY_ROOM_ID}`)}
+            aria-current={isLucy ? 'page' : undefined}
+            className={`flex w-full items-center gap-3 px-5 py-4 text-left border-b border-[#EFEFEF] transition-colors ${isLucy ? 'bg-[#F5EDFC]' : 'bg-[#FBF8FD] hover:bg-[#F5EDFC]'}`}
+          >
+            <div className="w-11 h-11 rounded-full bg-[#5F0080] ring-2 ring-[#01f0c8]/60 flex items-center justify-center text-white text-sm font-bold shrink-0">루시</div>
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-[14px] text-[#1F1F1F]">루시 (AI)</span>
+              <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">아침 브리핑 · 저녁 정리 · 내담자 피드백</p>
+            </div>
+            {agentUnread > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center font-mono shrink-0">
+                {agentUnread}
+              </span>
+            )}
+          </button>
           {loading ? (
             <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중…</div>
           ) : error ? (
@@ -204,7 +230,16 @@ export default function ChatPage() {
             paramRoomId ? 'flex' : 'hidden md:flex'
           }`}
         >
-          {selectedRoom ? (
+          {isLucy ? (
+            <>
+              <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
+                <button type="button" onClick={() => navigate('/chat')} className="min-h-[44px] inline-flex items-center text-sm text-[#5F0080] font-medium">← 대화 목록</button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto bg-[#F7F4F0]">
+                <CounselorAgentPage embedded />
+              </div>
+            </>
+          ) : selectedRoom ? (
             <>
               <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
                 <button
