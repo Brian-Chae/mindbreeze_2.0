@@ -8,7 +8,9 @@
 - 활성 토큰 없음 → `skipped` (앱 미설치 사용자. 실패가 아니다)
 - 1개 이상 발송 성공 → `sent` (다기기 중 일부 실패는 재시도하지 않는다 — 중복 푸시 방지)
 - 전부 실패 → attempts+1 · 지수 백오프, MAX_ATTEMPTS 초과 시 `failed`
-- FCM 미설정 → 행을 **건드리지 않고** 로그 1줄만 남긴다(설정 후 그대로 발송됨)
+- FCM·웹 푸시(VAPID) 모두 미설정 → 행을 **건드리지 않고** 로그 1줄만 남긴다(설정 후 그대로 발송됨)
+- 기기별 분기(SDD-192): `platform="web"` 은 VAPID, 그 외(ios/android)는 FCM. 해당 발송기가 미설정인
+  기기는 건너뛰고, 발송 가능한 기기가 하나도 없으면 행을 그대로 둔다
 
 email/ws 채널 행은 `channel == "push"` 필터 때문에 이 태스크가 절대 건드리지 않는다
 (역방향도 동일 — `tasks/outbox.py` 는 email, `services/outbox_worker.py` 는 ws 로 필터).
@@ -19,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.core.celery_app import celery_app
 from app.models.notification_outbox import NotificationOutbox
-from app.services import device_service, push_service
+from app.services import device_service, push_service, web_push_service
 
 logger = logging.getLogger(__name__)
 
@@ -58,9 +60,11 @@ def process_push_outbox(limit: int = 100) -> dict:
         now = datetime.now(timezone.utc)
         expired = _expire_stale(db, now)
 
-        if not push_service.is_configured():
+        fcm_ready = push_service.is_configured()
+        web_ready = web_push_service.is_configured()
+        if not (fcm_ready or web_ready):
             # 자격증명 미설정 — 행을 그대로 두고 설정 후 발송되게 한다.
-            logger.info("[OUTBOX-PUSH] FCM 미설정 — 발송 건너뜀(행 유지)")
+            logger.info("[OUTBOX-PUSH] FCM 미설정, 웹 푸시 미설정 — 발송 건너뜀(행 유지)")
             return {
                 "processed": 0,
                 "sent": 0,
@@ -86,7 +90,15 @@ def process_push_outbox(limit: int = 100) -> dict:
         for item in items:
             processed += 1
             payload = item.payload or {}
-            tokens = device_service.list_active_tokens(db, item.user_id)
+            all_tokens = device_service.list_active_tokens(db, item.user_id)
+            # 발송기가 설정된 기기만 대상 — 미설정 발송기의 기기는 설정 후를 위해 행을 유지한다.
+            tokens = [
+                t for t in all_tokens if (web_ready if t.platform == "web" else fcm_ready)
+            ]
+
+            if all_tokens and not tokens:
+                processed -= 1
+                continue
 
             if not tokens:
                 item.status = "skipped"
@@ -98,15 +110,7 @@ def process_push_outbox(limit: int = 100) -> dict:
             ok_count = 0
             reasons: list[str] = []
             for row in tokens:
-                result = push_service.send_to_token(
-                    row.token,
-                    title=str(payload.get("title", "")),
-                    body=str(payload.get("body", "")),
-                    data={
-                        "deeplink": str(payload.get("deeplink", "")),
-                        "message_id": str(payload.get("message_id", "")),
-                    },
-                )
+                result = _send_to_device(row, payload)
                 if result.ok:
                     ok_count += 1
                     continue
@@ -153,6 +157,21 @@ def process_push_outbox(limit: int = 100) -> dict:
     }
 
 
+def _send_to_device(row, payload: dict) -> push_service.PushResult:
+    """기기 플랫폼에 맞는 발송기로 1건 발송. payload 필드는 플랫폼 무관하게 동일(비식별)."""
+    title = str(payload.get("title", ""))
+    body = str(payload.get("body", ""))
+    data = {
+        "deeplink": str(payload.get("deeplink", "")),
+        "message_id": str(payload.get("message_id", "")),
+    }
+    if row.platform == "web":
+        return web_push_service.send_to_subscription(
+            row.token, row.p256dh, row.auth, title=title, body=body, data=data
+        )
+    return push_service.send_to_token(row.token, title=title, body=body, data=data)
+
+
 def _commit_row(db, item: NotificationOutbox) -> None:
     """행 단위 커밋 — 배치 중간에 워커가 죽어도 발송 사실이 유실되지 않게 한다."""
     try:
@@ -167,9 +186,9 @@ def dispatch_push_now() -> None:
 
     cron(1분)을 기다리지 않도록 응답 이후 백그라운드 스레드에서 outbox 를 처리한다.
     행 선점(skip_locked)으로 cron 과 동시에 돌아도 중복 발송되지 않으며,
-    FCM 미설정(테스트 포함)이면 스레드를 만들지 않는다. 실패는 cron 이 이어서 재처리한다.
+    FCM·웹 푸시 모두 미설정(테스트 포함)이면 스레드를 만들지 않는다. 실패는 cron 이 이어서 재처리한다.
     """
-    if not push_service.is_configured():
+    if not (push_service.is_configured() or web_push_service.is_configured()):
         return
     import threading
 

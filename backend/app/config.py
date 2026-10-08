@@ -100,5 +100,11 @@ class Settings(BaseSettings):
     fcm_project_id: str = ""
     fcm_service_account_json: str = ""
 
+    # SDD-192: 웹 푸시(VAPID). 공개키·개인키가 모두 있어야 웹 구독에 발송한다.
+    # 개인키는 로그·응답에 절대 노출하지 않는다.
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_subject: str = "mailto:developer@looxidlabs.com"
+
 
 settings = Settings()

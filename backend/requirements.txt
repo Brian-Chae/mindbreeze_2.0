@@ -53,3 +53,4 @@ fakeredis==2.35.1  # 테스트용 인메모리 Redis (tests/conftest.py)
 # 서버 PDF (시스템 Pango/Cairo + app/assets/fonts 한글 글꼴 필요)
 weasyprint==68.1
 pypdf==6.18.1
+pywebpush==2.5.0

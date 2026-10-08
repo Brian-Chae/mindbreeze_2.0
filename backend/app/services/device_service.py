@@ -37,6 +37,8 @@ def register_token(
     platform: str,
     app_version: str | None = None,
     device_label: str | None = None,
+    p256dh: str | None = None,
+    auth: str | None = None,
 ) -> DeviceToken:
     """토큰 upsert — 행은 토큰당 1개. 재등록 시 last_seen_at·메타를 갱신한다."""
     now = datetime.now(timezone.utc)
@@ -48,6 +50,8 @@ def register_token(
             user_id=owner,
             token=token,
             platform=platform,
+            p256dh=p256dh,
+            auth=auth,
             app_version=app_version,
             device_label=device_label,
             last_seen_at=now,
@@ -57,6 +61,8 @@ def register_token(
         # 소유자 이전 + 해지 해제(같은 기기를 다시 쓰기 시작한 경우)
         row.user_id = owner
         row.platform = platform
+        row.p256dh = p256dh
+        row.auth = auth
         row.last_seen_at = now
         row.revoked_at = None
         if app_version is not None:

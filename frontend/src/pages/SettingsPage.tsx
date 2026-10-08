@@ -17,6 +17,7 @@ import { updateUserMe, type UpdateUserMePayload } from '../lib/api/auth';
 import { getClientProfile } from '../lib/api/client-profile';
 import { useAuthStore } from '../stores/authStore';
 import { eventLabel } from '../lib/notification-format';
+import WebPushCard from '../components/settings/WebPushCard';
 
 function Toggle({ enabled, onChange }: { enabled: boolean; onChange: () => void }) {
   return (
@@ -262,6 +263,9 @@ export default function SettingsPage() {
             <SelfInfoSection value={basicInfo} showPersonal={isClient} onSave={handleBasicInfoSave} />
           </>
         )}
+
+        {/* SDD-192: 브라우저(웹 푸시) 알림 */}
+        <WebPushCard />
 
         {/* 알림 설정 */}
         {loading ? (

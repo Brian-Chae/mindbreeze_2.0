@@ -1,4 +1,4 @@
-"""SDD-190: 앱 푸시 디바이스 토큰 모델.
+"""SDD-190/192: 푸시 디바이스 토큰 모델(앱 FCM + 웹 푸시 구독).
 
 앱(Capacitor)이 FCM 등록 토큰을 올려두는 테이블. 발송기(push_service)는 사용자별
 `revoked_at IS NULL` 행만 대상으로 삼는다. 토큰은 기기 식별자이므로 로그·응답에
@@ -29,6 +29,9 @@ class DeviceToken(Base):
     # FCM 등록 토큰 — 기기당 1개. 기기 소유자가 바뀌면 같은 행의 user_id 를 이전한다.
     token: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
     platform: Mapped[str] = mapped_column(String(10), nullable=False)  # "ios" | "android"
+    # SDD-192: platform="web" 일 때 token 은 구독 endpoint, 암호화 키는 아래 두 컬럼.
+    p256dh: Mapped[str | None] = mapped_column(String(255))
+    auth: Mapped[str | None] = mapped_column(String(64))
     app_version: Mapped[str | None] = mapped_column(String(50))
     device_label: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(

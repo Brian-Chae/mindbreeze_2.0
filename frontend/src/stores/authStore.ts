@@ -213,6 +213,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // 오프라인 해지 실패가 로컬 로그아웃을 막지 않는다.
     }
     try {
+      // SDD-192: 웹 푸시 구독은 인증 토큰 폐기 전에 서버·브라우저 양쪽에서 해지한다.
+      const { disableWebPush } = await import('../lib/web-push');
+      await disableWebPush();
+    } catch {
+      // 웹 푸시 해지 실패가 로컬 로그아웃을 막지 않는다.
+    }
+    try {
       await apiLogout();
     } catch {
       // 서버 에러는 무시하고 로컬 상태만 정리
