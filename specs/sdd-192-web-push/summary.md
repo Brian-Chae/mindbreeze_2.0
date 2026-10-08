@@ -26,7 +26,13 @@
 - ⚠️ 프론트 전체 vitest 16건 실패(client-report-list·modal, agent-counselor-sidebar) — 'NEW' 배지/AI 대화 배지 관련으로 이 SDD와 무관. 작업 트리에 다른 진행 중 변경(App.tsx, BottomTabBar 등 8파일)이 있음.
 - ⏳ 실제 Chrome 알림 수신은 dev 배포 + VAPID 키 설정 후 확인 필요
 
+## 후속 변경 (dev 검증 중 발견)
+- **기본 ON:** 로그인 시 자동 구독(권한 미요청이면 1회만 팝업, 이미 허용이면 조용히 구독). 설정에서 직접 끈 브라우저만 제외(`mb_web_push_opt_out`).
+- **포커스 중에도 시스템 알림 표시:** 초기 구현의 "포커스 창이면 알림 생략"은 테스트 중 알림이 안 뜨는 것처럼 보이게 해 제거. 창에는 갱신 메시지를 함께 보낸다.
+- **중복 구독 정리:** 브라우저가 마지막으로 등록한 endpoint 를 localStorage 에 두고, 새 endpoint 로 바뀌면 이전 것을 해지.
+
 ## Debugging Journey
+- **dev 알림 미수신(코드 무관):** 서버는 `sent`·FCM 201·복호화까지 정상. 원인은 사용자 Chrome 의 `chrome://gcm-internals` Connection State 가 `CONNECTING` 에 멈춘 것 — Chrome 재시작으로 해결. DevTools Push 버튼은 이 연결을 쓰지 않아 정상으로 보인다. 진단 순서: 서버 outbox 상태 → 직접 발송 201 → gcm-internals.
 - 웹 endpoint가 `/`를 포함 → `DELETE /devices/{token}` 404 → 쿼리 파라미터 해지 엔드포인트 추가.
 - push_task가 FCM 미설정이면 전체 조기 종료 → FCM/VAPID 각각 게이트로 분리, 설정 안 된 발송기의 기기는 행 유지.
 - 기존 테스트가 "FCM 미설정" 로그 문구에 의존 → 문구에 포함 유지.

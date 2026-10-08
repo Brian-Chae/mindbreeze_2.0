@@ -138,6 +138,27 @@ describe('구독 흐름', () => {
     expect(b.sub.unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it('구독 endpoint 가 바뀌면 같은 브라우저의 이전 구독을 해지한다(중복 알림 방지)', async () => {
+    installBrowser({ permission: 'granted', subscribed: true });
+    localStorage.setItem('mb_web_push_endpoint', 'https://fcm.googleapis.com/fcm/send/OLD');
+
+    startWebPushSync(vi.fn(), vi.fn());
+
+    await vi.waitFor(() => expect(mocks.del).toHaveBeenCalledWith(
+      `/devices?token=${encodeURIComponent('https://fcm.googleapis.com/fcm/send/OLD')}`,
+    ));
+    expect(localStorage.getItem('mb_web_push_endpoint')).toBe(ENDPOINT);
+  });
+
+  it('같은 endpoint 재등록은 해지하지 않는다', async () => {
+    installBrowser({ permission: 'granted', subscribed: true });
+    localStorage.setItem('mb_web_push_endpoint', ENDPOINT);
+    startWebPushSync(vi.fn(), vi.fn());
+    await vi.waitFor(() => expect(mocks.post).toHaveBeenCalledOnce());
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mocks.del).not.toHaveBeenCalled();
+  });
+
   it('서버 해지가 실패해도 브라우저 구독은 해제한다', async () => {
     const b = installBrowser({ permission: 'granted', subscribed: true });
     mocks.del.mockRejectedValueOnce(new Error('offline'));

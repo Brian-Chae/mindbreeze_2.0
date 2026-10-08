@@ -14,6 +14,15 @@ const SW_URL = '/sw.js';
 // 기본값은 ON — 사용자가 설정에서 직접 끈 브라우저만 자동 구독을 건너뛴다.
 const OPT_OUT_KEY = 'mb_web_push_opt_out';
 const ASKED_KEY = 'mb_web_push_asked';
+// 이 브라우저가 마지막으로 서버에 등록한 구독 endpoint — 구독이 바뀌면 이전 것을 해지해 중복 알림을 막는다.
+const ENDPOINT_KEY = 'mb_web_push_endpoint';
+
+function storedEndpoint(): string | null {
+  try { return localStorage.getItem(ENDPOINT_KEY); } catch { return null; }
+}
+function storeEndpoint(value: string | null): void {
+  try { if (value) localStorage.setItem(ENDPOINT_KEY, value); else localStorage.removeItem(ENDPOINT_KEY); } catch { /* 무시 */ }
+}
 
 function flag(key: string): boolean {
   try { return localStorage.getItem(key) === '1'; } catch { return false; }
@@ -65,6 +74,12 @@ async function registerOnServer(subscription: PushSubscription): Promise<void> {
     keys: { p256dh: keys.p256dh, auth: keys.auth },
     device_label: navigator.userAgent.slice(0, 100),
   });
+  // 같은 브라우저가 새 endpoint 로 바뀌었다면 이전 구독을 해지한다(실패해도 410 응답으로 서버가 정리).
+  const previous = storedEndpoint();
+  storeEndpoint(subscription.endpoint);
+  if (previous && previous !== subscription.endpoint) {
+    try { await apiClient.delete(`/devices?token=${encodeURIComponent(previous)}`); } catch { /* 무시 */ }
+  }
 }
 
 export async function getWebPushState(): Promise<WebPushState> {
@@ -118,6 +133,7 @@ export async function disableWebPush(): Promise<void> {
   } catch {
     // 서버 해지 실패 시에도 로컬 구독은 해제한다(서버는 410 응답으로 정리).
   }
+  storeEndpoint(null);
   await subscription.unsubscribe();
 }
 
