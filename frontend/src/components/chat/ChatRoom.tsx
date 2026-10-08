@@ -5,7 +5,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { getChatSocket } from '../../lib/socket';
-import { KEYBOARD_EVENT } from '../../lib/native/keyboard';
+import { useStickToBottom } from '../../hooks/useStickToBottom';
 import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
 import { MessageBubble } from './MessageBubble';
@@ -92,11 +92,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const keyboardHeight = useKeyboardHeight();
   // HOOK-STATE-05: 가변 길이 deps 대신 단일 트리거(문자열)를 넘겨 의존성 배열 길이를 고정한다.
   const { handleScroll, scrollToBottom } = useAutoScroll(listRef, `${msgList.length}:${loading}`, !target);
-  useEffect(() => {
-    const onKeyboard = () => scrollToBottom();
-    window.addEventListener(KEYBOARD_EVENT, onKeyboard);
-    return () => window.removeEventListener(KEYBOARD_EVENT, onKeyboard);
-  }, [scrollToBottom]);
+  useStickToBottom(listRef);
 
   useEffect(() => {
     setDismissedTarget(null);

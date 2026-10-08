@@ -15,10 +15,7 @@ export async function initNativeKeyboard(): Promise<void> {
     await Keyboard.setScroll({ isDisabled: true });
     await Keyboard.addListener('keyboardDidShow', () => {
       // 레이아웃이 줄어든 뒤 입력 중인 요소를 보이게 하고, 대화 목록은 최신으로 내린다.
-      requestAnimationFrame(() => {
-        (document.activeElement as HTMLElement | null)?.scrollIntoView?.({ block: 'nearest' });
-        window.dispatchEvent(new CustomEvent(KEYBOARD_EVENT));
-      });
+      window.dispatchEvent(new CustomEvent(KEYBOARD_EVENT));
     });
   } catch {
     started = false; // 플러그인 미지원 환경은 무시

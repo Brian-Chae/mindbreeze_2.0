@@ -1,4 +1,4 @@
-import { KEYBOARD_EVENT } from '../../lib/native/keyboard';
+import { useStickToBottom } from '../../hooks/useStickToBottom';
 import { AgentBubble, AgentInputBar } from '../../components/chat/agent-bubble';
 import RiskSignals from './risk-signals';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -60,11 +60,7 @@ export default function CounselorAgentPage({ embedded = false }: { embedded?: bo
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
     return () => { active = false; window.clearInterval(timer); };
   }, [relayTab, riskTab, reload, fail]);
-  useEffect(() => {
-    const onKeyboard = () => bottom.current?.scrollIntoView?.({ block: 'end' });
-    window.addEventListener(KEYBOARD_EVENT, onKeyboard);
-    return () => window.removeEventListener(KEYBOARD_EVENT, onKeyboard);
-  }, []);
+  useStickToBottom(scroller, !riskTab && !relayTab);
   const latestId = messages.at(-1)?.id;
   useEffect(() => { if (!relayTab) bottom.current?.scrollIntoView?.({ block: 'end' }); }, [latestId, relayTab]);
   const perform = async (work: () => Promise<void>) => {
