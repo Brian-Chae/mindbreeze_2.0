@@ -58,6 +58,9 @@ app.add_middleware(
         "https://dev.mindbreeze.looxidlabs.com",
         "http://dev-api.mindbreeze.looxidlabs.com",
         "https://dev-api.mindbreeze.looxidlabs.com",
+        # SDD-190: Capacitor 앱 WebView 오리진 (Android=https://localhost, iOS=capacitor://localhost)
+        "https://localhost",
+        "capacitor://localhost",
         # prod (릴리즈 시 활성화)
         # "https://mindbreeze.looxidlabs.com",
         # "https://api.mindbreeze.looxidlabs.com",
