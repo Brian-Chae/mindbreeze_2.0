@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { useStatusBar } from './lib/native/use-status-bar';
 import { isNativeApp } from './lib/native/platform';
+import { initNativeKeyboard } from './lib/native/keyboard';
 // SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
 import {
   createBrowserRouter,
@@ -131,6 +132,7 @@ function PlatformAdminRoute({ children }: { children: ReactElement }) {
 function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
   useStatusBar();
+  useEffect(() => { void initNativeKeyboard(); }, []);
 
   useEffect(() => {
     initialize();

@@ -3,6 +3,7 @@ import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { useNavigate } from 'react-router-dom';
 import CheckinPreferences from '../../components/client/agent/checkin-prefs';
 import ClientShell from '../../components/client/ClientShell';
+import { KEYBOARD_EVENT } from '../../lib/native/keyboard';
 import { AgentBubble, AgentInputBar } from '../../components/chat/agent-bubble';
 import CtaCard from '../../components/client/agent/cta-card';
 import * as agentApi from '../../lib/api/agent';
@@ -75,6 +76,11 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [access, reload, fail]);
 
+  useEffect(() => {
+    const onKeyboard = () => bottom.current?.scrollIntoView?.({ block: 'end' });
+    window.addEventListener(KEYBOARD_EVENT, onKeyboard);
+    return () => window.removeEventListener(KEYBOARD_EVENT, onKeyboard);
+  }, []);
   const latestId = messages.at(-1)?.id;
   useEffect(() => { bottom.current?.scrollIntoView?.({ block: 'end' }); }, [latestId]);
 
