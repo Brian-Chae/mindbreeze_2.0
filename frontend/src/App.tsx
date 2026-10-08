@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
+import { useStatusBar } from './lib/native/use-status-bar';
 // SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
 import {
   createBrowserRouter,
@@ -117,6 +118,7 @@ function PlatformAdminRoute({ children }: { children: ReactElement }) {
 /** 데이터 라우터 루트 — 인증 초기화 + Suspense 셸 */
 function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
+  useStatusBar();
 
   useEffect(() => {
     initialize();
