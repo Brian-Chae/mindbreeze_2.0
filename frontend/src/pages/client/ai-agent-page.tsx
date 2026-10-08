@@ -3,6 +3,7 @@ import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { useNavigate } from 'react-router-dom';
 import CheckinPreferences from '../../components/client/agent/checkin-prefs';
 import ClientShell from '../../components/client/ClientShell';
+import { AgentBubble, AgentInputBar } from '../../components/chat/agent-bubble';
 import CtaCard from '../../components/client/agent/cta-card';
 import * as agentApi from '../../lib/api/agent';
 import type { AgentConsent, AgentCta, AgentMessage } from '../../lib/api/agent';
@@ -138,12 +139,12 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
     });
   };
 
-  const body = <div className={`mx-auto flex h-full min-h-0 max-w-2xl flex-col gap-3 font-sans ${embedded ? 'px-4 py-3 md:px-8 md:py-6' : ''}`}>
-      {error && <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}
+  const body = <div className={`flex h-full min-h-0 flex-col font-sans ${embedded ? 'bg-white' : 'mx-auto max-w-2xl gap-3'}`}>
+      {error && <div role="alert" className="m-3 shrink-0 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}
         <button className="ml-2 underline" onClick={() => setReload((value) => value + 1)}>다시 시도</button>
       </div>}
-      {loading ? <p role="status">동의 상태를 확인하고 있어요…</p> : !access ? (
-        <section aria-labelledby="agent-consent-title" className="my-auto rounded-3xl bg-white p-6 shadow-sm">
+      {loading ? <p role="status" className="p-4 text-sm text-[#6F6F6F]">동의 상태를 확인하고 있어요…</p> : !access ? (
+        <section aria-labelledby="agent-consent-title" className="m-4 my-auto rounded-3xl bg-[#F5EDFC] p-6">
           <span className="inline-block rounded-full bg-[#01f0c8] px-3 py-1 text-sm">마음 곁의 루시 (AI)</span>
           <h2 id="agent-consent-title" className="mt-4 text-xl font-bold">AI 대화를 시작하기 전에</h2>
           <ul className="my-5 space-y-3 text-sm leading-relaxed">
@@ -160,36 +161,32 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
           </div>
         </section>
       ) : <>
-        <CheckinPreferences />
-        <p className="text-xs text-[#6F6F6F]">AI 대화는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>
-        <div ref={scroller} role="log" aria-label="AI 대화 메시지" className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
-          {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto block rounded-full bg-white px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
-          {!messages.length && <p className="py-8 text-center text-sm text-[#6F6F6F]">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</p>}
-          {messages.map((message) => <article key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${message.sender === 'user' ? 'bg-[#5F0080] text-white' : 'bg-white text-[#1F1F1F]'}`}>
-              <p className="mb-1 text-xs opacity-70">{message.sender === 'user' ? '나' : message.sender === 'system' ? '안내' : '루시 (AI)'}</p>
-              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
-              <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} />
-              <time className="mt-2 block text-right text-xs opacity-60" dateTime={message.created_at}>{new Date(message.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</time>
-            </div>
-          </article>)}
+        <div className="shrink-0 border-b border-[#EFEFEF] bg-white p-3"><CheckinPreferences /></div>
+        <p className="shrink-0 px-4 py-1.5 text-xs text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>
+        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white">
+          {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
+          {!messages.length && <div className="text-center text-gray-500 py-4">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</div>}
+          {messages.map((message, index) => {
+            const isMine = message.sender === 'user';
+            const previous = messages[index - 1];
+            return <AgentBubble key={message.id} isMine={isMine} showSender={!previous || previous.sender === 'user'}
+              senderName={message.sender === 'system' ? '안내' : '루시 (AI)'}
+              content={message.content} createdAt={message.created_at}
+              actions={message.cta.length ? <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} /> : undefined} />;
+          })}
           <div ref={bottom} />
         </div>
-        <form className="flex shrink-0 items-end gap-2 rounded-2xl bg-white p-3" onSubmit={(event) => {
-          event.preventDefault();
-          if (!access || !text.trim() || text.length > 1000) return;
-          void perform(async () => {
-            const result = await agentApi.sendMessage(text);
-            setMessages((previous) => mergeAgentMessages(previous, [result.user_message, result.agent_message]));
-            setText('');
-            const read = await agentApi.markRead(result.agent_message.created_at);
-            useAgentStore.getState().setUnread(read.unread);
-          });
-        }}>
-          <textarea aria-label="AI에게 보낼 메시지" placeholder="이야기를 남겨 주세요" maxLength={1000} rows={2} value={text} disabled={busy}
-            onChange={(event) => setText(event.target.value)} className="min-w-0 flex-1 resize-none rounded-lg p-2 text-sm focus:outline-[#5F0080]" />
-          <button disabled={busy || !text.trim()} className="rounded-xl bg-[#5F0080] px-4 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy ? '처리 중…' : '전송'}</button>
-        </form>
+        <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
+          onSubmit={() => {
+            if (!access || !text.trim() || text.length > 1000) return;
+            void perform(async () => {
+              const result = await agentApi.sendMessage(text);
+              setMessages((previous) => mergeAgentMessages(previous, [result.user_message, result.agent_message]));
+              setText('');
+              const read = await agentApi.markRead(result.agent_message.created_at);
+              useAgentStore.getState().setUnread(read.unread);
+            });
+          }} />
       </>}
       {changeRequest && access && <div ref={changeDialogRef} tabIndex={-1} className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 md:items-center">
         <form role="dialog" aria-modal="true" aria-labelledby="change-request-title" className="w-full max-w-md rounded-3xl bg-white p-6" onSubmit={(event) => {

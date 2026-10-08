@@ -40,7 +40,7 @@ it.each(['client', 'org_admin', 'platform_admin'] as UserRole[])('%s는 상담�
 });
 it('상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다', async () => {
   useCounselorAgentStore.getState().setUnread(3);
-  await render(); expect(container.textContent).toContain('아침 브리핑'); expect(container.querySelector('textarea')?.maxLength).toBe(1000);
+  await render(); expect(container.textContent).toContain('아침 브리핑'); expect(container.querySelector('input[type="text"]')?.maxLength).toBe(1000);
   expect(useCounselorAgentStore.getState().unread).toBe(0);
   await act(async () => button('일정 보기').click()); expect(container.textContent).toContain('세션 목록 화면');
 });
@@ -67,9 +67,9 @@ it('최신 메시지는 아래에, 이전 메시지는 더보기 후 위에 유�
 it('메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다', async () => {
   vi.mocked(api.sendMessage).mockResolvedValue({ user_message: { ...message, id: 'user', sender: 'user', content: '내일 일정', cta: [], created_at: '2026-10-08T01:00:00Z' }, agent_message: { ...message, id: 'reply', content: '내일 일정 안내', created_at: '2026-10-08T01:00:01Z' } });
   await render();
-  const textarea = container.querySelector('textarea')!;
+  const textarea = container.querySelector<HTMLInputElement>('input[type="text"]')!;
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, '내일 일정');
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(textarea, '내일 일정');
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   });
   await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });

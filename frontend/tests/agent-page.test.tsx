@@ -43,9 +43,10 @@ function button(label: string): HTMLButtonElement {
   expect(found, `${label} 버튼`).toBeDefined();
   return found!;
 }
-async function input(element: HTMLTextAreaElement, value: string) {
+async function input(element: HTMLTextAreaElement | HTMLInputElement, value: string) {
   await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(element, value);
+    const proto = element instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value);
     element.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
@@ -111,7 +112,7 @@ it('피드백을 선택하면 세 선택지 모두 비활성화한다', async ()
 it('메시지를 1000자로 제한하고 전송 실패 시 입력을 보존한다', async () => {
   vi.mocked(api.sendMessage).mockRejectedValue(new Error('전송 실패'));
   await render();
-  const textarea = container.querySelector<HTMLTextAreaElement>('[aria-label="AI에게 보낼 메시지"]')!;
+  const textarea = container.querySelector<HTMLInputElement>('[aria-label="루시에게 보낼 메시지"]')!;
   const form = textarea.closest('form')!;
   expect(textarea.maxLength).toBe(1000);
   await input(textarea, '가'.repeat(1001));

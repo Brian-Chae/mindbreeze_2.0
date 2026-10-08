@@ -250,7 +250,7 @@ export default function ClientChatPage() {
                 <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
                   <button type="button" onClick={() => navigate('/app/chat')} className="text-sm text-[#5F0080] font-medium">← 대화 목록</button>
                 </div>
-                <div className="flex-1 min-h-0 bg-[#F7F4F0]">
+                <div className="flex-1 min-h-0">
                   <AiAgentPage key={user?.id} embedded />
                 </div>
               </>

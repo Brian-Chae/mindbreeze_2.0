@@ -235,7 +235,7 @@ export default function ChatPage() {
               <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
                 <button type="button" onClick={() => navigate('/chat')} className="min-h-[44px] inline-flex items-center text-sm text-[#5F0080] font-medium">← 대화 목록</button>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto bg-[#F7F4F0]">
+              <div className="flex-1 min-h-0">
                 <CounselorAgentPage embedded />
               </div>
             </>
