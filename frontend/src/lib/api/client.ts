@@ -3,6 +3,34 @@
 
 import { loginPathForRole } from '../auth-routing';
 import type { UserRole } from './auth';
+import { Capacitor } from '@capacitor/core';
+
+// 네이티브 앱(Capacitor)은 앱 오리진(https://localhost)이 API와 달라 SameSite=Lax 쿠키가 전송되지 않는다.
+// 그래서 앱에서만 서버가 응답 헤더로 주는 refresh token 을 로컬에 보관하고, refresh/logout 때 본문으로 보낸다.
+const NATIVE_HEADER = 'X-MB-Native';
+const NATIVE_REFRESH_RESPONSE_HEADER = 'X-MB-Refresh-Token';
+const NATIVE_REFRESH_KEY = 'mb_native_refresh';
+const isNativeClient = (): boolean => {
+  try { return Capacitor.isNativePlatform(); } catch { return false; }
+};
+const nativeHeaders = (): Record<string, string> => (isNativeClient() ? { [NATIVE_HEADER]: 'capacitor' } : {});
+function captureNativeRefresh(res: Response): void {
+  if (!isNativeClient()) return;
+  const next = res.headers.get(NATIVE_REFRESH_RESPONSE_HEADER);
+  if (next) {
+    try { localStorage.setItem(NATIVE_REFRESH_KEY, next); } catch { /* 저장 실패는 무시 */ }
+  }
+}
+export function getNativeRefreshBody(): { refresh_token: string } | undefined {
+  if (!isNativeClient()) return undefined;
+  try {
+    const t = localStorage.getItem(NATIVE_REFRESH_KEY);
+    return t ? { refresh_token: t } : undefined;
+  } catch { return undefined; }
+}
+export function clearNativeRefresh(): void {
+  try { localStorage.removeItem(NATIVE_REFRESH_KEY); } catch { /* 무시 */ }
+}
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
 
@@ -64,6 +92,7 @@ function terminateSession(): void {
   // 리다이렉트 경로는 persist 된 사용자(mb_user)에서 읽으므로 지우기 전에 계산한다.
   const redirectPath = loginRedirectPath();
   tokenStorage.clear();
+  clearNativeRefresh();
   try {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(PERSISTED_USER_KEY);
   } catch {
@@ -153,12 +182,16 @@ export function refreshAccessTokenResult(): Promise<RefreshResult> {
     // refresh token은 httpOnly cookie로 자동 전송된다 (credentials: include)
     const { signal, clear } = createTimeoutSignal(REQUEST_TIMEOUT_MS);
     try {
+      const nativeBody = getNativeRefreshBody();
       const res = await fetch(`${BASE_URL}/auth/refresh`, {
         method: 'POST',
+        headers: { ...nativeHeaders(), ...(nativeBody ? { 'Content-Type': 'application/json' } : {}) },
+        body: nativeBody ? JSON.stringify(nativeBody) : undefined,
         credentials: 'include',
         signal,
       });
       if (res.ok) {
+        captureNativeRefresh(res);
         const data = (await res.json()) as { access_token?: string };
         if (!data?.access_token) {
           // 200 이지만 토큰이 없는 비정상 응답 → 세션 폐기 대상이 아니다.
@@ -169,6 +202,7 @@ export function refreshAccessTokenResult(): Promise<RefreshResult> {
       }
       // 4xx: refresh 토큰이 실제로 만료/폐기됨 → 세션 폐기가 맞다.
       if (res.status >= 400 && res.status < 500) {
+        clearNativeRefresh();
         return { ok: false, token: null, reason: 'invalid' };
       }
       // 5xx: 서버 일시 장애 → 세션 유지
@@ -238,7 +272,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const { method = 'GET', body, skipAuth = false, headers = {} } = options;
 
   const buildHeaders = (token: string | null): Record<string, string> => {
-    const h: Record<string, string> = { ...headers };
+    const h: Record<string, string> = { ...headers, ...nativeHeaders() };
     if (body !== undefined && !isFormDataBody(body)) h['Content-Type'] = 'application/json';
     if (!skipAuth && token) h.Authorization = `Bearer ${token}`;
     return h;
@@ -250,13 +284,15 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       options.responseType === 'blob' ? BLOB_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
     );
     try {
-      return await fetch(`${BASE_URL}${path}`, {
+      const response = await fetch(`${BASE_URL}${path}`, {
         method,
         headers: buildHeaders(token),
         body: body !== undefined ? (isFormDataBody(body) ? body : JSON.stringify(body)) : undefined,
         credentials: 'include',
         signal,
       });
+      captureNativeRefresh(response);
+      return response;
     } catch (error) {
       if (isAbortError(error)) {
         throw new ApiError(408, '요청 시간이 초과되었습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.', null);

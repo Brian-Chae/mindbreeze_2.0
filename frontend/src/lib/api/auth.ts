@@ -1,6 +1,6 @@
 // 인증 관련 API 호출
 
-import { apiClient } from './client';
+import { apiClient, getNativeRefreshBody } from './client';
 import type { VerifiedTier } from './credentials';
 
 export type UserRole = 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin';
@@ -74,7 +74,7 @@ export const login = (
 export const refreshToken = (): Promise<TokenResponse> =>
   apiClient.post('/auth/refresh', undefined, { skipAuth: true });
 
-export const logout = (): Promise<void> => apiClient.post('/auth/logout', undefined);
+export const logout = (): Promise<void> => apiClient.post('/auth/logout', getNativeRefreshBody());
 
 export const forgotPassword = (email: string): Promise<{ ok: boolean }> =>
   apiClient.post('/auth/password/forgot', { email }, { skipAuth: true });

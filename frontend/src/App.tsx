@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { useStatusBar } from './lib/native/use-status-bar';
+import { isNativeApp } from './lib/native/platform';
 // SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
 import {
   createBrowserRouter,
@@ -96,6 +97,12 @@ function RoleRouter() {
   return <Navigate to={resolvePostLoginPath(user)} replace />;
 }
 
+/** 루트 진입: 네이티브 앱은 랜딩 없이 로그인(또는 로그인 상태면 역할별 홈)으로 바로 이동 */
+function EntryRoute() {
+  if (isNativeApp()) return <RoleRouter />;
+  return <LandingPage />;
+}
+
 function PlatformAdminRoute({ children }: { children: ReactElement }) {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
@@ -134,7 +141,7 @@ function RootLayout() {
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<RootLayout />}>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<EntryRoute />} />
         <Route path="/join" element={<ClassJoinPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/login" element={<LoginPage />} />

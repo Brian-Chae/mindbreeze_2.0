@@ -68,6 +68,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-MB-Refresh-Token"],
 )
 
 app.include_router(v1_router)

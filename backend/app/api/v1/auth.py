@@ -116,6 +116,10 @@ def _set_refresh_cookie(
       뒤 실제 접속 프로토콜과 어긋날 수 있어(예: 운영 프록시 뒤 http 프론트, 로컬 https),
       요청 scheme 기준으로 판단해 http 로컬 개발에서 쿠키가 조용히 버려지는 문제를 막는다.
     """
+    # 네이티브 앱(Capacitor)은 앱 오리진이 달라 쿠키가 전송되지 않는다 → 앱 헤더가 있을 때만
+    # 응답 헤더로도 전달한다(웹 응답에는 노출하지 않음).
+    if request is not None and request.headers.get("x-mb-native") == "capacitor":
+        response.headers["X-MB-Refresh-Token"] = refresh_token
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_token,

@@ -7,6 +7,7 @@ import {
   tokenStorage,
   refreshAccessTokenResult,
   type RefreshFailureReason,
+  clearNativeRefresh,
 } from '../lib/api/client';
 // API7-07: 로그아웃 시 실시간 네임스페이스(/chat·/record·/session-live) 연결을 정리한다.
 import {
@@ -217,6 +218,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // 서버 에러는 무시하고 로컬 상태만 정리
     }
     tokenStorage.clear();
+    clearNativeRefresh();
     persistUser(null);
     set({ user: null, accessToken: null, isAuthenticated: false, sessionError: null });
     // API7-07: 로그아웃 후에도 이전 사용자 토큰으로 연결된 채 남던 실시간 소켓을 닫는다.

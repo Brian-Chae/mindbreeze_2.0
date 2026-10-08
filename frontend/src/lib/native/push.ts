@@ -11,6 +11,7 @@ export function allowedPushDeeplink(value: unknown): string | null {
   const path = value.split(/[?#]/, 1)[0];
   if (path.split('/').some((part) => part === '.' || part === '..')) return null;
   return path === '/app' || path.startsWith('/app/') || path === '/agent'
+    || path === '/chat' || path.startsWith('/chat/')
     ? value : null;
 }
 

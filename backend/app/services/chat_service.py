@@ -1429,6 +1429,36 @@ def _resolve_recipients(room: ChatRoom, sender_id: UUID, db: DBSession) -> list[
     return recipients
 
 
+def _chat_push_deeplink(room_id: str, recipient: User | None) -> str:
+    """수신자 역할별 채팅방 앱 경로 — 내담자는 /app/chat, 그 외는 /chat."""
+    prefix = "/app/chat" if recipient is not None and recipient.role == "client" else "/chat"
+    return f"{prefix}/{room_id}"
+
+
+def _enqueue_chat_push(room, sender, recipients: list[str], msg, db: DBSession) -> None:
+    """채팅 수신자에게 푸시 Outbox 행 적재(실제 발송은 push cron). 디바이스 토큰이 없으면 cron 이 skipped 처리."""
+    from app.models.notification_outbox import NotificationOutbox
+
+    sender_display = sender.name if sender and sender.name else "상대방"
+    for recipient_id in recipients:
+        recipient = db.query(User).filter(User.id == recipient_id).first()
+        db.add(
+            NotificationOutbox(
+                user_id=recipient_id,
+                channel="push",
+                payload={
+                    "title": "MIND BREEZE",
+                    "body": f"{sender_display}님이 메시지를 보냈어요",
+                    "deeplink": _chat_push_deeplink(str(room.id), recipient),
+                    "message_id": str(msg.id),
+                },
+                status="pending",
+            )
+        )
+    db.commit()
+
+
+
 async def post_message(room_id: str, user_id: str, content: str, msg_type: str, file_url: str | None, db: DBSession) -> dict:
     rid = _uuid(room_id)
     room = db.query(ChatRoom).filter(ChatRoom.id == rid).first()
@@ -1486,6 +1516,13 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
             )
     except Exception as e:
         logger.error(f"Failed to create chat notification: {e}", exc_info=True)
+
+    # ── 앱 푸시 Outbox (채팅 도착) ── 상담 내용이 잠금화면에 노출되지 않도록 본문은 고정 문구
+    try:
+        _enqueue_chat_push(room, sender, recipients, msg, db)
+    except Exception as e:  # noqa: BLE001 — 푸시 적재 실패가 메시지 전송을 막지 않는다
+        db.rollback()
+        logger.error(f"Failed to enqueue chat push: {e}", exc_info=True)
 
     # 실시간 메시지 브로드캐스트
     serialized = _serialize_msg(msg, db)
