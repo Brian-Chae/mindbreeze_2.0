@@ -61,3 +61,12 @@ BLE는 기존 EEG Provider·UUID·notify 처리와 `useBand` 재연결 경로를
 - TypeScript와 프로덕션 빌드는 위 두 패키지 미설치로 차단됐다. 완료 또는 배포 가능한 빌드로 간주하지 않는다.
 - 모킹 기반 푸시·BLE·웹 회귀 테스트 결과와 전체 기존 실패 목록은 `/tmp/sdd-wave/report-190-fe.md`에 기록한다.
 - Firebase 자격증명 배치, APNs 키 업로드, Firebase SPM 다운로드, Xcode/Gradle 네이티브 컴파일·서명, 실기기 로그인/refresh·푸시 권한/수신/탭/로그아웃·BLE 연결/재연결은 아직 검증하지 않았다.
+
+
+## 진행 현황 (2026-10-08)
+- ✅ Firebase 프로젝트 `mind-breeze` 생성, Android/iOS 앱 등록 (번들/패키지 `com.looxidlabs.mindbreeze`)
+- ✅ `google-services.json` → `frontend/android/app/`, `GoogleService-Info.plist` → `frontend/ios/App/App/` 배치(git 제외), iOS 프로젝트 `Resources`에 포함
+- ✅ dev 서버 `/home/ubuntu/.secrets/fcm-service-account.json`(chmod 600) + `.env.dev`의 `FCM_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_JSON`(경로) 설정, 푸시 cron `configured: True`, FCM 인증 확인(가짜 토큰이 INVALID_ARGUMENT로 거절됨)
+- ⏳ iOS: APNs 인증 키(.p8)를 Apple Developer에서 만들어 Firebase 프로젝트 설정 → 클라우드 메시징에 업로드 필요
+- ⏳ prod 서버(`api.mindbreeze…`)에는 아직 미설정 — 배포 시 동일 절차(서비스 계정 키 파일 + 환경변수)
+- ⏳ 실기기 푸시 수신·탭·BLE 검증, Xcode/Gradle 빌드
