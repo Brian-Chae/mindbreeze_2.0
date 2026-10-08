@@ -241,7 +241,16 @@ def _call_gemini(prompt: str, max_output_tokens: int = 1024) -> str | None:
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.6, "maxOutputTokens": max_output_tokens},
+                "generationConfig": {
+                    "temperature": 0.6,
+                    "maxOutputTokens": max_output_tokens,
+                    # Gemini 2.5-flash 는 thinking(사고) 모델이라 maxOutputTokens 가
+                    # 사고 토큰 + 텍스트의 합계를 제한한다. 긴 시스템 지시가 있으면 사고가
+                    # 대부분을 차지해 텍스트가 몇 토큰만 나오고 MAX_TOKENS 로 잘린다
+                    # (실측: 384 토큰인데 27자에서 잘림). thinking 을 끄면 전체가 텍스트에
+                    # 쓰이고 완전한 문장이 나오며 속도도 크게 빨라진다(2.8초→1.1초).
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
             },
             timeout=GEMINI_TIMEOUT_SECONDS,
         )
