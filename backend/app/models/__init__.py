@@ -24,6 +24,12 @@ from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
 from app.models.signup_application import SignupApplication
+from app.models.agent import (
+    AgentConversation,
+    AgentMessage,
+    AgentRelayEvent,
+    AgentDeliveryLog,
+)
 
 from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
@@ -68,6 +74,11 @@ __all__ = [
     "Qualification",
     "Career",
     "SignupApplication",
+    # SDD-188: AI 에이전트 양방향 채널
+    "AgentConversation",
+    "AgentMessage",
+    "AgentRelayEvent",
+    "AgentDeliveryLog",
 ]
 
 from app.models.data_export import DataExportJob, DataExportAudit

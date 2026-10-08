@@ -16,6 +16,7 @@ import {
   type SessionParticipant,
 } from '../../lib/api/session';
 import type { ParticipantChangedEvent } from '../../lib/socket';
+import { SessionLocationEditor } from '../../components/session/session-location-editor';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
@@ -87,6 +88,7 @@ export default function SessionDetailPage() {
   const [session, setSession] = useState<SessionDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editingLocation, setEditingLocation] = useState(false);
   const [copied, setCopied] = useState(false);
   // SDD-095: 템플릿 저장 완료 표시
   const [templateSaved, setTemplateSaved] = useState(false);
@@ -431,6 +433,26 @@ export default function SessionDetailPage() {
               </dd>
             </div>
           </dl>
+          <div className="border-t border-[#EFEFEF] pt-4">
+            {editingLocation ? (
+              <SessionLocationEditor
+                key={session.id}
+                session={session}
+                onSaved={(updated) => { setSession(updated); setEditingLocation(false); }}
+                onCancel={() => setEditingLocation(false)}
+              />
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-[#6F6F6F]">장소</p>
+                  <p className="text-sm text-[#1F1F1F]">{session.location_type === 'online' ? '온라인 (원격)' : session.location_address || '오프라인 · 주소 미등록'}</p>
+                </div>
+                {['ready', 'scheduled'].includes(session.status) && (
+                  <button type="button" disabled={busy} onClick={() => setEditingLocation(true)} className="mb-btn mb-btn--ghost text-sm">장소 수정</button>
+                )}
+              </div>
+            )}
+          </div>
           {session.notes && (
             <div>
               <dt className="text-xs text-[#6F6F6F] mb-1">메모</dt>

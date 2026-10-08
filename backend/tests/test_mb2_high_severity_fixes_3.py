@@ -269,7 +269,9 @@ def test_eeg_qry_01_마이그레이션_헤드_단일_연결():
 
     # 6차 하(下): e036a0000035(credentials/chat_reads/org_join 인덱스)가 새 헤드이며,
     # e036a0000034(인덱스·org_join 유니크)는 그 부모로 연결된다.
-    assert script.get_heads() == ["e036a0000035"]
+    # SDD-188: 이후 리비전이 추가되어도 단일 head 이며 e036a0000035 가 체인에 포함되면 된다.
+    assert len(script.get_heads()) == 1
+    assert "e036a0000035" in {r.revision for r in script.walk_revisions()}
     head_rev = script.get_revision("e036a0000035")
     assert head_rev is not None
     assert head_rev.down_revision == "e036a0000034"

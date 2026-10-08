@@ -53,6 +53,10 @@ class Session(Base):
     max_participants: Mapped[int] = mapped_column(Integer, default=1)
     # 진행 형태 설정
     location_type: Mapped[str] = mapped_column(String(20), nullable=False, default="offline")  # online, offline
+    # SDD-188(D8): 오프라인 클래스의 실제 방문 주소. 내담자 AI 비서의 길찾기 CTA 가 이 값을 쓴다.
+    # 생성 시 미지정이면 서버가 기관 주소 → 상담사 프로필 주소 순으로 기본값을 채운다.
+    # 온라인 클래스는 항상 null(장소 개념이 없다).
+    location_address: Mapped[str | None] = mapped_column(String(300), nullable=True)
     participant_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="one_on_one")  # one_on_one, group
     linkband_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="none")  # none, required, optional
     # 온라인(WebRTC) 설정 — location_type=online 시 자동 생성

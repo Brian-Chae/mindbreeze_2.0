@@ -5,6 +5,8 @@ from app.config import settings
 from app.api.v1 import normalization
 from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications
 from app.api.v1 import class_audio
+# SDD-188: AI 에이전트 채널(내담자 전용)
+from app.api.v1 import agent
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -29,6 +31,7 @@ router.include_router(signup_applications.admin_router)
 router.include_router(notifications.router)
 router.include_router(dashboard.router)
 router.include_router(org_public.router)
+router.include_router(agent.router)
 
 # SDD-019: dev 전용 역할 시뮬레이션 라우터.
 # 프로덕션에는 엔드포인트 자체가 존재하지 않도록, 아래 두 조건이 모두 참일 때만 조건부 include.

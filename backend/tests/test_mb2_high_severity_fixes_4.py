@@ -198,7 +198,9 @@ def test_notification_outbox_인덱스_마이그레이션_헤드연결():
 
     heads = script.get_heads()
     # 6차 하(下): e036a0000035 가 새 헤드이며, IDX-06(e036a0000033)은 그 조상으로 연결된다.
-    assert heads == ["e036a0000035"], f"알렸 헤드 목록: {heads}"
+    # SDD-188: 이후 리비전이 추가되어도 단일 head 이며 e036a0000035 가 체인에 포함되면 된다.
+    assert len(heads) == 1, f"알렸 헤드 목록: {heads}"
+    assert "e036a0000035" in {r.revision for r in script.walk_revisions()}
 
     rev = script.get_revision("e036a0000033")
     assert rev.down_revision == "e036a0000032"

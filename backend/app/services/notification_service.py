@@ -65,6 +65,12 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "account_reactivated": {"type": "system", "target_type": "notice"},
     # ── 개인상담소 P01 ──
     "personal_office_opened": {"type": "organization", "target_type": "self_profile"},
+    # ── SDD-188: AI 에이전트 채널 ──
+    # 내담자의 일정 변경 문의가 상담사에게 전달될 때 발화한다(중계 이벤트와 쌍).
+    "schedule_change_request": {"type": "session", "target_type": "session"},
+    # AI 비서가 내담자에게 먼저 말을 건 경우의 인앱 알림.
+    # 본문에는 상담 내용·이름을 담지 않는다(대화창에서 확인하도록 유도).
+    "agent_message": {"type": "system", "target_type": "notice"},
 }
 
 # 하위 호환: 이전 이벤트→type 매핑 (기존 호출부가 참조하던 이름)

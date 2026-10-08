@@ -59,6 +59,7 @@ export interface SessionDto {
   notes: string | null;
   max_participants: number;
   location_type: LocationType;
+  location_address: string | null;
   participant_mode: ParticipantMode;
   linkband_mode: LinkbandMode;
   webrtc_room_id: string | null;
@@ -96,6 +97,7 @@ export interface CreateSessionPayload {
   force?: boolean;
   custom_type_name?: string;
   location_type?: LocationType;
+  location_address?: string;
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
   sfu_enabled?: boolean;
@@ -124,6 +126,7 @@ export interface UpdateSessionPayload {
   force?: boolean;
   custom_type_name?: string;
   location_type?: LocationType;
+  location_address?: string;
   participant_mode?: ParticipantMode;
   linkband_mode?: LinkbandMode;
   sfu_enabled?: boolean;

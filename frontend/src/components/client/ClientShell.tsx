@@ -3,7 +3,10 @@
 // 모바일: TopBar + 콘텐츠 + BottomTabBar
 
 import { useState, useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAgentStore } from '../../stores/agent-store';
+import { useAuthStore } from '../../stores/authStore';
+import { getUnreadCount } from '../../lib/api/agent';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import MobileDrawer from '../layout/MobileDrawer';
 import BottomTabBar from './BottomTabBar';
@@ -37,6 +40,9 @@ export default function ClientShell({
 }: ClientShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const userId = useAuthStore((s) => s.user?.id);
+  const agentUnread = useAgentStore((s) => s.unread);
   const unread = useNotificationStore((s) => s.unread);
   const toast = useNotificationStore((s) => s.toast);
   const dismissToast = useNotificationStore((s) => s.dismissToast);
@@ -46,6 +52,22 @@ export default function ClientShell({
   );
   const reportUnread = useReportStore((s) => s.unread);
   const refreshReports = useReportStore((s) => s.refresh);
+
+  useEffect(() => { useAgentStore.getState().setUnread(0); }, [userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // 대화 페이지에서는 실제 읽음 API 응답으로 배지를 갱신한다.
+    if (pathname.startsWith('/app/ai')) return;
+    const refresh = () => {
+      void getUnreadCount().then((result) => {
+        if (!cancelled) useAgentStore.getState().setUnread(result.unread);
+      }).catch(() => { /* 배지 조회 실패는 다른 화면 이용을 막지 않는다. */ });
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [pathname, userId]);
 
   // Socket.IO 실시간 알림 리스너 + 최초 fetch
   useNotificationSocket();
@@ -83,6 +105,7 @@ export default function ClientShell({
         <SidebarNav
           role="client"
           notificationBadge={unread}
+          agentBadge={agentUnread}
           chatBadge={chatUnread}
           reportBadge={reportUnread}
           sessionBadge={sessionInvites.length}

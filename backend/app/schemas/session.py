@@ -27,6 +27,9 @@ class SessionCreateRequest(BaseModel):
     notes: str | None = None
     max_participants: int = Field(10, ge=1, le=100)
     location_type: LocationType = "offline"
+    # SDD-188(D8): 오프라인 클래스 방문 주소. 미지정이면 서버가 기관 주소 → 상담사 주소 순으로
+    # 기본값을 채운다. 온라인 클래스에서는 무시되고 null 로 저장된다.
+    location_address: str | None = Field(None, max_length=300)
     participant_mode: ParticipantMode = "one_on_one"
     linkband_mode: LinkbandMode = "none"
     sfu_enabled: bool = False
@@ -80,6 +83,8 @@ class SessionUpdateRequest(BaseModel):
     notes: str | None = None
     max_participants: int | None = Field(None, ge=1, le=100)
     location_type: LocationType | None = None
+    # SDD-188(D8): 장소 주소 수정. 빈 문자열을 주면 주소를 비운다(None).
+    location_address: str | None = Field(None, max_length=300)
     participant_mode: ParticipantMode | None = None
     linkband_mode: LinkbandMode | None = None
     sfu_enabled: bool | None = None
@@ -157,6 +162,8 @@ class SessionResponse(BaseModel):
     notes: str | None = None
     max_participants: int
     location_type: LocationType
+    # SDD-188(D8): 오프라인 클래스 방문 주소. 온라인이면 항상 null.
+    location_address: str | None = None
     participant_mode: ParticipantMode
     linkband_mode: LinkbandMode
     webrtc_room_id: str | None = None

@@ -2,6 +2,7 @@
 // useLocation으로 현재 경로 기반 활성 탭 판단
 // 배지: 리포트=미열람(is_read), 채팅=미읽음, 세션=초대 대기 — reportStore/chatStore/notificationStore 구독
 
+import { useAgentStore } from '../../stores/agent-store';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import { useChatStore } from '../../stores/chatStore';
@@ -17,6 +18,7 @@ interface TabItem {
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/ai', label: 'AI 대화', icon: ICONS.message },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
 ];
@@ -32,6 +34,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
+  const agentUnread = useAgentStore((s) => s.unread);
   const reportUnread = useReportStore((s) => s.unread);
 
   const isActive = (path: string): boolean => {
@@ -47,7 +50,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
         const unread =
-          tab.label === '채팅'
+          tab.label === 'AI 대화' ? agentUnread : tab.label === '채팅'
             ? chatUnread
             : tab.label === '리포트'
               ? reportUnread
@@ -61,7 +64,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             type="button"
             onClick={() => navigate(tab.to)}
             aria-current={active ? 'page' : undefined}
-            className={`relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 ${
+            className={`relative flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] flex-1 h-14 ${
               active ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
             }`}
           >
@@ -83,7 +86,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       <button
         type="button"
         onClick={onMoreClick}
-        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 text-[#6F6F6F]"
+        className="flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] flex-1 h-14 text-[#6F6F6F]"
       >
         <StrokeIcon d={ICONS.menu} size={22} />
         <span>더보기</span>

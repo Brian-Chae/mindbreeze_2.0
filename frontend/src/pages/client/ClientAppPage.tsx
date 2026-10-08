@@ -2,6 +2,7 @@
 // 상담사 연결 안 됨 → 코드 입력 화면
 // 상담사 연결 됨 → ClientShell + 탭별 페이지
 
+import AiAgentPage from './ai-agent-page';
 import ClientNotificationPage from './ClientNotificationPage';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
@@ -249,6 +250,8 @@ export default function ClientAppPage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey]);
+
+  if (pathname === '/app/ai' || pathname === '/app/ai/') return <AiAgentPage key={user?.id} />;
 
   // 로딩 중
   if (counselors === null && !fetchError) {

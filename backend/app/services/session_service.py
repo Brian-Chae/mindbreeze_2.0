@@ -51,6 +51,37 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def resolve_location_address(
+    location_type: str,
+    requested: str | None,
+    organization_id: UUID | None,
+    host_id: UUID,
+    db: DBSession,
+) -> str | None:
+    """SDD-188(D8): 저장할 장소 주소를 결정한다.
+
+    - 온라인 클래스는 장소 개념이 없으므로 입력이 있어도 항상 None.
+    - 오프라인 + 입력 있음 → 입력값(공백 제거, 300자 절단)
+    - 오프라인 + 입력 없음 → 세션 소속 기관 주소 → 상담사 프로필 주소 → None
+    """
+    if location_type != "offline":
+        return None
+    if requested is not None and requested.strip():
+        return requested.strip()[:300]
+
+    if organization_id is not None:
+        from app.models.organization import Organization
+
+        org = db.get(Organization, organization_id)
+        if org is not None and org.address and org.address.strip():
+            return org.address.strip()[:300]
+
+    from app.services import agent_policy
+
+    host = db.get(User, host_id)
+    return agent_policy.counselor_address(host, db)
+
+
 def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
     parts = list(s.participants or [])
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
@@ -72,6 +103,8 @@ def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
         "notes": s.notes,
         "max_participants": s.max_participants,
         "location_type": s.location_type,
+        # SDD-188(D8): 오프라인 클래스 방문 주소 — 내담자 AI 비서 길찾기 CTA 의 원천.
+        "location_address": s.location_address,
         "participant_mode": s.participant_mode,
         "linkband_mode": s.linkband_mode,
         "webrtc_room_id": str(s.webrtc_room_id) if s.webrtc_room_id else None,
@@ -287,6 +320,14 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=max_p,
         location_type=payload.location_type,
+        # SDD-188(D8): 오프라인이면 기관 주소 → 상담사 주소 순으로 기본값을 채운다.
+        location_address=resolve_location_address(
+            payload.location_type,
+            getattr(payload, "location_address", None),
+            org.id if org else None,
+            host_uuid,
+            db,
+        ),
         participant_mode=payload.participant_mode,
         linkband_mode=payload.linkband_mode,
         webrtc_room_id=webrtc_room_id,
@@ -345,6 +386,8 @@ _COPYABLE_CONFIG_FIELDS = (
     "duration_min",
     "max_participants",
     "location_type",
+    # SDD-188(D8): 장소 주소도 유형 설정으로 함께 복사한다(일정만 새로 정한다).
+    "location_address",
     "participant_mode",
     "linkband_mode",
     "sfu_enabled",
@@ -387,6 +430,13 @@ def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
         reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=_normalized_max_participants(payload.type, payload.max_participants),
         location_type=payload.location_type,
+        location_address=resolve_location_address(
+            payload.location_type,
+            getattr(payload, "location_address", None),
+            org.id if org else None,
+            host_uuid,
+            db,
+        ),
         participant_mode=payload.participant_mode,
         linkband_mode=payload.linkband_mode,
         webrtc_room_id=None,
@@ -711,6 +761,22 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         # 회원 라이브 스트리밍은 장소유형과 무관 — 룸이 없으면 항상 생성 (오프라인 전환 시에도 유지)
         if not s.webrtc_room_id:
             s.webrtc_room_id = uuid.uuid4()
+
+    # SDD-188(D8): 장소 주소 반영.
+    #   - 주소를 명시하면 그 값으로 교체(빈 문자열이면 비운다).
+    #   - 주소를 안 주고 장소유형만 오프라인으로 바꿨으면 기본값을 다시 채운다.
+    #   - 온라인으로 바뀌면 항상 null 로 정리한다.
+    _address_given = getattr(payload, "location_address", None) is not None
+    if _address_given or payload.location_type is not None:
+        if s.location_type != "offline":
+            s.location_address = None
+        elif _address_given:
+            _cleaned = payload.location_address.strip()
+            s.location_address = _cleaned[:300] if _cleaned else None
+        elif not s.location_address:
+            s.location_address = resolve_location_address(
+                s.location_type, None, s.organization_id, s.host_id, db
+            )
 
     # SDD-097: 리마인더 시점 재설정 — 주어졌을 때만 교체.
     reminders_changed = False

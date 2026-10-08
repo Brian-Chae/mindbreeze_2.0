@@ -73,6 +73,7 @@ jobs:
             backend/sweep_stale_open_sessions_cron.py \
             backend/sweep_stale_reports_cron.py \
             backend/sweep_session_reminders_cron.py \
+            backend/sweep_agent_reminders_cron.py \
             backend/process_pipeline_outbox_cron.py \
             backend/process_email_outbox_cron.py \
             backend/cleanup_data_exports_cron.py \
@@ -240,6 +241,8 @@ jobs:
             # 5.7 SDD-138: celery beat 대체 나머지 주기 스윕 cron 등록
             (crontab -l 2>/dev/null | grep -v 'sweep_stale_reports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_reports_cron.py >> /var/log/mindbreeze-stale-reports.log 2>&1') | crontab -
             (crontab -l 2>/dev/null | grep -v 'sweep_session_reminders_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_session_reminders_cron.py >> /var/log/mindbreeze-reminders.log 2>&1') | crontab -
+            # SDD-188: AI 비서 예약 사전 노티(3시간 전·1시간 전) 스윕 cron 등록 (매 1분)
+            (crontab -l 2>/dev/null | grep -v 'sweep_agent_reminders_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_reminders_cron.py >> /var/log/mindbreeze-agent-reminders.log 2>&1') | crontab -
             (crontab -l 2>/dev/null | grep -v 'process_pipeline_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_pipeline_outbox_cron.py >> /var/log/mindbreeze-pipeline-outbox.log 2>&1') | crontab -
             # 5.8 NOTIF-03/OUTBOX-001: 이메일 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
             (crontab -l 2>/dev/null | grep -v 'process_email_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_API_KEY=$(grep -E ^RESEND_API_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_FROM_EMAIL=$(grep -E ^RESEND_FROM_EMAIL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_email_outbox_cron.py >> /var/log/mindbreeze-email-outbox.log 2>&1') | crontab -

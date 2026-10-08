@@ -314,7 +314,9 @@ def test_idx_마이그레이션_헤드연결():
     cfg = Config(str(_BACKEND_ROOT / "alembic.ini"))
     cfg.set_main_option("script_location", str(_BACKEND_ROOT / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert "e036a0000035" in script.get_heads()
+    # SDD-188: 후속 리비전이 head 가 될 수 있으므로 단일 head + 체인 포함으로 검증한다.
+    assert len(script.get_heads()) == 1
+    assert "e036a0000035" in {r.revision for r in script.walk_revisions()}
     rev = script.get_revision("e036a0000035")
     assert rev.down_revision == "e036a0000034"
     # 세 인덱스가 마이그레이션에 존재

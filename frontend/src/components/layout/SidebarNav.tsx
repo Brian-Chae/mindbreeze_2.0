@@ -110,6 +110,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home, end: true },
   { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/ai', label: 'AI 대화', icon: ICONS.message },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
   { to: '/app/notifications', label: '알림', icon: ICONS.bell },
@@ -128,6 +129,7 @@ interface SidebarNavProps {
   onNavigate?: () => void;
   role?: 'counselor' | 'client';
   notificationBadge?: number;
+  agentBadge?: number;
   chatBadge?: number;
   reportBadge?: number;
   sessionBadge?: number;
@@ -137,6 +139,7 @@ export default function SidebarNav({
   onNavigate,
   role = 'counselor',
   notificationBadge,
+  agentBadge,
   chatBadge,
   reportBadge,
   sessionBadge,
@@ -170,7 +173,7 @@ export default function SidebarNav({
   const getBadge = (label: string): React.ReactNode => {
     // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
     const count =
-      label === '채팅'
+      label === 'AI 대화' ? agentBadge ?? 0 : label === '채팅'
         ? chatBadge ?? 0
         : label === '알림'
           ? notificationBadge ?? 0

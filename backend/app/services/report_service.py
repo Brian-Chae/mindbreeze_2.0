@@ -927,6 +927,17 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     # 중복 예약하지 않는다.
     if not already_completed:
         _enqueue_client_email_on_approval(report, db)
+        # SDD-188: 승인 완료 시 내담자 AI 비서가 리포트 링크와 열린 질문으로 대화를 시작한다.
+        #   자동 승인(auto_approve_report) 경로도 이 함수를 거치므로 훅이 한 곳으로 모인다.
+        #   훅 내부에서 예외를 삼키지만, 여기서도 승인 트랜잭션을 지키기 위해 한 번 더 감싼다.
+        try:
+            from app.services import agent_report_chat
+
+            agent_report_chat.on_report_approved(report, db)
+        except Exception:  # noqa: BLE001
+            logger.exception(
+                "[report_service] AI 비서 리포트 대화 시작 실패: report_id=%s", report.id
+            )
 
     return _serialize(report, session, subjective=_subjective_for_report(report, db))
 

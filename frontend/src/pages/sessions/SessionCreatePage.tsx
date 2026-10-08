@@ -1,6 +1,6 @@
 // 세션 생성 페이지 (UI Kit)
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   createSession,
@@ -14,6 +14,9 @@ import {
   type SessionDto,
   type SessionType,
 } from '../../lib/api/session';
+import { getCounselorProfile } from '../../lib/api/counselor';
+import { getOrg } from '../../lib/api/org';
+import { getLocationAddressDefault, getLocationAddressPayload, isLocationAddressVisible } from '../../lib/class/session-location';
 import { REMINDER_OFF_OPTION, REMINDER_ON_OPTIONS } from '../../lib/class/reminder';
 import AppShell from '../../components/layout/AppShell';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
@@ -23,6 +26,8 @@ export default function SessionCreatePage() {
   const [type, setType] = useState<SessionType>('meditation');
   const [customTypeName, setCustomTypeName] = useState('');
   const [locationType, setLocationType] = useState<LocationType>('offline');
+  const [locationAddress, setLocationAddress] = useState('');
+  const locationAddressEdited = useRef(false);
   const [participantMode, setParticipantMode] = useState<ParticipantMode>('group');
   const [linkbandMode, setLinkbandMode] = useState<LinkbandMode>('optional');
   const [recordAudio, setRecordAudio] = useState(true);
@@ -50,6 +55,21 @@ export default function SessionCreatePage() {
   const [templateHint, setTemplateHint] = useState<string | null>(null);
   const [templateSaved, setTemplateSaved] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getCounselorProfile().then(async (profile) => {
+      const organization = profile.org_id ? await getOrg(profile.org_id).catch(() => null) : null;
+      if (!cancelled && !locationAddressEdited.current) {
+        setLocationAddress(getLocationAddressDefault({
+          organizationAddress: organization?.address,
+          addressLine1: profile.address_line1,
+          addressLine2: profile.address_line2,
+        }));
+      }
+    }).catch(() => { /* 기본 주소를 조회하지 못해도 직접 입력하거나 서버 기본값을 사용할 수 있다. */ });
+    return () => { cancelled = true; };
+  }, []);
 
   // 1:1 모드면 1명, 그룹이면 최대 참여자 수만큼 선택 가능
   const pickerMax = participantMode === 'one_on_one' ? 1 : maxParticipants;
@@ -81,6 +101,10 @@ export default function SessionCreatePage() {
     setType(tpl.type);
     setCustomTypeName(tpl.custom_type_name ?? '');
     setLocationType(tpl.location_type);
+    if (tpl.location_address) {
+      locationAddressEdited.current = true;
+      setLocationAddress(getLocationAddressDefault(tpl));
+    }
     setParticipantMode(tpl.participant_mode);
     setMaxParticipants(tpl.max_participants);
     // MB2-06: 템플릿의 최대 인원으로 줄어들면 선택된 참여자도 그 수에 맞게 정리한다
@@ -111,6 +135,7 @@ export default function SessionCreatePage() {
         notes: notes || undefined,
         max_participants: maxParticipants,
         location_type: locationType,
+        location_address: getLocationAddressPayload(locationType, locationAddress),
         participant_mode: participantMode,
         linkband_mode: linkbandMode,
         sfu_enabled: locationType === 'online' && participantMode === 'group',
@@ -307,6 +332,21 @@ export default function SessionCreatePage() {
                 온라인은 상담사 영상·음성이 회원에게 실시간 스트리밍됩니다. 오프라인은 하울링 방지를 위해 회원 스피커가 기본 음소거됩니다.
               </p>
             </div>
+
+            {isLocationAddressVisible(locationType) && (
+              <div>
+                <label className={labelCls} htmlFor="session-location-address">장소 (주소)</label>
+                <input
+                  id="session-location-address"
+                  value={locationAddress}
+                  onChange={(e) => { locationAddressEdited.current = true; setLocationAddress(e.target.value); }}
+                  maxLength={300}
+                  className={inputCls}
+                  placeholder="상담 장소 주소를 입력해 주세요"
+                />
+                <p className="mt-1.5 text-xs text-[#6F6F6F]">비워 두면 기관 또는 상담사 프로필의 기본 주소가 사용됩니다.</p>
+              </div>
+            )}
 
             <div>
               <label className={labelCls} htmlFor="session-participant-mode">인원</label>
