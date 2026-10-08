@@ -174,8 +174,8 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
 
     const handleNewMessage = (msg: ChatMessage): void => {
       if (msg.room_id !== roomId) return;
-      // 내가 보낸 메시지는 handleSend에서 이미 추가됨 (중복 방지)
-      if (user && msg.sender_id === user.id) return;
+      // 같은 계정의 다른 기기에서 보낸 메시지도 받아야 하므로 발신자로 거르지 않는다.
+      // 이 기기에서 보낸 메시지는 handleSend 가 이미 추가했고, appendMessage 가 id 로 중복을 막는다.
       appendMessage(roomId, msg);
     };
 
@@ -218,7 +218,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       socket.off('connect', handleReconnect);
       socket.emit('leave_room', { room_id: roomId });
     };
-  }, [roomId, token, appendMessage, updateSenderName, user]);
+  }, [roomId, token, appendMessage, updateSenderName]);
 
   // ── IntersectionObserver: 스크롤 읽음 처리 ──
   const messageElRefs = useRef<Map<string, HTMLDivElement>>(new Map());
