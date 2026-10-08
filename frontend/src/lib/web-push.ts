@@ -11,6 +11,16 @@ export type WebPushState =
   | 'subscribed';
 
 const SW_URL = '/sw.js';
+// 기본값은 ON — 사용자가 설정에서 직접 끈 브라우저만 자동 구독을 건너뛴다.
+const OPT_OUT_KEY = 'mb_web_push_opt_out';
+const ASKED_KEY = 'mb_web_push_asked';
+
+function flag(key: string): boolean {
+  try { return localStorage.getItem(key) === '1'; } catch { return false; }
+}
+function setFlag(key: string, on: boolean): void {
+  try { if (on) localStorage.setItem(key, '1'); else localStorage.removeItem(key); } catch { /* 무시 */ }
+}
 
 export function isWebPushSupported(): boolean {
   if (typeof window === 'undefined' || isNativeApp()) return false;
@@ -69,7 +79,9 @@ export async function enableWebPush(): Promise<WebPushState> {
   if (!isWebPushSupported()) return 'unsupported';
   const publicKey = await fetchPublicKey();
   if (!publicKey) return 'unavailable';
-  const permission = await Notification.requestPermission();
+  const permission = Notification.permission === 'granted'
+    ? 'granted'
+    : await Notification.requestPermission();
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'idle';
 
   await navigator.serviceWorker.register(SW_URL);
@@ -82,6 +94,18 @@ export async function enableWebPush(): Promise<WebPushState> {
     }));
   await registerOnServer(subscription);
   return 'subscribed';
+}
+
+/** 설정 화면에서 사용자가 직접 켠다 — 자동 구독 거부 표시를 해제. */
+export async function enableWebPushByUser(): Promise<WebPushState> {
+  setFlag(OPT_OUT_KEY, false);
+  return enableWebPush();
+}
+
+/** 설정 화면에서 사용자가 직접 끈다 — 이 브라우저는 다시 자동 구독하지 않는다. */
+export async function disableWebPushByUser(): Promise<void> {
+  setFlag(OPT_OUT_KEY, true);
+  await disableWebPush();
 }
 
 /** 서버 구독 해지 + 브라우저 구독 해제. 서버 해지 실패가 브라우저 해제를 막지 않는다. */
@@ -110,9 +134,16 @@ export function startWebPushSync(
 
   void (async () => {
     try {
-      if (Notification.permission !== 'granted') return;
+      if (flag(OPT_OUT_KEY) || Notification.permission === 'denied') return;
+      if (Notification.permission === 'default') {
+        // 기본 ON: 권한을 아직 안 물었다면 로그인 후 한 번만 묻는다(거절/무시해도 반복하지 않음).
+        if (flag(ASKED_KEY)) return;
+        setFlag(ASKED_KEY, true);
+      }
       const subscription = await getSubscription();
-      if (subscription && !stopped) await registerOnServer(subscription);
+      if (stopped) return;
+      if (subscription) await registerOnServer(subscription);
+      else await enableWebPush(); // 권한이 이미 허용됐으면 조용히 구독, default 면 권한 요청
     } catch {
       /* 재등록 실패는 조용히 무시 — 설정 화면에서 다시 켤 수 있다. */
     }

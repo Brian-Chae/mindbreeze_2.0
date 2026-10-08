@@ -24,7 +24,9 @@ vi.mock('../src/lib/api/client', () => {
 
 import {
   disableWebPush,
+  disableWebPushByUser,
   enableWebPush,
+  enableWebPushByUser,
   getWebPushState,
   isWebPushSupported,
   startWebPushSync,
@@ -78,6 +80,7 @@ beforeEach(() => {
   mocks.native = false;
   mocks.get.mockResolvedValue({ public_key: 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U' });
   // 이전 테스트가 심은 브라우저 API 제거
+  localStorage.clear();
   Reflect.deleteProperty(navigator, 'serviceWorker');
   Reflect.deleteProperty(window, 'PushManager');
   vi.unstubAllGlobals();
@@ -164,11 +167,48 @@ describe('startWebPushSync', () => {
     stop();
   });
 
-  it('권한이 허용되지 않았으면 재등록하지 않는다', async () => {
-    installBrowser({ permission: 'default', subscribed: true });
+  it('권한이 차단(denied)이면 자동 구독하지 않는다', async () => {
+    const b = installBrowser({ permission: 'denied' });
     startWebPushSync(vi.fn(), vi.fn())();
-    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.notification.requestPermission).not.toHaveBeenCalled();
     expect(mocks.post).not.toHaveBeenCalled();
+  });
+
+  it('기본 ON: 권한을 아직 안 물었다면 자동으로 요청하고 구독한다(1회만)', async () => {
+    const b = installBrowser({ permission: 'default' });
+    localStorage.clear();
+    startWebPushSync(vi.fn(), vi.fn());
+    await vi.waitFor(() => expect(mocks.post).toHaveBeenCalledOnce());
+    expect(b.notification.requestPermission).toHaveBeenCalledOnce();
+
+    // 같은 브라우저에서 다시 로그인해도 권한을 반복해서 묻지 않는다.
+    b.notification.requestPermission.mockClear();
+    startWebPushSync(vi.fn(), vi.fn())();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(b.notification.requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('이미 허용된 브라우저는 구독이 없어도 조용히 구독한다', async () => {
+    const b = installBrowser({ permission: 'granted' });
+    localStorage.clear();
+    startWebPushSync(vi.fn(), vi.fn());
+    await vi.waitFor(() => expect(mocks.post).toHaveBeenCalledOnce());
+    expect(b.notification.requestPermission).not.toHaveBeenCalled();
+    expect(b.pushManager.subscribe).toHaveBeenCalledOnce();
+  });
+
+  it('설정에서 직접 끈 브라우저는 자동 구독하지 않고, 다시 켜면 풀린다', async () => {
+    const b = installBrowser({ permission: 'granted', subscribed: true });
+    await disableWebPushByUser();
+    mocks.post.mockClear();
+    startWebPushSync(vi.fn(), vi.fn())();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mocks.post).not.toHaveBeenCalled();
+
+    await enableWebPushByUser();
+    expect(localStorage.getItem('mb_web_push_opt_out')).toBeNull();
+    expect(b.sub.unsubscribe).toHaveBeenCalled();
   });
 });
 
@@ -215,12 +255,12 @@ function loadSw() {
 describe('sw.js', () => {
   const pushEvent = (payload: unknown) => ({ data: { json: () => payload } });
 
-  it('앱 창이 포커스 중이면 시스템 알림 대신 창에 갱신 메시지를 보낸다', async () => {
+  it('앱 창이 포커스 중이어도 시스템 알림을 표시하고 창에는 갱신 메시지를 보낸다', async () => {
     const sw = loadSw();
     const postMessage = vi.fn();
     sw.state.clients = [{ focused: true, postMessage }];
     await sw.run('push', pushEvent({ title: 't', body: 'b', data: {} }));
-    expect(sw.shown).toHaveLength(0);
+    expect(sw.shown).toHaveLength(1);
     expect(postMessage).toHaveBeenCalledWith({ type: 'mb-push-received' });
   });
 

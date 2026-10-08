@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  disableWebPush,
-  enableWebPush,
+  disableWebPushByUser,
+  enableWebPushByUser,
   getWebPushState,
   type WebPushState,
 } from '../../lib/web-push';
@@ -10,7 +10,7 @@ const STATE_HINT: Record<WebPushState, string> = {
   unsupported: '이 브라우저는 웹 푸시를 지원하지 않아요. Chrome·Edge·Firefox를 쓰거나, iPhone은 홈 화면에 추가한 뒤 이용해 주세요.',
   unavailable: '현재 서버에서 브라우저 알림을 사용할 수 없어요.',
   denied: '브라우저에서 알림이 차단돼 있어요. 주소창의 사이트 설정에서 알림을 허용한 뒤 다시 시도해 주세요.',
-  idle: '탭을 닫아도 새 메시지와 알림을 이 기기로 받아요.',
+  idle: '꺼져 있어요. 켜면 탭을 닫아도 새 메시지와 알림을 이 기기로 받아요.',
   subscribed: '이 기기로 브라우저 알림을 받고 있어요.',
 };
 
@@ -33,10 +33,10 @@ export default function WebPushCard() {
     setError(null);
     try {
       if (state === 'subscribed') {
-        await disableWebPush();
+        await disableWebPushByUser();
         setState('idle');
       } else {
-        setState(await enableWebPush());
+        setState(await enableWebPushByUser());
       }
     } catch {
       setError('알림 설정을 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.');
