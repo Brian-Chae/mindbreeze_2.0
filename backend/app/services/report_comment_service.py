@@ -222,8 +222,13 @@ def _rule_based_draft(context: dict) -> str:
     return " ".join(sentences)[:COMMENT_MAX_LENGTH]
 
 
-def _call_gemini(prompt: str) -> str | None:
-    """Gemini generateContent 호출. 키 부재·오류·타임아웃 시 None (호출부에서 규칙 폴백)."""
+def _call_gemini(prompt: str, max_output_tokens: int = 1024) -> str | None:
+    """Gemini generateContent 호출. 키 부재·오류·타임아웃 시 None (호출부에서 규칙 폴백).
+
+    max_output_tokens 는 호출부가 응답 길이 상한을 조정할 수 있게 둔다 — 에이전트 대화처럼
+    짧은 응답(2~4문장)은 큰 상한이 생성 시간을 불필요하게 늘린다(2.5-flash 기준 1024→약 4.5초,
+    256→약 2.3초). 기본값 1024 로 기존 상담사 코멘트 초안 경로는 그대로다.
+    """
     api_key = settings.gemini_api_key
     if not api_key:
         return None
@@ -236,7 +241,7 @@ def _call_gemini(prompt: str) -> str | None:
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"temperature": 0.6, "maxOutputTokens": 1024},
+                "generationConfig": {"temperature": 0.6, "maxOutputTokens": max_output_tokens},
             },
             timeout=GEMINI_TIMEOUT_SECONDS,
         )

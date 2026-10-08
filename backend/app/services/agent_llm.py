@@ -20,7 +20,14 @@ from app.services import agent_guard
 logger = logging.getLogger(__name__)
 
 # 사용자 요청 경로에서 허용하는 LLM 대기 시간(초). 초과 시 템플릿 폴백으로 응답한다.
-AGENT_LLM_TIMEOUT_SEC = 4.5
+# 2.5-flash + 짧은 응답 상한(에이전트는 2~4문장) 기준 실제 생성은 2~3초이므로,
+# 네트워크 지터를 감안해 여유 있게 잡는다. 너무 짧으면(기존 4.5초) 실제 응답이 경계에
+# 걸려 항상 폴백으로 떨어진다.
+AGENT_LLM_TIMEOUT_SEC = 8.0
+
+# 에이전트 응답의 생성 토큰 상한 — 메시지 본문은 최대 800자(2~4문장)로 잘리므로
+# 이 이상 생성할 필요가 없다. 큰 상한은 생성 시간만 늘린다.
+AGENT_LLM_MAX_OUTPUT_TOKENS = 384
 
 # 에이전트 메시지 길이 상한 — 메신저 말풍선 가독성 기준.
 AGENT_MESSAGE_MAX_LENGTH = 800
@@ -60,7 +67,9 @@ def _invoke(prompt: str) -> str | None:
     from app.services.report_comment_service import _call_gemini
 
     try:
-        future = _EXECUTOR.submit(_call_gemini, prompt)
+        future = _EXECUTOR.submit(
+            _call_gemini, prompt, max_output_tokens=AGENT_LLM_MAX_OUTPUT_TOKENS
+        )
         return future.result(timeout=AGENT_LLM_TIMEOUT_SEC)
     except FutureTimeoutError:
         logger.warning("[agent_llm] LLM 응답 지연 — 템플릿 폴백 (%.1fs 초과)", AGENT_LLM_TIMEOUT_SEC)
