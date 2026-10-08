@@ -626,10 +626,33 @@ OUT_OF_SCOPE_REPLY = (
     "상담사님과 이야기해 보시면 좋겠어요. 지금 마음은 어떠신지 들려주실 수 있을까요?"
 )
 
-NO_CONTEXT_REPLY = (
-    "아직 함께 볼 수 있는 리포트나 예약된 일정이 없어요. "
-    "지금 어떤 마음이신지 편하게 적어 주시면 들을게요."
+# SDD-193: 리포트·일정이 없는 내담자도 감정 대화를 나눈다 — 친근한 친구 톤 폴백.
+COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
+    "그런 마음이 들었군요. 오늘 하루는 어떤 일들이 있었는지 조금 더 들려주실 수 있을까요?",
+    "지금 마음이 좀 무거우셨나 봐요. 편하게 말씀해 주세요. 어떤 점이 가장 힘든지 듣고 싶어요.",
+    "들려주셔서 고마워요. 요즘은 어떤 순간에 그 마음이 가장 크게 느껴지나요?",
+    "듣고 있어요. 오늘은 어떤 기분으로 지내셨는지 조금 더 이야기해 주실래요?",
 )
+
+
+def _companion_reply(user_text: str) -> str:
+    """담당 상담사·리포트·일정이 없는 내담자도 감정 대화로 응답한다(SDD-193 결정 1).
+
+    사실 정보(리포트·일정)가 없으므로 LLM 은 감정 공감 + 열린 질문만 만들고,
+    실패 시 고정 폴백으로 완결된다. 프로파일 축적 대상(담당 상담사)이 없으므로
+    이 경로는 체크인 없이 대화만 한다.
+    """
+    fallback = COMPANION_REPLY_FALLBACKS[len(user_text) % len(COMPANION_REPLY_FALLBACKS)]
+    task = (
+        "내담자의 오늘 기분과 감정을 편안한 친구처럼 들어 주세요. "
+        "한 문장으로 따뜻하게 공감하고, 왜 그런 마음이 들었는지 열린 질문 하나만 덧붙이세요. "
+        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
+        "2~3문장을 넘기지 마세요."
+    )
+    prompt = agent_llm.build_prompt(
+        "(감정 대화 — 참고 자료 없음)", user_text=user_text, task=task
+    )
+    return agent_llm.generate(prompt, fallback)
 
 
 def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
@@ -693,8 +716,12 @@ def _route_reply(
         # kind 는 평범한 "free" 로 둔다 — 메시지 종류로도 감지 사실이 드러나면 안 된다.
         return risk_reply["content"], "free", list(risk_reply["cta"])
 
-    # ② 열린 안부 대화, 또는 상담사가 안부를 켜 둔 내담자의 대화
-    checkin = agent_checkin.ensure_checkin_for_conversation(db, user_id)
+    # ② 열린 안부 대화, 또는 담당 상담사가 있는 내담자의 대화
+    #   started_at 을 사용자 메시지 시각으로 넘겨, 방금 저장된 메시지가 체크인 구간에
+    #   포함되게 한다(created_at >= started_at 필터 회귀 방지).
+    checkin = agent_checkin.ensure_checkin_for_conversation(
+        db, user_id, started_at=user_message.created_at
+    )
     if checkin is not None:
         content, kind = agent_checkin.respond(db, user_id, checkin, user_text)
         return content, kind, []
@@ -716,7 +743,8 @@ def _build_reply(
     reports = context.get("reports") or []
     sessions = context.get("sessions") or []
     if not reports and not sessions:
-        return NO_CONTEXT_REPLY, "free"
+        # SDD-193: 리포트·일정이 없어도 감정 대화로 응답한다(친근한 친구).
+        return _companion_reply(user_text), "free"
 
     fallback = _fallback_reply(context, in_feedback=in_feedback)
     task = (

@@ -221,7 +221,7 @@ def test_TS18_리포트_범위_질문은_본문_안에서_답하고_범위밖은
     assert "병명" not in reply["content"]
 
 
-def test_리포트_일정_모두_없으면_안내_응답(client, monkeypatch):
+def test_리포트_일정_모두_없으면_감정_대화_응답(client, monkeypatch):
     from app.config import settings
 
     monkeypatch.setattr(settings, "gemini_api_key", "")
@@ -230,7 +230,10 @@ def test_리포트_일정_모두_없으면_안내_응답(client, monkeypatch):
 
     res = client.post("/api/v1/agent/messages", json={"content": "안녕하세요"}, headers=member["h"])
     assert res.status_code == 200, res.text
-    assert res.json()["agent_message"]["content"] == agent_service.NO_CONTEXT_REPLY
+    reply = res.json()["agent_message"]
+    assert reply["kind"] == "free"
+    # SDD-193: 리포트·일정이 없어도 감정 대화 폴백으로 응답한다(안내 문구 아님).
+    assert reply["content"] in agent_service.COMPANION_REPLY_FALLBACKS
 
 
 # ── Edge Cases ──────────────────────────────────────────────────

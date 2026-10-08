@@ -62,13 +62,14 @@ def test_TS4_마무리_후_새_메시지는_새_체크인으로_처리된다(cli
     assert rows[1]["turn_count"] == 1
 
 
-def test_TS4_안부가_꺼진_내담자는_체크인으로_묶이지_않는다(client):
+def test_TS4_안부가_꺼져도_담당_상담사가_있으면_체크인으로_묶인다(client):
     _, member = _pair(client, "cv-ts4c", enabled=False)
 
     reply = _talk(client, member, "요즘 어떻게 지내는지 적어볼게요")
 
-    assert H.checkins(member["id"]) == []
-    assert reply["kind"] != agent_checkin.KIND_CHECKIN
+    # SDD-193 결정 1: 안부를 켜지 않아도 담당 상담사(active 링크)가 있으면 감정 대화가 열린다.
+    assert len(H.checkins(member["id"])) == 1
+    assert reply["kind"] == agent_checkin.KIND_CHECKIN
 
 
 def test_TS4_요약에는_대화_원문이_그대로_담기지_않는다(client):

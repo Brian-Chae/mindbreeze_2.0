@@ -99,13 +99,13 @@ OUTREACH_TEMPLATES: dict[str, str] = {
     ),
 }
 
-# 대화 응답 폴백 — 공감 한 문장 + 열린 질문 하나. 조언·해석을 담지 않는다.
+# 대화 응답 폴백 — 따뜻한 공감 한 문장 + 열린 질문 하나. 조언·해석을 담지 않는다.
 REPLY_FALLBACKS: tuple[str, ...] = (
-    "들려주셔서 고맙습니다. 그 마음이 가장 크게 느껴지는 순간은 언제인가요?",
-    "그렇게 느끼실 만한 시간이었겠어요. 그때 몸이나 마음에서 어떤 변화가 있었나요?",
-    "이야기해 주셔서 고맙습니다. 요즘 하루 중에 조금이라도 편한 순간이 있다면 언제인가요?",
-    "말씀을 듣고 있어요. 그 일을 떠올리면 지금 어떤 생각이 먼저 드나요?",
-    "조금 더 들어 보고 싶어요. 그 마음을 누군가에게 이야기해 본 적은 있으신가요?",
+    "그런 마음이 들었군요. 들려주셔서 고마워요. 오늘은 어떤 일이 있었는지 조금 더 듣고 싶어요.",
+    "그렇게 느끼실 만한 시간이었겠어요. 그 마음이 가장 크게 느껴지는 순간은 언제인가요?",
+    "말씀해 주셔서 고마워요. 요즘 하루 중에 조금이라도 편안한 순간이 있다면 언제인가요?",
+    "듣고 있어요. 그 일을 떠올리면 지금 어떤 생각이 먼저 드나요?",
+    "조금 더 들어 보고 싶어요. 그 마음을 편하게 말씀해 주셔도 괜찮아요.",
 )
 
 # 마무리 — 상담사 연결 방향으로 닫는다(AI 의존·애착 방지).
@@ -220,6 +220,33 @@ def enabled_counselor_ids(db: DBSession, client_id: UUID) -> list[UUID]:
         .filter(
             AgentCheckinEnablement.client_id == client_id,
             AgentCheckinEnablement.enabled.is_(True),
+            ClientCounselorLink.status == "active",
+            User.status == "active",
+        )
+        .order_by(ClientCounselorLink.matched_at.desc())
+        .all()
+    )
+    result: list[UUID] = []
+    for row in rows:
+        if row[0] not in result:
+            result.append(row[0])
+    return result
+
+
+def active_counselor_ids(db: DBSession, client_id: UUID) -> list[UUID]:
+    """활성 담당 상담사 — 안부 스위치와 무관하게 감정 대화를 연다(SDD-193 결정 1).
+
+    `enabled_counselor_ids` 가 "상담사가 안부를 켠" 조건을 요구하는 것과 달리,
+    여기서는 담당 링크(active)만 본다. 그래서 상담사가 안부를 켜지 않아도
+    내담자가 말을 걸면 감정 대화(체크인)가 열린다.
+    """
+    from app.models.client_counselor_link import ClientCounselorLink
+
+    rows = (
+        db.query(ClientCounselorLink.counselor_id)
+        .join(User, User.id == ClientCounselorLink.counselor_id)
+        .filter(
+            ClientCounselorLink.client_id == client_id,
             ClientCounselorLink.status == "active",
             User.status == "active",
         )
@@ -578,17 +605,26 @@ def sweep(db: DBSession, *, now: datetime | None = None, limit: int = SWEEP_LIMI
 # ---------------------------------------------------------------------------
 
 
-def ensure_checkin_for_conversation(db: DBSession, client_id: UUID) -> AgentCheckin | None:
-    """열린 체크인을 돌려주고, 없으면 "안부가 켜진 내담자" 에 한해 새로 시작한다.
+def ensure_checkin_for_conversation(
+    db: DBSession, client_id: UUID, *, started_at: datetime | None = None
+) -> AgentCheckin | None:
+    """열린 체크인을 돌려주고, 없으면 "담당 상담사가 있는 내담자" 에 한해 새로 시작한다.
 
     아웃리치(AI 선발화) 없이 내담자가 먼저 말을 건 경우에도 안부 대화로 묶어 요약을
-    남기기 위한 경로다. 안부가 켜져 있지 않으면 None — 기존 응답 경로를 그대로 쓴다.
+    남기기 위한 경로다. 담당 상담사가 없으면 None — 기존 응답 경로를 그대로 쓴다.
+
+    started_at 을 넘기면 그 시각을 체크인 시작으로 삼는다 — 사용자 메시지가 이미
+    저장된 뒤 체크인을 열 때(created_at < started_at 이 되지 않게) 그 메시지를
+    체크인 구간에 포함시키기 위함이다(회귀 방지).
     """
     existing = open_checkin(db, client_id)
     if existing is not None:
         return existing
 
-    counselor_ids = enabled_counselor_ids(db, client_id)
+    # SDD-193 결정 1: 안부를 "켠" 상담사가 없어도 담당 링크(active)만 있으면 감정 대화를
+    # 연다. 단 프로파일 전달 대상을 바꾸지 않도록, 안부를 켠 상담사가 있으면 그 상담사 우선,
+    # 없으면 활성 담당 상담사로 폴백한다(기존 "체크인 유발 상담사에게 프로파일" 동작 유지).
+    counselor_ids = enabled_counselor_ids(db, client_id) or active_counselor_ids(db, client_id)
     if not counselor_ids:
         return None
 
@@ -596,7 +632,7 @@ def ensure_checkin_for_conversation(db: DBSession, client_id: UUID) -> AgentChec
         client_id=client_id,
         counselor_id=counselor_ids[0],
         trigger=TRIGGER_USUAL_TIME,
-        started_at=_now(),
+        started_at=started_at or _now(),
         turn_count=0,
     )
     db.add(checkin)
@@ -620,7 +656,8 @@ def respond(
 
     fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
     task = (
-        "내담자가 남긴 이야기에 한 문장으로 공감하고, 이어서 열린 질문 하나만 덧붙이세요. "
+        "내담자의 오늘 기분과 감정을 편안한 친구처럼 들어 주세요. "
+        "한 문장으로 따뜻하게 공감하고, 왜 그런 마음이 들었는지 열린 질문 하나만 덧붙이세요. "
         "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
         "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
     )
