@@ -14,7 +14,7 @@ export async function nativeGoogleIdToken(): Promise<string> {
     await SocialLogin.initialize({ google: { webClientId: NATIVE_WEB_CLIENT_ID } });
     initialized = true;
   }
-  const res = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+  const res = await SocialLogin.login({ provider: 'google', options: {} });
   const result = res.result as { idToken?: string | null };
   if (!result.idToken) throw new Error('Google 인증 토큰을 받지 못했습니다.');
   return result.idToken;
