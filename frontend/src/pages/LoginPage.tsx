@@ -149,7 +149,8 @@ export default function LoginPage() {
       } else if (err instanceof ApiError) {
         showError(err);
       } else {
-        setError('Google 로그인이 취소되었거나 실패했습니다. 다시 시도해주세요.');
+        const detail = err instanceof Error ? err.message : typeof err === 'object' && err !== null ? JSON.stringify(err) : String(err);
+        setError(`Google 로그인이 취소되었거나 실패했습니다. 다시 시도해주세요.${detail ? ` (${detail.slice(0, 120)})` : ''}`);
       }
     } finally {
       finish();
