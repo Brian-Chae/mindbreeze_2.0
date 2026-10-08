@@ -22,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.agent import (
+    AgentCheckin as AgentCheckinModel,
     AgentConversation,
     AgentCounselorSettings,
     AgentMessage,
@@ -401,3 +402,190 @@ def execute_cta(db: DBSession, user_id: str | UUID, message_id: str, cta_id: str
     if target.get("action") not in COUNSELOR_NAVIGATION_ACTIONS:
         raise HTTPException(status_code=400, detail="지원하지 않는 동작입니다")
     return {"cta": target}
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화 스위치 · 프로파일 · 체크인 요약 · 위험 신호
+# ---------------------------------------------------------------------------
+#
+# 모든 함수가 `_require_linked_client` 로 시작한다. 담당(active 링크) 내담자가 아니면
+# 404 다 — 존재 여부조차 알려주지 않는다(상담사 간 격리, TS12/TS13).
+# excerpt·프로파일은 로그에 남기지 않는다(보안 리뷰 항목).
+
+
+def _require_linked_client(db: DBSession, counselor_id: UUID, client_id: str | UUID):
+    """담당(active) 내담자 User — 아니면 404."""
+    from app.models.client_counselor_link import ClientCounselorLink
+    from app.models.user import User
+
+    cid = agent_service._to_uuid(client_id)
+    linked = (
+        db.query(ClientCounselorLink.id)
+        .filter(
+            ClientCounselorLink.counselor_id == counselor_id,
+            ClientCounselorLink.client_id == cid,
+            ClientCounselorLink.status == "active",
+        )
+        .first()
+    )
+    if linked is None:
+        raise HTTPException(status_code=404, detail="담당 내담자를 찾을 수 없습니다")
+    client = db.get(User, cid)
+    if client is None:
+        raise HTTPException(status_code=404, detail="담당 내담자를 찾을 수 없습니다")
+    return client
+
+
+def _checkin_client_payload(db: DBSession, counselor_id: UUID, client) -> dict:
+    """Contract(CheckinClient) 한 줄 — 미처리 위험 신호 수는 본인 몫만 센다."""
+    from app.services import agent_checkin, agent_risk
+
+    enablement = agent_checkin.get_enablement(db, counselor_id, client.id)
+    latest = (
+        db.query(AgentCheckinModel)
+        .filter(
+            AgentCheckinModel.counselor_id == counselor_id,
+            AgentCheckinModel.client_id == client.id,
+        )
+        .order_by(AgentCheckinModel.started_at.desc())
+        .first()
+    )
+    return {
+        "client_id": str(client.id),
+        "client_name": client.name or "이름 미등록",
+        "enabled": bool(enablement and enablement.enabled),
+        "last_checkin_at": latest.started_at if latest else None,
+        "open_risk_count": agent_risk.open_signal_count(db, counselor_id, client.id),
+    }
+
+
+def list_checkin_clients(db: DBSession, user_id: str | UUID) -> dict:
+    """담당(active) 내담자 전원 + 안부 켜짐 여부. 타 상담사 내담자는 들어오지 않는다."""
+    from app.models.user import User
+
+    cid = agent_service._to_uuid(user_id)
+    client_ids = agent_policy.linked_client_ids(cid, db)
+    if not client_ids:
+        return {"items": []}
+    clients = (
+        db.query(User)
+        .filter(User.id.in_(client_ids))
+        .order_by(User.name.asc(), User.created_at.asc())
+        .all()
+    )
+    return {"items": [_checkin_client_payload(db, cid, client) for client in clients]}
+
+
+def set_checkin_enabled(
+    db: DBSession, user_id: str | UUID, client_id: str, enabled: bool
+) -> dict:
+    """안부 대화 켜기/끄기 (D5=②).
+
+    끄면 **신규 아웃리치만** 멈춘다 — 이미 열린 체크인은 마무리 흐름을 그대로 간다
+    (Edge Case: "체크인 도중 상담사가 끄기 → 열린 체크인은 마무리하고 신규 중단").
+    """
+    from app.services import agent_checkin
+
+    cid = agent_service._to_uuid(user_id)
+    client = _require_linked_client(db, cid, client_id)
+    agent_checkin.set_enabled(db, cid, client.id, enabled)
+    return _checkin_client_payload(db, cid, client)
+
+
+def get_client_profile(db: DBSession, user_id: str | UUID, client_id: str) -> dict:
+    """상담사 전용 프로파일 — 본인이 가진 항목만(상담사별로 분리 저장된다)."""
+    from app.services import agent_profile
+
+    cid = agent_service._to_uuid(user_id)
+    client = _require_linked_client(db, cid, client_id)
+    return {"items": agent_profile.list_items(db, cid, client.id)}
+
+
+def update_profile_item(
+    db: DBSession,
+    user_id: str | UUID,
+    item_id: str,
+    *,
+    status: str | None = None,
+    text: str | None = None,
+) -> dict:
+    """항목 확정/기각/문구 수정 — 본인 항목만. 타 상담사 항목 id 는 404(IDOR 방지)."""
+    from app.models.agent import AgentProfileItem
+    from app.services import agent_profile
+
+    if status is None and text is None:
+        raise HTTPException(status_code=400, detail="변경할 내용이 없습니다")
+
+    cid = agent_service._to_uuid(user_id)
+    item = (
+        db.query(AgentProfileItem)
+        .filter(
+            AgentProfileItem.id == agent_service._to_uuid(item_id),
+            AgentProfileItem.counselor_id == cid,
+        )
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=404, detail="프로파일 항목을 찾을 수 없습니다")
+
+    if text is not None:
+        cleaned = text.strip()
+        if not (1 <= len(cleaned) <= agent_profile.TEXT_MAX_LENGTH):
+            raise HTTPException(status_code=422, detail="내용을 1~300자로 입력해 주세요")
+        item.text = cleaned
+        # 상담사가 문구를 손댔다면 더 이상 AI 추정이 아니다.
+        if status is None:
+            item.status = agent_profile.STATUS_CONFIRMED
+    if status is not None:
+        item.status = status
+    db.commit()
+    db.refresh(item)
+    return agent_profile.serialize_item(item)
+
+
+def list_client_checkins(
+    db: DBSession, user_id: str | UUID, client_id: str, *, limit: int = 20
+) -> dict:
+    """체크인 요약 타임라인 — 요약만 담고 대화 원문은 담지 않는다(D1)."""
+    from app.services import agent_checkin
+
+    cid = agent_service._to_uuid(user_id)
+    client = _require_linked_client(db, cid, client_id)
+    return {"items": agent_checkin.list_checkins(db, cid, client.id, limit=limit)}
+
+
+def list_risk_signals(
+    db: DBSession, user_id: str | UUID, *, status: str = "open", limit: int = 50
+) -> dict:
+    """위험 신호 목록 — 미처리 우선. 본인 담당 내담자 신호만 보인다."""
+    from app.services import agent_risk
+
+    cid = agent_service._to_uuid(user_id)
+    return {"items": agent_risk.list_signals(db, cid, status=status, limit=limit)}
+
+
+def mark_risk_handled(db: DBSession, user_id: str | UUID, signal_id: str) -> dict:
+    """위험 신호 처리 완료 — 타 상담사 신호 id 는 404."""
+    from app.models.agent import AgentRiskSignal
+    from app.models.user import User
+    from app.services import agent_risk
+
+    cid = agent_service._to_uuid(user_id)
+    signal = (
+        db.query(AgentRiskSignal)
+        .filter(
+            AgentRiskSignal.id == agent_service._to_uuid(signal_id),
+            AgentRiskSignal.counselor_id == cid,
+        )
+        .first()
+    )
+    if signal is None:
+        raise HTTPException(status_code=404, detail="알림을 찾을 수 없습니다")
+
+    if signal.handled_at is None:
+        signal.handled_at = _now()
+        signal.status = "handled"
+        db.commit()
+        db.refresh(signal)
+    client = db.get(User, signal.client_id)
+    return agent_risk.serialize_signal(signal, (client.name if client else None) or "이름 미등록")

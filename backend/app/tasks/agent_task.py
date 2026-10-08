@@ -31,3 +31,15 @@ def sweep_agent_briefings(limit: int = 500) -> dict:
 
     with SessionLocal() as db:
         return agent_briefing.sweep(db, limit=limit)
+
+
+@celery_app.task(name="tasks.sweep_agent_checkins")
+def sweep_agent_checkins(limit: int = 500) -> dict:
+    """SDD-191: 안부 아웃리치 스윕 1회 + 방치된 열린 체크인 마무리."""
+    from app.core.database import SessionLocal
+    from app.services import agent_checkin
+
+    with SessionLocal() as db:
+        result = agent_checkin.sweep(db, limit=limit)
+        result["closed"] = agent_checkin.close_stale(db)
+        return result

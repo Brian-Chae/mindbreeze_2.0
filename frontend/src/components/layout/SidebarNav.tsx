@@ -1,3 +1,4 @@
+import { listCheckinClients } from '../../lib/api/agent-checkin';
 import { loginPathForRole } from '../../lib/auth-routing';
 import { NavLink, useNavigate } from 'react-router-dom';
 import React, { useEffect } from 'react';
@@ -148,12 +149,14 @@ export default function SidebarNav({
   sessionBadge,
 }: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
+  const openRisk = useCounselorAgentStore((state) => state.openRisk);
   const counselorUnread = useCounselorAgentStore((state) => state.unread);
   useEffect(() => {
     if (user?.role !== 'counselor' || role === 'client') return;
     let active = true;
     let fetching = false;
     useCounselorAgentStore.getState().setUnread(0);
+    useCounselorAgentStore.getState().setOpenRisk(0);
     const refresh = async () => {
       if (fetching) return;
       fetching = true;
@@ -165,9 +168,20 @@ export default function SidebarNav({
       } catch { /* 다음 조회 때 재시도한다. */ }
       finally { fetching = false; }
     };
+    const refreshRisk = async () => {
+      const revision = useCounselorAgentStore.getState().riskRevision;
+      try {
+        const result = await listCheckinClients();
+        if (active && revision === useCounselorAgentStore.getState().riskRevision) {
+          useCounselorAgentStore.getState().setOpenRisk(result.items.reduce((sum, item) => sum + item.open_risk_count, 0));
+        }
+      } catch { /* 다음 조회 때 재시도한다. */ }
+    };
+    void refreshRisk();
+    const riskTimer = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshRisk(); }, 15000);
     void refresh();
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
-    return () => { active = false; window.clearInterval(timer); };
+    return () => { active = false; window.clearInterval(timer); window.clearInterval(riskTimer); };
   }, [user?.id, user?.role, role]);
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
@@ -197,7 +211,7 @@ export default function SidebarNav({
   const getBadge = (label: string): React.ReactNode => {
     // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
     const count =
-      label === 'AI 대화' ? (user?.role === 'counselor' && role !== 'client' ? counselorUnread : agentBadge ?? 0) : label === '채팅'
+      label === 'AI 대화' ? (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0) : label === '채팅'
         ? chatBadge ?? 0
         : label === '알림'
           ? notificationBadge ?? 0

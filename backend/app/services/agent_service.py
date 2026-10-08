@@ -637,12 +637,15 @@ def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
     if feedback_event is not None:
         _append_feedback_text(db, feedback_event, text)
 
-    reply_text, reply_kind = _build_reply(db, uid, text, in_feedback=feedback_event is not None)
+    reply_text, reply_kind, reply_cta = _route_reply(
+        db, uid, text, user_message, in_feedback=feedback_event is not None
+    )
     agent_message = post_agent_message(
         db,
         uid,
         kind=reply_kind,
         content=reply_text,
+        cta=reply_cta,
         notify=False,  # 사용자가 대화창에 있는 중이므로 푸시를 보내지 않는다
         commit=False,
     )
@@ -657,6 +660,40 @@ def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
         "user_message": serialize_message(user_message),
         "agent_message": serialize_message(agent_message),
     }
+
+
+def _route_reply(
+    db: DBSession,
+    user_id: UUID,
+    user_text: str,
+    user_message: AgentMessage,
+    *,
+    in_feedback: bool = False,
+) -> tuple[str, str, list[dict]]:
+    """SDD-191 라우팅 — ① 위험 탐지 ② 안부 대화 ③ 기존 리포트 대화·일반 응답.
+
+    위험 탐지가 가장 앞에 오는 것은 의도적이다: 규칙 기반이라 LLM 지시 이전 단계에서
+    끝나므로 프롬프트 인젝션으로 우회할 수 없다. 탐지 시 응답은 LLM 을 쓰지 않는 고정
+    템플릿이며 감지 사실을 드러내지 않는다(D4).
+    """
+    # 지연 임포트 — agent_checkin/agent_risk 가 이 모듈을 참조하므로 순환을 피한다.
+    from app.services import agent_checkin, agent_risk
+
+    # ① 위험 표현 — 상담사에게만 조용히 알리고, 내담자에게는 고정 안전 응답을 돌려준다.
+    risk_reply = agent_risk.handle_client_message(db, user_id, user_message, user_text)
+    if risk_reply is not None:
+        # kind 는 평범한 "free" 로 둔다 — 메시지 종류로도 감지 사실이 드러나면 안 된다.
+        return risk_reply["content"], "free", list(risk_reply["cta"])
+
+    # ② 열린 안부 대화, 또는 상담사가 안부를 켜 둔 내담자의 대화
+    checkin = agent_checkin.ensure_checkin_for_conversation(db, user_id)
+    if checkin is not None:
+        content, kind = agent_checkin.respond(db, user_id, checkin, user_text)
+        return content, kind, []
+
+    # ③ 기존 경로(SDD-188) — 리포트 대화·일반 응답
+    reply_text, reply_kind = _build_reply(db, user_id, user_text, in_feedback=in_feedback)
+    return reply_text, reply_kind, []
 
 
 def _build_reply(
@@ -720,7 +757,15 @@ def _fallback_reply(context: dict, *, in_feedback: bool = False) -> str:
 
 # 서버가 상태를 바꾸지 않고 클라이언트 이동만 하는 액션 (기록용 200 응답)
 _NAVIGATION_ACTIONS = frozenset(
-    {"open_map", "join_session", "open_chat", "call_counselor", "open_report"}
+    {
+        "open_map",
+        "join_session",
+        "open_chat",
+        "call_counselor",
+        "open_report",
+        # SDD-191: 담당 상담사와의 direct 채팅방으로 이동(서버 상태 변경 없음).
+        "talk_to_counselor",
+    }
 )
 
 

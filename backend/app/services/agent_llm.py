@@ -40,7 +40,11 @@ def generate(prompt: str, fallback: str) -> str:
     키 부재·호출 실패·지연·가드 전량 제거 중 어느 경우에도 예외를 던지지 않고
     fallback(규칙 템플릿)을 돌려준다 — 메시지 생성 자체가 실패하면 안 된다.
     """
-    text = _invoke(prompt)
+    try:
+        text = _invoke(prompt)
+    except Exception:  # noqa: BLE001 — 어떤 공급자 오류도 메시지 생성을 실패시키지 않는다
+        logger.warning("[agent_llm] LLM 호출 예외 — 템플릿 폴백")
+        text = None
     if not text:
         return fallback[:AGENT_MESSAGE_MAX_LENGTH]
     # 진단·점수 표현이 섞여 있으면 해당 문장을 버리고, 전부 걸러지면 템플릿으로 되돌린다.

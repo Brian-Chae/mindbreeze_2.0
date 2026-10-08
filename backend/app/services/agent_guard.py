@@ -41,13 +41,32 @@ _SCORE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
     )
 )
 
+# SDD-191: 조언·해결 선언·애착 유발 표현. AI 는 경청·공감·열린 질문만 한다(기획 §3.4).
+#
+# "~하세요" 를 통째로 막지는 않는다 — "편하게 적어 주세요" 처럼 대화를 여는 표현까지
+# 걸러지면 기존 메시지가 전부 폐기된다. 약·병원·치료·운동 같은 **조언 맥락의 명령형**만
+# 막는다.
+_ADVICE_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p) for p in (
+        r"(?:약|병원|의사|진료|치료|입원|상담)\s*(?:을|를|에|은|는)?\s*"
+        r"(?:드세요|먹으세요|받으세요|가세요|가\s*보세요|시작하세요|끊으세요|받아\s*보세요)",
+        r"(?:운동|명상|호흡|산책|일기|요가|스트레칭)\s*(?:을|를)?\s*"
+        r"(?:하세요|해\s*보세요|추천(?:해|합니다|드려요))",
+        r"(?:하시는|드시는|해\s*보시는)\s*(?:게|것이)\s*좋(?:겠어요|아요|습니다)",
+        r"제가\s*(?:해결|고쳐|치료|낫게)",
+        r"(?:항상|언제나|늘|24시간)\s*(?:곁에|옆에|함께)",
+        r"(?:저|제가)\s*(?:늘|항상)?\s*있으니\s*(?:걱정|안심)",
+        r"혼자가\s*아니에요",
+    )
+)
+
 # 문장 분리 — 한국어 종결부호 기준. 줄바꿈도 경계로 본다.
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?。？！])\s+|\n+")
 
 
 def is_blocked(sentence: str) -> bool:
-    """한 문장이 진단·점수 금지 규칙에 걸리는지 판정한다."""
-    for pattern in (*_DIAGNOSIS_PATTERNS, *_SCORE_PATTERNS):
+    """한 문장이 진단·점수·조언 금지 규칙에 걸리는지 판정한다."""
+    for pattern in (*_DIAGNOSIS_PATTERNS, *_SCORE_PATTERNS, *_ADVICE_PATTERNS):
         if pattern.search(sentence):
             return True
     return False

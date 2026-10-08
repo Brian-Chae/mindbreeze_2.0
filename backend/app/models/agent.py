@@ -218,3 +218,174 @@ class AgentBriefingLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화(체크인) · 상담사 전용 프로파일 · 조용한 위험 신호
+# ---------------------------------------------------------------------------
+#
+# D5=② 결정에 따라 안부 대화는 **상담사가 내담자별로 켠 경우에만** 동작한다
+# (`AgentCheckinEnablement`). 내담자는 켜고 끄는 주체가 아니고 "일시 중지"만 할 수 있다
+# (`AgentCheckinPref`) — 안부를 보낼 수 있는지는 상담사 결정, 받을지는 내담자 선택이다.
+#
+# D4 결정에 따라 위험 신호(`AgentRiskSignal`)와 프로파일(`AgentProfileItem`)은
+# **상담사 전용**이다. 내담자 채널 API 는 이 두 테이블을 조회하지 않는다.
+# 프로파일·위험 신호는 (내담자, 상담사) 쌍으로 나뉘어 상담사 간에도 섞이지 않는다.
+
+
+class AgentCheckinEnablement(Base):
+    """상담사가 내담자별로 켠 안부 대화 스위치 — (상담사, 내담자) 당 1행(D5=②)."""
+
+    __tablename__ = "agent_checkin_enablements"
+    __table_args__ = (
+        UniqueConstraint(
+            "counselor_id", "client_id", name="uq_agent_checkin_enablement_pair"
+        ),
+        Index("ix_agent_checkin_enablements_client", "client_id", "enabled"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    counselor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AgentCheckinPref(Base):
+    """내담자의 안부 일시 중지 설정 — 내담자당 1행.
+
+    paused=True 여도 **대화 자체는 막지 않는다**. 막는 것은 AI 가 먼저 거는 아웃리치뿐이다
+    (Edge Case: "내담자가 체크인 중 일시중지 → 아웃리치 중단, 대화는 가능").
+    """
+
+    __tablename__ = "agent_checkin_prefs"
+    __table_args__ = (UniqueConstraint("client_id", name="uq_agent_checkin_prefs_client"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    paused: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AgentCheckin(Base):
+    """안부 대화 1회분. closed_at 이 null 인 행이 "열린 체크인"이다.
+
+    열린 체크인이 있으면 아웃리치를 새로 시작하지 않는다(중복 말걸기 방지).
+    summary/mood_direction 은 마무리 시점에 채워지며 **상담사만** 열람한다(D1 — 원문 아님).
+    """
+
+    __tablename__ = "agent_checkins"
+    __table_args__ = (
+        Index("ix_agent_checkins_client_started", "client_id", "started_at"),
+        Index("ix_agent_checkins_open", "client_id", "closed_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # 이 체크인을 유발한 상담사(enablement 소유자). 요약 열람 권한의 기준이 된다.
+    counselor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # 아웃리치 트리거 — no_response | hard_feeling | after_session | usual_time
+    trigger: Mapped[str] = mapped_column(String(20), nullable=False, default="no_response")
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 내담자(user sender) 발화 수. 마무리 판정(5~10턴)의 기준.
+    turn_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    summary: Mapped[str | None] = mapped_column(Text)
+    # better | same | watch — 숫자 척도를 쓰지 않는다(기획 §3.3).
+    mood_direction: Mapped[str | None] = mapped_column(String(10))
+
+
+class AgentProfileItem(Base):
+    """상담사 전용 내담자 프로파일 항목 — AI 추정(ai_estimate) → 상담사 확정/기각.
+
+    내담자에게 **절대 노출되지 않는다**(내담자 API 경로에 조회가 없고, 상담사 API 는
+    소유자 검증을 거친다). evidence 에는 근거 메시지 id 목록만 담고 원문은 담지 않는다.
+    """
+
+    __tablename__ = "agent_profile_items"
+    __table_args__ = (
+        Index("ix_agent_profile_items_owner", "counselor_id", "client_id", "category"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    counselor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # sleep | stress | emotion | coping | people_events
+    category: Mapped[str] = mapped_column(String(20), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    # ai_estimate | confirmed | dismissed
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="ai_estimate", server_default="ai_estimate"
+    )
+    # 근거 메시지 id 목록(JSON 배열). 원문 문장은 저장하지 않는다.
+    evidence: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AgentRiskSignal(Base):
+    """위험 표현 감지 신호 — 상담사 전용(D4: 내담자에게 감지 사실 비노출).
+
+    excerpt 는 상담사가 판단하는 데 필요한 **감지된 문장만**(최대 200자) 담는다.
+    같은 (내담자, 상담사, level) 조합이 30분 안에 재발하면 새 행을 만들지 않고,
+    레벨이 올라가면(watch→high) 새 신호를 만든다.
+    """
+
+    __tablename__ = "agent_risk_signals"
+    __table_args__ = (
+        Index("ix_agent_risk_signals_owner_created", "counselor_id", "created_at"),
+        Index("ix_agent_risk_signals_client_level", "client_id", "level", "created_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    counselor_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # 감지의 근거가 된 내담자 메시지
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("agent_messages.id", ondelete="SET NULL"), nullable=True
+    )
+    # watch | high
+    level: Mapped[str] = mapped_column(String(10), nullable=False)
+    excerpt: Mapped[str] = mapped_column(Text, nullable=False)
+    # open(미처리) → handled(상담사 처리 선언)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open"
+    )
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

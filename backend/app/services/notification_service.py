@@ -71,6 +71,10 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     # AI 비서가 내담자에게 먼저 말을 건 경우의 인앱 알림.
     # 본문에는 상담 내용·이름을 담지 않는다(대화창에서 확인하도록 유도).
     "agent_message": {"type": "system", "target_type": "notice"},
+    # ── SDD-191: 조용한 위험 알림 ──
+    # 내담자 대화에서 확인이 필요한 표현이 감지됐을 때 담당 상담사에게만 발화한다.
+    # 본문은 비식별이다 — 이름·감지 문장·레벨을 담지 않는다(D4).
+    "risk_signal": {"type": "system", "target_type": "notice"},
 }
 
 # 하위 호환: 이전 이벤트→type 매핑 (기존 호출부가 참조하던 이름)

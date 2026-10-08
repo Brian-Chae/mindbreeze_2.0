@@ -22,6 +22,8 @@ from app.schemas.agent import (
     AgentSendMessageRequest,
     AgentSendMessageResponse,
     AgentUnreadResponse,
+    CheckinPrefs,
+    CheckinPrefsUpdateRequest,
 )
 from app.services import agent_service
 
@@ -113,3 +115,36 @@ def execute_cta(
         reason=body.reason,
         text=body.text,
     )
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화 일시 중지 설정
+# ---------------------------------------------------------------------------
+#
+# 내담자 채널에는 위험 감지·프로파일과 관련된 엔드포인트가 **없다**(D4). 여기서 다루는
+# 것은 "상담사가 켠 안부를 잠시 받지 않기" 뿐이다.
+
+
+@router.get("/checkin-prefs", response_model=CheckinPrefs)
+def get_checkin_prefs(
+    current_user: dict = Depends(_client_only),
+    db: DBSession = Depends(get_db),
+):
+    """안부 설정 조회 — available 이 false 면 화면에 토글을 노출하지 않는다."""
+    from app.services import agent_checkin
+
+    return agent_checkin.prefs_payload(db, agent_service._to_uuid(current_user["id"]))
+
+
+@router.put("/checkin-prefs", response_model=CheckinPrefs)
+def update_checkin_prefs(
+    payload: CheckinPrefsUpdateRequest,
+    current_user: dict = Depends(_client_only),
+    db: DBSession = Depends(get_db),
+):
+    """안부 일시 중지 설정 — 아웃리치만 멈추고 대화는 계속 가능하다."""
+    from app.services import agent_checkin
+
+    uid = agent_service._to_uuid(current_user["id"])
+    agent_checkin.set_paused(db, uid, payload.paused)
+    return agent_checkin.prefs_payload(db, uid)

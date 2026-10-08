@@ -16,6 +16,16 @@ from app.api.deps import require_roles
 from app.core.database import get_db
 from app.schemas.agent import (
     AgentMessageListResponse,
+    CheckinClient,
+    CheckinClientListResponse,
+    CheckinEnableRequest,
+    CheckinSummaryListResponse,
+    ProfileItem,
+    ProfileItemListResponse,
+    ProfileItemUpdateRequest,
+    RiskSignal,
+    RiskSignalListResponse,
+    RiskSignalStatusFilter,
     AgentReadRequest,
     AgentSendMessageRequest,
     AgentSendMessageResponse,
@@ -142,3 +152,92 @@ def execute_cta(
     return agent_counselor_service.execute_cta(
         db, current_user["id"], message_id, cta_id
     )
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화 스위치 · 프로파일 · 체크인 요약 · 위험 신호
+# ---------------------------------------------------------------------------
+#
+# 담당(active 링크) 내담자가 아니면 404 다 — 다른 상담사의 내담자인지조차 알려주지
+# 않는다. 프로파일·위험 excerpt 는 소유자 검증을 통과한 상담사에게만 나간다.
+
+
+@router.get("/checkin/clients", response_model=CheckinClientListResponse)
+def list_checkin_clients(
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """안부 대화 대상 목록 — 담당 내담자 전원 + 켜짐 여부 + 미처리 알림 수."""
+    return agent_counselor_service.list_checkin_clients(db, current_user["id"])
+
+
+@router.put("/checkin/clients/{client_id}", response_model=CheckinClient)
+def set_checkin_enabled(
+    client_id: str,
+    payload: CheckinEnableRequest,
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """내담자별 안부 대화 켜기/끄기(D5=②). 담당이 아닌 내담자 id 는 404."""
+    return agent_counselor_service.set_checkin_enabled(
+        db, current_user["id"], client_id, payload.enabled
+    )
+
+
+@router.get("/clients/{client_id}/profile", response_model=ProfileItemListResponse)
+def get_client_profile(
+    client_id: str,
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """상담사 전용 프로파일 조회 — 기각(dismissed) 항목은 제외한다."""
+    return agent_counselor_service.get_client_profile(db, current_user["id"], client_id)
+
+
+@router.patch("/profile-items/{item_id}", response_model=ProfileItem)
+def update_profile_item(
+    item_id: str,
+    payload: ProfileItemUpdateRequest,
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """프로파일 항목 확정/기각/문구 수정 — 타 상담사 항목 id 는 404."""
+    return agent_counselor_service.update_profile_item(
+        db, current_user["id"], item_id, status=payload.status, text=payload.text
+    )
+
+
+@router.get("/clients/{client_id}/checkins", response_model=CheckinSummaryListResponse)
+def list_client_checkins(
+    client_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """체크인 요약 타임라인(최신순) — 대화 원문은 포함하지 않는다(D1)."""
+    return agent_counselor_service.list_client_checkins(
+        db, current_user["id"], client_id, limit=limit
+    )
+
+
+@router.get("/risk-signals", response_model=RiskSignalListResponse)
+def list_risk_signals(
+    status: RiskSignalStatusFilter = Query("open", description="open=미처리만, all=전체"),
+    limit: int = Query(50, ge=1, le=200),
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """확인이 필요한 알림 목록 — 본인 담당 내담자 신호만, 미처리 우선."""
+    return agent_counselor_service.list_risk_signals(
+        db, current_user["id"], status=status, limit=limit
+    )
+
+
+@router.post("/risk-signals/{signal_id}/handled", response_model=RiskSignal)
+def mark_risk_handled(
+    signal_id: str,
+    current_user: dict = Depends(_counselor_only),
+    db: DBSession = Depends(get_db),
+):
+    """위험 신호 처리 완료 — 타 상담사 신호 id 는 404."""
+    return agent_counselor_service.mark_risk_handled(db, current_user["id"], signal_id)

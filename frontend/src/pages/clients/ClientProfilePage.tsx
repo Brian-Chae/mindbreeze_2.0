@@ -1,3 +1,4 @@
+import AgentCheckinPanel from '../../components/clients/agent-checkin-panel';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
@@ -8,7 +9,7 @@ import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated, isInitialized, user } = useAuthStore();
 
   // SEC-07: 내담자 프로필 상세는 상담사·기관관리자 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
   useRequireAuth();
@@ -149,6 +150,8 @@ export default function ClientProfilePage() {
             </div>
           )}
         </div>
+
+        {id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
 
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-2">상담사 비공개 메모</h2>

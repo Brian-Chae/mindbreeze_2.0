@@ -24,6 +24,10 @@ AgentCtaAction = Literal[
     "open_client",
     "open_record",
     "open_change_requests",
+    # SDD-191 — 내담자: 담당 상담사와의 direct 채팅방으로 이동
+    "talk_to_counselor",
+    # SDD-191 — 상담사: 확인이 필요한 알림 목록으로 이동
+    "open_risk_signals",
 ]
 
 # plan.md §Contract — AgentMessage.kind
@@ -37,6 +41,10 @@ AgentMessageKind = Literal[
     # SDD-189 상담사 채널 브리핑
     "briefing_morning",
     "briefing_evening",
+    # SDD-191 안부 대화(내담자 채널) · 위험 알림(상담사 채널)
+    "checkin",
+    "checkin_closing",
+    "risk_alert",
     "free",
 ]
 
@@ -182,3 +190,99 @@ class CounselorCtaExecuteResponse(BaseModel):
     """상담사 CTA 는 화면 이동만 하므로 실행 기록(cta)만 돌려준다."""
 
     cta: AgentCta
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화 · 상담사 전용 프로파일 · 위험 신호 (plan.md §Contract)
+# ---------------------------------------------------------------------------
+
+MoodDirection = Literal["better", "same", "watch"]
+ProfileCategory = Literal["sleep", "stress", "emotion", "coping", "people_events"]
+ProfileItemStatus = Literal["ai_estimate", "confirmed", "dismissed"]
+RiskLevel = Literal["watch", "high"]
+RiskSignalStatusFilter = Literal["open", "all"]
+
+
+class CheckinPrefs(BaseModel):
+    """내담자용 — available 은 "상담사가 안부를 켰는지"다(D5=②).
+
+    감지·위험과 관련된 어떤 필드도 두지 않는다(D4 — 내담자에게 비노출).
+    """
+
+    available: bool = False
+    paused: bool = False
+
+
+class CheckinPrefsUpdateRequest(BaseModel):
+    paused: bool
+
+
+class CheckinClient(BaseModel):
+    """상담사용 안부 대상 목록 한 줄."""
+
+    client_id: str
+    client_name: str
+    enabled: bool
+    last_checkin_at: datetime | None = None
+    open_risk_count: int = 0
+
+
+class CheckinClientListResponse(BaseModel):
+    items: list[CheckinClient] = []
+
+
+class CheckinEnableRequest(BaseModel):
+    enabled: bool
+
+
+class ProfileItem(BaseModel):
+    """상담사 전용 프로파일 항목 — 근거는 개수만 노출한다(원문·id 비노출)."""
+
+    id: str
+    category: ProfileCategory
+    text: str
+    status: ProfileItemStatus
+    evidence_count: int = 0
+    updated_at: datetime
+
+
+class ProfileItemListResponse(BaseModel):
+    items: list[ProfileItem] = []
+
+
+class ProfileItemUpdateRequest(BaseModel):
+    """확정/기각 또는 문구 수정. 둘 다 생략하면 400."""
+
+    status: Literal["confirmed", "dismissed"] | None = None
+    text: str | None = Field(None, min_length=1, max_length=300)
+
+
+class CheckinSummary(BaseModel):
+    """체크인 요약 — 상담사에게는 원문이 아니라 요약만 전달한다(D1)."""
+
+    id: str
+    client_id: str
+    started_at: datetime
+    closed_at: datetime | None = None
+    summary: str = ""
+    mood_direction: MoodDirection | None = None
+
+
+class CheckinSummaryListResponse(BaseModel):
+    items: list[CheckinSummary] = []
+
+
+class RiskSignal(BaseModel):
+    """위험 신호 — 상담사 전용. excerpt 는 감지된 문장만(최대 200자)."""
+
+    id: str
+    client_id: str
+    client_name: str
+    level: RiskLevel
+    excerpt: str
+    created_at: datetime
+    handled_at: datetime | None = None
+
+
+class RiskSignalListResponse(BaseModel):
+    items: list[RiskSignal] = []

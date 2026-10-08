@@ -740,7 +740,104 @@ def counselor_context(
         "tomorrow": counselor_day_sessions(cid, base_day + timedelta(days=1), db),
         "pending_reports": counselor_pending_reports(cid, db),
         "relay_events": counselor_relay_events(cid, db, only_open=True),
+        # SDD-191: 세션 사이 안부 요약 + 미처리 위험 신호.
+        "checkin_summaries": counselor_checkin_summaries(cid, db),
+        "risk_signals": counselor_open_risk_signals(cid, db),
     }
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 요약 · 미처리 위험 신호 (상담사 전용)
+# ---------------------------------------------------------------------------
+
+# 브리핑 1건에 담는 상한.
+MAX_BRIEFING_CHECKINS = 10
+MAX_BRIEFING_RISK_SIGNALS = 10
+
+# 변화 방향 라벨 — 숫자 척도를 쓰지 않는다.
+MOOD_DIRECTION_LABELS: dict[str, str] = {
+    "better": "좋아짐",
+    "same": "비슷함",
+    "watch": "주의",
+}
+
+RISK_LEVEL_LABELS: dict[str, str] = {
+    "high": "즉시 확인",
+    "watch": "주의 관찰",
+}
+
+
+def counselor_checkin_summaries(
+    counselor_id: str | UUID, db: DBSession, *, limit: int = MAX_BRIEFING_CHECKINS
+) -> list[dict]:
+    """담당 내담자별 "세션 사이 안부 요약" — 최근 마무리된 체크인만, 내담자당 1건.
+
+    counselor_id 로 묶여 있어 타 상담사가 유발한 체크인은 들어올 수 없다.
+    """
+    from app.models.agent import AgentCheckin
+
+    cid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+    rows = (
+        db.query(AgentCheckin, User.name)
+        .join(User, User.id == AgentCheckin.client_id)
+        .filter(
+            AgentCheckin.counselor_id == cid,
+            AgentCheckin.closed_at.is_not(None),
+        )
+        .order_by(AgentCheckin.closed_at.desc())
+        .limit(limit * 3)
+        .all()
+    )
+    items: list[dict] = []
+    seen: set[UUID] = set()
+    for checkin, name in rows:
+        if checkin.client_id in seen:
+            continue
+        seen.add(checkin.client_id)
+        items.append({
+            "checkin_id": str(checkin.id),
+            "client_id": str(checkin.client_id),
+            "client_name": name or "이름 미등록",
+            "summary": checkin.summary or "",
+            "mood_direction": checkin.mood_direction,
+            "mood_label": MOOD_DIRECTION_LABELS.get(checkin.mood_direction or "", "비슷함"),
+            "closed_at": _ensure_aware(checkin.closed_at) if checkin.closed_at else None,
+        })
+        if len(items) >= limit:
+            break
+    return items
+
+
+def counselor_open_risk_signals(
+    counselor_id: str | UUID, db: DBSession, *, limit: int = MAX_BRIEFING_RISK_SIGNALS
+) -> list[dict]:
+    """미처리 위험 신호 — 처리 완료(handled_at)된 신호는 빠진다(TS14)."""
+    from app.models.agent import AgentRiskSignal
+
+    cid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+    rows = (
+        db.query(AgentRiskSignal, User.name)
+        .join(User, User.id == AgentRiskSignal.client_id)
+        .filter(
+            AgentRiskSignal.counselor_id == cid,
+            AgentRiskSignal.handled_at.is_(None),
+        )
+        .order_by(AgentRiskSignal.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "signal_id": str(signal.id),
+            "client_id": str(signal.client_id),
+            "client_name": name or "이름 미등록",
+            "level": signal.level,
+            "level_label": RISK_LEVEL_LABELS.get(signal.level, signal.level),
+            "excerpt": signal.excerpt,
+            "created_at": _ensure_aware(signal.created_at) if signal.created_at else None,
+        }
+        for signal, name in rows
+    ]
 
 
 def counselor_context_to_text(context: dict) -> str:
@@ -772,6 +869,17 @@ def counselor_context_to_text(context: dict) -> str:
         lines.append(f"■ 승인 대기 리포트 {len(reports)}건")
         for item in reports:
             lines.append(f"- {item['client_name']} / {item['scheduled_text']} {item['type_label']}")
+        lines.append("")
+
+    # SDD-191: 안부 요약·위험 신호는 **건수만** 넣는다. excerpt·요약 본문을 프롬프트에
+    # 넣으면 내담자 입력이 LLM 지시에 섞이고(인젝션), 상담 내용이 공급자로 흘러간다.
+    checkins = context.get("checkin_summaries") or []
+    if checkins:
+        lines.append(f"■ 세션 사이 안부 요약 {len(checkins)}건")
+        lines.append("")
+    risk_signals = context.get("risk_signals") or []
+    if risk_signals:
+        lines.append(f"■ 확인이 필요한 알림 {len(risk_signals)}건")
         lines.append("")
 
     events = context.get("relay_events") or []

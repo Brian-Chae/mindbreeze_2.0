@@ -83,3 +83,15 @@ it('처리 요청 실패 시 원문과 미처리 상태를 남긴다', async () 
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('처리 실패');
   expect(container.textContent).toContain('미처리'); expect(container.textContent).toContain('  원문\n그대로  ');
 });
+it('위험 알림은 실명·문장·두 CTA를 강조 카드에 표시한다', async () => {
+  vi.mocked(api.listMessages).mockResolvedValue({ items: [{ ...message, kind: 'risk_alert', content: '김내담: 확인이 필요한 문장', cta: [
+    { id: 'client', action: 'open_client', label: '내담자 보기', payload: { client_id: 'c1' } },
+    { id: 'risk', action: 'open_risk_signals', label: '위험 신호 보기' },
+  ] }], has_more: false });
+  await render();
+  const card = container.querySelector('[role="log"] article .border-amber-300');
+  expect(card?.textContent).toContain('김내담: 확인이 필요한 문장');
+  expect(card?.textContent).toContain('위험 알림');
+  expect(button('내담자 보기').disabled).toBe(false);
+  expect(button('위험 신호 보기').disabled).toBe(false);
+});

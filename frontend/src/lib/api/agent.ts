@@ -2,6 +2,7 @@ import { apiClient } from './client';
 
 export type AgentCtaAction =
   | 'ack' | 'open_map' | 'join_session' | 'request_change' | 'open_chat'
+  | 'talk_to_counselor' | 'open_risk_signals'
   | 'call_counselor' | 'open_report' | 'feedback_choice';
 
 export interface AgentCta {
@@ -22,6 +23,7 @@ export interface AgentMessage {
   id: string;
   sender: 'agent' | 'user' | 'system';
   kind: 'reminder_3h' | 'reminder_1h' | 'schedule_changed'
+    | 'checkin' | 'checkin_closing' | 'risk_alert'
     | 'report_ready' | 'report_chat' | 'feedback_thanks' | 'free';
   content: string;
   cta: AgentCta[];

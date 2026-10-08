@@ -91,6 +91,33 @@ def _remaining_topic_candidates(record: dict) -> list[str]:
     return [kw for kw in (record.get("keywords") or []) if kw not in sections_text]
 
 
+def _checkin_lines(context: dict) -> list[str]:
+    """SDD-191: 세션 사이 안부 요약 섹션 — 변화 방향 + 요약(원문 아님, D1)."""
+    items = context.get("checkin_summaries") or []
+    if not items:
+        return []
+    lines = ["", f"· 세션 사이 안부 요약 {len(items)}건"]
+    for item in items:
+        lines.append(f"  - {item['client_name']} / 변화 방향: {item['mood_label']}")
+        if item.get("summary"):
+            lines.append(f"    {item['summary']}")
+    return lines
+
+
+def _risk_signal_lines(context: dict) -> list[str]:
+    """SDD-191: 미처리 위험 신호 섹션 — excerpt 는 상담사 채널에만 들어간다(TS14)."""
+    items = context.get("risk_signals") or []
+    if not items:
+        return []
+    lines = ["", f"· 확인이 필요한 알림 {len(items)}건"]
+    for item in items:
+        lines.append(
+            f"  - {item['client_name']} / {item['level_label']}: “{item['excerpt']}”"
+        )
+    lines.append("  내담자에게는 알림이 간 사실을 알리지 않았어요.")
+    return lines
+
+
 # ---------------------------------------------------------------------------
 # 아침 일정 브리핑
 # ---------------------------------------------------------------------------
@@ -153,6 +180,10 @@ def build_morning_content(context: dict, db: DBSession) -> str:
             lines.append(
                 f"  - {event['client_name']}: {reason}" if reason else f"  - {event['client_name']}"
             )
+
+    # SDD-191: 미처리 위험 신호를 가장 먼저 보도록 안부 요약보다 앞에 둔다.
+    lines += _risk_signal_lines(context)
+    lines += _checkin_lines(context)
 
     return "\n".join(lines)
 
@@ -242,6 +273,9 @@ def build_evening_content(context: dict, db: DBSession) -> str:
         lines.append(f"· 내일 일정 {len(active_tomorrow)}건")
         for item in active_tomorrow:
             lines.append(f"  - {_session_headline(item)}")
+
+    lines += _risk_signal_lines(context)
+    lines += _checkin_lines(context)
 
     return "\n".join(lines)
 
@@ -409,6 +443,10 @@ def claim_briefing(
 def should_skip(context: dict, kind: str, settings) -> bool:
     """일정 없는 날 건너뛰기 판정 — 설정이 꺼져 있으면 "일정 없음" 메시지를 보낸다(TS4)."""
     if not settings.skip_no_session_days:
+        return False
+    # SDD-191: 일정이 없어도 미처리 위험 신호·안부 요약이 있으면 보낸다 — 상담사가
+    # 가장 먼저 봐야 하는 정보가 일정 유무 때문에 묻히면 안 된다.
+    if context.get("risk_signals") or context.get("checkin_summaries"):
         return False
     if kind == "morning":
         return not (context.get("today") or [])

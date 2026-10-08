@@ -265,7 +265,13 @@ def _uuid(value):
 # ---------------------------------------------------------------------------
 
 
-def link_client(counselor_id: str, client_id: str, *, status: str = "active") -> str:
+def link_client(
+    counselor_id: str,
+    client_id: str,
+    *,
+    status: str = "active",
+    matched_days_ago: int | None = None,
+) -> str:
     """ClientCounselorLink 직접 생성 — 담당 내담자 경계 검증용."""
     from app.models.client_counselor_link import ClientCounselorLink
 
@@ -274,6 +280,9 @@ def link_client(counselor_id: str, client_id: str, *, status: str = "active") ->
         link = ClientCounselorLink(
             client_id=_uuid(client_id), counselor_id=_uuid(counselor_id), status=status
         )
+        if matched_days_ago is not None:
+            # "가장 최근 매칭 상담사" 선택을 결정적으로 만들기 위한 시각 고정.
+            link.matched_at = datetime.now(timezone.utc) - timedelta(days=matched_days_ago)
         conn.add(link)
         conn.commit()
         conn.refresh(link)
@@ -408,5 +417,241 @@ def set_counselor_settings(user_id: str, **fields) -> None:
         for key, value in fields.items():
             setattr(settings, key, value)
         conn.commit()
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# SDD-191: 안부 대화 · 프로파일 · 위험 신호 헬퍼
+# ---------------------------------------------------------------------------
+
+
+def set_checkin_enabled(counselor_id: str, client_id: str, enabled: bool = True) -> None:
+    """상담사의 내담자별 안부 스위치를 직접 설정한다(D5=②)."""
+    from app.services import agent_checkin
+
+    conn = db()
+    try:
+        agent_checkin.set_enabled(conn, _uuid(counselor_id), _uuid(client_id), enabled)
+    finally:
+        conn.close()
+
+
+def set_checkin_paused(client_id: str, paused: bool = True) -> None:
+    from app.services import agent_checkin
+
+    conn = db()
+    try:
+        agent_checkin.set_paused(conn, _uuid(client_id), paused)
+    finally:
+        conn.close()
+
+
+def run_checkin_sweep(now: datetime | None = None) -> dict:
+    from app.services import agent_checkin
+
+    conn = db()
+    try:
+        return agent_checkin.sweep(conn, now=now)
+    finally:
+        conn.close()
+
+
+def checkins(client_id: str) -> list[dict]:
+    from app.models.agent import AgentCheckin
+
+    conn = db()
+    try:
+        rows = (
+            conn.query(AgentCheckin)
+            .filter(AgentCheckin.client_id == _uuid(client_id))
+            .order_by(AgentCheckin.started_at.asc())
+            .all()
+        )
+        return [
+            {
+                "id": str(r.id),
+                "counselor_id": str(r.counselor_id),
+                "trigger": r.trigger,
+                "turn_count": r.turn_count,
+                "closed_at": r.closed_at,
+                "summary": r.summary,
+                "mood_direction": r.mood_direction,
+            }
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def close_open_checkin(client_id: str, *, mood_direction: str | None = None, days_ago: int = 0) -> None:
+    """열린 체크인을 과거 시점에 마무리된 상태로 만든다 — 트리거·제한 검증용."""
+    from app.models.agent import AgentCheckin
+
+    conn = db()
+    try:
+        row = (
+            conn.query(AgentCheckin)
+            .filter(AgentCheckin.client_id == _uuid(client_id))
+            .order_by(AgentCheckin.started_at.desc())
+            .first()
+        )
+        when = datetime.now(timezone.utc) - timedelta(days=days_ago)
+        row.started_at = when
+        row.closed_at = when
+        if mood_direction is not None:
+            row.mood_direction = mood_direction
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def risk_signals(counselor_id: str | None = None) -> list[dict]:
+    from app.models.agent import AgentRiskSignal
+
+    conn = db()
+    try:
+        query = conn.query(AgentRiskSignal)
+        if counselor_id is not None:
+            query = query.filter(AgentRiskSignal.counselor_id == _uuid(counselor_id))
+        rows = query.order_by(AgentRiskSignal.created_at.asc()).all()
+        return [
+            {
+                "id": str(r.id),
+                "client_id": str(r.client_id),
+                "counselor_id": str(r.counselor_id),
+                "level": r.level,
+                "excerpt": r.excerpt,
+                "status": r.status,
+                "handled_at": r.handled_at,
+                "message_id": str(r.message_id) if r.message_id else None,
+            }
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def age_risk_signals(client_id: str, minutes: int) -> None:
+    """위험 신호 생성 시각을 과거로 밀어 중복 억제 창을 벗어나게 한다(TS10)."""
+    from app.models.agent import AgentRiskSignal
+
+    conn = db()
+    try:
+        rows = (
+            conn.query(AgentRiskSignal)
+            .filter(AgentRiskSignal.client_id == _uuid(client_id))
+            .all()
+        )
+        for row in rows:
+            row.created_at = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def profile_items(counselor_id: str, client_id: str) -> list[dict]:
+    from app.models.agent import AgentProfileItem
+
+    conn = db()
+    try:
+        rows = (
+            conn.query(AgentProfileItem)
+            .filter(
+                AgentProfileItem.counselor_id == _uuid(counselor_id),
+                AgentProfileItem.client_id == _uuid(client_id),
+            )
+            .order_by(AgentProfileItem.created_at.asc())
+            .all()
+        )
+        return [
+            {
+                "id": str(r.id),
+                "category": r.category,
+                "text": r.text,
+                "status": r.status,
+                "evidence": list(r.evidence or []),
+            }
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def send_client_message(client, headers: dict, text: str) -> dict:
+    """내담자 자유 메시지 전송 — 200 을 보장하고 본문을 돌려준다."""
+    res = client.post("/api/v1/agent/messages", json={"content": text}, headers=headers)
+    assert res.status_code == 200, res.text
+    return res.json()
+
+
+def age_last_user_message(client_id: str, days: int) -> None:
+    """내담자 발화 시각을 과거로 밀어 "무응답 N일" 트리거를 만든다."""
+    from app.models.agent import AgentConversation, AgentMessage
+
+    conn = db()
+    try:
+        conversation = (
+            conn.query(AgentConversation)
+            .filter(
+                AgentConversation.user_id == _uuid(client_id),
+                AgentConversation.channel == "client",
+            )
+            .first()
+        )
+        if conversation is None:
+            return
+        when = datetime.now(timezone.utc) - timedelta(days=days)
+        rows = (
+            conn.query(AgentMessage)
+            .filter(AgentMessage.conversation_id == conversation.id)
+            .all()
+        )
+        for row in rows:
+            row.created_at = when
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def notifications_of(user_id: str, *, title: str | None = None) -> list[dict]:
+    """인앱 알림 행 — 위험 알림 이벤트 적재·비식별 검증용(SDD-191)."""
+    from app.models.notification import Notification
+
+    conn = db()
+    try:
+        query = conn.query(Notification).filter(Notification.user_id == _uuid(user_id))
+        if title is not None:
+            query = query.filter(Notification.title == title)
+        rows = query.order_by(Notification.created_at.asc()).all()
+        return [
+            {
+                "type": r.type,
+                "title": r.title,
+                "body": r.body,
+                "extra": dict(r.extra or {}),
+            }
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def direct_room_id(counselor_id: str, client_id: str) -> str | None:
+    """상담사-내담자 direct 채팅방 id — CTA payload.room_id 대조용."""
+    from app.models.chat import ChatRoom
+
+    conn = db()
+    try:
+        room = (
+            conn.query(ChatRoom)
+            .filter(
+                ChatRoom.room_type == "direct",
+                ChatRoom.host_id == _uuid(counselor_id),
+                ChatRoom.name == str(client_id),
+            )
+            .first()
+        )
+        return str(room.id) if room else None
     finally:
         conn.close()

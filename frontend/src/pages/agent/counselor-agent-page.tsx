@@ -1,3 +1,4 @@
+import RiskSignals from './risk-signals';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
@@ -10,6 +11,8 @@ import { feedbackLabel, mergeMessages, resolveCounselorCta, sortRelayEvents } fr
 export default function CounselorAgentPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const riskTab = params.get('tab') === 'risk';
+  const openRisk = useCounselorAgentStore((state) => state.openRisk);
   const relayTab = params.get('tab') === 'relay';
   const [messages, setMessages] = useState<CounselorMessage[]>([]);
   const [events, setEvents] = useState<RelayEvent[]>([]);
@@ -27,6 +30,7 @@ export default function CounselorAgentPage() {
   const bottom = useRef<HTMLDivElement>(null);
   const fail = useCallback((err: unknown) => setError(err instanceof Error ? err.message : '요청을 처리하지 못했습니다. 다시 시도해 주세요.'), []);
   useEffect(() => {
+    if (riskTab) { setLoading(false); return; }
     let active = true;
     let fetching = false;
     setLoading(true);
@@ -53,7 +57,7 @@ export default function CounselorAgentPage() {
     void refresh();
     const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [relayTab, reload, fail]);
+  }, [relayTab, riskTab, reload, fail]);
   const latestId = messages.at(-1)?.id;
   useEffect(() => { if (!relayTab) bottom.current?.scrollIntoView?.({ block: 'end' }); }, [latestId, relayTab]);
   const perform = async (work: () => Promise<void>) => {
@@ -76,12 +80,13 @@ export default function CounselorAgentPage() {
   return <AppShell title="AI 대화" sub="AI ASSISTANT" noScroll rightSlot={<button onClick={() => setSettingsOpen(true)} className="rounded-xl border bg-white px-4 py-2 text-sm">브리핑 설정</button>}>
     <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-3">
       <div className="flex flex-wrap gap-2" aria-label="AI 채널 메뉴">
-        <button aria-pressed={!relayTab} onClick={() => setParams({})} className={`rounded-xl px-4 py-2 ${!relayTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>대화·브리핑</button>
+        <button aria-pressed={!relayTab && !riskTab} onClick={() => setParams({})} className={`rounded-xl px-4 py-2 ${!relayTab && !riskTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>대화·브리핑</button>
         <button aria-pressed={relayTab} onClick={() => setParams({ tab: 'relay' })} className={`rounded-xl px-4 py-2 ${relayTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>내담자 피드백·일정 변경 문의</button>
+        <button aria-pressed={riskTab} onClick={() => setParams({ tab: 'risk' })} className={`rounded-xl px-4 py-2 ${riskTab ? 'bg-[#5F0080] text-white' : 'bg-white'}`}>위험 신호{openRisk > 0 ? ` · 미처리 ${openRisk}` : ''}</button>
       </div>
       {error && <div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}<button onClick={() => { setError(''); setReload((value) => value + 1); }} className="ml-2 underline">다시 시도</button></div>}
       {loading && <p role="status">불러오는 중…</p>}
-      {relayTab ? <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+      {riskTab ? <RiskSignals /> : relayTab ? <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
         {!loading && !events.length && <p className="py-8 text-center text-sm">아직 전달된 피드백이나 문의가 없습니다.</p>}
         {sortRelayEvents(events).map((item) => <article key={item.id} className="rounded-2xl bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><Link to={`/clients/${encodeURIComponent(item.client_id)}`} className="font-bold text-[#5F0080]">{item.client_name}</Link><span className="text-xs text-[#6F6F6F]">{item.handled_at ? '처리 완료' : '미처리'}</span></div>
@@ -103,8 +108,8 @@ export default function CounselorAgentPage() {
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto block rounded-full bg-white px-4 py-2 text-sm">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
           {!loading && !messages.length && <p className="py-8 text-center text-sm">오늘 일정이나 지난 상담 요약을 물어보세요.</p>}
           {messages.map((message) => <article key={message.id} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${message.sender === 'user' ? 'bg-[#5F0080] text-white' : 'bg-white text-[#1F1F1F]'}`}>
-              <p className="mb-2 text-xs opacity-70">{message.kind === 'briefing_morning' ? '아침 브리핑' : message.kind === 'briefing_evening' ? '저녁 상담 정리' : message.sender === 'user' ? '나' : 'AI 비서'}</p>
+            <div className={`max-w-[88%] rounded-2xl px-4 py-3 ${message.kind === 'risk_alert' ? 'border-2 border-amber-300 bg-amber-50 text-[#1F1F1F]' : message.sender === 'user' ? 'bg-[#5F0080] text-white' : 'bg-white text-[#1F1F1F]'}`}>
+              <p className="mb-2 text-xs opacity-70">{message.kind === 'risk_alert' ? '위험 알림' : message.kind === 'briefing_morning' ? '아침 브리핑' : message.kind === 'briefing_evening' ? '저녁 상담 정리' : message.sender === 'user' ? '나' : 'AI 비서'}</p>
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.content}</p>
               <div className="mt-3 flex flex-wrap gap-2">{message.cta.map((cta) => {
                 const target = resolveCounselorCta(cta);

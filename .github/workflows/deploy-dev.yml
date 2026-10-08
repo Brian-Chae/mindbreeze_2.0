@@ -75,6 +75,7 @@ jobs:
             backend/sweep_session_reminders_cron.py \
             backend/sweep_agent_reminders_cron.py \
             backend/sweep_agent_briefings_cron.py \
+            backend/sweep_agent_checkins_cron.py \
             backend/process_pipeline_outbox_cron.py \
             backend/process_email_outbox_cron.py \
             backend/process_push_outbox_cron.py \
@@ -264,6 +265,8 @@ jobs:
             (crontab -l 2>/dev/null | grep -v 'sweep_stale_media_cron'; echo '45 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_media_cron.py >> /var/log/mindbreeze-media-sweep.log 2>&1') | crontab -
             # SDD-190: 앱 푸시 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
             (crontab -l 2>/dev/null | grep -v 'process_push_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_PROJECT_ID=$(grep -E ^FCM_PROJECT_ID= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_SERVICE_ACCOUNT_JSON=$(grep -E ^FCM_SERVICE_ACCOUNT_JSON= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_push_outbox_cron.py >> /var/log/mindbreeze-push-outbox.log 2>&1') | crontab -
+            # SDD-191: AI 비서 안부 대화(체크인) 아웃리치 스윕 cron 등록 (매 5분)
+            (crontab -l 2>/dev/null | grep -v 'sweep_agent_checkins_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_checkins_cron.py >> /var/log/mindbreeze-agent-checkins.log 2>&1') | crontab -
             # SDD-188: cron 로그 파일은 ubuntu 가 /var/log 에 직접 만들 수 없어(Permission denied) cron 이 실행되지 못했다 → 미리 생성·소유권 부여
             for f in $(crontab -l | grep -o '/var/log/mindbreeze-[a-z-]*\.log' | sort -u); do sudo touch "$f" && sudo chown ubuntu:ubuntu "$f"; done
             # cron 프로세스의 SQLAlchemy echo(DEBUG=true) 로 로그가 폭증하는 것을 막는다 (crontab 환경변수 줄)

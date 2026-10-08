@@ -31,6 +31,11 @@ from app.models.agent import (
     AgentDeliveryLog,
     AgentCounselorSettings,
     AgentBriefingLog,
+    AgentCheckinEnablement,
+    AgentCheckinPref,
+    AgentCheckin,
+    AgentProfileItem,
+    AgentRiskSignal,
 )
 
 from app.models.normalization_baseline import NormalizationBaseline
@@ -83,6 +88,11 @@ __all__ = [
     "AgentDeliveryLog",
     "AgentCounselorSettings",
     "AgentBriefingLog",
+    "AgentCheckinEnablement",
+    "AgentCheckinPref",
+    "AgentCheckin",
+    "AgentProfileItem",
+    "AgentRiskSignal",
 ]
 
 from app.models.data_export import DataExportJob, DataExportAudit

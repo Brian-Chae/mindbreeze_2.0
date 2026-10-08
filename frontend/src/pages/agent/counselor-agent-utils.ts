@@ -6,6 +6,7 @@ export function resolveCounselorCta(cta: CounselorCta): string | null {
   let target: string | undefined;
   let allowed: RegExp;
   switch (cta.action) {
+    case 'open_risk_signals': target = '/agent?tab=risk'; allowed = /^\/agent\?tab=risk$/; break;
     case 'open_schedule': target = '/sessions'; allowed = /^\/sessions$/; break;
     case 'open_change_requests': target = '/agent?tab=relay'; allowed = /^\/agent\?tab=relay$/; break;
     case 'open_client': target = payload?.client_id ? `/clients/${encodeURIComponent(payload.client_id)}` : payload?.url; allowed = /^\/clients\/[^/?#]+$/; break;

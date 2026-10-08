@@ -37,6 +37,11 @@ export function resolveCta(cta: AgentCta): CtaEffect | null {
 
     }
     case 'join_session': return cta.payload?.session_id ? { type: 'join', sessionId: cta.payload.session_id } : null;
+    case 'talk_to_counselor': {
+      const url = cta.payload?.room_id ? safeAgentUrl(`/app/chat/${encodeURIComponent(cta.payload.room_id)}`) : null;
+      return url?.startsWith('/app/chat/') ? { type: 'navigate', url } : null;
+    }
+    case 'open_risk_signals': return null;
     case 'open_chat': return cta.payload?.room_id ? { type: 'navigate', url: `/app/chat/${encodeURIComponent(cta.payload.room_id)}` } : null;
     case 'call_counselor': {
       const tel = cta.payload?.tel?.trim();

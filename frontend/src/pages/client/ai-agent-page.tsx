@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
 import { useNavigate } from 'react-router-dom';
+import CheckinPreferences from '../../components/client/agent/checkin-prefs';
 import ClientShell from '../../components/client/ClientShell';
 import CtaCard from '../../components/client/agent/cta-card';
 import * as agentApi from '../../lib/api/agent';
@@ -160,6 +161,7 @@ export default function AiAgentPage() {
           </div>
         </section>
       ) : <>
+        <CheckinPreferences />
         <p className="text-xs text-[#6F6F6F]">AI 대화는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>
         <div ref={scroller} role="log" aria-label="AI 대화 메시지" className="min-h-0 flex-1 space-y-4 overflow-y-auto py-2">
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto block rounded-full bg-white px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
