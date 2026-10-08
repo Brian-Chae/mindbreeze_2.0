@@ -93,5 +93,10 @@ class Settings(BaseSettings):
     livekit_api_key: str = "devkey"
     livekit_api_secret: str = "secret"
 
+    # SDD-190: 앱 푸시(FCM HTTP v1). 둘 다 설정된 환경에서만 실제 발송한다.
+    # fcm_service_account_json 은 서비스 계정 키 **파일 경로** 또는 JSON 문자열.
+    fcm_project_id: str = ""
+    fcm_service_account_json: str = ""
+
 
 settings = Settings()

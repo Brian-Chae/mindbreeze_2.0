@@ -12,7 +12,10 @@
     "build-storybook": "storybook build",
     "test:chat": "NODE_ENV=test vitest run tests/chat-*.test.ts",
     "test:browser": "vitest run --config vitest.browser.config.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "npm run build && cap sync android && cap open android",
+    "cap:ios": "npm run build && cap sync ios && cap open ios"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",
@@ -27,7 +30,14 @@
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1",
     "socket.io-client": "^4.8.3",
-    "zustand": "^5.0.13"
+    "zustand": "^5.0.13",
+    "@capacitor/core": "8.3.4",
+    "@capacitor/cli": "8.3.4",
+    "@capacitor/android": "8.3.4",
+    "@capacitor/ios": "8.3.4",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/push-notifications": "^8.0.0",
+    "@capacitor-community/bluetooth-le": "8.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

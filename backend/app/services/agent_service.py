@@ -41,10 +41,24 @@ AGENT_CONSENT_VERSION = "1.0"
 
 # 내담자 앱의 AI 대화 화면 딥링크 (프론트 라우트 /app/ai)
 AGENT_DEEPLINK = "/app/ai"
+# SDD-189: 상담사 웹의 AI 비서 화면 딥링크 (프론트 라우트 /agent)
+COUNSELOR_AGENT_DEEPLINK = "/agent"
 
 # 푸시 비식별 고정 문구 — 이름·상담 내용·리포트 문장을 담지 않는다.
 PUSH_TITLE = "AI 비서"
 PUSH_BODY = "AI 비서가 메시지를 보냈어요"
+# SDD-189 브리핑 푸시 문구 — 내담자 이름·상담 내용이 잠금화면에 보이면 안 된다.
+PUSH_BODY_BRIEFING = "AI 비서가 브리핑을 보냈어요"
+
+# 채널 식별자 — AgentConversation.channel 값.
+CHANNEL_CLIENT = "client"
+CHANNEL_COUNSELOR = "counselor"
+
+# 채널별 딥링크 — 푸시/인앱 알림이 어느 화면으로 보낼지 가른다.
+CHANNEL_DEEPLINKS: dict[str, str] = {
+    CHANNEL_CLIENT: AGENT_DEEPLINK,
+    CHANNEL_COUNSELOR: COUNSELOR_AGENT_DEEPLINK,
+}
 
 # 사후 피드백 자유 서술을 같은 relay event 에 누적하는 시간 창(분).
 # 이 창을 넘어선 일반 대화는 피드백으로 수집하지 않는다.
@@ -206,10 +220,16 @@ def post_agent_message(
     sender: str = "agent",
     notify: bool = True,
     commit: bool = True,
+    channel: str = CHANNEL_CLIENT,
+    push_body: str | None = None,
 ) -> AgentMessage:
-    """에이전트/시스템 메시지를 저장하고 (notify=True 면) 인앱·푸시 알림을 적재한다."""
+    """에이전트/시스템 메시지를 저장하고 (notify=True 면) 인앱·푸시 알림을 적재한다.
+
+    channel 로 내담자 채널(client)과 상담사 채널(counselor)을 가른다 — 두 채널은
+    서로 다른 대화방이므로 메시지가 섞이지 않는다.
+    """
     uid = _to_uuid(user_id)
-    conversation = get_or_create_conversation(db, uid)
+    conversation = get_or_create_conversation(db, uid, channel)
     message = AgentMessage(
         conversation_id=conversation.id,
         sender=sender,
@@ -223,7 +243,7 @@ def post_agent_message(
     db.flush()
 
     if notify:
-        _enqueue_notifications(db, uid, message)
+        _enqueue_notifications(db, uid, message, channel=channel, push_body=push_body)
 
     if commit:
         db.commit()
@@ -232,11 +252,16 @@ def post_agent_message(
 
 
 def post_user_message(
-    db: DBSession, user_id: str | UUID, content: str, *, commit: bool = False
+    db: DBSession,
+    user_id: str | UUID,
+    content: str,
+    *,
+    commit: bool = False,
+    channel: str = CHANNEL_CLIENT,
 ) -> AgentMessage:
     """사용자 발화 저장 — 본인이 쓴 글이므로 생성 시점에 읽음 처리한다."""
     uid = _to_uuid(user_id)
-    conversation = get_or_create_conversation(db, uid)
+    conversation = get_or_create_conversation(db, uid, channel)
     message = AgentMessage(
         conversation_id=conversation.id,
         sender="user",
@@ -253,23 +278,33 @@ def post_user_message(
     return message
 
 
-def _enqueue_notifications(db: DBSession, user_id: UUID, message: AgentMessage) -> None:
+def _enqueue_notifications(
+    db: DBSession,
+    user_id: UUID,
+    message: AgentMessage,
+    *,
+    channel: str = CHANNEL_CLIENT,
+    push_body: str | None = None,
+) -> None:
     """인앱(ws) 알림 + 푸시 Outbox 적재.
 
     두 채널 모두 본문에 상담 내용을 담지 않는다 — 내용은 대화창에서 확인한다.
+    상담사 브리핑도 같다: 내담자 이름·상담 내용이 잠금화면에 보이면 안 된다(TS10).
     푸시는 consumer 가 없어 pending 으로 남는다(SDD-190).
     """
+    deeplink = CHANNEL_DEEPLINKS.get(channel, AGENT_DEEPLINK)
+    body = push_body or PUSH_BODY
     extra = notification_service.build_standard_extra(
         "agent_message",
         "notice",
         str(message.id),
-        params={"deeplink": AGENT_DEEPLINK, "kind": message.kind},
+        params={"deeplink": deeplink, "kind": message.kind},
     )
     try:
         notification_service.notify_event(
             "agent_message",
             user_id,
-            {"title": PUSH_TITLE, "body": PUSH_BODY, "extra": extra},
+            {"title": PUSH_TITLE, "body": body, "extra": extra},
             db,
             commit=False,
         )
@@ -283,8 +318,8 @@ def _enqueue_notifications(db: DBSession, user_id: UUID, message: AgentMessage) 
             channel="push",
             payload={
                 "title": PUSH_TITLE,
-                "body": PUSH_BODY,
-                "deeplink": AGENT_DEEPLINK,
+                "body": body,
+                "deeplink": deeplink,
                 "message_id": str(message.id),
             },
             status="pending",
@@ -359,9 +394,10 @@ def list_messages(
     *,
     before: datetime | None = None,
     limit: int = 30,
+    channel: str = CHANNEL_CLIENT,
 ) -> dict:
     """최신순 메시지 목록 + 더 있는지 여부."""
-    conversation = get_or_create_conversation(db, user_id)
+    conversation = get_or_create_conversation(db, user_id, channel)
     limit = max(1, min(int(limit), 100))
     query = db.query(AgentMessage).filter(AgentMessage.conversation_id == conversation.id)
     if before is not None:
@@ -378,9 +414,15 @@ def list_messages(
     }
 
 
-def mark_read(db: DBSession, user_id: str | UUID, up_to: datetime | None = None) -> int:
+def mark_read(
+    db: DBSession,
+    user_id: str | UUID,
+    up_to: datetime | None = None,
+    *,
+    channel: str = CHANNEL_CLIENT,
+) -> int:
     """에이전트/시스템 메시지를 읽음 처리하고 남은 미읽음 수를 반환한다."""
-    conversation = get_or_create_conversation(db, user_id)
+    conversation = get_or_create_conversation(db, user_id, channel)
     query = db.query(AgentMessage).filter(
         AgentMessage.conversation_id == conversation.id,
         AgentMessage.read_at.is_(None),
@@ -389,11 +431,13 @@ def mark_read(db: DBSession, user_id: str | UUID, up_to: datetime | None = None)
         query = query.filter(AgentMessage.created_at <= _ensure_aware(up_to))
     query.update({"read_at": _now()}, synchronize_session=False)
     db.commit()
-    return unread_count(db, user_id)
+    return unread_count(db, user_id, channel=channel)
 
 
-def unread_count(db: DBSession, user_id: str | UUID) -> int:
-    conversation = get_or_create_conversation(db, user_id)
+def unread_count(
+    db: DBSession, user_id: str | UUID, *, channel: str = CHANNEL_CLIENT
+) -> int:
+    conversation = get_or_create_conversation(db, user_id, channel)
     return (
         db.query(AgentMessage)
         .filter(

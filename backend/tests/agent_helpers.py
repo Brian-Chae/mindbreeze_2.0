@@ -258,3 +258,155 @@ def _uuid(value):
     import uuid
 
     return value if isinstance(value, uuid.UUID) else uuid.UUID(str(value))
+
+
+# ---------------------------------------------------------------------------
+# SDD-189: 상담사 채널 헬퍼
+# ---------------------------------------------------------------------------
+
+
+def link_client(counselor_id: str, client_id: str, *, status: str = "active") -> str:
+    """ClientCounselorLink 직접 생성 — 담당 내담자 경계 검증용."""
+    from app.models.client_counselor_link import ClientCounselorLink
+
+    conn = db()
+    try:
+        link = ClientCounselorLink(
+            client_id=_uuid(client_id), counselor_id=_uuid(counselor_id), status=status
+        )
+        conn.add(link)
+        conn.commit()
+        conn.refresh(link)
+        return str(link.id)
+    finally:
+        conn.close()
+
+
+def set_ai_summary(session_id: str, summary: dict | None, *, status: str = "completed") -> None:
+    """SessionRecord 를 만들거나 갱신해 AI 요약을 심는다. summary=None 이면 기록 없음 상태."""
+    from app.models.record import SessionRecord
+
+    conn = db()
+    try:
+        record = (
+            conn.query(SessionRecord)
+            .filter(SessionRecord.session_id == _uuid(session_id))
+            .first()
+        )
+        if record is None:
+            record = SessionRecord(
+                session_id=_uuid(session_id), markers=[], edit_history=[], ai_summary={}
+            )
+            conn.add(record)
+        record.status = status
+        record.ai_summary = summary if summary is not None else {}
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def set_joined_at(session_id: str, user_id: str, when=None) -> None:
+    """참여 행의 joined_at 을 바꾼다 — None 이면 불참(참석 기록 없음)으로 본다."""
+    from app.models.session import SessionParticipant
+
+    conn = db()
+    try:
+        row = (
+            conn.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == _uuid(session_id),
+                SessionParticipant.user_id == _uuid(user_id),
+            )
+            .first()
+        )
+        row.joined_at = when
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def counselor_messages(user_id: str, *, kind: str | None = None) -> list:
+    """상담사 채널(channel="counselor") 메시지만 — 내담자 채널과 섞이지 않는지도 검증한다."""
+    from app.models.agent import AgentConversation, AgentMessage
+
+    conn = db()
+    try:
+        conversation = (
+            conn.query(AgentConversation)
+            .filter(
+                AgentConversation.user_id == _uuid(user_id),
+                AgentConversation.channel == "counselor",
+            )
+            .first()
+        )
+        if conversation is None:
+            return []
+        query = conn.query(AgentMessage).filter(
+            AgentMessage.conversation_id == conversation.id
+        )
+        if kind is not None:
+            query = query.filter(AgentMessage.kind == kind)
+        rows = query.order_by(AgentMessage.created_at.asc()).all()
+        return [
+            {
+                "id": str(m.id),
+                "sender": m.sender,
+                "kind": m.kind,
+                "content": m.content,
+                "cta": list(m.cta or []),
+            }
+            for m in rows
+        ]
+    finally:
+        conn.close()
+
+
+def briefing_logs(user_id: str | None = None) -> list[dict]:
+    from app.models.agent import AgentBriefingLog
+
+    conn = db()
+    try:
+        query = conn.query(AgentBriefingLog)
+        if user_id is not None:
+            query = query.filter(AgentBriefingLog.user_id == _uuid(user_id))
+        rows = query.all()
+        return [
+            {"user_id": str(r.user_id), "kind": r.kind, "briefing_date": r.briefing_date}
+            for r in rows
+        ]
+    finally:
+        conn.close()
+
+
+def run_briefing_sweep(now: datetime | None = None) -> dict:
+    from app.services import agent_briefing
+
+    conn = db()
+    try:
+        return agent_briefing.sweep(conn, now=now)
+    finally:
+        conn.close()
+
+
+def kst_at(hour: int, minute: int = 0, *, day_offset: int = 0) -> datetime:
+    """KST 기준 시각을 aware UTC datetime 으로 — 브리핑 시각 윈도우 테스트용."""
+    from zoneinfo import ZoneInfo
+
+    kst = ZoneInfo("Asia/Seoul")
+    base = (datetime.now(timezone.utc).astimezone(kst) + timedelta(days=day_offset)).replace(
+        hour=hour, minute=minute, second=0, microsecond=0
+    )
+    return base.astimezone(timezone.utc)
+
+
+def set_counselor_settings(user_id: str, **fields) -> None:
+    from app.services import agent_counselor_service
+
+    conn = db()
+    try:
+        settings = agent_counselor_service.get_settings(conn, user_id)
+        for key, value in fields.items():
+            setattr(settings, key, value)
+        conn.commit()
+    finally:
+        conn.close()

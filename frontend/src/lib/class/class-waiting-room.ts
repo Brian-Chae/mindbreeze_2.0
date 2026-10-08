@@ -1,3 +1,4 @@
+import { isBleSupported } from '../ble';
 // 입장 전 대기실 — 순수 로직(닉네임 확정 · 입장 게이트).
 // 컴포넌트(ClassWaitingRoom.tsx)와 함께 사용한다.
 //
@@ -120,5 +121,5 @@ export function mediaErrorMessage(err: unknown, device: '카메라' | '마이크
 
 /** Web Bluetooth 지원 여부 — LINK BAND 확인 카드의 안내 분기용(게이트와 무관) */
 export function isBluetoothSupported(): boolean {
-  return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+  return isBleSupported();
 }

@@ -1,3 +1,4 @@
+import { isBleSupported } from '../lib/ble';
 /**
  * useBand — LINK BAND BLE 연결 → StreamProcessor → 1초 feature
  *
@@ -235,7 +236,7 @@ export interface UseBandResult {
 }
 
 function isWebBluetoothSupported(): boolean {
-  return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+  return isBleSupported();
 }
 
 function envMockEeg(): boolean {

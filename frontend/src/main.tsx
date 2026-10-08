@@ -1,3 +1,4 @@
+import { NativeBootstrap } from './lib/native/use-push-registration';
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -12,6 +13,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <GoogleOAuthProvider clientId={googleClientId || ' '}>
+        <NativeBootstrap />
         <App />
       </GoogleOAuthProvider>
     </ErrorBoundary>

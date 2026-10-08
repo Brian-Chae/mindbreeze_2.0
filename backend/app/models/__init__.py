@@ -29,6 +29,8 @@ from app.models.agent import (
     AgentMessage,
     AgentRelayEvent,
     AgentDeliveryLog,
+    AgentCounselorSettings,
+    AgentBriefingLog,
 )
 
 from app.models.normalization_baseline import NormalizationBaseline
@@ -79,7 +81,13 @@ __all__ = [
     "AgentMessage",
     "AgentRelayEvent",
     "AgentDeliveryLog",
+    "AgentCounselorSettings",
+    "AgentBriefingLog",
 ]
 
 from app.models.data_export import DataExportJob, DataExportAudit
 __all__ += ["DataExportJob", "DataExportAudit"]
+
+# SDD-190: 앱 푸시 디바이스 토큰
+from app.models.device_token import DeviceToken
+__all__ += ["DeviceToken"]

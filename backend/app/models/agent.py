@@ -10,9 +10,11 @@ AgentDeliveryLog 는 "같은 알림을 두 번 보내지 않는다"를 DB 유니
 """
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
+    Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -114,6 +116,9 @@ class AgentRelayEvent(Base):
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     # pending(미열람) → read(상담사 열람, SDD-189)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    # SDD-189: 상담사가 "처리 완료"로 표시한 시각. null 이면 미처리(목록 상단 노출 대상).
+    # status 와 축이 다르다 — status 는 열람 여부, handled_at 은 상담사의 처리 선언이다.
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -145,6 +150,71 @@ class AgentDeliveryLog(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
     )
     payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class AgentCounselorSettings(Base):
+    """SDD-189: 상담사별 브리핑 설정 — 상담사당 1행.
+
+    시각은 "HH:MM" 문자열로 두고 **한국 시간(KST)** 으로 해석한다. 서버 타임존이
+    바뀌어도 상담사가 지정한 생활 시간대가 흔들리지 않게 하려는 선택이다.
+    행이 없는 상담사는 DEFAULT_* 값으로 동작하며, 설정 조회 시 행을 자동 생성한다.
+    """
+
+    __tablename__ = "agent_counselor_settings"
+    __table_args__ = (
+        UniqueConstraint("user_id", name="uq_agent_counselor_settings_user"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    morning_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    morning_time: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="08:00", server_default="08:00"
+    )
+    evening_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    evening_time: Mapped[str] = mapped_column(
+        String(5), nullable=False, default="21:00", server_default="21:00"
+    )
+    # true 면 해당 일에 일정이 없을 때 브리핑을 만들지 않는다(기획 §2.2 — 빈 알림 방지).
+    skip_no_session_days: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AgentBriefingLog(Base):
+    """SDD-189: 브리핑 발송 로그 — (상담사, 종류, 기준일) UNIQUE 로 1일 1회를 보장한다.
+
+    매 1분 cron 이 지정 시각 이후 30분까지 보정 발송을 시도하므로, 멱등은 이 제약에만
+    의존한다(스윕이 겹쳐도 메시지는 1건).
+    """
+
+    __tablename__ = "agent_briefing_logs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "kind", "briefing_date", name="uq_agent_briefing_log"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # morning | evening
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    # 브리핑 기준일(KST 날짜)
+    briefing_date: Mapped[date] = mapped_column(Date, nullable=False)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

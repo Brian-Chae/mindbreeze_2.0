@@ -1,6 +1,8 @@
 import { loginPathForRole } from '../../lib/auth-routing';
 import { NavLink, useNavigate } from 'react-router-dom';
-import React from 'react';
+import React, { useEffect } from 'react';
+import { getUnreadCount } from '../../lib/api/agent-counselor';
+import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 
@@ -86,6 +88,7 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: ICONS.home },
+  { to: '/agent', label: 'AI 대화', icon: ICONS.message },
   { to: '/sessions', label: '세션', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
@@ -145,6 +148,27 @@ export default function SidebarNav({
   sessionBadge,
 }: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
+  const counselorUnread = useCounselorAgentStore((state) => state.unread);
+  useEffect(() => {
+    if (user?.role !== 'counselor' || role === 'client') return;
+    let active = true;
+    let fetching = false;
+    useCounselorAgentStore.getState().setUnread(0);
+    const refresh = async () => {
+      if (fetching) return;
+      fetching = true;
+      const initial = useCounselorAgentStore.getState();
+      try {
+        const result = await getUnreadCount();
+        // 조회 중 읽음 처리가 끝났다면 오래된 개수로 덮어쓰지 않는다.
+        if (active && initial === useCounselorAgentStore.getState()) initial.setUnread(result.unread);
+      } catch { /* 다음 조회 때 재시도한다. */ }
+      finally { fetching = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [user?.id, user?.role, role]);
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
@@ -173,7 +197,7 @@ export default function SidebarNav({
   const getBadge = (label: string): React.ReactNode => {
     // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
     const count =
-      label === 'AI 대화' ? agentBadge ?? 0 : label === '채팅'
+      label === 'AI 대화' ? (user?.role === 'counselor' && role !== 'client' ? counselorUnread : agentBadge ?? 0) : label === '채팅'
         ? chatBadge ?? 0
         : label === '알림'
           ? notificationBadge ?? 0

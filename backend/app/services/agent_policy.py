@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -308,3 +308,484 @@ def context_to_text(context: dict) -> str:
         lines.append("■ 발송 완료된 리포트: 없음")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# SDD-189: 상담사 채널 컨텍스트 — host/담당 링크 기준 단일 진입점
+# ---------------------------------------------------------------------------
+#
+# 격리 규칙: 세션은 `Session.host_id == 상담사` 로만, 내담자는 그 세션의 active 참여자
+# 또는 `ClientCounselorLink(status="active")` 로만 들어온다. 따라서 다른 상담사의
+# 세션·내담자·요약은 쿼리 자체에 들어올 수 없다(기획 §3.1, SDD-189 Risks).
+#
+# 내담자 채널과 반대로 **실명**을 쓴다(D12) — 상담사는 담당 내담자를 식별해야 한다.
+# 반대로 **장소·주소·연락처·길찾기는 담지 않는다**(기획 §1.2-6): 상담사는 자기 상담실
+# 주소를 안내받을 필요가 없고, 내담자 연락처를 알림 본문으로 흘리지 않는다.
+
+# 브리핑 1건에 담는 상한 — 프롬프트·메시지 폭주 방지.
+MAX_BRIEFING_SESSIONS = 20
+MAX_BRIEFING_RELAY_EVENTS = 20
+MAX_BRIEFING_KEYWORDS = 5
+
+# 브리핑 대상에서 제외하지 않고 "취소" 로 표시하는 상태.
+CANCELLED_STATUSES: tuple[str, ...] = ("cancelled",)
+# 저녁 정리에서 "진행된 상담" 으로 보는 상태.
+CONDUCTED_STATUSES: tuple[str, ...] = ("in_progress", "completed")
+
+# 리포트 상태 → 상담사가 읽는 한국어 라벨. 승인 대기(pending_review)가 핵심 신호다.
+REPORT_STATUS_LABELS: dict[str, str] = {
+    "pending_analysis": "분석 중",
+    "pending_review": "승인 대기",
+    "completed": "발송 완료",
+    "error": "생성 오류",
+}
+
+LOCATION_LABELS: dict[str, str] = {"online": "온라인", "offline": "오프라인"}
+
+
+def kst_today(now: datetime | None = None) -> date:
+    """KST 기준 오늘 날짜 — 브리핑의 날짜 경계는 항상 한국 시간으로 끊는다."""
+    return (now or _now()).astimezone(KST).date()
+
+
+def kst_day_bounds(day: date) -> tuple[datetime, datetime]:
+    """KST 날짜의 [00:00, 24:00) 을 UTC aware 범위로 변환한다."""
+    start = datetime(day.year, day.month, day.day, tzinfo=KST)
+    return start.astimezone(timezone.utc), (start + timedelta(days=1)).astimezone(timezone.utc)
+
+
+def time_text(scheduled_at: datetime | None) -> str:
+    """KST 시각만 — 브리핑은 날짜별로 묶이므로 "14:00" 형태로 짧게 쓴다."""
+    if scheduled_at is None:
+        return "시간 미정"
+    dt = _ensure_aware(scheduled_at).astimezone(KST)
+    return f"{dt.hour:02d}:{dt.minute:02d}"
+
+
+def linked_client_ids(counselor_id: str | UUID, db: DBSession) -> set[UUID]:
+    """담당(active) 내담자 id 집합 — ClientCounselorLink 기준."""
+    from app.models.client_counselor_link import ClientCounselorLink
+
+    cid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+    rows = (
+        db.query(ClientCounselorLink.client_id)
+        .filter(
+            ClientCounselorLink.counselor_id == cid,
+            ClientCounselorLink.status == "active",
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def find_linked_client(counselor_id: str | UUID, name: str, db: DBSession) -> User | None:
+    """이름으로 담당 내담자를 찾는다 — 담당 링크 또는 본인 세션 참여자만 후보다.
+
+    타 상담사의 내담자 이름을 넣어도 None 이 돌아간다(TS6·TS9).
+    """
+    cid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+    needle = (name or "").strip()
+    if not needle:
+        return None
+
+    candidate_ids = set(linked_client_ids(cid, db))
+    # 링크가 아직 없더라도 본인이 host 인 세션의 참여자는 담당 내담자로 본다.
+    rows = (
+        db.query(SessionParticipant.user_id)
+        .join(Session, Session.id == SessionParticipant.session_id)
+        .filter(
+            Session.host_id == cid,
+            Session.is_template.is_(False),
+            SessionParticipant.user_id.is_not(None),
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .all()
+    )
+    candidate_ids.update(row[0] for row in rows if row[0] is not None)
+    if not candidate_ids:
+        return None
+
+    return (
+        db.query(User)
+        .filter(User.id.in_(candidate_ids), User.name == needle)
+        .order_by(User.created_at.asc())
+        .first()
+    )
+
+
+def session_ordinal(
+    counselor_id: UUID, client_id: UUID, session: Session, db: DBSession
+) -> int:
+    """회차 — 이 상담사와 이 내담자가 함께한 세션 중 해당 세션의 순번(1-based).
+
+    취소된 세션은 회차로 세지 않는다. 일정이 없는 세션은 비교 대상에서 빠지므로 1 이 된다.
+    """
+    if session.scheduled_at is None:
+        return 1
+    count = (
+        db.query(Session.id)
+        .join(SessionParticipant, SessionParticipant.session_id == Session.id)
+        .filter(
+            Session.host_id == counselor_id,
+            Session.is_template.is_(False),
+            Session.scheduled_at.is_not(None),
+            Session.scheduled_at <= _ensure_aware(session.scheduled_at),
+            Session.status.not_in(list(CANCELLED_STATUSES)),
+            SessionParticipant.user_id == client_id,
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .distinct()
+        .count()
+    )
+    return max(1, count)
+
+
+def record_facts(session_id: UUID, db: DBSession) -> dict:
+    """세션 기록의 AI 요약에서 상담사 브리핑에 쓸 서술만 추출한다.
+
+    기록이 없거나(마이크 오프·미진행) 요약이 비어 있으면 has_summary=False 로 돌려주고,
+    브리핑 템플릿이 "기록 없음" 으로 표기한다(환각으로 채우지 않는다).
+    """
+    from app.models.record import SessionRecord
+
+    record = (
+        db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
+    )
+    if record is None:
+        return {"status": None, "has_summary": False, "headline": None, "sections": {}, "keywords": []}
+
+    summary = record.ai_summary if isinstance(record.ai_summary, dict) else {}
+    sections = summary.get("sections")
+    sections = sections if isinstance(sections, dict) else {}
+    keywords = [
+        kw.strip()
+        for kw in (summary.get("keywords") or [])
+        if isinstance(kw, str) and kw.strip()
+    ][:MAX_BRIEFING_KEYWORDS]
+    headline = _clean_text(summary.get("headline"))
+
+    return {
+        "status": record.status,
+        "has_summary": bool(headline or sections or keywords),
+        "headline": headline,
+        # 섹션 본문은 상담사 본인이 만든 기록이므로 그대로 전달한다.
+        "sections": {
+            str(key): value.strip()
+            for key, value in sections.items()
+            if isinstance(value, str) and value.strip()
+        },
+        "keywords": keywords,
+        "counselor_notes": _clean_text(record.counselor_notes),
+    }
+
+
+def previous_record_facts(
+    counselor_id: UUID, client_id: UUID, session: Session, db: DBSession
+) -> dict | None:
+    """직전 세션의 AI 요약 — 같은 상담사·같은 내담자의 가장 최근 지난 세션 기준.
+
+    아침 브리핑의 "지난 회차에서 다룬 이야기" 한 줄에 쓴다. 요약이 없으면 None.
+    """
+    if session.scheduled_at is None:
+        return None
+    previous = (
+        db.query(Session)
+        .join(SessionParticipant, SessionParticipant.session_id == Session.id)
+        .filter(
+            Session.host_id == counselor_id,
+            Session.id != session.id,
+            Session.is_template.is_(False),
+            Session.scheduled_at.is_not(None),
+            Session.scheduled_at < _ensure_aware(session.scheduled_at),
+            Session.status.not_in(list(CANCELLED_STATUSES)),
+            SessionParticipant.user_id == client_id,
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .order_by(Session.scheduled_at.desc())
+        .first()
+    )
+    if previous is None:
+        return None
+    facts = record_facts(previous.id, db)
+    if not facts["has_summary"]:
+        return None
+    facts["session_id"] = str(previous.id)
+    facts["scheduled_text"] = format_schedule(previous.scheduled_at)
+    return facts
+
+
+def _report_facts_for(session_id: UUID, client_id: UUID | None, db: DBSession) -> dict | None:
+    """세션·내담자의 client 리포트 상태 — 본문은 담지 않고 상태만 쓴다."""
+    from app.models.record import Report
+
+    query = db.query(Report).filter(Report.session_id == session_id, Report.type == "client")
+    if client_id is not None:
+        query = query.filter(Report.user_id == client_id)
+    report = query.order_by(Report.created_at.desc()).first()
+    if report is None:
+        return None
+    return {
+        "report_id": str(report.id),
+        "status": report.status,
+        "status_label": REPORT_STATUS_LABELS.get(report.status, report.status),
+    }
+
+
+def _acked_client_ids(session_id: UUID, db: DBSession) -> set[UUID]:
+    """예약 안내를 "확인했어요" 로 누른 내담자 id — SDD-188 ack 중계 이벤트 기준."""
+    from app.models.agent import AgentRelayEvent
+
+    rows = (
+        db.query(AgentRelayEvent.source_user_id)
+        .filter(AgentRelayEvent.kind == "ack", AgentRelayEvent.session_id == session_id)
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _session_clients(session: Session, db: DBSession) -> list[User]:
+    """세션의 active 참여 내담자(대기열 제외, 중복 제거) — 실명 표시 대상."""
+    rows = (
+        db.query(User)
+        .join(SessionParticipant, SessionParticipant.user_id == User.id)
+        .filter(
+            SessionParticipant.session_id == session.id,
+            SessionParticipant.user_id.is_not(None),
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .all()
+    )
+    seen: set[UUID] = set()
+    clients: list[User] = []
+    for user in rows:
+        if user.id in seen:
+            continue
+        seen.add(user.id)
+        clients.append(user)
+    return clients
+
+
+def _participant_joined(session_id: UUID, client_id: UUID, db: DBSession) -> bool:
+    """참석 여부 — 참여 행의 joined_at 유무로 판단한다(별도 no-show 필드가 없다)."""
+    row = (
+        db.query(SessionParticipant.joined_at)
+        .filter(
+            SessionParticipant.session_id == session_id,
+            SessionParticipant.user_id == client_id,
+        )
+        .first()
+    )
+    return bool(row and row[0] is not None)
+
+
+def counselor_session_brief(
+    session: Session, counselor_id: UUID, db: DBSession, *, with_summary: bool = False
+) -> dict:
+    """브리핑 1행에 필요한 세션 사실 — **장소·주소·연락처를 담지 않는다**.
+
+    with_summary=True(저녁 정리)일 때만 이 세션의 기록 요약을 함께 싣는다.
+    """
+    acked = _acked_client_ids(session.id, db)
+    clients: list[dict] = []
+    for user in _session_clients(session, db):
+        clients.append({
+            "client_id": str(user.id),
+            # D12: 상담사 채널은 실명을 쓴다.
+            "name": user.name or "이름 미등록",
+            "ordinal": session_ordinal(counselor_id, user.id, session, db),
+            "acked": user.id in acked,
+            "attended": _participant_joined(session.id, user.id, db),
+            "report": _report_facts_for(session.id, user.id, db),
+            "previous_summary": previous_record_facts(counselor_id, user.id, session, db),
+        })
+
+    return {
+        "session_id": str(session.id),
+        "title": session.title,
+        "type_label": session_type_label(session),
+        "status": session.status,
+        "is_cancelled": session.status in CANCELLED_STATUSES,
+        "scheduled_at": _ensure_aware(session.scheduled_at) if session.scheduled_at else None,
+        "time_text": time_text(session.scheduled_at),
+        "scheduled_text": format_schedule(session.scheduled_at),
+        "duration_min": session.duration_min,
+        # 온라인/오프라인 구분만. 주소는 상담사 브리핑에 넣지 않는다.
+        "location_label": LOCATION_LABELS.get(session.location_type, "오프라인"),
+        "linkband_mode": session.linkband_mode,
+        "clients": clients,
+        "record": record_facts(session.id, db) if with_summary else None,
+    }
+
+
+def counselor_day_sessions(
+    counselor_id: UUID, day: date, db: DBSession, *, with_summary: bool = False
+) -> list[dict]:
+    """해당 KST 날짜에 잡힌 본인(host) 세션 목록(시각 순). 템플릿은 제외한다."""
+    start, end = kst_day_bounds(day)
+    rows = (
+        db.query(Session)
+        .filter(
+            Session.host_id == counselor_id,
+            Session.is_template.is_(False),
+            Session.scheduled_at.is_not(None),
+            Session.scheduled_at >= start,
+            Session.scheduled_at < end,
+        )
+        .order_by(Session.scheduled_at.asc())
+        .limit(MAX_BRIEFING_SESSIONS)
+        .all()
+    )
+    return [
+        counselor_session_brief(session, counselor_id, db, with_summary=with_summary)
+        for session in rows
+    ]
+
+
+def counselor_pending_reports(counselor_id: UUID, db: DBSession) -> list[dict]:
+    """승인 대기(pending_review) 리포트 — 본인이 host 인 세션 것만."""
+    from app.models.record import Report
+
+    rows = (
+        db.query(Report, Session)
+        .join(Session, Session.id == Report.session_id)
+        .filter(
+            Session.host_id == counselor_id,
+            Report.status == "pending_review",
+        )
+        .order_by(Report.created_at.desc())
+        .limit(MAX_BRIEFING_SESSIONS)
+        .all()
+    )
+    items: list[dict] = []
+    for report, session in rows:
+        client = db.get(User, report.user_id) if report.user_id else None
+        items.append({
+            "report_id": str(report.id),
+            "session_id": str(session.id),
+            "client_name": (client.name if client else None) or "이름 미등록",
+            "type_label": session_type_label(session),
+            "scheduled_text": format_schedule(session.scheduled_at),
+            "status": report.status,
+            "status_label": REPORT_STATUS_LABELS.get(report.status, report.status),
+        })
+    return items
+
+
+def counselor_relay_events(
+    counselor_id: UUID, db: DBSession, *, only_open: bool = True, limit: int | None = None
+) -> list[dict]:
+    """본인에게 온 중계 이벤트(내담자 피드백·일정 변경 문의·확인) 목록 — 최신순.
+
+    `target_user_id == 상담사` 로만 조회하므로 타 상담사 이벤트는 결과에 들어오지 않는다.
+    피드백 자유 서술은 **원문 그대로** 전달한다(D10 — 요약·순화 금지).
+    """
+    from app.models.agent import AgentRelayEvent
+
+    query = db.query(AgentRelayEvent).filter(AgentRelayEvent.target_user_id == counselor_id)
+    if only_open:
+        query = query.filter(AgentRelayEvent.handled_at.is_(None))
+    rows = (
+        query.order_by(AgentRelayEvent.created_at.desc())
+        .limit(limit or MAX_BRIEFING_RELAY_EVENTS)
+        .all()
+    )
+    return [relay_event_facts(event, db) for event in rows]
+
+
+def relay_event_facts(event, db: DBSession) -> dict:
+    """중계 이벤트 → Contract(RelayEvent) 형태. payload 는 원문 그대로 유지한다."""
+    client = db.get(User, event.source_user_id)
+    session = db.get(Session, event.session_id) if event.session_id else None
+    return {
+        "id": str(event.id),
+        "kind": event.kind,
+        "client_id": str(event.source_user_id),
+        "client_name": (client.name if client else None) or "이름 미등록",
+        "session_id": str(event.session_id) if event.session_id else None,
+        "session_title": (session.title if session else None),
+        "scheduled_at": (
+            _ensure_aware(session.scheduled_at)
+            if session and session.scheduled_at
+            else None
+        ),
+        "payload": dict(event.payload or {}),
+        "handled_at": event.handled_at,
+        "created_at": event.created_at,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 상담사 채널 단일 진입점
+# ---------------------------------------------------------------------------
+
+
+def counselor_context(
+    user_id: str | UUID, db: DBSession, day: date | None = None
+) -> dict:
+    """상담사 채널 컨텍스트 — 브리핑·대화가 참조할 수 있는 전부.
+
+    이 함수의 반환값(과 거기서 파생한 문자열)만 LLM 프롬프트에 들어간다.
+    모든 조회가 host_id / target_user_id / 담당 링크로 묶여 있어 타 상담사 데이터는
+    구조적으로 들어올 수 없다.
+    """
+    cid = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
+    user = db.get(User, cid)
+    base_day = day or kst_today()
+
+    return {
+        "user": {"id": str(cid), "name": (user.name if user else None) or "상담사"},
+        "day": base_day,
+        # 오늘 세션은 저녁 정리가 기록 요약을 쓰므로 요약을 포함해 한 번만 조회한다.
+        "today": counselor_day_sessions(cid, base_day, db, with_summary=True),
+        "tomorrow": counselor_day_sessions(cid, base_day + timedelta(days=1), db),
+        "pending_reports": counselor_pending_reports(cid, db),
+        "relay_events": counselor_relay_events(cid, db, only_open=True),
+    }
+
+
+def counselor_context_to_text(context: dict) -> str:
+    """상담사 컨텍스트를 LLM 프롬프트용 텍스트로 직렬화 — 허용 자료 블록에만 쓴다.
+
+    장소·주소·연락처는 컨텍스트 자체에 없으므로 여기에도 나타나지 않는다.
+    """
+    lines: list[str] = []
+
+    for key, label in (("today", "오늘 일정"), ("tomorrow", "내일 일정")):
+        sessions = context.get(key) or []
+        if not sessions:
+            lines.append(f"■ {label}: 없음")
+            continue
+        lines.append(f"■ {label}")
+        for item in sessions:
+            names = ", ".join(
+                f"{c['name']}({c['ordinal']}회차)" for c in item.get("clients") or []
+            ) or "참여자 미지정"
+            suffix = " / 취소됨" if item.get("is_cancelled") else ""
+            lines.append(
+                f"- {item['time_text']} {item['type_label']} / {names} / "
+                f"{item['location_label']}{suffix}"
+            )
+        lines.append("")
+
+    reports = context.get("pending_reports") or []
+    if reports:
+        lines.append(f"■ 승인 대기 리포트 {len(reports)}건")
+        for item in reports:
+            lines.append(f"- {item['client_name']} / {item['scheduled_text']} {item['type_label']}")
+        lines.append("")
+
+    events = context.get("relay_events") or []
+    if events:
+        lines.append(f"■ 미처리 내담자 전달 사항 {len(events)}건")
+        for item in events:
+            lines.append(f"- {item['client_name']} / {RELAY_KIND_LABELS.get(item['kind'], item['kind'])}")
+        lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+RELAY_KIND_LABELS: dict[str, str] = {
+    "feedback": "상담 후 피드백",
+    "schedule_change_request": "일정 변경 문의",
+    "ack": "예약 안내 확인",
+}

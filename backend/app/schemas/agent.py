@@ -1,6 +1,7 @@
-"""SDD-188: AI 에이전트 채널 Pydantic 스키마.
+"""SDD-188/189: AI 에이전트 채널 Pydantic 스키마.
 
 필드명·enum 값은 plan.md §Contract 와 1:1 대응한다(프론트가 그대로 소비). 변경 금지.
+SDD-189 는 상담사 채널 값을 **추가**만 한다 — 기존 값을 바꾸면 내담자 채널이 회귀한다.
 """
 
 from datetime import datetime
@@ -18,6 +19,11 @@ AgentCtaAction = Literal[
     "call_counselor",
     "open_report",
     "feedback_choice",
+    # SDD-189 상담사 채널 — 모두 화면 이동용(서버 상태 변경 없음)
+    "open_schedule",
+    "open_client",
+    "open_record",
+    "open_change_requests",
 ]
 
 # plan.md §Contract — AgentMessage.kind
@@ -28,6 +34,9 @@ AgentMessageKind = Literal[
     "report_ready",
     "report_chat",
     "feedback_thanks",
+    # SDD-189 상담사 채널 브리핑
+    "briefing_morning",
+    "briefing_evening",
     "free",
 ]
 
@@ -45,6 +54,10 @@ class AgentCtaPayload(BaseModel):
     room_id: str | None = None
     tel: str | None = None
     choice: FeedbackChoice | None = None
+    # SDD-189 상담사 채널 CTA 대상 — open_client / open_record / open_report
+    client_id: str | None = None
+    record_id: str | None = None
+    report_id: str | None = None
 
 
 class AgentCta(BaseModel):
@@ -113,3 +126,59 @@ class AgentCtaExecuteRequest(BaseModel):
 class AgentCtaExecuteResponse(BaseModel):
     cta: AgentCta
     agent_message: AgentMessageResponse | None = None
+
+
+# ---------------------------------------------------------------------------
+# SDD-189: 상담사 채널 (plan.md §Contract)
+# ---------------------------------------------------------------------------
+
+AgentRelayKind = Literal["feedback", "schedule_change_request", "ack"]
+RelayEventStatusFilter = Literal["open", "all"]
+
+# "HH:MM" 24시간 표기만 허용 — "25:00"·"8:0" 은 422.
+_TIME_PATTERN = r"^(?:[01]\d|2[0-3]):[0-5]\d$"
+
+
+class BriefingSettings(BaseModel):
+    """상담사 브리핑 설정 — 시각은 KST 로 해석한다."""
+
+    morning_enabled: bool = True
+    morning_time: str = Field("08:00", pattern=_TIME_PATTERN)
+    evening_enabled: bool = True
+    evening_time: str = Field("21:00", pattern=_TIME_PATTERN)
+    # true 면 일정이 없는 날에는 브리핑을 만들지 않는다.
+    skip_no_session_days: bool = True
+
+
+class RelayEventPayload(BaseModel):
+    """중계 이벤트 부가 정보 — 자유 서술(texts)·변경 사유(reason)는 원문 그대로다(D10)."""
+
+    choice: FeedbackChoice | None = None
+    texts: list[str] = []
+    reason: str | None = None
+    message_id: str | None = None
+    report_id: str | None = None
+
+
+class RelayEventResponse(BaseModel):
+    id: str
+    kind: AgentRelayKind
+    client_id: str
+    # D12: 상담사 채널은 내담자 실명을 쓴다.
+    client_name: str
+    session_id: str | None = None
+    session_title: str | None = None
+    scheduled_at: datetime | None = None
+    payload: RelayEventPayload = RelayEventPayload()
+    handled_at: datetime | None = None
+    created_at: datetime
+
+
+class RelayEventListResponse(BaseModel):
+    items: list[RelayEventResponse] = []
+
+
+class CounselorCtaExecuteResponse(BaseModel):
+    """상담사 CTA 는 화면 이동만 하므로 실행 기록(cta)만 돌려준다."""
+
+    cta: AgentCta

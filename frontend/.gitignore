@@ -2,3 +2,14 @@ node_modules
 dist
 .vite
 storybook-static
+
+# 네이티브 자격증명과 로컬 빌드 산출물
+google-services.json
+GoogleService-Info.plist
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+.build/
+.swiftpm/

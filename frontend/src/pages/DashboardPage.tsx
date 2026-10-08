@@ -297,6 +297,9 @@ export default function DashboardPage() {
       }
     >
       <OrgRemovedNoticeDialog />
+      <Link to="/agent" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
+        <span><strong>AI 대화·브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
+      </Link>
 
       {error && (
         <div className="mb-4 flex flex-col gap-2 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E] sm:flex-row sm:items-center sm:justify-between">

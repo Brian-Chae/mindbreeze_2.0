@@ -18,6 +18,7 @@ import { RoleGuard } from './components/auth/RoleGuard';
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
+const CounselorAgentPage = lazy(() => import('./pages/agent/counselor-agent-page'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
@@ -148,6 +149,7 @@ const router = createBrowserRouter(
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/set-password" element={<SetPasswordPage />} />
         <Route path="/membership-invite" element={<MembershipInvitePage />} />
+        <Route path="/agent" element={<RoleGuard role="counselor"><CounselorAgentPage /></RoleGuard>} />
         <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
         <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />

@@ -154,8 +154,10 @@ def test_정책계층은_EEG_점수를_컨텍스트에_담지_않는다(client):
     finally:
         conn.close()
     serialized = str(context)
-    assert "82" not in serialized
+    # 숫자 "82" 는 UUID/시각 문자열에 우연히 포함될 수 있어 키 이름으로 검증한다.
     assert "stress_score" not in serialized
+    assert "relaxation_score" not in serialized
+    assert "data_credibility" not in serialized
 
 
 def test_리포트_인용은_최대_2문장이고_빈본문은_인용하지_않는다(client):

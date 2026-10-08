@@ -206,6 +206,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async (): Promise<void> => {
     try {
+      const { revokePushRegistration } = await import('../lib/native/push');
+      await revokePushRegistration();
+    } catch {
+      // 오프라인 해지 실패가 로컬 로그아웃을 막지 않는다.
+    }
+    try {
       await apiLogout();
     } catch {
       // 서버 에러는 무시하고 로컬 상태만 정리
