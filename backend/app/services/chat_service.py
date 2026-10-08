@@ -1520,6 +1520,10 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     # ── 앱 푸시 Outbox (채팅 도착) ── 상담 내용이 잠금화면에 노출되지 않도록 본문은 고정 문구
     try:
         _enqueue_chat_push(room, sender, recipients, msg, db)
+        if recipients:
+            from app.tasks.push_task import dispatch_push_now
+
+            dispatch_push_now()  # cron(1분) 대기 없이 즉시 발송
     except Exception as e:  # noqa: BLE001 — 푸시 적재 실패가 메시지 전송을 막지 않는다
         db.rollback()
         logger.error(f"Failed to enqueue chat push: {e}", exc_info=True)

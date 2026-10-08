@@ -54,3 +54,26 @@ def test_네이티브_로그인은_refresh_헤더를_노출하고_웹은_노출�
     rf = client.post("/api/v1/auth/refresh", json={"refresh_token": token}, headers={"X-MB-Native": "capacitor"})
     assert rf.status_code == 200, rf.text
     assert rf.headers.get("x-mb-refresh-token") and rf.headers["x-mb-refresh-token"] != token
+
+
+def test_채팅_전송시_즉시_발송_트리거(client, monkeypatch):
+    from app.services import push_service
+    from app.tasks import push_task
+    from tests.test_chat import _register, _direct_room
+
+    calls = []
+    monkeypatch.setattr(push_service, "is_configured", lambda: True)
+    monkeypatch.setattr(push_task, "process_push_outbox", lambda limit=100: calls.append(limit) or {})
+
+    class _Sync:
+        def __init__(self, target, **kw): self._t = target
+        def start(self): self._t()
+    import threading
+    monkeypatch.setattr(threading, "Thread", _Sync)
+
+    host = _register(client, "pushnow@test.com", role="counselor")
+    room_id = _direct_room(client, host, "pushnow@test.com")
+    res = client.post(f"/api/v1/chat/rooms/{room_id}/messages",
+                      json={"content": "안녕하세요", "type": "text"}, headers=host["auth"])
+    assert res.status_code == 201, res.text
+    assert calls == [20]

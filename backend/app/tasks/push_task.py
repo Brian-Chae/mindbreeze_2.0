@@ -160,3 +160,23 @@ def _commit_row(db, item: NotificationOutbox) -> None:
     except Exception:  # noqa: BLE001
         logger.exception("[OUTBOX-PUSH] 행 단위 커밋 실패 (id=%s) — 롤백 후 다음 행 진행", item.id)
         db.rollback()
+
+
+def dispatch_push_now() -> None:
+    """채팅 등 즉시성이 필요한 푸시를 요청 응답과 분리해 바로 발송한다.
+
+    cron(1분)을 기다리지 않도록 응답 이후 백그라운드 스레드에서 outbox 를 처리한다.
+    행 선점(skip_locked)으로 cron 과 동시에 돌아도 중복 발송되지 않으며,
+    FCM 미설정(테스트 포함)이면 스레드를 만들지 않는다. 실패는 cron 이 이어서 재처리한다.
+    """
+    if not push_service.is_configured():
+        return
+    import threading
+
+    def _run() -> None:
+        try:
+            process_push_outbox(limit=20)
+        except Exception:  # noqa: BLE001 — 즉시 발송 실패는 cron 이 재시도한다
+            logger.exception("[OUTBOX-PUSH] 즉시 발송 실패")
+
+    threading.Thread(target=_run, name="push-dispatch", daemon=True).start()
