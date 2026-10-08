@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CheckinPreferences from '../../components/client/agent/checkin-prefs';
 import ClientShell from '../../components/client/ClientShell';
 import { useStickToBottom } from '../../hooks/useStickToBottom';
-import { AgentBubble, AgentInputBar } from '../../components/chat/agent-bubble';
+import { AgentBubble, AgentInputBar, AgentTypingIndicator } from '../../components/chat/agent-bubble';
 import CtaCard from '../../components/client/agent/cta-card';
 import * as agentApi from '../../lib/api/agent';
 import type { AgentConsent, AgentCta, AgentMessage } from '../../lib/api/agent';
@@ -24,6 +24,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [text, setText] = useState('');
+  const [awaitingReply, setAwaitingReply] = useState(false);
   const [changeRequest, setChangeRequest] = useState<{ messageId: string; cta: AgentCta } | null>(null);
   const [reason, setReason] = useState('');
   const [reload, setReload] = useState(0);
@@ -176,17 +177,39 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
               content={message.content} createdAt={message.created_at}
               actions={message.cta.length ? <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} /> : undefined} />;
           })}
+          {awaitingReply && <AgentTypingIndicator />}
           <div ref={bottom} />
         </div>
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
           onSubmit={() => {
             if (!access || !text.trim() || text.length > 1000) return;
+            const content = text.trim();
+            const tempId = `temp-${Date.now()}`;
+            const optimistic: AgentMessage = {
+              id: tempId, sender: 'user', kind: 'free', content, cta: [],
+              ref_type: null, ref_id: null,
+              read_at: new Date().toISOString(), created_at: new Date().toISOString(),
+            };
+            // 내 말풍선은 즉시 표시하고, 답변이 오면 실제 메시지로 교체한다.
+            setMessages((previous) => [...previous, optimistic]);
+            setText('');
+            setAwaitingReply(true);
             void perform(async () => {
-              const result = await agentApi.sendMessage(text);
-              setMessages((previous) => mergeAgentMessages(previous, [result.user_message, result.agent_message]));
-              setText('');
-              const read = await agentApi.markRead(result.agent_message.created_at);
-              useAgentStore.getState().setUnread(read.unread);
+              try {
+                const result = await agentApi.sendMessage(content);
+                setMessages((previous) => mergeAgentMessages(
+                  previous.filter((message) => message.id !== tempId),
+                  [result.user_message, result.agent_message],
+                ));
+                const read = await agentApi.markRead(result.agent_message.created_at);
+                useAgentStore.getState().setUnread(read.unread);
+              } catch (err) {
+                // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
+                setMessages((previous) => previous.filter((message) => message.id !== tempId));
+                throw err;
+              } finally {
+                setAwaitingReply(false);
+              }
             });
           }} />
       </>}

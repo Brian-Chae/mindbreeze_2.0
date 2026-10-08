@@ -77,7 +77,28 @@ export function AgentInputBar({ value, onChange, onSubmit, disabled, placeholder
         onChange={(event) => onChange(event.target.value)}
         className="flex-1 min-w-0 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
       />
-      <button type="submit" disabled={disabled || !value.trim()} className="mb-btn shrink-0 disabled:opacity-50">{busy ? '처리 중…' : '전송'}</button>
+      <button type="submit" disabled={disabled || !value.trim()} className="mb-btn shrink-0 disabled:opacity-50">
+        {busy ? <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />답변 중</span> : '전송'}
+      </button>
     </form>
+  );
+}
+
+/** 루시가 답변을 입력 중이라는 표시 — 아바타 + 점 3개 말풍선. */
+export function AgentTypingIndicator() {
+  const dot = (delay: string) => (
+    <span className="h-1.5 w-1.5 rounded-full bg-[#5F0080] animate-bounce" style={{ animationDelay: delay }} />
+  );
+  return (
+    <article style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', margin: '6px 0' }}>
+      <div style={{ width: '32px', flexShrink: 0, alignSelf: 'flex-start', marginBottom: '2px' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#5F0080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff' }}>
+          루시
+        </div>
+      </div>
+      <div style={{ padding: '12px 14px', borderRadius: '16px', background: '#F5EDFC', display: 'flex', gap: '5px', alignItems: 'center' }}>
+        {dot('0ms')}{dot('150ms')}{dot('300ms')}
+      </div>
+    </article>
   );
 }

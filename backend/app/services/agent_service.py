@@ -238,6 +238,11 @@ def post_agent_message(
         cta=list(cta or []),
         ref_type=ref_type,
         ref_id=_to_uuid(ref_id) if ref_id else None,
+        # 명시적 시각 부여 — server_default(now()) 는 트랜잭션 타임스탬프라서 같은
+        # 트랜잭션 안에서 user/agent 메시지가 동일한 created_at 을 갖게 되고,
+        # 정렬(created_at, id)에서 uuid 가 랜덤이라 순서가 뒤바뀐다. 생성 시점을
+        # 명시해 두면 user(LLM 전) < agent(LLM 후) 순서가 항상 보장된다.
+        created_at=_now(),
     )
     db.add(message)
     db.flush()
@@ -269,6 +274,9 @@ def post_user_message(
         content=content,
         cta=[],
         read_at=_now(),
+        # post_agent_message 와 동일한 이유로 명시적 시각 — LLM 응답 전 시점이라
+        # 같은 턴의 agent 메시지보다 항상 앞선다.
+        created_at=_now(),
     )
     db.add(message)
     db.flush()
