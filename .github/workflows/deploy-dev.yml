@@ -88,7 +88,8 @@ jobs:
             backend/sweep_stale_media_cron.py \
             backend/deploy/mindbreeze-worker.service \
             backend/deploy/mindbreeze-email-worker.service \
-            backend/deploy/mindbreeze-export-worker.service
+            backend/deploy/mindbreeze-export-worker.service \
+            backend/deploy/logrotate-mindbreeze
 
       - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -128,6 +129,9 @@ jobs:
             rollback() {
               if [ "$DEPLOY_OK" != "1" ]; then
                 echo "!!! 배포 실패 — 이전 버전으로 롤백합니다."
+                # SDD-197: 배포 스크립트가 backend 디렉터리로 이동한 뒤 실패해도 경로가 어긋나지 않게 BASE 로 복귀한다
+                #   (이전에는 상대경로가 backend/ 기준이 되어 복원이 실패했다).
+                cd "$BASE"
                 if [ -d "$BACKUP_DIR/dist" ]; then rm -rf dist; cp -r "$BACKUP_DIR/dist" dist; fi
                 if [ -d "$BACKUP_DIR/app" ]; then rm -rf backend/app; cp -r "$BACKUP_DIR/app" backend/app; fi
                 if [ -d "$BACKUP_DIR/alembic" ]; then rm -rf backend/alembic; cp -r "$BACKUP_DIR/alembic" backend/alembic; fi
