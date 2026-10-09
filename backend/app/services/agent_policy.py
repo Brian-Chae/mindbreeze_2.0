@@ -39,6 +39,8 @@ MAX_CONTEXT_REPORTS = 3
 MAX_QUOTE_SENTENCES = 2
 # 루시가 참조하는 최근 대화 기억(체크인 요약) 상한 — Brian 결정 D1.
 MAX_CONTEXT_MEMORIES = 100
+# 상담사 채널에서 루시가 참조하는 최근 대화 메시지 상한 — SDD-195.
+MAX_CONTEXT_RECENT_MESSAGES = 20
 
 SESSION_TYPE_LABELS: dict[str, str] = {
     "clinical": "임상심리상담",
@@ -761,6 +763,42 @@ def relay_event_facts(event, db: DBSession) -> dict:
 # ---------------------------------------------------------------------------
 # 상담사 채널 단일 진입점
 # ---------------------------------------------------------------------------
+
+
+def counselor_recent_messages(
+    counselor_id: str | UUID, db: DBSession, *, limit: int = MAX_CONTEXT_RECENT_MESSAGES
+) -> list[dict]:
+    """최근 상담사↔루시 대화 메시지 — 루시가 "최근 대화" 맥락으로 참조한다(SDD-195).
+
+    상담사 채널은 "체크인" 같은 세션 경계가 없어, 요약 대신 최근 메시지를 직접
+    시간순으로 돌려준다. 본인 대화방(channel=counselor)만 조회한다.
+    """
+    from app.models.agent import AgentConversation, AgentMessage
+
+    cid = counselor_id if isinstance(counselor_id, UUID) else UUID(str(counselor_id))
+    conversation = (
+        db.query(AgentConversation)
+        .filter(
+            AgentConversation.user_id == cid,
+            AgentConversation.channel == "counselor",
+        )
+        .first()
+    )
+    if conversation is None:
+        return []
+
+    rows = (
+        db.query(AgentMessage)
+        .filter(AgentMessage.conversation_id == conversation.id)
+        .order_by(AgentMessage.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {"sender": message.sender, "content": (message.content or "").strip()}
+        for message in reversed(rows)
+        if (message.content or "").strip()
+    ]
 
 
 def counselor_context(
