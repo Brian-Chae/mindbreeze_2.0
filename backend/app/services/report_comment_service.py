@@ -222,12 +222,19 @@ def _rule_based_draft(context: dict) -> str:
     return " ".join(sentences)[:COMMENT_MAX_LENGTH]
 
 
-def _call_gemini(prompt: str, max_output_tokens: int = 1024) -> str | None:
+def _call_gemini(
+    prompt: str, max_output_tokens: int = 1024, thinking_budget: int = 0
+) -> str | None:
     """Gemini generateContent 호출. 키 부재·오류·타임아웃 시 None (호출부에서 규칙 폴백).
 
     max_output_tokens 는 호출부가 응답 길이 상한을 조정할 수 있게 둔다 — 에이전트 대화처럼
     짧은 응답(2~4문장)은 큰 상한이 생성 시간을 불필요하게 늘린다(2.5-flash 기준 1024→약 4.5초,
     256→약 2.3초). 기본값 1024 로 기존 상담사 코멘트 초안 경로는 그대로다.
+
+    thinking_budget 은 Gemini 2.5 의 사고(thinking) 토큰 상한. 0 이면 사고를 건너뛰어
+    빠르게 응답하고(상담사 코멘트 초안), 양수면 모델이 사고를 거쳐 더 깊이 추론한 뒤
+    답한다(루시 감정 대화 — "생각하고 위로하는" 페르소나). 사고가 max_output_tokens 를
+    잡아먹으므로 thinking 을 켤 땐 max_output_tokens 를 함께 키워야 한다.
     """
     api_key = settings.gemini_api_key
     if not api_key:
@@ -244,12 +251,7 @@ def _call_gemini(prompt: str, max_output_tokens: int = 1024) -> str | None:
                 "generationConfig": {
                     "temperature": 0.6,
                     "maxOutputTokens": max_output_tokens,
-                    # Gemini 2.5-flash 는 thinking(사고) 모델이라 maxOutputTokens 가
-                    # 사고 토큰 + 텍스트의 합계를 제한한다. 긴 시스템 지시가 있으면 사고가
-                    # 대부분을 차지해 텍스트가 몇 토큰만 나오고 MAX_TOKENS 로 잘린다
-                    # (실측: 384 토큰인데 27자에서 잘림). thinking 을 끄면 전체가 텍스트에
-                    # 쓰이고 완전한 문장이 나오며 속도도 크게 빨라진다(2.8초→1.1초).
-                    "thinkingConfig": {"thinkingBudget": 0},
+                    "thinkingConfig": {"thinkingBudget": thinking_budget},
                 },
             },
             timeout=GEMINI_TIMEOUT_SECONDS,
