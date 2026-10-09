@@ -416,6 +416,14 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         <input
           ref={inputRef}
           type="text"
+          name="chat-message"
+          autoComplete="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          enterKeyHint="send"
+          data-form-type="other"
+          data-lpignore="true"
+          data-1p-ignore
           disabled={!!target && (loading || !!targetError)}
           value={input}
           onChange={(e) => setInput(e.target.value)}

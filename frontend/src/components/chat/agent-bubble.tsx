@@ -69,6 +69,14 @@ export function AgentInputBar({ value, onChange, onSubmit, disabled, placeholder
     >
       <input
         type="text"
+        name="chat-message"
+        autoComplete="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        enterKeyHint="send"
+        data-form-type="other"
+        data-lpignore="true"
+        data-1p-ignore
         aria-label={ariaLabel}
         placeholder={placeholder}
         maxLength={1000}
