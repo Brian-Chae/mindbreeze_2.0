@@ -1,5 +1,6 @@
 // 채팅 페이지 — 좌측 대화 목록 + 우측 채팅 영역. /chat 또는 /chat/:roomId
 
+import { ChatMobileHeader, LUCY_COUNSELOR_NOTICE } from '../../components/chat/ChatMobileHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
@@ -137,7 +138,7 @@ export default function ChatPage() {
   }, [selectedRoom, isLucy]);
 
   return (
-    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
+    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
       <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside
@@ -232,25 +233,19 @@ export default function ChatPage() {
         >
           {isLucy ? (
             <>
-              <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
-                <button type="button" onClick={() => navigate('/chat')} className="min-h-[44px] inline-flex items-center text-sm text-[#5F0080] font-medium">← 대화 목록</button>
-              </div>
+              <ChatMobileHeader title={headerTitle} sub={LUCY_COUNSELOR_NOTICE} onBack={() => navigate('/chat')} />
               <div className="flex-1 min-h-0">
                 <CounselorAgentPage embedded />
               </div>
             </>
           ) : selectedRoom ? (
             <>
-              <div className="flex items-center justify-between border-b border-[#EFEFEF] px-4 py-2.5 md:hidden">
-                <button
-                  type="button"
-                  onClick={() => navigate('/chat')}
-                  className="min-h-[44px] inline-flex items-center text-sm text-[#5F0080] font-medium"
-                >
-                  ← 대화 목록
-                </button>
-                <RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />
-              </div>
+              <ChatMobileHeader
+                title={headerTitle}
+                sub={headerSub}
+                onBack={() => navigate('/chat')}
+                rightSlot={<RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />}
+              />
               <div className="flex-1 min-h-0">
                 <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
               </div>

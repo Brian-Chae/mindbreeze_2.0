@@ -20,6 +20,8 @@ export interface AppShellProps {
   noScroll?: boolean;
   noBottomPad?: boolean;
   hideBottomTab?: boolean;
+  /** 모바일 페이지 타이틀 블록 숨김(채팅방처럼 화면이 자체 헤더를 가질 때). */
+  hideMobileTitle?: boolean;
 }
 
 export default function AppShell({
@@ -31,6 +33,7 @@ export default function AppShell({
   noScroll = false,
   noBottomPad = false,
   hideBottomTab = false,
+  hideMobileTitle = false,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -206,7 +209,7 @@ export default function AppShell({
         </header>
 
         {/* 모바일 페이지 타이틀 */}
-        {(title || sub || rightSlot) && (
+        {!hideMobileTitle && (title || sub || rightSlot) && (
           <div className="md:hidden px-4 pt-4 pb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
             <div className="min-w-0">
               {sub && (

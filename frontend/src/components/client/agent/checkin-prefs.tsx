@@ -20,7 +20,7 @@ export default function CheckinPreferences() {
     return () => { active = false; window.clearInterval(timer); };
   }, []);
   if (!prefs?.available) return null;
-  return <div className="rounded-xl bg-white p-3 text-sm">
+  return <div className="shrink-0 border-b border-[#EFEFEF] bg-white p-3"><div className="rounded-xl bg-white text-sm">
     <label className="flex items-center justify-between gap-3">AI 안부 일시 중지
       <input type="checkbox" role="switch" checked={prefs.paused} disabled={busy} onChange={async (event) => {
         if (lock.current) return;
@@ -31,5 +31,5 @@ export default function CheckinPreferences() {
       }} />
     </label>
     {error && <p role="alert" className="mt-2 text-sm">{error}</p>}
-  </div>;
+  </div></div>;
 }

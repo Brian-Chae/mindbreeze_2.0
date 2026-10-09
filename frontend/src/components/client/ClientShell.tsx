@@ -26,6 +26,8 @@ export interface ClientShellProps {
   noScroll?: boolean;
   noBottomPad?: boolean;
   hideBottomTab?: boolean;
+  /** 모바일 페이지 타이틀 블록 숨김(채팅방처럼 화면이 자체 헤더를 가질 때). */
+  hideMobileTitle?: boolean;
 }
 
 export default function ClientShell({
@@ -37,6 +39,7 @@ export default function ClientShell({
   noScroll = false,
   noBottomPad = false,
   hideBottomTab = false,
+  hideMobileTitle = false,
 }: ClientShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
@@ -229,7 +232,7 @@ export default function ClientShell({
         </header>
 
         {/* 모바일 페이지 타이틀 */}
-        {(title || sub || rightSlot) && (
+        {!hideMobileTitle && (title || sub || rightSlot) && (
           <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
             <div className="min-w-0">
               {sub && (

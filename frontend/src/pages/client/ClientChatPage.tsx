@@ -2,6 +2,7 @@
 // ClientShell + 좌측 대화 목록 + 우측 채팅 영역
 // /app/chat 또는 /app/chat/:roomId
 
+import { ChatMobileHeader, LUCY_NOTICE } from '../../components/chat/ChatMobileHeader';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import ClientShell from '../../components/client/ClientShell';
@@ -138,7 +139,7 @@ export default function ClientChatPage() {
   }, [selectedRoom, isLucy]);
 
   return (
-    <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId}>
+    <ClientShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
       {(
         <div className="h-full flex flex-col md:flex-row">
           {/* 좌측 대화 목록 */}
@@ -247,24 +248,14 @@ export default function ClientChatPage() {
           >
             {isLucy ? (
               <>
-                <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
-                  <button type="button" onClick={() => navigate('/app/chat')} className="text-sm text-[#5F0080] font-medium">← 대화 목록</button>
-                </div>
+                <ChatMobileHeader title={headerTitle} sub={LUCY_NOTICE} onBack={() => navigate('/app/chat')} />
                 <div className="flex-1 min-h-0">
                   <AiAgentPage key={user?.id} embedded />
                 </div>
               </>
             ) : selectedRoom ? (
               <>
-                <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
-                  <button
-                    type="button"
-                    onClick={() => navigate('/app/chat')}
-                    className="text-sm text-[#5F0080] font-medium"
-                  >
-                    ← 대화 목록
-                  </button>
-                </div>
+                <ChatMobileHeader title={headerTitle} sub={headerSub} onBack={() => navigate('/app/chat')} />
                 <div className="flex-1 min-h-0">
                   <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
                 </div>
