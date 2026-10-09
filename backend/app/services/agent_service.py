@@ -635,12 +635,12 @@ COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
 )
 
 
-def _companion_reply(user_text: str) -> str:
+def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
     """담당 상담사·리포트·일정이 없는 내담자도 감정 대화로 응답한다(SDD-193 결정 1).
 
-    사실 정보(리포트·일정)가 없으므로 LLM 은 감정 공감 + 열린 질문만 만들고,
-    실패 시 고정 폴백으로 완결된다. 프로파일 축적 대상(담당 상담사)이 없으므로
-    이 경로는 체크인 없이 대화만 한다.
+    사실 정보(리포트·일정)가 없어도 지난 대화 기억(memories)은 컨텍스트로 실어
+    연속성을 준다(SDD-194). LLM 은 감정 공감 + 이어가는 질문을 만들고, 실패 시
+    고정 폴백으로 완결된다.
     """
     fallback = COMPANION_REPLY_FALLBACKS[len(user_text) % len(COMPANION_REPLY_FALLBACKS)]
     task = (
@@ -650,9 +650,8 @@ def _companion_reply(user_text: str) -> str:
         "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
         "2~3문장을 넘기지 마세요."
     )
-    prompt = agent_llm.build_prompt(
-        "(감정 대화 — 참고 자료 없음)", user_text=user_text, task=task
-    )
+    context_text = agent_policy.context_to_text(agent_policy.client_context(user_id, db))
+    prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
     return agent_llm.generate(prompt, fallback)
 
 
@@ -745,7 +744,7 @@ def _build_reply(
     sessions = context.get("sessions") or []
     if not reports and not sessions:
         # SDD-193: 리포트·일정이 없어도 감정 대화로 응답한다(친근한 친구).
-        return _companion_reply(user_text), "free"
+        return _companion_reply(db, user_id, user_text), "free"
 
     fallback = _fallback_reply(context, in_feedback=in_feedback)
     task = (

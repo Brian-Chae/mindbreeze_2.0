@@ -37,6 +37,8 @@ MAX_CONTEXT_SESSIONS = 5
 MAX_CONTEXT_REPORTS = 3
 # 리포트 본문에서 인용할 문장 수 상한(기획 §3.3: 핵심 서술 1~2개).
 MAX_QUOTE_SENTENCES = 2
+# 루시가 참조하는 최근 대화 기억(체크인 요약) 상한 — Brian 결정 D1.
+MAX_CONTEXT_MEMORIES = 100
 
 SESSION_TYPE_LABELS: dict[str, str] = {
     "clinical": "임상심리상담",
@@ -251,6 +253,40 @@ def report_quotes(facts: dict, *, limit: int = MAX_QUOTE_SENTENCES) -> list[str]
 # ---------------------------------------------------------------------------
 
 
+def client_memories(
+    user_id: str | UUID, db: DBSession, *, limit: int = MAX_CONTEXT_MEMORIES
+) -> list[dict]:
+    """최근 체크인 요약 — 루시가 "지난 대화 기억"으로 참조한다(SDD-194).
+
+    요약은 체크인 마무리 시 `agent_guard` 를 거쳐 저장된 것만 담기므로 진단·점수
+    표현이 없다. 프롬프트에 자연스럽게 실리도록 시간순(오래된→최신)으로 돌려준다.
+    """
+    from app.models.agent import AgentCheckin
+
+    uid = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
+    rows = (
+        db.query(AgentCheckin.summary, AgentCheckin.closed_at)
+        .filter(
+            AgentCheckin.client_id == uid,
+            AgentCheckin.closed_at.is_not(None),
+            AgentCheckin.summary.is_not(None),
+        )
+        .order_by(AgentCheckin.closed_at.desc())
+        .limit(limit)
+        .all()
+    )
+    memories: list[dict] = []
+    for summary, closed_at in reversed(rows):
+        text = (summary or "").strip()
+        if not text:
+            continue
+        memories.append({
+            "summary": text,
+            "closed_at": _ensure_aware(closed_at) if closed_at else None,
+        })
+    return memories
+
+
 def client_context(user_id: str | UUID, db: DBSession) -> dict:
     """내담자 채널 컨텍스트 — 에이전트가 참조할 수 있는 전부.
 
@@ -265,6 +301,7 @@ def client_context(user_id: str | UUID, db: DBSession) -> dict:
         },
         "sessions": upcoming_sessions(uid, db),
         "reports": approved_client_reports(uid, db),
+        "memories": client_memories(uid, db),
     }
 
 
@@ -306,6 +343,13 @@ def context_to_text(context: dict) -> str:
     else:
         lines.append("")
         lines.append("■ 발송 완료된 리포트: 없음")
+
+    memories = context.get("memories") or []
+    if memories:
+        lines.append("")
+        lines.append("■ 지난 대화 기억 (내담자와 나눈 최근 대화 요약)")
+        for item in memories:
+            lines.append(f"- {item['summary']}")
 
     return "\n".join(lines)
 

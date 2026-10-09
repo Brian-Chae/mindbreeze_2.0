@@ -665,7 +665,11 @@ def respond(
         "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
         "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
     )
-    prompt = agent_llm.build_prompt("(안부 대화 — 참고 자료 없음)", user_text=user_text, task=task)
+    prompt = agent_llm.build_prompt(
+        agent_policy.context_to_text(agent_policy.client_context(client_id, db)),
+        user_text=user_text,
+        task=task,
+    )
     reply = agent_llm.generate(prompt, fallback)
     return agent_guard.sanitize(reply, fallback=fallback), KIND_CHECKIN
 
