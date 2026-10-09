@@ -588,7 +588,7 @@ def test_sweep_stale_eeg_raw_removes_orphans_and_expired(client):
         ])
         db.commit()
 
-        result = eeg_raw_service.sweep_stale_eeg_raw(db, now=now)
+        result = eeg_raw_service.sweep_stale_eeg_raw(db, now=now, retention_days=90)
         assert result == {"pending_deleted": 1, "failed_deleted": 1, "expired_deleted": 1}
 
         remaining = {

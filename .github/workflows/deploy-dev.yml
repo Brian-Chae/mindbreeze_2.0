@@ -11,6 +11,8 @@ name: Deploy Dev
 on:
   push:
     branches: [develop]
+  # SDD-197: 수동 재배포(예: push 이벤트 누락 시). 항상 develop 최신 커밋을 배포한다.
+  workflow_dispatch:
 
 # INFRA-05: 동시 배포 방지 — 워크플로 동시 실행을 그룹으로 직렬화한다.
 #   cancel-in-progress=false: 진행 중 배포를 중간에 취소하면 반쪽 상태가 남으므로 취소하지 않는다.
@@ -37,7 +39,7 @@ jobs:
           rm -rf dist node_modules/.tmp
           echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
-          echo "VITE_ENABLE_ROLE_SIM=true" >> .env
+          # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
           npm run build
@@ -165,17 +167,22 @@ jobs:
             else
               echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> ./.env.dev
             fi
-            # INFRA-12: 프론트 dev 빌드는 VITE_ENABLE_ROLE_SIM=true 이므로, 백엔드도 dev 역할
-            #   시뮬레이션 라우터가 등록되도록 .env.dev 를 맞춘다(프론트/백 일치, 없으면 추가·있으면 갱신).
+            # SDD-197: 역할 시뮬레이션은 항상 끈다(이전에는 true 로 강제). DEBUG 도 끈다(SQL echo 에
+            #   바인드 파라미터=개인정보가 로그로 남고 디스크를 채웠다).
             if grep -qE '^ENVIRONMENT=' ./.env.dev; then
               sed -i 's#^ENVIRONMENT=.*#ENVIRONMENT=development#' ./.env.dev
             else
               echo 'ENVIRONMENT=development' >> ./.env.dev
             fi
             if grep -qE '^ENABLE_DEV_ROLE_SIMULATION=' ./.env.dev; then
-              sed -i 's#^ENABLE_DEV_ROLE_SIMULATION=.*#ENABLE_DEV_ROLE_SIMULATION=true#' ./.env.dev
+              sed -i 's#^ENABLE_DEV_ROLE_SIMULATION=.*#ENABLE_DEV_ROLE_SIMULATION=false#' ./.env.dev
             else
-              echo 'ENABLE_DEV_ROLE_SIMULATION=true' >> ./.env.dev
+              echo 'ENABLE_DEV_ROLE_SIMULATION=false' >> ./.env.dev
+            fi
+            if grep -qE '^DEBUG=' ./.env.dev; then
+              sed -i 's#^DEBUG=.*#DEBUG=false#' ./.env.dev
+            else
+              echo 'DEBUG=false' >> ./.env.dev
             fi
             # SDD-070: PDF 렌더러 시스템 의존성. 글꼴은 app/assets/fonts에도 포함한다.
             sudo apt-get update -qq
@@ -272,8 +279,14 @@ jobs:
             # cron 프로세스의 SQLAlchemy echo(DEBUG=true) 로 로그가 폭증하는 것을 막는다 (crontab 환경변수 줄)
             (echo 'DEBUG=false'; crontab -l 2>/dev/null | grep -v '^DEBUG=') | crontab -
 
-            # 6. 헬스체크
-            curl -sf http://127.0.0.1:8000/health && echo " → backend health OK"
+            # 5.6 SDD-197: 로그 회전(cron 로그·SQL 폭증 방지) + journald 용량 상한
+            sudo cp "$BASE/backend/deploy/logrotate-mindbreeze" /etc/logrotate.d/mindbreeze
+            sudo mkdir -p /etc/systemd/journald.conf.d
+            printf '[Journal]\nSystemMaxUse=300M\nMaxRetentionSec=14day\n' | sudo tee /etc/systemd/journald.conf.d/mindbreeze.conf >/dev/null
+            sudo systemctl restart systemd-journald || true
+
+            # 6. 헬스체크 — SDD-197: DB·Redis까지 확인하는 ready 사용(실패 시 롤백 트랩 발동)
+            curl -sf http://127.0.0.1:8000/health/ready && echo " → backend ready OK"
 
             # 7. INFRA-04: 배포 성공 확정 → 롤백 트랩 해제, 백업 정리
             DEPLOY_OK=1
@@ -284,4 +297,4 @@ jobs:
         run: |
           sleep 5
           curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
-          curl -sf https://dev-api.mindbreeze.looxidlabs.com/health && echo " ← api health OK"
+          curl -sf https://dev-api.mindbreeze.looxidlabs.com/health/ready && echo " ← api ready OK"

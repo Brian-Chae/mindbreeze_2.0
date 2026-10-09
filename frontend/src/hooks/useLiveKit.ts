@@ -1,13 +1,12 @@
 // LiveKit 토큰 발급 + 방 연결 훅
 // 세션 참여(join) 후 LiveKit 토큰을 받아 VideoConference에 전달
 
+import { resolveLiveKitUrl } from '../lib/livekit-url';
 import { useState, useCallback } from 'react';
 import { joinSession, getLiveKitToken, type SessionDto } from '../lib/api/session';
 
 /** LiveKit 서버 URL — 환경변수 또는 기본값 사용 */
-const LIVEKIT_URL =
-  (import.meta.env.VITE_LIVEKIT_URL as string | undefined) ??
-  'wss://dev-api.mindbreeze.looxidlabs.com/livekit';
+const LIVEKIT_URL = resolveLiveKitUrl();
 
 export function useLiveKit(sessionId: string | undefined) {
   const [token, setToken] = useState<string | null>(null);

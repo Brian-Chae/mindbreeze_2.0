@@ -3,6 +3,7 @@
 // SDD-094: 온라인 그룹(≤20)은 기본 뮤트이고, speaking_changed(발언권) 수신 시 토큰을 재발급해
 // can_publish를 갱신한다 — 재발급된 토큰으로 재연결하면 카메라·마이크가 켜진다.
 // 손들기 상태도 이 훅이 소유한다(손들기 완료 ↔ 발언권 부여를 같은 출처로 유지).
+import { resolveLiveKitUrl } from '../lib/livekit-url';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, tokenStorage } from '../lib/api/client';
 import { getMemberLiveKitToken, raiseHand as raiseHandApi } from '../lib/api/session';
@@ -15,9 +16,7 @@ import {
 } from '../lib/socket';
 
 /** LiveKit 서버 URL — 환경변수 또는 기본값 사용 */
-const LIVEKIT_URL =
-  (import.meta.env.VITE_LIVEKIT_URL as string | undefined) ??
-  'wss://dev-api.mindbreeze.looxidlabs.com/livekit';
+const LIVEKIT_URL = resolveLiveKitUrl();
 
 interface UseMemberLiveKitOptions {
   code: string | null;

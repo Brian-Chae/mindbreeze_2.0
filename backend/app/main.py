@@ -29,11 +29,39 @@ async def _outbox_ws_poll_loop() -> None:
         await asyncio.sleep(2)
 
 
+def production_config_problems(cfg) -> list[str]:
+    """ENVIRONMENT=production 일 때만 검사하는 운영 설정 문제 목록(빈 목록=정상).
+
+    dev 서버(environment != production)는 영향이 없다. 운영에서 환경변수 누락 시
+    기본값(dev 주소)으로 조용히 동작하는 것을 막는 fail-fast 용도다.
+    ENVIRONMENT 를 **명시적으로** production 으로 설정한 경우에만 검사한다(기본값 production 으로
+    동작하는 로컬·테스트 환경은 제외 — 명시 설정 여부는 model_fields_set 으로 판별).
+    """
+    if cfg.environment != "production" or "environment" not in cfg.model_fields_set:
+        return []
+    problems: list[str] = []
+    for name in ("frontend_base_url", "report_email_base_url"):
+        value = (getattr(cfg, name, "") or "").lower()
+        if not value:
+            problems.append(f"{name} 미설정")
+        elif "://dev." in value or "dev-api." in value or "localhost" in value:
+            problems.append(f"{name} 가 개발 주소를 가리킴")
+    if cfg.debug:
+        problems.append("DEBUG 가 켜져 있음")
+    if cfg.enable_dev_role_simulation:
+        problems.append("개발용 역할 시뮬레이션이 켜져 있음")
+    return problems
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # SDD-136: JWT 서명 키 미설정/기본값은 기동 중단 — 임의 토큰 위조 방지.
     if not settings.jwt_secret_key:
         raise RuntimeError("JWT_SECRET_KEY가 설정되지 않았습니다. 배포 전 반드시 환경변수로 설정하세요.")
+    # SDD-197: 운영 환경 설정 검증 — dev 주소·디버그·역할 시뮬레이션이 섞인 채 기동하지 않는다.
+    problems = production_config_problems(settings)
+    if problems:
+        raise RuntimeError("운영 설정 오류: " + "; ".join(problems))
     task = asyncio.create_task(_outbox_ws_poll_loop())
     yield
     task.cancel()
@@ -99,6 +127,45 @@ async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSON
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "mindbreeze-api"}
+
+
+@app.get("/health/live")
+async def health_live():
+    """프로세스 생존만 확인 — 의존 서비스는 보지 않는다."""
+    return {"status": "ok", "service": "mindbreeze-api"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """DB·Redis 응답까지 확인 — 하나라도 실패하면 503. 배포 후 점검·업타임 감시용.
+
+    오류 상세(주소·계정 등)는 응답에 싣지 않고 서버 로그에만 남긴다.
+    """
+    checks: dict[str, str] = {}
+    try:
+        from sqlalchemy import text
+
+        from app.core.database import SessionLocal
+
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:  # noqa: BLE001
+        logger.exception("[health/ready] DB 점검 실패")
+        checks["database"] = "fail"
+    try:
+        from app.core.redis import get_redis
+
+        await get_redis().ping()
+        checks["redis"] = "ok"
+    except Exception:  # noqa: BLE001
+        logger.exception("[health/ready] Redis 점검 실패")
+        checks["redis"] = "fail"
+    ok = all(v == "ok" for v in checks.values())
+    return JSONResponse(
+        status_code=200 if ok else 503,
+        content={"status": "ok" if ok else "degraded", "checks": checks},
+    )
 
 
 # Socket.IO ASGI를 FastAPI 앱에 마운트 (socket.io 경로로 핸드셰이크)

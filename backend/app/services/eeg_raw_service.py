@@ -17,6 +17,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import EEGRawChunk, EEGRecord
 from app.services import session_service, storage_service
@@ -321,7 +322,8 @@ def _sync_eeg_record(
 EEG_RAW_PENDING_TTL_HOURS = 24
 # ack 무결성 검증 실패(failed)로 방치된 청크 정리 기준.
 EEG_RAW_FAILED_TTL_HOURS = 24
-# 업로드 완료(uploaded) raw 청크 보관 기간(일) — 개인정보 보관 정책. 경과분은 삭제한다.
+# 업로드 완료(uploaded) raw 청크의 과거 보관 기간(일). SDD-197(D5)로 뇌파 원본은 **영구 보관**이 기본이다.
+# 실제 적용값은 settings.eeg_raw_retention_days(0 이하=무기한). 이 상수는 명시 호출(테스트·수동 정리)용 참고값이다.
 EEG_RAW_RETENTION_DAYS = 90
 
 
@@ -353,13 +355,14 @@ def sweep_stale_eeg_raw(
     now: datetime | None = None,
     pending_ttl_hours: int = EEG_RAW_PENDING_TTL_HOURS,
     failed_ttl_hours: int = EEG_RAW_FAILED_TTL_HOURS,
-    retention_days: int = EEG_RAW_RETENTION_DAYS,
+    retention_days: int | None = None,
 ) -> dict:
     """스테일/고아 raw 청크와 보관 기간 경과 업로드분을 정리한다 (EEG-RAW-03, EEG-RET-01).
 
     - pending: 발급 후 pending_ttl_hours 내 ack 되지 않은 고아 → 행 삭제(객체는 best-effort).
     - failed: 검증 실패로 방치된 청크(failed_ttl_hours 초과) → 행 삭제.
-    - uploaded: 보관 기간(retention_days) 경과분 → 행 삭제 + S3 객체 삭제(개인정보 보관 정책).
+    - uploaded: 보관 기간(retention_days) 경과분 → 행 삭제 + S3 객체 삭제.
+      retention_days 미지정 시 settings.eeg_raw_retention_days 를 쓰며 0 이하(기본)는 **무기한 보관**(만료 삭제 없음).
 
     삭제 행 수를 {pending_deleted, failed_deleted, expired_deleted} 로 반환한다.
     """
@@ -370,7 +373,9 @@ def sweep_stale_eeg_raw(
 
     pending_cutoff = moment - timedelta(hours=pending_ttl_hours)
     failed_cutoff = moment - timedelta(hours=failed_ttl_hours)
-    retention_cutoff = moment - timedelta(days=retention_days)
+    effective_days = settings.eeg_raw_retention_days if retention_days is None else retention_days
+    unlimited = effective_days <= 0
+    retention_cutoff = moment - timedelta(days=effective_days) if not unlimited else None
 
     pending_query = db.query(EEGRawChunk).filter(
         EEGRawChunk.upload_status == "pending",
@@ -383,15 +388,15 @@ def sweep_stale_eeg_raw(
         EEGRawChunk.created_at < failed_cutoff,
     )
     # uploaded 는 uploaded_at(있으면) 또는 created_at 기준으로 보관 기간을 판정한다.
-    expired_query = db.query(EEGRawChunk).filter(
-        EEGRawChunk.upload_status == "uploaded",
-        func.coalesce(EEGRawChunk.uploaded_at, EEGRawChunk.created_at) < retention_cutoff,
-    )
-
-    # 보관 만료 대상의 (세션, 참가자) — 삭제 후 file_count 재계산이 필요하다.
-    affected_pairs = {
-        (c.session_id, c.participant_id) for c in expired_query.all()
-    }
+    expired_query = None
+    affected_pairs: set = set()
+    if not unlimited:
+        expired_query = db.query(EEGRawChunk).filter(
+            EEGRawChunk.upload_status == "uploaded",
+            func.coalesce(EEGRawChunk.uploaded_at, EEGRawChunk.created_at) < retention_cutoff,
+        )
+        # 보관 만료 대상의 (세션, 참가자) — 삭제 후 file_count 재계산이 필요하다.
+        affected_pairs = {(c.session_id, c.participant_id) for c in expired_query.all()}
 
     def _delete(query) -> int:
         chunks = query.all()
@@ -406,7 +411,7 @@ def sweep_stale_eeg_raw(
 
     pending_deleted = _delete(pending_query)
     failed_deleted = _delete(failed_query)
-    expired_deleted = _delete(expired_query)
+    expired_deleted = _delete(expired_query) if expired_query is not None else 0
     db.commit()
 
     for sid, participant_id in affected_pairs:

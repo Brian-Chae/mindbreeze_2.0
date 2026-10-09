@@ -64,7 +64,8 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
 
     # App
-    debug: bool = True
+    # SDD-197: DEBUG 는 SQL echo(바인드 파라미터=개인정보 포함)를 켠다. 기본은 꺼짐 — 로컬 개발만 명시적으로 켠다.
+    debug: bool = False
     frontend_base_url: str = "https://dev.mindbreeze.looxidlabs.com"
 
     # SDD-019: 실행 환경 식별자 — 기본값 production (fail-safe).
@@ -72,6 +73,10 @@ class Settings(BaseSettings):
     environment: str = "production"
     # SDD-019: dev 역할 시뮬레이션 로그인 기능 게이트 — 기본 False (명시적 opt-in).
     enable_dev_role_simulation: bool = False
+
+    # SDD-197(D5): 뇌파 원본(업로드 완료분) 보관 일수. 0 이하 = 무기한(영구 보관, 기본).
+    # 음성·영상은 media_cleanup_service.MEDIA_RETENTION_DAYS(90일) 별도 적용.
+    eeg_raw_retention_days: int = 0
 
     # Google OAuth
     google_client_id: str = ""

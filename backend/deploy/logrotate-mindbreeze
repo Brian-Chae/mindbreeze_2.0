@@ -1,0 +1,11 @@
+# SDD-197: Mind Breeze cron·워커 로그 회전. copytruncate — 실행 중 프로세스가 파일을 계속 열고 있어도 안전.
+/var/log/mindbreeze-*.log {
+    daily
+    rotate 14
+    maxsize 50M
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

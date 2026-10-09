@@ -67,10 +67,11 @@ def _endpoint_url() -> str | None:
 def should_fail_on_upload_failure() -> bool:
     """STG-12: 업로드 실패를 로컬 폴백으로 숨기지 않고 명시적으로 실패시켜야 하는지.
 
-    프로덕션이면서 실제 S3 자격증명이 설정된 경우에만 True. (dev/스텁 환경은 기존
-    로컬 폴백을 유지해 테스트·로컬 개발 흐름을 깨지 않는다.)
+    실제 S3 자격증명이 설정된 경우 환경(dev/prod)과 무관하게 True. SDD-197: dev 가 실사용자를
+    받는 동안 업로드 실패가 로컬 폴백으로 조용히 묻히지 않게 한다. 자격증명 미설정/더미(테스트·
+    로컬 개발)는 기존 로컬 폴백을 유지한다.
     """
-    return settings.environment == "production" and _has_real_credentials()
+    return _has_real_credentials()
 
 
 def _stub_url(object_key: str) -> str:
