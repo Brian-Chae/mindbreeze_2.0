@@ -651,7 +651,10 @@ def respond(
     db.flush()
 
     if checkin.turn_count >= CLOSE_TURN_COUNT:
-        close(db, checkin)
+        # 마무리 시점의 요약·프로파일 저장을 즉시 커밋한다. commit=False 로 두면
+        # 사용자 요청 경로의 후속 커밋에 묶이는데, LLM 응답 생성 등이 끼면 flush 된
+        # 프로파일 항목이 커밋되지 않고 유실될 수 있어 명시적으로 커밋한다.
+        close(db, checkin, commit=True)
         return CLOSING_TEMPLATE, KIND_CHECKIN_CLOSING
 
     fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
@@ -757,7 +760,7 @@ def close(db: DBSession, checkin: AgentCheckin, *, commit: bool = False) -> Agen
     checkin.summary = _build_summary(texts, mood)
     db.flush()
 
-    agent_profile.extract_and_store(
+    saved = agent_profile.extract_and_store(
         db,
         client_id=checkin.client_id,
         counselor_id=checkin.counselor_id,
