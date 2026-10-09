@@ -165,7 +165,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
         </section>
       ) : <>
         <div className="shrink-0 border-b border-[#EFEFEF] bg-white p-3"><CheckinPreferences /></div>
-        <p className="shrink-0 px-4 py-1.5 text-xs text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>
+        <p className="shrink-0 px-4 py-1.5 text-[13px] text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>
         <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white">
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
           {!messages.length && <div className="text-center text-gray-500 py-4">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</div>}

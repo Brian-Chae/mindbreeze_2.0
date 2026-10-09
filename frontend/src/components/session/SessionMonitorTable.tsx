@@ -106,12 +106,12 @@ const SessionMonitorRow = memo(function SessionMonitorRow({
         {/* SDD-094: 손들기/발언권 배지 — 상세 조작은 발언권 관리 패널 */}
         <span className="inline-flex items-center gap-1.5">
           {row.raise_hand && (
-            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[10px] font-semibold text-[#8A6B1F]">
+            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[12px] font-semibold text-[#8A6B1F]">
               🙋
             </span>
           )}
           {row.speaking && (
-            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[10px] font-semibold text-[#2F9E68]">
+            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[12px] font-semibold text-[#2F9E68]">
               🎤
             </span>
           )}

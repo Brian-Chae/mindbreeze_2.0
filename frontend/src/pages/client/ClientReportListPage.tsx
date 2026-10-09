@@ -18,7 +18,7 @@ function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
@@ -30,13 +30,13 @@ function TypeBadge({ type }: { type: string }) {
 function StatusBadge({ sentAt }: { sentAt: string | null }) {
   if (sentAt) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E0F2FE] text-[#075985]">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#E0F2FE] text-[#075985]">
         확인 가능
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#92400E]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEF3C7] text-[#92400E]">
       대기
     </span>
   );
@@ -228,7 +228,7 @@ export default function ClientReportListPage() {
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         {!report.is_read && (
-          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
         )}
         <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
       </div>
@@ -236,14 +236,14 @@ export default function ClientReportListPage() {
         {formatDateTime(report.scheduled_at)}
       </div>
       <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
-      <div className="mt-2 text-[11px] text-[#6F6F6F]">
+      <div className="mt-2 text-[12px] text-[#6F6F6F]">
         {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}
       </div>
     </button>
   );
 
   const renderTable = (items: ReportDto[]) => (
-    <table className="w-full text-[14px] min-w-[640px] table-fixed">
+    <table className="w-full text-[15px] min-w-[640px] table-fixed">
       <thead>
         <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
           {['제목', '세션유형', '날짜·시간', '상태', '액션'].map((label, index) => (
@@ -268,7 +268,7 @@ export default function ClientReportListPage() {
           >
             <td className="px-5 py-3.5"><div className="flex items-center gap-1.5">
               {!report.is_read && (
-                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+                <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
               )}
               <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
             </div>

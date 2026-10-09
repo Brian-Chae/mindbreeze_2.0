@@ -38,7 +38,7 @@ const GENDER_LABELS: Record<string, string> = { male: '남성', female: '여성'
 
 const FIELD_LABEL = 'text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1';
 const INPUT_CLASS =
-  'w-full px-3 py-2 text-[14px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
+  'w-full px-3 py-2 text-[15px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
 
 export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInfoSectionProps) {
   const [editing, setEditing] = useState(false);
@@ -124,7 +124,7 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
       )}
 
       {editing ? (
-        <div className="space-y-4 text-[14px]">
+        <div className="space-y-4 text-[15px]">
           <div>
             <label htmlFor={`${fid}-name`} className={FIELD_LABEL}>이름</label>
             <input
@@ -136,7 +136,7 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
           </div>
           <div>
             <div className={FIELD_LABEL}>이메일 (변경 불가)</div>
-            <div className="px-3 py-2 text-[14px] text-[#9B9B9B] bg-[#F8FAFC] rounded-lg">
+            <div className="px-3 py-2 text-[15px] text-[#9B9B9B] bg-[#F8FAFC] rounded-lg">
               {value.email}
             </div>
           </div>
@@ -180,7 +180,7 @@ export default function SelfInfoSection({ value, showPersonal, onSave }: SelfInf
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[15px]">
           <div>
             <div className={FIELD_LABEL}>이름</div>
             <div className="font-medium text-[#1F1F1F]">{value.name || '-'}</div>

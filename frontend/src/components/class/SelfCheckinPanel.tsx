@@ -70,7 +70,7 @@ function MoodAxes({ mood, onChange, idPrefix, ariaPrefix, disabled }: MoodAxesPr
                   } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <span aria-hidden="true">{step}</span>
-                  <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80" aria-hidden="true">
+                  <span className="mt-0.5 text-[12px] font-medium leading-tight opacity-80" aria-hidden="true">
                     {axis.steps[step]}
                   </span>
                 </button>

@@ -108,7 +108,7 @@ export default function DataExportButton({ sessionId, participantId, userId }: {
   const terminal = job && ['failed', 'expired', 'cancelled'].includes(job.status);
   return <>
     <button type="button" onClick={() => dialog.current?.showModal()}
-      className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl">
+      className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-5 py-2.5 rounded-xl">
       데이터 다운로드
     </button>
     {createPortal(<dialog ref={dialog} aria-labelledby="data-export-title"

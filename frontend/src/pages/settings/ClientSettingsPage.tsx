@@ -117,7 +117,7 @@ export default function ClientSettingsPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
             계정 정보
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[15px]">
             <div>
               <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">이름</div>
               <div className="font-medium text-[#1F1F1F]">{user?.name ?? '-'}</div>
@@ -129,7 +129,7 @@ export default function ClientSettingsPage() {
             <div>
               <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">역할</div>
               <div>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E0F2FE] text-[#075985]">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#E0F2FE] text-[#075985]">
                   내담자
                 </span>
               </div>

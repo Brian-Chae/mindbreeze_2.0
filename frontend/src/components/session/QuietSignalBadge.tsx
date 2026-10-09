@@ -18,7 +18,7 @@ export function QuietSignalBadge({ signal }: QuietSignalBadgeProps) {
   const meta = CLASS_SIGNAL_META[signal.type];
   return (
     <span
-      className={`mb-quiet-signal inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.badgeClass}`}
+      className={`mb-quiet-signal inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold ${meta.badgeClass}`}
       aria-label={`상태 신호: ${meta.label}`}
     >
       <span aria-hidden="true">{meta.icon}</span>

@@ -37,7 +37,7 @@ function RiskBadge({ score }: { score: number }) {
     label = '저위험';
   }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${color}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-bold font-mono ${color}`}>
       {label} {(score * 100).toFixed(0)}%
     </span>
   );
@@ -52,7 +52,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${m.cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold ${m.cls}`}>
       {m.label}
     </span>
   );
@@ -107,7 +107,7 @@ export default function AdminReviewListPage() {
 
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
-          <div className="text-[14px] text-red-700">{error}</div>
+          <div className="text-[15px] text-red-700">{error}</div>
           <button
             type="button"
             onClick={() => void fetchReviews()}
@@ -133,7 +133,7 @@ export default function AdminReviewListPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
                       {item.target_type === 'credential' ? '자격증빙' : '센터문서'}
                     </span>
                     <span className="text-[12px] text-[#6F6F6F] font-mono">
@@ -155,7 +155,7 @@ export default function AdminReviewListPage() {
                   <RiskBadge score={item.risk_score} />
                 </div>
 
-                <div className="text-[11px] text-[#9B9B9B] font-mono mt-3">
+                <div className="text-[12px] text-[#9B9B9B] font-mono mt-3">
                   접수: {formatDate(item.created_at)}
                 </div>
               </Link>

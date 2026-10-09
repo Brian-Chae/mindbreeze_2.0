@@ -177,7 +177,7 @@ export function CounselorLiveTile({
           {raiseHandError && (
             <p
               role="alert"
-              className="pointer-events-auto max-w-sm text-center text-[11px] font-medium text-red-200"
+              className="pointer-events-auto max-w-sm text-center text-[12px] font-medium text-red-200"
             >
               {raiseHandError}
             </p>

@@ -33,7 +33,7 @@ function LandingNav() {
   return <header className="sticky top-0 z-40 border-b border-[#ECE7ED] bg-white/95 backdrop-blur-lg">
     <div className={`${sectionContainer} flex min-h-20 flex-wrap items-center justify-between gap-x-6`}>
       <Link to="/" aria-label="Mind Breeze 홈" className="flex items-center gap-2.5 py-5 text-xl font-extrabold tracking-[-0.04em] text-[#5F0080]">
-        <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={16} alt="" />Mind Breeze<span className="ml-0.5 text-[10px] font-semibold tracking-normal text-[#827788]">2.0</span>
+        <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={16} alt="" />Mind Breeze<span className="ml-0.5 text-[12px] font-semibold tracking-normal text-[#827788]">2.0</span>
       </Link>
       <button ref={toggleRef} type="button" aria-label={open ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={open} aria-controls="landing-navigation" onClick={() => setOpen(!open)} className="flex h-11 w-11 items-center justify-center rounded-full border border-[#E4DDE6] text-[#5F0080] xl:hidden">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d={open ? 'M6 6l12 12M6 18L18 6' : 'M4 7h16M4 12h16M4 17h16'} /></svg>
@@ -69,7 +69,7 @@ function LandingHero() {
         <div className="absolute inset-x-8 bottom-10 top-12 rounded-full bg-[#E8DCEC]" aria-hidden="true" />
         <img src="/mb-design/assets/landing/hero-800.webp" srcSet="/mb-design/assets/landing/hero-480.webp 480w, /mb-design/assets/landing/hero-800.webp 800w" sizes="(max-width: 640px) 85vw, 460px" alt="눈을 감고 편안하게 자신의 호흡에 집중하는 사람" width={800} height={1115} loading="lazy" decoding="async" className="relative h-[380px] w-full object-contain sm:h-[490px] lg:h-[540px]" />
         <div className="absolute bottom-0 left-0 max-w-[285px] rounded-2xl border border-white bg-white/95 p-5 shadow-xl shadow-[#5F0080]/5">
-          <p className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-[#5F0080]"><span className="h-2 w-2 rounded-full bg-[#70A38B]" />BODY & MIND</p>
+          <p className="flex items-center gap-2 text-[12px] font-bold tracking-widest text-[#5F0080]"><span className="h-2 w-2 rounded-full bg-[#70A38B]" />BODY & MIND</p>
           <p className="mt-2 text-lg font-bold tracking-tight text-[#312637]">작은 변화에도,<br />이야기가 있으니까.</p>
           <p className="mt-2 text-xs text-[#796E7E]">나를 이해하는 새로운 기록</p>
         </div>

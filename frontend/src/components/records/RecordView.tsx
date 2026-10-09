@@ -49,7 +49,7 @@ export function RecordView({ record, transcript, onUpdated }: Props) {
     <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 space-y-4">
       {record.is_edited && (
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide bg-[#FFF4DC] text-[#8A6B1F]">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide bg-[#FFF4DC] text-[#8A6B1F]">
             편집됨 {record.edit_history.length}회
           </span>
         </div>

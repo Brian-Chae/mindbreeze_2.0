@@ -20,11 +20,11 @@ function formatDate(iso: string): string {
 
 function StatusBadge({ suspended }: { suspended: boolean }) {
   return suspended ? (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEE2E2] text-[#991B1B]">
       정지됨
     </span>
   ) : (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#D1FAE5] text-[#065F46]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#D1FAE5] text-[#065F46]">
       활성
     </span>
   );
@@ -33,7 +33,7 @@ function StatusBadge({ suspended }: { suspended: boolean }) {
 function CounselorCell({ counselor }: { counselor: UserDto['primary_counselor'] }) {
   if (!counselor) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#92400E]">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEF3C7] text-[#92400E]">
         미배정
       </span>
     );
@@ -168,7 +168,7 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder="상담사 이름 또는 이메일 검색..."
-          className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+          className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
         />
         {loading && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#9B9B9B]">
@@ -195,14 +195,14 @@ function CounselorPicker({ selected, onSelect, error }: CounselorPickerProps) {
                     index === highlightIndex ? 'bg-[#F5EDFC]' : ''
                   }`}
                 >
-                  <div className="font-medium text-[#1F1F1F] text-[14px]">{counselor.name}</div>
+                  <div className="font-medium text-[#1F1F1F] text-[15px]">{counselor.name}</div>
                   <div className="text-[12px] text-[#6F6F6F]">{counselor.email}</div>
                 </button>
               </li>
             ))
           )}
           {results.some((c) => c.suspended) && (
-            <li className="border-t border-[#EFEFEF] px-4 py-2 text-[11px] text-[#9B9B9B]">
+            <li className="border-t border-[#EFEFEF] px-4 py-2 text-[12px] text-[#9B9B9B]">
               정지된 상담사는 선택할 수 없습니다
             </li>
           )}
@@ -414,7 +414,7 @@ export default function ClientManagementPage() {
     <button
       type="button"
       onClick={() => setAddOpen(true)}
-      className="px-4 py-2 rounded-xl text-[14px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+      className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
     >
       + 회원 추가
     </button>
@@ -436,7 +436,7 @@ export default function ClientManagementPage() {
 
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
-          <div className="text-[14px] text-red-700">{error}</div>
+          <div className="text-[15px] text-red-700">{error}</div>
           <button
             type="button"
             onClick={() => void fetchUsers()}
@@ -453,7 +453,7 @@ export default function ClientManagementPage() {
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="text-[14px] font-medium text-[#5F0080] hover:underline"
+            className="text-[15px] font-medium text-[#5F0080] hover:underline"
           >
             + 회원 추가로 첫 회원을 등록하세요
           </button>
@@ -500,7 +500,7 @@ export default function ClientManagementPage() {
           </div>
 
           <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[760px] text-[14px]">
+            <table className="w-full min-w-[760px] text-[15px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이름</th>
@@ -600,8 +600,8 @@ export default function ClientManagementPage() {
           >
             {modal.action === 'delete' && modal.step === 1 ? (
               <>
-                <h3 id="client-delete-step1-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">회원 삭제</h3>
-                <p className="text-[14px] text-[#6F6F6F] mb-2">
+                <h3 id="client-delete-step1-title" className="text-[18px] font-bold text-[#1F1F1F] mb-2">회원 삭제</h3>
+                <p className="text-[15px] text-[#6F6F6F] mb-2">
                   &quot;{modal.user.name}&quot; ({modal.user.email}) 님을 삭제하시겠습니까?
                 </p>
                 <ul className="text-[13px] text-[#991B1B] mb-4 list-disc pl-5 space-y-1">
@@ -611,13 +611,13 @@ export default function ClientManagementPage() {
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
                   >
                     취소
                   </button>
                   <button
                     onClick={() => void handleAction()}
-                    className="px-4 py-2 rounded-xl text-[14px] font-medium text-white bg-[#EF4444]"
+                    className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#EF4444]"
                   >
                     계속
                   </button>
@@ -625,8 +625,8 @@ export default function ClientManagementPage() {
               </>
             ) : modal.action === 'delete' && modal.step === 2 ? (
               <>
-                <h3 id="client-delete-step2-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">삭제 확인</h3>
-                <p className="text-[14px] text-[#6F6F6F] mb-4">
+                <h3 id="client-delete-step2-title" className="text-[18px] font-bold text-[#1F1F1F] mb-2">삭제 확인</h3>
+                <p className="text-[15px] text-[#6F6F6F] mb-4">
                   삭제하려면 아래에 회원 이메일을 정확히 입력하세요.
                 </p>
                 <input
@@ -634,19 +634,19 @@ export default function ClientManagementPage() {
                   value={deleteEmailConfirm}
                   onChange={(e) => setDeleteEmailConfirm(e.target.value)}
                   placeholder={modal.user.email}
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#EF4444]/20 mb-4"
+                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#EF4444]/20 mb-4"
                 />
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
                   >
                     취소
                   </button>
                   <button
                     onClick={() => void handleAction()}
                     disabled={acting || deleteEmailConfirm.trim() !== modal.user.email}
-                    className="px-4 py-2 rounded-xl text-[14px] font-medium text-white bg-[#EF4444] disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#EF4444] disabled:opacity-50"
                   >
                     {acting ? '처리 중...' : '영구 삭제'}
                   </button>
@@ -654,10 +654,10 @@ export default function ClientManagementPage() {
               </>
             ) : (
               <>
-                <h3 id="client-action-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">
+                <h3 id="client-action-title" className="text-[18px] font-bold text-[#1F1F1F] mb-2">
                   {modal.action === 'suspend' ? '회원 정지' : '정지 해제'}
                 </h3>
-                <p className="text-[14px] text-[#6F6F6F] mb-4">
+                <p className="text-[15px] text-[#6F6F6F] mb-4">
                   {modal.action === 'suspend'
                     ? `"${modal.user.name}" (${modal.user.email}) 님을 정지하시겠습니까? 정지 시 로그인 및 서비스 이용이 차단됩니다.`
                     : `"${modal.user.name}" (${modal.user.email}) 님의 정지를 해제하시겠습니까?`}
@@ -668,20 +668,20 @@ export default function ClientManagementPage() {
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="정지 사유를 입력하세요 (필수)..."
                     rows={3}
-                    className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[14px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
+                    className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
                   />
                 )}
                 <div className="flex items-center gap-3 justify-end">
                   <button
                     onClick={() => setModal(null)}
-                    className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                    className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
                   >
                     취소
                   </button>
                   <button
                     onClick={() => void handleAction()}
                     disabled={acting || (modal.action === 'suspend' && !reason.trim())}
-                    className={`px-4 py-2 rounded-xl text-[14px] font-medium text-white disabled:opacity-50 ${
+                    className={`px-4 py-2 rounded-xl text-[15px] font-medium text-white disabled:opacity-50 ${
                       modal.action === 'suspend' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
                     }`}
                   >
@@ -709,7 +709,7 @@ export default function ClientManagementPage() {
             className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="client-add-modal-title" className="text-[17px] font-bold text-[#1F1F1F] mb-1">회원 추가</h3>
+            <h3 id="client-add-modal-title" className="text-[18px] font-bold text-[#1F1F1F] mb-1">회원 추가</h3>
             <p className="text-[13px] text-[#6F6F6F] mb-5">내담자(client) 계정을 생성하고 담당 상담사를 배정합니다.</p>
 
             {addError && (
@@ -727,7 +727,7 @@ export default function ClientManagementPage() {
                   onChange={(e) => setAddName(e.target.value)}
                   placeholder="홍길동"
                   maxLength={50}
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
                 />
               </div>
 
@@ -740,7 +740,7 @@ export default function ClientManagementPage() {
                   value={addEmail}
                   onChange={(e) => setAddEmail(e.target.value)}
                   placeholder="client@example.com"
-                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                  className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
                 />
                 {addFieldErrors.email && (
                   <p className="mt-1 text-[12px] text-red-600">{addFieldErrors.email}</p>
@@ -765,21 +765,21 @@ export default function ClientManagementPage() {
                   onChange={(e) => setSendInvite(e.target.checked)}
                   className="rounded border-[#EFEFEF] text-[#5F0080] focus:ring-[#5F0080]/20"
                 />
-                <span className="text-[14px] text-[#1F1F1F]">초대 메일 발송 (비밀번호 설정 링크)</span>
+                <span className="text-[15px] text-[#1F1F1F]">초대 메일 발송 (비밀번호 설정 링크)</span>
               </label>
 
               <div className="flex items-center gap-3 justify-end pt-2">
                 <button
                   type="button"
                   onClick={closeAddModal}
-                  className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                  className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
                 >
                   취소
                 </button>
                 <button
                   type="submit"
                   disabled={addSubmitting || !addCounselor}
-                  className="px-4 py-2 rounded-xl text-[14px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl text-[15px] font-medium text-white bg-[#5F0080] hover:bg-[#4A0066] disabled:opacity-50"
                 >
                   {addSubmitting ? '추가 중...' : '회원 추가'}
                 </button>

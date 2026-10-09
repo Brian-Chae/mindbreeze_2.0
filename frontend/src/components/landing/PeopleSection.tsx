@@ -17,7 +17,7 @@ export default function PeopleSection() {
         {audiences.map((item) => <article key={item.label} className="flex flex-col rounded-3xl border border-[#E7DFE9] bg-[#FCFAFD] p-6 sm:p-8">
           <div className="flex items-center justify-between"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#EDE3F1] text-[#5F0080]"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.icon} /></svg></span><span className="text-xs tracking-widest text-[#95809E]">{item.number}</span></div>
           <p className="mt-7 text-xs font-bold text-[#5F0080]">{item.label}</p>
-          <h3 className="mt-3 whitespace-pre-line text-[23px] font-bold leading-[1.5] tracking-[-0.035em]">{item.question}</h3>
+          <h3 className="mt-3 whitespace-pre-line text-[24px] font-bold leading-[1.5] tracking-[-0.035em]">{item.question}</h3>
           <p className="mb-5 mt-5 text-sm leading-7 text-[#817488]">{item.pain}</p>
           <p className="mt-auto border-t border-[#E8DFEC] pt-5 text-sm leading-7 text-[#4F4555]">{item.solution}</p>
           <div className="mt-6 flex flex-wrap gap-2">{item.tags.map((tag) => <span key={tag} className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#75647D]">{tag}</span>)}</div>

@@ -57,7 +57,7 @@ export default function MembershipInvitePage() {
               alt=""
               className="brightness-0 invert"
             />
-            <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+            <span className="font-extrabold text-[18px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
               Mind&nbsp;Breeze
             </span>
           </Link>

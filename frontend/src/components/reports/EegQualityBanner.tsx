@@ -115,7 +115,7 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
           <p className="mt-1 text-[12px] leading-relaxed opacity-90">{copy.body}</p>
         </div>
         {reliabilityText && (
-          <span className="shrink-0 font-mono text-[11px] opacity-80">
+          <span className="shrink-0 font-mono text-[12px] opacity-80">
             {reliabilityText}
           </span>
         )}
@@ -124,12 +124,12 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
       {(reasonChip || (reportType === 'counselor' && eeg.coverage_ratio !== null)) && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {reasonChip && (
-            <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-[11px] font-medium">
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 text-[12px] font-medium">
               {reasonChip}
             </span>
           )}
           {reportType === 'counselor' && eeg.coverage_ratio !== null && (
-            <span className="rounded-full bg-white/70 px-2.5 py-0.5 font-mono text-[11px]">
+            <span className="rounded-full bg-white/70 px-2.5 py-0.5 font-mono text-[12px]">
               커버리지 {Math.round(eeg.coverage_ratio * 100)}%
             </span>
           )}
@@ -149,7 +149,7 @@ export default function EegQualityBanner({ eeg, reportType }: EegQualityBannerPr
       )}
 
       {reportType === 'counselor' && eeg.normalization_version && (
-        <p className="mt-2 font-mono text-[10px] text-[#9B9B9B]">
+        <p className="mt-2 font-mono text-[12px] text-[#9B9B9B]">
           norm {eeg.normalization_version}
         </p>
       )}

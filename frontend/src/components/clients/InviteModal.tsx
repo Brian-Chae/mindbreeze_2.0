@@ -77,7 +77,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
 
         {/* 헤더 */}
         <div className="mb-6">
-          <h2 id="invite-modal-title" className="text-[17px] font-bold text-[#1F1F1F] flex items-center gap-2">
+          <h2 id="invite-modal-title" className="text-[18px] font-bold text-[#1F1F1F] flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
             내담자 초대
           </h2>
@@ -90,7 +90,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
         {result ? (
           <div className="space-y-4">
             <div className="p-4 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl">
-              <p className="text-[14px] font-medium text-[#166534] flex items-center gap-2">
+              <p className="text-[15px] font-medium text-[#166534] flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <circle cx="9" cy="9" r="8" stroke="#166534" strokeWidth="1.5" />
                   <path d="M5.5 9.5L8 12L12.5 6" stroke="#166534" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -101,7 +101,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
 
             {/* 초대 링크 */}
             <div className="p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl">
-              <p className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">초대 링크</p>
+              <p className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">초대 링크</p>
               <div className="flex items-center gap-2">
                 <input
                   readOnly
@@ -135,7 +135,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
 
             <button
               onClick={handleClose}
-              className="w-full py-2.5 text-[14px] font-medium text-[#6F6F6F] hover:text-[#1F1F1F] rounded-xl hover:bg-[#F2F4F7] transition-colors"
+              className="w-full py-2.5 text-[15px] font-medium text-[#6F6F6F] hover:text-[#1F1F1F] rounded-xl hover:bg-[#F2F4F7] transition-colors"
             >
               닫기
             </button>
@@ -156,7 +156,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
                 aria-invalid={error ? true : undefined}
                 aria-describedby={error ? 'invite-modal-error' : undefined}
                 placeholder="client@example.com"
-                className="w-full h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-[14px] text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
+                className="w-full h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-[15px] text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
               />
             </div>
 
@@ -167,7 +167,7 @@ export default function InviteModal({ open, onClose }: InviteModalProps) {
             <button
               type="submit"
               disabled={loading || !email.trim()}
-              className="w-full h-11 rounded-xl bg-[#5F0080] text-white text-[14px] font-semibold hover:bg-[#4A0066] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full h-11 rounded-xl bg-[#5F0080] text-white text-[15px] font-semibold hover:bg-[#4A0066] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? '발송 중...' : '초대 메일 보내기'}
             </button>

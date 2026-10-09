@@ -49,13 +49,13 @@ export function SessionCard({ session, onClick, counselorName }: Props) {
     <>
       <div className="flex items-center justify-between mb-3">
         <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
+          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
         >
           {TYPE_LABELS[session.type]}
         </span>
         <StatusBadge status={session.status} />
       </div>
-      <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2 truncate">
+      <h3 className="text-[18px] font-bold text-[#1F1F1F] mb-2 truncate">
         {session.title || '제목 없음'}
       </h3>
       <div className="text-[13px] text-[#6F6F6F] space-y-1">
@@ -73,19 +73,19 @@ export function SessionCard({ session, onClick, counselorName }: Props) {
           </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F5EDFC] text-[#5F0080]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-[#F5EDFC] text-[#5F0080]">
             {LOCATION_LABELS[session.location_type] ?? session.location_type}
           </span>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDEDED] text-[#6F6F6F]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-[#EDEDED] text-[#6F6F6F]">
             {MODE_LABELS[session.participant_mode] ?? session.participant_mode}
           </span>
           {session.linkband_mode !== 'none' && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#E6F8F3] text-[#1F8A5B]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-[#E6F8F3] text-[#1F8A5B]">
               {LINKBAND_LABELS[session.linkband_mode]}
             </span>
           )}
           {session.type === 'custom' && session.custom_type_name && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FFF4DC] text-[#8A6B1F]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-medium bg-[#FFF4DC] text-[#8A6B1F]">
               {session.custom_type_name}
             </span>
           )}

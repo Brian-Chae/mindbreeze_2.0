@@ -32,26 +32,26 @@ export default function ReportCoverSection({
       </div>
 
       <div className="relative z-10">
-        <p className="text-[11px] font-bold tracking-[1.5px] text-[#5F0080]">
+        <p className="text-[12px] font-bold tracking-[1.5px] text-[#5F0080]">
           MIND BREEZE · 몸·마음 리포트
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
             {report.type === 'counselor' ? '상담사용' : '내담자용'}
           </span>
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
+          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-white text-[#5F0080] border border-[#E8D9F5]">
             {sessionType}
           </span>
           {adapted.coverReasonChip && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
               {adapted.coverReasonChip}
             </span>
           )}
         </div>
-        <h1 className="mt-4 text-[26px] font-extrabold tracking-tight text-[#5F0080] leading-snug">
+        <h1 className="mt-4 text-[24px] font-extrabold tracking-tight text-[#5F0080] leading-snug">
           {sessionTitle}
         </h1>
-        <p className="mt-2 text-[14px] text-[#6D547A]">
+        <p className="mt-2 text-[15px] text-[#6D547A]">
           오늘 나에게 일어난 작은 변화를 만나보세요.
         </p>
         <div className="report-print-date mt-4 text-[13px] text-[#6F6F6F] font-mono">

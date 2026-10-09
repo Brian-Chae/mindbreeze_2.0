@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${m.cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold ${m.cls}`}>
       {m.label}
     </span>
   );
@@ -67,7 +67,7 @@ function AuditTimeline({ audits }: { audits: AuditDto[] }) {
                 <span className="font-bold text-[#1F1F1F]">
                   {ACTION_LABELS[a.action] ?? a.action}
                 </span>
-                <span className="text-[11px] text-[#9B9B9B] font-mono">
+                <span className="text-[12px] text-[#9B9B9B] font-mono">
                   {formatDate(a.created_at)}
                 </span>
               </div>
@@ -151,7 +151,7 @@ export default function AdminReviewDetailPage() {
         <div className="p-4 rounded-xl bg-red-50 text-red-700 text-sm mb-4">{error}</div>
         <button
           onClick={() => navigate('/admin/reviews')}
-          className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
+          className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
         >
           목록으로
         </button>
@@ -180,12 +180,12 @@ export default function AdminReviewDetailPage() {
           <div className="lg:col-span-1 space-y-4">
             <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
                   {DOC_TYPE_LABELS[detail.document_type] ?? detail.document_type}
                 </span>
                 <StatusBadge status={detail.status} />
               </div>
-              <div className="font-bold text-[17px] text-[#1F1F1F] mb-1">
+              <div className="font-bold text-[18px] text-[#1F1F1F] mb-1">
                 {detail.submitter_name ?? '이름 없음'}
               </div>
               <div className="text-[13px] text-[#6F6F6F] mb-3">
@@ -199,12 +199,12 @@ export default function AdminReviewDetailPage() {
             {/* 원본 뷰어 */}
             {detail.s3_key && (
               <div className="bg-white border border-[#EFEFEF] rounded-2xl p-6">
-                <h3 className="text-[14px] font-bold text-[#1F1F1F] mb-3">원본 증빙</h3>
+                <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-3">원본 증빙</h3>
                 <div className="bg-[#F8FAFC] rounded-xl p-4 text-center border border-[#EFEFEF]">
                   <div className="text-[12px] text-[#6F6F6F] font-mono break-all mb-2">
                     {detail.file_name ?? detail.s3_key}
                   </div>
-                  <div className="text-[11px] text-[#9B9B9B]">
+                  <div className="text-[12px] text-[#9B9B9B]">
                     S3 Key: {detail.s3_key.substring(0, 40)}...
                   </div>
                 </div>
@@ -224,19 +224,19 @@ export default function AdminReviewDetailPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                   <div className="bg-[#F8FAFC] rounded-xl p-3 text-center border border-[#EFEFEF]">
-                    <div className="text-[11px] text-[#6F6F6F] font-mono uppercase mb-1">위험도</div>
+                    <div className="text-[12px] text-[#6F6F6F] font-mono uppercase mb-1">위험도</div>
                     <div className="text-[20px] font-bold text-[#EF4444]">
                       {((detail.risk_score ?? 0) * 100).toFixed(0)}%
                     </div>
                   </div>
                   <div className="bg-[#F8FAFC] rounded-xl p-3 text-center border border-[#EFEFEF]">
-                    <div className="text-[11px] text-[#6F6F6F] font-mono uppercase mb-1">공공API</div>
+                    <div className="text-[12px] text-[#6F6F6F] font-mono uppercase mb-1">공공API</div>
                     <div className="text-[20px] font-bold text-[#10B981]">
                       {publicApiMatch === true ? '일치' : publicApiMatch === false ? '불일치' : '-'}
                     </div>
                   </div>
                   <div className="bg-[#F8FAFC] rounded-xl p-3 text-center border border-[#EFEFEF]">
-                    <div className="text-[11px] text-[#6F6F6F] font-mono uppercase mb-1">권장판정</div>
+                    <div className="text-[12px] text-[#6F6F6F] font-mono uppercase mb-1">권장판정</div>
                     <div className="text-[15px] font-bold text-[#5F0080]">
                       {recommendation ?? '-'}
                     </div>
@@ -265,7 +265,7 @@ export default function AdminReviewDetailPage() {
                     <div className="space-y-1">
                       {forgerySignals.map((s, i) => (
                         <div key={i} className="flex items-center gap-2 text-[13px] text-[#991B1B] bg-red-50 rounded-lg px-3 py-1.5">
-                          <span className="text-[11px]">⚠️</span>
+                          <span className="text-[12px]">⚠️</span>
                           {s}
                         </div>
                       ))}
@@ -287,20 +287,20 @@ export default function AdminReviewDetailPage() {
                   <button
                     onClick={() => handleQuickAction('approve')}
                     disabled={submitting}
-                    className="mb-btn mb-btn-primary text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50"
+                    className="mb-btn mb-btn-primary text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50"
                   >
                     {submitting && action === 'approve' ? '처리 중...' : '승인'}
                   </button>
                   <button
                     onClick={() => handleQuickAction('reject')}
                     disabled={submitting}
-                    className="px-6 py-2.5 rounded-xl text-[14px] font-medium border border-[#EF4444] text-[#EF4444] hover:bg-red-50 disabled:opacity-50"
+                    className="px-6 py-2.5 rounded-xl text-[15px] font-medium border border-[#EF4444] text-[#EF4444] hover:bg-red-50 disabled:opacity-50"
                   >
                     {submitting && action === 'reject' ? '처리 중...' : '반려'}
                   </button>
                   <button
                     onClick={() => setAction('request_more')}
-                    className="px-6 py-2.5 rounded-xl text-[14px] font-medium border border-[#EFEFEF] text-[#6F6F6F] hover:bg-gray-50"
+                    className="px-6 py-2.5 rounded-xl text-[15px] font-medium border border-[#EFEFEF] text-[#6F6F6F] hover:bg-gray-50"
                   >
                     추가 자료 요청
                   </button>
@@ -314,12 +314,12 @@ export default function AdminReviewDetailPage() {
                       onChange={(e) => setReason(e.target.value)}
                       placeholder="처리 사유를 입력하세요..."
                       rows={3}
-                      className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[14px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+                      className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
                     />
                     <button
                       onClick={handleAction}
                       disabled={submitting || !reason.trim()}
-                      className="mb-btn mb-btn-primary text-[14px] px-5 py-2 rounded-xl disabled:opacity-50"
+                      className="mb-btn mb-btn-primary text-[15px] px-5 py-2 rounded-xl disabled:opacity-50"
                     >
                       {submitting ? '처리 중...' : '확인'}
                     </button>
@@ -337,7 +337,7 @@ export default function AdminReviewDetailPage() {
         <div className="pt-4 border-t border-[#EFEFEF]">
           <button
             onClick={() => navigate('/admin/reviews')}
-            className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
+            className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
           >
             목록으로
           </button>

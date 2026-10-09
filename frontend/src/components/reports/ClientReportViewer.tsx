@@ -105,7 +105,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   <div className="text-[12px] text-[#6F6F6F] font-mono mb-1">
                     INSIGHT {String(i + 1).padStart(2, '0')}
                   </div>
-                  <p className="text-[14px] text-[#1F1F1F] leading-relaxed">{insight}</p>
+                  <p className="text-[15px] text-[#1F1F1F] leading-relaxed">{insight}</p>
                 </div>
               ))}
             </div>
@@ -128,7 +128,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
         <div className="flex items-center gap-3 pt-4 border-t border-[#EFEFEF]">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[14px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+            className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
           >
             {closeLabel}
           </button>
@@ -138,7 +138,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
               href={report.pdf_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[14px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 다운로드
             </a>
@@ -153,14 +153,14 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
                   body: 'PDF 생성 기능은 추후 제공됩니다.',
                 })
               }
-              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[14px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-white border border-[#EFEFEF] text-[15px] text-[#1F1F1F] hover:bg-[#F5F5F5] transition-colors"
             >
               PDF 생성 (준비 중)
             </button>
           ) : null}
         </div>
 
-        <p className="text-center text-[11px] text-[#9B9B9B] pb-4">
+        <p className="text-center text-[12px] text-[#9B9B9B] pb-4">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       </div>

@@ -19,7 +19,7 @@ interface Props {
 export function StatusBadge({ status }: Props) {
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${STATUS_CLASSES[status]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${STATUS_CLASSES[status]}`}
     >
       {sessionStatusLabel(status)}
     </span>

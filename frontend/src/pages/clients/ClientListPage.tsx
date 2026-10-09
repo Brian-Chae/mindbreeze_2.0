@@ -142,7 +142,7 @@ export default function ClientListPage() {
                       </p>
                     </div>
                     {c.last_session_at && (
-                      <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080] text-[11px] font-mono">
+                      <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080] text-[12px] font-mono">
                         {new Date(c.last_session_at).toLocaleDateString('ko-KR')}
                       </span>
                     )}
@@ -152,7 +152,7 @@ export default function ClientListPage() {
                       {c.concerns.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-[11px] rounded-full"
+                          className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-[12px] rounded-full"
                         >
                           {tag}
                         </span>

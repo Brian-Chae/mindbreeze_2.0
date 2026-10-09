@@ -119,7 +119,7 @@ export function PreCheckinPanel({
     return (
       <section>
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5F0080] text-[11px] font-bold text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#5F0080] text-[12px] font-bold text-white">
             ✓
           </span>
           <h2 className="text-xl font-semibold tracking-tight text-white">지금, 어떤 기분인가요?</h2>
@@ -175,7 +175,7 @@ export function PreCheckinPanel({
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     <span>{step}</span>
-                    <span className="mt-0.5 text-[10px] font-medium leading-tight opacity-80">
+                    <span className="mt-0.5 text-[12px] font-medium leading-tight opacity-80">
                       {axis.steps[step]}
                     </span>
                   </button>

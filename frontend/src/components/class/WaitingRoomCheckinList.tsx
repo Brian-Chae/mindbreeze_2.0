@@ -18,7 +18,7 @@ export function WaitingRoomCheckinList({ entries }: WaitingRoomCheckinListProps)
     <div className="rounded-2xl bg-white/5 p-5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-white">입장 전 체크인</h3>
-        <span className="rounded-full bg-[#5F0080]/25 px-2.5 py-1 text-[11px] font-semibold text-[#D9B8F2]">
+        <span className="rounded-full bg-[#5F0080]/25 px-2.5 py-1 text-[12px] font-semibold text-[#D9B8F2]">
           {entries.length}명 대기 중
         </span>
       </div>
@@ -37,7 +37,7 @@ export function WaitingRoomCheckinList({ entries }: WaitingRoomCheckinListProps)
             <p className="text-sm font-semibold text-white">
               {entry.nickname ?? '참가자'}
               {!entry.checkin && (
-                <span className="ml-2 text-[11px] font-normal text-white/50">체크인 대기 중</span>
+                <span className="ml-2 text-[12px] font-normal text-white/50">체크인 대기 중</span>
               )}
             </p>
             {entry.checkin && (

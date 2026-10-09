@@ -30,10 +30,10 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
   return (
     <section className="rounded-2xl border border-[#EFEFEF] bg-white p-5">
       <div className="mb-4">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
+        <p className="font-mono text-[12px] uppercase tracking-widest text-[#5F0080]/70">
           eeg timeline
         </p>
-        <h3 className="mt-1 text-[14px] font-bold text-[#1F1F1F]">뇌파 트렌드</h3>
+        <h3 className="mt-1 text-[15px] font-bold text-[#1F1F1F]">뇌파 트렌드</h3>
         {!dense && (
           <p className="mt-1 text-[12px] text-[#6F6F6F]">
             세션 중 집중·이완·스트레스 추이 (참고)
@@ -46,19 +46,19 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
           <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" />
           <XAxis
             dataKey="min"
-            tick={{ fontSize: 11, fill: '#6F6F6F' }}
+            tick={{ fontSize: 12, fill: '#6F6F6F' }}
             axisLine={{ stroke: '#EFEFEF' }}
             tickLine={false}
             label={{
               value: '분',
               position: 'insideBottomRight',
               offset: -5,
-              fontSize: 11,
+              fontSize: 12,
               fill: '#9B9B9B',
             }}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: '#6F6F6F' }}
+            tick={{ fontSize: 12, fill: '#6F6F6F' }}
             axisLine={false}
             tickLine={false}
             domain={[0, 100]}

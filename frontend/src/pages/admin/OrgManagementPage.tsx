@@ -28,11 +28,11 @@ interface ResendInviteResponse {
 
 function VerificationBadge({ verified }: { verified: boolean }) {
   return verified ? (
-    <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[11px] font-bold text-[#065F46]">
+    <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[12px] font-bold text-[#065F46]">
       인증됨
     </span>
   ) : (
-    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-bold text-[#92400E]">
+    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[12px] font-bold text-[#92400E]">
       미인증
     </span>
   );
@@ -201,7 +201,7 @@ export default function OrgManagementPage() {
 
       <section className="mb-8 rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
         <div className="mb-5">
-          <h2 className="text-[17px] font-bold text-[#1F1F1F]">새 기관 등록</h2>
+          <h2 className="text-[18px] font-bold text-[#1F1F1F]">새 기관 등록</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
             기관과 주 담당자를 등록하면 상담사용 기관 코드가 발급되고, 담당자에게 초대 메일이 발송됩니다.
           </p>
@@ -219,7 +219,7 @@ export default function OrgManagementPage() {
                 required
                 maxLength={200}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
               />
             </label>
             <label className="block">
@@ -233,7 +233,7 @@ export default function OrgManagementPage() {
                 placeholder="02-0000-0000"
                 maxLength={20}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
               />
             </label>
             <label className="block md:col-span-2">
@@ -247,13 +247,13 @@ export default function OrgManagementPage() {
                 placeholder="기관 주소"
                 maxLength={300}
                 disabled={creating}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
               />
             </label>
           </div>
 
           <div className="rounded-xl border border-[#DDDEE7] bg-[#FAFAFC] p-4">
-            <h3 className="text-[14px] font-bold text-[#1F1F1F]">주 담당자 정보</h3>
+            <h3 className="text-[15px] font-bold text-[#1F1F1F]">주 담당자 정보</h3>
             <p className="mt-1 text-[12px] text-[#6F6F6F]">
               담당자 이메일로 비밀번호 설정 링크가 발송됩니다.
             </p>
@@ -268,7 +268,7 @@ export default function OrgManagementPage() {
                   required
                   maxLength={100}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
                 />
               </label>
               <label className="block">
@@ -281,7 +281,7 @@ export default function OrgManagementPage() {
                   required
                   maxLength={200}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
                 />
               </label>
               <label className="block">
@@ -295,7 +295,7 @@ export default function OrgManagementPage() {
                   placeholder="010-0000-0000"
                   maxLength={20}
                   disabled={creating}
-                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+                  className="w-full rounded-xl border border-[#EFEFEF] bg-white px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
                 />
               </label>
             </div>
@@ -305,7 +305,7 @@ export default function OrgManagementPage() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[15px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {creating ? '등록 중...' : '기관 등록 및 초대 발송'}
             </button>
@@ -341,7 +341,7 @@ export default function OrgManagementPage() {
               </p>
               <div className="mt-3 space-y-1">
                 <div className="text-[15px] font-semibold text-[#1F1F1F]">{createdResult.admin.name}</div>
-                <div className="text-[14px] text-[#6F6F6F]">{createdResult.admin.email}</div>
+                <div className="text-[15px] text-[#6F6F6F]">{createdResult.admin.email}</div>
               </div>
             </div>
           </div>
@@ -350,7 +350,7 @@ export default function OrgManagementPage() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[17px] font-bold text-[#1F1F1F]">등록 기관</h2>
+          <h2 className="text-[18px] font-bold text-[#1F1F1F]">등록 기관</h2>
           <span className="text-[13px] text-[#6F6F6F]">총 {organizations.length}개</span>
         </div>
 

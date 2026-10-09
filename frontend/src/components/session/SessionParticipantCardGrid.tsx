@@ -81,18 +81,18 @@ const ParticipantCard = memo(function ParticipantCard({
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-1">
             {row.is_guest && (
-              <span className="inline-block rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[10px] font-medium text-[#6F6F6F]">
+              <span className="inline-block rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[12px] font-medium text-[#6F6F6F]">
                 게스트
               </span>
             )}
             {/* SDD-094: 손들기/발언권 상태 — 부여·해제는 발언권 관리 패널에서 */}
             {row.raise_hand && (
-              <span className="inline-block rounded-full bg-[#F5E2B8] px-2 py-0.5 text-[10px] font-semibold text-[#8A6B1F]">
+              <span className="inline-block rounded-full bg-[#F5E2B8] px-2 py-0.5 text-[12px] font-semibold text-[#8A6B1F]">
                 🙋 손들기
               </span>
             )}
             {row.speaking && (
-              <span className="inline-block rounded-full bg-[#59CE9026] px-2 py-0.5 text-[10px] font-semibold text-[#2F9E68]">
+              <span className="inline-block rounded-full bg-[#59CE9026] px-2 py-0.5 text-[12px] font-semibold text-[#2F9E68]">
                 🎤 발언 중
               </span>
             )}
@@ -102,7 +102,7 @@ const ParticipantCard = memo(function ParticipantCard({
           </div>
         </div>
         <span
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${BAND_BADGE_CLASS[bandState]}`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ${BAND_BADGE_CLASS[bandState]}`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${BAND_DOT_CLASS[bandState]}`}
@@ -151,7 +151,7 @@ const ParticipantCard = memo(function ParticipantCard({
             key={item.label}
             className="rounded-xl bg-[#F2F3F8] px-2 py-2 text-center"
           >
-            <p className="text-[10px] font-medium text-[#6F6F6F]">{item.label}</p>
+            <p className="text-[12px] font-medium text-[#6F6F6F]">{item.label}</p>
             <p className="mt-0.5 text-[15px] font-bold tabular-nums text-[#1F1F1F]">
               {item.value}
             </p>

@@ -59,20 +59,20 @@ function formatDateTime(iso: string | null | undefined): string {
 function StatusBadge({ status }: { status: DisplayStatus }) {
   if (status === 'active') {
     return (
-      <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[11px] font-bold text-[#065F46]">
+      <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[12px] font-bold text-[#065F46]">
         활성
       </span>
     );
   }
   if (status === 'suspended') {
     return (
-      <span className="inline-flex items-center rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-bold text-[#991B1B]">
+      <span className="inline-flex items-center rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[12px] font-bold text-[#991B1B]">
         정지
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-bold text-[#92400E]">
+    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[12px] font-bold text-[#92400E]">
       대기
     </span>
   );
@@ -105,7 +105,7 @@ function StatusChangeDialog({
         aria-labelledby="status-change-title"
         className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
       >
-        <h3 id="status-change-title" className="text-[17px] font-bold text-[#1F1F1F]">
+        <h3 id="status-change-title" className="text-[18px] font-bold text-[#1F1F1F]">
           {isSuspend ? '상담사 비활성화' : '상담사 활성화'}
         </h3>
         <p className="mt-2 text-[13px] leading-relaxed text-[#6F6F6F]">
@@ -121,7 +121,7 @@ function StatusChangeDialog({
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             placeholder="예: 휴직 처리에 따른 계정 비활성화"
-            className="mt-1.5 w-full rounded-xl border border-[#DDDEE7] p-3 text-[14px] font-normal text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+            className="mt-1.5 w-full rounded-xl border border-[#DDDEE7] p-3 text-[15px] font-normal text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
           />
         </label>
         <div className="mt-5 flex justify-end gap-2">
@@ -129,7 +129,7 @@ function StatusChangeDialog({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded-xl border border-[#DDDEE7] px-4 py-2.5 text-[14px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC] disabled:opacity-60"
+            className="rounded-xl border border-[#DDDEE7] px-4 py-2.5 text-[15px] font-semibold text-[#6F6F6F] hover:bg-[#F8FAFC] disabled:opacity-60"
           >
             취소
           </button>
@@ -137,7 +137,7 @@ function StatusChangeDialog({
             type="button"
             onClick={() => onConfirm(reason.trim())}
             disabled={busy || !reason.trim()}
-            className={`rounded-xl px-4 py-2.5 text-[14px] font-semibold text-white disabled:opacity-50 ${
+            className={`rounded-xl px-4 py-2.5 text-[15px] font-semibold text-white disabled:opacity-50 ${
               isSuspend ? 'bg-[#B3261E] hover:bg-[#991B1B]' : 'bg-[#1F8A5B] hover:bg-[#065F46]'
             }`}
           >
@@ -191,7 +191,7 @@ function CounselorDetailPanel({
     <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-[17px] font-bold tracking-tight text-[#1F1F1F]">
+          <h2 className="text-[18px] font-bold tracking-tight text-[#1F1F1F]">
             {counselor.name}
             <span className="ml-2 align-middle">
               <StatusBadge status={displayStatusOf(counselor)} />
@@ -219,7 +219,7 @@ function CounselorDetailPanel({
           ['활동 형태', counselor.has_personal_office ? '개인 상담소 운영' : '기관 소속'],
         ].map(([k, v]) => (
           <div key={k} className="rounded-xl bg-[#F8FAFC] p-3">
-            <dt className="text-[11px] text-[#6F6F6F]">{k}</dt>
+            <dt className="text-[12px] text-[#6F6F6F]">{k}</dt>
             <dd className="mt-0.5 font-semibold text-[#1F1F1F]">{v}</dd>
           </div>
         ))}
@@ -277,7 +277,7 @@ function CounselorDetailPanel({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-left text-[13px]">
               <thead>
-                <tr className="border-b border-[#EFEFEF] text-[11px] text-[#6F6F6F]">
+                <tr className="border-b border-[#EFEFEF] text-[12px] text-[#6F6F6F]">
                   {['제목', '유형', '상태', '일시', '참여자'].map((h) => (
                     <th key={h} className="px-3 py-2 font-medium">{h}</th>
                   ))}
@@ -305,7 +305,7 @@ function CounselorDetailPanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px] text-left text-[13px]">
             <thead>
-              <tr className="border-b border-[#EFEFEF] text-[11px] text-[#6F6F6F]">
+              <tr className="border-b border-[#EFEFEF] text-[12px] text-[#6F6F6F]">
                 {['제목', '유형', '상태', '생성일'].map((h) => (
                   <th key={h} className="px-3 py-2 font-medium">{h}</th>
                 ))}
@@ -424,7 +424,7 @@ export default function OrgCounselorsPage() {
           {/* SDD-077 재사용 — 상담사 정보 수정 */}
           {editing && orgId && (
             <section className="rounded-2xl border border-[#DDDEE7] bg-white p-6">
-              <h2 className="mb-4 text-[17px] font-bold text-[#1F1F1F]">
+              <h2 className="mb-4 text-[18px] font-bold text-[#1F1F1F]">
                 정보 수정 — {editing.name}
               </h2>
               <CounselorInfoEditor
@@ -446,13 +446,13 @@ export default function OrgCounselorsPage() {
               placeholder="이름·이메일·코드 검색"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="h-10 min-w-0 flex-1 rounded-xl border border-[#DDDEE7] bg-white px-3.5 text-[14px] text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
+              className="h-10 min-w-0 flex-1 rounded-xl border border-[#DDDEE7] bg-white px-3.5 text-[15px] text-[#1F1F1F] focus:border-[#5F0080] focus:outline-none"
             />
             <select
               aria-label="역할 필터"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[14px] text-[#1F1F1F]"
+              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
             >
               <option value="">전체 역할</option>
               <option value="counselor">상담사</option>
@@ -462,7 +462,7 @@ export default function OrgCounselorsPage() {
               aria-label="상태 필터"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[14px] text-[#1F1F1F]"
+              className="h-10 rounded-xl border border-[#DDDEE7] bg-white px-3 text-[15px] text-[#1F1F1F]"
             >
               <option value="">전체 상태</option>
               <option value="active">활성</option>
@@ -482,7 +482,7 @@ export default function OrgCounselorsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
-              <table className="w-full min-w-[720px] text-[14px]">
+              <table className="w-full min-w-[720px] text-[15px]">
                 <thead>
                   <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
                     {['이름', '이메일', '코드', '역할', '상태', '관리'].map((h) => (
@@ -507,7 +507,7 @@ export default function OrgCounselorsPage() {
                         <td className="px-5 py-3.5 font-medium text-[#1F1F1F]">
                           {c.name}
                           {c.has_personal_office && (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-[#EDE9FE] px-2 py-0.5 text-[10px] font-bold text-[#5B21B6]">
+                            <span className="ml-2 inline-flex items-center rounded-full bg-[#EDE9FE] px-2 py-0.5 text-[12px] font-bold text-[#5B21B6]">
                               개인 상담소
                             </span>
                           )}

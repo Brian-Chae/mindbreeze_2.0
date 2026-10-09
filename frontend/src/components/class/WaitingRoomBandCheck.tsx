@@ -52,7 +52,7 @@ export function WaitingRoomBandCheck({
     <section>
       <div className="flex items-center gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-white">LINK BAND 연결</h2>
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/60">
+        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[12px] font-medium text-white/60">
           선택
         </span>
       </div>

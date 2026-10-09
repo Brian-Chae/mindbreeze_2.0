@@ -34,7 +34,7 @@ export function ClassAudioPanel({ state, actions, enabled, connected }: ClassAud
           대기실 BGM
         </p>
         <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ${
             state.playing && broadcastOk
               ? 'bg-[#59CE9026] text-[#2F9E68]'
               : 'bg-white/10 text-white/60'

@@ -5,6 +5,15 @@
 @tailwind utilities;
 
 @layer base {
+  /* SDD-196: iOS Safari는 16px 미만 입력칸에 포커스하면 화면을 자동 확대한다 — 모바일 폭에서 일괄 16px. */
+  @media (max-width: 767px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
   body {
     @apply bg-mb-bg text-mb-fg font-mb-sans;
     -webkit-font-smoothing: antialiased;

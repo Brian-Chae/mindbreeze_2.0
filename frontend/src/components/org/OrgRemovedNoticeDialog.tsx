@@ -60,8 +60,8 @@ export default function OrgRemovedNoticeDialog() {
         aria-labelledby="org-removed-title"
         className="bg-white rounded-2xl p-6 max-w-md mx-4 w-full"
       >
-        <h2 id="org-removed-title" className="text-[17px] font-bold text-[#1F1F1F] mb-3">소속 변경 안내</h2>
-        <p className="text-[14px] leading-relaxed text-[#4A4A4A] whitespace-pre-line">
+        <h2 id="org-removed-title" className="text-[18px] font-bold text-[#1F1F1F] mb-3">소속 변경 안내</h2>
+        <p className="text-[15px] leading-relaxed text-[#4A4A4A] whitespace-pre-line">
           {orgName ? `'${orgName}' 기관에서 소속이 해제되어` : '기관 소속이 해제되어'}
           {'\n'}
           {officeName ? `'${officeName}'(개인 상담소)로 등록되었습니다.` : '개인 상담소로 등록되었습니다.'}
@@ -74,7 +74,7 @@ export default function OrgRemovedNoticeDialog() {
           <button
             type="button"
             onClick={() => void handleConfirm()}
-            className="px-5 py-2 text-[14px] bg-[#5F0080] text-white font-semibold rounded-lg hover:bg-[#3F0055] transition-colors"
+            className="px-5 py-2 text-[15px] bg-[#5F0080] text-white font-semibold rounded-lg hover:bg-[#3F0055] transition-colors"
           >
             확인
           </button>

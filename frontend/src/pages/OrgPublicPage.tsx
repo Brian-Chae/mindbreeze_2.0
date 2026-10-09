@@ -54,7 +54,7 @@ function AccessCodeCopyButton({ code }: { code: string }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="inline-flex items-center justify-center min-h-[44px] px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="inline-flex items-center justify-center min-h-[44px] px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[12px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -65,7 +65,7 @@ function AccessCodeCopyButton({ code }: { code: string }) {
 function TypeBadge({ type }: { type: SessionType }) {
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[type]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[type]}`}
     >
       {TYPE_LABELS[type]}
     </span>
@@ -107,7 +107,7 @@ function CounselorCard({ name, specialties }: { name: string; specialties: strin
           {specialties.map((specialty) => (
             <span
               key={specialty}
-              className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide bg-[#F5EDFC] text-[#5F0080]"
+              className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide bg-[#F5EDFC] text-[#5F0080]"
             >
               {specialty}
             </span>
@@ -228,7 +228,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[14px]">
+              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[15px]">
                 등록된 상담사·명상지도사가 없습니다.
               </div>
             )}
@@ -239,7 +239,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
             <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-[22px] font-bold text-[#1F1F1F]">진행중 · 예정 클래스</h2>
-                <p className="text-[14px] text-[#6F6F6F] mt-1">
+                <p className="text-[15px] text-[#6F6F6F] mt-1">
                   클래스 코드를 복사한 뒤 아래 &quot;클래스 코드로 참여&quot;에서 입력하세요.
                 </p>
               </div>
@@ -251,7 +251,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[14px]">
+              <div className="bg-white border border-[#DDDEE7] rounded-2xl p-6 text-[#6F6F6F] text-[15px]">
                 현재 진행중이거나 예정된 클래스가 없습니다.
               </div>
             )}
@@ -260,7 +260,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
           {/* 하단 CTA */}
           <section className="bg-white border border-[#DDDEE7] rounded-2xl p-8 text-center">
             <h2 className="text-[20px] font-bold text-[#1F1F1F] mb-2">클래스 코드로 참여</h2>
-            <p className="text-[14px] text-[#6F6F6F] mb-6">
+            <p className="text-[15px] text-[#6F6F6F] mb-6">
               상담사·지도사가 안내한 6자리 클래스 코드를 입력하면 바로 참여할 수 있습니다.
             </p>
             <Link

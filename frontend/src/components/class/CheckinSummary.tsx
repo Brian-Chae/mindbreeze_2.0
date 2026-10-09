@@ -27,7 +27,7 @@ export function CheckinSummary({ arousal, valence, emotion, note }: CheckinSumma
             return (
               <span
                 key={axis.key}
-                className="rounded-full bg-[#5F0080]/25 px-2.5 py-1 text-[11px] font-medium text-[#D9B8F2]"
+                className="rounded-full bg-[#5F0080]/25 px-2.5 py-1 text-[12px] font-medium text-[#D9B8F2]"
               >
                 {axis.label} {value} · {label}
               </span>

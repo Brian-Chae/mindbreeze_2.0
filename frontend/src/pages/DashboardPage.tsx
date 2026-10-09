@@ -67,7 +67,7 @@ function TypeBadge({ cls }: { cls: ClassSummary }) {
       : TYPE_LABELS[cls.type as SessionType];
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[cls.type as SessionType] ?? 'bg-[#F2F3F8] text-[#6F6F6F]'}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[cls.type as SessionType] ?? 'bg-[#F2F3F8] text-[#6F6F6F]'}`}
     >
       {label}
     </span>
@@ -107,7 +107,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
   return (
     <div className="bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <Link to={`/sessions/${cls.id}`} className="font-bold text-[14px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
+        <Link to={`/sessions/${cls.id}`} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
           {cls.title || '제목 없음'}
         </Link>
         <StatusBadge status={cls.status} />
@@ -317,7 +317,7 @@ export default function DashboardPage() {
       {showProfileBanner && (
         <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-[#DDD0EA] bg-[#F5EDFC] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[14px] font-bold text-[#5F0080]">프로필을 완성해보세요</p>
+            <p className="text-[15px] font-bold text-[#5F0080]">프로필을 완성해보세요</p>
             <p className="mt-1 text-[13px] text-[#6F6F6F]">
               자격증명·경력 등은 원하실 때 설정에서 입력하실 수 있습니다.
             </p>
@@ -352,7 +352,7 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-3">
                 {nextSession ? (
                   <div className="flex flex-col rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:min-h-[248px]">
-                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
+                    <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">
                       <span className="h-2 w-2 rounded-full bg-[#01f0c8]" />
                       {nextSession.status === 'in_progress' || nextSession.status === 'open'
                         ? '진행 중'
@@ -380,14 +380,14 @@ export default function DashboardPage() {
                         <button
                           type="button"
                           onClick={() => handleEnterLive(nextSession.id)}
-                          className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+                          className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                         >
                           입장
                         </button>
                       ) : (
                         <Link
                           to={`/sessions/${nextSession.id}`}
-                          className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+                          className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                         >
                           상세 보기
                         </Link>
@@ -396,7 +396,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   <div className="flex flex-col rounded-2xl bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:min-h-[248px]">
-                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">
+                    <div className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">
                       다음 세션
                     </div>
                     <h3 className="mt-1 text-[18px] font-extrabold leading-tight text-white sm:text-[20px]">
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                     <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
                       <Link
                         to="/sessions/new"
-                        className="rounded-lg bg-white px-5 py-2.5 text-[14px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+                        className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                       >
                         클래스 바로 열기
                       </Link>
@@ -442,7 +442,7 @@ export default function DashboardPage() {
             <section>
               <div className="mb-4 flex items-baseline justify-between">
                 <h2 className="font-extrabold text-[18px] text-[#1F1F1F] tracking-tight">오늘 · 다가오는 일정</h2>
-                <span className="font-mono text-[11px] text-[#6F6F6F]">오늘 {todaySessions.length}건</span>
+                <span className="font-mono text-[12px] text-[#6F6F6F]">오늘 {todaySessions.length}건</span>
               </div>
               {upcomingSessions.length > 0 ? (
                 <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5">
@@ -456,17 +456,17 @@ export default function DashboardPage() {
                         className="flex items-center gap-3 border-b border-[#F0ECF2] py-4 last:border-0"
                       >
                         <div className="w-[76px] shrink-0">
-                          <div className="text-[14.5px] font-extrabold text-[#1F1F1F]">
+                          <div className="text-[15px] font-extrabold text-[#1F1F1F]">
                             {formatTime(cls.scheduled_at)}
                           </div>
-                          <div className="text-[11px] font-semibold text-[#767676]">
+                          <div className="text-[12px] font-semibold text-[#767676]">
                             {cls.scheduled_at
                               ? `${new Date(cls.scheduled_at).getMonth() + 1}/${new Date(cls.scheduled_at).getDate()}`
                               : ''}
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                          <div className="truncate text-[15px] font-bold text-[#1F1F1F]">
                             {cls.title || '제목 없음'}
                           </div>
                           <div className="truncate text-[12px] text-[#6F6F6F]">
@@ -546,28 +546,28 @@ export default function DashboardPage() {
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F8A5B]">
                   {data.in_progress_classes}
                 </div>
-                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">입장하기 →</div>
+                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">입장하기 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">검토 대기</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#5F0080]">
                   {pendingReviewCount}
                 </div>
-                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">리포트 검토 →</div>
+                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">리포트 검토 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">오늘 예정</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {todaySessions.length}
                 </div>
-                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">일정 보기 →</div>
+                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">일정 보기 →</div>
               </div>
               <div className="rounded-2xl border border-[#E8E3EC] bg-white p-4">
                 <div className="text-[12px] font-semibold text-[#6F6F6F]">총 참여자</div>
                 <div className="mt-2 text-[30px] font-extrabold tracking-tight text-[#1F1F1F]">
                   {data.total_participants.toLocaleString('ko-KR')}
                 </div>
-                <div className="mt-1 text-[11px] font-bold text-[#5F0080]">내담자 관리 →</div>
+                <div className="mt-1 text-[12px] font-bold text-[#5F0080]">내담자 관리 →</div>
               </div>
             </div>
 
@@ -596,7 +596,7 @@ export default function DashboardPage() {
                             {room.display_name || room.peer_name || '내담자'}
                           </span>
                           {(room.unread_count ?? 0) > 0 && (
-                            <span className="rounded-full bg-[#5F0080] px-1.5 text-[10px] font-extrabold text-white">
+                            <span className="rounded-full bg-[#5F0080] px-1.5 text-[12px] font-extrabold text-white">
                               {room.unread_count}
                             </span>
                           )}
@@ -605,7 +605,7 @@ export default function DashboardPage() {
                           {room.last_message?.content || '새로운 대화가 없습니다'}
                         </div>
                       </div>
-                      <span className="shrink-0 text-[11px] text-[#767676]">
+                      <span className="shrink-0 text-[12px] text-[#767676]">
                         {relativeTime(room.last_message_at ?? null)}
                       </span>
                     </Link>
@@ -634,7 +634,7 @@ export default function DashboardPage() {
                       <div className="min-w-0 flex-1">
                         <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
                         {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
-                        <div className="text-[11px] text-[#767676]">{relativeTime(n.created_at)}</div>
+                        <div className="text-[12px] text-[#767676]">{relativeTime(n.created_at)}</div>
                       </div>
                     </div>
                   ))}

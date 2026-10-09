@@ -93,7 +93,7 @@ function MarkerBadge({ label, value }: { label: string; value: string | number }
   return (
     <div className="flex items-center justify-between py-2.5 px-4 bg-[#F5EDFC] rounded-xl">
       <span className="text-[13px] font-medium text-[#1F1F1F]">{label}</span>
-      <span className="text-[14px] font-bold text-[#5F0080]">{value}</span>
+      <span className="text-[15px] font-bold text-[#5F0080]">{value}</span>
     </div>
   );
 }
@@ -262,7 +262,7 @@ export default function ReportDetailView({
           <button
             type="button"
             onClick={onListAction}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl"
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-5 py-2.5 rounded-xl"
           >
             {listActionLabel}
           </button>
@@ -273,7 +273,7 @@ export default function ReportDetailView({
             type="button"
             onClick={handleApprove}
             disabled={approving}
-            className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50"
+            className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50"
           >
             {approving ? '승인 중...' : '승인하기'}
           </button>
@@ -290,7 +290,7 @@ export default function ReportDetailView({
             onClick={handleGeneratePDF}
             disabled={printing}
             aria-busy={printing}
-            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-5 py-2.5 rounded-xl disabled:opacity-50"
+            className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-5 py-2.5 rounded-xl disabled:opacity-50"
           >
             {printing ? 'PDF 준비 중...' : 'PDF 다운로드'}
           </button>
@@ -336,7 +336,7 @@ export default function ReportDetailView({
                     {entry.participant_name}
                   </div>
                 )}
-                <p className="text-[14px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
+                <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
                   {entry.comment}
                 </p>
               </div>
@@ -391,7 +391,7 @@ export default function ReportDetailView({
                 뇌파 상세 지표 보기
               </span>
               {eegQualityLabel && (
-                <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[11px] font-medium text-[#6D547A]">
+                <span className="rounded-lg border border-[#E8D9F5] bg-white px-2.5 py-0.5 text-[12px] font-medium text-[#6D547A]">
                   {eegQualityLabel}
                 </span>
               )}
@@ -446,7 +446,7 @@ export default function ReportDetailView({
               type="button"
               onClick={handleResendEmail}
               disabled={resending || !resendEmail.trim()}
-              className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[14px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
+              className="bg-[#5F0080] text-white font-medium hover:bg-[#4A0066] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[15px] px-6 py-2.5 rounded-xl disabled:opacity-50 shrink-0"
             >
               {resending ? '발송 중...' : '발송'}
             </button>
@@ -465,7 +465,7 @@ export default function ReportDetailView({
       )}
 
       {!isCounselor && (
-        <p className="text-center text-[11px] text-[#9B9B9B] pb-4">
+        <p className="text-center text-[12px] text-[#9B9B9B] pb-4">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       )}

@@ -42,7 +42,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${styles[status] ?? 'bg-[#F3F4F6] text-[#4B5563]'}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-bold ${styles[status] ?? 'bg-[#F3F4F6] text-[#4B5563]'}`}
     >
       {STATUS_LABELS[status] ?? status}
     </span>
@@ -184,7 +184,7 @@ export default function SignupApplicationsPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white">
-          <table className="min-w-[860px] w-full text-left text-[14px]">
+          <table className="min-w-[860px] w-full text-left text-[15px]">
             <thead>
               <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
                 <th className="px-5 py-3 text-[12px] font-mono font-normal uppercase tracking-wider text-[#6F6F6F]">유형</th>
@@ -235,7 +235,7 @@ export default function SignupApplicationsPage() {
         <section className="mt-6 rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-[17px] font-bold text-[#1F1F1F]">
+              <h2 className="text-[18px] font-bold text-[#1F1F1F]">
                 {TYPE_LABELS[detail.application_type]} — {detail.organization_name}
               </h2>
               <p className="mt-1 text-[12px] font-mono text-[#9B9B9B]">신청 ID: {detail.id}</p>
@@ -243,7 +243,7 @@ export default function SignupApplicationsPage() {
             <StatusBadge status={detail.status} />
           </div>
 
-          <dl className="mt-4 grid gap-x-8 gap-y-2 text-[14px] md:grid-cols-2">
+          <dl className="mt-4 grid gap-x-8 gap-y-2 text-[15px] md:grid-cols-2">
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">신청자</dt><dd className="text-[#1F1F1F]">{detail.contact_name}</dd></div>
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">이메일</dt><dd className="text-[#1F1F1F] min-w-0 break-all">{detail.email}</dd></div>
             <div className="flex gap-2"><dt className="w-24 shrink-0 text-[#6F6F6F]">전화번호</dt><dd className="text-[#1F1F1F]">{detail.phone ?? '미입력'}</dd></div>
@@ -295,7 +295,7 @@ export default function SignupApplicationsPage() {
                           : '승인 완료 — 기관 등록은 기관 관리에서 진행하세요.',
                     )
                   }
-                  className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[14px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-[#5F0080] px-5 py-2.5 text-[15px] font-bold text-white transition-colors hover:bg-[#4B0066] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {actionLoading ? '처리 중...' : '승인'}
                 </button>
@@ -316,7 +316,7 @@ export default function SignupApplicationsPage() {
                       () => '반려 처리되었습니다.',
                     )
                   }
-                  className="rounded-xl border border-[#FCA5A5] bg-white px-5 py-2.5 text-[14px] font-bold text-[#B91C1C] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl border border-[#FCA5A5] bg-white px-5 py-2.5 text-[15px] font-bold text-[#B91C1C] transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   반려
                 </button>

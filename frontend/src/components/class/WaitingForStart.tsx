@@ -75,13 +75,13 @@ export function WaitingForStart({
         <h1 className="truncate border-l border-white/10 px-4 text-sm font-medium text-white/80">
           {title ?? '클래스'}
         </h1>
-        <span className="ml-auto shrink-0 rounded-full border border-[#dcb5ee]/20 bg-black/30 px-3 py-1 text-[11px] text-[#dcb5ee]">
+        <span className="ml-auto shrink-0 rounded-full border border-[#dcb5ee]/20 bg-black/30 px-3 py-1 text-[12px] text-[#dcb5ee]">
           {statusLabel}
         </span>
       </header>
 
       <div className="relative z-10 mx-auto flex w-full max-w-[1200px] flex-1 flex-col items-center justify-center px-6 pb-20 text-center">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-[#dcb5ee]">
+        <p className="font-mono text-[12px] uppercase tracking-widest text-[#dcb5ee]">
           A MOMENT FOR YOURSELF
         </p>
         <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
@@ -92,7 +92,7 @@ export function WaitingForStart({
         </p>
 
         <figure className="mt-12 max-w-xl">
-          <p className="text-[10px] uppercase tracking-[0.25em] text-white/40">
+          <p className="text-[12px] uppercase tracking-[0.25em] text-white/40">
             명상 한마디
           </p>
           <blockquote

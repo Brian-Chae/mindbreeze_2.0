@@ -25,7 +25,7 @@ const toDraft = (p: ClientProfile): Draft => ({
 
 const FIELD_LABEL = 'text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1';
 const INPUT_CLASS =
-  'w-full px-3 py-2 text-[14px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
+  'w-full px-3 py-2 text-[15px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
 
 const GENDER_OPTIONS = [
   { value: '', label: '선택 안 함' },
@@ -119,7 +119,7 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
       </div>
 
       {editing ? (
-        <div className="space-y-4 text-[14px]">
+        <div className="space-y-4 text-[15px]">
           <div>
             <label htmlFor={`${fid}-gender`} className={FIELD_LABEL}>성별</label>
             <select
@@ -167,7 +167,7 @@ export default function ClientProfileSection({ profile, onSave }: Props) {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[15px]">
           <div>
             <div className={FIELD_LABEL}>성별</div>
             <div className="font-medium text-[#1F1F1F]">

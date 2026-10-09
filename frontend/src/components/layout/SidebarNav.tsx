@@ -239,13 +239,13 @@ export default function SidebarNav({
             height={13}
             alt=""
           />
-          <span className="font-extrabold text-[17px] text-[#5F0080] tracking-tight">
+          <span className="font-extrabold text-[18px] text-[#5F0080] tracking-tight">
             Mind&nbsp;Breeze
           </span>
         </div>
         <div className="pl-4 flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full shrink-0 ${role === 'client' ? 'bg-[#7C3AED]' : 'bg-[#5F0080]'}`} />
-          <span className={`text-[14px] font-semibold tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
+          <span className={`text-[15px] font-semibold tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
             {roleLabel}
           </span>
         </div>
@@ -304,7 +304,7 @@ export default function SidebarNav({
       <button
         type="button"
         onClick={() => void handleLogout()}
-        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[14px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
+        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
       >
         <StrokeIcon d={ICONS.logout} />
         로그아웃

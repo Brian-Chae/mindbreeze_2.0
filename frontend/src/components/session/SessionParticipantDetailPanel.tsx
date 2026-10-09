@@ -87,13 +87,13 @@ export function SessionParticipantDetailPanel({
         {/* 헤더 */}
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70">
+            <p className="font-mono text-[12px] uppercase tracking-widest text-[#5F0080]/70">
               participant detail
             </p>
-            <h3 className="mt-1 truncate text-[17px] font-bold text-[#1F1F1F]">
+            <h3 className="mt-1 truncate text-[18px] font-bold text-[#1F1F1F]">
               {row.display_name || (row.is_guest ? '게스트' : '참가자')}
               {row.is_guest && (
-                <span className="ml-2 align-middle rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[10px] font-medium text-[#6F6F6F]">
+                <span className="ml-2 align-middle rounded-full bg-[#F2F3F8] px-2 py-0.5 text-[12px] font-medium text-[#6F6F6F]">
                   게스트
                 </span>
               )}
@@ -172,7 +172,7 @@ export function SessionParticipantDetailPanel({
                     key={item.label}
                     className="rounded-xl bg-white px-3 py-2.5 text-center"
                   >
-                    <p className="text-[10px] font-medium text-[#6F6F6F]">
+                    <p className="text-[12px] font-medium text-[#6F6F6F]">
                       {item.label}
                     </p>
                     <p className="mt-0.5 text-[16px] font-bold tabular-nums text-[#1F1F1F]">
@@ -195,7 +195,7 @@ export function SessionParticipantDetailPanel({
               {SERIES.map((s) => (
                 <span
                   key={s.key}
-                  className="flex items-center gap-1 text-[11px] text-[#6F6F6F]"
+                  className="flex items-center gap-1 text-[12px] text-[#6F6F6F]"
                 >
                   <span
                     className="inline-block h-2 w-2 rounded-full"
@@ -224,12 +224,12 @@ export function SessionParticipantDetailPanel({
                   type="number"
                   domain={['dataMin', 'dataMax']}
                   tickFormatter={(v: number) => `${Math.round(v)}분`}
-                  tick={{ fontSize: 11, fill: '#6F6F6F' }}
+                  tick={{ fontSize: 12, fill: '#6F6F6F' }}
                   axisLine={{ stroke: '#EFEFEF' }}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: '#6F6F6F' }}
+                  tick={{ fontSize: 12, fill: '#6F6F6F' }}
                   axisLine={false}
                   tickLine={false}
                 />

@@ -16,13 +16,13 @@ export function InvitedSessionCard({ session, counselorName, onConfirm }: Props)
   return (
     <div className="bg-white border-2 border-[#5F0080] rounded-2xl p-[22px] shadow-[0_0_0_4px_rgba(95,0,128,0.08)]">
       <div className="flex items-center justify-between mb-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5F0080] px-2.5 py-1 text-[11px] font-bold text-white">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5F0080] px-2.5 py-1 text-[12px] font-bold text-white">
           <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" aria-hidden />
           초대된 클래스
         </span>
         <StatusBadge status={session.status} />
       </div>
-      <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-1 truncate">
+      <h3 className="text-[18px] font-bold text-[#1F1F1F] mb-1 truncate">
         {session.title || '제목 없음'}
       </h3>
       {counselorName && (

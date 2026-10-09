@@ -77,7 +77,7 @@ export default function GenerationStatusBadge({
       <span
         data-testid="generation-status-badge"
         data-generation-status={failed ? 'error' : gen}
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${tone(gen, failed)}`.trim()}
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold border ${tone(gen, failed)}`.trim()}
       >
         <span aria-hidden className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${dot(gen, failed)}`} />
         {label}
@@ -85,14 +85,14 @@ export default function GenerationStatusBadge({
       {failed && generationError && (
         <span
           data-testid="generation-error-log"
-          className="inline-flex items-center gap-1 text-[11px] text-red-600 font-mono break-all"
+          className="inline-flex items-center gap-1 text-[12px] text-red-600 font-mono break-all"
           title={generationError}
         >
           {generationError}
         </span>
       )}
       {startedAt && (
-        <span className="text-[10px] text-[#9B9B9B] font-mono">시작 {startedAt}</span>
+        <span className="text-[12px] text-[#9B9B9B] font-mono">시작 {startedAt}</span>
       )}
     </div>
   );

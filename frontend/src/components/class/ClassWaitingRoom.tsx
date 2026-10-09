@@ -387,14 +387,14 @@ export function ClassWaitingRoom({
         <h1 className="truncate border-l border-white/10 px-4 text-sm font-medium text-white/80">
           {title ?? '클래스'}
         </h1>
-        <span className="ml-auto shrink-0 rounded-full border border-[#dcb5ee]/20 bg-[#dcb5ee]/5 px-3 py-1 text-[11px] text-[#dcb5ee]">
+        <span className="ml-auto shrink-0 rounded-full border border-[#dcb5ee]/20 bg-[#dcb5ee]/5 px-3 py-1 text-[12px] text-[#dcb5ee]">
           {statusLabel}
         </span>
       </header>
 
       <div className="relative z-10 mx-auto w-full max-w-[1200px] flex-1 px-4 pb-16 sm:px-6">
         <div className="pt-5 text-left">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-[#dcb5ee]">
+          <p className="font-mono text-[12px] uppercase tracking-widest text-[#dcb5ee]">
             A MOMENT FOR YOURSELF
           </p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
@@ -447,7 +447,7 @@ export function ClassWaitingRoom({
             <div className="flex items-center justify-between gap-2">
               <h2 className="text-[15px] font-semibold text-white">마이크</h2>
               <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${
                   micOn
                     ? 'bg-[#59CE9026] text-[#B8F5D6]'
                     : micProblem
@@ -591,7 +591,7 @@ export function ClassWaitingRoom({
                 <div className="absolute h-36 w-36 rounded-full border border-[#dcb5ee]/15" />
                 <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#dcb5ee]/25 text-4xl font-extralight text-[#dcb5ee]">✧</div>
               </div>
-              <p className="text-[9px] tracking-[0.2em] text-[#dcb5ee]">YOUR SESSION</p>
+              <p className="text-[12px] tracking-[0.2em] text-[#dcb5ee]">YOUR SESSION</p>
               <h2 className="mt-2 text-lg font-medium text-[#F7F4F0]">{title ?? '클래스'}</h2>
               <p className="mt-2 text-xs text-[#bcaec5]">참여 코드 · {classCode}</p>
             </section>
@@ -600,7 +600,7 @@ export function ClassWaitingRoom({
             <div className="flex items-center gap-2">
               <span
                 aria-hidden="true"
-                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold ${
                   nicknameDone ? 'bg-[#5F0080] text-white' : 'bg-white/10 text-white/70'
                 }`}
               >

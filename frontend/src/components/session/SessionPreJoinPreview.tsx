@@ -293,7 +293,7 @@ export function SessionPreJoinPreview({
     <section className={dark ? "rounded-2xl border border-white/10 bg-[#211329] p-5 sm:p-6" : "rounded-2xl border border-[#EFEFEF] bg-white p-5 sm:p-6"}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className={dark ? "font-mono text-[11px] uppercase tracking-widest text-[#DEC0EB]" : "font-mono text-[11px] uppercase tracking-widest text-[#5F0080]/70"}>
+          <p className={dark ? "font-mono text-[12px] uppercase tracking-widest text-[#DEC0EB]" : "font-mono text-[12px] uppercase tracking-widest text-[#5F0080]/70"}>
             pre-join preview
           </p>
           <h3 className={dark ? "mt-1 text-[15px] font-bold text-white" : "mt-1 text-[15px] font-bold text-[#1F1F1F]"}>
@@ -369,12 +369,12 @@ export function SessionPreJoinPreview({
                 </div>
               )}
               {cameraOn && (
-                <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
+                <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[12px] font-medium text-white">
                   {facingMode === 'user' ? '전면 카메라' : '후면 카메라'}
                 </span>
               )}
               {!micOn && (
-                <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white">
+                <span className="absolute right-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[12px] font-medium text-white">
                   🎤 꺼짐
                 </span>
               )}
@@ -468,14 +468,14 @@ export function SessionPreJoinPreview({
                         style={{ width: `${Math.round(micLevel * 100)}%` }}
                       />
                     </div>
-                    <p className={dark ? "mt-1 text-[11px] text-white/50" : "mt-1 text-[11px] text-[#9B9B9B]"}>
+                    <p className={dark ? "mt-1 text-[12px] text-white/50" : "mt-1 text-[12px] text-[#9B9B9B]"}>
                       말해보면 초록 막대가 움직입니다
                     </p>
                   </>
                 ) : (
                   <>
                     <div className={dark ? "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10" : "mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[#E5E5E5]"} />
-                    <p className={dark ? "mt-1 text-[11px] text-white/50" : "mt-1 text-[11px] text-[#9B9B9B]"}>마이크 꺼짐</p>
+                    <p className={dark ? "mt-1 text-[12px] text-white/50" : "mt-1 text-[12px] text-[#9B9B9B]"}>마이크 꺼짐</p>
                   </>
                 )}
               </div>
@@ -492,12 +492,12 @@ export function SessionPreJoinPreview({
             </div>
             <div className="flex flex-col gap-2">
               {/* SDD-085: 현재 조합 요약 라인 (§7 S-1~S-4) */}
-              <p className={dark ? "text-center text-[11px] leading-relaxed text-white/70" : "text-center text-[11px] leading-relaxed text-[#6F6F6F]"}>
+              <p className={dark ? "text-center text-[12px] leading-relaxed text-white/70" : "text-center text-[12px] leading-relaxed text-[#6F6F6F]"}>
                 {startSummaryLine(cameraOn, micOn)}
               </p>
               {!compact && startButton}
               {!compact && !canStart && !starting && startDisabledReason && (
-                <p className={dark ? "text-center text-[11px] text-white/50" : "text-center text-[11px] text-[#9B9B9B]"}>
+                <p className={dark ? "text-center text-[12px] text-white/50" : "text-center text-[12px] text-[#9B9B9B]"}>
                   {startDisabledReason}
                 </p>
               )}

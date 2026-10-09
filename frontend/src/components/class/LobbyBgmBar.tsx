@@ -25,7 +25,7 @@ export function LobbyBgmBar({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+          <p className="text-[12px] font-mono uppercase tracking-wider text-white/50">
             대기실 BGM
           </p>
           <p className="mt-0.5 truncate text-sm font-medium text-white">
@@ -41,7 +41,7 @@ export function LobbyBgmBar({
             소리 켜기
           </button>
         ) : (
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#59CE9026] px-2.5 py-1 text-[11px] font-semibold text-[#2F9E68]">
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#59CE9026] px-2.5 py-1 text-[12px] font-semibold text-[#2F9E68]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#2F9E68]" />
             재생 중
           </span>

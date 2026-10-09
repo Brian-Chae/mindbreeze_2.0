@@ -233,7 +233,7 @@ export default function ClientShell({
           <div className="md:hidden px-4 pt-4 pb-2 flex items-end justify-between gap-3">
             <div className="min-w-0">
               {sub && (
-                <div className="text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider">
+                <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
                   {sub}
                 </div>
               )}

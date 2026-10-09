@@ -32,7 +32,7 @@ const toDraft = (p: CounselorProfile): ProfileDraft => ({
 
 const FIELD_LABEL = 'text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1';
 const INPUT_CLASS =
-  'w-full px-3 py-2 text-[14px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
+  'w-full px-3 py-2 text-[15px] border border-[#DDDEE7] rounded-lg focus:outline-none focus:border-[#5F0080]';
 
 export default function ProfileSection({ profile, onSave }: ProfileSectionProps) {
   const [editing, setEditing] = useState(false);
@@ -151,7 +151,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
       </div>
 
       {editing ? (
-        <div className="space-y-4 text-[14px]">
+        <div className="space-y-4 text-[15px]">
           <div>
             <label htmlFor={`${fid}-affiliation`} className={FIELD_LABEL}>소속 센터</label>
             <input
@@ -310,7 +310,7 @@ export default function ProfileSection({ profile, onSave }: ProfileSectionProps)
           </div>
         </div>
       ) : (
-        <div className="space-y-4 text-[14px]">
+        <div className="space-y-4 text-[15px]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <div className={FIELD_LABEL}>소속 센터</div>

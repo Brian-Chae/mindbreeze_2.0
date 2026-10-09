@@ -21,11 +21,11 @@ export function NotificationCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-0.5">
             <span
-              className={`text-[14px] ${notification.is_read ? 'text-[#1F1F1F] font-medium' : 'text-[#1F1F1F] font-bold'}`}
+              className={`text-[15px] ${notification.is_read ? 'text-[#1F1F1F] font-medium' : 'text-[#1F1F1F] font-bold'}`}
             >
               {notification.title}
             </span>
-            <span className="text-[11px] text-[#9B9B9B] font-mono shrink-0">
+            <span className="text-[12px] text-[#9B9B9B] font-mono shrink-0">
               {timeAgo(notification.created_at)}
             </span>
           </div>
@@ -33,7 +33,7 @@ export function NotificationCard({
             <div className="text-[13px] text-[#6F6F6F] line-clamp-2">{notification.body}</div>
           )}
           <div className="mt-1.5">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
               {TYPE_LABELS[notification.type] ?? notification.type}
             </span>
           </div>

@@ -41,7 +41,7 @@ export default function ReportDetailPage() {
         <button
           type="button"
           onClick={() => navigate('/reports')}
-          className="mb-btn mb-btn-secondary text-[14px] px-5 py-2.5 rounded-xl"
+          className="mb-btn mb-btn-secondary text-[15px] px-5 py-2.5 rounded-xl"
         >
           목록으로
         </button>

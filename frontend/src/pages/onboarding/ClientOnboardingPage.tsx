@@ -412,7 +412,7 @@ export default function ClientOnboardingPage() {
                 alt=""
                 className="brightness-0 invert"
               />
-              <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+              <span className="font-extrabold text-[18px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
                 Mind&nbsp;Breeze
               </span>
             </Link>
@@ -461,7 +461,7 @@ export default function ClientOnboardingPage() {
   }
 
   const concernBtnClass = (selected: boolean) =>
-    `rounded-full px-4 py-2.5 text-[14px] font-medium transition-colors ${
+    `rounded-full px-4 py-2.5 text-[15px] font-medium transition-colors ${
       selected
         ? 'bg-[#5F0080] text-white'
         : 'bg-white/10 text-white/80 border border-white/20 hover:bg-white/20'
@@ -491,7 +491,7 @@ export default function ClientOnboardingPage() {
               alt=""
               className="brightness-0 invert"
             />
-            <span className="font-extrabold text-[17px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+            <span className="font-extrabold text-[18px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
               Mind&nbsp;Breeze
             </span>
           </Link>
@@ -812,7 +812,7 @@ export default function ClientOnboardingPage() {
               type="button"
               onClick={handlePrev}
               disabled={loading || step === 1}
-              className="flex-shrink-0 h-[44px] px-5 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 disabled:opacity-30 text-white/80 text-[14px] font-medium transition-colors"
+              className="flex-shrink-0 h-[44px] px-5 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 disabled:opacity-30 text-white/80 text-[15px] font-medium transition-colors"
             >
               이전
             </button>

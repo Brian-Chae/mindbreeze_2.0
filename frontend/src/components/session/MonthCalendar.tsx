@@ -67,7 +67,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
   return (
     <div className={`bg-white rounded-[20px] border border-[#EFEFEF] overflow-hidden ${className ?? ''}`}>
       <div className="flex items-center justify-between px-4 py-3.5">
-        <div className="font-bold text-[17px] tracking-tight text-[#1F1F1F]">
+        <div className="font-bold text-[18px] tracking-tight text-[#1F1F1F]">
           {year}년 {month + 1}월
         </div>
         <div className="flex gap-1.5">
@@ -106,7 +106,7 @@ export function MonthCalendar({ sessions, currentDate, selectedDate, weekHighlig
         {DAY_LABELS.map((label, i) => (
           <div
             key={label}
-            className={`text-center py-2 text-[10px] font-mono uppercase tracking-wider ${
+            className={`text-center py-2 text-[12px] font-mono uppercase tracking-wider ${
               i === 0 ? 'text-[#B3261E]' : i === 6 ? 'text-[#1F4FB3]' : 'text-[#6F6F6F]'
             }`}
           >

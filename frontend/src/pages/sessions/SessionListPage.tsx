@@ -353,7 +353,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
                     <div className="flex gap-3">
                       {/* 시 다이얼 */}
                       <div className="flex-1">
-                        <div className="text-center text-[10px] font-medium text-[#6F6F6F] pb-2">시</div>
+                        <div className="text-center text-[12px] font-medium text-[#6F6F6F] pb-2">시</div>
                         <div ref={hourScrollRef} className="max-h-[200px] overflow-y-auto scrollbar-hide space-y-1">
                           {Array.from({ length: 12 }, (_, i) => {
                             const h = i + 1;
@@ -382,7 +382,7 @@ function CreateSessionModal({ open, onClose, onCreated }: { open: boolean; onClo
 
                       {/* 분 다이얼 */}
                       <div className="flex-1">
-                        <div className="text-center text-[10px] font-medium text-[#6F6F6F] pb-2">분</div>
+                        <div className="text-center text-[12px] font-medium text-[#6F6F6F] pb-2">분</div>
                         <div ref={minuteScrollRef} className="max-h-[200px] overflow-y-auto scrollbar-hide space-y-1">
                           {['00', '10', '20', '30', '40', '50'].map((m) => {
                             const selected = timeMinute === m;

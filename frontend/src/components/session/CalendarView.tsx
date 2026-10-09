@@ -77,7 +77,7 @@ export function CalendarView({ sessions, currentDate, mode = 'weekly' }: Props) 
               }`}
             >
               <div className="font-bold">{DAY_LABELS[d.getDay()]}</div>
-              <div className={`text-[11px] font-mono mt-0.5 ${isToday ? 'text-white/80' : 'text-[#6F6F6F]'}`}>
+              <div className={`text-[12px] font-mono mt-0.5 ${isToday ? 'text-white/80' : 'text-[#6F6F6F]'}`}>
                 {d.getMonth() + 1}/{d.getDate()}
               </div>
             </div>
@@ -86,7 +86,7 @@ export function CalendarView({ sessions, currentDate, mode = 'weekly' }: Props) 
 
         {HOURS.map((h) => (
           <div key={h} className="contents">
-            <div className="border-t border-[#EFEFEF] px-2 py-3 text-[11px] font-mono text-[#6F6F6F] text-right">
+            <div className="border-t border-[#EFEFEF] px-2 py-3 text-[12px] font-mono text-[#6F6F6F] text-right">
               {String(h).padStart(2, '0')}:00
             </div>
             {days.map((d) => {
@@ -100,7 +100,7 @@ export function CalendarView({ sessions, currentDate, mode = 'weekly' }: Props) 
                     <Link
                       key={s.id}
                       to={`/sessions/${s.id}`}
-                      className={`block px-2 py-1 rounded-lg text-[11px] truncate hover:opacity-80 transition ${statusColor(s.status)}`}
+                      className={`block px-2 py-1 rounded-lg text-[12px] truncate hover:opacity-80 transition ${statusColor(s.status)}`}
                       title={`${s.title || typeLabel(s.type)} (${s.duration_min}분)`}
                     >
                       <span className="font-bold">{typeLabel(s.type)}</span>{' '}

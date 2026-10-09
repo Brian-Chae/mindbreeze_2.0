@@ -93,11 +93,11 @@ function HeroCard({
     <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:flex lg:min-h-[168px] lg:items-center lg:justify-between lg:gap-6 lg:p-6">
       {/* 좌측 콘텐츠 */}
       <div className="min-w-0 lg:flex-1">
-        <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
+        <div className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
         <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
           {session.title || '세션'}
         </h2>
-        <p className="mt-1 text-[13.5px] opacity-90">
+        <p className="mt-1 text-[13px] opacity-90">
           {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
           {counselorName ? ` · ${counselorName}` : ''}
         </p>
@@ -110,7 +110,7 @@ function HeroCard({
             <button
               type="button"
               onClick={() => void handleCopy()}
-              className="rounded-xl bg-white/15 border border-white/25 px-[13px] py-2 text-[12.5px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
+              className="rounded-xl bg-white/15 border border-white/25 px-[13px] py-2 text-[13px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
             >
               {copied ? '복사됨' : '참여코드 복사'}
             </button>
@@ -123,7 +123,7 @@ function HeroCard({
       {/* 우측 액션 */}
       <div className="mt-4 flex flex-col items-start gap-3 lg:mt-0 lg:shrink-0 lg:items-end">
         {countdown && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-[12.5px] font-bold">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-bold">
             {countdown}
           </span>
         )}
@@ -144,11 +144,11 @@ function HeroCard({
 function EmptyHero({ onBook }: { onBook: () => void }) {
   return (
     <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:p-6">
-      <div className="text-[11px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
+      <div className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
       <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight text-white sm:text-[20px] md:text-[22px] lg:text-[30px]">
         아직 예약된 세션이 없어요
       </h2>
-      <p className="mt-1 text-[13.5px] text-white">
+      <p className="mt-1 text-[13px] text-white">
         상담사와 상담·명상 세션을 예약하고 변화를 시작해보세요.
       </p>
       <button
@@ -197,7 +197,7 @@ function SummaryTiles({
           <div className={`mt-2 text-[30px] font-extrabold tracking-tight ${t.purple ? 'text-[#5F0080]' : 'text-[#1F1F1F]'}`}>
             {t.value}
           </div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[#5F0080]">
+          <div className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#5F0080]">
             {t.action} <span aria-hidden>→</span>
           </div>
         </button>
@@ -441,7 +441,7 @@ export default function ClientHomePage() {
           <section>
             <div className={SECTION_HEAD_CLS}>
               <h2 className={SECTION_TITLE_CLS}>초대된 클래스</h2>
-              <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+              <span className="font-mono text-[12px] text-[#6F6F6F]">{invitedSessions.length}건</span>
             </div>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {invitedSessions.map((s) => (
@@ -479,11 +479,11 @@ export default function ClientHomePage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         {isNew && (
-                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">
+                          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">
                             NEW
                           </span>
                         )}
-                        <span className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                        <span className="truncate text-[15px] font-bold text-[#1F1F1F]">
                           {r.session_title || '리포트'}
                         </span>
                       </div>
@@ -493,7 +493,7 @@ export default function ClientHomePage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       {generation === 'processing' && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[11px] font-bold text-[#5F0080]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] font-bold text-[#5F0080]">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
                           생성 중
                         </span>
@@ -518,7 +518,7 @@ export default function ClientHomePage() {
             <button
               type="button"
               onClick={() => navigate('/app/sessions')}
-              className="rounded-lg border border-[#DDD0EA] bg-white px-3 py-2 text-[12.5px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
+              className="rounded-lg border border-[#DDD0EA] bg-white px-3 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
             >
               달력 보기
             </button>
@@ -533,24 +533,24 @@ export default function ClientHomePage() {
                   className="flex w-full items-center gap-3 border-b border-[#F0ECF2] py-4 text-left last:border-0"
                 >
                   <div className="w-[76px] shrink-0">
-                    <div className="text-[14.5px] font-extrabold text-[#1F1F1F]">
+                    <div className="text-[15px] font-extrabold text-[#1F1F1F]">
                       {formatTime(s.scheduled_at)}
                     </div>
-                    <div className="text-[11px] font-semibold text-[#767676]">
+                    <div className="text-[12px] font-semibold text-[#767676]">
                       {s.scheduled_at
                         ? `${new Date(s.scheduled_at).getMonth() + 1}/${new Date(s.scheduled_at).getDate()}`
                         : ''}
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-[14px] font-bold text-[#1F1F1F]">
+                    <div className="truncate text-[15px] font-bold text-[#1F1F1F]">
                       {s.title || '세션'}
                     </div>
                     <div className="truncate text-[12px] text-[#6F6F6F]">
                       {getCounselorName(s) ?? ''}
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[11px] font-bold text-[#6F6F6F]">
+                  <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[12px] font-bold text-[#6F6F6F]">
                     예정
                   </span>
                 </button>
@@ -561,7 +561,7 @@ export default function ClientHomePage() {
               <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F5EDFC] text-[20px]">
                 📅
               </div>
-              <p className="text-[14px] font-bold text-[#1F1F1F]">이번 주 예정된 세션이 없습니다</p>
+              <p className="text-[15px] font-bold text-[#1F1F1F]">이번 주 예정된 세션이 없습니다</p>
               <p className="mt-1 text-[12px] text-[#6F6F6F]">상담사에게 세션을 신청해보세요.</p>
               <button
                 type="button"
@@ -633,7 +633,7 @@ export default function ClientHomePage() {
                         {room.display_name || room.peer_name || '상담사'}
                       </span>
                       {(room.unread_count ?? 0) > 0 && (
-                        <span className="rounded-full bg-[#5F0080] px-1.5 text-[10.5px] font-extrabold text-white">
+                        <span className="rounded-full bg-[#5F0080] px-1.5 text-[12px] font-extrabold text-white">
                           {room.unread_count}
                         </span>
                       )}
@@ -642,7 +642,7 @@ export default function ClientHomePage() {
                       {room.last_message?.content || '새로운 대화가 없습니다'}
                     </div>
                   </div>
-                  <span className="shrink-0 text-[11px] text-[#767676]">
+                  <span className="shrink-0 text-[12px] text-[#767676]">
                     {relativeTime(room.last_message_at ?? null)}
                   </span>
                 </button>
@@ -669,7 +669,7 @@ export default function ClientHomePage() {
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] text-[#1F1F1F]">{n.title}</div>
                     {n.body && <div className="truncate text-[12px] text-[#6F6F6F]">{n.body}</div>}
-                    <div className="text-[11px] text-[#767676]">{relativeTime(n.created_at)}</div>
+                    <div className="text-[12px] text-[#767676]">{relativeTime(n.created_at)}</div>
                   </div>
                 </div>
               ))}

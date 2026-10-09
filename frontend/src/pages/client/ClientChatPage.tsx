@@ -158,7 +158,7 @@ export default function ClientChatPage() {
                 <span className="text-sm font-bold text-white">루시</span>
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[14px] font-semibold text-[#1F1F1F]">루시 (AI)</span>
+                <span className="text-[15px] font-semibold text-[#1F1F1F]">루시 (AI)</span>
                 <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">예약 안내 · 리포트 이야기 · 안부</p>
               </div>
               {agentUnread > 0 && (
@@ -210,11 +210,11 @@ export default function ClientChatPage() {
                         {/* 대화 정보 */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[14px] font-semibold text-[#1F1F1F] truncate">
+                            <span className="text-[15px] font-semibold text-[#1F1F1F] truncate">
                               {chatRoomDisplayName(room)}
                             </span>
                             {(room.last_message_at ?? room.last_message?.created_at ?? room.created_at) && (
-                              <span className="text-[11px] text-[#9CA0AE] shrink-0">
+                              <span className="text-[12px] text-[#9CA0AE] shrink-0">
                                 {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                               </span>
                             )}

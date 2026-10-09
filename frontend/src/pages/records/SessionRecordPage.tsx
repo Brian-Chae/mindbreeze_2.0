@@ -64,7 +64,7 @@ function AccessCodeCell({ code }: { code: string | null }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[11px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[12px] font-semibold hover:bg-[#EBDEF7] transition-colors"
       >
         {copied ? '복사됨' : '복사'}
       </button>
@@ -79,7 +79,7 @@ function TypeBadge({ session }: { session: SessionDto }) {
       : TYPE_LABELS[session.type];
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
     >
       {label}
     </span>
@@ -93,7 +93,7 @@ function ClassMetaCard({ session }: { session: SessionDto }) {
   return (
     <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="font-bold tracking-tight text-[#1F1F1F] text-[17px]">
+        <h2 className="font-bold tracking-tight text-[#1F1F1F] text-[18px]">
           {session.title || '제목 없음'}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -113,7 +113,7 @@ function ClassMetaCard({ session }: { session: SessionDto }) {
           <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
             참여자
           </div>
-          <span className="text-[14px] text-[#1F1F1F]">
+          <span className="text-[15px] text-[#1F1F1F]">
             {participantCount}명
             {guestCount > 0 && (
               <span className="text-[12px] text-[#9B9B9B] ml-1">(게스트 {guestCount})</span>
@@ -124,7 +124,7 @@ function ClassMetaCard({ session }: { session: SessionDto }) {
           <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
             일시
           </div>
-          <span className="text-[14px] text-[#6F6F6F] font-mono">
+          <span className="text-[15px] text-[#6F6F6F] font-mono">
             {formatDateTime(session.started_at)} ~ {formatDateTime(session.ended_at)}
           </span>
         </div>

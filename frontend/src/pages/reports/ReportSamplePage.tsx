@@ -81,7 +81,7 @@ export default function ReportSamplePage() {
       <div className="max-w-[1160px] mx-auto space-y-6">
         {/* 샘플 배지 */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-[#F5EDFC] text-[#5F0080] border border-[#E8D9F5]">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080] border border-[#E8D9F5]">
             샘플 리포트
           </span>
           <span className="text-[12px] text-[#6F6F6F]">

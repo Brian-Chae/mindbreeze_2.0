@@ -165,7 +165,7 @@ export default function ChatPage() {
           >
             <div className="w-11 h-11 rounded-full bg-[#5F0080] ring-2 ring-[#01f0c8]/60 flex items-center justify-center text-white text-sm font-bold shrink-0">루시</div>
             <div className="flex-1 min-w-0">
-              <span className="font-bold text-[14px] text-[#1F1F1F]">루시 (AI)</span>
+              <span className="font-bold text-[15px] text-[#1F1F1F]">루시 (AI)</span>
               <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">아침 브리핑 · 저녁 정리 · 내담자 피드백</p>
             </div>
             {agentUnread > 0 && (
@@ -199,10 +199,10 @@ export default function ChatPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-[14px] text-[#1F1F1F] truncate">
+                          <span className="font-bold text-[15px] text-[#1F1F1F] truncate">
                             {roomLabel(room)}
                           </span>
-                          <span className="text-[11px] text-[#6F6F6F] font-mono shrink-0">
+                          <span className="text-[12px] text-[#6F6F6F] font-mono shrink-0">
                             {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                           </span>
                         </div>

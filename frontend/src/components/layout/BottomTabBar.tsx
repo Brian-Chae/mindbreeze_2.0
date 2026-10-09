@@ -70,7 +70,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 ${
+              `relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 ${
                 isActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
               }`
             }
@@ -97,7 +97,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
       <button
         type="button"
         onClick={onMoreClick}
-        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[11px] flex-1 h-14 text-[#6F6F6F]"
+        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
       >
         <StrokeIcon d={ICONS.menu} size={22} />
         <span>더보기</span>

@@ -168,7 +168,7 @@ export default function NotificationCenterPage() {
 
         {showPreferences && !prefsError && prefs && (
           <div className="bg-[#F8FAFC] border border-[#EFEFEF] rounded-2xl p-5 mb-6">
-            <h3 className="text-[14px] font-bold text-[#1F1F1F] mb-4">메일 알림 설정</h3>
+            <h3 className="text-[15px] font-bold text-[#1F1F1F] mb-4">메일 알림 설정</h3>
             <div className="space-y-4">
               {(['email', 'in_app'] as const).map((channel) => (
                 <div key={channel}>

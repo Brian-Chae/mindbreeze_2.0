@@ -58,20 +58,20 @@ function getInviteDisplayStatus(counselor: CounselorItem): InviteDisplayStatus {
 function InviteStatusBadge({ status }: { status: InviteDisplayStatus }) {
   if (status === 'active') {
     return (
-      <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[11px] font-bold text-[#065F46]">
+      <span className="inline-flex items-center rounded-full bg-[#D1FAE5] px-2.5 py-1 text-[12px] font-bold text-[#065F46]">
         활성
       </span>
     );
   }
   if (status === 'expired') {
     return (
-      <span className="inline-flex items-center rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[11px] font-bold text-[#991B1B]">
+      <span className="inline-flex items-center rounded-full bg-[#FEE2E2] px-2.5 py-1 text-[12px] font-bold text-[#991B1B]">
         만료
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[11px] font-bold text-[#92400E]">
+    <span className="inline-flex items-center rounded-full bg-[#FEF3C7] px-2.5 py-1 text-[12px] font-bold text-[#92400E]">
       대기
     </span>
   );
@@ -90,7 +90,7 @@ function InviteTypeBadge({ counselor }: { counselor: CounselorItem }) {
   const isMembership = counselor.invite_type === 'org_membership';
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-bold ${
         isMembership ? 'bg-[#EDE9FE] text-[#5B21B6]' : 'bg-[#DBEAFE] text-[#1E40AF]'
       }`}
     >
@@ -148,7 +148,7 @@ function TypeBadge({ cls }: { cls: ClassSummary }) {
       : TYPE_LABELS[cls.type];
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide ${TYPE_CLASSES[cls.type]}`}
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[cls.type]}`}
     >
       {label}
     </span>
@@ -174,15 +174,15 @@ function CounselorCard({ counselor }: { counselor: OrgCounselorStat }) {
       <div className="text-[13px] text-[#6F6F6F] break-all mb-3">{counselor.email}</div>
       <div className="grid grid-cols-3 gap-2 text-center">
         <div className="rounded-xl bg-[#F8F4FC] py-2">
-          <div className="text-[11px] text-[#6F6F6F]">클래스</div>
+          <div className="text-[12px] text-[#6F6F6F]">클래스</div>
           <div className="font-bold text-[#5F0080]">{counselor.class_count}</div>
         </div>
         <div className="rounded-xl bg-[#F8F4FC] py-2">
-          <div className="text-[11px] text-[#6F6F6F]">참여자</div>
+          <div className="text-[12px] text-[#6F6F6F]">참여자</div>
           <div className="font-bold text-[#5F0080]">{counselor.participant_count}</div>
         </div>
         <div className="rounded-xl bg-[#E6F8F3] py-2">
-          <div className="text-[11px] text-[#6F6F6F]">완료</div>
+          <div className="text-[12px] text-[#6F6F6F]">완료</div>
           <div className="font-bold text-[#1F8A5B]">{counselor.completed_count}</div>
         </div>
       </div>
@@ -400,7 +400,7 @@ function CounselorInviteSection({
     <section className="space-y-6">
       <div className="rounded-2xl border border-[#EFEFEF] bg-white p-5 md:p-6">
         <div className="mb-5">
-          <h2 className="text-[17px] font-bold text-[#1F1F1F]">상담사 초대</h2>
+          <h2 className="text-[18px] font-bold text-[#1F1F1F]">상담사 초대</h2>
           <p className="mt-1 text-[13px] text-[#6F6F6F]">
             이름과 이메일을 입력하면 초대 메일이 발송됩니다. 상담사는 메일의 링크로 비밀번호를
             설정한 뒤 바로 이용할 수 있습니다.
@@ -432,7 +432,7 @@ function CounselorInviteSection({
               placeholder="홍길동"
               maxLength={100}
               disabled={inviting}
-              className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
+              className="w-full rounded-xl border border-[#EFEFEF] px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60"
             />
           </label>
           <label className="block">
@@ -446,7 +446,7 @@ function CounselorInviteSection({
               }}
               placeholder="name@example.com"
               disabled={inviting}
-              className={`w-full rounded-xl border px-4 py-2.5 text-[14px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60 ${
+              className={`w-full rounded-xl border px-4 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 disabled:opacity-60 ${
                 inviteError ? 'border-[#F87171] bg-[#FEF2F2]' : 'border-[#EFEFEF]'
               }`}
             />
@@ -460,7 +460,7 @@ function CounselorInviteSection({
             <button
               type="submit"
               disabled={inviting || !name.trim() || !email.trim()}
-              className="h-[42px] w-full rounded-xl bg-[#5F0080] px-6 text-[14px] font-semibold text-white transition-colors hover:bg-[#4B0066] disabled:opacity-60 md:w-auto"
+              className="h-[42px] w-full rounded-xl bg-[#5F0080] px-6 text-[15px] font-semibold text-white transition-colors hover:bg-[#4B0066] disabled:opacity-60 md:w-auto"
             >
               {inviting ? '발송 중…' : '초대 발송'}
             </button>
@@ -470,8 +470,8 @@ function CounselorInviteSection({
 
       <div>
         <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="text-[17px] font-bold tracking-tight text-[#1F1F1F]">초대·가입 현황</h2>
-          <span className="font-mono text-[11px] text-[#6F6F6F]">{sortedInviteList.length}명</span>
+          <h2 className="text-[18px] font-bold tracking-tight text-[#1F1F1F]">초대·가입 현황</h2>
+          <span className="font-mono text-[12px] text-[#6F6F6F]">{sortedInviteList.length}명</span>
         </div>
 
         {inviteListError ? (
@@ -526,7 +526,7 @@ function CounselorInviteSection({
             </div>
 
             <div className="hidden overflow-x-auto rounded-2xl border border-[#EFEFEF] bg-white md:block">
-              <table className="w-full text-[14px]">
+              <table className="w-full text-[15px]">
                 <thead>
                   <tr className="border-b border-[#EFEFEF] bg-[#F8FAFC]">
                     <th className="px-6 py-3 text-left text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
@@ -692,10 +692,10 @@ export default function OrgDashboardPage() {
 
           <section>
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">
+              <h2 className="font-bold text-[18px] text-[#1F1F1F] tracking-tight">
                 소속 상담사 실적
               </h2>
-              <span className="font-mono text-[11px] text-[#6F6F6F]">
+              <span className="font-mono text-[12px] text-[#6F6F6F]">
                 {activeCounselors.length}명
               </span>
             </div>
@@ -713,7 +713,7 @@ export default function OrgDashboardPage() {
                 </div>
 
                 <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
-                  <table className="w-full text-[14px]">
+                  <table className="w-full text-[15px]">
                     <thead>
                       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                         <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">
@@ -746,10 +746,10 @@ export default function OrgDashboardPage() {
 
           <section>
             <div className="flex items-baseline justify-between mb-4">
-              <h2 className="font-bold text-[17px] text-[#1F1F1F] tracking-tight">
+              <h2 className="font-bold text-[18px] text-[#1F1F1F] tracking-tight">
                 기관 전체 클래스
               </h2>
-              <span className="font-mono text-[11px] text-[#6F6F6F]">
+              <span className="font-mono text-[12px] text-[#6F6F6F]">
                 {data.classes.length}건
               </span>
             </div>
@@ -767,7 +767,7 @@ export default function OrgDashboardPage() {
                 </div>
 
                 <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
-                  <table className="w-full text-[14px] min-w-[960px]">
+                  <table className="w-full text-[15px] min-w-[960px]">
                     <thead>
                       <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                         <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">

@@ -183,7 +183,7 @@ export default function SettingsPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
             계정 정보
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[14px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[15px]">
             <div>
               <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">이름</div>
               <div className="font-medium text-[#1F1F1F]">{user?.name ?? '-'}</div>
@@ -195,7 +195,7 @@ export default function SettingsPage() {
             <div>
               <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">역할</div>
               <div>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
                   {user?.role === 'counselor' ? '상담사' : user?.role === 'client' ? '내담자' : user?.role === 'org_admin' ? '센터관리자' : user?.role === 'platform_admin' ? '플랫폼관리자' : user?.role ?? '-'}
                 </span>
               </div>
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                       key={event}
                       className="flex items-center justify-between py-2.5 px-3 hover:bg-[#F8FAFC] rounded-xl cursor-pointer transition-colors"
                     >
-                      <span className="text-[14px] text-[#1F1F1F]">
+                      <span className="text-[15px] text-[#1F1F1F]">
                         {eventLabel(event)}
                       </span>
                       <Toggle enabled={enabled} onChange={() => handleToggle(channel, event)} />

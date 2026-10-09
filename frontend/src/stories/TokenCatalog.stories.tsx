@@ -37,7 +37,7 @@ const TokenCatalog = () => (
                   className="w-16 h-16 rounded-lg border border-border-subtle shadow-xs"
                   style={{ backgroundColor: `var(--${name})` }}
                 />
-                <span className="text-[10px] text-ink-tertiary font-mono">{name}</span>
+                <span className="text-[12px] text-ink-tertiary font-mono">{name}</span>
               </div>
             ))}
           </div>
@@ -77,7 +77,7 @@ const TokenCatalog = () => (
         {[4, 8, 12, 16, 20, 24, 32, 40, 48, 64].map((s) => (
           <div key={s} className="flex flex-col items-center gap-1">
             <div className="bg-brand-subtle rounded-sm" style={{ width: `${s}px`, height: `${s}px` }} />
-            <span className="text-[10px] text-ink-tertiary font-mono">{s}</span>
+            <span className="text-[12px] text-ink-tertiary font-mono">{s}</span>
           </div>
         ))}
       </div>
@@ -96,7 +96,7 @@ const TokenCatalog = () => (
         ].map((r) => (
           <div key={r.name} className="flex flex-col items-center gap-2">
             <div className={`w-20 h-20 bg-brand-subtle ${r.cls}`} />
-            <span className="text-[10px] text-ink-tertiary font-mono">{r.name}</span>
+            <span className="text-[12px] text-ink-tertiary font-mono">{r.name}</span>
           </div>
         ))}
       </div>

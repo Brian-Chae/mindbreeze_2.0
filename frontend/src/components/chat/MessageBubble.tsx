@@ -57,11 +57,11 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
       {isMine && (
         <>
           {unread > 0 && (
-            <span style={{ fontSize: '11px', color: '#F5B041', flexShrink: 0, marginBottom: '6px', fontWeight: 500 }}>
+            <span style={{ fontSize: '12px', color: '#F5B041', flexShrink: 0, marginBottom: '6px', fontWeight: 500 }}>
               {unread}
             </span>
           )}
-          <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '6px' }}>
+          <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '6px' }}>
             {timeStr}
           </span>
         </>
@@ -89,17 +89,18 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
           ) : null}
         </div>
       )}
-      <div style={{ maxWidth: '70%' }}>
+      <div style={{ maxWidth: '80%' }}>
         {/* 상대방 이름 (첫 메시지만) */}
         {!isMine && showSender && senderName && (
-          <div style={{ fontSize: '11px', color: '#6F6F6F', marginBottom: '3px', marginLeft: '2px' }}>
+          <div style={{ fontSize: '13px', color: '#6F6F6F', marginBottom: '3px', marginLeft: '2px' }}>
             {senderName}
           </div>
         )}
         <div style={{
           padding: '8px 14px',
           borderRadius: '16px',
-          fontSize: '14px',
+          fontSize: '15px',
+          lineHeight: 1.5,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
           background: isMine ? '#5F0080' : '#F5EDFC',
@@ -110,7 +111,7 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
       </div>
       {/* 상대 메시지: 시간 오른쪽 */}
       {!isMine && (
-        <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '4px' }}>
+        <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '4px' }}>
           {timeStr}
         </span>
       )}

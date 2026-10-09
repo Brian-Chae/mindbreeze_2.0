@@ -41,11 +41,11 @@ export default function TranscriptTimeline({
           >
             <div className="flex w-16 shrink-0 flex-col items-start gap-0.5">
               <span className={`text-[12px] font-bold ${meta.tone}`}>{meta.label}</span>
-              <span className="font-mono text-[11px] text-[#9B9B9B]">
+              <span className="font-mono text-[12px] text-[#9B9B9B]">
                 {formatTimestamp(seg.start)}
               </span>
             </div>
-            <p className="min-w-0 flex-1 text-[14px] leading-relaxed text-[#1F1F1F] whitespace-pre-wrap">
+            <p className="min-w-0 flex-1 text-[15px] leading-relaxed text-[#1F1F1F] whitespace-pre-wrap">
               {seg.text}
             </p>
           </button>

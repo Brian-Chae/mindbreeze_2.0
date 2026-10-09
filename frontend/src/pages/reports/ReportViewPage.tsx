@@ -95,7 +95,7 @@ export default function ReportViewPage() {
     return (
       <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-2xl border border-[#EFEFEF] p-8 text-center">
-          <p className="text-[11px] font-bold tracking-[1.5px] text-[#5F0080] mb-4">
+          <p className="text-[12px] font-bold tracking-[1.5px] text-[#5F0080] mb-4">
             MIND BREEZE
           </p>
           <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-[#F5EDFC] flex items-center justify-center">
@@ -118,7 +118,7 @@ export default function ReportViewPage() {
           <h1 className="text-[18px] font-bold text-[#1F1F1F] mb-2">
             리포트를 열 수 없습니다
           </h1>
-          <p className="text-[14px] text-[#6F6F6F] leading-relaxed" role="alert">
+          <p className="text-[15px] text-[#6F6F6F] leading-relaxed" role="alert">
             {error ?? '리포트 데이터가 없습니다.'}
           </p>
         </div>
@@ -163,7 +163,7 @@ export default function ReportViewPage() {
             eegMeasured={eegMeasured}
           />
         )}
-        <p className="text-center text-[11px] text-[#9B9B9B] pb-8">
+        <p className="text-center text-[12px] text-[#9B9B9B] pb-8">
           본 리포트는 의료 진단이 아닌 두뇌건강 관리 목적의 참고 자료입니다.
         </p>
       </main>

@@ -88,7 +88,7 @@ export function GuestAudioPanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[11px] font-mono uppercase tracking-wider text-white/50">
+          <p className="text-[12px] font-mono uppercase tracking-wider text-white/50">
             가이드 · BGM
           </p>
           <p className="mt-0.5 truncate text-sm font-medium text-white">
@@ -96,7 +96,7 @@ export function GuestAudioPanel({
           </p>
         </div>
         <span
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold ${
             playing ? 'bg-[#59CE9026] text-[#2F9E68]' : 'bg-white/10 text-white/60'
           }`}
         >
@@ -147,7 +147,7 @@ export function GuestAudioPanel({
         </button>
       )}
 
-      <p className="mt-2 text-[11px] leading-5 text-white/40">
+      <p className="mt-2 text-[12px] leading-5 text-white/40">
         볼륨은 나만 조절됩니다. 이어폰·헤드셋 사용을 권장하며, 화면을 꺼도 재생은 계속됩니다.
       </p>
     </section>

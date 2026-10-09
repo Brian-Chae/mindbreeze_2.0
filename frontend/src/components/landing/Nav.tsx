@@ -10,7 +10,7 @@ const Nav: React.FC = () => {
       <div className="max-w-[1280px] mx-auto px-8 py-[18px] flex items-center justify-between gap-8">
         <a href="#" className="flex items-center gap-3 no-underline">
           <img src="/mb-design/assets/logo_symbol_dark.svg" width={28} height={13} alt="" />
-          <span className="font-sans font-extrabold text-[19px] text-purple-900 tracking-[-0.02em]">
+          <span className="font-sans font-extrabold text-[18px] text-purple-900 tracking-[-0.02em]">
             Mind&nbsp;Breeze
           </span>
         </a>
@@ -28,16 +28,16 @@ const Nav: React.FC = () => {
           ))}
         </div>
         <div className="flex gap-[10px]">
-          <Link to="/join" className="mb-btn mb-btn--ghost h-10 px-4 text-[14px] whitespace-nowrap inline-flex items-center">
+          <Link to="/join" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
             클래스 참여
           </Link>
-          <Link to="/login?role=counselor" className="mb-btn mb-btn--ghost h-10 px-4 text-[14px] whitespace-nowrap inline-flex items-center">
+          <Link to="/login?role=counselor" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
             상담사 로그인
           </Link>
-          <Link to="/login/client" className="mb-btn mb-btn--ghost h-10 px-4 text-[14px] whitespace-nowrap inline-flex items-center">
+          <Link to="/login/client" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
             회원 로그인
           </Link>
-          <Link to="/register" className="mb-btn h-10 px-[18px] text-[14px] whitespace-nowrap inline-flex items-center">
+          <Link to="/register" className="mb-btn h-10 px-[18px] text-[15px] whitespace-nowrap inline-flex items-center">
             무료 체험
           </Link>
         </div>

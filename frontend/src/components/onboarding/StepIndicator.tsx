@@ -45,7 +45,7 @@ export function StepIndicator({ currentStep, completedSteps, totalSteps = 4, lab
                 {state === 'completed' ? '✓' : step}
               </div>
               {labels && labels[idx] && (
-                <span className="mt-1.5 text-[11px] text-white/50 whitespace-nowrap text-center">
+                <span className="mt-1.5 text-[12px] text-white/50 whitespace-nowrap text-center">
                   {labels[idx]}
                 </span>
               )}

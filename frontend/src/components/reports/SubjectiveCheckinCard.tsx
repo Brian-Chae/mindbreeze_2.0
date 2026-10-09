@@ -51,7 +51,7 @@ function AxisDeltaRow({
         )}
         {deltaLabel !== null && (
           <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+            className={`rounded-full px-2 py-0.5 text-[12px] font-bold ${
               delta! > 0
                 ? 'bg-[#F1FAF5] text-[#1F7A4C]'
                 : delta! < 0
@@ -108,7 +108,7 @@ export default function SubjectiveCheckinCard({
       )}
 
       {note && (
-        <p className="mt-4 rounded-xl bg-[#FAFAFA] px-4 py-3 text-[14px] leading-relaxed text-[#1F1F1F]">
+        <p className="mt-4 rounded-xl bg-[#FAFAFA] px-4 py-3 text-[15px] leading-relaxed text-[#1F1F1F]">
           “{note}”
         </p>
       )}
@@ -123,7 +123,7 @@ export default function SubjectiveCheckinCard({
                 시작 {relaxationTrend.first} → 마지막 {relaxationTrend.last}
               </span>
             )}
-            <span className="w-full text-[11px] leading-5 text-[#9B9B9B]">
+            <span className="w-full text-[12px] leading-5 text-[#9B9B9B]">
               지표는 회원님의 느낌과 함께 읽어주세요. 측정 정보가 없는 항목은 해석하지 않습니다.
             </span>
           </div>

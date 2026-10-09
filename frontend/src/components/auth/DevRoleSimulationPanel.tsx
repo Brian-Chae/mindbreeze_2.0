@@ -210,7 +210,7 @@ export default function DevRoleSimulationPanel({ onLoginSuccess }: DevRoleSimula
         {/* 헤더 */}
         <div className="mb-4 flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/15 px-1.5 py-0.5 font-mono text-[10px] tracking-widest text-amber-300">
+            <span className="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/15 px-1.5 py-0.5 font-mono text-[12px] tracking-widest text-amber-300">
               DEV
             </span>
             <h2 className="text-sm font-semibold text-slate-100">역할 시뮬레이션</h2>
@@ -282,7 +282,7 @@ export default function DevRoleSimulationPanel({ onLoginSuccess }: DevRoleSimula
                 type="button"
                 onClick={suggestDevEmail}
                 disabled={formSubmitting}
-                className="shrink-0 rounded-lg border border-slate-700 px-2 py-2 text-[10px] text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300 disabled:opacity-50"
+                className="shrink-0 rounded-lg border border-slate-700 px-2 py-2 text-[12px] text-slate-400 hover:border-cyan-400/40 hover:text-cyan-300 disabled:opacity-50"
                 title="@dev.local 이메일 자동 제안"
               >
                 @dev
@@ -330,7 +330,7 @@ export default function DevRoleSimulationPanel({ onLoginSuccess }: DevRoleSimula
               type="button"
               onClick={() => void fetchUsers()}
               disabled={listLoading}
-              className="text-[11px] text-cyan-400/80 hover:text-cyan-300 disabled:opacity-50"
+              className="text-[12px] text-cyan-400/80 hover:text-cyan-300 disabled:opacity-50"
             >
               목록 새로고침
             </button>
@@ -364,20 +364,20 @@ export default function DevRoleSimulationPanel({ onLoginSuccess }: DevRoleSimula
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-medium text-slate-100">{user.name}</span>
                           <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${roleBadgeClass(user.role)}`}
+                            className={`rounded px-1.5 py-0.5 text-[12px] font-medium ${roleBadgeClass(user.role)}`}
                           >
                             {user.role}
                           </span>
                           {user.email.endsWith('@dev.local') && (
-                            <span className="rounded border border-amber-400/20 bg-amber-400/10 px-1 py-0.5 font-mono text-[9px] text-amber-300">
+                            <span className="rounded border border-amber-400/20 bg-amber-400/10 px-1 py-0.5 font-mono text-[12px] text-amber-300">
                               SIM
                             </span>
                           )}
                         </span>
-                        <span className="block truncate font-mono text-[11px] text-slate-500">
+                        <span className="block truncate font-mono text-[12px] text-slate-500">
                           {user.email}
                         </span>
-                        <span className="mt-0.5 block text-[10px] text-slate-500">
+                        <span className="mt-0.5 block text-[12px] text-slate-500">
                           {user.status}
                           {user.org_name ? ` · ${user.org_name}` : ''}
                           {' · '}
@@ -385,7 +385,7 @@ export default function DevRoleSimulationPanel({ onLoginSuccess }: DevRoleSimula
                         </span>
                       </span>
                       {isRowLoading && (
-                        <span className="shrink-0 text-[11px] text-cyan-300">로그인 중…</span>
+                        <span className="shrink-0 text-[12px] text-cyan-300">로그인 중…</span>
                       )}
                     </button>
                   </li>

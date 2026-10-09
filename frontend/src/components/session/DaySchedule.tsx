@@ -78,13 +78,13 @@ export function DaySchedule({ sessions, selectedDate }: Props) {
                 <span className="text-sm font-mono text-[#1F1F1F] min-w-[44px]">
                   {formatTime(s.scheduled_at)}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${typeBadge(s.type)}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[12px] font-bold shrink-0 ${typeBadge(s.type)}`}>
                   {typeLabel(s.type)}
                 </span>
                 <span className="flex-1 truncate text-sm text-[#1F1F1F]">
                   {s.title || `${typeLabel(s.type)} 세션`}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusBadge(s.status)}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${statusBadge(s.status)}`}>
                   {sessionStatusLabel(s.status)}
                 </span>
               </Link>

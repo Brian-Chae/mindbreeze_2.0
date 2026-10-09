@@ -28,7 +28,7 @@ export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = t
   const time = formatTime(createdAt);
   return (
     <article style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '4px', margin: '6px 0' }}>
-      {isMine && <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '6px' }}>{time}</span>}
+      {isMine && <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '6px' }}>{time}</span>}
       {!isMine && (
         <div style={{ width: '32px', flexShrink: 0, alignSelf: showSender ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
           {showSender && (
@@ -38,22 +38,22 @@ export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = t
           )}
         </div>
       )}
-      <div style={{ maxWidth: '78%' }}>
+      <div style={{ maxWidth: '80%' }}>
         {!isMine && showSender && (
-          <div style={{ fontSize: '11px', color: '#6F6F6F', marginBottom: '3px', marginLeft: '2px' }}>{senderName}</div>
+          <div style={{ fontSize: '13px', color: '#6F6F6F', marginBottom: '3px', marginLeft: '2px' }}>{senderName}</div>
         )}
         <div className={emphasis ? 'border-amber-300' : undefined} style={{
-          padding: '8px 14px', borderRadius: '16px', fontSize: '14px', whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+          padding: '8px 14px', borderRadius: '16px', fontSize: '15px', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
           background: isMine ? '#5F0080' : emphasis ? '#FFF4D6' : '#F5EDFC',
           color: isMine ? '#fff' : '#1F1F1F',
           border: emphasis ? '1px solid #F5B041' : undefined,
         }}>
-          {label && <div style={{ fontSize: '11px', fontWeight: 600, color: isMine ? '#fff' : '#5F0080', marginBottom: '4px' }}>{label}</div>}
+          {label && <div style={{ fontSize: '12px', fontWeight: 600, color: isMine ? '#fff' : '#5F0080', marginBottom: '4px' }}>{label}</div>}
           {content}
           {actions}
         </div>
       </div>
-      {!isMine && <span style={{ fontSize: '10px', color: '#9CA0AE', flexShrink: 0, marginBottom: '4px' }}>{time}</span>}
+      {!isMine && <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '4px' }}>{time}</span>}
     </article>
   );
 }

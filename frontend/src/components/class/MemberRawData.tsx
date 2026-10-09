@@ -175,7 +175,7 @@ function RawBlock({
     <div className="member-raw-block">
       <header className="member-raw-head">
         <span className="member-raw-title">
-          {label} <small style={{ fontSize: 10, fontWeight: 400, color: 'var(--player-muted)' }}>{sub}</small>
+          {label} <small style={{ fontSize: 12, fontWeight: 400, color: 'var(--player-muted)' }}>{sub}</small>
         </span>
         <span className={`member-raw-status${hasSignal ? '' : ' is-idle'}`}>
           {hasSignal ? '정상' : '대기'}

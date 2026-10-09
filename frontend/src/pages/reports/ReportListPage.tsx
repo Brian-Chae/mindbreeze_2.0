@@ -77,7 +77,7 @@ function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
@@ -94,7 +94,7 @@ function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
   const guest = isGuest === true;
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
         guest ? 'bg-[#F0F0F0] text-[#6F6F6F]' : 'bg-[#F5EDFC] text-[#5F0080]'
       }`}
     >
@@ -410,7 +410,7 @@ export default function ReportListPage() {
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-1.5">
           {!r.is_read && (
-            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
           )}
           <span className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</span>
         </div>
@@ -477,7 +477,7 @@ export default function ReportListPage() {
       </div>
       <div className="flex items-center gap-1.5 mb-1">
         {!r.is_read && (
-          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[11px] font-bold text-white">NEW</span>
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
         )}
         <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(r)}</span>
       </div>
@@ -531,7 +531,7 @@ export default function ReportListPage() {
       )}
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
-          <div className="text-[14px] text-red-700">{error}</div>
+          <div className="text-[15px] text-red-700">{error}</div>
           <button
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
@@ -674,14 +674,14 @@ export default function ReportListPage() {
                         {g.label}
                         <span className="ml-2 font-normal text-[#6F6F6F]">{g.items.length}건</span>
                       </div>
-                      <table className="w-full text-[14px] min-w-[980px]">
+                      <table className="w-full text-[15px] min-w-[980px]">
                         {tableHead}
                         <tbody>{g.items.map(renderRow)}</tbody>
                       </table>
                     </div>
                   ))
                 ) : (
-                  <table className="w-full text-[14px] min-w-[980px]">
+                  <table className="w-full text-[15px] min-w-[980px]">
                     {tableHead}
                     <tbody>{filtered.map(renderRow)}</tbody>
                   </table>

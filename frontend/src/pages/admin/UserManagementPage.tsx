@@ -24,7 +24,7 @@ function RoleBadge({ role }: { role: string }) {
     client: 'bg-[#E6F8F3] text-[#1F8A5B]',
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
       {ROLE_LABELS[role] ?? role}
     </span>
   );
@@ -32,11 +32,11 @@ function RoleBadge({ role }: { role: string }) {
 
 function StatusBadge({ suspended }: { suspended: boolean }) {
   return suspended ? (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEE2E2] text-[#991B1B]">
       정지됨
     </span>
   ) : (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#D1FAE5] text-[#065F46]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#D1FAE5] text-[#065F46]">
       활성
     </span>
   );
@@ -139,7 +139,7 @@ export default function UserManagementPage() {
 
       {error ? (
         <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
-          <div className="text-[14px] text-red-700">{error}</div>
+          <div className="text-[15px] text-red-700">{error}</div>
           <button
             type="button"
             onClick={() => void fetchUsers()}
@@ -198,7 +198,7 @@ export default function UserManagementPage() {
 
           {/* 데스크톱 테이블 */}
           <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
-            <table className="w-full min-w-[760px] text-[14px]">
+            <table className="w-full min-w-[760px] text-[15px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이름</th>
@@ -283,10 +283,10 @@ export default function UserManagementPage() {
             className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="user-action-modal-title" className="text-[17px] font-bold text-[#1F1F1F] mb-2">
+            <h3 id="user-action-modal-title" className="text-[18px] font-bold text-[#1F1F1F] mb-2">
               {modal.action === 'suspend' ? '사용자 정지' : modal.action === 'delete' ? '사용자 삭제' : '정지 해제'}
             </h3>
-            <p className="text-[14px] text-[#6F6F6F] mb-4">
+            <p className="text-[15px] text-[#6F6F6F] mb-4">
               {modal.action === 'suspend'
                 ? `"${modal.user.name}" (${modal.user.email}) 님을 정지하시겠습니까?`
                 : modal.action === 'delete'
@@ -300,21 +300,21 @@ export default function UserManagementPage() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="정지 사유를 입력하세요 (필수)..."
                 rows={3}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[14px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
+                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
               />
             )}
 
             <div className="flex items-center gap-3 justify-end">
               <button
                 onClick={() => setModal(null)}
-                className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
               >
                 취소
               </button>
               <button
                 onClick={handleAction}
                 disabled={acting || (modal.action === 'suspend' && !reason.trim())}
-                className={`px-4 py-2 rounded-xl text-[14px] font-medium text-white disabled:opacity-50 ${
+                className={`px-4 py-2 rounded-xl text-[15px] font-medium text-white disabled:opacity-50 ${
                   modal.action === 'suspend' || modal.action === 'delete' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
                 }`}
               >

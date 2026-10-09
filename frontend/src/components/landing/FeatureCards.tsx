@@ -21,7 +21,7 @@ export default function FeatureCards() {
           <a href="https://linkband.looxidlabs.com/ko" target="_blank" rel="noopener noreferrer" className={`${secondaryButton} mt-8`}>LINK BAND 자세히 보기 <span className="sr-only">(새 창)</span><Arrow diagonal /></a>
         </div>
       </div>
-      <dl className="mt-12 grid grid-cols-3 gap-3 border-y border-[#DCD2DF] py-8 sm:gap-6 sm:py-10">{specs.map((spec) => <div key={spec.label} className="text-center"><dt className="text-[11px] text-[#796B80] sm:text-sm">{spec.label}</dt><dd className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[#5F0080] sm:text-5xl">{spec.value}<span className="ml-1.5 text-xs font-medium tracking-normal sm:text-base">{spec.unit}</span></dd></div>)}</dl>
+      <dl className="mt-12 grid grid-cols-3 gap-3 border-y border-[#DCD2DF] py-8 sm:gap-6 sm:py-10">{specs.map((spec) => <div key={spec.label} className="text-center"><dt className="text-[12px] text-[#796B80] sm:text-sm">{spec.label}</dt><dd className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[#5F0080] sm:text-5xl">{spec.value}<span className="ml-1.5 text-xs font-medium tracking-normal sm:text-base">{spec.unit}</span></dd></div>)}</dl>
       <p className="mt-5 text-xs leading-6 text-[#756779]">제품 사양은 LINK BAND 공식 안내 기준입니다. 웹 기기 연결은 Chrome·Edge 등 Web Bluetooth 지원 브라우저에서 이용하세요. 측정 결과는 자기 이해를 위한 참고 정보입니다.</p>
     </div>
   </section>;

@@ -306,8 +306,8 @@ export default function ClientSessionListPage() {
       {!loading && !error && invitedSessions.length > 0 && (
         <section className="mb-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[17px] font-bold text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
-            <span className="font-mono text-[11px] text-[#6F6F6F]">{invitedSessions.length}건</span>
+            <h2 className="text-[18px] font-bold text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
+            <span className="font-mono text-[12px] text-[#6F6F6F]">{invitedSessions.length}건</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {invitedSessions.map((s) => (

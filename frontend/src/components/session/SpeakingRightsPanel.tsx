@@ -62,22 +62,22 @@ const ParticipantRow = memo(function ParticipantRow({
         </p>
         <div className="mt-0.5 flex flex-wrap items-center gap-1">
           {row.is_guest && (
-            <span className="rounded-full bg-[#F2F3F8] px-1.5 py-0.5 text-[10px] font-medium text-[#6F6F6F]">
+            <span className="rounded-full bg-[#F2F3F8] px-1.5 py-0.5 text-[12px] font-medium text-[#6F6F6F]">
               게스트
             </span>
           )}
           {row.raise_hand && (
-            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[10px] font-semibold text-[#8A6B1F]">
+            <span className="rounded-full bg-[#F5E2B8] px-1.5 py-0.5 text-[12px] font-semibold text-[#8A6B1F]">
               🙋 손들기
             </span>
           )}
           {row.speaking && (
-            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[10px] font-semibold text-[#2F9E68]">
+            <span className="rounded-full bg-[#59CE9026] px-1.5 py-0.5 text-[12px] font-semibold text-[#2F9E68]">
               🎤 발언 중
             </span>
           )}
           {!row.raise_hand && !row.speaking && (
-            <span className="text-[10px] font-medium text-[#9B9B9B]">발언권 없음</span>
+            <span className="text-[12px] font-medium text-[#9B9B9B]">발언권 없음</span>
           )}
         </div>
       </div>
@@ -122,7 +122,7 @@ export function SpeakingRightsPanel({
         <h3 className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
           발언권 관리
         </h3>
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold">
+        <div className="flex items-center gap-1.5 text-[12px] font-semibold">
           {raisedCount > 0 && (
             <span className="rounded-full bg-[#F5E2B8] px-2 py-0.5 text-[#8A6B1F]">
               🙋 손들기 {raisedCount}명

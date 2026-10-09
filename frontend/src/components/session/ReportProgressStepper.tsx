@@ -119,7 +119,7 @@ export function ReportProgressStepper({
       <div className="flex items-center justify-between gap-3">
         <p className={`text-sm font-semibold ${c.title}`}>{copy.title}</p>
         <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${c.chip}`}
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold ${c.chip}`}
           data-testid="report-progress-status-chip"
         >
           {REPORT_GENERATION_LABELS[progress.generation_status]}

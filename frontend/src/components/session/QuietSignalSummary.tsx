@@ -18,7 +18,7 @@ export function QuietSignalSummary({ counts }: QuietSignalSummaryProps) {
       className="inline-flex flex-wrap items-center gap-2 rounded-full bg-[#F2F3F8] px-3 py-1.5 text-[12px] font-medium text-[#6F6F6F]"
       aria-label={`조용한 신호 집계 — ${parts.join(', ')}`}
     >
-      <span className="text-[11px] font-mono uppercase tracking-wider text-[#9B9B9B]">
+      <span className="text-[12px] font-mono uppercase tracking-wider text-[#9B9B9B]">
         조용한 신호
       </span>
       {parts.map((part) => (

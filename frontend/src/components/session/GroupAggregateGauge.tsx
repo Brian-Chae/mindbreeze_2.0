@@ -33,14 +33,14 @@ export function GroupAggregateGauge({ aggregate, className = '' }: GroupAggregat
           <span className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
             그룹 상태
           </span>
-          <span className="text-[11px] text-[#9B9B9B]">익명 집계 · 기준선 대비</span>
+          <span className="text-[12px] text-[#9B9B9B]">익명 집계 · 기준선 대비</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[11px] font-medium tabular-nums text-[#6F6F6F]">
+          <span className="rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[12px] font-medium tabular-nums text-[#6F6F6F]">
             {model.sampleLabel}
           </span>
           <span
-            className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${model.paceChipClass}`}
+            className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${model.paceChipClass}`}
           >
             {model.paceLabel}
           </span>
@@ -71,7 +71,7 @@ export function GroupAggregateGauge({ aggregate, className = '' }: GroupAggregat
           </div>
         ))}
       </div>
-      <div className="flex justify-between text-[10px] text-[#9B9B9B]">
+      <div className="flex justify-between text-[12px] text-[#9B9B9B]">
         <span>기준선 아래</span>
         <span className="tabular-nums">기준선 0</span>
         <span>기준선 위</span>
@@ -92,7 +92,7 @@ export function GroupAggregateGauge({ aggregate, className = '' }: GroupAggregat
 
       {/* 표본이 적으면 근거가 약하다는 사실을 문장으로 남긴다(숫자로 눈속임하지 않는다) */}
       {aggregate && model.dimmed && (
-        <p className="mt-1 text-[11px] text-[#9B9B9B]">
+        <p className="mt-1 text-[12px] text-[#9B9B9B]">
           착용자가 {aggregate.min_wearers}명 이상이고 2분 기준선이 쌓이면 그룹 지표가 표시됩니다
           (현재 캘리브레이션 완료 {aggregate.calibrated_count}명).
         </p>
