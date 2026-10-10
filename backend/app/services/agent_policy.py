@@ -304,6 +304,43 @@ def structured_memories(
     return list_items(db, uid, limit=limit)
 
 
+def client_recent_messages(
+    user_id: str | UUID, db: DBSession, *, limit: int = MAX_CONTEXT_RECENT_MESSAGES
+) -> list[dict]:
+    """내담자 채널 최근 대화 메시지 — 루시가 "방금 나눈 대화" 맥락으로 참조한다(SDD-202).
+
+    진행 중인 체크인은 아직 요약이 없어, 최근 메시지 원문을 직접 실어야 루시가
+    "고마워 친구" 같은 짧은 말에도 직전 대화 맥락을 알고 답한다. 본인 대화방
+    (channel=client)만 조회한다.
+    """
+    from app.models.agent import AgentConversation, AgentMessage
+
+    uid = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
+    conversation = (
+        db.query(AgentConversation)
+        .filter(
+            AgentConversation.user_id == uid,
+            AgentConversation.channel == "client",
+        )
+        .first()
+    )
+    if conversation is None:
+        return []
+
+    rows = (
+        db.query(AgentMessage)
+        .filter(AgentMessage.conversation_id == conversation.id)
+        .order_by(AgentMessage.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {"sender": message.sender, "content": (message.content or "").strip()}
+        for message in reversed(rows)
+        if (message.content or "").strip()
+    ]
+
+
 def client_context(user_id: str | UUID, db: DBSession) -> dict:
     """내담자 채널 컨텍스트 — 에이전트가 참조할 수 있는 전부.
 
@@ -320,6 +357,7 @@ def client_context(user_id: str | UUID, db: DBSession) -> dict:
         "reports": approved_client_reports(uid, db),
         "memories": client_memories(uid, db),
         "structured_memories": structured_memories(uid, db),
+        "recent_messages": client_recent_messages(uid, db),
     }
 
 
@@ -378,6 +416,15 @@ def context_to_text(context: dict) -> str:
         for item in structured:
             label = CATEGORY_LABELS.get(item["category"], item["category"])
             lines.append(f"- [{label}] {item['key']}: {item['value']}")
+
+    # SDD-202: 진행 중 대화의 최근 메시지를 실어 맥락 상실(뜬금없는 지시 대명사 등)을 막는다.
+    recent = context.get("recent_messages") or []
+    if recent:
+        lines.append("")
+        lines.append("■ 최근 대화 (방금 나눈 대화 — 이 맥락을 이어서 답하세요)")
+        for item in recent:
+            who = "내담자" if item["sender"] == "user" else "루시"
+            lines.append(f"- {who}: {item['content']}")
 
     return "\n".join(lines)
 

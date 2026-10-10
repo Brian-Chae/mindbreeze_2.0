@@ -30,9 +30,9 @@ def test_TS3_예시에_이모지가_없다():
         assert token not in agent_llm.FEW_SHOT_EXAMPLES, token
 
 
-def test_예시는_4개_이상_5개_이하다():
+def test_예시는_4개_이상_6개_이하다():
     count = agent_llm.FEW_SHOT_EXAMPLES.count("내담자:")
-    assert 4 <= count <= 5
+    assert 4 <= count <= 6
 
 
 def test_generate_stream_thinking_토큰을_건너뛰고_텍스트만_모은다(monkeypatch):

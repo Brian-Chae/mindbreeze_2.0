@@ -161,6 +161,23 @@ def test_TS3_기억이_없으면_블록이_생략된다(client):
     assert "■ 기억" not in text
 
 
+def test_recent_messages가_컨텍스트와_직렬화에_포함된다(client):
+    member = H.register_client(client, "mem-ts3c@test.com", name="박내담")
+    H.agree_consent(client, member["h"])
+    H.send_client_message(client, member["h"], "오늘 음식 얘기 재밌었어요")
+
+    conn = H.db()
+    try:
+        context = agent_policy.client_context(member["id"], conn)
+        text = agent_policy.context_to_text(context)
+    finally:
+        conn.close()
+
+    assert context["recent_messages"]
+    assert "■ 최근 대화" in text
+    assert "음식 얘기 재밌었어요" in text
+
+
 # ── TS4: 진단·점수 차단 ────────────────────────────────────
 
 
