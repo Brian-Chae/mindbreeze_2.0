@@ -1,6 +1,6 @@
 """내담자 포털 API — Client-facing (상담사 관리, 내 정보, 홈)"""
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,7 +16,7 @@ from app.models.record import Report
 from app.models.session import Session as SessionModel, SessionParticipant
 from app.models.user import User
 from app.services.chat_service import get_or_create_direct_room
-from app.services import code_service, org_management_service
+from app.services import agent_policy, code_service, org_management_service
 from app.schemas.client import (
     AddCounselorRequest,
     ClientHomeResponse,
@@ -201,11 +201,12 @@ def add_counselor_by_code(
 # ── 내담자 홈 화면 ──
 
 def _get_today_range() -> tuple[datetime, datetime]:
-    """오늘의 시작/끝 datetime (UTC) 반환"""
-    now = datetime.now(timezone.utc)
-    today_start = datetime.combine(now.date(), datetime.min.time()).replace(tzinfo=timezone.utc)
-    today_end = datetime.combine(now.date(), datetime.max.time()).replace(tzinfo=timezone.utc)
-    return today_start, today_end
+    """오늘(KST)의 시작/끝을 UTC aware 범위로 반환한다.
+
+    내담자 홈의 "오늘 세션 수"는 한국 시간 기준이어야 한다(UTC 자정으로 끊으면
+    KST 00:00~08:59 구간에서 전날로 집계되는 오류가 난다).
+    """
+    return agent_policy.kst_day_bounds(agent_policy.kst_today())
 
 
 @router.get("/home", response_model=ClientHomeResponse)
@@ -307,7 +308,7 @@ def get_client_home(
         .filter(
             SessionParticipant.user_id == user_id,
             SessionModel.scheduled_at >= today_start,
-            SessionModel.scheduled_at <= today_end,
+            SessionModel.scheduled_at < today_end,
         )
         .count()
     )

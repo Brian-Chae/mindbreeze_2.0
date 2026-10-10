@@ -45,7 +45,7 @@ async function sort(value: string) {
   await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
 }
 function titles() {
-  return Array.from(container.querySelectorAll('tbody tr')).map((r) => r.querySelector('td > div')?.textContent);
+  return Array.from(container.querySelectorAll('tbody tr')).map((r) => r.querySelector('td > div > span.truncate')?.textContent);
 }
 it('20건 페이지 요청과 반응형 목록, 기본 상담사 그룹 및 회원 상태를 표시한다', async () => {
   await render();

@@ -147,7 +147,7 @@ export class CapacitorBleAdapter implements BluetoothProvider {
         BATTERY_LEVEL_CHAR_UUID
       );
       return result.getUint8(0);
-    } catch (error) {
+    } catch {
       // 선택적 배터리 서비스가 없는 기기는 기존 기본값을 유지한다.
       return 0;
     }

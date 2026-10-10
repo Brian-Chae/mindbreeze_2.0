@@ -29,7 +29,7 @@ def _talk(client, member: dict, text: str) -> dict:
 
 def test_TS4_여섯턴_진행하면_마무리_메시지로_닫힌다(client):
     counselor, member = _pair(client, "cv-ts4a")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     replies = [_talk(client, member, f"요즘은 그냥 그래요 {i}") for i in range(6)]
 
@@ -49,7 +49,7 @@ def test_TS4_여섯턴_진행하면_마무리_메시지로_닫힌다(client):
 
 def test_TS4_마무리_후_새_메시지는_새_체크인으로_처리된다(client):
     _, member = _pair(client, "cv-ts4b")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     for i in range(6):
         _talk(client, member, f"그냥 지냈어요 {i}")
     assert H.checkins(member["id"])[0]["closed_at"] is not None
@@ -74,7 +74,7 @@ def test_TS4_안부가_꺼져도_담당_상담사가_있으면_체크인으로_�
 
 def test_TS4_요약에는_대화_원문이_그대로_담기지_않는다(client):
     _, member = _pair(client, "cv-ts4d")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     secret = "지난주에 사촌 결혼식에서 크게 다퉜어요"
     _talk(client, member, secret)
     for i in range(5):
@@ -94,7 +94,7 @@ BAD_LLM_OUTPUT = (
 
 def test_TS5_금지_표현은_저장_전에_제거된다(client):
     _, member = _pair(client, "cv-ts5a")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm._invoke", return_value=BAD_LLM_OUTPUT):
         reply = _talk(client, member, "요즘 많이 힘들어요")
@@ -108,7 +108,7 @@ def test_TS5_금지_표현은_저장_전에_제거된다(client):
 
 def test_TS5_금지_표현만_있으면_템플릿_폴백으로_대체된다(client):
     _, member = _pair(client, "cv-ts5b")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch(
         "app.services.agent_llm._invoke",
@@ -144,7 +144,7 @@ def test_TS5_가드_단위_판정(client):
 
 def test_TS16_LLM_키가_없으면_템플릿으로_대화가_완결된다(client):
     _, member = _pair(client, "cv-ts16a")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm.is_enabled", return_value=False):
         replies = [_talk(client, member, f"요즘 잠을 잘 못 자요 {i}") for i in range(6)]
@@ -158,7 +158,7 @@ def test_TS16_LLM_키가_없으면_템플릿으로_대화가_완결된다(client
 
 def test_TS16_LLM_예외가_나도_템플릿으로_완결된다(client):
     _, member = _pair(client, "cv-ts16b")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm.is_enabled", return_value=True), patch(
         "app.services.agent_llm._invoke", side_effect=RuntimeError("provider down")
@@ -175,7 +175,7 @@ def test_TS16_LLM_예외가_나도_템플릿으로_완결된다(client):
 
 def test_TS16_변화_방향_키워드_폴백(client):
     _, member = _pair(client, "cv-ts16c")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm.is_enabled", return_value=False):
         for i in range(6):
@@ -189,7 +189,7 @@ def test_TS16_변화_방향_키워드_폴백(client):
 
 def test_Edge_체크인_도중_상담사가_끄면_열린_체크인은_마무리된다(client):
     counselor, member = _pair(client, "cv-edge-off")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     _talk(client, member, "한 턴 이야기했어요")
 
     H.set_checkin_enabled(counselor["id"], member["id"], False)
@@ -200,7 +200,7 @@ def test_Edge_체크인_도중_상담사가_끄면_열린_체크인은_마무리
     assert H.checkins(member["id"])[0]["closed_at"] is not None
 
     # 신규 아웃리치는 멈춘다.
-    H.run_checkin_sweep(now=H.kst_at(11, 0))
+    H.run_checkin_sweep(now=H.kst_at(11, 0, day_offset=-1))
     assert len(H.checkins(member["id"])) == 1
 
 
@@ -209,7 +209,7 @@ def test_Edge_내담자가_일시중지해도_대화는_계속_가능하다(clie
     H.set_checkin_paused(member["id"], True)
 
     # 아웃리치는 멈춘다.
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     assert H.messages_of(member["id"], kind=agent_checkin.KIND_CHECKIN) == []
 
     # 내담자가 먼저 말을 걸면 응답한다.
@@ -219,7 +219,7 @@ def test_Edge_내담자가_일시중지해도_대화는_계속_가능하다(clie
 
 def test_Edge_턴_상한을_넘기면_스윕이_방치된_체크인을_닫는다(client):
     _, member = _pair(client, "cv-edge-stale")
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     _talk(client, member, "한 턴만 이야기했어요")
     # 하루 넘게 방치된 상태로 만든다.
     conn = H.db()

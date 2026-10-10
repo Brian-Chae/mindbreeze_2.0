@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as api from '../../lib/api/agent-checkin';
 import type { CheckinClient, CheckinSummary, ProfileItem, ProfilePatch } from '../../lib/api/agent-checkin';
 
-export const profileCategoryLabels: Record<ProfileItem['category'], string> = {
+const profileCategoryLabels: Record<ProfileItem['category'], string> = {
   sleep: '수면', stress: '스트레스 요인', emotion: '감정 표현', coping: '대처 방식', people_events: '주요 인물·사건',
 };
 const moodLabels = { better: '좋아짐', same: '비슷함', watch: '주의' };

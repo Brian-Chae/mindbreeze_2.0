@@ -2,6 +2,7 @@ import type { AgentConsent, AgentCta, AgentMessage } from '../api/agent';
 
 /** 루트 상대경로 또는 HTTPS만 허용한다. 브라우저의 역슬래시·제어문자 URL 보정을 차단한다. */
 export function safeAgentUrl(value?: string): string | null {
+  // eslint-disable-next-line no-control-regex -- 제어문자·역슬래시는 브라우저 URL 보정에 악용될 수 있어 의도적으로 거른다.
   if (!value || value !== value.trim() || /[\\\u0000-\u0020\u007f]/.test(value)) return null;
   if (value.startsWith('/') && !value.startsWith('//')) return value;
   try {

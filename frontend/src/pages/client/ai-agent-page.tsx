@@ -206,6 +206,8 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
               } catch (err) {
                 // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
                 setMessages((previous) => previous.filter((message) => message.id !== tempId));
+                // 입력창은 전송 시점에 비웠으므로, 실패하면 사용자가 쓴 내용을 되돌려 재전송할 수 있게 한다.
+                setText((current) => current || content);
                 throw err;
               } finally {
                 setAwaitingReply(false);

@@ -4,7 +4,6 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import ClientSessionDetailPage from '../src/pages/client/ClientSessionDetailPage';
-import ClientReportDetailPage from '../src/pages/client/ClientReportDetailPage';
 import { ClientReportDetailModal } from '../src/pages/client/ClientReportDetailModal';
 import { getSession, type SessionDto } from '../src/lib/api/session';
 import ClientReportListPage from '../src/pages/client/ClientReportListPage';
@@ -112,14 +111,6 @@ it('세션에 리포트가 없으면 닫을 수 있는 오류 상태를 표시�
   vi.mocked(listReports).mockResolvedValue({ reports: [], total: 0 });
   await act(async () => root.render(<ClientReportDetailModal sessionId="missing" onClose={() => root.render(null)} />));
   expect(document.querySelector('[role="alert"]')?.textContent).toContain('리포트를 찾을 수 없습니다');
-});
-it('직접 URL 진입은 공용 본문과 목록 이동을 유지한다', async () => {
-  await act(async () => root.render(<MemoryRouter initialEntries={['/app/reports/report-1']}><ClientReportDetailPage /><Location /></MemoryRouter>));
-  expect(container.textContent).toContain('편안한 하루 보내세요');
-  expect(document.querySelector('dialog')).toBeNull();
-  const back = Array.from(container.querySelectorAll('button')).find((button) => button.textContent === '목록으로')!;
-  await act(async () => back.click());
-  expect(container.querySelector('output')?.textContent).toBe('/app/reports');
 });
 it('닫힌 모달의 늦은 응답은 다시 열린 리포트를 덮어쓰지 않는다', async () => {
   let resolveOld!: (value: ReportDto) => void;

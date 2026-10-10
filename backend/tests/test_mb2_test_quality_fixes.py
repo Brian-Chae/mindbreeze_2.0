@@ -33,6 +33,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
+from freezegun import freeze_time
 
 from app.services import email_verify_service
 from tests.conftest import create_test_counselor, create_test_org, post_register
@@ -430,7 +431,11 @@ def _seed_client_home(client):
     return member, host, ids
 
 
+@freeze_time(datetime(2026, 6, 15, 3, 0, 0, tzinfo=timezone.utc))  # 2026-06-15 12:00 KST
 def test_tq09_내담자_홈_집계_반환(client):
+    # "오늘 세션 수"는 KST 자정 경계로 끊는다. 테스트 실행 시각이 자정 근처면
+    # now+30분으로 심은 세션이 "내일"로 밀려 today_sessions==0 이 되는 flake를 막기 위해
+    # 시계를 정오(KST)로 고정한다(시드·엔드포인트가 같은 frozen now 를 본다).
     member, host, ids = _seed_client_home(client)
 
     res = client.get("/api/v1/client/home", headers=member["h"])

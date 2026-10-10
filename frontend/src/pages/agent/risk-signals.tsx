@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { handleRiskSignal, listRiskSignals, type RiskSignal } from '../../lib/api/agent-checkin';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 
+// 테스트에서 정렬 로직을 단독 검증하므로 컴포넌트와 함께 내보낸다.
+// eslint-disable-next-line react-refresh/only-export-components
 export function sortRiskSignals(items: RiskSignal[]): RiskSignal[] {
   return [...items].sort((a, b) => Number(Boolean(a.handled_at)) - Number(Boolean(b.handled_at)) || b.created_at.localeCompare(a.created_at));
 }

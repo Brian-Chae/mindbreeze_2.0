@@ -6,6 +6,7 @@ import { getPlatform, isNativeApp } from './platform';
 
 /** 외부 URL, 인코딩 우회, 경로 정규화 우회를 허용하지 않는다. */
 export function allowedPushDeeplink(value: unknown): string | null {
+  // eslint-disable-next-line no-control-regex -- 제어문자·공백·% 등 경로 정규화 우회에 쓰일 수 있어 의도적으로 거른다.
   if (typeof value !== 'string' || /[\\%\s\u0000-\u001f]/.test(value)) return null;
   if (!value.startsWith('/') || value.startsWith('//')) return null;
   const path = value.split(/[?#]/, 1)[0];

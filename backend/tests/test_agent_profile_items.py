@@ -23,7 +23,7 @@ def _pair(client, prefix: str):
 
 def _run_checkin(client, member: dict, first_text: str = PROFILE_TEXT) -> None:
     """체크인 1건을 마무리까지 진행해 프로파일 추출을 일으킨다(LLM 미사용 폴백)."""
-    H.run_checkin_sweep(now=H.kst_at(10, 0))
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     with patch("app.services.agent_llm.is_enabled", return_value=False):
         H.send_client_message(client, member["h"], first_text)
         for i in range(5):
