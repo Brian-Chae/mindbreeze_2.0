@@ -223,7 +223,7 @@ def _rule_based_draft(context: dict) -> str:
 
 
 def _call_gemini(
-    prompt: str, max_output_tokens: int = 1024, thinking_budget: int = 0
+    prompt: str, max_output_tokens: int = 1024, thinking_budget: int = 0, model: str | None = None
 ) -> str | None:
     """Gemini generateContent 호출. 키 부재·오류·타임아웃 시 None (호출부에서 규칙 폴백).
 
@@ -233,8 +233,11 @@ def _call_gemini(
 
     thinking_budget 은 Gemini 2.5 의 사고(thinking) 토큰 상한. 0 이면 사고를 건너뛰어
     빠르게 응답하고(상담사 코멘트 초안), 양수면 모델이 사고를 거쳐 더 깊이 추론한 뒤
-    답한다(루시 감정 대화 — "생각하고 위로하는" 페르소나). 사고가 max_output_tokens 를
+    답한다(루시 감정 대화 — \"생각하고 위로하는\" 페르소나). 사고가 max_output_tokens 를
     잡아먹으므로 thinking 을 켤 땐 max_output_tokens 를 함께 키워야 한다.
+
+    model 을 주지 않으면 settings.gemini_model(STT·요약 공용)을 쓰고, 루시는
+    settings.agent_llm_model 을 넘겨 전용 모델을 쓴다(SDD-201).
     """
     api_key = settings.gemini_api_key
     if not api_key:
@@ -242,9 +245,10 @@ def _call_gemini(
 
     import httpx
 
+    resolved_model = model or settings.gemini_model
     try:
         resp = httpx.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
+            f"https://generativelanguage.googleapis.com/v1beta/models/{resolved_model}:generateContent",
             headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
             json={
                 "contents": [{"parts": [{"text": prompt}]}],

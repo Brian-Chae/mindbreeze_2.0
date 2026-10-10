@@ -95,6 +95,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     whisper_model: str = "whisper-1"
 
+    # SDD-201: 루시(AI 에이전트) 전용 Gemini 모델 — STT·요약과 분리해 감정 대화 품질을
+    #   올릴 때 다른 파이프라인 비용을 건드리지 않는다. 기본값은 flash(기존 동작 유지).
+    agent_llm_model: str = "gemini-2.5-flash"
+
     # LiveKit WebRTC
     livekit_host: str = "ws://localhost:7880"
     livekit_api_key: str = "devkey"

@@ -75,6 +75,7 @@ def _invoke(prompt: str) -> str | None:
             prompt,
             max_output_tokens=AGENT_LLM_MAX_OUTPUT_TOKENS,
             thinking_budget=AGENT_LLM_THINKING_BUDGET,
+            model=settings.agent_llm_model,
         )
         return future.result(timeout=AGENT_LLM_TIMEOUT_SEC)
     except FutureTimeoutError:
