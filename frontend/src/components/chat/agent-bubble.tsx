@@ -1,6 +1,6 @@
 // 루시(AI) 대화 말풍선 — 일반 채팅방(MessageBubble)과 동일한 카톡 스타일.
 // 상대(루시) 메시지: 아바타 + 이름 + 말풍선 옆 시간, 내 메시지: 보라 말풍선 + 왼쪽 시간.
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 
 interface Props {
   isMine: boolean;
@@ -62,12 +62,19 @@ export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = t
 export function AgentInputBar({ value, onChange, onSubmit, disabled, placeholder, ariaLabel, busy }: {
   value: string; onChange: (v: string) => void; onSubmit: () => void; disabled?: boolean; placeholder: string; ariaLabel: string; busy?: boolean;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  // 첫 진입 시 iOS Safari 가 이전 포커스 상태를 복원해 키보드가 자동으로 올라와
+  // 입력창이 위로 밀리는 현상을 막는다.
+  useEffect(() => {
+    inputRef.current?.blur();
+  }, []);
   return (
     <form
       className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0"
       onSubmit={(event) => { event.preventDefault(); onSubmit(); }}
     >
       <input
+        ref={inputRef}
         type="text"
         name="chat-message"
         autoComplete="off"
