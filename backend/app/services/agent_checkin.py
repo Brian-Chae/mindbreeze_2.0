@@ -646,6 +646,7 @@ def _respond_prompt(
     """체크인 응답 프롬프트·폴백 — respond/respond_stream 이 함께 쓴다(SDD-201)."""
     fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
     task = (
+        "인사·감탄사 같은 짧은 말에는 감정을 해석하지 말고 자연스럽게 받아 주세요. "
         "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
         "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
         "공감·위로 후에는 대화가 끊기지 않도록 자연스럽게 이어갈 질문이나 주제를 하나 던지세요. "
