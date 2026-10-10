@@ -389,3 +389,37 @@ class AgentRiskSignal(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class AgentMemoryItem(Base):
+    """SDD-198: 루시 전용 구조화 장기기억 — 사실·선호·관계·감정 트렌드.
+
+    내담자별로 (category, key) 당 최신 1건을 유지한다. 루시가 대화에서 인출해
+    "기억하는 동반자"가 되는 기반이다. 상담사 전용 프로파일(AgentProfileItem)과 달리
+    루시 대화 컨텍스트에 직접 노출된다(내담자 본인 것만).
+    """
+
+    __tablename__ = "agent_memory_items"
+    __table_args__ = (
+        UniqueConstraint("client_id", "category", "key", name="uq_agent_memory_item_key"),
+        Index("ix_agent_memory_items_client", "client_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    client_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # fact(사실) | preference(선호) | relation(관계) | emotion_trend(감정 트렌드)
+    category: Mapped[str] = mapped_column(String(20), nullable=False)
+    # 주제명 — 예: "자녀", "직업", "선호 대화 방식"
+    key: Mapped[str] = mapped_column(String(80), nullable=False)
+    # 내용 — 예: "이서(딸), 이준(아들)"
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    # 근거 메시지 id 목록(JSON 배열). 원문은 저장하지 않는다.
+    evidence: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())

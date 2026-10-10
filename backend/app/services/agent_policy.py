@@ -289,6 +289,21 @@ def client_memories(
     return memories
 
 
+def structured_memories(
+    user_id: str | UUID, db: DBSession, *, limit: int = MAX_CONTEXT_MEMORIES
+) -> list[dict]:
+    """SDD-198: 구조화 장기기억 — 사실·선호·관계·감정 트렌드.
+
+    체크인 마무리 시 `agent_memory.extract_and_store` 로 저장된 키-밸류 기억이다.
+    요약 덩어리(client_memories)와 달리 (category, key) 당 최신 1건이라 "자녀" 같은
+    사실을 정확히 인출한다.
+    """
+    from app.services.agent_memory import list_items
+
+    uid = user_id if isinstance(user_id, UUID) else UUID(str(user_id))
+    return list_items(db, uid, limit=limit)
+
+
 def client_context(user_id: str | UUID, db: DBSession) -> dict:
     """내담자 채널 컨텍스트 — 에이전트가 참조할 수 있는 전부.
 
@@ -304,6 +319,7 @@ def client_context(user_id: str | UUID, db: DBSession) -> dict:
         "sessions": upcoming_sessions(uid, db),
         "reports": approved_client_reports(uid, db),
         "memories": client_memories(uid, db),
+        "structured_memories": structured_memories(uid, db),
     }
 
 
@@ -352,6 +368,16 @@ def context_to_text(context: dict) -> str:
         lines.append("■ 지난 대화 기억 (내담자와 나눈 최근 대화 요약)")
         for item in memories:
             lines.append(f"- {item['summary']}")
+
+    structured = context.get("structured_memories") or []
+    if structured:
+        from app.services.agent_memory import CATEGORY_LABELS
+
+        lines.append("")
+        lines.append("■ 기억 (내담자에 대해 알고 있는 사실·선호·관계 — 자연스럽게 언급)")
+        for item in structured:
+            label = CATEGORY_LABELS.get(item["category"], item["category"])
+            lines.append(f"- [{label}] {item['key']}: {item['value']}")
 
     return "\n".join(lines)
 

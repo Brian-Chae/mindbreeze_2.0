@@ -38,7 +38,7 @@ from app.models.agent import (
     AgentRiskSignal,
 )
 from app.models.user import User
-from app.services import agent_guard, agent_llm, agent_policy, agent_profile, agent_service
+from app.services import agent_guard, agent_llm, agent_memory, agent_policy, agent_profile, agent_service
 
 logger = logging.getLogger(__name__)
 
@@ -771,6 +771,8 @@ def close(db: DBSession, checkin: AgentCheckin, *, commit: bool = False) -> Agen
         counselor_id=checkin.counselor_id,
         texts=pairs,
     )
+    # SDD-198: 루시 전용 구조화 장기기억(사실·선호·관계·감정 트렌드) 축적.
+    agent_memory.extract_and_store(db, client_id=checkin.client_id, texts=pairs)
     if commit:
         db.commit()
     logger.info(
