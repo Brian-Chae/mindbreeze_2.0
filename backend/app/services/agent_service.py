@@ -31,7 +31,7 @@ from app.models.consent import Consent
 from app.models.notification_outbox import NotificationOutbox
 from app.models.session import Session
 from app.models.user import User
-from app.services import agent_guard, agent_llm, agent_policy, notification_service
+from app.services import agent_emotion, agent_guard, agent_llm, agent_policy, notification_service
 
 logger = logging.getLogger(__name__)
 
@@ -651,6 +651,12 @@ def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
         "2~3문장을 넘기지 마세요."
     )
     context_text = agent_policy.context_to_text(agent_policy.client_context(user_id, db))
+    # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
+    signal = agent_emotion.detect_emotion(user_text)
+    if signal["emotion"] != "neutral":
+        context_text = "\n".join(
+            filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
+        )
     prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
     return agent_llm.generate(prompt, fallback)
 

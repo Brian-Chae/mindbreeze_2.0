@@ -38,7 +38,7 @@ from app.models.agent import (
     AgentRiskSignal,
 )
 from app.models.user import User
-from app.services import agent_guard, agent_llm, agent_memory, agent_policy, agent_profile, agent_service
+from app.services import agent_emotion, agent_guard, agent_llm, agent_memory, agent_policy, agent_profile, agent_service
 
 logger = logging.getLogger(__name__)
 
@@ -665,8 +665,15 @@ def respond(
         "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
         "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
     )
+    context_text = agent_policy.context_to_text(agent_policy.client_context(client_id, db))
+    # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
+    signal = agent_emotion.detect_emotion(user_text)
+    if signal["emotion"] != "neutral":
+        context_text = "\n".join(
+            filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
+        )
     prompt = agent_llm.build_prompt(
-        agent_policy.context_to_text(agent_policy.client_context(client_id, db)),
+        context_text,
         user_text=user_text,
         task=task,
     )
