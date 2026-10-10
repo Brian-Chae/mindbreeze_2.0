@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
@@ -60,6 +61,71 @@ def generate(prompt: str, fallback: str) -> str:
     # 진단·점수 표현이 섞여 있으면 해당 문장을 버리고, 전부 걸러지면 템플릿으로 되돌린다.
     cleaned = agent_guard.sanitize(text, fallback=fallback)
     return cleaned[:AGENT_MESSAGE_MAX_LENGTH]
+
+
+def generate_stream(prompt: str, fallback: str):
+    """Gemini 스트리밍 응답 — thinking 토큰은 건너뛰고 텍스트 토큰만 yield(SDD-201).
+
+    thinking(사고) 유지 시 첫 텍스트 토큰은 사고 완료 후 도착한다. 스트리밍은
+    "완료 후 일괄 표시 → 토큰별 표시"로 바꿔 체감 지연을 줄인다. 호출 실패 시
+    fallback 을 통째로 yield 해 메시지 생성을 실패시키지 않는다.
+    """
+    if not is_enabled():
+        yield fallback[:AGENT_MESSAGE_MAX_LENGTH]
+        return
+
+    import httpx
+
+    from app.services.report_comment_service import GEMINI_TIMEOUT_SECONDS
+
+    api_key = settings.gemini_api_key
+    model = settings.agent_llm_model
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
+        f":streamGenerateContent?alt=sse&key={api_key}"
+    )
+
+    accumulated: list[str] = []
+    try:
+        with httpx.stream(
+            "POST",
+            url,
+            headers={"Content-Type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.6,
+                    "maxOutputTokens": AGENT_LLM_MAX_OUTPUT_TOKENS,
+                    "thinkingConfig": {"thinkingBudget": AGENT_LLM_THINKING_BUDGET},
+                },
+            },
+            timeout=GEMINI_TIMEOUT_SECONDS,
+        ) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                payload = line[len("data:"):].strip()
+                if not payload or payload == "[DONE]":
+                    continue
+                try:
+                    data = json.loads(payload)
+                except ValueError:
+                    continue
+                candidates = data.get("candidates") or []
+                for candidate in candidates:
+                    parts = (candidate.get("content") or {}).get("parts") or []
+                    for part in parts:
+                        if part.get("thought"):
+                            continue  # 사고 토큰은 사용자에게 보이지 않는다
+                        text = part.get("text", "")
+                        if text:
+                            accumulated.append(text)
+                            yield text
+    except Exception:  # noqa: BLE001 — 스트리밍 실패가 메시지 생성을 실패시키지 않는다
+        logger.warning("[agent_llm] 스트리밍 실패 — 폴백")
+    if not accumulated:
+        yield fallback[:AGENT_MESSAGE_MAX_LENGTH]
 
 
 def _invoke(prompt: str) -> str | None:

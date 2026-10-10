@@ -33,3 +33,45 @@ def test_TS3_예시에_이모지가_없다():
 def test_예시는_4개_이상_5개_이하다():
     count = agent_llm.FEW_SHOT_EXAMPLES.count("내담자:")
     assert 4 <= count <= 5
+
+
+def test_generate_stream_thinking_토큰을_건너뛰고_텍스트만_모은다(monkeypatch):
+    import httpx
+
+    class FakeResp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self):
+            return [
+                'data: {"candidates":[{"content":{"parts":[{"text":"사고 중...","thought":true}]}}]}',
+                'data: {"candidates":[{"content":{"parts":[{"text":"안녕","thought":false}]}}]}',
+                'data: {"candidates":[{"content":{"parts":[{"text":"하세요","thought":false}]}}]}',
+            ]
+
+    monkeypatch.setattr(httpx, "stream", lambda *a, **k: FakeResp())
+    monkeypatch.setattr(agent_llm, "is_enabled", lambda: True)
+
+    tokens = list(agent_llm.generate_stream("프롬프트", "폴백"))
+
+    assert tokens == ["안녕", "하세요"]
+
+
+def test_generate_stream_실패_시_폴백을_yield_한다(monkeypatch):
+    import httpx
+
+    def raise_stream(*args, **kwargs):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(httpx, "stream", raise_stream)
+    monkeypatch.setattr(agent_llm, "is_enabled", lambda: True)
+
+    tokens = list(agent_llm.generate_stream("프롬프트", "고정 폴백"))
+
+    assert tokens == ["고정 폴백"]

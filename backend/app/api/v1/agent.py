@@ -8,6 +8,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import require_roles
@@ -73,6 +74,32 @@ def send_message(
 ):
     """사용자 메시지 전송 + 에이전트 응답. 미동의 시 403 `agent_consent_required`."""
     return agent_service.send_user_message(db, current_user["id"], payload.content)
+
+
+@router.post("/messages/stream")
+def stream_message(
+    payload: AgentSendMessageRequest,
+    current_user: dict = Depends(_client_only),
+    db: DBSession = Depends(get_db),
+):
+    """사용자 메시지 전송 + 에이전트 응답 스트리밍(SSE, SDD-201).
+
+    응답 텍스트를 토큰 단위로 `data: {"token": "..."}` 로 흘린 뒤 `[DONE]` 으로 끝낸다.
+    완료 시점에 에이전트 메시지가 저장되므로, 클라이언트는 스트리밍 종료 후 목록을
+    다시 받아 확정 메시지를 표시한다.
+    """
+    import json
+
+    def generate():
+        for token in agent_service.stream_user_message(db, current_user["id"], payload.content):
+            yield f"data: {json.dumps({'token': token}, ensure_ascii=False)}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/messages/read", response_model=AgentUnreadResponse)

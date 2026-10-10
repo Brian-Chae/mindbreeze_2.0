@@ -640,6 +640,29 @@ def ensure_checkin_for_conversation(
     return checkin
 
 
+def _respond_prompt(
+    db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
+) -> tuple[str, str]:
+    """체크인 응답 프롬프트·폴백 — respond/respond_stream 이 함께 쓴다(SDD-201)."""
+    fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
+    task = (
+        "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
+        "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
+        "공감·위로 후에는 대화가 끊기지 않도록 자연스럽게 이어갈 질문이나 주제를 하나 던지세요. "
+        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
+        "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
+    )
+    context_text = agent_policy.context_to_text(agent_policy.client_context(client_id, db))
+    # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
+    signal = agent_emotion.detect_emotion(user_text)
+    if signal["emotion"] != "neutral":
+        context_text = "\n".join(
+            filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
+        )
+    prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
+    return prompt, fallback
+
+
 def respond(
     db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
 ) -> tuple[str, str]:
@@ -657,28 +680,25 @@ def respond(
         close(db, checkin, commit=True)
         return CLOSING_TEMPLATE, KIND_CHECKIN_CLOSING
 
-    fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
-    task = (
-        "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
-        "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
-        "공감·위로 후에는 대화가 끊기지 않도록 자연스럽게 이어갈 질문이나 주제를 하나 던지세요. "
-        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
-        "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
-    )
-    context_text = agent_policy.context_to_text(agent_policy.client_context(client_id, db))
-    # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
-    signal = agent_emotion.detect_emotion(user_text)
-    if signal["emotion"] != "neutral":
-        context_text = "\n".join(
-            filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
-        )
-    prompt = agent_llm.build_prompt(
-        context_text,
-        user_text=user_text,
-        task=task,
-    )
+    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text)
     reply = agent_llm.generate(prompt, fallback)
     return agent_guard.sanitize(reply, fallback=fallback), KIND_CHECKIN
+
+
+def respond_stream(
+    db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
+):
+    """체크인 응답 스트리밍 — 마무리 턴이면 종료 템플릿을 한 번 yield 한다(SDD-201)."""
+    checkin.turn_count = (checkin.turn_count or 0) + 1
+    db.flush()
+
+    if checkin.turn_count >= CLOSE_TURN_COUNT:
+        close(db, checkin, commit=True)
+        yield CLOSING_TEMPLATE
+        return
+
+    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text)
+    yield from agent_llm.generate_stream(prompt, fallback)
 
 
 # ---------------------------------------------------------------------------

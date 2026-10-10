@@ -635,13 +635,8 @@ COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
 )
 
 
-def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
-    """담당 상담사·리포트·일정이 없는 내담자도 감정 대화로 응답한다(SDD-193 결정 1).
-
-    사실 정보(리포트·일정)가 없어도 지난 대화 기억(memories)은 컨텍스트로 실어
-    연속성을 준다(SDD-194). LLM 은 감정 공감 + 이어가는 질문을 만들고, 실패 시
-    고정 폴백으로 완결된다.
-    """
+def _companion_prompt(db: DBSession, user_id: UUID, user_text: str) -> tuple[str, str]:
+    """동반자 응답 프롬프트·폴백 — _companion_reply/stream 이 함께 쓴다(SDD-201)."""
     fallback = COMPANION_REPLY_FALLBACKS[len(user_text) % len(COMPANION_REPLY_FALLBACKS)]
     task = (
         "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
@@ -658,6 +653,17 @@ def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
             filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
         )
     prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
+    return prompt, fallback
+
+
+def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
+    """담당 상담사·리포트·일정이 없는 내담자도 감정 대화로 응답한다(SDD-193 결정 1).
+
+    사실 정보(리포트·일정)가 없어도 지난 대화 기억(memories)은 컨텍스트로 실어
+    연속성을 준다(SDD-194). LLM 은 감정 공감 + 이어가는 질문을 만들고, 실패 시
+    고정 폴백으로 완결된다.
+    """
+    prompt, fallback = _companion_prompt(db, user_id, user_text)
     return agent_llm.generate(prompt, fallback)
 
 
@@ -697,6 +703,93 @@ def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
         "user_message": serialize_message(user_message),
         "agent_message": serialize_message(agent_message),
     }
+
+
+def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
+    """사용자 메시지 저장 + 에이전트 응답 스트리밍(SDD-201).
+
+    응답 텍스트를 토큰 단위로 yield 하고, 끝나면 에이전트 메시지를 저장한다. 위험 탐지·
+    리포트 대화 등 규칙 기반 응답도 동일하게 단일 토큰으로 흐른다. 최종 저장본은
+    `agent_guard.sanitize` 를 거쳐 진단·점수 표현이 제거된 뒤 저장된다(프론트는 완료 후
+    폴링으로 확정 메시지를 다시 받는다).
+    """
+    require_consent(db, user_id)
+    uid = _to_uuid(user_id)
+    text = content.strip()
+
+    user_message = post_user_message(db, uid, text)
+
+    # 사후 피드백 수집 창이 열려 있으면 원문 그대로 중계 이벤트에 누적한다(D10).
+    feedback_event = _active_feedback_event(db, uid)
+    if feedback_event is not None:
+        _append_feedback_text(db, feedback_event, text)
+
+    from app.services import agent_checkin, agent_risk
+
+    # ① 위험 표현 → 고정 안전 응답(스트리밍 불필요).
+    risk_reply = agent_risk.handle_client_message(db, uid, user_message, text)
+    if risk_reply is not None:
+        reply_text = risk_reply["content"]
+        yield reply_text
+        post_agent_message(
+            db, uid, kind="free", content=reply_text,
+            cta=list(risk_reply["cta"]), notify=False, commit=True,
+        )
+        return
+
+    # ② 열린 안부 대화 → 체크인 응답 스트리밍.
+    checkin = agent_checkin.ensure_checkin_for_conversation(
+        db, uid, started_at=user_message.created_at
+    )
+    if checkin is not None:
+        chunks: list[str] = []
+        for token in agent_checkin.respond_stream(db, uid, checkin, text):
+            chunks.append(token)
+            yield token
+        reply_text = "".join(chunks)
+        post_agent_message(
+            db, uid, kind="checkin", content=reply_text,
+            cta=[], notify=False, commit=True,
+        )
+        return
+
+    # ③ 기존 경로(SDD-188) — 리포트 대화·일반(동반자) 응답 스트리밍.
+    if agent_guard.is_blocked(text):
+        reply_text = OUT_OF_SCOPE_REPLY
+        yield reply_text
+        post_agent_message(
+            db, uid, kind="free", content=reply_text,
+            cta=[], notify=False, commit=True,
+        )
+        return
+
+    context = agent_policy.client_context(uid, db)
+    reports = context.get("reports") or []
+    sessions = context.get("sessions") or []
+    if not reports and not sessions:
+        prompt, fallback = _companion_prompt(db, uid, text)
+        reply_kind = "free"
+    else:
+        fallback = _fallback_reply(context)
+        task = (
+            "내담자가 남긴 이야기에 짧게 공감하고, [허용 자료]의 리포트 본문 범위 안에서만 "
+            "설명하세요. 자료에 없는 내용은 상담사님과 이야기해 보시라고 안내하세요. "
+            "마지막에 열린 질문 하나를 덧붙이세요."
+        )
+        prompt = agent_llm.build_prompt(
+            agent_policy.context_to_text(context), user_text=text, task=task
+        )
+        reply_kind = "report_chat" if reports else "free"
+
+    chunks = []
+    for token in agent_llm.generate_stream(prompt, fallback):
+        chunks.append(token)
+        yield token
+    reply_text = agent_guard.sanitize("".join(chunks), fallback=fallback)
+    post_agent_message(
+        db, uid, kind=reply_kind, content=reply_text,
+        cta=[], notify=False, commit=True,
+    )
 
 
 def _route_reply(

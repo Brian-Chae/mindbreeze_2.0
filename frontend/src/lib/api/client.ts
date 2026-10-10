@@ -32,7 +32,7 @@ export function clearNativeRefresh(): void {
   try { localStorage.removeItem(NATIVE_REFRESH_KEY); } catch { /* 무시 */ }
 }
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
+export const BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
 
 // SEC-04: 401 리다이렉트는 하드코딩 '/login' 대신 역할별 로그인 경로를 쓴다.
 // authStore 와의 순환 import 를 피하기 위해 persist 된 사용자(mb_user)에서 역할만 읽는다.

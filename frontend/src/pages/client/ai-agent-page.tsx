@@ -25,6 +25,7 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
   const [error, setError] = useState('');
   const [text, setText] = useState('');
   const [awaitingReply, setAwaitingReply] = useState(false);
+  const [streamText, setStreamText] = useState('');
   const [changeRequest, setChangeRequest] = useState<{ messageId: string; cta: AgentCta } | null>(null);
   const [reason, setReason] = useState('');
   const [reload, setReload] = useState(0);
@@ -177,7 +178,9 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
               content={message.content} createdAt={message.created_at}
               actions={message.cta.length ? <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} /> : undefined} />;
           })}
-          {awaitingReply && <AgentTypingIndicator />}
+          {awaitingReply && !streamText && <AgentTypingIndicator />}
+          {streamText && <AgentBubble isMine={false} showSender={messages.at(-1)?.sender !== 'agent'} senderName="루시 (AI)"
+            content={streamText} createdAt={new Date().toISOString()} actions={undefined} />}
           <div ref={bottom} />
         </div>
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
@@ -194,20 +197,33 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
             setMessages((previous) => [...previous, optimistic]);
             setText('');
             setAwaitingReply(true);
+            setStreamText('');
             void perform(async () => {
               try {
-                const result = await agentApi.sendMessage(content);
+                // SDD-201: 응답을 토큰 스트리밍으로 받아 실시간 표시한다.
+                let acc = '';
+                for await (const token of agentApi.streamMessage(content)) {
+                  acc += token;
+                  setStreamText(acc);
+                }
+                // 완료 후 목록을 다시 받아 확정(저장) 메시지로 교체한다.
+                const result = await agentApi.listMessages();
                 setMessages((previous) => mergeAgentMessages(
                   previous.filter((message) => message.id !== tempId),
-                  [result.user_message, result.agent_message],
+                  result.items,
                 ));
-                const read = await agentApi.markRead(result.agent_message.created_at);
-                useAgentStore.getState().setUnread(read.unread);
+                setStreamText('');
+                const latest = result.items[0]?.created_at;
+                if (latest) {
+                  const read = await agentApi.markRead(latest);
+                  useAgentStore.getState().setUnread(read.unread);
+                }
               } catch (err) {
                 // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
                 setMessages((previous) => previous.filter((message) => message.id !== tempId));
                 // 입력창은 전송 시점에 비웠으므로, 실패하면 사용자가 쓴 내용을 되돌려 재전송할 수 있게 한다.
                 setText((current) => current || content);
+                setStreamText('');
                 throw err;
               } finally {
                 setAwaitingReply(false);
