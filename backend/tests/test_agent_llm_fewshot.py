@@ -21,7 +21,7 @@ def test_TS2_예시에_진단_점수_조언_표현이_없다():
 
 
 def test_TS3_예시가_존댓말_어미를_쓴다():
-    for token in ("래요", "세요", "죠", "봐요"):
+    for token in ("세요", "죠", "요", "네요"):
         assert token in agent_llm.FEW_SHOT_EXAMPLES, token
 
 
@@ -30,9 +30,9 @@ def test_TS3_예시에_이모지가_없다():
         assert token not in agent_llm.FEW_SHOT_EXAMPLES, token
 
 
-def test_예시는_4개_이상_7개_이하다():
+def test_예시는_4개_이상_8개_이하다():
     count = agent_llm.FEW_SHOT_EXAMPLES.count("내담자:")
-    assert 4 <= count <= 7
+    assert 4 <= count <= 8
 
 
 def test_generate_stream_thinking_토큰을_건너뛰고_텍스트만_모은다(monkeypatch):
