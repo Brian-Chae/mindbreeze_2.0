@@ -167,21 +167,24 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
       ) : <>
         <CheckinPreferences />
         {!embedded && <p className="shrink-0 px-4 py-1.5 text-[13px] text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>}
-        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white">
+        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 md:px-6 md:py-4 bg-white">
+          <div className="mx-auto w-full max-w-[760px]">
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
           {!messages.length && <div className="text-center text-gray-500 py-4">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</div>}
           {messages.map((message, index) => {
             const isMine = message.sender === 'user';
             const previous = messages[index - 1];
             return <AgentBubble key={message.id} isMine={isMine} showSender={!previous || previous.sender === 'user'}
+              groupStart={!previous || (previous.sender === 'user') !== isMine}
               senderName={message.sender === 'system' ? '안내' : '루시 (AI)'}
               content={message.content} createdAt={message.created_at}
               actions={message.cta.length ? <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} /> : undefined} />;
           })}
           {awaitingReply && !streamText && <AgentTypingIndicator />}
-          {streamText && <AgentBubble isMine={false} showSender={messages.at(-1)?.sender !== 'agent'} senderName="루시 (AI)"
+          {streamText && <AgentBubble isMine={false} showSender={messages.at(-1)?.sender !== 'agent'} groupStart={messages.at(-1)?.sender === 'user'} senderName="루시 (AI)"
             content={streamText} createdAt={new Date().toISOString()} actions={undefined} />}
           <div ref={bottom} />
+          </div>
         </div>
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
           onSubmit={() => {

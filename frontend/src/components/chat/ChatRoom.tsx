@@ -8,6 +8,7 @@ import { getChatSocket } from '../../lib/socket';
 import { useStickToBottom } from '../../hooks/useStickToBottom';
 import { useKeyboardHeight } from '../../hooks/useKeyboardHeight';
 import { useAutoScroll } from '../../hooks/useAutoScroll';
+import { ChatTextarea } from './ChatTextarea';
 import { MessageBubble } from './MessageBubble';
 import { SystemMessage } from './SystemMessage';
 import type { Socket } from 'socket.io-client';
@@ -87,7 +88,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
   const [failedContent, setFailedContent] = useState<string | null>(null);
 
   const listRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const keyboardHeight = useKeyboardHeight();
   // HOOK-STATE-05: 가변 길이 deps 대신 단일 트리거(문자열)를 넘겨 의존성 배열 길이를 고정한다.
@@ -335,8 +336,9 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="flex-1 min-h-0 overflow-y-auto px-4 py-2"
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-2 md:px-6 md:py-4"
       >
+        <div className="mx-auto w-full max-w-[760px]">
         {loading ? (
           <div className="text-center text-gray-500 py-4">{target ? '메시지 위치를 찾고 있습니다' : '메시지를 불러오는 중…'}</div>
         ) : targetError ? null : msgList.length === 0 ? (
@@ -353,6 +355,8 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
               prevMsg.type !== 'system' &&
               prevMsg.sender_id === m.sender_id;
             const showSender = !isMine && !isSameSender;
+            // 발신자가 바뀌는 첫 말풍선(날짜 구분선 직후 포함)은 간격을 넓혀 묶음을 구분한다.
+            const groupStart = !showDateSep && (!prevMsg || prevMsg.type === 'system' || prevMsg.sender_id !== m.sender_id);
             const senderName = !isMine ? (m.sender_name || peerName || '사용자') : undefined;
             const item =
               m.type === 'system' ? (
@@ -364,6 +368,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
                   isMine={isMine}
                   senderName={senderName}
                   showSender={showSender}
+                  groupStart={groupStart}
                 />
               );
             // 메시지에 ref 등록 + data-message-id (IntersectionObserver용)
@@ -391,6 +396,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
             );
           })
         )}
+        </div>
       </div>
 
       {error && (
@@ -410,31 +416,17 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
 
       {/* 입력창 */}
       <div
-        className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0"
+        className="border-t border-[#EFEFEF] p-3 bg-white shrink-0"
         style={{ paddingBottom: `calc(0.75rem + ${keyboardHeight}px)` }}
       >
-        <input
-          ref={inputRef}
-          type="text"
-          name="chat-message"
-          autoComplete="off"
-          autoCapitalize="off"
-          spellCheck={false}
-          enterKeyHint="send"
-          data-form-type="other"
-          data-lpignore="true"
-          data-1p-ignore
+        <div className="mx-auto flex w-full max-w-[760px] items-end gap-2">
+        <ChatTextarea
+          textareaRef={inputRef}
           disabled={!!target && (loading || !!targetError)}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault();
-              void handleSend();
-            }
-          }}
+          onChange={setInput}
+          onSend={() => void handleSend()}
           placeholder="메시지를 입력하세요"
-          className="flex-1 min-w-0 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
         />
         <button
           type="button"
@@ -444,6 +436,7 @@ export function ChatRoom({ roomId, peerName, targetMessageId, onShowRecent }: Pr
         >
           전송
         </button>
+        </div>
       </div>
     </div>
   );

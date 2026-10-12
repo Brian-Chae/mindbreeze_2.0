@@ -109,13 +109,15 @@ export default function CounselorAgentPage({ embedded = false }: { embedded?: bo
         </article>)}
       </div> : <>
         {!embedded && <p className="shrink-0 px-4 py-1.5 text-xs text-[#6F6F6F] bg-white">일정과 상담 기록을 확인하고 초안을 정리할 수 있어요.</p>}
-        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white">
+        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 md:px-6 md:py-4 bg-white">
+          <div className="mx-auto w-full max-w-[760px]">
           {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
           {!loading && !messages.length && <div className="text-center text-gray-500 py-4">오늘 일정이나 지난 상담 요약을 물어보세요.</div>}
           {messages.map((message, index) => {
             const previous = messages[index - 1];
             const label = message.kind === 'risk_alert' ? '위험 알림' : message.kind === 'briefing_morning' ? '아침 브리핑' : message.kind === 'briefing_evening' ? '저녁 상담 정리' : undefined;
             return <AgentBubble key={message.id} isMine={message.sender === 'user'} showSender={!previous || previous.sender === 'user'}
+              groupStart={!previous || (previous.sender === 'user') !== (message.sender === 'user')}
               label={label} emphasis={message.kind === 'risk_alert'} content={message.content} createdAt={message.created_at}
               actions={message.cta.length ? <div className="mt-3 flex flex-wrap gap-2">{message.cta.map((cta) => {
                 const target = resolveCounselorCta(cta);
@@ -123,6 +125,7 @@ export default function CounselorAgentPage({ embedded = false }: { embedded?: bo
               })}</div> : undefined} />;
           })}
           <div ref={bottom} />
+          </div>
         </div>
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="오늘 일정을 알려줘" value={text} onChange={setText} disabled={busy} busy={busy}
           onSubmit={() => {

@@ -1,6 +1,7 @@
 // 루시(AI) 대화 말풍선 — 일반 채팅방(MessageBubble)과 동일한 카톡 스타일.
 // 상대(루시) 메시지: 아바타 + 이름 + 말풍선 옆 시간, 내 메시지: 보라 말풍선 + 왼쪽 시간.
 import { useEffect, useRef, type ReactNode } from 'react';
+import { ChatTextarea } from './ChatTextarea';
 
 interface Props {
   isMine: boolean;
@@ -15,6 +16,8 @@ interface Props {
   label?: string;
   /** 강조 말풍선 (위험 알림) */
   emphasis?: boolean;
+  /** 발신자가 바뀐 첫 말풍선 — 위쪽 간격을 넓혀 대화 묶음을 구분한다. */
+  groupStart?: boolean;
 }
 
 function formatTime(iso: string): string {
@@ -24,10 +27,10 @@ function formatTime(iso: string): string {
   return `${hour < 12 ? '오전' : '오후'} ${hour % 12 || 12}:${mm}`;
 }
 
-export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = true, content, createdAt, actions, label, emphasis }: Props) {
+export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = true, content, createdAt, actions, label, emphasis, groupStart = false }: Props) {
   const time = formatTime(createdAt);
   return (
-    <article style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '4px', margin: '6px 0' }}>
+    <article style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: '6px', margin: groupStart ? '18px 0 3px' : '3px 0' }}>
       {isMine && <span style={{ fontSize: '12px', color: '#6F6F6F', flexShrink: 0, marginBottom: '6px' }}>{time}</span>}
       {!isMine && (
         <div style={{ width: '32px', flexShrink: 0, alignSelf: showSender ? 'flex-start' : 'flex-end', marginBottom: '2px' }}>
@@ -62,7 +65,7 @@ export function AgentBubble({ isMine, senderName = '루시 (AI)', showSender = t
 export function AgentInputBar({ value, onChange, onSubmit, disabled, placeholder, ariaLabel, busy }: {
   value: string; onChange: (v: string) => void; onSubmit: () => void; disabled?: boolean; placeholder: string; ariaLabel: string; busy?: boolean;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // 첫 진입 시 iOS Safari 가 이전 포커스 상태를 복원해 키보드가 자동으로 올라와
   // 입력창이 위로 밀리는 현상을 막는다.
   useEffect(() => {
@@ -70,31 +73,24 @@ export function AgentInputBar({ value, onChange, onSubmit, disabled, placeholder
   }, []);
   return (
     <form
-      className="border-t border-[#EFEFEF] p-3 flex gap-2 bg-white shrink-0"
+      className="border-t border-[#EFEFEF] p-3 bg-white shrink-0"
       onSubmit={(event) => { event.preventDefault(); onSubmit(); }}
     >
-      <input
-        ref={inputRef}
-        type="text"
-        name="chat-message"
-        autoComplete="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        enterKeyHint="send"
-        data-form-type="other"
-        data-lpignore="true"
-        data-1p-ignore
-        aria-label={ariaLabel}
+      <div className="mx-auto flex w-full max-w-[760px] items-end gap-2">
+      <ChatTextarea
+        textareaRef={inputRef}
+        ariaLabel={ariaLabel}
         placeholder={placeholder}
         maxLength={1000}
         value={value}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="flex-1 min-w-0 h-11 px-4 rounded-xl border border-[#DDDEE7] bg-white text-base text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition"
+        onChange={onChange}
+        onSend={() => { if (!disabled && value.trim()) onSubmit(); }}
       />
       <button type="submit" disabled={disabled || !value.trim()} className="mb-btn shrink-0 disabled:opacity-50">
         {busy ? <span className="inline-flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />답변 중</span> : '전송'}
       </button>
+      </div>
     </form>
   );
 }
@@ -105,7 +101,7 @@ export function AgentTypingIndicator() {
     <span className="h-1.5 w-1.5 rounded-full bg-[#5F0080] animate-bounce" style={{ animationDelay: delay }} />
   );
   return (
-    <article style={{ display: 'flex', alignItems: 'flex-end', gap: '4px', margin: '6px 0' }}>
+    <article style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', margin: '18px 0 3px' }}>
       <div style={{ width: '32px', flexShrink: 0, alignSelf: 'flex-start', marginBottom: '2px' }}>
         <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#5F0080', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#fff' }}>
           루시

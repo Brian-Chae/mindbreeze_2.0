@@ -8,6 +8,8 @@ interface Props {
   senderName?: string;
   /** 상대방 메시지 첫 번째일 때 이름+아바타 표시 */
   showSender?: boolean;
+  /** 발신자가 바뀐 첫 말풍선 — 위쪽 간격을 넓혀 대화 묶음을 구분한다. */
+  groupStart?: boolean;
 }
 
 function formatTime(iso: string): string {
@@ -35,7 +37,7 @@ function calcUnreadCount(msg: ChatMessage): number {
   return 0;
 }
 
-export function MessageBubble({ message, isMine, senderName, showSender }: Props) {
+export function MessageBubble({ message, isMine, senderName, showSender, groupStart = false }: Props) {
   if (!message) return null;
 
   const content = message.content ?? '(내용 없음)';
@@ -49,8 +51,8 @@ export function MessageBubble({ message, isMine, senderName, showSender }: Props
         display: 'flex',
         justifyContent: isMine ? 'flex-end' : 'flex-start',
         alignItems: 'flex-end',
-        gap: '4px',
-        margin: '6px 0',
+        gap: '6px',
+        margin: groupStart ? '18px 0 3px' : '3px 0',
       }}
     >
       {/* 내 메시지: 안읽은 사람 수 + 시간 왼쪽 */}
