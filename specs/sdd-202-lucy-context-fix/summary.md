@@ -40,3 +40,12 @@
 - 테스트: `backend/tests/test_agent_llm_stream_failure.py` 11건, `frontend/tests/agent-page.test.tsx` 재시도 시나리오.
 - 미변경: 비스트리밍 `POST /agent/messages`(프론트 미사용), 브리핑·리마인더 템플릿.
 - 참고: 프론트 vitest 기존 실패 11건(agent-counselor-page 등 6파일)은 본 변경과 무관(baseline 동일).
+
+## 추가 수정 2 — 상담사 연결 제안형 문구 + 채팅 버튼, 타임아웃 60s
+- 타임아웃: `AGENT_LLM_TIMEOUT_SEC`·스트리밍 read 60s, `_call_gemini(timeout=)` 신설(기존 내부 공용 15s 때문에
+  비스트리밍은 사실상 12s였음), 스레드풀 2→4. 리포트 코멘트 초안 경로는 15s 유지.
+- 문구: "상담사님과 이야기해 보세요" → "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?"
+  (OUT_OF_SCOPE·SAFE_FALLBACK·SAFE_REPLIES·LLM 프롬프트). 연결 방식 A(이동만)이므로 "상태 전달"은 말하지 않는다.
+- 버튼: 최종 응답에 연결 제안 패턴이 있으면 서버가 `talk_to_counselor` CTA 부착(`agent_service.handoff_cta`).
+  라벨 "상담사님과 채팅하기". 담당 상담사 없으면 미부착. 후속(B): 대화 요약 전달 + 동의 확인 단계.
+- 테스트: `backend/tests/test_agent_handoff_cta.py` 7건. 백엔드 전체 통과(agent 300 + 그 외 1454).

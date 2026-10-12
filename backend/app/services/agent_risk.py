@@ -55,7 +55,7 @@ SAFE_REPLY_WINDOW_MIN = 30
 # 상담사 채널 메시지 kind / CTA — Contract 확장분.
 KIND_RISK_ALERT = "risk_alert"
 CTA_TALK_TO_COUNSELOR = "talk_to_counselor"
-CTA_LABEL_TALK_TO_COUNSELOR = "상담사님과 대화하기"
+CTA_LABEL_TALK_TO_COUNSELOR = "상담사님과 채팅하기"
 
 # 인앱 알림 이벤트 (notification_service.EVENT_CATALOG 등록분)
 RISK_NOTIFICATION_EVENT = "risk_signal"
@@ -239,18 +239,18 @@ def detect(text: str) -> tuple[str, str] | None:
 
 SAFE_REPLIES_HIGH: tuple[str, ...] = (
     "많이 힘든 마음을 꺼내 주셔서 고맙습니다. 혼자 담아 두기에 무거운 이야기예요. "
-    "상담사님과 이야기 나눠 보시면 좋겠어요.",
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "그 마음을 적어 주시기까지 많이 애쓰셨을 것 같아요. 제가 임의로 판단하지 않고 그대로 들을게요. "
-    "상담사님과 이야기 나눠 보시면 좋겠어요.",
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "지금 마음이 많이 무거우신 것 같아요. 들려주셔서 고맙습니다. "
-    "상담사님과 이야기 나눠 보시면 좋겠어요.",
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
 )
 
 SAFE_REPLIES_WATCH: tuple[str, ...] = (
     "그런 마음이 드실 만큼 지치셨던 것 같아요. 들려주셔서 고맙습니다. "
-    "상담사님과 이야기 나눠 보시면 좋겠어요.",
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
     "말씀해 주신 마음을 가볍게 넘기지 않고 듣고 있어요. "
-    "상담사님과 이야기 나눠 보시면 좋겠어요.",
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?",
 )
 
 # 연속 감지 시 안전 템플릿을 반복하지 않고 쓰는 일반 공감 문장(Edge Case).
@@ -440,7 +440,7 @@ def notify_counselor(
 
 
 def _talk_to_counselor_cta(db: DBSession, counselor_id: UUID | None, client_id: UUID) -> list[dict]:
-    """[상담사님과 대화하기] — 담당 상담사와의 실제 direct 채팅방으로 보낸다.
+    """[상담사님과 채팅하기] — 담당 상담사와의 실제 direct 채팅방으로 보낸다.
 
     방이 없으면 기존 chat 헬퍼로 만든다(Acceptance: room_id 가 실제 방이어야 한다).
     담당 상담사를 찾을 수 없으면 CTA 를 붙이지 않는다 — 열 수 없는 버튼을 보여주지 않는다.
@@ -462,6 +462,12 @@ def _talk_to_counselor_cta(db: DBSession, counselor_id: UUID | None, client_id: 
             "payload": {"room_id": str(room.id), "url": f"/app/chat/{room.id}"},
         }
     ]
+
+
+def talk_to_counselor_cta_for(db: DBSession, client_id: UUID) -> list[dict]:
+    """담당 상담사 채팅 연결 CTA — 상담사가 없으면 빈 목록(SDD-202: 연결 제안 문장 뒤에 붙인다)."""
+    counselor_ids = active_counselor_ids(db, client_id)
+    return _talk_to_counselor_cta(db, counselor_ids[0] if counselor_ids else None, client_id)
 
 
 def handle_client_message(

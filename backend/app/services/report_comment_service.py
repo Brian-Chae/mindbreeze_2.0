@@ -223,7 +223,11 @@ def _rule_based_draft(context: dict) -> str:
 
 
 def _call_gemini(
-    prompt: str, max_output_tokens: int = 1024, thinking_budget: int = 0, model: str | None = None
+    prompt: str,
+    max_output_tokens: int = 1024,
+    thinking_budget: int = 0,
+    model: str | None = None,
+    timeout: float | None = None,
 ) -> str | None:
     """Gemini generateContent 호출. 키 부재·오류·타임아웃 시 None (호출부에서 규칙 폴백).
 
@@ -258,7 +262,7 @@ def _call_gemini(
                     "thinkingConfig": {"thinkingBudget": thinking_budget},
                 },
             },
-            timeout=GEMINI_TIMEOUT_SECONDS,
+            timeout=timeout or GEMINI_TIMEOUT_SECONDS,
         )
         resp.raise_for_status()
         data = resp.json()
