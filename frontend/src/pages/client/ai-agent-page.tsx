@@ -78,7 +78,8 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [access, reload, fail]);
 
-  useStickToBottom(scroller, access);
+  // 대화 영역은 로딩이 끝나야 렌더되므로 그때부터 활성화한다(영역이 없을 때 켜지면 관찰이 붙지 않는다).
+  useStickToBottom(scroller, access && !loading);
   const latestId = messages.at(-1)?.id;
   useEffect(() => { bottom.current?.scrollIntoView?.({ block: 'end' }); }, [latestId]);
 

@@ -26,8 +26,18 @@ export function useStickToBottom(ref: RefObject<HTMLElement | null>, active = tr
     // 키보드가 올라오기 직전의 위치 기억 — 위로 스크롤해 과거 대화를 보던 사용자는 방해하지 않는다.
     const onFocusIn = (): void => { wasAtBottomBeforeKeyboard = atBottom; };
 
+    // 입력창이 커지거나 키보드가 열려 목록 영역이 줄어들 때, 줄어들기 "직전"에 맨 아래였다면 계속 맨 아래를 유지한다.
+    // atBottom 플래그는 스크롤 이벤트로만 갱신돼 키보드 전환 중 어긋날 수 있어, 높이 변화량으로 직접 다시 판정한다.
+    let prevHeight = el.clientHeight;
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => {
-      if (atBottom) requestAnimationFrame(toBottom);
+      const height = el.clientHeight;
+      const shrink = prevHeight - height;
+      prevHeight = height;
+      const distance = el.scrollHeight - el.scrollTop - height;
+      const wasNearBottom = atBottom || (shrink > 0 && distance - shrink < NEAR_BOTTOM_PX);
+      if (!wasNearBottom) return;
+      toBottom();
+      requestAnimationFrame(toBottom);
     });
     observer?.observe(el);
     el.addEventListener('scroll', onScroll, { passive: true });
