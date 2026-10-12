@@ -31,6 +31,15 @@ AGENT_LLM_TIMEOUT_SEC = 12.0
 # 텍스트(2~4문장)를 합해 충분히 잡는다. thinking 을 끄면 384 로도 충분하다.
 AGENT_LLM_MAX_OUTPUT_TOKENS = 2048
 
+# 스트리밍 응답 대기 시간(초). 사고(thinking) 모델은 첫 토큰까지 7~10초, 꼬리 지연은 15초를 넘길 수
+# 있어(SDD-202 실측) 리포트 공용 타임아웃(15초)과 분리해 넉넉히 둔다. 프록시 기본 read 타임아웃(60초) 안.
+AGENT_STREAM_READ_TIMEOUT_SEC = 40.0
+AGENT_STREAM_CONNECT_TIMEOUT_SEC = 10.0
+
+# 첫 토큰 전에 한해 일시 오류(429/5xx/연결 오류)를 자동 재시도하는 횟수.
+AGENT_STREAM_RETRIES = 1
+_RETRYABLE_STATUS = frozenset({429, 500, 502, 503, 504})
+
 # 에이전트의 사고(thinking) 토큰 상한 — 0 이면 사고 없이 즉답, 양수면 "생각하고 위로하는"
 # 페르소나가 된다. 루시는 수고한 사람을 다독이는 동반자이므로 사고를 켠다.
 AGENT_LLM_THINKING_BUDGET = 1024
@@ -56,6 +65,32 @@ def clip_message(text: str, limit: int = AGENT_MESSAGE_MAX_LENGTH) -> str:
 
 # 공급자 호출 전용 스레드 풀. 타임아웃 시 작업은 버려지고 응답만 폴백으로 돌려준다.
 _EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="agent-llm")
+
+
+class LLMUnavailableError(Exception):
+    """대화 응답을 LLM 으로 만들지 못했다 — 호출부는 고정 문구 대신 오류·재시도를 안내한다(SDD-202).
+
+    메시지에는 실패 사유 분류(예외 클래스·HTTP 상태)만 담는다. API 키가 든 URL·대화 원문은 넣지 않는다.
+    """
+
+
+def _failure_reason(exc: BaseException) -> str:
+    """로그·예외용 실패 사유 — httpx 예외 문자열에는 키가 든 URL 이 섞이므로 클래스·상태만 쓴다."""
+    status = getattr(getattr(exc, "response", None), "status_code", None)
+    return f"{type(exc).__name__}({status})" if status else type(exc).__name__
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """첫 토큰 전 일시 오류만 재시도한다. read 타임아웃은 이미 오래 기다렸으므로 제외."""
+    import httpx
+
+    if isinstance(exc, httpx.HTTPStatusError):
+        return exc.response.status_code in _RETRYABLE_STATUS
+    if isinstance(exc, httpx.ReadTimeout):
+        return False
+    return isinstance(
+        exc, (httpx.ConnectError, httpx.ConnectTimeout, httpx.RemoteProtocolError, httpx.ReadError)
+    )
 
 
 def is_enabled() -> bool:
@@ -111,20 +146,25 @@ def _request_body(prompt: "str | ChatRequest") -> dict:
     }
 
 
-def generate_stream(prompt: "str | ChatRequest", fallback: str):
+def generate_stream(
+    prompt: "str | ChatRequest", fallback: str, *, raise_on_failure: bool = False
+):
     """Gemini 스트리밍 응답 — thinking 토큰은 건너뛰고 텍스트 토큰만 yield(SDD-201).
 
     thinking(사고) 유지 시 첫 텍스트 토큰은 사고 완료 후 도착한다. 스트리밍은
-    "완료 후 일괄 표시 → 토큰별 표시"로 바꿔 체감 지연을 줄인다. 호출 실패 시
-    fallback 을 통째로 yield 해 메시지 생성을 실패시키지 않는다.
+    "완료 후 일괄 표시 → 토큰별 표시"로 바꿔 체감 지연을 줄인다.
+
+    실패 처리(SDD-202): 첫 토큰 전 일시 오류는 AGENT_STREAM_RETRIES 만큼 재시도한다.
+    그래도 응답이 없으면 `raise_on_failure=True` 는 `LLMUnavailableError` 를 던지고(대화 경로:
+    고정 문구 대신 오류·재시도 안내), 기본값은 기존처럼 fallback 을 통째로 yield 한다.
     """
     if not is_enabled():
+        if raise_on_failure:
+            raise LLMUnavailableError("disabled")
         yield clip_message(fallback)
         return
 
     import httpx
-
-    from app.services.report_comment_service import GEMINI_TIMEOUT_SECONDS
 
     api_key = settings.gemini_api_key
     model = settings.agent_llm_model
@@ -132,40 +172,53 @@ def generate_stream(prompt: "str | ChatRequest", fallback: str):
         f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
         f":streamGenerateContent?alt=sse&key={api_key}"
     )
+    timeout = httpx.Timeout(
+        AGENT_STREAM_CONNECT_TIMEOUT_SEC, read=AGENT_STREAM_READ_TIMEOUT_SEC
+    )
 
     accumulated: list[str] = []
-    try:
-        with httpx.stream(
-            "POST",
-            url,
-            headers={"Content-Type": "application/json"},
-            json=_request_body(prompt),
-            timeout=GEMINI_TIMEOUT_SECONDS,
-        ) as resp:
-            resp.raise_for_status()
-            for line in resp.iter_lines():
-                if not line or not line.startswith("data:"):
-                    continue
-                payload = line[len("data:"):].strip()
-                if not payload or payload == "[DONE]":
-                    continue
-                try:
-                    data = json.loads(payload)
-                except ValueError:
-                    continue
-                candidates = data.get("candidates") or []
-                for candidate in candidates:
-                    parts = (candidate.get("content") or {}).get("parts") or []
-                    for part in parts:
-                        if part.get("thought"):
-                            continue  # 사고 토큰은 사용자에게 보이지 않는다
-                        text = part.get("text", "")
-                        if text:
-                            accumulated.append(text)
-                            yield text
-    except Exception:  # noqa: BLE001 — 스트리밍 실패가 메시지 생성을 실패시키지 않는다
-        logger.warning("[agent_llm] 스트리밍 실패 — 폴백")
+    reason = "empty"
+    attempts = 1 + AGENT_STREAM_RETRIES
+    for attempt in range(1, attempts + 1):
+        try:
+            with httpx.stream(
+                "POST",
+                url,
+                headers={"Content-Type": "application/json"},
+                json=_request_body(prompt),
+                timeout=timeout,
+            ) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    payload = line[len("data:"):].strip()
+                    if not payload or payload == "[DONE]":
+                        continue
+                    try:
+                        data = json.loads(payload)
+                    except ValueError:
+                        continue
+                    candidates = data.get("candidates") or []
+                    for candidate in candidates:
+                        parts = (candidate.get("content") or {}).get("parts") or []
+                        for part in parts:
+                            if part.get("thought"):
+                                continue  # 사고 토큰은 사용자에게 보이지 않는다
+                            text = part.get("text", "")
+                            if text:
+                                accumulated.append(text)
+                                yield text
+            break
+        except Exception as exc:  # noqa: BLE001 — 스트리밍 실패가 메시지 생성을 실패시키지 않는다
+            reason = _failure_reason(exc)
+            logger.warning("[agent_llm] 스트리밍 실패 (시도 %d/%d, %s)", attempt, attempts, reason)
+            # 이미 일부를 내보냈다면 재시도가 중복 출력이 되므로 받은 만큼으로 끝낸다.
+            if accumulated or attempt >= attempts or not _is_retryable(exc):
+                break
     if not accumulated:
+        if raise_on_failure:
+            raise LLMUnavailableError(reason)
         yield clip_message(fallback)
 
 

@@ -30,3 +30,13 @@
   - SYSTEM_RULES: "인사·감탄사에는 감정 해석 금지, 짧은 말에 '그 마음' 같은 해석 덧붙이지 말 것"
   - few-shot: "안녕?? → 반갑게 인사" 예시 추가(총 7개)
   - task(companion/checkin): "인사·감탄사에는 감정 해석하지 말고 자연스럽게 받아 주세요"
+
+## 추가 수정 — LLM 실패 시 고정 폴백 제거 (verify-llm-failure-ux.md)
+- 원인: dev 모델 `gemini-3.1-pro-preview` 첫 토큰 7~10s(서버 실측), 스트리밍 read 타임아웃 15s 초과 시
+  `REPLY_FALLBACKS` 고정 문구가 문맥과 무관하게 나감.
+- 조치: 모델 유지 + 스트리밍 read 타임아웃 40s, 첫 토큰 전 일시 오류 1회 자동 재시도,
+  실패 시 `LLMUnavailableError` → SSE `{"error":"llm_unavailable"}`(메시지 미저장·롤백) →
+  프론트 "답변을 만들지 못했어요" + [다시 시도]. 로그는 예외 클래스·HTTP 상태만.
+- 테스트: `backend/tests/test_agent_llm_stream_failure.py` 11건, `frontend/tests/agent-page.test.tsx` 재시도 시나리오.
+- 미변경: 비스트리밍 `POST /agent/messages`(프론트 미사용), 브리핑·리마인더 템플릿.
+- 참고: 프론트 vitest 기존 실패 11건(agent-counselor-page 등 6파일)은 본 변경과 무관(baseline 동일).

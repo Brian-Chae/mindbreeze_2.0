@@ -26,6 +26,8 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
   const [text, setText] = useState('');
   const [awaitingReply, setAwaitingReply] = useState(false);
   const [streamText, setStreamText] = useState('');
+  // SDD-202: 루시가 답변을 만들지 못한 직전 전송 — 서버에 저장되지 않았으므로 같은 내용으로 재전송한다.
+  const [replyFailed, setReplyFailed] = useState<{ content: string; tempId: string } | null>(null);
   const [changeRequest, setChangeRequest] = useState<{ messageId: string; cta: AgentCta } | null>(null);
   const [reason, setReason] = useState('');
   const [reload, setReload] = useState(0);
@@ -105,6 +107,49 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
     setError('');
     try { await work(); } catch (err) { fail(err); }
     finally { lock.current = false; setBusy(false); }
+  };
+
+  // 메시지 전송(스트리밍) — 최초 전송과 [다시 시도]가 함께 쓴다. tempId 말풍선은 호출 전에 이미 화면에 있다.
+  const sendContent = (content: string, tempId: string) => {
+    setReplyFailed(null);
+    setAwaitingReply(true);
+    setStreamText('');
+    void perform(async () => {
+      try {
+        // SDD-201: 응답을 토큰 스트리밍으로 받아 실시간 표시한다.
+        let acc = '';
+        for await (const token of agentApi.streamMessage(content)) {
+          acc += token;
+          setStreamText(acc);
+        }
+        // 완료 후 목록을 다시 받아 확정(저장) 메시지로 교체한다.
+        const result = await agentApi.listMessages();
+        setMessages((previous) => mergeAgentMessages(
+          previous.filter((message) => message.id !== tempId),
+          result.items,
+        ));
+        setStreamText('');
+        const latest = result.items[0]?.created_at;
+        if (latest) {
+          const read = await agentApi.markRead(latest);
+          useAgentStore.getState().setUnread(read.unread);
+        }
+      } catch (err) {
+        setStreamText('');
+        if (err instanceof agentApi.AgentReplyError) {
+          // SDD-202: 서버에는 아무것도 저장되지 않았다 — 내 말풍선은 남기고 재시도를 안내한다.
+          setReplyFailed({ content, tempId });
+          return;
+        }
+        // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
+        setMessages((previous) => previous.filter((message) => message.id !== tempId));
+        // 입력창은 전송 시점에 비웠으므로, 실패하면 사용자가 쓴 내용을 되돌려 재전송할 수 있게 한다.
+        setText((current) => current || content);
+        throw err;
+      } finally {
+        setAwaitingReply(false);
+      }
+    });
   };
 
   const submitCta = async (messageId: string, cta: AgentCta, body = {}) => {
@@ -187,6 +232,11 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
           <div ref={bottom} />
           </div>
         </div>
+        {replyFailed && !awaitingReply && <div role="alert" className="mx-4 mb-2 shrink-0 rounded-2xl bg-[#F5EDFC] px-4 py-3 text-sm text-[#3D3D3D] md:mx-6">
+          <p>루시가 지금 답변을 만들지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+          <button disabled={busy} onClick={() => sendContent(replyFailed.content, replyFailed.tempId)}
+            className="mt-2 rounded-xl bg-[#5F0080] px-4 py-2 font-semibold text-white disabled:opacity-40">다시 시도</button>
+        </div>}
         <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
           onSubmit={() => {
             if (!access || !text.trim() || text.length > 1000) return;
@@ -198,41 +248,11 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
               read_at: new Date().toISOString(), created_at: new Date().toISOString(),
             };
             // 내 말풍선은 즉시 표시하고, 답변이 오면 실제 메시지로 교체한다.
-            setMessages((previous) => [...previous, optimistic]);
+            // 이전에 답변이 실패한 미전송 말풍선이 있으면 새 전송과 함께 걷어낸다.
+            const stale = replyFailed?.tempId;
+            setMessages((previous) => [...previous.filter((message) => message.id !== stale), optimistic]);
             setText('');
-            setAwaitingReply(true);
-            setStreamText('');
-            void perform(async () => {
-              try {
-                // SDD-201: 응답을 토큰 스트리밍으로 받아 실시간 표시한다.
-                let acc = '';
-                for await (const token of agentApi.streamMessage(content)) {
-                  acc += token;
-                  setStreamText(acc);
-                }
-                // 완료 후 목록을 다시 받아 확정(저장) 메시지로 교체한다.
-                const result = await agentApi.listMessages();
-                setMessages((previous) => mergeAgentMessages(
-                  previous.filter((message) => message.id !== tempId),
-                  result.items,
-                ));
-                setStreamText('');
-                const latest = result.items[0]?.created_at;
-                if (latest) {
-                  const read = await agentApi.markRead(latest);
-                  useAgentStore.getState().setUnread(read.unread);
-                }
-              } catch (err) {
-                // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
-                setMessages((previous) => previous.filter((message) => message.id !== tempId));
-                // 입력창은 전송 시점에 비웠으므로, 실패하면 사용자가 쓴 내용을 되돌려 재전송할 수 있게 한다.
-                setText((current) => current || content);
-                setStreamText('');
-                throw err;
-              } finally {
-                setAwaitingReply(false);
-              }
-            });
+            sendContent(content, tempId);
           }} />
       </>}
       {changeRequest && access && <div ref={changeDialogRef} tabIndex={-1} className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 md:items-center">

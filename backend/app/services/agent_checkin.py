@@ -693,7 +693,9 @@ def respond_stream(
         return
 
     prompt, fallback = _respond_prompt(db, client_id, checkin, user_text)
-    yield from agent_llm.generate_stream(prompt, fallback)
+    # SDD-202: 고정 폴백 문구는 문맥과 어긋나 품질을 해치므로 실패 시 오류로 올려 재시도를 안내한다.
+    # 아무것도 저장하지 않은 채 끝나 요청 트랜잭션이 롤백되므로 turn_count 도 소모되지 않는다.
+    yield from agent_llm.generate_stream(prompt, fallback, raise_on_failure=True)
 
 
 # ---------------------------------------------------------------------------

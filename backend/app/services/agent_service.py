@@ -782,7 +782,8 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
         reply_kind = "report_chat" if reports else "free"
 
     chunks = []
-    for token in agent_llm.generate_stream(prompt, fallback):
+    # SDD-202: LLM 실패 시 LLMUnavailableError 가 올라가 아무것도 저장하지 않는다(재시도 안내).
+    for token in agent_llm.generate_stream(prompt, fallback, raise_on_failure=True):
         chunks.append(token)
         yield token
     reply_text = agent_guard.sanitize("".join(chunks), fallback=fallback)
