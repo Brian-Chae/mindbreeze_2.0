@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import difflib
 import json
 import logging
 import re
@@ -411,6 +412,42 @@ def build_chat_contents(history: list[dict] | None, user_text: str) -> list[dict
     return [{"role": role, "parts": [{"text": content}]} for role, content in merged]
 
 
+# SDD-202: 직전 내담자 발화와 거의 같은 말이 다시 온 경우의 응대 지시. 문장 예시는 일부러 주지
+# 않는다 — 예시를 주면 그 문장을 그대로 따라 해 부자연스러워진다. 표현은 모델이 직접 만든다.
+REPEAT_TASK = (
+    "방금 내담자의 말은 바로 앞서 한 말과 거의 같은 내용입니다. 앞선 답변을 되풀이하지 말고, "
+    "같은 이야기가 반복된 것을 자연스럽게 알아차렸다는 점이 드러나게 답하세요. 의도한 반복인지, "
+    "잘못 보낸 것인지 가볍게 확인하는 것이 중심입니다. 새로운 감정이나 사실을 지어내 덧붙이지 마세요."
+)
+REPEAT_MIN_CHARS = 6
+REPEAT_SIMILARITY = 0.7
+
+
+def _normalize_for_repeat(text: str) -> str:
+    return re.sub(r"[\s\W_]+", "", text or "")
+
+
+def is_repeated_message(history: list[dict] | None, user_text: str) -> bool:
+    """현재 입력이 직전 내담자 발화와 같거나 매우 비슷한지 — 짧은 말("응" 등)은 제외한다."""
+    current = _normalize_for_repeat(user_text)
+    if len(current) < REPEAT_MIN_CHARS:
+        return False
+    previous_users = [
+        (item.get("content") or "").strip()
+        for item in (history or [])
+        if item.get("sender") == "user" and (item.get("content") or "").strip()
+    ]
+    # 이미 저장된 현재 입력(마지막 user 이력)은 비교 대상에서 뺀다.
+    if previous_users and previous_users[-1] == (user_text or "").strip():
+        previous_users.pop()
+    if not previous_users:
+        return False
+    previous = _normalize_for_repeat(previous_users[-1])
+    if not previous:
+        return False
+    return difflib.SequenceMatcher(None, previous, current).ratio() >= REPEAT_SIMILARITY
+
+
 def build_chat_request(
     context_text: str,
     history: list[dict] | None,
@@ -418,6 +455,8 @@ def build_chat_request(
     task: str = "",
 ) -> ChatRequest:
     """멀티턴 요청 조립 — 규칙·허용 자료는 system, 대화는 실제 턴, 사용자 입력은 마지막 user 턴."""
+    if is_repeated_message(history, user_text):
+        task = "\n".join(filter(None, [task, REPEAT_TASK]))
     blocks = [COMPANION_SYSTEM, "", "[허용 자료]", context_text or "(없음)"]
     if task:
         blocks += ["", "[이번 대화의 맥락]", task]

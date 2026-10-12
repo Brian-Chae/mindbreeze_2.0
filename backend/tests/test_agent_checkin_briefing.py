@@ -28,8 +28,9 @@ def _setup(client, prefix: str, *, with_session: bool = True):
 def _finish_checkin(client, member: dict) -> None:
     H.run_checkin_sweep(now=H.kst_at(10, 0))
     with patch("app.services.agent_llm.is_enabled", return_value=False):
-        for i in range(6):
+        for i in range(5):
             H.send_client_message(client, member["h"], f"요즘 잠을 잘 못 자요 {i}")
+        H.send_client_message(client, member["h"], "오늘은 여기까지 할게요")  # SDD-202: 마무리 신호로 종료
 
 
 # ── TS14: 안부 요약 섹션 ─────────────────────────────────────────

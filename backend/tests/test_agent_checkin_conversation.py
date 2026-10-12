@@ -27,17 +27,38 @@ def _talk(client, member: dict, text: str) -> dict:
 # ── TS4: 체크인 대화 ──────────────────────────────────────────────
 
 
-def test_TS4_여섯턴_진행하면_마무리_메시지로_닫힌다(client):
+CLOSE_TEXT = "오늘은 여기까지 할게요"
+
+
+def _finish(client, member: dict, text: str = "그냥 그래요", turns: int = 3) -> list[dict]:
+    """turns-1 번 대화한 뒤 마무리 신호로 체크인을 닫는다(SDD-202: 턴 수가 아니라 마무리 신호로 종료)."""
+    replies = [_talk(client, member, f"{text} {i}") for i in range(turns - 1)]
+    replies.append(_talk(client, member, CLOSE_TEXT))
+    return replies
+
+
+def test_TS4_턴_수로는_닫히지_않고_매_턴_응답한다(client):
+    _, member = _pair(client, "cv-ts4a0")
+    H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
+
+    replies = [_talk(client, member, f"요즘은 그냥 그래요 {i}") for i in range(8)]
+
+    assert [r["kind"] for r in replies] == [agent_checkin.KIND_CHECKIN] * 8
+    rows = H.checkins(member["id"])
+    assert len(rows) == 1 and rows[0]["closed_at"] is None
+    assert rows[0]["turn_count"] == 8
+
+
+def test_TS4_마무리_신호를_보내면_응답한_뒤_마무리로_닫힌다(client):
     counselor, member = _pair(client, "cv-ts4a")
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
-    replies = [_talk(client, member, f"요즘은 그냥 그래요 {i}") for i in range(6)]
+    with patch("app.services.agent_llm._invoke", return_value="오늘도 이야기 들려주셔서 고마워요. 편히 쉬세요."):
+        replies = _finish(client, member)
 
-    # 1~5턴은 안부 대화, 6턴에서 마무리.
-    assert [r["kind"] for r in replies[:5]] == [agent_checkin.KIND_CHECKIN] * 5
-    assert replies[5]["kind"] == agent_checkin.KIND_CHECKIN_CLOSING
-    assert replies[5]["content"] == agent_checkin.CLOSING_TEMPLATE
-    assert "상담사" in replies[5]["content"]
+    assert [r["kind"] for r in replies[:-1]] == [agent_checkin.KIND_CHECKIN] * 2
+    assert replies[-1]["kind"] == agent_checkin.KIND_CHECKIN_CLOSING
+    assert replies[-1]["content"] == "오늘도 이야기 들려주셔서 고마워요. 편히 쉬세요."  # 고정 문구가 아니라 LLM 응답
 
     rows = H.checkins(member["id"])
     assert len(rows) == 1
@@ -47,11 +68,22 @@ def test_TS4_여섯턴_진행하면_마무리_메시지로_닫힌다(client):
     assert rows[0]["counselor_id"] == counselor["id"]
 
 
+def test_TS4_마무리_신호는_짧은_작별_인사만_인정한다():
+    for text in ("잘 자요", "오늘은 여기까지 할게요", "이만 갈게요", "다음에 또 얘기해요", "굿나잇"):
+        assert agent_checkin.detect_closing(text), text
+    for text in (
+        "잘 자라고 말해 주는 사람도 없어서 요즘 너무 외로워요 정말로 매일 밤 그래요",  # 긴 문장
+        "요즘 잠을 잘 못 자요",
+        "안녕하세요",
+        "",
+    ):
+        assert not agent_checkin.detect_closing(text), text
+
+
 def test_TS4_마무리_후_새_메시지는_새_체크인으로_처리된다(client):
     _, member = _pair(client, "cv-ts4b")
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
-    for i in range(6):
-        _talk(client, member, f"그냥 지냈어요 {i}")
+    _finish(client, member)
     assert H.checkins(member["id"])[0]["closed_at"] is not None
 
     _talk(client, member, "다시 이야기하고 싶어요")
@@ -77,8 +109,9 @@ def test_TS4_요약에는_대화_원문이_그대로_담기지_않는다(client)
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     secret = "지난주에 사촌 결혼식에서 크게 다퉜어요"
     _talk(client, member, secret)
-    for i in range(5):
+    for i in range(4):
         _talk(client, member, f"그 뒤로도 계속 생각이 나요 {i}")
+    _talk(client, member, CLOSE_TEXT)
 
     summary = H.checkins(member["id"])[0]["summary"]
     assert secret not in summary
@@ -147,7 +180,8 @@ def test_TS16_LLM_키가_없으면_템플릿으로_대화가_완결된다(client
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm.is_enabled", return_value=False):
-        replies = [_talk(client, member, f"요즘 잠을 잘 못 자요 {i}") for i in range(6)]
+        replies = [_talk(client, member, f"요즘 잠을 잘 못 자요 {i}") for i in range(5)]
+        replies.append(_talk(client, member, CLOSE_TEXT))
 
     assert all(r["content"] for r in replies)
     assert replies[0]["content"] in agent_checkin.REPLY_FALLBACKS
@@ -163,7 +197,8 @@ def test_TS16_LLM_예외가_나도_템플릿으로_완결된다(client):
     with patch("app.services.agent_llm.is_enabled", return_value=True), patch(
         "app.services.agent_llm._invoke", side_effect=RuntimeError("provider down")
     ):
-        replies = [_talk(client, member, f"요즘 많이 지쳤어요 {i}") for i in range(6)]
+        replies = [_talk(client, member, f"요즘 많이 지쳤어요 {i}") for i in range(5)]
+        replies.append(_talk(client, member, CLOSE_TEXT))
 
     assert replies[0]["content"] in agent_checkin.REPLY_FALLBACKS
     row = H.checkins(member["id"])[0]
@@ -178,8 +213,9 @@ def test_TS16_변화_방향_키워드_폴백(client):
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
 
     with patch("app.services.agent_llm.is_enabled", return_value=False):
-        for i in range(6):
+        for i in range(5):
             _talk(client, member, f"요즘은 많이 나아졌고 편해졌어요 {i}")
+        _talk(client, member, CLOSE_TEXT)
 
     assert H.checkins(member["id"])[0]["mood_direction"] == "better"
 
@@ -195,7 +231,8 @@ def test_Edge_체크인_도중_상담사가_끄면_열린_체크인은_마무리
     H.set_checkin_enabled(counselor["id"], member["id"], False)
 
     # 열린 체크인은 마무리까지 간다.
-    replies = [_talk(client, member, f"계속 이야기해요 {i}") for i in range(5)]
+    replies = [_talk(client, member, f"계속 이야기해요 {i}") for i in range(2)]
+    replies.append(_talk(client, member, CLOSE_TEXT))
     assert replies[-1]["kind"] == agent_checkin.KIND_CHECKIN_CLOSING
     assert H.checkins(member["id"])[0]["closed_at"] is not None
 

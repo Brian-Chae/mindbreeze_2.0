@@ -783,8 +783,11 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
             chunks.append(token)
             yield token
         reply_text = "".join(chunks)
+        # SDD-202: 마무리 신호로 체크인이 닫혔다면 마무리 종류로 저장한다.
         post_agent_message(
-            db, uid, kind="checkin", content=reply_text,
+            db, uid,
+            kind=agent_checkin.KIND_CHECKIN_CLOSING if checkin.closed_at is not None else "checkin",
+            content=reply_text,
             cta=handoff_cta(db, uid, reply_text), notify=False, commit=True,
         )
         return

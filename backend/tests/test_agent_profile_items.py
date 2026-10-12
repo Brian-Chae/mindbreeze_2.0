@@ -26,8 +26,9 @@ def _run_checkin(client, member: dict, first_text: str = PROFILE_TEXT) -> None:
     H.run_checkin_sweep(now=H.kst_at(10, 0, day_offset=-1))
     with patch("app.services.agent_llm.is_enabled", return_value=False):
         H.send_client_message(client, member["h"], first_text)
-        for i in range(5):
+        for i in range(4):
             H.send_client_message(client, member["h"], f"그 뒤로도 비슷해요 {i}")
+        H.send_client_message(client, member["h"], "오늘은 여기까지 할게요")  # SDD-202: 마무리 신호로 종료
 
 
 # ── TS6: 추출 ─────────────────────────────────────────────────────
