@@ -361,8 +361,12 @@ def client_context(user_id: str | UUID, db: DBSession) -> dict:
     }
 
 
-def context_to_text(context: dict) -> str:
-    """컨텍스트를 LLM 프롬프트용 텍스트로 직렬화 — 허용 자료 블록에만 쓴다."""
+def context_to_text(context: dict, *, include_recent: bool = True) -> str:
+    """컨텍스트를 LLM 프롬프트용 텍스트로 직렬화 — 허용 자료 블록에만 쓴다.
+
+    include_recent=False 는 최근 대화를 실제 user/model 턴으로 따로 전달하는 멀티턴
+    경로(SDD-203)에서 `■ 최근 대화` 블록이 중복되지 않게 한다.
+    """
     lines: list[str] = []
 
     sessions = context.get("sessions") or []
@@ -418,7 +422,7 @@ def context_to_text(context: dict) -> str:
             lines.append(f"- [{label}] {item['key']}: {item['value']}")
 
     # SDD-202: 진행 중 대화의 최근 메시지를 실어 맥락 상실(뜬금없는 지시 대명사 등)을 막는다.
-    recent = context.get("recent_messages") or []
+    recent = (context.get("recent_messages") or []) if include_recent else []
     if recent:
         lines.append("")
         lines.append("■ 최근 대화 (방금 나눈 대화 — 이 맥락을 이어서 답하세요)")

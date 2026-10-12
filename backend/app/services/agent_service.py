@@ -635,27 +635,22 @@ COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
 )
 
 
-def _companion_prompt(db: DBSession, user_id: UUID, user_text: str) -> tuple[str, str]:
-    """동반자 응답 프롬프트·폴백 — _companion_reply/stream 이 함께 쓴다(SDD-201)."""
+def _companion_prompt(
+    db: DBSession, user_id: UUID, user_text: str
+) -> tuple[agent_llm.ChatRequest, str]:
+    """동반자 응답 멀티턴 요청·폴백 — _companion_reply/stream 이 함께 쓴다(SDD-201/203)."""
     fallback = COMPANION_REPLY_FALLBACKS[len(user_text) % len(COMPANION_REPLY_FALLBACKS)]
-    task = (
-        "인사·감탄사 같은 짧은 말에는 감정을 해석하지 말고 자연스럽게 받아 주세요. "
-        "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
-        "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
-        "공감·위로 후에는 당신의 생각·경험을 한두 마디 곁들여 친구처럼 주고받으세요. "
-        "질문은 대화가 막힐 때만 하나 던지고, 매번 질문으로 끝내지 마세요. "
-        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
-        "2~3문장을 넘기지 마세요."
-    )
-    context_text = agent_policy.context_to_text(agent_policy.client_context(user_id, db))
+    context = agent_policy.client_context(user_id, db)
+    # SDD-203: 최근 대화는 시스템 텍스트가 아니라 실제 user/model 턴으로 전달한다.
+    history = context.get("recent_messages") or []
+    context_text = agent_policy.context_to_text(context, include_recent=False)
     # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
     signal = agent_emotion.detect_emotion(user_text)
     if signal["emotion"] != "neutral":
         context_text = "\n".join(
             filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
         )
-    prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
-    return prompt, fallback
+    return agent_llm.build_chat_request(context_text, history, user_text), fallback
 
 
 def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
@@ -778,8 +773,11 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
             "설명하세요. 자료에 없는 내용은 상담사님과 이야기해 보시라고 안내하세요. "
             "마지막에 열린 질문 하나를 덧붙이세요."
         )
-        prompt = agent_llm.build_prompt(
-            agent_policy.context_to_text(context), user_text=text, task=task
+        prompt = agent_llm.build_chat_request(
+            agent_policy.context_to_text(context, include_recent=False),
+            context.get("recent_messages") or [],
+            text,
+            task=task,
         )
         reply_kind = "report_chat" if reports else "free"
 
@@ -853,8 +851,11 @@ def _build_reply(
         "설명하세요. 자료에 없는 내용은 상담사님과 이야기해 보시라고 안내하세요. "
         "마지막에 열린 질문 하나를 덧붙이세요."
     )
-    prompt = agent_llm.build_prompt(
-        agent_policy.context_to_text(context), user_text=user_text, task=task
+    prompt = agent_llm.build_chat_request(
+        agent_policy.context_to_text(context, include_recent=False),
+        context.get("recent_messages") or [],
+        user_text,
+        task=task,
     )
     reply = agent_llm.generate(prompt, fallback)
     return reply, ("report_chat" if reports else "free")
