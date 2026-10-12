@@ -627,15 +627,36 @@ OUT_OF_SCOPE_REPLY = (
     "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요? 그 전에 지금 마음을 들려주셔도 좋아요."
 )
 
-# SDD-202: 상담사 채팅 연결을 제안하는 문장 — 최종 응답에 이 패턴이 있으면 [상담사님과 채팅하기]
+# SDD-202: 상담사 채팅 연결을 제안하는 문장("…연결해 드릴까요?") — 최종 응답에 이 패턴이 있으면 [상담사님과 채팅하기]
 # 버튼을 붙인다. LLM 이 낸 마커가 아니라 서버가 최종 문장을 보고 판단한다(문장만 있고 갈 길이 없는 상태 방지).
 # "상담사님께 그대로 전해 드릴게요"(피드백 접수) 같은 문장에는 걸리지 않는다.
-_HANDOFF_OFFER = re.compile(r"상담사(?:님)?(?:과|와|께)[^.?!]{0,25}(?:이야기|채팅|상의|대화|말씀)")
+_HANDOFF_OFFER = re.compile(r"연결(?:해)?\s*드릴까요")
+
+# 내담자가 상담사 연결을 원하지 않는다고 말한 표현 — 이후 버튼·제안을 반복하지 않는다.
+_HANDOFF_DECLINE = re.compile(
+    r"상담사[^.?!\n]{0,20}(?:싶지(?:는|도)?\s*않|싫|안\s*(?:할|하고|하려|만나|볼|가)|말고|필요\s*없|나중에)"
+    r"|(?:채팅|연결)[^.?!\n]{0,10}(?:싫|안\s*(?:할|해)|필요\s*없|하지\s*마)"
+)
+_HANDOFF_DECLINE_WINDOW = 6  # 최근 내담자 발화 몇 건까지 거절을 기억할지
+
+
+def handoff_declined(db: DBSession, user_id: UUID) -> bool:
+    """최근 내담자 발화에 상담사 연결 거절이 있으면 True(현재 발화 포함)."""
+    conversation = get_or_create_conversation(db, user_id, CHANNEL_CLIENT)
+    rows = (
+        db.query(AgentMessage.content)
+        .filter(AgentMessage.conversation_id == conversation.id, AgentMessage.sender == "user")
+        .order_by(AgentMessage.created_at.desc())
+        .limit(_HANDOFF_DECLINE_WINDOW)
+        .all()
+    )
+    return any(_HANDOFF_DECLINE.search(row[0] or "") for row in rows)
 
 
 def handoff_cta(db: DBSession, user_id: UUID, reply_text: str) -> list[dict]:
-    """연결 제안 문장이 있으면 담당 상담사 채팅 CTA, 없거나 담당 상담사가 없으면 빈 목록."""
-    if not _HANDOFF_OFFER.search(reply_text or ""):
+    """연결 제안 문장이 있으면 담당 상담사 채팅 CTA. 제안이 없거나, 담당 상담사가 없거나,
+    내담자가 최근 거절했다면 빈 목록."""
+    if not _HANDOFF_OFFER.search(reply_text or "") or handoff_declined(db, user_id):
         return []
     from app.services import agent_risk
 

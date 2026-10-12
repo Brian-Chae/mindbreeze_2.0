@@ -121,3 +121,63 @@ def test_에이전트_LLM_타임아웃은_60초이고_리포트_공용값은_그
     monkeypatch.setattr(agent_llm.settings, "gemini_api_key", "k")
     agent_llm._call_gemini_chat(agent_llm.build_chat_request("ctx", [], "안녕"))
     assert seen["timeout"] == 60.0
+
+
+# ── 거절 존중 ─────────────────────────────────────────────────────
+
+DECLINE = "일단 지금은 상담사와 이야기 하고 싶지는 않아"
+
+
+def test_거절_판정():
+    pattern = agent_service._HANDOFF_DECLINE
+    for text in (DECLINE, "상담사님 말고 그냥 얘기할래", "상담사 연결은 싫어요", "채팅은 안 할래", "상담사는 지금 필요 없어요"):
+        assert pattern.search(text), text
+    for text in ("상담사님과 이야기하고 싶어요", "오늘 너무 지쳤어요", "연결해 주세요"):
+        assert not pattern.search(text), text
+
+
+def test_거절을_되풀이한_문장에는_CTA가_붙지_않는다(client):
+    _, member = _pair(client, "ho-5")
+    echo = "지금은 상담사님과 이야기하고 싶지 않으시다는 말씀, 충분히 이해했어요. 더 남겨 주세요."
+    with patch("app.services.agent_llm._invoke", return_value=echo):
+        reply = H.send_client_message(client, member["h"], "오늘 좀 지쳤어요")["agent_message"]
+    assert reply["cta"] == []
+
+
+def test_거절_이후에는_LLM이_제안_문장을_내도_CTA가_없다(client):
+    _, member = _pair(client, "ho-6")
+    with patch("app.services.agent_llm._invoke", return_value=OFFER):
+        reply = H.send_client_message(client, member["h"], DECLINE)["agent_message"]
+    assert reply["cta"] == []
+
+
+def test_거절_안_했으면_기존대로_제안과_버튼(client):
+    _, member = _pair(client, "ho-7")
+    with patch("app.services.agent_llm._invoke", return_value=OFFER):
+        reply = H.send_client_message(client, member["h"], "오늘 좀 지쳤어요")["agent_message"]
+    assert [c["action"] for c in reply["cta"]] == ["talk_to_counselor"]
+
+
+def test_거절_이후_위험_표현은_신호는_저장하고_응답은_제안_없는_공감(client):
+    from app.core.database import SessionLocal
+    from app.models.agent import AgentRiskSignal
+
+    _, member = _pair(client, "ho-8")
+    H.send_client_message(client, member["h"], DECLINE)
+    reply = H.send_client_message(client, member["h"], "계속 이러면 진짜 죽고싶을거 같아")["agent_message"]
+
+    assert reply["content"] == agent_risk.PLAIN_EMPATHY_REPLY
+    assert "연결해 드릴까요" not in reply["content"]
+    assert reply["cta"] == []
+    db = SessionLocal()
+    try:
+        assert db.query(AgentRiskSignal).count() >= 1  # 상담사 조용한 알림은 유지
+    finally:
+        db.close()
+
+
+def test_거절_전_위험_표현은_기존처럼_제안과_버튼(client):
+    _, member = _pair(client, "ho-9")
+    reply = H.send_client_message(client, member["h"], "계속 이러면 진짜 죽고싶을거 같아")["agent_message"]
+    assert "연결해 드릴까요" in reply["content"]
+    assert [c["action"] for c in reply["cta"]] == ["talk_to_counselor"]

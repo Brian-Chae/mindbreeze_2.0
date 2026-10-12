@@ -511,13 +511,20 @@ def handle_client_message(
             excerpt=excerpt,
         )
 
+    from app.services import agent_service
+
     repeat_index = _safe_reply_repeat_index(db, client_id)
-    content = safe_reply_text(level, repeat_index)
-    cta = (
-        _talk_to_counselor_cta(db, counselor_ids[0] if counselor_ids else None, client_id)
-        if repeat_index < 2
-        else []
-    )
+    if agent_service.handoff_declined(db, client_id):
+        # SDD-202: 상담사 연결을 거절한 뒤에는 같은 제안·버튼을 반복하지 않고 계속 들어 준다.
+        # 상담사에게 가는 조용한 알림(위 신호 저장)은 그대로다.
+        content, cta = PLAIN_EMPATHY_REPLY, []
+    else:
+        content = safe_reply_text(level, repeat_index)
+        cta = (
+            _talk_to_counselor_cta(db, counselor_ids[0] if counselor_ids else None, client_id)
+            if repeat_index < 2
+            else []
+        )
     # 로그에 대화 원문·excerpt·레벨을 남기지 않는다(보안 리뷰 항목).
     logger.info("[agent_risk] 안전 응답 생성 (client=%s, counselors=%d)", client_id, len(counselor_ids))
     return {"content": content, "cta": cta}
