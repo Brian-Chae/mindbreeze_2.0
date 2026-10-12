@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
+import InviteModal from '../../components/clients/InviteModal';
 import { useAuthStore } from '../../stores/authStore';
 import { listClients, type ClientListItem } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
@@ -15,7 +16,9 @@ function initials(name: string): string {
 
 export default function ClientListPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isInitialized } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
 
   const [query, setQuery] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,15 +27,16 @@ export default function ClientListPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
     }
   }, [isInitialized, isAuthenticated, navigate]);
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'counselor') return;
+    if (!isAuthenticated || (user?.role !== 'counselor' && user?.role !== 'org_admin')) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -62,13 +66,13 @@ export default function ClientListPage() {
 
   if (!isInitialized) return null;
 
-  if (user && user.role !== 'counselor') {
+  if (user && user.role !== 'counselor' && user.role !== 'org_admin') {
     return (
       <AppShell title="내담자">
         <div className="flex items-center justify-center py-24">
           <div className="max-w-md text-center">
             <h1 className="text-xl font-bold mb-2 text-[#1F1F1F]">접근 권한이 없습니다</h1>
-            <p className="text-sm text-[#6F6F6F]">상담사 전용 페이지입니다.</p>
+            <p className="text-sm text-[#6F6F6F]">상담사·기관관리자 전용 페이지입니다.</p>
           </div>
         </div>
       </AppShell>
@@ -80,7 +84,7 @@ export default function ClientListPage() {
   const rightSlot = (
     <button
       type="button"
-      onClick={() => navigate('/clients/invite')}
+      onClick={() => setShowInvite(true)}
       className="mb-btn"
     >
       내담자 초대
@@ -93,6 +97,7 @@ export default function ClientListPage() {
         <form onSubmit={handleSearch} className="flex gap-2">
           <input
             type="text"
+            aria-label="내담자 검색"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름 또는 이메일 검색"
@@ -106,7 +111,7 @@ export default function ClientListPage() {
         {loading && (
           <p className="text-center text-[#6F6F6F] py-8">불러오는 중...</p>
         )}
-        {error && <p className="text-center text-red-600 py-8">{error}</p>}
+        {error && <p role="alert" className="text-center text-red-600 py-8">{error}</p>}
 
         {!loading && !error && clients.length === 0 && (
           <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-12 text-center text-[#6F6F6F]">
@@ -137,7 +142,7 @@ export default function ClientListPage() {
                       </p>
                     </div>
                     {c.last_session_at && (
-                      <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080] text-[11px] font-mono">
+                      <span className="shrink-0 px-2.5 py-1 rounded-full bg-[#F5EDFC] text-[#5F0080] text-[12px] font-mono">
                         {new Date(c.last_session_at).toLocaleDateString('ko-KR')}
                       </span>
                     )}
@@ -147,7 +152,7 @@ export default function ClientListPage() {
                       {c.concerns.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-[11px] rounded-full"
+                          className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-[12px] rounded-full"
                         >
                           {tag}
                         </span>
@@ -184,6 +189,7 @@ export default function ClientListPage() {
           </div>
         )}
       </div>
+      <InviteModal open={showInvite} onClose={() => setShowInvite(false)} />
     </AppShell>
   );
 }

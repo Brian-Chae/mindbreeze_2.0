@@ -1,6 +1,6 @@
 """내담자 관리 API"""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -62,6 +62,11 @@ def create_invite(
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    if current_user.get("role") != "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="상담사만 초대할 수 있습니다",
+        )
     result = client_service.create_invite(
         current_user["id"], req.email, db
     )

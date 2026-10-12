@@ -1,17 +1,27 @@
 """F6 채팅 REST API"""
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.chat import (
+    InvitableCounselorOut,
+    InvitableCounselorsResponse,
+    MarkMessagesReadRequest,
     MessageCreateRequest,
+    MessageContextResponse,
     MessageListResponse,
     MessageResponse,
     RoomCreateRequest,
+    RoomForkRequest,
     RoomListResponse,
+    RoomParticipantsAddRequest,
+    RoomParticipantOut,
+    RoomParticipantsResponse,
     RoomResponse,
+    RoomUpdateRequest,
+    UnreadCountsResponse,
 )
 from app.services import chat_service
 
@@ -53,10 +63,98 @@ def get_room(
     return RoomResponse(**chat_service.get_room(room_id, current_user["id"], db))
 
 
+@router.patch("/rooms/{room_id}", response_model=RoomResponse)
+def update_room(
+    room_id: str,
+    payload: RoomUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """채팅방 이름 변경 (SDD-090) — direct/group host 전용, session은 403."""
+    room = chat_service.update_room(room_id, current_user["id"], payload.name, db)
+    return RoomResponse(**room)
+
+
+@router.post("/rooms/{room_id}/participants", response_model=RoomResponse)
+def add_room_participants(
+    room_id: str,
+    payload: RoomParticipantsAddRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 추가 (SDD-090) — group host 전용."""
+    room = chat_service.add_room_participants(
+        room_id, current_user["id"], payload.participant_ids, db
+    )
+    return RoomResponse(**room)
+
+
+@router.post("/rooms/{room_id}/fork", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
+def fork_room(
+    room_id: str,
+    payload: RoomForkRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """"새 방으로 만들기" (SDD-092) — 기존 참여자 승계 + 새 참여자로 새 group 방 생성.
+
+    대화 이력은 복사하지 않고 기존 방은 유지된다. direct 방은 fork 만 허용.
+    권한: host OR 기관 관리자(org_admin).
+    """
+    room = chat_service.fork_group_room(
+        room_id, current_user["id"], payload.participant_ids, payload.name, db
+    )
+    return RoomResponse(**room)
+
+
+@router.get("/invitable-counselors", response_model=InvitableCounselorsResponse)
+def list_invitable_counselors(
+    q: str | None = None,
+    # VB-04: page/size 검증 + 서비스에서 DB LIMIT/OFFSET 페이징.
+    page: int = Query(1, ge=1),
+    size: int = Query(50, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """초대 후보 상담사 조회 (SDD-092) — 요청자와 공유 기관의 active 상담사."""
+    data = chat_service.list_invitable_counselors(current_user["id"], q, db, page, size)
+    return InvitableCounselorsResponse(
+        counselors=[InvitableCounselorOut(**c) for c in data["counselors"]],
+        total=data["total"],
+        page=data["page"],
+    )
+
+
+@router.get("/rooms/{room_id}/participants", response_model=RoomParticipantsResponse)
+def list_room_participants(
+    room_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 명단 조회 (SDD-090) — group host 전용."""
+    participants = chat_service.get_room_participants(room_id, current_user["id"], db)
+    return RoomParticipantsResponse(
+        participants=[RoomParticipantOut(**p) for p in participants]
+    )
+
+
+@router.delete("/rooms/{room_id}/participants/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_room_participant(
+    room_id: str,
+    user_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """그룹방 참여자 내보내기 (SDD-090) — group host 전용."""
+    chat_service.remove_room_participant(room_id, current_user["id"], user_id, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/rooms/{room_id}/messages", response_model=MessageListResponse)
 def list_messages(
     room_id: str,
-    limit: int = 50,
+    # VB-03: ge/le 검증이 없어 큰 limit 으로 방 전체를 반환받을 수 있었다.
+    limit: int = Query(50, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
@@ -64,24 +162,82 @@ def list_messages(
     return MessageListResponse(messages=[MessageResponse(**m) for m in msgs])
 
 
+@router.get("/rooms/{room_id}/messages-around", response_model=MessageListResponse)
+def list_messages_around(
+    room_id: str,
+    message_id: str,
+    before: int = Query(20, ge=0, le=50),
+    after: int = Query(20, ge=0, le=50),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """기존 채팅 목록 소비자를 위한 최신순 주변 메시지 응답."""
+    context = chat_service.get_message_context(
+        room_id, message_id, current_user["id"], db, before=before, after=after,
+    )
+    return {
+        "messages": list(reversed([*context["before"], context["message"], *context["after"]])),
+        "next_cursor": context["before_cursor"],
+    }
+
+
+@router.get("/rooms/{room_id}/messages/{message_id}/context", response_model=MessageContextResponse)
+def get_message_context(
+    room_id: str,
+    message_id: str,
+    before: int = Query(20, ge=0, le=50),
+    after: int = Query(20, ge=0, le=50),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    return chat_service.get_message_context(
+        room_id, message_id, current_user["id"], db, before=before, after=after,
+    )
+
+
 @router.post("/rooms/{room_id}/messages", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-def create_message(
+async def create_message(
     room_id: str,
     payload: MessageCreateRequest,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    msg = chat_service.post_message(
+    msg = await chat_service.post_message(
         room_id, current_user["id"], payload.content, payload.type, payload.file_url, db
     )
     return MessageResponse(**msg)
 
 
 @router.put("/rooms/{room_id}/read", status_code=status.HTTP_204_NO_CONTENT)
-def mark_read(
+async def mark_read(
     room_id: str,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    chat_service.mark_read(room_id, current_user["id"], db)
+    await chat_service.mark_read(room_id, current_user["id"], db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/rooms/{room_id}/messages/read", status_code=status.HTTP_204_NO_CONTENT)
+async def mark_messages_read(
+    room_id: str,
+    payload: MarkMessagesReadRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """여러 메시지를 한 번에 읽음 처리 (Phase 3a)."""
+    await chat_service.mark_messages_read(
+        room_id, current_user["id"], payload.message_ids, db
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/rooms/{room_id}/unread-counts", response_model=UnreadCountsResponse)
+def get_unread_counts(
+    room_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """채팅방의 각 메시지별 안읽은 수 반환 (Phase 3a)."""
+    counts = chat_service.get_unread_counts(room_id, current_user["id"], db)
+    return UnreadCountsResponse(unread_counts=counts)

@@ -1,0 +1,91 @@
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+vite v8.0.13 building client environment for production...
+[2Ktransforming...Unable to resolve `@import "../design-system/build/outputs/css/tokens.css"` from /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/src
+✓ 824 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                    0.84 kB │ gzip:   0.59 kB
+dist/assets/style-DCbEYrJs.css                   143.70 kB │ gzip:  27.29 kB
+dist/assets/dashboard-BrC7PyM6.js                  0.12 kB │ gzip:   0.11 kB
+dist/assets/useAuth-N4yKutFz.js                    0.39 kB │ gzip:   0.25 kB
+dist/assets/clients-CwhTClUI.js                    0.44 kB │ gzip:   0.29 kB
+dist/assets/StatusBadge-DBKvznw5.js                0.59 kB │ gzip:   0.44 kB
+dist/assets/org-UJHawFMB.js                        0.65 kB │ gzip:   0.34 kB
+dist/assets/admin-BH6IY4Ia.js                      0.77 kB │ gzip:   0.41 kB
+dist/assets/audio-DiQdOyPZ.js                      0.80 kB │ gzip:   0.50 kB
+dist/assets/ConfirmDialog-XXNzaFEM.js              0.87 kB │ gzip:   0.47 kB
+dist/assets/ReportDetailPage-B4_9BlsK.js           1.21 kB │ gzip:   0.71 kB
+dist/assets/session-tBdfDacM.js                    1.26 kB │ gzip:   0.60 kB
+dist/assets/socket-BEA6hp57.js                     1.60 kB │ gzip:   0.67 kB
+dist/assets/onboarding-CGiocCvR.js                 1.69 kB │ gzip:   0.74 kB
+dist/assets/useSessionLiveSocket-BPHW4gtz.js       1.80 kB │ gzip:   0.82 kB
+dist/assets/ThemeToggle-BXdM6skp.js                2.09 kB │ gzip:   0.94 kB
+dist/assets/DesignIndexPage-Cqay8YFD.js            2.16 kB │ gzip:   1.17 kB
+dist/assets/WebBluetoothProvider-CF4M79OG.js       2.19 kB │ gzip:   0.77 kB
+dist/assets/MyRequestsPage-Bx_enZGm.js             2.37 kB │ gzip:   1.08 kB
+dist/assets/ReportSamplePage-zTYle0CG.js           2.84 kB │ gzip:   1.46 kB
+dist/assets/OrgRegisterPage-By1weADx.js            2.96 kB │ gzip:   1.39 kB
+dist/assets/ClientInvitePage-BPpCVYxS.js           2.99 kB │ gzip:   1.37 kB
+dist/assets/ReportViewPage-D5xAFra6.js             3.19 kB │ gzip:   1.46 kB
+dist/assets/ForgotPasswordPage-CdQyjQz2.js         3.20 kB │ gzip:   1.33 kB
+dist/assets/OrgSearchPage-thOyxVJ5.js              3.96 kB │ gzip:   1.61 kB
+dist/assets/ClientEssentialsPage-BFV1ikJ2.js       3.98 kB │ gzip:   1.52 kB
+dist/assets/OrgManagementPage-DczKuV-5.js          4.21 kB │ gzip:   1.68 kB
+dist/assets/ClientProfilePage-YPv4E4PG.js          4.47 kB │ gzip:   1.57 kB
+dist/assets/ResetPasswordPage-D-caBv8U.js          4.54 kB │ gzip:   1.68 kB
+dist/assets/AdminReviewListPage-CEfQY7mZ.js        4.70 kB │ gzip:   2.01 kB
+dist/assets/InviteLandingPage-D4G8epit.js          5.31 kB │ gzip:   2.32 kB
+dist/assets/NotificationCenterPage-DbQ9bNVy.js     5.37 kB │ gzip:   2.13 kB
+dist/assets/SetPasswordPage-C5_TiDC5.js            5.38 kB │ gzip:   2.17 kB
+dist/assets/CalendarView-yQK2NuJF.js               5.74 kB │ gzip:   2.05 kB
+dist/assets/SessionCreatePage-CKXFnto1.js          5.74 kB │ gzip:   2.02 kB
+dist/assets/AppShell-AZ-bfC-e.js                   6.16 kB │ gzip:   2.20 kB
+dist/assets/EegTimeline-D2Dzstcr.js                6.59 kB │ gzip:   2.72 kB
+dist/assets/ClientLoginPage-DGOgmM0v.js            7.03 kB │ gzip:   2.72 kB
+dist/assets/CredentialDashboardPage-DPge2ZD9.js    7.38 kB │ gzip:   2.61 kB
+dist/assets/LoginPage-R3pOkn_w.js                  7.60 kB │ gzip:   2.98 kB
+dist/assets/ChatRoom-DbpV1Eim.js                   8.37 kB │ gzip:   3.38 kB
+dist/assets/UserManagementPage-C-7sVpZq.js         8.49 kB │ gzip:   2.50 kB
+dist/assets/ClientListPage-DDk6mlhz.js             8.54 kB │ gzip:   3.03 kB
+dist/assets/CounselorOnboardingPage-6xDeZMQp.js    8.69 kB │ gzip:   2.74 kB
+dist/assets/AdminReviewDetailPage-BNa2toGp.js      9.32 kB │ gzip:   2.87 kB
+dist/assets/OrgPublicPage-C-yQM2Y9.js              9.34 kB │ gzip:   3.01 kB
+dist/assets/ChatPage-CUgEwSkA.js                   9.67 kB │ gzip:   3.02 kB
+dist/assets/ReportCoverSection-cj0VVULW.js         9.74 kB │ gzip:   3.84 kB
+dist/assets/DashboardPage-B29Dfr1s.js             10.20 kB │ gzip:   2.93 kB
+dist/assets/chat-fXcNmYpI.js                      10.59 kB │ gzip:   4.13 kB
+dist/assets/OrgManagementPage-D3qF0m22.js         11.12 kB │ gzip:   2.83 kB
+dist/assets/SessionDetailPage-sJu41nub.js         11.67 kB │ gzip:   3.91 kB
+dist/assets/ReportPage-B51TPBnr.js                12.43 kB │ gzip:   3.70 kB
+dist/assets/ReportDetailView-DJq-RijP.js          12.60 kB │ gzip:   4.53 kB
+dist/assets/RegisterPage-BiVEoZpD.js              12.91 kB │ gzip:   3.81 kB
+dist/assets/SessionRecordPage-C8nPaPFu.js         13.19 kB │ gzip:   4.33 kB
+dist/assets/HomepagePage-BU5KZgBG.js              13.82 kB │ gzip:   4.20 kB
+dist/assets/ReportListPage-8Mo_13Ah.js            16.11 kB │ gzip:   4.81 kB
+dist/assets/ClientOnboardingPage-DUcAf5At.js      17.63 kB │ gzip:   4.69 kB
+dist/assets/SettingsPage-C3rvqfIm.js              17.82 kB │ gzip:   4.21 kB
+dist/assets/ClientManagementPage-BUXtJOlO.js      18.00 kB │ gzip:   4.72 kB
+dist/assets/OrgDashboardPage-D9u9OTf1.js          19.87 kB │ gzip:   4.66 kB
+dist/assets/DocsPage-C6TWaQnw.js                  26.18 kB │ gzip:   6.34 kB
+dist/assets/NarrativeSections-DK30R4kE.js         26.30 kB │ gzip:   8.33 kB
+dist/assets/SessionListPage-DIfCUZgc.js           27.02 kB │ gzip:   6.65 kB
+dist/assets/UserAppPage-BlQIPQsM.js               30.52 kB │ gzip:   6.37 kB
+dist/assets/esm-BugJStQ-.js                       41.15 kB │ gzip:  12.84 kB
+dist/assets/class-join-page-DgQ2vfZ0.js           42.72 kB │ gzip:  11.78 kB
+dist/assets/OperatorAppPage-DpZp4PGS.js           42.92 kB │ gzip:  10.79 kB
+dist/assets/ClientAppPage-3sGi3KCY.js             58.28 kB │ gzip:  13.93 kB
+dist/assets/PlaygroundPage-DeRw5UOc.js            90.54 kB │ gzip:  24.85 kB
+dist/assets/useBand-pFSiVb7f.js                  101.64 kB │ gzip:  29.65 kB
+dist/assets/index-yb5q_T57.js                    277.74 kB │ gzip:  88.59 kB
+dist/assets/LineChart-DvvYrxgg.js                345.72 kB │ gzip: 101.74 kB
+dist/assets/SessionLivePage-DtuzK2YT.js          615.75 kB │ gzip: 166.80 kB
+
+✓ built in 1.00s
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.

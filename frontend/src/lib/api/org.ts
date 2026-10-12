@@ -33,20 +33,44 @@ export interface JoinRequest {
 }
 
 export type CounselorRole = 'counselor' | 'org_admin';
+// SDD-082: suspended — 기관 관리자가 비활성화한 계정 (로그인 차단)
+export type CounselorAccountStatus = 'pending' | 'active' | 'suspended';
+
+// SDD-079: 초대 유형 — 신규 가입 초대(new_account) / 소속 추가 초대(org_membership)
+export type CounselorInviteType = 'new_account' | 'org_membership';
 
 export interface CounselorItem {
   id: string;
   name: string;
   email: string;
   role: CounselorRole;
+  status?: CounselorAccountStatus;
+  invited_at?: string | null;
+  invite_expires_at?: string | null;
+  invite_type?: CounselorInviteType | null;
+  // SDD-082: 상담사 코드 검색 + 개인 상담소(kind=individual) 소속 구분
+  counselor_code?: string | null;
+  has_personal_office?: boolean;
 }
 
-export interface RegisterOrgPayload {
+export interface InviteCounselorPayload {
   name: string;
-  ceo_name: string;
-  biz_number: string;
-  address: string;
-  phone: string;
+  email: string;
+}
+
+export interface InviteCounselorResponse {
+  id: string;
+  name: string;
+  email: string;
+  status: CounselorAccountStatus;
+  invited_at: string;
+  invite_expires_at: string;
+  invite_sent: boolean;
+}
+
+export interface ResendCounselorInviteResponse {
+  invite_sent: boolean;
+  invite_expires_at: string;
 }
 
 export interface HandleRequestPayload {
@@ -63,9 +87,6 @@ export const searchOrgs = (q: string, region?: string): Promise<OrgSearchItem[]>
   const qs = params.toString();
   return apiClient.get<OrgSearchItem[]>(`${PREFIX}/search${qs ? `?${qs}` : ''}`, { skipAuth: true });
 };
-
-export const registerOrg = (body: RegisterOrgPayload): Promise<Org> =>
-  apiClient.post<Org>(`${PREFIX}/register`, body);
 
 export const getOrg = (orgId: string): Promise<Org> =>
   apiClient.get<Org>(`${PREFIX}/${orgId}`, { skipAuth: true });
@@ -94,3 +115,88 @@ export const updateCounselor = (
 
 export const removeCounselor = (orgId: string, userId: string): Promise<void> =>
   apiClient.delete<void>(`${PREFIX}/${orgId}/counselors/${userId}`);
+
+export const inviteCounselor = (
+  orgId: string,
+  body: InviteCounselorPayload,
+): Promise<InviteCounselorResponse> =>
+  apiClient.post<InviteCounselorResponse>(`${PREFIX}/${orgId}/counselors/invite`, body);
+
+export const resendCounselorInvite = (
+  orgId: string,
+  userId: string,
+): Promise<ResendCounselorInviteResponse> =>
+  apiClient.post<ResendCounselorInviteResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/resend-invite`,
+    {},
+  );
+
+// SDD-082: 기관 관리자 — 소속 상담사 활성화/비활성화 + 최근 이력
+
+export interface CounselorStatusResponse {
+  id: string;
+  status: CounselorAccountStatus;
+}
+
+export interface CounselorActivitySession {
+  id: string;
+  title: string | null;
+  type: string;
+  status: string;
+  scheduled_at: string | null;
+  started_at: string | null;
+  participant_count: number;
+}
+
+export interface CounselorActivityReport {
+  id: string;
+  session_id: string;
+  title: string | null;
+  type: string;
+  status: string;
+  created_at: string | null;
+}
+
+export interface CounselorActivity {
+  sessions: CounselorActivitySession[];
+  reports: CounselorActivityReport[];
+}
+
+export const suspendCounselor = (
+  orgId: string,
+  userId: string,
+  reason: string,
+): Promise<CounselorStatusResponse> =>
+  apiClient.post<CounselorStatusResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/suspend`,
+    { reason },
+  );
+
+export const unsuspendCounselor = (
+  orgId: string,
+  userId: string,
+  reason: string,
+): Promise<CounselorStatusResponse> =>
+  apiClient.post<CounselorStatusResponse>(
+    `${PREFIX}/${orgId}/counselors/${userId}/unsuspend`,
+    { reason },
+  );
+
+export const getCounselorActivity = (
+  orgId: string,
+  userId: string,
+): Promise<CounselorActivity> =>
+  apiClient.get<CounselorActivity>(`${PREFIX}/${orgId}/counselors/${userId}/activity`);
+
+// SDD-079: 기존 상담사 소속 추가 초대 수락 (이메일 링크의 일회용 토큰)
+export interface MembershipInviteAcceptResponse {
+  org_id: string;
+  org_name: string;
+}
+
+export const acceptMembershipInvite = (token: string): Promise<MembershipInviteAcceptResponse> =>
+  apiClient.post<MembershipInviteAcceptResponse>(
+    `${PREFIX}/membership-invites/accept`,
+    { token },
+    { skipAuth: true },
+  );

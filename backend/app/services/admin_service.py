@@ -2,19 +2,27 @@
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import Float, String, func, literal, select, text, union_all
 from sqlalchemy.orm import Session
 
+from app.core.security import hash_password
+from app.models.client_counselor_link import ClientCounselorLink
+from app.models.client_profile import ClientProfile
 from app.models.credential import Credential, VerificationAudit
 from app.models.org_document import OrgDocument
 from app.models.organization import Organization
 from app.models.user import User
+from app.services.notification_service import build_standard_extra, notify_event
 
 VALID_ACTIONS = {"approve", "reject", "request_more"}
 REVIEW_STATUSES = {"pending", "needs_review"}
+# SDD-020: list_users 에서 허용하는 role 화이트리스트. 이외 값은 422 로 거부한다.
+ALLOWED_USER_ROLES = {"platform_admin", "org_admin", "counselor", "client"}
 
 
 def _risk_score(verdict: dict | None) -> float:
@@ -74,28 +82,107 @@ def get_review_queue(
     page: int = 1,
     size: int = 20,
 ) -> dict[str, Any]:
-    cred_q = db.query(Credential).filter(Credential.status.in_(list(REVIEW_STATUSES)))
-    doc_q = db.query(OrgDocument).filter(OrgDocument.status.in_(list(REVIEW_STATUSES)))
+    """PERF-01: 검토 큐를 전부 적재하지 않고 DB에서 위험도 정렬·LIMIT/OFFSET 한다.
 
+    자격(Credential)+센터문서(OrgDocument) 두 소스를 union 한 뒤 위험도(JSON 의
+    risk_score) 기준으로 정렬한다. risk_score 는 DB에서 수치로 캐스팅해 정렬·필터한다.
+    """
+    # 허용되지 않은 risk_level 은 기존 로직과 동일하게 일치 항목 0건으로 처리한다.
+    if risk_level and risk_level not in ("high", "medium", "low"):
+        return {"items": [], "total": 0, "page": page, "size": size}
+
+    sub = _review_cards_subquery(document_type)
+    condition = _risk_level_filter(sub.c.risk_score, risk_level) if risk_level else None
+
+    count_stmt = select(func.count()).select_from(sub)
+    rows_stmt = select(sub).order_by(sub.c.risk_score.desc(), sub.c.created_at.asc())
+    if condition is not None:
+        count_stmt = count_stmt.where(condition)
+        rows_stmt = rows_stmt.where(condition)
+
+    total = int(db.execute(count_stmt).scalar() or 0)
+    rows = db.execute(rows_stmt.offset((page - 1) * size).limit(size)).all()
+    return {
+        "items": [_review_row_to_card(row) for row in rows],
+        "total": total,
+        "page": page,
+        "size": size,
+    }
+
+
+def _risk_score_expr(ai_verdict_col):
+    """ai_verdict(JSON) 의 risk_score 를 DB에서 수치로 캐스팅한다(없으면 0.0)."""
+    return func.coalesce(ai_verdict_col["risk_score"].as_float(), 0.0)
+
+
+def _risk_level_filter(risk_col, risk_level: str):
+    """risk_level → DB 비교 조건. _risk_level(high>=0.7, medium>=0.4, low<0.4) 과 동일."""
+    if risk_level == "high":
+        return risk_col >= 0.7
+    if risk_level == "medium":
+        return (risk_col >= 0.4) & (risk_col < 0.7)
+    return risk_col < 0.4
+
+
+def _review_cards_subquery(document_type: str | None):
+    """자격+센터문서를 회원/센터와 조인해 단일 카드 형태로 union 한 서브쿼리."""
+    cred_sel = (
+        select(
+            literal("credential").label("target_type"),
+            Credential.id.label("id"),
+            Credential.type.label("document_type"),
+            Credential.status.label("status"),
+            User.name.label("submitter_name"),
+            User.email.label("submitter_email"),
+            _risk_score_expr(Credential.ai_verdict).label("risk_score"),
+            Credential.ai_verdict.label("ai_verdict"),
+            Credential.file_name.label("file_name"),
+            Credential.created_at.label("created_at"),
+        )
+        .select_from(Credential)
+        .join(User, User.id == Credential.user_id)
+        .where(Credential.status.in_(list(REVIEW_STATUSES)))
+    )
+    doc_sel = (
+        select(
+            literal("org_document").label("target_type"),
+            OrgDocument.id.label("id"),
+            OrgDocument.type.label("document_type"),
+            OrgDocument.status.label("status"),
+            Organization.name.label("submitter_name"),
+            literal(None, type_=String).label("submitter_email"),
+            _risk_score_expr(OrgDocument.ai_verdict).label("risk_score"),
+            OrgDocument.ai_verdict.label("ai_verdict"),
+            OrgDocument.file_name.label("file_name"),
+            OrgDocument.created_at.label("created_at"),
+        )
+        .select_from(OrgDocument)
+        .join(Organization, Organization.id == OrgDocument.org_id)
+        .where(OrgDocument.status.in_(list(REVIEW_STATUSES)))
+    )
     if document_type:
-        cred_q = cred_q.filter(Credential.type == document_type)
-        doc_q = doc_q.filter(OrgDocument.type == document_type)
+        cred_sel = cred_sel.where(Credential.type == document_type)
+        doc_sel = doc_sel.where(OrgDocument.type == document_type)
+    return union_all(cred_sel, doc_sel).subquery()
 
-    cards: list[dict[str, Any]] = []
-    for c in cred_q.all():
-        cards.append(_credential_card(c, db))
-    for d in doc_q.all():
-        cards.append(_org_document_card(d, db))
 
-    if risk_level:
-        cards = [c for c in cards if _risk_level(c["risk_score"]) == risk_level]
-
-    cards.sort(key=lambda x: (-x["risk_score"], x["created_at"] or ""))
-
-    total = len(cards)
-    start = (page - 1) * size
-    end = start + size
-    return {"items": cards[start:end], "total": total, "page": page, "size": size}
+def _review_row_to_card(row) -> dict[str, Any]:
+    """union 행 → 검토 큐 카드 계약으로 변환한다(기존 _credential/_org_document_card 와 동일 필드)."""
+    m = row._mapping
+    risk = m["risk_score"]
+    created = m["created_at"]
+    return {
+        "target_type": m["target_type"],
+        "id": str(m["id"]),
+        "document_type": m["document_type"],
+        "status": m["status"],
+        "submitter_name": m["submitter_name"],
+        "submitter_email": m["submitter_email"],
+        "risk_score": float(risk) if risk is not None else 0.0,
+        "ai_verdict": m["ai_verdict"],
+        "file_name": m["file_name"],
+        "created_at": created.isoformat() if hasattr(created, "isoformat") else (created or None),
+    }
 
 
 def get_credential_review_detail(credential_id: uuid.UUID, db: Session) -> dict[str, Any]:
@@ -153,6 +240,14 @@ def get_org_document_review_detail(doc_id: uuid.UUID, db: Session) -> dict[str, 
         .order_by(VerificationAudit.created_at.desc())
         .all()
     )
+    # ADMIN-01: 상세 화면은 목록과 동일하게 제출자(기관 담당자) 정보를 노출한다.
+    # 기관 서류의 제출자는 주 담당자(primary_admin)이며, 없으면 소유자(owner)를 사용한다.
+    # 프론트 ReviewDetailResponse.submitter_name/submitter_email 계약을 채운다.
+    submitter = None
+    if org is not None:
+        submitter_id = org.primary_admin_id or org.owner_user_id
+        if submitter_id is not None:
+            submitter = db.query(User).filter(User.id == submitter_id).first()
     return {
         "target_type": "org_document",
         "id": str(doc.id),
@@ -160,6 +255,8 @@ def get_org_document_review_detail(doc_id: uuid.UUID, db: Session) -> dict[str, 
         "status": doc.status,
         "file_name": doc.file_name,
         "s3_key": doc.s3_key,
+        "submitter_name": submitter.name if submitter else None,
+        "submitter_email": submitter.email if submitter else None,
         "org": {
             "id": str(org.id) if org else None,
             "name": org.name if org else None,
@@ -190,6 +287,19 @@ def _action_to_status(action: str) -> str:
     }[action]
 
 
+# ADM-STATE-01: 검토 상태머신 — 승인/반려로 종결된 항목은 재검토 액션으로 되돌릴 수 없다.
+_REVIEW_TERMINAL_STATUSES = {"approved", "rejected"}
+
+
+def _ensure_review_action_allowed(current_status: str) -> None:
+    """이미 승인/반려(종결)된 검토 항목에 대한 재검토 액션을 409 로 차단한다."""
+    if current_status in _REVIEW_TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 처리된 검토 항목입니다",
+        )
+
+
 def process_review(
     target_type: str,
     target_id: uuid.UUID,
@@ -210,7 +320,9 @@ def process_review(
         cred = db.query(Credential).filter(Credential.id == target_id).first()
         if cred is None:
             raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
+        _ensure_review_action_allowed(cred.status)
         snapshot = cred.ai_verdict if isinstance(cred.ai_verdict, dict) else None
+        previous_status = cred.status
         cred.status = new_status
         db.add(cred)
         audit = VerificationAudit(
@@ -225,14 +337,25 @@ def process_review(
         db.add(audit)
         db.commit()
         db.refresh(cred)
-        if action == "approve":
+        # MB2-CRED-TIER-DOWNGRADE: 승인·반려 모두 재계산한다(반려 시 강등).
+        if new_status in ("approved", "rejected"):
             from app.services import credential_service
             credential_service.recalculate_tier(cred.user_id, db)
+        if previous_status != new_status and new_status in ("approved", "rejected") and cred.user_id != admin_id:
+            notify_event("verification_result", cred.user_id, {
+                "title": "자격 검증 결과가 도착했습니다",
+                "body": "자격 화면에서 결과와 보완 사항을 확인해주세요.",
+                "extra": build_standard_extra(
+                    "verification_result", "credentials", None,
+                    params={"credential_id": str(cred.id), "result": new_status},
+                ),
+            }, db)
         return {"target_type": "credential", "id": str(cred.id), "status": cred.status, "action": action}
 
     doc = db.query(OrgDocument).filter(OrgDocument.id == target_id).first()
     if doc is None:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다")
+    _ensure_review_action_allowed(doc.status)
     snapshot = doc.ai_verdict if isinstance(doc.ai_verdict, dict) else None
     doc.status = new_status
     db.add(doc)
@@ -278,6 +401,33 @@ def batch_process_review(
     return {"results": results, "total": len(results)}
 
 
+def _primary_counselor_summary(client_id: uuid.UUID, db: Session) -> dict[str, Any] | None:
+    """내담자의 대표(첫 active) 담당 상담사 요약을 반환한다 (없으면 None).
+
+    ClientCounselorLink 는 다중 상담사 연결을 허용하지만, 회원 관리 목록에서는
+    가장 먼저 연결된 active 링크의 상담사 1명만 노출한다.
+    """
+    link = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == client_id,
+            ClientCounselorLink.status == "active",
+        )
+        .order_by(ClientCounselorLink.matched_at.asc())
+        .first()
+    )
+    if link is None:
+        return None
+    counselor = db.query(User).filter(User.id == link.counselor_id).first()
+    if counselor is None:
+        return None
+    return {
+        "id": str(counselor.id),
+        "name": counselor.name,
+        "email": counselor.email,
+    }
+
+
 def list_users(
     db: Session,
     role: str | None = None,
@@ -285,6 +435,13 @@ def list_users(
     page: int = 1,
     size: int = 20,
 ) -> dict[str, Any]:
+    # SDD-020: role 은 화이트리스트로만 수용한다. 임의 문자열이 오면 빈 결과가 아니라 422.
+    if role is not None and role not in ALLOWED_USER_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="유효하지 않은 role 입니다",
+        )
+
     query = db.query(User)
     if role:
         query = query.filter(User.role == role)
@@ -298,15 +455,51 @@ def list_users(
         .limit(size)
         .all()
     )
+
+    # PERF-01: 회원마다 대표 상담사를 개별 조회(N+1)하지 않고, 목록에 포함된 client id 를
+    # 한 번에 조회해 client_id → 대표 상담사(가장 먼저 연결된 active) 매핑을 만든다.
+    client_ids = [u.id for u in rows if u.role == "client"]
+    counselor_by_client: dict[Any, dict[str, Any]] = {}
+    if client_ids:
+        link_rows = (
+            db.query(
+                ClientCounselorLink.client_id,
+                User.id,
+                User.name,
+                User.email,
+            )
+            .join(User, User.id == ClientCounselorLink.counselor_id)
+            .filter(
+                ClientCounselorLink.client_id.in_(client_ids),
+                ClientCounselorLink.status == "active",
+            )
+            .order_by(ClientCounselorLink.client_id, ClientCounselorLink.matched_at.asc())
+            .all()
+        )
+        for client_id, counselor_id, counselor_name, counselor_email in link_rows:
+            # 정렬상 첫 행(가장 먼저 연결된 active 상담사)만 대표로 채택한다.
+            if client_id not in counselor_by_client:
+                counselor_by_client[client_id] = {
+                    "id": str(counselor_id),
+                    "name": counselor_name,
+                    "email": counselor_email,
+                }
+
     return {
         "items": [
             {
                 "id": str(u.id),
                 "email": u.email,
                 "name": u.name,
+                "phone": u.phone,
                 "role": u.role,
                 "status": u.status,
+                "suspended": u.status == "suspended",
                 "verified_tier": u.verified_tier,
+                # 회원 관리 화면의 핵심 요구사항 — 담당 상담사 표시 (client 만 조회)
+                "primary_counselor": (
+                    counselor_by_client.get(u.id) if u.role == "client" else None
+                ),
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
             for u in rows
@@ -314,6 +507,132 @@ def list_users(
         "total": total,
         "page": page,
         "size": size,
+    }
+
+
+def create_client(
+    name: str,
+    email: str,
+    counselor_id: str,
+    db: Session,
+    *,
+    phone: str | None = None,
+) -> User:
+    """플랫폼 관리자 회원(내담자) 수동 추가 (SDD-020).
+
+    이름/이메일/담당 상담사로 pending 내담자 계정을 만들고 담당 상담사에 연결한다.
+    비밀번호는 난수로 설정되므로 내담자는 초대 메일(/set-password)로만 계정을
+    활성화할 수 있다. consents 는 만들지 않고 내담자 본인 온보딩에서 수집한다.
+
+    반환된 User 를 endpoint 에서 초대 메일 발송(org_invite_service.issue_client_invite)에
+    사용한다.
+
+    실패 조건:
+        - 이메일 형식/중복 → 409
+        - counselor_id 형식 오류 → 422
+        - 상담사 미존재 → 404
+        - role != counselor 또는 status != active → 422
+    """
+    # 1. 이메일 정규화 — org 초대와 동일하게 strip().lower()
+    normalized_email = (email or "").strip().lower()
+    if not normalized_email:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="이메일은 필수입니다"
+        )
+    clean_name = (name or "").strip()
+    if not clean_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="이름은 필수입니다"
+        )
+
+    # 2. 이메일 중복 검사
+    existing = db.query(User).filter(func.lower(User.email) == normalized_email).first()
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="이미 등록된 이메일입니다"
+        )
+
+    # 3. 담당 상담사 검증 — 존재 + role=counselor + status=active
+    try:
+        counselor_uuid = uuid.UUID(str(counselor_id))
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="상담사 ID 형식이 올바르지 않습니다"
+        )
+    counselor = db.query(User).filter(User.id == counselor_uuid).first()
+    if counselor is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="상담사를 찾을 수 없습니다")
+    if counselor.role != "counselor":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="지정한 사용자는 상담사가 아닙니다"
+        )
+    if counselor.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="활성 상태(인증 완료)의 상담사에게만 회원을 배정할 수 있습니다",
+        )
+
+    # 4. pending 내담자 계정 생성 — 비밀번호는 난수(초대 메일로만 활성화)
+    client = User(
+        email=normalized_email,
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        name=clean_name,
+        role="client",
+        status="pending",
+        verified_tier="unverified",
+        auth_provider="email",
+        phone=(phone or "").strip() or None,
+    )
+    db.add(client)
+    db.flush()
+
+    # 5. 빈 ClientProfile 생성 (목록/상세 조인 분기 최소화)
+    db.add(ClientProfile(user_id=client.id, concerns=[], interests=[]))
+    db.flush()
+
+    # 6. 담당 상담사 연결 + 1:1 채팅방 생성 (공용 함수). 내부에서 commit 된다.
+    from app.services import client_service
+
+    client_service.assign_counselor(client.id, counselor.id, db, create_room=True)
+
+    db.refresh(client)
+    return client
+
+
+def serialize_client_detail(user: User, db: Session) -> dict[str, Any]:
+    """수동 추가된 내담자 응답 직렬화 — active 담당 상담사 목록 포함."""
+    links = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == user.id,
+            ClientCounselorLink.status == "active",
+        )
+        .order_by(ClientCounselorLink.matched_at.asc())
+        .all()
+    )
+    counselors: list[dict[str, Any]] = []
+    for link in links:
+        counselor = db.query(User).filter(User.id == link.counselor_id).first()
+        if counselor is None:
+            continue
+        counselors.append(
+            {
+                "id": str(counselor.id),
+                "name": counselor.name,
+                "email": counselor.email,
+                "status": link.status,
+            }
+        )
+    return {
+        "id": str(user.id),
+        "email": user.email,
+        "name": user.name,
+        "phone": user.phone,
+        "role": user.role,
+        "status": user.status,
+        "verified_tier": user.verified_tier,
+        "counselors": counselors,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
 
@@ -325,6 +644,15 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="플랫폼 관리자는 정지할 수 없습니다")
+    # ADM-STATE-02: 초대 미수락(pending) 계정을 정지하면 previous_status 가 pending→suspended 로
+    #   덮여, 이어지는 unsuspend 가 그 계정을 active 로 강제 활성화한다(비밀번호 미설정 우회).
+    #   org_service.set_counselor_suspension 과 동일하게 pending 은 정지 대상에서 제외한다.
+    if user.status == "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="초대 미수락(대기) 상태의 계정은 정지할 수 없습니다",
+        )
+    previous_status = user.status
     user.status = "suspended"
     db.add(user)
     db.add(VerificationAudit(
@@ -335,6 +663,15 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
         reason=reason,
     ))
     db.commit()
+    if previous_status != "suspended" and user.id != admin_id:
+        notify_event("account_suspended", user.id, {
+            "title": "계정이 비활성화되었습니다",
+            "body": "계정 이용 상태가 변경되었습니다.",
+            "extra": build_standard_extra(
+                "account_suspended", "notice", None,
+                legacy={"actor_kind": "platform_admin", "action": "suspend"},
+            ),
+        }, db)
     return {"id": str(user.id), "status": user.status}
 
 
@@ -342,7 +679,14 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    user.status = "active"
+    previous_status = user.status
+    # ADMIN-03: 초대 미수락(pending) 계정은 정지 해제로 강제 활성화하지 않는다.
+    #   pending → active 로 전환하면 초대 수락(비밀번호 설정) 가드를 우회할 수 있다.
+    #   org_service.set_counselor_suspension 과 동일하게 상태를 복원한다.
+    if previous_status == "pending":
+        user.status = "pending"
+    else:
+        user.status = "active"
     db.add(user)
     db.add(VerificationAudit(
         target_type="user",
@@ -352,4 +696,102 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
         reason=None,
     ))
     db.commit()
+    if previous_status not in ("active", "pending") and user.id != admin_id:
+        notify_event("account_reactivated", user.id, {
+            "title": "계정이 다시 활성화되었습니다",
+            "body": "계정 이용 상태를 확인해주세요.",
+            "extra": build_standard_extra(
+                "account_reactivated", "notice", None,
+                legacy={"actor_kind": "platform_admin", "action": "unsuspend"},
+            ),
+        }, db)
     return {"id": str(user.id), "status": user.status}
+
+
+def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
+    """사용자 계정을 영구 삭제한다 (플랫폼 관리자 전용).
+
+    users.id 를 참조하는 모든 FK 자식 레코드를 먼저 삭제한 뒤 사용자를 삭제한다.
+    ORM cascade 가 없는 관계(client_counselor_links, credentials, sessions 등)까지
+    명시적으로 정리해 FK 제약 위반을 방지한다.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if user.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="플랫폼 관리자는 삭제할 수 없습니다")
+
+    uid = str(user_id)
+
+    # STG-05: 세션 자식 행을 지우기 전에 실제 미디어(S3 객체·로컬 파일)를 먼저 삭제한다.
+    # DB 행만 삭제하면 상담 음성·영상·뇌파 바이트가 스토리지에 잔존한다.
+    from app.services import media_cleanup_service
+
+    media_cleanup_service.delete_user_media(user_id, db)
+
+    # 1. 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
+    db.execute(
+        text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
+        {"id": uid},
+    )
+
+    # 2. users.id 를 참조하는 자식 테이블 정리
+    #   AUTH4-06: 세션을 삭제하기 전에 세션 자식 레코드를 먼저 정리한다.
+    #   session_records/reports/eeg_records/eeg_feature_windows/session_participants 등은
+    #   sessions.id 를 참조하지만 ON DELETE CASCADE 가 없어, 호스트 세션을 지우기 전에
+    #   명시적으로 삭제하지 않으면 FK 제약 위반으로 삭제가 실패한다.
+    session_child_tables: list[str] = [
+        "session_records",
+        "reports",
+        "eeg_records",
+        "eeg_raw_chunks",
+        "audio_chunks",
+        "video_chunks",
+        "eeg_feature_windows",
+        "session_reminder_logs",
+        "session_participants",
+    ]
+    for table in session_child_tables:
+        db.execute(
+            text(f"DELETE FROM {table} WHERE session_id IN (SELECT id FROM sessions WHERE host_id = :id)"),
+            {"id": uid},
+        )
+
+    child_tables: list[tuple[str, list[str]]] = [
+        ("client_counselor_links", ["client_id", "counselor_id"]),
+        ("client_invites", ["counselor_id"]),
+        ("chat_message_reads", ["user_id"]),
+        ("chat_messages", ["sender_id"]),
+        ("chat_room_participants", ["user_id"]),
+        ("chat_rooms", ["host_id"]),
+        ("credentials", ["user_id"]),
+        ("eeg_records", ["user_id"]),
+        # AUTH4-06: 사용자 참조 자식 테이블 누락 보완
+        ("eeg_feature_windows", ["user_id"]),
+        ("session_reminder_logs", ["user_id"]),
+        ("notifications", ["user_id"]),
+        ("org_join_requests", ["user_id"]),
+        ("reports", ["user_id"]),
+        ("session_participants", ["user_id"]),
+        ("sessions", ["host_id"]),
+        ("verification_audits", ["admin_id"]),
+        ("consents", ["user_id"]),
+        ("refresh_tokens", ["user_id"]),
+        ("password_history", ["user_id"]),
+        ("onboarding_progress", ["user_id"]),
+        ("counselor_profiles", ["user_id"]),
+        ("client_profiles", ["user_id"]),
+        ("qualifications", ["user_id"]),
+        ("careers", ["user_id"]),
+        # SDD-137: 소속·가입신청 정리 누락 보완
+        ("user_org_memberships", ["user_id"]),
+        ("signup_applications", ["user_id", "reviewed_by"]),
+    ]
+    for table, cols in child_tables:
+        for col in cols:
+            db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
+
+    # 3. 사용자 삭제
+    db.delete(user)
+    db.commit()
+    return {"id": uid, "deleted": True}

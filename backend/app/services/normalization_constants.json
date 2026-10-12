@@ -1,0 +1,147 @@
+{
+  "version": 2,
+  "pipeline_version": "v2-morlet7-linear-geomean",
+  "generated_at": "2026-09-01T16:22:23+0900",
+  "bootstrap_stage": "B0",
+  "provisional": true,
+  "psd_calibration_uv2_per_hz": 0.00739181390669613,
+  "percentile_basis": "session-level, user-weighted (weight = 1/n_sessions_of_user)",
+  "cohort": {
+    "n_sessions": 37,
+    "n_users": 6,
+    "date_from": "2026-06-26",
+    "date_to": "2026-08-30",
+    "batches": {
+      "2026-06": 2,
+      "2026-07": 28,
+      "2026-08": 7
+    },
+    "n_windows_analyzed": 3997
+  },
+  "indices": {
+    "totalNeuralActivity": {
+      "p5": 18.512342,
+      "p25": 110.555984,
+      "p75": 804.139473,
+      "p95": 9298.234459,
+      "unit": "uV2"
+    },
+    "stressIndex": {
+      "p5": 0.461857,
+      "p95": 8.720813
+    },
+    "faa": {
+      "abs_p90": 0.799637
+    },
+    "emotionalStability": {
+      "p5": 0.235214,
+      "p95": 7.241375
+    },
+    "relaxationIndex": {
+      "p10": 0.098243,
+      "p60": 0.259726,
+      "p95": 0.428846,
+      "transform": "logit"
+    },
+    "focusIndex": {
+      "p5": 0.381252,
+      "p25": 0.70725,
+      "p75": 3.185884,
+      "p95": 5.608388
+    }
+  },
+  "stability": {
+    "cognitiveLoad": {
+      "sd_max": 7.25503,
+      "sd_max_rule": "p99",
+      "sd_p50": 1.796412,
+      "sd_p95": 3.718109,
+      "sd_p99": 7.25503,
+      "score_formula": "100 * clamp01(1 - sd / sd_max)"
+    },
+    "focusIndex": {
+      "sd_max": 5.155375,
+      "sd_max_rule": "p99",
+      "sd_p50": 0.812374,
+      "sd_p95": 4.001084,
+      "sd_p99": 5.155375,
+      "score_formula": "100 * clamp01(1 - sd / sd_max)"
+    }
+  },
+  "duration_correction": {
+    "applied": false,
+    "beta": null,
+    "p_value": null,
+    "n_ref": 200,
+    "note": "표본 부족으로 회귀 미실시. §A2.8-(4) 방어 3 보류."
+  },
+  "gates": {
+    "gate2_discard_rate": {
+      "value_pct": 12.51,
+      "target": "5~30%",
+      "pass": true
+    },
+    "gate3_nonzero_variance": {
+      "zero_variance_keys": [],
+      "pass": true
+    },
+    "gate4_degeneracy": {
+      "focusIndex": {
+        "degenerate_value": 1.8889,
+        "cohort_median": 1.4069,
+        "cohort_p5": 0.3916,
+        "cohort_p95": 5.739,
+        "ratio_median_over_degenerate": 0.745,
+        "pct_within_10pct_of_degenerate": 8.1
+      },
+      "cognitiveLoad": {
+        "degenerate_value": 0.8,
+        "cohort_median": 2.3859,
+        "cohort_p5": 1.6066,
+        "cohort_p95": 4.8083,
+        "ratio_median_over_degenerate": 2.982,
+        "pct_within_10pct_of_degenerate": 0.0
+      },
+      "emotionalStability": {
+        "degenerate_value": 0.5625,
+        "cohort_median": 2.6411,
+        "cohort_p5": 0.3877,
+        "cohort_p95": 23.9552,
+        "ratio_median_over_degenerate": 4.695,
+        "pct_within_10pct_of_degenerate": 8.1
+      },
+      "relaxationIndex": {
+        "degenerate_value": 0.2273,
+        "cohort_median": 0.2447,
+        "cohort_p5": 0.0864,
+        "cohort_p95": 0.434,
+        "ratio_median_over_degenerate": 1.077,
+        "pct_within_10pct_of_degenerate": 8.1
+      },
+      "stressIndex": {
+        "degenerate_value": 3.6667,
+        "cohort_median": 2.7179,
+        "cohort_p5": 0.6074,
+        "cohort_p95": 10.2771,
+        "ratio_median_over_degenerate": 0.741,
+        "pct_within_10pct_of_degenerate": 8.1
+      }
+    },
+    "gate1_saturation": {
+      "cognitiveLoad": {
+        "chosen": "p99",
+        "sd_max": 7.25503,
+        "pct_zero": 2.8,
+        "pct_hundred": 0.0,
+        "pass": true
+      },
+      "focusIndex": {
+        "chosen": "p99",
+        "sd_max": 5.155375,
+        "pct_zero": 2.4,
+        "pct_hundred": 0.0,
+        "pass": true
+      }
+    }
+  }
+}

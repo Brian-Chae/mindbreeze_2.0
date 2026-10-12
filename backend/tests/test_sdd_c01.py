@@ -1,0 +1,138 @@
+"""Google OAuth + Client Portal API 테스트"""
+
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+
+class TestGoogleAuth:
+    """POST /api/v1/auth/google
+
+    실제 구현은 Google userinfo API를 access_token으로 호출한다.
+    따라서 httpx.AsyncClient.get 을 모킹한다.
+    """
+
+    @staticmethod
+    def _userinfo_mock(status_code: int, payload: dict | None = None):
+        """Google userinfo + tokeninfo 응답을 URL 로 구분해 흉내낸다.
+
+        SDD-136 이후 OAuth 검증이 userinfo(사용자 정보)와 tokeninfo(audience)를
+        순차 호출하므로, 같은 AsyncClient.get mock 이 URL 에 따라 다른 응답을 준다.
+        """
+        def _side_effect(url, **kwargs):
+            resp = MagicMock()
+            if "userinfo" in str(url):
+                resp.status_code = status_code
+                resp.json.return_value = payload or {}
+            else:  # tokeninfo — audience 검증 통과용
+                resp.status_code = 200
+                resp.json.return_value = {"aud": "test-client-id"}
+            return resp
+
+        return AsyncMock(side_effect=_side_effect)
+
+    def test_위조_토큰_401(self, client):
+        """Google access token 위조 시 401"""
+        with patch("httpx.AsyncClient.get", self._userinfo_mock(401)):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "fake-token"},
+            )
+            assert res.status_code == 401
+            assert "유효하지 않은" in res.json()["detail"]
+
+    def test_신규_Google_사용자_생성_200(self, client):
+        """신규 Google 사용자 생성 → JWT 발급"""
+        mock_get = self._userinfo_mock(
+            200, {"email": "google-user@test.com", "name": "Google User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={
+                    "access_token": "valid-token",
+                    # SEC-04: 신규 Google 가입은 약관·민감정보 동의가 필수다.
+                    "consents": {"tos": True, "privacy": True, "sensitive": True},
+                },
+            )
+            assert res.status_code == 200
+            data = res.json()
+            assert "access_token" in data
+            assert data["user"]["email"] == "google-user@test.com"
+            assert data["user"]["auth_provider"] == "google"
+            assert data["user"]["role"] == "client"
+            assert data["user"]["counselors"] == []
+
+    def test_신규_Google_가입_동의_없으면_422(self, client):
+        """SEC-04: 약관·민감정보 동의 없이 신규 가입 → 422 거부."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "no-consent@test.com", "name": "No Consent"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token"},
+            )
+            assert res.status_code == 422
+
+    def test_기존_이메일_사용자_Google_로그인_200(self, client):
+        """기존 Google 가입 사용자가 다시 Google로 로그인 → consents 없이도 200."""
+        # 1차: consents 와 함께 신규 Google 가입 (register 레거시 경로는 SDD-139 에서 차단됨)
+        mock_get = self._userinfo_mock(
+            200, {"email": "existing@test.com", "name": "Existing User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={
+                    "access_token": "valid-token",
+                    "consents": {"tos": True, "privacy": True, "sensitive": True},
+                },
+            )
+            assert res.status_code == 200
+
+        # 2차: 기존 사용자 재로그인 — 동의 없이도 성공, auth_provider 유지
+        mock_get2 = self._userinfo_mock(
+            200, {"email": "existing@test.com", "name": "Existing User"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get2):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token"},
+            )
+            assert res.status_code == 200
+            data = res.json()
+            assert data["user"]["email"] == "existing@test.com"
+            assert data["user"]["auth_provider"] == "google"
+
+    def test_looxidlabs_Google_시스템관리자_신규생성_거부_403(self, client):
+        """platform_admin 은 명시적 지정만 허용 — Google OAuth 신규 생성 금지."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "admin@looxidlabs.com", "name": "Looxid Admin"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token", "role": "platform_admin"},
+            )
+            assert res.status_code == 403
+
+    def test_외부도메인_Google_시스템관리자_거부_403(self, client):
+        """시스템 관리자 Google 로그인은 명시적 지정 경로만 허용한다 (도메인 무관 403)."""
+        mock_get = self._userinfo_mock(
+            200, {"email": "admin@example.com", "name": "External Admin"}
+        )
+        with patch("httpx.AsyncClient.get", mock_get):
+            res = client.post(
+                "/api/v1/auth/google",
+                json={"access_token": "valid-token", "role": "platform_admin"},
+            )
+            assert res.status_code == 403
+
+
+class TestClientPortal:
+    """GET/POST /api/v1/client/counselors — JWT 인증 필요, 통합 환경에서 검증"""
+
+    @pytest.mark.skip(reason="JWT auth fixture needed for client portal integration test")
+    def test_상담사_목록_빈_상태_200(self, client):
+        """연결된 상담사가 없을 때 빈 배열 반환"""
+        ...

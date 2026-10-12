@@ -1,23 +1,42 @@
 """세션 관리 비즈니스 로직"""
 
-from datetime import datetime, timedelta, timezone
+import logging
+import uuid
+from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session as DBSession
+from livekit import api as livekit_api
+from sqlalchemy import case, func, or_, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session as DBSession, selectinload
 
+from app.config import settings
+from app.models.user import User
+from app.models.client_profile import ClientProfile
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord
+from app.models.eeg_feature import EEGFeatureWindow
+from app.schemas.session import EEGFeatureItem
+from app.services import code_service, eeg_query, reminder_service as _reminder_service
+
+logger = logging.getLogger(__name__)
 
 
-ACTIVE_STATUSES = ("scheduled", "in_progress", "paused")
+# SDD-015: 일정 없는 즉석 클래스는 "ready" 상태로 생성된다.
+# 기존 예약형 세션의 "scheduled" 는 그대로 유지해 하위 호환을 지킨다.
+# SDD-088: "open"(오픈/대기)은 상담사가 준비를 마치고 회원 입장을 받는 상태 —
+# 진행 중으로 간주해 중복 개설 방지·목록 필터에 포함한다.
+ACTIVE_STATUSES = ("ready", "scheduled", "open", "in_progress")
 
+# SDD-088: ready/scheduled → open(오픈/대기) → in_progress → completed.
+# start 출발에 ready/scheduled 를 남기는 것은 과도기 하위 호환(구 클라이언트·1:1 즉석 세션).
+# 오픈된 방의 정상 퇴로는 cancel(=클래스 닫기)이며, end 는 진행중에서만 가능하다.
 TRANSITIONS = {
-    "start": ({"scheduled"}, "in_progress"),
-    "pause": ({"in_progress"}, "paused"),
-    "resume": ({"paused"}, "in_progress"),
-    "end": ({"in_progress", "paused"}, "completed"),
-    "cancel": ({"scheduled", "in_progress", "paused"}, "cancelled"),
+    "open": ({"ready", "scheduled"}, "open"),
+    "start": ({"ready", "scheduled", "open"}, "in_progress"),
+    "end": ({"in_progress"}, "completed"),
+    "cancel": ({"ready", "scheduled", "open", "in_progress"}, "cancelled"),
 }
 
 
@@ -32,36 +51,96 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _serialize(s: Session) -> dict:
+def resolve_location_address(
+    location_type: str,
+    requested: str | None,
+    organization_id: UUID | None,
+    host_id: UUID,
+    db: DBSession,
+) -> str | None:
+    """SDD-188(D8): 저장할 장소 주소를 결정한다.
+
+    - 온라인 클래스는 장소 개념이 없으므로 입력이 있어도 항상 None.
+    - 오프라인 + 입력 있음 → 입력값(공백 제거, 300자 절단)
+    - 오프라인 + 입력 없음 → 세션 소속 기관 주소 → 상담사 프로필 주소 → None
+    """
+    if location_type != "offline":
+        return None
+    if requested is not None and requested.strip():
+        return requested.strip()[:300]
+
+    if organization_id is not None:
+        from app.models.organization import Organization
+
+        org = db.get(Organization, organization_id)
+        if org is not None and org.address and org.address.strip():
+            return org.address.strip()[:300]
+
+    from app.services import agent_policy
+
+    host = db.get(User, host_id)
+    return agent_policy.counselor_address(host, db)
+
+
+def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
     parts = list(s.participants or [])
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
+        # SDD-028: 실행 회차 식별자. 미설정(직접 생성 등) 시 session_id 를 회차로 간주한다.
+        "run_id": str(s.run_id) if s.run_id else str(s.id),
         "type": s.type,
+        "custom_type_name": s.custom_type_name,
         "status": s.status,
         "host_id": str(s.host_id),
         "scheduled_at": s.scheduled_at,
+        "access_code": s.access_code,
+        "opened_at": s.opened_at,
+        "started_at": s.started_at,
+        "ended_at": s.ended_at,
         "duration_min": s.duration_min,
         "title": s.title,
         "notes": s.notes,
         "max_participants": s.max_participants,
-        "created_at": s.created_at or _now(),
-        "custom_type_name": s.custom_type_name,
         "location_type": s.location_type,
+        # SDD-188(D8): 오프라인 클래스 방문 주소 — 내담자 AI 비서 길찾기 CTA 의 원천.
+        "location_address": s.location_address,
         "participant_mode": s.participant_mode,
         "linkband_mode": s.linkband_mode,
         "webrtc_room_id": str(s.webrtc_room_id) if s.webrtc_room_id else None,
         "sfu_enabled": s.sfu_enabled,
+        "record_audio": s.record_audio,
+        "record_video": s.record_video,
+        # 클래스 실시간 채팅 사용 여부(회원/상담사 UI 게이트용)
+        "chat_enabled": s.chat_enabled,
+        # SDD-095: 클래스 템플릿 여부 — 프론트가 "템플릿에서 시작·복제" UI 를 게이트한다
+        "is_template": bool(s.is_template),
+        # SDD-097: 예약 사전 안내(리마인더) 시점 목록 — 회원 홈 카드/상담사 폼 표시용
+        "reminder_offsets": list(s.reminder_offsets or []),
+        "created_at": s.created_at or _now(),
         "participants": [
             {
-                "user_id": str(p.user_id),
+                # SDD-094: 참가자 공통 식별자(게스트 포함) — 상담사 UI 상태 매핑용
+                "participant_id": str(p.id),
+                # 게스트는 user_id가 없으므로 None으로 직렬화한다
+                "user_id": str(p.user_id) if p.user_id else None,
+                "guest_name": p.guest_name,
+                # AUTHZ-PARTICIPANT-PII: 생년월일/성별 등 참여자 PII 는 host(상담사)에게만 노출한다.
+                #   참여자(내담자)가 GET /sessions/{id} 로 조회할 때 타인 PII 가 새지 않도록
+                #   비host 뷰에서는 null 로 강등한다.
+                "gender": p.gender if include_participant_pii else None,
+                "birth_date": p.birth_date if include_participant_pii else None,
+                "is_guest": p.user_id is None,
                 "band_connected": p.band_connected,
+                "linkband_device_id": p.linkband_device_id,
+                "webrtc_peer_id": p.webrtc_peer_id,
                 "consent_audio": p.consent_audio,
                 "consent_eeg": p.consent_eeg,
                 "is_waitlisted": p.is_waitlisted,
                 "waitlist_position": p.waitlist_position,
-                "linkband_device_id": p.linkband_device_id,
-                "webrtc_peer_id": p.webrtc_peer_id,
+                # SDD-094: 발언권 관리 상태(상담사 UI 손들기 표시/부여 버튼용)
+                "raise_hand": p.raise_hand,
+                "speaking": p.speaking,
             }
             for p in parts
         ],
@@ -69,10 +148,86 @@ def _serialize(s: Session) -> dict:
     }
 
 
+_FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def _with_chat_room(data: dict, session_id: UUID, db: DBSession) -> dict:
+    """단건 세션 응답에 chat_room_id 를 덧붙인다(목록 경로는 N+1 방지를 위해 제외)."""
+    from app.services import chat_service
+
+    room = chat_service.get_room_by_session(session_id, db)
+    data["chat_room_id"] = str(room.id) if room else None
+    return data
+
+
+def ensure_session_chat_room(session_id: UUID, db: DBSession):
+    """세션 채팅방 멱등 개설 — 클래스 생성/오픈 시 호출한다(기존 방이 있으면 그대로 사용)."""
+    from app.services import chat_service
+
+    return chat_service.get_or_create_room_by_session(session_id, db)
+
+
+def set_chat_enabled(session_id: str, host_id: str, enabled: bool, db: DBSession) -> dict:
+    """클래스 실시간 채팅 켜기/끄기 — host(상담사) 전용.
+
+    토글 시 세션 채팅방을 멱등 개설해 방이 없는 세션에서도 즉시 room_id 를 얻을 수 있다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    room = ensure_session_chat_room(s.id, db)
+    s.chat_enabled = bool(enabled)
+    db.commit()
+    db.refresh(s)
+    return {
+        "session_id": str(s.id),
+        "chat_enabled": s.chat_enabled,
+        "room_id": str(room.id),
+        "room_type": room.room_type,
+    }
+
+
+def get_session_chat_room(session_id: str, user_id: str, db: DBSession) -> dict:
+    """세션 채팅방 조회 — host 또는 참여자(비참여자 403).
+
+    아직 방이 없는 세션(마이그레이션 이전 생성)은 host 조회 시에만 멱등 개설한다.
+    """
+    s = _get_session_for_user(session_id, user_id, db)
+    from app.services import chat_service
+
+    room = chat_service.get_room_by_session(s.id, db)
+    if room is None and s.host_id == _to_uuid(user_id):
+        room = chat_service.get_or_create_room_by_session(s.id, db)
+    return {
+        "session_id": str(s.id),
+        "chat_enabled": bool(s.chat_enabled),
+        "room_id": str(room.id) if room else None,
+        "room_type": room.room_type if room else "session",
+    }
+
+
+def _sort_key(s: Session) -> datetime:
+    """목록 정렬 키 — scheduled_at 우선, 없으면 created_at, 둘 다 없으면 epoch."""
+    for value in (s.scheduled_at, s.created_at):
+        if value is not None:
+            return _ensure_aware(value)
+    return _FALLBACK_SORT_TIME
+
+
+def generate_access_code(db: DBSession) -> str:
+    """클래스 코드(6자리) 발급 — Session.access_code 에서 unique 보장."""
+    return code_service.generate_unique_code(db, Session, "access_code", label="클래스 코드")
+
+
 def _ensure_aware(dt: datetime) -> datetime:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def _same_instant(a: datetime | None, b: datetime | None) -> bool:
+    """두 시각이 같은 순간인지(tz 정규화 후) 비교한다. 둘 다 None 이면 같음."""
+    if a is None or b is None:
+        return a is None and b is None
+    return _ensure_aware(a) == _ensure_aware(b)
 
 
 def detect_conflict(
@@ -93,6 +248,9 @@ def detect_conflict(
     if exclude_id is not None:
         q = q.filter(Session.id != exclude_id)
     for s in q.all():
+        # 일정 없는 즉석 클래스(scheduled_at=None)는 시간 충돌 판정 대상이 아니다
+        if s.scheduled_at is None:
+            continue
         s_start = _ensure_aware(s.scheduled_at)
         s_end = s_start + timedelta(minutes=s.duration_min)
         if s_start < new_end and scheduled_at < s_end:
@@ -100,17 +258,39 @@ def detect_conflict(
     return None
 
 
+def normalize_reminder_offsets(value) -> list[int]:
+    """SDD-097: 리마인더 시점 정규화 — reminder_service 규칙 재사용(단일 진실)."""
+    return _reminder_service.normalize_reminder_offsets(value)
+
+
 def create_session(host_id: str, payload, db: DBSession) -> dict:
     host_uuid = _to_uuid(host_id)
-    scheduled_at = _ensure_aware(payload.scheduled_at)
+    from app.services.org_management_service import require_active_user_org
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    org = require_active_user_org(host, db)
+    # SDD-095: 클래스 템플릿 저장 — 반복 클래스를 빠르게 다시 만들기 위한 "유형 설정 저장본".
+    # 일정·참여자·참여코드·WebRTC 룸·채팅방 없이 ready 상태로만 저장하고 알림도 발화하지 않는다.
+    if bool(getattr(payload, "is_template", False)):
+        return _create_template(host_uuid, org, payload, db)
+    # SDD-015: scheduled_at 이 없으면 "즉석 클래스" — 과거 일시 검증·충돌 검사를 건너뛰고
+    # status를 ready로 두어 상담사가 "시작"을 누를 때 진행중으로 전이한다.
+    scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else None
+    initial_status = "scheduled" if scheduled_at else "ready"
 
-    if scheduled_at < _now() - timedelta(minutes=1):
-        raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
+    if scheduled_at is not None:
+        if scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
 
-    if not payload.force:
-        conflict = detect_conflict(host_uuid, scheduled_at, payload.duration_min, None, db)
-        if conflict:
-            raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+        if not payload.force:
+            conflict = detect_conflict(host_uuid, scheduled_at, payload.duration_min, None, db)
+            if conflict:
+                raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+
+    # type=custom 일 때 custom_type_name 필수 (스키마에서도 검증하나 서비스 레벨 방어)
+    if payload.type == "custom" and not (payload.custom_type_name and payload.custom_type_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
 
     if payload.type == "meditation":
         max_p = payload.max_participants
@@ -120,18 +300,48 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     if len(payload.participant_ids) > max_p:
         raise HTTPException(status_code=400, detail="참여자 수가 정원을 초과합니다")
 
+    # 회원 클라이언트 라이브 스트리밍을 위해 모든 세션에 WebRTC 룸을 생성한다
+    # (기존: location_type='online' 만. 상담사 영상·음성 라이브 송출은 장소유형과 무관)
+    webrtc_room_id = uuid.uuid4()
+
     session = Session(
         type=payload.type,
-        status="scheduled",
+        custom_type_name=payload.custom_type_name.strip() if (payload.type == "custom" and payload.custom_type_name) else None,
+        status=initial_status,
         host_id=host_uuid,
+        organization_id=org.id if org else None,
+        organization_attribution_known=True,
         scheduled_at=scheduled_at,
+        access_code=generate_access_code(db),
         duration_min=payload.duration_min,
         title=payload.title,
         notes=payload.notes,
+        # SDD-097: 예약 클래스 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록.
+        reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
         max_participants=max_p,
+        location_type=payload.location_type,
+        # SDD-188(D8): 오프라인이면 기관 주소 → 상담사 주소 순으로 기본값을 채운다.
+        location_address=resolve_location_address(
+            payload.location_type,
+            getattr(payload, "location_address", None),
+            org.id if org else None,
+            host_uuid,
+            db,
+        ),
+        participant_mode=payload.participant_mode,
+        linkband_mode=payload.linkband_mode,
+        webrtc_room_id=webrtc_room_id,
+        sfu_enabled=payload.sfu_enabled,
+        record_audio=payload.record_audio,
+        record_video=payload.record_video,
     )
     db.add(session)
     db.flush()
+
+    # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
+    # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
+    # 기존 run_id 를 유지한다.
+    session.run_id = session.id
 
     for pid in payload.participant_ids:
         db.add(SessionParticipant(session_id=session.id, user_id=_to_uuid(pid)))
@@ -139,28 +349,308 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     db.commit()
     db.refresh(session)
 
-    # 그룹 세션(참여자 2인 이상)이면 채팅방 자동 생성
-    if len(payload.participant_ids) >= 2:
-        from app.services import chat_service
-        chat_service.get_or_create_room_by_session(session.id, db)
+    # 클래스 실시간 채팅방(room_type="session") 자동 개설 — 1:1/그룹 모두.
+    # 이전에는 그룹(참여자 2인 이상)만 개설했으나, 클래스 채팅은 방을 미리 개설해 두고
+    # Session.chat_enabled 로 발신 여부를 제어한다(개설은 멱등).
+    ensure_session_chat_room(session.id, db)
 
-    return _serialize(session)
-
-
-def list_sessions(user_id: str, db: DBSession) -> tuple[list[dict], int]:
-    uid = _to_uuid(user_id)
-    hosted = db.query(Session).filter(Session.host_id == uid).all()
-    participated_ids = [
-        p.session_id for p in db.query(SessionParticipant).filter(SessionParticipant.user_id == uid).all()
-    ]
-    participated = (
-        db.query(Session).filter(Session.id.in_(participated_ids)).all() if participated_ids else []
+    # SDD-093: S01(예약)/S04(즉석 클래스 ready) 알림 발화
+    event_type = "session_booked" if initial_status == "scheduled" else "session_ready"
+    _notify_participants_event(
+        session,
+        event_type,
+        db,
+        recipient_ids=[_to_uuid(pid) for pid in payload.participant_ids],
+        include_waitlisted=True,
+        title="새 세션 예약" if initial_status == "scheduled" else "새 세션이 열렸습니다",
+        body=session.title or "세션",
     )
-    seen: dict[UUID, Session] = {s.id: s for s in hosted}
-    for s in participated:
-        seen.setdefault(s.id, s)
-    result = sorted(seen.values(), key=lambda s: s.scheduled_at, reverse=True)
-    return [_serialize(s) for s in result], len(result)
+
+    # SDD-097: 예약 클래스면 리마인더를 ETA 태스크로 예약한다(끔이면 아무것도 안 함).
+    if scheduled_at is not None:
+        _reminder_service.schedule_session_reminders(session, db)
+
+    return _with_chat_room(_serialize(session), session.id, db)
+
+
+# ---------------------------------------------------------------------------
+# SDD-095: 클래스 템플릿 · 복제
+# ---------------------------------------------------------------------------
+
+# 복제/템플릿 저장 시 옮기는 "유형 설정" 필드.
+# 일정(scheduled_at)·상태(status)·참여코드(access_code)·WebRTC 룸·run_id·참여자 명단은
+# 복사하지 않는다 — 복제본은 항상 새 클래스로 신규 발급/초기화한다.
+_COPYABLE_CONFIG_FIELDS = (
+    "type",
+    "custom_type_name",
+    "duration_min",
+    "max_participants",
+    "location_type",
+    # SDD-188(D8): 장소 주소도 유형 설정으로 함께 복사한다(일정만 새로 정한다).
+    "location_address",
+    "participant_mode",
+    "linkband_mode",
+    "sfu_enabled",
+    "record_audio",
+    "record_video",
+    "chat_enabled",
+    # SDD-097: 리마인더 시점도 유형 설정으로 함께 복사/템플릿화한다(일정만 새로 정한다).
+    "reminder_offsets",
+)
+
+
+def _normalized_max_participants(session_type: str, max_participants: int) -> int:
+    """유형별 정원 정규화 — 명상(그룹)은 입력값, 그 외는 최소 1명."""
+    if session_type == "meditation":
+        return max_participants
+    return max(max_participants, 1)
+
+
+def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
+    """클래스 템플릿 행 생성 — 실제 진행 대상이 아니므로 코드/룸/채팅방/알림이 없다."""
+    if payload.type == "custom" and not (payload.custom_type_name and payload.custom_type_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
+
+    template = Session(
+        type=payload.type,
+        custom_type_name=(
+            payload.custom_type_name.strip()
+            if (payload.type == "custom" and payload.custom_type_name)
+            else None
+        ),
+        status="ready",
+        host_id=host_uuid,
+        organization_id=org.id if org else None,
+        organization_attribution_known=True,
+        scheduled_at=None,
+        access_code=None,
+        duration_min=payload.duration_min,
+        title=payload.title,
+        notes=payload.notes,
+        reminder_offsets=normalize_reminder_offsets(getattr(payload, "reminder_offsets", None)),
+        max_participants=_normalized_max_participants(payload.type, payload.max_participants),
+        location_type=payload.location_type,
+        location_address=resolve_location_address(
+            payload.location_type,
+            getattr(payload, "location_address", None),
+            org.id if org else None,
+            host_uuid,
+            db,
+        ),
+        participant_mode=payload.participant_mode,
+        linkband_mode=payload.linkband_mode,
+        webrtc_room_id=None,
+        sfu_enabled=payload.sfu_enabled,
+        record_audio=payload.record_audio,
+        record_video=payload.record_video,
+        is_template=True,
+    )
+    db.add(template)
+    db.flush()
+    # SDD-028 정합: run_id 기본값 = 자기 id (템플릿은 실행되지 않으므로 그대로 유지)
+    template.run_id = template.id
+    db.commit()
+    db.refresh(template)
+    return _serialize(template)
+
+
+def _clone_session_config(
+    source: Session,
+    *,
+    host_uuid: UUID,
+    organization_id: UUID | None,
+    is_template: bool,
+    title: str | None,
+    scheduled_at: datetime | None,
+    db: DBSession,
+) -> Session:
+    """원본 클래스의 '유형 설정'만 복사해 새 Session 행을 만든다(commit 은 호출측 책임).
+
+    - 유형 설정(type/정원/진행형태/LINK BAND/녹화·채팅 설정/안내문)은 그대로 옮긴다.
+    - 일정·상태·참여코드·WebRTC 룸·run_id 는 신규 발급/초기화한다.
+    - 참여자 명단은 복사하지 않는다(복제본은 빈 클래스로 시작).
+    """
+    config = {field: getattr(source, field) for field in _COPYABLE_CONFIG_FIELDS}
+    if is_template:
+        # 템플릿은 일정도 코드도 갖지 않는다 — 항상 ready.
+        initial_status = "ready"
+        clone_scheduled_at = None
+    else:
+        clone_scheduled_at = _ensure_aware(scheduled_at) if scheduled_at else None
+        # SDD-015 정합: 일정이 없으면 "즉석 클래스"(ready), 있으면 예약(scheduled).
+        initial_status = "scheduled" if clone_scheduled_at else "ready"
+
+    clone = Session(
+        **config,
+        status=initial_status,
+        host_id=host_uuid,
+        organization_id=organization_id,
+        organization_attribution_known=True,
+        scheduled_at=clone_scheduled_at,
+        access_code=None if is_template else generate_access_code(db),
+        title=title,
+        notes=source.notes,
+        webrtc_room_id=None if is_template else uuid.uuid4(),
+        is_template=is_template,
+    )
+    db.add(clone)
+    db.flush()
+    # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
+    clone.run_id = clone.id
+    return clone
+
+
+def duplicate_session(
+    session_id: str,
+    host_id: str,
+    db: DBSession,
+    *,
+    scheduled_at: datetime | None = None,
+    title: str | None = None,
+    force: bool = False,
+) -> dict:
+    """SDD-095: 클래스 복제 — 유형 설정만 복사해 새 클래스를 만든다.
+
+    - 복사: 유형/커스텀 유형명/소요 시간/정원/진행 형태/LINK BAND/녹화·채팅 설정/제목·안내문
+    - 신규 발급: 참여코드, run_id, WebRTC 룸, 상태(예정)
+    - 제외: 참여자 명단, EEG·기록·리포트, 일정(요청 시 새 일정으로 덮어쓰기)
+    - 원본이 템플릿(is_template=True)이더라도 결과물은 항상 실제 클래스(is_template=False)다.
+    호스트 상담사만 호출할 수 있다.
+    """
+    source = _get_session_as_host(session_id, host_id, db)
+    host_uuid = _to_uuid(host_id)
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    from app.services.org_management_service import require_active_user_org
+
+    org = require_active_user_org(host, db)
+
+    new_scheduled_at = _ensure_aware(scheduled_at) if scheduled_at else None
+    if new_scheduled_at is not None:
+        if new_scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시에는 세션을 생성할 수 없습니다")
+        if not force:
+            conflict = detect_conflict(host_uuid, new_scheduled_at, source.duration_min, None, db)
+            if conflict:
+                raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+
+    clone = _clone_session_config(
+        source,
+        host_uuid=host_uuid,
+        organization_id=org.id if org else None,
+        is_template=False,
+        title=title if title is not None else source.title,
+        scheduled_at=new_scheduled_at,
+        db=db,
+    )
+    db.commit()
+    db.refresh(clone)
+
+    # 복제본도 실제 클래스이므로 채팅방을 개설한다(생성 경로와 동일한 멱등 개설).
+    ensure_session_chat_room(clone.id, db)
+    # SDD-097: 복제본에 새 일정이 있으면 리마인더도 새 일정 기준으로 예약한다.
+    if new_scheduled_at is not None:
+        _reminder_service.schedule_session_reminders(clone, db)
+    return _with_chat_room(_serialize(clone), clone.id, db)
+
+
+def save_as_template(
+    session_id: str,
+    host_id: str,
+    db: DBSession,
+    *,
+    title: str | None = None,
+) -> dict:
+    """SDD-095: 기존 클래스의 유형 설정을 재사용 가능한 템플릿으로 저장한다(복제 + is_template)."""
+    source = _get_session_as_host(session_id, host_id, db)
+    host_uuid = _to_uuid(host_id)
+    host = db.get(User, host_uuid)
+    if host is None:
+        raise HTTPException(404, "사용자를 찾을 수 없습니다")
+    from app.services.org_management_service import require_active_user_org
+
+    org = require_active_user_org(host, db)
+
+    template = _clone_session_config(
+        source,
+        host_uuid=host_uuid,
+        organization_id=org.id if org else None,
+        is_template=True,
+        title=(title or source.title),
+        scheduled_at=None,
+        db=db,
+    )
+    db.commit()
+    db.refresh(template)
+    return _serialize(template)
+
+
+def _sorted_session_query(base, *, page: int | None, limit: int | None):
+    """목록 쿼리에 DB 정렬·페이지 창을 적용한다.
+
+    정렬 키는 scheduled_at 우선, 없으면 created_at 이며, ORDER BY/LIMIT/OFFSET 을
+    DB 로 내려 무제한 로드와 후처리 슬라이스를 없앤다.
+    """
+    activity = func.coalesce(Session.scheduled_at, Session.created_at)
+    query = base.order_by(activity.desc(), Session.created_at.desc())
+    if page is not None and limit is not None:
+        query = query.offset((page - 1) * limit).limit(limit)
+    return query
+
+
+def list_templates(
+    user_id: str,
+    db: DBSession,
+    *,
+    page: int | None = None,
+    limit: int | None = None,
+) -> tuple[list[dict], int]:
+    """호스트가 저장한 클래스 템플릿 목록 (최신순) — 생성 폼의 '내 템플릿에서 시작' 용."""
+    uid = _to_uuid(user_id)
+    base = db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(True))
+    total = base.count()
+    # participants 를 selectinload 로 즉시 로딩해 직렬화 N+1 을 제거한다.
+    rows = (
+        _sorted_session_query(base, page=page, limit=limit)
+        .options(selectinload(Session.participants))
+        .all()
+    )
+    # 창 적용 시 DB 순서를, 미적용 시 기존 파이썬 정렬과 동일한 순서를 보장한다.
+    rows = sorted(rows, key=_sort_key, reverse=True)
+    return [_serialize(s) for s in rows], total
+
+
+def list_sessions(
+    user_id: str,
+    db: DBSession,
+    *,
+    page: int | None = None,
+    limit: int | None = None,
+) -> tuple[list[dict], int]:
+    """내 클래스 목록 — 템플릿(is_template=True)은 제외한다(별도 /sessions/templates)."""
+    uid = _to_uuid(user_id)
+    # host 이거나 참여자인 세션을 단일 쿼리로 모은다(중복 제거 포함).
+    participates = (
+        db.query(SessionParticipant.id)
+        .filter(
+            SessionParticipant.session_id == Session.id,
+            SessionParticipant.user_id == uid,
+        )
+        .exists()
+    )
+    base = db.query(Session).filter(
+        Session.is_template.is_(False),
+        or_(Session.host_id == uid, participates),
+    )
+    total = base.count()
+    rows = (
+        _sorted_session_query(base, page=page, limit=limit)
+        .options(selectinload(Session.participants))
+        .all()
+    )
+    rows = sorted(rows, key=_sort_key, reverse=True)
+    return [_serialize(s) for s in rows], total
 
 
 def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:
@@ -188,11 +678,22 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
+    from app.services.org_management_service import require_active_org, require_active_user_org
+    host = db.get(User, s.host_id)
+    if host:
+        require_active_user_org(host, db)
+    if s.organization_id:
+        require_active_org(s.organization_id, db)
     return s
 
 
 def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
-    return _serialize(_get_session_for_user(session_id, user_id, db))
+    s = _get_session_for_user(session_id, user_id, db)
+    # AUTHZ-PARTICIPANT-PII: 호스트만 참여자 PII(생년월일·성별)를 본다. 참여자 본인 조회에서는 제외.
+    is_host = s.host_id == _to_uuid(user_id)
+    return _with_chat_room(
+        _serialize(s, include_participant_pii=is_host), s.id, db
+    )
 
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
@@ -200,13 +701,30 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
-    new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _ensure_aware(s.scheduled_at)
+    # FUNC-01: 변경 전 예약 시각·리마인더 시점을 보관 — 변경 후 옛 ETA 태스크를 취소한다.
+    _old_scheduled_at = s.scheduled_at
+    _old_reminder_offsets = normalize_reminder_offsets(s.reminder_offsets)
+
+    _current_scheduled = _ensure_aware(s.scheduled_at) if s.scheduled_at else None
+    new_scheduled_at = _ensure_aware(payload.scheduled_at) if payload.scheduled_at else _current_scheduled
     new_duration = payload.duration_min if payload.duration_min is not None else s.duration_min
 
-    if not payload.force and (payload.scheduled_at or payload.duration_min):
+    # FUNC-08: 생성(create_session)과 동일하게 과거 일시 수정을 차단한다.
+    #   payload.scheduled_at 이 실제로 전달된 경우에만 검증한다(부분 수정 보존).
+    if payload.scheduled_at is not None and new_scheduled_at is not None:
+        if new_scheduled_at < _now() - timedelta(minutes=1):
+            raise HTTPException(status_code=400, detail="과거 일시로는 세션을 수정할 수 없습니다")
+
+    if not payload.force and new_scheduled_at is not None and (payload.scheduled_at or payload.duration_min):
         conflict = detect_conflict(s.host_id, new_scheduled_at, new_duration, s.id, db)
         if conflict:
             raise HTTPException(status_code=409, detail="시간이 겹치는 세션이 있습니다")
+
+    # 유형 변경 검증: 최종 유형이 custom 이면 custom_type_name 필수
+    new_type = payload.type if payload.type is not None else s.type
+    new_custom_name = payload.custom_type_name if payload.custom_type_name is not None else s.custom_type_name
+    if new_type == "custom" and not (new_custom_name and new_custom_name.strip()):
+        raise HTTPException(status_code=400, detail="기타 유형 선택 시 유형 이름을 입력해야 합니다")
 
     if payload.scheduled_at:
         s.scheduled_at = new_scheduled_at
@@ -218,75 +736,532 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.notes = payload.notes
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
+    if payload.type is not None:
+        s.type = payload.type
+    if payload.custom_type_name is not None:
+        s.custom_type_name = payload.custom_type_name.strip() or None
+    # 유형이 custom 이 아니게 되면 custom_type_name 정리
+    if new_type != "custom":
+        s.custom_type_name = None
+    if payload.participant_mode is not None:
+        s.participant_mode = payload.participant_mode
+    if payload.linkband_mode is not None:
+        s.linkband_mode = payload.linkband_mode
+    if payload.sfu_enabled is not None:
+        s.sfu_enabled = payload.sfu_enabled
+    if payload.record_audio is not None:
+        s.record_audio = payload.record_audio
+    if payload.record_video is not None:
+        s.record_video = payload.record_video
+    # 클래스 실시간 채팅 on/off (SDD-… 클래스 채팅) — host 만 변경 가능(이 경로 자체가 host 전용)
+    if payload.chat_enabled is not None:
+        s.chat_enabled = bool(payload.chat_enabled)
+    if payload.location_type is not None:
+        s.location_type = payload.location_type
+        # 회원 라이브 스트리밍은 장소유형과 무관 — 룸이 없으면 항상 생성 (오프라인 전환 시에도 유지)
+        if not s.webrtc_room_id:
+            s.webrtc_room_id = uuid.uuid4()
+
+    # SDD-188(D8): 장소 주소 반영.
+    #   - 주소를 명시하면 그 값으로 교체(빈 문자열이면 비운다).
+    #   - 주소를 안 주고 장소유형만 오프라인으로 바꿨으면 기본값을 다시 채운다.
+    #   - 온라인으로 바뀌면 항상 null 로 정리한다.
+    _address_given = getattr(payload, "location_address", None) is not None
+    if _address_given or payload.location_type is not None:
+        if s.location_type != "offline":
+            s.location_address = None
+        elif _address_given:
+            _cleaned = payload.location_address.strip()
+            s.location_address = _cleaned[:300] if _cleaned else None
+        elif not s.location_address:
+            s.location_address = resolve_location_address(
+                s.location_type, None, s.organization_id, s.host_id, db
+            )
+
+    # SDD-097: 리마인더 시점 재설정 — 주어졌을 때만 교체.
+    reminders_changed = False
+    if getattr(payload, "reminder_offsets", None) is not None:
+        s.reminder_offsets = normalize_reminder_offsets(payload.reminder_offsets)
+        reminders_changed = True
 
     db.commit()
     db.refresh(s)
-    return _serialize(s)
+
+    # SDD-097 / FUNC-01: 일정 또는 리마인더 시점이 바뀌면 옛 ETA 를 취소하고 다시 예약한다.
+    # (이미 지난 시점은 예약되지 않고, 발송 로그가 중복 발송을 막는다. 남은 옛 ETA 가 잘못된
+    #  시각에 발송하는 것은 run_reminder 의 offset/ETA due 게이트가 추가로 차단한다.)
+    if reminders_changed or payload.scheduled_at is not None:
+        _scheduled_changed = not _same_instant(s.scheduled_at, _old_scheduled_at)
+        if _scheduled_changed:
+            # 일정이 바뀌면 옛 일정 기준 task_id 전체가 새 예약과 겹치지 않는다.
+            _reminder_service.revoke_session_reminders(
+                s.id, _old_reminder_offsets, _old_scheduled_at
+            )
+        elif reminders_changed:
+            # 일정은 그대로, 시점만 바뀐 경우 — 제거된 시점의 옛 ETA 만 취소한다.
+            _new_offsets = normalize_reminder_offsets(s.reminder_offsets)
+            _removed = [o for o in _old_reminder_offsets if o not in _new_offsets]
+            _reminder_service.revoke_session_reminders(s.id, _removed, _old_scheduled_at)
+        _reminder_service.schedule_session_reminders(s, db)
+
+    # SDD-093: S02 세션 변경 알림
+    _notify_participants_event(
+        s, "session_updated", db,
+        title="세션 정보가 변경되었습니다",
+        body=s.title or "세션",
+    )
+
+    return _with_chat_room(_serialize(s), s.id, db)
 
 
 def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     s = _get_session_as_host(session_id, host_id, db)
+    # SDD-093: S13 세션 삭제 알림 (삭제 전 발화 — participants 접근 필요)
+    _notify_participants_event(
+        s, "session_deleted", db,
+        include_waitlisted=True,
+        title="세션이 취소되었습니다",
+        body=s.title or "세션",
+    )
+    # STG-05: DB 행만 지우면 S3 객체·로컬 파일(음성/영상/raw)이 잔존한다 — 실제 미디어도 삭제.
+    # (행 삭제 전에 파일 참조를 수집해야 하므로 여기서 호출한다.)
+    from app.services import media_cleanup_service
+
+    media_cleanup_service.delete_session_media([s.id], db)
     db.delete(s)
     db.commit()
 
 
-def transition_status(session_id: str, host_id: str, action: str, db: DBSession) -> dict:
+def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
+    """cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan) 데이터를 막는다(BUG-4).
+
+    - 음성: recording → failed(중단), recording_ended_at 기록.
+    - 영상: recording → completed(종료), video_recording_ended_at 기록.
+    (실제 데이터 폐기·상담사 확인 플로우는 SDD-101 Phase D 에서 별도 처리.)
+    """
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
+    if record is None:
+        return
+    if record.status == "recording":
+        record.status = "failed"
+        record.recording_ended_at = _now()
+    if record.video_status == "recording":
+        record.video_status = "completed"
+        record.video_recording_ended_at = _now()
+    db.commit()
+
+
+def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
+                      *, restrict_from: set[str] | None = None) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = _get_session_as_host(session_id, host_id, db)
     allowed_from, target = TRANSITIONS[action]
-    if s.status not in allowed_from:
+    # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
+    #   cancel). effective_from 을 사전 검사와 CAS WHERE 절 양쪽에 사용해, 조회 이후 다른
+    #   전이로 상태가 바뀐 경우에도 원자적으로 취소되지 않게 한다(rowcount==0 → 409).
+    effective_from = set(allowed_from) & set(restrict_from) if restrict_from is not None else set(allowed_from)
+    if s.status not in effective_from:
         raise HTTPException(status_code=400, detail="잘못된 상태 전이입니다")
+
+    # SDD-021: 1.0 "클래스 시작" 패리티 — 그룹 수업은 active 참가자(대기열 제외) 1명 이상이어야
+    # 시작할 수 있다. 1:1 세션은 내담자가 암묵적으로 지정되므로 기존 상태전이 동작을 유지한다.
+    # SDD-101(Brian 요청): 참여자 0명이어도 상담사가 단독으로 클래스를 시작·종료하고
+    # 상담사 리포트를 생성할 수 있도록 그룹 시작 제약을 완화한다(단독 리허설·테스트·보고용).
+    if action == "start" and s.participant_mode == "group":
+        active = [p for p in (s.participants or []) if not p.is_waitlisted]
+        if len(active) < 1:
+            logger.info(
+                "[session] 참여자 0명 그룹 클래스 단독 시작 허용(SDD-101): session=%s host=%s",
+                s.id,
+                s.host_id,
+            )
+
     s.status = target
+    # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
+    # SDD-088: 오픈 시각도 최초 1회만 기록 (대기 경과 표시·오픈→시작 지표용)
+    if action == "open" and s.opened_at is None:
+        s.opened_at = _now()
+    elif action == "start" and s.started_at is None:
+        s.started_at = _now()
+    elif action == "end":
+        s.ended_at = _now()
+    # SDD-026: 상태 계약 버전 — 전이마다 정확히 +1 증가(계약: SDD-026).
+    # STATE-01: 인메모리 선반영(s.state_version += 1) 후 CAS values 에서 다시 +1 을
+    # 계산해 DB 에 +2 가 반영되던 문제를 제거한다. 원본 값을 스냅샷해 1회만 증가시킨다.
+    # (인메모리 속성을 건드리지 않으므로 commit flush 가 CAS 결과를 덮어쓰지 않는다.)
+    prev_state_version = s.state_version or 0
+
+    # SDD-101 B1: CAS(compare-and-set) — read-modify-write 대신 조건부 UPDATE로
+    # 동시 전이 경합(이중 finalize·이벤트 발행)을 원자적으로 막는다.
+    # 동일 시점 두 요청이 같은 상태를 읽어 둘 다 통과하던 버그(BUG-3) 해결.
+    now = _now()
+    values = {
+        "status": target,
+        "state_version": prev_state_version + 1,
+    }
+    if action == "open":
+        values["opened_at"] = case((Session.opened_at.is_(None), now), else_=Session.opened_at)
+    elif action == "start":
+        values["started_at"] = case((Session.started_at.is_(None), now), else_=Session.started_at)
+    elif action == "end":
+        values["ended_at"] = now
+
+    result = db.execute(
+        update(Session)
+        .where(Session.id == s.id, Session.status.in_(effective_from))
+        .values(**values)
+    )
+    if result.rowcount == 0:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
     db.commit()
     db.refresh(s)
 
+    # 클래스 오픈 시점에 세션 채팅방을 보장한다(생성 시 개설이 기본 — 기존 세션 대상 멱등 보완).
+    # 입장한 회원이 곧바로 room_id 를 받아 채팅에 참여할 수 있게 한다.
+    if action == "open":
+        ensure_session_chat_room(s.id, db)
+
     if action == "end":
+        # SDD-088 후속: 영상 종료를 먼저 수행해 audio finalize 가 video_merge_needed()
+        # 로 병합 필요 여부를 판별할 수 있게 한다(종료 응답은 비동기 체인이라 지연 없음).
+        try:
+            from app.services import video_service
+            video_service.finalize_on_session_end(s.id, db)
+        except Exception as exc:
+            # MB-ERR-002: 영상 finalize 실패도 무음 삼키지 않는다(audio 경로와 대칭).
+            # best-effort 이므로 종료 API 는 계속 진행하되, 실패 트랜잭션은 정리한다.
+            logger.exception("[session] video finalize failed (best-effort): %s", exc)
+            db.rollback()
         try:
             from app.services import audio_service
             audio_service.finalize_on_session_end(s.id, db)
-        except Exception:
-            pass
+        except Exception as exc:
+            # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
+            logger.exception("[session] audio finalize failed (best-effort): %s", exc)
+        # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
+        # 리포트 생성은 audio_service.finalize_on_session_end 의 Celery chain(STT→요약→리포트)에서
+        # 비동기 처리된다. 여기서는 동기 생성하지 않아 세션 종료 API 응답을 지연시키지 않는다.
+    elif action == "cancel":
+        # SDD-101 B3: cancel 시 진행 중이던 녹음·영상을 마감해 고아(orphan)를 막는다.
+        _close_out_media_on_cancel(s, db)
 
-    # WebSocket 브로드캐스트
-    try:
-        from app.ws.session_namespace import broadcast_session_update
-        import asyncio
-        asyncio.ensure_future(
-            broadcast_session_update(str(s.id), "status_changed", {
-                "session_id": str(s.id),
-                "status": s.status,
-                "action": action,
-            })
+    # SDD-026: 상태전이는 session_state_changed 이벤트로 발행(commit 후, best-effort)
+    _notify_session_state(s)
+
+    # SDD-093: S03/S05~S09 상태 전이 알림 발화 (대기열은 시작/일시정지/재개/종료 제외)
+    _action_event = {
+        "open": "session_opened",
+        "start": "session_started",
+        "end": "session_completed",
+        "cancel": "session_cancelled",
+    }
+    _action_title = {
+        "open": "세션이 오픈되었습니다",
+        "start": "세션이 시작되었습니다",
+        "end": "세션이 종료되었습니다",
+        "cancel": "세션이 취소되었습니다",
+    }
+    event_type = _action_event.get(action)
+    if event_type:
+        _notify_participants_event(
+            s, event_type, db,
+            include_waitlisted=(action == "cancel"),
+            title=_action_title.get(action, event_type),
+            body=s.title or "세션",
         )
-    except Exception:
-        pass
 
+    return _with_chat_room(_serialize(s), s.id, db)
+
+
+# SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
+STALE_OPEN_SESSION_MAX_AGE_HOURS = 24
+
+
+def sweep_stale_open_sessions(
+    db: DBSession,
+    *,
+    max_age_hours: int = STALE_OPEN_SESSION_MAX_AGE_HOURS,
+) -> list[str]:
+    """open 상태로 일정 시간 방치된 세션을 자동 cancel 처리한다.
+
+    - 대상: status == 'open' and is_template == False and opened_at <= now - max_age_hours
+    - 전이: transition_status(..., 'cancel', db) 재사용 → 참가자 알림·이벤트·state_version 일관성 유지
+    - 개별 세션 실패(host 삭제 등)는 try/except 로 격리해 스윕 전체를 중단시키지 않는다.
+
+    반환: 취소 처리된 세션 id 목록.
+    """
+    now = _now()
+    cutoff = now - timedelta(hours=max_age_hours)
+    cancelled: list[str] = []
+
+    candidates = (
+        db.query(Session)
+        .filter(
+            Session.is_template.is_(False),
+            Session.status == "open",
+            Session.opened_at.is_not(None),
+            Session.opened_at <= cutoff,
+        )
+        .all()
+    )
+
+    for s in candidates:
+        try:
+            # STATE-SWEEP-TOCTOU: 조회(open)와 전이 사이에 세션이 in_progress 등으로
+            #   바뀌었을 수 있다. restrict_from={"open"} 로 출발 상태를 재검증해 CAS 에서
+            #   차단되면(409) 취소하지 않는다 — 진행중 클래스를 잘못 취소하지 않도록.
+            transition_status(str(s.id), str(s.host_id), "cancel", db, restrict_from={"open"})
+            cancelled.append(str(s.id))
+        except Exception as exc:
+            # 호스트 삭제·동시 전이 등으로 실패한 건은 건너뛰고 다음 세션을 처리한다.
+            # MB-ERR-011: 개별 실패를 조용히 삼키지 않고 로그로 남겨 스윕 누락을 진단 가능하게 한다.
+            db.rollback()
+            logger.warning(
+                "[STALE-OPEN-SESSION] 세션 취소 실패 — 건너뜀: session_id=%s (%s)",
+                s.id,
+                exc,
+            )
+            continue
+
+    return cancelled
+
+
+# 새 실행(명시적)을 발급할 수 없는 상태 — 완료/취소된 세션은 즉시 재시작을 허용하지 않는다.
+_NON_RESTARTABLE_STATUSES = ("completed", "cancelled")
+
+
+def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
+    """같은 수업 정의를 "새 실행(명시적)"으로 열어 새 run_id 를 발급한다.
+
+    SDD-028 경량 SessionRun:
+      - run_id 만 새 값으로 교체한다(EEG/리포트는 session_id 기반이라 데이터 마이그레이션 없음).
+      - completed/cancelled 세션은 즉시 재시작을 허용하지 않는다(기존 상태 규칙 유지) → 400.
+        (재수업이 필요하면 새 세션을 생성한다.)
+      - pause/resume·이어하기는 이 함수를 호출하지 않으므로 기존 run_id 가 그대로 유지된다.
+    호스트 상담사만 호출할 수 있다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    if s.status in _NON_RESTARTABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail="완료·취소된 세션은 즉시 재시작할 수 없습니다. 새 세션을 생성하세요",
+        )
+    s.run_id = uuid.uuid4()
+    db.commit()
+    db.refresh(s)
     return _serialize(s)
 
 
-def _next_waitlist_position(s: Session) -> int:
-    positions = [p.waitlist_position or 0 for p in (s.participants or []) if p.is_waitlisted]
+def _notify_participants_event(
+    s: Session,
+    event_type: str,
+    db: DBSession,
+    *,
+    recipient_ids: list | None = None,
+    include_waitlisted: bool = False,
+    title: str,
+    body: str | None = None,
+) -> None:
+    """세션 참여자에게 인앱 알림을 best-effort 로 발화한다.
+
+    SDD-093 노티피케이션 재설계 — 이벤트 카탈로그(33종)의 세션 이벤트 발화 일원화.
+    수신자 기본값: 호스트 제외 + (include_waitlisted=False 시) 대기열 제외.
+    """
+    try:
+        from app.services import notification_service
+        from app.services.notification_service import build_standard_extra, EVENT_CATALOG
+
+        target_type = EVENT_CATALOG.get(event_type, {}).get("target_type", "session")
+        if recipient_ids is None:
+            recipient_ids = [
+                p.user_id for p in (s.participants or [])
+                if (include_waitlisted or not p.is_waitlisted) and p.user_id != s.host_id
+            ]
+        for uid in recipient_ids:
+            try:
+                notification_service.notify_event(
+                    event_type,
+                    uid,
+                    {
+                        "title": title,
+                        "body": body,
+                        "extra": build_standard_extra(
+                            event_type,
+                            target_type,
+                            str(s.id),
+                            params=None,
+                            legacy={"session_id": str(s.id)},
+                        ),
+                    },
+                    db,
+                )
+            except Exception as exc:
+                # MB-ERR-003: 알림 1건 실패를 무음 삼키지 않고 로깅 + 실패 트랜잭션 정리.
+                logger.warning(
+                    "[session] notify_event failed event=%s user=%s: %s", event_type, uid, exc
+                )
+                db.rollback()
+    except Exception as exc:
+        # MB-ERR-003: best-effort 알림 발행 전체 실패도 로그로 남긴다.
+        logger.warning("[session] notify participants event failed event=%s: %s", event_type, exc)
+
+
+def _notify_session_state(s: Session) -> None:
+    """session_state_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op).
+
+    개선 10: 클래스가 진행 단계를 벗어나면(완료·취소) 재생 중인 가이드·BGM 을 회원 화면에서도
+    멈춘다 — 상담사 브라우저가 닫혀 stop 명령이 오지 못한 경우의 안전망이다(재생 상태도 정리).
+    """
+    try:
+        from app.ws import session_live_namespace as live
+
+        live.notify_session_state_changed(
+            str(s.id),
+            {
+                "status": s.status,
+                "version": s.state_version or 0,
+                "started_at": s.started_at.isoformat() if s.started_at else None,
+                "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            },
+        )
+
+        if s.status not in AUDIO_SYNC_SESSION_STATUSES:
+            stop_payload = live.build_audio_sync_payload(str(s.id), "stop", None, 0.0)
+            live.record_audio_state(str(s.id), stop_payload)
+            live.notify_audio_sync(str(s.id), stop_payload)
+    except Exception as exc:
+        # MB-ERR-003: best-effort 이벤트 발행 실패를 로그로 남긴다(상태 변경은 유지).
+        logger.warning("[session] session_state_changed 발행 실패 session=%s: %s", s.id, exc)
+
+
+def _notify_participant_changed(s: Session, db: DBSession | None = None) -> None:
+    """participant_changed 이벤트를 best-effort 로 발행한다(호스트 룸 전용).
+
+    LIVE-05: 프론트(ClassPlayerPage/SessionDetailPage)가 event.participants 를 기대하므로
+    활성 참여자 식별 정보 배열을 함께 실어 보낸다. 배열이 없으면 프론트 실시간 목록 갱신이
+    죽은 코드가 되므로, participantsToMetrics 폴백과 동일한 SessionLiveMetric 형태로 채운다.
+    """
+    try:
+        from app.ws import session_live_namespace as live
+
+        active = [p for p in (s.participants or []) if not p.is_waitlisted]
+        names: dict = {}
+        if db is not None:
+            from app.models.user import User
+
+            uids = [p.user_id for p in active if p.user_id]
+            if uids:
+                for u in db.query(User).filter(User.id.in_(uids)).all():
+                    names[u.id] = u.name
+
+        participants = []
+        for p in active:
+            if p.user_id:
+                display_name = names.get(p.user_id) or "참여자"
+            else:
+                display_name = p.guest_name or "게스트"
+            participants.append(
+                {
+                    "participant_id": str(p.id),
+                    "user_id": str(p.user_id) if p.user_id else None,
+                    "display_name": display_name,
+                    "is_guest": p.user_id is None,
+                    "band_connected": p.band_connected,
+                    "device_status": None,
+                    "band_battery": p.band_battery,
+                    "avg_efficiency": None,
+                    "current_efficiency": None,
+                    "upload_status": None,
+                    "last_eeg_at": None,
+                    "raise_hand": p.raise_hand,
+                    "speaking": p.speaking,
+                }
+            )
+
+        live.notify_participant_changed(
+            str(s.id),
+            {
+                "version": s.state_version or 0,
+                "participant_count": len(active),
+                "waitlist_count": sum(1 for p in (s.participants or []) if p.is_waitlisted),
+                "participants": participants,
+            },
+        )
+    except Exception as exc:
+        # MB-ERR-003: best-effort 이벤트 발행 실패를 로그로 남긴다.
+        logger.warning("[session] participant_changed 발행 실패 session=%s: %s", s.id, exc)
+
+
+def _next_waitlist_position(s: Session, db: DBSession) -> int:
+    """대기열 다음 순번 — DB 기준으로 조회해 캐시된 컬렉션 오염을 피한다."""
+    rows = (
+        db.query(SessionParticipant.waitlist_position)
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.is_waitlisted.is_(True),
+        )
+        .all()
+    )
+    positions = [row[0] or 0 for row in rows]
     return (max(positions) + 1) if positions else 1
 
 
-def _promote_waitlist(s: Session, db: DBSession) -> None:
-    """정원에 여유가 생기면 대기열 1순위를 자동 승격"""
+def _active_participant_count(s: Session, db: DBSession) -> int:
+    """정원 판정용 active(대기열 제외) 인원 — 로드된 컬렉션 대신 DB 카운트로 센다."""
+    return (
+        db.query(func.count(SessionParticipant.id))
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.is_waitlisted.is_(False),
+        )
+        .scalar()
+        or 0
+    )
+
+
+def _has_capacity(s: Session, db: DBSession) -> bool:
+    """FUNC-03: active(대기열 제외) 인원이 정원(max_participants) 미만인지 판정한다.
+
+    정원 미설정(0/None)은 제한 없음으로 본다.
+    """
+    if not s.max_participants:
+        return True
+    return _active_participant_count(s, db) < s.max_participants
+
+
+def _lock_session_for_capacity(s_id: UUID, db: DBSession) -> Session | None:
+    """정원 검사~참여자 삽입 사이를 직렬화하기 위해 세션 행을 잠근다(CONC-CAPACITY-RACE).
+
+    PostgreSQL 은 SELECT ... FOR UPDATE 로 같은 세션으로의 동시 입장을 직렬화한다.
+    SQLite(테스트)는 FOR UPDATE 를 지원하지 않으므로 일반 조회로 폴백한다(단일 커넥션).
+    """
+    query = db.query(Session).filter(Session.id == s_id)
+    bind = db.get_bind()
+    if bind is not None and bind.dialect.name == "postgresql":
+        query = query.with_for_update()
+    return query.populate_existing().first()
+
+
+def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
+    """정원에 여유가 생기면 대기열 1순위를 자동 승격. 승격된 사용자 ID를 반환한다."""
     active = [p for p in (s.participants or []) if not p.is_waitlisted]
     if len(active) >= s.max_participants:
-        return
+        return None
     waiting = sorted(
         [p for p in (s.participants or []) if p.is_waitlisted],
         key=lambda p: p.waitlist_position or 0,
     )
     if not waiting:
-        return
+        return None
     promoted = waiting[0]
     promoted.is_waitlisted = False
     promoted.waitlist_position = None
     for idx, p in enumerate(waiting[1:], start=1):
         p.waitlist_position = idx
     db.flush()
+    return promoted.user_id
 
 
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
@@ -295,6 +1270,12 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         raise HTTPException(status_code=400, detail="종료된 세션에는 초대할 수 없습니다")
 
     target_uuid = _to_uuid(user_id)
+
+    # CONC-CAPACITY-RACE: 정원 검사~삽입 사이를 세션 행 잠금으로 직렬화한다.
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
     existing = (
         db.query(SessionParticipant)
         .filter(
@@ -306,20 +1287,38 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     if existing:
         raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
 
-    active = [p for p in (s.participants or []) if not p.is_waitlisted]
-    if len(active) >= s.max_participants:
-        position = _next_waitlist_position(s)
-        db.add(SessionParticipant(
+    # FUNC-03: 정원이 차 있으면 대기열에 등록한다.
+    if not _has_capacity(s, db):
+        position = _next_waitlist_position(s, db)
+        new_participant = SessionParticipant(
             session_id=s.id,
             user_id=target_uuid,
             is_waitlisted=True,
             waitlist_position=position,
-        ))
+        )
     else:
-        db.add(SessionParticipant(session_id=s.id, user_id=target_uuid))
+        new_participant = SessionParticipant(session_id=s.id, user_id=target_uuid)
+
+    # CONC-DUP-JOIN-INVITE: 동시 초대 경합 — unique(session_id, user_id) 위반 시
+    # IntegrityError(500) 대신 기존과 동일하게 409 로 멱등 응답한다.
+    try:
+        with db.begin_nested():
+            db.add(new_participant)
+    except IntegrityError:
+        raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
 
     db.commit()
     db.refresh(s)
+
+    # SDD-093: S10 세션 초대 알림
+    _notify_participants_event(
+        s, "session_invited", db,
+        recipient_ids=[target_uuid],
+        include_waitlisted=True,
+        title="세션에 초대되었습니다",
+        body=s.title or "세션",
+    )
+
     return _serialize(s)
 
 
@@ -343,6 +1342,7 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     db.flush()
     db.refresh(s)
 
+    promoted_id: UUID | None = None
     if was_waitlisted and removed_position is not None:
         # 대기열에서 빠진 경우, 뒤 순번 당기기
         for p in (s.participants or []):
@@ -350,16 +1350,34 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
                 p.waitlist_position -= 1
         db.flush()
     else:
-        _promote_waitlist(s, db)
+        promoted_id = _promote_waitlist(s, db)
 
     db.commit()
     db.refresh(s)
+
+    # SDD-093: S12 제거 알림
+    _notify_participants_event(
+        s, "session_participant_removed", db,
+        recipient_ids=[target_uuid],
+        include_waitlisted=True,
+        title="세션에서 제외되었습니다",
+        body=s.title or "세션",
+    )
+    # SDD-093: S11 대기열 승격 알림
+    if promoted_id:
+        _notify_participants_event(
+            s, "session_waitlist_promoted", db,
+            recipient_ids=[promoted_id],
+            title="대기열에서 참여자로 승격되었습니다",
+            body=s.title or "세션",
+        )
+
     return _serialize(s)
 
 
 def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
-    if s.status not in ("in_progress", "paused"):
+    if s.status != "in_progress":
         raise HTTPException(status_code=400, detail="진행 중인 세션에서만 마커를 추가할 수 있습니다")
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
@@ -377,56 +1395,1387 @@ def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, d
 
 # ── LiveKit WebRTC ──────────────────────────────────────────────
 
-def join_session(session_id: str, user_id: str, db: DBSession) -> dict:
-    """세션에 입장하고 LiveKit 토큰을 발급한다."""
-    import uuid as _uuid_mod
-    from livekit import api as livekit_api
-    from app.config import settings
+def generate_livekit_token(
+    room_name: str,
+    participant_name: str,
+    participant_id: str,
+    *,
+    can_publish: bool = True,
+    can_subscribe: bool = True,
+) -> str:
+    """LiveKit 접근 토큰(JWT)을 발급합니다.
 
-    s = _get_session_for_user(session_id, user_id, db)
-    if s.status not in ("scheduled", "in_progress", "paused"):
-        raise HTTPException(status_code=400, detail="시작 가능한 상태가 아닙니다")
-
-    # webrtc_room_id가 없으면 생성
-    if not getattr(s, "webrtc_room_id", None):
-        s.webrtc_room_id = str(_uuid_mod.uuid4())
-        db.flush()
-
-    # scheduled → in_progress 자동 전이
-    if s.status == "scheduled":
-        s.status = "in_progress"
-
-    db.commit()
-    db.refresh(s)
-
-    token = _generate_livekit_token(str(s.webrtc_room_id), user_id)
-    return {
-        "session": _serialize(s),
-        "livekit_token": token,
-        "webrtc_room_id": str(s.webrtc_room_id),
-    }
-
-
-def get_livekit_token(session_id: str, user_id: str, db: DBSession) -> dict:
-    """기존 WebRTC 룸의 LiveKit 토큰만 재발급한다."""
-    s = _get_session_for_user(session_id, user_id, db)
-    if not getattr(s, "webrtc_room_id", None):
-        raise HTTPException(status_code=400, detail="WebRTC 룸이 생성되지 않았습니다")
-
-    token = _generate_livekit_token(str(s.webrtc_room_id), user_id)
-    return {"livekit_token": token, "webrtc_room_id": str(s.webrtc_room_id)}
-
-
-def _generate_livekit_token(room_name: str, user_id: str) -> str:
-    from livekit import api as livekit_api
-    from app.config import settings
-
+    can_publish=False 면 구독 전용 토큰(회원/게스트) — 상담사 영상·음성만 수신한다.
+    """
     token = (
         livekit_api.AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-        .with_identity(user_id)
-        .with_name(user_id)
+        .with_identity(participant_id)
+        .with_name(participant_name)
         .with_grants(
-            livekit_api.VideoGrants(room_join=True, room=room_name)
+            livekit_api.VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=can_publish,
+                can_subscribe=can_subscribe,
+            )
         )
     )
     return token.to_jwt()
+
+
+def _get_session_for_participant(session_id: str, user_id: str, db: DBSession) -> Session:
+    """host 또는 participant 권한으로 세션 조회"""
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    uid = _to_uuid(user_id)
+    if s.host_id == uid:
+        return s
+    is_participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
+        .first()
+    )
+    if is_participant:
+        return s
+    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+
+
+def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
+    """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
+    s = _get_session_for_participant(session_id, user_id, db)
+
+    # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
+    if not s.webrtc_room_id:
+        s.webrtc_room_id = uuid.uuid4()
+        db.commit()
+        db.refresh(s)
+
+    # SDD-101 B2: scheduled → in_progress 전이를 직접 대입(s.status=...) 대신 CAS UPDATE로.
+    # 직접 대입은 started_at·state_version 기록을 우회해 종료 시 has_data 판정이 깨졌다(BUG-2).
+    if s.status == "scheduled" and s.host_id == _to_uuid(user_id):
+        now = _now()
+        result = db.execute(
+            update(Session)
+            .where(Session.id == s.id, Session.status == "scheduled")
+            .values(
+                status="in_progress",
+                state_version=(s.state_version or 0) + 1,
+                started_at=case((Session.started_at.is_(None), now), else_=Session.started_at),
+            )
+        )
+        if result.rowcount == 0:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
+        db.commit()
+        db.refresh(s)
+    elif s.status != "in_progress":
+        raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
+
+    # LiveKit 토큰 발급
+    room_name = str(s.webrtc_room_id)
+    token = generate_livekit_token(room_name, user_name, user_id)
+
+    result = _serialize(s)
+    result["livekit_token"] = token
+    return result
+
+
+# ---------------------------------------------------------------------------
+# SDD-015: 클래스 코드 기반 조회 · 참여
+# ---------------------------------------------------------------------------
+
+# 코드로 참여할 수 없는 상태 (이미 끝났거나 취소된 클래스)
+_CLOSED_STATUSES = ("completed", "cancelled")
+
+# SDD-088: 아직 오픈 전 상태 — 상담사가 "클래스 오픈"을 눌러야 회원 입장이 열린다.
+_PRE_OPEN_STATUSES = ("ready", "scheduled")
+
+
+def _get_session_by_code(code: str, db: DBSession) -> Session:
+    normalized = code_service.normalize_code(code)
+    if len(normalized) != code_service.CODE_LENGTH:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    s = db.query(Session).filter(Session.access_code == normalized).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    return s
+
+
+def get_session_by_code(code: str, db: DBSession) -> dict:
+    """참여 전 클래스 정보 확인 — 인증 불필요, 민감 정보는 노출하지 않는다."""
+    s = _get_session_by_code(code, db)
+    host_name = None
+    if s.host_id:
+        from app.models.user import User
+
+        host = db.query(User).filter(User.id == s.host_id).first()
+        host_name = host.name if host else None
+    return {
+        "id": str(s.id),
+        "access_code": s.access_code,
+        "title": s.title,
+        "type": s.type,
+        "custom_type_name": s.custom_type_name,
+        "status": s.status,
+        "host_name": host_name,
+        "participant_mode": s.participant_mode,
+        "linkband_mode": s.linkband_mode,
+        "location_type": s.location_type,
+        # SDD-021: 대기열(waitlisted) 제외, active 참가자만 카운트한다
+        "participant_count": sum(1 for p in (s.participants or []) if not p.is_waitlisted),
+        "max_participants": s.max_participants,
+        "started_at": s.started_at,
+        "scheduled_at": s.scheduled_at,
+        # 클래스 실시간 채팅 사용 여부 — 참여 전 채팅 가능 여부 안내용
+        "chat_enabled": bool(s.chat_enabled),
+    }
+
+
+def join_session_by_code(
+    code: str,
+    db: DBSession,
+    *,
+    user_id: str | None = None,
+    guest_name: str | None = None,
+    gender: str | None = None,
+    birth_date: date | None = None,
+    participant_token: str | None = None,
+) -> dict:
+    """클래스 코드로 참여.
+
+    로그인 사용자 → SessionParticipant(user_id) 생성 (이미 있으면 재사용).
+    게스트 → user_id=NULL + guest_name 으로 생성. 동일 이름 중복 참여는 허용한다.
+    """
+    s = _get_session_by_code(code, db)
+    if s.status in _CLOSED_STATUSES:
+        raise HTTPException(status_code=400, detail="이미 종료된 클래스입니다")
+    # SDD-088: 입장 게이트 이동 — 오픈(open) 이후부터 회원/게스트 입장을 허용한다.
+    # host 상담사는 오픈 전에도 자기 세션 참여 처리(no-op)를 막지 않는다.
+    if s.status in _PRE_OPEN_STATUSES:
+        uid = _to_uuid(user_id) if user_id else None
+        if uid is None or s.host_id != uid:
+            raise HTTPException(
+                status_code=400,
+                detail="아직 오픈 전인 클래스입니다. 상담사가 클래스를 열면 입장할 수 있습니다",
+            )
+
+    # host 상담사는 참여자로 중복 등록하지 않는다(잠금·삽입 불필요).
+    member_uid = _to_uuid(user_id) if user_id else None
+    if member_uid is not None and s.host_id == member_uid:
+        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": None, "is_guest": False}
+
+    # CONC-CAPACITY-RACE: 이 시점부터 정원 검사·참여자 삽입을 세션 행 잠금 하에 수행한다.
+    # (PostgreSQL SELECT ... FOR UPDATE 로 같은 세션 동시 입장을 직렬화)
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
+    if member_uid is not None:
+        uid = member_uid
+        existing = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == s.id,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        if existing is None:
+            # SDD-026: 코드로 자발 참여 = EEG 수집 opt-in 으로 기록(consent_eeg=True).
+            # 호스트가 초대(invite_participant)한 참가자는 consent_eeg=False 로 남아, 본인이
+            # 참여 동의를 거치기 전에는 업로드가 차단된다.
+            # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
+            has_room = _has_capacity(s, db)
+            new_participant = SessionParticipant(
+                session_id=s.id,
+                user_id=uid,
+                consent_eeg=True,
+                is_waitlisted=not has_room,
+                waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
+            )
+            # CONC-DUP-JOIN-INVITE: 동시 입장 경합 — unique(session_id, user_id) 위반 시
+            # IntegrityError(500) 대신 먼저 커밋된 행을 재사용해 멱등 처리한다.
+            try:
+                with db.begin_nested():
+                    db.add(new_participant)
+            except IntegrityError:
+                existing = (
+                    db.query(SessionParticipant)
+                    .filter(
+                        SessionParticipant.session_id == s.id,
+                        SessionParticipant.user_id == uid,
+                    )
+                    .first()
+                )
+                if existing is None:
+                    raise
+                existing.consent_eeg = True
+            else:
+                existing = new_participant
+        else:
+            existing.consent_eeg = True
+            # SDD-126: 대기열 회원이 코드로 자발 입장 시 is_waitlisted 해제(관제·좌석·인원 집계 반영)
+            # FUNC-03: 정원 여유가 있을 때만 해제한다(정원 초과 입장 방지).
+            if existing.is_waitlisted and _has_capacity(s, db):
+                existing.is_waitlisted = False
+                existing.waitlist_position = None
+        db.commit()
+        db.refresh(s)
+        _notify_participant_changed(s, db)
+        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(existing.id), "is_guest": False}
+
+    name = (guest_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="게스트 참여에는 이름이 필요합니다")
+
+    # SDD-126: participant_token 기반 게스트 멱등 — 재접속 시 기존 행 재사용(유령 방지)
+    participant = None
+    if participant_token:
+        from app.services.report_email_service import _decode
+        try:
+            claims = _decode(participant_token, "report_participant")
+            if claims.get("sub"):
+                participant = (
+                    db.query(SessionParticipant)
+                    .filter(
+                        SessionParticipant.id == _to_uuid(claims["sub"]),
+                        SessionParticipant.session_id == s.id,
+                    )
+                    .first()
+                )
+        except HTTPException:
+            participant = None
+
+    if participant is None:
+        # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
+        # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
+        has_room = _has_capacity(s, db)
+        participant = SessionParticipant(
+            session_id=s.id, user_id=None, guest_name=name[:100],
+            gender=gender, birth_date=birth_date, consent_eeg=True,
+            is_waitlisted=not has_room,
+            waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
+        )
+        db.add(participant)
+    else:
+        # 기존 행 재사용 — 이름·성별·생년월일 갱신 + 대기열 해제(정원 여유 시)
+        participant.guest_name = name[:100]
+        if gender is not None:
+            participant.gender = gender
+        if birth_date is not None:
+            participant.birth_date = birth_date
+        participant.consent_eeg = True
+        # FUNC-03: 정원 여유가 있을 때만 대기열에서 해제한다.
+        if participant.is_waitlisted and _has_capacity(s, db):
+            participant.is_waitlisted = False
+            participant.waitlist_position = None
+
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    from app.services.report_email_service import participant_token as make_token
+    # CONTRACT-GUEST-CHAT-ROOM-ID: 회원 경로와 동일하게 게스트 join 응답에도 chat_room_id 를
+    #   포함한다(누락 시 게스트 클라이언트가 채팅방에 입장하지 못한다).
+    return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(participant.id), "is_guest": True,
+            "participant_token": make_token(participant)}
+
+
+def member_livekit_token(
+    code: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    participant_token: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """회원/게스트 구독 전용 LiveKit 토큰 발급.
+
+    can_publish 규칙: 온라인 세션이면서 1:1 이거나, 그룹이면 max_participants ≤ 20 일 때만 송신 허용.
+    그 외(오프라인, 온라인 그룹 20명 초과)는 구독 전용(can_publish=False).
+    """
+    s = _get_session_by_code(code, db)
+    # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
+    if not s.webrtc_room_id:
+        raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
+
+    pid = _to_uuid(participant_id)
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == s.id)
+        .first()
+    )
+    if participant is None:
+        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
+
+    if participant.user_id is None:
+        # 게스트 — participant_token 소유 증명 필수
+        from app.services.report_email_service import _decode
+        try:
+            claims = _decode(participant_token, "report_participant")
+        except HTTPException:
+            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+        if claims.get("sub") != str(participant.id):
+            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+    elif current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
+        # 로그인 회원 — 본인 참여 확인
+        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
+
+    # AUTHZ-WAITLIST-SPEAKING: 대기열(waitlisted) 참여자는 아직 입장 허용되지 않았으므로
+    #   LiveKit(음성 송수신) 토큰을 발급하지 않는다 — 정원 초과 대기자의 매체 접근 차단.
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=403, detail="대기 중인 참여자입니다")
+
+    name = participant.guest_name
+    if not name and participant.user_id:
+        from app.models.user import User
+        user = db.query(User).filter(User.id == participant.user_id).first()
+        name = user.name if user else None
+    name = name or "참여자"
+
+    # SDD-094: 발언권 기반 송신 규칙 — 온라인 + (1:1 상시 또는 그룹≤20 & speaking=True).
+    can_publish = _compute_can_publish(s, participant)
+
+    token = generate_livekit_token(
+        room_name=str(s.webrtc_room_id),
+        participant_name=name,
+        participant_id=str(participant.id),
+        can_publish=can_publish,
+    )
+    return {
+        "livekit_token": token,
+        "webrtc_room_id": str(s.webrtc_room_id),
+        "can_publish": can_publish,
+    }
+
+
+def _compute_can_publish(s: Session, participant: SessionParticipant) -> bool:
+    """SDD-094 송신 허용 규칙.
+
+    can_publish = (location_type=="online") AND
+                  (participant_mode=="one_on_one"
+                   OR (participant_mode=="group" AND max_participants<=20 AND participant.speaking))
+    온라인 1:1 은 상시 송출(True), 온라인 그룹≤20 은 손들기 후 상담사가 발언권을 부여(speaking=True)했을 때만
+    송출 허용. 그 외(오프라인, 온라인 그룹>20)는 항상 구독 전용(False).
+    """
+    if s.location_type != "online":
+        return False
+    if s.participant_mode == "one_on_one":
+        return True
+    if s.participant_mode == "group" and (s.max_participants or 0) <= 20:
+        return bool(participant.speaking)
+    return False
+
+
+# ---------------------------------------------------------------------------
+# SDD-094: 발언권 관리 (손들기 → 부여/해제)
+# ---------------------------------------------------------------------------
+
+
+def _get_participant_in_session(sid: UUID, participant_id: str, db: DBSession) -> SessionParticipant:
+    """세션에 속한 참여자 행을 조회한다(없으면 404)."""
+    try:
+        pid = _to_uuid(participant_id)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+    participant = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == sid)
+        .first()
+    )
+    if participant is None:
+        raise HTTPException(status_code=404, detail="참여자를 찾을 수 없습니다")
+    return participant
+
+
+def _authorize_participant_access(
+    participant: SessionParticipant,
+    *,
+    participant_token: str | None,
+    current_user_id: str | None,
+) -> None:
+    """참여자 본인(로그인 회원) 또는 게스트 토큰 소유를 검증한다(아니면 403).
+
+    - 로그인 회원 참여자: current_user_id 가 participant.user_id 와 일치해야 한다.
+    - 게스트 참여자: participant_token 소유 증명(sub == participant.id) 필수.
+    """
+    if participant.user_id is not None:
+        if current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
+            raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+        return
+    from app.services.report_email_service import _decode
+    try:
+        claims = _decode(participant_token, "report_participant")
+    except HTTPException:
+        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+    if claims.get("sub") != str(participant.id):
+        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+
+
+def raise_hand(
+    session_id: str,
+    participant_id: str,
+    db: DBSession,
+    *,
+    participant_token: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """SDD-094: 참여자 손들기 — raise_hand=True 로 표시하고 호스트/본인에게 통지한다.
+
+    참여자 본인(로그인) 또는 게스트 토큰 소유만 가능하다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    # LIVE-04: 완료/취소된 세션에서는 발언권 상태를 변경할 수 없다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+    _authorize_participant_access(
+        participant, participant_token=participant_token, current_user_id=current_user_id
+    )
+
+    # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 좌석이 없어 발언 요청(손들기)을 할 수 없다.
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=403, detail="대기 중인 참여자는 손을 들 수 없습니다")
+
+    participant.raise_hand = True
+    db.commit()
+    db.refresh(participant)
+
+    can_publish = _compute_can_publish(s, participant)
+    _notify_speaking_changed(sid, participant)
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": can_publish,
+    }
+
+
+def set_speaking(
+    session_id: str,
+    host_id: str,
+    participant_id: str,
+    granted: bool,
+    db: DBSession,
+) -> dict:
+    """SDD-094: 상담사 발언권 부여/해제 — speaking=granted. 호스트(상담사) 전용.
+
+    부여(granted=True) 시 손들기(raise_hand)를 자동 해제한다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    # LIVE-04: 완료/취소된 세션에서는 발언권을 부여/해제할 수 없다.
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=400, detail="종료된 세션입니다")
+    if s.host_id != _to_uuid(host_id):
+        raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+
+    # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 입장 전이므로 발언권을 부여할 수 없다
+    #   (입장 허용 전에 speaking=True 로 송출 권한이 새는 것을 막는다).
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=409, detail="대기 중인 참여자에게는 발언권을 부여할 수 없습니다")
+
+    participant.speaking = bool(granted)
+    if granted:
+        participant.raise_hand = False
+    db.commit()
+    db.refresh(participant)
+
+    can_publish = _compute_can_publish(s, participant)
+    _notify_speaking_changed(sid, participant)
+    return {
+        "participant_id": str(participant.id),
+        "raise_hand": participant.raise_hand,
+        "speaking": participant.speaking,
+        "can_publish": can_publish,
+    }
+
+
+def _notify_speaking_changed(sid: UUID, participant: SessionParticipant) -> None:
+    """speaking_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op)."""
+    try:
+        from app.ws import session_live_namespace as live
+
+        live.notify_speaking_changed(
+            str(sid),
+            {
+                "participant_id": str(participant.id),
+                "raise_hand": participant.raise_hand,
+                "speaking": participant.speaking,
+            },
+        )
+    except Exception as exc:
+        # MB-ERR-003: 이벤트 발행 실패가 상태 변경 성공을 되돌려서는 안 되지만, 무음 삼키지 않는다.
+        logger.warning("[session] speaking_changed 발행 실패 session=%s: %s", sid, exc)
+
+
+# ---------------------------------------------------------------------------
+# 개선 5: 무음 시그널(비언어적 상태 신호) — 발신자 검증
+# ---------------------------------------------------------------------------
+
+# 상태 신호 유형 — "잘 따라가요 / 조금 어려워요 / 잠시 쉴게요"
+QUIET_SIGNAL_TYPES: tuple[str, ...] = ("following", "difficult", "resting")
+
+# 시그널을 받을 수 있는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
+QUIET_SIGNAL_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress")
+
+
+def resolve_signal_sender(
+    session_id: str,
+    participant_id: str | None,
+    current_user_id: str | None,
+    db: DBSession,
+) -> dict:
+    """무음 시그널 발신자를 검증한다 (SDD-026 소유 검증 규칙 재사용, EEG 동의와 무관).
+
+    - 인증 사용자: 본인 참가자 행으로만 발신. participant_id 를 명시하면 반드시
+      본인 소유여야 한다 → 타인 participant_id 대리 발신 차단(403).
+    - 미인증(게스트): participant_id 로만 식별하되 반드시 게스트 행(user_id IS NULL)이어야
+      한다 → 로그인 회원 참가자 사칭 차단(403).
+    - 세션 없음 404 / 비참가자·미식별 403.
+
+    반환: {"participant_id": str, "display_name": str, "status": str}
+    (상태 신호는 DB 에 저장하지 않는 휘발성 값이다 — 호스트 화면 표시용 메타만 만든다.)
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    participant: SessionParticipant | None = None
+    if current_user_id:
+        uid = _to_uuid(current_user_id)
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        # 명시 participant_id 는 반드시 본인 참가자와 일치해야 한다(대리 발신 방지)
+        if participant_id and (
+            participant is None or participant.id != _to_uuid(participant_id)
+        ):
+            raise HTTPException(status_code=403, detail="본인 참가자로만 신호를 보낼 수 있습니다")
+    elif participant_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(participant_id),
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id.is_(None),  # 게스트만 (회원 사칭 차단)
+            )
+            .first()
+        )
+
+    if participant is None:
+        raise HTTPException(status_code=403, detail="세션 참가자만 신호를 보낼 수 있습니다")
+
+    display_name = participant.guest_name
+    if participant.user_id is not None:
+        from app.models.user import User
+
+        user = db.query(User).filter(User.id == participant.user_id).first()
+        if user is not None and user.name:
+            display_name = user.name
+
+    return {
+        "participant_id": str(participant.id),
+        "display_name": display_name or "익명",
+        "status": s.status,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 개선 10: 명상 가이드·BGM 재생 제어 발신자 검증 (class:audio_sync)
+# ---------------------------------------------------------------------------
+
+# 재생 제어를 허용하는(진행 단계) 세션 상태 — 대기실(open)·진행·일시정지
+AUDIO_SYNC_SESSION_STATUSES: tuple[str, ...] = ("open", "in_progress")
+
+
+def resolve_audio_sync_host(
+    session_id: str,
+    current_user_id: str | None,
+    db: DBSession,
+) -> dict:
+    """class:audio_sync 발신자를 검증한다 — 재생 제어는 세션 호스트(상담사)만 가능하다.
+
+    회원·게스트가 올린 재생 제어는 브로드캐스트하면 안 되므로(아무나 남의 클래스
+    가이드·BGM 을 멈추거나 바꾸는 것을 차단), 여기서 호스트 여부를 서버가 판정한다.
+
+    - 세션 없음 404 / 미인증 403 / 호스트 아님 403.
+
+    반환: {"session_id": str, "status": str}
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if not current_user_id:
+        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    if s.host_id != _to_uuid(current_user_id):
+        raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    return {"session_id": str(sid), "status": s.status}
+
+
+# ---------------------------------------------------------------------------
+# SDD-021: 클래스 시작 프로세스 1.0 패리티
+# ---------------------------------------------------------------------------
+
+
+def _participant_log_state(status: str) -> str:
+    """세션 상태에서 참가자 진행 상태(1.0 SessionLog 상태)를 파생한다.
+
+    참가자 단위 상태 저장은 Phase 2 이므로, 현재는 세션 상태를 그대로 매핑한다.
+    """
+    if status == "completed":
+        return "COMPLETED"
+    if status == "in_progress":
+        return "STARTED"
+    return "READY"
+
+
+def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
+    """호스트 전용 실시간 모니터링 데이터.
+
+    SDD-023: LINK BAND 실연동 — EEGFeatureWindow 최신 윈도우를 조회해 두뇌휴식도
+    (relaxation_index)·연결상태(device_status)·신호품질(quality)을 실값으로 반환한다.
+    feature 가 없으면(미착용/미수집) 기존 placeholder(null/unknown/idle) 동작을 유지한다.
+    band_connected 는 기존 SessionParticipant 필드를 그대로 사용한다.
+    """
+    s = _get_session_as_host(session_id, host_id, db)
+    # 모니터링 대상은 active 참가자만 (대기열 제외)
+    active = [p for p in (s.participants or []) if not p.is_waitlisted]
+
+    # 로그인 참가자 표시 이름을 한 번의 쿼리로 확보 (게스트는 guest_name 사용)
+    from app.models.user import User
+
+    user_ids = [p.user_id for p in active if p.user_id]
+    names: dict = {}
+    profiles: dict[UUID, ClientProfile] = {}
+    if user_ids:
+        for u in db.query(User).filter(User.id.in_(user_ids)).all():
+            names[u.id] = u.name
+        profiles = {
+            profile.user_id: profile
+            for profile in db.query(ClientProfile).filter(ClientProfile.user_id.in_(user_ids)).all()
+        }
+
+    log_state = _participant_log_state(s.status)
+    # 참가자별 EEG feature 집계(최신 윈도우 + 평균 두뇌휴식도)
+    stats = _aggregate_window_stats(s.id, [p.id for p in active], db)
+
+    metrics = []
+    contact_fail = 0
+    device_fail = 0
+    band_low = 0
+    for p in active:
+        display_name = names.get(p.user_id) if p.user_id else p.guest_name
+        profile = profiles.get(p.user_id) if p.user_id else None
+        gender = p.gender or (profile.gender if profile else None)
+        birth_date = p.birth_date or (profile.birth_date if profile else None)
+        st = stats.get(p.id)
+        if st is None:
+            # feature 미수집 — placeholder 유지 (null 보존)
+            device_status = "unknown"
+            signal_quality = None
+            signal_state = "unknown"
+            avg_efficiency = None
+            current_efficiency = None
+            upload_status = "idle"
+            last_eeg_at = None
+            heart_rate = None
+            respiratory_rate = None
+            rmssd = None
+        else:
+            device_status = st["device_status"]
+            signal_quality = st["signal_quality"]
+            signal_state = st["signal_state"]
+            avg_efficiency = st["avg_relaxation"]
+            current_efficiency = st["current_relaxation"]
+            # SDD-026: staleness(disconnected)면 업로드가 지연/중단된 상태로 표기한다.
+            upload_status = "delayed" if device_status == "disconnected" else "streaming"
+            last_eeg_at = st["last_eeg_at"]
+            heart_rate = st["heart_rate"]
+            respiratory_rate = st["respiratory_rate"]
+            rmssd = st["rmssd"]
+            # SDD-026: 접촉 실패(lead_off)와 기기 단절(disconnected)을 분리 집계한다.
+            if device_status == "lead_off":
+                contact_fail += 1
+            elif device_status == "disconnected":
+                device_fail += 1
+
+        # SDD-026: 배터리 전달 + 저전력 집계 (null 보존 — 미상 시 None, 0 치환 금지)
+        if p.band_battery is not None and p.band_battery < _BATTERY_LOW_THRESHOLD:
+            band_low += 1
+
+        metrics.append(
+            {
+                "participant_id": str(p.id),
+                "user_id": str(p.user_id) if p.user_id else None,
+                "is_guest": p.user_id is None,
+                "display_name": display_name or "익명",
+                "gender": gender,
+                # REST와 호스트 소켓 스냅샷 모두 JSON으로 전달한다.
+                "birth_date": birth_date.isoformat() if birth_date else None,
+                "concerns": list(profile.concerns or []) if profile else [],
+                "seat_number": None,  # Phase 2: 좌석 배정
+                "consent_eeg": p.consent_eeg,
+                "session_log_state": log_state,
+                "band_connected": p.band_connected,
+                "device_status": device_status,
+                "band_battery": p.band_battery,
+                "signal_quality": signal_quality,
+                "signal_state": signal_state,
+                "avg_efficiency": avg_efficiency,
+                "current_efficiency": current_efficiency,
+                "upload_status": upload_status,
+                "last_eeg_at": last_eeg_at,
+                # SDD-xxx: 몸 지표(BPM·호흡수·HRV) 최신값 — 호스트 4초 폴링이 WS 패치를 덮지 않도록 포함.
+                "heart_rate": heart_rate,
+                "respiratory_rate": respiratory_rate,
+                "rmssd": rmssd,
+                # SDD-094: 발언권 상태 — 상담사 모니터 초기 로드/새로고침 시 손들기·발언 표시용
+                "raise_hand": p.raise_hand,
+                "speaking": p.speaking,
+            }
+        )
+
+    return {
+        "session_id": str(s.id),
+        "status": s.status,
+        # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트와 동일 계약
+        "version": s.state_version or 0,
+        "started_at": s.started_at,
+        "access_code": s.access_code,
+        # WS-SNAPSHOT-METRICS-KEY: join 스냅샷 소비자 계약이 'metrics'(백엔드 내부 핸들러)와
+        #   'participants'(프론트 SessionLiveJoinSnapshot)로 갈려 있어 둘 다 노출한다.
+        #   REST(/live-metrics)는 response_model 이 'metrics' 만 남기므로 무영향.
+        "metrics": metrics,
+        "participants": metrics,
+        # DashboardBox 4종 집계 — 접촉/단절/저전력을 분리 파생
+        "summary": {
+            "participant_count": len(metrics),
+            "contact_fail_count": contact_fail,
+            "device_fail_count": device_fail,
+            "band_low_count": band_low,
+        },
+    }
+
+
+def get_guest_session_state(
+    code: str,
+    db: DBSession,
+    *,
+    participant_id: str | None = None,
+) -> dict:
+    """게스트가 인증 없이 자기/세션 상태를 확인한다 (대기→명상 전이 감지용).
+
+    민감한 참가자 목록은 노출하지 않고, 세션 상태와 본인 상태만 내려준다.
+    """
+    s = _get_session_by_code(code, db)
+
+    participant_state = None
+    band_connected = False
+    band_battery = None
+    latest = None
+    if participant_id:
+        try:
+            pid = UUID(str(participant_id))
+        except (TypeError, ValueError):
+            pid = None
+        if pid is not None:
+            p = (
+                db.query(SessionParticipant)
+                .filter(
+                    SessionParticipant.id == pid,
+                    SessionParticipant.session_id == s.id,
+                )
+                .first()
+            )
+            if p is not None:
+                participant_state = _participant_log_state(s.status)
+                band_connected = p.band_connected
+                band_battery = p.band_battery
+                # SDD-023/026: 게스트 명상 실데이터 — 본인 최신 EEG feature 윈도우 (없으면 null).
+                # SDD-028: pause/resume 로 window_index 가 재시작하므로 created_at 기준 최신을 취하되,
+                # 전체 로딩 없이 LIMIT 1 헬퍼로 최신 1건만 조회한다.
+                latest = eeg_query.latest_feature_window(db, s.id, pid)
+
+    # SDD-026: 접촉/연결(device_status)과 신호품질(signal_state)을 분리해 게스트에도 동일 계약으로 내린다.
+    sq = latest.signal_quality if latest else None
+    device_status = (
+        _device_status_live(sq, latest.created_at, _now()) if latest else "unknown"
+    )
+    return {
+        "session_id": str(s.id),
+        "status": s.status,
+        # SDD-129(③-2): FE가 guest_state 파생 계약을 가정하므로 서버가 파생값을 내려 죽은 분기를 살린다.
+        "guest_state": (
+            "meditation" if s.status == "in_progress"
+            else "complete" if s.status == "completed"
+            else "cancelled" if s.status == "cancelled"
+            else "waiting"
+        ),
+        "version": s.state_version or 0,
+        "in_progress": s.status == "in_progress",
+        "ended": s.status in _CLOSED_STATUSES,
+        "participant_state": participant_state,
+        "band_connected": band_connected,
+        "device_status": device_status,
+        "signal_state": _signal_state_from_signal(sq),
+        "band_battery": band_battery,
+        "relaxation_index": latest.relaxation_index if latest else None,
+        "focus_index": latest.focus_index if latest else None,
+        "stress_index": latest.stress_index if latest else None,
+        "signal_quality": sq,
+        "last_eeg_at": latest.created_at if latest else None,
+        # 클래스 실시간 채팅 활성 여부(회원 대기/명상 화면의 채팅 패널 게이트)
+        "chat_enabled": bool(s.chat_enabled),
+    }
+
+
+# ---------------------------------------------------------------------------
+# SDD-026: /session-live WS join 권한 판정 + snapshot
+# ---------------------------------------------------------------------------
+
+
+def _participant_live_snapshot(s: Session, participant: SessionParticipant, db: DBSession) -> dict:
+    """게스트/회원 참가자 본인 전용 라이브 snapshot(민감한 타 참가자 정보 미포함)."""
+    stats = _aggregate_window_stats(s.id, [participant.id], db)
+    st = stats.get(participant.id)
+    if st is None:
+        device_status = "unknown"
+        signal_quality = None
+        signal_state = "unknown"
+        current_efficiency = None
+        avg_efficiency = None
+        last_eeg_at = None
+    else:
+        device_status = st["device_status"]
+        signal_quality = st["signal_quality"]
+        signal_state = st["signal_state"]
+        current_efficiency = st["current_relaxation"]
+        avg_efficiency = st["avg_relaxation"]
+        last_eeg_at = st["last_eeg_at"]
+    return {
+        "session_id": str(s.id),
+        "role": "participant",
+        "status": s.status,
+        "version": s.state_version or 0,
+        "started_at": s.started_at,
+        "participant_id": str(participant.id),
+        "band_connected": participant.band_connected,
+        "band_battery": participant.band_battery,
+        "device_status": device_status,
+        "signal_quality": signal_quality,
+        "signal_state": signal_state,
+        "current_efficiency": current_efficiency,
+        "avg_efficiency": avg_efficiency,
+        "last_eeg_at": last_eeg_at,
+    }
+
+
+def resolve_live_join(
+    session_id: str,
+    user_id: str | None,
+    participant_id: str | None,
+    db: DBSession,
+) -> dict | None:
+    """/session-live join 권한을 판정하고 역할별 snapshot 을 만든다.
+
+    - 호스트(세션 소유자): role="host" + 전체 모니터링 snapshot(허용 참가자 목록·집계).
+    - 회원/게스트 참가자: role="participant" + 본인 전용 snapshot.
+    - 비인가(세션 없음/비참가자/신원 불일치): None → 호출측이 room 미입장 + 거부 처리.
+
+    게스트는 participant_id 로만 식별하되 반드시 게스트 행(user_id IS NULL)이어야 회원 사칭을 막는다.
+    """
+    try:
+        sid = _to_uuid(session_id)
+    except HTTPException:
+        return None
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        return None
+
+    uid = None
+    if user_id:
+        try:
+            uid = _to_uuid(user_id)
+        except HTTPException:
+            uid = None
+
+    # 호스트 — 전체 수신
+    if uid is not None and s.host_id == uid:
+        snapshot = get_live_metrics(str(sid), str(uid), db)
+        snapshot["role"] = "host"
+        return {"role": "host", "participant_id": None, "snapshot": snapshot}
+
+    # 참가자(회원/게스트)
+    participant = None
+    if uid is not None:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+    elif participant_id:
+        try:
+            pid = _to_uuid(participant_id)
+        except HTTPException:
+            pid = None
+        if pid is not None:
+            participant = (
+                db.query(SessionParticipant)
+                .filter(
+                    SessionParticipant.id == pid,
+                    SessionParticipant.session_id == sid,
+                    SessionParticipant.user_id.is_(None),  # 게스트만
+                )
+                .first()
+            )
+
+    if participant is None:
+        return None
+
+    return {
+        "role": "participant",
+        "participant_id": str(participant.id),
+        "snapshot": _participant_live_snapshot(s, participant, db),
+    }
+
+
+# ---------------------------------------------------------------------------
+# SDD-023: LINK BAND 실연동 — EEG feature ingestion
+# ---------------------------------------------------------------------------
+
+# 신호 품질 원시값(0~1) → 윈도우 품질 문자열. 리포트 게이트(§A4.4)가 소비한다.
+_SIGNAL_QUALITY_VALID = 0.7
+_SIGNAL_QUALITY_DEGRADED = 0.4
+
+
+def _quality_from_signal(signal_quality: float | None) -> str:
+    """signal_quality(0~1) 에서 품질 문자열을 파생한다.
+
+    값이 없으면(null) 판정 불가이므로 'unknown' 으로 둔다 — 'valid' 로 승격하지 않는다.
+    report 게이트(report_task)가 quality == 'valid' 개수로 reliability/coverage 를
+    계산하므로, null 을 valid 로 세면 품질이 과대평가된다(0 치환 금지).
+    """
+    if signal_quality is None:
+        return "unknown"
+    if signal_quality >= _SIGNAL_QUALITY_VALID:
+        return "valid"
+    if signal_quality >= _SIGNAL_QUALITY_DEGRADED:
+        return "degraded"
+    return "invalid"
+
+
+# ---------------------------------------------------------------------------
+# SDD-026: 기기·품질 정합 — 접촉/연결(device_status)과 신호품질(SQI)을 분리한다.
+# ---------------------------------------------------------------------------
+
+# 마지막 EEG 수신 이후 이 시간(초) 초과면 BLE 단절/전송 중단으로 본다.
+_STALE_AFTER_SECONDS = 10
+# 배터리(%) 이 값 미만이면 저전력으로 집계한다.
+_BATTERY_LOW_THRESHOLD = 20
+
+
+def _signal_state_from_signal(signal_quality: float | None) -> str:
+    """원시 SQI(0~1) → 신호품질 상태(valid/degraded/invalid/unknown).
+
+    null 은 판정 불가이므로 'unknown' 으로 둔다 — valid 로 승격하지 않는다(SDD-026).
+    report 게이트가 쓰는 윈도우 quality 컬럼(_quality_from_signal)과 별개의 라이브 표시 축이다.
+    """
+    if signal_quality is None:
+        return "unknown"
+    if signal_quality >= _SIGNAL_QUALITY_VALID:
+        return "valid"
+    if signal_quality >= _SIGNAL_QUALITY_DEGRADED:
+        return "degraded"
+    return "invalid"
+
+
+def _is_stale(last_eeg_at, now: datetime) -> bool:
+    """마지막 EEG 수신 이후 staleness 판정. 시각이 없거나 비교 불가하면 stale 아님으로 본다."""
+    if last_eeg_at is None:
+        return False
+    try:
+        return (now - _ensure_aware(last_eeg_at)).total_seconds() > _STALE_AFTER_SECONDS
+    except (TypeError, ValueError):
+        return False
+
+
+def _device_status_live(signal_quality: float | None, last_eeg_at, now: datetime) -> str:
+    """접촉/연결 상태(device_status)를 원시 SQI + staleness 로 판정한다.
+
+    - staleness 초과 → disconnected (BLE 단절/전송 중단)
+    - SQI null → unknown (신호품질 판정 불가 — valid 로 승격하지 않음)
+    - SQI valid → ok (접촉 양호)
+    - 그 외(degraded/invalid) → lead_off (접촉 불량)
+    윈도우 자체가 없으면(미착용/미수집) 호출측이 unknown 을 유지한다.
+    """
+    if _is_stale(last_eeg_at, now):
+        return "disconnected"
+    if signal_quality is None:
+        return "unknown"
+    if signal_quality >= _SIGNAL_QUALITY_VALID:
+        return "ok"
+    return "lead_off"
+
+
+def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) -> dict:
+    """참가자별 EEG feature 윈도우 집계.
+
+    반환: {participant_id(UUID): {current_relaxation, avg_relaxation, device_status, last_eeg_at}}
+    윈도우가 없는 참가자는 키를 포함하지 않는다(호출측에서 placeholder 처리).
+
+    SDD-138: 매 4초 폴링마다 세션 전체 윈도우를 Python 으로 로드하던 것을 DB 집계로 이관한다.
+    - 평균 두뇌휴식도는 SQL AVG(참가자별 GROUP BY)로 구하고,
+    - MB2-ORM-N1-02: 최신 윈도우는 참가자마다 LIMIT 1 을 개별 호출(N회 쿼리)하지 않고
+      창 함수(ROW_NUMBER PARTITION BY participant_id) 단일 쿼리로 참가자 전체의 최신 1건을
+      한 번에 뽑아 참가자 수와 무관하게 쿼리 수를 상수로 고정한다.
+    """
+    if not participant_ids:
+        return {}
+
+    from sqlalchemy import func
+
+    from app.models.eeg_feature import EEGFeatureWindow
+
+    # (1) 참가자별 평균 두뇌휴식도 — null 제외 평균은 SQL AVG 와 동일 의미
+    avg_rows = {
+        pid: avg
+        for pid, avg in db.query(
+            EEGFeatureWindow.participant_id, func.avg(EEGFeatureWindow.relaxation_index)
+        )
+        .filter(
+            EEGFeatureWindow.session_id == session_id,
+            EEGFeatureWindow.participant_id.in_(participant_ids),
+            EEGFeatureWindow.relaxation_index.isnot(None),
+        )
+        .group_by(EEGFeatureWindow.participant_id)
+        .all()
+    }
+
+    # (2) 참가자 전체의 최신 윈도우 1건씩을 단일 쿼리로 일괄 조회.
+    #     정렬은 latest_feature_window 와 동일(created_at DESC, window_index DESC).
+    latest_by_participant = eeg_query.feature_windows_chronological_for_participants(
+        db, session_id, participant_ids, limit=1, newest_first=True,
+    )
+
+    now = _now()
+    result: dict = {}
+    for pid in participant_ids:
+        windows = latest_by_participant.get(pid)
+        if not windows:
+            continue
+        latest = windows[0]
+        raw_avg = avg_rows.get(pid)
+        avg_relaxation = round(float(raw_avg), 4) if raw_avg is not None else None
+        result[pid] = {
+            "current_relaxation": latest.relaxation_index,
+            "avg_relaxation": avg_relaxation,
+            # SDD-026: 접촉/연결(device_status)과 신호품질(SQI)을 분리해 반환한다.
+            "signal_quality": latest.signal_quality,
+            "signal_state": _signal_state_from_signal(latest.signal_quality),
+            "device_status": _device_status_live(latest.signal_quality, latest.created_at, now),
+            "last_eeg_at": latest.created_at,
+            # SDD-xxx: 몸 지표(BPM·호흡수·HRV) 최신값 — 호스트 4초 폴링이 WS 패치를 덮지 않도록 포함.
+            "heart_rate": latest.heart_rate,
+            "respiratory_rate": latest.respiratory_rate,
+            "rmssd": latest.rmssd,
+        }
+    return result
+
+
+def _assert_upload_eligible(participant: SessionParticipant) -> None:
+    """SDD-026: 업로드 자격(대기열·동의) 게이트.
+
+    - 대기열(is_waitlisted) 참가자는 아직 세션에 실입장하지 않았으므로 스트리밍 불가.
+    - EEG 수집 미동의(consent_eeg=False) 참가자는 업로드 불가(데이터 프라이버시 규칙).
+      동의는 클래스 참여(join_session_by_code) 시 opt-in 으로 기록된다.
+    """
+    if participant.is_waitlisted:
+        raise HTTPException(status_code=403, detail="대기열 참가자는 EEG 데이터를 업로드할 수 없습니다")
+    if not participant.consent_eeg:
+        raise HTTPException(status_code=403, detail="EEG 수집 동의 후 업로드할 수 있습니다")
+
+
+def resolve_upload_participant(
+    sid: UUID,
+    participant_id: str | None,
+    current_user_id: str | None,
+    db: DBSession,
+) -> SessionParticipant:
+    """업로드 소유 참가자를 확인한다 (REST 배치 + WS 실시간 공유 로직).
+
+    SDD-026 소유 검증 강화 — 명시 participant_id 가 소유 검증을 우회하지 못하게 한다.
+    - 인증 사용자: 항상 본인 참가자 행으로만 업로드. participant_id 를 명시하면 반드시
+      본인 소유(user_id 일치)여야 한다 → 타인 participant_id 대리 업로드 차단(403).
+    - 미인증(게스트): participant_id 로만 식별하되, 반드시 게스트 참가자(user_id IS NULL)여야
+      한다 → 로그인 회원 참가자를 사칭하는 대리 업로드 차단(403).
+    비참가자·미식별은 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
+    """
+    participant = None
+    if current_user_id:
+        uid = _to_uuid(current_user_id)
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == uid,
+            )
+            .first()
+        )
+        # 명시 participant_id 는 반드시 본인 참가자와 일치해야 한다(대리 업로드 방지)
+        if participant_id and (
+            participant is None or participant.id != _to_uuid(participant_id)
+        ):
+            raise HTTPException(
+                status_code=403, detail="본인 참가자로만 EEG 데이터를 업로드할 수 있습니다"
+            )
+    elif participant_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.id == _to_uuid(participant_id),
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id.is_(None),  # 게스트만 (회원 사칭 차단)
+            )
+            .first()
+        )
+
+    if participant is None:
+        raise HTTPException(status_code=403, detail="세션 참가자만 EEG 데이터를 업로드할 수 있습니다")
+
+    _assert_upload_eligible(participant)
+    return participant
+
+
+def persist_feature_windows(
+    sid: UUID,
+    participant: SessionParticipant,
+    features,
+    db: DBSession,
+) -> int:
+    """검증된 참가자의 EEG feature 윈도우를 멱등 저장한다(window_index 중복 skip).
+
+    REST 5초 배치와 WS 1초 실시간이 동일 window_index 를 이중 저장할 수 있으므로,
+    (a) 사전 조회로 기존 초 인덱스를 skip 하고
+    (b) 유니크 제약 경합(동시 커밋)은 SAVEPOINT + IntegrityError 로 흡수한다.
+    실제 저장한 윈도우 수를 반환한다.
+    """
+    return len(_persist_feature_items(sid, participant, features, db))
+
+
+def _persist_feature_items(
+    sid: UUID,
+    participant: SessionParticipant,
+    features: list[EEGFeatureItem],
+    db: DBSession,
+) -> list[EEGFeatureItem]:
+    """저장에 성공한 항목만 반환해 중복 입력의 미저장 값이 라이브로 발행되지 않게 한다."""
+    # SDD-026: 멱등 키를 (play_group_id, window_index) 로 확장한다.
+    # pause/resume 으로 second_offset 이 0 부터 재시작해도 실행 세그먼트(play_group_id)가 다르면
+    # 별개 키가 되어 skip 되지 않는다(데이터 보존). 레거시(play_group_id=None)는 기존과 동일 동작.
+    # SDD-111: 참가자 누적 전체 키 로드(O(T²)) 대신 현재 배치 window_index만 조회한다.
+    # dedup 키 (play_group_id, second_offset) 검사는 현재 배치 second_offset에만 필요하므로
+    # (session_id, participant_id, window_index) 복합 인덱스를 타는 범위 조회로 O(배치)로 줄인다.
+    batch_offsets = {f.second_offset for f in features}
+    existing_keys = {
+        (pg, idx)
+        for (pg, idx) in db.query(
+            EEGFeatureWindow.play_group_id, EEGFeatureWindow.window_index
+        )
+        .filter(
+            EEGFeatureWindow.session_id == sid,
+            EEGFeatureWindow.participant_id == participant.id,
+            EEGFeatureWindow.window_index.in_(batch_offsets),
+        )
+        .all()
+    }
+
+    saved: list[EEGFeatureItem] = []
+    seen_in_batch: set = set()
+    latest_battery = None
+    for f in features:
+        play_group_id = getattr(f, "play_group_id", None)
+        # 배치 안에서 마지막으로 보고된 배터리값을 채택(null 보존 — 없으면 기존값 유지)
+        if getattr(f, "band_battery", None) is not None:
+            latest_battery = f.band_battery
+        key = (play_group_id, f.second_offset)
+        if key in existing_keys or key in seen_in_batch:
+            continue
+        seen_in_batch.add(key)
+        row = EEGFeatureWindow(
+            session_id=sid,
+            user_id=participant.user_id,
+            participant_id=participant.id,
+            play_group_id=play_group_id,
+            window_index=f.second_offset,
+            quality=_quality_from_signal(f.signal_quality),
+            device_timestamp_ms=f.timestamp,
+            delta_power=f.delta_power,
+            theta_power=f.theta_power,
+            alpha_power=f.alpha_power,
+            beta_power=f.beta_power,
+            gamma_power=f.gamma_power,
+            total_power=f.total_power,
+            focus_index=f.focus_index,
+            relaxation_index=f.relaxation_index,
+            stress_index=f.stress_index,
+            meditation_level=f.meditation_level,
+            attention_level=f.attention_level,
+            cognitive_load=f.cognitive_load,
+            emotional_stability=f.emotional_stability,
+            hemispheric_balance=f.hemispheric_balance,
+            signal_quality=f.signal_quality,
+            sdnn=f.sdnn,
+            rmssd=f.rmssd,
+            lf_power=f.lf_power,
+            hf_power=f.hf_power,
+            lf_hf_ratio=f.lf_hf_ratio,
+            heart_rate=f.heart_rate,
+            respiratory_rate=f.respiratory_rate,
+            motion=f.motion,
+        )
+        try:
+            # SAVEPOINT 단위 flush — 동시 저장 경합(유니크 위반)은 롤백 후 skip
+            with db.begin_nested():
+                db.add(row)
+                db.flush()
+            saved.append(f)
+        except IntegrityError:
+            # WS 1초 + REST 5초 폴백이 같은 window_index 를 거의 동시에 저장한 경우 — 멱등 skip
+            continue
+
+    # 업로드가 발생하면 밴드 연결 상태로 마킹(호스트 모니터링/게스트 화면 정합)
+    became_connected = False
+    if saved and not participant.band_connected:
+        participant.band_connected = True
+        became_connected = True
+    # SDD-026: 배터리 최신값 반영(null 보존 — 보고되지 않으면 기존값 유지)
+    if latest_battery is not None:
+        participant.band_battery = latest_battery
+
+    db.commit()
+
+    # SDD-026: 밴드 연결 전이/배터리 변화는 device_status_changed 이벤트로 발행(commit 후, best-effort)
+    if became_connected or latest_battery is not None:
+        # WS-CONTRACT-DEVICE-VERSION: 프론트 DeviceStatusChangedEvent 는 version(number, 필수)을
+        #   요구한다. 세션 상태 버전을 함께 실어 보낸다(누락 시 프론트 파서가 이벤트를 버린다).
+        state_version = (
+            db.query(Session.state_version).filter(Session.id == sid).scalar() or 0
+        )
+        _notify_device_status(sid, participant, version=state_version)
+
+    return saved
+
+
+def _notify_device_status(
+    sid: UUID, participant: SessionParticipant, *, version: int | None = None
+) -> None:
+    """device_status_changed 이벤트를 best-effort 로 발행한다(WS 루프 없으면 no-op)."""
+    try:
+        from app.ws import session_live_namespace as live
+
+        live.notify_device_status_changed(
+            str(sid),
+            {
+                "participant_id": str(participant.id),
+                "band_connected": participant.band_connected,
+                "band_battery": participant.band_battery,
+                # WS-CONTRACT-DEVICE-VERSION: 상태 계약 버전 — 프론트 필수 필드.
+                "version": version if version is not None else 0,
+            },
+        )
+    except Exception as exc:
+        # MB-ERR-003: 이벤트 발행 실패가 저장 성공을 되돌려서는 안 되지만, 무음 삼키지 않는다.
+        logger.warning("[session] device_status_changed 발행 실패 session=%s: %s", sid, exc)
+
+
+def _has_newer_feature(
+    sid: UUID,
+    participant_id,
+    latest: EEGFeatureItem,
+    db: DBSession,
+) -> bool:
+    """주어진 feature(방금 저장했거나 재전송된 값)보다 더 새로운 EEGFeatureWindow 가 이미 있는가.
+
+    REST 5초 배치와 WS 1초 실시간이 공유하는 '과거값 되돌림 방지' 가드.
+    더 새로운 창이 이미 저장돼 있으면 실시간 발행을 생략해, 뒤늦게 도착한 과거 feature 가
+    상담사 화면을 과거 값으로 되돌리지 않게 한다.
+    """
+    newer = db.query(EEGFeatureWindow.id).filter(
+        EEGFeatureWindow.session_id == sid,
+        EEGFeatureWindow.participant_id == participant_id,
+    )
+    if latest.timestamp is not None:
+        newer = newer.filter(EEGFeatureWindow.device_timestamp_ms > latest.timestamp)
+    else:
+        # 레거시 입력은 실행 세그먼트 내 순서만 비교할 수 있다.
+        newer = newer.filter(
+            EEGFeatureWindow.play_group_id == latest.play_group_id,
+            EEGFeatureWindow.window_index > latest.second_offset,
+        )
+    return newer.first() is not None
+
+
+def ingest_features(
+    session_id: str,
+    payload,
+    db: DBSession,
+    *,
+    current_user_id: str | None = None,
+) -> dict:
+    """5초 배치 EEG feature 업로드 → EEGFeatureWindow 일괄 저장.
+
+    참가자 검증: participant_id(게스트/명시) 또는 인증 사용자(user_id)가 세션 참가자여야 한다.
+    비참가자는 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
+    중복 초 인덱스(재업로드)는 건너뛰고, 실제 저장한 윈도우 수만 반환한다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+
+    participant = resolve_upload_participant(sid, payload.participant_id, current_user_id, db)
+    saved_features = _persist_feature_items(sid, participant, payload.features, db)
+    saved = len(saved_features)
+    # WS가 끊겨 REST 폴백만 성공해도 상담사의 참가자 카드와 그룹 집계를 갱신한다.
+    # WS로 이미 저장된 재전송은 발행하지 않아 과거 배치로 실시간 표시가 되돌아가지 않게 한다.
+    if saved:
+        from app.ws import session_live_namespace as live
+
+        latest = max(
+            saved_features,
+            key=lambda feature: (feature.timestamp is not None, feature.timestamp or 0, feature.second_offset),
+        )
+        # 더 새로운 창이 이미 있으면(WS가 앞서 저장) 발행을 생략 — 과거 배치로 실시간 표시가
+        # 되돌아가지 않게 한다(WS on_feature 와 동일한 newer 가드).
+        if not _has_newer_feature(sid, participant.id, latest, db):
+            live.notify_session_eeg(
+                str(sid),
+                {
+                    "participant_id": str(participant.id),
+                    "feature": latest.model_dump(),
+                    "saved": saved,
+                },
+            )
+    return {"session_id": str(sid), "saved": saved}

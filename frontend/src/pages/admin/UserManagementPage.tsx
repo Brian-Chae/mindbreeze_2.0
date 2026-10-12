@@ -1,8 +1,8 @@
 // 어드민 사용자 관리 페이지
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import AppShell from '../../components/layout/AppShell';
-import { listUsers, suspendUser, unsuspendUser, type UserDto } from '../../lib/api/admin';
+import { listUsers, suspendUser, unsuspendUser, deleteUser, type UserDto } from '../../lib/api/admin';
 
 const ROLE_LABELS: Record<string, string> = {
   platform_admin: '플랫폼 관리자',
@@ -24,7 +24,7 @@ function RoleBadge({ role }: { role: string }) {
     client: 'bg-[#E6F8F3] text-[#1F8A5B]',
   };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold ${colors[role] ?? 'bg-gray-100 text-gray-600'}`}>
       {ROLE_LABELS[role] ?? role}
     </span>
   );
@@ -32,11 +32,11 @@ function RoleBadge({ role }: { role: string }) {
 
 function StatusBadge({ suspended }: { suspended: boolean }) {
   return suspended ? (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#FEE2E2] text-[#991B1B]">
       정지됨
     </span>
   ) : (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#D1FAE5] text-[#065F46]">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#D1FAE5] text-[#065F46]">
       활성
     </span>
   );
@@ -47,29 +47,40 @@ export default function UserManagementPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState('');
   const [q, setQ] = useState('');
+  const [debouncedQ, setDebouncedQ] = useState('');
   const [page, setPage] = useState(1);
-  const [modal, setModal] = useState<{ user: UserDto; action: 'suspend' | 'unsuspend' } | null>(null);
+  const [modal, setModal] = useState<{ user: UserDto; action: 'suspend' | 'unsuspend' | 'delete' } | null>(null);
   const [reason, setReason] = useState('');
   const [acting, setActing] = useState(false);
 
+  // PERF-01: 타이핑마다 요청이 나가지 않도록 300ms 디바운스한다.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [q]);
+
+  // 경쟁 상태 가드 — 가장 최근 요청의 응답만 화면에 반영한다.
+  const requestSeq = useRef(0);
+
   const fetchUsers = useCallback(async () => {
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const params: Record<string, string | number> = { page, size: 20 };
-      if (role) params.role = role;
-      if (q) params.q = q;
+      const params: Record<string, string | number> = { page, size: 20, role: 'counselor' };
+      if (debouncedQ) params.q = debouncedQ;
       const res = await listUsers(params as { role?: string; q?: string; page?: number; size?: number });
-      setUsers(res.users);
+      if (seq !== requestSeq.current) return;
+      setUsers(res.items);
       setTotal(res.total);
     } catch (e) {
+      if (seq !== requestSeq.current) return;
       setError(e instanceof Error ? e.message : '사용자 조회 실패');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [page, role, q]);
+  }, [page, debouncedQ]);
 
   useEffect(() => {
     fetchUsers();
@@ -82,6 +93,8 @@ export default function UserManagementPage() {
     try {
       if (modal.action === 'suspend') {
         await suspendUser(modal.user.id, reason);
+      } else if (modal.action === 'delete') {
+        await deleteUser(modal.user.id);
       } else {
         await unsuspendUser(modal.user.id);
       }
@@ -97,35 +110,45 @@ export default function UserManagementPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
-  return (
-    <AppShell title="사용자 관리" sub="USER MANAGEMENT">
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
+  // A11Y-01: 모달이 열리면 패널로 포커스를 옮기고 Escape로 닫는다.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!modal) return;
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setModal(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [modal]);
 
+  return (
+    <AppShell title="상담사 관리" sub="COUNSELOR MANAGEMENT">
       {/* 필터 */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
         <input
           type="text"
+          aria-label="상담사 검색"
           placeholder="이름 또는 이메일 검색..."
           value={q}
           onChange={(e) => { setQ(e.target.value); setPage(1); }}
           className="rounded-xl border border-[#EFEFEF] px-4 py-2 text-[13px] w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
         />
-        <select
-          value={role}
-          onChange={(e) => { setRole(e.target.value); setPage(1); }}
-          className="rounded-xl border border-[#EFEFEF] px-3 py-2 text-[13px]"
-        >
-          <option value="">전체 역할</option>
-          {Object.entries(ROLE_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
         <span className="text-[13px] text-[#6F6F6F]">총 {total}명</span>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[15px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => void fetchUsers()}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : users.length === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
@@ -145,29 +168,37 @@ export default function UserManagementPage() {
                 <div className="text-[12px] text-[#9B9B9B] font-mono mt-1">{formatDate(u.created_at)}</div>
                 <div className="flex items-center justify-between mt-3">
                   <RoleBadge role={u.role} />
-                  {u.suspended ? (
+                  <div className="flex items-center gap-3">
+                    {u.suspended ? (
+                      <button
+                        onClick={() => setModal({ user: u, action: 'unsuspend' })}
+                        className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
+                      >
+                        해제
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setModal({ user: u, action: 'suspend' })}
+                        className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                      >
+                        정지
+                      </button>
+                    )}
                     <button
-                      onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                      className="text-[13px] font-medium text-[#10B981] hover:underline"
-                    >
-                      해제
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => setModal({ user: u, action: 'suspend' })}
+                      onClick={() => setModal({ user: u, action: 'delete' })}
                       className="text-[13px] font-medium text-[#EF4444] hover:underline"
                     >
-                      정지
+                      삭제
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
           {/* 데스크톱 테이블 */}
-          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden">
-            <table className="w-full text-[14px]">
+          <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[15px]">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
                   <th className="text-left px-6 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">이름</th>
@@ -182,26 +213,34 @@ export default function UserManagementPage() {
                 {users.map((u) => (
                   <tr key={u.id} className="border-b border-[#EFEFEF] last:border-0 hover:bg-[#F8FAFC] transition-colors">
                     <td className="px-6 py-4 font-medium text-[#1F1F1F]">{u.name}</td>
-                    <td className="px-6 py-4 text-[#6F6F6F]">{u.email}</td>
+                    <td className="px-6 py-4 text-[#6F6F6F] break-all">{u.email}</td>
                     <td className="px-6 py-4"><RoleBadge role={u.role} /></td>
                     <td className="px-6 py-4"><StatusBadge suspended={u.suspended} /></td>
                     <td className="px-6 py-4 text-[#9B9B9B] font-mono text-[12px]">{formatDate(u.created_at)}</td>
                     <td className="px-6 py-4">
-                      {u.suspended ? (
+                      <div className="flex items-center gap-3">
+                        {u.suspended ? (
+                          <button
+                            onClick={() => setModal({ user: u, action: 'unsuspend' })}
+                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#10B981] hover:underline"
+                          >
+                            해제
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setModal({ user: u, action: 'suspend' })}
+                            className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
+                          >
+                            정지
+                          </button>
+                        )}
                         <button
-                          onClick={() => setModal({ user: u, action: 'unsuspend' })}
-                          className="text-[13px] font-medium text-[#10B981] hover:underline"
+                          onClick={() => setModal({ user: u, action: 'delete' })}
+                          className="inline-flex min-h-[44px] items-center text-[13px] font-medium text-[#EF4444] hover:underline"
                         >
-                          해제
+                          삭제
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => setModal({ user: u, action: 'suspend' })}
-                          className="text-[13px] font-medium text-[#EF4444] hover:underline"
-                        >
-                          정지
-                        </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -215,7 +254,7 @@ export default function UserManagementPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 이전
               </button>
@@ -223,7 +262,7 @@ export default function UserManagementPage() {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 다음
               </button>
@@ -234,18 +273,25 @@ export default function UserManagementPage() {
 
       {/* 모달 */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setModal(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setModal(null)}>
           <div
-            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-action-modal-title"
+            tabIndex={-1}
+            className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto focus:outline-none"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[17px] font-bold text-[#1F1F1F] mb-2">
-              {modal.action === 'suspend' ? '사용자 정지' : '정지 해제'}
+            <h3 id="user-action-modal-title" className="text-[18px] font-bold text-[#1F1F1F] mb-2">
+              {modal.action === 'suspend' ? '사용자 정지' : modal.action === 'delete' ? '사용자 삭제' : '정지 해제'}
             </h3>
-            <p className="text-[14px] text-[#6F6F6F] mb-4">
+            <p className="text-[15px] text-[#6F6F6F] mb-4">
               {modal.action === 'suspend'
                 ? `"${modal.user.name}" (${modal.user.email}) 님을 정지하시겠습니까?`
-                : `"${modal.user.name}" (${modal.user.email}) 님의 정지를 해제하시겠습니까?`}
+                : modal.action === 'delete'
+                  ? `"${modal.user.name}" (${modal.user.email}) 님을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+                  : `"${modal.user.name}" (${modal.user.email}) 님의 정지를 해제하시겠습니까?`}
             </p>
 
             {modal.action === 'suspend' && (
@@ -254,25 +300,25 @@ export default function UserManagementPage() {
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="정지 사유를 입력하세요 (필수)..."
                 rows={3}
-                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[14px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
+                className="w-full rounded-xl border border-[#EFEFEF] px-4 py-3 text-[15px] resize-none focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20 mb-4"
               />
             )}
 
             <div className="flex items-center gap-3 justify-end">
               <button
                 onClick={() => setModal(null)}
-                className="px-4 py-2 rounded-xl text-[14px] text-[#6F6F6F] border border-[#EFEFEF]"
+                className="px-4 py-2 rounded-xl text-[15px] text-[#6F6F6F] border border-[#EFEFEF]"
               >
                 취소
               </button>
               <button
                 onClick={handleAction}
                 disabled={acting || (modal.action === 'suspend' && !reason.trim())}
-                className={`px-4 py-2 rounded-xl text-[14px] font-medium text-white disabled:opacity-50 ${
-                  modal.action === 'suspend' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
+                className={`px-4 py-2 rounded-xl text-[15px] font-medium text-white disabled:opacity-50 ${
+                  modal.action === 'suspend' || modal.action === 'delete' ? 'bg-[#EF4444]' : 'bg-[#10B981]'
                 }`}
               >
-                {acting ? '처리 중...' : modal.action === 'suspend' ? '정지' : '해제'}
+                {acting ? '처리 중...' : modal.action === 'suspend' ? '정지' : modal.action === 'delete' ? '삭제' : '해제'}
               </button>
             </div>
           </div>

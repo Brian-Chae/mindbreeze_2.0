@@ -1,11 +1,11 @@
-// 내담자 온보딩 페이지 (4단계)
+// 내담자 온보딩 페이지 (4단계) — 로그인 페이지와 동일한 다크 테마
 
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { StepIndicator } from '../../components/onboarding/StepIndicator';
 import { useAuthStore } from '../../stores/authStore';
 import { useRequireAuth } from '../../hooks/useAuth';
-import { ApiError } from '../../lib/api/client';
+import { ApiError, apiClient } from '../../lib/api/client';
 import {
   getOnboardingProgress,
   saveClientStep1,
@@ -32,7 +32,27 @@ const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전�
 
 const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '상담사 매칭'];
 
+/**
+ * FORM-01: YYYY-MM-DD 문자열이 실제로 존재하는 달력 날짜인지 검증한다.
+ * 정규식만으로는 2025-02-31, 2025-13-01 처럼 존재하지 않는 날짜가 통과하므로 Date 로 역검증한다.
+ */
+function isValidBirthDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
 interface FormState {
+  name: string;
   phone: string;
   gender: string;
   birthDate: string;
@@ -44,6 +64,7 @@ interface FormState {
 }
 
 const initialForm: FormState = {
+  name: '',
   phone: '',
   gender: '',
   birthDate: '',
@@ -59,10 +80,19 @@ interface MatchInfo extends ClientMatchResponse {
   specialties?: string[];
 }
 
+const inputClass =
+  'w-full h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white disabled:opacity-50';
+
 export default function ClientOnboardingPage() {
   useRequireAuth();
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
+  const [searchParams] = useSearchParams();
+  const autoCode = searchParams.get('code') ?? '';
+  const inviteSource = searchParams.get('source') === 'invite';
+  const autoMatchTriggered = useRef(false);
+  const inviteFetchTriggered = useRef(false);
 
   const [step, setStep] = useState<number>(1);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -70,7 +100,18 @@ export default function ClientOnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matchedCounselor, setMatchedCounselor] = useState<MatchInfo | null>(null);
+  const [inviteConfirmLoading, setInviteConfirmLoading] = useState(false);
   const [done, setDone] = useState(false);
+  /** FUNC-07: 초대 연결 확인 실패 시 재시도 트리거 */
+  const [inviteRetryKey, setInviteRetryKey] = useState(0);
+
+  // 초대 경로 또는 이미 연결된 상담사가 있는 경우 Step 4 코드 입력 생략
+  const hasLinkedCounselor = (user?.counselors?.length ?? 0) > 0;
+  const isInviteFlow = inviteSource || hasLinkedCounselor;
+
+  const markCompleted = (n: number): void => {
+    setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -80,24 +121,126 @@ export default function ClientOnboardingPage() {
         if (cancelled) return;
         setStep(Math.min(Math.max(p.current_step, 1), 4));
         const d = p.step_data ?? {};
-          setForm((prev) => ({
-            ...prev,
-            phone: (d.phone as string) ?? prev.phone,
-            gender: (d.gender as string) ?? prev.gender,
-            birthDate: (d.birth_date as string) ?? prev.birthDate,
-            concerns: (d.concerns as string[]) ?? prev.concerns,
-            interests: (d.interests as string[]) ?? prev.interests,
-            profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
-            bio: (d.bio as string) ?? prev.bio,
-          }));
+        setForm((prev) => ({
+          ...prev,
+          name: (d.name as string) ?? user?.name ?? prev.name,
+          phone: (d.phone as string) ?? prev.phone,
+          gender: (d.gender as string) ?? prev.gender,
+          birthDate: (d.birth_date as string) ?? prev.birthDate,
+          concerns: (d.concerns as string[]) ?? prev.concerns,
+          interests: (d.interests as string[]) ?? prev.interests,
+          profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
+          bio: (d.bio as string) ?? prev.bio,
+        }));
       } catch {
         // 진행 상태 없음
+      }
+      // 초대 링크에서 전달된 상담사 코드 자동 입력 (일반 가입 ?code= fallback 포함)
+      if (!cancelled && autoCode.length === 6) {
+        setForm((prev) => ({ ...prev, counselorCode: autoCode }));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+    // autoCode(초대 코드)와 user?.name 을 실제로 읽으므로 deps 에 포함한다(마운트 시 진행 상태 1회 초기화).
+  }, [autoCode, user?.name]);
+
+  // 초대 경로 Step 4: 연결된 상담사 조회 후 확인 카드 표시 (코드 입력 없음)
+  useEffect(() => {
+    if (step !== 4 || !isInviteFlow || inviteFetchTriggered.current) return;
+
+    inviteFetchTriggered.current = true;
+    let cancelled = false;
+
+    (async () => {
+      setInviteConfirmLoading(true);
+      setError(null);
+      try {
+        // authStore에 상담사 정보가 있으면 우선 사용
+        if (hasLinkedCounselor && user?.counselors?.[0]) {
+          const linked = user.counselors[0];
+          if (!cancelled) {
+            setMatchedCounselor({
+              matched_counselor: {
+                id: linked.id,
+                name: linked.name,
+                counselor_code: autoCode || '',
+                specialties: [],
+                profile_image: linked.profile_image,
+              },
+              counselor_code: autoCode || undefined,
+            });
+            markCompleted(4);
+          }
+          return;
+        }
+
+        // 서버에서 연결된 상담사 목록 조회
+        const list = await apiClient.get<
+          Array<{ id: string; name: string; profile_image: string | null }>
+        >('/client/counselors');
+        if (cancelled) return;
+
+        if (list.length > 0) {
+          const linked = list[0];
+          setMatchedCounselor({
+            matched_counselor: {
+              id: linked.id,
+              name: linked.name,
+              counselor_code: autoCode || '',
+              specialties: [],
+              profile_image: linked.profile_image,
+            },
+            counselor_code: autoCode || undefined,
+          });
+          markCompleted(4);
+          return;
+        }
+
+        // edge case: link 미생성 시 code fallback으로 silent 매칭 시도
+        if (autoCode.length === 6) {
+          try {
+            const res = await matchClientWithCounselor(autoCode);
+            if (!cancelled) {
+              setMatchedCounselor({ ...res, counselor_code: autoCode });
+              markCompleted(4);
+            }
+          } catch {
+            if (!cancelled) {
+              setError('상담사 연결을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+            }
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setError('상담사 연결 정보를 불러오지 못했습니다.');
+        }
+      } finally {
+        if (!cancelled) setInviteConfirmLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, isInviteFlow, hasLinkedCounselor, user, autoCode, inviteRetryKey]);
+
+  // 일반 가입 ?code= 자동 매칭 (초대 source=invite 경로는 제외)
+  useEffect(() => {
+    if (
+      inviteSource ||
+      step !== 4 ||
+      form.counselorCode.length !== 6 ||
+      autoMatchTriggered.current ||
+      matchedCounselor
+    ) {
+      return;
+    }
+    autoMatchTriggered.current = true;
+    handleMatch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleMatch 는 렌더마다 새로 생성되는 함수라 deps 에 넣으면 effect 가 매 렌더 실행된다. autoMatchTriggered ref 로 1회 실행을 보장한다.
+  }, [step, form.counselorCode, inviteSource, matchedCounselor]);
 
   const toggleItem = (field: 'concerns' | 'interests', item: string): void => {
     setForm((f) => ({
@@ -108,8 +251,23 @@ export default function ClientOnboardingPage() {
     }));
   };
 
-  const markCompleted = (n: number): void => {
-    setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
+  const handlePhoneChange = (value: string): void => {
+    // 숫자만 추출
+    const digits = value.replace(/\D/g, '');
+    // 자동 형식: 010-XXXX-XXXX
+    let formatted: string;
+    if (digits.length <= 3) {
+      formatted = digits;
+    } else if (digits.length <= 7) {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    } else {
+      formatted = `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7, 11)}`;
+    }
+    setForm({ ...form, phone: formatted });
+  };
+
+  const isValidPhone = (phone: string): boolean => {
+    return /^010-\d{4}-\d{4}$/.test(phone);
   };
 
   const handleNext = async (): Promise<void> => {
@@ -117,12 +275,21 @@ export default function ClientOnboardingPage() {
     setLoading(true);
     try {
       if (step === 1) {
-        await saveClientStep1({ phone: form.phone });
+        if (!form.phone || !isValidPhone(form.phone)) {
+          setError('연락처를 010-0000-0000 형식으로 입력해주세요');
+          setLoading(false);
+          return;
+        }
+        await saveClientStep1({ phone: form.phone, name: form.name });
         markCompleted(1);
         setStep(2);
       } else if (step === 2) {
         if (!form.gender || !form.birthDate) {
-          setError('성별과 생년월일을 입력해주세요');
+          setError('성별과 생년월일을 모두 선택해주세요');
+          return;
+        }
+        if (!isValidBirthDate(form.birthDate)) {
+          setError('생년월일을 올바른 날짜로 선택해주세요');
           return;
         }
         await saveClientStep2({
@@ -182,6 +349,25 @@ export default function ClientOnboardingPage() {
     try {
       await completeClientOnboarding();
       markCompleted(4);
+
+      // 매칭/연결된 상담사 정보로 authStore 업데이트 → /app 에서 연결됨으로 인식
+      if (matchedCounselor?.matched_counselor && user) {
+        const mc = matchedCounselor.matched_counselor;
+        const existing = user.counselors ?? [];
+        // UX-06: 이미 연결된 상담사면 중복 추가하지 않고 정보만 갱신한다 (id 기준 upsert).
+        const counselors = existing.some((c) => c.id === mc.id)
+          ? existing.map((c) => (c.id === mc.id ? { ...c, name: mc.name, profile_image: mc.profile_image } : c))
+          : [...existing, { id: mc.id, name: mc.name, profile_image: mc.profile_image }];
+        setUser({
+          ...user,
+          counselors,
+          onboarding_completed: true,
+        });
+      } else if (user) {
+        // 초대 경로 등 step4 매칭 API 없이 완료된 경우
+        setUser({ ...user, onboarding_completed: true });
+      }
+
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : '완료 처리에 실패했습니다');
@@ -195,18 +381,77 @@ export default function ClientOnboardingPage() {
     if (step > 1) setStep(step - 1);
   };
 
+  /** FUNC-07: 초대 연결 확인 실패 시 가드를 리셋하고 다시 조회한다. */
+  const handleRetryInvite = (): void => {
+    setError(null);
+    inviteFetchTriggered.current = false;
+    setInviteRetryKey((k) => k + 1);
+  };
+
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4">
-        <div className="w-full max-w-[480px] bg-surface-raised rounded-2xl border border-border-default p-8 space-y-6 text-center">
-          <h1 className="text-2xl font-bold text-ink-primary">온보딩 완료</h1>
-          <p className="text-sm text-ink-secondary">
+      <div className="relative min-h-screen font-sans">
+        <img
+          src="/mb-design/assets/images/background3.jpg"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/40" />
+        <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-5 px-6">
+          {/* 상단 헤더 */}
+          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-5">
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 group"
+              aria-label="랜딩 페이지로 이동"
+            >
+              <img
+                src="/mb-design/assets/logo_symbol_dark.svg"
+                width={32}
+                height={14}
+                alt=""
+                className="brightness-0 invert"
+              />
+              <span className="font-extrabold text-[18px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+                Mind&nbsp;Breeze
+              </span>
+            </Link>
+          </div>
+
+          {/* 중앙 로고 */}
+          <img
+            src="/mb-design/assets/logo_symbol_dark.svg"
+            width={84}
+            height={38}
+            alt=""
+            className="brightness-0 invert"
+          />
+          <div className="font-extrabold text-[32px] text-white tracking-tight">
+            Mind&nbsp;Breeze
+          </div>
+
+          <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-white">온보딩 완료</h1>
+          <p className="text-[15px] text-white/70 text-center">
             상담사와 매칭되었습니다. 이제 세션을 시작할 수 있습니다.
           </p>
           <button
             type="button"
-            onClick={() => navigate('/')}
-            className="w-full h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90"
+            onClick={() => navigate('/app')}
+            className="h-[52px] w-[280px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] text-white font-semibold text-[15px] transition-colors"
           >
             대시보드로 이동
           </button>
@@ -215,62 +460,117 @@ export default function ClientOnboardingPage() {
     );
   }
 
+  const concernBtnClass = (selected: boolean) =>
+    `rounded-full px-4 py-2.5 text-[15px] font-medium transition-colors ${
+      selected
+        ? 'bg-[#5F0080] text-white'
+        : 'bg-white/10 text-white/80 border border-white/20 hover:bg-white/20'
+    }`;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-canvas p-4 sm:p-8">
-      <div className="w-full max-w-[600px] space-y-8">
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-block">
-            <h1 className="font-display text-3xl font-light text-ink-primary tracking-tight">
-              Mind Breeze
-            </h1>
+    <div className="relative min-h-screen font-sans">
+      <img
+        src="/mb-design/assets/images/background3.jpg"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/10 to-black/40" />
+
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center gap-6 px-6 py-10">
+        {/* 상단 헤더 — 로그인 페이지와 동일 */}
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-5">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 group"
+            aria-label="랜딩 페이지로 이동"
+          >
+            <img
+              src="/mb-design/assets/logo_symbol_dark.svg"
+              width={32}
+              height={14}
+              alt=""
+              className="brightness-0 invert"
+            />
+            <span className="font-extrabold text-[18px] text-white tracking-tight opacity-90 group-hover:opacity-100 transition-opacity">
+              Mind&nbsp;Breeze
+            </span>
           </Link>
-          <p className="text-sm text-ink-tertiary">내담자 온보딩</p>
+          <Link
+            to="/login"
+            className="text-[13px] text-white/90 hover:text-white font-medium px-4 py-2 rounded-full border border-white/30 hover:border-white/60 transition-colors"
+          >
+            상담사 로그인
+          </Link>
         </div>
 
-        <div className="bg-surface-raised rounded-2xl border border-border-default p-6 sm:p-8 space-y-6">
-          <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+        {/* 중앙 로고 — 로그인 페이지와 동일 */}
+        <img
+          src="/mb-design/assets/logo_symbol_dark.svg"
+          width={84}
+          height={38}
+          alt=""
+          className="brightness-0 invert"
+        />
+        <div className="font-extrabold text-[32px] text-white tracking-tight">
+          Mind&nbsp;Breeze
+        </div>
+        <p className="text-[15px] text-white/85">내담자 온보딩</p>
 
-          <h2 className="text-2xl font-bold text-ink-primary">
+        {/* 카드 */}
+        <div className="w-full max-w-[360px] bg-white/10 backdrop-blur-xl border border-white/20 rounded-[28px] p-6 shadow-2xl shadow-black/20">
+          {/* Step 인디케이터 */}
+          <div className="mb-5">
+            <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+          </div>
+
+          <h2 className="text-lg font-bold text-white mb-5">
             {step === 1 && '기본 정보'}
             {step === 2 && '상세 정보'}
             {step === 3 && '프로필'}
-            {step === 4 && '상담사 코드 매칭'}
+            {step === 4 && (isInviteFlow ? '상담사 연결' : '상담사 코드 매칭')}
           </h2>
 
+          {/* Step 1: 기본 정보 */}
           {step === 1 && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">이름</label>
+              <div>
+                <label htmlFor="onboarding-name" className="block text-[13px] text-white/70 mb-1.5 ml-1">이름</label>
                 <input
+                  id="onboarding-name"
                   type="text"
-                  value={user?.name ?? ''}
-                  readOnly
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary opacity-70"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="이름을 입력해주세요"
+                  className={inputClass}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
-                  연락처 (선택)
+              <div>
+                <label htmlFor="onboarding-phone" className="block text-[13px] text-white/70 mb-1.5 ml-1">
+                  연락처
                 </label>
                 <input
+                  id="onboarding-phone"
                   type="tel"
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onChange={(e) => handlePhoneChange(e.target.value)}
                   placeholder="010-0000-0000"
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  maxLength={13}
+                  className={inputClass}
                 />
               </div>
             </div>
           )}
 
+          {/* Step 2: 상세 정보 */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">성별</label>
+              <div>
+                <label htmlFor="onboarding-gender" className="block text-[13px] text-white/70 mb-1.5 ml-1">성별</label>
                 <select
+                  id="onboarding-gender"
                   value={form.gender}
                   onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={inputClass}
                 >
                   <option value="">선택해주세요</option>
                   <option value="male">남성</option>
@@ -278,91 +578,178 @@ export default function ClientOnboardingPage() {
                   <option value="other">기타</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">생년월일</label>
-                <input
-                  type="date"
-                  value={form.birthDate}
-                  onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
-                />
+              <div>
+                <label htmlFor="onboarding-birth-year" className="block text-[13px] text-white/70 mb-1.5 ml-1">생년월일</label>
+                <div className="flex gap-2">
+                  <select
+                    id="onboarding-birth-year"
+                    aria-label="출생 연도"
+                    value={form.birthDate ? form.birthDate.split('-')[0] : ''}
+                    onChange={(e) => {
+                      const [_, m, d] = (form.birthDate || '--').split('-');
+                      setForm({ ...form, birthDate: `${e.target.value}-${m || ''}-${d || ''}` });
+                    }}
+                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
+                  >
+                    <option value="">년</option>
+                    {Array.from({ length: 100 }, (_, i) => 2026 - i).map((y) => (
+                      <option key={y} value={y}>{y}년</option>
+                    ))}
+                  </select>
+                  <select
+                    id="onboarding-birth-month"
+                    aria-label="출생 월"
+                    value={form.birthDate ? form.birthDate.split('-')[1] : ''}
+                    onChange={(e) => {
+                      const [y, _, d] = (form.birthDate || '--').split('-');
+                      setForm({ ...form, birthDate: `${y || ''}-${e.target.value}-${d || ''}` });
+                    }}
+                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
+                  >
+                    <option value="">월</option>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <option key={m} value={String(m).padStart(2, '0')}>{m}월</option>
+                    ))}
+                  </select>
+                  <select
+                    id="onboarding-birth-day"
+                    aria-label="출생 일"
+                    value={form.birthDate ? form.birthDate.split('-')[2] : ''}
+                    onChange={(e) => {
+                      const [y, m] = (form.birthDate || '--').split('-');
+                      setForm({ ...form, birthDate: `${y || ''}-${m || ''}-${e.target.value}` });
+                    }}
+                    className="flex-1 h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-3 text-[15px] text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white appearance-none text-center"
+                  >
+                    <option value="">일</option>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={String(d).padStart(2, '0')}>{d}일</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">주요 호소 (다중 선택)</p>
-                <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[13px] text-white/70 font-semibold mb-2">주요 호소 (다중 선택)</p>
+                <div className="flex flex-wrap gap-2">
                   {CONCERN_OPTIONS.map((opt) => (
-                    <label
+                    <button
                       key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
+                      type="button"
+                      onClick={() => toggleItem('concerns', opt)}
+                      className={concernBtnClass(form.concerns.includes(opt))}
                     >
-                      <input
-                        type="checkbox"
-                        checked={form.concerns.includes(opt)}
-                        onChange={() => toggleItem('concerns', opt)}
-                      />
-                      <span>{opt}</span>
-                    </label>
+                      {opt}
+                    </button>
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
-                <p className="text-base font-semibold text-accent-warm">관심 영역 (선택)</p>
-                <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[13px] text-white/70 font-semibold mb-2">관심 영역 (선택)</p>
+                <div className="flex flex-wrap gap-2">
                   {INTEREST_OPTIONS.map((opt) => (
-                    <label
+                    <button
                       key={opt}
-                      className="flex items-center gap-2 rounded-lg border border-border-default bg-surface-raised px-3 py-2 text-sm text-ink-primary cursor-pointer hover:border-brand-primary"
+                      type="button"
+                      onClick={() => toggleItem('interests', opt)}
+                      className={concernBtnClass(form.interests.includes(opt))}
                     >
-                      <input
-                        type="checkbox"
-                        checked={form.interests.includes(opt)}
-                        onChange={() => toggleItem('interests', opt)}
-                      />
-                      <span>{opt}</span>
-                    </label>
+                      {opt}
+                    </button>
                   ))}
                 </div>
               </div>
             </div>
           )}
 
+          {/* Step 3: 프로필 */}
           {step === 3 && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
-                  프로필 사진 URL (선택)
+              <div>
+                <label htmlFor="onboarding-profile-image" className="block text-[13px] text-white/70 mb-1.5 ml-1">
+                  프로필 사진 URL <span className="text-white/70">(선택)</span>
                 </label>
                 <input
+                  id="onboarding-profile-image"
                   type="url"
                   value={form.profileImageUrl}
                   onChange={(e) => setForm({ ...form, profileImageUrl: e.target.value })}
                   placeholder="https://..."
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary"
+                  className={inputClass}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-ink-secondary">
-                  한줄 소개 (선택)
+              <div>
+                <label htmlFor="onboarding-bio" className="block text-[13px] text-white/70 mb-1.5 ml-1">
+                  한줄 소개 <span className="text-white/70">(선택)</span>
                 </label>
                 <textarea
+                  id="onboarding-bio"
                   value={form.bio}
                   onChange={(e) => setForm({ ...form, bio: e.target.value })}
                   rows={3}
-                  className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-sm text-ink-primary resize-none"
+                  placeholder="자기소개를 입력해주세요"
+                  className="w-full rounded-2xl bg-white/90 backdrop-blur border border-white/30 px-5 py-3 text-[15px] text-[#1F1F1F] placeholder:text-[#9A9BA8] resize-none outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
                 />
               </div>
             </div>
           )}
 
+          {/* Step 4: 상담사 매칭 / 초대 연결 확인 */}
           {step === 4 && (
             <div className="space-y-4">
-              {!matchedCounselor ? (
+              {isInviteFlow ? (
                 <>
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-ink-secondary">
+                  {inviteConfirmLoading ? (
+                    <p className="text-[13px] text-white/70 text-center py-4">
+                      상담사 연결을 확인하는 중...
+                    </p>
+                  ) : matchedCounselor ? (
+                    <>
+                      <p className="text-[15px] font-semibold text-white text-center">
+                        상담사와 연결되었습니다
+                      </p>
+                      <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
+                        <p className="text-sm font-semibold text-[#C38BFF]">연결된 상담사</p>
+                        <div>
+                          <p className="text-xs text-white/70">이름</p>
+                          <p className="text-lg font-semibold text-white">
+                            {matchedCounselor.matched_counselor?.name}
+                          </p>
+                        </div>
+                        {matchedCounselor.counselor_code && (
+                          <div>
+                            <p className="text-xs text-white/70">코드</p>
+                            <p className="text-base font-mono text-white tracking-widest">
+                              {matchedCounselor.counselor_code}
+                            </p>
+                          </div>
+                        )}
+                        <p className="text-xs text-white/70">초대를 통해 자동 연결됨</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-[13px] text-white/70 text-center">
+                        상담사 연결 정보를 확인할 수 없습니다.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRetryInvite}
+                        disabled={inviteConfirmLoading}
+                        className="w-full h-[44px] rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 disabled:opacity-50 text-white/90 font-semibold text-[15px] transition-colors"
+                      >
+                        다시 시도
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : !matchedCounselor ? (
+                <>
+                  <div>
+                    <label htmlFor="onboarding-counselor-code" className="block text-[13px] text-white/70 mb-1.5 ml-1">
                       상담사 코드 (6자리)
                     </label>
                     <input
+                      id="onboarding-counselor-code"
                       type="text"
                       maxLength={6}
                       value={form.counselorCode}
@@ -373,34 +760,34 @@ export default function ClientOnboardingPage() {
                         })
                       }
                       placeholder="ABC123"
-                      className="w-full rounded-lg border border-border-default bg-surface-raised px-4 py-3 text-center text-xl font-bold tracking-widest text-ink-primary"
+                      className="w-full h-[52px] rounded-full bg-white/90 backdrop-blur border border-white/30 px-5 text-center text-xl font-bold tracking-[0.3em] text-[#1F1F1F] placeholder:text-[#9A9BA8] placeholder:tracking-normal outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-[#5F0080]/20 focus:bg-white"
                     />
                   </div>
-                  <p className="text-xs text-ink-tertiary">
+                  <p className="text-[13px] text-white/70 text-center">
                     상담사로부터 전달받은 6자리 코드를 입력해주세요.
                   </p>
                 </>
               ) : (
-                <div className="space-y-3 bg-surface-raised rounded-lg border border-border-default p-5">
-                  <p className="text-base font-semibold text-accent-warm">매칭된 상담사</p>
-                  <div className="space-y-1">
-                    <p className="text-sm text-ink-tertiary">이름</p>
-                    <p className="text-lg font-semibold text-ink-primary">
+                <div className="rounded-2xl bg-white/10 border border-white/20 p-5 space-y-3">
+                  <p className="text-sm font-semibold text-[#C38BFF]">매칭된 상담사</p>
+                  <div>
+                    <p className="text-xs text-white/70">이름</p>
+                    <p className="text-lg font-semibold text-white">
                       {matchedCounselor.matched_counselor?.name}
                     </p>
                   </div>
                   {matchedCounselor.counselor_code && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-ink-tertiary">코드</p>
-                      <p className="text-base font-mono text-ink-primary tracking-widest">
+                    <div>
+                      <p className="text-xs text-white/70">코드</p>
+                      <p className="text-base font-mono text-white tracking-widest">
                         {matchedCounselor.counselor_code}
                       </p>
                     </div>
                   )}
                   {matchedCounselor.specialties && matchedCounselor.specialties.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-ink-tertiary">전문분야</p>
-                      <p className="text-sm text-ink-primary">
+                    <div>
+                      <p className="text-xs text-white/70">전문분야</p>
+                      <p className="text-sm text-white/80">
                         {matchedCounselor.specialties.join(', ')}
                       </p>
                     </div>
@@ -410,47 +797,58 @@ export default function ClientOnboardingPage() {
             </div>
           )}
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {/* 에러 표시 */}
+          {error && (
+            <div className="mt-4">
+              <p className="text-[13px] text-white bg-red-500/70 backdrop-blur rounded-full px-4 py-1.5 text-center" role="alert">
+                {error}
+              </p>
+            </div>
+          )}
 
-          <div className="flex gap-3">
+          {/* 버튼 영역 */}
+          <div className="flex items-center gap-3 mt-5">
             <button
               type="button"
               onClick={handlePrev}
               disabled={loading || step === 1}
-              className="flex-1 h-11 rounded-pill border border-border-default text-ink-secondary font-semibold hover:bg-surface-elevated disabled:opacity-40"
+              className="flex-shrink-0 h-[44px] px-5 rounded-full bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30 disabled:opacity-30 text-white/80 text-[15px] font-medium transition-colors"
             >
               이전
             </button>
-            {step < 4 && (
-              <button
-                type="button"
-                onClick={handleNext}
-                disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {loading ? '저장 중...' : '다음'}
-              </button>
-            )}
-            {step === 4 && !matchedCounselor && (
-              <button
-                type="button"
-                onClick={handleMatch}
-                disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {loading ? '매칭 중...' : '매칭하기'}
-              </button>
-            )}
-            {step === 4 && matchedCounselor && (
-              <button
-                type="button"
-                onClick={handleComplete}
-                disabled={loading}
-                className="flex-1 h-11 rounded-pill bg-brand-deep text-white font-semibold hover:opacity-90 disabled:opacity-50"
-              >
-                {loading ? '처리 중...' : '완료'}
-              </button>
-            )}
+
+            <div className="flex-1">
+              {step < 4 && (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={loading}
+                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                >
+                  {loading ? '저장 중...' : '다음'}
+                </button>
+              )}
+              {step === 4 && !isInviteFlow && !matchedCounselor && (
+                <button
+                  type="button"
+                  onClick={handleMatch}
+                  disabled={loading}
+                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                >
+                  {loading ? '매칭 중...' : '매칭하기'}
+                </button>
+              )}
+              {step === 4 && matchedCounselor && (
+                <button
+                  type="button"
+                  onClick={handleComplete}
+                  disabled={loading || inviteConfirmLoading}
+                  className="w-full h-[44px] rounded-full bg-[#5F0080] hover:bg-[#4B0066] active:bg-[#3F0055] disabled:opacity-60 text-white font-semibold text-[15px] transition-colors"
+                >
+                  {loading ? '처리 중...' : '완료'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,25 @@
+# MIND BREEZE 2.0 — 메인 Celery 워커 (STT·요약·리포트·영상 병합 파이프라인)
+# 설치 전 경로와 환경 파일을 배포 환경에 맞게 검토한다.
+#   · 기본 큐(celery)를 소비해 tasks.stt / tasks.summary / tasks.report /
+#     tasks.generate_reports_for_session / tasks.merge_video_chunks 를 처리한다.
+#   · email 전용 워커(mindbreeze-email-worker)와는 별도 앱이라 큐가 분리된다.
+[Unit]
+Description=MIND BREEZE pipeline worker (STT/summary/report/video merge)
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app worker --loglevel=INFO --prefetch-multiplier=1
+Restart=on-failure
+RestartSec=5
+# PrivateTmp=true 제거(2026-10-03): 오디오 청크가 /tmp/mindbreeze_audio(백엔드가 쓰는 호스트 /tmp)에
+# 저장되는데, PrivateTmp가 워커 /tmp를 격리해 STT가 청크를 찾지 못해 "No such file"로 실패했다.
+# 백엔드(uvicorn)도 PrivateTmp 없이 호스트 /tmp를 쓰므로 워커도 동일하게 맞춘다.
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

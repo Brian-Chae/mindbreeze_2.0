@@ -1,13 +1,22 @@
+import { listCheckinClients } from '../../lib/api/agent-checkin';
+import { loginPathForRole } from '../../lib/auth-routing';
 import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { getUnreadCount } from '../../lib/api/agent-counselor';
+import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
 
 interface NavItem {
   to: string;
   label: string;
   icon: string[];
   badge?: number;
+  end?: boolean;
 }
 
+// 레이아웃 간 공유하는 아이콘 경로로, 컴포넌트 export와 함께 유지한다.
+// eslint-disable-next-line react-refresh/only-export-components
 export const ICONS = {
   home: ['M3 11l9-8 9 8v10a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z'],
   calendar: [
@@ -52,6 +61,10 @@ export const ICONS = {
     'M16 17l5-5-5-5',
     'M21 12H9',
   ],
+  /** activity / 플라스크 — 플레이그라운드 */
+  activity: [
+    'M22 12h-4l-3 9L9 3l-3 9H2',
+  ],
 };
 
 export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
@@ -80,48 +93,170 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
   { to: '/reports', label: '리포트', icon: ICONS.report },
+  { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
   { to: '/notifications', label: '알림', icon: ICONS.bell },
   { to: '/settings', label: '설정', icon: ICONS.settings },
 ];
 
+const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
+  { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
+  { to: '/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/clients', label: '내담자', icon: ICONS.users },
+  { to: '/chat', label: '채팅', icon: ICONS.message },
+  // SDD-082: 기관 관리자 전용 상담사 관리 페이지
+  { to: '/org/counselors', label: '상담사', icon: ICONS.users },
+  { to: '/reports', label: '리포트', icon: ICONS.report },
+  { to: '/notifications', label: '알림', icon: ICONS.bell },
+  { to: '/settings', label: '설정', icon: ICONS.settings },
+];
+
+const CLIENT_NAV_ITEMS: NavItem[] = [
+  { to: '/app', label: '홈', icon: ICONS.home, end: true },
+  { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/chat', label: '채팅', icon: ICONS.message },
+  { to: '/app/reports', label: '리포트', icon: ICONS.report },
+  { to: '/app/notifications', label: '알림', icon: ICONS.bell },
+  { to: '/app/profile', label: '설정', icon: ICONS.settings },
+];
+
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: '/admin/reviews', label: '검토 큐', icon: ICONS.report },
-  { to: '/admin/users', label: '사용자 관리', icon: ICONS.users },
+  { to: '/admin/orgs', label: '기관 관리', icon: ICONS.users },
+  { to: '/admin/applications', label: '가입 신청', icon: ICONS.report },
+  { to: '/admin/users', label: '상담사 관리', icon: ICONS.users },
+  { to: '/admin/clients', label: '회원 관리', icon: ICONS.users },
+  { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
 ];
 
 interface SidebarNavProps {
   onNavigate?: () => void;
+  role?: 'counselor' | 'client';
+  notificationBadge?: number;
+  agentBadge?: number;
+  chatBadge?: number;
+  reportBadge?: number;
+  sessionBadge?: number;
 }
 
-export default function SidebarNav({ onNavigate }: SidebarNavProps) {
+export default function SidebarNav({
+  onNavigate,
+  role = 'counselor',
+  notificationBadge,
+  agentBadge,
+  chatBadge,
+  reportBadge,
+  sessionBadge,
+}: SidebarNavProps) {
   const user = useAuthStore((s) => s.user);
+  const openRisk = useCounselorAgentStore((state) => state.openRisk);
+  const counselorUnread = useCounselorAgentStore((state) => state.unread);
+  useEffect(() => {
+    if (user?.role !== 'counselor' || role === 'client') return;
+    let active = true;
+    let fetching = false;
+    useCounselorAgentStore.getState().setUnread(0);
+    useCounselorAgentStore.getState().setOpenRisk(0);
+    const refresh = async () => {
+      if (fetching) return;
+      fetching = true;
+      const initial = useCounselorAgentStore.getState();
+      try {
+        const result = await getUnreadCount();
+        // 조회 중 읽음 처리가 끝났다면 오래된 개수로 덮어쓰지 않는다.
+        if (active && initial === useCounselorAgentStore.getState()) initial.setUnread(result.unread);
+      } catch { /* 다음 조회 때 재시도한다. */ }
+      finally { fetching = false; }
+    };
+    const refreshRisk = async () => {
+      const revision = useCounselorAgentStore.getState().riskRevision;
+      try {
+        const result = await listCheckinClients();
+        if (active && revision === useCounselorAgentStore.getState().riskRevision) {
+          useCounselorAgentStore.getState().setOpenRisk(result.items.reduce((sum, item) => sum + item.open_risk_count, 0));
+        }
+      } catch { /* 다음 조회 때 재시도한다. */ }
+    };
+    void refreshRisk();
+    const riskTimer = window.setInterval(() => { if (document.visibilityState === 'visible') void refreshRisk(); }, 15000);
+    void refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
+    return () => { active = false; window.clearInterval(timer); window.clearInterval(riskTimer); };
+  }, [user?.id, user?.role, role]);
   const logout = useAuthStore((s) => s.logout);
+  const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
+  const navItems =
+    user?.role === 'client' || role === 'client'
+      ? CLIENT_NAV_ITEMS
+      : user?.role === 'platform_admin'
+        ? ADMIN_NAV_ITEMS
+        : user?.role === 'org_admin'
+          ? ORG_ADMIN_NAV_ITEMS
+          : NAV_ITEMS;
+  const roleLabel =
+    user?.role === 'client' || role === 'client'
+      ? '회원 전용'
+      : user?.role === 'platform_admin'
+        ? '플랫폼 관리자'
+        : user?.role === 'org_admin'
+          ? '기관 관리자'
+          : '상담사 전용';
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate(loginPathForRole(user?.role));
+  };
+
+  const getBadge = (label: string): React.ReactNode => {
+    // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
+    const count =
+      label === '채팅'
+        ? (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0)
+        : label === '알림'
+          ? notificationBadge ?? 0
+          : label === '리포트'
+            ? reportBadge ?? 0
+            : label === '세션'
+              ? sessionBadge ?? 0
+              : 0;
+    if (count > 0) {
+      return (
+        <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#EF4444] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
+          {count > 9 ? '9+' : count}
+        </span>
+      );
+    }
+    return null;
   };
 
   return (
     <div className="flex flex-col gap-7 px-5 py-8 h-full">
-      <div className="flex items-center gap-2.5 px-2.5">
-        <img
-          src="/mb-design/assets/logo_symbol_dark.svg"
-          width={28}
-          height={13}
-          alt=""
-        />
-        <span className="font-extrabold text-[17px] text-[#5F0080] tracking-tight">
-          mind&nbsp;breeze
-        </span>
+      {/* 브랜딩 블록 */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-2.5 px-2.5">
+          <img
+            src="/mb-design/assets/logo_symbol_dark.svg"
+            width={28}
+            height={13}
+            alt=""
+          />
+          <span className="font-extrabold text-[18px] text-[#5F0080] tracking-tight">
+            Mind&nbsp;Breeze
+          </span>
+        </div>
+        <div className="pl-4 flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${role === 'client' ? 'bg-[#7C3AED]' : 'bg-[#5F0080]'}`} />
+          <span className={`text-[15px] font-semibold tracking-tight ${role === 'client' ? 'text-[#7C3AED]' : 'text-[#5F0080]'}`}>
+            {roleLabel}
+          </span>
+        </div>
       </div>
 
       <nav className="flex flex-col gap-1">
-        {NAV_ITEMS.map((it) => (
+        {navItems.map((it) => (
           <NavLink
             key={it.to}
             to={it.to}
+            end={it.end}
             onClick={onNavigate}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-left transition-colors ${
@@ -133,42 +268,19 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
           >
             <StrokeIcon d={it.icon} />
             <span className="flex-1">{it.label}</span>
-            {it.badge ? (
+            {it.badge != null ? (
               <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#5F0080] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
                 {it.badge}
               </span>
-            ) : null}
+            ) : (
+              getBadge(it.label)
+            )}
           </NavLink>
         ))}
       </nav>
 
-      {user?.role === 'platform_admin' && (
-        <div className="mt-2 pt-4 border-t border-[#DDD0EA]">
-          <div className="px-3.5 text-[11px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-2">
-            어드민
-          </div>
-          {ADMIN_NAV_ITEMS.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-left transition-colors ${
-                  isActive
-                    ? 'bg-white text-[#5F0080] font-bold shadow-sm'
-                    : 'bg-transparent text-[#1F1F1F] font-medium hover:bg-white/60'
-                }`
-              }
-            >
-              <StrokeIcon d={it.icon} />
-              <span className="flex-1">{it.label}</span>
-            </NavLink>
-          ))}
-        </div>
-      )}
-
       <div className="mt-auto bg-white rounded-2xl p-4">
-        <div className="text-[12px] text-[#6F6F6F] font-mono">상담사</div>
+        <div className="text-[12px] text-[#6F6F6F] font-mono">{roleLabel}</div>
         <div className="font-bold text-[15px] text-[#1F1F1F] mt-1">
           {user?.name ?? '게스트'}
         </div>
@@ -177,10 +289,22 @@ export default function SidebarNav({ onNavigate }: SidebarNavProps) {
         </div>
       </div>
 
+      {/* 서버 연결 상태 */}
+      <div className="flex items-center gap-2 px-1 py-2">
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            wsConnected ? 'bg-[#10B981] animate-pulse' : 'bg-[#EF4444]'
+          }`}
+        />
+        <span className="text-[12px] text-[#6F6F6F]">
+          서버연결: {wsConnected ? '양호' : '끊김'}
+        </span>
+      </div>
+
       <button
         type="button"
         onClick={() => void handleLogout()}
-        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[14px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
+        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
       >
         <StrokeIcon d={ICONS.logout} />
         로그아웃

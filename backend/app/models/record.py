@@ -1,9 +1,9 @@
-"""SessionRecord, EEGRecord, Report, AudioChunk Models"""
+"""SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk Models"""
 
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Integer, Text, Boolean, DateTime, ForeignKey, func
+from sqlalchemy import String, Integer, Float, Text, Boolean, DateTime, ForeignKey, Index, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,7 +15,8 @@ class SessionRecord(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), unique=True, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="idle", nullable=False)  # idle/recording/processing/completed/failed
+    # SDD-085: manual = 마이크 오프(음성 미동의) 확정 — transcript·ai_summary 생성 대상 아님
+    status: Mapped[str] = mapped_column(String(20), default="idle", nullable=False)  # idle/recording/processing/completed/failed/manual
     transcript: Mapped[str | None] = mapped_column(Text)
     ai_summary: Mapped[dict] = mapped_column(JSONB, default=dict)
     counselor_notes: Mapped[str | None] = mapped_column(Text)
@@ -25,6 +26,20 @@ class SessionRecord(Base):
     audio_s3_key: Mapped[str | None] = mapped_column(String(500))
     recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # SDD-084: 영상 녹화 상태 트랙 — 음성(status/recording_*)과 분리 운영. idle/recording/completed
+    video_status: Mapped[str] = mapped_column(String(20), default="idle", server_default="idle", nullable=False)
+    video_s3_key: Mapped[str | None] = mapped_column(String(500))
+    video_recording_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    video_recording_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # SDD-101 C4: 클라이언트가 종료 시 선언한 예상 청크 수 — 병합 50% 규칙의 정확한 분모.
+    video_expected_chunks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # SDD-096: 세션 직후 1탭 셀프 체크인(주관 상태) — SAM 2축(각성·정서) 5단계 + 선택형 한 줄 소감.
+    # 구조: {"participants": {<participant_id>: {"before": <slot>|없음, "after": <slot>|없음,
+    #        "updated_at": iso}}, "updated_at": iso}
+    # slot = {"arousal": 1~5|None, "valence": 1~5|None, "note": str|None, "recorded_at": iso}
+    # 그룹 클래스에서 참여자별로 분리 저장한다(리포트에는 참여자 본인 슬롯만 노출).
+    # 미입력(스킵)이면 None — 빈 dict 로 치환하지 않는다.
+    subjective_state: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="record")
@@ -32,6 +47,31 @@ class SessionRecord(Base):
 
 class AudioChunk(Base):
     __tablename__ = "audio_chunks"
+    __table_args__ = (
+        # SDD-101 C1: (session_id, chunk_index) 유일 — 동일 청크 재업로드를 멱등 처리한다.
+        UniqueConstraint("session_id", "chunk_index", name="uq_audio_chunk_session_idx"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class VideoChunk(Base):
+    """SDD-084: 세션 영상 청크 — AudioChunk와 동일 구조.
+
+    상담사(host) 본인 카메라 영상만 저장한다(온라인 클래스에서도 내담자 영상·음성 저장 금지).
+    file_path 에는 S3 object key(자격증명 설정 시) 또는 로컬 폴백 경로가 들어간다.
+    """
+
+    __tablename__ = "video_chunks"
+    __table_args__ = (
+        # SDD-101 C1: (session_id, chunk_index) 유일 — 동일 청크 재업로드를 멱등 처리한다.
+        UniqueConstraint("session_id", "chunk_index", name="uq_video_chunk_session_idx"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False)
@@ -43,27 +83,153 @@ class AudioChunk(Base):
 
 class EEGRecord(Base):
     __tablename__ = "eeg_records"
+    __table_args__ = (
+        # EEG-RAW-04: raw ack 경합(get-or-create)이 중복 EEGRecord 를 만들지 않도록
+        # (session_id, participant_id) 를 DB 레벨에서 유일하게 강제한다. 이 제약이 없으면
+        # 동시 ack 시 두 요청이 각각 INSERT 해 중복 행(file_count 분산)이 생긴다.
+        # participant_id 는 nullable 이지만 NULL 은 유일성 비교에서 서로 다른 값으로 취급되므로
+        # 참여자 없는(레거시) 레코드의 다중 생성을 막지 않는다.
+        UniqueConstraint(
+            "session_id", "participant_id", name="uq_eeg_record_session_participant",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # SDD-027: 게스트 raw 보존을 위해 user_id nullable. 소유는 participant_id 로 식별한다.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # SDD-027: 참여자 기반 소유(게스트 포함) — 업로드 소유 검증(resolve_upload_participant)과 정합.
+    participant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=True, index=True,
+    )
+    # SDD-027: 실행 세그먼트 식별자(play/resume). raw chunk 묶음을 세그먼트 단위로 구분한다.
+    play_group_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     s3_key: Mapped[str] = mapped_column(String(500), nullable=False)
     duration_sec: Mapped[int | None] = mapped_column(Integer)
     sample_rate: Mapped[int] = mapped_column(Integer, default=250)
+    # SDD-027: 이 레코드에 속한 raw chunk(업로드 확인 완료) 개수. ack 시 증가한다.
+    file_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     analysis_result: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("Session", back_populates="eeg_records")
 
 
+class EEGRawChunk(Base):
+    """SDD-027: LINK BAND raw EEG 청크 manifest.
+
+    SDK raw → 로컬 영속 큐 → presigned PUT → ack(확인) 경로의 서버 측 원장이다.
+    실제 raw 바이트는 S3(object_key)에 저장되고, 이 테이블은 메타데이터·업로드 상태만 보유한다.
+    게스트도 participant_id 로 소유되며 user_id 는 nullable 이다(게스트 raw 지원).
+    """
+
+    __tablename__ = "eeg_raw_chunks"
+    __table_args__ = (
+        # 참여자·스트림별 청크 인덱스가 유일 — 동일 청크 재발급/중복 ack 를 멱등 처리한다.
+        UniqueConstraint(
+            "session_id", "participant_id", "stream_id", "chunk_index",
+            name="uq_eeg_raw_chunk",
+        ),
+        # SDD-028: batch key(chunk_index 범위) 조회를 인덱스로 지원한다.
+        # (session_id, participant_id, chunk_index) 복합 인덱스로 세그먼트별 청크 범위 스캔을
+        # 전체 스캔에서 인덱스 범위 스캔으로 전환한다(unique 제약은 stream_id 를 포함해 축이 다름).
+        Index(
+            "ix_eeg_raw_chunk_batch_key",
+            "session_id", "participant_id", "chunk_index",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    # 게스트 raw 지원 — 소유는 participant_id, user_id 는 로그인 참가자만 채운다.
+    participant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=True, index=True,
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # 스트림 식별자(디바이스/세그먼트 단위). 기본 'default'.
+    # 형식: eeg:{session_uuid}:{participant_uuid} (77자) — 128자로 충분히 수용.
+    stream_id: Mapped[str] = mapped_column(String(128), default="default", nullable=False)
+    # 스트림 내 0-based 청크 순번
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    # 청크 시간 범위(디바이스 ms epoch) — null 보존
+    start_ms: Mapped[float | None] = mapped_column(Float)
+    end_ms: Mapped[float | None] = mapped_column(Float)
+    # 샘플레이트/채널/단위/스키마 — raw 재해석에 필요한 계약 메타데이터
+    sample_rate: Mapped[int] = mapped_column(Integer, default=250, nullable=False)
+    channel_count: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    unit: Mapped[str] = mapped_column(String(20), default="uV", nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(20), default="1.0", nullable=False)
+    # 무결성 검증용 체크섬(예: sha256) — 클라이언트 제공, null 보존
+    checksum: Mapped[str | None] = mapped_column(String(128))
+    size_bytes: Mapped[int | None] = mapped_column(Integer)
+    # S3 객체 키
+    object_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    # 업로드 상태: pending(presigned 발급) → uploaded(ack) / failed
+    upload_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Report(Base):
     __tablename__ = "reports"
+    # DATA-01: 리포트 중복 생성을 DB 레벨에서 차단하는 부분 유일 인덱스.
+    # 종료 파이프라인(generate_reports_for_session)·재생성 API·재시도 아웃박스가
+    # 경합해도 (세션, 참여자, 유형) 당 1건만 존재하도록 보장한다.
+    # - (session_id, participant_id, type): 참여자별 client 리포트 및 participant 가
+    #   지정된 counselor 리포트(SDD-065).
+    # - (session_id, type) WHERE participant_id IS NULL: 참여자 없는 리포트.
+    #   PostgreSQL/SQLite 모두 NULL 은 유일성 비교에서 서로 다른 값으로 취급되므로
+    #   부분 인덱스를 별도로 둔다(방언별 where 로 DDL 호환).
+    __table_args__ = (
+        Index(
+            "uq_report_session_participant_type",
+            "session_id",
+            "participant_id",
+            "type",
+            unique=True,
+            postgresql_where=text("participant_id IS NOT NULL"),
+            sqlite_where=text("participant_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_report_session_type",
+            "session_id",
+            "type",
+            unique=True,
+            postgresql_where=text("participant_id IS NULL"),
+            sqlite_where=text("participant_id IS NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("sessions.id"), nullable=False)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    # SDD-027: 게스트 리포트 지원 — user_id nullable, 소유는 participant_id 로 보완한다.
+    # MB2-ORM-IDX-07: 내담자 리포트 목록이 Report.user_id 로 필터/조인하므로 인덱스를 둔다.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+    participant_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("session_participants.id", ondelete="CASCADE"), nullable=True, index=True,
+    )
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # SDD-027: 리포트 상태머신 — pending_analysis → pending_review(승인 게이트) → completed / error
+    status: Mapped[str] = mapped_column(String(30), default="pending_analysis", nullable=False)
+    # SDD-095: 리포트 '생성 진행' 상태머신 — 승인 게이트(status)와 독립 축.
+    # 세션 종료 후 STT→요약→리포트 생성이 Celery 로 수 분 걸리므로, 사용자에게
+    # '처리 중'을 명확히 보여주기 위한 진행 표시 전용 컬럼이다.
+    # pending(미시작) → processing(진행 중) → ready(완료) / partial(일부만 산출)
+    generation_status: Mapped[str] = mapped_column(
+        String(20), default="pending", server_default="pending", nullable=False
+    )
+    # SDD-095 후속(워치독): 'processing' 진입 시각과 비정상 종료 사유.
+    # 파이프라인이 워커에서 중단되면 beat 스윕이 generation_started_at 경과로 먹통을 감지한다.
+    generation_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    generation_error: Mapped[str | None] = mapped_column(String(50))
+    # SDD-027/122: 품질 게이트에서 파생한 데이터 신뢰도(high/medium/low/very_low).
+    # EEG 미측정이면 null(치환 금지). very_low = 유실(lost) 또는 커버리지<50%(B2).
+    data_credibility: Mapped[str | None] = mapped_column(String(20))
     pdf_url: Mapped[str | None] = mapped_column(String(500))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)

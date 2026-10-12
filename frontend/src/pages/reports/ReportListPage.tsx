@@ -1,9 +1,36 @@
-// AI 리포트 목록 페이지
+// AI 리포트 목록 페이지 — 테이블 + 검색/필터/정렬/세션 그룹핑 (SDD-053)
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ReportSampleModal } from './ReportSamplePage';
+import { ReportDetailModal } from './ReportDetailModal';
 import AppShell from '../../components/layout/AppShell';
-import { listReports, type ReportDto } from '../../lib/api/reports';
+import { ReportStatusChip } from '../../components/reports/ReportStatusBadge';
+import GenerationStatusBadge from '../../components/reports/GenerationStatusBadge';
+import {
+  approveAllReports,
+  getAutoApprove,
+  listReports,
+  resolveReportStatus,
+  setAutoApprove,
+  type ReportDto,
+} from '../../lib/api/reports';
+import BulkApproveModal from '../../components/reports/BulkApproveModal';
+import { useReportStore } from '../../stores/reportStore';
+
+type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
+type ReportTypeFilter = 'all' | 'counselor' | 'client';
+type SortKey = 'newest' | 'oldest' | 'title';
+
+/** SDD-058 — 페이지당 건수 */
+const PAGE_LIMIT = 20;
+
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  clinical: '임상심리상담',
+  hypnosis: '최면심리상담',
+  meditation: '명상수업',
+  custom: '기타',
+};
 
 function formatDate(iso: string | null): string {
   if (!iso) return '-';
@@ -11,11 +38,46 @@ function formatDate(iso: string | null): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function reportTitle(r: ReportDto): string {
+  const headline = (r.content?.headline as string) ?? '리포트';
+  return r.session_title || headline;
+}
+
+function reportDateIso(r: ReportDto): string | null {
+  return r.scheduled_at ?? r.created_at;
+}
+
+function sessionTypeLabel(type: string | null): string {
+  if (!type) return '-';
+  return SESSION_TYPE_LABELS[type] ?? type;
+}
+
+/** SDD-065 — male/female/other → 한글 */
+function genderLabel(gender: string | null | undefined): string {
+  if (!gender) return '—';
+  if (gender === 'male') return '남성';
+  if (gender === 'female') return '여성';
+  if (gender === 'other') return '기타';
+  return '—';
+}
+
+/** SDD-065 — YYYY-MM-DD (없으면 —) */
+function formatBirthDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(iso);
+  return m ? m[1] : '—';
+}
+
+function participantDisplayName(r: ReportDto): string {
+  const name = r.participant_name?.trim();
+  return name || '—';
+}
+
 function TypeBadge({ type }: { type: string }) {
   const isCounselor = type === 'counselor';
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold font-mono ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
         isCounselor ? 'bg-[#F5EDFC] text-[#5F0080]' : 'bg-[#E6F4EA] text-[#2E7D32]'
       }`}
     >
@@ -24,76 +86,670 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-function StatusBadge({ sentAt }: { sentAt: string | null }) {
-  if (sentAt) {
-    return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#E0F2FE] text-[#075985]">
-        승인됨
-      </span>
-    );
+/** SDD-065 — 회원(보라) / 비회원(회색). 미생성 합성 항목(is_guest=null)은 '—'. */
+function MembershipBadge({ isGuest }: { isGuest: boolean | null | undefined }) {
+  if (isGuest === null || isGuest === undefined) {
+    return <span className="text-[13px] text-[#9B9B9B]">—</span>;
   }
+  const guest = isGuest === true;
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#92400E]">
-      검토중
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold font-mono ${
+        guest ? 'bg-[#F0F0F0] text-[#6F6F6F]' : 'bg-[#F5EDFC] text-[#5F0080]'
+      }`}
+    >
+      {guest ? '비회원' : '회원'}
     </span>
   );
 }
 
+/** SDD-101 — 생성/분석 실패 여부 (status=error 또는 generation_error 존재). */
+function isGenerationFailed(r: ReportDto): boolean {
+  return r.status === 'error' || !!r.generation_error;
+}
+
+function filterAndSortReports(
+  reports: ReportDto[],
+  search: string,
+  statusFilter: StatusFilter,
+  sortKey: SortKey,
+  sessionFilter: string,
+  typeFilter: ReportTypeFilter,
+): ReportDto[] {
+  const q = search.trim().toLowerCase();
+
+  let filtered = reports.filter((r) => {
+    const pipeline = resolveReportStatus(r);
+    const failed = isGenerationFailed(r);
+    if (statusFilter === 'pending' && pipeline !== 'pending_review') return false;
+    if (statusFilter === 'approved' && pipeline !== 'completed') return false;
+    if (statusFilter === 'failed' && !failed) return false;
+    if (typeFilter !== 'all' && r.type !== typeFilter) return false;
+    if (sessionFilter && r.session_id !== sessionFilter) return false;
+    if (!q) return true;
+    const title = reportTitle(r).toLowerCase();
+    const sessionName = (r.session_title ?? '').toLowerCase();
+    const participant = (r.participant_name ?? '').toLowerCase();
+    return title.includes(q) || sessionName.includes(q) || participant.includes(q);
+  });
+
+  filtered = [...filtered].sort((a, b) => {
+    if (sortKey === 'title') {
+      return reportTitle(a).localeCompare(reportTitle(b), 'ko');
+    }
+    const aTime = new Date(reportDateIso(a) ?? 0).getTime();
+    const bTime = new Date(reportDateIso(b) ?? 0).getTime();
+    return sortKey === 'newest' ? bTime - aTime : aTime - bTime;
+  });
+
+  return filtered;
+}
+
+function groupBySession(reports: ReportDto[]): { sessionId: string; label: string; items: ReportDto[] }[] {
+  const map = new Map<string, { sessionId: string; label: string; items: ReportDto[] }>();
+  for (const r of reports) {
+    const key = r.session_id || 'unknown';
+    const existing = map.get(key);
+    if (existing) {
+      existing.items.push(r);
+    } else {
+      map.set(key, {
+        sessionId: key,
+        label: r.session_title || reportTitle(r),
+        items: [r],
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 export default function ReportListPage() {
+  const [sampleOpen, setSampleOpen] = useState(false);
+  /** SDD-064 — 목록에서 팝업으로 상세 보기 */
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [reports, setReports] = useState<ReportDto[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** 에러 발생 시 '다시 시도'로 목록 재조회 트리거 */
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    searchParams.get('status') === 'pending' ? 'pending' : 'all',
+  );
+  const [typeFilter, setTypeFilter] = useState<ReportTypeFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('newest');
+  // 세션별 리스트가 기본 뷰
+  const [groupByClass, setGroupByClass] = useState(true);
+  const [sessionFilter, setSessionFilter] = useState('');
+
+  // SDD-049 — 자동 승인 토글
+  const [autoApprove, setAutoApproveState] = useState(false);
+  const [autoApproveLoading, setAutoApproveLoading] = useState(true);
+  const [autoApproveSaving, setAutoApproveSaving] = useState(false);
+  const [autoApproveError, setAutoApproveError] = useState<string | null>(null);
+  // 일괄 승인 (검토중 리포트 코멘트 없이 일괄 발송)
+  const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+  const setReportPendingReview = useReportStore((s) => s.setPendingReview);
+
+  // 리포트 알림 딥링크(?report=ID) → 목록 위에 팝업으로 열기 (전면 페이지 대신).
+  useEffect(() => {
+    const reportId = searchParams.get('report');
+    if (!reportId) return;
+    setSelectedReportId(reportId);
+    // URL을 정리해 뒤로가기·새로고침 시 팝업이 다시 열리지 않게 한다.
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('report');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // FUNC-05: 검색·상태·세션·타입 필터는 서버 쿼리(page/limit만 지원)로 내려갈 수 없어
+  // 필터 활성 시 무페이지네이션 전체 로드로 전 페이지를 대상으로 필터/정렬한다.
+  const hasActiveFilter =
+    search.trim() !== '' ||
+    statusFilter !== 'all' ||
+    typeFilter !== 'all' ||
+    sessionFilter !== '';
+
+  // SDD-058 — page/limit 조회. 필터 활성 시 전체 조회, BE 미적용 시(전체 반환) 클라이언트 슬라이스 폴백.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const request = hasActiveFilter ? listReports() : listReports({ page, limit: PAGE_LIMIT });
+    request
+      .then((r) => {
+        if (cancelled) return;
+        setTotal(r.total);
+        // 전체 로드(필터 활성)에서는 슬라이스하지 않고 전체를 그대로 사용한다.
+        if (!hasActiveFilter && r.reports.length > PAGE_LIMIT) {
+          const start = (page - 1) * PAGE_LIMIT;
+          setReports(r.reports.slice(start, start + PAGE_LIMIT));
+        } else {
+          setReports(r.reports);
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : '리포트 조회 실패');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [page, reloadKey, hasActiveFilter]);
 
   useEffect(() => {
-    listReports()
-      .then((r) => setReports(r.reports))
-      .catch((e) => setError(e instanceof Error ? e.message : '리포트 조회 실패'))
-      .finally(() => setLoading(false));
+    getAutoApprove()
+      .then((r) => setAutoApproveState(r.enabled))
+      .catch((e) =>
+        setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 조회 실패'),
+      )
+      .finally(() => setAutoApproveLoading(false));
   }, []);
 
+  const handleToggleAutoApprove = async () => {
+    if (autoApproveLoading || autoApproveSaving) return;
+    const prev = autoApprove;
+    const next = !prev;
+    setAutoApproveState(next);
+    setAutoApproveError(null);
+    setAutoApproveSaving(true);
+    try {
+      const res = await setAutoApprove(next);
+      setAutoApproveState(res.enabled);
+    } catch (e) {
+      setAutoApproveState(prev);
+      setAutoApproveError(e instanceof Error ? e.message : '자동 승인 설정 변경 실패');
+    } finally {
+      setAutoApproveSaving(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    await approveAllReports();
+    setReportPendingReview(0);
+    setReloadKey((k) => k + 1);
+  };
+
+  const sessionOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const r of reports) {
+      if (!r.session_id) continue;
+      if (!map.has(r.session_id)) {
+        map.set(r.session_id, r.session_title || reportTitle(r));
+      }
+    }
+    return Array.from(map.entries()).map(([id, label]) => ({ id, label }));
+  }, [reports]);
+
+  const filtered = useMemo(
+    () => filterAndSortReports(reports, search, statusFilter, sortKey, sessionFilter, typeFilter),
+    [reports, search, statusFilter, sortKey, sessionFilter, typeFilter],
+  );
+
+  // 일괄 승인 대상 — 현재 목록에서 검토중(pending_review) 상태 개수.
+  const pendingCount = useMemo(
+    () => reports.filter((r) => resolveReportStatus(r) === 'pending_review').length,
+    [reports],
+  );
+
+  const grouped = useMemo(
+    () => (groupByClass ? groupBySession(filtered) : null),
+    [groupByClass, filtered],
+  );
+
+  // SDD-058 — total 기반 페이지 수. 필터 변경 시 1페이지로 리셋.
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_LIMIT));
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, sessionFilter, sortKey, typeFilter]);
+
+  const toggleDisabled = autoApproveLoading || autoApproveSaving;
+
+  const autoApproveToggle = (
+    <div className="inline-flex items-center gap-2 p-2.5 -m-2.5">
+      <span
+        className={`text-[13px] font-semibold ${
+          autoApprove ? 'text-[#5F0080]' : 'text-[#6F6F6F]'
+        }`}
+      >
+        {autoApproveLoading ? '설정 로딩…' : autoApprove ? '자동 승인' : '수동 승인'}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={autoApprove}
+        aria-label={autoApprove ? '자동 승인' : '수동 승인'}
+        disabled={toggleDisabled}
+        onClick={() => void handleToggleAutoApprove()}
+        className={`relative w-11 h-6 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+          autoApprove ? 'bg-[#5F0080]' : 'bg-[#D4D4D4]'
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+            autoApprove ? 'left-[22px]' : 'left-0.5'
+          }`}
+        />
+      </button>
+    </div>
+  );
+
+  const sampleLink = (
+    <button
+      type="button"
+      onClick={() => setSampleOpen(true)}
+      className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-[#5F0080] bg-[#F5EDFC] border border-[#E8D9F5] hover:bg-[#EFE3FA] transition-colors"
+    >
+      샘플 보기
+    </button>
+  );
+
+  const bulkApproveButton = pendingCount > 0 ? (
+    <button
+      type="button"
+      onClick={() => setBulkApproveOpen(true)}
+      className="inline-flex items-center h-9 px-4 rounded-full text-[13px] font-semibold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+    >
+      일괄 승인 ({pendingCount})
+    </button>
+  ) : null;
+
+  const rightSlot = (
+    <div className="inline-flex items-center gap-3">
+      {autoApproveToggle}
+      {bulkApproveButton}
+      {sampleLink}
+    </div>
+  );
+
+  const selectClass =
+    'h-10 rounded-xl border border-[#EFEFEF] px-3 text-[13px] text-[#1F1F1F] bg-white focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20';
+
+  const openReportModal = (id: string) => setSelectedReportId(id);
+
+  // 리포트 미생성 합성 항목(id=null)은 상세 열람이 없다 — 안정 키·가드용 헬퍼.
+  const reportKey = (r: ReportDto) => r.id ?? `missing:${r.session_id}:${r.type}`;
+  const openIfPresent = (r: ReportDto) => {
+    if (r.id) openReportModal(r.id);
+  };
+
+  const renderRow = (r: ReportDto) => {
+    const missing = !r.id;
+    const interactive = !missing;
+    return (
+    <tr
+      key={reportKey(r)}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? () => openIfPresent(r) : undefined}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openIfPresent(r);
+              }
+            }
+          : undefined
+      }
+      className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${
+        interactive ? 'hover:bg-[#F8FAFC] cursor-pointer' : 'bg-[#FDFDFD]'
+      }`}
+    >
+      <td className="px-5 py-3.5">
+        <div className="flex items-center gap-1.5">
+          {!r.is_read && (
+            <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+          )}
+          <span className="font-medium text-[#1F1F1F] truncate max-w-[200px]">{reportTitle(r)}</span>
+        </div>
+      </td>
+      <td className="px-5 py-3.5">
+        <div className="font-medium text-[#1F1F1F] truncate max-w-[120px]">{participantDisplayName(r)}</div>
+      </td>
+      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{genderLabel(r.gender)}</td>
+      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatBirthDate(r.birth_date)}</td>
+      <td className="px-5 py-3.5">
+        <MembershipBadge isGuest={r.is_guest} />
+      </td>
+      <td className="px-5 py-3.5">
+        <TypeBadge type={r.type} />
+      </td>
+      <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F] whitespace-nowrap">{sessionTypeLabel(r.session_type)}</td>
+      <td className="px-5 py-3.5 text-[12px] text-[#9B9B9B] font-mono whitespace-nowrap">{formatDate(reportDateIso(r))}</td>
+      <td className="px-5 py-3.5">
+        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
+      </td>
+      <td className="px-5 py-3.5">
+        <GenerationStatusBadge
+          status={r.status}
+          generationStatus={r.generation_status}
+          generationError={r.generation_error}
+          generationStartedAt={r.generation_started_at}
+        />
+      </td>
+      <td className="px-5 py-3.5">
+        {interactive ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              openIfPresent(r);
+            }}
+            className="text-[13px] font-semibold text-[#5F0080] hover:underline"
+          >
+            보기
+          </button>
+        ) : (
+          <span className="text-[13px] text-[#BDBDBD]">—</span>
+        )}
+      </td>
+    </tr>
+    );
+  };
+
+  const renderMobileCard = (r: ReportDto) => (
+    <button
+      key={reportKey(r)}
+      type="button"
+      onClick={r.id ? () => openIfPresent(r) : undefined}
+      className={`block w-full text-left bg-white border border-[#EFEFEF] rounded-2xl p-4 transition-all ${
+        r.id ? 'hover:border-[#5F0080]/30 hover:shadow-sm' : 'bg-[#FDFDFD]'
+      }`}
+    >
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <TypeBadge type={r.type} />
+          <MembershipBadge isGuest={r.is_guest} />
+        </div>
+        <ReportStatusChip status={r.status} sentAt={r.sent_at} />
+      </div>
+      <div className="flex items-center gap-1.5 mb-1">
+        {!r.is_read && (
+          <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
+        )}
+        <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(r)}</span>
+      </div>
+      <div className="text-[13px] text-[#1F1F1F] mb-1">
+        {participantDisplayName(r)}
+        <span className="text-[#9B9B9B] font-normal"> · {genderLabel(r.gender)} · {formatBirthDate(r.birth_date)}</span>
+      </div>
+      <div className="text-[12px] text-[#6F6F6F]">
+        {sessionTypeLabel(r.session_type)} · {formatDate(reportDateIso(r))}
+      </div>
+      <div className="mt-2">
+        <GenerationStatusBadge
+          status={r.status}
+          generationStatus={r.generation_status}
+          generationError={r.generation_error}
+          generationStartedAt={r.generation_started_at}
+        />
+      </div>
+    </button>
+  );
+
+  const tableHead = (
+    <thead>
+      <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">제목</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">사용자</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">성별</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생년월일</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">구분</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">타입</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">세션유형</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">날짜</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">상태</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">생성 상태</th>
+        <th className="text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider">액션</th>
+      </tr>
+    </thead>
+  );
+
   return (
-    <AppShell title="리포트" sub="AI REPORTS">
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+    <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? rightSlot : undefined}>
+      {!loading && (
+        <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
+          {autoApproveToggle}
+          {bulkApproveButton}
+          {sampleLink}
+        </div>
       )}
-      {loading ? (
+      {autoApproveError && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{autoApproveError}</div>
+      )}
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[15px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : hasActiveFilter || total > 0 ? (
+        <div className="space-y-4">
+          {/* 툴바: 검색 / 상태 / 정렬 / 세션 / 그룹핑 */}
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3 flex-wrap">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="제목·세션·사용자 검색"
+              aria-label="리포트 검색"
+              className="h-10 rounded-xl border border-[#EFEFEF] px-4 text-[13px] w-full lg:w-64 focus:outline-none focus:ring-2 focus:ring-[#5F0080]/20"
+            />
+            <div className="inline-flex rounded-xl border border-[#EFEFEF] overflow-hidden bg-white">
+              {(
+                [
+                  ['all', '전체'],
+                  ['pending', '검토중'],
+                  ['approved', '승인됨'],
+                  ['failed', '실패'],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatusFilter(value)}
+                  className={`h-10 px-3.5 text-[13px] font-semibold transition-colors ${
+                    statusFilter === value
+                      ? value === 'failed'
+                        ? 'bg-[#C62828] text-white'
+                        : 'bg-[#5F0080] text-white'
+                      : 'text-[#6F6F6F] hover:bg-[#F8FAFC]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as ReportTypeFilter)}
+              aria-label="타입 필터"
+              className={selectClass}
+            >
+              <option value="all">전체 타입</option>
+              <option value="counselor">상담사용</option>
+              <option value="client">회원용</option>
+            </select>
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as SortKey)}
+              aria-label="정렬"
+              className={selectClass}
+            >
+              <option value="newest">최신순</option>
+              <option value="oldest">오래된순</option>
+              <option value="title">제목순</option>
+            </select>
+            <select
+              value={sessionFilter}
+              onChange={(e) => setSessionFilter(e.target.value)}
+              aria-label="세션 필터"
+              className={`${selectClass} max-w-[220px]`}
+            >
+              <option value="">전체 세션</option>
+              {sessionOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={groupByClass}
+              onClick={() => setGroupByClass((v) => !v)}
+              className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${
+                groupByClass
+                  ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]'
+                  : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'
+              }`}
+            >
+              세션별 그룹핑 {groupByClass ? 'ON' : 'OFF'}
+            </button>
+            <span className="text-[13px] text-[#6F6F6F] lg:ml-auto">
+              {filtered.length} / {total}건
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="text-[#6F6F6F]">불러오는 중...</div>
+          ) : filtered.length === 0 ? (
+            <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-10 text-center">
+              <div className="text-[#6F6F6F] text-sm">조건에 맞는 리포트가 없습니다.</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('all');
+                  setTypeFilter('all');
+                  setSessionFilter('');
+                }}
+                className="mt-3 text-[13px] font-semibold text-[#5F0080] hover:underline"
+              >
+                필터 초기화
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* 모바일 카드 */}
+              <div className="block md:hidden space-y-3">
+                {grouped
+                  ? grouped.map((g) => (
+                      <div key={g.sessionId} className="space-y-2">
+                        <div className="px-1 pt-2 text-[12px] font-bold text-[#5F0080] font-mono uppercase tracking-wider">
+                          {g.label}
+                          <span className="ml-2 text-[#9B9B9B] font-normal normal-case tracking-normal">
+                            {g.items.length}건
+                          </span>
+                        </div>
+                        {g.items.map(renderMobileCard)}
+                      </div>
+                    ))
+                  : filtered.map(renderMobileCard)}
+              </div>
+
+              {/* 데스크톱 테이블 */}
+              <div className="hidden md:block bg-white border border-[#EFEFEF] rounded-2xl overflow-hidden overflow-x-auto">
+                {grouped ? (
+                  grouped.map((g) => (
+                    <div key={g.sessionId}>
+                      <div className="px-5 py-2.5 bg-[#F5EDFC]/60 border-b border-[#EFEFEF] text-[12px] font-bold text-[#5F0080]">
+                        {g.label}
+                        <span className="ml-2 font-normal text-[#6F6F6F]">{g.items.length}건</span>
+                      </div>
+                      <table className="w-full text-[15px] min-w-[980px]">
+                        {tableHead}
+                        <tbody>{g.items.map(renderRow)}</tbody>
+                      </table>
+                    </div>
+                  ))
+                ) : (
+                  <table className="w-full text-[15px] min-w-[980px]">
+                    {tableHead}
+                    <tbody>{filtered.map(renderRow)}</tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* SDD-058 — 페이지네이션(필터 활성 시 전체 로드이므로 숨김) */}
+              {!hasActiveFilter && totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1 || loading}
+                    aria-label="이전"
+                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    이전
+                  </button>
+                  <span className="text-[13px] text-[#6F6F6F] font-mono tabular-nums">
+                    {page} / {totalPages}
+                    <span className="ml-2 text-[#9B9B9B]">(전체 {total}건)</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages || loading}
+                    aria-label="다음"
+                    className="h-11 px-4 rounded-xl text-[13px] font-semibold border border-[#EFEFEF] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    다음
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
-      ) : reports.length === 0 ? (
+      ) : (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
           <div className="text-[#6F6F6F] text-sm">아직 생성된 리포트가 없습니다.</div>
           <div className="text-[#9B9B9B] text-xs mt-1">세션을 마치면 리포트를 생성할 수 있습니다.</div>
+          <button
+            type="button"
+            onClick={() => setSampleOpen(true)}
+            className="inline-flex items-center mt-5 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            샘플 리포트 보기
+          </button>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reports.map((r) => {
-            const headline = (r.content?.headline as string) ?? '리포트';
-            const score = (r.content?.score as number) ?? null;
-            return (
-              <Link
-                key={r.id}
-                to={`/reports/${r.id}`}
-                className="block bg-white border border-[#EFEFEF] rounded-2xl p-5 hover:shadow-md hover:border-[#5F0080]/30 transition-all"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <TypeBadge type={r.type} />
-                  <StatusBadge sentAt={r.sent_at} />
-                </div>
-                <div className="font-bold text-[16px] text-[#1F1F1F] mb-1 truncate">
-                  {r.session_title || headline}
-                </div>
-                <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-3">
-                  {r.session_type ?? '-'} · {formatDate(r.scheduled_at ?? r.created_at)}
-                </div>
-                {score !== null && (
-                  <div className="flex items-baseline gap-1.5 mt-3">
-                    <span className="text-[28px] font-extrabold text-[#5F0080]">{score}</span>
-                    <span className="text-[12px] text-[#6F6F6F]">/ 100</span>
-                  </div>
-                )}
-              </Link>
-            );
-          })}
-        </div>
+      )}
+      {sampleOpen && <ReportSampleModal onClose={() => setSampleOpen(false)} />}
+      {bulkApproveOpen && (
+        <BulkApproveModal
+          pendingCount={pendingCount}
+          onConfirm={handleBulkApprove}
+          onClose={() => setBulkApproveOpen(false)}
+        />
+      )}
+      {selectedReportId && (
+        <ReportDetailModal
+          reportId={selectedReportId}
+          onClose={() => setSelectedReportId(null)}
+          onReportChange={(next) => {
+            // 승인·코멘트 저장 등으로 갱신된 리포트를 목록에 즉시 반영 (새로고침 없이).
+            setReports((prev) => prev.map((r) => (r.id === next.id ? next : r)));
+          }}
+        />
       )}
     </AppShell>
   );

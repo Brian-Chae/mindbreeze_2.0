@@ -1,0 +1,18 @@
+# SDD-071: 설치 전 경로와 환경 파일을 배포 환경에 맞게 검토한다.
+[Unit]
+Description=MIND BREEZE data export worker
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/mindbreeze/backend
+EnvironmentFile=/home/ubuntu/mindbreeze/backend/.env.dev
+ExecStart=/home/ubuntu/mindbreeze/backend/venv/bin/celery -A app.core.celery_app:celery_app worker -Q exports --concurrency=1 --prefetch-multiplier=1 --hostname=exports@%H --loglevel=INFO
+Restart=on-failure
+PrivateTmp=true
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

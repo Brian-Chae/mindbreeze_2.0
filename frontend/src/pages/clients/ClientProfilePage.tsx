@@ -1,13 +1,19 @@
+import AgentCheckinPanel from '../../components/clients/agent-checkin-panel';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import { getClientProfile, updateMemo, type ClientProfile } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
+import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
 
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, isInitialized } = useAuthStore();
+  const { isAuthenticated, isInitialized, user } = useAuthStore();
+
+  // SEC-07: 내담자 프로필 상세는 상담사·기관관리자 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
+  useRequireAuth();
+  useRequireRole(['counselor', 'org_admin']);
 
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [memo, setMemo] = useState('');
@@ -15,12 +21,6 @@ export default function ClientProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (isInitialized && !isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isInitialized, isAuthenticated, navigate]);
 
   useEffect(() => {
     if (!id || !isAuthenticated) return;
@@ -78,7 +78,7 @@ export default function ClientProfilePage() {
       <div className="max-w-3xl mx-auto">
         <button
           onClick={() => navigate('/clients')}
-          className="text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex h-11 items-center px-3 -ml-3 text-sm text-[#6F6F6F] hover:text-[#5F0080] mb-2"
         >
           ← 목록으로
         </button>
@@ -92,7 +92,7 @@ export default function ClientProfilePage() {
                 className="w-16 h-16 rounded-full object-cover"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-[#F5EDFC] flex items-center justify-center text-[#5F0080] text-xl font-semibold">
                 {profile.name.charAt(0)}
               </div>
             )}
@@ -129,7 +129,7 @@ export default function ClientProfilePage() {
               <dt className="text-sm text-gray-500 mb-2">고민</dt>
               <div className="flex flex-wrap gap-1">
                 {profile.concerns.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs rounded-full">
+                  <span key={tag} className="px-2 py-0.5 bg-[#F5EDFC] text-[#5F0080] text-xs rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -142,7 +142,7 @@ export default function ClientProfilePage() {
               <dt className="text-sm text-gray-500 mb-2">관심사</dt>
               <div className="flex flex-wrap gap-1">
                 {profile.interests.map((tag) => (
-                  <span key={tag} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                  <span key={tag} className="px-2 py-0.5 bg-[#EFE3FA] text-[#6E1A8C] text-xs rounded-full">
                     {tag}
                   </span>
                 ))}
@@ -151,26 +151,31 @@ export default function ClientProfilePage() {
           )}
         </div>
 
+        {id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
+
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-2">상담사 비공개 메모</h2>
           <p className="text-xs text-gray-500 mb-3">내담자에게 공개되지 않습니다.</p>
           <textarea
+            id="client-memo"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'client-memo-error' : undefined}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080] text-sm"
             placeholder="상담 메모를 입력하세요"
           />
           <div className="flex items-center gap-3 mt-3">
             <button
               onClick={handleSaveMemo}
               disabled={saving}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-50"
+              className="px-4 py-2 bg-[#5F0080] text-white rounded-md hover:bg-[#4D0066] text-sm disabled:opacity-50"
             >
               {saving ? '저장 중...' : '저장'}
             </button>
-            {savedAt && <span className="text-sm text-emerald-600">저장되었습니다</span>}
-            {error && <span className="text-sm text-red-600">{error}</span>}
+            {savedAt && <span role="status" className="text-sm text-[#5F0080]">저장되었습니다</span>}
+            {error && <span id="client-memo-error" role="alert" className="text-sm text-red-600">{error}</span>}
           </div>
         </div>
       </div>

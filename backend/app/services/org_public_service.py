@@ -1,0 +1,148 @@
+"""기관 전용 공개 페이지 조회 로직
+
+인증 없이 호출되는 경로이므로 개인정보를 응답에 담지 않도록 조회 단계에서부터 제한한다.
+"""
+
+from __future__ import annotations
+
+import uuid
+
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session as DBSession
+
+from app.models.counselor_profile import CounselorProfile
+from app.models.organization import Organization
+from app.models.session import Session, SessionParticipant
+from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
+from app.services import code_service
+
+# 공개 페이지에 노출하는 클래스 상태 — 완료/취소는 제외한다.
+# SDD-088: open(오픈/대기)은 입장을 받는 상태이므로 공개 노출에 포함한다.
+PUBLIC_CLASS_STATUSES = ("ready", "scheduled", "open", "in_progress")
+
+
+def _counselors(org_id: uuid.UUID, db: DBSession) -> tuple[list[dict], list[uuid.UUID]]:
+    """기관 소속 활성 상담사 목록 + 전문분야. (공개 정보, 개인 식별 정보 제외)
+
+    AUTH4-10: 소속 판정은 User.org_id 미러가 아니라 membership(user_org_memberships)
+    기준으로 한다 — 다기관 소속 상담사는 미러가 주 소속만 가리켜 부 소속 기관의 공개
+    페이지에서 누락된다.
+    """
+    users = (
+        db.query(User)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
+        .filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.role == "counselor",
+            UserOrgMembership.status == "active",
+            User.status == "active",
+        )
+        .order_by(User.name.asc())
+        .all()
+    )
+    if not users:
+        return [], []
+
+    ids = [u.id for u in users]
+    # 전문분야는 CounselorProfile에 있으며, 프로필 미작성 상담사는 빈 배열로 둔다.
+    specialties_by_user = {
+        p.user_id: list(p.specialties or [])
+        for p in db.query(CounselorProfile).filter(CounselorProfile.user_id.in_(ids)).all()
+    }
+
+    counselors = [
+        {
+            "id": str(u.id),
+            "name": u.name,
+            "specialties": specialties_by_user.get(u.id, []),
+        }
+        for u in users
+    ]
+    return counselors, ids
+
+
+def _classes(counselor_ids: list[uuid.UUID], db: DBSession) -> list[dict]:
+    """소속 상담사가 진행하는 공개 클래스 목록 (완료·취소 제외)."""
+    if not counselor_ids:
+        return []
+
+    sessions = (
+        db.query(Session)
+        .filter(
+            Session.host_id.in_(counselor_ids),
+            Session.status.in_(PUBLIC_CLASS_STATUSES),
+            # SDD-095: 클래스 템플릿은 실제 진행 클래스가 아니다 — 공개 목록에서 제외(참여코드도 없다).
+            Session.is_template.is_(False),
+        )
+        .all()
+    )
+    if not sessions:
+        return []
+
+    # 참여자 수는 게스트(user_id=NULL) 포함 전체 행 수로 센다.
+    session_ids = [s.id for s in sessions]
+    counts: dict[uuid.UUID, int] = {}
+    for p in (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id.in_(session_ids))
+        .all()
+    ):
+        counts[p.session_id] = counts.get(p.session_id, 0) + 1
+
+    # 진행중 → 대기 순, 그 안에서는 최근 생성 순으로 노출한다.
+    def _sort_key(s: Session) -> tuple[int, str]:
+        priority = 0 if s.status == "in_progress" else 1
+        created = s.created_at.isoformat() if s.created_at else ""
+        return (priority, created)
+
+    return [
+        {
+            "id": str(s.id),
+            "title": s.title,
+            "type": s.type,
+            # SEC-10: 공개 페이지에는 참여 코드(access_code)를 노출하지 않는다 — 무단 입장 방지.
+            "status": s.status,
+            "participant_mode": s.participant_mode,
+            "started_at": s.started_at,
+            "participant_count": counts.get(s.id, 0),
+            "max_participants": s.max_participants,
+        }
+        for s in sorted(sessions, key=_sort_key)
+    ]
+
+
+def get_org_public_page(org_code: str, db: DBSession) -> dict:
+    """기관 코드로 공개 페이지 데이터를 조회한다. 없으면 404."""
+    normalized = code_service.normalize_code(org_code)
+    if len(normalized) != code_service.CODE_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다"
+        )
+
+    # SDD-081: 개인 상담소(kind=individual)는 org_code 가 없어 도달 불가하지만 방어적으로 제외한다
+    org = (
+        db.query(Organization)
+        .filter(
+            Organization.org_code == normalized,
+            Organization.deactivated_at.is_(None),
+            Organization.kind != "individual",
+        )
+        .first()
+    )
+    if org is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="기관을 찾을 수 없습니다"
+        )
+
+    counselors, counselor_ids = _counselors(org.id, db)
+
+    return {
+        "org_id": str(org.id),
+        "org_name": org.name,
+        "org_code": org.org_code,
+        # Organization에 소개글 필드가 없어 현재는 항상 None
+        "intro": getattr(org, "intro", None) or getattr(org, "description", None),
+        "counselors": counselors,
+        "classes": _classes(counselor_ids, db),
+    }

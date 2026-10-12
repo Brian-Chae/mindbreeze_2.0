@@ -2,6 +2,7 @@
 
 import { Link } from 'react-router-dom';
 import type { SessionDto, SessionType, SessionStatus } from '../../lib/api/session';
+import { sessionStatusLabel } from '../../lib/session-status';
 
 const sameDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -24,22 +25,11 @@ const typeBadge = (type: SessionType): string => {
   }
 };
 
-const statusLabel = (status: SessionStatus): string => {
-  switch (status) {
-    case 'scheduled': return '예정';
-    case 'in_progress': return '진행중';
-    case 'paused': return '일시정지';
-    case 'completed': return '완료';
-    case 'cancelled': return '취소';
-    default: return status;
-  }
-};
-
 const statusBadge = (status: SessionStatus): string => {
   switch (status) {
+    case 'ready':       return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled':   return 'bg-[#F5EDFC] text-[#5F0080]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
-    case 'paused':      return 'bg-[#FFF4DC] text-[#8A6B1F]';
     case 'completed':   return 'bg-[#F2F3F8] text-[#6F6F6F]';
     case 'cancelled':   return 'bg-[#FDECEC] text-[#B3261E]';
     default:            return 'bg-[#F2F3F8] text-[#6F6F6F]';
@@ -64,7 +54,9 @@ interface Props {
 
 export function DaySchedule({ sessions, selectedDate }: Props) {
   const items = sessions
-    .filter((s) => sameDay(new Date(s.scheduled_at), selectedDate))
+    .filter((s): s is SessionDto & { scheduled_at: string } => (
+      Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), selectedDate)
+    ))
     .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
 
   return (
@@ -86,14 +78,14 @@ export function DaySchedule({ sessions, selectedDate }: Props) {
                 <span className="text-sm font-mono text-[#1F1F1F] min-w-[44px]">
                   {formatTime(s.scheduled_at)}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${typeBadge(s.type)}`}>
+                <span className={`px-2 py-0.5 rounded-full text-[12px] font-bold shrink-0 ${typeBadge(s.type)}`}>
                   {typeLabel(s.type)}
                 </span>
                 <span className="flex-1 truncate text-sm text-[#1F1F1F]">
                   {s.title || `${typeLabel(s.type)} 세션`}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusBadge(s.status)}`}>
-                  {statusLabel(s.status)}
+                <span className={`px-2 py-0.5 rounded-full text-[12px] font-medium shrink-0 ${statusBadge(s.status)}`}>
+                  {sessionStatusLabel(s.status)}
                 </span>
               </Link>
             </li>

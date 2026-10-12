@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from datetime import date, datetime
@@ -12,6 +13,9 @@ from sqlalchemy.orm import Session
 
 from app.models.credential import Credential
 from app.models.user import User
+from app.services.notification_service import build_standard_extra, notify_event
+
+logger = logging.getLogger(__name__)
 
 # 업로드 루트 — backend/uploads/
 UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
@@ -19,6 +23,20 @@ UPLOAD_ROOT = Path(__file__).resolve().parents[2] / "uploads"
 # 허용 확장자 (MIME 보조 검증)
 ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/jpg", "image/png"}
+
+# SEC-12: 매직바이트(파일 시그니처) 화이트리스트 — 확장자·content_type 만으로는
+# 위장 업로드(예: 스크립트/HTML 을 .png 로)를 막지 못한다. 외부 의존성 없이
+# 표준 라이브러리로 파일 헤더만 검사한다.
+ALLOWED_SIGNATURES: tuple[bytes, ...] = (
+    b"%PDF",               # PDF
+    b"\xff\xd8\xff",       # JPEG
+    b"\x89PNG\r\n\x1a\n",  # PNG
+)
+
+
+def _signature_allowed(header: bytes) -> bool:
+    """파일 헤더가 허용 시그니처(PDF/JPEG/PNG) 중 하나로 시작하는지."""
+    return any(header.startswith(sig) for sig in ALLOWED_SIGNATURES)
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_CREDENTIALS_PER_USER = 10
@@ -55,6 +73,17 @@ def upload_credential(
             detail="PDF, JPG, PNG 파일만 업로드 가능합니다",
         )
     if file.content_type and file.content_type not in ALLOWED_MIME:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="PDF, JPG, PNG 파일만 업로드 가능합니다",
+        )
+
+    # SEC-12: content_type 유무와 무관하게 실제 파일 시그니처를 강제 검증한다.
+    # (content_type 미전송 시 검사를 건너뛰던 우회 차단)
+    file.file.seek(0)
+    header = file.file.read(8)
+    file.file.seek(0)
+    if not _signature_allowed(header):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="PDF, JPG, PNG 파일만 업로드 가능합니다",
@@ -115,6 +144,25 @@ def upload_credential(
     db.add(credential)
     db.commit()
     db.refresh(credential)
+
+    # 모든 플랫폼 관리자에게 검증 요청 알림 (SDD-093 #3)
+    platform_admins = (
+        db.query(User)
+        .filter(User.role == "platform_admin", User.status == "active")
+        .all()
+    )
+    submitter = db.query(User).filter(User.id == user_id).first()
+    submitter_name = submitter.name if submitter else "상담사"
+    for admin in platform_admins:
+        notify_event("verification_requested", admin.id, {
+            "title": "새 자격 검증 요청이 도착했습니다",
+            "body": f"{submitter_name}님이 자격 증빙을 제출했습니다. 검토해주세요.",
+            "extra": build_standard_extra(
+                "verification_requested", "credentials", None,
+                params={"credential_id": str(credential.id), "submitter_id": str(user_id)},
+            ),
+        }, db)
+
     return credential
 
 
@@ -147,15 +195,27 @@ def delete_credential(credential_id: uuid.UUID, user_id: uuid.UUID, db: Session)
     try:
         if cred.s3_key and os.path.exists(cred.s3_key):
             os.remove(cred.s3_key)
-    except OSError:
-        pass
+    except OSError as exc:
+        # MB-ERR-010: 로컬 파일 제거 실패(권한·잠금 등)를 조용히 무시하면 개인정보 파일이
+        # 잔존해도 알 수 없다. DB 삭제는 진행하되 실패를 로그로 남긴다.
+        logger.warning(
+            "[credential] 증빙 로컬 파일 삭제 실패: credential_id=%s path=%s (%s)",
+            credential_id,
+            cred.s3_key,
+            exc,
+        )
 
     db.delete(cred)
     db.commit()
 
 
 def recalculate_tier(user_id: uuid.UUID, db: Session) -> str:
-    """승인된 증빙 기반으로 verified_tier 재산정."""
+    """승인된 증빙 기반으로 verified_tier 재산정(승격·강등 모두).
+
+    신분증 + (자격증·학위·경력) 1종 이상이 모두 approved 면 verified,
+    그렇지 않으면 unverified 로 되돌린다. 반려·폐기로 잔여 approved 증빙이
+    요건을 못 채우면 등급이 유지되지 않고 강등된다(MB2-CRED-TIER-DOWNGRADE).
+    """
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         return "unverified"
@@ -168,8 +228,11 @@ def recalculate_tier(user_id: uuid.UUID, db: Session) -> str:
     has_id_card = any(c.type == "id_card" for c in approved)
     has_qualification = any(c.type in ("license", "diploma", "career") for c in approved)
 
-    if has_id_card and has_qualification:
-        user.verified_tier = "verified"
+    # verified_tier 계약값: 'unverified' | 'email' | 'verified' (프론트 VerifiedTier).
+    # 두 요건을 모두 충족할 때만 verified, 아니면 강등(unverified).
+    new_tier = "verified" if (has_id_card and has_qualification) else "unverified"
+    if user.verified_tier != new_tier:
+        user.verified_tier = new_tier
         db.add(user)
         db.commit()
 
@@ -199,6 +262,8 @@ def admin_verify(
     new_status: str,
     reason: str | None,
     db: Session,
+    *,
+    admin_id: uuid.UUID | None = None,
 ) -> Credential:
     """관리자 승인/반려 처리."""
     if new_status not in ("approved", "rejected"):
@@ -209,13 +274,25 @@ def admin_verify(
     cred = db.query(Credential).filter(Credential.id == credential_id).first()
     if cred is None:
         raise HTTPException(status_code=404, detail="증빙을 찾을 수 없습니다")
+    previous_status = cred.status
     cred.status = new_status
     cred.ai_verdict = {"reason": reason} if reason else None
     db.add(cred)
     db.commit()
     db.refresh(cred)
 
-    if new_status == "approved":
+    # MB2-CRED-TIER-DOWNGRADE: 승인·반려 모두 등급을 재계산한다. 반려 시 잔여
+    # approved 증빙 기준으로 강등되어 verified 가 유지되지 않는다.
+    if new_status in ("approved", "rejected"):
         recalculate_tier(cred.user_id, db)
 
+    if previous_status != new_status and cred.user_id != admin_id:
+        notify_event("verification_result", cred.user_id, {
+            "title": "자격 검증 결과가 도착했습니다",
+            "body": "자격 화면에서 결과와 보완 사항을 확인해주세요.",
+            "extra": build_standard_extra(
+                "verification_result", "credentials", None,
+                params={"credential_id": str(cred.id), "result": new_status},
+            ),
+        }, db)
     return cred

@@ -1,0 +1,46 @@
+TAP version 13
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+not ok 1 - 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+  ---
+  duration_ms: 3910.972042
+  type: 'test'
+  location: '/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/tests/report-modal-pdf.test.cjs:8:55'
+  failureType: 'testCodeFailure'
+  error: '페이지 2: 03 · 몸의 변화'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/tests/report-modal-pdf.test.cjs:81:105)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+not ok 2 - 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+  ---
+  duration_ms: 3076.039167
+  type: 'test'
+  location: '/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/tests/report-modal-pdf.test.cjs:8:55'
+  failureType: 'testCodeFailure'
+  error: '페이지 2: 03 · 몸의 변화'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/frontend/tests/report-modal-pdf.test.cjs:81:105)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 0
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7130.731833

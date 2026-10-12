@@ -28,7 +28,8 @@ function RiskBadge({ score }: { score: number }) {
   if (score >= 0.7) {
     color = 'bg-red-50 text-red-700';
     label = '고위험';
-  } else if (score >= 0.3) {
+  } else if (score >= 0.4) {
+    // 백엔드 admin_service._risk_level(high>=0.7, medium>=0.4, low<0.4)과 일치시킨다.
     color = 'bg-yellow-50 text-yellow-700';
     label = '중간';
   } else {
@@ -36,7 +37,7 @@ function RiskBadge({ score }: { score: number }) {
     label = '저위험';
   }
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold font-mono ${color}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[12px] font-bold font-mono ${color}`}>
       {label} {(score * 100).toFixed(0)}%
     </span>
   );
@@ -51,7 +52,7 @@ function StatusBadge({ status }: { status: string }) {
   };
   const m = map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${m.cls}`}>
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold ${m.cls}`}>
       {m.label}
     </span>
   );
@@ -89,10 +90,6 @@ export default function AdminReviewListPage() {
 
   return (
     <AppShell title="검토 큐" sub="ADMIN REVIEW QUEUE">
-      {error && (
-        <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
-      )}
-
       {/* 필터 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
         <select
@@ -108,7 +105,18 @@ export default function AdminReviewListPage() {
         <span className="text-[13px] text-[#6F6F6F]">총 {total}건</span>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="border border-[#F5C2C2] bg-red-50 rounded-2xl p-10 text-center">
+          <div className="text-[15px] text-red-700">{error}</div>
+          <button
+            type="button"
+            onClick={() => void fetchReviews()}
+            className="inline-flex items-center mt-4 h-10 px-5 rounded-full text-[13px] font-bold text-white bg-[#5F0080] hover:bg-[#4A0066] transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : loading ? (
         <div className="text-[#6F6F6F]">불러오는 중...</div>
       ) : items.length === 0 ? (
         <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
@@ -125,7 +133,7 @@ export default function AdminReviewListPage() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
                       {item.target_type === 'credential' ? '자격증빙' : '센터문서'}
                     </span>
                     <span className="text-[12px] text-[#6F6F6F] font-mono">
@@ -140,14 +148,14 @@ export default function AdminReviewListPage() {
                     <div className="font-bold text-[15px] text-[#1F1F1F] mb-1">
                       {item.submitter_name ?? '이름 없음'}
                     </div>
-                    <div className="text-[12px] text-[#6F6F6F]">
+                    <div className="text-[12px] text-[#6F6F6F] break-all">
                       {item.submitter_email ?? ''}
                     </div>
                   </div>
                   <RiskBadge score={item.risk_score} />
                 </div>
 
-                <div className="text-[11px] text-[#9B9B9B] font-mono mt-3">
+                <div className="text-[12px] text-[#9B9B9B] font-mono mt-3">
                   접수: {formatDate(item.created_at)}
                 </div>
               </Link>
@@ -160,7 +168,7 @@ export default function AdminReviewListPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 이전
               </button>
@@ -170,7 +178,7 @@ export default function AdminReviewListPage() {
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
+                className="px-3 py-2.5 rounded-lg text-[13px] border border-[#EFEFEF] disabled:opacity-30"
               >
                 다음
               </button>

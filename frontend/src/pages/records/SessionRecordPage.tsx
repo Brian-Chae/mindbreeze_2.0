@@ -1,68 +1,385 @@
-// 세션 후 AI 기록지 조회·편집 페이지
+// 세션 후 AI 기록지 조회·편집 페이지 (SDD-013)
+// 3탭 (AI 요약 / 전사문 / 상담사 메모) + WebSocket 실시간 처리 상태
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { getRecord, getTranscript, type RecordResponse, type TranscriptResponse } from '../../lib/api/audio';
+import AppShell from '../../components/layout/AppShell';
+import { StatusBadge } from '../../components/session/StatusBadge';
 import { RecordView } from '../../components/records/RecordView';
-import { TranscriptView } from '../../components/records/TranscriptView';
+import { getRecord, getTranscript, type RecordResponse, type TranscriptResponse } from '../../lib/api/audio';
+import { getSession, type SessionDto, type SessionType } from '../../lib/api/session';
+import { useRecordSocket, RECORD_STATUS_LABELS, type RecordStatus } from '../../hooks/useRecordSocket';
+import { useReportProgress } from '../../hooks/useReportProgress';
+import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
 
-export default function SessionRecordPage() {
-  const { id } = useParams<{ id: string }>();
-  const [record, setRecord] = useState<RecordResponse | null>(null);
-  const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
-  const [tab, setTab] = useState<'record' | 'transcript'>('record');
-  const [error, setError] = useState<string | null>(null);
+const TYPE_LABELS: Record<SessionType, string> = {
+  clinical: '임상심리상담',
+  hypnosis: '최면심리상담',
+  meditation: '명상수업',
+  custom: '기타',
+};
 
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([getRecord(id), getTranscript(id)])
-      .then(([r, t]) => {
-        setRecord(r);
-        setTranscript(t);
-      })
-      .catch((e) => setError((e as Error).message));
-  }, [id]);
+const TYPE_CLASSES: Record<SessionType, string> = {
+  clinical: 'bg-[#F5EDFC] text-[#5F0080]',
+  hypnosis: 'bg-[#EFE3FA] text-[#6E1A8C]',
+  meditation: 'bg-[#E6F8F3] text-[#1F8A5B]',
+  custom: 'bg-[#FFF4DC] text-[#8A6B1F]',
+};
 
-  if (error) {
-    return <div className="p-6 text-sm text-red-600">{error}</div>;
-  }
-  if (!record) {
-    return <div className="p-6 text-sm text-neutral-500">기록지 로딩 중...</div>;
+const PROCESSING_STATUSES: RecordStatus[] = ['merging', 'transcribing', 'diarizing', 'summarizing'];
+
+function formatDateTime(iso: string | null): string {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  return d.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function AccessCodeCell({ code }: { code: string | null }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (): Promise<void> => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* 클립보드 실패 시 무시 */
+    }
+  };
+
+  if (!code) {
+    return <span className="text-[#C2C3CE]">-</span>;
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 px-4 py-4 md:max-w-3xl md:p-6 text-sm md:text-base">
-      <h1 className="text-lg md:text-xl font-semibold text-neutral-900 dark:text-neutral-100">AI 기록지</h1>
-      <div className="flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
-        <button
-          type="button"
-          onClick={() => setTab('record')}
-          className={`px-4 py-2 text-sm font-medium ${
-            tab === 'record'
-              ? 'border-b-2 border-indigo-600 text-indigo-600'
-              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
-          }`}
-        >
-          기록지
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('transcript')}
-          className={`px-4 py-2 text-sm font-medium ${
-            tab === 'transcript'
-              ? 'border-b-2 border-indigo-600 text-indigo-600'
-              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400'
-          }`}
-        >
-          전사문
-        </button>
+    <div className="flex items-center gap-2">
+      <span className="font-mono font-bold tracking-widest text-[#5F0080]">{code}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="px-2 py-1 rounded-lg bg-[#F5EDFC] text-[#5F0080] text-[12px] font-semibold hover:bg-[#EBDEF7] transition-colors"
+      >
+        {copied ? '복사됨' : '복사'}
+      </button>
+    </div>
+  );
+}
+
+function TypeBadge({ session }: { session: SessionDto }) {
+  const label =
+    session.type === 'custom' && session.custom_type_name
+      ? session.custom_type_name
+      : TYPE_LABELS[session.type];
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold tracking-wide ${TYPE_CLASSES[session.type]}`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function ClassMetaCard({ session }: { session: SessionDto }) {
+  const guestCount = session.participants.filter((p) => p.is_guest).length;
+  const participantCount = session.participants.length;
+
+  return (
+    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="font-bold tracking-tight text-[#1F1F1F] text-[18px]">
+          {session.title || '제목 없음'}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <TypeBadge session={session} />
+          <StatusBadge status={session.status} />
+        </div>
       </div>
 
-      {tab === 'record' ? (
-        <RecordView record={record} onUpdated={setRecord} />
-      ) : (
-        <TranscriptView data={transcript} />
-      )}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            클래스 코드
+          </div>
+          <AccessCodeCell code={session.access_code} />
+        </div>
+        <div>
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            참여자
+          </div>
+          <span className="text-[15px] text-[#1F1F1F]">
+            {participantCount}명
+            {guestCount > 0 && (
+              <span className="text-[12px] text-[#9B9B9B] ml-1">(게스트 {guestCount})</span>
+            )}
+          </span>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="text-[12px] text-[#6F6F6F] font-mono uppercase tracking-wider mb-1">
+            일시
+          </div>
+          <span className="text-[15px] text-[#6F6F6F] font-mono">
+            {formatDateTime(session.started_at)} ~ {formatDateTime(session.ended_at)}
+          </span>
+        </div>
+      </div>
     </div>
+  );
+}
+
+function StatusProgressBar({ status }: { status: RecordStatus }) {
+  const steps: { key: RecordStatus; label: string }[] = [
+    { key: 'merging', label: '병합' },
+    { key: 'transcribing', label: '인식' },
+    { key: 'diarizing', label: '화자분리' },
+    { key: 'summarizing', label: '요약' },
+    { key: 'completed', label: '완료' },
+  ];
+
+  const currentIndex = steps.findIndex((s) => s.key === status);
+
+  return (
+    <div className="bg-white border border-[#DDDEE7] rounded-2xl p-5">
+      {/* 좁은 화면: 5단계 스텝퍼를 한 줄 가로 스크롤로 유지(라벨은 sm 이상에서만) */}
+      <div className="flex flex-nowrap items-center gap-1.5 overflow-x-auto pb-1">
+        {steps.map((step, i) => {
+          const isDone = i < currentIndex;
+          const isCurrent = i === currentIndex;
+          return (
+            <div key={step.key} className="flex shrink-0 items-center gap-1.5">
+              {i > 0 && (
+                <div
+                  className={`h-px w-6 shrink-0 ${isDone ? 'bg-[#5F0080]' : 'bg-[#DDDEE7]'}`}
+                />
+              )}
+              <div
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+                  isDone
+                    ? 'bg-[#5F0080] text-white'
+                    : isCurrent
+                      ? 'bg-[#F5EDFC] text-[#5F0080] ring-2 ring-[#5F0080]'
+                      : 'bg-[#F2F3F8] text-[#6F6F6F]'
+                }`}
+              >
+                {isDone ? '✓' : i + 1}
+              </div>
+              <span
+                className={`hidden shrink-0 text-xs sm:inline ${
+                  isCurrent ? 'font-semibold text-[#5F0080]' : 'text-[#6F6F6F]'
+                }`}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-[#6F6F6F]">
+        {`${RECORD_STATUS_LABELS[status]}...`}
+      </p>
+    </div>
+  );
+}
+
+function isProcessingStatus(status: string | null): status is RecordStatus {
+  return status !== null && PROCESSING_STATUSES.includes(status as RecordStatus);
+}
+
+export default function SessionRecordPage() {
+  const { id } = useParams<{ id: string }>();
+  const [session, setSession] = useState<SessionDto | null>(null);
+  const [record, setRecord] = useState<RecordResponse | null>(null);
+  const [transcript, setTranscript] = useState<TranscriptResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  /** 세션 메타(getSession) 실패는 기록지 조회 실패와 분리해 표시한다 */
+  const [sessionError, setSessionError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const { status: wsStatus, subscribe } = useRecordSocket();
+  // SDD-095: 리포트 생성 진행 스텝퍼(녹음 저장 → STT → 요약 → 완료)
+  const { progress: reportProgress } = useReportProgress(id ?? null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchData = useCallback(async () => {
+    if (!id) return null;
+    try {
+      // 전사문(/transcript)은 아직 없을 때 404가 난다 — 기록지(/record)와 분리 조회해
+      // 전사문 실패가 기록지 전체 오류 화면으로 번지지 않게 한다.
+      const [recordResult, transcriptResult] = await Promise.allSettled([
+        getRecord(id),
+        getTranscript(id),
+      ]);
+
+      if (recordResult.status === 'rejected') {
+        throw recordResult.reason;
+      }
+
+      const r = recordResult.value;
+      setRecord(r);
+      setTranscript(transcriptResult.status === 'fulfilled' ? transcriptResult.value : null);
+      // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
+      setError(null);
+      setLoading(false);
+
+      // SDD-085: manual(마이크 오프 수동 기록)은 처리 파이프라인이 없으므로 폴링 불필요
+      if (r.status === 'completed' || r.status === 'failed' || r.status === 'manual') {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      }
+      return r;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '기록지를 불러오지 못했습니다');
+      setLoading(false);
+      return null;
+    }
+  }, [id]);
+
+  const fetchSession = useCallback(async () => {
+    if (!id) return;
+    try {
+      const s = await getSession(id);
+      setSession(s);
+      setSessionError(null);
+    } catch (e) {
+      // 세션 메타 로드 실패 시 기록지는 계속 표시하되 상단에 사유를 안내한다
+      setSessionError(e instanceof Error ? e.message : '클래스 정보를 불러오지 못했습니다');
+    }
+  }, [id]);
+
+  const retryLoad = useCallback((): void => {
+    setLoading(true);
+    void fetchData();
+    void fetchSession();
+  }, [fetchData, fetchSession]);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+
+    subscribe(id);
+    void fetchSession();
+    void fetchData();
+
+    pollRef.current = setInterval(() => {
+      void fetchData();
+    }, 3000);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+      }
+    };
+  }, [id, subscribe, fetchData, fetchSession]);
+
+  useEffect(() => {
+    if (wsStatus === 'completed' || wsStatus === 'failed') {
+      void fetchData();
+    }
+  }, [wsStatus, fetchData]);
+
+  const recordStatus = record?.status ?? null;
+  const progressStatus = isProcessingStatus(wsStatus)
+    ? wsStatus
+    : isProcessingStatus(recordStatus)
+      ? (recordStatus as RecordStatus)
+      : null;
+
+  // SDD-101 D1: 영상 저장 무결성 — 병합 실패 시에만 에러 표시.
+  // 병합이 정상이면 청크 1~2개가 누락돼도 영상은 생성되므로 에러로 표시하지 않는다.
+  const videoIncomplete = record?.video_status === 'merge_failed';
+
+  if (error) {
+    return (
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="space-y-3">
+          <div role="alert" className="p-3 rounded-xl bg-[#FDECEC] text-[#B3261E] text-sm">
+            {error}
+          </div>
+          <button type="button" onClick={retryLoad} className="mb-btn text-sm">
+            다시 시도
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (loading && !record) {
+    return (
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="text-[#6F6F6F] text-sm">기록지 로딩 중...</div>
+      </AppShell>
+    );
+  }
+
+  if (!record) {
+    return (
+      <AppShell title="AI 기록지" sub="클래스 기록">
+        <div className="space-y-3">
+          <p role="alert" className="text-sm text-[#6F6F6F]">기록지를 불러올 수 없습니다.</p>
+          <button type="button" onClick={retryLoad} className="mb-btn text-sm">
+            다시 시도
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell title="AI 기록지" sub="클래스 기록">
+      <div className="space-y-4 max-w-4xl">
+        {sessionError && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E]"
+          >
+            <span>클래스 정보를 불러오지 못했습니다: {sessionError}</span>
+            <button type="button" onClick={() => void fetchSession()} className="underline">
+              다시 시도
+            </button>
+          </div>
+        )}
+        {session && <ClassMetaCard session={session} />}
+
+        {/* SDD-095: 리포트 생성 진행 스텝퍼 우선 — 계약 미수신 시 기존 처리 표시로 폴백 */}
+        {reportProgress ? (
+          <ReportProgressStepper progress={reportProgress} tone="light" />
+        ) : (
+          progressStatus && <StatusProgressBar status={progressStatus} />
+        )}
+
+        {/* SDD-085: 마이크 오프(수동 기록 모드) 안내 — §7 M-4 */}
+        {record.status === 'manual' && (
+          <div className="rounded-2xl border border-[#F5E2B8] bg-amber-50 p-5 text-sm text-[#8A6B1F]">
+            <p className="font-semibold">수동 기록 모드</p>
+            <p className="mt-1">
+              이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 없습니다. 아래에
+              상담사 노트를 직접 작성해주세요.
+            </p>
+          </div>
+        )}
+
+        {/* SDD-101 D1: 영상 저장 무결성 — 병합 실패 시에만 에러 표시 */}
+        {videoIncomplete && (
+          <div className="rounded-2xl border border-[#F5C2C0] bg-[#FDECEC] p-5 text-sm text-[#B3261E]">
+            <p className="font-semibold">영상이 저장되지 않았습니다</p>
+            <p className="mt-1">영상 청크가 절반 미만이라 영상이 생성되지 않았습니다.</p>
+          </div>
+        )}
+
+        <RecordView
+          record={record}
+          transcript={transcript}
+          onUpdated={setRecord}
+        />
+      </div>
+    </AppShell>
   );
 }

@@ -1,16 +1,19 @@
 """AI 기록 관련 Pydantic 스키마"""
 
 from datetime import datetime
-from typing import Any
-from pydantic import BaseModel, Field
+from typing import Any, Literal
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class AudioStartRequest(BaseModel):
+    # SDD-085: consent_audio=false 는 400이 아니라 "마이크 오프(수동 기록)" 선언 —
+    # SessionRecord.status='manual' 기록 후 200 응답
     consent_audio: bool = True
 
 
 class AudioStartResponse(BaseModel):
     session_id: str
+    # idle/recording/processing/completed/failed/manual (SDD-085: manual 추가)
     status: str
     started_at: datetime | None = None
 
@@ -25,6 +28,36 @@ class AudioStopResponse(BaseModel):
     session_id: str
     status: str
     total_chunks: int
+    ended_at: datetime | None = None
+
+
+class VideoStartRequest(BaseModel):
+    consent_video: bool = True
+
+
+class VideoStartResponse(BaseModel):
+    session_id: str
+    status: str
+    started_at: datetime | None = None
+
+
+# VIDEO-EXPECTED-COUNT-DOS: expected_count 는 병합 누락 청크 계산(누락 인덱스 range)의
+# 분모로 쓰인다. 비현실적으로 큰 값(예: 1e9)을 허용하면 range(expected) 가 메모리를
+# 폭발시켜 OOM 이 된다. 청크 하나가 대략 수 초이므로 매우 넉넉하되 상한을 둔다.
+MAX_VIDEO_EXPECTED_CHUNKS = 100_000
+
+
+class VideoStopRequest(BaseModel):
+    # SDD-101 C4: 클라이언트가 녹화한 예상 청크 수 — 병합 50% 규칙의 정확한 분모.
+    expected_count: int | None = Field(default=None, ge=0, le=MAX_VIDEO_EXPECTED_CHUNKS)
+
+
+class VideoStopResponse(BaseModel):
+    session_id: str
+    status: str
+    total_chunks: int
+    expected_chunks: int | None = None
+    missing_chunks: list[int] = []
     ended_at: datetime | None = None
 
 
@@ -51,8 +84,76 @@ class RecordResponse(BaseModel):
     markers: list[dict[str, Any]] = Field(default_factory=list)
     is_edited: bool = False
     edit_history: list[dict[str, Any]] = Field(default_factory=list)
+    # SDD-096: 셀프 체크인(주관 상태) — 상담사(호스트)는 세션 전체(scope=session),
+    # 참여자는 본인 슬롯만(scope=participant). 미입력이면 None.
+    subjective_state: dict[str, Any] | None = None
+    # SDD-101 D1: 영상 저장 무결성 — merge_failed/누락 표시용
+    video_status: str = "idle"
+    video_expected_chunks: int | None = None
+    video_actual_chunks: int | None = None
 
 
 class RecordUpdateRequest(BaseModel):
     counselor_notes: str | None = None
     ai_summary: dict[str, Any] | None = None
+
+
+# ---------------------------------------------------------------------------
+# SDD-096: 세션 직후 1탭 셀프 체크인 (SAM 2축 5단계 + 한 줄 소감)
+# ---------------------------------------------------------------------------
+
+
+class CheckinRequest(BaseModel):
+    """종료 화면 1탭 체크인 요청.
+
+    - phase: 'after'(기본, 세션 직후) / 'before'(수업 전 예상)
+    - arousal(각성)·valence(정서): 각 1~5 단계. 한 축만 남겨도 저장한다(null 보존).
+    - note: 선택형 한 줄 소감(최대 200자).
+    - 소유 증명: 로그인 회원은 액세스 토큰으로 본인 참여자를 증명하고,
+      게스트는 participant_id + participant_token 이 필요하다.
+    """
+
+    phase: Literal["before", "after"] = "after"
+    arousal: int | None = Field(default=None, ge=1, le=5)
+    valence: int | None = Field(default=None, ge=1, le=5)
+    emotion: int | None = Field(default=None, ge=1, le=5)
+    note: str | None = Field(default=None, max_length=200)
+    participant_id: str | None = None
+    participant_token: str | None = None
+
+    @field_validator("note")
+    @classmethod
+    def _normalize_note(cls, value: str | None) -> str | None:
+        """공백만 있는 소감은 None 으로 정규화한다(빈 문자열 저장 금지)."""
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+    @model_validator(mode="after")
+    def _require_axis(self) -> "CheckinRequest":
+        """두 축이 모두 없고 메시지도 없으면 체크인할 내용이 없다 — 422.
+
+        입장 전 체크인에서는 '상담사에게 전할 말'만 남기는 경우도 허용한다.
+        """
+        if self.arousal is None and self.valence is None and self.emotion is None and not self.note:
+            raise ValueError("최소 한 항목을 선택하거나 메시지를 입력해 주세요")
+        return self
+
+
+class SubjectiveSlot(BaseModel):
+    """한 시점(수업 전/후)의 주관 값 — null 보존."""
+
+    arousal: int | None = Field(default=None, ge=1, le=5)
+    valence: int | None = Field(default=None, ge=1, le=5)
+    emotion: int | None = Field(default=None, ge=1, le=5)
+    note: str | None = None
+    recorded_at: datetime | None = None
+
+
+class CheckinResponse(BaseModel):
+    session_id: str
+    participant_id: str | None = None
+    phase: str
+    # {"scope": "participant", "before": {...}|None, "after": {...}|None}
+    subjective_state: dict[str, Any]

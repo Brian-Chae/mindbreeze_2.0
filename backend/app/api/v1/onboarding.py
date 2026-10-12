@@ -8,9 +8,8 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, require_roles
 from app.core.database import get_db
-from app.models.client_counselor_link import ClientCounselorLink
 from app.models.client_profile import ClientProfile
 from app.models.counselor_profile import CounselorProfile
 from app.models.user import User
@@ -29,6 +28,8 @@ from app.schemas.onboarding import (
     OnboardingProgressResponse,
 )
 from app.services import onboarding_service
+from app.services import code_service
+from app.services.chat_service import get_or_create_direct_room
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -45,12 +46,20 @@ def _parse_date(value: str | None) -> date | None:
     if not value:
         return None
     try:
-        return date.fromisoformat(value)
+        parsed = date.fromisoformat(value)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="생년월일 형식이 올바르지 않습니다 (YYYY-MM-DD)",
         )
+    # MB2-ONB-BIRTHDATE-FUTURE: step2 저장 경로도 미래 생년월일을 거부한다
+    #   (PATCH /users/me 경로와 동일한 가드).
+    if parsed > date.today():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="생년월일은 미래 날짜일 수 없습니다",
+        )
+    return parsed
 
 
 def _progress_response(progress) -> OnboardingProgressResponse:
@@ -104,6 +113,8 @@ def get_my_progress(
 ):
     """현재 온보딩 진행 상태 조회."""
     progress = onboarding_service.get_progress(_uid(current_user), db)
+    # DATA-03: 서비스가 flush 만 하므로 조회 시점에 생성된 진행 레코드는 여기서 커밋한다.
+    db.commit()
     return _progress_response(progress)
 
 
@@ -114,7 +125,7 @@ def get_my_progress(
 @router.put("/counselor/step1", response_model=OnboardingProgressResponse)
 def counselor_step1(
     req: CounselorStep1Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step1 — 기본 정보(이름·연락처)."""
@@ -128,13 +139,15 @@ def counselor_step1(
         user.phone = req.phone
     db.add(user)
     progress = onboarding_service.save_step(user_id, 1, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
 @router.put("/counselor/step2", response_model=OnboardingProgressResponse)
 def counselor_step2(
     req: CounselorStep2Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step2 — 인적사항·전문분야."""
@@ -146,13 +159,15 @@ def counselor_step2(
     profile.specialties = list(req.specialties or [])
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 2, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
 @router.put("/counselor/step3", response_model=OnboardingProgressResponse)
 def counselor_step3(
     req: CounselorStep3Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step3 — 자격 증빙. 파일 업로드는 F3에서 처리."""
@@ -161,13 +176,15 @@ def counselor_step3(
     profile.affiliation_type = req.affiliation_type
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 3, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
 @router.put("/counselor/step4", response_model=OnboardingProgressResponse)
 def counselor_step4(
     req: CounselorStep4Request,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
     """Step4 — 프로필(이미지·소개)."""
@@ -177,15 +194,23 @@ def counselor_step4(
     profile.bio = req.bio
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 4, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
 @router.post("/counselor/complete", response_model=CounselorCompleteResponse)
 def counselor_complete(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: Session = Depends(get_db),
 ):
-    """상담사 온보딩 완료 — 상담사 코드 확정 + 인증 등급 상향."""
+    """상담사 온보딩 완료 — 상담사 코드 확정.
+
+    AUTH4-01: 온보딩 완료는 자격 등급을 'verified' 로 직접 상향하지 않는다.
+    verified 등급은 자격 증빙(신분증+자격증/학위) 승인 경로
+    (credential_service.recalculate_tier)에서만 부여된다. 여기서는 코드 확정과
+    온보딩 완료만 처리하고 현재 등급을 그대로 반환한다.
+    """
     user_id = _uid(current_user)
     progress = onboarding_service.get_progress(user_id, db)
     steps = progress.steps or {}
@@ -199,10 +224,10 @@ def counselor_complete(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
-    user.verified_tier = "verified"
-    db.add(user)
 
     onboarding_service.complete_onboarding(user_id, db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
 
     return CounselorCompleteResponse(
         counselor_code=profile.counselor_code,
@@ -231,6 +256,8 @@ def client_step1(
         user.phone = req.phone
     db.add(user)
     progress = onboarding_service.save_step(user_id, 1, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -249,6 +276,8 @@ def client_step2(
     profile.interests = list(req.interests or [])
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 2, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -265,6 +294,8 @@ def client_step3(
     profile.bio = req.bio
     db.add(profile)
     progress = onboarding_service.save_step(user_id, 3, req.model_dump(), db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)
 
 
@@ -276,9 +307,12 @@ def client_step4_match(
 ):
     """Step4 — 상담사 코드 매칭."""
     user_id = _uid(current_user)
+    # MB2-ONB-02: 가입 경로(signup_application_service.validate_counselor_code)와 동일하게
+    #   공백 제거·대문자화 정규화 후 조회한다. 정규화 없으면 소문자/공백 입력이 미매칭된다.
+    normalized = code_service.normalize_code(req.counselor_code)
     profile = (
         db.query(CounselorProfile)
-        .filter(CounselorProfile.counselor_code == req.counselor_code)
+        .filter(CounselorProfile.counselor_code == normalized)
         .first()
     )
     if profile is None:
@@ -292,35 +326,36 @@ def client_step4_match(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="해당 상담사는 아직 인증이 완료되지 않아 매칭할 수 없습니다",
         )
+    # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
+    if counselor.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+        )
 
-    existing_link = (
-        db.query(ClientCounselorLink)
-        .filter(
-            ClientCounselorLink.client_id == user_id,
-            ClientCounselorLink.counselor_id == counselor.id,
-        )
-        .first()
-    )
-    if existing_link is None:
-        link = ClientCounselorLink(
-            client_id=user_id,
-            counselor_id=counselor.id,
-            status="active",
-        )
-        db.add(link)
+    # MB2-ONB-01: ended 연결은 재활성화하고, 신규·재활성화 모두 1:1 채팅방을 보장한다.
+    #   assign_counselor 가 중복 방지·ended 재활성화·active 상태 규칙을 단일화한다.
+    from app.services import client_service
+
+    client_service.assign_counselor(user_id, counselor.id, db, create_room=False)
+    get_or_create_direct_room(counselor.id, user_id, db)
 
     onboarding_service.save_step(
         user_id,
         4,
-        {"counselor_code": req.counselor_code, "counselor_id": str(counselor.id)},
+        {"counselor_code": normalized, "counselor_id": str(counselor.id)},
         db,
     )
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
 
     return ClientMatchResponse(
         matched_counselor=MatchedCounselor(
+            id=str(counselor.id),
             name=counselor.name,
             counselor_code=profile.counselor_code,
             specialties=list(profile.specialties or []),
+            profile_image=counselor.profile_image,
         )
     )
 
@@ -332,13 +367,21 @@ def client_complete(
 ):
     """내담자 온보딩 완료."""
     user_id = _uid(current_user)
+    user = db.query(User).filter(User.id == user_id).first()
     progress = onboarding_service.get_progress(user_id, db)
     steps = progress.steps or {}
-    for required in ("step1", "step2", "step3", "step4"):
-        if required not in steps:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{required} 단계를 완료해야 합니다",
-            )
+    # MB2-ONB-GOOGLE-ESSENTIALS: Google 가입 내담자는 4단계 온보딩 대신 필수정보(essentials)만
+    #   입력한다(프론트 /onboarding/client/essentials → PATCH /auth/users/me 로 저장되고
+    #   step 은 기록되지 않는다). 따라서 Google 가입자는 step1~4 강제를 면제한다.
+    #   이메일 가입자는 가입 시 step1·2·4 가 마킹되므로 기존 step1~4 강제를 그대로 유지한다.
+    if user is None or user.auth_provider != "google":
+        for required in ("step1", "step2", "step3", "step4"):
+            if required not in steps:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{required} 단계를 완료해야 합니다",
+                )
     progress = onboarding_service.complete_onboarding(user_id, db)
+    # DATA-03: 요청 단위 단일 커밋
+    db.commit()
     return _progress_response(progress)

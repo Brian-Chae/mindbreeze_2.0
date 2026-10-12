@@ -11,6 +11,17 @@ def _consents():
 
 def _register(client, email: str, role: str = "counselor"):
     from app.services import email_verify_service
+    from tests.conftest import create_test_counselor, create_test_org
+
+    if role == "counselor":
+        # SDD-073: 상담사 직접 가입 API 차단 → 테스트 상담사는 DB에 직접 생성한다.
+        created = create_test_counselor(email, name=f"테스트{role}", org_code=create_test_org())
+        token = created["access_token"]
+        return {
+            "id": created["id"],
+            "token": token,
+            "h": {"Authorization": f"Bearer {token}"},
+        }
 
     payload = {
         "email": email,
@@ -19,7 +30,8 @@ def _register(client, email: str, role: str = "counselor"):
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": _consents(),
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body.get("access_token") or body.get("tokens", {}).get("access_token")
@@ -253,6 +265,19 @@ def test_정지사유_누락_422(client):
         headers=admin["h"],
     )
     assert r.status_code == 422
+
+
+def test_사용자_삭제(client):
+    admin = _make_admin(client)
+    sub = _register(client, "delete-me@test.com")
+
+    r = client.delete(f"/api/v1/admin/users/{sub['id']}", headers=admin["h"])
+    assert r.status_code == 204, r.text
+
+    # 삭제 후 목록에서 조회되지 않는다
+    res = client.get("/api/v1/admin/users?q=delete-me", headers=admin["h"])
+    assert res.status_code == 200
+    assert all(it["email"] != "delete-me@test.com" for it in res.json()["items"])
 
 
 def test_counselor_admin_API_403(client):

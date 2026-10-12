@@ -139,6 +139,7 @@ export function ParticipantPicker({ selected, onChange, maxParticipants }: Props
               <button
                 type="button"
                 onClick={() => removeSelected(s.userId)}
+                aria-label={`${s.name} 선택 취소`}
                 className="text-[#9CA0AE] hover:text-[#5F0080] ml-0.5"
               >
                 ×
@@ -151,13 +152,16 @@ export function ParticipantPicker({ selected, onChange, maxParticipants }: Props
       {/* 검색 */}
       <input
         type="text"
+        aria-label="내담자 검색"
         placeholder="내담자 검색..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? 'participant-search-error' : undefined}
         className="w-full px-3 py-2 border border-[#DDDEE7] rounded-lg bg-white text-sm text-[#1F1F1F] placeholder:text-[#9CA0AE] outline-none focus:ring-2 focus:ring-[#5F0080]/15 focus:border-[#5F0080] mb-2"
       />
 
-      {error && <p className="text-xs text-red-500 mb-2">{error}</p>}
+      {error && <p id="participant-search-error" role="alert" className="text-xs text-red-500 mb-2">{error}</p>}
 
       {/* 내담자 목록 */}
       <div className="max-h-48 overflow-y-auto border border-[#EFEFEF] rounded-lg divide-y divide-[#EFEFEF]">

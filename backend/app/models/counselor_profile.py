@@ -23,6 +23,12 @@ class CounselorProfile(Base):
     affiliation_type: Mapped[str | None] = mapped_column(String(50))
     profile_image_url: Mapped[str | None] = mapped_column(String(500))
     bio: Mapped[str | None] = mapped_column(Text)
+    # SDD-077: 상담사 개인 연락·우편 주소 (기관 주소와 별개, 모두 선택)
+    postal_code: Mapped[str | None] = mapped_column(String(20))
+    address_line1: Mapped[str | None] = mapped_column(String(300))
+    address_line2: Mapped[str | None] = mapped_column(String(200))
+    # SDD-077: 계정 기본 + 프로필 + 경력/자격 묶음의 낙관적 잠금 버전
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

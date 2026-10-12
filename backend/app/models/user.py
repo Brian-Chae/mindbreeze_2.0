@@ -3,25 +3,88 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, DateTime, Text, ForeignKey, func
+from sqlalchemy import Boolean, String, DateTime, Text, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 DEFAULT_NOTIFICATION_PREFERENCES: dict = {
     "email": {
+        # 이메일 기본 ON — 일정·검증·소속·계정 등 중요 통지
         "session_booked": True,
+        "session_updated": True,
         "session_cancelled": True,
-        "chat_message": False,
-        "report_ready": True,
+        "session_invited": True,
         "verification_result": True,
+        "organization_verification_result": True,
+        "verification_requested": True,
+        "organization_join_result": True,
+        "organization_removed": True,
+        "account_suspended": True,
+        "account_reactivated": True,
+        # 이메일 기본 OFF — 과다 발송 방지
+        "session_ready": False,
+        "session_opened": False,
+        "session_started": False,
+        "session_completed": False,
+        "session_waitlist_promoted": False,
+        "session_participant_removed": False,
+        "session_deleted": False,
+        "chat_message": False,
+        "chat_room_created": False,
+        "chat_room_invited": False,
+        "chat_room_removed": False,
+        "report_review_requested": False,
+        "report_ready": True,
+        "report_generation_failed": False,
+        "report_low_confidence": False,
+        "report_email_failed": False,
+        "organization_join_requested": False,
+        "organization_updated": False,
+        "organization_deactivated": False,
+        "organization_reactivated": False,
+        "organization_role_changed": False,
+        "counselor_profile_updated": False,
+        "primary_admin_profile_updated": False,
+        "personal_office_opened": False,
     },
     "in_app": {
+        # 인앱 기본 ON — 전 이벤트
         "session_booked": True,
+        "session_updated": True,
         "session_cancelled": True,
+        "session_ready": True,
+        "session_opened": True,
+        "session_started": True,
+        "session_completed": True,
+        "session_invited": True,
+        "session_waitlist_promoted": True,
+        "session_participant_removed": True,
+        "session_deleted": True,
         "chat_message": True,
+        "chat_room_created": True,
+        "chat_room_invited": True,
+        "chat_room_removed": True,
+        "report_review_requested": True,
         "report_ready": True,
+        "report_generation_failed": True,
+        "report_low_confidence": True,
+        "report_email_failed": True,
         "verification_result": True,
+        "organization_verification_result": True,
+        "verification_requested": True,
+        "organization_join_requested": True,
+        "organization_join_result": True,
+        "organization_updated": True,
+        "organization_deactivated": True,
+        "organization_reactivated": True,
+        "organization_role_changed": True,
+        "organization_removed": True,
+        "counselor_profile_updated": True,
+        "primary_admin_profile_updated": True,
+        "account_suspended": True,
+        "account_reactivated": True,
+        "personal_office_opened": True,
     },
 }
 
@@ -43,6 +106,13 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(20), default="active", nullable=False, server_default="active")
     org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id"))
     notification_preferences: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    auto_approve_report: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, server_default="false"
+    )
+    auth_provider: Mapped[str] = mapped_column(String(20), default="email", nullable=False, server_default="email")  # "email" | "google"
+    # SDD-017: 초대(pending) 계정의 초대 시각·만료 시각. 초대 관리 목록에서 상태/만료 뱃지에 사용한다.
+    invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    invite_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -58,8 +128,16 @@ class User(Base):
     password_history = relationship("PasswordHistory", back_populates="user", cascade="all, delete-orphan")
     counselor_profile = relationship("CounselorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     client_profile = relationship("ClientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    qualifications = relationship("Qualification", back_populates="user", cascade="all, delete-orphan")
+    careers = relationship("Career", back_populates="user", cascade="all, delete-orphan")
     org = relationship("Organization", foreign_keys=[org_id])
 
     @property
     def onboarding_completed(self) -> bool:
         return self.onboarding_progress is not None and self.onboarding_progress.completed
+
+    @property
+    def counselor_code(self) -> str | None:
+        if self.counselor_profile:
+            return self.counselor_profile.counselor_code
+        return None

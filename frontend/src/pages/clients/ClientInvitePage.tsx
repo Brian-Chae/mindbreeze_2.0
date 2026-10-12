@@ -16,7 +16,7 @@ export default function ClientInvitePage() {
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
     }
   }, [isInitialized, isAuthenticated, navigate]);
 
@@ -45,7 +45,17 @@ export default function ClientInvitePage() {
     }
   };
 
-  if (!isInitialized) return null;
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-canvas">
+        <div
+          role="status"
+          aria-label="불러오는 중"
+          className="h-8 w-8 animate-spin rounded-full border-2 border-[#5F0080] border-t-transparent"
+        />
+      </div>
+    );
+  }
 
   if (user && user.role !== 'counselor') {
     return (
@@ -60,7 +70,7 @@ export default function ClientInvitePage() {
       <div className="max-w-xl mx-auto">
         <button
           onClick={() => navigate('/clients')}
-          className="text-sm text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex h-11 items-center px-3 -ml-3 text-sm text-[#6F6F6F] hover:text-[#5F0080] mb-2"
         >
           ← 목록으로
         </button>
@@ -73,31 +83,34 @@ export default function ClientInvitePage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+              <label htmlFor="invite-email" className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
               <input
+                id="invite-email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? 'invite-error' : undefined}
                 placeholder="client@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#5F0080]"
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p id="invite-error" role="alert" className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[#5F0080] text-white rounded-md hover:bg-[#4D0066] disabled:opacity-50"
             >
               {loading ? '생성 중...' : '초대 링크 생성'}
             </button>
           </form>
 
           {invite && (
-            <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-md">
-              <p className="text-sm font-medium text-emerald-900 mb-2">초대 링크가 생성되었습니다</p>
+            <div className="mt-6 p-4 bg-[#F5EDFC] border border-[#E8D9F5] rounded-md">
+              <p className="text-sm font-medium text-[#5F0080] mb-2">초대 링크가 생성되었습니다</p>
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <input
                   readOnly

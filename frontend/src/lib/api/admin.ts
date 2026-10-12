@@ -56,6 +56,12 @@ export interface AuditDto {
   admin_name?: string | null;
 }
 
+export interface PrimaryCounselorDto {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface UserDto {
   id: string;
   name: string;
@@ -63,10 +69,24 @@ export interface UserDto {
   role: string;
   suspended: boolean;
   created_at: string;
+  primary_counselor?: PrimaryCounselorDto | null;
+  status?: string;
+}
+
+export interface CreateAdminClientPayload {
+  name: string;
+  email: string;
+  counselor_id: string;
+  send_invite: boolean;
+}
+
+export interface CreateAdminClientResponse {
+  client: UserDto;
+  invite_sent: boolean;
 }
 
 export interface UserListResponse {
-  users: UserDto[];
+  items: UserDto[];
   total: number;
   page: number;
   size: number;
@@ -75,6 +95,24 @@ export interface UserListResponse {
 export interface ActionResponse {
   success: boolean;
   message: string;
+}
+
+export interface AdminOrganizationDto {
+  id: string;
+  name: string;
+  org_code: string | null;
+  phone: string | null;
+  verified: boolean;
+  kind: string;
+  has_primary_admin: boolean;
+  version: number;
+  deactivated_at: string | null;
+  created_at: string;
+}
+
+export interface AdminOrganizationCreatePayload {
+  name: string;
+  phone?: string;
 }
 
 export const listReviews = (
@@ -118,3 +156,190 @@ export const suspendUser = (userId: string, reason: string): Promise<ActionRespo
 
 export const unsuspendUser = (userId: string): Promise<ActionResponse> =>
   apiClient.post<ActionResponse>(`/admin/users/${userId}/unsuspend`);
+
+export const deleteUser = (userId: string): Promise<void> =>
+  apiClient.delete<void>(`/admin/users/${userId}`);
+
+export const createAdminClient = (
+  payload: CreateAdminClientPayload,
+): Promise<CreateAdminClientResponse> =>
+  apiClient.post<CreateAdminClientResponse>('/admin/clients', payload);
+
+export const listAdminOrganizations = (status: 'active' | 'inactive' = 'active'): Promise<AdminOrganizationDto[]> =>
+  apiClient.get<AdminOrganizationDto[]>(`/admin/orgs?status=${status}`);
+
+// CONTRACT-09: 기관 등록(POST /admin/orgs) 응답은 평면 AdminOrganizationDto 가 아니라
+//   백엔드 OrganizationWithAdminResponse({org, admin, invite_sent}) 구조다. 타입을 정합화한다.
+export interface OrgAdminSummaryDto {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+}
+
+export interface OrganizationWithAdminResponseDto {
+  org: AdminOrganizationDto;
+  admin: OrgAdminSummaryDto | null;
+  invite_sent: boolean;
+}
+
+export const createAdminOrganization = (
+  payload: AdminOrganizationCreatePayload,
+): Promise<OrganizationWithAdminResponseDto> =>
+  apiClient.post<OrganizationWithAdminResponseDto>('/admin/orgs', payload);
+
+// ---------------------------------------------------------------------------
+// SDD-073: 가입 신청(기관 상담 / 개인 상담사) 관리
+// ---------------------------------------------------------------------------
+
+export interface SignupApplicationDto {
+  id: string;
+  application_type: 'organization' | 'individual_counselor';
+  organization_name: string;
+  contact_name: string;
+  email: string;
+  phone: string | null;
+  status: 'submitted' | 'reviewing' | 'approved' | 'rejected' | 'withdrawn';
+  notify_status: 'pending' | 'queued' | 'sent' | 'failed';
+  created_at: string | null;
+}
+
+export interface SignupApplicationDetailDto extends SignupApplicationDto {
+  inquiry: string | null;
+  specialties: string | null;
+  review_note: string | null;
+  reviewed_at: string | null;
+  organization_id: string | null;
+  user_id: string | null;
+  notified_at: string | null;
+}
+
+export interface SignupApplicationListResponse {
+  items: SignupApplicationDto[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface SignupApplicationActionResponse {
+  application: SignupApplicationDetailDto;
+  invite_sent: boolean;
+}
+
+export const listSignupApplications = (
+  params?: { application_type?: string; status?: string; page?: number; size?: number },
+): Promise<SignupApplicationListResponse> => {
+  const qs = buildQuery(params);
+  return apiClient.get<SignupApplicationListResponse>(`/admin/signup-applications${qs}`);
+};
+
+export const getSignupApplication = (id: string): Promise<SignupApplicationDetailDto> =>
+  apiClient.get<SignupApplicationDetailDto>(`/admin/signup-applications/${id}`);
+
+export const approveSignupApplication = (id: string): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/approve`);
+
+export const rejectSignupApplication = (
+  id: string,
+  reason?: string,
+): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/reject`, {
+    reason,
+  });
+
+export const resendSignupApplicationNotice = (
+  id: string,
+): Promise<SignupApplicationActionResponse> =>
+  apiClient.post<SignupApplicationActionResponse>(`/admin/signup-applications/${id}/resend-notice`);
+
+
+export interface OrganizationUserSummaryDto {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: string;
+  status: string;
+}
+
+export interface AdminOrganizationDetailDto extends AdminOrganizationDto {
+  address: string | null;
+  verified_at: string | null;
+  version: number;
+  primary_admin: OrganizationUserSummaryDto | null;
+  owner: OrganizationUserSummaryDto | null;
+}
+
+export interface AdminOrganizationCounselorDto {
+  id: string;
+  name: string;
+  email: string;
+  counselor_code: string | null;
+  role: string;
+  status: string;
+  is_primary_admin: boolean;
+  is_owner: boolean;
+}
+
+export const getAdminOrganization = (id: string): Promise<AdminOrganizationDetailDto> =>
+  apiClient.get<AdminOrganizationDetailDto>(`/admin/orgs/${id}`);
+
+export const listAdminOrganizationCounselors = (id: string): Promise<AdminOrganizationCounselorDto[]> =>
+  apiClient.get<AdminOrganizationCounselorDto[]>(`/admin/orgs/${id}/counselors`);
+
+
+export interface OrganizationPatchPayload {
+  name?: string;
+  phone?: string | null;
+  address?: string | null;
+  verified?: boolean;
+  reason?: string;
+}
+export interface OrganizationImpactDto {
+  account_count: number;
+  active_link_count: number;
+  scheduled_session_count: number;
+  ongoing_session_count: number;
+  unknown_attribution_count: number;
+  preserved_session_count: number;
+  attribution_note: string;
+  blockers: string[];
+  can_deactivate: boolean;
+  version: number;
+}
+const versionHeaders = (version: number) => ({ headers: { 'If-Match': `"${version}"` } });
+export const patchAdminOrganization = (id: string, payload: OrganizationPatchPayload, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.patch(`/admin/orgs/${id}`, payload, versionHeaders(version));
+export const getOrganizationDeactivationImpact = (id: string): Promise<OrganizationImpactDto> =>
+  apiClient.get(`/admin/orgs/${id}/deactivation-impact`);
+export const deactivateAdminOrganization = (id: string, payload: { reason: string; confirmation_value: string }, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.post(`/admin/orgs/${id}/deactivate`, payload, versionHeaders(version));
+export const reactivateAdminOrganization = (id: string, reason: string, version: number): Promise<AdminOrganizationDetailDto> =>
+  apiClient.post(`/admin/orgs/${id}/reactivate`, { reason }, versionHeaders(version));
+
+
+export const patchAdminOrganizationCounselor = (
+  orgId: string, userId: string, payload: { role: 'counselor' | 'org_admin'; reason: string },
+): Promise<AdminOrganizationCounselorDto> =>
+  apiClient.patch<AdminOrganizationCounselorDto>(`/admin/orgs/${orgId}/counselors/${userId}`, payload);
+
+export const removeAdminOrganizationCounselor = (orgId: string, userId: string, reason: string): Promise<void> =>
+  apiClient.delete<void>(`/admin/orgs/${orgId}/counselors/${userId}`, { body: { reason } });
+
+
+// ---------------------------------------------------------------------------
+// SDD-078: 관리자 비밀번호 재설정 (재설정 링크 발급)
+// ---------------------------------------------------------------------------
+
+export interface PasswordResetIssueResponse {
+  email_sent: boolean;
+  expires_at: string;
+}
+
+export const resetPrimaryAdminPassword = (orgId: string, reason: string): Promise<PasswordResetIssueResponse> =>
+  apiClient.post<PasswordResetIssueResponse>(`/admin/orgs/${orgId}/primary-admin/password-reset`, { reason });
+
+export const resetAdminOrgCounselorPassword = (
+  orgId: string, userId: string, reason: string,
+): Promise<PasswordResetIssueResponse> =>
+  apiClient.post<PasswordResetIssueResponse>(`/admin/orgs/${orgId}/counselors/${userId}/password-reset`, { reason });

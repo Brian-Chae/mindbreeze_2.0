@@ -4,7 +4,7 @@ import type { RecorderState } from '../../hooks/useAudioRecorder';
 
 interface Props {
   state: RecorderState;
-  uploadedChunks: number;
+  elapsedSec: number;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -19,7 +19,14 @@ const STATE_LABELS: Record<RecorderState, string> = {
   error: '오류',
 };
 
-export function RecordingControls({ state, uploadedChunks, onStart, onPause, onResume, onStop }: Props) {
+/** 경과 라벨 — MM분 SS초 */
+function formatElapsed(sec: number): string {
+  const mm = String(Math.floor(sec / 60)).padStart(2, '0');
+  const ss = String(sec % 60).padStart(2, '0');
+  return `${mm}분 ${ss}초`;
+}
+
+export function RecordingControls({ state, elapsedSec, onStart, onPause, onResume, onStop }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="flex items-center gap-2">
@@ -30,7 +37,11 @@ export function RecordingControls({ state, uploadedChunks, onStart, onPause, onR
         />
         <span className="text-sm font-medium text-neutral-700 dark:text-neutral-200">{STATE_LABELS[state]}</span>
       </div>
-      <span className="text-xs text-neutral-500 dark:text-neutral-400">청크 업로드: {uploadedChunks}</span>
+      <span className="text-xs tabular-nums text-neutral-500 dark:text-neutral-400">
+        {state === 'recording' || state === 'paused'
+          ? `녹음 시간: ${formatElapsed(elapsedSec)}`
+          : '아직 녹음되지 않았습니다'}
+      </span>
       <div className="ml-auto flex gap-2">
         {state === 'idle' && (
           <button

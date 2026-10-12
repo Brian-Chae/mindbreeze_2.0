@@ -1,10 +1,13 @@
 // visualViewport API로 키보드 높이 감지
 import { useEffect, useState } from 'react';
+import { isNativeApp } from '../lib/native/platform';
 
 export function useKeyboardHeight(): number {
   const [height, setHeight] = useState(0);
 
   useEffect(() => {
+    // 네이티브 앱은 키보드가 웹뷰 영역을 직접 줄이므로 추가 보정이 필요 없다(이중 적용 방지).
+    if (isNativeApp()) return;
     const vv = window.visualViewport;
     if (!vv) return;
 

@@ -1,9 +1,11 @@
 // 인증 관련 API 호출
 
-import { apiClient } from './client';
+import { apiClient, getNativeRefreshBody } from './client';
+import type { VerifiedTier } from './credentials';
 
 export type UserRole = 'counselor' | 'client' | 'admin' | 'org_admin' | 'platform_admin';
-export type VerifiedTier = 'unverified' | 'email_verified' | 'fully_verified';
+// 인증 등급은 credentials.ts(백엔드 계약)의 단일 정의를 재사용한다.
+export type { VerifiedTier };
 
 export interface User {
   id: string;
@@ -12,11 +14,14 @@ export interface User {
   role: UserRole;
   verified_tier: VerifiedTier;
   onboarding_completed: boolean;
+  auth_provider: string;
+  counselors: Array<{ id: string; name: string; profile_image: string | null }>;
+  counselor_code?: string | null;
 }
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
+  refresh_token?: string | null;
   token_type: string;
 }
 
@@ -28,20 +33,22 @@ export interface OtpVerifyResponse {
   email_verify_token: string;
 }
 
-export interface CounselorRegisterPayload {
-  email: string;
-  password: string;
-  name: string;
-  email_verify_token: string;
-  consents: { tos: boolean; privacy: boolean; sensitive: boolean };
-}
-
 export interface ClientRegisterPayload {
   email: string;
   password: string;
   name: string;
   email_verify_token: string;
   consents: { tos: boolean; privacy: boolean; sensitive: boolean };
+  /** 초대 링크 토큰 — 있으면 가입 시 상담사 자동 연결 */
+  invite_token?: string;
+  /** SDD-073: 가입 시점 개인정보 (전화번호는 선택) */
+  gender?: 'male' | 'female' | 'other';
+  birth_date?: string;
+  phone?: string;
+  /** SDD-073: 초대한 상담사 코드 (invite_token 이 있으면 생략) */
+  counselor_code?: string;
+  /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
+  remember_me?: boolean;
 }
 
 export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
@@ -50,23 +57,53 @@ export const requestOtp = (email: string): Promise<{ ok: boolean }> =>
 export const verifyOtp = (email: string, code: string): Promise<OtpVerifyResponse> =>
   apiClient.post('/auth/email/verify-otp', { email, code }, { skipAuth: true });
 
-export const registerCounselor = (data: CounselorRegisterPayload): Promise<LoginResponse> =>
-  apiClient.post('/auth/register/counselor', data, { skipAuth: true });
+export const registerClient = (
+  data: ClientRegisterPayload,
+  rememberMe: boolean = true,
+): Promise<LoginResponse> =>
+  apiClient.post('/auth/register/client', { ...data, remember_me: rememberMe }, { skipAuth: true });
 
-export const registerClient = (data: ClientRegisterPayload): Promise<LoginResponse> =>
-  apiClient.post('/auth/register/client', data, { skipAuth: true });
+export const login = (
+  email: string,
+  password: string,
+  role?: UserRole,
+  rememberMe: boolean = true,
+): Promise<LoginResponse> =>
+  apiClient.post('/auth/login', { email, password, role, remember_me: rememberMe }, { skipAuth: true });
 
-export const login = (email: string, password: string): Promise<LoginResponse> =>
-  apiClient.post('/auth/login', { email, password }, { skipAuth: true });
+export const refreshToken = (): Promise<TokenResponse> =>
+  apiClient.post('/auth/refresh', undefined, { skipAuth: true });
 
-export const refreshToken = (token: string): Promise<TokenResponse> =>
-  apiClient.post('/auth/refresh', { refresh_token: token }, { skipAuth: true });
-
-export const logout = (accessToken: string, refreshToken: string): Promise<void> =>
-  apiClient.post('/auth/logout', { access_token: accessToken, refresh_token: refreshToken });
+export const logout = (): Promise<void> => apiClient.post('/auth/logout', getNativeRefreshBody());
 
 export const forgotPassword = (email: string): Promise<{ ok: boolean }> =>
   apiClient.post('/auth/password/forgot', { email }, { skipAuth: true });
 
 export const resetPassword = (token: string, newPassword: string): Promise<{ ok: boolean }> =>
   apiClient.post('/auth/password/reset', { token, new_password: newPassword }, { skipAuth: true });
+
+export interface GoogleLoginPayload {
+  /** 웹: access_token / 네이티브 앱: id_token (둘 중 하나) */
+  access_token?: string;
+  id_token?: string;
+  invite_token?: string;
+  role?: string;
+  /** SEC-04: 신규 가입 시 약관·민감정보 동의 (기존 사용자 로그인은 불필요) */
+  consents?: { tos: boolean; privacy: boolean; sensitive: boolean };
+  /** 로그인 상태 유지 — true면 14일 영속 세션, false면 브라우저 종료 시 소멸 */
+  remember_me?: boolean;
+}
+
+export const loginGoogle = (payload: GoogleLoginPayload, rememberMe: boolean = true): Promise<LoginResponse> =>
+  apiClient.post('/auth/google', { ...payload, remember_me: rememberMe }, { skipAuth: true });
+
+// SDD-080: 자기 기본정보 수정 — 이름/전화/성별/생년월일만 허용 (이메일·역할 불변)
+export interface UpdateUserMePayload {
+  name?: string;
+  phone?: string;
+  gender?: 'male' | 'female' | 'other';
+  birth_date?: string;
+}
+
+export const updateUserMe = (data: UpdateUserMePayload): Promise<User> =>
+  apiClient.patch<User>('/auth/users/me', data);

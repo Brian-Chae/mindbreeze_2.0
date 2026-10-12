@@ -1,6 +1,9 @@
 # ─────────────────────────────────────────
 # MIND BREEZE 2.0 — Dev 배포 (GitHub Actions)
 # 트리거: develop 브랜치 push
+# 방식: systemd (Docker 미사용) — SDD-014 아키텍처 정합
+#   · 프론트: GitHub에서 빌드 → nginx 루트(/home/ubuntu/mindbreeze/dist) 교체
+#   · 백엔드: 소스 SCP 전송 → (venv 이미 서버에 존재) → alembic upgrade → systemctl restart
 # ─────────────────────────────────────────
 
 name: Deploy Dev
@@ -8,24 +11,16 @@ name: Deploy Dev
 on:
   push:
     branches: [develop]
+  # SDD-197: 수동 재배포(예: push 이벤트 누락 시). 항상 develop 최신 커밋을 배포한다.
+  workflow_dispatch:
+
+# INFRA-05: 동시 배포 방지 — 워크플로 동시 실행을 그룹으로 직렬화한다.
+#   cancel-in-progress=false: 진행 중 배포를 중간에 취소하면 반쪽 상태가 남으므로 취소하지 않는다.
+concurrency:
+  group: deploy-dev-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Docker Build & Push
-        run: |
-          docker build -t mindbreeze-dev-be -f docker/Dockerfile.backend backend/
-          docker save mindbreeze-dev-be | gzip > be.tar.gz
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-image
-          path: be.tar.gz
-
   frontend:
     runs-on: ubuntu-latest
     steps:
@@ -41,8 +36,12 @@ jobs:
       - name: Build
         run: |
           cd frontend
-          echo "VITE_API_BASE_URL=http://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
+          rm -rf dist node_modules/.tmp
+          echo "VITE_API_BASE_URL=https://dev-api.mindbreeze.looxidlabs.com/api/v1" > .env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ secrets.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
+          npx tsc -b --clean 2>/dev/null; true
           npm run build
 
       - name: Upload artifact
@@ -50,17 +49,13 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
+          overwrite: true
 
   deploy:
-    needs: [backend, frontend]
+    needs: [frontend]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Download backend image
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-image
 
       - name: Download frontend dist
         uses: actions/download-artifact@v4
@@ -68,25 +63,242 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-      - name: Deploy to EC2
+      - name: Package deploy bundle
+        run: |
+          tar czf deploy-bundle.tar.gz \
+            frontend/dist \
+            backend/app \
+            backend/alembic \
+            backend/alembic.ini \
+            backend/requirements.txt \
+            backend/ensure_livekit_nginx.py \
+            backend/sweep_stale_open_sessions_cron.py \
+            backend/sweep_stale_reports_cron.py \
+            backend/sweep_session_reminders_cron.py \
+            backend/sweep_agent_reminders_cron.py \
+            backend/sweep_agent_briefings_cron.py \
+            backend/sweep_agent_checkins_cron.py \
+            backend/process_pipeline_outbox_cron.py \
+            backend/process_email_outbox_cron.py \
+            backend/process_push_outbox_cron.py \
+            backend/cleanup_data_exports_cron.py \
+            backend/cleanup_notifications_cron.py \
+            backend/upgrade_narrative_cache_cron.py \
+            backend/sweep_stale_eeg_raw_cron.py \
+            backend/sweep_stale_media_cron.py \
+            backend/deploy/mindbreeze-worker.service \
+            backend/deploy/mindbreeze-email-worker.service \
+            backend/deploy/mindbreeze-export-worker.service \
+            backend/deploy/logrotate-mindbreeze
+
+      - name: Deploy bundle to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "be.tar.gz,frontend/dist,docker/docker-compose.dev.yml,docker/nginx"
+          source: "deploy-bundle.tar.gz"
           target: /home/ubuntu/mindbreeze/
+          overwrite: true
+          strip_components: 0
+          timeout: 60s
 
-      - name: Restart services
+      - name: Apply + restart (systemd)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_DEV_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 10m
           script: |
-            cd /home/ubuntu/mindbreeze
-            docker load < be.tar.gz
-            docker compose -f docker/docker-compose.dev.yml up -d --build
+            set -e
+            BASE=/home/ubuntu/mindbreeze
+            cd "$BASE"
+
+            # 0. INFRA-04: 이전 버전 백업 (실패 시 롤백 대비)
+            BACKUP_DIR="$BASE/.deploy-backup"
+            rm -rf "$BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+            [ -d dist ]            && cp -r dist "$BACKUP_DIR/dist" || true
+            [ -d backend/app ]     && cp -r backend/app "$BACKUP_DIR/app" || true
+            [ -d backend/alembic ] && cp -r backend/alembic "$BACKUP_DIR/alembic" || true
+
+            # 롤백 트랩: 스크립트가 실패(set -e 로 조기 종료)하면 이전 버전을 복원한다.
+            # 성공 경로에서는 DEPLOY_OK=1 로 확정해 롤백을 막는다.
+            DEPLOY_OK=0
+            rollback() {
+              if [ "$DEPLOY_OK" != "1" ]; then
+                echo "!!! 배포 실패 — 이전 버전으로 롤백합니다."
+                # SDD-197: 배포 스크립트가 backend 디렉터리로 이동한 뒤 실패해도 경로가 어긋나지 않게 BASE 로 복귀한다
+                #   (이전에는 상대경로가 backend/ 기준이 되어 복원이 실패했다).
+                cd "$BASE"
+                if [ -d "$BACKUP_DIR/dist" ]; then rm -rf dist; cp -r "$BACKUP_DIR/dist" dist; fi
+                if [ -d "$BACKUP_DIR/app" ]; then rm -rf backend/app; cp -r "$BACKUP_DIR/app" backend/app; fi
+                if [ -d "$BACKUP_DIR/alembic" ]; then rm -rf backend/alembic; cp -r "$BACKUP_DIR/alembic" backend/alembic; fi
+                sudo systemctl restart mindbreeze-backend 2>/dev/null || true
+                sudo systemctl restart mindbreeze-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
+              fi
+            }
+            trap rollback EXIT
+
+            # 1. 번들 압축 해제 (디렉토리 구조 보존)
+            tar xzf deploy-bundle.tar.gz
+            rm -f deploy-bundle.tar.gz
+
+            # 2. 프론트 dist → nginx root(/home/ubuntu/mindbreeze/dist) 반영
+            #    번들은 frontend/dist 로 풀리지만 nginx는 dist 를 서빙하므로 복사한다.
+            rm -rf dist
+            cp -r frontend/dist dist
+
+            # 3. 백엔드 소스 교체 (app/·alembic/·requirements.txt)
+            #    .env.dev 등 서버 전용 파일은 번들에 없으므로 보존된다.
+            #    macOS 리소스포크(._*)가 끼지 않도록 정리.
+            find backend/app backend/alembic -name '._*' -delete 2>/dev/null || true
+            rm -rf backend/app/__pycache__ backend/alembic/__pycache__ 2>/dev/null || true
+
+            # 4. venv 존재 확인 (없으면 생성 — 재배포 내구성)
+            cd "$BASE/backend"
+            if [ ! -x venv/bin/python ]; then
+              python3 -m venv venv
+              venv/bin/pip install --upgrade pip
+            fi
+
+            # 4.5 GEMINI_API_KEY 주입 (secrets → .env.dev, 없으면 추가·있으면 갱신)
+            if grep -qE '^GEMINI_API_KEY=' ./.env.dev; then
+              sed -i "s#^GEMINI_API_KEY=.*#GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}#" ./.env.dev
+            else
+              echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> ./.env.dev
+            fi
+            # SDD-197: 역할 시뮬레이션은 항상 끈다(이전에는 true 로 강제). DEBUG 도 끈다(SQL echo 에
+            #   바인드 파라미터=개인정보가 로그로 남고 디스크를 채웠다).
+            if grep -qE '^ENVIRONMENT=' ./.env.dev; then
+              sed -i 's#^ENVIRONMENT=.*#ENVIRONMENT=development#' ./.env.dev
+            else
+              echo 'ENVIRONMENT=development' >> ./.env.dev
+            fi
+            if grep -qE '^ENABLE_DEV_ROLE_SIMULATION=' ./.env.dev; then
+              sed -i 's#^ENABLE_DEV_ROLE_SIMULATION=.*#ENABLE_DEV_ROLE_SIMULATION=false#' ./.env.dev
+            else
+              echo 'ENABLE_DEV_ROLE_SIMULATION=false' >> ./.env.dev
+            fi
+            if grep -qE '^DEBUG=' ./.env.dev; then
+              sed -i 's#^DEBUG=.*#DEBUG=false#' ./.env.dev
+            else
+              echo 'DEBUG=false' >> ./.env.dev
+            fi
+            # SDD-070: PDF 렌더러 시스템 의존성. 글꼴은 app/assets/fonts에도 포함한다.
+            sudo apt-get update -qq
+            sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+            venv/bin/pip install -q -r requirements.txt
+            venv/bin/python -c "from weasyprint import HTML; from pathlib import Path; assert Path('app/assets/fonts/NotoSansKR.ttf').is_file()"
+
+            # 4. DB 마이그레이션 — .env.dev 전체 source 대신 필요한 변수만 추출
+            #    (.env.dev의 RESEND_FROM_EMAIL 등이 공백·꺽쇠를 포함해 셸 source가 깨짐)
+            export DATABASE_URL=$(grep -E '^DATABASE_URL=' ./.env.dev | head -1 | cut -d= -f2-)
+            export REDIS_URL=$(grep -E '^REDIS_URL=' ./.env.dev | head -1 | cut -d= -f2-)
+            venv/bin/alembic upgrade head
+
+            # 4.8 메인 Celery 워커 systemd 서비스 설치(파이프라인: STT·요약·리포트·영상 병합)
+            #     — 이 워커가 없으면 종료 체인(리포트 생성 등)이 큐에 쌓인 채 실행되지 않는다.
+            sudo cp "$BASE/backend/deploy/mindbreeze-worker.service" /etc/systemd/system/mindbreeze-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-worker 2>/dev/null || true
+
+            # 4.9 이메일 전용 워커 systemd 서비스 설치 (email 큐 분리 — 메인 워커와 큐 공유 방지)
+            sudo cp "$BASE/backend/deploy/mindbreeze-email-worker.service" /etc/systemd/system/mindbreeze-email-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-email-worker 2>/dev/null || true
+
+            # 4.10 INFRA-01: 데이터 export 전용 워커 systemd 서비스 설치 (exports 큐 소비)
+            #      — 이 워커가 없으면 tasks.generate_data_export/cleanup_data_exports 가 큐에
+            #        쌓인 채 실행되지 않아 내보내기 zip 이 영원히 준비되지 않는다.
+            #      — export-beat 는 **전체** beat 스케줄을 중복 실행하므로 dev 에서는 설치하지 않는다
+            #        (주기 작업은 아래 cron 들이 대체). beat 중복 조정은 INFRA-08 후속.
+            sudo cp "$BASE/backend/deploy/mindbreeze-export-worker.service" /etc/systemd/system/mindbreeze-export-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-export-worker 2>/dev/null || true
+
+            # 5. 서비스 재시작
+            sudo systemctl restart mindbreeze-backend
+            sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
+            sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
+            sudo systemctl restart mindbreeze-worker
             sleep 5
-            docker compose -f docker/docker-compose.dev.yml exec -T backend alembic upgrade head
-            docker image prune -f
+            sudo systemctl is-active mindbreeze-backend
+            sudo systemctl is-active mindbreeze-worker
+            sudo systemctl is-active mindbreeze-export-worker 2>/dev/null || true
+
+            # 5.0 진단: 워커·백엔드 최근 로그 (파이프라인 소비 여부 확인용)
+            echo "=== [진단] mindbreeze-worker 상태 ==="
+            sudo systemctl status mindbreeze-worker --no-pager -l || true
+            echo "=== [진단] mindbreeze-worker 최근 로그 ==="
+            sudo journalctl -u mindbreeze-worker -n 40 --no-pager || true
+            echo "=== [진단] mindbreeze-backend 최근 로그 (pipeline publish) ==="
+            sudo journalctl -u mindbreeze-backend -n 40 --no-pager | grep -iE "pipeline|outbox|redis|celery|report|error" || true
+
+            # 5.1 LiveKit nginx 프록시 보장 — 시그널링 /livekit/ → 127.0.0.1:7880
+            if [ -f /etc/nginx/sites-enabled/mindbreeze-ssl ]; then
+              sudo python3 "$BASE/backend/ensure_livekit_nginx.py"
+              sudo nginx -t && sudo systemctl reload nginx
+            fi
+
+            # 5.5 알림 보관·파기 cron 등록 (매일 04:00, celery beat 대체)
+            #     INFRA-03: DB·Redis 접속 정보(env)를 명시 export 해야 config 기본값(localhost)으로
+            #     떨어지지 않는다 — 다른 cron 들과 동일한 규약을 적용한다.
+            (crontab -l 2>/dev/null | grep -v 'cleanup_notifications_cron'; echo '0 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_notifications_cron.py >> /var/log/mindbreeze-cleanup.log 2>&1') | crontab -
+
+            # 5.6 SDD-100: open 상태 방치 세션 자동 취소 cron 등록 (매 5분, celery beat 대체)
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_open_sessions_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E "^DATABASE_URL=" ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E "^REDIS_URL=" ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_open_sessions_cron.py >> /var/log/mindbreeze-stale-open-sessions.log 2>&1') | crontab -
+
+            # 5.7 SDD-138: celery beat 대체 나머지 주기 스윕 cron 등록
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_reports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_reports_cron.py >> /var/log/mindbreeze-stale-reports.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'sweep_session_reminders_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_session_reminders_cron.py >> /var/log/mindbreeze-reminders.log 2>&1') | crontab -
+            # SDD-188: AI 비서 예약 사전 노티(3시간 전·1시간 전) 스윕 cron 등록 (매 1분)
+            (crontab -l 2>/dev/null | grep -v 'sweep_agent_reminders_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_reminders_cron.py >> /var/log/mindbreeze-agent-reminders.log 2>&1') | crontab -
+            # SDD-189: AI 비서 상담사 브리핑(아침 일정·저녁 정리) 스윕 cron 등록 (매 1분)
+            #     상담사가 지정한 KST 시각 도래 + 30분 보정 창 안에서만 생성한다.
+            (crontab -l 2>/dev/null | grep -v 'sweep_agent_briefings_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_briefings_cron.py >> /var/log/mindbreeze-agent-briefings.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'process_pipeline_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_pipeline_outbox_cron.py >> /var/log/mindbreeze-pipeline-outbox.log 2>&1') | crontab -
+            # 5.8 NOTIF-03/OUTBOX-001: 이메일 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
+            (crontab -l 2>/dev/null | grep -v 'process_email_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_API_KEY=$(grep -E ^RESEND_API_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export RESEND_FROM_EMAIL=$(grep -E ^RESEND_FROM_EMAIL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_email_outbox_cron.py >> /var/log/mindbreeze-email-outbox.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'cleanup_data_exports_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python cleanup_data_exports_cron.py >> /var/log/mindbreeze-exports.log 2>&1') | crontab -
+
+            # 5.9 SDD-048/INFRA-02: 서사 캐시 주기 업그레이드 cron 등록 (매일 05:00, celery beat 대체)
+            #     번들에는 포함(upgrade_narrative_cache_cron.py)되나 crontab 등록이 누락돼
+            #     실행되지 않던 항목을 보완한다.
+            (crontab -l 2>/dev/null | grep -v 'upgrade_narrative_cache_cron'; echo '0 5 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python upgrade_narrative_cache_cron.py >> /var/log/mindbreeze-narrative-cache.log 2>&1') | crontab -
+
+            # 5.10 INT-VERIFY-2AXIS: EEG raw 고아·보관기간 정리 + 미디어 고아 정리 cron 등록.
+            #     스크립트는 존재했으나 배포 번들·crontab 등록이 누락돼 실행되지 않던 항목.
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_eeg_raw_cron'; echo '30 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_eeg_raw_cron.py >> /var/log/mindbreeze-eeg-raw.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'sweep_stale_media_cron'; echo '45 4 * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_stale_media_cron.py >> /var/log/mindbreeze-media-sweep.log 2>&1') | crontab -
+            # SDD-190: 앱 푸시 아웃박스 발송 cron 등록 (매 1분, celery beat 대체)
+            (crontab -l 2>/dev/null | grep -v 'process_push_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_PROJECT_ID=$(grep -E ^FCM_PROJECT_ID= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_SERVICE_ACCOUNT_JSON=$(grep -E ^FCM_SERVICE_ACCOUNT_JSON= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PUBLIC_KEY=$(grep -E ^VAPID_PUBLIC_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PRIVATE_KEY=$(grep -E ^VAPID_PRIVATE_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_SUBJECT=$(grep -E ^VAPID_SUBJECT= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_push_outbox_cron.py >> /var/log/mindbreeze-push-outbox.log 2>&1') | crontab -
+            # SDD-191: AI 비서 안부 대화(체크인) 아웃리치 스윕 cron 등록 (매 5분)
+            (crontab -l 2>/dev/null | grep -v 'sweep_agent_checkins_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_checkins_cron.py >> /var/log/mindbreeze-agent-checkins.log 2>&1') | crontab -
+            # SDD-188: cron 로그 파일은 ubuntu 가 /var/log 에 직접 만들 수 없어(Permission denied) cron 이 실행되지 못했다 → 미리 생성·소유권 부여
+            for f in $(crontab -l | grep -o '/var/log/mindbreeze-[a-z-]*\.log' | sort -u); do sudo touch "$f" && sudo chown ubuntu:ubuntu "$f"; done
+            # cron 프로세스의 SQLAlchemy echo(DEBUG=true) 로 로그가 폭증하는 것을 막는다 (crontab 환경변수 줄)
+            (echo 'DEBUG=false'; crontab -l 2>/dev/null | grep -v '^DEBUG=') | crontab -
+
+            # 5.6 SDD-197: 로그 회전(cron 로그·SQL 폭증 방지) + journald 용량 상한
+            sudo cp "$BASE/backend/deploy/logrotate-mindbreeze" /etc/logrotate.d/mindbreeze
+            sudo mkdir -p /etc/systemd/journald.conf.d
+            printf '[Journal]\nSystemMaxUse=300M\nMaxRetentionSec=14day\n' | sudo tee /etc/systemd/journald.conf.d/mindbreeze.conf >/dev/null
+            sudo systemctl restart systemd-journald || true
+
+            # 6. 헬스체크 — SDD-197: DB·Redis까지 확인하는 ready 사용(실패 시 롤백 트랩 발동)
+            curl -sf http://127.0.0.1:8000/health/ready && echo " → backend ready OK"
+
+            # 7. INFRA-04: 배포 성공 확정 → 롤백 트랩 해제, 백업 정리
+            DEPLOY_OK=1
+            rm -rf "$BACKUP_DIR"
+            echo "✅ 배포 완료"
+
+      - name: Health check (public)
+        run: |
+          sleep 5
+          curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
+          curl -sf https://dev-api.mindbreeze.looxidlabs.com/health/ready && echo " ← api ready OK"

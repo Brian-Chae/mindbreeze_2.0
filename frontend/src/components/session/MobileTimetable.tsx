@@ -27,9 +27,9 @@ const typeLabel = (type: string): string => {
 
 const statusColor = (status: string): string => {
   switch (status) {
+    case 'ready':       return 'bg-[#EAF2FF] text-[#1F4FB3]';
     case 'scheduled':   return 'bg-[#F5EDFC] text-[#5F0080]';
     case 'in_progress': return 'bg-[#E6F8F3] text-[#1F8A5B]';
-    case 'paused':      return 'bg-[#FFF4DC] text-[#8A6B1F]';
     case 'completed':   return 'bg-[#F2F3F8] text-[#6F6F6F]';
     case 'cancelled':   return 'bg-[#FDECEC] text-[#B3261E]';
     default:            return 'bg-[#F2F3F8] text-[#6F6F6F]';
@@ -63,6 +63,7 @@ function DailyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cur
 
   const cellSessions = (hour: number): SessionDto[] =>
     sessions.filter((s) => {
+      if (!s.scheduled_at) return false;
       const at = new Date(s.scheduled_at);
       return sameDay(at, day) && at.getHours() === hour;
     });
@@ -74,7 +75,7 @@ function DailyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cur
           const items = cellSessions(h);
           return (
             <div key={h} className="contents">
-              <div className="border-t border-[#EFEFEF] px-2 py-3 text-[11px] font-mono text-[#6F6F6F] text-right">
+              <div className="border-t border-[#EFEFEF] px-2 py-3 text-[12px] font-mono text-[#6F6F6F] text-right">
                 {String(h).padStart(2, '0')}:00
               </div>
               <div className="border-t border-l border-[#EFEFEF] min-h-[44px] p-1 space-y-1">
@@ -82,7 +83,7 @@ function DailyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cur
                   <Link
                     key={s.id}
                     to={`/sessions/${s.id}`}
-                    className={`block px-2 py-1 rounded-lg text-[11px] truncate hover:opacity-80 transition ${statusColor(s.status)}`}
+                    className={`block px-2 py-1 rounded-lg text-[12px] truncate hover:opacity-80 transition ${statusColor(s.status)}`}
                     title={`${s.title || typeLabel(s.type)} (${s.duration_min}분)`}
                   >
                     <span className="font-bold">{typeLabel(s.type)}</span> {s.title || ''}
@@ -108,6 +109,7 @@ function WeeklyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cu
 
   const cellSessions = (day: Date, hour: number): SessionDto[] =>
     sessions.filter((s) => {
+      if (!s.scheduled_at) return false;
       const at = new Date(s.scheduled_at);
       return sameDay(at, day) && at.getHours() === hour;
     });
@@ -125,7 +127,7 @@ function WeeklyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cu
             >
               <div className="font-bold text-[#1F1F1F]">{DAY_LABELS[d.getDay()]}</div>
               <div
-                className={`text-[10px] font-mono mt-0.5 mx-auto w-6 h-5 leading-5 rounded-full ${
+                className={`text-[12px] font-mono mt-0.5 mx-auto w-6 h-5 leading-5 rounded-full ${
                   isToday ? 'bg-[#5F0080] text-white' : 'text-[#6F6F6F]'
                 }`}
               >
@@ -137,7 +139,7 @@ function WeeklyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cu
 
         {HOURS.map((h) => (
           <div key={h} className="contents">
-            <div className="border-t border-[#EFEFEF] px-1 py-2 text-[10px] font-mono text-[#6F6F6F] text-right">
+            <div className="border-t border-[#EFEFEF] px-1 py-2 text-[12px] font-mono text-[#6F6F6F] text-right">
               {String(h).padStart(2, '0')}
             </div>
             {days.map((d) => {
@@ -155,13 +157,13 @@ function WeeklyTimetable({ sessions, currentDate }: { sessions: SessionDto[]; cu
                       title={`${first.title || typeLabel(first.type)} (${first.duration_min}분)`}
                     >
                       <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${typeDotColor(first.type)}`} />
-                      <span className="text-[10px] text-[#1F1F1F] truncate">
+                      <span className="text-[12px] text-[#1F1F1F] truncate">
                         {(first.title || typeLabel(first.type)).slice(0, 2)}
                       </span>
                     </Link>
                   )}
                   {items.length > 1 && (
-                    <div className="text-[9px] text-[#6F6F6F] text-right pr-1">+{items.length - 1}</div>
+                    <div className="text-[12px] text-[#6F6F6F] text-right pr-1">+{items.length - 1}</div>
                   )}
                 </div>
               );

@@ -1,0 +1,115 @@
+/* SDD-067: 전체 서사를 섹션별 4페이지에 담는 인쇄 전용 스타일. */
+@page report {
+  size: A4 portrait;
+  margin: 12mm 6mm 6mm;
+  @top-center {
+    content: "MIND BREEZE · 몸과 마음의 기록";
+    font: 9pt -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: #5A5A5A;
+  }
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font: 9pt -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    color: #5A5A5A;
+  }
+}
+@media print {
+  .report-print-document { page: report; margin: 0; background: white; color: #302b35; font: 10pt/1.65 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  .report-print-document * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; overflow-wrap: anywhere; }
+  .report-print-document [data-print-exclude],
+  .report-print-document details,
+  .report-print-document .narrative-report .topbar,
+  .report-print-document .narrative-report .sidebar,
+  .report-print-document .narrative-report .footer a { display: none !important; }
+  .report-print-document > div { max-width: none; margin: 0; }
+  .report-print-document > div > :not([hidden]) ~ :not([hidden]) { margin-top: 2mm; margin-bottom: 0; }
+  /* 별도 관리용 커버는 숨기고 서사형 명상 여정 커버는 유지한다. */
+  .report-print-document .report-print-cover { display: none !important; }
+  .report-print-document .narrative-report .cover .cover-info { margin-top: 2mm; }
+  .report-print-document .narrative-report .cover .session { margin-top: 2mm; padding: 2mm 3mm; }
+  .report-print-document .narrative-report .cover .session dl { gap: 1mm 5mm; }
+  .report-print-document .narrative-report .cover .quality { margin-top: 1mm; padding-top: 1mm; }
+  .report-print-document .narrative-report .cover h1 { font-size: 29pt; }
+  .report-print-document .narrative-report .metric .delta { font-size: 20pt; }
+  .report-print-document .narrative-report { background: white; font-size: 11pt; line-height: 1.75; }
+  .report-print-document .narrative-report .layout { display: block; max-width: none; margin: 0; padding: 0; }
+  .report-print-document .narrative-report .report-main { display: block; overflow: visible; border: 0; border-radius: 0; box-shadow: none; }
+  /* 긴 원문은 잘라내지 않고 이어가되 각 주요 섹션은 새 장에서 시작한다. */
+  .report-print-document .narrative-report section[data-section] { min-height: 0; padding: 8mm; break-before: auto; break-inside: auto; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .report-print-document .narrative-report section[data-section="body"],
+  .report-print-document .narrative-report section[data-section="mind"],
+  .report-print-document .narrative-report section[data-section="closing"] { break-before: page; page-break-before: always; }
+  .report-print-document .narrative-report section[data-section="cover"] { min-height: 100mm; }
+  .report-print-document .narrative-report section[data-section="journey"] { min-height: 132mm; }
+  .report-print-document .narrative-report section[data-section="body"],
+  .report-print-document .narrative-report section[data-section="mind"] { min-height: 272mm; }
+  .report-print-document .narrative-report section[data-section="closing"] { min-height: 225mm; }
+  .report-print-document p { orphans: 3; widows: 3; }
+  .report-print-document .narrative-report h1 { font-size: 24pt; }
+  .report-print-document .narrative-report h2 { font-size: 23pt; line-height: 1.3; }
+  .report-print-document .narrative-report h3 { font-size: 12pt; }
+  .report-print-document .narrative-report .eyebrow { font-size: 8pt; }
+  .report-print-document .narrative-report .section-head { margin-bottom: 2mm; break-inside: avoid; break-after: avoid; }
+  .report-print-document .narrative-report .section-head h2 { margin-top: 1mm; }
+  .report-print-document .narrative-report .section-head p:last-child { margin-top: 1mm; }
+  .report-print-document .narrative-report .cover .eyebrow { margin-top: 0; }
+  .report-print-document .narrative-report .cover h1 { margin-top: 2mm; }
+  .report-print-document .narrative-report .cover-lead { margin-top: 2mm; font-size: 10pt; }
+  .report-print-document .narrative-report .cover-info { margin-top: 4mm; }
+  .report-print-document .narrative-report .cover-art { top: 5mm; right: 8mm; width: 42mm; height: 42mm; }
+  .report-print-document .narrative-report .session { margin-top: 3mm; padding: 3mm; }
+  .report-print-document .narrative-report .session dl { gap: 2mm 5mm; }
+  .report-print-document .narrative-report .quality { margin-top: 2mm; padding-top: 2mm; }
+  .report-print-document .narrative-report .journey-quote { min-height: 20mm; padding: 6mm; font-size: 12pt; line-height: 1.8; }
+  .report-print-document .narrative-report .journey-summary { margin-top: 3mm; gap: 2mm; }
+  .report-print-document .narrative-report .summary-chip { padding: 2mm 3mm; }
+  .report-print-document .narrative-report .journey-stages { margin-top: 20mm; }
+  .report-print-document .narrative-report .stage { padding-top: 2mm; }
+  .report-print-document .narrative-report .narrative-copy { margin-bottom: 3mm; }
+  .report-print-document .narrative-report .metric { grid-template-columns: 1.3fr 1fr; gap: 4mm; margin-top: 3mm; padding: 4mm; min-height: 56mm; border-radius: 3mm; break-inside: avoid; }
+  /* 카드 크기와 무관하게 모서리는 통일하고 태그만 pill 형태로 구분한다. */
+  .report-print-document .narrative-report .session,
+  .report-print-document .narrative-report .journey-quote,
+  .report-print-document .narrative-report .metric,
+  .report-print-document .narrative-report .distribution,
+  .report-print-document .narrative-report .practice,
+  .report-print-document .report-summary-card { border-radius: 3mm; }
+  .report-print-document .narrative-report .summary-chip { border-radius: 2mm; }
+  .report-print-document .narrative-report .badge { border-radius: 999px; padding: .5mm 2mm; }
+  /* 그래프 구간은 사각으로 유지하여 축과 측정값을 가리지 않는다. */
+  .report-print-document .narrative-report .trend,
+  .report-print-document .narrative-report .bar-chart { border-radius: 0; }
+  .report-print-document .narrative-report .trend { max-height: 38mm; }
+  .report-print-document .narrative-report .closing > .eyebrow,
+  .report-print-document .narrative-report .closing h2 { break-after: avoid; }
+  .report-print-document .narrative-report .metric figure { min-width: 0; break-inside: avoid; }
+  .report-print-document .narrative-report .metric figcaption { font-size: 9pt; line-height: 1.5; }
+  .report-print-document .narrative-report .metric-title { flex-wrap: wrap; gap: 2mm; }
+  .report-print-document .narrative-report .delta { margin: 2mm 0; font-size: 22pt; }
+  .report-print-document .narrative-report .delta span { font-size: 11pt; }
+  .report-print-document .narrative-report .metric-copy > .caption { margin-top: 2mm; }
+  .report-print-document .narrative-report .section-note { margin-top: 3mm; font-size: 9pt; }
+  .report-print-document .narrative-report .distribution { padding: 4mm; gap: 4mm; break-inside: avoid; }
+  .report-print-document .narrative-report .closing h2 { margin: 2mm 0; }
+  .report-print-document .narrative-report .closing > p { max-width: none; }
+  .report-print-document .narrative-report .practice { font-size: 11pt; margin-top: 10mm; padding: 12mm; min-height: 60mm; gap: 5mm; break-inside: avoid; }
+  .report-print-document .narrative-report .practice + .practice { margin-top: 3mm; }
+  .report-print-document .narrative-report .closing .closing-message { margin-top: 12mm; padding-top: 10mm; white-space: normal; overflow: visible; }
+  .report-print-document .narrative-report .closing-note { margin-top: 3mm !important; }
+  .report-print-document .narrative-report .footer { padding: 2mm 4mm; }
+  .report-print-document .report-summary-card { margin-top: 3mm; padding: 4mm; break-inside: auto; }
+  .report-print-document .report-summary-card h3 { margin-bottom: 2mm; font-size: 10pt; break-after: avoid; }
+  .report-print-document .report-summary-card p { font-size: 10pt; line-height: 1.6; }
+}
+
+/* SDD-068: 정의·방향 설명을 보존하면서 기본 4페이지의 읽기 밀도를 유지한다. */
+@media print {
+  .report-print-document .narrative-report .journey-stages { margin-top: 2mm; }
+  .report-print-document .narrative-report .summary-chip { font-size: 9pt; line-height: 1.5; }
+  .report-print-document .narrative-report .metric { padding: 3mm; gap: 3mm; }
+  .report-print-document .narrative-report .metric-copy > p:not(.delta) { font-size: 9pt; line-height: 1.45; }
+  .report-print-document .narrative-report .metric-copy > .change-interpretation,
+  .report-print-document .narrative-report .metric-copy > .metric-definition,
+  .report-print-document .narrative-report .metric-copy > .metric-direction-guide { margin-top: 1mm; }
+  .report-print-document .narrative-report .metric-copy > .caption { font-size: 8pt; line-height: 1.4; margin-top: 1mm; }
+}

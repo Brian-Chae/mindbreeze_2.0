@@ -20,6 +20,8 @@ class ClientCounselorLink(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")  # active, ended
     matched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # MB2-CLIENT-01: 상담사 비공개 메모. 상담사-내담자 연결 단위로 저장한다(내담자에게 미노출).
+    memo: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     client = relationship("User", foreign_keys=[client_id], back_populates="counselor_links")
     counselor = relationship("User", foreign_keys=[counselor_id], back_populates="client_links")

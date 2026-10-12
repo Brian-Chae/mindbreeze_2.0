@@ -8,15 +8,19 @@ VALID_PASSWORD = "Passw0rd!"
 
 def _register(client, email: str, role: str = "counselor") -> dict:
     from app.services import email_verify_service
+    from tests.conftest import create_test_org
 
     payload = {
+        # SDD-015: 상담사 가입에 유효한 기관 코드 필수 (client 가입에서는 무시됨)
+        "org_code": create_test_org(),
         "email": email,
         "password": VALID_PASSWORD,
         "name": "테스트",
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": {"tos": True, "privacy": True, "sensitive": True},
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body.get("access_token") or body.get("tokens", {}).get("access_token")
@@ -45,7 +49,8 @@ def _create_session(client, host, started: bool = True) -> str:
     return sid
 
 
-def test_01_녹음_시작_동의없음_400(client):
+def test_01_녹음_시작_동의없음_manual_200(client):
+    # SDD-085: consent_audio=false 는 400이 아니라 수동 기록 모드(manual) 선언 + 200
     host = _register(client, "rec01@test.com")
     sid = _create_session(client, host)
     res = client.post(
@@ -53,8 +58,8 @@ def test_01_녹음_시작_동의없음_400(client):
         json={"consent_audio": False},
         headers=host["auth"],
     )
-    assert res.status_code == 400
-    assert "동의" in res.json()["detail"]
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "manual"
 
 
 def test_02_녹음_시작_성공(client):
@@ -107,7 +112,8 @@ def test_05_청크_업로드_성공(client):
     assert body["total_chunks"] == 1
 
 
-def test_06_녹음_종료_파이프라인_트리거(client):
+def test_06_녹음_종료_파이프라인_트리거(client, monkeypatch):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec06@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
@@ -124,11 +130,63 @@ def test_06_녹음_종료_파이프라인_트리거(client):
     assert res.json()["status"] in ("processing", "completed")
 
 
-def test_07_기록지_조회_파이프라인후(client):
+def _upload_chunk(client, sid: str, host: dict, index: int = 0) -> None:
+    # SDD-085: 청크 0개면 STT가 스텁을 저장하지 않으므로(G5), 파이프라인 테스트는 청크 업로드 필수
+    file_data = {"file": (f"c{index}.webm", io.BytesIO(b"fake-audio" * 50), "audio/webm")}
+    res = client.post(
+        f"/api/v1/sessions/{sid}/audio/chunk",
+        data={"chunk_index": str(index)},
+        files=file_data,
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+
+
+def _mock_ai_pipeline(monkeypatch, confidence: str = "high") -> None:
+    """STT·요약 외부 API를 모킹한다 (테스트 환경은 API 키가 없어 실패하므로).
+
+    confidence='high' → 정상 대화 세그먼트, 'low' → 비언어([잡음]/[무음]) 마커만.
+    """
+    from app.tasks import stt_task, summary_task
+
+    if confidence == "low":
+        segs = [
+            {"speaker": "speaker_0", "text": "[잡음]", "start": 0.0, "end": 1.0},
+            {"speaker": "speaker_0", "text": "[무음]", "start": 1.0, "end": 3.0},
+            {"speaker": "speaker_0", "text": "[잡음]", "start": 3.0, "end": 5.0},
+        ]
+    else:
+        segs = [
+            {"speaker": "counselor", "text": "안녕하세요, 오늘 어떤 이야기를 해볼까요?", "start": 0.0, "end": 3.0},
+            {"speaker": "client", "text": "요즘 스트레스가 많아서 힘들어요.", "start": 3.5, "end": 6.5},
+            {"speaker": "counselor", "text": "어떤 부분이 가장 힘드신가요?", "start": 7.0, "end": 9.0},
+        ]
+
+    def fake_transcribe(chunk_paths, session_type, audio_duration_sec=None):
+        return {"segments": segs, "raw_text": "\n".join(f"[{s['speaker']}] {s['text']}" for s in segs)}
+
+    def fake_summary(session_type, transcript):
+        return {
+            "headline": "테스트 AI 요약",
+            "sections": {"요약": "요약 내용", "관찰": "관찰 내용"},
+            "keywords": ["키워드1"],
+            "risk_flags": [],
+            "transcript_present": True,
+        }
+
+    monkeypatch.setattr(stt_task, "_call_gemini_transcribe", fake_transcribe)
+    monkeypatch.setattr(summary_task, "_call_gemini_summary", fake_summary)
+
+
+def test_07_기록지_조회_파이프라인후(client, monkeypatch, celery_eager):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec07@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
+    # SDD-101: 종료는 /audio/stop(마킹) → /end(파이프라인 발행) 순서. stop 단독으로는 STT 미실행.
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/record", headers=host["auth"])
     assert res.status_code == 200
@@ -138,11 +196,15 @@ def test_07_기록지_조회_파이프라인후(client):
     assert "headline" in body["ai_summary"]
 
 
-def test_08_전사문_조회(client):
+def test_08_전사문_조회(client, monkeypatch, celery_eager):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec08@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     client.post(f"/api/v1/sessions/{sid}/audio/stop", headers=host["auth"])
+    # SDD-101: 종료는 /audio/stop(마킹) → /end(파이프라인 발행) 순서.
+    client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
 
     res = client.get(f"/api/v1/sessions/{sid}/transcript", headers=host["auth"])
     assert res.status_code == 200
@@ -186,10 +248,12 @@ def test_11_존재하지않는_세션_404(client):
     assert res.status_code == 404
 
 
-def test_12_세션_end_시_자동_finalize(client):
+def test_12_세션_end_시_자동_finalize(client, monkeypatch, celery_eager):
+    _mock_ai_pipeline(monkeypatch)
     host = _register(client, "rec12@test.com")
     sid = _create_session(client, host)
     client.post(f"/api/v1/sessions/{sid}/audio/start", json={"consent_audio": True}, headers=host["auth"])
+    _upload_chunk(client, sid, host)
     # /end 호출 → audio_service.finalize_on_session_end 자동 트리거
     r = client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"])
     assert r.status_code == 200

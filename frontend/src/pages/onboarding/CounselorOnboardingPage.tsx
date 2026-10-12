@@ -55,7 +55,7 @@ const INPUT_CLS =
   'w-full rounded-xl border border-[#DDDEE7] bg-white px-4 py-3 text-sm text-[#1F1F1F] outline-none focus:border-[#5F0080] focus:ring-2 focus:ring-purple-900/15 transition';
 
 export default function CounselorOnboardingPage() {
-  useRequireAuth();
+  useRequireAuth('counselor');
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
 
@@ -79,8 +79,10 @@ export default function CounselorOnboardingPage() {
           phone: (d.phone as string) ?? prev.phone,
           gender: (d.gender as string) ?? prev.gender,
           birthDate: (d.birth_date as string) ?? prev.birthDate,
+          // SDD-077: 백엔드 계약은 years_of_experience — 과거 저장분(experience_years)도 읽는다
           experienceYears:
-            d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
+            d.years_of_experience != null ? String(d.years_of_experience)
+              : d.experience_years != null ? String(d.experience_years) : prev.experienceYears,
           specialties: (d.specialties as string[]) ?? prev.specialties,
           affiliationType: (d.affiliation_type as string) ?? prev.affiliationType,
           profileImageUrl: (d.profile_image_url as string) ?? prev.profileImageUrl,
@@ -108,6 +110,10 @@ export default function CounselorOnboardingPage() {
     setCompletedSteps((prev) => (prev.includes(n) ? prev : [...prev, n]));
   };
 
+  const handleSkip = (): void => {
+    navigate('/dashboard');
+  };
+
   const handleNext = async (): Promise<void> => {
     setError(null);
     setLoading(true);
@@ -117,6 +123,8 @@ export default function CounselorOnboardingPage() {
         markCompleted(1);
         setStep(2);
       } else if (step === 2) {
+        // UX-03: 성별·생년월일·경력연수는 필수 — 미충족 시 저장/진행을 막고 오류를 표시한다.
+        // (ClientOnboardingPage 의 검증-후-진행 패턴과 동일)
         if (!form.gender || !form.birthDate || !form.experienceYears) {
           setError('성별, 생년월일, 경력연수를 모두 입력해주세요');
           return;
@@ -124,12 +132,13 @@ export default function CounselorOnboardingPage() {
         await saveCounselorStep2({
           gender: form.gender,
           birth_date: form.birthDate,
-          experience_years: Number(form.experienceYears),
+          years_of_experience: Number(form.experienceYears),
           specialties: form.specialties,
         });
         markCompleted(2);
         setStep(3);
       } else if (step === 3) {
+        // UX-03: 소속형태는 필수 — 미충족 시 저장/진행을 막고 오류를 표시한다.
         if (!form.affiliationType) {
           setError('소속형태를 선택해주세요');
           return;
@@ -173,7 +182,7 @@ export default function CounselorOnboardingPage() {
             </p>
             <p className="text-xs text-[#6F6F6F]">인증 등급: {result.verified_tier}</p>
           </div>
-          <button type="button" onClick={() => navigate('/')} className="mb-btn w-full">
+          <button type="button" onClick={() => navigate('/dashboard')} className="mb-btn w-full">
             대시보드로 이동
           </button>
         </div>
@@ -187,14 +196,23 @@ export default function CounselorOnboardingPage() {
         <div className="text-center space-y-2">
           <Link to="/" className="inline-block">
             <h1 className="text-3xl font-extrabold tracking-tight text-[#5F0080]">
-              mind breeze
+              Mind Breeze
             </h1>
           </Link>
-          <p className="text-sm text-[#6F6F6F]">상담사 온보딩</p>
+          <p className="text-sm text-[#6F6F6F]">상담사 온보딩 (선택)</p>
         </div>
 
         <div className="bg-white rounded-[20px] border border-[#EFEFEF] shadow-sm p-6 sm:p-8 space-y-6">
-          <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+          <div className="flex items-center justify-between gap-3">
+            <StepIndicator currentStep={step} completedSteps={completedSteps} labels={STEP_LABELS} />
+            <button
+              type="button"
+              onClick={handleSkip}
+              className="shrink-0 text-[13px] font-semibold text-[#6F6F6F] hover:text-[#5F0080] transition-colors"
+            >
+              나중에 하기
+            </button>
+          </div>
 
           <h2 className="text-2xl font-bold text-[#1F1F1F]">
             {step === 1 && '기본 정보'}
@@ -337,7 +355,7 @@ export default function CounselorOnboardingPage() {
             </div>
           )}
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p role="alert" className="text-red-500 text-sm text-center">{error}</p>}
 
           <div className="flex gap-3">
             <button
@@ -347,6 +365,14 @@ export default function CounselorOnboardingPage() {
               className="mb-btn mb-btn--ghost flex-1 disabled:opacity-40"
             >
               이전
+            </button>
+            <button
+              type="button"
+              onClick={handleSkip}
+              disabled={loading}
+              className="mb-btn mb-btn--ghost flex-1 disabled:opacity-50"
+            >
+              건너뛰기
             </button>
             <button
               type="button"

@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>리포트 데이터 유실 표시 — MIND BREEZE 2.0 (Phase 2 목업)</title>
+<!-- 폰트만 외부 CDN 허용 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" />
+<style>
+/* ──────────────────────────────────────────────────────────────
+   디자인 토큰 — mb-tokens.css 재사용 + 유실 전용 신규 토큰
+   ────────────────────────────────────────────────────────────── */
+:root{
+  /* 브랜드 퍼플 */
+  --mb-primary:#5F0080; --mb-primary-hover:#4C0066;
+  --mb-pale:#D2AEFC; --mb-purple-cream:#F5EDFC; --mb-lavender:#B373EF;
+  /* 배경/서피스 */
+  --mb-cream:#EBE6E2; --mb-bg-10:#F2F3F8; --mb-white:#FFFFFF;
+  /* 텍스트 */
+  --mb-fg:#1F1F1F; --mb-fg-muted:#6F6F6F; --mb-label-70:#1F1F1F;
+  /* 선 */
+  --mb-border:#DDDEE7; --mb-divider:#EFEFEF;
+  /* 액센트 */
+  --mb-mint:#01F0C8;
+  /* 시맨틱 */
+  --mb-success:#59CE90; --mb-warning:#EFC14C; --mb-danger:#FF453A;
+  --mb-info:#7878FA; --mb-data-red:#F9746B; --mb-data-red-light:#FFC9C7;
+  --mb-data-green:#59CE90;
+
+  /* ── 신규 · 유실 전용 토큰 ───────────────────────────────── */
+  --loss-gray:#A2A3AD;            /* 유실 구간 기본 그레이 */
+  --loss-gray-soft:#E8E8EA;       /* 유실 구간 저채도 배경 */
+  --loss-hatch:#C4C4CC;           /* 빗금 스트로크 색 */
+  --loss-banner-bg:#FFF4EC;       /* 유실 고지 배너 배경(웜 로즈) */
+  --loss-banner-border:#F7C9A8;   /* 유실 배너 보더 */
+  --loss-banner-fg:#A5472A;       /* 유실 배너 텍스트(가독 로즈) */
+  --loss-banner-icon:#E6593D;     /* 유실 배너 아이콘 */
+  --ref-bg:#FBF6E6;               /* "참고용" 라벨 배경(웜 옐로우 틴트) */
+  --ref-border:#ECD98A; --ref-fg:#8A6A14;
+  --recovery-bg:#EEF0FF;          /* 복구 대기 배경(인포 블루 틴트) */
+  --recovery-border:#C7CBF7; --recovery-fg:#4A4ACB;
+  /* 신뢰도 뱃지 톤 */
+  --conf-high-bg:#F0F9F5; --conf-high-fg:#2E7D55; --conf-high-dot:#59CE90;
+  --conf-med-bg:#FBF6E6;  --conf-med-fg:#8A6A14;  --conf-med-dot:#EFC14C;
+  --conf-low-bg:#FDEDEC;  --conf-low-fg:#A5472A;  --conf-low-dot:#F9746B;
+
+  /* radius */
+  --r-md:12px; --r-lg:16px; --r-xl:22px; --r-2xl:24px; --r-pill:9999px;
+  /* type */
+  --font-ui:"Pretendard Variable",Pretendard,"Noto Sans KR",system-ui,sans-serif;
+  --font-text:"Noto Sans KR","Pretendard Variable",Pretendard,system-ui,sans-serif;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-text);
+  color:var(--mb-fg);
+  background:var(--mb-cream);
+  -webkit-font-smoothing:antialiased;
+  line-height:1.6;
+}
+
+/* ── 상단 리뷰 컨트롤 (목업 전용 크롬, 리포트 아님) ───────────── */
+.toolbar{
+  position:sticky; top:0; z-index:50;
+  background:#1F1F1F; color:#fff;
+  padding:14px 20px; display:flex; flex-wrap:wrap; gap:18px; align-items:center;
+  font-family:var(--font-ui);
+  box-shadow:0 2px 12px rgba(0,0,0,.18);
+}
+.toolbar .tb-title{font-weight:700; font-size:14px; letter-spacing:.2px; opacity:.95;}
+.toolbar .tb-group{display:flex; align-items:center; gap:6px;}
+.toolbar .tb-label{font-size:11px; opacity:.55; margin-right:4px; text-transform:uppercase; letter-spacing:.6px;}
+.seg{display:inline-flex; background:#333; border-radius:var(--r-pill); padding:3px;}
+.seg button{
+  border:0; background:transparent; color:#cfcfcf; cursor:pointer;
+  font-family:var(--font-ui); font-size:12px; font-weight:600;
+  padding:6px 12px; border-radius:var(--r-pill); transition:all .15s;
+}
+.seg button:hover{color:#fff;}
+.seg button.active{background:var(--mb-primary); color:#fff;}
+.state-seg button.active{background:var(--mb-lavender); color:#2b0040;}
+.tb-note{font-size:11px; opacity:.6; margin-left:auto; max-width:360px; line-height:1.4;}
+
+/* ── 리포트 캔버스 ─────────────────────────────────────────── */
+.canvas{max-width:760px; margin:28px auto 80px; padding:0 20px;}
+.page{
+  background:var(--mb-white); border-radius:var(--r-2xl);
+  box-shadow:0 8px 40px rgba(31,31,31,.08);
+  overflow:hidden; margin-bottom:24px;
+}
+.page-pad{padding:40px 44px;}
+
+/* 타이포 스케일 (리포트) */
+.r-title{font-family:var(--font-ui); font-size:40px; font-weight:700; line-height:1.2; letter-spacing:-.5px; margin:0;}
+.r-subtitle{font-family:var(--font-ui); font-size:28px; font-weight:700; margin:0 0 4px;}
+.r-heading{font-family:var(--font-ui); font-size:20px; font-weight:600; margin:0 0 12px;}
+.r-label{font-family:var(--font-ui); font-size:16px; font-weight:500;}
+.r-body{font-size:14px; font-weight:400; color:var(--mb-fg);}
+.r-caption{font-family:var(--font-ui); font-size:12px; font-weight:500; color:var(--mb-fg-muted);}
+.muted{color:var(--mb-fg-muted);}
+
+/* 커버 */
+.cover{background:linear-gradient(135deg,#F5EDFC 0%,#FFFFFF 60%); }
+.cover .eyebrow{font-family:var(--font-ui); font-size:12px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--mb-primary);}
+.cover .r-title{margin:10px 0 6px;}
+.cover .cover-meta{display:flex; gap:22px; margin-top:22px; flex-wrap:wrap;}
+.cover .cm{display:flex; flex-direction:column; gap:2px;}
+.cover .cm .k{font-size:11px; color:var(--mb-fg-muted); font-family:var(--font-ui); letter-spacing:.4px;}
+.cover .cm .v{font-size:15px; font-weight:600; font-family:var(--font-ui);}
+.cover .cover-tag{display:inline-flex; align-items:center; gap:7px; margin-top:20px; background:#fff; border:1px solid var(--mb-border); border-radius:var(--r-pill); padding:7px 14px; font-size:12px; font-family:var(--font-ui); color:var(--mb-fg-muted);}
+.cover .cover-tag .dot{width:7px; height:7px; border-radius:50%; background:var(--mb-mint);}
+
+/* 섹션 공통 */
+.section + .section{border-top:1px solid var(--mb-divider);}
+.sec-eyebrow{font-family:var(--font-ui); font-size:11px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase; color:var(--mb-lavender); margin-bottom:8px;}
+.narrative p{font-size:15px; line-height:1.85; color:#2b2b2b; margin:0 0 14px;}
+.narrative p:last-child{margin-bottom:0;}
+.narr-block{margin-bottom:26px;}
+.narr-block:last-child{margin-bottom:0;}
+.narr-block h4{font-family:var(--font-ui); font-size:15px; font-weight:700; margin:0 0 8px; color:var(--mb-primary);}
+
+/* 변화량 막대 (서사 보조) */
+.delta-row{display:flex; align-items:center; gap:12px; margin:10px 0;}
+.delta-row .dl{width:84px; font-size:13px; font-family:var(--font-ui); color:var(--mb-fg-muted);}
+.delta-bar{flex:1; height:10px; border-radius:var(--r-pill); background:var(--mb-bg-10); position:relative; overflow:hidden;}
+.delta-bar > span{position:absolute; top:0; bottom:0; border-radius:var(--r-pill);}
+.delta-up{background:var(--mb-data-green);}
+.delta-down{background:var(--mb-data-red);}
+.delta-val{width:58px; text-align:right; font-family:var(--font-ui); font-size:13px; font-weight:600;}
+
+/* 상담 본문 */
+.transcript-line{display:flex; gap:10px; margin:0 0 12px;}
+.transcript-line .spk{flex:0 0 52px; font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--mb-primary);}
+.transcript-line .spk.client{color:var(--mb-info);}
+.transcript-line .txt{font-size:14px; color:#2b2b2b;}
+.summary-card{background:var(--mb-purple-cream); border-radius:var(--r-lg); padding:18px 20px; margin-bottom:16px;}
+.summary-card h5{font-family:var(--font-ui); font-size:13px; font-weight:700; color:var(--mb-primary); margin:0 0 8px; letter-spacing:.3px;}
+.summary-card ul{margin:0; padding-left:18px;} .summary-card li{font-size:14px; margin:4px 0;}
+
+/* ────────────────────────────────────────────────────────────
+   유실 표시 컴포넌트
+   ──────────────────────────────────────────────────────────── */
+
+/* 신뢰도 뱃지 */
+.conf-badge{display:inline-flex; align-items:center; gap:6px; border-radius:var(--r-pill); padding:5px 12px 5px 10px; font-family:var(--font-ui); font-size:12px; font-weight:600;}
+.conf-badge .dot{width:8px; height:8px; border-radius:50%;}
+.conf-badge.high{background:var(--conf-high-bg); color:var(--conf-high-fg);} .conf-badge.high .dot{background:var(--conf-high-dot);}
+.conf-badge.medium{background:var(--conf-med-bg); color:var(--conf-med-fg);} .conf-badge.medium .dot{background:var(--conf-med-dot);}
+.conf-badge.low{background:var(--conf-low-bg); color:var(--conf-low-fg);} .conf-badge.low .dot{background:var(--conf-low-dot);}
+
+/* 사유 칩 */
+.reason-chip{display:inline-flex; align-items:center; gap:5px; border:1px solid var(--mb-border); background:#fff; border-radius:var(--r-pill); padding:4px 10px; font-family:var(--font-ui); font-size:11px; font-weight:500; color:var(--mb-fg-muted);}
+.reason-chip svg{width:12px; height:12px; flex:0 0 12px;}
+.reason-chip.warn{border-color:var(--loss-banner-border); background:var(--loss-banner-bg); color:var(--loss-banner-fg);}
+
+.conf-row{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:16px;}
+
+/* 측정 커버리지 바 */
+.coverage{margin:0 0 20px;}
+.coverage .cov-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+.coverage .cov-head .cl{font-family:var(--font-ui); font-size:13px; font-weight:600;}
+.coverage .cov-head .cv{font-family:var(--font-ui); font-size:12px; color:var(--mb-fg-muted);}
+.cov-track{height:16px; border-radius:var(--r-pill); background:var(--loss-gray-soft); overflow:hidden; display:flex;}
+.cov-seg{height:100%;}
+.cov-seg.ok{background:linear-gradient(90deg,var(--mb-lavender),var(--mb-primary));}
+.cov-seg.lost{
+  background-color:var(--loss-gray-soft);
+  background-image:repeating-linear-gradient(45deg,transparent 0 5px,var(--loss-hatch) 5px 7px);
+}
+.cov-legend{display:flex; gap:16px; margin-top:8px;}
+.cov-legend span{display:inline-flex; align-items:center; gap:6px; font-family:var(--font-ui); font-size:11px; color:var(--mb-fg-muted);}
+.cov-legend .sw{width:14px; height:10px; border-radius:3px;}
+.cov-legend .sw.ok{background:linear-gradient(90deg,var(--mb-lavender),var(--mb-primary));}
+.cov-legend .sw.lost{background-color:var(--loss-gray-soft); background-image:repeating-linear-gradient(45deg,transparent 0 3px,var(--loss-hatch) 3px 5px);}
+
+/* 유실 고지 배너 */
+.loss-banner{display:flex; gap:12px; align-items:flex-start; background:var(--loss-banner-bg); border:1px solid var(--loss-banner-border); border-left:4px solid var(--loss-banner-icon); border-radius:var(--r-md); padding:14px 16px; margin:0 0 20px;}
+.loss-banner .lb-ic{flex:0 0 22px; width:22px; height:22px; color:var(--loss-banner-icon); margin-top:1px;}
+.loss-banner .lb-body h5{font-family:var(--font-ui); font-size:14px; font-weight:700; color:var(--loss-banner-fg); margin:0 0 3px;}
+.loss-banner .lb-body p{font-size:13px; color:#7a4330; margin:0; line-height:1.55;}
+
+/* "참고용" 라벨 + 매우 낮음 고지 */
+.ref-label{display:inline-flex; align-items:center; gap:6px; background:var(--ref-bg); border:1px solid var(--ref-border); color:var(--ref-fg); border-radius:var(--r-pill); padding:5px 12px; font-family:var(--font-ui); font-size:12px; font-weight:700; letter-spacing:.3px;}
+.ref-notice{background:var(--ref-bg); border:1px dashed var(--ref-border); border-radius:var(--r-md); padding:12px 14px; margin:0 0 18px; font-size:13px; color:var(--ref-fg);}
+.ref-notice strong{font-weight:700;}
+
+/* 복구 대기 배지 */
+.recovery-badge{display:inline-flex; align-items:center; gap:7px; background:var(--recovery-bg); border:1px solid var(--recovery-border); color:var(--recovery-fg); border-radius:var(--r-pill); padding:6px 13px; font-family:var(--font-ui); font-size:12px; font-weight:600;}
+.recovery-badge .spin{width:12px; height:12px; border:2px solid var(--recovery-border); border-top-color:var(--recovery-fg); border-radius:50%; animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.recovery-note{font-family:var(--font-ui); font-size:12px; color:var(--recovery-fg); margin-left:4px;}
+
+/* ── EEG 7지표 ───────────────────────────────────────────── */
+.eeg-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px; margin:6px 0 24px;}
+.metric{border:1px solid var(--mb-border); border-radius:var(--r-md); padding:14px 16px;}
+.metric .mh{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:9px;}
+.metric .mn{font-family:var(--font-ui); font-size:13px; font-weight:600;}
+.metric .mv{font-family:var(--font-ui); font-size:15px; font-weight:700;}
+.metric .mbar{height:8px; border-radius:var(--r-pill); background:var(--mb-bg-10); overflow:hidden;}
+.metric .mbar > span{display:block; height:100%; border-radius:var(--r-pill); background:linear-gradient(90deg,var(--mb-lavender),var(--mb-primary));}
+/* 유실/불확실 지표 상태 */
+.metric.lost{border-style:dashed; border-color:var(--loss-hatch); background:#FBFBFC;}
+.metric.lost .mv{color:var(--loss-gray);}
+.metric.lost .mbar{background-color:var(--loss-gray-soft); background-image:repeating-linear-gradient(45deg,transparent 0 5px,var(--loss-hatch) 5px 7px);}
+.metric.lost .mbar > span{display:none;}
+.metric.lost .mv-lost{font-family:var(--font-ui); font-size:12px; font-weight:600; color:var(--loss-gray);}
+.metric.partial .mbar > span{background:linear-gradient(90deg,#C9B3E8,#9F7BC4);}
+.metric .mnote{font-family:var(--font-ui); font-size:10px; color:var(--loss-gray); margin-top:6px;}
+
+/* 타임라인 */
+.timeline{margin-top:6px;}
+.tl-head{display:flex; justify-content:space-between; font-family:var(--font-ui); font-size:11px; color:var(--mb-fg-muted); margin-bottom:6px;}
+.tl-track{height:40px; border-radius:var(--r-md); background:var(--mb-bg-10); position:relative; overflow:hidden; display:flex;}
+.tl-seg{height:100%; position:relative;}
+.tl-seg.ok{background:linear-gradient(180deg,#EADBF8,#D8C2F0);}
+.tl-seg.ok::after{content:""; position:absolute; left:6%; right:6%; top:50%; height:2px; background:var(--mb-primary); opacity:.5; border-radius:2px; transform:translateY(-50%);}
+.tl-seg.lost{background-color:var(--loss-gray-soft); background-image:repeating-linear-gradient(45deg,transparent 0 6px,var(--loss-hatch) 6px 8px);}
+.tl-seg + .tl-seg{border-left:1px dashed #fff;}
+.tl-caption{font-family:var(--font-ui); font-size:11px; color:var(--mb-fg-muted); margin-top:8px;}
+
+/* not_measured 설명 레전드 (목업 하단) */
+.legend-box{max-width:760px; margin:0 auto 70px; padding:20px 22px; background:#fff; border:1px solid var(--mb-border); border-radius:var(--r-lg); font-family:var(--font-ui); font-size:12px; color:var(--mb-fg-muted); line-height:1.7;}
+.legend-box b{color:var(--mb-fg);}
+.legend-box .pill{display:inline-block; background:var(--mb-bg-10); border-radius:var(--r-pill); padding:1px 8px; margin:0 2px; font-size:11px;}
+
+/* 숨김 유틸 */
+[hidden]{display:none !important;}
+.view-only{display:none;}
+body[data-view="counselor"] .view-counselor{display:block;}
+body[data-view="client"] .view-client{display:block;}
+.inline.view-counselor,.inline.view-client{display:none;}
+body[data-view="counselor"] .inline.view-counselor{display:inline-flex;}
+body[data-view="client"] .inline.view-client{display:inline-flex;}
+
+/* 뷰 배지 (커버) */
+.audience-pill{display:inline-flex; align-items:center; gap:6px; border-radius:var(--r-pill); padding:5px 12px; font-family:var(--font-ui); font-size:12px; font-weight:700;}
+.audience-pill.counselor{background:#EEF0FF; color:#4A4ACB;}
+.audience-pill.client{background:var(--mb-purple-cream); color:var(--mb-primary);}
+</style>
+</head>
+<body data-view="counselor" data-state="1">
+
+<!-- ══════════ 리뷰 전용 툴바 (리포트 콘텐츠 아님) ══════════ -->
+<div class="toolbar">
+  <span class="tb-title">리포트 유실 표시 · 목업</span>
+  <div class="tb-group">
+    <span class="tb-label">뷰</span>
+    <div class="seg view-seg" id="viewSeg">
+      <button data-view="counselor" class="active">Counselor</button>
+      <button data-view="client">Client</button>
+    </div>
+  </div>
+  <div class="tb-group">
+    <span class="tb-label">상태</span>
+    <div class="seg state-seg" id="stateSeg">
+      <button data-state="1" class="active">① 정상</button>
+      <button data-state="2">② 부분측정</button>
+      <button data-state="3">③ 유실</button>
+      <button data-state="4">④ 신뢰도 매우낮음</button>
+      <button data-state="5">⑤ 복구대기</button>
+      <button data-state="6">⑥ STT실패</button>
+    </div>
+  </div>
+  <span class="tb-note" id="tbNote"></span>
+</div>
+
+<div class="canvas">
+
+  <!-- ══════════ COVER ══════════ -->
+  <div class="page cover">
+    <div class="page-pad">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="eyebrow view-counselor view-only">Counselor Report</div>
+          <div class="eyebrow view-client view-only">마음 리포트</div>
+          <h1 class="r-title view-counselor view-only">상담 세션 리포트</h1>
+          <h1 class="r-title view-client view-only">오늘의 마음 이야기</h1>
+          <p class="r-body muted" style="margin:0;">임상심리상담 · 1:1 세션</p>
+        </div>
+        <span class="audience-pill counselor view-counselor view-only">상담사용</span>
+        <span class="audience-pill client view-client view-only">내담자용</span>
+      </div>
+
+      <div class="cover-meta">
+        <div class="cm"><span class="k">세션일</span><span class="v">2026.10.04</span></div>
+        <div class="cm"><span class="k">참여자</span><span class="v">김○○</span></div>
+        <div class="cm"><span class="k">세션 길이</span><span class="v">약 4.3분</span></div>
+        <div class="cm view-counselor view-only"><span class="k">담당</span><span class="v">이상담 상담사</span></div>
+      </div>
+
+      <!-- 커버의 밴드 상태 요약 (상태별 치환) -->
+      <div id="coverTag"></div>
+    </div>
+  </div>
+
+  <!-- ══════════ 서사: 종합 → 몸 → 마음 → 마무리 ══════════ -->
+  <div class="page">
+    <div class="page-pad section narrative">
+      <div class="sec-eyebrow">Narrative · 종합 서사</div>
+
+      <div class="narr-block">
+        <h4>종합</h4>
+        <p class="view-counselor view-only">이번 세션에서 내담자는 초반의 긴장을 중반 이후 점진적으로 낮추며 대화에 몰입하는 양상을 보였습니다. 특정 주제(가족 관계)에서 정서적 환기가 관찰되었고, 후반부에 스스로 호흡을 조절하는 시도가 나타났습니다.</p>
+        <p class="view-client view-only">오늘은 처음엔 조금 긴장했지만, 이야기를 나누면서 점점 편안해지는 모습이 보였어요. 중간에 마음이 울컥하는 순간도 있었지만, 스스로 호흡을 고르며 잘 다독였어요.</p>
+      </div>
+
+      <div class="narr-block">
+        <h4>몸 — 상태 변화</h4>
+        <p class="view-counselor view-only">세션 전후 자기보고 기준, 신체 긴장도는 완화 방향으로 보고되었습니다. 아래 변화량은 측정·자기보고를 종합한 참고 지표입니다.</p>
+        <p class="view-client view-only">몸의 긴장이 시작할 때보다 한결 풀렸어요. 아래 그래프에서 변화를 확인해 보세요.</p>
+        <div class="delta-row"><span class="dl">긴장 완화</span><div class="delta-bar"><span class="delta-up" style="left:50%; width:32%;"></span></div><span class="delta-val" style="color:var(--mb-data-green)">▲ 32%</span></div>
+        <div class="delta-row"><span class="dl">호흡 안정</span><div class="delta-bar"><span class="delta-up" style="left:50%; width:21%;"></span></div><span class="delta-val" style="color:var(--mb-data-green)">▲ 21%</span></div>
+      </div>
+
+      <div class="narr-block">
+        <h4>마음 — 정서 흐름</h4>
+        <p class="view-counselor view-only">초반 불안·경계가 중반 환기 구간을 거치며 안정으로 이동했습니다. 몰입 회복 시점과 호흡 조절 시도가 시간상 맞물립니다.</p>
+        <p class="view-client view-only">마음이 불안에서 점차 안정으로 옮겨갔어요. 집중을 되찾는 순간과 호흡을 고르는 순간이 자연스럽게 이어졌어요.</p>
+        <div class="delta-row"><span class="dl">정서 안정</span><div class="delta-bar"><span class="delta-up" style="left:50%; width:28%;"></span></div><span class="delta-val" style="color:var(--mb-data-green)">▲ 28%</span></div>
+        <div class="delta-row"><span class="dl">불안</span><div class="delta-bar"><span class="delta-down" style="right:50%; width:24%;"></span></div><span class="delta-val" style="color:var(--mb-data-red)">▼ 24%</span></div>
+      </div>
+
+      <div class="narr-block">
+        <h4>마무리</h4>
+        <p class="view-counselor view-only">다음 세션에서는 가족 관계 주제의 후속 탐색과 호흡 조절 루틴의 자가 실천 여부를 점검할 것을 권장합니다.</p>
+        <p class="view-client view-only">오늘 찾은 편안함을 일상에서도 가볍게 떠올려 보세요. 다음 시간에 또 이야기 나눠요.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ 상담 본문 (STT/요약) ══════════ -->
+  <div class="page">
+    <div class="page-pad section">
+      <div class="sec-eyebrow">Session · 상담 본문</div>
+      <h3 class="r-heading">기록 요약</h3>
+
+      <!-- ⑥ STT 실패 고지 (요약 숨김 + 원본 전사 유지) : JS가 주입 -->
+      <div id="sttLossSlot"></div>
+
+      <!-- AI 요약 카드 (⑥에서는 숨김) -->
+      <div id="aiSummaryBlock">
+        <div class="summary-card">
+          <h5>AI 요약</h5>
+          <ul>
+            <li>가족 관계 주제에서 정서적 환기, 후반 호흡 조절 시도.</li>
+            <li>중반 이후 대화 몰입도 상승, 자기 조절 신호 관찰.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 원본 전사문 (항상 유지) -->
+      <h4 class="r-label" style="margin:18px 0 10px;">원본 전사</h4>
+      <div class="transcript-line"><span class="spk">상담사</span><span class="txt">오늘 어떤 이야기부터 나눠볼까요?</span></div>
+      <div class="transcript-line"><span class="spk client">내담자</span><span class="txt">음… 요즘 집에서 좀 답답한 일이 있어서요.</span></div>
+      <div class="transcript-line"><span class="spk">상담사</span><span class="txt">조금 더 편하게 말씀하셔도 괜찮아요.</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════ EEG 보조 섹션 ══════════ -->
+  <!-- 정상 밴드 미착용(not_measured)이면 이 전체가 DOM 미노출. 목업에서는 유실 상태만 다룸. -->
+  <div class="page" id="eegPage">
+    <div class="page-pad section">
+      <div class="sec-eyebrow">EEG · 뇌파 보조 분석</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <h3 class="r-heading" style="margin:0;">뇌파 측정 요약</h3>
+        <!-- 신뢰도/참고용 라벨 영역 : JS 주입 -->
+        <div id="eegStatusSlot" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"></div>
+      </div>
+
+      <p class="r-caption" style="margin:6px 0 18px;">LINK BAND 2.0 · 2채널 EEG · 보조 참고 지표입니다. 진단·치료 목적이 아닙니다.</p>
+
+      <!-- 유실 배너 영역 : JS 주입 (③ 등) -->
+      <div id="eegBannerSlot"></div>
+
+      <!-- 신뢰도 뱃지 + 사유 칩 행 (counselor 중심) : JS 주입 -->
+      <div id="eegConfSlot"></div>
+
+      <!-- 커버리지 바 : JS 주입 -->
+      <div id="eegCoverageSlot"></div>
+
+      <!-- 7지표 그리드 : JS 주입 -->
+      <div id="eegMetricsSlot"></div>
+
+      <!-- 타임라인 : JS 주입 -->
+      <div id="eegTimelineSlot"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- not_measured 처리 레전드 (목업 설명, 리포트 아님) -->
+<div class="legend-box">
+  <b>목업 참고 — 정상 vs 비정상 구분</b><br>
+  밴드 <b>미착용(opt-out, not_measured)</b>은 <span class="pill">정상 경로</span>로, EEG 보조 섹션 전체가 리포트 DOM에 <b>렌더되지 않습니다(숨김 유지)</b>. 위 상태 토글 ②~⑤는 모두 <span class="pill">비정상 · 유실 경로</span>로, 숨기지 않고 <b>유실을 명시</b>합니다. 이 둘은 시각적으로 절대 동일하게 처리하지 않습니다. ⑥ STT 실패는 EEG가 아닌 상담 본문의 AI 요약에만 영향을 줍니다.
+</div>
+
+<script>
+/* ──────────────────────────────────────────────────────────────
+   상태 모델 — 시나리오 ①~⑥ × 뷰(counselor/client)
+   ────────────────────────────────────────────────────────────── */
+const ICON = {
+  warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 10.5 21 3M16 3h5v5M10.5 13.5 3 21M8 21H3v-5"/></svg>',
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  wave:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h3l2-6 4 12 3-9 2 3h6"/></svg>',
+};
+
+const METRICS = [
+  {k:'집중도', v:68}, {k:'이완도', v:72}, {k:'스트레스', v:38},
+  {k:'몰입도', v:64}, {k:'안정도', v:70}, {k:'좌우뇌 균형', v:58}, {k:'정신적 피로', v:41},
+];
+
+/*
+  상태 정의
+  confidence: high | medium | low | none
+  coverage: {pct, measMin, totalMin, segs:[{ok:bool, w:%}]}  (null이면 커버리지 바 없음)
+  banner: null | {title, body}         (counselor 기준 문구 / client는 별도)
+  clientBanner: client 전용 문구
+  reference: bool  ("참고용" 라벨 + 매우 낮음 고지)
+  recovery: null | {remain}
+  reasons: [{icon, label}]
+  metricsMode: full | partial | lost     (지표 표현)
+  timeline: [{ok,w}]
+  sttFail: bool
+  hideEeg: bool    (EEG 섹션 숨김 — ⑥에서 EEG 영향 없음일 때는 정상 표시)
+*/
+const S = {
+  '1':{
+    confidence:'high', reasons:[],
+    coverage:{pct:100, measMin:4.3, totalMin:4.3, segs:[{ok:true,w:100}]},
+    banner:null, reference:false, recovery:null,
+    metricsMode:'full',
+    timeline:[{ok:true,w:100}],
+    sttFail:false, hideEeg:false,
+    coverCounselor:{tone:'ok', text:'LINK BAND 정상 측정 · 전 구간 수집'},
+    coverClient:{tone:'ok', text:'뇌파가 잘 측정되었어요'},
+    note:'① 정상 — 유실 UI 전혀 없음. 베이스라인.',
+  },
+  '2':{
+    confidence:'medium',
+    reasons:[{icon:'link', label:'연결 끊김'}],
+    coverage:{pct:47, measMin:2.0, totalMin:4.3, segs:[{ok:true,w:28},{ok:false,w:18},{ok:true,w:19},{ok:false,w:14},{ok:true,w:21}]},
+    banner:null, reference:false, recovery:null,
+    metricsMode:'partial',
+    timeline:[{ok:true,w:28},{ok:false,w:18},{ok:true,w:19},{ok:false,w:14},{ok:true,w:21}],
+    sttFail:false, hideEeg:false,
+    coverCounselor:{tone:'warn', text:'부분 측정 · 커버리지 47% (연결 끊김)'},
+    coverClient:{tone:'warn', text:'연결이 잠깐 끊겨 일부만 측정되었어요'},
+    note:'② 부분측정(≥50% 아님, 예시 47%) — 신뢰도 medium 뱃지 + "연결 끊김" 사유 칩 + 커버리지 바.',
+  },
+  '3':{
+    confidence:'none',
+    reasons:[{icon:'link', label:'연결 끊김'}],
+    coverage:{pct:0, measMin:0, totalMin:4.3, segs:[{ok:false,w:100}]},
+    banner:{title:'뇌파 데이터가 유실되었습니다',
+            body:'측정을 시도했으나 세션 전 구간에서 연결이 끊겨 데이터가 수집되지 않았습니다. 유효 측정 구간이 없어 지표를 산출할 수 없습니다.'},
+    clientBanner:{title:'뇌파가 측정되지 않았어요',
+            body:'측정을 시작했지만 중간에 연결이 끊겨, 이번에는 뇌파 데이터가 기록되지 않았어요. 아래 상담 내용으로 안내드릴게요.'},
+    reference:false, recovery:null,
+    metricsMode:'lost',
+    timeline:[{ok:false,w:100}],
+    sttFail:false, hideEeg:false,
+    coverCounselor:{tone:'danger', text:'전 구간 유실 · 0 윈도우 (숨김 아님)'},
+    coverClient:{tone:'warn', text:'이번엔 뇌파가 기록되지 않았어요'},
+    note:'③ 유실(0 윈도우) — 유실 고지 배너(warning/rose). 숨기지 않고 lost로 표기.',
+  },
+  '4':{
+    confidence:'low',
+    reasons:[{icon:'link', label:'연결 끊김'},{icon:'clock', label:'측정 구간 짧음'}],
+    coverage:{pct:31, measMin:1.3, totalMin:4.3, segs:[{ok:true,w:14},{ok:false,w:40},{ok:true,w:17},{ok:false,w:29}]},
+    banner:null, reference:true, recovery:null,
+    metricsMode:'partial',
+    timeline:[{ok:true,w:14},{ok:false,w:40},{ok:true,w:17},{ok:false,w:29}],
+    sttFail:false, hideEeg:false,
+    coverCounselor:{tone:'danger', text:'참고용 · 커버리지 31% · 신뢰도 매우 낮음'},
+    coverClient:{tone:'warn', text:'측정된 구간이 적어 참고용으로만 안내해요'},
+    note:'④ 신뢰도 매우 낮음(<50%, 예시 31%) — "참고용" 라벨 + "데이터 유실로 신뢰도 매우 낮음" 명확 고지.',
+  },
+  '5':{
+    confidence:'medium',
+    reasons:[{icon:'wave', label:'저품질 신호'}],
+    coverage:{pct:52, measMin:2.2, totalMin:4.3, segs:[{ok:true,w:30},{ok:false,w:10},{ok:true,w:22},{ok:false,w:12},{ok:true,w:26}]},
+    banner:null, reference:false,
+    recovery:{remain:'약 12분'},
+    metricsMode:'partial',
+    timeline:[{ok:true,w:30},{ok:false,w:10},{ok:true,w:22},{ok:false,w:12},{ok:true,w:26}],
+    sttFail:false, hideEeg:false,
+    coverCounselor:{tone:'info', text:'복구 대기 중 · 재처리 예정 (남은 시간 약 12분)'},
+    coverClient:{tone:'info', text:'뇌파 분석을 마무리하는 중이에요'},
+    note:'⑤ 복구 대기(provisional) — 시스템 오류로 복구 가능. "복구 대기 중(남은 시간)" 표시. 잠정 지표.',
+  },
+  '6':{
+    confidence:'high',
+    reasons:[],
+    coverage:{pct:100, measMin:4.3, totalMin:4.3, segs:[{ok:true,w:100}]},
+    banner:null, reference:false, recovery:null,
+    metricsMode:'full',
+    timeline:[{ok:true,w:100}],
+    sttFail:true, hideEeg:false,
+    coverCounselor:{tone:'ok', text:'LINK BAND 정상 측정 · STT만 실패'},
+    coverClient:{tone:'ok', text:'뇌파는 잘 측정되었어요'},
+    note:'⑥ STT 실패 — AI 요약 숨김 + 원본 전사문 유지. EEG는 영향 없음(정상 표시).',
+  },
+};
+
+const CONF_LABEL = {high:'신뢰도 높음', medium:'신뢰도 보통', low:'신뢰도 낮음'};
+
+/* ── 렌더 ─────────────────────────────────────────────────── */
+function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+function reasonChip(r){ return `<span class="reason-chip warn">${ICON[r.icon]}${r.label}</span>`; }
+
+function render(){
+  const view = document.body.dataset.view;      // counselor | client
+  const stKey = document.body.dataset.state;
+  const st = S[stKey];
+  const isCounselor = view==='counselor';
+
+  document.getElementById('tbNote').textContent = st.note;
+
+  /* 커버 태그 */
+  const cov = isCounselor ? st.coverCounselor : st.coverClient;
+  const dotColor = {ok:'var(--mb-mint)', warn:'var(--mb-warning)', danger:'var(--mb-data-red)', info:'var(--mb-info)'}[cov.tone];
+  document.getElementById('coverTag').innerHTML =
+    `<span class="cover-tag"><span class="dot" style="background:${dotColor}"></span>${cov.text}</span>`;
+
+  /* ⑥ STT 실패 — 요약 숨김 + 고지 */
+  const sttSlot = document.getElementById('sttLossSlot');
+  const aiBlock = document.getElementById('aiSummaryBlock');
+  if(st.sttFail){
+    aiBlock.hidden = true;
+    sttSlot.innerHTML = isCounselor
+      ? `<div class="loss-banner"><span class="lb-ic">${ICON.warn}</span><div class="lb-body">
+           <h5>AI 요약 생성 실패 — 원본 전사 유지</h5>
+           <p>음성 전사/요약 단계에서 오류가 발생해 AI 요약을 표시하지 않습니다. 아래 원본 전사문은 정상 보존되어 있으니 수기 검토 후 발행하세요.</p></div></div>`
+      : `<div class="loss-banner"><span class="lb-ic">${ICON.warn}</span><div class="lb-body">
+           <h5>요약을 준비하지 못했어요</h5>
+           <p>이번 세션은 자동 요약을 만들지 못했어요. 대신 아래 대화 기록을 그대로 확인하실 수 있어요.</p></div></div>`;
+  } else {
+    aiBlock.hidden = false;
+    sttSlot.innerHTML = '';
+  }
+
+  /* EEG 섹션: not_measured(정상 미착용)면 hideEeg=true → 숨김. 목업 상태엔 해당 없음 */
+  const eegPage = document.getElementById('eegPage');
+  eegPage.hidden = !!st.hideEeg;
+
+  /* EEG 상태 라벨(우상단): 신뢰도 뱃지 / 참고용 라벨 / 복구 배지 */
+  const statusSlot = document.getElementById('eegStatusSlot');
+  let statusHtml = '';
+  if(st.reference){
+    statusHtml += `<span class="ref-label">참고용</span>`;
+  }
+  if(st.confidence !== 'none'){
+    statusHtml += `<span class="conf-badge ${st.confidence}"><span class="dot"></span>${CONF_LABEL[st.confidence]}</span>`;
+  }
+  if(st.recovery){
+    statusHtml += `<span class="recovery-badge"><span class="spin"></span>복구 대기 중 · 남은 시간 ${st.recovery.remain}</span>`;
+  }
+  statusSlot.innerHTML = statusHtml;
+
+  /* EEG 유실 배너(③ 등) — 뷰별 문구 */
+  const bannerSlot = document.getElementById('eegBannerSlot');
+  const bannerData = (!isCounselor && st.clientBanner) ? st.clientBanner : st.banner;
+  bannerSlot.innerHTML = bannerData
+    ? `<div class="loss-banner"><span class="lb-ic">${ICON.warn}</span><div class="lb-body"><h5>${bannerData.title}</h5><p>${bannerData.body}</p></div></div>`
+    : '';
+
+  /* 신뢰도 사유 칩 행 — counselor만 관리 정보로 노출 */
+  const confSlot = document.getElementById('eegConfSlot');
+  if(isCounselor && st.reasons.length){
+    confSlot.innerHTML = `<div class="conf-row">
+        <span class="r-caption" style="margin-right:2px;">사유</span>
+        ${st.reasons.map(reasonChip).join('')}
+      </div>`;
+  } else if(st.reference && isCounselor){
+    confSlot.innerHTML = `<div class="ref-notice"><strong>데이터 유실로 신뢰도 매우 낮음.</strong> 유효 측정 구간이 세션의 절반 미만입니다. 지표는 경향 참고용이며 발행 전 수기 검토를 권장합니다.</div>`;
+  } else {
+    confSlot.innerHTML = '';
+  }
+  /* ④에서 사유 칩 + 매우낮음 고지 둘 다 (counselor) */
+  if(isCounselor && st.reference && st.reasons.length){
+    confSlot.innerHTML = `<div class="conf-row">
+        <span class="r-caption" style="margin-right:2px;">사유</span>
+        ${st.reasons.map(reasonChip).join('')}
+      </div>
+      <div class="ref-notice"><strong>데이터 유실로 신뢰도 매우 낮음.</strong> 유효 측정 구간이 세션의 절반 미만입니다. 아래 지표는 경향 참고용이며, 발행 전 수기 검토를 권장합니다.</div>`;
+  }
+
+  /* 커버리지 바 — counselor는 수치 노출, client는 수치 숨김(차분한 문구) */
+  const covSlot = document.getElementById('eegCoverageSlot');
+  if(st.coverage && st.metricsMode!=='full'){
+    const c = st.coverage;
+    const segHtml = c.segs.map(s=>`<div class="cov-seg ${s.ok?'ok':'lost'}" style="width:${s.w}%"></div>`).join('');
+    if(isCounselor){
+      covSlot.innerHTML = `<div class="coverage">
+          <div class="cov-head"><span class="cl">측정 커버리지</span>
+            <span class="cv">${c.totalMin}분 중 ${c.measMin}분 측정 · ${c.pct}%</span></div>
+          <div class="cov-track">${segHtml}</div>
+          <div class="cov-legend"><span><i class="sw ok"></i>측정 구간</span><span><i class="sw lost"></i>유실 구간</span></div>
+        </div>`;
+    } else {
+      /* client: 수치 비노출, 막대만 + 차분한 캡션 */
+      covSlot.innerHTML = `<div class="coverage">
+          <div class="cov-head"><span class="cl">측정된 구간</span></div>
+          <div class="cov-track">${segHtml}</div>
+          <div class="cov-legend"><span><i class="sw ok"></i>측정됨</span><span><i class="sw lost"></i>측정 안 됨</span></div>
+          <p class="r-caption" style="margin:8px 0 0;">중간에 연결이 끊겨 일부 구간은 측정되지 않았어요. 측정된 구간으로 안내드려요.</p>
+        </div>`;
+    }
+  } else {
+    covSlot.innerHTML = '';
+  }
+
+  /* 7지표 */
+  const metSlot = document.getElementById('eegMetricsSlot');
+  if(st.metricsMode==='lost'){
+    metSlot.innerHTML = `<div class="eeg-grid">${METRICS.map(m=>`
+      <div class="metric lost"><div class="mh"><span class="mn">${m.k}</span><span class="mv-lost">측정 안 됨</span></div>
+      <div class="mbar"></div><div class="mnote">유효 구간 없음 (유실)</div></div>`).join('')}</div>`;
+  } else {
+    const partial = st.metricsMode==='partial';
+    metSlot.innerHTML = `<div class="eeg-grid">${METRICS.map((m,i)=>{
+      const unstable = partial && (i%3===1); // 일부 지표는 측정 부족으로 불확실 표기
+      if(unstable){
+        return `<div class="metric lost"><div class="mh"><span class="mn">${m.k}</span><span class="mv-lost">구간 부족</span></div>
+          <div class="mbar"></div><div class="mnote">측정 구간이 짧아 산출 제외</div></div>`;
+      }
+      return `<div class="metric ${partial?'partial':''}"><div class="mh"><span class="mn">${m.k}</span><span class="mv">${m.v}</span></div>
+        <div class="mbar"><span style="width:${m.v}%"></span></div>${partial?'<div class="mnote" style="color:var(--mb-fg-muted)">측정 구간 기준</div>':''}</div>`;
+    }).join('')}</div>`;
+  }
+
+  /* 타임라인 */
+  const tlSlot = document.getElementById('eegTimelineSlot');
+  const tlSegs = st.timeline.map(s=>`<div class="tl-seg ${s.ok?'ok':'lost'}" style="width:${s.w}%"></div>`).join('');
+  const tlCaption = st.metricsMode==='lost'
+    ? (isCounselor ? '전 구간 유실 — 수집된 윈도우 없음.' : '이번엔 측정 구간이 없어요.')
+    : (isCounselor ? '빗금 구간은 연결 끊김으로 유실된 시간대입니다.' : '빗금 부분은 측정되지 않은 시간이에요.');
+  tlSlot.innerHTML = `<div class="timeline">
+      <div class="tl-head"><span>세션 시작</span><span>타임라인 (약 ${st.coverage?st.coverage.totalMin:'4.3'}분)</span><span>종료</span></div>
+      <div class="tl-track">${tlSegs}</div>
+      <div class="tl-caption">${tlCaption}</div>
+    </div>`;
+}
+
+/* ── 토글 바인딩 ─────────────────────────────────────────── */
+document.getElementById('viewSeg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); document.body.dataset.view=b.dataset.view; render();
+});
+document.getElementById('stateSeg').addEventListener('click', e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#stateSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); document.body.dataset.state=b.dataset.state; render();
+});
+
+render();
+</script>
+</body>
+</html>

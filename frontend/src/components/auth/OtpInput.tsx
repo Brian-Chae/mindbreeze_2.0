@@ -22,7 +22,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
   };
 
   const handleChange = (idx: number) => (e: ChangeEvent<HTMLInputElement>): void => {
-    const raw = e.target.value.replace(/\D/g, '');
+    const raw = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
     if (!raw) {
       updateAt(idx, '');
       return;
@@ -60,16 +60,16 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>): void => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, length);
+    const pasted = e.clipboardData.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, length);
     if (!pasted) return;
-    onChange(pasted.padEnd(0, ''));
+    onChange(pasted);
     const focusIdx = Math.min(pasted.length, length - 1);
     inputsRef.current[focusIdx]?.focus();
   };
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-1.5 sm:gap-2 justify-center">
         {digits.map((d, idx) => (
           <input
             key={idx}
@@ -77,7 +77,7 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
               inputsRef.current[idx] = el;
             }}
             type="text"
-            inputMode="numeric"
+            inputMode="text"
             autoComplete="one-time-code"
             maxLength={1}
             value={d}
@@ -85,14 +85,14 @@ export function OtpInput({ value, onChange, disabled = false, error, length = 6 
             onChange={handleChange(idx)}
             onKeyDown={handleKeyDown(idx)}
             onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--color-surface)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] disabled:opacity-50 ${
-              error ? 'border-[var(--color-danger)]' : 'border-[var(--color-border)]'
+            className={`w-10 sm:w-12 h-14 text-center text-2xl font-semibold rounded-lg border bg-[var(--mb-bg)] text-[var(--mb-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--mb-primary)] disabled:opacity-50 ${
+              error ? 'border-[var(--mb-danger)]' : 'border-[var(--mb-border)]'
             }`}
             aria-label={`OTP 자리 ${idx + 1}`}
           />
         ))}
       </div>
-      {error && <p className="text-sm text-[var(--color-danger)] text-center">{error}</p>}
+      {error && <p className="text-sm text-[var(--mb-danger)] text-center">{error}</p>}
     </div>
   );
 }

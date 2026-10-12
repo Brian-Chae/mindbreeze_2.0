@@ -1,0 +1,321 @@
+"""내담자 포털 API — Client-facing (상담사 관리, 내 정보, 홈)"""
+
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user
+from app.core.database import get_db
+from app.models.chat import ChatMessage, ChatMessageRead, ChatRoomParticipant
+from app.models.client_counselor_link import ClientCounselorLink
+from app.models.counselor_profile import CounselorProfile
+from app.models.organization import Organization
+from app.models.record import Report
+from app.models.session import Session as SessionModel, SessionParticipant
+from app.models.user import User
+from app.services.chat_service import get_or_create_direct_room
+from app.services import agent_policy, code_service, org_management_service
+from app.schemas.client import (
+    AddCounselorRequest,
+    ClientHomeResponse,
+    CounselorInfo,
+    NextSessionInfo,
+    RecentReportInfo,
+)
+
+router = APIRouter(prefix="/client", tags=["client-portal"])
+
+
+def _get_user_from_token(current_user: dict, db: Session) -> User:
+    """deps.py의 get_current_user가 dict를 반환하므로 실제 User 객체로 변환"""
+    user = db.query(User).filter(User.id == current_user["id"]).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="사용자를 찾을 수 없습니다",
+        )
+    return user
+
+
+@router.get("/counselors", response_model=list[CounselorInfo])
+def list_my_counselors(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """내가 연결된 상담사 목록"""
+    user = _get_user_from_token(current_user, db)
+
+    links = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == user.id,
+            ClientCounselorLink.status == "active",
+        )
+        .all()
+    )
+
+    result = []
+    for link in links:
+        counselor = db.query(User).filter(User.id == link.counselor_id).first()
+        if not counselor:
+            continue
+
+        profile = (
+            db.query(CounselorProfile)
+            .filter(CounselorProfile.user_id == counselor.id)
+            .first()
+        )
+
+        org_name = None
+        if counselor.org_id:
+            org = db.query(Organization).filter(Organization.id == counselor.org_id).first()
+            if org:
+                org_name = org.name
+
+        result.append(
+            CounselorInfo(
+                id=str(counselor.id),
+                name=counselor.name,
+                profile_image=profile.profile_image_url if profile else None,
+                org_name=org_name,
+                status=link.status,
+            )
+        )
+
+    return result
+
+
+@router.post("/counselors", response_model=CounselorInfo, status_code=status.HTTP_201_CREATED)
+def add_counselor_by_code(
+    req: AddCounselorRequest,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """상담사 코드로 연결 추가 — AUTHZ-05: 내담자(client) 전용."""
+    user = _get_user_from_token(current_user, db)
+
+    # AUTHZ-05: 내담자 포털 경로는 client 역할 전용이다. 상담사·기관 관리자 등이
+    #   자기 계정으로 내담자 연결/채팅방을 생성하지 못하도록 역할을 강제한다.
+    if user.role != "client":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="내담자만 상담사를 추가할 수 있습니다",
+        )
+
+    # AUTH4-03: 가입·온보딩 매칭 경로와 동일하게 공백 제거·대문자화 후 조회한다.
+    #   정규화가 없으면 소문자/공백 포함 입력이 유효한 코드와 미매칭(404)된다.
+    normalized = code_service.normalize_code(req.code)
+
+    # 상담사 코드로 CounselorProfile 검색
+    profile = (
+        db.query(CounselorProfile)
+        .filter(CounselorProfile.counselor_code == normalized)
+        .first()
+    )
+
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="유효하지 않은 상담사 코드입니다",
+        )
+
+    counselor = db.query(User).filter(User.id == profile.user_id).first()
+    if not counselor:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="상담사를 찾을 수 없습니다",
+        )
+
+    # SDD-073: 승인 전(pending) 개인 상담사 등 비활성 계정의 코드는 사용 불가
+    if counselor.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="아직 활동을 시작하지 않은 상담사입니다. 상담사에게 확인해 주세요.",
+        )
+
+    # AUTH4-04: 인증 미완료(자격 증빙 없음) 상담사는 연결 불가 — 온보딩 매칭(step4)과 동일 기준.
+    if counselor.verified_tier == "unverified":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 상담사는 아직 인증이 완료되지 않아 연결할 수 없습니다",
+        )
+
+    # AUTH4-04: 비활성화된 기관 소속 상담사는 연결 불가(활성 기관 소속 검증).
+    if counselor.org_id is not None:
+        org_management_service.require_active_org(counselor.org_id, db)
+
+    # 이미 연결되어 있는지 확인
+    existing = (
+        db.query(ClientCounselorLink)
+        .filter(
+            ClientCounselorLink.client_id == user.id,
+            ClientCounselorLink.counselor_id == counselor.id,
+        )
+        .first()
+    )
+
+    if existing:
+        if existing.status == "active":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 연결된 상담사입니다",
+            )
+        else:
+            # ended 상태면 재활성화 — AUTH4-09: status 만 되돌리고 ended_at 을 초기화하지
+            #   않으면 'active 인데 ended_at 존재'라는 모순 상태가 남고, 재연결 시 채팅방도
+            #   생성되지 않았다. client_service.assign_counselor 와 동일하게 ended_at 을 비우고
+            #   다이렉트 채팅방을 멱등 보장한다.
+            existing.status = "active"
+            existing.ended_at = None
+            db.commit()
+            db.refresh(existing)
+            get_or_create_direct_room(counselor.id, user.id, db)
+    else:
+        link = ClientCounselorLink(
+            client_id=user.id,
+            counselor_id=counselor.id,
+            status="active",
+        )
+        db.add(link)
+        db.commit()
+        # 상담사 연결 시 채팅방 자동 생성
+        get_or_create_direct_room(counselor.id, user.id, db)
+
+    org_name = None
+    if counselor.org_id:
+        org = db.query(Organization).filter(Organization.id == counselor.org_id).first()
+        if org:
+            org_name = org.name
+
+    return CounselorInfo(
+        id=str(counselor.id),
+        name=counselor.name,
+        profile_image=profile.profile_image_url,
+        org_name=org_name,
+        status="active",
+    )
+
+
+# ── 내담자 홈 화면 ──
+
+def _get_today_range() -> tuple[datetime, datetime]:
+    """오늘(KST)의 시작/끝을 UTC aware 범위로 반환한다.
+
+    내담자 홈의 "오늘 세션 수"는 한국 시간 기준이어야 한다(UTC 자정으로 끊으면
+    KST 00:00~08:59 구간에서 전날로 집계되는 오류가 난다).
+    """
+    return agent_policy.kst_day_bounds(agent_policy.kst_today())
+
+
+@router.get("/home", response_model=ClientHomeResponse)
+def get_client_home(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """내담자 홈 화면 집계 데이터
+
+    - 다음 예정 세션
+    - 최근 리포트
+    - 안 읽은 메시지 수
+    - 오늘 세션 수
+    """
+    user = _get_user_from_token(current_user, db)
+    user_id = user.id
+    now = datetime.now(timezone.utc)
+
+    # ── 1. 다음 예정 세션 ──
+    next_session: NextSessionInfo | None = None
+
+    upcoming_session = (
+        db.query(SessionModel)
+        .join(SessionParticipant, SessionParticipant.session_id == SessionModel.id)
+        .filter(
+            SessionParticipant.user_id == user_id,
+            SessionModel.status == "scheduled",
+            SessionModel.scheduled_at > now,
+        )
+        .order_by(SessionModel.scheduled_at.asc())
+        .first()
+    )
+
+    if upcoming_session:
+        counselor = db.query(User).filter(User.id == upcoming_session.host_id).first()
+        next_session = NextSessionInfo(
+            id=str(upcoming_session.id),
+            title=upcoming_session.title or "상담 세션",
+            counselor_name=counselor.name if counselor else "알 수 없음",
+            counselor_id=str(upcoming_session.host_id),
+            start_time=upcoming_session.scheduled_at.isoformat(),
+            status=upcoming_session.status,
+        )
+
+    # ── 2. 최근 리포트 ──
+    recent_report: RecentReportInfo | None = None
+
+    latest_report = (
+        db.query(Report)
+        .filter(Report.user_id == user_id)
+        .order_by(Report.created_at.desc())
+        .first()
+    )
+
+    if latest_report:
+        title = latest_report.created_at.strftime("%m월 %d일") + " 리포트"
+        recent_report = RecentReportInfo(
+            id=str(latest_report.id),
+            title=title,
+            created_at=latest_report.created_at.isoformat(),
+        )
+
+    # ── 3. 안 읽은 메시지 수 ──
+    # 사용자가 참여한 채팅방의 메시지 중, 자신이 보낸 것이 아니고 아직 읽지 않은 것
+    participant_room_ids = (
+        db.query(ChatRoomParticipant.room_id)
+        .filter(ChatRoomParticipant.user_id == user_id)
+        .subquery()
+    )
+
+    total_received = (
+        db.query(ChatMessage)
+        .filter(
+            ChatMessage.room_id.in_(db.query(participant_room_ids.c.room_id)),
+            ChatMessage.sender_id != user_id,
+        )
+        .count()
+    )
+
+    read_count = (
+        db.query(ChatMessageRead)
+        .join(ChatMessage, ChatMessage.id == ChatMessageRead.message_id)
+        .filter(
+            ChatMessage.room_id.in_(db.query(participant_room_ids.c.room_id)),
+            ChatMessageRead.user_id == user_id,
+            ChatMessage.sender_id != user_id,
+        )
+        .count()
+    )
+
+    unread_messages = max(total_received - read_count, 0)
+
+    # ── 4. 오늘 세션 수 ──
+    today_start, today_end = _get_today_range()
+
+    today_sessions = (
+        db.query(SessionModel)
+        .join(SessionParticipant, SessionParticipant.session_id == SessionModel.id)
+        .filter(
+            SessionParticipant.user_id == user_id,
+            SessionModel.scheduled_at >= today_start,
+            SessionModel.scheduled_at < today_end,
+        )
+        .count()
+    )
+
+    return ClientHomeResponse(
+        next_session=next_session,
+        recent_report=recent_report,
+        unread_messages=unread_messages,
+        today_sessions=today_sessions,
+    )

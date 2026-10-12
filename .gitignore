@@ -6,6 +6,18 @@ frontend/node_modules/
 .env
 .env.*
 !*.env.template
+!.env*.template
 .hermes/
 *.tar.gz
 .DS_Store
+
+# Claude Code / 에이전트 워크트리 (커밋 대상 아님)
+.claude/worktrees/
+
+# Codex 에이전트 로컬 설정
+.codex/
+
+# 루트 의존성·Paseo 워크스페이스·에이전트 임시 산출물
+node_modules/
+paseo.json
+.hermes-tmp/

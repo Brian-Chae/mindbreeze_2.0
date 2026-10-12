@@ -1,63 +1,111 @@
 // 채팅 페이지 — 좌측 대화 목록 + 우측 채팅 영역. /chat 또는 /chat/:roomId
 
+import { ChatMobileHeader, LUCY_COUNSELOR_NOTICE } from '../../components/chat/ChatMobileHeader';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import { ChatRoom } from '../../components/chat/ChatRoom';
 import { CreateRoomModal } from '../../components/chat/CreateRoomModal';
 import { listChatRooms, type ChatRoom as ChatRoomDto } from '../../lib/api/chat';
 import { useChatStore } from '../../stores/chatStore';
+import { ChatSortToggle } from '../../components/chat/ChatSortToggle';
+import { RoomActionsMenu } from '../../components/chat/RoomActionsMenu';
+import { RoomSettingsModal } from '../../components/chat/RoomSettingsModal';
+import { InviteMemberModal } from '../../components/chat/InviteMemberModal';
+import { canInviteToRoom } from '../../lib/api/chat-invite';
+import { useAuthStore } from '../../stores/authStore';
+import { useChatSortPreference } from '../../hooks/useChatSortPreference';
+import CounselorAgentPage from '../agent/counselor-agent-page';
+import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
+import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
+
+function formatSessionDate(iso: string | null | undefined): string {
+  if (!iso) return '세션 채팅';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '세션 채팅';
+  const day = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+  const hh = d.getHours();
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day}) ${hh}:${mm}`;
+}
 
 function roomLabel(room: ChatRoomDto): string {
   const count = room.participant_count ?? 0;
   const countStr = count > 0 ? ` (${count}명)` : '';
-  
-  if (room.room_type === 'direct') {
-    const displayName = room.name && room.name.length > 12 ? room.name : room.name || '1:1 채팅';
-    const isUUID = room.name && /^[0-9a-f]{8}-/.test(room.name);
-    return isUUID ? `1:1 채팅${countStr}` : `${displayName}${countStr}`;
-  }
-  if (room.room_type === 'group') {
-    return `${room.name || '그룹 채팅'}${countStr}`;
-  }
-  const label = room.session_id ? `세션 ${room.session_id.slice(0, 8)}` : '채팅방';
-  return `${label}${countStr}`;
+
+  return `${chatRoomDisplayName(room)}${countStr}`;
 }
 
 function roomSub(room: ChatRoomDto): string {
   if (room.room_type === 'direct') return '1:1 대화';
   if (room.room_type === 'group') return '그룹 대화';
-  return '세션 채팅';
+  return formatSessionDate(room.session_scheduled_at);
 }
+
+/** AI 채널(루시) 고정 방 ID — 경로 /chat/lucy */
+const LUCY_ROOM_ID = 'lucy';
 
 export default function ChatPage() {
   const { roomId: paramRoomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const targetMessageId = searchParams.get('message') || undefined;
+  const showRecentMessages = () => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      next.delete('message');
+      return next;
+    }, { replace: true });
+  };
   const rooms = useChatStore((s) => s.rooms);
+  const agentUnread = useCounselorAgentStore((state) => state.unread + state.openRisk);
+  const isLucy = paramRoomId === LUCY_ROOM_ID;
   const setRooms = useChatStore((s) => s.setRooms);
+  const sortPreference = useChatSortPreference();
+  const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.unreadFirst), [rooms, sortPreference.unreadFirst]);
+  const [settingsRoom, setSettingsRoom] = useState<ChatRoomDto | null>(null);
+  const [inviteRoom, setInviteRoom] = useState<ChatRoomDto | null>(null);
+  const [returnToSettings, setReturnToSettings] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
 
+  useEffect(() => { setInviteRoom(null); setSettingsRoom(null); }, [paramRoomId]);
+
+  useEffect(() => {
+    if (!status) return;
+    const timer = window.setTimeout(() => setStatus(''), 4000);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    listChatRooms()
+    let requestId = 0;
+    const refreshRooms = () => {
+      const currentRequest = ++requestId;
+      const snapshot = useChatStore.getState().rooms;
+      void listChatRooms()
       .then((res) => {
-        if (cancelled) return;
-        setRooms(res.rooms);
+        if (cancelled || currentRequest !== requestId) return;
+        setError(null);
+        setRooms(res.rooms, snapshot);
         setLoading(false);
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelled || currentRequest !== requestId) return;
         setError(err instanceof Error ? err.message : '로딩 실패');
         setLoading(false);
       });
-    return () => { cancelled = true; };
+    };
+    refreshRooms();
+    window.addEventListener('focus', refreshRooms);
+    return () => { cancelled = true; window.removeEventListener('focus', refreshRooms); };
   }, [setRooms]);
 
   const selectedRoom: ChatRoomDto | null = useMemo(() => {
-    if (!paramRoomId) return null;
+    if (!paramRoomId || paramRoomId === LUCY_ROOM_ID) return null;
     // room.id 또는 session_id로 검색 (하위 호환)
     return (
       rooms.find((r) => r.id === paramRoomId) ??
@@ -66,22 +114,31 @@ export default function ChatPage() {
     );
   }, [rooms, paramRoomId]);
 
+  const openInvite = (room: ChatRoomDto, fromSettings = false): void => {
+    if (!canInviteToRoom(room, useAuthStore.getState().user)) return;
+    setReturnToSettings(fromSettings);
+    setSettingsRoom(null);
+    setInviteRoom(room);
+  };
+
   const handleSelect = (room: ChatRoomDto): void => {
     navigate(`/chat/${room.id}`);
   };
 
   const headerTitle = useMemo(() => {
+    if (isLucy) return '루시 (AI)';
     if (!selectedRoom) return '채팅';
     return roomLabel(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   const headerSub = useMemo(() => {
+    if (isLucy) return 'AI ASSISTANT';
     if (!selectedRoom) return 'MESSAGES';
     return roomSub(selectedRoom);
-  }, [selectedRoom]);
+  }, [selectedRoom, isLucy]);
 
   return (
-    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab noBottomPad>
+    <AppShell title={headerTitle} sub={headerSub} contentPad="" noScroll hideBottomTab={!!paramRoomId} noBottomPad={!!paramRoomId} hideMobileTitle={!!paramRoomId}>
       <div className="h-full flex flex-col md:flex-row">
         {/* 좌측 대화 목록 */}
         <aside
@@ -94,12 +151,30 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setShowCreate(true)}
-              className="w-full h-10 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
+              className="w-full h-11 rounded-xl bg-[#5F0080] text-white font-semibold text-sm hover:bg-[#4B0066] transition-colors"
             >
               + 새 채팅방
             </button>
           </div>
 
+          <ChatSortToggle {...sortPreference} />
+          <button
+            type="button"
+            onClick={() => navigate(`/chat/${LUCY_ROOM_ID}`)}
+            aria-current={isLucy ? 'page' : undefined}
+            className={`flex w-full items-center gap-3 px-5 py-4 text-left border-b border-[#EFEFEF] transition-colors ${isLucy ? 'bg-[#F5EDFC]' : 'bg-[#FBF8FD] hover:bg-[#F5EDFC]'}`}
+          >
+            <div className="w-11 h-11 rounded-full bg-[#5F0080] ring-2 ring-[#01f0c8]/60 flex items-center justify-center text-white text-sm font-bold shrink-0">루시</div>
+            <div className="flex-1 min-w-0">
+              <span className="font-bold text-[15px] text-[#1F1F1F]">루시 (AI)</span>
+              <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">아침 브리핑 · 저녁 정리 · 내담자 피드백</p>
+            </div>
+            {agentUnread > 0 && (
+              <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#5F0080] text-white text-[11px] font-bold inline-flex items-center justify-center font-mono shrink-0">
+                {agentUnread}
+              </span>
+            )}
+          </button>
           {loading ? (
             <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중…</div>
           ) : error ? (
@@ -111,29 +186,29 @@ export default function ChatPage() {
             </div>
           ) : (
             <ul className="divide-y divide-[#EFEFEF]">
-              {rooms.map((room) => {
+              {sortedRooms.map((room) => {
                 const isActive = room.id === paramRoomId;
                 return (
-                  <li key={room.id}>
+                  <li key={room.id} className={`flex items-center ${isActive ? 'bg-[#F5EDFC]' : ''}`}>
                     <button
                       type="button"
                       onClick={() => handleSelect(room)}
-                        className={`w-full text-left flex items-center gap-3 px-5 py-4 transition-colors ${isActive ? 'bg-[#F5EDFC]' : 'hover:bg-[#F8F8FB]'}`}
+                        className={`min-w-0 flex-1 text-left flex items-center gap-3 px-5 py-4 transition-colors ${isActive ? 'bg-[#F5EDFC]' : 'hover:bg-[#F8F8FB]'}`}
                     >
                       <div className="w-11 h-11 rounded-full bg-[#F5EDFC] ring-2 ring-[#5F0080]/20 flex items-center justify-center text-[#5F0080] font-bold shrink-0">
                         {room.room_type === 'direct' ? '1:1' : '#'}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-bold text-[14px] text-[#1F1F1F] truncate">
+                          <span className="font-bold text-[15px] text-[#1F1F1F] truncate">
                             {roomLabel(room)}
                           </span>
-                          <span className="text-[11px] text-[#6F6F6F] font-mono shrink-0">
-                            {new Date(room.created_at).toLocaleDateString('ko-KR')}
+                          <span className="text-[12px] text-[#6F6F6F] font-mono shrink-0">
+                            {formatChatTime(room.last_message_at ?? room.last_message?.created_at ?? room.created_at)}
                           </span>
                         </div>
                         <p className="text-[12px] text-[#6F6F6F] truncate mt-0.5">
-                          {roomSub(room)}
+                          {lastMessagePreview(room, roomSub(room))}
                         </p>
                       </div>
                       {room.unread_count > 0 && (
@@ -142,6 +217,7 @@ export default function ChatPage() {
                         </span>
                       )}
                     </button>
+                    <RoomActionsMenu room={room} onSettings={() => setSettingsRoom(room)} onInvite={() => openInvite(room)} />
                   </li>
                 );
               })}
@@ -155,19 +231,23 @@ export default function ChatPage() {
             paramRoomId ? 'flex' : 'hidden md:flex'
           }`}
         >
-          {selectedRoom ? (
+          {isLucy ? (
             <>
-              <div className="md:hidden border-b border-[#EFEFEF] px-4 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => navigate('/chat')}
-                  className="text-sm text-[#5F0080] font-medium"
-                >
-                  ← 대화 목록
-                </button>
-              </div>
+              <ChatMobileHeader title={headerTitle} sub={LUCY_COUNSELOR_NOTICE} onBack={() => navigate('/chat')} />
               <div className="flex-1 min-h-0">
-                <ChatRoom roomId={selectedRoom.id} />
+                <CounselorAgentPage embedded />
+              </div>
+            </>
+          ) : selectedRoom ? (
+            <>
+              <ChatMobileHeader
+                title={headerTitle}
+                sub={headerSub}
+                onBack={() => navigate('/chat')}
+                rightSlot={<RoomActionsMenu room={selectedRoom} onSettings={() => setSettingsRoom(selectedRoom)} onInvite={() => openInvite(selectedRoom)} />}
+              />
+              <div className="flex-1 min-h-0">
+                <ChatRoom key={selectedRoom.id} targetMessageId={targetMessageId} onShowRecent={showRecentMessages} roomId={selectedRoom.id} peerName={selectedRoom.peer_name ?? undefined} />
               </div>
             </>
           ) : paramRoomId && !loading ? (
@@ -182,6 +262,21 @@ export default function ChatPage() {
         </main>
       </div>
 
+      {status && <p role="status" className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 max-w-[calc(100vw-2rem)] rounded-xl bg-[#5F0080] px-4 py-3 text-sm text-white break-words">{status}</p>}
+      {settingsRoom && <RoomSettingsModal key={settingsRoom.id} room={settingsRoom} onClose={() => setSettingsRoom(null)} onSaved={setStatus} onInvite={(room) => openInvite(room, true)} />}
+      {inviteRoom && <InviteMemberModal key={inviteRoom.id} room={inviteRoom} onClose={() => {
+        if (returnToSettings) setSettingsRoom(useChatStore.getState().rooms.find((room) => room.id === inviteRoom.id) ?? inviteRoom);
+        setInviteRoom(null);
+      }} onSuccess={(result, mode) => {
+        setInviteRoom(null);
+        if (mode === 'fork') {
+          setStatus('새 그룹 채팅방을 만들었습니다. 기존 방은 그대로 유지됩니다.');
+          navigate(`/chat/${result.id}`);
+        } else {
+          setStatus('회원을 초대했습니다.');
+          if (returnToSettings) setSettingsRoom(result);
+        }
+      }} />}
       <CreateRoomModal open={showCreate} onClose={() => setShowCreate(false)} />
     </AppShell>
   );

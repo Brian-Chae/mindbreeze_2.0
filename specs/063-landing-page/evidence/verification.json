@@ -1,0 +1,40 @@
+{
+  "results": [
+    {
+      "width": 360,
+      "result": "PASS",
+      "initialJs": [
+        "http://127.0.0.1:4176/assets/index-BZENwx1t.js"
+      ]
+    },
+    {
+      "width": 390,
+      "result": "PASS",
+      "initialJs": [
+        "http://127.0.0.1:4176/assets/index-BZENwx1t.js"
+      ]
+    },
+    {
+      "width": 768,
+      "result": "PASS",
+      "initialJs": [
+        "http://127.0.0.1:4176/assets/index-BZENwx1t.js"
+      ]
+    },
+    {
+      "width": 1024,
+      "result": "PASS",
+      "initialJs": [
+        "http://127.0.0.1:4176/assets/index-BZENwx1t.js"
+      ]
+    },
+    {
+      "width": 1440,
+      "result": "PASS",
+      "initialJs": [
+        "http://127.0.0.1:4176/assets/index-BZENwx1t.js"
+      ]
+    }
+  ],
+  "errors": []
+}

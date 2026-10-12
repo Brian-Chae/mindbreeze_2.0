@@ -1,11 +1,44 @@
+/// <reference types="vitest/config" />
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const rootDir = path.dirname(fileURLToPath(import.meta.url))
+
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(rootDir, 'src'),
+    },
+  },
   build: {
-    // CSS 코드 스플리팅 비활성화 — 청크마다 Tailwind base가 중복 생성되고
-    // preset(디자인 시스템 토큰)이 일부 청크에만 적용되는 문제를 방지한다.
     cssCodeSplit: false,
+  },
+  test: {
+    // CJS 테스트에서도 vitest 전역(test/expect)을 쓸 수 있게 한다.
+    globals: true,
+  },
+  server: {
+    host: true,
+    port: 5175,
+    proxy: {
+      '/api': {
+        target: 'https://dev-api.mindbreeze.looxidlabs.com',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/socket.io': {
+        target: 'https://dev-api.mindbreeze.looxidlabs.com',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+    allowedHosts: [
+      'brian-macmini.taila00d2a.ts.net',
+      '.taila00d2a.ts.net',
+      'localhost',
+    ],
   },
 })

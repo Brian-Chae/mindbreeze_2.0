@@ -12,6 +12,15 @@ import {
   type JoinRequest,
 } from '../../lib/api/org';
 
+// I18N-01: role enum(counselor 등)을 한글 라벨로 매핑해 원문 영문 노출을 막는다.
+const ROLE_LABELS: Record<string, string> = {
+  platform_admin: '플랫폼 관리자',
+  org_admin: '센터 관리자',
+  counselor: '상담사',
+  client: '내담자',
+  admin: '관리자',
+};
+
 export default function OrgSearchPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -30,13 +39,18 @@ export default function OrgSearchPage() {
   useEffect(() => {
     if (!isInitialized) return;
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login?role=counselor');
       return;
     }
     if (user?.role === 'counselor') {
       getMyRequests()
         .then(setMyRequests)
-        .catch(() => undefined);
+        .catch((err: unknown) => {
+          // 신청 내역 조회 실패를 삼키면 이미 신청한 센터에 중복 신청하게 된다 — 사유를 안내한다
+          setError(err instanceof Error && err.message
+            ? err.message
+            : '가입 신청 내역을 불러오지 못했습니다');
+        });
     }
   }, [isInitialized, isAuthenticated, user, navigate]);
 
@@ -78,28 +92,29 @@ export default function OrgSearchPage() {
   return (
     <div className="min-h-screen bg-surface-canvas p-4 sm:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-light text-ink-primary">상담센터 검색</h1>
             <p className="text-sm text-ink-secondary mt-1">소속될 상담센터를 찾아 가입을 신청하세요</p>
           </div>
           <Link
-            to="/org/register"
+            to="/register/organization"
             className="text-sm text-brand-primary hover:text-brand-primary-hover font-medium"
           >
-            + 새 센터 등록
+            + 기관 가입 상담 신청
           </Link>
         </div>
 
         {user?.role !== 'counselor' && (
           <div className="rounded-xl border border-border-default bg-surface-raised p-4 text-sm text-ink-secondary">
-            상담사 계정으로만 가입 신청이 가능합니다 (현재 역할: {user?.role})
+            상담사 계정으로만 가입 신청이 가능합니다 (현재 역할: {user?.role ? ROLE_LABELS[user.role] ?? user.role : '알 수 없음'})
           </div>
         )}
 
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
           <input
             type="text"
+            aria-label="센터명 검색"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="센터명 검색"
@@ -136,7 +151,7 @@ export default function OrgSearchPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <Link
-                      to={`/org/${org.id}/info`}
+                      to={`/org/${org.id}`}
                       className="font-medium text-ink-primary hover:text-brand-primary truncate"
                     >
                       {org.name}
@@ -153,7 +168,7 @@ export default function OrgSearchPage() {
                   type="button"
                   onClick={() => handleJoin(org.id)}
                   disabled={!canJoin || joiningId === org.id}
-                  className="shrink-0 h-9 px-4 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:bg-surface-sunken disabled:text-ink-disabled"
+                  className="shrink-0 h-11 px-4 rounded-pill bg-brand-primary text-ink-on-brand text-sm font-medium disabled:bg-surface-sunken disabled:text-ink-disabled"
                 >
                   {alreadyRequested ? '신청 완료' : joiningId === org.id ? '신청 중...' : '가입 신청'}
                 </button>

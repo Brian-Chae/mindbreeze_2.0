@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Text, ForeignKey, func, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, DateTime, Text, ForeignKey, Integer, Index, func, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID, ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -22,6 +22,8 @@ class ChatRoom(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # SDD-090: 사용자 지정 표시 이름 — direct 방의 name(=내담자 ID 저장소)을 보존하기 위한 별도 컬럼
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     messages = relationship("ChatMessage", back_populates="room", cascade="all, delete-orphan")
@@ -43,6 +45,10 @@ class ChatMessage(Base):
     event_type: Mapped[str | None] = mapped_column(String(40))  # system 메시지 이벤트 종류
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # ── 읽음 상태 추적 (Phase 3a) ──
+    read_by: Mapped[list[str] | None] = mapped_column(JSONB, nullable=True, default=None)
+    recipient_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     room = relationship("ChatRoom", back_populates="messages")
 
 
@@ -60,6 +66,9 @@ class ChatRoomParticipant(Base):
 
 class ChatMessageRead(Base):
     __tablename__ = "chat_message_reads"
+    # MB2-ORM-IDX-09: PK 가 (message_id, user_id) 라 user_id 단독 필터를 커버하지 못한다.
+    #   user_id 기준 조회·조인용 보조 인덱스로 접근 경로를 인덱스화한다.
+    __table_args__ = (Index("ix_chat_message_reads_user_id", "user_id", "message_id"),)
 
     message_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chat_messages.id", ondelete="CASCADE"), primary_key=True

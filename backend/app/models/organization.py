@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, func
+from sqlalchemy import String, Integer, Text, DateTime, Boolean, ForeignKey, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -15,10 +15,38 @@ class Organization(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    ceo_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    biz_number: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
-    address: Mapped[str] = mapped_column(String(300), nullable=False)
+    # SDD-015: 상담사 가입 시 입력하는 6자리 기관 코드 (system_admin이 기관 등록 시 발급)
+    org_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)
+    # SDD-015: system_admin 간이 등록(기관명만)을 위해 사업자 정보는 nullable로 완화
+    ceo_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    biz_number: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True)
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(20))
+    # SDD-016: 주 담당자(org_admin) User 참조. 담당자 이름/이메일/전화의 진실원은 User 이며
+    # 여기에는 참조만 둔다. users.org_id 와 순환 FK 이므로 use_alter 로 생성 순서를 분리한다.
+    primary_admin_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", use_alter=True, name="fk_organizations_primary_admin_id"),
+        nullable=True,
+    )
+    # SDD-073: 기관 유형 — institution(일반 기관) / individual(개인 상담사의 1인 기관)
+    kind: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="institution", server_default="institution"
+    )
+    # SDD-073: 개인 기관(kind=individual)의 소유 상담사 참조.
+    # primary_admin_id(org_admin 담당자)의 의미는 바꾸지 않는다.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", use_alter=True, name="fk_organizations_owner_user_id"),
+        nullable=True,
+    )
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    deactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deactivated_by: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", use_alter=True, name="fk_organizations_deactivated_by")
+    )
+    deactivation_reason: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")

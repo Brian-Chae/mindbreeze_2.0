@@ -1,0 +1,22 @@
+TAP version 13
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+ok 1 - 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+  ---
+  duration_ms: 4376.189291
+  type: 'test'
+  ...
+# Subtest: 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+ok 2 - 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+  ---
+  duration_ms: 3549.468083
+  type: 'test'
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8062.957875

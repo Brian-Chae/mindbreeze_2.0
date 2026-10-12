@@ -2,17 +2,52 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
-from typing import Any
+from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.user import User
-from app.services import admin_service
+from app.models.user_org_membership import UserOrgMembership
+from app.models.organization import Organization
+from app.models.counselor_profile import CounselorProfile
+from app.core.redis import get_redis
+from app.schemas.org import (
+    OrganizationCounselorPatch, OrganizationCounselorRemove,
+    OrganizationPatch, OrganizationDeactivate, OrganizationReactivate, OrganizationDeactivationImpact,
+    OrgAdminSummary,
+    OrganizationAdminDetail,
+    OrganizationAdminCounselor,
+    OrganizationUserSummary,
+    OrganizationAdminCreate,
+    OrganizationAdminResponse,
+    OrganizationWithAdminResponse,
+    PasswordResetIssueRequest,
+    PasswordResetIssueResponse,
+    ResendInviteResponse,
+)
+from app.schemas.counselor_info import (
+    AdminCounselorListItem,
+    AdminCounselorListResponse,
+    CounselorInfoResponse,
+    CounselorInfoUpdate,
+    PrimaryAdminProfilePatch,
+)
+from app.services import (
+    admin_password_reset_service,
+    admin_service,
+    counselor_info_service,
+    org_invite_service,
+    org_service,
+    org_management_service,
+    membership_service,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -31,24 +66,66 @@ def require_platform_admin(
     return user
 
 
+# VB-11: 검토 액션은 서비스 허용값(admin_service.VALID_ACTIONS)과 동일한 Literal 로 제한한다.
+ReviewAction = Literal["approve", "reject", "request_more"]
+
+# VB-11: 단일 배치 요청에 담을 수 있는 검토 항목 수 상한(대량 배치 제출 방지).
+MAX_BATCH_REVIEW_ITEMS = 100
+
+
 class ReviewActionRequest(BaseModel):
-    action: str
-    reason: str | None = None
+    action: ReviewAction
+    reason: str | None = Field(None, max_length=2000)
 
 
 class BatchReviewItem(BaseModel):
-    target_type: str
-    target_id: str
-    action: str
-    reason: str | None = None
+    target_type: str = Field(..., max_length=30)
+    target_id: str = Field(..., max_length=64)
+    action: ReviewAction
+    reason: str | None = Field(None, max_length=2000)
 
 
 class BatchReviewRequest(BaseModel):
-    items: list[BatchReviewItem]
+    items: list[BatchReviewItem] = Field(..., min_length=1, max_length=MAX_BATCH_REVIEW_ITEMS)
 
 
 class SuspendRequest(BaseModel):
     reason: str
+
+
+class ClientCreateRequest(BaseModel):
+    """SDD-020 회원(내담자) 수동 추가 요청."""
+
+    name: str
+    # VB-06: 형식 미검증 str → EmailStr 로 교체(잘못된 이메일로 pending 계정·초대 메일 생성 차단).
+    email: EmailStr
+    counselor_id: str
+    phone: str | None = None
+    send_invite: bool = True
+
+
+class ClientCounselorSummary(BaseModel):
+    id: str
+    name: str
+    email: str
+    status: str
+
+
+class ClientDetail(BaseModel):
+    id: str
+    email: str
+    name: str
+    phone: str | None = None
+    role: str
+    status: str
+    verified_tier: str
+    counselors: list[ClientCounselorSummary]
+    created_at: str | None = None
+
+
+class ClientCreateResponse(BaseModel):
+    client: ClientDetail
+    invite_sent: bool
 
 
 @router.get("/reviews")
@@ -126,6 +203,47 @@ def list_users(
     return admin_service.list_users(db, role, q, page, size)
 
 
+@router.post(
+    "/clients",
+    response_model=ClientCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_client(
+    req: ClientCreateRequest,
+    admin: User = Depends(require_platform_admin),  # noqa: ARG001
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """회원(내담자) 수동 추가 — pending 계정 + 담당 상담사 배정 + 비밀번호 설정 초대 메일.
+
+    SDD-020: 관리자가 임시 비밀번호를 지정하거나 응답으로 받지 않는다. 내담자는
+    초대 메일의 /set-password 링크로만 계정을 활성화한다. 계정·프로필·상담사
+    연결은 admin_service.create_client 트랜잭션에서 처리되고, 초대 메일 발송만
+    별도 후처리로 수행한다(발송 실패해도 계정 생성은 유지, invite_sent=false).
+    """
+    client_user = admin_service.create_client(
+        name=req.name,
+        email=req.email,
+        counselor_id=req.counselor_id,
+        db=db,
+        phone=req.phone,
+    )
+
+    invite_sent = False
+    if req.send_invite:
+        # 담당 상담사 이름을 초대 메일 카피에 사용
+        counselor = db.query(User).filter(User.id == uuid.UUID(req.counselor_id)).first()
+        counselor_name = counselor.name if counselor else "상담사"
+        invite_sent = await org_invite_service.issue_client_invite(
+            client_user, counselor_name, redis
+        )
+
+    return ClientCreateResponse(
+        client=ClientDetail(**admin_service.serialize_client_detail(client_user, db)),
+        invite_sent=invite_sent,
+    )
+
+
 @router.post("/users/{user_id}/suspend")
 def suspend(
     user_id: str,
@@ -151,3 +269,428 @@ def unsuspend(
     except ValueError:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     return admin_service.unsuspend_user(uid, admin.id, db)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: str,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> None:
+    """사용자 계정 영구 삭제 — 플랫폼 관리자 전용. FK 자식 레코드까지 정리한다."""
+    try:
+        uid = uuid.UUID(user_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    admin_service.delete_user(uid, admin.id, db)
+
+
+# ---------------------------------------------------------------------------
+# SDD-015: system_admin 전용 기관 등록 (기관명 → 6자리 기관 코드 발급)
+# ---------------------------------------------------------------------------
+
+
+def _serialize_org(org) -> OrganizationAdminResponse:
+    return OrganizationAdminResponse(
+        id=str(org.id),
+        name=org.name,
+        org_code=org.org_code,
+        phone=org.phone,
+        verified=org.verified,
+        kind=org.kind,
+        has_primary_admin=org.primary_admin_id is not None,
+        version=org.version,
+        deactivated_at=org.deactivated_at.isoformat() if org.deactivated_at else None,
+        created_at=org.created_at.isoformat() if org.created_at else "",
+    )
+
+
+def _serialize_admin(user: User) -> OrgAdminSummary:
+    return OrgAdminSummary(
+        id=str(user.id), email=user.email, name=user.name, status=user.status
+    )
+
+
+@router.post(
+    "/orgs",
+    response_model=OrganizationWithAdminResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def admin_register_org(
+    req: OrganizationAdminCreate,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """기관 등록 — 6자리 기관 코드 발급 + (선택) 주 담당자 계정 생성 및 초대 발송.
+
+    SDD-016: 담당자 정보를 함께 주면 org_admin 계정을 만들고 비밀번호 설정 링크를
+    이메일로 보낸다. 임시 비밀번호는 발급하지 않으며, 담당자는 초대 링크로만 계정을
+    활성화할 수 있다. 이메일이 이미 사용 중이면 409로 거부한다.
+    """
+    if not req.admin_email:
+        # 담당자 없이 기관만 등록하는 기존(SDD-015) 동작
+        org = org_service.admin_create_organization(req.name, db, phone=req.phone)
+        return OrganizationWithAdminResponse(org=_serialize_org(org), admin=None, invite_sent=False)
+
+    org, admin_user = org_service.create_org_with_admin(
+        name=req.name,
+        admin_name=req.admin_name,
+        admin_email=req.admin_email,
+        admin_phone=req.admin_phone,
+        phone=req.phone,
+        address=req.address,
+        db=db,
+    )
+    invite_sent = await org_invite_service.issue_invite(admin_user, org.name, redis)
+    return OrganizationWithAdminResponse(
+        org=_serialize_org(org),
+        admin=_serialize_admin(admin_user),
+        invite_sent=invite_sent,
+    )
+
+
+@router.post("/orgs/{org_id}/resend-invite", response_model=ResendInviteResponse)
+async def admin_resend_invite(
+    org_id: str,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """주 담당자에게 초대(비밀번호 설정) 링크를 재발송한다.
+
+    이전 토큰은 무효화되지 않지만 각 토큰은 일회용이며 7일 후 만료된다.
+    발송 폭탄을 막기 위해 기관당 쿨다운을 둔다.
+    """
+    org, admin_user = org_service.get_primary_admin(org_id, db)
+    await org_invite_service.check_resend_cooldown(str(org.id), redis)
+    invite_sent = await org_invite_service.issue_invite(admin_user, org.name, redis)
+    await org_invite_service.mark_resent(str(org.id), redis)
+    return ResendInviteResponse(admin=_serialize_admin(admin_user), invite_sent=invite_sent)
+
+
+@router.get("/orgs", response_model=list[OrganizationAdminResponse])
+def admin_list_orgs(
+    status: Literal["active", "inactive", "all"] = "active",
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """전체 기관 목록 + 발급된 기관 코드."""
+    return [_serialize_org(o) for o in org_service.list_organizations(db, status)]
+
+
+# SDD-074: 기관 관리자 경로와 분리한 플랫폼 관리자 조회.
+def _admin_org_or_404(org_id: uuid.UUID, db: Session) -> Organization:
+    org = db.get(Organization, org_id)
+    if org is None:
+        raise HTTPException(status_code=404, detail="기관을 찾을 수 없습니다")
+    return org
+
+
+def _org_user_summary(user_id: uuid.UUID | None, db: Session) -> OrganizationUserSummary | None:
+    user = db.get(User, user_id) if user_id else None
+    if user is None:
+        return None
+    return OrganizationUserSummary(
+        id=str(user.id), name=user.name, email=user.email, phone=user.phone,
+        role=user.role, status=user.status,
+    )
+
+
+@router.get("/orgs/{org_id}", response_model=OrganizationAdminDetail)
+def admin_get_org(
+    org_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    org = _admin_org_or_404(org_id, db)
+    return OrganizationAdminDetail(
+        **_serialize_org(org).model_dump(), address=org.address,
+        verified_at=org.verified_at.isoformat() if org.verified_at else None,
+        primary_admin=_org_user_summary(org.primary_admin_id, db),
+        owner=_org_user_summary(org.owner_user_id, db),
+    )
+
+
+@router.get("/orgs/{org_id}/counselors", response_model=list[OrganizationAdminCounselor])
+def admin_get_org_counselors(
+    org_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    org = _admin_org_or_404(org_id, db)
+    # AUTH4-05: 기관 구성원은 membership(user_org_memberships) 기준으로 판정한다.
+    #   User.org_id 미러는 주 소속 1개만 가리키므로, 다기관 소속 상담사는 부 소속 기관 목록에서
+    #   누락되거나 타 기관 소속으로 오인된다. 미러만 있고 membership 이 없는 레거시 계정은
+    #   org_id 로 합집합 보존한다.
+    member_user_ids = (
+        db.query(UserOrgMembership.user_id)
+        .filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        )
+    )
+    # 코드 조회를 outer join으로 묶어 프로필 없는 담당자도 보존한다.
+    members = (
+        db.query(User, CounselorProfile.counselor_code)
+        .outerjoin(CounselorProfile, CounselorProfile.user_id == User.id)
+        .filter(
+            User.role.in_(["counselor", "org_admin"]),
+            or_(User.id.in_(member_user_ids), User.org_id == org_id),
+        )
+        .order_by(User.created_at.asc(), User.id.asc()).all()
+    )
+    # 표시 역할은 이 기관의 membership role 을 우선한다(전역 미러는 주 소속 역할만 반영).
+    member_roles = {
+        m.user_id: m.role
+        for m in db.query(UserOrgMembership).filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        ).all()
+    }
+    return [OrganizationAdminCounselor(
+        id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+        role=(member_roles.get(user.id) or user.role), status=user.status,
+        is_primary_admin=user.id == org.primary_admin_id,
+        is_owner=user.id == org.owner_user_id,
+    ) for user, code in members]
+
+
+@router.patch("/orgs/{org_id}", response_model=OrganizationAdminDetail)
+def admin_patch_org(org_id: uuid.UUID, req: OrganizationPatch,
+                    if_match: str | None = Header(None),
+                    admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.patch_organization(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)
+
+
+@router.get("/orgs/{org_id}/deactivation-impact", response_model=OrganizationDeactivationImpact)
+def admin_org_impact(org_id: uuid.UUID, admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    return org_management_service.deactivation_impact(_admin_org_or_404(org_id, db), db)
+
+
+@router.post("/orgs/{org_id}/deactivate", response_model=OrganizationAdminDetail)
+def admin_deactivate_org(org_id: uuid.UUID, req: OrganizationDeactivate,
+                         if_match: str | None = Header(None),
+                         admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.deactivate(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)
+
+
+@router.post("/orgs/{org_id}/reactivate", response_model=OrganizationAdminDetail)
+def admin_reactivate_org(org_id: uuid.UUID, req: OrganizationReactivate,
+                         if_match: str | None = Header(None),
+                         admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.reactivate(org_id, req, if_match, admin.id, db)
+    return admin_get_org(org_id, admin, db)
+
+
+@router.patch("/orgs/{org_id}/counselors/{user_id}", response_model=OrganizationAdminCounselor)
+def admin_patch_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorPatch,
+                              admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    user = org_management_service.change_counselor(org_id, user_id, admin.id, req.reason or "상담사 권한 조정", db, role=req.role)
+    org = _admin_org_or_404(org_id, db)
+    code = db.query(CounselorProfile.counselor_code).filter(CounselorProfile.user_id == user.id).scalar()
+    # AUTH4-02/05: 응답 역할은 이 기관의 membership role 을 우선한다(전역 미러 오염 방지).
+    membership = membership_service.get_membership(db, user.id, org_id)
+    return OrganizationAdminCounselor(
+        id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+        role=(membership.role if membership is not None else user.role), status=user.status,
+        is_primary_admin=user.id == org.primary_admin_id, is_owner=user.id == org.owner_user_id,
+    )
+
+
+@router.delete("/orgs/{org_id}/counselors/{user_id}", status_code=204)
+def admin_remove_org_counselor(org_id: uuid.UUID, user_id: uuid.UUID, req: OrganizationCounselorRemove,
+                               admin: User = Depends(require_platform_admin), db: Session = Depends(get_db)):
+    org_management_service.change_counselor(org_id, user_id, admin.id, req.reason, db)
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# SDD-077: 플랫폼 관리자 상담사 정보 조회·수정 (미소속 포함)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/counselors", response_model=AdminCounselorListResponse)
+def admin_list_counselors(
+    org_id: str | None = Query(default=None, description="기관 UUID 또는 'none'(미소속)"),
+    q: str | None = Query(default=None),
+    status_filter: str | None = Query(default=None, alias="status"),
+    # VB-05: 전체 .all() 반환 → page/size 로 DB 페이징(total 은 필터 후 전체 건수).
+    page: int = Query(default=1, ge=1),
+    size: int = Query(default=20, ge=1, le=100),
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """전체 상담사 목록 — 미소속(org_id=none) 포함. 이름/이메일/코드 검색 + 상태 필터."""
+    query = (
+        db.query(User, CounselorProfile.counselor_code, Organization.name)
+        .outerjoin(CounselorProfile, CounselorProfile.user_id == User.id)
+        .outerjoin(Organization, Organization.id == User.org_id)
+        .filter(User.role.in_(["counselor", "org_admin"]))
+    )
+    # AUTH4-05: 소속 필터는 membership 기준으로 판정한다. User.org_id 미러는 주 소속 1개만 반영하므로
+    #   부 소속 기관으로 조회하면 다기관 상담사가 누락된다. 미러만 있는 레거시 계정은 합집합 보존한다.
+    filter_org_id: uuid.UUID | None = None
+    if org_id in ("none", "unassigned"):
+        alive_member_ids = db.query(UserOrgMembership.user_id).filter(
+            UserOrgMembership.status.in_(["active", "invited"])
+        )
+        query = query.filter(User.org_id.is_(None), ~User.id.in_(alive_member_ids))
+    elif org_id:
+        try:
+            filter_org_id = uuid.UUID(org_id)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="org_id 형식이 올바르지 않습니다")
+        org_member_ids = db.query(UserOrgMembership.user_id).filter(
+            UserOrgMembership.org_id == filter_org_id,
+            UserOrgMembership.status.in_(["active", "invited"]),
+        )
+        query = query.filter(or_(User.org_id == filter_org_id, User.id.in_(org_member_ids)))
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            User.name.ilike(like) | User.email.ilike(like) | CounselorProfile.counselor_code.ilike(like)
+        )
+    if status_filter:
+        query = query.filter(User.status == status_filter)
+    # VB-05: 필터 적용 후 전체 건수를 먼저 산출하고(페이지 개념), 요청 페이지만 DB 에서 조회한다.
+    total = query.count()
+    rows = (
+        query.order_by(User.created_at.asc(), User.id.asc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+    # 특정 기관으로 필터하면 표시 소속을 요청 기관 기준으로 정정한다(부 소속 상담사 오인 방지).
+    filter_org_name = (
+        db.query(Organization.name).filter(Organization.id == filter_org_id).scalar()
+        if filter_org_id is not None else None
+    )
+    return AdminCounselorListResponse(
+        items=[AdminCounselorListItem(
+            id=str(user.id), name=user.name, email=user.email, counselor_code=code,
+            role=user.role, status=user.status,
+            org_id=(str(filter_org_id) if filter_org_id is not None
+                    else (str(user.org_id) if user.org_id else None)),
+            org_name=(filter_org_name if filter_org_id is not None else org_name),
+        ) for user, code, org_name in rows],
+        total=total,
+    )
+
+
+@router.get("/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+def admin_get_counselor_profile(
+    user_id: uuid.UUID,
+    _admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    target = counselor_info_service.get_target_counselor(user_id, db)
+    return counselor_info_service.serialize(target)
+
+
+@router.patch("/counselors/{user_id}/profile", response_model=CounselorInfoResponse)
+async def admin_patch_counselor_profile(
+    user_id: uuid.UUID,
+    req: CounselorInfoUpdate,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """플랫폼 관리자 상담사 정보 수정 — 사유 필수, 감사 + 대상자 알림."""
+    target = counselor_info_service.get_target_counselor(user_id, db)
+    name_changed = counselor_info_service.update_profile(
+        target, req, db, actor_id=admin.id, actor_kind="platform_admin"
+    )
+    if name_changed:
+        # MB-ERR-006: 커밋 이후 best-effort WS 브로드캐스트 — 실패를 격리해 저장 성공을 유지한다.
+        from app.ws.chat_namespace import broadcast_profile_updated
+        try:
+            await broadcast_profile_updated(str(target.id), target.name)
+        except Exception as exc:  # noqa: BLE001 — best-effort 실패 격리
+            logging.getLogger(__name__).warning(
+                "[admin] broadcast_profile_updated failed user=%s: %s", target.id, exc
+            )
+    return counselor_info_service.serialize(target)
+
+
+@router.patch("/orgs/{org_id}/primary-admin/profile", response_model=OrganizationUserSummary)
+def admin_patch_primary_admin_profile(
+    org_id: uuid.UUID,
+    req: PrimaryAdminProfilePatch,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+):
+    """주 담당자 이름/전화 정정 — 담당자 교체(primary_admin_id 변경) 아님."""
+    user = counselor_info_service.update_primary_admin_profile(org_id, req, db, actor_id=admin.id)
+    return OrganizationUserSummary(
+        id=str(user.id), name=user.name, email=user.email, phone=user.phone,
+        role=user.role, status=user.status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# SDD-078: 관리자 비밀번호 재설정 (재설정 링크 발급 — 플랫폼 관리자)
+# ---------------------------------------------------------------------------
+
+
+def _require_active_org_for_reset(org: Organization) -> None:
+    """비활성화된 기관 구성원은 1차 범위에서 거부 — 재활성화 후 처리 (기획 §4)."""
+    if org.deactivated_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="비활성화된 기관에서는 이 작업을 수행할 수 없습니다",
+        )
+
+
+@router.post(
+    "/orgs/{org_id}/primary-admin/password-reset",
+    response_model=PasswordResetIssueResponse,
+)
+async def admin_reset_primary_admin_password(
+    org_id: uuid.UUID,
+    req: PasswordResetIssueRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """기관 주 담당자(active)에게 비밀번호 재설정 링크를 발송한다."""
+    org = _admin_org_or_404(org_id, db)
+    _require_active_org_for_reset(org)
+    target = db.get(User, org.primary_admin_id) if org.primary_admin_id else None
+    if target is None:
+        raise HTTPException(status_code=404, detail="주 담당자를 찾을 수 없습니다")
+    email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
+        target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",
+        reason=req.reason, org_id=org.id, db=db, redis=redis,
+    )
+    return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())
+
+
+@router.post(
+    "/orgs/{org_id}/counselors/{user_id}/password-reset",
+    response_model=PasswordResetIssueResponse,
+)
+async def admin_reset_org_counselor_password(
+    org_id: uuid.UUID,
+    user_id: uuid.UUID,
+    req: PasswordResetIssueRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """기관 소속 상담사(active)에게 비밀번호 재설정 링크를 발송한다."""
+    org = _admin_org_or_404(org_id, db)
+    _require_active_org_for_reset(org)
+    # AUTH4-05: 소속 판정은 membership 기준 — User.org_id 미러는 다기관 상담사에서 타 기관을 가리킨다.
+    target = db.query(User).filter(User.id == user_id).first()
+    membership = (
+        membership_service.get_membership(db, user_id, org.id) if target is not None else None
+    )
+    if target is None or membership is None or membership.role not in ("counselor", "org_admin"):
+        raise HTTPException(status_code=404, detail="대상 상담사를 찾을 수 없습니다")
+    email_sent, expires_at = await admin_password_reset_service.issue_admin_reset(
+        target, actor_id=admin.id, actor_name=admin.name, actor_role="platform_admin",
+        reason=req.reason, org_id=org.id, db=db, redis=redis,
+    )
+    return PasswordResetIssueResponse(email_sent=email_sent, expires_at=expires_at.isoformat())

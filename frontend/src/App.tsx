@@ -1,96 +1,267 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, type ReactElement } from 'react';
+import { useStatusBar } from './lib/native/use-status-bar';
+import { isNativeApp } from './lib/native/platform';
+import { initNativeKeyboard } from './lib/native/keyboard';
+// SDD-088: useBlocker(이탈 가드)는 데이터 라우터 전용 — createBrowserRouter 로 전환
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Outlet,
+  Route,
+  RouterProvider,
+  useLocation,
+} from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import ClientLoginPage from './pages/ClientLoginPage';
-import DashboardPage from './pages/DashboardPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import CounselorOnboardingPage from './pages/onboarding/CounselorOnboardingPage';
-import ClientOnboardingPage from './pages/onboarding/ClientOnboardingPage';
-import ClientListPage from './pages/clients/ClientListPage';
-import ClientProfilePage from './pages/clients/ClientProfilePage';
-import ClientInvitePage from './pages/clients/ClientInvitePage';
-import InviteLandingPage from './pages/clients/InviteLandingPage';
-import OrgSearchPage from './pages/org/OrgSearchPage';
-import OrgRegisterPage from './pages/org/OrgRegisterPage';
-import OrgManagementPage from './pages/org/OrgManagementPage';
-import MyRequestsPage from './pages/org/MyRequestsPage';
-import CredentialDashboardPage from './pages/credentials/CredentialDashboardPage';
-import SessionListPage from './pages/sessions/SessionListPage';
-import SessionCreatePage from './pages/sessions/SessionCreatePage';
-import SessionDetailPage from './pages/sessions/SessionDetailPage';
-import SessionLivePage from './pages/sessions/SessionLivePage';
-import SessionRecordPage from './pages/records/SessionRecordPage';
-import ChatPage from './pages/chat/ChatPage';
-import DesignIndexPage from './pages/design/DesignIndexPage';
-import HomepagePage from './pages/design/HomepagePage';
-import OperatorAppPage from './pages/design/OperatorAppPage';
-import UserAppPage from './pages/design/UserAppPage';
-import ReportPage from './pages/design/ReportPage';
-import DocsPage from './pages/design/DocsPage';
-import ReportListPage from './pages/reports/ReportListPage';
-import ReportDetailPage from './pages/reports/ReportDetailPage';
-import AdminReviewListPage from './pages/admin/AdminReviewListPage';
-import AdminReviewDetailPage from './pages/admin/AdminReviewDetailPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import NotificationCenterPage from './pages/notifications/NotificationCenterPage';
-import SettingsPage from './pages/SettingsPage';
-import { useAuthStore } from './stores/authStore';
 
-function App() {
+import { useAuthStore } from './stores/authStore';
+import { resolvePostLoginPath } from './lib/auth-routing';
+import { RoleGuard } from './components/auth/RoleGuard';
+
+// 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ClientLoginPage = lazy(() => import('./pages/ClientLoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const RegisterClientPage = lazy(() => import('./pages/register/RegisterClientPage'));
+const RegisterCounselorPage = lazy(() => import('./pages/register/RegisterCounselorPage'));
+const RegisterOrganizationPage = lazy(() => import('./pages/register/RegisterOrganizationPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
+// SDD-079: 기존 상담사 소속 추가 초대 수락
+const MembershipInvitePage = lazy(() => import('./pages/MembershipInvitePage'));
+const CounselorOnboardingPage = lazy(() => import('./pages/onboarding/CounselorOnboardingPage'));
+const ClientOnboardingPage = lazy(() => import('./pages/onboarding/ClientOnboardingPage'));
+const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssentialsPage'));
+const ClientListPage = lazy(() => import('./pages/clients/ClientListPage'));
+const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
+const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
+const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
+const OrgSearchPage = lazy(() => import('./pages/org/OrgSearchPage'));
+const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
+// SDD-082: 기관 관리자 상담사 관리 페이지
+const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
+const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
+const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
+const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
+const SessionCreatePage = lazy(() => import('./pages/sessions/SessionCreatePage'));
+const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
+const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
+// SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
+const ClassPlayerPage = lazy(() => import('./pages/sessions/ClassPlayerPage'));
+const SessionRecordPage = lazy(() => import('./pages/records/SessionRecordPage'));
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'));
+const DesignIndexPage = lazy(() => import('./pages/design/DesignIndexPage'));
+const HomepagePage = lazy(() => import('./pages/design/HomepagePage'));
+const OperatorAppPage = lazy(() => import('./pages/design/OperatorAppPage'));
+const UserAppPage = lazy(() => import('./pages/design/UserAppPage'));
+const ReportPage = lazy(() => import('./pages/design/ReportPage'));
+const DocsPage = lazy(() => import('./pages/design/DocsPage'));
+const ReportListPage = lazy(() => import('./pages/reports/ReportListPage'));
+const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
+const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
+const ReportViewPage = lazy(() => import('./pages/reports/ReportViewPage'));
+const AdminReviewListPage = lazy(() => import('./pages/admin/AdminReviewListPage'));
+const AdminReviewDetailPage = lazy(() => import('./pages/admin/AdminReviewDetailPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
+const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
+const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
+const ClassJoinPage = lazy(() => import('./pages/class-join-page'));
+const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
+const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
+const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
+
+function buildLoginRedirect(pathname: string, search: string): string {
+  const next = `${pathname}${search}`;
+  return `/login?role=platform_admin&next=${encodeURIComponent(next)}`;
+}
+
+/** 로그인 후 역할에 따라 라우팅 */
+function RoleRouter() {
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+
+  if (!isInitialized) return null;
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <Navigate to={resolvePostLoginPath(user)} replace />;
+}
+
+/** 루트 진입: 네이티브 앱은 랜딩 없이 로그인(또는 로그인 상태면 역할별 홈)으로 바로 이동 */
+/** 구 AI 대화 경로(/agent, 푸시 딥링크) → 채팅 목록의 루시(AI) 채널 */
+function LegacyAgentRedirect() {
+  const location = useLocation();
+  return <Navigate to={`/chat/lucy${location.search}`} replace />;
+}
+
+function EntryRoute() {
+  if (isNativeApp()) return <RoleRouter />;
+  return <LandingPage />;
+}
+
+function PlatformAdminRoute({ children }: { children: ReactElement }) {
+  const location = useLocation();
+  const user = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+
+  if (!isInitialized) return null;
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to={buildLoginRedirect(location.pathname, location.search)} replace />;
+  }
+
+  if (user.role !== 'platform_admin') {
+    return <Navigate to="/role-redirect" replace />;
+  }
+
+  return children;
+}
+
+/** 데이터 라우터 루트 — 인증 초기화 + Suspense 셸 */
+function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
+  useStatusBar();
+  useEffect(() => { void initNativeKeyboard(); }, []);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
+    <Suspense fallback={<div role="status" className="flex min-h-screen items-center justify-center bg-[#FAF8FB] text-sm text-[#5F0080]">화면을 불러오는 중이에요.</div>}>
+      <Outlet />
+    </Suspense>
+  );
+}
+
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <Route element={<RootLayout />}>
+        <Route path="/" element={<EntryRoute />} />
+        <Route path="/join" element={<ClassJoinPage />} />
+        <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register/client" element={<RegisterClientPage />} />
+        <Route path="/register/counselor" element={<RegisterCounselorPage />} />
+        <Route path="/register/organization" element={<RegisterOrganizationPage />} />
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
+        <Route path="/role-redirect" element={<RoleRouter />} />
+        <Route path="/app" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
+        <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/set-password" element={<SetPasswordPage />} />
+        <Route path="/membership-invite" element={<MembershipInvitePage />} />
+        <Route path="/agent" element={<RoleGuard role="counselor"><LegacyAgentRedirect /></RoleGuard>} />
+        <Route path="/dashboard" element={<RoleGuard role="counselor"><DashboardPage /></RoleGuard>} />
+        <Route path="/dashboard/org" element={<RoleGuard role="org_admin"><OrgDashboardPage /></RoleGuard>} />
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
-        <Route path="/clients" element={<ClientListPage />} />
-        <Route path="/clients/invite" element={<ClientInvitePage />} />
-        <Route path="/clients/:id" element={<ClientProfilePage />} />
+        <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><ClientListPage /></RoleGuard>} />
+        <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
+        <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
+        <Route path="/report-view" element={<ReportViewPage />} />
         <Route path="/org/search" element={<OrgSearchPage />} />
-        <Route path="/org/register" element={<OrgRegisterPage />} />
-        <Route path="/org/requests" element={<MyRequestsPage />} />
+        {/* SDD-073: /org/register 자가 등록 경로 제거 — 기관 가입 상담 신청으로 대체 */}
+        <Route path="/org/register" element={<Navigate to="/register/organization" replace />} />
+        <Route path="/org/requests" element={<RoleGuard><MyRequestsPage /></RoleGuard>} />
+        {/* SDD-082: static 세그먼트가 :org_id 보다 우선 매칭됨 */}
+        <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
-        <Route path="/credentials" element={<CredentialDashboardPage />} />
-        <Route path="/sessions" element={<SessionListPage />} />
-        <Route path="/sessions/new" element={<SessionCreatePage />} />
-        <Route path="/sessions/:id" element={<SessionDetailPage />} />
+        <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
+        <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><SessionListPage /></RoleGuard>} />
+        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><SessionCreatePage /></RoleGuard>} />
+        <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
+        {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
+        <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/chat/:roomId" element={<ChatPage />} />
+        <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
+        <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
         <Route path="/design" element={<DesignIndexPage />} />
         <Route path="/design/homepage" element={<HomepagePage />} />
         <Route path="/design/app" element={<OperatorAppPage />} />
         <Route path="/design/user-app" element={<UserAppPage />} />
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
-        <Route path="/reports" element={<ReportListPage />} />
-        <Route path="/reports/:id" element={<ReportDetailPage />} />
-        <Route path="/admin/reviews" element={<AdminReviewListPage />} />
-        <Route path="/admin/reviews/:targetType/:id" element={<AdminReviewDetailPage />} />
-        <Route path="/admin/users" element={<UserManagementPage />} />
-        <Route path="/notifications" element={<NotificationCenterPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+        <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
+        <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
+        <Route path="/reports/sample" element={<ReportSamplePage />} />
+        <Route path="/reports/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ReportDetailPage /></RoleGuard>} />
+        <Route
+          path="/admin/reviews"
+          element={(
+            <PlatformAdminRoute>
+              <AdminReviewListPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/reviews/:targetType/:id"
+          element={(
+            <PlatformAdminRoute>
+              <AdminReviewDetailPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/users"
+          element={(
+            <PlatformAdminRoute>
+              <UserManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/clients"
+          element={(
+            <PlatformAdminRoute>
+              <ClientManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/orgs"
+          element={(
+            <PlatformAdminRoute>
+              <AdminOrgManagementPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route
+          path="/admin/applications"
+          element={(
+            <PlatformAdminRoute>
+              <SignupApplicationsPage />
+            </PlatformAdminRoute>
+          )}
+        />
+        <Route path="/notifications" element={<RoleGuard><NotificationCenterPage /></RoleGuard>} />
+        <Route path="/settings" element={<RoleGuard><SettingsPage /></RoleGuard>} />
+        <Route path="/playground" element={<RoleGuard><PlaygroundPage /></RoleGuard>} />
+        {/* 정의되지 않은 경로는 전역 404 화면으로 처리한다 */}
+        <Route path="*" element={<NotFoundPage />} />
+    </Route>,
+  ),
+);
+
+function App() {
+  return <RouterProvider router={router} />;
 }
 
 export default App;

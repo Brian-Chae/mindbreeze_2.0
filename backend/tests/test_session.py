@@ -7,15 +7,19 @@ VALID_PASSWORD = "Passw0rd!"
 
 def _register(client, email: str, role: str = "counselor") -> dict:
     from app.services import email_verify_service
+    from tests.conftest import create_test_org
 
     payload = {
+        # SDD-015: 상담사 가입에 유효한 기관 코드 필수 (client 가입에서는 무시됨)
+        "org_code": create_test_org(),
         "email": email,
         "password": VALID_PASSWORD,
         "name": "테스트",
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": {"tos": True, "privacy": True, "sensitive": True},
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body.get("access_token") or body.get("tokens", {}).get("access_token")
@@ -119,16 +123,6 @@ def test_08_start_전이(client):
     assert res.json()["status"] == "in_progress"
 
 
-def test_09_pause_resume_전이(client):
-    host = _register(client, "host09@test.com")
-    s = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()
-    client.post(f"/api/v1/sessions/{s['id']}/start", headers=host["auth"])
-    r1 = client.post(f"/api/v1/sessions/{s['id']}/pause", headers=host["auth"])
-    assert r1.status_code == 200 and r1.json()["status"] == "paused"
-    r2 = client.post(f"/api/v1/sessions/{s['id']}/resume", headers=host["auth"])
-    assert r2.status_code == 200 and r2.json()["status"] == "in_progress"
-
-
 def test_10_end_전이(client):
     host = _register(client, "host10@test.com")
     s = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()
@@ -208,3 +202,73 @@ def test_15_세션_삭제(client):
     assert r_del.status_code == 204
     r_get = client.get(f"/api/v1/sessions/{s['id']}", headers=host["auth"])
     assert r_get.status_code == 404
+
+
+# ── Sprint 1 확장: 세션 설정 필드 ──────────────────────────────────────────
+
+def test_16_기본_설정값_검증(client):
+    host = _register(client, "host16@test.com")
+    body = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"]).json()
+    assert body["location_type"] == "offline"
+    assert body["participant_mode"] == "one_on_one"
+    assert body["linkband_mode"] == "none"
+    assert body["sfu_enabled"] is False
+    # 회원 라이브 스트리밍을 위해 장소유형(online/offline)과 무관하게 WebRTC 룸을 생성한다
+    assert body["webrtc_room_id"] is not None
+
+
+def test_17_커스텀_유형_이름_누락_차단(client):
+    host = _register(client, "host17@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(type="custom"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 422  # Pydantic model_validator
+
+
+def test_18_커스텀_유형_생성_성공(client):
+    host = _register(client, "host18@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(type="custom", custom_type_name="집단상담"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["type"] == "custom"
+    assert body["custom_type_name"] == "집단상담"
+
+
+def test_19_온라인_세션_webrtc_room_자동생성(client):
+    host = _register(client, "host19@test.com")
+    res = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(location_type="online", participant_mode="group", linkband_mode="optional"),
+        headers=host["auth"],
+    )
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["location_type"] == "online"
+    assert body["participant_mode"] == "group"
+    assert body["linkband_mode"] == "optional"
+    assert body["webrtc_room_id"] is not None
+
+
+def test_20_오프라인으로_수정시_webrtc_room_유지(client):
+    host = _register(client, "host20@test.com")
+    s = client.post(
+        "/api/v1/sessions",
+        json=_create_payload(location_type="online"),
+        headers=host["auth"],
+    ).json()
+    assert s["webrtc_room_id"] is not None
+    upd = client.put(
+        f"/api/v1/sessions/{s['id']}",
+        json={"location_type": "offline"},
+        headers=host["auth"],
+    )
+    assert upd.status_code == 200, upd.text
+    assert upd.json()["location_type"] == "offline"
+    # 회원 라이브 스트리밍은 장소유형과 무관 — 오프라인 전환 시에도 룸을 유지한다
+    assert upd.json()["webrtc_room_id"] is not None

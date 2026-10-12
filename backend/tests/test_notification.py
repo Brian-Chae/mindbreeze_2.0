@@ -1,5 +1,6 @@
 """F10 알림 시스템 QA"""
 from app.services import email_verify_service
+from tests.conftest import create_test_org
 
 VALID_PASSWORD = "Passw0rd!"
 
@@ -10,13 +11,16 @@ def _consents():
 
 def _register(client, email: str, role: str = "counselor"):
     payload = {
+        # SDD-015: 상담사 가입에 유효한 기관 코드 필수 (client 가입에서는 무시됨)
+        "org_code": create_test_org(),
         "email": email,
         "password": VALID_PASSWORD,
         "name": f"알림{role}",
         "email_verify_token": email_verify_service.generate_email_verify_token(email),
         "consents": _consents(),
     }
-    res = client.post(f"/api/v1/auth/register/{role}", json=payload)
+    from tests.conftest import post_register
+    res = post_register(client, role, payload)
     assert res.status_code == 201, res.text
     body = res.json()
     token = body.get("access_token") or body.get("tokens", {}).get("access_token")

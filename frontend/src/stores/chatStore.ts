@@ -1,6 +1,7 @@
 // 채팅 전역 상태 (Zustand)
 
 import { create } from 'zustand';
+import { inviteRoomMetadata } from '../lib/api/chat-invite';
 import type { ChatMessage, ChatRoom } from '../lib/api/chat';
 
 interface ChatState {
@@ -8,34 +9,149 @@ interface ChatState {
   messagesByRoom: Record<string, ChatMessage[]>;
   activeRoomId: string | null;
 
-  setRooms: (rooms: ChatRoom[]) => void;
+  setRooms: (rooms: ChatRoom[], snapshot?: ChatRoom[]) => void;
+  upsertRoom: (room: ChatRoom) => void;
+  updateRoom: (roomId: string, changes: Partial<ChatRoom>) => void;
+  updateRoomLastMessage: (roomId: string, preview: NonNullable<ChatRoom["last_message"]>) => void;
   setMessages: (roomId: string, messages: ChatMessage[]) => void;
   appendMessage: (roomId: string, message: ChatMessage) => void;
   setActiveRoom: (roomId: string | null) => void;
   clearRoomUnread: (roomId: string) => void;
+  incrementUnread: (roomId: string) => void;
+  updateSenderName: (senderId: string, newName: string) => void;
+  updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number, readBy?: string[]) => void;
+  markAllMessagesRead: (roomId: string, readerId?: string) => void;
+  reset: () => void;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   rooms: [],
   messagesByRoom: {},
   activeRoomId: null,
 
-  setRooms: (rooms) => set({ rooms }),
+  setRooms: (rooms, snapshot) => set((state) => {
+    if (!snapshot) return { rooms };
+    const before = new Map(snapshot.map((room) => [room.id, room]));
+    const current = new Map(state.rooms.map((room) => [room.id, room]));
+    const incomingIds = new Set(rooms.map((room) => room.id));
+    // 조회 시작 뒤 삽입·변경된 방을 과거 응답으로 되돌리지 않는다.
+    return { rooms: [
+      ...rooms.map((room) => {
+        const latest = current.get(room.id);
+        return latest && latest !== before.get(room.id) ? latest : room;
+      }),
+      ...state.rooms.filter((room) => !before.has(room.id) && !incomingIds.has(room.id)),
+    ] };
+  }),
+  upsertRoom: (incoming) => set((state) => ({
+    rooms: state.rooms.some((room) => room.id === incoming.id)
+      ? state.rooms.map((room) => room.id === incoming.id ? { ...room, ...inviteRoomMetadata(incoming) } : room)
+      : [...state.rooms, incoming],
+  })),
+  updateRoom: (roomId, changes) => set((state) => ({
+    rooms: state.rooms.map((room) => room.id === roomId ? { ...room, ...changes, id: room.id } : room),
+  })),
+  updateRoomLastMessage: (roomId, preview) => set((state) => ({
+    rooms: state.rooms.map((room) => {
+      if (room.id !== roomId) return room;
+      const previous = room.last_message_at ?? room.last_message?.created_at;
+      if (previous && Date.parse(previous) > Date.parse(preview.created_at)) return room;
+      return { ...room, last_message: { ...preview }, last_message_at: preview.created_at };
+    }),
+  })),
   setMessages: (roomId, messages) =>
     set((state) => ({
       messagesByRoom: { ...state.messagesByRoom, [roomId]: messages },
     })),
-  appendMessage: (roomId, message) =>
+  appendMessage: (roomId, message) => {
+    get().updateRoomLastMessage(roomId, {
+      content: message.type === 'image' ? '사진' : message.type === 'file' ? '파일' : message.content,
+      created_at: message.created_at,
+    });
     set((state) => {
       const prev = state.messagesByRoom[roomId] ?? [];
       if (prev.some((m) => m.id === message.id)) return state;
       return {
         messagesByRoom: { ...state.messagesByRoom, [roomId]: [message, ...prev] },
       };
-    }),
+    });
+  },
   setActiveRoom: (roomId) => set({ activeRoomId: roomId }),
   clearRoomUnread: (roomId) =>
     set((state) => ({
       rooms: state.rooms.map((r) => (r.id === roomId ? { ...r, unread_count: 0 } : r)),
     })),
+  incrementUnread: (roomId) =>
+    set((state) => ({
+      rooms: state.rooms.map((r) =>
+        r.id === roomId ? { ...r, unread_count: (r.unread_count ?? 0) + 1 } : r,
+      ),
+    })),
+  updateSenderName: (senderId, newName) =>
+    set((state) => {
+      const updated: Record<string, ChatMessage[]> = {};
+      // HOOK-STATE-04: Array.map 은 매번 새 배열을 반환하므로 참조 비교로는 '변경'을 판정할 수
+      // 없다. 실제로 이름이 바뀐 메시지가 있을 때만 방별 배열을 교체한다(불필요 리렌더 방지).
+      let changed = false;
+      for (const [roomId, msgs] of Object.entries(state.messagesByRoom)) {
+        const hasTarget = msgs.some(
+          (m) => m.sender_id === senderId && m.sender_name !== newName,
+        );
+        if (!hasTarget) {
+          updated[roomId] = msgs;
+          continue;
+        }
+        changed = true;
+        updated[roomId] = msgs.map((m) =>
+          m.sender_id === senderId ? { ...m, sender_name: newName } : m,
+        );
+      }
+      if (!changed) return state;
+      return { messagesByRoom: updated };
+    }),
+
+  updateMessageReadCount: (roomId, messageId, readCount, unreadCount, readBy) =>
+    set((state) => {
+      const msgs = state.messagesByRoom[roomId];
+      if (!msgs) return state;
+      return {
+        messagesByRoom: {
+          ...state.messagesByRoom,
+          [roomId]: msgs.map((m) =>
+            m.id === messageId
+              ? { ...m, read_count: readCount, unread_count: unreadCount, read_by: readBy ?? m.read_by }
+              : m,
+          ),
+        },
+      };
+    }),
+
+  markAllMessagesRead: (roomId, readerId) =>
+    set((state) => {
+      const msgs = state.messagesByRoom[roomId];
+      if (!msgs) return state;
+      return {
+        messagesByRoom: {
+          ...state.messagesByRoom,
+          [roomId]: msgs.map((m) => {
+            // readerId가 보낸 메시지는 건드리지 않음 (자기 메시지 읽음 방지)
+            if (readerId && m.sender_id === readerId) return m;
+
+            const currentReadBy = m.read_by ?? [];
+            const newReadBy = readerId && !currentReadBy.includes(readerId)
+              ? [...currentReadBy, readerId]
+              : currentReadBy;
+            return {
+              ...m,
+              unread_count: 0,
+              read_by: newReadBy,
+            };
+          }),
+        },
+      };
+    }),
+
+  // STORE-07: 로그아웃 시 사용자 종속 채팅 상태를 초기화한다.
+  // (이전 사용자의 방/메시지가 다음 로그인 사용자에게 노출되는 것을 막는다.)
+  reset: () => set({ rooms: [], messagesByRoom: {}, activeRoomId: null }),
 }));

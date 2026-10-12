@@ -1,0 +1,195 @@
+// SDD-084 — MediaRecorder(video/webm) 래퍼: 3초 청크 업로드 + 전면/후면 카메라 전환
+// useAudioRecorder 패턴 복제. 상담사 본인 카메라만 녹화한다(내담자 영상 저장 금지).
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { uploadVideoChunk } from '../lib/api/video';
+
+// 청크가 커지면 Nginx client_max_body_size 초과(413)로 업로드가 실패하고,
+// 413 응답에는 CORS 헤더가 없어 브라우저에서 CORS 에러로 보인다.
+// → 비트레이트 상한 + 3초 청크로 청크당 크기를 ~1MB 이내로 제어한다.
+const CHUNK_DURATION_MS = 3000;
+const VIDEO_BITS_PER_SECOND = 2_000_000; // 2Mbps — 3초 청크 ≈ 0.75MB
+const AUDIO_BITS_PER_SECOND = 128_000;
+
+export type VideoRecorderState = 'idle' | 'recording' | 'paused' | 'stopped' | 'error';
+export type FacingMode = 'user' | 'environment';
+
+export interface UseVideoRecorderOptions {
+  sessionId: string;
+  /** SDD-085: 마이크 오프 세션(조합 C)은 false — 오디오 트랙 없는 무음 영상만 녹화 */
+  withAudio?: boolean;
+  onError?: (err: Error) => void;
+}
+
+export function useVideoRecorder({ sessionId, withAudio = true, onError }: UseVideoRecorderOptions) {
+  const [state, setState] = useState<VideoRecorderState>('idle');
+  const [uploadedChunks, setUploadedChunks] = useState(0);
+  const [facingMode, setFacingMode] = useState<FacingMode>('user');
+  // 세션 화면에 상담사 본인 영상(셀프뷰)을 계속 보여주기 위한 현재 스트림
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const indexRef = useRef(0);
+  // 업로드 실패 청크 버퍼 — {index, blob} 으로 보관해 종료 시 원래 인덱스로 재전송한다.
+  const pendingRef = useRef<Array<{ index: number; blob: Blob }>>([]);
+  // 종료 시 잔여 청크 유실 방지 — 진행 중 업로드를 stop()에서 대기한다
+  const inflightRef = useRef<Set<Promise<void>>>(new Set());
+
+  const cleanup = useCallback(() => {
+    recorderRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    setStream(null);
+  }, []);
+
+  useEffect(() => () => cleanup(), [cleanup]);
+
+  /** 현재 스트림으로 MediaRecorder 를 만들어 청크 녹화를 시작 (chunk index는 이어감) */
+  const startRecorder = useCallback(
+    (stream: MediaStream) => {
+      // SDD-085: 무음 영상(withAudio=false)은 오디오 코덱 없는 mime으로 명시 분기
+      const preferredMime = withAudio ? 'video/webm;codecs=vp8,opus' : 'video/webm;codecs=vp8';
+      const mime = MediaRecorder.isTypeSupported(preferredMime) ? preferredMime : 'video/webm';
+      const rec = new MediaRecorder(stream, {
+        mimeType: mime,
+        videoBitsPerSecond: VIDEO_BITS_PER_SECOND,
+        ...(withAudio ? { audioBitsPerSecond: AUDIO_BITS_PER_SECOND } : {}),
+      });
+      recorderRef.current = rec;
+
+      rec.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) {
+          const idx = indexRef.current++;
+          const task = uploadVideoChunk(sessionId, idx, ev.data)
+            .then(() => {
+              setUploadedChunks((n) => n + 1);
+            })
+            .catch((err) => {
+              // 네트워크 실패 시 인덱스와 함께 로컬 버퍼링 — 종료 시 재전송한다
+              pendingRef.current.push({ index: idx, blob: ev.data });
+              onError?.(err as Error);
+            });
+          inflightRef.current.add(task);
+          void task.finally(() => inflightRef.current.delete(task));
+        }
+      };
+
+      rec.onerror = (e) => {
+        setState('error');
+        onError?.(new Error(String((e as ErrorEvent).message ?? '영상 녹화 오류')));
+      };
+
+      rec.start(CHUNK_DURATION_MS);
+    },
+    [sessionId, withAudio, onError],
+  );
+
+  const openStream = useCallback(async (mode: FacingMode): Promise<MediaStream> => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error('이 브라우저는 카메라 녹화를 지원하지 않습니다 (Chrome/Edge 권장)');
+    }
+    // facingMode 는 ideal 취급 — 후면 카메라가 없는 데스크톱에서도 실패하지 않음
+    // SDD-085: 마이크 오프 세션은 audio:false — 영상에 오디오 트랙이 섞이면 "마이크 오프" 약속 위반
+    return navigator.mediaDevices.getUserMedia({ video: { facingMode: mode }, audio: withAudio });
+  }, [withAudio]);
+
+  const start = useCallback(async () => {
+    if (state === 'recording') return;
+    try {
+      const s = await openStream(facingMode);
+      streamRef.current = s;
+      setStream(s);
+      startRecorder(s);
+      setState('recording');
+    } catch (err) {
+      setState('error');
+      onError?.(err as Error);
+    }
+  }, [state, facingMode, openStream, startRecorder, onError]);
+
+  /** 현재 recorder 를 멈추고 마지막 청크 flush 를 기다린다 */
+  const stopRecorder = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        const rec = recorderRef.current;
+        if (!rec || rec.state === 'inactive') {
+          resolve();
+          return;
+        }
+        rec.onstop = () => resolve();
+        rec.stop();
+      }),
+    [],
+  );
+
+  /** 전면/후면 카메라 전환 — 녹화 중이면 스트림을 교체하고 청크 index를 이어서 녹화 */
+  const switchCamera = useCallback(async () => {
+    const nextMode: FacingMode = facingMode === 'user' ? 'environment' : 'user';
+    if (state !== 'recording' && state !== 'paused') {
+      setFacingMode(nextMode);
+      return;
+    }
+    try {
+      await stopRecorder();
+      cleanup();
+      const s = await openStream(nextMode);
+      streamRef.current = s;
+      setStream(s);
+      startRecorder(s);
+      setFacingMode(nextMode);
+      setState('recording');
+    } catch (err) {
+      setState('error');
+      onError?.(err as Error);
+    }
+  }, [facingMode, state, stopRecorder, cleanup, openStream, startRecorder, onError]);
+
+  const pause = useCallback(() => {
+    if (recorderRef.current && recorderRef.current.state === 'recording') {
+      recorderRef.current.pause();
+      setState('paused');
+    }
+  }, []);
+
+  const resume = useCallback(() => {
+    if (recorderRef.current && recorderRef.current.state === 'paused') {
+      recorderRef.current.resume();
+      setState('recording');
+    }
+  }, []);
+
+  /** 업로드 실패로 pendingRef 에 쌓인 청크를 원래 인덱스로 재전송한다.
+
+      서버 save_chunk 는 (session_id, chunk_index) 멱등이므로 재전송해도 중복 저장되지 않는다.
+      재전송 실패 청크는 다시 pendingRef 로 돌려보내 다음 기회에 재시도한다. */
+  const retryPendingChunks = useCallback(() => {
+    const pending = pendingRef.current.splice(0);
+    for (const { index, blob } of pending) {
+      const task = uploadVideoChunk(sessionId, index, blob)
+        .then(() => {
+          setUploadedChunks((n) => n + 1);
+        })
+        .catch(() => {
+          pendingRef.current.push({ index, blob });
+        });
+      inflightRef.current.add(task);
+      void task.finally(() => inflightRef.current.delete(task));
+    }
+  }, [sessionId]);
+
+  /** 녹화 종료 — 마지막 청크 업로드까지 대기 후 완료 (서버 stop 호출 전 사용) */
+  const stop = useCallback(async () => {
+    await stopRecorder();
+    cleanup();
+    retryPendingChunks();
+    await Promise.allSettled([...inflightRef.current]);
+    setState('stopped');
+  }, [stopRecorder, cleanup, retryPendingChunks]);
+
+  /** SDD-101 C4: 녹화가 생성한 총 청크 수(업로드 성공 여부와 무관) — 종료 시 expected_count 로 전달 */
+  const getExpectedCount = useCallback(() => indexRef.current, []);
+
+  return { state, facingMode, stream, start, pause, resume, stop, switchCamera, uploadedChunks, getExpectedCount };
+}

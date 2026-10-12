@@ -1,0 +1,253 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { useNavigate } from 'react-router-dom';
+import CheckinPreferences from '../../components/client/agent/checkin-prefs';
+import ClientShell from '../../components/client/ClientShell';
+import { useStickToBottom } from '../../hooks/useStickToBottom';
+import { AgentBubble, AgentInputBar, AgentTypingIndicator } from '../../components/chat/agent-bubble';
+import CtaCard from '../../components/client/agent/cta-card';
+import * as agentApi from '../../lib/api/agent';
+import type { AgentConsent, AgentCta, AgentMessage } from '../../lib/api/agent';
+import { ApiError } from '../../lib/api/client';
+import { getSession } from '../../lib/api/session';
+import { canAccessAgent, isCtaDisabled, mergeAgentMessages, resolveCta } from '../../lib/agent/actions';
+import { useAgentStore } from '../../stores/agent-store';
+
+export default function AiAgentPage({ embedded = false }: { embedded?: boolean } = {}) {
+  const navigate = useNavigate();
+  const [consent, setConsent] = useState<AgentConsent | null>(null);
+  const [declined, setDeclined] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [olderBusy, setOlderBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [text, setText] = useState('');
+  const [awaitingReply, setAwaitingReply] = useState(false);
+  const [streamText, setStreamText] = useState('');
+  const [changeRequest, setChangeRequest] = useState<{ messageId: string; cta: AgentCta } | null>(null);
+  const [reason, setReason] = useState('');
+  const [reload, setReload] = useState(0);
+  const historyLoaded = useRef(false);
+  const bottom = useRef<HTMLDivElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const lock = useRef(false);
+  const access = canAccessAgent(consent, declined);
+  const changeDialogRef = useDialogA11y(Boolean(changeRequest && access), () => { if (!lock.current) setChangeRequest(null); });
+  const fail = useCallback((err: unknown) => {
+    setError(err instanceof Error ? err.message : '요청을 처리하지 못했습니다. 다시 시도해 주세요.');
+    if (err instanceof ApiError && err.status === 403) {
+      setConsent(null);
+      setMessages([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    agentApi.getConsent().then((value) => { if (!cancelled) setConsent(value); })
+      .catch((err: unknown) => { if (!cancelled) fail(err); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [reload, fail]);
+
+  useEffect(() => {
+    if (!access) return;
+    let cancelled = false;
+    let fetching = false;
+    const refresh = async () => {
+      if (fetching) return;
+      fetching = true;
+      try {
+        const result = await agentApi.listMessages();
+        if (cancelled) return;
+        setMessages((previous) => mergeAgentMessages(previous, result.items));
+        if (!historyLoaded.current) { setHasMore(result.has_more); historyLoaded.current = true; }
+        const latest = result.items[0]?.created_at;
+        if (latest) {
+          const read = await agentApi.markRead(latest);
+          if (!cancelled) useAgentStore.getState().setUnread(read.unread);
+        }
+      } catch (err) { if (!cancelled) fail(err); }
+      finally { fetching = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => { if (document.visibilityState === 'visible') void refresh(); }, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [access, reload, fail]);
+
+  useStickToBottom(scroller, access);
+  const latestId = messages.at(-1)?.id;
+  useEffect(() => { bottom.current?.scrollIntoView?.({ block: 'end' }); }, [latestId]);
+
+  const loadOlder = async () => {
+    if (olderBusy || !access) return;
+    setOlderBusy(true);
+    const height = scroller.current?.scrollHeight ?? 0;
+    const top = scroller.current?.scrollTop ?? 0;
+    try {
+      const result = await agentApi.listMessages(messages[0]?.created_at);
+      setMessages((previous) => mergeAgentMessages(previous, result.items));
+      setHasMore(result.has_more);
+      requestAnimationFrame(() => {
+        if (scroller.current) scroller.current.scrollTop = top + scroller.current.scrollHeight - height;
+      });
+    } catch (err) { fail(err); } finally { setOlderBusy(false); }
+  };
+
+  const perform = async (work: () => Promise<void>) => {
+    if (lock.current) return;
+    lock.current = true;
+    setBusy(true);
+    setError('');
+    try { await work(); } catch (err) { fail(err); }
+    finally { lock.current = false; setBusy(false); }
+  };
+
+  const submitCta = async (messageId: string, cta: AgentCta, body = {}) => {
+    const result = await agentApi.runCta(messageId, cta.id, body);
+    setMessages((previous) => mergeAgentMessages(previous.map((message) => message.id === messageId ? {
+      ...message,
+      cta: message.cta.map((item) => item.id === cta.id ? result.cta :
+        cta.action === 'feedback_choice' && item.action === 'feedback_choice' ? { ...item, done: true } : item),
+    } : message), result.agent_message ? [result.agent_message] : []));
+    if (result.agent_message) {
+      try {
+        const read = await agentApi.markRead(result.agent_message.created_at);
+        useAgentStore.getState().setUnread(read.unread);
+      } catch (err) { fail(err); }
+    }
+  };
+
+  const handleCta = (message: AgentMessage, cta: AgentCta) => {
+    if (!access || lock.current || isCtaDisabled(cta, message.cta)) return;
+    const effect = resolveCta(cta);
+    if (!effect) return;
+    if (effect.type === 'reason') { setReason(''); setChangeRequest({ messageId: message.id, cta }); return; }
+    // 팝업 차단을 피하기 위해 사용자의 클릭 이벤트 안에서 새 창을 연다.
+    if (effect.type === 'map') window.open(effect.url, '_blank', 'noopener,noreferrer');
+    void perform(async () => {
+      if (effect.type === 'submit') { await submitCta(message.id, cta); return; }
+      if (effect.type === 'join') {
+        const session = await getSession(effect.sessionId);
+        navigate(session.access_code && ['open', 'in_progress'].includes(session.status)
+          ? `/join?code=${encodeURIComponent(session.access_code)}`
+          : `/app/sessions/${encodeURIComponent(effect.sessionId)}`);
+      } else if (effect.type === 'navigate') {
+        if (effect.url.startsWith('/')) navigate(effect.url);
+        else window.location.assign(effect.url);
+      } else if (effect.type === 'phone') window.location.assign(effect.url);
+      await agentApi.runCta(message.id, cta.id);
+    });
+  };
+
+  const body = <div className={`flex h-full min-h-0 flex-col font-sans ${embedded ? 'bg-white' : 'mx-auto max-w-2xl gap-3'}`}>
+      {error && <div role="alert" className="m-3 shrink-0 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}
+        <button className="ml-2 underline" onClick={() => setReload((value) => value + 1)}>다시 시도</button>
+      </div>}
+      {loading ? <p role="status" className="p-4 text-sm text-[#6F6F6F]">동의 상태를 확인하고 있어요…</p> : !access ? (
+        <section aria-labelledby="agent-consent-title" className="m-4 my-auto rounded-3xl bg-[#F5EDFC] p-6">
+          <span className="inline-block rounded-full bg-[#01f0c8] px-3 py-1 text-sm">마음 곁의 루시 (AI)</span>
+          <h2 id="agent-consent-title" className="mt-4 text-xl font-bold">AI 대화를 시작하기 전에</h2>
+          <ul className="my-5 space-y-3 text-sm leading-relaxed">
+            <li>AI가 예약 안내와 리포트에 관해 먼저 연락합니다.</li>
+            <li>대화는 요약으로 상담사에게 전달됩니다.</li>
+            <li><strong>피드백은 상담사에게 그대로 전달됩니다.</strong></li>
+            <li>AI 대화는 상담을 대신하지 않습니다.</li>
+          </ul>
+          {declined && <p role="status" className="mb-3 text-sm">동의하지 않으면 AI 대화를 이용할 수 없습니다.</p>}
+          <div className="flex gap-2">
+            <button disabled={busy} onClick={() => { setDeclined(true); setMessages([]); }} className="rounded-xl border px-4 py-3">동의하지 않음</button>
+            <button disabled={busy || !consent} onClick={() => void perform(async () => { const value = await agentApi.agree(); setConsent(value); setDeclined(false); })}
+              className="flex-1 rounded-xl bg-[#5F0080] px-4 py-3 font-semibold text-white disabled:opacity-40">동의하고 시작하기</button>
+          </div>
+        </section>
+      ) : <>
+        <CheckinPreferences />
+        {!embedded && <p className="shrink-0 px-4 py-1.5 text-[13px] text-[#6F6F6F] bg-white">루시(AI)는 상담을 대신하지 않아요. 피드백은 상담사에게 그대로 전달돼요.</p>}
+        <div ref={scroller} role="log" aria-label="루시 (AI) 대화 메시지" className="flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white">
+          {hasMore && <button disabled={olderBusy} onClick={() => void loadOlder()} className="mx-auto my-2 block rounded-full bg-[#F5EDFC] px-4 py-2 text-sm text-[#5F0080]">{olderBusy ? '불러오는 중…' : '이전 메시지 더보기'}</button>}
+          {!messages.length && <div className="text-center text-gray-500 py-4">궁금한 점이나 나누고 싶은 이야기를 남겨 주세요.</div>}
+          {messages.map((message, index) => {
+            const isMine = message.sender === 'user';
+            const previous = messages[index - 1];
+            return <AgentBubble key={message.id} isMine={isMine} showSender={!previous || previous.sender === 'user'}
+              senderName={message.sender === 'system' ? '안내' : '루시 (AI)'}
+              content={message.content} createdAt={message.created_at}
+              actions={message.cta.length ? <CtaCard ctas={message.cta} busy={busy} onAction={(cta) => handleCta(message, cta)} /> : undefined} />;
+          })}
+          {awaitingReply && !streamText && <AgentTypingIndicator />}
+          {streamText && <AgentBubble isMine={false} showSender={messages.at(-1)?.sender !== 'agent'} senderName="루시 (AI)"
+            content={streamText} createdAt={new Date().toISOString()} actions={undefined} />}
+          <div ref={bottom} />
+        </div>
+        <AgentInputBar ariaLabel="루시에게 보낼 메시지" placeholder="메시지를 입력하세요" value={text} onChange={setText} disabled={busy} busy={busy}
+          onSubmit={() => {
+            if (!access || !text.trim() || text.length > 1000) return;
+            const content = text.trim();
+            const tempId = `temp-${Date.now()}`;
+            const optimistic: AgentMessage = {
+              id: tempId, sender: 'user', kind: 'free', content, cta: [],
+              ref_type: null, ref_id: null,
+              read_at: new Date().toISOString(), created_at: new Date().toISOString(),
+            };
+            // 내 말풍선은 즉시 표시하고, 답변이 오면 실제 메시지로 교체한다.
+            setMessages((previous) => [...previous, optimistic]);
+            setText('');
+            setAwaitingReply(true);
+            setStreamText('');
+            void perform(async () => {
+              try {
+                // SDD-201: 응답을 토큰 스트리밍으로 받아 실시간 표시한다.
+                let acc = '';
+                for await (const token of agentApi.streamMessage(content)) {
+                  acc += token;
+                  setStreamText(acc);
+                }
+                // 완료 후 목록을 다시 받아 확정(저장) 메시지로 교체한다.
+                const result = await agentApi.listMessages();
+                setMessages((previous) => mergeAgentMessages(
+                  previous.filter((message) => message.id !== tempId),
+                  result.items,
+                ));
+                setStreamText('');
+                const latest = result.items[0]?.created_at;
+                if (latest) {
+                  const read = await agentApi.markRead(latest);
+                  useAgentStore.getState().setUnread(read.unread);
+                }
+              } catch (err) {
+                // 전송 실패 시 임시 말풍선을 걷어내고 에러를 표시한다.
+                setMessages((previous) => previous.filter((message) => message.id !== tempId));
+                // 입력창은 전송 시점에 비웠으므로, 실패하면 사용자가 쓴 내용을 되돌려 재전송할 수 있게 한다.
+                setText((current) => current || content);
+                setStreamText('');
+                throw err;
+              } finally {
+                setAwaitingReply(false);
+              }
+            });
+          }} />
+      </>}
+      {changeRequest && access && <div ref={changeDialogRef} tabIndex={-1} className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 md:items-center">
+        <form role="dialog" aria-modal="true" aria-labelledby="change-request-title" className="w-full max-w-md rounded-3xl bg-white p-6" onSubmit={(event) => {
+          event.preventDefault();
+          if (!reason.trim() || reason.length > 500) return;
+          void perform(async () => { await submitCta(changeRequest.messageId, changeRequest.cta, { reason }); setChangeRequest(null); });
+        }}>
+          <h2 id="change-request-title" className="text-lg font-bold">일정 변경 문의</h2>
+          <label className="mt-4 block text-sm" htmlFor="agent-change-reason">변경 사유 (필수)</label>
+          <textarea autoFocus id="agent-change-reason" required maxLength={500} rows={4} value={reason} disabled={busy} onChange={(event) => setReason(event.target.value)} className="mt-2 w-full rounded-xl border p-3 text-sm" />
+          {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" disabled={busy} onClick={() => setChangeRequest(null)} className="rounded-xl border px-4 py-2">취소</button>
+            <button disabled={busy || !reason.trim()} className="rounded-xl bg-[#5F0080] px-4 py-2 text-white disabled:opacity-40">문의 보내기</button>
+          </div>
+        </form>
+      </div>}
+    </div>;
+  if (embedded) return body;
+  return <ClientShell title="루시 (AI)" sub="AI ASSISTANT" noScroll contentPad="px-4 py-3 md:px-8 md:py-6">{body}</ClientShell>;
+}
