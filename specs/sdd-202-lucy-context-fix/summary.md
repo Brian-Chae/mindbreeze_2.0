@@ -30,3 +30,39 @@
   - SYSTEM_RULES: "인사·감탄사에는 감정 해석 금지, 짧은 말에 '그 마음' 같은 해석 덧붙이지 말 것"
   - few-shot: "안녕?? → 반갑게 인사" 예시 추가(총 7개)
   - task(companion/checkin): "인사·감탄사에는 감정 해석하지 말고 자연스럽게 받아 주세요"
+
+## 추가 수정 — LLM 실패 시 고정 폴백 제거 (verify-llm-failure-ux.md)
+- 원인: dev 모델 `gemini-3.1-pro-preview` 첫 토큰 7~10s(서버 실측), 스트리밍 read 타임아웃 15s 초과 시
+  `REPLY_FALLBACKS` 고정 문구가 문맥과 무관하게 나감.
+- 조치: 모델 유지 + 스트리밍 read 타임아웃 40s, 첫 토큰 전 일시 오류 1회 자동 재시도,
+  실패 시 `LLMUnavailableError` → SSE `{"error":"llm_unavailable"}`(메시지 미저장·롤백) →
+  프론트 "답변을 만들지 못했어요" + [다시 시도]. 로그는 예외 클래스·HTTP 상태만.
+- 테스트: `backend/tests/test_agent_llm_stream_failure.py` 11건, `frontend/tests/agent-page.test.tsx` 재시도 시나리오.
+- 미변경: 비스트리밍 `POST /agent/messages`(프론트 미사용), 브리핑·리마인더 템플릿.
+- 참고: 프론트 vitest 기존 실패 11건(agent-counselor-page 등 6파일)은 본 변경과 무관(baseline 동일).
+
+## 추가 수정 2 — 상담사 연결 제안형 문구 + 채팅 버튼, 타임아웃 60s
+- 타임아웃: `AGENT_LLM_TIMEOUT_SEC`·스트리밍 read 60s, `_call_gemini(timeout=)` 신설(기존 내부 공용 15s 때문에
+  비스트리밍은 사실상 12s였음), 스레드풀 2→4. 리포트 코멘트 초안 경로는 15s 유지.
+- 문구: "상담사님과 이야기해 보세요" → "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요?"
+  (OUT_OF_SCOPE·SAFE_FALLBACK·SAFE_REPLIES·LLM 프롬프트). 연결 방식 A(이동만)이므로 "상태 전달"은 말하지 않는다.
+- 버튼: 최종 응답에 연결 제안 패턴이 있으면 서버가 `talk_to_counselor` CTA 부착(`agent_service.handoff_cta`).
+  라벨 "상담사님과 채팅하기". 담당 상담사 없으면 미부착. 후속(B): 대화 요약 전달 + 동의 확인 단계.
+- 테스트: `backend/tests/test_agent_handoff_cta.py` 7건. 백엔드 전체 통과(agent 300 + 그 외 1454).
+
+## 추가 수정 3 — 거절했는데 채팅 버튼이 또 뜨는 문제
+- 원인: 버튼 부착 패턴이 넓어 루시가 거절을 되풀이한 문장에도 걸림 + 거절 기억 없음.
+- 조치: 패턴을 `연결(해) 드릴까요`로 한정, 최근 내담자 발화 6건 내 거절 표현이 있으면 버튼 미부착
+  (`handoff_declined`), 위험 응답도 거절 이후엔 제안·버튼 없이 일반 공감(신호 저장·상담사 알림 유지),
+  프롬프트에 "거절하면 다시 권하지 않는다" 추가.
+- 테스트: `test_agent_handoff_cta.py` 6건 추가(총 13건). agent 전체 306 통과.
+
+## 추가 수정 4 — 6턴 고정 마무리 폐지(B안) + 반복 입력 대응
+- 원인: 체크인 6번째 턴에 LLM 호출 없이 고정 `CLOSING_TEMPLATE` 로 닫아 사용자 말에 응답하지 못함.
+- 종료 조건: ① 짧은 마무리 신호(작별·취침·"여기까지", 40자 이하) → 그 턴은 LLM 이 응답한 뒤 체크인 종료,
+  ② 마지막 루시 응답 후 30분 무응답(스윕 close_stale + 사용자가 돌아온 시점 즉시 종료·새 체크인).
+  턴 수 상한(CLOSE_TURN_COUNT/MAX_TURN_COUNT) 제거. turn_count=0 아웃리치 체크인·1일 방치 규칙은 유지.
+- 마무리 문구 LLM 생성, 스트림 실패 시 체크인 유지 + 오류/다시 시도. 고정 문구의 떠넘김 문장 제거.
+- 반복 입력: `agent_llm.is_repeated_message`(정규화 유사도 ≥0.7, 6자 이상) → `build_chat_request` 가 반복 지시
+  (`REPEAT_TASK`, 예시 문장 없음)를 system 맥락에 추가 — 체크인·동반자·리포트 대화 공통.
+- 테스트: `test_agent_checkin_close_repeat.py` 신규, 6턴 의존 기존 테스트 갱신(마무리 신호로 종료). agent 315 + 그 외 1454 통과.

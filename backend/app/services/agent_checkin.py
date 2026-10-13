@@ -23,6 +23,7 @@ D5=② 결정이 이 모듈의 전제다: **상담사가 내담자별로 켠 경
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
@@ -66,9 +67,17 @@ NO_RESPONSE_DAYS = 3
 USUAL_TIME_MIN_SAMPLES = 3
 USUAL_TIME_TOLERANCE_HOUR = 1
 
-# 체크인 길이 — 내담자 턴 기준. 기본 6턴에서 마무리하고 10턴을 넘기지 않는다.
-CLOSE_TURN_COUNT = 6
-MAX_TURN_COUNT = 10
+# 체크인 종료(SDD-202) — 턴 수가 아니라 대화의 흐름으로 닫는다.
+# ① 내담자가 마무리 신호를 보내면 그 턴에 응답한 뒤 닫고, ② 마지막 루시 응답 후 이 시간 동안
+# 말이 없으면 스윕(또는 내담자의 다음 메시지)이 닫는다.
+IDLE_CLOSE_MINUTES = 30
+# 마무리 신호는 짧은 작별·취침 인사만 인정한다 — 긴 문장 속 단어("잘 자라는 사람도 없어")는 제외.
+CLOSING_SIGNAL_MAX_CHARS = 40
+_CLOSING_SIGNAL = re.compile(
+    r"잘\s*자|굿\s*나잇|안녕히\s*(?:주무|계세|가세)|이만\s*(?:갈게|할게|쉴게|잘게|자러|줄일게)"
+    r"|오늘은?\s*(?:여기까지|이만|그만)|이제\s*(?:자러|쉬러|그만|가볼게|갈게|잘게)"
+    r"|(?:다음에|내일|나중에)\s*(?:또\s*)?(?:얘기|이야기|봐|보자|만나|올게)"
+)
 
 # 한 번의 스윕에서 검사할 내담자 수 상한.
 SWEEP_LIMIT = 500
@@ -111,7 +120,7 @@ REPLY_FALLBACKS: tuple[str, ...] = (
 # 마무리 — 상담사 연결 방향으로 닫는다(AI 의존·애착 방지).
 CLOSING_TEMPLATE = (
     "오늘 이야기 나눠 주셔서 고맙습니다. 들려주신 이야기는 제가 정리해 상담사님께 전해 드릴게요.\n"
-    "더 깊은 이야기는 상담사님과 나누시면 좋겠어요. 다음에 또 안부 물을게요."
+    "편안한 시간 보내시고, 다음에 또 안부 물을게요."
 )
 
 # 요약 폴백에서 쓰는 변화 방향 라벨 — 숫자 척도를 쓰지 않는다.
@@ -619,7 +628,14 @@ def ensure_checkin_for_conversation(
     """
     existing = open_checkin(db, client_id)
     if existing is not None:
-        return existing
+        # SDD-202: 마지막 루시 응답 후 IDLE_CLOSE_MINUTES 가 지난 뒤 돌아왔다면 이전 체크인을 닫고
+        # (새 메시지는 요약에서 제외) 새 체크인으로 이어 간다. 스윕 지연과 무관하게 일관되게 동작한다.
+        reference = agent_service._ensure_aware(started_at) if started_at else _now()
+        if _is_idle(db, existing, reference, include_user=False):
+            close(db, existing, commit=False, until=started_at)
+            db.flush()
+        else:
+            return existing
 
     # SDD-193 결정 1: 안부를 "켠" 상담사가 없어도 담당 링크(active)만 있으면 감정 대화를
     # 연다. 단 프로파일 전달 대상을 바꾸지 않도록, 안부를 켠 상담사가 있으면 그 상담사 우선,
@@ -640,67 +656,74 @@ def ensure_checkin_for_conversation(
     return checkin
 
 
+CLOSING_TASK = (
+    "내담자가 오늘 대화를 마무리하려는 말을 했습니다. 그 말과 방금 나눈 이야기를 먼저 받아 주고, "
+    "짧고 따뜻한 인사로 대화를 닫으세요. 새로운 질문은 던지지 않습니다."
+)
+
+
+def detect_closing(user_text: str) -> bool:
+    """내담자가 대화를 마무리하려는지 — 짧은 작별·취침 인사만 인정한다."""
+    text = (user_text or "").strip()
+    return 0 < len(text) <= CLOSING_SIGNAL_MAX_CHARS and bool(_CLOSING_SIGNAL.search(text))
+
+
 def _respond_prompt(
-    db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
-) -> tuple[str, str]:
-    """체크인 응답 프롬프트·폴백 — respond/respond_stream 이 함께 쓴다(SDD-201)."""
-    fallback = REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
-    task = (
-        "인사·감탄사 같은 짧은 말에는 감정을 해석하지 말고 자연스럽게 받아 주세요. "
-        "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
-        "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
-        "공감·위로 후에는 당신의 생각·경험을 한두 마디 곁들여 친구처럼 주고받으세요. "
-        "질문은 대화가 막힐 때만 하나 던지고, 매번 질문으로 끝내지 마세요. "
-        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
-        "'항상 곁에 있겠다' 같은 약속을 하지 마세요. 2~3문장을 넘기지 마세요."
-    )
-    context_text = agent_policy.context_to_text(agent_policy.client_context(client_id, db))
+    db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str, *, closing: bool = False
+) -> tuple[agent_llm.ChatRequest, str]:
+    """체크인 응답 멀티턴 요청·폴백 — respond/respond_stream 이 함께 쓴다(SDD-201/203)."""
+    fallback = CLOSING_TEMPLATE if closing else REPLY_FALLBACKS[(checkin.turn_count - 1) % len(REPLY_FALLBACKS)]
+    context = agent_policy.client_context(client_id, db)
+    # SDD-203: 최근 대화는 실제 user/model 턴으로 전달한다(시스템 텍스트에 넣지 않는다).
+    history = context.get("recent_messages") or []
+    context_text = agent_policy.context_to_text(context, include_recent=False)
     # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
     signal = agent_emotion.detect_emotion(user_text)
     if signal["emotion"] != "neutral":
         context_text = "\n".join(
             filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
         )
-    prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
-    return prompt, fallback
+    task = CLOSING_TASK if closing else ""
+    return agent_llm.build_chat_request(context_text, history, user_text, task=task), fallback
 
 
 def respond(
     db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
 ) -> tuple[str, str]:
-    """(응답 본문, kind) — 턴을 올리고, 마무리 턴에 도달하면 체크인을 닫는다.
+    """(응답 본문, kind) — 턴을 올리고, 내담자가 마무리 신호를 보내면 응답 후 체크인을 닫는다.
 
     조언·진단·점수 표현은 `agent_llm.generate` → `agent_guard` 경로에서 걸러진다.
     """
     checkin.turn_count = (checkin.turn_count or 0) + 1
     db.flush()
 
-    if checkin.turn_count >= CLOSE_TURN_COUNT:
-        # 마무리 시점의 요약·프로파일 저장을 즉시 커밋한다. commit=False 로 두면
-        # 사용자 요청 경로의 후속 커밋에 묶이는데, LLM 응답 생성 등이 끼면 flush 된
-        # 프로파일 항목이 커밋되지 않고 유실될 수 있어 명시적으로 커밋한다.
-        close(db, checkin, commit=True)
-        return CLOSING_TEMPLATE, KIND_CHECKIN_CLOSING
-
-    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text)
+    closing = detect_closing(user_text)
+    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text, closing=closing)
     reply = agent_llm.generate(prompt, fallback)
-    return agent_guard.sanitize(reply, fallback=fallback), KIND_CHECKIN
+    reply = agent_guard.sanitize(reply, fallback=fallback)
+    if closing:
+        # 마무리 시점의 요약·프로파일 저장을 즉시 커밋한다(요청 경로 후속 커밋에 묶이면 유실 가능).
+        close(db, checkin, commit=True)
+        return reply, KIND_CHECKIN_CLOSING
+    return reply, KIND_CHECKIN
 
 
 def respond_stream(
     db: DBSession, client_id: UUID, checkin: AgentCheckin, user_text: str
 ):
-    """체크인 응답 스트리밍 — 마무리 턴이면 종료 템플릿을 한 번 yield 한다(SDD-201)."""
+    """체크인 응답 스트리밍(SDD-201). 마무리 신호면 응답이 끝난 뒤 체크인을 닫는다(SDD-202).
+
+    LLM 이 실패하면 LLMUnavailableError 가 올라가 체크인은 열린 채 남고 아무것도 저장되지 않는다
+    (재시도 안내). 고정 폴백 문구는 문맥과 어긋나 품질을 해치므로 쓰지 않는다.
+    """
     checkin.turn_count = (checkin.turn_count or 0) + 1
     db.flush()
 
-    if checkin.turn_count >= CLOSE_TURN_COUNT:
+    closing = detect_closing(user_text)
+    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text, closing=closing)
+    yield from agent_llm.generate_stream(prompt, fallback, raise_on_failure=True)
+    if closing:
         close(db, checkin, commit=True)
-        yield CLOSING_TEMPLATE
-        return
-
-    prompt, fallback = _respond_prompt(db, client_id, checkin, user_text)
-    yield from agent_llm.generate_stream(prompt, fallback)
 
 
 # ---------------------------------------------------------------------------
@@ -708,8 +731,10 @@ def respond_stream(
 # ---------------------------------------------------------------------------
 
 
-def _checkin_user_texts(db: DBSession, checkin: AgentCheckin) -> list[tuple[str, str]]:
-    """해당 체크인 구간의 내담자 발화 [(message_id, text)]."""
+def _checkin_user_texts(
+    db: DBSession, checkin: AgentCheckin, *, until: datetime | None = None
+) -> list[tuple[str, str]]:
+    """해당 체크인 구간의 내담자 발화 [(message_id, text)]. until 이전 발화만(미포함 상한)."""
     conversation = _client_conversation(db, checkin.client_id)
     if conversation is None:
         return []
@@ -718,6 +743,8 @@ def _checkin_user_texts(db: DBSession, checkin: AgentCheckin) -> list[tuple[str,
         AgentMessage.sender == "user",
         AgentMessage.created_at >= agent_service._ensure_aware(checkin.started_at),
     )
+    if until is not None:
+        query = query.filter(AgentMessage.created_at < agent_service._ensure_aware(until))
     rows = query.order_by(AgentMessage.created_at.asc()).all()
     return [(str(row[0]), row[1] or "") for row in rows]
 
@@ -781,12 +808,17 @@ def _build_summary(texts: list[str], mood: str) -> str:
     return agent_guard.sanitize(summary, fallback=fallback)
 
 
-def close(db: DBSession, checkin: AgentCheckin, *, commit: bool = False) -> AgentCheckin:
-    """체크인 마무리 — closed_at · 요약 · 변화 방향 저장 + 프로파일 추출."""
+def close(
+    db: DBSession, checkin: AgentCheckin, *, commit: bool = False, until: datetime | None = None
+) -> AgentCheckin:
+    """체크인 마무리 — closed_at · 요약 · 변화 방향 저장 + 프로파일 추출.
+
+    until 을 주면 그 시각 이후 발화(새 체크인에 속할 메시지)는 요약에서 제외한다.
+    """
     if checkin.closed_at is not None:
         return checkin
 
-    pairs = _checkin_user_texts(db, checkin)
+    pairs = _checkin_user_texts(db, checkin, until=until)
     texts = [text for _, text in pairs if text]
     mood = _mood_direction(db, checkin, texts)
     checkin.closed_at = _now()
@@ -810,8 +842,40 @@ def close(db: DBSession, checkin: AgentCheckin, *, commit: bool = False) -> Agen
     return checkin
 
 
+def last_activity(
+    db: DBSession, checkin: AgentCheckin, *, include_user: bool = True
+) -> datetime:
+    """체크인 구간의 마지막 대화 시각 — 메시지가 없으면 시작 시각."""
+    from sqlalchemy import func
+
+    conversation = _client_conversation(db, checkin.client_id)
+    started = agent_service._ensure_aware(checkin.started_at)
+    if conversation is None:
+        return started
+    query = db.query(func.max(AgentMessage.created_at)).filter(
+        AgentMessage.conversation_id == conversation.id,
+        AgentMessage.created_at >= started,
+    )
+    if not include_user:
+        query = query.filter(AgentMessage.sender == "agent")
+    latest = query.scalar()
+    return agent_service._ensure_aware(latest) if latest is not None else started
+
+
+def _is_idle(db: DBSession, checkin: AgentCheckin, now: datetime, *, include_user: bool = True) -> bool:
+    """내담자가 대화를 시작했는데(turn_count>=1) 마지막 활동 후 IDLE_CLOSE_MINUTES 가 지났는가.
+
+    turn_count=0(아웃리치만 나가고 답이 없는 체크인)은 무응답 백오프 규칙을 쓰므로 제외한다.
+    """
+    if (checkin.turn_count or 0) < 1:
+        return False
+    return last_activity(db, checkin, include_user=include_user) <= now - timedelta(
+        minutes=IDLE_CLOSE_MINUTES
+    )
+
+
 def close_stale(db: DBSession, *, now: datetime | None = None) -> int:
-    """턴 상한을 넘겼거나 하루 넘게 방치된 열린 체크인을 닫는다(스윕에서 호출)."""
+    """하루 넘게 방치됐거나 대화 후 IDLE_CLOSE_MINUTES 동안 말이 없는 열린 체크인을 닫는다(스윕)."""
     now = now or _now()
     rows = (
         db.query(AgentCheckin)
@@ -822,9 +886,8 @@ def close_stale(db: DBSession, *, now: datetime | None = None) -> int:
     )
     closed = 0
     for checkin in rows:
-        too_long = (checkin.turn_count or 0) >= MAX_TURN_COUNT
         too_old = agent_service._ensure_aware(checkin.started_at) <= now - timedelta(days=1)
-        if not (too_long or too_old):
+        if not (too_old or _is_idle(db, checkin, now)):
             continue
         try:
             close(db, checkin, commit=True)
@@ -833,6 +896,7 @@ def close_stale(db: DBSession, *, now: datetime | None = None) -> int:
             db.rollback()
             logger.exception("[agent_checkin] 체크인 마무리 실패 (id=%s)", checkin.id)
     return closed
+
 
 
 # ---------------------------------------------------------------------------

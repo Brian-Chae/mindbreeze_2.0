@@ -49,6 +49,15 @@ export const sendMessage = (content: string) => apiClient.post<{
   user_message: AgentMessage; agent_message: AgentMessage;
 }>('/agent/messages', { content });
 
+// SDD-202: 루시가 답변을 만들지 못했다(LLM 지연·오류). 서버에는 아무것도 저장되지 않으므로
+// 같은 내용으로 다시 보내면 된다.
+export class AgentReplyError extends Error {
+  constructor(message = '루시가 지금 답변을 만들지 못했어요.') {
+    super(message);
+    this.name = 'AgentReplyError';
+  }
+}
+
 // SDD-201: 응답 토큰 스트리밍(SSE) — 에이전트 답변을 토큰 단위로 yield 한다.
 // 완료 시점에 에이전트 메시지가 저장되므로, 호출부는 종료 후 목록을 다시 받아 확정본을 표시한다.
 export async function* streamMessage(content: string): AsyncGenerator<string> {
@@ -86,10 +95,12 @@ export async function* streamMessage(content: string): AsyncGenerator<string> {
       if (!line.startsWith('data:')) continue;
       const payload = line.slice(5).trim();
       if (!payload || payload === '[DONE]') continue;
+      let parsed: { token?: unknown; error?: unknown };
       try {
-        const parsed = JSON.parse(payload) as { token?: unknown };
-        if (typeof parsed.token === 'string') yield parsed.token;
-      } catch { /* 잘못된 청크는 무시 */ }
+        parsed = JSON.parse(payload) as { token?: unknown; error?: unknown };
+      } catch { continue; /* 잘못된 청크는 무시 */ }
+      if (typeof parsed.error === 'string') throw new AgentReplyError();
+      if (typeof parsed.token === 'string') yield parsed.token;
     }
   }
 }

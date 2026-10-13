@@ -26,7 +26,7 @@ from app.schemas.agent import (
     CheckinPrefs,
     CheckinPrefsUpdateRequest,
 )
-from app.services import agent_service
+from app.services import agent_llm, agent_service
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -85,14 +85,21 @@ def stream_message(
     """사용자 메시지 전송 + 에이전트 응답 스트리밍(SSE, SDD-201).
 
     응답 텍스트를 토큰 단위로 `data: {"token": "..."}` 로 흘린 뒤 `[DONE]` 으로 끝낸다.
+    LLM 이 응답하지 못하면 `data: {"error": "llm_unavailable"}` 후 `[DONE]` — 이 경우 사용자·에이전트
+    메시지는 저장되지 않으므로 클라이언트는 같은 내용으로 재전송(다시 시도)하면 된다(SDD-202).
     완료 시점에 에이전트 메시지가 저장되므로, 클라이언트는 스트리밍 종료 후 목록을
     다시 받아 확정 메시지를 표시한다.
     """
     import json
 
     def generate():
-        for token in agent_service.stream_user_message(db, current_user["id"], payload.content):
-            yield f"data: {json.dumps({'token': token}, ensure_ascii=False)}\n\n"
+        try:
+            for token in agent_service.stream_user_message(db, current_user["id"], payload.content):
+                yield f"data: {json.dumps({'token': token}, ensure_ascii=False)}\n\n"
+        except agent_llm.LLMUnavailableError:
+            # 미커밋 변경(사용자 메시지·turn_count)을 되돌려 재시도가 중복을 만들지 않게 한다.
+            db.rollback()
+            yield f"data: {json.dumps({'error': 'llm_unavailable'})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(

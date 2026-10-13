@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from uuid import UUID, uuid4
@@ -623,8 +624,44 @@ def _append_feedback_text(db: DBSession, event: AgentRelayEvent, text: str) -> N
 # 리포트 범위를 벗어난 질문(진단·병명·약 등)에 쓰는 안내. LLM 을 거치지 않는다.
 OUT_OF_SCOPE_REPLY = (
     "그 부분은 제가 말씀드릴 수 있는 범위가 아니에요. "
-    "상담사님과 이야기해 보시면 좋겠어요. 지금 마음은 어떠신지 들려주실 수 있을까요?"
+    "상담사님과 직접 이야기 나눌 수 있도록 채팅을 연결해 드릴까요? 그 전에 지금 마음을 들려주셔도 좋아요."
 )
+
+# SDD-202: 상담사 채팅 연결을 제안하는 문장("…연결해 드릴까요?") — 최종 응답에 이 패턴이 있으면 [상담사님과 채팅하기]
+# 버튼을 붙인다. LLM 이 낸 마커가 아니라 서버가 최종 문장을 보고 판단한다(문장만 있고 갈 길이 없는 상태 방지).
+# "상담사님께 그대로 전해 드릴게요"(피드백 접수) 같은 문장에는 걸리지 않는다.
+_HANDOFF_OFFER = re.compile(r"연결(?:해)?\s*드릴까요")
+
+# 내담자가 상담사 연결을 원하지 않는다고 말한 표현 — 이후 버튼·제안을 반복하지 않는다.
+_HANDOFF_DECLINE = re.compile(
+    r"상담사[^.?!\n]{0,20}(?:싶지(?:는|도)?\s*않|싫|안\s*(?:할|하고|하려|만나|볼|가)|말고|필요\s*없|나중에)"
+    r"|(?:채팅|연결)[^.?!\n]{0,10}(?:싫|안\s*(?:할|해)|필요\s*없|하지\s*마)"
+)
+_HANDOFF_DECLINE_WINDOW = 6  # 최근 내담자 발화 몇 건까지 거절을 기억할지
+
+
+def handoff_declined(db: DBSession, user_id: UUID) -> bool:
+    """최근 내담자 발화에 상담사 연결 거절이 있으면 True(현재 발화 포함)."""
+    conversation = get_or_create_conversation(db, user_id, CHANNEL_CLIENT)
+    rows = (
+        db.query(AgentMessage.content)
+        .filter(AgentMessage.conversation_id == conversation.id, AgentMessage.sender == "user")
+        .order_by(AgentMessage.created_at.desc())
+        .limit(_HANDOFF_DECLINE_WINDOW)
+        .all()
+    )
+    return any(_HANDOFF_DECLINE.search(row[0] or "") for row in rows)
+
+
+def handoff_cta(db: DBSession, user_id: UUID, reply_text: str) -> list[dict]:
+    """연결 제안 문장이 있으면 담당 상담사 채팅 CTA. 제안이 없거나, 담당 상담사가 없거나,
+    내담자가 최근 거절했다면 빈 목록."""
+    if not _HANDOFF_OFFER.search(reply_text or "") or handoff_declined(db, user_id):
+        return []
+    from app.services import agent_risk
+
+    return agent_risk.talk_to_counselor_cta_for(db, user_id)
+
 
 # SDD-193: 리포트·일정이 없는 내담자도 감정 대화를 나눈다 — 친근한 친구 톤 폴백.
 COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
@@ -635,27 +672,22 @@ COMPANION_REPLY_FALLBACKS: tuple[str, ...] = (
 )
 
 
-def _companion_prompt(db: DBSession, user_id: UUID, user_text: str) -> tuple[str, str]:
-    """동반자 응답 프롬프트·폴백 — _companion_reply/stream 이 함께 쓴다(SDD-201)."""
+def _companion_prompt(
+    db: DBSession, user_id: UUID, user_text: str
+) -> tuple[agent_llm.ChatRequest, str]:
+    """동반자 응답 멀티턴 요청·폴백 — _companion_reply/stream 이 함께 쓴다(SDD-201/203)."""
     fallback = COMPANION_REPLY_FALLBACKS[len(user_text) % len(COMPANION_REPLY_FALLBACKS)]
-    task = (
-        "인사·감탄사 같은 짧은 말에는 감정을 해석하지 말고 자연스럽게 받아 주세요. "
-        "내담자의 이야기를 깊이 이해하고, 그 마음을 짚어 따뜻하게 위로하거나 공감하세요. "
-        "질문을 받으면 자신의 생각을 먼저 진솔하게 나누고, 그걸 통해 주제를 이끌어 가세요. "
-        "공감·위로 후에는 당신의 생각·경험을 한두 마디 곁들여 친구처럼 주고받으세요. "
-        "질문은 대화가 막힐 때만 하나 던지고, 매번 질문으로 끝내지 마세요. "
-        "조언·해석·진단·처방을 하지 마세요. 상태를 숫자나 점수로 표현하지 마세요. "
-        "2~3문장을 넘기지 마세요."
-    )
-    context_text = agent_policy.context_to_text(agent_policy.client_context(user_id, db))
+    context = agent_policy.client_context(user_id, db)
+    # SDD-203: 최근 대화는 시스템 텍스트가 아니라 실제 user/model 턴으로 전달한다.
+    history = context.get("recent_messages") or []
+    context_text = agent_policy.context_to_text(context, include_recent=False)
     # SDD-199: 내담자 메시지의 감정 톤·강도를 감지해 공감 정확도를 높인다.
     signal = agent_emotion.detect_emotion(user_text)
     if signal["emotion"] != "neutral":
         context_text = "\n".join(
             filter(None, [context_text, "■ 현재 감정", agent_emotion.signal_line(signal)])
         )
-    prompt = agent_llm.build_prompt(context_text, user_text=user_text, task=task)
-    return prompt, fallback
+    return agent_llm.build_chat_request(context_text, history, user_text), fallback
 
 
 def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
@@ -685,6 +717,8 @@ def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
     reply_text, reply_kind, reply_cta = _route_reply(
         db, uid, text, user_message, in_feedback=feedback_event is not None
     )
+    if not reply_cta:
+        reply_cta = handoff_cta(db, uid, reply_text)
     agent_message = post_agent_message(
         db,
         uid,
@@ -749,9 +783,12 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
             chunks.append(token)
             yield token
         reply_text = "".join(chunks)
+        # SDD-202: 마무리 신호로 체크인이 닫혔다면 마무리 종류로 저장한다.
         post_agent_message(
-            db, uid, kind="checkin", content=reply_text,
-            cta=[], notify=False, commit=True,
+            db, uid,
+            kind=agent_checkin.KIND_CHECKIN_CLOSING if checkin.closed_at is not None else "checkin",
+            content=reply_text,
+            cta=handoff_cta(db, uid, reply_text), notify=False, commit=True,
         )
         return
 
@@ -761,7 +798,7 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
         yield reply_text
         post_agent_message(
             db, uid, kind="free", content=reply_text,
-            cta=[], notify=False, commit=True,
+            cta=handoff_cta(db, uid, reply_text), notify=False, commit=True,
         )
         return
 
@@ -775,22 +812,26 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
         fallback = _fallback_reply(context)
         task = (
             "내담자가 남긴 이야기에 짧게 공감하고, [허용 자료]의 리포트 본문 범위 안에서만 "
-            "설명하세요. 자료에 없는 내용은 상담사님과 이야기해 보시라고 안내하세요. "
+            "설명하세요. 자료에 없는 내용은 \"상담사님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
             "마지막에 열린 질문 하나를 덧붙이세요."
         )
-        prompt = agent_llm.build_prompt(
-            agent_policy.context_to_text(context), user_text=text, task=task
+        prompt = agent_llm.build_chat_request(
+            agent_policy.context_to_text(context, include_recent=False),
+            context.get("recent_messages") or [],
+            text,
+            task=task,
         )
         reply_kind = "report_chat" if reports else "free"
 
     chunks = []
-    for token in agent_llm.generate_stream(prompt, fallback):
+    # SDD-202: LLM 실패 시 LLMUnavailableError 가 올라가 아무것도 저장하지 않는다(재시도 안내).
+    for token in agent_llm.generate_stream(prompt, fallback, raise_on_failure=True):
         chunks.append(token)
         yield token
     reply_text = agent_guard.sanitize("".join(chunks), fallback=fallback)
     post_agent_message(
         db, uid, kind=reply_kind, content=reply_text,
-        cta=[], notify=False, commit=True,
+        cta=handoff_cta(db, uid, reply_text), notify=False, commit=True,
     )
 
 
@@ -850,11 +891,14 @@ def _build_reply(
     fallback = _fallback_reply(context, in_feedback=in_feedback)
     task = (
         "내담자가 남긴 이야기에 짧게 공감하고, [허용 자료]의 리포트 본문 범위 안에서만 "
-        "설명하세요. 자료에 없는 내용은 상담사님과 이야기해 보시라고 안내하세요. "
+        "설명하세요. 자료에 없는 내용은 \"상담사님과 직접 이야기 나눌 수 있게 채팅을 연결해 드릴까요?\"처럼 연결을 제안하세요. "
         "마지막에 열린 질문 하나를 덧붙이세요."
     )
-    prompt = agent_llm.build_prompt(
-        agent_policy.context_to_text(context), user_text=user_text, task=task
+    prompt = agent_llm.build_chat_request(
+        agent_policy.context_to_text(context, include_recent=False),
+        context.get("recent_messages") or [],
+        user_text,
+        task=task,
     )
     reply = agent_llm.generate(prompt, fallback)
     return reply, ("report_chat" if reports else "free")
