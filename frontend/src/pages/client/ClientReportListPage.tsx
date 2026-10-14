@@ -233,7 +233,7 @@ export default function ClientReportListPage() {
         <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
       </div>
       <div className="text-[13px] font-bold text-[#1F1F1F] font-mono">
-        {formatDateTime(report.scheduled_at)}
+        {formatDateTime(report.scheduled_at ?? report.created_at)}
       </div>
       <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
       <div className="mt-2 text-[12px] text-[#6F6F6F]">
@@ -275,7 +275,7 @@ export default function ClientReportListPage() {
               <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
             </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
-            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at)}</td>
+            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>
             <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} /></td>
             <td className="px-5 py-3.5">
               <button type="button" aria-haspopup="dialog" disabled={!report.id}
