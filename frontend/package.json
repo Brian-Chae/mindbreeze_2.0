@@ -15,7 +15,9 @@
     "test": "vitest run",
     "cap:sync": "npm run build && cap sync",
     "cap:android": "npm run build && cap sync android && cap open android",
-    "cap:ios": "npm run build && cap sync ios && cap open ios"
+    "cap:ios": "npm run build && cap sync ios && cap open ios",
+    "cap:ios:dev": "tsc -b && vite build --mode dev && cap sync ios && cap open ios",
+    "cap:ios:prod": "tsc -b && vite build --mode prod && cap sync ios && cap open ios"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "8.2.0",
