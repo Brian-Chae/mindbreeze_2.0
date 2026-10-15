@@ -19,10 +19,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from sqlalchemy import text  # noqa: E402
 from app.core.database import SessionLocal  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
+from app.models.client_counselor_link import ClientCounselorLink  # noqa: E402
 from app.models.counselor_profile import CounselorProfile  # noqa: E402
 from app.models.onboarding_progress import OnboardingProgress  # noqa: E402
 from app.models.organization import Organization  # noqa: E402
 from app.models.user import User  # noqa: E402
+from app.models.user_org_membership import UserOrgMembership  # noqa: E402
 
 DOMAIN = "e2e.looxidlabs.com"
 ORG_NAME = "E2E-테스트기관"
@@ -89,6 +91,25 @@ def seed() -> None:
                         completed_at=datetime.now(timezone.utc), steps={},
                     )
                 )
+        # 기관 소속(membership): 상담사·기관관리자
+        for role, email, _ in ACCOUNTS:
+            if role not in ("counselor", "org_admin"):
+                continue
+            u = db.query(User).filter(User.email == email).first()
+            m = db.query(UserOrgMembership).filter_by(user_id=u.id, org_id=org.id).first()
+            if m is None:
+                db.add(UserOrgMembership(user_id=u.id, org_id=org.id, role=role, status="active",
+                                         is_primary=True, joined_at=datetime.now(timezone.utc)))
+            else:
+                m.status = "active"
+        # 내담자-상담사 연결(내담자 앱이 '연결하기' 게이트를 통과하도록)
+        client = db.query(User).filter(User.email == f"e2e-client@{DOMAIN}").first()
+        counselor = db.query(User).filter(User.email == f"e2e-counselor@{DOMAIN}").first()
+        link = db.query(ClientCounselorLink).filter_by(client_id=client.id, counselor_id=counselor.id).first()
+        if link is None:
+            db.add(ClientCounselorLink(client_id=client.id, counselor_id=counselor.id, status="active"))
+        else:
+            link.status = "active"
         db.commit()
         print(f"seed 완료: 기관 1 + 계정 {len(ACCOUNTS)}")
     finally:

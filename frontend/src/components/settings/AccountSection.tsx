@@ -69,7 +69,7 @@ export default function AccountSection({ profile, onSave }: AccountSectionProps)
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[15px] font-bold text-[#1F1F1F] flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-[#5F0080]" />
-          계정 정보
+          기본 정보
         </h3>
         {editing ? (
           <div className="flex items-center gap-2">

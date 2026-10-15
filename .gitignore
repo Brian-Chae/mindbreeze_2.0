@@ -22,3 +22,4 @@ node_modules/
 paseo.json
 .hermes-tmp/
 frontend/e2e/smoke-result.json
+frontend/e2e/journeys-result.json

@@ -57,12 +57,21 @@ jobs:
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: cd frontend && node e2e/smoke.mjs
 
+      # SDD-205: 역할별 여정. 스모크가 실패해도 여정은 실행해 결과를 모두 모은다.
+      - name: Run journeys
+        if: ${{ !cancelled() }}
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: cd frontend && node e2e/journeys.mjs
+
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: smoke-result
-          path: frontend/e2e/smoke-result.json
+          path: |
+            frontend/e2e/smoke-result.json
+            frontend/e2e/journeys-result.json
           if-no-files-found: ignore
 
       - name: Notify failure (Telegram)
