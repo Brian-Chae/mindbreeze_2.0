@@ -71,6 +71,13 @@ jobs:
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: cd frontend && node e2e/regressions.mjs
 
+      # 전수조사: 기업→상담사→회원가입→로그인→클래스 참여→리포트 발송
+      - name: Run full-journey
+        if: ${{ !cancelled() }}
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: cd frontend && node e2e/full-journey.mjs
+
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
@@ -80,6 +87,7 @@ jobs:
             frontend/e2e/smoke-result.json
             frontend/e2e/journeys-result.json
             frontend/e2e/regressions-result.json
+            frontend/e2e/full-journey-result.json
           if-no-files-found: ignore
 
       - name: Notify failure (Telegram)
