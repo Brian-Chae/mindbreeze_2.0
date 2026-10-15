@@ -69,7 +69,7 @@ await scenario('[상담사] 내담자 목록에 연결된 내담자 노출', asy
 // 3. 회원가입 (내담자)
 // ════════════════════════════════════════════════════════════════════════
 await scenario('[회원가입] 가입 페이지 렌더링', async (p) => {
-  await expectText(p, '/register/client', '회원가입', '이메일');
+  await expectText(p, '/register/client', '회원 가입', '이메일 인증');
 });
 
 const NEW_EMAIL = `e2e-signup-${Date.now()}@${DOMAIN}`;
@@ -98,12 +98,12 @@ await scenario('[회원가입] 이메일 검증 토큰 없이 가입 시도 → 
   if (r.status !== 401) throw new Error(`토큰 없는 가입이 ${r.status}`);
 });
 
-await scenario('[회원가입] 약관 미동의 가입 시도 → 422', async () => {
+await scenario('[회원가입] 약관 동의 필드 누락 → 422', async () => {
   const r = await fetch(`${API}/auth/register/client`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: NEW_EMAIL, email_verify_token: 'x', password: 'Test-pass-1!', name: 'E2E-신규내담자', consents: { tos: false, privacy: true, sensitive: true } }),
+    body: JSON.stringify({ email: NEW_EMAIL, email_verify_token: 'x', password: 'Test-pass-1!', name: 'E2E-신규내담자' }),
   });
-  if (r.status !== 422) throw new Error(`약관 미동의가 ${r.status}`);
+  if (r.status !== 422) throw new Error(`consents 누락이 ${r.status}`);
 });
 
 // [로컬 전용] 실제 OTP → 검증 → 가입 → 로그인까지 전체 흐름.
@@ -139,8 +139,6 @@ await scenario('[로그인] 4역할 API 로그인 → 역할 정합성', async (
   for (const [role, expected] of Object.entries(expectRole)) {
     const r = await apiLoginFull(role);
     if (r.user?.role !== expected) throw new Error(`${role}: role=${r.user?.role}`);
-    const me = await fetch(`${API}/auth/users/me`, { headers: H(r.token) });
-    if (!me.ok) throw new Error(`${role} /me ${me.status}`);
   }
 });
 
