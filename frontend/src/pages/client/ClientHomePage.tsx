@@ -94,10 +94,10 @@ function HeroCard({
       {/* 좌측 콘텐츠 */}
       <div className="min-w-0 lg:flex-1">
         <div className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-        <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight sm:text-[20px] md:text-[22px] lg:text-[30px]">
+        <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight text-white sm:text-[20px] md:text-[22px] lg:text-[30px]">
           {session.title || '세션'}
         </h2>
-        <p className="mt-1 text-[13px] opacity-90">
+        <p className="mt-1 text-[13px] text-white opacity-90">
           {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
           {counselorName ? ` · ${counselorName}` : ''}
         </p>
@@ -117,7 +117,7 @@ function HeroCard({
           </div>
         )}
 
-        <p className="mt-3 text-[12px] opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
+        <p className="mt-3 text-[12px] text-white opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
       </div>
 
       {/* 우측 액션 */}

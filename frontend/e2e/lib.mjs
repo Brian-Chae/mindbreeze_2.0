@@ -65,6 +65,13 @@ export async function apiLogin(role) {
   return (await r.json()).access_token;
 }
 
+export async function apiLoginFull(role) {
+  const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: EMAIL[role], password: PW }) });
+  if (!r.ok) throw new Error(`api login ${role} ${r.status}`);
+  const j = await r.json();
+  return { token: j.access_token, user: j.user };
+}
+
 export async function finish(file, label) {
   await browser.close();
   const failed = results.filter((r) => !r.ok);

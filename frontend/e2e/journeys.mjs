@@ -1,5 +1,5 @@
 // SDD-205 역할별 여정 (약 29개). 실행: E2E_PASSWORD=... node e2e/journeys.mjs
-import { scenario, uiLogin, go, bodyText, expectText, apiLogin, finish, BASE, API, EMAIL, HOME } from './lib.mjs';
+import { scenario, uiLogin, go, bodyText, expectText, apiLogin, apiLoginFull, finish, BASE, API, EMAIL, HOME } from './lib.mjs';
 
 const TITLE = `E2E-여정-${Date.now()}`;
 
@@ -10,6 +10,27 @@ await client('세션: 달력 표시', async (p) => { await expectText(p, '/app/s
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
 await client('채팅: 루시·담당 상담사 대화방 노출', async (p) => { await expectText(p, '/app/chat', '루시', 'E2E-상담사'); });
 await client('알림: 빈 상태', async (p) => { await expectText(p, '/app/notifications', '알림'); });
+await client('다음 세션 카드: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
+  // 상담사가 E2E 세션을 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 세션' 히어로 글자색을 확인하고 삭제한다.
+  const c = await apiLoginFull('counselor');
+  const cl = await apiLoginFull('client');
+  const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
+  const at = new Date(Date.now() + 2 * 86400000).toISOString();
+  const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: `E2E-히어로-${Date.now()}`, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: [cl.user.id] }) });
+  if (r.status !== 201) throw new Error(`세션 생성 ${r.status}`);
+  const id = (await r.json()).id;
+  try {
+    await go(p, '/app');
+    const hero = p.locator('section[class*="from-[#6E1A8C]"]').filter({ hasText: '다음 세션' }).first();
+    await hero.waitFor({ timeout: 10000 });
+    const colors = await hero.evaluate((el) => [...el.querySelectorAll('h2, p')].map((n) => ({ t: n.tagName, c: getComputedStyle(n).color })));
+    const dark = colors.filter(({ c: col }) => { const m = col.match(/\d+/g).map(Number); return m[0] < 200 || m[1] < 200 || m[2] < 200; });
+    if (dark.length) throw new Error(`어두운 글자색: ${dark.map((d) => `${d.t} ${d.c}`).join(', ')}`);
+  } finally {
+    const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
+    if (d.status !== 204) throw new Error(`E2E 세션 삭제 실패 ${d.status} (id=${id})`);
+  }
+});
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
   const t = await expectText(p, '/app/profile', 'e2e-client@e2e.looxidlabs.com', '계정 정보');
   const heads = await p.locator('h2,h3').allInnerTexts();
