@@ -302,3 +302,9 @@ jobs:
           sleep 5
           curl -sf https://dev.mindbreeze.looxidlabs.com/ -o /dev/null && echo "frontend 200 OK"
           curl -sf https://dev-api.mindbreeze.looxidlabs.com/health/ready && echo " ← api ready OK"
+
+  # SDD-204: 배포 성공 직후 스모크 E2E (실패 시 텔레그램 알림). 배포 자체의 성공/실패에는 영향 없음.
+  e2e-smoke:
+    needs: [deploy]
+    uses: ./.github/workflows/e2e-smoke.yml
+    secrets: inherit

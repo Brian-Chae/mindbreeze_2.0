@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────
+# SDD-204 — dev 배포 후 스모크 E2E
+# 트리거: deploy-dev.yml 의 deploy 잡 성공 직후(workflow_call) + 수동 실행
+# 알림: 실패 시에만 텔레그램 (TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID 시크릿이 있을 때)
+# 운영(main) 배포와 무관 — 대상은 dev 서버뿐이다.
+# ─────────────────────────────────────────
+name: E2E Smoke (dev)
+
+on:
+  workflow_call:
+    secrets:
+      E2E_PASSWORD:
+        required: true
+      TELEGRAM_BOT_TOKEN:
+        required: false
+      TELEGRAM_CHAT_ID:
+        required: false
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-smoke-dev
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+          npx playwright install --with-deps chromium-headless-shell
+
+      # 배포 직후 서비스 재시작 대기: 서버 준비 상태 확인(최대 2분)
+      - name: Wait for dev ready
+        run: |
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" https://dev-api.mindbreeze.looxidlabs.com/health || true)
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "dev 서버 준비 지연"; exit 1
+
+      - name: Run smoke
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: cd frontend && node e2e/smoke.mjs
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-result
+          path: frontend/e2e/smoke-result.json
+          if-no-files-found: ignore
+
+      - name: Notify failure (Telegram)
+        if: failure()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          [ -z "$TG_TOKEN" ] && { echo "텔레그램 시크릿 없음 — 알림 생략"; exit 0; }
+          msg="🔴 MIND BREEZE dev 스모크 실패
+          커밋: ${{ github.sha }}
+          상세: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TG_CHAT}" --data-urlencode "text=${msg}" >/dev/null
