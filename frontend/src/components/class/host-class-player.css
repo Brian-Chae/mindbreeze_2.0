@@ -164,6 +164,8 @@
 
 /* 진행 제어는 상단에, 기본 작업영역은 남은 뷰포트 안에 배치한다. */
 .hcp-lobby-audio{grid-column:2;grid-row:2;min-width:0;border:1px solid var(--border-container);border-radius:12px;background:#1d1027}
+/* 오프라인(대면) 수업은 대기실 BGM이 없어 패널이 비어 있으므로 빈 상자를 숨긴다. */
+.hcp-lobby-audio:empty{display:none}
 .hcp-lobby-audio>section{height:100%;background:transparent;padding:12px 16px}
 .hcp-media-controls{gap:4px}
 .hcp-media-controls button,.hcp-host .hcp-media-link{display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border-color:var(--border-container);font-size:11px;padding:4px 6px}
