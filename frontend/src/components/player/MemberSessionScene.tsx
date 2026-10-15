@@ -2,6 +2,7 @@
 // 검정 풀블리드 immersive (SDD-029)
 
 import { GuestMeditationPanel } from '../class/GuestMeditationPanel';
+import type { LinkbandMode } from '../../lib/api/session';
 
 interface MemberSessionSceneProps {
   title: string | null;
@@ -21,6 +22,8 @@ interface MemberSessionSceneProps {
   participantMode?: 'one_on_one' | 'group';
   /** 정원 — 오프라인 그룹 20명 초과 시 상담사 영상 타일 미표시 */
   maxParticipants?: number;
+  /** 세션 밴드 사용 정책 — none이면 밴드 UI 전체 숨김 */
+  linkbandMode?: LinkbandMode;
 }
 
 export function MemberSessionScene({
@@ -36,6 +39,7 @@ export function MemberSessionScene({
   locationType,
   participantMode,
   maxParticipants,
+  linkbandMode,
 }: MemberSessionSceneProps) {
   return (
     <main className="min-h-screen bg-black">
@@ -51,6 +55,7 @@ export function MemberSessionScene({
         locationType={locationType}
         participantMode={participantMode}
         maxParticipants={maxParticipants}
+        linkbandMode={linkbandMode}
       />
       {error && (
         <p

@@ -20,6 +20,8 @@ interface CounselorLiveTileProps {
   speakingManaged?: boolean;
   /** 스피커 on/off — false면 상담사 음성 음소거 (하울링 방지) */
   speakerOn?: boolean;
+  /** 상담사(원격) 카메라 트랙 유무 변경 통지 — true면 카메라가 실제 송출 중 */
+  onHostCameraChange?: (active: boolean) => void;
   className?: string;
 }
 
@@ -32,10 +34,14 @@ function CounselorPlaceholder({ message }: { message: string }) {
 }
 
 /** 구독한 원격(상담사) 카메라 트랙만 렌더 */
-function HostCamera() {
+function HostCamera({ onHostCameraChange }: { onHostCameraChange?: (active: boolean) => void }) {
   const tracks = useTracks([Track.Source.Camera]);
   const remoteCameras = tracks.filter((t) => !t.participant.isLocal);
-  if (remoteCameras.length === 0) {
+  const active = remoteCameras.length > 0;
+  useEffect(() => {
+    onHostCameraChange?.(active);
+  }, [active, onHostCameraChange]);
+  if (!active) {
     return (
       <CounselorPlaceholder message="상담사 영상 연결 중…" />
     );
@@ -73,6 +79,7 @@ export function CounselorLiveTile({
   sessionId = null,
   speakingManaged = false,
   speakerOn = true,
+  onHostCameraChange,
   className = '',
 }: CounselorLiveTileProps) {
   const {
@@ -147,7 +154,7 @@ export function CounselorLiveTile({
         audio={canPublish}
         className="h-full w-full"
       >
-        <HostCamera />
+        <HostCamera onHostCameraChange={onHostCameraChange} />
         {canPublish && <MemberSelfView />}
         {/* speakerOn=false → 볼륨 0 (클라이언트측 즉시 뮤트, 재구독 지연 없음) */}
         <RoomAudioRenderer volume={speakerOn ? 1 : 0} />

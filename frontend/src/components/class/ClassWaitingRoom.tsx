@@ -46,6 +46,8 @@ export interface ClassWaitingRoomProps {
   participantToken: string | null;
   /** 로그인 회원 여부 — 체크인 인증 분기(회원 액세스 토큰 / 게스트 토큰) */
   isLoggedIn: boolean;
+  /** 클래스 장소 유형 — 오프라인이면 대기실 BGM을 재생하지 않는다 */
+  locationType?: 'online' | 'offline';
   /** [입장] 클릭 — 확정 값과 함께 라이브 뷰로 진입 */
   onEnter: (payload: ClassWaitingRoomEnterPayload) => void;
   /** [나가기] — 코드 입력 단계로 복귀 */
@@ -62,6 +64,7 @@ export function ClassWaitingRoom({
   initialNickname,
   participantToken,
   isLoggedIn,
+  locationType,
   onEnter,
   onLeave,
   sessionLive = false,
@@ -132,8 +135,8 @@ export function ClassWaitingRoom({
     skipAuth: !isAuthenticated,
   });
 
-  // 대기실 BGM — 대기 중 플랫폼이 기본 트랙을 자동 재생(회원은 볼륨/음소거만 조절)
-  const lobbyBgm = useLobbyBgm(true);
+  // 대기실 BGM — 온라인 전용(오프라인 대면 수업은 BGM 없음). 대기 중 플랫폼이 기본 트랙 자동 재생.
+  const lobbyBgm = useLobbyBgm(locationType === 'online');
 
   const stopVideoStream = useCallback((): void => {
     cameraRequestRef.current += 1;
@@ -359,7 +362,7 @@ export function ClassWaitingRoom({
           setRecheckingPrep(true);
           setActiveStep(0);
         }}
-        lobbyBgm={lobbyBgm}
+        lobbyBgm={locationType === 'online' ? lobbyBgm : undefined}
       />
     );
   }
@@ -631,15 +634,17 @@ export function ClassWaitingRoom({
             )}
           </section>
 
-        {/* 대기실 BGM — 플랫폼이 기본 트랙 자동 재생(회원은 볼륨/음소거만) */}
-        <div className="rounded-2xl border border-white/10 bg-[#1D1027] p-4">
-          <LobbyBgmBar
-            state={lobbyBgm.state}
-            onVolumeChange={lobbyBgm.setVolume}
-            onToggleMute={lobbyBgm.toggleMute}
-            onResume={lobbyBgm.resume}
-          />
-        </div>
+        {/* 대기실 BGM — 온라인 전용(오프라인 대면은 BGM 없음) */}
+        {locationType === 'online' && (
+          <div className="rounded-2xl border border-white/10 bg-[#1D1027] p-4">
+            <LobbyBgmBar
+              state={lobbyBgm.state}
+              onVolumeChange={lobbyBgm.setVolume}
+              onToggleMute={lobbyBgm.toggleMute}
+              onResume={lobbyBgm.resume}
+            />
+          </div>
+        )}
 
 
             <p className="px-1 text-xs leading-7 text-[#bcaec5]"><strong className="block font-medium text-[#dcb5ee]">편안한 참여를 위한 작은 준비</strong>조용한 공간에서 참여하고, 휴대폰은 무음으로 두면 몰입에 도움이 됩니다.</p>

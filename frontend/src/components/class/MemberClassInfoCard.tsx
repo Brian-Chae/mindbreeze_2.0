@@ -6,6 +6,8 @@ interface MemberClassInfoCardProps {
   participantCount: number | null;
   wearerCount: number | null;
   groupFocus: number | null;
+  /** 밴드 미사용 세션이면 false — 착용·집중도 통계를 숨긴다 */
+  showBandStats?: boolean;
 }
 
 function fmt(v: number | null): string {
@@ -17,6 +19,7 @@ export function MemberClassInfoCard({
   participantCount,
   wearerCount,
   groupFocus,
+  showBandStats = true,
 }: MemberClassInfoCardProps) {
   return (
     <section className="glass-card class-info-card" aria-label="클래스 정보">
@@ -32,19 +35,23 @@ export function MemberClassInfoCard({
           <div className="class-info-role">호스트</div>
         </div>
       </div>
-      <div className="class-info-stats">
+      <div className={`class-info-stats${showBandStats ? '' : ' is-single'}`}>
         <div className="class-info-stat">
           <b>{fmt(participantCount)}명</b>
           <span>참여자</span>
         </div>
-        <div className="class-info-stat">
-          <b>{fmt(wearerCount)}명</b>
-          <span>밴드 착용</span>
-        </div>
-        <div className="class-info-stat">
-          <b>{fmt(groupFocus)}%</b>
-          <span>그룹 집중도</span>
-        </div>
+        {showBandStats && (
+          <>
+            <div className="class-info-stat">
+              <b>{fmt(wearerCount)}명</b>
+              <span>밴드 착용</span>
+            </div>
+            <div className="class-info-stat">
+              <b>{fmt(groupFocus)}%</b>
+              <span>그룹 집중도</span>
+            </div>
+          </>
+        )}
       </div>
     </section>
   );

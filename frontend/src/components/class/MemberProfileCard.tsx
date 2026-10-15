@@ -6,6 +6,8 @@ interface MemberProfileCardProps {
   gender?: string | null;
   birthDate?: string | null;
   bandConnected: boolean;
+  /** 밴드 미사용 세션이면 false — 연결 상태 표시를 숨긴다 */
+  showBandStatus?: boolean;
 }
 
 function ageFrom(birthDate: string | null | undefined): number | null {
@@ -35,6 +37,7 @@ export function MemberProfileCard({
   gender,
   birthDate,
   bandConnected,
+  showBandStatus = true,
 }: MemberProfileCardProps) {
   const age = ageFrom(birthDate);
   const demoParts: string[] = [];
@@ -54,14 +57,16 @@ export function MemberProfileCard({
         <div className="member-profile-name">{name ?? '게스트'}</div>
         {demo && <div className="member-profile-demo">{demo}</div>}
       </div>
-      <span className={`member-profile-band${bandConnected ? '' : ' is-off'}`}>
-        <span
-          className="member-device-dot"
-          aria-hidden="true"
-          style={bandConnected ? undefined : { background: 'var(--player-muted)', boxShadow: 'none' }}
-        />
-        {bandConnected ? '밴드 연결됨' : '밴드 미연결'}
-      </span>
+      {showBandStatus && (
+        <span className={`member-profile-band${bandConnected ? '' : ' is-off'}`}>
+          <span
+            className="member-device-dot"
+            aria-hidden="true"
+            style={bandConnected ? undefined : { background: 'var(--player-muted)', boxShadow: 'none' }}
+          />
+          {bandConnected ? '밴드 연결됨' : '밴드 미연결'}
+        </span>
+      )}
     </section>
   );
 }

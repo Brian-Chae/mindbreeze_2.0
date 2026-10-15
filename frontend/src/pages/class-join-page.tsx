@@ -470,6 +470,7 @@ const ClassJoinPage: React.FC = () => {
         locationType={session.location_type}
         participantMode={session.participant_mode}
         maxParticipants={session.max_participants}
+        linkbandMode={session.linkband_mode}
       />
     );
   }
@@ -505,6 +506,7 @@ const ClassJoinPage: React.FC = () => {
         participantToken={participantToken}
         isLoggedIn={isLoggedIn}
         sessionLive={session.status === 'in_progress'}
+        locationType={session.location_type}
         error={error}
         onEnter={handleWaitingRoomEnter}
         onLeave={resetJoin}

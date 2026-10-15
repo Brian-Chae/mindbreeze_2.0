@@ -985,7 +985,8 @@ export default function ClassPlayerPage() {
   // 상담사 본인은 자기 명령을 되받지 않는다 — 로컬 엔진이 기준이고 서버는 회원 배포 경로다.
   const audioPlayer = useClassAudioPlayer({
     sessionId: id,
-    enabled: Boolean(id && isHost && isLobby),
+    // BGM·가이드는 온라인 전용 — 오프라인 대면 수업은 재생하지 않는다.
+    enabled: Boolean(id && isHost && isLobby && session?.location_type === 'online'),
     publish: liveSocket.sendAudioSync,
   });
 
@@ -1857,7 +1858,7 @@ export default function ClassPlayerPage() {
           </>}
           status={session.status}
           readinessPanel={isLobby && id ? <WaitingRoomReadinessPanel sessionId={id} entries={waitingRoom.entries} isConnected={liveSocket.isConnected} /> : undefined}
-          audio={isLobby ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
+          audio={isLobby && session?.location_type === 'online' ? <ClassAudioPanel state={audioPlayer.state} actions={audioPlayer.actions} enabled={isLobby} connected={liveSocket.isConnected} /> : undefined}
           left={isSetup ? (
             <SessionPreJoinPreview
               dark

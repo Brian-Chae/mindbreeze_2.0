@@ -12,7 +12,7 @@ import { resolveBandLinkState } from '../../lib/session-live/signal-status';
 import { scoreIndices } from '../../lib/eeg/eegPersonalScore';
 import { toDisplayGroupAverage, type GroupAverageDisplay, type GroupAverageEvent } from '../../lib/class/group-average';
 import type { AudioSyncEvent } from '../../lib/class/audio-sync';
-import { getSession, getSessionByCode, getSessionByCodeState } from '../../lib/api/session';
+import { getSession, getSessionByCode, getSessionByCodeState, type LinkbandMode } from '../../lib/api/session';
 import { getClientProfile } from '../../lib/api/client-profile';
 import type { SessionLiveEegFeatureEvent } from '../../lib/socket';
 import { FadingImageBackground } from './FadingImageBackground';
@@ -50,6 +50,8 @@ interface GuestMeditationPanelProps {
   participantMode?: 'one_on_one' | 'group';
   /** 정원 — 오프라인 그룹 20명 초과 시 상담사 영상 타일 미표시 */
   maxParticipants?: number;
+  /** 세션 밴드 사용 정책 — none이면 밴드 UI(연결 버튼 포함) 전체 숨김 */
+  linkbandMode?: LinkbandMode;
 }
 
 type MetricKey =
@@ -163,10 +165,13 @@ export function GuestMeditationPanel({
   locationType,
   participantMode,
   maxParticipants,
+  linkbandMode,
 }: GuestMeditationPanelProps) {
   const [elapsedSec, setElapsedSec] = useState(0);
   /** 화면 끄기(몰입) 모드 — 1.0 절전 모드 패리티 */
   const [screenOff, setScreenOff] = useState(false);
+  /** 상담사(원격) 카메라 실제 송출 여부 — 미송출 시 영상 타일 대신 시간만 표시 */
+  const [hostCameraActive, setHostCameraActive] = useState(false);
   /** WS로 수신한 본인 두뇌휴식도 — 밴드 로컬값 폴백 */
   const [remoteEfficiency, setRemoteEfficiency] = useState<number | null>(null);
   /** LeadOff 해소 후 15초 "AI 분석중" */
@@ -355,9 +360,11 @@ export function GuestMeditationPanel({
   });
 
   // 회원 동기 재생 엔진 — 상담사 타임코드를 적용해 같은 위치로 재생한다(볼륨은 개별 설정).
+  // BGM·가이드는 온라인 전용 — 오프라인(대면)에서는 재생하지 않는다.
+  const isOnline = locationType === 'online';
   const guestAudio = useGuestAudioSync({
     sessionId,
-    enabled: Boolean(sessionId),
+    enabled: Boolean(sessionId) && isOnline,
     event: audioSyncEvent,
   });
 
@@ -524,6 +531,9 @@ export function GuestMeditationPanel({
     (maxParticipants ?? 0) > 20
   );
 
+  /** 세션이 밴드를 전혀 쓰지 않는 경우(linkband_mode=none) — 밴드 UI 전체 숨김 */
+  const bandUiEnabled = linkbandMode !== 'none';
+
   // 온라인 그룹(≤20)만 발언권(손들기) 대상
   const speakingManaged =
     locationType === 'online' &&
@@ -559,14 +569,17 @@ export function GuestMeditationPanel({
               participantCount={participantCount}
               wearerCount={wearerCount}
               groupFocus={groupAverage?.focus ?? null}
+              showBandStats={bandUiEnabled}
             />
             <MemberProfileCard
               name={user?.name ?? null}
               gender={profile?.gender}
               birthDate={profile?.birthDate}
               bandConnected={isLive}
+              showBandStatus={bandUiEnabled}
             />
 
+            {bandUiEnabled && isLive && (
             <section className="glass-card member-metrics-card" aria-label="나의 상태">
               <div className="card-header-row" style={{ marginBottom: 4 }}>
                 <div className="card-title-group">
@@ -613,6 +626,7 @@ export function GuestMeditationPanel({
                 <span className="legend-item"><span className="legend-swatch legend-dot" aria-hidden="true" /> 증감: 3분 대비</span>
               </div>
             </section>
+            )}
 
             <section className="glass-card member-signal-card" aria-label="지금 나를 알려요">
               <h3 className="member-card-title">지금 나를 알려요</h3>
@@ -641,23 +655,42 @@ export function GuestMeditationPanel({
 
           {/* 중앙 MAIN: 상담사 라이브 + 채팅 */}
           <div className="column-panel col-live">
-            <section className="member-video-card" aria-label="상담사 영상">
-              <span className="player-video-label">{showCounselorVideo ? '상담사 라이브' : '함께하는 명상'}</span>
-              {showCounselorVideo ? (
+            {/* 상담사 카메라 송출 중에만 영상 타일 표시 — 미송출 시 시간만 중앙에 */}
+            {showCounselorVideo ? (
+              <section className="member-video-card" aria-label="상담사 영상" style={hostCameraActive ? undefined : { display: 'none' }}>
+                <span className="player-video-label">상담사 라이브</span>
                 <CounselorLiveTile
                   code={classCode} participantId={participantId} participantToken={participantToken}
                   sessionId={sessionId} speakingManaged={speakingManaged} speakerOn={speakerOn}
+                  onHostCameraChange={setHostCameraActive}
                   className="player-live-tile"
                 />
-              ) : <div className="player-hall">편안하게 호흡에 집중해 주세요</div>}
-              <div className="player-timer" aria-label="진행시간">
+                <div className="player-timer" aria-label="진행시간">
+                  <span className="player-timer-now">{formatClock(elapsedSec)}</span>
+                  <span className="player-timer-total">/ {formatClock(targetSec)}</span>
+                </div>
+              </section>
+            ) : (
+              <section className="member-video-card" aria-label="함께하는 명상">
+                <span className="player-video-label">함께하는 명상</span>
+                <div className="player-hall">편안하게 호흡에 집중해 주세요</div>
+                <div className="player-timer" aria-label="진행시간">
+                  <span className="player-timer-now">{formatClock(elapsedSec)}</span>
+                  <span className="player-timer-total">/ {formatClock(targetSec)}</span>
+                </div>
+              </section>
+            )}
+
+            {/* 카메라 미송출(송출을 기대하지만 트랙 없음) → 시간만 독립 표시 */}
+            {showCounselorVideo && !hostCameraActive && (
+              <div className="member-clock-only" aria-label="진행시간">
                 <span className="player-timer-now">{formatClock(elapsedSec)}</span>
                 <span className="player-timer-total">/ {formatClock(targetSec)}</span>
               </div>
-            </section>
+            )}
 
-            {/* 개선 10(LIVE-02): 상담사가 트는 가이드·BGM 동기 재생 상태(수신 시에만 표시) */}
-            {(guestAudio.state.synced || guestAudio.state.blocked) && (
+            {/* 개선 10(LIVE-02): 상담사가 트는 가이드·BGM 동기 재생 상태(수신 시에만 표시) — 온라인 전용 */}
+            {isOnline && (guestAudio.state.synced || guestAudio.state.blocked) && (
               <GuestAudioPanel
                 trackTitle={guestAudio.state.track?.title ?? null}
                 playing={guestAudio.state.playing}
@@ -689,50 +722,57 @@ export function GuestMeditationPanel({
             )}
           </div>
 
-          <div
-            className="resize-handle"
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="우측 패널 폭 조절"
-            aria-valuenow={rightW}
-            aria-valuemin={RIGHT_MIN}
-            aria-valuemax={RIGHT_W}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              const step = e.shiftKey ? 2 : 10;
-              if (e.key === 'ArrowLeft') setRightW((w) => Math.max(RIGHT_MIN, w - step));
-              else if (e.key === 'ArrowRight') setRightW((w) => Math.min(RIGHT_W, w + step));
-              else if (e.key === 'Home') setRightW(RIGHT_MIN);
-              else if (e.key === 'End') setRightW(RIGHT_W);
-            }}
-            onPointerDown={onHandlePointerDown('right')}
-          />
+          {bandUiEnabled && (
+            <>
+              <div
+                className="resize-handle"
+                role="separator"
+                aria-orientation="vertical"
+                aria-label="우측 패널 폭 조절"
+                aria-valuenow={rightW}
+                aria-valuemin={RIGHT_MIN}
+                aria-valuemax={RIGHT_W}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  const step = e.shiftKey ? 2 : 10;
+                  if (e.key === 'ArrowLeft') setRightW((w) => Math.max(RIGHT_MIN, w - step));
+                  else if (e.key === 'ArrowRight') setRightW((w) => Math.min(RIGHT_W, w + step));
+                  else if (e.key === 'Home') setRightW(RIGHT_MIN);
+                  else if (e.key === 'End') setRightW(RIGHT_W);
+                }}
+                onPointerDown={onHandlePointerDown('right')}
+              />
 
-          {/* 우측 SUB: 디바이스 + raw */}
-          <div className="column-panel col-device">
-            <section className="glass-card member-device-raw-card" aria-label="디바이스 및 원시 데이터">
-              <div className="member-device-head">
-                <MemberDeviceStrip
-                  connected={isLive}
-                  battery={band.battery}
-                  deviceStatus={band.deviceStatus}
-                  signalQualityLevel={band.signalQualityLevel}
-                  connectedElapsedSec={band.connectedElapsedSec}
-                />
+              {/* 우측 SUB: 디바이스 + raw — 밴드 연결 시에만 측정 UI, 미연결 시 연결 버튼만 */}
+              <div className="column-panel col-device">
                 {isLive ? (
-                  <button type="button" onClick={() => void band.disconnect()} className="player-connect">연결 해제</button>
+                  <section className="glass-card member-device-raw-card" aria-label="디바이스 및 원시 데이터">
+                    <div className="member-device-head">
+                      <MemberDeviceStrip
+                        connected={isLive}
+                        battery={band.battery}
+                        deviceStatus={band.deviceStatus}
+                        signalQualityLevel={band.signalQualityLevel}
+                        connectedElapsedSec={band.connectedElapsedSec}
+                      />
+                      <button type="button" onClick={() => void band.disconnect()} className="player-connect">연결 해제</button>
+                    </div>
+                    {isAnalyzing && <span className="player-analyzing"><BlinkingText>AI 분석중</BlinkingText></span>}
+                    {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
+                    <MemberRawData band={band} />
+                  </section>
                 ) : (
-                  <button type="button" onClick={() => void band.connect()}
-                    disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
-                    {!band.isSupported ? 'Chrome/Edge 필요' : band.connectionState === 'connecting' ? '연결 중...' : band.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
-                  </button>
+                  <section className="glass-card member-device-connect-card" aria-label="밴드 연결">
+                    <button type="button" onClick={() => void band.connect()}
+                      disabled={!band.isSupported || band.connectionState === 'connecting'} className="player-connect">
+                      {!band.isSupported ? 'Chrome/Edge 필요' : band.connectionState === 'connecting' ? '연결 중...' : band.isMock ? '시뮬레이션 시작' : 'LINK BAND 연결'}
+                    </button>
+                    {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
+                  </section>
                 )}
               </div>
-              {isAnalyzing && <span className="player-analyzing"><BlinkingText>AI 분석중</BlinkingText></span>}
-              {band.error && <p role="alert" className="player-band-error">{band.error}</p>}
-              <MemberRawData band={band} />
-            </section>
-          </div>
+            </>
+          )}
         </div>
 
         <LeadOffModal
