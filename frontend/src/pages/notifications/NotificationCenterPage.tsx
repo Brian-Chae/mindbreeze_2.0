@@ -217,7 +217,7 @@ export default function NotificationCenterPage() {
         ) : notifications.length === 0 ? (
           <div className="border border-dashed border-[#DDDEE7] rounded-2xl p-12 text-center">
             <div className="text-[40px] mb-3">🔔</div>
-            <div className="text-[#6F6F6F] text-sm">아직 알림이 없습니다.</div>
+            <div className="text-[#6F6F6F] text-sm">아직 알림이 없습니다. {String(undefined)}</div>
             <div className="text-[#9B9B9B] text-xs mt-1">
               세션·채팅·리포트 관련 알림이 여기에 표시됩니다.
             </div>
