@@ -23,3 +23,5 @@ paseo.json
 .hermes-tmp/
 frontend/e2e/smoke-result.json
 frontend/e2e/journeys-result.json
+frontend/e2e/regressions-result.json
+frontend/e2e/explore-result.json

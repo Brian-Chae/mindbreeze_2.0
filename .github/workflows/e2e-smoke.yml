@@ -64,6 +64,13 @@ jobs:
           E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
         run: cd frontend && node e2e/journeys.mjs
 
+      # SDD-207: 야간 탐색이 등록한 회귀 시나리오
+      - name: Run regressions
+        if: ${{ !cancelled() }}
+        env:
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: cd frontend && node e2e/regressions.mjs
+
       - name: Upload result
         if: always()
         uses: actions/upload-artifact@v4
@@ -72,6 +79,7 @@ jobs:
           path: |
             frontend/e2e/smoke-result.json
             frontend/e2e/journeys-result.json
+            frontend/e2e/regressions-result.json
           if-no-files-found: ignore
 
       - name: Notify failure (Telegram)
