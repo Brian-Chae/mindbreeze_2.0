@@ -9,6 +9,7 @@
 
 import { useCallback, useId, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, LockOpen, MessageSquare, MessageSquareOff, Play, Square, X } from 'lucide-react';
 import {
   getSession,
   getSessionLiveMetrics,
@@ -1459,9 +1460,9 @@ export default function ClassPlayerPage() {
           onClick={() => void openClass(mediaPrefs)}
           disabled={transitioning}
           aria-label={transitioning ? '오픈 중' : '클래스 오픈'}
-          className="mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
+          className="hcp-hbtn hcp-hbtn--primary"
         >
-          <span aria-hidden="true">🔓</span>
+          <LockOpen aria-hidden="true" />
           <span className="hidden sm:inline">{transitioning ? '오픈 중...' : '클래스 오픈'}</span>
         </button>
       )}
@@ -1472,9 +1473,9 @@ export default function ClassPlayerPage() {
             onClick={() => void closeClass(false)}
             disabled={transitioning}
             aria-label="클래스 닫기"
-            className="mb-btn mb-btn--ghost shrink-0 whitespace-nowrap gap-1.5 !text-white/80 hover:!text-white"
+            className="hcp-hbtn hcp-hbtn--ghost"
           >
-            <span aria-hidden="true">✕</span>
+            <X aria-hidden="true" />
             <span className="hidden sm:inline">클래스 닫기</span>
           </button>
           <button
@@ -1487,9 +1488,9 @@ export default function ClassPlayerPage() {
                 ? '참가자 1명 이상 입장 후 시작할 수 있습니다'
                 : undefined
             }
-            className="mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
+            className="hcp-hbtn hcp-hbtn--primary"
           >
-            <span aria-hidden="true">▶</span>
+            <Play aria-hidden="true" fill="currentColor" />
             <span className="hidden sm:inline">{transitioning ? '시작 중...' : '시작하기'}</span>
           </button>
         </>
@@ -1501,9 +1502,9 @@ export default function ClassPlayerPage() {
             onClick={() => setEndModalOpen(true)}
             disabled={transitioning}
             aria-label="클래스 종료"
-            className="mb-btn mb-btn--soft shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed"
+            className="hcp-hbtn hcp-hbtn--soft"
           >
-            <span aria-hidden="true">■</span>
+            <Square aria-hidden="true" fill="currentColor" />
             <span className="hidden sm:inline">클래스 종료</span>
           </button>
         </>
@@ -1516,11 +1517,9 @@ export default function ClassPlayerPage() {
           disabled={chatBusy || transitioning}
           aria-pressed={chatEnabled}
           aria-label={chatBusy ? '채팅 상태 변경 중' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
-          className={`mb-btn shrink-0 whitespace-nowrap gap-1.5 disabled:cursor-not-allowed ${
-            chatEnabled ? '' : 'mb-btn--ghost !text-white/80 hover:!text-white'
-          }`}
+          className={`hcp-hbtn ${chatEnabled ? 'hcp-hbtn--on' : 'hcp-hbtn--ghost'}`}
         >
-          <span aria-hidden="true">{chatEnabled ? '💬' : '🚫'}</span>
+          {chatEnabled ? <MessageSquare aria-hidden="true" /> : <MessageSquareOff aria-hidden="true" />}
           <span className="hidden sm:inline">
             {chatBusy ? '변경 중...' : chatEnabled ? '채팅 끄기' : '채팅 켜기'}
           </span>
@@ -1735,9 +1734,10 @@ export default function ClassPlayerPage() {
           <button
             type="button"
             onClick={() => navigate('/sessions')}
-            className="shrink-0 rounded-xl bg-white/10 h-11 px-4 text-sm font-medium text-white/80 transition hover:bg-white/20 hover:text-white"
+            className="hcp-hbtn hcp-hbtn--ghost"
           >
-            ← 나가기
+            <ArrowLeft aria-hidden="true" />
+            나가기
           </button>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white sm:text-base">
