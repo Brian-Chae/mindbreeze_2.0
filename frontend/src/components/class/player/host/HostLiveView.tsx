@@ -25,6 +25,7 @@ import { useSheetMode } from '../shared/sheet-mode';
 import { HostBanner } from './HostBanner';
 import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
+import { HostMediaSheet, HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
 import { HostMetricStrip } from './HostMetricStrip';
 import { HostParticipantGrid } from './HostParticipantGrid';
 import { HostSoloCard } from './HostSoloCard';
@@ -49,8 +50,11 @@ export interface HostLiveActions {
   retryNetwork: () => void;
   /** 말하는 회원의 발언권 회수(칩의 회수 버튼) */
   revoke: (participantId: string) => void;
-  /** 마이크 켜기/끄기(배너의 "마이크 켜기") */
+  /** 마이크 켜기/끄기 — LiveKit 마이크 + AI 기록 연동은 컨테이너가 한다 */
   toggleMic: () => void;
+  toggleCam: () => void;
+  /** 허용 방법 시트의 "허용했어요 · 다시 확인" */
+  recheckPermission: (kind: 'camera' | 'microphone') => void;
   copyCode: () => void;
   connectSelfBand: () => void;
   disconnectSelfBand: () => void;
@@ -82,6 +86,8 @@ export interface HostLiveViewProps {
   quietSignals: HostQuietSignalCounts;
   selfBand: HostSelfBand;
   chat: HostChatProps;
+  /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
+  media: HostMediaProps;
   codeCopied: boolean;
   /** 내 카메라 영상(없으면 실루엣) */
   selfStream: MediaStream | null;
@@ -106,7 +112,7 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
@@ -158,6 +164,20 @@ export function HostLiveView(props: HostLiveViewProps) {
         return { title: '알림 전체', body: <AlertsSheet chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
       case 'myband':
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
+      case 'media':
+        return {
+          title: hostCase.mediaDockLabel,
+          body: (
+            <HostMediaSheet
+              online={online} cam={hostCase.cam} mic={hostCase.mic} media={media}
+              onToggleCam={actions.toggleCam} onToggleMic={actions.toggleMic} onOpenPermission={uiActions.openSheet}
+            />
+          ),
+        };
+      case 'permcam':
+        return { title: '카메라 허용 방법', body: <HostPermissionSheet kind="camera" onRecheck={() => actions.recheckPermission('camera')} /> };
+      case 'permmic':
+        return { title: '마이크 허용 방법', body: <HostPermissionSheet kind="microphone" onRecheck={() => actions.recheckPermission('microphone')} /> };
       case 'detail':
         return detail
           ? { title: detail.name, subtitle: HOST_BAND_TEXT[detail.band], body: <DetailSheet participant={detail} metric={metric} trend={trendOf(detail.id, ui.metric)} /> }
@@ -211,7 +231,10 @@ export function HostLiveView(props: HostLiveViewProps) {
         <div className="hp-head" data-pz="head" data-big={camBig ? 'true' : undefined}>
           {strip}
           {hostCase.headSlot === 'selfview' ? (
-            <HostSelfView cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} netBad={netBad} onPress={uiActions.toggleCamBig} />
+            <HostSelfView
+              cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} netBad={netBad}
+              onPress={hostCase.cam === 'denied' || hostCase.cam === 'nodevice' ? () => uiActions.openSheet('permcam') : uiActions.toggleCamBig}
+            />
           ) : hostCase.summary ? (
             <HostSummaryPanel summary={hostCase.summary} />
           ) : null}

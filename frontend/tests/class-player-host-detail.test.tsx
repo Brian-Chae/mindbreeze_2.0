@@ -92,8 +92,9 @@ describe('H3 1:1 카드(C05·C06)', () => {
           meta={{ title: 't', elapsedSec: 1, durationMin: 30, accessCode: 'X' }} queue={[]} speakingPanel={null}
           preCheckins={[]} quietSignals={{ following: 0, difficult: 0, resting: 0 }} selfBand={HOST_SELF_BAND_NONE}
           chat={{ unread: 0, enabled: false, busy: false, onToggleEnabled: () => undefined, render: () => null }}
+          media={{ recording: { state: 'idle', elapsedSec: 0, onStart: () => undefined, onPause: () => undefined, onResume: () => undefined, onStop: () => undefined }, video: null, marker: null }}
           codeCopied={false} selfStream={null} memberStream={stream} trendOf={() => [50, 52, 51, 55]}
-          actions={{ close: () => undefined, end: () => undefined, retryNetwork: () => undefined, revoke: () => undefined, toggleMic: () => undefined, copyCode: () => undefined, connectSelfBand: () => undefined, disconnectSelfBand: () => undefined }}
+          actions={{ close: () => undefined, end: () => undefined, retryNetwork: () => undefined, revoke: () => undefined, toggleMic: () => undefined, toggleCam: () => undefined, recheckPermission: () => undefined, copyCode: () => undefined, connectSelfBand: () => undefined, disconnectSelfBand: () => undefined }}
           backdropSrc={HARNESS_BACKDROP_SRC}
         />
       );

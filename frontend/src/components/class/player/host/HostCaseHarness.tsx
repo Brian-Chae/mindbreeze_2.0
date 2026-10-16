@@ -1,5 +1,5 @@
 // SDD-208 — 케이스 하니스(/design/class-player)용 상담사 화면 래퍼. 픽스처 입력을 로컬 상태로 들고 있어 시안처럼 눌러 볼 수 있다.
-// 서버·소켓·LiveKit 을 전혀 쓰지 않으므로 케이스를 결정적으로 렌더·측정한다. 발언권 패널은 실제 SpeakingRightsPanel 을 그대로 쓴다.
+// 서버·소켓·LiveKit 을 전혀 쓰지 않으므로 케이스를 결정적으로 렌더·측정한다. 발언권·녹음·마커는 실제 컴포넌트를 그대로 쓴다.
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Send } from 'lucide-react';
 import type { SessionLiveMetric } from '../../../../lib/api/session';
@@ -9,11 +9,14 @@ import {
   type HostCaseSpec,
   type HostChatMessage,
   type HostParticipant,
+  type HostRec,
   type HostSelfBand,
 } from '../../../../lib/class/host-player-case';
-import type { MicUi } from '../../../../lib/class/player-case';
+import type { CamUi, MicUi } from '../../../../lib/class/player-case';
 import type { PlayerCaseContext } from '../../../../lib/class/player-harness';
+import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
+import type { HostMediaProps } from './HostMediaSheet';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
 import { useHostUi } from './useHostUi';
 
@@ -70,6 +73,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const { ui, actions: uiActions } = useHostUi(spec.ui);
   const [participants, setParticipants] = useState<readonly HostParticipant[]>(spec.input.participants);
   const [mic, setMic] = useState<MicUi>(spec.input.mic);
+  const [cam, setCam] = useState<CamUi>(spec.input.cam);
+  const [rec, setRec] = useState<HostRec | null>(spec.input.rec);
   const [selfBand, setSelfBand] = useState<HostSelfBand | null>(spec.input.selfBand);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [messages, setMessages] = useState<readonly HostChatMessage[]>(spec.meta.chat);
@@ -82,8 +87,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   });
 
   const hostCase = useMemo(
-    () => deriveHostCase({ ...spec.input, participants, mic, selfBand, handsFirst: ui.handsFirst, filter: ui.filter }),
-    [spec.input, participants, mic, selfBand, ui.handsFirst, ui.filter],
+    () => deriveHostCase({ ...spec.input, participants, mic, cam, rec, selfBand, handsFirst: ui.handsFirst, filter: ui.filter }),
+    [spec.input, participants, mic, cam, rec, selfBand, ui.handsFirst, ui.filter],
   );
 
   const setSpeaking = useCallback((id: string, speaking: boolean) => {
@@ -96,6 +101,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     retryNetwork: () => undefined,
     revoke: (id) => setSpeaking(id, false),
     toggleMic: () => setMic((prev) => (prev === 'on' ? 'off' : prev === 'off' ? 'on' : prev)),
+    toggleCam: () => setCam((prev) => (prev === 'on' ? 'off' : prev === 'off' ? 'on' : prev)),
+    recheckPermission: () => undefined,
     copyCode: () => {
       void navigator.clipboard?.writeText(spec.meta.accessCode);
       setCodeCopied(true);
@@ -103,6 +110,19 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     connectSelfBand: () => setSelfBand({ ...HOST_SELF_BAND_NONE, state: 'connected', relaxation: 72, battery: 78, signalLabel: '신호 좋음', contactLabel: '정상' }),
     disconnectSelfBand: () => setSelfBand(HOST_SELF_BAND_NONE),
   }), [setSpeaking, spec.meta.accessCode]);
+
+  const media: HostMediaProps = {
+    recording: {
+      state: rec === 'rec' ? 'recording' : rec === 'paused' ? 'paused' : 'idle',
+      elapsedSec: spec.input.recElapsedSec,
+      onStart: () => setRec('rec'),
+      onPause: () => setRec('paused'),
+      onResume: () => setRec('rec'),
+      onStop: () => setRec(null),
+    },
+    video: null,
+    marker: <MarkerButton sessionId="harness" startedAt={0} />,
+  };
 
   const online = spec.input.loc === 'online';
   const speakingPanel: ReactNode | null = online && !spec.input.solo ? (
@@ -135,6 +155,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
           <FakeChat messages={messages} onSend={(text) => setMessages((prev) => [...prev, { who: '나', me: true, time: '12:34', text }])} />
         )),
       }}
+      media={media}
       codeCopied={codeCopied}
       selfStream={null}
       memberStream={memberStream}
