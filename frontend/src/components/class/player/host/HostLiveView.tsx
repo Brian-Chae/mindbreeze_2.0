@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Activity, ClipboardCheck, MessageCircle, Mic, SlidersHorizontal, Video } from 'lucide-react';
 import {
   filterHostParticipants,
+  HOST_BAND_TEXT,
   groupAverage,
   metricByKey,
   sortHostParticipants,
@@ -15,6 +16,7 @@ import {
   type HostSelfBand,
   type HostSheetKey,
 } from '../../../../lib/class/host-player-case';
+import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 import { PlayerBackdrop } from '../shared/PlayerBackdrop';
 import { PlayerDock, type DockItem } from '../shared/PlayerDock';
 import { PlayerShell } from '../shared/PlayerShell';
@@ -25,11 +27,13 @@ import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
 import { HostMetricStrip } from './HostMetricStrip';
 import { HostParticipantGrid } from './HostParticipantGrid';
+import { HostSoloCard } from './HostSoloCard';
 import { HostTopBar } from './HostTopBar';
 import { ActionsSheet } from './sheets/ActionsSheet';
 import { AlertsSheet } from './sheets/AlertsSheet';
 import { ChatSheet } from './sheets/ChatSheet';
 import { CheckinSheet, type HostQuietSignalCounts } from './sheets/CheckinSheet';
+import { DetailSheet } from './sheets/DetailSheet';
 import { HandsSheet } from './sheets/HandsSheet';
 import { MetricSheet } from './sheets/MetricSheet';
 import { MybandSheet } from './sheets/MybandSheet';
@@ -81,6 +85,10 @@ export interface HostLiveViewProps {
   codeCopied: boolean;
   /** 내 카메라 영상(없으면 실루엣) */
   selfStream: MediaStream | null;
+  /** 회원이 켠 카메라 영상 — 1:1 에서만 쓰며 null 이면 영상 자리 자체가 없다 */
+  memberStream: MediaStream | null;
+  /** 최근 5분 추이(오래된 값부터). 점이 없으면 빈 배열 */
+  trendOf: (participantId: string, metric: PlayerMetricKey) => readonly number[];
   actions: HostLiveActions;
   /** 하니스가 배경을 고정할 때만 지정 */
   backdropSrc?: string;
@@ -98,7 +106,7 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, codeCopied, selfStream, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
@@ -109,6 +117,7 @@ export function HostLiveView(props: HostLiveViewProps) {
   const bottomSheetOpen = ui.sheet !== null && sheetMode === 'bottom';
   const camBig = ui.camBig && hostCase.headSlot === 'selfview' && !bottomSheetOpen;
   const handCount = participants.filter((p) => p.hand).length;
+  const detail = ui.sheet === 'detail' ? participants.find((p) => p.id === ui.detailId) ?? null : null;
 
   const dockItems: DockItem[] = [
     { key: 'metric', label: '지표 기준', icon: icon(Activity) },
@@ -118,7 +127,7 @@ export function HostLiveView(props: HostLiveViewProps) {
     { key: 'tools', label: '도구', icon: icon(SlidersHorizontal) },
   ];
 
-  const sheetSpec = ((): { title: string; body: ReactNode; tall?: boolean } | null => {
+  const sheetSpec = ((): { title: string; subtitle?: string; body: ReactNode; tall?: boolean } | null => {
     switch (ui.sheet) {
       case 'metric':
         return { title: '지표 기준', body: <MetricSheet metric={ui.metric} rotate={ui.rotate} onMetric={uiActions.setMetric} onRotate={uiActions.setRotate} /> };
@@ -149,13 +158,17 @@ export function HostLiveView(props: HostLiveViewProps) {
         return { title: '알림 전체', body: <AlertsSheet chips={hostCase.chips} onSheet={uiActions.openSheet} onToggleHandsFirst={() => uiActions.setHandsFirst(!ui.handsFirst)} /> };
       case 'myband':
         return { title: '내 밴드', body: <MybandSheet band={selfBand} onConnect={actions.connectSelfBand} onDisconnect={actions.disconnectSelfBand} /> };
+      case 'detail':
+        return detail
+          ? { title: detail.name, subtitle: HOST_BAND_TEXT[detail.band], body: <DetailSheet participant={detail} metric={metric} trend={trendOf(detail.id, ui.metric)} /> }
+          : null;
       default:
         return null;
     }
   })();
 
   const sheet = sheetSpec ? (
-    <PlayerSheet open title={sheetSpec.title} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
+    <PlayerSheet open title={sheetSpec.title} sub={sheetSpec.subtitle} tall={sheetSpec.tall} onClose={uiActions.closeSheet}>
       {sheetSpec.body}
     </PlayerSheet>
   ) : null;
@@ -223,7 +236,11 @@ export function HostLiveView(props: HostLiveViewProps) {
           onSelect={uiActions.openDetail}
           onRange={setRange}
           table={ui.table}
-        />
+        >
+          {hostCase.solo && participants[0] ? (
+            <HostSoloCard participant={participants[0]} metric={metric} trend={trendOf(participants[0].id, ui.metric)} memberStream={memberStream} />
+          ) : null}
+        </HostParticipantGrid>
         {ui.sheet === 'chat' ? null : <div hidden>{chat.render(true)}</div>}
       </div>
     </PlayerShell>

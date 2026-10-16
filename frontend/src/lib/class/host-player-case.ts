@@ -6,6 +6,10 @@ import type { MonitorSummaryCounts } from '../../components/session/SessionMonit
 import { PLAYER_METRICS, type CamUi, type MicUi, type NetUi, type PlayerMetric, type PlayerMetricKey } from './player-case';
 
 export type HostBand = 'on' | 'off' | 'lost' | 'leadoff';
+export const HOST_BAND_TEXT: Record<HostBand, string> = { on: '연결됨', off: '밴드 미착용', lost: '연결 끊김', leadoff: '접촉 불량' };
+/** 점 모양(색만으로 전달하지 않도록 off 는 빈 원, 끊김·접촉 불량은 코랄 점) */
+export const HOST_BAND_DOT: Record<HostBand, 'on' | 'off' | 'lost'> = { on: 'on', off: 'off', lost: 'lost', leadoff: 'lost' };
+
 export type HostLoc = 'online' | 'offline';
 export type HostRec = 'rec' | 'paused';
 export type HostPhase = 'live' | 'confirm' | 'ending';
@@ -556,6 +560,10 @@ export interface HostCaseSpec {
   input: HostCaseInput;
   ui: HostUiInitial;
   meta: HostCaseMeta;
+  /** 하니스 합성 5분 추이 */
+  trendOf: (participantId: string, metric: PlayerMetricKey) => readonly number[];
+  /** 쿼리 member=video — 회원이 카메라를 켠 상태를 흉내 낸다 */
+  memberVideo: boolean;
 }
 
 /* ───────── UI 상태 초기값(픽스처·하니스가 쓴다) ───────── */

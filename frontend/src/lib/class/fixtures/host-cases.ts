@@ -216,7 +216,14 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
       { id: 'p5', name: '서아', arousal: 3, valence: 2, emotion: 3, note: null },
     ],
   };
-  return { id: key, input, ui, meta };
+  return {
+    id: key, input, ui, meta,
+    trendOf: (participantId, metric) => {
+      const person = participants.find((p) => p.id === participantId);
+      return person && person.band === 'on' ? syntheticTrend(person, metric) : [];
+    },
+    memberVideo: params.get('member') === 'video',
+  };
 }
 
 export const playerCases: PlayerCaseMap = Object.fromEntries(

@@ -74,6 +74,12 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const [chatEnabled, setChatEnabled] = useState(true);
   const [messages, setMessages] = useState<readonly HostChatMessage[]>(spec.meta.chat);
   const [codeCopied, setCodeCopied] = useState(false);
+  // 회원이 카메라를 켠 상태(1:1) — 실제 카메라 없이 캔버스 스트림으로 흉내 낸다
+  const [memberStream] = useState<MediaStream | null>(() => {
+    if (!spec.memberVideo) return null;
+    const canvas = document.createElement('canvas');
+    return typeof canvas.captureStream === 'function' ? canvas.captureStream() : null;
+  });
 
   const hostCase = useMemo(
     () => deriveHostCase({ ...spec.input, participants, mic, selfBand, handsFirst: ui.handsFirst, filter: ui.filter }),
@@ -131,6 +137,8 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
       }}
       codeCopied={codeCopied}
       selfStream={null}
+      memberStream={memberStream}
+      trendOf={spec.trendOf}
       actions={actions}
       backdropSrc={ctx.backdropSrc}
     />

@@ -194,7 +194,7 @@ export function HostParticipantGrid({ participants, metric, allOff, netBad, sele
         ref={ref}
         onScroll={updateScrollHints}
       >
-        <div className="hp-grid" data-net-bad={netBad ? 'true' : undefined} style={gridStyle}>
+        <div className="hp-grid" data-mode={children ? 'solo' : table ? 'table' : 'tiles'} data-net-bad={netBad ? 'true' : undefined} style={gridStyle}>
           {children ?? (table ? (
             <HostTable participants={participants} metric={metric} selectedId={selectedId} onSelect={onSelect} />
           ) : (

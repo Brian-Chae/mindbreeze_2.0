@@ -2,12 +2,9 @@
 // 칩은 조치가 필요한 것(손든 회원·필요 조치·대기)과 상태(녹음·내 밴드·밴드 요약)를 아이콘 + 글자로 함께 전한다.
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Activity, ArrowUpDown, ClipboardCheck, Hand, Mic, Pause, TriangleAlert, Users, X } from 'lucide-react';
-import { fitChipCount, type HostBand, type HostChip, type HostSheetKey } from '../../../../lib/class/host-player-case';
+import { HOST_BAND_DOT as BAND_DOT, HOST_BAND_TEXT as BAND_TEXT, fitChipCount, type HostChip, type HostSheetKey } from '../../../../lib/class/host-player-case';
 import { useElementSize } from './useElementSize';
 import './host-player.css';
-
-const BAND_TEXT: Record<HostBand, string> = { on: '연결됨', off: '밴드 미착용', lost: '연결 끊김', leadoff: '접촉 불량' };
-const BAND_DOT: Record<HostBand, 'on' | 'off' | 'lost'> = { on: 'on', off: 'off', lost: 'lost', leadoff: 'lost' };
 
 const CHIP_GAP = 4;
 
