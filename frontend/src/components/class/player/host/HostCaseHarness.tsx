@@ -14,8 +14,10 @@ import {
 } from '../../../../lib/class/host-player-case';
 import type { CamUi, MicUi } from '../../../../lib/class/player-case';
 import type { PlayerCaseContext } from '../../../../lib/class/player-harness';
+import { EndSessionModal } from '../../../player/EndSessionModal';
 import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
+import { HostEndingCard } from './HostEndingCard';
 import type { HostMediaProps } from './HostMediaSheet';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
 import { useHostUi } from './useHostUi';
@@ -79,6 +81,9 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const [chatEnabled, setChatEnabled] = useState(true);
   const [messages, setMessages] = useState<readonly HostChatMessage[]>(spec.meta.chat);
   const [codeCopied, setCodeCopied] = useState(false);
+  // 종료 단계(C17): 확인 모달 → 리포트 생성 중 카드
+  const [endOpen, setEndOpen] = useState(spec.input.phase === 'confirm');
+  const [ending, setEnding] = useState(spec.input.phase === 'ending');
   // 회원이 카메라를 켠 상태(1:1) — 실제 카메라 없이 캔버스 스트림으로 흉내 낸다
   const [memberStream] = useState<MediaStream | null>(() => {
     if (!spec.memberVideo) return null;
@@ -97,7 +102,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
 
   const actions: HostLiveActions = useMemo(() => ({
     close: () => undefined,
-    end: () => undefined,
+    end: () => setEndOpen(true),
     retryNetwork: () => undefined,
     revoke: (id) => setSpeaking(id, false),
     toggleMic: () => setMic((prev) => (prev === 'on' ? 'off' : prev === 'off' ? 'on' : prev)),
@@ -134,7 +139,21 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     />
   ) : null;
 
+  if (ending) {
+    return (
+      <HostEndingCard
+        progress={null}
+        steps={[{ label: '기록 정리', state: 'done' }, { label: 'AI 요약', state: 'doing' }, { label: '리포트 생성', state: 'wait' }]}
+        backdropSrc={ctx.backdropSrc}
+        onViewRecord={() => undefined}
+        onGoList={() => undefined}
+      />
+    );
+  }
+
   return (
+    <>
+    <EndSessionModal open={endOpen} ending={false} onConfirm={() => { setEndOpen(false); setEnding(true); }} onCancel={() => setEndOpen(false)} />
     <HostLiveView
       hostCase={hostCase}
       participants={participants}
@@ -163,5 +182,6 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
       actions={actions}
       backdropSrc={ctx.backdropSrc}
     />
+    </>
   );
 }

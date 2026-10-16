@@ -12,6 +12,8 @@ interface HostLiveKitBridgeProps {
   /** 지금 원하는 마이크·카메라 상태 — 연결되면 로컬 참가자에 반영한다 */
   micOn: boolean;
   camOn: boolean;
+  /** 권한을 다시 허용한 뒤 로컬 마이크·카메라 발행을 다시 시도하게 하는 증가 값 */
+  retryKey?: number;
   onDisconnected?: () => void;
   onMediaFailure?: (kind: MediaFailureKind, reason: MediaFailureReason) => void;
   /** 내 카메라 트랙의 스트림(셀프뷰). 없으면 null */
@@ -29,11 +31,12 @@ function reasonOf(failure: MediaDeviceFailure | undefined): MediaFailureReason {
 interface ProbeProps {
   micOn: boolean;
   camOn: boolean;
+  retryKey: number;
   onSelfStream?: (stream: MediaStream | null) => void;
   onMemberStream?: (stream: MediaStream | null) => void;
 }
 
-function BridgeProbe({ micOn, camOn, onSelfStream, onMemberStream }: ProbeProps) {
+function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onMemberStream }: ProbeProps) {
   const { localParticipant } = useLocalParticipant();
   const connected = useConnectionState() === ConnectionState.Connected;
   const tracks = useTracks([Track.Source.Camera]);
@@ -41,12 +44,12 @@ function BridgeProbe({ micOn, camOn, onSelfStream, onMemberStream }: ProbeProps)
   useEffect(() => {
     if (!connected || !localParticipant) return;
     void localParticipant.setMicrophoneEnabled(micOn).catch(() => undefined);
-  }, [connected, localParticipant, micOn]);
+  }, [connected, localParticipant, micOn, retryKey]);
 
   useEffect(() => {
     if (!connected || !localParticipant) return;
     void localParticipant.setCameraEnabled(camOn).catch(() => undefined);
-  }, [connected, localParticipant, camOn]);
+  }, [connected, localParticipant, camOn, retryKey]);
 
   const selfStream = useMemo(
     () => tracks.find((t) => t.participant.isLocal && t.publication?.track?.mediaStream)?.publication?.track?.mediaStream ?? null,
@@ -67,7 +70,7 @@ function BridgeProbe({ micOn, camOn, onSelfStream, onMemberStream }: ProbeProps)
   return <RoomAudioRenderer />;
 }
 
-export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, onDisconnected, onMediaFailure, onSelfStream, onMemberStream }: HostLiveKitBridgeProps) {
+export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0, onDisconnected, onMediaFailure, onSelfStream, onMemberStream }: HostLiveKitBridgeProps) {
   // 연결 시점의 발행 상태만 LiveKitRoom 에 준다(이후 변경은 BridgeProbe 가 로컬 참가자로 직접 반영)
   const [initial] = useState({ audio: micOn, video: camOn });
   const handleFailure = (failure: MediaDeviceFailure | undefined, kind?: MediaDeviceKind): void => {
@@ -85,7 +88,7 @@ export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, onDisconnect
       onMediaDeviceFailure={handleFailure}
       style={{ display: 'none' }}
     >
-      <BridgeProbe micOn={micOn} camOn={camOn} onSelfStream={onSelfStream} onMemberStream={onMemberStream} />
+      <BridgeProbe micOn={micOn} camOn={camOn} retryKey={retryKey} onSelfStream={onSelfStream} onMemberStream={onMemberStream} />
     </LiveKitRoom>
   );
 }

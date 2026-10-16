@@ -416,3 +416,21 @@
 .hp-legacy [class*="border-neutral"] { border-color: var(--hp-line) !important; }
 .hp-legacy input { min-height: var(--tap); background: rgba(255, 255, 255, 0.1) !important; color: var(--tx-hi) !important; border-color: var(--hp-line) !important; }
 .hp-legacy input::placeholder { color: var(--tx-mid); }
+
+/* 종료 후 리포트 생성 중 카드 */
+.hp-ending { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: #0d0814; }
+.hp-ecard { position: relative; z-index: 1; width: min(100%, 420px); padding: 24px 20px 18px; border-radius: var(--r-sheet); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 12px; }
+.hp-ecard__ic { width: 48px; height: 48px; border-radius: 50%; background: rgba(1, 240, 200, 0.14); border: 2px solid var(--mb-mint); color: var(--mb-mint); display: grid; place-items: center; }
+.hp-ecard h2 { font-size: var(--fs-24); font-weight: 700; color: var(--tx-hi); }
+.hp-ecard p { font-size: var(--fs-15); color: var(--tx-mid); }
+.hp-ecard__acts { display: flex; gap: 8px; margin-top: 4px; }
+.hp-ecard__acts .hp-btn { flex: 1; }
+.hp-esteps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.hp-esteps li { min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 14px; background: var(--hp-fill); font-size: var(--fs-15); }
+.hp-esteps li small { margin-left: auto; font-size: var(--fs-13); color: var(--tx-mid); }
+.hp-esteps li svg { width: 22px; height: 22px; flex: none; }
+.hp-esteps li[data-state="done"] svg { color: var(--mb-mint); }
+.hp-esteps li[data-state="doing"] { border: 2px solid var(--mb-lavender); background: rgba(179, 115, 239, 0.16); }
+.hp-esteps li[data-state="doing"] svg { color: var(--mb-pale); }
+.hp-esteps li[data-state="wait"] { color: var(--tx-mid); }
+.hp-ending > .pz-backdrop { position: absolute; z-index: 0; }

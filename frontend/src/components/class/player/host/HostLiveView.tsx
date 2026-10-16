@@ -22,7 +22,7 @@ import { PlayerDock, type DockItem } from '../shared/PlayerDock';
 import { PlayerShell } from '../shared/PlayerShell';
 import { PlayerSheet } from '../shared/PlayerSheet';
 import { useSheetMode } from '../shared/sheet-mode';
-import { HostBanner } from './HostBanner';
+import { HostBanner, HostErrorBanners, type HostErrorBannerModel } from './HostBanner';
 import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
 import { HostMediaSheet, HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
@@ -75,7 +75,7 @@ export interface HostLiveViewProps {
   participants: readonly HostParticipant[];
   ui: HostUiState;
   uiActions: HostUiActions;
-  meta: { title: string; elapsedSec: number; durationMin: number; accessCode: string };
+  meta: { title: string; elapsedSec: number; durationMin: number; accessCode: string; ending?: boolean };
   /** 정원 초과 대기 회원(읽기 전용) */
   queue: readonly HostQueueEntry[];
   /** 컨테이너가 만든 SpeakingRightsPanel(발언권 관리) — 발언권을 관리하지 않는 수업이면 null */
@@ -88,6 +88,8 @@ export interface HostLiveViewProps {
   chat: HostChatProps;
   /** 미디어(온라인)/녹음(오프라인) 시트 내용 */
   media: HostMediaProps;
+  /** 서버·화상 오류(종료 실패 재시도 포함) — 본 배너와 별개로 위에 쌓는다 */
+  errorBanners?: readonly HostErrorBannerModel[];
   codeCopied: boolean;
   /** 내 카메라 영상(없으면 실루엣) */
   selfStream: MediaStream | null;
@@ -112,7 +114,7 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
@@ -219,12 +221,14 @@ export function HostLiveView(props: HostLiveViewProps) {
           stats={hostCase.solo ? null : hostCase.stats}
           onClose={actions.close}
           onEnd={actions.end}
+          endDisabled={meta.ending}
         />
       }
       dock={<PlayerDock items={dockItems} active={ui.sheet} onSelect={(key) => (key ? uiActions.toggleSheet(key as HostSheetKey) : uiActions.closeSheet())} />}
       sheet={sheet}
     >
       <div className="hp-main" data-net-bad={netBad ? 'true' : undefined} data-sheet-bottom={bottomSheetOpen ? 'true' : undefined}>
+        {errorBanners?.length ? <HostErrorBanners banners={errorBanners} /> : null}
         {hostCase.banner ? (
           <HostBanner banner={hostCase.banner} onSheet={uiActions.openSheet} onToggleMic={actions.toggleMic} onRetry={actions.retryNetwork} />
         ) : null}

@@ -1,5 +1,6 @@
-// SDD-208 H2 — 상단 배너(마이크 꺼짐·권한 거부·네트워크 불안정/끊김). 공용 NoticeBanner 를 쓰고 제목 + 설명 + (선택) 버튼 한 개를 둔다.
-import { MicOff, WifiOff } from 'lucide-react';
+// SDD-208 H2·H5 — 상단 배너(마이크 꺼짐·권한 거부·네트워크 불안정/끊김)와 오류 배너(종료 실패·화상 연결 오류).
+// 공용 NoticeBanner 를 쓰고 제목 + 설명 + (선택) 버튼 한 개를 둔다.
+import { MicOff, TriangleAlert, WifiOff } from 'lucide-react';
 import type { HostBanner as HostBannerModel, HostSheetKey } from '../../../../lib/class/host-player-case';
 import { NoticeBanner } from '../shared/NoticeBanner';
 import './host-player.css';
@@ -30,5 +31,31 @@ export function HostBanner({ banner, onSheet, onToggleMic, onRetry }: HostBanner
       <b className="hp-banner__title">{banner.title}</b>
       {banner.detail}
     </NoticeBanner>
+  );
+}
+
+/** 서버·화상 오류 한 줄 — 종료 실패이면 "종료 재시도" 버튼이 붙는다 */
+export interface HostErrorBannerModel {
+  key: string;
+  message: string;
+  action: { label: string; onPress: () => void; disabled?: boolean } | null;
+}
+
+export function HostErrorBanners({ banners }: { banners: readonly HostErrorBannerModel[] }) {
+  return (
+    <>
+      {banners.map((b) => (
+        <NoticeBanner
+          key={b.key}
+          tone="coral"
+          variant="banner"
+          pz="error-banner"
+          icon={<TriangleAlert size={22} strokeWidth={2} />}
+          action={b.action ? <button type="button" className="hp-btn-soft" disabled={b.action.disabled} onClick={b.action.onPress}>{b.action.label}</button> : undefined}
+        >
+          {b.message}
+        </NoticeBanner>
+      ))}
+    </>
   );
 }
