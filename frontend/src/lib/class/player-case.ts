@@ -28,7 +28,7 @@ export interface BandInput {
  */
 export function deriveBandUi(input: BandInput, nowMs: number): BandUi {
   if (input.connectionState === 'unsupported') return 'unsupported';
-  // 이미 연결된 적이 있는 밴드가 끊긴 뒤 자동 재연결(connecting)을 거칠 때 lost↔pending 깜박임을 막는다
+  // 이미 연결된 적이 있는 밴드가 끊긴 뒤 자동 재연결(connecting)을 거칠 때 lost 와 pending 이 번갈아 깜박이는 현상을 막는다
   if (input.connectionState === 'connecting') return input.everConnected ? 'lost' : 'pending';
   if (input.deviceStatus === 'lead_off') return 'leadoff';
 
