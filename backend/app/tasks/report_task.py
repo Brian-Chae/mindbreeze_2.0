@@ -600,6 +600,12 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         for report in db.query(Report).filter(Report.session_id == sid).all():
             # 이미 승인(completed)된 리포트 내용·상태는 보존한다.
             if report.status == "completed":
+                # 생성 중으로 남으면 메일 발송이 영구히 미뤄지므로 부분 산출로 마감만 한다.
+                if report.generation_status in (
+                    report_progress_service.GENERATION_PENDING,
+                    report_progress_service.GENERATION_PROCESSING,
+                ):
+                    report.generation_status = report_progress_service.GENERATION_PARTIAL
                 continue
             report.status = "error"
             report.generation_status = report_progress_service.GENERATION_PARTIAL
@@ -608,6 +614,10 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         if record is not None and record.status not in ("completed", "manual"):
             record.status = "failed"
         db.commit()
+        # 생성 중이라 발송이 미뤄진 승인 완료 리포트가 영구히 메일을 못 받지 않도록, 부분 산출 상태로 마감된
+        # 리포트의 메일을 다시 예약한다(생성이 끝난 상태라 deliver 가 발송한다).
+        for report in db.query(Report).filter(Report.session_id == sid, Report.status == "completed").all():
+            _maybe_enqueue_client_report_email(report, db)
     except Exception:  # noqa: BLE001 — 마킹 실패가 원 예외 전파를 막지 않게 한다.
         logger.exception("[report_task] 실패 상태 마킹 실패: session_id=%s", session_id)
 

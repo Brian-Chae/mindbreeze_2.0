@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.config import settings
 from app.models.session import Session, SessionParticipant
-from app.models.record import Report
+from app.models.record import Report, SessionRecord
 from app.models.user import User
 from app.services import record_service
 from app.services.report_service import _serialize, normalize_report_content
@@ -156,6 +156,18 @@ def _notify_email_failed(report, db: DBSession) -> None:
         pass
 
 
+def _generation_in_progress(report: Report, db: DBSession) -> bool:
+    """리포트 내용이 아직 채워지는 중인지 — 이 상태에서 보낸 메일은 비어 있는 리포트를 연다.
+
+    세션 종료 직후엔 AI 기록(STT·요약)이 진행 중인 채로 부분 리포트가 자동 승인될 수 있다.
+    생성이 끝나면 report_task 가 메일을 다시 예약하므로 여기서는 발송을 미룬다.
+    """
+    if (report.generation_status or "pending") in ("pending", "processing"):
+        return True
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == report.session_id).first()
+    return bool(record and record.status in ("recording", "processing"))
+
+
 def deliver_report_email(report_id: str, db: DBSession) -> str:
     report = db.query(Report).filter(Report.id == UUID(report_id)).first()
     if not report or report.type != "client" or not report.participant_id:
@@ -170,6 +182,8 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
         return report.status
     if participant.report_email_sent_at:
         return "sent"
+    if _generation_in_progress(report, db):
+        return "generating"
     token = _token("report_view", str(report.id), str(report.session_id), email=participant.report_email)
     link = f"{settings.report_email_base_url.rstrip('/')}/report-view?token={token}"
     try:

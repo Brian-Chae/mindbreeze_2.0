@@ -38,6 +38,7 @@ def _view_report(client):
         participant_id=participant.id,
         type="client",
         status="completed",
+        generation_status="ready",
         content={
             "summary": "오늘의 요약",
             "eeg": {

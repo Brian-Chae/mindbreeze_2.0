@@ -185,6 +185,7 @@ def _seed_client_report(client, *, report_email: str | None = "client@example.co
         type="client",
         content={},
         status=status,
+        generation_status="ready",
     )
     db.add(report)
     db.commit()

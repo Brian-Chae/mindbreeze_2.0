@@ -74,6 +74,7 @@ def test_delivery_approval_and_failure(client, setup_email, monkeypatch):
     assert service.deliver_report_email(str(report.id), db) == "pending_review"
     sender.assert_not_called()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     sender.return_value = False
     assert service.deliver_report_email(str(report.id), db) == "failed"
@@ -96,6 +97,7 @@ def test_delivery_failure_logs_report_context(client, setup_email, monkeypatch, 
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
     report = db.query(Report).one()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     monkeypatch.setattr(service, "send_report_email", Mock(return_value=False))
 
@@ -114,6 +116,7 @@ def test_queue_failure_is_visible(client, setup_email, monkeypatch):
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=body)
     report = db.query(Report).one()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     monkeypatch.setattr(service, "enqueue_report_email", Mock(side_effect=RuntimeError("queue down")))
     response = client.post(f"/api/v1/sessions/{session.id}/report-email", json=body)
@@ -261,3 +264,36 @@ def test_auto_approval_enqueues_client_email(client, setup_email, monkeypatch):
     enqueue.assert_called_once()
     sender.assert_not_called()
     assert participant.report_email_sent_at is None
+
+
+def test_delivery_waits_until_generation_finishes(client, setup_email, monkeypatch):
+    """승인(completed)돼도 내용 생성·AI 기록이 진행 중이면 발송을 미루고, 끝나면 발송한다."""
+    from app.models.record import SessionRecord
+    from app.services import report_email_service as service
+    db, session, participant = setup_email
+    client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
+    db.expire_all()
+    report = db.query(Report).one()
+    report.status = "completed"
+    report.generation_status = "processing"
+    db.commit()
+    sender = Mock(return_value=True)
+    monkeypatch.setattr(service, "send_report_email", sender)
+
+    assert service.deliver_report_email(str(report.id), db) == "generating"
+    sender.assert_not_called()
+
+    # 생성은 끝났지만 STT·요약 파이프라인이 진행 중이면 여전히 대기
+    report.generation_status = "partial"
+    db.add(SessionRecord(session_id=session.id, status="processing"))
+    db.commit()
+    assert service.deliver_report_email(str(report.id), db) == "generating"
+    sender.assert_not_called()
+
+    # 파이프라인이 끝나면 발송
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).one()
+    record.status = "completed"
+    report.generation_status = "ready"
+    db.commit()
+    assert service.deliver_report_email(str(report.id), db) == "sent"
+    sender.assert_called_once()
