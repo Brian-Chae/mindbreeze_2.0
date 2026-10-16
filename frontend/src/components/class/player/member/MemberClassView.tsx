@@ -6,6 +6,7 @@ import { deriveMemberCase, type DockKey, type SlotAction } from '../../../../lib
 import { PlayerBackdrop } from '../shared/PlayerBackdrop';
 import { PlayerDock, type DockItem } from '../shared/PlayerDock';
 import { PlayerShell } from '../shared/PlayerShell';
+import { MemberHostPip, MemberMediaRow, MemberMyPip } from './MemberPips';
 import { MemberStage } from './MemberStage';
 import { MemberTopBar } from './MemberTopBar';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
@@ -25,7 +26,7 @@ const SHEET_KEYS: readonly string[] = ['status', 'chat', 'signal', 'sound', 'dev
 const isSheetKey = (key: string | null): key is MemberSheetKey => key !== null && SHEET_KEYS.includes(key);
 
 export function MemberClassView(props: MemberClassViewProps) {
-  const { input, header, hero, snapshot, series, chat, sheet, backdropSrc, actions } = props;
+  const { input, header, hero, snapshot, series, chat, sheet, backdropSrc, hostVideo, myVideo, actions } = props;
   const c = useMemo(() => deriveMemberCase(input), [input]);
 
   const dockItems: DockItem[] = c.dock.map((item) => ({
@@ -49,11 +50,14 @@ export function MemberClassView(props: MemberClassViewProps) {
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={<MemberTopBar header={header} conn={c.conn} onLeave={actions.onLeave} />}
       dock={
-        <PlayerDock
-          items={dockItems}
-          active={sheet}
-          onSelect={(key) => actions.onSheetChange(isSheetKey(key) ? key : null)}
-        />
+        <>
+          <MemberMediaRow c={c} sheetOpen={false} actions={actions} />
+          <PlayerDock
+            items={dockItems}
+            active={sheet}
+            onSelect={(key) => actions.onSheetChange(isSheetKey(key) ? key : null)}
+          />
+        </>
       }
       sheet={null}
     >
@@ -62,7 +66,12 @@ export function MemberClassView(props: MemberClassViewProps) {
         hero={hero}
         snapshot={snapshot}
         series={series}
-        slotTop={null}
+        slotTop={
+          <div className="mp-pips">
+            {c.showHostPip ? <MemberHostPip name={header.counselorName} frozen={c.pipFrozen} video={hostVideo} /> : null}
+            {c.showMyPip ? <MemberMyPip cam={c.myCam} initial={header.myInitial} video={myVideo} /> : null}
+          </div>
+        }
         sheetOpen={false}
         onSlotAction={handleSlotAction}
         netDownCard={null}

@@ -330,3 +330,6 @@
 .mp-fv-info b { font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); text-align: right; }
 .mp-fv-card .mp-fv-note { font-size: var(--fs-13); line-height: 18px; color: var(--tx-mid); }
 .mp-fv-card .mp-pill { margin-top: 4px; }
+
+/* LiveKit 방은 화면에 그리지 않는다(오디오·트랙 구독 전용) */
+.mp-lk-room { position: fixed; width: 0; height: 0; overflow: hidden; pointer-events: none; }

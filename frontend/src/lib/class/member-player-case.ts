@@ -288,3 +288,49 @@ export function deriveMemberCase(input: MemberCaseInput): MemberCase {
     dock: deriveDock(input),
   };
 }
+
+/* ───────── 실제 미디어 상태 → 케이스 입력(mic·cam·hand) ───────── */
+
+export interface MemberMediaState {
+  place: 'online' | 'offline';
+  mode: '1on1' | 'group';
+  /** 서버 토큰의 발행 권한 — 1:1 은 항상 true, 그룹은 발언권을 받았을 때만 true */
+  canPublish: boolean;
+  /** 발언권 이벤트(speaking_changed) — 토큰 갱신보다 먼저 올 수 있다 */
+  speaking: boolean;
+  raisedHand: boolean;
+  /** 회원 본인의 선택 — 마이크는 기본 켜짐, 카메라는 기본 꺼짐(spec 결정 #1) */
+  micWanted: boolean;
+  camWanted: boolean;
+  micFailure: 'denied' | null;
+  camFailure: 'denied' | 'nodevice' | null;
+}
+
+export interface MemberMediaInput {
+  mic: MicUi;
+  cam: CamUi;
+  hand: MemberHand;
+}
+
+/**
+ * 그룹에서 "말하기 종료"는 서버 발언권을 돌려주는 API(B2)가 없어 로컬 마이크 끄기로 대신한다.
+ * 그래서 발언권을 가진 채 micWanted=false 이면 화면은 다시 "뮤트 중 · 손들기"로 보여 주고,
+ * 이때 손들기는 서버 호출 없이 마이크만 다시 켠다(컨테이너 처리).
+ */
+export function deriveMemberMedia(state: MemberMediaState): MemberMediaInput {
+  if (state.place === 'offline') return { mic: 'none', cam: 'none', hand: 'idle' };
+
+  const micDenied = state.micFailure === 'denied';
+  if (state.mode === 'group') {
+    const granted = state.canPublish || state.speaking;
+    const speaking = granted && state.micWanted;
+    return {
+      mic: micDenied ? 'denied' : speaking ? 'on' : 'muted',
+      cam: 'off',
+      hand: speaking ? 'speaking' : state.raisedHand && !granted ? 'waiting' : 'idle',
+    };
+  }
+
+  const cam: CamUi = state.camFailure ?? (state.camWanted ? 'on' : 'off');
+  return { mic: micDenied ? 'denied' : state.micWanted ? 'on' : 'off', cam, hand: 'idle' };
+}
