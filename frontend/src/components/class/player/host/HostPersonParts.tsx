@@ -67,14 +67,14 @@ export function HostTrendCard({ participant, metric, points }: { participant: Ho
     : participant.band === 'leadoff'
       ? '접촉이 불안정해요. 밴드를 이마에 밀착하도록 안내해 주세요.'
       : participant.band === 'on'
-        ? '추이를 만드는 중이에요. 잠시 후 표시돼요.'
+        ? '추이를 만드는 중이에요. 값이 쌓이면 최근 5분의 변화가 이 자리에 표시돼요.'
         : 'LINK BAND 없이 참여 중이에요. 체크인 응답으로 상태를 살펴보세요.';
   return <div className="hp-noband" data-pz="trend">{message}</div>;
 }
 
 export function HostQaCard({ participant, card }: { participant: HostParticipant; card: boolean }) {
   return (
-    <div className={card ? 'hp-qas hp-card' : 'hp-qas'} data-pz="qas">
+    <div className={card ? 'hp-qas hp-card' : 'hp-qas'} data-pz="qas" data-empty={participant.checkin.length ? undefined : 'true'}>
       <p className="hp-lbl">체크인 응답</p>
       {participant.checkin.length ? (
         participant.checkin.map(([q, a]) => (

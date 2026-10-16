@@ -34,6 +34,9 @@ export const DEFAULT_VARIANTS = {
     ['C01', 'metric', 'sheet=metric'], ['C01', 'chat', 'sheet=chat'], ['C01', 'media', 'sheet=media'],
     ['C01', 'checkin', 'sheet=checkin'], ['C01', 'tools', 'sheet=tools'], ['C01', 'detail', 'sheet=detail&detail=3'],
     ['C01', 'n6', 'n=6'], ['C01', 'n7', 'n=7'], ['C01', 'n12', 'n=12'], ['C01', 'cam-big', 'cam=big'], ['C01', 'table', 'table=1'],
+    // SDD-208 I1: 실제 앱에서 나오는 1:1 카드의 빈 추이 상태(착용했지만 추이 대기 · 미착용 · 끊김 · 접촉 불량)
+    ['C05', 'solo-waiting', 'soloband=waiting'], ['C05', 'solo-off', 'soloband=off'], ['C05', 'solo-lost', 'soloband=lost'], ['C05', 'solo-leadoff', 'soloband=leadoff'],
+    ['C06', 'solo-waiting', 'soloband=waiting'], ['C05', 'solo-nocheckin', 'solocheckin=none'], ['C06', 'solo-nocheckin', 'solocheckin=none'],
     ['C02', 'hands', 'sheet=hands'], ['C04', 'media', 'sheet=media'], ['C05', 'media', 'sheet=media'], ['C18', 'chat', 'sheet=chat'],
   ],
 };
@@ -596,7 +599,7 @@ const FIT_NAMED = {
 };
 const FIT_EMPTIES = {
   member: [pz('sheet'), pz('trend'), pz('info-card'), pz('net-down'), pz('side-card'), pz('fv-card'), pz('mypip'), pz('pip'), pz('dock'), pz('media-row'), pz('banner')],
-  host: [pz('sheet'), pz('trend'), pz('dock'), pz('banner'), pz('mstrip'), pz('selfview'), pz('sumpanel')],
+  host: [pz('sheet'), pz('trend'), pz('qas'), pz('dock'), pz('banner'), pz('mstrip'), pz('selfview'), pz('sumpanel')],
 };
 
 /** measureFit 에 넘기는 설정 */

@@ -182,7 +182,17 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
     ? { ...HOST_SELF_BAND_NONE, state: 'connected', relaxation: 72, battery: 78, signalLabel: '신호 좋음', contactLabel: '정상' }
     : selfBandParam === 'off' ? HOST_SELF_BAND_NONE : null;
   const rec: HostRec | null = recParam === 'none' || recParam === '' ? null : recParam;
-  const participants = buildHostParticipants(count, def).map((p) => (online ? p : { ...p, hand: false, speaking: false }));
+  // 하니스 전용: ?soloband=off|lost|leadoff|waiting — 1:1 카드의 밴드 상태별 빈 추이를 재현한다(waiting = 착용했지만 추이가 아직 없음)
+  const soloBandParam = solo ? pick<HostBand | 'waiting' | ''>(params.get('soloband'), ['off', 'lost', 'leadoff', 'waiting'], '') : '';
+  const soloTrendWaiting = soloBandParam === 'waiting';
+  // 하니스 전용: ?solocheckin=none — 체크인 응답이 아직 없는 1:1 카드(실제 앱의 첫 순간)
+  const soloNoCheckin = solo && params.get('solocheckin') === 'none';
+  const participants = buildHostParticipants(count, def)
+    .map((p) => (online ? p : { ...p, hand: false, speaking: false }))
+    .map((p) => (soloNoCheckin ? { ...p, checkin: [], attention: null } : p))
+    .map((p) => (soloBandParam && soloBandParam !== 'waiting'
+      ? { ...p, band: soloBandParam, values: EMPTY_HOST_VALUES, agoLabel: soloBandParam === 'lost' ? '2분 전' : null }
+      : p));
   const sheetParam = params.get('sheet');
   const detailId = parseDetail(params.get('detail'));
 
@@ -220,7 +230,7 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
     id: key, input, ui, meta,
     trendOf: (participantId, metric) => {
       const person = participants.find((p) => p.id === participantId);
-      return person && person.band === 'on' ? syntheticTrend(person, metric) : [];
+      return person && person.band === 'on' && !soloTrendWaiting ? syntheticTrend(person, metric) : [];
     },
     memberVideo: params.get('member') === 'video',
   };

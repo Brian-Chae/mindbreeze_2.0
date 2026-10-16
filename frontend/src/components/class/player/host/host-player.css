@@ -365,7 +365,7 @@
 .hp-trend__th b { color: var(--mcol, var(--mb-mint)); font-size: var(--fs-13); }
 .hp-trend svg { display: block; width: 100%; height: 44px; margin-top: 4px; }
 .hp-trend__axis { display: flex; justify-content: space-between; font-size: var(--fs-12); color: var(--tx-lo); }
-.hp-noband { padding: 12px; border-radius: 14px; background: var(--hp-fill); font-size: var(--fs-13); color: var(--tx-mid); text-align: center; border: 1px dashed rgba(255, 255, 255, 0.25); }
+.hp-noband { padding: 8px 12px; border-radius: 14px; background: var(--hp-fill); font-size: var(--fs-13); color: var(--tx-mid); text-align: center; border: 1px dashed rgba(255, 255, 255, 0.25); }
 .hp-qas .hp-lbl { margin-bottom: 2px; }
 .hp-qa { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-top: 1px solid var(--hp-line); }
 .hp-qa__q { font-size: var(--fs-13); color: var(--tx-mid); white-space: nowrap; }
@@ -381,6 +381,8 @@
 .hp-solo__h b { font-size: var(--fs-18); }
 .hp-solo__r { display: flex; flex-direction: column; gap: 8px; }
 .hp-solo__r > * { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+/* 추이가 아직 없는 안내(착용 대기·미착용·끊김·접촉 불량)와 체크인 응답이 없는 카드는 한두 줄이라 늘리지 않는다 — 늘리면 빈 박스가 된다(P12) */
+.hp-solo__r > .hp-noband, .hp-solo__r > .hp-qas[data-empty="true"] { flex: 0 0 auto; }
 .hp-solo .hp-mini { --ring: 52px; }
 .hp-solo .hp-mini .hp-ring-num { font-size: var(--fs-18); }
 .hp-solo .hp-trend svg { height: 40px; }

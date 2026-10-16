@@ -357,3 +357,44 @@ describe('5분 추이 요약(H3)', () => {
     expect(series.at(-1)).toBeCloseTo(70, 0);
   });
 });
+
+describe('C05 1:1 하니스 변형 soloband — 실제 앱에서 나오는 빈 추이 상태를 측정할 수 있게 한다', () => {
+  const solo = (query: string) => {
+    const spec = buildHostCaseInput('C05', new URLSearchParams(query));
+    return { spec, person: spec.input.participants[0] };
+  };
+
+  it('기본은 밴드 착용·추이 있음', () => {
+    const { spec, person } = solo('');
+    expect(person.band).toBe('on');
+    expect(spec.trendOf(person.id, 'relaxation').length).toBeGreaterThan(1);
+  });
+  it('waiting: 밴드는 켜졌지만 추이가 아직 없다("추이를 만드는 중이에요")', () => {
+    const { spec, person } = solo('soloband=waiting');
+    expect(person.band).toBe('on');
+    expect(spec.trendOf(person.id, 'relaxation')).toEqual([]);
+  });
+  it('off·lost·leadoff: 밴드 상태를 바꾸고 값을 비운다', () => {
+    for (const band of ['off', 'lost', 'leadoff'] as const) {
+      const { spec, person } = solo(`soloband=${band}`);
+      expect(person.band).toBe(band);
+      expect(person.values.relaxation).toBeNull();
+      expect(spec.trendOf(person.id, 'relaxation')).toEqual([]);
+    }
+  });
+  it('여러 명 케이스에는 영향을 주지 않는다', () => {
+    const spec = buildHostCaseInput('C01', new URLSearchParams('soloband=off'));
+    expect(spec.input.participants.filter((p) => p.band === 'off').length).toBe(2);
+  });
+});
+
+describe('C05 1:1 하니스 변형 solocheckin=none — 체크인 응답이 없는 첫 순간', () => {
+  it('참가자의 체크인 응답을 비운다', () => {
+    const spec = buildHostCaseInput('C05', new URLSearchParams('solocheckin=none'));
+    expect(spec.input.participants[0].checkin).toEqual([]);
+    expect(spec.input.participants[0].attention).toBeNull();
+  });
+  it('기본은 체크인 응답이 있다', () => {
+    expect(buildHostCaseInput('C05').input.participants[0].checkin.length).toBeGreaterThan(0);
+  });
+});
