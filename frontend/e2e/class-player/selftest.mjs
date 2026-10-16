@@ -86,6 +86,45 @@ try {
   expect('fit 은 주입한 위반(P1 스크롤·P2 11px·P3 터치·P5 호흡 문구·P9 코랄·PC 어두운 글자)을 모두 FAIL 로 잡는다', ['P1', 'P2', 'P3', 'P5', 'P9', 'PC'].every((r) => injectedFails.includes(r)), `실제 FAIL 규칙: ${injectedFails.join(',') || '없음'}`);
   await ctx.close();
 
+  // 5) 오버레이 배너 가림 규칙(사용자 결정 A): PiP 는 가려도 되지만 링·도크를 가리면 P13 FAIL, 가려진 오버레이 버튼도 FAIL
+  const ctx2 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page2 = await ctx2.newPage();
+  const coverResults = {};
+  for (const target of ['pip', 'ring', 'dock']) {
+    await openCase(page2, base, 'member', '__selftest');
+    const found = await page2.evaluate((name) => {
+      const el = document.querySelector(`[data-pz="${name}"]`);
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const overlay = document.createElement('div');
+      overlay.setAttribute('data-pz', 'overlay');
+      overlay.style.cssText = `position:fixed;left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;`;
+      const banner = document.createElement('div');
+      banner.setAttribute('data-pz', 'banner');
+      banner.style.cssText = 'width:100%;height:100%';
+      overlay.appendChild(banner);
+      document.body.appendChild(overlay);
+      return true;
+    }, target);
+    const rows = found ? await page2.evaluate(measureFit, fitConfig('member', '__selftest')) : [];
+    coverResults[target] = found ? rows.find((r) => r.rule === 'P13') : null;
+  }
+  expect('오버레이 배너가 PiP 를 가리는 것은 P13 통과', coverResults.pip?.pass === true, coverResults.pip ? coverResults.pip.val : '대상 없음');
+  expect('오버레이 배너가 링·도크를 가리면 P13 FAIL', coverResults.ring?.pass === false && coverResults.dock?.pass === false, `ring=${coverResults.ring?.pass} dock=${coverResults.dock?.pass}`);
+  await openCase(page2, base, 'member', '__selftest');
+  await page2.evaluate(() => {
+    const overlay = document.createElement('div');
+    overlay.setAttribute('data-pz', 'overlay');
+    overlay.style.cssText = 'position:fixed;left:0;top:0;width:100px;height:100px;';
+    overlay.innerHTML = '<button type="button" style="width:100px;height:100px;min-height:44px">버튼</button>';
+    const cover = document.createElement('div');
+    cover.style.cssText = 'position:fixed;left:0;top:0;width:100px;height:100px;z-index:99;background:#000';
+    document.body.append(overlay, cover);
+  });
+  const blockedRows = await page2.evaluate(measureFit, fitConfig('member', '__selftest'));
+  expect('다른 요소에 가려진 오버레이 버튼은 P13 FAIL', blockedRows.find((r) => r.rule === 'P13')?.pass === false, blockedRows.find((r) => r.rule === 'P13')?.val ?? '');
+  await ctx2.close();
+
   writeReport(path.join(HERE, 'out', 'selftest.txt'), `${results.map((r) => `${r.ok ? 'PASS' : 'FAIL'}  ${r.name}${r.detail ? ` — ${r.detail}` : ''}`).join('\n')}\n\n${formatReport({ title: '측정 스크립트 자가 검증 상세', role: 'member+host', rows: allRows })}`);
 } finally {
   await browser.close();

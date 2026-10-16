@@ -420,7 +420,7 @@ export function measureHostSymmetry(S) {
  *  - empties: 빈 영역 검사 대상 셀렉터 목록
  */
 export function measureFit(cfg) {
-  const { named, empties: emptySelectors, forbidCoral } = cfg;
+  const { named, empties: emptySelectors, forbidCoral, overlayCoverable: OVERLAY_COVERABLE = [] } = cfg;
   const vw = innerWidth, vh = innerHeight, de = document.documentElement, checks = [];
   const add = (rule, val, pass) => checks.push({ rule, val, pass });
   const vis = (el) => { const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0; };
@@ -525,8 +525,8 @@ export function measureFit(cfg) {
       }
     }
   }
-  const boxes = {};
-  for (const [k, sel] of Object.entries(named)) { const el = [...document.querySelectorAll(sel)].find(vis); if (el) boxes[k] = rect(el); }
+  const boxes = {}, boxEls = {};
+  for (const [k, sel] of Object.entries(named)) { const el = [...document.querySelectorAll(sel)].find(vis); if (el) { boxes[k] = rect(el); boxEls[k] = el; } }
   const outside = Object.entries(boxes).filter(([, b]) => b.x < -0.5 || b.y < -0.5 || b.r > vw + 0.5 || b.b > vh + 0.5).map(([k]) => k);
   const grow = (b, g) => ({ x: b.x - g, y: b.y - g, r: b.r + g, b: b.b + g });
   const inter = (a, c) => Math.max(0, Math.min(a.r, c.r) - Math.max(a.x, c.x)) * Math.max(0, Math.min(a.b, c.b) - Math.max(a.y, c.y));
@@ -535,9 +535,19 @@ export function measureFit(cfg) {
     const a = boxes[names[i]], c = boxes[names[j]];
     const ga = names[i] === 'ring' ? grow(a, a.w * 0.03) : a, gc = names[j] === 'ring' ? grow(c, c.w * 0.03) : c;
     const area = inter(ga, gc);
-    if (area > 1) overlaps.push(`${names[i]}×${names[j]}(${Math.round(area)}px²)`);
+    // 사용자 결정 A(P11): 상태로 생기는 배너는 오버레이라 PiP·헤드 같은 뒤 콘텐츠를 가릴 수 있다. 상단 바·링·미디어 줄·도크·시트 등 나머지를 가리면 계속 위반이다
+    const overlayOver = (a1, b1) => a1 === 'banner' && OVERLAY_COVERABLE.includes(b1) && !!boxEls[a1]?.closest('[data-pz="overlay"]');
+    if (area > 1 && !overlayOver(names[i], names[j]) && !overlayOver(names[j], names[i])) overlaps.push(`${names[i]}×${names[j]}(${Math.round(area)}px²)`);
   }
-  const p13 = [...clipped.map((c) => `잘림 ${c}`), ...outside.map((o) => `이탈 ${o}`), ...overlaps.map((o) => `겹침 ${o}`)];
+  // 오버레이 안의 버튼(마이크 켜기·다시 연결 등)은 다른 요소에 가려지지 않고 눌려야 한다
+  const blocked = [];
+  for (const btn of document.querySelectorAll('[data-pz="overlay"] button')) {
+    if (!vis(btn)) continue;
+    const r = btn.getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (!top || !btn.contains(top)) blocked.push(label(btn));
+  }
+  const p13 = [...clipped.map((c) => `잘림 ${c}`), ...outside.map((o) => `이탈 ${o}`), ...overlaps.map((o) => `겹침 ${o}`), ...blocked.map((b) => `가려진 오버레이 버튼 ${b}`)];
   add('P13', p13.length ? p13.slice(0, 6).join(' | ') : '0건', p13.length === 0);
 
   // P12 빈 영역: 콘텐츠 없는 큰 박스(내용 bbox 가 박스의 35% 미만이거나 텍스트·아이콘이 없음)
@@ -602,9 +612,12 @@ const FIT_EMPTIES = {
   host: [pz('sheet'), pz('trend'), pz('qas'), pz('dock'), pz('banner'), pz('mstrip'), pz('selfview'), pz('sumpanel')],
 };
 
+/** 오버레이 배너가 가려도 되는 박스 이름(가림이 허용되는 뒤 콘텐츠). 그 밖의 박스를 가리면 P13 위반 */
+const OVERLAY_COVERABLE_NAMES = ['pip', 'mypip', 'head', 'chipline', 'solo'];
+
 /** measureFit 에 넘기는 설정 */
 export function fitConfig(role, id) {
-  return { named: FIT_NAMED[role], empties: FIT_EMPTIES[role], forbidCoral: NO_CORAL_IDS.includes(id) };
+  return { named: FIT_NAMED[role], empties: FIT_EMPTIES[role], forbidCoral: NO_CORAL_IDS.includes(id), overlayCoverable: OVERLAY_COVERABLE_NAMES };
 }
 
 /** 한 케이스를 한 뷰포트에서 측정해 행을 돌려준다. mode: 'symmetry' | 'fit' */
