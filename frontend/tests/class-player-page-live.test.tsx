@@ -137,7 +137,7 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
     await renderPage();
     expect(q('[data-testid="host-live-container"]')).not.toBeNull();
     expect(q('.host-class-player')).toBeNull();
-    expect(document.body.textContent).not.toContain('← 나가기');
+    expect(document.body.textContent).not.toContain('나가기');
     expect(q('[data-testid="page-chat-overlay"]')).toBeNull();
     expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(0);
   });
@@ -249,6 +249,6 @@ describe('진행 중이 아닌 씬·호스트가 아닌 사용자는 옛 화면�
     h.session = makeSession('in_progress', { host_id: 'someone-else' });
     await renderPage();
     expect(q('[data-testid="host-live-container"]')).toBeNull();
-    expect(document.body.textContent).toContain('← 나가기');
+    expect(document.body.textContent).toContain('나가기');
   });
 });
