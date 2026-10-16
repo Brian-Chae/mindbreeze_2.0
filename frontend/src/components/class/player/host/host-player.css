@@ -434,3 +434,10 @@
 .hp-esteps li[data-state="doing"] svg { color: var(--mb-pale); }
 .hp-esteps li[data-state="wait"] { color: var(--tx-mid); }
 .hp-ending > .pz-backdrop { position: absolute; z-index: 0; }
+
+/* 바텀 시트가 열린 동안 1:1 카드는 접는다 — 남는 높이가 카드보다 작아 시트 밑으로 겹쳐 들어가기 때문(시트를 닫으면 돌아온다) */
+.hp-main[data-sheet-bottom="true"] .hp-solowrap { display: none; }
+
+/* 하니스 전용: 종료 확인 모달이 떠 있어도 아래 화면의 도달성(P14)을 잴 수 있게 배경 오버레이만 이벤트를 통과시킨다 */
+.hp-modal-passthrough > div { pointer-events: none; }
+.hp-modal-passthrough [role="dialog"] { pointer-events: auto; }

@@ -153,7 +153,9 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
 
   return (
     <>
-    <EndSessionModal open={endOpen} ending={false} onConfirm={() => { setEndOpen(false); setEnding(true); }} onCancel={() => setEndOpen(false)} />
+    <div className="hp-modal-passthrough">
+      <EndSessionModal open={endOpen} ending={false} onConfirm={() => { setEndOpen(false); setEnding(true); }} onCancel={() => setEndOpen(false)} />
+    </div>
     <HostLiveView
       hostCase={hostCase}
       participants={participants}
