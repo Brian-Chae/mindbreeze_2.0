@@ -2,6 +2,13 @@
    근거: designs/class-player-redesign/{member.html, counselor.html, 균형.md}. 모든 규칙은 .pz-* 클래스로 스코프한다. */
 @import './player-tokens.css';
 
+/* ───────── 앱 전역 타이포 방어: mb-tokens.css 의 h1~h3·p 색/글꼴/자간이 다크 화면으로 새지 않게 .pz-root 범위에서 명시한다 ─────────
+   클래스 없는 제목·문단은 부모 색을 따르고, 클래스가 있는 것은 글꼴·자간만 되돌린다(색은 각 클래스가 정한다).
+   전역 규칙의 색을 그대로 받던 시트 제목·링 숫자·링 제목은 밝은 글자색을 직접 정한다. */
+.pz-root :is(h1, h2, h3, p):not([class]) { color: inherit; }
+.pz-root :is(h1, h2, h3, p) { font-family: inherit; letter-spacing: normal; }
+.pz-sheet__head h2, .pz-ring__num, .pz-ring__title { color: var(--tx-hi); }
+
 /* ───────── 셸: 상단 바 / 본문 / (바텀 시트) / 도크 — 사이드 시트가 열리면 오른쪽 열이 생겨 메인 축이 함께 이동 ───────── */
 .pz-shell {
   position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden;
@@ -20,7 +27,7 @@
 .pz-shell__dock { grid-column: 1; grid-row: 4; justify-self: center; width: min(100%, var(--pz-col)); min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 
 /* ───────── 배경 ───────── */
-.pz-backdrop { inset: 0; overflow: hidden; pointer-events: none; }
+.pz-backdrop { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
 .pz-backdrop__still { position: absolute; inset: 0; background-color: #1c3a5a; background-size: cover; background-position: 42% 50%; background-repeat: no-repeat; }
 .pz-backdrop__scrim { position: absolute; inset: 0; background: linear-gradient(to bottom, var(--scrim-top) 0%, rgba(18, 8, 28, 0.10) 42%, var(--scrim-bottom) 100%); }
 

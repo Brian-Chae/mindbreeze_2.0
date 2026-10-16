@@ -332,6 +332,8 @@
 .hp-legacy [class*="bg-[#FDF6E5]"] { background: rgba(179, 115, 239, 0.2) !important; border-color: var(--mb-lavender) !important; }
 .hp-legacy [class*="bg-[#F2F3F8]"] { background: var(--hp-fill) !important; color: var(--tx-hi) !important; }
 .hp-legacy [class*="bg-[#F2212133]"] { background: rgba(240, 96, 93, 0.18) !important; color: #FFC9C6 !important; }
+/* 마커 추가 버튼(bg-amber-500 + 흰 글자)은 어두운 시트 위에서 대비가 2:1 이하라 브랜드 보라로 바꾼다 */
+.hp-legacy [class*="bg-amber-500"] { background: var(--mb-purple) !important; color: #fff !important; }
 .hp-legacy .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
 .hp-legacy [class*="max-h-56"] { max-height: none !important; overflow: visible !important; }
 
@@ -345,9 +347,6 @@
   .hp-main .pz-notice[data-variant="banner"] { font-size: var(--fs-15); line-height: 22px; }
   .hp-banner__title { font-size: var(--fs-18); }
 }
-
-/* 전역 h2 색(mb-tokens.css)이 시트 제목을 어둡게 만든다 — 공용 시트 제목 색을 상담사 화면 안에서만 보정 */
-.pz-shell:has(.hp-main) .pz-sheet__head h2 { color: var(--tx-hi); }
 
 /* ───────── 6지표 격자·5분 추이·체크인 응답(1:1 카드와 상세 시트 공용) ───────── */
 .hp-minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -433,7 +432,6 @@
 .hp-esteps li[data-state="doing"] { border: 2px solid var(--mb-lavender); background: rgba(179, 115, 239, 0.16); }
 .hp-esteps li[data-state="doing"] svg { color: var(--mb-pale); }
 .hp-esteps li[data-state="wait"] { color: var(--tx-mid); }
-.hp-ending > .pz-backdrop { position: absolute; z-index: 0; }
 
 /* 바텀 시트가 열린 동안 1:1 카드는 접는다 — 남는 높이가 카드보다 작아 시트 밑으로 겹쳐 들어가기 때문(시트를 닫으면 돌아온다) */
 .hp-main[data-sheet-bottom="true"] .hp-solowrap { display: none; }

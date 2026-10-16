@@ -77,13 +77,13 @@ try {
     const host = document.querySelector('[data-pz="app"]');
     const bad = document.createElement('div');
     bad.style.cssText = 'position:absolute;left:8px;top:8px;z-index:9;color:#fff';
-    bad.innerHTML = '<span style="font-size:11px">작은 글자</span><button type="button" style="width:20px;height:20px">x</button><p>천천히 호흡에 집중해 주세요</p><i style="display:block;width:30px;height:30px;background:rgb(232,180,160)"></i>';
+    bad.innerHTML = '<span style="font-size:11px">작은 글자</span><h3 style="color:#1f1f1f;font-size:15px">어두운 제목</h3><button type="button" style="width:20px;height:20px">x</button><p>천천히 호흡에 집중해 주세요</p><i style="display:block;width:30px;height:30px;background:rgb(232,180,160)"></i>';
     host.appendChild(bad);
     document.documentElement.style.minHeight = '3000px';
   });
   const injected = await page.evaluate(measureFit, { ...fitConfig('member', 'M06') });
   const injectedFails = failedRules(injected);
-  expect('fit 은 주입한 위반(P1 스크롤·P2 11px·P3 터치·P5 호흡 문구·P9 코랄)을 모두 FAIL 로 잡는다', ['P1', 'P2', 'P3', 'P5', 'P9'].every((r) => injectedFails.includes(r)), `실제 FAIL 규칙: ${injectedFails.join(',') || '없음'}`);
+  expect('fit 은 주입한 위반(P1 스크롤·P2 11px·P3 터치·P5 호흡 문구·P9 코랄·PC 어두운 글자)을 모두 FAIL 로 잡는다', ['P1', 'P2', 'P3', 'P5', 'P9', 'PC'].every((r) => injectedFails.includes(r)), `실제 FAIL 규칙: ${injectedFails.join(',') || '없음'}`);
   await ctx.close();
 
   writeReport(path.join(HERE, 'out', 'selftest.txt'), `${results.map((r) => `${r.ok ? 'PASS' : 'FAIL'}  ${r.name}${r.detail ? ` — ${r.detail}` : ''}`).join('\n')}\n\n${formatReport({ title: '측정 스크립트 자가 검증 상세', role: 'member+host', rows: allRows })}`);

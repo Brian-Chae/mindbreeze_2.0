@@ -517,3 +517,34 @@ describe('ClassChatPanel embedded — 시트 안에 넣는 변형', () => {
     expect(document.querySelector('[aria-label="클래스 채팅 접기"]')).not.toBeNull();
   });
 });
+
+describe('공용 CSS — 앱 전역 타이포 방어(.pz-root 범위)와 역할별 CSS의 중복 제거', () => {
+  const read = (path: string): string => readFileSync(resolve(__dirname, '..', 'src/components/class/player', path), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const shared = read('shared/player-shared.css');
+
+  it('mb-tokens.css 의 h1~h3·p 글꼴·자간이 다크 화면으로 새지 않도록 .pz-root 안에서 되돌린다', () => {
+    expect(shared).toMatch(/\.pz-root :is\(h1, h2, h3, p\)\s*\{[^}]*font-family:\s*inherit/);
+    expect(shared).toMatch(/\.pz-root :is\(h1, h2, h3, p\)\s*\{[^}]*letter-spacing:\s*normal/);
+  });
+
+  it('클래스 없는 제목·문단은 부모 색을 따르고, 시트 제목·링 숫자·링 제목은 밝은 글자색을 명시한다', () => {
+    expect(shared).toMatch(/\.pz-root :is\(h1, h2, h3, p\):not\(\[class\]\)\s*\{[^}]*color:\s*inherit/);
+    expect(shared).toMatch(/\.pz-sheet__head h2[^{]*\{[^}]*color:\s*var\(--tx-hi\)/);
+    expect(shared).toMatch(/\.pz-ring__num[^{]*\{[^}]*color:\s*var\(--tx-hi\)/);
+    expect(shared).toMatch(/\.pz-ring__title[^{]*\{[^}]*color:\s*var\(--tx-hi\)/);
+  });
+
+  it('회원·상담사 CSS 에는 전역 타이포 임시 보정(:has, .pz-root :is)과 reduced-motion 복제가 없다', () => {
+    for (const file of ['member/member-player.css', 'host/host-player.css']) {
+      const css = read(file);
+      expect(css, file).not.toMatch(/:has\(/);
+      expect(css, file).not.toMatch(/\.pz-root :is\(h1/);
+      expect(css, file).not.toMatch(/prefers-reduced-motion/);
+    }
+  });
+
+  it('PlayerBackdrop 은 어느 셸(.pz-shell·.hp-ending)에서든 position 을 공용 CSS 가 정한다', () => {
+    expect(shared).toMatch(/\.pz-backdrop\s*\{[^}]*position:\s*absolute/);
+    expect(read('host/host-player.css')).not.toMatch(/\.hp-ending > \.pz-backdrop/);
+  });
+});

@@ -1,17 +1,6 @@
 /* SDD-208 — 회원 클래스 진행 화면 스타일. 근거: designs/class-player-redesign/member.html · 균형.md S1~S10·MS1~MS3.
    공용 프리미티브(.pz-*)는 shared/player-shared.css 가 담당하고, 여기서는 회원 전용 규칙만 .mp-* 로 둔다. */
 
-/* 움직임 줄이기: 값 호 전환·점 페이드·시트 진입 등 모든 모션 정지(verify P5 ③) */
-@media (prefers-reduced-motion: reduce) {
-  .pz-root *, .pz-root *::before, .pz-root *::after { animation: none !important; transition: none !important; }
-}
-
-/* 앱 전역 타이포(mb-tokens.css 의 h1~h3·p 색/글꼴/자간)가 다크 화면으로 새지 않게 한다.
-   클래스가 없는 제목·문단은 부모 색을 따르고, 클래스가 있는 것은 글꼴·자간만 되돌린다(색은 각 클래스가 정한다) */
-.pz-root :is(h1, h2, h3, p):not([class]) { color: inherit; }
-.pz-root :is(h1, h2, h3, p) { font-family: inherit; letter-spacing: normal; }
-.mp-stage .pz-ring__num, .mp-stage .pz-ring__title { color: var(--tx-hi); }
-
 /* ───────── 상단 바 ───────── */
 .mp-title-pill {
   position: relative; min-width: 0; max-width: 100%; height: var(--pz-top-h); padding: 6px 16px 8px;

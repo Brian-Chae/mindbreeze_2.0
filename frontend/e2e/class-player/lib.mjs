@@ -27,6 +27,8 @@ export const DEFAULT_VARIANTS = {
     ['M01', 'sound', 'sheet=sound'], ['M01', 'device', 'sheet=device'], ['M02', 'chat', 'sheet=chat'],
     ['M05', 'status', 'sheet=status'], ['M05', 'chat', 'sheet=chat'], ['M05', 'sound', 'sheet=sound'],
     ['M06', 'device', 'sheet=device'], ['M18', 'status', 'sheet=status'],
+    // SDD-208 I1: 상담사 영상 연결 문제 칩(실패 / 기다림). 1:1(M01)과 그룹(M02) 모두
+    ['M01', 'hostvideo-failed', 'hostvideo=failed'], ['M01', 'hostvideo-waiting', 'hostvideo=waiting'], ['M02', 'hostvideo-failed', 'hostvideo=failed'],
   ],
   host: [
     ['C01', 'metric', 'sheet=metric'], ['C01', 'chat', 'sheet=chat'], ['C01', 'media', 'sheet=media'],
@@ -46,7 +48,7 @@ export const MEMBER_SELECTORS = {
   app: pz('app'), topbar: pz('topbar'), leave: pz('leave'), conn: pz('conn'), title: pz('title'),
   ring: pz('ring'), guide: pz('guide'), trend: pz('trend'), infoCard: pz('info-card'), sideCard: pz('side-card'),
   banner: pz('banner'), netDown: pz('net-down'), fullCard: pz('fv-card'),
-  pip: pz('pip'), mypip: pz('mypip'), media: pz('media-row'), mediaItem: pz('mbtn'),
+  pip: `${pz('pip')}, ${pz('pip-issue')}`, mypip: pz('mypip'), media: pz('media-row'), mediaItem: pz('mbtn'),
   dock: pz('dock'), dockItem: pz('dk'), sheet: pz('sheet'), cell: pz('mcell'),
 };
 
@@ -67,15 +69,15 @@ export const RULE_NAMES = {
   S6: '도크·미디어 줄 균등', S7: '링 세로 중앙', S8: '박스 최대폭 동일', S9: '중앙 컬럼 max-width', S10: '8배수 간격',
   MS1: '오프라인 컬럼 구조', MS2: '6지표 격자 균등', MS3: '전체 화면 정중앙',
   CS1: '그리드 행 중앙', CS2: '마지막 행 중앙·열 수', CS3: '헤드 행 비율', CS4: '칩 줄 중앙', CS5: '1:1 카드',
-  P1: '페이지 스크롤 0', P2: '11px 이하 글자 0', P3: '터치 영역 ≥44px', P5: '호흡 지시 문구 0', P9: '경고색(코랄) 0',
+  P1: '페이지 스크롤 0', P2: '11px 이하 글자 0', P3: '터치 영역 ≥44px', P5: '호흡 지시 문구 0', PC: '글자 대비 ≥3:1', P9: '경고색(코랄) 0',
   P12: '빈 영역 0', P13: '겹침·이탈·잘림 0', P14: '도크 도달성', REG: '케이스 등록',
 };
 
 /* ───────────────────────── 실행 환경 ───────────────────────── */
 
 /** 번들 Chromium → PLAYWRIGHT_CHROMIUM 경로 → 시스템 Chrome 순으로 시도한다(CI·로컬 공용) */
-export async function launchBrowser() {
-  const args = ['--hide-scrollbars'];
+export async function launchBrowser(extraArgs = []) {
+  const args = ['--hide-scrollbars', ...extraArgs];
   if (process.env.PLAYWRIGHT_CHROMIUM) return chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM, args });
   let bundled = null;
   try { bundled = chromium.executablePath(); } catch { bundled = null; }
@@ -447,6 +449,33 @@ export function measureFit(cfg) {
   const breath = (document.body.innerText || '').match(/호흡에 집중|숨을 (들이|내쉬)|들이쉬|내쉬|호흡하세요|천천히 호흡|심호흡/g) || [];
   add('P5', breath.length ? breath.join(',') : '0건', breath.length === 0);
 
+  // PC 글자 대비: 앱 전역 타이포(mb-tokens.css 의 h1~h3·p 색)가 다크 화면으로 새면 어두운 글자가 된다 — WCAG 대비 ≥ 3:1
+  const toRgba = (c) => {
+    const m = /^rgba?\(([^)]+)\)$/.exec(c.trim());
+    if (!m) return null;
+    const [r, g, b, a = 1] = m[1].split(/[\s,/]+/).filter(Boolean).map(Number);
+    return [r, g, b, a].some((n) => Number.isNaN(n)) ? null : { r, g, b, a };
+  };
+  const blend = (top, under) => ({ r: top.r * top.a + under.r * (1 - top.a), g: top.g * top.a + under.g * (1 - top.a), b: top.b * top.a + under.b * (1 - top.a), a: 1 });
+  const lin = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; };
+  const lum = (c) => 0.2126 * lin(c.r) + 0.7152 * lin(c.g) + 0.0722 * lin(c.b);
+  const lowContrast = [];
+  for (const el of document.body.querySelectorAll('*')) {
+    if (!vis(el)) continue;
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    const fg = toRgba(getComputedStyle(el).color);
+    if (!fg) continue;
+    let bg = { r: 18, g: 8, b: 28, a: 1 };
+    const chain = [];
+    for (let node = el; node && node !== document.documentElement; node = node.parentElement) chain.unshift(node);
+    for (const node of chain) { const layer = toRgba(getComputedStyle(node).backgroundColor); if (layer && layer.a > 0) bg = blend(layer, bg); }
+    const text = blend(fg, bg);
+    const l1 = lum(text), l2 = lum(bg);
+    const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    if (ratio < 3) lowContrast.push(`${label(el)} ${ratio.toFixed(1)}:1`);
+  }
+  add('PC', lowContrast.length ? lowContrast.slice(0, 6).join(' | ') : '0건', lowContrast.length === 0);
+
   // P9 경고색(코랄) — 미착용·연결 대기·미지원 케이스에서만 검사. 글자색·배경·보이는 테두리·SVG 선/채움이 코랄(#E8B4A0)이면 위반
   if (forbidCoral) {
     const coral = /rgba?\(232,\s*180,\s*160/;
@@ -534,6 +563,12 @@ export function measureFit(cfg) {
 /** 보조 뷰포트에서 도크 항목이 전부 화면 안에서 눌리는지(최상단 요소가 자기 자신인지) 확인 */
 export function measureDockReach(S) {
   const vw = innerWidth, vh = innerHeight, checks = [];
+  // 대기열·종료 같은 전체 화면 카드는 도크가 없는 화면이다 — 도달성 검사 대상이 아니다
+  const fullCard = S.fullCard ? [...document.querySelectorAll(S.fullCard)].find((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }) : null;
+  if (fullCard) {
+    checks.push({ rule: 'P14', val: '전체 화면 카드(도크 없음) — 건너뜀', pass: true });
+    return checks;
+  }
   const items = [...document.querySelectorAll(S.dockItem)];
   const bad = [];
   for (const el of items) {
@@ -551,7 +586,7 @@ export function measureDockReach(S) {
 
 const FIT_NAMED = {
   member: {
-    leave: pz('leave'), title: pz('title'), conn: pz('conn'), banner: pz('banner'), pip: pz('pip'), mypip: pz('mypip'), ring: pz('ring'),
+    leave: pz('leave'), title: pz('title'), conn: pz('conn'), banner: pz('banner'), pip: `${pz('pip')}, ${pz('pip-issue')}`, mypip: pz('mypip'), ring: pz('ring'),
     guide: pz('guide'), trend: pz('trend'), info: pz('info-card'), netdown: pz('net-down'), side: pz('side-card'), media: pz('media-row'),
     dock: pz('dock'), sheet: pz('sheet'), fv: pz('fv-card'),
   },
