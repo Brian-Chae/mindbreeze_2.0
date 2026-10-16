@@ -24,6 +24,8 @@ export type ParticipantMode = 'one_on_one' | 'group';
 export type LinkbandMode = 'none' | 'required' | 'optional';
 
 export interface SessionParticipant {
+  /** SDD-208: 백엔드 ParticipantInfo.participant_id(항상 내려옴). 상세 화면이 직접 만드는 객체가 있어 optional */
+  participant_id?: string;
   user_id: string | null;
   guest_name: string | null;
   is_guest: boolean;

@@ -58,6 +58,7 @@ const OperatorAppPage = lazy(() => import('./pages/design/OperatorAppPage'));
 const UserAppPage = lazy(() => import('./pages/design/UserAppPage'));
 const ReportPage = lazy(() => import('./pages/design/ReportPage'));
 const DocsPage = lazy(() => import('./pages/design/DocsPage'));
+const ClassPlayerCasesPage = lazy(() => import('./pages/design/ClassPlayerCasesPage'));
 const ReportListPage = lazy(() => import('./pages/reports/ReportListPage'));
 const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
 const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
@@ -199,6 +200,7 @@ const router = createBrowserRouter(
         <Route path="/design/user-app" element={<UserAppPage />} />
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
+        <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />
