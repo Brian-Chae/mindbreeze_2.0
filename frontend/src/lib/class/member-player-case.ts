@@ -1,7 +1,7 @@
 // SDD-208 M1 — 회원 클래스 진행 화면 케이스 파생.
 // 시안 member.html 의 state 키(place·mode·cam·mic·hand·band·net·view)와 같은 이름을 쓰고,
 // 화면 문구(칩·슬롯 카드·미디어 버튼)는 이 파일에서만 만든다 → verify 문구 단언의 단일 출처.
-// 회원 화면에는 그룹 평균·순위·±델타·종합점수 코드를 두지 않는다(spec 합의 #5). 호흡 지시 문구도 두지 않는다(합의 #1).
+// 회원 화면에는 다른 참가자와 견주는 수치(평균·순위·델타·종합점수) 코드를 두지 않는다(spec 합의 #5). 호흡 지시 문구도 두지 않는다(합의 #1).
 
 import type { BandUi, CamUi, MicUi, NetUi } from './player-case';
 
@@ -25,6 +25,8 @@ export interface MemberCaseInput {
   battery: number | null;
   /** linkband_mode !== 'none'. false 면 밴드 UI 전체를 숨긴다(plan D7) */
   bandEnabled: boolean;
+  /** 온라인 그룹 정원 20명 초과 — 서버가 발행 권한을 주지 않는 수신 전용 수업(마이크·카메라·손들기 UI 없음) */
+  viewerOnly: boolean;
 }
 
 export const MEMBER_CASE_DEFAULT: MemberCaseInput = {
@@ -39,6 +41,7 @@ export const MEMBER_CASE_DEFAULT: MemberCaseInput = {
   net: 'ok',
   battery: 80,
   bandEnabled: true,
+  viewerOnly: false,
 };
 
 export function memberInput(partial: Partial<MemberCaseInput> = {}): MemberCaseInput {
@@ -154,7 +157,7 @@ function deriveNotice(input: MemberCaseInput): MemberNotice | null {
     if (input.mic === 'denied') {
       return { tone: 'coral', icon: 'micOff', text: '마이크 권한이 꺼져 있어요 · 아래 방법으로 허용해 주세요' };
     }
-    if (input.mode === 'group') return groupNotice(input);
+    if (input.mode === 'group' && !input.viewerOnly) return groupNotice(input);
     // D4: 회원 음성은 어떤 경우에도 AI 기록에 쓰이지 않으므로(F8) "AI 기록에서 빠져요" 대신 사실대로 안내한다
     if (input.mic === 'off') {
       return { tone: 'caution', icon: 'micOff', text: '마이크 꺼짐 · 상담사에게 내 목소리가 전달되지 않아요(뇌파는 계속 기록돼요)' };
@@ -262,7 +265,7 @@ export function deriveMemberCase(input: MemberCaseInput): MemberCase {
   const online = input.place === 'online';
   const group = input.mode === 'group';
   const netDown = input.net === 'down';
-  const mediaRow = online && !netDown;
+  const mediaRow = online && !netDown && !input.viewerOnly;
   const slot = deriveSlot(input);
 
   return {
@@ -270,7 +273,7 @@ export function deriveMemberCase(input: MemberCaseInput): MemberCase {
     place: input.place,
     mode: input.mode,
     showHostPip: online && input.hostCamera && !netDown,
-    showMyPip: online && !group && !netDown,
+    showMyPip: online && !group && !netDown && !input.viewerOnly,
     showMediaRow: mediaRow,
     showSideCard: !online && !netDown,
     mic: mediaRow ? micButton(input) : null,

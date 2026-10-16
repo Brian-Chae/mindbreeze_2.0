@@ -1,5 +1,5 @@
 // SDD-208 M1 — 회원 지표 표시 헬퍼. 지표 정의(라벨·단위·스케일)는 공용 PLAYER_METRICS 를 쓰고 복제하지 않는다.
-// 회원 화면에는 그룹 평균·순위·±델타를 두지 않으므로 여기에는 "내 값"의 호 길이·5분 변화·스파크라인만 있다.
+// 회원 화면에는 다른 참가자와 견주는 수치(평균·순위·델타)를 두지 않으므로 여기에는 "내 값"의 호 길이·5분 변화·스파크라인만 있다.
 import { PLAYER_METRICS, type PlayerMetric, type PlayerMetricKey } from '../../../../lib/class/player-case';
 
 export type MetricSnapshot = Record<PlayerMetricKey, number | null>;
@@ -59,6 +59,16 @@ export function formatTrendChange(series: readonly number[]): string {
   const delta = Math.round(series[series.length - 1]) - Math.round(series[0]);
   const sign = delta > 0 ? `+${delta}` : delta < 0 ? `-${Math.abs(delta)}` : '0';
   return `${minutes}분간 ${sign}`;
+}
+
+/** 표시용으로 점 수를 줄인다(처음·끝 유지, 균등 추출). Float32Array 같은 ArrayLike 도 받는다 */
+export function downsample(values: ArrayLike<number>, count: number): number[] {
+  const n = values.length;
+  if (n === 0) return [];
+  if (n <= count) return Array.from(values);
+  if (count < 2) return [values[n - 1]];
+  const last = n - 1;
+  return Array.from({ length: count }, (_, i) => values[Math.round((i * last) / (count - 1))]);
 }
 
 function resample(series: readonly number[], count: number): number[] {

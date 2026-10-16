@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MEMBER_SERIES_MAX,
   METRIC_GUIDE,
+  downsample,
   emptySeries,
   formatClock,
   formatTrendChange,
@@ -99,5 +100,29 @@ describe('formatClock', () => {
     expect(formatClock(754)).toBe('12:34');
     expect(formatClock(1800)).toBe('30:00');
     expect(formatClock(-3)).toBe('00:00');
+  });
+});
+
+describe('downsample — 기기 시트 원시 파형 표시용', () => {
+  const ramp300 = Array.from({ length: 300 }, (_, i) => i);
+  it('count 이하면 그대로 복사해 돌려준다(원본 불변)', () => {
+    const src = [1, 2, 3];
+    const out = downsample(src, 120);
+    expect(out).toEqual([1, 2, 3]);
+    expect(out).not.toBe(src);
+  });
+  it('count 를 넘으면 처음과 끝을 지키며 균등 추출한다', () => {
+    const out = downsample(ramp300, 120);
+    expect(out).toHaveLength(120);
+    expect(out[0]).toBe(0);
+    expect(out[119]).toBe(299);
+    expect(out.every((v, i) => i === 0 || v >= out[i - 1])).toBe(true);
+  });
+  it('ArrayLike(Float32Array 등)도 받는다', () => {
+    expect(downsample(new Float32Array([1, 2, 3, 4, 5, 6]), 3)).toEqual([1, 4, 6]);
+  });
+  it('빈 입력은 빈 배열, count<2 는 빈 배열이 아니라 마지막 값 하나', () => {
+    expect(downsample([], 10)).toEqual([]);
+    expect(downsample([5, 6, 7], 1)).toEqual([7]);
   });
 });

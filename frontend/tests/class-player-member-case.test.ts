@@ -252,6 +252,25 @@ describe('상담사 영상·linkband_mode=none', () => {
   });
 });
 
+describe('viewerOnly — 온라인 그룹 정원 20명 초과(수신 전용)', () => {
+  const c = deriveMemberCase(memberInput({ mode: 'group', mic: 'muted', viewerOnly: true }));
+  it('마이크·카메라·손들기 버튼과 미디어 줄, 내 PiP 가 없고 상담사 PiP 는 그대로', () => {
+    expect(c.showMediaRow).toBe(false);
+    expect(c.mic).toBeNull();
+    expect(c.cam).toBeNull();
+    expect(c.hand).toBeNull();
+    expect(c.showMyPip).toBe(false);
+    expect(c.showHostPip).toBe(true);
+  });
+  it('"기본 뮤트 · 손들기" 안내 대신 밴드 안내만 나온다', () => {
+    expect(c.notice).toBeNull();
+    expect(deriveMemberCase(memberInput({ mode: 'group', mic: 'muted', viewerOnly: true, band: 'weak' })).notice?.icon).toBe('signalLow');
+  });
+  it('기본값은 false(기존 케이스 불변)', () => {
+    expect(MEMBER_CASE_DEFAULT.viewerOnly).toBe(false);
+  });
+});
+
 describe('P5·P6 금지 문구 — 파생 결과 전체에 호흡 지시·그룹 비교 문구가 없다', () => {
   const FORBIDDEN_BREATH = /호흡에 집중|숨을 (들이|내쉬)|들이쉬|내쉬|호흡하세요|천천히 호흡|심호흡/;
   const FORBIDDEN_COMPARE = /그룹|평균|순위|상위|하위|종합|총점|점수/;
