@@ -1,0 +1,32 @@
+# SDD-208 기준선 (T0) — 기준 커밋 c9d5daa1 (origin/develop), worktree sdd/208-class-player
+# 이후 회귀 판정용. 아래 실패는 SDD-208 변경 이전부터 존재한다.
+
+## 환경
+- node v22.23.1, npm 10.9.8, npm ci --legacy-peer-deps (lockfile = 원본 작업 트리와 동일)
+
+## 1. tsc
+- CI 명령 `npx tsc --noEmit`: frontend/tsconfig.json 이 `files: []` + references 구조라 **아무것도 검사하지 않음**(0.7초, 오류 0). 실질 검사가 아님.
+- 실질 검사 `npx tsc -p tsconfig.app.json --noEmit`: 오류 0건 (이후 Task는 이 명령을 사용)
+
+## 2. eslint
+- `npx eslint src/`: 오류·경고 0건
+
+## 3. vitest (`npm test`)
+- Test Files  6 failed | 60 passed (66)
+- Tests  11 failed | 460 passed (471)
+- 실패 목록(11건, 6파일):
+  - tests/agent-counselor-page.test.tsx > 메시지 전송 성공 후 입력을 비우고 사용자·AI 응답을 최신 하단에 표시한다
+  - tests/agent-counselor-page.test.tsx > 상담사는 브리핑과 입력창을 보고 CTA로 세션 목록을 연다
+  - tests/chat-message-deeplink.test.ts > 대상 failure이면 최근 대화로 돌아갈 수 있다
+  - tests/chat-message-deeplink.test.ts > 대상 missing이면 최근 대화로 돌아갈 수 있다
+  - tests/org-counselor-management-browser.test.cjs > 상담사 보호 대상, 확인 사유, 실패 유지, 역할 변경과 소속 해제
+  - tests/org-management-browser.test.cjs > 기관 모달: 미저장 보호, 실패 유지, 충돌 재조회, 수정, 비활성화, 재활성화
+  - tests/org-management-browser.test.cjs > 목록 상태 필터와 저장 후 포커스 복귀
+  - tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: saved@example.com)
+  - tests/report-modal-pdf.test.cjs > 하단 액션과 본문 전용 PDF (수신 주소: 없음)
+  - tests/report-server-pdf.test.cjs > detail: 서버 파일 다운로드와 실패 복구
+  - tests/report-server-pdf.test.cjs > email: 서버 파일 다운로드와 실패 복구
+
+## 실패 원인 메모
+- *-browser.test.cjs·report-*-pdf.test.cjs: 실제 앱 서버/브라우저(liveBrowserHash)가 필요한 테스트 — 오프라인 worktree에서 실패.
+- agent-counselor-page.test.tsx, chat-message-deeplink.test.ts: SDD-208 이전부터 실패(해당 파일 미수정).
