@@ -1,0 +1,78 @@
+/* SDD-208 — 클래스 진행 화면(회원·상담사) 공용 토큰.
+   designs/class-player-redesign/tokens.css 이식. 앱 전역을 건드리지 않도록 .pz-root 안으로만 스코프한다. */
+.pz-root {
+  /* 브랜드 */
+  --mb-purple: #5F0080;
+  --mb-purple-90: #6E1A8C;
+  --mb-lavender: #B373EF;
+  --mb-pale: #D2AEFC;
+  --mb-purple-cream: #F5EDFC;
+  --mb-mint: #01F0C8;
+  --mb-coral: #E8B4A0;
+  --caution: #F0D08A;
+  --coral-bg: rgba(232, 180, 160, 0.16);
+
+  /* 텍스트 (소프트 시트 위) */
+  --tx-hi: #F7F4F0;
+  --tx-mid: #CFC6D6;
+  --tx-lo: #9A90A6;
+
+  /* 소프트 시트 — 블러 없음 */
+  --sheet-bg: rgba(24, 12, 36, 0.58);
+  --sheet-bg-strong: rgba(24, 12, 36, 0.78);
+  --sheet-border: rgba(255, 255, 255, 0.14);
+  --scrim-top: rgba(18, 8, 28, 0.35);
+  --scrim-bottom: rgba(18, 8, 28, 0.72);
+
+  /* 형태 — 터치 영역 최소 44px */
+  --r-sheet: 24px;
+  --r-card: 16px;
+  --r-pill: 9999px;
+  --tap: 44px;
+
+  /* 타이포 스케일 — 최소 12px (11px 이하 금지) */
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-18: 18px;
+  --fs-24: 24px;
+  --fs-36: 36px;
+  --fs-56: 56px;
+
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+
+  /* 지표별 고정 색 (상담사 화면 지표 식별용) */
+  --m-relax: #7DE3C8;
+  --m-focus: #D2AEFC;
+  --m-emotion: #F2C9A8;
+  --m-bpm: #F0A7B8;
+  --m-resp: #9CC9F0;
+  --m-hrv: #B8E08A;
+
+  /* 레이아웃 */
+  --pz-pad: 16px;
+  --pz-top-h: 56px;
+  --pz-dock-h: 60px;
+  /* 도크·미디어 줄·바텀 시트 최대 폭 (spec 확정 결정 #2) */
+  --pz-col: 640px;
+  --pz-sheet-w: clamp(360px, 32vw, 420px);
+
+  font-family: var(--font);
+  color: var(--tx-hi);
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 768px) {
+  .pz-root { --pz-pad: 20px; --pz-dock-h: 64px; }
+}
+
+/* 리셋은 :where() 로 특이도 0 — 컴포넌트 클래스가 항상 이긴다 */
+:where(.pz-root) *, :where(.pz-root) *::before, :where(.pz-root) *::after { box-sizing: border-box; }
+:where(.pz-root) button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+:where(.pz-root) h1, :where(.pz-root) h2, :where(.pz-root) h3, :where(.pz-root) p, :where(.pz-root) ul, :where(.pz-root) ol { margin: 0; padding: 0; }
+:where(.pz-root) :focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+
+/* 앱은 호흡 지시·호흡 애니메이션을 제공하지 않는다 — 링은 정적 게이지, 모션은 값 변화 전환뿐 */
+@media (prefers-reduced-motion: reduce) {
+  .pz-root, .pz-root *, .pz-root *::before, .pz-root *::after { animation: none !important; transition: none !important; }
+}
