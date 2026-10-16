@@ -192,7 +192,7 @@
 
 /* ───────── 네트워크 끊김(M19) ───────── */
 .mp-netdown {
-  grid-row: 1 / -1; align-self: center; width: min(100%, 480px); padding: 24px 20px 20px;
+  grid-row: 1 / -1; align-self: center; width: min(100%, 480px); max-height: 100%; overflow-y: auto; padding: 24px 20px 20px;
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
   border-radius: var(--r-sheet); background: var(--sheet-bg-strong); border: 1px solid var(--mb-coral);
 }
@@ -320,7 +320,7 @@
 /* ───────── 전체 화면(대기열·종료) ───────── */
 .mp-full-center { width: 100%; height: 100%; min-height: 0; display: grid; place-items: center; }
 .mp-fv-card {
-  width: min(100%, 420px); padding: 28px 24px 24px;
+  width: min(100%, 420px); max-height: 100%; overflow-y: auto; padding: 28px 24px 24px;
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px;
   background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet); box-shadow: 0 12px 32px rgba(10, 4, 18, 0.35);
 }
@@ -337,3 +337,6 @@
 
 /* LiveKit 방은 화면에 그리지 않는다(오디오·트랙 구독 전용) */
 .mp-lk-room { position: fixed; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+
+/* 카드가 화면보다 크면 카드 안에서 스크롤 — 안쪽 요소가 찌그러지지 않게 줄어들지 않는다 */
+.mp-fv-card > *, .mp-netdown > * { flex-shrink: 0; }
