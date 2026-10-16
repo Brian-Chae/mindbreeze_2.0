@@ -32,6 +32,8 @@ export interface MemberDeviceModel {
   raw: { fp1: readonly number[]; fp2: readonly number[] } | null;
   /** 시뮬레이션 모드면 연결 버튼 라벨이 "시뮬레이션 시작" */
   isMock: boolean;
+  /** 서버로 아직 못 보낸 밴드 데이터 수 — 0보다 크면 네트워크 끊김 카드에 "보관 중" 문구를 보여 준다 */
+  pendingCount: number;
 }
 
 export interface MemberSoundModel {
@@ -118,6 +120,10 @@ export interface MemberEndModel {
   durationLabel: string;
   /** 게스트는 "홈으로", 회원은 "대시보드로 이동" */
   actionLabel: string;
+  /** 기존 리포트 메일 신청 패널(시트로 연다). 없으면 [리포트 받기]를 그리지 않는다(D5) */
+  reportPanel?: ReactNode;
+  /** 기존 사후 체크인 패널(시트로 연다). 없으면 [오늘 상태 남기기]를 그리지 않는다(D5) */
+  checkinPanel?: ReactNode;
 }
 
 export interface MemberWaitlistModel {
@@ -125,4 +131,6 @@ export interface MemberWaitlistModel {
   counselorName: string | null;
   /** "14:00" */
   startLabel: string | null;
+  /** 로그인 회원에게만 입장 알림(푸시)이 간다 — 게스트는 안내 문구를 빼야 한다 */
+  notifyByPush: boolean;
 }

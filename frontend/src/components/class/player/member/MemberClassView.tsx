@@ -8,6 +8,7 @@ import { PlayerDock, type DockItem } from '../shared/PlayerDock';
 import { PlayerSheet } from '../shared/PlayerSheet';
 import { useSheetMode } from '../shared/sheet-mode';
 import { PlayerShell } from '../shared/PlayerShell';
+import { MemberNetDownCard, MemberEndView, MemberWaitlistView } from './MemberFullView';
 import { MemberHostPip, MemberMediaRow, MemberMyPip } from './MemberPips';
 import { MemberSheetBody } from './MemberSheets';
 import { memberSheetTitle } from './member-sheet-title';
@@ -31,7 +32,7 @@ const SHEET_KEYS: readonly string[] = ['status', 'chat', 'signal', 'sound', 'dev
 const isSheetKey = (key: string | null): key is MemberSheetKey => key !== null && SHEET_KEYS.includes(key);
 
 export function MemberClassView(props: MemberClassViewProps) {
-  const { input, header, hero, snapshot, series, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, actions } = props;
+  const { input, header, hero, snapshot, series, device, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, end, waitlist, actions } = props;
   const c = useMemo(() => deriveMemberCase(input), [input]);
   // 도크에 없는 시트(오프라인의 조용한 신호 등)는 열지 않는다
   const activeSheet = sheet !== null && c.dock.some((item) => item.key === sheet) ? sheet : null;
@@ -44,6 +45,15 @@ export function MemberClassView(props: MemberClassViewProps) {
     icon: DOCK_ICONS[item.key],
     badge: item.key === 'chat' && chat.enabled ? chat.unread : undefined,
   }));
+
+  if (c.view === 'waitlist') {
+    const info = waitlist ?? { title: header.title, counselorName: header.counselorName, startLabel: null, notifyByPush: false };
+    return <MemberWaitlistView waitlist={info} backdropSrc={backdropSrc} onLeave={actions.onWaitlistLeave} />;
+  }
+  if (c.view === 'end') {
+    const info = end ?? { title: header.title, durationLabel: `${Math.max(1, Math.round(header.elapsedSec / 60))}분`, actionLabel: '홈으로' };
+    return <MemberEndView end={info} backdropSrc={backdropSrc} onAction={actions.onEndAction} />;
+  }
 
   const handleSlotAction = (act: SlotAction): void => {
     if (act === 'openDevice') actions.onSheetChange('device');
@@ -97,7 +107,7 @@ export function MemberClassView(props: MemberClassViewProps) {
         }
         sheetOpen={sheetOpen}
         onSlotAction={handleSlotAction}
-        netDownCard={null}
+        netDownCard={<MemberNetDownCard pendingCount={device.pendingCount} onRetry={actions.onNetRetry} />}
       />
       {/* 채팅 시트가 닫혀 있어도 안읽음 집계가 이어지도록 채팅 노드는 계속 마운트해 둔다 */}
       {activeSheet !== 'chat' && chat.enabled && chat.authenticated ? <div hidden>{chat.node}</div> : null}
