@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 // SDD-208 M1 — 회원 뷰(MemberClassView): 상단 바·링·밴드 8상태·안내 칩·슬롯 카드·5분 추이·도크
 import { act, type ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberClassView, type MemberClassViewProps } from '../src/components/class/player/member/MemberClassView';
@@ -191,5 +193,23 @@ describe('금지 요소 — P5(호흡 지시)·P6(그룹 비교·점수)·X2(이
   it('정적 링: 값 호 외에 애니메이션 클래스가 없다(M08 점 페이드 제외)', async () => {
     await mount('M01');
     expect(q('[data-pz="ring"] .pz-ring__dots')).toBeNull();
+  });
+});
+
+describe('마이크 허용 방법 카드(M15) — 5분 추이 카드와 같은 높이라 링 자리를 밀지 않는다(verify P11)', () => {
+  const css = readFileSync(resolve(__dirname, '../src/components/class/player/member/member-player.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  it('추이 카드는 72px 고정이고, 카드 폭이 480px 이 되는 무대(≥480px)에서 허용 방법 카드도 72px 로 맞춘다', () => {
+    expect(css).toMatch(/\.mp-trend\s*\{[^}]*height:\s*72px/);
+    expect(css).toMatch(/@container\s*\(min-width:\s*480px\)\s*\{[^@]*?\.mp-info--steps\s*\{[^}]*height:\s*72px/);
+  });
+
+  it('M15: 제목과 3단계를 모두 그린다(칩 문구와 별도로)', async () => {
+    await mount('M15');
+    const card = q('[data-pz="info-card"]');
+    expect(card?.querySelector('b')?.textContent).toBe('마이크 허용 방법');
+    expect([...card?.querySelectorAll('ol li') ?? []].map((li) => li.textContent)).toEqual([
+      '주소창의 자물쇠 아이콘을 눌러요', '마이크를 “허용”으로 바꿔요', '페이지를 새로 고쳐요',
+    ]);
   });
 });

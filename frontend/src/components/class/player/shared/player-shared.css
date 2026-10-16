@@ -132,6 +132,15 @@
   border-radius: var(--r-card); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border);
   font-size: var(--fs-13); line-height: 18px; color: var(--tx-mid);
 }
+/* 오버레이: 흐름에서 빠져 기준 요소 위쪽에 겹쳐 뜬다. 뒤 요소의 클릭은 막지 않고 배너(와 그 안의 버튼)만 받는다 */
+.pz-overlay {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+.pz-overlay > .pz-notice { pointer-events: auto; }
+/* 뒤 요소의 글자가 비쳐 보이면 읽히지 않으므로 오버레이 배너는 불투명 바탕 위에 톤 색(--pz-tint)을 얹는다 */
+.pz-overlay > .pz-notice[data-variant="banner"] { --pz-tint: var(--sheet-bg-strong); background: linear-gradient(var(--pz-tint), var(--pz-tint)), #1a1024; }
 .pz-notice[data-tone="info"][data-variant="chip"] { background: rgba(24, 12, 36, 0.68); }
 .pz-notice[data-tone="info"] .pz-notice__icon { color: var(--mb-pale); }
 .pz-notice[data-tone="caution"][data-variant="chip"] { background: rgba(60, 46, 14, 0.82); }

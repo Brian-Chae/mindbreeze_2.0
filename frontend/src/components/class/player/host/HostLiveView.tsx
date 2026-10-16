@@ -23,6 +23,7 @@ import { PlayerShell } from '../shared/PlayerShell';
 import { PlayerSheet } from '../shared/PlayerSheet';
 import { useSheetMode } from '../shared/sheet-mode';
 import { HostBanner, HostErrorBanners, type HostErrorBannerModel } from './HostBanner';
+import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { HostChipLine } from './HostChipLine';
 import { HostSelfView, HostSummaryPanel } from './HostHeadSlot';
 import { HostMediaSheet, HostPermissionSheet, type HostMediaProps } from './HostMediaSheet';
@@ -228,10 +229,12 @@ export function HostLiveView(props: HostLiveViewProps) {
       sheet={sheet}
     >
       <div className="hp-main" data-net-bad={netBad ? 'true' : undefined} data-sheet-bottom={bottomSheetOpen ? 'true' : undefined}>
-        {errorBanners?.length ? <HostErrorBanners banners={errorBanners} /> : null}
-        {hostCase.banner ? (
-          <HostBanner banner={hostCase.banner} onSheet={uiActions.openSheet} onToggleMic={actions.toggleMic} onRetry={actions.retryNetwork} />
-        ) : null}
+        <NoticeOverlay>
+          {errorBanners?.length ? <HostErrorBanners banners={errorBanners} /> : null}
+          {hostCase.banner ? (
+            <HostBanner banner={hostCase.banner} onSheet={uiActions.openSheet} onToggleMic={actions.toggleMic} onRetry={actions.retryNetwork} />
+          ) : null}
+        </NoticeOverlay>
         <div className="hp-head" data-pz="head" data-big={camBig ? 'true' : undefined}>
           {strip}
           {hostCase.headSlot === 'selfview' ? (

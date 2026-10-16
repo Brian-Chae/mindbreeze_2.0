@@ -36,15 +36,14 @@
 
 /* ───────── 중앙 무대 ───────── */
 .mp-stage {
-  --pip-w: 96px; --pip-h: 128px; --banner-h: 0px; --reserve: 0px;
+  --pip-w: 96px; --pip-h: 128px; --reserve: 0px;
   --ring-cw: 65cqw; --cardw: min(100cqw, 480px);
   --ring: max(144px, min(var(--ring-cw), 420px, calc(100cqh - 2 * var(--reserve))));
-  position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; padding-top: var(--banner-h);
+  position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0;
   container-type: size;
   display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
   justify-items: center; align-items: center;
 }
-.mp-stage[data-net="reconnecting"] { --banner-h: 52px; }
 @media (min-width: 768px) { .mp-stage { --pip-w: 200px; --pip-h: 120px; --ring-cw: 60cqw; } }
 /* 모바일 바텀 시트가 열리면 PiP 를 줄이고 링 아래 카드는 접는다 */
 @media (max-width: 767px) {
@@ -53,7 +52,6 @@
   .mp-stage[data-sheet-open="true"] .mp-hero-side { display: none; }
 }
 .mp-stage > .pz-ring { grid-row: 2; }
-.mp-banner-slot { position: absolute; top: 0; left: 0; right: 0; z-index: 3; display: flex; justify-content: center; }
 .mp-slot-top { grid-row: 1; align-self: end; width: 100%; padding-bottom: 16px; display: flex; flex-direction: column; align-items: center; }
 .mp-slot-bottom { grid-row: 3; align-self: start; width: 100%; padding-top: 16px; display: flex; flex-direction: column; align-items: center; }
 .mp-stack { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -70,8 +68,8 @@
 .mp-stack .pz-notice[data-tone="caution"][data-variant="chip"], .mp-stack .pz-notice[data-tone="coral"][data-variant="chip"] { font-size: var(--fs-13); line-height: 18px; border-radius: 24px; }
 .mp-stack .pz-notice[data-tone="info"][data-variant="chip"] { font-size: var(--fs-15); }
 .mp-stack .pz-notice[data-tone="live"][data-variant="chip"] { font-size: var(--fs-15); }
-.mp-banner-slot .pz-notice[data-variant="banner"] { background: rgba(58, 26, 24, 0.88); color: var(--tx-mid); justify-content: center; }
-.mp-banner-slot .pz-notice[data-variant="banner"] b { font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); margin-inline-end: 8px; }
+.mp-stage .pz-overlay .pz-notice[data-variant="banner"] { --pz-tint: rgba(58, 26, 24, 0.88); color: var(--tx-mid); justify-content: center; }
+.mp-stage .pz-overlay .pz-notice[data-variant="banner"] b { font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); margin-inline-end: 8px; }
 
 /* ───────── 카드 ───────── */
 .mp-card {
@@ -98,6 +96,13 @@
 .mp-info__tx b { display: block; font-size: var(--fs-15); font-weight: 600; line-height: 20px; }
 .mp-info__tx p { margin: 0; font-size: var(--fs-13); line-height: 19px; color: var(--tx-mid); text-wrap: balance; }
 .mp-info__tx ol { margin: 6px 0 0; padding-left: 18px; list-style: decimal; font-size: var(--fs-13); line-height: 19px; color: var(--tx-mid); }
+/* 허용 방법 카드는 5분 추이 카드(72px)를 대신 그리므로 같은 높이여야 링·PiP 가 밀리지 않는다(P11). 카드 폭이 480px 이 되는 무대에서는 제목 옆에 3단계를 나란히 둔다 */
+@container (min-width: 480px) {
+  .mp-info--steps { height: 72px; padding-block: 8px; align-items: center; }
+  .mp-info--steps .mp-info__tx { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 16px; align-items: center; }
+  .mp-info--steps .mp-info__tx b { white-space: nowrap; }
+  .mp-info--steps .mp-info__tx ol { margin: 0; line-height: 18px; }
+}
 
 .mp-pill {
   flex: none; min-height: var(--tap); padding: 0 18px; border-radius: var(--r-pill);

@@ -5,6 +5,7 @@ import { TriangleAlert } from 'lucide-react';
 import type { MemberCase, SlotAction } from '../../../../lib/class/member-player-case';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 import { NoticeBanner } from '../shared/NoticeBanner';
+import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { StatusRing } from '../shared/StatusRing';
 import { MemberIcon } from './MemberIcon';
 import { METRIC_GUIDE, formatTrendChange, metricDef, metricFraction, sparkGeometry, type MetricSeries, type MetricSnapshot } from './member-metrics';
@@ -145,14 +146,14 @@ export function MemberStage({ c, hero, snapshot, series, slotTop, sideCard, shee
 
   return (
     <div className="mp-stage" ref={stageRef} data-net={c.netDown ? 'down' : c.conn.ok ? 'ok' : 'reconnecting'} data-sheet-open={sheetOpen ? 'true' : 'false'}>
-      {c.banner ? (
-        <div className="mp-banner-slot">
+      <NoticeOverlay>
+        {c.banner ? (
           <NoticeBanner tone="coral" variant="banner" icon={<MemberIcon name="wifiOff" />}>
             <b>{c.banner.title}</b>
             <span>{c.banner.text}</span>
           </NoticeBanner>
-        </div>
-      ) : null}
+        ) : null}
+      </NoticeOverlay>
       {c.netDown ? (
         netDownCard
       ) : (

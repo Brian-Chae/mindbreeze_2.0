@@ -10,6 +10,7 @@ import { PlayerSheet } from '../src/components/class/player/shared/PlayerSheet';
 import { PlayerDock, type DockItem } from '../src/components/class/player/shared/PlayerDock';
 import { StatusRing } from '../src/components/class/player/shared/StatusRing';
 import { NoticeBanner } from '../src/components/class/player/shared/NoticeBanner';
+import { NoticeOverlay } from '../src/components/class/player/shared/NoticeOverlay';
 import { IconCircleButton } from '../src/components/class/player/shared/IconCircleButton';
 import { PlayerTopBar } from '../src/components/class/player/shared/PlayerTopBar';
 import { PlayerShell } from '../src/components/class/player/shared/PlayerShell';
@@ -288,6 +289,79 @@ describe('NoticeBanner', () => {
     expect(q('.pz-notice')?.getAttribute('data-has-action')).toBe('true');
     await render(<NoticeBanner tone="info" variant="banner" icon={<svg />}>마이크 꺼짐</NoticeBanner>);
     expect(q('.pz-notice')?.hasAttribute('data-has-action')).toBe(false);
+  });
+});
+
+describe('NoticeOverlay — 배너를 흐름 밖에 띄워 형제 요소 자리를 밀지 않는다(verify P11)', () => {
+  const playerDir = resolve(__dirname, '../src/components/class/player');
+  const readCss = (path: string): string => readFileSync(resolve(playerDir, path), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  let style: HTMLStyleElement;
+  beforeEach(() => {
+    // jsdom 은 레이아웃을 계산하지 못하므로 getComputedStyle 이 읽는 공용 CSS 의 배치 선언으로 "흐름에서 빠졌는지"를 본다
+    style = document.createElement('style');
+    style.textContent = readCss('shared/player-shared.css').replace(/@import[^;]+;/g, '');
+    document.head.append(style);
+  });
+  afterEach(() => style.remove());
+
+  const withBanner = (
+    <div className="stage" style={{ position: 'relative' }}>
+      <NoticeOverlay>
+        <NoticeBanner tone="coral" variant="banner" icon={<svg />}>연결이 불안정해요</NoticeBanner>
+      </NoticeOverlay>
+      <p data-pz="below">본문</p>
+    </div>
+  );
+
+  const overlayStyle = (): CSSStyleDeclaration => {
+    const el = q('.pz-overlay');
+    expect(el).not.toBeNull();
+    return getComputedStyle(el as HTMLElement);
+  };
+
+  it('흐름에서 빠진 절대 배치로 기준 요소의 위쪽 가장자리에 붙는다(자리를 차지하지 않는다)', async () => {
+    await render(withBanner);
+    const cs = overlayStyle();
+    expect(cs.position).toBe('absolute');
+    expect(cs.top).toBe('0px');
+    expect(cs.left).toBe('0px');
+    expect(cs.right).toBe('0px');
+  });
+
+  it('배너를 위→아래로 쌓고(8px 간격, S10) 가운데 정렬한다', async () => {
+    await render(withBanner);
+    const cs = overlayStyle();
+    expect(cs.display).toBe('flex');
+    expect(cs.flexDirection).toBe('column');
+    expect(cs.alignItems).toBe('center');
+    expect(cs.gap).toBe('8px');
+  });
+
+  it('겹쳐 올라가되 포인터는 배너 자신만 받는다(뒤 요소 클릭을 막지 않고, 배너 버튼은 누를 수 있다)', async () => {
+    await render(withBanner);
+    const cs = overlayStyle();
+    expect(cs.pointerEvents).toBe('none');
+    expect(Number(cs.zIndex)).toBeGreaterThan(0);
+    expect(getComputedStyle(q('.pz-notice') as HTMLElement).pointerEvents).toBe('auto');
+  });
+
+  it('오버레이 배너는 불투명 바탕이라 뒤 요소의 글자가 비쳐 보이지 않는다', () => {
+    const rule = readCss('shared/player-shared.css').match(/\.pz-overlay\s*>\s*\.pz-notice\[data-variant="banner"\]\s*\{([^}]*)\}/);
+    expect(rule).not.toBeNull();
+    expect(rule?.[1]).toMatch(/background:[^;]*#[0-9A-Fa-f]{6}\s*;/);
+  });
+
+  it('배너가 없으면 아무것도 그리지 않는다(빈 박스 0)', async () => {
+    await render(<div id="host"><NoticeOverlay>{null}{false}</NoticeOverlay></div>);
+    expect(q('#host')?.childElementCount).toBe(0);
+  });
+
+  it('회원 무대·상담사 본문은 배너 높이만큼 padding 을 예약하지 않고, 오버레이의 기준 요소(position:relative)이다', () => {
+    const member = readCss('member/member-player.css');
+    const host = readCss('host/host-player.css');
+    expect(member).not.toMatch(/--banner-h/);
+    expect(member).toMatch(/\.mp-stage\s*\{[^}]*position:\s*relative/);
+    expect(host).toMatch(/\.hp-main\s*\{[^}]*position:\s*relative/);
   });
 });
 
