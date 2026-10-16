@@ -1,0 +1,203 @@
+// SDD-208 H1 — 상담사 케이스 C01~C18 입력 픽스처 + 하니스 등록.
+// 시안(designs/class-player-redesign/counselor.html)의 CASE_DEF·BASE 를 그대로 옮겼고, 쿼리 변형(n·loc·cam·mic·net·…)도 같은 이름을 쓴다.
+import { createElement as h } from 'react';
+import { HostCaseHarness } from '../../../components/class/player/host/HostCaseHarness';
+import type { CamUi, MicUi, NetUi, PlayerMetricKey } from '../player-case';
+import {
+  EMPTY_HOST_VALUES,
+  isHostSheetKey,
+  type HostBand,
+  type HostCaseInput,
+  type HostCaseMeta,
+  type HostCaseSpec,
+  type HostCheckinAnswer,
+  type HostLoc,
+  type HostMetricValues,
+  type HostParticipant,
+  type HostPhase,
+  type HostRec,
+  type HostSelfBand,
+  type HostSort,
+  type HostUiInitial,
+} from '../host-player-case';
+import type { PlayerCaseContext, PlayerCaseMap } from '../player-harness';
+
+export const HOST_CASE_IDS: readonly string[] = Array.from({ length: 18 }, (_, i) => `C${String(i + 1).padStart(2, '0')}`);
+
+interface CaseDef {
+  hands?: readonly number[];
+  speaking?: number;
+  loc?: HostLoc;
+  solo?: boolean;
+  cam?: 'off' | 'denied';
+  mic?: 'off' | 'denied';
+  rec?: HostRec;
+  leadoff?: readonly number[];
+  lowbat?: readonly number[];
+  allOff?: boolean;
+  queue?: number;
+  selfBand?: 'on';
+  net?: Exclude<NetUi, 'ok'>;
+  phase?: HostPhase;
+  n?: number;
+  handsFirst?: boolean;
+}
+
+const CASE_DEFS: Record<string, CaseDef> = {
+  C01: {}, C02: { hands: [2, 5] }, C03: { speaking: 3 },
+  C04: { loc: 'offline' }, C05: { solo: true }, C06: { solo: true, loc: 'offline' },
+  C07: { cam: 'off' }, C08: { cam: 'denied' }, C09: { mic: 'off' }, C10: { mic: 'denied' },
+  C11: { rec: 'rec' }, C12: { leadoff: [2, 5, 8], lowbat: [3, 7] }, C13: { allOff: true },
+  C14: { queue: 3 }, C15: { selfBand: 'on' }, C16: { net: 'reconnecting' }, C17: { phase: 'confirm' },
+  C18: { n: 20, hands: [10, 13, 18], handsFirst: true },
+};
+
+type Seed = {
+  id: number;
+  name: string;
+  band: 'on' | 'off' | 'lost';
+  v: readonly [focus: number, relaxation: number, emotional: number, bpm: number, respiration: number, hrv: number] | null;
+  ago?: string;
+  ci: readonly HostCheckinAnswer[];
+  attention?: string;
+};
+
+const SEEDS: readonly Seed[] = [
+  { id: 1, name: '서연', band: 'on', v: [68, 70, 74, 72, 14, 52], ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 푹 잤어요']] },
+  { id: 2, name: '민준', band: 'on', v: [54, 58, 61, 78, 16, 41], ci: [['마음의 날씨', '조금 들떠 있어요'], ['몸 상태', '어깨에 힘이 들어가요'], ['수면', '6시간 · 보통']] },
+  { id: 3, name: '지우', band: 'on', v: [79, 88, 85, 64, 10, 71], ci: [['마음의 날씨', '맑고 고요해요'], ['몸 상태', '가벼워요'], ['수면', '8시간 · 푹 잤어요']] },
+  { id: 4, name: '하준', band: 'off', v: null, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+  { id: 5, name: '서아', band: 'on', v: [38, 41, 45, 86, 18, 28], ci: [['몸 상태', '어깨가 많이 뻐근해요'], ['마음의 날씨', '조금 무거워요'], ['수면', '4시간 · 뒤척였어요']], attention: '어깨가 많이 뻐근해요' },
+  { id: 6, name: '도윤', band: 'lost', v: [60, 64, 66, 75, 15, 44], ago: '2분 전', ci: [['수면', '거의 못 잤어요'], ['마음의 날씨', '무거워요'], ['몸 상태', '피곤해요']], attention: '거의 못 잤어요' },
+  { id: 7, name: '예린', band: 'on', v: [62, 73, 70, 70, 12, 55], ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+  // 시우는 아직 체크인을 하지 않았다(체크인 요약 6/7 구성)
+  { id: 8, name: '시우', band: 'off', v: null, ci: [] },
+];
+
+const EXTRA_NAMES = ['하윤', '도현', '나은', '지안', '수호', '다온', '이서', '로하', '유진', '태오', '소이', '건우', '아린', '현서', '라온', '시현'];
+
+function makeExtra(i: number): Seed {
+  const band = i % 5 === 3 ? 'off' : 'on';
+  const r = 48 + ((i * 13) % 40);
+  return {
+    id: i + 1,
+    name: EXTRA_NAMES[(i - 8) % EXTRA_NAMES.length],
+    band,
+    v: band === 'off' ? null : [45 + ((i * 7) % 40), r, 50 + ((i * 11) % 38), 62 + ((i * 5) % 24), 10 + (i % 8), 30 + ((i * 9) % 40)],
+    ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']],
+  };
+}
+
+function toValues(v: Seed['v']): HostMetricValues {
+  if (!v) return EMPTY_HOST_VALUES;
+  return { focus: v[0], relaxation: v[1], emotional: v[2], bpm: v[3], respiration: v[4], hrv: v[5] };
+}
+
+export function buildHostParticipants(count: number, def: CaseDef = {}): HostParticipant[] {
+  return Array.from({ length: count }, (_, i) => {
+    const seed = SEEDS[i] ?? makeExtra(i);
+    let band: HostBand = def.allOff ? 'off' : seed.band;
+    if (def.leadoff?.includes(seed.id)) band = 'leadoff';
+    return {
+      id: `p${seed.id}`,
+      name: seed.name,
+      band,
+      values: band === 'on' ? toValues(seed.v) : EMPTY_HOST_VALUES,
+      lowBattery: Boolean(def.lowbat?.includes(seed.id)) && band === 'on',
+      hand: Boolean(def.hands?.includes(seed.id)),
+      speaking: def.speaking === seed.id,
+      agoLabel: band === 'lost' ? (seed.ago ?? '방금 전') : null,
+      checkin: seed.ci,
+      attention: seed.attention ?? null,
+    };
+  });
+}
+
+const MESSAGES: HostCaseMeta['chat'] = [
+  { who: '서연', time: '12:18', text: '마음이 한결 편안해졌어요' },
+  { who: '나', me: true, time: '12:19', text: '좋아요. 지금 편안한 속도 그대로 이어가 볼게요.' },
+  { who: '민준', time: '12:24', text: '어깨에 힘이 자꾸 들어가요' },
+  { who: '지우', time: '12:26', text: '배경 소리가 참 좋아요' },
+  { who: '서아', time: '12:31', text: '어깨가 계속 뻐근해요' },
+  { who: '나', me: true, time: '12:32', text: '서아님, 어깨에 힘이 들어가 있는지 한 번 살펴보세요.' },
+  { who: '예린', time: '12:33', text: '네, 살펴볼게요' },
+];
+
+const METRIC_BY_PARAM: Record<string, PlayerMetricKey> = {
+  focus: 'focus', relax: 'relaxation', balance: 'emotional', bpm: 'bpm', resp: 'respiration', hrv: 'hrv',
+  relaxation: 'relaxation', emotional: 'emotional', respiration: 'respiration',
+};
+
+function pick<T extends string>(value: string | null, allowed: readonly T[], fallback: T): T {
+  return allowed.find((a) => a === value) ?? fallback;
+}
+
+function parseCount(value: string | null, fallback: number): number {
+  const n = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(n) ? Math.min(24, Math.max(1, n)) : fallback;
+}
+
+/** 시안은 detail=3 처럼 숫자로 참가자를 가리킨다 — p3 형식으로 맞춘다 */
+function parseDetail(value: string | null): string | null {
+  if (!value) return null;
+  return /^\d+$/.test(value) ? `p${value}` : value;
+}
+
+export function buildHostCaseInput(id: string, params: URLSearchParams = new URLSearchParams()): HostCaseSpec {
+  const key = id.toUpperCase();
+  const def = CASE_DEFS[key] ?? CASE_DEFS.C01;
+  const loc = pick<HostLoc>(params.get('loc'), ['online', 'offline'], def.loc ?? 'online');
+  const camParam = pick<'off' | 'big' | 'denied' | ''>(params.get('cam'), ['off', 'big', 'denied'], def.cam ?? '');
+  const micParam = pick<'off' | 'denied' | ''>(params.get('mic'), ['off', 'denied'], def.mic ?? '');
+  const net = pick<NetUi>(params.get('net'), ['reconnecting', 'down'], def.net ?? 'ok');
+  const phase = pick<HostPhase>(params.get('phase'), ['confirm', 'ending'], def.phase ?? 'live');
+  const recParam = pick<'rec' | 'paused' | 'none' | ''>(params.get('rec'), ['rec', 'paused', 'none'], loc === 'offline' ? 'rec' : (def.rec ?? ''));
+  const selfBandParam = pick<'on' | 'off' | ''>(params.get('selfband'), ['on', 'off'], def.selfBand ?? '');
+  const solo = Boolean(def.solo);
+  const count = solo ? 1 : params.get('n') ? parseCount(params.get('n'), 8) : (def.n ?? 8);
+  const online = loc === 'online';
+
+  const cam: CamUi = !online ? 'none' : camParam === 'denied' ? 'denied' : camParam === 'off' ? 'off' : 'on';
+  const mic: MicUi = !online ? 'none' : micParam === 'denied' ? 'denied' : micParam === 'off' ? 'off' : 'on';
+  const selfBand: HostSelfBand | null = selfBandParam === 'on'
+    ? { connected: true, relaxation: 72, battery: 78, signalLabel: '신호 좋음' }
+    : selfBandParam === 'off' ? { connected: false, relaxation: null, battery: null, signalLabel: null } : null;
+  const rec: HostRec | null = recParam === 'none' || recParam === '' ? null : recParam;
+  const participants = buildHostParticipants(count, def).map((p) => (online ? p : { ...p, hand: false, speaking: false }));
+  const sheetParam = params.get('sheet');
+  const detailId = parseDetail(params.get('detail'));
+
+  const input: HostCaseInput = {
+    loc, solo, participants, cam, mic, rec, recElapsedSec: 492, net, phase,
+    queueCount: def.queue ?? 0,
+    selfBand,
+    handsFirst: false,
+    quietSignalCount: 0,
+  };
+  const ui: HostUiInitial = {
+    metric: METRIC_BY_PARAM[params.get('metric') ?? ''] ?? 'relaxation',
+    rotate: params.get('rotate') === '1',
+    sort: pick<HostSort>(params.get('sort'), ['join', 'low', 'high'], 'join'),
+    handsFirst: online && Boolean(def.handsFirst),
+    table: params.get('table') === '1',
+    sheet: detailId ? 'detail' : isHostSheetKey(sheetParam) ? sheetParam : null,
+    detailId,
+    camBig: camParam === 'big',
+  };
+  const meta: HostCaseMeta = {
+    title: solo ? '임상심리상담 · 3회차' : '마음챙김 명상수업 · 4회차',
+    elapsedSec: 12 * 60 + 34,
+    durationMin: 30,
+    accessCode: 'MIND24',
+    chat: MESSAGES,
+    unread: 3,
+  };
+  return { id: key, input, ui, meta };
+}
+
+export const playerCases: PlayerCaseMap = Object.fromEntries(
+  HOST_CASE_IDS.map((id) => [
+    id,
+    { role: 'host' as const, render: (ctx: PlayerCaseContext) => h(HostCaseHarness, { spec: buildHostCaseInput(id, ctx.params), ctx }) },
+  ]),
+);
