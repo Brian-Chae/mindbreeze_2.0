@@ -17,6 +17,8 @@ interface MemberStageProps {
   series: MetricSeries;
   /** 상담사·내 PiP 또는 오프라인 현장 카드 */
   slotTop: ReactNode;
+  /** 오프라인 현장 안내 카드(상담사·내 PiP 자리를 대신한다) */
+  sideCard: ReactNode;
   /** 시트가 열려 있는지 — 모바일 바텀 시트에서는 링 아래 카드를 접는다 */
   sheetOpen: boolean;
   onSlotAction: (act: SlotAction) => void;
@@ -135,7 +137,7 @@ function SlotCard({ card, onAction }: { card: NonNullable<MemberCase['slot']>; o
   );
 }
 
-export function MemberStage({ c, hero, snapshot, series, slotTop, sheetOpen, onSlotAction, netDownCard }: MemberStageProps) {
+export function MemberStage({ c, hero, snapshot, series, slotTop, sideCard, sheetOpen, onSlotAction, netDownCard }: MemberStageProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -155,7 +157,10 @@ export function MemberStage({ c, hero, snapshot, series, slotTop, sheetOpen, onS
         netDownCard
       ) : (
         <>
-          <div className="mp-slot-top" ref={topRef}>{slotTop}</div>
+          <div className="mp-slot-top" ref={topRef}>
+            {slotTop}
+            {sideCard ? <div className="mp-hero-side">{sideCard}</div> : null}
+          </div>
           <HeroRing c={c} hero={hero} snapshot={snapshot} />
           <div className="mp-slot-bottom" ref={bottomRef}>
             <div className="mp-stack">
