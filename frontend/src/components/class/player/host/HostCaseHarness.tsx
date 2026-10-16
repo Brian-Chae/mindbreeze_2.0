@@ -1,6 +1,6 @@
 // SDD-208 — 케이스 하니스(/design/class-player)용 상담사 화면 래퍼. 픽스처 입력을 로컬 상태로 들고 있어 시안처럼 눌러 볼 수 있다.
 // 서버·소켓·LiveKit 을 전혀 쓰지 않으므로 케이스를 결정적으로 렌더·측정한다. 발언권·녹음·마커는 실제 컴포넌트를 그대로 쓴다.
-import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { Send } from 'lucide-react';
 import type { SessionLiveMetric } from '../../../../lib/api/session';
 import {
@@ -12,8 +12,8 @@ import {
   type HostRec,
   type HostSelfBand,
 } from '../../../../lib/class/host-player-case';
-import type { CamUi, MicUi } from '../../../../lib/class/player-case';
-import type { PlayerCaseContext } from '../../../../lib/class/player-harness';
+import type { CamUi, MicUi, NetUi } from '../../../../lib/class/player-case';
+import { registerCasePatch, type PlayerCaseContext } from '../../../../lib/class/player-harness';
 import { EndSessionModal } from '../../../player/EndSessionModal';
 import { MarkerButton } from '../../../session/MarkerButton';
 import { SpeakingRightsPanel } from '../../../session/SpeakingRightsPanel';
@@ -78,6 +78,7 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
   const [cam, setCam] = useState<CamUi>(spec.input.cam);
   const [rec, setRec] = useState<HostRec | null>(spec.input.rec);
   const [selfBand, setSelfBand] = useState<HostSelfBand | null>(spec.input.selfBand);
+  const [net, setNet] = useState<NetUi>(spec.input.net);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [messages, setMessages] = useState<readonly HostChatMessage[]>(spec.meta.chat);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -91,9 +92,17 @@ export function HostCaseHarness({ spec, ctx }: HostCaseHarnessProps) {
     return typeof canvas.captureStream === 'function' ? canvas.captureStream() : null;
   });
 
+  // 측정 스크립트(P11)가 같은 화면에서 mic·cam·rec·net 만 바꿔 자리 변위를 잰다
+  useEffect(() => registerCasePatch((partial) => {
+    if (partial.mic !== undefined) setMic(partial.mic as MicUi);
+    if (partial.cam !== undefined) setCam(partial.cam as CamUi);
+    if (partial.rec !== undefined) setRec(partial.rec === 'none' || partial.rec === null ? null : (partial.rec as HostRec));
+    if (partial.net !== undefined) setNet(partial.net as NetUi);
+  }), []);
+
   const hostCase = useMemo(
-    () => deriveHostCase({ ...spec.input, participants, mic, cam, rec, selfBand, handsFirst: ui.handsFirst, filter: ui.filter }),
-    [spec.input, participants, mic, cam, rec, selfBand, ui.handsFirst, ui.filter],
+    () => deriveHostCase({ ...spec.input, participants, mic, cam, rec, net, selfBand, handsFirst: ui.handsFirst, filter: ui.filter }),
+    [spec.input, participants, mic, cam, rec, net, selfBand, ui.handsFirst, ui.filter],
   );
 
   const setSpeaking = useCallback((id: string, speaking: boolean) => {

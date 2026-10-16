@@ -1,11 +1,12 @@
 // SDD-208 — 케이스 하니스(/design/class-player) 전용 래퍼. 서버·BLE 없이 픽스처 입력만으로 회원 뷰를 그리고,
 // 시트 열기·지표 전환·마이크/카메라 토글 같은 화면 안 상호작용만 로컬 상태로 흉내 낸다(시안 member.html 의 동작).
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Send } from 'lucide-react';
 import { MemberClassView } from './MemberClassView';
 import type { MemberClassViewProps, MemberSheetKey } from './member-view-types';
 import type { MemberCaseInput } from '../../../../lib/class/member-player-case';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
+import { registerCasePatch } from '../../../../lib/class/player-harness';
 import './member-player.css';
 
 interface DemoMessage {
@@ -63,6 +64,8 @@ export function MemberCaseDemo({ initial }: MemberCaseDemoProps) {
   const [hero, setHero] = useState<PlayerMetricKey>(initial.hero);
   const [sound, setSound] = useState(initial.sound);
   const patch = (partial: Partial<MemberCaseInput>): void => setInput((prev) => ({ ...prev, ...partial }));
+  // 측정 스크립트(P11)가 같은 화면에서 band·mic·cam·net·hand 만 바꿔 자리 변위를 잰다
+  useEffect(() => registerCasePatch((partial) => setInput((prev) => ({ ...prev, ...partial }) as MemberCaseInput)), []);
 
   const actions: MemberClassViewProps['actions'] = {
     ...initial.actions,

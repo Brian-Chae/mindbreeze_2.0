@@ -58,3 +58,18 @@ export function parseViewport(raw: string | null): { width: number; height: numb
   if (width > MAX_VIEWPORT_PX || height > MAX_VIEWPORT_PX) return null;
   return { width, height };
 }
+
+declare global {
+  interface Window {
+    /** 하니스 전용: 같은 화면에서 상태만 바꿔 자리 고정(P11)을 측정하기 위해 케이스 입력 일부를 덮어쓴다 */
+    __patchCase?: (partial: Record<string, string | null>) => void;
+  }
+}
+
+/** 하니스 래퍼가 케이스 상태 변경 훅을 window.__patchCase 로 노출한다(언마운트 시 해제) */
+export function registerCasePatch(patch: (partial: Record<string, string | null>) => void): () => void {
+  window.__patchCase = patch;
+  return () => {
+    if (window.__patchCase === patch) delete window.__patchCase;
+  };
+}
