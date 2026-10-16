@@ -23,12 +23,13 @@ export interface BandInput {
 }
 
 /**
- * 밴드 UI 상태. 우선순위: unsupported > pending > leadoff > lost > weak > low > on > off.
+ * 밴드 UI 상태. 우선순위: unsupported > pending(최초 연결 시도) > leadoff > lost > weak > low > on > off.
  * 임계값은 새로 만들지 않고 기존 signal-status 의 판정(EEG stale 10초, 배터리 25% 이하)을 재사용한다.
  */
 export function deriveBandUi(input: BandInput, nowMs: number): BandUi {
   if (input.connectionState === 'unsupported') return 'unsupported';
-  if (input.connectionState === 'connecting') return 'pending';
+  // 이미 연결된 적이 있는 밴드가 끊긴 뒤 자동 재연결(connecting)을 거칠 때 lost↔pending 깜박임을 막는다
+  if (input.connectionState === 'connecting') return input.everConnected ? 'lost' : 'pending';
   if (input.deviceStatus === 'lead_off') return 'leadoff';
 
   const link = resolveBandLinkState({

@@ -91,7 +91,8 @@ describe('deriveBandUi — 우선순위 충돌 (unsupported > pending > leadoff 
     ['미지원 + 이전 값 잔존(리드오프·약함·부족) → unsupported', 'unsupported', {
       connectionState: 'unsupported', deviceStatus: 'lead_off', signalQualityLevel: 'invalid', battery: 5, lastEegAt: STALE,
     }],
-    ['연결 중 + 리드오프 값 잔존 → pending', 'pending', { connectionState: 'connecting', deviceStatus: 'lead_off' }],
+    ['연결된 적 있는 밴드의 자동 재연결(connecting) → lost(깜박임 방지)', 'lost', { connectionState: 'connecting', everConnected: true, deviceStatus: 'disconnected' }],
+    ['최초 연결 중 + 리드오프 값 잔존 → pending', 'pending', { connectionState: 'connecting', everConnected: false, deviceStatus: 'lead_off' }],
   ];
   it.each(conflicts)('%s', (_label, expected, override) => {
     expect(band(override)).toBe(expected);
