@@ -282,9 +282,12 @@ describe('NoticeBanner', () => {
     expect(q('.pz-notice')?.getAttribute('data-pz')).toBe('info-card');
   });
 
-  it('action 슬롯을 우측에 둔다', async () => {
+  it('action 슬롯을 우측에 두고, 있을 때만 data-has-action 을 붙인다(전체 폭 배너는 왼쪽 정렬)', async () => {
     await render(<NoticeBanner tone="info" variant="banner" icon={<svg />} action={<button type="button">마이크 켜기</button>}>마이크 꺼짐</NoticeBanner>);
     expect(q('.pz-notice__action button')?.textContent).toBe('마이크 켜기');
+    expect(q('.pz-notice')?.getAttribute('data-has-action')).toBe('true');
+    await render(<NoticeBanner tone="info" variant="banner" icon={<svg />}>마이크 꺼짐</NoticeBanner>);
+    expect(q('.pz-notice')?.hasAttribute('data-has-action')).toBe(false);
   });
 });
 
@@ -443,6 +446,19 @@ describe('player-tokens.css · player-shared.css — 토큰·정책 강제', () 
 
   it('이모지 문자가 없다', () => {
     expect(css).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+
+  it('링 지름(--ring)은 부모가 정하도록 .pz-ring 자신에게는 선언하지 않는다(상속 덮어쓰기 방지)', () => {
+    const ringRules = body.split('}').filter((rule) => /^\s*\.pz-ring\s*\{/.test(rule));
+    expect(ringRules.length).toBeGreaterThan(0);
+    expect(ringRules.filter((rule) => /--ring\s*:/.test(rule))).toEqual([]);
+    expect(body).toMatch(/width:\s*var\(--ring,\s*\d+px\)/);
+  });
+
+  it('바깥 여백 토큰(--pz-pad)은 8의 배수다(균형.md S10)', () => {
+    const pads = [...body.matchAll(/--pz-pad:\s*(\d+)px/g)].map((m) => Number(m[1]));
+    expect(pads.length).toBeGreaterThanOrEqual(2);
+    expect(pads.filter((px) => px % 8 !== 0)).toEqual([]);
   });
 });
 

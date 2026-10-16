@@ -9,7 +9,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   column-gap: var(--pz-pad);
-  padding: max(12px, env(safe-area-inset-top)) var(--pz-pad) max(10px, env(safe-area-inset-bottom));
+  padding: max(16px, env(safe-area-inset-top)) var(--pz-pad) max(16px, env(safe-area-inset-bottom));
   background: #0d0814;
 }
 .pz-shell[data-sheet-open="true"][data-sheet-mode="side"] { grid-template-columns: minmax(0, 1fr) var(--pz-sheet-w); }
@@ -54,7 +54,8 @@
 @media (min-width: 600px) { .pz-topbar[data-variant="host"] { grid-template-columns: minmax(104px, 1fr) minmax(0, auto) minmax(104px, 1fr); } }
 
 /* ───────── 지표 링: 정적 게이지 (호흡 애니메이션 없음) ───────── */
-.pz-ring { --ring: 240px; position: relative; width: var(--ring); height: var(--ring); flex: none; }
+/* 지름은 부모가 --ring 으로 정한다(기본 240px). 이 요소에서 --ring 을 선언하면 상속을 덮어쓰므로 폴백으로만 쓴다 */
+.pz-ring { position: relative; width: var(--ring, 240px); height: var(--ring, 240px); flex: none; }
 .pz-ring[data-variant="hero"] { container: pzring / inline-size; }
 .pz-ring__halo { position: absolute; border-radius: 50%; }
 .pz-ring__halo--1 { inset: 0; border: 1.5px solid rgba(210, 174, 252, 0.5); background: radial-gradient(circle, rgba(179, 115, 239, 0) 55%, rgba(179, 115, 239, 0.22) 100%); }
@@ -111,6 +112,9 @@
 .pz-notice__icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
 .pz-notice__text { min-width: 0; text-wrap: balance; }
 .pz-notice__action { flex: none; margin-inline-start: auto; }
+/* 액션이 있는 전체 폭 배너는 아이콘·텍스트를 왼쪽으로 붙이고 텍스트가 남는 폭을 채운다 */
+.pz-notice[data-has-action="true"] { justify-content: flex-start; }
+.pz-notice[data-has-action="true"] .pz-notice__text { flex: 1 1 auto; }
 .pz-notice[data-variant="chip"] {
   min-height: 48px; padding: 6px 16px; text-align: center;
   border-radius: var(--r-pill); background: var(--sheet-bg);

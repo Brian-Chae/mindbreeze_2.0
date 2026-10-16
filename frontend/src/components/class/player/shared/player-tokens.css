@@ -50,6 +50,7 @@
   --m-hrv: #B8E08A;
 
   /* 레이아웃 */
+  /* 바깥 여백은 8배수 스케일(균형.md S10) — 시안의 20px·12px 는 상담사 측정 기준(8/16/24…)과 맞지 않아 16/24 로 맞춘다 */
   --pz-pad: 16px;
   --pz-top-h: 56px;
   --pz-dock-h: 60px;
@@ -63,7 +64,7 @@
   font-variant-numeric: tabular-nums;
 }
 @media (min-width: 768px) {
-  .pz-root { --pz-pad: 20px; --pz-dock-h: 64px; }
+  .pz-root { --pz-pad: 24px; --pz-dock-h: 64px; }
 }
 
 /* 리셋은 :where() 로 특이도 0 — 컴포넌트 클래스가 항상 이긴다 */

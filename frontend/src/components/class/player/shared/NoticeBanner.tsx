@@ -23,6 +23,7 @@ export function NoticeBanner({ tone, icon, children, variant = 'chip', pz, actio
       role="status"
       data-tone={tone}
       data-variant={variant}
+      data-has-action={action ? 'true' : undefined}
       data-pz={pz ?? (variant === 'banner' ? 'banner' : 'guide')}
     >
       <span className="pz-notice__icon" aria-hidden="true">{icon}</span>
