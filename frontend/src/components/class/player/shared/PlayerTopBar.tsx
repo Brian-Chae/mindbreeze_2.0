@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import './player-shared.css';
 
 interface PlayerTopBarProps {
-  /** member = 투명 한 줄, host = 카드형. 측정 훅 이름도 variant 로 정해진다(topbar/title ↔ top/ttl) */
+  /** member = 투명 한 줄, host = 카드형. 측정 훅 이름도 variant 로 정해진다(member 는 topbar·title, host 는 top·ttl) */
   variant: 'member' | 'host';
   left?: ReactNode;
   center: ReactNode;
