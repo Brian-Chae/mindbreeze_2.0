@@ -61,6 +61,9 @@ export interface MemberChatModel {
 
 export type MemberCheckin = 'comfortable' | 'normal' | 'heavy';
 
+/** 상담사 영상 연결 문제 — failed: 영상을 불러오지 못했다(토큰 발급 실패), waiting: 상담사 화상이 아직 시작되지 않아 재시도를 모두 썼다 */
+export type MemberHostVideoIssue = 'failed' | 'waiting';
+
 export interface MemberViewActions {
   onLeave: () => void;
   onHeroChange: (key: PlayerMetricKey) => void;
@@ -77,6 +80,8 @@ export interface MemberViewActions {
   /** 접촉 불량 시트의 [접촉 다시 확인] — 안내를 접고 측정이 이어지길 기다린다 */
   onBandRecheck: () => void;
   onNetRetry: () => void;
+  /** 상담사 영상 연결을 다시 시도한다 */
+  onHostVideoRetry: () => void;
   onSignal: (type: ClassSignalType) => SignalSendResult;
   onSpeakerChange: (on: boolean) => void;
   onVolumeChange: (volume: number) => void;
@@ -102,6 +107,8 @@ export interface MemberClassViewProps {
   hostVideo?: ReactNode;
   /** 내 PiP 영상 */
   myVideo?: ReactNode;
+  /** 상담사 영상 연결 문제 — 있으면 상담사 PiP 자리에 안내 칩과 [영상 다시 시도]를 보인다(트랙이 아직 없는 것과 구분) */
+  hostVideoIssue?: MemberHostVideoIssue | null;
   /** 오프라인 현장 카드에서 고른 체크인 */
   checkin?: MemberCheckin | null;
   sheet: MemberSheetKey | null;

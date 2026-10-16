@@ -22,7 +22,7 @@ import { ClassOnboardingCoachmarks } from '../../ClassOnboardingCoachmarks';
 import { MemberClassView } from './MemberClassView';
 import { MemberMediaControls, type MemberMediaBinding } from './MemberMediaControls';
 import { downsample, emptySeries, formatClock, pushRingPoint, type MetricSeries, type MetricSnapshot } from './member-metrics';
-import type { MemberClassViewProps, MemberDeviceModel, MemberSheetKey } from './member-view-types';
+import type { MemberClassViewProps, MemberDeviceModel, MemberHostVideoIssue, MemberSheetKey } from './member-view-types';
 import './member-player.css';
 
 interface MemberClassContainerProps {
@@ -342,6 +342,15 @@ export function MemberClassContainer({
   // 미지원 브라우저에서 "밴드 없이 계속"을 고르면 밴드 UI 를 접는다
   const bandVisible = bandEnabled && !(bandContinued && bandUi === 'unsupported');
 
+  // 상담사 영상 연결 문제: 토큰 발급 실패(failed), 상담사 화상 미시작으로 재시도를 모두 쓴 경우(waiting). 그 외 트랙 없음은 문제로 보지 않는다
+  const hostVideoIssue: MemberHostVideoIssue | null = !videoActive || liveKit.token
+    ? null
+    : liveKit.error
+      ? 'failed'
+      : liveKit.notReady && liveKit.attemptCount >= LIVEKIT_RETRY_MAX
+        ? 'waiting'
+        : null;
+
   const retryNetwork = useCallback((): void => {
     void connectLiveKit();
     const socket = getActiveSessionLiveSocket();
@@ -349,7 +358,7 @@ export function MemberClassContainer({
   }, [connectLiveKit]);
 
   const shared: SharedScreenProps = {
-    place, mode, viewerOnly, bandVisible, bandUi, waitlisted, nowMs,
+    place, mode, viewerOnly, bandVisible, bandUi, waitlisted, nowMs, hostVideoIssue,
     header: { title: title ?? '클래스', elapsedSec, totalSec, counselorName, myInitial: user?.name?.trim().charAt(0) || '나' },
     hero, snapshot, series, sheet, screenOff, confirmLeave,
     device: {
@@ -402,6 +411,7 @@ export function MemberClassContainer({
     setLeadOffDismissed,
     band,
     retryNetwork,
+    retryHostVideo: () => void connectLiveKit(),
     sendSignal: liveSocket.sendSignal,
     setSpeakerOn: (on) => {
       speakerTouchedRef.current = true;
@@ -449,6 +459,7 @@ interface SharedScreenProps {
   bandUi: MemberCaseInput['band'];
   waitlisted: boolean;
   nowMs: number;
+  hostVideoIssue: MemberHostVideoIssue | null;
   header: MemberClassViewProps['header'];
   hero: PlayerMetricKey;
   snapshot: MetricSnapshot;
@@ -474,6 +485,7 @@ interface ScreenControls {
   setLeadOffDismissed: (dismissed: boolean) => void;
   band: UseBandResult;
   retryNetwork: () => void;
+  retryHostVideo: () => void;
   sendSignal: MemberClassViewProps['actions']['onSignal'];
   setSpeakerOn: (on: boolean) => void;
   setVolume: (volume: number) => void;
@@ -548,6 +560,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
       controls.setSheet(null);
     },
     onNetRetry: controls.retryNetwork,
+    onHostVideoRetry: controls.retryHostVideo,
     onSignal: controls.sendSignal,
     onSpeakerChange: controls.setSpeakerOn,
     onVolumeChange: controls.setVolume,
@@ -572,6 +585,7 @@ function MemberLiveScreen({ shared, controls, media }: MemberLiveScreenProps) {
           chat={shared.chat}
           hostVideo={media.hostVideo}
           myVideo={media.myVideo}
+          hostVideoIssue={shared.hostVideoIssue}
           sheet={shared.sheet}
           waitlist={shared.waitlist}
           actions={actions}

@@ -142,6 +142,14 @@
   position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px); display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 8px; border-radius: var(--r-pill); background: rgba(18, 8, 28, 0.62); font-size: var(--fs-12); line-height: 16px; color: var(--tx-hi); white-space: nowrap;
 }
+/* 상담사 영상 연결 문제: PiP 와 같은 크기의 자리에 안내와 재시도를 둔다(S4 짝 정렬 유지) */
+.mp-pip--issue { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px; cursor: default; text-align: center; }
+.mp-pip__issue-text { margin: 0; font-size: var(--fs-12); line-height: 16px; color: var(--tx-hi); word-break: keep-all; text-wrap: balance; }
+.mp-pip__retry {
+  flex: none; min-height: var(--tap); padding: 0 12px; border-radius: var(--r-pill); font-size: var(--fs-13); line-height: 18px; white-space: nowrap;
+  background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.34); color: var(--tx-hi);
+}
+.mp-pip__retry:hover { background: rgba(255, 255, 255, 0.22); }
 .mp-pip__dot { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--mb-mint); }
 .mp-pip__long { display: none; }
 @media (min-width: 768px) { .mp-pip__long { display: inline; } }
@@ -329,3 +337,7 @@
 
 /* 카드가 화면보다 크면 카드 안에서 스크롤 — 안쪽 요소가 찌그러지지 않게 줄어들지 않는다 */
 .mp-fv-card > *, .mp-netdown > * { flex-shrink: 0; }
+
+/* 종료 화면 시트 안의 기존 라이트 톤 패널(리포트 이메일 신청·사후 체크인)을 밝은 카드로 감싸 어두운 시트에서도 읽히게 한다 */
+.mp-legacy-panel { padding: 16px; border-radius: var(--r-card); background: var(--mb-purple-cream); color: var(--mb-label-70, #1f1f1f); }
+.mp-legacy-panel :is(h1, h2, h3, p):not([class]) { color: var(--mb-label-70, #1f1f1f); }

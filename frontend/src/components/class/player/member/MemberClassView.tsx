@@ -9,7 +9,7 @@ import { PlayerSheet } from '../shared/PlayerSheet';
 import { useSheetMode } from '../shared/sheet-mode';
 import { PlayerShell } from '../shared/PlayerShell';
 import { MemberNetDownCard, MemberEndView, MemberWaitlistView } from './MemberFullView';
-import { MemberHostPip, MemberMediaRow, MemberMyPip } from './MemberPips';
+import { MemberHostPip, MemberHostPipIssue, MemberMediaRow, MemberMyPip } from './MemberPips';
 import { MemberSheetBody } from './MemberSheets';
 import { memberSheetTitle } from './member-sheet-title';
 import { MemberSideCard } from './MemberSideCard';
@@ -32,7 +32,7 @@ const SHEET_KEYS: readonly string[] = ['status', 'chat', 'signal', 'sound', 'dev
 const isSheetKey = (key: string | null): key is MemberSheetKey => key !== null && SHEET_KEYS.includes(key);
 
 export function MemberClassView(props: MemberClassViewProps) {
-  const { input, header, hero, snapshot, series, device, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, end, waitlist, actions } = props;
+  const { input, header, hero, snapshot, series, device, chat, sound, checkin, sheet, backdropSrc, hostVideo, myVideo, hostVideoIssue, end, waitlist, actions } = props;
   const c = useMemo(() => deriveMemberCase(input), [input]);
   // 도크에 없는 시트(오프라인의 조용한 신호 등)는 열지 않는다
   const activeSheet = sheet !== null && c.dock.some((item) => item.key === sheet) ? sheet : null;
@@ -54,6 +54,9 @@ export function MemberClassView(props: MemberClassViewProps) {
     const info = end ?? { title: header.title, durationLabel: `${Math.max(1, Math.round(header.elapsedSec / 60))}분`, actionLabel: '홈으로' };
     return <MemberEndView end={info} backdropSrc={backdropSrc} onAction={actions.onEndAction} />;
   }
+
+  // 영상이 이미 나오는 중이거나 오프라인·끊김 카드 중에는 연결 문제 칩을 그리지 않는다
+  const hostIssue = hostVideoIssue != null && c.place === 'online' && !c.netDown && !c.showHostPip ? hostVideoIssue : null;
 
   const handleSlotAction = (act: SlotAction): void => {
     if (act === 'openDevice') actions.onSheetChange('device');
@@ -97,6 +100,7 @@ export function MemberClassView(props: MemberClassViewProps) {
         slotTop={
           <div className="mp-pips">
             {c.showHostPip ? <MemberHostPip name={header.counselorName} frozen={c.pipFrozen} video={hostVideo} /> : null}
+            {hostIssue ? <MemberHostPipIssue issue={hostIssue} onRetry={actions.onHostVideoRetry} /> : null}
             {c.showMyPip ? <MemberMyPip cam={c.myCam} initial={header.myInitial} video={myVideo} /> : null}
           </div>
         }

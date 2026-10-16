@@ -105,11 +105,15 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
   const input = MEMBER_CASE_INPUTS[id] ?? MEMBER_CASE_INPUTS.M01;
   const metricParam = ctx?.params?.get('metric') ?? null;
   const sheetParam = ctx?.sheet ?? null;
+  // 하니스 전용: ?hostvideo=failed|waiting 으로 상담사 영상 연결 문제 칩을 재현한다(트랙 없음)
+  const hostVideoParam = ctx?.params?.get('hostvideo') ?? null;
+  const hostVideoIssue = hostVideoParam === 'failed' || hostVideoParam === 'waiting' ? hostVideoParam : null;
   const low = input.band === 'low';
   const weak = input.band === 'weak';
   const noop = (): void => undefined;
   return {
-    input,
+    input: hostVideoIssue ? { ...input, hostCamera: false } : input,
+    hostVideoIssue,
     header: { title: '마음챙김 명상수업 · 4회차', elapsedSec: 754, totalSec: 1800, counselorName: '채용욱', myInitial: '수' },
     hero: isHeroKey(metricParam) ? metricParam : 'relaxation',
     snapshot: demoSnapshot(),
@@ -140,7 +144,7 @@ export function memberCaseViewProps(id: string, ctx?: Partial<Pick<PlayerCaseCon
     actions: {
       onLeave: noop, onHeroChange: noop, onSheetChange: noop, onToggleMic: noop, onToggleCam: noop, onRaiseHand: noop, onEndSpeaking: noop,
       onBandConnect: noop, onBandDisconnect: noop, onBandCancel: noop, onBandRetry: noop, onBandContinue: noop, onBandRecheck: noop,
-      onNetRetry: noop, onSignal: () => 'sent', onSpeakerChange: noop, onVolumeChange: noop, onResumeAudio: noop, onScreenOff: noop,
+      onNetRetry: noop, onHostVideoRetry: noop, onSignal: () => 'sent', onSpeakerChange: noop, onVolumeChange: noop, onResumeAudio: noop, onScreenOff: noop,
       onCheckin: noop, onEndAction: noop, onWaitlistLeave: noop,
     },
   };

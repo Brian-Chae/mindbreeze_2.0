@@ -1,7 +1,7 @@
 // SDD-088: 회원(게스트) 진행 씬 — class-join-page 의 meditation 렌더를 플레이어 씬으로 이전.
-// 검정 풀블리드 immersive (SDD-029)
+// SDD-208: 진행 화면 본체를 GuestMeditationPanel 에서 새 컨테이너(MemberClassContainer)로 교체.
 
-import { GuestMeditationPanel } from '../class/GuestMeditationPanel';
+import { MemberClassContainer } from '../class/player/member/MemberClassContainer';
 import type { LinkbandMode } from '../../lib/api/session';
 
 interface MemberSessionSceneProps {
@@ -24,6 +24,8 @@ interface MemberSessionSceneProps {
   maxParticipants?: number;
   /** 세션 밴드 사용 정책 — none이면 밴드 UI 전체 숨김 */
   linkbandMode?: LinkbandMode;
+  /** 정원이 차서 대기열에 들어간 참가자 — 대기 화면만 보이고 자리가 나면 자동으로 입장한다 */
+  waitlisted?: boolean;
 }
 
 export function MemberSessionScene({
@@ -40,10 +42,11 @@ export function MemberSessionScene({
   participantMode,
   maxParticipants,
   linkbandMode,
+  waitlisted = false,
 }: MemberSessionSceneProps) {
   return (
-    <main className="min-h-screen bg-black">
-      <GuestMeditationPanel
+    <div className="min-h-screen bg-black">
+      <MemberClassContainer
         title={title}
         startedAt={startedAt}
         durationMin={durationMin}
@@ -56,6 +59,7 @@ export function MemberSessionScene({
         participantMode={participantMode}
         maxParticipants={maxParticipants}
         linkbandMode={linkbandMode}
+        waitlisted={waitlisted}
       />
       {error && (
         <p
@@ -65,6 +69,6 @@ export function MemberSessionScene({
           {error}
         </p>
       )}
-    </main>
+    </div>
   );
 }

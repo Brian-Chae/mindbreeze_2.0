@@ -685,3 +685,41 @@ describe('정적 검사 — verify §5', () => {
     expect(view).toContain('IconCircleButton');
   });
 });
+
+describe('상담사 영상 연결 안내 복원(SDD-208 I1) — 옛 CounselorLiveTile 의 실패 안내·재시도', () => {
+  it('토큰 발급이 실패(error)하면 상담사 PiP 자리에 안내 칩과 [영상 다시 시도]가 나온다', async () => {
+    h.lk.token = null;
+    h.lk.error = '서버 오류';
+    await render(<Container />);
+    const issue = q('[data-pz="pip-issue"]');
+    expect(issue?.textContent).toContain('상담사 영상을 불러오지 못했습니다');
+    h.lk.connect.mockClear();
+    await act(async () => { buttonByText('영상 다시 시도')?.click(); });
+    expect(h.lk.connect).toHaveBeenCalledTimes(1);
+  });
+  it('상담사 화상이 아직 시작되지 않아 재시도를 모두 쓰면(notReady, 5회) 기다림 안내와 [영상 다시 시도]', async () => {
+    h.lk.token = null;
+    h.lk.notReady = true;
+    h.lk.attemptCount = 5;
+    await render(<Container />);
+    expect(q('[data-pz="pip-issue"]')?.textContent).toContain('상담사 영상을 기다리고 있어요');
+    expect(buttonByText('영상 다시 시도')).toBeDefined();
+  });
+  it('아직 재시도 중이거나 정상 연결(트랙 없음)일 때는 칩을 보이지 않는다 — 트랙이 없는 것과 연결 실패를 구분', async () => {
+    h.lk.token = null;
+    h.lk.notReady = true;
+    h.lk.attemptCount = 2;
+    await render(<Container />);
+    expect(q('[data-pz="pip-issue"]')).toBeNull();
+    Object.assign(h.lk, { token: 'tok', notReady: false, attemptCount: 0, error: null });
+    await render(<Container />);
+    expect(q('[data-pz="pip-issue"]')).toBeNull();
+  });
+  it('오프라인 수업은 상담사 영상을 연결하지 않으므로(현행 변경, D2) 토큰을 요청하지도 안내 칩을 그리지도 않는다', async () => {
+    h.lk.token = null;
+    h.lk.error = '서버 오류';
+    await render(<Container locationType="offline" participantMode="group" maxParticipants={30} />);
+    expect(h.lk.connect).not.toHaveBeenCalled();
+    expect(q('[data-pz="pip-issue"]')).toBeNull();
+  });
+});

@@ -11,12 +11,13 @@ import {
 } from '../lib/api/session';
 import { sessionStatusLabel } from '../lib/session-status';
 import { useAuthStore } from '../stores/authStore';
-import { GuestCompletePanel } from '../components/class/GuestCompletePanel';
 import { type ClassWaitingRoomEnterPayload } from '../components/class/ClassWaitingRoom';
 import { clearStoredNickname } from '../lib/class/class-waiting-room';
 // SDD-088: waiting/meditation 렌더는 플레이어 씬 컴포넌트로 이전 (join 게이트는 이 페이지가 유지)
 import { MemberWaitingScene } from '../components/player/MemberWaitingScene';
 import { MemberSessionScene } from '../components/player/MemberSessionScene';
+import { MemberEndScene } from '../components/player/MemberEndScene';
+import { isParticipantWaitlisted } from '../lib/class/waitlist';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 import { useSessionLiveSocket } from '../hooks/useSessionLiveSocket';
@@ -36,6 +37,9 @@ function isPreOpen(session: SessionByCodeResponse): boolean {
 }
 
 const PARTICIPANT_STORAGE_KEY = 'mb_join_participant';
+
+/** SDD-208: 대기열 참가자가 자리가 났는지 확인하는 주기 — 서버가 대기열 상태 조회 API 를 따로 주지 않아 join(멱등)을 다시 부른다 */
+const WAITLIST_POLL_MS = 5000;
 
 /** FE-JOIN-002: 게스트 생년월일 연도 선택지 — 현재 연도를 기준으로 100년치를 동적 생성한다. */
 const BIRTH_YEARS = Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i);
@@ -126,6 +130,8 @@ const ClassJoinPage: React.FC = () => {
   const [participantToken, setParticipantToken] = useState<string | null>(
     () => restoreStoredParticipant(code)?.participantToken ?? null,
   );
+  /** SDD-208: 정원이 차서 대기열에 들어간 참가자 — 진행 씬이 대기 화면만 보여 주고 자리가 나면 자동으로 입장한다 */
+  const [waitlisted, setWaitlisted] = useState(false);
   const [durationMin, setDurationMin] = useState(50);
   // SDD-096: 세션 최신 EEG 두뇌휴식도 — 종료 화면이 주관 체크인과 병기한다(밴드 미착용이면 null)
   const [relaxationIndex, setRelaxationIndex] = useState<number | null>(null);
@@ -331,6 +337,33 @@ const ClassJoinPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- session은 객체라 폴링 중 setSession으로 매번 새 참조가 생겨 effect 재구독 루프 위험이 있으므로, 안정적인 원시값 session?.id만 의존성으로 사용한다.
   }, [code, participantId, session?.id, step]);
 
+  // SDD-208: 대기열 참가자는 5초마다 join 을 다시 불러(멱등) 자리가 났는지 확인한다 — 승격되면 waitlisted=false 로 진행 화면이 열린다.
+  const rejoinRef = useRef<() => Promise<void>>(async () => undefined);
+  rejoinRef.current = async (): Promise<void> => {
+    const trimmedGuestName = guestName.trim();
+    if (!participantId || (!isLoggedIn && !trimmedGuestName)) return;
+    const birthDateComplete = /^\d{4}-\d{2}-\d{2}$/.test(guestBirthDate) ? guestBirthDate : undefined;
+    const joined = await joinSessionByCode(
+      code,
+      isLoggedIn
+        ? {}
+        : {
+            name: trimmedGuestName,
+            ...(guestGender ? { gender: guestGender } : {}),
+            ...(birthDateComplete ? { birth_date: birthDateComplete } : {}),
+            ...(participantToken ? { participant_token: participantToken } : {}),
+          },
+    );
+    setWaitlisted(isParticipantWaitlisted(joined.session.participants, joined.participant_id ?? participantId));
+  };
+  useEffect(() => {
+    if (step !== 'meditation' || !waitlisted) return undefined;
+    const intervalId = window.setInterval(() => {
+      void rejoinRef.current().catch(() => undefined);
+    }, WAITLIST_POLL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [step, waitlisted]);
+
   const handleCodeSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (code.length !== 6) {
@@ -392,6 +425,7 @@ const ClassJoinPage: React.FC = () => {
       const nextToken = joined.participant_token ?? null;
       setParticipantId(nextParticipantId);
       setParticipantToken(nextToken);
+      setWaitlisted(isParticipantWaitlisted(joined.session.participants, nextParticipantId));
       if (nextParticipantId) {
         persistParticipant(code, nextParticipantId, nextToken);
       }
@@ -446,6 +480,7 @@ const ClassJoinPage: React.FC = () => {
     setGuestBirthDate('');
     setParticipantId(null);
     setParticipantToken(null);
+    setWaitlisted(false);
     setDurationMin(50);
     setRelaxationIndex(null);
     setError(null);
@@ -471,16 +506,19 @@ const ClassJoinPage: React.FC = () => {
         participantMode={session.participant_mode}
         maxParticipants={session.max_participants}
         linkbandMode={session.linkband_mode}
+        waitlisted={waitlisted}
       />
     );
   }
 
-  // 완료 화면 — #F5EDFC + 리포트 메일 (SDD-029 P1)
+  // 종료 화면 — 점수 없는 종료 카드 + 리포트 메일 신청·사후 체크인 시트 (SDD-029 P1, SDD-208 M21)
   if (step === 'complete') {
     return (
-      <GuestCompletePanel
+      <MemberEndScene
         sessionId={session?.id ?? null}
         sessionTitle={session?.title ?? null}
+        startedAt={session?.started_at ?? null}
+        durationMin={durationMin}
         participantId={participantId}
         participantToken={participantToken}
         accountEmail={isLoggedIn ? (user?.email ?? null) : null}

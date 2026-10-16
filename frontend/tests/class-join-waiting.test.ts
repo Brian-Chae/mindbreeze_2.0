@@ -12,7 +12,7 @@ vi.mock('../src/components/class/FadingImageBackground', () => ({ FadingImageBac
 vi.mock('../src/components/class/WelcomeText', () => ({ WelcomeText: () => '기존 환영 화면' }));
 vi.mock('../src/hooks/useWakeLock', () => ({ useWakeLock: mocks.wake }));
 vi.mock('../src/lib/eeg/bluetoothService', () => ({ bluetoothService: { disconnect: vi.fn().mockResolvedValue(undefined) } }));
-vi.mock('../src/components/class/GuestCompletePanel', () => ({ GuestCompletePanel: () => '완료 화면' }));
+vi.mock('../src/components/player/MemberEndScene', () => ({ MemberEndScene: () => '완료 화면' }));
 vi.mock('../src/components/player/MemberSessionScene', () => ({ MemberSessionScene: () => '명상 화면' }));
 vi.mock('../src/components/class/ClassWaitingRoom', () => ({
   ClassWaitingRoom: ({ sessionLive, onEnter, error }: { sessionLive?: boolean; onEnter: (value: { nickname: string; cameraOn: boolean; micOn: boolean }) => void; error?: string }) => {

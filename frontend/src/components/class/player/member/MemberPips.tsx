@@ -5,7 +5,7 @@ import { Hand, Maximize2, Mic, MicOff, Pause, User, Video, VideoOff } from 'luci
 import type { Track } from 'livekit-client';
 import type { MediaButton, MemberCase } from '../../../../lib/class/member-player-case';
 import type { CamUi } from '../../../../lib/class/player-case';
-import type { MemberViewActions } from './member-view-types';
+import type { MemberHostVideoIssue, MemberViewActions } from './member-view-types';
 import './member-player.css';
 
 /** LiveKit 트랙을 <video> 에 붙인다. 컨텍스트 없이 동작하도록 컴포넌트 대신 attach() 를 쓴다 */
@@ -56,6 +56,21 @@ export function MemberHostPip({ name, frozen, video }: MemberHostPipProps) {
         </span>
       ) : null}
     </button>
+  );
+}
+
+interface MemberHostPipIssueProps {
+  issue: MemberHostVideoIssue;
+  onRetry: () => void;
+}
+
+/** 상담사 영상 연결 문제 — PiP 자리를 지키며 안내와 재시도를 보인다(옛 CounselorLiveTile 안내 복원) */
+export function MemberHostPipIssue({ issue, onRetry }: MemberHostPipIssueProps) {
+  return (
+    <div className="mp-pip mp-pip--issue" data-pz="pip-issue" data-issue={issue} role="status">
+      <p className="mp-pip__issue-text">{issue === 'failed' ? '상담사 영상을 불러오지 못했습니다' : '상담사 영상을 기다리고 있어요'}</p>
+      <button type="button" className="mp-pip__retry" onClick={onRetry}>영상 다시 시도</button>
+    </div>
   );
 }
 

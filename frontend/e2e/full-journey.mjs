@@ -194,9 +194,12 @@ await scenario('[클래스] 내담자 코드 참여 → 대기실 → 명상 화
   await p.getByRole('button', { name: /밴드 없이 진행하기/ }).click().catch(() => {});
   await p.waitForTimeout(400);
   await p.getByRole('button', { name: /기기 테스트 건너뛰기/ }).click().catch(() => {});
-  // in_progress 이므로 명상 화면(시간 표시) 진입 확인
-  await p.getByText(/^\d+:\d{2}\s*\/\s*\d+:\d{2}$/).first().waitFor({ timeout: 15000 }).catch(() => {});
-  if (!(await bodyText(p)).includes('지금 나를 알려요')) throw new Error('명상 화면 진입 실패');
+  // in_progress 이므로 새 진행 화면(SDD-208: 시간 + 지표 링 + 도크) 진입 확인
+  await p.locator('[data-pz="app"] [data-pz="dock"]').waitFor({ timeout: 15000 }).catch(() => {});
+  const live = await bodyText(p);
+  if (!(await p.locator('[data-pz="ring"]').count()) || !live.includes('조용한 신호') || !live.includes('내 상태')) {
+    throw new Error('명상 화면 진입 실패');
+  }
 });
 
 await scenario('[클래스] 상담사 종료(end) → 상태 completed', async () => {
