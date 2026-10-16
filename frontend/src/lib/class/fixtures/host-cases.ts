@@ -2,9 +2,10 @@
 // 시안(designs/class-player-redesign/counselor.html)의 CASE_DEF·BASE 를 그대로 옮겼고, 쿼리 변형(n·loc·cam·mic·net·…)도 같은 이름을 쓴다.
 import { createElement as h } from 'react';
 import { HostCaseHarness } from '../../../components/class/player/host/HostCaseHarness';
-import type { CamUi, MicUi, NetUi, PlayerMetricKey } from '../player-case';
+import { PLAYER_METRICS, type CamUi, type MicUi, type NetUi, type PlayerMetricKey } from '../player-case';
 import {
   EMPTY_HOST_VALUES,
+  HOST_SELF_BAND_NONE,
   isHostSheetKey,
   type HostBand,
   type HostCaseInput,
@@ -74,6 +75,8 @@ const SEEDS: readonly Seed[] = [
   { id: 8, name: '시우', band: 'off', v: null, ci: [] },
 ];
 
+const WAIT_NAMES = ['가은', '윤우', '채아'];
+
 const EXTRA_NAMES = ['하윤', '도현', '나은', '지안', '수호', '다온', '이서', '로하', '유진', '태오', '소이', '건우', '아린', '현서', '라온', '시현'];
 
 function makeExtra(i: number): Seed {
@@ -91,6 +94,22 @@ function makeExtra(i: number): Seed {
 function toValues(v: Seed['v']): HostMetricValues {
   if (!v) return EMPTY_HOST_VALUES;
   return { focus: v[0], relaxation: v[1], emotional: v[2], bpm: v[3], respiration: v[4], hrv: v[5] };
+}
+
+/** 하니스용 5분 추이(60점) — 마지막 값이 현재값에 수렴하도록 참가자별로 결정적으로 만든다 */
+export function syntheticTrend(participant: HostParticipant, key: PlayerMetricKey): number[] {
+  const metric = PLAYER_METRICS.find((m) => m.key === key) ?? PLAYER_METRICS[1];
+  const [min, max] = metric.scale.host;
+  const span = max - min;
+  const seed = Number.parseInt(participant.id.replace(/\D/g, ''), 10) || 1;
+  const end = participant.values[key] ?? 0;
+  return Array.from({ length: 60 }, (_, i) => {
+    if (i === 59) return end;
+    const f = (59 - i) / 59;
+    const wave = Math.sin(i / 5 + seed * 1.7) * span * 0.05 * (0.4 + f) + Math.sin(i / 11 + seed) * span * 0.03 + Math.sin(i * 1.9 + seed * 3) * span * 0.012;
+    const drift = -(((seed * 3) % 7) - 3) * span * 0.018 * f;
+    return Math.max(min, Math.min(max, end + wave + drift * 2));
+  });
 }
 
 export function buildHostParticipants(count: number, def: CaseDef = {}): HostParticipant[] {
@@ -160,8 +179,8 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
   const cam: CamUi = !online ? 'none' : camParam === 'denied' ? 'denied' : camParam === 'off' ? 'off' : 'on';
   const mic: MicUi = !online ? 'none' : micParam === 'denied' ? 'denied' : micParam === 'off' ? 'off' : 'on';
   const selfBand: HostSelfBand | null = selfBandParam === 'on'
-    ? { connected: true, relaxation: 72, battery: 78, signalLabel: '신호 좋음' }
-    : selfBandParam === 'off' ? { connected: false, relaxation: null, battery: null, signalLabel: null } : null;
+    ? { ...HOST_SELF_BAND_NONE, state: 'connected', relaxation: 72, battery: 78, signalLabel: '신호 좋음', contactLabel: '정상' }
+    : selfBandParam === 'off' ? HOST_SELF_BAND_NONE : null;
   const rec: HostRec | null = recParam === 'none' || recParam === '' ? null : recParam;
   const participants = buildHostParticipants(count, def).map((p) => (online ? p : { ...p, hand: false, speaking: false }));
   const sheetParam = params.get('sheet');
@@ -169,10 +188,11 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
 
   const input: HostCaseInput = {
     loc, solo, participants, cam, mic, rec, recElapsedSec: 492, net, phase,
-    queueCount: def.queue ?? 0,
+    queue: WAIT_NAMES.slice(WAIT_NAMES.length - (def.queue ?? 0)).map((name, i) => ({ id: `q${i + 1}`, name })),
     selfBand,
     handsFirst: false,
     quietSignalCount: 0,
+    filter: null,
   };
   const ui: HostUiInitial = {
     metric: METRIC_BY_PARAM[params.get('metric') ?? ''] ?? 'relaxation',
@@ -191,6 +211,10 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
     accessCode: 'MIND24',
     chat: MESSAGES,
     unread: 3,
+    preCheckins: [
+      { id: 'p1', name: '서연', arousal: 4, valence: 4, emotion: 4, note: '오늘은 천천히 시작하고 싶어요' },
+      { id: 'p5', name: '서아', arousal: 3, valence: 2, emotion: 3, note: null },
+    ],
   };
   return { id: key, input, ui, meta };
 }

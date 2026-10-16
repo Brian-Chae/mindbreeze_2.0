@@ -2,6 +2,7 @@
 // 케이스를 저장하지 않고 입력(HostCaseInput)에서 순수함수로 파생한다. 키 이름은 시안(counselor.html)의 scn/state 와 같다.
 // 지표 정의는 T1 의 PLAYER_METRICS 를 그대로 쓰고, 현행 ClassPlayerPage 의 HostMetricKey 는 키 매핑만 둔다.
 
+import type { MonitorSummaryCounts } from '../../components/session/SessionMonitorSummary';
 import { PLAYER_METRICS, type CamUi, type MicUi, type NetUi, type PlayerMetric, type PlayerMetricKey } from './player-case';
 
 export type HostBand = 'on' | 'off' | 'lost' | 'leadoff';
@@ -96,11 +97,46 @@ export function metricFraction(metric: PlayerMetric, value: number): number {
   return Math.max(0.03, Math.min(1, (value - min) / (max - min)));
 }
 
+/** 5분 추이의 처음→마지막 변화량(반올림). 점이 2개 미만이면 null */
+export function trendDelta(points: readonly number[]): number | null {
+  if (points.length < 2) return null;
+  return Math.round(points[points.length - 1] - points[0]);
+}
+
 /* ───────── 시간 ───────── */
 
 export function formatClock(totalSec: number): string {
   const sec = Math.max(0, Math.floor(totalSec));
   return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+}
+
+/* ───────── 필요 조치 필터(기존 SessionMonitorSummary 필터 계승) ───────── */
+
+export type HostFilter = keyof MonitorSummaryCounts;
+
+export const HOST_FILTER_LABEL: Record<HostFilter, string> = {
+  participants: '참여자',
+  leadOff: '접촉불량',
+  connectionFailed: '기기연결 실패',
+  lowBattery: '밴드 배터리 부족',
+};
+
+export function filterHostParticipants(list: readonly HostParticipant[], filter: HostFilter | null): HostParticipant[] {
+  switch (filter) {
+    case 'leadOff': return list.filter((p) => p.band === 'leadoff');
+    case 'connectionFailed': return list.filter((p) => p.band === 'lost');
+    case 'lowBattery': return list.filter((p) => p.lowBattery);
+    default: return [...list];
+  }
+}
+
+export function summarizeMonitorCounts(list: readonly HostParticipant[]): MonitorSummaryCounts {
+  return {
+    participants: list.length,
+    leadOff: list.filter((p) => p.band === 'leadoff').length,
+    connectionFailed: list.filter((p) => p.band === 'lost').length,
+    lowBattery: list.filter((p) => p.lowBattery).length,
+  };
 }
 
 /* ───────── 정렬 ───────── */
@@ -219,12 +255,27 @@ export function fitChipCount({ widths, optional, avail, gap, moreWidth }: FitChi
 
 /* ───────── 케이스 파생 ───────── */
 
-/** 상담사 본인 LINK BAND — 선택 사항이라 null(밴드 UI 자체를 쓰지 않음)이 정상 */
+export type HostSelfBandState = 'connected' | 'connecting' | 'disconnected' | 'unsupported';
+
+/** 상담사 본인 LINK BAND — 선택 사항이다. 미착용·미지원도 오류가 아니라 정상 상태로 표시한다 */
 export interface HostSelfBand {
-  connected: boolean;
+  state: HostSelfBandState;
   relaxation: number | null;
   battery: number | null;
   signalLabel: string | null;
+  contactLabel: string | null;
+  error: string | null;
+  /** 호스트 참가자 행이 없으면 연결해도 업로드할 곳이 없어 버튼을 막는다 */
+  canConnect: boolean;
+}
+
+export const HOST_SELF_BAND_NONE: HostSelfBand = {
+  state: 'disconnected', relaxation: null, battery: null, signalLabel: null, contactLabel: null, error: null, canConnect: true,
+};
+
+export interface HostQueueEntry {
+  id: string;
+  name: string;
 }
 
 export interface HostCaseInput {
@@ -238,11 +289,14 @@ export interface HostCaseInput {
   recElapsedSec: number;
   net: NetUi;
   phase: HostPhase;
-  queueCount: number;
+  /** 정원 초과로 대기 중인 회원(읽기 전용 — 입장 승인 API 없음) */
+  queue: readonly HostQueueEntry[];
+  /** 칩을 둘 때만 값을 준다(미착용 선택 사항이면 null) */
   selfBand: HostSelfBand | null;
   handsFirst: boolean;
   /** 최근 10초 조용한 신호 응답 수(0이면 칩을 두지 않는다) */
   quietSignalCount: number;
+  filter: HostFilter | null;
 }
 
 export type HostIconKey = 'wifioff' | 'micoff';
@@ -256,8 +310,33 @@ export interface HostBanner {
 }
 
 export type HostChip =
-  | { key: 'band'; label: string; solo: boolean; on: number; off: number; lost: number; soloBand: HostBand | null }
-  | { key: 'checkin'; label: string; done: number; total: number };
+  | { key: 'rec'; label: string; paused: boolean; elapsed: string }
+  | { key: 'checkin'; label: string; done: number; total: number }
+  | { key: 'speak'; label: string; participantId: string; name: string }
+  | { key: 'hands'; label: string; count: number }
+  | { key: 'actions'; label: string; leadOff: number; lowBattery: number }
+  | { key: 'queue'; label: string; count: number }
+  | { key: 'signals'; label: string; count: number }
+  | { key: 'myband'; label: string; state: HostSelfBandState; relaxation: number | null }
+  | { key: 'first'; label: string; on: boolean }
+  | { key: 'filter'; label: string; filter: HostFilter }
+  | { key: 'band'; label: string; solo: boolean; on: number; off: number; lost: number; soloBand: HostBand | null };
+
+/** 칩을 눌렀을 때 열리는 시트/동작 — 접힌 칩 목록(알림 전체)이 같은 규칙을 쓴다 */
+export function chipTarget(chip: HostChip): { sheet: HostSheetKey } | { act: 'handsfirst' } | null {
+  switch (chip.key) {
+    case 'rec': return { sheet: 'media' };
+    case 'checkin': return { sheet: 'checkin' };
+    case 'speak': case 'hands': return { sheet: 'hands' };
+    case 'actions': return { sheet: 'actions' };
+    case 'queue': return { sheet: 'queue' };
+    case 'signals': return { sheet: 'checkin' };
+    case 'myband': return { sheet: 'myband' };
+    case 'first': return { act: 'handsfirst' };
+    case 'filter': return { sheet: 'actions' };
+    case 'band': return null;
+  }
+}
 
 export interface HostSummary {
   /** 녹음 줄 — paused 면 "정지됨", 아니면 경과 mm:ss */
@@ -331,12 +410,40 @@ export function deriveHostCase(input: HostCaseInput): HostCase {
   const joinedList = list.filter((p) => p.band !== 'lost');
   const chips: HostChip[] = [];
 
+  if (input.rec) {
+    const paused = input.rec === 'paused';
+    const elapsed = formatClock(input.recElapsedSec);
+    chips.push({ key: 'rec', label: paused ? '기록 일시정지' : `녹음 중 ${elapsed}`, paused, elapsed });
+  }
   if (allOff) {
     const done = list.filter((p) => p.checkin.length > 0).length;
     chips.push({ key: 'checkin', label: `체크인 ${done}/${list.length}`, done, total: list.length });
   }
+  const speaker = list.find((p) => p.speaking);
+  if (online && speaker) {
+    chips.push({ key: 'speak', label: `${speaker.name} 말하는 중`, participantId: speaker.id, name: speaker.name });
+  }
+  const hands = list.filter((p) => p.hand);
+  if (online && hands.length) chips.push({ key: 'hands', label: `손든 회원 ${hands.length}`, count: hands.length });
+  const leadOff = countBand(list, 'leadoff');
+  const lowBattery = list.filter((p) => p.lowBattery).length;
+  if (leadOff || lowBattery) {
+    chips.push({ key: 'actions', label: `접촉 확인 ${leadOff} · 배터리 ${lowBattery}`, leadOff, lowBattery });
+  }
+  if (input.queue.length > 0) chips.push({ key: 'queue', label: `입장 대기 ${input.queue.length}`, count: input.queue.length });
+  if (input.quietSignalCount > 0) chips.push({ key: 'signals', label: `조용한 신호 ${input.quietSignalCount}`, count: input.quietSignalCount });
+  if (input.selfBand) {
+    const state = input.selfBand.state;
+    const text = state === 'connected' ? '내 밴드 연결됨' : state === 'connecting' ? '내 밴드 연결 중' : state === 'unsupported' ? '내 밴드 미지원' : '내 밴드 미착용';
+    chips.push({ key: 'myband', label: text, state, relaxation: input.selfBand.relaxation });
+  }
+  if (online && hands.length) chips.push({ key: 'first', label: '손든 회원 우선 정렬', on: input.handsFirst });
+  if (input.filter && input.filter !== 'participants') {
+    chips.push({ key: 'filter', label: `필터 · ${HOST_FILTER_LABEL[input.filter]}`, filter: input.filter });
+  }
+
   // 접촉 불량은 밴드가 연결된 상태라 "연결"에 센다(요약 세 값의 합 = 전체 인원)
-  const on = countBand(list, 'on') + countBand(list, 'leadoff');
+  const on = countBand(list, 'on') + leadOff;
   const off = countBand(list, 'off');
   const lost = countBand(list, 'lost');
   chips.push({
@@ -424,6 +531,16 @@ export interface HostChatMessage {
   text: string;
 }
 
+/** 입장 전 체크인(기분·전달 말) — 대기실에서 받은 값. 상담사 화면에서만 본다 */
+export interface HostPreCheckin {
+  id: string;
+  name: string;
+  arousal: number | null;
+  valence: number | null;
+  emotion: number | null;
+  note: string | null;
+}
+
 export interface HostCaseMeta {
   title: string;
   elapsedSec: number;
@@ -431,6 +548,7 @@ export interface HostCaseMeta {
   accessCode: string;
   chat: readonly HostChatMessage[];
   unread: number;
+  preCheckins: readonly HostPreCheckin[];
 }
 
 export interface HostCaseSpec {

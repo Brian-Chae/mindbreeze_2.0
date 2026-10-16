@@ -5,14 +5,18 @@ import {
   LEGACY_HOST_METRIC_KEY_MAP,
   computeHostGrid,
   deriveHostCase,
+  filterHostParticipants,
   fitChipCount,
   formatClock,
   groupAverage,
   nextMetricKey,
   pickGridColumns,
   sortHostParticipants,
+  summarizeCheckins,
+  summarizeMonitorCounts,
+  trendDelta,
 } from '../src/lib/class/host-player-case';
-import { HOST_CASE_IDS, buildHostCaseInput } from '../src/lib/class/fixtures/host-cases';
+import { HOST_CASE_IDS, buildHostCaseInput, syntheticTrend } from '../src/lib/class/fixtures/host-cases';
 
 describe('픽스처 — C01~C18 입력', () => {
   it('케이스 ID 는 C01~C18 18개이고 전부 입력을 만든다', () => {
@@ -196,5 +200,160 @@ describe('시간 표기', () => {
     expect(formatClock(492)).toBe('08:12');
     expect(formatClock(0)).toBe('00:00');
     expect(formatClock(3725)).toBe('62:05');
+  });
+});
+
+/* ───────── H2 — 칩 줄·배너 파생 ───────── */
+
+describe('deriveHostCase — 칩 줄(C02·C03·C11·C12·C14·C15) 우선순위와 문구', () => {
+  const keys = (id: string, query = ''): string[] => deriveHostCase(buildHostCaseInput(id, new URLSearchParams(query)).input).chips.map((c) => c.key);
+  const chip = <K extends string>(id: string, key: K) => deriveHostCase(buildHostCaseInput(id).input).chips.find((c) => c.key === key);
+
+  it('C02: 손든 회원 2 칩이 밴드 요약 앞에 오고 손든 회원 우선 칩도 둔다', () => {
+    expect(keys('C02')).toEqual(['hands', 'first', 'band']);
+    const hands = chip('C02', 'hands');
+    expect(hands && hands.key === 'hands' && hands.count).toBe(2);
+    expect(hands?.label).toBe('손든 회원 2');
+  });
+
+  it('C03: 말하는 중 칩에 회원 이름과 참가자 id(회수 대상)가 실린다', () => {
+    expect(keys('C03')).toEqual(['speak', 'band']);
+    const speak = chip('C03', 'speak');
+    expect(speak && speak.key === 'speak' && speak.name).toBe('지우');
+    expect(speak && speak.key === 'speak' && speak.participantId).toBe('p3');
+    expect(speak?.label).toBe('지우 말하는 중');
+  });
+
+  it('C11: 녹음 중 08:12 / 일시정지는 "기록 일시정지"', () => {
+    const rec = chip('C11', 'rec');
+    expect(rec?.label).toBe('녹음 중 08:12');
+    const paused = deriveHostCase(buildHostCaseInput('C11', new URLSearchParams('rec=paused')).input).chips[0];
+    expect(paused.key).toBe('rec');
+    expect(paused.label).toBe('기록 일시정지');
+  });
+
+  it('C04 오프라인: 녹음 칩은 있고 발언권 칩·손든 회원 칩은 없다', () => {
+    expect(keys('C04')).toEqual(['rec', 'band']);
+  });
+
+  it('C12: 접촉 확인 3 · 배터리 2 칩(접촉 불량이 있으면 경고 톤)', () => {
+    const actions = chip('C12', 'actions');
+    expect(actions && actions.key === 'actions' && [actions.leadOff, actions.lowBattery]).toEqual([3, 2]);
+    expect(actions?.label).toBe('접촉 확인 3 · 배터리 2');
+  });
+
+  it('C14: 대기 3 칩과 대기자 명단(읽기 전용)', () => {
+    const spec = buildHostCaseInput('C14');
+    expect(spec.input.queue.map((q) => q.name)).toEqual(['가은', '윤우', '채아']);
+    const queue = chip('C14', 'queue');
+    expect(queue?.label).toBe('입장 대기 3');
+  });
+
+  it('C15: 내 밴드 칩(연결됨 · 이완 72) — 미착용이면 "내 밴드 미착용 · 선택"', () => {
+    const connected = chip('C15', 'myband');
+    expect(connected?.label).toBe('내 밴드 연결됨');
+    expect(connected && connected.key === 'myband' && connected.relaxation).toBe(72);
+    const unworn = deriveHostCase(buildHostCaseInput('C15', new URLSearchParams('selfband=off')).input).chips.find((c) => c.key === 'myband');
+    expect(unworn?.label).toBe('내 밴드 미착용');
+  });
+
+  it('조용한 신호 응답이 있으면 칩이 생기고 0이면 없다', () => {
+    const base = buildHostCaseInput('C01').input;
+    expect(deriveHostCase({ ...base, quietSignalCount: 0 }).chips.some((c) => c.key === 'signals')).toBe(false);
+    const withSignals = deriveHostCase({ ...base, quietSignalCount: 3 }).chips.find((c) => c.key === 'signals');
+    expect(withSignals?.label).toBe('조용한 신호 3');
+  });
+});
+
+describe('deriveHostCase — 배너(C09·C10·C16)', () => {
+  const banner = (id: string, query = '') => deriveHostCase(buildHostCaseInput(id, new URLSearchParams(query)).input).banner;
+
+  it('C09 마이크 꺼짐: info 배너 + 마이크 켜기', () => {
+    const b = banner('C09');
+    expect(b?.tone).toBe('info');
+    expect(b?.title).toBe('마이크 꺼짐');
+    expect(b?.detail).toBe('이 구간은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.');
+    expect(b?.action).toEqual({ kind: 'act', act: 'mic', label: '마이크 켜기' });
+  });
+
+  it('C10 마이크 권한 거부: 코랄 배너 + 허용 방법(permmic 시트)', () => {
+    const b = banner('C10');
+    expect(b?.tone).toBe('coral');
+    expect(b?.title).toBe('마이크를 쓸 수 없어요');
+    expect(b?.detail).toBe('허용하면 AI 기록이 시작돼요. 허용하지 않아도 수업은 계속돼요.');
+    expect(b?.action).toEqual({ kind: 'sheet', sheet: 'permmic', label: '허용 방법' });
+  });
+
+  it('오프라인에서는 마이크 배너가 없다(녹음 마이크 상태만)', () => {
+    expect(banner('C09', 'loc=offline')).toBeNull();
+  });
+
+  it('C16 재연결 중: 연결이 불안정해요(버튼 없음) / 끊김: 다시 연결 버튼', () => {
+    const reconnecting = banner('C16');
+    expect(reconnecting?.title).toBe('연결이 불안정해요');
+    expect(reconnecting?.detail).toBe('데이터 수신이 잠시 중단됐어요. 복구되면 이어서 기록돼요.');
+    expect(reconnecting?.action).toBeNull();
+    const down = banner('C16', 'net=down');
+    expect(down?.title).toBe('연결이 끊겼어요');
+    expect(down?.action).toEqual({ kind: 'act', act: 'retry', label: '다시 연결' });
+  });
+
+  it('네트워크 배너가 마이크 배너보다 우선한다', () => {
+    expect(banner('C09', 'net=reconnecting')?.title).toBe('연결이 불안정해요');
+  });
+});
+
+describe('summarizeCheckins — 체크인 요약(필요 조치 아님)', () => {
+  it('C01: 응답 7명 중 질문별 분포와 살펴볼 응답을 만든다', () => {
+    const summary = summarizeCheckins(buildHostCaseInput('C01').input.participants);
+    expect(summary.total).toBe(8);
+    expect(summary.responded).toBe(7);
+    expect(summary.questions.map((q) => q.question)).toEqual(['마음의 날씨', '몸 상태', '수면']);
+    expect(summary.attention.map((a) => a.name)).toEqual(['서아', '도윤']);
+  });
+});
+
+describe('필요 조치 필터(기존 SessionMonitorSummary 필터 계승)', () => {
+  const list = buildHostCaseInput('C12').input.participants;
+  const ids = (filter: Parameters<typeof filterHostParticipants>[1]): string[] => filterHostParticipants(list, filter).map((p) => p.id);
+
+  it('필터 없음·참여자는 전원', () => {
+    expect(ids(null)).toHaveLength(8);
+    expect(ids('participants')).toHaveLength(8);
+  });
+
+  it('접촉불량·배터리 부족·기기연결 실패는 해당 참가자만', () => {
+    expect(ids('leadOff')).toEqual(['p2', 'p5', 'p8']);
+    expect(ids('lowBattery')).toEqual(['p3', 'p7']);
+    expect(ids('connectionFailed')).toEqual(['p6']);
+  });
+
+  it('필터가 켜지면 칩 줄에 해제 칩이 생긴다', () => {
+    const input = buildHostCaseInput('C12').input;
+    const c = deriveHostCase({ ...input, filter: 'leadOff' });
+    const chip = c.chips.find((x) => x.key === 'filter');
+    expect(chip?.label).toBe('필터 · 접촉불량');
+  });
+
+  it('카운트 요약은 SessionMonitorSummary 와 같은 4개 값', () => {
+    expect(summarizeMonitorCounts(list)).toEqual({ participants: 8, leadOff: 3, connectionFailed: 1, lowBattery: 2 });
+  });
+});
+
+describe('5분 추이 요약(H3)', () => {
+  it('trendDelta 는 처음과 마지막 값의 차(반올림)이고 점이 2개 미만이면 null', () => {
+    expect(trendDelta([60, 58, 53])).toBe(-7);
+    expect(trendDelta([40.4, 49.6])).toBe(9);
+    expect(trendDelta([50])).toBeNull();
+    expect(trendDelta([])).toBeNull();
+  });
+
+  it('하니스 합성 추이는 60점이고 지표 범위를 벗어나지 않는다', () => {
+    const p = buildHostCaseInput('C01').input.participants[0];
+    const series = syntheticTrend(p, 'relaxation');
+    expect(series).toHaveLength(60);
+    expect(Math.min(...series)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...series)).toBeLessThanOrEqual(100);
+    expect(series.at(-1)).toBeCloseTo(70, 0);
   });
 });

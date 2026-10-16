@@ -1,6 +1,6 @@
 // SDD-208 — 상담사 진행 화면의 뷰 상태(지표·순환·정렬·표·시트·상세). 컨테이너와 하니스가 같은 훅을 쓴다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { nextMetricKey, type HostSheetKey, type HostSort, type HostUiInitial } from '../../../../lib/class/host-player-case';
+import { nextMetricKey, type HostFilter, type HostSheetKey, type HostSort, type HostUiInitial } from '../../../../lib/class/host-player-case';
 import type { PlayerMetricKey } from '../../../../lib/class/player-case';
 
 export const HOST_ROTATE_MS = 10_000;
@@ -14,6 +14,7 @@ export interface HostUiState {
   sheet: HostSheetKey | null;
   detailId: string | null;
   camBig: boolean;
+  filter: HostFilter | null;
 }
 
 export interface HostUiActions {
@@ -28,10 +29,13 @@ export interface HostUiActions {
   openDetail: (participantId: string) => void;
   closeSheet: () => void;
   toggleCamBig: () => void;
+  /** 같은 필터를 다시 고르면 해제한다 */
+  toggleFilter: (filter: HostFilter) => void;
+  clearFilter: () => void;
 }
 
 export function useHostUi(initial: HostUiInitial): { ui: HostUiState; actions: HostUiActions } {
-  const [ui, setUi] = useState<HostUiState>(() => ({ ...initial }));
+  const [ui, setUi] = useState<HostUiState>(() => ({ filter: null, ...initial }));
 
   // 10초 순환 — 표 보기·참가자 상세가 열려 있으면 멈춘다(기존 동작 계승)
   const rotating = ui.rotate && !ui.table && ui.sheet !== 'detail';
@@ -56,10 +60,12 @@ export function useHostUi(initial: HostUiInitial): { ui: HostUiState; actions: H
   const openDetail = useCallback((participantId: string) => setUi((prev) => ({ ...prev, sheet: 'detail', detailId: participantId })), []);
   const closeSheet = useCallback(() => setUi((prev) => ({ ...prev, sheet: null, detailId: null })), []);
   const toggleCamBig = useCallback(() => setUi((prev) => ({ ...prev, camBig: !prev.camBig })), []);
+  const toggleFilter = useCallback((filter: HostFilter) => setUi((prev) => ({ ...prev, filter: prev.filter === filter ? null : filter })), []);
+  const clearFilter = useCallback(() => setUi((prev) => ({ ...prev, filter: null })), []);
 
   const actions = useMemo<HostUiActions>(
-    () => ({ setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig }),
-    [setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig],
+    () => ({ setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter }),
+    [setMetric, setRotate, setSort, setHandsFirst, setTable, toggleSheet, openSheet, openDetail, closeSheet, toggleCamBig, toggleFilter, clearFilter],
   );
   return { ui, actions };
 }

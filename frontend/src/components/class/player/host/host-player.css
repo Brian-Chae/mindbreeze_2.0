@@ -16,6 +16,8 @@
 @media (min-width: 600px) { .hp-main { --hh: 136px; --hhb: 200px; } }
 @media (min-width: 1000px) and (orientation: landscape) { .hp-main { --hh: 120px; --hhb: 176px; } }
 .hp-main > * { flex: none; }
+/* 좁은 화면에서 바텀 시트가 열리면 남는 높이가 모자라 칩 줄을 접는다(시트를 닫으면 돌아온다) */
+@media (max-width: 599px) { .hp-main[data-sheet-bottom="true"] .hp-chipline { display: none; } }
 .hp-main > .hp-gridwrap { flex: 1 1 0; }
 
 /* ───────── 상단 바: 제목·시간은 정중앙, 좌(닫기)·우(종료)는 같은 크기 (S3) ───────── */
@@ -272,3 +274,77 @@
 .hp-av { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 700; }
 .hp-avring { width: var(--rs); height: var(--rs); position: relative; flex: none; }
 .hp-grid[data-mode="solo"] { display: block; max-width: none; }
+
+.hp-row__tx small[data-tone="coral"] { color: var(--mb-coral); }
+.hp-row__tx small[data-tone="caution"] { color: #F0C060; }
+.hp-row[data-stack="true"] { flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; padding-block: 8px; }
+.hp-row b { font-size: var(--fs-15); font-weight: 600; }
+
+/* 체크인 요약 */
+.hp-prog { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.hp-prog i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--mb-lavender), var(--mb-mint)); }
+.hp-dist { display: flex; flex-direction: column; gap: 6px; }
+.hp-dist__q { display: flex; justify-content: space-between; font-size: var(--fs-13); color: var(--tx-mid); }
+.hp-dist__q b { color: var(--tx-hi); font-size: var(--fs-15); }
+.hp-dist__stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
+.hp-dist__stack i { display: block; }
+.hp-dist__leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-13); }
+.hp-dist__leg span { display: inline-flex; align-items: center; gap: 6px; }
+.hp-dist__leg em { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.hp-dist [data-c="1"] { background: var(--mb-lavender); }
+.hp-dist [data-c="2"] { background: var(--mb-pale); }
+.hp-dist [data-c="3"] { background: rgba(255, 255, 255, 0.45); }
+.hp-note-btn {
+  width: 100%; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px;
+  border-radius: 14px; background: var(--hp-fill); text-align: left;
+}
+.hp-note-btn b { font-size: var(--fs-15); }
+.hp-note-btn span span { font-size: var(--fs-13); color: var(--tx-mid); margin-left: 8px; }
+.hp-note-btn svg { width: 20px; height: 20px; flex: none; color: var(--tx-mid); }
+
+/* 도구 */
+.hp-segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hp-seg { min-height: var(--tap); padding: 0 6px; border-radius: 14px; background: var(--hp-fill); border: 2px solid transparent; font-size: var(--fs-13); font-weight: 600; }
+.hp-seg[aria-checked="true"] { background: rgba(179, 115, 239, 0.22); border-color: var(--mb-lavender); }
+.hp-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: 14px; background: var(--hp-fill); }
+.hp-code b { font-size: var(--fs-24); letter-spacing: 0.14em; font-weight: 700; }
+
+/* 채팅 시트 */
+.hp-chat { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-height: 0; }
+.hp-chat__room { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.hp-chat__list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+.hp-msg { max-width: 82%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
+.hp-msg__meta { font-size: var(--fs-12); color: var(--tx-mid); }
+.hp-msg__bub { padding: 8px 12px; border-radius: 16px 16px 16px 6px; background: rgba(255, 255, 255, 0.12); font-size: var(--fs-15); }
+.hp-msg[data-me="true"] { align-self: flex-end; align-items: flex-end; }
+.hp-msg[data-me="true"] .hp-msg__bub { background: var(--mb-purple); border-radius: 16px 16px 6px 16px; border: 1px solid rgba(179, 115, 239, 0.5); }
+.hp-composer { flex: none; display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.hp-composer input { flex: 1; min-width: 0; height: var(--tap); padding: 0 16px; border-radius: var(--r-pill); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--hp-line); color: inherit; font: inherit; }
+.hp-composer input::placeholder { color: var(--tx-mid); }
+
+/* 기존 라이트 테마 컴포넌트(SpeakingRightsPanel·SessionMonitorSummary)를 어두운 시트 안에 맞춘다 — 터치 44px·글자 12px 이상 보장 */
+.hp-legacy { display: flex; flex-direction: column; gap: 8px; }
+.hp-legacy button { min-height: var(--tap); min-width: var(--tap); }
+.hp-legacy section { background: var(--hp-fill) !important; border-color: var(--hp-line) !important; }
+.hp-legacy [class*="text-[#1F1F1F]"] { color: var(--tx-hi) !important; }
+.hp-legacy [class*="text-[#6F6F6F]"], .hp-legacy [class*="text-[#9B9B9B]"] { color: var(--tx-mid) !important; }
+.hp-legacy [class*="bg-white"] { background: rgba(255, 255, 255, 0.06) !important; border-color: var(--hp-line) !important; }
+.hp-legacy [class*="bg-[#FDF6E5]"] { background: rgba(179, 115, 239, 0.2) !important; border-color: var(--mb-lavender) !important; }
+.hp-legacy [class*="bg-[#F2F3F8]"] { background: var(--hp-fill) !important; color: var(--tx-hi) !important; }
+.hp-legacy [class*="bg-[#F2212133]"] { background: rgba(240, 96, 93, 0.18) !important; color: #FFC9C6 !important; }
+.hp-legacy .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+.hp-legacy [class*="max-h-56"] { max-height: none !important; overflow: visible !important; }
+
+/* 셀프뷰 확대로 헤드 행이 높아지면 띠 글자도 키운다(빈 칸 방지) */
+.hp-mstrip[data-big="true"] .hp-mstrip__tx { gap: 8px; }
+.hp-mstrip[data-big="true"] .hp-mstrip__top { min-height: 24px; }
+.hp-mstrip[data-big="true"] .hp-mstrip__nm { font-size: var(--fs-36); }
+.hp-mstrip[data-big="true"] .hp-mstrip__nm small { font-size: var(--fs-15); }
+.hp-mstrip[data-big="true"] .hp-mstrip__avg b { font-size: var(--fs-36); }
+@media (min-width: 1000px) {
+  .hp-main .pz-notice[data-variant="banner"] { font-size: var(--fs-15); line-height: 22px; }
+  .hp-banner__title { font-size: var(--fs-18); }
+}
+
+/* 전역 h2 색(mb-tokens.css)이 시트 제목을 어둡게 만든다 — 공용 시트 제목 색을 상담사 화면 안에서만 보정 */
+.pz-shell:has(.hp-main) .pz-sheet__head h2 { color: var(--tx-hi); }

@@ -13,12 +13,14 @@ interface HostMetricStripProps {
   rotating: boolean;
   /** 전원 미착용이면 띠를 비활성 안내로 바꾼다(C13) */
   allOff: boolean;
+  /** 셀프뷰를 크게 키우면 헤드 행이 높아지므로 띠 글자도 키워 빈 칸이 생기지 않게 한다 */
+  big: boolean;
   onOpen: () => void;
 }
 
 const mcol = (colorVar: string): CSSProperties => ({ ['--mcol' as string]: `var(${colorVar})` });
 
-export function HostMetricStrip({ metric, average, showAverage, solo, rotating, allOff, onOpen }: HostMetricStripProps) {
+export function HostMetricStrip({ metric, average, showAverage, solo, rotating, allOff, big, onOpen }: HostMetricStripProps) {
   if (allOff) {
     return (
       <button
@@ -48,6 +50,7 @@ export function HostMetricStrip({ metric, average, showAverage, solo, rotating, 
       className="hp-mstrip"
       data-pz="mstrip"
       data-metric={metric.key}
+      data-big={big ? 'true' : undefined}
       aria-label="지금 보는 지표 바꾸기"
       style={mcol(metric.colorVar)}
       onClick={onOpen}

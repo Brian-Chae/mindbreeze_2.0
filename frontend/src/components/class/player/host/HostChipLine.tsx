@@ -1,6 +1,7 @@
 // SDD-208 H1·H2 — 칩 줄: 가운데 정렬, 한 줄을 넘으면 선택 칩부터 접고 뒤에서부터 접어 "+N"(CS4).
+// 칩은 조치가 필요한 것(손든 회원·필요 조치·대기)과 상태(녹음·내 밴드·밴드 요약)를 아이콘 + 글자로 함께 전한다.
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { ClipboardCheck } from 'lucide-react';
+import { Activity, ArrowUpDown, ClipboardCheck, Hand, Mic, Pause, TriangleAlert, Users, X } from 'lucide-react';
 import { fitChipCount, type HostBand, type HostChip, type HostSheetKey } from '../../../../lib/class/host-player-case';
 import { useElementSize } from './useElementSize';
 import './host-player.css';
@@ -12,6 +13,9 @@ const CHIP_GAP = 4;
 
 export interface HostChipHandlers {
   onSheet: (sheet: HostSheetKey) => void;
+  onRevoke: (participantId: string) => void;
+  onToggleHandsFirst: () => void;
+  onClearFilter: () => void;
 }
 
 interface ChipItem {
@@ -22,20 +26,119 @@ interface ChipItem {
 
 function chipItem(chip: HostChip, handlers: HostChipHandlers): ChipItem {
   switch (chip.key) {
+    case 'rec':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('media')}>
+            {chip.paused ? (
+              <span className="hp-ap" data-tone="pause"><Pause aria-hidden="true" strokeWidth={2} />기록 일시정지</span>
+            ) : (
+              <span className="hp-ap" data-tone="rec"><i className="hp-rdot" aria-hidden="true" />녹음 중 <b>{chip.elapsed}</b></span>
+            )}
+          </button>
+        ),
+      };
     case 'checkin':
       return {
-        key: chip.key,
-        optional: false,
+        key: chip.key, optional: false,
         node: (
           <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('checkin')}>
             <span className="hp-ap"><ClipboardCheck aria-hidden="true" strokeWidth={2} />체크인 <b>{chip.done}/{chip.total}</b></span>
           </button>
         ),
       };
+    case 'speak':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <>
+            <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('hands')}>
+              <span className="hp-ap" data-tone="speak"><Mic aria-hidden="true" strokeWidth={2} />{chip.name} 말하는 중</span>
+            </button>
+            <button type="button" className="hp-achip" aria-label={`${chip.name} 발언권 회수`} onClick={() => handlers.onRevoke(chip.participantId)}>
+              <span className="hp-ap" data-tone="act">회수</span>
+            </button>
+          </>
+        ),
+      };
+    case 'hands':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('hands')}>
+            <span className="hp-ap" data-tone="hand"><Hand aria-hidden="true" strokeWidth={2} />손든 회원 <b>{chip.count}</b></span>
+          </button>
+        ),
+      };
+    case 'actions':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={`필요 조치 · ${chip.label}`} onClick={() => handlers.onSheet('actions')}>
+            <span className="hp-ap" data-tone={chip.leadOff ? 'warn' : 'caution'}>
+              <TriangleAlert aria-hidden="true" strokeWidth={2} />
+              {chip.leadOff ? <>접촉 확인 <b>{chip.leadOff}</b></> : null}
+              {chip.leadOff && chip.lowBattery ? ' · ' : null}
+              {chip.lowBattery ? <>배터리 <b>{chip.lowBattery}</b></> : null}
+            </span>
+          </button>
+        ),
+      };
+    case 'queue':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('queue')}>
+            <span className="hp-ap"><Users aria-hidden="true" strokeWidth={2} />대기 <b>{chip.count}</b></span>
+          </button>
+        ),
+      };
+    case 'signals':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('checkin')}>
+            <span className="hp-ap"><Activity aria-hidden="true" strokeWidth={2} />조용한 신호 <b>{chip.count}</b></span>
+          </button>
+        ),
+      };
+    case 'myband':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={chip.label} onClick={() => handlers.onSheet('myband')}>
+            <span className="hp-ap">
+              <i className="hp-dot" data-state={chip.state === 'connected' ? 'on' : 'off'} />
+              {chip.state === 'connected'
+                ? <>내 밴드 연결됨{chip.relaxation !== null ? <> · 이완 <b>{chip.relaxation}</b></> : null}</>
+                : chip.state === 'connecting' ? '내 밴드 연결 중'
+                  : chip.state === 'unsupported' ? '내 밴드 미지원 · 선택' : '내 밴드 미착용 · 선택'}
+            </span>
+          </button>
+        ),
+      };
+    case 'first':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-pressed={chip.on} aria-label={chip.label} onClick={handlers.onToggleHandsFirst}>
+            <span className="hp-ap" data-tone={chip.on ? 'on' : undefined}><ArrowUpDown aria-hidden="true" strokeWidth={2} />손든 회원 우선</span>
+          </button>
+        ),
+      };
+    case 'filter':
+      return {
+        key: chip.key, optional: false,
+        node: (
+          <button type="button" className="hp-achip" aria-label={`${chip.label} 해제`} onClick={handlers.onClearFilter}>
+            <span className="hp-ap" data-tone="on">{chip.label.replace('필터 · ', '')}<X aria-hidden="true" strokeWidth={2} /></span>
+          </button>
+        ),
+      };
     case 'band':
       return {
-        key: chip.key,
-        optional: false,
+        key: chip.key, optional: false,
         node: chip.solo && chip.soloBand ? (
           <span className="hp-achip" role="group" aria-label="밴드 상태">
             <span className="hp-ap" data-size="sm">
