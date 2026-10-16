@@ -1,8 +1,8 @@
 // SDD-208 H5 — 라이브 지표 행(SessionLiveMetric)을 상담사 화면 모델(HostParticipant)로 바꾼다.
-// 판정 규칙은 ClassPlayerPage 의 hostValues·metric-display(bandCardState)와 같고, 시계를 인자(nowMs)로 받아 테스트가 결정적이다.
-// (ClassPlayerPage 의 hostValues 는 비공개라 같은 규칙을 여기에 둔다 — I1 에서 그 파일이 이 모듈로 수렴하면 중복이 사라진다)
+// 판정 규칙은 metric-display(bandCardState)와 같고, 시계를 인자(nowMs)로 받아 테스트가 결정적이다.
+// ClassPlayerPage 의 hostValues 도 이 모듈의 hostMetricValues 를 쓴다(규칙 한 곳).
 import { SAM_AXES, samStepLabel } from '../../../../lib/api/checkin';
-import type { SessionLiveMetric } from '../../../../lib/api/session';
+import type { SessionLiveMetric, SessionParticipant } from '../../../../lib/api/session';
 import {
   EMPTY_HOST_VALUES,
   toHostMetricValues,
@@ -10,6 +10,7 @@ import {
   type HostCheckinAnswer,
   type HostMetricValues,
   type HostParticipant,
+  type HostQueueEntry,
 } from '../../../../lib/class/host-player-case';
 import { isEegStale, isLowBattery } from '../../../../lib/session-live/signal-status';
 import type { WaitingRoomCheckin } from '../../../../lib/socket';
@@ -111,4 +112,11 @@ export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs 
     checkin: checkinAnswers(checkin),
     attention: checkinAttention(checkin),
   };
+}
+
+/** 입장 대기자 명단 — id 는 서버 participant_id 를 우선한다(게스트는 user_id 가 없다) */
+export function toHostQueue(participants: readonly SessionParticipant[]): HostQueueEntry[] {
+  return participants
+    .filter((p) => p.is_waitlisted)
+    .map((p, i) => ({ id: p.participant_id ?? p.user_id ?? `queue-${i}`, name: p.user_name || p.guest_name || '대기 회원' }));
 }

@@ -9,7 +9,7 @@
 
 import { useCallback, useId, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, LockOpen, MessageSquare, MessageSquareOff, Play, Square, X } from 'lucide-react';
+import { ArrowLeft, LockOpen, MessageSquare, MessageSquareOff, Play, X } from 'lucide-react';
 import {
   getSession,
   getSessionLiveMetrics,
@@ -51,10 +51,7 @@ import type {
   SessionStateChangedEvent,
   SpeakingChangedEvent,
 } from '../../lib/socket';
-import { VideoConference } from '../../components/session/VideoConference';
 import { ConsentModal } from '../../components/session/ConsentModal';
-import { RecordingControls } from '../../components/session/RecordingControls';
-import { MarkerButton } from '../../components/session/MarkerButton';
 import {
   SessionMonitorSummary,
   type MonitorSummaryCounts,
@@ -84,13 +81,14 @@ import {
 import { ClassAudioPanel } from '../../components/class/ClassAudioPanel';
 // 개선 3 재설계: 입장 전 체크인 — 대기실 실시간 목록 + 세션 시작 카드
 import { WaitingRoomReadinessPanel } from '../../components/class/waiting-room-readiness-panel';
-import { CheckinSummary } from '../../components/class/CheckinSummary';
 import { useWaitingRoomCount, type WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
 import { useClassAudioPlayer } from '../../hooks/useClassAudioPlayer';
 import { SessionParticipantDetailPanel } from '../../components/session/SessionParticipantDetailPanel';
 import { StatusBadge } from '../../components/session/StatusBadge';
 import { ClassChatPanel } from '../../components/chat/ClassChatPanel';
-import { EndSessionModal } from '../../components/player/EndSessionModal';
+import { HostLiveContainer } from '../../components/class/player/host/HostLiveContainer';
+import { hostMetricValues } from '../../components/class/player/host/host-live-model';
+import { getActiveSessionLiveSocket } from '../../lib/socket';
 import { LeaveGuardModal } from '../../components/player/LeaveGuardModal';
 import { ReportProgressStepper } from '../../components/session/ReportProgressStepper';
 import { useReportProgress } from '../../hooks/useReportProgress';
@@ -236,19 +234,16 @@ const HOST_METRICS: { key: HostMetricKey; label: string; unit: string }[] = [
 const finiteValue = (value: number | null | undefined): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null;
 const hostValueLabel = (value: number | null): string => value === null ? '—' : String(Math.round(value));
+/** 지표 판정 규칙은 새 진행 화면(host-live-model)과 같은 한 곳(hostMetricValues)을 쓴다 — 키 이름만 이 화면(HostValues)에 맞춘다 */
 function hostValues(row: SessionLiveMetric, extra?: HostExtra): HostValues {
-  const valid = row.band_connected && canShowCurrentMetrics(row);
-  const extraValid = valid && extra && Date.now() - extra.at < 10000;
+  const v = hostMetricValues(row, extra, Date.now());
   return {
-    relaxation: valid ? finiteValue(row.current_efficiency) : null,
-    // BPM·호흡수·HRV는 행(4초 폴링) 우선, extras(WS·마지막 유효값 hold) 폴백 —
-    // 폴링이 WS 패치를 덮어도 깜빡이지 않는다.
-    heartRate: valid ? finiteValue(row.heart_rate) ?? (extraValid ? extra.heartRate : null) : null,
-    respiratoryRate: valid ? finiteValue(row.respiratory_rate) ?? (extraValid ? extra.respiratoryRate : null) : null,
-    focus: extraValid ? extra.focus : null,
-    emotionalStability: extraValid ? extra.emotionalStability : null,
-    // MB2-09: HRV는 회원 화면과 동일한 SDNN 기준으로 통일한다(rmssd 혼용 금지).
-    hrv: valid ? finiteValue(row.sdnn) ?? (extraValid ? extra.hrv : null) : null,
+    focus: v.focus,
+    relaxation: v.relaxation,
+    emotionalStability: v.emotional,
+    heartRate: v.bpm,
+    respiratoryRate: v.respiration,
+    hrv: v.hrv,
   };
 }
 interface HostParticipantProfile { demographics: string; concerns: string }
@@ -566,6 +561,8 @@ export default function ClassPlayerPage() {
     sessionRef.current = session;
   }, [session]);
   const [metrics, setMetrics] = useState<SessionLiveMetric[]>([]);
+  /** SDD-208: 라이브 지표 폴링이 실패 중인가 — 새 진행 화면이 "연결이 끊겼어요" 판정에 쓴다 */
+  const [metricsPollFailing, setMetricsPollFailing] = useState(false);
   const [hostExtras, setHostExtras] = useState<Record<string, HostExtra>>({});
   const lastFeaturePatchAtRef = useRef(0);
   const featureBufferRef = useRef<Map<string, FeatureSampleBuffer>>(new Map());
@@ -580,7 +577,6 @@ export default function ClassPlayerPage() {
   const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
   const [recordingElapsedSec, setRecordingElapsedSec] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
-  const [mediaOpen, setMediaOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<keyof MonitorSummaryCounts | null>(null);
   const [monitorView, setMonitorView] = useState<'cards' | 'table'>('cards');
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
@@ -607,7 +603,6 @@ export default function ClassPlayerPage() {
   /** (B) 세션 시작 카드 — 대기실에서 받은 입장 전 체크인을 라이브 전환 후에도 유지 */
   const retainedCheckinsRef = useRef<Map<string, WaitingRoomEntry>>(new Map());
   const [sessionCheckins, setSessionCheckins] = useState<WaitingRoomEntry[]>([]);
-  const [checkinCardDismissed, setCheckinCardDismissed] = useState(false);
 
   const liveKit = useLiveKit(id);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
@@ -939,7 +934,9 @@ export default function ClassPlayerPage() {
     try {
       const res = await getSessionLiveMetrics(id);
       setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
+      setMetricsPollFailing(false);
     } catch {
+      setMetricsPollFailing(true);
       // FE-PERF-002: sessionRef 에서 최신 세션을 읽어 setMetrics 를 직접 호출한다.
       const current = sessionRef.current;
       if (current) setMetrics(participantsToMetrics(current));
@@ -1212,8 +1209,6 @@ export default function ClassPlayerPage() {
     }
   };
 
-  const startedAtMs = useMemo(() => recordingStartedAt ?? Date.now(), [recordingStartedAt]);
-
   // 수업 경과 타이머 — started_at 기준
   useEffect(() => {
     if (!session?.started_at) {
@@ -1449,6 +1444,94 @@ export default function ClassPlayerPage() {
 
   const accessCode = session.access_code ?? '';
 
+  /* ─── 모든 씬 공용 모달: 녹음 동의 · 이탈 확인 ─── */
+  // SDD-085: 마이크 오프 세션은 녹음 자체가 없어 음성 동의 절차 불필요
+  const consentModal = (
+    <ConsentModal
+      open={consentOpen && mediaPrefs.micOn}
+      onConfirm={() => void handleConsentConfirm()}
+      onCancel={() => {
+        setConsentOpen(false);
+      }}
+    />
+  );
+  // SDD-088: SPA 라우팅 이탈 확인 — open/in_progress
+  const leaveGuardModal =
+    blocker.state === 'blocked' ? (
+      <LeaveGuardModal
+        status={session.status}
+        busy={transitioning}
+        onStay={() => blocker.reset?.()}
+        onCloseAndLeave={() => {
+          if (session.status === 'open') {
+            // 닫기(cancel) 후 원래 가려던 곳으로 이탈을 재개한다
+            void (async () => {
+              await closeClass(false);
+              blocker.proceed?.();
+            })();
+          } else {
+            // 종료(end)는 finishSession 이 bypass 후 기록 페이지로 직접 이동한다
+            void finishSession();
+          }
+        }}
+        onLeaveKeepOpen={() => blocker.proceed?.()}
+      />
+    ) : null;
+
+  /* ─── ③ 라이브 씬(호스트): 새 진행 화면(SDD-208). 훅·핸들러는 이 페이지가 한 번만 만들고 컨테이너는 값만 받는다 ─── */
+  if (isRunning && isHost) {
+    return (
+      <>
+        <HostLiveContainer
+          session={session}
+          hostUserId={currentUserId}
+          hostParticipantId={hostParticipantId}
+          rows={displayMetrics}
+          extras={hostExtras}
+          elapsedSec={classElapsedSec}
+          checkins={sessionCheckins}
+          waitingEntries={waitingRoom.entries}
+          quietSignals={quietSignals}
+          live={{
+            socketConnected: liveSocket.isConnected,
+            metricsPollFailing,
+            onRetry: () => {
+              void refreshMetrics();
+              const socket = getActiveSessionLiveSocket();
+              if (socket && !socket.connected) socket.connect();
+            },
+          }}
+          speaking={{ busyId: speakingBusyId, onSet: (participantId, granted) => void handleSetSpeaking(participantId, granted) }}
+          chat={{ enabled: chatEnabled, busy: chatBusy, onToggleEnabled: () => void handleToggleChatEnabled() }}
+          recorder={recorder}
+          videoRecorder={videoRecorder}
+          recording={{ elapsedSec: recordingElapsedSec, onStart: handleStartClick, onStop: () => void handleStop() }}
+          videoOnly={{ onStart: () => void handleVideoOnlyStart(), onStop: () => void handleVideoOnlyStop() }}
+          mediaPrefs={mediaPrefs}
+          liveKit={{
+            token: liveKit.token,
+            loading: liveKit.loading,
+            error: liveKit.error,
+            serverUrl: liveKit.serverUrl,
+            onDisconnected: () => setError('화상 회의 연결이 끊어졌습니다'),
+          }}
+          band={band}
+          status={{ error, endFailed, ending: transitioning, onRetryEnd: () => void finishSession() }}
+          end={{
+            open: endModalOpen,
+            onRequest: () => setEndModalOpen(true),
+            onConfirm: () => void finishSession(),
+            onCancel: () => setEndModalOpen(false),
+          }}
+          codeCopy={{ copied: codeCopied, onCopy: () => void handleCopyCode() }}
+          onClose={() => navigate('/sessions')}
+        />
+        {consentModal}
+        {leaveGuardModal}
+      </>
+    );
+  }
+
   /* ─── 씬별 상단 컨트롤 (상태 전이 버튼은 플레이어 안에만 존재) ───
      모바일에서는 버튼이 3줄로 접히며 헤더를 잠식하므로, 좁은 화면에서는
      한 줄 가로 스크롤(flex-nowrap + overflow-x-auto)로 유지하고 라벨은 감춘다(아이콘만). */
@@ -1492,20 +1575,6 @@ export default function ClassPlayerPage() {
           >
             <Play aria-hidden="true" fill="currentColor" />
             <span className="hidden sm:inline">{transitioning ? '시작 중...' : '시작하기'}</span>
-          </button>
-        </>
-      )}
-      {isRunning && (
-        <>
-          <button
-            type="button"
-            onClick={() => setEndModalOpen(true)}
-            disabled={transitioning}
-            aria-label="클래스 종료"
-            className="hcp-hbtn hcp-hbtn--soft"
-          >
-            <Square aria-hidden="true" fill="currentColor" />
-            <span className="hidden sm:inline">클래스 종료</span>
           </button>
         </>
       )}
@@ -1759,50 +1828,7 @@ export default function ClassPlayerPage() {
       </header>
 
       <div className="hcp-page-content mx-auto mt-4 max-w-7xl space-y-3 px-4 sm:px-6">
-        {/* (B) 세션 시작 — 입장 전 체크인 요약 카드(닫기 가능) */}
-        {isRunning && isHost && sessionCheckins.length > 0 && !checkinCardDismissed && (
-          <div className="hcp-checkin-card rounded-2xl border border-[#5F0080]/30 bg-[#5F0080]/10 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-bold text-white">
-                  입장 전 체크인 · {sessionCheckins.length}명
-                </h3>
-                <p className="mt-1 text-xs text-white/60">
-                  회원이 입장 전에 남긴 기분·전달 말입니다. 세션 진행에 참고해 주세요.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCheckinCardDismissed(true)}
-                aria-label="체크인 카드 닫기"
-                className="shrink-0 rounded-lg px-2 py-1 text-xs text-white/60 hover:bg-white/10"
-              >
-                닫기
-              </button>
-            </div>
-            <ul className="mt-3 space-y-2">
-              {sessionCheckins.map((entry) => (
-                <li key={entry.participantId} className="rounded-xl bg-black/20 p-3">
-                  <p className="text-sm font-semibold text-white">
-                    {entry.nickname ?? '참가자'}
-                  </p>
-                  {entry.checkin && (
-                    <div className="mt-1.5">
-                      <CheckinSummary
-                        arousal={entry.checkin.arousal}
-                        valence={entry.checkin.valence}
-                        emotion={entry.checkin.emotion}
-                        note={entry.checkin.note}
-                      />
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {isHost && (isSetup || isLobby || isRunning) && <HostClassWorkspace
+        {isHost && (isSetup || isLobby) && <HostClassWorkspace
           rows={displayMetrics} extras={hostExtras} signals={quietSignals} aggregate={groupAggregate}
           elapsed={classElapsedSec} running={isRunning} statusBar={liveStatusBar} filter={activeFilter}
           tools={<><SessionMonitorSummary counts={summary} activeFilter={activeFilter} onFilterToggle={handleFilterToggle} />
@@ -1879,7 +1905,6 @@ export default function ClassPlayerPage() {
               <button disabled={!isRunning || !mediaPrefs.cameraOn || mediaPrefs.micOn} onClick={() => void (videoRecorder.state === 'recording' || videoRecorder.state === 'paused' ? handleVideoOnlyStop() : handleVideoOnlyStart())} aria-pressed={videoRecorder.state === 'recording'} title={mediaPrefs.micOn ? '영상은 음성 녹음과 함께 제어됩니다' : '무음 영상 녹화 제어'}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="13" height="14" rx="2" /><path d="m15 9 7-4v14l-7-4" /></svg><span>영상 녹화 {videoRecorder.state === 'recording' ? '중' : '대기'}</span></button>
               <span>마이크 {mediaPrefs.micOn ? 'ON' : 'OFF'} · 카메라 {mediaPrefs.cameraOn ? 'ON' : 'OFF'}</span>
             </div>
-            {isRunning && <button className="hcp-media-link" onClick={() => setMediaOpen(v => !v)} aria-expanded={mediaOpen}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 22V3h14l-3 5 3 5H5" /></svg><span>녹음 · 화상 · 마커</span><span>{mediaOpen ? '접기' : '설정'}</span></button>}
             <div className="hcp-selfview"><p>나의 화면 · 호스트</p>{mediaPrefs.cameraOn ? <SessionHostVideoView stream={videoRecorder.stream} facingMode={videoRecorder.facingMode} recording={videoRecorder.state === 'recording'} /> : <div className="hcp-camera-off">카메라 꺼짐 · 녹화 안 함</div>}</div>
             {isLobby && <div className="hcp-code"><small>클래스 코드 · 대기 {elapsedLabel(lobbyElapsedSec)}</small><strong>{accessCode || '——————'}</strong><button onClick={() => void handleCopyCode()}>{codeCopied ? '복사 완료' : '코드 복사'}</button></div>}
             <div className="hcp-timer"><p>함께한 시간</p><strong>{elapsedLabel(classElapsedSec)}</strong><small> / {session.duration_min}분</small><progress aria-label="클래스 진행" value={classElapsedSec} max={Math.max(1, session.duration_min * 60)} /></div>
@@ -1919,159 +1944,6 @@ export default function ClassPlayerPage() {
         )}
 
         </div>}
-
-        {/* ③ 라이브 씬 보조 — 녹음 / 화상 / 마커 (접기) */}
-        {isRunning && isHost && (
-          <div className={`hcp-media-panel rounded-xl bg-white ${mediaOpen ? 'is-open' : ''}`}>
-            <button
-              type="button"
-              onClick={() => setMediaOpen((v) => !v)}
-              className="flex w-full items-center justify-between px-5 py-4 text-left sm:px-6"
-            >
-              <span className="text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                녹음 / 화상 / 마커
-              </span>
-              <span className="text-sm text-[#5F0080]">{mediaOpen ? '접기' : '펼치기'}</span>
-            </button>
-
-            <div className={`space-y-5 border-t border-[#EFEFEF] px-5 pb-6 pt-5 sm:px-6 ${mediaOpen ? '' : 'hidden'}`}>
-                <div>
-                  <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                    화상 회의
-                  </div>
-                  {liveKit.loading && (
-                    <div className="flex min-h-[400px] items-center justify-center rounded-2xl bg-[#111]">
-                      <p className="text-sm text-[#9CA3AF]">화상 회의 연결 중...</p>
-                    </div>
-                  )}
-                  {liveKit.token && !liveKit.loading && (
-                    <VideoConference
-                      token={liveKit.token}
-                      serverUrl={liveKit.serverUrl}
-                      onDisconnected={() => setError('화상 회의 연결이 끊어졌습니다')}
-                    />
-                  )}
-                  {!liveKit.token && !liveKit.loading && (
-                    <div className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E5E5E5] bg-[#F9F9F9]">
-                      <p className="text-sm text-[#6F6F6F]">
-                        클래스 시작 시 화상이 연결됩니다
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                    녹음
-                  </div>
-                  {!mediaPrefs.micOn ? (
-                    <div className="space-y-3">
-                      <div className="rounded-xl border border-[#F5E2B8] bg-amber-50 p-4 text-sm text-[#8A6B1F]">
-                        이 세션은 마이크 꺼짐으로 시작되어 수동 기록 모드로 진행 중입니다.
-                        마커와 상담사 노트로 기록을 남길 수 있습니다.
-                      </div>
-                      {mediaPrefs.cameraOn && (
-                        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[#F2F3F8] px-4 py-3">
-                          {videoRecorder.state === 'recording' ||
-                          videoRecorder.state === 'paused' ? (
-                            <>
-                              <span className="flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
-                                <span
-                                  className={`h-2 w-2 rounded-full ${
-                                    videoRecorder.state === 'recording'
-                                      ? 'animate-pulse bg-[#B3261E]'
-                                      : 'bg-[#9B9B9B]'
-                                  }`}
-                                />
-                                무음 영상 녹화 중 (상담사 본인 · 음성 미포함)
-                              </span>
-                              <span className="text-xs text-[#6F6F6F]">
-                                녹화 시간 {elapsedLabel(recordingElapsedSec)}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => void handleVideoOnlyStop()}
-                                className="mb-btn mb-btn--soft !px-3 !py-1.5 text-xs"
-                              >
-                                영상 녹화 종료
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-sm text-[#6F6F6F]">
-                                영상은 무음으로 녹화됩니다 (음성 녹음·AI 분석 없음)
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => void handleVideoOnlyStart()}
-                                className="mb-btn !px-3 !py-1.5 text-xs"
-                              >
-                                영상 녹화 시작
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <RecordingControls
-                        state={recorder.state}
-                        elapsedSec={recordingElapsedSec}
-                        onStart={handleStartClick}
-                        onPause={() => {
-                          recorder.pause();
-                          videoRecorder.pause();
-                        }}
-                        onResume={() => {
-                          recorder.resume();
-                          videoRecorder.resume();
-                        }}
-                        onStop={handleStop}
-                      />
-                      {(videoRecorder.state === 'recording' ||
-                        videoRecorder.state === 'paused') && (
-                        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-[#F2F3F8] px-4 py-3">
-                          <span className="flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
-                            <span
-                              className={`h-2 w-2 rounded-full ${
-                                videoRecorder.state === 'recording'
-                                  ? 'animate-pulse bg-[#B3261E]'
-                                  : 'bg-[#9B9B9B]'
-                              }`}
-                            />
-                            {videoRecorder.state === 'recording'
-                              ? '영상 녹화 중 (상담사 본인)'
-                              : '영상 녹화 일시정지'}
-                          </span>
-                          <span className="text-xs text-[#6F6F6F]">
-                            녹화 시간 {elapsedLabel(recordingElapsedSec)} ·{' '}
-                            {videoRecorder.facingMode === 'user' ? '전면 카메라' : '후면 카메라'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => void videoRecorder.switchCamera()}
-                            className="mb-btn mb-btn--ghost !px-3 !py-1.5 text-xs"
-                          >
-                            {videoRecorder.facingMode === 'user'
-                              ? '후면 카메라로 전환'
-                              : '전면 카메라로 전환'}
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                <section>
-                  <div className="mb-3 text-[12px] font-mono uppercase tracking-wider text-[#6F6F6F]">
-                    마커
-                  </div>
-                  <MarkerButton sessionId={id ?? ''} startedAt={startedAtMs} />
-                </section>
-              </div>
-          </div>
-        )}
 
         {/* ④ 종료 씬 — completed */}
         {isEnded && (
@@ -2132,44 +2004,8 @@ export default function ClassPlayerPage() {
         )}
       </div>
 
-      {/* SDD-085: 마이크 오프 세션은 녹음 자체가 없어 음성 동의 절차 불필요 */}
-      <ConsentModal
-        open={consentOpen && mediaPrefs.micOn}
-        onConfirm={() => void handleConsentConfirm()}
-        onCancel={() => {
-          setConsentOpen(false);
-        }}
-      />
-
-      {/* SDD-088: 종료 2단계 확인 */}
-      <EndSessionModal
-        open={endModalOpen}
-        ending={transitioning}
-        onConfirm={() => void finishSession()}
-        onCancel={() => setEndModalOpen(false)}
-      />
-
-      {/* SDD-088: SPA 라우팅 이탈 확인 — open/in_progress */}
-      {blocker.state === 'blocked' && (
-        <LeaveGuardModal
-          status={session.status}
-          busy={transitioning}
-          onStay={() => blocker.reset?.()}
-          onCloseAndLeave={() => {
-            if (session.status === 'open') {
-              // 닫기(cancel) 후 원래 가려던 곳으로 이탈을 재개한다
-              void (async () => {
-                await closeClass(false);
-                blocker.proceed?.();
-              })();
-            } else {
-              // 종료(end)는 finishSession 이 bypass 후 기록 페이지로 직접 이동한다
-              void finishSession();
-            }
-          }}
-          onLeaveKeepOpen={() => blocker.proceed?.()}
-        />
-      )}
+      {consentModal}
+      {leaveGuardModal}
       {/* SDD-095: 클래스 채팅 패널 — chat_enabled일 때 우측 오버레이로 노출(대기실·진행 중) */}
       {(isLobby || isRunning) && (
         <ClassChatPanel

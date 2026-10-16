@@ -8,6 +8,7 @@ import {
   hostBandOf,
   hostMetricValues,
   toHostParticipant,
+  toHostQueue,
   type HostMetricExtra,
 } from '../src/components/class/player/host/host-live-model';
 
@@ -139,5 +140,26 @@ describe('toHostParticipant', () => {
   it('이름이 없으면 게스트/참가자로 표시한다', () => {
     expect(toHostParticipant(row({ display_name: '', is_guest: true }), { nowMs: NOW }).name).toBe('게스트');
     expect(toHostParticipant(row({ display_name: '', is_guest: false }), { nowMs: NOW }).name).toBe('참가자');
+  });
+});
+
+describe('toHostQueue — 입장 대기자 명단', () => {
+  const p = (over: Record<string, unknown>) => ({
+    user_id: null, guest_name: null, is_guest: false, band_connected: false, linkband_device_id: null, webrtc_peer_id: null,
+    consent_audio: false, consent_eeg: true, is_waitlisted: true, waitlist_position: 1, ...over,
+  }) as Parameters<typeof toHostQueue>[0][number];
+
+  it('대기열 참가자만 담고 id 는 participant_id 를 우선한다(게스트도 고유 id)', () => {
+    const queue = toHostQueue([
+      p({ participant_id: 'a1', is_waitlisted: false, user_name: '입장함' }),
+      p({ participant_id: 'q1', user_id: 'u-q1', user_name: '가은' }),
+      p({ participant_id: 'q2', guest_name: '게스트', is_guest: true }),
+    ]);
+    expect(queue).toEqual([{ id: 'q1', name: '가은' }, { id: 'q2', name: '게스트' }]);
+  });
+
+  it('participant_id 가 없으면 user_id, 그것도 없으면 순번으로 대체하고 이름이 없으면 "대기 회원"', () => {
+    const queue = toHostQueue([p({ user_id: 'u-9', user_name: '민준' }), p({})]);
+    expect(queue).toEqual([{ id: 'u-9', name: '민준' }, { id: 'queue-1', name: '대기 회원' }]);
   });
 });

@@ -30,7 +30,7 @@ import type { HostErrorBannerModel } from './HostBanner';
 import { HostLiveKitBridge } from './HostLiveKitBridge';
 import { HostLiveView, type HostLiveActions } from './HostLiveView';
 import type { HostMediaProps } from './HostMediaSheet';
-import { toHostParticipant, type HostMetricExtra } from './host-live-model';
+import { toHostParticipant, toHostQueue, type HostMetricExtra } from './host-live-model';
 import {
   resolveCamUi,
   resolveMicUi,
@@ -166,12 +166,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
     [history],
   );
 
-  const queue = useMemo<readonly HostQueueEntry[]>(
-    () => session.participants
-      .filter((p) => p.is_waitlisted)
-      .map((p, i) => ({ id: p.user_id ?? `queue-${i}`, name: p.user_name || p.guest_name || '대기 회원' })),
-    [session.participants],
-  );
+  const queue = useMemo<readonly HostQueueEntry[]>(() => toHostQueue(session.participants), [session.participants]);
 
   const preCheckins = useMemo<readonly HostPreCheckin[]>(
     () => checkins.flatMap((e) => (e.checkin ? [{

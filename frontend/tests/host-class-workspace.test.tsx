@@ -194,28 +194,4 @@ it('몰입과 사용 안내를 기존처럼 켜고 끌 수 있다', async () => 
   expect(container.querySelector('.hcp-immersed')).toBeNull();
 });
 
-it('데스크톱의 작은 목록 영역에서도 페이지 이동으로 모든 참가자에 접근한다', async () => {
-  vi.stubGlobal('ResizeObserver', class {
-    constructor(private readonly callback: ResizeObserverCallback) {}
-    observe(target: Element) {
-      this.callback([{ target, contentRect: { width: 400, height: 180 } } as ResizeObserverEntry], this);
-    }
-    unobserve() {}
-    disconnect() {}
-  });
-  vi.stubGlobal('matchMedia', () => ({ matches: true }));
-  try {
-    await render();
-    expect(names()).toEqual(['나래', '가람']);
-    await click(container.querySelector('[aria-label="다음 참가자 페이지"]'));
-    expect(names()).toEqual(['다온']);
-    await click(container.querySelector('[aria-label="이전 참가자 페이지"]'));
-    await click(button('모두'));
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
-    await click(container.querySelector('[aria-label="다음 참가자 페이지"]'));
-    expect(container.querySelector('tbody')?.textContent).toContain('다온');
-    await click(button('이완도'));
-    await render([row('가람', 70)]);
-    expect(names()).toEqual(['가람']);
-  } finally { vi.unstubAllGlobals(); }
-});
+// 진행 중 그리드의 페이지 이동 버튼 테스트는 spec 합의 #3(페이지 버튼 없음)에 따라 삭제하고, 새 화면의 세로 스크롤 검증은 class-player-host-view.test.tsx 로 옮겼다.
