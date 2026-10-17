@@ -1,0 +1,55 @@
+/* 클래스 진행 화면 리디자인 — 공통 토큰 (회원·상담사 시안이 동일하게 import) */
+:root {
+  /* 브랜드 */
+  --mb-purple: #5F0080;
+  --mb-purple-90: #6E1A8C;
+  --mb-lavender: #B373EF;
+  --mb-pale: #D2AEFC;
+  --mb-purple-cream: #F5EDFC;
+  --mb-mint: #01F0C8;
+  --mb-coral: #E8B4A0;
+
+  /* 텍스트 (소프트 시트 위) */
+  --tx-hi: #F7F4F0;
+  --tx-mid: #CFC6D6;
+  --tx-lo: #9A90A6;
+
+  /* 소프트 시트 — 블러 없음 */
+  --sheet-bg: rgba(24, 12, 36, 0.58);
+  --sheet-bg-strong: rgba(24, 12, 36, 0.78);
+  --sheet-border: rgba(255, 255, 255, 0.14);
+  --scrim-top: rgba(18, 8, 28, 0.35);
+  --scrim-bottom: rgba(18, 8, 28, 0.72);
+
+  /* 형태 */
+  --r-sheet: 24px;
+  --r-card: 16px;
+  --r-pill: 9999px;
+  --tap: 44px;
+
+  /* 타이포 스케일 */
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-15: 15px;
+  --fs-18: 18px;
+  --fs-24: 24px;
+  --fs-36: 36px;
+  --fs-56: 56px;
+
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font-family: var(--font); color: var(--tx-hi); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/* 아웃라인 아이콘 공통 (24px 그리드, 2px stroke, round) */
+.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* 앱은 호흡 지시·호흡 애니메이션을 제공하지 않는다 — 링은 정적 게이지 */
+
+/* 지표별 고정 색 (상담사 화면 지표 식별용) */
+:root { --m-relax: #7DE3C8; --m-focus: #D2AEFC; --m-emotion: #F2C9A8; --m-bpm: #F0A7B8; --m-resp: #9CC9F0; --m-hrv: #B8E08A; }

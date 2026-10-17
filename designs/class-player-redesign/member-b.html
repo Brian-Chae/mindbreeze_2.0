@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 회원 클래스 진행 — B안 Daylight Window</title>
+<link rel="stylesheet" href="tokens-b.css">
+<style>
+/* ── 페이지: 스크롤 0 ─────────────────────────────── */
+html, body { height: 100dvh; overflow: hidden; }
+body { word-break: keep-all; overflow-wrap: break-word; }
+:root { --ring: 112px; --cring: 60px; --hv: var(--fs-36); --hu: var(--fs-12); --cv: var(--fs-15); --pad: 16px; --pip-w: 84px; --pip-h: 112px; }
+@media (min-width: 700px) { :root { --ring: 150px; --cring: 72px; --hv: var(--fs-56); --hu: var(--fs-13); --cv: var(--fs-18); --pad: 24px; --pip-w: 132px; --pip-h: 176px; } }
+@media (min-width: 700px) and (max-aspect-ratio: 1/1) { :root { --ring: 176px; --cring: 92px; } }
+@media (min-width: 1100px) and (min-aspect-ratio: 1/1) { :root { --ring: 160px; --cring: 84px; } }
+
+.app {
+  height: 100dvh; padding: 12px; gap: 12px; display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 42dvh minmax(0, 1fr) auto;
+  grid-template-areas: "win" "panel" "tabs";
+}
+@media (min-width: 700px) { .app { padding: 16px; gap: 16px; } }
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) {
+  .app { grid-template-columns: minmax(0, 56fr) minmax(0, 44fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "win panel" "win tabs"; }
+}
+
+/* ── 자연 창 ─────────────────────────────────────── */
+.window {
+  grid-area: win; position: relative; min-height: 0; border-radius: var(--r-window); overflow: hidden;
+  background: #9fb8d4 url("assets/bg/background8.webp") 40% 50% / cover no-repeat;
+  box-shadow: var(--b-shadow), 0 0 0 1px rgba(255, 255, 255, .7) inset;
+}
+.w-top { position: absolute; left: 14px; right: 14px; top: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; z-index: 2; }
+.pill {
+  display: inline-flex; align-items: center; gap: 8px; height: var(--tap); padding: 0 16px 0 12px; border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .92); color: var(--b-tx-hi); font-size: var(--fs-13); font-weight: 600; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(20, 20, 50, .12);
+}
+.pill .ic { width: 20px; height: 20px; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--b-ok); flex: none; }
+.w-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 56px 18px 18px; color: #fff; z-index: 1;
+  background: linear-gradient(to top, rgba(14, 20, 44, .66) 0%, rgba(14, 20, 44, .36) 55%, rgba(14, 20, 44, 0) 100%);
+}
+.w-info { display: flex; flex-direction: column; gap: 6px; max-width: calc(100% - var(--pip-w) - 18px); }
+.w-time { margin: 0; display: flex; align-items: baseline; gap: 6px; line-height: 1; white-space: nowrap; text-shadow: 0 1px 8px rgba(0, 0, 0, .25); }
+.w-time b { font-size: var(--fs-36); font-weight: 700; letter-spacing: -.01em; }
+.w-time span { font-size: var(--fs-18); font-weight: 500; opacity: .86; }
+.w-title { margin: 0; font-size: var(--fs-15); font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 6px rgba(0, 0, 0, .3); }
+.w-title .by { display: none; font-weight: 500; opacity: .9; }
+@media (min-width: 700px) { .w-title .by { display: inline; } }
+.w-bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, .35); overflow: hidden; margin-top: 4px; }
+.w-bar i { display: block; height: 100%; width: 41.9%; border-radius: 4px; background: #fff; }
+
+.pip {
+  position: absolute; right: 16px; bottom: 16px; width: var(--pip-w); height: var(--pip-h); border-radius: 18px; z-index: 2;
+  background: linear-gradient(160deg, #EBDDF8 0%, #C9A8EC 100%); border: 2px solid rgba(255, 255, 255, .95);
+  box-shadow: 0 6px 20px rgba(20, 20, 50, .28); overflow: hidden; padding: 0;
+}
+.pip .avatar { position: absolute; left: 50%; top: 44%; width: 50%; aspect-ratio: 1; transform: translate(-50%, -50%); fill: none; stroke: var(--mb-purple); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: .5; }
+.pip .chip {
+  position: absolute; left: 6px; right: 6px; bottom: 6px; height: 24px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: var(--r-pill); background: rgba(255, 255, 255, .94); font-size: var(--fs-12); font-weight: 600; white-space: nowrap; color: var(--b-tx-hi);
+}
+.pip .chip .dot { width: 6px; height: 6px; }
+.pip .chip .long { display: none; }
+@media (min-width: 700px) { .pip .chip .long { display: inline; } }
+[data-pip="off"] .pip { display: none; }
+[data-pip="off"] .w-info { max-width: 100%; }
+
+/* ── 라이트 패널 ─────────────────────────────────── */
+.panel-card {
+  grid-area: panel; min-height: 0; background: var(--b-card); border: 1px solid var(--b-border); border-radius: var(--r-card); box-shadow: var(--b-shadow);
+  padding: var(--pad); display: flex; flex-direction: column; overflow: hidden;
+}
+.tp { display: none; flex: 1; min-height: 0; flex-direction: column; gap: 12px; }
+.app[data-tab="status"] .tp[data-tp="status"],
+.app[data-tab="chat"] .tp[data-tp="chat"],
+.app[data-tab="signal"] .tp[data-tp="signal"],
+.app[data-tab="sound"] .tp[data-tp="sound"],
+.app[data-tab="device"] .tp[data-tp="device"] { display: flex; }
+[data-band="off"] .when-on { display: none !important; }
+[data-band="on"] .when-off { display: none !important; }
+
+.tp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: none; }
+.tp-head h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; color: var(--b-tx-hi); }
+.tp-head p { margin: 0; font-size: var(--fs-13); color: var(--b-tx-lo); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 내 상태 — 히어로 */
+.hero { display: grid; grid-template-columns: var(--ring) minmax(0, 1fr); gap: 16px; align-items: center; flex: none; --mc: var(--b-m-relax); }
+.ring { position: relative; width: var(--ring); height: var(--ring); }
+.ring svg { width: 100%; height: 100%; display: block; transform: rotate(-90deg); }
+.ring .trk { fill: none; stroke: #F0E6F8; stroke-width: 9; }
+.ring .arc { fill: none; stroke: var(--mc); stroke-width: 9; stroke-linecap: round; transition: stroke-dasharray 1.2s ease, stroke 1.2s ease; }
+.core { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.core b { font-size: var(--hv); font-weight: 700; letter-spacing: -.02em; color: var(--b-tx-hi); }
+.core span { font-size: var(--hu); color: var(--b-tx-lo); margin-top: 4px; font-weight: 500; }
+.hero-tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.h-label { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.h-label i { width: 10px; height: 10px; border-radius: 50%; background: var(--mc); flex: none; }
+.h-guide { margin: 0; font-size: var(--fs-15); line-height: 21px; color: var(--b-tx-mid); }
+.trend { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chg {
+  flex: none; height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 700; white-space: nowrap;
+  background: color-mix(in srgb, var(--mc) 14%, #fff); color: color-mix(in srgb, var(--mc) 62%, #1F1F1F);
+}
+.spark { position: relative; flex: 1; min-width: 0; height: 32px; padding-right: 6px; color: var(--mc); }
+.spark svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.spark .line { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.spark .area { fill: url(#sparkFill); stroke: none; }
+.spark .end { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: currentColor; border: 2px solid #fff; transform: translate(-50%, -50%); box-shadow: 0 1px 4px rgba(0, 0, 0, .2); }
+
+.cells-note { margin: 0; flex: none; font-size: var(--fs-12); color: var(--b-tx-lo); line-height: 16px; }
+.cells { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mcell {
+  --mc: var(--b-m-relax); min-width: 0; min-height: var(--tap); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 4px 2px;
+  border-radius: 16px; border: 1.5px solid var(--b-border); background: var(--b-tint); transition: border-color .2s, background .2s;
+}
+.mcell[aria-pressed="true"] { border-color: var(--mb-purple); background: #fff; box-shadow: 0 0 0 1px var(--mb-purple) inset; }
+.mring { position: relative; width: var(--cring); height: var(--cring); }
+.mring svg { width: 100%; height: 100%; display: block; transform: rotate(-90deg); }
+.mring .trk { fill: none; stroke: #EBDDF5; stroke-width: 10; }
+.mring .val { fill: none; stroke: var(--mc); stroke-width: 10; stroke-linecap: round; }
+.mv { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.mv b { font-size: var(--cv); font-weight: 700; }
+.mv i { font-style: normal; font-size: var(--fs-12); color: var(--b-tx-lo); margin-top: 2px; }
+.ml { font-size: var(--fs-13); color: var(--b-tx-mid); font-weight: 600; line-height: 16px; white-space: nowrap; }
+
+/* 밴드 미착용 */
+.empty {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 16px;
+  border-radius: var(--r-card); border: 1.5px dashed #D9C6EA; background: var(--b-tint);
+}
+.empty .eic { width: 76px; height: 76px; border-radius: 50%; border: 3px dashed #D2AEFC; display: grid; place-items: center; color: var(--mb-purple); background: #fff; }
+.empty .eic .ic { width: 28px; height: 28px; }
+.empty h3 { margin: 4px 0 0; font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.empty .e-sub { margin: 0; font-size: var(--fs-15); color: var(--b-tx-mid); line-height: 21px; }
+.empty .e-note { margin: 0; font-size: var(--fs-13); color: var(--b-tx-lo); line-height: 18px; }
+
+.btn { height: var(--tap); padding: 0 20px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; white-space: nowrap; border: 1.5px solid var(--b-border); background: #fff; color: var(--mb-purple); }
+.btn.primary { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.btn.sm { font-size: var(--fs-13); padding: 0 16px; }
+.btn .ic { width: 20px; height: 20px; }
+
+/* 채팅 */
+.msgs { flex: 1; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 0 4px 0 0; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: #DCC8EE transparent; }
+.msg { display: flex; flex-direction: column; gap: 4px; max-width: 86%; }
+.msg.me { align-self: flex-end; align-items: flex-end; }
+.msg .who { font-size: var(--fs-12); color: var(--b-tx-lo); line-height: 16px; }
+.msg .bub { margin: 0; padding: 10px 14px; border-radius: 18px; font-size: var(--fs-15); line-height: 21px; }
+.msg.them .bub { background: #F5EDFC; color: var(--b-tx-hi); border-top-left-radius: 6px; }
+.msg.me .bub { background: var(--mb-purple); color: #fff; border-top-right-radius: 6px; }
+.composer { flex: none; display: flex; gap: 8px; }
+.composer input { flex: 1; min-width: 0; height: var(--tap); padding: 0 18px; border-radius: var(--r-pill); border: 1.5px solid var(--b-border); background: var(--b-tint); font: inherit; font-size: var(--fs-15); color: var(--b-tx-hi); outline: none; }
+.composer input:focus { border-color: var(--mb-lavender); background: #fff; }
+.composer input::placeholder { color: var(--b-tx-lo); }
+.send { width: var(--tap); height: var(--tap); flex: none; border-radius: 50%; background: var(--mb-purple); color: #fff; display: grid; place-items: center; }
+.send .ic { width: 20px; height: 20px; }
+
+/* 조용한 신호 */
+.sig-hint { margin: 0; flex: none; font-size: var(--fs-13); line-height: 18px; color: var(--b-tx-lo); min-height: 18px; }
+.sig-hint.ok { color: var(--b-ok); font-weight: 600; }
+.sig-list { display: grid; grid-auto-rows: minmax(60px, 88px); gap: 8px; align-content: start; }
+.sig { display: flex; align-items: center; gap: 14px; padding: 10px 16px 10px 12px; text-align: left; border-radius: 18px; border: 1.5px solid var(--b-border); background: var(--b-tint); min-width: 0; }
+.sig[aria-pressed="true"] { border-color: var(--mb-purple); background: #F3E9FA; box-shadow: 0 0 0 1px var(--mb-purple) inset; }
+.sig .ico { width: 44px; height: 44px; flex: none; border-radius: 50%; background: #fff; border: 1px solid var(--b-border); display: grid; place-items: center; color: var(--mb-purple); }
+.sig .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sig .tx b { font-size: var(--fs-15); font-weight: 700; line-height: 20px; }
+.sig .tx span { font-size: var(--fs-13); color: var(--b-tx-lo); line-height: 18px; }
+
+/* 소리 */
+.now, .dev-top { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 18px; background: var(--b-tint); border: 1px solid var(--b-border); min-width: 0; }
+.now .ico, .dev-top .ico { width: 44px; height: 44px; flex: none; border-radius: 50%; background: #fff; border: 1px solid var(--b-border); display: grid; place-items: center; color: var(--mb-purple); }
+.now .tx, .dev-top .tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.now .tx b, .dev-top .tx b { font-size: var(--fs-15); font-weight: 700; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now .tx span, .dev-top .tx span { font-size: var(--fs-13); color: var(--b-tx-lo); line-height: 18px; display: flex; align-items: center; gap: 6px; }
+.row { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 16px; border-radius: 18px; border: 1px solid var(--b-border); background: #fff; }
+.row .ic { flex: none; color: var(--mb-purple); }
+.row .lbl { flex: 1; font-size: var(--fs-15); font-weight: 600; }
+.row .val { flex: none; width: 44px; text-align: right; font-size: var(--fs-13); color: var(--b-tx-mid); font-weight: 600; }
+input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: var(--tap); background: transparent; margin: 0; --fill: 60%; cursor: pointer; }
+input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 8px; background: linear-gradient(to right, var(--mb-purple) var(--fill), #EBDDF5 var(--fill)); }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -9px; border-radius: 50%; background: #fff; border: 3px solid var(--mb-purple); box-shadow: 0 2px 6px rgba(95, 0, 128, .25); }
+.switch { position: relative; width: 60px; height: var(--tap); flex: none; }
+.switch::before { content: ""; position: absolute; left: 4px; top: 7px; width: 52px; height: 30px; border-radius: 30px; background: #D9CCE4; transition: background .2s; }
+.switch::after { content: ""; position: absolute; left: 7px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); transition: transform .2s; }
+.switch[aria-checked="true"]::before { background: var(--mb-purple); }
+.switch[aria-checked="true"]::after { transform: translateX(22px); }
+
+/* 기기 */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--b-border); background: #fff; }
+.stat span { font-size: var(--fs-12); color: var(--b-tx-lo); line-height: 16px; }
+.stat b { font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.raw { flex: 1; min-height: 64px; display: flex; flex-direction: column; gap: 6px; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--b-border); background: var(--b-tint); }
+.raw > span { font-size: var(--fs-12); color: var(--b-tx-lo); line-height: 16px; flex: none; }
+.raw svg { flex: 1; min-height: 0; width: 100%; }
+.raw path { fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.note { margin: 0; font-size: var(--fs-13); color: var(--b-tx-lo); line-height: 18px; text-align: center; }
+.stack { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; }
+
+/* ── 탭바 (메인 앱 BottomTabBar 스타일) ───────────── */
+.tabbar {
+  grid-area: tabs; height: 64px; display: flex; align-items: stretch; padding: 0 4px; background: #fff;
+  border: 1px solid var(--b-border); border-radius: var(--r-card); box-shadow: var(--b-shadow);
+}
+.tab { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; color: #6F6F6F; font-size: var(--fs-12); white-space: nowrap; }
+.tab .ic { width: 22px; height: 22px; }
+.tab[aria-selected="true"] { color: var(--mb-purple); font-weight: 700; }
+.tab[aria-selected="true"]::before { content: ""; position: absolute; top: 0; left: 50%; width: 24px; height: 3px; margin-left: -12px; border-radius: 0 0 3px 3px; background: var(--mb-purple); }
+.tab .ico { position: relative; display: block; line-height: 0; }
+.badge { position: absolute; top: -6px; right: -12px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #E5484D; color: #fff; font-size: var(--fs-12); font-weight: 700; font-style: normal; line-height: 18px; text-align: center; }
+.badge[hidden] { display: none; }
+
+:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="app" id="app" data-tab="status" data-band="on">
+
+  <!-- 자연 창 -->
+  <section class="window" id="window" aria-label="수업 화면">
+    <div class="w-top">
+      <button class="pill" type="button" id="leave" aria-label="수업 나가기">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>나가기
+      </button>
+      <div class="pill" id="conn" role="status" aria-label="연결됨"><i class="dot"></i><span>연결됨</span></div>
+    </div>
+
+    <div class="w-foot">
+      <div class="w-info">
+        <p class="w-time" aria-label="진행 시간 12분 34초 중 30분"><b>12:34</b><span>/ 30:00</span></p>
+        <p class="w-title">마음챙김 명상수업 · 4회차<span class="by"> · 채용욱 상담사</span></p>
+        <div class="w-bar" role="progressbar" aria-valuemin="0" aria-valuemax="1800" aria-valuenow="754"><i></i></div>
+      </div>
+    </div>
+
+    <button class="pip" id="pip" type="button" aria-label="채용욱 상담사 영상">
+      <svg class="avatar" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+      <span class="chip"><i class="dot"></i><span>채용욱<span class="long">&nbsp;상담사</span></span></span>
+    </button>
+  </section>
+
+  <!-- 라이트 패널 -->
+  <section class="panel-card" id="panel" role="tabpanel" aria-live="off">
+
+    <!-- 내 상태 -->
+    <div class="tp" data-tp="status">
+      <div class="hero when-on" id="hero">
+        <div class="ring" id="ring" role="img" aria-label="지표 게이지">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle class="trk" cx="50" cy="50" r="43"/>
+            <circle class="arc" id="arc" cx="50" cy="50" r="43" pathLength="100" stroke-dasharray="72 100"/>
+          </svg>
+          <div class="core"><b id="heroVal">72</b><span id="heroUnit">%</span></div>
+        </div>
+        <div class="hero-tx">
+          <p class="h-label"><i></i><span id="heroLabel">이완도</span></p>
+          <p class="h-guide" id="guide">이완도는 최근 5분간 부드럽게 이어졌어요</p>
+          <div class="trend">
+            <span class="chg" id="chg">5분간 +8</span>
+            <div class="spark" aria-hidden="true">
+              <svg viewBox="0 0 200 48" preserveAspectRatio="none">
+                <defs><linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
+                <path class="area" id="sparkArea" d=""/>
+                <path class="line" id="sparkLine" d=""/>
+              </svg>
+              <i class="end" id="sparkEnd"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cells-note when-on">지표를 누르면 위 링에 보여 드려요</p>
+      <div class="cells when-on" id="cells"></div>
+
+      <div class="empty when-off">
+        <span class="eic"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg></span>
+        <h3>밴드 없이 참여 중이에요</h3>
+        <p class="e-sub">측정 없이도 수업은 그대로 진행돼요</p>
+        <p class="e-note">LINK BAND를 연결하면 내 몸과 마음의 상태를 볼 수 있어요.</p>
+        <button class="btn primary" type="button" data-go="device">밴드 연결 안내</button>
+      </div>
+    </div>
+
+    <!-- 채팅 -->
+    <div class="tp" data-tp="chat">
+      <div class="tp-head"><h2>채팅</h2><p>채용욱 상담사와 나눈 대화</p></div>
+      <ul class="msgs" id="msgs" aria-live="polite"></ul>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="chatInput" type="text" placeholder="메시지 보내기" aria-label="메시지 입력">
+        <button class="send" type="submit" aria-label="보내기">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- 조용한 신호 -->
+    <div class="tp" data-tp="signal">
+      <div class="tp-head"><h2>조용한 신호</h2><p>상담사에게만 보여요</p></div>
+      <p class="sig-hint" id="sigHint">지금 상태를 조용히 알려 주세요</p>
+      <div class="sig-list" id="sigList">
+        <button class="sig" type="button" aria-pressed="false">
+          <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+          <span class="tx"><b>잘 따라가요</b><span>지금 흐름이 편안해요</span></span>
+        </button>
+        <button class="sig" type="button" aria-pressed="false">
+          <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></span>
+          <span class="tx"><b>조금 어려워요</b><span>속도를 늦춰 주세요</span></span>
+        </button>
+        <button class="sig" type="button" aria-pressed="false">
+          <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></span>
+          <span class="tx"><b>잠시 쉴게요</b><span>잠깐 쉬어 갈게요</span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 소리 -->
+    <div class="tp" data-tp="sound">
+      <div class="tp-head"><h2>소리</h2><p>내 기기에서만 조절돼요</p></div>
+      <div class="now">
+        <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+        <span class="tx"><b>고요한 숲의 아침</b><span>상담사가 재생 중인 가이드 · BGM</span></span>
+      </div>
+      <div class="row">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        <input type="range" id="vol" min="0" max="100" step="5" value="60" aria-label="볼륨">
+        <span class="val" id="volVal">60%</span>
+      </div>
+      <div class="row">
+        <span class="lbl">가이드 · BGM 듣기</span>
+        <button class="switch" type="button" id="bgmSwitch" role="switch" aria-checked="true" aria-label="가이드·BGM 듣기"></button>
+      </div>
+    </div>
+
+    <!-- 기기 -->
+    <div class="tp" data-tp="device">
+      <div class="tp-head"><h2>기기</h2><p>LINK BAND 2.0</p></div>
+      <div class="stack when-on">
+        <div class="dev-top">
+          <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg></span>
+          <span class="tx"><b>LINK BAND 2.0</b><span><i class="dot"></i>연결됨 · 12분째</span></span>
+          <button class="btn sm" type="button">연결 해제</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>배터리</span><b>82%</b></div>
+          <div class="stat"><span>신호</span><b>좋음</b></div>
+          <div class="stat"><span>접촉</span><b>양호</b></div>
+        </div>
+        <div class="raw"><span>원시 데이터 · 2채널</span>
+          <svg viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true"><path id="wave1" stroke="#B373EF" d=""/><path id="wave2" stroke="#14A38B" d=""/></svg>
+        </div>
+      </div>
+      <div class="stack when-off">
+        <div class="dev-top">
+          <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg></span>
+          <span class="tx"><b>연결된 기기 없음</b><span>밴드 없이도 수업에 참여할 수 있어요</span></span>
+        </div>
+        <button class="btn primary" type="button">LINK BAND 연결</button>
+        <p class="note">Chrome·Edge에서 연결할 수 있어요 (Safari·Firefox 미지원)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 탭바 -->
+  <nav class="tabbar" id="tabbar" role="tablist" aria-label="클래스 도구">
+    <button class="tab" type="button" role="tab" data-tab="status" aria-selected="true">
+      <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span><span>내 상태</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="chat" aria-selected="false">
+      <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg><i class="badge" id="badge">2</i></span><span>채팅</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="signal" aria-selected="false">
+      <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></span><span>조용한 신호</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="sound" aria-selected="false">
+      <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span><span>소리</span>
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="device" aria-selected="false">
+      <span class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10-5 5V2l5 5L7 17"/></svg></span><span>기기</span>
+    </button>
+  </nav>
+</div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var app = document.getElementById('app');
+  var $ = function (id) { return document.getElementById(id); };
+
+  var METRICS = [
+    { key: 'focus', label: '집중도', unit: '%', value: 58, start: 55, min: 0, max: 100, color: 'var(--b-m-focus)', guide: '집중도는 최근 5분간 차분하게 이어졌어요', seed: 1.3 },
+    { key: 'relaxation', label: '이완도', unit: '%', value: 72, start: 64, min: 0, max: 100, color: 'var(--b-m-relax)', guide: '이완도는 최근 5분간 부드럽게 이어졌어요', seed: 0.4 },
+    { key: 'emotional', label: '감정균형도', unit: '%', value: 64, start: 59, min: 0, max: 100, color: 'var(--b-m-emotion)', guide: '감정균형도는 최근 5분간 고르게 이어졌어요', seed: 2.2 },
+    { key: 'bpm', label: 'BPM', unit: 'bpm', value: 68, start: 72, min: 40, max: 140, color: 'var(--b-m-bpm)', guide: 'BPM은 최근 5분간 안정적으로 이어졌어요', seed: 0.9 },
+    { key: 'respiration', label: '호흡', unit: '회/분', value: 11, start: 13, min: 5, max: 30, color: 'var(--b-m-resp)', guide: '호흡은 최근 5분간 고르게 이어졌어요', seed: 1.8 },
+    { key: 'hrv', label: 'HRV', unit: 'ms', value: 52, start: 46, min: 10, max: 100, color: 'var(--b-m-hrv)', guide: 'HRV는 최근 5분간 꾸준히 이어졌어요', seed: 2.9 }
+  ];
+  var TABS = ['status', 'chat', 'signal', 'sound', 'device'];
+
+  var state = { tab: TABS.indexOf(q.get('tab')) >= 0 ? q.get('tab') : 'status', band: q.get('band') === 'off' ? 'off' : 'on', hero: 'relaxation' };
+  var mk = q.get('metric');
+  if (mk && METRICS.some(function (m) { return m.key === mk; })) state.hero = mk;
+
+  /* 배경 · PiP · 밴드 */
+  var bgNo = q.get('bg');
+  if (['1', '4', '5', '8', '10'].indexOf(bgNo) < 0) bgNo = '8';
+  var win = $('window');
+  win.style.backgroundImage = 'url("assets/bg/background' + bgNo + '.webp")';
+  win.style.backgroundPosition = bgNo === '8' ? '40% 50%' : '50% 50%';
+  if (q.get('pip') === 'off') app.setAttribute('data-pip', 'off');
+  app.setAttribute('data-band', state.band);
+
+  /* 5분 추이 (10초 간격 31점) */
+  function series(m) {
+    var n = 31, out = [], amp = (m.max - m.min) * 0.035;
+    for (var i = 0; i < n; i++) {
+      var t = i / (n - 1), e = t * t * (3 - 2 * t) * 0.6 + t * 0.4;
+      var wob = (Math.sin(i * 1.9 + m.seed) + 0.6 * Math.sin(i * 0.8 + m.seed * 2)) * amp * Math.sin(Math.PI * t);
+      out.push(m.start + (m.value - m.start) * e + wob);
+    }
+    out[0] = m.start; out[n - 1] = m.value;
+    return out;
+  }
+  METRICS.forEach(function (m) { m.series = series(m); });
+
+  function fmtChange(m) {
+    var d = Math.round(m.value) - Math.round(m.start);
+    return '5분간 ' + (d > 0 ? '+' + d : d < 0 ? '-' + Math.abs(d) : '0');
+  }
+  function sparkPath(m) {
+    var s = m.series, W = 200, H = 48, pad = 8;
+    var lo = Math.min.apply(null, s), hi = Math.max.apply(null, s);
+    var minRange = (m.max - m.min) * 0.12;
+    if (hi - lo < minRange) { var c = (hi + lo) / 2; lo = c - minRange / 2; hi = c + minRange / 2; }
+    var pts = s.map(function (v, i) { return [i / (s.length - 1) * W, H - pad - (v - lo) / (hi - lo) * (H - pad * 2)]; });
+    var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+    for (var i = 1; i < pts.length - 1; i++) {
+      var mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+      d += ' Q' + pts[i][0].toFixed(1) + ' ' + pts[i][1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1);
+    }
+    var last = pts[pts.length - 1];
+    d += ' L' + last[0].toFixed(1) + ' ' + last[1].toFixed(1);
+    return { line: d, area: d + ' L' + W + ' ' + H + ' L0 ' + H + ' Z', endY: last[1] / H * 100 };
+  }
+  function pct(m) { return Math.max(0, Math.min(100, (m.value - m.min) / (m.max - m.min) * 100)); }
+
+  function renderHero() {
+    var m = METRICS.filter(function (x) { return x.key === state.hero; })[0];
+    $('hero').style.setProperty('--mc', m.color);
+    $('heroLabel').textContent = m.label;
+    $('heroVal').textContent = m.value;
+    $('heroUnit').textContent = m.unit;
+    $('guide').textContent = m.guide;
+    $('arc').setAttribute('stroke-dasharray', pct(m).toFixed(1) + ' 100');
+    $('chg').textContent = fmtChange(m);
+    var sp = sparkPath(m);
+    $('sparkLine').setAttribute('d', sp.line);
+    $('sparkArea').setAttribute('d', sp.area);
+    $('sparkEnd').style.left = 'calc(100% - 6px)';
+    $('sparkEnd').style.top = sp.endY + '%';
+    $('ring').setAttribute('aria-label', '지표 게이지 — ' + m.label + ' ' + m.value + m.unit);
+    var cells = document.querySelectorAll('.mcell');
+    for (var i = 0; i < cells.length; i++) cells[i].setAttribute('aria-pressed', cells[i].dataset.metric === state.hero ? 'true' : 'false');
+  }
+
+  /* 6지표 2×3 링 */
+  function cellHtml(m) {
+    return '<button class="mcell" type="button" data-metric="' + m.key + '" aria-pressed="false" style="--mc:' + m.color + '">' +
+      '<span class="mring"><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trk" cx="50" cy="50" r="42"/>' +
+      '<circle class="val" cx="50" cy="50" r="42" pathLength="100" stroke-dasharray="' + pct(m).toFixed(1) + ' 100"/></svg>' +
+      '<span class="mv"><b>' + m.value + '</b><i>' + m.unit + '</i></span></span>' +
+      '<span class="ml">' + m.label + '</span></button>';
+  }
+  $('cells').innerHTML = METRICS.map(cellHtml).join('');
+  $('cells').addEventListener('click', function (e) {
+    var b = e.target.closest('.mcell');
+    if (!b) return;
+    state.hero = b.dataset.metric;
+    renderHero();
+  });
+
+  /* 채팅 */
+  var MSGS = [
+    { me: false, t: '14:02', tx: '어서 오세요. 편안한 자세로 앉아 어깨의 힘을 풀어 볼게요.' },
+    { me: false, t: '14:06', tx: '몸의 긴장을 내려놓고 편안한 자세를 유지해 보세요.' },
+    { me: true, t: '14:09', tx: '네, 지금 많이 편안해요.' },
+    { me: false, t: '14:11', tx: '좋아요. 지금 흐름이 아주 좋아요.' },
+    { me: false, t: '14:12', tx: '남은 시간은 눈을 감고 편안히 머물러 보세요.' }
+  ];
+  function esc(s) { return s.replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }); }
+  function msgHtml(m) {
+    return '<li class="msg ' + (m.me ? 'me' : 'them') + '"><span class="who">' + (m.me ? '나' : '채용욱 상담사') + ' · ' + m.t + '</span><p class="bub">' + m.tx + '</p></li>';
+  }
+  $('msgs').innerHTML = MSGS.map(msgHtml).join('');
+  function scrollMsgs() { var l = $('msgs'); l.scrollTop = l.scrollHeight; }
+  $('composer').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = $('chatInput').value.trim();
+    if (!v) return;
+    var d = new Date(), hh = ('0' + d.getHours()).slice(-2), mm = ('0' + d.getMinutes()).slice(-2);
+    var m = { me: true, t: hh + ':' + mm, tx: esc(v) };
+    MSGS.push(m);
+    $('msgs').insertAdjacentHTML('beforeend', msgHtml(m));
+    $('chatInput').value = '';
+    scrollMsgs();
+  });
+
+  /* 조용한 신호 */
+  var sigTimer = null;
+  $('sigList').addEventListener('click', function (e) {
+    var b = e.target.closest('.sig');
+    if (!b) return;
+    var all = document.querySelectorAll('.sig');
+    for (var i = 0; i < all.length; i++) all[i].setAttribute('aria-pressed', all[i] === b ? 'true' : 'false');
+    var h = $('sigHint');
+    h.textContent = '상담사에게 조용히 전해졌어요'; h.classList.add('ok');
+    clearTimeout(sigTimer);
+    sigTimer = setTimeout(function () {
+      h.textContent = '지금 상태를 조용히 알려 주세요'; h.classList.remove('ok');
+      for (var j = 0; j < all.length; j++) all[j].setAttribute('aria-pressed', 'false');
+    }, 4000);
+  });
+
+  /* 소리 */
+  function setVol() { var v = $('vol').value; $('vol').style.setProperty('--fill', v + '%'); $('volVal').textContent = v + '%'; }
+  $('vol').addEventListener('input', setVol); setVol();
+  $('bgmSwitch').addEventListener('click', function () {
+    this.setAttribute('aria-checked', this.getAttribute('aria-checked') !== 'true' ? 'true' : 'false');
+  });
+
+  /* 원시 데이터 파형 (정적) */
+  function wave(ph, a1, a2) {
+    var d = '';
+    for (var x = 0; x <= 240; x += 2) {
+      var y = 20 + Math.sin(x * 0.21 + ph) * a1 + Math.sin(x * 0.57 + ph * 2) * a2 + Math.sin(x * 1.3 + ph) * 1.4;
+      d += (x ? ' L' : 'M') + x + ' ' + y.toFixed(1);
+    }
+    return d;
+  }
+  $('wave1').setAttribute('d', wave(0.5, 7, 4));
+  $('wave2').setAttribute('d', wave(2.1, 6, 5));
+
+  /* 탭 전환 */
+  function setTab(name, focus) {
+    if (TABS.indexOf(name) < 0) return;
+    state.tab = name;
+    app.setAttribute('data-tab', name);
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      var on = tabs[i].dataset.tab === name;
+      tabs[i].setAttribute('aria-selected', on ? 'true' : 'false');
+      tabs[i].tabIndex = on ? 0 : -1;
+      if (on && focus) tabs[i].focus();
+    }
+    if (name === 'chat') { $('badge').hidden = true; requestAnimationFrame(scrollMsgs); }
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('tab', name);
+      history.replaceState(null, '', u);
+    } catch (err) { /* file:// 에서 막히면 무시 */ }
+  }
+  $('tabbar').addEventListener('click', function (e) {
+    var b = e.target.closest('.tab');
+    if (b) setTab(b.dataset.tab);
+  });
+  $('tabbar').addEventListener('keydown', function (e) {
+    var i = TABS.indexOf(state.tab);
+    if (e.key === 'ArrowRight') setTab(TABS[(i + 1) % TABS.length], true);
+    else if (e.key === 'ArrowLeft') setTab(TABS[(i + TABS.length - 1) % TABS.length], true);
+  });
+  document.addEventListener('click', function (e) {
+    var g = e.target.closest('[data-go]');
+    if (g) setTab(g.dataset.go);
+  });
+
+  renderHero();
+  setTab(state.tab);
+
+  /* 캡처 스크립트용 준비 신호 */
+  var img = new Image();
+  img.onload = img.onerror = function () { window.__ready = true; };
+  img.src = 'assets/bg/background' + bgNo + '.webp';
+})();
+</script>
+</body>
+</html>

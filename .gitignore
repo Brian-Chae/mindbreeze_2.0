@@ -25,3 +25,6 @@ frontend/e2e/smoke-result.json
 frontend/e2e/journeys-result.json
 frontend/e2e/regressions-result.json
 frontend/e2e/explore-result.json
+
+# 디자인 스크린샷(수백 MB) — 커밋 제외
+designs/*/shots/
