@@ -15,6 +15,7 @@ case "$MODE" in
     [[ "$BUCKET" =~ ^[a-z0-9][a-z0-9.-]{2,62}$ ]] || { echo "bucket 형식 오류" >&2; exit 2; }
     EXTRA=""; [ "$ALLOW" = "allow-destructive" ] && EXTRA=" --allow-destructive"
     cat <<CMD
+[ -n "\$BASH_VERSION" ] || exec bash "\$0" "\$@"   # SSM 기본 셸은 dash — pipefail 지원 bash 로 재실행
 set -euo pipefail
 DIR=$PREFIX/incoming/$RID
 mkdir -p "\$DIR"; cd "\$DIR"
@@ -30,12 +31,14 @@ CMD
     ARGS=""
     if [ -n "$TO" ]; then [[ "$TO" =~ $RID_RE ]] || { echo "release-id 형식 오류" >&2; exit 2; }; ARGS=" --to $TO"; fi
     cat <<CMD
+[ -n "\$BASH_VERSION" ] || exec bash "\$0" "\$@"   # SSM 기본 셸은 dash — pipefail 지원 bash 로 재실행
 set -euo pipefail
 bash $PREFIX/current/deploy/install-release.sh rollback$ARGS
 CMD
     ;;
   status)
     cat <<CMD
+[ -n "\$BASH_VERSION" ] || exec bash "\$0" "\$@"   # SSM 기본 셸은 dash — pipefail 지원 bash 로 재실행
 set -euo pipefail
 bash $PREFIX/current/deploy/install-release.sh status
 CMD
