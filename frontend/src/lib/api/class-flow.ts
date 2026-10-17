@@ -3,7 +3,10 @@
 // 코드는 입장 요청에만 쓰고 이후 요청의 인증 수단은 입장 자격(X-Entry-Credential)이다.
 import { apiClient, refreshAccessToken, tokenStorage } from './client';
 import { isAccessTokenExpiring } from './token-expiry';
-import type { SessionDto } from './session';
+import type { EegFeatureBatchPayload, EegFeatureBatchResponse, SessionDto } from './session';
+import type {
+  EegRawAckRequest, EegRawAckResponse, EegRawPresignRequest, EegRawPresignResponse,
+} from './eeg-raw';
 
 export const ENTRY_HEADER = 'X-Entry-Credential';
 
@@ -177,6 +180,32 @@ export interface EntryCheckinPayload {
 export async function submitEntryCheckin(sessionId: string, credential: string | null, payload: EntryCheckinPayload): Promise<void> {
   await prepareMemberToken();
   await apiClient.post<unknown>(`/sessions/${encodeURIComponent(sessionId)}/checkin`, payload, entryRequestOptions(credential));
+}
+
+/** 5초 배치 EEG feature 업로드 — 입장 자격으로 소유를 증명한다 */
+export async function postEntryFeatures(sessionId: string, credential: string | null, payload: EegFeatureBatchPayload): Promise<EegFeatureBatchResponse> {
+  await prepareMemberToken();
+  return apiClient.post<EegFeatureBatchResponse>(`/sessions/${encodeURIComponent(sessionId)}/features`, payload, entryRequestOptions(credential));
+}
+
+export async function requestEntryEegRawPresign(sessionId: string, credential: string | null, body: EegRawPresignRequest): Promise<EegRawPresignResponse> {
+  await prepareMemberToken();
+  return apiClient.post<EegRawPresignResponse>(`/sessions/${encodeURIComponent(sessionId)}/eeg-raw/presign`, body, entryRequestOptions(credential));
+}
+
+export async function ackEntryEegRawChunks(sessionId: string, credential: string | null, body: EegRawAckRequest): Promise<EegRawAckResponse> {
+  await prepareMemberToken();
+  return apiClient.post<EegRawAckResponse>(`/sessions/${encodeURIComponent(sessionId)}/eeg-raw/ack`, body, entryRequestOptions(credential));
+}
+
+/** 손들기 — 입장 자격(또는 로그인)으로 본인 참여자임을 증명한다 */
+export async function raiseEntryHand(sessionId: string, participantId: string, credential: string | null): Promise<void> {
+  await prepareMemberToken();
+  await apiClient.post<unknown>(
+    `/sessions/${encodeURIComponent(sessionId)}/participants/${encodeURIComponent(participantId)}/raise-hand`,
+    undefined,
+    entryRequestOptions(credential),
+  );
 }
 
 /* ───────────────────────── 입장 자격 저장 (탭 단위) ───────────────────────── */

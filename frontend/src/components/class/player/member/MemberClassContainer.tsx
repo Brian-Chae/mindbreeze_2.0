@@ -9,6 +9,7 @@ import { useGuestAudioSync } from '../../../../hooks/useGuestAudioSync';
 import { useMemberLiveKit } from '../../../../hooks/useMemberLiveKit';
 import { useSessionLiveSocket } from '../../../../hooks/useSessionLiveSocket';
 import { scoreIndices } from '../../../../lib/eeg/eegPersonalScore';
+import { getEntryState } from '../../../../lib/api/class-flow';
 import { getSession, getSessionByCode, getSessionByCodeState, type LinkbandMode } from '../../../../lib/api/session';
 import type { AudioSyncEvent } from '../../../../lib/class/audio-sync';
 import { PLAYER_METRICS, deriveBandUi, deriveNetUi, type PlayerMetricKey } from '../../../../lib/class/player-case';
@@ -36,6 +37,10 @@ interface MemberClassContainerProps {
   classCode: string | null;
   /** 게스트 소유 증명 토큰 (로그인 회원은 생략) */
   participantToken?: string | null;
+  /** SDD-209: 입장 자격 — 있으면 구 6자리 코드 경로(by-code)를 쓰지 않고 이 자격으로 상태·미디어·업로드 소유를 증명한다 */
+  entryCredential?: string | null;
+  /** SDD-209: 입장 자격 모드의 상담사 이름(클래스 요약에서 받은 값) — 별도 조회를 하지 않는다 */
+  hostName?: string | null;
   locationType?: 'online' | 'offline';
   participantMode?: 'one_on_one' | 'group';
   maxParticipants?: number;
@@ -72,7 +77,7 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
 }
 
 export function MemberClassContainer({
-  title, startedAt, durationMin, onLeave, sessionId, participantId, classCode, participantToken,
+  title, startedAt, durationMin, onLeave, sessionId, participantId, classCode, participantToken, entryCredential = null, hostName = null,
   locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false,
 }: MemberClassContainerProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -105,6 +110,10 @@ export function MemberClassContainer({
   const [counselorName, setCounselorName] = useState<string | null>(null);
   useEffect(() => {
     if (!sessionId) return undefined;
+    if (entryCredential) {
+      setCounselorName(hostName);
+      return undefined;
+    }
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
@@ -124,7 +133,7 @@ export function MemberClassContainer({
     return () => {
       cancelled = true;
     };
-  }, [sessionId, classCode, isAuthenticated, user]);
+  }, [sessionId, classCode, isAuthenticated, user, entryCredential, hostName]);
 
   /* ───────── 클래스 채팅(SDD-095): 로그인=세션 상세 폴링, 게스트=by-code 상태 폴링 ───────── */
   const [chatEnabled, setChatEnabled] = useState(false);
@@ -154,13 +163,14 @@ export function MemberClassContainer({
   }, [isAuthenticated, sessionId]);
 
   useEffect(() => {
-    if (isAuthenticated || !classCode || !participantId) return undefined;
-    const code = classCode;
+    if (isAuthenticated || !participantId || (!classCode && !entryCredential)) return undefined;
     const pid = participantId;
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
-        const state = await getSessionByCodeState(code, pid);
+        const state = entryCredential
+          ? await getEntryState(sessionId, entryCredential)
+          : await getSessionByCodeState(classCode as string, pid);
         if (!cancelled) setGuestChatEnabled(Boolean(state.chat_enabled));
       } catch {
         // 상태 조회 실패는 무해
@@ -172,10 +182,10 @@ export function MemberClassContainer({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, classCode, participantId]);
+  }, [isAuthenticated, classCode, participantId, entryCredential, sessionId]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
-  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated });
+  const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential });
   const bandRef = useRef(band);
   useEffect(() => {
     bandRef.current = band;
@@ -299,6 +309,7 @@ export function MemberClassContainer({
     participantId,
     enabled: connectionsActive,
     skipAuth: !isAuthenticated,
+    entryCredential,
     onEegFeature: handleEegFeature,
     onClassAudioSync: handleClassAudioSync,
   });
@@ -313,7 +324,7 @@ export function MemberClassContainer({
   }, [locationType]);
 
   /* ───────── 상담사 영상(LiveKit) 토큰: 입장 + 상담사 화상 미시작이면 지수 백오프 재시도 ───────── */
-  const liveKit = useMemberLiveKit({ code: classCode, participantId, participantToken, sessionId, listenSpeakingChanges: speakingManaged });
+  const liveKit = useMemberLiveKit({ code: classCode, participantId, participantToken, entryCredential, sessionId, listenSpeakingChanges: speakingManaged });
   const { connect: connectLiveKit, notReady, attemptCount } = liveKit;
   const videoActive = connectionsActive && place === 'online';
   useEffect(() => {

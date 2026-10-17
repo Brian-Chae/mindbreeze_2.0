@@ -11,8 +11,10 @@ import { ReadySummaryView } from '../../components/class/flow/member/ReadySummar
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
 import { EndContainer } from '../../components/class/flow/member/EndContainer';
+import { MemberClassContainer } from '../../components/class/player/member/MemberClassContainer';
 import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
@@ -112,6 +114,9 @@ export default function EntryPage() {
   const listPath = isAuthenticated ? '/app/sessions' : '/';
   const displayName = handoffName || (isAuthenticated && user ? user.name : '참가자');
 
+  // 대기·진행 중에는 화면이 꺼지지 않게 한다(class-join-page 와 같은 기준)
+  useWakeLock(machine.phase === 'wait' || machine.phase === 'live');
+
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -163,6 +168,28 @@ export default function EntryPage() {
     navigate(homePath);
   };
 
+  if (machine.phase === 'live') {
+    // 진행 화면은 입장 자격으로 상태·상담사 영상·밴드 업로드·손들기 소유를 증명한다(6자리 코드·참여자 토큰 경로 없음)
+    return (
+      <div className="min-h-screen bg-black">
+        <MemberClassContainer
+          title={info.title}
+          startedAt={info.startedAt ?? startedSeenRef.current}
+          durationMin={info.durationMin}
+          onLeave={() => navigate(homePath, { replace: true })}
+          sessionId={sessionId}
+          participantId={entry.participantId}
+          classCode={null}
+          entryCredential={entry.credential}
+          hostName={info.hostName}
+          locationType={info.locationType}
+          participantMode={info.participantMode}
+          maxParticipants={info.maxParticipants}
+          linkbandMode={info.linkbandMode}
+        />
+      </div>
+    );
+  }
   if (machine.phase === 'end') {
     const reportMode = !serverState?.report_included ? 'excluded' : entry.isGuest ? 'guest' : 'member';
     const minutes = durationMinutes(info.startedAt ?? startedSeenRef.current, endedSeenRef.current);
