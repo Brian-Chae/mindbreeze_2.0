@@ -2,6 +2,7 @@
 import type { FlowBandMode, FlowPlace } from './types';
 import type { WizardKey } from './member-machine';
 import type { BandStepUi } from '../band-step';
+import type { MediaDeviceUi } from '../class-media';
 
 /** 고지 문구 버전(서버 증빙용, 최대 20자). 문구가 바뀌면 올린다 */
 export const REPORT_NOTICE_VERSION = 'r5-1';
@@ -99,4 +100,10 @@ export function remainingPrepLabels(steps: readonly WizardKey[], current: Wizard
  */
 export function bandOutcomeOf(_state: BandStepUi, action: 'next' | 'skip'): BandOutcome {
   return action === 'next' ? 'connected' : 'skipped';
+}
+
+/** 기기 단계를 떠날 때 요약에 반영할 값. 확인 중(pending)은 아직 모른다 */
+export function deviceOutcomeOf(mic: MediaDeviceUi, cam: MediaDeviceUi): { mic: MicOutcome; camOn: boolean } {
+  const micOutcome: MicOutcome = mic === 'on' ? 'on' : mic === 'pending' ? 'unknown' : 'off';
+  return { mic: micOutcome, camOn: cam === 'on' };
 }

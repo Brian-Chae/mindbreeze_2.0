@@ -27,6 +27,16 @@ vi.mock('../src/hooks/useBandStep', () => ({
   useBandStep: () => ({ state: bandStepState.state, leadOff: null, battery: 80, connect: vi.fn(), disconnect: vi.fn() }),
 }));
 
+const mediaState = { mic: 'off' as string, cam: 'off' as string };
+const toggleMic = vi.fn();
+vi.mock('../src/hooks/useMediaCheck', () => ({
+  useMediaCheck: () => ({
+    mic: mediaState.mic, cam: mediaState.cam, level: 0, steps: 0, quiet: false, speakerPlaying: false, videoRef: { current: null },
+    startMic: vi.fn(), stopMic: vi.fn(), toggleMic, startCamera: vi.fn(), stopCamera: vi.fn(), toggleCamera: vi.fn(),
+    recheck: vi.fn(), playTestTone: vi.fn(),
+  }),
+}));
+
 import EntryPage from '../src/pages/class/EntryPage';
 
 let root: Root;
@@ -332,5 +342,36 @@ describe('EntryPage — LINK BAND 단계 (M4)', () => {
     expect(text()).toContain('접촉 불량');
     await act(async () => { find('다음')?.click(); });
     expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+});
+
+describe('EntryPage — 기기 점검 (M5)', () => {
+  const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
+  async function toDevice(): Promise<void> {
+    seedEntry();
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
+    getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
+    bandStepState.state = 'idle';
+    await renderPage();
+    await act(async () => { find('입장하기')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('건너뛰기')?.click(); });
+    await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
+  }
+  it('진입만으로 권한을 요청하지 않는다(마이크 켜기를 눌러야 요청)', async () => {
+    toggleMic.mockReset();
+    mediaState.mic = 'off';
+    await toDevice();
+    expect(text()).toContain('내 영상과 소리를 확인해요');
+    expect(toggleMic).not.toHaveBeenCalled();
+    await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.getAttribute('aria-label') === '마이크 켜기')?.click(); });
+    expect(toggleMic).toHaveBeenCalledTimes(1);
+  });
+  it('마이크가 거부돼도 다음으로 진행해 요약에 마이크 꺼짐이 보인다', async () => {
+    mediaState.mic = 'denied';
+    await toDevice();
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).toContain('준비를 마쳤어요');
+    expect(text()).toContain('마이크 꺼짐 · 카메라 꺼짐');
   });
 });
