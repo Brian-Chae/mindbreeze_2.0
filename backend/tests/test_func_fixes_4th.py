@@ -50,10 +50,11 @@ def test_join_by_code_member_idempotent(client):
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open_class(client, cls, counselor["h"])
     member = _register(client, "conc-join-m@test.com", role="client")
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
+    url = "/api/v1/sessions/enter"
+    body = {"code": cls["access_code"]}
 
-    first = client.post(url, json={}, headers=member["h"])
-    second = client.post(url, json={}, headers=member["h"])
+    first = client.post(url, json=body, headers=member["h"])
+    second = client.post(url, json=body, headers=member["h"])
     assert first.status_code == 200 and second.status_code == 200, first.text
     assert first.json()["participant_id"] == second.json()["participant_id"]
     assert len(second.json()["session"]["participants"]) == 1
@@ -71,10 +72,11 @@ def test_capacity_full_second_member_waitlisted(client):
     _open_class(client, cls, counselor["h"])
     m1 = _register(client, "cap-m1@test.com", role="client")
     m2 = _register(client, "cap-m2@test.com", role="client")
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
+    url = "/api/v1/sessions/enter"
+    body = {"code": cls["access_code"]}
 
-    assert client.post(url, json={}, headers=m1["h"]).status_code == 200
-    r2 = client.post(url, json={}, headers=m2["h"])
+    assert client.post(url, json=body, headers=m1["h"]).status_code == 200
+    r2 = client.post(url, json=body, headers=m2["h"])
     assert r2.status_code == 200, r2.text
 
     parts = {p["user_id"]: p for p in r2.json()["session"]["participants"]}

@@ -225,29 +225,6 @@ class MarkerRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class SessionByCodeResponse(BaseModel):
-    """참여 전 클래스 확인 — 인증 없이 노출해도 되는 최소 정보만 담는다."""
-
-    id: str
-    access_code: str | None = None
-    title: str | None = None
-    type: SessionType
-    custom_type_name: str | None = None
-    status: SessionStatus
-    host_name: str | None = None
-    participant_mode: ParticipantMode
-    linkband_mode: LinkbandMode
-    location_type: LocationType
-    participant_count: int = 0
-    max_participants: int
-    started_at: datetime | None = None
-    scheduled_at: datetime | None = None
-    # 클래스 실시간 채팅 사용 여부 — 참여자가 입장 전에 채팅 가능 여부를 알 수 있게 노출
-    chat_enabled: bool = False
-
-    model_config = {"from_attributes": True}
-
-
 # ---------------------------------------------------------------------------
 # 클래스 실시간 채팅 (세션 채팅방 · on/off 토글)
 # ---------------------------------------------------------------------------
@@ -266,22 +243,6 @@ class SessionChatRoomResponse(BaseModel):
     chat_enabled: bool = False
     room_id: str | None = None
     room_type: str = "session"
-
-
-class JoinByCodeRequest(BaseModel):
-    """게스트 참여 시 name 필수, 로그인 참여 시 생략 가능."""
-
-    name: str | None = Field(None, min_length=1, max_length=100)
-    gender: Literal["male", "female", "other"] | None = None
-    birth_date: str | None = None
-    participant_token: str | None = None
-
-
-class JoinByCodeResponse(BaseModel):
-    participant_token: str | None = None
-    session: SessionResponse
-    participant_id: str | None = None
-    is_guest: bool = False
 
 
 class EnterVerifyRequest(BaseModel):
@@ -319,13 +280,6 @@ class EnterResponse(BaseModel):
     session: SessionResponse
 
 
-class MemberLiveKitTokenRequest(BaseModel):
-    """회원/게스트 구독 전용 LiveKit 토큰 요청 — 게스트는 participant_token 소유 증명."""
-
-    participant_id: str
-    participant_token: str | None = None
-
-
 class MemberLiveKitTokenResponse(BaseModel):
     livekit_token: str
     webrtc_room_id: str
@@ -344,21 +298,14 @@ class SpeakingRequest(BaseModel):
     granted: bool
 
 
-class RaiseHandRequest(BaseModel):
-    """회원/게스트 손들기 요청 — 게스트는 participant_token 으로 소유를 증명한다."""
-
-    participant_token: str | None = None
-
-
 class ReportChoiceRequest(BaseModel):
-    """SDD-209(B2): 리포트 반영 선택 — 본인 참여자만(회원 로그인 또는 게스트 participant_token)."""
+    """SDD-209(B2): 리포트 반영 선택 — 본인 참여자만(회원 로그인 또는 입장 자격 헤더 X-Entry-Credential)."""
 
     participant_id: str
     report_included: bool
     # 고지를 실제로 확인했을 때만 true. 증빙(시각/버전)은 선택 이력과 분리 저장된다.
     notice_acknowledged: bool = False
     notice_version: str | None = Field(None, max_length=20)
-    participant_token: str | None = None
 
 
 class ReportChoiceResponse(BaseModel):
@@ -453,7 +400,7 @@ class SessionLiveMetricsResponse(BaseModel):
 
 
 class GuestSessionStateResponse(BaseModel):
-    """게스트가 인증 없이 대기→명상 전이를 감지하기 위한 최소 상태.
+    """참여자 본인 상태의 공통 필드 — EntryStateResponse 의 기반.
 
     민감한 참가자 목록은 포함하지 않는다.
     SDD-023: 게스트 명상 화면 실데이터(최신 윈도우) 필드를 추가한다. 미착용/미수집 시 null.
@@ -546,3 +493,12 @@ class ReportEmailRequest(BaseModel):
 class ReportEmailResponse(BaseModel):
     status: str
     message: str
+
+
+class EntryStateResponse(GuestSessionStateResponse):
+    """SDD-209(B5b/BE-9): 입장 자격(또는 로그인) 기반 본인 상태 — 대기→진행 전이·승격 감지용."""
+
+    participant_id: str
+    is_waitlisted: bool = False
+    # 본인의 리포트 반영 선택(기본 제외). 타인 선택은 어디에도 내려가지 않는다.
+    report_included: bool = False

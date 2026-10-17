@@ -1,5 +1,6 @@
 """세션 관리 API"""
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
@@ -20,16 +21,11 @@ from app.schemas.session import (
     EnterResponse,
     EnterVerifyRequest,
     EnterVerifyResponse,
-    GuestSessionStateResponse,
+    EntryStateResponse,
     InviteParticipantRequest,
-    JoinByCodeRequest,
-    JoinByCodeResponse,
-    MemberLiveKitTokenRequest,
     MemberLiveKitTokenResponse,
-    RaiseHandRequest,
     ReportChoiceRequest,
     ReportChoiceResponse,
-    SessionByCodeResponse,
     SessionChatEnabledRequest,
     SessionChatRoomResponse,
     SessionLiveMetricsResponse,
@@ -80,6 +76,9 @@ def create_session(
 
 # ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
 # 주의: "/{session_id}" 라우트보다 먼저 선언해야 "enter"가 세션 ID로 해석되지 않는다.
+EntryCredential = Annotated[str | None, Header(alias="X-Entry-Credential")]
+
+
 def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
@@ -113,7 +112,7 @@ async def enter_session(
     payload: EnterRequest,
     request: Request,
     current_user: dict | None = Depends(get_current_user_optional),
-    x_entry_credential: str | None = Header(None),
+    x_entry_credential: EntryCredential = None,
     db: DBSession = Depends(get_db),
     redis=Depends(get_redis),
 ):
@@ -147,72 +146,12 @@ async def enter_session(
 
 @router.post("/entry/revoke", status_code=status.HTTP_204_NO_CONTENT)
 def revoke_entry_credential(
-    x_entry_credential: str | None = Header(None),
+    x_entry_credential: EntryCredential = None,
     db: DBSession = Depends(get_db),
 ):
     """입장 자격 폐기(로그아웃) — 이 자격으로 발급된 모든 토큰이 무효가 된다."""
     session_service.revoke_entry_credential(x_entry_credential, db)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
-@router.get("/by-code/{code}", response_model=SessionByCodeResponse)
-def get_session_by_code(code: str, db: DBSession = Depends(get_db)):
-    """클래스 코드로 클래스 정보 조회 — 참여 전 확인용(인증 불필요)."""
-    return session_service.get_session_by_code(code, db)
-
-
-@router.post("/by-code/{code}/join", response_model=JoinByCodeResponse)
-def join_session_by_code(
-    code: str,
-    payload: JoinByCodeRequest | None = None,
-    current_user: dict | None = Depends(get_current_user_optional),
-    db: DBSession = Depends(get_db),
-):
-    """클래스 코드로 참여 — 로그인 사용자는 user_id로, 게스트는 이름으로 등록한다."""
-    name = payload.name if payload else None
-    return session_service.join_session_by_code(
-        code,
-        db,
-        user_id=current_user["id"] if current_user else None,
-        guest_name=name,
-        gender=payload.gender if payload and not current_user else None,
-        birth_date=_parse_date(payload.birth_date) if payload and not current_user else None,
-        participant_token=payload.participant_token if payload and not current_user else None,
-    )
-
-
-# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
-@router.get("/by-code/{code}/state", response_model=GuestSessionStateResponse)
-def get_guest_session_state(
-    code: str,
-    participant_id: str | None = None,
-    db: DBSession = Depends(get_db),
-):
-    """게스트 상태 조회 — 인증 없이 세션/본인 상태를 확인한다(대기→명상 전이 감지)."""
-    return session_service.get_guest_session_state(code, db, participant_id=participant_id)
-
-
-# 회원/게스트 구독 전용 LiveKit 토큰 — 상담사 영상·음성 라이브 수신용.
-# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
-@router.post("/by-code/{code}/livekit-token", response_model=MemberLiveKitTokenResponse)
-def get_member_livekit_token(
-    code: str,
-    payload: MemberLiveKitTokenRequest,
-    current_user: dict | None = Depends(get_current_user_optional),
-    db: DBSession = Depends(get_db),
-):
-    """회원/게스트 LiveKit 토큰을 발급한다.
-
-    can_publish 는 온라인 세션 + (1:1 또는 그룹 20명 이하)일 때만 True.
-    """
-    return session_service.member_livekit_token(
-        code,
-        payload.participant_id,
-        db,
-        participant_token=payload.participant_token,
-        current_user_id=current_user["id"] if current_user else None,
-    )
 
 
 # ── SDD-095: 클래스 템플릿 (설정 저장본) ──
@@ -402,19 +341,54 @@ def remove_participant(
 def raise_hand(
     session_id: str,
     participant_id: str,
-    payload: RaiseHandRequest | None = None,
+    x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
     """참여자 손들기 — raise_hand=True 로 표시.
 
-    로그인 회원은 본인 참여자만, 게스트는 body.participant_token 소유 증명이 필요하다.
+    로그인 회원은 본인 참여자만, 비회원은 입장 자격(X-Entry-Credential)이 필요하다.
     """
     return session_service.raise_hand(
         session_id,
         participant_id,
         db,
-        participant_token=payload.participant_token if payload else None,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.get("/{session_id}/entry-state", response_model=EntryStateResponse)
+def get_entry_state(
+    session_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """참여자 본인 상태 — 입장 자격(X-Entry-Credential) 또는 로그인 회원만. 코드/식별자 단독은 401."""
+    return session_service.get_entry_state(
+        session_id,
+        db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.post("/{session_id}/entry/livekit-token", response_model=MemberLiveKitTokenResponse)
+def get_participant_livekit_token(
+    session_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """참여자 구독/송신 LiveKit 토큰 — 입장 자격 또는 로그인 회원만(대기열·타인 403, 자격 없음 401).
+
+    can_publish 는 온라인 + (1:1 또는 그룹≤20 & 발언권)일 때만 True. 호스트 토큰과 분리된 경로다.
+    """
+    return session_service.participant_livekit_token(
+        session_id,
+        db,
+        entry_credential=x_entry_credential,
         current_user_id=current_user["id"] if current_user else None,
     )
 
@@ -433,6 +407,7 @@ def enter_invited_session(
 def set_report_choice(
     session_id: str,
     payload: ReportChoiceRequest,
+    x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -444,7 +419,7 @@ def set_report_choice(
         db,
         notice_acknowledged=payload.notice_acknowledged,
         notice_version=payload.notice_version,
-        participant_token=payload.participant_token,
+        entry_credential=x_entry_credential,
         current_user_id=current_user["id"] if current_user else None,
     )
 
@@ -486,18 +461,21 @@ def add_marker(
 def ingest_eeg_features(
     session_id: str,
     payload: EEGFeatureBatchRequest,
+    x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
     """SDD-023: LINK BAND 5초 배치 EEG feature 업로드.
 
-    게스트는 participant_id 로, 로그인 참가자는 인증 토큰으로 식별한다(비참가자 403).
+    비회원은 입장 자격(X-Entry-Credential)으로, 로그인 참가자는 인증 토큰으로 식별한다
+    (자격 없음 401 · 비참가자/타인 403).
     """
     return session_service.ingest_features(
         session_id,
         payload,
         db,
         current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
     )
 
 
@@ -532,16 +510,19 @@ def get_eeg_rollup(
 def presign_eeg_raw(
     session_id: str,
     payload: RawPresignRequest,
+    x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
     """SDD-027: raw EEG 청크 presigned PUT URL 발급 + manifest 생성.
 
-    게스트는 participant_id 로, 로그인 참가자는 인증 토큰으로 소유 검증(비참가자 403).
+    비회원은 입장 자격(X-Entry-Credential)으로, 로그인 참가자는 인증 토큰으로 소유 검증
+    (자격 없음 401 · 비참가자/타인 403).
     """
     return eeg_raw_service.presign_upload(
         session_id, payload, db,
         current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
     )
 
 
@@ -549,6 +530,7 @@ def presign_eeg_raw(
 def ack_eeg_raw(
     session_id: str,
     payload: RawAckRequest,
+    x_entry_credential: EntryCredential = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
@@ -556,6 +538,7 @@ def ack_eeg_raw(
     return eeg_raw_service.ack_upload(
         session_id, payload, db,
         current_user_id=current_user["id"] if current_user else None,
+        entry_credential=x_entry_credential,
     )
 
 
@@ -580,8 +563,8 @@ def get_livekit_token(
     """LiveKit 접근 토큰 발급 — host 전용 (SEC-LIVEKIT-PUBLISH-BYPASS).
 
     일반 참여자(대기열 포함)에게 can_publish=True 토큰이 발급되면 SDD-094 발언권
-    게이트(speaking)를 우회해 발언할 수 있다. 참여자용 구독 토큰은 by-code
-    livekit-token(_compute_can_publish 적용) 경로로만 발급한다.
+    게이트(speaking)를 우회해 발언할 수 있다. 참여자용 구독 토큰은
+    entry/livekit-token(_compute_can_publish 적용) 경로로만 발급한다.
     """
     from fastapi import HTTPException
     s = session_service._get_session_as_host(session_id, current_user["id"], db)

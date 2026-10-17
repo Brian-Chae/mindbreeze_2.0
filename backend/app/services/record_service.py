@@ -272,52 +272,23 @@ def _get_session(session_id: str, db: DBSession) -> Session:
 
 
 def _resolve_checkin_participant(
-    s: Session, payload, user_id: str | None, db: DBSession
+    s: Session, payload, user_id: str | None, entry_credential: str | None, db: DBSession
 ) -> SessionParticipant:
-    """체크인 주체를 확정한다 — 로그인 회원(본인 참여자) 또는 게스트(토큰 소유 증명)."""
-    from app.services.session_service import _authorize_participant_access
+    """체크인 주체를 확정한다 — 로그인 회원(본인 참여자) 또는 입장 자격 보유자(SDD-209 B5b)."""
+    from app.services.session_service import resolve_participant_actor
 
-    if payload.participant_id:
-        try:
-            pid = _to_uuid(payload.participant_id)
-        except HTTPException:
-            raise HTTPException(status_code=403, detail="참여자 확인 정보가 일치하지 않습니다")
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.id == pid,
-                SessionParticipant.session_id == s.id,
-                SessionParticipant.is_waitlisted.is_(False),
-            )
-            .first()
-        )
-        if not participant:
-            raise HTTPException(status_code=403, detail="해당 세션의 참가자가 아닙니다")
-        _authorize_participant_access(
-            participant,
-            participant_token=payload.participant_token,
-            current_user_id=user_id,
-        )
-        return participant
-
-    # participant_id 미지정 — 로그인 회원이면 본인 참여자로 한정한다.
-    if user_id is None:
-        raise HTTPException(status_code=403, detail="참여자 확인 정보가 필요합니다")
-    participant = (
-        db.query(SessionParticipant)
-        .filter(
-            SessionParticipant.session_id == s.id,
-            SessionParticipant.user_id == _to_uuid(user_id),
-            SessionParticipant.is_waitlisted.is_(False),
-        )
-        .first()
+    participant = resolve_participant_actor(
+        s.id, db, entry_credential=entry_credential, current_user_id=user_id,
+        participant_id=payload.participant_id,
     )
-    if not participant:
+    if participant.is_waitlisted:
         raise HTTPException(status_code=403, detail="해당 세션의 참가자가 아닙니다")
     return participant
 
 
-def submit_checkin(session_id: str, payload, user_id: str | None, db: DBSession) -> dict:
+def submit_checkin(
+    session_id: str, payload, user_id: str | None, db: DBSession, *, entry_credential: str | None = None
+) -> dict:
     """세션 직후 1탭 셀프 체크인 — 주관 상태를 SessionRecord.subjective_state 에 적재한다.
 
     - 밴드 미착용(세션 레코드 없음)이어도 레코드를 만들어 주관 기록을 남긴다.
@@ -328,7 +299,7 @@ def submit_checkin(session_id: str, payload, user_id: str | None, db: DBSession)
     if s.status == "cancelled":
         raise HTTPException(status_code=409, detail="취소된 세션에는 체크인할 수 없습니다")
 
-    participant = _resolve_checkin_participant(s, payload, user_id, db)
+    participant = _resolve_checkin_participant(s, payload, user_id, entry_credential, db)
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
     if not record:

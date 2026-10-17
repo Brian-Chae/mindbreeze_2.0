@@ -1558,200 +1558,13 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
 # 코드로 참여할 수 없는 상태 (이미 끝났거나 취소된 클래스)
 _CLOSED_STATUSES = ("completed", "cancelled")
 
-# SDD-088: 아직 오픈 전 상태 — 상담사가 "클래스 오픈"을 눌러야 회원 입장이 열린다.
-_PRE_OPEN_STATUSES = ("ready", "scheduled")
-
-
-def _get_session_by_code(code: str, db: DBSession, *, include_closed: bool = False) -> Session:
+def _get_session_by_code(code: str, db: DBSession) -> Session:
     # SDD-209(B4): 4자리 숫자 코드만, 입장 가능한 활성 클래스만. 없는/형식오류/종료/취소/숨김은
     # 사유를 구분하지 않는 동일한 404 로 응답한다(정보 비노출). 과거 6자리 값은 입장되지 않는다.
-    # include_closed=True 는 이미 입장한 참여자의 상태/토큰 경로(by-code state·livekit-token)가
-    # 종료 후에도 동작하도록 두는 **임시** 허용이며, B5b 에서 해당 by-code 경로와 함께 제거된다.
-    s = class_code_service.find_enterable_session(db, code, include_closed=include_closed)
+    s = class_code_service.find_enterable_session(db, code)
     if not s:
         raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
     return s
-
-
-def get_session_by_code(code: str, db: DBSession) -> dict:
-    """참여 전 클래스 정보 확인 — 인증 불필요, 민감 정보는 노출하지 않는다."""
-    s = _get_session_by_code(code, db)
-    host_name = None
-    if s.host_id:
-        from app.models.user import User
-
-        host = db.query(User).filter(User.id == s.host_id).first()
-        host_name = host.name if host else None
-    return {
-        "id": str(s.id),
-        "access_code": s.access_code,
-        "title": s.title,
-        "type": s.type,
-        "custom_type_name": s.custom_type_name,
-        "status": s.status,
-        "host_name": host_name,
-        "participant_mode": s.participant_mode,
-        "linkband_mode": s.linkband_mode,
-        "location_type": s.location_type,
-        # SDD-021: 대기열(waitlisted) 제외, active 참가자만 카운트한다
-        "participant_count": sum(1 for p in (s.participants or []) if not p.is_waitlisted),
-        "max_participants": s.max_participants,
-        "started_at": s.started_at,
-        "scheduled_at": s.scheduled_at,
-        # 클래스 실시간 채팅 사용 여부 — 참여 전 채팅 가능 여부 안내용
-        "chat_enabled": bool(s.chat_enabled),
-    }
-
-
-def join_session_by_code(
-    code: str,
-    db: DBSession,
-    *,
-    user_id: str | None = None,
-    guest_name: str | None = None,
-    gender: str | None = None,
-    birth_date: date | None = None,
-    participant_token: str | None = None,
-) -> dict:
-    """클래스 코드로 참여.
-
-    로그인 사용자 → SessionParticipant(user_id) 생성 (이미 있으면 재사용).
-    게스트 → user_id=NULL + guest_name 으로 생성. 동일 이름 중복 참여는 허용한다.
-    """
-    s = _get_session_by_code(code, db)
-    if s.status in _CLOSED_STATUSES:
-        raise HTTPException(status_code=400, detail="이미 종료된 클래스입니다")
-    # SDD-088: 입장 게이트 이동 — 오픈(open) 이후부터 회원/게스트 입장을 허용한다.
-    # host 상담사는 오픈 전에도 자기 세션 참여 처리(no-op)를 막지 않는다.
-    if s.status in _PRE_OPEN_STATUSES:
-        uid = _to_uuid(user_id) if user_id else None
-        if uid is None or s.host_id != uid:
-            raise HTTPException(
-                status_code=400,
-                detail="아직 오픈 전인 클래스입니다. 상담사가 클래스를 열면 입장할 수 있습니다",
-            )
-
-    # host 상담사는 참여자로 중복 등록하지 않는다(잠금·삽입 불필요).
-    member_uid = _to_uuid(user_id) if user_id else None
-    if member_uid is not None and s.host_id == member_uid:
-        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": None, "is_guest": False}
-
-    # CONC-CAPACITY-RACE: 이 시점부터 정원 검사·참여자 삽입을 세션 행 잠금 하에 수행한다.
-    # (PostgreSQL SELECT ... FOR UPDATE 로 같은 세션 동시 입장을 직렬화)
-    locked = _lock_session_for_capacity(s.id, db)
-    if locked is not None:
-        s = locked
-
-    if member_uid is not None:
-        uid = member_uid
-        # SDD-209(B1): 제거된 회원이 코드로 다시 입장하면 제거 행을 되살려 재사용한다.
-        _revive_removed_participant(s, uid, db)
-        existing = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == s.id,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
-        )
-        if existing is None:
-            # SDD-026: 코드로 자발 참여 = EEG 수집 opt-in 으로 기록(consent_eeg=True).
-            # 호스트가 초대(invite_participant)한 참가자는 consent_eeg=False 로 남아, 본인이
-            # 참여 동의를 거치기 전에는 업로드가 차단된다.
-            # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
-            has_room = _has_capacity(s, db)
-            new_participant = SessionParticipant(
-                session_id=s.id,
-                user_id=uid,
-                consent_eeg=True,
-                is_waitlisted=not has_room,
-                waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
-            )
-            # CONC-DUP-JOIN-INVITE: 동시 입장 경합 — unique(session_id, user_id) 위반 시
-            # IntegrityError(500) 대신 먼저 커밋된 행을 재사용해 멱등 처리한다.
-            try:
-                with db.begin_nested():
-                    db.add(new_participant)
-            except IntegrityError:
-                existing = (
-                    db.query(SessionParticipant)
-                    .filter(
-                        SessionParticipant.session_id == s.id,
-                        SessionParticipant.user_id == uid,
-                    )
-                    .first()
-                )
-                if existing is None:
-                    raise
-                existing.consent_eeg = True
-            else:
-                existing = new_participant
-        else:
-            existing.consent_eeg = True
-            # SDD-126: 대기열 회원이 코드로 자발 입장 시 is_waitlisted 해제(관제·좌석·인원 집계 반영)
-            # FUNC-03: 정원 여유가 있을 때만 해제한다(정원 초과 입장 방지).
-            if existing.is_waitlisted and _has_capacity(s, db):
-                existing.is_waitlisted = False
-                existing.waitlist_position = None
-        db.commit()
-        db.refresh(s)
-        _notify_participant_changed(s, db)
-        return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(existing.id), "is_guest": False}
-
-    name = (guest_name or "").strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="게스트 참여에는 이름이 필요합니다")
-
-    # SDD-126: participant_token 기반 게스트 멱등 — 재접속 시 기존 행 재사용(유령 방지)
-    participant = None
-    if participant_token:
-        from app.services.report_email_service import _decode
-        try:
-            claims = _decode(participant_token, "report_participant")
-            if claims.get("sub"):
-                participant = (
-                    db.query(SessionParticipant)
-                    .filter(
-                        SessionParticipant.id == _to_uuid(claims["sub"]),
-                        SessionParticipant.session_id == s.id,
-                    )
-                    .first()
-                )
-        except HTTPException:
-            participant = None
-
-    if participant is None:
-        # SDD-026: 게스트도 코드 참여 시 EEG 수집 opt-in 기록
-        # FUNC-03: 정원이 차 있으면 active 로 들이지 않고 대기열에 등록한다.
-        has_room = _has_capacity(s, db)
-        participant = SessionParticipant(
-            session_id=s.id, user_id=None, guest_name=name[:100],
-            gender=gender, birth_date=birth_date, consent_eeg=True,
-            is_waitlisted=not has_room,
-            waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
-        )
-        db.add(participant)
-    else:
-        # 기존 행 재사용 — 이름·성별·생년월일 갱신 + 대기열 해제(정원 여유 시)
-        participant.guest_name = name[:100]
-        if gender is not None:
-            participant.gender = gender
-        if birth_date is not None:
-            participant.birth_date = birth_date
-        participant.consent_eeg = True
-        # FUNC-03: 정원 여유가 있을 때만 대기열에서 해제한다.
-        if participant.is_waitlisted and _has_capacity(s, db):
-            participant.is_waitlisted = False
-            participant.waitlist_position = None
-
-    db.commit()
-    db.refresh(s)
-    _notify_participant_changed(s, db)
-    from app.services.report_email_service import participant_token as make_token
-    # CONTRACT-GUEST-CHAT-ROOM-ID: 회원 경로와 동일하게 게스트 join 응답에도 chat_room_id 를
-    #   포함한다(누락 시 게스트 클라이언트가 채팅방에 입장하지 못한다).
-    return {"session": _with_chat_room(_serialize(s), s.id, db), "participant_id": str(participant.id), "is_guest": True,
-            "participant_token": make_token(participant)}
 
 
 # ---------------------------------------------------------------------------
@@ -1946,47 +1759,33 @@ def revoke_entry_credential(entry_credential: str | None, db: DBSession) -> None
     entry_credential_service.revoke(db, participant)
 
 
-def member_livekit_token(
-    code: str,
-    participant_id: str,
+def participant_livekit_token(
+    session_id: str,
     db: DBSession,
     *,
-    participant_token: str | None = None,
+    entry_credential: str | None = None,
     current_user_id: str | None = None,
+    participant_id: str | None = None,
 ) -> dict:
-    """회원/게스트 구독 전용 LiveKit 토큰 발급.
+    """회원/비회원 참여자의 LiveKit 토큰 발급 (SDD-209 B5b — 코드가 아니라 입장 자격/로그인으로 소유 검증).
 
     can_publish 규칙: 온라인 세션이면서 1:1 이거나, 그룹이면 max_participants ≤ 20 일 때만 송신 허용.
     그 외(오프라인, 온라인 그룹 20명 초과)는 구독 전용(can_publish=False).
+    호스트는 ``POST /{session_id}/livekit-token`` 을 쓴다(참가자 자격으로는 호스트 토큰을 못 받는다).
     """
-    s = _get_session_by_code(code, db, include_closed=True)
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    participant = resolve_participant_actor(
+        sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
+        participant_id=participant_id,
+    )
     # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
-    if s.status in ("completed", "cancelled"):
+    if s.status in _CLOSED_STATUSES:
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="아직 상담사 화상이 시작되지 않았습니다")
-
-    pid = _to_uuid(participant_id)
-    participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == s.id)
-        .first()
-    )
-    if participant is None:
-        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
-
-    if participant.user_id is None:
-        # 게스트 — participant_token 소유 증명 필수
-        from app.services.report_email_service import _decode
-        try:
-            claims = _decode(participant_token, "report_participant")
-        except HTTPException:
-            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
-        if claims.get("sub") != str(participant.id):
-            raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
-    elif current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
-        # 로그인 회원 — 본인 참여 확인
-        raise HTTPException(status_code=403, detail="참여자 권한이 없습니다")
 
     # AUTHZ-WAITLIST-SPEAKING: 대기열(waitlisted) 참여자는 아직 입장 허용되지 않았으므로
     #   LiveKit(음성 송수신) 토큰을 발급하지 않는다 — 정원 초과 대기자의 매체 접근 차단.
@@ -1995,7 +1794,6 @@ def member_livekit_token(
 
     name = participant.guest_name
     if not name and participant.user_id:
-        from app.models.user import User
         user = db.query(User).filter(User.id == participant.user_id).first()
         name = user.name if user else None
     name = name or "참여자"
@@ -2013,6 +1811,58 @@ def member_livekit_token(
         "livekit_token": token,
         "webrtc_room_id": str(s.webrtc_room_id),
         "can_publish": can_publish,
+    }
+
+
+def get_entry_state(
+    session_id: str,
+    db: DBSession,
+    *,
+    entry_credential: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """참여자 본인의 클래스 상태 (SDD-209 B5b / BE-9) — 입장 자격/로그인으로 소유 검증.
+
+    대기→진행 전이 감지, 본인 밴드 상태·최신 지표, 채팅 가능 여부, 대기열 여부, 본인 리포트 선택을 돌려준다.
+    종료·취소 클래스도 읽을 수 있다(FM09/FM10). 타인 정보와 참가자 목록은 포함하지 않는다.
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    p = resolve_participant_actor(
+        sid, db, entry_credential=entry_credential, current_user_id=current_user_id
+    )
+    # SDD-023/026: 본인 최신 EEG feature 윈도우 (없으면 null). LIMIT 1 헬퍼로 최신 1건만 조회.
+    latest = eeg_query.latest_feature_window(db, s.id, p.id)
+    sq = latest.signal_quality if latest else None
+    device_status = _device_status_live(sq, latest.created_at, _now()) if latest else "unknown"
+    return {
+        "session_id": str(s.id),
+        "participant_id": str(p.id),
+        "status": s.status,
+        "guest_state": (
+            "meditation" if s.status == "in_progress"
+            else "complete" if s.status == "completed"
+            else "cancelled" if s.status == "cancelled"
+            else "waiting"
+        ),
+        "version": s.state_version or 0,
+        "in_progress": s.status == "in_progress",
+        "ended": s.status in _CLOSED_STATUSES,
+        "participant_state": _participant_log_state(s.status),
+        "is_waitlisted": bool(p.is_waitlisted),
+        "report_included": bool(p.report_included),
+        "band_connected": p.band_connected,
+        "device_status": device_status,
+        "signal_state": _signal_state_from_signal(sq),
+        "band_battery": p.band_battery,
+        "relaxation_index": latest.relaxation_index if latest else None,
+        "focus_index": latest.focus_index if latest else None,
+        "stress_index": latest.stress_index if latest else None,
+        "signal_quality": sq,
+        "last_eeg_at": latest.created_at if latest else None,
+        "chat_enabled": bool(s.chat_enabled),
     }
 
 
@@ -2055,28 +1905,66 @@ def _get_participant_in_session(sid: UUID, participant_id: str, db: DBSession) -
     return participant
 
 
+def resolve_participant_actor(
+    sid: UUID,
+    db: DBSession,
+    *,
+    entry_credential: str | None,
+    current_user_id: str | None,
+    participant_id: str | None = None,
+) -> SessionParticipant:
+    """소유권 통합(SDD-209 B5b) — 요청 주체의 본인 참여자 행을 확정한다.
+
+    우선순위: ① 로그인 회원(access 토큰) → 이 클래스의 본인 행 ② 입장 자격(헤더/페이로드).
+    ``participant_id`` 를 함께 주면 확정된 본인 행과 같아야 한다(대리 요청 403).
+    아무 증명이 없으면 401 — **코드·participant_id 단독은 인증 수단이 아니다**(AZ8).
+    로그인했지만 이 클래스 참여자가 아니면 403(호스트는 참여자 행이 없어 거부된다).
+    """
+    from app.services import entry_credential_service
+
+    participant = None
+    if current_user_id:
+        participant = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == _to_uuid(current_user_id),
+            )
+            .first()
+        )
+    if participant is None and entry_credential:
+        participant = entry_credential_service.resolve_participant(db, entry_credential, sid)
+    if participant is None:
+        if current_user_id:
+            raise HTTPException(status_code=403, detail="세션 참가자만 요청할 수 있습니다")
+        raise HTTPException(
+            status_code=401, detail="입장 자격이 필요해요. 코드를 다시 입력해 주세요."
+        )
+    if participant_id:
+        try:
+            explicit = _to_uuid(participant_id)
+        except HTTPException:
+            raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+        if participant.id != explicit:
+            raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+    return participant
+
+
 def _authorize_participant_access(
     participant: SessionParticipant,
+    db: DBSession,
     *,
-    participant_token: str | None,
+    entry_credential: str | None,
     current_user_id: str | None,
 ) -> None:
-    """참여자 본인(로그인 회원) 또는 게스트 토큰 소유를 검증한다(아니면 403).
-
-    - 로그인 회원 참여자: current_user_id 가 participant.user_id 와 일치해야 한다.
-    - 게스트 참여자: participant_token 소유 증명(sub == participant.id) 필수.
-    """
-    if participant.user_id is not None:
-        if current_user_id is None or _to_uuid(current_user_id) != participant.user_id:
-            raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
-        return
-    from app.services.report_email_service import _decode
-    try:
-        claims = _decode(participant_token, "report_participant")
-    except HTTPException:
-        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
-    if claims.get("sub") != str(participant.id):
-        raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
+    """이미 조회한 참여자 행의 소유자(로그인 회원 또는 입장 자격 보유자)만 통과시킨다."""
+    resolve_participant_actor(
+        participant.session_id,
+        db,
+        entry_credential=entry_credential,
+        current_user_id=current_user_id,
+        participant_id=str(participant.id),
+    )
 
 
 def set_report_choice(
@@ -2087,12 +1975,12 @@ def set_report_choice(
     *,
     notice_acknowledged: bool = False,
     notice_version: str | None = None,
-    participant_token: str | None = None,
+    entry_credential: str | None = None,
     current_user_id: str | None = None,
 ) -> dict:
     """SDD-209(B2/BE-2): 리포트 반영 선택(포함/제외)을 기록한다.
 
-    - 본인 참여자만(회원 로그인 / 게스트 participant_token). 호스트·타인은 403.
+    - 본인 참여자만(회원 로그인 / 입장 자격). 호스트·타인은 403, 자격 없으면 401.
     - 종료·취소 클래스는 409. 같은 값 재요청은 멱등(이력 추가 없음).
     - 고지 확인(notice_acknowledged)은 선택 이력과 분리해 참여자 행에 시각/버전으로 남긴다.
     - 입장·업로드·리포트 생성은 이 선택의 성공 여부와 무관하다(기본 제외로 진행).
@@ -2106,7 +1994,7 @@ def set_report_choice(
 
     participant = _get_participant_in_session(sid, participant_id, db)
     _authorize_participant_access(
-        participant, participant_token=participant_token, current_user_id=current_user_id
+        participant, db, entry_credential=entry_credential, current_user_id=current_user_id
     )
 
     previous = bool(participant.report_included)
@@ -2142,12 +2030,12 @@ def raise_hand(
     participant_id: str,
     db: DBSession,
     *,
-    participant_token: str | None = None,
+    entry_credential: str | None = None,
     current_user_id: str | None = None,
 ) -> dict:
     """SDD-094: 참여자 손들기 — raise_hand=True 로 표시하고 호스트/본인에게 통지한다.
 
-    참여자 본인(로그인) 또는 게스트 토큰 소유만 가능하다.
+    참여자 본인(로그인) 또는 입장 자격 소유자만 가능하다.
     """
     sid = _to_uuid(session_id)
     s = db.query(Session).filter(Session.id == sid).first()
@@ -2159,7 +2047,7 @@ def raise_hand(
 
     participant = _get_participant_in_session(sid, participant_id, db)
     _authorize_participant_access(
-        participant, participant_token=participant_token, current_user_id=current_user_id
+        participant, db, entry_credential=entry_credential, current_user_id=current_user_id
     )
 
     # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 좌석이 없어 발언 요청(손들기)을 할 수 없다.
@@ -2258,14 +2146,14 @@ def resolve_signal_sender(
     participant_id: str | None,
     current_user_id: str | None,
     db: DBSession,
+    *,
+    entry_credential: str | None = None,
 ) -> dict:
-    """무음 시그널 발신자를 검증한다 (SDD-026 소유 검증 규칙 재사용, EEG 동의와 무관).
+    """무음 시그널 발신자를 검증한다 (EEG 동의와 무관, SDD-209 B5b: 입장 자격 소유권 통합).
 
-    - 인증 사용자: 본인 참가자 행으로만 발신. participant_id 를 명시하면 반드시
-      본인 소유여야 한다 → 타인 participant_id 대리 발신 차단(403).
-    - 미인증(게스트): participant_id 로만 식별하되 반드시 게스트 행(user_id IS NULL)이어야
-      한다 → 로그인 회원 참가자 사칭 차단(403).
-    - 세션 없음 404 / 비참가자·미식별 403.
+    - 로그인 회원은 본인 참가자 행으로만, 비로그인은 입장 자격으로만 발신한다.
+    - participant_id 단독(자격 없음)은 인증 수단이 아니다(401). 타인 participant_id 는 403.
+    - 세션 없음 404.
 
     반환: {"participant_id": str, "display_name": str, "status": str}
     (상태 신호는 DB 에 저장하지 않는 휘발성 값이다 — 호스트 화면 표시용 메타만 만든다.)
@@ -2275,35 +2163,10 @@ def resolve_signal_sender(
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
-    participant: SessionParticipant | None = None
-    if current_user_id:
-        uid = _to_uuid(current_user_id)
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
-        )
-        # 명시 participant_id 는 반드시 본인 참가자와 일치해야 한다(대리 발신 방지)
-        if participant_id and (
-            participant is None or participant.id != _to_uuid(participant_id)
-        ):
-            raise HTTPException(status_code=403, detail="본인 참가자로만 신호를 보낼 수 있습니다")
-    elif participant_id:
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.id == _to_uuid(participant_id),
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id.is_(None),  # 게스트만 (회원 사칭 차단)
-            )
-            .first()
-        )
-
-    if participant is None:
-        raise HTTPException(status_code=403, detail="세션 참가자만 신호를 보낼 수 있습니다")
+    participant = resolve_participant_actor(
+        sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
+        participant_id=participant_id,
+    )
 
     display_name = participant.guest_name
     if participant.user_id is not None:
@@ -2498,78 +2361,6 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     }
 
 
-def get_guest_session_state(
-    code: str,
-    db: DBSession,
-    *,
-    participant_id: str | None = None,
-) -> dict:
-    """게스트가 인증 없이 자기/세션 상태를 확인한다 (대기→명상 전이 감지용).
-
-    민감한 참가자 목록은 노출하지 않고, 세션 상태와 본인 상태만 내려준다.
-    """
-    s = _get_session_by_code(code, db, include_closed=True)
-
-    participant_state = None
-    band_connected = False
-    band_battery = None
-    latest = None
-    if participant_id:
-        try:
-            pid = UUID(str(participant_id))
-        except (TypeError, ValueError):
-            pid = None
-        if pid is not None:
-            p = (
-                db.query(SessionParticipant)
-                .filter(
-                    SessionParticipant.id == pid,
-                    SessionParticipant.session_id == s.id,
-                )
-                .first()
-            )
-            if p is not None:
-                participant_state = _participant_log_state(s.status)
-                band_connected = p.band_connected
-                band_battery = p.band_battery
-                # SDD-023/026: 게스트 명상 실데이터 — 본인 최신 EEG feature 윈도우 (없으면 null).
-                # SDD-028: pause/resume 로 window_index 가 재시작하므로 created_at 기준 최신을 취하되,
-                # 전체 로딩 없이 LIMIT 1 헬퍼로 최신 1건만 조회한다.
-                latest = eeg_query.latest_feature_window(db, s.id, pid)
-
-    # SDD-026: 접촉/연결(device_status)과 신호품질(signal_state)을 분리해 게스트에도 동일 계약으로 내린다.
-    sq = latest.signal_quality if latest else None
-    device_status = (
-        _device_status_live(sq, latest.created_at, _now()) if latest else "unknown"
-    )
-    return {
-        "session_id": str(s.id),
-        "status": s.status,
-        # SDD-129(③-2): FE가 guest_state 파생 계약을 가정하므로 서버가 파생값을 내려 죽은 분기를 살린다.
-        "guest_state": (
-            "meditation" if s.status == "in_progress"
-            else "complete" if s.status == "completed"
-            else "cancelled" if s.status == "cancelled"
-            else "waiting"
-        ),
-        "version": s.state_version or 0,
-        "in_progress": s.status == "in_progress",
-        "ended": s.status in _CLOSED_STATUSES,
-        "participant_state": participant_state,
-        "band_connected": band_connected,
-        "device_status": device_status,
-        "signal_state": _signal_state_from_signal(sq),
-        "band_battery": band_battery,
-        "relaxation_index": latest.relaxation_index if latest else None,
-        "focus_index": latest.focus_index if latest else None,
-        "stress_index": latest.stress_index if latest else None,
-        "signal_quality": sq,
-        "last_eeg_at": latest.created_at if latest else None,
-        # 클래스 실시간 채팅 활성 여부(회원 대기/명상 화면의 채팅 패널 게이트)
-        "chat_enabled": bool(s.chat_enabled),
-    }
-
-
 # ---------------------------------------------------------------------------
 # SDD-026: /session-live WS join 권한 판정 + snapshot
 # ---------------------------------------------------------------------------
@@ -2616,14 +2407,17 @@ def resolve_live_join(
     user_id: str | None,
     participant_id: str | None,
     db: DBSession,
+    *,
+    entry_credential: str | None = None,
 ) -> dict | None:
     """/session-live join 권한을 판정하고 역할별 snapshot 을 만든다.
 
     - 호스트(세션 소유자): role="host" + 전체 모니터링 snapshot(허용 참가자 목록·집계).
     - 회원/게스트 참가자: role="participant" + 본인 전용 snapshot.
-    - 비인가(세션 없음/비참가자/신원 불일치): None → 호출측이 room 미입장 + 거부 처리.
+    - 비인가(세션 없음/비참가자/신원 불일치/자격 없음·만료·폐기): None → 호출측이 거부 처리.
 
-    게스트는 participant_id 로만 식별하되 반드시 게스트 행(user_id IS NULL)이어야 회원 사칭을 막는다.
+    SDD-209(B5b): 비회원은 **입장 자격**으로만 증명한다(participant_id 단독 불가). participant_id 를 함께
+    주면 자격이 가리키는 본인과 같아야 한다.
     """
     try:
         sid = _to_uuid(session_id)
@@ -2646,32 +2440,15 @@ def resolve_live_join(
         snapshot["role"] = "host"
         return {"role": "host", "participant_id": None, "snapshot": snapshot}
 
-    # 참가자(회원/게스트)
-    participant = None
-    if uid is not None:
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
+    # 참가자(회원/비회원)
+    try:
+        participant = resolve_participant_actor(
+            sid, db, entry_credential=entry_credential,
+            current_user_id=str(uid) if uid is not None else None,
+            participant_id=participant_id,
         )
-    elif participant_id:
-        try:
-            pid = _to_uuid(participant_id)
-        except HTTPException:
-            pid = None
-        if pid is not None:
-            participant = (
-                db.query(SessionParticipant)
-                .filter(
-                    SessionParticipant.id == pid,
-                    SessionParticipant.session_id == sid,
-                    SessionParticipant.user_id.is_(None),  # 게스트만
-                )
-                .first()
-            )
+    except HTTPException:
+        participant = None
 
     if participant is None:
         return None
@@ -2843,48 +2620,20 @@ def resolve_upload_participant(
     participant_id: str | None,
     current_user_id: str | None,
     db: DBSession,
+    *,
+    entry_credential: str | None = None,
 ) -> SessionParticipant:
     """업로드 소유 참가자를 확인한다 (REST 배치 + WS 실시간 공유 로직).
 
-    SDD-026 소유 검증 강화 — 명시 participant_id 가 소유 검증을 우회하지 못하게 한다.
-    - 인증 사용자: 항상 본인 참가자 행으로만 업로드. participant_id 를 명시하면 반드시
-      본인 소유(user_id 일치)여야 한다 → 타인 participant_id 대리 업로드 차단(403).
-    - 미인증(게스트): participant_id 로만 식별하되, 반드시 게스트 참가자(user_id IS NULL)여야
-      한다 → 로그인 회원 참가자를 사칭하는 대리 업로드 차단(403).
-    비참가자·미식별은 403. 호스트는 참가자 행이 아니므로 업로드 대상이 아니다.
+    SDD-209(B5b) 소유권 통합 — 로그인 회원은 본인 행으로, 비회원은 **입장 자격**으로만 업로드한다.
+    - 명시 participant_id 는 확정된 본인 행과 같아야 한다 → 타인 대리 업로드 403.
+    - 자격 없이 participant_id 만 보내면 401(코드/식별자 단독은 인증 수단이 아니다).
+    호스트는 참가자 행이 아니므로 업로드 대상이 아니다(403).
     """
-    participant = None
-    if current_user_id:
-        uid = _to_uuid(current_user_id)
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
-        )
-        # 명시 participant_id 는 반드시 본인 참가자와 일치해야 한다(대리 업로드 방지)
-        if participant_id and (
-            participant is None or participant.id != _to_uuid(participant_id)
-        ):
-            raise HTTPException(
-                status_code=403, detail="본인 참가자로만 EEG 데이터를 업로드할 수 있습니다"
-            )
-    elif participant_id:
-        participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.id == _to_uuid(participant_id),
-                SessionParticipant.session_id == sid,
-                SessionParticipant.user_id.is_(None),  # 게스트만 (회원 사칭 차단)
-            )
-            .first()
-        )
-
-    if participant is None:
-        raise HTTPException(status_code=403, detail="세션 참가자만 EEG 데이터를 업로드할 수 있습니다")
-
+    participant = resolve_participant_actor(
+        sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
+        participant_id=participant_id,
+    )
     _assert_upload_eligible(participant)
     return participant
 
@@ -3064,6 +2813,7 @@ def ingest_features(
     db: DBSession,
     *,
     current_user_id: str | None = None,
+    entry_credential: str | None = None,
 ) -> dict:
     """5초 배치 EEG feature 업로드 → EEGFeatureWindow 일괄 저장.
 
@@ -3076,7 +2826,9 @@ def ingest_features(
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
 
-    participant = resolve_upload_participant(sid, payload.participant_id, current_user_id, db)
+    participant = resolve_upload_participant(
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
+    )
     saved_features = _persist_feature_items(sid, participant, payload.features, db)
     saved = len(saved_features)
     # WS가 끊겨 REST 폴백만 성공해도 상담사의 참가자 카드와 그룹 집계를 갱신한다.

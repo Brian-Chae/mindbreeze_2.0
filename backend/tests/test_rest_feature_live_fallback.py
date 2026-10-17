@@ -58,7 +58,7 @@ def test_rest_rejected_upload_does_not_publish(client, monkeypatch):
         json={"features": [_feature(0, relaxation_index=0.4)]},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 401  # 입장 자격 없는 업로드는 거부(SDD-209 B5b)
     assert fake.eeg_emits() == []
 
 

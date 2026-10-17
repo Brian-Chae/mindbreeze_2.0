@@ -5,6 +5,7 @@
 
 import uuid
 
+from tests.entry_helpers import no_credential
 from tests.test_member_livekit_token import _join_guest, _start_group_class
 from tests.test_sdd015_class_code import _create_class, _register, _open_class
 
@@ -23,9 +24,9 @@ def _group_with_guest(client, email="b2c@test.com"):
 
 def _put(client, cls, joined, included, *, token=True, headers=None, **extra):
     body = {"participant_id": joined["participant_id"], "report_included": included, **extra}
-    if token:
-        body["participant_token"] = joined["participant_token"]
-    return client.put(f"/api/v1/sessions/{cls['id']}/report-choice", json=body, headers=headers or {})
+    hdr = {"X-Entry-Credential": joined["entry_credential"]} if token else no_credential()
+    hdr.update(headers or {})
+    return client.put(f"/api/v1/sessions/{cls['id']}/report-choice", json=body, headers=hdr)
 
 
 def _row(pid):
@@ -92,16 +93,16 @@ def test_고지확인_없이_선택만_하면_증빙을_남기지_않는다(clie
     assert row["included"] is True and row["ack_at"] is None and row["ack_ver"] is None
 
 
-def test_본인만_가능_게스트토큰없음_타인_호스트_403(client):
+def test_본인만_가능_자격없음_401_타인_호스트_403(client):
     counselor, cls, joined = _group_with_guest(client, "b2c4@test.com")
-    # 토큰 없는 게스트
-    assert _put(client, cls, joined, True, token=False).status_code == 403
-    # 다른 게스트의 토큰
+    # 자격 없는 비회원 → 401
+    assert _put(client, cls, joined, True, token=False).status_code == 401
+    # 다른 비회원의 자격 → 403
     other = _join_guest(client, cls)
     r = client.put(
         f"/api/v1/sessions/{cls['id']}/report-choice",
-        json={"participant_id": joined["participant_id"], "report_included": True,
-              "participant_token": other["participant_token"]},
+        json={"participant_id": joined["participant_id"], "report_included": True},
+        headers={"X-Entry-Credential": other["entry_credential"]},
     )
     assert r.status_code == 403
     # 호스트도 참여자 대신 바꿀 수 없다
@@ -115,11 +116,12 @@ def test_회원_본인_선택_및_타인_회원_403(client):
     m2 = _register(client, "b2m5b@test.com", role="client")
     cls = _create_class(client, counselor["h"], participant_mode="group", max_participants=10)
     _open_class(client, cls, counselor["h"])
-    pid1 = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m1["h"]).json()["participant_id"]
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m2["h"])
+    pid1 = client.post("/api/v1/sessions/enter", json={"code": cls["access_code"]}, headers=m1["h"]).json()["participant_id"]
+    client.post("/api/v1/sessions/enter", json={"code": cls["access_code"]}, headers=m2["h"])
 
     url = f"/api/v1/sessions/{cls['id']}/report-choice"
-    assert client.put(url, json={"participant_id": pid1, "report_included": True}, headers=m2["h"]).status_code == 403
+    assert client.put(url, json={"participant_id": pid1, "report_included": True},
+                      headers={**m2["h"], **no_credential()}).status_code == 403
     ok = client.put(url, json={"participant_id": pid1, "report_included": True}, headers=m1["h"])
     assert ok.status_code == 200 and ok.json()["report_included"] is True
 
@@ -154,6 +156,7 @@ def test_BT7_제외_동의없는_참여자도_입장_업로드_200_타인_403(cl
     up = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": pid, "features": [{"second_offset": 0, "relaxation_index": 0.5, "signal_quality": 0.9}]},
+        headers={"X-Entry-Credential": joined["entry_credential"]},
     )
     assert up.status_code == 200, up.text
     # consent_* 의미 불변: 업로드가 값을 바꾸지 않는다
@@ -161,10 +164,11 @@ def test_BT7_제외_동의없는_참여자도_입장_업로드_200_타인_403(cl
 
     # 타 참여자 id 로 비소유 업로드는 여전히 403 (회원 사칭)
     other = _register(client, "b2m7@test.com", role="client")
-    mpid = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=other["h"]).json()["participant_id"]
+    mpid = client.post("/api/v1/sessions/enter", json={"code": cls["access_code"]}, headers=other["h"]).json()["participant_id"]
     bad = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": mpid, "features": [{"second_offset": 1, "relaxation_index": 0.5, "signal_quality": 0.9}]},
+        headers={"X-Entry-Credential": joined["entry_credential"]},  # 비회원 자격으로 타 참여자 대리 업로드
     )
     assert bad.status_code == 403
 

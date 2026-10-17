@@ -7,7 +7,7 @@
 - TS4: 1~5 범위 밖 값은 422
 - TS5: 소감 길이 초과(200자 초과)는 422
 - TS6: 취소된 세션은 409
-- TS7: 게스트 — participant_token 없으면 403, 있으면 저장
+- TS7: 비회원 — 입장 자격 없으면 401, 있으면 저장
 - TS8: 다른 참여자(타인 게스트) 슬롯은 덮어쓰지 않는다(참여자별 분리 저장)
 - TS9: 기록지 조회 — 상담사는 세션 전체(scope=session), 참여자는 본인 슬롯(scope=participant)
 - TS10: 수업 전 예상(before) + 수업 후(after) 대비가 내담자 리포트에 연계된다
@@ -46,7 +46,7 @@ def _start_one_on_one(client, counselor, member) -> tuple[dict, str]:
 
 def _join_member(client, cls: dict, member: dict) -> str:
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
@@ -180,21 +180,21 @@ def test_06_취소된_세션은_409(client):
 # ---------------------------------------------------------------------------
 
 
-def test_07_게스트_토큰없으면_403_있으면_저장(client):
+def test_07_비회원_자격없으면_401_있으면_저장(client):
     host = _register(client, "sdd096g@test.com")
     cls, joined = _start_group_class(client, host)
     pid = joined["participant_id"]
 
     denied = client.post(
-        _checkin_url(cls["id"]), json={"participant_id": pid, "arousal": 3, "valence": 3}
+        _checkin_url(cls["id"]), json={"participant_id": pid, "arousal": 3, "valence": 3},
+        headers={"X-Entry-Credential": ""},
     )
-    assert denied.status_code == 403, denied.text
+    assert denied.status_code == 401, denied.text
 
     ok = client.post(
         _checkin_url(cls["id"]),
         json={
             "participant_id": pid,
-            "participant_token": joined["participant_token"],
             "arousal": 3,
             "valence": 4,
             "note": "편안했어요",
@@ -226,8 +226,7 @@ def test_09_참여자별_분리저장_및_기록지_스코프(client):
 
     for payload, headers in (
         (
-            {"participant_id": joined["participant_id"], "participant_token": joined["participant_token"],
-             "arousal": 1, "valence": 2},
+            {"participant_id": joined["participant_id"], "arousal": 1, "valence": 2},
             None,
         ),
         ({"arousal": 5, "valence": 4}, member["h"]),

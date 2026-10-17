@@ -15,7 +15,6 @@ import re
 import secrets
 
 from fastapi import HTTPException, status
-from sqlalchemy import case
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session
@@ -87,22 +86,17 @@ def exhausted_http_error() -> HTTPException:
     )
 
 
-def find_enterable_session(
-    db: DBSession, code: str | None, *, include_closed: bool = False
-) -> Session | None:
-    """입장 가능한 활성 클래스를 코드로 찾는다. 어떤 이유로든 없으면 ``None``(사유 비구분).
-
-    ``include_closed`` 는 B5b 에서 제거될 by-code 상태/토큰 경로의 임시 허용이다 — 신규 입장 경로에서
-    쓰지 않는다.
-    """
+def find_enterable_session(db: DBSession, code: str | None) -> Session | None:
+    """입장 가능한 활성 클래스를 코드로 찾는다. 어떤 이유로든 없으면 ``None``(사유 비구분)."""
     normalized = normalize_class_code(code)
     if normalized is None:
         return None
-    query = db.query(Session).filter(
-        Session.access_code == normalized,
-        Session.is_template.is_(False),
+    return (
+        db.query(Session)
+        .filter(
+            Session.access_code == normalized,
+            Session.is_template.is_(False),
+            Session.status.notin_(CLOSED_STATUSES),
+        )
+        .first()
     )
-    if not include_closed:
-        query = query.filter(Session.status.notin_(CLOSED_STATUSES))
-    # 종료 클래스를 포함할 때 같은 값을 재사용 중인 활성 클래스가 있으면 활성을 우선한다.
-    return query.order_by(case((Session.status.in_(CLOSED_STATUSES), 1), else_=0)).first()

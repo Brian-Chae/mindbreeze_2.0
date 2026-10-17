@@ -141,7 +141,7 @@ def test_sec_livekit_publish_bypass_참여자_403(client):
     cls = _start_online_class(client, counselor, max_participants=10)
 
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert joined.status_code == 200, joined.text
 

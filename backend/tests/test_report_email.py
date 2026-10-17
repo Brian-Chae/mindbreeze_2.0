@@ -1,4 +1,5 @@
 """SDD-029: 게스트 메일 요청과 승인·발송·열람 경계 검증."""
+from tests.entry_helpers import guest_body
 from uuid import UUID, uuid4
 from unittest.mock import Mock
 
@@ -174,16 +175,18 @@ def test_expired_link_rejected(client, setup_email):
     assert client.get(f"/api/v1/sessions/{session.id}/report-email/view", params={"token": token}).status_code == 401
 
 
-def test_join_issues_private_participant_token(client, setup_email):
+def test_enter_issues_private_entry_credential(client, setup_email):
     db, session, participant = setup_email
     # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용
     session.status = "open"
     session.access_code = "9123"
     session.max_participants = 10
     db.commit()
-    response = client.post("/api/v1/sessions/by-code/9123/join", json={"name": "새 게스트"})
+    response = client.post("/api/v1/sessions/enter", json=guest_body("9123", "새 게스트"))
     assert response.status_code == 200, response.text
-    assert response.json()["participant_token"]
+    assert response.json()["entry_credential"]
+    # 입장 자격은 본인 응답에만 담기고 공개 참가자 목록에는 포함되지 않는다
+    assert "entry_credential" not in response.json()["session"]["participants"][0]
     assert "participant_token" not in response.json()["session"]["participants"][0]
 
 

@@ -444,6 +444,8 @@ def register_session_live_namespace(sio):
         if not session_id:
             return
         participant_id = data.get("participant_id")
+        # SDD-209(B5b): 비회원은 입장 자격으로 증명한다(participant_id 단독 불가).
+        entry_credential = data.get("entry_credential")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
         # WS-03: connect 이후 계정이 정지·대기·삭제로 바뀐 경우에도 join 을 허용하지 않는다
@@ -473,7 +475,7 @@ def register_session_live_namespace(sio):
         #   join_denied 를 통지하고 room 에 입장시키지 않는다(비인가 join 과 동일 처리).
         try:
             resolved = await asyncio.to_thread(
-                _resolve_join, session_id, current_user_id, participant_id
+                _resolve_join, session_id, current_user_id, participant_id, entry_credential
             )
         except Exception:
             logger.exception(
@@ -514,6 +516,8 @@ def register_session_live_namespace(sio):
                 "role": role,
                 "participant_id": pid,
                 "session_id": str(session_id),
+                # 이후 feature/class:signal 이 매 요청 자격(폐기·만료 포함)을 다시 검증한다(SDD-209 B5b).
+                "entry_credential": entry_credential if role == "participant" else None,
             },
             namespace=_NAMESPACE,
         )
@@ -609,10 +613,12 @@ def register_session_live_namespace(sio):
         sequence = data.get("sequence")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
+        # SDD-209(B5b): 비회원은 입장 자격으로 증명(페이로드 우선, 없으면 join 컨텍스트).
+        entry_credential = data.get("entry_credential") or (session or {}).get("entry_credential")
 
         # WS-07: 이 소켓이 join 한 세션 컨텍스트와 payload session_id 를 대조한다.
         # 이미 다른 세션에 join 한 소켓이 타 세션으로 feature 를 올리는 것을 막는다.
-        # (join 전 feature 는 저장 시 resolve_upload_participant 가 참가자 소유를 검증하므로
+        # (join 전 feature 는 저장 시 resolve_upload_participant 가 참가자 소유(입장 자격)를 검증하므로
         #  기존 흐름을 유지한다 — 세션 컨텍스트가 있을 때만 불일치를 거부한다.)
         ctx_session_id = (session or {}).get("session_id")
         if ctx_session_id is not None and str(ctx_session_id) != str(session_id):
@@ -636,7 +642,7 @@ def register_session_live_namespace(sio):
 
         try:
             saved, resolved_participant_id, feature_out, is_latest = await asyncio.to_thread(
-                _store_feature, session_id, participant_id, current_user_id, feature
+                _store_feature, session_id, participant_id, current_user_id, feature, entry_credential
             )
         except Exception:
             # 비참가자/미식별/대리 업로드/미동의 등 저장 실패 시 브로드캐스트하지 않는다
@@ -717,10 +723,12 @@ def register_session_live_namespace(sio):
         current_user_id = (session or {}).get("user_id")
         # join 이후에는 세션 컨텍스트의 participant_id 를 신뢰한다(게스트 본인 룸 스코프)
         participant_id = data.get("participant_id") or (session or {}).get("participant_id")
+        entry_credential = data.get("entry_credential") or (session or {}).get("entry_credential")
 
         try:
             sender = await asyncio.to_thread(
-                _resolve_quiet_signal_sender, session_id, participant_id, current_user_id
+                _resolve_quiet_signal_sender, session_id, participant_id, current_user_id,
+                entry_credential,
             )
         except Exception:
             # 비참가자/미식별/사칭 → 브로드캐스트하지 않는다
@@ -905,18 +913,20 @@ def register_session_live_namespace(sio):
     logger.info("[WS /session-live] namespace registered")
 
 
-def _resolve_join(session_id, current_user_id, participant_id):
+def _resolve_join(session_id, current_user_id, participant_id, entry_credential=None):
     """join 권한 판정을 서비스 레이어에 위임(전용 DB 세션)."""
     from app.services import session_service
 
     db = _open_db()
     try:
-        return session_service.resolve_live_join(session_id, current_user_id, participant_id, db)
+        return session_service.resolve_live_join(
+            session_id, current_user_id, participant_id, db, entry_credential=entry_credential
+        )
     finally:
         db.close()
 
 
-def _resolve_quiet_signal_sender(session_id, participant_id, current_user_id):
+def _resolve_quiet_signal_sender(session_id, participant_id, current_user_id, entry_credential=None):
     """무음 시그널 발신자 검증을 서비스 레이어에 위임(전용 DB 세션).
 
     비참가자·미식별·타인 participant_id 사칭이면 HTTPException 을 올린다
@@ -927,7 +937,7 @@ def _resolve_quiet_signal_sender(session_id, participant_id, current_user_id):
     db = _open_db()
     try:
         return session_service.resolve_signal_sender(
-            session_id, participant_id, current_user_id, db
+            session_id, participant_id, current_user_id, db, entry_credential=entry_credential
         )
     finally:
         db.close()
@@ -955,7 +965,7 @@ def _is_known_audio_track(track_id) -> bool:
     return class_audio_service.is_known_track(track_id)
 
 
-def _store_feature(session_id, participant_id, current_user_id, feature):
+def _store_feature(session_id, participant_id, current_user_id, feature, entry_credential=None):
     """단일 EEG feature 를 검증·저장한다(SDD-023 ingestion 로직 재사용).
 
     반환: (saved_count, resolved_participant_id(str), normalized_feature(dict), is_latest(bool))
@@ -974,7 +984,9 @@ def _store_feature(session_id, participant_id, current_user_id, feature):
         s = db.query(Session).filter(Session.id == sid).first()
         if not s:
             raise ValueError("세션을 찾을 수 없습니다")
-        participant = session_service.resolve_upload_participant(sid, participant_id, current_user_id, db)
+        participant = session_service.resolve_upload_participant(
+            sid, participant_id, current_user_id, db, entry_credential=entry_credential
+        )
         saved = session_service.persist_feature_windows(sid, participant, [item], db)
         is_latest = not session_service._has_newer_feature(sid, participant.id, item, db)
         # 공통 입력 계약 전체를 전송: 마음 지표 + BPM·호흡수·HRV, 미측정은 null.

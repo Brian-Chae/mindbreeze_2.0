@@ -4,7 +4,7 @@
 - presign: 참가자 소유 검증 후 EEGRawChunk(status=pending) 를 멱등 생성하고 PUT URL 발급.
 - ack: 업로드 완료를 status=uploaded 로 확정하고, 세그먼트 단위 EEGRecord.file_count 를 갱신.
 
-소유 검증은 SDD-026 resolve_upload_participant 를 재사용한다(게스트 raw 지원 — participant_id 기반).
+소유 검증은 SDD-026 resolve_upload_participant 를 재사용한다(SDD-209 B5b: 로그인 회원 또는 입장 자격).
 """
 
 import re
@@ -76,11 +76,12 @@ def presign_upload(
     db: DBSession,
     *,
     current_user_id: str | None = None,
+    entry_credential: str | None = None,
 ) -> dict:
     """raw chunk presigned PUT URL 발급 + manifest(EEGRawChunk) 멱등 생성."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
     )
     prefix = _object_prefix(sid, participant, payload.play_group_id)
 
@@ -182,11 +183,12 @@ def ack_upload(
     db: DBSession,
     *,
     current_user_id: str | None = None,
+    entry_credential: str | None = None,
 ) -> dict:
     """업로드 완료 확인 — EEGRawChunk.status=uploaded + EEGRecord.file_count 갱신."""
     sid, _ = _get_session(session_id, db)
     participant = session_service.resolve_upload_participant(
-        sid, payload.participant_id, current_user_id, db
+        sid, payload.participant_id, current_user_id, db, entry_credential=entry_credential
     )
 
     # EEG-QRY-03: 청크별 개별 SELECT(N+1) 대신 id 목록을 한 번의 SELECT 로 조회한다.

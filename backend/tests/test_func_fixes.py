@@ -7,6 +7,7 @@
 - FUNC-06: _build_eeg_content 는 참여자 지정 시 해당 참여자만, session_wide=True 면 세션 전체를 집계한다.
 """
 
+from tests.entry_helpers import guest_body
 from unittest.mock import Mock
 from uuid import UUID, uuid4
 
@@ -127,13 +128,13 @@ def test_func03_new_joiner_over_capacity_is_waitlisted(client):
     assert opened.status_code == 200, opened.text
 
     first = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "먼저온게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "먼저온게스트")
     )
     assert first.status_code == 200, first.text
 
     member = _register(client, "func03-m@test.com", role="client")
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert joined.status_code == 200, joined.text
 

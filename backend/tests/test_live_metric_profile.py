@@ -1,5 +1,6 @@
 """호스트 라이브 지표의 회원 프로필·게스트 개인정보 계약."""
 
+from tests.entry_helpers import guest_body
 import json
 from datetime import date
 from uuid import UUID
@@ -19,8 +20,7 @@ def test_member_profile_and_participant_precedence(client, override):
     session = _create_group_class(client, host["h"])
     member = _register(client, "profile-member@test.com", role="client")
     joined = client.post(
-        f"/api/v1/sessions/by-code/{session['access_code']}/join",
-        json={}, headers=member["h"],
+        "/api/v1/sessions/enter", json={"code": session['access_code']}, headers=member["h"],
     )
     assert joined.status_code == 200, joined.text
     with _db() as db:
@@ -51,9 +51,9 @@ def test_guest_and_member_without_profile(client):
     host = _register(client, "missing-host@test.com")
     session = _create_group_class(client, host["h"])
     member = _register(client, "missing-member@test.com", role="client")
-    url = f"/api/v1/sessions/by-code/{session['access_code']}/join"
-    assert client.post(url, json={}, headers=member["h"]).status_code == 200
-    assert client.post(url, json={"name": "게스트", "gender": "male", "birth_date": "1990-02-03"}).status_code == 200
+    url = "/api/v1/sessions/enter"
+    assert client.post(url, json={"code": session["access_code"]}, headers=member["h"]).status_code == 200
+    assert client.post(url, json=guest_body(session["access_code"], "게스트", gender="male", birth_date="1990-02-03")).status_code == 200
     with _db() as db:
         db.query(ClientProfile).filter_by(user_id=UUID(member["id"])).delete()
         db.commit()

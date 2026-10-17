@@ -8,6 +8,7 @@
 - 리포트 EEG 집계: started_at ~ ended_at 구간 밖(대기 중) 윈도우 제외
 """
 
+from tests.entry_helpers import guest_body
 from datetime import datetime, timedelta, timezone
 
 from tests.test_sdd015_class_code import _create_class, _db, _register
@@ -123,7 +124,12 @@ def test_10_state_version_open_전이마다_증가(client):
     cls = _create_class(client, counselor["h"])
     res = _open(client, cls, counselor["h"])
     # 생성 직후 0 → open 전이로 +1
-    detail = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state")
+    # 참여자 상태(entry-state)의 version 이 open 전이로 증가한다 (입장 자격으로 조회)
+    entered = client.post("/api/v1/sessions/enter", json=guest_body(cls["access_code"], "버전게스트"))
+    detail = client.get(
+        f"/api/v1/sessions/{cls['id']}/entry-state",
+        headers={"X-Entry-Credential": entered.json()["entry_credential"]},
+    )
     assert detail.status_code == 200
     assert detail.json()["version"] >= 1
     assert detail.json()["status"] == "open"
@@ -135,15 +141,23 @@ def test_10_state_version_open_전이마다_증가(client):
 # ---------------------------------------------------------------------------
 
 
-def test_11_ready_클래스는_아직_오픈전_참여거부(client):
+def test_11_ready_클래스도_코드로_사전_입장_대기실(client):
+    # SDD-209(P5): 오픈 전에도 코드 입장은 허용되고 참여자는 "대기" 상태(FM05)로 머문다 — 진행 게이트는 상태로 판단.
     counselor = _register(client, "s088c11@test.com")
     cls = _create_class(client, counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "성급한게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "성급한게스트")
     )
-    assert res.status_code == 400
-    assert "오픈 전" in res.json()["detail"]
+    assert res.status_code == 200, res.text
+    assert res.json()["session"]["status"] == "ready"
+    pid = res.json()["participant_id"]
+    state = client.get(
+        f"/api/v1/sessions/{cls['id']}/entry-state",
+        headers={"X-Entry-Credential": res.json()["entry_credential"]},
+    )
+    assert state.status_code == 200 and state.json()["guest_state"] == "waiting"
+    assert state.json()["participant_id"] == pid
 
 
 def test_12_open_클래스는_게스트_참여허용(client):
@@ -152,7 +166,7 @@ def test_12_open_클래스는_게스트_참여허용(client):
     _open(client, cls, counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "대기실게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "대기실게스트")
     )
     assert res.status_code == 200, res.text
     assert res.json()["participant_id"]
@@ -165,21 +179,21 @@ def test_13_in_progress_참여는_기존대로_허용(client):
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "지각게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "지각게스트")
     )
     assert res.status_code == 200, res.text
 
 
-def test_14_로그인_회원도_오픈전_참여거부(client):
+def test_14_로그인_회원도_오픈전_사전_입장(client):
     counselor = _register(client, "s088c14@test.com")
     member = _register(client, "s088m14@test.com", role="client")
     cls = _create_class(client, counselor["h"], max_participants=10)
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
-    assert res.status_code == 400
-    assert "오픈 전" in res.json()["detail"]
+    assert res.status_code == 200, res.text
+    assert res.json()["session"]["status"] == "ready"
 
 
 def test_15_host는_오픈전에도_참여처리_noop_허용(client):
@@ -187,7 +201,7 @@ def test_15_host는_오픈전에도_참여처리_noop_허용(client):
     cls = _create_class(client, counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=counselor["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=counselor["h"]
     )
     assert res.status_code == 200, res.text
     assert res.json()["participant_id"] is None
@@ -208,7 +222,7 @@ def test_16_리포트_EEG는_started_ended_구간만_집계(client):
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open(client, cls, counselor["h"])
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "구간게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "구간게스트")
     )
     pid = UUID(joined.json()["participant_id"])
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
@@ -272,7 +286,7 @@ def test_17_구간_경계가_없는_레거시_세션은_전체_집계(client):
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open(client, cls, counselor["h"])
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "레거시게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "레거시게스트")
     )
     pid = UUID(joined.json()["participant_id"])
 

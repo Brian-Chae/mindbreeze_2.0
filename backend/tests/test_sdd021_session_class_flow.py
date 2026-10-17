@@ -6,6 +6,7 @@
 - 게스트 by-code 상태 조회 (대기→명상→완료 전이 감지)
 """
 
+from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from tests.conftest import create_test_org
 
@@ -58,7 +59,7 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 
 
 def _join_guest(client, code: str, name: str) -> str:
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 
@@ -156,7 +157,7 @@ def test_06_live_metrics_로그인참가자_표시이름(client):
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s021m06@test.com", role="client")
     client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
 
     res = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"])
@@ -202,7 +203,7 @@ def test_09_게스트_state_대기중(client):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "대기게스트")
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}")
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["session_id"] == cls["id"]
@@ -217,7 +218,7 @@ def test_10_게스트_state_시작후_명상전이(client):
     pid = _join_guest(client, cls["access_code"], "명상게스트")
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}")
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["in_progress"] is True
@@ -231,7 +232,7 @@ def test_11_게스트_state_종료후_완료(client):
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
     client.post(f"/api/v1/sessions/{cls['id']}/end", headers=counselor["h"])
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}")
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["in_progress"] is False
@@ -239,21 +240,19 @@ def test_11_게스트_state_종료후_완료(client):
     assert body["participant_state"] == "COMPLETED"
 
 
-def test_12_게스트_state_participant_id_없이도_세션상태조회(client):
+def test_12_state_는_입장자격_없이_조회_불가(client):
+    # SDD-209(B5b): 무인증 by-code state(IDOR 성격)는 제거 — 입장 자격 없는 entry-state 는 401.
     counselor = _register(client, "s021c12@test.com")
     cls = _create_group_class(client, counselor["h"])
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state")
-    assert res.status_code == 200, res.text
-    body = res.json()
-    # SDD-088: 헬퍼가 생성 직후 오픈까지 진행하므로 open 상태로 조회된다
-    assert body["status"] == "open"
-    assert body["participant_state"] is None
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state")
+    assert res.status_code == 401, res.text
 
 
-def test_13_게스트_state_잘못된_코드_404(client):
-    res = client.get("/api/v1/sessions/by-code/ZZZZZZ/state")
-    assert res.status_code == 404
+def test_13_by_code_경로는_제거됨_404(client):
+    # SDD-209(B5b): by-code 4개 경로는 폴백 없이 제거 — 어떤 코드로도 404/405.
+    assert client.get("/api/v1/sessions/by-code/1234/state").status_code in (404, 405)
+    assert client.post("/api/v1/sessions/by-code/1234/join", json={}).status_code in (404, 405)
 
 
 # ---------------------------------------------------------------------------
@@ -265,18 +264,17 @@ def test_14_게스트_재참여_멱등(client):
     cls = _create_group_class(client, counselor["h"])
 
     first = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={"name": "멱등게스트"},
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "멱등게스트"),
     )
     assert first.status_code == 200, first.text
     pid = first.json()["participant_id"]
-    token = first.json()["participant_token"]
+    token = first.json()["entry_credential"]
     assert token
 
-    # 같은 participant_token으로 재참여 → 기존 행 재사용(유령 방지)
+    # 같은 입장 자격으로 재입장 → 기존 행 재사용(유령 방지)
     second = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={"name": "멱등게스트", "participant_token": token},
+        "/api/v1/sessions/enter",
+        json=guest_body(cls["access_code"], "멱등게스트", entry_credential=token),
     )
     assert second.status_code == 200, second.text
     assert second.json()["participant_id"] == pid
@@ -307,8 +305,7 @@ def test_15_대기열_회원_코드입장_정원여유시에만_해제(client):
 
     # FUNC-03: 정원이 찬 상태에서 코드로 자발 입장해도 대기열 유지(초과 입장 방지)
     j = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={},
+        "/api/v1/sessions/enter", json={"code": cls['access_code']},
         headers=members[2]["h"],
     )
     assert j.status_code == 200, j.text
@@ -347,8 +344,7 @@ def test_15b_대기열_회원_코드입장_정원여유시_해제(client):
         db.close()
 
     j = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={},
+        "/api/v1/sessions/enter", json={"code": cls['access_code']},
         headers=member["h"],
     )
     assert j.status_code == 200, j.text

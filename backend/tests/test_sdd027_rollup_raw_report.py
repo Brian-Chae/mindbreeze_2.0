@@ -6,6 +6,7 @@
 3. 리포트 상태머신 4단계(pending_analysis→pending_review→completed/error), data_credibility 파생
 """
 
+from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from tests.conftest import create_test_org
 
@@ -48,7 +49,7 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 
 
 def _join_guest(client, code: str, name: str) -> str:
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 
@@ -273,7 +274,7 @@ def test_10_로그인참가자_raw_JWT소유(client):
     counselor = _register(client, "s027c10@test.com")
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s027m10@test.com", role="client")
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
 
     # participant_id 없이 인증 토큰만으로 presign
     chunks = [{"stream_id": "s0", "chunk_index": 0}]

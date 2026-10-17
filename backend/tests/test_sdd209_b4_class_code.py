@@ -10,6 +10,7 @@ import uuid
 
 import pytest
 
+from tests.entry_helpers import guest_body
 from tests.test_sdd015_class_code import _create_class, _register
 
 
@@ -62,8 +63,8 @@ def test_RV3_1_선행_0_코드_문자열_보존(client, monkeypatch):
     assert cls["access_code"] == "0042"
     assert _get(cls["id"])["code"] == "0042"
     # 입장 조회도 "0042" 로 된다(정수 변환 0)
-    assert client.get("/api/v1/sessions/by-code/0042").status_code == 200
-    assert client.get("/api/v1/sessions/by-code/42").status_code == 404
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": "0042"}).status_code == 200
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": "42"}).status_code == 404
 
 
 def test_BT15_동시_발급_경합_충돌_0_재발급_재시도(client, monkeypatch):
@@ -126,7 +127,10 @@ def test_generate_class_code_높은_점유율에서도_남은_코드만_고른�
 # ── BT16 검증·정보 비노출 / RV3-2·6·12 ───────────────────────────────────
 
 
-def test_BT16_잘못된_코드_모두_동일_응답(client):
+def test_BT16_잘못된_코드_모두_동일_응답(client, monkeypatch):
+    from app.services import class_code_attempt_service
+
+    monkeypatch.setattr(class_code_attempt_service, "IP_MAX_FAILURES", 1000)  # 이 테스트는 제한이 아닌 응답 형태 검증
     host = _register(client, "b4h7@test.com")
     active = _create_class(client, host["h"])
     ended = _create_class(client, host["h"])
@@ -145,12 +149,12 @@ def test_BT16_잘못된_코드_모두_동일_응답(client):
               hidden["access_code"], "AB12CD"]
     bodies = set()
     for p in probes:
-        r = client.get(f"/api/v1/sessions/by-code/{p}")
+        r = client.post("/api/v1/sessions/enter/verify", json={"code": p})
         assert r.status_code == 404, (p, r.status_code)
         bodies.add(r.text)
     assert len(bodies) == 1, "없는/형식오류/종료/취소/숨김/과거 6자리 응답은 동일해야 한다"
 
-    ok = client.get(f"/api/v1/sessions/by-code/{active['access_code']}")
+    ok = client.post("/api/v1/sessions/enter/verify", json={"code": active["access_code"]})
     assert ok.status_code == 200
 
 
@@ -159,10 +163,10 @@ def test_RV3_6_종료_취소_후_입장_거부_값_보존(client):
     cls = _create_class(client, host["h"])
     code = cls["access_code"]
     client.post(f"/api/v1/sessions/{cls['id']}/open", headers=host["h"])
-    assert client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": "손님"}).status_code == 200
+    assert client.post("/api/v1/sessions/enter", json=guest_body(code, "손님")).status_code == 200
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=host["h"])
     client.post(f"/api/v1/sessions/{cls['id']}/end", headers=host["h"])
-    assert client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": "지각"}).status_code == 404
+    assert client.post("/api/v1/sessions/enter", json=guest_body(code, "지각")).status_code == 404
     assert _get(cls["id"])["code"] == code
 
 
@@ -256,9 +260,9 @@ def test_BT17_전체_유입_분산_대입_시_전체_일시_거부(fake_redis):
 def test_BT18_취소_숨김은_조회_불가_값_보존(client):
     host = _register(client, "b4h9@test.com")
     a = _create_class(client, host["h"])
-    assert client.get(f"/api/v1/sessions/by-code/{a['access_code']}").status_code == 200
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": a["access_code"]}).status_code == 200
     client.post(f"/api/v1/sessions/{a['id']}/cancel", headers=host["h"])
-    assert client.get(f"/api/v1/sessions/by-code/{a['access_code']}").status_code == 404
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": a["access_code"]}).status_code == 404
     assert _get(a["id"])["code"] == a["access_code"]
 
 
