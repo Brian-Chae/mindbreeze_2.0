@@ -114,6 +114,11 @@ export interface ReportDto {
    * 내담자 리포트는 본인 슬롯(scope=participant), 상담사 리포트는 세션 전체(scope=session).
    */
   subjective_state?: SubjectiveStateDto | null;
+  /**
+   * SDD-211 — 회원 조회 시 승인 전 리포트이면 true(본문·지표는 서버가 마스킹).
+   * 서버 미배포·구 응답에서는 없을 수 있어 optional 로 둔다.
+   */
+  in_review?: boolean;
 }
 
 export interface ReportListResponse {

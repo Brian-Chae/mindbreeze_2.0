@@ -268,8 +268,16 @@ export async function readExpected(page, ref, query = '') {
 /* ───────────────────────── 소스 정적 검사 (FR4 소스판) ───────────────────────── */
 
 export const SRC_GLYPH = '[\\u{1F000}-\\u{1FFFF}\\u{2190}-\\u{21FF}\\u{2300}-\\u{23FF}\\u{2600}-\\u{27BF}\\u{2B00}-\\u{2BFF}\\u{FE0F}\\u{200D}✓✔✕✗✘→←↑↓›‹▶▷●○★☆×•]';
-/** verify P7(금지 용어) + P8(금지 표현) — 사용자에게 보이는 글자에 쓰면 안 되는 말 */
-export const BANNED_COPY = '세션|수업|오픈|참여하기|그래도 시작|LB |1:N|대시보드로|6자리|게스트|인증 코드|OTP|\\bQR\\b|귀 뒤|귀뒤|귀에|연결해야 입장|30일 보관|관리자가 삭제를 지시하기 전까지|표시 이름만|정원 10 고정|그룹은 최대 10명';
+/** 영역별 금지어 정규식 소스(JSON 정본: banned/{common,meditation,counseling}.json) */
+function readBannedRules(name) {
+  return JSON.parse(fs.readFileSync(path.join(HERE, 'banned', `${name}.json`), 'utf8'));
+}
+/** 영역 전용 항목을 앞에, 공통 항목을 뒤에 `|` 로 이어 붙인다. meditation 결과는 SDD-209 의 BANNED_COPY 원문과 같다 */
+export function composeBanned(area = 'meditation') {
+  return [...readBannedRules(area), ...readBannedRules('common')].join('|');
+}
+/** verify P7(금지 용어) + P8(금지 표현) — 사용자에게 보이는 글자에 쓰면 안 되는 말. 현행 하니스는 명상(클래스) 영역 정책을 쓴다 */
+export const BANNED_COPY = composeBanned('meditation');
 /** 신규 경로에서 쓰면 안 되는 식별자 (verify P8 소스판) */
 export const BANNED_IDENT = 'participant_token|by-code|getSessionByCode|joinSessionByCode|VITE_FLOW_API_FALLBACK|w-vmeter|iconmeter';
 export const EYEBROW_ALLOW = ['LINK BAND', 'MIND BREEZE'];
@@ -291,9 +299,9 @@ function listFiles(dir, exts) {
 }
 
 /** 신규 경로 소스 스캔. 반환: { files, hits: [{ file, kind, text }] } */
-export function scanSources(roots, exts = ['.ts', '.tsx', '.css']) {
+export function scanSources(roots, exts = ['.ts', '.tsx', '.css'], area = 'meditation') {
   const glyphRe = new RegExp(SRC_GLYPH, 'gu');
-  const bannedRe = new RegExp(BANNED_COPY, 'g');
+  const bannedRe = new RegExp(composeBanned(area), 'g');
   const identRe = new RegExp(BANNED_IDENT, 'g');
   const hits = [];
   const files = roots.flatMap((root) => listFiles(root, exts));
@@ -321,6 +329,6 @@ export function fitConfig(ref) {
   return { named: FLOW_NAMED, empties: FLOW_EMPTIES, forbidCoral: forbidsCoral(screen, key), overlayCoverable: [] };
 }
 
-export function copyConfig() {
-  return { glyph: SRC_GLYPH, banned: BANNED_COPY, eyebrowAllow: EYEBROW_ALLOW };
+export function copyConfig(area = 'meditation') {
+  return { glyph: SRC_GLYPH, banned: composeBanned(area), eyebrowAllow: EYEBROW_ALLOW };
 }

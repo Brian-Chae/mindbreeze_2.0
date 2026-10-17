@@ -4,6 +4,7 @@
 
 import { create } from 'zustand';
 import { listReports, resolveReportStatus } from '../lib/api/reports';
+import { isReportInReview } from '../lib/report-review-copy';
 
 interface ReportState {
   /** 미열람 수 (내담자 배지 기준) */
@@ -25,7 +26,8 @@ export const useReportStore = create<ReportState>((set) => ({
       const res = await listReports({ limit: 100 });
       const reports = res.reports;
       set({
-        unread: reports.filter((r) => !r.is_read).length,
+        // 승인 전(리뷰 중) 행은 NEW 로 세지 않는다 — 승인 후에 NEW 로 나타난다.
+        unread: reports.filter((r) => !r.is_read && !isReportInReview(r)).length,
         pendingReview: reports.filter((r) => resolveReportStatus(r) === 'pending_review').length,
       });
     } catch {
