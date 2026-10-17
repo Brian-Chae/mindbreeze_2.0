@@ -27,7 +27,7 @@ function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
   const isClient = role === 'client';
   return [
     { to: homePathForRole(role), label: '홈', icon: ICONS.home },
-    { to: isClient ? '/app/sessions' : '/sessions', label: '세션', icon: ICONS.calendar },
+    { to: isClient ? '/app/sessions' : '/sessions', label: '클래스', icon: ICONS.calendar },
     { to: isClient ? '/app/chat' : '/chat', label: '채팅', icon: ICONS.message },
     { to: isClient ? '/app/reports' : '/reports?status=pending', label: '리포트', icon: ICONS.report },
   ];
@@ -62,7 +62,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
             ? chatUnread
             : item.label === '리포트'
               ? reportBadge
-              : item.label === '세션'
+              : item.label === '클래스'
                 ? sessionInvites.length
                 : 0;
         return (

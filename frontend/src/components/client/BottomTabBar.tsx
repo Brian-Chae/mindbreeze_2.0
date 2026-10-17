@@ -17,7 +17,7 @@ interface TabItem {
 
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home },
-  { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/sessions', label: '클래스', icon: ICONS.calendar },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
 ];
@@ -53,7 +53,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             ? chatUnread + agentUnread
             : tab.label === '리포트'
               ? reportUnread
-              : tab.label === '세션'
+              : tab.label === '클래스'
                 ? sessionInvites.length
                 : 0;
 
