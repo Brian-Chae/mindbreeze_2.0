@@ -1,14 +1,14 @@
-# host-b after — 화면 7 / 케이스 76 / 스크린샷 304
-# 대칭 위반 합계 0건 (측정 8110건)
-#   S1: 측정 1594 / 위반 0
-#   S10: 측정 1212 / 위반 0
-#   S2: 측정 1804 / 위반 0
-#   S3: 측정 912 / 위반 0
+# host-b after — 화면 7 / 케이스 77 / 스크린샷 308
+# 대칭 위반 합계 0건 (측정 8198건)
+#   S1: 측정 1614 / 위반 0
+#   S10: 측정 1228 / 위반 0
+#   S2: 측정 1828 / 위반 0
+#   S3: 측정 924 / 위반 0
 #   S5: 측정 580 / 위반 0
 #   S6: 측정 808 / 위반 0
-#   S7: 측정 296 / 위반 0
-#   S8: 측정 296 / 위반 0
-#   S9: 측정 608 / 위반 0
+#   S7: 측정 300 / 위반 0
+#   S8: 측정 300 / 위반 0
+#   S9: 측정 616 / 위반 0
 
 
 # 전체 측정 로그
@@ -5033,7 +5033,7 @@ ok    FH07 ok 390x844  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 ok 390x844  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 ok 390x844  S5  바텀 시트 최대폭 <= 640: 390px
 ok    FH07 ok 390x844  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 ok 390x844  S5  시트 상단이 화면 안: 341.5px
+ok    FH07 ok 390x844  S5  시트 상단이 화면 안: 285.5px
 ok    FH07 ok 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 ok 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 ok 834x1194  S3  상단바 제목 중앙: 0px
@@ -5065,7 +5065,7 @@ ok    FH07 ok 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 ok 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 ok 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 ok 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 ok 834x1194  S5  시트 상단이 화면 안: 691.5px
+ok    FH07 ok 834x1194  S5  시트 상단이 화면 안: 675.5px
 ok    FH07 ok 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 ok 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 ok 1194x834  S3  상단바 제목 중앙: 0px
@@ -5097,7 +5097,7 @@ ok    FH07 ok 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 ok 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 ok 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 ok 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 ok 1194x834  S5  시트 상단이 화면 안: 331.5px
+ok    FH07 ok 1194x834  S5  시트 상단이 화면 안: 315.5px
 ok    FH07 ok 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 ok 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 ok 1280x720  S3  상단바 제목 중앙: 0px
@@ -5129,7 +5129,7 @@ ok    FH07 ok 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 ok 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 ok 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 ok 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 ok 1280x720  S5  시트 상단이 화면 안: 257.5px
+ok    FH07 ok 1280x720  S5  시트 상단이 화면 안: 209.5px
 ok    FH07 pending 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 pending 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 pending 390x844  S3  상단바 제목 중앙: 0px
@@ -5193,7 +5193,7 @@ ok    FH07 pending 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 pending 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 pending 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 pending 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 pending 834x1194  S5  시트 상단이 화면 안: 582.5px
+ok    FH07 pending 834x1194  S5  시트 상단이 화면 안: 622.5px
 ok    FH07 pending 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 pending 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 pending 1194x834  S3  상단바 제목 중앙: 0px
@@ -5225,7 +5225,7 @@ ok    FH07 pending 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 pending 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 pending 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 pending 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 pending 1194x834  S5  시트 상단이 화면 안: 222.5px
+ok    FH07 pending 1194x834  S5  시트 상단이 화면 안: 262.5px
 ok    FH07 pending 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 pending 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 pending 1280x720  S3  상단바 제목 중앙: 0px
@@ -5257,7 +5257,7 @@ ok    FH07 pending 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 pending 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 pending 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 pending 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 pending 1280x720  S5  시트 상단이 화면 안: 148.5px
+ok    FH07 pending 1280x720  S5  시트 상단이 화면 안: 156.5px
 ok    FH07 all-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 all-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 all-wait 390x844  S3  상단바 제목 중앙: 0px
@@ -5321,7 +5321,7 @@ ok    FH07 all-wait 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 all-wait 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 all-wait 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 all-wait 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 all-wait 834x1194  S5  시트 상단이 화면 안: 550.5px
+ok    FH07 all-wait 834x1194  S5  시트 상단이 화면 안: 590.5px
 ok    FH07 all-wait 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 all-wait 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 all-wait 1194x834  S3  상단바 제목 중앙: 0px
@@ -5353,7 +5353,7 @@ ok    FH07 all-wait 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 all-wait 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 all-wait 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 all-wait 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 all-wait 1194x834  S5  시트 상단이 화면 안: 190.5px
+ok    FH07 all-wait 1194x834  S5  시트 상단이 화면 안: 230.5px
 ok    FH07 all-wait 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 all-wait 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 all-wait 1280x720  S3  상단바 제목 중앙: 0px
@@ -5385,7 +5385,7 @@ ok    FH07 all-wait 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 all-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 all-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 all-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 all-wait 1280x720  S5  시트 상단이 화면 안: 116.5px
+ok    FH07 all-wait 1280x720  S5  시트 상단이 화면 안: 124.5px
 ok    FH07 many-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 many-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 many-wait 390x844  S3  상단바 제목 중앙: 0px
@@ -5449,7 +5449,7 @@ ok    FH07 many-wait 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 many-wait 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 many-wait 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 many-wait 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 many-wait 834x1194  S5  시트 상단이 화면 안: 518.5px
+ok    FH07 many-wait 834x1194  S5  시트 상단이 화면 안: 558.5px
 ok    FH07 many-wait 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 many-wait 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 many-wait 1194x834  S3  상단바 제목 중앙: 0px
@@ -5481,7 +5481,7 @@ ok    FH07 many-wait 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 many-wait 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 many-wait 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 many-wait 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 many-wait 1194x834  S5  시트 상단이 화면 안: 158.5px
+ok    FH07 many-wait 1194x834  S5  시트 상단이 화면 안: 198.5px
 ok    FH07 many-wait 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 many-wait 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 many-wait 1280x720  S3  상단바 제목 중앙: 0px
@@ -5513,7 +5513,7 @@ ok    FH07 many-wait 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 many-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 many-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 many-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 many-wait 1280x720  S5  시트 상단이 화면 안: 84.5px
+ok    FH07 many-wait 1280x720  S5  시트 상단이 화면 안: 92.5px
 ok    FH07 mic-off 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 mic-off 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 mic-off 390x844  S3  상단바 제목 중앙: 0px
@@ -5577,7 +5577,7 @@ ok    FH07 mic-off 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 mic-off 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 mic-off 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 mic-off 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 mic-off 834x1194  S5  시트 상단이 화면 안: 578.5px
+ok    FH07 mic-off 834x1194  S5  시트 상단이 화면 안: 618.5px
 ok    FH07 mic-off 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 mic-off 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 mic-off 1194x834  S3  상단바 제목 중앙: 0px
@@ -5609,7 +5609,7 @@ ok    FH07 mic-off 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 mic-off 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 mic-off 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 mic-off 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 mic-off 1194x834  S5  시트 상단이 화면 안: 218.5px
+ok    FH07 mic-off 1194x834  S5  시트 상단이 화면 안: 258.5px
 ok    FH07 mic-off 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 mic-off 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 mic-off 1280x720  S3  상단바 제목 중앙: 0px
@@ -5641,7 +5641,7 @@ ok    FH07 mic-off 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 mic-off 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 mic-off 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 mic-off 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 mic-off 1280x720  S5  시트 상단이 화면 안: 144.5px
+ok    FH07 mic-off 1280x720  S5  시트 상단이 화면 안: 152.5px
 ok    FH07 no-consent 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 no-consent 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 no-consent 390x844  S3  상단바 제목 중앙: 0px
@@ -5705,7 +5705,7 @@ ok    FH07 no-consent 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 no-consent 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 no-consent 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 no-consent 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 no-consent 834x1194  S5  시트 상단이 화면 안: 691.5px
+ok    FH07 no-consent 834x1194  S5  시트 상단이 화면 안: 731.5px
 ok    FH07 no-consent 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 no-consent 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 no-consent 1194x834  S3  상단바 제목 중앙: 0px
@@ -5737,7 +5737,7 @@ ok    FH07 no-consent 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 no-consent 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 no-consent 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 no-consent 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 no-consent 1194x834  S5  시트 상단이 화면 안: 331.5px
+ok    FH07 no-consent 1194x834  S5  시트 상단이 화면 안: 371.5px
 ok    FH07 no-consent 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 no-consent 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 no-consent 1280x720  S3  상단바 제목 중앙: 0px
@@ -5769,7 +5769,7 @@ ok    FH07 no-consent 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 no-consent 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 no-consent 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 no-consent 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 no-consent 1280x720  S5  시트 상단이 화면 안: 257.5px
+ok    FH07 no-consent 1280x720  S5  시트 상단이 화면 안: 265.5px
 ok    FH07 offline 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 offline 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 offline 390x844  S3  상단바 제목 중앙: 0px
@@ -5839,7 +5839,7 @@ ok    FH07 offline 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 offline 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 offline 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 offline 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 offline 834x1194  S5  시트 상단이 화면 안: 582.5px
+ok    FH07 offline 834x1194  S5  시트 상단이 화면 안: 622.5px
 ok    FH07 offline 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 offline 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 offline 1194x834  S3  상단바 제목 중앙: 0px
@@ -5874,7 +5874,7 @@ ok    FH07 offline 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 offline 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 offline 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 offline 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 offline 1194x834  S5  시트 상단이 화면 안: 222.5px
+ok    FH07 offline 1194x834  S5  시트 상단이 화면 안: 262.5px
 ok    FH07 offline 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 offline 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 offline 1280x720  S3  상단바 제목 중앙: 0px
@@ -5909,7 +5909,7 @@ ok    FH07 offline 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 offline 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 offline 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 offline 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 offline 1280x720  S5  시트 상단이 화면 안: 148.5px
+ok    FH07 offline 1280x720  S5  시트 상단이 화면 안: 156.5px
 ok    FH07 one 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one 390x844  S3  상단바 제목 중앙: 0px
@@ -5941,7 +5941,7 @@ ok    FH07 one 390x844  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one 390x844  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one 390x844  S5  바텀 시트 최대폭 <= 640: 390px
 ok    FH07 one 390x844  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one 390x844  S5  시트 상단이 화면 안: 341.5px
+ok    FH07 one 390x844  S5  시트 상단이 화면 안: 313.5px
 ok    FH07 one 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one 834x1194  S3  상단바 제목 중앙: 0px
@@ -5973,7 +5973,7 @@ ok    FH07 one 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one 834x1194  S5  시트 상단이 화면 안: 691.5px
+ok    FH07 one 834x1194  S5  시트 상단이 화면 안: 703.5px
 ok    FH07 one 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one 1194x834  S3  상단바 제목 중앙: 0px
@@ -6005,7 +6005,7 @@ ok    FH07 one 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one 1194x834  S5  시트 상단이 화면 안: 331.5px
+ok    FH07 one 1194x834  S5  시트 상단이 화면 안: 343.5px
 ok    FH07 one 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one 1280x720  S3  상단바 제목 중앙: 0px
@@ -6037,7 +6037,7 @@ ok    FH07 one 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one 1280x720  S5  시트 상단이 화면 안: 257.5px
+ok    FH07 one 1280x720  S5  시트 상단이 화면 안: 237.5px
 ok    FH07 one-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one-wait 390x844  S3  상단바 제목 중앙: 0px
@@ -6101,7 +6101,7 @@ ok    FH07 one-wait 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one-wait 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one-wait 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one-wait 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one-wait 834x1194  S5  시트 상단이 화면 안: 614.5px
+ok    FH07 one-wait 834x1194  S5  시트 상단이 화면 안: 654.5px
 ok    FH07 one-wait 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one-wait 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one-wait 1194x834  S3  상단바 제목 중앙: 0px
@@ -6133,7 +6133,7 @@ ok    FH07 one-wait 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one-wait 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one-wait 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one-wait 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one-wait 1194x834  S5  시트 상단이 화면 안: 254.5px
+ok    FH07 one-wait 1194x834  S5  시트 상단이 화면 안: 294.5px
 ok    FH07 one-wait 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 one-wait 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 one-wait 1280x720  S3  상단바 제목 중앙: 0px
@@ -6165,7 +6165,7 @@ ok    FH07 one-wait 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 one-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 one-wait 1280x720  S5  시트 상단이 화면 안: 180.5px
+ok    FH07 one-wait 1280x720  S5  시트 상단이 화면 안: 188.5px
 ok    FH07 empty-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait 390x844  S3  상단바 제목 중앙: 0px
@@ -6229,7 +6229,7 @@ ok    FH07 empty-wait 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait 834x1194  S5  시트 상단이 화면 안: 694.5px
 ok    FH07 empty-wait 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait 1194x834  S3  상단바 제목 중앙: 0px
@@ -6261,7 +6261,7 @@ ok    FH07 empty-wait 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait 1194x834  S5  시트 상단이 화면 안: 334.5px
 ok    FH07 empty-wait 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait 1280x720  S3  상단바 제목 중앙: 0px
@@ -6293,7 +6293,7 @@ ok    FH07 empty-wait 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait 1280x720  S5  시트 상단이 화면 안: 220.5px
+ok    FH07 empty-wait 1280x720  S5  시트 상단이 화면 안: 228.5px
 ok    FH07 empty-wait-offline 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-offline 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-offline 390x844  S3  상단바 제목 중앙: 0px
@@ -6363,7 +6363,7 @@ ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-offline 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-offline 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait-offline 834x1194  S5  시트 상단이 화면 안: 694.5px
 ok    FH07 empty-wait-offline 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-offline 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-offline 1194x834  S3  상단바 제목 중앙: 0px
@@ -6398,7 +6398,7 @@ ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-offline 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-offline 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait-offline 1194x834  S5  시트 상단이 화면 안: 334.5px
 ok    FH07 empty-wait-offline 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-offline 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-offline 1280x720  S3  상단바 제목 중앙: 0px
@@ -6433,7 +6433,7 @@ ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-offline 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-offline 1280x720  S5  시트 상단이 화면 안: 220.5px
+ok    FH07 empty-wait-offline 1280x720  S5  시트 상단이 화면 안: 228.5px
 ok    FH07 empty-wait-one 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-one 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-one 390x844  S3  상단바 제목 중앙: 0px
@@ -6497,7 +6497,7 @@ ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-one 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-one 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait-one 834x1194  S5  시트 상단이 화면 안: 694.5px
 ok    FH07 empty-wait-one 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-one 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-one 1194x834  S3  상단바 제목 중앙: 0px
@@ -6529,7 +6529,7 @@ ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-one 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-one 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait-one 1194x834  S5  시트 상단이 화면 안: 334.5px
 ok    FH07 empty-wait-one 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH07 empty-wait-one 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH07 empty-wait-one 1280x720  S3  상단바 제목 중앙: 0px
@@ -6561,7 +6561,7 @@ ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 좌우여백 차: 0px
 ok    FH07 empty-wait-one 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
-ok    FH07 empty-wait-one 1280x720  S5  시트 상단이 화면 안: 220.5px
+ok    FH07 empty-wait-one 1280x720  S5  시트 상단이 화면 안: 228.5px
 ok    FH08 choose 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH08 choose 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH08 choose 390x844  S3  상단바 제목 중앙: 0px
@@ -7506,6 +7506,94 @@ ok    FH09 manual-done 1280x720  S10  본문 간격 1: 16px
 ok    FH09 manual-done 1280x720  S10  푸터 간격 1: 8px
 ok    FH09 manual-done 1280x720  S10  본문 좌우 안쪽여백: 16px
 ok    FH09 manual-done 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH09 excluded-common 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH09 excluded-common 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH09 excluded-common 390x844  S3  상단바 제목 중앙: 0px
+ok    FH09 excluded-common 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH09 excluded-common 390x844  S1  본문 w-scene 가로중심=메인축: 0px
+ok    FH09 excluded-common 390x844  S2  본문 w-scene 좌우여백: 0px
+ok    FH09 excluded-common 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH09 excluded-common 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH09 excluded-common 390x844  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH09 excluded-common 390x844  S2  본문 w-row 좌우여백: 0px
+ok    FH09 excluded-common 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH09 excluded-common 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH09 excluded-common 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH09 excluded-common 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH09 excluded-common 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH09 excluded-common 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH09 excluded-common 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH09 excluded-common 390x844  S10  본문 간격 1: 16px
+ok    FH09 excluded-common 390x844  S10  본문 간격 2: 16px
+ok    FH09 excluded-common 390x844  S10  푸터 간격 1: 8px
+ok    FH09 excluded-common 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH09 excluded-common 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH09 excluded-common 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH09 excluded-common 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH09 excluded-common 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH09 excluded-common 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH09 excluded-common 834x1194  S1  본문 w-scene 가로중심=메인축: 0px
+ok    FH09 excluded-common 834x1194  S2  본문 w-scene 좌우여백: 0px
+ok    FH09 excluded-common 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH09 excluded-common 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH09 excluded-common 834x1194  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH09 excluded-common 834x1194  S2  본문 w-row 좌우여백: 0px
+ok    FH09 excluded-common 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH09 excluded-common 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH09 excluded-common 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH09 excluded-common 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH09 excluded-common 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH09 excluded-common 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 834x1194  S10  본문 간격 1: 16px
+ok    FH09 excluded-common 834x1194  S10  본문 간격 2: 16px
+ok    FH09 excluded-common 834x1194  S10  푸터 간격 1: 8px
+ok    FH09 excluded-common 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH09 excluded-common 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH09 excluded-common 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH09 excluded-common 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH09 excluded-common 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH09 excluded-common 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH09 excluded-common 1194x834  S1  본문 w-scene 가로중심=메인축: 0px
+ok    FH09 excluded-common 1194x834  S2  본문 w-scene 좌우여백: 0px
+ok    FH09 excluded-common 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH09 excluded-common 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH09 excluded-common 1194x834  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH09 excluded-common 1194x834  S2  본문 w-row 좌우여백: 0px
+ok    FH09 excluded-common 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH09 excluded-common 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH09 excluded-common 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH09 excluded-common 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH09 excluded-common 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH09 excluded-common 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 1194x834  S10  본문 간격 1: 16px
+ok    FH09 excluded-common 1194x834  S10  본문 간격 2: 16px
+ok    FH09 excluded-common 1194x834  S10  푸터 간격 1: 8px
+ok    FH09 excluded-common 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH09 excluded-common 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH09 excluded-common 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH09 excluded-common 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH09 excluded-common 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH09 excluded-common 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH09 excluded-common 1280x720  S1  본문 w-scene 가로중심=메인축: 0px
+ok    FH09 excluded-common 1280x720  S2  본문 w-scene 좌우여백: 0px
+ok    FH09 excluded-common 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH09 excluded-common 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH09 excluded-common 1280x720  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH09 excluded-common 1280x720  S2  본문 w-row 좌우여백: 0px
+ok    FH09 excluded-common 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH09 excluded-common 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH09 excluded-common 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH09 excluded-common 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH09 excluded-common 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH09 excluded-common 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH09 excluded-common 1280x720  S10  본문 간격 1: 16px
+ok    FH09 excluded-common 1280x720  S10  본문 간격 2: 16px
+ok    FH09 excluded-common 1280x720  S10  푸터 간격 1: 8px
+ok    FH09 excluded-common 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH09 excluded-common 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
 ok    FH10 closed 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH10 closed 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH10 closed 390x844  S3  상단바 제목 중앙: 0px

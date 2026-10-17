@@ -1,20 +1,20 @@
 MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B 좌우 대칭·비율 균형 측정 (균형.md S1~S10, MS1·MS3)
-측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 63개 × 뷰포트 4개 · 총 검사 3616건
-위반 0건 / 전체 3616건  → PASS
+측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 70개 × 뷰포트 4개 · 총 검사 4000건
+위반 0건 / 전체 4000건  → PASS
 
 규칙별 위반 건수 (수정 전 → 수정 후 / 전체 검사 건수):
-  S1   단독 요소 중심축                         0 →    0 / 1244
-  S2   좌우 여백 동일                          0 →    0 / 484
-  S3   상단 바 좌우 대칭                        0 →    0 / 212
+  S1   단독 요소 중심축                         0 →    0 / 1396
+  S2   좌우 여백 동일                          0 →    0 / 532
+  S3   상단 바 좌우 대칭                        0 →    0 / 228
   S4   PiP 짝 가운데(이 시안에 PiP 없음)           0 →    0 / 0
-  S5   시트 분기(세로=바텀)                      0 →    0 / 60
-  S6   균등 분배                             0 →    0 / 96
-  S7   본문 세로 중앙                          0 →    0 / 212
-  S8   박스 폭 동일                           0 →    0 / 252
-  S9   중앙 컬럼 max-width                   0 →    0 / 464
-  S10  8배수·같은 종류 같은 간격                   0 →    0 / 504
+  S5   시트 분기(세로=바텀)                      0 →    0 / 72
+  S6   균등 분배                             0 →    0 / 100
+  S7   본문 세로 중앙                          0 →    0 / 228
+  S8   박스 폭 동일                           0 →    0 / 280
+  S9   중앙 컬럼 max-width                   0 →    0 / 508
+  S10  8배수·같은 종류 같은 간격                   0 →    0 / 556
   MS1  오프라인 컬럼 구조                        0 →    0 / 48
-  MS3  전체 화면 정중앙                         0 →    0 / 40
+  MS3  전체 화면 정중앙                         0 →    0 / 52
 
 뷰포트별 위반 건수: 390x844=0  834x1194=0  1194x834=0  1280x720=0
 
@@ -23,88 +23,139 @@ FM06a/on-group-opt-member                      | 390x844  | S1   | 본문 컬럼
 FM06a/on-group-opt-member                      | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member                      | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member                      | 390x844  | S7   | 본문 위126.2/아래126.2 (허용 ±52.5) | PASS
+FM06a/on-group-opt-member                      | 390x844  | S7   | 본문 위14.2/아래14.2 (허용 ±54.1) | PASS
 FM06a/on-group-opt-member                      | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/on-group-opt-member                      | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member                      | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member                      | 390x844  | S10  | 하단 간격 8 | PASS
 FM06a/on-group-req-member                      | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-req-member                      | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-req-member                      | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-req-member                      | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-req-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/on-group-req-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/on-group-req-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-req-member                      | 390x844  | S7   | 본문 위126.2/아래126.2 (허용 ±52.5) | PASS
+FM06a/on-group-req-member                      | 390x844  | S7   | 본문 위14.2/아래14.2 (허용 ±54.1) | PASS
 FM06a/on-group-req-member                      | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/on-group-req-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/on-group-req-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/on-group-req-member                      | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-req-member                      | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-req-member                      | 390x844  | S10  | 하단 간격 8 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-solo-none-member                      | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-solo-none-member                      | 390x844  | S7   | 본문 위183.2/아래183.2 (허용 ±52.5) | PASS
+FM06a/on-solo-none-member                      | 390x844  | S7   | 본문 위30.2/아래30.2 (허용 ±54.1) | PASS
 FM06a/on-solo-none-member                      | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/on-solo-none-member                      | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-solo-none-member                      | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-solo-none-member                      | 390x844  | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/off-group-none-member                    | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-group-none-member                    | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-group-none-member                    | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-group-none-member                    | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/off-group-none-member                    | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/off-group-none-member                    | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-group-none-member                    | 390x844  | S7   | 본문 위183.2/아래183.2 (허용 ±52.5) | PASS
+FM06a/off-group-none-member                    | 390x844  | S7   | 본문 위46.2/아래46.2 (허용 ±54.1) | PASS
 FM06a/off-group-none-member                    | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/off-group-none-member                    | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/off-group-none-member                    | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/off-group-none-member                    | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-group-none-member                    | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-group-none-member                    | 390x844  | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 390x844  | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 358 (기대 358) | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-solo-opt-member                      | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-solo-opt-member                      | 390x844  | S7   | 본문 위126.2/아래126.2 (허용 ±52.5) | PASS
+FM06a/off-solo-opt-member                      | 390x844  | S7   | 본문 위30.2/아래30.2 (허용 ±54.1) | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/off-solo-opt-member                      | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-solo-opt-member                      | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | S10  | 하단 간격 8 | PASS
 FM06a/off-solo-opt-member                      | 390x844  | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 358 (기대 358) | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-empty                | 390x844  | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member-empty                | 390x844  | S7   | 본문 위126.2/아래126.2 (허용 ±52.5) | PASS
+FM06a/on-group-opt-member-empty                | 390x844  | S7   | 본문 위2.2/아래2.2 (허용 ±54.1) | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06a/on-group-opt-member-empty                | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member-empty                | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member-empty                | 390x844  | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S7   | 본문 위2.2/아래2.2 (허용 ±54.1) | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-included             | 390x844  | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S7   | 본문 위14.2/아래14.2 (허용 ±54.1) | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-agree       | 390x844  | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S7   | 본문 위0.2/아래0.2 (허용 ±54.1) | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-fail        | 390x844  | S10  | 하단 간격 8 | PASS
 FM06b/on-group-opt-member-q1                   | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 390x844  | S1   | 진행 점 Δ0 | PASS
@@ -342,7 +393,7 @@ FM06c/on-group-req-member-idle                 | 390x844  | S1   | 하단 주 �
 FM06c/on-group-req-member-idle                 | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-idle                 | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-idle                 | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-idle                 | 390x844  | S7   | 본문 위132.9/아래132.9 (허용 ±52.5) | PASS
+FM06c/on-group-req-member-idle                 | 390x844  | S7   | 본문 위144.2/아래144.2 (허용 ±52.5) | PASS
 FM06c/on-group-req-member-idle                 | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06c/on-group-req-member-idle                 | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06c/on-group-req-member-idle                 | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -356,7 +407,7 @@ FM06c/on-group-req-member-leadoffl             | 390x844  | S1   | 하단 주 �
 FM06c/on-group-req-member-leadoffl             | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-leadoffl             | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-leadoffl             | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-leadoffl             | 390x844  | S7   | 본문 위78.9/아래78.9 (허용 ±52.5) | PASS
+FM06c/on-group-req-member-leadoffl             | 390x844  | S7   | 본문 위90.2/아래90.2 (허용 ±52.5) | PASS
 FM06c/on-group-req-member-leadoffl             | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06c/on-group-req-member-leadoffl             | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06c/on-group-req-member-leadoffl             | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -370,7 +421,7 @@ FM06c/on-group-req-member-leadoff              | 390x844  | S1   | 하단 주 �
 FM06c/on-group-req-member-leadoff              | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-leadoff              | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-leadoff              | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-leadoff              | 390x844  | S7   | 본문 위78.9/아래78.9 (허용 ±52.5) | PASS
+FM06c/on-group-req-member-leadoff              | 390x844  | S7   | 본문 위90.2/아래90.2 (허용 ±52.5) | PASS
 FM06c/on-group-req-member-leadoff              | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06c/on-group-req-member-leadoff              | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06c/on-group-req-member-leadoff              | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -384,12 +435,27 @@ FM06c/on-group-req-member-unsupported          | 390x844  | S1   | 하단 주 �
 FM06c/on-group-req-member-unsupported          | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-unsupported          | 390x844  | S7   | 본문 위132.9/아래132.9 (허용 ±52.5) | PASS
+FM06c/on-group-req-member-unsupported          | 390x844  | S7   | 본문 위144.2/아래144.2 (허용 ±52.5) | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S10  | 본문 블록 간격 16 | PASS
 FM06c/on-group-req-member-unsupported          | 390x844  | S10  | 하단 간격 8 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S1   | 진행 점 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S6   | 밴드 상태 타일 2개 폭 150~150 간격 8~8 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S7   | 본문 위144.2/아래144.2 (허용 ±52.5) | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S10  | 본문 블록 간격 16 | PASS
+FM06c/on-group-req-member-connected            | 390x844  | S10  | 하단 간격 8 | PASS
 FM06c/off-solo-opt-member-idle                 | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 390x844  | S1   | 진행 점 Δ0 | PASS
@@ -414,7 +480,7 @@ FM06c/off-group-req-member-connected           | 390x844  | S2   | 본문 컬럼
 FM06c/off-group-req-member-connected           | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06c/off-group-req-member-connected           | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
 FM06c/off-group-req-member-connected           | 390x844  | S6   | 밴드 상태 타일 2개 폭 150~150 간격 8~8 | PASS
-FM06c/off-group-req-member-connected           | 390x844  | S7   | 본문 위132.9/아래132.9 (허용 ±52.5) | PASS
+FM06c/off-group-req-member-connected           | 390x844  | S7   | 본문 위144.2/아래144.2 (허용 ±52.5) | PASS
 FM06c/off-group-req-member-connected           | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06c/off-group-req-member-connected           | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06c/off-group-req-member-connected           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -654,7 +720,7 @@ FM06e/on-group-opt-member                      | 390x844  | S1   | 상태 아이
 FM06e/on-group-opt-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/on-group-opt-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/on-group-opt-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member                      | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/on-group-opt-member                      | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/on-group-opt-member                      | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/on-group-opt-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/on-group-opt-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -669,7 +735,7 @@ FM06e/on-group-req-member                      | 390x844  | S1   | 상태 아이
 FM06e/on-group-req-member                      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/on-group-req-member                      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/on-group-req-member                      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-req-member                      | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/on-group-req-member                      | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/on-group-req-member                      | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/on-group-req-member                      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/on-group-req-member                      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -684,7 +750,7 @@ FM06e/on-solo-none-member-skip                 | 390x844  | S1   | 상태 아이
 FM06e/on-solo-none-member-skip                 | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/on-solo-none-member-skip                 | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/on-solo-none-member-skip                 | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-solo-none-member-skip                 | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/on-solo-none-member-skip                 | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/on-solo-none-member-skip                 | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/on-solo-none-member-skip                 | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/on-solo-none-member-skip                 | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -699,7 +765,7 @@ FM06e/off-group-none-member                    | 390x844  | S1   | 상태 아이
 FM06e/off-group-none-member                    | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/off-group-none-member                    | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/off-group-none-member                    | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-group-none-member                    | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/off-group-none-member                    | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/off-group-none-member                    | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/off-group-none-member                    | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/off-group-none-member                    | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -715,7 +781,7 @@ FM06e/off-solo-opt-member-noband               | 390x844  | S1   | 상태 아이
 FM06e/off-solo-opt-member-noband               | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/off-solo-opt-member-noband               | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/off-solo-opt-member-noband               | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-solo-opt-member-noband               | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/off-solo-opt-member-noband               | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/off-solo-opt-member-noband               | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/off-solo-opt-member-noband               | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/off-solo-opt-member-noband               | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -731,7 +797,7 @@ FM06e/on-group-opt-member-nomic                | 390x844  | S1   | 상태 아이
 FM06e/on-group-opt-member-nomic                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM06e/on-group-opt-member-nomic                | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FM06e/on-group-opt-member-nomic                | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member-nomic                | 390x844  | S7   | 본문 위133.2/아래133.2 (허용 ±52.5) | PASS
+FM06e/on-group-opt-member-nomic                | 390x844  | S7   | 본문 위121.2/아래121.2 (허용 ±52.5) | PASS
 FM06e/on-group-opt-member-nomic                | 390x844  | S8   | 본문 블록 2개 폭 358~358 | PASS
 FM06e/on-group-opt-member-nomic                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
 FM06e/on-group-opt-member-nomic                | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
@@ -851,9 +917,21 @@ FM08/off-group-member                          | 390x844  | S1   | 상태 아이
 FM08/off-group-member                          | 390x844  | S2   | 종료·대기 카드 좌16/우16 | PASS
 FM08/off-group-member                          | 390x844  | S8   | 카드 안 블록 2개 폭 308~308 | PASS
 FM08/off-group-member                          | 390x844  | S9   | 종료·대기 카드 폭 358 ≤640 | PASS
-FM08/off-group-member                          | 390x844  | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/off-group-member                          | 390x844  | S10  | 카드 간격 16/16/16/16 | PASS
 FM08/off-group-member                          | 390x844  | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 - (기대 358) | PASS
 FM08/off-group-member                          | 390x844  | MS3  | 카드 Δx0 Δy0 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S1   | 종료·대기 카드 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S1   | 상태 아이콘 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S2   | 종료·대기 카드 좌16/우16 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S2   | 바텀 시트 좌0/우0 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S5   | 세로형 바텀 시트 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S5   | 바텀 시트 폭 390 (≤640) | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S8   | 카드 안 블록 2개 폭 308~308 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S9   | 종료·대기 카드 폭 358 ≤640 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | S10  | 시트 간격 16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 390x844  | MS3  | 카드 Δx0 Δy0 | PASS
 FM09/on-group-member                           | 390x844  | S1   | 종료·대기 카드 Δ0 | PASS
 FM09/on-group-member                           | 390x844  | S1   | 제목 글자 Δ0 | PASS
 FM09/on-group-member                           | 390x844  | S1   | 상태 아이콘 Δ0 | PASS
@@ -933,92 +1011,163 @@ FM09/on-group-member-checkinempty              | 390x844  | S9   | 종료·대�
 FM09/on-group-member-checkinempty              | 390x844  | S10  | 카드 간격 16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 390x844  | S10  | 시트 간격 16/16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 390x844  | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S2   | 종료·대기 카드 좌16/우16 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S8   | 카드 안 블록 2개 폭 308~308 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S9   | 종료·대기 카드 폭 358 ≤640 | PASS
+FM09/on-group-member-excluded                  | 390x844  | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-excluded                  | 390x844  | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S2   | 종료·대기 카드 좌16/우16 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S2   | 바텀 시트 좌0/우0 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S5   | 세로형 바텀 시트 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S5   | 바텀 시트 폭 390 (≤640) | PASS
+FM09/on-group-member-guest-report              | 390x844  | S8   | 카드 안 블록 2개 폭 308~308 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S9   | 종료·대기 카드 폭 358 ≤640 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-guest-report              | 390x844  | S10  | 시트 간격 16/16/16 | PASS
+FM09/on-group-member-guest-report              | 390x844  | MS3  | 카드 Δx0 Δy0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member                      | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member                      | 834x1194 | S7   | 본문 위321.2/아래321.2 (허용 ±80.5) | PASS
+FM06a/on-group-opt-member                      | 834x1194 | S7   | 본문 위207.2/아래207.2 (허용 ±82.1) | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member                      | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member                      | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member                      | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-req-member                      | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-req-member                      | 834x1194 | S7   | 본문 위321.2/아래321.2 (허용 ±80.5) | PASS
+FM06a/on-group-req-member                      | 834x1194 | S7   | 본문 위207.2/아래207.2 (허용 ±82.1) | PASS
 FM06a/on-group-req-member                      | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-req-member                      | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-req-member                      | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-req-member                      | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-solo-none-member                      | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-solo-none-member                      | 834x1194 | S7   | 본문 위368.2/아래368.2 (허용 ±80.5) | PASS
+FM06a/on-solo-none-member                      | 834x1194 | S7   | 본문 위223.2/아래223.2 (허용 ±82.1) | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-solo-none-member                      | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-solo-none-member                      | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-solo-none-member                      | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-group-none-member                    | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-group-none-member                    | 834x1194 | S7   | 본문 위368.2/아래368.2 (허용 ±80.5) | PASS
+FM06a/off-group-none-member                    | 834x1194 | S7   | 본문 위239.2/아래239.2 (허용 ±82.1) | PASS
 FM06a/off-group-none-member                    | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-group-none-member                    | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-group-none-member                    | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-group-none-member                    | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 834x1194 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-solo-opt-member                      | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-solo-opt-member                      | 834x1194 | S7   | 본문 위321.2/아래321.2 (허용 ±80.5) | PASS
+FM06a/off-solo-opt-member                      | 834x1194 | S7   | 본문 위223.2/아래223.2 (허용 ±82.1) | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-solo-opt-member                      | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-solo-opt-member                      | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06a/off-solo-opt-member                      | 834x1194 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member-empty                | 834x1194 | S7   | 본문 위321.2/아래321.2 (허용 ±80.5) | PASS
+FM06a/on-group-opt-member-empty                | 834x1194 | S7   | 본문 위195.2/아래195.2 (허용 ±82.1) | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member-empty                | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member-empty                | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member-empty                | 834x1194 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S7   | 본문 위195.2/아래195.2 (허용 ±82.1) | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-included             | 834x1194 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S7   | 본문 위207.2/아래207.2 (허용 ±82.1) | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-agree       | 834x1194 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S7   | 본문 위193.2/아래193.2 (허용 ±82.1) | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-fail        | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06b/on-group-opt-member-q1                   | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 834x1194 | S1   | 진행 점 Δ0 | PASS
@@ -1304,6 +1453,21 @@ FM06c/on-group-req-member-unsupported          | 834x1194 | S9   | 본문 컬럼
 FM06c/on-group-req-member-unsupported          | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-unsupported          | 834x1194 | S10  | 본문 블록 간격 16 | PASS
 FM06c/on-group-req-member-unsupported          | 834x1194 | S10  | 하단 간격 8 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S1   | 진행 점 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S6   | 밴드 상태 타일 2개 폭 291~291 간격 8~8 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S7   | 본문 위319.2/아래319.2 (허용 ±80.5) | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S10  | 본문 블록 간격 16 | PASS
+FM06c/on-group-req-member-connected            | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06c/off-solo-opt-member-idle                 | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 834x1194 | S1   | 진행 점 Δ0 | PASS
@@ -1568,7 +1732,7 @@ FM06e/on-group-opt-member                      | 834x1194 | S1   | 상태 아이
 FM06e/on-group-opt-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/on-group-opt-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/on-group-opt-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member                      | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/on-group-opt-member                      | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/on-group-opt-member                      | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1583,7 +1747,7 @@ FM06e/on-group-req-member                      | 834x1194 | S1   | 상태 아이
 FM06e/on-group-req-member                      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/on-group-req-member                      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/on-group-req-member                      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-req-member                      | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/on-group-req-member                      | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/on-group-req-member                      | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-req-member                      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-req-member                      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1598,7 +1762,7 @@ FM06e/on-solo-none-member-skip                 | 834x1194 | S1   | 상태 아이
 FM06e/on-solo-none-member-skip                 | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/on-solo-none-member-skip                 | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/on-solo-none-member-skip                 | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-solo-none-member-skip                 | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/on-solo-none-member-skip                 | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/on-solo-none-member-skip                 | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-solo-none-member-skip                 | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-solo-none-member-skip                 | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1613,7 +1777,7 @@ FM06e/off-group-none-member                    | 834x1194 | S1   | 상태 아이
 FM06e/off-group-none-member                    | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/off-group-none-member                    | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/off-group-none-member                    | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-group-none-member                    | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/off-group-none-member                    | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/off-group-none-member                    | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-group-none-member                    | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-group-none-member                    | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1629,7 +1793,7 @@ FM06e/off-solo-opt-member-noband               | 834x1194 | S1   | 상태 아이
 FM06e/off-solo-opt-member-noband               | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/off-solo-opt-member-noband               | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/off-solo-opt-member-noband               | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-solo-opt-member-noband               | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/off-solo-opt-member-noband               | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/off-solo-opt-member-noband               | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-solo-opt-member-noband               | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-solo-opt-member-noband               | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1645,7 +1809,7 @@ FM06e/on-group-opt-member-nomic                | 834x1194 | S1   | 상태 아이
 FM06e/on-group-opt-member-nomic                | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
 FM06e/on-group-opt-member-nomic                | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FM06e/on-group-opt-member-nomic                | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member-nomic                | 834x1194 | S7   | 본문 위308.2/아래308.2 (허용 ±80.5) | PASS
+FM06e/on-group-opt-member-nomic                | 834x1194 | S7   | 본문 위296.2/아래296.2 (허용 ±80.5) | PASS
 FM06e/on-group-opt-member-nomic                | 834x1194 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member-nomic                | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member-nomic                | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -1765,9 +1929,21 @@ FM08/off-group-member                          | 834x1194 | S1   | 상태 아이
 FM08/off-group-member                          | 834x1194 | S2   | 종료·대기 카드 좌207/우207 | PASS
 FM08/off-group-member                          | 834x1194 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
 FM08/off-group-member                          | 834x1194 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
-FM08/off-group-member                          | 834x1194 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/off-group-member                          | 834x1194 | S10  | 카드 간격 16/16/16/16 | PASS
 FM08/off-group-member                          | 834x1194 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 - (기대 640) | PASS
 FM08/off-group-member                          | 834x1194 | MS3  | 카드 Δx0 Δy0 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S1   | 종료·대기 카드 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S1   | 상태 아이콘 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S2   | 종료·대기 카드 좌207/우207 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S2   | 바텀 시트 좌97/우97 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S5   | 세로형 바텀 시트 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S5   | 바텀 시트 폭 640 (≤640) | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | S10  | 시트 간격 16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 834x1194 | MS3  | 카드 Δx0 Δy0 | PASS
 FM09/on-group-member                           | 834x1194 | S1   | 종료·대기 카드 Δ0 | PASS
 FM09/on-group-member                           | 834x1194 | S1   | 제목 글자 Δ0 | PASS
 FM09/on-group-member                           | 834x1194 | S1   | 상태 아이콘 Δ0 | PASS
@@ -1847,92 +2023,163 @@ FM09/on-group-member-checkinempty              | 834x1194 | S9   | 종료·대�
 FM09/on-group-member-checkinempty              | 834x1194 | S10  | 카드 간격 16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 834x1194 | S10  | 시트 간격 16/16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 834x1194 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S2   | 종료·대기 카드 좌207/우207 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-excluded                  | 834x1194 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S2   | 종료·대기 카드 좌207/우207 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S2   | 바텀 시트 좌97/우97 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S5   | 세로형 바텀 시트 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S5   | 바텀 시트 폭 640 (≤640) | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | S10  | 시트 간격 16/16/16 | PASS
+FM09/on-group-member-guest-report              | 834x1194 | MS3  | 카드 Δx0 Δy0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member                      | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member                      | 1194x834 | S7   | 본문 위141.2/아래141.2 (허용 ±51.7) | PASS
+FM06a/on-group-opt-member                      | 1194x834 | S7   | 본문 위114.2/아래114.2 (허용 ±53.3) | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member                      | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member                      | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member                      | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-req-member                      | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-req-member                      | 1194x834 | S7   | 본문 위141.2/아래141.2 (허용 ±51.7) | PASS
+FM06a/on-group-req-member                      | 1194x834 | S7   | 본문 위114.2/아래114.2 (허용 ±53.3) | PASS
 FM06a/on-group-req-member                      | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-req-member                      | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-req-member                      | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-req-member                      | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-solo-none-member                      | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-solo-none-member                      | 1194x834 | S7   | 본문 위188.2/아래188.2 (허용 ±51.7) | PASS
+FM06a/on-solo-none-member                      | 1194x834 | S7   | 본문 위130.2/아래130.2 (허용 ±53.3) | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-solo-none-member                      | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-solo-none-member                      | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-solo-none-member                      | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-group-none-member                    | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-group-none-member                    | 1194x834 | S7   | 본문 위188.2/아래188.2 (허용 ±51.7) | PASS
+FM06a/off-group-none-member                    | 1194x834 | S7   | 본문 위146.2/아래146.2 (허용 ±53.3) | PASS
 FM06a/off-group-none-member                    | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-group-none-member                    | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-group-none-member                    | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-group-none-member                    | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 1194x834 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-solo-opt-member                      | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-solo-opt-member                      | 1194x834 | S7   | 본문 위141.2/아래141.2 (허용 ±51.7) | PASS
+FM06a/off-solo-opt-member                      | 1194x834 | S7   | 본문 위130.2/아래130.2 (허용 ±53.3) | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-solo-opt-member                      | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-solo-opt-member                      | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06a/off-solo-opt-member                      | 1194x834 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member-empty                | 1194x834 | S7   | 본문 위141.2/아래141.2 (허용 ±51.7) | PASS
+FM06a/on-group-opt-member-empty                | 1194x834 | S7   | 본문 위102.2/아래102.2 (허용 ±53.3) | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member-empty                | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member-empty                | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member-empty                | 1194x834 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S7   | 본문 위102.2/아래102.2 (허용 ±53.3) | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-included             | 1194x834 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S7   | 본문 위114.2/아래114.2 (허용 ±53.3) | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-agree       | 1194x834 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S7   | 본문 위114.2/아래114.2 (허용 ±53.3) | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-fail        | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06b/on-group-opt-member-q1                   | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 1194x834 | S1   | 진행 점 Δ0 | PASS
@@ -2214,6 +2461,21 @@ FM06c/on-group-req-member-unsupported          | 1194x834 | S9   | 본문 컬럼
 FM06c/on-group-req-member-unsupported          | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-unsupported          | 1194x834 | S10  | 본문 블록 간격 16 | PASS
 FM06c/on-group-req-member-unsupported          | 1194x834 | S10  | 하단 간격 8 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S1   | 진행 점 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S6   | 밴드 상태 타일 2개 폭 291~291 간격 8~8 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S7   | 본문 위139.2/아래139.2 (허용 ±51.7) | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S10  | 본문 블록 간격 16 | PASS
+FM06c/on-group-req-member-connected            | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06c/off-solo-opt-member-idle                 | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 1194x834 | S1   | 진행 점 Δ0 | PASS
@@ -2470,7 +2732,7 @@ FM06e/on-group-opt-member                      | 1194x834 | S1   | 상태 아이
 FM06e/on-group-opt-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/on-group-opt-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/on-group-opt-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member                      | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/on-group-opt-member                      | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/on-group-opt-member                      | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2485,7 +2747,7 @@ FM06e/on-group-req-member                      | 1194x834 | S1   | 상태 아이
 FM06e/on-group-req-member                      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/on-group-req-member                      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/on-group-req-member                      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-req-member                      | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/on-group-req-member                      | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/on-group-req-member                      | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-req-member                      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-req-member                      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2500,7 +2762,7 @@ FM06e/on-solo-none-member-skip                 | 1194x834 | S1   | 상태 아이
 FM06e/on-solo-none-member-skip                 | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/on-solo-none-member-skip                 | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/on-solo-none-member-skip                 | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-solo-none-member-skip                 | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/on-solo-none-member-skip                 | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/on-solo-none-member-skip                 | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-solo-none-member-skip                 | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-solo-none-member-skip                 | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2515,7 +2777,7 @@ FM06e/off-group-none-member                    | 1194x834 | S1   | 상태 아이
 FM06e/off-group-none-member                    | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/off-group-none-member                    | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/off-group-none-member                    | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-group-none-member                    | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/off-group-none-member                    | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/off-group-none-member                    | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-group-none-member                    | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-group-none-member                    | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2531,7 +2793,7 @@ FM06e/off-solo-opt-member-noband               | 1194x834 | S1   | 상태 아이
 FM06e/off-solo-opt-member-noband               | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/off-solo-opt-member-noband               | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/off-solo-opt-member-noband               | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-solo-opt-member-noband               | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/off-solo-opt-member-noband               | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/off-solo-opt-member-noband               | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-solo-opt-member-noband               | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-solo-opt-member-noband               | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2547,7 +2809,7 @@ FM06e/on-group-opt-member-nomic                | 1194x834 | S1   | 상태 아이
 FM06e/on-group-opt-member-nomic                | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
 FM06e/on-group-opt-member-nomic                | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FM06e/on-group-opt-member-nomic                | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member-nomic                | 1194x834 | S7   | 본문 위128.2/아래128.2 (허용 ±51.7) | PASS
+FM06e/on-group-opt-member-nomic                | 1194x834 | S7   | 본문 위116.2/아래116.2 (허용 ±51.7) | PASS
 FM06e/on-group-opt-member-nomic                | 1194x834 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member-nomic                | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member-nomic                | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -2667,9 +2929,19 @@ FM08/off-group-member                          | 1194x834 | S1   | 상태 아이
 FM08/off-group-member                          | 1194x834 | S2   | 종료·대기 카드 좌387/우387 | PASS
 FM08/off-group-member                          | 1194x834 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
 FM08/off-group-member                          | 1194x834 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
-FM08/off-group-member                          | 1194x834 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/off-group-member                          | 1194x834 | S10  | 카드 간격 16/16/16/16 | PASS
 FM08/off-group-member                          | 1194x834 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 - (기대 640) | PASS
 FM08/off-group-member                          | 1194x834 | MS3  | 카드 Δx0 Δy0 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S1   | 종료·대기 카드 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S1   | 상태 아이콘 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S2   | 종료·대기 카드 좌169/우169 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S5   | 가로형 사이드 시트 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | S10  | 시트 간격 16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 1194x834 | MS3  | 카드 Δx0 Δy0 | PASS
 FM09/on-group-member                           | 1194x834 | S1   | 종료·대기 카드 Δ0 | PASS
 FM09/on-group-member                           | 1194x834 | S1   | 제목 글자 Δ0 | PASS
 FM09/on-group-member                           | 1194x834 | S1   | 상태 아이콘 Δ0 | PASS
@@ -2741,92 +3013,161 @@ FM09/on-group-member-checkinempty              | 1194x834 | S9   | 종료·대�
 FM09/on-group-member-checkinempty              | 1194x834 | S10  | 카드 간격 16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 1194x834 | S10  | 시트 간격 16/16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 1194x834 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S2   | 종료·대기 카드 좌387/우387 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-excluded                  | 1194x834 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S2   | 종료·대기 카드 좌169/우169 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S5   | 가로형 사이드 시트 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | S10  | 시트 간격 16/16/16 | PASS
+FM09/on-group-member-guest-report              | 1194x834 | MS3  | 카드 Δx0 Δy0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member                      | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member                      | 1280x720 | S7   | 본문 위94.2/아래94.2 (허용 ±44.2) | PASS
+FM06a/on-group-opt-member                      | 1280x720 | S7   | 본문 위57.2/아래57.2 (허용 ±44.2) | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member                      | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member                      | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member                      | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-req-member                      | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-req-member                      | 1280x720 | S7   | 본문 위94.2/아래94.2 (허용 ±44.2) | PASS
+FM06a/on-group-req-member                      | 1280x720 | S7   | 본문 위57.2/아래57.2 (허용 ±44.2) | PASS
 FM06a/on-group-req-member                      | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-req-member                      | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-req-member                      | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-req-member                      | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-solo-none-member                      | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-solo-none-member                      | 1280x720 | S7   | 본문 위141.2/아래141.2 (허용 ±44.2) | PASS
+FM06a/on-solo-none-member                      | 1280x720 | S7   | 본문 위73.2/아래73.2 (허용 ±44.2) | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-solo-none-member                      | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-solo-none-member                      | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-solo-none-member                      | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-group-none-member                    | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-group-none-member                    | 1280x720 | S7   | 본문 위141.2/아래141.2 (허용 ±44.2) | PASS
+FM06a/off-group-none-member                    | 1280x720 | S7   | 본문 위89.2/아래89.2 (허용 ±44.2) | PASS
 FM06a/off-group-none-member                    | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-group-none-member                    | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-group-none-member                    | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-group-none-member                    | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06a/off-group-none-member                    | 1280x720 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/off-solo-opt-member                      | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/off-solo-opt-member                      | 1280x720 | S7   | 본문 위94.2/아래94.2 (허용 ±44.2) | PASS
+FM06a/off-solo-opt-member                      | 1280x720 | S7   | 본문 위73.2/아래73.2 (허용 ±44.2) | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/off-solo-opt-member                      | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/off-solo-opt-member                      | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06a/off-solo-opt-member                      | 1280x720 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 640 (기대 640) | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 진행 점 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 칩 줄 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06a/on-group-opt-member-empty                | 1280x720 | S7   | 본문 위94.2/아래94.2 (허용 ±44.2) | PASS
+FM06a/on-group-opt-member-empty                | 1280x720 | S7   | 본문 위45.2/아래45.2 (허용 ±44.2) | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06a/on-group-opt-member-empty                | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06a/on-group-opt-member-empty                | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
 FM06a/on-group-opt-member-empty                | 1280x720 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S7   | 본문 위45.2/아래45.2 (허용 ±44.2) | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-included             | 1280x720 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S7   | 본문 위57.2/아래57.2 (허용 ±44.2) | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-agree       | 1280x720 | S10  | 하단 간격 8 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 진행 점 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 칩 줄 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S7   | 본문 위57.2/아래57.2 (허용 ±44.2) | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S10  | 본문 블록 간격 8/8 | PASS
+FM06a/on-group-opt-member-research-fail        | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06b/on-group-opt-member-q1                   | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06b/on-group-opt-member-q1                   | 1280x720 | S1   | 진행 점 Δ0 | PASS
@@ -3060,7 +3401,7 @@ FM06c/on-group-req-member-idle                 | 1280x720 | S1   | 하단 주 �
 FM06c/on-group-req-member-idle                 | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-idle                 | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-idle                 | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-idle                 | 1280x720 | S7   | 본문 위92.2/아래92.2 (허용 ±44.2) | PASS
+FM06c/on-group-req-member-idle                 | 1280x720 | S7   | 본문 위82.2/아래82.2 (허용 ±42.6) | PASS
 FM06c/on-group-req-member-idle                 | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06c/on-group-req-member-idle                 | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-idle                 | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3074,7 +3415,7 @@ FM06c/on-group-req-member-leadoffl             | 1280x720 | S1   | 하단 주 �
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-leadoffl             | 1280x720 | S7   | 본문 위38.2/아래38.2 (허용 ±44.2) | PASS
+FM06c/on-group-req-member-leadoffl             | 1280x720 | S7   | 본문 위28.2/아래28.2 (허용 ±42.6) | PASS
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-leadoffl             | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3088,7 +3429,7 @@ FM06c/on-group-req-member-leadoff              | 1280x720 | S1   | 하단 주 �
 FM06c/on-group-req-member-leadoff              | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-leadoff              | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06c/on-group-req-member-leadoff              | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06c/on-group-req-member-leadoff              | 1280x720 | S7   | 본문 위38.2/아래38.2 (허용 ±44.2) | PASS
+FM06c/on-group-req-member-leadoff              | 1280x720 | S7   | 본문 위28.2/아래28.2 (허용 ±42.6) | PASS
 FM06c/on-group-req-member-leadoff              | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06c/on-group-req-member-leadoff              | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-leadoff              | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3108,6 +3449,21 @@ FM06c/on-group-req-member-unsupported          | 1280x720 | S9   | 본문 컬럼
 FM06c/on-group-req-member-unsupported          | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06c/on-group-req-member-unsupported          | 1280x720 | S10  | 본문 블록 간격 16 | PASS
 FM06c/on-group-req-member-unsupported          | 1280x720 | S10  | 하단 간격 8 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S1   | 진행 점 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S6   | 밴드 상태 타일 2개 폭 291~291 간격 8~8 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S7   | 본문 위82.2/아래82.2 (허용 ±42.6) | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S10  | 본문 블록 간격 16 | PASS
+FM06c/on-group-req-member-connected            | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06c/off-solo-opt-member-idle                 | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06c/off-solo-opt-member-idle                 | 1280x720 | S1   | 진행 점 Δ0 | PASS
@@ -3132,7 +3488,7 @@ FM06c/off-group-req-member-connected           | 1280x720 | S2   | 본문 컬럼
 FM06c/off-group-req-member-connected           | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06c/off-group-req-member-connected           | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
 FM06c/off-group-req-member-connected           | 1280x720 | S6   | 밴드 상태 타일 2개 폭 291~291 간격 8~8 | PASS
-FM06c/off-group-req-member-connected           | 1280x720 | S7   | 본문 위92.2/아래92.2 (허용 ±44.2) | PASS
+FM06c/off-group-req-member-connected           | 1280x720 | S7   | 본문 위82.2/아래82.2 (허용 ±42.6) | PASS
 FM06c/off-group-req-member-connected           | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06c/off-group-req-member-connected           | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06c/off-group-req-member-connected           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3364,7 +3720,7 @@ FM06e/on-group-opt-member                      | 1280x720 | S1   | 상태 아이
 FM06e/on-group-opt-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/on-group-opt-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/on-group-opt-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member                      | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/on-group-opt-member                      | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/on-group-opt-member                      | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3379,7 +3735,7 @@ FM06e/on-group-req-member                      | 1280x720 | S1   | 상태 아이
 FM06e/on-group-req-member                      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/on-group-req-member                      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/on-group-req-member                      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-req-member                      | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/on-group-req-member                      | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/on-group-req-member                      | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-req-member                      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-req-member                      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3394,7 +3750,7 @@ FM06e/on-solo-none-member-skip                 | 1280x720 | S1   | 상태 아이
 FM06e/on-solo-none-member-skip                 | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/on-solo-none-member-skip                 | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/on-solo-none-member-skip                 | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-solo-none-member-skip                 | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/on-solo-none-member-skip                 | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/on-solo-none-member-skip                 | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-solo-none-member-skip                 | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-solo-none-member-skip                 | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3409,7 +3765,7 @@ FM06e/off-group-none-member                    | 1280x720 | S1   | 상태 아이
 FM06e/off-group-none-member                    | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/off-group-none-member                    | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/off-group-none-member                    | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-group-none-member                    | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/off-group-none-member                    | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/off-group-none-member                    | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-group-none-member                    | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-group-none-member                    | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3425,7 +3781,7 @@ FM06e/off-solo-opt-member-noband               | 1280x720 | S1   | 상태 아이
 FM06e/off-solo-opt-member-noband               | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/off-solo-opt-member-noband               | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/off-solo-opt-member-noband               | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/off-solo-opt-member-noband               | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/off-solo-opt-member-noband               | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/off-solo-opt-member-noband               | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/off-solo-opt-member-noband               | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/off-solo-opt-member-noband               | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3441,7 +3797,7 @@ FM06e/on-group-opt-member-nomic                | 1280x720 | S1   | 상태 아이
 FM06e/on-group-opt-member-nomic                | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
 FM06e/on-group-opt-member-nomic                | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FM06e/on-group-opt-member-nomic                | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06e/on-group-opt-member-nomic                | 1280x720 | S7   | 본문 위81.2/아래81.2 (허용 ±44.2) | PASS
+FM06e/on-group-opt-member-nomic                | 1280x720 | S7   | 본문 위69.2/아래69.2 (허용 ±44.2) | PASS
 FM06e/on-group-opt-member-nomic                | 1280x720 | S8   | 본문 블록 2개 폭 640~640 | PASS
 FM06e/on-group-opt-member-nomic                | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
 FM06e/on-group-opt-member-nomic                | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
@@ -3561,9 +3917,19 @@ FM08/off-group-member                          | 1280x720 | S1   | 상태 아이
 FM08/off-group-member                          | 1280x720 | S2   | 종료·대기 카드 좌430/우430 | PASS
 FM08/off-group-member                          | 1280x720 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
 FM08/off-group-member                          | 1280x720 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
-FM08/off-group-member                          | 1280x720 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/off-group-member                          | 1280x720 | S10  | 카드 간격 16/16/16/16 | PASS
 FM08/off-group-member                          | 1280x720 | MS1  | 오프라인 · 영상·마이크·BGM 0개 · 컬럼 - (기대 640) | PASS
 FM08/off-group-member                          | 1280x720 | MS3  | 카드 Δx0 Δy0 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S1   | 종료·대기 카드 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S1   | 상태 아이콘 Δ0 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S2   | 종료·대기 카드 좌212/우212 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S5   | 가로형 사이드 시트 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | S10  | 시트 간격 16/16 | PASS
+FM08/on-group-member-cancel-sheet              | 1280x720 | MS3  | 카드 Δx0 Δy0 | PASS
 FM09/on-group-member                           | 1280x720 | S1   | 종료·대기 카드 Δ0 | PASS
 FM09/on-group-member                           | 1280x720 | S1   | 제목 글자 Δ0 | PASS
 FM09/on-group-member                           | 1280x720 | S1   | 상태 아이콘 Δ0 | PASS
@@ -3635,3 +4001,21 @@ FM09/on-group-member-checkinempty              | 1280x720 | S9   | 종료·대�
 FM09/on-group-member-checkinempty              | 1280x720 | S10  | 카드 간격 16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 1280x720 | S10  | 시트 간격 16/16/16/16/16/16 | PASS
 FM09/on-group-member-checkinempty              | 1280x720 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S2   | 종료·대기 카드 좌430/우430 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-excluded                  | 1280x720 | MS3  | 카드 Δx0 Δy0 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S1   | 종료·대기 카드 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S1   | 상태 아이콘 Δ0 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S2   | 종료·대기 카드 좌212/우212 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S5   | 가로형 사이드 시트 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S8   | 카드 안 블록 2개 폭 370~370 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S9   | 종료·대기 카드 폭 420 ≤640 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S10  | 카드 간격 16/16/16/16/16 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | S10  | 시트 간격 16/16/16 | PASS
+FM09/on-group-member-guest-report              | 1280x720 | MS3  | 카드 Δx0 Δy0 | PASS

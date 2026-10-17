@@ -70,11 +70,11 @@ for (const r of fitRows) {
   if (n) failCombos++;
   lines.push(`${(r.id + '/' + r.c).padEnd(26)} | ${r.vp.padEnd(8)} | ${(r.scrollH + '/' + r.vh).padEnd(9)} | 내부스크롤 ${String(r.inner).padStart(4)} | ${n ? 'FAIL' : 'PASS'}${n ? ' ' + Object.entries(b).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(',') : ''}`);
 }
-const BANNED_FILE = ['클래스 코드', '참여 코드', '참여코드', '코드 복사', '코드 입력', '6자리', '게스트', '인증 코드', '코드', 'OTP', 'QR', '귀', '세션', '수업', '참여하기', '오픈', '그래도 시작', '1:N'];
+const BANNED_FILE = ['회원 전용', '초대 기반 입장', '초대받은 회원만', '초대한 회원만', '로그인한 계정으로 입장해요', '30일 보관', '관리자가 삭제를 지시하기 전까지', '동의하고 계속하기', '녹음과 AI 기록', '대기 그만하기', '대시보드로 이동', '6자리', 'LINK BAND 연결이 필요해요', '필수 클래스라', '회원이 LINK BAND를 연결해야', '알림 받음', '전달되지 않았어요', '발송 완료', '발송 실패', '수업', '세션', '참여하기', '오픈', '그래도 시작', '1:N', '게스트', '인증 코드', 'OTP', '인증 요청', 'QR', '참여 코드', '참여코드', '코드 복사', 'LINK BAND (필수)', '입장 전에 연결을 확인해요'];
 const fileHits = Object.fromEntries(BANNED_FILE.map((w) => [w, html.split(w).length - 1]));
 const fileHitTotal = Object.values(fileHits).reduce((a, v) => a + v, 0);
 const staticFail = (external ? 1 : 0) + (breathing ? 1 : 0) + (fileHitTotal ? 1 : 0);
-L.push(`MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — fit 측정 [${MODE === 'before' ? '수정 전' : '수정 후'}]`);
+L.push(`MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM04b, FM10) — fit 측정 [${MODE === 'before' ? '수정 전' : '수정 후'}]`);
 L.push(`측정: tools/member-a-run.mjs (+ member-a-lib.mjs) · 대상 ${REG.filter((s) => !ONLY || ONLY.has(s.id)).length}개 화면 · ${new Set(fitRows.map((r) => r.id + '/' + r.c)).size}개 케이스 × ${VPS.length}개 뷰포트 = ${fitRows.length}개 조합 · 서버: http://localhost:5301 (서빙 루트 designs/)`);
 L.push(`판정: ${failCombos === 0 && !staticFail ? 'PASS' : 'FAIL'} (조합 위반 ${failCombos}건 / ${fitRows.length}건, 정적 grep 위반 ${staticFail}건)`);
 L.push('');
@@ -82,7 +82,7 @@ L.push('항목별 위반 건수 (조합 합계):');
 for (const k of Object.keys(CAT)) L.push(`  ${CAT[k].padEnd(26)} ${String(totals[k]).padStart(4)}`);
 L.push(`  ${'외부 http 리소스 0'.padEnd(26)} ${String(external).padStart(4)}`);
 L.push(`  ${'호흡 지시 문구 grep 0'.padEnd(26)} ${String(breathing).padStart(4)}`);
-L.push(`  ${'금지어 파일 grep(코드·귀·게스트·OTP·QR 등)'.padEnd(26)} ${String(fileHitTotal).padStart(4)}  ` + Object.entries(fileHits).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(' '));
+L.push(`  ${'금지어 파일 grep(R4/R5 충돌 문구)'.padEnd(26)} ${String(fileHitTotal).padStart(4)}  ` + Object.entries(fileHits).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(' '));
 L.push('');
 L.push('셸형 내부 스크롤 요건: FM01(홈)·FM03(상세)는 내부 스크롤 0, FM02(목록)만 허용');
 const innerBad = fitRows.filter((r) => (r.id === 'FM01' || r.id === 'FM03') && r.inner > 0);
@@ -107,7 +107,7 @@ fs.writeFileSync(path.join(D, `fit/member-a-fit${suffix}.txt`), L.join('\n') + '
 const RULE = { S1: '단독 요소 중심축', S2: '좌우 여백 동일', S3: '상단 바 좌우 대칭', S4: 'PiP 짝 가운데(해당 없음)', S5: '시트 분기(세로형=바텀)', S6: '균등 분배', S7: '본문 세로 중앙', S8: '박스 폭 동일', S9: '중앙 컬럼 max-width', S10: '8배수 간격', MS3: '전체 화면 정중앙' };
 const fails = symRows.filter((r) => !r.pass);
 const S = [];
-S.push(`MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — 좌우 대칭·비율 균형 측정 [${MODE === 'before' ? '수정 전' : '수정 후'}] (균형.md S1~S10, MS3)`);
+S.push(`MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM04b, FM10) — 좌우 대칭·비율 균형 측정 [${MODE === 'before' ? '수정 전' : '수정 후'}] (균형.md S1~S10, MS3)`);
 S.push(`측정: tools/member-a-run.mjs · ${new Set(symRows.map((r) => r.id)).size}개 케이스 × ${VPS.length}개 뷰포트 · 총 검사 ${symRows.length}건`);
 S.push(`위반 ${fails.length}건 / 전체 ${symRows.length}건`);
 S.push('');

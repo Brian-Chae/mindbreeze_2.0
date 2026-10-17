@@ -64,7 +64,7 @@
 .fl-field { display: flex; flex-direction: column; gap: 8px; }
 .fl-input { height: 52px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); color: var(--tx-hi); padding: 0 var(--sp-2); font: inherit; font-size: var(--fs-15); width: 100%; }
 .fl-input::placeholder { color: var(--tx-lo); }
-.fl-codebox { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.fl-codebox { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .fl-codebox > span { height: 56px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); display: grid; place-items: center; font-size: var(--fs-24); font-weight: 800; }
 .fl-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
 .fl-seg > button { min-height: 52px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 600; }

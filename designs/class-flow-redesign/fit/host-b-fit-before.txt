@@ -1,5 +1,5 @@
-# host-b before — 화면 7 / 케이스 73 / 스크린샷 292
-# fit: 케이스×뷰포트 292건 중 FAIL 48건 (PASS 244)
+# host-b before — 화면 7 / 케이스 76 / 스크린샷 304
+# fit: 케이스×뷰포트 304건 중 FAIL 0건 (PASS 304)
 # 파일 전체 정적 grep (host-b.html)
 #   이모지 0건 / 문자 글리프(✓ ✕ ← → ‹ › • ● ○ ×) 0건
 #   R1 금지어(파일 전체, 화면 텍스트+인덱스 표 포함): 코드 0 / 귀 0 / 게스트 0 / OTP 0 / QR 0 / 6자리 0 / 인증 코드 0
@@ -8,94 +8,30 @@
 #   화면 텍스트 기준 grep(글리프·금지어·영문 대문자 아이브로우·11px 이하)은 아래 케이스별 판정에 포함
 #   페이지 스크롤은 전 케이스 0. 내부 스크롤은 대기 회원 목록(.w-list)만 허용 — 발생 케이스는 줄 끝 [내부스크롤] 표기
 
-FAIL  FH05 ok 390x844
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 정상은 5단계 중 4단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 ok 834x1194
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 정상은 5단계 중 4단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 ok 1194x834
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 정상은 5단계 중 4단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 ok 1280x720
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 정상은 5단계 중 4단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 quiet 390x844
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 조용해요는 5단계 중 1단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 quiet 834x1194
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 조용해요는 5단계 중 1단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 quiet 1194x834
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 조용해요는 5단계 중 1단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 quiet 1280x720
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-        - R3-1 조용해요는 5단계 중 1단계 채움이어야 함(빈 단계 -1)
-FAIL  FH05 ok-iconmeter 390x844
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 ok-iconmeter 834x1194
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 ok-iconmeter 1194x834
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 ok-iconmeter 1280x720
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 quiet-iconmeter 390x844
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 quiet-iconmeter 834x1194
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 quiet-iconmeter 1194x834
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
-FAIL  FH05 quiet-iconmeter 1280x720
-        - R2-2 권한 거부·장치 없음·미지원은 기존 가로 막대 유지(0)
+PASS  FH05 ok 390x844
+PASS  FH05 ok 834x1194
+PASS  FH05 ok 1194x834
+PASS  FH05 ok 1280x720
+PASS  FH05 quiet 390x844
+PASS  FH05 quiet 834x1194
+PASS  FH05 quiet 1194x834
+PASS  FH05 quiet 1280x720
 PASS  FH05 cam-off 390x844
 PASS  FH05 cam-off 834x1194
 PASS  FH05 cam-off 1194x834
 PASS  FH05 cam-off 1280x720
-FAIL  FH05 mic-off 390x844
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off 834x1194
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off 1194x834
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off 1280x720
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off-warn 390x844
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off-warn 834x1194
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off-warn 1194x834
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-off-warn 1280x720
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-denied 390x844
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-denied 834x1194
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-denied 1194x834
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
-FAIL  FH05 mic-denied 1280x720
-        - R3-1 세로 레벨 미터 1개 (0이어야 함)
-        - R3-1 아이콘 링 버튼 0개 (1이어야 함)
+PASS  FH05 mic-off 390x844
+PASS  FH05 mic-off 834x1194
+PASS  FH05 mic-off 1194x834
+PASS  FH05 mic-off 1280x720
+PASS  FH05 mic-off-warn 390x844
+PASS  FH05 mic-off-warn 834x1194
+PASS  FH05 mic-off-warn 1194x834
+PASS  FH05 mic-off-warn 1280x720
+PASS  FH05 mic-denied 390x844
+PASS  FH05 mic-denied 834x1194
+PASS  FH05 mic-denied 1194x834
+PASS  FH05 mic-denied 1280x720
 PASS  FH05 cam-denied 390x844
 PASS  FH05 cam-denied 834x1194
 PASS  FH05 cam-denied 1194x834
@@ -112,18 +48,10 @@ PASS  FH05 offline 390x844
 PASS  FH05 offline 834x1194
 PASS  FH05 offline 1194x834
 PASS  FH05 offline 1280x720
-FAIL  FH06 g-on-0 390x844
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-on-0 834x1194
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-on-0 1194x834
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-on-0 1280x720
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
+PASS  FH06 g-on-0 390x844
+PASS  FH06 g-on-0 834x1194
+PASS  FH06 g-on-0 1194x834
+PASS  FH06 g-on-0 1280x720
 PASS  FH06 g-on-3 390x844
 PASS  FH06 g-on-3 834x1194
 PASS  FH06 g-on-3 1194x834
@@ -136,18 +64,10 @@ PASS  FH06 g-on-12 390x844  [내부스크롤: w-list]
 PASS  FH06 g-on-12 834x1194
 PASS  FH06 g-on-12 1194x834
 PASS  FH06 g-on-12 1280x720  [내부스크롤: w-list]
-FAIL  FH06 g-off-0 390x844
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-off-0 834x1194
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-off-0 1194x834
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 g-off-0 1280x720
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
+PASS  FH06 g-off-0 390x844
+PASS  FH06 g-off-0 834x1194
+PASS  FH06 g-off-0 1194x834
+PASS  FH06 g-off-0 1280x720
 PASS  FH06 g-off-3 390x844
 PASS  FH06 g-off-3 834x1194
 PASS  FH06 g-off-3 1194x834
@@ -160,18 +80,10 @@ PASS  FH06 g-off-12 390x844  [내부스크롤: w-list]
 PASS  FH06 g-off-12 834x1194
 PASS  FH06 g-off-12 1194x834
 PASS  FH06 g-off-12 1280x720  [내부스크롤: w-list]
-FAIL  FH06 o-on-0 390x844
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-on-0 834x1194
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-on-0 1194x834
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-on-0 1280x720
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
+PASS  FH06 o-on-0 390x844
+PASS  FH06 o-on-0 834x1194
+PASS  FH06 o-on-0 1194x834
+PASS  FH06 o-on-0 1280x720
 PASS  FH06 o-on-1 390x844
 PASS  FH06 o-on-1 834x1194
 PASS  FH06 o-on-1 1194x834
@@ -180,18 +92,10 @@ PASS  FH06 o-on-1r 390x844
 PASS  FH06 o-on-1r 834x1194
 PASS  FH06 o-on-1r 1194x834
 PASS  FH06 o-on-1r 1280x720
-FAIL  FH06 o-off-0 390x844
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-off-0 834x1194
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-off-0 1194x834
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH06 o-off-0 1280x720
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
+PASS  FH06 o-off-0 390x844
+PASS  FH06 o-off-0 834x1194
+PASS  FH06 o-off-0 1194x834
+PASS  FH06 o-off-0 1280x720
 PASS  FH06 o-off-1 390x844
 PASS  FH06 o-off-1 834x1194
 PASS  FH06 o-off-1 1194x834
@@ -216,6 +120,14 @@ PASS  FH06 g-on-8-none 390x844  [내부스크롤: w-list]
 PASS  FH06 g-on-8-none 834x1194
 PASS  FH06 g-on-8-none 1194x834
 PASS  FH06 g-on-8-none 1280x720
+PASS  FH06 g-on-0-inv0 390x844
+PASS  FH06 g-on-0-inv0 834x1194
+PASS  FH06 g-on-0-inv0 1194x834
+PASS  FH06 g-on-0-inv0 1280x720
+PASS  FH06 g-off-0-inv0 390x844
+PASS  FH06 g-off-0-inv0 834x1194
+PASS  FH06 g-off-0-inv0 1194x834
+PASS  FH06 g-off-0-inv0 1280x720
 PASS  FH06 g-on-3-wait 390x844
 PASS  FH06 g-on-3-wait 834x1194
 PASS  FH06 g-on-3-wait 1194x834
@@ -316,22 +228,26 @@ PASS  FH07 one-wait 390x844
 PASS  FH07 one-wait 834x1194
 PASS  FH07 one-wait 1194x834
 PASS  FH07 one-wait 1280x720
+PASS  FH07 empty-wait 390x844
+PASS  FH07 empty-wait 834x1194
+PASS  FH07 empty-wait 1194x834
+PASS  FH07 empty-wait 1280x720
+PASS  FH07 empty-wait-offline 390x844
+PASS  FH07 empty-wait-offline 834x1194
+PASS  FH07 empty-wait-offline 1194x834
+PASS  FH07 empty-wait-offline 1280x720
+PASS  FH07 empty-wait-one 390x844
+PASS  FH07 empty-wait-one 834x1194
+PASS  FH07 empty-wait-one 1194x834
+PASS  FH07 empty-wait-one 1280x720
 PASS  FH08 choose 390x844
 PASS  FH08 choose 834x1194
 PASS  FH08 choose 1194x834
 PASS  FH08 choose 1280x720
-FAIL  FH08 choose-0 390x844
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH08 choose-0 834x1194
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH08 choose-0 1194x834
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
-FAIL  FH08 choose-0 1280x720
-        - R3-2 시작하기가 비활성(대기 0명) — 항상 활성이어야 함
-        - R3-2 대기 0명 상태줄 문구(회원이 입장하면 시작할 수 있어요)
+PASS  FH08 choose-0 390x844
+PASS  FH08 choose-0 834x1194
+PASS  FH08 choose-0 1194x834
+PASS  FH08 choose-0 1280x720
 PASS  FH08 confirm 390x844
 PASS  FH08 confirm 834x1194
 PASS  FH08 confirm 1194x834

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="../class-player-redesign/tokens.css">
 <link rel="stylesheet" href="flow-base.css">
 <style>
-/* 워커 전용 스타일 (.w- 접두어) — member-a: FM01~FM05, FM10 */
+/* 워커 전용 스타일 (.w- 접두어) — member-a: FM01~FM05, FM04b, FM10 */
 body { background: #12081C; word-break: keep-all; overflow-wrap: break-word; }
 .w-br { display: none; }
 @media (max-width: 479px) { .w-br { display: block; flex-basis: 100%; height: 0; margin-top: -8px; } }
@@ -143,6 +143,33 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .w-info > div span { color: var(--tx-lo); font-size: var(--fs-13); flex: none; }
 .w-info > div b { font-weight: 600; text-align: right; }
 .w-tc { display: flex; flex-direction: column; gap: 16px; }
+/* FM04 코드 입력 · FM04b 정보 입력 */
+.w-code-card { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
+.w-code-card .w-logo.d { margin: 0 auto; }
+.w-code-card .fl-sub { margin-top: -8px; }
+.w-codewrap { padding: 0; }
+.w-codebox { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.w-codebox > span { height: 64px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); display: block; }
+.w-codebox > span.on { border: 2px solid var(--mb-lavender); }
+.w-codebox > span.bad { border: 2px solid var(--warn); background: var(--warn-bg); }
+.w-codebox input { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: var(--tx-hi); text-align: center; font: inherit; font-size: var(--fs-36); font-weight: 800; border-radius: 12px; }
+.w-codebox input:disabled { opacity: 0.6; }
+.w-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; font-size: var(--fs-13); color: var(--tx-mid); text-align: center; }
+.w-hint.bad { color: var(--warn); font-weight: 600; }
+.w-wide { --col-w: 640px; }
+.w-form { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.w-form .span2 { grid-column: 1 / -1; }
+@media (min-width: 640px) { .w-form { grid-template-columns: 1fr 1fr; } }
+.w-form .fl-input { height: 48px; }
+.w-form .fl-seg > button { min-height: 48px; }
+.w-form .fl-input[readonly] { background: rgba(255,255,255,0.06); color: var(--tx-mid); }
+.w-form .fl-input.bad { border: 1.5px solid var(--warn); }
+.w-form .fl-seg > button[disabled] { opacity: 0.7; }
+.w-err { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); font-weight: 600; color: var(--warn); }
+.w-form .w-fnote.left { align-self: end; min-height: 48px; }
+.w-sum .m .ic { flex: none; }
+.w-link { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 700; color: var(--mb-purple); background: transparent; }
+@media (max-width: 479px) and (max-height: 900px) { .w-form { gap: 16px; } .w-wide .fl-body { padding-top: 8px; padding-bottom: 8px; } }
 .w-tc .fl-note { text-align: center; }
 
 /* ───────── 개발자 인덱스 (?index=1) ───────── */
@@ -284,6 +311,7 @@ var fm01 = function (k) {
     list = '<div class="w-sec"><h2>이번 주 클래스</h2><span>' + d.rows.length + '개</span></div>' +
       d.rows.map(function (r) { return '<a class="sh-card w-row" href="#" data-go="FM03:scheduled"><span class="tx"><b>' + r[0].title + '</b><span class="s">' + r[1] + ' · ' + r[0].host + '</span></span>' + stChip(r[2], false) + '</a>'; }).join('');
   }
+  list += '<button class="w-link" type="button" data-go="FM04:default">' + I('key', 'md') + '코드로 입장하기</button>';
   return shell({ active: 'home', head: headHome('안녕하세요, 지은님', '<button class="w-hbtn" type="button" aria-label="알림">' + I('bell') + '<i class="w-dot"></i></button>'), body: hero + list });
 };
 
@@ -297,7 +325,7 @@ var card = function (o) {
     (open ? '<button class="sh-btn" type="button" data-go="FM05:member">입장하기</button>' : '') + '</article>';
 };
 var invitedCard = function () {
-  return '<article class="sh-card w-ccard" data-go="FM05:member"><div class="w-crow"><span class="w-ctype">' + C.orient.type + '</span>' + stChip('invited', false) + '</div>' +
+  return '<article class="sh-card w-ccard" data-go="FM03:scheduled"><div class="w-crow"><span class="w-ctype">' + C.orient.type + '</span>' + stChip('invited', false) + '</div>' +
     '<h3 class="w-ctitle">' + C.orient.title + '</h3>' +
     '<div class="w-cmeta">' + I('user', 'sm') + C.orient.host + '가 초대했어요</div>' +
     '<div class="w-cmeta">' + I('clock', 'sm') + '10월 23일 (금) 오후 2:00</div>' +
@@ -333,7 +361,7 @@ var fm02 = function (k) {
 
 /* ───────── FM03 클래스 상세 ───────── */
 var prepRows = function (m) {
-  var band = m.band === 'optional' ? ['activity', 'LINK BAND (선택)', '착용하지 않아도 모든 기능을 쓸 수 있어요'] : m.band === 'required' ? ['activity', 'LINK BAND (필수)', m.mode === 'online' ? '입장 전에 연결을 확인해요' : '현장에서 착용을 도와드려요'] : null;
+  var band = m.band === 'optional' ? ['activity', 'LINK BAND (선택)', '착용하지 않아도 모든 기능을 쓸 수 있어요'] : m.band === 'required' ? ['activity', 'LINK BAND (권장)', 'LINK BAND 사용을 권장해요. 없어도 참가할 수 있어요'] : null;
   if (m.mode === 'online') return [['moon', '조용한 곳', '방해받지 않는 곳에서 입장해요'], ['headphones', '이어폰', '안내 음성이 또렷하게 들려요'], band || ['phone', '휴대폰 무음', '진행 중 알림이 울리지 않게 해요']];
   return [['map-pin', '장소', ADDR], ['phone', '휴대폰 무음', '진행 중 알림이 울리지 않게 해요'], band || ['clock', '10분 전 도착', '시작 전에 자리를 잡아요']];
 };
@@ -368,23 +396,74 @@ var fm03 = function (k) {
 /* ───────── 몰입형 프레임 ───────── */
 var imm = function (o) {
   var top = o.top === false ? '' : '<header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn" type="button" aria-label="뒤로" data-go="' + (o.back || 'FM01:open') + '">' + I('chev-l') + '</button></div><h1 class="fl-top-title">' + o.title + '</h1><div class="fl-top-r"><span class="w-ph" aria-hidden="true"></span></div></header>';
-  return '<div class="fl-root w-imm" data-kind="imm"><div class="fl-backdrop" style="background-image:url(' + BG(o.bg) + ')"></div><div class="fl-layer">' + top +
+  return '<div class="fl-root w-imm' + (o.cls ? ' ' + o.cls : '') + '" data-kind="imm"><div class="fl-backdrop" style="background-image:url(' + BG(o.bg) + ')"></div><div class="fl-layer">' + top +
     '<main class="fl-body"><div class="fl-col">' + o.body + '</div></main>' + (o.foot ? '<footer class="fl-foot"><div class="fl-col">' + o.foot + '</div></footer>' : '') + '</div></div>';
 };
 
-/* ───────── FM05 입장 정보 ───────── */
+/* ───────── FM04 코드 입력 ───────── */
+var FM04 = {
+  'default': { v: '', hint: ['key', '숫자 4자리를 모두 입력하면 확인할 수 있어요', ''], on: 0, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  filled: { v: '004', hint: ['key', '숫자 4자리를 모두 입력하면 확인할 수 있어요', ''], on: 3, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  'leading-zero': { v: '0042', hint: ['circle-check', '4자리를 모두 입력했어요', ''], on: -1, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  error: { v: '0047', hint: ['circle-alert', '코드를 확인해 주세요', 'bad'], on: -1, bad: true, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  throttled: { v: '0047', hint: ['clock', '잠시 후 다시 시도해 주세요', 'bad'], on: -1, lock: true, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  member: { v: '0042', hint: ['user', '내 계정 정보로 다음 단계를 채워 드려요', ''], on: -1, note: '지은님으로 이어서 입장해요', go: 'FM04b:member' }
+};
+var fm04 = function (k) {
+  var d = FM04[k], cells = '';
+  for (var i = 0; i < 4; i++) {
+    var ch = d.v.charAt(i);
+    cells += '<span class="' + (d.bad ? 'bad' : (d.on === i ? 'on' : '')) + '"><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="' + (i + 1) + '번째 숫자" value="' + ch + '"' + (d.lock ? ' disabled' : '') + '></span>';
+  }
+  var dis = d.v.length < 4 || d.lock;
+  var body = '<section class="fl-card strong w-code-card" aria-label="코드 입력">' + LOGO('w-logo d') +
+    '<h2 class="fl-h1">입장 코드를 입력해 주세요</h2><p class="fl-sub">상담사가 알려 준 숫자 4자리예요</p>' +
+    '<div class="w-codewrap"><div class="w-codebox" role="group" aria-label="입장 코드 4자리">' + cells + '</div></div>' +
+    '<div class="w-hint ' + d.hint[2] + '"' + (d.hint[2] ? ' role="alert"' : '') + '>' + I(d.hint[0], 'sm') + d.hint[1] + '</div></section>';
+  var foot = '<div class="w-fnote">' + I(k === 'member' ? 'user' : 'log-in', 'sm') + d.note + '</div>' +
+    '<button class="fl-btn primary block" type="button"' + (dis ? ' disabled' : '') + ' data-go="' + d.go + '">코드 확인</button>';
+  return imm({ bg: 1, title: '코드로 입장', back: 'FM01:open', body: body, foot: foot });
+};
+
+/* ───────── FM04b 개인정보 입력 ───────── */
+var fm04b = function (k) {
+  var mem = k === 'member', filled = k === 'filled' || k === 'mismatch' || mem;
+  var V = { name: '', birth: '', email: '', email2: '', g: -1 };
+  if (filled) V = { name: '지은', birth: '1990.03.12', email: 'jieun@example.com', email2: k === 'mismatch' ? 'jieun@exampel.com' : 'jieun@example.com', g: 0 };
+  if (k === 'error') V = { name: '', birth: '1990.13', email: 'jieun@', email2: '', g: 0 };
+  var err = function (t) { return '<div class="w-err" role="alert">' + I('circle-alert', 'sm') + t + '</div>'; };
+  var fld = function (id, label, inner, e, cls) { return '<div class="fl-field ' + (cls || '') + '"><label class="fl-label" for="' + id + '">' + label + '</label>' + inner + (e ? err(e) : '') + '</div>'; };
+  var inp = function (id, v, ph, o) { o = o || {}; return '<input class="fl-input' + (o.bad ? ' bad' : '') + '" id="' + id + '" type="' + (o.type || 'text') + '"' + (o.mode ? ' inputmode="' + o.mode + '"' : '') + ' autocomplete="off" placeholder="' + ph + '" value="' + v + '"' + (mem ? ' readonly' : '') + (o.bad ? ' aria-invalid="true"' : '') + '>'; };
+  var G = ['여성', '남성', '선택 안 함'];
+  var seg = '<div class="fl-seg" role="radiogroup" aria-label="성별">' + G.map(function (g, i) { return '<button type="button" role="radio" aria-checked="' + (V.g === i) + '" class="' + (V.g === i ? 'on' : '') + '"' + (mem ? ' disabled' : '') + '>' + g + '</button>'; }).join('') + '</div>';
+  var form = '<section class="fl-card sm w-form" aria-label="정보 입력">' +
+    fld('nm', '이름', inp('nm', V.name, '이름을 입력해 주세요', { bad: k === 'error' }), k === 'error' ? '이름을 입력해 주세요' : '') +
+    fld('gd', '성별', seg) +
+    fld('bd', '생년월일', inp('bd', V.birth, '예: 1990.03.12', { mode: 'numeric', bad: k === 'error' }), k === 'error' ? '생년월일을 다시 확인해 주세요' : '') +
+    fld('em', '이메일', inp('em', V.email, 'name@example.com', { type: 'email', mode: 'email', bad: k === 'error' }), k === 'error' ? '이메일 형식을 확인해 주세요' : '') +
+    (mem ? '' : fld('em2', '이메일 확인', inp('em2', V.email2, '이메일을 한 번 더 입력해 주세요', { type: 'email', mode: 'email', bad: k === 'mismatch' }), k === 'mismatch' ? '이메일이 서로 달라요' : '')) +
+    '<div class="w-fnote left' + (mem ? ' span2' : '') + '">' + I('mail', 'sm') + '리포트는 입력한 이메일로 보내 드려요</div></section>';
+  var sum = '<section class="fl-card sm w-sum" aria-label="클래스 요약"><h2>' + C.med.title + '</h2>' +
+    '<div class="m"><span>' + I('clock', 'sm') + '오늘 오후 3:00 시작</span><span>' + I('user', 'sm') + C.med.host + '</span></div></section>';
+  var ready = k === 'filled' || k === 'mismatch' || k === 'error' || mem;
+  var foot = '<button class="fl-btn primary block" type="button"' + (ready ? '' : ' disabled') + ' data-go="' + (mem ? 'FM05:member' : 'FM05:guest-name') + '">입장하기</button>';
+  return imm({ bg: 1, title: '정보를 입력해 주세요', back: mem ? 'FM04:member' : 'FM04:default', body: sum + form, foot: foot, cls: 'w-wide' });
+};
+
+/* ───────── FM05 입장 확인 ───────── */
 var FM05 = {
-  member: { c: C.med, m: M_ONLINE_GROUP_OPT, wait: false, time: '오늘 오후 3:00 시작' },
-  'member-wait': { c: C.med, m: M_ONLINE_GROUP_OPT, wait: true, time: '오늘 오후 3:00 시작' },
-  'member-offline': { c: C.clin, m: M_OFFLINE_ONE_NONE, wait: false, time: '오늘 오후 3:00 시작', addr: ADDR }
+  member: { c: C.med, m: M_ONLINE_GROUP_OPT, wait: false, time: '오늘 오후 3:00 시작', who: '계정 정보로 확인했어요', back: 'FM04b:member' },
+  'guest-name': { c: C.med, m: M_ONLINE_GROUP_OPT, wait: false, time: '오늘 오후 3:00 시작', who: '입력한 정보로 확인했어요', back: 'FM04b:default' },
+  'member-wait': { c: C.med, m: M_ONLINE_GROUP_OPT, wait: true, time: '오늘 오후 3:00 시작', who: '계정 정보로 확인했어요', back: 'FM04b:member' },
+  'member-offline': { c: C.clin, m: M_OFFLINE_ONE_NONE, wait: false, time: '오늘 오후 3:00 시작', addr: ADDR, who: '계정 정보로 확인했어요', back: 'FM04b:member' }
 };
 var fm05 = function (k) {
   var d = FM05[k];
   var sum = '<section class="fl-card sm w-sum" aria-label="클래스 요약"><h2>' + d.c.title + '</h2>' +
     '<div class="m"><span>' + I('clock', 'sm') + d.time + '</span><span>' + I('user', 'sm') + d.c.host + ' 진행</span>' + (d.addr ? '<span>' + I('map-pin', 'sm') + d.addr + '</span>' : '') + '</div>' +
     '<div class="c">' + chips(d.m, 'fl-chip') + '</div></section>';
-  var who = '<section class="fl-card sm w-who" aria-label="입장 정보"><div class="id"><i>' + I('user') + '</i><div><b>지은님</b><span class="s">로그인한 계정으로 입장해요</span></div>' + I('circle-check', 'ok') + '</div>' +
-    '<div class="w-fnote left">' + I('info', 'sm') + '이름은 프로필에서 바꿀 수 있어요</div></section>';
+  var who = '<section class="fl-card sm w-who" aria-label="입장 정보"><div class="id"><i>' + I('user') + '</i><div><b>지은님</b><span class="s">' + d.who + '</span></div>' + I('circle-check', 'ok') + '</div>' +
+    '<div class="w-fnote left">' + I('info', 'sm') + '정보를 바꾸려면 이전 화면으로 돌아가요</div></section>';
   var note, cta;
   if (d.wait) {
     note = '<div class="w-fnote">' + I('clock', 'sm') + '열리면 자동으로 입장해요 · 이 화면을 열어 두세요</div>';
@@ -393,15 +472,16 @@ var fm05 = function (k) {
     note = '<div class="w-fnote">' + I('circle-check', 'sm') + '지금 입장할 수 있어요 · 준비는 2분이면 끝나요</div>';
     cta = '<button class="fl-btn primary block" type="button">' + I('log-in', 'md') + '입장하기</button>';
   }
-  return imm({ bg: 1, title: '입장 확인', back: 'FM01:open', body: sum + who, foot: note + cta });
+  return imm({ bg: 1, title: '입장 확인', back: d.back, body: sum + who, foot: note + cta });
 };
 
 /* ───────── FM10 취소됨 · 오류 · 네트워크 끊김 ───────── */
 var FM10 = {
   cancelled: { ic: 'calendar-x', warn: false, h: '클래스가 취소됐어요', p: '진행자가 클래스를 취소했어요.<br>새 일정이 정해지면 알려드릴게요.', rows: [['클래스', C.med.title], ['원래 일정', '오늘 오후 3:00']], note: '입장했던 내용은 저장되지 않아요.', a: ['클래스 목록 보기', 'FM02:list'], b: ['홈으로', 'FM01:open'], bg: 4 },
   error: { ic: 'triangle-alert', warn: true, h: '잠시 문제가 생겼어요', p: '클래스 정보를 불러오지 못했어요.<br>잠시 후 다시 시도해 주세요.', rows: [['클래스', C.med.title], ['상태', '불러오지 못했어요']], note: '문제가 계속되면 진행자에게 알려 주세요.', a: ['다시 시도', 'FM03:open'], b: ['홈으로', 'FM01:open'], bg: 4 },
-  closed: { ic: 'calendar-x', warn: false, h: '이미 끝난 클래스예요', p: '종료되었거나 취소된 클래스예요.<br>다른 클래스를 확인해 주세요.', rows: [['클래스', C.med.title], ['상태', '종료됨']], note: '초대받은 다른 클래스는 목록에서 볼 수 있어요.', a: ['클래스 목록 보기', 'FM02:list'], b: ['홈으로', 'FM01:open'], bg: 4 },
+  closed: { ic: 'calendar-x', warn: false, h: '이미 끝난 클래스예요', p: '종료되었거나 취소된 클래스예요.<br>다른 클래스를 확인해 주세요.', rows: [['클래스', C.med.title], ['상태', '종료됨']], note: '다른 클래스는 목록에서 확인할 수 있어요.', a: ['클래스 목록 보기', 'FM02:list'], b: ['홈으로', 'FM01:open'], bg: 4 },
   notyet: { ic: 'clock', warn: false, h: '아직 열리지 않았어요', p: '오늘 오후 3:00에 열려요.<br>먼저 입장해서 기다릴 수 있어요.', rows: [['클래스', C.med.title], ['시작', '오늘 오후 3:00']], note: '열리면 자동으로 입장해요.', a: ['입장 대기하기', 'FM05:member-wait'], b: ['홈으로', 'FM01:open'], bg: 1 },
+  'entry-expired': { ic: 'key', warn: false, h: '입장 정보가 만료됐어요', p: '입장 정보를 더는 쓸 수 없어요.<br>코드를 다시 입력해 주세요.', rows: [['클래스', C.med.title], ['상태', '다시 입력이 필요해요']], note: '코드는 상담사에게 받을 수 있어요.', a: ['코드 입력하기', 'FM04:default'], b: ['나가기', 'FM01:open'], bg: 4 },
   offline: { ic: 'wifi-off', warn: true, h: '네트워크 연결이 끊겼어요', p: '연결이 돌아오면 자동으로 이어져요.<br>이 화면을 닫지 말고 기다려 주세요.', rows: [['클래스', C.med.title], ['연결 상태', '다시 연결하는 중']], note: '와이파이나 모바일 데이터를 확인해 주세요.', a: ['다시 연결', 'FM03:open'], b: ['나가기', 'FM01:open'], bg: 4 }
 };
 var fm10 = function (k) {
@@ -417,7 +497,8 @@ var fm10 = function (k) {
 };
 
 /* ───────── 화면·케이스 인덱스 ───────── */
-var A3 = 'A3 (클래스 응답에 시작 시각 포함) · A7 (초대 기반 입장 전제)';
+var A3 = 'A3 (클래스 응답에 시작 시각 포함) · R4: 로그인 없는 4자리 코드 입장 / R5: 개인정보 입력';
+var AR = 'R4: 로그인 없는 4자리 코드 입장 / R5: 개인정보 입력';
 var A2 = 'A2 (방식·장소 서버 저장)';
 var REG = [
   { id: 'FM01', name: '홈 — 다음 클래스 히어로', kind: '셸형', fn: fm01, cases: [
@@ -438,8 +519,22 @@ var REG = [
     { k: 'open-1on1', d: '입장 가능 · 온라인·1:1·LINK BAND 필수', a: A2 },
     { k: 'done', d: '완료 · 리포트 보기', a: '-' },
     { k: 'cancelled', d: '취소', a: '-' }] },
-  { id: 'FM05', name: '입장 확인 (회원 전용)', kind: '몰입형', fn: fm05, cases: [
+  { id: 'FM04', name: '코드 입력 (4자리 숫자 · 로그인 없이)', kind: '몰입형', fn: fm04, cases: [
+    { k: 'default', d: '비로그인 · 빈 4칸 · 코드 확인 비활성', a: AR },
+    { k: 'filled', d: '입력 중 `004` · 4자리 미만이라 버튼 비활성', a: AR },
+    { k: 'leading-zero', d: '`0042` 완성 · 앞자리 0 보존 · 버튼 활성', a: AR },
+    { k: 'error', d: '없는·틀린·종료 코드 모두 같은 안내 `코드를 확인해 주세요`', a: AR },
+    { k: 'throttled', d: '시도 제한 `잠시 후 다시 시도해 주세요`', a: AR },
+    { k: 'member', d: '로그인 회원 · 같은 화면 · 안내만 다름', a: AR }] },
+  { id: 'FM04b', name: '개인정보 입력 (이름·성별·생년월일·이메일)', kind: '몰입형', fn: fm04b, cases: [
+    { k: 'default', d: '비로그인 · 빈 입력 · 입장하기 비활성', a: AR },
+    { k: 'filled', d: '모두 입력 · 입장하기 활성', a: AR },
+    { k: 'error', d: '필수 누락·형식 오류 인라인', a: AR },
+    { k: 'mismatch', d: '이메일 확인 불일치 `이메일이 서로 달라요`', a: AR },
+    { k: 'member', d: '로그인 회원 · 계정 값 채움 · 이메일 재입력 생략', a: AR }] },
+  { id: 'FM05', name: '입장 확인', kind: '몰입형', fn: fm05, cases: [
     { k: 'member', d: '열림 후 · 온라인·그룹·LINK BAND 선택', a: A3 },
+    { k: 'guest-name', d: '열림 후 · 비로그인 · 입력한 이름 표시', a: A3 },
     { k: 'member-wait', d: '열림 전 · 자동 입장 대기 카드', a: A3 },
     { k: 'member-offline', d: '열림 후 · 오프라인·1:1·LINK BAND 사용 안 함 (장소 표시)', a: A3 + ' + ' + A2 }] },
   { id: 'FM10', name: '취소됨 · 종료 · 아직 열리지 않음 · 오류 · 네트워크 끊김 (회원 쪽)', kind: '몰입형', fn: fm10, cases: [
@@ -447,7 +542,8 @@ var REG = [
     { k: 'closed', d: '종료·취소된 클래스 (구 입장 오류 흡수)', a: '-' },
     { k: 'notyet', d: '아직 열리지 않음 → 입장 대기하기 (구 입장 오류 흡수)', a: A3 },
     { k: 'error', d: '오류 (서버 메시지 원문 숨김)', a: '-' },
-    { k: 'offline', d: '네트워크 끊김', a: '-' }] }
+    { k: 'offline', d: '네트워크 끊김', a: '-' },
+    { k: 'entry-expired', d: '입장 정보 만료 → 코드 입력하기 (R4 신규)', a: AR }] }
 ];
 
 var q = new URLSearchParams(location.search);

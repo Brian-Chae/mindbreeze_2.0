@@ -1,6 +1,6 @@
-MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — fit 측정 [수정 후]
-측정: tools/member-a-run.mjs (+ member-a-lib.mjs) · 대상 5개 화면 · 23개 케이스 × 4개 뷰포트 = 92개 조합 · 서버: http://localhost:5301 (서빙 루트 designs/)
-판정: PASS (조합 위반 0건 / 92건, 정적 grep 위반 0건)
+MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM04b, FM10) — fit 측정 [수정 후]
+측정: tools/member-a-run.mjs (+ member-a-lib.mjs) · 대상 7개 화면 · 36개 케이스 × 4개 뷰포트 = 144개 조합 · 서버: http://localhost:5301 (서빙 루트 designs/)
+판정: PASS (조합 위반 0건 / 144건, 정적 grep 위반 0건)
 
 항목별 위반 건수 (조합 합계):
   페이지 스크롤 0                     0
@@ -15,7 +15,7 @@ MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — fit 측정 [수정 후]
   영문 대문자 아이브로우 0                0
   외부 http 리소스 0                 0
   호흡 지시 문구 grep 0               0
-  금지어 파일 grep(코드·귀·게스트·OTP·QR 등)    0  
+  금지어 파일 grep(R4/R5 충돌 문구)      0  
 
 셸형 내부 스크롤 요건: FM01(홈)·FM03(상세)는 내부 스크롤 0, FM02(목록)만 허용
   FM01/FM03 내부 스크롤 > 0 조합: 0건
@@ -36,7 +36,19 @@ FM03/open-offline          | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM03/open-1on1             | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM03/done                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM03/cancelled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/default               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/filled                | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/leading-zero          | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/error                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/throttled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/member                | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04b/default              | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04b/filled               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04b/error                | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04b/mismatch             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04b/member               | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM05/member                | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/guest-name            | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM05/member-wait           | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM05/member-offline        | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM10/cancelled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
@@ -44,6 +56,7 @@ FM10/closed                | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM10/notyet                | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM10/error                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM10/offline               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM10/entry-expired         | 390x844  | 844/844   | 내부스크롤    0 | PASS
 FM01/upcoming              | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM01/soon                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM01/open                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
@@ -59,7 +72,19 @@ FM03/open-offline          | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM03/open-1on1             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM03/done                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM03/cancelled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/default               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/filled                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/leading-zero          | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/error                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/throttled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/member                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04b/default              | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04b/filled               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04b/error                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04b/mismatch             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04b/member               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM05/member                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/guest-name            | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM05/member-wait           | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM05/member-offline        | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM10/cancelled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
@@ -67,6 +92,7 @@ FM10/closed                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM10/notyet                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM10/error                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM10/offline               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM10/entry-expired         | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
 FM01/upcoming              | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM01/soon                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM01/open                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
@@ -82,7 +108,19 @@ FM03/open-offline          | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM03/open-1on1             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM03/done                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM03/cancelled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/default               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/filled                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/leading-zero          | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/error                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/throttled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/member                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04b/default              | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04b/filled               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04b/error                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04b/mismatch             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04b/member               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM05/member                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/guest-name            | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM05/member-wait           | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM05/member-offline        | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM10/cancelled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
@@ -90,6 +128,7 @@ FM10/closed                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM10/notyet                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM10/error                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM10/offline               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM10/entry-expired         | 1194x834 | 834/834   | 내부스크롤    0 | PASS
 FM01/upcoming              | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM01/soon                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM01/open                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
@@ -105,7 +144,19 @@ FM03/open-offline          | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM03/open-1on1             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM03/done                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM03/cancelled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/default               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/filled                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/leading-zero          | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/error                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/throttled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/member                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04b/default              | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04b/filled               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04b/error                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04b/mismatch             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04b/member               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM05/member                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/guest-name            | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM05/member-wait           | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM05/member-offline        | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM10/cancelled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
@@ -113,3 +164,4 @@ FM10/closed                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM10/notyet                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM10/error                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS
 FM10/offline               | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM10/entry-expired         | 1280x720 | 720/720   | 내부스크롤    0 | PASS

@@ -160,6 +160,8 @@ button:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2p
 .w-facts { display: flex; flex-wrap: wrap; gap: 8px; }
 .w-fact { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 700; }
 .w-fact .ic { width: 20px; height: 20px; flex: none; }
+.w-tight .w-sheet { gap: 8px; }
+.w-tight .w-fact { min-height: 32px; }
 .w-bar { height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); overflow: hidden; }
 .w-bar > i { display: block; height: 100%; width: var(--p, 0); background: var(--mb-lavender); border-radius: var(--r-pill); }
 .w-slider { position: relative; height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.18); flex: 1; }
@@ -269,6 +271,7 @@ const ic = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden=
 /* ───────── 데모 고정값 ───────── */
 const CLASS_TITLE = '마음챙김 명상 · 4회차';
 const ADDR = '서울 강남구 테헤란로 123 · 4층 명상실';
+const ENTRY_CODE = '4829';
 const NAMES = ['서연', '민준', '지우', '하준', '서아', '도윤', '예린', '시우', '지호', '수아', '현우', '하은'];
 const BAND_LABEL = { opt: 'LINK BAND 선택', none: 'LINK BAND 사용 안 함', req: 'LINK BAND 필수' };
 
@@ -305,36 +308,29 @@ const LOBBY_DESC = {
   'g-off-0': '오프라인·그룹·대기 0명 (시작 가능)', 'g-off-3': '오프라인·그룹·대기 3명', 'g-off-8': '오프라인·그룹·8명 전원 완료', 'g-off-12': '오프라인·그룹·대기 12명',
   'o-on-0': '온라인·1:1·대기 0명 (시작 가능)', 'o-on-1': '온라인·1:1·1명 준비 중 (시작 가능)', 'o-on-1r': '온라인·1:1·1명 준비 완료',
   'o-off-0': '오프라인·1:1·대기 0명 (시작 가능)', 'o-off-1': '오프라인·1:1·1명 준비 중', 'o-off-1r': '오프라인·1:1·1명 준비 완료',
-  'g-on-3-req': '밴드 필수 — 밴드 연결 전인 회원', 'g-off-3-none': '오프라인·밴드 사용 안 함·대기 3명', 'o-off-1r-none': '오프라인·1:1·밴드 없음 (가장 비어 보이는 조합)', 'g-on-8-none': '온라인·밴드 사용 안 함·8명',
-  'g-on-0-inv0': { loc: 'on', grp: true, n: 0, fill: 'part', band: 'opt', inv: 0 },
-  'g-off-0-inv0': { loc: 'off', grp: false, n: 0, fill: 'part', band: 'opt', inv: 0 },
-  'g-on-3-wait': { loc: 'on', grp: true, n: 3, fill: 'none', band: 'opt', inv: 6 },
-  'g-off-3-wait': { loc: 'off', grp: true, n: 3, fill: 'none', band: 'opt', inv: 6 },
-  'g-on-12-many': { loc: 'on', grp: true, n: 12, fill: 'many', band: 'opt', inv: 14 },
-  'g-on-0-inv0': { loc: 'on', grp: true, n: 0, fill: 'part', band: 'opt', inv: 0 },
-  'g-off-0-inv0': { loc: 'off', grp: false, n: 0, fill: 'part', band: 'opt', inv: 0 },
+  'g-on-3-req': '헤더 칩 LINK BAND 필수 — 밴드 연결 전인 회원도 대기실 행·시작 판정에 그대로 포함(참가 조건 아님)', 'g-off-3-none': '오프라인·밴드 사용 안 함·대기 3명', 'o-off-1r-none': '오프라인·1:1·밴드 없음 (가장 비어 보이는 조합)', 'g-on-8-none': '온라인·밴드 사용 안 함·8명',
   'g-on-0-inv0': '온라인·그룹·초대 0명·대기 0명 (시작 가능)', 'g-off-0-inv0': '오프라인·1:1·초대 0명·대기 0명 (시작 가능)',
   'g-on-3-wait': '온라인·그룹·3명 모두 준비 중 (준비 완료 0명, 시작 가능)', 'g-off-3-wait': '오프라인·그룹·3명 모두 준비 중 (시작 가능)', 'g-on-12-many': '온라인·그룹·12명 중 8명 준비 중',
   'g-on-3-contact': '전극 접촉 불량 3종 — L만 / R만 / 둘 다 (회원 행에 소형 LED)', 'g-on-8-contact': '8명 중 1명 L 접촉 불량 (2열 목록)'
 };
 const REG = {
-  FH05: { name: '세팅 — 장비 점검 (내 영상·소리)', assume: 'A2 (오프라인 주소 표시는 장소 유형이 서버에 저장돼야 함)', cases: {
+  FH05: { name: '세팅 — 장비 점검 (내 영상·소리)', assume: 'A2 (오프라인 주소 표시는 장소 유형이 서버에 저장돼야 함), P4 (밴드는 어떤 모드에서도 참가·열기를 막지 않음), P7 (열기 안내는 알림 요청이며 전달·수신을 단정하지 않음). 수동 기록은 상담사 마이크 끔·장치 없음에 한함', cases: {
     ok: '온라인 정상 — 마이크 버튼 링이 레벨 표시(5단계 중 4단계, 칩 정상)', quiet: '조용해요 — 링 1단계, 칩 조용해요', 'cam-off': '카메라 꺼짐 — 마이크 레벨만 있는 낮은 상태', 'mic-off': '마이크 꺼짐 (열기 전 상태)', 'mic-off-warn': '마이크 꺼짐 경고 시트 (열기 누른 직후)', 'mic-denied': '마이크 권한 거부',
     'cam-denied': '카메라 권한 거부', nodevice: '장치 없음', unsupported: '미지원 브라우저', offline: '오프라인 — 장비 생략, 주소·안내' } },
-  FH06: { name: '로비(열림)', assume: 'A5 (시작 판정을 대기실 인원 기준으로), A9 (대기실이 비어도·준비 중 회원이 있어도 시작 가능, 시작 후 입장), A8 (전극별 접촉 상태 전송), A6 (초대 회원 이름·알림 상태), 시안 가정 S1: 호스트가 이름별 설문·밴드·기기 준비 상태와 전극 접촉을 실시간으로 받는다, 시안 가정 S6: 아직 입장하지 않은 초대 회원에게 알림을 다시 보내는 API', cases: LOBBY_DESC },
-  FH06a: { name: '로비 시트 — 회원 초대·BGM·내 밴드·발언권·채팅', assume: 'A6, 시안 가정 S6 (알림 재전송·초대 추가). 채팅·발언권은 온라인 그룹 로비 기준. 클래스 링크는 로그인이 필요한 클래스 상세 딥링크', cases: {
-    invite: '회원 초대 — 입장 전 3명(1명 알림 실패)', 'invite-all': '회원 초대 — 전원 입장', bgm: 'BGM', band: '내 밴드 — 미연결', 'band-on': '내 밴드 — 연결됨·접촉 양호(트래커 숨김, 칩만)',
+  FH06: { name: '로비(열림)', assume: 'A5 (시작 판정은 대기실 인원 기준), A9 (대기실이 비어도·준비 중 회원이 있어도 시작 가능, 시작 후 입장), A8·AD9 (전극별 접촉 전송 BE-10 배포 시 LED, 아니면 접촉 확인 필요 텍스트), P5 (입장은 4자리 코드 — 초대 명단은 현황 표시용이며 입장 자격이 아님), P4 (LINK BAND 필수 모드도 참가를 막지 않음), P7 (다시 알림은 요청 결과만 표시)', cases: LOBBY_DESC },
+  FH06a: { name: '로비 시트 — 회원 초대·BGM·내 밴드·발언권·채팅', assume: 'P5·AD17 (상담사 화면에서만 4자리 입장 코드 표시·복사, QR 없음), P7·AD4 (등록 성공은 초대했어요, 재발송은 실제 요청 결과만 — 푸시 수신·전달 단정 0), A6 (초대 추가). 채팅·발언권은 온라인 그룹 로비 기준', cases: {
+    invite: '회원 초대 — 입장 전 3명(초대했어요·재발송 요청 결과·입장 코드 복사)', 'invite-all': '회원 초대 — 전원 입장', bgm: 'BGM', band: '내 밴드 — 미연결', 'band-on': '내 밴드 — 연결됨·접촉 양호(트래커 숨김, 칩만)',
     'band-bad-l': '내 밴드 — L 전극 접촉 실패', 'band-bad-r': '내 밴드 — R 전극 접촉 실패', 'band-bad-lr': '내 밴드 — L·R 모두 접촉 실패',
     speak: '발언권', chat: '채팅 켜짐', 'chat-off': '채팅 꺼짐' } },
-  FH07: { name: '시작 확인 시트', assume: 'A1 (녹음 동의 서버 저장), A9 (대기실이 비어도 시작 가능 — 시작 후 입장 / 준비가 끝나지 않은 회원도 시작 후 입장해 이어서 준비), 시안 가정 S2: 녹음 동의를 시작 전에 받는다(현행은 시작 직후 모달), 시안 가정 S4: 오프라인도 이 기기 마이크로 녹음할 수 있다', cases: {
-    ok: '전원 준비 완료 — 간단 확인', pending: '일부 준비 중 — 준비 중 회원 목록', 'all-wait': '전원 준비 중(준비 완료 0명)', 'many-wait': '준비 중 8명 — 3명만 보이고 외 N명 접기', 'mic-off': '마이크 꺼짐, 수동 기록으로 진행', 'no-consent': '녹음 미동의, 수동 기록으로 진행', offline: '오프라인 — 준비 중 회원(장소 행)', one: '1:1 — 준비 완료', 'one-wait': '1:1 — 준비 중', 'empty-wait': '대기실 0명 — 온라인·그룹', 'empty-wait-offline': '대기실 0명 — 오프라인', 'empty-wait-one': '대기실 0명 — 온라인·1:1' } },
-  FH08: { name: '나가기·클래스 닫기 시트', assume: '시안 가정 S3: 닫으면 대기 회원 전원에게 닫힘 안내가 전달된다', cases: {
+  FH07: { name: '시작 확인 시트', assume: 'P1·AD7·AD19 (기록 원본은 {N}일 후 삭제 — N은 서버 설정값), P2 (참가자 거부는 리포트 반영 제외일 뿐 시작·입장을 막지 않음; 제외 인원·연구 동의 인원은 익명 집계 수만 표시, 0명이면 줄 없음), 수동 기록은 상담사의 녹음 선택 해제·마이크 끔에 한함, A9 (대기실이 비어도 시작 가능 — 시작 후 입장), 시안 가정 S4: 오프라인도 이 기기 마이크로 녹음할 수 있다', cases: {
+    ok: '전원 준비 완료 — 간단 확인(리포트 제외 2명·연구 동의 5명 줄)', pending: '일부 준비 중 — 준비 중 회원 목록', 'all-wait': '전원 준비 중(준비 완료 0명)', 'many-wait': '준비 중 8명 — 3명만 보이고 외 N명 접기', 'mic-off': '마이크 꺼짐, 수동 기록으로 진행(상담사 선택)', 'no-consent': '상담사가 녹음 체크 해제, 수동 기록으로 진행(제외·연구 동의 0명이라 줄 없음)', offline: '오프라인 — 준비 중 회원(장소 행)', one: '1:1 — 준비 완료(연구 동의 1명 한 줄)', 'one-wait': '1:1 — 준비 중', 'empty-wait': '대기실 0명 — 온라인·그룹', 'empty-wait-offline': '대기실 0명 — 오프라인', 'empty-wait-one': '대기실 0명 — 온라인·1:1' } },
+  FH08: { name: '나가기·클래스 닫기 시트', assume: 'P7 (닫힘 안내 대상은 서버가 아는 대기 회원 수이며 전달·열람을 단정하지 않음)', cases: {
     choose: '선택 — 대기 회원 3명', 'choose-0': '선택 — 대기 회원 0명', confirm: '클래스 닫기 재확인 (코랄)' } },
-  FH09: { name: '종료 확인, 종료 씬, 리포트 진행', assume: '시안 가정 S5: 종료 후 /record 로 점프하지 않고 같은 몰입 화면에서 진행을 보여준다', cases: {
+  FH09: { name: '종료 확인, 종료 씬, 리포트 진행', assume: 'D-5① (종료 후 /record 로 점프하지 않고 같은 몰입 화면에서 진행), P2 (리포트에서 제외된 참가자가 있으면 그룹 공통 요약만 제외 — 원본은 설정 기간 동안 보관), P1 (보관 기간 N일은 서버 설정값)', cases: {
     confirm: '종료 확인 시트', 'confirm-busy': '종료 확인 — 끝내는 중', 'end-saving': '종료 씬 — 녹음 저장 중', 'end-stt': '종료 씬 — 음성 인식 중', 'end-ai': '종료 씬 — AI 요약 중',
-    'end-done': '종료 씬 — 리포트 완료', 'manual-ing': '수동 기록 모드 — 진행 중', 'manual-done': '수동 기록 모드 — 완료' } },
-  FH10: { name: '닫힌 클래스 / 오류', assume: '시안 가정 S3 (닫힘 안내 인원), 서버 오류 메시지는 화면에서 사용자 문구로 매핑(구현 단계 결정)', cases: {
-    closed: '방금 닫음 — 회원 3명 안내', 'closed-0': '방금 닫음 — 대기 회원 없음', 'closed-revisit': '닫힌 클래스 재진입',
+    'end-done': '종료 씬 — 리포트 완료', 'manual-ing': '수동 기록 모드 — 진행 중', 'manual-done': '수동 기록 모드 — 완료', 'excluded-common': '종료 씬 — 리포트 제외 참가자가 있어 그룹 공통 요약 제외 안내' } },
+  FH10: { name: '닫힌 클래스 / 오류', assume: 'AD4·F25 (닫은 시각·안내 인원은 방금 닫은 경우에만 표시 — 재진입에는 서버에 저장된 값이 없어 표시하지 않음), 서버 오류 메시지는 HTTP 404/403/네트워크 분기로 사용자 문구에 매핑(서버 원문 노출 0)', cases: {
+    closed: '방금 닫음 — 회원 3명 안내', 'closed-0': '방금 닫음 — 대기 회원 없음', 'closed-revisit': '닫힌 클래스 재진입(닫은 시각·인원 없음)',
     error: '오류 — 일반', 'error-notfound': '오류 — 찾을 수 없음', 'error-forbidden': '오류 — 내 클래스 아님', 'error-network': '오류 — 연결 끊김' } }
 };
 
@@ -371,7 +367,7 @@ function fh05(c) {
   if (c === 'offline') {
     const body = `<div class="w-row w-venue strong"><span class="w-ico ok">${ic('map-pin')}</span><div class="w-rt"><b>${ADDR}</b><span>오늘 오후 3:00 시작 예정</span></div></div>
       <div class="w-row"><span class="w-ico">${ic('video-off')}</span><div class="w-rt"><b>카메라와 마이크는 쓰지 않아요</b><span>대면 클래스라 장비 점검 없이 바로 열 수 있어요.</span></div></div>
-      <div class="w-row"><span class="w-ico">${ic('bell')}</span><div class="w-rt"><b>초대한 회원에게 알려요</b><span>열면 초대받은 회원에게 알림이 가고, 도착하면 입장해요.</span></div></div>
+      <div class="w-row"><span class="w-ico">${ic('bell')}</span><div class="w-rt"><b>초대한 회원에게 알려요</b><span>열면 초대한 회원에게 알림을 요청해요. 도착하면 입장해요.</span></div></div>
       <div class="w-row"><span class="w-ico">${ic('band')}</span><div class="w-rt"><b>LINK BAND는 선택이에요</b><span>원하는 회원만 이마에 착용하고, 없어도 진행할 수 있어요.</span></div></div>`;
     return frame({ id: 'FH05', bg: 'background1', left: LEFT_BACK, title: CLASS_TITLE, sub: '준비 · 오프라인 · 오늘 오후 3:00', body, foot: cta('클래스 열기', 'door-open') + '<p class="w-fnote">열면 초대한 회원에게 알려요</p>' });
   }
@@ -517,14 +513,14 @@ function toolSheet(c) {
     const all = c === 'invite-all';
     const p = LOBBY[all ? 'g-on-8' : 'g-on-3'];
     const away = p.inv - p.n;
-    const who = (n, ok) => `<div class="w-row"><span class="w-ico">${ic('user')}</span><div class="w-rt"><b>${n}</b><span class="${ok ? '' : 'warn'}">${ok ? '오후 2:30에 알렸어요' : '알림이 전달되지 않았어요'}</span></div>${ok ? chip('알림 받음', 'mute', 'circle-check') : `<button class="fl-btn soft w-btn44">${ic('refresh')}재시도</button>`}</div>`;
+    const who = (n, sp, kind) => `<div class="w-row"><span class="w-ico">${ic('user')}</span><div class="w-rt"><b>${n}</b><span class="${kind === 'bad' ? 'warn' : ''}">${sp}</span></div>${kind === 'bad' ? `<button class="fl-btn soft w-btn44">${ic('refresh')}재시도</button>` : ''}</div>`;
     const mid = all
       ? `<div class="w-empty"><span class="w-ico lg ok">${ic('circle-check')}</span><h2>초대한 회원이 모두 입장했어요</h2><p>다시 알릴 회원이 없어요</p></div>`
-      : `<span class="fl-label">아직 입장하지 않은 회원 ${away}명</span><div class="w-msgs">${who('현우', true)}${who('수아', true)}${who('하은', false)}</div>`;
+      : `<span class="fl-label">아직 입장하지 않은 회원 ${away}명</span><div class="w-msgs">${who('현우', '초대했어요')}${who('수아', '요청했어요 · 잠시 후 다시 할 수 있어요')}${who('하은', '요청하지 못했어요', 'bad')}</div>`;
     return { label: '회원 초대', html: `${sheetHead('회원 초대')}
       ${r('users', `초대 ${p.inv}명 · 대기실 ${p.n}명`, all ? '모두 입장했어요' : `${away}명이 아직 입장하지 않았어요`, '', all ? 'ok' : '')}
       ${mid}
-      <div class="w-row"><span class="w-ico">${ic('link')}</span><div class="w-rt"><b>클래스 링크</b><span>로그인한 회원만 열 수 있어요</span></div><button class="fl-iconbtn" aria-label="링크 복사">${ic('copy')}</button></div>
+      <div class="w-row"><span class="w-ico">${ic('key')}</span><div class="w-rt"><b>입장 코드 ${ENTRY_CODE}</b><span>참가자에게 직접 알려 주세요</span></div><button class="fl-iconbtn" aria-label="입장 코드 복사">${ic('copy')}</button></div>
       <div class="w-act">${cta(all ? '다시 알릴 회원이 없어요' : `${away}명에게 다시 알림`, 'bell', all)}${cta('초대 추가', 'user-plus', false, 'soft')}</div>` };
   }
   if (c === 'bgm') {
@@ -597,14 +593,17 @@ function fh07(c) {
     : micOff ? `<div class="w-sr"><span class="w-ico warn">${ic('mic-off')}</span><div class="w-rt"><b>마이크</b><span class="warn">꺼져 있어요</span></div><button class="fl-btn soft w-btn44">${ic('mic')}켜기</button></div>`
     : `<div class="w-sr"><span class="w-ico ok">${ic('mic')}</span><div class="w-rt"><b>마이크</b><span>켜져 있어요</span></div>${chip('켜짐', 'ok', 'circle-check')}</div>`;
   const checked = !manual;
+  const CNT = { ok: [2, 5], one: [0, 1] }[c] || [0, 0];
+  const cntRows = [[CNT[0], 'minus-circle', `리포트에 반영하지 않는 참가자 ${CNT[0]}명`], [CNT[1], 'shield', `연구 목적 활용에 동의한 참가자 ${CNT[1]}명`]].filter((x) => x[0] > 0)
+    .map((x) => `<div class="w-rt" style="display:flex;align-items:center;gap:8px;flex:none">${ic(x[1], 'w-mid').replace('class="ic', 'style="width:16px;height:16px;flex:none" class="ic')}<span style="line-height:20px">${x[2]}</span></div>`).join('');
   const consent = `<div class="fl-card sm" style="display:flex;flex-direction:column;gap:8px">
-    <div class="w-facts"><span class="w-fact">${ic('calendar')}30일 보관</span><span class="w-fact">${ic('shield')}나와 담당 상담사만 열람</span></div>
+    <div class="w-facts"><span class="w-fact">${ic('calendar')}기록 원본은 {N}일 후 삭제돼요</span><span class="w-fact">${ic('shield')}나와 담당 상담사만 열람</span></div>${cntRows}
     <div class="w-row" role="checkbox" aria-checked="${checked}" style="min-height:48px;padding:0 16px"><span class="w-cb ${checked ? 'on' : ''}${micOff ? ' dis' : ''}">${ic('check')}</span><div class="w-rt"><b style="font-size:15px">녹음하고 AI 기록지를 만들어요</b></div></div></div>`;
   const note = manual ? '녹음 없이 수동 기록으로 진행해요. 메모로 기록지를 만들어요.' : '녹음은 언제든 멈출 수 있어요.';
   const html = `<div class="w-ctr"><h2>시작 전에 확인해요</h2></div><div class="w-stat">${rowPeople}${plist}${rowMic}</div>${consent}
     <p class="fl-note" style="margin:0;display:flex;gap:8px;align-items:center">${ic('info', 'w-mid').replace('class="ic', 'style="width:16px;height:16px;flex:none" class="ic')}${note}</p>
     <div class="w-act">${cta(pend.length || empty ? '지금 시작하기' : '시작하기', 'play')}<button class="fl-btn ghost block">${pend.length || empty ? '조금 더 기다리기' : '돌아가기'}</button></div>`;
-  return frame({ id: 'FH07', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot, sheet: { kind: 'conf', label: '시작 확인', html } });
+  return frame({ id: 'FH07', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot, sheet: { kind: 'conf w-tight', label: '시작 확인', html } });
 }
 
 /* ───────── FH08 나가기·닫기 ───────── */
@@ -635,7 +634,7 @@ function fh09(c) {
     return frame({ id: 'FH09', bg: 'background8', left: LEFT_BACK, title: CLASS_TITLE, sub: '진행 중 · 온라인 · 그룹', body: '', foot: '', sheet: { kind: 'conf', label: '클래스 종료 확인', html } });
   }
   const manual = c.startsWith('manual');
-  const stage = { 'end-saving': 0, 'end-stt': 1, 'end-ai': 2, 'end-done': 4, 'manual-ing': 3, 'manual-done': 4 }[c];
+  const stage = { 'end-saving': 0, 'end-stt': 1, 'end-ai': 2, 'end-done': 4, 'manual-ing': 3, 'manual-done': 4, 'excluded-common': 2 }[c];
   const done = stage === 4;
   const defs = manual ? [['save', '녹음 저장', '녹음 없음'], ['wave', '음성 인식', '건너뜀'], ['spark', 'AI 요약', '건너뜀'], ['file', '리포트 완료', done ? '완료' : '메모로 만드는 중']]
     : [['save', '녹음 저장', ''], ['wave', '음성 인식', ''], ['spark', 'AI 요약', ''], ['file', '리포트 완료', '']];
@@ -653,7 +652,7 @@ function fh09(c) {
     : manual ? '수동 기록 모드로 진행했어요. 녹음 없이 내 메모로 리포트를 만들어요.' : '48분 동안 8명이 함께했어요. 녹음이 저장됐고 리포트를 만들고 있어요.';
   const body = `<div class="w-scene"><span class="w-ico lg ok">${ic('flag')}</span><h1 class="fl-h1">클래스가 끝났어요</h1><p class="fl-sub">${sub}</p></div>
     <div class="fl-card strong sm" style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px"><b>${done ? '리포트가 준비됐어요' : '리포트를 만들고 있어요'}</b>${done ? chip('완료', 'ok', 'circle-check') : chip('보통 3~5분', 'mute', 'clock')}</div>
-      <div class="w-bar" style="--p:${pct}"><i></i></div><div class="w-steps">${steps}</div></div>`;
+      <div class="w-bar" style="--p:${pct}"><i></i></div><div class="w-steps">${steps}</div></div>${c === 'excluded-common' ? `<div class="w-row"><span class="w-ico">${ic('info')}</span><div class="w-rt"><b>리포트에 반영하지 않은 참가자 2명이 있어 그룹 공통 요약은 제외돼요</b><span>원본은 설정 기간 동안 보관돼요</span></div></div>` : ''}`;
   return frame({ id: 'FH09', bg: 'background8', left: LEFT_HOME, title: '클래스 종료', sub: CLASS_TITLE, body, foot: cta('기록 보기', 'file') + `<p class="w-fnote">${done ? '리포트는 기록에서 언제든 볼 수 있어요' : '화면을 닫아도 리포트는 계속 만들어져요'}</p>` });
 }
 
@@ -663,10 +662,10 @@ function fh10(c) {
   const V = {
     closed: { t: '클래스 닫힘', ico: 'door-closed', h: '클래스를 닫았어요', s: '대기 중이던 회원 3명에게 클래스가 닫혔다고 안내했어요.', r: [['clock', '닫은 시각', '오늘 오후 2:41'], ['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
     'closed-0': { t: '클래스 닫힘', ico: 'door-closed', h: '클래스를 닫았어요', s: '대기 중이던 회원은 없었어요.', r: [['clock', '닫은 시각', '오늘 오후 2:41'], ['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
-    'closed-revisit': { t: '클래스 닫힘', ico: 'door-closed', h: '이미 닫힌 클래스예요', s: '오늘 오후 2:41에 닫혔어요. 대기 중이던 회원 3명에게 안내했어요.', r: [['users', '안내한 회원', '3명'], ['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
+    'closed-revisit': { t: '클래스 닫힘', ico: 'door-closed', h: '이미 닫힌 클래스예요', s: '이 클래스는 닫혀서 다시 열 수 없어요.', r: [['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요'], ['list', '목록에서 찾아도 돼요', '내 클래스는 목록에 모여 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
     error: { t: '문제가 생겼어요', ico: 'alert', warn: true, h: '클래스를 불러오지 못했어요', s: '잠시 뒤 다시 시도해 주세요. 계속 안 되면 클래스 목록에서 다시 들어와 주세요.', r: [['refresh', '잠시 기다렸다가 다시 시도해요', '일시적인 문제일 수 있어요'], ['list', '목록에서 다시 들어와도 돼요', '내 클래스는 목록에서 찾을 수 있어요']], b1: ['다시 시도', 'refresh'], b2: '클래스 목록으로' },
     'error-notfound': { t: '문제가 생겼어요', ico: 'alert', warn: true, h: '찾을 수 없는 클래스예요', s: '삭제됐거나 주소가 잘못됐을 수 있어요.', r: [['link', '주소를 다시 확인해요', '링크가 끝까지 복사됐는지 확인해요'], ['list', '목록에서 찾아도 돼요', '내 클래스는 목록에 모여 있어요']], b1: ['클래스 목록으로', 'list'], b2: '다시 시도' },
-    'error-forbidden': { t: '문제가 생겼어요', ico: 'lock', warn: true, h: '내가 연 클래스가 아니에요', s: '이 클래스는 다른 상담사가 열었어요. 내 클래스는 목록에서 확인해요.', r: [['user', '호스트만 열 수 있어요', '클래스를 만든 상담사가 열고 진행해요'], ['list', '내 클래스 보기', '목록에서 내가 만든 클래스를 찾아요']], b1: ['클래스 목록으로', 'list'], b2: '홈으로' },
+    'error-forbidden': { t: '문제가 생겼어요', ico: 'lock', warn: true, h: '내가 연 클래스가 아니에요', s: '이 클래스는 다른 상담사가 열었어요. 내 클래스는 목록에서 확인해요.', r: [['user', '호스트만 열 수 있어요', '클래스를 만든 상담사가 열고 진행해요'], ['list', '내 클래스 보기', '목록에서 내가 만든 클래스를 찾아요']], b1: ['내 클래스 보기', 'list'], b2: '홈으로' },
     'error-network': { t: '연결이 끊겼어요', ico: 'wifi-off', warn: true, h: '연결이 끊겼어요', s: '인터넷 연결을 확인한 뒤 다시 시도해 주세요.', r: [['wifi-off', '네트워크를 확인해요', 'Wi-Fi나 모바일 데이터가 켜져 있는지 봐요'], ['refresh', '연결되면 이어서 진행해요', '다시 시도를 누르면 돼요']], b1: ['다시 시도', 'refresh'], b2: '클래스 목록으로' }
   }[c];
   const body = `<div class="w-scene"><span class="w-ico lg ${V.warn ? 'warn' : ''}">${ic(V.ico)}</span><h1 class="fl-h1">${V.h}</h1><p class="fl-sub">${V.s}</p></div>${rows(V.r)}`;
@@ -691,6 +690,8 @@ function render() {
   document.body.dataset.screen = id; document.body.dataset.case = c; document.body.dataset.ready = '1';
 }
 render();
+window.__REG = Object.fromEntries(Object.entries(REG).map(([id, r]) => [id, Object.keys(r.cases)]));
+window.__ready = true;
 </script>
 </body>
 </html>

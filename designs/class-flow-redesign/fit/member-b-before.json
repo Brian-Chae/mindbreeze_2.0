@@ -14,10 +14,10 @@
   "space8": 0,
   "nested": 0,
   "trk": 0,
-  "av": 40,
+  "av": 0,
   "srcGlyph": 0,
   "srcBanned": 0,
-  "srcStale": 4,
+  "srcStale": 0,
   "idxBanned": 0
  },
  "sym": {
@@ -34,5 +34,5 @@
   "MS1": 0,
   "MS3": 0
  },
- "pages": 256
+ "pages": 252
 }

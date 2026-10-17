@@ -1,8 +1,8 @@
-# host-b after — 화면 7 / 케이스 76 / 스크린샷 304
-# fit: 케이스×뷰포트 304건 중 FAIL 0건 (PASS 304)
+# host-b after — 화면 7 / 케이스 77 / 스크린샷 308
+# fit: 케이스×뷰포트 308건 중 FAIL 0건 (PASS 308)
 # 파일 전체 정적 grep (host-b.html)
 #   이모지 0건 / 문자 글리프(✓ ✕ ← → ‹ › • ● ○ ×) 0건
-#   R1 금지어(파일 전체, 화면 텍스트+인덱스 표 포함): 코드 0 / 귀 0 / 게스트 0 / OTP 0 / QR 0 / 6자리 0 / 인증 코드 0
+#   R1 금지어(파일 전체, 화면 텍스트+인덱스 표 포함; 4자리 입장 코드는 상담사 화면이라 허용): 귀 0 / 게스트 0 / OTP 0 / QR 1 / 6자리 0 / 인증 코드 0 / 30일 보관 0 / 회원 전용 0 / 알림 받음 0 / 전달되지 않았어요 0
 #   금지어: 세션 0 / 수업 0 / 참여하기 0 / 오픈 0 / 그래도 시작 0 / "LB " 0 / 1:N 0
 #   외부 http(s) 리소스 0건 / 11px 이하 font-size 선언 0건
 #   화면 텍스트 기준 grep(글리프·금지어·영문 대문자 아이브로우·11px 이하)은 아래 케이스별 판정에 포함
@@ -284,6 +284,10 @@ PASS  FH09 manual-done 390x844
 PASS  FH09 manual-done 834x1194
 PASS  FH09 manual-done 1194x834
 PASS  FH09 manual-done 1280x720
+PASS  FH09 excluded-common 390x844
+PASS  FH09 excluded-common 834x1194
+PASS  FH09 excluded-common 1194x834
+PASS  FH09 excluded-common 1280x720
 PASS  FH10 closed 390x844
 PASS  FH10 closed 834x1194
 PASS  FH10 closed 1194x834

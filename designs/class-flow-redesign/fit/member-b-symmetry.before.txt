@@ -1,18 +1,18 @@
 MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B 좌우 대칭·비율 균형 측정 (균형.md S1~S10, MS1·MS3)
-측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 64개 × 뷰포트 4개 · 총 검사 3680건
-위반 0건 / 전체 3680건  → PASS  ← 수정 전 기준선
+측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 63개 × 뷰포트 4개 · 총 검사 3616건
+위반 0건 / 전체 3616건  → PASS  ← 수정 전 기준선
 
 규칙별 위반 건수 (수정 전 → 수정 후 / 전체 검사 건수):
-  S1   단독 요소 중심축                         0 →    0 / 1268
-  S2   좌우 여백 동일                          0 →    0 / 492
-  S3   상단 바 좌우 대칭                        0 →    0 / 216
+  S1   단독 요소 중심축                         0 →    0 / 1244
+  S2   좌우 여백 동일                          0 →    0 / 484
+  S3   상단 바 좌우 대칭                        0 →    0 / 212
   S4   PiP 짝 가운데(이 시안에 PiP 없음)           0 →    0 / 0
   S5   시트 분기(세로=바텀)                      0 →    0 / 60
-  S6   균등 분배                             0 →    0 / 100
-  S7   본문 세로 중앙                          0 →    0 / 216
-  S8   박스 폭 동일                           0 →    0 / 256
-  S9   중앙 컬럼 max-width                   0 →    0 / 472
-  S10  8배수·같은 종류 같은 간격                   0 →    0 / 512
+  S6   균등 분배                             0 →    0 / 96
+  S7   본문 세로 중앙                          0 →    0 / 212
+  S8   박스 폭 동일                           0 →    0 / 252
+  S9   중앙 컬럼 max-width                   0 →    0 / 464
+  S10  8배수·같은 종류 같은 간격                   0 →    0 / 504
   MS1  오프라인 컬럼 구조                        0 →    0 / 48
   MS3  전체 화면 정중앙                         0 →    0 / 40
 
@@ -590,38 +590,22 @@ FM06d/on-solo-none-member-mic                  | 390x844  | S9   | 본문 컬럼
 FM06d/on-solo-none-member-mic                  | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FM06d/on-solo-none-member-mic                  | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
 FM06d/on-solo-none-member-mic                  | 390x844  | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S7   | 본문 위113.9/아래113.9 (허용 ±52.5) | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 390x844  | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S7   | 본문 위113.9/아래113.9 (허용 ±52.5) | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 390x844  | S10  | 하단 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 진행 점 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 제목 글자 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 하단 주 버튼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S1   | 영상 위 토글 쌍 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S7   | 본문 위113.9/아래113.9 (허용 ±52.5) | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S8   | 본문 블록 3개 폭 358~358 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S10  | 본문 블록 간격 16/16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 390x844  | S10  | 하단 간격 8 | PASS
 FM06d/on-group-opt-member-camon-started        | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 390x844  | S1   | 진행 점 Δ0 | PASS
@@ -1520,38 +1504,22 @@ FM06d/on-solo-none-member-mic                  | 834x1194 | S9   | 본문 컬럼
 FM06d/on-solo-none-member-mic                  | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06d/on-solo-none-member-mic                  | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
 FM06d/on-solo-none-member-mic                  | 834x1194 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S7   | 본문 위183.2/아래183.2 (허용 ±80.5) | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 834x1194 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S7   | 본문 위183.2/아래183.2 (허용 ±80.5) | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 834x1194 | S10  | 하단 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 진행 점 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 제목 글자 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S1   | 영상 위 토글 쌍 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S7   | 본문 위183.2/아래183.2 (허용 ±80.5) | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S10  | 본문 블록 간격 16/16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 834x1194 | S10  | 하단 간격 8 | PASS
 FM06d/on-group-opt-member-camon-started        | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 834x1194 | S1   | 진행 점 Δ0 | PASS
@@ -2442,38 +2410,22 @@ FM06d/on-solo-none-member-mic                  | 1194x834 | S9   | 본문 컬럼
 FM06d/on-solo-none-member-mic                  | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06d/on-solo-none-member-mic                  | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
 FM06d/on-solo-none-member-mic                  | 1194x834 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S7   | 본문 위61.7/아래61.7 (허용 ±51.7) | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1194x834 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S7   | 본문 위61.7/아래61.7 (허용 ±51.7) | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1194x834 | S10  | 하단 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 진행 점 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 제목 글자 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S1   | 영상 위 토글 쌍 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S7   | 본문 위61.7/아래61.7 (허용 ±51.7) | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S10  | 본문 블록 간격 16/16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1194x834 | S10  | 하단 간격 8 | PASS
 FM06d/on-group-opt-member-camon-started        | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 1194x834 | S1   | 진행 점 Δ0 | PASS
@@ -3352,38 +3304,22 @@ FM06d/on-solo-none-member-mic                  | 1280x720 | S9   | 본문 컬럼
 FM06d/on-solo-none-member-mic                  | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FM06d/on-solo-none-member-mic                  | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
 FM06d/on-solo-none-member-mic                  | 1280x720 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S7   | 본문 위14.7/아래14.7 (허용 ±44.2) | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter      | 1280x720 | S10  | 하단 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 진행 점 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 제목 글자 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S1   | 영상 위 토글 쌍 Δ0 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S7   | 본문 위14.7/아래14.7 (허용 ±44.2) | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
-FM06d/on-group-opt-member-camon-iconmeter-quiet | 1280x720 | S10  | 하단 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 진행 점 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 제목 글자 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 하단 주 버튼 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S3   | 여백 좌16/우16 · 높이 44/44 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S1   | 영상 위 토글 쌍 Δ0 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S6   | 영상 위 토글 쌍 폭 44/44 간격 8 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S7   | 본문 위14.7/아래14.7 (허용 ±44.2) | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S8   | 본문 블록 3개 폭 640~640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S10  | 본문 블록 간격 16/16 | PASS
+FM06d/on-group-opt-member-camon-quiet          | 1280x720 | S10  | 하단 간격 8 | PASS
 FM06d/on-group-opt-member-camon-started        | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
 FM06d/on-group-opt-member-camon-started        | 1280x720 | S1   | 진행 점 Δ0 | PASS

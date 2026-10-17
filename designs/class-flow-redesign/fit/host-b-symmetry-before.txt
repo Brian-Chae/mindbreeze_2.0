@@ -1,14 +1,14 @@
-# host-b before — 화면 7 / 케이스 73 / 스크린샷 292
-# 대칭 위반 합계 0건 (측정 7646건)
-#   S1: 측정 1506 / 위반 0
-#   S10: 측정 1148 / 위반 0
-#   S2: 측정 1716 / 위반 0
-#   S3: 측정 876 / 위반 0
-#   S5: 측정 520 / 위반 0
-#   S6: 측정 728 / 위반 0
-#   S7: 측정 284 / 위반 0
-#   S8: 측정 284 / 위반 0
-#   S9: 측정 584 / 위반 0
+# host-b before — 화면 7 / 케이스 76 / 스크린샷 304
+# 대칭 위반 합계 0건 (측정 8110건)
+#   S1: 측정 1594 / 위반 0
+#   S10: 측정 1212 / 위반 0
+#   S2: 측정 1804 / 위반 0
+#   S3: 측정 912 / 위반 0
+#   S5: 측정 580 / 위반 0
+#   S6: 측정 808 / 위반 0
+#   S7: 측정 296 / 위반 0
+#   S8: 측정 296 / 위반 0
+#   S9: 측정 608 / 위반 0
 
 
 # 전체 측정 로그
@@ -164,158 +164,6 @@ ok    FH05 quiet 1280x720  S10  본문 간격 1: 16px
 ok    FH05 quiet 1280x720  S10  푸터 간격 1: 8px
 ok    FH05 quiet 1280x720  S10  본문 좌우 안쪽여백: 16px
 ok    FH05 quiet 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 ok-iconmeter 390x844  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 ok-iconmeter 390x844  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 ok-iconmeter 390x844  S3  상단바 제목 중앙: 0px
-ok    FH05 ok-iconmeter 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 ok-iconmeter 390x844  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 390x844  S2  본문 w-media 좌우여백: 0px
-ok    FH05 ok-iconmeter 390x844  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 390x844  S2  본문 w-row 좌우여백: 0px
-ok    FH05 ok-iconmeter 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 390x844  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 ok-iconmeter 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 390x844  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 ok-iconmeter 390x844  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 ok-iconmeter 390x844  S9  본문 컬럼 폭(<=640): 358px
-ok    FH05 ok-iconmeter 390x844  S9  푸터 컬럼 폭(<=640): 358px
-ok    FH05 ok-iconmeter 390x844  S10  본문 간격 1: 16px
-ok    FH05 ok-iconmeter 390x844  S10  푸터 간격 1: 8px
-ok    FH05 ok-iconmeter 390x844  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 ok-iconmeter 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 ok-iconmeter 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 ok-iconmeter 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 ok-iconmeter 834x1194  S3  상단바 제목 중앙: 0px
-ok    FH05 ok-iconmeter 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 ok-iconmeter 834x1194  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 834x1194  S2  본문 w-media 좌우여백: 0px
-ok    FH05 ok-iconmeter 834x1194  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 834x1194  S2  본문 w-row 좌우여백: 0px
-ok    FH05 ok-iconmeter 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 834x1194  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 ok-iconmeter 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 834x1194  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 ok-iconmeter 834x1194  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 ok-iconmeter 834x1194  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 834x1194  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 834x1194  S10  본문 간격 1: 16px
-ok    FH05 ok-iconmeter 834x1194  S10  푸터 간격 1: 8px
-ok    FH05 ok-iconmeter 834x1194  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 ok-iconmeter 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 ok-iconmeter 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 ok-iconmeter 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 ok-iconmeter 1194x834  S3  상단바 제목 중앙: 0px
-ok    FH05 ok-iconmeter 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 ok-iconmeter 1194x834  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1194x834  S2  본문 w-media 좌우여백: 0px
-ok    FH05 ok-iconmeter 1194x834  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1194x834  S2  본문 w-row 좌우여백: 0px
-ok    FH05 ok-iconmeter 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1194x834  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 ok-iconmeter 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1194x834  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 ok-iconmeter 1194x834  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 ok-iconmeter 1194x834  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 1194x834  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 1194x834  S10  본문 간격 1: 16px
-ok    FH05 ok-iconmeter 1194x834  S10  푸터 간격 1: 8px
-ok    FH05 ok-iconmeter 1194x834  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 ok-iconmeter 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 ok-iconmeter 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 ok-iconmeter 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 ok-iconmeter 1280x720  S3  상단바 제목 중앙: 0px
-ok    FH05 ok-iconmeter 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 ok-iconmeter 1280x720  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1280x720  S2  본문 w-media 좌우여백: 0px
-ok    FH05 ok-iconmeter 1280x720  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1280x720  S2  본문 w-row 좌우여백: 0px
-ok    FH05 ok-iconmeter 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1280x720  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 ok-iconmeter 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 ok-iconmeter 1280x720  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 ok-iconmeter 1280x720  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 ok-iconmeter 1280x720  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 1280x720  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 ok-iconmeter 1280x720  S10  본문 간격 1: 16px
-ok    FH05 ok-iconmeter 1280x720  S10  푸터 간격 1: 8px
-ok    FH05 ok-iconmeter 1280x720  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 ok-iconmeter 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 quiet-iconmeter 390x844  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 quiet-iconmeter 390x844  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 quiet-iconmeter 390x844  S3  상단바 제목 중앙: 0px
-ok    FH05 quiet-iconmeter 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 quiet-iconmeter 390x844  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 390x844  S2  본문 w-media 좌우여백: 0px
-ok    FH05 quiet-iconmeter 390x844  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 390x844  S2  본문 w-row 좌우여백: 0px
-ok    FH05 quiet-iconmeter 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 390x844  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 quiet-iconmeter 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 390x844  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 quiet-iconmeter 390x844  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 quiet-iconmeter 390x844  S9  본문 컬럼 폭(<=640): 358px
-ok    FH05 quiet-iconmeter 390x844  S9  푸터 컬럼 폭(<=640): 358px
-ok    FH05 quiet-iconmeter 390x844  S10  본문 간격 1: 16px
-ok    FH05 quiet-iconmeter 390x844  S10  푸터 간격 1: 8px
-ok    FH05 quiet-iconmeter 390x844  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 quiet-iconmeter 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 quiet-iconmeter 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 quiet-iconmeter 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 quiet-iconmeter 834x1194  S3  상단바 제목 중앙: 0px
-ok    FH05 quiet-iconmeter 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 quiet-iconmeter 834x1194  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 834x1194  S2  본문 w-media 좌우여백: 0px
-ok    FH05 quiet-iconmeter 834x1194  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 834x1194  S2  본문 w-row 좌우여백: 0px
-ok    FH05 quiet-iconmeter 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 834x1194  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 quiet-iconmeter 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 834x1194  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 quiet-iconmeter 834x1194  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 quiet-iconmeter 834x1194  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 834x1194  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 834x1194  S10  본문 간격 1: 16px
-ok    FH05 quiet-iconmeter 834x1194  S10  푸터 간격 1: 8px
-ok    FH05 quiet-iconmeter 834x1194  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 quiet-iconmeter 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 quiet-iconmeter 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 quiet-iconmeter 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 quiet-iconmeter 1194x834  S3  상단바 제목 중앙: 0px
-ok    FH05 quiet-iconmeter 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 quiet-iconmeter 1194x834  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1194x834  S2  본문 w-media 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1194x834  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1194x834  S2  본문 w-row 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1194x834  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1194x834  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1194x834  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 quiet-iconmeter 1194x834  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 1194x834  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 1194x834  S10  본문 간격 1: 16px
-ok    FH05 quiet-iconmeter 1194x834  S10  푸터 간격 1: 8px
-ok    FH05 quiet-iconmeter 1194x834  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 quiet-iconmeter 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
-ok    FH05 quiet-iconmeter 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
-ok    FH05 quiet-iconmeter 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
-ok    FH05 quiet-iconmeter 1280x720  S3  상단바 제목 중앙: 0px
-ok    FH05 quiet-iconmeter 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
-ok    FH05 quiet-iconmeter 1280x720  S1  본문 w-media 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1280x720  S2  본문 w-media 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1280x720  S1  본문 w-row 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1280x720  S2  본문 w-row 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1280x720  S2  푸터 fl-btn 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
-ok    FH05 quiet-iconmeter 1280x720  S2  푸터 w-fnote 좌우여백: 0px
-ok    FH05 quiet-iconmeter 1280x720  S8  본문·푸터 블록 폭 편차: 0px
-ok    FH05 quiet-iconmeter 1280x720  S9  본문 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 1280x720  S9  푸터 컬럼 폭(<=640): 640px
-ok    FH05 quiet-iconmeter 1280x720  S10  본문 간격 1: 16px
-ok    FH05 quiet-iconmeter 1280x720  S10  푸터 간격 1: 8px
-ok    FH05 quiet-iconmeter 1280x720  S10  본문 좌우 안쪽여백: 16px
-ok    FH05 quiet-iconmeter 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
 ok    FH05 cam-off 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH05 cam-off 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH05 cam-off 390x844  S3  상단바 제목 중앙: 0px
@@ -3016,6 +2864,226 @@ ok    FH06 g-on-8-none 1280x720  S6  도크 항목 폭 편차: 0px
 ok    FH06 g-on-8-none 1280x720  S6  도크 항목 간격 편차: 0px
 ok    FH06 g-on-8-none 1280x720  S6  도크 안쪽 좌우여백 차: 0px
 ok    FH06 g-on-8-none 1280x720  S6  도크 폭 >= 560: 640px
+ok    FH06 g-on-0-inv0 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-on-0-inv0 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-on-0-inv0 390x844  S3  상단바 제목 중앙: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-on-0-inv0 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-on-0-inv0 390x844  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-on-0-inv0 390x844  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-on-0-inv0 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-on-0-inv0 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-on-0-inv0 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-on-0-inv0 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH06 g-on-0-inv0 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH06 g-on-0-inv0 390x844  S10  본문 간격 1: 16px
+ok    FH06 g-on-0-inv0 390x844  S10  본문 간격 2: 16px
+ok    FH06 g-on-0-inv0 390x844  S10  푸터 간격 1: 8px
+ok    FH06 g-on-0-inv0 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-on-0-inv0 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-on-0-inv0 390x844  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-on-0-inv0 390x844  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-on-0-inv0 390x844  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-on-0-inv0 390x844  S6  도크 폭 >= 359: 358px
+ok    FH06 g-on-0-inv0 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-on-0-inv0 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-on-0-inv0 834x1194  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-on-0-inv0 834x1194  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-on-0-inv0 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-on-0-inv0 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-on-0-inv0 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 834x1194  S10  본문 간격 1: 16px
+ok    FH06 g-on-0-inv0 834x1194  S10  본문 간격 2: 16px
+ok    FH06 g-on-0-inv0 834x1194  S10  푸터 간격 1: 8px
+ok    FH06 g-on-0-inv0 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-on-0-inv0 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-on-0-inv0 834x1194  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-on-0-inv0 834x1194  S6  도크 폭 >= 560: 640px
+ok    FH06 g-on-0-inv0 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-on-0-inv0 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1194x834  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1194x834  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 1194x834  S10  본문 간격 1: 16px
+ok    FH06 g-on-0-inv0 1194x834  S10  본문 간격 2: 16px
+ok    FH06 g-on-0-inv0 1194x834  S10  푸터 간격 1: 8px
+ok    FH06 g-on-0-inv0 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-on-0-inv0 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-on-0-inv0 1194x834  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-on-0-inv0 1194x834  S6  도크 폭 >= 560: 640px
+ok    FH06 g-on-0-inv0 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-on-0-inv0 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1280x720  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1280x720  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-on-0-inv0 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-on-0-inv0 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-on-0-inv0 1280x720  S10  본문 간격 1: 16px
+ok    FH06 g-on-0-inv0 1280x720  S10  본문 간격 2: 16px
+ok    FH06 g-on-0-inv0 1280x720  S10  푸터 간격 1: 8px
+ok    FH06 g-on-0-inv0 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-on-0-inv0 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-on-0-inv0 1280x720  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-on-0-inv0 1280x720  S6  도크 폭 >= 560: 640px
+ok    FH06 g-off-0-inv0 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-off-0-inv0 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-off-0-inv0 390x844  S3  상단바 제목 중앙: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-off-0-inv0 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  본문 w-row 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-off-0-inv0 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-off-0-inv0 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH06 g-off-0-inv0 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH06 g-off-0-inv0 390x844  S10  본문 간격 1: 16px
+ok    FH06 g-off-0-inv0 390x844  S10  본문 간격 2: 16px
+ok    FH06 g-off-0-inv0 390x844  S10  본문 간격 3: 16px
+ok    FH06 g-off-0-inv0 390x844  S10  푸터 간격 1: 8px
+ok    FH06 g-off-0-inv0 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-off-0-inv0 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-off-0-inv0 390x844  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-off-0-inv0 390x844  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-off-0-inv0 390x844  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-off-0-inv0 390x844  S6  도크 폭 >= 359: 358px
+ok    FH06 g-off-0-inv0 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  본문 w-row 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-off-0-inv0 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 834x1194  S10  본문 간격 1: 16px
+ok    FH06 g-off-0-inv0 834x1194  S10  본문 간격 2: 16px
+ok    FH06 g-off-0-inv0 834x1194  S10  본문 간격 3: 16px
+ok    FH06 g-off-0-inv0 834x1194  S10  푸터 간격 1: 8px
+ok    FH06 g-off-0-inv0 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-off-0-inv0 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-off-0-inv0 834x1194  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-off-0-inv0 834x1194  S6  도크 폭 >= 560: 640px
+ok    FH06 g-off-0-inv0 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  본문 w-row 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 1194x834  S10  본문 간격 1: 16px
+ok    FH06 g-off-0-inv0 1194x834  S10  본문 간격 2: 16px
+ok    FH06 g-off-0-inv0 1194x834  S10  본문 간격 3: 16px
+ok    FH06 g-off-0-inv0 1194x834  S10  푸터 간격 1: 8px
+ok    FH06 g-off-0-inv0 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-off-0-inv0 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-off-0-inv0 1194x834  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-off-0-inv0 1194x834  S6  도크 폭 >= 560: 640px
+ok    FH06 g-off-0-inv0 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  본문 w-row 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  본문 w-listcard 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  본문 w-dock 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH06 g-off-0-inv0 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH06 g-off-0-inv0 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH06 g-off-0-inv0 1280x720  S10  본문 간격 1: 16px
+ok    FH06 g-off-0-inv0 1280x720  S10  본문 간격 2: 16px
+ok    FH06 g-off-0-inv0 1280x720  S10  본문 간격 3: 16px
+ok    FH06 g-off-0-inv0 1280x720  S10  푸터 간격 1: 8px
+ok    FH06 g-off-0-inv0 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH06 g-off-0-inv0 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH06 g-off-0-inv0 1280x720  S6  도크 항목 폭 편차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S6  도크 항목 간격 편차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH06 g-off-0-inv0 1280x720  S6  도크 폭 >= 560: 640px
 ok    FH06 g-on-3-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH06 g-on-3-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH06 g-on-3-wait 390x844  S3  상단바 제목 중앙: 0px
@@ -6098,6 +6166,402 @@ ok    FH07 one-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
 ok    FH07 one-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
 ok    FH07 one-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
 ok    FH07 one-wait 1280x720  S5  시트 상단이 화면 안: 180.5px
+ok    FH07 empty-wait 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait 390x844  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait 390x844  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait 390x844  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait 390x844  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait 390x844  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait 390x844  S10  본문 간격 1: 16px
+ok    FH07 empty-wait 390x844  S10  본문 간격 2: 16px
+ok    FH07 empty-wait 390x844  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait 390x844  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait 390x844  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait 390x844  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait 390x844  S6  도크 폭 >= 359: 358px
+ok    FH07 empty-wait 390x844  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait 390x844  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait 390x844  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait 390x844  S5  바텀 시트 최대폭 <= 640: 390px
+ok    FH07 empty-wait 390x844  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait 390x844  S5  시트 상단이 화면 안: 304.5px
+ok    FH07 empty-wait 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait 834x1194  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait 834x1194  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait 834x1194  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait 834x1194  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 834x1194  S10  본문 간격 1: 16px
+ok    FH07 empty-wait 834x1194  S10  본문 간격 2: 16px
+ok    FH07 empty-wait 834x1194  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait 834x1194  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait 834x1194  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait 834x1194  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait 834x1194  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait 834x1194  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait 834x1194  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait 1194x834  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait 1194x834  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait 1194x834  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait 1194x834  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 1194x834  S10  본문 간격 1: 16px
+ok    FH07 empty-wait 1194x834  S10  본문 간격 2: 16px
+ok    FH07 empty-wait 1194x834  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait 1194x834  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait 1194x834  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait 1194x834  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait 1194x834  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait 1194x834  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait 1194x834  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait 1280x720  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait 1280x720  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait 1280x720  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait 1280x720  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait 1280x720  S10  본문 간격 1: 16px
+ok    FH07 empty-wait 1280x720  S10  본문 간격 2: 16px
+ok    FH07 empty-wait 1280x720  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait 1280x720  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait 1280x720  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait 1280x720  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait 1280x720  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait 1280x720  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait 1280x720  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait 1280x720  S5  시트 상단이 화면 안: 220.5px
+ok    FH07 empty-wait-offline 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-offline 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-offline 390x844  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-offline 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-offline 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  본문 w-row 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-offline 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-offline 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait-offline 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait-offline 390x844  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-offline 390x844  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-offline 390x844  S10  본문 간격 3: 16px
+ok    FH07 empty-wait-offline 390x844  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-offline 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-offline 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-offline 390x844  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-offline 390x844  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-offline 390x844  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 390x844  S6  도크 폭 >= 359: 358px
+ok    FH07 empty-wait-offline 390x844  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-offline 390x844  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 390x844  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-offline 390x844  S5  바텀 시트 최대폭 <= 640: 390px
+ok    FH07 empty-wait-offline 390x844  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-offline 390x844  S5  시트 상단이 화면 안: 304.5px
+ok    FH07 empty-wait-offline 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-offline 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-offline 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-offline 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  본문 w-row 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-offline 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-offline 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 834x1194  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-offline 834x1194  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-offline 834x1194  S10  본문 간격 3: 16px
+ok    FH07 empty-wait-offline 834x1194  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-offline 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-offline 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-offline 834x1194  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-offline 834x1194  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-offline 834x1194  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 834x1194  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-offline 834x1194  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-offline 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-offline 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait-offline 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-offline 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-offline 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-offline 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  본문 w-row 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-offline 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-offline 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 1194x834  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-offline 1194x834  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-offline 1194x834  S10  본문 간격 3: 16px
+ok    FH07 empty-wait-offline 1194x834  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-offline 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-offline 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-offline 1194x834  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-offline 1194x834  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-offline 1194x834  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 1194x834  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-offline 1194x834  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-offline 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-offline 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait-offline 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-offline 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-offline 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-offline 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  본문 w-row 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  본문 w-row 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-offline 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-offline 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-offline 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-offline 1280x720  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-offline 1280x720  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-offline 1280x720  S10  본문 간격 3: 16px
+ok    FH07 empty-wait-offline 1280x720  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-offline 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-offline 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-offline 1280x720  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-offline 1280x720  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-offline 1280x720  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 1280x720  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-offline 1280x720  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-offline 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-offline 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-offline 1280x720  S5  시트 상단이 화면 안: 220.5px
+ok    FH07 empty-wait-one 390x844  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-one 390x844  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-one 390x844  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-one 390x844  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-one 390x844  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 390x844  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-one 390x844  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 390x844  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-one 390x844  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 390x844  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-one 390x844  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 390x844  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-one 390x844  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 390x844  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-one 390x844  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-one 390x844  S9  본문 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait-one 390x844  S9  푸터 컬럼 폭(<=640): 358px
+ok    FH07 empty-wait-one 390x844  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-one 390x844  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-one 390x844  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-one 390x844  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-one 390x844  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-one 390x844  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-one 390x844  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-one 390x844  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-one 390x844  S6  도크 폭 >= 359: 358px
+ok    FH07 empty-wait-one 390x844  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-one 390x844  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-one 390x844  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-one 390x844  S5  바텀 시트 최대폭 <= 640: 390px
+ok    FH07 empty-wait-one 390x844  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-one 390x844  S5  시트 상단이 화면 안: 304.5px
+ok    FH07 empty-wait-one 834x1194  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-one 834x1194  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-one 834x1194  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-one 834x1194  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-one 834x1194  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 834x1194  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-one 834x1194  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 834x1194  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-one 834x1194  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 834x1194  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-one 834x1194  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 834x1194  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-one 834x1194  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 834x1194  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-one 834x1194  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-one 834x1194  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 834x1194  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 834x1194  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-one 834x1194  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-one 834x1194  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-one 834x1194  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-one 834x1194  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-one 834x1194  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-one 834x1194  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-one 834x1194  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-one 834x1194  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-one 834x1194  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-one 834x1194  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-one 834x1194  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-one 834x1194  S5  시트 상단이 화면 안: 654.5px
+ok    FH07 empty-wait-one 1194x834  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-one 1194x834  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-one 1194x834  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-one 1194x834  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-one 1194x834  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1194x834  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-one 1194x834  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1194x834  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-one 1194x834  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1194x834  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-one 1194x834  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1194x834  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-one 1194x834  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1194x834  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-one 1194x834  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-one 1194x834  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 1194x834  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 1194x834  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-one 1194x834  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-one 1194x834  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-one 1194x834  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-one 1194x834  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-one 1194x834  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-one 1194x834  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-one 1194x834  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-one 1194x834  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-one 1194x834  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-one 1194x834  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-one 1194x834  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-one 1194x834  S5  시트 상단이 화면 안: 294.5px
+ok    FH07 empty-wait-one 1280x720  S3  상단바 좌/우 바깥여백 차: 0px
+ok    FH07 empty-wait-one 1280x720  S3  상단바 좌/우 요소 높이 차: 0px
+ok    FH07 empty-wait-one 1280x720  S3  상단바 제목 중앙: 0px
+ok    FH07 empty-wait-one 1280x720  S2  상단바 좌우여백(메인영역 기준): 0px
+ok    FH07 empty-wait-one 1280x720  S1  본문 fl-card 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1280x720  S2  본문 fl-card 좌우여백: 0px
+ok    FH07 empty-wait-one 1280x720  S1  본문 w-listcard 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1280x720  S2  본문 w-listcard 좌우여백: 0px
+ok    FH07 empty-wait-one 1280x720  S1  본문 w-dock 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1280x720  S2  본문 w-dock 좌우여백: 0px
+ok    FH07 empty-wait-one 1280x720  S1  푸터 w-fnote 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1280x720  S2  푸터 w-fnote 좌우여백: 0px
+ok    FH07 empty-wait-one 1280x720  S1  푸터 fl-btn 가로중심=메인축: 0px
+ok    FH07 empty-wait-one 1280x720  S2  푸터 fl-btn 좌우여백: 0px
+ok    FH07 empty-wait-one 1280x720  S8  본문·푸터 블록 폭 편차: 0px
+ok    FH07 empty-wait-one 1280x720  S9  본문 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 1280x720  S9  푸터 컬럼 폭(<=640): 640px
+ok    FH07 empty-wait-one 1280x720  S10  본문 간격 1: 16px
+ok    FH07 empty-wait-one 1280x720  S10  본문 간격 2: 16px
+ok    FH07 empty-wait-one 1280x720  S10  푸터 간격 1: 8px
+ok    FH07 empty-wait-one 1280x720  S10  본문 좌우 안쪽여백: 16px
+ok    FH07 empty-wait-one 1280x720  S7  본문 묶음 세로중앙(본문영역 기준): 0px
+ok    FH07 empty-wait-one 1280x720  S6  도크 항목 폭 편차: 0px
+ok    FH07 empty-wait-one 1280x720  S6  도크 항목 간격 편차: 0px
+ok    FH07 empty-wait-one 1280x720  S6  도크 안쪽 좌우여백 차: 0px
+ok    FH07 empty-wait-one 1280x720  S6  도크 폭 >= 560: 640px
+ok    FH07 empty-wait-one 1280x720  S5  세로형/모바일/확인 시트: 사이드 금지(바텀): 바텀
+ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 좌우여백 차: 0px
+ok    FH07 empty-wait-one 1280x720  S1  바텀 시트 가로중심=화면 중앙: 0px
+ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 최대폭 <= 640: 640px
+ok    FH07 empty-wait-one 1280x720  S5  바텀 시트 화면 하단 밀착: 0px
+ok    FH07 empty-wait-one 1280x720  S5  시트 상단이 화면 안: 220.5px
 ok    FH08 choose 390x844  S3  상단바 좌/우 바깥여백 차: 0px
 ok    FH08 choose 390x844  S3  상단바 좌/우 요소 높이 차: 0px
 ok    FH08 choose 390x844  S3  상단바 제목 중앙: 0px

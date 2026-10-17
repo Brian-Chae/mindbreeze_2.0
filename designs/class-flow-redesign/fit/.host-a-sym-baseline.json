@@ -2,15 +2,15 @@
  "byRule": {
   "S1": {
    "fail": 0,
-   "total": 892
+   "total": 920
   },
   "S2": {
    "fail": 0,
-   "total": 280
+   "total": 296
   },
   "S3": {
    "fail": 0,
-   "total": 160
+   "total": 168
   },
   "S4": {
    "fail": 0,
@@ -26,21 +26,21 @@
   },
   "S7": {
    "fail": 0,
-   "total": 92
+   "total": 100
   },
   "S8": {
    "fail": 0,
-   "total": 224
+   "total": 228
   },
   "S9": {
    "fail": 0,
-   "total": 360
+   "total": 384
   },
   "S10": {
    "fail": 0,
-   "total": 536
+   "total": 572
   }
  },
  "fail": 0,
- "total": 2792
+ "total": 2916
 }

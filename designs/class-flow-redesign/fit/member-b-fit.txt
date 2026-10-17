@@ -1,5 +1,5 @@
 MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B (FM06a~e · FM07 · FM08 · FM09) 핏 측정
-측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 63개 · 뷰포트 4개(390x844, 834x1194, 1194x834, 1280x720) · 측정 페이지 252장
+측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 70개 · 뷰포트 4개(390x844, 834x1194, 1194x834, 1280x720) · 측정 페이지 280장
 판정: PASS (위반 0건)
 
 항목별 위반 건수 (수정 전 → 수정 후):
@@ -17,10 +17,10 @@ MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B (FM06a~e · FM07 �
   space8   8배수 아닌 간격               0 →    0
   nested   시트 내 중첩 스크롤             0 →    0
   trk      R1-2 전극 트래커             0 →    0
-  av       R1-3 내 영상·소리           40 →    0
+  av       R1-3 내 영상·소리            0 →    0
   srcGlyph 파일 소스 이모지·글리프    0 →    0
   srcBanned 파일 소스 R1 금지어(클래스 코드·참여 코드·참여코드·코드 복사·코드 입력·6자리·게스트·인증 코드·OTP·QR·귀)    0 →    0  
-  srcStale  R3 폐기 흔적(w-vmeter·iconmeter)    4 →    0  
+  srcStale  R3 폐기 흔적(w-vmeter·iconmeter)    0 →    0  
   idxBanned 인덱스 표 R1 금지어    0 →    0  
   외부 http 리소스 참조 0건
 측정 방식 메모: 영문 대문자 아이브로우 검사는 제품명 "LINK BAND"(필수 표기)를 예외로 한다. 금지 용어에는 %·순위·점수·평균을 포함한다. 11px 이하는 12px 미만 글자 수.
@@ -32,6 +32,9 @@ FM06a  | on-solo-none-member                      | 390x844  | PASS
 FM06a  | off-group-none-member                    | 390x844  | PASS
 FM06a  | off-solo-opt-member                      | 390x844  | PASS
 FM06a  | on-group-opt-member-empty                | 390x844  | PASS
+FM06a  | on-group-opt-member-included             | 390x844  | PASS
+FM06a  | on-group-opt-member-research-agree       | 390x844  | PASS
+FM06a  | on-group-opt-member-research-fail        | 390x844  | PASS
 FM06b  | on-group-opt-member-q1                   | 390x844  | PASS
 FM06b  | on-group-opt-member-q2                   | 390x844  | PASS
 FM06b  | on-group-opt-member-q3                   | 390x844  | PASS
@@ -51,6 +54,7 @@ FM06c  | on-group-req-member-idle                 | 390x844  | PASS
 FM06c  | on-group-req-member-leadoffl             | 390x844  | PASS
 FM06c  | on-group-req-member-leadoff              | 390x844  | PASS
 FM06c  | on-group-req-member-unsupported          | 390x844  | PASS
+FM06c  | on-group-req-member-connected            | 390x844  | PASS
 FM06c  | off-solo-opt-member-idle                 | 390x844  | PASS
 FM06c  | off-group-req-member-connected           | 390x844  | PASS
 FM06c  | on-group-opt-member-idle-started         | 390x844  | PASS
@@ -82,6 +86,7 @@ FM07   | on-group-req-member                      | 390x844  | PASS
 FM08   | on-group-member                          | 390x844  | PASS
 FM08   | on-solo-member                           | 390x844  | PASS
 FM08   | off-group-member                         | 390x844  | PASS
+FM08   | on-group-member-cancel-sheet             | 390x844  | PASS
 FM09   | on-group-member                          | 390x844  | PASS
 FM09   | off-solo-member                          | 390x844  | PASS
 FM09   | on-group-member-checked                  | 390x844  | PASS
@@ -89,12 +94,17 @@ FM09   | on-group-member-report                   | 390x844  | PASS
 FM09   | on-group-member-reportsent               | 390x844  | PASS
 FM09   | on-group-member-checkin                  | 390x844  | PASS
 FM09   | on-group-member-checkinempty             | 390x844  | PASS
+FM09   | on-group-member-excluded                 | 390x844  | PASS
+FM09   | on-group-member-guest-report             | 390x844  | PASS
 FM06a  | on-group-opt-member                      | 834x1194 | PASS
 FM06a  | on-group-req-member                      | 834x1194 | PASS
 FM06a  | on-solo-none-member                      | 834x1194 | PASS
 FM06a  | off-group-none-member                    | 834x1194 | PASS
 FM06a  | off-solo-opt-member                      | 834x1194 | PASS
 FM06a  | on-group-opt-member-empty                | 834x1194 | PASS
+FM06a  | on-group-opt-member-included             | 834x1194 | PASS
+FM06a  | on-group-opt-member-research-agree       | 834x1194 | PASS
+FM06a  | on-group-opt-member-research-fail        | 834x1194 | PASS
 FM06b  | on-group-opt-member-q1                   | 834x1194 | PASS
 FM06b  | on-group-opt-member-q2                   | 834x1194 | PASS
 FM06b  | on-group-opt-member-q3                   | 834x1194 | PASS
@@ -114,6 +124,7 @@ FM06c  | on-group-req-member-idle                 | 834x1194 | PASS
 FM06c  | on-group-req-member-leadoffl             | 834x1194 | PASS
 FM06c  | on-group-req-member-leadoff              | 834x1194 | PASS
 FM06c  | on-group-req-member-unsupported          | 834x1194 | PASS
+FM06c  | on-group-req-member-connected            | 834x1194 | PASS
 FM06c  | off-solo-opt-member-idle                 | 834x1194 | PASS
 FM06c  | off-group-req-member-connected           | 834x1194 | PASS
 FM06c  | on-group-opt-member-idle-started         | 834x1194 | PASS
@@ -145,6 +156,7 @@ FM07   | on-group-req-member                      | 834x1194 | PASS
 FM08   | on-group-member                          | 834x1194 | PASS
 FM08   | on-solo-member                           | 834x1194 | PASS
 FM08   | off-group-member                         | 834x1194 | PASS
+FM08   | on-group-member-cancel-sheet             | 834x1194 | PASS
 FM09   | on-group-member                          | 834x1194 | PASS
 FM09   | off-solo-member                          | 834x1194 | PASS
 FM09   | on-group-member-checked                  | 834x1194 | PASS
@@ -152,12 +164,17 @@ FM09   | on-group-member-report                   | 834x1194 | PASS
 FM09   | on-group-member-reportsent               | 834x1194 | PASS
 FM09   | on-group-member-checkin                  | 834x1194 | PASS
 FM09   | on-group-member-checkinempty             | 834x1194 | PASS
+FM09   | on-group-member-excluded                 | 834x1194 | PASS
+FM09   | on-group-member-guest-report             | 834x1194 | PASS
 FM06a  | on-group-opt-member                      | 1194x834 | PASS
 FM06a  | on-group-req-member                      | 1194x834 | PASS
 FM06a  | on-solo-none-member                      | 1194x834 | PASS
 FM06a  | off-group-none-member                    | 1194x834 | PASS
 FM06a  | off-solo-opt-member                      | 1194x834 | PASS
 FM06a  | on-group-opt-member-empty                | 1194x834 | PASS
+FM06a  | on-group-opt-member-included             | 1194x834 | PASS
+FM06a  | on-group-opt-member-research-agree       | 1194x834 | PASS
+FM06a  | on-group-opt-member-research-fail        | 1194x834 | PASS
 FM06b  | on-group-opt-member-q1                   | 1194x834 | PASS
 FM06b  | on-group-opt-member-q2                   | 1194x834 | PASS
 FM06b  | on-group-opt-member-q3                   | 1194x834 | PASS
@@ -177,6 +194,7 @@ FM06c  | on-group-req-member-idle                 | 1194x834 | PASS
 FM06c  | on-group-req-member-leadoffl             | 1194x834 | PASS
 FM06c  | on-group-req-member-leadoff              | 1194x834 | PASS
 FM06c  | on-group-req-member-unsupported          | 1194x834 | PASS
+FM06c  | on-group-req-member-connected            | 1194x834 | PASS
 FM06c  | off-solo-opt-member-idle                 | 1194x834 | PASS
 FM06c  | off-group-req-member-connected           | 1194x834 | PASS
 FM06c  | on-group-opt-member-idle-started         | 1194x834 | PASS
@@ -208,6 +226,7 @@ FM07   | on-group-req-member                      | 1194x834 | PASS
 FM08   | on-group-member                          | 1194x834 | PASS
 FM08   | on-solo-member                           | 1194x834 | PASS
 FM08   | off-group-member                         | 1194x834 | PASS
+FM08   | on-group-member-cancel-sheet             | 1194x834 | PASS
 FM09   | on-group-member                          | 1194x834 | PASS
 FM09   | off-solo-member                          | 1194x834 | PASS
 FM09   | on-group-member-checked                  | 1194x834 | PASS
@@ -215,12 +234,17 @@ FM09   | on-group-member-report                   | 1194x834 | PASS
 FM09   | on-group-member-reportsent               | 1194x834 | PASS
 FM09   | on-group-member-checkin                  | 1194x834 | PASS
 FM09   | on-group-member-checkinempty             | 1194x834 | PASS
+FM09   | on-group-member-excluded                 | 1194x834 | PASS
+FM09   | on-group-member-guest-report             | 1194x834 | PASS
 FM06a  | on-group-opt-member                      | 1280x720 | PASS
 FM06a  | on-group-req-member                      | 1280x720 | PASS
 FM06a  | on-solo-none-member                      | 1280x720 | PASS
 FM06a  | off-group-none-member                    | 1280x720 | PASS
 FM06a  | off-solo-opt-member                      | 1280x720 | PASS
 FM06a  | on-group-opt-member-empty                | 1280x720 | PASS
+FM06a  | on-group-opt-member-included             | 1280x720 | PASS
+FM06a  | on-group-opt-member-research-agree       | 1280x720 | PASS
+FM06a  | on-group-opt-member-research-fail        | 1280x720 | PASS
 FM06b  | on-group-opt-member-q1                   | 1280x720 | PASS
 FM06b  | on-group-opt-member-q2                   | 1280x720 | PASS
 FM06b  | on-group-opt-member-q3                   | 1280x720 | PASS
@@ -240,6 +264,7 @@ FM06c  | on-group-req-member-idle                 | 1280x720 | PASS
 FM06c  | on-group-req-member-leadoffl             | 1280x720 | PASS
 FM06c  | on-group-req-member-leadoff              | 1280x720 | PASS
 FM06c  | on-group-req-member-unsupported          | 1280x720 | PASS
+FM06c  | on-group-req-member-connected            | 1280x720 | PASS
 FM06c  | off-solo-opt-member-idle                 | 1280x720 | PASS
 FM06c  | off-group-req-member-connected           | 1280x720 | PASS
 FM06c  | on-group-opt-member-idle-started         | 1280x720 | PASS
@@ -271,6 +296,7 @@ FM07   | on-group-req-member                      | 1280x720 | PASS
 FM08   | on-group-member                          | 1280x720 | PASS
 FM08   | on-solo-member                           | 1280x720 | PASS
 FM08   | off-group-member                         | 1280x720 | PASS
+FM08   | on-group-member-cancel-sheet             | 1280x720 | PASS
 FM09   | on-group-member                          | 1280x720 | PASS
 FM09   | off-solo-member                          | 1280x720 | PASS
 FM09   | on-group-member-checked                  | 1280x720 | PASS
@@ -278,3 +304,5 @@ FM09   | on-group-member-report                   | 1280x720 | PASS
 FM09   | on-group-member-reportsent               | 1280x720 | PASS
 FM09   | on-group-member-checkin                  | 1280x720 | PASS
 FM09   | on-group-member-checkinempty             | 1280x720 | PASS
+FM09   | on-group-member-excluded                 | 1280x720 | PASS
+FM09   | on-group-member-guest-report             | 1280x720 | PASS

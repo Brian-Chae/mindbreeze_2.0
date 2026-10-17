@@ -22,7 +22,7 @@ fs.mkdirSync(`${D}/fit`, { recursive: true });
 const suffix = mode === 'before' ? '-before' : '';
 const VPS = [[390, 844], [834, 1194], [1194, 834], [1280, 720]];
 
-const BANNED = /세션|수업|참여하기|오픈|그래도 시작|LB |1:N|코드|게스트|OTP|QR|귀/;
+const BANNED = /세션|수업|참여하기|오픈|그래도 시작|LB |1:N|6자리|회원 전용|초대 기반 입장|초대받은 회원만|초대한 회원만|로그인한 계정으로 입장해요|30일 보관|관리자가 삭제를 지시하기 전까지|동의하고 계속하기|대기 그만하기|대시보드로 이동|LINK BAND 연결이 필요해요|필수 클래스라|입장할 수 없어요|회원이 LINK BAND를 연결해야|알림 받음|전달되지 않았어요|발송 완료|발송 실패|게스트|OTP|QR|귀/;
 const GLYPH = /[✓✕←-↓‹›•○●×]|\p{Extended_Pictographic}/u;
 
 const measure = ({ glyphSrc, bannedSrc }) => {
@@ -321,7 +321,7 @@ const cnt = (re) => (src.match(re) || []).length;
 const stat = [
   '# 파일 전체 정적 grep (host-b.html)',
   `#   이모지 ${cnt(/\p{Extended_Pictographic}/gu)}건 / 문자 글리프(✓ ✕ ← → ‹ › • ● ○ ×) ${cnt(/[✓✕←→‹›•●○×]/g)}건`,
-  `#   R1 금지어(파일 전체, 화면 텍스트+인덱스 표 포함): 코드 ${cnt(/코드/g)} / 귀 ${cnt(/귀/g)} / 게스트 ${cnt(/게스트/g)} / OTP ${cnt(/OTP/g)} / QR ${cnt(/QR/g)} / 6자리 ${cnt(/6자리/g)} / 인증 코드 ${cnt(/인증 코드/g)}`,
+  `#   R1 금지어(파일 전체, 화면 텍스트+인덱스 표 포함; 4자리 입장 코드는 상담사 화면이라 허용): 귀 ${cnt(/귀/g)} / 게스트 ${cnt(/게스트/g)} / OTP ${cnt(/OTP/g)} / QR ${cnt(/QR/g)} / 6자리 ${cnt(/6자리/g)} / 인증 코드 ${cnt(/인증 코드/g)} / 30일 보관 ${cnt(/30일 보관/g)} / 회원 전용 ${cnt(/회원 전용/g)} / 알림 받음 ${cnt(/알림 받음/g)} / 전달되지 않았어요 ${cnt(/전달되지 않았어요/g)}`,
   `#   금지어: 세션 ${cnt(/세션/g)} / 수업 ${cnt(/수업/g)} / 참여하기 ${cnt(/참여하기/g)} / 오픈 ${cnt(/오픈/g)} / 그래도 시작 ${cnt(/그래도 시작/g)} / "LB " ${cnt(/LB /g)} / 1:N ${cnt(/1:N/g)}`,
   `#   외부 http(s) 리소스 ${cnt(/https?:\/\//g)}건 / 11px 이하 font-size 선언 ${cnt(/font-size:\s*(?:[0-9]|1[01])px/g)}건`,
   '#   화면 텍스트 기준 grep(글리프·금지어·영문 대문자 아이브로우·11px 이하)은 아래 케이스별 판정에 포함',

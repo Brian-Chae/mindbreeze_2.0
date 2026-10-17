@@ -53,7 +53,7 @@ export function fitMeasure() {
   const overlaps = [];
   const groups = [
     ['.fl-layer', '.fl-layer > *'], ['.sh-main', '.sh-main > *'], ['.fl-top', '.fl-top > *, .fl-top .fl-top-l > *, .fl-top .fl-top-r > *'],
-    ['.sh-head', '.sh-head > *'], ['.w-col', '.w-col > *'], ['.fl-col', '.fl-col > *'], ['.w-hc', '.w-hc > *'], ['.w-sheet', '.w-sheet > *'], ['.w-code-card', '.w-code-card > *'], ['.w-tc', '.w-tc > *'],
+    ['.sh-head', '.sh-head > *'], ['.w-col', '.w-col > *'], ['.fl-col', '.fl-col > *'], ['.w-hc', '.w-hc > *'], ['.w-sheet', '.w-sheet > *'], ['.w-code-card', '.w-code-card > *'], ['.w-form', '.w-form > *'], ['.w-tc', '.w-tc > *'],
   ];
   for (const [cont, sel] of groups) for (const c of document.querySelectorAll(cont)) {
     const kids = [...c.querySelectorAll(sel)].filter((k) => vis(k) && (k.parentElement === c || k.parentElement.parentElement === c));
@@ -93,7 +93,7 @@ export function fitMeasure() {
   const texts = document.body.innerText + '\n' + [...document.querySelectorAll('[aria-label],[placeholder],input')].map((e) => (e.getAttribute('aria-label') || '') + ' ' + (e.getAttribute('placeholder') || '') + ' ' + (e.value || '')).join('\n');
   const glyph = (texts.match(/[←-⇿•‹›×○●✓✕✗✔]|\p{Extended_Pictographic}/gu) || []);
   const banned = [];
-  for (const w of ['세션', '수업', '참여하기', '오픈', '그래도 시작', '1:N', '클래스 코드', '참여 코드', '참여코드', '코드 복사', '코드 입력', '6자리', '게스트', '인증 코드', '코드', 'OTP', 'QR', '귀']) if (texts.includes(w)) banned.push(w);
+  for (const w of ['회원 전용', '초대 기반 입장', '초대받은 회원만', '초대한 회원만', '로그인한 계정으로 입장해요', '30일 보관', '관리자가 삭제를 지시하기 전까지', '동의하고 계속하기', '녹음과 AI 기록', '대기 그만하기', '대시보드로 이동', '6자리', 'LINK BAND 연결이 필요해요', '필수 클래스라', '회원이 LINK BAND를 연결해야', '알림 받음', '전달되지 않았어요', '발송 완료', '발송 실패', '수업', '세션', '참여하기', '오픈', '그래도 시작', '1:N', '게스트', '인증 코드', 'OTP', '인증 요청', 'QR', '참여 코드', '참여코드', '코드 복사', 'LINK BAND (필수)', '입장 전에 연결을 확인해요']) if (texts.includes(w)) banned.push(w);
   if (/(^|[^A-Za-z])LB /.test(texts)) banned.push('LB ');
   const eyebrow = [];
   for (const el of all) {
@@ -217,9 +217,9 @@ export function symMeasure() {
     }
     // S6 균등 분배: 코드 칸·분할 버튼
     const cells = RA('.w-codebox > span');
-    if (cells.length === 6) {
+    if (cells.length === 4) {
       const ws = cells.map((c) => c.w), gaps = cells.slice(1).map((c, n) => c.x - cells[n].r), wrap = R('.w-codewrap');
-      add('S6', `코드 칸 폭 ${f(Math.min(...ws))}~${f(Math.max(...ws))} 간격 ${f(Math.min(...gaps))}~${f(Math.max(...gaps))} 안쪽 ${f(cells[0].x - wrap.x)}/${f(wrap.r - cells[5].r)}`, Math.max(...ws) - Math.min(...ws) <= 2 && Math.max(...gaps) - Math.min(...gaps) <= 2 && Math.abs((cells[0].x - wrap.x) - (wrap.r - cells[5].r)) <= 2);
+      add('S6', `코드 칸 폭 ${f(Math.min(...ws))}~${f(Math.max(...ws))} 간격 ${f(Math.min(...gaps))}~${f(Math.max(...gaps))} 안쪽 ${f(cells[0].x - wrap.x)}/${f(wrap.r - cells[3].r)}`, Math.max(...ws) - Math.min(...ws) <= 2 && Math.max(...gaps) - Math.min(...gaps) <= 2 && Math.abs((cells[0].x - wrap.x) - (wrap.r - cells[3].r)) <= 2);
     }
     const seg = RA('.fl-seg > button');
     if (seg.length === 3) add('S6', `성별 버튼 폭 ${seg.map((s) => f(s.w)).join('/')}`, Math.max(...seg.map((s) => s.w)) - Math.min(...seg.map((s) => s.w)) <= 2);

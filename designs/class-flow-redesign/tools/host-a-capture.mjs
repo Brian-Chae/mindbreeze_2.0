@@ -45,7 +45,7 @@ await browser.close();
 // 원본 소스 grep
 const src = fs.readFileSync(path.join(root, 'host-a.html'), 'utf8');
 const glyphRe = /[\u{1F000}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{2022}\u{2023}\u{25A0}-\u{25FF}×✓✕←→‹›•●○]/u;
-const forbRe = /세션|수업|참여하기|오픈|그래도 시작|LB |1:N|코드|QR|OTP|게스트|6자리|귀/;
+const forbRe = /세션|수업|참여하기|오픈|그래도 시작|LB |1:N|QR|OTP|게스트|6자리|귀|회원 전용|초대 기반 입장|초대받은 회원만|초대한 회원만|로그인한 계정으로 입장|30일 보관|관리자가 삭제를 지시|동의하고 계속하기|대기 그만하기|대시보드로 이동|LINK BAND 연결이 필요|필수 클래스라|입장할 수 없어요|회원이 LINK BAND를 연결해야|알림 받음|전달되지 않았어요|발송 완료|발송 실패|정원 10 고정|그룹은 최대 10명/;
 const srcGlyph = src.split('\n').filter((l) => glyphRe.test(l)).length;
 const srcForb = src.split('\n').filter((l) => forbRe.test(l)).length;
 const srcHttp = (src.match(/https?:\/\//g) || []).length;

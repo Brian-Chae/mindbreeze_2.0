@@ -1,19 +1,19 @@
-MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — 좌우 대칭·비율 균형 측정 [수정 전] (균형.md S1~S10, MS3)
-측정: tools/member-a-run.mjs · 29개 케이스 × 4개 뷰포트 · 총 검사 1858건
-위반 0건 / 전체 1858건
+MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM04b, FM10) — 좌우 대칭·비율 균형 측정 [수정 전] (균형.md S1~S10, MS3)
+측정: tools/member-a-run.mjs · 23개 케이스 × 4개 뷰포트 · 총 검사 1494건
+위반 0건 / 전체 1494건
 
 규칙별 위반 건수:
-  S1   단독 요소 중심축              위반   0 / 352
-  S2   좌우 여백 동일               위반   0 / 159
-  S3   상단 바 좌우 대칭             위반   0 / 132
+  S1   단독 요소 중심축              위반   0 / 268
+  S2   좌우 여백 동일               위반   0 / 123
+  S3   상단 바 좌우 대칭             위반   0 / 100
   S4   PiP 짝 가운데(해당 없음)       위반   0 / 0
   S5   시트 분기(세로형=바텀)          위반   0 / 4
-  S6   균등 분배                  위반   0 / 67
-  S7   본문 세로 중앙               위반   0 / 56
-  S8   박스 폭 동일                위반   0 / 192
-  S9   중앙 컬럼 max-width        위반   0 / 120
-  S10  8배수 간격                 위반   0 / 764
-  MS3  전체 화면 정중앙              위반   0 / 12
+  S6   균등 분배                  위반   0 / 43
+  S7   본문 세로 중앙               위반   0 / 32
+  S8   박스 폭 동일                위반   0 / 156
+  S9   중앙 컬럼 max-width        위반   0 / 96
+  S10  8배수 간격                 위반   0 / 652
+  MS3  전체 화면 정중앙              위반   0 / 20
 
 뷰포트별 위반 건수: 390x844=0  834x1194=0  1194x834=0  1280x720=0
 
@@ -291,76 +291,6 @@ FM03/cancelled             | 390x844  | S10  | .w-hc .w-hrow→.w-htl 16 | PASS
 FM03/cancelled             | 390x844  | S10  | .w-hc .w-htl→.w-hmeta 8 | PASS
 FM03/cancelled             | 390x844  | S10  | .w-hc .w-hmeta→.w-hrow 16 | PASS
 FM03/cancelled             | 390x844  | S10  | .w-hc .w-hrow→.w-hbox 16 | PASS
-FM04/empty                 | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM04/empty                 | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM04/empty                 | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM04/empty                 | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/empty                 | 390x844  | S1   | 로고 Δ0 | PASS
-FM04/empty                 | 390x844  | S1   | 코드 칸 Δ0 | PASS
-FM04/empty                 | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/empty                 | 390x844  | S6   | 코드 칸 폭 44.7~44.7 간격 8~8 안쪽 0/0 | PASS
-FM04/empty                 | 390x844  | S7   | 본문 중심 Δ0 (허용 ±71) | PASS
-FM04/empty                 | 390x844  | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/empty                 | 390x844  | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/empty                 | 390x844  | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/empty                 | 390x844  | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/empty                 | 390x844  | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/typing                | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM04/typing                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM04/typing                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM04/typing                | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/typing                | 390x844  | S1   | 로고 Δ0 | PASS
-FM04/typing                | 390x844  | S1   | 코드 칸 Δ0 | PASS
-FM04/typing                | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/typing                | 390x844  | S6   | 코드 칸 폭 44.7~44.7 간격 8~8 안쪽 0/0 | PASS
-FM04/typing                | 390x844  | S7   | 본문 중심 Δ0 (허용 ±71) | PASS
-FM04/typing                | 390x844  | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/typing                | 390x844  | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/typing                | 390x844  | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/typing                | 390x844  | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/typing                | 390x844  | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-none            | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-none            | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM04/error-none            | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM04/error-none            | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-none            | 390x844  | S1   | 로고 Δ0 | PASS
-FM04/error-none            | 390x844  | S1   | 코드 칸 Δ0 | PASS
-FM04/error-none            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-none            | 390x844  | S6   | 코드 칸 폭 44.7~44.7 간격 8~8 안쪽 0/0 | PASS
-FM04/error-none            | 390x844  | S7   | 본문 중심 Δ0 (허용 ±71) | PASS
-FM04/error-none            | 390x844  | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-none            | 390x844  | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-none            | 390x844  | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-none            | 390x844  | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-none            | 390x844  | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-closed          | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-closed          | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM04/error-closed          | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM04/error-closed          | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-closed          | 390x844  | S1   | 로고 Δ0 | PASS
-FM04/error-closed          | 390x844  | S1   | 코드 칸 Δ0 | PASS
-FM04/error-closed          | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-closed          | 390x844  | S6   | 코드 칸 폭 44.7~44.7 간격 8~8 안쪽 0/0 | PASS
-FM04/error-closed          | 390x844  | S7   | 본문 중심 Δ0 (허용 ±71) | PASS
-FM04/error-closed          | 390x844  | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-closed          | 390x844  | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-closed          | 390x844  | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-closed          | 390x844  | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-closed          | 390x844  | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-notyet          | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-notyet          | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM04/error-notyet          | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM04/error-notyet          | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-notyet          | 390x844  | S1   | 로고 Δ0 | PASS
-FM04/error-notyet          | 390x844  | S1   | 코드 칸 Δ0 | PASS
-FM04/error-notyet          | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-notyet          | 390x844  | S6   | 코드 칸 폭 44.7~44.7 간격 8~8 안쪽 0/0 | PASS
-FM04/error-notyet          | 390x844  | S7   | 본문 중심 Δ0 (허용 ±71) | PASS
-FM04/error-notyet          | 390x844  | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-notyet          | 390x844  | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-notyet          | 390x844  | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-notyet          | 390x844  | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-notyet          | 390x844  | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
 FM05/member                | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM05/member                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM05/member                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
@@ -409,57 +339,6 @@ FM05/member-offline        | 390x844  | S10  | .fl-foot > .fl-col .w-fnote→.fl
 FM05/member-offline        | 390x844  | S10  | .w-sum h2→.m 8 | PASS
 FM05/member-offline        | 390x844  | S10  | .w-sum .m→.c 8 | PASS
 FM05/member-offline        | 390x844  | S10  | .w-who .id→.w-fnote 16 | PASS
-FM05/guest                 | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest                 | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM05/guest                 | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM05/guest                 | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest                 | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
-FM05/guest                 | 390x844  | S8   | 본문 폭 358 = 하단 폭 358 | PASS
-FM05/guest                 | 390x844  | S8   | 하단 박스 폭 358/358 | PASS
-FM05/guest                 | 390x844  | S8   | 본문 박스 폭 358/358 | PASS
-FM05/guest                 | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest                 | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest                 | 390x844  | S7   | 본문 중심 Δ0 (허용 ±62.7) | PASS
-FM05/guest                 | 390x844  | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest                 | 390x844  | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest                 | 390x844  | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest                 | 390x844  | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest                 | 390x844  | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-wait            | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-wait            | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM05/guest-wait            | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM05/guest-wait            | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-wait            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
-FM05/guest-wait            | 390x844  | S8   | 본문 폭 358 = 하단 폭 358 | PASS
-FM05/guest-wait            | 390x844  | S8   | 하단 박스 폭 358/358 | PASS
-FM05/guest-wait            | 390x844  | S8   | 본문 박스 폭 358/358 | PASS
-FM05/guest-wait            | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-wait            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-wait            | 390x844  | S7   | 본문 중심 Δ0 (허용 ±62.7) | PASS
-FM05/guest-wait            | 390x844  | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-wait            | 390x844  | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-wait            | 390x844  | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-wait            | 390x844  | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-wait            | 390x844  | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-more            | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
-FM05/guest-more            | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
-FM05/guest-more            | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-more            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
-FM05/guest-more            | 390x844  | S8   | 본문 폭 358 = 하단 폭 358 | PASS
-FM05/guest-more            | 390x844  | S8   | 하단 박스 폭 358/358 | PASS
-FM05/guest-more            | 390x844  | S8   | 본문 박스 폭 358/358 | PASS
-FM05/guest-more            | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-more            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-more            | 390x844  | S6   | 성별 버튼 폭 102.7/102.7/102.7 | PASS
-FM05/guest-more            | 390x844  | S7   | 본문 중심 Δ0 (허용 ±62.7) | PASS
-FM05/guest-more            | 390x844  | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-more            | 390x844  | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-more            | 390x844  | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-more            | 390x844  | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-more            | 390x844  | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 390x844  | S10  | .w-who .w-acc→.w-opt 16 | PASS
-FM05/guest-more            | 390x844  | S10  | .w-opt .fl-field→.fl-field 16 | PASS
 FM10/cancelled             | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM10/cancelled             | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM10/cancelled             | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
@@ -475,6 +354,36 @@ FM10/cancelled             | 390x844  | S10  | .w-tc .fl-sub→.w-info 16 | PASS
 FM10/cancelled             | 390x844  | S10  | .w-tc .w-info→.fl-note 16 | PASS
 FM10/cancelled             | 390x844  | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
 FM10/cancelled             | 390x844  | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/closed                | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM10/closed                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM10/closed                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM10/closed                | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/closed                | 390x844  | S1   | 로고 Δ0 | PASS
+FM10/closed                | 390x844  | S1   | 아이콘 Δ0 | PASS
+FM10/closed                | 390x844  | S7   | 본문 중심 Δ0 (허용 ±75.5) | PASS
+FM10/closed                | 390x844  | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/closed                | 390x844  | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/notyet                | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FM10/notyet                | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FM10/notyet                | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FM10/notyet                | 390x844  | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/notyet                | 390x844  | S1   | 로고 Δ0 | PASS
+FM10/notyet                | 390x844  | S1   | 아이콘 Δ0 | PASS
+FM10/notyet                | 390x844  | S7   | 본문 중심 Δ0 (허용 ±75.5) | PASS
+FM10/notyet                | 390x844  | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/notyet                | 390x844  | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
 FM10/error                 | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FM10/error                 | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FM10/error                 | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
@@ -748,76 +657,6 @@ FM03/cancelled             | 834x1194 | S10  | .w-hc .w-hrow→.w-htl 16 | PASS
 FM03/cancelled             | 834x1194 | S10  | .w-hc .w-htl→.w-hmeta 8 | PASS
 FM03/cancelled             | 834x1194 | S10  | .w-hc .w-hmeta→.w-hrow 16 | PASS
 FM03/cancelled             | 834x1194 | S10  | .w-hc .w-hrow→.w-hbox 16 | PASS
-FM04/empty                 | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/empty                 | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM04/empty                 | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/empty                 | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/empty                 | 834x1194 | S1   | 로고 Δ0 | PASS
-FM04/empty                 | 834x1194 | S1   | 코드 칸 Δ0 | PASS
-FM04/empty                 | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/empty                 | 834x1194 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/empty                 | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±99) | PASS
-FM04/empty                 | 834x1194 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/empty                 | 834x1194 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/empty                 | 834x1194 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/empty                 | 834x1194 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/empty                 | 834x1194 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/typing                | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/typing                | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM04/typing                | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/typing                | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/typing                | 834x1194 | S1   | 로고 Δ0 | PASS
-FM04/typing                | 834x1194 | S1   | 코드 칸 Δ0 | PASS
-FM04/typing                | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/typing                | 834x1194 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/typing                | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±99) | PASS
-FM04/typing                | 834x1194 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/typing                | 834x1194 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/typing                | 834x1194 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/typing                | 834x1194 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/typing                | 834x1194 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-none            | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-none            | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM04/error-none            | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-none            | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-none            | 834x1194 | S1   | 로고 Δ0 | PASS
-FM04/error-none            | 834x1194 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-none            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-none            | 834x1194 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-none            | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±99) | PASS
-FM04/error-none            | 834x1194 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-none            | 834x1194 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-none            | 834x1194 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-none            | 834x1194 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-none            | 834x1194 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-closed          | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-closed          | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM04/error-closed          | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-closed          | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-closed          | 834x1194 | S1   | 로고 Δ0 | PASS
-FM04/error-closed          | 834x1194 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-closed          | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-closed          | 834x1194 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-closed          | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±99) | PASS
-FM04/error-closed          | 834x1194 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-closed          | 834x1194 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-closed          | 834x1194 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-closed          | 834x1194 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-closed          | 834x1194 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-notyet          | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-notyet          | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM04/error-notyet          | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-notyet          | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-notyet          | 834x1194 | S1   | 로고 Δ0 | PASS
-FM04/error-notyet          | 834x1194 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-notyet          | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-notyet          | 834x1194 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-notyet          | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±99) | PASS
-FM04/error-notyet          | 834x1194 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-notyet          | 834x1194 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-notyet          | 834x1194 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-notyet          | 834x1194 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-notyet          | 834x1194 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
 FM05/member                | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM05/member                | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
 FM05/member                | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -866,57 +705,6 @@ FM05/member-offline        | 834x1194 | S10  | .fl-foot > .fl-col .w-fnote→.fl
 FM05/member-offline        | 834x1194 | S10  | .w-sum h2→.m 8 | PASS
 FM05/member-offline        | 834x1194 | S10  | .w-sum .m→.c 8 | PASS
 FM05/member-offline        | 834x1194 | S10  | .w-who .id→.w-fnote 16 | PASS
-FM05/guest                 | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest                 | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM05/guest                 | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest                 | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest                 | 834x1194 | S2   | 하단 컬럼 좌177/우177 | PASS
-FM05/guest                 | 834x1194 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest                 | 834x1194 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest                 | 834x1194 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest                 | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest                 | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest                 | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±90.7) | PASS
-FM05/guest                 | 834x1194 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest                 | 834x1194 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest                 | 834x1194 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest                 | 834x1194 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest                 | 834x1194 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-wait            | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-wait            | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM05/guest-wait            | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-wait            | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-wait            | 834x1194 | S2   | 하단 컬럼 좌177/우177 | PASS
-FM05/guest-wait            | 834x1194 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-wait            | 834x1194 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-wait            | 834x1194 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-wait            | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-wait            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-wait            | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±90.7) | PASS
-FM05/guest-wait            | 834x1194 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-wait            | 834x1194 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-wait            | 834x1194 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-wait            | 834x1194 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-wait            | 834x1194 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-more            | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
-FM05/guest-more            | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-more            | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-more            | 834x1194 | S2   | 하단 컬럼 좌177/우177 | PASS
-FM05/guest-more            | 834x1194 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-more            | 834x1194 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-more            | 834x1194 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-more            | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-more            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-more            | 834x1194 | S6   | 성별 버튼 폭 143.3/143.3/143.3 | PASS
-FM05/guest-more            | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±90.7) | PASS
-FM05/guest-more            | 834x1194 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-more            | 834x1194 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-more            | 834x1194 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-more            | 834x1194 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-more            | 834x1194 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 834x1194 | S10  | .w-who .w-acc→.w-opt 16 | PASS
-FM05/guest-more            | 834x1194 | S10  | .w-opt .fl-field→.fl-field 16 | PASS
 FM10/cancelled             | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/cancelled             | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
 FM10/cancelled             | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -932,6 +720,36 @@ FM10/cancelled             | 834x1194 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
 FM10/cancelled             | 834x1194 | S10  | .w-tc .w-info→.fl-note 16 | PASS
 FM10/cancelled             | 834x1194 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
 FM10/cancelled             | 834x1194 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/closed                | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/closed                | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
+FM10/closed                | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/closed                | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/closed                | 834x1194 | S1   | 로고 Δ0 | PASS
+FM10/closed                | 834x1194 | S1   | 아이콘 Δ0 | PASS
+FM10/closed                | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±103.5) | PASS
+FM10/closed                | 834x1194 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/closed                | 834x1194 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/notyet                | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/notyet                | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
+FM10/notyet                | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/notyet                | 834x1194 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/notyet                | 834x1194 | S1   | 로고 Δ0 | PASS
+FM10/notyet                | 834x1194 | S1   | 아이콘 Δ0 | PASS
+FM10/notyet                | 834x1194 | S7   | 본문 중심 Δ0 (허용 ±103.5) | PASS
+FM10/notyet                | 834x1194 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/notyet                | 834x1194 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
 FM10/error                 | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/error                 | 834x1194 | S2   | 본문 컬럼 좌177/우177 | PASS
 FM10/error                 | 834x1194 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1205,76 +1023,6 @@ FM03/cancelled             | 1194x834 | S10  | .w-hc .w-hrow→.w-htl 16 | PASS
 FM03/cancelled             | 1194x834 | S10  | .w-hc .w-htl→.w-hmeta 8 | PASS
 FM03/cancelled             | 1194x834 | S10  | .w-hc .w-hmeta→.w-hrow 16 | PASS
 FM03/cancelled             | 1194x834 | S10  | .w-hc .w-hrow→.w-hbox 16 | PASS
-FM04/empty                 | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/empty                 | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM04/empty                 | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/empty                 | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/empty                 | 1194x834 | S1   | 로고 Δ0 | PASS
-FM04/empty                 | 1194x834 | S1   | 코드 칸 Δ0 | PASS
-FM04/empty                 | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/empty                 | 1194x834 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/empty                 | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±70.2) | PASS
-FM04/empty                 | 1194x834 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/empty                 | 1194x834 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/empty                 | 1194x834 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/empty                 | 1194x834 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/empty                 | 1194x834 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/typing                | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/typing                | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM04/typing                | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/typing                | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/typing                | 1194x834 | S1   | 로고 Δ0 | PASS
-FM04/typing                | 1194x834 | S1   | 코드 칸 Δ0 | PASS
-FM04/typing                | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/typing                | 1194x834 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/typing                | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±70.2) | PASS
-FM04/typing                | 1194x834 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/typing                | 1194x834 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/typing                | 1194x834 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/typing                | 1194x834 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/typing                | 1194x834 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-none            | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-none            | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM04/error-none            | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-none            | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-none            | 1194x834 | S1   | 로고 Δ0 | PASS
-FM04/error-none            | 1194x834 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-none            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-none            | 1194x834 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-none            | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±70.2) | PASS
-FM04/error-none            | 1194x834 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-none            | 1194x834 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-none            | 1194x834 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-none            | 1194x834 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-none            | 1194x834 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-closed          | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-closed          | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM04/error-closed          | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-closed          | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-closed          | 1194x834 | S1   | 로고 Δ0 | PASS
-FM04/error-closed          | 1194x834 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-closed          | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-closed          | 1194x834 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-closed          | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±70.2) | PASS
-FM04/error-closed          | 1194x834 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-closed          | 1194x834 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-closed          | 1194x834 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-closed          | 1194x834 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-closed          | 1194x834 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-notyet          | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-notyet          | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM04/error-notyet          | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-notyet          | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-notyet          | 1194x834 | S1   | 로고 Δ0 | PASS
-FM04/error-notyet          | 1194x834 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-notyet          | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-notyet          | 1194x834 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-notyet          | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±70.2) | PASS
-FM04/error-notyet          | 1194x834 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-notyet          | 1194x834 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-notyet          | 1194x834 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-notyet          | 1194x834 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-notyet          | 1194x834 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
 FM05/member                | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM05/member                | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
 FM05/member                | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1323,57 +1071,6 @@ FM05/member-offline        | 1194x834 | S10  | .fl-foot > .fl-col .w-fnote→.fl
 FM05/member-offline        | 1194x834 | S10  | .w-sum h2→.m 8 | PASS
 FM05/member-offline        | 1194x834 | S10  | .w-sum .m→.c 8 | PASS
 FM05/member-offline        | 1194x834 | S10  | .w-who .id→.w-fnote 16 | PASS
-FM05/guest                 | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest                 | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM05/guest                 | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest                 | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest                 | 1194x834 | S2   | 하단 컬럼 좌357/우357 | PASS
-FM05/guest                 | 1194x834 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest                 | 1194x834 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest                 | 1194x834 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest                 | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest                 | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest                 | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±61.9) | PASS
-FM05/guest                 | 1194x834 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest                 | 1194x834 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest                 | 1194x834 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest                 | 1194x834 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest                 | 1194x834 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-wait            | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-wait            | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM05/guest-wait            | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-wait            | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-wait            | 1194x834 | S2   | 하단 컬럼 좌357/우357 | PASS
-FM05/guest-wait            | 1194x834 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-wait            | 1194x834 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-wait            | 1194x834 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-wait            | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-wait            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-wait            | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±61.9) | PASS
-FM05/guest-wait            | 1194x834 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-wait            | 1194x834 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-wait            | 1194x834 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-wait            | 1194x834 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-wait            | 1194x834 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-more            | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
-FM05/guest-more            | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-more            | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-more            | 1194x834 | S2   | 하단 컬럼 좌357/우357 | PASS
-FM05/guest-more            | 1194x834 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-more            | 1194x834 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-more            | 1194x834 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-more            | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-more            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-more            | 1194x834 | S6   | 성별 버튼 폭 143.3/143.3/143.3 | PASS
-FM05/guest-more            | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±61.9) | PASS
-FM05/guest-more            | 1194x834 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-more            | 1194x834 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-more            | 1194x834 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-more            | 1194x834 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-more            | 1194x834 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 1194x834 | S10  | .w-who .w-acc→.w-opt 16 | PASS
-FM05/guest-more            | 1194x834 | S10  | .w-opt .fl-field→.fl-field 16 | PASS
 FM10/cancelled             | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/cancelled             | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
 FM10/cancelled             | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1389,6 +1086,36 @@ FM10/cancelled             | 1194x834 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
 FM10/cancelled             | 1194x834 | S10  | .w-tc .w-info→.fl-note 16 | PASS
 FM10/cancelled             | 1194x834 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
 FM10/cancelled             | 1194x834 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/closed                | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/closed                | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
+FM10/closed                | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/closed                | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/closed                | 1194x834 | S1   | 로고 Δ0 | PASS
+FM10/closed                | 1194x834 | S1   | 아이콘 Δ0 | PASS
+FM10/closed                | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±74.7) | PASS
+FM10/closed                | 1194x834 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/closed                | 1194x834 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/notyet                | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/notyet                | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
+FM10/notyet                | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/notyet                | 1194x834 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/notyet                | 1194x834 | S1   | 로고 Δ0 | PASS
+FM10/notyet                | 1194x834 | S1   | 아이콘 Δ0 | PASS
+FM10/notyet                | 1194x834 | S7   | 본문 중심 Δ0 (허용 ±74.7) | PASS
+FM10/notyet                | 1194x834 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/notyet                | 1194x834 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
 FM10/error                 | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/error                 | 1194x834 | S2   | 본문 컬럼 좌357/우357 | PASS
 FM10/error                 | 1194x834 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1662,76 +1389,6 @@ FM03/cancelled             | 1280x720 | S10  | .w-hc .w-hrow→.w-htl 16 | PASS
 FM03/cancelled             | 1280x720 | S10  | .w-hc .w-htl→.w-hmeta 8 | PASS
 FM03/cancelled             | 1280x720 | S10  | .w-hc .w-hmeta→.w-hrow 16 | PASS
 FM03/cancelled             | 1280x720 | S10  | .w-hc .w-hrow→.w-hbox 16 | PASS
-FM04/empty                 | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/empty                 | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM04/empty                 | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/empty                 | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/empty                 | 1280x720 | S1   | 로고 Δ0 | PASS
-FM04/empty                 | 1280x720 | S1   | 코드 칸 Δ0 | PASS
-FM04/empty                 | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/empty                 | 1280x720 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/empty                 | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±61.1) | PASS
-FM04/empty                 | 1280x720 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/empty                 | 1280x720 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/empty                 | 1280x720 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/empty                 | 1280x720 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/empty                 | 1280x720 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/typing                | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/typing                | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM04/typing                | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/typing                | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/typing                | 1280x720 | S1   | 로고 Δ0 | PASS
-FM04/typing                | 1280x720 | S1   | 코드 칸 Δ0 | PASS
-FM04/typing                | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/typing                | 1280x720 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/typing                | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±61.1) | PASS
-FM04/typing                | 1280x720 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/typing                | 1280x720 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/typing                | 1280x720 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/typing                | 1280x720 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/typing                | 1280x720 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-none            | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-none            | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM04/error-none            | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-none            | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-none            | 1280x720 | S1   | 로고 Δ0 | PASS
-FM04/error-none            | 1280x720 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-none            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-none            | 1280x720 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-none            | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±61.1) | PASS
-FM04/error-none            | 1280x720 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-none            | 1280x720 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-none            | 1280x720 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-none            | 1280x720 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-none            | 1280x720 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-closed          | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-closed          | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM04/error-closed          | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-closed          | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-closed          | 1280x720 | S1   | 로고 Δ0 | PASS
-FM04/error-closed          | 1280x720 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-closed          | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-closed          | 1280x720 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-closed          | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±61.1) | PASS
-FM04/error-closed          | 1280x720 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-closed          | 1280x720 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-closed          | 1280x720 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-closed          | 1280x720 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-closed          | 1280x720 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
-FM04/error-notyet          | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM04/error-notyet          | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM04/error-notyet          | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM04/error-notyet          | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM04/error-notyet          | 1280x720 | S1   | 로고 Δ0 | PASS
-FM04/error-notyet          | 1280x720 | S1   | 코드 칸 Δ0 | PASS
-FM04/error-notyet          | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM04/error-notyet          | 1280x720 | S6   | 코드 칸 폭 60~60 간격 8~8 안쪽 0/0 | PASS
-FM04/error-notyet          | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±61.1) | PASS
-FM04/error-notyet          | 1280x720 | S10  | .w-code-card svg→.fl-h1 16 | PASS
-FM04/error-notyet          | 1280x720 | S10  | .w-code-card .fl-h1→.fl-sub 16 | PASS
-FM04/error-notyet          | 1280x720 | S10  | .w-code-card .fl-sub→.w-codewrap 16 | PASS
-FM04/error-notyet          | 1280x720 | S10  | .w-code-card .w-codewrap→.w-msg 16 | PASS
-FM04/error-notyet          | 1280x720 | S10  | .w-code-card .w-msg→.w-entry 16 | PASS
 FM05/member                | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM05/member                | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
 FM05/member                | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1780,57 +1437,6 @@ FM05/member-offline        | 1280x720 | S10  | .fl-foot > .fl-col .w-fnote→.fl
 FM05/member-offline        | 1280x720 | S10  | .w-sum h2→.m 8 | PASS
 FM05/member-offline        | 1280x720 | S10  | .w-sum .m→.c 8 | PASS
 FM05/member-offline        | 1280x720 | S10  | .w-who .id→.w-fnote 16 | PASS
-FM05/guest                 | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest                 | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM05/guest                 | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest                 | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest                 | 1280x720 | S2   | 하단 컬럼 좌400/우400 | PASS
-FM05/guest                 | 1280x720 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest                 | 1280x720 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest                 | 1280x720 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest                 | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest                 | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest                 | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±52.8) | PASS
-FM05/guest                 | 1280x720 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest                 | 1280x720 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest                 | 1280x720 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest                 | 1280x720 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest                 | 1280x720 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-wait            | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-wait            | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM05/guest-wait            | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-wait            | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-wait            | 1280x720 | S2   | 하단 컬럼 좌400/우400 | PASS
-FM05/guest-wait            | 1280x720 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-wait            | 1280x720 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-wait            | 1280x720 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-wait            | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-wait            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-wait            | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±52.8) | PASS
-FM05/guest-wait            | 1280x720 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-wait            | 1280x720 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-wait            | 1280x720 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-wait            | 1280x720 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-wait            | 1280x720 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
-FM05/guest-more            | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
-FM05/guest-more            | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
-FM05/guest-more            | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
-FM05/guest-more            | 1280x720 | S2   | 하단 컬럼 좌400/우400 | PASS
-FM05/guest-more            | 1280x720 | S8   | 본문 폭 480 = 하단 폭 480 | PASS
-FM05/guest-more            | 1280x720 | S8   | 하단 박스 폭 480/480 | PASS
-FM05/guest-more            | 1280x720 | S8   | 본문 박스 폭 480/480 | PASS
-FM05/guest-more            | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
-FM05/guest-more            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 · 제목 Δ0 | PASS
-FM05/guest-more            | 1280x720 | S6   | 성별 버튼 폭 143.3/143.3/143.3 | PASS
-FM05/guest-more            | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±52.8) | PASS
-FM05/guest-more            | 1280x720 | S10  | .fl-body > .fl-col .fl-card→.fl-card 16 | PASS
-FM05/guest-more            | 1280x720 | S10  | .fl-foot > .fl-col .w-fnote→.fl-btn 8 | PASS
-FM05/guest-more            | 1280x720 | S10  | .w-sum h2→.m 8 | PASS
-FM05/guest-more            | 1280x720 | S10  | .w-sum .m→.c 8 | PASS
-FM05/guest-more            | 1280x720 | S10  | .w-who .fl-field→.w-acc 16 | PASS
-FM05/guest-more            | 1280x720 | S10  | .w-who .w-acc→.w-opt 16 | PASS
-FM05/guest-more            | 1280x720 | S10  | .w-opt .fl-field→.fl-field 16 | PASS
 FM10/cancelled             | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/cancelled             | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
 FM10/cancelled             | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
@@ -1846,6 +1452,36 @@ FM10/cancelled             | 1280x720 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
 FM10/cancelled             | 1280x720 | S10  | .w-tc .w-info→.fl-note 16 | PASS
 FM10/cancelled             | 1280x720 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
 FM10/cancelled             | 1280x720 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/closed                | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/closed                | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
+FM10/closed                | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/closed                | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/closed                | 1280x720 | S1   | 로고 Δ0 | PASS
+FM10/closed                | 1280x720 | S1   | 아이콘 Δ0 | PASS
+FM10/closed                | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±65.6) | PASS
+FM10/closed                | 1280x720 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/closed                | 1280x720 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
+FM10/notyet                | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FM10/notyet                | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
+FM10/notyet                | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS
+FM10/notyet                | 1280x720 | S1   | 본문 박스 중심 최대 Δ0 | PASS
+FM10/notyet                | 1280x720 | S1   | 로고 Δ0 | PASS
+FM10/notyet                | 1280x720 | S1   | 아이콘 Δ0 | PASS
+FM10/notyet                | 1280x720 | S7   | 본문 중심 Δ0 (허용 ±65.6) | PASS
+FM10/notyet                | 1280x720 | MS3  | 전체 화면 카드 Δx0 Δy0 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc svg→.w-ic 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .w-ic→.fl-h1 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .fl-h1→.fl-sub 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .fl-sub→.w-info 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .w-info→.fl-note 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .fl-note→.fl-btn 16 | PASS
+FM10/notyet                | 1280x720 | S10  | .w-tc .fl-btn→.fl-btn 16 | PASS
 FM10/error                 | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FM10/error                 | 1280x720 | S2   | 본문 컬럼 좌400/우400 | PASS
 FM10/error                 | 1280x720 | S9   | 본문 컬럼 폭 480 ≤640 | PASS

@@ -1,6 +1,6 @@
 MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B (FM06a~e · FM07 · FM08 · FM09) 핏 측정
-측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 64개 · 뷰포트 4개(390x844, 834x1194, 1194x834, 1280x720) · 측정 페이지 256장
-판정: FAIL (위반 44건)  ← 수정 전 기준선
+측정: tools/member-b-measure.mjs · 대상: 화면 8개 · 케이스 63개 · 뷰포트 4개(390x844, 834x1194, 1194x834, 1280x720) · 측정 페이지 252장
+판정: PASS (위반 0건)  ← 수정 전 기준선
 
 항목별 위반 건수 (수정 전 → 수정 후):
   scroll   페이지 스크롤                 0 →    0
@@ -17,35 +17,13 @@ MIND BREEZE 2.0 · 클래스 사전 흐름 · 회원 시안 B (FM06a~e · FM07 �
   space8   8배수 아닌 간격               0 →    0
   nested   시트 내 중첩 스크롤             0 →    0
   trk      R1-2 전극 트래커             0 →    0
-  av       R1-3 내 영상·소리           40 →   40
+  av       R1-3 내 영상·소리            0 →    0
   srcGlyph 파일 소스 이모지·글리프    0 →    0
   srcBanned 파일 소스 R1 금지어(클래스 코드·참여 코드·참여코드·코드 복사·코드 입력·6자리·게스트·인증 코드·OTP·QR·귀)    0 →    0  
-  srcStale  R3 폐기 흔적(w-vmeter·iconmeter)    4 →    2  w-vmeter,iconmeter
+  srcStale  R3 폐기 흔적(w-vmeter·iconmeter)    0 →    0  
   idxBanned 인덱스 표 R1 금지어    0 →    0  
   외부 http 리소스 참조 0건
 측정 방식 메모: 영문 대문자 아이브로우 검사는 제품명 "LINK BAND"(필수 표기)를 예외로 한다. 금지 용어에는 %·순위·점수·평균을 포함한다. 11px 이하는 12px 미만 글자 수.
-
-=== 위반 목록 (화면 | 케이스 | 뷰포트 | 항목: 내용) ===
-FAIL | FM06d | on-group-opt-member-camon | 390x844 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-solo-req-member-camon-spk | 390x844 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter | 390x844 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 3)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter-quiet | 390x844 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 1)
-FAIL | FM06d | on-group-opt-member-camon-started | 390x844 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon | 834x1194 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-solo-req-member-camon-spk | 834x1194 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter | 834x1194 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 3)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter-quiet | 834x1194 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 1)
-FAIL | FM06d | on-group-opt-member-camon-started | 834x1194 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon | 1194x834 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-solo-req-member-camon-spk | 1194x834 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter | 1194x834 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 3)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter-quiet | 1194x834 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 1)
-FAIL | FM06d | on-group-opt-member-camon-started | 1194x834 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon | 1280x720 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-solo-req-member-camon-spk | 1280x720 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter | 1280x720 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 3)
-FAIL | FM06d | on-group-opt-member-camon-iconmeter-quiet | 1280x720 | av: 링 단계 0개 (5단계 아님) ; 링 채움 0단계 (기대 1)
-FAIL | FM06d | on-group-opt-member-camon-started | 1280x720 | av: 세로 레벨 미터 존재(R3-1 폐기) ; 아이콘 링 0개 (1개여야 함)
 
 === 전체 일람표 (화면 | 케이스 | 뷰포트 | 판정) ===
 FM06a  | on-group-opt-member                      | 390x844  | PASS
@@ -77,18 +55,17 @@ FM06c  | off-solo-opt-member-idle                 | 390x844  | PASS
 FM06c  | off-group-req-member-connected           | 390x844  | PASS
 FM06c  | on-group-opt-member-idle-started         | 390x844  | PASS
 FM06d  | on-group-opt-member-mic                  | 390x844  | PASS
-FM06d  | on-group-opt-member-camon                | 390x844  | FAIL
+FM06d  | on-group-opt-member-camon                | 390x844  | PASS
 FM06d  | on-group-opt-member-micdenied            | 390x844  | PASS
 FM06d  | on-group-opt-member-micnodev             | 390x844  | PASS
 FM06d  | on-group-opt-member-camdenied            | 390x844  | PASS
 FM06d  | on-group-opt-member-unsupported          | 390x844  | PASS
 FM06d  | on-group-opt-member-micdenied-sheet      | 390x844  | PASS
 FM06d  | on-group-opt-member-camon-micdenied      | 390x844  | PASS
-FM06d  | on-solo-req-member-camon-spk             | 390x844  | FAIL
+FM06d  | on-solo-req-member-camon-spk             | 390x844  | PASS
 FM06d  | on-solo-none-member-mic                  | 390x844  | PASS
-FM06d  | on-group-opt-member-camon-iconmeter      | 390x844  | FAIL
-FM06d  | on-group-opt-member-camon-iconmeter-quiet | 390x844  | FAIL
-FM06d  | on-group-opt-member-camon-started        | 390x844  | FAIL
+FM06d  | on-group-opt-member-camon-quiet          | 390x844  | PASS
+FM06d  | on-group-opt-member-camon-started        | 390x844  | PASS
 FM06d  | on-group-opt-member-mic-started          | 390x844  | PASS
 FM06e  | on-group-opt-member                      | 390x844  | PASS
 FM06e  | on-group-req-member                      | 390x844  | PASS
@@ -141,18 +118,17 @@ FM06c  | off-solo-opt-member-idle                 | 834x1194 | PASS
 FM06c  | off-group-req-member-connected           | 834x1194 | PASS
 FM06c  | on-group-opt-member-idle-started         | 834x1194 | PASS
 FM06d  | on-group-opt-member-mic                  | 834x1194 | PASS
-FM06d  | on-group-opt-member-camon                | 834x1194 | FAIL
+FM06d  | on-group-opt-member-camon                | 834x1194 | PASS
 FM06d  | on-group-opt-member-micdenied            | 834x1194 | PASS
 FM06d  | on-group-opt-member-micnodev             | 834x1194 | PASS
 FM06d  | on-group-opt-member-camdenied            | 834x1194 | PASS
 FM06d  | on-group-opt-member-unsupported          | 834x1194 | PASS
 FM06d  | on-group-opt-member-micdenied-sheet      | 834x1194 | PASS
 FM06d  | on-group-opt-member-camon-micdenied      | 834x1194 | PASS
-FM06d  | on-solo-req-member-camon-spk             | 834x1194 | FAIL
+FM06d  | on-solo-req-member-camon-spk             | 834x1194 | PASS
 FM06d  | on-solo-none-member-mic                  | 834x1194 | PASS
-FM06d  | on-group-opt-member-camon-iconmeter      | 834x1194 | FAIL
-FM06d  | on-group-opt-member-camon-iconmeter-quiet | 834x1194 | FAIL
-FM06d  | on-group-opt-member-camon-started        | 834x1194 | FAIL
+FM06d  | on-group-opt-member-camon-quiet          | 834x1194 | PASS
+FM06d  | on-group-opt-member-camon-started        | 834x1194 | PASS
 FM06d  | on-group-opt-member-mic-started          | 834x1194 | PASS
 FM06e  | on-group-opt-member                      | 834x1194 | PASS
 FM06e  | on-group-req-member                      | 834x1194 | PASS
@@ -205,18 +181,17 @@ FM06c  | off-solo-opt-member-idle                 | 1194x834 | PASS
 FM06c  | off-group-req-member-connected           | 1194x834 | PASS
 FM06c  | on-group-opt-member-idle-started         | 1194x834 | PASS
 FM06d  | on-group-opt-member-mic                  | 1194x834 | PASS
-FM06d  | on-group-opt-member-camon                | 1194x834 | FAIL
+FM06d  | on-group-opt-member-camon                | 1194x834 | PASS
 FM06d  | on-group-opt-member-micdenied            | 1194x834 | PASS
 FM06d  | on-group-opt-member-micnodev             | 1194x834 | PASS
 FM06d  | on-group-opt-member-camdenied            | 1194x834 | PASS
 FM06d  | on-group-opt-member-unsupported          | 1194x834 | PASS
 FM06d  | on-group-opt-member-micdenied-sheet      | 1194x834 | PASS
 FM06d  | on-group-opt-member-camon-micdenied      | 1194x834 | PASS
-FM06d  | on-solo-req-member-camon-spk             | 1194x834 | FAIL
+FM06d  | on-solo-req-member-camon-spk             | 1194x834 | PASS
 FM06d  | on-solo-none-member-mic                  | 1194x834 | PASS
-FM06d  | on-group-opt-member-camon-iconmeter      | 1194x834 | FAIL
-FM06d  | on-group-opt-member-camon-iconmeter-quiet | 1194x834 | FAIL
-FM06d  | on-group-opt-member-camon-started        | 1194x834 | FAIL
+FM06d  | on-group-opt-member-camon-quiet          | 1194x834 | PASS
+FM06d  | on-group-opt-member-camon-started        | 1194x834 | PASS
 FM06d  | on-group-opt-member-mic-started          | 1194x834 | PASS
 FM06e  | on-group-opt-member                      | 1194x834 | PASS
 FM06e  | on-group-req-member                      | 1194x834 | PASS
@@ -269,18 +244,17 @@ FM06c  | off-solo-opt-member-idle                 | 1280x720 | PASS
 FM06c  | off-group-req-member-connected           | 1280x720 | PASS
 FM06c  | on-group-opt-member-idle-started         | 1280x720 | PASS
 FM06d  | on-group-opt-member-mic                  | 1280x720 | PASS
-FM06d  | on-group-opt-member-camon                | 1280x720 | FAIL
+FM06d  | on-group-opt-member-camon                | 1280x720 | PASS
 FM06d  | on-group-opt-member-micdenied            | 1280x720 | PASS
 FM06d  | on-group-opt-member-micnodev             | 1280x720 | PASS
 FM06d  | on-group-opt-member-camdenied            | 1280x720 | PASS
 FM06d  | on-group-opt-member-unsupported          | 1280x720 | PASS
 FM06d  | on-group-opt-member-micdenied-sheet      | 1280x720 | PASS
 FM06d  | on-group-opt-member-camon-micdenied      | 1280x720 | PASS
-FM06d  | on-solo-req-member-camon-spk             | 1280x720 | FAIL
+FM06d  | on-solo-req-member-camon-spk             | 1280x720 | PASS
 FM06d  | on-solo-none-member-mic                  | 1280x720 | PASS
-FM06d  | on-group-opt-member-camon-iconmeter      | 1280x720 | FAIL
-FM06d  | on-group-opt-member-camon-iconmeter-quiet | 1280x720 | FAIL
-FM06d  | on-group-opt-member-camon-started        | 1280x720 | FAIL
+FM06d  | on-group-opt-member-camon-quiet          | 1280x720 | PASS
+FM06d  | on-group-opt-member-camon-started        | 1280x720 | PASS
 FM06d  | on-group-opt-member-mic-started          | 1280x720 | PASS
 FM06e  | on-group-opt-member                      | 1280x720 | PASS
 FM06e  | on-group-req-member                      | 1280x720 | PASS

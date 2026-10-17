@@ -1,19 +1,19 @@
 MIND BREEZE 2.0 · host-a(FH01~FH04) 좌우 대칭·비율 균형 측정 (균형.md S1~S10)
 측정: tools/host-a-symmetry.mjs (+ tools/host-a-measure-lib.mjs) · getBoundingClientRect 기준 · 허용 오차 ±2px (S7은 높이의 8%)
-대상: 43개 케이스 × 4뷰포트 · 총 검사 2916건 (수정 전 2792건)
+대상: 49개 케이스 × 4뷰포트 · 총 검사 3475건 (수정 전 2916건)
 위반: 수정 전 0건 → 수정 후 0건
 
 규칙별 위반 건수 (수정 전 → 수정 후 / 검사 건수):
-  S1   단독 요소 중심축                 0 →   0 / 920
-  S2   좌우 여백 동일                  0 →   0 / 296
-  S3   상단 바 좌우 대칭                0 →   0 / 168
+  S1   단독 요소 중심축                 0 →   0 / 1104
+  S2   좌우 여백 동일                  0 →   0 / 340
+  S3   상단 바 좌우 대칭                0 →   0 / 192
   S4   PiP 짝(해당 없음)              0 →   0 / 0
   S5   시트 분기                     0 →   0 / 40
-  S6   균등 분배                     0 →   0 / 208
-  S7   세로 중앙                     0 →   0 / 100
-  S8   같은 종류 박스 폭                0 →   0 / 228
-  S9   중앙 컬럼 max-width           0 →   0 / 384
-  S10  8배수 간격                    0 →   0 / 572
+  S6   균등 분배                     0 →   0 / 263
+  S7   세로 중앙                     0 →   0 / 120
+  S8   같은 종류 박스 폭                0 →   0 / 264
+  S9   중앙 컬럼 max-width           0 →   0 / 476
+  S10  8배수 간격                    0 →   0 / 676
   (S4 PiP·CS·MS 규칙은 이 시안(영상 PiP·참가자 그리드·진행 링 없음)에 해당 요소가 없어 검사 대상 아님)
 
 뷰포트별 위반 건수: 390x844=0  834x1194=0  1194x834=0  1280x720=0
@@ -120,14 +120,14 @@ FH02a-online-group     | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02a-online-group     | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02a-online-group     | 390x844  | S1   | 카드 Δ0 | PASS
 FH02a-online-group     | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02a-online-group     | 390x844  | S7   | 본문 위107.4/아래107.4 | PASS
+FH02a-online-group     | 390x844  | S7   | 본문 위75.4/아래75.4 | PASS
 FH02a-online-group     | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 390x844  | S8   | .w-form 자식 3개 폭 324~324 | PASS
 FH02a-online-group     | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
-FH02a-online-group     | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-online-group     | 390x844  | S8   | .w-group 자식 3개 폭 324~324 | PASS
 FH02a-online-group     | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02a-online-group     | 390x844  | S10  | .w-form 간격 16 | PASS
 FH02a-online-group     | 390x844  | S10  | .w-group 간격 8 | PASS
@@ -170,14 +170,14 @@ FH02a-offline-group    | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02a-offline-group    | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02a-offline-group    | 390x844  | S1   | 카드 Δ0 | PASS
 FH02a-offline-group    | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02a-offline-group    | 390x844  | S7   | 본문 위91.4/아래91.4 | PASS
+FH02a-offline-group    | 390x844  | S7   | 본문 위59.4/아래59.4 | PASS
 FH02a-offline-group    | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 390x844  | S8   | .w-form 자식 3개 폭 324~324 | PASS
 FH02a-offline-group    | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
-FH02a-offline-group    | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-offline-group    | 390x844  | S8   | .w-group 자식 3개 폭 324~324 | PASS
 FH02a-offline-group    | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02a-offline-group    | 390x844  | S10  | .w-form 간격 16 | PASS
 FH02a-offline-group    | 390x844  | S10  | .w-group 간격 8 | PASS
@@ -208,6 +208,57 @@ FH02a-offline-1to1     | 390x844  | S10  | .w-form 간격 16 | PASS
 FH02a-offline-1to1     | 390x844  | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 390x844  | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-online-group-max | 390x844  | S1   | 상단 제목 Δ0 | PASS
+FH02a-online-group-max | 390x844  | S1   | .fl-steps Δ0 | PASS
+FH02a-online-group-max | 390x844  | S1   | .fl-h1 Δ0 | PASS
+FH02a-online-group-max | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-online-group-max | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH02a-online-group-max | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH02a-online-group-max | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-online-group-max | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FH02a-online-group-max | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FH02a-online-group-max | 390x844  | S1   | 카드 Δ0 | PASS
+FH02a-online-group-max | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH02a-online-group-max | 390x844  | S7   | 본문 위75.4/아래75.4 | PASS
+FH02a-online-group-max | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 390x844  | S8   | .w-form 자식 3개 폭 324~324 | PASS
+FH02a-online-group-max | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-online-group-max | 390x844  | S8   | .w-group 자식 3개 폭 324~324 | PASS
+FH02a-online-group-max | 390x844  | S10  | .fl-card 간격 16 | PASS
+FH02a-online-group-max | 390x844  | S10  | .w-form 간격 16 | PASS
+FH02a-online-group-max | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-custom           | 390x844  | S1   | 상단 제목 Δ0 | PASS
+FH02a-custom           | 390x844  | S1   | .fl-steps Δ0 | PASS
+FH02a-custom           | 390x844  | S1   | .fl-h1 Δ0 | PASS
+FH02a-custom           | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-custom           | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH02a-custom           | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH02a-custom           | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-custom           | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FH02a-custom           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FH02a-custom           | 390x844  | S1   | 카드 Δ0 | PASS
+FH02a-custom           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH02a-custom           | 390x844  | S7   | 본문 위45.4/아래45.4 | PASS
+FH02a-custom           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 390x844  | S8   | .w-form 자식 3개 폭 324~324 | PASS
+FH02a-custom           | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-custom           | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-custom           | 390x844  | S8   | .w-group 자식 3개 폭 324~324 | PASS
+FH02a-custom           | 390x844  | S10  | .fl-card 간격 16 | PASS
+FH02a-custom           | 390x844  | S10  | .w-form 간격 16 | PASS
+FH02a-custom           | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 390x844  | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 390x844  | S10  | .w-group 간격 8 | PASS
 FH02a-leave            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02a-leave            | 390x844  | S1   | 상단 제목 Δ0 | PASS
 FH02a-leave            | 390x844  | S1   | .fl-steps Δ0 | PASS
@@ -220,7 +271,7 @@ FH02a-leave            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02a-leave            | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02a-leave            | 390x844  | S1   | 카드 Δ0 | PASS
 FH02a-leave            | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02a-leave            | 390x844  | S7   | 본문 위107.4/아래107.4 | PASS
+FH02a-leave            | 390x844  | S7   | 본문 위75.4/아래75.4 | PASS
 FH02a-leave            | 390x844  | S5   | 세로형 바텀 시트 | PASS
 FH02a-leave            | 390x844  | S2   | 바텀 시트 좌0/우0 | PASS
 FH02a-leave            | 390x844  | S1   | 바텀 시트 Δ0 | PASS
@@ -233,7 +284,7 @@ FH02a-leave            | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 
 FH02a-leave            | 390x844  | S6   | .w-sfoot 2항목 폭166~166 간격8~8 안쪽0/0 | PASS
 FH02a-leave            | 390x844  | S8   | .w-form 자식 3개 폭 324~324 | PASS
 FH02a-leave            | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
-FH02a-leave            | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
+FH02a-leave            | 390x844  | S8   | .w-group 자식 3개 폭 324~324 | PASS
 FH02a-leave            | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02a-leave            | 390x844  | S10  | .w-form 간격 16 | PASS
 FH02a-leave            | 390x844  | S10  | .w-group 간격 8 | PASS
@@ -295,7 +346,7 @@ FH02b-required         | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02b-required         | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02b-required         | 390x844  | S1   | 카드 Δ0 | PASS
 FH02b-required         | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02b-required         | 390x844  | S7   | 본문 위121.4/아래121.4 | PASS
+FH02b-required         | 390x844  | S7   | 본문 위111.4/아래111.4 | PASS
 FH02b-required         | 390x844  | S6   | .fl-seg 3항목 폭102.7~102.7 간격8~8 안쪽0/0 | PASS
 FH02b-required         | 390x844  | S8   | .w-form 자식 2개 폭 324~324 | PASS
 FH02b-required         | 390x844  | S8   | .w-group 자식 2개 폭 324~324 | PASS
@@ -429,7 +480,8 @@ FH02d-empty            | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02d-empty            | 390x844  | S1   | 카드 Δ0 | PASS
 FH02d-empty            | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
 FH02d-empty            | 390x844  | S7   | 본문 위22/아래22 | PASS
-FH02d-empty            | 390x844  | S8   | .fl-card 자식 3개 폭 324~324 | PASS
+FH02d-empty            | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02d-empty            | 390x844  | S8   | .fl-card 자식 4개 폭 324~324 | PASS
 FH02d-empty            | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02d-picked           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-picked           | 390x844  | S1   | 상단 제목 Δ0 | PASS
@@ -444,7 +496,8 @@ FH02d-picked           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02d-picked           | 390x844  | S1   | 카드 Δ0 | PASS
 FH02d-picked           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
 FH02d-picked           | 390x844  | S7   | 본문 위22/아래22 | PASS
-FH02d-picked           | 390x844  | S8   | .fl-card 자식 3개 폭 324~324 | PASS
+FH02d-picked           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02d-picked           | 390x844  | S8   | .fl-card 자식 4개 폭 324~324 | PASS
 FH02d-picked           | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02d-solo             | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-solo             | 390x844  | S1   | 상단 제목 Δ0 | PASS
@@ -459,7 +512,8 @@ FH02d-solo             | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02d-solo             | 390x844  | S1   | 카드 Δ0 | PASS
 FH02d-solo             | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
 FH02d-solo             | 390x844  | S7   | 본문 위22/아래22 | PASS
-FH02d-solo             | 390x844  | S8   | .fl-card 자식 3개 폭 324~324 | PASS
+FH02d-solo             | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02d-solo             | 390x844  | S8   | .fl-card 자식 4개 폭 324~324 | PASS
 FH02d-solo             | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02d-search           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-search           | 390x844  | S1   | 상단 제목 Δ0 | PASS
@@ -474,8 +528,25 @@ FH02d-search           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02d-search           | 390x844  | S1   | 카드 Δ0 | PASS
 FH02d-search           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
 FH02d-search           | 390x844  | S7   | 본문 위22/아래22 | PASS
-FH02d-search           | 390x844  | S8   | .fl-card 자식 3개 폭 324~324 | PASS
+FH02d-search           | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02d-search           | 390x844  | S8   | .fl-card 자식 4개 폭 324~324 | PASS
 FH02d-search           | 390x844  | S10  | .fl-card 간격 16 | PASS
+FH02d-email            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02d-email            | 390x844  | S1   | 상단 제목 Δ0 | PASS
+FH02d-email            | 390x844  | S1   | .fl-steps Δ0 | PASS
+FH02d-email            | 390x844  | S1   | .fl-h1 Δ0 | PASS
+FH02d-email            | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH02d-email            | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH02d-email            | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH02d-email            | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FH02d-email            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FH02d-email            | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FH02d-email            | 390x844  | S1   | 카드 Δ0 | PASS
+FH02d-email            | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH02d-email            | 390x844  | S7   | 본문 위22/아래22 | PASS
+FH02d-email            | 390x844  | S6   | .fl-seg 2항목 폭158~158 간격8~8 안쪽0/0 | PASS
+FH02d-email            | 390x844  | S8   | .fl-card 자식 4개 폭 324~324 | PASS
+FH02d-email            | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02e-online           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02e-online           | 390x844  | S1   | 상단 제목 Δ0 | PASS
 FH02e-online           | 390x844  | S1   | .fl-steps Δ0 | PASS
@@ -488,7 +559,7 @@ FH02e-online           | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02e-online           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02e-online           | 390x844  | S1   | 카드 Δ0 | PASS
 FH02e-online           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02e-online           | 390x844  | S7   | 본문 위99.9/아래99.9 | PASS
+FH02e-online           | 390x844  | S7   | 본문 위96.4/아래96.4 | PASS
 FH02e-online           | 390x844  | S8   | .w-form 자식 6개 폭 324~324 | PASS
 FH02e-online           | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02e-online           | 390x844  | S10  | .w-form 간격 16 | PASS
@@ -504,8 +575,8 @@ FH02e-offline          | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH02e-offline          | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH02e-offline          | 390x844  | S1   | 카드 Δ0 | PASS
 FH02e-offline          | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH02e-offline          | 390x844  | S7   | 본문 위124.4/아래124.4 | PASS
-FH02e-offline          | 390x844  | S8   | .w-form 자식 5개 폭 324~324 | PASS
+FH02e-offline          | 390x844  | S7   | 본문 위96.4/아래96.4 | PASS
+FH02e-offline          | 390x844  | S8   | .w-form 자식 6개 폭 324~324 | PASS
 FH02e-offline          | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH02e-offline          | 390x844  | S10  | .w-form 간격 16 | PASS
 FH03-online            | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -522,9 +593,12 @@ FH03-online            | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH03-online            | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH03-online            | 390x844  | S1   | 카드 Δ0 | PASS
 FH03-online            | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH03-online            | 390x844  | S7   | 본문 위85.3/아래85.3 | PASS
+FH03-online            | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-online            | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-online            | 390x844  | S7   | 본문 위16/아래16 | PASS
 FH03-online            | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
 FH03-online            | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-online            | 390x844  | S10  | .fl-card 간격 8 | PASS
 FH03-online            | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH03-online            | 390x844  | S10  | .fl-col 간격 8 | PASS
 FH03-offline           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -541,9 +615,12 @@ FH03-offline           | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH03-offline           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH03-offline           | 390x844  | S1   | 카드 Δ0 | PASS
 FH03-offline           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH03-offline           | 390x844  | S7   | 본문 위169.3/아래169.3 | PASS
+FH03-offline           | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-offline           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-offline           | 390x844  | S7   | 본문 위98.3/아래98.3 | PASS
 FH03-offline           | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
 FH03-offline           | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-offline           | 390x844  | S10  | .fl-card 간격 8 | PASS
 FH03-offline           | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH03-offline           | 390x844  | S10  | .fl-col 간격 8 | PASS
 FH03-partial           | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -560,9 +637,12 @@ FH03-partial           | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH03-partial           | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH03-partial           | 390x844  | S1   | 카드 Δ0 | PASS
 FH03-partial           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH03-partial           | 390x844  | S7   | 본문 위85.3/아래85.3 | PASS
+FH03-partial           | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-partial           | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-partial           | 390x844  | S7   | 본문 위16/아래16 | PASS
 FH03-partial           | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
 FH03-partial           | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-partial           | 390x844  | S10  | .fl-card 간격 8 | PASS
 FH03-partial           | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH03-partial           | 390x844  | S10  | .fl-col 간격 8 | PASS
 FH03-scheduled         | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -579,9 +659,12 @@ FH03-scheduled         | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH03-scheduled         | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH03-scheduled         | 390x844  | S1   | 카드 Δ0 | PASS
 FH03-scheduled         | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH03-scheduled         | 390x844  | S7   | 본문 위85.3/아래85.3 | PASS
+FH03-scheduled         | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-scheduled         | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-scheduled         | 390x844  | S7   | 본문 위16/아래16 | PASS
 FH03-scheduled         | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
 FH03-scheduled         | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-scheduled         | 390x844  | S10  | .fl-card 간격 8 | PASS
 FH03-scheduled         | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH03-scheduled         | 390x844  | S10  | .fl-col 간격 8 | PASS
 FH03-none              | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -599,11 +682,58 @@ FH03-none              | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
 FH03-none              | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
 FH03-none              | 390x844  | S1   | 카드 Δ0 | PASS
 FH03-none              | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
-FH03-none              | 390x844  | S7   | 본문 위164/아래164 | PASS
+FH03-none              | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-none              | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-none              | 390x844  | S7   | 본문 위87/아래87 | PASS
 FH03-none              | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
 FH03-none              | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-none              | 390x844  | S10  | .fl-card 간격 8 | PASS
 FH03-none              | 390x844  | S10  | .fl-card 간격 16 | PASS
 FH03-none              | 390x844  | S10  | .fl-col 간격 8 | PASS
+FH03-email             | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email             | 390x844  | S1   | 상단 제목 Δ0 | PASS
+FH03-email             | 390x844  | S1   | .w-ok Δ0 | PASS
+FH03-email             | 390x844  | S1   | .fl-h1 Δ0 | PASS
+FH03-email             | 390x844  | S1   | .fl-chiprow Δ0 | PASS
+FH03-email             | 390x844  | S1   | .fl-h2 Δ0 | PASS
+FH03-email             | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email             | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH03-email             | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH03-email             | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email             | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FH03-email             | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FH03-email             | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-email             | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-email             | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-email             | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-email             | 390x844  | S7   | 본문 위16/아래16 | PASS
+FH03-email             | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
+FH03-email             | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-email             | 390x844  | S10  | .fl-card 간격 8 | PASS
+FH03-email             | 390x844  | S10  | .fl-card 간격 16 | PASS
+FH03-email             | 390x844  | S10  | .fl-col 간격 8 | PASS
+FH03-email-partial     | 390x844  | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email-partial     | 390x844  | S1   | 상단 제목 Δ0 | PASS
+FH03-email-partial     | 390x844  | S1   | .w-ok Δ0 | PASS
+FH03-email-partial     | 390x844  | S1   | .fl-h1 Δ0 | PASS
+FH03-email-partial     | 390x844  | S1   | .fl-chiprow Δ0 | PASS
+FH03-email-partial     | 390x844  | S1   | .fl-h2 Δ0 | PASS
+FH03-email-partial     | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email-partial     | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH03-email-partial     | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH03-email-partial     | 390x844  | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email-partial     | 390x844  | S2   | 하단 컬럼 좌16/우16 | PASS
+FH03-email-partial     | 390x844  | S9   | 하단 컬럼 폭 358 ≤640 | PASS
+FH03-email-partial     | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-email-partial     | 390x844  | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 390x844  | S9   | 카드 폭 358 ≤640 | PASS
+FH03-email-partial     | 390x844  | S7   | 본문 위16/아래16 | PASS
+FH03-email-partial     | 390x844  | S6   | .w-ghostrow 3항목 폭114~114 간격8~8 안쪽0/0 | PASS
+FH03-email-partial     | 390x844  | S10  | .fl-col 간격 16 | PASS
+FH03-email-partial     | 390x844  | S10  | .fl-card 간격 8 | PASS
+FH03-email-partial     | 390x844  | S10  | .fl-card 간격 16 | PASS
+FH03-email-partial     | 390x844  | S10  | .fl-col 간격 8 | PASS
 FH04-ready             | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
 FH04-ready             | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
 FH04-ready             | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
@@ -769,6 +899,18 @@ FH04-net               | 390x844  | S2   | 배너 좌15.6/우15.6 | PASS
 FH04-net               | 390x844  | S8   | .w-page 자식 3개 폭 358~358 | PASS
 FH04-net               | 390x844  | S10  | .w-page 간격 16 | PASS
 FH04-net               | 390x844  | S10  | .sh-hero 간격 16 | PASS
+FH04-email-invites     | 390x844  | S1   | 본문 컬럼 Δ0 | PASS
+FH04-email-invites     | 390x844  | S2   | 본문 컬럼 좌16/우16 | PASS
+FH04-email-invites     | 390x844  | S9   | 본문 컬럼 폭 358 ≤640 | PASS
+FH04-email-invites     | 390x844  | S1   | .sh-hero Δ0 | PASS
+FH04-email-invites     | 390x844  | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 390x844  | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 390x844  | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 390x844  | S3   | 머리줄 좌0/우0 | PASS
+FH04-email-invites     | 390x844  | S6   | 탭바 5항목 폭 78~78 | PASS
+FH04-email-invites     | 390x844  | S8   | .w-page 자식 4개 폭 358~358 | PASS
+FH04-email-invites     | 390x844  | S10  | .w-page 간격 16 | PASS
+FH04-email-invites     | 390x844  | S10  | .sh-hero 간격 16 | PASS
 FH01-open              | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FH01-open              | 834x1194 | S2   | 본문 컬럼 좌24/우24 | PASS
 FH01-open              | 834x1194 | S9   | 본문 컬럼 폭 566 ≤640 | PASS
@@ -859,13 +1001,13 @@ FH02a-online-group     | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH02a-online-group     | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-online-group     | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02a-online-group     | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-online-group     | 834x1194 | S7   | 본문 위304.4/아래304.4 | PASS
+FH02a-online-group     | 834x1194 | S7   | 본문 위272.4/아래272.4 | PASS
 FH02a-online-group     | 834x1194 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 834x1194 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-online-group     | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group     | 834x1194 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02a-online-group     | 834x1194 | S10  | .w-form 간격 16 | PASS
 FH02a-online-group     | 834x1194 | S10  | .w-group 간격 8 | PASS
@@ -907,13 +1049,13 @@ FH02a-offline-group    | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH02a-offline-group    | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-offline-group    | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02a-offline-group    | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-offline-group    | 834x1194 | S7   | 본문 위288.4/아래288.4 | PASS
+FH02a-offline-group    | 834x1194 | S7   | 본문 위256.4/아래256.4 | PASS
 FH02a-offline-group    | 834x1194 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 834x1194 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-offline-group    | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-offline-group    | 834x1194 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02a-offline-group    | 834x1194 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-group    | 834x1194 | S10  | .w-group 간격 8 | PASS
@@ -943,6 +1085,55 @@ FH02a-offline-1to1     | 834x1194 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-1to1     | 834x1194 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 834x1194 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-online-group-max | 834x1194 | S1   | 상단 제목 Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S1   | .fl-steps Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S1   | .fl-h1 Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FH02a-online-group-max | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FH02a-online-group-max | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 834x1194 | S1   | 카드 Δ0 | PASS
+FH02a-online-group-max | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-online-group-max | 834x1194 | S7   | 본문 위272.4/아래272.4 | PASS
+FH02a-online-group-max | 834x1194 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 834x1194 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group-max | 834x1194 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 834x1194 | S10  | .fl-card 간격 16 | PASS
+FH02a-online-group-max | 834x1194 | S10  | .w-form 간격 16 | PASS
+FH02a-online-group-max | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-custom           | 834x1194 | S1   | 상단 제목 Δ0 | PASS
+FH02a-custom           | 834x1194 | S1   | .fl-steps Δ0 | PASS
+FH02a-custom           | 834x1194 | S1   | .fl-h1 Δ0 | PASS
+FH02a-custom           | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-custom           | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FH02a-custom           | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-custom           | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FH02a-custom           | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 834x1194 | S1   | 카드 Δ0 | PASS
+FH02a-custom           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-custom           | 834x1194 | S7   | 본문 위242.4/아래242.4 | PASS
+FH02a-custom           | 834x1194 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 834x1194 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 834x1194 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 834x1194 | S10  | .fl-card 간격 16 | PASS
+FH02a-custom           | 834x1194 | S10  | .w-form 간격 16 | PASS
+FH02a-custom           | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 834x1194 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 834x1194 | S10  | .w-group 간격 8 | PASS
 FH02a-leave            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02a-leave            | 834x1194 | S1   | 상단 제목 Δ0 | PASS
 FH02a-leave            | 834x1194 | S1   | .fl-steps Δ0 | PASS
@@ -955,7 +1146,7 @@ FH02a-leave            | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH02a-leave            | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-leave            | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02a-leave            | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-leave            | 834x1194 | S7   | 본문 위304.4/아래304.4 | PASS
+FH02a-leave            | 834x1194 | S7   | 본문 위272.4/아래272.4 | PASS
 FH02a-leave            | 834x1194 | S5   | 세로형 바텀 시트 | PASS
 FH02a-leave            | 834x1194 | S2   | 바텀 시트 좌97/우97 | PASS
 FH02a-leave            | 834x1194 | S1   | 바텀 시트 Δ0 | PASS
@@ -967,7 +1158,7 @@ FH02a-leave            | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 
 FH02a-leave            | 834x1194 | S6   | .w-sfoot 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-leave            | 834x1194 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-leave            | 834x1194 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-leave            | 834x1194 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02a-leave            | 834x1194 | S10  | .w-form 간격 16 | PASS
 FH02a-leave            | 834x1194 | S10  | .w-group 간격 8 | PASS
@@ -1163,7 +1354,8 @@ FH02d-empty            | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-empty            | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02d-empty            | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-empty            | 834x1194 | S7   | 본문 위197/아래197 | PASS
-FH02d-empty            | 834x1194 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-empty            | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-empty            | 834x1194 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-empty            | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02d-picked           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-picked           | 834x1194 | S1   | 상단 제목 Δ0 | PASS
@@ -1178,7 +1370,8 @@ FH02d-picked           | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-picked           | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02d-picked           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-picked           | 834x1194 | S7   | 본문 위197/아래197 | PASS
-FH02d-picked           | 834x1194 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-picked           | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-picked           | 834x1194 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-picked           | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02d-solo             | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-solo             | 834x1194 | S1   | 상단 제목 Δ0 | PASS
@@ -1193,7 +1386,8 @@ FH02d-solo             | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-solo             | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02d-solo             | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-solo             | 834x1194 | S7   | 본문 위197/아래197 | PASS
-FH02d-solo             | 834x1194 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-solo             | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-solo             | 834x1194 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-solo             | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02d-search           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-search           | 834x1194 | S1   | 상단 제목 Δ0 | PASS
@@ -1208,8 +1402,25 @@ FH02d-search           | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-search           | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02d-search           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-search           | 834x1194 | S7   | 본문 위197/아래197 | PASS
-FH02d-search           | 834x1194 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-search           | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-search           | 834x1194 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-search           | 834x1194 | S10  | .fl-card 간격 16 | PASS
+FH02d-email            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02d-email            | 834x1194 | S1   | 상단 제목 Δ0 | PASS
+FH02d-email            | 834x1194 | S1   | .fl-steps Δ0 | PASS
+FH02d-email            | 834x1194 | S1   | .fl-h1 Δ0 | PASS
+FH02d-email            | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH02d-email            | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FH02d-email            | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FH02d-email            | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FH02d-email            | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 834x1194 | S1   | 카드 Δ0 | PASS
+FH02d-email            | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH02d-email            | 834x1194 | S7   | 본문 위197/아래197 | PASS
+FH02d-email            | 834x1194 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-email            | 834x1194 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
+FH02d-email            | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02e-online           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02e-online           | 834x1194 | S1   | 상단 제목 Δ0 | PASS
 FH02e-online           | 834x1194 | S1   | .fl-steps Δ0 | PASS
@@ -1238,8 +1449,8 @@ FH02e-offline          | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH02e-offline          | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02e-offline          | 834x1194 | S1   | 카드 Δ0 | PASS
 FH02e-offline          | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH02e-offline          | 834x1194 | S7   | 본문 위298.4/아래298.4 | PASS
-FH02e-offline          | 834x1194 | S8   | .w-form 자식 5개 폭 590~590 | PASS
+FH02e-offline          | 834x1194 | S7   | 본문 위280.4/아래280.4 | PASS
+FH02e-offline          | 834x1194 | S8   | .w-form 자식 6개 폭 590~590 | PASS
 FH02e-offline          | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH02e-offline          | 834x1194 | S10  | .w-form 간격 16 | PASS
 FH03-online            | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1256,9 +1467,12 @@ FH03-online            | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH03-online            | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-online            | 834x1194 | S1   | 카드 Δ0 | PASS
 FH03-online            | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-online            | 834x1194 | S7   | 본문 위252.3/아래252.3 | PASS
+FH03-online            | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-online            | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-online            | 834x1194 | S7   | 본문 위183/아래183 | PASS
 FH03-online            | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-online            | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-online            | 834x1194 | S10  | .fl-card 간격 8 | PASS
 FH03-online            | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH03-online            | 834x1194 | S10  | .fl-col 간격 8 | PASS
 FH03-offline           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1275,9 +1489,12 @@ FH03-offline           | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH03-offline           | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-offline           | 834x1194 | S1   | 카드 Δ0 | PASS
 FH03-offline           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-offline           | 834x1194 | S7   | 본문 위336.3/아래336.3 | PASS
+FH03-offline           | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-offline           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-offline           | 834x1194 | S7   | 본문 위257.3/아래257.3 | PASS
 FH03-offline           | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-offline           | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-offline           | 834x1194 | S10  | .fl-card 간격 8 | PASS
 FH03-offline           | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH03-offline           | 834x1194 | S10  | .fl-col 간격 8 | PASS
 FH03-partial           | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1294,9 +1511,12 @@ FH03-partial           | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH03-partial           | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-partial           | 834x1194 | S1   | 카드 Δ0 | PASS
 FH03-partial           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-partial           | 834x1194 | S7   | 본문 위252.3/아래252.3 | PASS
+FH03-partial           | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-partial           | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-partial           | 834x1194 | S7   | 본문 위183/아래183 | PASS
 FH03-partial           | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-partial           | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-partial           | 834x1194 | S10  | .fl-card 간격 8 | PASS
 FH03-partial           | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH03-partial           | 834x1194 | S10  | .fl-col 간격 8 | PASS
 FH03-scheduled         | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1313,9 +1533,12 @@ FH03-scheduled         | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH03-scheduled         | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-scheduled         | 834x1194 | S1   | 카드 Δ0 | PASS
 FH03-scheduled         | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-scheduled         | 834x1194 | S7   | 본문 위252.3/아래252.3 | PASS
+FH03-scheduled         | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-scheduled         | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-scheduled         | 834x1194 | S7   | 본문 위183/아래183 | PASS
 FH03-scheduled         | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-scheduled         | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-scheduled         | 834x1194 | S10  | .fl-card 간격 8 | PASS
 FH03-scheduled         | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH03-scheduled         | 834x1194 | S10  | .fl-col 간격 8 | PASS
 FH03-none              | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1333,11 +1556,58 @@ FH03-none              | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
 FH03-none              | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-none              | 834x1194 | S1   | 카드 Δ0 | PASS
 FH03-none              | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-none              | 834x1194 | S7   | 본문 위331/아래331 | PASS
+FH03-none              | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-none              | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-none              | 834x1194 | S7   | 본문 위246/아래246 | PASS
 FH03-none              | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-none              | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-none              | 834x1194 | S10  | .fl-card 간격 8 | PASS
 FH03-none              | 834x1194 | S10  | .fl-card 간격 16 | PASS
 FH03-none              | 834x1194 | S10  | .fl-col 간격 8 | PASS
+FH03-email             | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email             | 834x1194 | S1   | 상단 제목 Δ0 | PASS
+FH03-email             | 834x1194 | S1   | .w-ok Δ0 | PASS
+FH03-email             | 834x1194 | S1   | .fl-h1 Δ0 | PASS
+FH03-email             | 834x1194 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email             | 834x1194 | S1   | .fl-h2 Δ0 | PASS
+FH03-email             | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email             | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FH03-email             | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email             | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FH03-email             | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-email             | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-email             | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 834x1194 | S7   | 본문 위183/아래183 | PASS
+FH03-email             | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email             | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-email             | 834x1194 | S10  | .fl-card 간격 8 | PASS
+FH03-email             | 834x1194 | S10  | .fl-card 간격 16 | PASS
+FH03-email             | 834x1194 | S10  | .fl-col 간격 8 | PASS
+FH03-email-partial     | 834x1194 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email-partial     | 834x1194 | S1   | 상단 제목 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S1   | .w-ok Δ0 | PASS
+FH03-email-partial     | 834x1194 | S1   | .fl-h1 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email-partial     | 834x1194 | S1   | .fl-h2 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S2   | 본문 컬럼 좌97/우97 | PASS
+FH03-email-partial     | 834x1194 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 834x1194 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S2   | 하단 컬럼 좌97/우97 | PASS
+FH03-email-partial     | 834x1194 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 834x1194 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 834x1194 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 834x1194 | S7   | 본문 위183/아래183 | PASS
+FH03-email-partial     | 834x1194 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email-partial     | 834x1194 | S10  | .fl-col 간격 16 | PASS
+FH03-email-partial     | 834x1194 | S10  | .fl-card 간격 8 | PASS
+FH03-email-partial     | 834x1194 | S10  | .fl-card 간격 16 | PASS
+FH03-email-partial     | 834x1194 | S10  | .fl-col 간격 8 | PASS
 FH04-ready             | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
 FH04-ready             | 834x1194 | S2   | 본문 컬럼 좌24/우24 | PASS
 FH04-ready             | 834x1194 | S9   | 본문 컬럼 폭 566 ≤640 | PASS
@@ -1491,6 +1761,17 @@ FH04-net               | 834x1194 | S2   | 배너 좌67/우67 | PASS
 FH04-net               | 834x1194 | S8   | .w-page 자식 3개 폭 566~566 | PASS
 FH04-net               | 834x1194 | S10  | .w-page 간격 16 | PASS
 FH04-net               | 834x1194 | S10  | .sh-hero 간격 16 | PASS
+FH04-email-invites     | 834x1194 | S1   | 본문 컬럼 Δ0 | PASS
+FH04-email-invites     | 834x1194 | S2   | 본문 컬럼 좌24/우24 | PASS
+FH04-email-invites     | 834x1194 | S9   | 본문 컬럼 폭 566 ≤640 | PASS
+FH04-email-invites     | 834x1194 | S1   | .sh-hero Δ0 | PASS
+FH04-email-invites     | 834x1194 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 834x1194 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 834x1194 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 834x1194 | S3   | 머리줄 좌0/우0 | PASS
+FH04-email-invites     | 834x1194 | S8   | .w-page 자식 4개 폭 566~566 | PASS
+FH04-email-invites     | 834x1194 | S10  | .w-page 간격 16 | PASS
+FH04-email-invites     | 834x1194 | S10  | .sh-hero 간격 16 | PASS
 FH01-open              | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FH01-open              | 1194x834 | S2   | 본문 컬럼 좌167/우167 | PASS
 FH01-open              | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
@@ -1581,13 +1862,13 @@ FH02a-online-group     | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH02a-online-group     | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-online-group     | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02a-online-group     | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-online-group     | 1194x834 | S7   | 본문 위124.4/아래124.4 | PASS
+FH02a-online-group     | 1194x834 | S7   | 본문 위92.4/아래92.4 | PASS
 FH02a-online-group     | 1194x834 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1194x834 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-online-group     | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group     | 1194x834 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02a-online-group     | 1194x834 | S10  | .w-form 간격 16 | PASS
 FH02a-online-group     | 1194x834 | S10  | .w-group 간격 8 | PASS
@@ -1629,13 +1910,13 @@ FH02a-offline-group    | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH02a-offline-group    | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-offline-group    | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02a-offline-group    | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-offline-group    | 1194x834 | S7   | 본문 위108.4/아래108.4 | PASS
+FH02a-offline-group    | 1194x834 | S7   | 본문 위76.4/아래76.4 | PASS
 FH02a-offline-group    | 1194x834 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1194x834 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-offline-group    | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-offline-group    | 1194x834 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02a-offline-group    | 1194x834 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-group    | 1194x834 | S10  | .w-group 간격 8 | PASS
@@ -1665,6 +1946,55 @@ FH02a-offline-1to1     | 1194x834 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-1to1     | 1194x834 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 1194x834 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-online-group-max | 1194x834 | S1   | 상단 제목 Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S1   | .fl-steps Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S1   | .fl-h1 Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FH02a-online-group-max | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FH02a-online-group-max | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1194x834 | S1   | 카드 Δ0 | PASS
+FH02a-online-group-max | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1194x834 | S7   | 본문 위92.4/아래92.4 | PASS
+FH02a-online-group-max | 1194x834 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1194x834 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group-max | 1194x834 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 1194x834 | S10  | .fl-card 간격 16 | PASS
+FH02a-online-group-max | 1194x834 | S10  | .w-form 간격 16 | PASS
+FH02a-online-group-max | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-custom           | 1194x834 | S1   | 상단 제목 Δ0 | PASS
+FH02a-custom           | 1194x834 | S1   | .fl-steps Δ0 | PASS
+FH02a-custom           | 1194x834 | S1   | .fl-h1 Δ0 | PASS
+FH02a-custom           | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-custom           | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FH02a-custom           | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-custom           | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FH02a-custom           | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 1194x834 | S1   | 카드 Δ0 | PASS
+FH02a-custom           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-custom           | 1194x834 | S7   | 본문 위62.4/아래62.4 | PASS
+FH02a-custom           | 1194x834 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1194x834 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 1194x834 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 1194x834 | S10  | .fl-card 간격 16 | PASS
+FH02a-custom           | 1194x834 | S10  | .w-form 간격 16 | PASS
+FH02a-custom           | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1194x834 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1194x834 | S10  | .w-group 간격 8 | PASS
 FH02a-leave            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02a-leave            | 1194x834 | S1   | 상단 제목 Δ0 | PASS
 FH02a-leave            | 1194x834 | S1   | .fl-steps Δ0 | PASS
@@ -1677,7 +2007,7 @@ FH02a-leave            | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH02a-leave            | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-leave            | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02a-leave            | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-leave            | 1194x834 | S7   | 본문 위124.4/아래124.4 | PASS
+FH02a-leave            | 1194x834 | S7   | 본문 위92.4/아래92.4 | PASS
 FH02a-leave            | 1194x834 | S5   | 가로형 바텀 시트 | PASS
 FH02a-leave            | 1194x834 | S2   | 바텀 시트 좌277/우277 | PASS
 FH02a-leave            | 1194x834 | S1   | 바텀 시트 Δ0 | PASS
@@ -1689,7 +2019,7 @@ FH02a-leave            | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 
 FH02a-leave            | 1194x834 | S6   | .w-sfoot 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-leave            | 1194x834 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-leave            | 1194x834 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-leave            | 1194x834 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02a-leave            | 1194x834 | S10  | .w-form 간격 16 | PASS
 FH02a-leave            | 1194x834 | S10  | .w-group 간격 8 | PASS
@@ -1885,7 +2215,8 @@ FH02d-empty            | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-empty            | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02d-empty            | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-empty            | 1194x834 | S7   | 본문 위17/아래17 | PASS
-FH02d-empty            | 1194x834 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-empty            | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-empty            | 1194x834 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-empty            | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02d-picked           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-picked           | 1194x834 | S1   | 상단 제목 Δ0 | PASS
@@ -1900,7 +2231,8 @@ FH02d-picked           | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-picked           | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02d-picked           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-picked           | 1194x834 | S7   | 본문 위17/아래17 | PASS
-FH02d-picked           | 1194x834 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-picked           | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-picked           | 1194x834 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-picked           | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02d-solo             | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-solo             | 1194x834 | S1   | 상단 제목 Δ0 | PASS
@@ -1915,7 +2247,8 @@ FH02d-solo             | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-solo             | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02d-solo             | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-solo             | 1194x834 | S7   | 본문 위17/아래17 | PASS
-FH02d-solo             | 1194x834 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-solo             | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-solo             | 1194x834 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-solo             | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02d-search           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-search           | 1194x834 | S1   | 상단 제목 Δ0 | PASS
@@ -1930,8 +2263,25 @@ FH02d-search           | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-search           | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02d-search           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-search           | 1194x834 | S7   | 본문 위17/아래17 | PASS
-FH02d-search           | 1194x834 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-search           | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-search           | 1194x834 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-search           | 1194x834 | S10  | .fl-card 간격 16 | PASS
+FH02d-email            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02d-email            | 1194x834 | S1   | 상단 제목 Δ0 | PASS
+FH02d-email            | 1194x834 | S1   | .fl-steps Δ0 | PASS
+FH02d-email            | 1194x834 | S1   | .fl-h1 Δ0 | PASS
+FH02d-email            | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH02d-email            | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FH02d-email            | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FH02d-email            | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FH02d-email            | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 1194x834 | S1   | 카드 Δ0 | PASS
+FH02d-email            | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH02d-email            | 1194x834 | S7   | 본문 위17/아래17 | PASS
+FH02d-email            | 1194x834 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-email            | 1194x834 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
+FH02d-email            | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02e-online           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02e-online           | 1194x834 | S1   | 상단 제목 Δ0 | PASS
 FH02e-online           | 1194x834 | S1   | .fl-steps Δ0 | PASS
@@ -1960,8 +2310,8 @@ FH02e-offline          | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH02e-offline          | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02e-offline          | 1194x834 | S1   | 카드 Δ0 | PASS
 FH02e-offline          | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH02e-offline          | 1194x834 | S7   | 본문 위118.4/아래118.4 | PASS
-FH02e-offline          | 1194x834 | S8   | .w-form 자식 5개 폭 590~590 | PASS
+FH02e-offline          | 1194x834 | S7   | 본문 위100.4/아래100.4 | PASS
+FH02e-offline          | 1194x834 | S8   | .w-form 자식 6개 폭 590~590 | PASS
 FH02e-offline          | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH02e-offline          | 1194x834 | S10  | .w-form 간격 16 | PASS
 FH03-online            | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1978,9 +2328,12 @@ FH03-online            | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH03-online            | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-online            | 1194x834 | S1   | 카드 Δ0 | PASS
 FH03-online            | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-online            | 1194x834 | S7   | 본문 위72.3/아래72.3 | PASS
+FH03-online            | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-online            | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-online            | 1194x834 | S7   | 본문 위16/아래16 | PASS
 FH03-online            | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-online            | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-online            | 1194x834 | S10  | .fl-card 간격 8 | PASS
 FH03-online            | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH03-online            | 1194x834 | S10  | .fl-col 간격 8 | PASS
 FH03-offline           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -1997,9 +2350,12 @@ FH03-offline           | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH03-offline           | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-offline           | 1194x834 | S1   | 카드 Δ0 | PASS
 FH03-offline           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-offline           | 1194x834 | S7   | 본문 위156.3/아래156.3 | PASS
+FH03-offline           | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-offline           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-offline           | 1194x834 | S7   | 본문 위77.3/아래77.3 | PASS
 FH03-offline           | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-offline           | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-offline           | 1194x834 | S10  | .fl-card 간격 8 | PASS
 FH03-offline           | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH03-offline           | 1194x834 | S10  | .fl-col 간격 8 | PASS
 FH03-partial           | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2016,9 +2372,12 @@ FH03-partial           | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH03-partial           | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-partial           | 1194x834 | S1   | 카드 Δ0 | PASS
 FH03-partial           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-partial           | 1194x834 | S7   | 본문 위72.3/아래72.3 | PASS
+FH03-partial           | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-partial           | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-partial           | 1194x834 | S7   | 본문 위16/아래16 | PASS
 FH03-partial           | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-partial           | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-partial           | 1194x834 | S10  | .fl-card 간격 8 | PASS
 FH03-partial           | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH03-partial           | 1194x834 | S10  | .fl-col 간격 8 | PASS
 FH03-scheduled         | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2035,9 +2394,12 @@ FH03-scheduled         | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH03-scheduled         | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-scheduled         | 1194x834 | S1   | 카드 Δ0 | PASS
 FH03-scheduled         | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-scheduled         | 1194x834 | S7   | 본문 위72.3/아래72.3 | PASS
+FH03-scheduled         | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-scheduled         | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-scheduled         | 1194x834 | S7   | 본문 위16/아래16 | PASS
 FH03-scheduled         | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-scheduled         | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-scheduled         | 1194x834 | S10  | .fl-card 간격 8 | PASS
 FH03-scheduled         | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH03-scheduled         | 1194x834 | S10  | .fl-col 간격 8 | PASS
 FH03-none              | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2055,11 +2417,58 @@ FH03-none              | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
 FH03-none              | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-none              | 1194x834 | S1   | 카드 Δ0 | PASS
 FH03-none              | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-none              | 1194x834 | S7   | 본문 위151/아래151 | PASS
+FH03-none              | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-none              | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-none              | 1194x834 | S7   | 본문 위66/아래66 | PASS
 FH03-none              | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-none              | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-none              | 1194x834 | S10  | .fl-card 간격 8 | PASS
 FH03-none              | 1194x834 | S10  | .fl-card 간격 16 | PASS
 FH03-none              | 1194x834 | S10  | .fl-col 간격 8 | PASS
+FH03-email             | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email             | 1194x834 | S1   | 상단 제목 Δ0 | PASS
+FH03-email             | 1194x834 | S1   | .w-ok Δ0 | PASS
+FH03-email             | 1194x834 | S1   | .fl-h1 Δ0 | PASS
+FH03-email             | 1194x834 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email             | 1194x834 | S1   | .fl-h2 Δ0 | PASS
+FH03-email             | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email             | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FH03-email             | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email             | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FH03-email             | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-email             | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-email             | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 1194x834 | S7   | 본문 위16/아래16 | PASS
+FH03-email             | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email             | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-email             | 1194x834 | S10  | .fl-card 간격 8 | PASS
+FH03-email             | 1194x834 | S10  | .fl-card 간격 16 | PASS
+FH03-email             | 1194x834 | S10  | .fl-col 간격 8 | PASS
+FH03-email-partial     | 1194x834 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email-partial     | 1194x834 | S1   | 상단 제목 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S1   | .w-ok Δ0 | PASS
+FH03-email-partial     | 1194x834 | S1   | .fl-h1 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email-partial     | 1194x834 | S1   | .fl-h2 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S2   | 본문 컬럼 좌277/우277 | PASS
+FH03-email-partial     | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 1194x834 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S2   | 하단 컬럼 좌277/우277 | PASS
+FH03-email-partial     | 1194x834 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 1194x834 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 1194x834 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 1194x834 | S7   | 본문 위16/아래16 | PASS
+FH03-email-partial     | 1194x834 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email-partial     | 1194x834 | S10  | .fl-col 간격 16 | PASS
+FH03-email-partial     | 1194x834 | S10  | .fl-card 간격 8 | PASS
+FH03-email-partial     | 1194x834 | S10  | .fl-card 간격 16 | PASS
+FH03-email-partial     | 1194x834 | S10  | .fl-col 간격 8 | PASS
 FH04-ready             | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
 FH04-ready             | 1194x834 | S2   | 본문 컬럼 좌167/우167 | PASS
 FH04-ready             | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
@@ -2213,6 +2622,17 @@ FH04-net               | 1194x834 | S2   | 배너 좌247/우247 | PASS
 FH04-net               | 1194x834 | S8   | .w-page 자식 3개 폭 640~640 | PASS
 FH04-net               | 1194x834 | S10  | .w-page 간격 16 | PASS
 FH04-net               | 1194x834 | S10  | .sh-hero 간격 16 | PASS
+FH04-email-invites     | 1194x834 | S1   | 본문 컬럼 Δ0 | PASS
+FH04-email-invites     | 1194x834 | S2   | 본문 컬럼 좌167/우167 | PASS
+FH04-email-invites     | 1194x834 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH04-email-invites     | 1194x834 | S1   | .sh-hero Δ0 | PASS
+FH04-email-invites     | 1194x834 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1194x834 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1194x834 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1194x834 | S3   | 머리줄 좌0/우0 | PASS
+FH04-email-invites     | 1194x834 | S8   | .w-page 자식 4개 폭 640~640 | PASS
+FH04-email-invites     | 1194x834 | S10  | .w-page 간격 16 | PASS
+FH04-email-invites     | 1194x834 | S10  | .sh-hero 간격 16 | PASS
 FH01-open              | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FH01-open              | 1280x720 | S2   | 본문 컬럼 좌210/우210 | PASS
 FH01-open              | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
@@ -2303,13 +2723,13 @@ FH02a-online-group     | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH02a-online-group     | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-online-group     | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02a-online-group     | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-online-group     | 1280x720 | S7   | 본문 위67.4/아래67.4 | PASS
+FH02a-online-group     | 1280x720 | S7   | 본문 위35.4/아래35.4 | PASS
 FH02a-online-group     | 1280x720 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-online-group     | 1280x720 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-online-group     | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group     | 1280x720 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-online-group     | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02a-online-group     | 1280x720 | S10  | .w-form 간격 16 | PASS
 FH02a-online-group     | 1280x720 | S10  | .w-group 간격 8 | PASS
@@ -2351,13 +2771,13 @@ FH02a-offline-group    | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH02a-offline-group    | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-offline-group    | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02a-offline-group    | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-offline-group    | 1280x720 | S7   | 본문 위51.4/아래51.4 | PASS
+FH02a-offline-group    | 1280x720 | S7   | 본문 위19.4/아래19.4 | PASS
 FH02a-offline-group    | 1280x720 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-offline-group    | 1280x720 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-offline-group    | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-offline-group    | 1280x720 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-offline-group    | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02a-offline-group    | 1280x720 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-group    | 1280x720 | S10  | .w-group 간격 8 | PASS
@@ -2387,6 +2807,55 @@ FH02a-offline-1to1     | 1280x720 | S10  | .w-form 간격 16 | PASS
 FH02a-offline-1to1     | 1280x720 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 1280x720 | S10  | .w-group 간격 8 | PASS
 FH02a-offline-1to1     | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-online-group-max | 1280x720 | S1   | 상단 제목 Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S1   | .fl-steps Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S1   | .fl-h1 Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FH02a-online-group-max | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FH02a-online-group-max | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1280x720 | S1   | 카드 Δ0 | PASS
+FH02a-online-group-max | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-online-group-max | 1280x720 | S7   | 본문 위35.4/아래35.4 | PASS
+FH02a-online-group-max | 1280x720 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-online-group-max | 1280x720 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-online-group-max | 1280x720 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-online-group-max | 1280x720 | S10  | .fl-card 간격 16 | PASS
+FH02a-online-group-max | 1280x720 | S10  | .w-form 간격 16 | PASS
+FH02a-online-group-max | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-online-group-max | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02a-custom           | 1280x720 | S1   | 상단 제목 Δ0 | PASS
+FH02a-custom           | 1280x720 | S1   | .fl-steps Δ0 | PASS
+FH02a-custom           | 1280x720 | S1   | .fl-h1 Δ0 | PASS
+FH02a-custom           | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH02a-custom           | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FH02a-custom           | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FH02a-custom           | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FH02a-custom           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02a-custom           | 1280x720 | S1   | 카드 Δ0 | PASS
+FH02a-custom           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH02a-custom           | 1280x720 | S7   | 본문 위5.4/아래5.4 | PASS
+FH02a-custom           | 1280x720 | S6   | .fl-seg 4항목 폭141.5~141.5 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02a-custom           | 1280x720 | S8   | .w-form 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-custom           | 1280x720 | S8   | .w-group 자식 3개 폭 590~590 | PASS
+FH02a-custom           | 1280x720 | S10  | .fl-card 간격 16 | PASS
+FH02a-custom           | 1280x720 | S10  | .w-form 간격 16 | PASS
+FH02a-custom           | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1280x720 | S10  | .w-group 간격 8 | PASS
+FH02a-custom           | 1280x720 | S10  | .w-group 간격 8 | PASS
 FH02a-leave            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02a-leave            | 1280x720 | S1   | 상단 제목 Δ0 | PASS
 FH02a-leave            | 1280x720 | S1   | .fl-steps Δ0 | PASS
@@ -2399,7 +2868,7 @@ FH02a-leave            | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH02a-leave            | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02a-leave            | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02a-leave            | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH02a-leave            | 1280x720 | S7   | 본문 위67.4/아래67.4 | PASS
+FH02a-leave            | 1280x720 | S7   | 본문 위35.4/아래35.4 | PASS
 FH02a-leave            | 1280x720 | S5   | 가로형 바텀 시트 | PASS
 FH02a-leave            | 1280x720 | S2   | 바텀 시트 좌320/우320 | PASS
 FH02a-leave            | 1280x720 | S1   | 바텀 시트 Δ0 | PASS
@@ -2411,7 +2880,7 @@ FH02a-leave            | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 
 FH02a-leave            | 1280x720 | S6   | .w-sfoot 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
 FH02a-leave            | 1280x720 | S8   | .w-form 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
-FH02a-leave            | 1280x720 | S8   | .w-group 자식 2개 폭 590~590 | PASS
+FH02a-leave            | 1280x720 | S8   | .w-group 자식 3개 폭 590~590 | PASS
 FH02a-leave            | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02a-leave            | 1280x720 | S10  | .w-form 간격 16 | PASS
 FH02a-leave            | 1280x720 | S10  | .w-group 간격 8 | PASS
@@ -2607,7 +3076,8 @@ FH02d-empty            | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-empty            | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02d-empty            | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-empty            | 1280x720 | S7   | 본문 위16/아래16 | PASS
-FH02d-empty            | 1280x720 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-empty            | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-empty            | 1280x720 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-empty            | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02d-picked           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-picked           | 1280x720 | S1   | 상단 제목 Δ0 | PASS
@@ -2622,7 +3092,8 @@ FH02d-picked           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-picked           | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02d-picked           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-picked           | 1280x720 | S7   | 본문 위16/아래16 | PASS
-FH02d-picked           | 1280x720 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-picked           | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-picked           | 1280x720 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-picked           | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02d-solo             | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-solo             | 1280x720 | S1   | 상단 제목 Δ0 | PASS
@@ -2637,7 +3108,8 @@ FH02d-solo             | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-solo             | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02d-solo             | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-solo             | 1280x720 | S7   | 본문 위16/아래16 | PASS
-FH02d-solo             | 1280x720 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-solo             | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-solo             | 1280x720 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-solo             | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02d-search           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02d-search           | 1280x720 | S1   | 상단 제목 Δ0 | PASS
@@ -2652,8 +3124,25 @@ FH02d-search           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02d-search           | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02d-search           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
 FH02d-search           | 1280x720 | S7   | 본문 위16/아래16 | PASS
-FH02d-search           | 1280x720 | S8   | .fl-card 자식 3개 폭 590~590 | PASS
+FH02d-search           | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-search           | 1280x720 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
 FH02d-search           | 1280x720 | S10  | .fl-card 간격 16 | PASS
+FH02d-email            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH02d-email            | 1280x720 | S1   | 상단 제목 Δ0 | PASS
+FH02d-email            | 1280x720 | S1   | .fl-steps Δ0 | PASS
+FH02d-email            | 1280x720 | S1   | .fl-h1 Δ0 | PASS
+FH02d-email            | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH02d-email            | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FH02d-email            | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FH02d-email            | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FH02d-email            | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH02d-email            | 1280x720 | S1   | 카드 Δ0 | PASS
+FH02d-email            | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH02d-email            | 1280x720 | S7   | 본문 위16/아래16 | PASS
+FH02d-email            | 1280x720 | S6   | .fl-seg 2항목 폭291~291 간격8~8 안쪽0/0 | PASS
+FH02d-email            | 1280x720 | S8   | .fl-card 자식 4개 폭 590~590 | PASS
+FH02d-email            | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02e-online           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
 FH02e-online           | 1280x720 | S1   | 상단 제목 Δ0 | PASS
 FH02e-online           | 1280x720 | S1   | .fl-steps Δ0 | PASS
@@ -2682,8 +3171,8 @@ FH02e-offline          | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH02e-offline          | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH02e-offline          | 1280x720 | S1   | 카드 Δ0 | PASS
 FH02e-offline          | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH02e-offline          | 1280x720 | S7   | 본문 위61.4/아래61.4 | PASS
-FH02e-offline          | 1280x720 | S8   | .w-form 자식 5개 폭 590~590 | PASS
+FH02e-offline          | 1280x720 | S7   | 본문 위43.4/아래43.4 | PASS
+FH02e-offline          | 1280x720 | S8   | .w-form 자식 6개 폭 590~590 | PASS
 FH02e-offline          | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH02e-offline          | 1280x720 | S10  | .w-form 간격 16 | PASS
 FH03-online            | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2700,9 +3189,12 @@ FH03-online            | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH03-online            | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-online            | 1280x720 | S1   | 카드 Δ0 | PASS
 FH03-online            | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-online            | 1280x720 | S7   | 본문 위15.3/아래15.3 | PASS
+FH03-online            | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-online            | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-online            | 1280x720 | S7   | 본문 위16/아래16 | PASS
 FH03-online            | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-online            | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-online            | 1280x720 | S10  | .fl-card 간격 8 | PASS
 FH03-online            | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH03-online            | 1280x720 | S10  | .fl-col 간격 8 | PASS
 FH03-offline           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2719,9 +3211,12 @@ FH03-offline           | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH03-offline           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-offline           | 1280x720 | S1   | 카드 Δ0 | PASS
 FH03-offline           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-offline           | 1280x720 | S7   | 본문 위99.3/아래99.3 | PASS
+FH03-offline           | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-offline           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-offline           | 1280x720 | S7   | 본문 위20.3/아래20.3 | PASS
 FH03-offline           | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-offline           | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-offline           | 1280x720 | S10  | .fl-card 간격 8 | PASS
 FH03-offline           | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH03-offline           | 1280x720 | S10  | .fl-col 간격 8 | PASS
 FH03-partial           | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2738,9 +3233,12 @@ FH03-partial           | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH03-partial           | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-partial           | 1280x720 | S1   | 카드 Δ0 | PASS
 FH03-partial           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-partial           | 1280x720 | S7   | 본문 위15.3/아래15.3 | PASS
+FH03-partial           | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-partial           | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-partial           | 1280x720 | S7   | 본문 위16/아래16 | PASS
 FH03-partial           | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-partial           | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-partial           | 1280x720 | S10  | .fl-card 간격 8 | PASS
 FH03-partial           | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH03-partial           | 1280x720 | S10  | .fl-col 간격 8 | PASS
 FH03-scheduled         | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2757,9 +3255,12 @@ FH03-scheduled         | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH03-scheduled         | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-scheduled         | 1280x720 | S1   | 카드 Δ0 | PASS
 FH03-scheduled         | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-scheduled         | 1280x720 | S7   | 본문 위15.3/아래15.3 | PASS
+FH03-scheduled         | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-scheduled         | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-scheduled         | 1280x720 | S7   | 본문 위16/아래16 | PASS
 FH03-scheduled         | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-scheduled         | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-scheduled         | 1280x720 | S10  | .fl-card 간격 8 | PASS
 FH03-scheduled         | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH03-scheduled         | 1280x720 | S10  | .fl-col 간격 8 | PASS
 FH03-none              | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
@@ -2777,11 +3278,58 @@ FH03-none              | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
 FH03-none              | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
 FH03-none              | 1280x720 | S1   | 카드 Δ0 | PASS
 FH03-none              | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
-FH03-none              | 1280x720 | S7   | 본문 위94/아래94 | PASS
+FH03-none              | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-none              | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-none              | 1280x720 | S7   | 본문 위9/아래9 | PASS
 FH03-none              | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
 FH03-none              | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-none              | 1280x720 | S10  | .fl-card 간격 8 | PASS
 FH03-none              | 1280x720 | S10  | .fl-card 간격 16 | PASS
 FH03-none              | 1280x720 | S10  | .fl-col 간격 8 | PASS
+FH03-email             | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email             | 1280x720 | S1   | 상단 제목 Δ0 | PASS
+FH03-email             | 1280x720 | S1   | .w-ok Δ0 | PASS
+FH03-email             | 1280x720 | S1   | .fl-h1 Δ0 | PASS
+FH03-email             | 1280x720 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email             | 1280x720 | S1   | .fl-h2 Δ0 | PASS
+FH03-email             | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email             | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FH03-email             | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email             | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FH03-email             | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email             | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-email             | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-email             | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email             | 1280x720 | S7   | 본문 위16/아래16 | PASS
+FH03-email             | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email             | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-email             | 1280x720 | S10  | .fl-card 간격 8 | PASS
+FH03-email             | 1280x720 | S10  | .fl-card 간격 16 | PASS
+FH03-email             | 1280x720 | S10  | .fl-col 간격 8 | PASS
+FH03-email-partial     | 1280x720 | S3   | 상단 바 여백 좌16/우16 · 높이 44/44 | PASS
+FH03-email-partial     | 1280x720 | S1   | 상단 제목 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S1   | .w-ok Δ0 | PASS
+FH03-email-partial     | 1280x720 | S1   | .fl-h1 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S1   | .fl-chiprow Δ0 | PASS
+FH03-email-partial     | 1280x720 | S1   | .fl-h2 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S2   | 본문 컬럼 좌320/우320 | PASS
+FH03-email-partial     | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 1280x720 | S1   | 하단 컬럼 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S2   | 하단 컬럼 좌320/우320 | PASS
+FH03-email-partial     | 1280x720 | S9   | 하단 컬럼 폭 640 ≤640 | PASS
+FH03-email-partial     | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 1280x720 | S1   | 카드 Δ0 | PASS
+FH03-email-partial     | 1280x720 | S9   | 카드 폭 640 ≤640 | PASS
+FH03-email-partial     | 1280x720 | S7   | 본문 위16/아래16 | PASS
+FH03-email-partial     | 1280x720 | S6   | .w-ghostrow 3항목 폭208~208 간격8~8 안쪽0/0 | PASS
+FH03-email-partial     | 1280x720 | S10  | .fl-col 간격 16 | PASS
+FH03-email-partial     | 1280x720 | S10  | .fl-card 간격 8 | PASS
+FH03-email-partial     | 1280x720 | S10  | .fl-card 간격 16 | PASS
+FH03-email-partial     | 1280x720 | S10  | .fl-col 간격 8 | PASS
 FH04-ready             | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
 FH04-ready             | 1280x720 | S2   | 본문 컬럼 좌210/우210 | PASS
 FH04-ready             | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
@@ -2935,3 +3483,14 @@ FH04-net               | 1280x720 | S2   | 배너 좌290/우290 | PASS
 FH04-net               | 1280x720 | S8   | .w-page 자식 3개 폭 640~640 | PASS
 FH04-net               | 1280x720 | S10  | .w-page 간격 16 | PASS
 FH04-net               | 1280x720 | S10  | .sh-hero 간격 16 | PASS
+FH04-email-invites     | 1280x720 | S1   | 본문 컬럼 Δ0 | PASS
+FH04-email-invites     | 1280x720 | S2   | 본문 컬럼 좌210/우210 | PASS
+FH04-email-invites     | 1280x720 | S9   | 본문 컬럼 폭 640 ≤640 | PASS
+FH04-email-invites     | 1280x720 | S1   | .sh-hero Δ0 | PASS
+FH04-email-invites     | 1280x720 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1280x720 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1280x720 | S1   | .sh-card Δ0 | PASS
+FH04-email-invites     | 1280x720 | S3   | 머리줄 좌0/우0 | PASS
+FH04-email-invites     | 1280x720 | S8   | .w-page 자식 4개 폭 640~640 | PASS
+FH04-email-invites     | 1280x720 | S10  | .w-page 간격 16 | PASS
+FH04-email-invites     | 1280x720 | S10  | .sh-hero 간격 16 | PASS
