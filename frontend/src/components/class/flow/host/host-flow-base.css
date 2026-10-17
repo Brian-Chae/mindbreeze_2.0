@@ -8,7 +8,7 @@
 .pz-root .fl-label { display: block; }
 
 /* 목록 선택 단계: 본문 컬럼이 푸터까지 채운다 */
-.pz-root .fh-fillcol { width: min(100%, var(--col-w)); flex: 1; min-height: 0; max-height: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--sp-2); }
+.pz-root .fh-fillcol { width: min(100%, var(--col-w)); flex: 1; min-height: 0; max-height: 640px; margin: auto; display: flex; flex-direction: column; gap: var(--sp-2); }
 .pz-root .fh-fillcol > .fh-card { flex: 1; min-height: 0; }
 
 /* 상단 바 제목 2줄 */
@@ -35,3 +35,11 @@
   .pz-root.fh-wiz .fh-tog, .pz-root.fh-wiz .fh-static { min-height: 56px; }
   .pz-root.fh-wiz .fh-stepper { min-height: 52px; }
 }
+
+/* 안내 줄·삭제 버튼 (host-a 의 .w-note · .w-xbtn) */
+.pz-root .fh-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 1.5; }
+.pz-root .fh-note > svg, .pz-root .fh-info > svg { flex: none; }
+.pz-root .fh-note.ok { color: var(--ok); }
+.pz-root .fh-note.warn { color: var(--warn); }
+.pz-root .fh-xbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; color: var(--tx-mid); flex: none; }
+.pz-root .fh-csv-input { display: none; }

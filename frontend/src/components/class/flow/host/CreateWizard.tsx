@@ -1,10 +1,10 @@
 // SDD-209 H1~H2 — 클래스 만들기 마법사 뷰(FH02a~e). 상태·API 는 컨테이너/하니스가 props 로 넘긴다.
 import type { Dispatch, ReactNode } from 'react';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import type { WizardAction, WizardState } from '../../../../lib/class/class-wizard';
+import type { WizardAction, WizardMember, WizardState } from '../../../../lib/class/class-wizard';
 import { FlowButton, FlowSheet, FlowSteps } from '../shared/flow-primitives';
 import { HostFlowFrame } from './HostFlowFrame';
-import { StepRecord, StepType } from './wizard-steps';
+import { StepConfirm, StepInvite, StepRecord, StepSchedule, StepType } from './wizard-steps';
 
 export interface WizardViewProps {
   state: WizardState;
@@ -15,21 +15,36 @@ export interface WizardViewProps {
   /** 나가기 확정 */
   onExit?: () => void;
   backdropSrc?: string;
+  /** 일정 표기 기준일(기본: 지금) */
+  base?: Date;
+  /** 같은 시간대 기존 클래스 제목(충돌 안내) */
+  conflictTitle?: string | null;
+  /** 초대할 수 있는 회원 목록 */
+  members?: readonly WizardMember[];
+  membersState?: 'ok' | 'loading' | 'error';
+  onCsvText?: (text: string) => void;
 }
 
-function StepBody({ state, dispatch }: Pick<WizardViewProps, 'state' | 'dispatch'>): ReactNode {
+function StepBody({ state, dispatch, base, conflictTitle = null, members = [], membersState, onCsvText }: WizardViewProps & { base: Date }): ReactNode {
   const props = { draft: state.draft, ui: state.ui, dispatch };
   switch (state.step) {
     case 1:
       return <StepType {...props} />;
     case 2:
       return <StepRecord {...props} />;
+    case 3:
+      return <StepSchedule {...props} base={base} conflictTitle={conflictTitle} />;
+    case 4:
+      return <StepInvite {...props} members={members} membersState={membersState} onCsvText={onCsvText} />;
+    case 5:
+      return <StepConfirm {...props} base={base} />;
     default:
       return null;
   }
 }
 
-export function WizardView({ state, dispatch, onSubmit, submitting = false, onExit, backdropSrc }: WizardViewProps) {
+export function WizardView(props: WizardViewProps) {
+  const { state, dispatch, onSubmit, submitting = false, onExit, backdropSrc, base = new Date() } = props;
   const { step, ui } = state;
   const last = step === 5;
   const next = (): void => {
@@ -79,7 +94,7 @@ export function WizardView({ state, dispatch, onSubmit, submitting = false, onEx
       }
     >
       <FlowSteps total={5} current={step - 1} />
-      <StepBody state={state} dispatch={dispatch} />
+      <StepBody {...props} base={base} />
     </HostFlowFrame>
   );
 }

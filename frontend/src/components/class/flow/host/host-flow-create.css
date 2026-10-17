@@ -1,12 +1,9 @@
 /* SDD-209 H1~H3 — 상담사 만들기 마법사·생성 완료 스타일. 근거: designs/class-flow-redesign/host-a.html (.w- → .fh-) */
-.pz-root .ic.s16 {width: 16px; height: 16px;}
-.pz-root .ic.s20 {width: 20px; height: 20px;}
 .pz-root .fh-logo {fill: currentColor; stroke: none;}
 .pz-root h1, .pz-root h2, .pz-root h3, .pz-root p {margin: 0;}
 .pz-root input {font: inherit;}
 .pz-root button:focus-visible, .pz-root input:focus-visible {outline: 2px solid var(--mb-pale); outline-offset: 2px;}
 .pz-root .fh-tight {white-space: nowrap;}
-.pz-root.fh-wiz .fl-top-title {font-size: var(--fs-15);}
 .pz-root.fh-wiz .fl-label {line-height: 20px;}
 .pz-root.fh-wiz .fl-steps {flex: none;}
 .pz-root .fh-card {padding: 16px; display: flex; flex-direction: column; gap: 16px;}
@@ -16,7 +13,7 @@
 .pz-root .fh-form {display: flex; flex-direction: column; gap: 16px;}
 .pz-root .fh-group {display: flex; flex-direction: column; gap: 8px;}
 .pz-root .fh-info {display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid);}
-.pz-root .fh-info .ic {flex: none;}
+.pz-root .fh-info svg {flex: none;}
 .pz-root .fl-seg.fh-flex > button {display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; min-width: 0; white-space: nowrap;}
 .pz-root .fl-seg.fh-flex > button.on {border-color: var(--mb-lavender);}
 .pz-root .fl-seg.fh-types {grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr));}
@@ -25,7 +22,7 @@
 .pz-root .fl-seg.fh-types {grid-template-columns: repeat(2, minmax(0, 1fr));}
 }
 .pz-root .fh-inwrap {position: relative;}
-.pz-root .fh-inwrap > .ic {position: absolute; left: 16px; top: 16px; color: var(--tx-mid); pointer-events: none;}
+.pz-root .fh-inwrap > svg {position: absolute; left: 16px; top: 16px; color: var(--tx-mid); pointer-events: none;}
 .pz-root .fh-inwrap > .fl-input {padding-left: 48px;}
 .pz-root .fh-tog {width: 100%; text-align: left; min-height: 64px;}
 .pz-root .fh-tog .tx {flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;}
@@ -58,8 +55,6 @@
 .pz-root .fh-stepper b {text-align: center; font-size: var(--fs-15); font-weight: 700; white-space: nowrap;}
 .pz-root .fh-stepper button {width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1);}
 .pz-root .fh-stepper button[disabled] {opacity: 0.4;}
-.pz-root.fh-wiz .fl-body.fh-fill .fl-col {flex: 1; min-height: 0; max-height: 640px;}
-.pz-root.fh-wiz .fh-fill .fh-card {flex: 1; min-height: 0;}
 .pz-root .fh-pchips {display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center;}
 .pz-root .fh-pchips .hint {font-size: var(--fs-13); color: var(--tx-lo);}
 .pz-root .fh-pchip {display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 600;}
@@ -76,10 +71,10 @@
 .pz-root .fh-prow .ck {width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sheet-border); display: grid; place-items: center;}
 .pz-root .fh-prow.on {border-color: var(--mb-lavender);}
 .pz-root .fh-prow.on .ck {background: var(--mb-purple); border-color: var(--mb-lavender);}
-.pz-root .fh-prow:not(.on) .ck .ic {display: none;}
-.pz-root .fh-prow .ck .ic {width: 20px; height: 20px;}
+.pz-root .fh-prow:not(.on) .ck svg {display: none;}
+.pz-root .fh-prow .ck svg {width: 20px; height: 20px;}
 .pz-root .fh-sumrow .tx {flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 1.5; padding: 8px 0;}
-.pz-root .fh-sumrow > .ic {flex: none; color: var(--mb-pale);}
+.pz-root .fh-sumrow > svg {flex: none; color: var(--mb-pale);}
 .pz-root .fh-edit {width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; color: var(--tx-mid);}
 .pz-root .fh-ok {width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125,227,200,0.16); border: 1px solid rgba(125,227,200,0.5); color: var(--ok); align-self: center;}
 .pz-root .fh-invcard {gap: 16px;}
@@ -109,5 +104,4 @@
 .pz-root .fh-inv .sub {margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5;}
 .pz-root .fh-inv .sub.bad {color: var(--warn);}
 .pz-root .fh-inv .av svg {width: 20px; height: 20px;}
-.pz-root.fh-wiz .fh-fill .fh-codecard {flex: none;}
-.pz-root.fh-wiz .fh-fill .fh-invcard {flex: 1; min-height: 0;}
+

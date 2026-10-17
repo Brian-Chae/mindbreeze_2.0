@@ -4,20 +4,29 @@ import { act, createElement, useReducer, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WizardView } from '../src/components/class/flow/host/CreateWizard';
+import { FIXTURE_BASE, FIXTURE_MEMBERS, fixtureDraft } from '../src/lib/class/flow/host-fixture-data';
 import { createInitialDraft, createInitialState, wizardReducer, type WizardDraft, type WizardState } from '../src/lib/class/class-wizard';
 
 let root: Root;
 let container: HTMLDivElement;
 
-function Harness({ initial, onExit }: { initial: WizardState; onExit?: () => void }): ReactNode {
+function Harness({ initial, onExit, conflictTitle }: { initial: WizardState; onExit?: () => void; conflictTitle?: string | null }): ReactNode {
   const [state, dispatch] = useReducer(wizardReducer, initial);
-  return createElement(WizardView, { state, dispatch, onExit });
+  return createElement(WizardView, { state, dispatch, onExit, base: FIXTURE_BASE, members: FIXTURE_MEMBERS, conflictTitle, onCsvText: () => undefined });
 }
 
-async function mount(step: WizardState['step'], patch: Partial<WizardDraft> = {}, onExit?: () => void): Promise<void> {
-  const initial: WizardState = { ...createInitialState({ ...createInitialDraft(), ...patch }), step };
-  await act(async () => root.render(createElement(Harness, { initial, onExit })));
+async function mount(step: WizardState['step'], patch: Partial<WizardDraft> = {}, onExit?: () => void, conflictTitle?: string | null, ui: Partial<WizardState['ui']> = {}): Promise<void> {
+  const base = createInitialState({ ...createInitialDraft(), ...patch });
+  const initial: WizardState = { ...base, step, ui: { ...base.ui, ...ui } };
+  await act(async () => root.render(createElement(Harness, { initial, onExit, conflictTitle })));
 }
+const typeInto = async (el: HTMLInputElement, value: string): Promise<void> => {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+};
 const text = (): string => container.textContent ?? '';
 const click = async (el: Element | null): Promise<void> => { await act(async () => { (el as HTMLElement).click(); }); };
 const byText = (sel: string, t: string): HTMLElement | null => [...container.querySelectorAll<HTMLElement>(sel)].find((el) => el.textContent?.includes(t)) ?? null;
@@ -138,5 +147,131 @@ describe('나가기 확인 시트', () => {
     expect(text()).toContain('입력한 내용은 저장되지 않아요.');
     await click([...container.querySelectorAll('button')].find((b) => b.textContent === '나가기') ?? null);
     expect(exited).toBe(1);
+  });
+});
+
+describe('FH02c 일정', () => {
+  it('지금 바로: 날짜·시·분 없이 안내와 소요 시간만', async () => {
+    await mount(3, { when: 'now' });
+    expect(text()).toContain('언제 열까요?');
+    expect(text()).toContain('만들면 바로 열 수 있어요. 일정은 따로 저장되지 않아요.');
+    expect(text()).toContain('소요 시간 · 5분 단위');
+    expect(text()).not.toContain('예약 알림');
+    for (const chip of ['30분', '45분', '50분', '60분', '90분']) expect(text()).toContain(chip);
+  });
+
+  it('시간 예약: 날짜·시·분과 예약 알림, 충돌 없음 안내', async () => {
+    await mount(3, { timeMin: 915 }, undefined, null);
+    expect(text()).toContain('내일 · 10월 18일 일');
+    expect(text()).toContain('오후 3시');
+    expect(text()).toContain('15분');
+    expect(text()).toContain('이 시간에는 다른 클래스가 없어요.');
+    for (const label of ['끄기', '하루 전', '1시간 전']) expect(text()).toContain(label);
+  });
+
+  it('충돌: 겹치는 클래스 제목과 겹쳐도 만들 수 있다는 안내', async () => {
+    await mount(3, {}, undefined, '박지우 님 1차 상담');
+    expect(text()).toContain('같은 시간에 박지우 님 1차 상담이 있어요. 겹쳐도 만들 수 있어요.');
+  });
+
+  it('90분은 1시간 30분으로 표기, +/- 는 5분씩', async () => {
+    await mount(3, { durationMin: 90 });
+    expect(text()).toContain('1시간 30분');
+    await click(container.querySelector('[aria-label="소요 시간 늘리기"]'));
+    expect(text()).toContain('1시간 35분');
+  });
+});
+
+describe('FH02d 초대', () => {
+  const members = fixtureDraft().members;
+
+  it('선택 없음: 안내 문구와 {N}/{정원}명', async () => {
+    await mount(4, { members: [] });
+    expect(text()).toContain('누구를 초대할까요?');
+    expect(text()).toContain('아직 선택한 회원이 없어요. 건너뛰고 나중에 초대해도 돼요.');
+    expect(text()).toContain('0/10명');
+    expect(text()).toContain('CSV 추가');
+  });
+
+  it('회원을 고르면 칩과 카운트가 바뀌고, 칩을 누르면 해제', async () => {
+    await mount(4, { members: [] });
+    await click(container.querySelector('button.fh-prow'));
+    expect(text()).toContain('1/10명');
+    expect(container.querySelector('[aria-label="김서연 선택 해제"]')).not.toBeNull();
+    await click(container.querySelector('[aria-label="김서연 선택 해제"]'));
+    expect(text()).toContain('0/10명');
+  });
+
+  it('1:1 은 1명을 고르면 나머지 행이 비활성', async () => {
+    await mount(4, { size: 'solo', members: members.slice(0, 1) });
+    expect(text()).toContain('1명 · 1:1은 최대 1명이에요');
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('button.fh-prow')];
+    expect(rows.filter((r) => !r.disabled)).toHaveLength(1);
+  });
+
+  it('정원이 차면 선택하지 않은 행이 비활성', async () => {
+    await mount(4, { capacity: 3, members: members.slice(0, 3) });
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('button.fh-prow')];
+    expect(rows.filter((r) => r.disabled)).toHaveLength(9);
+    expect(text()).toContain('3/3명');
+  });
+
+  it('검색은 이름·이메일로 거르고 결과 수를 보인다', async () => {
+    await mount(4, { members: [] }, undefined, null, { memberQuery: '서' });
+    expect(text()).toContain('검색 결과 3명');
+    await typeInto(container.querySelector('input[aria-label="회원 검색"]') as HTMLInputElement, 'zzz');
+    expect(text()).toContain('검색 결과가 없어요.');
+  });
+
+  it('비회원 이메일 탭: 안내·형식 오류·추가·삭제, 정원에 포함하지 않음', async () => {
+    await mount(4, { members: [] }, undefined, null, { inviteTab: 'email' });
+    expect(text()).toContain('비회원은 이메일로 초대할 수 있어요');
+    expect(text()).toContain('메일에 입장 코드가 들어가요');
+    const input = container.querySelector('input[aria-label="초대할 이메일"]') as HTMLInputElement;
+    await typeInto(input, 'minsu@');
+    await click(byText('button', '추가'));
+    expect(text()).toContain('이메일 형식을 확인해 주세요.');
+    await typeInto(input, 'minsu@example.com');
+    await click(byText('button', '추가'));
+    expect(text()).toContain('이메일 1명 · 초대 인원은 정원에 포함하지 않아요');
+    expect(text()).toContain('minsu@example.com');
+    await click(container.querySelector('[aria-label="minsu@example.com 삭제"]'));
+    expect(text()).toContain('이메일 0명');
+  });
+});
+
+describe('FH02e 확인', () => {
+  it('요약 행·고지 문구·이름 입력, 마지막 버튼은 클래스 만들기', async () => {
+    await mount(5, fixtureDraft({ emails: ['hana.park@example.com'] }));
+    expect(text()).toContain('이렇게 만들까요?');
+    expect(text()).toContain('명상 · 온라인 · 그룹 · 정원 10명');
+    expect(text()).toContain('내일 오후 3:15 · 50분');
+    expect(text()).toContain('LINK BAND 선택 · 음성 녹음 · AI 분석 · 영상 녹화');
+    expect(text()).toContain('3명 초대 · 김서연 외 2명 · 이메일 1명');
+    expect(text()).toContain('LINK BAND는 진단·치료 목적이 아니에요. 리포트 반영은 참가자가 직접 정해요.');
+    expect((container.querySelector('[data-pz="flow-cta"]') as HTMLElement).textContent).toContain('클래스 만들기');
+  });
+
+  it('연필을 누르면 해당 단계로 가고 값이 보존된다', async () => {
+    await mount(5, fixtureDraft({ title: '내 클래스' }));
+    await click(container.querySelector('[aria-label="일정 수정"]'));
+    expect(text()).toContain('언제 열까요?');
+    await click(byText('button', '다음'));
+    await click(byText('button', '다음'));
+    expect((container.querySelector('input[aria-label="클래스 이름"]') as HTMLInputElement).value).toBe('내 클래스');
+  });
+
+  it('오프라인 1:1 요약: 영상 녹화 없음·장소 포함', async () => {
+    await mount(5, fixtureDraft({ place: 'offline', size: 'solo', band: 'none', when: 'now', members: [] }));
+    expect(text()).toContain('1:1 · 서울 강남구 테헤란로 152 7층');
+    expect(text()).toContain('LINK BAND 사용 안 함 · 음성 녹음 · AI 분석');
+    expect(text()).not.toContain('영상 녹화');
+    expect(text()).toContain('초대 없이 만들어요');
+  });
+
+  it('제출 중에는 만들기 버튼이 비활성', async () => {
+    const initial: WizardState = { ...createInitialState(fixtureDraft()), step: 5 };
+    await act(async () => root.render(createElement(WizardView, { state: initial, dispatch: () => undefined, submitting: true, base: FIXTURE_BASE })));
+    expect((container.querySelector('[data-pz="flow-cta"]') as HTMLButtonElement).disabled).toBe(true);
   });
 });

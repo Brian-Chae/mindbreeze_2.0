@@ -1,12 +1,12 @@
 /* SDD-209 H4~H8 — 상담사 세팅·로비·시작·종료 스타일. 근거: designs/class-flow-redesign/host-b.html (.w- → .fhb-) */
 .pz-root .fhb-ico {width: 40px; height: 40px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; background: rgba(255,255,255,0.1);}
-.pz-root .fhb-ico .ic {width: 20px; height: 20px;}
+.pz-root .fhb-ico svg {width: 20px; height: 20px;}
 .pz-root .fhb-ico.lg {width: 56px; height: 56px;}
-.pz-root .fhb-ico.lg .ic {width: 24px; height: 24px;}
+.pz-root .fhb-ico.lg svg {width: 24px; height: 24px;}
 .pz-root .fhb-ico.ok {color: var(--ok); background: rgba(125,227,200,0.14);}
 .pz-root .fhb-ico.warn {color: var(--warn); background: var(--warn-bg);}
 .pz-root .fhb-chip {display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); white-space: nowrap; flex: none;}
-.pz-root .fhb-chip .ic {width: 16px; height: 16px;}
+.pz-root .fhb-chip svg {width: 16px; height: 16px;}
 .pz-root .fhb-chip.ok {color: var(--ok); border-color: rgba(125,227,200,0.5);}
 .pz-root .fhb-chip.warn {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
 .pz-root .fhb-chip.mute {color: var(--tx-mid);}
@@ -17,8 +17,8 @@
 .pz-root .fhb-rt span {display: block; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid);}
 .pz-root .fhb-rt span.warn {color: var(--warn);}
 .pz-root .fhb-btn44 {min-height: 44px; padding: 0 16px; font-size: var(--fs-13);}
-.pz-root .fhb-btn44 .ic {width: 20px; height: 20px;}
-.pz-root .fl-btn .ic {width: 20px; height: 20px;}
+.pz-root .fhb-btn44 svg {width: 20px; height: 20px;}
+.pz-root .fl-btn svg {width: 20px; height: 20px;}
 .pz-root .fhb-ok {color: var(--ok);}
 .pz-root .fhb-dim {color: var(--tx-lo);}
 .pz-root .fhb-mid {color: var(--tx-mid);}
@@ -39,7 +39,7 @@
 .pz-root .fhb-vbar {position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: linear-gradient(to top, rgba(8,4,14,0.85), rgba(8,4,14,0));}
 .pz-root .fhb-vbar .fhb-meter, .pz-root .fhb-media.low .fhb-meter {flex: 1; min-width: 0;}
 .pz-root .fhb-mi {flex: none; display: grid; place-items: center;}
-.pz-root .fhb-mi .ic {width: 20px; height: 20px;}
+.pz-root .fhb-mi svg {width: 20px; height: 20px;}
 .pz-root .fhb-tg {display: flex; gap: 8px; flex: none;}
 .pz-root .fhb-tg .fl-iconbtn.off {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
 .pz-root .fhb-tg .fl-iconbtn[disabled] {opacity: 0.4;}
@@ -53,9 +53,9 @@
 .pz-root .fhb-vtg .fl-iconbtn.off {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
 .pz-root .fhb-ringbtn {border: 0; position: relative; background: var(--ring, rgba(255,255,255,0.22));}
 .pz-root .fhb-ringbtn::before {content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #1B0F26;}
-.pz-root .fhb-ringbtn .ic {position: relative; opacity: var(--op, 1);}
+.pz-root .fhb-ringbtn svg {position: relative; opacity: var(--op, 1);}
 .pz-root .fhb-vtg .fhb-ringbtn.off {border: 0; background: var(--ring);}
-.pz-root .fhb-ringbtn.off .ic {color: var(--warn); opacity: 1;}
+.pz-root .fhb-ringbtn.off svg {color: var(--warn); opacity: 1;}
 .pz-root .fhb-led {width: 32px; height: 20px; border-radius: 10px; border: 2px solid #606276; display: inline-grid; place-items: center; flex: none;}
 .pz-root .fhb-led.ok {background: #01F0C8; color: #04211C;}
 .pz-root .fhb-led.bad {background: #D33F3F; color: #fff;}
@@ -87,7 +87,7 @@
 .pz-root .fhb-mrow .nm {flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .pz-root .fhb-cells {display: flex; gap: 8px; flex: none;}
 .pz-root .fhb-cell {display: inline-flex; align-items: center; font-size: var(--fs-13); font-weight: 600; white-space: nowrap;}
-.pz-root .fhb-cell .ic {width: 16px; height: 16px; margin-right: 8px;}
+.pz-root .fhb-cell svg {width: 16px; height: 16px; margin-right: 8px;}
 .pz-root .fhb-cell.bad {color: var(--warn);}
 .pz-root .fhb-cell.ok {color: var(--ok);}
 .pz-root .fhb-cell.wait {color: var(--tx-mid);}
@@ -101,7 +101,7 @@
 .pz-root .fhb-empty p {margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid);}
 .pz-root .fhb-dock {display: flex; gap: 8px; flex: none;}
 .pz-root .fhb-dk {flex: 1 1 0; min-width: 0; min-height: 56px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; line-height: 16px;}
-.pz-root .fhb-dk .ic {width: 24px; height: 24px;}
+.pz-root .fhb-dk svg {width: 24px; height: 24px;}
 .pz-root .fhb-venue .fhb-rt b {font-size: var(--fs-15);}
 .pz-root .fhb-sh-h {display: flex; align-items: center; justify-content: space-between; min-height: 44px;}
 .pz-root .fhb-sh-h h2 {margin: 0; font-size: var(--fs-18); font-weight: 700;}
@@ -122,13 +122,13 @@
 .pz-root .fhb-sw.on::before {background: var(--mb-purple);}
 .pz-root .fhb-sw.on::after {left: 24px;}
 .pz-root .fhb-cb {width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--tx-mid); display: grid; place-items: center; flex: none;}
-.pz-root .fhb-cb .ic {width: 16px; height: 16px; opacity: 0;}
+.pz-root .fhb-cb svg {width: 16px; height: 16px; opacity: 0;}
 .pz-root .fhb-cb.on {background: var(--mb-purple); border-color: transparent;}
-.pz-root .fhb-cb.on .ic {opacity: 1;}
+.pz-root .fhb-cb.on svg {opacity: 1;}
 .pz-root .fhb-cb.dis {opacity: 0.4;}
 .pz-root .fhb-facts {display: flex; flex-wrap: wrap; gap: 8px;}
 .pz-root .fhb-fact {display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 700;}
-.pz-root .fhb-fact .ic {width: 20px; height: 20px; flex: none;}
+.pz-root .fhb-fact svg {width: 20px; height: 20px; flex: none;}
 .pz-root .fhb-tight .fhb-fact {min-height: 32px;}
 .pz-root .fhb-bar {height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); overflow: hidden;}
 .pz-root .fhb-bar > i {display: block; height: 100%; width: var(--p, 0); background: var(--mb-lavender); border-radius: var(--r-pill);}
@@ -148,14 +148,14 @@
 .pz-root .fhb-pmore {color: var(--tx-mid);}
 .pz-root .fhb-pn {display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 16px 0 72px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid);}
 .pz-root .fhb-mchip {display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; color: var(--tx-mid); white-space: nowrap;}
-.pz-root .fhb-mchip .ic {width: 16px; height: 16px; margin-right: 8px;}
+.pz-root .fhb-mchip svg {width: 16px; height: 16px; margin-right: 8px;}
 .pz-root .fhb-mchip.bad {color: var(--warn); border: 1px dashed var(--warn);}
 .pz-root .fhb-step {display: flex; align-items: center; gap: 16px; min-height: 48px;}
-.pz-root .fhb-step .ic {width: 24px; height: 24px; flex: none;}
+.pz-root .fhb-step svg {width: 24px; height: 24px; flex: none;}
 .pz-root .fhb-step .tx {flex: 1; font-weight: 700;}
 .pz-root .fhb-step .st {font-size: var(--fs-13); color: var(--tx-mid);}
-.pz-root .fhb-step.done .ic {color: var(--ok);}
-.pz-root .fhb-step.now .ic {color: var(--mb-pale); animation: fhb-spin 1.4s linear infinite;}
+.pz-root .fhb-step.done svg {color: var(--ok);}
+.pz-root .fhb-step.now svg {color: var(--mb-pale); animation: fhb-spin 1.4s linear infinite;}
 .pz-root .fhb-step.todo {color: var(--tx-lo);}
 .pz-root .fhb-step.skip {color: var(--tx-lo);}
 @keyframes fhb-spin { to { transform: rotate(360deg); } }

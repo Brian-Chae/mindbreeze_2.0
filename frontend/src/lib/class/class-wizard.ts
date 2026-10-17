@@ -189,6 +189,21 @@ export function isValidEmail(value: string): boolean {
   return EMAIL_RE.test(value.trim());
 }
 
+/** CSV 본문에서 `email` 열을 찾아 주소 목록을 돌려준다. 헤더가 없거나 email 열이 없으면 null */
+export function parseCsvEmails(text: string): string[] | null {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return null;
+  const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+  const col = header.indexOf('email');
+  if (col < 0) return null;
+  const seen = new Set<string>();
+  for (const line of lines.slice(1)) {
+    const value = line.split(',')[col]?.trim().toLowerCase();
+    if (value && isValidEmail(value)) seen.add(value);
+  }
+  return [...seen];
+}
+
 // ───────── 상태 전이 ─────────
 
 export type WizardAction =
@@ -205,6 +220,7 @@ export type WizardAction =
   | { type: 'stepTime'; delta: number }
   | { type: 'stepMinute'; delta: number }
   | { type: 'toggleMember'; member: WizardMember }
+  | { type: 'pickMembers'; members: readonly WizardMember[] }
   | { type: 'setInviteTab'; tab: InviteTab }
   | { type: 'setMemberQuery'; query: string }
   | { type: 'setMailInput'; value: string }
@@ -276,6 +292,18 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       if (exists) return withDraft(state, { members: draft.members.filter((m) => m.id !== action.member.id) });
       if (draft.members.length >= memberLimit(draft)) return state;
       return withDraft(state, { members: [...draft.members, action.member] });
+    }
+    case 'pickMembers': {
+      const known = new Set(draft.members.map((m) => m.id));
+      const merged = [...draft.members];
+      for (const m of action.members) {
+        if (merged.length >= memberLimit(draft)) break;
+        if (!known.has(m.id)) {
+          known.add(m.id);
+          merged.push(m);
+        }
+      }
+      return withDraft(state, { members: merged });
     }
     case 'setInviteTab':
       return withUi(state, { inviteTab: action.tab });

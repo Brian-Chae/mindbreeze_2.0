@@ -1,7 +1,7 @@
 // SDD-209 H1 — 만들기 마법사 순수 로직: 단계 전이·유형/방식/인원·녹음·서버 페이로드
 import { describe, expect, it } from 'vitest';
 import {
-  buildCreatePayload, capacityMax, clampCapacity, createInitialDraft, createInitialState, fmtDay, fmtDuration, isDraftDirty, maskEmail, wizardReducer,
+  buildCreatePayload, capacityMax, clampCapacity, findScheduleConflict, isValidEmail, parseCsvEmails, createInitialDraft, createInitialState, fmtDay, fmtDuration, isDraftDirty, maskEmail, wizardReducer,
   type WizardDraft, type WizardMember, type WizardState,
 } from '../src/lib/class/class-wizard';
 
@@ -167,5 +167,66 @@ describe('정원 스텐퍼 (D-5 ③)', () => {
     expect(buildCreatePayload({ ...createInitialDraft(), size: 'solo', capacity: 30 }, BASE, false).max_participants).toBe(1);
     expect(buildCreatePayload({ ...createInitialDraft(), place: 'offline', capacity: 100 }, BASE, false).max_participants).toBe(100);
     expect(clampCapacity(120, 'offline', 'group')).toBe(100);
+  });
+});
+
+describe('초대(회원·비회원 이메일)', () => {
+  it('이메일 형식 검사', () => {
+    expect(isValidEmail('hana.park@example.com')).toBe(true);
+    expect(isValidEmail('minsu@')).toBe(false);
+    expect(isValidEmail('a b@example.com')).toBe(false);
+    expect(isValidEmail('no-at.example.com')).toBe(false);
+  });
+
+  it('잘못된 이메일은 추가하지 않고 오류 표시, 입력을 고치면 오류가 사라진다', () => {
+    const s0 = run(createInitialState(), { type: 'setMailInput', value: 'minsu@' }, { type: 'addEmail' });
+    expect(s0.draft.emails).toEqual([]);
+    expect(s0.ui.mailError).toBe(true);
+    expect(run(s0, { type: 'setMailInput', value: 'minsu@example.com' }).ui.mailError).toBe(false);
+  });
+
+  it('올바른 이메일은 소문자로 추가되고 중복은 무시, 입력칸이 비워진다', () => {
+    let s = run(createInitialState(), { type: 'setMailInput', value: ' Hana@Example.com ' }, { type: 'addEmail' });
+    expect(s.draft.emails).toEqual(['hana@example.com']);
+    expect(s.ui.mailInput).toBe('');
+    s = run(s, { type: 'setMailInput', value: 'hana@example.com' }, { type: 'addEmail' });
+    expect(s.draft.emails).toHaveLength(1);
+    expect(run(s, { type: 'removeEmail', email: 'hana@example.com' }).draft.emails).toEqual([]);
+  });
+
+  it('이메일 초대는 정원 한도에 포함되지 않는다', () => {
+    let s = createInitialState({ ...createInitialDraft(), capacity: 2 });
+    for (const e of ['a@x.com', 'b@x.com', 'c@x.com']) s = run(s, { type: 'setMailInput', value: e }, { type: 'addEmail' });
+    s = run(s, { type: 'toggleMember', member: member(1) }, { type: 'toggleMember', member: member(2) });
+    expect(s.draft.emails).toHaveLength(3);
+    expect(s.draft.members).toHaveLength(2);
+  });
+
+  it('CSV 의 email 열만 읽는다', () => {
+    expect(parseCsvEmails('name,email\n가,A@x.com\n나,bad\n다,b@x.com\n라,a@x.com')).toEqual(['a@x.com', 'b@x.com']);
+    expect(parseCsvEmails('name\n가')).toBeNull();
+    expect(parseCsvEmails('')).toBeNull();
+  });
+
+  it('pickMembers 는 한도까지 중복 없이 채운다', () => {
+    const s = run(createInitialState({ ...createInitialDraft(), capacity: 3 }), { type: 'pickMembers', members: [member(1), member(2), member(2), member(3), member(4)] });
+    expect(s.draft.members.map((m) => m.id)).toEqual(['m1', 'm2', 'm3']);
+  });
+});
+
+describe('일정 충돌 계산', () => {
+  const at = (h: number, m: number): string => new Date(2026, 9, 18, h, m).toISOString();
+  const later = (timeMin: number, durationMin = 45): WizardDraft => ({ ...createInitialDraft(), when: 'later', dayOffset: 1, timeMin, durationMin });
+
+  it('겹치면 그 클래스를, 맞닿기만 하면 충돌이 아니다', () => {
+    const existing = [{ title: '박지우 님 1차 상담', scheduledAt: at(15, 0), durationMin: 60 }];
+    expect(findScheduleConflict(later(15 * 60 + 15), BASE, existing)?.title).toBe('박지우 님 1차 상담');
+    expect(findScheduleConflict(later(16 * 60), BASE, existing)).toBeNull();
+    expect(findScheduleConflict(later(14 * 60 + 15, 45), BASE, existing)).toBeNull();
+  });
+
+  it('지금 바로이거나 일정 없는 기존 클래스는 충돌로 보지 않는다', () => {
+    expect(findScheduleConflict({ ...later(900), when: 'now' }, BASE, [{ title: 'a', scheduledAt: at(15, 0), durationMin: 60 }])).toBeNull();
+    expect(findScheduleConflict(later(900), BASE, [{ title: 'b', scheduledAt: null, durationMin: 60 }])).toBeNull();
   });
 });
