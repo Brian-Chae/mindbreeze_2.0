@@ -1,0 +1,186 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — 릴리스 빌드 (build-once) · SDD-210 T-4
+# 한 번 빌드한 산출물(프론트 dist + 백엔드 소스 + 마이그레이션 + 배포 파일 + MANIFEST)을
+# 체크섬과 함께 보관하고, deploy-prod 는 **이 산출물을 그대로** 설치한다(서버에서 재빌드 금지).
+# 트리거: 수동(workflow_dispatch) 또는 태그 release-*.  운영에는 아무 영향이 없다(산출물 보관만).
+#
+# 게이트(하나라도 실패하면 릴리스를 만들지 않는다):
+#   1) alembic head 정확히 1개  2) 백엔드 pytest  3) 프론트 tsc·build(prod 설정)
+#   4) 산출물에 dev 주소·역할 시뮬레이션 흔적 0건(허용목록은 deploy/ci/dev-leak-allowlist.txt)
+# 파괴적 마이그레이션은 막지 않고 MANIFEST·요약에 경고로 남긴다(deploy-prod 가 별도 확인 요구).
+#
+# 필요 설정 (T-7/T-8 완료 후 채움 — 비어 있으면 S3 업로드만 건너뛰고 GitHub 아티팩트로만 보관):
+#   Repository variables:
+#     AWS_RELEASE_BUILD_ROLE_ARN = <PLACEHOLDER: arn:aws:iam::187768779388:role/… 릴리스 버킷 PUT 전용 OIDC 역할>
+#     RELEASE_BUCKET             = <PLACEHOLDER: mindbreeze-prod-releases>
+#     (선택) PROD_WEB_HOST / PROD_API_HOST — 기본 mindbreeze.looxidlabs.com / api.mindbreeze.looxidlabs.com
+#   Repository secret: VITE_GOOGLE_CLIENT_ID (공개 값, 기존 사용 중)
+# ─────────────────────────────────────────
+
+name: Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "빌드할 브랜치/태그/SHA"
+        required: true
+        default: develop
+      base_release_sha:
+        description: "직전 운영 릴리스 SHA (파괴적 마이그레이션 검사 범위. 비우면 전체 이력)"
+        required: false
+        default: ""
+  push:
+    tags:
+      - "release-*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-build-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: false
+
+env:
+  PROD_WEB_HOST: ${{ vars.PROD_WEB_HOST || 'mindbreeze.looxidlabs.com' }}
+  PROD_API_HOST: ${{ vars.PROD_API_HOST || 'api.mindbreeze.looxidlabs.com' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # S3 업로드용 OIDC (변수 설정 시에만 사용)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: 릴리스 ID 결정
+        id: meta
+        run: |
+          SHA="$(git rev-parse HEAD)"
+          RID="$(date -u +%Y%m%d-%H%M%S)-${SHA:0:7}"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "rid=$RID" >> "$GITHUB_OUTPUT"
+          echo "릴리스 ID: $RID (SHA $SHA)"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ── 게이트 1: 마이그레이션 head 1개 + 파괴적 변경 감지 ──────────────
+      - name: 마이그레이션 게이트
+        env:
+          BASE_SHA: ${{ github.event.inputs.base_release_sha }}
+        run: |
+          mkdir -p out
+          ARGS=(--versions backend/alembic/versions --out out/migration-report.json)
+          if [ -n "${BASE_SHA:-}" ]; then ARGS+=(--base-sha "$BASE_SHA"); fi
+          python3 deploy/ci/check_migrations.py "${ARGS[@]}"
+
+      # ── 게이트 2: 백엔드 테스트 ─────────────────────────────────────────
+      - name: PDF 시스템 의존성
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-noto-cjk
+      - name: 백엔드 설치·테스트
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pytest -q --tb=short --ignore=tests/test_sprint4_integration.py \
+            --deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
+
+      # ── 게이트 3: 프론트 타입체크 + prod 설정 빌드 ──────────────────────
+      - name: 프론트 빌드 (prod 공개 설정 주입)
+        env:
+          VITE_API_BASE_URL: https://${{ env.PROD_API_HOST }}/api/v1
+          VITE_PUBLIC_APP_URL: https://${{ env.PROD_WEB_HOST }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          cd frontend
+          rm -rf dist
+          npm install --legacy-peer-deps
+          npx tsc --noEmit -p tsconfig.app.json
+          npm run build   # = tsc -b && vite build (mode production). .env 파일을 만들지 않는다.
+          # prod API 주소가 번들에 실제로 들어갔는지 확인 (미주입 시 localhost 폴백으로 빌드되는 사고 방지)
+          grep -rqF "$PROD_API_HOST" dist || { echo "::error::dist 에 운영 API 주소($PROD_API_HOST)가 없음"; exit 1; }
+
+      # ── 산출물 조립 + 게이트 4: dev 흔적 검사 ───────────────────────────
+      - name: 릴리스 조립
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: bash deploy/ci/build-release.sh "$RID" "$SHA" out out/migration-report.json "$GITHUB_RUN_ID"
+
+      - name: dev 흔적 0건 검사
+        run: python3 deploy/ci/scan_dev_leaks.py out/stage/release --allowlist deploy/ci/dev-leak-allowlist.txt
+
+      - name: 산출물 체크섬 재검증
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+        run: cd out && sha256sum -c "mindbreeze-$RID.tar.gz.sha256"
+
+      - name: GitHub 아티팩트 보관 (14일)
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ steps.meta.outputs.rid }}
+          retention-days: 14
+          path: |
+            out/mindbreeze-${{ steps.meta.outputs.rid }}.tar.gz
+            out/mindbreeze-${{ steps.meta.outputs.rid }}.tar.gz.sha256
+            out/stage/release/MANIFEST.json
+            out/migration-report.json
+
+      # ── 릴리스 저장소(S3) 업로드 — OIDC, 변수 설정 시에만 ───────────────
+      - name: AWS 자격 (OIDC)
+        if: ${{ vars.AWS_RELEASE_BUILD_ROLE_ARN != '' && vars.RELEASE_BUCKET != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_RELEASE_BUILD_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          role-session-name: release-build-${{ github.run_id }}
+
+      - name: S3 릴리스 저장소 업로드
+        if: ${{ vars.AWS_RELEASE_BUILD_ROLE_ARN != '' && vars.RELEASE_BUCKET != '' }}
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+          BUCKET: ${{ vars.RELEASE_BUCKET }}
+        run: |
+          DEST="s3://$BUCKET/releases/$RID"
+          aws s3 cp "out/mindbreeze-$RID.tar.gz" "$DEST/mindbreeze-$RID.tar.gz" --sse AES256
+          aws s3 cp "out/mindbreeze-$RID.tar.gz.sha256" "$DEST/mindbreeze-$RID.tar.gz.sha256" --sse AES256
+          aws s3 cp out/stage/release/MANIFEST.json "$DEST/MANIFEST.json" --sse AES256
+          echo "업로드 완료: $DEST"
+
+      - name: 요약
+        env:
+          RID: ${{ steps.meta.outputs.rid }}
+          SHA: ${{ steps.meta.outputs.sha }}
+          UPLOADED: ${{ vars.AWS_RELEASE_BUILD_ROLE_ARN != '' && vars.RELEASE_BUCKET != '' }}
+        run: |
+          {
+            echo "## 릴리스 \`$RID\`"
+            echo "- 커밋: \`$SHA\`"
+            echo "- S3 업로드: $UPLOADED (false 면 GitHub 아티팩트로만 보관 — T-7/T-8 변수 설정 필요)"
+            python3 - <<'PY'
+          import json
+          m = json.load(open("out/stage/release/MANIFEST.json"))
+          print(f"- 마이그레이션 head: {', '.join(m['migration_heads'])}")
+          if m["destructive_migrations"]:
+              print(f"- ⚠️ **파괴적 마이그레이션 {len(m['migration_warnings'])}건** — deploy-prod 에서 confirm_destructive 필요")
+              for w in m["migration_warnings"][:20]:
+                  print(f"  - {w}")
+          else:
+              print("- 파괴적 마이그레이션: 없음")
+          PY
+          } >> "$GITHUB_STEP_SUMMARY"

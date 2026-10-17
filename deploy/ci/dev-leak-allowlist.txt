@@ -1,0 +1,7 @@
+backend/app/config.py	dev 호환 기본값(frontend_base_url·s3_bucket 등) — ENVIRONMENT=production 명시 시 production_config_problems 가 기동 중단
+backend/app/core/cors.py	CORS_ALLOWED_ORIGINS 미설정 시 dev 호환 기본 목록 — 운영은 fail-fast 로 변수 필수
+backend/app/main.py	production_config_problems 의 dev 마커 목록(검사용 문자열)
+deploy/render.py	dev 흔적 검사용 마커 상수
+deploy/render_env.py	dev 흔적 검사용 마커 상수
+deploy/precheck/*	dev DB 사전 집계(컷오버 전용, 서버에서 실행하지 않음)
+deploy/ci/*	검사 스크립트 자체의 패턴 상수
