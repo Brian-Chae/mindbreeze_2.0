@@ -197,3 +197,14 @@
 .pz-root .fhb-stat .fhb-pn { padding-top: 4px; line-height: 16px; }
 .pz-root .fhb-stat .fhb-pr { min-height: 28px; }
 .pz-root .fl-card.fhb-consent[data-size] { padding: 8px 16px; }
+.pz-root .fhb-scene {display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;}
+.pz-root .fhb-scene .fl-h1 {margin-top: 8px;}
+.pz-root .fhb-scene .fl-sub {max-width: 480px;}
+.pz-root .fhb-fnote {margin: 0; min-height: 16px; text-align: center; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); overflow: hidden; text-overflow: ellipsis;}
+.pz-root .fhb-steps {display: flex; flex-direction: column;}
+.pz-root .fhb-step.fail {color: var(--warn);}
+.pz-root .fhb-step.fail svg {color: var(--warn);}
+.pz-root .fhb-endcard {display: flex; flex-direction: column; gap: 16px;}
+.pz-root .fhb-endhead {display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px;}
+@media (max-height: 760px) { .pz-root .fhb-step {min-height: 40px;} }
+@media (prefers-reduced-motion: reduce) { .pz-root .fhb-step.now svg {animation: none;} }
