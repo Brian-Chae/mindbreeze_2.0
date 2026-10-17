@@ -25,7 +25,6 @@ export interface LobbyScreenProps extends LobbyContext {
   banner?: ReactNode;
   onBack: () => void;
   onStart: () => void;
-  onRemind: () => void;
   onInviteAdd: () => void;
   onInviteSheet: () => void;
   onDock: (kind: LobbyDockKind) => void;
@@ -108,7 +107,7 @@ export function LobbyScreen(props: LobbyScreenProps) {
             <span className="fhb-link">{inviteStatusLine(stats)}</span>
           </div>
           <div className="r">
-            <FlowButton kind="soft" disabled={stats.away === 0} onClick={props.onRemind}><Bell size={20} aria-hidden="true" />다시 알림</FlowButton>
+            <FlowButton kind="soft" disabled={stats.away === 0} onClick={props.onInviteSheet}><Bell size={20} aria-hidden="true" />다시 알림</FlowButton>
             <FlowButton kind="soft" onClick={props.onInviteAdd}><UserPlus size={20} aria-hidden="true" />초대 추가</FlowButton>
           </div>
         </div>

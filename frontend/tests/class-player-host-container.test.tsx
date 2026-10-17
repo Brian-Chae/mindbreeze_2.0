@@ -53,7 +53,7 @@ function row(id: string, name: string, over: Partial<SessionLiveMetric> = {}): S
 function baseProps(over: Partial<HostLiveContainerProps> = {}): HostLiveContainerProps {
   return {
     session: {
-      id: 's1', title: '마음챙김 명상수업', location_type: 'online', participant_mode: 'group', duration_min: 30, access_code: 'MIND24',
+      id: 's1', title: '마음챙김 명상수업', location_type: 'online', participant_mode: 'group', duration_min: 30, access_code: '4829',
       chat_room_id: null, record_video: true,
       participants: [
         { user_id: 'u-host', user_name: '상담사', is_waitlisted: false, is_guest: false },

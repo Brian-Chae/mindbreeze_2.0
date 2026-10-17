@@ -82,7 +82,6 @@ export function LobbySheetFixture({ spec, backdropSrc }: { spec: LobbySheetCase;
       }
       onBack={() => undefined}
       onStart={() => undefined}
-      onRemind={() => undefined}
       onInviteAdd={() => undefined}
       onInviteSheet={() => setKind('invite')}
       onDock={(k) => setKind(k)}

@@ -21,7 +21,6 @@ export function LobbyFixture({ caseKey, n, backdropSrc }: LobbyFixtureProps) {
       backdropSrc={backdropSrc}
       onBack={() => undefined}
       onStart={() => undefined}
-      onRemind={() => undefined}
       onInviteAdd={() => undefined}
       onInviteSheet={() => undefined}
       onDock={() => undefined}

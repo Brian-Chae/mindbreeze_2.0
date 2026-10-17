@@ -61,7 +61,6 @@ export function LobbyOverlayFixture({ spec, backdropSrc }: { spec: LobbyOverlayS
       sheet={sheet}
       onBack={() => { setStage('choose'); setLeaveOpen(true); }}
       onStart={() => setStartOpen(true)}
-      onRemind={() => undefined}
       onInviteAdd={() => undefined}
       onInviteSheet={() => undefined}
       onDock={() => undefined}
