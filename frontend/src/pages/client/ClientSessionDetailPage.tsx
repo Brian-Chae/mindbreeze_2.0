@@ -51,7 +51,7 @@ export default function ClientSessionDetailPage() {
     return () => { cancelled = true; };
   }, [id]);
 
-  // 실시간 상태 반영 — join snapshot(초기 상태)과 session_state_changed(전이)를 세션 상태에 머지
+  // 실시간 상태 반영 — join snapshot(초기 상태)과 session_state_changed(전이)를 클래스 상태에 머지
   const applyStatus = useCallback(
     (status: SessionStatus | string, started_at?: string | null, ended_at?: string | null) => {
       setSession((prev) =>

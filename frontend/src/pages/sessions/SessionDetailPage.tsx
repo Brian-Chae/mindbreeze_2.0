@@ -93,7 +93,7 @@ export default function SessionDetailPage() {
     [id],
   );
 
-  // SDD-129(③-8): WS 구독으로 세션 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
+  // SDD-129(③-8): WS 구독으로 클래스 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
   const { isReady } = useSessionLiveSocket({
     sessionId: id,
     onSessionStateChanged: (event) => {
