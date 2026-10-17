@@ -145,6 +145,8 @@ class ParticipantInfo(BaseModel):
     speaking: bool = False
     # SDD-209(B14): 비회원 리포트 메일 발송 결과(호스트 뷰 전용). sent / failed / None(미발송·해당 없음)
     report_email_status: str | None = None
+    # SDD-209(B9/BE-11): 최초 입장 시각(호스트 뷰 전용). 초대만 받고 들어오지 않았거나 기록 도입 전이면 null.
+    entered_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -350,7 +352,7 @@ class InviteRemindRequest(BaseModel):
 class InviteRemindResult(BaseModel):
     participant_id: str
     user_id: str | None = None
-    # queued / skipped_cooldown / skipped_no_account / skipped_waitlisted / skipped_notification_off / not_found / failed
+    # queued / skipped_cooldown / skipped_no_account / skipped_waitlisted / skipped_entered / skipped_notification_off / not_found / failed
     status: str
     channels: InviteChannelResults | None = None
 
@@ -431,6 +433,14 @@ class ResearchConsentSummaryResponse(BaseModel):
     """상담사용 익명 집계 — 인원 수만(개별 상태·가명 ID 없음)."""
 
     consented: int
+    total: int
+
+
+class ReportChoiceSummaryResponse(BaseModel):
+    """상담사용 익명 집계(SDD-209 B9/BE-12) — 인원 수만(개별 선택·이름 비노출). 시작 확인 시트의 `리포트 제외 N명`."""
+
+    included: int
+    excluded: int
     total: int
 
 

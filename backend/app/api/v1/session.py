@@ -30,6 +30,7 @@ from app.schemas.session import (
     InviteRemindResponse,
     MemberLiveKitTokenResponse,
     ReportChoiceRequest,
+    ReportChoiceSummaryResponse,
     ReportChoiceResponse,
     ResearchConsentRequest,
     ResearchConsentResponse,
@@ -494,6 +495,16 @@ def set_research_consent(
         entry_credential=x_entry_credential,
         current_user_id=current_user["id"] if current_user else None,
     )
+
+
+@router.get("/{session_id}/report-choice/summary", response_model=ReportChoiceSummaryResponse)
+def report_choice_summary(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B9): 상담사용 익명 집계 — 리포트 제외 인원 수만(개별 선택 비노출). 호스트 전용, 녹음 시작을 막지 않음."""
+    return session_service.report_choice_summary(session_id, current_user["id"], db)
 
 
 @router.get("/{session_id}/research-consent/summary", response_model=ResearchConsentSummaryResponse)

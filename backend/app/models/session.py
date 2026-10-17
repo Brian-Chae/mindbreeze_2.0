@@ -160,6 +160,9 @@ class SessionParticipant(Base):
     waitlist_cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-209(B12): 비회원 개인정보(이름·성별·생년월일·이메일)를 보관 스위프가 비운 시각. 행·세션 참조는 유지.
     pii_scrubbed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-209(B9/BE-11): 코드/초대 입장으로 실제 클래스에 들어온 최초 시각. 초대만 받고 들어오지 않았으면 NULL.
+    # (이 컬럼 도입 전 참여자는 NULL — 입장 여부를 알 수 없다.) 이후 값은 바뀌지 않는다.
+    entered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="participants")
 

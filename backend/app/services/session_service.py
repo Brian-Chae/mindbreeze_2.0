@@ -186,6 +186,8 @@ def _serialize(
                 "speaking": p.speaking,
                 # SDD-209(B14): 비회원 리포트 메일 발송 결과 — 호스트 뷰 전용(실패를 상담사 화면에 표시)
                 "report_email_status": p.report_email_status if include_participant_pii else None,
+                # SDD-209(B9/BE-11): 최초 입장 시각(호스트 뷰 전용) — 상세의 `참여함`·입장 N명 근거. 미입장/기록 이전은 null
+                "entered_at": p.entered_at if include_participant_pii else None,
             }
             for p in parts
         ],
@@ -1697,6 +1699,17 @@ def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -
     elif s.status != "in_progress":
         raise HTTPException(status_code=400, detail="현재 세션에 입장할 수 없는 상태입니다")
 
+    # SDD-209(B9): 로그인 회원이 이 경로로 들어오면 입장 시각도 남긴다(호스트는 참여자가 아니라 해당 없음).
+    entered = (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == _to_uuid(user_id))
+        .first()
+    )
+    if entered is not None and entered.entered_at is None:
+        entered.entered_at = _now()
+        db.commit()
+        db.refresh(s)
+
     # LiveKit 토큰 발급
     room_name = str(s.webrtc_room_id)
     token = generate_livekit_token(room_name, user_name, user_id)
@@ -1757,6 +1770,12 @@ def _enter_response(s: Session, participant: SessionParticipant | None, db: DBSe
 def _member_profile_pii(user_id: UUID, db: DBSession) -> tuple[str | None, date | None]:
     profile = db.query(ClientProfile).filter(ClientProfile.user_id == user_id).first()
     return (profile.gender, profile.birth_date) if profile else (None, None)
+
+
+def _mark_entered(participant: SessionParticipant) -> None:
+    """SDD-209(B9/BE-11): 최초 입장 시각을 한 번만 기록한다(재입장·복귀로 덮어쓰지 않는다)."""
+    if participant.entered_at is None:
+        participant.entered_at = _now()
 
 
 def _enter_resolved(
@@ -1824,6 +1843,7 @@ def _enter_resolved(
         if participant.is_waitlisted:
             # 재입장이 순번을 앞지르지 못한다 — 정원 여유가 있으면 대기열 앞에서부터 순서대로 승격한다.
             promoted = _promote_waitlist_all(s, db)
+        _mark_entered(participant)
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s, db)
@@ -1877,6 +1897,7 @@ def _enter_resolved(
     db.flush()
     if participant.is_waitlisted:
         promoted = _promote_waitlist_all(s, db)
+    _mark_entered(participant)
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s, db)
@@ -3122,3 +3143,20 @@ def ingest_features(
                 },
             )
     return {"session_id": str(sid), "saved": saved}
+
+
+def report_choice_summary(session_id: str, host_id: str, db: DBSession) -> dict:
+    """SDD-209(B9/BE-12): 시작 확인 시트용 익명 집계 — 리포트 제외 인원 수만(개별 선택·이름 비노출). 호스트 전용.
+
+    대기열 밖 참여자 중 입장 기록(entered_at)이 있는 클래스에서는 입장한 참여자만 센다(report_scope 와 같은 규칙).
+    녹음 시작을 막는 값이 아니라 표시용이다.
+    """
+    from app.services import report_scope
+
+    s = _get_session_as_host(session_id, host_id, db)
+    scope = report_scope.scope_for_session(s.id, db)
+    return {
+        "included": len(scope.included_ids),
+        "excluded": len(scope.excluded_ids),
+        "total": len(scope.included_ids) + len(scope.excluded_ids),
+    }

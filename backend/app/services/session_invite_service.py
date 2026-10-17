@@ -2,8 +2,8 @@
 
 - 채널은 인앱 알림(+WS outbox)과, 사용자 선호가 켜진 경우 이메일뿐이다. **푸시 수신을 약속하지 않으며**
   결과는 요청 상태(queued/skipped/failed)이지 전달·수신 확인이 아니다.
-- 서버는 입장 여부(presence)를 모르므로(입장 시각 BE-11 은 별도 Task) 대상 선별은 호스트 클라이언트가
-  ``participant_ids`` 로 한다. 생략하면 호스트를 제외한 모든 참여자가 대상이다.
+- 입장 시각(``entered_at``, B9)이 기록된 참여자는 서버가 `skipped_entered` 로 건너뛴다. 기록이 없는 참여자(미입장·기록 도입 전)는
+  대상이며, 호스트 클라이언트가 ``participant_ids`` 로 더 좁힐 수 있다. 생략하면 호스트를 제외한 모든 참여자가 대상이다.
 - 쿨다운은 새 컬럼 없이 최근 재발송 알림 행(``extra.params.remind``)으로 판정한다.
 """
 
@@ -72,6 +72,10 @@ def remind_invitees(
             continue
         if p.is_waitlisted:
             results.append({**base, "status": "skipped_waitlisted"})
+            continue
+        if p.entered_at is not None:
+            # SDD-209(B9/BE-11): 이미 입장한 참여자에게는 다시 알리지 않는다(B7 에서 미구현이던 항목).
+            results.append({**base, "status": "skipped_entered"})
             continue
         if _recently_reminded(p.user_id, s.id, db):
             results.append({**base, "status": "skipped_cooldown"})

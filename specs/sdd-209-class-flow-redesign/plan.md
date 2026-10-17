@@ -554,3 +554,9 @@ SH1 라이트 키트(`ClassCard`·`StatusChip`·`ShellSheet` 등) → SH2 FM01 �
 - 누적: 동의 건·내용 해시 단위 항목(append-only). 같은 해시면 건너뛰고(중복 제거), 내용이 늘면 새 revision. 종료 훅(`on_session_completed`)이 큐(`pending`)에 올리고, B12 삭제 보류가 삭제 전 미적재분을 같은 큐에 유지한다. 철회: 미ack 배치 취소+스테이징 객체 삭제, ack 직전 철회도 취소, 남은 유효 건은 다시 `pending`. 실패: 부분 업로드 정리·배치 failed·연속 실패 `RESEARCH_EXPORT_MAX_ATTEMPTS`(5)에 닿으면 관리자 알림 1회.
 - 의존성 추가: `pyarrow==26.0.0`(requirements.txt) — Parquet 번들용. **dev 배포 시 requirements 설치가 필요**하다.
 - 미해결: ① 장비 시계(`device_timestamp_ms`)의 절대 시각 의미는 계속 미확인이라 상대화로 회피 ② 배치 크기 상한(256MB) 초과 시 분할 정책 없음(실패 처리) ③ cron 등록(`research_export_cron.py`)·스테이징 prefix IAM·Spark 쪽 pull 계정은 별도 인프라 승인 사항.
+
+### B9 전극·준비 중계(BE-10)·입장 시각(BE-11)·익명 집계(BE-12) (마이그레이션 `e036a0000051`)
+- **BE-10**: WS `waiting_room` 의 `readiness` 가 구 3-boolean 페이로드를 그대로 통과시키면서 선택 필드 `surveySkipped/bandSkipped/deviceSkipped`(boolean)와 `band{state(소문자 식별자), lead_off{ch1,ch2}, battery(0~100)}` 를 검증해 호스트 룸으로 중계한다. 필드별로 잘못된 값은 개별로 버리고, 완료 boolean 3종이 틀리면 전체 `null`(기존 규칙). 서버 저장 없음. **D11(시작 전 EEG feature 미저장)은 강제하지 않았다** — 기존 SDD-088 이 대기실(open) 구간 윈도우를 저장하되 리포트 집계에서만 제외하는 동작이라 저장 차단은 별도 결정/회귀 검토가 필요하다.
+- **BE-11**: `session_participants.entered_at`(nullable, 백필 없음). `_enter_resolved`(코드 입장·초대 편의 경로)와 `join_session` 에서 최초 1회만 기록(재입장 불변). 호스트 뷰 참여자 DTO 에만 `entered_at` 노출. **B7 이월 해소**: `invite/remind` 가 입장한 참여자를 `skipped_entered` 로 건너뛴다(대상 명시 시에도). **B3 이월 해소**: 참여자 중 한 명이라도 `entered_at` 이 있는 클래스에서는 초대만 받고 입장하지 않은 참여자를 리포트 범위(제외/포함)에서 뺀다. 입장 기록 도입 전 클래스(전원 NULL)는 기존 규칙 그대로.
+- **BE-12**: 서버가 대기실 presence 를 휘발성 메모리(단일 프로세스, heartbeat TTL 90초)로 집계해 `waiting_room_summary {session_id, ready, total}` 만 세션 공용 룸에 방송(개인 식별 정보·닉네임 없음, 준비 = 설문·밴드·기기 각각 완료 또는 건너뜀). 시작 확인 시트용 `GET /sessions/{id}/report-choice/summary → {included, excluded, total}`(호스트 전용, 개별 선택 비노출, 녹음 시작을 막지 않음). 연구 동의 인원은 B11 의 기존 `research-consent/summary` 를 그대로 쓴다.
+- 미해결: presence 집계는 프로세스 메모리라 다중 프로세스/재시작 시 heartbeat 이 다시 쌓일 때까지 값이 비어 있다(systemd 단일 프로세스 전제).

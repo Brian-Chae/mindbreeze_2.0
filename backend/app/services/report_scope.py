@@ -58,6 +58,7 @@ def scopes_for_sessions(session_ids: Iterable[UUID], db: DBSession) -> dict[UUID
             SessionParticipant.session_id,
             SessionParticipant.id,
             SessionParticipant.report_included,
+            SessionParticipant.entered_at,
         )
         .filter(
             SessionParticipant.session_id.in_(ids),
@@ -67,7 +68,13 @@ def scopes_for_sessions(session_ids: Iterable[UUID], db: DBSession) -> dict[UUID
     )
     included: dict[UUID, set[UUID]] = {sid: set() for sid in ids}
     excluded: dict[UUID, set[UUID]] = {sid: set() for sid in ids}
-    for sid, pid, flag in rows:
+    # SDD-209(B9): 입장 시각이 기록되는 클래스(참여자 중 한 명이라도 entered_at 이 있는 클래스)에서는
+    # 초대만 받고 들어오지 않은 참여자(entered_at NULL)를 범위에서 뺀다 — 불참자가 기본 `제외`로 세어져
+    # 그룹 공통 기록이 통째로 빠지는 것을 막는다. 기록 도입 전 클래스(전원 NULL)는 기존 규칙 그대로.
+    has_entry_record = {sid for sid, _pid, _flag, entered in rows if entered is not None}
+    for sid, pid, flag, entered in rows:
+        if sid in has_entry_record and entered is None:
+            continue
         (included if flag else excluded)[sid].add(pid)
     return {
         sid: ReportScope(frozenset(included[sid]), frozenset(excluded[sid])) for sid in ids

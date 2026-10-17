@@ -506,7 +506,8 @@ def test_BT72_마이그레이션_체인과_중복_테이블_없음():
     base = Path(__file__).resolve().parents[1]
     cfg = Config(str(base / "alembic.ini"))
     cfg.set_main_option("script_location", str(base / "alembic"))
-    assert ScriptDirectory.from_config(cfg).get_heads() == ["e036a0000050"], "alembic head 단일"
+    heads = ScriptDirectory.from_config(cfg).get_heads()
+    assert len(heads) == 1, f"alembic head 단일: {heads}"
     b13 = (base / "alembic" / "versions" / "e036a0000050_sdd_209_b13_research_export.py").read_text()
     assert "create_table(\n        \"research_withdrawal_requests\"" not in b13, "철회 요청 테이블은 B11 에서 이미 생성(중복 금지)"
     assert "research_export_batches" in b13 and "research_export_items" in b13

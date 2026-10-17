@@ -57,6 +57,7 @@ sample_status="insufficient"(표본 적음)로 알린다. 계산은 AGGREGATE_IN
 
 import asyncio
 import logging
+import re
 import time
 from datetime import datetime, timezone
 from typing import Any, cast
@@ -270,6 +271,8 @@ def _room_self(session_id, participant_id) -> str:
 
 # 개선 3: 대기실 닉네임 표시 상한 — 화면·툴팁에만 쓰이는 값이라 짧게 자른다.
 _WAITING_ROOM_NICKNAME_MAX = 20
+# SDD-209(B9/BE-10): 밴드 준비 상태 식별자(짧은 소문자 snake_case) — 임의 문자열 중계 차단
+_BAND_STATE_RE = re.compile(r"^[a-z][a-z0-9_]{0,23}$")
 
 
 def _sanitize_nickname(value) -> str | None:
@@ -784,6 +787,7 @@ def register_session_live_namespace(sio):
             logger.warning("[WS /session-live] waiting_room 무시 — 참가자 아님 (sid=%s)", sid)
             return
 
+        readiness = _sanitize_readiness(data.get("readiness"))
         await broadcast_waiting_room(
             session_id,
             {
@@ -791,9 +795,14 @@ def register_session_live_namespace(sio):
                 "action": action,
                 "nickname": _sanitize_nickname(data.get("nickname")),
                 "checkin": _sanitize_checkin(data.get("checkin")),
-                "readiness": _sanitize_readiness(data.get("readiness")),
+                "readiness": readiness,
             },
         )
+        # SDD-209(B9/BE-12): 회원 대기실용 익명 집계({ready,total}) — 개인 식별 정보 없음, 서버 DB 저장 없음.
+        summary = update_waiting_room_presence(
+            session_id, session["participant_id"], action, readiness
+        )
+        await broadcast_waiting_room_summary(session_id, summary)
 
     @sio.on("waiting_room_remind", namespace=_NAMESPACE)
     async def on_waiting_room_remind(sid, data):
@@ -1111,6 +1120,73 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
         namespace=_NAMESPACE,
     )
     logger.info("[WS /session-live] broadcast waiting_room_changed → %s", room)
+
+
+# ── SDD-209(B9/BE-12): 대기실 익명 집계 ────────────────────────────────────────────
+# 대기실 presence 는 휘발성 메모리(프로세스 단일 — systemd 단일 프로세스 전제)다. DB·로그에 남기지 않는다.
+# 클라이언트가 주기적으로 waiting_room(join)을 다시 보내는 heartbeat 로 유지되고, TTL 을 넘기면 집계에서 빠진다.
+WAITING_ROOM_PRESENCE_TTL_SEC = 90.0
+_waiting_room_presence: dict[str, dict[str, dict[str, Any]]] = {}
+
+
+def _readiness_ready(readiness: dict | None) -> bool:
+    """세 단계(설문·밴드·기기)가 각각 완료되었거나 건너뛰기로 정리됐으면 준비 완료."""
+    if not readiness:
+        return False
+    for step in ("survey", "band", "device"):
+        if not (readiness.get(f"{step}Done") or readiness.get(f"{step}Skipped")):
+            return False
+    return True
+
+
+def update_waiting_room_presence(
+    session_id: str, participant_id: str, action: str, readiness: dict | None, *, now: float | None = None
+) -> dict:
+    """대기실 presence 를 갱신하고 익명 집계 {session_id, ready, total} 을 돌려준다(참가자 식별 정보 없음)."""
+    moment = time.monotonic() if now is None else now
+    room = _waiting_room_presence.setdefault(str(session_id), {})
+    if action == "join":
+        room[str(participant_id)] = {"ts": moment, "ready": _readiness_ready(readiness)}
+    else:
+        room.pop(str(participant_id), None)
+    return waiting_room_summary(session_id, now=moment)
+
+
+def waiting_room_summary(session_id: str, *, now: float | None = None) -> dict:
+    moment = time.monotonic() if now is None else now
+    room = _waiting_room_presence.get(str(session_id), {})
+    for pid in [p for p, v in room.items() if moment - v["ts"] > WAITING_ROOM_PRESENCE_TTL_SEC]:
+        room.pop(pid, None)
+    if not room:
+        _waiting_room_presence.pop(str(session_id), None)
+    return {
+        "session_id": str(session_id),
+        "ready": sum(1 for v in room.values() if v["ready"]),
+        "total": len(room),
+    }
+
+
+def reset_waiting_room_presence(session_id: str | None = None) -> None:
+    """세션 시작·종료 시 정리하거나 테스트에서 초기화한다."""
+    if session_id is None:
+        _waiting_room_presence.clear()
+    else:
+        _waiting_room_presence.pop(str(session_id), None)
+
+
+async def broadcast_waiting_room_summary(session_id: str, summary: dict) -> None:
+    """대기실 준비 인원 {ready,total} 을 세션 공용 룸(호스트+참가자)에 방송한다. 개인 식별 정보는 싣지 않는다."""
+    sio = _get_sio()
+    await sio.emit(
+        "waiting_room_summary",
+        {
+            "session_id": str(session_id),
+            "ready": int(summary.get("ready", 0)),
+            "total": int(summary.get("total", 0)),
+        },
+        room=_room_all(session_id),
+        namespace=_NAMESPACE,
+    )
 
 
 async def broadcast_audio_sync(session_id: str, payload: dict, *, to: str | None = None) -> None:
@@ -1436,9 +1512,45 @@ def notify_audio_sync(session_id: str, payload: dict) -> None:
     _schedule(broadcast_audio_sync(session_id, body))
 
 
+def _sanitize_band(value):
+    """SDD-209(B9/BE-10): 밴드 준비 상태 중계 — state(짧은 식별자)·lead_off{ch1,ch2}·battery(0~100)만 통과.
+
+    서버는 저장하지 않고 호스트 룸으로 중계만 한다. 잘못된 필드는 개별로 버린다.
+    """
+    if not isinstance(value, dict):
+        return None
+    state = value.get("state")
+    if not (isinstance(state, str) and _BAND_STATE_RE.match(state)):
+        state = None
+    lead_off = value.get("lead_off")
+    if isinstance(lead_off, dict):
+        lead_off = {
+            ch: (lead_off.get(ch) if type(lead_off.get(ch)) is bool else None) for ch in ("ch1", "ch2")
+        }
+    else:
+        lead_off = None
+    battery = value.get("battery")
+    if type(battery) is not int or not 0 <= battery <= 100:
+        battery = None
+    if state is None and lead_off is None and battery is None:
+        return None
+    return {"state": state, "lead_off": lead_off, "battery": battery}
+
+
 def _sanitize_readiness(value):
-    """완료 여부는 실제 boolean 세 필드가 모두 있을 때만 신뢰한다."""
+    """완료 여부는 실제 boolean 세 필드가 모두 있을 때만 신뢰한다(구 3-boolean 페이로드도 그대로 통과).
+
+    SDD-209(B9/BE-10): 건너뛰기(surveySkipped/bandSkipped/deviceSkipped, 선택 boolean)와 밴드 상태
+    (band{state, lead_off{ch1,ch2}, battery})를 선택적으로 함께 중계한다.
+    """
     fields = ("surveyDone", "bandDone", "deviceDone")
     if not isinstance(value, dict) or not all(type(value.get(key)) is bool for key in fields):
         return None
-    return {key: value[key] for key in fields}
+    out = {key: value[key] for key in fields}
+    for key in ("surveySkipped", "bandSkipped", "deviceSkipped"):
+        if type(value.get(key)) is bool:
+            out[key] = value[key]
+    band = _sanitize_band(value.get("band"))
+    if band is not None:
+        out["band"] = band
+    return out
