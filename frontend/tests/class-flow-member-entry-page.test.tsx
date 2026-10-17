@@ -13,11 +13,13 @@ import type { EntryStateDto } from '../src/lib/api/class-flow';
 const getEntryState = vi.fn();
 const setReportChoice = vi.fn();
 const setResearchConsent = vi.fn();
+const submitEntryCheckin = vi.fn();
 vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/class-flow')>()),
   getEntryState: (...a: unknown[]) => getEntryState(...a),
   setReportChoice: (...a: unknown[]) => setReportChoice(...a),
   setResearchConsent: (...a: unknown[]) => setResearchConsent(...a),
+  submitEntryCheckin: (...a: unknown[]) => submitEntryCheckin(...a),
 }));
 
 import EntryPage from '../src/pages/class/EntryPage';
@@ -39,6 +41,7 @@ beforeEach(() => {
   getEntryState.mockReset();
   setReportChoice.mockReset();
   setResearchConsent.mockReset();
+  submitEntryCheckin.mockReset();
   window.sessionStorage.clear();
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
@@ -229,5 +232,73 @@ describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', ()
     // 해제 시도가 실패했으므로 서버에 남아 있는 동의 상태(true)를 거짓으로 보이지 않는다
     expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
     expect(find('확인하고 계속하기')!.disabled).toBe(false);
+  });
+});
+
+describe('EntryPage — 오늘의 상태 (M3)', () => {
+  const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
+  const radio = (label: string): HTMLElement | undefined => qa('[role="radio"]').find((r) => r.textContent === label);
+  async function toSurvey(status: EntryStateDto['status'] = 'open'): Promise<void> {
+    seedEntry();
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
+    getEntryState.mockResolvedValue(stateDto({ status }));
+    await renderPage();
+    await act(async () => { find('입장하기')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+  }
+
+  it('3축 선택 → 전할 말 → 남기고 계속하기: 입장 자격으로 phase=before 체크인을 1회 저장하고 다음 단계로', async () => {
+    submitEntryCheckin.mockResolvedValue(undefined);
+    await toSurvey();
+    expect(text()).toContain('지금 집중은 어떤가요?');
+    await act(async () => { radio('집중')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { radio('보통')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { find('다음')?.click(); }); // 감정은 고르지 않으면 다음이 비활성이라 눌려도 그대로
+    expect(find('다음')!.disabled).toBe(true);
+    await act(async () => { radio('긍정적')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).toContain('상담사에게 전하고 싶은 말이 있나요?');
+    const area = document.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(area, '목이 불편해요');
+      area.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { find('남기고 계속하기')?.click(); });
+    expect(submitEntryCheckin).toHaveBeenCalledTimes(1);
+    expect(submitEntryCheckin).toHaveBeenCalledWith('s1', 'cred', {
+      phase: 'before', arousal: 4, valence: 3, emotion: 4, note: '목이 불편해요', participant_id: 'p1',
+    });
+    expect(text()).not.toContain('상담사에게 전하고 싶은 말이 있나요?');
+  });
+  it('저장이 실패하면 안내를 보여 주고 머물되, 건너뛰기로 계속할 수 있다', async () => {
+    submitEntryCheckin.mockRejectedValue(new ApiError(500, '서버 원문', null));
+    await toSurvey();
+    await act(async () => { radio('집중')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { radio('보통')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { radio('보통')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { find('남기고 계속하기')?.click(); });
+    expect(text()).toContain('저장하지 못했어요. 건너뛰고 계속할 수 있어요.');
+    expect(text()).not.toContain('서버 원문');
+    await act(async () => { find('건너뛰기')?.click(); });
+    expect(text()).not.toContain('상담사에게 전하고 싶은 말이 있나요?');
+  });
+  it('건너뛰기는 저장 호출 없이 다음 단계로', async () => {
+    await toSurvey();
+    await act(async () => { find('건너뛰기')?.click(); });
+    expect(submitEntryCheckin).not.toHaveBeenCalled();
+    expect(text()).not.toContain('지금 집중은 어떤가요?');
+  });
+  it('시작된 뒤에 들어와도 단계를 막지 않고, 시트에서 준비 이어서 하기를 고르면 다시 묻지 않는다', async () => {
+    await toSurvey('in_progress');
+    expect(text()).toContain('상담사가 클래스를 시작했어요');
+    expect(text()).toContain('남은 준비: 오늘의 상태 · LINK BAND · 기기');
+    await act(async () => { find('준비 이어서 하기')?.click(); });
+    expect(text()).not.toContain('상담사가 클래스를 시작했어요');
+    expect(text()).toContain('지금 집중은 어떤가요?');
   });
 });

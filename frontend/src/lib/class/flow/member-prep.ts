@@ -79,3 +79,15 @@ export function buildSummaryRows(input: { place: FlowPlace; bandMode: FlowBandMo
   }
   return rows;
 }
+
+const PREP_LABEL: Partial<Record<WizardKey, string>> = { b: '오늘의 상태', c: 'LINK BAND', d: '기기' };
+
+/** 시작 후 시트의 `남은 준비` — 지금 단계부터 끝까지 남은 건너뛸 수 있는 준비 이름 */
+export function remainingPrepLabels(steps: readonly WizardKey[], current: WizardKey): string[] {
+  const from = steps.indexOf(current);
+  if (from < 0) return [];
+  return steps.slice(from).flatMap((key) => {
+    const label = PREP_LABEL[key];
+    return label ? [label] : [];
+  });
+}

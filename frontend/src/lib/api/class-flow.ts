@@ -164,6 +164,21 @@ export async function getEntryLiveKitToken(sessionId: string, credential: string
   );
 }
 
+export interface EntryCheckinPayload {
+  phase: 'before' | 'after';
+  arousal: number | null;
+  valence: number | null;
+  emotion: number | null;
+  note: string | null;
+  participant_id: string;
+}
+
+/** 입장 전·후 오늘의 상태 저장 — 참여자 토큰이 아니라 입장 자격으로 소유권을 증명한다 */
+export async function submitEntryCheckin(sessionId: string, credential: string | null, payload: EntryCheckinPayload): Promise<void> {
+  await prepareMemberToken();
+  await apiClient.post<unknown>(`/sessions/${encodeURIComponent(sessionId)}/checkin`, payload, entryRequestOptions(credential));
+}
+
 /* ───────────────────────── 입장 자격 저장 (탭 단위) ───────────────────────── */
 
 /** 새로고침 뒤 화면을 다시 그리기 위한 클래스 요약 — 개인정보가 아니다(제목·시각·방식 설정) */

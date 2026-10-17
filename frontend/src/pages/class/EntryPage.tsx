@@ -6,15 +6,18 @@ import { EntryConfirmView } from '../../components/class/flow/member/EntryConfir
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
 import { NoticeStepView } from '../../components/class/flow/member/NoticeStepView';
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
+import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
+import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
+import { useEntrySurvey } from '../../hooks/useEntrySurvey';
 import { clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
 import { formatStartLabel, formatWhen } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
-  buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, type FlowStateKind,
+  buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
-import { buildSummaryRows, parseRetentionDays } from '../../lib/class/flow/member-prep';
+import { buildSummaryRows, parseRetentionDays, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -35,6 +38,9 @@ export default function EntryPage() {
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoffName] = useState(() => takeEntryHandoff(sessionId)?.displayName ?? '');
   const prep = useEntryPrep({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
+  const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
+  // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
+  const [startedDismissed, setStartedDismissed] = useState(false);
 
   // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(실패하면 만료 안내)
   useEffect(() => {
@@ -141,6 +147,34 @@ export default function EntryPage() {
           dispatch({ type: 'next', steps });
         }}
         onBack={() => dispatch({ type: 'back', steps })}
+        onExit={exit}
+      />
+    );
+  }
+  const startedOpen = machine.stage === 'started' && !startedDismissed && machine.phase === 'wizard' && startedSheetApplies(machine.step);
+  const startedSheet = (
+    <StartedSheet
+      open={startedOpen}
+      remaining={remainingPrepLabels(steps, machine.step)}
+      onEnterNow={() => dispatch({ type: 'enterNow' })}
+      onContinue={() => setStartedDismissed(true)}
+    />
+  );
+  if (machine.phase === 'wizard' && machine.step === 'b') {
+    const done = (outcome: SurveyOutcome): void => {
+      prep.patch({ survey: outcome });
+      dispatch({ type: 'next', steps });
+    };
+    return (
+      <SurveyStepView
+        question={survey.question} draft={survey.draft} steps={stepsView} place={place} saving={survey.saving} errorText={survey.errorText}
+        startedSheet={startedSheet} sheetOpen={startedOpen}
+        onSelect={survey.select} onNote={survey.setNote}
+        onNext={() => void survey.next(done)}
+        onSkip={() => survey.skip(done)}
+        onBack={() => {
+          if (!survey.back()) dispatch({ type: 'back', steps });
+        }}
         onExit={exit}
       />
     );

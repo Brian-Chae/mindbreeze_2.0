@@ -116,3 +116,36 @@
 .pz-root .fm-srow .v { flex: 1; min-width: 0; text-align: right; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
 .pz-root .fm-srow .wide { flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 24px; font-weight: 700; }
 .pz-root .fm-srow .chev { flex: none; color: var(--tx-lo); }
+
+/* FM06b 오늘의 상태 */
+.pz-root .fm-axes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.pz-root .fm-ax { display: flex; flex-direction: column; gap: 8px; align-items: center; min-height: 32px; font-size: var(--fs-13); line-height: 20px; font-weight: 600; color: var(--tx-lo); white-space: nowrap; }
+.pz-root .fm-ax i { display: block; width: 100%; height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.25); }
+.pz-root .fm-ax[data-state="on"] { color: var(--tx-hi); }
+.pz-root .fm-ax[data-state="on"] i { background: #fff; }
+.pz-root .fm-ax[data-state="done"] { color: var(--tx-mid); }
+.pz-root .fm-ax[data-state="done"] i { background: var(--mb-lavender); }
+.pz-root .fm-opts { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fm-opt { display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 0 16px; border-radius: var(--r-card); text-align: left; font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); }
+.pz-root .fm-opt[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.pz-root .fm-radio { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55); display: grid; place-items: center; }
+.pz-root .fm-radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: 0; }
+.pz-root .fm-opt[aria-checked="true"] .fm-radio { border-color: #fff; }
+.pz-root .fm-opt[aria-checked="true"] .fm-radio::after { opacity: 1; }
+.pz-root .fm-ta { height: 144px; padding: 16px; resize: none; line-height: 24px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); color: var(--tx-hi); font: inherit; font-size: var(--fs-15); width: 100%; }
+.pz-root .fm-ta::placeholder { color: var(--tx-lo); }
+.pz-root .fm-count { text-align: right; font-size: var(--fs-13); color: var(--tx-lo); }
+
+/* 시트·단계 공용 목록 행 */
+.pz-root .fm-li { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.06); font-size: var(--fs-15); color: var(--tx-hi); }
+.pz-root .fm-li > svg { flex: none; color: var(--mb-pale); }
+.pz-root .fm-li > span { min-width: 0; }
+.pz-root .fm-sheet-sub { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* 하단 시트는 본문 자리를 차지하지 않고 화면 위에 얹는다(시안 fl-scrim) — 본문이 상단 바와 푸터 사이 가운데에 그대로 남는다(FS7).
+   가로형(≥1000px) 사이드 시트는 공용 규칙대로 오른쪽 열을 쓴다. */
+.pz-shell.fm-member[data-sheet-mode="bottom"] .pz-sheet[data-pz="flow-sheet"] {
+  position: absolute; grid-row: auto; left: var(--pz-pad); right: var(--pz-pad); bottom: max(8px, env(safe-area-inset-bottom));
+  margin: 0 auto; width: auto; z-index: 6;
+}

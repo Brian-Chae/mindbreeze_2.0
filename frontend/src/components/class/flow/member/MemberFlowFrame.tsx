@@ -47,7 +47,7 @@ export function MemberFlowFrame({
     <PlayerShell
       place={place}
       flow
-      className={wizard ? 'fl-root fm-wizard' : 'fl-root'}
+      className={wizard ? 'fl-root fm-member fm-wizard' : 'fl-root fm-member'}
       sheetOpen={sheetOpen}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={
@@ -89,7 +89,7 @@ export function MemberFullFrame({ place = 'online', backdropSrc, sheet = null, s
     <PlayerShell
       place={place}
       flow
-      className="fl-root"
+      className="fl-root fm-member"
       sheetOpen={sheetOpen}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={null}
