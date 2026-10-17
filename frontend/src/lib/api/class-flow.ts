@@ -166,12 +166,29 @@ export async function getEntryLiveKitToken(sessionId: string, credential: string
 
 /* ───────────────────────── 입장 자격 저장 (탭 단위) ───────────────────────── */
 
+/** 새로고침 뒤 화면을 다시 그리기 위한 클래스 요약 — 개인정보가 아니다(제목·시각·방식 설정) */
+export interface EntryClassInfo {
+  title: string | null;
+  hostName: string | null;
+  scheduledAt: string | null;
+  startedAt: string | null;
+  durationMin: number;
+  locationType: 'online' | 'offline';
+  locationAddress: string | null;
+  participantMode: 'one_on_one' | 'group';
+  linkbandMode: SessionDto['linkband_mode'];
+  maxParticipants: number;
+  recordAudio: boolean;
+  recordVideo: boolean;
+}
+
 export interface StoredEntry {
   sessionId: string;
   credential: string;
   expiresAt: string | null;
   participantId: string | null;
   isGuest: boolean;
+  classInfo?: EntryClassInfo;
 }
 
 const ENTRY_KEY_PREFIX = 'mb_entry_';
@@ -188,7 +205,8 @@ function isStoredEntry(value: unknown): value is StoredEntry {
     typeof v.credential === 'string' &&
     (v.expiresAt === null || typeof v.expiresAt === 'string') &&
     (v.participantId === null || typeof v.participantId === 'string') &&
-    typeof v.isGuest === 'boolean'
+    typeof v.isGuest === 'boolean' &&
+    (v.classInfo === undefined || (typeof v.classInfo === 'object' && v.classInfo !== null))
   );
 }
 
@@ -222,10 +240,28 @@ export function clearEntry(sessionId: string): void {
   }
 }
 
+export function classInfoFromSession(session: EntrySessionDto): EntryClassInfo {
+  return {
+    title: session.title,
+    hostName: session.host_name ?? null,
+    scheduledAt: session.scheduled_at,
+    startedAt: session.started_at,
+    durationMin: session.duration_min,
+    locationType: session.location_type,
+    locationAddress: session.location_address,
+    participantMode: session.participant_mode,
+    linkbandMode: session.linkband_mode,
+    maxParticipants: session.max_participants,
+    recordAudio: session.record_audio,
+    recordVideo: session.record_video,
+  };
+}
+
 /** 입장 응답 → 저장 레코드. 자격이 없는 응답(로그인 회원 편의 경로 등)은 null */
 export function entryFromResult(result: EnterResult): StoredEntry | null {
   if (!result.entry_credential) return null;
   return {
+    classInfo: classInfoFromSession(result.session),
     sessionId: result.session.id,
     credential: result.entry_credential,
     expiresAt: result.expires_at,

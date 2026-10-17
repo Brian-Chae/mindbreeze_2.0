@@ -86,6 +86,7 @@ export function CodeEntryView({ digits, status, memberName, backdropSrc, onChang
       backdropSrc={backdropSrc}
       title="코드로 입장"
       onBack={onBack}
+      colClassName="fm-narrow"
       foot={
         <>
           <div className="fm-fnote">

@@ -63,3 +63,12 @@
 .pz-root .fm-finfo b { font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); text-align: right; }
 .pz-root .fm-fnote2 { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); text-wrap: balance; }
 .pz-root .fm-fbtns { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+/* FM05 입장 확인 */
+.pz-root .fm-narrow { --col-w: 480px; }
+.pz-root .fm-who { display: flex; flex-direction: column; gap: 16px; }
+.pz-root .fm-who__id { display: flex; align-items: center; gap: 16px; min-height: 56px; }
+.pz-root .fm-who__id > i { width: 48px; height: 48px; border-radius: 50%; background: rgba(210, 174, 252, 0.18); color: var(--mb-pale); display: grid; place-items: center; flex: none; }
+.pz-root .fm-who__id b { display: block; font-size: var(--fs-18); font-weight: 700; color: var(--tx-hi); }
+.pz-root .fm-who__id .s { display: block; font-size: var(--fs-13); color: var(--tx-mid); }
+.pz-root .fm-who__id .ok { color: var(--ok); margin-left: auto; flex: none; }
