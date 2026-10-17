@@ -917,7 +917,7 @@ def test_tq14_세션_생성은_참여코드와_DB행을_만든다(client):
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["status"] == "ready"
-    assert len(body["access_code"]) == 6
+    assert len(body["access_code"]) == 4 and body["access_code"].isdigit()
     assert body["participant_mode"] == "one_on_one"
 
     db = _db()

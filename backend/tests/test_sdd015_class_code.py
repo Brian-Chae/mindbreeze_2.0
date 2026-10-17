@@ -191,7 +191,7 @@ def test_07_일정없이_클래스_생성_ready_및_코드발급(client):
 
     assert body["scheduled_at"] is None
     assert body["status"] == "ready"
-    assert body["access_code"] and len(body["access_code"]) == 6
+    assert body["access_code"] and len(body["access_code"]) == 4 and body["access_code"].isdigit()
     assert body["started_at"] is None and body["ended_at"] is None
 
 
@@ -330,7 +330,8 @@ def test_18_종료된_클래스는_참여불가_400(client):
     res = client.post(
         f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "지각생"}
     )
-    assert res.status_code == 400
+    # SDD-209(B4): 종료된 클래스의 코드는 즉시 무효 — 없는 코드와 구분되지 않는 404
+    assert res.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -422,4 +423,4 @@ def test_23_예약형_세션은_기존대로_scheduled(client):
     assert body["status"] == "scheduled"
     assert body["scheduled_at"] is not None
     # 예약형 세션에도 클래스 코드는 발급된다
-    assert body["access_code"] and len(body["access_code"]) == 6
+    assert body["access_code"] and len(body["access_code"]) == 4 and body["access_code"].isdigit()

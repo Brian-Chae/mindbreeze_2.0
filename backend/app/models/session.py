@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func
+from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,21 @@ class Session(Base):
     # SDD-095: 일반 클래스 목록/템플릿 목록 조회를 (host_id, is_template) 로 좁힌다.
     __table_args__ = (
         Index("ix_sessions_host_is_template", "host_id", "is_template"),
+        # SDD-209(B4): 4자리 코드는 활성(입장 가능) 클래스 사이에서만 유일하다. 종료·취소·숨김·템플릿은
+        # 제외하므로 코드 값이 재사용될 수 있고, 과거 값은 행에 그대로 보존된다.
+        Index(
+            "uq_sessions_active_access_code",
+            "access_code",
+            unique=True,
+            postgresql_where=text(
+                "access_code IS NOT NULL AND is_template = false AND hidden_at IS NULL "
+                "AND status NOT IN ('completed', 'cancelled')"
+            ),
+            sqlite_where=text(
+                "access_code IS NOT NULL AND is_template = 0 AND hidden_at IS NULL "
+                "AND status NOT IN ('completed', 'cancelled')"
+            ),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -42,7 +57,11 @@ class Session(Base):
     )
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-015: 참여자가 입력하는 6자리 클래스 코드 (생성 시 자동 발급)
-    access_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)
+    # SDD-209(B4): 로그인 없는 공통 4자리 숫자 코드(문자열, 선행 0 보존). 활성 클래스 사이에서만 유일.
+    # 길이 6 은 과거 6자리 값 보존용 — 과거 값은 입장에 쓰이지 않는다.
+    access_code: Mapped[str | None] = mapped_column(String(6), index=True)
+    # SDD-209(B4/DS-1): 재발급 시 이전 6자리 값을 보존하는 컬럼(읽기 전용 보존, 입장 불가).
+    legacy_access_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
     # SDD-088: 클래스 오픈(대기실 개방) 시각 — 대기 경과 표시·오픈→시작 소요 지표용
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

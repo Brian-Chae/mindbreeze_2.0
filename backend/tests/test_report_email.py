@@ -178,10 +178,10 @@ def test_join_issues_private_participant_token(client, setup_email):
     db, session, participant = setup_email
     # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용
     session.status = "open"
-    session.access_code = "912345"
+    session.access_code = "9123"
     session.max_participants = 10
     db.commit()
-    response = client.post("/api/v1/sessions/by-code/912345/join", json={"name": "새 게스트"})
+    response = client.post("/api/v1/sessions/by-code/9123/join", json={"name": "새 게스트"})
     assert response.status_code == 200, response.text
     assert response.json()["participant_token"]
     assert "participant_token" not in response.json()["session"]["participants"][0]

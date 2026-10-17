@@ -18,7 +18,7 @@ from app.models.session import ReportChoiceEvent, Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
-from app.services import code_service, eeg_query, reminder_service as _reminder_service
+from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
 
 logger = logging.getLogger(__name__)
 
@@ -213,8 +213,28 @@ def _sort_key(s: Session) -> datetime:
 
 
 def generate_access_code(db: DBSession) -> str:
-    """클래스 코드(6자리) 발급 — Session.access_code 에서 unique 보장."""
-    return code_service.generate_unique_code(db, Session, "access_code", label="클래스 코드")
+    """클래스 코드(4자리 숫자 문자열) 발급 — 활성 클래스 사이에서 중복 없음(SDD-209 B4).
+
+    코드 공간이 소진되면 명시적 오류(503)를 낸다.
+    """
+    try:
+        return class_code_service.generate_class_code(db)
+    except class_code_service.ClassCodeExhausted:
+        raise class_code_service.exhausted_http_error()
+
+
+def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
+    """세션 행 삽입. 동시 발급 경합(활성 코드 부분 유니크 위반)이면 코드를 재발급해 재시도한다."""
+    for attempt in range(5):
+        try:
+            with db.begin_nested():
+                db.add(session)
+                db.flush()
+            return
+        except IntegrityError:
+            if session.access_code is None or attempt == 4:
+                raise
+            session.access_code = generate_access_code(db)
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -335,8 +355,7 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         record_audio=payload.record_audio,
         record_video=payload.record_video,
     )
-    db.add(session)
-    db.flush()
+    _add_session_with_code_retry(session, db)
 
     # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
     # 이후 "새 실행(명시적)"은 start_new_run 이 새 run_id 를 발급하고, pause/resume·이어하기는
@@ -493,8 +512,7 @@ def _clone_session_config(
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
-    db.add(clone)
-    db.flush()
+    _add_session_with_code_retry(clone, db)
     # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
     clone.run_id = clone.id
     return clone
@@ -1544,11 +1562,12 @@ _CLOSED_STATUSES = ("completed", "cancelled")
 _PRE_OPEN_STATUSES = ("ready", "scheduled")
 
 
-def _get_session_by_code(code: str, db: DBSession) -> Session:
-    normalized = code_service.normalize_code(code)
-    if len(normalized) != code_service.CODE_LENGTH:
-        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
-    s = db.query(Session).filter(Session.access_code == normalized).first()
+def _get_session_by_code(code: str, db: DBSession, *, include_closed: bool = False) -> Session:
+    # SDD-209(B4): 4자리 숫자 코드만, 입장 가능한 활성 클래스만. 없는/형식오류/종료/취소/숨김은
+    # 사유를 구분하지 않는 동일한 404 로 응답한다(정보 비노출). 과거 6자리 값은 입장되지 않는다.
+    # include_closed=True 는 이미 입장한 참여자의 상태/토큰 경로(by-code state·livekit-token)가
+    # 종료 후에도 동작하도록 두는 **임시** 허용이며, B5b 에서 해당 by-code 경로와 함께 제거된다.
+    s = class_code_service.find_enterable_session(db, code, include_closed=include_closed)
     if not s:
         raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
     return s
@@ -1748,7 +1767,7 @@ def member_livekit_token(
     can_publish 규칙: 온라인 세션이면서 1:1 이거나, 그룹이면 max_participants ≤ 20 일 때만 송신 허용.
     그 외(오프라인, 온라인 그룹 20명 초과)는 구독 전용(can_publish=False).
     """
-    s = _get_session_by_code(code, db)
+    s = _get_session_by_code(code, db, include_closed=True)
     # LIVE-04: 완료/취소된 세션에서는 토큰을 발급하지 않는다.
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션입니다")
@@ -2297,7 +2316,7 @@ def get_guest_session_state(
 
     민감한 참가자 목록은 노출하지 않고, 세션 상태와 본인 상태만 내려준다.
     """
-    s = _get_session_by_code(code, db)
+    s = _get_session_by_code(code, db, include_closed=True)
 
     participant_state = None
     band_connected = False

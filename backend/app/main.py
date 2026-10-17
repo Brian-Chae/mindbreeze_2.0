@@ -16,6 +16,11 @@ from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
+# SDD-209(B4): 클래스 입장 코드(4자리)가 접근 로그·에러 로그에 원문으로 남지 않게 마스킹한다.
+from app.core.log_redaction import install_log_redaction  # noqa: E402
+
+install_log_redaction()
+
 
 async def _outbox_ws_poll_loop() -> None:
     """WS 서버 이벤트 루프에서 outbox(ws 채널)를 주기적으로 처리."""
