@@ -10,11 +10,12 @@ import { NoticeStepView } from '../../components/class/flow/member/NoticeStepVie
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
+import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
-import { clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
+import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
 import { formatStartLabel, formatWhen } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
@@ -104,6 +105,24 @@ export default function EntryPage() {
   const listPath = isAuthenticated ? '/app/sessions' : '/';
   const displayName = handoffName || (isAuthenticated && user ? user.name : '참가자');
 
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const confirmCancel = useCallback(async (): Promise<void> => {
+    if (cancelling) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      await cancelWaitlist(sessionId, entry?.credential ?? null);
+      clearEntry(sessionId);
+      navigate('/join', { replace: true });
+    } catch {
+      setCancelError('대기를 취소하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setCancelling(false);
+    }
+  }, [cancelling, sessionId, entry, navigate]);
+
   const retry = useCallback(() => {
     dispatch({ type: 'resume' });
     void refresh();
@@ -137,6 +156,21 @@ export default function EntryPage() {
     navigate(homePath);
   };
 
+  if (machine.phase === 'waitlist') {
+    return (
+      <WaitlistView
+        place={place} title={title} hostName={info.hostName} whenLabel={formatWhen(info.scheduledAt)}
+        placeName={info.locationType === 'offline' ? (info.locationAddress?.split(',').pop()?.trim() ?? null) : null}
+        cancelOpen={cancelOpen} cancelling={cancelling} cancelError={cancelError}
+        onAskCancel={() => {
+          setCancelError(null);
+          setCancelOpen(true);
+        }}
+        onKeepWaiting={() => setCancelOpen(false)}
+        onConfirmCancel={() => void confirmCancel()}
+      />
+    );
+  }
   if (machine.phase === 'wait') {
     return (
       <WaitStartContainer
