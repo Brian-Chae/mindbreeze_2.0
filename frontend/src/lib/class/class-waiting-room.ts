@@ -1,4 +1,5 @@
 import { isBleSupported } from '../ble';
+import { classifyMediaError } from './class-media';
 // 입장 전 대기실 — 순수 로직(닉네임 확정 · 입장 게이트).
 // 컴포넌트(ClassWaitingRoom.tsx)와 함께 사용한다.
 //
@@ -12,13 +13,20 @@ export const WAITING_ROOM_NICKNAME_KEY = 'mb_waiting_room_nickname';
 /** 닉네임 최대 길이 — 화면·영상 타일에 표시되는 이름이라 짧게 제한한다. */
 export const NICKNAME_MAX_LENGTH = 20;
 
-/** 카메라/마이크 장치 상태. denied/unsupported 는 동작상 off 와 같고 안내 문구만 다르다. */
+/** 카메라/마이크 장치 상태. denied/nodevice/inuse/unsupported 는 동작상 off 와 같고 안내 문구만 다르다(SDD-209: 권한·장치 없음·사용 중을 구분). */
 export type WaitingRoomDeviceState =
   | 'pending'
   | 'on'
   | 'off'
   | 'denied'
+  | 'nodevice'
+  | 'inuse'
   | 'unsupported';
+
+/** getUserMedia 오류 → 장치 상태(권한 거부 한 값으로 뭉치지 않는다). */
+export function deviceStateFromMediaError(err: unknown): WaitingRoomDeviceState {
+  return classifyMediaError(err);
+}
 
 /** 앞뒤 공백·연속 공백을 정리하고 길이를 제한한다(빈 이름은 유효하지 않다). */
 export function normalizeNickname(value: string): string {
@@ -99,6 +107,10 @@ export function deviceStateLabel(state: WaitingRoomDeviceState, device: '카메�
       return `${device} 꺼짐`;
     case 'denied':
       return `${device} 권한이 거부되었습니다`;
+    case 'nodevice':
+      return `${device}를 찾지 못했습니다`;
+    case 'inuse':
+      return `${device}를 쓸 수 없습니다`;
     case 'unsupported':
       return `이 브라우저는 ${device}를 지원하지 않습니다`;
   }

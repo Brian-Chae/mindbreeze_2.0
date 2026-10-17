@@ -53,3 +53,52 @@
 .pz-root .fl-steps > i { width: 8px; height: 8px; border-radius: 9999px; background: rgba(255, 255, 255, 0.3); }
 .pz-root .fl-steps > i.on { width: 24px; background: #fff; }
 .pz-root .fl-steps > i.done { background: var(--mb-lavender); }
+
+/* ───────── 전극 LED 소형(FH06 행) ───────── */
+.pz-root .eled-mini { display: inline-flex; align-items: center; gap: 8px; }
+.pz-root .eled-mini__item { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); color: var(--tx-mid); }
+.pz-root .eled-mini__item i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.pz-root .eled-mini__item[data-state="bad"] { color: var(--tx-hi); font-weight: 700; }
+
+/* ───────── 내 영상·소리(MyAvCheck) ───────── */
+.pz-root .mav-card { background: var(--sheet-bg); border: 0; box-shadow: inset 0 0 0 1px var(--sheet-border); border-radius: var(--r-sheet); padding: var(--sp-1); display: flex; flex-direction: column; gap: var(--sp-1); }
+.pz-root .mav-card--low { padding: var(--sp-2); }
+.pz-root .mav-vid { position: relative; border-radius: var(--r-card); overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(160deg, #4A3A68 0%, #241A3E 100%); }
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) { .pz-root .mav-vid { aspect-ratio: 16 / 9; } }
+.pz-root .mav-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.pz-root .mav-silh { position: absolute; inset: 0; display: grid; place-items: center; color: #B9A3DA; opacity: 0.5; pointer-events: none; }
+.pz-root .mav-video:not([src]):not([srcObject]) { background: transparent; }
+.pz-root .mav-ovt { position: absolute; left: 8px; top: 8px; display: flex; align-items: center; gap: 8px; }
+.pz-root .mav-ovb { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; padding: var(--sp-3) var(--sp-1) var(--sp-1); background: linear-gradient(to top, rgba(14, 6, 24, 0.85), rgba(14, 6, 24, 0)); }
+.pz-root .mav-ovb[data-center="true"] { justify-content: center; }
+.pz-root .mav-owarn { flex: 1; min-width: 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-hi); padding-left: 8px; }
+.pz-root .mav-tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 9999px; font-size: var(--fs-12); font-weight: 700; line-height: 1; white-space: nowrap; background: rgba(255, 255, 255, 0.14); color: var(--tx-mid); flex: none; }
+.pz-root .mav-tag[data-required="true"] { background: rgba(179, 115, 239, 0.28); color: var(--mb-pale); }
+.pz-root .mav-tg { flex: none; width: var(--tap); height: var(--tap); border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(18, 8, 28, 0.72); border: 1px solid var(--sheet-border); color: var(--tx-hi); }
+.pz-root .mav-tg[aria-pressed="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.pz-root .mav-tg:disabled { opacity: 0.4; cursor: default; }
+.pz-root .mav-tg--ring, .pz-root .mav-tg--ring[aria-pressed="true"] { position: relative; background: rgba(18, 8, 28, 0.9); border: 0; }
+.pz-root .mav-seg { position: absolute; inset: 0; width: 44px; height: 44px; transform: rotate(-90deg); }
+.pz-root .mav-seg circle { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 3; stroke-linecap: butt; }
+.pz-root .mav-seg circle[data-on="1"] { stroke: var(--ok); }
+.pz-root .mav-tg--ring svg:not(.mav-seg) { position: relative; color: #fff; opacity: var(--io, 1); }
+.pz-root .mav-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.pz-root .mav-head__l { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1); min-width: 0; }
+.pz-root .mav-head__r { display: flex; align-items: center; gap: var(--sp-1); flex: none; }
+.pz-root .mav-body { display: flex; flex-direction: column; gap: var(--sp-1); }
+.pz-root .mav-level { display: grid; grid-template-columns: repeat(10, 1fr); gap: var(--sp-1); }
+.pz-root .mav-level i { height: 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.2); }
+.pz-root .mav-level i.on { background: var(--ok); }
+.pz-root .mav-hint { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); font-family: inherit; }
+.pz-root .mav-hint[data-warn="true"] { display: flex; align-items: flex-start; gap: var(--sp-1); color: var(--tx-hi); }
+.pz-root .mav-hint[data-warn="true"] svg { flex: none; color: var(--warn); }
+.pz-root .mav-mini { align-self: flex-start; min-height: var(--tap); padding: 0 var(--sp-2); border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 700; display: inline-flex; align-items: center; gap: var(--sp-1); background: rgba(255, 255, 255, 0.12); border: 1px solid var(--sheet-border); }
+.pz-root .mav-spk { padding: var(--sp-1) var(--sp-2); flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.pz-root .mav-spk__l { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.pz-root .mav-spk__l svg { color: var(--mb-pale); flex: none; }
+.pz-root .mav-spk__l b { font-size: var(--fs-15); white-space: nowrap; color: var(--tx-hi); }
+.pz-root .mav-spk__btn { flex: none; }
+.pz-root .mav-spk__btn .fl-btn { min-height: var(--tap); padding: 0 var(--sp-2); font-size: var(--fs-13); width: auto; }
+.pz-root .mav-howto { list-style: none; display: flex; flex-direction: column; gap: var(--sp-1); }
+.pz-root .mav-howto li { display: flex; align-items: center; gap: var(--sp-2); min-height: 48px; font-size: var(--fs-15); color: var(--tx-hi); }
+.pz-root .mav-howto svg { flex: none; color: var(--mb-pale); }
