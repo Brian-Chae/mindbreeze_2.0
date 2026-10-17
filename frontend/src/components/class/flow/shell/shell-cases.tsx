@@ -1,7 +1,7 @@
 // SDD-209 SH — 셸형 케이스 렌더(하니스 픽스처 전용). 시안(member-a.html / host-a.html)의 고정 시연값을 그대로 쓴다.
 // 서버·시계에 의존하지 않도록 모든 문구는 미리 만들어 둔 값이다(측정이 결정적이어야 한다).
 import type { ReactNode } from 'react';
-import { Bell, Mail, Plus } from 'lucide-react';
+import { Bell, Ellipsis, Mail, Plus, WifiOff } from 'lucide-react';
 import { deriveDetailAction, deriveHeroAction } from '../../../../lib/class/enter-action';
 import type { SessionDto, SessionStatus, SessionType } from '../../../../lib/api/session';
 import type { ClassChipKey } from '../../../../lib/class/class-labels';
@@ -13,8 +13,11 @@ import { MemberClassListView } from './MemberClassListView';
 import { MemberHomeView, type HomeSection } from './MemberHomeView';
 import type { ClassRowData } from './ClassRow';
 import { ClassDetailBody, ClassDetailFoot } from './ClassDetailView';
+import { ClassActionSheet } from './ClassActionSheet';
 import { HostClassListView } from './HostClassListView';
-import { buildHostListModel, type HostListTab } from './host-shell-data';
+import { HostDetailView } from './HostDetailView';
+import { HostMenuSheet } from './HostMenuSheet';
+import { buildHostListModel, toHostDetailData, type HostListTab, type MailInviteInput } from './host-shell-data';
 import { ShellFrame, ShellHeadBack, ShellHeadTitle } from './ShellFrame';
 import { toDetailData, type ClassListEntry, type ClassListSection, type SessionWithHost } from './shell-data';
 import './shell-kit.css';
@@ -254,6 +257,78 @@ export function renderHostListCase(key: string): ReactNode {
   );
 }
 
+/* ───────── FH04 상담사 상세 ───────── */
+interface HostDetailCase { status: SessionStatus; offline?: boolean; sheet?: 'menu' | 'cancel' | 'close' | 'delete'; net?: boolean; mail?: boolean }
+const HOST_DETAIL_CASES: Readonly<Record<string, HostDetailCase>> = {
+  ready: { status: 'ready' },
+  scheduled: { status: 'scheduled' },
+  open: { status: 'open' },
+  progress: { status: 'in_progress' },
+  completed: { status: 'completed' },
+  cancelled: { status: 'cancelled' },
+  offline: { status: 'ready', offline: true },
+  menu: { status: 'ready', sheet: 'menu' },
+  cancel: { status: 'scheduled', sheet: 'cancel' },
+  close: { status: 'open', sheet: 'close' },
+  delete: { status: 'cancelled', sheet: 'delete' },
+  net: { status: 'ready', net: true },
+  'email-invites': { status: 'open', mail: true },
+};
+const DEMO_MAIL: MailInviteInput[] = [
+  { id: 'm1', maskedEmail: 'se***@…', state: 'requested', cooldownSec: 0 },
+  { id: 'm2', maskedEmail: 'ha***@…', state: 'failed', cooldownSec: 0 },
+  { id: 'm3', maskedEmail: 'ji***@…', state: 'requested', cooldownSec: 42 },
+  { id: 'm4', maskedEmail: null, state: 'requested', cooldownSec: 0 },
+];
+const PEOPLE = ['김서연', '이민준', '박지우', '최하준', '정서아', '강도윤', '윤예린', '임시우'];
+
+function hostDetailSession(c: HostDetailCase): SessionDto {
+  const many = c.status === 'in_progress' || c.status === 'completed';
+  const count = c.offline ? 1 : many ? 8 : 3;
+  const m = c.offline ? { place: 'offline' as const, mode: 'one_on_one' as const, band: 'none' as const } : ONLINE_GROUP_OPT;
+  return {
+    id: 'hd-1', type: 'meditation', custom_type_name: null, status: c.status, host_id: 'h1', access_code: '4827',
+    scheduled_at: c.status === 'ready' ? null : c.status === 'completed' ? at(16, 19) : at(17, 15),
+    started_at: c.status === 'in_progress' ? new Date(DETAIL_NOW.getTime() - 12 * 60_000).toISOString() : null, ended_at: null,
+    duration_min: 50, title: c.offline ? '김서연 님 3차 상담' : c.status === 'ready' ? '이완 명상 입문' : '마음챙김 명상 4회차', notes: null, max_participants: c.offline ? 1 : 10,
+    location_type: m.place, location_address: c.offline ? '서울 강남구 테헤란로 152 7층' : null, participant_mode: m.mode, linkband_mode: m.band,
+    webrtc_room_id: null, sfu_enabled: false, record_audio: true, record_video: !c.offline, created_at: at(1, 9), waitlist_count: 0,
+    participants: PEOPLE.slice(0, count).map((name, i) => ({ user_id: `hp${i}`, guest_name: null, is_guest: false, band_connected: false, linkband_device_id: null, webrtc_peer_id: null, consent_audio: false, consent_eeg: false, is_waitlisted: false, waitlist_position: null, user_name: name })),
+  };
+}
+
+export function renderHostDetailCase(key: string): ReactNode {
+  const c = HOST_DETAIL_CASES[key];
+  if (!c) return null;
+  const session = hostDetailSession(c);
+  const data = toHostDetailData(session, { now: DETAIL_NOW, mailInvites: c.mail ? DEMO_MAIL : [] });
+  const over = c.sheet === 'menu'
+    ? <HostMenuSheet open canDelete={data.canDelete} onDuplicate={noop} onTemplate={noop} onDelete={noop} onClose={noop} />
+    : c.sheet ? <ClassActionSheet kind={c.sheet} count={c.sheet === 'cancel' ? session.participants.length : data.people.total} onConfirm={noop} onClose={noop} /> : null;
+  return (
+    <ShellFrame
+      role="host"
+      active="class"
+      head={<ShellHeadBack title="클래스 상세" right={<button type="button" className="sh-iconbtn" aria-label="더보기"><Ellipsis size={20} aria-hidden="true" /></button>} />}
+      over={over}
+    >
+      {c.net ? <div role="status" className="sh-banner"><WifiOff size={20} aria-hidden="true" /><span>연결이 끊겼어요. 다시 연결되면 자동으로 새로 고쳐요.</span></div> : null}
+      <HostDetailView
+        data={data}
+        heroId={session.id}
+        onCta={noop}
+        onCopyCode={noop}
+        onCopyLink={noop}
+        onEditPlace={noop}
+        onRequestAction={noop}
+        onInvite={noop}
+        onRemove={noop}
+        onResend={noop}
+      />
+    </ShellFrame>
+  );
+}
+
 /** 화면 ID + 케이스 키 → 렌더. 등록되지 않은 조합은 null */
 export function renderShellCase(screen: string, key: string): ReactNode {
   switch (screen) {
@@ -261,6 +336,7 @@ export function renderShellCase(screen: string, key: string): ReactNode {
     case 'FM02': return renderMemberListCase(key);
     case 'FM03': return renderMemberDetailCase(key);
     case 'FH01': return renderHostListCase(key);
+    case 'FH04': return renderHostDetailCase(key);
     default: return null;
   }
 }

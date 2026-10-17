@@ -12,6 +12,21 @@ const SHELL_HOST_KEYS: Readonly<Record<string, Readonly<Record<string, string>>>
     past: '지난 클래스 탭',
     net: '연결 끊김 안내',
   },
+  FH04: {
+    ready: '준비(일정 없음) · 클래스 열기, 코드 복사 비활성',
+    scheduled: '예정 · 클래스 열기',
+    open: '입장 가능 · 입장 코드 표시·복사, 클래스 닫기 행',
+    progress: '진행 중 · 클래스 취소 숨김',
+    completed: '완료 · 코드가 닫혔어요 · 기록 보기',
+    cancelled: '취소 · 복제해서 만들기',
+    offline: '오프라인 1:1 · 장소 주소',
+    menu: '더보기 시트(복제·템플릿 저장·삭제)',
+    cancel: '클래스 취소 확인 시트',
+    close: '클래스 닫기 확인 시트',
+    delete: '클래스 삭제 확인 시트',
+    net: '연결 끊김 안내',
+    'email-invites': '이메일 초대 현황 · 다시 보내기',
+  },
 };
 
 export const flowCases: Record<string, FlowCaseEntry> = Object.fromEntries(

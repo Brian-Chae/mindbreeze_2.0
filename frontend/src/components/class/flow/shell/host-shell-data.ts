@@ -1,5 +1,5 @@
 // SDD-209 SH5 — 상담사 목록(FH01) 화면 데이터. 열린 클래스를 상단에 고정하고 나머지를 예정/지난으로 나눈다.
-import type { LinkbandMode, LocationType, ParticipantMode, SessionDto, SessionType } from '../../../../lib/api/session';
+import type { LinkbandMode, LocationType, ParticipantMode, SessionDto, SessionParticipant, SessionType } from '../../../../lib/api/session';
 import { hostChipKey, placeLabel, sizeLabel, type ClassChipKey } from '../../../../lib/class/class-labels';
 import { formatClassWhen, formatElapsed, formatStartsIn } from '../../../../lib/class/class-when';
 
@@ -156,5 +156,177 @@ export function buildHostListModel(sessions: SessionDto[], tab: HostListTab, now
     featured,
     groups: groupItems(tab === 'upcoming' ? upcoming : past, now),
     counts: { upcoming: upcoming.length, past: past.length },
+  };
+}
+
+/* ───────── FH04 상담사 상세 ───────── */
+export type HostNextIcon = 'door-open' | 'clock' | 'users' | 'play' | 'file' | 'copy';
+export type HostNextKind = 'player' | 'record' | 'duplicate';
+export type CodeState = 'active' | 'wait' | 'closed' | 'none';
+
+export interface PersonRow {
+  key: string;
+  name: string;
+  initial: string;
+  chip: 'invited' | 'waitlist';
+  waitLabel: string;
+  /** 제거 API 에 넘기는 회원 id. 회원이 아니면 null */
+  userId: string | null;
+  removable: boolean;
+}
+
+/** 서버가 내려주는 이메일 초대 요청 결과(BE-R4). 아직 목록 API 가 없으면 화면은 이 구역을 그리지 않는다 */
+export interface MailInviteInput {
+  id: string;
+  /** 마스킹된 이메일. 스위프로 지워졌으면 null */
+  maskedEmail: string | null;
+  state: 'requested' | 'failed';
+  /** 다시 보내기까지 남은 초 */
+  cooldownSec: number;
+}
+
+export interface MailInviteRow {
+  key: string;
+  email: string;
+  tone: 'ok' | 'warn' | 'mute';
+  label: string;
+  again: 'on' | 'wait' | 'gone';
+  waitText: string;
+}
+
+export interface HostDetailData {
+  chip: ClassChipKey;
+  title: string;
+  whenLabel: string;
+  next: { icon: HostNextIcon; title: string; sub: string; cta: string; ctaKind: HostNextKind };
+  code: { state: CodeState; value: string | null };
+  inviteText: string;
+  showLinkCopy: boolean;
+  place: LocationType;
+  mode: ParticipantMode;
+  band: LinkbandMode;
+  placeText: string;
+  canEditPlace: boolean;
+  recordText: string;
+  cancelRow: { kind: 'cancel' | 'close'; label: string } | null;
+  canDelete: boolean;
+  people: { total: number; max: number; items: PersonRow[]; waitlist: PersonRow[]; canInvite: boolean; full: boolean };
+  mailInvites: MailInviteRow[];
+}
+
+/** 이름이 없는 참가자는 id 앞자리 대신 `참가자`로 둔다(개인정보·UUID 노출 방지) */
+function personName(p: SessionParticipant): string {
+  return p.user_name || p.user_email || p.guest_name || '참가자';
+}
+
+function toPerson(p: SessionParticipant, index: number, closed: boolean): PersonRow {
+  const name = personName(p);
+  return {
+    key: p.participant_id ?? p.user_id ?? `p-${index}`,
+    name,
+    initial: name.slice(0, 1),
+    chip: p.is_waitlisted ? 'waitlist' : 'invited',
+    waitLabel: p.is_waitlisted ? `대기 ${p.waitlist_position ?? '-'}순위` : '',
+    userId: p.user_id,
+    removable: Boolean(p.user_id) && !closed,
+  };
+}
+
+function nextCopy(session: SessionDto, now: Date, whenLabel: string, activeCount: number): HostDetailData['next'] {
+  const offline = session.location_type === 'offline';
+  switch (session.status) {
+    case 'ready':
+      return {
+        icon: 'door-open', title: '클래스를 열어 참가자를 맞이해요',
+        sub: offline ? '대면 클래스도 열어야 참가자가 입장 코드로 들어와 대기실에서 준비해요.' : '열면 참가자가 입장 코드로 들어와 대기실에서 준비해요.',
+        cta: '클래스 열기', ctaKind: 'player',
+      };
+    case 'scheduled':
+      return { icon: 'clock', title: `${whenLabel}에 시작해요`, sub: '미리 열어 두면 참가자가 일찍 와서 준비해요.', cta: '클래스 열기', ctaKind: 'player' };
+    case 'open':
+      return { icon: 'users', title: '클래스가 열려 있어요', sub: activeCount > 0 ? `초대한 ${activeCount}명이 입장 코드로 들어올 수 있어요.` : '입장 코드를 전달하면 참가자가 들어올 수 있어요.', cta: '이어서 열기', ctaKind: 'player' };
+    case 'in_progress': {
+      const elapsed = formatElapsed(session.started_at ?? session.scheduled_at, now);
+      return { icon: 'play', title: `${elapsed || '지금'} 진행 중이에요`, sub: '이어서 열면 진행 화면이 나와요.', cta: '이어서 열기', ctaKind: 'player' };
+    }
+    case 'completed':
+      return { icon: 'file', title: '기록과 리포트를 확인해 보세요', sub: 'AI 요약과 리포트가 준비됐어요.', cta: '기록 보기', ctaKind: 'record' };
+    default:
+      return { icon: 'copy', title: '취소된 클래스예요', sub: '같은 설정으로 새 클래스를 만들 수 있어요.', cta: '복제해서 만들기', ctaKind: 'duplicate' };
+  }
+}
+
+function recordText(session: SessionDto): string {
+  const parts: string[] = [];
+  if (session.record_audio) parts.push('음성 녹음');
+  if (session.record_video && session.location_type === 'online') parts.push('영상 녹화');
+  return parts.length > 0 ? `${parts.join(' · ')} · AI 분석` : '기록 없음';
+}
+
+function toMailRows(inputs: MailInviteInput[]): MailInviteRow[] {
+  return inputs.map((m) => {
+    const gone = m.maskedEmail === null;
+    return {
+      key: m.id,
+      email: m.maskedEmail ?? '삭제된 정보',
+      tone: gone ? 'mute' : m.state === 'failed' ? 'warn' : 'ok',
+      label: m.state === 'failed' ? '발송하지 못했어요' : '발송 요청함',
+      again: gone ? 'gone' : m.cooldownSec > 0 ? 'wait' : 'on',
+      waitText: m.cooldownSec > 0 ? `${m.cooldownSec}초 뒤에 다시 보낼 수 있어요` : '',
+    };
+  });
+}
+
+interface HostDetailOptions {
+  now?: Date;
+  mailInvites?: MailInviteInput[];
+}
+
+export function toHostDetailData(session: SessionDto, { now = new Date(), mailInvites = [] }: HostDetailOptions = {}): HostDetailData {
+  const status = session.status;
+  const closed = status === 'completed' || status === 'cancelled';
+  const active = session.participants.filter((p) => !p.is_waitlisted);
+  const waitlisted = session.participants.filter((p) => p.is_waitlisted).sort((a, b) => (a.waitlist_position ?? 99) - (b.waitlist_position ?? 99));
+  const whenLabel = session.scheduled_at
+    ? `${formatClassWhen(session.scheduled_at, now)} · ${session.duration_min}분`
+    : `일정 없이 바로 열 수 있어요 · ${session.duration_min}분`;
+  const timeOnly = formatClassWhen(session.scheduled_at, now);
+
+  const codeValue = session.access_code;
+  const code: HostDetailData['code'] = closed
+    ? { state: 'closed', value: null }
+    : !codeValue ? { state: 'none', value: null }
+      : status === 'open' || status === 'in_progress' ? { state: 'active', value: codeValue } : { state: 'wait', value: codeValue };
+
+  const cancelRow: HostDetailData['cancelRow'] = status === 'ready' || status === 'scheduled'
+    ? { kind: 'cancel', label: '클래스 취소' }
+    : status === 'open' ? { kind: 'close', label: `클래스 닫기 (회원 ${active.length}명이 나가요)` } : null;
+
+  const full = active.length >= session.max_participants;
+  return {
+    chip: hostChipKey(status),
+    title: session.title || '제목 없는 클래스',
+    whenLabel,
+    next: nextCopy(session, now, timeOnly, active.length),
+    code,
+    inviteText: status === 'cancelled' ? `${session.participants.length}명에게 취소 안내를 보냈어요` : `초대 ${session.participants.length}명`,
+    showLinkCopy: !closed,
+    place: session.location_type,
+    mode: session.participant_mode,
+    band: session.linkband_mode,
+    placeText: session.location_type === 'online' ? '온라인(원격)' : session.location_address || '오프라인 · 주소 미등록',
+    canEditPlace: status === 'ready' || status === 'scheduled',
+    recordText: recordText(session),
+    cancelRow,
+    canDelete: status === 'ready' || status === 'scheduled' || status === 'cancelled',
+    people: {
+      total: active.length,
+      max: session.max_participants,
+      items: active.map((p, i) => toPerson(p, i, closed)),
+      waitlist: waitlisted.map((p, i) => toPerson(p, i, closed)),
+      canInvite: !closed && !full,
+      full,
+    },
+    mailInvites: toMailRows(mailInvites),
   };
 }
