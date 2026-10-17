@@ -462,6 +462,8 @@ export const getActiveSessionLiveSocket = (): Socket | null => sessionLiveSocket
 export interface SessionLiveJoinPayload {
   session_id: string;
   participant_id?: string | null;
+  /** SDD-209: 로그인 없는 참가자의 소유 증명(입장 자격). 없으면 보내지 않는다 — 현행 동작 */
+  entry_credential?: string;
 }
 
 /** room `session:{id}` 진입 — participant_id는 권한·본인 EEG 스코프용 */
@@ -469,6 +471,7 @@ export const joinSessionLive = (
   socket: Socket,
   sessionId: string,
   participantId?: string | null,
+  entryCredential?: string | null,
 ): void => {
   // SDD-110: 이미 같은 세션에 join된 상태면 재emit하지 않는다(재연결 join N회 → 1회).
   // FE-RT-001: dedup 키를 (session_id, participant_id)로 확장한다. 참여자 확정 후
@@ -483,6 +486,7 @@ export const joinSessionLive = (
   const payload: SessionLiveJoinPayload = {
     session_id: sessionId,
     ...(participantId ? { participant_id: participantId } : {}),
+    ...(entryCredential ? { entry_credential: entryCredential } : {}),
   };
   liveCurrentSession = sessionId;
   liveCurrentParticipant = nextParticipant;

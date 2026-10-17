@@ -14,6 +14,7 @@ import {
   putEegRawToPresignedUrl,
   requestEegRawPresign,
 } from '../lib/api/eeg-raw';
+import { ackEntryEegRawChunks, requestEntryEegRawPresign } from '../lib/api/class-flow';
 import {
   enqueueRawChunk,
   listPendingRawChunks,
@@ -65,6 +66,8 @@ export interface UseEegRawUploadOptions {
   enabled?: boolean;
   /** 게스트 등 비인증 업로드 */
   skipAuth?: boolean;
+  /** SDD-209: 입장 자격(X-Entry-Credential)으로 소유를 증명하는 업로드. 없으면 현행 동작 */
+  entryCredential?: string | null;
   /** flush 주기(ms). 0이면 수동 flush만 */
   flushIntervalMs?: number;
 }
@@ -95,6 +98,7 @@ export function useEegRawUpload(
     participantId,
     enabled = true,
     skipAuth = false,
+    entryCredential = null,
     flushIntervalMs = FLUSH_INTERVAL_MS,
   } = options;
 
@@ -106,6 +110,8 @@ export function useEegRawUpload(
   const mountedRef = useRef(true);
   const skipAuthRef = useRef(skipAuth);
   skipAuthRef.current = skipAuth;
+  const entryCredentialRef = useRef(entryCredential);
+  entryCredentialRef.current = entryCredential;
 
   const refreshPendingCount = useCallback(async () => {
     try {
@@ -126,9 +132,7 @@ export function useEegRawUpload(
       }
 
       try {
-        const presign = await requestEegRawPresign(
-          item.sessionId,
-          {
+        const presignBody = {
             participant_id: item.participantId,
             chunks: [
               {
@@ -145,9 +149,10 @@ export function useEegRawUpload(
                 content_type: item.contentType,
               },
             ],
-          },
-          { skipAuth: skipAuthRef.current },
-        );
+          };
+        const presign = entryCredentialRef.current
+          ? await requestEntryEegRawPresign(item.sessionId, entryCredentialRef.current, presignBody)
+          : await requestEegRawPresign(item.sessionId, presignBody, { skipAuth: skipAuthRef.current });
 
         const chunk = presign.chunks[0];
         if (!chunk) {
@@ -156,9 +161,7 @@ export function useEegRawUpload(
 
         await putEegRawToPresignedUrl(chunk.upload_url, item.payload);
 
-        await ackEegRawChunks(
-          item.sessionId,
-          {
+        const ackBody = {
             participant_id: item.participantId,
             chunks: [
               {
@@ -167,9 +170,9 @@ export function useEegRawUpload(
                 size_bytes: item.byteSize,
               },
             ],
-          },
-          { skipAuth: skipAuthRef.current },
-        );
+          };
+        if (entryCredentialRef.current) await ackEntryEegRawChunks(item.sessionId, entryCredentialRef.current, ackBody);
+        else await ackEegRawChunks(item.sessionId, ackBody, { skipAuth: skipAuthRef.current });
 
         await removeRawChunk(item.streamId, item.chunkIndex, item.sessionId);
         return true;

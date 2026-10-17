@@ -6,6 +6,7 @@
 import { resolveLiveKitUrl } from '../lib/livekit-url';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, tokenStorage } from '../lib/api/client';
+import { getEntryLiveKitToken, raiseEntryHand } from '../lib/api/class-flow';
 import { getMemberLiveKitToken, raiseHand as raiseHandApi } from '../lib/api/session';
 import {
   getActiveSessionLiveSocket,
@@ -22,6 +23,8 @@ interface UseMemberLiveKitOptions {
   code: string | null;
   participantId: string | null;
   participantToken?: string | null;
+  /** SDD-209: 입장 자격 — 있으면 코드·참여자 토큰 대신 이 자격으로 토큰 발급·손들기·room join 을 한다 */
+  entryCredential?: string | null;
   /** SDD-094: 발언권 이벤트 수신용 세션 id — 없으면(미지정) 자기 룸 join 이 불가해 리스너를 만들지 않는다 */
   sessionId?: string | null;
   /** SDD-094: 온라인 그룹(≤20)에서만 true — speaking_changed 수신 시 토큰 재발급 (기본 true) */
@@ -32,6 +35,7 @@ export function useMemberLiveKit({
   code,
   participantId,
   participantToken,
+  entryCredential = null,
   sessionId = null,
   listenSpeakingChanges = true,
 }: UseMemberLiveKitOptions) {
@@ -53,11 +57,15 @@ export function useMemberLiveKit({
   const [raiseError, setRaiseError] = useState<string | null>(null);
 
   const connect = useCallback(async () => {
-    if (!code || !participantId) return;
+    if ((!code && !entryCredential) || !participantId) return;
+    if (entryCredential && !sessionId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await getMemberLiveKitToken(code, participantId, participantToken);
+      const res =
+        entryCredential && sessionId
+          ? await getEntryLiveKitToken(sessionId, entryCredential)
+          : await getMemberLiveKitToken(code as string, participantId, participantToken);
       setToken(res.livekit_token);
       setRoomId(res.webrtc_room_id);
       setCanPublish(res.can_publish);
@@ -79,7 +87,7 @@ export function useMemberLiveKit({
     } finally {
       setLoading(false);
     }
-  }, [code, participantId, participantToken]);
+  }, [code, participantId, participantToken, entryCredential, sessionId]);
 
   const disconnect = useCallback(() => {
     setToken(null);
@@ -118,7 +126,7 @@ export function useMemberLiveKit({
     // 새로 만든 연결은 아직 room 에 없으므로 join 이 필요하다(기존 연결은 소유 훅이 join 담당).
     const ownsJoin = !existing && Boolean(sessionId);
     const onConnect = (): void => {
-      if (ownsJoin && sessionId) joinSessionLive(socket, sessionId, participantId);
+      if (ownsJoin && sessionId) joinSessionLive(socket, sessionId, participantId, entryCredential);
     };
 
     const unsubSpeaking = subscribeSpeakingChanged(socket, handleSpeaking);
@@ -129,7 +137,7 @@ export function useMemberLiveKit({
       unsubSpeaking();
       socket.off('connect', onConnect);
     };
-  }, [listenSpeakingChanges, participantId, sessionId]);
+  }, [listenSpeakingChanges, participantId, sessionId, entryCredential]);
 
   /** SDD-094: 손들기 — 상담사가 발언권을 부여할 때까지 대기 상태로 둔다 */
   const raiseHand = useCallback(async (): Promise<void> => {
@@ -137,14 +145,15 @@ export function useMemberLiveKit({
     setRaising(true);
     setRaiseError(null);
     try {
-      await raiseHandApi(sessionId, participantId, participantToken);
+      if (entryCredential) await raiseEntryHand(sessionId, participantId, entryCredential);
+      else await raiseHandApi(sessionId, participantId, participantToken);
       setRaisedHand(true);
     } catch (e) {
       setRaiseError(e instanceof Error ? e.message : '손들기에 실패했습니다');
     } finally {
       setRaising(false);
     }
-  }, [sessionId, participantId, participantToken]);
+  }, [sessionId, participantId, participantToken, entryCredential]);
 
   return {
     token,

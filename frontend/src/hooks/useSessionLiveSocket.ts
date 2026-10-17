@@ -60,6 +60,8 @@ interface UseSessionLiveSocketOptions {
   enabled?: boolean;
   /** 게스트 등 비인증 연결 */
   skipAuth?: boolean;
+  /** SDD-209: 입장 자격 — 로그인 없는 참가자의 room join 소유 증명. 없으면 현행 동작 */
+  entryCredential?: string | null;
   onEegFeature?: SessionLiveEegFeatureHandler;
   onSnapshot?: (snapshot: SessionLiveJoinSnapshot) => void;
   onSessionStateChanged?: SessionStateChangedHandler;
@@ -112,6 +114,7 @@ export function useSessionLiveSocket({
   participantId = null,
   enabled = true,
   skipAuth = false,
+  entryCredential = null,
   onEegFeature,
   onSnapshot,
   onSessionStateChanged,
@@ -157,6 +160,8 @@ export function useSessionLiveSocket({
   /** 개선 5: 무음 시그널 전송용 — effect 안에서 생성한 소켓을 참조한다 */
   const socketRef = useRef<Socket | null>(null);
   const joinedSessionRef = useRef<string | null>(null);
+  const entryCredentialRef = useRef(entryCredential);
+  entryCredentialRef.current = entryCredential;
   const signalParticipantRef = useRef<string | null>(null);
   /** 단절 중 눌린 신호를 보관 — 재join 확정 후 확정된 본인 id로 flush한다 */
   const pendingSignalsRef = useRef<ClassSignalType[]>([]);
@@ -253,7 +258,7 @@ export function useSessionLiveSocket({
       joinDeniedRef.current = false;
       setIsConnected(true);
       // 연결만으로 hasSnapshot을 true로 만들지 않음
-      joinSessionLive(socket, sessionId, participantId);
+      joinSessionLive(socket, sessionId, participantId, entryCredentialRef.current);
       joinedSessionRef.current = sessionId;
     };
 

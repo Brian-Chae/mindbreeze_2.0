@@ -18,6 +18,7 @@ import {
   type UploadStatus,
 } from '../lib/api/session';
 import { tokenStorage } from '../lib/api/client';
+import { postEntryFeatures } from '../lib/api/class-flow';
 import { AnalysisMetricsService } from '../lib/eeg/AnalysisMetricsService';
 import { bluetoothService } from '../lib/eeg/bluetoothService';
 import { mockDataGenerator } from '../lib/eeg/mockDataGenerator';
@@ -167,6 +168,8 @@ export interface UseBandOptions {
   enabled?: boolean;
   /** 게스트 등 비인증 업로드 시 true */
   skipAuth?: boolean;
+  /** SDD-209: 입장 자격(X-Entry-Credential) — 로그인 없는 참가자의 WS join·feature/raw 업로드 소유 증명. 없으면 현행 동작 */
+  entryCredential?: string | null;
   /**
    * playground 관찰 전용 — IndexedDB 큐·WS 업로드 없이 로컬 스트림만.
    * sessionId가 비어 있어도 연결·지표 갱신이 동작한다.
@@ -325,6 +328,7 @@ export function useBand({
   participantId,
   enabled = true,
   skipAuth = false,
+  entryCredential = null,
   observationOnly = false,
   forceMock = false,
 }: UseBandOptions): UseBandResult {
@@ -388,6 +392,8 @@ export function useBand({
   const retransmitInFlightRef = useRef(false);
   const observationOnlyRef = useRef(observationOnly);
   observationOnlyRef.current = observationOnly;
+  const entryCredentialRef = useRef(entryCredential);
+  entryCredentialRef.current = entryCredential;
   const participantIdRef = useRef(participantId);
   participantIdRef.current = participantId;
 
@@ -411,6 +417,7 @@ export function useBand({
     participantId,
     enabled: !observationOnly && Boolean(sessionId && participantId),
     skipAuth,
+    entryCredential,
   });
   const rawEnqueueRef = useRef(rawUpload.enqueueChunk);
   rawEnqueueRef.current = rawUpload.enqueueChunk;
@@ -486,6 +493,15 @@ export function useBand({
     });
   }, []);
 
+  /** feature 배치 REST 업로드 — 입장 자격이 있으면 자격으로, 없으면 현행(로그인/skipAuth)대로 */
+  const uploadFeatureBatch = useCallback(
+    (targetSessionId: string, payload: { participant_id?: string | null; features: EegFeatureItem[] }) =>
+      entryCredentialRef.current
+        ? postEntryFeatures(targetSessionId, entryCredentialRef.current, payload)
+        : postSessionFeatures(targetSessionId, payload, { skipAuth }),
+    [skipAuth],
+  );
+
   /** 큐 항목 1건 WS emit — 성공해도 ACK 전까지 삭제하지 않음 */
   const emitQueuedItem = useCallback(
     (item: QueuedFeatureItem): boolean => {
@@ -526,14 +542,10 @@ export function useBand({
       const chunk = pending.slice(0, RETRANSMIT_BATCH_MAX);
       const batch = chunk.map((p) => p.feature);
       if (!wsConnectedRef.current) setUploadStatus('delayed');
-      await postSessionFeatures(
-        sessionId,
-        {
-          participant_id: participantIdRef.current,
-          features: batch,
-        },
-        { skipAuth },
-      );
+      await uploadFeatureBatch(sessionId, {
+        participant_id: participantIdRef.current,
+        features: batch,
+      });
       for (const item of chunk) {
         await removeAckedFeature(
           {
@@ -556,7 +568,7 @@ export function useBand({
     } finally {
       retransmitInFlightRef.current = false;
     }
-  }, [refreshPendingCount, sessionId, skipAuth]);
+  }, [refreshPendingCount, sessionId, uploadFeatureBatch]);
 
   /** 종료 시 새 수집 중단 + 큐 drain */
   const drainPendingQueue = useCallback(async (): Promise<void> => {
@@ -572,14 +584,10 @@ export function useBand({
 
         // WS ACK는 게스트에게 오지 않으므로(호스트 룸 전용 브로드캐스트) REST로만 drain한다.
         try {
-          await postSessionFeatures(
-            sessionId,
-            {
-              participant_id: participantIdRef.current,
-              features: pending.map((p) => p.feature),
-            },
-            { skipAuth },
-          );
+          await uploadFeatureBatch(sessionId, {
+            participant_id: participantIdRef.current,
+            features: pending.map((p) => p.feature),
+          });
           for (const item of pending) {
             await removeAckedFeature(
               {
@@ -600,7 +608,7 @@ export function useBand({
       drainingRef.current = false;
       await refreshPendingCount();
     }
-  }, [refreshPendingCount, sessionId, skipAuth]);
+  }, [refreshPendingCount, sessionId, uploadFeatureBatch]);
 
   const handleFeatureAck = useCallback(
     async (ack: SessionLiveFeatureAck): Promise<void> => {
@@ -1246,7 +1254,7 @@ export function useBand({
     const onConnect = (): void => {
       wsConnectedRef.current = true;
       if (mountedRef.current) setIsWsConnected(true);
-      joinSessionLive(socket, sessionId, participantIdRef.current);
+      joinSessionLive(socket, sessionId, participantIdRef.current, entryCredentialRef.current);
       // 재연결: 큐 폐기 금지 → 재전송
       void retransmitPending();
     };

@@ -35,9 +35,10 @@ afterEach(async () => {
 
 describe('ClassFlowCasesPage', () => {
   it('미등록 케이스는 안내를 보이고 등록 수를 알려 준다', async () => {
-    await renderAt('?screen=FM04&case=default');
+    // 실제 화면 키는 트랙 병합에 따라 등록되므로, 어떤 트랙도 등록하지 않을 키로 확인한다
+    await renderAt('?screen=FM99&case=default');
     expect(q('[role="status"]')!.textContent).toContain('케이스 미등록');
-    expect(q('[role="status"]')!.textContent).toContain('screen=FM04');
+    expect(q('[role="status"]')!.textContent).toContain('screen=FM99');
   });
 
   it('준비 신호와 레지스트리를 window 에 노출한다(실제 픽스처만, 자가검증 제외)', async () => {
