@@ -1,0 +1,200 @@
+MIND BREEZE 2.0 · 클래스 사전 흐름 시안 host-a(FH01~FH04) — 적합성(fit) 측정
+파일: designs/class-flow-redesign/host-a.html · 측정: tools/host-a-capture.mjs (+ tools/host-a-measure-lib.mjs) · 서버: python3 -m http.server 5303 --directory designs
+대상: 화면 8종(FH01·FH02a~e·FH03·FH04) · 케이스 43개 × 뷰포트 4종 = 172개 조합
+판정: 페이지 스크롤 0 · 11px 이하 0 · 겹침 0 · 이탈 0 · 잘림 0 · 터치≥44 · 빈 영역 0 · 이모지·글리프 0 · 금지 용어 0 · 영문 대문자 아이브로우 0 (내부 스크롤은 목록·셸 본문 영역만 허용)
+
+항목                    | 수정 전 | 수정 후
+------------------------|--------|--------
+페이지 스크롤                |      0 |      0
+11px 이하 글자             |      0 |      0
+요소 겹침                  |      0 |      0
+이탈                     |      0 |      0
+잘림                     |      0 |      0
+터치 44 미만               |      0 |      0
+빈 영역                   |      0 |      0
+이모지·글리프                |      0 |      0
+금지 용어                  |    328 |      0
+영문 대문자 아이브로우           |      0 |      0
+소스 grep 글리프(행)        |      0 |      0
+소스 grep 금지 용어(행)     |      9 |      0
+외부 http 리소스           |      0 |      0
+위반 조합 수                |    164 |      0  (전체 172)
+
+전체 판정: PASS
+
+내부 스크롤이 실제로 생기는 조합: 67개 (허용 영역만: .sh-scroll 셸 본문 / .w-list 목록 / .w-plist 초대 목록)
+  영역별: .w-list=17 .w-plist=12 .sh-scroll=38
+
+=== 전체 일람표 (화면-케이스 | 뷰포트 | scrollH/vh | 위반 항목 수 | 판정) ===
+FH01-open              | 390x844  | 844/844    |  0 | PASS
+FH01-open-offline      | 390x844  | 844/844    |  0 | PASS
+FH01-progress          | 390x844  | 844/844    |  0 | PASS
+FH01-idle              | 390x844  | 844/844    |  0 | PASS
+FH01-empty             | 390x844  | 844/844    |  0 | PASS
+FH01-past              | 390x844  | 844/844    |  0 | PASS
+FH01-net               | 390x844  | 844/844    |  0 | PASS
+FH02a-online-group     | 390x844  | 844/844    |  0 | PASS
+FH02a-online-1to1      | 390x844  | 844/844    |  0 | PASS
+FH02a-offline-group    | 390x844  | 844/844    |  0 | PASS
+FH02a-offline-1to1     | 390x844  | 844/844    |  0 | PASS
+FH02a-leave            | 390x844  | 844/844    |  0 | PASS
+FH02b-none             | 390x844  | 844/844    |  0 | PASS
+FH02b-optional         | 390x844  | 844/844    |  0 | PASS
+FH02b-required         | 390x844  | 844/844    |  0 | PASS
+FH02b-offline          | 390x844  | 844/844    |  0 | PASS
+FH02c-now              | 390x844  | 844/844    |  0 | PASS
+FH02c-later            | 390x844  | 844/844    |  0 | PASS
+FH02c-conflict         | 390x844  | 844/844    |  0 | PASS
+FH02c-long             | 390x844  | 844/844    |  0 | PASS
+FH02d-empty            | 390x844  | 844/844    |  0 | PASS
+FH02d-picked           | 390x844  | 844/844    |  0 | PASS
+FH02d-solo             | 390x844  | 844/844    |  0 | PASS
+FH02d-search           | 390x844  | 844/844    |  0 | PASS
+FH02e-online           | 390x844  | 844/844    |  0 | PASS
+FH02e-offline          | 390x844  | 844/844    |  0 | PASS
+FH03-online            | 390x844  | 844/844    |  0 | PASS
+FH03-offline           | 390x844  | 844/844    |  0 | PASS
+FH03-partial           | 390x844  | 844/844    |  0 | PASS
+FH03-scheduled         | 390x844  | 844/844    |  0 | PASS
+FH03-none              | 390x844  | 844/844    |  0 | PASS
+FH04-ready             | 390x844  | 844/844    |  0 | PASS
+FH04-scheduled         | 390x844  | 844/844    |  0 | PASS
+FH04-open              | 390x844  | 844/844    |  0 | PASS
+FH04-progress          | 390x844  | 844/844    |  0 | PASS
+FH04-completed         | 390x844  | 844/844    |  0 | PASS
+FH04-cancelled         | 390x844  | 844/844    |  0 | PASS
+FH04-offline           | 390x844  | 844/844    |  0 | PASS
+FH04-menu              | 390x844  | 844/844    |  0 | PASS
+FH04-cancel            | 390x844  | 844/844    |  0 | PASS
+FH04-close             | 390x844  | 844/844    |  0 | PASS
+FH04-delete            | 390x844  | 844/844    |  0 | PASS
+FH04-net               | 390x844  | 844/844    |  0 | PASS
+FH01-open              | 834x1194 | 1194/1194  |  0 | PASS
+FH01-open-offline      | 834x1194 | 1194/1194  |  0 | PASS
+FH01-progress          | 834x1194 | 1194/1194  |  0 | PASS
+FH01-idle              | 834x1194 | 1194/1194  |  0 | PASS
+FH01-empty             | 834x1194 | 1194/1194  |  0 | PASS
+FH01-past              | 834x1194 | 1194/1194  |  0 | PASS
+FH01-net               | 834x1194 | 1194/1194  |  0 | PASS
+FH02a-online-group     | 834x1194 | 1194/1194  |  0 | PASS
+FH02a-online-1to1      | 834x1194 | 1194/1194  |  0 | PASS
+FH02a-offline-group    | 834x1194 | 1194/1194  |  0 | PASS
+FH02a-offline-1to1     | 834x1194 | 1194/1194  |  0 | PASS
+FH02a-leave            | 834x1194 | 1194/1194  |  0 | PASS
+FH02b-none             | 834x1194 | 1194/1194  |  0 | PASS
+FH02b-optional         | 834x1194 | 1194/1194  |  0 | PASS
+FH02b-required         | 834x1194 | 1194/1194  |  0 | PASS
+FH02b-offline          | 834x1194 | 1194/1194  |  0 | PASS
+FH02c-now              | 834x1194 | 1194/1194  |  0 | PASS
+FH02c-later            | 834x1194 | 1194/1194  |  0 | PASS
+FH02c-conflict         | 834x1194 | 1194/1194  |  0 | PASS
+FH02c-long             | 834x1194 | 1194/1194  |  0 | PASS
+FH02d-empty            | 834x1194 | 1194/1194  |  0 | PASS
+FH02d-picked           | 834x1194 | 1194/1194  |  0 | PASS
+FH02d-solo             | 834x1194 | 1194/1194  |  0 | PASS
+FH02d-search           | 834x1194 | 1194/1194  |  0 | PASS
+FH02e-online           | 834x1194 | 1194/1194  |  0 | PASS
+FH02e-offline          | 834x1194 | 1194/1194  |  0 | PASS
+FH03-online            | 834x1194 | 1194/1194  |  0 | PASS
+FH03-offline           | 834x1194 | 1194/1194  |  0 | PASS
+FH03-partial           | 834x1194 | 1194/1194  |  0 | PASS
+FH03-scheduled         | 834x1194 | 1194/1194  |  0 | PASS
+FH03-none              | 834x1194 | 1194/1194  |  0 | PASS
+FH04-ready             | 834x1194 | 1194/1194  |  0 | PASS
+FH04-scheduled         | 834x1194 | 1194/1194  |  0 | PASS
+FH04-open              | 834x1194 | 1194/1194  |  0 | PASS
+FH04-progress          | 834x1194 | 1194/1194  |  0 | PASS
+FH04-completed         | 834x1194 | 1194/1194  |  0 | PASS
+FH04-cancelled         | 834x1194 | 1194/1194  |  0 | PASS
+FH04-offline           | 834x1194 | 1194/1194  |  0 | PASS
+FH04-menu              | 834x1194 | 1194/1194  |  0 | PASS
+FH04-cancel            | 834x1194 | 1194/1194  |  0 | PASS
+FH04-close             | 834x1194 | 1194/1194  |  0 | PASS
+FH04-delete            | 834x1194 | 1194/1194  |  0 | PASS
+FH04-net               | 834x1194 | 1194/1194  |  0 | PASS
+FH01-open              | 1194x834 | 834/834    |  0 | PASS
+FH01-open-offline      | 1194x834 | 834/834    |  0 | PASS
+FH01-progress          | 1194x834 | 834/834    |  0 | PASS
+FH01-idle              | 1194x834 | 834/834    |  0 | PASS
+FH01-empty             | 1194x834 | 834/834    |  0 | PASS
+FH01-past              | 1194x834 | 834/834    |  0 | PASS
+FH01-net               | 1194x834 | 834/834    |  0 | PASS
+FH02a-online-group     | 1194x834 | 834/834    |  0 | PASS
+FH02a-online-1to1      | 1194x834 | 834/834    |  0 | PASS
+FH02a-offline-group    | 1194x834 | 834/834    |  0 | PASS
+FH02a-offline-1to1     | 1194x834 | 834/834    |  0 | PASS
+FH02a-leave            | 1194x834 | 834/834    |  0 | PASS
+FH02b-none             | 1194x834 | 834/834    |  0 | PASS
+FH02b-optional         | 1194x834 | 834/834    |  0 | PASS
+FH02b-required         | 1194x834 | 834/834    |  0 | PASS
+FH02b-offline          | 1194x834 | 834/834    |  0 | PASS
+FH02c-now              | 1194x834 | 834/834    |  0 | PASS
+FH02c-later            | 1194x834 | 834/834    |  0 | PASS
+FH02c-conflict         | 1194x834 | 834/834    |  0 | PASS
+FH02c-long             | 1194x834 | 834/834    |  0 | PASS
+FH02d-empty            | 1194x834 | 834/834    |  0 | PASS
+FH02d-picked           | 1194x834 | 834/834    |  0 | PASS
+FH02d-solo             | 1194x834 | 834/834    |  0 | PASS
+FH02d-search           | 1194x834 | 834/834    |  0 | PASS
+FH02e-online           | 1194x834 | 834/834    |  0 | PASS
+FH02e-offline          | 1194x834 | 834/834    |  0 | PASS
+FH03-online            | 1194x834 | 834/834    |  0 | PASS
+FH03-offline           | 1194x834 | 834/834    |  0 | PASS
+FH03-partial           | 1194x834 | 834/834    |  0 | PASS
+FH03-scheduled         | 1194x834 | 834/834    |  0 | PASS
+FH03-none              | 1194x834 | 834/834    |  0 | PASS
+FH04-ready             | 1194x834 | 834/834    |  0 | PASS
+FH04-scheduled         | 1194x834 | 834/834    |  0 | PASS
+FH04-open              | 1194x834 | 834/834    |  0 | PASS
+FH04-progress          | 1194x834 | 834/834    |  0 | PASS
+FH04-completed         | 1194x834 | 834/834    |  0 | PASS
+FH04-cancelled         | 1194x834 | 834/834    |  0 | PASS
+FH04-offline           | 1194x834 | 834/834    |  0 | PASS
+FH04-menu              | 1194x834 | 834/834    |  0 | PASS
+FH04-cancel            | 1194x834 | 834/834    |  0 | PASS
+FH04-close             | 1194x834 | 834/834    |  0 | PASS
+FH04-delete            | 1194x834 | 834/834    |  0 | PASS
+FH04-net               | 1194x834 | 834/834    |  0 | PASS
+FH01-open              | 1280x720 | 720/720    |  0 | PASS
+FH01-open-offline      | 1280x720 | 720/720    |  0 | PASS
+FH01-progress          | 1280x720 | 720/720    |  0 | PASS
+FH01-idle              | 1280x720 | 720/720    |  0 | PASS
+FH01-empty             | 1280x720 | 720/720    |  0 | PASS
+FH01-past              | 1280x720 | 720/720    |  0 | PASS
+FH01-net               | 1280x720 | 720/720    |  0 | PASS
+FH02a-online-group     | 1280x720 | 720/720    |  0 | PASS
+FH02a-online-1to1      | 1280x720 | 720/720    |  0 | PASS
+FH02a-offline-group    | 1280x720 | 720/720    |  0 | PASS
+FH02a-offline-1to1     | 1280x720 | 720/720    |  0 | PASS
+FH02a-leave            | 1280x720 | 720/720    |  0 | PASS
+FH02b-none             | 1280x720 | 720/720    |  0 | PASS
+FH02b-optional         | 1280x720 | 720/720    |  0 | PASS
+FH02b-required         | 1280x720 | 720/720    |  0 | PASS
+FH02b-offline          | 1280x720 | 720/720    |  0 | PASS
+FH02c-now              | 1280x720 | 720/720    |  0 | PASS
+FH02c-later            | 1280x720 | 720/720    |  0 | PASS
+FH02c-conflict         | 1280x720 | 720/720    |  0 | PASS
+FH02c-long             | 1280x720 | 720/720    |  0 | PASS
+FH02d-empty            | 1280x720 | 720/720    |  0 | PASS
+FH02d-picked           | 1280x720 | 720/720    |  0 | PASS
+FH02d-solo             | 1280x720 | 720/720    |  0 | PASS
+FH02d-search           | 1280x720 | 720/720    |  0 | PASS
+FH02e-online           | 1280x720 | 720/720    |  0 | PASS
+FH02e-offline          | 1280x720 | 720/720    |  0 | PASS
+FH03-online            | 1280x720 | 720/720    |  0 | PASS
+FH03-offline           | 1280x720 | 720/720    |  0 | PASS
+FH03-partial           | 1280x720 | 720/720    |  0 | PASS
+FH03-scheduled         | 1280x720 | 720/720    |  0 | PASS
+FH03-none              | 1280x720 | 720/720    |  0 | PASS
+FH04-ready             | 1280x720 | 720/720    |  0 | PASS
+FH04-scheduled         | 1280x720 | 720/720    |  0 | PASS
+FH04-open              | 1280x720 | 720/720    |  0 | PASS
+FH04-progress          | 1280x720 | 720/720    |  0 | PASS
+FH04-completed         | 1280x720 | 720/720    |  0 | PASS
+FH04-cancelled         | 1280x720 | 720/720    |  0 | PASS
+FH04-offline           | 1280x720 | 720/720    |  0 | PASS
+FH04-menu              | 1280x720 | 720/720    |  0 | PASS
+FH04-cancel            | 1280x720 | 720/720    |  0 | PASS
+FH04-close             | 1280x720 | 720/720    |  0 | PASS
+FH04-delete            | 1280x720 | 720/720    |  0 | PASS
+FH04-net               | 1280x720 | 720/720    |  0 | PASS

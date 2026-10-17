@@ -1,0 +1,165 @@
+MIND BREEZE 2.0 · 회원 시안 A (FM01~FM05, FM10) — fit 측정 [수정 전]
+측정: tools/member-a-run.mjs (+ member-a-lib.mjs) · 대상 6개 화면 · 29개 케이스 × 4개 뷰포트 = 116개 조합 · 서버: http://localhost:5301 (서빙 루트 designs/)
+판정: FAIL (조합 위반 24건 / 116건, 정적 grep 위반 1건)
+
+항목별 위반 건수 (조합 합계):
+  페이지 스크롤 0                     0
+  11px 이하 0                     0
+  텍스트 잘림 0                      0
+  이탈 0                          0
+  겹침 0                          0
+  터치 ≥44                        0
+  빈 영역 0                        0
+  이모지·글리프 0                     0
+  금지 용어 0                      68
+  영문 대문자 아이브로우 0                0
+  외부 http 리소스 0                 0
+  호흡 지시 문구 grep 0               0
+  금지어 파일 grep(코드·귀·게스트·OTP·QR 등)   20  코드 입력=1 6자리=5 게스트=4 코드=10
+
+셸형 내부 스크롤 요건: FM01(홈)·FM03(상세)는 내부 스크롤 0, FM02(목록)만 허용
+  FM01/FM03 내부 스크롤 > 0 조합: 0건
+
+=== 위반 상세 ===
+FAIL | FM01/empty | 390x844 | 금지어: 6자리 ; 코드
+FAIL | FM04/empty | 390x844 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/typing | 390x844 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-none | 390x844 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-closed | 390x844 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-notyet | 390x844 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM01/empty | 834x1194 | 금지어: 6자리 ; 코드
+FAIL | FM04/empty | 834x1194 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/typing | 834x1194 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-none | 834x1194 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-closed | 834x1194 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-notyet | 834x1194 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM01/empty | 1194x834 | 금지어: 6자리 ; 코드
+FAIL | FM04/empty | 1194x834 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/typing | 1194x834 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-none | 1194x834 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-closed | 1194x834 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-notyet | 1194x834 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM01/empty | 1280x720 | 금지어: 6자리 ; 코드
+FAIL | FM04/empty | 1280x720 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/typing | 1280x720 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-none | 1280x720 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-closed | 1280x720 | 금지어: 6자리 ; 게스트 ; 코드
+FAIL | FM04/error-notyet | 1280x720 | 금지어: 6자리 ; 게스트 ; 코드
+
+=== 전체 일람표 (화면/케이스 | 뷰포트 | scrollH/innerH | 내부 스크롤 | 판정) ===
+FM01/upcoming              | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM01/soon                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM01/open                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM01/live                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM01/empty                 | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=2
+FM02/list                  | 390x844  | 844/844   | 내부스크롤  589 | PASS
+FM02/invited               | 390x844  | 844/844   | 내부스크롤  655 | PASS
+FM02/apply                 | 390x844  | 844/844   | 내부스크롤  589 | PASS
+FM03/scheduled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/scheduled-offline     | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/open                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/open-offline          | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/open-1on1             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/done                  | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM03/cancelled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM04/empty                 | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=3
+FM04/typing                | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=3
+FM04/error-none            | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=3
+FM04/error-closed          | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=3
+FM04/error-notyet          | 390x844  | 844/844   | 내부스크롤    0 | FAIL banned=3
+FM05/member                | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/member-wait           | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/member-offline        | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/guest                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/guest-wait            | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM05/guest-more            | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM10/cancelled             | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM10/error                 | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM10/offline               | 390x844  | 844/844   | 내부스크롤    0 | PASS
+FM01/upcoming              | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM01/soon                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM01/open                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM01/live                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM01/empty                 | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=2
+FM02/list                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM02/invited               | 834x1194 | 1194/1194 | 내부스크롤   73 | PASS
+FM02/apply                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/scheduled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/scheduled-offline     | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/open                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/open-offline          | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/open-1on1             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/done                  | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM03/cancelled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM04/empty                 | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=3
+FM04/typing                | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=3
+FM04/error-none            | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=3
+FM04/error-closed          | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=3
+FM04/error-notyet          | 834x1194 | 1194/1194 | 내부스크롤    0 | FAIL banned=3
+FM05/member                | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/member-wait           | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/member-offline        | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/guest                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/guest-wait            | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM05/guest-more            | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM10/cancelled             | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM10/error                 | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM10/offline               | 834x1194 | 1194/1194 | 내부스크롤    0 | PASS
+FM01/upcoming              | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM01/soon                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM01/open                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM01/live                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM01/empty                 | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=2
+FM02/list                  | 1194x834 | 834/834   | 내부스크롤  323 | PASS
+FM02/invited               | 1194x834 | 834/834   | 내부스크롤  433 | PASS
+FM02/apply                 | 1194x834 | 834/834   | 내부스크롤  323 | PASS
+FM03/scheduled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/scheduled-offline     | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/open                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/open-offline          | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/open-1on1             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/done                  | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM03/cancelled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM04/empty                 | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=3
+FM04/typing                | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=3
+FM04/error-none            | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=3
+FM04/error-closed          | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=3
+FM04/error-notyet          | 1194x834 | 834/834   | 내부스크롤    0 | FAIL banned=3
+FM05/member                | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/member-wait           | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/member-offline        | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/guest                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/guest-wait            | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM05/guest-more            | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM10/cancelled             | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM10/error                 | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM10/offline               | 1194x834 | 834/834   | 내부스크롤    0 | PASS
+FM01/upcoming              | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM01/soon                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM01/open                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM01/live                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM01/empty                 | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=2
+FM02/list                  | 1280x720 | 720/720   | 내부스크롤  437 | PASS
+FM02/invited               | 1280x720 | 720/720   | 내부스크롤  547 | PASS
+FM02/apply                 | 1280x720 | 720/720   | 내부스크롤  437 | PASS
+FM03/scheduled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/scheduled-offline     | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/open                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/open-offline          | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/open-1on1             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/done                  | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM03/cancelled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM04/empty                 | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=3
+FM04/typing                | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=3
+FM04/error-none            | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=3
+FM04/error-closed          | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=3
+FM04/error-notyet          | 1280x720 | 720/720   | 내부스크롤    0 | FAIL banned=3
+FM05/member                | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/member-wait           | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/member-offline        | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/guest                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/guest-wait            | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM05/guest-more            | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM10/cancelled             | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM10/error                 | 1280x720 | 720/720   | 내부스크롤    0 | PASS
+FM10/offline               | 1280x720 | 720/720   | 내부스크롤    0 | PASS

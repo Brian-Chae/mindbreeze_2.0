@@ -1,0 +1,38 @@
+{
+ "fit": {
+  "scroll": 0,
+  "layout": 0,
+  "small": 0,
+  "clipped": 0,
+  "outside": 0,
+  "overlap": 0,
+  "touch": 0,
+  "empty": 0,
+  "glyph": 0,
+  "banned": 0,
+  "eyebrow": 0,
+  "space8": 0,
+  "nested": 0,
+  "trk": 0,
+  "av": 40,
+  "srcGlyph": 0,
+  "srcBanned": 0,
+  "srcStale": 4,
+  "idxBanned": 0
+ },
+ "sym": {
+  "S1": 0,
+  "S2": 0,
+  "S3": 0,
+  "S4": 0,
+  "S5": 0,
+  "S6": 0,
+  "S7": 0,
+  "S8": 0,
+  "S9": 0,
+  "S10": 0,
+  "MS1": 0,
+  "MS3": 0
+ },
+ "pages": 256
+}

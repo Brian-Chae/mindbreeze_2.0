@@ -1,0 +1,30 @@
+import { launch, makePages, shootAll, forEachPage, closeAll, apiLogin, authH, API, BASE } from './lib.mjs';
+const SID_A = process.env.SID_A, CODE_A = process.env.CODE_A;
+const cou = await apiLogin(process.env.MB_COUNSELOR_EMAIL, process.env.MB_COUNSELOR_PW);
+const act = async (a) => { const r = await fetch(`${API}/sessions/${SID_A}/${a}`, { method: 'POST', headers: authH(cou.access_token) }); console.log(a, r.status); return r.ok; };
+const browser = await launch({ fakeMedia: true });
+const members = await makePages(browser, { login: true });
+await forEachPage(members, async (page) => {
+  await page.goto(`${BASE}/join?code=${CODE_A}`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('[role=tablist]', { timeout: 30000 });
+  await page.getByRole('button', { name: '건너뛰기' }).first().click();
+  await page.getByRole('button', { name: '밴드 없이 진행하기' }).click();
+  await page.click('#preparation-tab-2');
+  await page.getByRole('button', { name: '기기 확인 완료' }).click();
+});
+await members.mobile.page.waitForTimeout(1500);
+await act('start');
+await members.mobile.page.waitForTimeout(9000);
+await act('end');
+await members.mobile.page.waitForTimeout(9000);
+await shootAll('S-M17', members, { settle: 1000 });
+await forEachPage(members, async (page) => { await page.getByRole('button', { name: '리포트 받기' }).first().click(); await page.waitForTimeout(800); });
+await shootAll('S-M18', members);
+await forEachPage(members, async (page) => {
+  await page.keyboard.press('Escape'); await page.waitForTimeout(500);
+  const close = page.getByRole('button', { name: /닫기/ }).first(); if (await close.count()) await close.click().catch(() => {});
+  await page.waitForTimeout(500);
+  await page.getByRole('button', { name: '오늘 상태 남기기' }).first().click(); await page.waitForTimeout(800);
+});
+await shootAll('S-M19', members);
+await closeAll(browser, members);
