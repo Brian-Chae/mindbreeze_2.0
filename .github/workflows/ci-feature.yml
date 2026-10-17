@@ -164,3 +164,21 @@ jobs:
         run: |
           pip install "$(grep -E '^pytest==' requirements.txt)"
           pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider
+
+      - name: alembic check (정보성 — 모델↔마이그레이션 드리프트 건수)
+        # 검출 전용 명령이라 마이그레이션을 생성하지 않는다. 현재 드리프트가 있어 차단하면 모든 PR 이 빨개지므로
+        # 건수만 기록한다(continue-on-error). 드리프트 정리 후 건수 상한을 두는 차단 승격은 후속.
+        continue-on-error: true
+        run: |
+          set +e
+          alembic check > "$RUNNER_TEMP/alembic-check.log" 2>&1
+          rc=$?
+          set -e
+          count=$(grep -c 'alembic.autogenerate.compare.*Detected' "$RUNNER_TEMP/alembic-check.log" || true)
+          echo "alembic check rc=$rc, 감지 ${count}건"
+          grep 'alembic.autogenerate.compare.*Detected' "$RUNNER_TEMP/alembic-check.log" | sed 's/^.*\] Detected /- /' || true
+          {
+            echo "### alembic check (정보성)"
+            echo "모델↔마이그레이션 드리프트 감지 **${count}건** (rc=${rc}). 차단 승격은 드리프트 정리 후."
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          exit $rc
