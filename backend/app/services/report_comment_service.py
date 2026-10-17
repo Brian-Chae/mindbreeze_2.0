@@ -15,17 +15,14 @@ from app.config import settings
 from app.models.record import Report, SessionRecord
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
+from app.services import session_terms
 
 logger = logging.getLogger(__name__)
 
 COMMENT_MAX_LENGTH = 1000
 GEMINI_TIMEOUT_SECONDS = 15.0
 
-_SESSION_TYPE_LABELS = {
-    "clinical": "임상심리상담",
-    "hypnosis": "최면심리상담",
-    "meditation": "명상 수업",
-}
+_SESSION_TYPE_LABELS = session_terms.type_label_table("report_comment")
 
 
 def _load_client_report(report_id: str, host_id: str, db: DBSession) -> tuple[Report, Session]:
@@ -100,9 +97,7 @@ def ensure_auto_comment(report: Report, db: DBSession) -> None:
 
 
 def _session_type_label(session: Session) -> str:
-    if session.type == "custom" and session.custom_type_name:
-        return session.custom_type_name
-    return _SESSION_TYPE_LABELS.get(session.type, "상담")
+    return session_terms.session_type_label(session.type, session.custom_type_name, variant="report_comment")
 
 
 def _draft_context(report: Report, session: Session, db: DBSession) -> dict:

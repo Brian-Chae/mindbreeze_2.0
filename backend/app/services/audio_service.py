@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
+from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +38,6 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _get_host_session(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    return s
-
-
 def _get_or_create_record(session_id: UUID, db: DBSession) -> SessionRecord:
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
     if not record:
@@ -67,7 +58,7 @@ def _emit_report_progress(session_id: str, db: DBSession) -> None:
 
 
 def start_recording(session_id: str, host_id: str, consent_audio: bool, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.AUDIO_RECORD)
     if s.status not in ("scheduled", "in_progress"):
         raise HTTPException(status_code=400, detail="종료된 세션은 녹음할 수 없습니다")
 
@@ -109,7 +100,7 @@ def _discard_local_file(path: str) -> None:
 
 
 def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.AUDIO_RECORD)
     record = _get_or_create_record(s.id, db)
     if record.status not in ("recording", "processing"):
         raise HTTPException(status_code=400, detail="녹음이 시작되지 않았습니다")
@@ -169,7 +160,7 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
 
 
 def stop_recording(session_id: str, host_id: str, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.AUDIO_RECORD)
     record = _get_or_create_record(s.id, db)
 
     # SDD-085: 수동 기록 모드(manual)에서는 stop이 no-op — STT/요약 파이프라인 미실행

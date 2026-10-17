@@ -86,6 +86,8 @@ class RecentReportInfo(BaseModel):
     id: str
     title: str
     created_at: str
+    # SDD-211: 승인 전(리뷰 중) 리포트 여부 — 가산 필드
+    in_review: bool = False
 
 
 class ClientHomeResponse(BaseModel):

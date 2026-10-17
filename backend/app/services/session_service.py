@@ -19,6 +19,8 @@ from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
 from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
+from app.services import session_terms
+from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +221,7 @@ def set_chat_enabled(session_id: str, host_id: str, enabled: bool, db: DBSession
 
     토글 시 세션 채팅방을 멱등 개설해 방이 없는 세션에서도 즉시 room_id 를 얻을 수 있다.
     """
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_CHAT_TOGGLE)
     room = ensure_session_chat_room(s.id, db)
     s.chat_enabled = bool(enabled)
     db.commit()
@@ -237,7 +239,7 @@ def get_session_chat_room(session_id: str, user_id: str, db: DBSession) -> dict:
 
     아직 방이 없는 세션(마이그레이션 이전 생성)은 host 조회 시에만 멱등 개설한다.
     """
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_CHAT_ROOM_VIEW)
     from app.services import chat_service
 
     room = chat_service.get_room_by_session(s.id, db)
@@ -428,8 +430,8 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         db,
         recipient_ids=[_to_uuid(pid) for pid in payload.participant_ids],
         include_waitlisted=True,
-        title="새 세션 예약" if initial_status == "scheduled" else "새 세션이 열렸습니다",
-        body=session.title or "세션",
+        title=session_terms.notification_title(event_type),
+        body=session.title or session_terms.notification_body_fallback(),
     )
 
     # SDD-097: 예약 클래스면 리마인더를 ETA 태스크로 예약한다(끔이면 아무것도 안 함).
@@ -582,7 +584,7 @@ def duplicate_session(
     - 원본이 템플릿(is_template=True)이더라도 결과물은 항상 실제 클래스(is_template=False)다.
     호스트 상담사만 호출할 수 있다.
     """
-    source = _get_session_as_host(session_id, host_id, db)
+    source = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DUPLICATE)
     host_uuid = _to_uuid(host_id)
     host = db.get(User, host_uuid)
     if host is None:
@@ -628,7 +630,7 @@ def save_as_template(
     title: str | None = None,
 ) -> dict:
     """SDD-095: 기존 클래스의 유형 설정을 재사용 가능한 템플릿으로 저장한다(복제 + is_template)."""
-    source = _get_session_as_host(session_id, host_id, db)
+    source = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_SAVE_TEMPLATE)
     host_uuid = _to_uuid(host_id)
     host = db.get(User, host_uuid)
     if host is None:
@@ -721,42 +723,8 @@ def list_sessions(
     return [_serialize(s, include_participant_pii=(s.host_id == uid), users=users) for s in rows], total
 
 
-def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    uid = _to_uuid(user_id)
-    if s.host_id == uid:
-        return s
-    is_participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
-        .first()
-    )
-    if is_participant:
-        return s
-    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-
-
-def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    from app.services.org_management_service import require_active_org, require_active_user_org
-    host = db.get(User, s.host_id)
-    if host:
-        require_active_user_org(host, db)
-    if s.organization_id:
-        require_active_org(s.organization_id, db)
-    return s
-
-
 def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_VIEW)
     # AUTHZ-PARTICIPANT-PII: 호스트만 참여자 PII(생년월일·성별)를 본다. 참여자 본인 조회에서는 제외.
     is_host = s.host_id == _to_uuid(user_id)
     return _with_chat_room(
@@ -765,7 +733,7 @@ def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
 
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_UPDATE)
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
@@ -883,8 +851,8 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     # SDD-093: S02 세션 변경 알림
     _notify_participants_event(
         s, "session_updated", db,
-        title="세션 정보가 변경되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_updated"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
 
     return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
@@ -900,7 +868,7 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     ``hidden_at`` 만 기록해 모든 조회·접근에서 제외하고, 원본(음성·영상·EEG raw)은 보관 스위프나
     플랫폼 관리자 삭제(original_deletion_service)로만 지운다.
     """
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DELETE)
     # SDD-209(B8 / BE-13): 준비·예정·취소 상태만 삭제할 수 있다. 열림(대기실 개방)·진행 중·완료는 거부 —
     # 열린 클래스는 먼저 취소(닫기)해야 하고, 완료된 기록은 삭제 대상이 아니다. 거부 시 알림·숨김 없음.
     if s.status not in _DELETABLE_STATUSES:
@@ -912,8 +880,8 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     _notify_participants_event(
         s, "session_deleted", db,
         include_waitlisted=True,
-        title="세션이 취소되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_deleted"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
     s.hidden_at = datetime.now(timezone.utc)
     db.commit()
@@ -942,7 +910,7 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
                       *, restrict_from: set[str] | None = None) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_TRANSITION)
     allowed_from, target = TRANSITIONS[action]
     # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
     #   cancel). effective_from 을 사전 검사와 CAS WHERE 절 양쪽에 사용해, 조회 이후 다른
@@ -1048,19 +1016,13 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
         "end": "session_completed",
         "cancel": "session_cancelled",
     }
-    _action_title = {
-        "open": "세션이 오픈되었습니다",
-        "start": "세션이 시작되었습니다",
-        "end": "세션이 종료되었습니다",
-        "cancel": "세션이 취소되었습니다",
-    }
     event_type = _action_event.get(action)
     if event_type:
         _notify_participants_event(
             s, event_type, db,
             include_waitlisted=(action == "cancel"),
-            title=_action_title.get(action, event_type),
-            body=s.title or "세션",
+            title=session_terms.notification_title(event_type),
+            body=s.title or session_terms.notification_body_fallback(),
         )
 
     return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
@@ -1133,7 +1095,7 @@ def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
       - pause/resume·이어하기는 이 함수를 호출하지 않으므로 기존 run_id 가 그대로 유지된다.
     호스트 상담사만 호출할 수 있다.
     """
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_NEW_RUN)
     if s.status in _NON_RESTARTABLE_STATUSES:
         raise HTTPException(
             status_code=400,
@@ -1413,8 +1375,8 @@ def _notify_promoted(s: Session, promoted: list[SessionParticipant], db: DBSessi
         _notify_participants_event(
             s, "session_waitlist_promoted", db,
             recipient_ids=member_ids,
-            title="대기열에서 참여자로 승격되었습니다",
-            body=s.title or "세션",
+            title=session_terms.notification_title("session_waitlist_promoted"),
+            body=s.title or session_terms.notification_body_fallback(),
         )
 
 
@@ -1478,7 +1440,7 @@ def _invite_result(target_uuid: UUID, results: list[dict]) -> dict:
 
 
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.PARTICIPANT_INVITE)
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션에는 초대할 수 없습니다")
 
@@ -1509,8 +1471,8 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
             s, "session_invited", db,
             recipient_ids=[target_uuid],
             include_waitlisted=True,
-            title="세션에 초대되었습니다",
-            body=s.title or "세션",
+            title=session_terms.notification_title("session_invited"),
+            body=s.title or session_terms.notification_body_fallback(),
         )
         return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
 
@@ -1542,15 +1504,15 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         s, "session_invited", db,
         recipient_ids=[target_uuid],
         include_waitlisted=True,
-        title="세션에 초대되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_invited"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
 
     return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
 
 
 def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.PARTICIPANT_REMOVE)
     target_uuid = _to_uuid(user_id)
     participant = (
         db.query(SessionParticipant)
@@ -1590,8 +1552,8 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         s, "session_participant_removed", db,
         recipient_ids=[target_uuid],
         include_waitlisted=True,
-        title="세션에서 제외되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_participant_removed"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
     # SDD-093: S11 대기열 승격 알림 (+ B6: 대상에게만 WS participant_promoted)
     _notify_promoted(s, promoted, db)
@@ -1602,7 +1564,7 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 
 
 def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.MARKER_ADD)
     if s.status != "in_progress":
         raise HTTPException(status_code=400, detail="진행 중인 세션에서만 마커를 추가할 수 있습니다")
 
@@ -1649,28 +1611,9 @@ def generate_livekit_token(
     return token.to_jwt()
 
 
-def _get_session_for_participant(session_id: str, user_id: str, db: DBSession) -> Session:
-    """host 또는 participant 권한으로 세션 조회"""
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    uid = _to_uuid(user_id)
-    if s.host_id == uid:
-        return s
-    is_participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
-        .first()
-    )
-    if is_participant:
-        return s
-    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-
-
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
-    s = _get_session_for_participant(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
 
     # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
@@ -2534,7 +2477,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
     feature 가 없으면(미착용/미수집) 기존 placeholder(null/unknown/idle) 동작을 유지한다.
     band_connected 는 기존 SessionParticipant 필드를 그대로 사용한다.
     """
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.LIVE_METRICS_READ)
     # 모니터링 대상은 active 참가자만 (대기열 제외)
     active = [p for p in (s.participants or []) if not p.is_waitlisted]
 
@@ -3155,7 +3098,7 @@ def report_choice_summary(session_id: str, host_id: str, db: DBSession) -> dict:
     """
     from app.services import report_scope
 
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.REPORT_CHOICE_SUMMARY_READ)
     scope = report_scope.scope_for_session(s.id, db)
     return {
         "included": len(scope.included_ids),

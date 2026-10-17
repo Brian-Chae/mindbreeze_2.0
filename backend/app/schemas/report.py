@@ -86,6 +86,8 @@ class ReportResponse(HRVMotionSummary):
     # SDD-096: 셀프 체크인(주관 상태) — 내담자 리포트는 본인 슬롯(scope=participant),
     # 상담사 리포트는 세션 전체(scope=session). 미입력이면 None.
     subjective_state: dict[str, Any] | None = None
+    # SDD-211: 승인 전 리포트를 회원에게 '리뷰 중' 으로 마스킹한 응답이면 true (가산 필드, 기본 false)
+    in_review: bool = False
 
 
 class ReportListResponse(BaseModel):

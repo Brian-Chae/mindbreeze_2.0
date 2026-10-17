@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user, get_current_user_optional
+from app.api.deps import get_current_user, get_current_user_optional, require_roles
 from app.api.v1.onboarding import _parse_date
 from app.core.database import get_db
 from app.core.redis import get_redis
@@ -65,8 +65,12 @@ from app.services import (
     session_invite_service,
     session_service,
 )
+from app.services.session_authz import SessionAction, get_session_authorized
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+
+# 세션 생성·수정·복제·템플릿 저장·새 실행 — client 만 차단한다(platform_admin 은 현행 보존, SDD-211 U4).
+SESSION_MANAGE_ROLES = ("counselor", "org_admin", "platform_admin")
 
 
 @router.get("", response_model=SessionListResponse)
@@ -86,7 +90,7 @@ def list_sessions(
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
 def create_session(
     payload: SessionCreateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
     return session_service.create_session(current_user["id"], payload, db)
@@ -204,7 +208,7 @@ def get_session(
 def update_session(
     session_id: str,
     payload: SessionUpdateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
     return session_service.update_session(session_id, current_user["id"], payload, db)
@@ -272,7 +276,7 @@ for _action in ("open", "start", "end", "cancel"):
 @router.post("/{session_id}/new-run", response_model=SessionResponse)
 def start_new_run(
     session_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
     """SDD-028: 같은 수업 정의를 "새 실행(명시적)"으로 열어 새 run_id 를 발급한다.
@@ -293,7 +297,7 @@ def start_new_run(
 def duplicate_session(
     session_id: str,
     payload: SessionDuplicateRequest | None = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
     """클래스 복제 — 유형 설정만 복사해 새 클래스(참여코드/룸/회차 신규)를 만든다.
@@ -319,7 +323,7 @@ def duplicate_session(
 def save_session_as_template(
     session_id: str,
     payload: SessionTemplateSaveRequest | None = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
     """현재 클래스의 유형 설정을 재사용 가능한 템플릿(is_template=True)으로 저장한다."""
@@ -628,7 +632,7 @@ def get_eeg_rollup(
     EEGFeatureWindow(1초 원천) 온디맨드 집계(valid_count/coverage/유효샘플 가중평균).
     SDD-028: start_bucket/end_bucket(batch key)로 필요한 버킷 구간만 조회할 수 있다.
     """
-    session_service._get_session_as_host(session_id, current_user["id"], db)
+    get_session_authorized(db, session_id, current_user["id"], SessionAction.EEG_ROLLUP_READ)
     return eeg_rollup_service.compute_rollup(
         session_id,
         db,
@@ -700,7 +704,7 @@ def get_livekit_token(
     entry/livekit-token(_compute_can_publish 적용) 경로로만 발급한다.
     """
     from fastapi import HTTPException
-    s = session_service._get_session_as_host(session_id, current_user["id"], db)
+    s = get_session_authorized(db, session_id, current_user["id"], SessionAction.LIVEKIT_TOKEN_ISSUE)
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="WebRTC 룸이 아직 생성되지 않았습니다")
     token = session_service.generate_livekit_token(

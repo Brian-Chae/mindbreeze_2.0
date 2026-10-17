@@ -589,14 +589,15 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
             # SDD-027: 분석 실패 → error 상태(신뢰도 판정 불가 — None 유지)
             report.status = "error"
             report.data_credibility = None
-        # SDD-093: 리포트 생성 실패 알림 발화 — 소유자(상담사/내담자)에게 통지
+        # SDD-093: 리포트 생성 실패 알림 발화
+        # SDD-211(U3 변경): 호스트(상담사)에게만 보낸다. 회원에게는 '리뷰 중' 으로만 보이므로 실패 알림을 중단한다.
         try:
             from app.services import notification_service
 
             if report.user_id:
                 notification_service.notify_event(
                     "report_generation_failed",
-                    report.user_id,
+                    session.host_id,
                     {
                         "title": "리포트 생성에 실패했습니다",
                         "body": f"'{session.title or '세션'}' 리포트 생성 중 오류가 발생했습니다.",
