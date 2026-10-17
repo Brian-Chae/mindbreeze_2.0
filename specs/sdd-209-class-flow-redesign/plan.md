@@ -536,3 +536,12 @@ SH1 라이트 키트(`ClassCard`·`StatusChip`·`ShellSheet` 등) → SH2 FM01 �
 - 비회원 개인정보 스크럽용 `scrub_invite_emails()` 를 제공(B12 스위프가 호출). 
 - 리포트 자동 발송(N-3): 기존 "승인 후 자동 발송" 경로가 입장 시 입력한 `report_email` 만으로 이미 동작함을 테스트로 고정(중복 0, 제외자 대상 아님). 발송 실패는 호스트 뷰 참여자 DTO `report_email_status` 로 표시(비호스트 null). OTP 분기는 건드리지 않았다(회원 1탭·구 게스트 신청 경로 유지).
 - 정원 서버 검증(BT79)은 `schemas/session.py` 의 기존 검증을 그대로 두고 테스트로 고정.
+
+### B12 기본 DB 삭제 스위프 `retention_sweep` (마이그레이션 `e036a0000049`, 비활성 배포)
+- **A1 확정 반영**: 기존 cron 2개(`sweep_stale_media_cron.py`·`sweep_stale_eeg_raw_cron.py`)는 **그대로 둔다**(현행 dev 90일 음성·영상 삭제 유지). 새 `retention_sweep` 는 `RETENTION_SWEEP_ENABLED=false`(기본)로 배포되어 실행해도 **dry-run(삭제 0)** 이며 후보 건수·바이트·보류 건수를 보고하고 `retention_sweep_runs` 에 이력을 남긴다(`backend/retention_sweep_cron.py` 로 보고서 출력). 활성화는 별도 승인 — 활성이 되면 기존 두 스위프 태스크가 `{"skipped": "replaced_by_retention_sweep"}` 로 스스로 건너뛰어 이중 실행을 막는다. **crontab 등록(deploy-dev.yml)은 이번 범위에서 변경하지 않았다.**
+- 설정값: `RETENTION_RAW_DAYS=90`·`RETENTION_GUEST_PII_DAYS=90`(세션 종료일 기준, `ended_at` 없으면 `created_at`), `RETENTION_HOLD_ALERT_DAYS=14`, **`RETENTION_APPLY_FROM`(N-5)** — 이 날짜 이후 종료된 클래스부터만 삭제하며, 비어 있으면 활성이어도 삭제를 거부하고 dry-run 으로만 동작(과거 테스트 데이터 보호). **활성화 전 `.env` 에 설정해야 한다.**
+- 삭제 범위: EEG raw 청크·음성/영상 청크·병합 영상/음성 키·STT 원문(`transcript`·`ai_summary.segments`). 지표(`eeg_feature_windows`)·리포트 본문·회원 계정은 대상 아님(N-2). 종료·취소 클래스만, 숨김(보존 전환) 클래스 포함. 파일/객체는 DB 커밋 뒤 best-effort.
+- 비회원 개인정보 스크럽: 이름·성별·생년월일·리포트 이메일·이메일 초대 주소를 비움, `session_participants.pii_scrubbed_at` 신설.
+- 연구 게이트: 연구 동의(미철회)이고 `export_state` 가 `acked/withdrawn/blocked_withdrawn/not_applicable` 이 아닌 참여자의 **EEG raw 만** 보류(음성·영상·STT 는 연구 번들 대상이 아니라 게이트 없음). `pending/exported` = 내보내기 큐 유지, `blocked_*` 는 별도 집계. 보류가 `RETENTION_RAW_DAYS + RETENTION_HOLD_ALERT_DAYS` 를 넘으면 플랫폼 관리자에게 인앱 알림 1회(`research_consents.hold_alerted_at` 로 중복 방지).
+- 임시·고아 정리(재생성 가능한 임시 데이터)는 실행 시 함께 수행: pending/failed EEG 청크, 부모 없는 미디어 청크.
+- 미해결(정책 확인 필요): 리포트 스냅샷 `reports.content.transcript_segments` 에 STT 원문이 복제돼 있어 원문 삭제가 이 사본까지 지우지 못한다(N-2 "리포트 본문은 삭제 대상 아님" 과 충돌, B0 A6). 이번에는 N-2 를 따라 건드리지 않았다.

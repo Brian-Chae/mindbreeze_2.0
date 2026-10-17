@@ -82,6 +82,18 @@ class Settings(BaseSettings):
     # SDD-019: dev 역할 시뮬레이션 로그인 기능 게이트 — 기본 False (명시적 opt-in).
     enable_dev_role_simulation: bool = False
 
+    # SDD-209(B12/BE-R2): 기본 DB 삭제 스위프(retention_sweep). 기본 **비활성** — 활성화는 dry-run 승인 후 별도 승인.
+    # 비활성이어도 dry-run 보고서는 만들 수 있다(삭제 0). 활성화하면 기존 두 cron(sweep_stale_media/eeg_raw)은 건너뛴다.
+    retention_sweep_enabled: bool = False
+    # 원본(EEG raw·음성·영상·STT 원문) 보관 일수 — 세션 종료일 기준(N-1 기본 90일)
+    retention_raw_days: int = 90
+    # 비회원 개인정보(이름·성별·생년월일·이메일, 이메일 초대 주소) 보관 일수 — 세션 종료일 기준(N-1 기본 90일)
+    retention_guest_pii_days: int = 90
+    # 연구 동의 건이 내보내기 ack 되지 않은 채 삭제 기한을 이만큼(일) 넘기면 운영 알림 1회
+    retention_hold_alert_days: int = 14
+    # N-5: 이 날짜(YYYY-MM-DD, UTC) 이후 종료된 클래스부터만 삭제 대상. 비어 있으면 실제 삭제를 거부한다(dry-run 만).
+    retention_apply_from: str = ""
+
     # SDD-197(D5): 뇌파 원본(업로드 완료분) 보관 일수. 0 이하 = 무기한(영구 보관, 기본).
     # 음성·영상은 media_cleanup_service.MEDIA_RETENTION_DAYS(90일) 별도 적용.
     eeg_raw_retention_days: int = 0

@@ -112,3 +112,7 @@ __all__ += ["ResearchConsent", "ResearchConsentEvent", "ResearchWithdrawalReques
 # SDD-209 B14: 비회원 이메일 초대
 from app.models.session_email_invite import SessionEmailInvite
 __all__ += ["SessionEmailInvite"]
+
+# SDD-209 B12: 기본 DB 삭제 스위프 실행 이력
+from app.models.retention_sweep_run import RetentionSweepRun
+__all__ += ["RetentionSweepRun"]

@@ -38,6 +38,8 @@ class ResearchConsent(Base):
     # not_applicable | pending | blocked_key_missing | blocked_identity_missing | blocked_withdrawn
     # | withdrawn | exported | acked   (exported/acked 는 B13 내보내기 배치가 갱신)
     export_state: Mapped[str] = mapped_column(String(30), nullable=False, default="not_applicable")
+    # SDD-209(B12): 삭제 보류가 임계(RETENTION_HOLD_ALERT_DAYS)를 넘겨 운영 알림을 보낸 시각(중복 알림 방지)
+    hold_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
