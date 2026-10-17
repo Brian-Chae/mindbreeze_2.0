@@ -250,6 +250,9 @@ export function measureCtaReach() {
   const foot = [...document.querySelectorAll('[data-pz="flow-foot"]')].find(vis);
   const cta = foot ? [...foot.querySelectorAll('[data-pz="flow-cta"]')].find(vis) : null;
   if (!cta) return [{ rule: 'P14', val: '하단 주 버튼 없음(해당 없음)', pass: true }];
+  // 시트가 열린 케이스는 시트가 CTA 를 덮고 푸터가 inert 이다(FR6 이 별도로 검사) — 눌림 판정은 해당 없음
+  const openSheet = [...document.querySelectorAll('[data-pz="flow-sheet"]')].find(vis);
+  if (openSheet) return [{ rule: 'P14', val: '시트 열림 — 푸터 inert, CTA 눌림 판정 해당 없음(FR6 에서 검사)', pass: true }];
   const r = cta.getBoundingClientRect();
   const inside = r.left >= -0.5 && r.right <= vw + 0.5 && r.top >= -0.5 && r.bottom <= vh + 0.5;
   const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);

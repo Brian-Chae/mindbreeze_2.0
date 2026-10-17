@@ -188,14 +188,15 @@ await scenario('[클래스] 초대 회원 입장 → 준비 → 진행 화면', 
   // SDD-209: 코드 없이 초대 행으로 입장 자격을 받는 편의 경로(/class/{id}/enter). 6자리 코드·/join?code= 는 없다.
   await p.goto(`${BASE}/class/${sessionId}/enter`, { waitUntil: 'networkidle' });
   // 입장 확인 → 고지 → (설문·밴드·기기) → 요약 → 입장. 보이는 CTA 를 순서대로 눌러 진행 화면까지 간다.
-  const steps = ['입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음', '지금 입장하기'];
+  // 시작 후 시트(`지금 입장하기`)가 뜨면 뒤의 단계 버튼이 가려지므로 가장 먼저 누른다
+  const steps = ['지금 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
   for (let round = 0; round < 12; round += 1) {
     if (await p.locator('[data-pz="app"] [data-pz="dock"]').count()) break;
     let clicked = false;
     for (const name of steps) {
       const button = p.getByRole('button', { name, exact: true });
       if (await button.count() && await button.first().isEnabled()) {
-        await button.first().click().catch(() => {});
+        await button.first().click({ timeout: 4000 }).catch(() => {});
         clicked = true;
         break;
       }

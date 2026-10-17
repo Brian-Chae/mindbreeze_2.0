@@ -1,5 +1,5 @@
 // SDD-208 — 실제 앱 경로에서 새 진행 화면이 뜨는지 확인하는 E2E (plan §7).
-//   회원: /join?code= → 대기실 건너뛰기 → 새 회원 진행 화면(링·도크) / 상담사: /sessions/:id/player → 새 상담사 진행 화면(1:1 카드·도크)
+//   회원: /class/:id/enter(초대 회원 편의 입장, SDD-209) → 준비 마법사 → 새 회원 진행 화면(링·도크) / 상담사: /sessions/:id/player → 새 상담사 진행 화면(1:1 카드·도크)
 //   가짜 미디어 장치 플래그로 카메라·마이크를 흉내 내고, 하니스 측정 함수(P1~P3·P5·PC)를 실제 화면에 그대로 적용한다.
 // 실행: E2E_PASSWORD=... [BASE_URL=... API_URL=...] node e2e/class-player/live.mjs      (기본 대상: dev 배포본)
 //       node e2e/class-player/live.mjs --stub [--base=http://127.0.0.1:5175]           (로컬 vite 개발 서버 + API 스텁: 실제 앱 라우트·페이지·컨테이너를 백엔드 없이 확인)
@@ -96,13 +96,15 @@ async function installStub(ctx, role) {
     const path = pathname.replace(/^.*\/api\/v1/, '');
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     if (path === '/auth/refresh') return json({ access_token: 'stub-token', token_type: 'bearer' });
-    if (path === '/sessions/by-code/ABC123') return json({ ...stubSession(), host_name: '채용욱' });
-    if (path === '/sessions/by-code/ABC123/join') return json({ session: stubSession(), participant_id: 'p-client', is_guest: false });
-    if (path === '/sessions/by-code/ABC123/state') {
+    if (path === '/sessions/s1/enter') return json({ entry_credential: 'stub-cred', expires_at: null, participant_id: 'p-client', is_guest: false, is_waitlisted: false, session: stubSession() });
+    if (path === '/sessions/s1/entry-state') {
       const done = stubState.status === 'completed';
-      return json({ session_id: 's1', status: stubState.status, guest_state: done ? 'complete' : 'meditation', in_progress: !done, ended: done, started_at: stubState.startedAt, title: TITLE, chat_enabled: false });
+      return json({
+        session_id: 's1', status: stubState.status, guest_state: done ? 'complete' : 'meditation', in_progress: !done, ended: done, participant_id: 'p-client',
+        is_waitlisted: false, report_included: true, started_at: stubState.startedAt, ended_at: done ? new Date().toISOString() : null, chat_enabled: false, band_connected: false,
+      });
     }
-    if (path === '/sessions/by-code/ABC123/livekit-token') return json({ detail: '상담사 화상이 아직 시작되지 않았습니다' }, 400);
+    if (path === '/sessions/s1/entry/livekit-token') return json({ detail: '상담사 화상이 아직 시작되지 않았습니다' }, 400);
     if (path === '/sessions/s1') return json(stubSession());
     if (path === '/sessions/s1/live-metrics') return json({ metrics: [stubMetric()] });
     return json({}, 404);
@@ -160,7 +162,7 @@ if (DRY) {
     await page.goto(`${BASE}/join`, { waitUntil: 'networkidle' });
     const text = await bodyText(page);
     await ctx.close();
-    if (!/클래스 코드|코드/.test(text)) throw new Error('/join 화면에 코드 입력이 없음');
+    if (!/입장 코드/.test(text)) throw new Error('/join 화면에 입장 코드 입력이 없음');
   });
   await scenario('[dry] 하니스(/design/class-player)에서 측정 함수가 실제 DOM 에 적용된다', async () => {
     const ctx = await newContext(browser, VIEWPORTS[0]);
@@ -178,7 +180,6 @@ if (DRY) {
 
 /* ───────── 실제 앱 경로: dev 백엔드(기본) 또는 --stub(API 가로채기) ───────── */
 let sessionId = STUB ? 's1' : null;
-let accessCode = STUB ? 'ABC123' : null;
 let counselorToken = null;
 
 if (!STUB) {
@@ -193,7 +194,6 @@ if (!STUB) {
     if (r.status !== 201 && r.status !== 200) throw new Error(`세션 생성 ${r.status}`);
     const s = await r.json();
     sessionId = s.id;
-    accessCode = s.access_code;
     for (const action of ['open', 'start']) {
       const t = await fetch(`${API}/sessions/${sessionId}/${action}`, { method: 'POST', headers: H(c.token) });
       if (t.status !== 200) throw new Error(`세션 ${action} ${t.status}`);
@@ -201,20 +201,32 @@ if (!STUB) {
   });
 }
 
-/** 회원이 /join?code= 로 들어가 대기실 준비를 건너뛰고 진행 화면(도크)이 뜰 때까지 */
+/** 초대 회원이 /class/:id/enter 로 들어가 준비 마법사를 건너뛰고 진행 화면(도크)이 뜰 때까지 (SDD-209: 코드·/join?code= 없음) */
 async function joinAsMember(page) {
   await signIn(page, 'client', '/app');
-  await page.goto(`${BASE}/join?code=${accessCode}`, { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: '건너뛰기' }).click().catch(() => {});
-  await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /밴드 없이 진행하기/ }).click().catch(() => {});
-  await page.waitForTimeout(400);
-  await page.getByRole('button', { name: /기기 테스트 건너뛰기/ }).click().catch(() => {});
-  await page.locator('[data-pz="app"] [data-pz="dock"]').waitFor({ timeout: 20000 });
+  await page.goto(`${BASE}/class/${sessionId}/enter`, { waitUntil: 'networkidle' });
+  // 시작 후 시트(`지금 입장하기`)가 뜨면 뒤의 단계 버튼이 가려지므로 가장 먼저 누른다
+  const steps = ['지금 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
+  for (let round = 0; round < 12; round += 1) {
+    if (await page.locator('[data-pz="app"] [data-pz="dock"]').count()) break;
+    let clicked = false;
+    for (const name of steps) {
+      const button = page.getByRole('button', { name, exact: true });
+      if ((await button.count()) && (await button.first().isEnabled())) {
+        await button.first().click({ timeout: 4000 }).catch(() => {});
+        clicked = true;
+        break;
+      }
+    }
+    await page.waitForTimeout(clicked ? 500 : 800);
+  }
+  await page.locator('[data-pz="app"] [data-pz="dock"]').waitFor({ timeout: 20000 }).catch(async () => {
+    throw new Error(`진행 화면 도크가 뜨지 않음 — 현재 화면: ${(await bodyText(page)).slice(0, 160)}`);
+  });
 }
 
-await scenario('[회원] /join?code= → 새 진행 화면(링·도크) · 카메라 기본 비공개 · 측정 위반 0', async () => {
-  if (!accessCode) throw new Error('선행 세션 생성 실패');
+await scenario('[회원] /class/:id/enter → 새 진행 화면(링·도크) · 카메라 기본 비공개 · 측정 위반 0', async () => {
+  if (!sessionId) throw new Error('선행 세션 생성 실패');
   for (const vp of VIEWPORTS) {
     const ctx = await newContext(browser, vp, 'client');
     const page = await ctx.newPage();
@@ -240,7 +252,7 @@ await scenario('[회원] /join?code= → 새 진행 화면(링·도크) · 카�
 if (!STUB) {
   // 카메라 켜기는 실제 LiveKit 방(발행 권한)이 있어야 하므로 스텁에서는 건너뛴다
   await scenario('[회원] 카메라 켜기 → 내 PiP 가 켜짐 상태가 되고 getUserMedia(video) 호출', async () => {
-    if (!accessCode) throw new Error('선행 세션 생성 실패');
+    if (!sessionId) throw new Error('선행 세션 생성 실패');
     const ctx = await newContext(browser, VIEWPORTS[0], 'client');
     const page = await ctx.newPage();
     try {
@@ -279,7 +291,7 @@ await scenario('[상담사] /sessions/:id/player → 새 진행 화면(1:1 카�
 });
 
 await scenario('[종료] 상담사 종료 → 회원 화면이 점수 없는 종료 카드(수고하셨어요)로 바뀐다', async () => {
-  if (!sessionId || !accessCode) throw new Error('선행 세션 생성 실패');
+  if (!sessionId) throw new Error('선행 세션 생성 실패');
   const ctx = await newContext(browser, VIEWPORTS[0], 'client');
   const page = await ctx.newPage();
   try {
@@ -297,7 +309,7 @@ await scenario('[종료] 상담사 종료 → 회원 화면이 점수 없는 종
     if (/\d+\s*%/.test(text)) throw new Error('종료 카드에 퍼센트 숫자가 있음');
     if (!/리포트 받기/.test(text) || !/오늘 상태 남기기/.test(text)) throw new Error('리포트 받기·오늘 상태 남기기 진입점 없음');
     await page.getByRole('button', { name: '리포트 받기' }).click();
-    await page.locator('[data-pz="sheet"]').waitFor({ timeout: 5000 });
+    await page.locator('[data-pz="flow-sheet"]').waitFor({ timeout: 5000 });
   } finally {
     await ctx.close();
   }

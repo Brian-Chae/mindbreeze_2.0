@@ -17,7 +17,7 @@ await client('다음 세션 카드: 제목·설명 글자가 흰색(어두운 �
   const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
   const at = new Date(Date.now() + 2 * 86400000).toISOString();
   const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: `E2E-히어로-${Date.now()}`, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: [cl.user.id] }) });
-  if (r.status !== 201) throw new Error(`세션 생성 ${r.status}`);
+  if (r.status !== 201) throw new Error(`클래스 생성 ${r.status}`);
   const id = (await r.json()).id;
   try {
     await go(p, '/app');
@@ -28,7 +28,7 @@ await client('다음 세션 카드: 제목·설명 글자가 흰색(어두운 �
     if (dark.length) throw new Error(`어두운 글자색: ${dark.map((d) => `${d.t} ${d.c}`).join(', ')}`);
   } finally {
     const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
-    if (d.status !== 204) throw new Error(`E2E 세션 삭제 실패 ${d.status} (id=${id})`);
+    if (d.status !== 204) throw new Error(`E2E 클래스 삭제 실패 ${d.status} (id=${id})`);
   }
 });
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
@@ -56,14 +56,17 @@ await cou('내담자 검색: 없는 이름 → 결과 없음', async (p) => {
   if ((await bodyText(p)).includes('e2e-client@e2e.looxidlabs.com')) throw new Error('검색 필터가 동작하지 않음');
 });
 await cou('내담자 초대: 폼 노출 (제출 안 함)', async (p) => { await expectText(p, '/clients/invite', '내담자 초대', '초대 링크 생성'); });
-await cou('세션: 달력·목록·예약 버튼', async (p) => { await expectText(p, '/sessions', '예약 만들기', '즉시 클래스', '전체 목록'); });
-await cou('세션 예약 창 열기/닫기', async (p) => {
-  await go(p, '/sessions');
-  await p.getByRole('button', { name: '예약 만들기' }).first().click();
-  await p.getByText('새 세션 생성').waitFor({ timeout: 8000 });
-  await p.getByRole('button', { name: '세션 생성 닫기' }).click();
+await cou('클래스: 목록·클래스 만들기 버튼(달력·타임라인 없음)', async (p) => {
+  const text = await expectText(p, '/sessions', '클래스 만들기');
+  if (/예약 만들기|타임라인|달력/.test(text)) throw new Error('캘린더·예약 모달 문구가 남아 있음');
 });
-await cou('세션 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {
+await cou('클래스 만들기: 버튼 → /sessions/new 마법사(예약 모달 없음)', async (p) => {
+  await go(p, '/sessions');
+  await p.getByRole('button', { name: /클래스 만들기/ }).first().click();
+  await p.waitForURL((u) => u.pathname === '/sessions/new', { timeout: 8000 });
+  await p.getByText('클래스 만들기').first().waitFor({ timeout: 8000 });
+});
+await cou('클래스 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {
   const token = await apiLogin('counselor');
   const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
   const at = new Date(Date.now() + 3 * 86400000).toISOString();
@@ -72,7 +75,6 @@ await cou('세션 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {
   const id = (await r.json()).id;
   try {
     await go(p, '/sessions');
-    await p.getByRole('button', { name: '전체 목록' }).click().catch(() => {});
     await p.getByText(TITLE).first().waitFor({ timeout: 10000 });
   } finally {
     const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
