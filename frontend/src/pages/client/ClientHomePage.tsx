@@ -1,11 +1,19 @@
-// 내담자 홈 — 행동 중심 재설계 (SDD-187)
-// 데스크톱 2컬럼: 좌측(다음 세션 히어로 → 초대 → 내 리포트 → 이번 주 일정) / 우측(요약 타일 → 담당 상담사 → 대화 → 알림)
+// 내담자 홈 — 행동 중심 재설계 (SDD-187) + 클래스 사전 흐름(SDD-209 FM01)
+// 데스크톱 2컬럼: 좌측(다음 클래스 히어로 → 초대 → 이번 주 클래스 → 코드로 입장하기 → 내 리포트) / 우측(요약 타일 → 담당 상담사 → 대화 → 알림)
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CalendarDays, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
-import { formatCountdown, pickUpcomingClass } from '../../lib/class/reminder';
+import { pickHeroClass } from '../../lib/class/pick-hero-class';
+import { deriveHeroAction } from '../../lib/class/enter-action';
+import { memberChipKey } from '../../lib/class/class-labels';
+import { ClassHero, ClassHeroEmpty } from '../../components/class/flow/shell/ClassHero';
+import { ClassRow } from '../../components/class/flow/shell/ClassRow';
+import { EnterByCodeLink } from '../../components/class/flow/shell/MemberHomeView';
+import { heroBackdrop, toClassRowData, toHeroData } from '../../components/class/flow/shell/shell-data';
+import '../../components/class/flow/shell/shell-kit.css';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 import { resolveReportGenerationStatus } from '../../lib/api/report-status';
 import { markRead, listNotifications, type NotificationDto } from '../../lib/api/notifications';
@@ -22,11 +30,6 @@ function formatDate(iso: string | null): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
-}
-
-function formatTime(iso: string | null): string {
-  if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function relativeTime(iso: string | null): string {
@@ -62,126 +65,30 @@ const SECTION_HEAD_CLS = 'flex items-center justify-between mb-4';
 const LINK_CLS = 'text-[13px] font-bold text-[#5F0080] hover:underline shrink-0';
 const CARD_CLS = 'rounded-2xl border border-[#E8E3EC] bg-white shadow-sm';
 
-// ── 다음 세션 히어로 ─────────────────────────────────────────────
-
-function HeroCard({
-  session,
-  counselorName,
-  onEnter,
-}: {
-  session: SessionDto;
-  counselorName?: string;
-  onEnter: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const isLive = session.status === 'in_progress' || session.status === 'open' || session.status === 'ready';
-  const countdown = session.scheduled_at ? formatCountdown(session.scheduled_at) : null;
-
-  const handleCopy = async (): Promise<void> => {
-    if (!session.access_code) return;
-    try {
-      await navigator.clipboard.writeText(session.access_code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* 클립보드 실패 시 무시 */
-    }
-  };
-
-  return (
-    <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:flex lg:min-h-[168px] lg:items-center lg:justify-between lg:gap-6 lg:p-6">
-      {/* 좌측 콘텐츠 */}
-      <div className="min-w-0 lg:flex-1">
-        <div className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-        <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight text-white sm:text-[20px] md:text-[22px] lg:text-[30px]">
-          {session.title || '세션'}
-        </h2>
-        <p className="mt-1 text-[13px] text-white opacity-90">
-          {session.scheduled_at ? `${formatDate(session.scheduled_at)} ${formatTime(session.scheduled_at)}` : '즉시 입장 가능'}
-          {counselorName ? ` · ${counselorName}` : ''}
-        </p>
-
-        {session.access_code && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-xl bg-white/15 border border-white/25 px-3.5 py-2 font-mono text-[16px] font-extrabold tracking-[0.12em]">
-              {session.access_code}
-            </span>
-            <button
-              type="button"
-              onClick={() => void handleCopy()}
-              className="rounded-xl bg-white/15 border border-white/25 px-[13px] py-2 text-[13px] font-bold min-h-[40px] hover:bg-white/25 transition-colors"
-            >
-              {copied ? '복사됨' : '참여코드 복사'}
-            </button>
-          </div>
-        )}
-
-        <p className="mt-3 text-[12px] text-white opacity-85">LINK BAND 선택 착용 · Chrome/Edge 권장</p>
-      </div>
-
-      {/* 우측 액션 */}
-      <div className="mt-4 flex flex-col items-start gap-3 lg:mt-0 lg:shrink-0 lg:items-end">
-        {countdown && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-[13px] font-bold">
-            {countdown}
-          </span>
-        )}
-        <button
-          type="button"
-          onClick={onEnter}
-          className="w-full rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors lg:mt-0 lg:w-auto lg:min-w-[160px]"
-        >
-          {isLive ? '지금 입장하기 →' : '입장하기 →'}
-        </button>
-      </div>
-    </section>
-  );
-}
-
-// ── 세션 없음 히어로 ─────────────────────────────────────────────
-
-function EmptyHero({ onBook }: { onBook: () => void }) {
-  return (
-    <section className="rounded-[20px] bg-gradient-to-br from-[#6E1A8C] via-[#5F0080] to-[#4B0066] p-5 text-white shadow-[0_16px_40px_rgba(95,0,128,0.24)] lg:p-6">
-      <div className="text-[12px] font-bold uppercase tracking-[0.08em] opacity-85">다음 세션</div>
-      <h2 className="mt-1 text-[18px] font-extrabold leading-tight tracking-tight text-white sm:text-[20px] md:text-[22px] lg:text-[30px]">
-        아직 예약된 세션이 없어요
-      </h2>
-      <p className="mt-1 text-[13px] text-white">
-        상담사와 상담·명상 세션을 예약하고 변화를 시작해보세요.
-      </p>
-      <button
-        type="button"
-        onClick={onBook}
-        className="mt-4 w-full rounded-lg bg-white px-5 py-3 text-[15px] font-extrabold text-[#5F0080] min-h-[48px] hover:bg-[#F5EDFC] transition-colors lg:w-auto lg:min-w-[160px]"
-      >
-        세션 예약하기 →
-      </button>
-    </section>
-  );
-}
-
 // ── 요약 타일 ────────────────────────────────────────────────────
 
 function SummaryTiles({
   dDay,
   newReportCount,
-  weekSessionCount,
+  weekClassCount,
   completedCount,
-  onCopyCode,
+  onOpenNext,
+  onOpenReports,
+  onOpenClasses,
 }: {
   dDay: string;
   newReportCount: number;
-  weekSessionCount: number;
+  weekClassCount: number;
   completedCount: number;
-  onCopyCode: () => void;
+  onOpenNext: () => void;
+  onOpenReports: () => void;
+  onOpenClasses: () => void;
 }) {
   const tiles = [
-    { label: '다음 세션까지', value: dDay, action: '참여코드 복사', onClick: onCopyCode, purple: true },
-    { label: '새 리포트', value: String(newReportCount), action: '바로 확인', purple: true },
-    { label: '이번 주 세션', value: String(weekSessionCount), action: '일정 보기' },
-    { label: '완료 세션', value: String(completedCount), action: '리포트 보기' },
+    { label: '다음 클래스까지', value: dDay, action: '클래스 보기', onClick: onOpenNext, purple: true },
+    { label: '새 리포트', value: String(newReportCount), action: '바로 확인', onClick: onOpenReports, purple: true },
+    { label: '이번 주 클래스', value: String(weekClassCount), action: '목록 보기', onClick: onOpenClasses },
+    { label: '완료 클래스', value: String(completedCount), action: '리포트 보기', onClick: onOpenReports },
   ];
 
   return (
@@ -198,7 +105,7 @@ function SummaryTiles({
             {t.value}
           </div>
           <div className="mt-1 flex items-center gap-1 text-[12px] font-bold text-[#5F0080]">
-            {t.action} <span aria-hidden>→</span>
+            {t.action} <ChevronRight size={14} aria-hidden="true" />
           </div>
         </button>
       ))}
@@ -256,14 +163,13 @@ export default function ClientHomePage() {
 
   // ── 파생 데이터 ────────────────────────────────────────────────
 
-  // 다음 세션: 진행중/오픈/ready 최우선, 없으면 가장 임박한 예약
-  const upcomingClass = useMemo(() => pickUpcomingClass(sessions), [sessions]);
-  const heroSession = useMemo(() => {
-    const live = sessions.find(
-      (s) => s.status === 'in_progress' || s.status === 'open' || s.status === 'ready',
-    );
-    return live ?? upcomingClass ?? null;
-  }, [sessions, upcomingClass]);
+  // 다음 클래스: 진행 중 > 입장 가능 > 가장 임박한 예약 > 일정 없는 준비 (ready 는 열린 것이 아니다)
+  const heroSession = useMemo(() => pickHeroClass(sessions), [sessions]);
+  const heroData = useMemo(() => (heroSession ? toHeroData(heroSession) : null), [heroSession]);
+  const heroAction = useMemo(
+    () => deriveHeroAction(heroSession ? memberChipKey(heroSession.status, heroSession.scheduled_at) : 'scheduled'),
+    [heroSession],
+  );
 
   // 내담자용 리포트만
   const clientReports = useMemo(
@@ -275,7 +181,7 @@ export default function ClientHomePage() {
     [reports],
   );
 
-  // 이번 주 일정 (예약 세션, 시간순)
+  // 이번 주 클래스 (예약, 시간순)
   const weekSessions = useMemo(() => {
     const now = new Date();
     return sessions
@@ -287,10 +193,10 @@ export default function ClientHomePage() {
   // 요약 타일 데이터
   const dDay = useMemo(() => {
     if (!heroSession) return '-';
-    if (!heroSession.scheduled_at) return 'NOW';
+    if (!heroSession.scheduled_at) return '지금';
     const diff = new Date(heroSession.scheduled_at).getTime() - Date.now();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days > 0 ? `D-${days}` : days === 0 ? 'D-DAY' : 'NOW';
+    return days > 0 ? `D-${days}` : days === 0 ? '오늘' : '지금';
   }, [heroSession]);
 
   const newReportCount = useMemo(
@@ -298,7 +204,7 @@ export default function ClientHomePage() {
     [reports],
   );
 
-  const weekSessionCount = useMemo(() => weekSessions.length, [weekSessions]);
+  const weekClassCount = useMemo(() => weekSessions.length, [weekSessions]);
 
   const completedCount = useMemo(
     () => sessions.filter((s) => s.status === 'completed').length,
@@ -390,10 +296,10 @@ export default function ClientHomePage() {
     [sessionInvites, removeSessionInvite, navigate],
   );
 
-  const handleCopyHeroCode = useCallback(() => {
-    if (!heroSession?.access_code) return;
-    void navigator.clipboard.writeText(heroSession.access_code).catch(() => {});
-  }, [heroSession]);
+  // 히어로 CTA: 상세 화면으로(입장 처리는 상세의 입장하기 CTA)
+  const openHeroClass = useCallback(() => {
+    if (heroSession) navigate(`/app/sessions/${heroSession.id}`);
+  }, [heroSession, navigate]);
 
   const openChat = useCallback(
     (roomId: string) => navigate(`/app/chat/${roomId}`),
@@ -422,18 +328,14 @@ export default function ClientHomePage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <div className="sh-scope mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       {/* ── 좌측 컬럼 ── */}
       <div className="flex min-w-0 flex-col gap-6">
-        {/* 다음 세션 히어로 (항상 표시) */}
-        {heroSession ? (
-          <HeroCard
-            session={heroSession}
-            counselorName={getCounselorName(heroSession)}
-            onEnter={() => navigate(`/app/sessions/${heroSession.id}`)}
-          />
+        {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
+        {heroData ? (
+          <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} />
         ) : (
-          <EmptyHero onBook={() => navigate('/app/sessions')} />
+          <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions')} />
         )}
 
         {/* 초대된 클래스 (조건부) */}
@@ -456,12 +358,41 @@ export default function ClientHomePage() {
           </section>
         )}
 
+        {/* 이번 주 클래스 */}
+        <section className="flex flex-col gap-2">
+          <div className={SECTION_HEAD_CLS}>
+            <h2 className={SECTION_TITLE_CLS}>이번 주 클래스</h2>
+            <span className="text-[13px] text-[#6F6F6F]">{weekSessions.length}개</span>
+          </div>
+          {weekSessions.length > 0 ? (
+            weekSessions.map((s) => (
+              <ClassRow key={s.id} data={toClassRowData({ ...s, host_name: getCounselorName(s) ?? null })} onOpen={(id) => navigate(`/app/sessions/${id}`)} />
+            ))
+          ) : (
+            <div className="rounded-2xl border border-[#DDD0EA] bg-[#FBF8FD] p-6 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F5EDFC] text-[#5F0080]">
+                <CalendarDays size={20} aria-hidden="true" />
+              </div>
+              <p className="text-[15px] font-bold text-[#1F1F1F]">이번 주 예정된 클래스가 없어요</p>
+              <p className="mt-1 text-[13px] text-[#6F6F6F]">상담사에게 클래스를 신청해 보세요.</p>
+              <button
+                type="button"
+                onClick={() => navigate('/app/sessions')}
+                className="mt-4 rounded-lg border border-[#DDD0EA] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
+              >
+                클래스 신청하기
+              </button>
+            </div>
+          )}
+          <EnterByCodeLink onClick={() => navigate('/join')} />
+        </section>
+
         {/* 내 리포트 */}
         <section>
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>내 리포트</h2>
             <button type="button" onClick={() => navigate('/app/reports')} className={LINK_CLS}>
-              전체 보기 <span aria-hidden>›</span>
+              전체 보기 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
           {clientReports.length > 0 ? (
@@ -498,7 +429,7 @@ export default function ClientHomePage() {
                           생성 중
                         </span>
                       )}
-                      <span className="text-[#767676]" aria-hidden>›</span>
+                      <ChevronRight size={16} aria-hidden="true" className="text-[#767676]" />
                     </div>
                   </button>
                 );
@@ -510,69 +441,6 @@ export default function ClientHomePage() {
             </div>
           )}
         </section>
-
-        {/* 이번 주 일정 */}
-        <section>
-          <div className={SECTION_HEAD_CLS}>
-            <h2 className={SECTION_TITLE_CLS}>이번 주 일정</h2>
-            <button
-              type="button"
-              onClick={() => navigate('/app/sessions')}
-              className="rounded-lg border border-[#DDD0EA] bg-white px-3 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
-            >
-              달력 보기
-            </button>
-          </div>
-          {weekSessions.length > 0 ? (
-            <div className="rounded-2xl border border-[#E8E3EC] bg-white px-5 py-2 shadow-sm">
-              {weekSessions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => navigate(`/app/sessions/${s.id}`)}
-                  className="flex w-full items-center gap-3 border-b border-[#F0ECF2] py-4 text-left last:border-0"
-                >
-                  <div className="w-[76px] shrink-0">
-                    <div className="text-[15px] font-extrabold text-[#1F1F1F]">
-                      {formatTime(s.scheduled_at)}
-                    </div>
-                    <div className="text-[12px] font-semibold text-[#767676]">
-                      {s.scheduled_at
-                        ? `${new Date(s.scheduled_at).getMonth() + 1}/${new Date(s.scheduled_at).getDate()}`
-                        : ''}
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[15px] font-bold text-[#1F1F1F]">
-                      {s.title || '세션'}
-                    </div>
-                    <div className="truncate text-[12px] text-[#6F6F6F]">
-                      {getCounselorName(s) ?? ''}
-                    </div>
-                  </div>
-                  <span className="shrink-0 rounded-full bg-[#F2F3F8] px-2.5 py-1 text-[12px] font-bold text-[#6F6F6F]">
-                    예정
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-[#DDD0EA] bg-[#FBF8FD] p-6 text-center">
-              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#F5EDFC] text-[20px]">
-                📅
-              </div>
-              <p className="text-[15px] font-bold text-[#1F1F1F]">이번 주 예정된 세션이 없습니다</p>
-              <p className="mt-1 text-[12px] text-[#6F6F6F]">상담사에게 세션을 신청해보세요.</p>
-              <button
-                type="button"
-                onClick={() => navigate('/app/sessions')}
-                className="mt-4 rounded-lg border border-[#DDD0EA] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[40px] hover:bg-[#F5EDFC] transition-colors"
-              >
-                세션 신청하기
-              </button>
-            </div>
-          )}
-        </section>
       </div>
 
       {/* ── 우측 레일 ── */}
@@ -581,9 +449,11 @@ export default function ClientHomePage() {
         <SummaryTiles
           dDay={dDay}
           newReportCount={newReportCount}
-          weekSessionCount={weekSessionCount}
+          weekClassCount={weekClassCount}
           completedCount={completedCount}
-          onCopyCode={handleCopyHeroCode}
+          onOpenNext={openHeroClass}
+          onOpenReports={() => navigate('/app/reports')}
+          onOpenClasses={() => navigate('/app/sessions')}
         />
 
         {/* 담당 상담사 */}
@@ -592,7 +462,7 @@ export default function ClientHomePage() {
             <div className={SECTION_HEAD_CLS}>
               <h2 className={SECTION_TITLE_CLS}>담당 상담사</h2>
               <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-                상담 신청 <span aria-hidden>›</span>
+                상담 신청 <ChevronRight size={14} aria-hidden="true" className="inline" />
               </button>
             </div>
             <div className="flex items-center gap-3">
@@ -612,7 +482,7 @@ export default function ClientHomePage() {
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>최근 대화</h2>
             <button type="button" onClick={() => navigate('/app/chat')} className={LINK_CLS}>
-              전체 <span aria-hidden>›</span>
+              전체 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
           {recentChats.length > 0 ? (
@@ -658,7 +528,7 @@ export default function ClientHomePage() {
           <div className={SECTION_HEAD_CLS}>
             <h2 className={SECTION_TITLE_CLS}>새 알림</h2>
             <button type="button" onClick={() => navigate('/app/notifications')} className={LINK_CLS}>
-              전체 <span aria-hidden>›</span>
+              전체 <ChevronRight size={14} aria-hidden="true" className="inline" />
             </button>
           </div>
           {recentNotifications.length > 0 ? (

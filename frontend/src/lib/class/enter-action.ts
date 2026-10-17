@@ -42,3 +42,32 @@ export function deriveHeroAction(chip: ClassChipKey): EnterAction {
       return { kind: 'view', label: '클래스 보기', disabled: false, note: '', line: true };
   }
 }
+
+export type HeroBoxIcon = 'bell' | 'clock' | 'check' | 'activity' | 'send';
+
+export interface HeroCopy {
+  icon: HeroBoxIcon;
+  title: string;
+  sub: string;
+}
+
+export interface HeroCopyInput {
+  /** 시작까지 남은 시간(`30분`). 없으면 빈 문자열 */
+  startsInLabel: string;
+  /** 진행 경과(`12분째`). 없으면 빈 문자열 */
+  elapsedLabel: string;
+}
+
+/** 홈 히어로 안내 박스 문구(상태별) */
+export function deriveHeroCopy(chip: ClassChipKey, input: HeroCopyInput): HeroCopy {
+  switch (chip) {
+    case 'open':
+      return { icon: 'check', title: '지금 입장할 수 있어요', sub: '입장하면 간단한 준비를 먼저 해요' };
+    case 'live':
+      return { icon: 'activity', title: `${input.elapsedLabel || '지금'} 진행 중이에요`, sub: '지금 들어가도 괜찮아요' };
+    case 'soon':
+      return { icon: 'clock', title: input.startsInLabel ? `${input.startsInLabel} 뒤에 클래스가 열려요` : '곧 클래스가 열려요', sub: '미리 입장해서 기다릴 수 있어요' };
+    default:
+      return { icon: 'bell', title: '클래스가 열리면 알려드려요', sub: '열리기 전에 한 번 더 알림을 보내요' };
+  }
+}
