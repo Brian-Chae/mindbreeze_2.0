@@ -164,3 +164,9 @@
 8. certbot dry-run 때 서버에 Let's Encrypt 스테이징 계정 디렉터리가 생김(`/etc/letsencrypt/accounts`) — 무해, 설정 파일은 삭제함.
 9. 공용 SNS `mindbreeze-alerts` 를 dev 와 같이 사용 — 알림 문구로 `mb-prod-` 접두사로 구분.
 10. 사전 조사 상 `gpg` 첫 실행으로 맥에 `~/.gnupg` 디렉터리가 생성됨(더미 테스트, 키 없음).
+
+## 6. Phase C 보정 (2026-10-17, `t07`·`t08` 멱등 재실행)
+- SG `mb-prod-ec2` 에 **UDP 50000–50200** 추가(LiveKit RTC, 기존 규칙 유지). 현재 인바운드: TCP 80·443·7881·3478·5349 / UDP 3478·49152–49200·50000–50200.
+- `mb-prod-ec2-role` 인라인 정책에 `SnsPublishAlerts`(sns:Publish → `mindbreeze-alerts` 단일 토픽) 추가. 릴리스 버킷 읽기(`S3ReleasesRead`/`S3ReleasesList`)는 기존 존재 확인.
+- **신규 IAM 역할 `mb-prod-release-build`** (`arn:aws:iam::187768779388:role/mb-prod-release-build`): release-build 워크플로는 `environment:` 가 없어 배포 역할(environment:production 한정)을 쓸 수 없으므로 전용 역할 신설. 신뢰 = OIDC, `sub` ∈ {`repo:Brian-Chae/mindbreeze_2.0:ref:refs/heads/main`, `…:ref:refs/tags/release-*`}. 권한 = `mindbreeze-prod-releases/releases/*` PutObject + 버킷 List 뿐. 릴리스 버킷 정책의 허용 주체에 추가(`t08`).
+- GitHub **저장소 변수**(환경 변수 아님 — release-build 가 environment 없이 참조) 4개 설정: `AWS_RELEASE_BUILD_ROLE_ARN`, `AWS_DEPLOY_ROLE_ARN`, `PROD_INSTANCE_ID`, `RELEASE_BUCKET`. 값은 ARN·ID 이며 비밀 아님.

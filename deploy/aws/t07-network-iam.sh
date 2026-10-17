@@ -82,6 +82,7 @@ allow "$SG_EC2" tcp 3478 3478  $A turn-tcp
 allow "$SG_EC2" udp 3478 3478  $A turn-udp
 allow "$SG_EC2" tcp 5349 5349  $A turns-tls
 allow "$SG_EC2" udp 49152 49200 $A turn-relay-udp
+allow "$SG_EC2" udp 50000 50200 $A livekit-rtc-udp   # Phase C 보정: LiveKit UDP 고정 범위(render.py LIVEKIT_UDP_PORT_START=50000)
 # RDS: EC2 SG 에서 오는 5432 만
 aws ec2 authorize-security-group-ingress --group-id "$SG_RDS" --ip-permissions \
   "IpProtocol=tcp,FromPort=5432,ToPort=5432,UserIdGroupPairs=[{GroupId=$SG_EC2,Description=postgres-from-ec2}]" >/dev/null 2>"$MB_STATE_DIR/err" \
@@ -114,6 +115,7 @@ EC2_POLICY="$(cat <<JSON
  {"Sid":"S3ProdBuckets","Effect":"Allow","Action":["s3:ListBucket","s3:GetBucketLocation","s3:ListBucketMultipartUploads"],"Resource":["arn:aws:s3:::mindbreeze-prod"]},
  {"Sid":"S3ReleasesRead","Effect":"Allow","Action":["s3:GetObject","s3:GetObjectVersion"],"Resource":["arn:aws:s3:::mindbreeze-prod-releases/*"]},
  {"Sid":"S3ReleasesList","Effect":"Allow","Action":["s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::mindbreeze-prod-releases"]},
+ {"Sid":"SnsPublishAlerts","Effect":"Allow","Action":["sns:Publish"],"Resource":["arn:aws:sns:$MB_REGION:$MB_ACCOUNT:mindbreeze-alerts"]},
  {"Sid":"SsmParamsRead","Effect":"Allow","Action":["ssm:GetParameter","ssm:GetParameters","ssm:GetParametersByPath"],"Resource":["arn:aws:ssm:$MB_REGION:$MB_ACCOUNT:parameter/mindbreeze/prod","arn:aws:ssm:$MB_REGION:$MB_ACCOUNT:parameter/mindbreeze/prod/*"]},
  {"Sid":"KmsDecryptProd","Effect":"Allow","Action":["kms:Decrypt","kms:DescribeKey"],"Resource":["$KEY_ARN"]},
  {"Sid":"CertbotDns01List","Effect":"Allow","Action":["route53:ListHostedZones","route53:ListHostedZonesByName","route53:GetChange"],"Resource":"*"},
@@ -163,4 +165,25 @@ JSON
 )"
 aws iam put-role-policy --role-name $DROLE --policy-name mb-prod-github-deploy-inline --policy-document "$DEPLOY_POLICY"
 save deploy_role_arn "$(aws iam get-role --role-name $DROLE --query Role.Arn --output text)"
+
+### 7. 릴리스 빌드 역할 (Phase C 보정) — release-build 워크플로(environment 없음)가 releases 버킷에 PUT 만 하는 전용 역할.
+#   신뢰: main 브랜치 / release-* 태그에서 실행된 워크플로만(정확 sub 패턴). 읽기·삭제·SSM·기타 권한 없음.
+RROLE=mb-prod-release-build
+TRUST_RB="$(cat <<JSON
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Federated":"$OIDC_ARN"},"Action":"sts:AssumeRoleWithWebIdentity",
+ "Condition":{"StringEquals":{"token.actions.githubusercontent.com:aud":"sts.amazonaws.com"},
+ "StringLike":{"token.actions.githubusercontent.com:sub":["repo:$REPO:ref:refs/heads/main","repo:$REPO:ref:refs/tags/release-*"]}}}]}
+JSON
+)"
+if ! aws iam get-role --role-name $RROLE >/dev/null 2>&1; then
+  log "릴리스 빌드 역할 $RROLE 생성"
+  aws iam create-role --role-name $RROLE --assume-role-policy-document "$TRUST_RB" --max-session-duration 3600 --tags "Key=project,Value=mindbreeze" "Key=env,Value=prod" >/dev/null
+else
+  aws iam update-assume-role-policy --role-name $RROLE --policy-document "$TRUST_RB"
+fi
+RB_POLICY='{"Version":"2012-10-17","Statement":[
+ {"Sid":"ReleasesPutOnly","Effect":"Allow","Action":["s3:PutObject"],"Resource":"arn:aws:s3:::mindbreeze-prod-releases/releases/*"},
+ {"Sid":"ReleasesList","Effect":"Allow","Action":["s3:ListBucket","s3:GetBucketLocation"],"Resource":"arn:aws:s3:::mindbreeze-prod-releases"}]}'
+aws iam put-role-policy --role-name $RROLE --policy-name mb-prod-release-build-inline --policy-document "$RB_POLICY"
+save release_build_role_arn "$(aws iam get-role --role-name $RROLE --query Role.Arn --output text)"
 log "T-7 완료"
