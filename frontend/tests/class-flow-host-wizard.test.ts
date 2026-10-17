@@ -1,7 +1,7 @@
 // SDD-209 H1 — 만들기 마법사 순수 로직: 단계 전이·유형/방식/인원·녹음·서버 페이로드
 import { describe, expect, it } from 'vitest';
 import {
-  buildCreatePayload, createInitialDraft, createInitialState, fmtDay, fmtDuration, isDraftDirty, maskEmail, wizardReducer,
+  buildCreatePayload, capacityMax, clampCapacity, createInitialDraft, createInitialState, fmtDay, fmtDuration, isDraftDirty, maskEmail, wizardReducer,
   type WizardDraft, type WizardMember, type WizardState,
 } from '../src/lib/class/class-wizard';
 
@@ -119,5 +119,53 @@ describe('표시 도우미', () => {
   it('기본값이면 이탈 가드가 필요 없고 입력이 생기면 필요하다', () => {
     expect(isDraftDirty(createInitialDraft())).toBe(false);
     expect(isDraftDirty({ ...createInitialDraft(), title: 'a' })).toBe(true);
+  });
+});
+
+describe('정원 스텐퍼 (D-5 ③)', () => {
+  it('상한: 온라인 그룹 50 · 오프라인 그룹 100 · 1:1 1명', () => {
+    expect(capacityMax('online', 'group')).toBe(50);
+    expect(capacityMax('offline', 'group')).toBe(100);
+    expect(capacityMax('online', 'solo')).toBe(1);
+    expect(capacityMax('offline', 'solo')).toBe(1);
+  });
+
+  it('기본 정원은 10명이고 2명 밑으로 내려가지 않는다', () => {
+    const s = createInitialState();
+    expect(s.draft.capacity).toBe(10);
+    expect(run(s, ...Array.from({ length: 20 }, () => ({ type: 'stepCapacity', delta: -1 }) as const)).draft.capacity).toBe(2);
+  });
+
+  it('온라인 그룹은 50명에서 멈춘다', () => {
+    const s = createInitialState({ ...createInitialDraft(), capacity: 49 });
+    expect(run(s, { type: 'stepCapacity', delta: 1 }).draft.capacity).toBe(50);
+    expect(run(s, { type: 'stepCapacity', delta: 1 }, { type: 'stepCapacity', delta: 1 }).draft.capacity).toBe(50);
+  });
+
+  it('오프라인 그룹은 100명까지, 온라인으로 돌아오면 50명으로 줄인다', () => {
+    const off = run(createInitialState({ ...createInitialDraft(), capacity: 99 }), { type: 'setPlace', place: 'offline' }, { type: 'stepCapacity', delta: 1 }, { type: 'stepCapacity', delta: 1 });
+    expect(off.draft.capacity).toBe(100);
+    expect(run(off, { type: 'setPlace', place: 'online' }).draft.capacity).toBe(50);
+  });
+
+  it('정원을 줄이면 초과 선택 회원을 정리한다', () => {
+    const members = Array.from({ length: 8 }, (_, i) => member(i + 1));
+    const s = run(createInitialState({ ...createInitialDraft(), members }), { type: 'patch', patch: { capacity: 5 } }, { type: 'stepCapacity', delta: -1 });
+    expect(s.draft.capacity).toBe(4);
+    expect(s.draft.members).toHaveLength(4);
+  });
+
+  it('회원 선택 한도는 정원, 1:1 은 1명', () => {
+    let s = createInitialState({ ...createInitialDraft(), capacity: 3 });
+    for (let i = 1; i <= 5; i += 1) s = run(s, { type: 'toggleMember', member: member(i) });
+    expect(s.draft.members).toHaveLength(3);
+    expect(run(s, { type: 'setSize', size: 'solo' }).draft.members).toHaveLength(1);
+  });
+
+  it('서버 max_participants: 그룹은 정원, 1:1 은 1', () => {
+    expect(buildCreatePayload({ ...createInitialDraft(), capacity: 30 }, BASE, false).max_participants).toBe(30);
+    expect(buildCreatePayload({ ...createInitialDraft(), size: 'solo', capacity: 30 }, BASE, false).max_participants).toBe(1);
+    expect(buildCreatePayload({ ...createInitialDraft(), place: 'offline', capacity: 100 }, BASE, false).max_participants).toBe(100);
+    expect(clampCapacity(120, 'offline', 'group')).toBe(100);
   });
 });

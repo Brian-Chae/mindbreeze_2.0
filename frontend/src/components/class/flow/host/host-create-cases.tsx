@@ -12,7 +12,8 @@ function wizardCase(step: WizardStep, description: string, patch: Partial<Wizard
 }
 
 export const hostCreateCases: Record<string, FlowCaseEntry> = {
-  'FH02a:online-group': wizardCase(1, '온라인 · 그룹'),
+  'FH02a:online-group': wizardCase(1, '온라인 · 그룹 · 정원 10명'),
+  'FH02a:online-group-max': wizardCase(1, '온라인 그룹 정원 50명 도달 · + 비활성 + 안내', { capacity: 50 }),
   'FH02a:online-1to1': wizardCase(1, '온라인 · 1:1 (최대 1명 고정)', { size: 'solo' }),
   'FH02a:offline-group': wizardCase(1, '오프라인 · 그룹 (주소 입력)', { place: 'offline' }),
   'FH02a:offline-1to1': wizardCase(1, '오프라인 · 1:1', { place: 'offline', size: 'solo' }),

@@ -6,9 +6,9 @@
 .pz-root input {font: inherit;}
 .pz-root button:focus-visible, .pz-root input:focus-visible {outline: 2px solid var(--mb-pale); outline-offset: 2px;}
 .pz-root .fh-tight {white-space: nowrap;}
-.pz-root .fh-wiz .fl-top-title {font-size: var(--fs-15);}
-.pz-root .fh-wiz .fl-label {line-height: 20px;}
-.pz-root .fh-wiz .fl-steps {flex: none;}
+.pz-root.fh-wiz .fl-top-title {font-size: var(--fs-15);}
+.pz-root.fh-wiz .fl-label {line-height: 20px;}
+.pz-root.fh-wiz .fl-steps {flex: none;}
 .pz-root .fh-card {padding: 16px; display: flex; flex-direction: column; gap: 16px;}
 @media (min-width: 600px) {
 .pz-root .fh-card {padding: 24px;}
@@ -58,8 +58,8 @@
 .pz-root .fh-stepper b {text-align: center; font-size: var(--fs-15); font-weight: 700; white-space: nowrap;}
 .pz-root .fh-stepper button {width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1);}
 .pz-root .fh-stepper button[disabled] {opacity: 0.4;}
-.pz-root .fh-wiz .fl-body.fh-fill .fl-col {flex: 1; min-height: 0; max-height: 640px;}
-.pz-root .fh-wiz .fh-fill .fh-card {flex: 1; min-height: 0;}
+.pz-root.fh-wiz .fl-body.fh-fill .fl-col {flex: 1; min-height: 0; max-height: 640px;}
+.pz-root.fh-wiz .fh-fill .fh-card {flex: 1; min-height: 0;}
 .pz-root .fh-pchips {display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center;}
 .pz-root .fh-pchips .hint {font-size: var(--fs-13); color: var(--tx-lo);}
 .pz-root .fh-pchip {display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 600;}
@@ -109,5 +109,5 @@
 .pz-root .fh-inv .sub {margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5;}
 .pz-root .fh-inv .sub.bad {color: var(--warn);}
 .pz-root .fh-inv .av svg {width: 20px; height: 20px;}
-.pz-root .fh-wiz .fh-fill .fh-codecard {flex: none;}
-.pz-root .fh-wiz .fh-fill .fh-invcard {flex: 1; min-height: 0;}
+.pz-root.fh-wiz .fh-fill .fh-codecard {flex: none;}
+.pz-root.fh-wiz .fh-fill .fh-invcard {flex: 1; min-height: 0;}

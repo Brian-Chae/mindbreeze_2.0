@@ -2,9 +2,9 @@
 import type { Dispatch } from 'react';
 import { Heart, Leaf, MapPin, Moon, MoreHorizontal, Pencil, Sparkles, Video, VideoOff, Users, Mic, Waves, Volume2 } from 'lucide-react';
 import type { LinkbandMode } from '../../../../lib/api/session';
-import { WIZARD_TYPES, type WizardAction, type WizardDraft, type WizardType, type WizardUi } from '../../../../lib/class/class-wizard';
+import { capacityMax, MIN_CAPACITY, WIZARD_TYPES, type WizardAction, type WizardDraft, type WizardType, type WizardUi } from '../../../../lib/class/class-wizard';
 import { FlowH1 } from '../shared/flow-primitives';
-import { FhCard, FhForm, FhGroup, FhInfo, FhSeg, FhStaticRow, FhToggleRow } from './host-flow-atoms';
+import { FhCard, FhForm, FhGroup, FhInfo, FhSeg, FhStaticRow, FhStepper, FhToggleRow } from './host-flow-atoms';
 
 export interface WizardStepProps {
   draft: WizardDraft;
@@ -23,6 +23,7 @@ const BAND_INFO: Readonly<Record<LinkbandMode, string>> = {
 /** FH02a 유형·진행 방식·인원 */
 export function StepType({ draft, dispatch }: WizardStepProps) {
   const online = draft.place === 'online';
+  const capMax = capacityMax(draft.place, draft.size);
   return (
     <FhCard>
       <FlowH1>어떤 클래스를 만들까요?</FlowH1>
@@ -91,7 +92,27 @@ export function StepType({ draft, dispatch }: WizardStepProps) {
             ]}
             onChange={(size) => dispatch({ type: 'setSize', size })}
           />
-          {draft.size === 'solo' ? <FhInfo>1:1은 참여자를 최대 1명으로 고정해요.</FhInfo> : null}
+          {draft.size === 'solo' ? (
+            <FhInfo>1:1은 참여자를 최대 1명으로 고정해요.</FhInfo>
+          ) : (
+            <>
+              <FhStepper
+                label="정원"
+                text={`정원 ${draft.capacity}명`}
+                decreaseLabel="정원 줄이기"
+                increaseLabel="정원 늘리기"
+                decreaseDisabled={draft.capacity <= MIN_CAPACITY}
+                increaseDisabled={draft.capacity >= capMax}
+                onDecrease={() => dispatch({ type: 'stepCapacity', delta: -1 })}
+                onIncrease={() => dispatch({ type: 'stepCapacity', delta: 1 })}
+              />
+              <FhInfo warn={draft.capacity >= capMax}>
+                {draft.capacity >= capMax
+                  ? `${online ? '온라인' : '오프라인'} 그룹은 최대 ${capMax}명이라 더 늘릴 수 없어요.`
+                  : `${online ? '온라인' : '오프라인'} 그룹은 최대 ${capMax}명까지 정할 수 있어요.`}
+              </FhInfo>
+            </>
+          )}
         </FhGroup>
       </FhForm>
     </FhCard>

@@ -69,6 +69,41 @@ describe('FH02a 유형·방식·인원', () => {
   });
 });
 
+describe('FH02a 정원 스텐퍼', () => {
+  it('그룹 기본 정원 10명과 최대 안내', async () => {
+    await mount(1);
+    expect(text()).toContain('정원 10명');
+    expect(text()).toContain('온라인 그룹은 최대 50명까지 정할 수 있어요.');
+  });
+
+  it('+/- 로 정원이 바뀐다', async () => {
+    await mount(1);
+    await click(container.querySelector('[aria-label="정원 늘리기"]'));
+    expect(text()).toContain('정원 11명');
+    await click(container.querySelector('[aria-label="정원 줄이기"]'));
+    await click(container.querySelector('[aria-label="정원 줄이기"]'));
+    expect(text()).toContain('정원 9명');
+  });
+
+  it('온라인 그룹 50명이면 + 가 비활성이고 안내가 바뀐다', async () => {
+    await mount(1, { capacity: 50 });
+    expect((container.querySelector('[aria-label="정원 늘리기"]') as HTMLButtonElement).disabled).toBe(true);
+    expect(text()).toContain('온라인 그룹은 최대 50명이라 더 늘릴 수 없어요.');
+  });
+
+  it('오프라인 그룹은 최대 100명', async () => {
+    await mount(1, { place: 'offline', capacity: 60 });
+    expect((container.querySelector('[aria-label="정원 늘리기"]') as HTMLButtonElement).disabled).toBe(false);
+    expect(text()).toContain('오프라인 그룹은 최대 100명까지 정할 수 있어요.');
+  });
+
+  it('1:1 은 스텐퍼 없이 1명 고정 안내', async () => {
+    await mount(1, { size: 'solo' });
+    expect(container.querySelector('[aria-label="정원 늘리기"]')).toBeNull();
+    expect(text()).toContain('1:1은 참여자를 최대 1명으로 고정해요.');
+  });
+});
+
 describe('FH02b LINK BAND·녹음', () => {
   it('필수여도 참가를 막지 않는 권장 문구', async () => {
     await mount(2, { band: 'required' });

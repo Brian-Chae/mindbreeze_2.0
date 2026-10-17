@@ -23,6 +23,8 @@ export interface WizardDraft {
   customName: string;
   place: FlowPlace;
   size: FlowSize;
+  /** 그룹 정원(1:1 은 항상 1명). 기본 10, 온라인 그룹 최대 50·오프라인 그룹 최대 100 */
+  capacity: number;
   band: LinkbandMode;
   /** 음성 녹음 */
   voice: boolean;
@@ -56,6 +58,22 @@ export interface WizardState {
   ui: WizardUi;
 }
 
+export const DEFAULT_CAPACITY = 10;
+export const MIN_CAPACITY = 2;
+export const ONLINE_GROUP_MAX = 50;
+export const OFFLINE_GROUP_MAX = 100;
+
+/** 정원 상한: 1:1 은 1명 고정, 그룹은 장소별(서버 검증 `le=100` 안) */
+export function capacityMax(place: FlowPlace, size: FlowSize): number {
+  if (size === 'solo') return 1;
+  return place === 'offline' ? OFFLINE_GROUP_MAX : ONLINE_GROUP_MAX;
+}
+
+export function clampCapacity(value: number, place: FlowPlace, size: FlowSize): number {
+  if (size === 'solo') return 1;
+  return Math.max(MIN_CAPACITY, Math.min(capacityMax(place, size), value));
+}
+
 export const MAX_DURATION_MIN = 480;
 export const MIN_DURATION_MIN = 5;
 export const MAX_DAY_OFFSET = 13;
@@ -82,6 +100,7 @@ export function createInitialDraft(): WizardDraft {
     customName: '',
     place: 'online',
     size: 'group',
+    capacity: DEFAULT_CAPACITY,
     band: 'optional',
     voice: true,
     video: true,
@@ -180,6 +199,7 @@ export type WizardAction =
   | { type: 'setPlace'; place: FlowPlace }
   | { type: 'setSize'; size: FlowSize }
   | { type: 'setWhen'; when: WizardWhen }
+  | { type: 'stepCapacity'; delta: number }
   | { type: 'stepDuration'; delta: number }
   | { type: 'stepDay'; delta: number }
   | { type: 'stepTime'; delta: number }
@@ -197,13 +217,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-/** 1:1 은 참여자 1명 고정, 그룹은 `memberLimit` 까지 */
+/** 1:1 은 참여자 1명 고정, 그룹은 정원까지 */
 export function memberLimit(draft: WizardDraft): number {
-  return draft.size === 'solo' ? 1 : GROUP_MEMBER_LIMIT;
+  return draft.size === 'solo' ? 1 : draft.capacity;
 }
-
-/** 정원 스텐퍼 도입 전의 그룹 기본 선택 한도(서버 기본 정원과 같다) */
-export const GROUP_MEMBER_LIMIT = 10;
 
 function withDraft(state: WizardState, patch: Partial<WizardDraft>): WizardState {
   return { ...state, draft: { ...state.draft, ...patch } };
@@ -228,8 +245,15 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
       return state.step <= 1 ? state : { ...state, step: (state.step - 1) as WizardStep };
     case 'patch':
       return withDraft(state, action.patch);
-    case 'setPlace':
-      return withDraft(state, { place: action.place });
+    case 'setPlace': {
+      const capacity = clampCapacity(draft.capacity, action.place, draft.size === 'solo' ? 'group' : draft.size);
+      const next = { ...draft, place: action.place, capacity };
+      return withDraft(state, { place: action.place, capacity, members: trimMembers(next) });
+    }
+    case 'stepCapacity': {
+      const capacity = clampCapacity(draft.capacity + action.delta, draft.place, 'group');
+      return withDraft(state, { capacity, members: trimMembers({ ...draft, capacity }) });
+    }
     case 'setSize': {
       const next = { ...draft, size: action.size };
       return withDraft(state, { size: action.size, members: trimMembers(next) });
@@ -344,5 +368,5 @@ export function buildCreatePayload(draft: WizardDraft, base: Date, force: boolea
 
 /** 서버 `max_participants`. 1:1 은 1명 고정 */
 export function maxParticipantsOf(draft: WizardDraft): number {
-  return draft.size === 'solo' ? 1 : GROUP_MEMBER_LIMIT;
+  return draft.size === 'solo' ? 1 : clampCapacity(draft.capacity, draft.place, 'group');
 }
