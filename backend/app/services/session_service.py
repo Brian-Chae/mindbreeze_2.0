@@ -1025,6 +1025,10 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
         except Exception as exc:
             # SDD-101: finalize는 best-effort(종료 API 500 방지)이나 예외를 삼키지 않고 로그로 남긴다.
             logger.exception("[session] audio finalize failed (best-effort): %s", exc)
+        # SDD-209(B13): 종료 후 연구 동의 건을 내보내기 큐에 올린다(번들 생성·업로드는 cron 이 이어받는다, best-effort).
+        from app.services import research_export_service
+
+        research_export_service.on_session_completed(s.id, db)
         # SDD-086: 세션 종료 시 리포트 자동 생성 — counselor 1건 + participant별 client.
         # 리포트 생성은 audio_service.finalize_on_session_end 의 Celery chain(STT→요약→리포트)에서
         # 비동기 처리된다. 여기서는 동기 생성하지 않아 세션 종료 API 응답을 지연시키지 않는다.

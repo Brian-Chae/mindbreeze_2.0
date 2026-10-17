@@ -545,3 +545,12 @@ SH1 라이트 키트(`ClassCard`·`StatusChip`·`ShellSheet` 등) → SH2 FM01 �
 - 연구 게이트: 연구 동의(미철회)이고 `export_state` 가 `acked/withdrawn/blocked_withdrawn/not_applicable` 이 아닌 참여자의 **EEG raw 만** 보류(음성·영상·STT 는 연구 번들 대상이 아니라 게이트 없음). `pending/exported` = 내보내기 큐 유지, `blocked_*` 는 별도 집계. 보류가 `RETENTION_RAW_DAYS + RETENTION_HOLD_ALERT_DAYS` 를 넘으면 플랫폼 관리자에게 인앱 알림 1회(`research_consents.hold_alerted_at` 로 중복 방지).
 - 임시·고아 정리(재생성 가능한 임시 데이터)는 실행 시 함께 수행: pending/failed EEG 청크, 부모 없는 미디어 청크.
 - 미해결(정책 확인 필요): 리포트 스냅샷 `reports.content.transcript_segments` 에 STT 원문이 복제돼 있어 원문 삭제가 이 사본까지 지우지 못한다(N-2 "리포트 본문은 삭제 대상 아님" 과 충돌, B0 A6). 이번에는 N-2 를 따라 건드리지 않았다.
+
+### B13 연구 DB 내보내기 배치 (마이그레이션 `e036a0000050`, 비활성)
+- **S3 스테이징 pull 방식 확정**: 운영→Spark push 없음. 번들 `research-export/<batch_id>/{sessions,subjects,eeg_raw,features}.parquet + manifest.json` 을 스테이징 prefix 에만 쓰고(manifest 가 마지막), Spark 가 `GET /research-export/batches`(서비스 토큰)로 목록을 보고 pull 한 뒤 `POST /research-export/ack`(batch_id + manifest sha256)로 회신하면 해당 동의 건 `export_state: pending → exported(업로드) → acked`. 서비스 토큰은 `RESEARCH_EXPORT_ACK_TOKEN`(.env 전용, 비면 503). **Spark 실접속·실전송 없음**, `RESEARCH_EXPORT_ENABLED=false` 기본.
+- `research_withdrawal_requests` 는 B11 에서 만든 것을 재사용(이번 마이그레이션은 `research_export_batches`·`research_export_items` 2개만). FK/CASCADE 없음.
+- **허용 필드 화이트리스트**(번들 컬럼이 목록과 정확히 같지 않으면 업로드 0) + 문자열 셀 스캔(이메일·전화 패턴, 이 배치 참가자의 이름·이메일·세션 제목/메모 원문). 원본 session/participant/user UUID·이름·이메일·전화·STT·음성·영상·호스트/기관 식별자·**절대 시각 없음**: 세션/참여자는 연구 키 HMAC 가명(`session_pseudo`·`participant_pseudo`), 시각은 참여자 기준 상대 ms(`t_rel_ms`/`start_rel_ms`), 생년월은 `YYYY-MM`(N-4).
+- **PPG/ACC**: raw 저장이 없으므로(B0 S6) 번들은 EEG raw(payload 바이트 그대로 + 해석 메타) + EEG 지표 + PPG/ACC **파생 지표**(sdnn·rmssd·lf/hf·heart_rate·respiratory_rate·motion)만 담는다. 계약 문구 "EEG/PPG/ACC raw" 는 이에 맞춰 정정.
+- 누적: 동의 건·내용 해시 단위 항목(append-only). 같은 해시면 건너뛰고(중복 제거), 내용이 늘면 새 revision. 종료 훅(`on_session_completed`)이 큐(`pending`)에 올리고, B12 삭제 보류가 삭제 전 미적재분을 같은 큐에 유지한다. 철회: 미ack 배치 취소+스테이징 객체 삭제, ack 직전 철회도 취소, 남은 유효 건은 다시 `pending`. 실패: 부분 업로드 정리·배치 failed·연속 실패 `RESEARCH_EXPORT_MAX_ATTEMPTS`(5)에 닿으면 관리자 알림 1회.
+- 의존성 추가: `pyarrow==26.0.0`(requirements.txt) — Parquet 번들용. **dev 배포 시 requirements 설치가 필요**하다.
+- 미해결: ① 장비 시계(`device_timestamp_ms`)의 절대 시각 의미는 계속 미확인이라 상대화로 회피 ② 배치 크기 상한(256MB) 초과 시 분할 정책 없음(실패 처리) ③ cron 등록(`research_export_cron.py`)·스테이징 prefix IAM·Spark 쪽 pull 계정은 별도 인프라 승인 사항.

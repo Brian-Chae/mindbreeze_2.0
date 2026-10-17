@@ -3,7 +3,7 @@
 from fastapi import APIRouter
 from app.config import settings
 from app.api.v1 import normalization
-from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications
+from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications, research_export
 from app.api.v1 import class_audio
 # SDD-188: AI 에이전트 채널(내담자 전용)
 from app.api.v1 import agent
@@ -29,6 +29,7 @@ router.include_router(video.router)
 router.include_router(records.router)
 router.include_router(reports.router)
 router.include_router(admin.router)
+router.include_router(research_export.router)
 router.include_router(signup_applications.router)
 router.include_router(signup_applications.admin_router)
 router.include_router(notifications.router)

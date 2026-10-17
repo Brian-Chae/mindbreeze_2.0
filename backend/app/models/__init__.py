@@ -116,3 +116,7 @@ __all__ += ["SessionEmailInvite"]
 # SDD-209 B12: 기본 DB 삭제 스위프 실행 이력
 from app.models.retention_sweep_run import RetentionSweepRun
 __all__ += ["RetentionSweepRun"]
+
+# SDD-209 B13: 연구 DB 내보내기 배치
+from app.models.research_export import ResearchExportBatch, ResearchExportItem
+__all__ += ["ResearchExportBatch", "ResearchExportItem"]

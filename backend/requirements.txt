@@ -26,6 +26,7 @@ google-auth==2.53.0
 
 # AWS / Storage
 boto3==1.43.9
+pyarrow==26.0.0  # SDD-209 B13: 연구 DB 내보내기 번들(Parquet)
 
 # Validation
 pydantic==2.13.4

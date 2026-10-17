@@ -48,6 +48,16 @@ class Settings(BaseSettings):
     # 키 교체는 버전 번호(research_id_key_version)를 올리고 RESEARCH_ID_KEY_V{n} 을 추가하는 방식(정기 교체 안 함).
     research_id_key_v1: str = ""
     research_id_key_version: int = 1
+    # SDD-209(B13): 연구 DB 내보내기. 기본 비활성 — 활성화는 스테이징 prefix·IAM 인프라 승인 후.
+    research_export_enabled: bool = False
+    # S3 스테이징 prefix (Spark 가 pull). 이 prefix 아래에만 쓴다.
+    research_export_prefix: str = "research-export/"
+    # ack API 서비스 토큰 — 서버 .env 전용(RESEARCH_EXPORT_ACK_TOKEN). 값은 어떤 로그·응답에도 싣지 않는다. 비어 있으면 ack 거부.
+    research_export_ack_token: str = ""
+    # 같은 세션 배치가 연속 실패한 횟수가 이 값에 닿으면 플랫폼 관리자에게 1회 알린다
+    research_export_max_attempts: int = 5
+    # 한 배치의 최대 바이트(초과 시 배치 실패 — 분할 정책은 후속)
+    research_export_max_batch_bytes: int = 256 * 1024 * 1024
     refresh_token_expire_days: int = 14
 
     # Resend Email
