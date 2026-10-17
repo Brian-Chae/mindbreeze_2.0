@@ -53,7 +53,8 @@ def pg_conn(pg_engine: Engine) -> Iterator[Connection]:
         try:
             yield conn
         finally:
-            outer.rollback()
+            if outer.is_active:
+                outer.rollback()
 
 
 @pytest.fixture
