@@ -16,6 +16,7 @@ import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
+import { useWaitingRoomPresence } from '../../hooks/useWaitingRoomPresence';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
 import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
@@ -25,6 +26,7 @@ import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
 import { buildSummaryRows, parseRetentionDays, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
+import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -49,6 +51,8 @@ export default function EntryPage() {
   const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
   const [startedDismissed, setStartedDismissed] = useState(false);
+  /** 밴드 단계에서 본 마지막 상태 — 준비 현황(presence)으로 상담사 로비에 중계된다(서버 저장 없음) */
+  const [bandSnapshot, setBandSnapshot] = useState<BandSnapshot | null>(null);
 
   // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(실패하면 만료 안내)
   useEffect(() => {
@@ -111,6 +115,28 @@ export default function EntryPage() {
 
   // 대기·진행 중에는 화면이 꺼지지 않게 한다(class-join-page 와 같은 기준)
   useWakeLock(machine.phase === 'wait' || machine.phase === 'live');
+
+  // 준비 중(마법사·시작 대기)인 동안 상담사 로비에 내 준비 현황을 알린다. 대기열·진행·종료·상태 화면에서는 보내지 않는다.
+  const presenceReadiness = useMemo(
+    () => buildMemberReadiness({
+      place: info?.locationType ?? 'online',
+      bandMode: info ? bandModeOf(info.linkbandMode) : 'none',
+      survey: prep.draft.survey,
+      bandOutcome: prep.draft.bandOutcome,
+      mic: prep.draft.mic,
+      band: bandSnapshot,
+    }),
+    [info, prep.draft.survey, prep.draft.bandOutcome, prep.draft.mic, bandSnapshot],
+  );
+  useWaitingRoomPresence({
+    sessionId,
+    participantId: entry?.participantId ?? null,
+    nickname: displayName,
+    readiness: presenceReadiness,
+    enabled: entry !== null && (machine.phase === 'wizard' || machine.phase === 'wait'),
+    skipAuth: !isAuthenticated,
+    entryCredential: entry?.credential ?? null,
+  });
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -276,6 +302,7 @@ export default function EntryPage() {
       <BandStepContainer
         bandMode={bandMode} place={place} steps={stepsView}
         startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
+        onBandChange={setBandSnapshot}
         onDone={(outcome) => {
           prep.patch({ bandOutcome: outcome });
           dispatch({ type: 'next', steps });

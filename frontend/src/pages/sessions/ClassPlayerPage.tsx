@@ -73,6 +73,7 @@ import {
 import { HostPrepContainer } from '../../components/class/flow/host/HostPrepContainer';
 import { HostStateScreen } from '../../components/class/flow/host/HostStateScreen';
 import { useMediaCheck } from '../../hooks/useMediaCheck';
+import { leadOffFromBand } from '../../lib/class/flow/member-presence';
 import { endedDurationMin } from '../../lib/class/flow/host-ending-model';
 import { deriveHostStateKind, type HostStateAction, type HostStateKind } from '../../lib/class/flow/host-state-model';
 import type { OpenPrefs } from '../../lib/class/flow/host-open';
@@ -1279,6 +1280,8 @@ export default function ClassPlayerPage() {
       participantId: entry.participantId,
       nickname: entry.nickname,
       readiness: entry.readiness ?? null,
+      // BE-10: 중계된 전극 접촉(채널별 boolean 일 때만). 모르면 null
+      leadOff: leadOffFromBand(entry.readiness?.band),
     }));
     const ctx: LobbyContext = {
       place: session.location_type === 'offline' ? 'offline' : 'online',

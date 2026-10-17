@@ -22,6 +22,11 @@ vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({
   submitEntryCheckin: (...a: unknown[]) => submitEntryCheckin(...a),
 }));
 
+const presenceCalls: Array<Record<string, unknown>> = [];
+vi.mock('../src/hooks/useWaitingRoomPresence', () => ({
+  useWaitingRoomPresence: (options: Record<string, unknown>) => { presenceCalls.push(options); },
+}));
+
 const bandStepState = { state: 'idle' as string };
 vi.mock('../src/hooks/useBandStep', () => ({
   useBandStep: () => ({ state: bandStepState.state, leadOff: null, battery: 80, connect: vi.fn(), disconnect: vi.fn() }),
@@ -160,6 +165,20 @@ function renderPage(): Promise<void> {
     </MemoryRouter>,
   );
 }
+
+describe('EntryPage — 상담사 로비로 준비 현황 중계 (BE-10)', () => {
+  it('준비 마법사 동안 입장 자격·준비 현황(완료 boolean 3종 + 밴드 계약)으로 presence 를 켠다', async () => {
+    presenceCalls.length = 0;
+    seedEntry();
+    getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
+    await renderPage();
+    expect(presenceCalls.at(-1)).toMatchObject({ enabled: false }); // 입장 확인 화면에서는 보내지 않는다
+    await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '입장하기')?.click(); });
+    const last = presenceCalls.at(-1) as { enabled: boolean; entryCredential: string; participantId: string; readiness: Record<string, unknown> };
+    expect(last).toMatchObject({ enabled: true, entryCredential: 'cred', participantId: 'p1' });
+    expect(last.readiness).toMatchObject({ surveyDone: false, bandDone: false, deviceDone: false });
+  });
+});
 
 describe('EntryPage', () => {
   it('저장된 입장 자격으로 상태를 조회하고(헤더용 자격 전달) 열려 있으면 입장하기를 보여 준다', async () => {
