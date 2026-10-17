@@ -5,6 +5,8 @@
 set -euo pipefail
 RID="${1:?RELEASE_ID}"; SHA="${2:?GIT_SHA}"; OUT="${3:?출력 디렉터리}"; MIGREPORT="${4:-}"; RUN_ID="${5:-local}"
 [ -d frontend/dist ] || { echo "frontend/dist 없음 — 먼저 빌드" >&2; exit 2; }
+mkdir -p "$OUT"; OUT="$(cd "$OUT" && pwd)"   # 절대 경로화 — 아래 서브셸이 cd 하므로 상대 경로면 tar 출력 위치가 깨진다
+[ -z "$MIGREPORT" ] || MIGREPORT="$(cd "$(dirname "$MIGREPORT")" && pwd)/$(basename "$MIGREPORT")"
 STAGE="$OUT/stage/release"
 rm -rf "$OUT/stage"; mkdir -p "$STAGE/backend" "$STAGE/deploy"
 cp -R frontend/dist "$STAGE/dist"
