@@ -2037,6 +2037,8 @@ def get_entry_state(
         "participant_state": _participant_log_state(s.status),
         "is_waitlisted": bool(p.is_waitlisted),
         "report_included": bool(p.report_included),
+        "started_at": s.started_at,
+        "ended_at": s.ended_at,
         "band_connected": p.band_connected,
         "device_status": device_status,
         "signal_state": _signal_state_from_signal(sq),

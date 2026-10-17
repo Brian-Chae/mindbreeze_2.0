@@ -1,7 +1,7 @@
 // SDD-209 H9 — 상담사 시작 전·종료 구간 컨테이너. ClassPlayerPage 의 상태·핸들러를 props 로 받아
 // 세팅(FH05) → 로비(FH06/06a) → 시작 확인(FH07) → 나가기·닫기(FH08) → 종료(FH09) → 닫힘·오류(FH10) 를 잇는다.
 // 이 파일은 ClassPlayerPage 를 수정하지 않는다(교체는 통합 Task I2). 화면 상태는 phase 로만 정한다.
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { LeadOffStatus } from '../../../../lib/eeg/types/eeg';
 import { decideOpen, resolveOpenPrefs, type OpenPrefs } from '../../../../lib/class/flow/host-open';
 import { deriveEnding, type EndingInput } from '../../../../lib/class/flow/host-ending-model';
@@ -60,7 +60,7 @@ export interface HostPrepContainerProps {
     bgm: { tracks: readonly BgmTrack[]; selectedId: string | null; playing: boolean; progress: number; timeText: string; volume: number; onSelect: (id: string) => void; onTogglePlay: () => void; onVolume: (v: number) => void };
     band: { connected: boolean; leadOff: LeadOffStatus | null; connecting?: boolean; onConnect: () => void; onDisconnect: () => void };
     speak: { raised: readonly SpeakPerson[]; speaking: readonly SpeakPerson[]; busyId?: string | null; onAllow: (id: string) => void; onStop: (id: string) => void };
-    chat: { enabled: boolean; messages: readonly LobbyChatMessage[]; busy?: boolean; onToggle: () => void; onSend: (text: string) => void };
+    chat: { enabled: boolean; messages: readonly LobbyChatMessage[]; busy?: boolean; node?: ReactNode; onToggle: () => void; onSend: (text: string) => void };
   };
   /** 시작: 녹음 선언(record|manual)과 함께 페이지가 transition → LiveKit → audio/start 순서를 수행한다 */
   onStart: (audio: StartAudioPlan) => void;
@@ -190,6 +190,7 @@ export function HostPrepContainer(props: HostPrepContainerProps) {
         speak={props.sheets.speak}
         chat={{
           enabled: props.sheets.chat.enabled,
+          node: props.sheets.chat.node,
           messages: props.sheets.chat.messages,
           busy: props.sheets.chat.busy,
           draft,

@@ -637,3 +637,6 @@ class EntryStateResponse(GuestSessionStateResponse):
     is_waitlisted: bool = False
     # 본인의 리포트 반영 선택(기본 제외). 타인 선택은 어디에도 내려가지 않는다.
     report_included: bool = False
+    # 서버 기준 클래스 시작·종료 시각 — 종료 화면의 `함께한 시간`을 클라이언트 관찰 시각으로 근사하지 않기 위함.
+    started_at: datetime | None = None
+    ended_at: datetime | None = None

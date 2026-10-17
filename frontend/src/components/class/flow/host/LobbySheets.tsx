@@ -285,6 +285,8 @@ export interface LobbyChatMessage {
 
 export interface ChatSheetProps {
   enabled: boolean;
+  /** 실제 채팅방(ChatRoom)을 시트 안에 넣을 때. 있으면 messages/입력줄 대신 이 노드를 보인다 */
+  node?: ReactNode;
   messages: readonly LobbyChatMessage[];
   busy?: boolean;
   draft: string;
@@ -293,7 +295,24 @@ export interface ChatSheetProps {
   onSend: () => void;
 }
 
-export function ChatSheetBody({ enabled, messages, busy = false, draft, onDraft, onToggle, onSend }: ChatSheetProps) {
+export function ChatSheetBody({ enabled, node, messages, busy = false, draft, onDraft, onToggle, onSend }: ChatSheetProps) {
+  const toggleRow = (
+    <Row
+      ok={enabled}
+      icon={<MessageCircle size={20} aria-hidden="true" />}
+      title="회원 채팅"
+      sub={enabled ? '켜짐' : '꺼짐'}
+      trail={<button type="button" className={enabled ? 'fhb-sw on' : 'fhb-sw'} role="switch" aria-checked={enabled} aria-label="회원 채팅" disabled={busy} onClick={onToggle} />}
+    />
+  );
+  if (node !== undefined) {
+    return (
+      <>
+        {toggleRow}
+        {enabled ? node : <Empty icon={<MessageCircle size={24} aria-hidden="true" />} title="채팅이 꺼져 있어요" sub="켜면 회원이 대기실에서도 메시지를 보낼 수 있어요" />}
+      </>
+    );
+  }
   return (
     <>
       <Row

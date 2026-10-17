@@ -25,7 +25,9 @@ import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { ClassActionSheet, type ClassActionKind } from '../../components/class/flow/shell/ClassActionSheet';
 import { HostDetailView } from '../../components/class/flow/shell/HostDetailView';
 import { HostMenuSheet } from '../../components/class/flow/shell/HostMenuSheet';
-import { toHostDetailData } from '../../components/class/flow/shell/host-shell-data';
+import { toHostDetailData, toMailInviteInput } from '../../components/class/flow/shell/host-shell-data';
+import { EMAIL_INVITE_COOLDOWN_SEC, inviteByEmail, listEmailInvites, type InviteEmailItem } from '../../lib/api/class-flow-host';
+import { maskEmail } from '../../lib/class/flow/member-format';
 import '../../components/class/flow/shell/shell-kit.css';
 
 /** FE-RT-003: WS 참여자 메트릭을 상세 화면 참여자 스키마로 매핑한다(활성 참여자 기준). */
@@ -263,7 +265,45 @@ export default function SessionDetailPage() {
     }
   };
 
-  const data = useMemo(() => (session ? toHostDetailData(session) : null), [session]);
+  // SDD-209 B14: 이메일 초대 목록(요청 결과 — 전달 확인이 아니다)과 다시 보내기
+  const [mailItems, setMailItems] = useState<InviteEmailItem[]>([]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const loadMailInvites = useCallback(async (): Promise<void> => {
+    if (!id) return;
+    try {
+      const res = await listEmailInvites(id);
+      setMailItems(res.invites);
+      setNowMs(Date.now());
+    } catch {
+      // 목록을 못 받으면 이 구역만 그리지 않는다 — 클래스 상세에는 영향이 없다
+    }
+  }, [id]);
+  useEffect(() => {
+    void loadMailInvites();
+  }, [loadMailInvites]);
+  const mailInputs = useMemo(
+    () => mailItems.map((item) => toMailInviteInput(item, new Date(nowMs), EMAIL_INVITE_COOLDOWN_SEC, maskEmail)),
+    [mailItems, nowMs],
+  );
+  // 쿨다운 안에 있는 항목이 있으면 1초마다 남은 시간을 갱신한다
+  const hasCooldown = mailInputs.some((m) => m.cooldownSec > 0);
+  useEffect(() => {
+    if (!hasCooldown) return undefined;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasCooldown]);
+  const handleResendMail = useCallback(async (inviteId: string): Promise<void> => {
+    const target = mailItems.find((item) => item.invite_id === inviteId);
+    if (!id || !target?.email) return;
+    try {
+      await inviteByEmail(id, [target.email]);
+    } catch {
+      // 요청 결과는 목록에서 다시 확인한다
+    }
+    await loadMailInvites();
+  }, [id, mailItems, loadMailInvites]);
+
+  const data = useMemo(() => (session ? toHostDetailData(session, { mailInvites: mailInputs }) : null), [session, mailInputs]);
 
   if (error && !session) {
     return (
@@ -322,7 +362,7 @@ export default function SessionDetailPage() {
             onRequestAction={(kind) => setSheet(kind)}
             onInvite={() => setShowInvite((v) => !v)}
             onRemove={(userId) => void handleRemoveParticipant(userId)}
-            onResend={() => { /* 이메일 초대 재발송은 B14 API 연결 후 활성화된다 */ }}
+            onResend={(inviteId) => void handleResendMail(inviteId)}
             placeEditor={editingLocation ? (
               <SessionLocationEditor
                 key={session.id}

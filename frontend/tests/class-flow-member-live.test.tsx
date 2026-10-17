@@ -110,7 +110,7 @@ import EntryPage from '../src/pages/class/EntryPage';
 function stateDto(over: Partial<EntryStateDto> = {}): EntryStateDto {
   return {
     session_id: 's1', status: 'open', guest_state: 'waiting', in_progress: false, ended: false, participant_id: 'p1',
-    is_waitlisted: false, report_included: false, chat_enabled: false, band_connected: false, ...over,
+    is_waitlisted: false, report_included: false, started_at: null, ended_at: null, chat_enabled: false, band_connected: false, ...over,
   };
 }
 
@@ -174,5 +174,17 @@ describe('EntryPage — 진행 화면 연결 (M9)', () => {
     await act(async () => { window.dispatchEvent(new Event('online')); });
     expect(text()).toContain('수고하셨어요');
     expect(text()).toContain('보낼 리포트가 없어요');
+  });
+  it('종료 화면의 함께한 시간은 서버가 내려 준 시작·종료 시각의 차이다(처음 본 시각 근사 없음)', async () => {
+    seed();
+    getEntryState.mockResolvedValue(stateDto({ status: 'in_progress', started_at: '2026-10-17T01:00:00Z' }));
+    await renderPage();
+    const find = (label: string): HTMLButtonElement | undefined => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => (b.textContent ?? '').trim() === label);
+    await act(async () => { find('입장하기')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('지금 입장하기')?.click(); });
+    getEntryState.mockResolvedValue(stateDto({ status: 'completed', ended: true, started_at: '2026-10-17T01:00:00Z', ended_at: '2026-10-17T01:37:00Z' }));
+    await act(async () => { window.dispatchEvent(new Event('online')); });
+    expect(text()).toContain('37분');
   });
 });

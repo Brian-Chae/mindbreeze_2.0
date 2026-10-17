@@ -1,6 +1,6 @@
 // SDD-209 M1 — `/class/:sessionId/enter` 참가자 입장 흐름 오케스트레이터(입장 자격 기반, 로그인 불필요).
 // FM05 입장 확인 → (M2~M5 준비 마법사) → (M6 시작 대기) → (M7 대기열) → 진행 화면 → (M8 종료) 를 하나의 상태 머신으로 돌린다.
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EntryConfirmView } from '../../components/class/flow/member/EntryConfirmView';
 import { BandStepContainer } from '../../components/class/flow/member/BandStepContainer';
@@ -45,8 +45,6 @@ export default function EntryPage() {
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
-  const startedSeenRef = useRef<string | null>(null);
-  const endedSeenRef = useRef<string | null>(null);
   const prep = useEntryPrep({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
@@ -86,9 +84,6 @@ export default function EntryPage() {
   // 서버 상태 → 머신
   useEffect(() => {
     if (!serverState) return;
-    // 함께한 시간 계산용으로 시작·종료를 처음 본 시각을 기록한다(서버가 시각을 내려 주기 전까지의 근사)
-    if (serverState.status === 'in_progress' && !startedSeenRef.current) startedSeenRef.current = new Date().toISOString();
-    if (serverState.status === 'completed' && !endedSeenRef.current) endedSeenRef.current = new Date().toISOString();
     dispatch({ type: 'sync', stage: deriveEnterStage({ status: serverState.status, isWaitlisted: serverState.is_waitlisted }) });
   }, [serverState]);
 
@@ -174,7 +169,7 @@ export default function EntryPage() {
       <div className="min-h-screen bg-black">
         <MemberClassContainer
           title={info.title}
-          startedAt={info.startedAt ?? startedSeenRef.current}
+          startedAt={serverState?.started_at ?? info.startedAt}
           durationMin={info.durationMin}
           onLeave={() => navigate(homePath, { replace: true })}
           sessionId={sessionId}
@@ -191,7 +186,7 @@ export default function EntryPage() {
   }
   if (machine.phase === 'end') {
     const reportMode = !serverState?.report_included ? 'excluded' : entry.isGuest ? 'guest' : 'member';
-    const minutes = durationMinutes(info.startedAt ?? startedSeenRef.current, endedSeenRef.current);
+    const minutes = durationMinutes(serverState?.started_at ?? info.startedAt, serverState?.ended_at ?? null);
     return (
       <EndContainer
         sessionId={sessionId} credential={entry.credential} participantId={entry.participantId} place={place} title={title}

@@ -45,7 +45,7 @@ const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
 const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
-const SessionCreatePage = lazy(() => import('./pages/sessions/SessionCreatePage'));
+const CreateWizardContainer = lazy(() => import('./components/class/flow/host/CreateWizardContainer').then((m) => ({ default: m.CreateWizardContainer })));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
 // SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
@@ -189,7 +189,7 @@ const router = createBrowserRouter(
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><SessionListPage /></RoleGuard>} />
-        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><SessionCreatePage /></RoleGuard>} />
+        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />

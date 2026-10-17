@@ -1,5 +1,5 @@
 // SDD-209 M0 — 로그인 없는 4자리 코드 입장 + 입장 자격 기반 참가자 API 어댑터.
-// session.ts 는 수정하지 않고, 구 by-code 경로는 폴백으로도 호출하지 않는다.
+// 구 by-code 경로는 제거되었고 폴백도 없다.
 // 코드는 입장 요청에만 쓰고 이후 요청의 인증 수단은 입장 자격(X-Entry-Credential)이다.
 import { apiClient, refreshAccessToken, tokenStorage } from './client';
 import { isAccessTokenExpiring } from './token-expiry';
@@ -48,6 +48,9 @@ export interface EntryStateDto {
   is_waitlisted: boolean;
   /** 본인의 리포트 반영 선택(기본 제외) */
   report_included: boolean;
+  /** 서버 기준 시작·종료 시각(없으면 null) — 종료 화면의 `함께한 시간` 계산에 쓴다 */
+  started_at: string | null;
+  ended_at: string | null;
   chat_enabled: boolean;
   band_connected: boolean;
 }

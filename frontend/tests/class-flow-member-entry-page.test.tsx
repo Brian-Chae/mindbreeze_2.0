@@ -135,7 +135,7 @@ function Where() {
 function stateDto(over: Partial<EntryStateDto> = {}): EntryStateDto {
   return {
     session_id: 's1', status: 'open', guest_state: 'waiting', in_progress: false, ended: false, participant_id: 'p1',
-    is_waitlisted: false, report_included: false, chat_enabled: false, band_connected: false, ...over,
+    is_waitlisted: false, report_included: false, started_at: null, ended_at: null, chat_enabled: false, band_connected: false, ...over,
   };
 }
 

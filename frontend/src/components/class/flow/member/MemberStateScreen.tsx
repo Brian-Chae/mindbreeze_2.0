@@ -2,9 +2,7 @@
 import type { ReactNode } from 'react';
 import { CalendarX, Clock, Key, TriangleAlert, WifiOff } from 'lucide-react';
 import type { FlowStateKind } from '../../../../lib/class/flow/member-machine';
-import { MemberBrandMark } from '../../player/member/MemberBrandMark';
-import { FlowButton, FlowH1 } from '../shared/flow-primitives';
-import { MemberFullFrame } from './MemberFlowFrame';
+import { FlowStateScreen } from '../shared/FlowStateScreen';
 
 interface StateCopy {
   icon: ReactNode;
@@ -70,24 +68,16 @@ export function MemberStateScreen({ kind, classTitle, whenLabel, backdropSrc, on
   const copy = COPY[kind];
   const [secondLabel, secondValue] = copy.secondRow(whenLabel);
   return (
-    <MemberFullFrame backdropSrc={backdropSrc}>
-      <section className="fm-fv" role="alert" aria-labelledby="fm-state-title">
-        <MemberBrandMark className="fm-logo" />
-        <span className="fm-ficon" data-tone={copy.warn ? 'warn' : undefined}>{copy.icon}</span>
-        <div className="fm-ftx">
-          <span id="fm-state-title"><FlowH1>{copy.heading}</FlowH1></span>
-          <p>{copy.lead(whenLabel)}</p>
-        </div>
-        <div className="fm-finfo">
-          <div><span>클래스</span><b>{classTitle}</b></div>
-          <div><span>{secondLabel}</span><b>{secondValue}</b></div>
-        </div>
-        <p className="fm-fnote2">{copy.note}</p>
-        <div className="fm-fbtns">
-          <FlowButton kind="primary" onClick={onPrimary}>{copy.primary}</FlowButton>
-          <FlowButton kind="soft" onClick={onSecondary}>{copy.secondary}</FlowButton>
-        </div>
-      </section>
-    </MemberFullFrame>
+    <FlowStateScreen
+      icon={copy.icon}
+      warn={copy.warn}
+      heading={copy.heading}
+      lead={copy.lead(whenLabel)}
+      info={[{ label: '클래스', value: classTitle }, { label: secondLabel, value: secondValue }]}
+      note={copy.note}
+      primary={{ label: copy.primary, onClick: onPrimary }}
+      secondary={{ label: copy.secondary, onClick: onSecondary }}
+      backdropSrc={backdropSrc}
+    />
   );
 }

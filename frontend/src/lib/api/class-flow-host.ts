@@ -41,6 +41,33 @@ export interface InviteEmailResponse {
 export const inviteByEmail = (sessionId: string, emails: readonly string[]): Promise<InviteEmailResponse> =>
   apiClient.post<InviteEmailResponse>(`/sessions/${sessionId}/invite/email`, { emails });
 
+/** 이메일 초대 목록 한 건(호스트 전용 GET /sessions/{id}/invite/email). status 는 발송 "요청" 상태이며 전달·수신 확인이 아니다 */
+export interface InviteEmailItem {
+  invite_id: string;
+  /** 스위프로 지워졌으면 null */
+  email: string | null;
+  /** queued(큐 투입) / requested(발송 접수) / failed */
+  status: string;
+  /** 큐에 오래 머물러 보내지 못한 것으로 보이는 건 */
+  stale: boolean;
+  request_count: number;
+  queued_at: string | null;
+  requested_at: string | null;
+  pii_scrubbed: boolean;
+}
+
+export interface InviteEmailListResponse {
+  session_id: string;
+  invites: InviteEmailItem[];
+  summary: Record<string, number>;
+}
+
+export const listEmailInvites = (sessionId: string): Promise<InviteEmailListResponse> =>
+  apiClient.get<InviteEmailListResponse>(`/sessions/${sessionId}/invite/email`);
+
+/** 서버 재요청 쿨다운(INVITE_EMAIL_COOLDOWN_SEC)과 같은 값 — 응답의 cooldown_sec 이 정본이고, 목록만 있을 때의 표시용 */
+export const EMAIL_INVITE_COOLDOWN_SEC = 60;
+
 /** queued / skipped_cooldown / skipped_no_account / skipped_waitlisted / skipped_notification_off / not_found / failed */
 export interface InviteRemindResult {
   participant_id: string;

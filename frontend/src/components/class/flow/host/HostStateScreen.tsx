@@ -2,8 +2,7 @@
 import { AlertTriangle, ChevronLeft, Clock, Copy, DoorClosed, Home, Link2, List, Lock, RefreshCw, User, WifiOff } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { hostStateCopy, type HostRowIcon, type HostStateAction, type HostStateIcon, type HostStateKind } from '../../../../lib/class/flow/host-state-model';
-import { FlowButton } from '../shared/flow-primitives';
-import { HostFlowFrame } from './HostFlowFrame';
+import { FlowStateScreen } from '../shared/FlowStateScreen';
 
 const HEAD_ICON: Readonly<Record<HostStateIcon, ReactNode>> = {
   'door-closed': <DoorClosed size={24} aria-hidden="true" />, alert: <AlertTriangle size={24} aria-hidden="true" />,
@@ -32,29 +31,16 @@ export interface HostStateScreenProps {
 export function HostStateScreen({ kind, waiting, closedAtText, title, backdropSrc, onAction }: HostStateScreenProps) {
   const copy = hostStateCopy(kind, { waiting, closedAtText });
   return (
-    <HostFlowFrame
-      title={copy.top}
-      sub={title}
+    <FlowStateScreen
+      bar={{ title: copy.top, sub: title, left: { label: '홈으로', icon: <ChevronLeft size={20} aria-hidden="true" />, onClick: () => onAction('home') } }}
+      icon={HEAD_ICON[copy.icon]}
+      warn={copy.warn}
+      heading={copy.heading}
+      lead={copy.lead}
+      rows={copy.rows.map((row) => ({ icon: ROW_ICON[row.icon], title: row.title, sub: row.sub }))}
+      primary={{ label: copy.primary.label, icon: ACTION_ICON[copy.primary.action], onClick: () => onAction(copy.primary.action) }}
+      secondary={{ label: copy.secondary.label, onClick: () => onAction(copy.secondary.action) }}
       backdropSrc={backdropSrc}
-      left={{ label: '홈으로', icon: <ChevronLeft size={20} aria-hidden="true" />, onClick: () => onAction('home') }}
-      foot={
-        <>
-          <FlowButton kind="primary" onClick={() => onAction(copy.primary.action)}>{ACTION_ICON[copy.primary.action]}{copy.primary.label}</FlowButton>
-          <FlowButton kind="soft" onClick={() => onAction(copy.secondary.action)}>{copy.secondary.label}</FlowButton>
-        </>
-      }
-    >
-      <div className="fhb-scene" role={copy.warn ? 'alert' : undefined}>
-        <span className={copy.warn ? 'fhb-ico lg warn' : 'fhb-ico lg'}>{HEAD_ICON[copy.icon]}</span>
-        <h1 className="fl-h1">{copy.heading}</h1>
-        <p className="fl-sub">{copy.lead}</p>
-      </div>
-      {copy.rows.map((r) => (
-        <div className="fhb-row" key={r.title}>
-          <span className="fhb-ico">{ROW_ICON[r.icon]}</span>
-          <div className="fhb-rt"><b>{r.title}</b><span>{r.sub}</span></div>
-        </div>
-      ))}
-    </HostFlowFrame>
+    />
   );
 }

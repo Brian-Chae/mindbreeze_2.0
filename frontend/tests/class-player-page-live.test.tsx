@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
-// SDD-208 I1 — ClassPlayerPage 의 진행 중(in_progress) 호스트 구간이 새 HostLiveContainer 로 바뀌고,
-// 세팅·대기 씬은 그대로 옛 HostClassWorkspace 를 쓴다. 페이지는 컨테이너에 값·핸들러만 넘기고 종료 모달·채팅 오버레이는 중복으로 두지 않는다.
+// SDD-208 I1 — ClassPlayerPage 의 진행 중(in_progress) 호스트 구간은 HostLiveContainer,
+// SDD-209 I2 — 세팅(ready/scheduled)·대기(open)·닫힘(cancelled) 호스트 구간은 HostPrepContainer 가 맡는다.
+// 페이지는 컨테이너에 값·핸들러만 넘기고 종료 모달·채팅 오버레이는 중복으로 두지 않는다.
 import { act, createElement, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
@@ -10,6 +11,9 @@ import { useAuthStore } from '../src/stores/authStore';
 
 const h = vi.hoisted(() => ({
   containerProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
+  prepProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
+  calls: [] as string[],
+  media: { mic: 'on', cam: 'on', level: 0.2, steps: 1, quiet: false, speakerPlaying: false, videoRef: { current: null }, startMic: vi.fn(async () => undefined), stopMic: vi.fn(), toggleMic: vi.fn(async () => undefined), startCamera: vi.fn(async () => undefined), stopCamera: vi.fn(), toggleCamera: vi.fn(async () => undefined), recheck: vi.fn(async () => undefined), playTestTone: vi.fn(async () => undefined) },
   session: {} as Record<string, unknown>,
   getSession: vi.fn(),
   getSessionLiveMetrics: vi.fn(),
@@ -27,14 +31,26 @@ vi.mock('../src/lib/api/session', async (importOriginal) => ({
   getSession: (...a: unknown[]) => h.getSession(...a),
   getSessionLiveMetrics: (...a: unknown[]) => h.getSessionLiveMetrics(...a),
   setParticipantSpeaking: (...a: unknown[]) => h.setParticipantSpeaking(...a),
-  transitionSession: (...a: unknown[]) => h.transitionSession(...a),
+  transitionSession: (...a: unknown[]) => { h.calls.push(`transition:${String(a[1])}`); return h.transitionSession(...a); },
 }));
 vi.mock('../src/lib/api/chat', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/chat')>()),
   setSessionChatEnabled: (...a: unknown[]) => h.setSessionChatEnabled(...a),
 }));
-vi.mock('../src/lib/api/audio', () => ({ startAudio: vi.fn(), stopAudio: vi.fn() }));
-vi.mock('../src/lib/api/video', () => ({ startVideo: vi.fn(), stopVideo: vi.fn() }));
+vi.mock('../src/lib/api/audio', () => ({
+  startAudio: (...a: unknown[]) => { h.calls.push(`audio/start:${String(a[1])}`); return Promise.resolve(); },
+  stopAudio: vi.fn(),
+}));
+vi.mock('../src/lib/api/video', () => ({
+  startVideo: () => { h.calls.push('video/start'); return Promise.resolve(); },
+  stopVideo: vi.fn(),
+}));
+vi.mock('../src/lib/api/class-flow-host', () => ({
+  remindInvitees: vi.fn(async () => ({ session_id: 's1', cooldown_sec: 60, results: [{ participant_id: 'a', status: 'queued' }], summary: {} })),
+  getReportChoiceSummary: vi.fn(async () => ({ included: 1, excluded: 2, total: 3 })),
+  getResearchConsentSummary: vi.fn(async () => ({ consented: 1, total: 3 })),
+}));
+vi.mock('../src/hooks/useMediaCheck', () => ({ useMediaCheck: () => h.media }));
 vi.mock('../src/lib/socket', () => ({ getActiveSessionLiveSocket: () => h.rawSocket }));
 vi.mock('../src/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => h.recorder }));
 vi.mock('../src/hooks/useVideoRecorder', () => ({ useVideoRecorder: () => h.videoRecorder }));
@@ -52,7 +68,7 @@ vi.mock('../src/hooks/useSessionLiveSocket', () => ({
 vi.mock('../src/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('../src/hooks/useLeaveGuard', () => ({ useLeaveGuard: () => ({ state: 'unblocked' }) }));
 vi.mock('../src/hooks/useWaitingRoomCount', () => ({ useWaitingRoomCount: () => ({ entries: [], count: 0, nicknames: [] }) }));
-vi.mock('../src/hooks/useClassAudioPlayer', () => ({ useClassAudioPlayer: () => ({ state: {}, actions: {} }) }));
+vi.mock('../src/hooks/useClassAudioPlayer', () => ({ useClassAudioPlayer: () => ({ state: { tracks: [], selectedTrackId: null, playing: false, positionSec: 0, durationSec: null, volume: 0.6 }, actions: { selectTrack: vi.fn(), toggle: vi.fn(), setVolume: vi.fn() } }) }));
 vi.mock('../src/hooks/useReportProgress', () => ({ useReportProgress: () => ({ progress: null }) }));
 vi.mock('../src/components/class/FadingImageBackground', () => ({ FadingImageBackground: () => null }));
 vi.mock('../src/components/chat/ClassChatPanel', () => ({
@@ -64,9 +80,12 @@ vi.mock('../src/components/class/player/host/HostLiveContainer', () => ({
     return createElement('section', { 'data-testid': 'host-live-container' }, '새 상담사 진행 화면');
   },
 }));
-vi.mock('../src/components/class/waiting-room-readiness-panel', () => ({ WaitingRoomReadinessPanel: () => null }));
-vi.mock('../src/components/class/ClassAudioPanel', () => ({ ClassAudioPanel: () => null }));
-vi.mock('../src/components/session/SessionPreJoinPreview', () => ({ SessionPreJoinPreview: () => createElement('div', null, '미디어 프리뷰') }));
+vi.mock('../src/components/class/flow/host/HostPrepContainer', () => ({
+  HostPrepContainer: (props: Record<string, unknown>) => {
+    h.prepProps.push(props);
+    return createElement('section', { 'data-testid': 'host-prep-container', 'data-phase': String(props.phase) }, '새 상담사 시작 전 화면');
+  },
+}));
 
 const metric = (id: string, extra: Record<string, unknown> = {}) => ({
   participant_id: id, display_name: `회원 ${id}`, is_guest: false, band_connected: true, device_status: 'ok', band_battery: 80,
@@ -109,6 +128,8 @@ beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: (query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }) });
   h.containerProps.length = 0;
+  h.prepProps.length = 0;
+  h.calls.length = 0;
   Object.assign(h.liveKit, { token: null, loading: false, error: null });
   h.getSession.mockReset().mockImplementation(async () => h.session);
   h.getSessionLiveMetrics.mockReset().mockResolvedValue({ metrics: [metric('host-p', { user_id: 'host-1' }), metric('a'), metric('b')] });
@@ -229,22 +250,107 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
   });
 });
 
-describe('진행 중이 아닌 씬·호스트가 아닌 사용자는 옛 화면을 그대로 쓴다', () => {
-  it('대기실(open)의 호스트는 옛 워크스페이스와 채팅 오버레이를 본다', async () => {
+const lastPrep = () => h.prepProps.at(-1) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+describe('시작 전·닫힘 호스트: HostPrepContainer 로 교체 (SDD-209 I2)', () => {
+  it.each([['ready', 'setup'], ['scheduled', 'setup'], ['open', 'lobby'], ['cancelled', 'closed']])('%s 상태는 phase=%s 로 그린다', async (status, phase) => {
+    h.session = makeSession(status);
+    await renderPage();
+    expect(q('[data-testid="host-live-container"]')).toBeNull();
+    expect(q('[data-testid="host-prep-container"]')?.getAttribute('data-phase')).toBe(phase);
+    expect(q('.host-class-player')).toBeNull();
+  });
+
+  it('로비: 초대 명단은 호스트 본인을 뺀 live-metrics 행이고, 입장 코드는 세션의 4자리 값이다', async () => {
+    h.session = makeSession('open', { access_code: '4821' });
+    await renderPage();
+    expect(lastPrep().roster).toEqual([
+      { participantId: 'a', name: '회원 a' },
+      { participantId: 'b', name: '회원 b' },
+    ]);
+    expect(lastPrep().accessCode).toBe('4821');
+    expect(lastPrep().ctx).toEqual({ place: 'online', size: 'group', band: undefined });
+  });
+
+  it('세팅(온라인)에서만 장비 점검을 켜고, 오프라인은 getUserMedia 를 부르지 않는다', async () => {
+    h.session = makeSession('ready', { location_type: 'offline' });
+    await renderPage();
+    expect(h.media.startMic).not.toHaveBeenCalled();
+    expect(h.media.startCamera).not.toHaveBeenCalled();
+  });
+
+  it('세팅(온라인): 점검을 켜고, 열면 장비 사용 값을 보관한 채 open 전이한다', async () => {
+    h.session = makeSession('ready');
+    h.transitionSession.mockResolvedValue(makeSession('open'));
+    await renderPage();
+    expect(h.media.startMic).toHaveBeenCalled();
+    expect(h.media.startCamera).toHaveBeenCalled();
+    await fire(() => lastPrep().onOpen({ cameraOn: true, micOn: false }));
+    expect(h.calls).toContain('transition:open');
+  });
+
+  it('시작(녹음): start 전이 → 화상 연결 → audio/start(true) → 녹음기 → 영상, 동의 모달 없음', async () => {
+    h.session = makeSession('open');
+    h.transitionSession.mockResolvedValue(makeSession('in_progress'));
+    await renderPage();
+    await fire(() => lastPrep().onStart('record'));
+    expect(h.calls.filter((c) => c.startsWith('transition') || c.startsWith('audio') || c.startsWith('video'))).toEqual(['transition:start', 'audio/start:true', 'video/start']);
+    expect(h.liveKit.connect).toHaveBeenCalledTimes(1);
+    expect(h.recorder.start).toHaveBeenCalledTimes(1);
+  });
+
+  it('시작(수동 기록): audio/start(false) 로 선언하고 녹음기는 켜지 않는다', async () => {
+    h.session = makeSession('open');
+    h.transitionSession.mockResolvedValue(makeSession('in_progress'));
+    await renderPage();
+    await fire(() => lastPrep().onStart('manual'));
+    expect(h.calls).toContain('audio/start:false');
+    expect(h.calls).not.toContain('audio/start:true');
+    expect(h.recorder.start).not.toHaveBeenCalled();
+  });
+
+  it('오프라인 시작은 화상 연결과 영상 녹화를 하지 않는다', async () => {
+    h.session = makeSession('open', { location_type: 'offline' });
+    h.transitionSession.mockResolvedValue(makeSession('in_progress', { location_type: 'offline' }));
+    await renderPage();
+    await fire(() => lastPrep().onStart('record'));
+    expect(h.liveKit.connect).not.toHaveBeenCalled();
+    expect(h.calls).not.toContain('video/start');
+  });
+
+  it('클래스 닫기: cancel 전이 후 같은 화면에서 FH10(closed, 대기 인원 포함)을 보여 준다', async () => {
+    h.session = makeSession('open');
+    h.transitionSession.mockResolvedValue(makeSession('cancelled'));
+    await renderPage();
+    await fire(() => lastPrep().onCloseClass());
+    expect(h.calls).toContain('transition:cancel');
+    expect(lastPrep().phase).toBe('closed');
+    expect(lastPrep().stateKind).toBe('closed-0');
+  });
+
+  it('이미 닫힌 클래스에 다시 들어오면 closed-revisit', async () => {
+    h.session = makeSession('cancelled');
+    await renderPage();
+    expect(lastPrep().stateKind).toBe('closed-revisit');
+  });
+
+  it('로비 도구: 시작 확인 시트용 익명 집계를 받아 넘긴다', async () => {
     h.session = makeSession('open');
     await renderPage();
-    expect(q('[data-testid="host-live-container"]')).toBeNull();
-    expect(q('.host-class-player')).not.toBeNull();
-    expect(q('[data-testid="page-chat-overlay"]')).not.toBeNull();
+    expect(lastPrep().excluded).toBe(2);
+    expect(lastPrep().research).toBe(1);
   });
 
-  it('세팅(ready)의 호스트는 미디어 프리뷰가 있는 옛 워크스페이스를 본다', async () => {
-    h.session = makeSession('ready');
+  it('세션을 못 받으면 서버 문구 없이 FH10 오류 화면(404=찾을 수 없는 클래스)을 보여 준다', async () => {
+    const { ApiError } = await import('../src/lib/api/client');
+    h.getSession.mockReset().mockRejectedValue(new ApiError(404, '서버 원문 메시지', null));
     await renderPage();
-    expect(q('[data-testid="host-live-container"]')).toBeNull();
-    expect(document.body.textContent).toContain('미디어 프리뷰');
+    expect(document.body.textContent).toContain('찾을 수 없는 클래스예요');
+    expect(document.body.textContent).not.toContain('서버 원문 메시지');
   });
+});
 
+describe('호스트가 아닌 사용자는 옛 화면을 그대로 쓴다', () => {
   it('진행 중이라도 호스트가 아니면(기관관리자 등) 옛 모니터 화면이다', async () => {
     h.session = makeSession('in_progress', { host_id: 'someone-else' });
     await renderPage();

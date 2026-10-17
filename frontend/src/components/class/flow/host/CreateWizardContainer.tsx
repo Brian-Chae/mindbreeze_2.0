@@ -1,5 +1,5 @@
 // SDD-209 H3 — 클래스 만들기 컨테이너: 마법사 상태 + 회원 검색 + 충돌 계산 + 제출(생성→초대) + 생성 완료 화면.
-// App 라우트 연결은 통합 Task(I2). 이 컴포넌트는 데이터 라우터(useBlocker) 안에서 쓴다.
+// `/sessions/new` 라우트에 연결돼 있다(App.tsx). 이 컴포넌트는 데이터 라우터(useBlocker) 안에서 쓴다.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClassWizard } from '../../../../hooks/useClassWizard';

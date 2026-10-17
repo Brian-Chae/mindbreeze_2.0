@@ -330,3 +330,20 @@ export function toHostDetailData(session: SessionDto, { now = new Date(), mailIn
     mailInvites: toMailRows(mailInvites),
   };
 }
+
+/** 서버 이메일 초대 목록 한 건 → 화면 입력. requested/queued 는 `발송 요청함`, failed·큐 적체(stale)는 `발송하지 못했어요` */
+export function toMailInviteInput(
+  item: { invite_id: string; email: string | null; status: string; stale: boolean; queued_at: string | null },
+  now: Date,
+  cooldownSec: number,
+  mask: (email: string) => string | null,
+): MailInviteInput {
+  const queuedMs = item.queued_at ? new Date(item.queued_at).getTime() : Number.NaN;
+  const elapsed = Number.isNaN(queuedMs) ? cooldownSec : Math.floor((now.getTime() - queuedMs) / 1000);
+  return {
+    id: item.invite_id,
+    maskedEmail: item.email === null ? null : mask(item.email) ?? '비공개 주소',
+    state: item.status === 'failed' || item.stale ? 'failed' : 'requested',
+    cooldownSec: Math.max(0, cooldownSec - elapsed),
+  };
+}
