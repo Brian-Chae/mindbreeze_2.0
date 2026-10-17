@@ -22,6 +22,11 @@ vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({
   submitEntryCheckin: (...a: unknown[]) => submitEntryCheckin(...a),
 }));
 
+const bandStepState = { state: 'idle' as string };
+vi.mock('../src/hooks/useBandStep', () => ({
+  useBandStep: () => ({ state: bandStepState.state, leadOff: null, battery: 80, connect: vi.fn(), disconnect: vi.fn() }),
+}));
+
 import EntryPage from '../src/pages/class/EntryPage';
 
 let root: Root;
@@ -300,5 +305,32 @@ describe('EntryPage — 오늘의 상태 (M3)', () => {
     await act(async () => { find('준비 이어서 하기')?.click(); });
     expect(text()).not.toContain('상담사가 클래스를 시작했어요');
     expect(text()).toContain('지금 집중은 어떤가요?');
+  });
+});
+
+describe('EntryPage — LINK BAND 단계 (M4)', () => {
+  const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
+  async function toBand(): Promise<void> {
+    seedEntry();
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
+    getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
+    await renderPage();
+    await act(async () => { find('입장하기')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('건너뛰기')?.click(); });
+  }
+  it('밴드 없이 계속하기로 다음(기기) 단계로 가며 차단하지 않는다', async () => {
+    bandStepState.state = 'idle';
+    await toBand();
+    expect(text()).toContain('LINK BAND를 연결해요');
+    await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
+    expect(text()).not.toContain('LINK BAND를 연결해요');
+  });
+  it('접촉 불량이어도 다음으로 진행할 수 있다', async () => {
+    bandStepState.state = 'leadoffl';
+    await toBand();
+    expect(text()).toContain('접촉 불량');
+    await act(async () => { find('다음')?.click(); });
+    expect(text()).not.toContain('LINK BAND를 연결해요');
   });
 });

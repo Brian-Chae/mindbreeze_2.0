@@ -1,6 +1,7 @@
 // SDD-209 M2 — 준비 마법사(FM06a~e) 초안과 요약 행. 어떤 값도 입장·녹음·업로드의 조건이 아니다(기본 제외·미동의로 진행 가능).
 import type { FlowBandMode, FlowPlace } from './types';
 import type { WizardKey } from './member-machine';
+import type { BandStepUi } from '../band-step';
 
 /** 고지 문구 버전(서버 증빙용, 최대 20자). 문구가 바뀌면 올린다 */
 export const REPORT_NOTICE_VERSION = 'r5-1';
@@ -90,4 +91,12 @@ export function remainingPrepLabels(steps: readonly WizardKey[], current: Wizard
     const label = PREP_LABEL[key];
     return label ? [label] : [];
   });
+}
+
+/**
+ * LINK BAND 단계를 떠날 때의 결과. 접촉 불량이어도 `다음`이면 연결된 채로 진행한다(차단 없음).
+ * 연결돼 있어도 `없이 계속하기`를 골랐으면 skipped.
+ */
+export function bandOutcomeOf(_state: BandStepUi, action: 'next' | 'skip'): BandOutcome {
+  return action === 'next' ? 'connected' : 'skipped';
 }

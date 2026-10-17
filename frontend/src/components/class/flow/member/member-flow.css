@@ -149,3 +149,41 @@
   position: absolute; grid-row: auto; left: var(--pz-pad); right: var(--pz-pad); bottom: max(8px, env(safe-area-inset-bottom));
   margin: 0 auto; width: auto; z-index: 6;
 }
+
+/* FM06c LINK BAND */
+.pz-root .fm-band { display: flex; flex-direction: column; gap: 16px; }
+.pz-root .fm-bh { display: flex; align-items: center; gap: 16px; }
+.pz-root .fm-bi { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none; background: rgba(179, 115, 239, 0.22); color: var(--mb-pale); }
+.pz-root .fm-bi[data-tone="ok"] { background: rgba(125, 227, 200, 0.16); color: var(--ok); }
+.pz-root .fm-bi[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.pz-root .fm-bt { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.pz-root .fm-bt b { display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); line-height: 24px; white-space: nowrap; }
+.pz-root .fm-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: var(--fs-12); font-weight: 600; background: rgba(255, 255, 255, 0.12); color: var(--tx-mid); }
+.pz-root .fm-tag[data-tone="req"] { background: rgba(179, 115, 239, 0.22); color: var(--mb-pale); }
+.pz-root .fm-bb { min-height: 168px; display: flex; flex-direction: column; justify-content: center; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.pz-root .fm-bb.top { justify-content: flex-start; }
+.pz-root .fm-li[data-tone="warn"] > svg { color: var(--warn); }
+.pz-root .fm-li.sm { min-height: 40px; font-size: var(--fs-13); }
+.pz-root .fm-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; flex: 1; }
+.pz-root .fm-center b { font-size: var(--fs-15); line-height: 24px; }
+.pz-root .fm-center .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-dots { display: flex; gap: 8px; height: 40px; align-items: center; }
+.pz-root .fm-dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--mb-pale); opacity: 0.25; animation: fm-dot 1.2s ease-in-out infinite; }
+.pz-root .fm-dots i:nth-child(2) { animation-delay: 0.2s; }
+.pz-root .fm-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes fm-dot { 0%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pz-root .fm-dots i { animation: none; opacity: 0.7; } }
+.pz-root .fm-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pz-root .fm-tile { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.06); min-width: 0; }
+.pz-root .fm-tile .l { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-tile .v { font-size: var(--fs-15); font-weight: 700; line-height: 24px; color: var(--ok); }
+.pz-root .fm-tile[data-tone="warn"] .v { color: var(--warn); }
+.pz-root .fm-segbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pz-root .fm-segbar i { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.25); }
+.pz-root .fm-segbar i.on { background: var(--ok); }
+
+/* 시트가 하단 주 버튼을 덮는 낮은 화면(세로 700px 이하 · 가로형 500px 이하)에서는 시트가 열려 있는 동안 푸터를 숨긴다.
+   시트가 같은 행동(지금 입장하기 / 준비 이어서 하기)을 주 버튼으로 제공하고, 푸터는 어차피 inert 이기 때문이다(P14 눌림 검사). */
+@media (max-height: 700px) and (max-width: 999px), (max-height: 500px) {
+  .pz-shell.fm-member[data-sheet-open="true"] .pz-shell__dock { visibility: hidden; }
+}

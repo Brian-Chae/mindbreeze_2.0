@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EntryConfirmView } from '../../components/class/flow/member/EntryConfirmView';
+import { BandStepContainer } from '../../components/class/flow/member/BandStepContainer';
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
 import { NoticeStepView } from '../../components/class/flow/member/NoticeStepView';
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
@@ -175,6 +176,22 @@ export default function EntryPage() {
         onBack={() => {
           if (!survey.back()) dispatch({ type: 'back', steps });
         }}
+        onExit={exit}
+      />
+    );
+  }
+  if (machine.phase === 'wizard' && machine.step === 'c' && bandMode !== 'none') {
+    return (
+      <BandStepContainer
+        bandMode={bandMode} place={place} steps={stepsView}
+        startedRemaining={startedOpen ? remainingPrepLabels(steps, 'c') : null}
+        onDone={(outcome) => {
+          prep.patch({ bandOutcome: outcome });
+          dispatch({ type: 'next', steps });
+        }}
+        onStartedEnterNow={() => dispatch({ type: 'enterNow' })}
+        onStartedContinue={() => setStartedDismissed(true)}
+        onBack={() => dispatch({ type: 'back', steps })}
         onExit={exit}
       />
     );
