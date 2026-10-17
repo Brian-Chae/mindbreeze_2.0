@@ -315,6 +315,26 @@ class RaiseHandRequest(BaseModel):
     participant_token: str | None = None
 
 
+class ReportChoiceRequest(BaseModel):
+    """SDD-209(B2): 리포트 반영 선택 — 본인 참여자만(회원 로그인 또는 게스트 participant_token)."""
+
+    participant_id: str
+    report_included: bool
+    # 고지를 실제로 확인했을 때만 true. 증빙(시각/버전)은 선택 이력과 분리 저장된다.
+    notice_acknowledged: bool = False
+    notice_version: str | None = Field(None, max_length=20)
+    participant_token: str | None = None
+
+
+class ReportChoiceResponse(BaseModel):
+    participant_id: str
+    report_included: bool
+    report_notice_ack_at: datetime | None = None
+    report_notice_version: str | None = None
+    # 이번 요청으로 선택 값이 실제로 바뀌었는지(멱등 재요청은 False)
+    changed: bool = False
+
+
 class SpeakingStateResponse(BaseModel):
     """손들기/발언권 상태 응답 — 변경 결과를 호스트/회원 UI 에 되돌려준다."""
 

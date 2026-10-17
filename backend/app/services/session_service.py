@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session as DBSession, selectinload
 from app.config import settings
 from app.models.user import User
 from app.models.client_profile import ClientProfile
-from app.models.session import Session, SessionParticipant
+from app.models.session import ReportChoiceEvent, Session, SessionParticipant
 from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
@@ -1868,6 +1868,64 @@ def _authorize_participant_access(
         raise HTTPException(status_code=403, detail="참여자 토큰이 유효하지 않습니다")
 
 
+def set_report_choice(
+    session_id: str,
+    participant_id: str,
+    report_included: bool,
+    db: DBSession,
+    *,
+    notice_acknowledged: bool = False,
+    notice_version: str | None = None,
+    participant_token: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """SDD-209(B2/BE-2): 리포트 반영 선택(포함/제외)을 기록한다.
+
+    - 본인 참여자만(회원 로그인 / 게스트 participant_token). 호스트·타인은 403.
+    - 종료·취소 클래스는 409. 같은 값 재요청은 멱등(이력 추가 없음).
+    - 고지 확인(notice_acknowledged)은 선택 이력과 분리해 참여자 행에 시각/버전으로 남긴다.
+    - 입장·업로드·리포트 생성은 이 선택의 성공 여부와 무관하다(기본 제외로 진행).
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.status in ("completed", "cancelled"):
+        raise HTTPException(status_code=409, detail="종료된 클래스에서는 리포트 반영 선택을 바꿀 수 없습니다")
+
+    participant = _get_participant_in_session(sid, participant_id, db)
+    _authorize_participant_access(
+        participant, participant_token=participant_token, current_user_id=current_user_id
+    )
+
+    previous = bool(participant.report_included)
+    changed = previous != report_included
+    if changed:
+        db.add(
+            ReportChoiceEvent(
+                session_id=sid,
+                participant_id=participant.id,
+                previous_included=previous,
+                new_included=report_included,
+                actor_kind="self",
+                actor_user_id=participant.user_id,
+            )
+        )
+        participant.report_included = report_included
+    if notice_acknowledged:
+        participant.report_notice_ack_at = _now()
+        participant.report_notice_version = notice_version
+    db.commit()
+    db.refresh(participant)
+    return {
+        "participant_id": str(participant.id),
+        "report_included": participant.report_included,
+        "report_notice_ack_at": participant.report_notice_ack_at,
+        "report_notice_version": participant.report_notice_version,
+        "changed": changed,
+    }
+
+
 def raise_hand(
     session_id: str,
     participant_id: str,
@@ -2558,16 +2616,15 @@ def _aggregate_window_stats(session_id, participant_ids: list, db: DBSession) ->
 
 
 def _assert_upload_eligible(participant: SessionParticipant) -> None:
-    """SDD-026: 업로드 자격(대기열·동의) 게이트.
+    """업로드 자격 게이트 — 소유 참여자 + 대기열 여부만 본다.
 
     - 대기열(is_waitlisted) 참가자는 아직 세션에 실입장하지 않았으므로 스트리밍 불가.
-    - EEG 수집 미동의(consent_eeg=False) 참가자는 업로드 불가(데이터 프라이버시 규칙).
-      동의는 클래스 참여(join_session_by_code) 시 opt-in 으로 기록된다.
+    - SDD-209(B2/P2): 업로드는 ``consent_eeg`` 에 의존하지 않는다. 거부(리포트 제외)는 원본 수집
+      중지가 아니라 리포트 반영 제외이므로, 소유 참여자라면 리포트 선택·동의 값과 무관하게 업로드한다.
+      ``consent_audio/consent_eeg`` 컬럼과 그 의미는 그대로 유지된다(내보내기 게이트 등).
     """
     if participant.is_waitlisted:
         raise HTTPException(status_code=403, detail="대기열 참가자는 EEG 데이터를 업로드할 수 없습니다")
-    if not participant.consent_eeg:
-        raise HTTPException(status_code=403, detail="EEG 수집 동의 후 업로드할 수 있습니다")
 
 
 def resolve_upload_participant(

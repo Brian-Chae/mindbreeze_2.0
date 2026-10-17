@@ -21,6 +21,8 @@ from app.schemas.session import (
     MemberLiveKitTokenRequest,
     MemberLiveKitTokenResponse,
     RaiseHandRequest,
+    ReportChoiceRequest,
+    ReportChoiceResponse,
     SessionByCodeResponse,
     SessionChatEnabledRequest,
     SessionChatRoomResponse,
@@ -330,6 +332,26 @@ def raise_hand(
         participant_id,
         db,
         participant_token=payload.participant_token if payload else None,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.put("/{session_id}/report-choice", response_model=ReportChoiceResponse)
+def set_report_choice(
+    session_id: str,
+    payload: ReportChoiceRequest,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B2): 리포트 반영 선택 — 본인 참여자만, 종료·취소 409, 멱등."""
+    return session_service.set_report_choice(
+        session_id,
+        payload.participant_id,
+        payload.report_included,
+        db,
+        notice_acknowledged=payload.notice_acknowledged,
+        notice_version=payload.notice_version,
+        participant_token=payload.participant_token,
         current_user_id=current_user["id"] if current_user else None,
     )
 

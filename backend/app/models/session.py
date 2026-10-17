@@ -129,6 +129,11 @@ class SessionParticipant(Base):
     # SDD-209(B1): 호스트의 참여자 제거는 행 삭제가 아니라 제거 시각 기록(보존 전환) —
     # 행을 지우면 FK CASCADE 로 EEG raw·지표·리포트가 영구 삭제된다. 값이 있으면 모든 ORM 조회에서 제외.
     removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-209(B2): 리포트 반영 선택(P2). 기본 제외 — 명시 선택 시에만 포함. consent_audio/eeg 와 별개.
+    report_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # 고지 확인 증빙(선택 이력과 분리 저장): 마지막으로 확인한 시각과 고지 문구 버전.
+    report_notice_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    report_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     session = relationship("Session", back_populates="participants")
 
@@ -163,3 +168,23 @@ class SessionReminderLog(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="sent")  # sent | failed
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReportChoiceEvent(Base):
+    """SDD-209(B2): 리포트 반영 선택 변경 이력(불변, append-only).
+
+    세션/참여자 삭제·스크럽 뒤에도 이력이 남도록 FK 없이 UUID 값만 보관한다.
+    고지 확인 증빙(시각/버전)은 session_participants 의 별도 컬럼에 둔다(RV2-7: 분리 저장).
+    """
+
+    __tablename__ = "report_choice_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    previous_included: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    new_included: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    # 변경 주체: self(참여자 본인). 후속 확장 대비 문자열.
+    actor_kind: Mapped[str] = mapped_column(String(20), nullable=False, default="self")
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

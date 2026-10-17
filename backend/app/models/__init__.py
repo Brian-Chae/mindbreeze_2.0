@@ -1,7 +1,7 @@
 """SQLAlchemy Models — All"""
 
 from app.models.user import User
-from app.models.session import Session, SessionParticipant, SessionReminderLog
+from app.models.session import Session, SessionParticipant, SessionReminderLog, ReportChoiceEvent
 from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.credential import Credential, VerificationAudit
@@ -44,6 +44,7 @@ from app.models.narrative_cache import NarrativeCache
 from app.models.original_deletion_audit import OriginalDeletionAudit
 
 __all__ = [
+    "ReportChoiceEvent",
     "OriginalDeletionAudit",
     "NormalizationBaseline",
     "NormalizationModel",

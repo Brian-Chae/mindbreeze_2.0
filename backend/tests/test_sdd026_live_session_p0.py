@@ -295,7 +295,7 @@ def test_09_게스트_회원_participant_id_사칭_업로드_차단(client, monk
     assert res.status_code == 403
 
 
-def test_10_초대회원_동의미완료_업로드_403(client, monkeypatch):
+def test_10_초대회원_동의미완료여도_소유참여자_업로드_200_SDD209(client, monkeypatch):
     counselor = _register(client, "s026c10@test.com")
     member = _register(client, "s026m10@test.com", role="client")
     cls = _create_group_class(client, counselor["h"])
@@ -311,13 +311,14 @@ def test_10_초대회원_동의미완료_업로드_403(client, monkeypatch):
     assert m["consent_eeg"] is False
     invited_pid = m["participant_id"]
 
-    # 회원 인증으로 본인 업로드 시도 → 동의 미완료로 차단
+    # SDD-209(B2): 업로드 게이트는 consent_eeg 와 분리됐다 — 소유 참여자 본인은 동의 값과 무관하게 200
+    # (consent_eeg 컬럼 값/의미는 그대로 False 로 유지).
     up = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=member["h"],
     )
-    assert up.status_code == 403
+    assert up.status_code == 200, up.text
 
 
 def test_11_대기열_참가자_업로드_403(client, monkeypatch):
