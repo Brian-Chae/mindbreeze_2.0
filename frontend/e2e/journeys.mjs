@@ -5,13 +5,18 @@ const TITLE = `E2E-여정-${Date.now()}`;
 
 // ── 내담자 (7) ─────────────────────────────────────────
 const client = (name, fn, o) => scenario(`[내담자] ${name}`, async (p) => { await uiLogin(p, 'client', HOME.client); await fn(p); }, o);
-await client('홈: 인사·담당 상담사·클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 상담사', '이번 주 클래스'); });
-await client('클래스 목록: 제목 표시', async (p) => { await expectText(p, '/app/sessions', '클래스'); });
+await client('홈: 인사·담당 상담사·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 상담사', '이번 주 클래스'); });
+// SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
+await client('클래스: 목록 표시(달력 없음)', async (p) => {
+  const t = await expectText(p, '/app/sessions', '클래스', '클래스 신청하기');
+  await p.locator('.sh-list-sec').first().waitFor({ timeout: 10000 });
+  if (/달력/.test(t)) throw new Error('달력 문구가 남아 있음');
+});
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
 await client('채팅: 루시·담당 상담사 대화방 노출', async (p) => { await expectText(p, '/app/chat', '루시', 'E2E-상담사'); });
 await client('알림: 빈 상태', async (p) => { await expectText(p, '/app/notifications', '알림'); });
-await client('다음 클래스 히어로: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
-  // 상담사가 E2E 클래스를 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 클래스' 히어로(SH2 재설계 .sh-hero) 글자색을 확인하고 삭제한다.
+await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
+  // 상담사가 E2E 세션을 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 클래스' 히어로(class-hero) 글자색을 확인하고 삭제한다.
   const c = await apiLoginFull('counselor');
   const cl = await apiLoginFull('client');
   const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
@@ -21,7 +26,7 @@ await client('다음 클래스 히어로: 제목·설명 글자가 흰색(어두
   const id = (await r.json()).id;
   try {
     await go(p, '/app');
-    const hero = p.locator('[data-testid="class-hero"]').first();
+    const hero = p.locator('section[data-testid="class-hero"]').first();
     await hero.waitFor({ timeout: 10000 });
     // 제목(h2)·안내 박스(.sh-hbox__tx) 글자색만 검사 — 메타(.sh-hero__meta)는 의도된 뮤트 그레이이므로 제외
     const colors = await hero.evaluate((el) => [...el.querySelectorAll('h2.sh-hero__title, .sh-hbox__tx b, .sh-hbox__tx span')].map((n) => ({ t: n.tagName, c: getComputedStyle(n).color })));
