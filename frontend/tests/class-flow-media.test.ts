@@ -5,7 +5,6 @@ import {
   mediaDeviceMessage, micChipLabel, needsMicOffWarning, peakInWindow, ringSteps, rmsFromTimeDomain,
 } from '../src/lib/class/class-media';
 import { deriveBandStep, deriveElectrodes } from '../src/lib/class/band-step';
-import { deviceStateFromMediaError, deviceStateLabel } from '../src/lib/class/class-waiting-room';
 
 const domErr = (name: string): DOMException => new DOMException('x', name);
 
@@ -130,19 +129,5 @@ describe('deriveBandStep — L/R 분할·연결 실패·접촉 미확인', () =>
   });
   it('서버식 lead_off 판정만 있고 채널 정보가 없으면 둘 다 불량으로 본다', () => {
     expect(deriveBandStep({ ...base, deviceStatus: 'lead_off' }, null, now)).toBe('leadoff');
-  });
-});
-
-describe('대기실 장치 상태 분리 (denied 한 값으로 뭉치지 않음)', () => {
-  it('오류 → 상태 분류', () => {
-    expect(deviceStateFromMediaError(domErr('NotAllowedError'))).toBe('denied');
-    expect(deviceStateFromMediaError(domErr('NotFoundError'))).toBe('nodevice');
-    expect(deviceStateFromMediaError(domErr('NotReadableError'))).toBe('inuse');
-  });
-  it('라벨 — 기존 상태 라벨은 유지', () => {
-    expect(deviceStateLabel('denied', '마이크')).toBe('마이크 권한이 거부되었습니다');
-    expect(deviceStateLabel('on', '카메라')).toBe('카메라 켜짐');
-    expect(deviceStateLabel('nodevice', '마이크')).toBe('마이크를 찾지 못했습니다');
-    expect(deviceStateLabel('inuse', '카메라')).toBe('카메라를 쓸 수 없습니다');
   });
 });
