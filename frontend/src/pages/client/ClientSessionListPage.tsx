@@ -1,6 +1,6 @@
 // 내담자 클래스 목록 페이지 (SDD-209 FM02)
 // 입장 가능한 클래스가 맨 위, 카드 정보는 유형·제목·시각·방식·상태만, 신청은 바텀 시트.
-// 아래 LegacyCalendarBlock 은 D-5② 커밋에서 제거된다(캘린더·타임라인).
+// 캘린더·타임라인은 없다(D-5② 확정).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -14,7 +14,6 @@ import { ApplySheet, type ApplyOption } from '../../components/class/flow/shell/
 import { MemberClassListView } from '../../components/class/flow/shell/MemberClassListView';
 import { buildClassSections, type SessionWithHost } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
-import LegacyCalendarBlock from './legacy-calendar-block';
 
 export default function ClientSessionListPage() {
   const navigate = useNavigate();
@@ -205,8 +204,6 @@ export default function ClientSessionListPage() {
           />
         )}
       </div>
-
-      <LegacyCalendarBlock sessions={sessions} loading={loading} error={error} counselorNameMap={counselorNameMap} />
 
       <ApplySheet
         open={showApply}

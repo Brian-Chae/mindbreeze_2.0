@@ -17,7 +17,6 @@ vi.mock('../src/lib/api/session', async (importOriginal) => ({
 vi.mock('../src/components/layout/AppShell', () => ({
   default: ({ children, rightSlot }: { children: ReactNode; rightSlot?: ReactNode }) => <div data-testid="app-shell"><div data-testid="right-slot">{rightSlot}</div>{children}</div>,
 }));
-vi.mock('../src/pages/sessions/legacy-host-calendar-block', () => ({ default: () => <div data-testid="legacy-calendar" /> }));
 
 let root: Root;
 let container: HTMLDivElement;

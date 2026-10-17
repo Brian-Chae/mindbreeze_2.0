@@ -1,6 +1,6 @@
 // 클래스 목록 페이지 (SDD-209 FH01) — 열린 클래스 상단 고정 + 예정/지난 카드 목록.
 // 예약 만들기 모달은 없다: 클래스 만들기가 `/sessions/new` 마법사로 가는 유일한 진입점이다.
-// 아래 LegacyHostCalendarBlock 은 D-5② 커밋에서 제거된다(캘린더·타임라인·표).
+// 캘린더·타임라인·표는 없다(D-5② 확정).
 
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -12,7 +12,6 @@ import { ClassActionSheet } from '../../components/class/flow/shell/ClassActionS
 import { HostClassListView, type HostPlayerIntent } from '../../components/class/flow/shell/HostClassListView';
 import { buildHostListModel, type HostListTab } from '../../components/class/flow/shell/host-shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
-import LegacyHostCalendarBlock from './legacy-host-calendar-block';
 
 const NET_NOTICE = '연결이 끊겼어요. 다시 연결되면 자동으로 새로 고쳐요.';
 
@@ -77,7 +76,6 @@ export default function SessionListPage() {
             />
           )}
         </div>
-        <LegacyHostCalendarBlock sessions={sessions} loading={loading} error={error} />
       </div>
       {closeTarget ? (
         <ClassActionSheet
