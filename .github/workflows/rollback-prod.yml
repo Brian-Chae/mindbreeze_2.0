@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — 운영 롤백 · SDD-210 T-5
+# 직전(또는 지정) 릴리스로 코드·프론트·유닛·timer 를 되돌린다. **DB 는 자동으로 되돌리지 않는다**(expand 전용 원칙).
+#   B 에서 마이그레이션이 적용된 뒤 A 로 롤백하면 A 코드가 B 스키마에서 동작해야 한다(호환 안 되는 변경은 롤백 불가 — 수정 배포 또는 PITR).
+# 승인: deploy-prod 와 동일하게 `environment: production`. 긴급 시에도 승인은 필요하며, Brian 이 모바일 GitHub 앱에서 즉시 승인할 수 있다
+#   (목표: 승인 대기 5분 이내. 지연되면 SSM 세션으로 `sudo bash /opt/mindbreeze/current/deploy/install-release.sh rollback` 을 직접 실행 — 감사 로그 남음).
+# 필요 설정: deploy-prod.yml 상단과 동일 — AWS_DEPLOY_ROLE_ARN · PROD_INSTANCE_ID 는 <PLACEHOLDER>, T-7 완료 후 채움.
+# ─────────────────────────────────────────
+
+name: Rollback Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_release_id:
+        description: "되돌릴 릴리스 ID (비우면 직전 릴리스 previous)"
+        required: false
+        default: ""
+      reason:
+        description: "롤백 사유 (실행 기록·이력에 남음)"
+        required: true
+
+concurrency:
+  group: prod-deploy       # deploy-prod 와 같은 그룹 — 배포와 롤백이 동시에 돌지 않는다
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROD_WEB_HOST: ${{ vars.PROD_WEB_HOST || 'mindbreeze.looxidlabs.com' }}
+  PROD_API_HOST: ${{ vars.PROD_API_HOST || 'api.mindbreeze.looxidlabs.com' }}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 입력·설정 검증
+        env:
+          TO: ${{ github.event.inputs.target_release_id }}
+          REASON: ${{ github.event.inputs.reason }}
+          ROLE: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          IID: ${{ vars.PROD_INSTANCE_ID }}
+        run: |
+          if [ -n "$TO" ]; then [[ "$TO" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-f]{7}$ ]] || { echo "::error::target_release_id 형식 오류"; exit 1; }; fi
+          [ -n "$REASON" ] || { echo "::error::reason 필수"; exit 1; }
+          for v in ROLE IID; do
+            if [ -z "${!v}" ]; then echo "::error::변수 $v 미설정 — T-7 완료 후 설정(placeholder 상태)"; exit 1; fi
+          done
+          {
+            echo "## 운영 롤백 요청"
+            echo "- 대상: \`${TO:-previous(직전)}\`"
+            echo "- 사유: $REASON"
+            echo "- 실행자: ${{ github.actor }} / run #${{ github.run_number }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: AWS 자격 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          role-session-name: rollback-prod-${{ github.run_id }}
+
+      - name: 롤백 전 상태 기록
+        run: |
+          bash deploy/ci/ssm-install-cmd.sh status > /tmp/status.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 60 /tmp/status.sh | tee /tmp/before.out
+          grep -E '^(current|previous)=' /tmp/before.out | sed 's/^/- (전) /' >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: 서버 롤백 (링크·유닛·timer 복귀 → 재시작 → 헬스)
+        env:
+          TO: ${{ github.event.inputs.target_release_id }}
+        run: |
+          bash deploy/ci/ssm-install-cmd.sh rollback $TO > /tmp/rollback.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 300 /tmp/rollback.sh
+
+      - name: 공개 스모크
+        run: bash deploy/ci/smoke.sh "$PROD_WEB_HOST" "$PROD_API_HOST"
+
+      - name: 롤백 후 상태 기록
+        run: |
+          bash deploy/ci/ssm-install-cmd.sh status > /tmp/status.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 60 /tmp/status.sh | tee /tmp/after.out
+          {
+            echo "## ✅ 롤백 완료"
+            grep -E '^(current|previous)=' /tmp/after.out | sed 's/^/- (후) /'
+            echo "- DB 는 되돌리지 않았습니다. 스키마 호환 여부를 확인하세요."
+          } >> "$GITHUB_STEP_SUMMARY"
