@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -12,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1 import router as v1_router
 from app.config import settings
+from app.core.cors import http_cors_origins, parse_origins, cors_explicitly_configured
 from app.ws import sio, asgi_app as socketio_asgi  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,77 @@ async def _outbox_ws_poll_loop() -> None:
         except Exception as e:
             logger.error(f"[OUTBOX-WS] poll loop error: {e}", exc_info=True)
         await asyncio.sleep(2)
+
+
+_DEV_MARKERS = ("://dev.", "dev-api.", "mindbreeze-dev", "mindbreeze_dev", "18.183.86.88")
+
+
+def _is_dev_value(value: str) -> bool:
+    low = (value or "").lower()
+    return any(marker in low for marker in _DEV_MARKERS)
+
+
+def _production_extra_problems(cfg) -> list[str]:
+    """SDD-210(T-2): 운영에서 dev 값·기본값이 조용히 쓰이는 경로를 기동 단계에서 차단한다. 값은 출력하지 않는다."""
+    problems: list[str] = []
+
+    # S3 — dev 버킷에 쓰는 사고 방지 + 인스턴스 역할 사용 강제(장기 키 금지)
+    bucket = (cfg.s3_bucket or "").strip()
+    if not bucket:
+        problems.append("s3_bucket 미설정")
+    elif _is_dev_value(bucket) or "dev" in bucket.lower().split("-"):
+        problems.append("s3_bucket 가 개발 버킷을 가리킴")
+    if (cfg.aws_access_key_id or "").strip() or (cfg.aws_secret_access_key or "").strip():
+        problems.append("AWS 액세스 키가 설정됨 (운영은 인스턴스 역할 사용 — 키 제거)")
+    if not cfg.s3_use_instance_role:
+        problems.append("S3_USE_INSTANCE_ROLE 가 꺼져 있음 (운영은 인스턴스 역할로 S3 접근)")
+
+    # CORS — 명시 필수, 와일드카드·dev 오리진·로컬 http 금지
+    if not cors_explicitly_configured(cfg):
+        problems.append("CORS_ALLOWED_ORIGINS 미설정")
+    else:
+        for origin in parse_origins(cfg.cors_allowed_origins):
+            if origin == "*":
+                problems.append("CORS_ALLOWED_ORIGINS 에 와일드카드(*) 포함")
+            elif _is_dev_value(origin):
+                problems.append("CORS_ALLOWED_ORIGINS 에 개발 도메인 포함")
+            elif origin.startswith("http://"):
+                problems.append("CORS_ALLOWED_ORIGINS 에 비 TLS(http) 오리진 포함")
+
+    # 메일 발신 — 기본 발신자·DEV 표기 금지
+    sender = (cfg.resend_from_email or "").strip().lower()
+    if not sender:
+        problems.append("resend_from_email 미설정")
+    elif "resend.dev" in sender or re.search(r"(?<![a-z])dev(?![a-z])", sender):
+        problems.append("resend_from_email 가 개발/기본 발신자를 가리킴")
+    if not (cfg.resend_api_key or "").strip():
+        problems.append("resend_api_key 미설정")
+
+    # LiveKit — 기본값(ws://localhost, devkey/secret) 금지
+    lk_host = (cfg.livekit_host or "").strip().lower()
+    if not lk_host or "localhost" in lk_host or "127.0.0.1" in lk_host or _is_dev_value(lk_host):
+        problems.append("livekit_host 가 기본/개발 주소를 가리킴")
+    if (cfg.livekit_api_key or "") in ("", "devkey") or (cfg.livekit_api_secret or "") in ("", "secret"):
+        problems.append("LiveKit API 키/시크릿이 기본값이거나 비어 있음")
+
+    # 푸시 — 둘 다 비면 푸시 비활성(허용), 한쪽만 있으면 설정 오류
+    if bool((cfg.fcm_project_id or "").strip()) != bool((cfg.fcm_service_account_json or "").strip()):
+        problems.append("FCM_PROJECT_ID 와 FCM_SERVICE_ACCOUNT_JSON 이 한쪽만 설정됨")
+    if bool((cfg.vapid_public_key or "").strip()) != bool((cfg.vapid_private_key or "").strip()):
+        problems.append("VAPID 공개키/개인키가 한쪽만 설정됨")
+
+    # DB — dev 엔드포인트·기본 로컬 DB 금지
+    db_url = (cfg.database_url or "").strip()
+    if not db_url or "localhost" in db_url or _is_dev_value(db_url):
+        problems.append("database_url 가 기본/개발 DB 를 가리킴")
+
+    # 연구 가명 키 — 분실·미설정 시 동일인 매핑 단절(R14)
+    if not (cfg.research_id_key_v1 or "").strip():
+        problems.append("RESEARCH_ID_KEY_V1 미설정")
+    if cfg.research_export_enabled and not (cfg.research_export_ack_token or "").strip():
+        problems.append("RESEARCH_EXPORT_ACK_TOKEN 미설정 (연구 내보내기 활성)")
+
+    return problems
 
 
 def production_config_problems(cfg) -> list[str]:
@@ -55,6 +128,7 @@ def production_config_problems(cfg) -> list[str]:
         problems.append("DEBUG 가 켜져 있음")
     if cfg.enable_dev_role_simulation:
         problems.append("개발용 역할 시뮬레이션이 켜져 있음")
+    problems.extend(_production_extra_problems(cfg))
     return problems
 
 
@@ -83,21 +157,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# SDD-210: 허용 오리진은 CORS_ALLOWED_ORIGINS 로 주입(미설정 시 기존 기본 목록 — app/core/cors.py).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://dev.mindbreeze.looxidlabs.com",
-        "https://dev.mindbreeze.looxidlabs.com",
-        "http://dev-api.mindbreeze.looxidlabs.com",
-        "https://dev-api.mindbreeze.looxidlabs.com",
-        # SDD-190: Capacitor 앱 WebView 오리진 (Android=https://localhost, iOS=capacitor://localhost)
-        "https://localhost",
-        "capacitor://localhost",
-        # prod (릴리즈 시 활성화)
-        # "https://mindbreeze.looxidlabs.com",
-        # "https://api.mindbreeze.looxidlabs.com",
-    ],
+    allow_origins=http_cors_origins(settings),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

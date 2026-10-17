@@ -44,13 +44,30 @@ class StorageSigningError(RuntimeError):
     """
 
 
+def _credential_kwargs() -> dict[str, str]:
+    """boto3.client 자격증명 인자. 키가 비어 있으면 인자를 생략해 기본 자격 체인(인스턴스 역할)을 쓴다.
+
+    SDD-210(T-D3): 빈 문자열을 그대로 넘기면 boto3 가 빈 키로 서명을 시도해 실패한다. 키가 있으면 기존과 동일.
+    """
+    key = (settings.aws_access_key_id or "").strip()
+    secret = (settings.aws_secret_access_key or "").strip()
+    if key and secret:
+        return {"aws_access_key_id": settings.aws_access_key_id, "aws_secret_access_key": settings.aws_secret_access_key}
+    return {}
+
+
 def _has_real_credentials() -> bool:
     """실제 S3 자격증명이 설정되었는지(더미 아님) 판정한다.
+
+    SDD-210: S3_USE_INSTANCE_ROLE=true 면 키 없이도 설정된 것으로 본다(EC2 인스턴스 역할). 키가 함께
+    있으면 아래 기존 판정을 따른다.
 
     STG-07: dev 더미(dev/dev 등)는 실제 서명이 불가하므로 미설정으로 본다 — 스텁 유지.
     """
     key = (settings.aws_access_key_id or "").strip()
     secret = (settings.aws_secret_access_key or "").strip()
+    if not key and not secret and getattr(settings, "s3_use_instance_role", False):
+        return True
     if not key or not secret:
         return False
     if key.lower() in _DUMMY_CREDENTIALS and secret.lower() in _DUMMY_CREDENTIALS:
@@ -114,8 +131,7 @@ def generate_presigned_put(
             "s3",
             region_name=settings.s3_region,
             endpoint_url=_endpoint_url() or f"https://s3.{settings.s3_region}.amazonaws.com",
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
+            **_credential_kwargs(),
         )
         return client.generate_presigned_url(
             "put_object",
@@ -174,6 +190,7 @@ def _s3_client_fingerprint() -> tuple:
         _endpoint_url() or "",
         settings.aws_access_key_id or "",
         hashlib.sha256((settings.aws_secret_access_key or "").encode()).hexdigest(),
+        bool(getattr(settings, "s3_use_instance_role", False)),
     )
 
 
@@ -199,8 +216,7 @@ def _s3_client():
             "s3",
             region_name=settings.s3_region,
             endpoint_url=_endpoint_url(),
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
+            **_credential_kwargs(),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[storage] S3 클라이언트 생성 실패: %s", exc)
@@ -318,8 +334,7 @@ def _export_client():
         return boto3.client(
             's3', region_name=settings.s3_region,
             endpoint_url=_endpoint_url(),
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
+            **_credential_kwargs(),
             config=Config(signature_version='s3v4', connect_timeout=10, read_timeout=60, retries={'max_attempts': 2}),
         )
     except Exception as exc:

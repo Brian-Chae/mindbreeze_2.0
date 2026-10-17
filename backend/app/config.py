@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     research_export_max_batch_bytes: int = 256 * 1024 * 1024
     refresh_token_expire_days: int = 14
 
+    # SDD-210: CORS 허용 오리진(쉼표 구분). 미설정이면 기존 기본 목록(dev 호환), 운영은 **명시 필수**.
+    # HTTP CORS 와 Socket.IO 가 같은 값을 쓴다(app/core/cors.py).
+    cors_allowed_origins: str = ""
+
     # Resend Email
     resend_api_key: str = ""
     resend_from_email: str = "onboarding@resend.dev"
@@ -80,6 +84,9 @@ class Settings(BaseSettings):
     s3_endpoint_url: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
+    # SDD-210(T-D3): True 면 키 없이 boto3 기본 자격 체인(EC2 인스턴스 역할)으로 S3 를 사용한다.
+    # 기본 False — 키가 비어 있으면 기존처럼 스텁/로컬 폴백(로컬·테스트·현 dev 서버 호환).
+    s3_use_instance_role: bool = False
 
     # App
     # SDD-197: DEBUG 는 SQL echo(바인드 파라미터=개인정보 포함)를 켠다. 기본은 꺼짐 — 로컬 개발만 명시적으로 켠다.
