@@ -71,8 +71,8 @@ def test_func02_client_report_targets_requested_participant(client):
     sid = _create_session(client, host)
     db = _db()
     try:
-        p1 = SessionParticipant(session_id=UUID(sid), guest_name="첫째")
-        p2 = SessionParticipant(session_id=UUID(sid), guest_name="둘째")
+        p1 = SessionParticipant(report_included=True, session_id=UUID(sid), guest_name="첫째")
+        p2 = SessionParticipant(report_included=True, session_id=UUID(sid), guest_name="둘째")
         db.add_all([p1, p2])
         db.commit()
         p1_id, p2_id = str(p1.id), str(p2.id)
@@ -156,6 +156,7 @@ def test_func04_completion_enqueues_report_email(client, monkeypatch):
     db = _db()
     try:
         participant = SessionParticipant(
+            report_included=True,
             session_id=UUID(sid), guest_name="내담자", report_email="guest@example.com"
         )
         db.add(participant)
@@ -188,7 +189,7 @@ def test_func04_no_email_without_report_email(client, monkeypatch):
     sid = _create_session(client, host)
     db = _db()
     try:
-        participant = SessionParticipant(session_id=UUID(sid), guest_name="내담자")
+        participant = SessionParticipant(report_included=True, session_id=UUID(sid), guest_name="내담자")
         db.add(participant)
         db.commit()
         report = Report(

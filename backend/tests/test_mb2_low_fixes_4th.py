@@ -442,8 +442,8 @@ def test_collect_client_comments_batches_queries(client):
                          status="completed")
         db.add(s)
         db.flush()
-        p_member = SessionParticipant(session_id=s.id, user_id=member.id)
-        p_guest = SessionParticipant(session_id=s.id, user_id=None, guest_name="게스트")
+        p_member = SessionParticipant(report_included=True, session_id=s.id, user_id=member.id)
+        p_guest = SessionParticipant(report_included=True, session_id=s.id, user_id=None, guest_name="게스트")
         db.add_all([p_member, p_guest])
         db.flush()
         db.add(Report(

@@ -177,7 +177,14 @@ def approved_client_reports(
         .limit(limit)
         .all()
     )
-    return [report_facts(report, db) for report in rows]
+    # SDD-209(B3): 리포트 반영을 제외한 참가자의 리포트는 AI 비서 입력에 쓰지 않는다.
+    from app.services import report_scope
+
+    return [
+        report_facts(report, db)
+        for report in rows
+        if not report_scope.is_participant_excluded(report.session_id, report.participant_id, db)
+    ]
 
 
 def report_facts(report: Report, db: DBSession) -> dict:

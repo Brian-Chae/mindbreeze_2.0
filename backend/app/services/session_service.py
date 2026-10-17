@@ -2275,6 +2275,11 @@ def set_report_choice(
         participant.report_notice_version = notice_version
     db.commit()
     db.refresh(participant)
+    if changed:
+        # SDD-209(B3): 이미 만들어진 리포트 산출물(스냅샷)을 새 반영 범위로 재생성/무효화한다.
+        from app.services import report_service
+
+        report_service.refresh_reports_after_choice_change(sid, participant.id, db)
     return {
         "participant_id": str(participant.id),
         "report_included": participant.report_included,

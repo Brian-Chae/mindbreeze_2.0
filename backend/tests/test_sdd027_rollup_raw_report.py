@@ -8,6 +8,7 @@
 
 from tests.entry_helpers import guest_body
 from app.services import email_verify_service
+from app.models.session import SessionParticipant
 from tests.conftest import create_test_org
 
 VALID_PASSWORD = "Passw0rd!"
@@ -51,7 +52,17 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 def _join_guest(client, code: str, name: str) -> str:
     res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
-    return res.json()["participant_id"]
+    pid = res.json()["participant_id"]
+    # SDD-209(B3): 리포트 반영은 기본 제외 — 리포트 본문을 검증하는 이 파일의 참가자는 명시 선택(포함)한다.
+    from uuid import UUID as _UUID
+
+    db = _db()
+    try:
+        db.query(SessionParticipant).filter(SessionParticipant.id == _UUID(pid)).update({"report_included": True})
+        db.commit()
+    finally:
+        db.close()
+    return pid
 
 
 def _feature(second_offset: int, **over) -> dict:

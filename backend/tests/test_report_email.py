@@ -20,7 +20,7 @@ def setup_email(client):
     session = Session(host_id=uuid4(), type="meditation", status="completed", duration_min=10)
     db.add(session)
     db.flush()
-    participant = SessionParticipant(session_id=session.id, guest_name="게스트")
+    participant = SessionParticipant(report_included=True, session_id=session.id, guest_name="게스트")
     db.add(participant)
     db.commit()
     yield db, session, participant
@@ -129,7 +129,7 @@ def test_group_report_excludes_others(client, setup_email):
     from app.models.eeg_feature import EEGFeatureWindow
     db, session, participant = setup_email
     session.participant_mode = "group"
-    other = SessionParticipant(session_id=session.id, guest_name="다른 참가자")
+    other = SessionParticipant(report_included=True, session_id=session.id, guest_name="다른 참가자")
     db.add(other)
     db.flush()
     db.add(SessionRecord(session_id=session.id, ai_summary={"summary": "다른 참가자 비밀 상담"}))

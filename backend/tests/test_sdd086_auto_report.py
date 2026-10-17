@@ -25,6 +25,7 @@ def _db():
 
 def _add_participant(db, sid: str, user_id=None, guest_name=None, is_waitlisted=False):
     participant = SessionParticipant(
+            report_included=True,
         session_id=UUID(sid),
         user_id=UUID(user_id) if user_id else None,
         guest_name=guest_name,

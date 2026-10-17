@@ -307,6 +307,7 @@ def test_participant_pii_hidden_from_non_host(client):
         db.add(session)
         db.flush()
         db.add(SessionParticipant(
+            report_included=True,
             session_id=session.id, user_id=uuid.UUID(member["id"]),
             gender="female", birth_date=date(1990, 1, 1),
         ))
@@ -468,7 +469,7 @@ def _client_report_ctx(client):
     host = _reg_report_host(client, "auth412-host@example.com")
     session_id = _create_session(client, host)
     db, provider = _db()
-    participant = SessionParticipant(session_id=session_id, guest_name="재발송", report_email="old@example.com")
+    participant = SessionParticipant(report_included=True, session_id=session_id, guest_name="재발송", report_email="old@example.com")
     db.add(participant)
     db.flush()
     report = Report(session_id=session_id, participant_id=participant.id, type="client", status="completed", content={})

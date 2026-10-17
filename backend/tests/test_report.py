@@ -70,7 +70,7 @@ def _add_participant(client, sid: str) -> str:
 
     db = next(app.dependency_overrides[get_db]())
     try:
-        participant = SessionParticipant(session_id=UUID(sid), guest_name="내담자")
+        participant = SessionParticipant(report_included=True, session_id=UUID(sid), guest_name="내담자")
         db.add(participant)
         db.commit()
         return str(participant.id)
