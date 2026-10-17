@@ -185,7 +185,7 @@ def test_live04_raise_hand_completed_400(client):
     _set_room_id(cls, uuid4())
     _complete_session(cls)
 
-    res = _raise_hand(client, cls, joined["participant_id"], token=joined["participant_token"])
+    res = _raise_hand(client, cls, joined["participant_id"], token=joined["entry_credential"])
     assert res.status_code == 400, res.text
 
 
@@ -212,11 +212,8 @@ def test_live04_member_token_completed_400(client):
     _complete_session(cls)
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/livekit-token",
-        json={
-            "participant_id": joined["participant_id"],
-            "participant_token": joined["participant_token"],
-        },
+        f"/api/v1/sessions/{cls['id']}/entry/livekit-token",
+        headers={"X-Entry-Credential": joined["entry_credential"]},
     )
     assert res.status_code == 400, res.text
 

@@ -72,6 +72,9 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
             raise HTTPException(403, "참가자 확인 정보가 일치하지 않습니다")
     if session.status != "completed":
         raise HTTPException(409, "완료된 세션에서만 리포트를 요청할 수 있습니다")
+    if not participant.report_included:
+        # SDD-209(B3): 리포트 반영을 제외한 참가자는 리포트(메일) 대상이 아니다.
+        raise HTTPException(409, "리포트에 반영되지 않은 참가자입니다")
     # 로그인 회원이 본인 계정 이메일로 요청하면 OTP 인증 생략 (계정 이메일은 이미 인증됨)
     email_verified = False
     if participant.user_id and user_id and str(participant.user_id) == user_id:
@@ -178,6 +181,9 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
     ).with_for_update().first()
     if not participant or not participant.report_email:
         return "unavailable"
+    if not participant.report_included:
+        # SDD-209(B3): 제외 참가자에게는 발송하지 않는다.
+        return "excluded"
     if report.status != "completed":
         return report.status
     if participant.report_email_sent_at:
@@ -237,6 +243,8 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
     ).first()
     if not participant:
         raise HTTPException(400, "리포트 참가자를 찾을 수 없습니다")
+    if not participant.report_included:
+        raise HTTPException(409, "리포트에 반영되지 않은 참가자입니다")
 
     # RESEND-006: report_email 은 '등록된 수신 이메일'로 불변이다(request_report_email 이
     # 이후 변경을 409 로 막는 계약). 재발송은 '전달 주소'만 지정하므로 report_email 을 덮어쓰지
@@ -300,6 +308,9 @@ def get_report_view_content(token: str, db: DBSession) -> dict:
     ).first() if report and report.participant_id else None
     if not participant or participant.report_email != claims.get("email"):
         raise HTTPException(403, "리포트 접근 권한이 없습니다")
+    if not participant.report_included:
+        # SDD-209(B3): 이미 발송된 링크라도 제외로 바뀐 뒤에는 열람을 막는다(사본 회수 불가 한계는 고지).
+        raise HTTPException(403, "리포트에 반영되지 않은 참가자입니다")
 
     session = db.query(Session).filter(Session.id == session_id).first()
     if not session:
@@ -327,6 +338,8 @@ def view_report_email(session_id: UUID, token: str, db: DBSession) -> str:
     participant = db.query(SessionParticipant).filter(SessionParticipant.id == report.participant_id).first() if report else None
     if not report or not participant or participant.report_email != claims.get("email"):
         raise HTTPException(403, "리포트 접근 권한이 없습니다")
+    if not participant.report_included:
+        raise HTTPException(403, "리포트에 반영되지 않은 참가자입니다")
     # 링크 열람에는 허용한 내담자 필드만 사용하며 HTML을 이스케이프한다.
     # VIEW-NORM-005: JSON 뷰(_serialize)와 동일한 정규화를 적용한다. 정규화 없이 raw content 를
     # 읽으면 content.eeg 가 dict 가 아닐 때 eeg.get(...) 이 AttributeError(500)를 낸다.

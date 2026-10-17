@@ -829,3 +829,16 @@ def send_org_removed_email(
         f"감사합니다.\nMIND BREEZE 드림"
     )
     return _send_email(to_email, subject, body_text)
+
+
+def send_session_invite_email(to_email: str, subject: str, body_text: str) -> bool:
+    """SDD-209 B14: 비회원 클래스 초대 메일(4자리 코드 안내). Resend 2xx 접수 여부만 반환한다."""
+    from html import escape
+
+    html_body = (
+        "<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\"></head>"
+        "<body style=\"font-family:Arial,'Malgun Gothic',sans-serif;color:#1F1F1F;line-height:1.8;\">"
+        f"<pre style=\"font-family:inherit;white-space:pre-wrap;margin:0;\">{escape(body_text)}</pre>"
+        "</body></html>"
+    )
+    return _send_email(to_email, subject, body_text, html_body)

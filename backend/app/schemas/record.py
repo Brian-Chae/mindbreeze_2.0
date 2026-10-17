@@ -110,7 +110,7 @@ class CheckinRequest(BaseModel):
     - arousal(각성)·valence(정서): 각 1~5 단계. 한 축만 남겨도 저장한다(null 보존).
     - note: 선택형 한 줄 소감(최대 200자).
     - 소유 증명: 로그인 회원은 액세스 토큰으로 본인 참여자를 증명하고,
-      게스트는 participant_id + participant_token 이 필요하다.
+      비회원은 입장 자격(헤더 X-Entry-Credential)이 필요하다.
     """
 
     phase: Literal["before", "after"] = "after"
@@ -119,7 +119,6 @@ class CheckinRequest(BaseModel):
     emotion: int | None = Field(default=None, ge=1, le=5)
     note: str | None = Field(default=None, max_length=200)
     participant_id: str | None = None
-    participant_token: str | None = None
 
     @field_validator("note")
     @classmethod

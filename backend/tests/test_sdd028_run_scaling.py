@@ -8,6 +8,7 @@
 3. 회귀: 기존 라이브·롤업 동작 유지
 """
 
+from tests.entry_helpers import guest_body
 from sqlalchemy import inspect as sa_inspect
 
 from app.services import email_verify_service, eeg_query
@@ -52,7 +53,7 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 
 
 def _join_guest(client, code: str, name: str) -> str:
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 

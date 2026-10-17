@@ -512,3 +512,51 @@ SH1 라이트 키트(`ClassCard`·`StatusChip`·`ShellSheet` 등) → SH2 FM01 �
 | **N-4 (확정)** | **생년월일 보관 형태** | **연·월만 보관, 일 삭제**(Brian 확정) | 연구 번들에는 `birth_year_month`(YYYY-MM)만 담고 일(日)은 번들·연구 DB에 없다. 가명 ID 계산·철회 대조에는 입력받은 전체 생년월일을 쓰되 저장하지 않는다(계산 직후 폐기). 재식별 위험 고지는 유지 | 연구 DB 필드, R15 |
 | **N-5** | **기존(과거) 데이터와 스위프 최초 활성화** | (a) 배포일 이후 종료된 클래스부터 적용(과거 테스트 데이터 보호) (b) dry-run 보고 후 과거 기간 경과분도 일괄 삭제 | **(a)** — 스위프는 비활성 배포, dry-run 보고서를 보고 Brian 이 활성화·과거분 처리를 별도 승인 | 기존 테스트 데이터 |
 | **N-6** | **개인정보처리방침 갱신 시점** (기록 N일 삭제·연구 동의·무기한 보관·재식별 위험) | 출시 전 완료 vs 출시 후 | **출시(운영 배포) 전 완료 조건**(법적 판단은 별도 검토) | 출시 게이트 |
+
+---
+
+## 구현 변경 기록 — 백엔드 3차 (Stage 4: B3 → B14 → B12 → B13 → B9)
+
+> plan 대비 구현 중 확정·변경된 사항(Brian 확정 결정 반영). 각 Task 커밋 시 갱신한다.
+
+### B3 리포트 전 경로 필터·무효화 (확정 A3)
+- **상담사 리포트 EEG 집계 규칙 변경(숫자가 바뀔 수 있음)**: 첫 참가자 1명 → **리포트 반영에 동의한 대기열 밖 참가자 전원**의 합산(1:1 은 그 1명, 그룹은 동의자 전원 평균·분포). `_build_eeg_content(session_wide=True, participant_ids=[동의자])` 경로 사용. **배포 후 새로 생성·재생성되는 그룹 상담사 리포트의 EEG 숫자는 기존(첫 참가자 기준)과 달라질 수 있다.** 이미 저장된 스냅샷은 건드리지 않으며(조회 시 방어 필터만 적용), 재생성 시에만 새 규칙이 적용된다.
+- 전원 제외: EEG 구간을 비우고 `{"status":"not_measured","excluded":true,"notice":"참가자가 제외를 선택했어요"}`. 제외 참가자의 저장(원본·지표)은 그대로.
+- 제외자가 1명이라도 있으면 상담사 리포트의 `transcript_segments`·`video.available`·AI 공통 요약(`ai_record`)을 제거(원본 보존). 내담자 리포트: 제외자는 행을 만들지 않고, 수동 생성·기존 행은 `리포트에 반영되지 않아요` 안내(stub)만. 상담사 코멘트 파생 표시·AI 코멘트 초안·AI 비서 입력·메일 발송/신청/재발송/이메일 링크 열람(403)에서 제외자 배제.
+- `content.report_scope = {version, included_participants, excluded_participants}` 표식. 조회(`get_report`/`list_reports`/메일 열람 직렬화)는 구 스냅샷도 방어 필터로 한 번 더 거른다.
+- 선택 변경 시 `refresh_reports_after_choice_change`: 상담사 리포트·해당 참가자 내담자 리포트 재생성(실패해도 제외 기여분은 즉시 걷어냄). 승인(`completed`) 상태는 보존(내용만 교체).
+- `narrative_cache`(전역 패턴 캐시)·PDF(저장물 없음, 내용 해시 키)는 무효화 대상 아님(B0 확정 그대로). `/video/url`(호스트 원본 재생)과 데이터 내보내기 번들은 원본 열람이므로 변경 없음(리포트 content 의 영상 가용 표시만 제거).
+- 기본 제외이므로 기존 테스트 17건 중 직접 `SessionParticipant` 를 만드는 보조코드는 `report_included=True` 로 명시(테스트 정합).
+- 미해결: 초대만 받고 입장하지 않은 대기열 밖 참가자도 기본 `제외`로 세어져 그룹 상담사 리포트의 공통 기록이 빠질 수 있다 → B9 `entered_at` 도입 후 미입장자 제외 여부를 후속 판단.
+
+### B14 비회원 이메일 초대·리포트 자동 발송 (마이그레이션 `e036a0000048`)
+- 신규 테이블 `session_email_invites`(추가형, 세션 FK CASCADE, `(session_id,email_norm)` 유니크). `POST /sessions/{id}/invite/email`(호스트 전용·최대 50개·형식 검증·요청 내 중복 제거) / `GET /sessions/{id}/invite/email`(현황). 응답은 주소별 `registered`(등록)와 `request`(발송 요청: `queued`/`skipped_pending`/`skipped_cooldown`/`enqueue_failed`/`invalid_email`/`duplicate_in_request`/`limit_exceeded`)를 분리하고 delivered/received 계열 필드는 없다.
+- 상태 `queued → requested(Resend 2xx 접수) | failed`. 전달 확인은 접수 수준(N 확정). 큐에 300초 넘게 머문 건은 `stale=true`("아직 보내지 못했어요" 근거, 워커 미기동 감지) — 이 건은 쿨다운과 무관하게 재요청 가능. 재요청 쿨다운 60초, 같은 행 갱신.
+- 발송은 `report_email_task.py` 의 `@email_app.task("tasks.session_invite_email")`(큐 `email`, 재시도 3회) — 다른 모듈에 두면 unregistered 로 버려지는 기존 함정 회피. 본문: 클래스·시각·**4자리 코드**·`/join` 안내, 코드는 URL 에 싣지 않음.
+- 비회원 개인정보 스크럽용 `scrub_invite_emails()` 를 제공(B12 스위프가 호출). 
+- 리포트 자동 발송(N-3): 기존 "승인 후 자동 발송" 경로가 입장 시 입력한 `report_email` 만으로 이미 동작함을 테스트로 고정(중복 0, 제외자 대상 아님). 발송 실패는 호스트 뷰 참여자 DTO `report_email_status` 로 표시(비호스트 null). OTP 분기는 건드리지 않았다(회원 1탭·구 게스트 신청 경로 유지).
+- 정원 서버 검증(BT79)은 `schemas/session.py` 의 기존 검증을 그대로 두고 테스트로 고정.
+
+### B12 기본 DB 삭제 스위프 `retention_sweep` (마이그레이션 `e036a0000049`, 비활성 배포)
+- **A1 확정 반영**: 기존 cron 2개(`sweep_stale_media_cron.py`·`sweep_stale_eeg_raw_cron.py`)는 **그대로 둔다**(현행 dev 90일 음성·영상 삭제 유지). 새 `retention_sweep` 는 `RETENTION_SWEEP_ENABLED=false`(기본)로 배포되어 실행해도 **dry-run(삭제 0)** 이며 후보 건수·바이트·보류 건수를 보고하고 `retention_sweep_runs` 에 이력을 남긴다(`backend/retention_sweep_cron.py` 로 보고서 출력). 활성화는 별도 승인 — 활성이 되면 기존 두 스위프 태스크가 `{"skipped": "replaced_by_retention_sweep"}` 로 스스로 건너뛰어 이중 실행을 막는다. **crontab 등록(deploy-dev.yml)은 이번 범위에서 변경하지 않았다.**
+- 설정값: `RETENTION_RAW_DAYS=90`·`RETENTION_GUEST_PII_DAYS=90`(세션 종료일 기준, `ended_at` 없으면 `created_at`), `RETENTION_HOLD_ALERT_DAYS=14`, **`RETENTION_APPLY_FROM`(N-5)** — 이 날짜 이후 종료된 클래스부터만 삭제하며, 비어 있으면 활성이어도 삭제를 거부하고 dry-run 으로만 동작(과거 테스트 데이터 보호). **활성화 전 `.env` 에 설정해야 한다.**
+- 삭제 범위: EEG raw 청크·음성/영상 청크·병합 영상/음성 키·STT 원문(`transcript`·`ai_summary.segments`). 지표(`eeg_feature_windows`)·리포트 본문·회원 계정은 대상 아님(N-2). 종료·취소 클래스만, 숨김(보존 전환) 클래스 포함. 파일/객체는 DB 커밋 뒤 best-effort.
+- 비회원 개인정보 스크럽: 이름·성별·생년월일·리포트 이메일·이메일 초대 주소를 비움, `session_participants.pii_scrubbed_at` 신설.
+- 연구 게이트: 연구 동의(미철회)이고 `export_state` 가 `acked/withdrawn/blocked_withdrawn/not_applicable` 이 아닌 참여자의 **EEG raw 만** 보류(음성·영상·STT 는 연구 번들 대상이 아니라 게이트 없음). `pending/exported` = 내보내기 큐 유지, `blocked_*` 는 별도 집계. 보류가 `RETENTION_RAW_DAYS + RETENTION_HOLD_ALERT_DAYS` 를 넘으면 플랫폼 관리자에게 인앱 알림 1회(`research_consents.hold_alerted_at` 로 중복 방지).
+- 임시·고아 정리(재생성 가능한 임시 데이터)는 실행 시 함께 수행: pending/failed EEG 청크, 부모 없는 미디어 청크.
+- 미해결(정책 확인 필요): 리포트 스냅샷 `reports.content.transcript_segments` 에 STT 원문이 복제돼 있어 원문 삭제가 이 사본까지 지우지 못한다(N-2 "리포트 본문은 삭제 대상 아님" 과 충돌, B0 A6). 이번에는 N-2 를 따라 건드리지 않았다.
+
+### B13 연구 DB 내보내기 배치 (마이그레이션 `e036a0000050`, 비활성)
+- **S3 스테이징 pull 방식 확정**: 운영→Spark push 없음. 번들 `research-export/<batch_id>/{sessions,subjects,eeg_raw,features}.parquet + manifest.json` 을 스테이징 prefix 에만 쓰고(manifest 가 마지막), Spark 가 `GET /research-export/batches`(서비스 토큰)로 목록을 보고 pull 한 뒤 `POST /research-export/ack`(batch_id + manifest sha256)로 회신하면 해당 동의 건 `export_state: pending → exported(업로드) → acked`. 서비스 토큰은 `RESEARCH_EXPORT_ACK_TOKEN`(.env 전용, 비면 503). **Spark 실접속·실전송 없음**, `RESEARCH_EXPORT_ENABLED=false` 기본.
+- `research_withdrawal_requests` 는 B11 에서 만든 것을 재사용(이번 마이그레이션은 `research_export_batches`·`research_export_items` 2개만). FK/CASCADE 없음.
+- **허용 필드 화이트리스트**(번들 컬럼이 목록과 정확히 같지 않으면 업로드 0) + 문자열 셀 스캔(이메일·전화 패턴, 이 배치 참가자의 이름·이메일·세션 제목/메모 원문). 원본 session/participant/user UUID·이름·이메일·전화·STT·음성·영상·호스트/기관 식별자·**절대 시각 없음**: 세션/참여자는 연구 키 HMAC 가명(`session_pseudo`·`participant_pseudo`), 시각은 참여자 기준 상대 ms(`t_rel_ms`/`start_rel_ms`), 생년월은 `YYYY-MM`(N-4).
+- **PPG/ACC**: raw 저장이 없으므로(B0 S6) 번들은 EEG raw(payload 바이트 그대로 + 해석 메타) + EEG 지표 + PPG/ACC **파생 지표**(sdnn·rmssd·lf/hf·heart_rate·respiratory_rate·motion)만 담는다. 계약 문구 "EEG/PPG/ACC raw" 는 이에 맞춰 정정.
+- 누적: 동의 건·내용 해시 단위 항목(append-only). 같은 해시면 건너뛰고(중복 제거), 내용이 늘면 새 revision. 종료 훅(`on_session_completed`)이 큐(`pending`)에 올리고, B12 삭제 보류가 삭제 전 미적재분을 같은 큐에 유지한다. 철회: 미ack 배치 취소+스테이징 객체 삭제, ack 직전 철회도 취소, 남은 유효 건은 다시 `pending`. 실패: 부분 업로드 정리·배치 failed·연속 실패 `RESEARCH_EXPORT_MAX_ATTEMPTS`(5)에 닿으면 관리자 알림 1회.
+- 의존성 추가: `pyarrow==26.0.0`(requirements.txt) — Parquet 번들용. **dev 배포 시 requirements 설치가 필요**하다.
+- 미해결: ① 장비 시계(`device_timestamp_ms`)의 절대 시각 의미는 계속 미확인이라 상대화로 회피 ② 배치 크기 상한(256MB) 초과 시 분할 정책 없음(실패 처리) ③ cron 등록(`research_export_cron.py`)·스테이징 prefix IAM·Spark 쪽 pull 계정은 별도 인프라 승인 사항.
+
+### B9 전극·준비 중계(BE-10)·입장 시각(BE-11)·익명 집계(BE-12) (마이그레이션 `e036a0000051`)
+- **BE-10**: WS `waiting_room` 의 `readiness` 가 구 3-boolean 페이로드를 그대로 통과시키면서 선택 필드 `surveySkipped/bandSkipped/deviceSkipped`(boolean)와 `band{state(소문자 식별자), lead_off{ch1,ch2}, battery(0~100)}` 를 검증해 호스트 룸으로 중계한다. 필드별로 잘못된 값은 개별로 버리고, 완료 boolean 3종이 틀리면 전체 `null`(기존 규칙). 서버 저장 없음. **D11(시작 전 EEG feature 미저장)은 강제하지 않았다** — 기존 SDD-088 이 대기실(open) 구간 윈도우를 저장하되 리포트 집계에서만 제외하는 동작이라 저장 차단은 별도 결정/회귀 검토가 필요하다.
+- **BE-11**: `session_participants.entered_at`(nullable, 백필 없음). `_enter_resolved`(코드 입장·초대 편의 경로)와 `join_session` 에서 최초 1회만 기록(재입장 불변). 호스트 뷰 참여자 DTO 에만 `entered_at` 노출. **B7 이월 해소**: `invite/remind` 가 입장한 참여자를 `skipped_entered` 로 건너뛴다(대상 명시 시에도). **B3 이월 해소**: 참여자 중 한 명이라도 `entered_at` 이 있는 클래스에서는 초대만 받고 입장하지 않은 참여자를 리포트 범위(제외/포함)에서 뺀다. 입장 기록 도입 전 클래스(전원 NULL)는 기존 규칙 그대로.
+- **BE-12**: 서버가 대기실 presence 를 휘발성 메모리(단일 프로세스, heartbeat TTL 90초)로 집계해 `waiting_room_summary {session_id, ready, total}` 만 세션 공용 룸에 방송(개인 식별 정보·닉네임 없음, 준비 = 설문·밴드·기기 각각 완료 또는 건너뜀). 시작 확인 시트용 `GET /sessions/{id}/report-choice/summary → {included, excluded, total}`(호스트 전용, 개별 선택 비노출, 녹음 시작을 막지 않음). 연구 동의 인원은 B11 의 기존 `research-consent/summary` 를 그대로 쓴다.
+- 미해결: presence 집계는 프로세스 메모리라 다중 프로세스/재시작 시 heartbeat 이 다시 쌓일 때까지 값이 비어 있다(systemd 단일 프로세스 전제).

@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func
+from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -16,6 +16,21 @@ class Session(Base):
     # SDD-095: 일반 클래스 목록/템플릿 목록 조회를 (host_id, is_template) 로 좁힌다.
     __table_args__ = (
         Index("ix_sessions_host_is_template", "host_id", "is_template"),
+        # SDD-209(B4): 4자리 코드는 활성(입장 가능) 클래스 사이에서만 유일하다. 종료·취소·숨김·템플릿은
+        # 제외하므로 코드 값이 재사용될 수 있고, 과거 값은 행에 그대로 보존된다.
+        Index(
+            "uq_sessions_active_access_code",
+            "access_code",
+            unique=True,
+            postgresql_where=text(
+                "access_code IS NOT NULL AND is_template = false AND hidden_at IS NULL "
+                "AND status NOT IN ('completed', 'cancelled')"
+            ),
+            sqlite_where=text(
+                "access_code IS NOT NULL AND is_template = 0 AND hidden_at IS NULL "
+                "AND status NOT IN ('completed', 'cancelled')"
+            ),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -42,7 +57,11 @@ class Session(Base):
     )
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # SDD-015: 참여자가 입력하는 6자리 클래스 코드 (생성 시 자동 발급)
-    access_code: Mapped[str | None] = mapped_column(String(6), unique=True, index=True)
+    # SDD-209(B4): 로그인 없는 공통 4자리 숫자 코드(문자열, 선행 0 보존). 활성 클래스 사이에서만 유일.
+    # 길이 6 은 과거 6자리 값 보존용 — 과거 값은 입장에 쓰이지 않는다.
+    access_code: Mapped[str | None] = mapped_column(String(6), index=True)
+    # SDD-209(B4/DS-1): 재발급 시 이전 6자리 값을 보존하는 컬럼(읽기 전용 보존, 입장 불가).
+    legacy_access_code: Mapped[str | None] = mapped_column(String(6), nullable=True)
     # SDD-088: 클래스 오픈(대기실 개방) 시각 — 대기 경과 표시·오픈→시작 소요 지표용
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -80,6 +99,9 @@ class Session(Base):
         JSONB, nullable=False, default=list, server_default="[]"
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # SDD-209(B1): 일반 클래스 삭제는 숨김(보존 전환). 값이 있으면 모든 ORM 조회에서 제외된다
+    # (app/core/database.py 의 do_orm_execute 필터). 원본은 보관 스위프/플랫폼 관리자만 삭제한다.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
     participants = relationship("SessionParticipant", back_populates="session", cascade="all, delete-orphan")
@@ -123,6 +145,24 @@ class SessionParticipant(Base):
     # online 그룹(≤20) 회원은 기본 뮤트이며 speaking=True 일 때만 송신(can_publish) 허용.
     raise_hand: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     speaking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # SDD-209(B1): 호스트의 참여자 제거는 행 삭제가 아니라 제거 시각 기록(보존 전환) —
+    # 행을 지우면 FK CASCADE 로 EEG raw·지표·리포트가 영구 삭제된다. 값이 있으면 모든 ORM 조회에서 제외.
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-209(B2): 리포트 반영 선택(P2). 기본 제외 — 명시 선택 시에만 포함. consent_audio/eeg 와 별개.
+    report_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # 고지 확인 증빙(선택 이력과 분리 저장): 마지막으로 확인한 시각과 고지 문구 버전.
+    report_notice_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    report_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # SDD-209(B5a): 입장 자격 폐기용 버전 — 자격(JWT)의 ver 와 일치해야 유효. 올리면 이전 자격이 모두 무효.
+    entry_ver: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # SDD-209(B6): 대기 취소 시각. 행을 지우지 않고 기록만 한다 — 값이 있으면 removed_at 과 같이 모든 ORM 조회에서
+    # 제외(정원·순번·승격·토큰·상태 접근 대상 아님). 재대기하면 같은 행을 되살려 NULL 로 되돌리고 끝 순번을 준다.
+    waitlist_cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-209(B12): 비회원 개인정보(이름·성별·생년월일·이메일)를 보관 스위프가 비운 시각. 행·세션 참조는 유지.
+    pii_scrubbed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # SDD-209(B9/BE-11): 코드/초대 입장으로 실제 클래스에 들어온 최초 시각. 초대만 받고 들어오지 않았으면 NULL.
+    # (이 컬럼 도입 전 참여자는 NULL — 입장 여부를 알 수 없다.) 이후 값은 바뀌지 않는다.
+    entered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="participants")
 
@@ -157,3 +197,23 @@ class SessionReminderLog(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="sent")  # sent | failed
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReportChoiceEvent(Base):
+    """SDD-209(B2): 리포트 반영 선택 변경 이력(불변, append-only).
+
+    세션/참여자 삭제·스크럽 뒤에도 이력이 남도록 FK 없이 UUID 값만 보관한다.
+    고지 확인 증빙(시각/버전)은 session_participants 의 별도 컬럼에 둔다(RV2-7: 분리 저장).
+    """
+
+    __tablename__ = "report_choice_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    previous_included: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    new_included: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    # 변경 주체: self(참여자 본인). 후속 확장 대비 문자열.
+    actor_kind: Mapped[str] = mapped_column(String(20), nullable=False, default="self")
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

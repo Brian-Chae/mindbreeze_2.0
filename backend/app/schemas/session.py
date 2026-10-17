@@ -126,6 +126,10 @@ class ParticipantInfo(BaseModel):
     # SDD-015: 게스트 참여자는 user_id가 없고 guest_name만 갖는다
     user_id: str | None = None
     guest_name: str | None = None
+    # SDD-209(B8): 표시 이름(회원=계정 이름, 비회원=입력한 이름) — 모든 뷰에 공개.
+    user_name: str | None = None
+    # 이메일·성별·생년월일은 호스트 뷰에서만 채워진다(비호스트는 null).
+    user_email: str | None = None
     gender: str | None = None
     birth_date: date | None = None
     is_guest: bool = False
@@ -139,6 +143,10 @@ class ParticipantInfo(BaseModel):
     # SDD-094: 발언권 관리 — 손들기/발언권 부여 상태(상담사 UI 표시용)
     raise_hand: bool = False
     speaking: bool = False
+    # SDD-209(B14): 비회원 리포트 메일 발송 결과(호스트 뷰 전용). sent / failed / None(미발송·해당 없음)
+    report_email_status: str | None = None
+    # SDD-209(B9/BE-11): 최초 입장 시각(호스트 뷰 전용). 초대만 받고 들어오지 않았거나 기록 도입 전이면 null.
+    entered_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -151,6 +159,8 @@ class SessionResponse(BaseModel):
     custom_type_name: str | None = None
     status: SessionStatus
     host_id: str
+    # SDD-209(B8): 진행자(상담사) 표시 이름 — 참가자 화면에서 호스트 id 대신 이름을 보여준다.
+    host_name: str | None = None
     scheduled_at: datetime | None = None
     access_code: str | None = None
     # SDD-088: 클래스 오픈(대기실 개방) 시각
@@ -180,6 +190,8 @@ class SessionResponse(BaseModel):
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0
+    # SDD-209(B7): 초대 응답에서만 채워진다 — 참여자 등록 성공과 알림 요청 결과를 분리.
+    invite_result: "InviteResult | None" = None
 
     model_config = {"from_attributes": True}
 
@@ -225,29 +237,6 @@ class MarkerRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class SessionByCodeResponse(BaseModel):
-    """참여 전 클래스 확인 — 인증 없이 노출해도 되는 최소 정보만 담는다."""
-
-    id: str
-    access_code: str | None = None
-    title: str | None = None
-    type: SessionType
-    custom_type_name: str | None = None
-    status: SessionStatus
-    host_name: str | None = None
-    participant_mode: ParticipantMode
-    linkband_mode: LinkbandMode
-    location_type: LocationType
-    participant_count: int = 0
-    max_participants: int
-    started_at: datetime | None = None
-    scheduled_at: datetime | None = None
-    # 클래스 실시간 채팅 사용 여부 — 참여자가 입장 전에 채팅 가능 여부를 알 수 있게 노출
-    chat_enabled: bool = False
-
-    model_config = {"from_attributes": True}
-
-
 # ---------------------------------------------------------------------------
 # 클래스 실시간 채팅 (세션 채팅방 · on/off 토글)
 # ---------------------------------------------------------------------------
@@ -268,27 +257,39 @@ class SessionChatRoomResponse(BaseModel):
     room_type: str = "session"
 
 
-class JoinByCodeRequest(BaseModel):
-    """게스트 참여 시 name 필수, 로그인 참여 시 생략 가능."""
+class EnterVerifyRequest(BaseModel):
+    """SDD-209(B5a): 코드 확인 — 형식 검증은 서비스가 한다(틀린 형식도 없는 코드와 같은 404)."""
 
+    code: str = Field(..., max_length=64)
+
+
+class EnterVerifyResponse(BaseModel):
+    """코드 확인 성공 응답 — 클래스 제목·시각·진행자명 외에는 노출하지 않는다."""
+
+    title: str | None = None
+    scheduled_at: datetime | None = None
+    host_name: str | None = None
+
+
+class EnterRequest(BaseModel):
+    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월일·이메일 필수, 로그인 회원은 생략 가능."""
+
+    code: str = Field(..., max_length=64)
     name: str | None = Field(None, min_length=1, max_length=100)
     gender: Literal["male", "female", "other"] | None = None
     birth_date: str | None = None
-    participant_token: str | None = None
+    email: EmailStr | None = None
+    # 복귀: 이전에 받은 입장 자격(헤더 X-Entry-Credential 로도 전달 가능). 이름 일치로는 인계하지 않는다.
+    entry_credential: str | None = None
 
 
-class JoinByCodeResponse(BaseModel):
-    participant_token: str | None = None
-    session: SessionResponse
+class EnterResponse(BaseModel):
+    entry_credential: str | None = None
+    expires_at: datetime | None = None
     participant_id: str | None = None
     is_guest: bool = False
-
-
-class MemberLiveKitTokenRequest(BaseModel):
-    """회원/게스트 구독 전용 LiveKit 토큰 요청 — 게스트는 participant_token 소유 증명."""
-
-    participant_id: str
-    participant_token: str | None = None
+    is_waitlisted: bool = False
+    session: SessionResponse
 
 
 class MemberLiveKitTokenResponse(BaseModel):
@@ -309,10 +310,146 @@ class SpeakingRequest(BaseModel):
     granted: bool
 
 
-class RaiseHandRequest(BaseModel):
-    """회원/게스트 손들기 요청 — 게스트는 participant_token 으로 소유를 증명한다."""
+class ReportChoiceRequest(BaseModel):
+    """SDD-209(B2): 리포트 반영 선택 — 본인 참여자만(회원 로그인 또는 입장 자격 헤더 X-Entry-Credential)."""
 
-    participant_token: str | None = None
+    participant_id: str
+    report_included: bool
+    # 고지를 실제로 확인했을 때만 true. 증빙(시각/버전)은 선택 이력과 분리 저장된다.
+    notice_acknowledged: bool = False
+    notice_version: str | None = Field(None, max_length=20)
+
+
+class ReportChoiceResponse(BaseModel):
+    participant_id: str
+    report_included: bool
+    report_notice_ack_at: datetime | None = None
+    report_notice_version: str | None = None
+    # 이번 요청으로 선택 값이 실제로 바뀌었는지(멱등 재요청은 False)
+    changed: bool = False
+
+
+class InviteChannelResults(BaseModel):
+    """알림 **요청** 결과 — queued/skipped/failed/not_requested. 전달·수신 확인이 아니다(SDD-209 B7)."""
+
+    in_app: str
+    email: str
+
+
+class InviteResult(BaseModel):
+    registered: bool
+    user_id: str
+    channels: InviteChannelResults
+
+
+class InviteRemindRequest(BaseModel):
+    """재발송 대상 — 생략하면 호스트를 제외한 모든 참여자. 입장 여부는 서버가 알지 못하므로(BE-11 전)
+    호스트 클라이언트가 아직 입장하지 않은 참여자 id 만 보낼 수 있다."""
+
+    participant_ids: list[str] | None = None
+
+
+class InviteRemindResult(BaseModel):
+    participant_id: str
+    user_id: str | None = None
+    # queued / skipped_cooldown / skipped_no_account / skipped_waitlisted / skipped_entered / skipped_notification_off / not_found / failed
+    status: str
+    channels: InviteChannelResults | None = None
+
+
+class InviteRemindResponse(BaseModel):
+    session_id: str
+    cooldown_sec: int
+    results: list[InviteRemindResult]
+    summary: dict[str, int]
+
+
+class InviteEmailRequest(BaseModel):
+    """비회원 이메일 초대 — 형식 검증·중복 제거는 서비스가 주소별 결과로 돌려준다."""
+
+    emails: list[str] = Field(min_length=1, max_length=50)
+
+
+class InviteEmailResult(BaseModel):
+    email: str
+    # 등록 여부(새 초대 행 생성). 재요청은 False.
+    registered: bool
+    # 발송 요청 결과: queued / skipped_cooldown / skipped_pending / enqueue_failed / invalid_email /
+    # duplicate_in_request / limit_exceeded — 전달·수신 확인이 아니다.
+    request: str
+    invite_id: str | None = None
+
+
+class InviteEmailResponse(BaseModel):
+    session_id: str
+    cooldown_sec: int
+    results: list[InviteEmailResult]
+    summary: dict[str, int]
+
+
+class InviteEmailItem(BaseModel):
+    invite_id: str
+    email: str | None = None
+    # queued / requested(Resend 접수) / failed
+    status: str
+    stale: bool = False
+    request_count: int = 0
+    queued_at: datetime | None = None
+    requested_at: datetime | None = None
+    pii_scrubbed: bool = False
+
+
+class InviteEmailListResponse(BaseModel):
+    session_id: str
+    invites: list[InviteEmailItem]
+    summary: dict[str, int]
+
+
+SessionResponse.model_rebuild()
+
+
+class ResearchConsentRequest(BaseModel):
+    """SDD-209(B11): 연구 목적 데이터 활용 동의 — 기본 미동의. 리포트 반영 선택과 독립."""
+
+    consented: bool
+    # 동의 화면에 표시한 고지 문구 버전(생략하면 서버 기본 버전을 기록)
+    notice_version: str | None = Field(None, max_length=20)
+    # 선택 — 지정하면 본인 참여자와 같아야 한다(대리 요청 403)
+    participant_id: str | None = None
+
+
+class ResearchConsentResponse(BaseModel):
+    participant_id: str
+    consented: bool = False
+    changed: bool = False
+    notice_version: str | None = None
+    consented_at: datetime | None = None
+    # not_applicable | pending | blocked_key_missing | blocked_identity_missing | blocked_withdrawn | withdrawn | exported | acked
+    export_state: str = "not_applicable"
+    export_block_reason: str | None = None
+
+
+class ResearchConsentSummaryResponse(BaseModel):
+    """상담사용 익명 집계 — 인원 수만(개별 상태·가명 ID 없음)."""
+
+    consented: int
+    total: int
+
+
+class ReportChoiceSummaryResponse(BaseModel):
+    """상담사용 익명 집계(SDD-209 B9/BE-12) — 인원 수만(개별 선택·이름 비노출). 시작 확인 시트의 `리포트 제외 N명`."""
+
+    included: int
+    excluded: int
+    total: int
+
+
+class WaitlistCancelResponse(BaseModel):
+    """SDD-209(B6): 대기 취소 결과 — 멱등 재요청은 changed=False."""
+
+    participant_id: str
+    cancelled: bool = True
+    changed: bool = False
 
 
 class SpeakingStateResponse(BaseModel):
@@ -398,7 +535,7 @@ class SessionLiveMetricsResponse(BaseModel):
 
 
 class GuestSessionStateResponse(BaseModel):
-    """게스트가 인증 없이 대기→명상 전이를 감지하기 위한 최소 상태.
+    """참여자 본인 상태의 공통 필드 — EntryStateResponse 의 기반.
 
     민감한 참가자 목록은 포함하지 않는다.
     SDD-023: 게스트 명상 화면 실데이터(최신 윈도우) 필드를 추가한다. 미착용/미수집 시 null.
@@ -491,3 +628,12 @@ class ReportEmailRequest(BaseModel):
 class ReportEmailResponse(BaseModel):
     status: str
     message: str
+
+
+class EntryStateResponse(GuestSessionStateResponse):
+    """SDD-209(B5b/BE-9): 입장 자격(또는 로그인) 기반 본인 상태 — 대기→진행 전이·승격 감지용."""
+
+    participant_id: str
+    is_waitlisted: bool = False
+    # 본인의 리포트 반영 선택(기본 제외). 타인 선택은 어디에도 내려가지 않는다.
+    report_included: bool = False

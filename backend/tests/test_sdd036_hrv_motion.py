@@ -88,7 +88,7 @@ def test_websocket_feature_storage_and_normalized_payload(client, monkeypatch):
     monkeypatch.setattr(session_live_namespace, '_open_db', _db)
     values = dict(zip(FIELDS, (20, None, 120, 60, 2, 72, 0)))
     saved, resolved, payload, _is_latest = session_live_namespace._store_feature(
-        session['id'], pid, None, {'second_offset': 0, **values},
+        session['id'], pid, None, {'second_offset': 0, **values}, client.credential(pid),
     )
     assert saved == 1 and resolved == pid
     with _db() as db:

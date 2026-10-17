@@ -8,6 +8,7 @@
 - 중복 초 인덱스 멱등, null 보존(0 치환 금지)
 """
 
+from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from tests.conftest import create_test_org
 
@@ -50,7 +51,7 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 
 
 def _join_guest(client, code: str, name: str) -> str:
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 
@@ -105,7 +106,7 @@ def test_02_로그인_참가자_JWT로_업로드(client):
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s023m02@test.com", role="client")
     # 로그인 참가자로 참여 → user_id 기반 참가자 행 생성
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
 
     # participant_id 없이 인증 토큰만으로 업로드
     res = client.post(
@@ -135,7 +136,7 @@ def test_03_비참가자_인증사용자_업로드_403(client):
     assert res.status_code == 403, res.text
 
 
-def test_04_인증도_participant_id도_없으면_403(client):
+def test_04_인증도_입장자격도_없으면_401(client):
     counselor = _register(client, "s023c04@test.com")
     cls = _create_group_class(client, counselor["h"])
 
@@ -143,10 +144,10 @@ def test_04_인증도_participant_id도_없으면_403(client):
         f"/api/v1/sessions/{cls['id']}/features",
         json={"features": _batch(range(2), relaxation_index=0.5)},
     )
-    assert res.status_code == 403, res.text
+    assert res.status_code == 401, res.text
 
 
-def test_05_존재하지않는_participant_id_403(client):
+def test_05_자격없는_participant_id_단독은_401(client):
     counselor = _register(client, "s023c05@test.com")
     cls = _create_group_class(client, counselor["h"])
     import uuid as _uuid
@@ -155,7 +156,7 @@ def test_05_존재하지않는_participant_id_403(client):
         f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": str(_uuid.uuid4()), "features": _batch(range(2))},
     )
-    assert res.status_code == 403, res.text
+    assert res.status_code == 401, res.text  # participant_id 단독은 인증 수단이 아니다
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +247,7 @@ def test_10_게스트_state_실데이터_반영(client):
     features = [_feature(i, relaxation_index=0.4 + i * 0.1, focus_index=0.7, signal_quality=0.95) for i in range(3)]
     client.post(f"/api/v1/sessions/{cls['id']}/features", json={"participant_id": pid, "features": features})
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}")
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     assert res.status_code == 200, res.text
     body = res.json()
     assert abs(body["relaxation_index"] - 0.6) < 1e-6  # 최신 윈도우
@@ -261,7 +262,7 @@ def test_11_게스트_state_feature없으면_null(client):
     cls = _create_group_class(client, counselor["h"])
     pid = _join_guest(client, cls["access_code"], "무데이터게스트")
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}")
+    res = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}")
     body = res.json()
     assert body["relaxation_index"] is None
     assert body["focus_index"] is None

@@ -19,6 +19,7 @@ CEL-OUTBOX-01: 이메일 outbox 는 notification_email_task 로 직접 큐 적�
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from html import escape
 from uuid import UUID
@@ -50,6 +51,11 @@ BROWSER_GUIDE = (
     "Chrome 또는 Edge 를 권장합니다(Web Bluetooth·실시간 연결).\n"
     "Safari·Firefox 는 LINK BAND 연동을 지원하지 않습니다."
 )
+
+
+def public_access_code(code: str | None) -> str | None:
+    """리마인더에 실을 수 있는 코드 — 4자리 숫자만(SDD-209). 구 6자리·미설정은 None(본문에 노출하지 않는다)."""
+    return code if code and re.fullmatch(r"\d{4}", code) else None
 
 
 def _to_uuid(value: str | UUID) -> UUID:
@@ -136,10 +142,20 @@ def build_reminder_message(session: Session, offset_min: int) -> dict[str, str]:
     """
     label = format_offset_label(offset_min)
     title = session.title or _session_type_label(session)
-    code = session.access_code or "------"
+    code = public_access_code(session.access_code)
     join_url = f"{settings.frontend_base_url.rstrip('/')}/join"
     when = _format_scheduled_at(session)
     prepare = "\n".join(_prepare_lines(session))
+
+    if code:
+        code_line = f"· 클래스 코드: {code}"
+        code_html = (
+            "<span style=\"font-family:monospace;font-size:20px;font-weight:800;color:#5F0080;\">"
+            f"{escape(code)}</span>"
+        )
+    else:
+        code_line = "· 클래스 코드: 상담사에게 확인해 주세요"
+        code_html = "상담사에게 확인해 주세요"
 
     subject = f"[MIND BREEZE] {title} 클래스 안내 ({label})"
     body_text = (
@@ -147,10 +163,10 @@ def build_reminder_message(session: Session, offset_min: int) -> dict[str, str]:
         f"예약하신 클래스가 {label} 남았습니다.\n\n"
         f"· 클래스: {title} ({_session_type_label(session)})\n"
         f"· 일시: {when} (약 {session.duration_min}분)\n"
-        f"· 참여코드: {code}\n\n"
+        f"{code_line}\n\n"
         f"[입장 전 준비물]\n{prepare}\n\n"
         f"[브라우저 안내]\n{BROWSER_GUIDE}\n\n"
-        f"시간에 맞춰 {join_url} 에서 참여코드를 입력하고 입장해 주세요.\n\n"
+        f"시간에 맞춰 {join_url} 에서 클래스 코드를 입력하고 입장해 주세요.\n\n"
         f"감사합니다.\nMIND BREEZE 드림"
     )
     rows = "".join(
@@ -164,9 +180,7 @@ def build_reminder_message(session: Session, offset_min: int) -> dict[str, str]:
         f"<p style=\"padding:16px;background:#F5EDFC;border-radius:12px;\">"
         f"<strong>· 클래스:</strong> {escape(title)} ({escape(_session_type_label(session))})<br>"
         f"<strong>· 일시:</strong> {escape(when)} (약 {session.duration_min}분)<br>"
-        f"<strong>· 참여코드:</strong> "
-        f"<span style=\"font-family:monospace;font-size:20px;font-weight:800;color:#5F0080;\">"
-        f"{escape(code)}</span></p>"
+        f"<strong>· 클래스 코드:</strong> {code_html}</p>"
         f"<p><strong>[입장 전 준비물]</strong></p><ul style=\"padding-left:18px;color:#4A3B5F;\">{rows}</ul>"
         "<p><strong>[브라우저 안내]</strong><br>"
         "Chrome 또는 Edge 를 권장합니다(Web Bluetooth·실시간 연결).<br>"
@@ -264,7 +278,7 @@ def _dispatch_channels(
     message = build_reminder_message(session, offset_min)
     extra = notification_service.build_standard_extra(
         "session_reminder", "session", str(session.id),
-        params={"offset_min": offset_min, "access_code": session.access_code},
+        params={"offset_min": offset_min, "access_code": public_access_code(session.access_code)},
     )
     sent = 0
 

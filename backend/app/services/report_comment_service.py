@@ -143,9 +143,15 @@ def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
 
     # 그룹 세션의 공통 녹음 요약·메모는 타 참가자 내용을 포함할 수 있어 프롬프트에서 제외한다
     # (report_task._client_content 의 격리 규칙과 동일).
+    # SDD-209(B3): 리포트 반영을 제외한 참가자의 초안에는 요약·메모·뇌파 서사를 입력하지 않는다(메타만).
+    from app.services import report_scope
+
+    participant_excluded = report_scope.is_participant_excluded(
+        session.id, report.participant_id, db
+    )
     record = (
         None
-        if session.participant_mode == "group"
+        if session.participant_mode == "group" or participant_excluded
         else db.query(SessionRecord).filter(SessionRecord.session_id == session.id).first()
     )
     if record and isinstance(record.ai_summary, dict):
@@ -164,7 +170,7 @@ def _draft_context(report: Report, session: Session, db: DBSession) -> dict:
     # EEG 측정 세션이면 서사(narrative)를 보강 소재로 활용 — 미측정이면 넣지 않는다 (날조 금지)
     content = report.content if isinstance(report.content, dict) else {}
     eeg = content.get("eeg")
-    if isinstance(eeg, dict) and eeg.get("status") in ("valid", "degraded"):
+    if not participant_excluded and isinstance(eeg, dict) and eeg.get("status") in ("valid", "degraded"):
         narrative = eeg.get("narrative")
         if isinstance(narrative, dict):
             texts = [v for v in narrative.values() if isinstance(v, str) and v.strip()]

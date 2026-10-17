@@ -137,7 +137,7 @@ def test_03_로그인회원_재생제어는_무시(client, monkeypatch):
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "ca03m@test.com", role="client")
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert res.status_code == 200, res.text
     pid = res.json()["participant_id"]

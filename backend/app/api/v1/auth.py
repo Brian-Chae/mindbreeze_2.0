@@ -150,6 +150,9 @@ def _ensure_account_active(user: User) -> None:
     - pending: 초대 수락(비밀번호 설정) 전 계정 → 403.
     이번 범위에서는 suspended/pending 만 차단한다(SDD-018 inactive/deleted 미도입).
     """
+    if user.status == "deleted":
+        # SDD-209(B1): 삭제된 계정은 존재 여부를 드러내지 않는 동일 문구로 거부한다.
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="이메일 또는 비밀번호가 일치하지 않습니다")
     if user.status == "suspended":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

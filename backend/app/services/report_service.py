@@ -13,7 +13,7 @@ from app.models.session import Session, SessionParticipant
 from app.models.client_profile import ClientProfile
 from app.models.record import Report, SessionRecord
 from app.models.user import User
-from app.services import notification_service, record_service
+from app.services import notification_service, record_service, report_scope
 from app.schemas.eeg import HRVMotionSummary
 
 logger = logging.getLogger(__name__)
@@ -65,6 +65,9 @@ def _normalize_eeg(eeg) -> dict | None:
         avail = eeg.get("available")
         status = "valid" if avail is True else "not_measured"
     if status == "not_measured":
+        if eeg.get("excluded"):
+            # SDD-209(B3): 리포트 반영 제외 안내는 축약 형태에서도 보존한다.
+            return {"status": "not_measured", "excluded": True, "notice": eeg.get("notice")}
         return {"status": "not_measured"}
 
     metrics_in = eeg.get("metrics") if isinstance(eeg.get("metrics"), dict) else {}
@@ -135,8 +138,25 @@ def _serialize(
     subjective: dict | None = None,
     counselor_names: dict[UUID, str] | None = None,
     strip_timeline: bool = False,
+    scope: "report_scope.ReportScope | None" = None,
 ) -> dict:
     content = normalize_report_content(report.content, report.type)
+    # SDD-209(B3): 저장된 스냅샷이 구버전이어도 제외 참가자 기여분이 나가지 않도록 조회 시점에 한 번 더 거른다.
+    if scope is None:
+        from sqlalchemy.orm import object_session
+
+        sess = object_session(report)
+        scope = report_scope.scope_for_session(report.session_id, sess) if sess is not None else None
+    if scope is not None:
+        content = normalize_report_content(
+            report_scope.apply_read_filter(
+                content,
+                report_type=report.type,
+                participant_id=report.participant_id,
+                scope=scope,
+            ),
+            report.type,
+        )
     # RPT-PAYLOAD-01: 목록 조회는 EEG 시계열(eeg.timeline, 최대 수 MB)을 제외한다.
     # 목록 카드는 headline/summary 요약만 쓰므로 대용량 timeline 을 내려보내는 건
     # 직렬화·전송 낭비(45건 × 수백 KB → 수 초 지연)다. 상세 조회(get_report)만 전체를 담는다.
@@ -377,6 +397,9 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
     results: list[dict] = []
     for participant in participants:
         report = existing_reports.get(participant.id)
+        if report is None and not participant.report_included:
+            # SDD-209(B3): 리포트 반영을 제외한 참가자는 리포트 행을 만들지 않는다(원본은 그대로 보존).
+            continue
         if report is None:
             report = _get_or_create_report(
                 db,
@@ -655,6 +678,9 @@ def list_reports(
             .all()
         }
 
+    # SDD-209(B3): 리포트 반영 범위를 배치 조회(N+1 방지)해 직렬화 시 방어 필터로 쓴다.
+    scopes_map = report_scope.scopes_for_sessions({r.session_id for r in report_rows}, db)
+
     # DB 정렬 순서를 그대로 보존해 직렬화한다(추가 메모리 정렬 불필요).
     result: list[dict] = []
     for row in rows:
@@ -670,6 +696,7 @@ def list_reports(
                     subjective=_subjective_from_map(report, records_map),
                     counselor_names=counselor_names,
                     strip_timeline=True,
+                    scope=scopes_map.get(report.session_id),
                 )
             )
         else:
@@ -766,6 +793,14 @@ def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
         .filter(SessionParticipant.id.in_(participant_ids))
         .all()
     }
+    # SDD-209(B3): 리포트 반영을 제외한 참가자의 코멘트는 상담사 리포트에 파생 표시하지 않는다.
+    commented = [
+        cr for cr in commented
+        if cr.participant_id is None
+        or (participants.get(cr.participant_id) is not None and participants[cr.participant_id].report_included)
+    ]
+    if not commented:
+        return []
     user_ids = [p.user_id for p in participants.values() if p.user_id]
     names = {u.id: u.name for u in db.query(User).filter(User.id.in_(user_ids)).all()}
 
@@ -975,3 +1010,43 @@ def approve_all_reports(host_id: str, db: DBSession) -> dict:
     for report in pending:
         approve_report(str(report.id), host_id, db)
     return {"approved": len(pending)}
+
+
+def refresh_reports_after_choice_change(session_id, participant_id, db: DBSession) -> int:
+    """SDD-209(B3): 리포트 반영 선택이 바뀐 뒤 이미 만들어진 산출물을 새 범위로 다시 만든다.
+
+    - 상담사 리포트: 포함 참가자 집계로 재생성(승인 상태는 report_task 규칙대로 유지).
+    - 해당 참가자의 내담자 리포트: 제외로 바뀌면 안내(stub)로 교체, 포함으로 바뀌면 본문을 다시 생성.
+    재생성이 실패해도 제외 기여분이 남지 않도록 방어 필터를 적용한 내용으로 즉시 덮어쓴다.
+    narrative_cache 는 세션·참가자 정보가 없는 전역 패턴 캐시라 무효화 대상이 아니다.
+    반환값은 다시 만든 리포트 수.
+    """
+    sid = _to_uuid(str(session_id))
+    pid = _to_uuid(str(participant_id))
+    reports = (
+        db.query(Report)
+        .filter(
+            Report.session_id == sid,
+            or_(Report.type == "counselor", and_(Report.type == "client", Report.participant_id == pid)),
+        )
+        .all()
+    )
+    refreshed = 0
+    for report in reports:
+        try:
+            generate_report_inline(str(report.id), db)
+            refreshed += 1
+        except Exception:  # noqa: BLE001 — 재생성 실패 시에도 제외 기여분은 즉시 걷어낸다
+            logger.exception("[report_service] 선택 변경 후 리포트 재생성 실패: report_id=%s", report.id)
+            db.rollback()
+            scope = report_scope.scope_for_session(sid, db)
+            fresh = db.query(Report).filter(Report.id == report.id).first()
+            if fresh is not None and isinstance(fresh.content, dict):
+                fresh.content = report_scope.apply_read_filter(
+                    fresh.content,
+                    report_type=fresh.type,
+                    participant_id=fresh.participant_id,
+                    scope=scope,
+                )
+                db.commit()
+    return refreshed

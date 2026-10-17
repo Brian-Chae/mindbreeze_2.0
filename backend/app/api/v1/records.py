@@ -1,6 +1,8 @@
 """AI 기록지 조회/편집 API"""
 
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, get_current_user_optional
@@ -50,18 +52,20 @@ def get_transcript(
 def submit_checkin(
     session_id: str,
     payload: CheckinRequest,
+    x_entry_credential: Annotated[str | None, Header(alias="X-Entry-Credential")] = None,
     current_user: dict | None = Depends(get_current_user_optional),
     db: DBSession = Depends(get_db),
 ):
     """SDD-096: 세션 직후 1탭 셀프 체크인 — SAM 2축(각성·정서) 5단계 + 한 줄 소감.
 
     종료 화면에서 회원/게스트가 바로 남기는 주관 상태를 저장한다(스킵 가능).
-    로그인 회원은 본인 참여자로 한정되고, 게스트는 participant_id + participant_token
-    소유 증명이 필요하다(member livekit token·손들기와 동일한 인증 분기).
+    로그인 회원은 본인 참여자로 한정되고, 비회원은 입장 자격(X-Entry-Credential)이
+    필요하다(참여자 livekit token·손들기와 동일한 인증 분기).
     밴드 미착용(LINK BAND 없이) 세션도 주관 기록이 남도록 레코드를 보장한다.
     """
     return record_service.submit_checkin(
-        session_id, payload, current_user["id"] if current_user else None, db
+        session_id, payload, current_user["id"] if current_user else None, db,
+        entry_credential=x_entry_credential,
     )
 
 

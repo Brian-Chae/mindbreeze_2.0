@@ -27,6 +27,7 @@ def _view_report(client):
     db.add(session)
     db.flush()
     participant = SessionParticipant(
+            report_included=True,
         session_id=session.id,
         guest_name="게스트",
         report_email="guest@example.com",

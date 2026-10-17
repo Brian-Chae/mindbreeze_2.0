@@ -28,7 +28,7 @@ from tests.test_sdd015_class_code import _create_class, _register
 
 def _join_member(client, cls: dict, member: dict) -> str:
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
@@ -43,8 +43,11 @@ def _speaking_url(cls: dict, pid: str) -> str:
 
 
 def _raise_hand(client, cls, pid, *, token=None, headers=None):
-    body = {"participant_token": token} if token else None
-    return client.post(_raise_hand_url(cls, pid), json=body, headers=headers or {})
+    """token: 입장 자격(X-Entry-Credential). None 이면 클라이언트가 저장한 자격을 자동 첨부, ""이면 자격 없음."""
+    hdr = dict(headers or {})
+    if token is not None:
+        hdr["X-Entry-Credential"] = token
+    return client.post(_raise_hand_url(cls, pid), headers=hdr)
 
 
 def _set_speaking(client, cls, pid, granted: bool, headers=None):
@@ -99,8 +102,8 @@ def test_03_게스트_손들기_부여_송출(client):
     cls, joined = _grant_group_guest(client, counselor)
     pid = joined["participant_id"]
 
-    # 1) 게스트 손들기(participant_token 소유 증명) → raise_hand=True
-    res = _raise_hand(client, cls, pid, token=joined["participant_token"])
+    # 1) 비회원 손들기(입장 자격 소유 증명) → raise_hand=True
+    res = _raise_hand(client, cls, pid, token=joined["entry_credential"])
     assert res.status_code == 200, res.text
     assert res.json()["raise_hand"] is True
     assert res.json()["speaking"] is False
@@ -168,21 +171,21 @@ def test_06_온라인그룹21_발언권부여해도_false(client):
 # ---------------------------------------------------------------------------
 
 
-def test_07_손들기_토큰없으면_403(client):
+def test_07_손들기_자격없으면_401(client):
     counselor = _register(client, "s094c07@test.com")
     cls, joined = _grant_group_guest(client, counselor)
 
-    # 게스트인데 participant_token 누락 → 403
-    res = _raise_hand(client, cls, joined["participant_id"])
-    assert res.status_code == 403
+    # 비회원인데 입장 자격 누락 → 401
+    res = _raise_hand(client, cls, joined["participant_id"], token="")
+    assert res.status_code == 401
 
 
-def test_08_손들기_잘못된토큰_403(client):
+def test_08_손들기_위조자격_401(client):
     counselor = _register(client, "s094c08@test.com")
     cls, joined = _grant_group_guest(client, counselor)
 
-    res = _raise_hand(client, cls, joined["participant_id"], token="잘못된토큰")
-    assert res.status_code == 403
+    res = _raise_hand(client, cls, joined["participant_id"], token="forged-credential")
+    assert res.status_code == 401
 
 
 def test_09_로그인회원_본인손들기_200_타인_403(client):
@@ -230,5 +233,5 @@ def test_12_손들기_세션불일치_404(client):
     other = _create_class(client, counselor["h"], participant_mode="group", max_participants=20)
 
     # 다른 세션 ID 로 손들기 → 참여자 미존재 404
-    res = _raise_hand(client, other, joined["participant_id"], token=joined["participant_token"])
+    res = _raise_hand(client, other, joined["participant_id"], token=joined["entry_credential"])
     assert res.status_code == 404

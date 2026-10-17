@@ -147,7 +147,7 @@ def test_eeg_raw_04_duplicate_record_rejected_by_db(client):
     session_id = _create_session(client, host)
     db = _db()
     try:
-        participant = SessionParticipant(session_id=session_id, guest_name="g")
+        participant = SessionParticipant(report_included=True, session_id=session_id, guest_name="g")
         db.add(participant)
         db.flush()
         db.add(EEGRecord(session_id=session_id, participant_id=participant.id, s3_key="k", file_count=1))
@@ -408,6 +408,7 @@ def test_resend_006_does_not_overwrite_report_email(client, monkeypatch):
     db = _db()
     try:
         participant = SessionParticipant(
+            report_included=True,
             session_id=session_id, guest_name="재발송", report_email="before@example.com"
         )
         db.add(participant)
@@ -597,6 +598,7 @@ def test_view_norm_005_malformed_content_does_not_500(client):
     db = _db()
     try:
         participant = SessionParticipant(
+            report_included=True,
             session_id=session_id, guest_name="g", report_email="g@example.com"
         )
         db.add(participant)
