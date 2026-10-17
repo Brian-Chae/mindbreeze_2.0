@@ -82,18 +82,21 @@ export function WizardView(props: WizardViewProps) {
         </FlowSheet>
       }
       foot={
-        <div className="fh-nav2">
-          {step === 1 ? (
-            <span className="fh-spacer" aria-hidden="true" />
-          ) : (
+        step === 1 ? (
+          // 첫 단계는 이전 버튼이 없으므로 시안(FH02a)처럼 주 버튼을 한 줄 전체 폭으로 둔다(왼쪽 빈 칸 없음)
+          <FlowButton kind="primary" disabled={submitting} onClick={next}>
+            다음<ChevronRight size={20} aria-hidden="true" />
+          </FlowButton>
+        ) : (
+          <div className="fh-nav2">
             <FlowButton kind="soft" onClick={() => dispatch({ type: 'prev' })}>
               <ChevronLeft size={20} aria-hidden="true" />이전
             </FlowButton>
-          )}
-          <FlowButton kind="primary" disabled={submitting} onClick={next}>
-            {last ? (<><Check size={20} aria-hidden="true" />클래스 만들기</>) : (<>다음<ChevronRight size={20} aria-hidden="true" /></>)}
-          </FlowButton>
-        </div>
+            <FlowButton kind="primary" disabled={submitting} onClick={next}>
+              {last ? (<><Check size={20} aria-hidden="true" />클래스 만들기</>) : (<>다음<ChevronRight size={20} aria-hidden="true" /></>)}
+            </FlowButton>
+          </div>
+        )
       }
     >
       <FlowSteps total={5} current={step - 1} />

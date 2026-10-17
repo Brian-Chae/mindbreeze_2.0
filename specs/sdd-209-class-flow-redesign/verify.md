@@ -55,7 +55,7 @@
 | [ ] | P15 | `any` 0, 불변성 | 신규 경로 `any` 0, 객체·배열 직접 변경(`push`/`splice`/직접 대입) 0(eslint 규칙 또는 grep) | eslint·grep | 0 |
 | [ ] | P16 | 접근성 | 아이콘 전용 버튼 `aria-label`, 시트·모달 `role=dialog`+`aria-modal`+라벨, 진행 점 `aria-current`, `prefers-reduced-motion: reduce` 에서 `animation`·`transition` 0 | C | 충족 |
 | [ ] | P17 | 터치 키보드 | 입력(설문 전할 말·FH02 제목·FH02d 검색·채팅)이 포커스될 때 입력창과 주 버튼이 키보드에 가려지지 않음(모바일) | R | 충족 |
-| [ ] | FR1 | 하단 CTA 위치 고정(몰입형 신규 규칙) | 마법사 단계가 바뀌어도 `flow-foot` 주 버튼 박스(x·y·w·h) 변위 ≤ 2px(`stability.mjs` 의 사전 흐름판) | H | 충족 |
+| [ ] | FR1 | 하단 CTA 위치 고정(몰입형 신규 규칙) | 마법사 단계가 바뀌어도 `flow-foot` 주 버튼의 세로 위치(y)·높이(h)·오른쪽 끝(x+w) 변위 ≤ 2px(`stability.mjs` 의 사전 흐름판). 첫 단계는 이전 버튼이 없어 시안(FH02a)처럼 한 줄 전체 폭이므로 시작점(x)·너비(w)는 비교하지 않는다(2026-10-17 보정: 첫 단계 왼쪽 빈 칸이 어색하다는 Brian 피드백) | H | 충족 |
 | [ ] | FR2 | 진행 점 | 점 개수 = 단계 수(온라인 5·오프라인 4·밴드 사용 안 함 −1), 가운데 정렬, 완료·현재 구분, `aria-current` | C·H | 충족 |
 | [ ] | FR3 | 시트 내 중첩 스크롤 0 | 시트 본문·시트 내부 요소의 `scrollHeight>clientHeight` 0(리포트·체크인·허용 방법 시트) | H | 0 |
 | [ ] | FR4 | 카피·글리프 소스 정적 검사 | 금지어·이모지·글리프·영문 대문자 아이브로우를 소스(`srcGlyph`/`srcBanned`/`srcStale`)에서도 검사(P5~P8 의 소스판) | grep | 0건 |

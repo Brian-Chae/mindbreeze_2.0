@@ -31,6 +31,14 @@ export async function measureCase(page, { base, ref, query = '', vp }) {
 }
 
 /** FR1: 같은 그룹 안에서 하단 주 버튼 박스(x·y·w·h) 변위 ≤ 2px. 기준 = 그룹의 첫 케이스 */
+/** FR1 비교: 주 버튼의 세로 위치(y)·높이(h)·오른쪽 끝(x+w). 이전 버튼이 있는 단계와 없는 첫 단계는 가로 시작점·너비가 다를 수 있다(시안 FH02a 첫 단계는 한 줄 전체 폭) */
+function ctaDeltas(a, b) {
+  const y = Math.abs(a.y - b.y);
+  const h = Math.abs(a.h - b.h);
+  const right = Math.abs(a.x + a.w - (b.x + b.w));
+  return { y, h, right, max: Math.max(y, h, right) };
+}
+
 export function compareCtas(entries) {
   const rows = [];
   const byGroup = new Map();
@@ -44,12 +52,11 @@ export function compareCtas(entries) {
     const [group, vp] = key.split('|');
     const base = list[0];
     for (const e of list.slice(1)) {
-      const d = ['x', 'y', 'w', 'h'].map((k) => Math.abs(e.cta.rect[k] - base.cta.rect[k]));
-      const max = Math.max(...d);
+      const d = ctaDeltas(e.cta.rect, base.cta.rect);
       rows.push({
         id: `${group}`, vp, rule: 'FR1',
-        val: `${e.label} ↔ ${base.label} Δx${d[0].toFixed(1)} Δy${d[1].toFixed(1)} Δw${d[2].toFixed(1)} Δh${d[3].toFixed(1)} (허용 ${CTA_TOLERANCE})`,
-        pass: max <= CTA_TOLERANCE,
+        val: `${e.label} ↔ ${base.label} Δy${d.y.toFixed(1)} Δh${d.h.toFixed(1)} Δ오른쪽끝${d.right.toFixed(1)} (허용 ${CTA_TOLERANCE})`,
+        pass: d.max <= CTA_TOLERANCE,
       });
     }
   }
@@ -71,8 +78,8 @@ export async function stepRows({ browser, base, ref, steps, viewports = VIEWPORT
     const first = ctas[0];
     for (const c of ctas.slice(1)) {
       if (!c.rect || !first.rect) { rows.push({ id: ref, vp, rule: 'FR1', val: `step ${c.step}: 하단 주 버튼 없음`, pass: false }); continue; }
-      const d = ['x', 'y', 'w', 'h'].map((k) => Math.abs(c.rect[k] - first.rect[k]));
-      rows.push({ id: ref, vp, rule: 'FR1', val: `step ${c.step} ↔ step ${first.step} Δx${d[0].toFixed(1)} Δy${d[1].toFixed(1)} Δw${d[2].toFixed(1)} Δh${d[3].toFixed(1)} (허용 ${CTA_TOLERANCE})`, pass: Math.max(...d) <= CTA_TOLERANCE });
+      const d = ctaDeltas(c.rect, first.rect);
+      rows.push({ id: ref, vp, rule: 'FR1', val: `step ${c.step} ↔ step ${first.step} Δy${d.y.toFixed(1)} Δh${d.h.toFixed(1)} Δ오른쪽끝${d.right.toFixed(1)} (허용 ${CTA_TOLERANCE})`, pass: d.max <= CTA_TOLERANCE });
     }
     await ctx.close();
   }
