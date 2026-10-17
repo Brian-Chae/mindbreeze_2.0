@@ -6,10 +6,11 @@ import { getUnreadCount } from '../../lib/api/agent-counselor';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { term, type TermKey } from '../../lib/terms';
 
 interface NavItem {
   to: string;
-  label: string;
+  key: TermKey;
   icon: string[];
   badge?: number;
   end?: boolean;
@@ -88,43 +89,43 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', label: '대시보드', icon: ICONS.home },
-  { to: '/sessions', label: '클래스', icon: ICONS.calendar },
-  { to: '/clients', label: '내담자', icon: ICONS.users },
-  { to: '/chat', label: '채팅', icon: ICONS.message },
-  { to: '/reports', label: '리포트', icon: ICONS.report },
-  { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
-  { to: '/notifications', label: '알림', icon: ICONS.bell },
-  { to: '/settings', label: '설정', icon: ICONS.settings },
+  { to: '/dashboard', key: 'dashboard', icon: ICONS.home },
+  { to: '/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/chat', key: 'chat', icon: ICONS.message },
+  { to: '/reports', key: 'report', icon: ICONS.report },
+  { to: '/playground', key: 'playground', icon: ICONS.activity },
+  { to: '/notifications', key: 'notification', icon: ICONS.bell },
+  { to: '/settings', key: 'setting', icon: ICONS.settings },
 ];
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
-  { to: '/sessions', label: '클래스', icon: ICONS.calendar },
-  { to: '/clients', label: '내담자', icon: ICONS.users },
-  { to: '/chat', label: '채팅', icon: ICONS.message },
+  { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
+  { to: '/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/chat', key: 'chat', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
-  { to: '/org/counselors', label: '상담사', icon: ICONS.users },
-  { to: '/reports', label: '리포트', icon: ICONS.report },
-  { to: '/notifications', label: '알림', icon: ICONS.bell },
-  { to: '/settings', label: '설정', icon: ICONS.settings },
+  { to: '/org/counselors', key: 'org-counselors', icon: ICONS.users },
+  { to: '/reports', key: 'report', icon: ICONS.report },
+  { to: '/notifications', key: 'notification', icon: ICONS.bell },
+  { to: '/settings', key: 'setting', icon: ICONS.settings },
 ];
 
 const CLIENT_NAV_ITEMS: NavItem[] = [
-  { to: '/app', label: '홈', icon: ICONS.home, end: true },
-  { to: '/app/sessions', label: '클래스', icon: ICONS.calendar },
-  { to: '/app/chat', label: '채팅', icon: ICONS.message },
-  { to: '/app/reports', label: '리포트', icon: ICONS.report },
-  { to: '/app/notifications', label: '알림', icon: ICONS.bell },
-  { to: '/app/profile', label: '설정', icon: ICONS.settings },
+  { to: '/app', key: 'home', icon: ICONS.home, end: true },
+  { to: '/app/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/app/chat', key: 'chat', icon: ICONS.message },
+  { to: '/app/reports', key: 'report', icon: ICONS.report },
+  { to: '/app/notifications', key: 'notification', icon: ICONS.bell },
+  { to: '/app/profile', key: 'setting', icon: ICONS.settings },
 ];
 
 const ADMIN_NAV_ITEMS: NavItem[] = [
-  { to: '/admin/orgs', label: '기관 관리', icon: ICONS.users },
-  { to: '/admin/applications', label: '가입 신청', icon: ICONS.report },
-  { to: '/admin/users', label: '상담사 관리', icon: ICONS.users },
-  { to: '/admin/clients', label: '회원 관리', icon: ICONS.users },
-  { to: '/playground', label: '플레이그라운드', icon: ICONS.activity },
+  { to: '/admin/orgs', key: 'admin-orgs', icon: ICONS.users },
+  { to: '/admin/applications', key: 'admin-applications', icon: ICONS.report },
+  { to: '/admin/users', key: 'admin-users', icon: ICONS.users },
+  { to: '/admin/clients', key: 'admin-clients', icon: ICONS.users },
+  { to: '/playground', key: 'playground', icon: ICONS.activity },
 ];
 
 interface SidebarNavProps {
@@ -206,18 +207,25 @@ export default function SidebarNav({
     navigate(loginPathForRole(user?.role));
   };
 
-  const getBadge = (label: string): React.ReactNode => {
-    // 채팅/알림/리포트/세션 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+).
-    const count =
-      label === '채팅'
-        ? (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0)
-        : label === '알림'
-          ? notificationBadge ?? 0
-          : label === '리포트'
-            ? reportBadge ?? 0
-            : label === '클래스'
-              ? sessionBadge ?? 0
-              : 0;
+  const getBadge = (key: TermKey): React.ReactNode => {
+    // 채팅/알림/리포트/클래스 항목에 각각 미읽음 개수를 노출한다 (9 초과 시 9+). 결합 기준은 라벨이 아니라 키다.
+    let count: number;
+    switch (key) {
+      case 'chat':
+        count = (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
+        break;
+      case 'notification':
+        count = notificationBadge ?? 0;
+        break;
+      case 'report':
+        count = reportBadge ?? 0;
+        break;
+      case 'class':
+        count = sessionBadge ?? 0;
+        break;
+      default:
+        count = 0;
+    }
     if (count > 0) {
       return (
         <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#EF4444] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
@@ -267,13 +275,13 @@ export default function SidebarNav({
             }
           >
             <StrokeIcon d={it.icon} />
-            <span className="flex-1">{it.label}</span>
+            <span className="flex-1">{term(it.key)}</span>
             {it.badge != null ? (
               <span className="min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#5F0080] text-white font-bold text-[10px] inline-flex items-center justify-center font-mono">
                 {it.badge}
               </span>
             ) : (
-              getBadge(it.label)
+              getBadge(it.key)
             )}
           </NavLink>
         ))}

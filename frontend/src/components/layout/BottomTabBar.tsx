@@ -4,10 +4,11 @@ import type { UserRole } from '../../lib/api/auth';
 import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
+import { term, type TermKey } from '../../lib/terms';
 
 interface TabItem {
   to: string;
-  label: string;
+  key: TermKey;
   icon: string[];
 }
 
@@ -26,10 +27,10 @@ function homePathForRole(role: UserRole | null | undefined): string {
 function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
   const isClient = role === 'client';
   return [
-    { to: homePathForRole(role), label: '홈', icon: ICONS.home },
-    { to: isClient ? '/app/sessions' : '/sessions', label: '클래스', icon: ICONS.calendar },
-    { to: isClient ? '/app/chat' : '/chat', label: '채팅', icon: ICONS.message },
-    { to: isClient ? '/app/reports' : '/reports?status=pending', label: '리포트', icon: ICONS.report },
+    { to: homePathForRole(role), key: 'home', icon: ICONS.home },
+    { to: isClient ? '/app/sessions' : '/sessions', key: 'class', icon: ICONS.calendar },
+    { to: isClient ? '/app/chat' : '/chat', key: 'chat', icon: ICONS.message },
+    { to: isClient ? '/app/reports' : '/reports?status=pending', key: 'report', icon: ICONS.report },
   ];
 }
 
@@ -58,11 +59,11 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
     >
       {tabItems.map((item) => {
         const unread =
-          item.label === '채팅'
+          item.key === 'chat'
             ? chatUnread
-            : item.label === '리포트'
+            : item.key === 'report'
               ? reportBadge
-              : item.label === '클래스'
+              : item.key === 'class'
                 ? sessionInvites.length
                 : 0;
         return (
@@ -88,7 +89,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
                     </span>
                   )}
                 </span>
-                <span>{item.label}</span>
+                <span>{term(item.key)}</span>
               </>
             )}
           </NavLink>
@@ -100,7 +101,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
         className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
       >
         <StrokeIcon d={ICONS.menu} size={22} />
-        <span>더보기</span>
+        <span>{term('more')}</span>
       </button>
     </nav>
   );
