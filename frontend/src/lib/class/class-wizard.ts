@@ -328,10 +328,10 @@ export function wizardReducer(state: WizardState, action: WizardAction): WizardS
   }
 }
 
-/** 변경이 있으면 이탈 가드가 필요하다 */
+/** 변경이 있으면 이탈 가드가 필요하다. 주소는 기본 주소가 자동으로 채워지므로 비교에서 뺀다(오프라인 선택 자체가 변경으로 잡힌다) */
 export function isDraftDirty(draft: WizardDraft): boolean {
   const base = createInitialDraft();
-  return (Object.keys(base) as Array<keyof WizardDraft>).some((key) => JSON.stringify(base[key]) !== JSON.stringify(draft[key]));
+  return (Object.keys(base) as Array<keyof WizardDraft>).some((key) => key !== 'address' && JSON.stringify(base[key]) !== JSON.stringify(draft[key]));
 }
 
 // ───────── 일정 ─────────

@@ -119,6 +119,8 @@ describe('표시 도우미', () => {
   it('기본값이면 이탈 가드가 필요 없고 입력이 생기면 필요하다', () => {
     expect(isDraftDirty(createInitialDraft())).toBe(false);
     expect(isDraftDirty({ ...createInitialDraft(), title: 'a' })).toBe(true);
+    // 기본 주소 사전 채움은 사용자 입력이 아니다
+    expect(isDraftDirty({ ...createInitialDraft(), address: '서울 강남구' })).toBe(false);
   });
 });
 

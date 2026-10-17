@@ -43,3 +43,6 @@
 .pz-root .fh-note.warn { color: var(--warn); }
 .pz-root .fh-xbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; color: var(--tx-mid); flex: none; }
 .pz-root .fh-csv-input { display: none; }
+.pz-root .fh-fillcol > .fh-codecard { flex: none; }
+.pz-root .fh-invcard { flex: none; }
+.pz-root .fh-fillcol > .fh-invcard { flex: 1; min-height: 0; }

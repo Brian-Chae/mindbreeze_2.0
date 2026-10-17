@@ -3,6 +3,7 @@ import type { Dispatch, ReactNode } from 'react';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { WizardAction, WizardMember, WizardState } from '../../../../lib/class/class-wizard';
 import { FlowButton, FlowSheet, FlowSteps } from '../shared/flow-primitives';
+import { FhInfo } from './host-flow-atoms';
 import { HostFlowFrame } from './HostFlowFrame';
 import { StepConfirm, StepInvite, StepRecord, StepSchedule, StepType } from './wizard-steps';
 
@@ -23,6 +24,8 @@ export interface WizardViewProps {
   members?: readonly WizardMember[];
   membersState?: 'ok' | 'loading' | 'error';
   onCsvText?: (text: string) => void;
+  /** 제출 실패 안내(서버 원문이 아닌 정해진 문구) */
+  error?: string | null;
 }
 
 function StepBody({ state, dispatch, base, conflictTitle = null, members = [], membersState, onCsvText }: WizardViewProps & { base: Date }): ReactNode {
@@ -95,6 +98,7 @@ export function WizardView(props: WizardViewProps) {
     >
       <FlowSteps total={5} current={step - 1} />
       <StepBody {...props} base={base} />
+      {props.error ? <FhInfo warn role="alert">{props.error}</FhInfo> : null}
     </HostFlowFrame>
   );
 }
