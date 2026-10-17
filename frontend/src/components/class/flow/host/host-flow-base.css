@@ -52,3 +52,8 @@
 .pz-root.fh-lobby .fl-col { max-height: 100%; min-height: 0; }
 .pz-root.fh-lobby .fl-col > * { flex: none; }
 .pz-root.fh-lobby .fl-col > .fhb-listcard { flex: 0 1 auto; min-height: 0; }
+
+/* 상담사 시트(바텀)는 시안처럼 화면 위에 겹친다: 뒤 화면을 밀지 않고 스크림으로 어둡게 한다.
+   PlayerShell 의 바텀 시트 행(grid-row 3)은 본문을 줄이므로 이 범위에서만 절대 배치로 바꾼다. 사이드 시트(≥1000 가로)는 그대로. */
+.pz-root.fh-ovsheet[data-sheet-open="true"][data-sheet-mode="bottom"]::after { content: ""; position: absolute; inset: 0; z-index: 10; background: rgba(12, 6, 20, 0.55); pointer-events: none; }
+.pz-root.fh-ovsheet .pz-sheet[data-mode="bottom"] { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; width: min(calc(100% - 2 * var(--pz-pad)), var(--pz-col)); max-width: none; margin: 0 auto 8px; max-height: calc(100dvh - 72px); }

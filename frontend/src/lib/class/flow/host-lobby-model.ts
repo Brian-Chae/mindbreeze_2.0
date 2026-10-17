@@ -67,6 +67,8 @@ export interface LobbyModel {
   stats: LobbyStats;
   /** 아직 입장하지 않은 초대 명단 이름 */
   awayNames: string[];
+  /** 아직 입장하지 않은 초대 명단(다시 알림 대상 id 포함) */
+  awayEntries: LobbyRosterEntry[];
 }
 
 const READY_CELLS: ReadonlySet<LobbyCell> = new Set<LobbyCell>(['ok', 'skip', 'na']);
@@ -114,7 +116,8 @@ export function deriveLobby(roster: readonly LobbyRosterEntry[], presence: reado
     const name = nameById.get(p.participantId) ?? (p.nickname?.trim() || '참가자');
     rows.push(deriveLobbyRow(p.participantId, name, p, ctx));
   }
-  const awayNames = roster.filter((r) => !seen.has(r.participantId)).map((r) => r.name);
+  const awayEntries = roster.filter((r) => !seen.has(r.participantId));
+  const awayNames = awayEntries.map((r) => r.name);
   // 초대 명단에 없는 대기실 인원(예: 코드로 입장한 비회원)도 초대 N 보다 앞서지 않도록 N 을 보정한다
   const outsiders = rows.filter((row) => !nameById.has(row.id)).length;
   const invited = roster.length + outsiders;
@@ -122,6 +125,7 @@ export function deriveLobby(roster: readonly LobbyRosterEntry[], presence: reado
   return {
     rows,
     awayNames,
+    awayEntries,
     stats: { invited, inRoom: rows.length, away: awayNames.length, ready, waiting: rows.length - ready },
   };
 }
@@ -190,3 +194,14 @@ export function badElectrodeWord(e: Electrodes): string {
   if (e.left === 'bad' && e.right === 'bad') return 'L·R 전극';
   return e.left === 'bad' ? 'L 전극' : 'R 전극';
 }
+
+/** 로비 시트 종류(도크 항목 + 초대) */
+export type LobbySheetKind = 'invite' | LobbyDockKind;
+
+export const LOBBY_SHEET_TITLE: Readonly<Record<LobbySheetKind, string>> = {
+  invite: '회원 초대',
+  bgm: '대기실 BGM',
+  band: '내 LINK BAND',
+  speak: '발언권',
+  chat: '채팅',
+};

@@ -52,7 +52,7 @@ export function HostFlowFrame({
     <PlayerShell
       place={place}
       flow
-      className={className ? `fl-root ${className}` : 'fl-root'}
+      className={`fl-root fh-ovsheet${className ? ` ${className}` : ''}`}
       sheetOpen={sheetOpen}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={
