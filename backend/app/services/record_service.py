@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, VideoChunk
 from app.schemas.record import SubjectiveSlot
+from app.services.session_authz import SessionAction, get_session_authorized
 
 
 def _to_uuid(value: str) -> UUID:
@@ -39,16 +40,6 @@ def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Sessi
     if participant:
         return s
     raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-
-
-def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    return s
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +223,7 @@ def get_report_status(session_id: str, user_id: str, db: DBSession) -> dict:
 
 
 def update_record(session_id: str, host_id: str, payload, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.RECORD_UPDATE)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
     if not record:
         record = SessionRecord(session_id=s.id, status="idle", markers=[], edit_history=[], ai_summary={})
