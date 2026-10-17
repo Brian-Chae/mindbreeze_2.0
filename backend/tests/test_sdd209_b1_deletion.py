@@ -63,6 +63,10 @@ def _seed_originals(client, host, sid: str):
         record.video_s3_key = f"video/{sid}/merged.webm"
         record.transcript = "전사문 원문"
         record.ai_summary = {"segments": [{"text": "a"}], "summary": "요약"}
+        # B8(BE-13): 진행 중·완료 클래스는 삭제 거부 — 삭제(숨김) 경로 테스트가 가능하도록 취소 상태로 둔다.
+        from app.models.session import Session as _S
+
+        db.query(_S).filter(_S.id == sid_uuid).update({"status": "cancelled"})
         db.commit()
         return local_path, str(part.id)
     finally:

@@ -126,6 +126,10 @@ class ParticipantInfo(BaseModel):
     # SDD-015: 게스트 참여자는 user_id가 없고 guest_name만 갖는다
     user_id: str | None = None
     guest_name: str | None = None
+    # SDD-209(B8): 표시 이름(회원=계정 이름, 비회원=입력한 이름) — 모든 뷰에 공개.
+    user_name: str | None = None
+    # 이메일·성별·생년월일은 호스트 뷰에서만 채워진다(비호스트는 null).
+    user_email: str | None = None
     gender: str | None = None
     birth_date: date | None = None
     is_guest: bool = False
@@ -151,6 +155,8 @@ class SessionResponse(BaseModel):
     custom_type_name: str | None = None
     status: SessionStatus
     host_id: str
+    # SDD-209(B8): 진행자(상담사) 표시 이름 — 참가자 화면에서 호스트 id 대신 이름을 보여준다.
+    host_name: str | None = None
     scheduled_at: datetime | None = None
     access_code: str | None = None
     # SDD-088: 클래스 오픈(대기실 개방) 시각

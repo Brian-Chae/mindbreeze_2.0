@@ -278,6 +278,10 @@ def test_stg05_세션삭제시_로컬파일과_S3객체_보존_SDD209(client, mo
 
         record = db.query(SessionRecord).filter(SessionRecord.session_id == sid_uuid).first()
         record.video_s3_key = f"video/{sid}/merged.webm"
+        # B8(BE-13): 진행 중·완료 클래스는 삭제 거부 — 삭제(숨김) 경로 검증을 위해 취소 상태로 둔다.
+        from app.models.session import Session as _S
+
+        db.query(_S).filter(_S.id == sid_uuid).update({"status": "cancelled"})
         db.commit()
     finally:
         db.close()

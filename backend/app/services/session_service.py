@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from livekit import api as livekit_api
 from sqlalchemy import case, func, or_, update
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session as DBSession, selectinload
+from sqlalchemy.orm import Session as DBSession, object_session, selectinload
 
 from app.config import settings
 from app.models.user import User
@@ -82,8 +82,42 @@ def resolve_location_address(
     return agent_policy.counselor_address(host, db)
 
 
-def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
+def _load_user_directory(db: DBSession | None, user_ids) -> dict:
+    """회원 id → {name, email} 를 한 번의 쿼리로 가져온다(직렬화 N+1 방지)."""
+    ids = {uid for uid in user_ids if uid}
+    if not ids or db is None:
+        return {}
+    rows = db.query(User.id, User.name, User.email).filter(User.id.in_(ids)).all()
+    return {r[0]: {"name": r[1], "email": r[2]} for r in rows}
+
+
+def _list_user_directory(sessions: list[Session], db: DBSession) -> dict:
+    """목록 직렬화용 — 모든 세션의 호스트·회원 참여자를 한 쿼리로 조회한다."""
+    ids = set()
+    for sess in sessions:
+        ids.add(sess.host_id)
+        ids.update(p.user_id for p in (sess.participants or []) if p.user_id)
+    return _load_user_directory(db, ids)
+
+
+def _serialize(
+    s: Session,
+    *,
+    include_participant_pii: bool = False,
+    users: dict | None = None,
+) -> dict:
+    """세션 응답 dict.
+
+    SDD-209 B8: 참여자 PII(성별·생년월일·이메일)는 **호스트 뷰에서만** 담는다 — 기본값은 비노출이며 호스트 경로가
+    ``include_participant_pii=True`` 로 명시한다. 이름(``user_name``)과 진행자 이름(``host_name``)은 공개.
+    ``users`` 는 목록처럼 여러 세션을 직렬화할 때 미리 한 번에 만든 디렉터리(N+1 방지).
+    """
     parts = list(s.participants or [])
+    if users is None:
+        users = _load_user_directory(
+            object_session(s), [s.host_id, *(p.user_id for p in parts)]
+        )
+    host_info = users.get(s.host_id) or {}
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
@@ -93,6 +127,7 @@ def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
         "custom_type_name": s.custom_type_name,
         "status": s.status,
         "host_id": str(s.host_id),
+        "host_name": host_info.get("name"),
         "scheduled_at": s.scheduled_at,
         "access_code": s.access_code,
         "opened_at": s.opened_at,
@@ -125,6 +160,14 @@ def _serialize(s: Session, *, include_participant_pii: bool = True) -> dict:
                 # 게스트는 user_id가 없으므로 None으로 직렬화한다
                 "user_id": str(p.user_id) if p.user_id else None,
                 "guest_name": p.guest_name,
+                # B8: 표시 이름 — 회원은 계정 이름, 비회원은 입력한 이름. 모든 뷰에 공개(이름만).
+                "user_name": (users.get(p.user_id) or {}).get("name") if p.user_id else p.guest_name,
+                # B8: 이메일은 호스트 뷰 전용(회원=계정 이메일, 비회원=리포트 수신 이메일).
+                "user_email": (
+                    ((users.get(p.user_id) or {}).get("email") if p.user_id else p.report_email)
+                    if include_participant_pii
+                    else None
+                ),
                 # AUTHZ-PARTICIPANT-PII: 생년월일/성별 등 참여자 PII 는 host(상담사)에게만 노출한다.
                 #   참여자(내담자)가 GET /sessions/{id} 로 조회할 때 타인 PII 가 새지 않도록
                 #   비host 뷰에서는 null 로 강등한다.
@@ -389,7 +432,7 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
     if scheduled_at is not None:
         _reminder_service.schedule_session_reminders(session, db)
 
-    return _with_chat_room(_serialize(session), session.id, db)
+    return _with_chat_room(_serialize(session, include_participant_pii=True), session.id, db)
 
 
 # ---------------------------------------------------------------------------
@@ -470,7 +513,7 @@ def _create_template(host_uuid: UUID, org, payload, db: DBSession) -> dict:
     template.run_id = template.id
     db.commit()
     db.refresh(template)
-    return _serialize(template)
+    return _serialize(template, include_participant_pii=True)
 
 
 def _clone_session_config(
@@ -570,7 +613,7 @@ def duplicate_session(
     # SDD-097: 복제본에 새 일정이 있으면 리마인더도 새 일정 기준으로 예약한다.
     if new_scheduled_at is not None:
         _reminder_service.schedule_session_reminders(clone, db)
-    return _with_chat_room(_serialize(clone), clone.id, db)
+    return _with_chat_room(_serialize(clone, include_participant_pii=True), clone.id, db)
 
 
 def save_as_template(
@@ -601,7 +644,7 @@ def save_as_template(
     )
     db.commit()
     db.refresh(template)
-    return _serialize(template)
+    return _serialize(template, include_participant_pii=True)
 
 
 def _sorted_session_query(base, *, page: int | None, limit: int | None):
@@ -636,7 +679,8 @@ def list_templates(
     )
     # 창 적용 시 DB 순서를, 미적용 시 기존 파이썬 정렬과 동일한 순서를 보장한다.
     rows = sorted(rows, key=_sort_key, reverse=True)
-    return [_serialize(s) for s in rows], total
+    users = _list_user_directory(rows, db)
+    return [_serialize(s, include_participant_pii=True, users=users) for s in rows], total
 
 
 def list_sessions(
@@ -668,7 +712,9 @@ def list_sessions(
         .all()
     )
     rows = sorted(rows, key=_sort_key, reverse=True)
-    return [_serialize(s) for s in rows], total
+    users = _list_user_directory(rows, db)
+    # B8: 참여자 PII 는 본인이 호스트인 클래스에서만 — 참여한 클래스 목록에서는 타인 개인정보를 가린다.
+    return [_serialize(s, include_participant_pii=(s.host_id == uid), users=users) for s in rows], total
 
 
 def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:
@@ -837,7 +883,10 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         body=s.title or "세션",
     )
 
-    return _with_chat_room(_serialize(s), s.id, db)
+    return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
+
+
+_DELETABLE_STATUSES = frozenset({"ready", "scheduled", "cancelled"})
 
 
 def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
@@ -848,6 +897,13 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     플랫폼 관리자 삭제(original_deletion_service)로만 지운다.
     """
     s = _get_session_as_host(session_id, host_id, db)
+    # SDD-209(B8 / BE-13): 준비·예정·취소 상태만 삭제할 수 있다. 열림(대기실 개방)·진행 중·완료는 거부 —
+    # 열린 클래스는 먼저 취소(닫기)해야 하고, 완료된 기록은 삭제 대상이 아니다. 거부 시 알림·숨김 없음.
+    if s.status not in _DELETABLE_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail="진행 중이거나 종료된 클래스는 삭제할 수 없어요. 열린 클래스는 먼저 닫아 주세요",
+        )
     # SDD-093: S13 세션 삭제 알림 (숨김 전 발화 — participants 접근 필요)
     _notify_participants_event(
         s, "session_deleted", db,
@@ -999,7 +1055,7 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
             body=s.title or "세션",
         )
 
-    return _with_chat_room(_serialize(s), s.id, db)
+    return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
 
 
 # SDD-100: open 상태 방치 세션 자동 취소 — 스테일 클래스 정리.
@@ -1078,7 +1134,7 @@ def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
     s.run_id = uuid.uuid4()
     db.commit()
     db.refresh(s)
-    return _serialize(s)
+    return _serialize(s, include_participant_pii=True)
 
 
 def _notify_participants_event(
@@ -1448,7 +1504,7 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
             title="세션에 초대되었습니다",
             body=s.title or "세션",
         )
-        return {**_serialize(s), "invite_result": _invite_result(target_uuid, results)}
+        return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
 
     # FUNC-03: 정원이 차 있으면(또는 앞선 대기자가 있으면) 대기열에 등록한다.
     if not _can_join_active(s, db):
@@ -1482,7 +1538,7 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         body=s.title or "세션",
     )
 
-    return {**_serialize(s), "invite_result": _invite_result(target_uuid, results)}
+    return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
 
 
 def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
@@ -1534,7 +1590,7 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     if promoted:
         _notify_participant_changed(s, db)
 
-    return _serialize(s)
+    return _serialize(s, include_participant_pii=True)
 
 
 def add_marker(session_id: str, host_id: str, timestamp_sec: float, note: str, db: DBSession) -> dict:
