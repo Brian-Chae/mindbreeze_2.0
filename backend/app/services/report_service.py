@@ -202,6 +202,34 @@ def _serialize(
         "gender": participant_info.get("gender") if participant_info else None,
         "birth_date": participant_info.get("birth_date") if participant_info else None,
         "is_guest": participant_info.get("is_guest") if participant_info else None,
+        "in_review": False,
+    }
+
+
+# 승인 전 리포트를 회원에게 가릴 때 null 로 만드는 HRV·움직임 지표 10개(HRVMotionSummary 필드).
+_MASKED_METRIC_KEYS = tuple(HRVMotionSummary.model_fields.keys())
+
+
+def _is_unapproved(report: Report) -> bool:
+    return report.status != "completed"
+
+
+def _mask_unapproved(result: dict, report: Report) -> dict:
+    """SDD-211(R6-X1, U1=B): 승인 전 리포트를 회원 응답에서 '리뷰 중' 자리표시자로 마스킹한다.
+
+    행·id·상태·생성 진행·시각 등 식별/표시 필드는 보존하고(구 앱 호환, 키 집합 불변),
+    본문·지표·상담사 코멘트 초안·오류 원문·PDF 링크·주관 상태는 비운다. 마스킹은 이 한 곳에서만 한다.
+    """
+    masked = {key: None for key in _MASKED_METRIC_KEYS}
+    return {
+        **result,
+        **masked,
+        "content": normalize_report_content({}, report.type),
+        "generation_error": None,
+        "data_credibility": None,
+        "pdf_url": None,
+        "subjective_state": None,
+        "in_review": True,
     }
 
 
@@ -679,17 +707,19 @@ def list_reports(
             report = reports_by_id.get(row.report_id)
             if report is None:
                 continue
-            result.append(
-                _serialize(
-                    report,
-                    sessions_map.get(report.session_id),
-                    participant_info=participant_info_map.get(report.participant_id),
-                    subjective=_subjective_from_map(report, records_map),
-                    counselor_names=counselor_names,
-                    strip_timeline=True,
-                    scope=scopes_map.get(report.session_id),
-                )
+            serialized = _serialize(
+                report,
+                sessions_map.get(report.session_id),
+                participant_info=participant_info_map.get(report.participant_id),
+                subjective=_subjective_from_map(report, records_map),
+                counselor_names=counselor_names,
+                strip_timeline=True,
+                scope=scopes_map.get(report.session_id),
             )
+            # SDD-211(R6-X1): 회원(비-staff) 조회에서는 승인 전 행을 '리뷰 중' 으로 마스킹한다(총계·페이지 불변).
+            if not is_staff and _is_unapproved(report):
+                serialized = _mask_unapproved(serialized, report)
+            result.append(serialized)
         else:
             session = missing_by_id.get(row.session_id)
             if session is None:
@@ -744,6 +774,10 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
         participant.report_email if participant else None,
         subjective=_subjective_for_report(report, db),
     )
+    # SDD-211(R6-X1): 회원이 승인 전 리포트를 열면 마스킹 200 을 주고, 읽음 처리하지 않는다
+    #   (승인 후에 NEW 가 정상 표시되도록). 소유자 검사(RPT-IDOR-001)가 위에서 먼저 끝났다.
+    if viewer and viewer.role == "client" and _is_unapproved(report):
+        return _mask_unapproved(result, report)
     # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
     # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
     if report.type == "counselor":
@@ -974,11 +1008,12 @@ def mark_all_read(user_id: str, db: DBSession) -> int:
     is_read 마킹은 상세 열람(get_report) 시 1건씩 이뤄지지만, 목록에서 '전체 읽음'으로
     쌓인 미열람 리포트를 한 번에 처리하기 위한 배치 경로다. 본인(user_id) 소유 리포트만
     대상이므로 counselor 리포트(상담사 소유)는 자연히 제외된다.
+    SDD-211: 승인 전 리포트는 회원에게 '리뷰 중' 으로만 보이므로 읽음 처리하지 않는다(승인 후 NEW 유지).
     """
     uid = _to_uuid(user_id)
     updated = (
         db.query(Report)
-        .filter(Report.user_id == uid, Report.is_read.is_(False))
+        .filter(Report.user_id == uid, Report.is_read.is_(False), Report.status == "completed")
         .update({"is_read": True}, synchronize_session=False)
     )
     db.commit()
