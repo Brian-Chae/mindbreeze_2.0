@@ -24,6 +24,11 @@
 .pz-root .fh-sico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); }
 .pz-root .fh-sbody p { font-size: var(--fs-15); line-height: 1.5; color: var(--tx-mid); }
 
+/* 좁은 화면(시안 .w-card): 마법사 카드 안쪽 여백은 16px. 공용 .fl-card(24px)가 뒤에 로드돼 .fh-card 의 16px 를 덮으므로 마법사 한정으로 다시 지정한다 */
+@media (max-width: 599px) {
+  .pz-root.fh-wiz .fl-card.fh-card { padding: 16px; }
+}
+
 /* 낮은 화면(1280x720 등): 본문이 푸터와 겹치거나 스크롤되지 않도록 마법사를 촘촘하게 */
 @media (max-height: 760px) {
   .pz-root.fh-wiz .fh-card { padding: 16px; gap: 8px; }
