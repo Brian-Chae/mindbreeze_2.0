@@ -8,7 +8,7 @@ import { NoticeBanner } from '../shared/NoticeBanner';
 import { NoticeOverlay } from '../shared/NoticeOverlay';
 import { StatusRing } from '../shared/StatusRing';
 import { MemberIcon } from './MemberIcon';
-import { METRIC_GUIDE, formatTrendChange, metricDef, metricFraction, sparkGeometry, type MetricSeries, type MetricSnapshot } from './member-metrics';
+import { METRIC_GUIDE, formatTrendChange, hasTrendData, metricDef, metricFraction, sparkGeometry, type MetricSeries, type MetricSnapshot } from './member-metrics';
 import './member-player.css';
 
 interface MemberStageProps {
@@ -77,10 +77,12 @@ function HeroRing({ c, hero, snapshot }: Pick<MemberStageProps, 'c' | 'hero' | '
   );
 }
 
-function GuideChip({ c, hero }: Pick<MemberStageProps, 'c' | 'hero'>) {
+function GuideChip({ c, hero, snapshot, series }: Pick<MemberStageProps, 'c' | 'hero' | 'snapshot' | 'series'>) {
   if (c.notice) {
     return <NoticeBanner tone={c.notice.tone} icon={<MemberIcon name={c.notice.icon} />}>{c.notice.text}</NoticeBanner>;
   }
+  // 지표 링이 아닌 안내 링(밴드 없음 등)이거나 아직 값이 쌓이지 않았으면 "최근 5분간 …" 문구를 내지 않는다.
+  if (c.ring.core !== 'gauge' || !hasTrendData(series[hero], snapshot[hero])) return null;
   return (
     <div className="mp-guide-plain">
       <NoticeBanner tone="info" icon={null}>{METRIC_GUIDE[hero]}</NoticeBanner>
@@ -165,7 +167,7 @@ export function MemberStage({ c, hero, snapshot, series, slotTop, sideCard, shee
           <HeroRing c={c} hero={hero} snapshot={snapshot} />
           <div className="mp-slot-bottom" ref={bottomRef}>
             <div className="mp-stack">
-              <GuideChip c={c} hero={hero} />
+              <GuideChip c={c} hero={hero} snapshot={snapshot} series={series} />
               {c.showTrend ? <TrendCard hero={hero} series={series} /> : null}
               {c.slot ? <SlotCard card={c.slot} onAction={onSlotAction} /> : null}
             </div>

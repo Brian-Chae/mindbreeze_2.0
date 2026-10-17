@@ -23,6 +23,11 @@ export const METRIC_GUIDE: Record<PlayerMetricKey, string> = {
   hrv: 'HRV는 최근 5분간 꾸준히 이어졌어요',
 };
 
+/** 5분 안내 문구는 실제로 쌓인 값이 있을 때만 말한다 — 밴드 없음·미측정이면 문구가 사실이 아니다 */
+export function hasTrendData(series: readonly number[], value: number | null): boolean {
+  return value !== null && Number.isFinite(value) && series.length >= MIN_TREND_SEC;
+}
+
 export function metricDef(key: PlayerMetricKey): PlayerMetric {
   const def = PLAYER_METRICS.find((m) => m.key === key);
   if (!def) throw new Error(`알 수 없는 지표: ${key}`);
