@@ -14,6 +14,7 @@ from app.models.client_profile import ClientProfile
 from app.models.record import Report, SessionRecord
 from app.models.user import User
 from app.services import notification_service, record_service, report_scope
+from app.services.session_authz import SessionAction, get_session_authorized
 from app.schemas.eeg import HRVMotionSummary
 
 logger = logging.getLogger(__name__)
@@ -222,16 +223,6 @@ def _subjective_from_map(report: Report, records_map: dict) -> dict | None:
     return record_service.session_subjective_state(record)
 
 
-def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    return s
-
-
 def _get_or_create_report(db: DBSession, *, filters: dict, defaults: dict) -> Report:
     """DATA-01: 리포트 조회 후 없으면 생성하는 멱등 헬퍼.
 
@@ -273,7 +264,7 @@ def generate_report(
 ) -> dict:
     if report_type not in ("counselor", "client"):
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.REPORT_GENERATE)
 
     if report_type == "client":
         # FUNC-02: client 리포트는 대상 participant 를 명시해야 한다.
