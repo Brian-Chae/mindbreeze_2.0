@@ -30,7 +30,8 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
     await hero.waitFor({ timeout: 10000 });
     // 제목(h2)·안내 박스(.sh-hbox__tx) 글자색만 검사 — 메타(.sh-hero__meta)는 의도된 뮤트 그레이이므로 제외
     const colors = await hero.evaluate((el) => [...el.querySelectorAll('h2.sh-hero__title, .sh-hbox__tx b, .sh-hbox__tx span')].map((n) => ({ t: n.tagName, c: getComputedStyle(n).color })));
-    const dark = colors.filter(({ c: col }) => { const m = col.match(/\d+/g).map(Number); return m[0] < 200 || m[1] < 200 || m[2] < 200; });
+    // 어두운 배경 위 글자는 밝은 색(상대 휘도 150/255 이상)이면 통과 — 보조 문구는 의도적으로 연한 라벤더(207,198,214)
+    const dark = colors.filter(({ c: col }) => { const m = col.match(/\d+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) < 150; });
     if (dark.length) throw new Error(`어두운 글자색: ${dark.map((d) => `${d.t} ${d.c}`).join(', ')}`);
   } finally {
     const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
