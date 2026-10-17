@@ -228,13 +228,15 @@ describe('H2 시트 — 체크인·도구·채팅·지표 기준', () => {
     expect(all('[data-pz="table"] tbody tr')).toHaveLength(8);
   });
 
-  it('도구 시트: 참여 코드와 코드 복사', async () => {
+  it('도구 시트: 입장 코드(4자리)와 코드 복사', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     await renderCase('C01', 'sheet=tools');
-    expect(text(sheet())).toContain('MIND24');
+    expect(text(sheet())).toContain('입장 코드');
+    expect(text(sheet())).toContain('4829');
+    expect(text(sheet())).toContain('참가자에게 직접 알려 주세요');
     await click(buttonByText('코드 복사', sheet() ?? document));
-    expect(writeText).toHaveBeenCalledWith('MIND24');
+    expect(writeText).toHaveBeenCalledWith('4829');
   });
 
   it('도구 시트: 1:1·오프라인에서는 손든 회원 우선 스위치가 없다', async () => {

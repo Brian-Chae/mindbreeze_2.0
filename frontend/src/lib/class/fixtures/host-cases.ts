@@ -218,7 +218,7 @@ export function buildHostCaseInput(id: string, params: URLSearchParams = new URL
     title: solo ? '임상심리상담 · 3회차' : '마음챙김 명상수업 · 4회차',
     elapsedSec: 12 * 60 + 34,
     durationMin: 30,
-    accessCode: 'MIND24',
+    accessCode: '4829',
     chat: MESSAGES,
     unread: 3,
     preCheckins: [

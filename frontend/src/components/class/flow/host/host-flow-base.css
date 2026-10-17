@@ -1,0 +1,59 @@
+/* SDD-209 H1 — 상담사 흐름 공통 보강. flow-shared.css 에 없는 시안(flow-base.css) 부품만 .pz-root 로 스코프해 이식한다. */
+.pz-root .fl-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.pz-root .fl-seg > button { min-height: 52px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); }
+.pz-root .fl-seg > button.on { background: var(--mb-purple); border-color: transparent; color: #fff; }
+.pz-root .fl-input { height: 52px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); color: var(--tx-hi); padding: 0 var(--sp-2); font: inherit; font-size: var(--fs-15); width: 100%; }
+.pz-root .fl-input::placeholder { color: var(--tx-lo); }
+.pz-root .fl-row { color: var(--tx-hi); }
+.pz-root .fl-label { display: block; }
+
+/* 목록 선택 단계: 본문 컬럼이 푸터까지 채운다 */
+.pz-root .fh-fillcol { width: min(100%, var(--col-w)); flex: 1; min-height: 0; max-height: 640px; margin: auto; display: flex; flex-direction: column; gap: var(--sp-2); }
+.pz-root .fh-fillcol > .fh-card { flex: 1; min-height: 0; }
+
+/* 상단 바 제목 2줄 */
+.pz-root .fhb-ttl { display: flex; flex-direction: column; align-items: center; min-width: 0; max-width: 100%; }
+.pz-root .fhb-ttl > b { font-size: var(--fs-15); font-weight: 700; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.pz-root .fhb-ttl > span { font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* 마법사 하단: 이전(1fr) + 다음(2fr). 1단계도 같은 격자를 써서 주 버튼 자리가 단계마다 같다(FR1) */
+.pz-root .fh-nav2 { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.pz-root .fh-nav2 > .fh-spacer { visibility: hidden; }
+.pz-root .fh-sfoot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pz-root .fh-sbody { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.pz-root .fh-sico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); }
+.pz-root .fh-sbody p { font-size: var(--fs-15); line-height: 1.5; color: var(--tx-mid); }
+
+/* 낮은 화면(1280x720 등): 본문이 푸터와 겹치거나 스크롤되지 않도록 마법사를 촘촘하게 */
+@media (max-height: 760px) {
+  .pz-root.fh-wiz .fh-card { padding: 16px; gap: 8px; }
+  .pz-root.fh-wiz .fh-form { gap: 8px; }
+  .pz-root.fh-wiz .fl-seg > button { min-height: 44px; }
+  .pz-root.fh-wiz .fl-input { height: 44px; }
+  .pz-root.fh-wiz .fh-inwrap > .ic { top: 12px; }
+  .pz-root.fh-wiz .fl-h1 { font-size: var(--fs-18); }
+  .pz-root.fh-wiz .fh-tog, .pz-root.fh-wiz .fh-static { min-height: 56px; }
+  .pz-root.fh-wiz .fh-stepper { min-height: 52px; }
+}
+
+/* 안내 줄·삭제 버튼 (host-a 의 .w-note · .w-xbtn) */
+.pz-root .fh-note { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 1.5; }
+.pz-root .fh-note > svg, .pz-root .fh-info > svg { flex: none; }
+.pz-root .fh-note.ok { color: var(--ok); }
+.pz-root .fh-note.warn { color: var(--warn); }
+.pz-root .fh-xbtn { width: 44px; height: 44px; border-radius: var(--r-pill); display: inline-grid; place-items: center; color: var(--tx-mid); flex: none; }
+.pz-root .fh-csv-input { display: none; }
+.pz-root .fh-fillcol > .fh-codecard { flex: none; }
+.pz-root .fh-invcard { flex: none; }
+.pz-root .fh-fillcol > .fh-invcard { flex: 1; min-height: 0; }
+
+/* 로비/세팅: 본문 컬럼이 상단 바와 푸터 사이를 넘지 않고, 대기 회원 목록만 안에서 스크롤한다 */
+.pz-root.fh-lobby .fl-body { overflow: hidden; }
+.pz-root.fh-lobby .fl-col { max-height: 100%; min-height: 0; }
+.pz-root.fh-lobby .fl-col > * { flex: none; }
+.pz-root.fh-lobby .fl-col > .fhb-listcard { flex: 0 1 auto; min-height: 0; }
+
+/* 상담사 시트(바텀)는 시안처럼 화면 위에 겹친다: 뒤 화면을 밀지 않고 스크림으로 어둡게 한다.
+   PlayerShell 의 바텀 시트 행(grid-row 3)은 본문을 줄이므로 이 범위에서만 절대 배치로 바꾼다. 사이드 시트(≥1000 가로)는 그대로. */
+.pz-root.fh-ovsheet[data-sheet-open="true"][data-sheet-mode="bottom"]::after { content: ""; position: absolute; inset: 0; z-index: 10; background: rgba(12, 6, 20, 0.55); pointer-events: none; }
+.pz-root.fh-ovsheet .pz-sheet[data-mode="bottom"] { position: absolute; left: 0; right: 0; bottom: 0; z-index: 20; width: min(calc(100% - 2 * var(--pz-pad)), var(--pz-col)); max-width: none; margin: 0 auto 8px; max-height: calc(100dvh - 72px); }

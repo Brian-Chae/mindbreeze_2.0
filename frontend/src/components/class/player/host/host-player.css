@@ -441,3 +441,4 @@
 /* 하니스 전용: 종료 확인 모달이 떠 있어도 아래 화면의 도달성(P14)을 잴 수 있게 배경 오버레이만 이벤트를 통과시킨다 */
 .hp-modal-passthrough > div { pointer-events: none; }
 .hp-modal-passthrough [role="dialog"] { pointer-events: auto; }
+.hp-code__hint { margin: 8px 0 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }

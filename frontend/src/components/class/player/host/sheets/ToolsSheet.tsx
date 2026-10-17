@@ -1,8 +1,11 @@
-// SDD-208 H2 — "도구" 시트: 정렬 · 손든 회원 우선 · 표로 보기 · 내 밴드 · 참여 코드(복사).
+// SDD-208 H2 — "도구" 시트: 정렬 · 손든 회원 우선 · 표로 보기 · 내 밴드 · 입장 코드(4자리 표시·복사).
 import { Copy, Hand, Table2, Watch } from 'lucide-react';
 import type { HostSort } from '../../../../../lib/class/host-player-case';
 import { HostRow, HostSection, HostSwitch } from '../HostAtoms';
 import '../host-player.css';
+
+/** 입장 코드는 4자리다(D-4). 값이 아직 없으면 4칸 자리표시 */
+export const ENTRY_CODE_PLACEHOLDER = '————';
 
 interface ToolsSheetProps {
   sort: HostSort;
@@ -59,13 +62,14 @@ export function ToolsSheet({
         sub={selfBandText}
         trailing={<button type="button" className="hp-btn" data-variant="ghost" onClick={onOpenMyband}>보기</button>}
       />
-      <HostSection label="참여 코드">
+      <HostSection label="입장 코드">
         <div className="hp-code">
-          <b>{accessCode || '——————'}</b>
+          <b aria-label={accessCode ? `입장 코드 ${accessCode.split('').join(' ')}` : '입장 코드 없음'}>{accessCode || ENTRY_CODE_PLACEHOLDER}</b>
           <button type="button" className="hp-btn" disabled={!accessCode} onClick={onCopyCode}>
             <Copy aria-hidden="true" strokeWidth={2} />{codeCopied ? '복사 완료' : '코드 복사'}
           </button>
         </div>
+        <p className="hp-code__hint">참가자에게 직접 알려 주세요</p>
       </HostSection>
     </div>
   );
