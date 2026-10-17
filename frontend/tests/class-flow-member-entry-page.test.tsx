@@ -37,6 +37,10 @@ vi.mock('../src/hooks/useMediaCheck', () => ({
   }),
 }));
 
+vi.mock('../src/hooks/useLobbyBgm', () => ({
+  useLobbyBgm: () => ({ state: { track: null, volume: 0.6, blocked: false, muted: false }, setVolume: vi.fn(), toggleMute: vi.fn(), resume: vi.fn() }),
+}));
+
 import EntryPage from '../src/pages/class/EntryPage';
 
 let root: Root;
@@ -373,5 +377,38 @@ describe('EntryPage — 기기 점검 (M5)', () => {
     await act(async () => { find('다음')?.click(); });
     expect(text()).toContain('준비를 마쳤어요');
     expect(text()).toContain('마이크 꺼짐 · 카메라 꺼짐');
+  });
+});
+
+describe('EntryPage — 시작 대기 (M6)', () => {
+  const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
+  async function toWait(status: EntryStateDto['status'] = 'open'): Promise<void> {
+    seedEntry();
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
+    getEntryState.mockResolvedValue(stateDto({ status }));
+    bandStepState.state = 'idle';
+    mediaState.mic = 'on';
+    await renderPage();
+    await act(async () => { find('입장하기')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    await act(async () => { find('건너뛰기')?.click(); });
+    await act(async () => { find('LINK BAND 없이 계속하기')?.click(); });
+    await act(async () => { find('다음')?.click(); });
+    await act(async () => { find('입장 대기')?.click(); });
+  }
+  it('입장 대기 → FM07, 준비 다시 확인하기는 요약으로 돌아가며 초안이 보존된다', async () => {
+    await toWait();
+    expect(text()).toContain('상담사가 시작하면 자동으로 입장해요.');
+    expect(text()).toContain('시작 예정');
+    await act(async () => { find('준비 다시 확인하기')?.click(); });
+    expect(text()).toContain('준비를 마쳤어요');
+    expect(text()).toContain('LINK BAND 없이 참가해요');
+    expect(text()).toContain('건너뛰었어요');
+  });
+  it('대기 중 취소되면 취소 안내(FM10)', async () => {
+    await toWait();
+    getEntryState.mockResolvedValue(stateDto({ status: 'cancelled' }));
+    await act(async () => { window.dispatchEvent(new Event('online')); });
+    expect(text()).toContain('클래스가 취소됐어요');
   });
 });

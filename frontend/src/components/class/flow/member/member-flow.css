@@ -187,3 +187,26 @@
 @media (max-height: 700px) and (max-width: 999px), (max-height: 500px) {
   .pz-shell.fm-member[data-sheet-open="true"] .pz-shell__dock { visibility: hidden; }
 }
+
+/* FM07 시작 대기 */
+.pz-root .fm-time { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.pz-root .fm-time .fl-num { font-size: var(--fs-36); line-height: 44px; font-weight: 800; color: var(--tx-hi); }
+.pz-root .fm-ready { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fm-rrow { display: flex; align-items: center; gap: 16px; min-height: 24px; font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); }
+.pz-root .fm-rrow > svg { flex: none; color: var(--mb-pale); }
+.pz-root .fm-bar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.25); overflow: hidden; }
+.pz-root .fm-bar i { display: block; height: 100%; background: var(--ok); }
+.pz-root .fm-hint2 { margin: 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-bgmh { display: flex; align-items: center; gap: 16px; }
+.pz-root .fm-bgmh > svg { flex: none; color: var(--mb-pale); }
+.pz-root .fm-bgmh .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.pz-root .fm-bgmh .tx b { font-size: var(--fs-15); line-height: 24px; color: var(--tx-hi); }
+.pz-root .fm-bgmh .tx span { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-bgmr { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+.pz-root .fm-bgmr > svg { flex: none; color: var(--tx-mid); }
+.pz-root .fm-range { flex: 1; min-width: 0; height: 44px; accent-color: var(--mb-lavender); }
+.pz-root .fm-place { display: flex; align-items: flex-start; gap: 16px; }
+.pz-root .fm-place > svg { flex: none; color: var(--mb-pale); margin-top: 2px; }
+.pz-root .fm-place .tx { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pz-root .fm-place .tx b { font-size: var(--fs-15); line-height: 24px; color: var(--tx-hi); }
+.pz-root .fm-place .tx .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }

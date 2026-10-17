@@ -36,3 +36,14 @@ export function minutesUntil(iso: string | null, now: Date = new Date()): number
   if (Number.isNaN(t)) return null;
   return Math.max(0, Math.ceil((t - now.getTime()) / 60_000));
 }
+
+/** `약 5분 뒤에 시작해요` · `약 1시간 30분 뒤에 시작해요` · 시각이 지났으면 `곧 시작해요` · 시각을 모르면 null */
+export function startsInLabel(iso: string | null, now: Date = new Date()): string | null {
+  const minutes = minutesUntil(iso, now);
+  if (minutes === null) return null;
+  if (minutes <= 0) return '곧 시작해요';
+  if (minutes < 60) return `약 ${minutes}분 뒤에 시작해요`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `약 ${hours}시간 뒤에 시작해요` : `약 ${hours}시간 ${rest}분 뒤에 시작해요`;
+}

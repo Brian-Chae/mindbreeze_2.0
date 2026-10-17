@@ -10,6 +10,7 @@ import { NoticeStepView } from '../../components/class/flow/member/NoticeStepVie
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
+import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
@@ -136,6 +137,16 @@ export default function EntryPage() {
     navigate(homePath);
   };
 
+  if (machine.phase === 'wait') {
+    return (
+      <WaitStartContainer
+        place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} scheduledAt={info.scheduledAt}
+        address={info.locationType === 'offline' ? info.locationAddress : null}
+        onRecheck={() => dispatch({ type: 'recheck' })}
+        onExit={exit}
+      />
+    );
+  }
   if (machine.phase === 'wizard' && machine.step === 'a') {
     return (
       <NoticeStepView
