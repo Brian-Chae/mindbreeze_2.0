@@ -34,7 +34,10 @@ export function PlayerShell({ place, sheetOpen, top, dock, sheet, backdrop, clas
       {backdrop}
       <div className="pz-shell__top" inert={sheetOpen}>{top}</div>
       <main className="pz-shell__stage" data-pz={flow ? 'flow-stage' : 'col'} inert={sheetOpen}>{children}</main>
-      {dock === undefined ? null : <div className="pz-shell__dock">{dock}</div>}
+      {dock === undefined ? null : (
+        // 진행 화면은 시트가 열려도 도크가 계속 눌려야 한다. 사전 흐름(flow)은 주 버튼을 시트가 가리므로 같이 막는다(FR6)
+        <div className="pz-shell__dock" inert={flow && sheetOpen}>{dock}</div>
+      )}
       {sheet}
     </div>
   );

@@ -131,3 +131,29 @@ export function parseFlowCaseRef(ref: string): FlowCaseKey | null {
 export function placeOfCaseKey(parsed: FlowCaseKey): FlowPlace | null {
   return parsed.kind === 'simple' ? null : parsed.place;
 }
+
+/** 마법사(FM06a~e) 진행 점 개수: 온라인 5 · 오프라인 4(기기 점검 없음) · 밴드 사용 안 함이면 −1(밴드 단계 없음) */
+export function expectedWizardSteps(parsed: FlowCaseKey): number | null {
+  if (parsed.kind !== 'prep') return null;
+  if (!/^FM06[a-e]$/.test(parsed.screen)) return null;
+  return (parsed.place === 'online' ? 5 : 4) - (parsed.bandMode === 'none' ? 1 : 0);
+}
+
+/** FR5 상태 의존 요소 기대값. null = 해당 없음 */
+export interface ExpectedFlowState {
+  /** 전극 트래커(288×64)가 보여야 하는가 */
+  tracker: boolean | null;
+  /** 내 영상·소리 형태: video(카메라 켜짐) / bar(가로 막대) / none(마이크 사용 불가) */
+  avMode: 'video' | 'bar' | 'none' | null;
+}
+
+export function expectedFlowState(parsed: FlowCaseKey): ExpectedFlowState {
+  const none: ExpectedFlowState = { tracker: null, avMode: null };
+  if (parsed.kind !== 'prep') return none;
+  if (parsed.screen === 'FM06c') return { tracker: parsed.state.startsWith('leadoff'), avMode: null };
+  if (parsed.screen === 'FM06d') {
+    const avMode = parsed.state.startsWith('camon') ? 'video' : ['mic', 'camdenied'].includes(parsed.state) ? 'bar' : 'none';
+    return { tracker: null, avMode };
+  }
+  return none;
+}

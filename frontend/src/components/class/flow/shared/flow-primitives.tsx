@@ -88,9 +88,9 @@ export function FlowList({ children }: { children: ReactNode }) {
 /** 진행 점: total 개, current(0부터) 이전은 done, 현재는 on */
 export function FlowSteps({ total, current }: { total: number; current: number }) {
   return (
-    <div className="fl-steps" data-pz="flow-steps" role="img" aria-label={`${total}단계 중 ${current + 1}단계`}>
+    <div className="fl-steps" data-pz="flow-steps" role="group" aria-label={`${total}단계 중 ${current + 1}단계`}>
       {Array.from({ length: total }, (_, i) => (
-        <i key={i} className={i < current ? 'done' : i === current ? 'on' : undefined} />
+        <i key={i} className={i < current ? 'done' : i === current ? 'on' : undefined} aria-current={i === current ? 'step' : undefined} />
       ))}
     </div>
   );

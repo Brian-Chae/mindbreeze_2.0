@@ -70,7 +70,8 @@ export type FlowCaseKey = FlowPrepCaseKey | FlowLobbyCaseKey | FlowSimpleCaseKey
 
 /** 하니스 쿼리로 넘어오는 케이스 변형 값 */
 export interface FlowCaseContext {
-  screen: FlowScreenId;
+  /** 화면 ID(자가검증 픽스처는 `__selftest`) */
+  screen: string;
   caseKey: string;
   /** 열려 있어야 할 시트 이름(쿼리 sheet=) */
   sheet: string | null;

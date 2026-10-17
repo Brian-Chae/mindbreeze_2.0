@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseFlowCaseKey, parseFlowCaseRef } from '../src/lib/class/flow/case-key';
+import { expectedFlowState, expectedWizardSteps, parseFlowCaseKey, parseFlowCaseRef } from '../src/lib/class/flow/case-key';
 import { buildFlowIndex, collectFlowCases, diffFlowRegistry, listFlowRefs } from '../src/lib/class/flow/registry';
 import { FLOW_SCREEN_IDS, roleOfScreen } from '../src/lib/class/flow/types';
 
@@ -107,5 +107,48 @@ describe('레지스트리', () => {
     const { missing, extra } = diffFlowRegistry(map, ['FM04:default', 'FM04:error']);
     expect(missing).toEqual(['FM04:error']);
     expect(extra).toEqual(['FH05:ok']);
+  });
+});
+
+describe('측정 기대값 파생', () => {
+  const steps = (screen: string, key: string): number | null => expectedWizardSteps(parseFlowCaseKey(screen, key)!);
+  it('진행 점: 온라인 5 · 오프라인 4 · 밴드 사용 안 함 −1', () => {
+    expect(steps('FM06c', 'on-group-opt-member-idle')).toBe(5);
+    expect(steps('FM06a', 'off-solo-opt-member')).toBe(4);
+    expect(steps('FM06a', 'on-solo-none-member')).toBe(4);
+    expect(steps('FM06a', 'off-group-none-member')).toBe(3);
+    expect(steps('FM07', 'on-group-opt-member')).toBeNull(); // 마법사 아님
+    expect(steps('FM04', 'default')).toBeNull();
+  });
+  it('FR5: 접촉 불량일 때만 트래커, 카메라 켜짐일 때만 영상', () => {
+    const st = (screen: string, key: string) => expectedFlowState(parseFlowCaseKey(screen, key)!);
+    expect(st('FM06c', 'on-group-opt-member-leadoffl').tracker).toBe(true);
+    expect(st('FM06c', 'on-group-opt-member-connected').tracker).toBe(false);
+    expect(st('FM06c', 'on-group-opt-member-idle').tracker).toBe(false);
+    expect(st('FM06d', 'on-group-opt-member-camon').avMode).toBe('video');
+    expect(st('FM06d', 'on-group-opt-member-camon-micdenied').avMode).toBe('video');
+    expect(st('FM06d', 'on-solo-none-member-mic').avMode).toBe('bar');
+    expect(st('FM06d', 'on-group-opt-member-micdenied').avMode).toBe('none');
+    expect(st('FM06e', 'on-group-opt-member')).toEqual({ tracker: null, avMode: null });
+  });
+});
+
+describe('deriveFlowExpect — 측정 기대값의 단일 정본', () => {
+  it('마법사·FR1 그룹·상태 의존', async () => {
+    const { deriveFlowExpect } = await import('../src/lib/class/flow/expect');
+    expect(deriveFlowExpect('FM06c:on-group-opt-member-leadoffl')).toEqual({ steps: 5, fr1Group: 'FM06:online-group-opt', tracker: true, avMode: null });
+    expect(deriveFlowExpect('FM06a:off-group-none-member').steps).toBe(3);
+    expect(deriveFlowExpect('FM06c:on-group-opt-member-idle-started').fr1Group).toBeNull();
+    expect(deriveFlowExpect('FM07:on-group-opt-member')).toEqual({ steps: null, fr1Group: null, tracker: null, avMode: null });
+    expect(deriveFlowExpect('FH02a:online-group').fr1Group).toBe('FH02');
+    expect(deriveFlowExpect('FH02a:offline-group').fr1Group).toBeNull();
+  });
+  it('자가검증 픽스처 기대값', async () => {
+    const { deriveFlowExpect } = await import('../src/lib/class/flow/expect');
+    expect(deriveFlowExpect('__selftest:wizard').steps).toBe(5);
+    expect(deriveFlowExpect('__selftest:wizard', 'total=3&step=1').steps).toBe(3);
+    expect(deriveFlowExpect('__selftest:av-video').avMode).toBe('video');
+    expect(deriveFlowExpect('__selftest:electrodes-good').tracker).toBe(false);
+    expect(deriveFlowExpect('nonsense')).toEqual({ steps: null, fr1Group: null, tracker: null, avMode: null });
   });
 });

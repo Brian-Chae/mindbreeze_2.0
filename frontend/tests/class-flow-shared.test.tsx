@@ -50,6 +50,22 @@ describe('PlayerShell — 추가 props 기본값 = 현행', () => {
   });
 });
 
+describe('PlayerShell — 시트가 열리면(FR6)', () => {
+  it('기본(진행 화면): 도크는 계속 눌린다(inert 아님)', async () => {
+    await render(<PlayerShell place="online" sheetOpen top="T" dock="D" sheet={<span>S</span>}>본문</PlayerShell>);
+    expect(q('.pz-shell__dock')!.hasAttribute('inert')).toBe(false);
+    expect(q('.pz-shell__top')!.hasAttribute('inert')).toBe(true);
+  });
+  it('flow: 푸터(dock)도 inert', async () => {
+    await render(<PlayerShell place="online" sheetOpen flow top="T" dock="D" sheet={<span>S</span>}>본문</PlayerShell>);
+    expect(q('.pz-shell__dock')!.hasAttribute('inert')).toBe(true);
+  });
+  it('flow 이지만 시트가 닫혀 있으면 inert 아님', async () => {
+    await render(<PlayerShell place="online" sheetOpen={false} flow top="T" dock="D" sheet={null}>본문</PlayerShell>);
+    expect(q('.pz-shell__dock')!.hasAttribute('inert')).toBe(false);
+  });
+});
+
 describe('PlayerSheet — 추가 props 기본값 = 현행', () => {
   it('기본: data-pz=sheet, 닫기 라벨, footer 없음', async () => {
     await render(<PlayerSheet open title="도구" onClose={() => {}}>내용</PlayerSheet>);
@@ -128,6 +144,8 @@ describe('몰입형 프리미티브', () => {
     expect(dots[0].className).toBe('done');
     expect(dots[2].className).toBe('on');
     expect(q('[data-pz="flow-steps"]')!.getAttribute('aria-label')).toBe('5단계 중 3단계');
+    expect(document.querySelectorAll('[data-pz="flow-steps"] > i[aria-current="step"]')).toHaveLength(1);
+    expect(dots[2].getAttribute('aria-current')).toBe('step');
   });
   it('FlowChip: 톤 + 아이콘 자리 + 라벨(색만으로 구분하지 않는다)', async () => {
     await render(<FlowChip tone="warn" icon={<svg data-testid="ic" />}>접촉 필요</FlowChip>);
