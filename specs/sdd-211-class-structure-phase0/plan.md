@@ -3,6 +3,7 @@
 > 2026-10-18 · 기준 커밋 `3b93f692`(develop) · 입력: `spec.md`, `brief.md`, `investigation/01~07`, `기획.md` §9/§12/§13/§14, `영향도.md`, `결정-필요.md`, SDD-209/210 선례.
 > 표기: **확인** = 이번에 코드로 확인(`파일:줄`) / `미확인` / **[조사 NN]** = `investigation/NN-*.md` 의 해당 절(줄 근거 포함). 경로 접두 `backend/app/`→`app/`, `frontend/src/`→`fe/`.
 > **구현 전 verify 승인 없이는 어떤 Task 도 시작하지 않는다.** 이 문서와 verify.md 는 코드·DB·서버를 건드리지 않고 작성했다.
+> **개정 2026-10-18 (Hermes, 사용자 결정 확정 반영 — §13·§13.1)**: U1=B(`리뷰 중` 자리표시자 + 본문 마스킹) · U2 문구 확정 · U4=3역할 · U5=A · U6=platform_admin 열람 · 리포트 생성 큐는 후속 항목(§14). 해당 본문(F5~F7·TD4·TD5·TD8·TD12·Task X1~X3·R1·M1·M3·§5·§7·§10·§11)을 개정했다. §13·§13.1 은 결정 원문 기록이라 수정하지 않았다.
 
 ## 0. 조사로 확정한 사실
 
@@ -14,9 +15,9 @@
 | F2 | 403 문구 3종(`host 상담사만 가능합니다`/`호스트만 초대할 수 있습니다`/`접근 권한이 없습니다`). 문구를 단언하는 기존 테스트는 `tests/test_report.py:123` 하나뿐 | [조사 01] §1·§4 | 문구 보존은 기존 테스트가 지켜주지 않음 → **특성화 테스트 먼저** |
 | F3 | 어느 복제본도 role 을 보지 않음(org_admin·platform_admin 도 비호스트면 403). `video.py:81,108` 만 platform_admin 우회 | [조사 01] D4 | `authorize_session` 이 role 우회를 넣으면 **권한 확대** → 금지 |
 | F4 | 세션 생성·복제·수정·템플릿·새 실행 라우트 5개(`app/api/v1/session.py:86,203,272,288,314`)는 `get_current_user` 만 사용. `require_roles` 는 이미 존재(`app/api/deps.py:75-86`, 403 본문 `이 작업을 수행할 권한이 없습니다`). **client 정상 호출 경로 없음**(프론트 `RoleGuard(['counselor','org_admin'])` `fe/App.tsx:191-193`, "클래스 신청하기"=채팅 메시지, e2e·부하테스트·백엔드 테스트 전수) | [조사 02] §0·§2 | 가드 적용이 알려진 호출자를 깨지 않음. 남는 `미확인`: 구 Capacitor 번들, role=client 호스트 세션 존재 |
-| F5 | `platform_admin` 은 현재 API 로 세션 생성 가능(UI 는 불가). 가드에서 제외하면 동작 변경 | [조사 02] §4 | 사용자 결정 U4 (기본: 제외) |
-| F6 | R6-X1 **노출 확정**: `GET /reports`(`app/services/report_service.py:584` 소유자 조건만), `GET /reports/{id}`(`:722-765` 소유자 검사만), `GET /client/home` `recent_report`(`app/api/v1/client_portal.py:257-262`)가 상태 불문. 자동 승인 기본 off(`app/models/user.py:109-111`) → 대부분의 회원 리포트가 승인 전까지 무기한 노출 구간. 비회원 토큰·메일·PDF·AI 비서·내보내기는 `completed` 만 허용(안전, 테스트 고정) | [조사 03] §0·§2 | 쿼리 수준 필터. 승인 전 `counselor_comment` 초안도 회원에게 보이던 것이 함께 닫힘 |
-| F7 | 노출이 **테스트로 고정**: `tests/test_mb2_high_severity_fixes.py:163-183`(pending_review 소유 회원 GET → 200), `tests/test_report_bulk_actions.py:89-108`. SDD-027 codex 점검이 요구했으나(`specs/027-…/02-codex-integration-check.md:53,83`) 미구현 | [조사 03] §2.3·§4.2 | 두 테스트의 개정은 **구현 전 verify 에서 확정**(verify §4 RX-개정표) — "완화"가 아니라 정책 변경 |
+| F5 | `platform_admin` 은 현재 API 로 세션 생성 가능(UI 는 불가). **U4 확정: 허용 유지** → 역할 가드 대상 3역할(`counselor`·`org_admin`·`platform_admin`), 차단 대상은 `client` 뿐이라 platform_admin 에 대해서는 **현행 동작 보존** | [조사 02] §4 | TD4, RG-3 |
+| F6 | R6-X1 **노출 확정**: `GET /reports`(`app/services/report_service.py:584` 소유자 조건만), `GET /reports/{id}`(`:722-765` 소유자 검사만), `GET /client/home` `recent_report`(`app/api/v1/client_portal.py:257-262`)가 상태 불문. 노출되는 것은 `content` 전체뿐 아니라 **`_serialize` 의 최상위 필드**(`HRVMotionSummary` 10개 지표, `generation_error`(예외 원문), `data_credibility`, `pdf_url`, `subjective_state`)와 상담사 코멘트 초안(`content.counselor_comment`)이다(`report_service.py:132-200`, `app/schemas/eeg.py:23-34`, 모두 **확인**). 자동 승인 기본 off(`app/models/user.py:109-111`) → 대부분의 회원 리포트가 승인 전까지 무기한 노출 구간. 비회원 토큰·메일·PDF·AI 비서·내보내기는 `completed` 만 허용(안전, 테스트 고정). 프론트 홈 카드는 `/client/home` 의 `recent_report` 가 아니라 `listReports()` 를 쓰고(`fe/pages/client/ClientHomePage.tsx:143,176-185`), `recent_report` 는 프론트 소비처가 없다(`grep recent_report frontend/src` 0건, **확인**) | [조사 03] §0·§2 | **U1=B 로 처리 방식 변경**: 행은 유지(`리뷰 중`)하고 본문·최상위 지표·코멘트·오류 원문을 응답에서 마스킹(TD5) |
+| F7 | 노출이 **테스트로 고정**: `tests/test_mb2_high_severity_fixes.py:163-183`(pending_review 소유 회원 GET → 200 — U1=B 에서도 상태코드 200 은 유지되나 본문이 마스킹되므로 단언 대상이 바뀜), `tests/test_report_bulk_actions.py:89-108`(회원 목록 `total>=1` — U1=B 에서 총계는 유지되므로 단언 자체는 통과 가능, 마스킹 단언만 추가). SDD-027 codex 점검이 요구했으나(`specs/027-…/02-codex-integration-check.md:53,83`) 미구현 | [조사 03] §2.3·§4.2 | 개정표 §5.2 재작성(U1=B 기준). "완화"가 아니라 정책 변경 |
 | F8 | 빈 DB `alembic upgrade head` **실패**(14번째 `30c1bfbc724f`: `backend/alembic/versions/30c1bfbc724f_*.py:24` 가 `c8f3a1b5d201`(`…_013_chat_room_participants.py:22`) 이 이미 만든 `chat_room_participants` 를 재생성 — **두 파일 모두 직접 확인**). 이 리비전만 건너뛰면 나머지 83개 통과(로컬 PG 16.13, 총 ≈1.2초). 필요분 4건(`careers.updated_at`, `qualifications.updated_at`, `careers.role` 200→100, `careers.is_current NOT NULL`)뿐. 리비전 **84개**, head 1개 `e036a0000051` | [조사 04] §0·§2 | P0 Task 로 멱등화. 이미 적용된 DB 는 재실행하지 않으므로 dev/prod 무영향(추론 — dev `alembic current` 는 `미확인`) |
 | F9 | 테스트는 인메모리 SQLite `create_all`(`tests/conftest.py:195-203`). PG 부분 인덱스는 모델에 `postgresql_where`+`sqlite_where` 를 **손으로 이중 작성**, 복합 FK 현재 0건, SQLite 는 FK 미강제. 마이그레이션이 CI 에서 한 번도 안 돎 | [조사 04] §3·§4 | PG 잡 + `pg` 마커 하네스. 복합 FK 테스트는 대상 테이블이 생기는 Phase |
 | F10 | `deploy-dev.yml` 은 `ci-feature` 를 `needs` 하지 않음(독립) → CI 가 빨개도 dev 배포는 막히지 않음. 롤백 트랩은 `dist`·`backend/app`·`backend/alembic` 만 복원(`:118-144`), DB 되돌림 없음 | [조사 04] §1.1 | 새 PG 잡의 "차단" 의미는 브랜치 보호 필수 점검 등록이 있어야 실현(현황 `미확인`, Brian 수동) |
@@ -48,15 +49,15 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 | TD1 | **`authorize_session` 은 user_id 문자열 기반**, 모듈 `app/services/session_authz.py`. 두 진입점: `get_session_authorized(db, session_id, user_id, action)`(로드+판정, 현행 헬퍼 1:1 대체)와 `authorize_session(db, user_id, session, action)`(이미 로드된 세션용, `approve_report` 계열). 액션 enum = **현 호출 지점 단위**([조사 01] §3.3 25개). 액션마다 정책 `{rule: HOST|HOST_OR_PARTICIPANT, deny_detail, require_active_org}`. 에러 우선순위 고정 **400(ID)→404→403→409(기관)**. `db.query(Session).filter(...)` 유지(`db.get` 금지 — 전역 숨김 필터 보존, [조사 01] D3). **role 우회 도입 금지**. `Actor(id, role)` 확장은 Phase 3. `session_service` 를 import 하지 않음(순환 방지, 기관 검사는 함수 내부 지연 import) | 응답 바이트 동일, 권한 확대 방지, Phase 3 에서 HOST 규칙을 한 곳에서 변경 |
 | TD2 | **교체는 shim → 호출부 0 → 삭제** 순서. `app/ws/record_namespace.py:59` 가 private 이름 `_get_session_for_participant` 를 import 하므로 마지막까지 위임 shim 유지. 스위프(`session_service.py:1106`)는 호스트 id 로 `transition_status` 를 호출해 계열 B 를 통과 — `SYSTEM` actor 도입 금지 | [조사 01] D5·D7 |
 | TD3 | 9곳 밖의 호스트 판정은 **통합하지 않고 특성화 테스트만** 추가: `_can_access_report` 계열(org_admin·참여자 통과), `approve_report` 인라인 비교(`report_service.py:914`, 세션 없음도 403·문구 상이), `set_speaking`(400 이 403 보다 먼저), `resolve_audio_sync_host`, `video.py:81,108`(platform_admin 우회), `export_service.authorize`(404 은닉), `ChatRoom.host_id`(다른 컬럼). Phase 3 에서 후속 액션으로 흡수 검토 | Phase 0 은 동작 동일 리팩터 |
-| TD4 | **역할 가드**: `Depends(require_roles("counselor","org_admin"))` 를 5개 라우트에 적용(`POST /sessions`, `PUT /{id}`, `duplicate`, `save-as-template`, `new-run`). 별도 문구·형식 신설 안 함(403 `이 작업을 수행할 권한이 없습니다`). `DELETE`·상태 전이·초대 등은 호스트 판정이 이미 막으므로 제외(문구 변경 위험 회피). 역할 가드(라우트 의존성)와 호스트 판정(서비스)은 **층이 다르므로 구현 순서를 독립** | [조사 02] §4.1 |
-| TD5 | **R6-X1 수정 지점**: ① `list_reports` 회원 분기 쿼리에 `Report.status == "completed"`(총계·페이지네이션 정합) ② `get_report` — 소유자 검사 **뒤**, `is_read` 마킹 **앞**에서 client 이고 미완료면 404(존재 은닉; RPT-IDOR-001 의 타 참여자 403 계약 유지) ③ `client_portal` `recent_report` 에 `status=="completed"`(+`type=="client"`) ④ `mark_all_read` 에 `status=="completed"`. 응답 스키마·필드 불변. 승인·자동 승인·재생성 흐름 불변. **`report-status`·WS `report:progress` 의 상태 문자열은 Phase 0 에서 변경하지 않음**(호스트 UI 와 공유 필드, 내용 노출 아님) → 잔여 노출로 기록(§7 위험) | [조사 03] §5.1 |
+| TD4 | **역할 가드**: `Depends(require_roles("counselor","org_admin","platform_admin"))` 를 5개 라우트에 적용(`POST /sessions`, `PUT /{id}`, `duplicate`, `save-as-template`, `new-run`). **차단 대상은 `client` 뿐**(U4 확정). 별도 문구·형식 신설 안 함(403 `이 작업을 수행할 권한이 없습니다`). `DELETE`·상태 전이·초대 등은 호스트 판정이 이미 막으므로 제외(문구 변경 위험 회피). platform_admin 은 가드 전후 응답이 동일해야 한다(현행 보존, RG-3). 역할 가드(라우트 의존성)와 호스트 판정(서비스)은 **층이 다르므로 구현 순서를 독립**. 호스트 전용 조작(전이·초대 등)은 여전히 `host_id` 판정이라 platform_admin 이 타인 세션을 조작하지 못한다(AZ-3) | [조사 02] §4.1 |
+| TD5 | **R6-X1 수정(U1=B — 행 유지 + 응답 마스킹)**. 판정: 조회자가 **회원 쪽**(리포트 소유자, `list_reports` 의 비-staff 분기 / `get_report` 의 `viewer.role == "client"`)이고 `report.status != "completed"` 이면 *미승인*. ① **공통 마스킹** `_mask_unapproved(result)`(신규, `report_service.py`): `content` ← `normalize_report_content({}, report.type)` 결과(기존 `pending_analysis` 행이 이미 내려가는 거의 빈 형태와 같은 모양 — 구 앱 뷰어 호환), 최상위 `HRVMotionSummary` 10개 지표 ← null, `generation_error`·`data_credibility`·`pdf_url`·`subjective_state` ← null, 응답 스키마 **가산 필드** `in_review: bool = False`(`schemas/report.py` `ReportResponse`) ← true. **보존**: `id`·`session_id`·`type`·`status`(원문 유지)·`generation_status`·`is_read`·`created_at`·`session_title`·`counselor_name`·`session_type`·`scheduled_at`·`sent_at`·본인 `participant_*`/`report_email`. ② `list_reports` 비-staff 분기: **쿼리·총계·페이지네이션 불변**, 직렬화 결과 중 미승인 행에만 마스킹. staff 분기(`counselor`·`org_admin`) 불변. ③ `get_report`: 기존 순서 `_can_access_report` → counselor 타입 client 403 → **소유자 검사(타 참여자 403, RPT-IDOR-001)** → *(신규)* 미승인이면 마스킹 응답 **200**(404 아님) → **마스킹된 경우 `is_read` 를 올리지 않음**(승인 후 NEW 유지) → 승인된 경우 기존대로 마킹. ④ `mark_all_read`: `Report.status == "completed"` 조건 추가(미승인 건은 승인 후에도 NEW 로 남음). ⑤ `client_portal` `recent_report`: 행 유지, `RecentReportInfo` 에 가산 `in_review: bool = False`(제목 `MM월 DD일 리포트`·id·created_at 불변, 내용 없음). **비회원 토큰·메일·PDF·AI 비서·내보내기 경로 불변**(이미 `completed` 만). **`report-status`·WS `report:progress` 의 상태 문자열은 Phase 0 에서 변경하지 않음**(호스트 UI 와 공유, 내용 아님) → 잔여 노출(§7 R4). 승인·자동 승인·재생성 흐름 불변. 마스킹은 **응답 직렬화 단계 한 곳**(`_mask_unapproved`)에서만 하고, 테스트는 응답 키를 allow-list 로 키별 단언해 이후 필드가 추가돼도 누출을 잡는다 | [조사 03] §5.1(수정), 확정 U1·U2 |
 | TD6 | **PG 스모크**: `ci-feature.yml` 에 새 잡 `backend-pg-smoke`(`postgres:16` 서비스 컨테이너, `DATABASE_URL` 하나만 필요, 최소 패키지 설치, `timeout-minutes: 10`, 필터 없이 항상 실행). 단계: `alembic heads` 정확히 1개 → 빈 DB `upgrade head` → 스키마 덤프 복원 + 합성 시드 → `upgrade head` → `alembic check`(정보성, `continue-on-error`). **upgrade 만 검증, downgrade 왕복 없음**(롤백 정책 일관). "스냅샷 복원본" = **스키마 전용 덤프 + 합성 시드**(실데이터 덤프 기각 — 공개 저장소·비암호화 스냅샷). `deploy-dev.yml` 변경 없음 | [조사 04] §5·§7, [조사 07] E10 |
 | TD7 | **`30c1bfbc724f` 멱등화**는 삭제가 아니라 `sa.inspect` 존재 검사 가드(필요분 4건 보존). 결과 스키마가 모델 메타데이터와 같은 테이블 수(62)임을 확인. 리비전 id·체인 불변 | [조사 04] §2 |
-| TD8 | **계약 스냅샷**: (a) OpenAPI 서브셋 골든(주 방어선, 가산 전용 규칙) + (b) 응답 형태 골든 17 시나리오(미지정 dict 8개·불투명 필드 보강) 둘 다. 위치 `backend/tests/contract/`. 값이 아닌 **형태(키+타입 태그)** 만 저장해 비결정성 제거. 골든 쓰기는 `UPDATE_CONTRACT_GOLDEN=1` 에서만, `CI=true` 이면 거부. 의도적 파괴는 `golden/breaking_exemptions.json`(SDD 번호·사유·`expires_phase`) 항목으로만 가능. `enter/verify` 는 `strict_keys` 봉인. **골든은 Phase 0 시작 시점 동작을 박제**(버그 포함, 수정·정리 금지) → 모든 변경 Task 보다 먼저 커밋 | [조사 05] §5 |
+| TD8 | **계약 스냅샷**: (a) OpenAPI 서브셋 골든(주 방어선, 가산 전용 규칙) + (b) 응답 형태 골든 17 시나리오(미지정 dict 8개·불투명 필드 보강) 둘 다. 위치 `backend/tests/contract/`. 값이 아닌 **형태(키+타입 태그)** 만 저장해 비결정성 제거. 골든 쓰기는 `UPDATE_CONTRACT_GOLDEN=1` 에서만, `CI=true` 이면 거부. 의도적 파괴는 `golden/breaking_exemptions.json`(SDD 번호·사유·`expires_phase`) 항목으로만 가능. `enter/verify` 는 `strict_keys` 봉인. **골든은 Phase 0 시작 시점 동작을 박제**(버그 포함, 수정·정리 금지) → 모든 변경 Task 보다 먼저 커밋 | [조사 05] §5 **U1=B 의 계약 영향**: 새 필드 `in_review` 는 *가산*이라 §5.2 규칙상 **예외 항목 등록 불요**(`breaking_exemptions.json` 은 계속 빈 배열 — 확정 지시의 "예외 항목"은 *가산 확인 + CS-11 고정*으로 충족하고, 파괴 변경이 생길 때만 등록). `ReportResponse` 는 61 라우트 중 `POST /reports/generate/{session_id}` 응답에 쓰이므로 CS-2 가 "골든에 없는 신규 속성" **경고**를 출력하는 것이 정상이다. `GET /reports`·`GET /reports/{id}` 는 61 라우트 밖이라 골든이 지키지 않으므로 **CS-11(가산 전용·키 보존 단언)** 로 별도 고정한다. 구현 중 기존 키 제거·타입 변경·nullable 확대가 필요해지면 그때 예외 항목(SDD 번호·사유·`expires_phase`)을 등록하고 Brian 승인을 받는다 |
 | TD9 | **용어**: `lib/terms.ts` 는 `Record<TermKey, Record<TermArea, string>>`(영역 `meditation`·`counseling`), Phase 0 에서 두 영역 값 동일. 키는 화면 위치별 항목 정체성(`dashboard`=`대시보드`/`home`=`홈`/`org-dashboard`=`기관 대시보드` 분리 등 16개). 컴포넌트 파일에서 함수 export 금지(`react-refresh/only-export-components: error`) → 순수 `.ts`. 배지 결합은 키로, **계산식 통합 금지**(세 컴포넌트 식 상이). `NavItem.badge` 죽은 필드·`ShellFrame.tsx` 키·`host-shell-data.ts:98` 는 건드리지 않음 | [조사 06] §4 |
 | TD10 | **서버 `session_terms.py` 범위** = 알림 제목 11개 + 본문 fallback `세션` 8개 + `session_invite_service.py:87-88` + 유형 라벨 4곳(variant 별 키). 메일/푸시 본문·에러 `detail` 제외. 미지 키는 `KeyError`(조용한 fallback 금지). 서버에 `area` 가 아직 없으므로 호출부는 기본값 사용 | [조사 06] §3.4 |
 | TD11 | **가드 분리 데이터**: `frontend/e2e/class-flow/banned/{common,meditation,counseling}.json`(정규식 소스). `composeBanned('meditation')` 가 현행 `BANNED_COPY` 와 **바이트 동일**(meditation 항목을 앞에). `counseling` 규칙은 정의만, **적용 경로 0개**. `class-flow-shell-terms.test.ts` 는 `세션` 단독 검사 유지(검사 범위 확대 금지 — 현재 통과 여부 `미확인`인 `수업`·`오픈` 추가는 게이트 변경) | [조사 06] §4.4 |
-| TD12 | **M0 질의**: A1~A11(+B0, C2~C4, 기준선 재실행 C6), 전부 `SELECT` 시작·서브쿼리 전개(매크로 `<A>`), 출력은 범주형·구간·집계만. 읽기 전용 **3중 강제**(연결 옵션 `default_transaction_read_only=on`+`statement_timeout`, `BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY` … `ROLLBACK`, 문장별 `^select` + 금지어 정규식). 한 트랜잭션 단일 패스(질의 간 시점 일치). 파일 위치 `specs/sdd-211-class-structure-phase0/m0-prequery.{sql,py}`. **조사 07 에 없던 질의 2개 추가(범주형 집계만)**: **A10** `users.role × 호스트 세션 수`(role=client 호스트 세션 유무 — 역할 가드 `미확인` 해소), **A11** `reports(type='client', user_id IS NOT NULL) × status × is_read` 건수(R6-X1 수정의 영향 규모, R6-X7 `미확인` 해소 — 이메일·내용 비조회) | [조사 07] §1, [조사 02] §4 `미확인` 2, [조사 03] §5.2 |
+| TD12 | **M0 질의**: A1~A11(+B0, C2~C4, 기준선 재실행 C6), 전부 `SELECT` 시작·서브쿼리 전개(매크로 `<A>`), 출력은 범주형·구간·집계만. 읽기 전용 **3중 강제**(연결 옵션 `default_transaction_read_only=on`+`statement_timeout`, `BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY` … `ROLLBACK`, 문장별 `^select` + 금지어 정규식). 한 트랜잭션 단일 패스(질의 간 시점 일치). 파일 위치 `specs/sdd-211-class-structure-phase0/m0-prequery.{sql,py}`. **조사 07 에 없던 질의 2개 추가(범주형 집계만)**: **A10** `users.role × 호스트 세션 수`(role=client 호스트 세션 유무 — 역할 가드 `미확인` 해소), **A11** `reports(type='client', user_id IS NOT NULL) × status × is_read` 건수(R6-X1 영향 규모, R6-X7 `미확인` 해소 — 이메일·내용 비조회). **U6 반영(A4d)**: `custom_type_name` 원문 조회(A4d)는 **`platform_admin` 역할 보유자(Brian 및 대리인)에게 허용**한다. 러너는 `--include-labels` 플래그가 있을 때만 A4d 를 실행하고 결과를 **공유 가능 출력과 분리된 별도 파일**(`out-labels-*.txt`, 0600)에 쓴다. k 임계(`HAVING >= 3`)는 U5=A·U6 로 불필요해져 제거하고 `LIMIT 100` 만 유지. 원문은 **저장소 커밋 보고서·Linear 코멘트에 넣지 않는다**(공개 저장소, 열람자가 platform_admin 인지 보장 불가). U5=A: 소량 셀 억제 로직은 만들지 않는다 | [조사 07] §1, [조사 02] §4 `미확인` 2, [조사 03] §5.2 |
 | TD13 | **실행 경로**: SSH 선례(서버에서만 DB 도달, `.env.dev` 의 `DATABASE_URL` 환경변수로 읽기, `set -x` 금지, 임시 파일 `umask 077` 후 삭제). SSM 등록은 SDD-210 범위로 두고 묶지 않음 | [조사 07] M0-D3 |
 | TD14 | **롤백**: 모든 Task 는 코드 revert 로 되돌린다. DB 변경 0. 마이그레이션 수정 P0 는 신규 빈 DB 에서만 동작이 달라짐 | `기획.md` §12 |
 | TD15 | **커밋·푸시**: 격리 worktree 에서 `test(sdd-211):`/`feat(sdd-211):`/`fix(sdd-211):` 로 Task 단위 로컬 커밋, **푸시는 I1 에서만**(RED 상태 커밋이 CI 에 올라가지 않도록) | SDD-209 선례 |
@@ -78,7 +79,7 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 | A0 | **호스트 판정 특성화 테스트**(현행에서 통과해야 하며 이후 변경 금지): 액션별 비호스트 403 + detail, 기관 비활성 409(B 계열)·통과(A/C 계열), org_admin/platform_admin 403, 숨김 404·제거 참여자 403, 스위프 경로, 비참여자 403, 우선순위, 기존 공백 7(end·save-as-template·markers·PUT record·audio chunk/stop·video stop·approve_report) | `backend/tests/test_sdd211_authz_characterization.py`(신규) | AZ-1~AZ-8 | 현행 코드에서 전부 GREEN | G0 | M |
 | T0-FE | **내비 라벨/배지 특성화**: 4역할 `SidebarNav`·`layout/BottomTabBar`·`client/BottomTabBar` 렌더 `[href, 텍스트(배지 제외)]` 골든 배열, 배지 현행값(`sessionInvites` 0/3/10 → 없음/3/9+, 채팅·리포트·알림, 드로어 경로) | `frontend/tests/nav-labels-characterization.test.tsx`(신규) | TM-1·TM-2 | 현행 코드에서 GREEN | G0 | S |
 | T0-BE | **서버 문구 특성화**: `notify_event` 캡처로 알림 제목/본문(open/start/end/cancel, 생성 2변형, 수정, 직접 취소, 초대 2경로, 제외, 대기 승격, 리마인드; **제목 없는 세션 fallback 포함**) 골든 + 유형 라벨 3함수 × 5유형 | `backend/tests/test_session_terms_characterization.py`(신규) | TM-10 | 현행 코드에서 GREEN | G0 | M |
-| X1 | **회원 리포트 가시성 테스트(RED)** T1~T16 + 개정 대상 기존 테스트의 **개정표 확정**(§5.2). 구현 전 기준(현행 노출 재현 포함)을 로컬 증거로 기록 | `backend/tests/test_sdd211_member_report_visibility.py`(신규) | RX-1~RX-16 | 신규 테스트 중 노출 관련은 RED, 회귀 고정(PDF·토큰·staff)은 GREEN | G0 | S |
+| X1 | **회원 리포트 가시성 테스트(RED)** — U1=B 기준 RX-1~RX-16·RX-22: 4상태 시드(고유 sentinel 문자열을 `content`·`counselor_comment`·`generation_error` 에 심어 응답 어디에도 나오지 않음을 단언), 마스킹 allow-list 키별 단언, 총계·페이지 불변, 타 참여자 403, `is_read` 불변, 승인 전/후, 키 보존(구 앱 호환). 개정 대상 기존 테스트 2건의 **개정표 확정**(§5.2). 구현 전 기준(현행 노출 재현)을 로컬 증거로 기록 | `backend/tests/test_sdd211_member_report_visibility.py`(신규) | RX-1~RX-16·RX-22 | 노출 관련은 RED, 회귀 고정(PDF·토큰·staff)은 GREEN | G0 | M |
 | P0 | **`30c1bfbc724f` 멱등화**: 존재 검사 가드, 필요분 4건 보존. 수정 전 빈 DB 실패 재현 로그·수정 후 통과·스키마 대조 | `backend/alembic/versions/30c1bfbc724f_add_updated_at_to_qualifications_and_.py` | PG-2·PG-3·PG-4 | 로컬 임시 PG 16 에서 빈 DB `upgrade head` 성공, 테이블 62(+`alembic_version`) | G0 | S |
 
 ### 3.2 호스트 판정 단일화 (A) — BE-worker 1
@@ -93,14 +94,14 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 
 | Task | 내용 | 소유 파일 | 테스트 | 완료 기준 | 선행 | 규모 |
 |---|---|---|---|---|---|---|
-| R1 | 테스트 먼저(RED): client 토큰 5개 라우트 → 403 + 문구, counselor/org_admin 정상, platform_admin(U4 반영), 비로그인 401, 잘못된 body + client → 403(422 아님). 이후 가드 적용. 가드 적용 뒤 **전체 pytest 로 기존 테스트 영향 확정**(role=client 로 세션 생성하던 테스트 발견 시 목록화해 Brian 보고 — 임의로 role 을 바꾸지 않음) | `app/api/v1/session.py`(5 라우트 `Depends`), `backend/tests/test_sdd211_session_role_guard.py`(신규) | RG-1~RG-8 | 5 라우트 403 확인, 기존 테스트 신규 실패 0 | A3, U4 | S |
+| R1 | 테스트 먼저(RED): client 토큰 5개 라우트 → 403 + 문구, counselor/org_admin/**platform_admin 정상(현행 보존)**, 비로그인 401, 잘못된 body + client → 403(422 아님). 이후 가드(3역할) 적용. 가드 적용 뒤 **전체 pytest 로 기존 테스트 영향 확정**(role=client 로 세션을 만들던 테스트 발견 시 목록화해 Brian 보고 — 임의로 role 을 바꾸지 않음) | `app/api/v1/session.py`(5 라우트 `Depends`), `backend/tests/test_sdd211_session_role_guard.py`(신규) | RG-1~RG-9 | client 5 라우트 403, platform_admin 5 라우트 통과, 기존 테스트 신규 실패 0 | A3 | S |
 
 ### 3.4 R6-X1 (X) — BE-worker 1 (`report_service.py` 는 A2 뒤)
 
 | Task | 내용 | 소유 파일 | 테스트 | 완료 기준 | 선행 | 규모 |
 |---|---|---|---|---|---|---|
-| X2 | TD5 ①~④ 적용. X1 RED 가 GREEN 으로, 개정표의 기존 2 테스트 개정 | `app/services/report_service.py`, `app/api/v1/client_portal.py`, 기존 테스트 2개(개정표 범위만) | RX-1~RX-16 | X1 전부 GREEN, 개정표 외 기존 테스트 무수정 GREEN, PDF·토큰·staff 회귀 GREEN | A2, X1, U1 | S |
-| X3 | 프론트 안내(U2 반영): 승인 전 완료 클래스 "리포트 보기"·알림 이동 시 모달이 던지는 `리포트를 찾을 수 없습니다`(`fe/pages/client/ClientReportDetailModal.tsx:37`, **확인**) 를 중립 안내 문구로 교체. 목록 테스트(`client-report-list.test.tsx`)·모달 테스트(`client-report-modal.test.tsx`)를 U1 결정에 맞춰 조정. **새 문구는 용어 가드(`세션\|수업\|오픈`) 0건** | `fe/pages/client/ClientReportDetailModal.tsx`(필요 시 `fe/pages/client/ClientReportListPage.tsx`), `frontend/tests/client-report-{list,modal}.test.tsx` | RX-17·RX-18·TM-9 | 신규 문구 1종 외 문구 변경 0, 프론트 테스트 GREEN | X2, U2 | S |
+| X2 | TD5 ①~⑤ 적용(`_mask_unapproved`, `list_reports` 비-staff 마스킹, `get_report` 마스킹 200·`is_read` 보존, `mark_all_read` 필터, `recent_report` 가산 필드, `ReportResponse`/`RecentReportInfo` 에 `in_review` 가산). X1 RED 가 GREEN 으로, 개정표의 기존 테스트 개정 | `app/services/report_service.py`, `app/schemas/report.py`, `app/schemas/client.py`, `app/api/v1/client_portal.py`, 기존 테스트 2개(개정표 범위만) | RX-1~RX-16·RX-22 | X1 전부 GREEN, 개정표 외 기존 테스트 무수정 GREEN, PDF·토큰·staff 회귀 GREEN, CS-2 신규 속성 경고만(실패 0) | A2, X1 | M |
+| X3 | **프론트 `리뷰 중` 표시(U1=B·U2)**: ① 문구 상수 `fe/lib/report-review-copy.ts`(신규, 순수 `.ts`): 배지 `리뷰 중`, 안내 `리뷰 중이에요. 확인이 끝나면 알려드릴게요.` ② `ReportDto` 에 `in_review?: boolean` 가산(`fe/lib/api/reports.ts`) ③ 목록(`ClientReportListPage.tsx`): `in_review` 행은 상태 배지를 `리뷰 중` 으로(기존 `확인 가능`/`대기` 로직은 승인 행에 그대로), 요약 텍스트 비표시, NEW 배지 비표시, 행 클릭은 기존대로 모달 ④ 홈 카드(`ClientHomePage.tsx:411-441`): `in_review` 행에 `리뷰 중` 칩, NEW 비표시, 기존 `생성 중` 칩 로직 불변, 클릭 `/app/reports?report=id` 불변 ⑤ 모달(`ClientReportDetailModal.tsx`): 응답이 `in_review` 이면 `ClientReportViewer` 대신 **소프트 페이지**(제목=세션 제목, 안내 문구 1종, PDF·공유 UI 없음); 리포트 행이 아예 없을 때의 기존 오류 문구(`:37`)는 **그대로 유지** ⑥ `reportStore.refresh` 의 `unread` 집계에서 `in_review` 제외. **새 문구 2종은 용어 가드(`세션\|수업\|오픈` 및 공통 19개) 0건**을 테스트로 고정 | `fe/lib/report-review-copy.ts`(신규), `fe/lib/api/reports.ts`, `fe/pages/client/{ClientReportListPage,ClientHomePage,ClientReportDetailModal}.tsx`, `fe/stores/reportStore.ts`, `frontend/tests/client-report-{list,modal}.test.tsx`, `frontend/tests/client-report-in-review.test.tsx`(신규) | RX-17~RX-21·TM-9 | 신규 문구 2종 외 문구 변경 0, 프론트 테스트 GREEN, NEW 카운트 정합 | X2 | M |
 
 ### 3.5 PG 스모크 (P) — BE-worker 2
 
@@ -124,9 +125,9 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 
 | Task | 내용 | 소유 파일 | 테스트 | 완료 기준 | 선행 | 규모 |
 |---|---|---|---|---|---|---|
-| M1 | `m0-prequery.sql`(A1~A11, B0, C2~C4, C6 기준선 재전개)와 `m0-prequery.py`(읽기 전용 3중 강제 러너). 러너 단위 테스트(INSERT·`WITH`·금지어·`;` 분할). **빈 PG(alembic 적용본, 실데이터 없음)에서 모든 질의 `EXPLAIN`** 으로 컬럼·문법 검증. 리뷰어 체크리스트 R0~R10 기록, sha256 기록 | `specs/sdd-211-class-structure-phase0/m0-prequery.{sql,py}`, 러너 테스트(`backend/tests/test_sdd211_m0_runner.py`) | M0-1~M0-4 | 체크리스트 통과 기록, EXPLAIN 오류 0 | P1(PG 하네스) | M |
+| M1 | `m0-prequery.sql`(A1~A11, B0, C2~C4, C6 기준선 재전개)와 `m0-prequery.py`(읽기 전용 3중 강제 러너). 러너 단위 테스트(INSERT·`WITH`·금지어·`;` 분할, **`--include-labels` 없이는 A4d 미실행·별도 출력 파일 분리**). **빈 PG(alembic 적용본, 실데이터 없음)에서 모든 질의 `EXPLAIN`** 으로 컬럼·문법 검증. 리뷰어 체크리스트 R0~R10 기록, sha256 기록 | `specs/sdd-211-class-structure-phase0/m0-prequery.{sql,py}`, 러너 테스트(`backend/tests/test_sdd211_m0_runner.py`) | M0-1~M0-4·M0-12 | 체크리스트 통과 기록, EXPLAIN 오류 0 | P1(PG 하네스) | M |
 | M2 | **수동 RDS 스냅샷**(dev, 명령 단위 Brian 승인 후). 이름 `mindbreeze-dev-pre-classrestructure-m0-YYYYMMDD`, 태그, `available`/암호화 여부 기록. 템플릿은 [조사 07] §4.3 | (코드 없음) 기록: `m0-report.md` 스냅샷 표 | M0-5 | `Status=available`, `Encrypted=false` 기록, ID 가 Linear·보고서에 기재 | M1, Brian 승인 | S |
-| M3 | **감독 실행·보고**(Brian go + 배포·E2E 비실행 시간 확인 후): SSH 선례 절차로 단일 REPEATABLE READ 패스 실행 → 출력 회수 → 서버 임시 파일 삭제 → 소량 셀 억제 적용 `m0-report.md` → 102 vs 134 판정 → D-55/56/57 영향 예·아니오 → Brian 수령 확인 | `specs/sdd-211-class-structure-phase0/m0-report.md`(신규) | M0-6~M0-11 | verify §3.7 수락 조건 전부 | M2, Brian go | S |
+| M3 | **실행·보고**(Brian go + 배포·E2E 비실행 시간 확인 후): SSH 선례 절차로 단일 REPEATABLE READ 패스 실행 → 출력 회수 → 서버 임시 파일 삭제 → 커밋용 `m0-report.md` 작성(**U5=A: 전체 합계·분포만, 사람·센터 단위 상세 표(A8 센터별 표 등)는 커밋하지 않고 Brian 에게만 전달, 소량 셀 억제 없음**; `custom_type_name` 원문·이메일·UUID 0건) → **라벨 원문(A4d)은 `platform_admin` 역할 보유자에게만 별도 파일로 전달**하고 실행 요청자가 platform_admin 임을 M3 기록에 한 줄 남김 → 102 vs 134 판정 → D-55/56/57 영향 예·아니오 → Brian 수령 확인 | `specs/sdd-211-class-structure-phase0/m0-report.md`(신규, 원문 제외) | M0-6~M0-12 | verify §2.7 수락 조건 전부 | M2, Brian go | S |
 
 ### 3.8 통합 (I)
 
@@ -135,7 +136,7 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 | I1 | 전체 회귀(pytest 전체·vitest 전체·tsc·eslint·build) → 기준선 대비 신규 실패 0 → worktree 에서 **푸시**(`sdd/211-phase0` → PR → develop) → CI(프론트·백엔드·PG 잡) 확인 → dev 자동 배포 → `e2e-smoke.yml`(smoke·journeys·regressions·full-journey) 통과 → 배포 후 계약 스냅샷 재확인 → 수동 호출 절차(§6.2 [조사 03])는 **별도 승인** 후 실행 | 없음 | G·VR 전부 | 합격표 전 항목 체크 | 코드 Task 전부 | M |
 | I2 | `summary.md`(구현 결과·디버깅·테스트·SDD-210 인수사항), Linear SDD-211 코멘트에 spec·plan·verify·summary·`m0-report` 게시, `brief.md`/investigation 정리 | `specs/sdd-211-class-structure-phase0/summary.md` | 해당 없음 | 4종 존재 | I1, M3 | S |
 
-**Task 합계: 28개** — 트랙별 G 1(G0) · C 3(C1~C3) · A 4(A0~A3) · R 1(R1) · X 3(X1~X3) · P 5(P0~P4) · T 6(T0-FE·T0-BE·T1~T4) · M 3(M1~M3) · I 2(I1·I2). 규모별 S 17 · M 11. 3.1 표(9개: G0·C1~C3·A0·T0-FE·T0-BE·X1·P0)는 Wave 0 안전망이고 나머지 19개가 Wave 1~2 이다.
+**Task 합계: 28개(개정 전과 동일 — 신규 Task 없음, 내용 개정 6개 X1·X2·X3·R1·M1·M3, 규모 상향 3개 X1·X2·X3 S→M)** — 트랙별 G 1(G0) · C 3(C1~C3) · A 4(A0~A3) · R 1(R1) · X 3(X1~X3) · P 5(P0~P4) · T 6(T0-FE·T0-BE·T1~T4) · M 3(M1~M3) · I 2(I1·I2). 규모별 **S 14 · M 14**. 3.1 표(9개: G0·C1~C3·A0·T0-FE·T0-BE·X1·P0)는 Wave 0 안전망이고 나머지 19개가 Wave 1~2 이다. 리포트 생성 큐 분리는 Task 가 아니라 §14 후속 항목이다.
 
 ---
 
@@ -145,9 +146,9 @@ spec.md 참조. 범위 7항목: 용어 사전/키 기반 배지/가드 분리 ·
 
 | 워커 | Task | 소유 파일 |
 |---|---|---|
-| **BE-1** (직렬) | G0, A0, A1, A2, A3, R1, X1, X2, T0-BE, T4 | `session_authz.py`, `session_service.py`, `audio_/video_/record_/report_/session_email_invite_/session_invite_/research_consent_service.py`, `app/api/v1/session.py`, `app/ws/record_namespace.py`, `client_portal.py`, `reminder_service.py`, `agent_policy.py`, `report_comment_service.py`, `session_terms.py` 및 해당 신규 테스트 |
+| **BE-1** (직렬) | G0, A0, A1, A2, A3, R1, X1, X2, T0-BE, T4 | `session_authz.py`, `session_service.py`, `audio_/video_/record_/report_/session_email_invite_/session_invite_/research_consent_service.py`, `app/api/v1/session.py`, `app/ws/record_namespace.py`, `client_portal.py`, `app/schemas/report.py`, `app/schemas/client.py`, `reminder_service.py`, `agent_policy.py`, `report_comment_service.py`, `session_terms.py` 및 해당 신규 테스트 |
 | **BE-2** | C1~C3, P0~P4, M1, M2, M3 | `backend/tests/contract/**`, `backend/tests/pg/**`, `backend/tests/fixtures/pg/**`, `.github/workflows/ci-feature.yml`, `alembic/versions/30c1bfbc724f_*`, `m0-prequery.*`, `m0-report.md` |
-| **FE-1** | T0-FE, T1, T2, T3, X3 | `fe/lib/terms.ts`, `SidebarNav.tsx`, 두 `BottomTabBar.tsx`, `ClientReportDetailModal.tsx`, `frontend/e2e/class-flow/{lib.mjs,banned/**}`, 프론트 신규/수정 테스트 |
+| **FE-1** | T0-FE, T1, T2, T3, X3 | `fe/lib/terms.ts`, `fe/lib/report-review-copy.ts`, `fe/lib/api/reports.ts`, `SidebarNav.tsx`, 두 `BottomTabBar.tsx`, `ClientReportListPage.tsx`, `ClientHomePage.tsx`, `ClientReportDetailModal.tsx`, `reportStore.ts`, `frontend/e2e/class-flow/{lib.mjs,banned/**}`, 프론트 신규/수정 테스트 |
 | **I** | I1, I2 | 푸시·PR·summary |
 
 ### 4.2 직렬 의존 (충돌 지점)
@@ -170,22 +171,30 @@ Wave 0 (verify 승인 직후) `G0` → { `C1→C2→C3`, `A0`, `T0-FE`, `T0-BE`,
 
 | # | 현행 | 변경 후 | 영향 대상 | 근거 |
 |---|---|---|---|---|
-| 1 | 회원이 승인 전·생성 중·실패 리포트를 목록·상세·홈 카드로 볼 수 있음(상담사 초안 코멘트 포함) | **승인(`completed`) 후에만** 보임. 목록 총계·홈 카드·읽음 처리 정합. 타 참여자 403 계약 유지 | 자동 승인을 켜지 않은 호스트(기본 off)의 모든 회원 | F6, U1 |
-| 2 | 완료 클래스에서 "리포트 보기" → 승인 전엔 "리포트를 찾을 수 없습니다" 오류(수정 후 발생) | 중립 안내 1문장(U2). 그 외 문구 변경 없음 | 위와 동일 | [조사 03] §5.2 |
-| 3 | `report_generation_failed` 인앱 알림 → 눌러 이동 시 404 가 될 수 있음 | 알림은 유지(U3 기본), 이동 시 U2 안내 | 동일 | [조사 03] 경로 11 |
-| 4 | client 토큰으로 세션 생성·복제·수정·템플릿 저장·새 실행 가능(UI 는 막혀 있어 알려진 호출자 없음) | **403** `이 작업을 수행할 권한이 없습니다` | 이론상 직접 API 호출자·미확인 구 앱 번들 | F4, TD4 |
-| 5 | client 가 **타인** 세션 PUT 시 403 `host 상담사만 가능합니다` | 403 `이 작업을 수행할 권한이 없습니다`(상태코드 동일, detail 변경) | 동일 | [조사 02] §4.1 |
-| 6 | `platform_admin` 이 API 로 세션 생성 가능 | 기본 403(U4) | 운영자 직접 호출(알려진 호출자 없음) | F5 |
+| 1 | 회원이 승인 전·생성 중·실패 리포트의 **본문·지표·상담사 코멘트 초안·오류 원문**을 목록/상세/홈 카드에서 그대로 봄 | 같은 **행은 그대로 보이되 상태가 `리뷰 중`**. 본문·최상위 지표·코멘트·오류 원문·PDF 링크·주관 상태는 응답에서 **마스킹**. 총계·페이지네이션 불변. 타 참여자 403 계약 유지 | 자동 승인을 켜지 않은 호스트(기본 off)의 모든 회원 | F6, U1=B |
+| 2 | 회원 목록의 상태 배지: `sent_at` 유무로 `확인 가능`/`대기`, 요약 텍스트·NEW 배지 표시 | 미승인 행: 배지 `리뷰 중`, 요약 텍스트 비표시, **NEW 배지 비표시**(탭 NEW 카운트에서도 제외). 승인된 행은 현행 그대로 | 동일 | X3 |
+| 3 | 홈 "내 리포트" 카드(최신 3건): 미승인 건도 NEW·제목·`생성 중` 칩과 함께 표시 | 미승인 행에 `리뷰 중` 칩(`생성 중` 칩은 `generation_status=processing` 일 때 그대로), NEW 비표시, 클릭 시 `/app/reports?report=id` 동일 | 동일 | X3, 소프트 페이지 |
+| 4 | 리포트 상세 모달: 미승인 리포트도 전체 뷰어 표시 | **소프트 페이지**: 세션 제목 + `리뷰 중이에요. 확인이 끝나면 알려드릴게요.` (뷰어·PDF·공유 UI 없음). 리포트 행 자체가 없을 때의 기존 오류 문구는 그대로 | 동일 | U2 |
+| 5 | 승인 후 NEW 표시: 미승인 열람/`모두 읽음` 으로 이미 읽음 처리돼 승인 후에는 NEW 가 안 뜸 | 미승인 상태에서는 읽음 처리되지 않아 **승인 후에 NEW 가 정상 표시** | 동일 | TD5 ③④ |
+| 6 | `report_generation_failed` 인앱 알림 | **유지**(U3 확정). 눌러 이동하면 `리뷰 중` 소프트 페이지(생성 실패 리포트도 회원에게는 `리뷰 중` 으로만 보임 — R17) | 동일 | U3 |
+| 7 | client 토큰으로 세션 생성·복제·수정·템플릿 저장·새 실행 가능(UI 는 막혀 있어 알려진 호출자 없음) | **403** `이 작업을 수행할 권한이 없습니다` | 이론상 직접 API 호출자·미확인 구 앱 번들 | F4, TD4 |
+| 8 | client 가 **타인** 세션 PUT 시 403 `host 상담사만 가능합니다` | 403 `이 작업을 수행할 권한이 없습니다`(상태코드 동일, detail 변경) | 동일 | [조사 02] §4.1 |
+| 9 | `platform_admin` 이 API 로 세션 생성 가능 | **변경 없음**(U4 확정, 가드 3역할) | 운영자 | F5 |
+
+신규 사용자 노출 문구는 **2종**뿐이다: 배지·칩 `리뷰 중`, 안내 `리뷰 중이에요. 확인이 끝나면 알려드릴게요.` (verify G6). 안내의 "알려드릴게요" 는 승인 시 `report_ready` 인앱 알림이 발화되는 현행 동작(`app/services/report_service.py:929-947`, 중복 승인 시 재발송 없음)에 근거한다. 알림 수신 설정 기본값은 인앱 ON·이메일 OFF(`app/models/user.py:70,39`)이고 앱 푸시 도달 여부는 `미확인`.
 
 ### 5.2 기존 테스트 개정표 (구현 전 확정 — verify §5 와 동일)
 
+U1=B 에서 "행 유지 + 상태코드 200 유지" 라 U1=A 설계 대비 **개정 대상이 줄었다**(3건 → 1건). 개정은 "노출 허용을 계약으로 고정하던 단언"이 정책 변경으로 틀려진 경우에 한한다.
+
 | 테스트 | 현재 단언 | 개정 | 사유 |
 |---|---|---|---|
-| `backend/tests/test_mb2_high_severity_fixes.py:177-183` | pending_review 소유 회원 `GET /reports/{id}` → 200 | pending_review → **404**(존재 은닉), 소유자 200 단언은 `completed` 리포트로 이동, 타 참여자 403 단언 **유지** | 정책 변경(U1=A). 노출 허용을 계약으로 고정하던 단언 |
-| `backend/tests/test_report_bulk_actions.py:89-108` | 호스트가 generate 한 pending_review 가 회원 목록 `total>=1` | 승인 후 목록 확인으로 순서 변경 | 동일 |
-| `frontend/tests/client-report-list.test.tsx:18,59-60` | `sent_at:null` 행이 "대기"로 표시 | U1 결정에 맞춰 조정(U1=A 이면 비승인 행 미표시, B 이면 자리표시자) | 동일 |
+| `backend/tests/test_report_bulk_actions.py:89-108` (`test_mark_all_read`) | 호스트가 `generate` 한 client 리포트(자동 승인 off → `pending_review`)를 회원이 `read-all` 하면 `count >= 1`, 이후 목록의 **모든 행 `is_read`** | **승인 후** `read-all` 하도록 호출 순서 변경(`count == 1`, 모든 행 `is_read`). 미승인 건은 `read-all` 로 읽음 처리되지 않는다는 반대 단언은 신규 파일(RX-11)에 둔다 | TD5 ④ (`mark_all_read` 가 `completed` 만 처리) — 정책 변경 |
+| `backend/tests/test_mb2_high_severity_fixes.py:163-183` | pending_review 소유 회원 `GET /reports/{id}` → 200, 타 참여자 → 403 | **무수정 통과** (200 유지, 본문 마스킹은 신규 파일 RX-3 가 단언). 타 참여자 403 계약 유지 | 상태코드 불변 |
+| `frontend/tests/client-report-list.test.tsx` | `sent_at:null` 행이 `대기` 로 표시 | **무수정 통과** (픽스처에 `in_review` 가 없어 기존 분기를 탐). `리뷰 중` 렌더는 신규 파일(RX-17)에 둔다 | 가산 필드 부재 시 현행 동작 |
+| `frontend/tests/client-report-modal.test.tsx:113` | 행이 없을 때 `리포트를 찾을 수 없습니다` 오류 | **무수정 통과** (U2 확정으로 그 오류 문구는 유지) | — |
 
-이 3건 외 기존 테스트는 **무수정으로 통과**해야 한다.
+이 1건 외 기존 테스트는 **무수정으로 통과**해야 한다.
 
 ### 5.3 보이지 않는 변화
 
@@ -213,19 +222,21 @@ Wave 0 (verify 승인 직후) `G0` → { `C1→C2→C3`, `A0`, `T0-FE`, `T0-BE`,
 |---|---|---|---|---|
 | R1 | 호스트 판정 통합이 응답을 바꿈(기관 검사 통일, 문구, 우선순위, `db.get` 필터 우회) | 중/높음 | 특성화 테스트 선행·무수정, 액션별 정책 플래그, `db.query` 유지, 계약 골든 GREEN | 코드 revert |
 | R2 | 통합 함수에 role 우회가 들어가 권한 확대 | 낮음/높음 | AZ-3(org_admin·platform_admin 403) 고정 | 코드 revert |
-| R3 | R6-X1 수정으로 회원 화면에서 리포트가 사라져 문의 발생(자동 승인 off 호스트의 회원 전원) | 중/중 | U1·U2 결정, 안내 문구, 승인 흐름 불변. 건수는 M0 에 추가 집계 후보 `미확인`(R6-X7) | 코드 revert(데이터 변경 없음) |
+| R3 | R6-X1 수정으로 회원이 보던 승인 전 내용이 사라져 문의 발생(자동 승인 off 호스트의 회원 전원). 행은 남고 `리뷰 중` 안내가 있어 "사라짐" 위험은 U1=A 대비 낮음 | 중/낮음 | 안내 문구(U2)·승인 흐름 불변. 영향 건수는 M0 A11 로 집계(R6-X7) | 코드 revert(데이터 변경 없음) |
 | R4 | `report-status`·WS 의 `pending_review` 문자열이 회원에게 계속 노출(내용 아님) | 낮음/낮음 | **Phase 0 에서 변경 안 함** — 호스트 UI 와 공유 필드. 후속(Phase 5) 에서 회원 컨텍스트 분리 | — |
-| R5 | 역할 가드로 구 Capacitor 번들·role=client 호스트 세션 보유자의 편집이 막힘 | 낮음/중 | M0 A10 로 role=client 호스트 세션 유무 집계, 가드 적용 후 전체 pytest, 문제 시 가드 revert(독립 커밋) | 코드 revert |
+| R5 | 역할 가드(차단 대상 `client` 뿐)로 구 Capacitor 번들·role=client 호스트 세션 보유자의 편집이 막힘. platform_admin 은 영향 없음(U4) | 낮음/중 | M0 A10 로 role=client 호스트 세션 유무 집계, 가드 적용 후 전체 pytest, 문제 시 가드 revert(독립 커밋) | 코드 revert |
 | R6 | `30c1bfbc724f` 수정이 이미 적용된 DB 에 영향 | 낮음/중 | 이미 적용된 DB 는 재실행 안 함(추론). P2 의 dev 덤프 diff 로 확인. 리비전 id·체인 불변 | 코드 revert |
 | R7 | PG 잡이 차단 게이트로 작동하지 않음(`deploy-dev` 는 CI 와 독립) | 높음/중 | 브랜치 보호 필수 상태 점검 등록을 Brian 수동 작업으로 요청 | — |
 | R8 | 스키마 덤프 픽스처에 개인정보 유입 / 유지 비용 | 낮음/높음 | 스키마 전용·합성 시드·위생 grep, 실데이터 덤프 기각 | 픽스처 삭제 |
 | R9 | 계약 골든이 현행 버그를 박제 | — | 의도된 설계(구 앱 호환). 의도적 변경은 예외 파일+리뷰 | — |
-| R10 | M0 질의가 개인정보를 노출 / 서버 부하 | 낮음/높음 | 금지 컬럼 체크리스트·바깥 SELECT 정적 검사·읽기 전용 3중·`statement_timeout 15s`·소량 셀 억제·`custom_type_name` 비출력(U6). 공개 저장소이므로 원문 수치는 Brian 비공개 전달 | 해당 없음(읽기 전용) |
+| R10 | M0 질의가 개인정보를 노출 / 서버 부하 | 낮음/높음 | 금지 컬럼 체크리스트·바깥 SELECT 정적 검사·읽기 전용 3중·`statement_timeout 15s`·사람·센터 단위 표 비커밋(U5=A)·`custom_type_name` 원문은 platform_admin 에게만 별도 파일로 전달하고 커밋 제외(U6). 공개 저장소이므로 원문 수치는 Brian 비공개 전달 | 해당 없음(읽기 전용) |
 | R11 | dev 스냅샷 **비암호화**에 개인·생체 정보 | 낮음/중 | 공유 금지·접근 최소·보관 기간(U7), 삭제 승인 체크 | 스냅샷 삭제(Brian 승인) |
 | R12 | 서버 문구 치환이 메일 제목을 바꿈(알림 제목 = 메일 제목) | 낮음/중 | T0-BE 가 제목/본문 골든을 먼저 박제, 서버 사전은 알림 제목·fallback·유형 라벨에 한정 | 코드 revert |
 | R13 | 병렬 작업이 `session_service.py` 등에서 충돌 | 중/낮음 | §4.2 직렬 규칙·한 워커 | — |
 | R14 | 타인 미커밋 변경(`designs/class-structure-redesign/` 등 untracked)과 섞임 | 중/낮음 | 격리 worktree, `git add` 는 파일 지정, G0 에서 확인 | — |
-| R15 | dev 가 현재 실사용자 운영 → R6-X1·가드가 즉시 실사용자에 적용 | 높음/중 | verify 승인 + U1~U4 응답 후에만, I1 에서 E2E 스모크, 필요 시 즉시 revert | 코드 revert |
+| R15 | dev 가 현재 실사용자 운영 → R6-X1·가드가 즉시 실사용자에 적용 | 높음/중 | verify 승인 후에만(U1~U7 은 확정됨), I1 에서 E2E 스모크, 필요 시 즉시 revert | 코드 revert |
+| R16 | **구 앱 번들**(강제 업데이트 없음)이 마스킹 응답을 받으면: 목록은 `content?.headline` 등을 옵셔널 체이닝으로 읽어 세션 제목으로 대체되고, `sent_at` 이 null 이라 기존 `대기` 배지가 뜨며 행은 열린다 → 상세 뷰어가 거의 빈 `content` 를 렌더. 같은 모양의 행(`pending_analysis`, `content={"status":"generating"}`)이 이미 현행에서 회원에게 내려가므로 뷰어가 견딘다는 **추론**은 있으나 구 번들의 실제 렌더는 `미확인` | 낮음/중 | 마스킹 `content` 를 `normalize_report_content({})` 형태(현행 빈 행과 동일 모양)로 고정, 키 보존 단언(RX-22), 신규 프론트에서 `in_review` 소프트 페이지. 구 번들 렌더 확인은 실기기 수동(`미확인`) | 코드 revert |
+| R17 | 생성 **실패**(`error`) 리포트도 회원에게는 `리뷰 중` 으로만 보임(U3 로 "생성 실패" 인앱 알림은 유지돼 문구가 어긋남). 호스트가 재생성하면 해소 | 낮음/낮음 | 의도된 단순화(회원에게 실패 상세·예외 원문을 내리지 않음). 별도 결정 필요 없음, summary 에 기록 | — |
 
 **롤백 총칙**: 정상 롤백 = 각 커밋 revert(DB 변경 없음). 가시 변경(X2·X3, R1)은 독립 커밋이므로 개별 revert 가 가능하다. `deploy-dev.yml` 롤백 트랩이 `dist`·`backend/app`·`backend/alembic` 을 복원하므로 `30c1bfbc724f` 수정도 함께 복원된다(스키마 영향 없음).
 
@@ -233,7 +244,7 @@ Wave 0 (verify 승인 직후) `G0` → { `C1→C2→C3`, `A0`, `T0-FE`, `T0-BE`,
 
 ## 8. 배포 순서
 
-1. **verify 승인**(Brian) + 사용자 결정 U1~U7·확인 C1 응답(또는 기본값 수락).
+1. **verify 승인**(Brian). 사용자 결정 U1~U7 은 확정됨(§11), 확인 요청 C1 은 비차단.
 2. 격리 worktree `sdd/211-phase0` 에서 Wave 0 → Wave 1 (로컬 커밋, **푸시 금지**).
 3. I1: 전체 회귀 → 푸시 → PR(develop 대상) → CI 3잡 GREEN → 머지 → `deploy-dev.yml` 자동 배포(릴리스 1) → `e2e-smoke` 통과 → 계약 스냅샷 재확인.
 4. M0: M2(스냅샷, 명령 승인) → M3(감독 실행·보고). **분류 규칙 승인은 별개의 Phase 1 진입 게이트**(보고만으로 승인된 것이 아님).
@@ -263,7 +274,7 @@ DB 마이그레이션 배포 0건(신규 리비전 0). 배포 중 `in_progress` 
 ## 10. 구현 전 미확정 (확인하지 못한 것)
 
 1. **구 Capacitor 앱 번들**이 client 토큰으로 `POST/PUT /sessions…` 를 호출하는지 — 번들 접근 불가([조사 02] §2.3). M0 A10 으로 role=client 호스트 세션 유무만 집계 가능.
-2. 운영/개발 DB 의 **승인 전 회원 리포트 건수·열람 이력**(R6-X7), 자동 승인 사용 비율 — 조회 금지로 `미확인`. M0 의 **A11**(리포트 상태×읽음 건수)이 건수를 해소(자동 승인 사용 비율은 `users.auto_approve_report` 집계를 A11 변형으로 추가할 수 있으나 호스트 단위 소량 셀이라 U5 억제 규칙 적용).
+2. 운영/개발 DB 의 **승인 전 회원 리포트 건수·열람 이력**(R6-X7), 자동 승인 사용 비율 — 조회 금지로 `미확인`. M0 의 **A11**(리포트 상태×읽음 건수)이 건수를 해소(자동 승인 사용 비율은 `users.auto_approve_report` 집계를 A11 변형으로 추가할 수 있으며, 호스트 단위 표이므로 U5=A 에 따라 커밋하지 않고 Brian 에게만 전달).
 3. 102→134 증분 32건의 구성, SDD-210 134 의 질의 원문, DB 시간대(B0 로 확인) — M3 판별 질의 결과로만 확정.
 4. dev 서버 `alembic current`·스키마 상태(`30c1bfbc724f` 적용 이력, dev 와 빈 체인 DB 의 스키마 차이 ≈12건 드리프트), 실제 dev 스키마 덤프 크기 — P2 에서 확인.
 5. **CI 러너 소요 시간**·기존 `backend` 잡 소요·러너 `psql` 유무·브랜치 보호 규칙/CODEOWNERS — I1 측정.
@@ -275,24 +286,32 @@ DB 마이그레이션 배포 0건(신규 리비전 0). 배포 중 `in_progress` 
 11. R6 이탈 참가자 목록/상세 불일치(R6-X2), `core/database.py:16-44` 전역 필터가 회원 리포트 JOIN 에 실제 적용되는지(실행 미검증).
 12. `db.get(Session, id)` 가 전역 숨김 필터를 우회하는지(실행 미검증, TD1 은 `db.query` 유지로 회피), 동적 접근(`getattr` 등)으로 호스트 헬퍼를 쓰는 곳(이름 기준 grep 으로만 전수).
 
+13. **구 앱 번들**이 `in_review` 마스킹 응답(거의 빈 `content` + `대기` 배지)을 실제로 어떻게 렌더하는지 — 실기기 수동 확인 필요(R16).
+14. 승인 시 `report_ready` 의 **앱 푸시 도달 여부**(인앱 알림은 기본 ON) — 안내 문구 "알려드릴게요" 의 이행 범위.
+
 ---
 
-## 11. 사용자 결정 필요 (비즈니스·정책만, 기본값 포함)
+## 11. 사용자 결정 — 확정 상태 (2026-10-18, §13·§13.1 반영)
 
-기본값대로 가면 "**기본값대로**"라고만 답하면 된다(`결정-필요.md` 관례: 기본값 진행 허용). 단 U1~U4 는 사용자에게 보이는 변경이므로 verify 승인 때 명시 확인한다.
+Brian 이 U1~U7 을 모두 확정했다. **남은 것은 확인 요청 C1 한 건**이며 Phase 0 의 차단 조건이 아니다.
 
-| ID | 질문 | 옵션 | **기본값** | 영향 | 차단 Task |
-|---|---|---|---|---|---|
-| **U1** | 승인 전 리포트를 회원 화면에서 어떻게 처리할까요? | **A 행 자체 숨김** / B "승인 대기" 자리표시자 행을 보이되 본문·열람 불가(SDD-118 의 "대기" 배지 의도에 가까움, 응답 수준 마스킹이 필요해 범위 증가) | **A** | 회원 화면, X2·X3, 테스트 개정표 | X2, X3 |
-| **U2** | 승인 전 "리포트 보기"·알림 이동 시 무엇을 보여줄까요? | **중립 안내 1문장**(제안 문구: `아직 전달된 리포트가 없어요. 확인이 끝나면 알려드릴게요.`) / 버튼 비활성+문구 / 현행 오류 유지 | **중립 안내 1문장** | 새 문구 1종(용어 가드 통과 필수) | X3 |
-| **U3** | 리포트 생성 **실패** 인앱 알림(`report_generation_failed`)을 회원에게 계속 보낼까요? | **유지(내용 노출 아님)** / 회원 대상 중단(호스트에게만) | **유지** | 알림 정책 | — (변경 시 X2 범위 확대) |
-| **U4** | `platform_admin` 이 API 로 세션을 만들 수 있게 둘까요? | **차단**(기획서의 `counselor`·`org_admin` 한정) / 허용(현행 유지) | **차단** | 운영자 직접 호출 이력은 `미확인` | R1 |
-| **U5** | M0 보고서(공개 저장소에 커밋)의 소량 셀 처리는? | **사람·기관 단위 셀(A5·A6·A7b·A8·C3b)만 `<3` 억제, 원본 수치는 Brian 에게만 비공개 전달** / 억제 없이 커밋 / 전부 비공개 | **사람·기관 단위만 억제** | 재식별 위험 | M3 |
-| **U6** | `custom` 유형의 **자유 입력 라벨 원문**을 확인할까요? (호스트가 입력한 ≤30자, 사람 이름 가능) | **1단계만**(건수·키워드 분류·빈도 분포, 라벨 비출력). 원문(A4d)은 필요할 때만 Brian 입회 하 화면 출력 전용·기록 금지 / 원문 미확인(호스트 확인 질문으로 대체) | **1단계만** | D-56 분류 정확도 | M3 |
-| **U7** | 수동 RDS 스냅샷(**비암호화**, 개인·생체 포함)의 보관과 암호화 사본은? | **M5 호환 윈도우 종료(≥30일) + Brian 삭제 승인까지 보관, 암호화 사본은 만들지 않음(SDD-210 컷오버 전용)** / 짧게 보관 후 삭제 | **기본값** | 개인정보 보관 | M2 |
-| **C1** (확인 요청) | **SDD-210 컷오버 일정(B-7)** 이 정해지면 알려주세요. 정해지면 Phase 1 의 M2(백필 apply) 위치를 확정합니다. 지금은 Phase 0 이 독립이라 차단은 아닙니다 | — | 일정 확정 시 통보 | Phase 1 plan | — |
+| ID | 결정 | 확정 내용 | 반영 위치 |
+|---|---|---|---|
+| **U1** | 승인 전 리포트 회원 화면 | **B 로 변경**: 목록·홈 카드에 `리뷰 중` 상태로 노출, 본문·상담사 코멘트 초안·오류 원문은 응답에서 마스킹, 상세는 마스킹 200(소프트 페이지) | TD5, X1~X3, §5, RX |
+| **U2** | 안내 문구 | `리뷰 중이에요. 확인이 끝나면 알려드릴게요.` (배지·칩 `리뷰 중`). 용어 가드 통과를 테스트로 고정 | X3, RX-21 |
+| **U3** | 생성 실패 인앱 알림 | 기본값 유지(회원에게 계속 발송) | §5.1 #6, R17 |
+| **U4** | `platform_admin` 세션 생성 | **허용** — 역할 가드를 `counselor`·`org_admin`·`platform_admin` 3역할로 | TD4, R1, RG-3 |
+| **U5** | M0 보고서 커밋 범위 | **A**: 전체 합계·분포만 커밋, 사람·센터 단위 상세 표는 커밋하지 않고 Brian 에게만 전달, 소량 셀 억제 불필요 | TD12, M3, M0-7 |
+| **U6** | 자유 입력 라벨 원문 | 플랫폼 관리자(**Brian 및 대리인 = `platform_admin` 역할 보유자 전체**)에게 열람 허용. 저장소 커밋 보고서에는 원문 제외 | TD12, M1, M3, M0-12 |
+| **U7** | 수동 RDS 스냅샷 | 기본값: M5 호환 윈도우 종료(≥30일) + Brian 삭제 승인까지 보관, 암호화 사본 만들지 않음 | M2, M0-5 |
 
-별도 알림(결정 아님): ① SDD-210 T-15 는 현재 첫 단계에서 실패(리비전 `30c1bfbc724f`)하며 이 SDD 의 P0·P1 이 해소 ② 브랜치 보호 필수 상태 점검 등록은 Brian 수동 작업 ③ P2(dev 스키마 덤프)·M2(스냅샷)·M3(조회) 실행은 각각 Brian go 가 필요하다(읽기 전용이지만 dev=실운영 DB).
+### 남은 확인 요청
+
+| ID | 내용 | 기본 처리 |
+|---|---|---|
+| **C1** | **SDD-210 컷오버 일정(B-7)** 이 정해지면 알려주세요. 정해지면 Phase 1 의 M2(백필 apply) 위치를 확정한다. Phase 0 은 독립이라 차단은 아니다(§9) | 일정 확정 시 통보. 그 전까지 D-60 선후는 `미확인` |
+
+별도 알림(결정 아님): ① SDD-210 T-15 는 현재 첫 단계에서 실패(리비전 `30c1bfbc724f`)하며 이 SDD 의 P0·P1 이 해소 ② 브랜치 보호 필수 상태 점검 등록은 Brian 수동 작업 ③ P2(dev 스키마 덤프)·M2(스냅샷)·M3(조회) 실행은 각각 Brian go 가 필요하다(읽기 전용이지만 dev=실운영 DB) ④ **U6 의 `platform_admin` 열람 허용**은 A4d 출력의 *전달 대상*을 정하는 것이며, 관리자 화면에서 라벨을 조회하는 기능은 Phase 0 범위가 아니다.
 
 ---
 
@@ -325,3 +344,17 @@ DB 마이그레이션 배포 0건(신규 리비전 0). 배포 중 `in_progress` 
 - **U5 = A**: 분포 보고서는 전체 합계·분포만 저장소에 커밋하고, 사람·센터 단위 상세 표는 커밋하지 않고 Brian 에게만 전달. 소량 셀 억제 기준 불필요.
 - **U6 보정**: "플랫폼 관리자" = Brian 과 그 대리인들(`platform_admin` 역할 보유자 전체). 라벨 원문 열람은 이 역할에 허용.
 - **신규 요구(리포트 몰림 대응)**: 리포트 생성이 한꺼번에 몰리면 부하가 크므로 **큐 방식으로 처리**한다. 현황(코드 확인): STT → 요약 → `generate_reports_for_session` 이 Celery chain 으로 이미 비동기 실행되지만(`audio_service.py:215-228`, `report_task.py:704`), 리포트 전용 큐·워커 동시성·우선순위·상한·적체 가시화 설계는 없음(`celery_app.py:41` task_routes 는 `exports` 만 분리, 워커는 `mindbreeze-worker` 단일). → **Phase 0 범위에서 제외하고 별도 항목(리포트 생성 큐 분리·동시성·적체 모니터링·세션 종료 일괄 몰림 완화)으로 설계**. 선행 조사 후 SDD 번호 부여.
+
+## 14. 후속 항목 (Phase 0 범위 밖 — Task 아님)
+
+### 14.1 리포트 생성 큐 분리·동시성·적체 모니터링
+
+- **요구(§13.1)**: 세션 종료 시 리포트 생성이 한꺼번에 몰리면 부하가 크므로 큐 방식으로 처리한다.
+- **현황(§13.1 의 코드 확인 인용, 이 개정에서 재조사하지 않음)**: STT → 요약 → `generate_reports_for_session` 이 Celery chain 으로 이미 비동기 실행(`audio_service.py:215-228`, `report_task.py:704`). 리포트 전용 큐·워커 동시성·우선순위·상한·적체 가시화는 없음(`celery_app.py:41` task_routes 는 `exports` 만 분리, 워커는 `mindbreeze-worker` 단일).
+- **처리**: **Phase 0 에 Task 로 넣지 않는다.** 별도 항목(리포트 생성 큐 분리·동시성·적체 모니터링·세션 종료 일괄 몰림 완화)으로 선행 조사 후 SDD 번호를 부여한다. Phase 0 코드는 이 설계에 영향을 주지 않는다(리포트 *생성* 경로 무수정, 조회·직렬화만 변경 — G5).
+- **연결 고리(참고)**: U1=B 로 회원이 `리뷰 중` 을 보는 구간이 생성 지연과 겹칠 수 있다. 적체가 심해지면 `리뷰 중` 기간이 길어지므로 후속 항목에서 적체 지표를 회원 안내 문구와 함께 검토한다.
+
+### 13.2 추가 확정 (Brian, 2026-10-18) — 구현 승인
+- **R17 처리**: 생성 실패 리포트도 회원에게는 `리뷰 중`으로만 표시. **U3 변경: `report_generation_failed` 알림은 상담사(호스트)에게만 발송**(회원 대상 중단). 이 알림 대상 변경은 X2 범위에 포함(테스트 먼저).
+- **계약 스냅샷 예외 미등록(CS-11 키 보존 검사로 대체)** 승인.
+- **verify 승인 → 구현 착수.** 병렬 워커 3(BE-1·BE-2·FE-1)을 별도 worktree·브랜치에서 진행 후 `sdd/211-phase0` 로 병합.
