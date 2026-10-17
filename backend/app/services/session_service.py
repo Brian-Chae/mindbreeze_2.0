@@ -815,20 +815,21 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
 
 
 def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
+    """클래스 삭제 = 숨김(보존 전환) (SDD-209 B1 / RV1-4).
+
+    행을 지우면 ORM/FK CASCADE 로 참가자·기록·EEG·리포트·청크가 즉시 사라진다. 일반 삭제는
+    ``hidden_at`` 만 기록해 모든 조회·접근에서 제외하고, 원본(음성·영상·EEG raw)은 보관 스위프나
+    플랫폼 관리자 삭제(original_deletion_service)로만 지운다.
+    """
     s = _get_session_as_host(session_id, host_id, db)
-    # SDD-093: S13 세션 삭제 알림 (삭제 전 발화 — participants 접근 필요)
+    # SDD-093: S13 세션 삭제 알림 (숨김 전 발화 — participants 접근 필요)
     _notify_participants_event(
         s, "session_deleted", db,
         include_waitlisted=True,
         title="세션이 취소되었습니다",
         body=s.title or "세션",
     )
-    # STG-05: DB 행만 지우면 S3 객체·로컬 파일(음성/영상/raw)이 잔존한다 — 실제 미디어도 삭제.
-    # (행 삭제 전에 파일 참조를 수집해야 하므로 여기서 호출한다.)
-    from app.services import media_cleanup_service
-
-    media_cleanup_service.delete_session_media([s.id], db)
-    db.delete(s)
+    s.hidden_at = datetime.now(timezone.utc)
     db.commit()
 
 
@@ -1264,6 +1265,36 @@ def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
     return promoted.user_id
 
 
+def _revive_removed_participant(s: Session, uid: UUID, db: DBSession) -> SessionParticipant | None:
+    """제거(removed_at)된 회원 참여자를 다시 입장/초대할 때 같은 행을 되살린다 (SDD-209 B1).
+
+    unique(session_id, user_id) 때문에 제거 행이 남아 있으면 새 행을 만들 수 없다. 제거 이력의
+    원본(EEG raw 등)은 같은 행에 붙어 있으므로 행을 재사용하고 입장 상태는 새로 계산한다.
+    되살릴 행이 없으면 None.
+    """
+    removed = (
+        db.query(SessionParticipant)
+        .filter(
+            SessionParticipant.session_id == s.id,
+            SessionParticipant.user_id == uid,
+            SessionParticipant.removed_at.is_not(None),
+        )
+        .execution_options(include_removed=True)
+        .first()
+    )
+    if removed is None:
+        return None
+    removed.removed_at = None
+    removed.is_waitlisted = False
+    removed.waitlist_position = None
+    db.flush()
+    if not _has_capacity(s, db):
+        removed.is_waitlisted = True
+        removed.waitlist_position = _next_waitlist_position(s, db)
+        db.flush()
+    return removed
+
+
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
     if s.status in ("completed", "cancelled"):
@@ -1286,6 +1317,20 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     )
     if existing:
         raise HTTPException(status_code=409, detail="이미 초대된 참여자입니다")
+
+    # SDD-209(B1): 제거된 참여자를 다시 초대하면 새 행 대신 제거 행을 되살린다(unique 충돌 방지).
+    revived = _revive_removed_participant(s, target_uuid, db)
+    if revived is not None:
+        db.commit()
+        db.refresh(s)
+        _notify_participants_event(
+            s, "session_invited", db,
+            recipient_ids=[target_uuid],
+            include_waitlisted=True,
+            title="세션에 초대되었습니다",
+            body=s.title or "세션",
+        )
+        return _serialize(s)
 
     # FUNC-03: 정원이 차 있으면 대기열에 등록한다.
     if not _has_capacity(s, db):
@@ -1338,7 +1383,13 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
 
     was_waitlisted = participant.is_waitlisted
     removed_position = participant.waitlist_position
-    db.delete(participant)
+    # SDD-209(B1): 행 삭제는 FK CASCADE 로 EEG raw·지표·리포트를 영구 삭제한다 → 제거 시각만 기록한다.
+    # 이후 모든 ORM 조회에서 제외되어 접근·정원·대기열 계산에서 빠진다.
+    participant.removed_at = datetime.now(timezone.utc)
+    participant.is_waitlisted = False
+    participant.waitlist_position = None
+    participant.speaking = False
+    participant.raise_hand = False
     db.flush()
     db.refresh(s)
 
@@ -1574,6 +1625,8 @@ def join_session_by_code(
 
     if member_uid is not None:
         uid = member_uid
+        # SDD-209(B1): 제거된 회원이 코드로 다시 입장하면 제거 행을 되살려 재사용한다.
+        _revive_removed_participant(s, uid, db)
         existing = (
             db.query(SessionParticipant)
             .filter(

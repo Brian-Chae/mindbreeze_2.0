@@ -41,8 +41,10 @@ from app.models.agent import (
 from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
 from app.models.narrative_cache import NarrativeCache
+from app.models.original_deletion_audit import OriginalDeletionAudit
 
 __all__ = [
+    "OriginalDeletionAudit",
     "NormalizationBaseline",
     "NormalizationModel",
     "NarrativeCache",

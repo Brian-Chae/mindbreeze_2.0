@@ -257,7 +257,7 @@ def test_stg03_스윕_태스크_인라인(client):
 # ── [6] STG-05 ──────────────────────────────────────────────────────────
 
 
-def test_stg05_세션삭제시_로컬파일과_S3객체_삭제(client, monkeypatch):
+def test_stg05_세션삭제시_로컬파일과_S3객체_보존_SDD209(client, monkeypatch):
     from app.models.record import SessionRecord
     from app.services import session_service, storage_service
 
@@ -291,11 +291,12 @@ def test_stg05_세션삭제시_로컬파일과_S3객체_삭제(client, monkeypat
     finally:
         db.close()
 
-    assert not os.path.exists(local_path), "세션 삭제 시 로컬 청크 파일이 삭제돼야 함"
-    assert f"video/{sid}/merged.webm" in deleted_s3, "세션 삭제 시 S3 병합본 객체가 삭제돼야 함"
+    # SDD-209(B1): 일반 삭제는 숨김(보존 전환) — 원본은 스위프/관리자 삭제 전까지 지워지지 않는다.
+    assert os.path.exists(local_path), "세션 삭제(숨김) 시 로컬 청크 파일은 보존돼야 함"
+    assert deleted_s3 == [], "세션 삭제(숨김) 시 S3 병합본 객체는 보존돼야 함"
 
 
-def test_stg05_사용자삭제시_미디어_삭제(client, monkeypatch):
+def test_stg05_사용자삭제시_미디어_보존_SDD209(client, monkeypatch):
     from app.models.record import AudioChunk
     from app.models.session import Session as SessionModel
     from app.models.user import User
@@ -329,7 +330,8 @@ def test_stg05_사용자삭제시_미디어_삭제(client, monkeypatch):
     finally:
         db.close()
 
-    assert not os.path.exists(local_file), "사용자 삭제 시 로컬 미디어가 삭제돼야 함"
+    # SDD-209(B1): 계정 삭제는 비활성 전환 — 미디어 원본은 보존된다.
+    assert os.path.exists(local_file), "사용자 삭제(비활성 전환) 시 로컬 미디어는 보존돼야 함"
 
 
 # ── [7] MB-ERR-001 ──────────────────────────────────────────────────────

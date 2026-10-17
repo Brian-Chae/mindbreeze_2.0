@@ -285,6 +285,30 @@ def delete_user(
     admin_service.delete_user(uid, admin.id, db)
 
 
+class OriginalDeleteRequest(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=500)
+    scopes: list[Literal["eeg_raw", "audio", "video", "transcript"]] | None = None
+
+
+@router.post("/sessions/{session_id}/originals/delete")
+def delete_session_originals(
+    session_id: str,
+    payload: OriginalDeleteRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """SDD-209: 기간 전 원본 삭제 — 플랫폼 관리자 전용, 사유 필수, 감사 기록."""
+    from app.services import original_deletion_service
+
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    return original_deletion_service.delete_session_originals(
+        sid, admin.id, payload.reason, payload.scopes, db
+    )
+
+
 # ---------------------------------------------------------------------------
 # SDD-015: system_admin 전용 기관 등록 (기관명 → 6자리 기관 코드 발급)
 # ---------------------------------------------------------------------------

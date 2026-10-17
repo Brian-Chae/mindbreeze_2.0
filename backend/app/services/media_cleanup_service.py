@@ -107,7 +107,8 @@ def delete_user_media(user_id, db: DBSession) -> int:
 
 def _purge_chunks(db: DBSession, model, *criteria) -> int:
     """모델 행을 삭제하고 각 행의 file_path 미디어도 함께 제거한다."""
-    rows = db.query(model).filter(*criteria).all()
+    # SDD-209(B1): 숨김(보존 전환) 클래스의 청크가 "부모 없는 고아"로 오판되지 않도록 숨김 행도 본다.
+    rows = db.query(model).filter(*criteria).execution_options(include_hidden=True).all()
     refs = [getattr(row, "file_path", None) for row in rows]
     for row in rows:
         db.delete(row)

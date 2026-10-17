@@ -80,6 +80,9 @@ class Session(Base):
         JSONB, nullable=False, default=list, server_default="[]"
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # SDD-209(B1): 일반 클래스 삭제는 숨김(보존 전환). 값이 있으면 모든 ORM 조회에서 제외된다
+    # (app/core/database.py 의 do_orm_execute 필터). 원본은 보관 스위프/플랫폼 관리자만 삭제한다.
+    hidden_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
     participants = relationship("SessionParticipant", back_populates="session", cascade="all, delete-orphan")
@@ -123,6 +126,9 @@ class SessionParticipant(Base):
     # online 그룹(≤20) 회원은 기본 뮤트이며 speaking=True 일 때만 송신(can_publish) 허용.
     raise_hand: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     speaking: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # SDD-209(B1): 호스트의 참여자 제거는 행 삭제가 아니라 제거 시각 기록(보존 전환) —
+    # 행을 지우면 FK CASCADE 로 EEG raw·지표·리포트가 영구 삭제된다. 값이 있으면 모든 ORM 조회에서 제외.
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="participants")
 
