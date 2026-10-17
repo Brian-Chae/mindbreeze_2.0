@@ -19,6 +19,7 @@ from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
 from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
+from app.services import session_terms
 from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
@@ -429,8 +430,8 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         db,
         recipient_ids=[_to_uuid(pid) for pid in payload.participant_ids],
         include_waitlisted=True,
-        title="새 세션 예약" if initial_status == "scheduled" else "새 세션이 열렸습니다",
-        body=session.title or "세션",
+        title=session_terms.notification_title(event_type),
+        body=session.title or session_terms.notification_body_fallback(),
     )
 
     # SDD-097: 예약 클래스면 리마인더를 ETA 태스크로 예약한다(끔이면 아무것도 안 함).
@@ -850,8 +851,8 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
     # SDD-093: S02 세션 변경 알림
     _notify_participants_event(
         s, "session_updated", db,
-        title="세션 정보가 변경되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_updated"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
 
     return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
@@ -879,8 +880,8 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     _notify_participants_event(
         s, "session_deleted", db,
         include_waitlisted=True,
-        title="세션이 취소되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_deleted"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
     s.hidden_at = datetime.now(timezone.utc)
     db.commit()
@@ -1015,19 +1016,13 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
         "end": "session_completed",
         "cancel": "session_cancelled",
     }
-    _action_title = {
-        "open": "세션이 오픈되었습니다",
-        "start": "세션이 시작되었습니다",
-        "end": "세션이 종료되었습니다",
-        "cancel": "세션이 취소되었습니다",
-    }
     event_type = _action_event.get(action)
     if event_type:
         _notify_participants_event(
             s, event_type, db,
             include_waitlisted=(action == "cancel"),
-            title=_action_title.get(action, event_type),
-            body=s.title or "세션",
+            title=session_terms.notification_title(event_type),
+            body=s.title or session_terms.notification_body_fallback(),
         )
 
     return _with_chat_room(_serialize(s, include_participant_pii=True), s.id, db)
@@ -1380,8 +1375,8 @@ def _notify_promoted(s: Session, promoted: list[SessionParticipant], db: DBSessi
         _notify_participants_event(
             s, "session_waitlist_promoted", db,
             recipient_ids=member_ids,
-            title="대기열에서 참여자로 승격되었습니다",
-            body=s.title or "세션",
+            title=session_terms.notification_title("session_waitlist_promoted"),
+            body=s.title or session_terms.notification_body_fallback(),
         )
 
 
@@ -1476,8 +1471,8 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
             s, "session_invited", db,
             recipient_ids=[target_uuid],
             include_waitlisted=True,
-            title="세션에 초대되었습니다",
-            body=s.title or "세션",
+            title=session_terms.notification_title("session_invited"),
+            body=s.title or session_terms.notification_body_fallback(),
         )
         return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
 
@@ -1509,8 +1504,8 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         s, "session_invited", db,
         recipient_ids=[target_uuid],
         include_waitlisted=True,
-        title="세션에 초대되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_invited"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
 
     return {**_serialize(s, include_participant_pii=True), "invite_result": _invite_result(target_uuid, results)}
@@ -1557,8 +1552,8 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         s, "session_participant_removed", db,
         recipient_ids=[target_uuid],
         include_waitlisted=True,
-        title="세션에서 제외되었습니다",
-        body=s.title or "세션",
+        title=session_terms.notification_title("session_participant_removed"),
+        body=s.title or session_terms.notification_body_fallback(),
     )
     # SDD-093: S11 대기열 승격 알림 (+ B6: 대상에게만 WS participant_promoted)
     _notify_promoted(s, promoted, db)

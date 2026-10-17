@@ -16,7 +16,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.notification import Notification
-from app.services import session_service
+from app.services import session_service, session_terms
 from app.services.session_authz import SessionAction, get_session_authorized
 
 REMIND_COOLDOWN_SEC = 60
@@ -85,8 +85,8 @@ def remind_invitees(
             s, "session_invited", db,
             recipient_ids=[p.user_id],
             include_waitlisted=False,
-            title="클래스에 입장해 주세요",
-            body=s.title or "클래스",
+            title=session_terms.notification_title("session_invite_remind"),
+            body=s.title or session_terms.invite_remind_body_fallback(),
             params={"remind": True},
         )
         mine = notified[0] if notified else {"in_app": "failed", "email": "not_requested"}
