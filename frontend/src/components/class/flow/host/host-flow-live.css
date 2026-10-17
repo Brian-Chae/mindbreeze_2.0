@@ -166,3 +166,4 @@
 @media (max-height: 760px) {
 .pz-root .fhb-step {min-height: 40px;}
 }
+.pz-root .fhb-fnote { margin: 0; min-height: 16px; text-align: center; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); }
