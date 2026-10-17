@@ -19,6 +19,7 @@ from app.models.record import SessionRecord
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
 from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
+from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,7 @@ def get_session_chat_room(session_id: str, user_id: str, db: DBSession) -> dict:
 
     아직 방이 없는 세션(마이그레이션 이전 생성)은 host 조회 시에만 멱등 개설한다.
     """
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_CHAT_ROOM_VIEW)
     from app.services import chat_service
 
     room = chat_service.get_room_by_session(s.id, db)
@@ -721,24 +722,6 @@ def list_sessions(
     return [_serialize(s, include_participant_pii=(s.host_id == uid), users=users) for s in rows], total
 
 
-def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    uid = _to_uuid(user_id)
-    if s.host_id == uid:
-        return s
-    is_participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
-        .first()
-    )
-    if is_participant:
-        return s
-    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-
-
 def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
     sid = _to_uuid(session_id)
     s = db.query(Session).filter(Session.id == sid).first()
@@ -756,7 +739,7 @@ def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Sessio
 
 
 def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_VIEW)
     # AUTHZ-PARTICIPANT-PII: 호스트만 참여자 PII(생년월일·성별)를 본다. 참여자 본인 조회에서는 제외.
     is_host = s.host_id == _to_uuid(user_id)
     return _with_chat_room(
@@ -1650,27 +1633,13 @@ def generate_livekit_token(
 
 
 def _get_session_for_participant(session_id: str, user_id: str, db: DBSession) -> Session:
-    """host 또는 participant 권한으로 세션 조회"""
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    uid = _to_uuid(user_id)
-    if s.host_id == uid:
-        return s
-    is_participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
-        .first()
-    )
-    if is_participant:
-        return s
-    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
+    """WS record_namespace 호환용 위임 shim — A3 에서 호출부를 session_authz 로 바꾼 뒤 삭제한다."""
+    return get_session_authorized(db, session_id, user_id, SessionAction.RECORD_SUBSCRIBE)
 
 
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
-    s = _get_session_for_participant(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
 
     # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
