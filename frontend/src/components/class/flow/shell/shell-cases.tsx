@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { Bell, Mail, Plus } from 'lucide-react';
 import { deriveDetailAction, deriveHeroAction } from '../../../../lib/class/enter-action';
-import type { SessionStatus, SessionType } from '../../../../lib/api/session';
+import type { SessionDto, SessionStatus, SessionType } from '../../../../lib/api/session';
 import type { ClassChipKey } from '../../../../lib/class/class-labels';
 import type { LinkbandMode, LocationType, ParticipantMode } from '../../../../lib/api/session';
 import { ApplySheet } from './ApplySheet';
@@ -13,6 +13,8 @@ import { MemberClassListView } from './MemberClassListView';
 import { MemberHomeView, type HomeSection } from './MemberHomeView';
 import type { ClassRowData } from './ClassRow';
 import { ClassDetailBody, ClassDetailFoot } from './ClassDetailView';
+import { HostClassListView } from './HostClassListView';
+import { buildHostListModel, type HostListTab } from './host-shell-data';
 import { ShellFrame, ShellHeadBack, ShellHeadTitle } from './ShellFrame';
 import { toDetailData, type ClassListEntry, type ClassListSection, type SessionWithHost } from './shell-data';
 import './shell-kit.css';
@@ -186,12 +188,79 @@ export function renderMemberDetailCase(key: string): ReactNode {
   );
 }
 
+/* ───────── FH01 상담사 목록 ───────── */
+interface HostDemo { id: string; title: string; status: SessionStatus; type: SessionType; day: number | null; hour: number; minute?: number; m: Method; invited: number; startedAgoMin?: number }
+
+function hostDemoSession(d: HostDemo): SessionDto {
+  const when = d.day === null ? null : new Date(2026, 9, d.day, d.hour, d.minute ?? 0).toISOString();
+  return {
+    id: d.id, type: d.type, custom_type_name: null, status: d.status, host_id: 'h1', scheduled_at: when, access_code: null,
+    started_at: d.startedAgoMin === undefined ? null : new Date(DETAIL_NOW.getTime() - d.startedAgoMin * 60_000).toISOString(), ended_at: null,
+    duration_min: 50, title: d.title, notes: null, max_participants: 10, location_type: d.m.place, location_address: null,
+    participant_mode: d.m.mode, linkband_mode: d.m.band, webrtc_room_id: null, sfu_enabled: false, record_audio: true, record_video: true, created_at: at(1, 9),
+    participants: Array.from({ length: d.invited }, (_, i) => ({ user_id: `${d.id}-${i}`, guest_name: null, is_guest: false, band_connected: false, linkband_device_id: null, webrtc_peer_id: null, consent_audio: false, consent_eeg: false, is_waitlisted: false, waitlist_position: null })),
+    waitlist_count: 0,
+  };
+}
+
+const ONLINE_ONE_OPT: Method = { place: 'online', mode: 'one_on_one', band: 'optional' };
+const OFFLINE_GROUP_OPT: Method = { place: 'offline', mode: 'group', band: 'optional' };
+const OFFLINE_ONE_OPT: Method = { place: 'offline', mode: 'one_on_one', band: 'optional' };
+const HOST_UPCOMING: HostDemo[] = [
+  { id: 'h-a', title: '박지우 님 1차 상담', status: 'scheduled', type: 'clinical', day: 17, hour: 15, m: ONLINE_ONE_OPT, invited: 1 },
+  { id: 'h-b', title: '최면 이완 2회차', status: 'scheduled', type: 'hypnosis', day: 17, hour: 17, minute: 30, m: OFFLINE_GROUP_OPT, invited: 6 },
+  { id: 'h-c', title: '이완 명상 입문', status: 'ready', type: 'meditation', day: null, hour: 0, m: ONLINE_GROUP_OPT, invited: 3 },
+  { id: 'h-d', title: '직장인 명상 1회차', status: 'scheduled', type: 'meditation', day: 18, hour: 10, m: ONLINE_GROUP_OPT, invited: 8 },
+  { id: 'h-e', title: '정서아 님 2차 상담', status: 'scheduled', type: 'clinical', day: 18, hour: 14, m: OFFLINE_ONE_OPT, invited: 1 },
+];
+const HOST_PAST: HostDemo[] = [
+  { id: 'h-p1', title: '마음챙김 명상 3회차', status: 'completed', type: 'meditation', day: 16, hour: 19, m: ONLINE_GROUP_OPT, invited: 8 },
+  { id: 'h-p2', title: '이민준 님 2차 상담', status: 'cancelled', type: 'clinical', day: 15, hour: 16, m: OFFLINE_ONE_OPT, invited: 1 },
+  { id: 'h-p3', title: '최면 이완 1회차', status: 'completed', type: 'hypnosis', day: 10, hour: 10, m: ONLINE_GROUP_OPT, invited: 6 },
+  { id: 'h-p4', title: '김서연 님 2차 상담', status: 'completed', type: 'clinical', day: 8, hour: 14, m: OFFLINE_ONE_OPT, invited: 1 },
+];
+const HOST_LIVE: Readonly<Record<string, HostDemo>> = {
+  open: { id: 'h-live', title: '마음챙김 명상 4회차', status: 'open', type: 'meditation', day: 17, hour: 15, m: ONLINE_GROUP_OPT, invited: 8 },
+  'open-offline': { id: 'h-live', title: '김서연 님 3차 상담', status: 'open', type: 'clinical', day: 17, hour: 15, m: { place: 'offline', mode: 'one_on_one', band: 'none' }, invited: 1 },
+  progress: { id: 'h-live', title: '마음챙김 명상 4회차', status: 'in_progress', type: 'meditation', day: 17, hour: 11, minute: 48, m: ONLINE_GROUP_OPT, invited: 8, startedAgoMin: 12 },
+  past: { id: 'h-live', title: '마음챙김 명상 4회차', status: 'open', type: 'meditation', day: 17, hour: 15, m: ONLINE_GROUP_OPT, invited: 8 },
+  net: { id: 'h-live', title: '마음챙김 명상 4회차', status: 'open', type: 'meditation', day: 17, hour: 15, m: ONLINE_GROUP_OPT, invited: 8 },
+};
+
+export function renderHostListCase(key: string): ReactNode {
+  const live = HOST_LIVE[key];
+  const demos = key === 'empty' ? [] : [...(live ? [live] : []), ...HOST_UPCOMING, ...HOST_PAST];
+  const tab: HostListTab = key === 'past' ? 'past' : 'upcoming';
+  const model = buildHostListModel(demos.map(hostDemoSession), tab, DETAIL_NOW);
+  const head = (
+    <ShellHeadTitle
+      title="클래스"
+      right={key === 'empty' ? undefined : <button type="button" className="sh-btn"><Plus size={20} aria-hidden="true" />클래스 만들기</button>}
+    />
+  );
+  return (
+    <ShellFrame role="host" active="class" head={head}>
+      <HostClassListView
+        model={model}
+        tab={tab}
+        onTab={noop}
+        onCreate={noop}
+        onDetail={noop}
+        onEnterPlayer={noop}
+        onRequestClose={noop}
+        notice={key === 'net' ? '연결이 끊겼어요. 다시 연결되면 자동으로 새로 고쳐요.' : null}
+      />
+    </ShellFrame>
+  );
+}
+
 /** 화면 ID + 케이스 키 → 렌더. 등록되지 않은 조합은 null */
 export function renderShellCase(screen: string, key: string): ReactNode {
   switch (screen) {
     case 'FM01': return renderMemberHomeCase(key);
     case 'FM02': return renderMemberListCase(key);
     case 'FM03': return renderMemberDetailCase(key);
+    case 'FH01': return renderHostListCase(key);
     default: return null;
   }
 }

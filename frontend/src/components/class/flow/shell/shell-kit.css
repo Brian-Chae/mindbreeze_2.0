@@ -190,3 +190,48 @@
 
 /* 페이지 본문 안에 그리는 푸터(고정 푸터가 아닐 때) */
 .sh-foot.inline { padding: 0; background: transparent; }
+
+/* 확인 시트 아이콘·오류(어두운 시트) */
+.sh-sico { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); border: 1px dashed var(--warn); flex: none; }
+.sh-err--dark { color: var(--warn); }
+.sh-sheet[data-tone="dark"] .sh-btn.danger { background: var(--warn); color: #3A1A10; }
+.sh-sheet[data-tone="dark"] .sh-btn:disabled { opacity: 0.5; }
+
+/* ───────── 상담사 목록(FH01) ───────── */
+.sh-live { display: grid; gap: 16px; padding: 16px; flex: none; }
+.sh-live.sh-hero { padding: 16px; }
+.sh-live.sh-card { padding: 16px; border-radius: var(--r-sheet); }
+@media (min-width: 768px) {
+  .sh-live { padding: 24px; grid-template-columns: minmax(0, 1fr) 208px; align-items: center; gap: 24px; }
+  .sh-live.sh-hero, .sh-live.sh-card { padding: 24px; }
+}
+.sh-live__main { display: flex; flex-direction: column; gap: 16px; min-width: 0; position: relative; z-index: 2; }
+.sh-live__act { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 2; }
+.sh-live__act .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (min-width: 768px) { .sh-live__act .row2 { grid-template-columns: 1fr; } }
+.sh-line { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.sh-dim { font-size: var(--fs-13); color: var(--tx-mid); }
+.sh-dim2 { font-size: var(--fs-13); color: var(--ink-mid); }
+.sh-wait { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-15); font-weight: 600; }
+.sh-scope .sh-live__title { margin: 0; font-family: var(--font); font-size: var(--fs-24); line-height: 32px; font-weight: 800; letter-spacing: normal; color: var(--tx-hi); }
+.sh-scope .sh-card .sh-live__title { color: var(--ink); }
+.sh-hcta.soft { background: rgba(255, 255, 255, 0.12); color: #fff; border: 1px solid var(--sheet-border); }
+.sh-hcta.dline { background: rgba(232, 180, 160, 0.08); color: var(--warn); border: 1px solid var(--warn); }
+.sh-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
+.sh-tabs button { min-height: 44px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--shell-line); font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.sh-tabs button[aria-selected="true"] { background: var(--mb-purple); border-color: var(--mb-purple); color: #fff; }
+.sh-glabel { font-size: var(--fs-13); font-weight: 700; color: var(--ink-mid); padding: 8px 8px 0; }
+.sh-item { display: flex; align-items: center; gap: 8px; background: var(--shell-card); border: 1px solid var(--shell-line); border-radius: var(--r-card); padding-right: 16px; flex: none; }
+.sh-item__main { flex: 1; min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px; min-height: 72px; text-align: left; }
+.sh-item__ico { width: 44px; height: 44px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.sh-item__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sh-item__top b { font-size: var(--fs-15); font-weight: 700; color: var(--ink); min-width: 0; }
+.sh-item__sub { display: block; font-size: var(--fs-13); color: var(--ink-mid); margin-top: 8px; line-height: 1.5; }
+.sh-item__open { display: none; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); font-size: var(--fs-13); font-weight: 700; flex: none; }
+@media (min-width: 768px) { .sh-item__open { display: inline-flex; } }
+.sh-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; padding: 32px 24px; }
+.sh-scope .sh-empty h2 { margin: 0; font-family: var(--font); font-size: var(--fs-18); font-weight: 700; letter-spacing: normal; color: var(--ink); }
+.sh-scope .sh-empty p { margin: 0; font-family: var(--font); font-size: var(--fs-15); line-height: 1.5; color: var(--ink-mid); }
+.sh-bigico { width: 64px; height: 64px; border-radius: var(--r-pill); background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.sh-banner { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-radius: var(--r-card); background: rgba(40, 18, 30, 0.92); border: 1px dashed var(--warn); color: var(--tx-hi); font-size: var(--fs-13); }
+.sh-banner svg { color: var(--warn); flex: none; }
