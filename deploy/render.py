@@ -52,6 +52,8 @@ STATIC_OUTPUTS: dict[str, str] = {
     "systemd/mindbreeze-job@.service.tpl": "etc/systemd/system/mindbreeze-job@.service",
     "systemd/mindbreeze-job-failed@.service.tpl": "etc/systemd/system/mindbreeze-job-failed@.service",
 }
+# 렌더 그룹: app = 릴리스마다 갱신하는 앱 유닛·timer(시크릿·환경별 IP 불필요) / infra = nginx·livekit·coturn(서버 구성, T-14)
+APP_OUTPUTS = {k for k in STATIC_OUTPUTS if k.startswith("systemd/") and "livekit.service" not in k}
 SECRET_FILE_MODES: dict[str, int] = {
     "etc/livekit/livekit.yaml": 0o600,
     "etc/turnserver.conf": 0o640,
@@ -160,15 +162,22 @@ def write(out: Path, rel: str, content: str, mode: int = 0o644) -> None:
 
 
 def render_all(out: Path, values: dict[str, str], templates: Path = HERE / "templates", jobs_file: Path = HERE / "jobs.tsv",
-               allow_dev_markers: bool = False) -> list[str]:
+               allow_dev_markers: bool = False, only: str | None = None) -> list[str]:
+    """only=None: 전체 / "app": 앱 유닛·job timer 만(install-release.sh 가 릴리스마다 사용) / "infra": 나머지."""
     validate_values(values)
     written: list[str] = []
     for tpl_rel, out_rel in STATIC_OUTPUTS.items():
+        if only == "app" and tpl_rel not in APP_OUTPUTS:
+            continue
+        if only == "infra" and tpl_rel in APP_OUTPUTS:
+            continue
         text = (templates / tpl_rel).read_text(encoding="utf-8")
         rendered = render_text(text, values, tpl_rel)
         write(out, out_rel, rendered, SECRET_FILE_MODES.get(out_rel, 0o644))
         written.append(out_rel)
     for job in load_jobs(jobs_file):
+        if only == "infra":
+            break
         if job["enabled"] != "1":
             continue
         timer = TIMER_TEMPLATE.format(name=job["name"], note=job["note"].split("—")[0].strip(), on_calendar=job["on_calendar"])
@@ -191,10 +200,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", required=True, help="출력 루트 디렉터리(서버 루트 구조로 생성)")
     ap.add_argument("--set", dest="sets", action="append", default=[], help="NAME=VALUE (시크릿 변수 제외)")
     ap.add_argument("--allow-dev-markers", action="store_true", help="dev 흔적 검사 생략(dev 서버 재현용)")
+    ap.add_argument("--only", choices=["app", "infra"], help="app=앱 유닛·timer 만, infra=nginx/livekit/coturn 만")
     args = ap.parse_args(argv)
     try:
         values = resolve_vars(args.sets)
-        written = render_all(Path(args.out), values, allow_dev_markers=args.allow_dev_markers)
+        written = render_all(Path(args.out), values, allow_dev_markers=args.allow_dev_markers, only=args.only)
     except RenderError as exc:
         print(f"렌더 실패: {exc}", file=sys.stderr)
         return 2
