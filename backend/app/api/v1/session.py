@@ -26,6 +26,7 @@ from app.schemas.session import (
     MemberLiveKitTokenResponse,
     ReportChoiceRequest,
     ReportChoiceResponse,
+    WaitlistCancelResponse,
     SessionChatEnabledRequest,
     SessionChatRoomResponse,
     SessionLiveMetricsResponse,
@@ -401,6 +402,25 @@ def enter_invited_session(
 ):
     """초대받은 로그인 회원의 편의 입장 — 초대 행이 있을 때만(없으면 403 + 코드 입장 안내)."""
     return session_service.enter_session_as_invited(session_id, current_user["id"], db)
+
+
+@router.post("/{session_id}/waitlist/cancel", response_model=WaitlistCancelResponse)
+def cancel_waitlist(
+    session_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B6): 대기 취소 — 본인만(입장 자격/로그인), 멱등, 행 삭제 없음.
+
+    활성 참가자·종료 클래스는 409. 취소자는 자동 승격·토큰·상태 접근에서 제외되고 재대기는 대기열 끝 순번이다.
+    """
+    return session_service.cancel_waitlist(
+        session_id,
+        db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
 
 
 @router.put("/{session_id}/report-choice", response_model=ReportChoiceResponse)

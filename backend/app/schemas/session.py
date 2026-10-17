@@ -317,6 +317,14 @@ class ReportChoiceResponse(BaseModel):
     changed: bool = False
 
 
+class WaitlistCancelResponse(BaseModel):
+    """SDD-209(B6): 대기 취소 결과 — 멱등 재요청은 changed=False."""
+
+    participant_id: str
+    cancelled: bool = True
+    changed: bool = False
+
+
 class SpeakingStateResponse(BaseModel):
     """손들기/발언권 상태 응답 — 변경 결과를 호스트/회원 UI 에 되돌려준다."""
 

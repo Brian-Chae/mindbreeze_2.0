@@ -61,12 +61,18 @@ def decode(token: str | None) -> dict:
 
 
 def resolve_participant(
-    db: DBSession, token: str | None, session_id: UUID | str | None = None
+    db: DBSession,
+    token: str | None,
+    session_id: UUID | str | None = None,
+    *,
+    include_cancelled: bool = False,
 ) -> SessionParticipant:
     """입장 자격 → 소유 참여자.
 
     - 서명/만료/type 불량, 참여자 없음(제거 포함), 클래스 불일치, 폐기된 버전은 모두 401/403.
     - ``session_id`` 를 주면 자격의 클래스와 같아야 한다(타 클래스 접근 403).
+    - 대기 취소(B6)한 참여자는 기본적으로 조회되지 않는다(401). ``include_cancelled=True`` 는 취소 멱등 처리와
+      재대기 복귀 전용이며, 호스트가 제거한 행은 이 옵션으로도 되살리지 않는다.
     """
     claims = decode(token)
     try:
@@ -76,11 +82,12 @@ def resolve_participant(
         raise _unauthorized()
     if session_id is not None and sid != UUID(str(session_id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="다른 클래스의 입장 자격이에요")
-    participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.id == pid, SessionParticipant.session_id == sid)
-        .first()
+    query = db.query(SessionParticipant).filter(
+        SessionParticipant.id == pid, SessionParticipant.session_id == sid
     )
+    if include_cancelled:
+        query = query.filter(SessionParticipant.removed_at.is_(None)).execution_options(include_removed=True)
+    participant = query.first()
     if participant is None or int(claims.get("ver", -1)) != int(participant.entry_ver or 0):
         raise _unauthorized()
     return participant

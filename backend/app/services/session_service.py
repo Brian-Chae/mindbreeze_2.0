@@ -752,8 +752,13 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.title = payload.title
     if payload.notes is not None:
         s.notes = payload.notes
+    promoted_by_capacity: list[SessionParticipant] = []
     if payload.max_participants is not None:
         s.max_participants = payload.max_participants
+        # B6: 정원이 늘면 대기열을 순번 순으로 승격한다(세션 행 잠금 하에서 취소·입장과 직렬화).
+        db.flush()  # populate_existing 이 미반영 변경을 덮지 않도록 먼저 flush
+        _lock_session_for_capacity(s.id, db)
+        promoted_by_capacity = _promote_waitlist_all(s, db)
     if payload.type is not None:
         s.type = payload.type
     if payload.custom_type_name is not None:
@@ -804,6 +809,9 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
 
     db.commit()
     db.refresh(s)
+    if promoted_by_capacity:
+        _notify_promoted(s, promoted_by_capacity, db)
+        _notify_participant_changed(s, db)
 
     # SDD-097 / FUNC-01: 일정 또는 리마인더 시점이 바뀌면 옛 ETA 를 취소하고 다시 예약한다.
     # (이미 지난 시점은 예약되지 않고, 발송 로그가 중복 발송을 막는다. 남은 옛 ETA 가 잘못된
@@ -1263,54 +1271,111 @@ def _lock_session_for_capacity(s_id: UUID, db: DBSession) -> Session | None:
     return query.populate_existing().first()
 
 
-def _promote_waitlist(s: Session, db: DBSession) -> UUID | None:
-    """정원에 여유가 생기면 대기열 1순위를 자동 승격. 승격된 사용자 ID를 반환한다."""
-    active = [p for p in (s.participants or []) if not p.is_waitlisted]
-    if len(active) >= s.max_participants:
-        return None
-    waiting = sorted(
-        [p for p in (s.participants or []) if p.is_waitlisted],
-        key=lambda p: p.waitlist_position or 0,
+def _waiting_participants(s: Session, db: DBSession) -> list[SessionParticipant]:
+    """대기열(취소 제외 — ORM 필터가 거른다)을 순번 순으로 DB 에서 조회한다."""
+    return (
+        db.query(SessionParticipant)
+        .filter(SessionParticipant.session_id == s.id, SessionParticipant.is_waitlisted.is_(True))
+        .order_by(SessionParticipant.waitlist_position.asc().nulls_last(), SessionParticipant.joined_at.asc())
+        .all()
     )
-    if not waiting:
-        return None
-    promoted = waiting[0]
-    promoted.is_waitlisted = False
-    promoted.waitlist_position = None
-    for idx, p in enumerate(waiting[1:], start=1):
-        p.waitlist_position = idx
+
+
+def _renumber_waitlist(s: Session, db: DBSession) -> None:
+    """대기열 순번을 1..n 으로 다시 매긴다(취소·승격·제거 뒤 정렬)."""
+    for idx, p in enumerate(_waiting_participants(s, db), start=1):
+        if p.waitlist_position != idx:
+            p.waitlist_position = idx
     db.flush()
-    return promoted.user_id
+
+
+def _can_join_active(s: Session, db: DBSession) -> bool:
+    """신규/재입장자가 바로 활성이 될 수 있는지 — 정원 여유가 있고 앞선 대기자가 없을 때만(새치기 방지)."""
+    return _has_capacity(s, db) and not _waiting_participants(s, db)
+
+
+def _promote_waitlist_all(s: Session, db: DBSession) -> list[SessionParticipant]:
+    """정원에 여유가 있는 만큼 대기열을 순번 순으로 승격하고 승격된 참여자 목록을 돌려준다(SDD-209 B6).
+
+    취소자는 ORM 필터로 이미 제외된다. 호출 전에 세션 행 잠금을 잡아 취소·입장·정원 변경과 직렬화한다.
+    """
+    promoted: list[SessionParticipant] = []
+    while _has_capacity(s, db):
+        waiting = _waiting_participants(s, db)
+        if not waiting:
+            break
+        head = waiting[0]
+        head.is_waitlisted = False
+        head.waitlist_position = None
+        db.flush()
+        promoted.append(head)
+    if promoted:
+        _renumber_waitlist(s, db)
+    return promoted
+
+
+def _notify_promoted(s: Session, promoted: list[SessionParticipant], db: DBSession) -> None:
+    """승격 알림 — WS ``participant_promoted`` 는 대상 본인 룸에만, 회원에게는 인앱 알림도 보낸다(best-effort)."""
+    if not promoted:
+        return
+    try:
+        from app.ws import session_live_namespace as live
+
+        for p in promoted:
+            live.notify_participant_promoted(str(s.id), str(p.id), {"participant_id": str(p.id)})
+    except Exception as exc:
+        logger.warning("[session] participant_promoted 발행 실패 session=%s: %s", s.id, exc)
+    member_ids = [p.user_id for p in promoted if p.user_id]
+    if member_ids:
+        _notify_participants_event(
+            s, "session_waitlist_promoted", db,
+            recipient_ids=member_ids,
+            title="대기열에서 참여자로 승격되었습니다",
+            body=s.title or "세션",
+        )
+
+
+def _reactivate_cancelled_or_removed(
+    s: Session, p: SessionParticipant, db: DBSession
+) -> SessionParticipant:
+    """제거(removed_at)·대기 취소(waitlist_cancelled_at)된 행을 되살리고 입장 상태를 새로 계산한다.
+
+    자리가 있고 앞선 대기자가 없을 때만 활성, 아니면 대기열 **끝** 순번(재대기).
+    """
+    p.removed_at = None
+    p.waitlist_cancelled_at = None
+    p.is_waitlisted = False
+    p.waitlist_position = None
+    db.flush()
+    if not _can_join_active(s, db):
+        p.is_waitlisted = True
+        p.waitlist_position = _next_waitlist_position(s, db)
+        db.flush()
+    return p
 
 
 def _revive_removed_participant(s: Session, uid: UUID, db: DBSession) -> SessionParticipant | None:
-    """제거(removed_at)된 회원 참여자를 다시 입장/초대할 때 같은 행을 되살린다 (SDD-209 B1).
+    """제거(removed_at)·대기 취소된 회원 참여자를 다시 입장/초대할 때 같은 행을 되살린다 (SDD-209 B1·B6).
 
-    unique(session_id, user_id) 때문에 제거 행이 남아 있으면 새 행을 만들 수 없다. 제거 이력의
-    원본(EEG raw 등)은 같은 행에 붙어 있으므로 행을 재사용하고 입장 상태는 새로 계산한다.
-    되살릴 행이 없으면 None.
+    unique(session_id, user_id) 때문에 숨김 행이 남아 있으면 새 행을 만들 수 없다. 이력의 원본(EEG raw 등)은
+    같은 행에 붙어 있으므로 행을 재사용하고 입장 상태는 새로 계산한다(재대기는 끝 순번). 되살릴 행이 없으면 None.
     """
-    removed = (
+    hidden = (
         db.query(SessionParticipant)
         .filter(
             SessionParticipant.session_id == s.id,
             SessionParticipant.user_id == uid,
-            SessionParticipant.removed_at.is_not(None),
+            or_(
+                SessionParticipant.removed_at.is_not(None),
+                SessionParticipant.waitlist_cancelled_at.is_not(None),
+            ),
         )
         .execution_options(include_removed=True)
         .first()
     )
-    if removed is None:
+    if hidden is None:
         return None
-    removed.removed_at = None
-    removed.is_waitlisted = False
-    removed.waitlist_position = None
-    db.flush()
-    if not _has_capacity(s, db):
-        removed.is_waitlisted = True
-        removed.waitlist_position = _next_waitlist_position(s, db)
-        db.flush()
-    return removed
+    return _reactivate_cancelled_or_removed(s, hidden, db)
 
 
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
@@ -1350,8 +1415,8 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         )
         return _serialize(s)
 
-    # FUNC-03: 정원이 차 있으면 대기열에 등록한다.
-    if not _has_capacity(s, db):
+    # FUNC-03: 정원이 차 있으면(또는 앞선 대기자가 있으면) 대기열에 등록한다.
+    if not _can_join_active(s, db):
         position = _next_waitlist_position(s, db)
         new_participant = SessionParticipant(
             session_id=s.id,
@@ -1411,15 +1476,12 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     db.flush()
     db.refresh(s)
 
-    promoted_id: UUID | None = None
+    promoted: list[SessionParticipant] = []
     if was_waitlisted and removed_position is not None:
         # 대기열에서 빠진 경우, 뒤 순번 당기기
-        for p in (s.participants or []):
-            if p.is_waitlisted and p.waitlist_position and p.waitlist_position > removed_position:
-                p.waitlist_position -= 1
-        db.flush()
+        _renumber_waitlist(s, db)
     else:
-        promoted_id = _promote_waitlist(s, db)
+        promoted = _promote_waitlist_all(s, db)
 
     db.commit()
     db.refresh(s)
@@ -1432,14 +1494,10 @@ def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         title="세션에서 제외되었습니다",
         body=s.title or "세션",
     )
-    # SDD-093: S11 대기열 승격 알림
-    if promoted_id:
-        _notify_participants_event(
-            s, "session_waitlist_promoted", db,
-            recipient_ids=[promoted_id],
-            title="대기열에서 참여자로 승격되었습니다",
-            body=s.title or "세션",
-        )
+    # SDD-093: S11 대기열 승격 알림 (+ B6: 대상에게만 WS participant_promoted)
+    _notify_promoted(s, promoted, db)
+    if promoted:
+        _notify_participant_changed(s, db)
 
     return _serialize(s)
 
@@ -1620,6 +1678,7 @@ def _enter_resolved(
     from app.services import entry_credential_service
 
     member_uid = _to_uuid(user_id) if user_id else None
+    promoted: list[SessionParticipant] = []
     if member_uid is not None and s.host_id == member_uid:
         if require_invite:
             raise HTTPException(status_code=403, detail="호스트는 참여자로 입장할 수 없어요")
@@ -1643,7 +1702,7 @@ def _enter_resolved(
                     status_code=403,
                     detail="초대받은 클래스가 아니에요. 클래스 코드로 입장해 주세요",
                 )
-            has_room = _has_capacity(s, db)
+            has_room = _can_join_active(s, db)
             pii_gender, pii_birth = _member_profile_pii(member_uid, db)
             participant = SessionParticipant(
                 session_id=s.id,
@@ -1665,12 +1724,13 @@ def _enter_resolved(
                 )
                 if participant is None:
                     raise
-        elif participant.is_waitlisted and _has_capacity(s, db):
-            participant.is_waitlisted = False
-            participant.waitlist_position = None
+        if participant.is_waitlisted:
+            # 재입장이 순번을 앞지르지 못한다 — 정원 여유가 있으면 대기열 앞에서부터 순서대로 승격한다.
+            promoted = _promote_waitlist_all(s, db)
         db.commit()
         db.refresh(s)
         _notify_participant_changed(s, db)
+        _notify_promoted(s, [p for p in promoted if p.id != participant.id], db)
         return _enter_response(s, participant, db, is_guest=False)
 
     # ── 비회원: 개인정보 필수 ──
@@ -1686,14 +1746,19 @@ def _enter_resolved(
     participant = None
     if entry_credential:
         try:
-            candidate = entry_credential_service.resolve_participant(db, entry_credential, s.id)
+            candidate = entry_credential_service.resolve_participant(
+                db, entry_credential, s.id, include_cancelled=True
+            )
         except HTTPException:
             candidate = None  # 만료·폐기·타 클래스 자격은 무시하고 새 참여자로 입장
         if candidate is not None:
             participant = candidate
 
+    if participant is not None and participant.waitlist_cancelled_at is not None:
+        # 대기 취소 후 재대기 — 같은 행을 되살려 대기열 끝에 둔다(B6).
+        _reactivate_cancelled_or_removed(s, participant, db)
     if participant is None:
-        has_room = _has_capacity(s, db)
+        has_room = _can_join_active(s, db)
         participant = SessionParticipant(
             session_id=s.id,
             user_id=None,
@@ -1712,12 +1777,13 @@ def _enter_resolved(
             participant.gender = gender
             participant.birth_date = birth_date
             participant.report_email = clean_email
-        if participant.is_waitlisted and _has_capacity(s, db):
-            participant.is_waitlisted = False
-            participant.waitlist_position = None
+    db.flush()
+    if participant.is_waitlisted:
+        promoted = _promote_waitlist_all(s, db)
     db.commit()
     db.refresh(s)
     _notify_participant_changed(s, db)
+    _notify_promoted(s, [p for p in promoted if p.id != participant.id], db)
     return _enter_response(s, participant, db, is_guest=participant.user_id is None)
 
 
@@ -1905,6 +1971,97 @@ def _get_participant_in_session(sid: UUID, participant_id: str, db: DBSession) -
     return participant
 
 
+_WAITLIST_CANCELLED_DETAIL = "대기를 취소했어요. 다시 대기하려면 코드로 입장해 주세요"
+
+
+def _find_cancelled_participant(
+    sid: UUID,
+    db: DBSession,
+    *,
+    entry_credential: str | None,
+    current_user_id: str | None,
+) -> SessionParticipant | None:
+    """본인이 대기 취소한 참여자 행(취소 멱등 처리·접근 거부 사유 구분용). 없으면 None."""
+    from app.services import entry_credential_service
+
+    if current_user_id:
+        row = (
+            db.query(SessionParticipant)
+            .filter(
+                SessionParticipant.session_id == sid,
+                SessionParticipant.user_id == _to_uuid(current_user_id),
+                SessionParticipant.waitlist_cancelled_at.is_not(None),
+                SessionParticipant.removed_at.is_(None),
+            )
+            .execution_options(include_removed=True)
+            .first()
+        )
+        if row is not None:
+            return row
+    if entry_credential:
+        try:
+            row = entry_credential_service.resolve_participant(
+                db, entry_credential, sid, include_cancelled=True
+            )
+        except HTTPException:
+            return None
+        if row.waitlist_cancelled_at is not None:
+            return row
+    return None
+
+
+def cancel_waitlist(
+    session_id: str,
+    db: DBSession,
+    *,
+    entry_credential: str | None = None,
+    current_user_id: str | None = None,
+) -> dict:
+    """대기 취소(SDD-209 B6 / BE-6) — 본인만, 멱등, 행 삭제 없음.
+
+    - 정원 변경 경로(입장·승격·정원 증가)와 **같은 세션 행 잠금**을 먼저 잡고 처리한다.
+    - 활성 참가자의 요청은 대기 취소로 처리하지 않는다(409). 종료·취소 클래스도 409.
+    - 취소자는 ORM 필터로 정원·순번·승격·토큰·상태 접근에서 제외되고, 뒤 순번은 한 칸씩 당겨진다.
+    - 같은 요청 재호출은 changed=False 로 200(멱등).
+    """
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.status in _CLOSED_STATUSES:
+        raise HTTPException(status_code=409, detail="종료된 클래스에서는 대기를 취소할 수 없어요")
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
+    try:
+        participant = resolve_participant_actor(
+            sid, db, entry_credential=entry_credential, current_user_id=current_user_id
+        )
+    except HTTPException as exc:
+        participant = _find_cancelled_participant(
+            sid, db, entry_credential=entry_credential, current_user_id=current_user_id
+        )
+        if participant is None:
+            raise exc
+
+    if participant.waitlist_cancelled_at is not None:
+        return {"participant_id": str(participant.id), "cancelled": True, "changed": False}
+    if not participant.is_waitlisted:
+        raise HTTPException(status_code=409, detail="이미 입장한 참여자는 대기 취소를 할 수 없어요")
+
+    participant.waitlist_cancelled_at = _now()
+    participant.waitlist_position = None
+    participant.raise_hand = False
+    participant.speaking = False
+    db.flush()
+    _renumber_waitlist(s, db)
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    return {"participant_id": str(participant.id), "cancelled": True, "changed": True}
+
+
 def resolve_participant_actor(
     sid: UUID,
     db: DBSession,
@@ -1933,8 +2090,19 @@ def resolve_participant_actor(
             .first()
         )
     if participant is None and entry_credential:
-        participant = entry_credential_service.resolve_participant(db, entry_credential, sid)
+        try:
+            participant = entry_credential_service.resolve_participant(db, entry_credential, sid)
+        except HTTPException as exc:
+            if exc.status_code == 401 and _find_cancelled_participant(
+                sid, db, entry_credential=entry_credential, current_user_id=current_user_id
+            ):
+                raise HTTPException(status_code=403, detail=_WAITLIST_CANCELLED_DETAIL)
+            raise
     if participant is None:
+        if current_user_id and _find_cancelled_participant(
+            sid, db, entry_credential=None, current_user_id=current_user_id
+        ):
+            raise HTTPException(status_code=403, detail=_WAITLIST_CANCELLED_DETAIL)
         if current_user_id:
             raise HTTPException(status_code=403, detail="세션 참가자만 요청할 수 있습니다")
         raise HTTPException(

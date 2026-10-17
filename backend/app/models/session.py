@@ -155,6 +155,9 @@ class SessionParticipant(Base):
     report_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
     # SDD-209(B5a): 입장 자격 폐기용 버전 — 자격(JWT)의 ver 와 일치해야 유효. 올리면 이전 자격이 모두 무효.
     entry_ver: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # SDD-209(B6): 대기 취소 시각. 행을 지우지 않고 기록만 한다 — 값이 있으면 removed_at 과 같이 모든 ORM 조회에서
+    # 제외(정원·순번·승격·토큰·상태 접근 대상 아님). 재대기하면 같은 행을 되살려 NULL 로 되돌리고 끝 순번을 준다.
+    waitlist_cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="participants")
 

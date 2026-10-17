@@ -1057,6 +1057,16 @@ async def broadcast_speaking(session_id: str, payload: dict) -> None:
     logger.info("[WS /session-live] broadcast speaking_changed → session:%s", session_id)
 
 
+async def broadcast_participant_promoted(session_id: str, participant_id: str, payload: dict) -> None:
+    """SDD-209 B6: 대기열 승격을 **대상 참여자 본인 룸에만** 알린다(호스트·다른 참가자에게는 보내지 않는다)."""
+    sio = _get_sio()
+    body = {"session_id": str(session_id), **payload, "participant_id": str(participant_id)}
+    await sio.emit(
+        "participant_promoted", body, room=_room_self(session_id, participant_id), namespace=_NAMESPACE
+    )
+    logger.info("[WS /session-live] broadcast participant_promoted → session:%s", session_id)
+
+
 async def broadcast_device_status(session_id: str, payload: dict) -> None:
     """기기 상태 변경(연결/배터리)을 호스트 룸 + 해당 참가자 본인 룸에 브로드캐스트한다."""
     sio = _get_sio()
@@ -1401,6 +1411,11 @@ def notify_session_eeg(session_id: str, payload: dict) -> None:
 
 def notify_participant_changed(session_id: str, payload: dict) -> None:
     _schedule(broadcast_participant(session_id, _jsonify(payload)))
+
+
+def notify_participant_promoted(session_id: str, participant_id: str, payload: dict | None = None) -> None:
+    """SDD-209 B6: 대기열 승격 이벤트를 대상 본인 룸으로 예약 발행한다."""
+    _schedule(broadcast_participant_promoted(session_id, participant_id, _jsonify(payload or {})))
 
 
 def notify_device_status_changed(session_id: str, payload: dict) -> None:
