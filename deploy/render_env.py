@@ -17,10 +17,14 @@ import re
 import subprocess
 import sys
 import tempfile
+from urllib.parse import quote_plus
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 FORBIDDEN_KEYS = {"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"}
+PLACEHOLDER = "PLACEHOLDER-FILL-ME"  # 아직 채우지 않은 외부 키 자리표시 → 미설정으로 취급(env 에 쓰지 않음)
+# env 파일에는 쓰지 않는 입력 전용 키: DB_* 는 DATABASE_URL[_SYNC] 조립 재료, TURN 시크릿은 coturn 렌더(server-config.sh)에서 사용
+INPUT_ONLY_KEYS = {"DB_USER", "DB_PASSWORD", "DB_NAME", "DB_HOST", "DB_HOST_EMPTY", "TURN_STATIC_AUTH_SECRET"}
 DEV_MARKERS = ("://dev.", "dev-api.", "mindbreeze-dev", "mindbreeze_dev", "18.183.86.88", "devkey")
 
 
@@ -45,16 +49,25 @@ def quote(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def build_env(params: dict[str, str], manifest: list[dict[str, str]] | None = None) -> tuple[str, list[str]]:
+def build_env(params: dict[str, str], manifest: list[dict[str, str]] | None = None, allow_placeholders: bool = False) -> tuple[str, list[str]]:
     """SSM 파라미터 맵(키→값) → (env 파일 텍스트, 경고 목록). 문제가 있으면 EnvRenderError(키 이름만 포함)."""
     manifest = manifest or load_manifest()
+    placeholder_keys = {k for k, v in params.items() if v == PLACEHOLDER}
+    warnings: list[str] = []
+    params = {k: v for k, v in params.items() if v != PLACEHOLDER}
+    if not params.get("DATABASE_URL"):  # 컷오버 전후로 호스트·비밀번호가 바뀌므로 구성요소에서 조립(DB_HOST 우선, 없으면 리허설용 빈 DB)
+        host = params.get("DB_HOST") or params.get("DB_HOST_EMPTY")
+        if host and params.get("DB_USER") and params.get("DB_PASSWORD") and params.get("DB_NAME"):
+            url = (f"postgresql://{quote_plus(params['DB_USER'])}:{quote_plus(params['DB_PASSWORD'])}"
+                   f"@{host}:5432/{params['DB_NAME']}?sslmode=require")
+            params = {**params, "DATABASE_URL": url, "DATABASE_URL_SYNC": params.get("DATABASE_URL_SYNC") or url}
     known = {r["key"] for r in manifest}
     problems: list[str] = []
 
     for key in params:
         if key in FORBIDDEN_KEYS:
             problems.append(f"금지 키 {key} (인스턴스 역할 사용)")
-        elif key not in known:
+        elif key not in known and key not in INPUT_ONLY_KEYS:
             problems.append(f"매니페스트에 없는 키 {key}")
 
     out: dict[str, str] = {}
@@ -67,7 +80,9 @@ def build_env(params: dict[str, str], manifest: list[dict[str, str]] | None = No
         else:
             val = params.get(key, "")
             if val == "":
-                if required:
+                if required and allow_placeholders and key in placeholder_keys:
+                    warnings.append(f"{key} 자리표시(미채움) — 앱은 채우기 전까지 기동 불가")
+                elif required:
                     problems.append(f"필수 키 {key} 누락")
                 continue
             out[key] = val
@@ -91,7 +106,7 @@ def build_env(params: dict[str, str], manifest: list[dict[str, str]] | None = No
     for row in manifest:  # 매니페스트 순서 고정(재현성)
         if row["key"] in out:
             lines.append(f"{row['key']}={quote(out[row['key']])}")
-    return "\n".join(lines) + "\n", []
+    return "\n".join(lines) + "\n", warnings
 
 
 def fetch_ssm(path: str, region: str | None) -> dict[str, str]:
@@ -138,6 +153,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out")
     ap.add_argument("--region")
     ap.add_argument("--check-file")
+    ap.add_argument("--allow-placeholders", action="store_true", help="자리표시 상태인 필수 외부 키는 경고로 낮춤(서버 선구성 단계용, 채운 뒤 재렌더)")
     args = ap.parse_args(argv)
     try:
         if args.check_file:
@@ -149,7 +165,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if not args.out:
             ap.error("--out 필요")
-        text, _ = build_env(fetch_ssm(args.ssm_path, args.region))
+        text, warns = build_env(fetch_ssm(args.ssm_path, args.region), allow_placeholders=args.allow_placeholders)
+        for w in warns:
+            print(f"경고: {w}", file=sys.stderr)
         write_atomic(Path(args.out), text)
     except EnvRenderError as exc:
         print(f"환경 렌더 실패: {exc}", file=sys.stderr)

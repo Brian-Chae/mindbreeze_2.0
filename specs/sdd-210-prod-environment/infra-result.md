@@ -170,3 +170,10 @@
 - `mb-prod-ec2-role` 인라인 정책에 `SnsPublishAlerts`(sns:Publish → `mindbreeze-alerts` 단일 토픽) 추가. 릴리스 버킷 읽기(`S3ReleasesRead`/`S3ReleasesList`)는 기존 존재 확인.
 - **신규 IAM 역할 `mb-prod-release-build`** (`arn:aws:iam::187768779388:role/mb-prod-release-build`): release-build 워크플로는 `environment:` 가 없어 배포 역할(environment:production 한정)을 쓸 수 없으므로 전용 역할 신설. 신뢰 = OIDC, `sub` ∈ {`repo:Brian-Chae/mindbreeze_2.0:ref:refs/heads/main`, `…:ref:refs/tags/release-*`}. 권한 = `mindbreeze-prod-releases/releases/*` PutObject + 버킷 List 뿐. 릴리스 버킷 정책의 허용 주체에 추가(`t08`).
 - GitHub **저장소 변수**(환경 변수 아님 — release-build 가 environment 없이 참조) 4개 설정: `AWS_RELEASE_BUILD_ROLE_ARN`, `AWS_DEPLOY_ROLE_ARN`, `PROD_INSTANCE_ID`, `RELEASE_BUCKET`. 값은 ARN·ID 이며 비밀 아님.
+
+## 7. Phase C 전반부 — 릴리스 후보 · 서버 구성 (T-14)
+- 릴리스 빌드 run 39046093677 (main `50949b2f`): 릴리스 ID `20261017-154048-50949b2`, `s3://mindbreeze-prod-releases/releases/<ID>/` 에 tar.gz(106,352,447B)·`.sha256`·`MANIFEST.json` 업로드. 마이그레이션 head 1개(`e036a0000051`), 파괴적 마이그레이션 20건 경고(deploy-prod 시 `confirm_destructive` 필요), 백엔드 pytest·프론트 빌드·dev 흔적 0건·체크섬 재검증 통과.
+- 서버 구성(임시 호스트 `prod-check`/`prod-api-check`, 공개 운영 DNS 없음): SSM Run Command 로 릴리스 산출물의 `deploy/` 를 `/opt/mindbreeze-staging/<ID>/x/deploy` 에 풀어 `deploy/server-config.sh <WEB> <API> <EIP>` 실행(coturn 설치, livekit-server 1.8.0 arm64, 서비스 계정, 템플릿 렌더, certbot DNS-01 인증서 발급, `apply-config.sh`, `render_env.py --allow-placeholders` → `/etc/mindbreeze/prod.env` 0600 root, timer 14종 설치 후 전부 disabled, nginx/livekit/coturn/redis 기동, logrotate·journald 상한) + `deploy/aws/cw-install.sh`(CloudWatch 에이전트, `cloudwatch-agent.json`).
+- 컷오버 때는 같은 스크립트를 운영 호스트명으로 재실행(인증서 신규 발급 포함).
+- 이 과정에서 발견·수정한 결함: build-release.sh 출력 경로 상대 → 절대화 / nginx 템플릿 `http2 on;`(nginx 1.24 미지원) → `listen … ssl http2` / render_env.py 가 DB_* 조립·자리표시 처리·입력 전용 키(DB_*·TURN 시크릿)를 지원하지 않던 문제 / 릴리스에서 `deploy/aws`·`precheck` 제외.
+- 앱 서비스(backend·worker 3종)는 릴리스 미설치로 inactive — `deploy-prod`(Brian 승인) 후 기동. 웹 루트 HTTPS 500·API 502 는 이 때문에 정상.
