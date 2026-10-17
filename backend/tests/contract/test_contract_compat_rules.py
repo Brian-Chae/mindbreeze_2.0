@@ -283,3 +283,10 @@ def test_봉인_응답은_키가_늘면_실패한다():
     assert shape.compare_shape(golden, shape.shape_of({"title": "a", "host_name": "b", "email": "c"})) == []
     problems = shape.compare_shape(golden, shape.shape_of({"title": "a", "host_name": "b", "email": "c"}), strict_keys=True)
     assert problems and "email" in problems[0]
+
+
+def test_키가_UUID_인_맵은_하나의_키로_접어_비결정성을_없앤다():
+    first = {"3f2c1a40-1111-4222-8333-444455556666": {"after": 1}, "9a8b7c60-1111-4222-8333-444455556666": {"after": 2}}
+    other = {"11111111-2222-4333-8444-555555555555": {"after": 3}}
+    assert shape.shape_of(first) == {"<uuid>": {"after": "number"}}
+    assert shape.compare_shape(shape.shape_of(first), shape.shape_of(other)) == []

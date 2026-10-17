@@ -2,7 +2,7 @@
 
 값이 아니라 형태만 저장해 UUID·시각·토큰의 비결정성을 없앤다.
 태그: uuid · datetime · date · url · str · number · bool · null. 배열은 `[원소 형태 합집합]`,
-일부 원소에만 있는 키는 `키?` 로 표기한다. 순수 함수만 둔다.
+일부 원소에만 있는 키는 `키?` 로 표기하고, 키가 모두 UUID 인 맵은 `<uuid>` 키 하나로 접는다. 순수 함수만 둔다.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _URL = re.compile(r"^https?://")
 
 Shape = Any
+UUID_KEY = "<uuid>"
 
 
 def _tag_str(value: str) -> str:
@@ -75,6 +76,12 @@ def shape_of(value: Any) -> Shape:
             merged = _merge(merged, shape_of(item))
         return [merged]
     if isinstance(value, dict):
+        if value and all(isinstance(k, str) and _UUID.match(k) for k in value):
+            # 키가 UUID 인 맵(참여자별 슬롯 등)은 키 값이 비결정적이므로 하나로 접는다
+            merged = shape_of(next(iter(value.values())))
+            for item in list(value.values())[1:]:
+                merged = _merge(merged, shape_of(item))
+            return {UUID_KEY: merged}
         return {k: shape_of(v) for k, v in sorted(value.items())}
     return "str"
 
