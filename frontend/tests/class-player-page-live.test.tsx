@@ -69,7 +69,7 @@ vi.mock('../src/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('../src/hooks/useLeaveGuard', () => ({ useLeaveGuard: () => ({ state: 'unblocked' }) }));
 vi.mock('../src/hooks/useWaitingRoomCount', () => ({ useWaitingRoomCount: () => ({ entries: [], count: 0, nicknames: [] }) }));
 vi.mock('../src/hooks/useClassAudioPlayer', () => ({ useClassAudioPlayer: () => ({ state: { tracks: [], selectedTrackId: null, playing: false, positionSec: 0, durationSec: null, volume: 0.6 }, actions: { selectTrack: vi.fn(), toggle: vi.fn(), setVolume: vi.fn() } }) }));
-vi.mock('../src/hooks/useReportProgress', () => ({ useReportProgress: () => ({ progress: null }) }));
+vi.mock('../src/hooks/useReportProgress', () => ({ useReportProgress: () => ({ progress: null, generationStatus: null }) }));
 vi.mock('../src/components/class/FadingImageBackground', () => ({ FadingImageBackground: () => null }));
 vi.mock('../src/components/chat/ClassChatPanel', () => ({
   ClassChatPanel: () => createElement('aside', { 'data-testid': 'page-chat-overlay' }, '페이지 채팅 오버레이'),
@@ -213,8 +213,10 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
     expect(lastProps().chat.enabled).toBe(true);
   });
 
-  it('종료: 요청 → 모달 열림 → 확정하면 end 전이 후 기록 페이지로 이동', async () => {
+  it('종료: 요청 → 모달 열림 → 확정하면 end 전이 후 같은 화면에서 리포트 진행(ending)', async () => {
     await renderPage();
+    const startedAt = new Date(Date.now() - 180_000).toISOString();
+    h.transitionSession.mockResolvedValueOnce(makeSession('completed', { started_at: startedAt, ended_at: new Date(Date.parse(startedAt) + 150_000).toISOString() }));
     expect(lastProps().end.open).toBe(false);
     await act(async () => { lastProps().end.onRequest(); });
     expect(lastProps().end.open).toBe(true);
@@ -224,7 +226,9 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
     await fire(() => lastProps().end.onConfirm());
     expect(h.liveKit.disconnect).toHaveBeenCalled();
     expect(h.transitionSession).toHaveBeenCalledWith('s1', 'end');
-    expect(document.body.textContent).toContain('기록 화면');
+    expect(document.body.textContent).not.toContain('기록 화면');
+    expect(lastPrep()).toMatchObject({ phase: 'ending' });
+    expect(lastPrep().ending).toMatchObject({ steps: null, durationMin: 3 });
   });
 
   it('종료가 실패하면 오류와 endFailed 를 알리고, [종료 재시도]로 다시 시도한다', async () => {
@@ -234,7 +238,7 @@ describe('진행 중 호스트: 새 컨테이너로 교체', () => {
     expect(lastProps().status).toMatchObject({ error: '서버 오류', endFailed: true });
     await fire(() => lastProps().status.onRetryEnd());
     expect(h.transitionSession).toHaveBeenCalledTimes(2);
-    expect(document.body.textContent).toContain('기록 화면');
+    expect(lastPrep()).toMatchObject({ phase: 'ending' });
   });
 
   it('화상 연결이 끊기면 오류 문구를 알린다', async () => {

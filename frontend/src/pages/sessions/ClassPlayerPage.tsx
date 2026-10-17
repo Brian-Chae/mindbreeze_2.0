@@ -73,6 +73,7 @@ import {
 import { HostPrepContainer } from '../../components/class/flow/host/HostPrepContainer';
 import { HostStateScreen } from '../../components/class/flow/host/HostStateScreen';
 import { useMediaCheck } from '../../hooks/useMediaCheck';
+import { endedDurationMin } from '../../lib/class/flow/host-ending-model';
 import { deriveHostStateKind, type HostStateAction, type HostStateKind } from '../../lib/class/flow/host-state-model';
 import type { OpenPrefs } from '../../lib/class/flow/host-open';
 import type { StartAudioPlan } from '../../lib/class/flow/host-start-model';
@@ -723,7 +724,7 @@ export default function ClassPlayerPage() {
   // FH07 시작 확인 시트: 리포트 제외·연구 동의 익명 집계 — 대기실 인원이 바뀔 때 다시 받는다(실패해도 시작을 막지 않는다)
   const lobbyCount = waitingRoom.count;
   useEffect(() => {
-    if (!id || !isHost || !isLobby) return undefined;
+    if (!id || !isHost || !(isLobby || isEnded)) return undefined;
     let cancelled = false;
     void Promise.allSettled([getReportChoiceSummary(id), getResearchConsentSummary(id)]).then(([choice, research]) => {
       if (cancelled) return;
@@ -735,7 +736,7 @@ export default function ClassPlayerPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, isHost, isLobby, lobbyCount]);
+  }, [id, isHost, isLobby, isEnded, lobbyCount]);
 
 
   // (B) 대기실에서 받은 체크인을 라이브 전환 후에도 유지한다 — 세션 시작 카드에 쓴다.
@@ -953,10 +954,12 @@ export default function ClassPlayerPage() {
         await handleStop();
       }
       liveKit.disconnect();
-      await transitionSession(id, 'end');
+      // D-5①: 응답(ended_at 포함)을 반영해 같은 화면에서 리포트 진행을 보여준다(/record 로 점프하지 않음)
+      const ended = await transitionSession(id, 'end');
+      setSession(ended);
       setEndModalOpen(false);
       bypassGuardRef.current = true;
-      navigate(leaveTo ?? `/sessions/${id}/record`);
+      if (leaveTo) navigate(leaveTo);
     } catch (e) {
       // SDD-101 D3: 종료 확정 실패 — 에러 + 재시도 CTA(미디어는 이미 stop 되어 있어 재시도 시 handleStop 생략됨)
       setError((e as Error).message);
@@ -1204,7 +1207,7 @@ export default function ClassPlayerPage() {
               blocker.proceed?.();
             })();
           } else {
-            // 종료(end)는 finishSession 이 bypass 후 기록 페이지로 직접 이동한다
+            // 종료(end)는 finishSession 이 bypass 후 같은 화면에서 리포트 진행을 보여준다
             void finishSession();
           }
         }}
@@ -1267,7 +1270,7 @@ export default function ClassPlayerPage() {
   }
 
   /* ─── ①②⑤ 호스트 시작 전(세팅·로비)·닫힘: SDD-209 새 흐름. 훅·핸들러는 이 페이지가 한 번만 만들고 컨테이너는 값만 받는다 ─── */
-  if (isHost && (isSetup || isLobby || isCancelled)) {
+  if (isHost && (isSetup || isLobby || isCancelled || isEnded)) {
     const hostUserId = currentUserId;
     const roster: LobbyRosterEntry[] = displayMetrics
       .filter((row) => row.user_id !== hostUserId)
@@ -1283,7 +1286,7 @@ export default function ClassPlayerPage() {
       band: session.linkband_mode,
     };
     const online = ctx.place === 'online';
-    const phase = isSetup ? 'setup' : isLobby ? 'lobby' : 'closed';
+    const phase = isSetup ? 'setup' : isLobby ? 'lobby' : isEnded ? 'ending' : 'closed';
     const personOf = (row: SessionLiveMetric) => ({ id: row.participant_id, name: row.display_name });
     const audio = audioPlayer.state;
     const clock = (sec: number): string => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
@@ -1386,7 +1389,16 @@ export default function ClassPlayerPage() {
             navigate('/sessions');
           }}
           onCloseClass={() => void closeClass(false)}
-          ending={{ steps: null, generationStatus: null, progress: null, reason: null, manual: false, durationMin: null, headcount: null, excluded: 0 }}
+          ending={{
+            steps: reportProgress.progress?.steps ?? null,
+            generationStatus: reportProgress.generationStatus,
+            progress: reportProgress.progress?.progress ?? null,
+            reason: reportProgress.progress?.reason ?? null,
+            manual: !mediaPrefs.micOn,
+            durationMin: endedDurationMin(session.started_at, session.ended_at),
+            headcount: roster.length > 0 ? roster.length : null,
+            excluded: choiceCounts.excluded,
+          }}
           headcount={null}
           onEnd={() => undefined}
           onContinue={() => undefined}

@@ -141,3 +141,11 @@ export function endConfirmLines(headcount: number | null): string[] {
   else if (headcount > 0) lines.push(`참여 중인 회원 ${headcount}명의 화면도 함께 끝나요`);
   return lines;
 }
+
+/** 함께한 시간(분): 서버 started_at~ended_at 기준. 둘 중 하나라도 없거나 역전이면 null, 1분 미만은 1분 */
+export function endedDurationMin(startedAt: string | null | undefined, endedAt: string | null | undefined): number | null {
+  if (!startedAt || !endedAt) return null;
+  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  return Math.max(1, Math.round(ms / 60000));
+}

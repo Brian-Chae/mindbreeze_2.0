@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EndConfirmScreen, EndingScene } from '../src/components/class/flow/host/EndingScreen';
 import { ENDING_FIXTURES } from '../src/lib/class/flow/host-ending-fixtures';
-import { deriveEnding, endConfirmLines, isEndingDone } from '../src/lib/class/flow/host-ending-model';
+import { deriveEnding, endConfirmLines, endedDurationMin, isEndingDone } from '../src/lib/class/flow/host-ending-model';
 
 const view = (k: keyof typeof ENDING_FIXTURES) => deriveEnding(ENDING_FIXTURES[k]);
 const uis = (k: keyof typeof ENDING_FIXTURES): string[] => view(k).steps.map((s) => s.ui);
@@ -158,5 +158,30 @@ describe('EndingScene', () => {
     expect(container.textContent).toContain('그룹 공통 요약은 제외돼요');
     await mount('manual-ing');
     expect(container.textContent).toContain('메모로 만드는 중');
+  });
+});
+
+describe('endedDurationMin — 서버 ended_at 기준 함께한 시간', () => {
+  it('started_at~ended_at 분 단위 반올림, 1분 미만은 1분', () => {
+    expect(endedDurationMin('2026-10-17T01:00:00Z', '2026-10-17T01:48:10Z')).toBe(48);
+    expect(endedDurationMin('2026-10-17T01:00:00Z', '2026-10-17T01:00:20Z')).toBe(1);
+  });
+
+  it('값이 없거나 역전·비정상이면 null(시간을 말하지 않는다)', () => {
+    expect(endedDurationMin(null, '2026-10-17T01:00:00Z')).toBeNull();
+    expect(endedDurationMin('2026-10-17T01:00:00Z', undefined)).toBeNull();
+    expect(endedDurationMin('2026-10-17T02:00:00Z', '2026-10-17T01:00:00Z')).toBeNull();
+    expect(endedDurationMin('x', 'y')).toBeNull();
+  });
+});
+
+describe('ClassPlayerPage 종료 연결(D-5①)', () => {
+  it('finishSession 이 /record 로 자동 이동하지 않고 응답을 반영한다', async () => {
+    const { readFileSync } = await import('node:fs');
+    const src = readFileSync(`${process.cwd()}/src/pages/sessions/ClassPlayerPage.tsx`, 'utf8');
+    const body = src.slice(src.indexOf('const finishSession'), src.indexOf('수업 경과 타이머'));
+    expect(body).toContain('setSession(ended)');
+    expect(body).not.toContain('navigate(`/sessions/${id}/record`)');
+    expect(src).toContain("isEnded ? 'ending'");
   });
 });
