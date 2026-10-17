@@ -28,11 +28,11 @@ function getInitials(name: string | null): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-/** 세션 일자 포맷 (M월 D일 (요일) HH:mm) */
+/** 클래스 일자 포맷 (M월 D일 (요일) HH:mm) */
 function formatSessionDate(iso: string | null | undefined): string {
-  if (!iso) return '세션 채팅';
+  if (!iso) return '클래스 채팅';
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '세션 채팅';
+  if (Number.isNaN(d.getTime())) return '클래스 채팅';
   const day = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${day}) ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
 }

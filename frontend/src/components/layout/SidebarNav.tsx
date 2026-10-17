@@ -89,7 +89,7 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', label: '대시보드', icon: ICONS.home },
-  { to: '/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/sessions', label: '클래스', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
   { to: '/reports', label: '리포트', icon: ICONS.report },
@@ -100,7 +100,7 @@ const NAV_ITEMS: NavItem[] = [
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', label: '기관 대시보드', icon: ICONS.home },
-  { to: '/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/sessions', label: '클래스', icon: ICONS.calendar },
   { to: '/clients', label: '내담자', icon: ICONS.users },
   { to: '/chat', label: '채팅', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
@@ -112,7 +112,7 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
 
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', label: '홈', icon: ICONS.home, end: true },
-  { to: '/app/sessions', label: '세션', icon: ICONS.calendar },
+  { to: '/app/sessions', label: '클래스', icon: ICONS.calendar },
   { to: '/app/chat', label: '채팅', icon: ICONS.message },
   { to: '/app/reports', label: '리포트', icon: ICONS.report },
   { to: '/app/notifications', label: '알림', icon: ICONS.bell },
@@ -215,7 +215,7 @@ export default function SidebarNav({
           ? notificationBadge ?? 0
           : label === '리포트'
             ? reportBadge ?? 0
-            : label === '세션'
+            : label === '클래스'
               ? sessionBadge ?? 0
               : 0;
     if (count > 0) {
@@ -289,6 +289,15 @@ export default function SidebarNav({
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        className="flex items-center gap-3 px-3.5 py-3 mt-2 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
+      >
+        <StrokeIcon d={ICONS.logout} />
+        로그아웃
+      </button>
+
       {/* 서버 연결 상태 */}
       <div className="flex items-center gap-2 px-1 py-2">
         <span
@@ -300,15 +309,6 @@ export default function SidebarNav({
           서버연결: {wsConnected ? '양호' : '끊김'}
         </span>
       </div>
-
-      <button
-        type="button"
-        onClick={() => void handleLogout()}
-        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
-      >
-        <StrokeIcon d={ICONS.logout} />
-        로그아웃
-      </button>
     </div>
   );
 }

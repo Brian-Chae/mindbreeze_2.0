@@ -20,6 +20,7 @@ from app.models.eeg_feature import EEGFeatureWindow
 from app.models.normalization_model import NormalizationModel
 from app.services import eeg_metrics
 from app.services import report_progress_service
+from app.services import report_scope
 from app.services.eeg_rollup_service import summarize_hrv_motion
 from app.services.report_narrative import build_metrics_summary
 from app.services.normalization_score import sigmoid_score
@@ -135,6 +136,7 @@ def _measurement_intent(
     participant_id: UUID | None,
     windows: list[EEGFeatureWindow],
     db: DBSession,
+    participant_ids: list[UUID] | None = None,
 ) -> str:
     """밴드 측정 시도 여부 — 윈도우 존재 OR 실제 연결(band_connected) 기록.
 
@@ -145,7 +147,10 @@ def _measurement_intent(
     if windows:
         return "yes"
     conditions = [SessionParticipant.session_id == session_id]
-    if participant_id is not None:
+    if participant_ids is not None:
+        # SDD-209(B3): 리포트에 반영하기로 한 참가자들만 대상으로 연결 여부를 본다.
+        conditions.append(SessionParticipant.id.in_(participant_ids))
+    elif participant_id is not None:
         conditions.append(SessionParticipant.id == participant_id)
     conditions.append(SessionParticipant.band_connected.is_(True))
     return "yes" if db.query(SessionParticipant).filter(*conditions).first() else "no"
@@ -186,6 +191,7 @@ def _build_eeg_content(
     started_at=None,
     ended_at=None,
     session_wide: bool = False,
+    participant_ids: list[UUID] | None = None,
 ) -> dict:
     """EEGFeatureWindow 시계열 → content.eeg 단일 계약 블록.
 
@@ -194,6 +200,8 @@ def _build_eeg_content(
     started_at ~ ended_at 구간의 윈도우만 집계한다(경계 미전달 시 전체 유지 — 하위 호환).
     FUNC-06: participant_id 가 주어지면 해당 참가자만 집계한다(counselor 포함).
     세션 전체 합산은 session_wide=True 로 명시한다.
+    SDD-209(B3): participant_ids 가 주어지면(session_wide 경로) 그 참가자들의 윈도우만 합산한다 —
+    상담사 리포트가 리포트 반영에 동의한 참가자 전원의 집계를 내기 위한 필터(제외 참가자 기여분 0).
     FUNC-05(EEG-REPORT-BOUNDARY): 경계는 device_timestamp_ms(디바이스 측정 시각)를
     우선 사용하고, 없으면 created_at(서버 저장 시각)으로 폴백한다 — 오프라인 큐/지연
     업로드로 서버 저장이 세션 종료 이후가 된 윈도우가 누락되지 않게 한다.
@@ -201,6 +209,8 @@ def _build_eeg_content(
     q = db.query(EEGFeatureWindow).filter(EEGFeatureWindow.session_id == session_id)
     if participant_id is not None and not session_wide:
         q = q.filter(EEGFeatureWindow.participant_id == participant_id)
+    if session_wide and participant_ids is not None:
+        q = q.filter(EEGFeatureWindow.participant_id.in_(participant_ids))
     if started_at is not None:
         start_ms = int(_ensure_aware_dt(started_at).timestamp() * 1000)
         q = q.filter(or_(
@@ -227,7 +237,7 @@ def _build_eeg_content(
         ))
     windows = q.order_by(EEGFeatureWindow.window_index).all()
     # SDD-122: 유실(비정상)과 미측정(정상) 구분 — 밴드 연결/시도 여부로 판정.
-    intent = _measurement_intent(session_id, participant_id, windows, db)
+    intent = _measurement_intent(session_id, participant_id, windows, db, participant_ids)
     if not windows:
         if intent == "yes":
             # 연결했으나 윈도우 0 → 전 구간 유실(lost). 숨기지 않고 표시한다.
@@ -445,6 +455,9 @@ def _maybe_enqueue_client_report_email(report: Report, db: DBSession) -> None:
         return
     if participant.report_email_sent_at is not None:
         return
+    if not participant.report_included:
+        # SDD-209(B3): 리포트 반영을 제외한 참가자에게는 메일을 보내지 않는다.
+        return
     try:
         from app.services.report_email_service import enqueue_report_email
 
@@ -497,23 +510,54 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     db.commit()
 
     try:
-        # SDD-088: 대기실(open) 중 수집 EEG 제외 — started_at~ended_at 구간만 집계
-        # FUNC-06: counselor 도 report.participant_id 로 집계 대상을 좁힌다(전체 참여자
-        # 혼합 방지). 참여자 미지정 세션 단위 집계는 session_wide=True 로 명시한다.
-        eeg_block = _build_eeg_content(
-            session.id,
-            db,
-            report.participant_id,
-            started_at=session.started_at,
-            ended_at=session.ended_at,
-            session_wide=report.participant_id is None,
-        )
-        if report.type == "client":
-            # 그룹 세션의 공통 녹음 요약은 다른 참가자의 상담 내용을 포함할 수 있다.
-            client_record = None if session.participant_mode == "group" else record
-            content = _client_content(session, client_record, eeg_block)
-        else:
+        scope = report_scope.scope_for_session(session.id, db)
+        if report.type == "client" and scope.is_excluded(report.participant_id):
+            # SDD-209(B3): 리포트 반영을 제외한 참가자 본인 리포트 — 지표·서사·기록 없이 안내만.
+            eeg_block = report_scope.excluded_eeg_block()
+            content = report_scope.client_excluded_content(
+                session.title,
+                session.type,
+                session.scheduled_at.isoformat() if session.scheduled_at else None,
+            )
+        elif report.type != "client" and scope.has_participants:
+            # SDD-209(B3): 상담사 리포트 = 리포트 반영에 동의한 참가자 전원의 집계(1:1 은 그 1명).
+            # 전원 제외면 EEG 를 비우고 안내만. 공통 녹음 파생(발화 기록·영상·AI 요약)은 제외자가 1명이라도
+            # 있으면 넣지 않는다(원본은 보존).
+            if scope.all_excluded:
+                eeg_block = report_scope.excluded_eeg_block()
+            else:
+                eeg_block = _build_eeg_content(
+                    session.id,
+                    db,
+                    None,
+                    started_at=session.started_at,
+                    ended_at=session.ended_at,
+                    session_wide=True,
+                    participant_ids=sorted(scope.included_ids, key=str),
+                )
             content = _counselor_content(session, record, eeg_block)
+            if scope.any_excluded:
+                content = report_scope.strip_counselor_shared_sources(content)
+            content["report_scope"] = report_scope.scope_marker(scope)
+        else:
+            # SDD-088: 대기실(open) 중 수집 EEG 제외 — started_at~ended_at 구간만 집계
+            # FUNC-06: counselor 도 report.participant_id 로 집계 대상을 좁힌다(전체 참여자
+            # 혼합 방지). 참여자 미지정 세션 단위 집계는 session_wide=True 로 명시한다.
+            eeg_block = _build_eeg_content(
+                session.id,
+                db,
+                report.participant_id,
+                started_at=session.started_at,
+                ended_at=session.ended_at,
+                session_wide=report.participant_id is None,
+            )
+            if report.type == "client":
+                # 그룹 세션의 공통 녹음 요약은 다른 참가자의 상담 내용을 포함할 수 있다.
+                client_record = None if session.participant_mode == "group" else record
+                content = _client_content(session, client_record, eeg_block)
+                content["report_scope"] = report_scope.scope_marker(scope)
+            else:
+                content = _counselor_content(session, record, eeg_block)
         # SDD-027: 분석 성공 → 승인 게이트(pending_review) 로 전이 + 신뢰도 파생
         report.data_credibility = _derive_data_credibility(eeg_block)
         # RPT-REGEN-005: 이미 승인된 리포트는 재생성 후에도 승인(completed)을 유지한다.
@@ -573,7 +617,13 @@ def generate_report_inline(report_id: str, db: DBSession) -> Report | None:
     # SDD-087: content 통째 교체로 기존 상담사 코멘트가 유실되지 않게 이월한다 (방어 가드)
     prev = report.content if isinstance(report.content, dict) else {}
     prev_comment = prev.get("counselor_comment")
-    if isinstance(prev_comment, str) and prev_comment.strip() and "counselor_comment" not in content:
+    excluded_stub = isinstance(content.get("report_scope"), dict) and content["report_scope"].get("excluded")
+    if (
+        isinstance(prev_comment, str)
+        and prev_comment.strip()
+        and "counselor_comment" not in content
+        and not excluded_stub  # SDD-209(B3): 제외한 참가자의 리포트에는 기존 코멘트도 이월하지 않는다
+    ):
         content["counselor_comment"] = prev_comment
 
     report.content = content
@@ -600,6 +650,12 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         for report in db.query(Report).filter(Report.session_id == sid).all():
             # 이미 승인(completed)된 리포트 내용·상태는 보존한다.
             if report.status == "completed":
+                # 생성 중으로 남으면 메일 발송이 영구히 미뤄지므로 부분 산출로 마감만 한다.
+                if report.generation_status in (
+                    report_progress_service.GENERATION_PENDING,
+                    report_progress_service.GENERATION_PROCESSING,
+                ):
+                    report.generation_status = report_progress_service.GENERATION_PARTIAL
                 continue
             report.status = "error"
             report.generation_status = report_progress_service.GENERATION_PARTIAL
@@ -608,6 +664,10 @@ def _mark_pipeline_failure(session_id: str, db: DBSession, exc: Exception) -> No
         if record is not None and record.status not in ("completed", "manual"):
             record.status = "failed"
         db.commit()
+        # 생성 중이라 발송이 미뤄진 승인 완료 리포트가 영구히 메일을 못 받지 않도록, 부분 산출 상태로 마감된
+        # 리포트의 메일을 다시 예약한다(생성이 끝난 상태라 deliver 가 발송한다).
+        for report in db.query(Report).filter(Report.session_id == sid, Report.status == "completed").all():
+            _maybe_enqueue_client_report_email(report, db)
     except Exception:  # noqa: BLE001 — 마킹 실패가 원 예외 전파를 막지 않게 한다.
         logger.exception("[report_task] 실패 상태 마킹 실패: session_id=%s", session_id)
 

@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:,">
+<title>MIND BREEZE · 회원 시안 B — 입장 준비 · 시작 대기 · 종료</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+/* 워커 전용 스타일(.w-) — flow-base.css 는 수정하지 않는다 */
+html, body { height: 100dvh; overflow: hidden; background: #12081C; }
+body { word-break: keep-all; overflow-wrap: break-word; }
+:where(.fl-root, .w-scrim) :is(h1, h2, h3, p, ul) { margin: 0; padding: 0; }
+:where(.fl-root, .w-scrim) ul { list-style: none; }
+:where(.fl-root) button { padding: 0; }
+:where(.fl-root) input, :where(.fl-root) textarea { font-family: inherit; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--mb-pale); outline-offset: 2px; }
+.fl-root .fl-layer { right: var(--side, 0px); }
+.fl-root .ic.s { width: 20px; height: 20px; }
+.fl-chip .ic.s { width: 16px; height: 16px; }
+@media (max-height: 760px) { .fl-body { padding-top: 8px; padding-bottom: 8px; } }
+
+/* 상단·공통 */
+.w-ph { display: block; width: 44px; height: 44px; visibility: hidden; }
+.w-head { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+.w-head .fl-sub { text-wrap: balance; }
+.w-slot { min-height: 44px; margin: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+.w-c { padding: 0 16px; gap: 8px; }
+.w-tag { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 9999px; font-size: var(--fs-12); font-weight: 700; line-height: 1; white-space: nowrap; background: rgba(255,255,255,0.14); color: var(--tx-mid); flex: none; }
+.w-tag.req { background: rgba(179,115,239,0.28); color: var(--mb-pale); }
+.fl-btn.w-mini { min-height: var(--tap); padding: 0 16px; font-size: var(--fs-13); }
+.fl-btn .ic { width: 20px; height: 20px; }
+.fl-btn.w-dark { background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); }
+.fl-btn.done { background: rgba(125,227,200,0.12); border: 1px solid rgba(125,227,200,0.5); color: var(--ok); opacity: 1; }
+
+/* FM06a */
+.w-info { display: flex; flex-direction: column; gap: 8px; }
+.w-irow { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 24px; font-size: var(--fs-15); }
+.w-il { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.w-il b { font-weight: 700; white-space: nowrap; }
+.w-il .ic { width: 20px; height: 20px; color: var(--mb-pale); flex: none; }
+.w-iv { font-size: var(--fs-13); color: var(--tx-mid); text-align: right; white-space: nowrap; }
+.w-checks { display: flex; flex-direction: column; gap: 8px; }
+.w-check { display: flex; align-items: flex-start; gap: 16px; width: 100%; min-height: 56px; padding: 16px; border-radius: var(--r-card); text-align: left; background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-check[aria-checked="true"] { background: rgba(179,115,239,0.18); border-color: rgba(210,174,252,0.55); }
+.w-box { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.55); display: grid; place-items: center; }
+.w-box .ic { width: 16px; height: 16px; stroke-width: 3; display: none; }
+.w-check[aria-checked="true"] .w-box { background: var(--mb-purple); border-color: var(--mb-pale); color: #fff; }
+.w-check[aria-checked="true"] .w-box .ic { display: block; }
+.w-ct { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-ct b { display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); line-height: 24px; }
+.w-ct .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+/* FM06a — 고지 · 리포트 반영 선택 · 연구 동의 (한 화면, 스크롤 0) */
+.fl-root:has(.w-agrid) .fl-body { padding-top: 8px; padding-bottom: 8px; }
+.fl-root:has(.w-agrid) .w-slot { min-height: 24px; }
+.fl-col.w-wiz:has(.w-agrid) { gap: 8px; }
+.fl-col.w-wiz:has(.w-agrid) .w-head { gap: 8px; }
+.w-agrid { display: grid; gap: 8px; }
+.w-acol { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) { .w-agrid { grid-template-columns: 1fr 1fr; align-items: start; } }
+.w-blk { display: flex; flex-direction: column; gap: 8px; }
+.w-qh { display: block; font-size: var(--fs-15); line-height: 24px; font-weight: 700; }
+.w-ft { margin: 0; font-size: var(--fs-12); line-height: 16px; color: var(--tx-mid); }
+.w-ft.hi { color: var(--tx-hi); }
+.w-nrow { display: flex; align-items: flex-start; gap: 8px; min-height: 24px; font-size: var(--fs-15); line-height: 24px; font-weight: 600; }
+.w-nrow .ic { width: 20px; height: 20px; margin-top: 2px; color: var(--mb-pale); flex: none; }
+.w-nrow .tx { display: flex; flex-direction: column; min-width: 0; }
+.w-nrow .tx .w-ft { font-weight: 400; }
+.w-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-seg button { min-height: 44px; padding: 0 8px; border-radius: var(--r-card); font-size: var(--fs-15); font-weight: 600; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.w-seg button[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.w-rhead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-rhead .w-qh { flex: 1; min-width: 0; }
+.w-rhead .w-check { width: auto; flex: none; min-height: 44px; padding: 0 16px 0 8px; align-items: center; gap: 8px; font-size: var(--fs-15); font-weight: 700; }
+.w-hint.w-fail { font-size: var(--fs-12); line-height: 16px; align-items: center; }
+.w-hint.w-fail .ic { width: 16px; height: 16px; }
+.w-rlist { display: flex; flex-direction: column; gap: 0; }
+
+/* FM06b */
+.w-axes { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.w-ax { display: flex; flex-direction: column; gap: 8px; align-items: center; min-height: 32px; font-size: var(--fs-13); line-height: 20px; font-weight: 600; color: var(--tx-lo); white-space: nowrap; }
+.w-ax i { display: block; width: 100%; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.25); }
+.w-ax.on { color: var(--tx-hi); } .w-ax.on i { background: #fff; }
+.w-ax.done { color: var(--tx-mid); } .w-ax.done i { background: var(--mb-lavender); }
+.w-opts { display: flex; flex-direction: column; gap: 8px; }
+.w-opt { display: flex; align-items: center; gap: 16px; min-height: 52px; padding: 0 16px; border-radius: var(--r-card); text-align: left; font-size: var(--fs-15); font-weight: 600; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.w-opt[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.w-radio { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.55); display: grid; place-items: center; }
+.w-radio::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; opacity: 0; }
+.w-opt[aria-checked="true"] .w-radio { border-color: #fff; } .w-opt[aria-checked="true"] .w-radio::after { opacity: 1; }
+.fl-input.w-ta { height: 144px; padding: 16px; resize: none; line-height: 24px; }
+.w-count { text-align: right; font-size: var(--fs-13); color: var(--tx-lo); }
+
+/* FM06c */
+.w-band { display: flex; flex-direction: column; gap: 16px; }
+.w-bh { display: flex; align-items: center; gap: 16px; }
+.w-bi { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: none; background: rgba(179,115,239,0.22); color: var(--mb-pale); }
+.w-bi.ok { background: rgba(125,227,200,0.16); color: var(--ok); }
+.w-bi.warn { background: var(--warn-bg); color: var(--warn); }
+.w-bi .ic { width: 28px; height: 28px; }
+.w-bt { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.w-bt b { display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); line-height: 24px; white-space: nowrap; }
+.w-bb { min-height: 168px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.w-li { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.06); font-size: var(--fs-15); }
+.w-li .ic { flex: none; color: var(--mb-pale); }
+.w-li.warn .ic { color: var(--warn); }
+.w-li > span { min-width: 0; }
+.w-center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; flex: 1; }
+.w-center .ic { width: 40px; height: 40px; color: var(--mb-pale); }
+.w-center b { font-size: var(--fs-15); line-height: 24px; }
+.w-center .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-spin { animation: wspin 1.1s linear infinite; }
+@keyframes wspin { to { transform: rotate(360deg); } }
+.w-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-tile { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.06); min-width: 0; }
+.w-tile .l { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 20px; }
+.w-tile .l .ic { width: 20px; height: 20px; }
+.w-tile .v { font-size: var(--fs-15); font-weight: 700; line-height: 24px; }
+.w-tile.ok .l .ic, .w-tile.ok .v { color: var(--ok); }
+.w-segbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.w-segbar i { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.25); }
+.w-segbar i.on { background: var(--ok); }
+
+/* FM06c 전극 접촉 트래커 (SensorTracker 재현) */
+.w-trk { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 288px; max-width: 100%; align-self: center; }
+.w-trk svg { display: block; width: 288px; height: 64px; }
+.w-trk .lbs { position: relative; width: 288px; height: 20px; }
+.w-trk .lbs span { position: absolute; top: 0; transform: translateX(-50%); font-size: var(--fs-12); line-height: 20px; white-space: nowrap; color: var(--tx-mid); }
+.w-trk .lbs span.bad { color: var(--tx-hi); font-weight: 700; }
+.w-trk .lg { display: flex; align-items: center; justify-content: center; gap: 24px; min-height: 24px; font-size: var(--fs-13); color: #EFEFEF; }
+.w-trk .lg span { display: inline-flex; align-items: center; gap: 8px; }
+.w-trk .lg i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.w-bb.trk { min-height: 0; gap: 16px; }
+.w-li.sm { font-size: var(--fs-13); line-height: 18px; min-height: 40px; }
+
+/* FM06d 내 영상·소리 (합친 컴포넌트) */
+.fl-card.w-av { padding: 8px; border: 0; box-shadow: inset 0 0 0 1px var(--sheet-border); border-radius: var(--r-sheet); display: flex; flex-direction: column; gap: 8px; }
+.fl-card.w-av.low { padding: 16px; }
+.w-vid { position: relative; border-radius: var(--r-card); overflow: hidden; aspect-ratio: 4 / 3; background: linear-gradient(160deg, #4A3A68 0%, #241A3E 100%); }
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) { .w-vid { aspect-ratio: 16 / 9; } }
+.w-silh { position: absolute; inset: 0; display: grid; place-items: center; color: #B9A3DA; }
+.w-silh .ic { width: 96px; height: 96px; opacity: 0.5; stroke-width: 1.5; }
+.w-ovt { position: absolute; left: 8px; top: 8px; display: flex; align-items: center; gap: 8px; }
+.w-ovl { background: rgba(18, 8, 28, 0.72); }
+.w-ovb { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px; padding: 24px 8px 8px; background: linear-gradient(to top, rgba(14, 6, 24, 0.85), rgba(14, 6, 24, 0)); }
+.w-owarn { flex: 1; min-width: 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-hi); padding-left: 8px; }
+.w-ovb .w-level { flex: 1; min-width: 0; padding-left: 8px; }
+.w-ovb .w-level i { background: rgba(255, 255, 255, 0.3); } .w-ovb .w-level i.on { background: var(--ok); }
+.w-ovb.center { justify-content: center; }
+.w-tg { flex: none; width: var(--tap); height: var(--tap); border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(18, 8, 28, 0.72); border: 1px solid var(--sheet-border); }
+.w-tg[aria-pressed="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.w-tg[disabled] { opacity: 0.4; }
+.w-tg.ring, .w-tg.ring[aria-pressed="true"] { position: relative; background: rgba(18, 8, 28, 0.9); border: 0; }
+.w-tg.ring svg.seg { position: absolute; inset: 0; width: 44px; height: 44px; transform: rotate(-90deg); }
+.w-tg.ring svg.seg circle { fill: none; stroke: rgba(255, 255, 255, 0.28); stroke-width: 3; stroke-linecap: butt; }
+.w-tg.ring svg.seg circle[data-on="1"] { stroke: var(--ok); }
+.w-tg.ring .ic { position: relative; color: #fff; opacity: var(--io, 1); }
+.w-avh { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-avh .l { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.w-avh .r { display: flex; align-items: center; gap: 8px; flex: none; }
+.w-avb { display: flex; flex-direction: column; gap: 8px; }
+.w-level { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; }
+.w-level i { height: 8px; border-radius: 8px; background: rgba(255,255,255,0.2); }
+.w-level i.on { background: var(--ok); }
+.w-hint { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-hint.warn { display: flex; align-items: flex-start; gap: 8px; color: var(--tx-hi); }
+.w-hint.warn .ic { width: 20px; height: 20px; flex: none; color: var(--warn); }
+.fl-card.w-spk { padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-spk .l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.w-spk .l .ic { color: var(--mb-pale); flex: none; }
+.w-spk b { font-size: var(--fs-15); white-space: nowrap; }
+.w-howto { display: flex; flex-direction: column; gap: 8px; }
+@media (max-height: 760px) { .w-slot { min-height: 24px; } }
+
+/* FM06e */
+.w-hi { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125,227,200,0.16); color: var(--ok); }
+.w-hi .ic { width: 28px; height: 28px; }
+.w-sum { display: flex; flex-direction: column; gap: 8px; }
+.w-srow { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 48px; padding: 0 16px; border-radius: var(--r-card); text-align: left; background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-srow > .ic { flex: none; color: var(--mb-pale); }
+.w-srow b { flex: none; font-size: var(--fs-15); white-space: nowrap; }
+.w-srow .v { flex: 1; min-width: 0; text-align: right; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-srow .chev { flex: none; color: var(--tx-lo); }
+.w-srow.warn .v, .w-srow.warn > .ic:first-child { color: var(--warn); }
+
+/* FM07 */
+.w-time { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.w-time .fl-num { line-height: 48px; }
+.w-ready { display: flex; flex-direction: column; gap: 8px; }
+.w-rrow { display: flex; align-items: center; gap: 16px; min-height: 24px; font-size: var(--fs-15); font-weight: 600; }
+.w-rrow .ic { flex: none; color: var(--mb-pale); }
+.w-bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.25); overflow: hidden; }
+.w-bar i { display: block; height: 100%; border-radius: 4px; background: var(--ok); }
+.w-slotcard { min-height: 112px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.w-bgmh { display: flex; align-items: center; gap: 16px; }
+.w-bgmh > .ic { flex: none; color: var(--mb-pale); }
+.w-bgmh .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.w-bgmh .tx b { font-size: var(--fs-15); line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-bgmh .tx span { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-bgmr { display: flex; align-items: center; gap: 16px; }
+.w-bgmr > .ic { flex: none; color: var(--tx-mid); }
+.w-range { flex: 1; min-width: 0; height: 44px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.w-range::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.3); }
+.w-range::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; margin-top: -10px; border-radius: 50%; border: 0; background: #fff; }
+.w-range:disabled { opacity: 0.4; }
+.w-place { display: flex; align-items: flex-start; gap: 16px; }
+.w-place > .ic { flex: none; color: var(--mb-pale); }
+.w-place .tx { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.w-place b { font-size: var(--fs-15); line-height: 24px; }
+.w-place .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+
+/* FM08 · FM09 전체 화면 카드 */
+.fl-layer.w-fullview { align-items: center; justify-content: center; padding: 16px; }
+.w-fv { width: min(100%, 420px); padding: 32px 24px 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; box-shadow: 0 16px 32px rgba(10,4,18,0.35); }
+.w-fv .w-logo { width: 56px; height: 26px; fill: var(--mb-pale); }
+.w-fv .w-ficon { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(179,115,239,0.22); color: var(--mb-pale); }
+.w-fv .w-ficon.ok { background: rgba(125,227,200,0.16); color: var(--ok); }
+.w-fv .w-ficon .ic { width: 28px; height: 28px; }
+.w-ftx { display: flex; flex-direction: column; gap: 8px; }
+.w-ftx p { font-size: var(--fs-15); line-height: 24px; color: var(--tx-mid); text-wrap: balance; }
+.w-finfo { width: 100%; display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.07); text-align: left; }
+.w-finfo div { display: flex; justify-content: space-between; gap: 16px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-lo); }
+.w-finfo b { font-size: var(--fs-15); font-weight: 600; color: var(--tx-hi); text-align: right; }
+.w-fnote { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); text-wrap: balance; }
+.w-fbtns { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+
+/* 시트: 모바일·태블릿 세로 = 바텀, 가로형 = 우측 사이드 */
+.fl-scrim.w-scrim { z-index: 8; }
+.w-sheet { display: flex; flex-direction: column; gap: 16px; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.w-sh { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; }
+.w-sub { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-ro { display: flex; align-items: center; color: var(--tx-mid); }
+.w-scale { display: flex; flex-direction: column; gap: 8px; }
+.w-scale .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.w-scale .row button { min-height: 56px; padding: 0; border-radius: var(--r-card); font-size: var(--fs-13); line-height: 16px; font-weight: 600; text-align: center; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); }
+.w-scale .row button[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.w-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fl-codebox.w-code > span { height: 56px; }
+@media (min-width: 1100px) and (min-aspect-ratio: 1/1) {
+  .fl-root[data-sheet] { --side: 436px; }
+  .fl-scrim.w-scrim { align-items: center; justify-content: flex-end; padding: 16px; }
+  .w-sheet { width: 420px; max-height: 100%; border-radius: var(--r-sheet); }
+}
+
+/* 개발자 인덱스 (?index=1) */
+.w-index { position: fixed; inset: 0; overflow: auto; background: #F7F4F0; color: #1F1F1F; font-family: var(--font); padding: 24px; }
+.w-index h1 { font-size: var(--fs-24); margin: 0 0 8px; }
+.w-index p { font-size: var(--fs-15); line-height: 24px; margin: 0 0 8px; color: #6F6F6F; }
+.w-index table { border-collapse: collapse; width: 100%; background: #fff; margin: 16px 0 24px; }
+.w-index th, .w-index td { border: 1px solid #ECE6F0; padding: 8px 16px; text-align: left; vertical-align: top; font-size: var(--fs-13); line-height: 24px; }
+.w-index th { background: #F5EDFC; }
+.w-index a { display: inline-block; margin: 0 8px 8px 0; padding: 0 8px; min-height: 24px; border-radius: 8px; background: #F5EDFC; color: #5F0080; text-decoration: none; font-size: var(--fs-12); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><g id="brandMark"><path d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></g></defs></svg>
+<div id="mount"></div>
+<script>
+(function () {
+  /* ───────── 케이스 인덱스 (단일 출처 — 캡처·측정 스크립트도 이 목록을 읽는다) ─────────
+     토큰: on|off(방식) · group|solo(인원) · none|opt|req(LINK BAND 모드) · member + 화면별 상태 토큰 */
+  var CASES = {
+    FM06a: ['on-group-opt-member', 'on-group-req-member', 'on-solo-none-member', 'off-group-none-member', 'off-solo-opt-member', 'on-group-opt-member-empty', 'on-group-opt-member-included', 'on-group-opt-member-research-agree', 'on-group-opt-member-research-fail'],
+    FM06b: ['on-group-opt-member-q1', 'on-group-opt-member-q2', 'on-group-opt-member-q3', 'on-group-opt-member-q4', 'off-group-none-member-q1', 'on-solo-req-member-q4', 'on-group-opt-member-q2-started', 'off-group-none-member-q1-started'],
+    FM06c: ['on-group-opt-member-idle', 'on-group-opt-member-connecting', 'on-group-opt-member-connected', 'on-group-opt-member-leadoffl', 'on-group-opt-member-leadoffr', 'on-group-opt-member-leadoff', 'on-group-opt-member-unsupported', 'on-group-req-member-idle', 'on-group-req-member-leadoffl', 'on-group-req-member-leadoff', 'on-group-req-member-unsupported', 'on-group-req-member-connected', 'off-solo-opt-member-idle', 'off-group-req-member-connected', 'on-group-opt-member-idle-started'],
+    FM06d: ['on-group-opt-member-mic', 'on-group-opt-member-camon', 'on-group-opt-member-micdenied', 'on-group-opt-member-micnodev', 'on-group-opt-member-camdenied', 'on-group-opt-member-unsupported', 'on-group-opt-member-micdenied-sheet', 'on-group-opt-member-camon-micdenied', 'on-solo-req-member-camon-spk', 'on-solo-none-member-mic', 'on-group-opt-member-camon-quiet', 'on-group-opt-member-camon-started', 'on-group-opt-member-mic-started'],
+    FM06e: ['on-group-opt-member', 'on-group-req-member', 'on-solo-none-member-skip', 'off-group-none-member', 'off-solo-opt-member-noband', 'on-group-opt-member-nomic'],
+    FM07: ['on-group-opt-member', 'on-group-opt-member-bgmoff', 'on-solo-none-member', 'off-group-none-member', 'off-solo-opt-member', 'on-group-req-member'],
+    FM08: ['on-group-member', 'on-solo-member', 'off-group-member', 'on-group-member-cancel-sheet'],
+    FM09: ['on-group-member', 'off-solo-member', 'on-group-member-checked', 'on-group-member-report', 'on-group-member-reportsent', 'on-group-member-checkin', 'on-group-member-checkinempty', 'on-group-member-excluded', 'on-group-member-guest-report']
+  };
+  var META = {
+    FM06a: { name: '입장 준비 1 — 시작 전에 확인해 주세요: 고지(녹음·AI 기록 / 뇌파 / 영상 / 기록 원본 {N}일 후 삭제) + 리포트 반영 선택(기본 반영하지 않아요) + 연구 동의(별도 블록, 기본 해제). 주 버튼은 항상 활성', type: '몰입', assume: 'AD7·AD8·AD20 — 리포트 반영은 입장 자격(PUT report-choice), 연구 동의는 별도 PUT research-consent. 두 호출 모두 실패·미호출이어도 계속하기 가능(기본 제외·미동의 유지). 삭제 기간 {N}일은 서버 설정값' },
+    FM06b: { name: '입장 준비 2 — 오늘의 상태(설문) 3축 + 전할 말 · started: 상담사가 시작했을 때 시트', type: '몰입', assume: 'A9 준비가 끝나지 않은 회원·대기실이 비어도 시작 가능, 시작 후 입장(-started 케이스)' },
+    FM06c: { name: '입장 준비 3 — LINK BAND (연결·접촉 불량 3종, 사용 안 함은 단계 없음). 권장(req) 모드도 LINK BAND 없이 계속하기 제공 · started 시트', type: '몰입', assume: 'AD16 — 밴드는 어떤 모드에서도 참가를 막지 않음(권장 칩) · A8 전극별 접촉 상태 전송 · A9 시작 후 입장(-started 케이스)' },
+    FM06d: { name: '입장 준비 4 — 기기 점검: 내 영상·소리 합친 컴포넌트 (온라인만). camon=카메라 켜짐(마이크 토글 둘레 5단계 링 + 아이콘 밝기 + 칩 정상), camon-quiet=조용해요 · started 시트', type: '몰입', assume: 'AD14 마이크 권한은 사용자 동작 후 요청 · A9 시작 후 입장(-started 케이스)' },
+    FM06e: { name: '입장 준비 5 — 준비 완료 요약 (리포트 반영·연구 동의 행 포함)', type: '몰입', assume: 'R4/R5 — 리포트 반영·연구 동의는 종료 전까지 행을 눌러 다시 바꿀 수 있음' },
+    FM07: { name: '시작 대기 (상담사가 시작하면 기존대로 자동 입장 — 이 화면에는 started 케이스 없음)', type: '몰입', assume: 'AD2 준비 인원 {M}/{N}은 대기실 presence 전달이 구현될 때만(아니면 내 준비 문구) · A3 시작 예정 시각 · A9 시작되면 자동 입장' },
+    FM08: { name: '대기열(정원 초과) + cancel-sheet: 대기 취소 확인 시트(취소 후 FM04 로 이동)', type: '몰입', assume: 'AD10 대기 취소는 서버 대기열에서 제외 · AD11 승격 알림은 푸시 채널 확인 전까지 문구만' },
+    FM09: { name: '종료 카드 + 시트(리포트 받기 1탭·신청 완료 · 오늘 상태 남기기) + excluded(리포트 반영 제외) · guest-report(비회원 마스킹 메일 자동 발송)', type: '몰입', assume: 'AD13 함께한 시간은 서버 값 · AD18 비회원 리포트는 상담사 확인 후 자동 발송 · 회원 리포트 신청은 1탭' }
+  };
+  window.__cases = CASES; window.__meta = META;
+  window.__REG = Object.keys(CASES).map(function (id) { return { id: id, cases: CASES[id].slice() }; });
+
+  /* ───────── 아이콘 (lucide 스타일 · 24 그리드 · 2px) ───────── */
+  var IC = {
+    chevL: '<path d="m15 18-6-6 6-6"/>', chevR: '<path d="m9 18 6-6-6-6"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', check: '<path d="M20 6 9 17l-5-5"/>',
+    checkCircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+    mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
+    micOff: '<path d="M12 19v3"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M16.95 16.95A7 7 0 0 1 5 12v-2"/><path d="M18.89 13.23A7 7 0 0 0 19 12v-2"/><path d="m2 2 20 20"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>',
+    video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+    videoOff: '<path d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.248-3.062A.5.5 0 0 1 22 7.87v8.196"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/>',
+    vol: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
+    volX: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/>',
+    bt: '<path d="m7 7 10 10-5 5V2l5 5L7 17"/>',
+    battery: '<path d="M10 10v4"/><path d="M14 10v4"/><path d="M22 14v-4"/><path d="M6 10v4"/><rect x="2" y="6" width="16" height="12" rx="2"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    userCheck: '<path d="m16 11 2 2 4-4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    play: '<polygon points="6 3 20 12 6 21 6 3"/>', pause: '<rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/>',
+    shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+    activity: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+    mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    smile: '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/>',
+    power: '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.77.04"/>',
+    loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+    monitor: '<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>',
+    lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+    globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+    copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+    sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>'
+  };
+  function ic(n, c) { return '<svg class="ic' + (c ? ' ' + c : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + IC[n] + '</svg>'; }
+
+  /* ───────── 케이스 해석 ───────── */
+  var q = new URLSearchParams(location.search);
+  var mount = document.getElementById('mount');
+  var SCREEN = q.get('screen') || 'FM06a';
+  var RAW = q.get('case') || (CASES[SCREEN] || [''])[0];
+  var T = RAW.split('-').filter(Boolean);
+  function has(t) { return T.indexOf(t) >= 0; }
+  var C = {
+    online: !has('off'), solo: has('solo'),
+    band: has('none') ? 'none' : has('req') ? 'req' : 'opt', t: has
+  };
+  var TITLE = C.solo ? '마음챙김 상담 · 3회차' : '마음챙김 명상 · 4회차';
+  var HOST = '채용욱 상담사', TIME = '오늘 오후 3:00', PLACE = '서울 강남구 테헤란로 123, 5층 명상실';
+  var NAME = '김서연';
+  var MODE = { none: '사용 안 함', opt: '선택', req: '권장' };
+  var BG = { FM06: 4, FM07: 1, FM08: 5, FM09: 8 };
+
+  function go(extra, drop) {
+    var next = T.filter(function (t) { return !(drop || []).includes(t); }).concat(extra || []).join('-');
+    var p = new URLSearchParams(location.search); p.set('case', next); location.search = p.toString();
+  }
+
+  /* ───────── 조립 블록 ───────── */
+  function tag(t, k) { return '<span class="w-tag' + (k ? ' ' + k : '') + '">' + t + '</span>'; }
+  function chip(icon, t, k) { return '<span class="fl-chip w-c' + (k ? ' ' + k : '') + '">' + ic(icon, 's') + t + '</span>'; }
+  function iconbtn(icon, label, attr) { return '<button class="fl-iconbtn" type="button" aria-label="' + label + '"' + (attr || '') + '>' + ic(icon) + '</button>'; }
+  function top(l, c, r) { return '<header class="fl-top"><div class="fl-top-l">' + l + '</div>' + c + '<div class="fl-top-r">' + r + '</div></header>'; }
+  function head(h, s) { return '<div class="w-head"><h1 class="fl-h1">' + h + '</h1><p class="fl-sub">' + s + '</p></div>'; }
+  function foot(p, s, kind) {
+    var pb = '<button class="fl-btn ' + (kind || 'primary') + ' block" type="button"' + (p.disabled ? ' disabled' : '') + '>' + (p.icon ? ic(p.icon) : '') + p.label + '</button>';
+    var sb = s.ghost ? '<button class="fl-btn ghost block" type="button">' + s.ghost + '</button>' : '<p class="fl-note w-slot">' + s.note + '</p>';
+    return '<footer class="fl-foot"><div class="fl-col">' + pb + sb + '</div></footer>';
+  }
+  function root(bg, inner, sheetHtml, side) {
+    return '<div class="fl-root" id="app"' + (sheetHtml ? ' data-sheet="1"' : '') + ' data-online="' + (C.online ? 1 : 0) + '"><div class="fl-backdrop" style="background-image:url(assets/bg/background' + bg + '.webp)"></div>' + inner + (sheetHtml || '') + '</div>';
+  }
+  function sheet(title, body, noClose) {
+    return '<div class="fl-scrim w-scrim" id="scrim"><section class="fl-sheet w-sheet" role="dialog" aria-modal="true" aria-label="' + title + '"><div class="w-sh"><h2 class="fl-h2">' + title + '</h2>' + (noClose ? '<span class="w-ph" aria-hidden="true"></span>' : iconbtn('x', '닫기', ' data-close="1"')) + '</div>' + body + '</section></div>';
+  }
+  function startedSheet(key) {
+    var names = { b: '오늘의 상태', c: 'LINK BAND', d: '기기' };
+    var rest = steps().slice(steps().indexOf(key)).filter(function (k) { return names[k]; }).map(function (k) { return names[k]; });
+    return sheet('상담사가 클래스를 시작했어요',
+      '<div class="w-li">' + ic('clock') + '<span>남은 준비: ' + rest.join(' · ') + '</span></div><p class="w-sub">건너뛴 준비는 입장한 뒤 진행 화면의 도구에서 이어서 할 수 있어요.</p>' +
+      '<div class="w-fbtns"><button class="fl-btn primary block" type="button">' + ic('play') + '지금 입장하기</button><button class="fl-btn soft block" type="button" data-close="1">준비 이어서 하기</button></div>', true);
+  }
+  function steps() { var s = ['a', 'b']; if (C.band !== 'none') s.push('c'); if (C.online) s.push('d'); s.push('e'); return s; }
+  function wiz(key, h, s, body, p, sec, kind, sheetHtml) {
+    var st = steps(), i = st.indexOf(key);
+    var dots = st.map(function (k, n) { return '<i class="' + (n < i ? 'done' : n === i ? 'on' : '') + '"></i>'; }).join('');
+    var inner = '<div class="fl-layer">' +
+      top(iconbtn('chevL', '이전'), '<div class="fl-steps" role="img" aria-label="' + st.length + '단계 중 ' + (i + 1) + '단계">' + dots + '</div>', iconbtn('x', '나가기')) +
+      '<main class="fl-body"><div class="fl-col w-wiz">' + head(h, s) + body + '</div></main>' + foot(p, sec, kind) + '</div>';
+    return root(BG.FM06, inner, sheetHtml);
+  }
+
+  /* ───────── FM06a 시작 전에 확인해 주세요 (고지 · 리포트 반영 선택 · 연구 동의) ───────── */
+  function FM06a() {
+    var inc = has('included'), none = has('empty'), agree = has('agree'), fail = has('fail');
+    var chips = '<div class="fl-chiprow">' + chip(C.online ? 'monitor' : 'pin', C.online ? '온라인' : '대면') + chip(C.solo ? 'user' : 'users', C.solo ? '1:1' : '그룹') + '</div>';
+    var nrow = function (icon, label, desc) { return '<div class="w-nrow">' + ic(icon) + '<span class="tx"><span>' + label + '</span>' + (desc ? '<span class="w-ft">' + desc + '</span>' : '') + '</span></div>'; };
+    var notice = '<section class="fl-card sm w-blk" aria-label="고지">' +
+      nrow('mic', '녹음과 AI 기록', C.online ? '음성을 녹음하고 AI가 기록지를 만들어요' : '현장 대화를 녹음하고 AI가 기록지를 만들어요') +
+      (C.band === 'none' ? '' : nrow('activity', '뇌파 측정(LINK BAND를 쓸 때만)')) +
+      (C.online ? nrow('video', '영상(카메라를 켤 때만)') : '') +
+      '<p class="w-ft hi">기록 원본(뇌파·음성·영상)은 {N}일이 지나면 삭제돼요</p></section>';
+    var confirm = inc ? '<p class="w-ft hi">이번 클래스의 내 기록이 리포트에 반영돼요</p>' : none ? '<p class="w-ft hi">고르지 않으면 반영하지 않는 것으로 진행돼요</p>' : '';
+    var choice = '<section class="fl-card sm w-blk" aria-label="리포트 반영 선택"><b class="w-qh">내 기록을 리포트에 반영할까요?</b>' +
+      '<div class="w-seg" role="radiogroup" aria-label="리포트 반영"><button type="button" role="radio" aria-checked="' + (!inc && !none) + '">반영하지 않아요</button><button type="button" role="radio" aria-checked="' + inc + '">반영해요</button></div>' +
+      '<p class="w-ft">반영하지 않아도 클래스에는 그대로 참여할 수 있어요</p><p class="w-ft">이미 보낸 리포트는 되돌릴 수 없어요</p>' + confirm + '</section>';
+    var research = '<section class="fl-card sm w-blk" aria-label="연구 동의"><div class="w-rhead"><b class="w-qh">연구 목적 데이터 활용에 동의할까요? (선택)</b>' +
+      '<button class="w-check" type="button" role="checkbox" aria-checked="' + agree + '"><span class="w-box">' + ic('check') + '</span>동의해요</button></div>' +
+      (fail ? '<p class="w-hint warn w-fail">' + ic('alert') + '<span>연구 동의를 저장하지 못했어요. 미동의로 진행해요.</span></p>' : '') +
+      '<div class="w-rlist"><p class="w-ft">동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년월일이 삭제 기한 없이 계속 보관돼요</p>' +
+      '<p class="w-ft">이메일·전화번호·이름·녹음 내용은 보관하지 않아요</p><p class="w-ft">동의하지 않아도 클래스에 참여할 수 있어요</p><p class="w-ft">철회하려면 운영팀에 요청해 주세요</p>' +
+      '<p class="w-ft">비식별 처리해도 다른 정보와 결합하면 본인을 알아볼 가능성이 완전히 없지는 않아요</p></div></section>';
+    var grid = '<div class="w-agrid"><div class="w-acol">' + notice + choice + '</div><div class="w-acol">' + research + '</div></div>';
+    return wiz('a', '시작 전에 확인해 주세요', HOST + '와 함께하는 ' + TITLE, chips + grid,
+      { label: '확인하고 계속하기' }, { note: '리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.' });
+  }
+
+  /* ───────── FM06b 오늘의 상태 ───────── */
+  var AX = [
+    { k: '집중', q: '지금 집중은 어떤가요?', L: ['매우 산만', '산만', '보통', '집중', '매우 집중'] },
+    { k: '편안함', q: '지금 몸은 얼마나 편안한가요?', L: ['매우 불편', '불편', '보통', '편안', '매우 편안'] },
+    { k: '감정', q: '지금 기분은 어떤가요?', L: ['매우 부정적', '부정적', '보통', '긍정적', '매우 긍정적'] }
+  ];
+  function FM06b() {
+    var n = has('q4') ? 4 : has('q3') ? 3 : has('q2') ? 2 : 1;
+    var labels = ['집중', '편안함', '감정', '전할 말'];
+    var axes = '<div class="w-axes" role="list">' + labels.map(function (l, i) { return '<div class="w-ax ' + (i < n - 1 ? 'done' : i === n - 1 ? 'on' : '') + '" role="listitem">' + l + '<i></i></div>'; }).join('') + '</div>';
+    if (n === 4) {
+      var body4 = axes + '<div class="fl-field"><textarea class="fl-input w-ta" maxlength="200" aria-label="상담사에게 전하고 싶은 말" placeholder="예: 오늘 목이 조금 불편해서 소리를 내기 어려워요">목이 조금 불편해서 소리를 내기 어려워요.</textarea><p class="w-count">20 / 200</p></div>';
+      return wiz('b', '상담사에게 전하고 싶은 말이 있나요?', '선택이에요. 적지 않아도 괜찮아요.', body4, { label: '남기고 계속하기' }, { ghost: '건너뛰기' }, 'primary', has('started') ? startedSheet('b') : '');
+    }
+    var ax = AX[n - 1], sel = n === 1 ? 3 : n === 2 ? 2 : -1;
+    var opts = '<div class="w-opts" role="radiogroup" aria-label="' + ax.k + '">' + ax.L.map(function (l, i) { return '<button class="w-opt" type="button" role="radio" aria-checked="' + (i === sel) + '"><span class="w-radio"></span>' + l + '</button>'; }).join('') + '</div>';
+    return wiz('b', ax.q, '가장 가까운 느낌을 하나 골라 주세요.', axes + opts, { label: '다음', disabled: sel < 0 }, { ghost: '건너뛰기' }, 'primary', has('started') ? startedSheet('b') : '');
+  }
+
+  /* ───────── FM06c LINK BAND ───────── */
+  function ledGroup(key, x, ok) {
+    var col = ok ? '#01F0C8' : '#D33F3F';
+    return '<g data-led="' + key + '" data-ok="' + (ok ? 1 : 0) + '"><rect x="' + x + '" y="20" width="30" height="22" rx="11" stroke="#606276" stroke-width="2" fill="none"/><rect data-fill x="' + (x + 3) + '" y="23" width="24" height="16" rx="8" fill="' + col + '"/></g>';
+  }
+  function tracker(lOk, rOk) {
+    var refOk = lOk && rOk, rc = refOk ? '#01F0C8' : '#D33F3F';
+    var svg = '<svg width="288" height="64" viewBox="0 0 288 64" fill="none" role="img" aria-label="LINK BAND 전극 접촉 상태: 왼쪽 ' + (lOk ? '양호' : '실패') + ', 기준 ' + (refOk ? '양호' : '실패') + ', 오른쪽 ' + (rOk ? '양호' : '실패') + '">' +
+      '<rect x="1" y="1" width="286" height="62" rx="23" stroke="#353842" stroke-width="2"/>' +
+      ledGroup('L', 39, lOk) +
+      '<g data-led="ref" data-ok="' + (refOk ? 1 : 0) + '"><rect x="84" y="20" width="30" height="22" rx="11" stroke="#606276" stroke-width="2" fill="none"/><rect data-fill x="87" y="23" width="24" height="16" rx="8" fill="' + rc + '"/><path data-shape d="M147 18H141C136.029 18 132 22.0294 132 27V33C132 37.9706 136.029 42 141 42H147C151.971 42 156 37.9706 156 33V27C156 22.0294 151.971 18 147 18Z" fill="' + rc + '"/></g>' +
+      ledGroup('R', 219, rOk) +
+      '<text x="24" y="38" fill="#EFEFEF" font-size="12" font-family="sans-serif">L</text><text x="256" y="38" fill="#EFEFEF" font-size="12" font-family="sans-serif">R</text></svg>';
+    var lb = function (x, name, ok) { return '<span class="' + (ok ? '' : 'bad') + '" style="left:' + x + 'px">' + name + ' ' + (ok ? '양호' : '실패') + '</span>'; };
+    return '<div class="w-trk">' + svg + '<div class="lbs">' + lb(54, '왼쪽', lOk) + lb(144, '기준', refOk) + lb(234, '오른쪽', rOk) + '</div>' +
+      '<div class="lg"><span><i style="background:#01F0C8"></i>접촉 양호</span><span><i style="background:#D33F3F"></i>접촉 실패</span></div></div>';
+  }
+  function FM06c() {
+    var st = ['connecting', 'connected', 'leadoffl', 'leadoffr', 'leadoff', 'unsupported'].filter(has)[0] || 'idle', req = C.band === 'req';
+    var lead = st.indexOf('leadoff') === 0;
+    var H = {
+      idle: { i: 'bt', k: '', chip: chip('bt', '연결 안 됨') },
+      connecting: { i: 'bt', k: '', chip: chip('loader', '연결 중', 'live') },
+      connected: { i: 'bt', k: 'ok', chip: chip('check', '연결됨', 'ok') },
+      unsupported: { i: 'globe', k: 'warn', chip: chip('alert', '지원 안 됨', 'warn') }
+    }[lead ? 'x' : st] || { i: 'alert', k: 'warn', chip: chip('alert', '접촉 불량', 'warn') };
+    var body;
+    if (st === 'idle') body = '<ul class="w-bb"><li class="w-li">' + ic('power') + '<span>LINK BAND의 전원을 켜요</span></li><li class="w-li">' + ic('user') + '<span>이마 중앙에 밴드를 맞춰요</span></li><li class="w-li">' + ic('bt') + '<span>아래 버튼으로 연결해요</span></li></ul>';
+    else if (st === 'connecting') body = '<div class="w-bb"><div class="w-center">' + ic('loader', 'w-spin') + '<b>연결하고 있어요</b><span class="d">LINK BAND를 가까이에 두고 잠시만 기다려 주세요.</span></div></div>';
+    else if (st === 'connected') body = '<div class="w-bb"><div class="w-tiles"><div class="w-tile ok"><span class="l">' + ic('battery') + '배터리</span><span class="v">넉넉해요</span><div class="w-segbar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div><div class="w-tile"><span class="l">' + ic('activity') + '전극</span>' + chip('check', '접촉 양호', 'ok') + '</div></div><div class="w-li">' + ic('info') + '<span>이마에서 밴드가 움직이면 접촉이 흐트러질 수 있어요</span></div></div>';
+    else if (lead) {
+      var lOk = st === 'leadoffr', rOk = st === 'leadoffl';
+      body = '<div class="w-bb trk">' + tracker(lOk, rOk) + '<ul class="w-bb" style="min-height:0"><li class="w-li sm">' + ic('user') + '<span>밴드를 이마 중앙에 맞춰 전극이 피부에 밀착되게 조여요</span></li><li class="w-li sm">' + ic('refresh') + '<span>머리카락이나 땀이 전극을 가리지 않게 정리해요</span></li><li class="w-li sm">' + ic('bt') + '<span>다시 착용해요. 그래도 안 되면 벗었다가 다시 써요</span></li></ul></div>';
+    } else body = '<ul class="w-bb"><li class="w-li warn">' + ic('alert') + '<span>이 브라우저는 LINK BAND 연결을 지원하지 않아요</span></li><li class="w-li">' + ic('globe') + '<span>Chrome 또는 Edge에서 열면 연결할 수 있어요</span></li>' + '<li class="w-li">' + ic('info') + '<span>밴드 없이도 클래스에 함께할 수 있어요</span></li>' + '</ul>';
+    var card = '<section class="fl-card w-band"><div class="w-bh"><span class="w-bi ' + H.k + '">' + ic(H.i) + '</span><div class="w-bt"><b>LINK BAND ' + tag(req ? '권장' : '선택', req ? 'req' : '') + '</b>' + H.chip + '</div></div>' + body + '</section>';
+    var sub = req ? 'LINK BAND 사용을 권장해요. 없어도 참가할 수 있어요' : '연결하면 뇌파도 함께 기록해요. 지금 연결하지 않아도 괜찮아요.';
+    var P, S;
+    var NOBAND = { ghost: 'LINK BAND 없이 계속하기' };
+    if (st === 'idle') { P = { label: 'LINK BAND 연결하기', icon: 'bt' }; S = NOBAND; }
+    else if (st === 'connecting') { P = { label: '연결하고 있어요', icon: 'loader', disabled: true }; S = NOBAND; }
+    else if (st === 'connected') { P = { label: '다음' }; S = req ? NOBAND : { ghost: '연결 해제하기' }; }
+    else if (lead) { P = req ? { label: '접촉을 확인해 주세요' } : { label: '다음' }; S = NOBAND; }
+    else { P = { label: 'LINK BAND 없이 계속하기' }; S = { note: 'Chrome 또는 Edge에서 열면 연결할 수 있어요.' }; }
+    return wiz('c', 'LINK BAND를 연결해요', sub, card, P, S, 'primary', has('started') ? startedSheet('c') : '');
+  }
+
+  /* ───────── FM06d 기기 점검 — 내 영상·소리 합친 컴포넌트 ───────── */
+  function FM06d() {
+    var unsup = has('unsupported');
+    var mic = unsup ? 'unsup' : has('micdenied') ? 'denied' : has('micnodev') ? 'nodev' : 'ok';
+    var cam = unsup ? 'unsup' : has('camdenied') ? 'denied' : has('camon') ? 'on' : 'off';
+    var spk = has('spk');
+    var target = has('camdenied') ? '카메라' : '마이크';
+    var micChip = { ok: chip('check', '정상', 'ok'), denied: chip('alert', '권한 필요', 'warn'), nodev: chip('alert', '마이크를 찾지 못했어요', 'warn'), unsup: chip('alert', '지원 안 됨', 'warn') }[mic];
+    var micTg = '<button class="w-tg" type="button" aria-pressed="' + (mic === 'ok') + '" aria-label="마이크 ' + (mic === 'ok' ? '끄기' : '사용할 수 없어요') + '"' + (mic === 'ok' ? '' : ' disabled') + '>' + ic(mic === 'ok' ? 'mic' : 'micOff', 's') + '</button>';
+    var camTg = '<button class="w-tg" type="button" aria-pressed="' + (cam === 'on') + '" aria-label="카메라 ' + (cam === 'on' ? '끄기' : cam === 'off' ? '켜기' : '사용할 수 없어요') + '"' + (cam === 'denied' || cam === 'unsup' ? ' disabled' : '') + '>' + ic(cam === 'on' ? 'video' : 'videoOff', 's') + '</button>';
+    var level = '<div class="w-level" aria-label="마이크 입력 크기"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div>';
+    var help = function (what) { return '<button class="fl-btn soft w-mini" type="button" data-open="sheet" style="align-self:flex-start">' + ic('info') + what + ' 허용 방법 보기</button>'; };
+    var card;
+    if (cam === 'on') {
+      var quiet = has('quiet'), lv = quiet ? 1 : 3;
+      var segs = [0, 1, 2, 3, 4].map(function (i) { return '<circle data-seg="' + i + '" data-on="' + (i < lv ? 1 : 0) + '" cx="22" cy="22" r="19" pathLength="100" stroke-dasharray="16 84" stroke-dashoffset="' + (-20 * i - 2) + '"/>'; }).join('');
+      var micRing = '<button class="w-tg ring" type="button" aria-pressed="true" aria-label="마이크 끄기 · 입력 ' + (quiet ? '조용해요' : '정상') + ' (5단계 중 ' + lv + '단계)" style="--io:' + (quiet ? 0.55 : 1) + '"><svg class="seg" viewBox="0 0 44 44" aria-hidden="true">' + segs + '</svg>' + ic('mic', 's') + '</button>';
+      var iconChip = quiet ? chip('mic', '조용해요') : chip('mic', '정상', 'ok');
+      var bottom, chipHtml = micChip;
+      if (mic !== 'ok') bottom = '<span class="w-owarn">' + (mic === 'denied' ? '마이크 권한이 꺼져 있어요' : mic === 'nodev' ? '마이크를 찾지 못했어요' : '마이크를 쓸 수 없어요') + '</span><button class="w-tg" type="button" aria-label="마이크 허용 방법 보기" data-open="sheet">' + ic('info', 's') + '</button>' + camTg;
+      else { bottom = micRing + camTg; chipHtml = iconChip; }
+      card = '<section class="fl-card w-av w-media"><div class="w-vid"><div class="w-silh">' + ic('user') + '</div><div class="w-ovt">' + tag('필수', 'req').replace('class="w-tag', 'class="w-tag w-ovl') + chipHtml.replace('class="fl-chip w-c', 'class="fl-chip w-c w-ovl') + '</div><div class="w-ovb' + (mic === 'ok' ? ' center' : '') + '">' + bottom + '</div></div></section>';
+    } else {
+      var lowBody;
+      if (mic === 'ok' && cam === 'denied') lowBody = level + '<p class="w-hint warn">' + ic('alert') + '<span>카메라 권한이 꺼져 있어요. 카메라 없이도 참여할 수 있어요.</span></p>' + help('카메라');
+      else if (mic === 'ok' && cam === 'off') lowBody = level + '<p class="w-hint">말해 보세요. 막대가 움직이면 잘 들리는 거예요. ' + (C.solo ? '카메라를 켜면 상담사에게 내 모습이 보여요.' : '카메라를 켜면 상담사와 다른 분들에게 내 모습이 보여요.') + '</p>';
+      else if (mic === 'denied') lowBody = '<p class="w-hint warn">' + ic('alert') + '<span>마이크 권한이 꺼져 있어요. 마이크 없이도 입장할 수 있어요. 입장한 뒤에 다시 켤 수 있어요.</span></p>' + help('마이크');
+      else if (mic === 'nodev') lowBody = '<p class="w-hint warn">' + ic('alert') + '<span>마이크를 찾지 못했어요. 장치가 연결됐는지 확인해 주세요. 마이크 없이도 입장할 수 있어요.</span></p><button class="fl-btn soft w-mini" type="button" style="align-self:flex-start">' + ic('refresh') + '다시 확인하기</button>';
+      else lowBody = '<p class="w-hint warn">' + ic('alert') + '<span>이 브라우저에서는 마이크와 카메라를 쓸 수 없어요. Chrome 또는 Edge에서 열어 주세요.</span></p><button class="fl-btn soft w-mini" type="button" style="align-self:flex-start">' + ic('copy') + '링크 복사하기</button>';
+      card = '<section class="fl-card w-av low"><div class="w-avh"><div class="l">' + tag('필수', 'req') + micChip + '</div><div class="r">' + micTg + camTg + '</div></div><div class="w-avb">' + lowBody + '</div></section>';
+    }
+    var spkCard = '<section class="fl-card sm w-spk"><div class="l">' + ic('vol') + '<b>스피커</b>' + tag('선택') + '</div><button class="fl-btn ' + (spk ? 'primary' : 'soft') + ' w-mini" type="button">' + ic(spk ? 'vol' : 'play') + (spk ? '재생 중' : '테스트음 듣기') + '</button></section>';
+    var sh = has('sheet') ? sheet(target + ' 허용 방법',
+      '<ul class="w-howto"><li class="w-li">' + ic('lock') + '<span>주소창 왼쪽의 자물쇠 아이콘을 눌러요</span></li><li class="w-li">' + ic(target === '카메라' ? 'video' : 'mic') + '<span>' + target + '를 허용으로 바꿔요</span></li><li class="w-li">' + ic('refresh') + '<span>화면을 새로고침한 뒤 다시 확인해요</span></li></ul><p class="w-sub">스마트폰에서는 설정 앱의 브라우저 항목에서도 바꿀 수 있어요.</p><button class="fl-btn primary block" type="button" data-close="1">허용했어요, 다시 확인하기</button>') : '';
+    return wiz('d', '내 영상과 소리를 확인해요', '마이크는 꼭 필요하고, 카메라와 스피커는 선택이에요.', card + spkCard, { label: '다음' }, { note: '마이크는 입장한 뒤에도 다시 켤 수 있어요.' }, 'primary', has('started') ? startedSheet('d') : sh);
+  }
+
+  /* ───────── FM06e 준비 완료 ───────── */
+  function FM06e() {
+    var skip = has('skip'), noband = has('noband') || (C.band === 'req' && !has('connected')), nomic = has('nomic');
+    var inc = C.band === 'req' && !C.solo && C.online, agree = inc;
+    var row = function (icon, label, val, warn) { return '<button class="w-srow' + (warn ? ' warn' : '') + '" type="button">' + ic(icon) + '<b>' + label + '</b>' + (val ? '<span class="v">' + val + '</span>' : '<span class="v"></span>') + ic('chevR', 'chev') + '</button>'; };
+    var wide = function (icon, text) { return '<button class="w-srow" type="button">' + ic(icon) + '<b style="white-space:normal;flex:1;min-width:0;font-size:var(--fs-15);line-height:24px">' + text + '</b>' + ic('chevR', 'chev') + '</button>'; };
+    var bandVal = C.band === 'none' ? '사용 안 해요' : noband ? 'LINK BAND 없이 참가해요' : '연결됐어요 · 접촉 양호';
+    var dev = C.online ? row(nomic ? 'micOff' : 'mic', '기기', nomic ? '마이크 꺼짐 · 카메라 꺼짐' : '마이크 정상 · 카메라 꺼짐', nomic) : row('pin', '참여 방식', '현장에서 함께해요');
+    var rows = '<div class="w-sum">' + wide('shield', inc ? '리포트 반영해요' : '리포트 반영하지 않아요') + wide('lock', agree ? '연구 목적 활용에 동의했어요' : '연구 목적 활용에 동의하지 않았어요') + row('smile', '오늘의 상태', skip ? '건너뛰었어요' : '남겼어요') + row('activity', C.band === 'none' ? 'LINK BAND' : 'LINK BAND', bandVal) + dev + '</div>';
+    var inner = '<div class="fl-layer">' +
+      top(iconbtn('chevL', '이전'), (function () { var st = steps(), i = st.indexOf('e'); return '<div class="fl-steps" role="img" aria-label="' + st.length + '단계 중 ' + (i + 1) + '단계">' + st.map(function (k, n) { return '<i class="' + (n < i ? 'done' : n === i ? 'on' : '') + '"></i>'; }).join('') + '</div>'; })(), iconbtn('x', '나가기')) +
+      '<main class="fl-body"><div class="fl-col w-wiz"><div class="w-head"><span class="w-hi">' + ic('checkCircle') + '</span><h1 class="fl-h1">준비를 마쳤어요</h1><p class="fl-sub">' + NAME + '님, 상담사가 시작하면 자동으로 입장해요.</p></div>' + rows + '</div></main>' +
+      foot({ label: '입장 대기' }, { note: '항목을 눌러 다시 바꿀 수 있어요.' }) + '</div>';
+    return root(BG.FM06, inner);
+  }
+
+  /* ───────── FM07 시작 대기 ───────── */
+  function FM07() {
+    var bgmoff = has('bgmoff');
+    var chips = '<div class="fl-chiprow">' + chip(C.online ? 'monitor' : 'pin', C.online ? '온라인' : '대면') + chip(C.solo ? 'user' : 'users', C.solo ? '1:1' : '그룹') + chip('activity', C.band === 'none' ? 'LINK BAND 사용 안 함' : 'LINK BAND ' + MODE[C.band]) + '</div>';
+    var time = '<div class="w-time"><span class="fl-label">시작 예정</span><span class="fl-num">' + TIME + '</span><span class="fl-sub">약 5분 뒤에 시작해요</span></div>';
+    var ready = C.solo
+      ? '<section class="fl-card sm w-ready"><div class="w-rrow">' + ic('userCheck') + '<span>내 준비를 마쳤어요</span></div><div class="w-bar" aria-hidden="true"><i style="width:100%"></i></div><p class="w-hint">' + HOST + '가 곧 시작해요.</p></section>'
+      : '<section class="fl-card sm w-ready"><div class="w-rrow">' + ic('users') + '<span>6명 중 4명이 준비를 마쳤어요</span></div><div class="w-bar" aria-hidden="true"><i style="width:66.7%"></i></div></section>';
+    var slot = C.online
+      ? '<section class="fl-card sm w-slotcard w-media"><div class="w-bgmh">' + ic('music') + '<div class="tx"><b>심신이완 앰비언트</b><span>대기실 BGM · ' + (bgmoff ? '꺼짐' : '재생 중') + '</span></div>' + iconbtn(bgmoff ? 'play' : 'pause', bgmoff ? '재생' : '일시정지') + '</div><div class="w-bgmr">' + ic(bgmoff ? 'volX' : 'vol') + '<input class="w-range" type="range" min="0" max="100" value="60" aria-label="볼륨"' + (bgmoff ? ' disabled' : '') + '></div></section>'
+      : '<section class="fl-card sm w-slotcard"><div class="w-place">' + ic('pin') + '<div class="tx"><b>' + PLACE + '</b><span class="d">' + (C.band === 'none' ? '자리에 앉아 기다려 주세요. 휴대폰은 무음으로 해 주세요.' : '이마에 LINK BAND를 착용하고 자리에 앉아 기다려 주세요.') + '</span></div></div></section>';
+    var inner = '<div class="fl-layer">' +
+      top(iconbtn('x', '나가기'), '<div class="fl-top-title">' + TITLE + '</div>', '<span class="w-ph" aria-hidden="true"></span>') +
+      '<main class="fl-body"><div class="fl-col">' + chips + time + ready + slot + '</div></main>' +
+      foot({ label: '준비 다시 확인하기', icon: 'refresh' }, { note: '상담사가 시작하면 자동으로 입장해요.' }, 'soft w-dark') + '</div>';
+    return root(BG.FM07, inner);
+  }
+
+  /* ───────── FM08 대기열 ───────── */
+  function fv(bg, inner, sheetHtml) { return root(bg, '<div class="fl-layer w-fullview">' + inner + '</div>', sheetHtml); }
+  function FM08() {
+    var off = !C.online;
+    var h = off ? '현장 자리가 가득 찼어요' : '지금은 자리가 가득 찼어요';
+    var p = off ? '자리가 나면 이 화면에서 알려 드려요.<br>가까운 곳에서 잠시 기다려 주세요.' : '자리가 나면 자동으로 입장해요.<br>이 화면을 열어 둬 주세요.';
+    var card = '<section class="fl-card strong w-fv" aria-labelledby="fvt"><svg class="w-logo" viewBox="0 0 414.72 188.928" aria-hidden="true"><use href="#brandMark"/></svg><span class="w-ficon">' + ic('clock') + '</span><div class="w-ftx"><h1 class="fl-h1" id="fvt">' + h + '</h1><p>' + p + '</p></div>' +
+      '<div class="w-finfo"><div><span>클래스</span><b>' + TITLE + '</b></div><div><span>' + (off ? '장소' : '진행자') + '</span><b>' + (off ? '5층 명상실' : HOST) + '</b></div><div><span>시작</span><b>' + TIME + '</b></div></div>' +
+      (off ? '' : '<p class="w-fnote">자리가 나면 알림으로 알려 드려요.</p>') + '<div class="w-fbtns"><button class="fl-btn soft block" type="button" data-open="cancel-sheet">대기 취소</button></div></section>';
+    var sh = has('cancel') ? sheet('대기를 취소할까요?', '<p class="w-sub">취소하면 자리가 나도 자동으로 입장하지 않아요. 다시 대기할 수 있어요.</p>' +
+      '<div class="w-fbtns"><a class="fl-btn danger block" href="member-a.html?screen=FM04&amp;case=default">대기 취소</a><button class="fl-btn soft block" type="button" data-close="1">계속 대기하기</button></div>') : '';
+    return fv(BG.FM08, card, sh);
+  }
+
+  /* ───────── FM09 종료 + 시트 ───────── */
+  function scale(k, L, sel) {
+    return '<div class="w-scale"><span class="fl-label">' + k + '</span><div class="row" role="radiogroup" aria-label="' + k + '">' + L.map(function (l, i) { return '<button type="button" role="radio" aria-checked="' + (i === sel) + '">' + l + '</button>'; }).join('') + '</div></div>';
+  }
+  function FM09() {
+    var checked = has('checked'), excl = has('excluded'), guest = has('guest');
+    var sh = '';
+    if (has('checkin') || has('checkinempty')) {
+      var e = has('checkinempty'), sel = [3, 2, 3];
+      sh = sheet('오늘 상태 남기기', '<p class="w-sub">뇌파를 측정하지 않아도 이 기록은 리포트에 남아요.</p>' + AX.map(function (a, i) { return scale(a.k, a.L, e ? -1 : sel[i]); }).join('') +
+        '<div class="fl-field"><label class="fl-label" for="onel">한 줄 소감 (선택)</label><input class="fl-input" id="onel" placeholder="예: 한결 가벼워졌어요"></div>' +
+        '<div class="w-fbtns"><button class="fl-btn primary block" type="button"' + (e ? ' disabled' : '') + '>남기기</button><button class="fl-btn ghost block" type="button" data-close="1">건너뛰기</button></div>');
+    } else if (has('reportsent')) {
+      sh = sheet('리포트 받기', '<div class="w-center" style="padding:16px 0"><span class="w-hi">' + ic('checkCircle') + '</span><b>신청했어요</b><span class="d">상담사가 확인하면 이메일로 보내 드려요.</span></div><button class="fl-btn primary block" type="button" data-close="1">확인</button>');
+    } else if (has('report')) {
+      sh = sheet('리포트 받기', '<div class="fl-field"><span class="fl-label">받는 이메일</span><div class="fl-input w-ro">se***@example.com</div></div><p class="w-sub">리포트는 상담사가 확인한 뒤 계정 이메일로 보내 드려요. 영업일 기준 1~2일 걸릴 수 있어요.</p><button class="fl-btn primary block" type="button" data-open="reportsent">' + ic('mail') + '리포트 신청하기</button>');
+    }
+    var lead = excl ? '이번 클래스는 내 기록이 리포트에 반영되지 않아요' : guest ? '리포트를 se***@example.com 로 보내 드려요' : '리포트는 준비되면 메일로 보내 드려요.';
+    var rep = excl ? '보낼 리포트가 없어요' : guest ? '상담사 확인 후 메일 발송' : '준비되면 메일 발송';
+    var note = excl ? '종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 상담사에게 요청해 주세요.' : guest ? '상담사가 확인하면 자동으로 보내져요.' : 'AI 기록과 리포트를 만드는 데 몇 분 걸릴 수 있어요.';
+    var card = '<section class="fl-card strong w-fv" aria-labelledby="fvt"><svg class="w-logo" viewBox="0 0 414.72 188.928" aria-hidden="true"><use href="#brandMark"/></svg><span class="w-ficon' + (excl ? '' : ' ok') + '">' + ic(excl ? 'info' : 'checkCircle') + '</span><div class="w-ftx"><h1 class="fl-h1" id="fvt">수고하셨어요</h1><p>' + lead + '</p></div>' +
+      '<div class="w-finfo"><div><span>클래스</span><b>' + TITLE + '</b></div><div><span>함께한 시간</span><b>30분</b></div><div><span>리포트</span><b>' + rep + '</b></div></div>' +
+      '<p class="w-fnote">' + note + '</p>' +
+      '<div class="w-fbtns">' + (excl || guest ? '' : '<button class="fl-btn primary block" type="button" data-open="report">' + ic('mail') + '리포트 받기</button>') +
+      (checked ? '<button class="fl-btn done block" type="button" disabled>' + ic('checkCircle') + '오늘 상태를 남겼어요</button>' : '<button class="fl-btn ' + (excl || guest ? 'primary' : 'soft') + ' block" type="button" data-open="checkin">' + ic('smile') + '오늘 상태 남기기</button>') +
+      '<button class="fl-btn ghost block" type="button">홈으로</button></div></section>';
+    return fv(BG.FM09, card, sh);
+  }
+
+  /* ───────── 개발자 인덱스 ───────── */
+  function INDEX() {
+    var rows = Object.keys(CASES).map(function (id) {
+      var links = CASES[id].map(function (c) { return '<a href="?screen=' + id + '&case=' + c + '">' + c + '</a>'; }).join('');
+      return '<tr><td><b>' + id + '</b></td><td>' + META[id].name + '</td><td>' + META[id].type + '</td><td>' + links + '</td><td>' + META[id].assume + '</td></tr>';
+    }).join('');
+    var n = Object.keys(CASES).reduce(function (s, k) { return s + CASES[k].length; }, 0);
+    return '<div class="w-index"><h1>회원 시안 B — 입장 준비 마법사 · 시작 대기 · 종료</h1>' +
+      '<p>개발자용 인덱스입니다. 화면 ' + Object.keys(CASES).length + '개 · 케이스 ' + n + '개. 주소 형식은 <code>?screen=FM06c&amp;case=on-group-opt-member-leadoff</code> 입니다.</p>' +
+      '<p>정책: R4/R5 — 거부는 리포트 반영 제외(입장·녹음·영상·뇌파 업로드를 막지 않음), 밴드는 어떤 모드에서도 참가를 막지 않음(권장), 입장 코드는 상담사가 전달하며 회원 화면에는 표시하지 않음.</p>' +
+      '<p>케이스 토큰: 방식 <code>on</code>/<code>off</code> · 인원 <code>group</code>/<code>solo</code> · LINK BAND 모드 <code>none</code>(사용 안 함)/<code>opt</code>(선택)/<code>req</code>(권장) · 회원 <code>member</code> (생략하면 on · group · opt · member). 나머지 토큰은 화면별 상태입니다.</p>' +
+      '<p>단계 수: 온라인은 확인 · 상태 · LINK BAND · 기기 · 완료 5단계, 오프라인은 기기 점검이 없어 4단계, LINK BAND 사용 안 함이면 LINK BAND 단계도 없어 진행 점이 줄어듭니다. 그래서 FM06c는 모드가 선택·권장인 케이스만, FM06d는 온라인 케이스만 있습니다. 접촉 불량은 leadoffl(왼쪽만 실패) · leadoffr(오른쪽만 실패) · leadoff(둘 다 실패) 3종입니다.</p>' +
+      '<table><thead><tr><th>화면</th><th>설명</th><th>유형</th><th>케이스</th><th>가정</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  /* ───────── 렌더 ───────── */
+  var R = { FM06a: FM06a, FM06b: FM06b, FM06c: FM06c, FM06d: FM06d, FM06e: FM06e, FM07: FM07, FM08: FM08, FM09: FM09 };
+  mount.innerHTML = q.get('index') ? INDEX() : (R[SCREEN] || FM06a)();
+
+  /* 가벼운 상호작용: 시트 열고 닫기 */
+  document.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-open]');
+    if (o) { go(o.dataset.open === 'sheet' ? ['sheet'] : [o.dataset.open], o.dataset.open === 'reportsent' ? ['report'] : []); return; }
+    var closeBtn = e.target.closest('[data-close]');
+    if (closeBtn || e.target.id === 'scrim') go([], ['sheet', 'cancel', 'report', 'reportsent', 'checkin', 'checkinempty', 'started']);
+  });
+  window.__ready = true;
+})();
+</script>
+</body>
+</html>

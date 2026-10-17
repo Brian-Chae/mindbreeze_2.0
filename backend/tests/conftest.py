@@ -128,6 +128,62 @@ def _isolate_external_storage_credentials():
     settings.aws_access_key_id, settings.aws_secret_access_key = saved
 
 
+class EntryAwareClient(TestClient):
+    """SDD-209(B5b): 프론트 클라이언트의 "입장 자격 저장소" 동작을 흉내 내는 테스트 클라이언트.
+
+    - ``/sessions/enter``·``/sessions/{id}/enter`` 응답의 (participant_id → entry_credential) 을 기억한다.
+    - 같은 참여자를 가리키는 요청(JSON 바디/쿼리의 ``participant_id``, 경로의 ``/participants/{id}``)에
+      ``X-Entry-Credential`` 헤더를 자동으로 붙인다 — 실제 프론트가 매 요청에 자격을 싣는 것과 같다.
+    - 자격이 없는 상태를 검증하려면 ``headers={"X-Entry-Credential": ""}`` 처럼 명시한다
+      (헤더가 이미 있으면 자동으로 덮어쓰지 않는다).
+    - ``client.credential(pid)`` 로 저장된 자격을 직접 꺼낼 수 있다.
+    """
+
+    _PATH_PID = None
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.entry_credentials: dict[str, str] = {}
+
+    def credential(self, participant_id: str) -> str:
+        return self.entry_credentials[str(participant_id)]
+
+    def _guess_pid(self, url: str, kwargs: dict) -> str | None:
+        import re as _re
+
+        body = kwargs.get("json")
+        if isinstance(body, dict) and body.get("participant_id"):
+            return str(body["participant_id"])
+        params = kwargs.get("params")
+        if isinstance(params, dict) and params.get("participant_id"):
+            return str(params["participant_id"])
+        m = _re.search(r"[?&]participant_id=([0-9a-fA-F-]{36})", url)
+        if m:
+            return m.group(1)
+        m = _re.search(r"/participants/([0-9a-fA-F-]{36})", url)
+        return m.group(1) if m else None
+
+    def request(self, method, url, **kwargs):
+        headers = dict(kwargs.get("headers") or {})
+        if not any(k.lower() == "x-entry-credential" for k in headers):
+            pid = self._guess_pid(str(url), kwargs)
+            if pid and pid in self.entry_credentials:
+                headers["X-Entry-Credential"] = self.entry_credentials[pid]
+                kwargs["headers"] = headers
+        response = super().request(method, url, **kwargs)
+        if str(url).split("?")[0].endswith("/enter") and response.status_code == 200:
+            try:
+                data = response.json()
+            except ValueError:
+                data = {}
+            if data.get("participant_id") and data.get("entry_credential"):
+                self.entry_credentials[data["participant_id"]] = data["entry_credential"]
+                from tests.entry_helpers import ENTRY_CREDENTIALS
+
+                ENTRY_CREDENTIALS[data["participant_id"]] = data["entry_credential"]
+        return response
+
+
 @pytest.fixture(scope="function")
 def app_client(monkeypatch):
     from app.main import app as fastapi_app
@@ -165,11 +221,20 @@ def app_client(monkeypatch):
     fastapi_app.dependency_overrides[get_db] = _override_get_db
     fastapi_app.dependency_overrides[get_redis] = _override_get_redis
 
-    client = TestClient(fastapi_app)
+    client = EntryAwareClient(fastapi_app)
     yield client, fake
 
     fastapi_app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def _reset_entry_credentials():
+    from tests.entry_helpers import ENTRY_CREDENTIALS
+
+    ENTRY_CREDENTIALS.clear()
+    yield
+    ENTRY_CREDENTIALS.clear()
 
 
 @pytest.fixture

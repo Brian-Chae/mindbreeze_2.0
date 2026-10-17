@@ -43,7 +43,7 @@ function LandingNav() {
           {navItems.map(({ label, id }) => <a key={id} href={`#${id}`} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm font-medium text-[#4B4350] transition-colors hover:bg-[#F6F1F8] hover:text-[#5F0080]">{label}</a>)}
         </nav>
         <nav aria-label="서비스 시작" className="flex flex-col gap-2 border-t border-[#ECE7ED] pt-4 xl:flex-row xl:items-center xl:border-0 xl:pt-0">
-          <Link to="/join" onClick={() => setOpen(false)} className={secondaryButton}>클래스 바로 참여</Link>
+          <Link to="/join" onClick={() => setOpen(false)} className={secondaryButton}>코드로 입장</Link>
           <Link to="/login" onClick={() => setOpen(false)} className="inline-flex min-h-12 items-center justify-center rounded-full px-4 text-sm font-semibold text-[#49414E] hover:bg-[#F6F1F8]">로그인</Link>
           <Link to="/register" onClick={() => setOpen(false)} className={primaryButton}>회원가입</Link>
         </nav>

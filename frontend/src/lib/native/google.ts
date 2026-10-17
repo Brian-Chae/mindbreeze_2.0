@@ -6,12 +6,24 @@ const NATIVE_WEB_CLIENT_ID =
   import.meta.env.VITE_GOOGLE_NATIVE_WEB_CLIENT_ID ||
   '1087454235919-rn6a7tjc29g13ncjdijgv2uqmgku8ksm.apps.googleusercontent.com';
 
+// iOS 전용 OAuth 클라이언트 ID(Firebase iOS 앱 com.looxidlabs.mindbreeze.ios, GoogleService-Info.plist 의 CLIENT_ID) — 공개값.
+const NATIVE_IOS_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_NATIVE_IOS_CLIENT_ID ||
+  '1087454235919-r2r01n0q2o4s1qmjcoirghvjc24jknn2.apps.googleusercontent.com';
+
 let initialized = false;
 
 /** 네이티브 Google 로그인 후 id_token 반환. 사용자가 취소하면 예외. */
 export async function nativeGoogleIdToken(): Promise<string> {
   if (!initialized) {
-    await SocialLogin.initialize({ google: { webClientId: NATIVE_WEB_CLIENT_ID } });
+    // iOS 는 iOSClientId 필수, 서버 검증용 id_token 의 aud 를 웹 클라이언트로 맞추려면 iOSServerClientId 필요.
+    await SocialLogin.initialize({
+      google: {
+        webClientId: NATIVE_WEB_CLIENT_ID,
+        iOSClientId: NATIVE_IOS_CLIENT_ID,
+        iOSServerClientId: NATIVE_WEB_CLIENT_ID,
+      },
+    });
     initialized = true;
   }
   const res = await SocialLogin.login({ provider: 'google', options: {} });

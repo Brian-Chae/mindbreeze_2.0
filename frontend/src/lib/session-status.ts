@@ -1,6 +1,6 @@
 import type { SessionStatus } from './api/session';
 
-/** 세션 상태 라벨 단일 소스 (SDD-129 ③-6) — 모든 화면 공통 표기 */
+/** 클래스 상태 라벨 단일 소스 (SDD-129 ③-6) — 모든 화면 공통 표기 */
 export const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
   ready: '준비',
   scheduled: '예정',

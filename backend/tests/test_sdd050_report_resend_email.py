@@ -19,6 +19,7 @@ def _client_report(client, email: str = "before@example.com"):
     provider = app.dependency_overrides[get_db]()
     db = next(provider)
     participant = SessionParticipant(
+            report_included=True,
         session_id=session_id,
         guest_name="재발송 내담자",
         report_email=email,

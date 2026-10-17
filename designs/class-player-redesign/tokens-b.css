@@ -1,0 +1,54 @@
+/* B안 "Daylight Window" 공통 토큰 — member-b.html · counselor-b.html 이 같이 import */
+:root {
+  /* 브랜드 */
+  --mb-purple: #5F0080;
+  --mb-purple-90: #6E1A8C;
+  --mb-lavender: #B373EF;
+  --mb-pale: #D2AEFC;
+
+  /* 라이트 서피스 (메인 앱과 동일 계열) */
+  --b-page: #F5EDFC;
+  --b-card: #FFFFFF;
+  --b-border: #EADCF6;
+  --b-shadow: 0 6px 24px rgba(95, 0, 128, 0.08);
+  --b-tint: #FBF8FD;
+
+  /* 텍스트 */
+  --b-tx-hi: #1F1F1F;
+  --b-tx-mid: #4A4150;
+  --b-tx-lo: #7A6F85;
+
+  /* 상태 */
+  --b-ok: #14A38B;
+  --b-warn: #C9784F;
+  --b-off: #9A90A6;
+
+  /* 지표별 고정 색 (라이트 배경 대비 확보) */
+  --b-m-relax: #14A38B;
+  --b-m-focus: #7B3FA3;
+  --b-m-emotion: #C9784F;
+  --b-m-bpm: #D0506E;
+  --b-m-resp: #3B82B8;
+  --b-m-hrv: #6F9A2B;
+
+  /* 형태 */
+  --r-window: 28px;
+  --r-card: 20px;
+  --r-pill: 9999px;
+  --tap: 44px;
+
+  /* 타이포 스케일 */
+  --fs-12: 12px; --fs-13: 13px; --fs-15: 15px; --fs-18: 18px; --fs-24: 24px; --fs-36: 36px; --fs-56: 56px;
+
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font-family: var(--font); color: var(--b-tx-hi); background: var(--b-page); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/* 아웃라인 아이콘 공통 (24px 그리드, 2px stroke, round) */
+.ic { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

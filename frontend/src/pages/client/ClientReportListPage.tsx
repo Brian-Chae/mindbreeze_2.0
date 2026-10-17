@@ -64,7 +64,7 @@ function EmptyState() {
         <polyline points="10 9 9 9 8 9" />
       </svg>
       <p className="text-sm font-medium text-[#1F1F1F] mb-1">아직 리포트가 없어요</p>
-      <p className="text-xs text-[#6F6F6F]">세션을 마치면 리포트를 확인할 수 있습니다</p>
+      <p className="text-xs text-[#6F6F6F]">클래스를 마치면 리포트를 확인할 수 있습니다</p>
     </div>
   );
 }
@@ -233,7 +233,7 @@ export default function ClientReportListPage() {
         <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
       </div>
       <div className="text-[13px] font-bold text-[#1F1F1F] font-mono">
-        {formatDateTime(report.scheduled_at)}
+        {formatDateTime(report.scheduled_at ?? report.created_at)}
       </div>
       <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
       <div className="mt-2 text-[12px] text-[#6F6F6F]">
@@ -246,7 +246,7 @@ export default function ClientReportListPage() {
     <table className="w-full text-[15px] min-w-[640px] table-fixed">
       <thead>
         <tr className="bg-[#F8FAFC] border-b border-[#EFEFEF]">
-          {['제목', '세션유형', '날짜·시간', '상태', '액션'].map((label, index) => (
+          {['제목', '클래스 유형', '날짜·시간', '상태', '액션'].map((label, index) => (
             <th key={label} scope="col" className={`text-left px-5 py-3 text-[12px] text-[#6F6F6F] font-mono tracking-wider ${index === 0 ? 'w-[34%]' : index === 2 ? 'w-[25%]' : index === 4 ? 'w-[10%]' : ''}`}>{label}</th>
           ))}
         </tr>
@@ -275,7 +275,7 @@ export default function ClientReportListPage() {
               <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
             </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
-            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at)}</td>
+            <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>
             <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} /></td>
             <td className="px-5 py-3.5">
               <button type="button" aria-haspopup="dialog" disabled={!report.id}

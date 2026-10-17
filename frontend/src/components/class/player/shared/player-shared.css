@@ -1,0 +1,204 @@
+/* SDD-208 — 공용 UI 프리미티브 스타일(셸·상단 바·링·배너·도크·시트·원형 버튼).
+   근거: designs/class-player-redesign/{member.html, counselor.html, 균형.md}. 모든 규칙은 .pz-* 클래스로 스코프한다. */
+@import './player-tokens.css';
+
+/* ───────── 앱 전역 타이포 방어: mb-tokens.css 의 h1~h3·p 색/글꼴/자간이 다크 화면으로 새지 않게 .pz-root 범위에서 명시한다 ─────────
+   클래스 없는 제목·문단은 부모 색을 따르고, 클래스가 있는 것은 글꼴·자간만 되돌린다(색은 각 클래스가 정한다).
+   전역 규칙의 색을 그대로 받던 시트 제목·링 숫자·링 제목은 밝은 글자색을 직접 정한다. */
+.pz-root :is(h1, h2, h3, p):not([class]) { color: inherit; }
+.pz-root :is(h1, h2, h3, p) { font-family: inherit; letter-spacing: normal; }
+.pz-sheet__head h2, .pz-ring__num, .pz-ring__title { color: var(--tx-hi); }
+
+/* ───────── 셸: 상단 바 / 본문 / (바텀 시트) / 도크 — 사이드 시트가 열리면 오른쪽 열이 생겨 메인 축이 함께 이동 ───────── */
+.pz-shell {
+  position: fixed; inset: 0; width: 100%; height: 100dvh; overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  column-gap: var(--pz-pad);
+  padding: max(16px, env(safe-area-inset-top)) var(--pz-pad) max(16px, env(safe-area-inset-bottom));
+  background: #0d0814;
+}
+.pz-shell[data-sheet-open="true"][data-sheet-mode="side"] { grid-template-columns: minmax(0, 1fr) var(--pz-sheet-w); }
+.pz-shell > * { position: relative; z-index: 1; }
+.pz-shell > .pz-backdrop { position: absolute; z-index: 0; }
+.pz-shell__top { grid-column: 1; grid-row: 1; min-width: 0; }
+.pz-shell__stage { grid-column: 1; grid-row: 2; min-width: 0; min-height: 0; margin: 8px 0; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); }
+.pz-shell__dock { grid-column: 1; grid-row: 4; justify-self: center; width: min(100%, var(--pz-col)); min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+
+/* ───────── 배경 ───────── */
+.pz-backdrop { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+.pz-backdrop__still { position: absolute; inset: 0; background-color: #1c3a5a; background-size: cover; background-position: 42% 50%; background-repeat: no-repeat; }
+.pz-backdrop__scrim { position: absolute; inset: 0; background: linear-gradient(to bottom, var(--scrim-top) 0%, rgba(18, 8, 28, 0.10) 42%, var(--scrim-bottom) 100%); }
+
+/* ───────── 원형 아이콘 버튼 (44px 터치 타깃) ───────── */
+.pz-circle-btn {
+  flex: none; width: var(--tap); height: var(--tap); border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--sheet-bg); border: 1px solid var(--sheet-border); color: var(--tx-hi);
+}
+.pz-circle-btn:hover:not(:disabled) { background: var(--sheet-bg-strong); }
+.pz-circle-btn:disabled { opacity: 0.45; cursor: default; }
+.pz-circle-btn[data-variant="ghost"] { background: rgba(255, 255, 255, 0.08); }
+.pz-circle-btn[data-variant="primary"] { background: var(--mb-purple); border-color: rgba(210, 174, 252, 0.5); }
+.pz-circle-btn[aria-pressed="true"] { background: rgba(179, 115, 239, 0.30); border-color: rgba(210, 174, 252, 0.5); }
+.pz-circle-btn__icon { display: grid; place-items: center; }
+
+/* ───────── 상단 바: 좌·우 같은 크기 슬롯 + 중앙 제목 (S3) ───────── */
+.pz-topbar {
+  display: grid; grid-template-columns: minmax(var(--tap), 1fr) auto minmax(var(--tap), 1fr);
+  align-items: center; gap: 8px; min-height: var(--pz-top-h);
+}
+.pz-topbar__slot { min-width: 0; display: flex; align-items: center; }
+.pz-topbar__slot--start { justify-content: flex-start; }
+.pz-topbar__slot--end { justify-content: flex-end; }
+.pz-topbar__center { justify-self: center; min-width: 0; max-width: 100%; display: flex; justify-content: center; }
+@media (min-width: 768px) { .pz-topbar { gap: 12px; } }
+.pz-topbar[data-variant="host"] {
+  padding: 8px; border-radius: 20px;
+  background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border);
+}
+@media (min-width: 600px) { .pz-topbar[data-variant="host"] { grid-template-columns: minmax(104px, 1fr) minmax(0, auto) minmax(104px, 1fr); } }
+
+/* SDD-209: 슬롯 폭 고정(좌·우 같은 폭 — 제목이 항상 화면 가운데) */
+.pz-topbar[data-slot-fixed="true"] { grid-template-columns: var(--pz-top-slot) minmax(0, 1fr) var(--pz-top-slot); }
+.pz-topbar[data-variant="flow"] .pz-topbar__center { width: 100%; }
+
+/* ───────── 지표 링: 정적 게이지 (호흡 애니메이션 없음) ───────── */
+/* 지름은 부모가 --ring 으로 정한다(기본 240px). 이 요소에서 --ring 을 선언하면 상속을 덮어쓰므로 폴백으로만 쓴다 */
+.pz-ring { position: relative; width: var(--ring, 240px); height: var(--ring, 240px); flex: none; }
+.pz-ring[data-variant="hero"] { container: pzring / inline-size; }
+.pz-ring__halo { position: absolute; border-radius: 50%; }
+.pz-ring__halo--1 { inset: 0; border: 1.5px solid rgba(210, 174, 252, 0.5); background: radial-gradient(circle, rgba(179, 115, 239, 0) 55%, rgba(179, 115, 239, 0.22) 100%); }
+.pz-ring__halo--2 { inset: 5%; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(179, 115, 239, 0.14); }
+.pz-ring__arc { position: absolute; inset: 10%; width: 80%; height: 80%; overflow: visible; }
+.pz-ring[data-variant="mini"] .pz-ring__arc { inset: 0; width: 100%; height: 100%; }
+.pz-ring__arc circle { fill: none; stroke-width: 3.2; stroke-linecap: round; }
+.pz-ring[data-variant="mini"] .pz-ring__arc circle { stroke-width: 7; }
+.pz-ring__trk { stroke: rgba(255, 255, 255, 0.24); }
+.pz-ring__val { stroke: var(--mb-mint); transition: stroke-dasharray 1.2s ease-out; }
+.pz-ring[data-tone="idle"] .pz-ring__halo { filter: grayscale(1); opacity: 0.55; }
+.pz-ring[data-tone="idle"] .pz-ring__trk { stroke-dasharray: 1.6 2.4; stroke: rgba(255, 255, 255, 0.34); }
+.pz-ring[data-tone="idle"] .pz-ring__val { opacity: 0.28; }
+.pz-ring[data-tone="lost"] .pz-ring__trk { stroke-dasharray: 1.6 2.4; stroke: rgba(232, 180, 160, 0.7); }
+.pz-ring[data-tone="lost"] .pz-ring__val { opacity: 0.28; }
+
+.pz-ring__core {
+  position: absolute; inset: 17%; border-radius: 50%;
+  background: rgba(24, 12, 36, 0.55); border: 1px solid var(--sheet-border);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.pz-ring[data-core="msg"] .pz-ring__core { inset: 12%; }
+.pz-ring[data-tone="idle"] .pz-ring__core { border-style: dashed; border-color: rgba(255, 255, 255, 0.3); }
+.pz-ring__core-in { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; }
+.pz-ring[data-core="dim"] .pz-ring__label, .pz-ring[data-core="dim"] .pz-ring__num { opacity: 0.4; }
+.pz-ring__core-ic { display: grid; place-items: center; width: 24px; height: 24px; color: var(--mb-coral); margin-bottom: 2px; }
+.pz-ring__label { font-size: var(--fs-15); line-height: 20px; color: var(--tx-mid); white-space: nowrap; }
+.pz-ring__num { display: flex; align-items: baseline; gap: 3px; line-height: 1; }
+.pz-ring__num b { font-size: var(--fs-56); font-weight: 700; letter-spacing: -0.02em; line-height: 60px; }
+.pz-ring__num span { font-size: var(--fs-18); color: var(--tx-mid); white-space: nowrap; }
+.pz-ring__title { font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.pz-ring__sub { font-size: var(--fs-13); line-height: 18px; color: var(--tx-mid); margin-top: 4px; }
+.pz-ring__dots { display: inline-flex; gap: 6px; margin-top: 6px; }
+.pz-ring__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--mb-pale); opacity: 0.7; animation: pz-dot-fade 1.5s ease-in-out infinite; }
+.pz-ring__dots i:nth-child(2) { animation-delay: 0.25s; }
+.pz-ring__dots i:nth-child(3) { animation-delay: 0.5s; }
+@keyframes pz-dot-fade { 0%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
+/* 링이 작아지면 타이포 스케일 안에서 한 단계 낮춘다 */
+@container pzring (max-width: 259px) {
+  .pz-ring__num b { font-size: var(--fs-36); line-height: 40px; }
+  .pz-ring__num span { font-size: var(--fs-15); }
+  .pz-ring__label { font-size: var(--fs-13); line-height: 18px; }
+  .pz-ring__title { font-size: var(--fs-15); line-height: 20px; }
+  .pz-ring__sub { font-size: var(--fs-12); line-height: 16px; }
+}
+/* mini: 상담사 타일·6지표 격자 — 가운데 내용은 소비 측이 채운다 */
+.pz-ring__center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; text-align: center; }
+
+/* ───────── 칩 / 배너: 톤(info·caution·coral·live) + 아이콘 + 텍스트 ───────── */
+.pz-notice {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: var(--pz-notice-w, min(100%, 480px)); margin-inline: auto; color: var(--tx-hi);
+}
+.pz-notice__icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; }
+.pz-notice__text { min-width: 0; text-wrap: balance; }
+.pz-notice__action { flex: none; margin-inline-start: auto; }
+/* 액션이 있는 전체 폭 배너는 아이콘·텍스트를 왼쪽으로 붙이고 텍스트가 남는 폭을 채운다 */
+.pz-notice[data-has-action="true"] { justify-content: flex-start; }
+.pz-notice[data-has-action="true"] .pz-notice__text { flex: 1 1 auto; }
+.pz-notice[data-variant="chip"] {
+  min-height: 48px; padding: 6px 16px; text-align: center;
+  border-radius: var(--r-pill); background: var(--sheet-bg);
+  font-size: var(--fs-15); line-height: 22px;
+}
+.pz-notice[data-variant="banner"] {
+  min-height: var(--tap); padding: 8px 14px; text-align: left;
+  border-radius: var(--r-card); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border);
+  font-size: var(--fs-13); line-height: 18px; color: var(--tx-mid);
+}
+/* 오버레이: 흐름에서 빠져 기준 요소 위쪽에 겹쳐 뜬다. 뒤 요소의 클릭은 막지 않고 배너(와 그 안의 버튼)만 받는다 */
+.pz-overlay {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+.pz-overlay > .pz-notice { pointer-events: auto; }
+/* 뒤 요소의 글자가 비쳐 보이면 읽히지 않으므로 오버레이 배너는 불투명 바탕 위에 톤 색(--pz-tint)을 얹는다 */
+.pz-overlay > .pz-notice[data-variant="banner"] { --pz-tint: var(--sheet-bg-strong); background: linear-gradient(var(--pz-tint), var(--pz-tint)), #1a1024; }
+.pz-notice[data-tone="info"][data-variant="chip"] { background: rgba(24, 12, 36, 0.68); }
+.pz-notice[data-tone="info"] .pz-notice__icon { color: var(--mb-pale); }
+.pz-notice[data-tone="caution"][data-variant="chip"] { background: rgba(60, 46, 14, 0.82); }
+.pz-notice[data-tone="caution"] { border-color: rgba(240, 208, 138, 0.65); }
+.pz-notice[data-tone="caution"] .pz-notice__icon { color: var(--caution); }
+.pz-notice[data-tone="coral"][data-variant="chip"] { background: rgba(62, 26, 24, 0.84); }
+.pz-notice[data-tone="coral"] { border-color: rgba(232, 180, 160, 0.7); }
+.pz-notice[data-tone="coral"] .pz-notice__icon { color: var(--mb-coral); }
+.pz-notice[data-tone="live"][data-variant="chip"] { background: rgba(6, 54, 48, 0.80); }
+.pz-notice[data-tone="live"] { border-color: rgba(1, 240, 200, 0.6); }
+.pz-notice[data-tone="live"] .pz-notice__icon { color: var(--mb-mint); }
+
+/* ───────── 도크: 항목 폭 동일·균등 분배 (S6), 최대 폭은 셸(.pz-shell__dock)이 640px 로 제한 ───────── */
+.pz-dock {
+  width: 100%; flex: none; height: var(--pz-dock-h); padding: 4px; display: flex; gap: 2px; justify-content: space-evenly;
+  background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet);
+}
+.pz-dk {
+  position: relative; flex: 1 1 0; min-width: 0; min-height: var(--tap); border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--tx-mid); font-size: var(--fs-12); line-height: 16px;
+}
+.pz-dk__icon { display: grid; place-items: center; }
+.pz-dk__label { white-space: nowrap; }
+.pz-dk:hover { background: rgba(255, 255, 255, 0.08); color: var(--tx-hi); }
+.pz-dk[aria-pressed="true"] { background: rgba(179, 115, 239, 0.30); color: #fff; box-shadow: inset 0 0 0 1px rgba(210, 174, 252, 0.5); }
+.pz-dk__badge {
+  position: absolute; top: 3px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--mb-lavender); color: #1b0a26; font-size: var(--fs-12); font-weight: 700; line-height: 18px; text-align: center; font-style: normal;
+}
+
+/* ───────── 시트: 바텀(기본) / 사이드(가로형 ≥1000px) — 분기는 sheet-mode.ts 가 data-mode 로 알려 준다 ───────── */
+.pz-sheet {
+  z-index: 5; display: flex; flex-direction: column; min-height: 0;
+  background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); border-radius: var(--r-sheet);
+  box-shadow: 0 12px 32px rgba(10, 4, 18, 0.35); padding: 4px 16px 16px;
+}
+.pz-sheet:focus { outline: none; }
+.pz-sheet[data-mode="bottom"] {
+  grid-column: 1; grid-row: 3; justify-self: center; width: 100%; max-width: var(--pz-col);
+  margin-bottom: 8px; max-height: min(58dvh, 520px);
+  animation: pz-sheet-in-bottom 0.22s ease-out;
+}
+.pz-sheet[data-mode="bottom"][data-tall="true"] { height: min(58dvh, 520px); }
+.pz-sheet[data-mode="side"] {
+  grid-column: 2; grid-row: 1 / -1; align-self: start; max-height: 100%; padding: 8px 20px 20px;
+  animation: pz-sheet-in-side 0.22s ease-out;
+}
+.pz-sheet[data-mode="side"][data-tall="true"] { height: min(100%, 560px); }
+@keyframes pz-sheet-in-bottom { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pz-sheet-in-side { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.pz-sheet__handle { align-self: center; flex: none; width: 40px; height: 4px; margin: 6px 0 0; border-radius: 4px; background: rgba(255, 255, 255, 0.3); }
+.pz-sheet__head { flex: none; display: flex; align-items: center; justify-content: space-between; height: 48px; }
+.pz-sheet__head h2 { font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.pz-sheet__sub { margin-left: 8px; font-size: var(--fs-12); font-weight: 400; color: var(--tx-lo); }
+.pz-sheet__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+.pz-sheet__foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }

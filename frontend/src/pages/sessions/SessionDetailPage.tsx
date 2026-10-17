@@ -1,7 +1,10 @@
-// 세션 상세 페이지 (UI Kit)
+// 클래스 상세 페이지 (SDD-209 FH04)
+// 4자리 입장 코드 표시·공유, 준비 현황·다음 할 일, 취소/닫기/삭제 확인 시트, 더보기 시트.
+// 상태 전이(오픈/시작/종료)는 플레이어 안에만 있다(SDD-088) — 여기는 정보 조회·참여자 관리·입장(열기)·취소/닫기만 담당한다.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Ellipsis } from 'lucide-react';
 import {
   deleteSession,
   duplicateSession,
@@ -10,62 +13,22 @@ import {
   removeParticipant,
   saveSessionAsTemplate,
   transitionSession,
-  type SessionAction,
   type SessionDto,
   type SessionLiveMetric,
   type SessionParticipant,
 } from '../../lib/api/session';
 import type { ParticipantChangedEvent } from '../../lib/socket';
 import { SessionLocationEditor } from '../../components/session/session-location-editor';
-import { StatusBadge } from '../../components/session/StatusBadge';
 import { ParticipantPicker, type SelectedParticipant } from '../../components/session/ParticipantPicker';
 import AppShell from '../../components/layout/AppShell';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
-
-const TYPE_LABELS: Record<string, string> = {
-  clinical: '임상심리상담',
-  hypnosis: '최면심리상담',
-  meditation: '명상수업',
-  custom: '기타',
-};
-
-// SDD-088: 상태 전이 버튼(오픈/시작/일시정지/종료)은 플레이어 안에만 존재한다.
-// 상세 페이지는 정보 조회·참여자 관리·[입장]·[닫기(취소)]만 담당한다.
-const ACTIONS_BY_STATUS: Record<SessionDto['status'], SessionAction[]> = {
-  ready: ['cancel'],
-  scheduled: ['cancel'],
-  open: ['cancel'],
-  in_progress: ['cancel'],
-  completed: [],
-  cancelled: [],
-};
-
-const ACTION_LABELS: Record<SessionAction, string> = {
-  open: '오픈',
-  start: '시작',
-  end: '종료',
-  cancel: '취소',
-};
-
-/** SDD-088: 오픈된 방의 cancel 은 "클래스 닫기"로 읽힌다 */
-function cancelLabel(status: SessionDto['status']): string {
-  return status === 'open' ? '클래스 닫기' : ACTION_LABELS.cancel;
-}
-
-/** 플레이어 입장 가능 상태 — 종료/취소 외 전부 (완료는 종료 씬 열람 허용) */
-const ENTERABLE_STATUSES: SessionDto['status'][] = [
-  'ready',
-  'scheduled',
-  'open',
-  'in_progress',
-  'completed',
-];
-
-const participantLabel = (participant: SessionDto['participants'][number]): string =>
-  participant.user_name
-  || participant.user_email
-  || participant.guest_name
-  || (participant.user_id ? participant.user_id.slice(0, 8) : '게스트');
+import { ClassActionSheet, type ClassActionKind } from '../../components/class/flow/shell/ClassActionSheet';
+import { HostDetailView } from '../../components/class/flow/shell/HostDetailView';
+import { HostMenuSheet } from '../../components/class/flow/shell/HostMenuSheet';
+import { toHostDetailData, toMailInviteInput } from '../../components/class/flow/shell/host-shell-data';
+import { EMAIL_INVITE_COOLDOWN_SEC, inviteByEmail, listEmailInvites, type InviteEmailItem } from '../../lib/api/class-flow-host';
+import { maskEmail } from '../../lib/class/flow/member-format';
+import '../../components/class/flow/shell/shell-kit.css';
 
 /** FE-RT-003: WS 참여자 메트릭을 상세 화면 참여자 스키마로 매핑한다(활성 참여자 기준). */
 const toSessionParticipant = (metric: SessionLiveMetric): SessionParticipant => ({
@@ -89,14 +52,13 @@ export default function SessionDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingLocation, setEditingLocation] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
   // SDD-095: 템플릿 저장 완료 표시
   const [templateSaved, setTemplateSaved] = useState(false);
+  // 열린 시트: 더보기 또는 취소/닫기/삭제 확인
+  const [sheet, setSheet] = useState<'menu' | ClassActionKind | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [inviteSelected, setInviteSelected] = useState<SelectedParticipant[]>([]);
-
-  const activeParticipants = (session?.participants ?? []).filter((p) => !p.is_waitlisted);
-  const waitlisted = (session?.participants ?? []).filter((p) => p.is_waitlisted);
 
   // FE-RT-003: WS 참여자 변경 구독 — 추가/제거/대기열 변동을 session 상태에 반영한다.
   const handleParticipantChanged = useCallback(
@@ -133,7 +95,7 @@ export default function SessionDetailPage() {
     [id],
   );
 
-  // SDD-129(③-8): WS 구독으로 세션 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
+  // SDD-129(③-8): WS 구독으로 클래스 상태 즉시 반영 (5초 폴링은 WS 미결합 시 폴백)
   const { isReady } = useSessionLiveSocket({
     sessionId: id,
     onSessionStateChanged: (event) => {
@@ -172,13 +134,15 @@ export default function SessionDetailPage() {
     };
   }, [id, isReady]);
 
-  const handleAction = async (action: SessionAction): Promise<void> => {
+  // 취소·닫기 — 확인 시트에서 확정한다(window.confirm 없음)
+  const handleTransitionCancel = async (): Promise<void> => {
     if (!id) return;
     setBusy(true);
     setError(null);
     try {
-      const updated = await transitionSession(id, action);
+      const updated = await transitionSession(id, 'cancel');
       setSession(updated);
+      setSheet(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '상태 변경에 실패했습니다');
     } finally {
@@ -188,8 +152,8 @@ export default function SessionDetailPage() {
 
   const handleDelete = async (): Promise<void> => {
     if (!id) return;
-    if (!confirm('정말 삭제하시겠습니까?')) return;
     setBusy(true);
+    setError(null);
     try {
       await deleteSession(id);
       navigate('/sessions');
@@ -217,7 +181,7 @@ export default function SessionDetailPage() {
       setInviteSelected([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : '초대에 실패했습니다');
-      // 중간 실패로 서버 상태와 어긋날 수 있어, 성공분 반영 후 최신 세션을 재조회한다.
+      // 중간 실패로 서버 상태와 어긋날 수 있어, 성공분 반영 후 최신 클래스를 재조회한다.
       if (invited > 0) {
         try {
           setSession(await getSession(id));
@@ -244,14 +208,29 @@ export default function SessionDetailPage() {
     }
   };
 
+  const flashCopied = (kind: 'code' | 'link'): void => {
+    setCopied(kind);
+    window.setTimeout(() => setCopied(null), 2000);
+  };
+
+  // 코드 복사: 4자리 입장 코드 그대로
   const handleCopyCode = async (): Promise<void> => {
     if (!session?.access_code) return;
     try {
       await navigator.clipboard.writeText(session.access_code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      flashCopied('code');
     } catch {
-      setError('클래스 코드를 복사하지 못했습니다. 코드를 직접 선택해 주세요.');
+      setError('입장 코드를 복사하지 못했어요. 코드를 직접 선택해 주세요.');
+    }
+  };
+
+  // 링크 복사: /join 주소만 — 코드는 URL 에 싣지 않는다(접근 로그·히스토리 노출 방지)
+  const handleCopyLink = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/join`);
+      flashCopied('link');
+    } catch {
+      setError('링크를 복사하지 못했어요.');
     }
   };
 
@@ -265,6 +244,7 @@ export default function SessionDetailPage() {
       navigate(`/sessions/${duplicated.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : '클래스 복제에 실패했습니다');
+      setSheet(null);
       setBusy(false);
     }
   };
@@ -281,23 +261,60 @@ export default function SessionDetailPage() {
       setError(e instanceof Error ? e.message : '템플릿 저장에 실패했습니다');
     } finally {
       setBusy(false);
+      setSheet(null);
     }
   };
 
+  // SDD-209 B14: 이메일 초대 목록(요청 결과 — 전달 확인이 아니다)과 다시 보내기
+  const [mailItems, setMailItems] = useState<InviteEmailItem[]>([]);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const loadMailInvites = useCallback(async (): Promise<void> => {
+    if (!id) return;
+    try {
+      const res = await listEmailInvites(id);
+      setMailItems(res.invites);
+      setNowMs(Date.now());
+    } catch {
+      // 목록을 못 받으면 이 구역만 그리지 않는다 — 클래스 상세에는 영향이 없다
+    }
+  }, [id]);
+  useEffect(() => {
+    void loadMailInvites();
+  }, [loadMailInvites]);
+  const mailInputs = useMemo(
+    () => mailItems.map((item) => toMailInviteInput(item, new Date(nowMs), EMAIL_INVITE_COOLDOWN_SEC, maskEmail)),
+    [mailItems, nowMs],
+  );
+  // 쿨다운 안에 있는 항목이 있으면 1초마다 남은 시간을 갱신한다
+  const hasCooldown = mailInputs.some((m) => m.cooldownSec > 0);
+  useEffect(() => {
+    if (!hasCooldown) return undefined;
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [hasCooldown]);
+  const handleResendMail = useCallback(async (inviteId: string): Promise<void> => {
+    const target = mailItems.find((item) => item.invite_id === inviteId);
+    if (!id || !target?.email) return;
+    try {
+      await inviteByEmail(id, [target.email]);
+    } catch {
+      // 요청 결과는 목록에서 다시 확인한다
+    }
+    await loadMailInvites();
+  }, [id, mailItems, loadMailInvites]);
+
+  const data = useMemo(() => (session ? toHostDetailData(session, { mailInvites: mailInputs }) : null), [session, mailInputs]);
+
   if (error && !session) {
     return (
-      <AppShell title="세션 상세" sub="DETAIL">
+      <AppShell title="클래스 상세">
         <div className="max-w-3xl mx-auto" role="alert">
           <p className="text-[#B3261E]">{error}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => window.location.reload()} className="mb-btn text-sm">
               다시 시도
             </button>
-            <button
-              type="button"
-              onClick={() => navigate('/sessions')}
-              className="mb-btn mb-btn--ghost text-sm"
-            >
+            <button type="button" onClick={() => navigate('/sessions')} className="mb-btn mb-btn--ghost text-sm">
               목록으로
             </button>
           </div>
@@ -305,9 +322,9 @@ export default function SessionDetailPage() {
       </AppShell>
     );
   }
-  if (!session) {
+  if (!session || !data) {
     return (
-      <AppShell title="세션 상세" sub="DETAIL">
+      <AppShell title="클래스 상세">
         <div className="max-w-3xl mx-auto">
           <p className="text-[#6F6F6F]">불러오는 중...</p>
         </div>
@@ -315,266 +332,87 @@ export default function SessionDetailPage() {
     );
   }
 
-  const actions = ACTIONS_BY_STATUS[session.status];
+  const handleCta = (): void => {
+    if (data.next.ctaKind === 'record') navigate(`/sessions/${session.id}/record`);
+    else if (data.next.ctaKind === 'duplicate') void handleDuplicate();
+    else navigate(`/sessions/${session.id}/player`);
+  };
 
   const rightSlot = (
-    /* 모바일에서는 보조 버튼(템플릿/복제/삭제)을 감추고 [입장]/[취소]만 노출한다.
-       mb-tokens.css 의 .mb-btn{display:inline-flex} 가 Tailwind utilities 뒤에 로드되므로
-       hidden 유틸리티가 먹도록 !important 변형(!hidden / sm:!inline-flex)을 쓴다. */
-    <div className="flex flex-wrap items-center gap-2">
-      {/* SDD-095: 템플릿으로 저장 / 복제 — 반복 클래스를 같은 설정으로 다시 만든다 */}
-      <button
-        type="button"
-        onClick={handleSaveAsTemplate}
-        disabled={busy || templateSaved}
-        className="mb-btn mb-btn--ghost text-sm disabled:opacity-50 !hidden sm:!inline-flex"
-      >
-        {templateSaved ? '템플릿 저장됨' : '템플릿으로 저장'}
-      </button>
-      <button
-        type="button"
-        onClick={handleDuplicate}
-        disabled={busy}
-        className="mb-btn mb-btn--ghost text-sm !hidden sm:!inline-flex"
-      >
-        복제
-      </button>
-      {/* SDD-088: [입장] 단일 버튼 — 플레이어가 상태에 맞는 씬을 전개한다 */}
-      {ENTERABLE_STATUSES.includes(session.status) && (
-        <button
-          type="button"
-          onClick={() => navigate(`/sessions/${session.id}/player`)}
-          disabled={busy}
-          className="mb-btn text-sm"
-        >
-          입장
-        </button>
-      )}
-      {actions.map((action) => (
-        <button
-          key={action}
-          type="button"
-          onClick={() => handleAction(action)}
-          disabled={busy}
-          className="mb-btn mb-btn--ghost text-sm"
-        >
-          {action === 'cancel' ? cancelLabel(session.status) : ACTION_LABELS[action]}
-        </button>
-      ))}
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={busy}
-        className="mb-btn mb-btn--ghost text-sm !text-[#B3261E] !hidden sm:!inline-flex"
-      >
-        삭제
-      </button>
-    </div>
+    <button type="button" data-testid="menu-open" aria-label="더보기" onClick={() => setSheet('menu')} className="mb-btn mb-btn--ghost" style={{ minWidth: 44, minHeight: 44 }}>
+      <Ellipsis size={20} aria-hidden="true" />
+    </button>
   );
 
-  return (
-    <AppShell
-      title="세션 상세"
-      sub="DETAIL"
-      rightSlot={rightSlot}
-      noScroll
-    >
-      <div className="max-w-3xl mx-auto space-y-4 pb-6 h-full overflow-y-auto">
-        {/* 뒤로 가기 + 상태 */}
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate('/sessions')}
-            className="text-sm text-[#6F6F6F] hover:text-[#1F1F1F] transition-colors"
-          >
-            ← 목록으로
-          </button>
-          <StatusBadge status={session.status} />
-        </div>
+  const actionKind: ClassActionKind | null = sheet === 'cancel' || sheet === 'close' || sheet === 'delete' ? sheet : null;
+  const actionCount = actionKind === 'cancel' ? session.participants.length : data.people.total;
 
-        {/* 세션 정보 카드 */}
-        <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[#F5EDFC] text-[#5F0080]">
-              {TYPE_LABELS[session.type]}
-            </span>
-          </div>
-          <h1 className="text-xl font-bold text-[#1F1F1F]">
-            {session.title || '제목 없음'}
-          </h1>
-          {session.access_code && (
-            <div className="rounded-xl bg-[#F5EDFC] border border-[#DDD0EA] px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <dt className="text-xs text-[#6F6F6F] mb-1">클래스 코드</dt>
-                <dd className="font-mono text-3xl font-black tracking-[0.16em] text-[#5F0080]">
-                  {session.access_code}
-                </dd>
-              </div>
-              <button type="button" onClick={handleCopyCode} className="mb-btn text-sm">
-                {copied ? '복사 완료' : '코드 복사'}
-              </button>
-            </div>
-          )}
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <dt className="text-xs text-[#6F6F6F] mb-0.5">일시</dt>
-              <dd className="text-sm text-[#1F1F1F] font-medium">
-                {session.scheduled_at ? new Date(session.scheduled_at).toLocaleString('ko-KR') : '즉시 클래스'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-[#6F6F6F] mb-0.5">소요 시간</dt>
-              <dd className="text-sm text-[#1F1F1F] font-medium">{session.duration_min}분</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-[#6F6F6F] mb-0.5">참여자</dt>
-              <dd className="text-sm text-[#1F1F1F] font-medium">
-                {session.participants.length} / {session.max_participants}
-              </dd>
-            </div>
-          </dl>
-          <div className="border-t border-[#EFEFEF] pt-4">
-            {editingLocation ? (
+  return (
+    <AppShell title="클래스 상세" rightSlot={rightSlot} noScroll>
+      <div className="sh-scope mx-auto h-full w-full overflow-y-auto pb-6">
+        <div className="sh-col">
+          <HostDetailView
+            data={data}
+            heroId={session.id}
+            copied={copied}
+            onCta={handleCta}
+            onCopyCode={() => void handleCopyCode()}
+            onCopyLink={() => void handleCopyLink()}
+            onEditPlace={() => setEditingLocation(true)}
+            onRequestAction={(kind) => setSheet(kind)}
+            onInvite={() => setShowInvite((v) => !v)}
+            onRemove={(userId) => void handleRemoveParticipant(userId)}
+            onResend={(inviteId) => void handleResendMail(inviteId)}
+            placeEditor={editingLocation ? (
               <SessionLocationEditor
                 key={session.id}
                 session={session}
                 onSaved={(updated) => { setSession(updated); setEditingLocation(false); }}
                 onCancel={() => setEditingLocation(false)}
               />
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs text-[#6F6F6F]">장소</p>
-                  <p className="text-sm text-[#1F1F1F]">{session.location_type === 'online' ? '온라인 (원격)' : session.location_address || '오프라인 · 주소 미등록'}</p>
+            ) : undefined}
+            invitePanel={showInvite ? (
+              <>
+                <ParticipantPicker
+                  selected={inviteSelected}
+                  onChange={setInviteSelected}
+                  maxParticipants={session.max_participants - data.people.total}
+                />
+                <div className="sh-inline-panel__act">
+                  <button type="button" className="sh-btn" data-testid="invite-submit" onClick={() => void handleInvite()} disabled={busy || inviteSelected.length === 0}>
+                    초대
+                  </button>
+                  <button type="button" className="sh-btn ghost" onClick={() => { setShowInvite(false); setInviteSelected([]); }}>
+                    취소
+                  </button>
                 </div>
-                {['ready', 'scheduled'].includes(session.status) && (
-                  <button type="button" disabled={busy} onClick={() => setEditingLocation(true)} className="mb-btn mb-btn--ghost text-sm">장소 수정</button>
-                )}
-              </div>
-            )}
-          </div>
-          {session.notes && (
-            <div>
-              <dt className="text-xs text-[#6F6F6F] mb-1">메모</dt>
-              <p className="text-sm text-[#1F1F1F] whitespace-pre-wrap leading-relaxed">
-                {session.notes}
-              </p>
-            </div>
-          )}
+              </>
+            ) : undefined}
+          />
+          {error ? <p role="alert" className="text-sm text-[#B3261E] bg-[#FDECEC] px-4 py-3 rounded-xl">{error}</p> : null}
         </div>
-
-        {/* 참여자 카드 */}
-        <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-[#1F1F1F]">
-              참여자 ({activeParticipants.length}/{session.max_participants}명)
-              {session.waitlist_count > 0 && (
-                <span className="ml-2 text-[#6F6F6F] font-normal text-xs">
-                  대기 {session.waitlist_count}명
-                </span>
-              )}
-            </h2>
-            <button
-              type="button"
-              onClick={() => setShowInvite(true)}
-              disabled={busy}
-              className="inline-flex h-11 items-center px-3 -mx-3 text-sm text-[#5F0080] font-medium hover:underline"
-            >
-              + 참여자 초대
-            </button>
-          </div>
-
-          {activeParticipants.length === 0 && waitlisted.length === 0 ? (
-            <p className="text-sm text-[#6F6F6F]">아직 참여자가 없습니다</p>
-          ) : (
-            <ul className="divide-y divide-[#EFEFEF] -mx-2">
-              {activeParticipants.map((p, index) => (
-                <li key={p.user_id ?? `guest-${p.guest_name ?? index}`} className="flex items-center justify-between gap-2 px-2 py-2.5">
-                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                    <span className="w-2 h-2 shrink-0 rounded-full bg-[#1F8A5B]" />
-                    <span className="min-w-0 truncate text-sm text-[#1F1F1F]">
-                      {participantLabel(p)}
-                    </span>
-                  </div>
-                  {p.user_id && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveParticipant(p.user_id!)}
-                      disabled={busy}
-                      className="inline-flex h-11 shrink-0 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
-                    >
-                      제거
-                    </button>
-                  )}
-                </li>
-              ))}
-              {waitlisted.length > 0 && (
-                <>
-                  <li className="px-2 py-2 text-xs text-[#6F6F6F] font-medium bg-[#FAFAFA]">
-                    대기열
-                  </li>
-                  {waitlisted
-                    .sort((a, b) => (a.waitlist_position ?? 99) - (b.waitlist_position ?? 99))
-                    .map((p, index) => (
-                      <li key={p.user_id ?? `waitlisted-guest-${p.guest_name ?? index}`} className="flex items-center justify-between gap-2 px-2 py-2.5">
-                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                          <span className="w-2 h-2 shrink-0 rounded-full bg-[#E6A817]" />
-                          <span className="min-w-0 truncate text-sm text-[#6F6F6F]">
-                            {participantLabel(p)}
-                          </span>
-                          <span className="shrink-0 text-xs text-[#A0A0B0]">
-                            {p.waitlist_position}순위
-                          </span>
-                        </div>
-                        {p.user_id && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveParticipant(p.user_id!)}
-                            disabled={busy}
-                            className="inline-flex h-11 shrink-0 min-w-[44px] items-center justify-end px-3 -my-2.5 text-sm text-[#B3261E] hover:underline disabled:opacity-50"
-                          >
-                            제거
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                </>
-              )}
-            </ul>
-          )}
-
-          {showInvite && (
-            <div className="border-t border-[#EFEFEF] pt-4 mt-2">
-              <ParticipantPicker
-                selected={inviteSelected}
-                onChange={setInviteSelected}
-                maxParticipants={session.max_participants - activeParticipants.length}
-              />
-              <div className="flex gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={handleInvite}
-                  disabled={busy || inviteSelected.length === 0}
-                  className="mb-btn text-sm"
-                >
-                  초대
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowInvite(false); setInviteSelected([]); }}
-                  className="mb-btn mb-btn--ghost text-sm"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {error && (
-          <p className="text-sm text-[#B3261E] bg-[#FDECEC] px-4 py-3 rounded-xl">{error}</p>
-        )}
       </div>
+
+      <HostMenuSheet
+        open={sheet === 'menu'}
+        canDelete={data.canDelete}
+        templateSaved={templateSaved}
+        busy={busy}
+        onDuplicate={() => void handleDuplicate()}
+        onTemplate={() => void handleSaveAsTemplate()}
+        onDelete={() => setSheet('delete')}
+        onClose={() => setSheet(null)}
+      />
+      {actionKind ? (
+        <ClassActionSheet
+          kind={actionKind}
+          count={actionCount}
+          busy={busy}
+          error={error}
+          onConfirm={() => void (actionKind === 'delete' ? handleDelete() : handleTransitionCancel())}
+          onClose={() => { setSheet(null); setError(null); }}
+        />
+      ) : null}
     </AppShell>
   );
 }

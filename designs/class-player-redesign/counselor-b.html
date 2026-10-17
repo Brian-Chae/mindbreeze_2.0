@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 상담사 클래스 진행 화면 시안 (B안 Daylight Window)</title>
+<link rel="stylesheet" href="tokens-b.css">
+<style>
+:root {
+  --win-h: clamp(150px, 21dvh, 200px);
+  --lilac: #F1E4FA;
+  --track: #E9DEF3;
+  --warn-tx: #A8532F;
+  --ink-line: #EADCF6;
+}
+html, body { height: 100dvh; overflow: hidden; margin: 0; }
+body { font-size: var(--fs-15); line-height: 1.35; }
+[hidden] { display: none !important; }
+.no-anim *, .no-anim *::before, .no-anim *::after { animation: none !important; transition: none !important; }
+input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mb-purple); outline-offset: 2px; }
+
+/* ── 전체 배치: 모바일=위 자연 창 / 아래 패널, 태블릿·데스크톱=좌 자연 창 / 우 패널 ── */
+.app { position: fixed; inset: 0; display: grid; gap: 12px; padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--win-h) minmax(0, 1fr) auto; grid-template-areas: "win" "panel" "tab"; }
+@media (min-width: 600px) {
+  .app { gap: 16px; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    grid-template-columns: clamp(220px, 28vw, 380px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "win panel" "win tab"; }
+}
+
+/* ── 자연 창 ── */
+.win { grid-area: win; position: relative; min-height: 0; border-radius: var(--r-window); overflow: hidden; background: #cfc4dc center / cover no-repeat; box-shadow: var(--b-shadow), inset 0 0 0 1px rgba(255,255,255,.5); }
+.wbtn { position: absolute; top: 12px; z-index: 2; height: var(--tap); border-radius: var(--r-pill); background: rgba(255,255,255,.94); box-shadow: 0 2px 10px rgba(31,31,31,.18); display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: var(--fs-15); white-space: nowrap; }
+.wbtn:hover { background: #fff; }
+.wbtn.x { left: 12px; width: var(--tap); color: var(--mb-purple); }
+.wbtn.end { right: 12px; padding: 0 16px 0 12px; color: var(--warn-tx); }
+.wbtn .ic { width: 20px; height: 20px; }
+
+/* 상담사 셀프뷰 (카메라 ON: 거울 반전 영상 / OFF: 칩만) */
+.self { position: absolute; right: 12px; bottom: 12px; z-index: 1; height: min(96px, calc(100% - 76px)); aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; border: 2px solid rgba(255,255,255,.9); background: linear-gradient(145deg, #B79AD6 0%, #8E6BB8 55%, #D9A58F 130%); box-shadow: 0 4px 16px rgba(31,31,31,.28); }
+.self .sv-img { position: absolute; inset: 0; transform: scaleX(-1); }
+.self .sv-img svg { width: 100%; height: 100%; display: block; }
+.self .sv-lb { position: absolute; top: 6px; left: 6px; display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px 0 6px; border-radius: var(--r-pill); background: rgba(31,31,31,.58); color: #fff; font-size: var(--fs-12); font-weight: 600; white-space: nowrap; }
+.self .sv-lb .ic { width: 14px; height: 14px; }
+.sv-st { position: absolute; right: 6px; bottom: 6px; display: inline-flex; gap: 4px; }
+.sv-st i { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: rgba(31,31,31,.58); color: #fff; }
+.sv-st i .ic { width: 16px; height: 16px; }
+.sv-st i.off { background: var(--warn-tx); }
+.self.off { height: auto; aspect-ratio: auto; border: 0; background: none; box-shadow: none; overflow: visible; display: flex; align-items: center; gap: 8px; }
+.self.off .sv-st { position: static; }
+.sv-chip { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border-radius: var(--r-pill); background: rgba(255,255,255,.94); box-shadow: 0 2px 10px rgba(31,31,31,.18); font-size: var(--fs-13); font-weight: 600; color: var(--b-tx-mid); white-space: nowrap; }
+.sv-chip .ic { width: 18px; height: 18px; }
+@media (min-width: 600px) {
+  .self { left: 12px; right: 12px; height: auto; aspect-ratio: 4 / 3; }
+  .self.off { right: auto; }
+  .self .sv-lb { top: 8px; left: 8px; }
+  .sv-st { right: 8px; bottom: 8px; }
+}
+
+/* ── 라이트 패널 ── */
+.panel { grid-area: panel; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--b-card); border: 1px solid var(--b-border); border-radius: 24px; box-shadow: var(--b-shadow); }
+@media (min-width: 600px) { .panel { padding: 16px; gap: 12px; } }
+
+.info { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t tm" "st st"; gap: 8px 12px; align-items: center; }
+.info .ttl { grid-area: t; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.info h1 { margin: 0; font-size: var(--fs-15); font-weight: 700; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.info h1 span { overflow: hidden; text-overflow: ellipsis; }
+.info h1 .logo { width: 24px; height: 11px; flex: none; color: var(--mb-purple); }
+.info .sub { display: none; margin: 2px 0 0; font-size: var(--fs-13); color: var(--b-tx-lo); white-space: nowrap; }
+.info .tm { grid-area: tm; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.info .tm b { font-size: var(--fs-15); font-weight: 700; }
+.info .tm span { font-size: var(--fs-13); color: var(--b-tx-lo); }
+.info .st { grid-area: st; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 10px; border-radius: var(--r-pill); background: var(--b-tint); border: 1px solid var(--b-border); font-size: var(--fs-13); white-space: nowrap; color: var(--b-tx-mid); }
+.chip b { font-weight: 700; font-size: var(--fs-15); color: var(--b-tx-hi); }
+.chip .ic { width: 16px; height: 16px; color: var(--mb-purple); }
+@media (min-width: 600px) { .info h1 { font-size: var(--fs-18); } .info .tm b { font-size: var(--fs-18); } }
+@media (min-width: 1000px) {
+  .info { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "t tm st"; gap: 16px; }
+  .info .sub { display: block; }
+  .info .tm b { font-size: var(--fs-24); line-height: 1; }
+  .info .tm span { font-size: var(--fs-15); }
+}
+
+.pbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.list, .view { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+
+/* 지금 보는 지표 띠 */
+.mstrip { flex: none; display: flex; align-items: center; gap: 12px; min-height: 56px; width: 100%; padding: 6px 12px 6px 16px; border-radius: var(--r-card); background: var(--b-tint); border: 1px solid var(--b-border); box-shadow: inset 5px 0 0 var(--mcol); text-align: left; }
+.mstrip:hover { background: #F6EEFB; }
+.mstrip .mg { width: 36px; height: 36px; flex: none; }
+.mstrip .mg svg { width: 100%; height: 100%; display: block; }
+.mstrip .mtx { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mstrip .mlb { font-size: var(--fs-12); color: var(--b-tx-lo); line-height: 1.2; }
+.mstrip .mnm { font-size: var(--fs-18); font-weight: 700; line-height: 1.25; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.mstrip .mnm i { width: 12px; height: 12px; border-radius: 50%; background: var(--mcol); flex: none; }
+.mstrip .mnm small { font-size: var(--fs-13); color: var(--b-tx-mid); font-weight: 500; }
+.mstrip .chev { width: 20px; height: 20px; color: var(--b-tx-lo); flex: none; }
+
+/* 타일 그리드 (세로 스크롤) */
+.gridwrap { position: relative; flex: 1; min-height: 0; }
+.gridscroll { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; padding: 4px 3px; display: flex; flex-direction: column; }
+.gridscroll::-webkit-scrollbar { display: none; }
+.gridscroll.fade-b { -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px), transparent 100%); mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px), transparent 100%); }
+.gridscroll.fade-t { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 100%); }
+.gridscroll.fade-t.fade-b { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 36px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 36px), transparent 100%); }
+.range { flex: none; height: 28px; padding: 0 10px; border-radius: var(--r-pill); background: #fff; border: 1px solid var(--b-border); font-size: var(--fs-13); font-weight: 600; color: var(--b-tx-mid); display: inline-flex; align-items: center; white-space: nowrap; }
+.grid { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; width: 100%; margin: 0 auto; flex: none; }
+.tile { width: var(--tw); height: var(--th); flex: none; border-radius: var(--r-card); background: var(--b-tint); border: 1px solid var(--b-border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 6px; text-align: center; position: relative; transition: background .2s; }
+.tile:hover { background: #F6EEFB; }
+.tile[aria-pressed="true"] { border-color: var(--mb-purple); box-shadow: 0 0 0 2px var(--mb-purple); }
+.tile.warn { border-color: var(--b-warn); }
+.tile.away .nm { color: var(--b-tx-mid); }
+.ring { width: var(--rs); height: var(--rs); position: relative; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; overflow: visible; }
+.ring .val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.ring .num { font-size: var(--rf); font-weight: 700; color: var(--b-tx-hi); }
+.ring small { font-size: var(--fs-12); color: var(--b-tx-mid); margin-top: 3px; font-weight: 600; }
+.ring .nb { font-size: var(--fs-13); color: var(--b-tx-lo); font-weight: 600; }
+.ring .nb.warn { color: var(--warn-tx); }
+.rc-t { fill: none; stroke: var(--track); stroke-width: 9; }
+.rc-t.off { stroke: #B3A9BF; stroke-width: 5; stroke-dasharray: 1 9; stroke-linecap: round; }
+.rc-t.lost { stroke: var(--b-warn); stroke-width: 5; stroke-dasharray: 9 7; stroke-linecap: round; }
+.rc-a { fill: none; stroke: var(--mcol, var(--b-m-relax)); stroke-width: 9; stroke-linecap: round; transition: stroke-dasharray 1.2s ease; }
+.nm { font-size: var(--fs-15); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stl { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-13); color: var(--b-tx-mid); max-width: 100%; white-space: nowrap; }
+.stl.warn { color: var(--warn-tx); font-weight: 600; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.on { background: var(--b-ok); }
+.dot.off { border: 2px solid var(--b-off); }
+.dot.lost { background: var(--b-warn); }
+.lg { display: none; }
+@media (min-width: 600px) { .lg { display: inline; } .sm { display: none; } }
+
+/* ── 탭바 (메인 앱 스타일) ── */
+.tabbar { grid-area: tab; display: flex; gap: 2px; padding: 6px; background: var(--b-card); border: 1px solid var(--b-border); border-radius: 24px; box-shadow: var(--b-shadow); }
+.tb { position: relative; flex: 1; min-width: 0; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 18px; font-size: var(--fs-12); font-weight: 600; color: var(--b-tx-lo); white-space: nowrap; }
+.tb:hover { background: var(--b-tint); }
+.tb[aria-pressed="true"] { color: var(--mb-purple); background: var(--lilac); }
+.tb .bd { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--mb-purple); color: #fff; font-size: var(--fs-12); font-weight: 700; display: grid; place-items: center; }
+@media (min-width: 600px) { .tb { font-size: var(--fs-13); } }
+
+/* ── 탭 뷰 (패널 내용 교체) ── */
+.vh { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: var(--tap); }
+.vh h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.back { display: inline-flex; align-items: center; gap: 4px; height: var(--tap); padding: 0 14px 0 8px; border-radius: var(--r-pill); background: var(--b-tint); border: 1px solid var(--b-border); font-size: var(--fs-13); font-weight: 600; color: var(--mb-purple); white-space: nowrap; flex: none; }
+.back:hover { background: var(--lilac); }
+.back .ic { width: 20px; height: 20px; }
+.vb { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.lbl { margin: 0; font-size: var(--fs-12); font-weight: 700; letter-spacing: .06em; color: var(--b-tx-lo); }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.opt { min-height: 60px; padding: 6px 4px; border-radius: 16px; background: var(--b-tint); border: 2px solid var(--b-border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: var(--fs-15); font-weight: 600; }
+.opt .od { width: 12px; height: 12px; border-radius: 50%; background: var(--mcol); margin-bottom: 2px; }
+.opt small { font-size: var(--fs-12); font-weight: 500; color: var(--b-tx-lo); }
+.opt[aria-checked="true"], .seg[aria-checked="true"], .pill[aria-checked="true"] { background: var(--lilac); border-color: var(--mb-purple); }
+.hint { margin: 0; font-size: var(--fs-13); color: var(--b-tx-lo); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 4px 12px; border-radius: 16px; background: var(--b-tint); border: 1px solid var(--b-border); }
+.row .tx { display: flex; flex-direction: column; min-width: 0; }
+.row .tx b { font-size: var(--fs-15); font-weight: 600; }
+.row .tx small { font-size: var(--fs-12); color: var(--b-tx-lo); }
+.row .l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.row .lead { width: 36px; height: 36px; border-radius: 50%; background: var(--lilac); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.row .lead .ic { width: 20px; height: 20px; }
+.sw { width: 56px; height: var(--tap); display: grid; place-items: center; flex: none; }
+.sw .trk { width: 48px; height: 28px; border-radius: 14px; background: #D5C9E1; position: relative; transition: background .2s; }
+.sw .trk::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(31,31,31,.25); transition: transform .2s; }
+.sw[aria-checked="true"] .trk { background: var(--mb-purple); }
+.sw[aria-checked="true"] .trk::after { transform: translateX(20px); }
+.segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.seg { min-height: var(--tap); padding: 0 6px; border-radius: 14px; background: var(--b-tint); border: 2px solid var(--b-border); font-size: var(--fs-13); font-weight: 600; }
+.pill { min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); background: var(--b-tint); border: 2px solid var(--b-border); font-size: var(--fs-13); font-weight: 600; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.vol { display: flex; align-items: center; gap: 10px; min-height: var(--tap); }
+.vol input { flex: 1; accent-color: var(--mb-purple); height: var(--tap); margin: 0; }
+.vol span { min-width: 40px; text-align: right; font-size: var(--fs-13); color: var(--b-tx-lo); }
+.meter { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.meter i { width: 4px; border-radius: 2px; background: var(--b-ok); }
+.meter i.q { background: #D5C9E1; }
+.thumb { width: 56px; height: 40px; border-radius: 10px; background: linear-gradient(145deg, #B79AD6, #8E6BB8); display: grid; place-items: center; color: #fff; flex: none; }
+
+/* 채팅 */
+.chat-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 2px 2px 2px 0; scrollbar-width: thin; scrollbar-color: #D5C9E1 transparent; }
+.msg { max-width: 82%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
+.msg .meta { font-size: var(--fs-12); color: var(--b-tx-lo); }
+.msg .bub { padding: 8px 12px; border-radius: 16px 16px 16px 6px; background: var(--b-tint); border: 1px solid var(--b-border); font-size: var(--fs-15); color: var(--b-tx-mid); }
+.msg.me { align-self: flex-end; align-items: flex-end; }
+.msg.me .bub { background: var(--mb-purple); color: #fff; border-color: var(--mb-purple); border-radius: 16px 16px 6px 16px; }
+.composer { flex: none; display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.composer input { flex: 1; min-width: 0; height: var(--tap); padding: 0 16px; border-radius: var(--r-pill); background: var(--b-tint); border: 1px solid var(--b-border); outline-offset: 0; }
+.composer input::placeholder { color: var(--b-tx-lo); }
+.ib { width: var(--tap); height: var(--tap); border-radius: 50%; display: grid; place-items: center; background: var(--mb-purple); color: #fff; flex: none; }
+.ib:hover { background: var(--mb-purple-90); }
+
+/* 체크인 */
+.prog { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--mb-lavender), var(--b-ok)); }
+.dist { display: flex; flex-direction: column; gap: 6px; }
+.dist .q, .qrow { display: flex; justify-content: space-between; font-size: var(--fs-13); color: var(--b-tx-mid); }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
+.stack i { display: block; }
+.leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-13); color: var(--b-tx-mid); }
+.leg span { display: inline-flex; align-items: center; gap: 6px; }
+.leg em { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.c1 { background: var(--mb-lavender); } .c2 { background: var(--mb-pale); } .c3 { background: #E3A98C; }
+.note { width: 100%; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; border-radius: 14px; background: var(--b-tint); border: 1px solid var(--b-border); text-align: left; }
+.note b { font-size: var(--fs-15); }
+.note span { font-size: var(--fs-13); color: var(--b-tx-mid); margin-left: 8px; }
+.note .ic { width: 20px; height: 20px; flex: none; color: var(--b-tx-lo); }
+
+/* 참가자 상세 */
+.who { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: var(--fs-18); font-weight: 700; }
+.av { width: 36px; height: 36px; border-radius: 50%; background: var(--lilac); color: var(--mb-purple); display: grid; place-items: center; font-size: var(--fs-15); font-weight: 700; flex: none; }
+.who .chip { height: 28px; font-weight: 500; }
+.minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mini { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px 6px; border-radius: 14px; background: var(--b-tint); border: 2px solid var(--b-border); }
+.mini.sel { border-color: var(--mcol); background: #fff; }
+.mini .ring { width: var(--mrs, 52px); height: var(--mrs, 52px); }
+.mini .ring .num { font-size: var(--fs-15); }
+.mini .ml { font-size: var(--fs-12); color: var(--b-tx-mid); font-weight: 600; line-height: 1.1; }
+.trend { padding: 8px 12px; border-radius: 14px; background: var(--b-tint); border: 1px solid var(--b-border); }
+.trend .th { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-13); color: var(--b-tx-mid); }
+.trend .th b { font-size: var(--fs-15); }
+.trend svg { display: block; width: 100%; height: var(--trh, 44px); margin-top: 4px; }
+.trend .axis { display: flex; justify-content: space-between; font-size: var(--fs-12); color: var(--b-tx-lo); }
+.noband { padding: 12px; border-radius: 14px; background: var(--b-tint); font-size: var(--fs-13); color: var(--b-tx-mid); text-align: center; border: 1px dashed #B3A9BF; }
+.qa { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-top: 1px solid var(--b-border); }
+.qa .q { font-size: var(--fs-13); color: var(--b-tx-lo); white-space: nowrap; }
+.qa .a { font-size: var(--fs-15); text-align: right; }
+.qas .lbl { margin-bottom: 2px; }
+@media (max-height: 760px) { .qa:nth-of-type(3) { display: none; } }
+@media (max-width: 599px) { .qa:nth-of-type(3) { display: none; } }
+@media (min-width: 600px) { .mini .ring { --mrs: 60px; } .trend svg { --trh: 64px; } }
+
+/* 코드 · 버튼 */
+.code { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: 16px; background: var(--b-tint); border: 1px solid var(--b-border); }
+.code b { font-size: var(--fs-24); letter-spacing: .14em; font-weight: 700; color: var(--mb-purple); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: var(--tap); padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); color: #fff; font-weight: 600; font-size: var(--fs-15); }
+.btn .ic { width: 20px; height: 20px; }
+.btn.ghost { background: var(--b-tint); color: var(--b-tx-mid); border: 1px solid var(--b-border); }
+.btn.coral { background: #fff; color: var(--warn-tx); border: 2px solid var(--b-warn); }
+
+/* 토스트 · 모달 */
+.toast { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); z-index: 40; padding: 10px 18px; border-radius: var(--r-pill); background: var(--b-tx-hi); color: #fff; font-size: var(--fs-15); white-space: nowrap; }
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(60,30,80,.35); }
+.mcard { width: min(100%, 360px); padding: 22px 20px 18px; border-radius: 24px; background: #fff; border: 1px solid var(--b-border); box-shadow: var(--b-shadow); display: flex; flex-direction: column; gap: 8px; }
+.mcard h3 { margin: 0; font-size: var(--fs-18); }
+.mcard p { margin: 0; font-size: var(--fs-15); color: var(--b-tx-mid); }
+.mcard .acts { display: flex; gap: 8px; margin-top: 12px; }
+.mcard .acts .btn { flex: 1; justify-content: center; }
+</style>
+</head>
+<body class="no-anim">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></symbol>
+    <symbol id="i-video-off" viewBox="0 0 24 24"><path d="M15 10.5V9a3 3 0 0 0-3-3H8M2 8v7a3 3 0 0 0 3 3h7a3 3 0 0 0 3-3v-1.5M15 13l6 3V8l-6 3M3 3l18 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="i-tools" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="M15 9.3V6a3 3 0 0 0-5.9-.8M9 9v2a3 3 0 0 0 4.6 2.5M5 11a7 7 0 0 0 11.2 5.6M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-11 11M22 2l-7 20-4-9-9-4z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-avg" viewBox="0 0 24 24"><path d="M3 20h18M6 20v-6M12 20V6M18 20v-10"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 414.72 188.928"><path fill="currentColor" d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <section class="win" id="win" aria-label="자연 창">
+    <button class="wbtn x" id="btn-close" aria-label="클래스 화면 닫기"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <button class="wbtn end" id="btn-end" aria-label="클래스 종료"><svg class="ic" aria-hidden="true"><use href="#i-stop"/></svg>종료</button>
+    <div class="self" id="self"></div>
+  </section>
+
+  <section class="panel" id="panel" aria-label="클래스 진행 정보">
+    <header class="info">
+      <div class="ttl">
+        <h1><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><span>마음챙김 명상수업 · 4회차</span></h1>
+        <p class="sub">명상수업 · 참여 코드 MIND24</p>
+      </div>
+      <div class="tm" aria-label="함께한 시간 12분 34초, 계획 30분"><b>12:34</b><span>/ 30:00</span></div>
+      <div class="st">
+        <span class="chip" id="chip-join"></span>
+        <span class="chip" id="chip-avg"></span>
+      </div>
+    </header>
+    <div class="pbody">
+      <div class="list" id="list">
+        <button class="mstrip" id="mstrip" data-tab="metric" aria-label="지금 보는 지표 바꾸기"></button>
+        <div class="gridwrap"><div class="gridscroll" id="gridscroll"><div class="grid" id="grid"></div></div></div>
+      </div>
+      <div class="view" id="view" hidden></div>
+    </div>
+  </section>
+
+  <nav class="tabbar" aria-label="클래스 도구">
+    <button class="tb" data-tab="metric"><svg class="ic" aria-hidden="true"><use href="#i-activity"/></svg>지표 기준</button>
+    <button class="tb" data-tab="chat"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg>채팅<span class="bd" id="bd-chat">3</span></button>
+    <button class="tb" data-tab="media"><svg class="ic" aria-hidden="true"><use href="#i-video"/></svg>미디어</button>
+    <button class="tb" data-tab="checkin"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>체크인</button>
+    <button class="tb" data-tab="tools"><svg class="ic" aria-hidden="true"><use href="#i-tools"/></svg>도구</button>
+  </nav>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="modal" id="modal" hidden>
+  <div class="mcard" role="alertdialog" aria-labelledby="m-t">
+    <h3 id="m-t">클래스를 종료할까요?</h3>
+    <p>접속 중인 참가자 7명의 화면이 종료되고, 기록·리포트 생성이 시작됩니다.</p>
+    <div class="acts"><button class="btn ghost" id="m-cancel">계속 진행</button><button class="btn coral" id="m-ok">종료하기</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const params = new URLSearchParams(location.search);
+
+  const METRICS = [
+    { key: 'focus', label: '집중도', short: '집중', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'relax', label: '이완도', short: '이완', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'emotion', label: '감정균형도', short: '감정', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'bpm', label: 'BPM', short: 'BPM', unit: 'bpm', group: 'BODY', min: 50, max: 110 },
+    { key: 'resp', label: '호흡', short: '호흡', unit: '회/분', group: 'BODY', min: 6, max: 24 },
+    { key: 'hrv', label: 'HRV', short: 'HRV', unit: 'ms', group: 'BODY', min: 10, max: 90 },
+  ];
+  const MKEY = Object.fromEntries(METRICS.map(m => [m.key, m]));
+  const mcol = key => `var(--b-m-${key})`;
+
+  const BASE = [
+    { id: 1, name: '서연', band: 'on', v: { focus: 68, relax: 70, emotion: 74, bpm: 72, resp: 14, hrv: 52 }, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 푹 잤어요']] },
+    { id: 2, name: '민준', band: 'on', v: { focus: 54, relax: 58, emotion: 61, bpm: 78, resp: 16, hrv: 41 }, ci: [['마음의 날씨', '조금 들떠 있어요'], ['몸 상태', '어깨에 힘이 들어가요'], ['수면', '6시간 · 보통']] },
+    { id: 3, name: '지우', band: 'on', v: { focus: 79, relax: 88, emotion: 85, bpm: 64, resp: 10, hrv: 71 }, ci: [['마음의 날씨', '맑고 고요해요'], ['몸 상태', '가벼워요'], ['수면', '8시간 · 푹 잤어요']] },
+    { id: 4, name: '하준', band: 'off', v: null, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+    { id: 5, name: '서아', band: 'on', v: { focus: 38, relax: 41, emotion: 45, bpm: 86, resp: 18, hrv: 28 }, ci: [['몸 상태', '어깨가 많이 뻐근해요'], ['마음의 날씨', '조금 무거워요'], ['수면', '4시간 · 뒤척였어요']] },
+    { id: 6, name: '도윤', band: 'lost', v: { focus: 60, relax: 64, emotion: 66, bpm: 75, resp: 15, hrv: 44 }, ago: '2분 전', ci: [['수면', '거의 못 잤어요'], ['마음의 날씨', '무거워요'], ['몸 상태', '피곤해요']] },
+    { id: 7, name: '예린', band: 'on', v: { focus: 62, relax: 73, emotion: 70, bpm: 70, resp: 12, hrv: 55 }, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+    { id: 8, name: '시우', band: 'off', v: null, ci: [['마음의 날씨', '들떠 있어요'], ['몸 상태', '가벼워요'], ['수면', '6시간 · 보통']] },
+  ];
+  const EXTRA_NAMES = ['하윤', '도현', '나은', '지안', '수호', '다온', '이서', '로하', '유진', '태오', '소이', '건우', '아린', '현서', '라온', '시현'];
+  function makeExtra(i) {
+    const band = i % 5 === 3 ? 'off' : 'on';
+    return { id: i + 1, name: EXTRA_NAMES[(i - 8) % EXTRA_NAMES.length], band,
+      v: band === 'off' ? null : { focus: 45 + ((i * 7) % 40), relax: 48 + ((i * 13) % 40), emotion: 50 + ((i * 11) % 38), bpm: 62 + ((i * 5) % 24), resp: 10 + (i % 8), hrv: 30 + ((i * 9) % 40) },
+      ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] };
+  }
+  const clampN = v => { const n = parseInt(v || '8', 10); return Number.isFinite(n) ? Math.min(24, Math.max(1, n)) : 8; };
+  const buildPeople = n => Array.from({ length: n }, (_, i) => BASE[i] || makeExtra(i));
+
+  const MESSAGES = [
+    { who: '서연', t: '12:18', x: '마음이 한결 편안해졌어요' },
+    { who: '나', me: true, t: '12:19', x: '좋아요. 지금 편안한 속도 그대로 이어가 볼게요.' },
+    { who: '민준', t: '12:24', x: '어깨에 힘이 자꾸 들어가요' },
+    { who: '지우', t: '12:26', x: '배경 소리가 참 좋아요' },
+    { who: '서아', t: '12:31', x: '어깨가 계속 뻐근해요' },
+    { who: '나', me: true, t: '12:32', x: '서아님, 어깨에 힘이 들어가 있는지 한 번 살펴보세요.' },
+    { who: '예린', t: '12:33', x: '네, 살펴볼게요' },
+  ];
+
+  const TABS = ['metric', 'chat', 'media', 'checkin', 'tools'];
+  const detailParam = parseInt(params.get('detail') || '', 10);
+  let state = {
+    n: clampN(params.get('n')),
+    metric: METRICS.some(m => m.key === params.get('metric')) ? params.get('metric') : 'relax',
+    sort: 'join',
+    tab: TABS.includes(params.get('tab')) ? params.get('tab') : null,
+    detail: Number.isFinite(detailParam) ? detailParam : null,
+    messages: MESSAGES,
+    cam: params.get('cam') !== 'off', mic: params.get('mic') !== 'off', bgm: '숲속 새벽', vol: 60,
+  };
+  if (state.detail !== null) state.tab = null;
+  const setState = patch => { state = { ...state, ...patch }; render(); };
+
+  const bgNo = ['1', '4', '5', '8', '10'].includes(params.get('bg')) ? params.get('bg') : '4';
+  $('#win').style.backgroundImage = `url(assets/bg/background${bgNo}.webp)`;
+
+  const icon = (id, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+  const valOf = (p, key) => (p.band === 'on' && p.v) ? p.v[key] : null;
+  const pctOf = (m, v) => Math.max(0.03, Math.min(1, (v - m.min) / (m.max - m.min)));
+  const people = () => buildPeople(state.n);
+
+  function ringSVG(pct, mode, key) {
+    const C = 2 * Math.PI * 44;
+    if (mode === 'off' || mode === 'lost') return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rc-t ${mode}" cx="50" cy="50" r="44"/></svg>`;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rc-t" cx="50" cy="50" r="44"/><circle class="rc-a" style="--mcol:${mcol(key)}" cx="50" cy="50" r="44" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
+  }
+
+  function sortedPeople() {
+    const m = MKEY[state.metric];
+    const list = people();
+    if (state.sort === 'join') return list;
+    const dir = state.sort === 'low' ? 1 : -1;
+    const withVal = list.filter(p => valOf(p, m.key) !== null).sort((a, b) => dir * (valOf(a, m.key) - valOf(b, m.key)));
+    return [...withVal, ...list.filter(p => valOf(p, m.key) === null)];
+  }
+  function avgOf(key) {
+    const vals = people().map(p => valOf(p, key)).filter(v => v !== null);
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  }
+
+  // ── 셀프뷰 ──
+  function renderSelf() {
+    const el = $('#self');
+    const micI = `<i class="${state.mic ? '' : 'off'}" aria-label="마이크 ${state.mic ? '켜짐' : '꺼짐'}">${icon(state.mic ? 'mic' : 'mic-off')}</i>`;
+    if (state.cam) {
+      el.className = 'self';
+      el.innerHTML = `<div class="sv-img" aria-hidden="true"><svg viewBox="0 0 160 120" preserveAspectRatio="xMidYMid slice"><defs><radialGradient id="sv-glow" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#fff" stop-opacity=".38"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="160" height="120" fill="url(#sv-glow)"/><path d="M26 124c0-30 22-44 54-44s54 14 54 44z" fill="#fff" fill-opacity=".62"/><circle cx="80" cy="52" r="21" fill="#fff" fill-opacity=".74"/><clipPath id="sv-head"><circle cx="80" cy="52" r="21"/></clipPath><ellipse cx="74" cy="38" rx="25" ry="13" fill="#5F0080" fill-opacity=".4" clip-path="url(#sv-head)"/></svg></div>
+        <span class="sv-lb">${icon('person')}내 화면</span>
+        <span class="sv-st"><i aria-label="카메라 켜짐">${icon('video')}</i>${micI}</span>`;
+    } else {
+      el.className = 'self off';
+      el.innerHTML = `<span class="sv-chip">${icon('video-off')}내 카메라 꺼짐</span><span class="sv-st">${micI}</span>`;
+    }
+  }
+
+  function tileHTML(p) {
+    const m = MKEY[state.metric];
+    const v = valOf(p, m.key);
+    const pressed = state.detail === p.id;
+    if (p.band === 'on') {
+      const warn = m.unit === '%' && v < 50;
+      return `<button class="tile ${warn ? 'warn' : ''}" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} ${m.label} ${v}${m.unit}">
+        <div class="ring">${ringSVG(pctOf(m, v), 'ok', m.key)}<div class="val"><b class="num">${v}</b><small>${m.short}</small></div></div>
+        <span class="nm">${p.name}</span>
+        <span class="stl ${warn ? 'warn' : ''}"><i class="dot ${warn ? 'lost' : 'on'}"></i>${warn ? '살펴보기' : '연결됨'}</span></button>`;
+    }
+    if (p.band === 'lost') {
+      return `<button class="tile away" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 연결 끊김">
+        <div class="ring">${ringSVG(0, 'lost')}<div class="val"><span class="nb warn">끊김</span></div></div>
+        <span class="nm">${p.name}</span>
+        <span class="stl"><i class="dot lost"></i>${p.ago}부터</span></button>`;
+    }
+    return `<button class="tile away" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 밴드 미착용">
+      <div class="ring">${ringSVG(0, 'off')}<div class="val"><span class="nb">미착용</span></div></div>
+      <span class="nm">${p.name}</span>
+      <span class="stl"><i class="dot off"></i>밴드 없이<span class="lg">&nbsp;참여</span></span></button>`;
+  }
+
+  // ── 타일 크기 계획: 8명은 한 화면에 전부, 12명 이상은 반드시 그리드 내부 스크롤 ──
+  const scroller = () => $('#gridscroll');
+  function updateScrollHints() {
+    const sc = scroller();
+    const up = sc.scrollTop > 4, down = sc.scrollTop + sc.clientHeight < sc.scrollHeight - 4;
+    sc.classList.toggle('fade-t', up);
+    sc.classList.toggle('fade-b', down);
+    const range = $('#range');
+    if (sc.scrollHeight <= sc.clientHeight + 1) { range.hidden = true; return; }
+    const sr = sc.getBoundingClientRect();
+    const items = $$('#grid [data-id]');
+    let first = -1, last = -1;
+    items.forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      const visible = Math.min(r.bottom, sr.bottom) - Math.max(r.top, sr.top);
+      if (visible > r.height * 0.5) { if (first < 0) first = i; last = i; }
+    });
+    range.hidden = first < 0;
+    if (first >= 0) range.textContent = `${first + 1}–${last + 1} / ${items.length}명`;
+  }
+
+  function plan(W, H) {
+    const mobile = window.innerWidth < 600;
+    const g = mobile ? 10 : 14;
+    const minW = mobile ? 100 : 150, minH = mobile ? 118 : 140, maxH = mobile ? 150 : 260;
+    let best = null;
+    for (let cols = 2; cols <= 5; cols++) {
+      const tw = Math.floor((W - (cols - 1) * g) / cols);
+      if (tw < minW) continue;
+      const rows8 = Math.ceil(8 / cols), rows12 = Math.ceil(12 / cols);
+      const fit = Math.floor((H - (rows8 - 1) * g) / rows8);
+      if (fit < minH) continue;
+      for (const th of new Set([Math.min(fit, maxH, Math.round(tw * 1.2)), Math.min(fit, maxH)])) {
+        const overflows = rows12 * th + (rows12 - 1) * g > H + 8;
+        const score = Math.abs(th / tw - 1.05) + (overflows ? 0 : 5);
+        if (!best || score < best.score) best = { cols, tw, th, g, score };
+      }
+    }
+    if (!best) { const cols = mobile ? 3 : 2; best = { cols, tw: Math.floor((W - (cols - 1) * g) / cols), th: minH, g, score: 0 }; }
+    return best;
+  }
+
+  function layout() {
+    if ($('#list').hidden) return;
+    const sc = scroller(), grid = $('#grid');
+    const prevTop = sc.scrollTop;
+    const W = sc.clientWidth - 8, H = sc.clientHeight - 8;
+    const { cols, tw, th, g } = plan(W, H);
+    const rs = Math.max(56, Math.min(112, th - 64, tw - 28));
+    grid.style.cssText = `--tw:${tw}px;--th:${th}px;--rs:${rs}px;--rf:${rs >= 100 ? 'var(--fs-36)' : 'var(--fs-24)'};gap:${g}px;max-width:${cols * tw + (cols - 1) * g + 1}px;`;
+    grid.innerHTML = sortedPeople().map(tileHTML).join('');
+    grid.style.setProperty('--mcol', mcol(state.metric));
+    sc.scrollTop = prevTop;
+    updateScrollHints();
+  }
+
+  function renderInfo() {
+    const list = people();
+    const joined = list.filter(p => p.band !== 'lost').length;
+    $('#chip-join').innerHTML = `${icon('users')}<span>접속 <b>${joined}/${list.length}</b></span>`;
+    const a = avgOf('relax');
+    $('#chip-avg').innerHTML = `${icon('avg')}<span>그룹 평균 이완도 <b>${a === null ? '—' : a}</b></span>`;
+    const m = MKEY[state.metric];
+    const strip = $('#mstrip');
+    strip.style.setProperty('--mcol', mcol(m.key));
+    strip.innerHTML = `<span class="mg" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="#E9DEF3" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="${mcol(m.key)}" stroke-width="5" stroke-linecap="round" stroke-dasharray="70 100" transform="rotate(-90 20 20)"/></svg></span>
+      <span class="mtx"><span class="mlb">지금 보는 지표</span><b class="mnm" id="mstrip-name" data-key="${m.key}"><i></i>${m.label}<small>${m.unit}</small></b></span><span class="range" id="range" hidden></span>${icon('chev', 'chev')}`;
+    updateScrollHints();
+  }
+
+  // ── 상세 보조 ──
+  function seriesFor(p, key) {
+    const m = MKEY[key];
+    const end = p.v ? p.v[key] : 0;
+    const span = m.max - m.min;
+    return Array.from({ length: 60 }, (_, i) => {
+      const f = (59 - i) / 59;
+      const wave = Math.sin(i / 5 + p.id * 1.7) * span * 0.05 * (0.4 + f) + Math.sin(i / 11 + p.id) * span * 0.03 + Math.sin(i * 1.9 + p.id * 3) * span * 0.012;
+      const drift = -(((p.id * 3) % 7) - 3) * span * 0.018 * f;
+      return Math.max(m.min, Math.min(m.max, end + wave + drift * 2));
+    });
+  }
+  function trendSVG(pts, m) {
+    const lo = Math.min(...pts), hi = Math.max(...pts);
+    const pad = (hi - lo) * 0.2 || 4;
+    const y = v => 44 - ((v - (lo - pad)) / ((hi + pad) - (lo - pad))) * 40 - 2;
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / 59 * 300).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-label="최근 5분 ${m.label} 추이" style="color:${mcol(m.key)}"><path d="${d} L300 44 L0 44 Z" fill="currentColor" fill-opacity=".14"/><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+
+  const TAB_TITLE = { metric: '지표 기준', chat: '채팅', media: '미디어', checkin: '체크인 요약', tools: '도구' };
+  const backBtn = `<button class="back" data-act="list" aria-label="참가자 목록으로 돌아가기">${icon('left')}참가자 목록</button>`;
+  const sw = (act, on, label) => `<button class="sw" role="switch" data-act="${act}" aria-checked="${on}" aria-label="${label}"><span class="trk"></span></button>`;
+
+  function viewContent() {
+    const t = state.tab;
+    if (state.detail !== null) {
+      const p = people().find(x => x.id === state.detail) || people()[0];
+      const m = MKEY[state.metric];
+      const chipTxt = p.band === 'on' ? '연결됨' : (p.band === 'lost' ? '연결 끊김' : '밴드 미착용');
+      const minis = METRICS.map(x => {
+        const v = p.v ? p.v[x.key] : null;
+        const live = p.band === 'on' && v !== null;
+        return `<div class="mini ${x.key === state.metric ? 'sel' : ''}" style="--mcol:${mcol(x.key)}"><div class="ring">${live ? ringSVG(pctOf(x, v), 'ok', x.key) : ringSVG(0, p.band === 'lost' ? 'lost' : 'off')}<div class="val"><b class="num" ${live ? '' : 'style="color:var(--b-tx-lo)"'}>${live ? v : '—'}</b></div></div><span class="ml">${x.short}</span></div>`;
+      }).join('');
+      let trend;
+      if (p.band === 'on') {
+        const pts = seriesFor(p, m.key);
+        const dlt = Math.round(pts[59] - pts[0]);
+        trend = `<div class="trend"><div class="th"><span>최근 5분 · ${m.label}</span><b style="color:${mcol(m.key)}">${dlt > 0 ? '+' : ''}${dlt}</b></div>${trendSVG(pts, m)}<div class="axis"><span>5분 전</span><span>지금</span></div></div>`;
+      } else {
+        trend = `<div class="noband">${p.band === 'lost' ? `LINK BAND 연결이 ${p.ago}부터 끊겼어요. 다시 연결되면 지표가 이어서 표시돼요.` : 'LINK BAND 없이 참여 중이에요. 체크인 응답으로 상태를 살펴보세요.'}</div>`;
+      }
+      const qa = p.ci.map(([q, a]) => `<div class="qa"><span class="q">${q}</span><span class="a">${a}</span></div>`).join('');
+      return { head: `<button class="back" data-act="list" aria-label="참가자 목록으로 돌아가기">${icon('left')}목록</button><span class="who"><span class="av">${p.name[0]}</span>${p.name}<span class="chip"><i class="dot ${p.band}"></i>${chipTxt}</span></span>`,
+        body: `<div class="minis">${minis}</div>${trend}<div class="qas"><p class="lbl">체크인 응답</p>${qa}</div>` };
+    }
+    if (t === 'metric') {
+      const grp = g => `<div class="sec"><p class="lbl">${g}</p><div class="opts" role="radiogroup" aria-label="${g} 지표">${METRICS.filter(x => x.group === g).map(x => `<button class="opt" role="radio" data-metric="${x.key}" style="--mcol:${mcol(x.key)}" aria-checked="${x.key === state.metric}"><span class="od"></span>${x.label}<small>${x.unit}</small></button>`).join('')}</div></div>`;
+      return { head: `<h2>${TAB_TITLE.metric}</h2>${backBtn}`, body: `${grp('MIND')}${grp('BODY')}<p class="hint">선택한 지표가 참가자 타일의 링 색과 숫자에 표시돼요.</p>` };
+    }
+    if (t === 'chat') {
+      const msgs = state.messages.map(x => `<div class="msg ${x.me ? 'me' : ''}"><span class="meta">${x.me ? '나' : x.who} · ${x.t}</span><span class="bub">${x.x}</span></div>`).join('');
+      return { head: `<h2>${TAB_TITLE.chat}</h2>${backBtn}`, flush: true, body: `<div class="chat-list" id="chat-list">${msgs}</div>
+        <form class="composer" id="composer"><input id="chat-in" type="text" placeholder="참가자에게 메시지 보내기" aria-label="메시지 입력" autocomplete="off"><button class="ib" type="submit" aria-label="보내기">${icon('send')}</button></form>` };
+    }
+    if (t === 'media') {
+      const bars = [6, 10, 14, 9, 16, 12, 8, 5, 3, 3, 3, 3].map((h, i) => `<i class="${i > 7 ? 'q' : ''}" style="height:${h}px"></i>`).join('');
+      return { head: `<h2>${TAB_TITLE.media}</h2>${backBtn}`, body: `
+        <div class="row"><div class="l"><span class="thumb">${icon('person')}</span><div class="tx"><b>내 카메라</b><small>${state.cam ? '참가자에게 보이는 중' : '꺼짐'}</small></div></div>${sw('cam', state.cam, '카메라')}</div>
+        <div class="row"><div class="l"><span class="lead">${icon(state.mic ? 'mic' : 'mic-off')}</span><div class="tx"><b>마이크</b><small>${state.mic ? '켜짐' : '음소거'}</small></div></div><div class="meter" aria-hidden="true">${bars}</div>${sw('mic', state.mic, '마이크')}</div>
+        <div class="sec"><div class="row"><div class="l"><span class="lead">${icon('music')}</span><div class="tx"><b>배경 음악(BGM)</b><small>${state.bgm || '꺼짐'}</small></div></div></div>
+        <div class="chips" role="radiogroup" aria-label="BGM 선택">${['숲속 새벽', '계곡 물소리', '고요한 종소리'].map(x => `<button class="pill" role="radio" data-bgm="${x}" aria-checked="${state.bgm === x}">${x}</button>`).join('')}</div>
+        <div class="vol"><input type="range" min="0" max="100" value="${state.vol}" id="vol" aria-label="BGM 음량"><span id="vol-v">${state.vol}%</span></div></div>` };
+    }
+    if (t === 'checkin') {
+      return { head: `<h2>${TAB_TITLE.checkin}</h2>${backBtn}`, body: `
+        <div class="sec"><div class="qrow"><span>자가 체크인 응답</span><span><b style="color:var(--b-tx-hi);font-size:var(--fs-15)">6</b> / 7명</span></div><div class="prog" role="progressbar" aria-valuenow="86" aria-valuemin="0" aria-valuemax="100"><i style="width:86%"></i></div></div>
+        <div class="dist"><div class="q"><span>오늘 마음의 날씨</span></div><div class="stack"><i class="c1" style="flex:3"></i><i class="c2" style="flex:1"></i><i class="c3" style="flex:2"></i></div><div class="leg"><span><em class="c1"></em>잔잔 3</span><span><em class="c2"></em>들뜸 1</span><span><em class="c3"></em>무거움 2</span></div></div>
+        <div class="dist"><div class="q"><span>몸 상태</span></div><div class="stack"><i class="c1" style="flex:3"></i><i class="c2" style="flex:2"></i><i class="c3" style="flex:1"></i></div><div class="leg"><span><em class="c1"></em>편안 3</span><span><em class="c2"></em>뻐근 2</span><span><em class="c3"></em>피곤 1</span></div></div>
+        <div class="sec"><p class="lbl">살펴볼 응답</p>
+          <button class="note" data-detail="5"><span><b>서아</b><span>어깨가 많이 뻐근해요</span></span>${icon('chev')}</button>
+          <button class="note" data-detail="6"><span><b>도윤</b><span>거의 못 잤어요</span></span>${icon('chev')}</button></div>` };
+    }
+    if (t === 'tools') {
+      const seg = (k, x) => `<button class="seg" role="radio" data-sort="${k}" aria-checked="${state.sort === k}">${x}</button>`;
+      return { head: `<h2>${TAB_TITLE.tools}</h2>${backBtn}`, body: `
+        <div class="sec"><p class="lbl">참가자 정렬</p><div class="segs" role="radiogroup" aria-label="정렬">${seg('join', '입장순')}${seg('low', '낮은 순')}${seg('high', '높은 순')}</div></div>
+        <div class="sec"><p class="lbl">참여 코드</p><div class="code"><b>MIND24</b><button class="btn" data-act="copy">${icon('copy')}코드 복사</button></div></div>` };
+    }
+    return null;
+  }
+
+  function renderView() {
+    const c = viewContent();
+    const list = $('#list'), view = $('#view');
+    $$('.tb').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === state.tab && state.detail === null)));
+    if (!c) { list.hidden = false; view.hidden = true; view.innerHTML = ''; return; }
+    list.hidden = true; view.hidden = false;
+    view.innerHTML = `<div class="vh">${c.head}</div><div class="vb" style="${c.flush ? 'gap:0' : ''}">${c.body}</div>`;
+    const cl = $('#chat-list'); if (cl) cl.scrollTop = cl.scrollHeight;
+    $('#bd-chat').hidden = state.tab === 'chat';
+  }
+
+  function render() { renderSelf(); renderInfo(); renderView(); layout(); }
+
+  // ── 이벤트 ──
+  let toastTimer = null;
+  function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 1800); }
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button, input');
+    if (!t) return;
+    if (t.id === 'btn-end') { $('#modal').hidden = false; return; }
+    if (t.id === 'm-cancel') { $('#modal').hidden = true; return; }
+    if (t.id === 'm-ok') { $('#modal').hidden = true; toast('시안에서는 클래스가 종료되지 않아요'); return; }
+    if (t.id === 'btn-close') { toast('클래스 화면을 닫으면 대시보드로 돌아가요'); return; }
+    if (t.dataset.tab) { const same = state.tab === t.dataset.tab && state.detail === null; return setState({ tab: same ? null : t.dataset.tab, detail: null }); }
+    if (t.dataset.id) return setState({ detail: Number(t.dataset.id), tab: null });
+    if (t.dataset.detail) return setState({ detail: Number(t.dataset.detail), tab: null });
+    if (t.dataset.metric) return setState({ metric: t.dataset.metric });
+    if (t.dataset.sort) return setState({ sort: t.dataset.sort });
+    if (t.dataset.bgm) return setState({ bgm: state.bgm === t.dataset.bgm ? null : t.dataset.bgm });
+    const act = t.dataset.act;
+    if (act === 'list') return setState({ tab: null, detail: null });
+    if (act === 'cam') return setState({ cam: !state.cam });
+    if (act === 'mic') return setState({ mic: !state.mic });
+    if (act === 'copy') {
+      try { navigator.clipboard && navigator.clipboard.writeText('MIND24'); } catch (_) { /* 시안: 복사 실패 무시 */ }
+      toast('참여 코드 MIND24를 복사했어요');
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!$('#modal').hidden) $('#modal').hidden = true;
+    else if (state.tab || state.detail !== null) setState({ tab: null, detail: null });
+  });
+  document.addEventListener('submit', e => {
+    if (e.target.id !== 'composer') return;
+    e.preventDefault();
+    const x = $('#chat-in').value.trim();
+    if (!x) return;
+    setState({ messages: [...state.messages, { who: '나', me: true, t: '12:34', x }] });
+  });
+  document.addEventListener('input', e => {
+    if (e.target.id === 'vol') { state = { ...state, vol: Number(e.target.value) }; $('#vol-v').textContent = state.vol + '%'; }
+  });
+
+  $('#gridscroll').addEventListener('scroll', updateScrollHints, { passive: true });
+  new ResizeObserver(() => layout()).observe($('#list'));
+  window.addEventListener('resize', () => layout());
+  if (params.get('modal') === 'end') $('#modal').hidden = false;
+  render();
+  requestAnimationFrame(() => requestAnimationFrame(() => { document.body.classList.remove('no-anim'); window.__ready = true; }));
+})();
+</script>
+</body>
+</html>

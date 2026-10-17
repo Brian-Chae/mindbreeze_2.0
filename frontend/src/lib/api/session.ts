@@ -1,20 +1,6 @@
 // 세션 관리 API
 
-import { apiClient, refreshAccessToken, tokenStorage } from './client';
-import { isAccessTokenExpiring } from './token-expiry';
-
-/**
- * API7-04: 만료 임박/만료 토큰만 1회 선제 갱신한다.
- * 유효한 토큰은 그대로 사용하고(불필요한 refresh 왕복 제거), 갱신이 네트워크/서버 오류로
- * 실패해도 예외를 던지지 않는다 — 이어지는 요청의 401 경로(apiClient)가 invalid 여부를
- * 구분해 세션 폐기/재시도를 결정하므로, 일시적 장애가 '로그인 만료'로 오인되지 않는다.
- */
-async function ensureMemberToken(): Promise<void> {
-  const accessToken = tokenStorage.getAccess();
-  if (accessToken && isAccessTokenExpiring(accessToken)) {
-    await refreshAccessToken();
-  }
-}
+import { apiClient } from './client';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 /** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
@@ -24,6 +10,8 @@ export type ParticipantMode = 'one_on_one' | 'group';
 export type LinkbandMode = 'none' | 'required' | 'optional';
 
 export interface SessionParticipant {
+  /** SDD-208: 백엔드 ParticipantInfo.participant_id(항상 내려옴). 상세 화면이 직접 만드는 객체가 있어 optional */
+  participant_id?: string;
   user_id: string | null;
   guest_name: string | null;
   is_guest: boolean;
@@ -136,45 +124,6 @@ export interface UpdateSessionPayload {
   reminder_offsets?: number[];
 }
 
-export interface SessionByCodeResponse {
-  id: string;
-  access_code: string | null;
-  title: string | null;
-  type: SessionType;
-  custom_type_name: string | null;
-  status: SessionStatus;
-  host_name: string | null;
-  participant_mode: ParticipantMode;
-  linkband_mode: LinkbandMode;
-  location_type: LocationType;
-  participant_count: number;
-  max_participants: number;
-  started_at: string | null;
-  scheduled_at: string | null;
-  /** SDD-095: 클래스 채팅 활성 여부 — 회원 입장 화면의 채팅 패널 노출 조건 */
-  chat_enabled?: boolean;
-  /** SDD-095: 세션 채팅방 id */
-  chat_room_id?: string | null;
-}
-
-export interface JoinByCodePayload {
-  name?: string;
-  /** SDD-062: 게스트 성별 — male | female | other */
-  gender?: string;
-  /** SDD-062: 게스트 생년월일 YYYY-MM-DD */
-  birth_date?: string;
-  /** SDD-126: 게스트 멱등 — 재참여 시 기존 행 재사용용 소유 증명 */
-  participant_token?: string | null;
-}
-
-export interface JoinByCodeResponse {
-  session: SessionDto;
-  participant_id: string | null;
-  is_guest: boolean;
-  /** SDD-029: 게스트 리포트 메일 소유 증명 — 공개 참가자 목록에는 미포함 */
-  participant_token?: string | null;
-}
-
 /** SDD-029: 완료 세션 리포트 메일 요청 */
 export interface ReportEmailRequest {
   participant_id: string;
@@ -280,54 +229,11 @@ export interface EegFeatureBatchResponse {
   saved: number;
 }
 
-/** 게스트 by-code 상태 — waiting→meditation 전이 감지용 */
-export type GuestState = 'waiting' | 'meditation' | 'complete' | string;
-
-export interface SessionByCodeStateResponse {
-  status: SessionStatus;
-  guest_state?: GuestState;
-  /** BE는 participant_state 로도 내려줄 수 있음 */
-  participant_state?: string | null;
-  started_at?: string | null;
-  duration_min?: number | null;
-  title?: string | null;
-  /** SDD-023: 게스트 본인 최신 EEG (미착용 시 null) */
-  band_connected?: boolean;
-  relaxation_index?: number | null;
-  focus_index?: number | null;
-  stress_index?: number | null;
-  signal_quality?: number | null;
-  last_eeg_at?: string | null;
-  /** SDD-095: 클래스 채팅 활성 여부 */
-  chat_enabled?: boolean;
-  /** SDD-095: 세션 채팅방 id */
-  chat_room_id?: string | null;
-}
-
 export const listSessions = (): Promise<SessionListResponse> =>
   apiClient.get<SessionListResponse>('/sessions');
 
 export const getSession = (id: string): Promise<SessionDto> =>
   apiClient.get<SessionDto>(`/sessions/${id}`);
-
-export const getSessionByCode = (code: string): Promise<SessionByCodeResponse> =>
-  apiClient.get<SessionByCodeResponse>(`/sessions/by-code/${code}`, { skipAuth: true });
-
-export const joinSessionByCode = async (
-  code: string,
-  payload: JoinByCodePayload = {},
-): Promise<JoinByCodeResponse> => {
-  if (tokenStorage.getAccess()) {
-    await ensureMemberToken();
-    return apiClient.post<JoinByCodeResponse>(`/sessions/by-code/${code}/join`, payload);
-  }
-
-  return apiClient.post<JoinByCodeResponse>(
-    `/sessions/by-code/${code}/join`,
-    payload,
-    { skipAuth: true },
-  );
-};
 
 export const createSession = (payload: CreateSessionPayload): Promise<SessionDto> =>
   apiClient.post<SessionDto>('/sessions', payload);
@@ -396,26 +302,6 @@ export interface MemberLiveKitTokenResponse {
   can_publish: boolean;
 }
 
-export const getMemberLiveKitToken = async (
-  code: string,
-  participantId: string,
-  participantToken?: string | null,
-): Promise<MemberLiveKitTokenResponse> => {
-  const payload = { participant_id: participantId, participant_token: participantToken ?? null };
-  if (tokenStorage.getAccess()) {
-    await ensureMemberToken();
-    return apiClient.post<MemberLiveKitTokenResponse>(
-      `/sessions/by-code/${code}/livekit-token`,
-      payload,
-    );
-  }
-  return apiClient.post<MemberLiveKitTokenResponse>(
-    `/sessions/by-code/${code}/livekit-token`,
-    payload,
-    { skipAuth: true },
-  );
-};
-
 /** SDD-094: 회원/게스트 손들기 — 온라인 그룹에서 발언권을 요청한다 */
 export interface RaiseHandResponse {
   participant_id: string;
@@ -429,25 +315,6 @@ export interface SetSpeakingResponse {
   speaking: boolean;
   raise_hand?: boolean;
 }
-
-/**
- * 회원/게스트 손들기.
- * 로그인 회원은 액세스 토큰으로, 비로그인 게스트는 participant_token 소유 증명으로 호출한다
- * (member livekit token 과 동일한 인증 분기).
- */
-export const raiseHand = async (
-  sessionId: string,
-  participantId: string,
-  participantToken?: string | null,
-): Promise<RaiseHandResponse> => {
-  const payload = { participant_token: participantToken ?? null };
-  const path = `/sessions/${sessionId}/participants/${participantId}/raise-hand`;
-  if (tokenStorage.getAccess()) {
-    await ensureMemberToken();
-    return apiClient.post<RaiseHandResponse>(path, payload);
-  }
-  return apiClient.post<RaiseHandResponse>(path, payload, { skipAuth: true });
-};
 
 /** 상담사(호스트) 발언권 부여/해제 — granted=false 면 회수 */
 export const setParticipantSpeaking = (
@@ -481,16 +348,6 @@ export const postSessionFeatures = (
   apiClient.post<EegFeatureBatchResponse>(`/sessions/${id}/features`, payload, {
     skipAuth: options?.skipAuth ?? false,
   });
-
-/** 게스트 대기/명상 전이용 세션 상태 */
-export const getSessionByCodeState = (
-  code: string,
-  participantId: string,
-): Promise<SessionByCodeStateResponse> =>
-  apiClient.get<SessionByCodeStateResponse>(
-    `/sessions/by-code/${code}/state?participant_id=${encodeURIComponent(participantId)}`,
-    { skipAuth: true },
-  );
 
 /** SDD-029: 인증된 이메일로 리포트 메일 발송 요청 (202 pending_review/queued/sent) */
 export const requestReportEmail = (

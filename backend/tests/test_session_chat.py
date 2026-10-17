@@ -4,6 +4,7 @@
 세션 방 권한은 ChatRoom.host_id 가 아니라 Session.host_id / SessionParticipant 기준이다.
 """
 
+from tests.entry_helpers import guest_body
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -242,10 +243,15 @@ def test_08_채팅토글_host성공_응답계약(client):
     # 세션 단건 조회/코드 조회에도 반영된다
     detail = client.get(f"/api/v1/sessions/{s['id']}", headers=host["auth"]).json()
     assert detail["chat_enabled"] is True
-    by_code = client.get(f"/api/v1/sessions/by-code/{detail['access_code']}").json()
-    assert by_code["chat_enabled"] is True
-    # 게스트/회원 상태 조회(폴링)에도 동일 플래그가 내려간다
-    state = client.get(f"/api/v1/sessions/by-code/{detail['access_code']}/state")
+    # 참여자 상태 조회(폴링)에도 동일 플래그가 내려간다 (SDD-209: 입장 자격 기반 entry-state)
+    entered = client.post(
+        "/api/v1/sessions/enter", json=guest_body(detail["access_code"], "채팅게스트")
+    )
+    assert entered.status_code == 200, entered.text
+    state = client.get(
+        f"/api/v1/sessions/{s['id']}/entry-state",
+        headers={"X-Entry-Credential": entered.json()["entry_credential"]},
+    )
     assert state.status_code == 200, state.text
     assert state.json()["chat_enabled"] is True
 

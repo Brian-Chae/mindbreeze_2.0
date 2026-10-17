@@ -46,7 +46,7 @@ def test_resend_failure_logs_report_context(report_db, monkeypatch, caplog):
     session = Session(host_id=uuid4(), type="meditation", status="completed", duration_min=10)
     db.add(session)
     db.flush()
-    participant = SessionParticipant(session_id=session.id, guest_name="게스트")
+    participant = SessionParticipant(report_included=True, session_id=session.id, guest_name="게스트")
     db.add(participant)
     db.flush()
     report = Report(

@@ -86,3 +86,15 @@ def notification_email_task(outbox_id: str) -> None:
         item.sent_at = datetime.now(timezone.utc)
         item.last_error = None
         db.commit()
+
+
+# SDD-209 B14: 비회원 이메일 초대 메일. email_app 에 등록해야 mindbreeze-email-worker 가 소비한다.
+# 다른 모듈에 정의하면 큐에서 unregistered task 로 버려진다(위 주석 참고). 실패는 재시도(backoff)한다.
+@email_app.task(name="tasks.session_invite_email", autoretry_for=(RuntimeError,), retry_backoff=True,
+                retry_kwargs={"max_retries": 3})
+def session_invite_email_task(invite_id: str) -> None:
+    from app.core.database import SessionLocal
+    from app.services.session_email_invite_service import deliver_invite_email
+    with SessionLocal() as db:
+        if deliver_invite_email(invite_id, db) == "failed":
+            raise RuntimeError("초대 메일 발송 실패")

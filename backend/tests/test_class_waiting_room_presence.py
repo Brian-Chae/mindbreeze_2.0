@@ -64,8 +64,10 @@ class FakeSio:
 
     # 헬퍼
     def call(self, event, *args):
+        from tests.entry_helpers import with_ws_credential
+
         fn = self.handlers[("/session-live", event)]
-        return asyncio.run(fn(*args))
+        return asyncio.run(fn(*with_ws_credential(args)))
 
     def events(self, name):
         return [e for e in self.emits if e["event"] == name]

@@ -1,7 +1,7 @@
 """SQLAlchemy Models — All"""
 
 from app.models.user import User
-from app.models.session import Session, SessionParticipant, SessionReminderLog
+from app.models.session import Session, SessionParticipant, SessionReminderLog, ReportChoiceEvent
 from app.models.record import SessionRecord, EEGRecord, EEGRawChunk, Report, AudioChunk, VideoChunk
 from app.models.eeg_feature import EEGFeatureWindow
 from app.models.credential import Credential, VerificationAudit
@@ -41,8 +41,11 @@ from app.models.agent import (
 from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
 from app.models.narrative_cache import NarrativeCache
+from app.models.original_deletion_audit import OriginalDeletionAudit
 
 __all__ = [
+    "ReportChoiceEvent",
+    "OriginalDeletionAudit",
     "NormalizationBaseline",
     "NormalizationModel",
     "NarrativeCache",
@@ -101,3 +104,19 @@ __all__ += ["DataExportJob", "DataExportAudit"]
 # SDD-190: 앱 푸시 디바이스 토큰
 from app.models.device_token import DeviceToken
 __all__ += ["DeviceToken"]
+
+# SDD-209 B11: 연구 목적 데이터 활용 동의
+from app.models.research import ResearchConsent, ResearchConsentEvent, ResearchWithdrawalRequest
+__all__ += ["ResearchConsent", "ResearchConsentEvent", "ResearchWithdrawalRequest"]
+
+# SDD-209 B14: 비회원 이메일 초대
+from app.models.session_email_invite import SessionEmailInvite
+__all__ += ["SessionEmailInvite"]
+
+# SDD-209 B12: 기본 DB 삭제 스위프 실행 이력
+from app.models.retention_sweep_run import RetentionSweepRun
+__all__ += ["RetentionSweepRun"]
+
+# SDD-209 B13: 연구 DB 내보내기 배치
+from app.models.research_export import ResearchExportBatch, ResearchExportItem
+__all__ += ["ResearchExportBatch", "ResearchExportItem"]

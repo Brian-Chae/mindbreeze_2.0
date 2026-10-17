@@ -23,6 +23,7 @@
          status_code-only 회귀를 막는 가드를 추가한다.
 """
 
+from tests.entry_helpers import guest_body
 import ast
 import asyncio
 import re
@@ -328,7 +329,7 @@ def test_tq06_실제_AsyncServer_게스트는_호스트룸에_들어가지_않�
     counselor = _counselor("tq06-guest-host@test.com")
     cls = _create_open_group_class(client, counselor["h"])
     joined_guest = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "TQ게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "TQ게스트")
     )
     assert joined_guest.status_code == 200, joined_guest.text
     pid = joined_guest.json()["participant_id"]
@@ -337,7 +338,10 @@ def test_tq06_실제_AsyncServer_게스트는_호스트룸에_들어가지_않�
     _attach_client(server, sid, eio)
     handlers = server.handlers["/session-live"]
     asyncio.run(handlers["connect"](sid, {}, {}))  # 게스트: 무토큰
-    asyncio.run(handlers["join"](sid, {"session_id": cls["id"], "participant_id": pid}))
+    asyncio.run(handlers["join"](sid, {
+        "session_id": cls["id"], "participant_id": pid,
+        "entry_credential": joined_guest.json()["entry_credential"],
+    }))
 
     rooms = server.rooms(sid, namespace="/session-live")
     assert f"session:{cls['id']}:all" in rooms
@@ -917,7 +921,7 @@ def test_tq14_세션_생성은_참여코드와_DB행을_만든다(client):
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["status"] == "ready"
-    assert len(body["access_code"]) == 6
+    assert len(body["access_code"]) == 4 and body["access_code"].isdigit()
     assert body["participant_mode"] == "one_on_one"
 
     db = _db()

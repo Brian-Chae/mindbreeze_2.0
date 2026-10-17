@@ -40,7 +40,29 @@ class Settings(BaseSettings):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 2880  # 48시간
+    # SDD-209(B5a): 클래스 입장 자격(로그인 없는 참가자 소유 증명) 만료 시간
+    entry_credential_ttl_hours: int = 24
+
+    # SDD-209(B11): 연구 가명 ID(HMAC-SHA256) 키 — 서버 .env 전용(RESEARCH_ID_KEY_V1). 값은 어떤 로그·응답·번들·
+    # 저장소에도 싣지 않는다. 연구 DB(Spark)에는 보내지 않는다. 분실하면 이후 동일인 매핑이 끊기므로 오프라인 백업 필수.
+    # 키 교체는 버전 번호(research_id_key_version)를 올리고 RESEARCH_ID_KEY_V{n} 을 추가하는 방식(정기 교체 안 함).
+    research_id_key_v1: str = ""
+    research_id_key_version: int = 1
+    # SDD-209(B13): 연구 DB 내보내기. 기본 비활성 — 활성화는 스테이징 prefix·IAM 인프라 승인 후.
+    research_export_enabled: bool = False
+    # S3 스테이징 prefix (Spark 가 pull). 이 prefix 아래에만 쓴다.
+    research_export_prefix: str = "research-export/"
+    # ack API 서비스 토큰 — 서버 .env 전용(RESEARCH_EXPORT_ACK_TOKEN). 값은 어떤 로그·응답에도 싣지 않는다. 비어 있으면 ack 거부.
+    research_export_ack_token: str = ""
+    # 같은 세션 배치가 연속 실패한 횟수가 이 값에 닿으면 플랫폼 관리자에게 1회 알린다
+    research_export_max_attempts: int = 5
+    # 한 배치의 최대 바이트(초과 시 배치 실패 — 분할 정책은 후속)
+    research_export_max_batch_bytes: int = 256 * 1024 * 1024
     refresh_token_expire_days: int = 14
+
+    # SDD-210: CORS 허용 오리진(쉼표 구분). 미설정이면 기존 기본 목록(dev 호환), 운영은 **명시 필수**.
+    # HTTP CORS 와 Socket.IO 가 같은 값을 쓴다(app/core/cors.py).
+    cors_allowed_origins: str = ""
 
     # Resend Email
     resend_api_key: str = ""
@@ -62,6 +84,9 @@ class Settings(BaseSettings):
     s3_endpoint_url: str = ""
     aws_access_key_id: str = ""
     aws_secret_access_key: str = ""
+    # SDD-210(T-D3): True 면 키 없이 boto3 기본 자격 체인(EC2 인스턴스 역할)으로 S3 를 사용한다.
+    # 기본 False — 키가 비어 있으면 기존처럼 스텁/로컬 폴백(로컬·테스트·현 dev 서버 호환).
+    s3_use_instance_role: bool = False
 
     # App
     # SDD-197: DEBUG 는 SQL echo(바인드 파라미터=개인정보 포함)를 켠다. 기본은 꺼짐 — 로컬 개발만 명시적으로 켠다.
@@ -73,6 +98,18 @@ class Settings(BaseSettings):
     environment: str = "production"
     # SDD-019: dev 역할 시뮬레이션 로그인 기능 게이트 — 기본 False (명시적 opt-in).
     enable_dev_role_simulation: bool = False
+
+    # SDD-209(B12/BE-R2): 기본 DB 삭제 스위프(retention_sweep). 기본 **비활성** — 활성화는 dry-run 승인 후 별도 승인.
+    # 비활성이어도 dry-run 보고서는 만들 수 있다(삭제 0). 활성화하면 기존 두 cron(sweep_stale_media/eeg_raw)은 건너뛴다.
+    retention_sweep_enabled: bool = False
+    # 원본(EEG raw·음성·영상·STT 원문) 보관 일수 — 세션 종료일 기준(N-1 기본 90일)
+    retention_raw_days: int = 90
+    # 비회원 개인정보(이름·성별·생년월일·이메일, 이메일 초대 주소) 보관 일수 — 세션 종료일 기준(N-1 기본 90일)
+    retention_guest_pii_days: int = 90
+    # 연구 동의 건이 내보내기 ack 되지 않은 채 삭제 기한을 이만큼(일) 넘기면 운영 알림 1회
+    retention_hold_alert_days: int = 14
+    # N-5: 이 날짜(YYYY-MM-DD, UTC) 이후 종료된 클래스부터만 삭제 대상. 비어 있으면 실제 삭제를 거부한다(dry-run 만).
+    retention_apply_from: str = ""
 
     # SDD-197(D5): 뇌파 원본(업로드 완료분) 보관 일수. 0 이하 = 무기한(영구 보관, 기본).
     # 음성·영상은 media_cleanup_service.MEDIA_RETENTION_DAYS(90일) 별도 적용.

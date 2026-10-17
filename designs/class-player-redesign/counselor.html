@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 상담사 클래스 진행 화면 시안</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+:root { --sheet-w: 380px; --line: rgba(255,255,255,.12); --fill: rgba(255,255,255,.07);
+  --mc-focus: var(--m-focus, #B373EF); --mc-relax: var(--m-relax, #01F0C8); --mc-balance: var(--m-emotion, #FF9ECB);
+  --mc-bpm: var(--m-bpm, #FFC857); --mc-resp: var(--m-resp, #5BC8FF); --mc-hrv: var(--m-hrv, #A8E86B); }
+@media (min-width: 1000px) { :root { --sheet-w: 400px; } }
+@media (min-width: 1280px) { :root { --sheet-w: 420px; } }
+
+html, body { height: 100dvh; overflow: hidden; margin: 0; }
+body { background: #1b0f26; font-size: var(--fs-15); line-height: 1.35; }
+.no-anim *, .no-anim *::before, .no-anim *::after { animation: none !important; transition: none !important; }
+input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* 배경 — 자연 창 */
+.bg { position: fixed; inset: 0; background: #1b0f26 center / cover no-repeat; }
+.bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, var(--scrim-top), var(--scrim-bottom)); }
+
+.app { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+
+/* ── 상단 바 ───────────────── */
+.top { flex: none; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: "x t e"; gap: 8px 10px; align-items: center; padding: 8px 10px; border-radius: 20px; background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); }
+.top .x { grid-area: x; } .top .ttl { grid-area: t; } .top .end { grid-area: e; } .top .stats { grid-area: s; }
+.ib { width: var(--tap); height: var(--tap); border-radius: 50%; display: grid; place-items: center; background: var(--fill); border: 1px solid var(--line); flex: none; }
+.ib:hover { background: rgba(255,255,255,.14); }
+.ttl { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.ttl h1 { margin: 0; font-size: var(--fs-15); font-weight: 700; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.ttl h1 span { overflow: hidden; text-overflow: ellipsis; }
+.ttl .logo { width: 24px; height: 11px; flex: none; color: var(--mb-lavender); }
+.ttl p { display: none; margin: 2px 0 0; font-size: var(--fs-13); color: var(--tx-mid); white-space: nowrap; }
+.stats { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-13); white-space: nowrap; color: var(--tx-hi); }
+.chip b { font-weight: 700; font-size: var(--fs-15); }
+.chip .ic { width: 16px; height: 16px; }
+.chip .lg { display: none; }
+.timeblk b { font-size: var(--fs-15); }
+.timeblk .tot { color: var(--tx-mid); }
+.timeblk .ic { display: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+.dot.on { background: var(--mb-mint); box-shadow: 0 0 0 3px rgba(1,240,200,.2); }
+.dot.off { border: 2px solid var(--tx-lo); }
+.dot.lost { background: var(--mb-coral); box-shadow: 0 0 0 3px rgba(232,180,160,.22); }
+.end { display: inline-flex; align-items: center; gap: 6px; height: var(--tap); padding: 0 16px 0 12px; border-radius: var(--r-pill); color: var(--mb-coral); border: 2px solid rgba(232,180,160,.6); background: rgba(232,180,160,.12); font-weight: 600; white-space: nowrap; }
+.end:hover { background: rgba(232,180,160,.22); }
+.end .ic { width: 20px; height: 20px; }
+@media (min-width: 600px) {
+  .top { grid-template-areas: "x t e" "s s s"; }
+  .ttl h1 { font-size: var(--fs-18); }
+  .stats { justify-content: flex-start; gap: 10px; }
+  .chip .lg { display: inline; } .chip .sm { display: none; }
+  .timeblk .ic { display: block; }
+}
+@media (min-width: 1000px) {
+  .top { grid-template-columns: 44px minmax(0, 1fr) auto auto; grid-template-areas: "x t s e"; gap: 14px; padding: 10px 14px; }
+  .ttl p { display: block; }
+  .stats { gap: 12px; }
+  .timeblk { background: none; border: 0; padding: 0; height: auto; gap: 8px; }
+  .timeblk b { font-size: var(--fs-24); line-height: 1; }
+  .timeblk .tot { font-size: var(--fs-15); }
+}
+
+/* ── 본문 ───────────────── */
+.body { flex: 1; min-height: 0; display: flex; gap: 12px; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.mstrip { flex: none; display: flex; align-items: center; gap: 12px; min-height: 52px; width: 100%; padding: 6px 12px 6px 10px; border-radius: var(--r-card); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); text-align: left; }
+.mstrip:hover { background: rgba(24,12,36,.88); }
+.mstrip .mg { width: 36px; height: 36px; flex: none; color: var(--mcol); }
+.mstrip .mg svg { width: 100%; height: 100%; display: block; }
+.mstrip .mtx { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mstrip .mlb { font-size: var(--fs-12); color: var(--tx-mid); line-height: 1.2; }
+.mstrip .mnm { font-size: var(--fs-18); font-weight: 700; line-height: 1.25; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; }
+.mstrip .mnm i { width: 10px; height: 10px; border-radius: 50%; background: var(--mcol); align-self: center; flex: none; }
+.mstrip .mnm small { font-size: var(--fs-13); color: var(--tx-mid); font-weight: 500; }
+.mstrip { container-type: inline-size; }
+.mstrip .mtop { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; min-height: 20px; }
+.mstrip .mrot { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px 0 6px; border-radius: var(--r-pill); background: rgba(179,115,239,.2); border: 1px solid rgba(179,115,239,.55); font-size: var(--fs-12); line-height: 1; white-space: nowrap; flex: none; }
+.mstrip .mrot .ic { width: 14px; height: 14px; }
+@container (max-width: 330px) { .mstrip .lgx, .mstrip .chev, .mstrip .mnm i { display: none; } }
+@container (max-width: 200px) { .mstrip .mg { display: none; } }
+.mstrip .mrot[hidden] { display: none; }
+.mstrip .chev { width: 20px; height: 20px; color: var(--tx-mid); flex: none; }
+/* 헤드 행: 지표 띠 + 보조 정보(좌) / 셀프뷰 자리(우) — 그리드와 절대 겹치지 않도록 레이아웃에서 자리를 확보 */
+.head { flex: none; display: flex; gap: 10px; align-items: stretch; }
+.hl { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: flex-start; gap: 6px; }
+.meta { display: flex; flex-direction: column; gap: 6px; }
+.meta .stats { flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
+.bandsum { display: none; flex-wrap: wrap; gap: 6px 8px; }
+.bandsum .chip { height: 32px; padding: 0 12px; gap: 8px; }
+.bandsum .chip .dot { width: 8px; height: 8px; }
+.selfview, .sumpanel { --svw: 96px; --svr: 3 / 4; position: relative; flex: none; width: var(--svw); aspect-ratio: var(--svr); align-self: flex-start; border-radius: var(--r-card); overflow: hidden; background: #241636; border: 1px solid var(--sheet-border); padding: 0; display: block; }
+.selfview.big { --svw: 144px; }
+.selfview .sv-vid { position: absolute; inset: 0; transform: scaleX(-1); }
+.selfview .sv-vid svg { width: 100%; height: 100%; display: block; }
+.selfview .sv-l { display: none; }
+.selfview .sv-lb { position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 12px); height: 24px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(18,8,28,.62); display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); font-weight: 600; white-space: nowrap; }
+.selfview .sv-ic { position: absolute; top: 6px; width: 28px; height: 28px; border-radius: 50%; background: rgba(18,8,28,.62); display: grid; place-items: center; }
+.selfview .sv-ic .ic { width: 16px; height: 16px; }
+.selfview .sv-mic { right: 6px; }
+.selfview .sv-mic.off { color: var(--mb-coral); }
+.selfview .sv-sz { left: 6px; }
+.selfview .sv-off { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: var(--sheet-bg-strong); color: var(--tx-mid); font-size: var(--fs-13); font-weight: 600; text-align: center; padding: 0 6px; }
+.selfview .sv-off .ic { width: 28px; height: 28px; }
+@media (min-width: 600px) {
+  .selfview, .sumpanel { --svw: min(200px, 42%); --svr: 5 / 3; }
+  .selfview.big { --svw: min(288px, 50%); --svr: 16 / 9; }
+  .selfview .sv-p { display: none; } .selfview .sv-l { display: block; }
+  .bandsum { display: flex; }
+}
+.gridwrap { position: relative; flex: 1; min-height: 0; }
+.gridscroll { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; scrollbar-width: none; padding: 4px 3px; display: flex; flex-direction: column; }
+.gridscroll::-webkit-scrollbar { display: none; }
+.gridscroll.fade-b { -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px), transparent 100%); mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 36px), transparent 100%); }
+.gridscroll.fade-t { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 100%); }
+.gridscroll.fade-t.fade-b { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 36px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 36px, #000 calc(100% - 36px), transparent 100%); }
+.range { position: absolute; right: 8px; bottom: 8px; z-index: 2; height: 28px; padding: 0 12px; border-radius: var(--r-pill); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); font-size: var(--fs-13); display: inline-flex; align-items: center; white-space: nowrap; pointer-events: none; }
+.range[hidden] { display: none; }
+.grid { display: flex; flex-wrap: wrap; justify-content: center; align-content: flex-start; width: 100%; margin: 0 auto; flex: none; }
+.tile { width: var(--tw); height: var(--th); flex: none; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; text-align: center; position: relative; transition: background .2s; }
+.tile:hover { background: rgba(24,12,36,.7); }
+.tile[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--mb-lavender); }
+.tile.warn { border-color: rgba(232,180,160,.7); }
+.tile.away .nm { color: var(--tx-mid); }
+.ring { width: var(--rs); height: var(--rs); position: relative; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; overflow: visible; }
+.ring .val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.ring .num { font-size: var(--rf); font-weight: 700; }
+.ring small { font-size: var(--fs-12); color: var(--tx-hi); margin-top: 3px; font-weight: 600; }
+.ring .nb { font-size: var(--fs-13); color: var(--tx-mid); font-weight: 600; }
+.ring .nb.warn { color: var(--mb-coral); }
+.rc-t { fill: none; stroke: rgba(255,255,255,.16); stroke-width: 8; }
+.rc-t.off { stroke: rgba(255,255,255,.3); stroke-width: 5; stroke-dasharray: 2 9; stroke-linecap: round; }
+.rc-t.lost { stroke: rgba(232,180,160,.7); stroke-width: 5; stroke-dasharray: 2 9; stroke-linecap: round; }
+.rc-a { fill: none; stroke: var(--mcol, var(--mb-mint)); stroke-width: 8; stroke-linecap: round; }
+.nm { font-size: var(--fs-15); font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: var(--fs-13); color: var(--tx-mid); max-width: 100%; white-space: nowrap; }
+.st.warn { color: var(--mb-coral); }
+
+
+.tbl-wrap { width: min(100%, 760px); border-radius: var(--r-card); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); overflow: clip; }
+.tbl { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-13); }
+.tbl th { position: sticky; top: 0; z-index: 1; background: rgb(30,17,44); height: 40px; text-align: center; font-weight: 600; color: var(--tx-mid); border-bottom: 1px solid var(--line); }
+.tbl th:first-child, .tbl td:first-child { text-align: left; padding-left: 12px; width: 25%; }
+.tbl th.sel { color: var(--mcol); }
+.tbl td { height: 46px; text-align: center; border-bottom: 1px solid rgba(255,255,255,.07); }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl td:first-child { font-size: var(--fs-15); font-weight: 600; }
+.tbl td.sel { background: rgba(255,255,255,.08); font-weight: 700; }
+.tbl tbody tr { cursor: pointer; }
+.tbl tbody tr:hover { background: rgba(255,255,255,.05); }
+.tbl .nd { display: inline-flex; align-items: center; gap: 8px; }
+.tbl .mu { color: var(--tx-lo); }
+
+/* ── 하단 도크 ───────────────── */
+.dockwrap { flex: none; display: flex; justify-content: center; }
+.dock { display: flex; justify-content: space-between; gap: 2px; width: 100%; max-width: 560px; padding: 6px 10px; border-radius: 28px; background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); }
+.dk { position: relative; flex: 1; min-width: 60px; min-height: 60px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 2px 0; font-size: var(--fs-12); color: var(--tx-mid); border-radius: 18px; }
+.dk .ico { width: var(--tap); height: var(--tap); border-radius: 50%; display: grid; place-items: center; background: var(--fill); border: 1px solid var(--line); color: var(--tx-hi); transition: background .2s; }
+.dk:hover .ico { background: rgba(255,255,255,.14); }
+.dk[aria-pressed="true"] { color: var(--tx-hi); }
+.dk[aria-pressed="true"] .ico { background: var(--mb-purple); border-color: var(--mb-lavender); }
+.dk .bd { position: absolute; top: 0; left: calc(50% + 8px); min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--mb-lavender); color: #24103a; font-size: var(--fs-12); font-weight: 700; display: grid; place-items: center; }
+
+/* ── 시트 ───────────────── */
+.hit { display: none !important; }
+.hit[hidden], .sheet[hidden] { display: none; }
+@media not all and (min-width: 1000px) and (orientation: landscape) { body.sheet-open .grid { opacity: .4; transition: opacity .2s; } }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; width: 100%; max-width: 640px; margin-inline: auto; z-index: 20; max-height: 58dvh; display: flex; flex-direction: column; background: rgba(22,11,34,.94); border: 1px solid var(--sheet-border); border-bottom: 0; border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 8px 16px calc(14px + env(safe-area-inset-bottom)); animation: up .28s ease-out; }
+.sheet.tall { height: 58dvh; }
+@keyframes up { from { transform: translateY(18px); opacity: 0; } }
+@keyframes in-right { from { transform: translateX(18px); opacity: 0; } }
+.grab { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.3); margin: 0 auto 4px; flex: none; }
+.sh-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 48px; }
+.sh-head h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sh-body > * { flex-shrink: 0; }
+.sh-body { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 12px; scrollbar-width: none; }
+.sh-body::-webkit-scrollbar { display: none; }
+@media (min-width: 1000px) and (orientation: landscape) {
+  .sheet { margin: 0; max-width: none; background: var(--sheet-bg-strong); position: static; flex: none; width: var(--sheet-w); max-height: none; height: auto; border-radius: var(--r-sheet); border: 1px solid var(--sheet-border); padding: 12px 18px 18px; animation: in-right .28s ease-out; }
+  .sheet.tall { height: auto; }
+  .grab { display: none; }
+  .hit { display: none; }
+}
+.lbl { margin: 0; font-size: var(--fs-12); font-weight: 700; letter-spacing: .08em; color: var(--tx-mid); }
+.sec { display: flex; flex-direction: column; gap: 8px; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.opt { min-height: 56px; padding: 6px 4px; border-radius: 14px; background: var(--fill); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: var(--fs-15); font-weight: 600; }
+.opt .od { width: 10px; height: 10px; border-radius: 50%; background: var(--mcol); margin-bottom: 2px; }
+.opt small { font-size: var(--fs-12); font-weight: 500; color: var(--tx-mid); }
+.opt[aria-checked="true"], .seg[aria-checked="true"] { background: rgba(179,115,239,.22); border-color: var(--mb-lavender); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 4px 12px; border-radius: 14px; background: var(--fill); }
+.row .tx { display: flex; flex-direction: column; min-width: 0; }
+.row .tx b { font-size: var(--fs-15); font-weight: 600; }
+.row .tx small { font-size: var(--fs-12); color: var(--tx-mid); }
+.row .lead { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.1); display: grid; place-items: center; flex: none; }
+.row .lead .ic { width: 20px; height: 20px; }
+.row .l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.sw { width: 56px; height: var(--tap); display: grid; place-items: center; flex: none; }
+.sw .trk { width: 48px; height: 28px; border-radius: 14px; background: rgba(255,255,255,.2); position: relative; transition: background .2s; }
+.sw .trk::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: transform .2s; }
+.sw[aria-checked="true"] .trk { background: var(--mb-purple-90); box-shadow: inset 0 0 0 2px var(--mb-lavender); }
+.sw[aria-checked="true"] .trk::after { transform: translateX(20px); }
+.segs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.seg { min-height: var(--tap); padding: 0 6px; border-radius: 14px; background: var(--fill); border: 2px solid transparent; font-size: var(--fs-13); font-weight: 600; }
+.thumb { width: 56px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #3b2a55, #1f5a56); display: grid; place-items: center; color: var(--tx-mid); flex: none; }
+.meter { display: flex; align-items: flex-end; gap: 3px; height: 20px; }
+.meter i { width: 4px; border-radius: 2px; background: var(--mb-mint); opacity: .85; }
+.meter i.q { background: rgba(255,255,255,.25); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { min-height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); background: var(--fill); border: 2px solid transparent; font-size: var(--fs-13); font-weight: 600; }
+.pill[aria-checked="true"] { background: rgba(179,115,239,.22); border-color: var(--mb-lavender); }
+.vol { display: flex; align-items: center; gap: 10px; min-height: var(--tap); }
+.vol input { flex: 1; accent-color: var(--mb-lavender); height: 28px; }
+.vol span { min-width: 40px; text-align: right; font-size: var(--fs-13); color: var(--tx-mid); }
+
+/* 채팅 */
+.chat-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 2px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.25) transparent; }
+.msg { max-width: 82%; display: flex; flex-direction: column; gap: 3px; align-self: flex-start; }
+.msg .meta { font-size: var(--fs-12); color: var(--tx-mid); }
+.msg .bub { padding: 8px 12px; border-radius: 16px 16px 16px 6px; background: rgba(255,255,255,.12); font-size: var(--fs-15); }
+.msg.me { align-self: flex-end; align-items: flex-end; }
+.msg.me .bub { background: var(--mb-purple); border-radius: 16px 16px 6px 16px; border: 1px solid rgba(179,115,239,.5); }
+.composer { flex: none; display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.composer input { flex: 1; min-width: 0; height: var(--tap); padding: 0 16px; border-radius: var(--r-pill); background: rgba(255,255,255,.1); border: 1px solid var(--line); outline-offset: 0; }
+.composer input::placeholder { color: var(--tx-mid); }
+.composer .send { background: var(--mb-purple); border-color: var(--mb-lavender); }
+
+/* 체크인 */
+.prog { height: 8px; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; }
+.prog i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--mb-lavender), var(--mb-mint)); }
+.dist { display: flex; flex-direction: column; gap: 6px; }
+.dist .q { display: flex; justify-content: space-between; font-size: var(--fs-13); color: var(--tx-mid); }
+.stack { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
+.stack i { display: block; }
+.leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-13); }
+.leg span { display: inline-flex; align-items: center; gap: 6px; }
+.leg em { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.c1 { background: var(--mb-lavender); } .c2 { background: var(--mb-pale); } .c3 { background: var(--mb-coral); }
+.note { width: 100%; min-height: var(--tap); display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; border-radius: 14px; background: var(--fill); text-align: left; }
+.note b { font-size: var(--fs-15); }
+.note span { font-size: var(--fs-13); color: var(--tx-mid); margin-left: 8px; }
+.note .ic { width: 20px; height: 20px; flex: none; color: var(--tx-mid); }
+
+/* 참가자 상세 */
+.who { display: flex; align-items: center; gap: 10px; }
+.av { width: 36px; height: 36px; border-radius: 50%; background: var(--mb-purple); border: 1px solid var(--mb-lavender); display: grid; place-items: center; font-size: var(--fs-15); font-weight: 700; flex: none; }
+.who .chip { height: 28px; }
+.minis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mini { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px 6px; border-radius: 14px; background: var(--fill); border: 2px solid transparent; }
+.mini.sel { border-color: var(--mcol); background: rgba(255,255,255,.1); }
+.mini .ring { width: 48px; height: 48px; }
+.mini .ring .num { font-size: var(--fs-15); }
+.mini .ml { font-size: var(--fs-12); color: var(--tx-mid); line-height: 1.1; }
+.trend { padding: 8px 12px 8px; border-radius: 14px; background: var(--fill); }
+.trend .th { display: flex; align-items: center; justify-content: space-between; font-size: var(--fs-13); color: var(--tx-mid); }
+.trend .th b { color: var(--mb-mint); font-size: var(--fs-13); }
+.trend svg { display: block; width: 100%; height: 44px; margin-top: 4px; }
+.trend .axis { display: flex; justify-content: space-between; font-size: var(--fs-12); color: var(--tx-lo); }
+.noband { padding: 12px; border-radius: 14px; background: var(--fill); font-size: var(--fs-13); color: var(--tx-mid); text-align: center; border: 1px dashed rgba(255,255,255,.25); }
+.qa { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 7px 0; border-top: 1px solid var(--line); }
+.qa .q { font-size: var(--fs-13); color: var(--tx-mid); white-space: nowrap; }
+.qa .a { font-size: var(--fs-15); text-align: right; }
+.qas .lbl { margin-bottom: 2px; }
+@media (max-width: 599px) { .qa:nth-of-type(3) { display: none; } }
+
+/* 코드 */
+.code { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: 14px; background: var(--fill); }
+.code b { font-size: var(--fs-24); letter-spacing: .14em; font-weight: 700; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: var(--tap); padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-weight: 600; font-size: var(--fs-15); }
+.btn .ic { width: 20px; height: 20px; }
+.btn.ghost { background: var(--fill); border-color: var(--line); }
+.btn.coral { background: rgba(232,180,160,.18); border: 2px solid rgba(232,180,160,.7); color: var(--mb-coral); }
+
+/* 토스트 · 모달 */
+.toast { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); z-index: 40; padding: 10px 18px; border-radius: var(--r-pill); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); font-size: var(--fs-15); white-space: nowrap; animation: up .2s ease-out; }
+.toast[hidden] { display: none; }
+.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(18,8,28,.45); }
+.modal[hidden] { display: none; }
+.mcard { width: min(100%, 360px); padding: 22px 20px 18px; border-radius: var(--r-sheet); background: rgba(24,12,36,.92); border: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 8px; }
+.mcard h3 { margin: 0; font-size: var(--fs-18); }
+.mcard p { margin: 0; font-size: var(--fs-15); color: var(--tx-mid); }
+.mcard .acts { display: flex; gap: 8px; margin-top: 12px; }
+.mcard .acts .btn { flex: 1; justify-content: center; }
+[hidden] { display: none !important; }
+.caution { --cau: #F0C060; }
+/* 모바일: 그룹 평균은 지표 띠 안으로 */
+.mstrip .mavg { display: none; flex-direction: column; align-items: flex-end; line-height: 1.15; flex: none; }
+.mstrip .mavg small { font-size: var(--fs-12); color: var(--tx-mid); }
+.mstrip .mavg b { font-size: var(--fs-18); }
+@media (max-width: 599px) { .mstrip .mavg { display: flex; } #chip-avg { display: none !important; } }
+.mstrip .mtx { overflow: hidden; }
+.mstrip.nobd { cursor: default; }
+.mstrip.nobd .mnote { font-size: var(--fs-15); font-weight: 700; line-height: 1.3; }
+.mstrip.nobd .msub { font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.3; }
+@container (max-width: 330px) { .mstrip .msub { display: none; } }
+
+/* 상단 배너 */
+.banner { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border-radius: var(--r-card); background: var(--sheet-bg-strong); border: 2px solid rgba(179,115,239,.55); }
+.banner.coral { border-color: rgba(232,180,160,.75); }
+.banner .bn-ic { width: 28px; height: 28px; flex: none; display: grid; place-items: center; color: var(--mb-pale); }
+.banner.coral .bn-ic { color: var(--mb-coral); }
+.banner .bn-ic .ic { width: 22px; height: 22px; }
+.banner .bn-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.35; }
+.banner .bn-tx b { font-size: var(--fs-15); color: var(--tx-hi); }
+.banner.coral .bn-tx b { color: var(--mb-coral); }
+.banner .bn-btn { height: var(--tap); padding: 0 14px; border-radius: var(--r-pill); background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-13); font-weight: 600; white-space: nowrap; flex: none; }
+.banner.coral .bn-btn { border: 2px solid rgba(232,180,160,.7); color: var(--mb-coral); background: rgba(232,180,160,.12); }
+
+/* 칩 줄: 한 줄, 넘치면 우선순위 낮은 칩 생략 + 더보기 */
+@media (max-width: 599px) { body.sheet-tall #chipline { display: none; } }
+.chipline { display: flex; align-items: center; gap: 4px; min-height: 44px; min-width: 0; overflow: hidden; flex-wrap: nowrap; }
+.chipline .grp { display: inline-flex; flex: none; align-items: center; }
+.achip { height: var(--tap); padding: 0 2px; display: inline-flex; align-items: center; flex: none; }
+.ap { height: 36px; padding: 0 12px; border-radius: var(--r-pill); display: inline-flex; align-items: center; gap: 6px; background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-13); white-space: nowrap; color: var(--tx-hi); }
+.ap b { font-size: var(--fs-15); font-weight: 700; }
+.ap .ic { width: 16px; height: 16px; flex: none; }
+.ap.sm { gap: 10px; padding: 0 12px; }
+.ap .sg { display: inline-flex; align-items: center; gap: 6px; }
+.ap.warn { border: 2px solid rgba(232,180,160,.75); background: rgba(232,180,160,.14); color: var(--mb-coral); padding: 0 11px; }
+.ap.hd { border: 2px solid var(--mb-lavender); background: rgba(179,115,239,.22); padding: 0 11px; }
+.ap.sp { border: 2px solid var(--mb-mint); background: rgba(1,240,200,.12); padding: 0 11px; }
+.ap.act { background: rgba(232,180,160,.16); border: 2px solid rgba(232,180,160,.75); color: var(--mb-coral); font-weight: 700; padding: 0 12px; }
+.ap.rec { border: 2px solid rgba(240,96,93,.7); background: rgba(240,96,93,.14); padding: 0 11px; }
+.ap.pause { border: 2px solid rgba(179,115,239,.7); background: rgba(179,115,239,.16); padding: 0 11px; }
+.ap.on { background: rgba(179,115,239,.28); border-color: var(--mb-lavender); }
+.ap.cau { border: 2px solid rgba(240,192,96,.75); background: rgba(240,192,96,.12); color: #F0C060; padding: 0 11px; }
+.rdot { width: 10px; height: 10px; border-radius: 50%; background: #F0605D; flex: none; display: inline-block; box-shadow: 0 0 0 3px rgba(240,96,93,.25); }
+.rdot.paused { background: transparent; border: 2px solid var(--mb-pale); box-shadow: none; }
+
+/* 타일 변형 */
+.tile .tbadge { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(18,8,28,.7); }
+.tile .tbadge .ic { width: 16px; height: 16px; }
+.tile .tbadge.hd { color: var(--mb-pale); border: 1px solid var(--mb-lavender); }
+.tile .tbadge.sp { color: var(--mb-mint); border: 1px solid var(--mb-mint); }
+.tile.handup { border: 2px solid var(--mb-lavender); }
+.tile.speaking { border: 2px solid var(--mb-mint); background: rgba(1,240,200,.1); }
+.tile.leadoff { border-color: rgba(232,180,160,.75); }
+.st.hdt { color: var(--mb-pale); font-weight: 600; }
+.st.spt { color: var(--mb-mint); font-weight: 600; }
+.st.cau { color: #F0C060; }
+.st .ic { width: 14px; height: 14px; flex: none; }
+.avt { width: 100%; height: 100%; border-radius: 50%; background: rgba(95,0,128,.55); border: 1px solid rgba(179,115,239,.5); display: grid; place-items: center; font-size: var(--rf); font-weight: 700; }
+body.net-bad .grid, body.net-bad .solowrap { opacity: .5; }
+body.net-bad .selfview .sv-vid { opacity: .45; }
+
+/* 오프라인 요약 패널(셀프뷰 자리) */
+.sumpanel { aspect-ratio: auto; height: 128px; align-self: flex-start; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 8px; background: var(--sheet-bg-strong); }
+@media (min-width: 600px) { .sumpanel { height: 120px; } }
+.sumpanel .sp-r { min-height: 32px; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: var(--fs-12); color: var(--tx-mid); border-bottom: 1px solid rgba(255,255,255,.08); }
+.sumpanel .sp-r:last-child { border-bottom: 0; }
+.sumpanel .sp-r span { white-space: nowrap; }
+.sumpanel .sp-r { gap: 4px; }
+.sumpanel .rdot { width: 8px; height: 8px; box-shadow: none; }
+.sumpanel .sp-r b { font-size: var(--fs-13); color: var(--tx-hi); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+@media (min-width: 600px) { .sumpanel .sp-r b { font-size: var(--fs-15); } .sumpanel { padding: 8px 12px; } .sumpanel .sp-r { gap: 8px; } .sumpanel .rdot { width: 10px; height: 10px; } }
+.selfview.deny { border: 2px solid rgba(232,180,160,.75); }
+.sv-off.deny { color: var(--mb-coral); gap: 3px; justify-content: flex-start; padding: 12px 6px 32px; line-height: 1.2; }
+.sv-off.deny > * { flex: none; }
+.sv-off.deny .ic { width: 22px; height: 22px; }
+@media (min-width: 600px) { .sv-off.deny { padding: 10px 6px 34px; justify-content: center; } }
+.sv-off.deny small { font-size: var(--fs-12); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+/* 1:1 큰 회원 카드 — 가운데 단일 컬럼, 가로형만 2열(같은 폭·같은 높이) */
+.solowrap { width: 100%; max-width: 640px; margin: 0 auto; }
+.solo { display: grid; grid-template-columns: 1fr; gap: 8px; align-items: stretch; }
+.card { padding: 16px; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); }
+.solo-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.solo-h b { font-size: var(--fs-18); }
+.solo-h .chip { height: 28px; }
+.solo .mini .ring { width: 52px; height: 52px; }
+.solo .mini .ring .num { font-size: var(--fs-18); }
+.solo-r { display: flex; flex-direction: column; gap: 8px; }
+.solo-r > * { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.solo .trend svg { height: 40px; }
+.solo .qas.card { padding: 8px 16px; }
+@media (min-width: 600px) { .solo .mini .ring { width: 88px; height: 88px; } .solo .mini .ring .num { font-size: var(--fs-24); } .solo .trend svg { height: 64px; } }
+@media (min-width: 1000px) and (orientation: landscape) {
+  .solowrap { max-width: 1000px; }
+  .solo { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .solo .mini .ring { width: 72px; height: 72px; }
+  .solo .mini .ring .num { font-size: var(--fs-18); }
+  .solo .trend svg { height: 56px; }
+}
+
+/* 시트 리스트·단계 */
+.lrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 6px 8px 6px 12px; border-radius: 14px; background: var(--fill); }
+.lrow .l { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.lrow .tx { display: flex; flex-direction: column; min-width: 0; }
+.lrow .tx b { font-size: var(--fs-15); }
+.lrow .tx small { font-size: var(--fs-12); color: var(--tx-mid); }
+.lrow .tx small.coral { color: var(--mb-coral); }
+.lrow .tx small.cau { color: #F0C060; }
+.lrow .btn { height: var(--tap); padding: 0 14px; font-size: var(--fs-13); }
+.steps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; counter-reset: st; }
+.steps li { display: flex; align-items: center; gap: 12px; font-size: var(--fs-15); }
+.steps li::before { counter-increment: st; content: counter(st); width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-13); font-weight: 700; }
+.sh-note { margin: 0; font-size: var(--fs-13); color: var(--tx-mid); }
+.sh-note.coral { color: var(--mb-coral); }
+.mi { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; }
+
+/* 종료 후 리포트 생성 중 */
+body.ending .app, body.ending .toast, body.ending .modal { display: none !important; }
+.ending { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; }
+.ecard { width: min(100%, 420px); padding: 24px 20px 18px; border-radius: var(--r-sheet); background: var(--sheet-bg-strong); border: 1px solid var(--sheet-border); display: flex; flex-direction: column; gap: 12px; }
+.ecard .eic { width: 48px; height: 48px; border-radius: 50%; background: rgba(1,240,200,.14); border: 2px solid var(--mb-mint); color: var(--mb-mint); display: grid; place-items: center; }
+.ecard .eic .ic { width: 26px; height: 26px; }
+.ecard h2 { margin: 0; font-size: var(--fs-24); }
+.ecard p { margin: 0; font-size: var(--fs-15); color: var(--tx-mid); }
+.esteps { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.esteps li { min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-radius: 14px; background: var(--fill); font-size: var(--fs-15); }
+.esteps li small { margin-left: auto; font-size: var(--fs-13); color: var(--tx-mid); }
+.esteps li .ic { width: 22px; height: 22px; flex: none; }
+.esteps li.done .ic { color: var(--mb-mint); }
+.esteps li.doing { border: 2px solid var(--mb-lavender); background: rgba(179,115,239,.16); }
+.esteps li.doing .ic { color: var(--mb-pale); }
+.esteps li.wait { color: var(--tx-mid); }
+.ecard .acts { display: flex; gap: 8px; margin-top: 4px; }
+.ecard .acts .btn { flex: 1; justify-content: center; }
+/* ===== 5차: 좌우 대칭·비율 규칙(균형.md) — 기준축 = 사이드 시트를 뺀 메인 영역 중심 ===== */
+:root { --hh: 112px; --hhb: 168px; --colmax: 1000px; }
+@media (min-width: 600px) { :root { --hh: 136px; --hhb: 200px; } }
+@media (min-width: 1000px) and (orientation: landscape) { :root { --hh: 120px; --hhb: 176px; } }
+.app { gap: 8px; padding: 8px 16px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+.body { gap: 16px; }
+.col { gap: 8px; }
+.main { gap: 8px; align-items: center; }
+.main > * { width: 100%; max-width: var(--colmax); }
+.gridwrap { flex: 1 1 0; }
+
+/* S3 상단 바: 좌(닫기)·우(종료) 같은 크기·같은 바깥 여백, 제목·시간은 정중앙 */
+.top { grid-template-columns: minmax(44px, 1fr) minmax(0, auto) minmax(44px, 1fr); grid-template-areas: "x t e"; gap: 8px; padding: 8px; }
+.top .x { justify-self: start; } .top .end { justify-self: end; }
+.ttl { align-items: center; text-align: center; }
+.ttl h1 { justify-content: center; max-width: 100%; }
+.ttl p { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 0; font-size: var(--fs-13); color: var(--tx-mid); white-space: nowrap; }
+.ttl p b { color: var(--tx-hi); font-size: var(--fs-15); }
+.ttl p .ic { width: 14px; height: 14px; }
+.ttl p .tm { display: inline-flex; align-items: center; gap: 4px; }
+.ttl .logo { display: none; }
+.end { width: var(--tap); padding: 0; justify-content: center; border-radius: 50%; }
+.end .et { display: none; }
+@media (min-width: 600px) {
+  .ttl .logo { display: block; }
+  .end { width: auto; padding: 0 16px 0 12px; border-radius: var(--r-pill); }
+  .end .et { display: inline; }
+  .top { grid-template-columns: minmax(104px, 1fr) minmax(0, auto) minmax(104px, 1fr); }
+}
+@media (min-width: 1000px) { .ttl p b { font-size: var(--fs-18); } .ttl p { font-size: var(--fs-15); } }
+
+/* CS3 헤드 행: 지표 띠 : 슬롯(셀프뷰/요약 패널) = 62:38(모바일) · 66:34(태블릿·데스크톱), 같은 높이 */
+.head { display: grid; grid-template-columns: 62fr 38fr; gap: 8px; height: var(--hh); flex: none; align-items: stretch; }
+.head.big { height: var(--hhb); }
+@media (min-width: 600px) { .head { grid-template-columns: 66fr 34fr; gap: 16px; } }
+.head > .mstrip { height: 100%; min-height: 0; width: 100%; }
+.head .selfview, .head .sumpanel { width: 100%; height: 100%; aspect-ratio: auto; align-self: stretch; }
+.selfview .sv-p { display: none !important; } .selfview .sv-l { display: block !important; }
+.sumpanel { justify-content: space-evenly; padding: 0 12px; }
+.mstrip { gap: 8px; padding: 8px 12px; }
+.mstrip .mavg { display: flex; }
+.mstrip .mtop { flex-wrap: wrap; }
+@container (max-width: 250px) { .mstrip .mg { display: none; } }
+
+/* 태블릿 세로 바텀 시트: 마지막 타일이 시트 위에 온전히 보이도록 높이 제한 */
+@media (min-width: 600px) and (not ((min-width: 1000px) and (orientation: landscape))) { .sheet { max-height: 50dvh; } .sheet.tall { height: 50dvh; } }
+/* CS4 칩 줄: 헤드와 같은 폭, 가운데 정렬 */
+.chipline { justify-content: center; }
+[data-skip] { display: none !important; }
+#rangechip { min-width: 96px; justify-content: center; }
+
+/* CS1·CS2 그리드: 고정 크기 타일, 열 수는 균등 분배 우선, 행 단위로 가운데, 영역 세로 중앙 */
+.grid { margin: auto; }
+.tile { gap: 2px; padding: 6px 8px; }
+.dockwrap { width: 100%; }
+.dock { max-width: 640px; justify-content: space-evenly; }
+</style>
+</head>
+<body class="no-anim">
+<div class="bg" id="bg"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="gr-ok" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#B373EF"/><stop offset="1" stop-color="#01F0C8"/></linearGradient>
+    <linearGradient id="gr-warn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E8B4A0"/><stop offset="1" stop-color="#D2AEFC"/></linearGradient>
+    <linearGradient id="svg-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#46306a"/><stop offset="1" stop-color="#1d4a48"/></linearGradient>
+    <linearGradient id="gr-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#01F0C8" stop-opacity=".32"/><stop offset="1" stop-color="#01F0C8" stop-opacity="0"/></linearGradient>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><rect x="2" y="6" width="13" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4h6v2a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="i-tools" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+    <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M9 10v10"/></symbol>
+    <symbol id="i-sort" viewBox="0 0 24 24"><path d="M7 4v16M7 20l-3-3M7 20l3-3M17 20V4M17 4l-3 3M17 4l3 3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-11 11M22 2l-7 20-4-9-9-4z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-videooff" viewBox="0 0 24 24"><path d="M2 8a3 3 0 0 1 3-2h6M15 10l6-3v10l-6-3M15 12v3a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V8M3 3l18 18"/></symbol>
+    <symbol id="i-micoff" viewBox="0 0 24 24"><path d="M9 9v3a3 3 0 0 0 5.1 2.1M15 9.3V6a3 3 0 0 0-5.7-1.3M5 11a7 7 0 0 0 11.2 5.6M19 11a7 7 0 0 1-.6 2.8M12 18v3M3 3l18 18"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v5M12 18h.01"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+    <symbol id="i-battery" viewBox="0 0 24 24"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2M6 11v2"/></symbol>
+    <symbol id="i-wifioff" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0 1 4-2.6M10.7 5.1A15 15 0 0 1 22 8.8M5 12.9a10 10 0 0 1 5.2-2.7M14.7 10a10 10 0 0 1 4.3 2.9M8.5 16.4a5 5 0 0 1 7 0M12 20h.01M3 3l18 18"/></symbol>
+    <symbol id="i-check2" viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></symbol>
+    <symbol id="i-rot" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></symbol>
+    <symbol id="i-logo" viewBox="0 0 414.72 188.928"><path fill="currentColor" d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <header class="top">
+    <button class="ib x" id="btn-close" aria-label="클래스 화면 닫기"><svg class="ic"><use href="#i-x"/></svg></button>
+    <div class="ttl">
+      <h1><svg class="logo" aria-hidden="true"><use href="#i-logo"/></svg><span id="ttl-t">마음챙김 명상수업 · 4회차</span></h1>
+      <p id="ttl-s"></p>
+    </div>
+    <button class="end" id="btn-end" aria-label="클래스 종료"><svg class="ic"><use href="#i-stop"/></svg><span class="et">종료</span></button>
+  </header>
+
+  <div class="body">
+    <div class="col">
+      <main class="main" id="main"><div class="banner" id="banner" hidden></div><div class="head" id="head"><button class="mstrip" id="mstrip" data-sheet="metric" aria-label="지금 보는 지표 바꾸기"></button><div id="hslot" style="display:contents"></div></div><div class="chipline" id="chipline"></div><div class="gridwrap"><div class="gridscroll" id="gridscroll"><div class="grid" id="grid"></div></div></div></main>
+      <div class="dockwrap">
+        <nav class="dock" aria-label="클래스 도구">
+          <button class="dk" data-sheet="metric"><span class="ico"><svg class="ic"><use href="#i-activity"/></svg></span>지표 기준</button>
+          <button class="dk" data-sheet="chat"><span class="ico"><svg class="ic"><use href="#i-chat"/></svg></span>채팅<span class="bd" id="bd-chat">3</span></button>
+          <button class="dk" data-sheet="media"><span class="ico"><svg class="ic"><use href="#i-video"/></svg></span>미디어</button>
+          <button class="dk" data-sheet="checkin"><span class="ico"><svg class="ic"><use href="#i-check"/></svg></span>체크인</button>
+          <button class="dk" data-sheet="tools"><span class="ico"><svg class="ic"><use href="#i-tools"/></svg></span>도구</button>
+        </nav>
+      </div>
+    </div>
+    <aside class="sheet" id="sheet" role="dialog" aria-modal="false" hidden></aside>
+  </div>
+</div>
+<div class="hit" id="hit" hidden></div>
+<div class="ending" id="ending" hidden>
+  <div class="ecard" role="status">
+    <div class="eic"><svg class="ic"><use href="#i-check2"/></svg></div>
+    <h2>수업이 종료됐어요</h2>
+    <p>리포트를 만드는 중이에요. 몇 분 걸릴 수 있어요.</p>
+    <ol class="esteps">
+      <li class="done"><svg class="ic"><use href="#i-check2"/></svg>기록 정리<small>완료</small></li>
+      <li class="doing"><svg class="ic"><use href="#i-clock"/></svg>AI 요약<small>진행 중</small></li>
+      <li class="wait"><svg class="ic"><use href="#i-clock"/></svg>리포트 생성<small>대기</small></li>
+    </ol>
+    <div class="prog" role="progressbar" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"><i style="width:55%"></i></div>
+    <p>화면을 닫아도 계속 만들어요. 준비되면 알려 드려요.</p>
+    <div class="acts"><button class="btn" data-act="dash">대시보드로</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="modal" id="modal" hidden>
+  <div class="mcard" role="alertdialog" aria-labelledby="m-t">
+    <h3 id="m-t">클래스를 종료할까요?</h3>
+    <p id="m-p">접속 중인 참가자 7명의 화면이 종료되고, 기록·리포트 생성이 시작돼요.</p>
+    <div class="acts"><button class="btn ghost" id="m-cancel">계속 진행</button><button class="btn coral" id="m-ok">종료하기</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const params = new URLSearchParams(location.search);
+
+  const METRICS = [
+    { key: 'focus', label: '집중도', short: '집중', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'relax', label: '이완도', short: '이완', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'balance', label: '감정균형도', short: '감정', unit: '%', group: 'MIND', min: 0, max: 100 },
+    { key: 'bpm', label: 'BPM', short: 'BPM', unit: 'bpm', group: 'BODY', min: 50, max: 110 },
+    { key: 'resp', label: '호흡', short: '호흡', unit: '회/분', group: 'BODY', min: 6, max: 24 },
+    { key: 'hrv', label: 'HRV', short: 'HRV', unit: 'ms', group: 'BODY', min: 10, max: 90 },
+  ];
+  const MKEY = Object.fromEntries(METRICS.map(m => [m.key, m]));
+  const mcol = key => `var(--mc-${key})`;
+
+  const BASE = [
+    { id: 1, name: '서연', band: 'on', v: { focus: 68, relax: 70, balance: 74, bpm: 72, resp: 14, hrv: 52 }, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 푹 잤어요']] },
+    { id: 2, name: '민준', band: 'on', v: { focus: 54, relax: 58, balance: 61, bpm: 78, resp: 16, hrv: 41 }, ci: [['마음의 날씨', '조금 들떠 있어요'], ['몸 상태', '어깨에 힘이 들어가요'], ['수면', '6시간 · 보통']] },
+    { id: 3, name: '지우', band: 'on', v: { focus: 79, relax: 88, balance: 85, bpm: 64, resp: 10, hrv: 71 }, ci: [['마음의 날씨', '맑고 고요해요'], ['몸 상태', '가벼워요'], ['수면', '8시간 · 푹 잤어요']] },
+    { id: 4, name: '하준', band: 'off', v: null, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+    { id: 5, name: '서아', band: 'on', v: { focus: 38, relax: 41, balance: 45, bpm: 86, resp: 18, hrv: 28 }, ci: [['몸 상태', '어깨가 많이 뻐근해요'], ['마음의 날씨', '조금 무거워요'], ['수면', '4시간 · 뒤척였어요']] },
+    { id: 6, name: '도윤', band: 'lost', v: { focus: 60, relax: 64, balance: 66, bpm: 75, resp: 15, hrv: 44 }, ago: '2분 전', ci: [['수면', '거의 못 잤어요'], ['마음의 날씨', '무거워요'], ['몸 상태', '피곤해요']] },
+    { id: 7, name: '예린', band: 'on', v: { focus: 62, relax: 73, balance: 70, bpm: 70, resp: 12, hrv: 55 }, ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] },
+    { id: 8, name: '시우', band: 'off', v: null, ci: [['마음의 날씨', '들떠 있어요'], ['몸 상태', '가벼워요'], ['수면', '6시간 · 보통']] },
+  ];
+  const EXTRA_NAMES = ['하윤', '도현', '나은', '지안', '수호', '다온', '이서', '로하', '유진', '태오', '소이', '건우', '아린', '현서', '라온', '시현'];
+  function makeExtra(i) {
+    const band = i % 5 === 3 ? 'off' : 'on';
+    const r = 48 + ((i * 13) % 40);
+    return { id: i + 1, name: EXTRA_NAMES[(i - 8) % EXTRA_NAMES.length], band,
+      v: band === 'off' ? null : { focus: 45 + ((i * 7) % 40), relax: r, balance: 50 + ((i * 11) % 38), bpm: 62 + ((i * 5) % 24), resp: 10 + (i % 8), hrv: 30 + ((i * 9) % 40) },
+      ci: [['마음의 날씨', '잔잔해요'], ['몸 상태', '편안해요'], ['수면', '7시간 · 보통']] };
+  }
+  const clampN = v => { const n = parseInt(v || '8', 10); return Number.isFinite(n) ? Math.min(24, Math.max(1, n)) : 8; };
+  const buildPeople = n => Array.from({ length: n }, (_, i) => BASE[i] || makeExtra(i));
+
+  const MESSAGES = [
+    { who: '서연', t: '12:18', x: '마음이 한결 편안해졌어요' },
+    { who: '나', me: true, t: '12:19', x: '좋아요. 지금 편안한 속도 그대로 이어가 볼게요.' },
+    { who: '민준', t: '12:24', x: '어깨에 힘이 자꾸 들어가요' },
+    { who: '지우', t: '12:26', x: '배경 소리가 참 좋아요' },
+    { who: '서아', t: '12:31', x: '어깨가 계속 뻐근해요' },
+    { who: '나', me: true, t: '12:32', x: '서아님, 어깨에 힘이 들어가 있는지 한 번 살펴보세요.' },
+    { who: '예린', t: '12:33', x: '네, 살펴볼게요' },
+  ];
+
+  const CASE_DEF = {
+    C01: {}, C02: { hands: [2, 5] }, C03: { speaking: 3 },
+    C04: { loc: 'offline' }, C05: { solo: true }, C06: { solo: true, loc: 'offline' },
+    C07: { cam: 'off' }, C08: { cam: 'denied' }, C09: { mic: 'off' }, C10: { mic: 'denied' },
+    C11: { rec: 'rec' }, C12: { leadoff: [2, 5, 8], lowbat: [3, 7] }, C13: { allOff: true },
+    C14: { queue: 3 }, C15: { selfBand: 'on' }, C16: { net: 'reconnecting' }, C17: { phase: 'confirm' },
+    C18: { n: 20, hands: [10, 13, 18], handsFirst: true },
+  };
+  const rawCase = (params.get('case') || '').toUpperCase();
+  const CASE_ID = CASE_DEF[rawCase] ? rawCase : 'C01';
+  const cd = CASE_DEF[CASE_ID];
+  const pick = (k, allowed, d) => (allowed.includes(params.get(k)) ? params.get(k) : d);
+  const loc = pick('loc', ['online', 'offline'], cd.loc || 'online');
+  const camParam = pick('cam', ['off', 'big', 'denied'], cd.cam || null);
+  const micParam = pick('mic', ['off', 'denied'], cd.mic || null);
+  const scn = {
+    id: CASE_ID, loc, solo: !!cd.solo, allOff: !!cd.allOff,
+    camDenied: loc === 'online' && camParam === 'denied',
+    micDenied: loc === 'online' && micParam === 'denied',
+    net: pick('net', ['reconnecting', 'down'], cd.net || null),
+    leadoff: cd.leadoff || [], lowbat: cd.lowbat || [],
+    selfBand: pick('selfband', ['on', 'off'], cd.selfBand || null),
+    phase: pick('phase', ['confirm', 'ending'], cd.phase || 'live'),
+  };
+  const REC_T = '08:12';
+  const WAIT_NAMES = ['가은', '윤우', '채아'];
+  const recParam = pick('rec', ['rec', 'paused', 'none'], loc === 'offline' ? 'rec' : (cd.rec || null));
+  const initialDetail = parseInt(params.get('detail') || '', 10);
+  const SHEETS = ['metric', 'chat', 'media', 'checkin', 'tools', 'hands', 'actions', 'queue', 'alerts', 'myband', 'permcam', 'permmic'];
+  let state = {
+    n: scn.solo ? 1 : (params.get('n') ? clampN(params.get('n')) : (cd.n || 8)),
+    metric: METRICS.some(m => m.key === params.get('metric')) ? params.get('metric') : 'relax',
+    rotate: params.get('rotate') === '1',
+    sort: 'join',
+    handsFirst: loc === 'online' && !!cd.handsFirst,
+    table: params.get('table') === '1',
+    sheet: Number.isFinite(initialDetail) ? 'detail' : (SHEETS.includes(params.get('sheet')) ? params.get('sheet') : null),
+    detail: Number.isFinite(initialDetail) ? initialDetail : null,
+    messages: MESSAGES,
+    cam: camParam !== 'off', camBig: camParam === 'big', mic: micParam === null,
+    rec: recParam === 'none' ? null : recParam,
+    hands: loc === 'online' ? (cd.hands || []) : [],
+    speaking: loc === 'online' ? (cd.speaking || null) : null,
+    queue: cd.queue || 0,
+    bgm: '숲속 새벽', vol: 60,
+  };
+  const setState = patch => { state = { ...state, ...patch }; render(); };
+
+  // 배경
+  const bgNo = ['1', '4', '5', '8', '10'].includes(params.get('bg')) ? params.get('bg') : '4';
+  $('#bg').style.backgroundImage = `url(assets/bg/background${bgNo}.webp)`;
+
+  const SIDE_MQ = window.matchMedia('(min-width: 1000px) and (orientation: landscape)');
+  const isBottomSheet = () => !SIDE_MQ.matches;
+  const icon = (id, cls = '') => `<svg class="ic ${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+  const valOf = (p, key) => (p.band === 'on' && p.v) ? p.v[key] : null;
+  const pctOf = (m, v) => Math.max(0.03, Math.min(1, (v - m.min) / (m.max - m.min)));
+  const bandDot = b => (b === 'leadoff' ? 'lost' : b);
+  const BAND_TXT = { on: '연결됨', off: '밴드 미착용', lost: '연결 끊김', leadoff: '접촉 불량' };
+  const people = () => buildPeople(state.n).map(p => {
+    let q = scn.allOff ? { ...p, band: 'off', v: null } : p;
+    if (scn.leadoff.includes(p.id)) q = { ...q, band: 'leadoff' };
+    if (scn.lowbat.includes(p.id)) q = { ...q, lowbat: true };
+    return { ...q, hand: state.hands.includes(p.id), speaking: state.speaking === p.id };
+  });
+
+  function ringSVG(pct, mode, key) {
+    const C = 2 * Math.PI * 44;
+    if (mode === 'off' || mode === 'lost') return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rc-t ${mode}" cx="50" cy="50" r="44"/></svg>`;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle class="rc-t" cx="50" cy="50" r="44"/><circle class="rc-a" style="--mcol:${mcol(key)}" cx="50" cy="50" r="44" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}"/></svg>`;
+  }
+
+  function sortedPeople() {
+    const m = MKEY[state.metric];
+    const list = people();
+    let out = list;
+    if (state.sort !== 'join') {
+      const dir = state.sort === 'low' ? 1 : -1;
+      const withVal = list.filter(p => valOf(p, m.key) !== null).sort((a, b) => dir * (valOf(a, m.key) - valOf(b, m.key)));
+      out = [...withVal, ...list.filter(p => valOf(p, m.key) === null)];
+    }
+    if (state.handsFirst) out = [...out.filter(p => p.speaking || p.hand), ...out.filter(p => !(p.speaking || p.hand))];
+    return out;
+  }
+
+  function avgOf(key) {
+    const vals = people().map(p => valOf(p, key)).filter(v => v !== null);
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  }
+
+  function tileHTML(p) {
+    const m = MKEY[state.metric];
+    const v = valOf(p, m.key);
+    const pressed = state.sheet === 'detail' && state.detail === p.id;
+    const badge = p.speaking ? `<span class="tbadge sp" aria-hidden="true">${icon('mic')}</span>` : (p.hand ? `<span class="tbadge hd" aria-hidden="true">${icon('hand')}</span>` : '');
+    const cls = [p.speaking ? 'speaking' : '', p.hand ? 'handup' : ''].join(' ');
+    if (scn.allOff) {
+      return `<button class="tile away" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 체크인 ${p.ci[0][1]}">
+        <div class="ring"><span class="avt">${p.name[0]}</span></div>
+        <span class="nm">${p.name}</span>
+        <span class="st"><i class="dot off"></i>${p.ci[0][1]}</span></button>`;
+    }
+    if (p.band === 'on') {
+      const warn = m.unit === '%' && v < 50;
+      let st;
+      if (p.speaking) st = `<span class="st spt"><i class="dot on"></i>말하는 중</span>`;
+      else if (p.hand) st = `<span class="st hdt">${icon('hand')}손듦 · 대기 중</span>`;
+      else if (scn.net) st = `<span class="st">${icon('pause')}수신 일시 중단</span>`;
+      else if (p.lowbat) st = `<span class="st cau">${icon('battery')}배터리 낮음</span>`;
+      else st = `<span class="st ${warn ? 'warn' : ''}"><i class="dot on"></i>연결됨${warn ? ' · 살펴보기' : ''}</span>`;
+      return `<button class="tile ${warn && !p.hand && !p.speaking ? 'warn' : ''} ${cls}" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} ${m.label} ${v}${m.unit}${p.hand ? ', 손들었어요' : ''}${p.speaking ? ', 말하는 중' : ''}">
+        ${badge}<div class="ring">${ringSVG(pctOf(m, v), 'ok', m.key)}<div class="val"><b class="num">${v}</b><small>${m.short}</small></div></div>
+        <span class="nm">${p.name}</span>${st}</button>`;
+    }
+    if (p.band === 'leadoff') {
+      return `<button class="tile leadoff" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 접촉 불량">
+        <div class="ring">${ringSVG(0, 'lost')}<div class="val"><span class="nb warn">접촉</span></div></div>
+        <span class="nm">${p.name}</span>
+        <span class="st warn"><i class="dot lost"></i>접촉 불량 · 확인</span></button>`;
+    }
+    if (p.band === 'lost') {
+      return `<button class="tile away" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 연결 끊김">
+        <div class="ring">${ringSVG(0, 'lost')}<div class="val"><span class="nb warn">끊김</span></div></div>
+        <span class="nm">${p.name}</span>
+        <span class="st"><i class="dot lost"></i>연결 끊김 · ${p.ago}</span></button>`;
+    }
+    return `<button class="tile away" data-id="${p.id}" aria-pressed="${pressed}" aria-label="${p.name} 밴드 미착용">
+      <div class="ring">${ringSVG(0, 'off')}<div class="val"><span class="nb">미착용</span></div></div>
+      <span class="nm">${p.name}</span>
+      <span class="st"><i class="dot off"></i>밴드 없이 참여</span></button>`;
+  }
+
+  function tableHTML(list) {
+    const head = METRICS.map(m => `<th class="${m.key === state.metric ? 'sel' : ''}">${m.short}</th>`).join('');
+    const rows = list.map(p => {
+      const cells = METRICS.map(m => {
+        const v = p.band === 'on' && p.v ? p.v[m.key] : null;
+        return `<td class="${m.key === state.metric ? 'sel' : ''} ${v === null ? 'mu' : ''}">${v === null ? '—' : v}</td>`;
+      }).join('');
+      return `<tr data-id="${p.id}" tabindex="0"><td><span class="nd"><i class="dot ${bandDot(p.band)}"></i>${p.name}</span></td>${cells}</tr>`;
+    }).join('');
+    return `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>이름</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+
+  // ── 레이아웃: 타일은 고정 크기(참가자 수와 무관), 넘치면 그리드만 세로 스크롤 ──
+  const scroller = () => $('#gridscroll');
+  function updateScrollHints() {
+    const sc = scroller();
+    const up = sc.scrollTop > 4, down = sc.scrollTop + sc.clientHeight < sc.scrollHeight - 4;
+    sc.classList.toggle('fade-t', up);
+    sc.classList.toggle('fade-b', down);
+    const rg = $('#rangetxt'); const grp = rg ? rg.closest('.grp') : null;
+    const scrollable = sc.scrollHeight > sc.clientHeight + 1;
+    if (!grp) return;
+    if (!scrollable) { if (!grp.dataset.skip) { grp.dataset.skip = '1'; fitChips(); } return; }
+    const sr = sc.getBoundingClientRect();
+    const items = $$('#grid [data-id]');
+    let first = -1, last = -1;
+    items.forEach((el, i) => {
+      const r = el.getBoundingClientRect();
+      const visible = Math.min(r.bottom, sr.bottom) - Math.max(r.top, sr.top);
+      if (visible > r.height * 0.5) { if (first < 0) first = i; last = i; }
+    });
+    if (first < 0) return;
+    const was = grp.dataset.skip;
+    delete grp.dataset.skip;
+    rg.textContent = `${first + 1}–${last + 1} / ${items.length}명`;
+    if (was) fitChips();
+  }
+
+  function layout() {
+    const sc = scroller();
+    const grid = $('#grid');
+    const prevTop = sc.scrollTop;
+    sc.style.paddingBottom = '';
+    const W = sc.clientWidth - 6, H = sc.clientHeight - 8;
+    const vw = window.innerWidth;
+    const vp = vw < 600 ? 'm' : (vw < 1000 ? 'tp' : (vw < 1280 ? 'tl' : 'd'));
+    const baseCols = { m: 2, tp: 4, tl: 5, d: 5 }[vp];
+    const gap = vp === 'm' ? 8 : 16;
+    const minW = vp === 'm' ? 140 : 170;
+    const list = sortedPeople();
+
+    if (scn.solo) {
+      grid.style.cssText = 'display:block;max-width:none;';
+      grid.innerHTML = soloHTML(list[0]);
+    } else if (state.table) {
+      grid.removeAttribute('style');
+      grid.innerHTML = tableHTML(list);
+    } else {
+      const nP = list.length;
+      const fit = Math.max(2, Math.min(baseCols, Math.floor((W + gap) / (minW + gap))));
+      // 열 수: 인원을 균등히 나누는 값 우선(큰 값부터), 없으면 마지막 행이 가장 덜 비는 값
+      let cols = 0;
+      for (let c = fit; c >= 2; c--) if (nP % c === 0) { cols = c; break; }
+      if (!cols) { let best = -1; for (let c = fit; c >= 2; c--) { const fill = (nP % c || c) / c; if (fill > best) { best = fill; cols = c; } } }
+      const designRows = Math.ceil(Math.min(nP, 8) / cols);
+      const minH = vp === 'm' ? 112 : 150, maxTH = vp === 'm' ? 150 : 240;
+      const th = Math.max(minH, Math.min(maxTH, Math.floor((H - (designRows - 1) * gap) / designRows)));
+      const tw = Math.min(vp === 'm' ? 400 : 240, Math.floor((W - (cols - 1) * gap) / cols));
+      const rs = Math.max(56, Math.min(112, th - 68, tw - 32));
+      grid.style.cssText = `--tw:${tw}px;--th:${th}px;--rs:${rs}px;--rf:${rs >= 100 ? 'var(--fs-36)' : 'var(--fs-24)'};gap:${gap}px;max-width:${cols * tw + (cols - 1) * gap + 1}px;`;
+      grid.innerHTML = list.map(tileHTML).join('');
+    }
+    grid.style.setProperty('--mcol', mcol(state.metric));
+    // 모바일 바텀 시트가 그리드 하단을 덮을 때, 마지막 타일을 시트 밖으로 끌어올 수 있게 여백 확보
+    const sheet = $('#sheet');
+    if (!sheet.hidden && isBottomSheet()) {
+      const covered = sheet.getBoundingClientRect().height - (window.innerHeight - sc.getBoundingClientRect().bottom);
+      sc.style.paddingBottom = `${4 + Math.max(0, Math.round(covered))}px`;
+    }
+    sc.scrollTop = prevTop;
+    updateScrollHints();
+  }
+
+  // ── 상단 영역 ──
+  function renderTitle() {
+    $('#ttl-t').textContent = scn.solo ? '임상심리상담 · 3회차' : '마음챙김 명상수업 · 4회차';
+    const Lp = people(); const joined = Lp.filter(p => p.band !== 'lost').length;
+    $('#ttl-s').innerHTML = `<span class="tm" aria-label="함께한 시간 12분 34초, 계획 30분">${icon('clock')}<b>12:34</b><span>/ 30:00</span></span>${scn.solo ? '' : `<span aria-hidden="true">·</span><span>접속 <b>${joined}/${Lp.length}</b></span>`}`;
+    $('#m-p').textContent = `접속 중인 참가자 ${people().filter(p => p.band !== 'lost').length}명의 화면이 종료되고, 기록·리포트 생성이 시작돼요. 종료 후에는 되돌릴 수 없어요.`;
+  }
+  function renderTop() {
+    renderStrip(); renderSlot(); renderChips();
+  }
+
+  const SV_P = '<svg class="sv-p" viewBox="0 0 96 128" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="96" height="128" fill="url(#svg-bg)"/><circle cx="48" cy="60" r="16" fill="rgba(255,255,255,.3)"/><path d="M16 128c0-24 14-40 32-40s32 16 32 40z" fill="rgba(255,255,255,.22)"/></svg>';
+  const SV_L = '<svg class="sv-l" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="120" fill="url(#svg-bg)"/><circle cx="100" cy="52" r="15" fill="rgba(255,255,255,.3)"/><path d="M62 120c0-24 17-40 38-40s38 16 38 40z" fill="rgba(255,255,255,.22)"/></svg>';
+  // 헤드 행 오른쪽 슬롯: 온라인=셀프뷰, 오프라인=셀프뷰 없이 수업 요약 패널
+  function renderSlot() {
+    const slot = $('#hslot');
+    if (loc === 'offline') {
+      const L = people();
+      const joined = L.filter(p => p.band !== 'lost').length;
+      const answered = L.length === 1 ? 1 : Math.max(0, joined - 1);
+      const rec = state.rec === 'paused' ? '<b>정지됨</b>' : `<b><i class="rdot"></i>${REC_T}</b>`;
+      slot.innerHTML = `<div class="sumpanel" id="sumpanel" role="group" aria-label="수업 요약"><div class="sp-r"><span>녹음</span>${rec}</div><div class="sp-r"><span>체크인</span><b>${answered}/${joined}</b></div><div class="sp-r"><span>밴드</span><b>${L.filter(p => p.band === 'on').length}/${L.length}</b></div></div>`;
+      return;
+    }
+    const big = state.camBig && !scn.camDenied && !(isBottomSheet() && state.sheet);
+    $('#head').classList.toggle('big', big);
+    const micOff = !state.mic || scn.micDenied;
+    const camTxt = scn.camDenied ? '카메라 사용 불가' : (state.cam ? '카메라 켜짐' : '카메라 꺼짐');
+    const dot = scn.camDenied ? 'lost' : (state.cam ? 'on' : 'off');
+    const body = scn.camDenied
+      ? `<span class="sv-off deny">${icon('videooff')}<span>카메라를 쓸 수 없어요</span><small>설정 안내 ›</small></span>`
+      : (state.cam ? `<span class="sv-vid">${SV_P}${SV_L}</span>` : `<span class="sv-off">${icon('videooff')}카메라 꺼짐</span>`);
+    slot.innerHTML = `<button class="selfview ${scn.camDenied ? 'deny' : ''}" id="selfview" aria-label="내 화면 ${camTxt}, 마이크 ${micOff ? '꺼짐' : '켜짐'}. ${scn.camDenied ? '탭하면 설정 안내' : '탭하면 크기 전환'}">${body}
+      ${scn.camDenied ? '' : `<span class="sv-ic sv-sz" aria-hidden="true">${icon(big ? 'shrink' : 'expand')}</span>`}
+      <span class="sv-ic sv-mic ${micOff ? 'off' : ''}" aria-hidden="true">${icon(micOff ? 'micoff' : 'mic')}</span>
+      <span class="sv-lb"><i class="dot ${dot}"></i>내 화면</span></button>`;
+  }
+
+  // 칩 줄: 우선순위 순서. 한 줄을 넘으면 뒤에서부터 생략하고 "+N" 더보기 칩을 둔다
+  let chipCache = [];
+  function chipItems() {
+    const L = people();
+    const c = k => L.filter(p => p.band === k).length;
+    const online = loc === 'online';
+    const items = [];
+    if (state.rec) {
+      const paused = state.rec === 'paused';
+      items.push({ key: 'rec', label: paused ? '기록 일시정지' : `녹음 중 ${REC_T}`, sheet: 'media',
+        html: `<button class="achip" data-sheet="media" aria-label="${paused ? '기록 일시정지' : '녹음 중 ' + REC_T}"><span class="ap ${paused ? 'pause' : 'rec'}">${paused ? icon('pause') + '기록 일시정지' : `<i class="rdot"></i>녹음 중 <b>${REC_T}</b>`}</span></button>` });
+    }
+    if (scn.allOff) items.push({ key: 'checkin', label: `체크인 ${Math.max(0, L.length - 2)}/${L.length}`, sheet: 'checkin', html: `<button class="achip" data-sheet="checkin"><span class="ap">${icon('check')}체크인 <b>${Math.max(0, L.length - 2)}/${L.length}</b></span></button>` });
+    const sp = L.find(p => p.speaking);
+    if (online && sp) items.push({ key: 'speak', label: `${sp.name} 말하는 중`, sheet: 'hands',
+      html: `<button class="achip" data-sheet="hands"><span class="ap sp">${icon('mic')}${sp.name} 말하는 중</span></button><button class="achip" data-act="revoke" aria-label="${sp.name} 발언권 회수"><span class="ap act">회수</span></button>` });
+    const hands = L.filter(p => p.hand);
+    if (online && hands.length) items.push({ key: 'hands', label: `손든 회원 ${hands.length}`, sheet: 'hands', html: `<button class="achip" data-sheet="hands"><span class="ap hd">${icon('hand')}손든 회원 <b>${hands.length}</b></span></button>` });
+    const lead = c('leadoff'), bat = L.filter(p => p.lowbat).length;
+    if (lead || bat) {
+      const parts = [lead ? `접촉 확인 <b>${lead}</b>` : '', bat ? `배터리 <b>${bat}</b>` : ''].filter(Boolean).join(' · ');
+      items.push({ key: 'actions', label: `필요 조치 · 접촉 확인 ${lead} · 배터리 ${bat}`, sheet: 'actions', html: `<button class="achip" data-sheet="actions"><span class="ap ${lead ? 'warn' : 'cau'}">${icon('alert')}${parts}</span></button>` });
+    }
+    if (state.queue > 0) items.push({ key: 'queue', label: `입장 대기 ${state.queue}`, sheet: 'queue', html: `<button class="achip" data-sheet="queue"><span class="ap">${icon('users')}대기 <b>${state.queue}</b></span></button>` });
+    if (scn.selfBand) {
+      const on = scn.selfBand === 'on';
+      items.push({ key: 'myband', label: on ? '내 밴드 연결됨' : '내 밴드 미착용', sheet: 'myband',
+        html: `<button class="achip" data-sheet="myband"><span class="ap"><i class="dot ${on ? 'on' : 'off'}"></i>${on ? '내 밴드 연결됨 · 이완 <b>72</b>' : '내 밴드 미착용 · 선택'}</span></button>` });
+    }
+    if (online && hands.length) items.push({ key: 'first', label: '손든 회원 우선 정렬', act: 'handsfirst', html: `<button class="achip" data-act="handsfirst" aria-pressed="${state.handsFirst}"><span class="ap ${state.handsFirst ? 'on' : ''}">${icon('sort')}손든 회원 우선</span></button>` });
+    if (scn.solo) items.push({ key: 'band', label: BAND_TXT[L[0].band], html: `<span class="achip" role="group" aria-label="밴드 상태"><span class="ap sm"><span class="sg"><i class="dot ${bandDot(L[0].band)}"></i>밴드 ${BAND_TXT[L[0].band]}</span></span></span>` });
+    else items.push({ key: 'band', label: `연결 ${c('on')} · 미착용 ${c('off')} · 끊김 ${c('lost')}`,
+      html: `<span class="achip" role="group" aria-label="밴드 상태 요약"><span class="ap sm"><span class="sg"><i class="dot on"></i>연결 <b>${c('on')}</b></span><span class="sg"><i class="dot off"></i>미착용 <b>${c('off')}</b></span><span class="sg"><i class="dot lost"></i>끊김 <b>${c('lost')}</b></span></span></span>` });
+    items.push({ key: 'range', opt: true, html: `<span class="achip"><span class="ap" id="rangechip"><b id="rangetxt">1–1 / ${L.length}명</b></span></span>` });
+    return items;
+  }
+  function renderChips() {
+    chipCache = chipItems();
+    $('#chipline').innerHTML = chipCache.map(i => `<span class="grp ${i.opt ? 'gopt' : ''}" ${i.opt ? 'data-skip="1"' : ''}>${i.html}</span>`).join('') + `<button class="achip more" data-sheet="alerts" aria-label="나머지 보기" hidden><span class="ap"><b>+0</b></span></button>`;
+    fitChips();
+  }
+  function fitChips() {
+    const line = $('#chipline');
+    if (!line) return;
+    const all = $$(':scope > .grp', line).filter(k => !k.dataset.skip);
+    const more = $('.more', line);
+    if (!all.length) return;
+    all.forEach(k => { k.hidden = false; });
+    more.hidden = true;
+    const avail = line.clientWidth, gap = 4;
+    const sum = list => list.reduce((a, k) => a + k.offsetWidth, 0) + gap * Math.max(0, list.length - 1);
+    // 1) 선택 칩(범위)을 먼저 생략, 2) 그래도 넘치면 뒤에서부터 생략하고 "+N" 더보기
+    let kids = all;
+    if (sum(kids) > avail) { all.filter(k => k.classList.contains('gopt')).forEach(k => { k.hidden = true; }); kids = all.filter(k => !k.hidden); }
+    if (sum(kids) > avail) {
+      more.hidden = false;
+      more.querySelector('b').textContent = `+${kids.length - 1}`;
+      const mw = more.offsetWidth;
+      let n = kids.length;
+      while (n > 1 && sum(kids.slice(0, n)) + gap + mw > avail) n -= 1;
+      kids.slice(n).forEach(k => { k.hidden = true; });
+      more.querySelector('b').textContent = `+${kids.length - n}`;
+    }
+  }
+
+  function bannerSpec() {
+    if (scn.net === 'down') return { tone: 'coral', ic: 'wifioff', t: '연결이 끊겼어요', d: '밴드 데이터는 기기에 보관 중이에요. 복구되면 이어서 기록돼요.', btn: '다시 연결', act: 'retry' };
+    if (scn.net) return { tone: 'coral', ic: 'wifioff', t: '연결이 불안정해요', d: '데이터 수신이 잠시 중단됐어요. 복구되면 이어서 기록돼요.' };
+    if (loc === 'online' && scn.micDenied) return { tone: 'coral', ic: 'micoff', t: '마이크를 쓸 수 없어요', d: '허용하면 AI 기록이 시작돼요. 허용하지 않아도 수업은 계속돼요.', btn: '허용 방법', sheet: 'permmic' };
+    if (loc === 'online' && !state.mic) return { tone: 'info', ic: 'micoff', t: '마이크 꺼짐', d: '이 구간은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.', btn: '마이크 켜기', act: 'mic' };
+    return null;
+  }
+  function renderBanner() {
+    const b = bannerSpec();
+    const el = $('#banner');
+    if (!b) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    el.className = `banner ${b.tone === 'coral' ? 'coral' : ''}`;
+    el.setAttribute('role', 'status');
+    el.innerHTML = `<span class="bn-ic">${icon(b.ic)}</span><span class="bn-tx"><b>${b.t}</b>${b.d}</span>${b.btn ? `<button class="bn-btn" ${b.sheet ? `data-sheet="${b.sheet}"` : `data-act="${b.act}"`}>${b.btn}</button>` : ''}`;
+  }
+  function renderDock() {
+    const btn = $('.dk[data-sheet="media"]');
+    btn.innerHTML = loc === 'offline' ? `<span class="ico">${icon('mic')}</span>녹음` : `<span class="ico">${icon('video')}</span>미디어`;
+    if (loc === 'online' && scn.camDenied) btn.setAttribute('aria-label', '미디어, 카메라 사용 불가');
+  }
+  function renderStrip() {
+    const strip = $('#mstrip');
+    if (scn.allOff) {
+      strip.classList.add('nobd'); strip.disabled = true; strip.removeAttribute('data-sheet');
+      strip.style.setProperty('--mcol', 'var(--tx-mid)');
+      strip.setAttribute('aria-label', '이번 수업은 밴드 없이 진행 중이에요');
+      strip.innerHTML = `<span class="mg" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 7"/></svg></span><span class="mtx"><b class="mnote">이번 수업은 밴드 없이 진행 중이에요</b><span class="msub">측정 없이도 수업은 그대로 진행돼요</span></span>`;
+      return;
+    }
+    const m = MKEY[state.metric];
+    const a = avgOf(m.key);
+    const showAvg = !scn.solo;
+    strip.style.setProperty('--mcol', mcol(m.key));
+    strip.innerHTML = `<span class="mg" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="5"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-dasharray="70 100" transform="rotate(-90 20 20)"/></svg></span>
+      <span class="mtx"><span class="mtop"><span class="mlb">${scn.solo ? '강조해서 보는 지표' : '지금 보는 지표'}</span><span class="mrot" ${state.rotate ? '' : 'hidden'}>${icon('rot')}<span><span class="lgx">10초마다 </span>순환 중</span></span></span><b class="mnm" id="mstrip-name" data-key="${m.key}"><i></i>${m.label}<small>${m.unit}</small></b></span>
+      ${showAvg ? `<span class="mavg"><small>그룹 평균</small><b>${a === null ? '—' : a}</b></span>` : ''}${icon('chev', 'chev')}`;
+  }
+
+  // ── 시트 ──
+  const SHEET_TITLE = { metric: '지표 기준', chat: '채팅', media: '미디어', checkin: '체크인 요약', tools: '도구' };
+
+  function seriesFor(p, key) {
+    const m = MKEY[key];
+    const end = p.v ? p.v[key] : 0;
+    const span = m.max - m.min;
+    return Array.from({ length: 60 }, (_, i) => {
+      const f = (59 - i) / 59;
+      const wave = Math.sin(i / 5 + p.id * 1.7) * span * 0.05 * (0.4 + f) + Math.sin(i / 11 + p.id) * span * 0.03 + Math.sin(i * 1.9 + p.id * 3) * span * 0.012;
+      const drift = -(((p.id * 3) % 7) - 3) * span * 0.018 * f;
+      return Math.max(m.min, Math.min(m.max, end + wave + drift * 2));
+    });
+  }
+  function trendSVG(pts, m) {
+    const lo = Math.min(...pts), hi = Math.max(...pts);
+    const pad = (hi - lo) * 0.2 || 4;
+    const y = v => 44 - ((v - (lo - pad)) / ((hi + pad) - (lo - pad))) * 40 - 2;
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / 59 * 300).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-label="최근 5분 ${m.label} 추이" style="color:${mcol(m.key)}"><path d="${d} L300 44 L0 44 Z" fill="currentColor" fill-opacity=".16"/><path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
+  }
+
+  function miniHTML(p, x) {
+    const v = p.v ? p.v[x.key] : null;
+    const live = p.band === 'on' && v !== null;
+    return `<div class="mini ${x.key === state.metric ? 'sel' : ''}" style="--mcol:${mcol(x.key)}"><div class="ring">${live ? ringSVG(pctOf(x, v), 'ok', x.key) : ringSVG(0, p.band === 'off' ? 'off' : 'lost')}<div class="val"><b class="num" ${live ? '' : 'style="color:var(--tx-lo)"'}>${live ? v : '—'}</b></div></div><span class="ml">${x.short}</span></div>`;
+  }
+  function trendHTML(p, m) {
+    if (p.band === 'on') {
+      const pts = seriesFor(p, m.key);
+      const dlt = Math.round(pts[59] - pts[0]);
+      return `<div class="trend"><div class="th"><span>최근 5분 · ${m.label}</span><b style="color:${mcol(m.key)}">${dlt > 0 ? '+' : ''}${dlt}</b></div>${trendSVG(pts, m)}<div class="axis"><span>5분 전</span><span>지금</span></div></div>`;
+    }
+    const msg = p.band === 'lost' ? `LINK BAND 연결이 ${p.ago}부터 끊겼어요. 다시 연결되면 지표가 이어서 표시돼요.` : (p.band === 'leadoff' ? '접촉이 불안정해요. 밴드를 이마에 밀착하도록 안내해 주세요.' : 'LINK BAND 없이 참여 중이에요. 체크인 응답으로 상태를 살펴보세요.');
+    return `<div class="noband">${msg}</div>`;
+  }
+  const qaHTML = p => p.ci.map(([q, a]) => `<div class="qa"><span class="q">${q}</span><span class="a">${a}</span></div>`).join('');
+  function soloHTML(p) {
+    const m = MKEY[state.metric];
+    return `<div class="solowrap"><div class="solo">
+      <section class="card"><header class="solo-h"><span class="av">${p.name[0]}</span><b>${p.name}</b><span class="chip"><i class="dot ${bandDot(p.band)}"></i>${BAND_TXT[p.band]}</span></header><div class="minis">${METRICS.map(x => miniHTML(p, x)).join('')}</div></section>
+      <section class="solo-r">${trendHTML(p, m)}<div class="card qas"><p class="lbl">체크인 응답</p>${qaHTML(p)}</div></section></div></div>`;
+  }
+  const personRow = (p, small, btn) => `<div class="lrow"><div class="l"><span class="av">${p.name[0]}</span><div class="tx"><b>${p.name}</b>${small}</div></div>${btn || ''}</div>`;
+  const stepsHTML = what => `<ol class="steps"><li>브라우저 주소창 왼쪽의 자물쇠 아이콘을 눌러요</li><li>${what}을 &quot;허용&quot;으로 바꿔요</li><li>이 화면을 새로고침해요</li></ol>`;
+
+  function sheetContent() {
+    const s = state.sheet;
+    if (s === 'metric') {
+      const m = MKEY[state.metric];
+      const grp = g => `<div class="sec"><p class="lbl">${g}</p><div class="opts" role="radiogroup" aria-label="${g} 지표">${METRICS.filter(x => x.group === g).map(x => `<button class="opt" role="radio" data-metric="${x.key}" style="--mcol:${mcol(x.key)}" aria-checked="${x.key === state.metric}"><span class="od"></span>${x.label}<small>${x.unit}</small></button>`).join('')}</div></div>`;
+      return { title: SHEET_TITLE.metric, body: `${grp('MIND')}${grp('BODY')}
+        <div class="row"><div class="tx"><b>10초마다 지표 순환</b><small>${state.rotate ? '순환 중 · 지금 ' + m.label : '꺼짐 · 선택한 지표를 고정해요'}</small></div><button class="sw" role="switch" data-act="rotate" aria-checked="${state.rotate}" aria-label="10초 순환"><span class="trk"></span></button></div>` };
+    }
+    if (s === 'chat') {
+      const msgs = state.messages.map(x => `<div class="msg ${x.me ? 'me' : ''}"><span class="meta">${x.me ? '나' : x.who} · ${x.t}</span><span class="bub">${x.x}</span></div>`).join('');
+      return { title: SHEET_TITLE.chat, tall: true, body: `<div class="chat-list" id="chat-list">${msgs}</div>
+        <form class="composer" id="composer"><input id="chat-in" type="text" placeholder="참가자에게 메시지 보내기" aria-label="메시지 입력" autocomplete="off"><button class="ib send" type="submit" aria-label="보내기">${icon('send')}</button></form>`, flush: true };
+    }
+    if (s === 'media') {
+      const bars = [6, 10, 14, 9, 16, 12, 8, 5, 3, 3, 3, 3].map((h, i) => `<i class="${i > 7 ? 'q' : ''}" style="height:${h}px"></i>`).join('');
+      const sw = (act, on, label) => `<button class="sw" role="switch" data-act="${act}" aria-checked="${on}" aria-label="${label}"><span class="trk"></span></button>`;
+      const bgmBlock = `<div class="sec"><div class="row"><div class="l"><span class="lead">${icon('music')}</span><div class="tx"><b>배경 음악(BGM)</b><small>${state.bgm || '꺼짐'}</small></div></div></div>
+        <div class="chips" role="radiogroup" aria-label="BGM 선택">${['숲속 새벽', '계곡 물소리', '고요한 종소리'].map(t => `<button class="pill" role="radio" data-bgm="${t}" aria-checked="${state.bgm === t}">${t}</button>`).join('')}</div>
+        <div class="vol"><input type="range" min="0" max="100" value="${state.vol}" id="vol" aria-label="BGM 음량"><span id="vol-v">${state.vol}%</span></div></div>`;
+      const paused = state.rec === 'paused';
+      const recBtn = `<button class="btn ghost" data-act="recpause" style="padding:0 12px">${icon(paused ? 'play' : 'pause')}${paused ? '재개' : '일시정지'}</button>`;
+      if (loc === 'offline') {
+        return { title: '녹음', body: `
+          <div class="row"><div class="l"><span class="lead">${icon('mic')}</span><div class="tx"><b>녹음 마이크</b><small>${paused ? '기록 일시정지' : '녹음 중 · ' + REC_T}</small></div></div>${recBtn}</div>
+          <p class="sh-note">멈춘 구간은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.</p>${bgmBlock}` };
+      }
+      const camRow = scn.camDenied
+        ? `<div class="row"><div class="l"><span class="thumb">${icon('videooff')}</span><div class="tx"><b>내 카메라</b><small class="coral" style="color:var(--mb-coral)">권한이 필요해요</small></div></div><button class="btn ghost" data-sheet="permcam" style="padding:0 12px">설정 안내</button></div>`
+        : `<div class="row"><div class="l"><span class="thumb">${icon('person')}</span><div class="tx"><b>내 카메라</b><small>${state.cam ? '참가자에게 보이는 중' : '꺼짐'}</small></div></div>${sw('cam', state.cam, '카메라')}</div>`;
+      const micRow = scn.micDenied
+        ? `<div class="row"><div class="l"><span class="lead">${icon('micoff')}</span><div class="tx"><b>마이크</b><small style="color:var(--mb-coral)">권한이 필요해요</small></div></div><button class="btn ghost" data-sheet="permmic" style="padding:0 12px">허용 방법</button></div>`
+        : `<div class="row"><div class="l"><span class="lead">${icon(state.mic ? 'mic' : 'micoff')}</span><div class="tx"><b>마이크</b><small>${state.mic ? '켜짐' : '꺼짐 · AI 기록 제외'}</small></div></div>${state.mic ? `<div class="meter" aria-hidden="true">${bars}</div>` : ''}${sw('mic', state.mic, '마이크')}</div>`;
+      const recRow = state.rec ? `<div class="row"><div class="l"><span class="lead">${icon('pause')}</span><div class="tx"><b>AI 기록</b><small>${paused ? '일시정지' : '녹음 중 · ' + REC_T}</small></div></div>${recBtn}</div>` : '';
+      return { title: SHEET_TITLE.media, body: `${camRow}${micRow}${recRow}${bgmBlock}` };
+    }
+    if (s === 'checkin') {
+      return { title: SHEET_TITLE.checkin, body: `
+        <div class="sec"><div class="q" style="display:flex;justify-content:space-between;font-size:var(--fs-13);color:var(--tx-mid)"><span>자가 체크인 응답</span><span><b style="color:var(--tx-hi);font-size:var(--fs-15)">6</b> / 7명</span></div><div class="prog" role="progressbar" aria-valuenow="86" aria-valuemin="0" aria-valuemax="100"><i style="width:86%"></i></div></div>
+        <div class="dist"><div class="q"><span>오늘 마음의 날씨</span></div><div class="stack"><i class="c1" style="flex:3"></i><i class="c2" style="flex:1"></i><i class="c3" style="flex:2"></i></div><div class="leg"><span><em class="c1"></em>잔잔 3</span><span><em class="c2"></em>들뜸 1</span><span><em class="c3"></em>무거움 2</span></div></div>
+        <div class="dist"><div class="q"><span>몸 상태</span></div><div class="stack"><i class="c1" style="flex:3"></i><i class="c2" style="flex:2"></i><i class="c3" style="flex:1"></i></div><div class="leg"><span><em class="c1"></em>편안 3</span><span><em class="c2"></em>뻐근 2</span><span><em class="c3"></em>피곤 1</span></div></div>
+        <div class="sec"><p class="lbl">살펴볼 응답</p>
+          <button class="note" data-detail="5"><span><b>서아</b><span>어깨가 많이 뻐근해요</span></span>${icon('chev')}</button>
+          <button class="note" data-detail="6"><span><b>도윤</b><span>거의 못 잤어요</span></span>${icon('chev')}</button></div>` };
+    }
+    if (s === 'tools') {
+      const seg = (k, t) => `<button class="seg" role="radio" data-sort="${k}" aria-checked="${state.sort === k}">${t}</button>`;
+      return { title: SHEET_TITLE.tools, body: `
+        <div class="sec"><p class="lbl">정렬</p><div class="segs" role="radiogroup" aria-label="정렬">${seg('join', '입장순')}${seg('low', '낮은 순')}${seg('high', '높은 순')}</div></div>
+        ${loc === 'online' && !scn.solo ? `<div class="row"><div class="l"><span class="lead">${icon('hand')}</span><div class="tx"><b>손든 회원 우선</b><small>손든·말하는 회원을 맨 위에</small></div></div><button class="sw" role="switch" data-act="handsfirst" aria-checked="${state.handsFirst}" aria-label="손든 회원 우선"><span class="trk"></span></button></div>` : ''}
+        <div class="row"><div class="l"><span class="lead">${icon('table')}</span><div class="tx"><b>표로 보기</b><small>6개 지표를 한눈에 비교</small></div></div><button class="sw" role="switch" data-act="table" aria-checked="${state.table}" aria-label="표로 보기"><span class="trk"></span></button></div>
+        <div class="sec"><p class="lbl">참여 코드</p><div class="code"><b>MIND24</b><button class="btn" data-act="copy">${icon('copy')}코드 복사</button></div></div>` };
+    }
+    if (s === 'detail') {
+      const p = people().find(x => x.id === state.detail) || people()[0];
+      const m = MKEY[state.metric];
+      const chipTxt = BAND_TXT[p.band];
+      return { title: `<span class="who"><span class="av">${p.name[0]}</span>${p.name}<span class="chip"><i class="dot ${bandDot(p.band)}"></i>${chipTxt}</span></span>`, body: `<div class="minis">${METRICS.map(x => miniHTML(p, x)).join('')}</div>${trendHTML(p, m)}<div class="qas"><p class="lbl">체크인 응답</p>${qaHTML(p)}</div>` };
+    }
+    if (s === 'hands') {
+      const L = people();
+      const hs = L.filter(p => p.hand), sp = L.find(p => p.speaking);
+      const cur = sp ? personRow(sp, '<small>말하는 중</small>', '<button class="btn coral" data-act="revoke">회수</button>') : '';
+      const rows = hs.map(p => personRow(p, '<small>손들었어요 · 방금</small>', `<button class="btn" data-grant="${p.id}">발언권 부여</button>`)).join('');
+      return { title: `손든 회원 ${hs.length}`, body: `${cur}${rows}${!cur && !rows ? '<p class="sh-note">지금 손든 회원이 없어요.</p>' : ''}<p class="sh-note">발언권을 주면 회원 마이크가 켜져요. 켜진 구간은 AI 기록에 포함돼요.</p>` };
+    }
+    if (s === 'actions') {
+      const L = people();
+      const lead = L.filter(p => p.band === 'leadoff'), bat = L.filter(p => p.lowbat);
+      return { title: '필요 조치', body: `
+        ${lead.length ? `<div class="sec"><p class="lbl">접촉 확인 ${lead.length}</p>${lead.map(p => personRow(p, '<small class="coral">접촉 불량 · 이마에 밀착</small>')).join('')}</div>` : ''}
+        ${bat.length ? `<div class="sec"><p class="lbl">배터리 낮음 ${bat.length}</p>${bat.map(p => personRow(p, '<small class="cau">배터리 낮음 · 충전 안내</small>')).join('')}</div>` : ''}
+        <button class="btn" data-act="notify" style="justify-content:center">${icon('send')}모두에게 안내 보내기</button>` };
+    }
+    if (s === 'queue') {
+      const names = WAIT_NAMES.slice(WAIT_NAMES.length - state.queue);
+      return { title: `입장 대기 ${state.queue}`, body: `${names.map((n, i) => `<div class="lrow"><div class="l"><span class="av">${n[0]}</span><div class="tx"><b>${n}</b><small>자리 대기 중</small></div></div><button class="btn" data-approve="1">입장 승인</button></div>`).join('') || '<p class="sh-note">대기 중인 회원이 없어요.</p>'}${state.queue ? '<button class="btn ghost" data-act="approveall" style="justify-content:center">모두 승인</button>' : ''}` };
+    }
+    if (s === 'alerts') {
+      const rows = chipCache.filter(i => !i.opt && (i.sheet || i.act)).map(i => `<div class="lrow"><div class="l"><div class="tx"><b>${i.label}</b></div></div>${i.sheet ? `<button class="btn ghost" data-sheet="${i.sheet}">열기</button>` : `<button class="btn ghost" data-act="${i.act}">바꾸기</button>`}</div>`).join('');
+      return { title: '알림 전체', body: rows || '<p class="sh-note">확인할 알림이 없어요.</p>' };
+    }
+    if (s === 'myband') {
+      const on = scn.selfBand === 'on';
+      return { title: '내 밴드', body: on
+        ? `<div class="row"><div class="l"><span class="lead"><i class="dot on"></i></span><div class="tx"><b>연결됨</b><small>신호 좋음 · 내 이완도 72</small></div></div></div><div class="row"><div class="l"><span class="lead">${icon('battery')}</span><div class="tx"><b>배터리 78%</b><small>충분해요</small></div></div></div><p class="sh-note">내 지표는 나에게만 보여요. 참가자에게는 공유되지 않아요.</p>`
+        : `<div class="row"><div class="l"><span class="lead"><i class="dot off"></i></span><div class="tx"><b>미착용</b><small>선택 사항이에요</small></div></div><button class="btn" data-act="notify">밴드 연결</button></div><p class="sh-note">밴드 없이도 수업은 그대로 진행돼요. 착용하면 내 지표도 볼 수 있어요.</p>` };
+    }
+    if (s === 'permcam' || s === 'permmic') {
+      const cam = s === 'permcam';
+      return { title: cam ? '카메라 허용 방법' : '마이크 허용 방법', body: `${stepsHTML(cam ? '카메라' : '마이크')}<p class="sh-note coral">${cam ? '허용하지 않아도 수업은 계속 진행할 수 있어요.' : '허용하지 않으면 이 수업은 AI 기록에서 빠져요. 뇌파는 계속 기록돼요.'}</p><button class="btn" data-act="notify" style="justify-content:center">허용했어요 · 다시 확인</button>` };
+    }
+    return null;
+  }
+
+  let lastSheetKey = '';
+  function renderSheet() {
+    const sheet = $('#sheet'), hit = $('#hit');
+    const c = state.sheet ? sheetContent() : null;
+    $$('.dk').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sheet === state.sheet)));
+    if (!c) { document.body.classList.remove('sheet-open', 'sheet-tall'); sheet.hidden = true; hit.hidden = true; sheet.innerHTML = ''; lastSheetKey = ''; return; }
+    const key = state.sheet + ':' + state.detail;
+    sheet.hidden = false;
+    hit.hidden = false;
+    document.body.classList.add('sheet-open');
+    sheet.classList.toggle('tall', !!c.tall);
+    document.body.classList.toggle('sheet-tall', !!c.tall);
+    sheet.setAttribute('aria-label', typeof c.title === 'string' ? c.title : '참가자 상세');
+    sheet.innerHTML = `<div class="grab" aria-hidden="true"></div><div class="sh-head"><h2>${c.title}</h2><button class="ib" data-act="close" aria-label="시트 닫기">${icon('x')}</button></div><div class="sh-body" style="${c.flush ? 'gap:0' : ''}">${c.body}</div>`;
+    if (key !== lastSheetKey) { sheet.style.animation = 'none'; void sheet.offsetWidth; sheet.style.animation = ''; }
+    lastSheetKey = key;
+    const list = $('#chat-list');
+    if (list) list.scrollTop = list.scrollHeight;
+    const unread = $('#bd-chat'); unread.hidden = state.sheet === 'chat';
+  }
+
+  function render() {
+    document.body.classList.toggle('net-bad', !!scn.net);
+    renderTitle(); renderDock(); renderTop(); renderBanner(); renderSheet(); layout(); fitChips();
+  }
+
+  // ── 이벤트 ──
+  let rotateTimer = null;
+  function syncRotate() {
+    clearInterval(rotateTimer); rotateTimer = null;
+    if (state.rotate) rotateTimer = setInterval(() => {
+      const i = METRICS.findIndex(m => m.key === state.metric);
+      setState({ metric: METRICS[(i + 1) % METRICS.length].key });
+    }, 10000);
+  }
+  let toastTimer = null;
+  function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 1800); }
+
+  document.addEventListener('click', e => {
+    const t = e.target.closest('button, tr[data-id]');
+    if (!t) {
+      if (state.sheet && isBottomSheet() && !e.target.closest('#sheet, .top, .mstrip, .dock, .modal, .toast, .head, .banner, .chipline')) setState({ sheet: null, detail: null });
+      return;
+    }
+    if (t.id === 'btn-end') { $('#modal').hidden = false; return; }
+    if (t.id === 'm-cancel') { $('#modal').hidden = true; return; }
+    if (t.id === 'm-ok') { $('#modal').hidden = true; document.body.classList.add('ending'); $('#ending').hidden = false; return; }
+    if (t.id === 'selfview') return scn.camDenied ? setState({ sheet: 'permcam', detail: null }) : setState({ camBig: !state.camBig });
+    if (t.dataset.grant) { const id = Number(t.dataset.grant); return setState({ hands: state.hands.filter(h => h !== id), speaking: id }); }
+    if (t.dataset.approve) return setState({ queue: Math.max(0, state.queue - 1) });
+    if (t.id === 'btn-close') { toast('클래스 화면을 닫으면 대시보드로 돌아가요'); return; }
+    if (t.dataset.sheet) { const same = state.sheet === t.dataset.sheet; return setState({ sheet: same ? null : t.dataset.sheet, detail: null }); }
+    if (t.dataset.id) return setState({ sheet: 'detail', detail: Number(t.dataset.id) });
+    if (t.dataset.detail) return setState({ sheet: 'detail', detail: Number(t.dataset.detail) });
+    if (t.dataset.metric) return setState({ metric: t.dataset.metric });
+    if (t.dataset.sort) return setState({ sort: t.dataset.sort });
+    if (t.dataset.bgm) return setState({ bgm: state.bgm === t.dataset.bgm ? null : t.dataset.bgm });
+    const act = t.dataset.act;
+    if (act === 'close') return setState({ sheet: null, detail: null });
+    if (act === 'rotate') { state = { ...state, rotate: !state.rotate }; syncRotate(); return render(); }
+    if (act === 'table') return setState({ table: !state.table });
+    if (act === 'revoke') return setState({ speaking: null });
+    if (act === 'handsfirst') return setState({ handsFirst: !state.handsFirst });
+    if (act === 'recpause') return setState({ rec: state.rec === 'paused' ? 'rec' : 'paused' });
+    if (act === 'approveall') return setState({ queue: 0 });
+    if (act === 'notify') { toast('안내를 보냈어요'); return; }
+    if (act === 'retry') { toast('다시 연결하는 중이에요'); return; }
+    if (act === 'dash') { toast('대시보드로 이동해요'); return; }
+    if (act === 'cam') return setState({ cam: !state.cam });
+    if (act === 'mic') return setState({ mic: !state.mic });
+    if (act === 'copy') {
+      try { navigator.clipboard && navigator.clipboard.writeText('MIND24'); } catch (_) { /* 시안: 복사 실패 무시 */ }
+      toast('참여 코드 MIND24를 복사했어요');
+    }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { if (!$('#modal').hidden) $('#modal').hidden = true; else if (state.sheet) setState({ sheet: null, detail: null }); }
+    if (e.key === 'Enter' && e.target.matches('tr[data-id]')) setState({ sheet: 'detail', detail: Number(e.target.dataset.id) });
+  });
+  document.addEventListener('submit', e => {
+    if (e.target.id !== 'composer') return;
+    e.preventDefault();
+    const input = $('#chat-in'); const x = input.value.trim();
+    if (!x) return;
+    setState({ messages: [...state.messages, { who: '나', me: true, t: '12:34', x }] });
+  });
+  document.addEventListener('input', e => {
+    if (e.target.id === 'vol') { state = { ...state, vol: Number(e.target.value) }; $('#vol-v').textContent = state.vol + '%'; }
+  });
+
+  $('#gridscroll').addEventListener('scroll', updateScrollHints, { passive: true });
+  new ResizeObserver(() => layout()).observe($('#gridscroll'));
+  window.addEventListener('resize', () => { render(); });
+  new ResizeObserver(() => fitChips()).observe($('#chipline'));
+  syncRotate();
+  if (params.get('modal') === 'end' || scn.phase === 'confirm') $('#modal').hidden = false;
+  if (scn.phase === 'ending') { document.body.classList.add('ending'); $('#ending').hidden = false; }
+  render();
+  requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('no-anim')));
+})();
+</script>
+</body>
+</html>

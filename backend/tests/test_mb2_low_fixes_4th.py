@@ -19,6 +19,7 @@
   [16] CONTRACT-09  관리자 기관 등록 응답 계약({org, admin, invite_sent})
 """
 
+from tests.entry_helpers import guest_body
 import asyncio
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -271,7 +272,7 @@ def test_guest_join_response_has_chat_room_id(client):
     _open_class(client, cls, counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "게스트")
     )
     assert res.status_code == 200, res.text
     assert "chat_room_id" in res.json()["session"]
@@ -293,16 +294,16 @@ def test_waitlisted_participant_cannot_speak_or_get_token(client):
         max_participants=1,
     )
     _open_class(client, cls, counselor["h"])
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
+    url = "/api/v1/sessions/enter"
 
-    g1 = client.post(url, json={"name": "g1"}).json()
-    g2 = client.post(url, json={"name": "g2"}).json()
+    g1 = client.post(url, json=guest_body(cls["access_code"], "g1")).json()
+    g2 = client.post(url, json=guest_body(cls["access_code"], "g2")).json()
     parts = {p["participant_id"]: p for p in g2["session"]["participants"]}
     assert parts[g1["participant_id"]]["is_waitlisted"] is False
     assert parts[g2["participant_id"]]["is_waitlisted"] is True
 
     # 대기열 참여자 손들기 → 403
-    res = _raise_hand(client, cls, g2["participant_id"], token=g2["participant_token"])
+    res = _raise_hand(client, cls, g2["participant_id"], token=g2["entry_credential"])
     assert res.status_code == 403, res.text
 
     # 상담사가 대기열 참여자에게 발언권 부여 → 409
@@ -311,10 +312,7 @@ def test_waitlisted_participant_cannot_speak_or_get_token(client):
 
     # 대기열 참여자 LiveKit 토큰 발급 → 403
     _set_room_id(cls, uuid.uuid4())
-    res = client.post(
-        _token_url(cls),
-        json={"participant_id": g2["participant_id"], "participant_token": g2["participant_token"]},
-    )
+    res = client.post(_token_url(cls), headers={"X-Entry-Credential": g2["entry_credential"]})
     assert res.status_code == 403, res.text
 
 
@@ -330,9 +328,9 @@ def test_dashboard_excludes_waitlisted_participants(client):
         max_participants=1,
     )
     _open_class(client, cls, counselor["h"])
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
-    client.post(url, json={"name": "d1"})
-    client.post(url, json={"name": "d2"})
+    url = "/api/v1/sessions/enter"
+    client.post(url, json=guest_body(cls["access_code"], "d1"))
+    client.post(url, json=guest_body(cls["access_code"], "d2"))
 
     db = _db()
     try:
@@ -444,8 +442,8 @@ def test_collect_client_comments_batches_queries(client):
                          status="completed")
         db.add(s)
         db.flush()
-        p_member = SessionParticipant(session_id=s.id, user_id=member.id)
-        p_guest = SessionParticipant(session_id=s.id, user_id=None, guest_name="게스트")
+        p_member = SessionParticipant(report_included=True, session_id=s.id, user_id=member.id)
+        p_guest = SessionParticipant(report_included=True, session_id=s.id, user_id=None, guest_name="게스트")
         db.add_all([p_member, p_guest])
         db.flush()
         db.add(Report(

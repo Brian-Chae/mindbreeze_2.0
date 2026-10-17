@@ -1,4 +1,5 @@
 """SDD-029: 게스트 메일 요청과 승인·발송·열람 경계 검증."""
+from tests.entry_helpers import guest_body
 from uuid import UUID, uuid4
 from unittest.mock import Mock
 
@@ -19,7 +20,7 @@ def setup_email(client):
     session = Session(host_id=uuid4(), type="meditation", status="completed", duration_min=10)
     db.add(session)
     db.flush()
-    participant = SessionParticipant(session_id=session.id, guest_name="게스트")
+    participant = SessionParticipant(report_included=True, session_id=session.id, guest_name="게스트")
     db.add(participant)
     db.commit()
     yield db, session, participant
@@ -74,6 +75,7 @@ def test_delivery_approval_and_failure(client, setup_email, monkeypatch):
     assert service.deliver_report_email(str(report.id), db) == "pending_review"
     sender.assert_not_called()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     sender.return_value = False
     assert service.deliver_report_email(str(report.id), db) == "failed"
@@ -96,6 +98,7 @@ def test_delivery_failure_logs_report_context(client, setup_email, monkeypatch, 
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
     report = db.query(Report).one()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     monkeypatch.setattr(service, "send_report_email", Mock(return_value=False))
 
@@ -114,6 +117,7 @@ def test_queue_failure_is_visible(client, setup_email, monkeypatch):
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=body)
     report = db.query(Report).one()
     report.status = "completed"
+    report.generation_status = "ready"
     db.commit()
     monkeypatch.setattr(service, "enqueue_report_email", Mock(side_effect=RuntimeError("queue down")))
     response = client.post(f"/api/v1/sessions/{session.id}/report-email", json=body)
@@ -125,7 +129,7 @@ def test_group_report_excludes_others(client, setup_email):
     from app.models.eeg_feature import EEGFeatureWindow
     db, session, participant = setup_email
     session.participant_mode = "group"
-    other = SessionParticipant(session_id=session.id, guest_name="다른 참가자")
+    other = SessionParticipant(report_included=True, session_id=session.id, guest_name="다른 참가자")
     db.add(other)
     db.flush()
     db.add(SessionRecord(session_id=session.id, ai_summary={"summary": "다른 참가자 비밀 상담"}))
@@ -171,16 +175,18 @@ def test_expired_link_rejected(client, setup_email):
     assert client.get(f"/api/v1/sessions/{session.id}/report-email/view", params={"token": token}).status_code == 401
 
 
-def test_join_issues_private_participant_token(client, setup_email):
+def test_enter_issues_private_entry_credential(client, setup_email):
     db, session, participant = setup_email
     # SDD-088: 회원/게스트 입장은 오픈(open) 이후 허용
     session.status = "open"
-    session.access_code = "912345"
+    session.access_code = "9123"
     session.max_participants = 10
     db.commit()
-    response = client.post("/api/v1/sessions/by-code/912345/join", json={"name": "새 게스트"})
+    response = client.post("/api/v1/sessions/enter", json=guest_body("9123", "새 게스트"))
     assert response.status_code == 200, response.text
-    assert response.json()["participant_token"]
+    assert response.json()["entry_credential"]
+    # 입장 자격은 본인 응답에만 담기고 공개 참가자 목록에는 포함되지 않는다
+    assert "entry_credential" not in response.json()["session"]["participants"][0]
     assert "participant_token" not in response.json()["session"]["participants"][0]
 
 
@@ -261,3 +267,36 @@ def test_auto_approval_enqueues_client_email(client, setup_email, monkeypatch):
     enqueue.assert_called_once()
     sender.assert_not_called()
     assert participant.report_email_sent_at is None
+
+
+def test_delivery_waits_until_generation_finishes(client, setup_email, monkeypatch):
+    """승인(completed)돼도 내용 생성·AI 기록이 진행 중이면 발송을 미루고, 끝나면 발송한다."""
+    from app.models.record import SessionRecord
+    from app.services import report_email_service as service
+    db, session, participant = setup_email
+    client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
+    db.expire_all()
+    report = db.query(Report).one()
+    report.status = "completed"
+    report.generation_status = "processing"
+    db.commit()
+    sender = Mock(return_value=True)
+    monkeypatch.setattr(service, "send_report_email", sender)
+
+    assert service.deliver_report_email(str(report.id), db) == "generating"
+    sender.assert_not_called()
+
+    # 생성은 끝났지만 STT·요약 파이프라인이 진행 중이면 여전히 대기
+    report.generation_status = "partial"
+    db.add(SessionRecord(session_id=session.id, status="processing"))
+    db.commit()
+    assert service.deliver_report_email(str(report.id), db) == "generating"
+    sender.assert_not_called()
+
+    # 파이프라인이 끝나면 발송
+    record = db.query(SessionRecord).filter(SessionRecord.session_id == session.id).one()
+    record.status = "completed"
+    report.generation_status = "ready"
+    db.commit()
+    assert service.deliver_report_email(str(report.id), db) == "sent"
+    sender.assert_called_once()

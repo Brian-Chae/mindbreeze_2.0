@@ -1,13 +1,15 @@
 """회원/게스트 구독 전용 LiveKit 토큰 발급 — 상담사 영상·음성 라이브 수신(can_publish=False).
 
 검증 시나리오:
-- 게스트: participant_token 소유 증명으로 구독 토큰 발급
+- 비회원: 입장 자격(X-Entry-Credential)으로 구독 토큰 발급 (SDD-209 B5b — by-code 경로 제거)
 - 화상(room) 미시작 시 400
-- 게스트 토큰 누락/불일치 시 403
-- 로그인 회원: 본인 인증 시 발급, 미인증(게스트 경로) 시 403
+- 자격 누락/위조 시 401
+- 로그인 회원: 본인 인증 시 발급, 미인증 시 401
 """
 
 from uuid import UUID, uuid4
+
+from tests.entry_helpers import guest_body, no_credential
 
 from tests.test_sdd015_class_code import _create_class, _db, _register
 
@@ -33,24 +35,18 @@ def _set_room_id(cls: dict, room_id: UUID | None) -> None:
 
 def _join_guest(client, cls: dict) -> dict:
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "라이브게스트"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "라이브게스트")
     )
     assert res.status_code == 200, res.text
     return res.json()
 
 
 def _token_url(cls: dict) -> str:
-    return f"/api/v1/sessions/by-code/{cls['access_code']}/livekit-token"
+    return f"/api/v1/sessions/{cls['id']}/entry/livekit-token"
 
 
 def _guest_token_body(client, cls: dict, joined: dict) -> dict:
-    res = client.post(
-        _token_url(cls),
-        json={
-            "participant_id": joined["participant_id"],
-            "participant_token": joined["participant_token"],
-        },
-    )
+    res = client.post(_token_url(cls), headers={"X-Entry-Credential": joined["entry_credential"]})
     assert res.status_code == 200, res.text
     return res.json()
 
@@ -78,10 +74,7 @@ def test_01_게스트_구독토큰_발급(client):
     _set_room_id(cls, uuid4())
 
     joined = _join_guest(client, cls)
-    res = client.post(
-        _token_url(cls),
-        json={"participant_id": joined["participant_id"], "participant_token": joined["participant_token"]},
-    )
+    res = client.post(_token_url(cls), headers={"X-Entry-Credential": joined["entry_credential"]})
     assert res.status_code == 200, res.text
     body = res.json()
     assert body["livekit_token"]
@@ -96,52 +89,46 @@ def test_02_화상_미시작_400(client):
     _set_room_id(cls, None)  # room_id 제거 = 화상 미시작 시뮬레이션
 
     joined = _join_guest(client, cls)
-    res = client.post(
-        _token_url(cls),
-        json={"participant_id": joined["participant_id"], "participant_token": joined["participant_token"]},
-    )
+    res = client.post(_token_url(cls), headers={"X-Entry-Credential": joined["entry_credential"]})
     assert res.status_code == 400
     assert "시작되지 않았" in res.json()["detail"]
 
 
-def test_03_게스트_토큰누락_403(client):
+def test_03_게스트_자격누락_401(client):
     counselor = _register(client, "s089c03@test.com")
     cls = _start_online_class(client, counselor)
     _set_room_id(cls, uuid4())
 
     joined = _join_guest(client, cls)
-    res = client.post(_token_url(cls), json={"participant_id": joined["participant_id"]})
-    assert res.status_code == 403
+    res = client.post(_token_url(cls), headers=no_credential())
+    assert res.status_code == 401
 
 
-def test_04_게스트_잘못된토큰_403(client):
+def test_04_게스트_위조자격_401(client):
     counselor = _register(client, "s089c04@test.com")
     cls = _start_online_class(client, counselor)
     _set_room_id(cls, uuid4())
 
     joined = _join_guest(client, cls)
-    res = client.post(
-        _token_url(cls),
-        json={"participant_id": joined["participant_id"], "participant_token": "잘못된토큰"},
-    )
-    assert res.status_code == 403
+    res = client.post(_token_url(cls), headers={"X-Entry-Credential": "forged-credential"})
+    assert res.status_code == 401
 
 
-def test_05_로그인회원_미인증_403(client):
+def test_05_로그인회원_미인증_401(client):
     counselor = _register(client, "s089c05@test.com")
     member = _register(client, "s089m05@test.com", role="client")
     cls = _start_online_class(client, counselor, max_participants=10)
     _set_room_id(cls, uuid4())
 
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert joined.status_code == 200, joined.text
     pid = joined.json()["participant_id"]
 
-    # 게스트 경로(인증 헤더 없음)로 요청 → 본인 확인 실패 403
-    res = client.post(_token_url(cls), json={"participant_id": pid})
-    assert res.status_code == 403
+    # 로그인·자격 모두 없이 요청 → 본인 확인 불가 401
+    res = client.post(_token_url(cls), headers=no_credential())
+    assert res.status_code == 401
 
 
 def test_06_로그인회원_본인인증_발급(client):
@@ -151,11 +138,11 @@ def test_06_로그인회원_본인인증_발급(client):
     _set_room_id(cls, uuid4())
 
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     pid = joined.json()["participant_id"]
 
-    res = client.post(_token_url(cls), json={"participant_id": pid}, headers=member["h"])
+    res = client.post(_token_url(cls), headers=member["h"])
     assert res.status_code == 200, res.text
     assert res.json()["livekit_token"]
     # 온라인 1:1(로그인 회원) → 양방향 영상 송신 허용

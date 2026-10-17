@@ -30,8 +30,8 @@ def _seed_record_with_secrets(client):
 
     db = _db()
     try:
-        p_self = SessionParticipant(session_id=UUID(sid), user_id=UUID(member["id"]))
-        p_other = SessionParticipant(session_id=UUID(sid), user_id=UUID(other["id"]))
+        p_self = SessionParticipant(report_included=True, session_id=UUID(sid), user_id=UUID(member["id"]))
+        p_other = SessionParticipant(report_included=True, session_id=UUID(sid), user_id=UUID(other["id"]))
         db.add_all([p_self, p_other])
         db.flush()
         db.add(
@@ -141,7 +141,7 @@ def test_sec_livekit_publish_bypass_참여자_403(client):
     cls = _start_online_class(client, counselor, max_participants=10)
 
     joined = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert joined.status_code == 200, joined.text
 
@@ -175,6 +175,7 @@ def _seed_client_report(client, *, report_email: str | None = "client@example.co
     db.add(session)
     db.flush()
     participant = SessionParticipant(
+            report_included=True,
         session_id=session.id, guest_name="내담자", report_email=report_email
     )
     db.add(participant)
@@ -185,6 +186,7 @@ def _seed_client_report(client, *, report_email: str | None = "client@example.co
         type="client",
         content={},
         status=status,
+        generation_status="ready",
     )
     db.add(report)
     db.commit()

@@ -32,7 +32,7 @@ const output = process.env.LANDING_EVIDENCE || '/tmp/sdd063-evidence';
       }
       const actions = page.getByRole('navigation', { name: '서비스 시작', exact: true });
       assert.equal(await actions.getByRole('link').count(), 3);
-      for (const [name, href] of [['클래스 바로 참여', '/join'], ['로그인', '/login'], ['회원가입', '/register']]) {
+      for (const [name, href] of [['코드로 입장', '/join'], ['로그인', '/login'], ['회원가입', '/register']]) {
         assert.equal(await actions.getByRole('link', { name, exact: true }).getAttribute('href'), href);
       }
       const nav = page.getByRole('navigation', { name: '메인 메뉴', exact: true });
@@ -70,7 +70,7 @@ const output = process.env.LANDING_EVIDENCE || '/tmp/sdd063-evidence';
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), '가로 넘침 없음');
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.screenshot({ path: path.join(output, `loop5-${width}.png`), fullPage: true });
-      for (const [label, route] of [['클래스 바로 참여', '/join'], ['로그인', '/login'], ['회원가입', '/register']]) {
+      for (const [label, route] of [['코드로 입장', '/join'], ['로그인', '/login'], ['회원가입', '/register']]) {
         await page.goto(baseUrl);
         if (width < 1280) await page.getByRole('button', { name: '메뉴 열기', exact: true }).click();
         await page.getByRole('navigation', { name: '서비스 시작', exact: true }).getByRole('link', { name: label, exact: true }).click();

@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 import socketio
 
 from app.config import settings
+from app.core.cors import socketio_cors_origins
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,8 @@ def _build_client_manager():
 
 sio = socketio.AsyncServer(
     async_mode="asgi",
-    cors_allowed_origins="*",
+    # SDD-210: CORS_ALLOWED_ORIGINS 명시 시 동일 목록, 미설정이면 기존 "*" 유지(dev 호환; 운영은 fail-fast 가 강제)
+    cors_allowed_origins=socketio_cors_origins(settings),
     ping_interval=20,
     ping_timeout=40,
     client_manager=_build_client_manager(),

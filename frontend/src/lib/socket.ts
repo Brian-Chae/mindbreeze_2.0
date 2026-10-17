@@ -233,10 +233,25 @@ export interface WaitingRoomCheckin {
   note: string | null;
 }
 
+/** 서버(BE-10) 중계 계약: 밴드 준비 상태. 잘못된 필드는 서버가 개별로 null 로 버린다 */
+export interface WaitingRoomBand {
+  /** 짧은 소문자 식별자(예: connected, leadoffl). 서버 정규식 ^[a-z][a-z0-9_]{0,23}$ */
+  state: string | null;
+  /** 채널별 전극 분리 여부(true = 접촉 불량). boolean 이 아닌 채널은 null */
+  lead_off: { ch1: boolean | null; ch2: boolean | null } | null;
+  /** 0~100 정수 */
+  battery: number | null;
+}
+
 export interface WaitingRoomReadiness {
   surveyDone: boolean;
   bandDone: boolean;
   deviceDone: boolean;
+  /** 건너뛰기로 완료한 단계(BE-10, 선택) */
+  surveySkipped?: boolean;
+  bandSkipped?: boolean;
+  deviceSkipped?: boolean;
+  band?: WaitingRoomBand | null;
 }
 
 export interface WaitingRoomChangedEvent {
@@ -462,6 +477,8 @@ export const getActiveSessionLiveSocket = (): Socket | null => sessionLiveSocket
 export interface SessionLiveJoinPayload {
   session_id: string;
   participant_id?: string | null;
+  /** SDD-209: 로그인 없는 참가자의 소유 증명(입장 자격). 없으면 보내지 않는다 — 현행 동작 */
+  entry_credential?: string;
 }
 
 /** room `session:{id}` 진입 — participant_id는 권한·본인 EEG 스코프용 */
@@ -469,6 +486,7 @@ export const joinSessionLive = (
   socket: Socket,
   sessionId: string,
   participantId?: string | null,
+  entryCredential?: string | null,
 ): void => {
   // SDD-110: 이미 같은 세션에 join된 상태면 재emit하지 않는다(재연결 join N회 → 1회).
   // FE-RT-001: dedup 키를 (session_id, participant_id)로 확장한다. 참여자 확정 후
@@ -483,6 +501,7 @@ export const joinSessionLive = (
   const payload: SessionLiveJoinPayload = {
     session_id: sessionId,
     ...(participantId ? { participant_id: participantId } : {}),
+    ...(entryCredential ? { entry_credential: entryCredential } : {}),
   };
   liveCurrentSession = sessionId;
   liveCurrentParticipant = nextParticipant;

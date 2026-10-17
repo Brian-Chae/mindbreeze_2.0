@@ -164,6 +164,8 @@
 
 /* 진행 제어는 상단에, 기본 작업영역은 남은 뷰포트 안에 배치한다. */
 .hcp-lobby-audio{grid-column:2;grid-row:2;min-width:0;border:1px solid var(--border-container);border-radius:12px;background:#1d1027}
+/* 오프라인(대면) 수업은 대기실 BGM이 없어 패널이 비어 있으므로 빈 상자를 숨긴다. */
+.hcp-lobby-audio:empty{display:none}
 .hcp-lobby-audio>section{height:100%;background:transparent;padding:12px 16px}
 .hcp-media-controls{gap:4px}
 .hcp-media-controls button,.hcp-host .hcp-media-link{display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border-color:var(--border-container);font-size:11px;padding:4px 6px}
@@ -176,7 +178,22 @@
 .hcp-pagination{display:flex;align-items:center;gap:6px}
 .hcp-pagination button{min-height:28px;width:28px;padding:0;font-size:16px}
 .hcp-roster-foot{align-items:center;gap:8px}
+/* 호스트 플레이어 상단 버튼 — 어두운 헤더(#12081C) 전용. 라이트 테마용 mb-btn 호버색이 섞여 글자가 사라지던 문제 정리 */
+.hcp-hbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex-shrink:0;white-space:nowrap;height:40px;padding:0 14px;border-radius:12px;border:1px solid transparent;font-size:13px;font-weight:600;line-height:1;cursor:pointer;color:#fff;background:transparent;transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .1s ease}
+.hcp-hbtn svg{width:16px;height:16px;flex-shrink:0}
+.hcp-hbtn:active:not(:disabled){transform:scale(.97)}
+.hcp-hbtn:focus-visible{outline:2px solid #D2AEFC;outline-offset:2px}
+.hcp-hbtn:disabled{opacity:.45;cursor:not-allowed}
+.hcp-hbtn--primary{background:#7A1FA2;border-color:#8F34B8}
+.hcp-hbtn--primary:hover:not(:disabled){background:#8F2BB8;border-color:#A24ACB}
+.hcp-hbtn--soft{background:rgba(210,174,252,.16);border-color:rgba(210,174,252,.32);color:#EBD9FF}
+.hcp-hbtn--soft:hover:not(:disabled){background:rgba(210,174,252,.28);border-color:rgba(210,174,252,.5);color:#fff}
+.hcp-hbtn--ghost{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.78)}
+.hcp-hbtn--ghost:hover:not(:disabled){background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.32);color:#fff}
+.hcp-hbtn--on{background:rgba(1,240,200,.12);border-color:rgba(1,240,200,.38);color:#6CF7DF}
+.hcp-hbtn--on:hover:not(:disabled){background:rgba(1,240,200,.2);border-color:rgba(1,240,200,.6);color:#9AFBEA}
 @media(min-width:761px){
+ .hcp-active>header .hcp-hbtn{height:36px;padding:0 12px;font-size:12px}
  .host-class-player.hcp-active{height:100vh;height:100dvh;min-height:0;display:flex;flex-direction:column;padding-bottom:0;overflow:hidden}
  .hcp-active>header{position:relative;flex-shrink:0;flex-wrap:nowrap}
  .hcp-active>header>div:first-child{flex:1;min-width:0}

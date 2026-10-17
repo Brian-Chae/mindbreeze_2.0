@@ -22,6 +22,7 @@
    - play_group_id 로 window_index 재시작 충돌 없이 데이터 보존
 """
 
+from tests.entry_helpers import guest_body
 import asyncio
 
 import pytest
@@ -77,8 +78,10 @@ class FakeSio:
 
     # 헬퍼
     def call(self, event, *args):
+        from tests.entry_helpers import with_ws_credential
+
         fn = self.handlers[("/session-live", event)]
-        return asyncio.run(fn(*args))
+        return asyncio.run(fn(*with_ws_credential(args)))
 
     def events(self, name):
         return [e for e in self.emits if e["event"] == name]
@@ -132,7 +135,7 @@ def _create_group_class(client, headers, **overrides):
 
 
 def _join_guest(client, code, name):
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 
@@ -245,14 +248,15 @@ def test_07_게스트_타인_participant_id_join_거부(client, monkeypatch):
     counselor = _register(client, "s026c07@test.com")
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s026m07@test.com", role="client")
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
     # 회원 participant_id 조회
     lm = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()
     member_pid = lm["metrics"][0]["participant_id"]
     fake = _wire(monkeypatch)
 
     fake.call("connect", "sidG", {}, {})  # 게스트가
-    fake.call("join", "sidG", {"session_id": cls["id"], "participant_id": member_pid})  # 회원 사칭
+    # 회원 사칭: 입장 자격 없이 회원 participant_id 만 제시 (entry_credential=None 으로 자격 없음을 명시)
+    fake.call("join", "sidG", {"session_id": cls["id"], "participant_id": member_pid, "entry_credential": None})
 
     assert fake.events("joined") == []
     assert fake.events("join_denied")
@@ -268,7 +272,7 @@ def test_08_회원_타인_participant_id_업로드_403(client, monkeypatch):
     cls = _create_group_class(client, counselor["h"])
     victim = _join_guest(client, cls["access_code"], "피해게스트")
     attacker = _register(client, "s026a08@test.com", role="client")
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=attacker["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=attacker["h"])
 
     # REST: 인증 회원이 타인(게스트) participant_id 로 업로드 시도
     res = client.post(
@@ -283,19 +287,28 @@ def test_09_게스트_회원_participant_id_사칭_업로드_차단(client, monk
     counselor = _register(client, "s026c09@test.com")
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s026m09@test.com", role="client")
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
     lm = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()
     member_pid = lm["metrics"][0]["participant_id"]
 
-    # REST: 무인증 게스트가 회원 participant_id 로 업로드 시도 → 회원 사칭 차단
+    # REST: 자격 없는 호출자가 회원 participant_id 로 업로드 시도 → 401 (participant_id 단독은 인증 수단 아님)
     res = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"participant_id": member_pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
+        headers={"X-Entry-Credential": ""},
+    )
+    assert res.status_code == 401
+    # 다른 비회원의 입장 자격으로 회원 participant_id 대리 업로드 → 403
+    other = _join_guest(client, cls["access_code"], "사칭게스트")
+    res = client.post(
+        f"/api/v1/sessions/{cls['id']}/features",
+        json={"participant_id": member_pid, "features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
+        headers={"X-Entry-Credential": client.credential(other)},
     )
     assert res.status_code == 403
 
 
-def test_10_초대회원_동의미완료_업로드_403(client, monkeypatch):
+def test_10_초대회원_동의미완료여도_소유참여자_업로드_200_SDD209(client, monkeypatch):
     counselor = _register(client, "s026c10@test.com")
     member = _register(client, "s026m10@test.com", role="client")
     cls = _create_group_class(client, counselor["h"])
@@ -311,13 +324,14 @@ def test_10_초대회원_동의미완료_업로드_403(client, monkeypatch):
     assert m["consent_eeg"] is False
     invited_pid = m["participant_id"]
 
-    # 회원 인증으로 본인 업로드 시도 → 동의 미완료로 차단
+    # SDD-209(B2): 업로드 게이트는 consent_eeg 와 분리됐다 — 소유 참여자 본인은 동의 값과 무관하게 200
+    # (consent_eeg 컬럼 값/의미는 그대로 False 로 유지).
     up = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
         json={"features": [_feature(0, relaxation_index=0.5, signal_quality=0.9)]},
         headers=member["h"],
     )
-    assert up.status_code == 403
+    assert up.status_code == 200, up.text
 
 
 def test_11_대기열_참가자_업로드_403(client, monkeypatch):
@@ -326,7 +340,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     # 정원 1 을 회원으로 채운다(active=1)
     filler = _register(client, "s026m11fill@test.com", role="client")
     jf = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=filler["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=filler["h"]
     )
     assert jf.status_code == 200, jf.text
     # 회원 초대 → 정원 초과이므로 대기열 편입(is_waitlisted=True)
@@ -341,7 +355,7 @@ def test_11_대기열_참가자_업로드_403(client, monkeypatch):
     assert up.status_code == 403
 
     # FUNC-03: 정원이 찬 상태에서 코드로 자발 입장해도 대기열 유지 → 여전히 차단
-    j = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=m1["h"])
+    j = client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=m1["h"])
     assert j.status_code == 200
     up2 = client.post(
         f"/api/v1/sessions/{cls['id']}/features",
@@ -474,7 +488,7 @@ def test_18_SQI_분리표시_WS_REST_동일(client, monkeypatch):
     assert m["signal_state"] == "degraded"      # 신호품질(SQI) 분리 표시
     assert abs(m["signal_quality"] - 0.5) < 1e-6
     # REST guest-state (동일 계약)
-    gs = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}").json()
+    gs = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}").json()
     assert gs["device_status"] == "lead_off"
     assert gs["signal_state"] == "degraded"
     assert abs(gs["signal_quality"] - 0.5) < 1e-6
@@ -492,7 +506,7 @@ def test_19_배터리_전달(client, monkeypatch):
     m = client.get(f"/api/v1/sessions/{cls['id']}/live-metrics", headers=counselor["h"]).json()
     assert m["metrics"][0]["band_battery"] == 15
     assert m["summary"]["band_low_count"] == 1  # 20% 미만 저전력 집계
-    gs = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}/state?participant_id={pid}").json()
+    gs = client.get(f"/api/v1/sessions/{cls['id']}/entry-state?participant_id={pid}").json()
     assert gs["band_battery"] == 15
 
 

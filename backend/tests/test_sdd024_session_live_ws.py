@@ -12,6 +12,7 @@ Socket.IO 핸들러를 FakeSio 로 잡아 직접 호출하고, DB 는 REST 와 �
 인메모리 세션을 공유하도록 `_open_db` / `_get_sio` 를 monkeypatch 한다.
 """
 
+from tests.entry_helpers import guest_body
 import asyncio
 
 import app.ws.session_live_namespace as ns
@@ -64,8 +65,10 @@ class FakeSio:
 
     # 테스트 편의 헬퍼
     def call(self, event, *args):
+        from tests.entry_helpers import with_ws_credential
+
         fn = self.handlers[("/session-live", event)]
-        return asyncio.run(fn(*args))
+        return asyncio.run(fn(*with_ws_credential(args)))
 
     def eeg_emits(self):
         return [e for e in self.emits if e["event"] == "eeg_feature"]
@@ -119,7 +122,7 @@ def _create_group_class(client, headers: dict, **overrides) -> dict:
 
 
 def _join_guest(client, code: str, name: str) -> str:
-    res = client.post(f"/api/v1/sessions/by-code/{code}/join", json={"name": name})
+    res = client.post("/api/v1/sessions/enter", json=guest_body(code, name))
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
 
@@ -279,7 +282,7 @@ def test_04_로그인_참가자_토큰_user_id로_저장(client, monkeypatch):
     counselor = _register(client, "s024c04@test.com")
     cls = _create_group_class(client, counselor["h"])
     member = _register(client, "s024m04@test.com", role="client")
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"])
+    client.post("/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"])
     fake = _wire(monkeypatch)
 
     fake.call("connect", "sidM", {}, {"token": member["token"]})

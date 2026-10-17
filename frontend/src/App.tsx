@@ -45,7 +45,7 @@ const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
 const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
-const SessionCreatePage = lazy(() => import('./pages/sessions/SessionCreatePage'));
+const CreateWizardContainer = lazy(() => import('./components/class/flow/host/CreateWizardContainer').then((m) => ({ default: m.CreateWizardContainer })));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
 // SDD-088: 독립형 클래스 플레이어 (풀스크린, AppShell 밖)
@@ -58,6 +58,8 @@ const OperatorAppPage = lazy(() => import('./pages/design/OperatorAppPage'));
 const UserAppPage = lazy(() => import('./pages/design/UserAppPage'));
 const ReportPage = lazy(() => import('./pages/design/ReportPage'));
 const DocsPage = lazy(() => import('./pages/design/DocsPage'));
+const ClassPlayerCasesPage = lazy(() => import('./pages/design/ClassPlayerCasesPage'));
+const ClassFlowCasesPage = lazy(() => import('./pages/design/ClassFlowCasesPage'));
 const ReportListPage = lazy(() => import('./pages/reports/ReportListPage'));
 const ReportSamplePage = lazy(() => import('./pages/reports/ReportSamplePage'));
 const ReportDetailPage = lazy(() => import('./pages/reports/ReportDetailPage'));
@@ -72,7 +74,8 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
-const ClassJoinPage = lazy(() => import('./pages/class-join-page'));
+const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
+const ClassEntryPage = lazy(() => import('./pages/class/EntryPage'));
 const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
 const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
 const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
@@ -149,7 +152,8 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<RootLayout />}>
         <Route path="/" element={<EntryRoute />} />
-        <Route path="/join" element={<ClassJoinPage />} />
+        <Route path="/join" element={<CodeEntryPage />} />
+        <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
@@ -185,7 +189,7 @@ const router = createBrowserRouter(
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
         <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><SessionListPage /></RoleGuard>} />
-        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><SessionCreatePage /></RoleGuard>} />
+        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
@@ -199,6 +203,8 @@ const router = createBrowserRouter(
         <Route path="/design/user-app" element={<UserAppPage />} />
         <Route path="/design/report" element={<ReportPage />} />
         <Route path="/design/docs" element={<DocsPage />} />
+        <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
+        <Route path="/design/class-flow" element={<ClassFlowCasesPage />} />
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />

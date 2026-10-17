@@ -22,6 +22,13 @@ interface ClassChatPanelProps {
   /** 접힘 여부(제어 컴포넌트) — 호출측이 소유한다 */
   collapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
+  /**
+   * SDD-208: 시트 안에 넣는 변형 — 고정 오버레이·접기 헤더 없이 ChatRoom 만 그린다.
+   * collapsed=true 는 "시트가 닫힘"이며 아무것도 그리지 않지만 안읽음 집계는 계속한다.
+   */
+  embedded?: boolean;
+  /** SDD-208: 안읽음 수가 바뀔 때 알린다(도크 배지용) */
+  onUnreadChange?: (count: number) => void;
 }
 
 /** 채팅 아이콘 */
@@ -60,6 +67,8 @@ export function ClassChatPanel({
   title = '클래스 채팅',
   collapsed,
   onCollapsedChange,
+  embedded = false,
+  onUnreadChange,
 }: ClassChatPanelProps) {
   const token = useAuthStore((s) => s.accessToken);
   const userId = useAuthStore((s) => s.user?.id ?? null);
@@ -123,8 +132,21 @@ export function ClassChatPanel({
     (s) => s.rooms.find((room) => room.id === activeRoomId)?.unread_count ?? 0,
   );
 
+  useEffect(() => {
+    onUnreadChange?.(unread);
+  }, [unread, onUnreadChange]);
+
   // 미인증(게스트)·비활성·방 미해석 → 아무것도 그리지 않는다
   if (!enabled || !isAuthenticated || !activeRoomId) return null;
+
+  if (embedded) {
+    if (collapsed) return null;
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <ChatRoom key={activeRoomId} roomId={activeRoomId} />
+      </div>
+    );
+  }
 
   if (collapsed) {
     return (

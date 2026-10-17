@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 상담사 시안 B — 세팅·로비·시작·종료</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+/* 상담사 시안 B 전용 스타일 (.w- 접두어). 공용은 flow-base.css 를 그대로 쓴다. */
+html, body { overflow: hidden; }
+body { background: #12081C; font-size: var(--fs-15); line-height: 1.4; word-break: keep-all; }
+body.w-index { overflow: auto; height: auto; background: #F7F4F0; color: var(--ink); }
+button { padding: 0; }
+button:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+
+/* 레이아웃 뼈대: 상단 바는 메인 영역 안에 두어, 사이드 시트가 열리면 축이 함께 이동한다 */
+.w-stage { flex: 1; min-height: 0; display: flex; }
+.w-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.w-main > .fl-body { overflow: hidden; }
+.w-main > .fl-body > .fl-col { max-height: 100%; min-height: 0; }
+.w-top { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; align-items: center; height: 56px; padding: 0 8px; flex: none; }
+.w-top > .fl-iconbtn { justify-self: start; }
+.w-top > .w-ph { justify-self: end; width: 44px; height: 44px; }
+.w-ttl { min-width: 0; text-align: center; }
+.w-ttl h1 { margin: 0; font-size: var(--fs-15); font-weight: 700; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-ttl p { margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-fnote.two { white-space: normal; overflow: visible; }
+.w-fnote { margin: 0; min-height: 16px; text-align: center; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 아이콘·칩·행 */
+.w-ico { width: 40px; height: 40px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; background: rgba(255,255,255,0.1); }
+.w-ico .ic { width: 20px; height: 20px; }
+.w-ico.lg { width: 56px; height: 56px; } .w-ico.lg .ic { width: 24px; height: 24px; }
+.w-ico.ok { color: var(--ok); background: rgba(125,227,200,0.14); }
+.w-ico.warn { color: var(--warn); background: var(--warn-bg); }
+.w-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); white-space: nowrap; flex: none; }
+.w-chip .ic { width: 16px; height: 16px; }
+.w-chip.ok { color: var(--ok); border-color: rgba(125,227,200,0.5); }
+.w-chip.warn { color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-chip.mute { color: var(--tx-mid); }
+.w-row { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-row.strong { background: var(--sheet-bg); }
+.w-rt { flex: 1; min-width: 0; }
+.w-rt b { display: block; font-size: var(--fs-15); font-weight: 700; line-height: 24px; }
+.w-rt span { display: block; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); }
+.w-rt span.warn { color: var(--warn); }
+.w-btn44 { min-height: 44px; padding: 0 16px; font-size: var(--fs-13); }
+.w-btn44 .ic { width: 20px; height: 20px; }
+.fl-btn .ic { width: 20px; height: 20px; }
+.w-ok { color: var(--ok); } .w-dim { color: var(--tx-lo); } .w-mid { color: var(--tx-mid); } .w-warn { color: var(--warn); }
+
+/* FH05 내 영상·소리 (영상+음성 합친 큰 컴포넌트) */
+.w-media { position: relative; flex: 0 1 auto; height: min(448px, 52dvh); min-height: 220px; border-radius: var(--r-sheet); overflow: hidden; border: 1px solid var(--sheet-border); background: linear-gradient(160deg, #1E3A44, #2B2342); }
+@media (min-width: 600px) and (orientation: portrait) { .w-media { height: auto; aspect-ratio: 4 / 3; } }
+@media (min-width: 600px) and (orientation: landscape) { .w-media { height: auto; aspect-ratio: 16 / 9; } }
+.w-media.low { height: auto; min-height: 0; aspect-ratio: auto; background: var(--sheet-bg); display: flex; flex-direction: column; gap: 16px; padding: 16px; }
+.w-lowrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.w-vid { position: absolute; inset: 0; }
+.w-sil { position: absolute; inset: 0; width: 100%; height: 100%; }
+.w-vtag { position: absolute; top: 16px; left: 16px; }
+.w-vtag .w-chip, .w-lowrow .w-chip { background: rgba(18,8,28,0.7); }
+.w-vbar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: linear-gradient(to top, rgba(8,4,14,0.85), rgba(8,4,14,0)); }
+.w-vbar .w-meter, .w-media.low .w-meter { flex: 1; min-width: 0; }
+.w-mi { flex: none; display: grid; place-items: center; }
+.w-mi .ic { width: 20px; height: 20px; }
+.w-tg { display: flex; gap: 8px; flex: none; }
+.w-tg .fl-iconbtn.off { color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-tg .fl-iconbtn[disabled] { opacity: 0.4; }
+.w-slot { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 56px 24px 80px; text-align: center; background: rgba(24,12,36,0.5); }
+.w-slot h2 { margin: 0; font-size: var(--fs-15); font-weight: 700; line-height: 24px; }
+.w-slot p { margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); max-width: 420px; }
+.w-meter { display: flex; align-items: flex-end; gap: 8px; height: 24px; }
+.w-meter i { display: block; width: 8px; border-radius: 4px; background: rgba(255,255,255,0.3); }
+.w-meter i.on { background: var(--ok); }
+
+/* 카메라 켜짐: 마이크 버튼 둘레 5단계 링(아이콘 미터) + 하단 가운데 토글 쌍 */
+.w-vtg { position: absolute; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center; gap: 16px; }
+.w-vtg .fl-iconbtn.off { color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg); }
+.w-ringbtn { border: 0; position: relative; background: var(--ring, rgba(255,255,255,0.22)); }
+.w-ringbtn::before { content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #1B0F26; }
+.w-ringbtn .ic { position: relative; opacity: var(--op, 1); }
+.w-vtg .w-ringbtn.off { border: 0; background: var(--ring); }
+.w-ringbtn.off .ic { color: var(--warn); opacity: 1; }
+
+/* 전극 접촉 UI (SensorTracker 재현) */
+.w-led { width: 32px; height: 20px; border-radius: 10px; border: 2px solid #606276; display: inline-grid; place-items: center; flex: none; }
+.w-led.ok { background: #01F0C8; color: #04211C; } .w-led.bad { background: #D33F3F; color: #fff; }
+.w-lead { display: flex; gap: 8px; flex-basis: 100%; margin-left: 40px; }
+.w-lx { display: inline-flex; flex-direction: column; align-items: center; font-size: var(--fs-13); font-weight: 600; line-height: 16px; }
+.w-lx > .w-led { margin-bottom: 0; }
+.w-trk { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.w-trksvg { display: block; max-width: 100%; }
+.w-legend { display: flex; justify-content: center; gap: 24px; font-size: var(--fs-13); }
+.w-legend > span { display: inline-flex; align-items: center; }
+.w-legend > span > i { margin-right: 8px; width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; }
+.w-legend i.ok { background: #01F0C8; color: #04211C; } .w-legend i.bad { background: #D33F3F; color: #fff; }
+.w-num { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: rgba(255,255,255,0.14); font-size: var(--fs-13); font-weight: 700; }
+.w-how { display: flex; flex-direction: column; gap: 8px; }
+.w-how > div { display: flex; gap: 16px; align-items: flex-start; font-size: var(--fs-13); line-height: 24px; color: var(--tx-mid); }
+
+/* FH06 로비 */
+.w-invite { display: flex; align-items: center; gap: 16px; }
+.w-invite .l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.w-invite .r { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.w-inv-n { font-size: var(--fs-18); font-weight: 800; line-height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-link { font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-listcard { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; background: var(--sheet-bg); border: 1px solid var(--sheet-border); border-radius: var(--r-card); overflow: hidden; }
+.w-lhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 56px; padding: 0 16px; flex: none; border-bottom: 1px solid var(--sheet-border); }
+.w-lhead b { font-size: var(--fs-15); font-weight: 700; }
+.w-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr; }
+.w-mrow { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); min-width: 0; }
+.w-mrow.bad { flex-wrap: wrap; padding: 8px 16px; row-gap: 8px; }
+.w-mrow .av { width: 32px; height: 32px; border-radius: var(--r-pill); display: grid; place-items: center; font-size: var(--fs-13); font-weight: 700; background: rgba(255,255,255,0.12); flex: none; }
+.w-mrow .nm { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.w-cells { display: flex; gap: 8px; flex: none; }
+.w-cell { display: inline-flex; align-items: center; font-size: var(--fs-13); font-weight: 600; white-space: nowrap; }
+.w-cell .ic { width: 16px; height: 16px; margin-right: 8px; }
+.w-cell.bad { color: var(--warn); }
+.w-cell.ok { color: var(--ok); } .w-cell.wait { color: var(--tx-mid); } .w-cell.skip { color: var(--tx-lo); }
+.w-list.two .w-mrow:nth-child(odd) { border-right: 1px solid rgba(255,255,255,0.08); }
+@media (min-width: 600px) { .w-list.two { grid-template-columns: 1fr 1fr; } }
+.w-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px 16px; text-align: center; }
+.w-empty h2 { margin: 0; font-size: var(--fs-15); font-weight: 700; line-height: 24px; }
+.w-empty p { margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); }
+.w-dock { display: flex; gap: 8px; flex: none; }
+.w-dk { flex: 1 1 0; min-width: 0; min-height: 56px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; line-height: 16px; }
+.w-dk .ic { width: 24px; height: 24px; }
+.w-venue .w-rt b { font-size: var(--fs-15); }
+
+/* 시트 */
+.w-wrap { position: absolute; inset: 0; z-index: 8; background: rgba(12,6,20,0.55); display: flex; align-items: flex-end; justify-content: center; }
+.w-sheet { background: rgba(24,12,36,0.96); max-height: calc(100dvh - 72px); overflow: hidden; display: flex; flex-direction: column; gap: 16px; padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1000px) and (orientation: landscape) {
+  .w-wrap.tool { position: static; inset: auto; z-index: auto; background: none; width: 416px; flex: none; align-items: center; padding: 16px 16px 16px 0; }
+  .w-wrap.tool .w-sheet { width: 100%; max-height: 100%; border-radius: var(--r-sheet); padding-bottom: 24px; }
+}
+@media (max-height: 760px) { .w-sheet { gap: 8px; padding-top: 16px; } }
+.w-sh-h { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.w-sh-h h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; }
+.w-ctr { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.w-ctr h2 { margin: 0; font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
+.w-ctr p { margin: 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); max-width: 480px; }
+.w-act { display: flex; flex-direction: column; gap: 8px; }
+.w-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.w-opt { display: flex; align-items: flex-start; gap: 16px; text-align: left; padding: 16px; width: 100%; min-height: 72px; border-radius: var(--r-card); border: 1px solid var(--sheet-border); background: rgba(255,255,255,0.08); }
+.w-opt .w-ot { display: block; flex: 1; min-width: 0; }
+.w-opt b { display: block; font-size: var(--fs-15); font-weight: 700; line-height: 24px; }
+.w-opt .w-od { display: block; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-opt.danger { border-color: var(--warn); background: var(--warn-bg); }
+.w-opt.danger b { color: var(--warn); }
+.w-sw { width: 52px; height: 44px; position: relative; flex: none; }
+.w-sw::before { content: ""; position: absolute; left: 0; top: 6px; width: 52px; height: 32px; border-radius: var(--r-pill); background: rgba(255,255,255,0.18); }
+.w-sw::after { content: ""; position: absolute; top: 10px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+.w-sw.on::before { background: var(--mb-purple); } .w-sw.on::after { left: 24px; }
+.w-cb { width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--tx-mid); display: grid; place-items: center; flex: none; }
+.w-cb .ic { width: 16px; height: 16px; opacity: 0; }
+.w-cb.on { background: var(--mb-purple); border-color: transparent; } .w-cb.on .ic { opacity: 1; }
+.w-cb.dis { opacity: 0.4; }
+.w-facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-fact { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 700; }
+.w-fact .ic { width: 20px; height: 20px; flex: none; }
+.w-tight .w-sheet { gap: 8px; }
+.w-tight .w-fact { min-height: 32px; }
+.w-bar { height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); overflow: hidden; }
+.w-bar > i { display: block; height: 100%; width: var(--p, 0); background: var(--mb-lavender); border-radius: var(--r-pill); }
+.w-slider { position: relative; height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.18); flex: 1; }
+.w-slider > i { display: block; height: 100%; width: 60%; border-radius: var(--r-pill); background: var(--mb-lavender); }
+.w-slider::after { content: ""; position: absolute; top: -8px; left: calc(60% - 12px); width: 24px; height: 24px; border-radius: 50%; background: #fff; }
+.w-bubble { max-width: 80%; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); font-size: var(--fs-13); line-height: 20px; }
+.w-bubble.me { align-self: flex-end; background: var(--mb-purple); }
+.w-bubble small { display: block; font-size: var(--fs-12); color: var(--tx-mid); line-height: 16px; }
+.w-msgs { display: flex; flex-direction: column; gap: 8px; }
+
+/* FH07 시작 확인 — 준비 인원 카드 + 준비 중 회원 목록 */
+.w-stat { border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-sr { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; }
+.w-sr + .w-sr, .w-pl + .w-sr { border-top: 1px solid var(--sheet-border); }
+.w-pl { border-top: 1px solid var(--sheet-border); padding: 8px 0; display: flex; flex-direction: column; }
+.w-pr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 72px; font-size: var(--fs-13); }
+.w-pr b { min-width: 40px; font-size: var(--fs-13); font-weight: 700; }
+.w-pmore { color: var(--tx-mid); }
+.w-pn { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 16px 0 72px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.w-mchip { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; color: var(--tx-mid); white-space: nowrap; }
+.w-mchip .ic { width: 16px; height: 16px; margin-right: 8px; }
+.w-mchip.bad { color: var(--warn); border: 1px dashed var(--warn); }
+
+/* FH09·FH10 */
+.w-step { display: flex; align-items: center; gap: 16px; min-height: 48px; }
+.w-step .ic { width: 24px; height: 24px; flex: none; }
+.w-step .tx { flex: 1; font-weight: 700; }
+.w-step .st { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-step.done .ic { color: var(--ok); } .w-step.now .ic { color: var(--mb-pale); animation: w-spin 1.4s linear infinite; } .w-step.todo { color: var(--tx-lo); } .w-step.skip { color: var(--tx-lo); }
+@keyframes w-spin { to { transform: rotate(360deg); } }
+.w-steps { display: flex; flex-direction: column; }
+.w-scene { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.w-scene .fl-h1 { margin-top: 8px; }
+.w-scene .fl-sub { max-width: 480px; }
+@media (max-height: 760px) { .w-step { min-height: 40px; } }
+
+/* 인덱스 */
+.w-ix { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+.w-ix h1 { font-size: var(--fs-24); margin: 0 0 8px; }
+.w-ix p { color: var(--ink-mid); margin: 0 0 16px; }
+.w-ix table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--shell-line); border-radius: 16px; overflow: hidden; }
+.w-ix th, .w-ix td { text-align: left; vertical-align: top; padding: 16px; border-bottom: 1px solid var(--shell-line); font-size: var(--fs-13); line-height: 24px; }
+.w-ix th { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-ix a { display: inline-block; margin: 0 8px 8px 0; padding: 0 16px; line-height: 32px; border-radius: 9999px; background: var(--mb-purple-cream); color: var(--mb-purple); text-decoration: none; font-weight: 600; }
+.w-ix a:hover { background: var(--mb-purple); color: #fff; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ───────── 아이콘 (lucide 스타일 2px 아웃라인) ───────── */
+const ICON = {
+  back: '<path d="m15 18-6-6 6-6"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  'circle-check': '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  'minus-circle': '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+  'x-circle': '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  video: '<rect x="2" y="6" width="13" height="12" rx="3"/><path d="m15 10 6-3v10l-6-3"/>',
+  'video-off': '<path d="M10.66 6H14a2 2 0 0 1 2 2v2.5l5.25-3.06A.5.5 0 0 1 22 7.87v8.2"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2"/><path d="m2 2 20 20"/>',
+  mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
+  'mic-off': '<path d="m2 2 20 20"/><path d="M18.9 13.2A7 7 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.3V5a3 3 0 0 0-5.7-1.3"/><path d="M9 9v3a3 3 0 0 0 5.1 2.1"/><path d="M12 19v3"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  'map-pin': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  key: '<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  copy: '<rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4M12 2v13"/>',
+  music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+  band: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  hand: '<path d="M18 11V6a2 2 0 0 0-4 0M14 10V4a2 2 0 0 0-4 0v2M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+  'door-open': '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.6v16.1a1 1 0 0 1-1.2 1L5 20V5.6a2 2 0 0 1 1.5-1.9l4-1A2 2 0 0 1 13 4.6Z"/>',
+  'door-closed': '<path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/>',
+  play: '<path d="m6 3 14 9-14 9z"/>',
+  pause: '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
+  refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
+  loader: '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>',
+  home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.500 20.500 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.500-1.200 6.200-2.700a1.200 1.200 0 0 1 1.500 0C14.500 3.800 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+  'wifi-off': '<path d="M12 20h.01M8.5 16.4a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.7M10.7 5c4-.4 8.1.9 11.300 3.800M16.900 11.300a10 10 0 0 1 2.200 1.600M5 12.900a10 10 0 0 1 5.200-2.700"/><path d="m2 2 20 20"/>',
+  vol: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.500 8.500a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>',
+  'vol-low': '<path d="M11 5 6 9H2v6h4l5 4z"/>',
+  battery: '<rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2M6 11v2M10 11v2"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  wave: '<path d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3"/>',
+  spark: '<path d="M12 3l1.900 5.100L19 10l-5.100 1.900L12 17l-1.900-5.100L5 10l5.100-1.900z"/><path d="M19 17v4M17 19h4"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.500 3.500a2.100 2.100 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  'log-out': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>'
+};
+const ic = (n, c = '') => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+/* ───────── 데모 고정값 ───────── */
+const CLASS_TITLE = '마음챙김 명상 · 4회차';
+const ADDR = '서울 강남구 테헤란로 123 · 4층 명상실';
+const ENTRY_CODE = '4829';
+const NAMES = ['서연', '민준', '지우', '하준', '서아', '도윤', '예린', '시우', '지호', '수아', '현우', '하은'];
+const BAND_LABEL = { opt: 'LINK BAND 선택', none: 'LINK BAND 사용 안 함', req: 'LINK BAND 필수' };
+
+/* ───────── 케이스 레지스트리 ───────── */
+const LOBBY = {
+  'g-on-0':  { loc: 'on',  grp: true,  n: 0,  fill: 'part', band: 'opt', inv: 6 },
+  'g-on-3':  { loc: 'on',  grp: true,  n: 3,  fill: 'part', band: 'opt', inv: 6 },
+  'g-on-8':  { loc: 'on',  grp: true,  n: 8,  fill: 'all',  band: 'opt', inv: 8 },
+  'g-on-12': { loc: 'on',  grp: true,  n: 12, fill: 'mix',  band: 'opt', inv: 14 },
+  'g-off-0': { loc: 'off', grp: true,  n: 0,  fill: 'part', band: 'opt', inv: 6 },
+  'g-off-3': { loc: 'off', grp: true,  n: 3,  fill: 'part', band: 'opt', inv: 6 },
+  'g-off-8': { loc: 'off', grp: true,  n: 8,  fill: 'all',  band: 'opt', inv: 8 },
+  'g-off-12':{ loc: 'off', grp: true,  n: 12, fill: 'mix',  band: 'opt', inv: 14 },
+  'o-on-0':  { loc: 'on',  grp: false, n: 0,  fill: 'part', band: 'opt', inv: 1 },
+  'o-on-1':  { loc: 'on',  grp: false, n: 1,  fill: 'part', band: 'opt', inv: 1 },
+  'o-on-1r': { loc: 'on',  grp: false, n: 1,  fill: 'all',  band: 'opt', inv: 1 },
+  'o-off-0': { loc: 'off', grp: false, n: 0,  fill: 'part', band: 'opt', inv: 1 },
+  'o-off-1': { loc: 'off', grp: false, n: 1,  fill: 'part', band: 'opt', inv: 1 },
+  'o-off-1r':{ loc: 'off', grp: false, n: 1,  fill: 'all',  band: 'opt', inv: 1 },
+  'g-on-3-req':   { loc: 'on',  grp: true,  n: 3, fill: 'part', band: 'req', inv: 6 },
+  'g-off-3-none': { loc: 'off', grp: true,  n: 3, fill: 'part', band: 'none', inv: 6 },
+  'o-off-1r-none':{ loc: 'off', grp: false, n: 1, fill: 'all',  band: 'none', inv: 1 },
+  'g-on-8-none':  { loc: 'on',  grp: true,  n: 8, fill: 'all',  band: 'none', inv: 8 },
+  'g-on-0-inv0': { loc: 'on', grp: true, n: 0, fill: 'part', band: 'opt', inv: 0 },
+  'g-off-0-inv0': { loc: 'off', grp: false, n: 0, fill: 'part', band: 'opt', inv: 0 },
+  'g-on-3-wait': { loc: 'on', grp: true, n: 3, fill: 'none', band: 'opt', inv: 6 },
+  'g-off-3-wait': { loc: 'off', grp: true, n: 3, fill: 'none', band: 'opt', inv: 6 },
+  'g-on-12-many': { loc: 'on', grp: true, n: 12, fill: 'many', band: 'opt', inv: 14 },
+  'g-on-3-contact': { loc: 'on', grp: true, n: 3, fill: 'all', band: 'opt', inv: 6, contact: { 0: 'L', 1: 'R', 2: 'LR' } },
+  'g-on-8-contact': { loc: 'on', grp: true, n: 8, fill: 'all', band: 'opt', inv: 8, contact: { 3: 'L' } }
+};
+const LOBBY_DESC = {
+  'g-on-0': '온라인·그룹·초대 6명, 대기 0명 (시작 가능, 상태줄 안내)', 'g-on-3': '온라인·그룹·초대 6명, 대기 3명 (일부 준비 중, 시작 가능)', 'g-on-8': '온라인·그룹·8명 전원 입장·준비 완료', 'g-on-12': '온라인·그룹·초대 14명, 대기 12명 (목록 내부 스크롤)',
+  'g-off-0': '오프라인·그룹·대기 0명 (시작 가능)', 'g-off-3': '오프라인·그룹·대기 3명', 'g-off-8': '오프라인·그룹·8명 전원 완료', 'g-off-12': '오프라인·그룹·대기 12명',
+  'o-on-0': '온라인·1:1·대기 0명 (시작 가능)', 'o-on-1': '온라인·1:1·1명 준비 중 (시작 가능)', 'o-on-1r': '온라인·1:1·1명 준비 완료',
+  'o-off-0': '오프라인·1:1·대기 0명 (시작 가능)', 'o-off-1': '오프라인·1:1·1명 준비 중', 'o-off-1r': '오프라인·1:1·1명 준비 완료',
+  'g-on-3-req': '헤더 칩 LINK BAND 필수 — 밴드 연결 전인 회원도 대기실 행·시작 판정에 그대로 포함(참가 조건 아님)', 'g-off-3-none': '오프라인·밴드 사용 안 함·대기 3명', 'o-off-1r-none': '오프라인·1:1·밴드 없음 (가장 비어 보이는 조합)', 'g-on-8-none': '온라인·밴드 사용 안 함·8명',
+  'g-on-0-inv0': '온라인·그룹·초대 0명·대기 0명 (시작 가능)', 'g-off-0-inv0': '오프라인·1:1·초대 0명·대기 0명 (시작 가능)',
+  'g-on-3-wait': '온라인·그룹·3명 모두 준비 중 (준비 완료 0명, 시작 가능)', 'g-off-3-wait': '오프라인·그룹·3명 모두 준비 중 (시작 가능)', 'g-on-12-many': '온라인·그룹·12명 중 8명 준비 중',
+  'g-on-3-contact': '전극 접촉 불량 3종 — L만 / R만 / 둘 다 (회원 행에 소형 LED)', 'g-on-8-contact': '8명 중 1명 L 접촉 불량 (2열 목록)'
+};
+const REG = {
+  FH05: { name: '세팅 — 장비 점검 (내 영상·소리)', assume: 'A2 (오프라인 주소 표시는 장소 유형이 서버에 저장돼야 함), P4 (밴드는 어떤 모드에서도 참가·열기를 막지 않음), P7 (열기 안내는 알림 요청이며 전달·수신을 단정하지 않음). 수동 기록은 상담사 마이크 끔·장치 없음에 한함', cases: {
+    ok: '온라인 정상 — 마이크 버튼 링이 레벨 표시(5단계 중 4단계, 칩 정상)', quiet: '조용해요 — 링 1단계, 칩 조용해요', 'cam-off': '카메라 꺼짐 — 마이크 레벨만 있는 낮은 상태', 'mic-off': '마이크 꺼짐 (열기 전 상태)', 'mic-off-warn': '마이크 꺼짐 경고 시트 (열기 누른 직후)', 'mic-denied': '마이크 권한 거부',
+    'cam-denied': '카메라 권한 거부', nodevice: '장치 없음', unsupported: '미지원 브라우저', offline: '오프라인 — 장비 생략, 주소·안내' } },
+  FH06: { name: '로비(열림)', assume: 'A5 (시작 판정은 대기실 인원 기준), A9 (대기실이 비어도·준비 중 회원이 있어도 시작 가능, 시작 후 입장), A8·AD9 (전극별 접촉 전송 BE-10 배포 시 LED, 아니면 접촉 확인 필요 텍스트), P5 (입장은 4자리 코드 — 초대 명단은 현황 표시용이며 입장 자격이 아님), P4 (LINK BAND 필수 모드도 참가를 막지 않음), P7 (다시 알림은 요청 결과만 표시)', cases: LOBBY_DESC },
+  FH06a: { name: '로비 시트 — 회원 초대·BGM·내 밴드·발언권·채팅', assume: 'P5·AD17 (상담사 화면에서만 4자리 입장 코드 표시·복사, QR 없음), P7·AD4 (등록 성공은 초대했어요, 재발송은 실제 요청 결과만 — 푸시 수신·전달 단정 0), A6 (초대 추가). 채팅·발언권은 온라인 그룹 로비 기준', cases: {
+    invite: '회원 초대 — 입장 전 3명(초대했어요·재발송 요청 결과·입장 코드 복사)', 'invite-all': '회원 초대 — 전원 입장', bgm: 'BGM', band: '내 밴드 — 미연결', 'band-on': '내 밴드 — 연결됨·접촉 양호(트래커 숨김, 칩만)',
+    'band-bad-l': '내 밴드 — L 전극 접촉 실패', 'band-bad-r': '내 밴드 — R 전극 접촉 실패', 'band-bad-lr': '내 밴드 — L·R 모두 접촉 실패',
+    speak: '발언권', chat: '채팅 켜짐', 'chat-off': '채팅 꺼짐' } },
+  FH07: { name: '시작 확인 시트', assume: 'P1·AD7·AD19 (기록 원본은 {N}일 후 삭제 — N은 서버 설정값), P2 (참가자 거부는 리포트 반영 제외일 뿐 시작·입장을 막지 않음; 제외 인원·연구 동의 인원은 익명 집계 수만 표시, 0명이면 줄 없음), 수동 기록은 상담사의 녹음 선택 해제·마이크 끔에 한함, A9 (대기실이 비어도 시작 가능 — 시작 후 입장), 시안 가정 S4: 오프라인도 이 기기 마이크로 녹음할 수 있다', cases: {
+    ok: '전원 준비 완료 — 간단 확인(리포트 제외 2명·연구 동의 5명 줄)', pending: '일부 준비 중 — 준비 중 회원 목록', 'all-wait': '전원 준비 중(준비 완료 0명)', 'many-wait': '준비 중 8명 — 3명만 보이고 외 N명 접기', 'mic-off': '마이크 꺼짐, 수동 기록으로 진행(상담사 선택)', 'no-consent': '상담사가 녹음 체크 해제, 수동 기록으로 진행(제외·연구 동의 0명이라 줄 없음)', offline: '오프라인 — 준비 중 회원(장소 행)', one: '1:1 — 준비 완료(연구 동의 1명 한 줄)', 'one-wait': '1:1 — 준비 중', 'empty-wait': '대기실 0명 — 온라인·그룹', 'empty-wait-offline': '대기실 0명 — 오프라인', 'empty-wait-one': '대기실 0명 — 온라인·1:1' } },
+  FH08: { name: '나가기·클래스 닫기 시트', assume: 'P7 (닫힘 안내 대상은 서버가 아는 대기 회원 수이며 전달·열람을 단정하지 않음)', cases: {
+    choose: '선택 — 대기 회원 3명', 'choose-0': '선택 — 대기 회원 0명', confirm: '클래스 닫기 재확인 (코랄)' } },
+  FH09: { name: '종료 확인, 종료 씬, 리포트 진행', assume: 'D-5① (종료 후 /record 로 점프하지 않고 같은 몰입 화면에서 진행), P2 (리포트에서 제외된 참가자가 있으면 그룹 공통 요약만 제외 — 원본은 설정 기간 동안 보관), P1 (보관 기간 N일은 서버 설정값)', cases: {
+    confirm: '종료 확인 시트', 'confirm-busy': '종료 확인 — 끝내는 중', 'end-saving': '종료 씬 — 녹음 저장 중', 'end-stt': '종료 씬 — 음성 인식 중', 'end-ai': '종료 씬 — AI 요약 중',
+    'end-done': '종료 씬 — 리포트 완료', 'manual-ing': '수동 기록 모드 — 진행 중', 'manual-done': '수동 기록 모드 — 완료', 'excluded-common': '종료 씬 — 리포트 제외 참가자가 있어 그룹 공통 요약 제외 안내' } },
+  FH10: { name: '닫힌 클래스 / 오류', assume: 'AD4·F25 (닫은 시각·안내 인원은 방금 닫은 경우에만 표시 — 재진입에는 서버에 저장된 값이 없어 표시하지 않음), 서버 오류 메시지는 HTTP 404/403/네트워크 분기로 사용자 문구에 매핑(서버 원문 노출 0)', cases: {
+    closed: '방금 닫음 — 회원 3명 안내', 'closed-0': '방금 닫음 — 대기 회원 없음', 'closed-revisit': '닫힌 클래스 재진입(닫은 시각·인원 없음)',
+    error: '오류 — 일반', 'error-notfound': '오류 — 찾을 수 없음', 'error-forbidden': '오류 — 내 클래스 아님', 'error-network': '오류 — 연결 끊김' } }
+};
+
+/* ───────── 공용 조각 ───────── */
+function frame(o) {
+  const sheet = o.sheet ? `<div class="w-wrap ${o.sheet.kind}" role="dialog" aria-modal="true" aria-label="${o.sheet.label}"><section class="fl-sheet w-sheet">${o.sheet.html}</section></div>` : '';
+  const tool = o.sheet && o.sheet.kind === 'tool';
+  return `<div class="fl-root" data-screen="${o.id}">
+  <div class="fl-backdrop" style="background-image:url(assets/bg/${o.bg}.webp)"></div>
+  <div class="fl-layer"><div class="w-stage">
+    <div class="w-main">
+      <header class="w-top"><button class="fl-iconbtn" aria-label="${o.left.label}">${ic(o.left.ic)}</button>
+        <div class="w-ttl"><h1>${o.title}</h1><p>${o.sub}</p></div><span class="w-ph" aria-hidden="true"></span></header>
+      <div class="fl-body"><div class="fl-col">${o.body}</div></div>
+      <div class="fl-foot"><div class="fl-col">${o.foot}</div></div>
+    </div>${tool ? sheet : ''}</div>${o.sheet && !tool ? sheet : ''}</div></div>`;
+}
+const LEFT_BACK = { ic: 'back', label: '나가기' };
+const LEFT_HOME = { ic: 'home', label: '클래스 목록으로' };
+const chip = (txt, kind = '', icon = '') => `<span class="w-chip ${kind}">${icon ? ic(icon) : ''}${txt}</span>`;
+const cta = (label, icon, dis = false, cls = 'primary') => `<button class="fl-btn ${cls} block"${dis ? ' disabled' : ''}>${icon ? ic(icon) : ''}${label}</button>`;
+
+/* ───────── FH05 세팅 ───────── */
+function bars(on) { const h = [8, 16, 24, 16, 24, 16, 8, 16, 8, 8]; return `<div class="w-meter" aria-hidden="true">${h.map((v, i) => `<i class="${i < on ? 'on' : ''}" style="height:${v}px"></i>`).join('')}</div>`; }
+const SIL = '<svg class="w-sil" viewBox="0 0 200 160" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><circle cx="100" cy="64" r="28" fill="rgba(255,255,255,0.22)"/><path d="M40 160c0-34 26-58 60-58s60 24 60 58z" fill="rgba(255,255,255,0.22)"/></svg>';
+function ringBtn(lv, word, off) {
+  const steps = off ? 0 : Math.round(lv / 20), col = lv >= 60 ? 'var(--ok)' : 'var(--mb-pale)';
+  const seg = [0, 1, 2, 3, 4].map((i) => `${i < steps ? col : 'rgba(255,255,255,0.22)'} ${i * 72}deg ${i * 72 + 64}deg, transparent ${i * 72 + 64}deg ${i * 72 + 72}deg`).join(', ');
+  return `<button class="fl-iconbtn w-ringbtn${off ? ' off' : ''}" style="--ring:conic-gradient(${seg});--op:${lv >= 60 ? 1 : 0.6}" aria-label="${off ? '마이크 켜기' : `마이크 끄기, 레벨 ${word}`}">${ic(off ? 'mic-off' : 'mic')}</button>`;
+}
+const tgBtns = (camOff, micOff, camDis) => `<div class="w-tg"><button class="fl-iconbtn${camOff ? ' off' : ''}" aria-label="${camOff ? '카메라 켜기' : '카메라 끄기'}"${camDis ? ' disabled' : ''}>${ic(camOff ? 'video-off' : 'video')}</button><button class="fl-iconbtn${micOff ? ' off' : ''}" aria-label="${micOff ? '마이크 켜기' : '마이크 끄기'}">${ic(micOff ? 'mic-off' : 'mic')}</button></div>`;
+
+function fh05(c) {
+  if (c === 'offline') {
+    const body = `<div class="w-row w-venue strong"><span class="w-ico ok">${ic('map-pin')}</span><div class="w-rt"><b>${ADDR}</b><span>오늘 오후 3:00 시작 예정</span></div></div>
+      <div class="w-row"><span class="w-ico">${ic('video-off')}</span><div class="w-rt"><b>카메라와 마이크는 쓰지 않아요</b><span>대면 클래스라 장비 점검 없이 바로 열 수 있어요.</span></div></div>
+      <div class="w-row"><span class="w-ico">${ic('bell')}</span><div class="w-rt"><b>초대한 회원에게 알려요</b><span>열면 초대한 회원에게 알림을 요청해요. 도착하면 입장해요.</span></div></div>
+      <div class="w-row"><span class="w-ico">${ic('band')}</span><div class="w-rt"><b>LINK BAND는 선택이에요</b><span>원하는 회원만 이마에 착용하고, 없어도 진행할 수 있어요.</span></div></div>`;
+    return frame({ id: 'FH05', bg: 'background1', left: LEFT_BACK, title: CLASS_TITLE, sub: '준비 · 오프라인 · 오늘 오후 3:00', body, foot: cta('클래스 열기', 'door-open') + '<p class="w-fnote">열면 초대한 회원에게 알려요</p>' });
+  }
+  const st = {
+    ok: { cam: 'ok', mic: 'ok', lv: 80, chip: ['정상', 'ok', 'circle-check'], note: '열면 초대한 회원이 입장할 수 있어요' },
+    quiet: { cam: 'ok', mic: 'ok', lv: 20, chip: ['조용해요', 'mute', 'info'], note: '소리가 작아요. 조금 더 크게 말해 보세요' },
+    'cam-off': { cam: 'off', mic: 'ok', chip: ['정상', 'ok', 'circle-check'], note: '카메라 없이 소리만 열어요' },
+    'mic-off': { cam: 'ok', mic: 'off', chip: ['마이크 꺼짐', 'warn', 'alert'], hint: ['mic-off', '꺼져 있어요. 켜지 않으면 녹음과 AI 기록지를 만들 수 없어요'], note: '열 때 마이크를 한 번 더 확인해요' },
+    'mic-denied': { cam: 'ok', mic: 'denied', chip: ['권한 필요', 'warn', 'alert'], hint: ['mic-off', '주소창 왼쪽 설정에서 마이크를 허용해 주세요'], note: '마이크 없이 열면 수동 기록이에요' },
+    'cam-denied': { cam: 'denied', mic: 'ok', chip: ['권한 필요', 'warn', 'alert'], hint: ['video-off', '주소창 왼쪽 설정에서 카메라를 허용해 주세요'], note: '카메라 없이도 열 수 있어요' },
+    nodevice: { cam: 'none', mic: 'none', chip: ['장치 없음', 'warn', 'alert'], hint: ['mic-off', '연결된 카메라와 마이크가 없어요. 없이 열면 수동 기록이에요'], note: '장비 없이 열면 수동 기록이에요' },
+    unsupported: { cam: 'unsup', mic: 'unsup', chip: ['확인 불가', 'mute', 'info'], hint: ['alert', '이 브라우저에서는 장비를 확인할 수 없어요'], note: 'Chrome이나 Edge를 권장해요' }
+  };
+  st['mic-off-warn'] = st['mic-off'];
+  const s = st[c];
+  const micOff = s.mic !== 'ok';
+  const camOff = s.cam !== 'ok';
+  const camDis = ['none', 'unsup'].includes(s.cam);
+  const tag = chip(s.chip[0], s.chip[1], s.chip[2]);
+  let media;
+  if (s.cam === 'off') {
+    media = `<div class="w-media low"><div class="w-lowrow">${tag}${tgBtns(true, false, false)}</div><div class="w-lowrow"><span class="w-mi">${ic('mic')}</span>${bars(7)}</div></div>`;
+  } else {
+    let slot = '';
+    if (s.cam === 'denied') slot = `<div class="w-slot"><span class="w-ico lg warn">${ic('video-off')}</span><h2>카메라를 쓸 수 없어요</h2><p>카메라 없이도 클래스를 열 수 있어요. 회원에게는 내 이름만 보여요.</p></div>`;
+    else if (s.cam === 'none') slot = `<div class="w-slot"><span class="w-ico lg warn">${ic('video-off')}</span><h2>카메라를 찾지 못했어요</h2><p>카메라와 마이크를 연결한 뒤 다시 확인해 주세요.</p><button class="fl-btn soft w-btn44">${ic('refresh')}다시 확인</button></div>`;
+    else if (s.cam === 'unsup') slot = `<div class="w-slot"><span class="w-ico lg warn">${ic('alert')}</span><h2>이 브라우저에서는 확인할 수 없어요</h2><p>Chrome이나 Edge에서 열면 카메라와 마이크를 확인할 수 있어요.</p></div>`;
+    if (s.cam === 'ok') {
+      const lv = micOff ? 0 : s.lv;
+      const camBtn = `<button class="fl-iconbtn" aria-label="카메라 끄기">${ic('video')}</button>`;
+      const micBtn = ringBtn(lv, s.chip[0], micOff);
+      media = `<div class="w-media"><div class="w-vid">${SIL}</div><span class="w-vtag">${tag}</span>
+      <div class="w-vtg">${camBtn}${micBtn}</div></div>`;
+    } else {
+      media = `<div class="w-media"><div class="w-vid">${slot}</div><span class="w-vtag">${tag}</span>
+      <div class="w-vbar"><span class="w-mi">${ic(micOff ? 'mic-off' : 'mic')}</span>${bars(micOff ? 0 : 7)}${tgBtns(camOff, micOff, camDis)}</div></div>`;
+    }
+  }
+  const hint = s.hint ? `<div class="w-row"><span class="w-ico warn">${ic(s.hint[0])}</span><div class="w-rt"><span class="${s.chip[1] === 'warn' ? 'warn' : ''}" style="font-size:13px;line-height:20px">${s.hint[1]}</span></div></div>` : '';
+  const spk = `<div class="w-row"><span class="w-ico">${ic('vol')}</span><div class="w-rt"><b>스피커</b><span>소리를 확인해요</span></div><button class="fl-btn soft w-btn44"${s.cam === 'unsup' ? ' disabled' : ''}>${ic('play')}테스트음 듣기</button></div>`;
+  const warn = c === 'mic-off-warn' ? {
+    kind: 'conf', label: '마이크 꺼짐 확인', html: `<div class="w-ctr"><span class="w-ico lg warn">${ic('mic-off')}</span><h2>마이크가 꺼져 있어요</h2><p>이대로 열면 음성 녹음과 AI 기록지를 만들 수 없어요. 마이크를 켜고 열거나, 수동 기록 모드로 열 수 있어요.</p></div>
+    <div class="w-act">${cta('마이크 켜고 열기', 'mic')}${cta('꺼진 채로 열기 (수동 기록)', 'pencil', false, 'soft')}<button class="fl-btn ghost block">돌아가기</button></div>` } : null;
+  return frame({ id: 'FH05', bg: 'background1', left: LEFT_BACK, title: CLASS_TITLE, sub: '장비 점검 · 오늘 오후 3:00 시작', body: media + hint + spk, foot: cta('클래스 열기', 'door-open') + `<p class="w-fnote">${s.note}</p>`, sheet: warn });
+}
+
+/* ───────── FH06 로비 ───────── */
+function members(cfg) {
+  const out = [];
+  for (let i = 0; i < cfg.n; i++) {
+    let s = 'ok', b = 'ok', d = 'ok';
+    if (cfg.fill === 'part') {
+      if (cfg.n === 1) { d = 'wait'; if (cfg.loc === 'off') { d = 'na'; b = 'wait'; if (cfg.band === 'none') s = 'wait'; } }
+      else { if (i === 1) { b = 'wait'; d = 'wait'; } if (i === 2) { s = 'wait'; b = 'wait'; d = 'wait'; } }
+    } else if (cfg.fill === 'none') {
+      s = 'wait'; b = 'wait'; d = 'wait';
+      if (i === 0) s = 'ok';
+    } else if (cfg.fill === 'many') {
+      if (i >= 4) { s = i % 3 === 0 ? 'ok' : 'wait'; b = 'wait'; d = 'wait'; }
+    } else if (cfg.fill === 'mix') {
+      if (i === 7) d = 'wait';
+      if (i >= 9) { s = i === 9 ? 'ok' : 'wait'; b = 'wait'; d = 'wait'; }
+    }
+    if (cfg.fill !== 'part' && cfg.fill !== 'none' && cfg.band === 'opt' && b === 'ok' && i % 4 === 2) b = 'skip';
+    if (cfg.loc === 'off') d = 'na';
+    if (cfg.band === 'none') b = 'na';
+    const m = { name: NAMES[i], s, b, d };
+    if (cfg.contact && cfg.contact[i]) { m.b = 'bad'; m.lead = cfg.contact[i]; }
+    out.push(m);
+  }
+  return out;
+}
+const isReady = (m) => [m.s, m.b, m.d].every((v) => v === 'ok' || v === 'skip' || v === 'na');
+const CELL_ICON = { ok: 'circle-check', wait: 'clock', skip: 'minus-circle', bad: 'alert' };
+const CELL_WORD = { ok: '완료', wait: '준비 중', skip: '건너뜀', bad: '접촉 불량' };
+const leadOk = (lead) => { const l = !lead.includes('L'), r = !lead.includes('R'); return { l, r, ref: l && r }; };
+const ledMini = (ok) => `<span class="w-led ${ok ? 'ok' : 'bad'}"></span>`;
+function leadRow(lead) {
+  const o = leadOk(lead);
+  return `<div class="w-lead">${[['왼쪽', o.l], ['기준', o.ref], ['오른쪽', o.r]].map(([n, ok]) => `<span class="w-lx">${ledMini(ok)}<span>${n} ${ok ? '양호' : '실패'}</span></span>`).join('')}</div>`;
+}
+const LEAD_WORD = { L: 'L 전극', R: 'R 전극', LR: 'L·R 전극' };
+function mrow(m) {
+  const kinds = [['s', '설문'], ['b', '밴드'], ['d', '기기']].filter(([k]) => m[k] !== 'na');
+  const cells = kinds.map(([k, l]) => `<span class="w-cell ${m[k]}">${ic(CELL_ICON[m[k]])}${l}</span>`).join('');
+  const aria = kinds.map(([k, l]) => `${l} ${CELL_WORD[m[k]]}${m[k] === 'bad' ? `(${LEAD_WORD[m.lead]})` : ''}`).join(', ');
+  const bad = m.b === 'bad';
+  return `<div class="w-mrow${bad ? ' bad' : ''}" role="group" aria-label="${m.name}: ${aria}"><span class="av">${m.name[0]}</span><span class="nm">${m.name}</span><div class="w-cells">${cells}</div>${bad ? leadRow(m.lead) : ''}</div>`;
+}
+function statusLine(n, ready, wait) {
+  if (!n) return '대기실이 비어 있어요 · 초대한 회원은 시작 후에도 입장할 수 있어요';
+  if (wait) return `${ready}명 준비 완료 · ${wait}명 준비 중`;
+  return n === 1 ? '회원이 준비 완료' : `${n}명 모두 준비 완료`;
+}
+function lobbyParts(key) {
+  const cfg = LOBBY[key];
+  const ms = members(cfg);
+  const ready = ms.filter(isReady).length, wait = ms.length - ready;
+  const off = cfg.loc === 'off';
+  const away = Math.max(0, cfg.inv - ms.length);
+  const invite = `<div class="fl-card sm w-invite"><div class="l"><span class="fl-label">초대 현황</span><span class="w-inv-n">초대 ${cfg.inv}명 · 대기실 ${ms.length}명</span><span class="w-link">${away ? `${away}명이 아직 입장하지 않았어요` : (cfg.inv ? '초대한 회원이 모두 입장했어요' : '아직 초대한 회원이 없어요')}</span></div>
+    <div class="r"><button class="fl-btn soft w-btn44"${away ? '' : ' disabled'}>${ic('bell')}다시 알림</button><button class="fl-btn soft w-btn44">${ic('user-plus')}초대 추가</button></div></div>`;
+  const venue = off ? `<div class="w-row w-venue strong"><span class="w-ico ok">${ic('map-pin')}</span><div class="w-rt"><b>${ADDR}</b><span>오늘 오후 3:00 시작 예정</span></div></div>` : '';
+  let list;
+  if (!ms.length) {
+    list = `<div class="w-empty"><span class="w-ico lg">${ic('users')}</span><h2>아직 대기 중인 회원이 없어요</h2><p>${!cfg.inv ? '초대 추가로 회원을 초대할 수 있어요' : off ? '초대한 회원이 도착해 입장하면 여기에 나타나요' : '초대한 회원이 입장하면 여기에 나타나요'}</p></div>`;
+  } else list = `<div class="w-list${ms.length > 4 ? ' two' : ''}">${ms.map(mrow).join('')}</div>`;
+  const listcard = `<div class="w-listcard"><div class="w-lhead"><b>대기실 ${ms.length}명</b>${chip(BAND_LABEL[cfg.band], 'mute', 'band')}</div>${list}</div>`;
+  const items = [];
+  if (!off) items.push(['music', 'BGM']);
+  if (cfg.band !== 'none') items.push(['band', '내 밴드']);
+  if (!off && cfg.grp) items.push(['hand', '발언권']);
+  items.push(['chat', '채팅']);
+  const dock = `<div class="w-dock">${items.map(([i, l]) => `<button class="w-dk">${ic(i)}${l}</button>`).join('')}</div>`;
+  const note = statusLine(ms.length, ready, wait);
+  return { cfg, ms, ready, wait, away, off, body: invite + venue + listcard + dock, foot: `<p class="w-fnote${ms.length ? '' : ' two'}">${note}</p>` + cta('시작하기', 'play'),
+    sub: `로비 · ${off ? '오프라인' : '온라인'} · ${cfg.grp ? '그룹' : '1:1'}` };
+}
+function fh06(key) {
+  const p = lobbyParts(key);
+  return frame({ id: 'FH06', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot });
+}
+
+/* ───────── FH06a 로비 시트 ───────── */
+function trackerSvg(lead) {
+  const o = leadOk(lead);
+  const col = (ok) => (ok ? '#01F0C8' : '#D33F3F');
+  const ico = () => '';
+  const word = LEAD_WORD[lead];
+  return `<svg class="w-trksvg" width="288" height="64" viewBox="0 0 288 64" fill="none" role="img" aria-label="LINK BAND 전극 접촉 상태, ${word} 접촉 실패">
+    <rect x="1" y="1" width="286" height="62" rx="23" stroke="#353842" stroke-width="2"/>
+    <rect x="39" y="20" width="30" height="22" rx="11" stroke="#606276" stroke-width="2"/><rect x="42" y="23" width="24" height="16" rx="8" fill="${col(o.l)}"/>${ico(54, 31, o.l)}
+    <rect x="84" y="20" width="30" height="22" rx="11" stroke="#606276" stroke-width="2"/><rect x="87" y="23" width="24" height="16" rx="8" fill="${col(o.ref)}"/>${ico(99, 31, o.ref)}
+    <rect x="219" y="20" width="30" height="22" rx="11" stroke="#606276" stroke-width="2"/><rect x="222" y="23" width="24" height="16" rx="8" fill="${col(o.r)}"/>${ico(234, 31, o.r)}
+    <path d="M147 18H141C136.029 18 132 22.0294 132 27V33C132 37.9706 136.029 42 141 42H147C151.971 42 156 37.9706 156 33V27C156 22.0294 151.971 18 147 18Z" fill="${col(o.ref)}"/>${ico(144, 30, o.ref)}
+    <text x="24" y="38" fill="#EFEFEF" font-size="12" font-family="sans-serif">L</text><text x="256" y="38" fill="#EFEFEF" font-size="12" font-family="sans-serif">R</text>
+    <text x="54" y="58" fill="#EFEFEF" font-size="12" font-family="sans-serif" text-anchor="middle">왼쪽 ${o.l ? '양호' : '실패'}</text><text x="144" y="58" fill="#EFEFEF" font-size="12" font-family="sans-serif" text-anchor="middle">기준 ${o.ref ? '양호' : '실패'}</text><text x="234" y="58" fill="#EFEFEF" font-size="12" font-family="sans-serif" text-anchor="middle">오른쪽 ${o.r ? '양호' : '실패'}</text></svg>`;
+}
+function sheetHead(t) { return `<div class="w-sh-h"><h2>${t}</h2><button class="fl-iconbtn" aria-label="닫기">${ic('x')}</button></div>`; }
+function toolSheet(c) {
+  const r = (icn, b, sp, trail = '', cls = '') => `<div class="w-row ${cls}"><span class="w-ico ${cls}">${ic(icn)}</span><div class="w-rt"><b>${b}</b><span>${sp}</span></div>${trail}</div>`;
+  if (c === 'invite' || c === 'invite-all') {
+    const all = c === 'invite-all';
+    const p = LOBBY[all ? 'g-on-8' : 'g-on-3'];
+    const away = p.inv - p.n;
+    const who = (n, sp, kind) => `<div class="w-row"><span class="w-ico">${ic('user')}</span><div class="w-rt"><b>${n}</b><span class="${kind === 'bad' ? 'warn' : ''}">${sp}</span></div>${kind === 'bad' ? `<button class="fl-btn soft w-btn44">${ic('refresh')}재시도</button>` : ''}</div>`;
+    const mid = all
+      ? `<div class="w-empty"><span class="w-ico lg ok">${ic('circle-check')}</span><h2>초대한 회원이 모두 입장했어요</h2><p>다시 알릴 회원이 없어요</p></div>`
+      : `<span class="fl-label">아직 입장하지 않은 회원 ${away}명</span><div class="w-msgs">${who('현우', '초대했어요')}${who('수아', '요청했어요 · 잠시 후 다시 할 수 있어요')}${who('하은', '요청하지 못했어요', 'bad')}</div>`;
+    return { label: '회원 초대', html: `${sheetHead('회원 초대')}
+      ${r('users', `초대 ${p.inv}명 · 대기실 ${p.n}명`, all ? '모두 입장했어요' : `${away}명이 아직 입장하지 않았어요`, '', all ? 'ok' : '')}
+      ${mid}
+      <div class="w-row"><span class="w-ico">${ic('key')}</span><div class="w-rt"><b>입장 코드 ${ENTRY_CODE}</b><span>참가자에게 직접 알려 주세요</span></div><button class="fl-iconbtn" aria-label="입장 코드 복사">${ic('copy')}</button></div>
+      <div class="w-act">${cta(all ? '다시 알릴 회원이 없어요' : `${away}명에게 다시 알림`, 'bell', all)}${cta('초대 추가', 'user-plus', false, 'soft')}</div>` };
+  }
+  if (c === 'bgm') {
+    const tr = (n, on) => `<div class="w-row"><span class="w-ico ${on ? 'ok' : ''}">${ic('music')}</span><div class="w-rt"><b>${n}</b></div>${on ? ic('circle-check', 'w-ok') : ''}</div>`;
+    return { label: '대기실 BGM', html: `${sheetHead('대기실 BGM')}
+      <div class="w-msgs">${tr('숲속 새벽', true)}${tr('계곡 물소리', false)}${tr('고요한 종소리', false)}</div>
+      <div class="w-row strong"><button class="fl-iconbtn" aria-label="일시정지">${ic('pause')}</button><div class="w-rt"><div class="w-bar" style="--p:36%"><i></i></div><span style="margin-top:8px">01:20 / 03:40</span></div></div>
+      <div class="w-row"><span class="w-mid">${ic('vol-low')}</span><div class="w-slider" role="slider" aria-label="모니터 볼륨"><i></i></div><span class="w-mid">${ic('vol')}</span></div>
+      <p class="fl-note" style="margin:0">대기실에서 회원에게도 같은 음악이 들려요. 시작하면 자동으로 줄어들어요.</p>` };
+  }
+  if (c === 'band') {
+    return { label: '내 밴드', html: `${sheetHead('내 LINK BAND')}
+      <div class="w-ctr"><span class="w-ico lg">${ic('band')}</span>${chip('연결 안 됨', 'mute', 'minus-circle')}<p>내 뇌파를 함께 볼 때만 이마에 착용해 연결해요. 연결하지 않아도 클래스를 진행할 수 있어요.</p></div>
+      <div class="w-act">${cta('LINK BAND 연결', 'band')}</div>` };
+  }
+  if (c === 'band-on') {
+    return { label: '내 밴드', html: `${sheetHead('내 LINK BAND')}
+      <div class="w-ctr"><span class="w-ico lg ok">${ic('band')}</span>${chip('연결됨', 'ok', 'circle-check')}</div>
+      ${r('battery', '배터리', '충분해요', chip('좋음', 'ok', 'circle-check'))}${r('circle-check', '전극 접촉', '이마에 잘 닿아 있어요', chip('접촉 양호', 'ok', 'circle-check'))}
+      <div class="w-act">${cta('연결 해제', 'x-circle', false, 'soft')}</div>` };
+  }
+  if (c.startsWith('band-bad')) {
+    const lead = { 'band-bad-l': 'L', 'band-bad-r': 'R', 'band-bad-lr': 'LR' }[c];
+    const msg = lead === 'LR' ? 'L·R 전극이 모두 이마에 닿지 않아요.' : `${lead} 전극이 이마에 닿지 않아요.`;
+    return { label: '내 밴드 전극 접촉', html: `${sheetHead('내 LINK BAND')}
+      <div class="w-ctr">${chip('접촉 불량', 'warn', 'alert')}<h2>LINK BAND 위치를 조정해 주세요</h2><p>${msg} 빨간색 전극이 밀착되도록 밴드 크기를 내 머리에 맞춰 주세요.</p></div>
+      <div class="fl-card sm w-trk">${trackerSvg(lead)}<div class="w-legend"><span><i class="ok"></i>접촉 양호</span><span><i class="bad"></i>접촉 실패</span></div></div>
+      <div class="w-how"><div><span class="w-num">1</span>밴드를 이마 중앙에 맞춰 전극이 피부에 밀착되도록 조여 주세요.</div><div><span class="w-num">2</span>머리카락이나 땀이 센서를 가리지 않게 정리한 뒤 다시 착용해 주세요.</div><div><span class="w-num">3</span>밀착되면 수치가 다시 표시돼요. 안 되면 벗었다가 다시 착용해 주세요.</div></div>` };
+  }
+  if (c === 'speak') {
+    const ask = (n) => `<div class="w-row"><span class="w-ico">${ic('hand')}</span><div class="w-rt"><b>${n}</b><span>손들었어요</span></div><button class="fl-btn soft w-btn44">발언 허용</button></div>`;
+    return { label: '발언권', html: `${sheetHead('발언권')}
+      <span class="fl-label">손든 회원 2명</span><div class="w-msgs">${ask('민준')}${ask('지우')}</div>
+      <span class="fl-label">발언 중 1명</span>
+      <div class="w-row strong"><span class="w-ico ok">${ic('mic')}</span><div class="w-rt"><b>서연</b><span>마이크가 켜져 있어요</span></div><button class="fl-btn soft w-btn44">발언 마치기</button></div>
+      <p class="fl-note" style="margin:0">발언을 허용하면 그 회원의 마이크가 켜져요.</p>` };
+  }
+  const on = c === 'chat';
+  const msgs = `<div class="w-msgs"><div class="w-bubble"><small>서연</small>안녕하세요, 잘 들려요</div><div class="w-bubble"><small>민준</small>음악이 좋아요</div><div class="w-bubble me"><small>나</small>곧 시작할게요</div></div>`;
+  const offBox = `<div class="w-empty"><span class="w-ico lg">${ic('chat')}</span><h2>채팅이 꺼져 있어요</h2><p>켜면 회원이 대기실에서도 메시지를 보낼 수 있어요</p></div>`;
+  return { label: '채팅', html: `${sheetHead('채팅')}
+    <div class="w-row"><span class="w-ico ${on ? 'ok' : ''}">${ic('chat')}</span><div class="w-rt"><b>회원 채팅</b><span>${on ? '켜짐' : '꺼짐'}</span></div><button class="w-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="회원 채팅"></button></div>
+    ${on ? msgs : offBox}
+    <div class="w-row strong"><div class="w-rt"><span>${on ? '메시지를 입력해요' : '채팅을 켜면 보낼 수 있어요'}</span></div><button class="fl-iconbtn" aria-label="보내기"${on ? '' : ' disabled'}>${ic('send')}</button></div>` };
+}
+function fh06a(c) {
+  const p = lobbyParts(c === 'invite-all' ? 'g-on-8' : 'g-on-3');
+  const sh = toolSheet(c);
+  return frame({ id: 'FH06a', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot, sheet: { kind: 'tool', label: sh.label, html: sh.html } });
+}
+
+/* ───────── FH07 시작 확인 ───────── */
+function fh07(c) {
+  const key = { ok: 'g-on-8', pending: 'g-on-3', 'all-wait': 'g-on-3-wait', 'many-wait': 'g-on-12-many', 'mic-off': 'g-on-3', 'no-consent': 'g-on-8', offline: 'g-off-3', one: 'o-on-1r', 'one-wait': 'o-on-1', 'empty-wait': 'g-on-0', 'empty-wait-offline': 'g-off-0', 'empty-wait-one': 'o-on-0' }[c];
+  const p = lobbyParts(key);
+  const off = p.off;
+  const micOff = c === 'mic-off', noC = c === 'no-consent';
+  const manual = micOff || noC;
+  const empty = !p.ms.length;
+  const people = empty ? '아직 아무도 입장하지 않았어요' : statusLine(p.ms.length, p.ready, p.wait);
+  const rowPeople = `<div class="w-sr"><span class="w-ico ${p.wait || empty ? '' : 'ok'}">${ic('users')}</span><div class="w-rt"><b>준비 인원</b><span>${people}</span></div></div>`;
+  // 준비 중 회원 목록: 6명 이상이면 3명만 보이고 '외 N명'으로 접는다
+  const pend = p.ms.filter((m) => !isReady(m));
+  const shown = pend.length >= 6 ? pend.slice(0, 3) : pend;
+  const stepChips = (m) => [[m.s === 'wait', '설문', 'clock'], [m.b === 'wait' || m.b === 'bad', 'LINK BAND', m.b === 'bad' ? 'alert' : 'clock'], [m.d === 'wait', '기기', 'clock']]
+    .filter((x) => x[0]).map((x) => `<span class="w-mchip${x[2] === 'alert' ? ' bad' : ''}">${ic(x[2])}${x[1]}</span>`).join('');
+  const plist = empty ? `<div class="w-pl"><p class="w-pn" style="padding-top:0">시작하면 초대한 회원이 이후에 입장해요</p></div>` : pend.length ? `<div class="w-pl" aria-label="준비 중인 회원 ${pend.length}명">${shown.map((m) => `<div class="w-pr"><b>${m.name}</b>${stepChips(m)}</div>`).join('')}${pend.length > shown.length ? `<div class="w-pr w-pmore">외 ${pend.length - shown.length}명</div>` : ''}
+    <p class="w-pn">준비 중인 회원은 시작 후에도 입장해서 이어서 준비할 수 있어요</p></div>` : '';
+  const rowMic = off ? `<div class="w-sr"><span class="w-ico ok">${ic('map-pin')}</span><div class="w-rt"><b>장소</b><span>${ADDR}</span></div></div>`
+    : micOff ? `<div class="w-sr"><span class="w-ico warn">${ic('mic-off')}</span><div class="w-rt"><b>마이크</b><span class="warn">꺼져 있어요</span></div><button class="fl-btn soft w-btn44">${ic('mic')}켜기</button></div>`
+    : `<div class="w-sr"><span class="w-ico ok">${ic('mic')}</span><div class="w-rt"><b>마이크</b><span>켜져 있어요</span></div>${chip('켜짐', 'ok', 'circle-check')}</div>`;
+  const checked = !manual;
+  const CNT = { ok: [2, 5], one: [0, 1] }[c] || [0, 0];
+  const cntRows = [[CNT[0], 'minus-circle', `리포트에 반영하지 않는 참가자 ${CNT[0]}명`], [CNT[1], 'shield', `연구 목적 활용에 동의한 참가자 ${CNT[1]}명`]].filter((x) => x[0] > 0)
+    .map((x) => `<div class="w-rt" style="display:flex;align-items:center;gap:8px;flex:none">${ic(x[1], 'w-mid').replace('class="ic', 'style="width:16px;height:16px;flex:none" class="ic')}<span style="line-height:20px">${x[2]}</span></div>`).join('');
+  const consent = `<div class="fl-card sm" style="display:flex;flex-direction:column;gap:8px">
+    <div class="w-facts"><span class="w-fact">${ic('calendar')}기록 원본은 {N}일 후 삭제돼요</span><span class="w-fact">${ic('shield')}나와 담당 상담사만 열람</span></div>${cntRows}
+    <div class="w-row" role="checkbox" aria-checked="${checked}" style="min-height:48px;padding:0 16px"><span class="w-cb ${checked ? 'on' : ''}${micOff ? ' dis' : ''}">${ic('check')}</span><div class="w-rt"><b style="font-size:15px">녹음하고 AI 기록지를 만들어요</b></div></div></div>`;
+  const note = manual ? '녹음 없이 수동 기록으로 진행해요. 메모로 기록지를 만들어요.' : '녹음은 언제든 멈출 수 있어요.';
+  const html = `<div class="w-ctr"><h2>시작 전에 확인해요</h2></div><div class="w-stat">${rowPeople}${plist}${rowMic}</div>${consent}
+    <p class="fl-note" style="margin:0;display:flex;gap:8px;align-items:center">${ic('info', 'w-mid').replace('class="ic', 'style="width:16px;height:16px;flex:none" class="ic')}${note}</p>
+    <div class="w-act">${cta(pend.length || empty ? '지금 시작하기' : '시작하기', 'play')}<button class="fl-btn ghost block">${pend.length || empty ? '조금 더 기다리기' : '돌아가기'}</button></div>`;
+  return frame({ id: 'FH07', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot, sheet: { kind: 'conf w-tight', label: '시작 확인', html } });
+}
+
+/* ───────── FH08 나가기·닫기 ───────── */
+function fh08(c) {
+  const zero = c === 'choose-0';
+  const p = lobbyParts(zero ? 'g-on-0' : 'g-on-3');
+  let html;
+  if (c === 'confirm') {
+    html = `<div class="w-ctr"><span class="w-ico lg warn">${ic('alert')}</span><h2>클래스를 정말 닫을까요?</h2><p>대기 중인 회원 3명이 모두 퇴장하고, 닫힌 클래스는 다시 열 수 없어요. 같은 설정으로 새 클래스를 만들 수 있어요.</p></div>
+      <div class="w-act">${cta('클래스 닫기', 'x-circle', false, 'danger')}<button class="fl-btn soft block">취소</button></div>`;
+  } else {
+    html = `<div class="w-ctr"><h2>나갈까요?</h2><p>${zero ? '지금은 대기 중인 회원이 없어요.' : '지금 대기실에 회원 3명이 있어요.'}</p></div>
+      <div class="w-act"><button class="w-opt">${ic('log-out')}<span class="w-ot"><b>나가기</b><span class="w-od">${zero ? '클래스는 열린 채로 두어요. 회원이 들어오면 대기실에서 기다려요.' : '클래스는 열린 채로 두어요. 회원 3명은 대기실에서 기다리고, 돌아오면 이어서 시작할 수 있어요.'}</span></span></button>
+      <button class="w-opt danger">${ic('x-circle')}<span class="w-ot"><b>클래스 닫기</b><span class="w-od">${zero ? '클래스가 닫혀요. 닫은 클래스는 다시 열 수 없어요.' : '회원 3명이 모두 퇴장해요. 닫은 클래스는 다시 열 수 없어요.'}</span></span></button>
+      <button class="fl-btn ghost block">계속 준비하기</button></div>`;
+  }
+  return frame({ id: 'FH08', bg: 'background4', left: LEFT_BACK, title: CLASS_TITLE, sub: p.sub, body: p.body, foot: p.foot, sheet: { kind: 'conf', label: '나가기 또는 클래스 닫기', html } });
+}
+
+/* ───────── FH09 종료 ───────── */
+function fh09(c) {
+  if (c === 'confirm' || c === 'confirm-busy') {
+    const busy = c === 'confirm-busy';
+    const li = (i, t) => `<div class="w-row"><span class="w-ico">${ic(i)}</span><div class="w-rt"><b style="font-size:13px;line-height:20px;font-weight:600">${t}</b></div></div>`;
+    const html = `<div class="w-ctr"><span class="w-ico lg">${ic('flag')}</span><h2>클래스를 끝낼까요?</h2></div>
+      <div class="w-msgs">${li('save', '녹음과 녹화가 저장돼요')}${li('file', '상담사·회원 리포트가 자동으로 만들어져요')}${li('users', '참여 중인 회원 8명의 화면도 함께 끝나요')}</div>
+      <div class="w-act">${cta(busy ? '끝내는 중이에요' : '클래스 끝내기', busy ? 'loader' : 'flag', busy, 'danger')}<button class="fl-btn soft block"${busy ? ' disabled' : ''}>계속 진행</button></div>`;
+    return frame({ id: 'FH09', bg: 'background8', left: LEFT_BACK, title: CLASS_TITLE, sub: '진행 중 · 온라인 · 그룹', body: '', foot: '', sheet: { kind: 'conf', label: '클래스 종료 확인', html } });
+  }
+  const manual = c.startsWith('manual');
+  const stage = { 'end-saving': 0, 'end-stt': 1, 'end-ai': 2, 'end-done': 4, 'manual-ing': 3, 'manual-done': 4, 'excluded-common': 2 }[c];
+  const done = stage === 4;
+  const defs = manual ? [['save', '녹음 저장', '녹음 없음'], ['wave', '음성 인식', '건너뜀'], ['spark', 'AI 요약', '건너뜀'], ['file', '리포트 완료', done ? '완료' : '메모로 만드는 중']]
+    : [['save', '녹음 저장', ''], ['wave', '음성 인식', ''], ['spark', 'AI 요약', ''], ['file', '리포트 완료', '']];
+  const steps = defs.map((d, i) => {
+    let st, label = d[2];
+    if (manual && i < 3) st = 'skip';
+    else if (stage > i) st = 'done'; else if (stage === i) st = 'now'; else st = 'todo';
+    if (!manual) label = { done: '완료', now: '진행 중', todo: '기다리는 중' }[st];
+    if (manual && i === 3) st = done ? 'done' : 'now';
+    const icn = st === 'done' ? 'circle-check' : st === 'now' ? 'loader' : st === 'skip' ? 'minus-circle' : 'clock';
+    return `<div class="w-step ${st}">${ic(icn)}<span class="tx">${d[1]}</span><span class="st">${label}</span></div>`;
+  }).join('');
+  const pct = manual ? (done ? '100%' : '70%') : ['25%', '50%', '75%', '90%', '100%'][stage];
+  const sub = done ? (manual ? '수동 기록 모드로 진행했어요. 내 메모로 리포트를 만들었어요.' : '48분 동안 8명이 함께했어요. 리포트가 준비됐어요.')
+    : manual ? '수동 기록 모드로 진행했어요. 녹음 없이 내 메모로 리포트를 만들어요.' : '48분 동안 8명이 함께했어요. 녹음이 저장됐고 리포트를 만들고 있어요.';
+  const body = `<div class="w-scene"><span class="w-ico lg ok">${ic('flag')}</span><h1 class="fl-h1">클래스가 끝났어요</h1><p class="fl-sub">${sub}</p></div>
+    <div class="fl-card strong sm" style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:32px"><b>${done ? '리포트가 준비됐어요' : '리포트를 만들고 있어요'}</b>${done ? chip('완료', 'ok', 'circle-check') : chip('보통 3~5분', 'mute', 'clock')}</div>
+      <div class="w-bar" style="--p:${pct}"><i></i></div><div class="w-steps">${steps}</div></div>${c === 'excluded-common' ? `<div class="w-row"><span class="w-ico">${ic('info')}</span><div class="w-rt"><b>리포트에 반영하지 않은 참가자 2명이 있어 그룹 공통 요약은 제외돼요</b><span>원본은 설정 기간 동안 보관돼요</span></div></div>` : ''}`;
+  return frame({ id: 'FH09', bg: 'background8', left: LEFT_HOME, title: '클래스 종료', sub: CLASS_TITLE, body, foot: cta('기록 보기', 'file') + `<p class="w-fnote">${done ? '리포트는 기록에서 언제든 볼 수 있어요' : '화면을 닫아도 리포트는 계속 만들어져요'}</p>` });
+}
+
+/* ───────── FH10 닫힘 / 오류 ───────── */
+function fh10(c) {
+  const rows = (a) => a.map(([i, b, s]) => `<div class="w-row"><span class="w-ico">${ic(i)}</span><div class="w-rt"><b>${b}</b><span>${s}</span></div></div>`).join('');
+  const V = {
+    closed: { t: '클래스 닫힘', ico: 'door-closed', h: '클래스를 닫았어요', s: '대기 중이던 회원 3명에게 클래스가 닫혔다고 안내했어요.', r: [['clock', '닫은 시각', '오늘 오후 2:41'], ['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
+    'closed-0': { t: '클래스 닫힘', ico: 'door-closed', h: '클래스를 닫았어요', s: '대기 중이던 회원은 없었어요.', r: [['clock', '닫은 시각', '오늘 오후 2:41'], ['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
+    'closed-revisit': { t: '클래스 닫힘', ico: 'door-closed', h: '이미 닫힌 클래스예요', s: '이 클래스는 닫혀서 다시 열 수 없어요.', r: [['copy', '다시 열 수는 없어요', '같은 설정으로 새 클래스를 만들 수 있어요'], ['list', '목록에서 찾아도 돼요', '내 클래스는 목록에 모여 있어요']], b1: ['같은 설정으로 새 클래스', 'copy'], b2: '클래스 목록으로' },
+    error: { t: '문제가 생겼어요', ico: 'alert', warn: true, h: '클래스를 불러오지 못했어요', s: '잠시 뒤 다시 시도해 주세요. 계속 안 되면 클래스 목록에서 다시 들어와 주세요.', r: [['refresh', '잠시 기다렸다가 다시 시도해요', '일시적인 문제일 수 있어요'], ['list', '목록에서 다시 들어와도 돼요', '내 클래스는 목록에서 찾을 수 있어요']], b1: ['다시 시도', 'refresh'], b2: '클래스 목록으로' },
+    'error-notfound': { t: '문제가 생겼어요', ico: 'alert', warn: true, h: '찾을 수 없는 클래스예요', s: '삭제됐거나 주소가 잘못됐을 수 있어요.', r: [['link', '주소를 다시 확인해요', '링크가 끝까지 복사됐는지 확인해요'], ['list', '목록에서 찾아도 돼요', '내 클래스는 목록에 모여 있어요']], b1: ['클래스 목록으로', 'list'], b2: '다시 시도' },
+    'error-forbidden': { t: '문제가 생겼어요', ico: 'lock', warn: true, h: '내가 연 클래스가 아니에요', s: '이 클래스는 다른 상담사가 열었어요. 내 클래스는 목록에서 확인해요.', r: [['user', '호스트만 열 수 있어요', '클래스를 만든 상담사가 열고 진행해요'], ['list', '내 클래스 보기', '목록에서 내가 만든 클래스를 찾아요']], b1: ['내 클래스 보기', 'list'], b2: '홈으로' },
+    'error-network': { t: '연결이 끊겼어요', ico: 'wifi-off', warn: true, h: '연결이 끊겼어요', s: '인터넷 연결을 확인한 뒤 다시 시도해 주세요.', r: [['wifi-off', '네트워크를 확인해요', 'Wi-Fi나 모바일 데이터가 켜져 있는지 봐요'], ['refresh', '연결되면 이어서 진행해요', '다시 시도를 누르면 돼요']], b1: ['다시 시도', 'refresh'], b2: '클래스 목록으로' }
+  }[c];
+  const body = `<div class="w-scene"><span class="w-ico lg ${V.warn ? 'warn' : ''}">${ic(V.ico)}</span><h1 class="fl-h1">${V.h}</h1><p class="fl-sub">${V.s}</p></div>${rows(V.r)}`;
+  return frame({ id: 'FH10', bg: 'background10', left: LEFT_HOME, title: V.t, sub: CLASS_TITLE, body, foot: cta(V.b1[0], V.b1[1]) + `<button class="fl-btn soft block">${V.b2}</button>` });
+}
+
+/* ───────── 라우팅 ───────── */
+function renderIndex() {
+  document.body.classList.add('w-index');
+  const rows = Object.entries(REG).map(([id, r]) => `<tr><td><b>${id}</b></td><td>${r.name}</td><td>${Object.entries(r.cases).map(([k, d]) => `<a href="?screen=${id}&case=${k}" title="${d}">${k}</a>`).join('')}</td><td>${r.assume}</td></tr>`).join('');
+  document.getElementById('app').innerHTML = `<div class="w-ix"><h1>상담사 시안 B — 화면·케이스 인덱스</h1><p>개발자용. 화면 선택은 ?screen=FH06&amp;case=g-on-3 형태이고, 파라미터가 없으면 FH05 첫 케이스가 열려요.</p>
+    <table><thead><tr><th>화면 ID</th><th>화면</th><th>케이스</th><th>가정</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function render() {
+  const P = new URLSearchParams(location.search);
+  if (P.get('index')) return renderIndex();
+  const id = REG[P.get('screen')] ? P.get('screen') : 'FH05';
+  const keys = Object.keys(REG[id].cases);
+  const c = keys.includes(P.get('case')) ? P.get('case') : keys[0];
+  const html = { FH05: fh05, FH06: fh06, FH06a: fh06a, FH07: fh07, FH08: fh08, FH09: fh09, FH10: fh10 }[id](c);
+  document.getElementById('app').innerHTML = html;
+  document.body.dataset.screen = id; document.body.dataset.case = c; document.body.dataset.ready = '1';
+}
+render();
+window.__REG = Object.fromEntries(Object.entries(REG).map(([id, r]) => [id, Object.keys(r.cases)]));
+window.__ready = true;
+</script>
+</body>
+</html>

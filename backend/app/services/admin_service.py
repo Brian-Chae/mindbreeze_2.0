@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -442,7 +443,7 @@ def list_users(
             detail="유효하지 않은 role 입니다",
         )
 
-    query = db.query(User)
+    query = db.query(User).filter(User.status != "deleted")  # SDD-209(B1): 삭제(비활성 전환) 계정 제외
     if role:
         query = query.filter(User.role == role)
     if q:
@@ -708,12 +709,70 @@ def unsuspend_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict
     return {"id": str(user.id), "status": user.status}
 
 
-def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
-    """사용자 계정을 영구 삭제한다 (플랫폼 관리자 전용).
+# SDD-209(B1): 계정 삭제 시 지우는(=접근 권한·소속·알림) 자식 테이블. 상담·원본·리포트 데이터
+# (sessions·session_participants·eeg_*·reports·chat_messages 등)는 포함하지 않는다.
+_ACCOUNT_ACCESS_TABLES: list[tuple[str, list[str]]] = [
+    ("client_counselor_links", ["client_id", "counselor_id"]),
+    ("client_invites", ["counselor_id"]),
+    ("chat_room_participants", ["user_id"]),
+    ("credentials", ["user_id"]),
+    ("notifications", ["user_id"]),
+    ("org_join_requests", ["user_id"]),
+    ("refresh_tokens", ["user_id"]),
+    ("password_history", ["user_id"]),
+    ("onboarding_progress", ["user_id"]),
+    ("user_org_memberships", ["user_id"]),
+]
 
+
+def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
+    """사용자 계정 삭제 = 비활성(숨김) 전환 (플랫폼 관리자 전용, SDD-209 B1 / RV1-4).
+
+    users 행은 ``sessions.host_id`` FK 때문에 지울 수 없고, 세션·원본을 함께 지우면 상담 기록과
+    뇌파·음성·영상 원본이 즉시 영구 삭제된다. 따라서 계정은 ``status='deleted'`` 로 전환해 로그인·
+    토큰·조직 소속·알림만 걷어내고, 호스트 클래스는 숨김 처리하며 원본·리포트는 보존한다.
+    실제 삭제는 보관 스위프나 관리자 원본 삭제(original_deletion_service)로만 도달한다.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
+    if user.role == "platform_admin":
+        raise HTTPException(status_code=403, detail="플랫폼 관리자는 삭제할 수 없습니다")
+    if user.status == "deleted":
+        return {"id": str(user_id), "deleted": True}
+
+    uid = str(user_id)
+
+    # 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
+    db.execute(
+        text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
+        {"id": uid},
+    )
+    for table, cols in _ACCOUNT_ACCESS_TABLES:
+        for col in cols:
+            db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
+    db.execute(
+        text("DELETE FROM signup_applications WHERE user_id = :id OR reviewed_by = :id"),
+        {"id": uid},
+    )
+
+    # 호스트 클래스는 숨김(원본 보존). 이미 숨김인 행은 건드리지 않는다.
+    db.execute(
+        text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND hidden_at IS NULL"),
+        {"id": uid, "now": datetime.now(timezone.utc)},
+    )
+
+    user.status = "deleted"
+    db.commit()
+    return {"id": uid, "deleted": True}
+
+
+def _purge_user_hard(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
+    """[내부 전용] 사용자와 모든 자식 레코드·미디어를 영구 삭제한다.
+
+    SDD-209(B1) 이후 일반 경로(API)에서는 호출하지 않는다 — 보관 스위프(B12)·관리자 원본 삭제만
+    도달해야 하는 하드 삭제 구현을 보존해 둔 것이다.
     users.id 를 참조하는 모든 FK 자식 레코드를 먼저 삭제한 뒤 사용자를 삭제한다.
-    ORM cascade 가 없는 관계(client_counselor_links, credentials, sessions 등)까지
-    명시적으로 정리해 FK 제약 위반을 방지한다.
     """
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:

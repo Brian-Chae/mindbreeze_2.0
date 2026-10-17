@@ -110,3 +110,4 @@ GoogleService-Info.plist
 *.mobileprovision
 .build/
 .swiftpm/
+keystore.properties

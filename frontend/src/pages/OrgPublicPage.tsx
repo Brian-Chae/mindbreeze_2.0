@@ -240,7 +240,7 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
               <div>
                 <h2 className="text-[22px] font-bold text-[#1F1F1F]">진행중 · 예정 클래스</h2>
                 <p className="text-[15px] text-[#6F6F6F] mt-1">
-                  클래스 코드를 복사한 뒤 아래 &quot;클래스 코드로 참여&quot;에서 입력하세요.
+                  진행자에게 입장 코드를 안내받은 뒤 아래 &quot;코드로 입장&quot;에서 입력하세요.
                 </p>
               </div>
             </div>
@@ -259,15 +259,15 @@ function OrgPublicContent({ data }: { data: OrgPublicResponse }) {
 
           {/* 하단 CTA */}
           <section className="bg-white border border-[#DDDEE7] rounded-2xl p-8 text-center">
-            <h2 className="text-[20px] font-bold text-[#1F1F1F] mb-2">클래스 코드로 참여</h2>
+            <h2 className="text-[20px] font-bold text-[#1F1F1F] mb-2">코드로 입장</h2>
             <p className="text-[15px] text-[#6F6F6F] mb-6">
-              상담사·지도사가 안내한 6자리 클래스 코드를 입력하면 바로 참여할 수 있습니다.
+              상담사·지도사가 안내한 입장 코드 4자리를 입력하면 바로 입장할 수 있습니다.
             </p>
             <Link
               to="/join"
               className="inline-flex items-center justify-center rounded-xl px-8 py-3 font-semibold bg-[#5F0080] text-white hover:bg-[#4D0066] transition-colors"
             >
-              클래스 코드 입력
+              입장 코드 입력
             </Link>
           </section>
         </div>

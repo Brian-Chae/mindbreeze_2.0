@@ -44,7 +44,7 @@ def _signals(fake):
 
 def _join_member(client, cls: dict, member: dict) -> str:
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={}, headers=member["h"]
+        "/api/v1/sessions/enter", json={"code": cls['access_code']}, headers=member["h"]
     )
     assert res.status_code == 200, res.text
     return res.json()["participant_id"]
@@ -237,7 +237,9 @@ def test_07_게스트가_회원참여자_사칭하면_차단(client, monkeypatch
     fake.call(
         "class:signal",
         "sidG",
-        {"session_id": cls["id"], "participant_id": pid_member, "signal_type": "following"},
+        # entry_credential=None: 회원의 입장 자격 없이 participant_id 만 제시(사칭)
+        {"session_id": cls["id"], "participant_id": pid_member, "signal_type": "following",
+         "entry_credential": None},
     )
 
     assert _signals(fake) == []

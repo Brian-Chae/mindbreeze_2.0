@@ -32,6 +32,8 @@ interface UseWaitingRoomPresenceOptions {
   enabled: boolean;
   /** 게스트(비로그인) 연결 */
   skipAuth?: boolean;
+  /** 입장 자격(게스트·초대 입장) — 있으면 join 에 실어 참가자 신원을 증명한다 */
+  entryCredential?: string | null;
 }
 
 /**
@@ -46,6 +48,7 @@ export function useWaitingRoomPresence({
   readiness = null,
   enabled,
   skipAuth = false,
+  entryCredential = null,
 }: UseWaitingRoomPresenceOptions): void {
   // 닉네임·체크인은 ref 로 들고 있어 effect 재실행(leave/join 플리커) 없이
   // heartbeat 가 최신 값을 실어 보낸다. 체크인은 변경 즉시 별도 재전송한다.
@@ -68,7 +71,7 @@ export function useWaitingRoomPresence({
 
     const announce = (action: 'join' | 'leave'): void => {
       if (!socket.connected) return;
-      if (action === 'join') joinSessionLive(socket, sessionId, participantId);
+      if (action === 'join') joinSessionLive(socket, sessionId, participantId, entryCredential);
       emitWaitingRoomPresence(socket, {
         session_id: sessionId,
         action,
@@ -94,7 +97,7 @@ export function useWaitingRoomPresence({
       // 대기실을 벗어나면(입장·나가기) 인원에서 제거한다 — 실패해도 TTL 로 정리된다.
       if (announced) announce('leave');
     };
-  }, [enabled, sessionId, participantId, skipAuth]);
+  }, [enabled, sessionId, participantId, skipAuth, entryCredential]);
 
   // 체크인이 저장되면 즉시 join 을 재전송해 상담사 화면을 갱신한다(15초 heartbeat 대기 없이).
   //
@@ -107,7 +110,7 @@ export function useWaitingRoomPresence({
     if (!enabled || !sessionId || !participantId || (!checkinKey && !readinessKey)) return undefined;
     const socket = getSessionLiveSocket(skipAuth ? null : tokenStorage.getAccess());
     if (!socket.connected) return undefined;
-    joinSessionLive(socket, sessionId, participantId);
+    joinSessionLive(socket, sessionId, participantId, entryCredential);
     emitWaitingRoomPresence(socket, {
       session_id: sessionId,
       action: 'join',
@@ -116,5 +119,5 @@ export function useWaitingRoomPresence({
       readiness: readinessRef.current,
     });
     return undefined;
-  }, [checkinKey, readinessKey, enabled, sessionId, participantId, skipAuth]);
+  }, [checkinKey, readinessKey, enabled, sessionId, participantId, skipAuth, entryCredential]);
 }

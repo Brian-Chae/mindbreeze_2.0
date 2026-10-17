@@ -3,6 +3,7 @@
 verify.md 시나리오 1~4, 6 을 검증한다.
 """
 
+from tests.entry_helpers import guest_body
 from app.services import email_verify_service
 from tests.conftest import create_test_org
 
@@ -191,7 +192,7 @@ def test_07_일정없이_클래스_생성_ready_및_코드발급(client):
 
     assert body["scheduled_at"] is None
     assert body["status"] == "ready"
-    assert body["access_code"] and len(body["access_code"]) == 6
+    assert body["access_code"] and len(body["access_code"]) == 4 and body["access_code"].isdigit()
     assert body["started_at"] is None and body["ended_at"] is None
 
 
@@ -230,22 +231,22 @@ def test_10_ready_클래스_취소_가능(client):
 # ---------------------------------------------------------------------------
 
 
-def test_11_코드로_클래스_조회_인증불필요(client):
+def test_11_코드로_클래스_확인_인증불필요(client):
     counselor = _register(client, "c11@test.com")
     cls = _create_class(client, counselor["h"], title="코드조회 클래스")
 
-    res = client.get(f"/api/v1/sessions/by-code/{cls['access_code']}")
+    # SDD-209(B5a): by-code 조회는 enter/verify 로 대체 — 제목·시각·진행자명 외에는 노출하지 않는다.
+    res = client.post("/api/v1/sessions/enter/verify", json={"code": cls["access_code"]})
     assert res.status_code == 200, res.text
     body = res.json()
-    assert body["id"] == cls["id"]
     assert body["title"] == "코드조회 클래스"
-    assert body["status"] == "ready"
+    assert set(body) == {"title", "scheduled_at", "host_name"}
 
 
 def test_12_잘못된_클래스코드_404(client):
-    assert client.get("/api/v1/sessions/by-code/ABC123").status_code == 404
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": "ABC123"}).status_code == 404
     # 길이가 맞지 않는 코드도 404
-    assert client.get("/api/v1/sessions/by-code/XY").status_code == 404
+    assert client.post("/api/v1/sessions/enter/verify", json={"code": "XY"}).status_code == 404
 
 
 def test_13_로그인_내담자_코드로_참여(client):
@@ -255,8 +256,7 @@ def test_13_로그인_내담자_코드로_참여(client):
     member = _register(client, "m13@test.com", role="client")
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={},
+        "/api/v1/sessions/enter", json={"code": cls['access_code']},
         headers=member["h"],
     )
     assert res.status_code == 200, res.text
@@ -273,8 +273,7 @@ def test_14_게스트_이름만으로_참여(client):
     _open_class(client, cls, counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join",
-        json={"name": "게스트홍길동"},
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "게스트홍길동"),
     )
     assert res.status_code == 200, res.text
     body = res.json()
@@ -285,12 +284,12 @@ def test_14_게스트_이름만으로_참여(client):
     assert guest["is_guest"] is True
 
 
-def test_15_게스트_이름_없으면_400(client):
+def test_15_게스트_개인정보_없으면_422(client):
     counselor = _register(client, "c15@test.com")
     cls = _create_class(client, counselor["h"])
     _open_class(client, cls, counselor["h"])
-    res = client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={})
-    assert res.status_code == 400
+    res = client.post("/api/v1/sessions/enter", json={"code": cls['access_code']})
+    assert res.status_code == 422  # SDD-209: 이름·성별·생년월일·이메일 필수
     assert "이름" in res.json()["detail"]
 
 
@@ -298,10 +297,10 @@ def test_16_동일_게스트이름_중복참여_허용(client):
     counselor = _register(client, "c16@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open_class(client, cls, counselor["h"])
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
+    url = "/api/v1/sessions/enter"
 
-    first = client.post(url, json={"name": "김철수"})
-    second = client.post(url, json={"name": "김철수"})
+    first = client.post(url, json=guest_body(cls["access_code"], "김철수"))
+    second = client.post(url, json=guest_body(cls["access_code"], "김철수"))
     assert first.status_code == 200 and second.status_code == 200
     assert first.json()["participant_id"] != second.json()["participant_id"]
     assert len(second.json()["session"]["participants"]) == 2
@@ -312,10 +311,10 @@ def test_17_로그인_사용자_중복참여는_1건만(client):
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open_class(client, cls, counselor["h"])
     member = _register(client, "m17@test.com", role="client")
-    url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
+    url = "/api/v1/sessions/enter"
 
-    first = client.post(url, json={}, headers=member["h"])
-    second = client.post(url, json={}, headers=member["h"])
+    first = client.post(url, json={"code": cls["access_code"]}, headers=member["h"])
+    second = client.post(url, json={"code": cls["access_code"]}, headers=member["h"])
     assert first.status_code == 200 and second.status_code == 200
     assert first.json()["participant_id"] == second.json()["participant_id"]
     assert len(second.json()["session"]["participants"]) == 1
@@ -328,9 +327,10 @@ def test_18_종료된_클래스는_참여불가_400(client):
     client.post(f"/api/v1/sessions/{cls['id']}/end", headers=counselor["h"])
 
     res = client.post(
-        f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "지각생"}
+        "/api/v1/sessions/enter", json=guest_body(cls['access_code'], "지각생")
     )
-    assert res.status_code == 400
+    # SDD-209(B4): 종료된 클래스의 코드는 즉시 무효 — 없는 코드와 구분되지 않는 404
+    assert res.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +342,7 @@ def test_19_상담사_대시보드(client):
     counselor = _register(client, "c19@test.com")
     cls = _create_class(client, counselor["h"], max_participants=10, title="대시보드 클래스")
     _open_class(client, cls, counselor["h"])
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "게스트A"})
+    client.post("/api/v1/sessions/enter", json=guest_body(cls['access_code'], "게스트A"))
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
 
     res = client.get("/api/v1/dashboard/counselor", headers=counselor["h"])
@@ -374,7 +374,7 @@ def test_21_기관_대시보드_통계(client):
     counselor = _register(client, "c21@test.com", org_code=code)
     cls = _create_class(client, counselor["h"], max_participants=10)
     _open_class(client, cls, counselor["h"])
-    client.post(f"/api/v1/sessions/by-code/{cls['access_code']}/join", json={"name": "게스트B"})
+    client.post("/api/v1/sessions/enter", json=guest_body(cls['access_code'], "게스트B"))
     client.post(f"/api/v1/sessions/{cls['id']}/start", headers=counselor["h"])
     client.post(f"/api/v1/sessions/{cls['id']}/end", headers=counselor["h"])
 
@@ -422,4 +422,4 @@ def test_23_예약형_세션은_기존대로_scheduled(client):
     assert body["status"] == "scheduled"
     assert body["scheduled_at"] is not None
     # 예약형 세션에도 클래스 코드는 발급된다
-    assert body["access_code"] and len(body["access_code"]) == 6
+    assert body["access_code"] and len(body["access_code"]) == 4 and body["access_code"].isdigit()

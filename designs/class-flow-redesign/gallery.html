@@ -1,0 +1,1442 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>클래스 사전 흐름 리디자인 — 시안 갤러리 (R0 · R4/R5 정합화)</title>
+<style>body{margin:0;background:#12081C;color:#F7F4F0;font-family:"Pretendard Variable",Pretendard,"Noto Sans KR",-apple-system,system-ui,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#1b0f29;border-bottom:1px solid #ffffff22;padding:12px 24px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+header b{font-size:18px} header a{color:#D2AEFC;text-decoration:none;font-size:14px;padding:6px 12px;border:1px solid #ffffff22;border-radius:999px}
+main{padding:24px;max-width:1500px;margin:auto} h2{font-size:22px;margin:48px 0 8px} h3{font-size:17px;margin:32px 0 4px;color:#D2AEFC}
+.case{margin:16px 0 8px;font-size:13px;color:#CFC6D6} .case a{color:#B373EF;margin-left:8px}
+.row{display:grid;grid-template-columns:repeat(4,auto);gap:12px;align-items:start;overflow-x:auto;padding-bottom:8px}
+.row figure{margin:0}.row figcaption{font-size:12px;color:#9A90A6;margin-bottom:4px}.row img{display:block;height:300px;width:auto;border-radius:10px;border:1px solid #ffffff22}
+p.note{color:#CFC6D6;font-size:14px;line-height:1.6;max-width:900px}</style>
+<header><b>클래스 사전 흐름 시안 (R4/R5 정합화 · 케이스 232)</b>
+<a href="#member-a">회원 A — 홈·목록·상세·코드 입장·입장 확인</a>
+<a href="#member-b">회원 B — 준비 마법사·시작 대기·종료</a>
+<a href="#host-a">상담사 A — 목록·만들기·상세</a>
+<a href="#host-b">상담사 B — 세팅·로비·시작·종료</a>
+<a href="기획.md">기획.md</a></header><main><p class="note">R4·R5(2026-10-17): 로그인 없는 4자리 코드 입장 → 개인정보 입력, 리포트 반영 선택·연구 동의 분리, 밴드 없이 참가(권장 안내), 대기 취소, 비회원 이메일 초대·리포트 자동 발송, 정원 스텐퍼. 기간은 <code>{N}일</code> 자리표시. 케이스는 모바일 390×844 · 태블릿 세로 834×1194 · 태블릿 가로 1194×834 · 데스크톱 1280×720 순서. “직접 열기”는 동작하는 시안(?screen=&amp;case=), 개발자 인덱스는 ?index=1, 정본 키 목록은 case-keys.json 입니다. 정적 시연이며 서버 연동은 없습니다.</p>
+<h2 id="member-a">회원 A — 홈·목록·상세·코드 입장·입장 확인</h2><p class="note">측정: <a style="color:#B373EF" href="fit/member-a-fit.txt">fit</a> · <a style="color:#B373EF" href="fit/member-a-symmetry.txt">대칭</a> · <a style="color:#B373EF" href="member-a.html?index=1">인덱스</a></p>
+<h3>FM01</h3>
+<div class="case">upcoming<a href="member-a.html?screen=FM01&amp;case=upcoming">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM01-upcoming-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM01-upcoming-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM01-upcoming-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM01-upcoming-1280x720.png"></figure>
+</div>
+<div class="case">soon<a href="member-a.html?screen=FM01&amp;case=soon">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM01-soon-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM01-soon-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM01-soon-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM01-soon-1280x720.png"></figure>
+</div>
+<div class="case">open<a href="member-a.html?screen=FM01&amp;case=open">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM01-open-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM01-open-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM01-open-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM01-open-1280x720.png"></figure>
+</div>
+<div class="case">live<a href="member-a.html?screen=FM01&amp;case=live">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM01-live-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM01-live-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM01-live-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM01-live-1280x720.png"></figure>
+</div>
+<div class="case">empty<a href="member-a.html?screen=FM01&amp;case=empty">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM01-empty-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM01-empty-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM01-empty-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM01-empty-1280x720.png"></figure>
+</div>
+<h3>FM02</h3>
+<div class="case">list<a href="member-a.html?screen=FM02&amp;case=list">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM02-list-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM02-list-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM02-list-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM02-list-1280x720.png"></figure>
+</div>
+<div class="case">invited<a href="member-a.html?screen=FM02&amp;case=invited">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM02-invited-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM02-invited-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM02-invited-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM02-invited-1280x720.png"></figure>
+</div>
+<div class="case">apply<a href="member-a.html?screen=FM02&amp;case=apply">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM02-apply-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM02-apply-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM02-apply-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM02-apply-1280x720.png"></figure>
+</div>
+<h3>FM03</h3>
+<div class="case">scheduled<a href="member-a.html?screen=FM03&amp;case=scheduled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-1280x720.png"></figure>
+</div>
+<div class="case">scheduled-offline<a href="member-a.html?screen=FM03&amp;case=scheduled-offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-scheduled-offline-1280x720.png"></figure>
+</div>
+<div class="case">open<a href="member-a.html?screen=FM03&amp;case=open">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-open-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-open-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1280x720.png"></figure>
+</div>
+<div class="case">open-offline<a href="member-a.html?screen=FM03&amp;case=open-offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-open-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-open-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-open-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-open-offline-1280x720.png"></figure>
+</div>
+<div class="case">open-1on1<a href="member-a.html?screen=FM03&amp;case=open-1on1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1on1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1on1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1on1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-open-1on1-1280x720.png"></figure>
+</div>
+<div class="case">done<a href="member-a.html?screen=FM03&amp;case=done">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-done-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-done-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-done-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-done-1280x720.png"></figure>
+</div>
+<div class="case">cancelled<a href="member-a.html?screen=FM03&amp;case=cancelled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM03-cancelled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM03-cancelled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM03-cancelled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM03-cancelled-1280x720.png"></figure>
+</div>
+<h3>FM04</h3>
+<div class="case">default<a href="member-a.html?screen=FM04&amp;case=default">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-default-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-default-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-default-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-default-1280x720.png"></figure>
+</div>
+<div class="case">filled<a href="member-a.html?screen=FM04&amp;case=filled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-filled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-filled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-filled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-filled-1280x720.png"></figure>
+</div>
+<div class="case">leading-zero<a href="member-a.html?screen=FM04&amp;case=leading-zero">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-leading-zero-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-leading-zero-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-leading-zero-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-leading-zero-1280x720.png"></figure>
+</div>
+<div class="case">error<a href="member-a.html?screen=FM04&amp;case=error">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-error-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-error-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-error-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-error-1280x720.png"></figure>
+</div>
+<div class="case">throttled<a href="member-a.html?screen=FM04&amp;case=throttled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-throttled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-throttled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-throttled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-throttled-1280x720.png"></figure>
+</div>
+<div class="case">member<a href="member-a.html?screen=FM04&amp;case=member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04-member-1280x720.png"></figure>
+</div>
+<h3>FM04b</h3>
+<div class="case">default<a href="member-a.html?screen=FM04b&amp;case=default">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04b-default-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04b-default-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04b-default-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04b-default-1280x720.png"></figure>
+</div>
+<div class="case">filled<a href="member-a.html?screen=FM04b&amp;case=filled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04b-filled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04b-filled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04b-filled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04b-filled-1280x720.png"></figure>
+</div>
+<div class="case">error<a href="member-a.html?screen=FM04b&amp;case=error">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04b-error-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04b-error-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04b-error-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04b-error-1280x720.png"></figure>
+</div>
+<div class="case">mismatch<a href="member-a.html?screen=FM04b&amp;case=mismatch">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04b-mismatch-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04b-mismatch-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04b-mismatch-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04b-mismatch-1280x720.png"></figure>
+</div>
+<div class="case">member<a href="member-a.html?screen=FM04b&amp;case=member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM04b-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM04b-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM04b-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM04b-member-1280x720.png"></figure>
+</div>
+<h3>FM05</h3>
+<div class="case">member<a href="member-a.html?screen=FM05&amp;case=member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM05-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM05-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM05-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM05-member-1280x720.png"></figure>
+</div>
+<div class="case">guest-name<a href="member-a.html?screen=FM05&amp;case=guest-name">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM05-guest-name-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM05-guest-name-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM05-guest-name-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM05-guest-name-1280x720.png"></figure>
+</div>
+<div class="case">member-wait<a href="member-a.html?screen=FM05&amp;case=member-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM05-member-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM05-member-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM05-member-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM05-member-wait-1280x720.png"></figure>
+</div>
+<div class="case">member-offline<a href="member-a.html?screen=FM05&amp;case=member-offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM05-member-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM05-member-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM05-member-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM05-member-offline-1280x720.png"></figure>
+</div>
+<h3>FM10</h3>
+<div class="case">cancelled<a href="member-a.html?screen=FM10&amp;case=cancelled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-cancelled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-cancelled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-cancelled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-cancelled-1280x720.png"></figure>
+</div>
+<div class="case">closed<a href="member-a.html?screen=FM10&amp;case=closed">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-closed-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-closed-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-closed-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-closed-1280x720.png"></figure>
+</div>
+<div class="case">notyet<a href="member-a.html?screen=FM10&amp;case=notyet">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-notyet-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-notyet-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-notyet-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-notyet-1280x720.png"></figure>
+</div>
+<div class="case">error<a href="member-a.html?screen=FM10&amp;case=error">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-error-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-error-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-error-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-error-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="member-a.html?screen=FM10&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-offline-1280x720.png"></figure>
+</div>
+<div class="case">entry-expired<a href="member-a.html?screen=FM10&amp;case=entry-expired">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-a/FM10-entry-expired-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-a/FM10-entry-expired-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-a/FM10-entry-expired-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-a/FM10-entry-expired-1280x720.png"></figure>
+</div>
+<h2 id="member-b">회원 B — 준비 마법사·시작 대기·종료</h2><p class="note">측정: <a style="color:#B373EF" href="fit/member-b-fit.txt">fit</a> · <a style="color:#B373EF" href="fit/member-b-symmetry.txt">대칭</a> · <a style="color:#B373EF" href="member-b.html?index=1">인덱스</a></p>
+<h3>FM06a</h3>
+<div class="case">on-group-opt-member<a href="member-b.html?screen=FM06a&amp;case=on-group-opt-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member<a href="member-b.html?screen=FM06a&amp;case=on-group-req-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-req-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-req-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-req-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-req-member-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-none-member<a href="member-b.html?screen=FM06a&amp;case=on-solo-none-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-solo-none-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-solo-none-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-solo-none-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-solo-none-member-1280x720.png"></figure>
+</div>
+<div class="case">off-group-none-member<a href="member-b.html?screen=FM06a&amp;case=off-group-none-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-group-none-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-group-none-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-group-none-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-group-none-member-1280x720.png"></figure>
+</div>
+<div class="case">off-solo-opt-member<a href="member-b.html?screen=FM06a&amp;case=off-solo-opt-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-solo-opt-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-solo-opt-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-solo-opt-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-off-solo-opt-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-empty<a href="member-b.html?screen=FM06a&amp;case=on-group-opt-member-empty">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-empty-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-empty-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-empty-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-empty-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-included<a href="member-b.html?screen=FM06a&amp;case=on-group-opt-member-included">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-included-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-included-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-included-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-included-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-research-agree<a href="member-b.html?screen=FM06a&amp;case=on-group-opt-member-research-agree">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-agree-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-agree-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-agree-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-agree-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-research-fail<a href="member-b.html?screen=FM06a&amp;case=on-group-opt-member-research-fail">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-fail-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-fail-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-fail-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06a-on-group-opt-member-research-fail-1280x720.png"></figure>
+</div>
+<h3>FM06b</h3>
+<div class="case">on-group-opt-member-q1<a href="member-b.html?screen=FM06b&amp;case=on-group-opt-member-q1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q1-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-q2<a href="member-b.html?screen=FM06b&amp;case=on-group-opt-member-q2">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-q3<a href="member-b.html?screen=FM06b&amp;case=on-group-opt-member-q3">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q3-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q3-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q3-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q3-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-q4<a href="member-b.html?screen=FM06b&amp;case=on-group-opt-member-q4">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q4-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q4-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q4-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q4-1280x720.png"></figure>
+</div>
+<div class="case">off-group-none-member-q1<a href="member-b.html?screen=FM06b&amp;case=off-group-none-member-q1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-req-member-q4<a href="member-b.html?screen=FM06b&amp;case=on-solo-req-member-q4">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-solo-req-member-q4-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-solo-req-member-q4-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-solo-req-member-q4-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-solo-req-member-q4-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-q2-started<a href="member-b.html?screen=FM06b&amp;case=on-group-opt-member-q2-started">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-started-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-started-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-started-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-on-group-opt-member-q2-started-1280x720.png"></figure>
+</div>
+<div class="case">off-group-none-member-q1-started<a href="member-b.html?screen=FM06b&amp;case=off-group-none-member-q1-started">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-started-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-started-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-started-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06b-off-group-none-member-q1-started-1280x720.png"></figure>
+</div>
+<h3>FM06c</h3>
+<div class="case">on-group-opt-member-idle<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-idle">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-connecting<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-connecting">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connecting-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connecting-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connecting-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connecting-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-connected<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-connected">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connected-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connected-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connected-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-connected-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-leadoffl<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-leadoffl">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffl-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffl-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffl-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffl-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-leadoffr<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-leadoffr">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffr-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffr-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffr-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoffr-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-leadoff<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-leadoff">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoff-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoff-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoff-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-leadoff-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-unsupported<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-unsupported">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-unsupported-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-unsupported-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-unsupported-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-unsupported-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member-idle<a href="member-b.html?screen=FM06c&amp;case=on-group-req-member-idle">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-idle-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-idle-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-idle-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-idle-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member-leadoffl<a href="member-b.html?screen=FM06c&amp;case=on-group-req-member-leadoffl">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoffl-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoffl-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoffl-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoffl-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member-leadoff<a href="member-b.html?screen=FM06c&amp;case=on-group-req-member-leadoff">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoff-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoff-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoff-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-leadoff-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member-unsupported<a href="member-b.html?screen=FM06c&amp;case=on-group-req-member-unsupported">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-unsupported-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-unsupported-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-unsupported-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-unsupported-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member-connected<a href="member-b.html?screen=FM06c&amp;case=on-group-req-member-connected">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-connected-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-connected-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-connected-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-req-member-connected-1280x720.png"></figure>
+</div>
+<div class="case">off-solo-opt-member-idle<a href="member-b.html?screen=FM06c&amp;case=off-solo-opt-member-idle">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-solo-opt-member-idle-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-solo-opt-member-idle-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-solo-opt-member-idle-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-solo-opt-member-idle-1280x720.png"></figure>
+</div>
+<div class="case">off-group-req-member-connected<a href="member-b.html?screen=FM06c&amp;case=off-group-req-member-connected">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-group-req-member-connected-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-group-req-member-connected-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-group-req-member-connected-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-off-group-req-member-connected-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-idle-started<a href="member-b.html?screen=FM06c&amp;case=on-group-opt-member-idle-started">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-started-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-started-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-started-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06c-on-group-opt-member-idle-started-1280x720.png"></figure>
+</div>
+<h3>FM06d</h3>
+<div class="case">on-group-opt-member-mic<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-mic">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-camon<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-camon">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-micdenied<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-micdenied">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-micnodev<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-micnodev">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micnodev-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micnodev-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micnodev-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micnodev-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-camdenied<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-camdenied">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camdenied-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camdenied-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camdenied-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camdenied-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-unsupported<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-unsupported">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-unsupported-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-unsupported-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-unsupported-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-unsupported-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-micdenied-sheet<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-micdenied-sheet">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-sheet-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-sheet-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-sheet-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-micdenied-sheet-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-camon-micdenied<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-camon-micdenied">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-micdenied-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-micdenied-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-micdenied-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-micdenied-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-req-member-camon-spk<a href="member-b.html?screen=FM06d&amp;case=on-solo-req-member-camon-spk">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-req-member-camon-spk-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-req-member-camon-spk-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-req-member-camon-spk-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-req-member-camon-spk-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-none-member-mic<a href="member-b.html?screen=FM06d&amp;case=on-solo-none-member-mic">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-none-member-mic-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-none-member-mic-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-none-member-mic-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-solo-none-member-mic-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-camon-quiet<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-camon-quiet">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-quiet-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-quiet-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-quiet-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-quiet-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-camon-started<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-camon-started">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-started-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-started-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-started-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-camon-started-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-mic-started<a href="member-b.html?screen=FM06d&amp;case=on-group-opt-member-mic-started">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-started-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-started-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-started-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06d-on-group-opt-member-mic-started-1280x720.png"></figure>
+</div>
+<h3>FM06e</h3>
+<div class="case">on-group-opt-member<a href="member-b.html?screen=FM06e&amp;case=on-group-opt-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member<a href="member-b.html?screen=FM06e&amp;case=on-group-req-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-req-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-req-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-req-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-req-member-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-none-member-skip<a href="member-b.html?screen=FM06e&amp;case=on-solo-none-member-skip">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-solo-none-member-skip-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-solo-none-member-skip-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-solo-none-member-skip-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-solo-none-member-skip-1280x720.png"></figure>
+</div>
+<div class="case">off-group-none-member<a href="member-b.html?screen=FM06e&amp;case=off-group-none-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-group-none-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-group-none-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-group-none-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-group-none-member-1280x720.png"></figure>
+</div>
+<div class="case">off-solo-opt-member-noband<a href="member-b.html?screen=FM06e&amp;case=off-solo-opt-member-noband">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-solo-opt-member-noband-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-solo-opt-member-noband-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-solo-opt-member-noband-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-off-solo-opt-member-noband-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-nomic<a href="member-b.html?screen=FM06e&amp;case=on-group-opt-member-nomic">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-nomic-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-nomic-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-nomic-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM06e-on-group-opt-member-nomic-1280x720.png"></figure>
+</div>
+<h3>FM07</h3>
+<div class="case">on-group-opt-member<a href="member-b.html?screen=FM07&amp;case=on-group-opt-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-opt-member-bgmoff<a href="member-b.html?screen=FM07&amp;case=on-group-opt-member-bgmoff">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-bgmoff-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-bgmoff-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-bgmoff-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-opt-member-bgmoff-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-none-member<a href="member-b.html?screen=FM07&amp;case=on-solo-none-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-on-solo-none-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-on-solo-none-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-on-solo-none-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-on-solo-none-member-1280x720.png"></figure>
+</div>
+<div class="case">off-group-none-member<a href="member-b.html?screen=FM07&amp;case=off-group-none-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-off-group-none-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-off-group-none-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-off-group-none-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-off-group-none-member-1280x720.png"></figure>
+</div>
+<div class="case">off-solo-opt-member<a href="member-b.html?screen=FM07&amp;case=off-solo-opt-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-off-solo-opt-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-off-solo-opt-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-off-solo-opt-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-off-solo-opt-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-req-member<a href="member-b.html?screen=FM07&amp;case=on-group-req-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-req-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-req-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-req-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM07-on-group-req-member-1280x720.png"></figure>
+</div>
+<h3>FM08</h3>
+<div class="case">on-group-member<a href="member-b.html?screen=FM08&amp;case=on-group-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-1280x720.png"></figure>
+</div>
+<div class="case">on-solo-member<a href="member-b.html?screen=FM08&amp;case=on-solo-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM08-on-solo-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM08-on-solo-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM08-on-solo-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM08-on-solo-member-1280x720.png"></figure>
+</div>
+<div class="case">off-group-member<a href="member-b.html?screen=FM08&amp;case=off-group-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM08-off-group-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM08-off-group-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM08-off-group-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM08-off-group-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-cancel-sheet<a href="member-b.html?screen=FM08&amp;case=on-group-member-cancel-sheet">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-cancel-sheet-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-cancel-sheet-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-cancel-sheet-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM08-on-group-member-cancel-sheet-1280x720.png"></figure>
+</div>
+<h3>FM09</h3>
+<div class="case">on-group-member<a href="member-b.html?screen=FM09&amp;case=on-group-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-1280x720.png"></figure>
+</div>
+<div class="case">off-solo-member<a href="member-b.html?screen=FM09&amp;case=off-solo-member">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-off-solo-member-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-off-solo-member-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-off-solo-member-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-off-solo-member-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-checked<a href="member-b.html?screen=FM09&amp;case=on-group-member-checked">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checked-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checked-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checked-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checked-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-report<a href="member-b.html?screen=FM09&amp;case=on-group-member-report">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-report-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-report-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-report-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-report-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-reportsent<a href="member-b.html?screen=FM09&amp;case=on-group-member-reportsent">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-reportsent-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-reportsent-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-reportsent-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-reportsent-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-checkin<a href="member-b.html?screen=FM09&amp;case=on-group-member-checkin">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkin-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkin-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkin-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkin-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-checkinempty<a href="member-b.html?screen=FM09&amp;case=on-group-member-checkinempty">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkinempty-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkinempty-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkinempty-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-checkinempty-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-excluded<a href="member-b.html?screen=FM09&amp;case=on-group-member-excluded">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-excluded-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-excluded-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-excluded-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-excluded-1280x720.png"></figure>
+</div>
+<div class="case">on-group-member-guest-report<a href="member-b.html?screen=FM09&amp;case=on-group-member-guest-report">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-guest-report-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-guest-report-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-guest-report-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/member-b/FM09-on-group-member-guest-report-1280x720.png"></figure>
+</div>
+<h2 id="host-a">상담사 A — 목록·만들기·상세</h2><p class="note">측정: <a style="color:#B373EF" href="fit/host-a-fit.txt">fit</a> · <a style="color:#B373EF" href="fit/host-a-symmetry.txt">대칭</a> · <a style="color:#B373EF" href="host-a.html?index=1">인덱스</a></p>
+<h3>FH01</h3>
+<div class="case">open<a href="host-a.html?screen=FH01&amp;case=open">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-open-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-open-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-open-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-open-1280x720.png"></figure>
+</div>
+<div class="case">open-offline<a href="host-a.html?screen=FH01&amp;case=open-offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-open-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-open-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-open-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-open-offline-1280x720.png"></figure>
+</div>
+<div class="case">progress<a href="host-a.html?screen=FH01&amp;case=progress">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-progress-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-progress-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-progress-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-progress-1280x720.png"></figure>
+</div>
+<div class="case">idle<a href="host-a.html?screen=FH01&amp;case=idle">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-idle-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-idle-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-idle-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-idle-1280x720.png"></figure>
+</div>
+<div class="case">empty<a href="host-a.html?screen=FH01&amp;case=empty">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-empty-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-empty-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-empty-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-empty-1280x720.png"></figure>
+</div>
+<div class="case">past<a href="host-a.html?screen=FH01&amp;case=past">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-past-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-past-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-past-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-past-1280x720.png"></figure>
+</div>
+<div class="case">net<a href="host-a.html?screen=FH01&amp;case=net">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH01-net-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH01-net-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH01-net-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH01-net-1280x720.png"></figure>
+</div>
+<h3>FH02a</h3>
+<div class="case">online-group<a href="host-a.html?screen=FH02a&amp;case=online-group">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-1280x720.png"></figure>
+</div>
+<div class="case">online-1to1<a href="host-a.html?screen=FH02a&amp;case=online-1to1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-1to1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-1to1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-1to1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-1to1-1280x720.png"></figure>
+</div>
+<div class="case">offline-group<a href="host-a.html?screen=FH02a&amp;case=offline-group">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-group-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-group-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-group-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-group-1280x720.png"></figure>
+</div>
+<div class="case">offline-1to1<a href="host-a.html?screen=FH02a&amp;case=offline-1to1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-1to1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-1to1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-1to1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-offline-1to1-1280x720.png"></figure>
+</div>
+<div class="case">online-group-max<a href="host-a.html?screen=FH02a&amp;case=online-group-max">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-max-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-max-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-max-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-online-group-max-1280x720.png"></figure>
+</div>
+<div class="case">custom<a href="host-a.html?screen=FH02a&amp;case=custom">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-custom-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-custom-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-custom-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-custom-1280x720.png"></figure>
+</div>
+<div class="case">leave<a href="host-a.html?screen=FH02a&amp;case=leave">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02a-leave-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02a-leave-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02a-leave-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02a-leave-1280x720.png"></figure>
+</div>
+<h3>FH02b</h3>
+<div class="case">none<a href="host-a.html?screen=FH02b&amp;case=none">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02b-none-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02b-none-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02b-none-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02b-none-1280x720.png"></figure>
+</div>
+<div class="case">optional<a href="host-a.html?screen=FH02b&amp;case=optional">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02b-optional-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02b-optional-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02b-optional-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02b-optional-1280x720.png"></figure>
+</div>
+<div class="case">required<a href="host-a.html?screen=FH02b&amp;case=required">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02b-required-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02b-required-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02b-required-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02b-required-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-a.html?screen=FH02b&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02b-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02b-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02b-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02b-offline-1280x720.png"></figure>
+</div>
+<h3>FH02c</h3>
+<div class="case">now<a href="host-a.html?screen=FH02c&amp;case=now">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02c-now-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02c-now-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02c-now-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02c-now-1280x720.png"></figure>
+</div>
+<div class="case">later<a href="host-a.html?screen=FH02c&amp;case=later">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02c-later-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02c-later-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02c-later-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02c-later-1280x720.png"></figure>
+</div>
+<div class="case">conflict<a href="host-a.html?screen=FH02c&amp;case=conflict">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02c-conflict-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02c-conflict-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02c-conflict-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02c-conflict-1280x720.png"></figure>
+</div>
+<div class="case">long<a href="host-a.html?screen=FH02c&amp;case=long">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02c-long-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02c-long-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02c-long-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02c-long-1280x720.png"></figure>
+</div>
+<h3>FH02d</h3>
+<div class="case">empty<a href="host-a.html?screen=FH02d&amp;case=empty">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02d-empty-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02d-empty-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02d-empty-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02d-empty-1280x720.png"></figure>
+</div>
+<div class="case">picked<a href="host-a.html?screen=FH02d&amp;case=picked">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02d-picked-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02d-picked-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02d-picked-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02d-picked-1280x720.png"></figure>
+</div>
+<div class="case">solo<a href="host-a.html?screen=FH02d&amp;case=solo">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02d-solo-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02d-solo-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02d-solo-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02d-solo-1280x720.png"></figure>
+</div>
+<div class="case">search<a href="host-a.html?screen=FH02d&amp;case=search">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02d-search-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02d-search-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02d-search-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02d-search-1280x720.png"></figure>
+</div>
+<div class="case">email<a href="host-a.html?screen=FH02d&amp;case=email">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02d-email-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02d-email-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02d-email-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02d-email-1280x720.png"></figure>
+</div>
+<h3>FH02e</h3>
+<div class="case">online<a href="host-a.html?screen=FH02e&amp;case=online">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02e-online-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02e-online-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02e-online-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02e-online-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-a.html?screen=FH02e&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH02e-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH02e-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH02e-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH02e-offline-1280x720.png"></figure>
+</div>
+<h3>FH03</h3>
+<div class="case">online<a href="host-a.html?screen=FH03&amp;case=online">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-online-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-online-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-online-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-online-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-a.html?screen=FH03&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-offline-1280x720.png"></figure>
+</div>
+<div class="case">partial<a href="host-a.html?screen=FH03&amp;case=partial">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-partial-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-partial-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-partial-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-partial-1280x720.png"></figure>
+</div>
+<div class="case">scheduled<a href="host-a.html?screen=FH03&amp;case=scheduled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-scheduled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-scheduled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-scheduled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-scheduled-1280x720.png"></figure>
+</div>
+<div class="case">none<a href="host-a.html?screen=FH03&amp;case=none">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-none-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-none-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-none-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-none-1280x720.png"></figure>
+</div>
+<div class="case">email<a href="host-a.html?screen=FH03&amp;case=email">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-email-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-email-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-email-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-email-1280x720.png"></figure>
+</div>
+<div class="case">email-partial<a href="host-a.html?screen=FH03&amp;case=email-partial">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH03-email-partial-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH03-email-partial-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH03-email-partial-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH03-email-partial-1280x720.png"></figure>
+</div>
+<h3>FH04</h3>
+<div class="case">ready<a href="host-a.html?screen=FH04&amp;case=ready">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-ready-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-ready-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-ready-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-ready-1280x720.png"></figure>
+</div>
+<div class="case">scheduled<a href="host-a.html?screen=FH04&amp;case=scheduled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-scheduled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-scheduled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-scheduled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-scheduled-1280x720.png"></figure>
+</div>
+<div class="case">open<a href="host-a.html?screen=FH04&amp;case=open">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-open-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-open-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-open-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-open-1280x720.png"></figure>
+</div>
+<div class="case">progress<a href="host-a.html?screen=FH04&amp;case=progress">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-progress-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-progress-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-progress-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-progress-1280x720.png"></figure>
+</div>
+<div class="case">completed<a href="host-a.html?screen=FH04&amp;case=completed">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-completed-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-completed-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-completed-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-completed-1280x720.png"></figure>
+</div>
+<div class="case">cancelled<a href="host-a.html?screen=FH04&amp;case=cancelled">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-cancelled-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-cancelled-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-cancelled-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-cancelled-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-a.html?screen=FH04&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-offline-1280x720.png"></figure>
+</div>
+<div class="case">menu<a href="host-a.html?screen=FH04&amp;case=menu">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-menu-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-menu-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-menu-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-menu-1280x720.png"></figure>
+</div>
+<div class="case">cancel<a href="host-a.html?screen=FH04&amp;case=cancel">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-cancel-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-cancel-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-cancel-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-cancel-1280x720.png"></figure>
+</div>
+<div class="case">close<a href="host-a.html?screen=FH04&amp;case=close">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-close-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-close-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-close-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-close-1280x720.png"></figure>
+</div>
+<div class="case">delete<a href="host-a.html?screen=FH04&amp;case=delete">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-delete-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-delete-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-delete-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-delete-1280x720.png"></figure>
+</div>
+<div class="case">net<a href="host-a.html?screen=FH04&amp;case=net">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-net-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-net-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-net-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-net-1280x720.png"></figure>
+</div>
+<div class="case">email-invites<a href="host-a.html?screen=FH04&amp;case=email-invites">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-a/FH04-email-invites-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-a/FH04-email-invites-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-a/FH04-email-invites-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-a/FH04-email-invites-1280x720.png"></figure>
+</div>
+<h2 id="host-b">상담사 B — 세팅·로비·시작·종료</h2><p class="note">측정: <a style="color:#B373EF" href="fit/host-b-fit.txt">fit</a> · <a style="color:#B373EF" href="fit/host-b-symmetry.txt">대칭</a> · <a style="color:#B373EF" href="host-b.html?index=1">인덱스</a></p>
+<h3>FH05</h3>
+<div class="case">ok<a href="host-b.html?screen=FH05&amp;case=ok">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-ok-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-ok-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-ok-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-ok-1280x720.png"></figure>
+</div>
+<div class="case">quiet<a href="host-b.html?screen=FH05&amp;case=quiet">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-quiet-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-quiet-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-quiet-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-quiet-1280x720.png"></figure>
+</div>
+<div class="case">cam-off<a href="host-b.html?screen=FH05&amp;case=cam-off">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-off-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-off-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-off-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-off-1280x720.png"></figure>
+</div>
+<div class="case">mic-off<a href="host-b.html?screen=FH05&amp;case=mic-off">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-1280x720.png"></figure>
+</div>
+<div class="case">mic-off-warn<a href="host-b.html?screen=FH05&amp;case=mic-off-warn">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-warn-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-warn-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-warn-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-off-warn-1280x720.png"></figure>
+</div>
+<div class="case">mic-denied<a href="host-b.html?screen=FH05&amp;case=mic-denied">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-denied-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-denied-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-denied-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-mic-denied-1280x720.png"></figure>
+</div>
+<div class="case">cam-denied<a href="host-b.html?screen=FH05&amp;case=cam-denied">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-denied-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-denied-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-denied-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-cam-denied-1280x720.png"></figure>
+</div>
+<div class="case">nodevice<a href="host-b.html?screen=FH05&amp;case=nodevice">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-nodevice-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-nodevice-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-nodevice-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-nodevice-1280x720.png"></figure>
+</div>
+<div class="case">unsupported<a href="host-b.html?screen=FH05&amp;case=unsupported">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-unsupported-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-unsupported-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-unsupported-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-unsupported-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-b.html?screen=FH05&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH05-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH05-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH05-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH05-offline-1280x720.png"></figure>
+</div>
+<h3>FH06</h3>
+<div class="case">g-on-0<a href="host-b.html?screen=FH06&amp;case=g-on-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-1280x720.png"></figure>
+</div>
+<div class="case">g-on-3<a href="host-b.html?screen=FH06&amp;case=g-on-3">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-1280x720.png"></figure>
+</div>
+<div class="case">g-on-8<a href="host-b.html?screen=FH06&amp;case=g-on-8">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-1280x720.png"></figure>
+</div>
+<div class="case">g-on-12<a href="host-b.html?screen=FH06&amp;case=g-on-12">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-1280x720.png"></figure>
+</div>
+<div class="case">g-off-0<a href="host-b.html?screen=FH06&amp;case=g-off-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-1280x720.png"></figure>
+</div>
+<div class="case">g-off-3<a href="host-b.html?screen=FH06&amp;case=g-off-3">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-1280x720.png"></figure>
+</div>
+<div class="case">g-off-8<a href="host-b.html?screen=FH06&amp;case=g-off-8">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-8-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-8-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-8-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-8-1280x720.png"></figure>
+</div>
+<div class="case">g-off-12<a href="host-b.html?screen=FH06&amp;case=g-off-12">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-12-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-12-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-12-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-12-1280x720.png"></figure>
+</div>
+<div class="case">o-on-0<a href="host-b.html?screen=FH06&amp;case=o-on-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-0-1280x720.png"></figure>
+</div>
+<div class="case">o-on-1<a href="host-b.html?screen=FH06&amp;case=o-on-1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1-1280x720.png"></figure>
+</div>
+<div class="case">o-on-1r<a href="host-b.html?screen=FH06&amp;case=o-on-1r">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1r-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1r-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1r-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-on-1r-1280x720.png"></figure>
+</div>
+<div class="case">o-off-0<a href="host-b.html?screen=FH06&amp;case=o-off-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-0-1280x720.png"></figure>
+</div>
+<div class="case">o-off-1<a href="host-b.html?screen=FH06&amp;case=o-off-1">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1-1280x720.png"></figure>
+</div>
+<div class="case">o-off-1r<a href="host-b.html?screen=FH06&amp;case=o-off-1r">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-1280x720.png"></figure>
+</div>
+<div class="case">g-on-3-req<a href="host-b.html?screen=FH06&amp;case=g-on-3-req">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-req-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-req-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-req-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-req-1280x720.png"></figure>
+</div>
+<div class="case">g-off-3-none<a href="host-b.html?screen=FH06&amp;case=g-off-3-none">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-none-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-none-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-none-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-none-1280x720.png"></figure>
+</div>
+<div class="case">o-off-1r-none<a href="host-b.html?screen=FH06&amp;case=o-off-1r-none">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-none-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-none-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-none-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-o-off-1r-none-1280x720.png"></figure>
+</div>
+<div class="case">g-on-8-none<a href="host-b.html?screen=FH06&amp;case=g-on-8-none">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-none-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-none-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-none-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-none-1280x720.png"></figure>
+</div>
+<div class="case">g-on-0-inv0<a href="host-b.html?screen=FH06&amp;case=g-on-0-inv0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-inv0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-inv0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-inv0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-0-inv0-1280x720.png"></figure>
+</div>
+<div class="case">g-off-0-inv0<a href="host-b.html?screen=FH06&amp;case=g-off-0-inv0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-inv0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-inv0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-inv0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-0-inv0-1280x720.png"></figure>
+</div>
+<div class="case">g-on-3-wait<a href="host-b.html?screen=FH06&amp;case=g-on-3-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-wait-1280x720.png"></figure>
+</div>
+<div class="case">g-off-3-wait<a href="host-b.html?screen=FH06&amp;case=g-off-3-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-off-3-wait-1280x720.png"></figure>
+</div>
+<div class="case">g-on-12-many<a href="host-b.html?screen=FH06&amp;case=g-on-12-many">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-many-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-many-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-many-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-12-many-1280x720.png"></figure>
+</div>
+<div class="case">g-on-3-contact<a href="host-b.html?screen=FH06&amp;case=g-on-3-contact">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-contact-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-contact-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-contact-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-3-contact-1280x720.png"></figure>
+</div>
+<div class="case">g-on-8-contact<a href="host-b.html?screen=FH06&amp;case=g-on-8-contact">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-contact-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-contact-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-contact-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06-g-on-8-contact-1280x720.png"></figure>
+</div>
+<h3>FH06a</h3>
+<div class="case">invite<a href="host-b.html?screen=FH06a&amp;case=invite">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-1280x720.png"></figure>
+</div>
+<div class="case">invite-all<a href="host-b.html?screen=FH06a&amp;case=invite-all">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-all-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-all-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-all-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-invite-all-1280x720.png"></figure>
+</div>
+<div class="case">bgm<a href="host-b.html?screen=FH06a&amp;case=bgm">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-bgm-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-bgm-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-bgm-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-bgm-1280x720.png"></figure>
+</div>
+<div class="case">band<a href="host-b.html?screen=FH06a&amp;case=band">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-1280x720.png"></figure>
+</div>
+<div class="case">band-on<a href="host-b.html?screen=FH06a&amp;case=band-on">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-on-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-on-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-on-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-on-1280x720.png"></figure>
+</div>
+<div class="case">band-bad-l<a href="host-b.html?screen=FH06a&amp;case=band-bad-l">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-l-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-l-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-l-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-l-1280x720.png"></figure>
+</div>
+<div class="case">band-bad-r<a href="host-b.html?screen=FH06a&amp;case=band-bad-r">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-r-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-r-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-r-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-r-1280x720.png"></figure>
+</div>
+<div class="case">band-bad-lr<a href="host-b.html?screen=FH06a&amp;case=band-bad-lr">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-lr-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-lr-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-lr-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-band-bad-lr-1280x720.png"></figure>
+</div>
+<div class="case">speak<a href="host-b.html?screen=FH06a&amp;case=speak">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-speak-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-speak-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-speak-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-speak-1280x720.png"></figure>
+</div>
+<div class="case">chat<a href="host-b.html?screen=FH06a&amp;case=chat">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-1280x720.png"></figure>
+</div>
+<div class="case">chat-off<a href="host-b.html?screen=FH06a&amp;case=chat-off">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-off-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-off-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-off-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH06a-chat-off-1280x720.png"></figure>
+</div>
+<h3>FH07</h3>
+<div class="case">ok<a href="host-b.html?screen=FH07&amp;case=ok">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-ok-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-ok-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-ok-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-ok-1280x720.png"></figure>
+</div>
+<div class="case">pending<a href="host-b.html?screen=FH07&amp;case=pending">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-pending-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-pending-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-pending-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-pending-1280x720.png"></figure>
+</div>
+<div class="case">all-wait<a href="host-b.html?screen=FH07&amp;case=all-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-all-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-all-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-all-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-all-wait-1280x720.png"></figure>
+</div>
+<div class="case">many-wait<a href="host-b.html?screen=FH07&amp;case=many-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-many-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-many-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-many-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-many-wait-1280x720.png"></figure>
+</div>
+<div class="case">mic-off<a href="host-b.html?screen=FH07&amp;case=mic-off">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-mic-off-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-mic-off-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-mic-off-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-mic-off-1280x720.png"></figure>
+</div>
+<div class="case">no-consent<a href="host-b.html?screen=FH07&amp;case=no-consent">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-no-consent-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-no-consent-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-no-consent-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-no-consent-1280x720.png"></figure>
+</div>
+<div class="case">offline<a href="host-b.html?screen=FH07&amp;case=offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-offline-1280x720.png"></figure>
+</div>
+<div class="case">one<a href="host-b.html?screen=FH07&amp;case=one">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-one-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-one-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-one-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-one-1280x720.png"></figure>
+</div>
+<div class="case">one-wait<a href="host-b.html?screen=FH07&amp;case=one-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-one-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-one-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-one-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-one-wait-1280x720.png"></figure>
+</div>
+<div class="case">empty-wait<a href="host-b.html?screen=FH07&amp;case=empty-wait">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-1280x720.png"></figure>
+</div>
+<div class="case">empty-wait-offline<a href="host-b.html?screen=FH07&amp;case=empty-wait-offline">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-offline-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-offline-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-offline-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-offline-1280x720.png"></figure>
+</div>
+<div class="case">empty-wait-one<a href="host-b.html?screen=FH07&amp;case=empty-wait-one">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-one-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-one-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-one-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH07-empty-wait-one-1280x720.png"></figure>
+</div>
+<h3>FH08</h3>
+<div class="case">choose<a href="host-b.html?screen=FH08&amp;case=choose">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-1280x720.png"></figure>
+</div>
+<div class="case">choose-0<a href="host-b.html?screen=FH08&amp;case=choose-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH08-choose-0-1280x720.png"></figure>
+</div>
+<div class="case">confirm<a href="host-b.html?screen=FH08&amp;case=confirm">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH08-confirm-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH08-confirm-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH08-confirm-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH08-confirm-1280x720.png"></figure>
+</div>
+<h3>FH09</h3>
+<div class="case">confirm<a href="host-b.html?screen=FH09&amp;case=confirm">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-1280x720.png"></figure>
+</div>
+<div class="case">confirm-busy<a href="host-b.html?screen=FH09&amp;case=confirm-busy">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-busy-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-busy-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-busy-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-confirm-busy-1280x720.png"></figure>
+</div>
+<div class="case">end-saving<a href="host-b.html?screen=FH09&amp;case=end-saving">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-end-saving-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-end-saving-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-end-saving-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-end-saving-1280x720.png"></figure>
+</div>
+<div class="case">end-stt<a href="host-b.html?screen=FH09&amp;case=end-stt">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-end-stt-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-end-stt-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-end-stt-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-end-stt-1280x720.png"></figure>
+</div>
+<div class="case">end-ai<a href="host-b.html?screen=FH09&amp;case=end-ai">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-end-ai-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-end-ai-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-end-ai-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-end-ai-1280x720.png"></figure>
+</div>
+<div class="case">end-done<a href="host-b.html?screen=FH09&amp;case=end-done">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-end-done-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-end-done-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-end-done-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-end-done-1280x720.png"></figure>
+</div>
+<div class="case">manual-ing<a href="host-b.html?screen=FH09&amp;case=manual-ing">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-ing-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-ing-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-ing-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-ing-1280x720.png"></figure>
+</div>
+<div class="case">manual-done<a href="host-b.html?screen=FH09&amp;case=manual-done">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-done-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-done-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-done-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-manual-done-1280x720.png"></figure>
+</div>
+<div class="case">excluded-common<a href="host-b.html?screen=FH09&amp;case=excluded-common">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH09-excluded-common-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH09-excluded-common-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH09-excluded-common-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH09-excluded-common-1280x720.png"></figure>
+</div>
+<h3>FH10</h3>
+<div class="case">closed<a href="host-b.html?screen=FH10&amp;case=closed">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-1280x720.png"></figure>
+</div>
+<div class="case">closed-0<a href="host-b.html?screen=FH10&amp;case=closed-0">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-0-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-0-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-0-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-0-1280x720.png"></figure>
+</div>
+<div class="case">closed-revisit<a href="host-b.html?screen=FH10&amp;case=closed-revisit">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-revisit-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-revisit-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-revisit-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-closed-revisit-1280x720.png"></figure>
+</div>
+<div class="case">error<a href="host-b.html?screen=FH10&amp;case=error">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-error-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-error-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-error-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-error-1280x720.png"></figure>
+</div>
+<div class="case">error-notfound<a href="host-b.html?screen=FH10&amp;case=error-notfound">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-error-notfound-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-error-notfound-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-error-notfound-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-error-notfound-1280x720.png"></figure>
+</div>
+<div class="case">error-forbidden<a href="host-b.html?screen=FH10&amp;case=error-forbidden">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-error-forbidden-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-error-forbidden-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-error-forbidden-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-error-forbidden-1280x720.png"></figure>
+</div>
+<div class="case">error-network<a href="host-b.html?screen=FH10&amp;case=error-network">직접 열기</a></div><div class="row">
+<figure><figcaption>모바일 390x844</figcaption><img loading="lazy" src="shots/host-b/FH10-error-network-390x844.png"></figure>
+<figure><figcaption>태블릿 세로 834x1194</figcaption><img loading="lazy" src="shots/host-b/FH10-error-network-834x1194.png"></figure>
+<figure><figcaption>태블릿 가로 1194x834</figcaption><img loading="lazy" src="shots/host-b/FH10-error-network-1194x834.png"></figure>
+<figure><figcaption>데스크톱 1280x720</figcaption><img loading="lazy" src="shots/host-b/FH10-error-network-1280x720.png"></figure>
+</div>
+</main>

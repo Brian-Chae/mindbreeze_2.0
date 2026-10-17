@@ -132,6 +132,13 @@ def create_report(
             content=content if content is not None else {"headline": "기본 본문"},
         )
         conn.add(report)
+        if participant_id and report_type == "client":
+            # SDD-209(B3): 리포트 반영은 기본 제외 — 리포트가 있는 참여자는 포함으로 둔다(제외 경로는 B3 전용 테스트가 검증).
+            from app.models.session import SessionParticipant
+
+            conn.query(SessionParticipant).filter(SessionParticipant.id == _uuid(participant_id)).update(
+                {"report_included": True}
+            )
         conn.commit()
         conn.refresh(report)
         return str(report.id)

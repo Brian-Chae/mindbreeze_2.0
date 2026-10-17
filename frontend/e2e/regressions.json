@@ -1,0 +1,11 @@
+[
+ {
+  "id": "R1015-1",
+  "role": "counselor",
+  "path": "/notifications",
+  "check": "bad_text",
+  "detail": "undefined",
+  "added": "2026-10-15",
+  "origin": "nightly"
+ }
+]

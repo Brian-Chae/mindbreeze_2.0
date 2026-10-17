@@ -1,0 +1,693 @@
+{
+  "version": 1,
+  "task": "SDD-209 R0",
+  "total": 232,
+  "files": {
+    "member-a": [
+      "FM01",
+      "FM02",
+      "FM03",
+      "FM04",
+      "FM04b",
+      "FM05",
+      "FM10"
+    ],
+    "member-b": [
+      "FM06a",
+      "FM06b",
+      "FM06c",
+      "FM06d",
+      "FM06e",
+      "FM07",
+      "FM08",
+      "FM09"
+    ],
+    "host-a": [
+      "FH01",
+      "FH02a",
+      "FH02b",
+      "FH02c",
+      "FH02d",
+      "FH02e",
+      "FH03",
+      "FH04"
+    ],
+    "host-b": [
+      "FH05",
+      "FH06",
+      "FH06a",
+      "FH07",
+      "FH08",
+      "FH09",
+      "FH10"
+    ]
+  },
+  "screens": {
+    "FM01": {
+      "file": "member-a",
+      "count": 5,
+      "cases": [
+        "upcoming",
+        "soon",
+        "open",
+        "live",
+        "empty"
+      ]
+    },
+    "FM02": {
+      "file": "member-a",
+      "count": 3,
+      "cases": [
+        "list",
+        "invited",
+        "apply"
+      ]
+    },
+    "FM03": {
+      "file": "member-a",
+      "count": 7,
+      "cases": [
+        "scheduled",
+        "scheduled-offline",
+        "open",
+        "open-offline",
+        "open-1on1",
+        "done",
+        "cancelled"
+      ]
+    },
+    "FM04": {
+      "file": "member-a",
+      "count": 6,
+      "cases": [
+        "default",
+        "filled",
+        "leading-zero",
+        "error",
+        "throttled",
+        "member"
+      ]
+    },
+    "FM04b": {
+      "file": "member-a",
+      "count": 5,
+      "cases": [
+        "default",
+        "filled",
+        "error",
+        "mismatch",
+        "member"
+      ]
+    },
+    "FM05": {
+      "file": "member-a",
+      "count": 4,
+      "cases": [
+        "member",
+        "guest-name",
+        "member-wait",
+        "member-offline"
+      ]
+    },
+    "FM10": {
+      "file": "member-a",
+      "count": 6,
+      "cases": [
+        "cancelled",
+        "closed",
+        "notyet",
+        "error",
+        "offline",
+        "entry-expired"
+      ]
+    },
+    "FM06a": {
+      "file": "member-b",
+      "count": 9,
+      "cases": [
+        "on-group-opt-member",
+        "on-group-req-member",
+        "on-solo-none-member",
+        "off-group-none-member",
+        "off-solo-opt-member",
+        "on-group-opt-member-empty",
+        "on-group-opt-member-included",
+        "on-group-opt-member-research-agree",
+        "on-group-opt-member-research-fail"
+      ]
+    },
+    "FM06b": {
+      "file": "member-b",
+      "count": 8,
+      "cases": [
+        "on-group-opt-member-q1",
+        "on-group-opt-member-q2",
+        "on-group-opt-member-q3",
+        "on-group-opt-member-q4",
+        "off-group-none-member-q1",
+        "on-solo-req-member-q4",
+        "on-group-opt-member-q2-started",
+        "off-group-none-member-q1-started"
+      ]
+    },
+    "FM06c": {
+      "file": "member-b",
+      "count": 15,
+      "cases": [
+        "on-group-opt-member-idle",
+        "on-group-opt-member-connecting",
+        "on-group-opt-member-connected",
+        "on-group-opt-member-leadoffl",
+        "on-group-opt-member-leadoffr",
+        "on-group-opt-member-leadoff",
+        "on-group-opt-member-unsupported",
+        "on-group-req-member-idle",
+        "on-group-req-member-leadoffl",
+        "on-group-req-member-leadoff",
+        "on-group-req-member-unsupported",
+        "on-group-req-member-connected",
+        "off-solo-opt-member-idle",
+        "off-group-req-member-connected",
+        "on-group-opt-member-idle-started"
+      ]
+    },
+    "FM06d": {
+      "file": "member-b",
+      "count": 13,
+      "cases": [
+        "on-group-opt-member-mic",
+        "on-group-opt-member-camon",
+        "on-group-opt-member-micdenied",
+        "on-group-opt-member-micnodev",
+        "on-group-opt-member-camdenied",
+        "on-group-opt-member-unsupported",
+        "on-group-opt-member-micdenied-sheet",
+        "on-group-opt-member-camon-micdenied",
+        "on-solo-req-member-camon-spk",
+        "on-solo-none-member-mic",
+        "on-group-opt-member-camon-quiet",
+        "on-group-opt-member-camon-started",
+        "on-group-opt-member-mic-started"
+      ]
+    },
+    "FM06e": {
+      "file": "member-b",
+      "count": 6,
+      "cases": [
+        "on-group-opt-member",
+        "on-group-req-member",
+        "on-solo-none-member-skip",
+        "off-group-none-member",
+        "off-solo-opt-member-noband",
+        "on-group-opt-member-nomic"
+      ]
+    },
+    "FM07": {
+      "file": "member-b",
+      "count": 6,
+      "cases": [
+        "on-group-opt-member",
+        "on-group-opt-member-bgmoff",
+        "on-solo-none-member",
+        "off-group-none-member",
+        "off-solo-opt-member",
+        "on-group-req-member"
+      ]
+    },
+    "FM08": {
+      "file": "member-b",
+      "count": 4,
+      "cases": [
+        "on-group-member",
+        "on-solo-member",
+        "off-group-member",
+        "on-group-member-cancel-sheet"
+      ]
+    },
+    "FM09": {
+      "file": "member-b",
+      "count": 9,
+      "cases": [
+        "on-group-member",
+        "off-solo-member",
+        "on-group-member-checked",
+        "on-group-member-report",
+        "on-group-member-reportsent",
+        "on-group-member-checkin",
+        "on-group-member-checkinempty",
+        "on-group-member-excluded",
+        "on-group-member-guest-report"
+      ]
+    },
+    "FH01": {
+      "file": "host-a",
+      "count": 7,
+      "cases": [
+        "open",
+        "open-offline",
+        "progress",
+        "idle",
+        "empty",
+        "past",
+        "net"
+      ]
+    },
+    "FH02a": {
+      "file": "host-a",
+      "count": 7,
+      "cases": [
+        "online-group",
+        "online-1to1",
+        "offline-group",
+        "offline-1to1",
+        "online-group-max",
+        "custom",
+        "leave"
+      ]
+    },
+    "FH02b": {
+      "file": "host-a",
+      "count": 4,
+      "cases": [
+        "none",
+        "optional",
+        "required",
+        "offline"
+      ]
+    },
+    "FH02c": {
+      "file": "host-a",
+      "count": 4,
+      "cases": [
+        "now",
+        "later",
+        "conflict",
+        "long"
+      ]
+    },
+    "FH02d": {
+      "file": "host-a",
+      "count": 5,
+      "cases": [
+        "empty",
+        "picked",
+        "solo",
+        "search",
+        "email"
+      ]
+    },
+    "FH02e": {
+      "file": "host-a",
+      "count": 2,
+      "cases": [
+        "online",
+        "offline"
+      ]
+    },
+    "FH03": {
+      "file": "host-a",
+      "count": 7,
+      "cases": [
+        "online",
+        "offline",
+        "partial",
+        "scheduled",
+        "none",
+        "email",
+        "email-partial"
+      ]
+    },
+    "FH04": {
+      "file": "host-a",
+      "count": 13,
+      "cases": [
+        "ready",
+        "scheduled",
+        "open",
+        "progress",
+        "completed",
+        "cancelled",
+        "offline",
+        "menu",
+        "cancel",
+        "close",
+        "delete",
+        "net",
+        "email-invites"
+      ]
+    },
+    "FH05": {
+      "file": "host-b",
+      "count": 10,
+      "cases": [
+        "ok",
+        "quiet",
+        "cam-off",
+        "mic-off",
+        "mic-off-warn",
+        "mic-denied",
+        "cam-denied",
+        "nodevice",
+        "unsupported",
+        "offline"
+      ]
+    },
+    "FH06": {
+      "file": "host-b",
+      "count": 25,
+      "cases": [
+        "g-on-0",
+        "g-on-3",
+        "g-on-8",
+        "g-on-12",
+        "g-off-0",
+        "g-off-3",
+        "g-off-8",
+        "g-off-12",
+        "o-on-0",
+        "o-on-1",
+        "o-on-1r",
+        "o-off-0",
+        "o-off-1",
+        "o-off-1r",
+        "g-on-3-req",
+        "g-off-3-none",
+        "o-off-1r-none",
+        "g-on-8-none",
+        "g-on-0-inv0",
+        "g-off-0-inv0",
+        "g-on-3-wait",
+        "g-off-3-wait",
+        "g-on-12-many",
+        "g-on-3-contact",
+        "g-on-8-contact"
+      ]
+    },
+    "FH06a": {
+      "file": "host-b",
+      "count": 11,
+      "cases": [
+        "invite",
+        "invite-all",
+        "bgm",
+        "band",
+        "band-on",
+        "band-bad-l",
+        "band-bad-r",
+        "band-bad-lr",
+        "speak",
+        "chat",
+        "chat-off"
+      ]
+    },
+    "FH07": {
+      "file": "host-b",
+      "count": 12,
+      "cases": [
+        "ok",
+        "pending",
+        "all-wait",
+        "many-wait",
+        "mic-off",
+        "no-consent",
+        "offline",
+        "one",
+        "one-wait",
+        "empty-wait",
+        "empty-wait-offline",
+        "empty-wait-one"
+      ]
+    },
+    "FH08": {
+      "file": "host-b",
+      "count": 3,
+      "cases": [
+        "choose",
+        "choose-0",
+        "confirm"
+      ]
+    },
+    "FH09": {
+      "file": "host-b",
+      "count": 9,
+      "cases": [
+        "confirm",
+        "confirm-busy",
+        "end-saving",
+        "end-stt",
+        "end-ai",
+        "end-done",
+        "manual-ing",
+        "manual-done",
+        "excluded-common"
+      ]
+    },
+    "FH10": {
+      "file": "host-b",
+      "count": 7,
+      "cases": [
+        "closed",
+        "closed-0",
+        "closed-revisit",
+        "error",
+        "error-notfound",
+        "error-forbidden",
+        "error-network"
+      ]
+    }
+  },
+  "cases": [
+    "FM01:upcoming",
+    "FM01:soon",
+    "FM01:open",
+    "FM01:live",
+    "FM01:empty",
+    "FM02:list",
+    "FM02:invited",
+    "FM02:apply",
+    "FM03:scheduled",
+    "FM03:scheduled-offline",
+    "FM03:open",
+    "FM03:open-offline",
+    "FM03:open-1on1",
+    "FM03:done",
+    "FM03:cancelled",
+    "FM04:default",
+    "FM04:filled",
+    "FM04:leading-zero",
+    "FM04:error",
+    "FM04:throttled",
+    "FM04:member",
+    "FM04b:default",
+    "FM04b:filled",
+    "FM04b:error",
+    "FM04b:mismatch",
+    "FM04b:member",
+    "FM05:member",
+    "FM05:guest-name",
+    "FM05:member-wait",
+    "FM05:member-offline",
+    "FM10:cancelled",
+    "FM10:closed",
+    "FM10:notyet",
+    "FM10:error",
+    "FM10:offline",
+    "FM10:entry-expired",
+    "FM06a:on-group-opt-member",
+    "FM06a:on-group-req-member",
+    "FM06a:on-solo-none-member",
+    "FM06a:off-group-none-member",
+    "FM06a:off-solo-opt-member",
+    "FM06a:on-group-opt-member-empty",
+    "FM06a:on-group-opt-member-included",
+    "FM06a:on-group-opt-member-research-agree",
+    "FM06a:on-group-opt-member-research-fail",
+    "FM06b:on-group-opt-member-q1",
+    "FM06b:on-group-opt-member-q2",
+    "FM06b:on-group-opt-member-q3",
+    "FM06b:on-group-opt-member-q4",
+    "FM06b:off-group-none-member-q1",
+    "FM06b:on-solo-req-member-q4",
+    "FM06b:on-group-opt-member-q2-started",
+    "FM06b:off-group-none-member-q1-started",
+    "FM06c:on-group-opt-member-idle",
+    "FM06c:on-group-opt-member-connecting",
+    "FM06c:on-group-opt-member-connected",
+    "FM06c:on-group-opt-member-leadoffl",
+    "FM06c:on-group-opt-member-leadoffr",
+    "FM06c:on-group-opt-member-leadoff",
+    "FM06c:on-group-opt-member-unsupported",
+    "FM06c:on-group-req-member-idle",
+    "FM06c:on-group-req-member-leadoffl",
+    "FM06c:on-group-req-member-leadoff",
+    "FM06c:on-group-req-member-unsupported",
+    "FM06c:on-group-req-member-connected",
+    "FM06c:off-solo-opt-member-idle",
+    "FM06c:off-group-req-member-connected",
+    "FM06c:on-group-opt-member-idle-started",
+    "FM06d:on-group-opt-member-mic",
+    "FM06d:on-group-opt-member-camon",
+    "FM06d:on-group-opt-member-micdenied",
+    "FM06d:on-group-opt-member-micnodev",
+    "FM06d:on-group-opt-member-camdenied",
+    "FM06d:on-group-opt-member-unsupported",
+    "FM06d:on-group-opt-member-micdenied-sheet",
+    "FM06d:on-group-opt-member-camon-micdenied",
+    "FM06d:on-solo-req-member-camon-spk",
+    "FM06d:on-solo-none-member-mic",
+    "FM06d:on-group-opt-member-camon-quiet",
+    "FM06d:on-group-opt-member-camon-started",
+    "FM06d:on-group-opt-member-mic-started",
+    "FM06e:on-group-opt-member",
+    "FM06e:on-group-req-member",
+    "FM06e:on-solo-none-member-skip",
+    "FM06e:off-group-none-member",
+    "FM06e:off-solo-opt-member-noband",
+    "FM06e:on-group-opt-member-nomic",
+    "FM07:on-group-opt-member",
+    "FM07:on-group-opt-member-bgmoff",
+    "FM07:on-solo-none-member",
+    "FM07:off-group-none-member",
+    "FM07:off-solo-opt-member",
+    "FM07:on-group-req-member",
+    "FM08:on-group-member",
+    "FM08:on-solo-member",
+    "FM08:off-group-member",
+    "FM08:on-group-member-cancel-sheet",
+    "FM09:on-group-member",
+    "FM09:off-solo-member",
+    "FM09:on-group-member-checked",
+    "FM09:on-group-member-report",
+    "FM09:on-group-member-reportsent",
+    "FM09:on-group-member-checkin",
+    "FM09:on-group-member-checkinempty",
+    "FM09:on-group-member-excluded",
+    "FM09:on-group-member-guest-report",
+    "FH01:open",
+    "FH01:open-offline",
+    "FH01:progress",
+    "FH01:idle",
+    "FH01:empty",
+    "FH01:past",
+    "FH01:net",
+    "FH02a:online-group",
+    "FH02a:online-1to1",
+    "FH02a:offline-group",
+    "FH02a:offline-1to1",
+    "FH02a:online-group-max",
+    "FH02a:custom",
+    "FH02a:leave",
+    "FH02b:none",
+    "FH02b:optional",
+    "FH02b:required",
+    "FH02b:offline",
+    "FH02c:now",
+    "FH02c:later",
+    "FH02c:conflict",
+    "FH02c:long",
+    "FH02d:empty",
+    "FH02d:picked",
+    "FH02d:solo",
+    "FH02d:search",
+    "FH02d:email",
+    "FH02e:online",
+    "FH02e:offline",
+    "FH03:online",
+    "FH03:offline",
+    "FH03:partial",
+    "FH03:scheduled",
+    "FH03:none",
+    "FH03:email",
+    "FH03:email-partial",
+    "FH04:ready",
+    "FH04:scheduled",
+    "FH04:open",
+    "FH04:progress",
+    "FH04:completed",
+    "FH04:cancelled",
+    "FH04:offline",
+    "FH04:menu",
+    "FH04:cancel",
+    "FH04:close",
+    "FH04:delete",
+    "FH04:net",
+    "FH04:email-invites",
+    "FH05:ok",
+    "FH05:quiet",
+    "FH05:cam-off",
+    "FH05:mic-off",
+    "FH05:mic-off-warn",
+    "FH05:mic-denied",
+    "FH05:cam-denied",
+    "FH05:nodevice",
+    "FH05:unsupported",
+    "FH05:offline",
+    "FH06:g-on-0",
+    "FH06:g-on-3",
+    "FH06:g-on-8",
+    "FH06:g-on-12",
+    "FH06:g-off-0",
+    "FH06:g-off-3",
+    "FH06:g-off-8",
+    "FH06:g-off-12",
+    "FH06:o-on-0",
+    "FH06:o-on-1",
+    "FH06:o-on-1r",
+    "FH06:o-off-0",
+    "FH06:o-off-1",
+    "FH06:o-off-1r",
+    "FH06:g-on-3-req",
+    "FH06:g-off-3-none",
+    "FH06:o-off-1r-none",
+    "FH06:g-on-8-none",
+    "FH06:g-on-0-inv0",
+    "FH06:g-off-0-inv0",
+    "FH06:g-on-3-wait",
+    "FH06:g-off-3-wait",
+    "FH06:g-on-12-many",
+    "FH06:g-on-3-contact",
+    "FH06:g-on-8-contact",
+    "FH06a:invite",
+    "FH06a:invite-all",
+    "FH06a:bgm",
+    "FH06a:band",
+    "FH06a:band-on",
+    "FH06a:band-bad-l",
+    "FH06a:band-bad-r",
+    "FH06a:band-bad-lr",
+    "FH06a:speak",
+    "FH06a:chat",
+    "FH06a:chat-off",
+    "FH07:ok",
+    "FH07:pending",
+    "FH07:all-wait",
+    "FH07:many-wait",
+    "FH07:mic-off",
+    "FH07:no-consent",
+    "FH07:offline",
+    "FH07:one",
+    "FH07:one-wait",
+    "FH07:empty-wait",
+    "FH07:empty-wait-offline",
+    "FH07:empty-wait-one",
+    "FH08:choose",
+    "FH08:choose-0",
+    "FH08:confirm",
+    "FH09:confirm",
+    "FH09:confirm-busy",
+    "FH09:end-saving",
+    "FH09:end-stt",
+    "FH09:end-ai",
+    "FH09:end-done",
+    "FH09:manual-ing",
+    "FH09:manual-done",
+    "FH09:excluded-common",
+    "FH10:closed",
+    "FH10:closed-0",
+    "FH10:closed-revisit",
+    "FH10:error",
+    "FH10:error-notfound",
+    "FH10:error-forbidden",
+    "FH10:error-network"
+  ]
+}

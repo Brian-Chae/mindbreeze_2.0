@@ -98,7 +98,7 @@ afterEach(() => {
 
 it('대기실에 들어가면 join 을 알리고, 나갈 때 leave 를 알린다', async () => {
   await render(createElement(PresenceHarness, { nickname: '민지' }));
-  expect(socketLib.joinSessionLive).toHaveBeenCalledWith(socketLib.fakeSocket, 'session-1', 'participant-1');
+  expect(socketLib.joinSessionLive).toHaveBeenCalledWith(socketLib.fakeSocket, 'session-1', 'participant-1', null);
   expect(socketLib.emitWaitingRoomPresence).toHaveBeenCalledTimes(1);
   expect(socketLib.emitWaitingRoomPresence).toHaveBeenCalledWith(
     socketLib.fakeSocket,

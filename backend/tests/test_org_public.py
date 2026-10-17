@@ -3,6 +3,7 @@
 인증 없이 호출되며 개인정보가 노출되지 않아야 한다.
 """
 
+from tests.entry_helpers import guest_body
 import uuid
 
 from app.services import email_verify_service
@@ -167,9 +168,9 @@ def test_06_참여자수는_게스트_포함(client):
     client.post(f"/api/v1/sessions/{cls['id']}/open", headers=counselor["h"])
 
     # 게스트 2명 + 로그인 내담자 1명
-    join_url = f"/api/v1/sessions/by-code/{cls['access_code']}/join"
-    client.post(join_url, json={"name": "게스트1"})
-    client.post(join_url, json={"name": "게스트2"})
+    join_url = "/api/v1/sessions/enter"
+    client.post(join_url, json=guest_body(cls["access_code"], "게스트1"))
+    client.post(join_url, json=guest_body(cls["access_code"], "게스트2"))
 
     member_email = "pubmember06@test.com"
     member = client.post(
@@ -184,7 +185,7 @@ def test_06_참여자수는_게스트_포함(client):
     )
     assert member.status_code == 201
     token = member.json()["access_token"]
-    client.post(join_url, json={}, headers={"Authorization": f"Bearer {token}"})
+    client.post(join_url, json={"code": cls["access_code"]}, headers={"Authorization": f"Bearer {token}"})
 
     body = client.get(f"/api/v1/o/{code}").json()
     assert body["classes"][0]["participant_count"] == 3

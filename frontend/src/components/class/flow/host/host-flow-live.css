@@ -1,0 +1,210 @@
+/* SDD-209 H4~H8 — 상담사 세팅·로비·시작·종료 스타일. 근거: designs/class-flow-redesign/host-b.html (.w- → .fhb-) */
+.pz-root .fhb-ico {width: 40px; height: 40px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; background: rgba(255,255,255,0.1);}
+.pz-root .fhb-ico svg {width: 20px; height: 20px;}
+.pz-root .fhb-ico.lg {width: 56px; height: 56px;}
+.pz-root .fhb-ico.lg svg {width: 24px; height: 24px;}
+.pz-root .fhb-ico.ok {color: var(--ok); background: rgba(125,227,200,0.14);}
+.pz-root .fhb-ico.warn {color: var(--warn); background: var(--warn-bg);}
+.pz-root .fhb-chip {display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); white-space: nowrap; flex: none;}
+.pz-root .fhb-chip svg {width: 16px; height: 16px;}
+.pz-root .fhb-chip.ok {color: var(--ok); border-color: rgba(125,227,200,0.5);}
+.pz-root .fhb-chip.warn {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
+.pz-root .fhb-chip.mute {color: var(--tx-mid);}
+.pz-root .fhb-row {display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border);}
+.pz-root .fhb-row.strong {background: var(--sheet-bg);}
+.pz-root .fhb-rt {flex: 1; min-width: 0;}
+.pz-root .fhb-rt b {display: block; font-size: var(--fs-15); font-weight: 700; line-height: 24px;}
+.pz-root .fhb-rt span {display: block; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid);}
+.pz-root .fhb-rt span.warn {color: var(--warn);}
+.pz-root .fhb-btn44 {min-height: 44px; padding: 0 16px; font-size: var(--fs-13);}
+.pz-root .fhb-btn44 svg {width: 20px; height: 20px;}
+.pz-root .fl-btn svg {width: 20px; height: 20px;}
+.pz-root .fhb-ok {color: var(--ok);}
+.pz-root .fhb-dim {color: var(--tx-lo);}
+.pz-root .fhb-mid {color: var(--tx-mid);}
+.pz-root .fhb-warn {color: var(--warn);}
+.pz-root .fhb-media {position: relative; flex: 0 1 auto; height: min(448px, 52dvh); min-height: 220px; border-radius: var(--r-sheet); overflow: hidden; border: 1px solid var(--sheet-border); background: linear-gradient(160deg, #1E3A44, #2B2342);}
+@media (min-width: 600px) and (orientation: portrait) {
+.pz-root .fhb-media {height: auto; aspect-ratio: 4 / 3;}
+}
+@media (min-width: 600px) and (orientation: landscape) {
+.pz-root .fhb-media {height: auto; aspect-ratio: 16 / 9;}
+}
+.pz-root .fhb-media.low {height: auto; min-height: 0; aspect-ratio: auto; background: var(--sheet-bg); display: flex; flex-direction: column; gap: 16px; padding: 16px;}
+.pz-root .fhb-lowrow {display: flex; align-items: center; justify-content: space-between; gap: 16px;}
+.pz-root .fhb-vid {position: absolute; inset: 0;}
+.pz-root .fhb-sil {position: absolute; inset: 0; width: 100%; height: 100%;}
+.pz-root .fhb-vtag {position: absolute; top: 16px; left: 16px;}
+.pz-root .fhb-vtag .fhb-chip, .pz-root .fhb-lowrow .fhb-chip {background: rgba(18,8,28,0.7);}
+.pz-root .fhb-vbar {position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 16px; padding: 8px 16px; background: linear-gradient(to top, rgba(8,4,14,0.85), rgba(8,4,14,0));}
+.pz-root .fhb-vbar .fhb-meter, .pz-root .fhb-media.low .fhb-meter {flex: 1; min-width: 0;}
+.pz-root .fhb-mi {flex: none; display: grid; place-items: center;}
+.pz-root .fhb-mi svg {width: 20px; height: 20px;}
+.pz-root .fhb-tg {display: flex; gap: 8px; flex: none;}
+.pz-root .fhb-tg .fl-iconbtn.off {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
+.pz-root .fhb-tg .fl-iconbtn[disabled] {opacity: 0.4;}
+.pz-root .fhb-slot {position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 56px 24px 80px; text-align: center; background: rgba(24,12,36,0.5);}
+.pz-root .fhb-slot h2 {margin: 0; font-size: var(--fs-15); font-weight: 700; line-height: 24px;}
+.pz-root .fhb-slot p {margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); max-width: 420px;}
+.pz-root .fhb-meter {display: flex; align-items: flex-end; gap: 8px; height: 24px;}
+.pz-root .fhb-meter i {display: block; width: 8px; border-radius: 4px; background: rgba(255,255,255,0.3);}
+.pz-root .fhb-meter i.on {background: var(--ok);}
+.pz-root .fhb-vtg {position: absolute; left: 0; right: 0; bottom: 16px; display: flex; justify-content: center; gap: 16px;}
+.pz-root .fhb-vtg .fl-iconbtn.off {color: var(--warn); border: 1px dashed var(--warn); background: var(--warn-bg);}
+.pz-root .fhb-ringbtn {border: 0; position: relative; background: var(--ring, rgba(255,255,255,0.22));}
+.pz-root .fhb-ringbtn::before {content: ""; position: absolute; inset: 4px; border-radius: 50%; background: #1B0F26;}
+.pz-root .fhb-ringbtn svg {position: relative; opacity: var(--op, 1);}
+.pz-root .fhb-vtg .fhb-ringbtn.off {border: 0; background: var(--ring);}
+.pz-root .fhb-ringbtn.off svg {color: var(--warn); opacity: 1;}
+.pz-root .fhb-led {width: 32px; height: 20px; border-radius: 10px; border: 2px solid #606276; display: inline-grid; place-items: center; flex: none;}
+.pz-root .fhb-led.ok {background: #01F0C8; color: #04211C;}
+.pz-root .fhb-led.bad {background: #D33F3F; color: #fff;}
+.pz-root .fhb-lead {display: flex; gap: 8px; flex-basis: 100%; margin-left: 40px;}
+.pz-root .fhb-lx {display: inline-flex; flex-direction: column; align-items: center; font-size: var(--fs-13); font-weight: 600; line-height: 16px;}
+.pz-root .fhb-lx > .fhb-led {margin-bottom: 0;}
+.pz-root .fhb-trk {display: flex; flex-direction: column; align-items: center; gap: 16px;}
+.pz-root .fhb-trksvg {display: block; max-width: 100%;}
+.pz-root .fhb-legend {display: flex; justify-content: center; gap: 24px; font-size: var(--fs-13);}
+.pz-root .fhb-legend > span {display: inline-flex; align-items: center;}
+.pz-root .fhb-legend > span > i {margin-right: 8px; width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center;}
+.pz-root .fhb-legend i.ok {background: #01F0C8; color: #04211C;}
+.pz-root .fhb-legend i.bad {background: #D33F3F; color: #fff;}
+.pz-root .fhb-num {width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; flex: none; background: rgba(255,255,255,0.14); font-size: var(--fs-13); font-weight: 700;}
+.pz-root .fhb-how {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fhb-how > div {display: flex; gap: 16px; align-items: flex-start; font-size: var(--fs-13); line-height: 24px; color: var(--tx-mid);}
+.pz-root .fhb-invite {display: flex; align-items: center; gap: 16px;}
+.pz-root .fhb-invite .l {flex: 1; min-width: 0; display: flex; flex-direction: column;}
+.pz-root .fhb-invite .r {display: flex; flex-direction: column; gap: 8px; flex: none;}
+.pz-root .fhb-inv-n {font-size: var(--fs-18); font-weight: 800; line-height: 32px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.pz-root .fhb-link {font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.pz-root .fhb-listcard {display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; background: var(--sheet-bg); border: 1px solid var(--sheet-border); border-radius: var(--r-card); overflow: hidden;}
+.pz-root .fhb-lhead {display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 56px; padding: 0 16px; flex: none; border-bottom: 1px solid var(--sheet-border);}
+.pz-root .fhb-lhead b {font-size: var(--fs-15); font-weight: 700;}
+.pz-root .fhb-list {flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr;}
+.pz-root .fhb-mrow {display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.08); min-width: 0;}
+.pz-root .fhb-mrow.bad {flex-wrap: wrap; padding: 8px 16px; row-gap: 8px;}
+.pz-root .fhb-mrow .av {width: 32px; height: 32px; border-radius: var(--r-pill); display: grid; place-items: center; font-size: var(--fs-13); font-weight: 700; background: rgba(255,255,255,0.12); flex: none;}
+.pz-root .fhb-mrow .nm {flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.pz-root .fhb-cells {display: flex; gap: 8px; flex: none;}
+.pz-root .fhb-cell {display: inline-flex; align-items: center; font-size: var(--fs-13); font-weight: 600; white-space: nowrap;}
+.pz-root .fhb-cell svg {width: 16px; height: 16px; margin-right: 8px;}
+.pz-root .fhb-cell.bad {color: var(--warn);}
+.pz-root .fhb-cell.ok {color: var(--ok);}
+.pz-root .fhb-cell.wait {color: var(--tx-mid);}
+.pz-root .fhb-cell.skip {color: var(--tx-lo);}
+.pz-root .fhb-list.two .fhb-mrow:nth-child(odd) {border-right: 1px solid rgba(255,255,255,0.08);}
+@media (min-width: 600px) {
+.pz-root .fhb-list.two {grid-template-columns: 1fr 1fr;}
+}
+.pz-root .fhb-empty {display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px 16px; text-align: center;}
+.pz-root .fhb-empty h2 {margin: 0; font-size: var(--fs-15); font-weight: 700; line-height: 24px;}
+.pz-root .fhb-empty p {margin: 0; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid);}
+.pz-root .fhb-dock {display: flex; gap: 8px; flex: none;}
+.pz-root .fhb-dk {flex: 1 1 0; min-width: 0; min-height: 56px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; line-height: 16px;}
+.pz-root .fhb-dk svg {width: 24px; height: 24px;}
+.pz-root .fhb-venue .fhb-rt b {font-size: var(--fs-15);}
+.pz-root .fhb-sh-h {display: flex; align-items: center; justify-content: space-between; min-height: 44px;}
+.pz-root .fhb-sh-h h2 {margin: 0; font-size: var(--fs-18); font-weight: 700;}
+.pz-root .fhb-ctr {display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;}
+.pz-root .fhb-ctr h2 {margin: 0; font-size: var(--fs-18); font-weight: 700; line-height: 24px;}
+.pz-root .fhb-ctr p {margin: 0; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); max-width: 480px;}
+.pz-root .fhb-act {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fhb-two {display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+.pz-root .fhb-opt {display: flex; align-items: flex-start; gap: 16px; text-align: left; padding: 16px; width: 100%; min-height: 72px; border-radius: var(--r-card); border: 1px solid var(--sheet-border); background: rgba(255,255,255,0.08);}
+.pz-root .fhb-opt .fhb-ot {display: block; flex: 1; min-width: 0;}
+.pz-root .fhb-opt b {display: block; font-size: var(--fs-15); font-weight: 700; line-height: 24px;}
+.pz-root .fhb-opt .fhb-od {display: block; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid);}
+.pz-root .fhb-opt.danger {border-color: var(--warn); background: var(--warn-bg);}
+.pz-root .fhb-opt.danger b {color: var(--warn);}
+.pz-root .fhb-sw {width: 52px; height: 44px; position: relative; flex: none;}
+.pz-root .fhb-sw::before {content: ""; position: absolute; left: 0; top: 6px; width: 52px; height: 32px; border-radius: var(--r-pill); background: rgba(255,255,255,0.18);}
+.pz-root .fhb-sw::after {content: ""; position: absolute; top: 10px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff;}
+.pz-root .fhb-sw.on::before {background: var(--mb-purple);}
+.pz-root .fhb-sw.on::after {left: 24px;}
+.pz-root .fhb-cb {width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--tx-mid); display: grid; place-items: center; flex: none;}
+.pz-root .fhb-cb svg {width: 16px; height: 16px; opacity: 0;}
+.pz-root .fhb-cb.on {background: var(--mb-purple); border-color: transparent;}
+.pz-root .fhb-cb.on svg {opacity: 1;}
+.pz-root .fhb-cb.dis {opacity: 0.4;}
+.pz-root .fhb-facts {display: flex; flex-wrap: wrap; gap: 8px;}
+.pz-root .fhb-fact {display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 700;}
+.pz-root .fhb-fact svg {width: 20px; height: 20px; flex: none;}
+.pz-root .fhb-tight .fhb-fact {min-height: 32px;}
+.pz-root .fhb-bar {height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); overflow: hidden;}
+.pz-root .fhb-bar > i {display: block; height: 100%; width: var(--p, 0); background: var(--mb-lavender); border-radius: var(--r-pill);}
+.pz-root .fhb-slider {position: relative; height: 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.18); flex: 1;}
+.pz-root .fhb-slider > i {display: block; height: 100%; width: 60%; border-radius: var(--r-pill); background: var(--mb-lavender);}
+.pz-root .fhb-slider::after {content: ""; position: absolute; top: -8px; left: calc(60% - 12px); width: 24px; height: 24px; border-radius: 50%; background: #fff;}
+.pz-root .fhb-bubble {max-width: 80%; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.1); font-size: var(--fs-13); line-height: 20px;}
+.pz-root .fhb-bubble.me {align-self: flex-end; background: var(--mb-purple);}
+.pz-root .fhb-bubble small {display: block; font-size: var(--fs-12); color: var(--tx-mid); line-height: 16px;}
+.pz-root .fhb-msgs {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fhb-stat {border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border);}
+.pz-root .fhb-sr {display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px;}
+.pz-root .fhb-sr + .fhb-sr, .pz-root .fhb-pl + .fhb-sr {border-top: 1px solid var(--sheet-border);}
+.pz-root .fhb-pl {border-top: 1px solid var(--sheet-border); padding: 8px 0; display: flex; flex-direction: column;}
+.pz-root .fhb-pr {display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-height: 32px; padding: 0 16px 0 72px; font-size: var(--fs-13);}
+.pz-root .fhb-pr b {min-width: 40px; font-size: var(--fs-13); font-weight: 700;}
+.pz-root .fhb-pmore {color: var(--tx-mid);}
+.pz-root .fhb-pn {display: flex; gap: 8px; align-items: flex-start; margin: 0; padding: 8px 16px 0 72px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid);}
+.pz-root .fhb-mchip {display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: var(--r-pill); background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); font-size: var(--fs-13); font-weight: 600; color: var(--tx-mid); white-space: nowrap;}
+.pz-root .fhb-mchip svg {width: 16px; height: 16px; margin-right: 8px;}
+.pz-root .fhb-mchip.bad {color: var(--warn); border: 1px dashed var(--warn);}
+.pz-root .fhb-step {display: flex; align-items: center; gap: 16px; min-height: 48px;}
+.pz-root .fhb-step svg {width: 24px; height: 24px; flex: none;}
+.pz-root .fhb-step .tx {flex: 1; font-weight: 700;}
+.pz-root .fhb-step .st {font-size: var(--fs-13); color: var(--tx-mid);}
+.pz-root .fhb-step.done svg {color: var(--ok);}
+.pz-root .fhb-step.now svg {color: var(--mb-pale); animation: fhb-spin 1.4s linear infinite;}
+.pz-root .fhb-step.todo {color: var(--tx-lo);}
+.pz-root .fhb-step.skip {color: var(--tx-lo);}
+@keyframes fhb-spin { to { transform: rotate(360deg); } }
+.pz-root .fhb-steps {display: flex; flex-direction: column;}
+.pz-root .fhb-scene {display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;}
+.pz-root .fhb-scene .fl-h1 {margin-top: 8px;}
+.pz-root .fhb-scene .fl-sub {max-width: 480px;}
+@media (max-height: 760px) {
+.pz-root .fhb-step {min-height: 40px;}
+}
+.pz-root .fhb-fnote { margin: 0; min-height: 16px; text-align: center; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); }
+.pz-root .fhb-iconbtn { width: var(--tap); height: var(--tap); flex: none; }
+.pz-root .fhb-track { width: 100%; text-align: left; }
+.pz-root .fhb-range { flex: 1; min-width: 0; height: 44px; accent-color: var(--mb-lavender); background: transparent; }
+.pz-root .fhb-chatin { flex: 1; min-width: 0; min-height: 44px; background: transparent; border: 0; color: var(--tx-hi); font: inherit; font-size: var(--fs-15); }
+.pz-root .fhb-chatin::placeholder { color: var(--tx-lo); }
+.pz-root .fhb-chatin:disabled { opacity: 0.6; }
+.pz-root .fhb-consent { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fhb-cnt { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fhb-cnt > svg { flex: none; }
+.pz-root .fhb-check { width: 100%; min-height: 48px; padding: 0 16px; text-align: left; }
+.pz-root .fhb-check:disabled { opacity: 1; }
+.pz-root .fhb-check b { font-size: var(--fs-15); }
+.pz-root .fhb-startnote { margin: 0; display: flex; gap: 8px; align-items: center; }
+.pz-root .fhb-startnote > svg { flex: none; }
+
+/* 시작 확인 시트는 내용이 많아 시트 안 스크롤이 생기지 않도록 촘촘하게(시안 .w-tight) */
+.pz-root .fhb-stat .fhb-sr { min-height: 48px; padding: 4px 16px; }
+.pz-root .fhb-consent .fhb-fact { min-height: 32px; }
+.pz-root .fhb-consent .fhb-check { min-height: 44px; }
+@media (max-height: 760px) {
+  .pz-root .fhb-stat .fhb-sr { min-height: 44px; }
+  .pz-root .fhb-stat .fhb-pr { min-height: 24px; }
+  .pz-root .fhb-stat .fhb-pl { padding: 4px 0; }
+  .pz-root .fhb-act-start { flex-direction: row-reverse; }
+  .pz-root .fhb-act-start > * { flex: 1 1 0; min-width: 0; }
+}
+.pz-root .fhb-stat .fhb-sr .fl-btn { min-height: var(--tap); padding: 0 16px; font-size: var(--fs-13); }
+.pz-root .fhb-stat .fhb-pn { padding-top: 4px; line-height: 16px; }
+.pz-root .fhb-stat .fhb-pr { min-height: 28px; }
+.pz-root .fl-card.fhb-consent[data-size] { padding: 8px 16px; }
+.pz-root .fhb-scene {display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;}
+.pz-root .fhb-scene .fl-h1 {margin-top: 8px;}
+.pz-root .fhb-scene .fl-sub {max-width: 480px;}
+.pz-root .fhb-fnote {margin: 0; min-height: 16px; text-align: center; font-size: var(--fs-13); line-height: 16px; color: var(--tx-mid); overflow: hidden; text-overflow: ellipsis;}
+.pz-root .fhb-steps {display: flex; flex-direction: column;}
+.pz-root .fhb-step.fail {color: var(--warn);}
+.pz-root .fhb-step.fail svg {color: var(--warn);}
+.pz-root .fhb-endcard {display: flex; flex-direction: column; gap: 16px;}
+.pz-root .fhb-endhead {display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px;}
+@media (max-height: 760px) { .pz-root .fhb-step {min-height: 40px;} }
+@media (prefers-reduced-motion: reduce) { .pz-root .fhb-step.now svg {animation: none;} }

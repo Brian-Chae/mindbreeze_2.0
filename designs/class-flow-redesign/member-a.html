@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIND BREEZE · 회원 클래스 사전 흐름 시안 A</title>
+<link rel="stylesheet" href="../class-player-redesign/tokens.css">
+<link rel="stylesheet" href="flow-base.css">
+<style>
+/* 워커 전용 스타일 (.w- 접두어) — member-a: FM01~FM05, FM04b, FM10 */
+body { background: #12081C; word-break: keep-all; overflow-wrap: break-word; }
+.w-br { display: none; }
+@media (max-width: 479px) { .w-br { display: block; flex-basis: 100%; height: 0; margin-top: -8px; } }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--mb-lavender); outline-offset: 2px; }
+.ic.sm { width: 16px; height: 16px; flex: none; }
+.ic.md { width: 20px; height: 20px; flex: none; }
+.w-logo { width: 64px; height: 29px; fill: var(--mb-purple); flex: none; }
+.w-logo.d { width: 56px; height: 26px; fill: var(--mb-pale); align-self: center; }
+
+/* ───────── 셸형 공통 ───────── */
+.sh-side .w-logo { margin: 0 0 16px 16px; }
+.w-nav { display: flex; flex-direction: column; gap: 8px; }
+.w-nav a { display: flex; align-items: center; gap: 16px; min-height: 48px; padding: 0 16px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-nav a.on { background: var(--mb-purple-cream); color: var(--mb-purple); }
+.w-me { margin-top: auto; display: flex; align-items: center; gap: 16px; padding: 8px 16px; font-size: var(--fs-15); font-weight: 600; color: var(--ink-mid); }
+.w-me i { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; }
+.sh-tabbar > a.w-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--fs-12); font-weight: 600; color: var(--ink-mid); }
+.sh-tabbar > a.w-tab.on { color: var(--mb-purple); }
+.sh-title { line-height: 1.3; }
+.w-hbtn { width: var(--tap); height: var(--tap); border-radius: var(--r-pill); display: inline-grid; place-items: center; background: #fff; border: 1px solid var(--shell-line); color: var(--ink); position: relative; }
+.w-hbtn .w-dot { position: absolute; top: 10px; right: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--mb-purple); border: 2px solid #fff; box-sizing: content-box; }
+.w-head3 { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.w-htitle { font-size: var(--fs-18); font-weight: 700; text-align: center; }
+.w-ph { display: block; width: 44px; height: 44px; }
+.w-col { width: 100%; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.w-foot { flex: none; padding: 16px 24px; background: var(--shell-bg); }
+@media (max-width: 767px) { .w-foot { padding: 16px; } }
+.w-foot .w-col { gap: 8px; }
+.w-fnote { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: var(--fs-13); color: var(--ink-mid); text-align: center; }
+.w-sec { display: flex; align-items: center; justify-content: space-between; min-height: 32px; margin-top: 8px; }
+.w-sec h2 { font-size: var(--fs-15); font-weight: 700; }
+.w-sec span { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-sec:first-child { margin-top: 0; }
+
+/* 히어로 (자연 사진 + 진행 화면 언어) */
+.w-hero .w-herobg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0; }
+.sh-hero.w-hero::before { z-index: 1; }
+.w-hero.off .w-herobg { filter: grayscale(1) brightness(0.8); }
+.w-hc { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 16px; }
+.w-hrow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.w-htl { font-size: var(--fs-24); font-weight: 800; line-height: 1.3; }
+.w-htl + .w-hmeta { margin-top: -8px; }
+.w-hmeta { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-15); color: var(--tx-mid); }
+.w-hmeta > span { display: inline-flex; align-items: center; gap: 8px; }
+.w-hchip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: var(--r-pill); font-size: var(--fs-13); font-weight: 600; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.24); color: var(--tx-hi); }
+.w-hchip.live { background: var(--mb-purple); border-color: transparent; color: #fff; }
+.w-hchip.ok { color: var(--ok); border-color: rgba(125,227,200,0.5); }
+.w-hchip.off { border-style: dashed; color: var(--tx-mid); }
+.w-hbox { display: flex; align-items: center; gap: 16px; min-height: 56px; padding: 8px 16px; border-radius: var(--r-card); background: var(--sheet-bg); border: 1px solid var(--sheet-border); }
+.w-hbox .tx { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
+.w-hbox b { font-size: var(--fs-15); font-weight: 700; }
+.w-hbox .s { font-size: var(--fs-13); color: var(--tx-mid); }
+.w-hbox .ic { color: var(--mb-pale); flex: none; }
+.w-hcta { min-height: 48px; width: 100%; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #fff; color: var(--mb-purple); }
+.w-hcta.line { background: transparent; color: #fff; border: 1.5px solid rgba(255,255,255,0.7); }
+.w-hcta[disabled] { background: rgba(255,255,255,0.18); color: var(--tx-mid); border: 1px solid var(--sheet-border); }
+
+/* 목록 카드·행 */
+.w-ccard { display: flex; flex-direction: column; gap: 8px; }
+.w-ccard.hl { border-color: var(--mb-purple); box-shadow: 0 0 0 1px var(--mb-purple); }
+.w-crow { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px; }
+.w-ctype { font-size: var(--fs-13); font-weight: 600; color: var(--ink-mid); }
+.w-ctitle { font-size: var(--fs-18); font-weight: 700; line-height: 1.35; }
+.w-cmeta { display: flex; align-items: center; gap: 8px; font-size: var(--fs-15); color: var(--ink-mid); }
+.w-cchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-ccard .sh-btn { width: 100%; margin-top: 8px; }
+.w-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; min-height: 72px; }
+.w-row .tx { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.w-row b { font-size: var(--fs-15); font-weight: 700; }
+.w-row .s { font-size: var(--fs-13); color: var(--ink-mid); }
+.w-row.go { min-height: 72px; }
+.w-row.go .l { display: flex; align-items: center; gap: 16px; }
+.w-row.go .l i { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.sh-chip .ic.sm, .sh-chip svg { flex: none; }
+.sh-chip.dash { background: #F0ECF3; color: var(--ink-mid); border: 1px dashed #B5ABBE; }
+.sh-chip.line { background: #fff; color: var(--mb-purple); border: 1px solid var(--mb-purple); }
+
+/* 준비물·안내 카드 */
+.w-prep h2 { font-size: var(--fs-15); font-weight: 700; margin-bottom: 8px; }
+.w-prep ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 8px; }
+.w-prep li { display: flex; align-items: center; gap: 16px; min-height: 48px; }
+.w-prep li i { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-prep li b { display: block; font-size: var(--fs-15); font-weight: 700; }
+.w-prep li .s { display: block; font-size: var(--fs-13); color: var(--ink-mid); line-height: 1.4; }
+@media (min-width: 768px) {
+  .w-prep ul { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .w-prep li { flex-direction: column; align-items: flex-start; gap: 8px; }
+}
+
+/* 시트 (셸형 위 — 라이트 시트, 진행 화면의 radius·pill·lucide 언어) */
+.w-scrim { position: fixed; inset: 0; z-index: 30; background: rgba(12,6,20,0.55); display: flex; align-items: flex-end; justify-content: center; }
+.w-sheet { width: min(100%, 640px); background: #fff; color: var(--ink); border-radius: var(--r-sheet) var(--r-sheet) 0 0; padding: 16px 24px calc(24px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+.w-sheet h2 { font-size: var(--fs-18); font-weight: 800; }
+.w-sheet p { font-size: var(--fs-15); color: var(--ink-mid); line-height: 1.5; }
+.w-sheet .hd { display: flex; flex-direction: column; gap: 8px; }
+.w-grab { width: 48px; height: 4px; border-radius: 4px; background: #D9D2DF; align-self: center; }
+.w-picks { display: flex; flex-direction: column; gap: 8px; }
+.w-pick { display: flex; align-items: center; gap: 16px; min-height: 64px; padding: 0 16px; border-radius: var(--r-card); border: 1px solid var(--shell-line); background: #fff; text-align: left; width: 100%; }
+.w-pick.on { border: 1.5px solid var(--mb-purple); background: var(--mb-purple-cream); }
+.w-pick i.av { width: 40px; height: 40px; border-radius: 50%; background: var(--mb-purple-cream); color: var(--mb-purple); display: grid; place-items: center; flex: none; }
+.w-pick.on i.av { background: #fff; }
+.w-pick .tx { flex: 1; min-width: 0; }
+.w-pick b { display: block; font-size: var(--fs-15); }
+.w-pick .s { display: block; font-size: var(--fs-13); color: var(--ink-mid); }
+.w-pick .ic.end { color: var(--ink-lo); }
+.w-pick.on .ic.end { color: var(--mb-purple); }
+.w-sheet .sh-btn { width: 100%; }
+.w-sheet .sh-btn.ghost { background: transparent; color: var(--ink-mid); min-height: var(--tap); }
+
+/* ───────── 몰입형 공통 ───────── */
+.w-imm { --col-w: 480px; }
+.w-imm .fl-top .fl-top-r { justify-self: end; }
+.w-sum { display: flex; flex-direction: column; gap: 8px; }
+.w-sum h2 { font-size: var(--fs-18); font-weight: 700; line-height: 1.35; }
+.w-sum .m { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: var(--fs-15); color: var(--tx-mid); }
+.w-sum .m > span { display: inline-flex; align-items: center; gap: 8px; }
+.w-sum .c { display: flex; flex-wrap: wrap; gap: 8px; }
+.w-who { display: flex; flex-direction: column; gap: 16px; }
+.w-who .id { display: flex; align-items: center; gap: 16px; min-height: 56px; }
+.w-who .id i { width: 48px; height: 48px; border-radius: 50%; background: rgba(210,174,252,0.18); color: var(--mb-pale); display: grid; place-items: center; flex: none; }
+.w-who .id b { display: block; font-size: var(--fs-18); font-weight: 700; }
+.w-who .id .s { display: block; font-size: var(--fs-13); color: var(--tx-mid); }
+.w-who .id .ic.ok { color: var(--ok); margin-left: auto; }
+.fl-root .w-fnote { color: var(--tx-mid); }
+.w-fnote.left { justify-content: flex-start; text-align: left; }
+.w-ic { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(210,174,252,0.18); color: var(--mb-pale); align-self: center; }
+.w-ic.warn { background: var(--warn-bg); color: var(--warn); }
+.w-ic .ic { width: 32px; height: 32px; }
+.w-info { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); }
+.w-info > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; font-size: var(--fs-15); }
+.w-info > div span { color: var(--tx-lo); font-size: var(--fs-13); flex: none; }
+.w-info > div b { font-weight: 600; text-align: right; }
+.w-tc { display: flex; flex-direction: column; gap: 16px; }
+/* FM04 코드 입력 · FM04b 정보 입력 */
+.w-code-card { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
+.w-code-card .w-logo.d { margin: 0 auto; }
+.w-code-card .fl-sub { margin-top: -8px; }
+.w-codewrap { padding: 0; }
+.w-codebox { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.w-codebox > span { height: 64px; border-radius: 12px; background: rgba(255,255,255,0.1); border: 1px solid var(--sheet-border); display: block; }
+.w-codebox > span.on { border: 2px solid var(--mb-lavender); }
+.w-codebox > span.bad { border: 2px solid var(--warn); background: var(--warn-bg); }
+.w-codebox input { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; color: var(--tx-hi); text-align: center; font: inherit; font-size: var(--fs-36); font-weight: 800; border-radius: 12px; }
+.w-codebox input:disabled { opacity: 0.6; }
+.w-hint { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; font-size: var(--fs-13); color: var(--tx-mid); text-align: center; }
+.w-hint.bad { color: var(--warn); font-weight: 600; }
+.w-wide { --col-w: 640px; }
+.w-form { display: grid; grid-template-columns: 1fr; gap: 16px; }
+.w-form .span2 { grid-column: 1 / -1; }
+@media (min-width: 640px) { .w-form { grid-template-columns: 1fr 1fr; } }
+.w-form .fl-input { height: 48px; }
+.w-form .fl-seg > button { min-height: 48px; }
+.w-form .fl-input[readonly] { background: rgba(255,255,255,0.06); color: var(--tx-mid); }
+.w-form .fl-input.bad { border: 1.5px solid var(--warn); }
+.w-form .fl-seg > button[disabled] { opacity: 0.7; }
+.w-err { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); font-weight: 600; color: var(--warn); }
+.w-form .w-fnote.left { align-self: end; min-height: 48px; }
+.w-sum .m .ic { flex: none; }
+.w-link { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; border-radius: var(--r-pill); font-size: var(--fs-15); font-weight: 700; color: var(--mb-purple); background: transparent; }
+@media (max-width: 479px) and (max-height: 900px) { .w-form { gap: 16px; } .w-wide .fl-body { padding-top: 8px; padding-bottom: 8px; } }
+.w-tc .fl-note { text-align: center; }
+
+/* ───────── 개발자 인덱스 (?index=1) ───────── */
+body.w-index { height: auto; overflow: auto; background: #fff; color: #1F1F1F; }
+.w-idx { max-width: 1200px; margin: 0 auto; padding: 24px; font-family: var(--font); }
+.w-idx h1 { font-size: 24px; margin-bottom: 8px; }
+.w-idx p.l { font-size: 14px; color: #555; margin-bottom: 24px; line-height: 1.6; }
+.w-idx table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.w-idx th, .w-idx td { border: 1px solid #E3DEE8; padding: 8px 16px; text-align: left; vertical-align: top; }
+.w-idx th { background: #F5EDFC; }
+.w-idx a { color: #5F0080; margin-right: 16px; display: inline-block; text-decoration: underline; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="brandMark"><path d="M 414.72 92.871 L 413.139 94.458 L 412.995 94.603 C 409.607 98.313 406.014 101.838 402.483 105.424 C 378.911 129.356 355.38 153.328 331.686 177.136 C 329.386 179.424 326.183 181.464 323.062 182.165 C 314.089 184.165 306.554 177.919 306.102 168.334 C 305.753 160.975 305.979 153.575 305.979 146.196 C 305.958 131.582 305.876 116.988 305.999 102.394 C 306.061 95.365 303.72 89.82 297.088 87.017 C 290.251 84.131 284.584 86.399 279.491 91.552 C 253.538 117.709 227.482 143.764 201.447 169.839 C 195.677 175.59 190.071 177.012 183.871 174.312 C 177.382 171.467 175.041 166.211 175.083 159.388 C 175.144 140.342 175.124 121.275 175.062 102.209 C 175.021 93.283 170.955 87.821 163.564 86.172 C 157.281 84.75 152.763 87.574 148.575 91.882 C 118.843 122.265 89.03 152.565 59.319 182.948 C 55.52 186.803 51.393 189.503 45.767 188.823 C 37.76 187.875 32.955 182.083 32.852 172.992 C 32.565 150.669 32.483 128.325 32.175 106.001 C 32.031 95.18 20.184 88.171 11.108 93.448 C 9.712 94.376 8.049 96.169 7.638 96.54 C 7.494 96.664 7.371 96.788 7.248 96.911 C 7.125 97.035 7.002 97.138 6.899 97.262 C 6.796 97.344 6.714 97.427 6.714 97.427 L 0.205 103.961 C 0.082 101.652 0.021 99.344 0 97.014 L 3.018 93.984 L 13.839 82.915 L 13.839 82.956 C 37.328 58.984 60.859 35.032 84.431 11.121 C 89.071 6.401 94.635 4.814 100.836 7.535 C 106.976 10.214 109.768 15.244 109.747 21.902 L 109.747 54.861 C 109.747 65.869 109.706 76.855 109.768 87.842 C 109.83 95.035 112.971 100.518 119.583 103.425 C 125.085 105.857 129.767 104.105 133.914 99.818 C 151.1 82.111 168.368 64.467 185.636 46.843 C 199.065 33.136 212.575 19.511 225.963 5.742 C 230.849 0.712 236.332 -1.535 243.066 1.248 C 249.76 4.031 252.121 9.534 252.08 16.543 C 252.019 35.609 251.998 54.655 252.121 73.722 C 252.203 84.234 259.144 91.119 268.527 89.326 C 272.223 88.625 276.021 86.007 278.793 83.266 C 304.89 57.5 330.782 31.528 356.736 5.618 C 362.731 -0.339 369.035 -1.576 375.256 1.99 C 380.738 5.123 382.771 10.05 382.751 16.213 C 382.689 37.67 382.792 59.149 382.73 80.607 C 382.689 87.697 385.564 92.892 392.052 95.798 C 394.721 96.994 397.308 97.385 399.752 97.056 C 401.764 96.664 403.304 96.458 408.642 91.263 L 414.535 85.512 C 414.658 87.965 414.72 90.398 414.72 92.871 Z"/></g>
+<symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+<symbol id="i-calendar-x" viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m14 14-4 4"/><path d="m10 14 4 4"/></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+<symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+<symbol id="i-video" viewBox="0 0 24 24"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></symbol>
+<symbol id="i-map-pin" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></symbol>
+<symbol id="i-headphones" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+<symbol id="i-phone" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+<symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></symbol>
+<symbol id="i-circle-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="i-circle-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></symbol>
+<symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+<symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="i-log-in" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+</defs></svg>
+<div id="root"></div>
+<script>
+(function () {
+'use strict';
+var I = function (n, c) { return '<svg class="ic ' + (c || '') + '" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-' + n + '"/></svg>'; };
+var LOGO = function (c) { return '<svg class="' + c + '" viewBox="0 0 414.72 188.928" aria-hidden="true"><use href="#brandMark"/></svg>'; };
+var BG = function (n) { return 'assets/bg/background' + n + '.webp'; };
+
+/* ───────── 데모 데이터 (고정 시연값) ───────── */
+var BAND = { none: 'LINK BAND 사용 안 함', optional: 'LINK BAND 선택', required: 'LINK BAND 필수' };
+var C = {
+  med: { type: '명상 클래스', title: '마음챙김 명상 · 4회차', host: '김하늘 상담사', dur: '50분' },
+  clin: { type: '임상심리상담', title: '불안 다루기 · 개인 상담', host: '김하늘 상담사', dur: '50분' },
+  hyp: { type: '최면심리상담', title: '깊은 이완 · 최면 상담', host: '박서연 상담사', dur: '60분' },
+  sleep: { type: '명상 클래스', title: '수면 준비 명상', host: '박서연 상담사', dur: '40분' },
+  orient: { type: '명상 클래스', title: '집단 명상 · 오리엔테이션', host: '박서연 상담사', dur: '50분' }
+};
+var ADDR = '서울 강남구 테헤란로 123 · 4층';
+var M_ONLINE_GROUP_OPT = { mode: 'online', size: 'group', band: 'optional' };
+var M_OFFLINE_ONE_NONE = { mode: 'offline', size: 'one', band: 'none' };
+var M_OFFLINE_GROUP_REQ = { mode: 'offline', size: 'group', band: 'required' };
+var M_ONLINE_ONE_REQ = { mode: 'online', size: 'one', band: 'required' };
+var M_ONLINE_GROUP_NONE = { mode: 'online', size: 'group', band: 'none' };
+
+var methodItems = function (m) {
+  return [
+    m.mode === 'online' ? ['video', '온라인'] : ['map-pin', '오프라인'],
+    m.size === 'group' ? ['users', '그룹'] : ['user', '1:1'],
+    ['activity', BAND[m.band]]
+  ];
+};
+var chips = function (m, cls) { return methodItems(m).map(function (p, i) { return (i === 2 ? '<i class="w-br" aria-hidden="true"></i>' : '') + '<span class="' + cls + '">' + I(p[0], 'sm') + p[1] + '</span>'; }).join(''); };
+
+/* 상태 칩: 색 + 선 + 아이콘 + 라벨 */
+var ST = {
+  scheduled: ['calendar', '예정', 'sh-chip mute', 'w-hchip'],
+  soon: ['clock', '곧 열림', 'sh-chip', 'w-hchip'],
+  open: ['log-in', '입장 가능', 'sh-chip ok', 'w-hchip ok'],
+  live: ['play', '진행 중', 'sh-chip live', 'w-hchip live'],
+  done: ['circle-check', '완료', 'sh-chip mute', 'w-hchip'],
+  cancelled: ['circle-x', '취소', 'sh-chip dash', 'w-hchip off'],
+  invited: ['mail', '초대', 'sh-chip line', 'w-hchip']
+};
+var stChip = function (k, dark) { var s = ST[k]; return '<span class="' + (dark ? s[3] : s[2]) + '">' + I(s[0], 'sm') + s[1] + '</span>'; };
+
+/* ───────── 셸형 프레임 ───────── */
+var NAV = [['home', 'house', '홈'], ['class', 'calendar', '클래스'], ['chat', 'message', '채팅'], ['report', 'file-text', '리포트'], ['more', 'ellipsis', '더보기']];
+var shell = function (o) {
+  return '<div class="sh-root" data-kind="shell">' +
+    '<aside class="sh-side" aria-label="메뉴">' + LOGO('w-logo') +
+      '<nav class="w-nav">' + NAV.map(function (n) { return '<a href="#" class="' + (n[0] === o.active ? 'on' : '') + '"' + (n[0] === o.active ? ' aria-current="page"' : '') + '>' + I(n[1]) + '<span>' + n[2] + '</span></a>'; }).join('') + '</nav>' +
+      '<div class="w-me"><i>' + I('user') + '</i>지은 님</div></aside>' +
+    '<div class="sh-main">' + o.head +
+      '<div class="sh-scroll"><div class="w-col">' + o.body + '</div></div>' + (o.foot || '') +
+      '<nav class="sh-tabbar" aria-label="하단 메뉴">' + NAV.map(function (n) { return '<a href="#" class="w-tab ' + (n[0] === o.active ? 'on' : '') + '"' + (n[0] === o.active ? ' aria-current="page"' : '') + '>' + I(n[1]) + '<span>' + n[2] + '</span></a>'; }).join('') + '</nav>' +
+    '</div>' + (o.over || '') + '</div>';
+};
+var headHome = function (title, right) { return '<header class="sh-head"><h1 class="sh-title">' + title + '</h1>' + right + '</header>'; };
+var headBack = function (title) { return '<header class="sh-head w-head3"><button class="w-hbtn" type="button" aria-label="뒤로" data-go="FM02:list">' + I('chev-l') + '</button><h1 class="w-htitle">' + title + '</h1><span class="w-ph" aria-hidden="true"></span></header>'; };
+
+/* ───────── FM01 홈 ───────── */
+var HOME = {
+  upcoming: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 5, st: 'scheduled', ex: 'D-3', time: '화요일 오후 3:00', box: ['bell', '클래스가 열리면 알려드려요', '열리기 전에 한 번 더 알림을 보내요'], cta: ['클래스 보기', 'line', 'FM03:scheduled'], rows: [[C.clin, '내일 오전 10:00', 'scheduled'], [C.hyp, '10월 22일 (목) 오후 7:00', 'scheduled']] },
+  soon: { c: C.clin, m: M_OFFLINE_ONE_NONE, bg: 1, st: 'soon', ex: '30분 뒤', time: '오늘 오후 3:00', box: ['clock', '30분 뒤에 클래스가 열려요', '미리 입장해서 기다릴 수 있어요'], cta: ['입장 대기하기', '', 'FM05:member-wait'], rows: [[C.med, '화요일 오후 3:00', 'scheduled'], [C.hyp, '10월 22일 (목) 오후 7:00', 'scheduled']] },
+  open: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 8, st: 'open', ex: '오늘 오후 3:00', time: '오늘 오후 3:00', box: ['circle-check', '지금 입장할 수 있어요', '입장하면 간단한 준비를 먼저 해요'], cta: ['입장하기', '', 'FM05:member'], rows: [[C.clin, '내일 오전 10:00', 'scheduled'], [C.hyp, '10월 22일 (목) 오후 7:00', 'scheduled']] },
+  live: { c: C.clin, m: M_ONLINE_ONE_REQ, bg: 4, st: 'live', ex: '12분째', time: '오늘 오후 2:48 시작', box: ['activity', '12분째 진행 중이에요', '지금 들어가도 괜찮아요'], cta: ['입장하기', '', 'FM05:member'], rows: [[C.med, '화요일 오후 3:00', 'scheduled'], [C.hyp, '10월 22일 (목) 오후 7:00', 'scheduled']] },
+  empty: { bg: 8 }
+};
+var fm01 = function (k) {
+  var d = HOME[k], hero, list;
+  if (k === 'empty') {
+    hero = '<section class="sh-hero w-hero" aria-label="다음 클래스"><div class="w-herobg" style="background-image:url(' + BG(d.bg) + ')"></div><div class="w-hc">' +
+      '<div class="w-hrow"><span class="w-hchip">' + I('calendar', 'sm') + '예정 없음</span></div>' +
+      '<h2 class="w-htl">예정된 클래스가 없어요</h2>' +
+      '<div class="w-hmeta"><span>' + I('bell', 'sm') + '상담사가 클래스를 만들면 알려드려요</span></div>' +
+      '<div class="w-hbox">' + I('send') + '<div class="tx"><b>하고 싶은 클래스가 있나요?</b><span class="s">상담사에게 신청 메시지를 보내 보세요</span></div></div>' +
+      '<button class="w-hcta" type="button" data-go="FM02:apply">' + I('plus', 'md') + '클래스 신청하기</button></div></section>';
+    list = '<div class="w-sec"><h2>받은 초대</h2><span>0개</span></div>' +
+      '<div class="sh-card w-row go"><span class="l"><i>' + I('mail', 'md') + '</i><span class="tx"><b>받은 초대가 없어요</b><span class="s">상담사가 초대하면 알림으로 알려드려요</span></span></span></div>';
+  } else {
+    hero = '<section class="sh-hero w-hero" aria-label="다음 클래스"><div class="w-herobg" style="background-image:url(' + BG(d.bg) + ')"></div><div class="w-hc">' +
+      '<div class="w-hrow">' + stChip(d.st, true) + '<span class="w-hchip">' + I('clock', 'sm') + d.ex + '</span></div>' +
+      '<h2 class="w-htl">' + d.c.title + '</h2>' +
+      '<div class="w-hmeta"><span>' + I('clock', 'sm') + d.time + ' · ' + d.c.dur + '</span><span>' + I('user', 'sm') + d.c.host + '</span></div>' +
+      '<div class="w-hrow">' + chips(d.m, 'w-hchip') + '</div>' +
+      '<div class="w-hbox">' + I(d.box[0]) + '<div class="tx"><b>' + d.box[1] + '</b><span class="s">' + d.box[2] + '</span></div></div>' +
+      '<button class="w-hcta ' + d.cta[1] + '" type="button" data-go="' + d.cta[2] + '">' + d.cta[0] + '</button></div></section>';
+    list = '<div class="w-sec"><h2>이번 주 클래스</h2><span>' + d.rows.length + '개</span></div>' +
+      d.rows.map(function (r) { return '<a class="sh-card w-row" href="#" data-go="FM03:scheduled"><span class="tx"><b>' + r[0].title + '</b><span class="s">' + r[1] + ' · ' + r[0].host + '</span></span>' + stChip(r[2], false) + '</a>'; }).join('');
+  }
+  list += '<button class="w-link" type="button" data-go="FM04:default">' + I('key', 'md') + '코드로 입장하기</button>';
+  return shell({ active: 'home', head: headHome('안녕하세요, 지은님', '<button class="w-hbtn" type="button" aria-label="알림">' + I('bell') + '<i class="w-dot"></i></button>'), body: hero + list });
+};
+
+/* ───────── FM02 목록 + 신청 시트 ───────── */
+var card = function (o) {
+  var open = o.st === 'open';
+  return '<article class="sh-card w-ccard' + (open ? ' hl' : '') + '" data-go="FM03:' + (o.go || 'scheduled') + '"><div class="w-crow"><span class="w-ctype">' + o.c.type + '</span>' + stChip(o.st, false) + '</div>' +
+    '<h3 class="w-ctitle">' + o.c.title + '</h3>' +
+    '<div class="w-cmeta">' + I('clock', 'sm') + o.time + '</div>' +
+    '<div class="w-cchips">' + chips(o.m, 'sh-chip mute') + '</div>' +
+    (open ? '<button class="sh-btn" type="button" data-go="FM05:member">입장하기</button>' : '') + '</article>';
+};
+var invitedCard = function () {
+  return '<article class="sh-card w-ccard" data-go="FM03:scheduled"><div class="w-crow"><span class="w-ctype">' + C.orient.type + '</span>' + stChip('invited', false) + '</div>' +
+    '<h3 class="w-ctitle">' + C.orient.title + '</h3>' +
+    '<div class="w-cmeta">' + I('user', 'sm') + C.orient.host + '가 초대했어요</div>' +
+    '<div class="w-cmeta">' + I('clock', 'sm') + '10월 23일 (금) 오후 2:00</div>' +
+    '<button class="sh-btn line" type="button" data-go="FM03:scheduled">클래스 확인</button></article>';
+};
+var fm02 = function (k) {
+  var open = { c: C.med, m: M_ONLINE_GROUP_OPT, st: 'open', time: '오늘 오후 3:00', go: 'open' };
+  var sch = [
+    { c: C.clin, m: M_OFFLINE_ONE_NONE, st: 'scheduled', time: '내일 오전 10:00' },
+    { c: C.hyp, m: M_ONLINE_ONE_REQ, st: 'scheduled', time: '10월 22일 (목) 오후 7:00' },
+    { c: C.sleep, m: M_ONLINE_GROUP_OPT, st: 'scheduled', time: '10월 24일 (토) 오후 8:00' }
+  ];
+  var done = { c: { type: C.med.type, title: '마음챙김 명상 · 3회차' }, m: M_ONLINE_GROUP_OPT, st: 'done', time: '어제 오후 3:00', go: 'done' };
+  var sec = function (t, n) { return '<div class="w-sec"><h2>' + t + '</h2><span>' + n + '개</span></div>'; };
+  var inv = k === 'invited';
+  var body = sec('지금 입장할 수 있어요', 1) + card(open) +
+    (inv ? sec('초대받은 클래스', 1) + invitedCard() : '') +
+    sec('예정된 클래스', inv ? 2 : 3) + sch.slice(0, inv ? 2 : 3).map(card).join('') +
+    sec('지난 클래스', 1) + card(done);
+  var sheet = '';
+  if (k === 'apply') {
+    sheet = '<div class="w-scrim" data-layer="sheet"><section class="w-sheet" role="dialog" aria-modal="true" aria-labelledby="applyTitle"><span class="w-grab" aria-hidden="true"></span>' +
+      '<div class="hd"><h2 id="applyTitle">클래스 신청하기</h2><p>신청 메시지를 상담사에게 보내요. 답을 받으면 알림으로 알려드려요.</p></div>' +
+      '<div class="w-picks" role="radiogroup" aria-label="상담사 선택">' +
+        '<button class="w-pick on" type="button" role="radio" aria-checked="true"><i class="av">' + I('user') + '</i><span class="tx"><b>김하늘 상담사</b><span class="s">임상·최면심리상담</span></span>' + I('circle-check', 'end') + '</button>' +
+        '<button class="w-pick" type="button" role="radio" aria-checked="false"><i class="av">' + I('user') + '</i><span class="tx"><b>박서연 상담사</b><span class="s">명상 클래스</span></span>' + I('circle', 'end') + '</button></div>' +
+      '<button class="sh-btn" type="button">' + I('send', 'md') + '신청 메시지 보내기</button>' +
+      '<button class="sh-btn ghost" type="button" data-go="FM02:list">닫기</button></section></div>';
+  }
+  var head = headHome('클래스', '<button class="sh-btn" type="button" data-go="FM02:apply">' + I('plus', 'md') + '클래스 신청</button>');
+  return shell({ active: 'class', head: head, body: body, over: sheet });
+};
+
+/* ───────── FM03 클래스 상세 ───────── */
+var prepRows = function (m) {
+  var band = m.band === 'optional' ? ['activity', 'LINK BAND (선택)', '착용하지 않아도 모든 기능을 쓸 수 있어요'] : m.band === 'required' ? ['activity', 'LINK BAND (권장)', 'LINK BAND 사용을 권장해요. 없어도 참가할 수 있어요'] : null;
+  if (m.mode === 'online') return [['moon', '조용한 곳', '방해받지 않는 곳에서 입장해요'], ['headphones', '이어폰', '안내 음성이 또렷하게 들려요'], band || ['phone', '휴대폰 무음', '진행 중 알림이 울리지 않게 해요']];
+  return [['map-pin', '장소', ADDR], ['phone', '휴대폰 무음', '진행 중 알림이 울리지 않게 해요'], band || ['clock', '10분 전 도착', '시작 전에 자리를 잡아요']];
+};
+var D3 = {
+  scheduled: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 5, st: 'scheduled', time: '화요일 오후 3:00', box: ['clock', '시작까지 3일 2시간', '열리면 알림으로 알려드려요'], ptitle: '준비하면 좋아요', cta: ['입장하기', 'dis'], note: ['bell', '클래스가 열리면 알려드려요'] },
+  'scheduled-offline': { c: C.clin, m: M_OFFLINE_ONE_NONE, bg: 1, st: 'scheduled', time: '내일 오전 10:00', box: ['clock', '시작까지 19시간', '열리면 알림으로 알려드려요'], ptitle: '준비하면 좋아요', cta: ['입장하기', 'dis'], note: ['bell', '클래스가 열리면 알려드려요'] },
+  open: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 8, st: 'open', time: '오늘 오후 3:00', box: ['circle-check', '지금 입장할 수 있어요', '입장하면 간단한 준비를 먼저 해요'], ptitle: '준비하면 좋아요', cta: ['입장하기', ''], note: ['clock', '준비는 2분이면 끝나요'], go: 'FM05:member' },
+  'open-offline': { c: { type: C.med.type, title: '소그룹 명상 · 현장 클래스', host: '김하늘 상담사', dur: '50분' }, m: M_OFFLINE_GROUP_REQ, bg: 1, st: 'open', time: '오늘 오후 3:00', box: ['circle-check', '지금 입장할 수 있어요', '현장에 도착했다면 입장해 주세요'], ptitle: '준비하면 좋아요', cta: ['입장하기', ''], note: ['clock', '준비는 2분이면 끝나요'], go: 'FM05:member-offline' },
+  'open-1on1': { c: C.hyp, m: M_ONLINE_ONE_REQ, bg: 4, st: 'open', time: '오늘 오후 3:00', box: ['circle-check', '지금 입장할 수 있어요', '1:1 클래스예요'], ptitle: '준비하면 좋아요', cta: ['입장하기', ''], note: ['clock', '준비는 2분이면 끝나요'], go: 'FM05:member' },
+  done: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 8, st: 'done', time: '어제 오후 3:00', box: ['circle-check', '50분 동안 진행했어요', '리포트가 준비됐어요'], ptitle: '이번 클래스', cta: ['리포트 보기', ''], note: ['file-text', 'AI 기록으로 만든 리포트예요'],
+    rows: [['clock', '50분 진행', '어제 오후 3:00에 시작했어요'], ['users', '8명이 함께했어요', '그룹 클래스'], ['file-text', '리포트가 준비됐어요', '리포트 보기에서 확인해요']] },
+  cancelled: { c: C.med, m: M_ONLINE_GROUP_OPT, bg: 10, st: 'cancelled', time: '화요일 오후 3:00', box: ['calendar-x', '진행자가 클래스를 취소했어요', '새 일정이 정해지면 알려드려요'], ptitle: '안내', cta: ['클래스 목록 보기', 'line'], note: ['info', '이 클래스에는 입장할 수 없어요'],
+    rows: [['calendar-x', '진행자가 취소했어요', '화요일 오후 3:00 클래스'], ['bell', '새 일정을 알려드려요', '일정이 정해지면 알림을 보내요'], ['calendar', '다른 클래스 보기', '클래스 목록에서 확인해요']] }
+};
+var fm03 = function (k) {
+  var d = D3[k], rows = d.rows || prepRows(d.m);
+  var hero = '<section class="sh-hero w-hero' + (k === 'cancelled' ? ' off' : '') + '" aria-label="클래스 정보"><div class="w-herobg" style="background-image:url(' + BG(d.bg) + ')"></div><div class="w-hc">' +
+    '<div class="w-hrow"><span class="w-hchip">' + d.c.type + '</span>' + stChip(d.st, true) + '</div>' +
+    '<h2 class="w-htl">' + d.c.title + '</h2>' +
+    '<div class="w-hmeta"><span>' + I('clock', 'sm') + d.time + ' · ' + d.c.dur + '</span><span>' + I('user', 'sm') + d.c.host + '</span></div>' +
+    '<div class="w-hrow">' + chips(d.m, 'w-hchip') + '</div>' +
+    '<div class="w-hbox">' + I(d.box[0]) + '<div class="tx"><b>' + d.box[1] + '</b><span class="s">' + d.box[2] + '</span></div></div></div></section>';
+  var prep = '<section class="sh-card w-prep" aria-label="' + d.ptitle + '"><h2>' + d.ptitle + '</h2><ul>' +
+    rows.map(function (r) { return '<li><i>' + I(r[0], 'md') + '</i><span><b>' + r[1] + '</b><span class="s">' + r[2] + '</span></span></li>'; }).join('') + '</ul></section>';
+  var dis = d.cta[1] === 'dis';
+  var go = d.go || (k === 'done' ? 'FM03:done' : 'FM02:list');
+  var foot = '<div class="w-foot"><div class="w-col"><div class="w-fnote">' + I(d.note[0], 'sm') + d.note[1] + '</div>' +
+    '<button class="sh-btn ' + (dis ? 'mute' : d.cta[1]) + '" type="button"' + (dis ? ' disabled' : '') + ' data-go="' + go + '">' + d.cta[0] + '</button></div></div>';
+  return shell({ active: 'class', head: headBack('클래스 상세'), body: hero + prep, foot: foot });
+};
+
+/* ───────── 몰입형 프레임 ───────── */
+var imm = function (o) {
+  var top = o.top === false ? '' : '<header class="fl-top"><div class="fl-top-l"><button class="fl-iconbtn" type="button" aria-label="뒤로" data-go="' + (o.back || 'FM01:open') + '">' + I('chev-l') + '</button></div><h1 class="fl-top-title">' + o.title + '</h1><div class="fl-top-r"><span class="w-ph" aria-hidden="true"></span></div></header>';
+  return '<div class="fl-root w-imm' + (o.cls ? ' ' + o.cls : '') + '" data-kind="imm"><div class="fl-backdrop" style="background-image:url(' + BG(o.bg) + ')"></div><div class="fl-layer">' + top +
+    '<main class="fl-body"><div class="fl-col">' + o.body + '</div></main>' + (o.foot ? '<footer class="fl-foot"><div class="fl-col">' + o.foot + '</div></footer>' : '') + '</div></div>';
+};
+
+/* ───────── FM04 코드 입력 ───────── */
+var FM04 = {
+  'default': { v: '', hint: ['key', '숫자 4자리를 모두 입력하면 확인할 수 있어요', ''], on: 0, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  filled: { v: '004', hint: ['key', '숫자 4자리를 모두 입력하면 확인할 수 있어요', ''], on: 3, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  'leading-zero': { v: '0042', hint: ['circle-check', '4자리를 모두 입력했어요', ''], on: -1, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  error: { v: '0047', hint: ['circle-alert', '코드를 확인해 주세요', 'bad'], on: -1, bad: true, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  throttled: { v: '0047', hint: ['clock', '잠시 후 다시 시도해 주세요', 'bad'], on: -1, lock: true, note: '로그인 없이 입장할 수 있어요', go: 'FM04b:default' },
+  member: { v: '0042', hint: ['user', '내 계정 정보로 다음 단계를 채워 드려요', ''], on: -1, note: '지은님으로 이어서 입장해요', go: 'FM04b:member' }
+};
+var fm04 = function (k) {
+  var d = FM04[k], cells = '';
+  for (var i = 0; i < 4; i++) {
+    var ch = d.v.charAt(i);
+    cells += '<span class="' + (d.bad ? 'bad' : (d.on === i ? 'on' : '')) + '"><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" autocomplete="off" aria-label="' + (i + 1) + '번째 숫자" value="' + ch + '"' + (d.lock ? ' disabled' : '') + '></span>';
+  }
+  var dis = d.v.length < 4 || d.lock;
+  var body = '<section class="fl-card strong w-code-card" aria-label="코드 입력">' + LOGO('w-logo d') +
+    '<h2 class="fl-h1">입장 코드를 입력해 주세요</h2><p class="fl-sub">상담사가 알려 준 숫자 4자리예요</p>' +
+    '<div class="w-codewrap"><div class="w-codebox" role="group" aria-label="입장 코드 4자리">' + cells + '</div></div>' +
+    '<div class="w-hint ' + d.hint[2] + '"' + (d.hint[2] ? ' role="alert"' : '') + '>' + I(d.hint[0], 'sm') + d.hint[1] + '</div></section>';
+  var foot = '<div class="w-fnote">' + I(k === 'member' ? 'user' : 'log-in', 'sm') + d.note + '</div>' +
+    '<button class="fl-btn primary block" type="button"' + (dis ? ' disabled' : '') + ' data-go="' + d.go + '">코드 확인</button>';
+  return imm({ bg: 1, title: '코드로 입장', back: 'FM01:open', body: body, foot: foot });
+};
+
+/* ───────── FM04b 개인정보 입력 ───────── */
+var fm04b = function (k) {
+  var mem = k === 'member', filled = k === 'filled' || k === 'mismatch' || mem;
+  var V = { name: '', birth: '', email: '', email2: '', g: -1 };
+  if (filled) V = { name: '지은', birth: '1990.03.12', email: 'jieun@example.com', email2: k === 'mismatch' ? 'jieun@exampel.com' : 'jieun@example.com', g: 0 };
+  if (k === 'error') V = { name: '', birth: '1990.13', email: 'jieun@', email2: '', g: 0 };
+  var err = function (t) { return '<div class="w-err" role="alert">' + I('circle-alert', 'sm') + t + '</div>'; };
+  var fld = function (id, label, inner, e, cls) { return '<div class="fl-field ' + (cls || '') + '"><label class="fl-label" for="' + id + '">' + label + '</label>' + inner + (e ? err(e) : '') + '</div>'; };
+  var inp = function (id, v, ph, o) { o = o || {}; return '<input class="fl-input' + (o.bad ? ' bad' : '') + '" id="' + id + '" type="' + (o.type || 'text') + '"' + (o.mode ? ' inputmode="' + o.mode + '"' : '') + ' autocomplete="off" placeholder="' + ph + '" value="' + v + '"' + (mem ? ' readonly' : '') + (o.bad ? ' aria-invalid="true"' : '') + '>'; };
+  var G = ['여성', '남성', '선택 안 함'];
+  var seg = '<div class="fl-seg" role="radiogroup" aria-label="성별">' + G.map(function (g, i) { return '<button type="button" role="radio" aria-checked="' + (V.g === i) + '" class="' + (V.g === i ? 'on' : '') + '"' + (mem ? ' disabled' : '') + '>' + g + '</button>'; }).join('') + '</div>';
+  var form = '<section class="fl-card sm w-form" aria-label="정보 입력">' +
+    fld('nm', '이름', inp('nm', V.name, '이름을 입력해 주세요', { bad: k === 'error' }), k === 'error' ? '이름을 입력해 주세요' : '') +
+    fld('gd', '성별', seg) +
+    fld('bd', '생년월일', inp('bd', V.birth, '예: 1990.03.12', { mode: 'numeric', bad: k === 'error' }), k === 'error' ? '생년월일을 다시 확인해 주세요' : '') +
+    fld('em', '이메일', inp('em', V.email, 'name@example.com', { type: 'email', mode: 'email', bad: k === 'error' }), k === 'error' ? '이메일 형식을 확인해 주세요' : '') +
+    (mem ? '' : fld('em2', '이메일 확인', inp('em2', V.email2, '이메일을 한 번 더 입력해 주세요', { type: 'email', mode: 'email', bad: k === 'mismatch' }), k === 'mismatch' ? '이메일이 서로 달라요' : '')) +
+    '<div class="w-fnote left' + (mem ? ' span2' : '') + '">' + I('mail', 'sm') + '리포트는 입력한 이메일로 보내 드려요</div></section>';
+  var sum = '<section class="fl-card sm w-sum" aria-label="클래스 요약"><h2>' + C.med.title + '</h2>' +
+    '<div class="m"><span>' + I('clock', 'sm') + '오늘 오후 3:00 시작</span><span>' + I('user', 'sm') + C.med.host + '</span></div></section>';
+  var ready = k === 'filled' || k === 'mismatch' || k === 'error' || mem;
+  var foot = '<button class="fl-btn primary block" type="button"' + (ready ? '' : ' disabled') + ' data-go="' + (mem ? 'FM05:member' : 'FM05:guest-name') + '">입장하기</button>';
+  return imm({ bg: 1, title: '정보를 입력해 주세요', back: mem ? 'FM04:member' : 'FM04:default', body: sum + form, foot: foot, cls: 'w-wide' });
+};
+
+/* ───────── FM05 입장 확인 ───────── */
+var FM05 = {
+  member: { c: C.med, m: M_ONLINE_GROUP_OPT, wait: false, time: '오늘 오후 3:00 시작', who: '계정 정보로 확인했어요', back: 'FM04b:member' },
+  'guest-name': { c: C.med, m: M_ONLINE_GROUP_OPT, wait: false, time: '오늘 오후 3:00 시작', who: '입력한 정보로 확인했어요', back: 'FM04b:default' },
+  'member-wait': { c: C.med, m: M_ONLINE_GROUP_OPT, wait: true, time: '오늘 오후 3:00 시작', who: '계정 정보로 확인했어요', back: 'FM04b:member' },
+  'member-offline': { c: C.clin, m: M_OFFLINE_ONE_NONE, wait: false, time: '오늘 오후 3:00 시작', addr: ADDR, who: '계정 정보로 확인했어요', back: 'FM04b:member' }
+};
+var fm05 = function (k) {
+  var d = FM05[k];
+  var sum = '<section class="fl-card sm w-sum" aria-label="클래스 요약"><h2>' + d.c.title + '</h2>' +
+    '<div class="m"><span>' + I('clock', 'sm') + d.time + '</span><span>' + I('user', 'sm') + d.c.host + ' 진행</span>' + (d.addr ? '<span>' + I('map-pin', 'sm') + d.addr + '</span>' : '') + '</div>' +
+    '<div class="c">' + chips(d.m, 'fl-chip') + '</div></section>';
+  var who = '<section class="fl-card sm w-who" aria-label="입장 정보"><div class="id"><i>' + I('user') + '</i><div><b>지은님</b><span class="s">' + d.who + '</span></div>' + I('circle-check', 'ok') + '</div>' +
+    '<div class="w-fnote left">' + I('info', 'sm') + '정보를 바꾸려면 이전 화면으로 돌아가요</div></section>';
+  var note, cta;
+  if (d.wait) {
+    note = '<div class="w-fnote">' + I('clock', 'sm') + '열리면 자동으로 입장해요 · 이 화면을 열어 두세요</div>';
+    cta = '<button class="fl-btn primary block" type="button" disabled>' + '열리면 자동으로 입장해요' + '</button>';
+  } else {
+    note = '<div class="w-fnote">' + I('circle-check', 'sm') + '지금 입장할 수 있어요 · 준비는 2분이면 끝나요</div>';
+    cta = '<button class="fl-btn primary block" type="button">' + I('log-in', 'md') + '입장하기</button>';
+  }
+  return imm({ bg: 1, title: '입장 확인', back: d.back, body: sum + who, foot: note + cta });
+};
+
+/* ───────── FM10 취소됨 · 오류 · 네트워크 끊김 ───────── */
+var FM10 = {
+  cancelled: { ic: 'calendar-x', warn: false, h: '클래스가 취소됐어요', p: '진행자가 클래스를 취소했어요.<br>새 일정이 정해지면 알려드릴게요.', rows: [['클래스', C.med.title], ['원래 일정', '오늘 오후 3:00']], note: '입장했던 내용은 저장되지 않아요.', a: ['클래스 목록 보기', 'FM02:list'], b: ['홈으로', 'FM01:open'], bg: 4 },
+  error: { ic: 'triangle-alert', warn: true, h: '잠시 문제가 생겼어요', p: '클래스 정보를 불러오지 못했어요.<br>잠시 후 다시 시도해 주세요.', rows: [['클래스', C.med.title], ['상태', '불러오지 못했어요']], note: '문제가 계속되면 진행자에게 알려 주세요.', a: ['다시 시도', 'FM03:open'], b: ['홈으로', 'FM01:open'], bg: 4 },
+  closed: { ic: 'calendar-x', warn: false, h: '이미 끝난 클래스예요', p: '종료되었거나 취소된 클래스예요.<br>다른 클래스를 확인해 주세요.', rows: [['클래스', C.med.title], ['상태', '종료됨']], note: '다른 클래스는 목록에서 확인할 수 있어요.', a: ['클래스 목록 보기', 'FM02:list'], b: ['홈으로', 'FM01:open'], bg: 4 },
+  notyet: { ic: 'clock', warn: false, h: '아직 열리지 않았어요', p: '오늘 오후 3:00에 열려요.<br>먼저 입장해서 기다릴 수 있어요.', rows: [['클래스', C.med.title], ['시작', '오늘 오후 3:00']], note: '열리면 자동으로 입장해요.', a: ['입장 대기하기', 'FM05:member-wait'], b: ['홈으로', 'FM01:open'], bg: 1 },
+  'entry-expired': { ic: 'key', warn: false, h: '입장 정보가 만료됐어요', p: '입장 정보를 더는 쓸 수 없어요.<br>코드를 다시 입력해 주세요.', rows: [['클래스', C.med.title], ['상태', '다시 입력이 필요해요']], note: '코드는 상담사에게 받을 수 있어요.', a: ['코드 입력하기', 'FM04:default'], b: ['나가기', 'FM01:open'], bg: 4 },
+  offline: { ic: 'wifi-off', warn: true, h: '네트워크 연결이 끊겼어요', p: '연결이 돌아오면 자동으로 이어져요.<br>이 화면을 닫지 말고 기다려 주세요.', rows: [['클래스', C.med.title], ['연결 상태', '다시 연결하는 중']], note: '와이파이나 모바일 데이터를 확인해 주세요.', a: ['다시 연결', 'FM03:open'], b: ['나가기', 'FM01:open'], bg: 4 }
+};
+var fm10 = function (k) {
+  var d = FM10[k];
+  var body = '<div class="fl-card strong w-tc" role="alert">' + LOGO('w-logo d') +
+    '<span class="w-ic ' + (d.warn ? 'warn' : '') + '">' + I(d.ic) + '</span>' +
+    '<h2 class="fl-h1">' + d.h + '</h2><p class="fl-sub">' + d.p + '</p>' +
+    '<div class="w-info">' + d.rows.map(function (r) { return '<div><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') + '</div>' +
+    '<p class="fl-note">' + d.note + '</p>' +
+    '<button class="fl-btn primary block" type="button" data-go="' + d.a[1] + '">' + d.a[0] + '</button>' +
+    '<button class="fl-btn soft block" type="button" data-go="' + d.b[1] + '">' + d.b[0] + '</button></div>';
+  return imm({ bg: d.bg, top: false, body: body });
+};
+
+/* ───────── 화면·케이스 인덱스 ───────── */
+var A3 = 'A3 (클래스 응답에 시작 시각 포함) · R4: 로그인 없는 4자리 코드 입장 / R5: 개인정보 입력';
+var AR = 'R4: 로그인 없는 4자리 코드 입장 / R5: 개인정보 입력';
+var A2 = 'A2 (방식·장소 서버 저장)';
+var REG = [
+  { id: 'FM01', name: '홈 — 다음 클래스 히어로', kind: '셸형', fn: fm01, cases: [
+    { k: 'upcoming', d: '예정 D-day · 온라인·그룹·LINK BAND 선택', a: A2 },
+    { k: 'soon', d: '곧 열림 · 오프라인·1:1·LINK BAND 사용 안 함', a: A2 },
+    { k: 'open', d: '입장 가능 · 온라인·그룹·LINK BAND 선택', a: A2 },
+    { k: 'live', d: '진행 중 · 온라인·1:1·LINK BAND 필수', a: A2 },
+    { k: 'empty', d: '클래스 없음 빈 상태', a: '-' }] },
+  { id: 'FM02', name: '클래스 목록 + 신청 시트', kind: '셸형', fn: fm02, cases: [
+    { k: 'list', d: '입장 가능 최상단 · 예정 · 지난 클래스 (내부 스크롤)', a: A2 },
+    { k: 'invited', d: '초대받은 클래스 카드 포함', a: A2 },
+    { k: 'apply', d: '신청 바텀 시트 (탭바 위로)', a: '-' }] },
+  { id: 'FM03', name: '클래스 상세 — 4상태', kind: '셸형', fn: fm03, cases: [
+    { k: 'scheduled', d: '예정 · 온라인·그룹·LINK BAND 선택', a: A2 },
+    { k: 'scheduled-offline', d: '예정 · 오프라인·1:1·LINK BAND 사용 안 함 (장소 안내)', a: A2 + ' + 장소 필드' },
+    { k: 'open', d: '입장 가능 · 온라인·그룹·LINK BAND 선택', a: A2 },
+    { k: 'open-offline', d: '입장 가능 · 오프라인·그룹·LINK BAND 필수', a: A2 + ' + 장소 필드' },
+    { k: 'open-1on1', d: '입장 가능 · 온라인·1:1·LINK BAND 필수', a: A2 },
+    { k: 'done', d: '완료 · 리포트 보기', a: '-' },
+    { k: 'cancelled', d: '취소', a: '-' }] },
+  { id: 'FM04', name: '코드 입력 (4자리 숫자 · 로그인 없이)', kind: '몰입형', fn: fm04, cases: [
+    { k: 'default', d: '비로그인 · 빈 4칸 · 코드 확인 비활성', a: AR },
+    { k: 'filled', d: '입력 중 `004` · 4자리 미만이라 버튼 비활성', a: AR },
+    { k: 'leading-zero', d: '`0042` 완성 · 앞자리 0 보존 · 버튼 활성', a: AR },
+    { k: 'error', d: '없는·틀린·종료 코드 모두 같은 안내 `코드를 확인해 주세요`', a: AR },
+    { k: 'throttled', d: '시도 제한 `잠시 후 다시 시도해 주세요`', a: AR },
+    { k: 'member', d: '로그인 회원 · 같은 화면 · 안내만 다름', a: AR }] },
+  { id: 'FM04b', name: '개인정보 입력 (이름·성별·생년월일·이메일)', kind: '몰입형', fn: fm04b, cases: [
+    { k: 'default', d: '비로그인 · 빈 입력 · 입장하기 비활성', a: AR },
+    { k: 'filled', d: '모두 입력 · 입장하기 활성', a: AR },
+    { k: 'error', d: '필수 누락·형식 오류 인라인', a: AR },
+    { k: 'mismatch', d: '이메일 확인 불일치 `이메일이 서로 달라요`', a: AR },
+    { k: 'member', d: '로그인 회원 · 계정 값 채움 · 이메일 재입력 생략', a: AR }] },
+  { id: 'FM05', name: '입장 확인', kind: '몰입형', fn: fm05, cases: [
+    { k: 'member', d: '열림 후 · 온라인·그룹·LINK BAND 선택', a: A3 },
+    { k: 'guest-name', d: '열림 후 · 비로그인 · 입력한 이름 표시', a: A3 },
+    { k: 'member-wait', d: '열림 전 · 자동 입장 대기 카드', a: A3 },
+    { k: 'member-offline', d: '열림 후 · 오프라인·1:1·LINK BAND 사용 안 함 (장소 표시)', a: A3 + ' + ' + A2 }] },
+  { id: 'FM10', name: '취소됨 · 종료 · 아직 열리지 않음 · 오류 · 네트워크 끊김 (회원 쪽)', kind: '몰입형', fn: fm10, cases: [
+    { k: 'cancelled', d: '클래스 취소됨', a: '-' },
+    { k: 'closed', d: '종료·취소된 클래스 (구 입장 오류 흡수)', a: '-' },
+    { k: 'notyet', d: '아직 열리지 않음 → 입장 대기하기 (구 입장 오류 흡수)', a: A3 },
+    { k: 'error', d: '오류 (서버 메시지 원문 숨김)', a: '-' },
+    { k: 'offline', d: '네트워크 끊김', a: '-' },
+    { k: 'entry-expired', d: '입장 정보 만료 → 코드 입력하기 (R4 신규)', a: AR }] }
+];
+
+var q = new URLSearchParams(location.search);
+var root = document.getElementById('root');
+if (q.get('index')) {
+  document.body.className = 'w-index';
+  var rows = REG.map(function (s) {
+    return s.cases.map(function (c, i) {
+      return '<tr>' + (i === 0 ? '<td rowspan="' + s.cases.length + '"><b>' + s.id + '</b><br>' + s.name + '<br>' + s.kind + '</td>' : '') +
+        '<td><a href="?screen=' + s.id + '&case=' + c.k + '">' + c.k + '</a></td><td>' + c.d + '</td><td>' + c.a + '</td></tr>';
+    }).join('');
+  }).join('');
+  root.innerHTML = '<div class="w-idx"><h1>회원 시안 A · 화면·케이스 인덱스</h1><p class="l">?screen=FM01&amp;case=upcoming 형태로 화면을 고릅니다. 파라미터가 없으면 FM01 첫 케이스. 4개 뷰포트: 390x844 · 834x1194 · 1194x834 · 1280x720.</p>' +
+    '<table><thead><tr><th>화면</th><th>케이스</th><th>설명 (방식·인원·밴드 모드·상태)</th><th>가정</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  document.title = '인덱스 · member-a';
+} else {
+  var sid = q.get('screen') || 'FM01';
+  var scr = REG.filter(function (s) { return s.id === sid; })[0] || REG[0];
+  var cs = q.get('case');
+  var ck = scr.cases.filter(function (c) { return c.k === cs; })[0] || scr.cases[0];
+  root.innerHTML = scr.fn(ck.k);
+  root.firstChild.setAttribute('data-screen', scr.id);
+  root.firstChild.setAttribute('data-case', ck.k);
+  document.title = scr.id + ' · ' + ck.k + ' · member-a';
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-go]');
+    if (!t) return;
+    var p = t.getAttribute('data-go').split(':');
+    location.search = '?screen=' + p[0] + '&case=' + p[1];
+  });
+}
+window.__REG = REG.map(function (s) { return { id: s.id, cases: s.cases.map(function (c) { return c.k; }) }; });
+window.__ready = true;
+})();
+</script>
+</body>
+</html>

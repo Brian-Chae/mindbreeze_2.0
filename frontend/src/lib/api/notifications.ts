@@ -108,6 +108,9 @@ export interface NotificationExtra {
   [key: string]: unknown;
 }
 
+/** 탭하면 클래스 입장 화면으로 바로 가는 알림 이벤트(회원 전용) */
+const DIRECT_ENTER_EVENTS: ReadonlySet<string> = new Set(['session_opened', 'session_started', 'session_waitlist_promoted']);
+
 /**
  * 알림 extra 를 실제 라우트 경로로 해석한다.
  * 화이트리스트(target_type)만 허용 — 임의 경로/URL 실행 금지.
@@ -153,6 +156,10 @@ export function resolveNotificationTarget(
       };
     case 'session':
       if (!targetId) return null;
+      // SDD-209: 열림·시작·대기열 승격 알림은 회원을 입장 화면으로 바로 보낸다(열리기 전이면 입장 화면이 대기 카드로 안내)
+      if (isClient && typeof extra.event_type === 'string' && DIRECT_ENTER_EVENTS.has(extra.event_type)) {
+        return { path: `/class/${encodeURIComponent(targetId)}/enter` };
+      }
       return { path: `${isClient ? '/app' : ''}/sessions/${targetId}` };
     case 'report':
       if (!targetId) return null;
