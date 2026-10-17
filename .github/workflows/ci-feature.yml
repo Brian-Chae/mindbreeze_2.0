@@ -92,3 +92,66 @@ jobs:
           # Linux 폰트 메트릭에서 3~5페이지로 어긋나 422를 띄움. Linux 재보정 전까지 제외.
           pytest -q --tb=short --ignore=tests/test_sprint4_integration.py \
             --deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
+
+  backend-pg-smoke:
+    # SDD-211(P1): 테스트는 SQLite create_all 이라 마이그레이션이 CI 어디서도 PostgreSQL 로 실행되지 않았다.
+    # 빈 PG 에 alembic 체인을 처음부터 적용해 head 단일성·적용 가능성을 항상 확인한다(paths 필터 없음).
+    # 이 잡 실패 = dev 배포(deploy-dev.yml)에서도 마이그레이션이 실패한다. 차단 효력은 브랜치 보호의
+    # 필수 상태 점검 등록(저장소 설정)이 있어야 생긴다 — deploy-dev 는 ci-feature 를 needs 하지 않는다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        # 운영 RDS 는 PostgreSQL 16 이다.
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci_pw
+          POSTGRES_DB: smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # 비밀 없음. alembic env.py 가 읽는 환경변수는 DATABASE_URL 하나뿐이다(비밀번호에 % 금지).
+      DATABASE_URL: postgresql://postgres:ci_pw@127.0.0.1:5432/smoke
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install (alembic 최소 패키지 — 버전은 requirements.txt 와 동일)
+        run: |
+          pkgs=$(grep -i -E '^(sqlalchemy|alembic|psycopg2-binary|pydantic|pydantic-settings|python-dotenv)==' requirements.txt)
+          test "$(echo "$pkgs" | wc -l)" -eq 6
+          pip install $pkgs
+
+      - name: alembic head 는 정확히 1개
+        run: |
+          heads=$(alembic heads 2>/dev/null)
+          echo "$heads"
+          test "$(echo "$heads" | grep -c '(head)')" -eq 1
+
+      - name: 빈 DB 에 alembic upgrade head
+        run: |
+          alembic upgrade head
+          current=$(alembic current 2>/dev/null | grep -oE '^[0-9a-z]+')
+          head=$(alembic heads 2>/dev/null | grep -oE '^[0-9a-z]+')
+          echo "current=$current head=$head"
+          test -n "$head" && test "$current" = "$head"
+          python - <<'PY'
+          import os
+          import sqlalchemy as sa
+          with sa.create_engine(os.environ["DATABASE_URL"]).connect() as conn:
+              rows = conn.execute(sa.text("select version_num from alembic_version")).fetchall()
+          assert len(rows) == 1, rows
+          print("alembic_version:", rows[0][0])
+          PY
