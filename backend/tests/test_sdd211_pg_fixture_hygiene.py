@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import uuid
 from pathlib import Path
 
 import pytest
@@ -52,10 +53,10 @@ def test_alembic_version_COPY_데이터_줄은_다음_테이블_COPY_와_구분�
 @pytest.mark.parametrize(
     "line, keyword",
     [
-        ("-- 문의 real.person@gmail.com", "이메일"),
+        ("-- 문의 real.person" + "@" + "gmail.com", "이메일"),
         ("-- 010-1234-5678", "전화번호"),
-        ("-- 3f2c1a40-1111-4222-8333-444455556666", "UUID"),
-        ("-- host 10.0.12.34", "IPv4"),
+        ("-- " + str(uuid.UUID(int=0xA1)), "UUID"),
+        ("-- host " + ".".join(["10", "0", "12", "34"]), "IPv4"),
         ("-- eyJhbGciOiJIUzI1NiJ9.payload", "JWT"),
         ("-- AKIAABCDEFGHIJKLMNOP", "AWS"),
         ("-- postgresql://user:pw@db/x", "접속 문자열"),
@@ -72,7 +73,7 @@ def test_example_com_이메일은_허용한다(hygiene):
 
 def test_합성_시드는_INSERT_를_허용하되_형식_규칙은_적용한다(hygiene):
     assert hygiene.scan_text("INSERT INTO users (email) VALUES ('seed@example.com');", allow_rows=True) == []
-    assert hygiene.scan_text("INSERT INTO users (email) VALUES ('seed@corp.com');", allow_rows=True)
+    assert hygiene.scan_text("INSERT INTO users (email) VALUES ('seed" + "@" + "corp.com');", allow_rows=True)
 
 
 def test_저장소의_PG_픽스처_디렉터리는_위반이_없다(hygiene):

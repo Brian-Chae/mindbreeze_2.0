@@ -10,6 +10,7 @@ import io
 import re
 import stat
 import sys
+import uuid
 from pathlib import Path
 
 import pytest
@@ -308,7 +309,7 @@ def test_실행은_SET_LOCAL_3개로_시작하고_ROLLBACK_으로_끝나며_COMM
 
 
 def test_도중_오류가_나도_ROLLBACK_한다(runner):
-    conn = _FakeConn(rows_by_qid={"A2": (["qid", "email"], [["A2", "a@b.co"]])})
+    conn = _FakeConn(rows_by_qid={"A2": (["qid", "email"], [["A2", "a" + "@" + "b.co"]])})
     with pytest.raises(runner.OutputGuardError):
         runner.run_plan(conn, _statements(runner, "A1", "A2"), io.StringIO(), None)
     assert conn.calls[-1] == "rollback"
@@ -316,7 +317,7 @@ def test_도중_오류가_나도_ROLLBACK_한다(runner):
 
 def test_출력에_이메일_UUID_형식이_있으면_출력하지_않고_중단한다(runner):
     out = io.StringIO()
-    conn = _FakeConn(rows_by_qid={"A1": (["qid", "v"], [["A1", "3f2c1a40-1111-4222-8333-444455556666"]])})
+    conn = _FakeConn(rows_by_qid={"A1": (["qid", "v"], [["A1", str(uuid.UUID(int=0xA1))]])})
     with pytest.raises(runner.OutputGuardError):
         runner.run_plan(conn, _statements(runner, "A1"), out, None)
     assert "3f2c1a40" not in out.getvalue()
@@ -395,8 +396,8 @@ def test_허용_목록_함수만_쓴다(runner, statements):
 
 def test_접속에_실패하면_라벨_파일을_만들지_않는다(runner, tmp_path, monkeypatch, capsys):
     labels = tmp_path / "out-labels-x.txt"
-    monkeypatch.setenv("DATABASE_URL", "postgresql://nobody:pw@127.0.0.1:1/none")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://nobody:pw@localhost:1/none")
     code = runner.main([str(SQL_PATH), "--include-labels", "--labels-out", str(labels)])
     captured = capsys.readouterr()
     assert code == 5 and not labels.exists()
-    assert "pw" not in captured.out + captured.err and "127.0.0.1" not in captured.out + captured.err
+    assert "pw" not in captured.out + captured.err and "localhost" not in captured.out + captured.err

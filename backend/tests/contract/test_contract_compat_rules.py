@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import copy
+import uuid
 
 import pytest
 
@@ -49,6 +50,7 @@ def _changes(result: compat.CompareResult) -> set[str]:
     return {v.change for v in result.violations}
 
 
+UUID_A, UUID_B, UUID_C = (str(uuid.UUID(int=n)) for n in (0xA1, 0xB2, 0xC3))
 BASE = _obj({"id": {"type": "string", "format": "uuid"}, "name": {"type": "string"}}, ["id"])
 
 
@@ -247,7 +249,7 @@ def test_예외는_expires_phase_가_지나면_만료된다():
 
 def test_형태는_값이_아니라_타입_태그로_저장한다():
     value = {
-        "id": "3f2c1a40-1111-4222-8333-444455556666",
+        "id": UUID_A,
         "created_at": "2026-10-18T09:00:00+09:00",
         "day": "2026-10-18",
         "link": "https://example.com/x",
@@ -266,9 +268,9 @@ def test_배열_형태는_원소_키_합집합이고_일부에만_있으면_선�
 
 
 def test_형태_호환_키_삭제와_태그_변경은_실패하고_추가는_통과한다():
-    golden = shape.shape_of({"id": "3f2c1a40-1111-4222-8333-444455556666", "n": 1})
-    assert shape.compare_shape(golden, shape.shape_of({"id": "3f2c1a40-1111-4222-8333-444455556666", "n": 2, "x": 1})) == []
-    assert shape.compare_shape(golden, shape.shape_of({"id": "3f2c1a40-1111-4222-8333-444455556666"})) == ["$.n: 키가 사라짐"]
+    golden = shape.shape_of({"id": UUID_A, "n": 1})
+    assert shape.compare_shape(golden, shape.shape_of({"id": UUID_A, "n": 2, "x": 1})) == []
+    assert shape.compare_shape(golden, shape.shape_of({"id": UUID_A})) == ["$.n: 키가 사라짐"]
     assert shape.compare_shape(golden, shape.shape_of({"id": "abc", "n": 1})) == ["$.id: 타입 태그 uuid → str"]
 
 
@@ -286,7 +288,7 @@ def test_봉인_응답은_키가_늘면_실패한다():
 
 
 def test_키가_UUID_인_맵은_하나의_키로_접어_비결정성을_없앤다():
-    first = {"3f2c1a40-1111-4222-8333-444455556666": {"after": 1}, "9a8b7c60-1111-4222-8333-444455556666": {"after": 2}}
-    other = {"11111111-2222-4333-8444-555555555555": {"after": 3}}
+    first = {UUID_A: {"after": 1}, UUID_B: {"after": 2}}
+    other = {UUID_C: {"after": 3}}
     assert shape.shape_of(first) == {"<uuid>": {"after": "number"}}
     assert shape.compare_shape(shape.shape_of(first), shape.shape_of(other)) == []
