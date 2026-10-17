@@ -165,6 +165,28 @@ jobs:
           pip install "$(grep -E '^pytest==' requirements.txt)"
           pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider
 
+      - name: PG 픽스처 위생 (스키마 덤프에 데이터 행·개인정보 없음)
+        run: python tests/fixtures/pg/check_fixture_hygiene.py
+
+      - name: 스냅샷 복원본 + 합성 시드 + upgrade head (덤프 픽스처가 커밋되면 실행)
+        # SDD-211 P2 자리. baseline_*.sql(스키마 전용 덤프)이 아직 없으면 건너뛴다 — 덤프 생성은 dev DB 읽기가 필요해
+        # Brian go 후 수행한다. 덤프의 \restrict 메타 명령은 러너 psql 버전에 따라 오류가 나므로 걸러서 복원한다.
+        if: ${{ hashFiles('backend/tests/fixtures/pg/baseline_*.sql') != '' }}
+        run: |
+          command -v psql >/dev/null || sudo apt-get install -y -qq postgresql-client
+          test "$(ls tests/fixtures/pg/baseline_*.sql | wc -l)" -eq 1
+          base=$(ls tests/fixtures/pg/baseline_*.sql)
+          admin="${DATABASE_URL%/*}/postgres"
+          snap="${DATABASE_URL%/*}/smoke_snap"
+          psql "$admin" -v ON_ERROR_STOP=1 -c "create database smoke_snap"
+          grep -v -E '^\\(un)?restrict ' "$base" | psql "$snap" -v ON_ERROR_STOP=1 -q
+          psql "$snap" -v ON_ERROR_STOP=1 -q -f tests/fixtures/pg/seed_synthetic.sql
+          DATABASE_URL="$snap" alembic upgrade head
+          current=$(DATABASE_URL="$snap" alembic current 2>/dev/null | grep -oE '^[0-9a-z]+')
+          head=$(alembic heads 2>/dev/null | grep -oE '^[0-9a-z]+')
+          echo "snapshot current=$current head=$head"
+          test -n "$head" && test "$current" = "$head"
+
       - name: alembic check (정보성 — 모델↔마이그레이션 드리프트 건수)
         # 검출 전용 명령이라 마이그레이션을 생성하지 않는다. 현재 드리프트가 있어 차단하면 모든 PR 이 빨개지므로
         # 건수만 기록한다(continue-on-error). 드리프트 정리 후 건수 상한을 두는 차단 승격은 후속.
