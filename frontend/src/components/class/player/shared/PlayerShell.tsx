@@ -8,28 +8,33 @@ interface PlayerShellProps {
   place: 'online' | 'offline';
   sheetOpen: boolean;
   top: ReactNode;
-  /** 도크 위에 미디어 줄을 함께 쌓을 수 있다 */
-  dock: ReactNode;
+  /** 도크 위에 미디어 줄을 함께 쌓을 수 있다. SDD-209: 생략하면 도크 영역 자체를 렌더하지 않는다 */
+  dock?: ReactNode;
   /** PlayerSheet 요소(닫혀 있으면 null) */
   sheet: ReactNode;
   backdrop?: ReactNode;
+  /** SDD-209: 루트에 덧붙일 클래스(기본 없음) */
+  className?: string;
+  /** SDD-209: 몰입형 사전 흐름 모드(기본 false = 진행 화면 현행). 본문 측정 훅이 flow-stage 가 된다 */
+  flow?: boolean;
   children: ReactNode;
 }
 
-export function PlayerShell({ place, sheetOpen, top, dock, sheet, backdrop, children }: PlayerShellProps) {
+export function PlayerShell({ place, sheetOpen, top, dock, sheet, backdrop, className, flow = false, children }: PlayerShellProps) {
   const mode = useSheetMode();
   return (
     <div
-      className="pz-root pz-shell"
+      className={className ? `pz-root pz-shell ${className}` : 'pz-root pz-shell'}
       data-pz="app"
       data-place={place}
       data-sheet-open={sheetOpen ? 'true' : 'false'}
       data-sheet-mode={mode}
+      data-flow={flow ? 'true' : undefined}
     >
       {backdrop}
       <div className="pz-shell__top" inert={sheetOpen}>{top}</div>
-      <main className="pz-shell__stage" data-pz="col" inert={sheetOpen}>{children}</main>
-      <div className="pz-shell__dock">{dock}</div>
+      <main className="pz-shell__stage" data-pz={flow ? 'flow-stage' : 'col'} inert={sheetOpen}>{children}</main>
+      {dock === undefined ? null : <div className="pz-shell__dock">{dock}</div>}
       {sheet}
     </div>
   );

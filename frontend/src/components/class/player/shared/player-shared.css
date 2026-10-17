@@ -60,6 +60,10 @@
 }
 @media (min-width: 600px) { .pz-topbar[data-variant="host"] { grid-template-columns: minmax(104px, 1fr) minmax(0, auto) minmax(104px, 1fr); } }
 
+/* SDD-209: 슬롯 폭 고정(좌·우 같은 폭 — 제목이 항상 화면 가운데) */
+.pz-topbar[data-slot-fixed="true"] { grid-template-columns: var(--pz-top-slot) minmax(0, 1fr) var(--pz-top-slot); }
+.pz-topbar[data-variant="flow"] .pz-topbar__center { width: 100%; }
+
 /* ───────── 지표 링: 정적 게이지 (호흡 애니메이션 없음) ───────── */
 /* 지름은 부모가 --ring 으로 정한다(기본 240px). 이 요소에서 --ring 을 선언하면 상속을 덮어쓰므로 폴백으로만 쓴다 */
 .pz-ring { position: relative; width: var(--ring, 240px); height: var(--ring, 240px); flex: none; }
@@ -197,3 +201,4 @@
 .pz-sheet__head h2 { font-size: var(--fs-18); font-weight: 700; line-height: 24px; }
 .pz-sheet__sub { margin-left: 8px; font-size: var(--fs-12); font-weight: 400; color: var(--tx-lo); }
 .pz-sheet__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+.pz-sheet__foot { flex: none; display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }

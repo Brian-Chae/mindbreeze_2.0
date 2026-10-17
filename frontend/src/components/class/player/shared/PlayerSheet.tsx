@@ -14,10 +14,18 @@ interface PlayerSheetProps {
   /** 채팅처럼 내용과 무관하게 높이를 고정해야 하는 시트 */
   tall?: boolean;
   onClose: () => void;
+  /** SDD-209: 측정 훅 이름(기본 sheet). 사전 흐름은 flow-sheet */
+  pz?: string;
+  /** SDD-209: 본문 스크롤 밖에 고정되는 하단 영역(주 버튼 등). 시트 안 중첩 스크롤을 만들지 않는다 */
+  footer?: ReactNode;
+  /** SDD-209: 닫기 버튼 접근성 이름(기본 "닫기") */
+  closeLabel?: string;
+  /** SDD-209: 바깥 pointerdown 으로 닫을지(기본 true). 확인이 필요한 시트는 false */
+  dismissOnOutside?: boolean;
   children: ReactNode;
 }
 
-export function PlayerSheet({ open, title, sub, tall, onClose, children }: PlayerSheetProps) {
+export function PlayerSheet({ open, title, sub, tall, onClose, pz = 'sheet', footer, closeLabel = '닫기', dismissOnOutside = true, children }: PlayerSheetProps) {
   const mode = useSheetMode();
   const dialogRef = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
@@ -44,6 +52,7 @@ export function PlayerSheet({ open, title, sub, tall, onClose, children }: Playe
     const onPointerDown = (e: Event): void => {
       const target = e.target;
       if (!(target instanceof Element)) return;
+      if (!dismissOnOutside) return;
       if (dialogRef.current?.contains(target)) return;
       // 도크에서 다른 항목을 눌러 시트를 바꾸는 동작, 위에 뜬 다른 모달 안의 조작은 닫기로 보지 않는다
       if (target.closest('[data-pz="dock"]')) return;
@@ -57,7 +66,7 @@ export function PlayerSheet({ open, title, sub, tall, onClose, children }: Playe
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [open]);
+  }, [open, dismissOnOutside]);
 
   if (!open) return null;
 
@@ -65,7 +74,7 @@ export function PlayerSheet({ open, title, sub, tall, onClose, children }: Playe
     <section
       ref={dialogRef}
       className="pz-sheet"
-      data-pz="sheet"
+      data-pz={pz}
       data-mode={mode}
       data-tall={tall ? 'true' : undefined}
       role="dialog"
@@ -79,9 +88,10 @@ export function PlayerSheet({ open, title, sub, tall, onClose, children }: Playe
           {title}
           {sub ? <span className="pz-sheet__sub">{sub}</span> : null}
         </h2>
-        <IconCircleButton label="닫기" icon={<X size={24} strokeWidth={2} />} variant="ghost" onClick={onClose} />
+        <IconCircleButton label={closeLabel} icon={<X size={24} strokeWidth={2} />} variant="ghost" onClick={onClose} />
       </header>
       <div className="pz-sheet__body">{children}</div>
+      {footer ? <div className="pz-sheet__foot">{footer}</div> : null}
     </section>
   );
 }
