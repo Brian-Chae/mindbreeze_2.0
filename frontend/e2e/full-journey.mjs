@@ -192,6 +192,12 @@ await scenario('[클래스] 초대 회원 입장 → 준비 → 진행 화면', 
   const steps = ['지금 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
   for (let round = 0; round < 12; round += 1) {
     if (await p.locator('[data-pz="app"] [data-pz="dock"]').count()) break;
+    // SDD-209(B2): 리포트 반영은 기본 제외(opt-in). 고지 스텝의 '반영해요'를 먼저 선택해야
+    // 종료 후 client 리포트가 생성된다(선택 라디오는 화면을 넘기지 않으므로 아래 스텝 버튼과 별개로 처리).
+    const include = p.getByRole('radio', { name: '반영해요', exact: true });
+    if (await include.count() && (await include.first().getAttribute('aria-checked')) !== 'true') {
+      await include.first().click({ timeout: 2000 }).catch(() => {});
+    }
     let clicked = false;
     for (const name of steps) {
       const button = p.getByRole('button', { name, exact: true });
