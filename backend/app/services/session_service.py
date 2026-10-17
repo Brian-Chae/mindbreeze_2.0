@@ -1090,12 +1090,16 @@ def _notify_participants_event(
     include_waitlisted: bool = False,
     title: str,
     body: str | None = None,
-) -> None:
-    """세션 참여자에게 인앱 알림을 best-effort 로 발화한다.
+    params: dict | None = None,
+) -> list[dict]:
+    """세션 참여자에게 인앱 알림을 best-effort 로 발화하고 수신자별 **요청 결과**를 돌려준다.
 
     SDD-093 노티피케이션 재설계 — 이벤트 카탈로그(33종)의 세션 이벤트 발화 일원화.
     수신자 기본값: 호스트 제외 + (include_waitlisted=False 시) 대기열 제외.
+    결과(SDD-209 B7): ``in_app`` = queued(알림 행·WS outbox 기록)/skipped(사용자 설정 꺼짐)/failed,
+    ``email`` = queued(이메일 선호 켜짐 → outbox 요청)/not_requested/failed. **전달·수신 확인이 아니다.**
     """
+    results: list[dict] = []
     try:
         from app.services import notification_service
         from app.services.notification_service import build_standard_extra, EVENT_CATALOG
@@ -1107,8 +1111,12 @@ def _notify_participants_event(
                 if (include_waitlisted or not p.is_waitlisted) and p.user_id != s.host_id
             ]
         for uid in recipient_ids:
+            if uid is None:
+                continue  # 비회원은 계정이 없어 알림 대상이 아니다
+            email_on = False
             try:
-                notification_service.notify_event(
+                email_on = notification_service.email_requested(event_type, uid, db)
+                notif = notification_service.notify_event(
                     event_type,
                     uid,
                     {
@@ -1118,11 +1126,18 @@ def _notify_participants_event(
                             event_type,
                             target_type,
                             str(s.id),
-                            params=None,
+                            params=params,
                             legacy={"session_id": str(s.id)},
                         ),
                     },
                     db,
+                )
+                results.append(
+                    {
+                        "user_id": str(uid),
+                        "in_app": "queued" if notif is not None else "skipped",
+                        "email": "queued" if email_on else "not_requested",
+                    }
                 )
             except Exception as exc:
                 # MB-ERR-003: 알림 1건 실패를 무음 삼키지 않고 로깅 + 실패 트랜잭션 정리.
@@ -1130,9 +1145,13 @@ def _notify_participants_event(
                     "[session] notify_event failed event=%s user=%s: %s", event_type, uid, exc
                 )
                 db.rollback()
+                results.append(
+                    {"user_id": str(uid), "in_app": "failed", "email": "failed" if email_on else "not_requested"}
+                )
     except Exception as exc:
         # MB-ERR-003: best-effort 알림 발행 전체 실패도 로그로 남긴다.
         logger.warning("[session] notify participants event failed event=%s: %s", event_type, exc)
+    return results
 
 
 def _notify_session_state(s: Session) -> None:
@@ -1378,6 +1397,22 @@ def _revive_removed_participant(s: Session, uid: UUID, db: DBSession) -> Session
     return _reactivate_cancelled_or_removed(s, hidden, db)
 
 
+def _invite_result(target_uuid: UUID, results: list[dict]) -> dict:
+    """초대 응답의 ``invite_result`` — 참여자 등록(registered)과 알림 요청 결과(channels)를 분리한다.
+
+    channels 값은 요청 결과일 뿐 전달·수신을 뜻하지 않는다(queued/skipped/failed/not_requested).
+    """
+    mine = next((r for r in results if r["user_id"] == str(target_uuid)), None)
+    return {
+        "registered": True,
+        "user_id": str(target_uuid),
+        "channels": {
+            "in_app": mine["in_app"] if mine else "failed",
+            "email": mine["email"] if mine else "not_requested",
+        },
+    }
+
+
 def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:
     s = _get_session_as_host(session_id, host_id, db)
     if s.status in ("completed", "cancelled"):
@@ -1406,14 +1441,14 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     if revived is not None:
         db.commit()
         db.refresh(s)
-        _notify_participants_event(
+        results = _notify_participants_event(
             s, "session_invited", db,
             recipient_ids=[target_uuid],
             include_waitlisted=True,
             title="세션에 초대되었습니다",
             body=s.title or "세션",
         )
-        return _serialize(s)
+        return {**_serialize(s), "invite_result": _invite_result(target_uuid, results)}
 
     # FUNC-03: 정원이 차 있으면(또는 앞선 대기자가 있으면) 대기열에 등록한다.
     if not _can_join_active(s, db):
@@ -1438,8 +1473,8 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
     db.commit()
     db.refresh(s)
 
-    # SDD-093: S10 세션 초대 알림
-    _notify_participants_event(
+    # SDD-093: S10 세션 초대 알림 — B7: 등록 성공과 알림 요청 결과를 분리해 응답한다.
+    results = _notify_participants_event(
         s, "session_invited", db,
         recipient_ids=[target_uuid],
         include_waitlisted=True,
@@ -1447,7 +1482,7 @@ def invite_participant(session_id: str, host_id: str, user_id: str, db: DBSessio
         body=s.title or "세션",
     )
 
-    return _serialize(s)
+    return {**_serialize(s), "invite_result": _invite_result(target_uuid, results)}
 
 
 def remove_participant(session_id: str, host_id: str, user_id: str, db: DBSession) -> dict:

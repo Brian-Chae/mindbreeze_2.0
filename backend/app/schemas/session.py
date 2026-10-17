@@ -180,6 +180,8 @@ class SessionResponse(BaseModel):
     created_at: datetime
     participants: list[ParticipantInfo] = []
     waitlist_count: int = 0
+    # SDD-209(B7): 초대 응답에서만 채워진다 — 참여자 등록 성공과 알림 요청 결과를 분리.
+    invite_result: "InviteResult | None" = None
 
     model_config = {"from_attributes": True}
 
@@ -315,6 +317,44 @@ class ReportChoiceResponse(BaseModel):
     report_notice_version: str | None = None
     # 이번 요청으로 선택 값이 실제로 바뀌었는지(멱등 재요청은 False)
     changed: bool = False
+
+
+class InviteChannelResults(BaseModel):
+    """알림 **요청** 결과 — queued/skipped/failed/not_requested. 전달·수신 확인이 아니다(SDD-209 B7)."""
+
+    in_app: str
+    email: str
+
+
+class InviteResult(BaseModel):
+    registered: bool
+    user_id: str
+    channels: InviteChannelResults
+
+
+class InviteRemindRequest(BaseModel):
+    """재발송 대상 — 생략하면 호스트를 제외한 모든 참여자. 입장 여부는 서버가 알지 못하므로(BE-11 전)
+    호스트 클라이언트가 아직 입장하지 않은 참여자 id 만 보낼 수 있다."""
+
+    participant_ids: list[str] | None = None
+
+
+class InviteRemindResult(BaseModel):
+    participant_id: str
+    user_id: str | None = None
+    # queued / skipped_cooldown / skipped_no_account / skipped_waitlisted / skipped_notification_off / not_found / failed
+    status: str
+    channels: InviteChannelResults | None = None
+
+
+class InviteRemindResponse(BaseModel):
+    session_id: str
+    cooldown_sec: int
+    results: list[InviteRemindResult]
+    summary: dict[str, int]
+
+
+SessionResponse.model_rebuild()
 
 
 class WaitlistCancelResponse(BaseModel):

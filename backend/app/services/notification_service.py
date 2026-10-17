@@ -134,6 +134,17 @@ def get_user_preferences(user: User) -> dict[str, dict[str, bool]]:
     }
 
 
+def email_requested(event_type: str, user_id: str | UUID, db: DBSession) -> bool:
+    """이 이벤트에 대해 사용자의 이메일 선호가 켜져 있는지(= notify_event 가 이메일 outbox 를 만들지) 판정한다.
+
+    전달 성공 여부가 아니라 '요청 여부'만 알려준다 — 화면이 이메일 전달을 단정하지 않게 하는 용도.
+    """
+    user = db.query(User).filter(User.id == _to_uuid(user_id)).first()
+    if not user or not user.email:
+        return False
+    return bool(get_user_preferences(user)["email"].get(_get_pref_event_key(event_type), False))
+
+
 def create_notification(
     user_id: str | UUID,
     notif_type: str,

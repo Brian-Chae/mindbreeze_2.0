@@ -23,6 +23,8 @@ from app.schemas.session import (
     EnterVerifyResponse,
     EntryStateResponse,
     InviteParticipantRequest,
+    InviteRemindRequest,
+    InviteRemindResponse,
     MemberLiveKitTokenResponse,
     ReportChoiceRequest,
     ReportChoiceResponse,
@@ -47,7 +49,13 @@ from app.schemas.eeg import (
     RawPresignRequest,
     RawPresignResponse,
 )
-from app.services import eeg_raw_service, eeg_rollup_service, session_service, report_email_service
+from app.services import (
+    eeg_raw_service,
+    eeg_rollup_service,
+    report_email_service,
+    session_invite_service,
+    session_service,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -322,6 +330,22 @@ def invite_participant(
     db: DBSession = Depends(get_db),
 ):
     return session_service.invite_participant(session_id, current_user["id"], payload.user_id, db)
+
+
+@router.post("/{session_id}/invite/remind", response_model=InviteRemindResponse)
+def remind_invitees(
+    session_id: str,
+    payload: InviteRemindRequest | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B7): 초대 재발송 — 호스트 전용, 쿨다운, 대상별 실제 요청 결과(전달·수신 확정 아님)."""
+    return session_invite_service.remind_invitees(
+        session_id,
+        current_user["id"],
+        payload.participant_ids if payload else None,
+        db,
+    )
 
 
 @router.delete("/{session_id}/participants/{user_id}", response_model=SessionResponse)
