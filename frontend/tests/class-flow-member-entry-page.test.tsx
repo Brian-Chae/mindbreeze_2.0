@@ -11,9 +11,13 @@ import { saveEntry } from '../src/lib/api/class-flow';
 import type { EntryStateDto } from '../src/lib/api/class-flow';
 
 const getEntryState = vi.fn();
+const setReportChoice = vi.fn();
+const setResearchConsent = vi.fn();
 vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/class-flow')>()),
   getEntryState: (...a: unknown[]) => getEntryState(...a),
+  setReportChoice: (...a: unknown[]) => setReportChoice(...a),
+  setResearchConsent: (...a: unknown[]) => setResearchConsent(...a),
 }));
 
 import EntryPage from '../src/pages/class/EntryPage';
@@ -33,6 +37,8 @@ beforeEach(() => {
   document.body.append(container);
   root = createRoot(container);
   getEntryState.mockReset();
+  setReportChoice.mockReset();
+  setResearchConsent.mockReset();
   window.sessionStorage.clear();
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
@@ -176,5 +182,52 @@ describe('EntryPage', () => {
     getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '다시 연결')?.click(); });
     expect(qa('button').some((b) => b.textContent === '입장하기')).toBe(true);
+  });
+});
+
+describe('EntryPage — 고지·리포트 반영 선택·연구 동의 (M2)', () => {
+  async function toNotice(): Promise<void> {
+    seedEntry();
+    getEntryState.mockResolvedValue(stateDto({ status: 'open' }));
+    await renderPage();
+    await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '입장하기')?.click(); });
+  }
+  const find = (label: string): HTMLButtonElement | undefined => qa<HTMLButtonElement>('button').find((b) => (b.textContent ?? '').trim() === label);
+
+  it('입장하기 → FM06a, 확인하고 계속하기로 리포트 선택을 고지 확인 증빙과 함께 1회 보낸다(기본 제외)', async () => {
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: false, changed: false });
+    await toNotice();
+    expect(text()).toContain('시작 전에 확인해 주세요');
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    expect(setReportChoice).toHaveBeenCalledTimes(1);
+    expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', reportIncluded: false, noticeAcknowledged: true, noticeVersion: 'r5-1' });
+    expect(setResearchConsent).not.toHaveBeenCalled(); // 연구 동의는 체크할 때만, 리포트 선택과 독립
+  });
+  it('`반영해요`를 고르면 reportIncluded=true 로 보낸다', async () => {
+    setReportChoice.mockResolvedValue({ participant_id: 'p1', report_included: true, changed: true });
+    await toNotice();
+    await act(async () => { find('반영해요')?.click(); });
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    expect(setReportChoice).toHaveBeenCalledWith('s1', 'cred', expect.objectContaining({ reportIncluded: true }));
+  });
+  it('리포트 선택 저장이 실패해도 다음 단계로 진행한다', async () => {
+    setReportChoice.mockRejectedValue(new ApiError(500, 'x', null));
+    await toNotice();
+    await act(async () => { find('확인하고 계속하기')?.click(); });
+    expect(text()).not.toContain('시작 전에 확인해 주세요');
+  });
+  it('연구 동의 체크는 즉시 저장하고, 실패하면 미동의로 두며 안내한다(계속하기는 막지 않음)', async () => {
+    setResearchConsent.mockResolvedValueOnce({ participant_id: 'p1', consented: true, changed: true });
+    await toNotice();
+    await act(async () => { qa('[role="checkbox"]')[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(setResearchConsent).toHaveBeenCalledWith('s1', 'cred', { participantId: 'p1', consented: true, noticeVersion: 'r5-1' });
+    expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
+
+    setResearchConsent.mockRejectedValueOnce(new ApiError(409, 'x', null));
+    await act(async () => { qa('[role="checkbox"]')[0]!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+    expect(text()).toContain('연구 동의를 저장하지 못했어요. 미동의로 진행해요.');
+    // 해제 시도가 실패했으므로 서버에 남아 있는 동의 상태(true)를 거짓으로 보이지 않는다
+    expect(qa('[role="checkbox"]')[0]!.getAttribute('aria-checked')).toBe('true');
+    expect(find('확인하고 계속하기')!.disabled).toBe(false);
   });
 });

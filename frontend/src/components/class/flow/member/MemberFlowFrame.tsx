@@ -27,6 +27,8 @@ interface MemberFlowFrameProps {
   backLabel?: string;
   onExit?: () => void;
   exitLabel?: string;
+  /** 준비 마법사(FM06) 단계 — 모든 단계가 같은 바깥 여백을 쓴다 */
+  wizard?: boolean;
   /** 본문 컬럼 클래스(예: fm-wide) */
   colClassName?: string;
   /** 하단 고정 영역(주 버튼 1개 + 보조) */
@@ -38,14 +40,14 @@ interface MemberFlowFrameProps {
 
 export function MemberFlowFrame({
   place = 'online', backdropSrc, title, steps, onBack, backLabel = '이전', onExit, exitLabel = '나가기',
-  colClassName, foot, sheet = null, sheetOpen = false, children,
+  wizard = false, colClassName, foot, sheet = null, sheetOpen = false, children,
 }: MemberFlowFrameProps) {
   const center = steps ? <FlowSteps total={steps.total} current={steps.current} /> : <span className="fm-title">{title ?? ''}</span>;
   return (
     <PlayerShell
       place={place}
       flow
-      className="fl-root"
+      className={wizard ? 'fl-root fm-wizard' : 'fl-root'}
       sheetOpen={sheetOpen}
       backdrop={<PlayerBackdrop imageSrc={backdropSrc} />}
       top={

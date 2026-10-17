@@ -131,6 +131,18 @@ describe('entryReducer — 입장 상태 머신', () => {
     const live = { ...initialEntryState(), phase: 'live' as const, stage: 'started' as const };
     expect(entryReducer(live, { type: 'sync', stage: 'started' })).toEqual(live);
   });
+  it('요약에서 행을 눌러 고친 단계는 다음/이전 모두 요약(e)으로 바로 돌아온다', () => {
+    const steps = buildSteps('online', 'opt');
+    let s = run([{ type: 'sync', stage: 'open' }, { type: 'enter' }, { type: 'goto', step: 'e' }, { type: 'goto', step: 'c', fromSummary: true }]);
+    expect(s).toMatchObject({ phase: 'wizard', step: 'c' });
+    s = entryReducer(s, { type: 'next', steps });
+    expect(s).toMatchObject({ phase: 'wizard', step: 'e' });
+    s = run([{ type: 'goto', step: 'b', fromSummary: true }, { type: 'back', steps }], s);
+    expect(s).toMatchObject({ phase: 'wizard', step: 'e' });
+    // 요약에 돌아온 뒤에는 보통의 이동으로 복귀
+    s = entryReducer(s, { type: 'back', steps });
+    expect(s.step).toBe('d');
+  });
   it('상태 화면에서 다시 시도하면 확인 화면으로 돌아가 동기화를 이어 간다', () => {
     const s = run([{ type: 'showState', kind: 'error' }, { type: 'resume' }]);
     expect(s.phase).toBe('confirm');

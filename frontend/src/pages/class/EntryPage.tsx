@@ -4,15 +4,21 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EntryConfirmView } from '../../components/class/flow/member/EntryConfirmView';
 import { MemberStateScreen } from '../../components/class/flow/member/MemberStateScreen';
+import { NoticeStepView } from '../../components/class/flow/member/NoticeStepView';
+import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
+import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
 import { clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
 import { formatStartLabel, formatWhen } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
-  deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, type FlowStateKind,
+  buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
+import { buildSummaryRows, parseRetentionDays } from '../../lib/class/flow/member-prep';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
+
+const RETENTION_DAYS = parseRetentionDays(import.meta.env.VITE_RETENTION_RAW_DAYS as string | undefined);
 
 function bandModeOf(mode: string | undefined): FlowBandMode {
   return mode === 'none' ? 'none' : mode === 'required' ? 'req' : 'opt';
@@ -28,6 +34,7 @@ export default function EntryPage() {
   const [entryChecked, setEntryChecked] = useState(entry !== null);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoffName] = useState(() => takeEntryHandoff(sessionId)?.displayName ?? '');
+  const prep = useEntryPrep({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
 
   // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(실패하면 만료 안내)
   useEffect(() => {
@@ -112,15 +119,53 @@ export default function EntryPage() {
   }
 
   if (!info || !entry) return null;
+  const place = info.locationType;
+  const size = info.participantMode === 'group' ? 'group' : 'solo';
+  const bandMode = bandModeOf(info.linkbandMode);
+  const steps = buildSteps(place, bandMode);
+  const stepsView = { total: steps.length, current: Math.max(0, steps.indexOf(machine.step)) };
+  const exit = (): void => {
+    navigate(homePath);
+  };
+
+  if (machine.phase === 'wizard' && machine.step === 'a') {
+    return (
+      <NoticeStepView
+        place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
+        reportChoice={prep.draft.reportChoice} researchConsent={prep.draft.researchConsent} researchSaveFailed={prep.draft.researchSaveFailed}
+        steps={stepsView}
+        onReportChoice={prep.chooseReport}
+        onResearchChange={(next) => void prep.changeResearch(next)}
+        onNext={() => {
+          void prep.commitReportChoice();
+          dispatch({ type: 'next', steps });
+        }}
+        onBack={() => dispatch({ type: 'back', steps })}
+        onExit={exit}
+      />
+    );
+  }
+  if (machine.phase === 'wizard' && machine.step === 'e') {
+    return (
+      <ReadySummaryView
+        place={place} displayName={displayName} steps={stepsView}
+        rows={buildSummaryRows({ place, bandMode, draft: prep.draft })}
+        onGoto={(step) => dispatch({ type: 'goto', step, fromSummary: true })}
+        onReady={() => dispatch({ type: 'finishPrep' })}
+        onBack={() => dispatch({ type: 'back', steps })}
+        onExit={exit}
+      />
+    );
+  }
   return (
     <EntryConfirmView
       title={title}
       startLabel={formatStartLabel(info.scheduledAt)}
       hostName={info.hostName}
       address={info.locationType === 'offline' ? info.locationAddress : null}
-      place={info.locationType}
-      size={info.participantMode === 'group' ? 'group' : 'solo'}
-      bandMode={bandModeOf(info.linkbandMode)}
+      place={place}
+      size={size}
+      bandMode={bandMode}
       displayName={displayName}
       identitySource={entry.isGuest ? 'input' : 'account'}
       wait={machine.stage === 'unopened'}

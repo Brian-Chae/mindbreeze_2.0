@@ -62,13 +62,15 @@ export interface EntryMachineState {
   phase: EntryPhase;
   step: WizardKey;
   stage: EnterStage | null;
+  /** 요약(e)의 행을 눌러 들어온 단계 — 다음/이전이 요약으로 곧바로 돌아간다 */
+  fromSummary: boolean;
   /** 준비를 다 마치지 않고 진행 화면으로 들어왔다 — 진행 화면이 건너뛴 준비를 안내한다 */
   prepSkipped: boolean;
   stateKind: FlowStateKind | null;
 }
 
 export function initialEntryState(): EntryMachineState {
-  return { phase: 'confirm', step: 'a', stage: null, prepSkipped: false, stateKind: null };
+  return { phase: 'confirm', step: 'a', stage: null, fromSummary: false, prepSkipped: false, stateKind: null };
 }
 
 export type EntryAction =
@@ -76,7 +78,7 @@ export type EntryAction =
   | { type: 'enter' }
   | { type: 'next'; steps: readonly WizardKey[] }
   | { type: 'back'; steps: readonly WizardKey[] }
-  | { type: 'goto'; step: WizardKey }
+  | { type: 'goto'; step: WizardKey; fromSummary?: boolean }
   | { type: 'finishPrep' }
   | { type: 'recheck' }
   | { type: 'enterNow' }
@@ -110,18 +112,20 @@ export function entryReducer(state: EntryMachineState, action: EntryAction): Ent
       return { ...state, phase: 'wizard', step: 'a' };
     case 'next': {
       if (state.phase !== 'wizard') return state;
+      if (state.fromSummary) return { ...state, step: 'e', fromSummary: false };
       const index = action.steps.indexOf(state.step);
       if (index >= 0 && index < action.steps.length - 1) return { ...state, step: action.steps[index + 1]! };
       return entryReducer(state, { type: 'finishPrep' });
     }
     case 'back': {
       if (state.phase !== 'wizard') return state;
+      if (state.fromSummary) return { ...state, step: 'e', fromSummary: false };
       const index = action.steps.indexOf(state.step);
       if (index <= 0) return { ...state, phase: 'confirm' };
       return { ...state, step: action.steps[index - 1]! };
     }
     case 'goto':
-      return state.phase === 'wizard' ? { ...state, step: action.step } : state;
+      return state.phase === 'wizard' ? { ...state, step: action.step, fromSummary: action.fromSummary === true } : state;
     case 'finishPrep':
       return state.stage === 'started' ? { ...state, phase: 'live', prepSkipped: false } : { ...state, phase: 'wait' };
     case 'recheck':

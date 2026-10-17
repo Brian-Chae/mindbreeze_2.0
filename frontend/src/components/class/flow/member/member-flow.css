@@ -72,3 +72,47 @@
 .pz-root .fm-who__id b { display: block; font-size: var(--fs-18); font-weight: 700; color: var(--tx-hi); }
 .pz-root .fm-who__id .s { display: block; font-size: var(--fs-13); color: var(--tx-mid); }
 .pz-root .fm-who__id .ok { color: var(--ok); margin-left: auto; flex: none; }
+
+/* FM06 준비 마법사 공통 — 모든 단계가 같은 여백을 써서 하단 주 버튼 자리가 변하지 않는다(FR1) */
+.pz-shell.fm-wizard { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+/* 고지·선택이 많은 화면(FM06a)은 좁고 낮은 화면에서 스크롤 없이 한 화면에 들어가도록 여백을 줄인다 */
+.pz-root:has(.fm-wiz-dense) .fl-col { gap: 8px; }
+.pz-root:has(.fm-wiz-dense) .fl-body { padding-top: 0; padding-bottom: 0; }
+.pz-root:has(.fm-wiz-dense) .pz-shell__stage { margin-top: 0; margin-bottom: 0; }
+
+/* FM06a 고지 · 리포트 반영 선택 · 연구 동의 */
+.pz-root .fm-agrid { display: grid; gap: 8px; }
+.pz-root .fm-acol { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@media (min-width: 700px) and (min-aspect-ratio: 1/1) { .pz-root .fm-agrid { grid-template-columns: 1fr 1fr; align-items: start; } }
+.pz-root .fm-blk { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fm-qh { display: block; font-size: var(--fs-15); line-height: 24px; font-weight: 700; color: var(--tx-hi); }
+.pz-root .fm-ft { margin: 0; font-size: var(--fs-12); line-height: 16px; color: var(--tx-mid); }
+.pz-root .fm-ft.hi { color: var(--tx-hi); }
+.pz-root .fm-nrow { display: flex; align-items: flex-start; gap: 8px; min-height: 24px; font-size: var(--fs-15); line-height: 24px; font-weight: 600; color: var(--tx-hi); }
+.pz-root .fm-nrow > svg { margin-top: 2px; color: var(--mb-pale); flex: none; }
+.pz-root .fm-nrow .tx { display: flex; flex-direction: column; min-width: 0; }
+.pz-root .fm-nrow .tx .fm-ft { font-weight: 400; }
+.pz-root .fm-aseg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pz-root .fm-aseg button { min-height: 44px; padding: 0 8px; border-radius: var(--r-card); font-size: var(--fs-15); font-weight: 600; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); }
+.pz-root .fm-aseg button[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+.pz-root .fm-rhead { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pz-root .fm-rhead .fm-qh { flex: 1; min-width: 0; }
+.pz-root .fm-check { display: flex; align-items: center; gap: 8px; flex: none; min-height: 44px; padding: 0 16px 0 8px; border-radius: var(--r-card); font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi); background: rgba(255, 255, 255, 0.08); border: 1px solid var(--sheet-border); }
+.pz-root .fm-check[aria-checked="true"] { background: rgba(179, 115, 239, 0.18); border-color: rgba(210, 174, 252, 0.55); }
+.pz-root .fm-box { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.55); display: grid; place-items: center; }
+.pz-root .fm-box svg { width: 16px; height: 16px; display: none; }
+.pz-root .fm-check[aria-checked="true"] .fm-box { background: var(--mb-purple); border-color: var(--mb-pale); color: #fff; }
+.pz-root .fm-check[aria-checked="true"] .fm-box svg { display: block; }
+.pz-root .fm-failhint { display: flex; align-items: center; gap: 8px; font-size: var(--fs-12); line-height: 16px; color: var(--tx-hi); }
+.pz-root .fm-failhint svg { flex: none; color: var(--warn); }
+.pz-root .fm-rlist { display: flex; flex-direction: column; gap: 0; }
+
+/* FM06e 준비 완료 요약 */
+.pz-root .fm-hi { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125, 227, 200, 0.16); color: var(--ok); }
+.pz-root .fm-sumlist { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fm-srow { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 48px; padding: 0 16px; border-radius: var(--r-card); text-align: left; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--sheet-border); color: var(--tx-hi); }
+.pz-root .fm-srow > svg:first-child { flex: none; color: var(--mb-pale); }
+.pz-root .fm-srow b { flex: none; font-size: var(--fs-15); font-weight: 700; white-space: nowrap; }
+.pz-root .fm-srow .v { flex: 1; min-width: 0; text-align: right; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fm-srow .wide { flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 24px; font-weight: 700; }
+.pz-root .fm-srow .chev { flex: none; color: var(--tx-lo); }
