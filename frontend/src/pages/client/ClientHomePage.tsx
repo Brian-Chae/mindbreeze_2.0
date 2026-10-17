@@ -17,6 +17,7 @@ import { heroBackdrop, toClassRowData, toHeroData } from '../../components/class
 import '../../components/class/flow/shell/shell-kit.css';
 import { listReports, type ReportDto } from '../../lib/api/reports';
 import { resolveReportGenerationStatus } from '../../lib/api/report-status';
+import { isReportInReview, REPORT_IN_REVIEW_BADGE } from '../../lib/report-review-copy';
 import { markRead, listNotifications, type NotificationDto } from '../../lib/api/notifications';
 import { listChatRooms, type ChatRoom } from '../../lib/api/chat';
 import { useNotificationStore } from '../../stores/notificationStore';
@@ -201,7 +202,7 @@ export default function ClientHomePage() {
   }, [heroSession]);
 
   const newReportCount = useMemo(
-    () => reports.filter((r) => r.type === 'client' && !r.is_read).length,
+    () => reports.filter((r) => r.type === 'client' && !r.is_read && !isReportInReview(r)).length,
     [reports],
   );
 
@@ -412,7 +413,8 @@ export default function ClientHomePage() {
             <div className="flex flex-col gap-3">
               {clientReports.map((r) => {
                 const generation = resolveReportGenerationStatus(r.generation_status);
-                const isNew = !r.is_read;
+                const inReview = isReportInReview(r);
+                const isNew = !r.is_read && !inReview;
                 return (
                   <button
                     key={r.id ?? r.session_id}
@@ -436,6 +438,11 @@ export default function ClientHomePage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
+                      {inReview && (
+                        <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] font-bold text-[#5F0080]">
+                          {REPORT_IN_REVIEW_BADGE}
+                        </span>
+                      )}
                       {generation === 'processing' && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-[#F5EDFC] px-2 py-0.5 text-[12px] font-bold text-[#5F0080]">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />
