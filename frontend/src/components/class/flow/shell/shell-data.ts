@@ -76,3 +76,71 @@ export function toHeroData(session: SessionWithHost, now: Date = new Date()): Cl
     backdropSrc: heroBackdrop(session.id),
   };
 }
+
+export type ListSectionKey = 'enterable' | 'invited' | 'upcoming' | 'past';
+
+export interface ClassListEntry {
+  data: ClassCardData;
+  chip: ClassChipKey;
+  highlight: boolean;
+  action?: { label: string; kind: 'enter' | 'confirm' };
+}
+
+export interface ClassListSection {
+  key: ListSectionKey;
+  title: string;
+  entries: ClassListEntry[];
+}
+
+const SECTION_TITLES: Readonly<Record<ListSectionKey, string>> = {
+  enterable: '지금 입장할 수 있어요',
+  invited: '초대받은 클래스',
+  upcoming: '예정된 클래스',
+  past: '지난 클래스',
+};
+
+function timeOf(session: { scheduled_at: string | null }, missing: number): number {
+  if (!session.scheduled_at) return missing;
+  const time = new Date(session.scheduled_at).getTime();
+  return Number.isNaN(time) ? missing : time;
+}
+
+/**
+ * 회원 클래스 목록을 4구역으로 나눈다. 같은 클래스는 한 구역에만 나온다(이중 렌더 제거).
+ * 입장 가능(진행 중 먼저) → 초대받은(아직 열리기 전) → 예정(일정 없는 것은 맨 뒤) → 지난(최근 순)
+ */
+export function buildClassSections(sessions: SessionWithHost[], invitedIds: ReadonlySet<string>, now: Date = new Date()): ClassListSection[] {
+  const enterable: SessionWithHost[] = [];
+  const invited: SessionWithHost[] = [];
+  const upcoming: SessionWithHost[] = [];
+  const past: SessionWithHost[] = [];
+  for (const s of sessions) {
+    if (s.status === 'in_progress' || s.status === 'open') enterable.push(s);
+    else if (s.status === 'completed' || s.status === 'cancelled') past.push(s);
+    else if (invitedIds.has(s.id)) invited.push(s);
+    else upcoming.push(s);
+  }
+  enterable.sort((a, b) => (a.status === b.status ? timeOf(a, Infinity) - timeOf(b, Infinity) : a.status === 'in_progress' ? -1 : 1));
+  invited.sort((a, b) => timeOf(a, Infinity) - timeOf(b, Infinity));
+  upcoming.sort((a, b) => timeOf(a, Infinity) - timeOf(b, Infinity));
+  past.sort((a, b) => timeOf(b, -Infinity) - timeOf(a, -Infinity));
+
+  const entry = (s: SessionWithHost, kind: ListSectionKey): ClassListEntry => {
+    const chip: ClassChipKey = kind === 'invited' ? 'invited' : memberChipKey(s.status, s.scheduled_at, now);
+    const data = toClassCardData(s, now);
+    if (kind === 'invited') {
+      const host = hostLabel(s);
+      data.subLine = host ? `${host}가 초대했어요` : '상담사가 초대했어요';
+    }
+    return {
+      data,
+      chip,
+      highlight: kind === 'enterable',
+      action: kind === 'enterable' ? { label: '입장하기', kind: 'enter' } : kind === 'invited' ? { label: '클래스 확인', kind: 'confirm' } : undefined,
+    };
+  };
+  const groups: [ListSectionKey, SessionWithHost[]][] = [['enterable', enterable], ['invited', invited], ['upcoming', upcoming], ['past', past]];
+  return groups
+    .filter(([, list]) => list.length > 0)
+    .map(([key, list]) => ({ key, title: SECTION_TITLES[key], entries: list.map((s) => entry(s, key)) }));
+}

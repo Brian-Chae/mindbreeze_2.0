@@ -335,7 +335,7 @@ export default function ClientHomePage() {
         {heroData ? (
           <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} />
         ) : (
-          <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions')} />
+          <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions', { state: { openApply: true } })} />
         )}
 
         {/* 초대된 클래스 (조건부) */}

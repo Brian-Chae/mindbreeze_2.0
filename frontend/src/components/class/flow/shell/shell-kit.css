@@ -183,3 +183,7 @@
 .sh-pick__end { color: var(--ink-mid); flex: none; }
 .sh-pick[aria-checked="true"] .sh-pick__end { color: var(--mb-purple); }
 .sh-err { font-size: var(--fs-13); font-weight: 600; color: #8A3A1F; }
+
+/* ───────── 목록 구역 ───────── */
+.sh-list-sec { display: flex; flex-direction: column; gap: 16px; }
+.sh-list-sec + .sh-list-sec { margin-top: 8px; }

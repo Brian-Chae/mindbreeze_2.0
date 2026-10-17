@@ -10,6 +10,11 @@ const SHELL_MEMBER_KEYS: Readonly<Record<string, Readonly<Record<string, string>
     live: '진행 중(12분째) · 입장하기',
     empty: '예정 없음 · 클래스 신청하기',
   },
+  FM02: {
+    list: '입장 가능 최상단 · 예정 · 지난 클래스',
+    invited: '초대받은 클래스 구역 추가',
+    apply: '클래스 신청 바텀 시트',
+  },
 };
 
 export const flowCases: Record<string, FlowCaseEntry> = Object.fromEntries(

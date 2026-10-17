@@ -295,7 +295,7 @@ export default function ClientAppPage() {
     return <ClientChatPage />;
   }
 
-  // /app/sessions/:id → 세션 상세 (ClientShell 없이 풀스크린)
+  // /app/sessions/:id → 클래스 상세 (ClientShell 없이 풀스크린)
   const sessionDetailMatch = pathname.match(/^\/app\/sessions\/([^/]+)$/);
   if (sessionDetailMatch) {
     return <ClientSessionDetailPage />;
@@ -310,7 +310,7 @@ export default function ClientAppPage() {
     shellTitle = `안녕하세요, ${user?.name ?? '내담자'}님`;
     shellSub = formatKoreanSub();
   } else if (pathname.startsWith('/app/sessions')) {
-    shellTitle = '세션';
+    shellTitle = '클래스';
     shellSub = 'SESSIONS';
   } else if (pathname.startsWith('/app/reports')) {
     shellTitle = '리포트';
@@ -344,14 +344,14 @@ export default function ClientAppPage() {
     window.dispatchEvent(new CustomEvent('open-session-request'));
   };
 
-  // 세션 탭이면 rightSlot에 신청하기 버튼
+  // 클래스 탭이면 rightSlot에 신청하기 버튼
   const rightSlot = pathname.startsWith('/app/sessions') ? (
     <button
       type="button"
       onClick={handleSessionRequest}
       className="h-11 px-4 rounded-full bg-[#5F0080] text-white text-sm font-semibold hover:bg-[#4B0066] transition-colors"
     >
-      세션 신청하기
+      클래스 신청하기
     </button>
   ) : undefined;
 

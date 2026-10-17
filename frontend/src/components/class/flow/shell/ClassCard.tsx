@@ -22,6 +22,8 @@ export interface ClassCardAction {
   label: string;
   onClick: (id: string) => void;
   disabled?: boolean;
+  /** 윤곽선 버튼(보조 동작) */
+  line?: boolean;
 }
 
 interface ClassCardProps {
@@ -49,7 +51,7 @@ export function ClassCard({ data, chip, highlight = false, onOpen, action }: Cla
         <div className="sh-ccard__act">
           <button
             type="button"
-            className={`sh-btn${action.disabled ? ' mute' : ''}`}
+            className={`sh-btn${action.line ? ' line' : ''}${action.disabled ? ' mute' : ''}`}
             data-testid="class-card-action"
             disabled={action.disabled}
             onClick={() => action.onClick(data.id)}

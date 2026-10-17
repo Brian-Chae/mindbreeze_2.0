@@ -1,47 +1,23 @@
-// 내담자 세션 캘린더 + 목록 페이지
-// 월간 캘린더 뷰 + 선택일 세션 리스트 + 세션 신청 + 일간/주간/월간 뷰 모드
+// 내담자 클래스 목록 페이지 (SDD-209 FM02)
+// 입장 가능한 클래스가 맨 위, 카드 정보는 유형·제목·시각·방식·상태만, 신청은 바텀 시트.
+// 아래 LegacyCalendarBlock 은 D-5② 커밋에서 제거된다(캘린더·타임라인).
 
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { listSessions, type SessionDto } from '../../lib/api/session';
-import { listChatRooms, sendChatMessage, type ChatRoom } from '../../lib/api/chat';
+import { listChatRooms, sendChatMessage } from '../../lib/api/chat';
 import { useAuthStore } from '../../stores/authStore';
 import { markRead } from '../../lib/api/notifications';
 import { useNotificationStore } from '../../stores/notificationStore';
-import { MonthCalendar } from '../../components/session/MonthCalendar';
-import { SessionCard } from '../../components/session/SessionCard';
-import { CalendarView } from '../../components/session/CalendarView';
-import { InvitedSessionCard } from '../../components/client/InvitedSessionCard';
-import { useDialogA11y } from '../../hooks/useDialogA11y';
-
-const WEEKDAY = ['일', '월', '화', '수', '목', '금', '토'];
-const COUNSELOR_COLORS = ['#5F0080', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
-
-const sameDay = (a: Date, b: Date): boolean =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-const startOfWeek = (date: Date): Date => {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
-};
-
-function formatDay(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} (${WEEKDAY[date.getDay()]})`;
-}
-
-function formatWeekRange(date: Date): string {
-  const start = startOfWeek(date);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${start.getFullYear()}.${pad(start.getMonth() + 1)}.${pad(start.getDate())} – ${pad(end.getMonth() + 1)}.${pad(end.getDate())}`;
-}
+import { ApplySheet, type ApplyOption } from '../../components/class/flow/shell/ApplySheet';
+import { MemberClassListView } from '../../components/class/flow/shell/MemberClassListView';
+import { buildClassSections, type SessionWithHost } from '../../components/class/flow/shell/shell-data';
+import '../../components/class/flow/shell/shell-kit.css';
+import LegacyCalendarBlock from './legacy-calendar-block';
 
 export default function ClientSessionListPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   // user?.counselors 가 nullish 일 때 매 렌더 새 배열이 생성되어 useMemo deps 가 흔들리는 것을 막기 위해 useMemo 로 안정화한다.
   const counselors = useMemo(() => user?.counselors ?? [], [user?.counselors]);
@@ -51,20 +27,16 @@ export default function ClientSessionListPage() {
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-  // 세션 신청 관련 상태
-  const [showRequestModal, setShowRequestModal] = useState(false);
-  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  // 클래스 신청 시트
+  const [showApply, setShowApply] = useState(false);
+  const [options, setOptions] = useState<ApplyOption[]>([]);
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [roomsError, setRoomsError] = useState<string | null>(null);
-  const [requesting, setRequesting] = useState(false);
+  const [sending, setSending] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const requestModalRef = useDialogA11y(showRequestModal, () => setShowRequestModal(false));
-
-  // 세션 데이터 로딩
+  // 클래스 데이터 로딩
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -82,22 +54,6 @@ export default function ClientSessionListPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // 상단 헤더의 "세션 신청하기" 버튼 이벤트 리스너
-  useEffect(() => {
-    const handler = () => { void handleOpenRequest(); };
-    window.addEventListener('open-session-request', handler);
-    return () => window.removeEventListener('open-session-request', handler);
-  }, []);
-
-  // 상담사 ID → 색상 매핑
-  const counselorColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    counselors.forEach((c, i) => {
-      map[c.id] = COUNSELOR_COLORS[i % COUNSELOR_COLORS.length];
-    });
-    return map;
-  }, [counselors]);
-
   // 상담사 ID → 이름 매핑
   const counselorNameMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -112,18 +68,8 @@ export default function ClientSessionListPage() {
     () => new Set(sessionInvites.map((i) => i.sessionId)),
     [sessionInvites],
   );
-  const invitedSessions = useMemo(
-    () =>
-      sessions.filter(
-        (s) =>
-          invitedSessionIds.has(s.id) &&
-          s.status !== 'completed' &&
-          s.status !== 'cancelled',
-      ),
-    [sessions, invitedSessionIds],
-  );
 
-  // 초대 도착 시 목록에 아직 없는 세션을 반영 (listSessions 재조회)
+  // 초대 도착 시 목록에 아직 없는 클래스를 반영 (listSessions 재조회)
   // HOOK-STATE-03: sessions 를 deps 로 두면 재조회로 sessions 가 갱신될 때마다 effect 가
   // 다시 돌아 반영이 지연·중복된다. 최신 sessions 는 ref 로 읽고, 초대 id 별로 1회만 재조회한다.
   const sessionsRef = useRef(sessions);
@@ -159,370 +105,112 @@ export default function ClientSessionListPage() {
     navigate(`/app/sessions/${sessionId}`);
   };
 
-  // 특정 날짜의 세션 목록
-  const sessionsOnDay = (day: Date): SessionDto[] =>
-    sessions
-      .filter((s): s is SessionDto & { scheduled_at: string } => (
-        Boolean(s.scheduled_at) && sameDay(new Date(s.scheduled_at as string), day)
-      ))
-      .sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
-
-  // 선택된 날짜의 세션
-  const todaySessions = sessionsOnDay(selectedDate);
-  const instantSessions = sessions.filter((session) => (
-    !session.scheduled_at && (session.status === 'ready' || session.status === 'open' || session.status === 'in_progress')
-  ));
-  const readyInstantCount = instantSessions.filter((session) => session.status === 'ready').length;
-  const inProgressInstantCount = instantSessions.filter((session) => session.status === 'in_progress').length;
-
-  // 날짜 이동
-  const shiftDay = (dir: 1 | -1): void => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + dir);
-      return next;
-    });
-  };
-  const shiftWeek = (dir: 1 | -1): void => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + dir * 7);
-      return next;
-    });
-  };
-  const shiftMonth = (dir: 1 | -1): void => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev);
-      next.setMonth(next.getMonth() + dir);
-      return next;
-    });
-  };
-
-  // MonthCalendar에서 날짜 선택 시 selectedDate 동기화
-  const handleCalendarSelect = (date: Date) => {
-    setSelectedDate(date);
-  };
-
-  // 세션 신청 모달 열기 + 채팅방 목록 로딩
-  const handleOpenRequest = async (): Promise<void> => {
-    setShowRequestModal(true);
+  // ── 신청 시트 ──────────────────────────────────────────────────
+  const loadRooms = useCallback(async (): Promise<void> => {
     setRoomsError(null);
     try {
       const res = await listChatRooms();
-      const directRooms = res.rooms.filter((r) => r.room_type === 'direct');
-      setRooms(directRooms);
+      const next: ApplyOption[] = res.rooms
+        .filter((r) => r.room_type === 'direct')
+        .map((r) => ({ id: r.id, name: r.peer_name || r.name || '채팅방' }));
+      setOptions(next);
+      setSelectedRoomId((prev) => (prev && next.some((o) => o.id === prev) ? prev : next[0]?.id ?? null));
     } catch (e: unknown) {
       // 조회 실패를 '채팅방 없음'으로 오인하지 않도록 별도 에러 상태로 분리
-      setRooms([]);
-      setRoomsError(e instanceof Error ? e.message : '채팅방 목록을 불러오지 못했습니다');
+      setOptions([]);
+      setSelectedRoomId(null);
+      setRoomsError(e instanceof Error ? e.message : '채팅방 목록을 불러오지 못했어요');
     }
+  }, []);
+
+  const openApply = useCallback((): void => {
+    setShowApply(true);
+    void loadRooms();
+  }, [loadRooms]);
+
+  // 상단 헤더의 "클래스 신청하기" 버튼 이벤트 리스너
+  useEffect(() => {
+    const handler = (): void => { openApply(); };
+    window.addEventListener('open-session-request', handler);
+    return () => window.removeEventListener('open-session-request', handler);
+  }, [openApply]);
+
+  // 홈의 신청 진입(state.openApply)
+  const openedFromHomeRef = useRef(false);
+  useEffect(() => {
+    const state = location.state as { openApply?: boolean } | null;
+    if (!state?.openApply || openedFromHomeRef.current) return;
+    openedFromHomeRef.current = true;
+    openApply();
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate, openApply]);
+
+  const showToast = (message: string): void => {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 3000);
   };
 
-  // 세션 신청 전송
-  const handleSendRequest = async (roomId: string): Promise<void> => {
-    setRequesting(true);
+  const handleSendRequest = async (): Promise<void> => {
+    if (!selectedRoomId) return;
+    setSending(true);
     try {
-      await sendChatMessage(roomId, {
-        content: '세션 신청합니다',
+      await sendChatMessage(selectedRoomId, {
+        content: '클래스 신청합니다',
         type: 'system',
         event_type: 'session_request',
       });
-      setToast('세션 신청이 완료되었습니다');
-      setShowRequestModal(false);
-      setTimeout(() => setToast(null), 3000);
+      setShowApply(false);
+      showToast('클래스 신청을 보냈어요');
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '세션 신청에 실패했습니다';
-      setToast(message);
-      setTimeout(() => setToast(null), 3000);
+      showToast(e instanceof Error ? e.message : '클래스 신청을 보내지 못했어요');
     } finally {
-      setRequesting(false);
+      setSending(false);
     }
   };
 
-  // 선택일 표시 포맷
-  const selectedDateLabel = (() => {
-    const d = selectedDate;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())} (${WEEKDAY[d.getDay()]})`;
-  })();
-
-  const onShift = (dir: 1 | -1): void => {
-    if (viewMode === 'daily') shiftDay(dir);
-    else if (viewMode === 'weekly') shiftWeek(dir);
-  };
-
-  // --- 렌더링 헬퍼: 세션 리스트 (공통) ---
-  const renderSessionList = () => {
-    if (loading) {
-      return (
-        <div className="py-8 text-center text-sm text-[#6F6F6F]">
-          불러오는 중...
-        </div>
-      );
-    }
-    if (error) {
-      return (
-        <div className="py-8 text-center text-sm text-red-500">{error}</div>
-      );
-    }
-    if (todaySessions.length === 0) {
-      return (
-        <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9B9B9B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-          <p className="text-sm font-medium text-[#1F1F1F] mb-1">아직 예정된 세션이 없어요</p>
-          <p className="text-xs text-[#6F6F6F]">상담사가 세션을 등록하면 여기에 표시됩니다</p>
-        </div>
-      );
-    }
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {todaySessions.map((s) => (
-          <SessionCard
-            key={s.id}
-            session={s}
-            onClick={() => navigate(`/app/sessions/${s.id}`)}
-            counselorName={counselorNameMap[s.host_id] || undefined}
-          />
-        ))}
-      </div>
-    );
-  };
+  const withHost = useMemo<SessionWithHost[]>(
+    () => sessions.map((s) => ({ ...s, host_name: (s as SessionWithHost).host_name ?? counselorNameMap[s.host_id] ?? null })),
+    [sessions, counselorNameMap],
+  );
+  const sections = useMemo(() => buildClassSections(withHost, invitedSessionIds), [withHost, invitedSessionIds]);
 
   return (
-    <div className="px-4 md:px-8 py-4 md:py-6">
+    <div className="sh-scope px-4 md:px-8 py-4 md:py-6">
       {/* 토스트 */}
       {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#1F1F1F] text-white text-sm px-5 py-2.5 rounded-full shadow-lg animate-fade-in">
+        <div role="status" className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#1F1F1F] text-white text-sm px-5 py-2.5 rounded-full shadow-lg animate-fade-in">
           {toast}
         </div>
       )}
 
-      {/* 초대된 클래스 — 신규 세션 초대를 강조해 확인 유도 */}
-      {!loading && !error && invitedSessions.length > 0 && (
-        <section className="mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[18px] font-bold text-[#1F1F1F] tracking-tight">초대된 클래스</h2>
-            <span className="font-mono text-[12px] text-[#6F6F6F]">{invitedSessions.length}건</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {invitedSessions.map((s) => (
-              <InvitedSessionCard
-                key={s.id}
-                session={s}
-                counselorName={counselorNameMap[s.host_id] || undefined}
-                onConfirm={() => handleConfirmInvite(s.id)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {!loading && !error && instantSessions.length > 0 && (
-        <section className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 mb-5">
-          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 mb-3">
-            <h2 className="text-sm font-bold text-[#1F1F1F]">즉시 클래스</h2>
-            <p className="text-xs text-[#6F6F6F]">
-              시작 대기 {readyInstantCount}건 · 진행 중 {inProgressInstantCount}건
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {instantSessions.map((session) => (
-              <SessionCard
-                key={session.id}
-                session={session}
-                onClick={() => navigate(`/app/sessions/${session.id}`)}
-                counselorName={counselorNameMap[session.host_id] || undefined}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ===== 모바일: MonthCalendar + 세션 리스트 ===== */}
-      <div className="md:hidden space-y-4">
-        <MonthCalendar
-          sessions={sessions}
-          currentDate={currentDate}
-          selectedDate={selectedDate}
-          onSelectDate={handleCalendarSelect}
-          onShiftMonth={shiftMonth}
-        />
-
-        <h2 className="text-sm font-semibold text-[#1F1F1F] mb-2">
-          {selectedDateLabel}
-        </h2>
-        {renderSessionList()}
+      <div className="sh-col">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-[#6F6F6F]">불러오는 중...</div>
+        ) : error ? (
+          <div role="alert" className="py-8 text-center text-sm text-red-500">{error}</div>
+        ) : (
+          <MemberClassListView
+            sections={sections}
+            onOpen={(id) => navigate(`/app/sessions/${id}`)}
+            onEnter={(id) => navigate(`/app/sessions/${id}`)}
+            onConfirmInvite={handleConfirmInvite}
+          />
+        )}
       </div>
 
-      {/* ===== 데스크톱: 좌측 캘린더+목록 / 우측 타임라인 (50:50) ===== */}
-      <div className="hidden md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] gap-6 min-h-0">
-        {/* 좌측: 캘린더 + 선택일 세션 목록 */}
-        <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
-          <MonthCalendar
-            sessions={sessions}
-            currentDate={currentDate}
-            selectedDate={selectedDate}
-            onSelectDate={(d) => { setSelectedDate(d); setViewMode('daily'); }}
-            onShiftMonth={shiftMonth}
-          />
-          {/* 선택일 세션 리스트 */}
-          <div className="bg-white border border-[#EFEFEF] rounded-[20px] p-4 space-y-2">
-            <h3 className="text-sm font-semibold text-[#1F1F1F]">
-              {selectedDate.getMonth() + 1}월 {selectedDate.getDate()}일 세션
-            </h3>
-            {(() => {
-              const daySessions = sessions.filter((s) => {
-                if (!s.scheduled_at) return false;
-                const d = new Date(s.scheduled_at);
-                return d.getFullYear() === selectedDate.getFullYear() && d.getMonth() === selectedDate.getMonth() && d.getDate() === selectedDate.getDate();
-              }).sort((a, b) => new Date(a.scheduled_at ?? 0).getTime() - new Date(b.scheduled_at ?? 0).getTime());
-              if (daySessions.length === 0) return <p className="text-xs text-[#6F6F6F] py-4 text-center">예정된 세션이 없습니다</p>;
-              return daySessions.map((s) => (
-                <SessionCard
-                  key={s.id}
-                  session={s}
-                  onClick={() => navigate(`/app/sessions/${s.id}`)}
-                  counselorName={counselorNameMap[s.host_id] || undefined}
-                />
-              ));
-            })()}
-          </div>
-        </div>
+      <LegacyCalendarBlock sessions={sessions} loading={loading} error={error} counselorNameMap={counselorNameMap} />
 
-        {/* 우측: 타임라인 (일간/주간 토글 + CalendarView) */}
-        <div className="flex flex-col min-h-0 overflow-y-auto">
-          <div className="flex items-center justify-between shrink-0 mb-3">
-            <div className="inline-flex rounded-full bg-[#F2F3F8] p-1">
-              {(['daily', 'weekly'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setViewMode(m)}
-                  className={`px-4 py-1.5 text-sm rounded-full transition-colors ${
-                    viewMode === m ? 'bg-[#5F0080] text-white font-bold' : 'text-[#1F1F1F] font-medium'
-                  }`}
-                >
-                  {m === 'daily' ? '일간' : '주간'}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onShift(-1)}
-                className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-                aria-label="이전"
-              >
-                ‹
-              </button>
-              <span className="text-sm font-mono text-[#1F1F1F] min-w-[140px] text-center">
-                {viewMode === 'daily' ? formatDay(currentDate) : viewMode === 'weekly' ? formatWeekRange(currentDate) : ''}
-              </span>
-              <button
-                type="button"
-                onClick={() => onShift(1)}
-                className="w-11 h-11 rounded-full bg-[#F2F3F8] hover:bg-[#E6E7EE] text-[#1F1F1F] flex items-center justify-center"
-                aria-label="다음"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-
-          {loading && <p className="text-[#6F6F6F]">불러오는 중...</p>}
-          {error && <p className="text-[#B3261E]">{error}</p>}
-
-          {!loading && !error && viewMode === 'daily' && (
-            <CalendarView sessions={sessions} currentDate={currentDate} mode="daily" />
-          )}
-          {!loading && !error && viewMode === 'weekly' && (
-            <CalendarView sessions={sessions} currentDate={currentDate} mode="weekly" />
-          )}
-        </div>
-      </div>
-
-      {/* 세션 신청 모달 */}
-      {showRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowRequestModal(false)}
-          />
-          <div
-            ref={requestModalRef}
-            tabIndex={-1}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="session-request-title"
-            className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-[#EFEFEF]"
-          >
-            <h2 id="session-request-title" className="text-lg font-bold text-[#1F1F1F] mb-2">세션 신청하기</h2>
-            <p className="text-sm text-[#6F6F6F] mb-4">
-              상담사에게 세션 신청 메시지를 보냅니다.
-            </p>
-
-            {roomsError ? (
-              <div className="py-4 text-center" role="alert">
-                <p className="text-sm text-red-600 mb-3">{roomsError}</p>
-                <button
-                  type="button"
-                  onClick={() => void handleOpenRequest()}
-                  className="rounded-xl px-4 py-2 text-sm font-semibold bg-white text-[#1F1F1F] border border-[#EFEFEF] hover:bg-[#F5F5F5] transition-colors"
-                >
-                  다시 시도
-                </button>
-              </div>
-            ) : rooms.length === 0 ? (
-              <p className="text-sm text-[#6F6F6F] py-4 text-center">
-                연결된 상담사 채팅방이 없습니다.
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {rooms.map((room) => {
-                  const counselor = counselors.find(
-                    (c) => c.name === (room.peer_name || room.name),
-                  );
-                  const counselorId = counselor?.id;
-                  const color = counselorId
-                    ? counselorColorMap[counselorId]
-                    : COUNSELOR_COLORS[0];
-
-                  return (
-                    <button
-                      key={room.id}
-                      type="button"
-                      onClick={() => void handleSendRequest(room.id)}
-                      disabled={requesting}
-                      className="w-full text-left flex items-center gap-3 p-3 rounded-xl hover:bg-[#F5EDFC] transition-colors disabled:opacity-50"
-                    >
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="text-sm font-medium text-[#1F1F1F]">
-                        {room.peer_name || room.name || '채팅방'}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowRequestModal(false)}
-              className="w-full mt-4 rounded-xl bg-[#F2F3F8] text-[#1F1F1F] text-sm font-medium py-2.5 active:scale-[0.98] transition-transform"
-            >
-              취소
-            </button>
-          </div>
-        </div>
-      )}
+      <ApplySheet
+        open={showApply}
+        options={options}
+        selectedId={selectedRoomId}
+        onSelect={setSelectedRoomId}
+        onSend={() => void handleSendRequest()}
+        onClose={() => setShowApply(false)}
+        sending={sending}
+        loadError={roomsError}
+        onRetry={() => void loadRooms()}
+      />
     </div>
   );
 }
