@@ -28,6 +28,9 @@ from app.schemas.session import (
     MemberLiveKitTokenResponse,
     ReportChoiceRequest,
     ReportChoiceResponse,
+    ResearchConsentRequest,
+    ResearchConsentResponse,
+    ResearchConsentSummaryResponse,
     WaitlistCancelResponse,
     SessionChatEnabledRequest,
     SessionChatRoomResponse,
@@ -53,6 +56,7 @@ from app.services import (
     eeg_raw_service,
     eeg_rollup_service,
     report_email_service,
+    research_consent_service,
     session_invite_service,
     session_service,
 )
@@ -426,6 +430,55 @@ def enter_invited_session(
 ):
     """초대받은 로그인 회원의 편의 입장 — 초대 행이 있을 때만(없으면 403 + 코드 입장 안내)."""
     return session_service.enter_session_as_invited(session_id, current_user["id"], db)
+
+
+@router.get("/{session_id}/research-consent", response_model=ResearchConsentResponse)
+def get_research_consent(
+    session_id: str,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B11): 내 연구 동의 상태 — 본인(입장 자격/로그인)만. 기록이 없으면 미동의."""
+    return research_consent_service.get_own_consent(
+        session_id,
+        db,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.put("/{session_id}/research-consent", response_model=ResearchConsentResponse)
+def set_research_consent(
+    session_id: str,
+    payload: ResearchConsentRequest,
+    x_entry_credential: EntryCredential = None,
+    current_user: dict | None = Depends(get_current_user_optional),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B11): 연구 목적 데이터 활용 동의 — 본인만, 종료·취소 409, 멱등, 종료 전 변경 가능.
+
+    동의 여부는 입장·업로드·리포트 생성의 게이트가 아니다. 철회(종료 후)는 플랫폼 관리자 경로만.
+    """
+    return research_consent_service.set_own_consent(
+        session_id,
+        payload.consented,
+        db,
+        notice_version=payload.notice_version,
+        participant_id=payload.participant_id,
+        entry_credential=x_entry_credential,
+        current_user_id=current_user["id"] if current_user else None,
+    )
+
+
+@router.get("/{session_id}/research-consent/summary", response_model=ResearchConsentSummaryResponse)
+def research_consent_summary(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """상담사용 익명 집계 — 연구 동의 인원 수만(개별 상태·가명 ID 비노출). 호스트 전용."""
+    return research_consent_service.anonymous_summary(session_id, current_user["id"], db)
 
 
 @router.post("/{session_id}/waitlist/cancel", response_model=WaitlistCancelResponse)

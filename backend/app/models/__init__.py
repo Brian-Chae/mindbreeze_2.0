@@ -104,3 +104,7 @@ __all__ += ["DataExportJob", "DataExportAudit"]
 # SDD-190: 앱 푸시 디바이스 토큰
 from app.models.device_token import DeviceToken
 __all__ += ["DeviceToken"]
+
+# SDD-209 B11: 연구 목적 데이터 활용 동의
+from app.models.research import ResearchConsent, ResearchConsentEvent, ResearchWithdrawalRequest
+__all__ += ["ResearchConsent", "ResearchConsentEvent", "ResearchWithdrawalRequest"]

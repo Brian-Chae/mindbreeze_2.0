@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import date
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Response, status
@@ -288,6 +289,44 @@ def delete_user(
 class OriginalDeleteRequest(BaseModel):
     reason: str = Field(..., min_length=1, max_length=500)
     scopes: list[Literal["eeg_raw", "audio", "video", "transcript"]] | None = None
+
+
+class ResearchWithdrawRequest(BaseModel):
+    """요청자가 제시한 이름+생년월일로 가명 ID 를 재계산해 대조한다(값은 저장·로깅하지 않는다)."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    birth_date: date
+    reason: str = Field(..., min_length=1, max_length=500)
+
+
+@router.post("/research-consents/withdraw")
+def withdraw_research_consent(
+    payload: ResearchWithdrawRequest,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """SDD-209(B11): 연구 동의 철회 — 플랫폼 관리자 전용, 사유 필수, 이력·요청 레코드 기록."""
+    from app.services import research_consent_service
+
+    return research_consent_service.admin_withdraw(
+        payload.name, payload.birth_date, payload.reason, admin.id, db
+    )
+
+
+@router.get("/sessions/{session_id}/research-consents")
+def list_research_consents(
+    session_id: str,
+    admin: User = Depends(require_platform_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """SDD-209(B11): 클래스의 연구 동의 현황 — 플랫폼 관리자 전용(이름·생년월일 원문 없음)."""
+    from app.services import research_consent_service
+
+    try:
+        uuid.UUID(session_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="클래스를 찾을 수 없습니다")
+    return research_consent_service.admin_list_consents(session_id, db)
 
 
 @router.post("/sessions/{session_id}/originals/delete")

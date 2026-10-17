@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 2880  # 48시간
     # SDD-209(B5a): 클래스 입장 자격(로그인 없는 참가자 소유 증명) 만료 시간
     entry_credential_ttl_hours: int = 24
+
+    # SDD-209(B11): 연구 가명 ID(HMAC-SHA256) 키 — 서버 .env 전용(RESEARCH_ID_KEY_V1). 값은 어떤 로그·응답·번들·
+    # 저장소에도 싣지 않는다. 연구 DB(Spark)에는 보내지 않는다. 분실하면 이후 동일인 매핑이 끊기므로 오프라인 백업 필수.
+    # 키 교체는 버전 번호(research_id_key_version)를 올리고 RESEARCH_ID_KEY_V{n} 을 추가하는 방식(정기 교체 안 함).
+    research_id_key_v1: str = ""
+    research_id_key_version: int = 1
     refresh_token_expire_days: int = 14
 
     # Resend Email

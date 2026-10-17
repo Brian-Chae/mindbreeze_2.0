@@ -363,6 +363,34 @@ class InviteRemindResponse(BaseModel):
 SessionResponse.model_rebuild()
 
 
+class ResearchConsentRequest(BaseModel):
+    """SDD-209(B11): 연구 목적 데이터 활용 동의 — 기본 미동의. 리포트 반영 선택과 독립."""
+
+    consented: bool
+    # 동의 화면에 표시한 고지 문구 버전(생략하면 서버 기본 버전을 기록)
+    notice_version: str | None = Field(None, max_length=20)
+    # 선택 — 지정하면 본인 참여자와 같아야 한다(대리 요청 403)
+    participant_id: str | None = None
+
+
+class ResearchConsentResponse(BaseModel):
+    participant_id: str
+    consented: bool = False
+    changed: bool = False
+    notice_version: str | None = None
+    consented_at: datetime | None = None
+    # not_applicable | pending | blocked_key_missing | blocked_identity_missing | blocked_withdrawn | withdrawn | exported | acked
+    export_state: str = "not_applicable"
+    export_block_reason: str | None = None
+
+
+class ResearchConsentSummaryResponse(BaseModel):
+    """상담사용 익명 집계 — 인원 수만(개별 상태·가명 ID 없음)."""
+
+    consented: int
+    total: int
+
+
 class WaitlistCancelResponse(BaseModel):
     """SDD-209(B6): 대기 취소 결과 — 멱등 재요청은 changed=False."""
 
