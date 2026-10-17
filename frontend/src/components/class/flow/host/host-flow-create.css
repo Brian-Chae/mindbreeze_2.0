@@ -1,0 +1,113 @@
+/* SDD-209 H1~H3 — 상담사 만들기 마법사·생성 완료 스타일. 근거: designs/class-flow-redesign/host-a.html (.w- → .fh-) */
+.pz-root .ic.s16 {width: 16px; height: 16px;}
+.pz-root .ic.s20 {width: 20px; height: 20px;}
+.pz-root .fh-logo {fill: currentColor; stroke: none;}
+.pz-root h1, .pz-root h2, .pz-root h3, .pz-root p {margin: 0;}
+.pz-root input {font: inherit;}
+.pz-root button:focus-visible, .pz-root input:focus-visible {outline: 2px solid var(--mb-pale); outline-offset: 2px;}
+.pz-root .fh-tight {white-space: nowrap;}
+.pz-root .fh-wiz .fl-top-title {font-size: var(--fs-15);}
+.pz-root .fh-wiz .fl-label {line-height: 20px;}
+.pz-root .fh-wiz .fl-steps {flex: none;}
+.pz-root .fh-card {padding: 16px; display: flex; flex-direction: column; gap: 16px;}
+@media (min-width: 600px) {
+.pz-root .fh-card {padding: 24px;}
+}
+.pz-root .fh-form {display: flex; flex-direction: column; gap: 16px;}
+.pz-root .fh-group {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-info {display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid);}
+.pz-root .fh-info .ic {flex: none;}
+.pz-root .fl-seg.fh-flex > button {display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; min-width: 0; white-space: nowrap;}
+.pz-root .fl-seg.fh-flex > button.on {border-color: var(--mb-lavender);}
+.pz-root .fl-seg.fh-types {grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr));}
+.pz-root .fl-seg.fh-c4 {grid-auto-flow: row; grid-template-columns: repeat(4, minmax(0, 1fr));}
+@media (max-width: 699px) {
+.pz-root .fl-seg.fh-types {grid-template-columns: repeat(2, minmax(0, 1fr));}
+}
+.pz-root .fh-inwrap {position: relative;}
+.pz-root .fh-inwrap > .ic {position: absolute; left: 16px; top: 16px; color: var(--tx-mid); pointer-events: none;}
+.pz-root .fh-inwrap > .fl-input {padding-left: 48px;}
+.pz-root .fh-tog {width: 100%; text-align: left; min-height: 64px;}
+.pz-root .fh-tog .tx {flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-tog .tx b {font-size: var(--fs-15); font-weight: 700;}
+.pz-root .fh-tog .tx span {font-size: var(--fs-13); color: var(--tx-mid);}
+.pz-root .fh-tog .sw {width: 48px; height: 28px; border-radius: var(--r-pill); background: rgba(255,255,255,0.24); position: relative; flex: none;}
+.pz-root .fh-tog .sw::after {content: ""; position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: 50%; background: #fff;}
+.pz-root .fh-tog[aria-checked="true"] .sw {background: var(--mb-lavender);}
+.pz-root .fh-tog[aria-checked="true"] .sw::after {left: 24px;}
+.pz-root .fh-tog[disabled] {opacity: 0.4;}
+.pz-root .fh-static {min-height: 64px; border-style: dashed;}
+.pz-root .fh-static .tx {flex: 1; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5;}
+.pz-root .fh-when3 {display: grid; grid-template-columns: 1fr 1fr; gap: 16px;}
+.pz-root .fh-when3 > .fh-group:first-child {grid-column: 1 / -1;}
+@media (min-width: 700px) {
+.pz-root .fh-when3 {grid-template-columns: 1.8fr 1fr 1fr;}
+.pz-root .fh-when3 > .fh-group:first-child {grid-column: auto;}
+}
+.pz-root .fh-stepper.sm {grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 0; padding: 0;}
+.pz-root .fh-durrow {display: grid; grid-template-columns: 1fr; gap: 8px;}
+@media (min-width: 700px) {
+.pz-root .fh-durrow {grid-template-columns: 216px 1fr; gap: 16px;}
+}
+.pz-root .fl-seg.fh-c5 {grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr));}
+.pz-root .fh-2col {display: grid; grid-template-columns: 1fr; gap: 16px;}
+@media (min-width: 700px) {
+.pz-root .fh-2col {grid-template-columns: 1fr 1fr;}
+}
+.pz-root .fh-stepper {display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 56px; padding: 0 8px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border);}
+.pz-root .fh-stepper b {text-align: center; font-size: var(--fs-15); font-weight: 700; white-space: nowrap;}
+.pz-root .fh-stepper button {width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; background: rgba(255,255,255,0.1);}
+.pz-root .fh-stepper button[disabled] {opacity: 0.4;}
+.pz-root .fh-wiz .fl-body.fh-fill .fl-col {flex: 1; min-height: 0; max-height: 640px;}
+.pz-root .fh-wiz .fh-fill .fh-card {flex: 1; min-height: 0;}
+.pz-root .fh-pchips {display: flex; flex-wrap: wrap; gap: 8px; min-height: 44px; align-items: center;}
+.pz-root .fh-pchips .hint {font-size: var(--fs-13); color: var(--tx-lo);}
+.pz-root .fh-pchip {display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); background: var(--mb-purple); border: 1px solid var(--mb-lavender); font-size: var(--fs-15); font-weight: 600;}
+.pz-root .fh-count {display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px;}
+.pz-root .fh-count span {font-size: var(--fs-13); color: var(--tx-mid);}
+.pz-root .fh-count b {color: var(--tx-hi); font-size: var(--fs-15);}
+.pz-root .fh-count .fl-btn {min-height: 44px; padding: 0 16px; font-size: var(--fs-13);}
+.pz-root .fh-plist {flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-prow {display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); width: 100%; text-align: left; flex: none;}
+.pz-root .fh-prow[disabled] {opacity: 0.4;}
+.pz-root .fh-prow .av {width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center;}
+.pz-root .fh-prow .nm {font-size: var(--fs-15); font-weight: 700;}
+.pz-root .fh-prow .em {font-size: var(--fs-13); color: var(--tx-mid); margin-top: 8px;}
+.pz-root .fh-prow .ck {width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--sheet-border); display: grid; place-items: center;}
+.pz-root .fh-prow.on {border-color: var(--mb-lavender);}
+.pz-root .fh-prow.on .ck {background: var(--mb-purple); border-color: var(--mb-lavender);}
+.pz-root .fh-prow:not(.on) .ck .ic {display: none;}
+.pz-root .fh-prow .ck .ic {width: 20px; height: 20px;}
+.pz-root .fh-sumrow .tx {flex: 1; min-width: 0; font-size: var(--fs-15); line-height: 1.5; padding: 8px 0;}
+.pz-root .fh-sumrow > .ic {flex: none; color: var(--mb-pale);}
+.pz-root .fh-edit {width: 44px; height: 44px; border-radius: var(--r-pill); display: grid; place-items: center; flex: none; color: var(--tx-mid);}
+.pz-root .fh-ok {width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: rgba(125,227,200,0.16); border: 1px solid rgba(125,227,200,0.5); color: var(--ok); align-self: center;}
+.pz-root .fh-invcard {gap: 16px;}
+.pz-root .fh-inv {display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 64px; padding: 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border);}
+.pz-root .fh-inv.fail {border: 1px dashed var(--warn); background: var(--warn-bg);}
+.pz-root .fh-inv .av {width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); font-weight: 700; display: grid; place-items: center;}
+.pz-root .fh-inv .nm {font-size: var(--fs-15); font-weight: 700;}
+.pz-root .fh-inv .st {margin-top: 8px; display: flex;}
+.pz-root .fh-inv .fl-btn {min-height: 44px; padding: 0 16px; font-size: var(--fs-13); white-space: nowrap;}
+.pz-root .fh-invcard .fl-h2 {text-align: center;}
+.pz-root .fh-invlist {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-ghostrow {display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;}
+.pz-root .fh-ghostrow .fl-btn {padding: 0 8px; font-size: var(--fs-13); white-space: nowrap;}
+.pz-root .fh-center {text-align: center; align-items: center;}
+.pz-root .fh-static .fh-two {display: flex; flex-direction: column; gap: 8px;}
+.pz-root .fh-static .fh-two b {font-size: var(--fs-15); font-weight: 700; color: var(--tx-hi);}
+.pz-root .fh-emailin {display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center;}
+.pz-root .fh-emailin .fl-btn {min-height: 52px;}
+.pz-root .fh-erow {display: grid; grid-template-columns: 40px minmax(0, 1fr) 44px; gap: 16px; align-items: center; min-height: 64px; padding: 8px 8px 8px 16px; border-radius: var(--r-card); background: rgba(255,255,255,0.08); border: 1px solid var(--sheet-border); flex: none;}
+.pz-root .fh-erow .av {width: 40px; height: 40px; border-radius: var(--r-pill); background: rgba(255,255,255,0.14); display: grid; place-items: center;}
+.pz-root .fh-erow .em {font-size: var(--fs-15); font-weight: 600; min-width: 0; overflow-wrap: anywhere;}
+.pz-root .fh-codecard {gap: 8px; flex: none;}
+.pz-root .fh-coderow {display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center;}
+.pz-root .fh-codebig {font-size: 40px; line-height: 48px; font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums;}
+.pz-root .fh-codecard .fh-note {color: var(--tx-mid);}
+.pz-root .fh-codeval {font-size: var(--fs-18); font-weight: 800; letter-spacing: 8px; font-variant-numeric: tabular-nums;}
+.pz-root .fh-inv .sub {margin-top: 8px; font-size: var(--fs-13); color: var(--tx-mid); line-height: 1.5;}
+.pz-root .fh-inv .sub.bad {color: var(--warn);}
+.pz-root .fh-inv .av svg {width: 20px; height: 20px;}
+.pz-root .fh-wiz .fh-fill .fh-codecard {flex: none;}
+.pz-root .fh-wiz .fh-fill .fh-invcard {flex: 1; min-height: 0;}
