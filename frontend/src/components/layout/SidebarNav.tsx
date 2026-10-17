@@ -289,6 +289,15 @@ export default function SidebarNav({
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={() => void handleLogout()}
+        className="flex items-center gap-3 px-3.5 py-3 mt-2 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
+      >
+        <StrokeIcon d={ICONS.logout} />
+        로그아웃
+      </button>
+
       {/* 서버 연결 상태 */}
       <div className="flex items-center gap-2 px-1 py-2">
         <span
@@ -300,15 +309,6 @@ export default function SidebarNav({
           서버연결: {wsConnected ? '양호' : '끊김'}
         </span>
       </div>
-
-      <button
-        type="button"
-        onClick={() => void handleLogout()}
-        className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-[15px] text-[#C0392B] font-medium hover:bg-red-50 transition-colors w-full text-left"
-      >
-        <StrokeIcon d={ICONS.logout} />
-        로그아웃
-      </button>
     </div>
   );
 }

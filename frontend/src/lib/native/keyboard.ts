@@ -12,7 +12,7 @@ export async function initNativeKeyboard(): Promise<void> {
   try {
     // 웹뷰 프레임 자체를 키보드 높이만큼 줄인다(iOS). Android 는 adjustResize 로 동일하게 동작.
     await Keyboard.setResizeMode({ mode: KeyboardResize.Native });
-    await Keyboard.setScroll({ isDisabled: true });
+    // setScroll({ isDisabled: true })는 iOS 웹뷰 전체 스크롤을 꺼서 일반 페이지(대기실 등)가 스크롤되지 않는다 — 사용하지 않는다.
     await Keyboard.addListener('keyboardDidShow', () => {
       // 레이아웃이 줄어든 뒤 입력 중인 요소를 보이게 하고, 대화 목록은 최신으로 내린다.
       window.dispatchEvent(new CustomEvent(KEYBOARD_EVENT));
