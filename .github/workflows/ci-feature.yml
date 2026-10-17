@@ -155,3 +155,12 @@ jobs:
           assert len(rows) == 1, rows
           print("alembic_version:", rows[0][0])
           PY
+
+      - name: PG 제약·마이그레이션 결과 테스트 (pg 마커)
+        # 루트 conftest(SQLite 전용, fakeredis 등)를 불러오지 않도록 --confcutdir 로 tests/pg 만 쓴다.
+        # PG_SMOKE=1 + 로컬 PostgreSQL DATABASE_URL 일 때만 실행되며 기본 `pytest -q` 에서는 skip 된다.
+        env:
+          PG_SMOKE: '1'
+        run: |
+          pip install "$(grep -E '^pytest==' requirements.txt)"
+          pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider
