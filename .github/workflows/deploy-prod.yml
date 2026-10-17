@@ -1,0 +1,169 @@
+# ─────────────────────────────────────────
+# MIND BREEZE 2.0 — 운영 배포 · SDD-210 T-5
+# 수동 실행(workflow_dispatch)만 허용. release-build 로 만든 **같은 산출물**을 설치한다(서버에서 재빌드 없음).
+#
+# 승인 게이트: job 에 `environment: production` — GitHub 환경의 Required reviewers(=Brian)가 승인하기 전에는
+#   이 job 의 어떤 단계도(AWS 자격 취득 포함) 실행되지 않는다. OIDC 역할 신뢰 정책도 environment:production 만 허용하도록
+#   T-7 에서 구성한다(승인 없이는 역할을 맡을 수 없음).
+# 서버 설정 파일을 sed 로 고치지 않는다. 비밀값은 GitHub 에 없고 서버가 SSM 에서 읽는다(deploy/render_env.py).
+#
+# 흐름: 입력 검증 → (승인) → OIDC → MANIFEST 확인(파괴적 마이그레이션 게이트) → SSM 설치(마이그레이션 → 원자 전환 → 헬스,
+#       실패 시 서버가 자동 복귀) → 공개 스모크 → 관찰 → 성공 확정. 설치 이후 단계가 실패하면 직전 릴리스로 롤백한다.
+#
+# 필요 설정 (T-7/T-8 완료 후 채움 — 비어 있으면 첫 단계에서 즉시 중단):
+#   Repository/Environment variables:
+#     AWS_DEPLOY_ROLE_ARN = <PLACEHOLDER: arn:aws:iam::187768779388:role/… OIDC 배포 역할(environment:production 한정)>
+#     PROD_INSTANCE_ID    = <PLACEHOLDER: i-… mindbreeze-prod 인스턴스 ID>
+#     RELEASE_BUCKET      = <PLACEHOLDER: mindbreeze-prod-releases>
+#     (선택) PROD_WEB_HOST / PROD_API_HOST — 기본 mindbreeze.looxidlabs.com / api.mindbreeze.looxidlabs.com
+#   GitHub Environment: production (Required reviewers = Brian, 본인 승인 방지 설정은 Brian 이 결정)
+# ─────────────────────────────────────────
+
+name: Deploy Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: "릴리스 ID (release-build 요약의 값, 예: 20261017-020000-abcdef0)"
+        required: true
+      reason:
+        description: "배포 사유 (실행 기록에 남음)"
+        required: true
+      confirm_destructive:
+        description: "파괴적 마이그레이션 포함 릴리스 배포를 확인함 (MANIFEST 에 경고가 있을 때만 필요)"
+        type: boolean
+        default: false
+      observe_minutes:
+        description: "배포 후 관찰 시간(분). 이 시간 동안 헬스 이상이 없어야 성공 확정"
+        default: "5"
+
+# 운영 배포·롤백은 항상 한 번에 하나(동시 실행 대기, 취소 안 함)
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROD_WEB_HOST: ${{ vars.PROD_WEB_HOST || 'mindbreeze.looxidlabs.com' }}
+  PROD_API_HOST: ${{ vars.PROD_API_HOST || 'api.mindbreeze.looxidlabs.com' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production        # ← Brian 승인 게이트 (D4)
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 입력·설정 검증
+        env:
+          RID: ${{ github.event.inputs.release_id }}
+          REASON: ${{ github.event.inputs.reason }}
+          OBS: ${{ github.event.inputs.observe_minutes }}
+          ROLE: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          IID: ${{ vars.PROD_INSTANCE_ID }}
+          BUCKET: ${{ vars.RELEASE_BUCKET }}
+        run: |
+          [[ "$RID" =~ ^[0-9]{8}-[0-9]{6}-[0-9a-f]{7}$ ]] || { echo "::error::release_id 형식 오류"; exit 1; }
+          [[ "$OBS" =~ ^[0-9]{1,3}$ ]] || { echo "::error::observe_minutes 는 숫자"; exit 1; }
+          [ -n "$REASON" ] || { echo "::error::reason 필수"; exit 1; }
+          for v in ROLE IID BUCKET; do
+            if [ -z "${!v}" ]; then echo "::error::변수 $v 미설정 — T-7/T-8 완료 후 설정(placeholder 상태)"; exit 1; fi
+          done
+          {
+            echo "## 운영 배포 요청"
+            echo "- 릴리스: \`$RID\`"
+            echo "- 사유: $REASON"
+            echo "- 실행자: ${{ github.actor }} / run #${{ github.run_number }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: AWS 자격 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-1
+          role-session-name: deploy-prod-${{ github.run_id }}
+
+      - name: 릴리스 MANIFEST 확인
+        id: manifest
+        env:
+          RID: ${{ github.event.inputs.release_id }}
+          BUCKET: ${{ vars.RELEASE_BUCKET }}
+          CONFIRM: ${{ github.event.inputs.confirm_destructive }}
+        run: |
+          aws s3 cp "s3://$BUCKET/releases/$RID/MANIFEST.json" MANIFEST.json --only-show-errors
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          m = json.load(open("MANIFEST.json"))
+          print(f"sha={m['git_sha']}")
+          print(f"destructive={'true' if m.get('destructive_migrations') else 'false'}")
+          PY
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          m = json.load(open("MANIFEST.json"))
+          print(f"- 커밋: `{m['git_sha']}` / 빌드 {m['built_at']} / head {', '.join(m['migration_heads'])}")
+          if m.get("destructive_migrations"):
+              print(f"- ⚠️ 파괴적 마이그레이션 {len(m['migration_warnings'])}건")
+          PY
+          DESTR="$(python3 -c 'import json;print("true" if json.load(open("MANIFEST.json")).get("destructive_migrations") else "false")')"
+          if [ "$DESTR" = "true" ] && [ "$CONFIRM" != "true" ]; then
+            echo "::error::파괴적 마이그레이션이 포함된 릴리스입니다. 내용을 확인한 뒤 confirm_destructive=true 로 다시 실행하세요."
+            exit 1
+          fi
+
+      - name: 현재 운영 릴리스 기록
+        run: |
+          bash deploy/ci/ssm-install-cmd.sh status > /tmp/status.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 60 /tmp/status.sh | tee /tmp/status.out
+          grep -E '^(current|previous)=' /tmp/status.out >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: 서버 설치 (마이그레이션 → 원자 전환 → 헬스, 실패 시 서버가 자동 복귀)
+        id: install
+        env:
+          RID: ${{ github.event.inputs.release_id }}
+          BUCKET: ${{ vars.RELEASE_BUCKET }}
+          DESTR: ${{ steps.manifest.outputs.destructive }}
+        run: |
+          ALLOW=""; [ "$DESTR" = "true" ] && ALLOW="allow-destructive"
+          bash deploy/ci/ssm-install-cmd.sh install "$RID" "$BUCKET" $ALLOW > /tmp/install.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 1500 /tmp/install.sh
+
+      - name: 공개 스모크
+        id: smoke
+        run: bash deploy/ci/smoke.sh "$PROD_WEB_HOST" "$PROD_API_HOST"
+
+      - name: 관찰 (연속 실패 3회면 실패)
+        id: observe
+        env:
+          OBS: ${{ github.event.inputs.observe_minutes }}
+        run: |
+          END=$(( $(date +%s) + OBS * 60 )); BAD=0
+          while [ "$(date +%s)" -lt "$END" ]; do
+            if curl -fsS --max-time 10 "https://$PROD_API_HOST/health/ready" >/dev/null; then BAD=0; else BAD=$((BAD + 1)); echo "헬스 실패 $BAD회"; fi
+            [ "$BAD" -ge 3 ] && { echo "::error::관찰 중 헬스 연속 3회 실패"; exit 1; }
+            sleep 15
+          done
+          echo "관찰 ${OBS}분 이상 없음"
+
+      # 설치는 성공했으나 스모크/관찰이 실패 → 직전 릴리스로 롤백 (설치 자체가 실패한 경우는 서버가 이미 복귀했거나 변경이 없다)
+      - name: 롤백 (스모크/관찰 실패 시)
+        if: ${{ failure() && steps.install.outcome == 'success' }}
+        run: |
+          bash deploy/ci/ssm-install-cmd.sh rollback > /tmp/rollback.sh
+          bash deploy/ci/ssm-run.sh "${{ vars.PROD_INSTANCE_ID }}" 300 /tmp/rollback.sh
+          echo "::error::스모크/관찰 실패로 직전 릴리스로 롤백했습니다. 원인 확인 전 재배포 금지." 
+          echo "## ❌ 배포 실패 → 롤백 완료" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 성공 확정
+        if: ${{ success() }}
+        run: |
+          {
+            echo "## ✅ 운영 배포 성공"
+            echo "- 릴리스 \`${{ github.event.inputs.release_id }}\` 가 현재 운영 릴리스입니다."
+            echo "- 롤백이 필요하면 **Rollback Prod** 워크플로를 실행하세요."
+          } >> "$GITHUB_STEP_SUMMARY"

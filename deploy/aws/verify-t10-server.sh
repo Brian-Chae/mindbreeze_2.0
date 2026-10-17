@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# V-1.2(IMDS 토큰 없이 401), V-1.9(인스턴스 역할 자격), userdata 완료·기본 패키지·nginx 비활성 확인
+D="$(dirname "$0")"
+bash "$D/ssm-run.sh" 'echo userdata=$(cat /var/tmp/mb-userdata-done 2>&1); echo imds_no_token=$(curl -s -o /dev/null -w %{http_code} http://169.254.169.254/latest/meta-data/instance-id); T=$(curl -s -X PUT http://169.254.169.254/latest/api/token -H X-aws-ec2-metadata-token-ttl-seconds:60); echo imds_with_token=$(curl -s -o /dev/null -w %{http_code} -H X-aws-ec2-metadata-token:$T http://169.254.169.254/latest/meta-data/instance-id); echo nginx=$(systemctl is-enabled nginx 2>&1) active=$(systemctl is-active nginx 2>&1); echo redis=$(systemctl is-active redis-server); certbot --version; ls /etc/mindbreeze 2>&1 | head -1; df -h / | tail -1; ss -ltn | tail -n +2 | tr -s " " | cut -d" " -f4 | sort | tr "\n" " "'
