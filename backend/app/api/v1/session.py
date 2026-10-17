@@ -22,6 +22,9 @@ from app.schemas.session import (
     EnterVerifyRequest,
     EnterVerifyResponse,
     EntryStateResponse,
+    InviteEmailListResponse,
+    InviteEmailRequest,
+    InviteEmailResponse,
     InviteParticipantRequest,
     InviteRemindRequest,
     InviteRemindResponse,
@@ -57,6 +60,7 @@ from app.services import (
     eeg_rollup_service,
     report_email_service,
     research_consent_service,
+    session_email_invite_service,
     session_invite_service,
     session_service,
 )
@@ -350,6 +354,27 @@ def remind_invitees(
         payload.participant_ids if payload else None,
         db,
     )
+
+
+@router.post("/{session_id}/invite/email", response_model=InviteEmailResponse)
+def invite_by_email(
+    session_id: str,
+    payload: InviteEmailRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B14): 비회원 이메일 초대 — 호스트 전용. 등록 결과와 발송 요청 결과를 분리해 돌려준다(전달 확인 아님)."""
+    return session_email_invite_service.invite_by_email(session_id, current_user["id"], payload.emails, db)
+
+
+@router.get("/{session_id}/invite/email", response_model=InviteEmailListResponse)
+def list_email_invites(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """SDD-209(B14): 이메일 초대 현황(요청 상태·적체 여부) — 호스트 전용."""
+    return session_email_invite_service.list_email_invites(session_id, current_user["id"], db)
 
 
 @router.delete("/{session_id}/participants/{user_id}", response_model=SessionResponse)

@@ -528,3 +528,11 @@ SH1 라이트 키트(`ClassCard`·`StatusChip`·`ShellSheet` 등) → SH2 FM01 �
 - `narrative_cache`(전역 패턴 캐시)·PDF(저장물 없음, 내용 해시 키)는 무효화 대상 아님(B0 확정 그대로). `/video/url`(호스트 원본 재생)과 데이터 내보내기 번들은 원본 열람이므로 변경 없음(리포트 content 의 영상 가용 표시만 제거).
 - 기본 제외이므로 기존 테스트 17건 중 직접 `SessionParticipant` 를 만드는 보조코드는 `report_included=True` 로 명시(테스트 정합).
 - 미해결: 초대만 받고 입장하지 않은 대기열 밖 참가자도 기본 `제외`로 세어져 그룹 상담사 리포트의 공통 기록이 빠질 수 있다 → B9 `entered_at` 도입 후 미입장자 제외 여부를 후속 판단.
+
+### B14 비회원 이메일 초대·리포트 자동 발송 (마이그레이션 `e036a0000048`)
+- 신규 테이블 `session_email_invites`(추가형, 세션 FK CASCADE, `(session_id,email_norm)` 유니크). `POST /sessions/{id}/invite/email`(호스트 전용·최대 50개·형식 검증·요청 내 중복 제거) / `GET /sessions/{id}/invite/email`(현황). 응답은 주소별 `registered`(등록)와 `request`(발송 요청: `queued`/`skipped_pending`/`skipped_cooldown`/`enqueue_failed`/`invalid_email`/`duplicate_in_request`/`limit_exceeded`)를 분리하고 delivered/received 계열 필드는 없다.
+- 상태 `queued → requested(Resend 2xx 접수) | failed`. 전달 확인은 접수 수준(N 확정). 큐에 300초 넘게 머문 건은 `stale=true`("아직 보내지 못했어요" 근거, 워커 미기동 감지) — 이 건은 쿨다운과 무관하게 재요청 가능. 재요청 쿨다운 60초, 같은 행 갱신.
+- 발송은 `report_email_task.py` 의 `@email_app.task("tasks.session_invite_email")`(큐 `email`, 재시도 3회) — 다른 모듈에 두면 unregistered 로 버려지는 기존 함정 회피. 본문: 클래스·시각·**4자리 코드**·`/join` 안내, 코드는 URL 에 싣지 않음.
+- 비회원 개인정보 스크럽용 `scrub_invite_emails()` 를 제공(B12 스위프가 호출). 
+- 리포트 자동 발송(N-3): 기존 "승인 후 자동 발송" 경로가 입장 시 입력한 `report_email` 만으로 이미 동작함을 테스트로 고정(중복 0, 제외자 대상 아님). 발송 실패는 호스트 뷰 참여자 DTO `report_email_status` 로 표시(비호스트 null). OTP 분기는 건드리지 않았다(회원 1탭·구 게스트 신청 경로 유지).
+- 정원 서버 검증(BT79)은 `schemas/session.py` 의 기존 검증을 그대로 두고 테스트로 고정.

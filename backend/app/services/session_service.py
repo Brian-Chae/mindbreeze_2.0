@@ -184,6 +184,8 @@ def _serialize(
                 # SDD-094: 발언권 관리 상태(상담사 UI 손들기 표시/부여 버튼용)
                 "raise_hand": p.raise_hand,
                 "speaking": p.speaking,
+                # SDD-209(B14): 비회원 리포트 메일 발송 결과 — 호스트 뷰 전용(실패를 상담사 화면에 표시)
+                "report_email_status": p.report_email_status if include_participant_pii else None,
             }
             for p in parts
         ],

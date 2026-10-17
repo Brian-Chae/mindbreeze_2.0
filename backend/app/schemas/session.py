@@ -143,6 +143,8 @@ class ParticipantInfo(BaseModel):
     # SDD-094: 발언권 관리 — 손들기/발언권 부여 상태(상담사 UI 표시용)
     raise_hand: bool = False
     speaking: bool = False
+    # SDD-209(B14): 비회원 리포트 메일 발송 결과(호스트 뷰 전용). sent / failed / None(미발송·해당 없음)
+    report_email_status: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -357,6 +359,47 @@ class InviteRemindResponse(BaseModel):
     session_id: str
     cooldown_sec: int
     results: list[InviteRemindResult]
+    summary: dict[str, int]
+
+
+class InviteEmailRequest(BaseModel):
+    """비회원 이메일 초대 — 형식 검증·중복 제거는 서비스가 주소별 결과로 돌려준다."""
+
+    emails: list[str] = Field(min_length=1, max_length=50)
+
+
+class InviteEmailResult(BaseModel):
+    email: str
+    # 등록 여부(새 초대 행 생성). 재요청은 False.
+    registered: bool
+    # 발송 요청 결과: queued / skipped_cooldown / skipped_pending / enqueue_failed / invalid_email /
+    # duplicate_in_request / limit_exceeded — 전달·수신 확인이 아니다.
+    request: str
+    invite_id: str | None = None
+
+
+class InviteEmailResponse(BaseModel):
+    session_id: str
+    cooldown_sec: int
+    results: list[InviteEmailResult]
+    summary: dict[str, int]
+
+
+class InviteEmailItem(BaseModel):
+    invite_id: str
+    email: str | None = None
+    # queued / requested(Resend 접수) / failed
+    status: str
+    stale: bool = False
+    request_count: int = 0
+    queued_at: datetime | None = None
+    requested_at: datetime | None = None
+    pii_scrubbed: bool = False
+
+
+class InviteEmailListResponse(BaseModel):
+    session_id: str
+    invites: list[InviteEmailItem]
     summary: dict[str, int]
 
 

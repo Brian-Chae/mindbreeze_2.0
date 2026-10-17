@@ -108,3 +108,7 @@ __all__ += ["DeviceToken"]
 # SDD-209 B11: 연구 목적 데이터 활용 동의
 from app.models.research import ResearchConsent, ResearchConsentEvent, ResearchWithdrawalRequest
 __all__ += ["ResearchConsent", "ResearchConsentEvent", "ResearchWithdrawalRequest"]
+
+# SDD-209 B14: 비회원 이메일 초대
+from app.models.session_email_invite import SessionEmailInvite
+__all__ += ["SessionEmailInvite"]

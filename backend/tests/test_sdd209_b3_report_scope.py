@@ -129,7 +129,7 @@ def test_A3_그룹은_동의한_전원의_평균_1대1은_그_1명(db):
     one_conc = [t["concentration"] for t in one["timeline"]]
     assert avg["status"] not in ("not_measured", "lost") and one["status"] not in ("not_measured", "lost")
     assert avg_conc != one_conc
-    h3, s3, _ = _class(db, mode="individual", included=(True,), focus=(70.0,))
+    h3, s3, _ = _class(db, mode="one_on_one", included=(True,), focus=(70.0,))
     solo = _gen(db, h3, s3, "counselor")["content"]["eeg"]
     assert [t["concentration"] for t in solo["timeline"]] == one_conc
 
@@ -183,7 +183,7 @@ def test_BT10_수동_생성한_제외자_리포트는_안내만(db):
 def test_BT12_AI_초안_입력에_제외자_데이터_없음(db):
     from app.services import report_comment_service as svc
 
-    host, session, (p_out,) = _class(db, mode="individual", included=(False,), focus=(40.0,))
+    host, session, (p_out,) = _class(db, mode="one_on_one", included=(False,), focus=(40.0,))
     report = _gen(db, host, session, "client", p_out)
     row = db.query(Report).filter(Report.id == report["id"]).one()
     ctx = svc._draft_context(row, session, db)
