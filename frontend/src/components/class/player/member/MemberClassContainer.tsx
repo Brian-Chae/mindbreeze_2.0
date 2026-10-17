@@ -10,7 +10,7 @@ import { useMemberLiveKit } from '../../../../hooks/useMemberLiveKit';
 import { useSessionLiveSocket } from '../../../../hooks/useSessionLiveSocket';
 import { scoreIndices } from '../../../../lib/eeg/eegPersonalScore';
 import { getEntryState } from '../../../../lib/api/class-flow';
-import { getSession, getSessionByCode, getSessionByCodeState, type LinkbandMode } from '../../../../lib/api/session';
+import { getSession, type LinkbandMode } from '../../../../lib/api/session';
 import type { AudioSyncEvent } from '../../../../lib/class/audio-sync';
 import { PLAYER_METRICS, deriveBandUi, deriveNetUi, type PlayerMetricKey } from '../../../../lib/class/player-case';
 import type { MemberCaseInput } from '../../../../lib/class/member-player-case';
@@ -33,13 +33,9 @@ interface MemberClassContainerProps {
   onLeave: () => void;
   sessionId: string;
   participantId: string | null;
-  /** 클래스 코드 — 상담사 라이브 영상 구독 토큰 요청용 */
-  classCode: string | null;
-  /** 게스트 소유 증명 토큰 (로그인 회원은 생략) */
-  participantToken?: string | null;
-  /** SDD-209: 입장 자격 — 있으면 구 6자리 코드 경로(by-code)를 쓰지 않고 이 자격으로 상태·미디어·업로드 소유를 증명한다 */
-  entryCredential?: string | null;
-  /** SDD-209: 입장 자격 모드의 상담사 이름(클래스 요약에서 받은 값) — 별도 조회를 하지 않는다 */
+  /** SDD-209: 입장 자격 — 이 자격으로 상태·미디어·업로드 소유를 증명한다(6자리 코드·참여자 토큰 경로 없음) */
+  entryCredential: string | null;
+  /** SDD-209: 상담사 이름(클래스 요약에서 받은 값) — 별도 조회를 하지 않는다 */
   hostName?: string | null;
   locationType?: 'online' | 'offline';
   participantMode?: 'one_on_one' | 'group';
@@ -77,7 +73,7 @@ function buildSnapshot(band: BandSnapshotSource, metricsBlocked: boolean, remote
 }
 
 export function MemberClassContainer({
-  title, startedAt, durationMin, onLeave, sessionId, participantId, classCode, participantToken, entryCredential = null, hostName = null,
+  title, startedAt, durationMin, onLeave, sessionId, participantId, entryCredential, hostName = null,
   locationType, participantMode, maxParticipants, linkbandMode, waitlisted = false,
 }: MemberClassContainerProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -106,36 +102,10 @@ export function MemberClassContainer({
   const [series, setSeries] = useState<MetricSeries>(() => emptySeries());
   const [raw, setRaw] = useState<MemberDeviceModel['raw']>(null);
 
-  /* ───────── 클래스 정보(상담사 이름) ───────── */
-  const [counselorName, setCounselorName] = useState<string | null>(null);
-  useEffect(() => {
-    if (!sessionId) return undefined;
-    if (entryCredential) {
-      setCounselorName(hostName);
-      return undefined;
-    }
-    let cancelled = false;
-    const load = async (): Promise<void> => {
-      try {
-        if (isAuthenticated) {
-          const detail = await getSession(sessionId);
-          if (cancelled) return;
-          setCounselorName(user?.counselors?.find((c) => c.id === detail.host_id)?.name ?? null);
-        } else if (classCode) {
-          const byCode = await getSessionByCode(classCode);
-          if (!cancelled) setCounselorName(byCode.host_name);
-        }
-      } catch {
-        // 클래스 정보 조회 실패는 무해 — 이름 없이 "상담사" 로 표기
-      }
-    };
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId, classCode, isAuthenticated, user, entryCredential, hostName]);
+  /* ───────── 클래스 정보(상담사 이름): 클래스 요약에서 받은 값을 그대로 쓴다 ───────── */
+  const counselorName = hostName;
 
-  /* ───────── 클래스 채팅(SDD-095): 로그인=세션 상세 폴링, 게스트=by-code 상태 폴링 ───────── */
+  /* ───────── 클래스 채팅(SDD-095): 로그인=세션 상세 폴링, 비회원=입장 자격 상태 폴링 ───────── */
   const [chatEnabled, setChatEnabled] = useState(false);
   const [chatRoomId, setChatRoomId] = useState<string | null>(null);
   const [guestChatEnabled, setGuestChatEnabled] = useState(false);
@@ -163,14 +133,11 @@ export function MemberClassContainer({
   }, [isAuthenticated, sessionId]);
 
   useEffect(() => {
-    if (isAuthenticated || !participantId || (!classCode && !entryCredential)) return undefined;
-    const pid = participantId;
+    if (isAuthenticated || !participantId || !entryCredential) return undefined;
     let cancelled = false;
     const load = async (): Promise<void> => {
       try {
-        const state = entryCredential
-          ? await getEntryState(sessionId, entryCredential)
-          : await getSessionByCodeState(classCode as string, pid);
+        const state = await getEntryState(sessionId, entryCredential);
         if (!cancelled) setGuestChatEnabled(Boolean(state.chat_enabled));
       } catch {
         // 상태 조회 실패는 무해
@@ -182,7 +149,7 @@ export function MemberClassContainer({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [isAuthenticated, classCode, participantId, entryCredential, sessionId]);
+  }, [isAuthenticated, participantId, entryCredential, sessionId]);
 
   /* ───────── 밴드(useBand 단일 인스턴스) ───────── */
   const band = useBand({ sessionId, participantId, enabled: connectionsActive, skipAuth: !isAuthenticated, entryCredential });
@@ -324,7 +291,7 @@ export function MemberClassContainer({
   }, [locationType]);
 
   /* ───────── 상담사 영상(LiveKit) 토큰: 입장 + 상담사 화상 미시작이면 지수 백오프 재시도 ───────── */
-  const liveKit = useMemberLiveKit({ code: classCode, participantId, participantToken, entryCredential, sessionId, listenSpeakingChanges: speakingManaged });
+  const liveKit = useMemberLiveKit({ participantId, entryCredential, sessionId, listenSpeakingChanges: speakingManaged });
   const { connect: connectLiveKit, notReady, attemptCount } = liveKit;
   const videoActive = connectionsActive && place === 'online';
   useEffect(() => {

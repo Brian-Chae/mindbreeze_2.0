@@ -161,7 +161,7 @@ export default function SessionCreatePage() {
 
       setCreatedSession(created);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '세션 생성에 실패했습니다');
+      setError(e instanceof Error ? e.message : '클래스 생성에 실패했습니다');
     } finally {
       setSubmitting(false);
     }
@@ -264,7 +264,7 @@ export default function SessionCreatePage() {
   }
 
   return (
-    <AppShell title="새 세션" sub="CREATE">
+    <AppShell title="새 클래스" sub="CREATE">
       <div className="max-w-[640px] mx-auto">
         <div className="bg-white rounded-[20px] border border-[#EFEFEF] p-5 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -292,7 +292,7 @@ export default function SessionCreatePage() {
             )}
 
             <div>
-              <label className={labelCls} htmlFor="session-type">세션 유형</label>
+              <label className={labelCls} htmlFor="session-type">클래스 유형</label>
               <select id="session-type" value={type} onChange={(e) => setType(e.target.value as SessionType)} className={inputCls}>
                 <option value="meditation">명상수업</option>
                 <option value="clinical">임상심리상담</option>
@@ -429,7 +429,7 @@ export default function SessionCreatePage() {
             <div className="rounded-xl border border-[#E6E1DA] bg-[#FAF9F7] px-4 py-3">
               <p className="text-sm font-semibold text-[#1F1F1F]">AI 클래스 분석</p>
               <p className="text-xs text-[#6F6F6F] mt-1 mb-3">
-                영상·음성을 녹화해 세션 종료 후 분석 리포트를 생성합니다. 끄면 해당 미디어 리포트가 생성되지 않습니다.
+                영상·음성을 녹화해 클래스 종료 후 분석 리포트를 생성합니다. 끄면 해당 미디어 리포트가 생성되지 않습니다.
               </p>
               <label className="flex items-center justify-between py-2 cursor-pointer">
                 <span className="text-sm text-[#1F1F1F]">음성 녹화 (STT 발화자 기록지)</span>

@@ -925,7 +925,7 @@ export default function ClassPlayerPage() {
       // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : '세션을 불러오지 못했습니다');
+      setError(e instanceof Error ? e.message : '클래스를 불러오지 못했습니다');
     }
   }, [id]);
 

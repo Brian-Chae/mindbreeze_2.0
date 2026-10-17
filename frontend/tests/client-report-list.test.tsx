@@ -55,7 +55,7 @@ it('20건 페이지 요청과 반응형 목록, 기본 상담사 그룹 및 회�
   expect(container.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true');
   expect(container.querySelectorAll('table')).toHaveLength(2);
   expect(Array.from(container.querySelector('table')!.querySelectorAll('th')).map((el) => el.textContent))
-    .toEqual(['제목', '세션유형', '날짜·시간', '상태', '액션']);
+    .toEqual(['제목', '클래스 유형', '날짜·시간', '상태', '액션']);
   expect(container.textContent).toContain('확인 가능');
   expect(container.textContent).toContain('대기');
   expect(container.textContent).toContain('3 / 3건');

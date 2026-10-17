@@ -48,7 +48,7 @@ const Hero: React.FC = () => {
               to="/join"
               className="mb-btn mb-btn--ghost h-[52px] px-[22px] text-[16px] rounded-[14px] inline-flex items-center backdrop-blur-md"
             >
-              클래스 코드로 참여
+              코드로 입장
             </Link>
             <button
               className="mb-btn mb-btn--ghost h-[52px] px-[22px] text-[16px] rounded-[14px] backdrop-blur-md"

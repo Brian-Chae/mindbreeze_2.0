@@ -59,7 +59,7 @@ describe('입장 자격 전달', () => {
 });
 
 function LiveKitProbe({ credential, onToken }: { credential: string | null; onToken: (t: string | null, err: string | null, notReady: boolean) => void }) {
-  const kit = useMemberLiveKit({ code: null, participantId: 'p1', entryCredential: credential, sessionId: 's1', listenSpeakingChanges: false });
+  const kit = useMemberLiveKit({ participantId: 'p1', entryCredential: credential, sessionId: 's1', listenSpeakingChanges: false });
   useEffect(() => {
     void kit.connect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,8 +156,8 @@ describe('EntryPage — 진행 화면 연결 (M9)', () => {
     expect(props.entryCredential).toBe('cred');
     expect(props.sessionId).toBe('s1');
     expect(props.participantId).toBe('p1');
-    expect(props.classCode).toBeNull();
-    expect(props.participantToken).toBeUndefined();
+    expect(props).not.toHaveProperty('classCode');
+    expect(props).not.toHaveProperty('participantToken');
     expect(props.hostName).toBe('채용욱');
     expect(props.locationType).toBe('online');
   });

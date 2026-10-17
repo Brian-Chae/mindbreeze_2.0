@@ -46,8 +46,7 @@ const h = vi.hoisted(() => {
     audio: { state: { track: null as { title: string } | null, playing: false, positionSec: 0, durationSec: null, volume: 0.6, blocked: false, synced: false, drift: 0 }, setVolume: vi.fn(), resume: vi.fn() },
     audioOptions: [] as Array<Record<string, unknown>>,
     getSession: vi.fn(),
-    getSessionByCode: vi.fn(),
-    getSessionByCodeState: vi.fn(),
+    getEntryState: vi.fn(),
     chatProps: [] as Array<Record<string, unknown>>,
     unread: 0,
     roomConnection: 'connected',
@@ -83,8 +82,10 @@ vi.mock('../src/hooks/useGuestAudioSync', () => ({
 vi.mock('../src/lib/api/session', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/session')>()),
   getSession: (...args: unknown[]) => h.getSession(...args),
-  getSessionByCode: (...args: unknown[]) => h.getSessionByCode(...args),
-  getSessionByCodeState: (...args: unknown[]) => h.getSessionByCodeState(...args),
+}));
+vi.mock('../src/lib/api/class-flow', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/api/class-flow')>()),
+  getEntryState: (...args: unknown[]) => h.getEntryState(...args),
 }));
 vi.mock('../src/lib/socket', () => ({ getActiveSessionLiveSocket: () => h.rawSocket }));
 vi.mock('../src/components/chat/ClassChatPanel', async () => {
@@ -155,8 +156,8 @@ function Container({ locationType = 'online', participantMode = 'one_on_one', ma
       onLeave={onLeave}
       sessionId="s1"
       participantId="p1"
-      classCode="ABC123"
-      participantToken="ptok"
+      entryCredential="cred"
+      hostName="채용욱"
       locationType={locationType}
       participantMode={participantMode}
       maxParticipants={maxParticipants}
@@ -205,8 +206,7 @@ beforeEach(() => {
   h.audio.setVolume.mockClear();
   h.audio.resume.mockClear();
   h.getSession.mockReset().mockResolvedValue({ host_id: 'h1', participants: [], chat_enabled: true, chat_room_id: 'room-1' });
-  h.getSessionByCode.mockReset().mockResolvedValue({ host_name: '채용욱', participant_count: 5 });
-  h.getSessionByCodeState.mockReset().mockResolvedValue({ chat_enabled: false });
+  h.getEntryState.mockReset().mockResolvedValue({ chat_enabled: false });
   useAuthStore.setState({
     isAuthenticated: true,
     user: { name: '김수연', counselors: [{ id: 'h1', name: '채용욱', profile_image: null }] } as unknown as ReturnType<typeof useAuthStore.getState>['user'],
@@ -280,12 +280,11 @@ describe('데이터 → 뷰 모델', () => {
     await advance(1000);
     expect(q('[data-pz="guide"]')?.textContent).toBe('이 브라우저에서는 밴드 연결이 안 돼요');
   });
-  it('상담사 이름: 로그인 회원은 세션 상세(host_id)에서, 게스트는 코드 조회(host_name)에서', async () => {
-    await render(<Container />);
-    expect(h.getSession).toHaveBeenCalledWith('s1');
+  it('상담사 이름: 클래스 요약에서 받은 hostName 을 그대로 쓰고 이름 때문에 따로 조회하지 않는다', async () => {
     useAuthStore.setState({ isAuthenticated: false, user: null });
-    await render(<Container />);
-    expect(h.getSessionByCode).toHaveBeenCalledWith('ABC123');
+    await render(<Container waitlisted />);
+    expect(document.body.textContent).toContain('채용욱 상담사');
+    expect(h.getSession).not.toHaveBeenCalled();
   });
 });
 
@@ -368,12 +367,12 @@ describe('채팅', () => {
     expect(h.chatProps.at(-1)).toMatchObject({ collapsed: false });
     expect(q('[data-pz="sheet"] [data-testid="chat-panel"]')).not.toBeNull();
   });
-  it('게스트: by-code 상태를 조회해 채팅이 켜져 있으면 회원 전용 안내를 보여 준다', async () => {
+  it('비회원: 입장 자격으로 상태를 조회해 채팅이 켜져 있으면 회원 전용 안내를 보여 준다', async () => {
     useAuthStore.setState({ isAuthenticated: false, user: null });
-    h.getSessionByCodeState.mockResolvedValue({ chat_enabled: true });
+    h.getEntryState.mockResolvedValue({ chat_enabled: true });
     await render(<Container />);
     await advance(100);
-    expect(h.getSessionByCodeState).toHaveBeenCalledWith('ABC123', 'p1');
+    expect(h.getEntryState).toHaveBeenCalledWith('s1', 'cred');
     await act(async () => { dockButton('채팅')?.click(); });
     expect(q('[data-pz="sheet"]')?.textContent).toContain('채팅은 회원 전용이에요');
   });
@@ -545,7 +544,9 @@ describe('LiveKit·미디어 연결', () => {
     await render(<Container />);
     expect(h.lk.connect).toHaveBeenCalled();
     expect(h.roomProps.at(-1)).toMatchObject({ video: false, audio: true, token: 'tok' });
-    expect(h.lkOptions.at(-1)).toMatchObject({ code: 'ABC123', participantId: 'p1', participantToken: 'ptok', sessionId: 's1' });
+    expect(h.lkOptions.at(-1)).toMatchObject({ participantId: 'p1', entryCredential: 'cred', sessionId: 's1' });
+    expect(h.lkOptions.at(-1)).not.toHaveProperty('code');
+    expect(h.lkOptions.at(-1)).not.toHaveProperty('participantToken');
   });
   it('온라인 그룹(≤20)은 발언권 이벤트를 듣고(listenSpeakingChanges) 손들기를 서버에 보낸다', async () => {
     h.lk.canPublish = false;

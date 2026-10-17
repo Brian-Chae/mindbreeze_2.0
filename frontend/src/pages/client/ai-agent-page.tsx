@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { useEnterClass } from '../../hooks/useEnterClass';
 import { useNavigate } from 'react-router-dom';
 import CheckinPreferences from '../../components/client/agent/checkin-prefs';
 import ClientShell from '../../components/client/ClientShell';
@@ -15,6 +16,7 @@ import { useAgentStore } from '../../stores/agent-store';
 
 export default function AiAgentPage({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
+  const { enter: enterClass } = useEnterClass();
   const [consent, setConsent] = useState<AgentConsent | null>(null);
   const [declined, setDeclined] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -178,9 +180,9 @@ export default function AiAgentPage({ embedded = false }: { embedded?: boolean }
       if (effect.type === 'submit') { await submitCta(message.id, cta); return; }
       if (effect.type === 'join') {
         const session = await getSession(effect.sessionId);
-        navigate(session.access_code && ['open', 'in_progress'].includes(session.status)
-          ? `/join?code=${encodeURIComponent(session.access_code)}`
-          : `/app/sessions/${encodeURIComponent(effect.sessionId)}`);
+        // SDD-209: 코드 없이 초대 회원 입장(`POST /sessions/{id}/enter`) — 실패하면 상세로 안내한다
+        const entered = ['open', 'in_progress'].includes(session.status) && await enterClass(effect.sessionId);
+        if (!entered) navigate(`/app/sessions/${encodeURIComponent(effect.sessionId)}`);
       } else if (effect.type === 'navigate') {
         if (effect.url.startsWith('/')) navigate(effect.url);
         else window.location.assign(effect.url);

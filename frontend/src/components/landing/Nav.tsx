@@ -29,7 +29,7 @@ const Nav: React.FC = () => {
         </div>
         <div className="flex gap-[10px]">
           <Link to="/join" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
-            클래스 참여
+            코드로 입장
           </Link>
           <Link to="/login?role=counselor" className="mb-btn mb-btn--ghost h-10 px-4 text-[15px] whitespace-nowrap inline-flex items-center">
             상담사 로그인

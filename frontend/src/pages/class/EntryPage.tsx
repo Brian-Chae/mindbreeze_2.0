@@ -179,7 +179,6 @@ export default function EntryPage() {
           onLeave={() => navigate(homePath, { replace: true })}
           sessionId={sessionId}
           participantId={entry.participantId}
-          classCode={null}
           entryCredential={entry.credential}
           hostName={info.hostName}
           locationType={info.locationType}

@@ -74,7 +74,8 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
-const ClassJoinPage = lazy(() => import('./pages/class-join-page'));
+const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
+const ClassEntryPage = lazy(() => import('./pages/class/EntryPage'));
 const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
 const OrgDashboardPage = lazy(() => import('./pages/OrgDashboardPage'));
 const PlaygroundPage = lazy(() => import('./pages/playground/PlaygroundPage'));
@@ -151,7 +152,8 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <Route element={<RootLayout />}>
         <Route path="/" element={<EntryRoute />} />
-        <Route path="/join" element={<ClassJoinPage />} />
+        <Route path="/join" element={<CodeEntryPage />} />
+        <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
