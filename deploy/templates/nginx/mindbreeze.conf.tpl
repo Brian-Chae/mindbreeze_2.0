@@ -25,9 +25,8 @@ server {
 
 # 프론트엔드 (릴리스 링크 /current/dist)
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;   # Ubuntu 24.04 nginx 1.24 는 `http2 on;` 지시어 미지원
+    listen [::]:443 ssl http2;
     server_name @@WEB_HOST@@;
 
     ssl_certificate     /etc/letsencrypt/live/@@CERT_NAME@@/fullchain.pem;
@@ -68,9 +67,8 @@ server {
 
 # API / WebSocket / LiveKit 시그널링
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;   # Ubuntu 24.04 nginx 1.24 는 `http2 on;` 지시어 미지원
+    listen [::]:443 ssl http2;
     server_name @@API_HOST@@;
 
     ssl_certificate     /etc/letsencrypt/live/@@CERT_NAME@@/fullchain.pem;

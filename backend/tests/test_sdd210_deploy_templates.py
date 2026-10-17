@@ -276,3 +276,40 @@ def test_운영_env_의_Settings_가_fail_fast_를_통과한다(monkeypatch):
         monkeypatch.setenv(k, v)
     cfg = Settings(_env_file=None)
     assert production_config_problems(cfg) == []
+
+
+# ── Phase C: DB URL 조립 · 자리표시 처리 ─────────────────────
+
+
+def test_DB_구성요소로_DATABASE_URL_을_조립하고_입력전용_키는_env_에_쓰지_않는다():
+    params = _good_params()
+    params.pop("DATABASE_URL")
+    params.pop("DATABASE_URL_SYNC", None)
+    params.update({"DB_USER": "mb", "DB_PASSWORD": "p@ss/w", "DB_NAME": "mindbreeze",
+                   "DB_HOST_EMPTY": "x.rds.amazonaws.com", "TURN_STATIC_AUTH_SECRET": "t"})
+    text, _ = render_env.build_env(params)
+    assert 'DATABASE_URL="postgresql://mb:p%40ss%2Fw@x.rds.amazonaws.com:5432/mindbreeze?sslmode=require"' in text
+    assert "DATABASE_URL_SYNC=" in text
+    for k in ("DB_PASSWORD", "DB_USER", "TURN_STATIC_AUTH_SECRET", "DB_HOST_EMPTY"):
+        assert f"\n{k}=" not in text
+
+
+def test_DB_HOST_가_있으면_리허설용_DB_HOST_EMPTY_보다_우선한다():
+    params = _good_params()
+    params.pop("DATABASE_URL")
+    params.update({"DB_USER": "mb", "DB_PASSWORD": "pw", "DB_NAME": "mindbreeze",
+                   "DB_HOST": "real.rds.amazonaws.com", "DB_HOST_EMPTY": "empty.rds.amazonaws.com"})
+    text, _ = render_env.build_env(params)
+    assert "real.rds.amazonaws.com" in text and "empty.rds.amazonaws.com" not in text
+
+
+def test_자리표시_값은_미설정으로_취급되고_옵션이_있을_때만_경고로_낮춘다():
+    params = _good_params()
+    params["GEMINI_API_KEY"] = render_env.PLACEHOLDER
+    params["FCM_PROJECT_ID"] = render_env.PLACEHOLDER
+    with pytest.raises(render_env.EnvRenderError) as exc:
+        render_env.build_env(params)
+    assert "GEMINI_API_KEY" in str(exc.value) and render_env.PLACEHOLDER not in str(exc.value)
+    text, warns = render_env.build_env(params, allow_placeholders=True)
+    assert "GEMINI_API_KEY" not in text and "FCM_PROJECT_ID" not in text and render_env.PLACEHOLDER not in text
+    assert any("GEMINI_API_KEY" in w for w in warns)
