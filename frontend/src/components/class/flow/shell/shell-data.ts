@@ -2,9 +2,10 @@
 import type { SessionDto } from '../../../../lib/api/session';
 import { classTypeLabel, memberChipKey, type ClassChipKey } from '../../../../lib/class/class-labels';
 import { formatClassWhen, formatDDay, formatElapsed, formatStartsIn } from '../../../../lib/class/class-when';
-import { deriveHeroCopy } from '../../../../lib/class/enter-action';
+import { deriveDetailBox, deriveHeroCopy, derivePrepRows } from '../../../../lib/class/enter-action';
 import type { ClassHeroData } from './ClassHero';
 import type { ClassCardData } from './ClassCard';
+import type { ClassDetailData } from './ClassDetailView';
 import type { ClassRowData } from './ClassRow';
 
 const BACKDROPS = [1, 4, 5, 8, 10] as const;
@@ -143,4 +144,35 @@ export function buildClassSections(sessions: SessionWithHost[], invitedIds: Read
   return groups
     .filter(([, list]) => list.length > 0)
     .map(([key, list]) => ({ key, title: SECTION_TITLES[key], entries: list.map((s) => entry(s, key)) }));
+}
+
+/** 상세 화면 데이터. over 로 일부 값을 덮어쓸 수 있다(테스트·하니스) */
+export function toDetailData(session: SessionWithHost, now: Date = new Date(), over: Partial<ClassDetailData> = {}): ClassDetailData {
+  const chip = memberChipKey(session.status, session.scheduled_at, now);
+  const startsIn = formatStartsIn(session.scheduled_at, now);
+  const elapsed = formatElapsed(session.started_at ?? session.scheduled_at, now);
+  const whenLabel = formatClassWhen(session.scheduled_at, now);
+  const when = chip === 'live' && session.started_at ? `${formatClassWhen(session.started_at, now)} 시작` : whenLabel;
+  return {
+    typeLabel: classTypeLabel(session.type, session.custom_type_name),
+    chip,
+    title: session.title || '제목 없는 클래스',
+    meta: `${when} · ${session.duration_min}분`,
+    hostName: hostLabel(session),
+    place: session.location_type,
+    mode: session.participant_mode,
+    band: session.linkband_mode,
+    box: deriveDetailBox(chip, { startsInLabel: startsIn, elapsedLabel: elapsed, durationMin: session.duration_min }),
+    backdropSrc: heroBackdrop(session.id),
+    prep: derivePrepRows(chip, {
+      place: session.location_type,
+      band: session.linkband_mode,
+      address: session.location_address,
+      durationMin: session.duration_min,
+      mode: session.participant_mode,
+      whenLabel,
+      participantCount: chip === 'done' ? session.participants.length || undefined : undefined,
+    }),
+    ...over,
+  };
 }

@@ -2,7 +2,8 @@
 // 서버·시계에 의존하지 않도록 모든 문구는 미리 만들어 둔 값이다(측정이 결정적이어야 한다).
 import type { ReactNode } from 'react';
 import { Bell, Mail, Plus } from 'lucide-react';
-import { deriveHeroAction } from '../../../../lib/class/enter-action';
+import { deriveDetailAction, deriveHeroAction } from '../../../../lib/class/enter-action';
+import type { SessionStatus, SessionType } from '../../../../lib/api/session';
 import type { ClassChipKey } from '../../../../lib/class/class-labels';
 import type { LinkbandMode, LocationType, ParticipantMode } from '../../../../lib/api/session';
 import { ApplySheet } from './ApplySheet';
@@ -11,8 +12,9 @@ import { type ClassHeroData } from './ClassHero';
 import { MemberClassListView } from './MemberClassListView';
 import { MemberHomeView, type HomeSection } from './MemberHomeView';
 import type { ClassRowData } from './ClassRow';
-import { ShellFrame, ShellHeadTitle } from './ShellFrame';
-import type { ClassListEntry, ClassListSection } from './shell-data';
+import { ClassDetailBody, ClassDetailFoot } from './ClassDetailView';
+import { ShellFrame, ShellHeadBack, ShellHeadTitle } from './ShellFrame';
+import { toDetailData, type ClassListEntry, type ClassListSection, type SessionWithHost } from './shell-data';
 import './shell-kit.css';
 
 const noop = (): void => {};
@@ -139,11 +141,57 @@ export function renderMemberListCase(key: string): ReactNode {
   );
 }
 
+/* ───────── FM03 클래스 상세 ───────── */
+/** 하니스 고정 시각: 2026-10-17(토) 12:00. 실제 변환 함수(toDetailData)를 거쳐 문구가 만들어진다 */
+const DETAIL_NOW = new Date(2026, 9, 17, 12, 0);
+const ADDRESS = '서울 강남구 테헤란로 123 · 4층';
+const at = (day: number, hour: number): string => new Date(2026, 9, day, hour, 0).toISOString();
+
+interface DetailCase { id: string; status: SessionStatus; type: SessionType; title: string; host: string; dur: number; when: string | null; m: Method }
+const DETAIL_CASES: Readonly<Record<string, DetailCase>> = {
+  scheduled: { id: 'd-sch', status: 'scheduled', type: 'meditation', title: '마음챙김 명상 · 4회차', host: '김하늘', dur: 50, when: at(20, 14), m: ONLINE_GROUP_OPT },
+  'scheduled-offline': { id: 'd-sch-off', status: 'scheduled', type: 'clinical', title: '불안 다루기 · 개인 상담', host: '김하늘', dur: 50, when: at(18, 7), m: OFFLINE_ONE_NONE },
+  open: { id: 'd-open', status: 'open', type: 'meditation', title: '마음챙김 명상 · 4회차', host: '김하늘', dur: 50, when: at(17, 15), m: ONLINE_GROUP_OPT },
+  'open-offline': { id: 'd-open-off', status: 'open', type: 'meditation', title: '소그룹 명상 · 현장 클래스', host: '김하늘', dur: 50, when: at(17, 15), m: { place: 'offline', mode: 'group', band: 'required' } },
+  'open-1on1': { id: 'd-open-1', status: 'open', type: 'hypnosis', title: '깊은 이완 · 최면 상담', host: '박서연', dur: 60, when: at(17, 15), m: ONLINE_ONE_REQ },
+  done: { id: 'd-done', status: 'completed', type: 'meditation', title: '마음챙김 명상 · 3회차', host: '김하늘', dur: 50, when: at(16, 15), m: ONLINE_GROUP_OPT },
+  cancelled: { id: 'd-canc', status: 'cancelled', type: 'meditation', title: '마음챙김 명상 · 4회차', host: '김하늘', dur: 50, when: at(20, 15), m: ONLINE_GROUP_OPT },
+};
+
+function demoSession(c: DetailCase): SessionWithHost {
+  return {
+    id: c.id, type: c.type, custom_type_name: null, status: c.status, host_id: 'h1', host_name: c.host, scheduled_at: c.when, access_code: null,
+    started_at: null, ended_at: null, duration_min: c.dur, title: c.title, notes: null, max_participants: 10,
+    location_type: c.m.place, location_address: c.m.place === 'offline' ? ADDRESS : null, participant_mode: c.m.mode, linkband_mode: c.m.band,
+    webrtc_room_id: null, sfu_enabled: false, record_audio: true, record_video: true, created_at: at(1, 9),
+    participants: c.status === 'completed' ? Array.from({ length: 8 }, (_, i) => ({ user_id: `u${i}`, guest_name: null, is_guest: false, band_connected: false, linkband_device_id: null, webrtc_peer_id: null, consent_audio: false, consent_eeg: false, is_waitlisted: false, waitlist_position: null })) : [],
+    waitlist_count: 0,
+  };
+}
+
+export function renderMemberDetailCase(key: string): ReactNode {
+  const c = DETAIL_CASES[key];
+  if (!c) return null;
+  const data = toDetailData(demoSession(c), DETAIL_NOW, key === 'open-offline' ? { box: { icon: 'check', title: '지금 입장할 수 있어요', sub: '현장에 도착했다면 입장해 주세요' } } : key === 'open-1on1' ? { box: { icon: 'check', title: '지금 입장할 수 있어요', sub: '1:1 클래스예요' } } : {});
+  const action = deriveDetailAction(data.chip);
+  return (
+    <ShellFrame
+      role="member"
+      active="class"
+      head={<ShellHeadBack title="클래스 상세" />}
+      foot={<ClassDetailFoot note={action.note} action={action} onAction={noop} />}
+    >
+      <ClassDetailBody data={data} />
+    </ShellFrame>
+  );
+}
+
 /** 화면 ID + 케이스 키 → 렌더. 등록되지 않은 조합은 null */
 export function renderShellCase(screen: string, key: string): ReactNode {
   switch (screen) {
     case 'FM01': return renderMemberHomeCase(key);
     case 'FM02': return renderMemberListCase(key);
+    case 'FM03': return renderMemberDetailCase(key);
     default: return null;
   }
 }

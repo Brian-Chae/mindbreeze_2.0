@@ -11,11 +11,16 @@ import ClientSessionListPage from '../src/pages/client/ClientSessionListPage';
 import { listSessions, type SessionDto } from '../src/lib/api/session';
 import { listChatRooms, sendChatMessage, type ChatRoom } from '../src/lib/api/chat';
 import { useNotificationStore } from '../src/stores/notificationStore';
+import { apiClient } from '../src/lib/api/client';
 
 vi.mock('../src/lib/api/session', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/session')>()), listSessions: vi.fn() }));
 vi.mock('../src/lib/api/chat', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/chat')>()), listChatRooms: vi.fn(), sendChatMessage: vi.fn(),
 }));
+vi.mock('../src/lib/api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/lib/api/client')>();
+  return { ...actual, apiClient: { ...actual.apiClient, post: vi.fn() } };
+});
 vi.mock('../src/lib/api/notifications', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/notifications')>()), markRead: vi.fn() }));
 
 let root: Root;
@@ -164,9 +169,25 @@ describe('ClientSessionListPage — FM02', () => {
     expect(document.body.textContent).not.toContain('4827');
     expect(document.body.textContent).not.toContain('클래스 코드');
   });
-  it('카드 본문 → 상세, 입장하기 → 상세', async () => {
+  it('카드 본문 → 상세', async () => {
     await renderPage([session('b', { status: 'open' })]);
     await act(async () => { qa<HTMLButtonElement>('.sh-ccard__main')[0].click(); });
+    expect(q('[data-testid="where"]')!.textContent).toBe('/app/sessions/b');
+  });
+  it('입장하기 → 초대된 회원 편의 입장(POST enter) → 입장 흐름', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ entry_credential: 'c', expires_at: null, participant_id: 'p', is_guest: false, is_waitlisted: false, session: {} });
+    await renderPage([session('b', { status: 'open' })]);
+    await act(async () => { q<HTMLButtonElement>('[data-testid="class-card-action"]')!.click(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(apiClient.post).toHaveBeenCalledWith('/sessions/b/enter', {});
+    expect(q('[data-testid="where"]')!.textContent).toBe('/class/b/enter');
+  });
+  it('입장이 거절되면(403) 상세로 보내 사유를 보여준다', async () => {
+    const { ApiError } = await import('../src/lib/api/client');
+    vi.mocked(apiClient.post).mockRejectedValue(new ApiError(403, 'x', {}));
+    await renderPage([session('b', { status: 'open' })]);
+    await act(async () => { q<HTMLButtonElement>('[data-testid="class-card-action"]')!.click(); });
+    await act(async () => { await Promise.resolve(); });
     expect(q('[data-testid="where"]')!.textContent).toBe('/app/sessions/b');
   });
   it('신청 시트: 이벤트로 열고 상담사에게 신청 메시지를 보낸다', async () => {

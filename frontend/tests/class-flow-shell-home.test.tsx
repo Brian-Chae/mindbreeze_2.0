@@ -13,8 +13,13 @@ import { listSessions, type SessionDto } from '../src/lib/api/session';
 import { listReports } from '../src/lib/api/reports';
 import { listNotifications } from '../src/lib/api/notifications';
 import { listChatRooms } from '../src/lib/api/chat';
+import { apiClient } from '../src/lib/api/client';
 
 vi.mock('../src/lib/api/session', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/api/session')>()), listSessions: vi.fn() }));
+vi.mock('../src/lib/api/client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/lib/api/client')>();
+  return { ...actual, apiClient: { ...actual.apiClient, post: vi.fn() } };
+});
 vi.mock('../src/lib/api/reports', () => ({ listReports: vi.fn() }));
 vi.mock('../src/lib/api/notifications', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/notifications')>()), listNotifications: vi.fn(), markRead: vi.fn(),
@@ -168,6 +173,14 @@ describe('ClientHomePage — FM01', () => {
     expect(q('[data-testid="class-hero-cta"]')!.textContent).toBe('클래스 보기');
     await act(async () => { q<HTMLButtonElement>('[data-testid="class-hero-cta"]')!.click(); });
     expect(document.querySelector('[data-testid="where"]')!.textContent).toBe('/app/sessions/sch9');
+  });
+  it('입장 가능 히어로의 입장하기 → POST enter → 입장 흐름', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({ entry_credential: 'c', expires_at: null, participant_id: 'p', is_guest: false, is_waitlisted: false, session: {} });
+    await renderHome([session({ id: 'open7', status: 'open' })]);
+    await act(async () => { q<HTMLButtonElement>('[data-testid="class-hero-cta"]')!.click(); });
+    await act(async () => { await Promise.resolve(); });
+    expect(apiClient.post).toHaveBeenCalledWith('/sessions/open7/enter', {});
+    expect(document.querySelector('[data-testid="where"]')!.textContent).toBe('/class/open7/enter');
   });
   it('클래스가 없으면 빈 히어로 + 신청 진입', async () => {
     await renderHome([]);

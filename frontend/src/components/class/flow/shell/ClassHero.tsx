@@ -1,10 +1,11 @@
 // SDD-209 SH2 — 회원 홈 히어로(FM01). 자연 사진 + 다크 면 위에 상태 배지·시작까지·방식·안내·CTA 한 개.
 // 입장 코드는 상담사가 전달하므로 회원 화면에는 코드 값·복사 UI 를 두지 않는다(R4).
-import { Activity, Bell, CircleCheck, Clock, Plus, Send, User, type LucideIcon } from 'lucide-react';
+import { Bell, Clock, Plus, Send, User } from 'lucide-react';
 import type { LinkbandMode, LocationType, ParticipantMode } from '../../../../lib/api/session';
 import type { ClassChipKey } from '../../../../lib/class/class-labels';
 import type { EnterAction, HeroBoxIcon } from '../../../../lib/class/enter-action';
 import { MethodChips } from './MethodChips';
+import { BOX_ICONS } from './shell-icons';
 import { StatusChip } from './StatusChip';
 import './shell-kit.css';
 
@@ -22,10 +23,6 @@ export interface ClassHeroData {
   box: { icon: HeroBoxIcon; title: string; sub: string };
   backdropSrc: string;
 }
-
-const BOX_ICONS: Readonly<Record<HeroBoxIcon, LucideIcon>> = {
-  bell: Bell, clock: Clock, check: CircleCheck, activity: Activity, send: Send,
-};
 
 interface ClassHeroProps {
   data: ClassHeroData;

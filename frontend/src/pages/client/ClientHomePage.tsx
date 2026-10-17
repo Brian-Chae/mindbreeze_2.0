@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { listSessions, type SessionDto } from '../../lib/api/session';
 import { pickHeroClass } from '../../lib/class/pick-hero-class';
 import { deriveHeroAction } from '../../lib/class/enter-action';
+import { useEnterClass } from '../../hooks/useEnterClass';
 import { memberChipKey } from '../../lib/class/class-labels';
 import { ClassHero, ClassHeroEmpty } from '../../components/class/flow/shell/ClassHero';
 import { ClassRow } from '../../components/class/flow/shell/ClassRow';
@@ -296,8 +297,20 @@ export default function ClientHomePage() {
     [sessionInvites, removeSessionInvite, navigate],
   );
 
-  // 히어로 CTA: 상세 화면으로(입장 처리는 상세의 입장하기 CTA)
+  // 히어로 CTA: 입장 가능이면 초대된 회원 편의 입장(POST /sessions/{id}/enter), 아니면 상세.
+  // 입장이 거절되면 상세로 보내 사유와 코드 입장 안내를 보여준다.
+  const { enter, enteringId } = useEnterClass();
   const openHeroClass = useCallback(() => {
+    if (!heroSession) return;
+    if (heroAction.kind === 'enter') {
+      void enter(heroSession.id).then((ok) => {
+        if (!ok) navigate(`/app/sessions/${heroSession.id}`);
+      });
+      return;
+    }
+    navigate(`/app/sessions/${heroSession.id}`);
+  }, [heroSession, heroAction, enter, navigate]);
+  const openHeroDetail = useCallback(() => {
     if (heroSession) navigate(`/app/sessions/${heroSession.id}`);
   }, [heroSession, navigate]);
 
@@ -333,7 +346,7 @@ export default function ClientHomePage() {
       <div className="flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
         {heroData ? (
-          <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} />
+          <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} busy={enteringId !== null} />
         ) : (
           <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions', { state: { openApply: true } })} />
         )}
@@ -451,7 +464,7 @@ export default function ClientHomePage() {
           newReportCount={newReportCount}
           weekClassCount={weekClassCount}
           completedCount={completedCount}
-          onOpenNext={openHeroClass}
+          onOpenNext={openHeroDetail}
           onOpenReports={() => navigate('/app/reports')}
           onOpenClasses={() => navigate('/app/sessions')}
         />

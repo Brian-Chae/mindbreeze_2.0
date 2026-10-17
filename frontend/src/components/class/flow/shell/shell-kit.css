@@ -187,3 +187,6 @@
 /* ───────── 목록 구역 ───────── */
 .sh-list-sec { display: flex; flex-direction: column; gap: 16px; }
 .sh-list-sec + .sh-list-sec { margin-top: 8px; }
+
+/* 페이지 본문 안에 그리는 푸터(고정 푸터가 아닐 때) */
+.sh-foot.inline { padding: 0; background: transparent; }

@@ -9,6 +9,7 @@ import { listChatRooms, sendChatMessage } from '../../lib/api/chat';
 import { useAuthStore } from '../../stores/authStore';
 import { markRead } from '../../lib/api/notifications';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useEnterClass } from '../../hooks/useEnterClass';
 import { ApplySheet, type ApplyOption } from '../../components/class/flow/shell/ApplySheet';
 import { MemberClassListView } from '../../components/class/flow/shell/MemberClassListView';
 import { buildClassSections, type SessionWithHost } from '../../components/class/flow/shell/shell-data';
@@ -23,6 +24,7 @@ export default function ClientSessionListPage() {
   const counselors = useMemo(() => user?.counselors ?? [], [user?.counselors]);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const removeSessionInvite = useNotificationStore((s) => s.removeSessionInvite);
+  const { enter, enteringId } = useEnterClass();
 
   const [sessions, setSessions] = useState<SessionDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -192,7 +194,13 @@ export default function ClientSessionListPage() {
           <MemberClassListView
             sections={sections}
             onOpen={(id) => navigate(`/app/sessions/${id}`)}
-            onEnter={(id) => navigate(`/app/sessions/${id}`)}
+            enteringId={enteringId}
+            onEnter={(id) => {
+              // 거절되면(초대 행 없음·종료 등) 상세로 보내 사유와 코드 입장 안내를 보여준다
+              void enter(id).then((ok) => {
+                if (!ok) navigate(`/app/sessions/${id}`);
+              });
+            }}
             onConfirmInvite={handleConfirmInvite}
           />
         )}
