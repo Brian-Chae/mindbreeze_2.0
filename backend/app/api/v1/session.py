@@ -3,17 +3,23 @@
 from uuid import UUID
 
 from fastapi.responses import HTMLResponse
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user, get_current_user_optional
 from app.api.v1.onboarding import _parse_date
 from app.core.database import get_db
+from app.core.redis import get_redis
 from app.schemas.session import (
     ReportEmailRequest,
     ReportEmailResponse,
     EEGFeatureBatchRequest,
     EEGFeatureBatchResponse,
+    EnterRequest,
+    EnterResponse,
+    EnterVerifyRequest,
+    EnterVerifyResponse,
     GuestSessionStateResponse,
     InviteParticipantRequest,
     JoinByCodeRequest,
@@ -70,6 +76,83 @@ def create_session(
     db: DBSession = Depends(get_db),
 ):
     return session_service.create_session(current_user["id"], payload, db)
+
+
+# ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
+# 주의: "/{session_id}" 라우트보다 먼저 선언해야 "enter"가 세션 ID로 해석되지 않는다.
+def _client_ip(request: Request) -> str | None:
+    return request.client.host if request.client else None
+
+
+@router.post("/enter/verify", response_model=EnterVerifyResponse)
+async def verify_entry_code(
+    payload: EnterVerifyRequest,
+    request: Request,
+    db: DBSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """코드 확인만 — 시도 제한 대상. 없는/틀린/종료 코드는 같은 404, 제한 시 같은 429."""
+    from fastapi import HTTPException
+
+    from app.services import class_code_attempt_service as attempts, class_code_service
+
+    ip = _client_ip(request)
+    await attempts.check_allowed(redis, ip)
+    normalized = class_code_service.normalize_class_code(payload.code)
+    await attempts.note_code_request(redis, normalized)
+    try:
+        return await run_in_threadpool(session_service.verify_entry_code, payload.code, db)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            await attempts.record_failure(redis, ip)
+        raise
+
+
+@router.post("/enter", response_model=EnterResponse)
+async def enter_session(
+    payload: EnterRequest,
+    request: Request,
+    current_user: dict | None = Depends(get_current_user_optional),
+    x_entry_credential: str | None = Header(None),
+    db: DBSession = Depends(get_db),
+    redis=Depends(get_redis),
+):
+    """코드 + 개인정보로 입장 — 로그인·초대 불요(이메일 OTP 없음). 성공 시 입장 자격 발급."""
+    from fastapi import HTTPException
+
+    from app.services import class_code_attempt_service as attempts, class_code_service
+
+    ip = _client_ip(request)
+    await attempts.check_allowed(redis, ip)
+    normalized = class_code_service.normalize_class_code(payload.code)
+    await attempts.note_code_request(redis, normalized)
+    try:
+        return await run_in_threadpool(
+            lambda: session_service.enter_session(
+                payload.code,
+                db,
+                user_id=current_user["id"] if current_user else None,
+                name=payload.name,
+                gender=payload.gender,
+                birth_date=_parse_date(payload.birth_date) if payload.birth_date else None,
+                email=payload.email,
+                entry_credential=x_entry_credential or payload.entry_credential,
+            )
+        )
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            await attempts.record_failure(redis, ip)
+        raise
+
+
+@router.post("/entry/revoke", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_entry_credential(
+    x_entry_credential: str | None = Header(None),
+    db: DBSession = Depends(get_db),
+):
+    """입장 자격 폐기(로그아웃) — 이 자격으로 발급된 모든 토큰이 무효가 된다."""
+    session_service.revoke_entry_credential(x_entry_credential, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # 주의: "/{session_id}" 라우트보다 먼저 선언해야 "by-code"가 세션 ID로 해석되지 않는다.
@@ -334,6 +417,16 @@ def raise_hand(
         participant_token=payload.participant_token if payload else None,
         current_user_id=current_user["id"] if current_user else None,
     )
+
+
+@router.post("/{session_id}/enter", response_model=EnterResponse)
+def enter_invited_session(
+    session_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """초대받은 로그인 회원의 편의 입장 — 초대 행이 있을 때만(없으면 403 + 코드 입장 안내)."""
+    return session_service.enter_session_as_invited(session_id, current_user["id"], db)
 
 
 @router.put("/{session_id}/report-choice", response_model=ReportChoiceResponse)

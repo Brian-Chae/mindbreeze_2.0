@@ -200,15 +200,18 @@ def test_BT17_IP_단위_실패_누적_후_올바른_코드도_거부_해제(fake
     _run(scenario())
 
 
-def test_BT17_성공하면_실패_카운터_초기화(fake_redis):
+def test_BT17_올바른_코드를_끼워도_실패_카운터는_초기화되지_않는다(fake_redis):
+    from fastapi import HTTPException
+
     from app.services import class_code_attempt_service as svc
 
+    assert not hasattr(svc, "record_success"), "성공 시 초기화는 제한 우회 수단이 된다"
+
     async def scenario():
-        for _ in range(svc.IP_MAX_FAILURES - 1):
-            await svc.record_failure(fake_redis, "3.3.3.3")
-        await svc.record_success(fake_redis, "3.3.3.3")
-        await svc.record_failure(fake_redis, "3.3.3.3")
-        await svc.check_allowed(fake_redis, "3.3.3.3")  # 잠기지 않음
+        for _ in range(svc.IP_MAX_FAILURES):
+            await svc.record_failure(fake_redis, "3.3.3.3")  # 사이사이 성공 요청이 있어도 카운트 유지
+        with pytest.raises(HTTPException):
+            await svc.check_allowed(fake_redis, "3.3.3.3")
 
     _run(scenario())
 

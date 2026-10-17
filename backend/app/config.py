@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 2880  # 48시간
+    # SDD-209(B5a): 클래스 입장 자격(로그인 없는 참가자 소유 증명) 만료 시간
+    entry_credential_ttl_hours: int = 24
     refresh_token_expire_days: int = 14
 
     # Resend Email

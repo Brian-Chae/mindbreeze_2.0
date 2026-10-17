@@ -153,6 +153,8 @@ class SessionParticipant(Base):
     # 고지 확인 증빙(선택 이력과 분리 저장): 마지막으로 확인한 시각과 고지 문구 버전.
     report_notice_ack_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     report_notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # SDD-209(B5a): 입장 자격 폐기용 버전 — 자격(JWT)의 ver 와 일치해야 유효. 올리면 이전 자격이 모두 무효.
+    entry_ver: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     session = relationship("Session", back_populates="participants")
 

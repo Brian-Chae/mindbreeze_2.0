@@ -4,7 +4,8 @@
 수용하므로 세 단위로 제한한다(Redis, 비동기 — login_attempt_service 와 같은 방식).
 
 1. IP 단위: 실패(틀린/없는/종료 코드)가 ``IP_MAX_FAILURES`` 회 이상이면 ``LOCK_SECONDS`` 동안 해당
-   IP 의 **올바른 코드도 거부**한다. 성공하면 카운터를 비운다.
+   IP 의 **올바른 코드도 거부**한다. 카운터는 창(``IP_WINDOW_SECONDS``) 만료로만 비워진다 —
+   성공 시 초기화하면 공격자가 자기 클래스의 올바른 코드를 끼워 넣어 제한을 우회할 수 있다.
 2. 코드 단위: 같은 코드 값에 대한 요청이 분당 ``CODE_MAX_PER_MINUTE`` 회를 넘으면 거부한다
    (성공 포함 — 확인된 코드로의 반복 입장 시도 억제). 키는 코드 해시라 Redis 에도 원문이 없다.
 3. 전체 유입: 모든 IP 합산 실패가 ``GLOBAL_MAX_FAILURES`` / ``GLOBAL_WINDOW_SECONDS`` 를 넘으면
@@ -88,8 +89,3 @@ async def record_failure(redis: Redis, ip: str | None) -> None:
         await redis.expire(_GLOBAL_FAIL_KEY, GLOBAL_WINDOW_SECONDS)
     if global_count >= GLOBAL_MAX_FAILURES:
         await redis.setex(_GLOBAL_LOCK_KEY, GLOBAL_LOCK_SECONDS, "1")
-
-
-async def record_success(redis: Redis, ip: str | None) -> None:
-    """성공 시 해당 IP 의 실패 카운터를 비운다(잠금 중에는 도달하지 않는다)."""
-    await redis.delete(_ip_fail_key(ip))

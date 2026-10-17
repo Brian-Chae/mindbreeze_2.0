@@ -284,6 +284,41 @@ class JoinByCodeResponse(BaseModel):
     is_guest: bool = False
 
 
+class EnterVerifyRequest(BaseModel):
+    """SDD-209(B5a): 코드 확인 — 형식 검증은 서비스가 한다(틀린 형식도 없는 코드와 같은 404)."""
+
+    code: str = Field(..., max_length=64)
+
+
+class EnterVerifyResponse(BaseModel):
+    """코드 확인 성공 응답 — 클래스 제목·시각·진행자명 외에는 노출하지 않는다."""
+
+    title: str | None = None
+    scheduled_at: datetime | None = None
+    host_name: str | None = None
+
+
+class EnterRequest(BaseModel):
+    """SDD-209(B5a): 코드 + 개인정보로 입장. 비로그인은 이름·성별·생년월일·이메일 필수, 로그인 회원은 생략 가능."""
+
+    code: str = Field(..., max_length=64)
+    name: str | None = Field(None, min_length=1, max_length=100)
+    gender: Literal["male", "female", "other"] | None = None
+    birth_date: str | None = None
+    email: EmailStr | None = None
+    # 복귀: 이전에 받은 입장 자격(헤더 X-Entry-Credential 로도 전달 가능). 이름 일치로는 인계하지 않는다.
+    entry_credential: str | None = None
+
+
+class EnterResponse(BaseModel):
+    entry_credential: str | None = None
+    expires_at: datetime | None = None
+    participant_id: str | None = None
+    is_guest: bool = False
+    is_waitlisted: bool = False
+    session: SessionResponse
+
+
 class MemberLiveKitTokenRequest(BaseModel):
     """회원/게스트 구독 전용 LiveKit 토큰 요청 — 게스트는 participant_token 소유 증명."""
 

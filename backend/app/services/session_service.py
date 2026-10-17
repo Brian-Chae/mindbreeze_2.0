@@ -1754,6 +1754,198 @@ def join_session_by_code(
             "participant_token": make_token(participant)}
 
 
+# ---------------------------------------------------------------------------
+# SDD-209(B5a): 로그인 없는 4자리 코드 입장 + 입장 자격
+# ---------------------------------------------------------------------------
+
+
+def verify_entry_code(code: str, db: DBSession) -> dict:
+    """코드 확인만 한다(참여자 생성 없음). 성공해도 제목·시각·진행자명 외에는 노출하지 않는다.
+
+    없는/형식오류/종료/취소/숨김 코드는 사유 구분 없는 동일한 404 다.
+    """
+    s = _get_session_by_code(code, db)
+    host = db.query(User).filter(User.id == s.host_id).first()
+    return {"title": s.title, "scheduled_at": s.scheduled_at, "host_name": host.name if host else None}
+
+
+def _enter_response(s: Session, participant: SessionParticipant | None, db: DBSession, *, is_guest: bool) -> dict:
+    from app.services import entry_credential_service
+
+    credential = expires_at = None
+    if participant is not None:
+        credential, expires_at = entry_credential_service.issue(participant)
+    return {
+        "entry_credential": credential,
+        "expires_at": expires_at,
+        "participant_id": str(participant.id) if participant is not None else None,
+        "is_guest": is_guest,
+        "is_waitlisted": bool(participant.is_waitlisted) if participant is not None else False,
+        # 참여자 PII(성별·생년월일)는 입장 응답에 싣지 않는다.
+        "session": _with_chat_room(_serialize(s, include_participant_pii=False), s.id, db),
+    }
+
+
+def _member_profile_pii(user_id: UUID, db: DBSession) -> tuple[str | None, date | None]:
+    profile = db.query(ClientProfile).filter(ClientProfile.user_id == user_id).first()
+    return (profile.gender, profile.birth_date) if profile else (None, None)
+
+
+def _enter_resolved(
+    s: Session,
+    db: DBSession,
+    *,
+    user_id: str | None,
+    name: str | None = None,
+    gender: str | None = None,
+    birth_date: date | None = None,
+    email: str | None = None,
+    entry_credential: str | None = None,
+    require_invite: bool = False,
+) -> dict:
+    """확인된 활성 클래스에 참여자를 만들거나 되살려 입장 자격과 함께 돌려준다."""
+    from app.services import entry_credential_service
+
+    member_uid = _to_uuid(user_id) if user_id else None
+    if member_uid is not None and s.host_id == member_uid:
+        if require_invite:
+            raise HTTPException(status_code=403, detail="호스트는 참여자로 입장할 수 없어요")
+        return _enter_response(s, None, db, is_guest=False)
+
+    # CONC-CAPACITY-RACE: 정원 검사~삽입은 세션 행 잠금 하에서 직렬화한다.
+    locked = _lock_session_for_capacity(s.id, db)
+    if locked is not None:
+        s = locked
+
+    if member_uid is not None:
+        _revive_removed_participant(s, member_uid, db)
+        participant = (
+            db.query(SessionParticipant)
+            .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == member_uid)
+            .first()
+        )
+        if participant is None:
+            if require_invite:
+                raise HTTPException(
+                    status_code=403,
+                    detail="초대받은 클래스가 아니에요. 클래스 코드로 입장해 주세요",
+                )
+            has_room = _has_capacity(s, db)
+            pii_gender, pii_birth = _member_profile_pii(member_uid, db)
+            participant = SessionParticipant(
+                session_id=s.id,
+                user_id=member_uid,
+                gender=pii_gender,
+                birth_date=pii_birth,
+                consent_eeg=True,
+                is_waitlisted=not has_room,
+                waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
+            )
+            try:
+                with db.begin_nested():
+                    db.add(participant)
+            except IntegrityError:  # 동시 입장 경합 — 먼저 커밋된 행을 재사용
+                participant = (
+                    db.query(SessionParticipant)
+                    .filter(SessionParticipant.session_id == s.id, SessionParticipant.user_id == member_uid)
+                    .first()
+                )
+                if participant is None:
+                    raise
+        elif participant.is_waitlisted and _has_capacity(s, db):
+            participant.is_waitlisted = False
+            participant.waitlist_position = None
+        db.commit()
+        db.refresh(s)
+        _notify_participant_changed(s, db)
+        return _enter_response(s, participant, db, is_guest=False)
+
+    # ── 비회원: 개인정보 필수 ──
+    clean_name = (name or "").strip()
+    if not (clean_name and gender and birth_date and email):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="이름, 성별, 생년월일, 이메일을 모두 입력해 주세요",
+        )
+    clean_email = email.strip().lower()
+
+    # 복귀: 입장 자격이 가리키는 본인 참여자만 되돌려 받는다(이름 일치로는 인계하지 않는다).
+    participant = None
+    if entry_credential:
+        try:
+            candidate = entry_credential_service.resolve_participant(db, entry_credential, s.id)
+        except HTTPException:
+            candidate = None  # 만료·폐기·타 클래스 자격은 무시하고 새 참여자로 입장
+        if candidate is not None:
+            participant = candidate
+
+    if participant is None:
+        has_room = _has_capacity(s, db)
+        participant = SessionParticipant(
+            session_id=s.id,
+            user_id=None,
+            guest_name=clean_name[:100],
+            gender=gender,
+            birth_date=birth_date,
+            report_email=clean_email,
+            consent_eeg=True,
+            is_waitlisted=not has_room,
+            waitlist_position=_next_waitlist_position(s, db) if not has_room else None,
+        )
+        db.add(participant)
+    else:
+        if participant.user_id is None:
+            participant.guest_name = clean_name[:100]
+            participant.gender = gender
+            participant.birth_date = birth_date
+            participant.report_email = clean_email
+        if participant.is_waitlisted and _has_capacity(s, db):
+            participant.is_waitlisted = False
+            participant.waitlist_position = None
+    db.commit()
+    db.refresh(s)
+    _notify_participant_changed(s, db)
+    return _enter_response(s, participant, db, is_guest=participant.user_id is None)
+
+
+def enter_session(
+    code: str,
+    db: DBSession,
+    *,
+    user_id: str | None = None,
+    name: str | None = None,
+    gender: str | None = None,
+    birth_date: date | None = None,
+    email: str | None = None,
+    entry_credential: str | None = None,
+) -> dict:
+    """코드로 입장 — 로그인·초대 행 없이 가능. 성공 시 클래스/참여자 범위의 입장 자격을 발급한다."""
+    s = _get_session_by_code(code, db)
+    return _enter_resolved(
+        s, db, user_id=user_id, name=name, gender=gender, birth_date=birth_date,
+        email=email, entry_credential=entry_credential,
+    )
+
+
+def enter_session_as_invited(session_id: str, user_id: str, db: DBSession) -> dict:
+    """초대받은 로그인 회원의 편의 경로 — 초대 행이 있을 때만 코드 없이 입장한다(입장 조건이 아님)."""
+    sid = _to_uuid(session_id)
+    s = db.query(Session).filter(Session.id == sid, Session.is_template.is_(False)).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+    if s.status in _CLOSED_STATUSES:
+        raise HTTPException(status_code=409, detail="종료된 클래스에는 입장할 수 없어요")
+    return _enter_resolved(s, db, user_id=user_id, require_invite=True)
+
+
+def revoke_entry_credential(entry_credential: str | None, db: DBSession) -> None:
+    """로그아웃/폐기 — 이 참여자의 기존 입장 자격을 모두 무효화한다."""
+    from app.services import entry_credential_service
+
+    participant = entry_credential_service.resolve_participant(db, entry_credential)
+    entry_credential_service.revoke(db, participant)
+
+
 def member_livekit_token(
     code: str,
     participant_id: str,
