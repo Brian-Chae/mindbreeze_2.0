@@ -7,7 +7,7 @@ import { ProfileEntryView, type EntrySummary } from '../../components/class/flow
 import { ApiError } from '../../lib/api/client';
 import { getClientProfile } from '../../lib/api/client-profile';
 import { enterByCode, entryFromResult, saveEntry, verifyEntryCode, type EntryGender } from '../../lib/api/class-flow';
-import { formatStartLabel } from '../../lib/class/flow/member-format';
+import { formatStartLabel, maskEmail } from '../../lib/class/flow/member-format';
 import { setEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
   classifyCodeError, emptyProfileDraft, isCompleteCode, sanitizeCodeInput, toEnterPayload, validateEntryProfile,
@@ -104,7 +104,11 @@ export default function CodeEntryPage() {
         return;
       }
       saveEntry(entry);
-      setEntryHandoff({ sessionId: entry.sessionId, displayName: draft.name.trim() || (memberName ?? '') });
+      setEntryHandoff({
+        sessionId: entry.sessionId,
+        displayName: draft.name.trim() || (memberName ?? ''),
+        maskedEmail: entry.isGuest ? maskEmail(draft.email.trim()) : null,
+      });
       navigate(`/class/${encodeURIComponent(entry.sessionId)}/enter`, { replace: true });
     } catch (error) {
       if (!aliveRef.current) return;

@@ -1,6 +1,6 @@
 // SDD-209 M1 — `/class/:sessionId/enter` 참가자 입장 흐름 오케스트레이터(입장 자격 기반, 로그인 불필요).
 // FM05 입장 확인 → (M2~M5 준비 마법사) → (M6 시작 대기) → (M7 대기열) → 진행 화면 → (M8 종료) 를 하나의 상태 머신으로 돌린다.
-import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EntryConfirmView } from '../../components/class/flow/member/EntryConfirmView';
 import { BandStepContainer } from '../../components/class/flow/member/BandStepContainer';
@@ -10,13 +10,14 @@ import { NoticeStepView } from '../../components/class/flow/member/NoticeStepVie
 import { ReadySummaryView } from '../../components/class/flow/member/ReadySummaryView';
 import { StartedSheet } from '../../components/class/flow/member/StartedSheet';
 import { SurveyStepView } from '../../components/class/flow/member/SurveyStepView';
+import { EndContainer } from '../../components/class/flow/member/EndContainer';
 import { WaitlistView } from '../../components/class/flow/member/WaitlistView';
 import { WaitStartContainer } from '../../components/class/flow/member/WaitStartContainer';
 import { useEntryPrep } from '../../hooks/useEntryPrep';
 import { useEntryState } from '../../hooks/useEntryState';
 import { useEntrySurvey } from '../../hooks/useEntrySurvey';
 import { cancelWaitlist, clearEntry, enterInvitedSession, entryFromResult, loadEntry, saveEntry, type StoredEntry } from '../../lib/api/class-flow';
-import { formatStartLabel, formatWhen } from '../../lib/class/flow/member-format';
+import { durationMinutes, formatStartLabel, formatWhen, maskEmail } from '../../lib/class/flow/member-format';
 import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, startedSheetApplies, type FlowStateKind,
@@ -40,7 +41,10 @@ export default function EntryPage() {
   const [entry, setEntry] = useState<StoredEntry | null>(() => loadEntry(sessionId));
   const [entryChecked, setEntryChecked] = useState(entry !== null);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
-  const [handoffName] = useState(() => takeEntryHandoff(sessionId)?.displayName ?? '');
+  const [handoff] = useState(() => takeEntryHandoff(sessionId));
+  const handoffName = handoff?.displayName ?? '';
+  const startedSeenRef = useRef<string | null>(null);
+  const endedSeenRef = useRef<string | null>(null);
   const prep = useEntryPrep({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
@@ -80,6 +84,9 @@ export default function EntryPage() {
   // 서버 상태 → 머신
   useEffect(() => {
     if (!serverState) return;
+    // 함께한 시간 계산용으로 시작·종료를 처음 본 시각을 기록한다(서버가 시각을 내려 주기 전까지의 근사)
+    if (serverState.status === 'in_progress' && !startedSeenRef.current) startedSeenRef.current = new Date().toISOString();
+    if (serverState.status === 'completed' && !endedSeenRef.current) endedSeenRef.current = new Date().toISOString();
     dispatch({ type: 'sync', stage: deriveEnterStage({ status: serverState.status, isWaitlisted: serverState.is_waitlisted }) });
   }, [serverState]);
 
@@ -156,6 +163,23 @@ export default function EntryPage() {
     navigate(homePath);
   };
 
+  if (machine.phase === 'end') {
+    const reportMode = !serverState?.report_included ? 'excluded' : entry.isGuest ? 'guest' : 'member';
+    const minutes = durationMinutes(info.startedAt ?? startedSeenRef.current, endedSeenRef.current);
+    return (
+      <EndContainer
+        sessionId={sessionId} credential={entry.credential} participantId={entry.participantId} place={place} title={title}
+        duration={minutes === null ? null : `${minutes}분`}
+        reportMode={reportMode}
+        maskedEmail={entry.isGuest ? (handoff?.maskedEmail ?? null) : maskEmail(user?.email ?? '')}
+        accountEmail={entry.isGuest ? null : (user?.email ?? null)}
+        onHome={() => {
+          clearEntry(sessionId);
+          navigate(homePath, { replace: true });
+        }}
+      />
+    );
+  }
   if (machine.phase === 'waitlist') {
     return (
       <WaitlistView

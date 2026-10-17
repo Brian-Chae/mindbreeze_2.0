@@ -194,7 +194,7 @@ describe('/join 컨테이너', () => {
     expect(stored).toContain('cred-xyz');
     for (const secret of ['0042', '지은', 'jieun', '1990']) expect(stored).not.toContain(secret);
     expect(window.location.href).not.toContain('0042');
-    expect(takeEntryHandoff('s1')).toEqual({ sessionId: 's1', displayName: '지은' });
+    expect(takeEntryHandoff('s1')).toEqual({ sessionId: 's1', displayName: '지은', maskedEmail: 'ji***@example.com' });
     expect(window.localStorage.length).toBe(0);
   });
 

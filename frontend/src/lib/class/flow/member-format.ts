@@ -47,3 +47,19 @@ export function startsInLabel(iso: string | null, now: Date = new Date()): strin
   const rest = minutes % 60;
   return rest === 0 ? `약 ${hours}시간 뒤에 시작해요` : `약 ${hours}시간 ${rest}분 뒤에 시작해요`;
 }
+
+/** 앞 2글자만 보이는 이메일 마스킹: `se***@example.com`. 이메일 형식이 아니면 null */
+export function maskEmail(email: string): string | null {
+  const at = email.indexOf('@');
+  if (at < 1 || at === email.length - 1) return null;
+  return `${email.slice(0, Math.min(2, at))}***${email.slice(at)}`;
+}
+
+/** 시작~종료 시각의 차이(분, 반올림). 시각이 없거나 종료가 먼저면 null */
+export function durationMinutes(startIso: string | null, endIso: string | null): number | null {
+  if (!startIso || !endIso) return null;
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) return null;
+  return Math.round((end - start) / 60_000);
+}

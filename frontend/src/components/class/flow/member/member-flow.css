@@ -210,3 +210,15 @@
 .pz-root .fm-place .tx { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .pz-root .fm-place .tx b { font-size: var(--fs-15); line-height: 24px; color: var(--tx-hi); }
 .pz-root .fm-place .tx .d { font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+
+/* FM09 종료·리포트 */
+.pz-root .fm-fbtns .fl-btn[data-kind="done"], .pz-root .fm-fbtns .fl-btn:disabled { opacity: 0.75; }
+.pz-root .fm-hi { display: grid; }
+.pz-root .fm-ro { display: flex; align-items: center; min-height: 48px; padding: 0 16px; border-radius: var(--r-card); background: rgba(255, 255, 255, 0.06); border: 1px solid var(--sheet-border); color: var(--tx-mid); font-size: var(--fs-15); }
+.pz-root .fm-scale { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fm-scale .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.pz-root .fm-scale .row button { min-height: 56px; padding: 0; border-radius: var(--r-card); font-size: var(--fs-13); line-height: 16px; font-weight: 600; text-align: center; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--sheet-border); }
+.pz-root .fm-scale .row button[aria-checked="true"] { background: var(--mb-purple); border-color: var(--mb-pale); }
+
+/* 체크인 시트(3축 + 한 줄 소감 + 버튼)는 공용 상한(58dvh)보다 크다 — 시트 안 중첩 스크롤을 만들지 않도록 회원 흐름 시트만 상한을 올린다 */
+.pz-shell.fm-member[data-sheet-mode="bottom"] .pz-sheet[data-pz="flow-sheet"] { max-height: min(86dvh, 640px); }

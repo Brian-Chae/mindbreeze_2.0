@@ -3,6 +3,8 @@
 interface EntryHandoff {
   sessionId: string;
   displayName: string;
+  /** 앞 2글자만 보이는 입력 이메일 — 종료 화면의 비회원 리포트 안내용(원문 이메일은 담지 않는다) */
+  maskedEmail?: string | null;
 }
 
 let pending: EntryHandoff | null = null;
