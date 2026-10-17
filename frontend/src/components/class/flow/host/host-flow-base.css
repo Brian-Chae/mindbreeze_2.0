@@ -46,3 +46,9 @@
 .pz-root .fh-fillcol > .fh-codecard { flex: none; }
 .pz-root .fh-invcard { flex: none; }
 .pz-root .fh-fillcol > .fh-invcard { flex: 1; min-height: 0; }
+
+/* 로비/세팅: 본문 컬럼이 상단 바와 푸터 사이를 넘지 않고, 대기 회원 목록만 안에서 스크롤한다 */
+.pz-root.fh-lobby .fl-body { overflow: hidden; }
+.pz-root.fh-lobby .fl-col { max-height: 100%; min-height: 0; }
+.pz-root.fh-lobby .fl-col > * { flex: none; }
+.pz-root.fh-lobby .fl-col > .fhb-listcard { flex: 0 1 auto; min-height: 0; }
