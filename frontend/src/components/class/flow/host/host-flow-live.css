@@ -173,3 +173,27 @@
 .pz-root .fhb-chatin { flex: 1; min-width: 0; min-height: 44px; background: transparent; border: 0; color: var(--tx-hi); font: inherit; font-size: var(--fs-15); }
 .pz-root .fhb-chatin::placeholder { color: var(--tx-lo); }
 .pz-root .fhb-chatin:disabled { opacity: 0.6; }
+.pz-root .fhb-consent { display: flex; flex-direction: column; gap: 8px; }
+.pz-root .fhb-cnt { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); line-height: 20px; color: var(--tx-mid); }
+.pz-root .fhb-cnt > svg { flex: none; }
+.pz-root .fhb-check { width: 100%; min-height: 48px; padding: 0 16px; text-align: left; }
+.pz-root .fhb-check:disabled { opacity: 1; }
+.pz-root .fhb-check b { font-size: var(--fs-15); }
+.pz-root .fhb-startnote { margin: 0; display: flex; gap: 8px; align-items: center; }
+.pz-root .fhb-startnote > svg { flex: none; }
+
+/* 시작 확인 시트는 내용이 많아 시트 안 스크롤이 생기지 않도록 촘촘하게(시안 .w-tight) */
+.pz-root .fhb-stat .fhb-sr { min-height: 48px; padding: 4px 16px; }
+.pz-root .fhb-consent .fhb-fact { min-height: 32px; }
+.pz-root .fhb-consent .fhb-check { min-height: 44px; }
+@media (max-height: 760px) {
+  .pz-root .fhb-stat .fhb-sr { min-height: 44px; }
+  .pz-root .fhb-stat .fhb-pr { min-height: 24px; }
+  .pz-root .fhb-stat .fhb-pl { padding: 4px 0; }
+  .pz-root .fhb-act-start { flex-direction: row-reverse; }
+  .pz-root .fhb-act-start > * { flex: 1 1 0; min-width: 0; }
+}
+.pz-root .fhb-stat .fhb-sr .fl-btn { min-height: var(--tap); padding: 0 16px; font-size: var(--fs-13); }
+.pz-root .fhb-stat .fhb-pn { padding-top: 4px; line-height: 16px; }
+.pz-root .fhb-stat .fhb-pr { min-height: 28px; }
+.pz-root .fl-card.fhb-consent[data-size] { padding: 8px 16px; }

@@ -58,3 +58,22 @@ export interface InviteRemindResponse {
 
 export const remindInvitees = (sessionId: string, participantIds?: readonly string[]): Promise<InviteRemindResponse> =>
   apiClient.post<InviteRemindResponse>(`/sessions/${sessionId}/invite/remind`, participantIds ? { participant_ids: participantIds } : {});
+
+/** 상담사용 익명 집계(개별 선택·이름 비노출) — 시작 확인 시트의 `리포트에 반영하지 않는 참가자 N명` */
+export interface ReportChoiceSummary {
+  included: number;
+  excluded: number;
+  total: number;
+}
+
+export const getReportChoiceSummary = (sessionId: string): Promise<ReportChoiceSummary> =>
+  apiClient.get<ReportChoiceSummary>(`/sessions/${sessionId}/report-choice/summary`);
+
+/** 연구 목적 활용에 동의한 인원 수만(개별 상태·가명 ID 비노출) */
+export interface ResearchConsentSummary {
+  consented: number;
+  total: number;
+}
+
+export const getResearchConsentSummary = (sessionId: string): Promise<ResearchConsentSummary> =>
+  apiClient.get<ResearchConsentSummary>(`/sessions/${sessionId}/research-consent/summary`);
