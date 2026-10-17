@@ -159,54 +159,62 @@ await scenario('[로그인] 없는 계정 로그인 → 오류 안내(잠금 방
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// 5. 클래스 참여 (상담사 생성→오픈→시작 → 내담자 코드 참여 → 종료)
+// 5. 클래스 참여 (상담사 생성→오픈→시작 → 초대 회원 입장 → 종료)
 // ════════════════════════════════════════════════════════════════════════
 let sessionId = null;
-let accessCode = null;
 
-await scenario('[클래스] 상담사 세션 생성 → 오픈 → 시작', async () => {
+await scenario('[클래스] 상담사 클래스 생성 → 오픈 → 시작', async () => {
   const c = await counselor();
   const cl = await client();
   const r = await fetch(`${API}/sessions`, {
     method: 'POST', headers: H(c.token),
     body: JSON.stringify({ type: 'meditation', duration_min: 30, title: TITLE, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: [cl.user.id] }),
   });
-  if (r.status !== 201 && r.status !== 200) throw new Error(`세션 생성 ${r.status}`);
+  if (r.status !== 201 && r.status !== 200) throw new Error(`클래스 생성 ${r.status}`);
   const s = await r.json();
   sessionId = s.id;
-  accessCode = s.access_code;
   for (const action of ['open', 'start']) {
     const t = await fetch(`${API}/sessions/${sessionId}/${action}`, { method: 'POST', headers: H(c.token) });
-    if (t.status !== 200) throw new Error(`세션 ${action} ${t.status}`);
+    if (t.status !== 200) throw new Error(`클래스 ${action} ${t.status}`);
   }
   // 종료 가능 상태(in_progress) 확인
   const chk = await fetch(`${API}/sessions/${sessionId}`, { headers: H(c.token) });
-  if ((await chk.json()).status !== 'in_progress') throw new Error('세션이 in_progress 가 아님');
+  if ((await chk.json()).status !== 'in_progress') throw new Error('클래스가 in_progress 가 아님');
 });
 
-await scenario('[클래스] 내담자 코드 참여 → 대기실 → 명상 화면', async (p) => {
-  if (!accessCode) throw new Error('선행 세션 생성 실패');
+await scenario('[클래스] 초대 회원 입장 → 준비 → 진행 화면', async (p) => {
+  if (!sessionId) throw new Error('선행 클래스 생성 실패');
   await uiLogin(p, 'client', HOME.client);
-  await p.goto(`${BASE}/join?code=${accessCode}`, { waitUntil: 'networkidle' });
-  // 3단계 준비 건너뛰기(설문→링크밴드→기기)
-  await p.getByRole('button', { name: '건너뛰기' }).click().catch(() => {});
-  await p.waitForTimeout(400);
-  await p.getByRole('button', { name: /밴드 없이 진행하기/ }).click().catch(() => {});
-  await p.waitForTimeout(400);
-  await p.getByRole('button', { name: /기기 테스트 건너뛰기/ }).click().catch(() => {});
-  // in_progress 이므로 새 진행 화면(SDD-208: 시간 + 지표 링 + 도크. 밴드 없이 입장하므로 '내 상태' 탭은 없다) 진입 확인
+  // SDD-209: 코드 없이 초대 행으로 입장 자격을 받는 편의 경로(/class/{id}/enter). 6자리 코드·/join?code= 는 없다.
+  await p.goto(`${BASE}/class/${sessionId}/enter`, { waitUntil: 'networkidle' });
+  // 입장 확인 → 고지 → (설문·밴드·기기) → 요약 → 입장. 보이는 CTA 를 순서대로 눌러 진행 화면까지 간다.
+  const steps = ['입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음', '지금 입장하기'];
+  for (let round = 0; round < 12; round += 1) {
+    if (await p.locator('[data-pz="app"] [data-pz="dock"]').count()) break;
+    let clicked = false;
+    for (const name of steps) {
+      const button = p.getByRole('button', { name, exact: true });
+      if (await button.count() && await button.first().isEnabled()) {
+        await button.first().click().catch(() => {});
+        clicked = true;
+        break;
+      }
+    }
+    await p.waitForTimeout(clicked ? 500 : 1000);
+  }
+  // in_progress 이므로 진행 화면(SDD-208: 시간 + 지표 링 + 도크. 밴드 없이 입장하므로 '내 상태' 탭은 없다) 진입 확인
   await p.locator('[data-pz="app"] [data-pz="dock"]').waitFor({ timeout: 15000 }).catch(() => {});
   const live = await bodyText(p);
   if (!(await p.locator('[data-pz="ring"]').count()) || !live.includes('조용한 신호') || !live.includes('채팅')) {
-    throw new Error('명상 화면 진입 실패');
+    throw new Error('진행 화면 진입 실패');
   }
 });
 
 await scenario('[클래스] 상담사 종료(end) → 상태 completed', async () => {
-  if (!sessionId) throw new Error('선행 세션 생성 실패');
+  if (!sessionId) throw new Error('선행 클래스 생성 실패');
   const c = await counselor();
   const r = await fetch(`${API}/sessions/${sessionId}/end`, { method: 'POST', headers: H(c.token) });
-  if (r.status !== 200) throw new Error(`세션 종료 ${r.status}`);
+  if (r.status !== 200) throw new Error(`클래스 종료 ${r.status}`);
   const s = await r.json();
   if (s.status !== 'completed') throw new Error(`종료 후 상태 ${s.status}`);
 });
@@ -223,7 +231,7 @@ async function sessionReports(cToken) {
 }
 
 await scenario('[리포트] 종료 후 자동 생성 폴링(counselor + client)', async () => {
-  if (!sessionId) throw new Error('선행 세션 생성 실패');
+  if (!sessionId) throw new Error('선행 클래스 생성 실패');
   const c = await counselor();
   let reports = [];
   for (let i = 0; i < 30; i++) {
@@ -245,7 +253,7 @@ await scenario('[리포트] 상담사 리포트 열람(UI)', async (p) => {
 });
 
 await scenario('[리포트] client 리포트 승인 → completed', async () => {
-  if (!sessionId) throw new Error('선행 세션 생성 실패');
+  if (!sessionId) throw new Error('선행 클래스 생성 실패');
   const c = await counselor();
   const reports = await sessionReports(c.token);
   const clientReport = reports.find((x) => x.type === 'client');
@@ -259,7 +267,7 @@ await scenario('[리포트] client 리포트 승인 → completed', async () => 
 });
 
 await scenario('[리포트] 리포트 이메일 재발송(승인 후) → queued/sent', async () => {
-  if (!sessionId) throw new Error('선행 세션 생성 실패');
+  if (!sessionId) throw new Error('선행 클래스 생성 실패');
   const c = await counselor();
   const cl = await client();
   const reports = await sessionReports(c.token);
