@@ -25,6 +25,7 @@ from app.models.research import ResearchConsent, ResearchConsentEvent, ResearchW
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.services import session_service
+from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -240,7 +241,7 @@ def set_own_consent(
 
 def anonymous_summary(session_id: str, host_id: str, db: DBSession) -> dict:
     """상담사에게는 인원 수만 — 개별 동의 상태·가명 ID 는 노출하지 않는다."""
-    s = session_service._get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.RESEARCH_CONSENT_SUMMARY_READ)
     active_ids = [p.id for p in (s.participants or []) if not p.is_waitlisted]
     consented = 0
     if active_ids:

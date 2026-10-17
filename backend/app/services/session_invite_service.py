@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.notification import Notification
 from app.services import session_service
+from app.services.session_authz import SessionAction, get_session_authorized
 
 REMIND_COOLDOWN_SEC = 60
 _RECENT_LOOKBACK = 20
@@ -50,7 +51,7 @@ def _recently_reminded(user_id: uuid.UUID, session_id: uuid.UUID, db: DBSession)
 def remind_invitees(
     session_id: str, host_id: str, participant_ids: list[str] | None, db: DBSession
 ) -> dict:
-    s = session_service._get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.PARTICIPANT_REMIND)
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 클래스에는 다시 알릴 수 없어요")
 

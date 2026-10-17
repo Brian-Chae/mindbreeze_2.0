@@ -65,6 +65,7 @@ from app.services import (
     session_invite_service,
     session_service,
 )
+from app.services.session_authz import SessionAction, get_session_authorized
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -628,7 +629,7 @@ def get_eeg_rollup(
     EEGFeatureWindow(1초 원천) 온디맨드 집계(valid_count/coverage/유효샘플 가중평균).
     SDD-028: start_bucket/end_bucket(batch key)로 필요한 버킷 구간만 조회할 수 있다.
     """
-    session_service._get_session_as_host(session_id, current_user["id"], db)
+    get_session_authorized(db, session_id, current_user["id"], SessionAction.EEG_ROLLUP_READ)
     return eeg_rollup_service.compute_rollup(
         session_id,
         db,
@@ -700,7 +701,7 @@ def get_livekit_token(
     entry/livekit-token(_compute_can_publish 적용) 경로로만 발급한다.
     """
     from fastapi import HTTPException
-    s = session_service._get_session_as_host(session_id, current_user["id"], db)
+    s = get_session_authorized(db, session_id, current_user["id"], SessionAction.LIVEKIT_TOKEN_ISSUE)
     if not s.webrtc_room_id:
         raise HTTPException(status_code=400, detail="WebRTC 룸이 아직 생성되지 않았습니다")
     token = session_service.generate_livekit_token(
