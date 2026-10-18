@@ -142,10 +142,14 @@ DEV_CRON_14 = {
 }
 
 
+# SDD-212: 운영 전용 추가 timer(dev 서버 cron 에는 없음) — 적체 감시.
+PROD_ONLY_JOBS = {"report_backlog_probe"}
+
+
 def test_jobs_tsv_는_dev_cron_14개를_활성으로_포함하고_SDD209_2종은_비활성이다():
     jobs = render.load_jobs(DEPLOY / "jobs.tsv")
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
-    assert enabled == DEV_CRON_14
+    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
     assert disabled == {"retention_sweep", "research_export"}
 
@@ -167,7 +171,7 @@ def test_jobs_tsv_주기가_dev_cron_과_같다():
 
 def test_활성_작업_수만큼_timer_와_타임아웃_드롭인이_생성된다(rendered):
     timers = sorted(p.name for p in (rendered / "etc/systemd/system").glob("mindbreeze-job-*.timer"))
-    assert len(timers) == 14
+    assert len(timers) == 14 + len(PROD_ONLY_JOBS)
     assert not (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").exists()
     t = (rendered / "etc/systemd/system/mindbreeze-job-process_email_outbox.timer").read_text()
     assert "Unit=mindbreeze-job@process_email_outbox.service" in t and "Persistent=false" in t

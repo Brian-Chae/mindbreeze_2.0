@@ -49,7 +49,7 @@ fi
 # 5. INFRA-10: systemd 유닛 설치 (backend/deploy/*.service 가 존재할 때)
 #    — 첫 배포 전에는 유닛 파일이 없으므로, 첫 배포 후 이 스크립트를 재실행하면 설치된다.
 if [ -d /home/ubuntu/mindbreeze/backend/deploy ]; then
-  for unit in mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker; do
+  for unit in mindbreeze-worker mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-email-worker mindbreeze-export-worker; do
     src="/home/ubuntu/mindbreeze/backend/deploy/${unit}.service"
     if [ -f "$src" ]; then
       sudo cp "$src" "/etc/systemd/system/${unit}.service"

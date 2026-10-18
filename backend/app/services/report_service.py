@@ -9,11 +9,12 @@ from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.client_profile import ClientProfile
 from app.models.record import Report, SessionRecord
 from app.models.user import User
-from app.services import notification_service, record_service, report_scope
+from app.services import notification_service, record_service, report_progress_service, report_scope
 from app.services.session_authz import SessionAction, get_session_authorized
 from app.schemas.eeg import HRVMotionSummary
 
@@ -203,6 +204,7 @@ def _serialize(
         "birth_date": participant_info.get("birth_date") if participant_info else None,
         "is_guest": participant_info.get("is_guest") if participant_info else None,
         "in_review": False,
+        "in_review_delayed": False,
     }
 
 
@@ -214,7 +216,24 @@ def _is_unapproved(report: Report) -> bool:
     return report.status != "completed"
 
 
-def _mask_unapproved(result: dict, report: Report) -> dict:
+def _generation_delayed(report: Report, session: Session | None, now: datetime | None = None) -> bool:
+    """SDD-212 TD7: 리포트 생성이 아직 끝나지 않았고 세션 종료 후 지연 임계를 넘었는가.
+
+    생성이 끝나 상담사 확인을 기다리는 건(ready/partial)이나 실패 건은 지연이 아니다.
+    """
+    if session is None or session.ended_at is None:
+        return False
+    if (report.generation_status or "pending") not in (
+        report_progress_service.GENERATION_PENDING,
+        report_progress_service.GENERATION_PROCESSING,
+    ):
+        return False
+    ended_at = session.ended_at if session.ended_at.tzinfo else session.ended_at.replace(tzinfo=timezone.utc)
+    elapsed = ((now or _now()) - ended_at).total_seconds()
+    return elapsed > settings.pipeline_report_delay_notice_seconds
+
+
+def _mask_unapproved(result: dict, report: Report, session: Session | None = None) -> dict:
     """SDD-211(R6-X1, U1=B): 승인 전 리포트를 회원 응답에서 '리뷰 중' 자리표시자로 마스킹한다.
 
     행·id·상태·생성 진행·시각 등 식별/표시 필드는 보존하고(구 앱 호환, 키 집합 불변),
@@ -230,6 +249,7 @@ def _mask_unapproved(result: dict, report: Report) -> dict:
         "pdf_url": None,
         "subjective_state": None,
         "in_review": True,
+        "in_review_delayed": _generation_delayed(report, session),
     }
 
 
@@ -718,7 +738,7 @@ def list_reports(
             )
             # SDD-211(R6-X1): 회원(비-staff) 조회에서는 승인 전 행을 '리뷰 중' 으로 마스킹한다(총계·페이지 불변).
             if not is_staff and _is_unapproved(report):
-                serialized = _mask_unapproved(serialized, report)
+                serialized = _mask_unapproved(serialized, report, sessions_map.get(report.session_id))
             result.append(serialized)
         else:
             session = missing_by_id.get(row.session_id)
@@ -777,7 +797,7 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     # SDD-211(R6-X1): 회원이 승인 전 리포트를 열면 마스킹 200 을 주고, 읽음 처리하지 않는다
     #   (승인 후에 NEW 가 정상 표시되도록). 소유자 검사(RPT-IDOR-001)가 위에서 먼저 끝났다.
     if viewer and viewer.role == "client" and _is_unapproved(report):
-        return _mask_unapproved(result, report)
+        return _mask_unapproved(result, report, session)
     # SDD-087: counselor 리포트 상세에는 같은 세션 client 리포트들의 코멘트를 파생 표시한다
     # (원본은 client 리포트에만 저장 — 저장하지 않고 조회 시 주입).
     if report.type == "counselor":

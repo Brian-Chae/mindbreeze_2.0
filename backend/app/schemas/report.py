@@ -88,6 +88,9 @@ class ReportResponse(HRVMotionSummary):
     subjective_state: dict[str, Any] | None = None
     # SDD-211: 승인 전 리포트를 회원에게 '리뷰 중' 으로 마스킹한 응답이면 true (가산 필드, 기본 false)
     in_review: bool = False
+    # SDD-212: 승인 전(in_review)이면서 리포트 생성이 지연 중일 때만 true (가산 필드, 기본 false).
+    #   상담사 확인 대기(생성 완료) 건은 false — 보조 문구는 생성 지연에만 붙는다.
+    in_review_delayed: bool = False
 
 
 class ReportListResponse(BaseModel):

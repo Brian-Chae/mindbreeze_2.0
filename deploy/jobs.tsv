@@ -15,3 +15,4 @@ process_push_outbox	process_push_outbox_cron.py	*-*-* *:*:00 UTC	55	1	푸시 out
 sweep_agent_checkins	sweep_agent_checkins_cron.py	*-*-* *:00/5:00 UTC	240	1	AI 비서 안부 체크인
 retention_sweep	retention_sweep_cron.py	*-*-* 03:00:00 UTC	3600	0	SDD-209 기본 DB 삭제 스위프 — RETENTION_SWEEP_ENABLED 승인 전 비활성(enabled=0)
 research_export	research_export_cron.py	*-*-* 03:30:00 UTC	3600	0	SDD-209 연구 내보내기 — RESEARCH_EXPORT_ENABLED 승인 전 비활성(enabled=0)
+report_backlog_probe	report_backlog_probe_cron.py	*-*-* *:*:00 UTC	55	1	SDD-212 종료 파이프라인 적체 지표 수집(로그, 게시는 설정 승인 후)

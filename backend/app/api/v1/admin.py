@@ -129,6 +129,23 @@ class ClientCreateResponse(BaseModel):
     invite_sent: bool
 
 
+@router.get("/pipeline/backlog")
+def get_pipeline_backlog(
+    admin: User = Depends(require_platform_admin),  # noqa: ARG001
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """SDD-212: 종료 파이프라인 적체 지표(건수·시간만). 읽기 전용, 개인정보·내용 없음."""
+    from app.services import pipeline_backlog_service as backlog
+
+    try:
+        redis_client = backlog.get_redis_client()
+    except Exception:  # noqa: BLE001
+        redis_client = None
+    snap = backlog.snapshot(db, redis_client)
+    snap["alerts"] = backlog.evaluate_alerts(snap)
+    return snap
+
+
 @router.get("/reviews")
 def list_reviews(
     document_type: str | None = Query(default=None),

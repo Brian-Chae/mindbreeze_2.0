@@ -277,6 +277,20 @@ def _celery_conf_isolation(request):
     celery_app.conf.task_eager_propagates = prev[1]
 
 
+@pytest.fixture(autouse=True)
+def _pipeline_backlog_redis_isolation(monkeypatch):
+    """SDD-212: 적체 조회가 개발 PC 의 실제 Redis 를 보지 않게 빈 fakeredis 를 기본 주입한다.
+
+    파이프라인 아웃박스 재드라이브가 줄 잔량으로 보류를 판단하므로, 로컬 Redis 의 잔량이
+    테스트 결과를 바꾸면 안 된다. 적체 시나리오를 검증하는 테스트는 이를 다시 monkeypatch 한다.
+    """
+    import fakeredis
+
+    client = fakeredis.FakeStrictRedis()
+    monkeypatch.setattr("app.services.pipeline_backlog_service.get_redis_client", lambda: client)
+    yield client
+
+
 @pytest.fixture
 def celery_eager():
     """SDD-101: Celery 체인을 테스트에서 결정적으로 인라인 실행한다(파이프라인 검증용).

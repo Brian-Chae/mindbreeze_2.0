@@ -3,7 +3,13 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ClientReportViewer from '../../components/reports/ClientReportViewer';
 import { getReport, listReports, type ReportDto } from '../../lib/api/reports';
-import { isReportInReview, REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_NOTICE } from '../../lib/report-review-copy';
+import {
+  isReportDelayed,
+  isReportInReview,
+  REPORT_IN_REVIEW_BADGE,
+  REPORT_IN_REVIEW_DELAYED_NOTICE,
+  REPORT_IN_REVIEW_NOTICE,
+} from '../../lib/report-review-copy';
 import '../../components/reports/narrative-sections.css';
 
 type ClientReportDetailModalProps = {
@@ -87,6 +93,7 @@ export function ClientReportDetailModal({ reportId, sessionId, onClose, onReport
               {REPORT_IN_REVIEW_BADGE}
             </span>
             <p className="text-[15px] text-[#1F1F1F]">{REPORT_IN_REVIEW_NOTICE}</p>
+            {isReportDelayed(report) && <p className="text-[13px] text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
           </div>
         )}
         {!loading && report && !isReportInReview(report) && <ClientReportViewer report={report} onClose={onClose} />}

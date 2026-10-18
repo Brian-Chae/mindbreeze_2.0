@@ -23,6 +23,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.record import Report, SessionRecord
 
 logger = logging.getLogger(__name__)
@@ -343,6 +344,11 @@ def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
     """
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(seconds=REPORT_GENERATION_TIMEOUT_SECONDS)
+    # SDD-212 TD4: 녹음 종료 시각은 줄에 들어간 시각이라 대기 시간이 처리 시간으로 계산된다.
+    #   대기 유예를 더해 줄에서 기다리는 정상 건을 정체로 오판하지 않는다.
+    record_cutoff = now - timedelta(
+        seconds=REPORT_GENERATION_TIMEOUT_SECONDS + settings.pipeline_queue_grace_seconds
+    )
 
     affected: list[str] = []
 
@@ -373,7 +379,7 @@ def sweep_stale_reports(db: DBSession, *, commit: bool = True) -> list[str]:
         .filter(
             SessionRecord.status == "processing",
             SessionRecord.recording_ended_at.isnot(None),
-            SessionRecord.recording_ended_at < cutoff,
+            SessionRecord.recording_ended_at < record_cutoff,
         )
         .all()
     )

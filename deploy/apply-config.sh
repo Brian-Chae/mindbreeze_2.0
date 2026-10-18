@@ -40,7 +40,7 @@ fi
 systemctl daemon-reload
 
 # 상시 서비스는 enable 만(기동은 릴리스 설치 단계). timer 는 enable 하지 않는다.
-for svc in mindbreeze-backend mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker livekit coturn; do
+for svc in mindbreeze-backend mindbreeze-stt-worker mindbreeze-report-worker mindbreeze-worker mindbreeze-email-worker mindbreeze-export-worker livekit coturn; do
   systemctl enable "$svc" 2>/dev/null || true
 done
 systemctl restart livekit coturn || true

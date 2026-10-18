@@ -36,6 +36,22 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
+    # SDD-212: 종료 파이프라인 줄(큐) 분리 — stt/report 전용 일꾼 유닛이 설치된 환경에서만 켠다.
+    #   꺼져 있으면 기존 단일 줄 구성(롤백 경로). 신규 유닛 기동 후 켜야 작업이 쌓이지 않는다.
+    pipeline_queue_split_enabled: bool = False
+    # SDD-212 TD4: 줄 대기 시간 보정. 대기가 길어도 정상 건을 실패 처리·중복 발행하지 않도록 한다.
+    #   - queue_grace: 녹음 종료 후 30분 타임아웃에 더하는 대기 유예(초)
+    #   - redrive_delay: 발행 후 체인 미완료로 보고 재발행하기까지의 지연(초, D-3 몰림 목표의 2배)
+    pipeline_queue_grace_seconds: int = 60 * 60
+    pipeline_redrive_delay_seconds: int = 90 * 60
+    # SDD-212 TD6: 적체 경보 임계. 최장 대기(D-3 몰림 목표 45분의 2/3)와 줄별 대기 건수.
+    pipeline_alert_max_wait_seconds: int = 30 * 60
+    pipeline_alert_queue_len: int = 20
+    # SDD-212 TD6: CloudWatch 사용자 지정 지표 게시. AWS 권한 확인·승인 전에는 꺼 둔다(꺼져 있으면 로그만 출력).
+    pipeline_metrics_cloudwatch_enabled: bool = False
+    # SDD-212 TD7: 회원 '리뷰 중' 에 생성 지연 보조 문구를 붙이는 기준(세션 종료 후 경과, 초). D-3 평상시 목표 15분.
+    pipeline_report_delay_notice_seconds: int = 15 * 60
+
     # JWT — 기본값 없음. 미설정 시 기동 중단(main.py lifespan fail-fast).
     jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
