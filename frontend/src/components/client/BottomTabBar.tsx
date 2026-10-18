@@ -18,8 +18,8 @@ interface TabItem {
 
 const TAB_ITEMS: TabItem[] = [
   { to: '/app', key: 'home', icon: ICONS.home },
-  { to: '/app/sessions', key: 'class', icon: ICONS.calendar },
-  { to: '/app/chat', key: 'chat', icon: ICONS.message },
+  { to: '/app/classes', key: 'my-class', icon: ICONS.calendar },
+  { to: '/app/counseling', key: 'my-counseling', icon: ICONS.users },
   { to: '/app/reports', key: 'report', icon: ICONS.report },
 ];
 
@@ -33,13 +33,16 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
   );
+  const notificationUnread = useNotificationStore((s) => s.unread);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
   const agentUnread = useAgentStore((s) => s.unread);
   const reportUnread = useReportStore((s) => s.unread);
 
+  const moreBadge = notificationUnread + sessionInvites.length + chatUnread + agentUnread;
+
   const isActive = (path: string): boolean => {
     if (path === '/app') return pathname === '/app';
-    return pathname.startsWith(path);
+    return pathname === path || pathname.startsWith(`${path}/`);
   };
 
   return (
@@ -55,7 +58,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
             : tab.key === 'report'
               ? reportUnread
               : tab.key === 'class'
-                ? sessionInvites.length
+                ? 0
                 : 0;
 
         return (
@@ -86,10 +89,12 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       <button
         type="button"
         onClick={onMoreClick}
+        aria-label={moreBadge > 0 ? `더보기 ${moreBadge}건` : '더보기'}
         className="flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
       >
         <StrokeIcon d={ICONS.menu} size={22} />
         <span>{term('more')}</span>
+        {moreBadge > 0 && <span className="text-[12px]">{moreBadge > 9 ? '9+' : moreBadge}</span>}
       </button>
     </nav>
   );

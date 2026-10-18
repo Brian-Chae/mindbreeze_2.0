@@ -21,6 +21,12 @@ export const TERM_KEYS = [
   'admin-users',
   'admin-clients',
   'more',
+  'meditation-class',
+  'counseling',
+  'my-class',
+  'my-counseling',
+  'members',
+  'instructor',
 ] as const;
 
 export type TermKey = (typeof TERM_KEYS)[number];
@@ -45,6 +51,12 @@ const TERMS: Readonly<Record<TermKey, Readonly<Record<TermArea, string>>>> = {
   'admin-users': same('상담사 관리'),
   'admin-clients': same('회원 관리'),
   more: same('더보기'),
+  'meditation-class': same('명상 클래스'),
+  counseling: same('상담'),
+  'my-class': same('내 클래스'),
+  'my-counseling': same('내 상담'),
+  members: same('구성원'),
+  instructor: { meditation: '지도사', counseling: '상담사' },
 };
 
 export function term(key: TermKey, area: TermArea = 'meditation'): string {

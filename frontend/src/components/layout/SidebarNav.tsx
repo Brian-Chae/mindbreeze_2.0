@@ -6,6 +6,7 @@ import { getUnreadCount } from '../../lib/api/agent-counselor';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
 import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
+import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
 
 interface NavItem {
@@ -89,9 +90,9 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard', key: 'dashboard', icon: ICONS.home },
-  { to: '/sessions', key: 'class', icon: ICONS.calendar },
-  { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/dashboard', key: 'home', icon: ICONS.home },
+  { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
+  { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: '/reports', key: 'report', icon: ICONS.report },
   { to: '/playground', key: 'playground', icon: ICONS.activity },
@@ -101,11 +102,11 @@ const NAV_ITEMS: NavItem[] = [
 
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
-  { to: '/sessions', key: 'class', icon: ICONS.calendar },
-  { to: '/clients', key: 'client', icon: ICONS.users },
+  { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
+  { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
-  { to: '/org/counselors', key: 'org-counselors', icon: ICONS.users },
+  { to: '/org/counselors', key: 'members', icon: ICONS.users },
   { to: '/reports', key: 'report', icon: ICONS.report },
   { to: '/notifications', key: 'notification', icon: ICONS.bell },
   { to: '/settings', key: 'setting', icon: ICONS.settings },
@@ -113,7 +114,8 @@ const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
 
 const CLIENT_NAV_ITEMS: NavItem[] = [
   { to: '/app', key: 'home', icon: ICONS.home, end: true },
-  { to: '/app/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/app/classes', key: 'my-class', icon: ICONS.calendar },
+  { to: '/app/counseling', key: 'my-counseling', icon: ICONS.users },
   { to: '/app/chat', key: 'chat', icon: ICONS.message },
   { to: '/app/reports', key: 'report', icon: ICONS.report },
   { to: '/app/notifications', key: 'notification', icon: ICONS.bell },
@@ -147,6 +149,8 @@ export default function SidebarNav({
   reportBadge,
   sessionBadge,
 }: SidebarNavProps) {
+  const pendingReview = useReportStore((s) => s.pendingReview);
+  const unreadReports = useReportStore((s) => s.unread);
   const user = useAuthStore((s) => s.user);
   const openRisk = useCounselorAgentStore((state) => state.openRisk);
   const counselorUnread = useCounselorAgentStore((state) => state.unread);
@@ -215,13 +219,13 @@ export default function SidebarNav({
         count = (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
         break;
       case 'notification':
-        count = notificationBadge ?? 0;
+        count = (notificationBadge ?? 0) + (sessionBadge ?? 0);
         break;
       case 'report':
-        count = reportBadge ?? 0;
+        count = reportBadge ?? (role === 'client' || user?.role === 'client' ? unreadReports : pendingReview);
         break;
       case 'class':
-        count = sessionBadge ?? 0;
+        count = 0;
         break;
       default:
         count = 0;
