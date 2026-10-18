@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ClientReportViewer from '../../components/reports/ClientReportViewer';
 import { getReport, listReports, type ReportDto } from '../../lib/api/reports';
+import { isReportInReview, REPORT_IN_REVIEW_BADGE, REPORT_IN_REVIEW_NOTICE } from '../../lib/report-review-copy';
 import '../../components/reports/narrative-sections.css';
 
 type ClientReportDetailModalProps = {
@@ -80,7 +81,15 @@ export function ClientReportDetailModal({ reportId, sessionId, onClose, onReport
       <div className="report-sample-scroll">
         {loading && <div className="p-8 text-[#6F6F6F] text-sm" role="status">불러오는 중...</div>}
         {!loading && error && <div className="m-6 p-3 rounded-xl bg-red-50 text-red-700 text-sm" role="alert">{error}</div>}
-        {!loading && report && <ClientReportViewer report={report} onClose={onClose} />}
+        {!loading && report && isReportInReview(report) && (
+          <div className="flex flex-col items-center gap-3 px-6 py-16 text-center" data-testid="report-in-review">
+            <span className="inline-flex items-center rounded-full bg-[#F5EDFC] px-2.5 py-1 text-[12px] font-bold text-[#5F0080]">
+              {REPORT_IN_REVIEW_BADGE}
+            </span>
+            <p className="text-[15px] text-[#1F1F1F]">{REPORT_IN_REVIEW_NOTICE}</p>
+          </div>
+        )}
+        {!loading && report && !isReportInReview(report) && <ClientReportViewer report={report} onClose={onClose} />}
       </div>
     </dialog>,
     document.body,

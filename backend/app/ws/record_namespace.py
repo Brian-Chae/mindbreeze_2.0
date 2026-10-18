@@ -56,11 +56,11 @@ def _authorize_subscribe(session_id, user_id) -> None:
     `on_subscribe`(async) 안에서 직접 동기 DB 를 호출하면 이벤트 루프가 블로킹되므로
     이 함수를 `asyncio.to_thread` 로 위임한다(WS-08). 비참여자·세션 없음이면 예외를 올린다.
     """
-    from app.services.session_service import _get_session_for_participant
+    from app.services.session_authz import SessionAction, get_session_authorized
 
     db = _open_db()
     try:
-        _get_session_for_participant(session_id, user_id, db)
+        get_session_authorized(db, session_id, user_id, SessionAction.RECORD_SUBSCRIBE)
     finally:
         db.close()
 

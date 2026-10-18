@@ -32,6 +32,7 @@ from app.config import settings
 from app.models.notification import Notification  # noqa: F401  (relationship 등록)
 from app.models.session import Session, SessionParticipant, SessionReminderLog
 from app.models.user import User
+from app.services import session_terms
 
 logger = logging.getLogger(__name__)
 
@@ -97,14 +98,7 @@ def format_offset_label(offset_min: int) -> str:
 
 
 def _session_type_label(session: Session) -> str:
-    labels = {
-        "clinical": "임상심리상담",
-        "hypnosis": "최면심리상담",
-        "meditation": "명상수업",
-    }
-    if session.type == "custom":
-        return session.custom_type_name or "클래스"
-    return labels.get(session.type, "클래스")
+    return session_terms.session_type_label(session.type, session.custom_type_name, variant="reminder")
 
 
 def _format_scheduled_at(session: Session) -> str:

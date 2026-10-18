@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
 import { useReportStore } from '../../stores/reportStore';
+import { isReportInReview, REPORT_IN_REVIEW_BADGE } from '../../lib/report-review-copy';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -27,7 +28,14 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
-function StatusBadge({ sentAt }: { sentAt: string | null }) {
+function StatusBadge({ sentAt, inReview = false }: { sentAt: string | null; inReview?: boolean }) {
+  if (inReview) {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#F5EDFC] text-[#5F0080]">
+        {REPORT_IN_REVIEW_BADGE}
+      </span>
+    );
+  }
   if (sentAt) {
     return (
       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-bold bg-[#E0F2FE] text-[#075985]">
@@ -80,6 +88,7 @@ function reportTitle(report: ReportDto): string {
 }
 
 function reportSummary(report: ReportDto): string {
+  if (isReportInReview(report)) return '';
   const summary = report.content?.summary;
   if (typeof summary === 'string' && summary.trim()) return summary;
   return typeof report.content?.headline === 'string' ? report.content.headline : '';
@@ -144,7 +153,7 @@ export default function ClientReportListPage() {
     setError(null);
     try {
       await markAllReportsRead();
-      setReports((prev) => prev.map((r) => ({ ...r, is_read: true })));
+      setReports((prev) => prev.map((r) => (isReportInReview(r) ? r : { ...r, is_read: true })));
       setReportUnread(0);
     } catch (e) {
       setError(e instanceof Error ? e.message : '전체 읽음 처리 실패');
@@ -224,10 +233,10 @@ export default function ClientReportListPage() {
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-[12px] font-semibold text-[#5F0080]">{counselorName(report)}</span>
-        <span className="flex gap-2"><TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} /></span>
+        <span className="flex gap-2"><TypeBadge type={report.type} /><StatusBadge sentAt={report.sent_at} inReview={isReportInReview(report)} /></span>
       </div>
       <div className="flex items-center gap-1.5 mb-1">
-        {!report.is_read && (
+        {!report.is_read && !isReportInReview(report) && (
           <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
         )}
         <span className="font-bold text-[15px] text-[#1F1F1F] truncate">{reportTitle(report)}</span>
@@ -267,7 +276,7 @@ export default function ClientReportListPage() {
             className={`border-b border-[#EFEFEF] last:border-0 transition-colors ${report.id ? 'hover:bg-[#F8FAFC] cursor-pointer' : ''}`}
           >
             <td className="px-5 py-3.5"><div className="flex items-center gap-1.5">
-              {!report.is_read && (
+              {!report.is_read && !isReportInReview(report) && (
                 <span className="shrink-0 rounded-full bg-[#5F0080] px-2 py-0.5 text-[12px] font-bold text-white">NEW</span>
               )}
               <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
@@ -276,7 +285,7 @@ export default function ClientReportListPage() {
             </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
             <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>
-            <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} /></td>
+            <td className="px-5 py-3.5"><StatusBadge sentAt={report.sent_at} inReview={isReportInReview(report)} /></td>
             <td className="px-5 py-3.5">
               <button type="button" aria-haspopup="dialog" disabled={!report.id}
                 onClick={(event) => { event.stopPropagation(); setSelectedReportId(report.id); }}
@@ -303,7 +312,7 @@ export default function ClientReportListPage() {
           onClick={() => setGroupByCounselor((value) => !value)}
           className={`h-10 px-4 rounded-xl text-[13px] font-semibold border transition-colors ${groupByCounselor ? 'bg-[#F5EDFC] text-[#5F0080] border-[#E8D9F5]' : 'bg-white text-[#6F6F6F] border-[#EFEFEF] hover:bg-[#F8FAFC]'}`}
         >상담사별 그룹핑 {groupByCounselor ? 'ON' : 'OFF'}</button>
-        {reports.some((r) => !r.is_read) && (
+        {reports.some((r) => !r.is_read && !isReportInReview(r)) && (
           <button type="button" onClick={() => void handleMarkAllRead()} disabled={markingAllRead}
             className="h-10 px-4 rounded-xl text-[13px] font-semibold border border-[#E8D9F5] bg-white text-[#5F0080] hover:bg-[#F5EDFC] disabled:opacity-50 transition-colors"
           >{markingAllRead ? '처리 중...' : '전체 읽음'}</button>
@@ -365,7 +374,11 @@ export default function ClientReportListPage() {
           onClose={() => setSelectedReportId(null)}
           onReportChange={(next) => {
             // 열람 시 서버가 is_read를 마킹 — 목록의 NEW 배지와 하단 탭 배지를 즉시 갱신.
-            setReports((prev) => prev.map((r) => (r.id === next.id ? { ...r, is_read: true } : r)));
+            // 리뷰 중 리포트는 서버가 읽음 처리하지 않으므로 목록의 NEW 상태를 건드리지 않는다.
+            setReports((prev) => prev.map((r) => {
+              if (r.id !== next.id || isReportInReview(next)) return r;
+              return { ...r, is_read: true, in_review: false, sent_at: next.sent_at ?? r.sent_at };
+            }));
             void refreshReports();
           }}
         />

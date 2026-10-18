@@ -267,6 +267,7 @@ def get_client_home(
             id=str(latest_report.id),
             title=title,
             created_at=latest_report.created_at.isoformat(),
+            in_review=latest_report.status != "completed",
         )
 
     # ── 3. 안 읽은 메시지 수 ──

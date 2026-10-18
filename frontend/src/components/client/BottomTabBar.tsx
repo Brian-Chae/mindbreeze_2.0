@@ -8,18 +8,19 @@ import { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
+import { term, type TermKey } from '../../lib/terms';
 
 interface TabItem {
   to: string;
-  label: string;
+  key: TermKey;
   icon: string[];
 }
 
 const TAB_ITEMS: TabItem[] = [
-  { to: '/app', label: '홈', icon: ICONS.home },
-  { to: '/app/sessions', label: '클래스', icon: ICONS.calendar },
-  { to: '/app/chat', label: '채팅', icon: ICONS.message },
-  { to: '/app/reports', label: '리포트', icon: ICONS.report },
+  { to: '/app', key: 'home', icon: ICONS.home },
+  { to: '/app/sessions', key: 'class', icon: ICONS.calendar },
+  { to: '/app/chat', key: 'chat', icon: ICONS.message },
+  { to: '/app/reports', key: 'report', icon: ICONS.report },
 ];
 
 interface BottomTabBarProps {
@@ -49,11 +50,11 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       {TAB_ITEMS.map((tab) => {
         const active = isActive(tab.to);
         const unread =
-          tab.label === '채팅'
+          tab.key === 'chat'
             ? chatUnread + agentUnread
-            : tab.label === '리포트'
+            : tab.key === 'report'
               ? reportUnread
-              : tab.label === '클래스'
+              : tab.key === 'class'
                 ? sessionInvites.length
                 : 0;
 
@@ -78,7 +79,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
                 </span>
               )}
             </span>
-            <span>{tab.label}</span>
+            <span>{term(tab.key)}</span>
           </button>
         );
       })}
@@ -88,7 +89,7 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
         className="flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
       >
         <StrokeIcon d={ICONS.menu} size={22} />
-        <span>더보기</span>
+        <span>{term('more')}</span>
       </button>
     </nav>
   );

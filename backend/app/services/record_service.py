@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, VideoChunk
 from app.schemas.record import SubjectiveSlot
+from app.services.session_authz import SessionAction, get_session_authorized
 
 
 def _to_uuid(value: str) -> UUID:
@@ -21,34 +22,6 @@ def _to_uuid(value: str) -> UUID:
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _get_session_for_user(session_id: str, user_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    uid = _to_uuid(user_id)
-    if s.host_id == uid:
-        return s
-    participant = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == sid, SessionParticipant.user_id == uid)
-        .first()
-    )
-    if participant:
-        return s
-    raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
-
-
-def _get_session_as_host(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    return s
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +155,7 @@ def _serialize(
 
 
 def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.RECORD_VIEW)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
     # SDD-101 D1: 영상 청크 실제 수신 수 — 누락 여부 판정용.
     video_actual = db.query(VideoChunk).filter(VideoChunk.session_id == s.id).count()
@@ -206,7 +179,7 @@ def get_record(session_id: str, user_id: str, db: DBSession) -> dict:
 
 
 def get_transcript(session_id: str, user_id: str, db: DBSession) -> dict:
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.TRANSCRIPT_VIEW)
     # REC-PRIV-001: 전사문(원문·세그먼트)은 상담사(호스트) 전용 — 참여자에게는 노출하지 않는다.
     is_host = s.host_id == _to_uuid(user_id)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
@@ -227,12 +200,12 @@ def get_report_status(session_id: str, user_id: str, db: DBSession) -> dict:
     """
     from app.services import report_progress_service
 
-    s = _get_session_for_user(session_id, user_id, db)
+    s = get_session_authorized(db, session_id, user_id, SessionAction.REPORT_STATUS_VIEW)
     return report_progress_service.compute_report_progress(s.id, db)
 
 
 def update_record(session_id: str, host_id: str, payload, db: DBSession) -> dict:
-    s = _get_session_as_host(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.RECORD_UPDATE)
     record = db.query(SessionRecord).filter(SessionRecord.session_id == s.id).first()
     if not record:
         record = SessionRecord(session_id=s.id, status="idle", markers=[], edit_history=[], ai_summary={})

@@ -1,0 +1,6144 @@
+{
+ "components": {
+  "AudioStartRequest": {
+   "properties": {
+    "consent_audio": {
+     "default": true,
+     "type": "boolean"
+    }
+   },
+   "type": "object"
+  },
+  "AudioStartResponse": {
+   "properties": {
+    "session_id": {
+     "type": "string"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "AudioStopResponse": {
+   "properties": {
+    "ended_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "total_chunks": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "status",
+    "total_chunks"
+   ],
+   "type": "object"
+  },
+  "Body_upload_chunk_api_v1_sessions__session_id__audio_chunk_post": {
+   "properties": {
+    "chunk_index": {
+     "minimum": 0.0,
+     "type": "integer"
+    },
+    "file": {
+     "contentMediaType": "application/octet-stream",
+     "type": "string"
+    }
+   },
+   "required": [
+    "chunk_index",
+    "file"
+   ],
+   "type": "object"
+  },
+  "Body_upload_video_chunk_api_v1_sessions__session_id__video_chunk_post": {
+   "properties": {
+    "chunk_index": {
+     "minimum": 0.0,
+     "type": "integer"
+    },
+    "file": {
+     "contentMediaType": "application/octet-stream",
+     "type": "string"
+    }
+   },
+   "required": [
+    "chunk_index",
+    "file"
+   ],
+   "type": "object"
+  },
+  "CheckinRequest": {
+   "properties": {
+    "arousal": {
+     "anyOf": [
+      {
+       "maximum": 5.0,
+       "minimum": 1.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "emotion": {
+     "anyOf": [
+      {
+       "maximum": 5.0,
+       "minimum": 1.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "note": {
+     "anyOf": [
+      {
+       "maxLength": 200,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "phase": {
+     "default": "after",
+     "enum": [
+      "before",
+      "after"
+     ],
+     "type": "string"
+    },
+    "valence": {
+     "anyOf": [
+      {
+       "maximum": 5.0,
+       "minimum": 1.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "CheckinResponse": {
+   "properties": {
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "phase": {
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "subjective_state": {
+     "additionalProperties": true,
+     "type": "object"
+    }
+   },
+   "required": [
+    "session_id",
+    "phase",
+    "subjective_state"
+   ],
+   "type": "object"
+  },
+  "ChunkUploadResponse": {
+   "properties": {
+    "chunk_index": {
+     "type": "integer"
+    },
+    "received_bytes": {
+     "type": "integer"
+    },
+    "total_chunks": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "chunk_index",
+    "received_bytes",
+    "total_chunks"
+   ],
+   "type": "object"
+  },
+  "DataExportCreate": {
+   "additionalProperties": false,
+   "properties": {
+    "include": {
+     "items": {
+      "enum": [
+       "features",
+       "report"
+      ],
+      "type": "string"
+     },
+     "maxItems": 2,
+     "minItems": 1,
+     "type": "array"
+    },
+    "purpose": {
+     "maxLength": 500,
+     "minLength": 2,
+     "type": "string"
+    }
+   },
+   "required": [
+    "purpose"
+   ],
+   "type": "object"
+  },
+  "DataExportStatus": {
+   "properties": {
+    "completed_count": {
+     "type": "integer"
+    },
+    "error_code": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "expires_at": {
+     "format": "date-time",
+     "type": "string"
+    },
+    "export_id": {
+     "type": "string"
+    },
+    "size_bytes": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "snapshot_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "stage": {
+     "type": "string"
+    },
+    "status": {
+     "enum": [
+      "queued",
+      "preparing",
+      "ready",
+      "ready_with_warnings",
+      "failed",
+      "expired",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "status_url": {
+     "type": "string"
+    },
+    "target_count": {
+     "default": 1,
+     "type": "integer"
+    },
+    "warnings": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    }
+   },
+   "required": [
+    "export_id",
+    "status",
+    "stage",
+    "completed_count",
+    "size_bytes",
+    "warnings",
+    "error_code",
+    "expires_at",
+    "snapshot_at",
+    "status_url"
+   ],
+   "type": "object"
+  },
+  "EEGFeatureBatchRequest": {
+   "properties": {
+    "features": {
+     "items": {
+      "$ref": "#/components/schemas/EEGFeatureItem"
+     },
+     "maxItems": 5000,
+     "minItems": 1,
+     "type": "array"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "features"
+   ],
+   "type": "object"
+  },
+  "EEGFeatureBatchResponse": {
+   "properties": {
+    "saved": {
+     "type": "integer"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "saved"
+   ],
+   "type": "object"
+  },
+  "EEGFeatureItem": {
+   "properties": {
+    "alpha_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "attention_level": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "band_battery": {
+     "anyOf": [
+      {
+       "maximum": 100.0,
+       "minimum": 0.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "beta_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "cognitive_load": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "delta_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "emotional_stability": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "focus_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "gamma_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "hemispheric_balance": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "hf_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lf_hf_ratio": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lf_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "meditation_level": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "motion": {
+     "anyOf": [
+      {
+       "maximum": 1.0,
+       "minimum": 0.0,
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "play_group_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "relaxation_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "respiratory_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "rmssd": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sdnn": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "second_offset": {
+     "minimum": 0.0,
+     "type": "integer"
+    },
+    "signal_quality": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "stress_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "theta_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "timestamp": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "total_power": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "second_offset"
+   ],
+   "type": "object"
+  },
+  "EEGRollupBucket": {
+   "properties": {
+    "bucket_index": {
+     "type": "integer"
+    },
+    "coverage": {
+     "type": "number"
+    },
+    "end_sec": {
+     "type": "integer"
+    },
+    "metrics": {
+     "additionalProperties": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "type": "object"
+    },
+    "play_group_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sample_count": {
+     "type": "integer"
+    },
+    "start_sec": {
+     "type": "integer"
+    },
+    "valid_count": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "bucket_index",
+    "start_sec",
+    "end_sec",
+    "sample_count",
+    "valid_count",
+    "coverage",
+    "metrics"
+   ],
+   "type": "object"
+  },
+  "EEGRollupOverall": {
+   "properties": {
+    "heart_rate_max": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate_min": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "hf_power_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lf_hf_ratio_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lf_power_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "metrics": {
+     "additionalProperties": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "type": "object"
+    },
+    "motion_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "respiratory_rate_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "rmssd_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sample_count": {
+     "type": "integer"
+    },
+    "sdnn_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "valid_count": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "sample_count",
+    "valid_count",
+    "metrics"
+   ],
+   "type": "object"
+  },
+  "EEGRollupResponse": {
+   "properties": {
+    "algorithm_version": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "bucket_count": {
+     "type": "integer"
+    },
+    "buckets": {
+     "items": {
+      "$ref": "#/components/schemas/EEGRollupBucket"
+     },
+     "type": "array"
+    },
+    "overall": {
+     "$ref": "#/components/schemas/EEGRollupOverall"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "resolution_sec": {
+     "type": "integer"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "window_count": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "resolution_sec",
+    "window_count",
+    "bucket_count",
+    "buckets",
+    "overall"
+   ],
+   "type": "object"
+  },
+  "EnterRequest": {
+   "properties": {
+    "birth_date": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "code": {
+     "maxLength": 64,
+     "type": "string"
+    },
+    "email": {
+     "anyOf": [
+      {
+       "format": "email",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "entry_credential": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "gender": {
+     "anyOf": [
+      {
+       "enum": [
+        "male",
+        "female",
+        "other"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "name": {
+     "anyOf": [
+      {
+       "maxLength": 100,
+       "minLength": 1,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "code"
+   ],
+   "type": "object"
+  },
+  "EnterResponse": {
+   "properties": {
+    "entry_credential": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "expires_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_guest": {
+     "default": false,
+     "type": "boolean"
+    },
+    "is_waitlisted": {
+     "default": false,
+     "type": "boolean"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session": {
+     "$ref": "#/components/schemas/SessionResponse"
+    }
+   },
+   "required": [
+    "session"
+   ],
+   "type": "object"
+  },
+  "EnterVerifyRequest": {
+   "properties": {
+    "code": {
+     "maxLength": 64,
+     "type": "string"
+    }
+   },
+   "required": [
+    "code"
+   ],
+   "type": "object"
+  },
+  "EnterVerifyResponse": {
+   "properties": {
+    "host_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "EntryStateResponse": {
+   "properties": {
+    "band_battery": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "band_connected": {
+     "default": false,
+     "type": "boolean"
+    },
+    "chat_enabled": {
+     "default": false,
+     "type": "boolean"
+    },
+    "device_status": {
+     "default": "unknown",
+     "enum": [
+      "ok",
+      "lead_off",
+      "disconnected",
+      "unsupported",
+      "unknown"
+     ],
+     "type": "string"
+    },
+    "ended": {
+     "default": false,
+     "type": "boolean"
+    },
+    "ended_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "focus_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "guest_state": {
+     "default": "waiting",
+     "enum": [
+      "waiting",
+      "meditation",
+      "complete",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "in_progress": {
+     "default": false,
+     "type": "boolean"
+    },
+    "is_waitlisted": {
+     "default": false,
+     "type": "boolean"
+    },
+    "last_eeg_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "participant_state": {
+     "anyOf": [
+      {
+       "enum": [
+        "READY",
+        "STARTED",
+        "COMPLETED"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "relaxation_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "report_included": {
+     "default": false,
+     "type": "boolean"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "signal_quality": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "signal_state": {
+     "default": "unknown",
+     "enum": [
+      "valid",
+      "degraded",
+      "invalid",
+      "unknown"
+     ],
+     "type": "string"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "enum": [
+      "ready",
+      "scheduled",
+      "open",
+      "in_progress",
+      "completed",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "stress_index": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "version": {
+     "default": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "status",
+    "participant_id"
+   ],
+   "type": "object"
+  },
+  "InviteChannelResults": {
+   "properties": {
+    "email": {
+     "type": "string"
+    },
+    "in_app": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "in_app",
+    "email"
+   ],
+   "type": "object"
+  },
+  "InviteEmailItem": {
+   "properties": {
+    "email": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "invite_id": {
+     "type": "string"
+    },
+    "pii_scrubbed": {
+     "default": false,
+     "type": "boolean"
+    },
+    "queued_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "request_count": {
+     "default": 0,
+     "type": "integer"
+    },
+    "requested_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "stale": {
+     "default": false,
+     "type": "boolean"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "invite_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "InviteEmailListResponse": {
+   "properties": {
+    "invites": {
+     "items": {
+      "$ref": "#/components/schemas/InviteEmailItem"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "summary": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    }
+   },
+   "required": [
+    "session_id",
+    "invites",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "InviteEmailRequest": {
+   "properties": {
+    "emails": {
+     "items": {
+      "type": "string"
+     },
+     "maxItems": 50,
+     "minItems": 1,
+     "type": "array"
+    }
+   },
+   "required": [
+    "emails"
+   ],
+   "type": "object"
+  },
+  "InviteEmailResponse": {
+   "properties": {
+    "cooldown_sec": {
+     "type": "integer"
+    },
+    "results": {
+     "items": {
+      "$ref": "#/components/schemas/InviteEmailResult"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "summary": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    }
+   },
+   "required": [
+    "session_id",
+    "cooldown_sec",
+    "results",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "InviteEmailResult": {
+   "properties": {
+    "email": {
+     "type": "string"
+    },
+    "invite_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "registered": {
+     "type": "boolean"
+    },
+    "request": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "email",
+    "registered",
+    "request"
+   ],
+   "type": "object"
+  },
+  "InviteParticipantRequest": {
+   "properties": {
+    "user_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "user_id"
+   ],
+   "type": "object"
+  },
+  "InviteRemindRequest": {
+   "properties": {
+    "participant_ids": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "InviteRemindResponse": {
+   "properties": {
+    "cooldown_sec": {
+     "type": "integer"
+    },
+    "results": {
+     "items": {
+      "$ref": "#/components/schemas/InviteRemindResult"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "summary": {
+     "additionalProperties": {
+      "type": "integer"
+     },
+     "type": "object"
+    }
+   },
+   "required": [
+    "session_id",
+    "cooldown_sec",
+    "results",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "InviteRemindResult": {
+   "properties": {
+    "channels": {
+     "anyOf": [
+      {
+       "$ref": "#/components/schemas/InviteChannelResults"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "user_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "participant_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "InviteResult": {
+   "properties": {
+    "channels": {
+     "$ref": "#/components/schemas/InviteChannelResults"
+    },
+    "registered": {
+     "type": "boolean"
+    },
+    "user_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "registered",
+    "user_id",
+    "channels"
+   ],
+   "type": "object"
+  },
+  "MarkerRequest": {
+   "properties": {
+    "note": {
+     "maxLength": 500,
+     "minLength": 1,
+     "type": "string"
+    },
+    "timestamp_sec": {
+     "minimum": 0.0,
+     "type": "number"
+    }
+   },
+   "required": [
+    "timestamp_sec",
+    "note"
+   ],
+   "type": "object"
+  },
+  "MemberLiveKitTokenResponse": {
+   "properties": {
+    "can_publish": {
+     "default": false,
+     "type": "boolean"
+    },
+    "livekit_token": {
+     "type": "string"
+    },
+    "webrtc_room_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "livekit_token",
+    "webrtc_room_id"
+   ],
+   "type": "object"
+  },
+  "OriginalDeleteRequest": {
+   "properties": {
+    "reason": {
+     "maxLength": 500,
+     "minLength": 1,
+     "type": "string"
+    },
+    "scopes": {
+     "anyOf": [
+      {
+       "items": {
+        "enum": [
+         "eeg_raw",
+         "audio",
+         "video",
+         "transcript"
+        ],
+        "type": "string"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "reason"
+   ],
+   "type": "object"
+  },
+  "ParticipantInfo": {
+   "properties": {
+    "band_connected": {
+     "default": false,
+     "type": "boolean"
+    },
+    "birth_date": {
+     "anyOf": [
+      {
+       "format": "date",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "consent_audio": {
+     "default": false,
+     "type": "boolean"
+    },
+    "consent_eeg": {
+     "default": false,
+     "type": "boolean"
+    },
+    "entered_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "gender": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "guest_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_guest": {
+     "default": false,
+     "type": "boolean"
+    },
+    "is_waitlisted": {
+     "default": false,
+     "type": "boolean"
+    },
+    "linkband_device_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "raise_hand": {
+     "default": false,
+     "type": "boolean"
+    },
+    "report_email_status": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "speaking": {
+     "default": false,
+     "type": "boolean"
+    },
+    "user_email": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "user_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "user_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "waitlist_position": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "webrtc_peer_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "participant_id"
+   ],
+   "type": "object"
+  },
+  "RawAckItem": {
+   "properties": {
+    "checksum": {
+     "anyOf": [
+      {
+       "maxLength": 128,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "chunk_id": {
+     "type": "string"
+    },
+    "size_bytes": {
+     "anyOf": [
+      {
+       "minimum": 0.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "chunk_id"
+   ],
+   "type": "object"
+  },
+  "RawAckRequest": {
+   "properties": {
+    "chunks": {
+     "items": {
+      "$ref": "#/components/schemas/RawAckItem"
+     },
+     "maxItems": 500,
+     "minItems": 1,
+     "type": "array"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "play_group_id": {
+     "anyOf": [
+      {
+       "maxLength": 64,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "chunks"
+   ],
+   "type": "object"
+  },
+  "RawAckResponse": {
+   "properties": {
+    "acked": {
+     "type": "integer"
+    },
+    "eeg_record_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "failed": {
+     "default": 0,
+     "type": "integer"
+    },
+    "file_count": {
+     "type": "integer"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "acked",
+    "file_count"
+   ],
+   "type": "object"
+  },
+  "RawChunkMeta": {
+   "properties": {
+    "channel_count": {
+     "default": 2,
+     "minimum": 1.0,
+     "type": "integer"
+    },
+    "checksum": {
+     "anyOf": [
+      {
+       "maxLength": 128,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "chunk_index": {
+     "minimum": 0.0,
+     "type": "integer"
+    },
+    "content_type": {
+     "default": "application/octet-stream",
+     "maxLength": 100,
+     "type": "string"
+    },
+    "end_ms": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sample_rate": {
+     "default": 250,
+     "minimum": 1.0,
+     "type": "integer"
+    },
+    "schema_version": {
+     "default": "1.0",
+     "maxLength": 20,
+     "type": "string"
+    },
+    "size_bytes": {
+     "anyOf": [
+      {
+       "minimum": 0.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "start_ms": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "stream_id": {
+     "default": "default",
+     "maxLength": 128,
+     "type": "string"
+    },
+    "unit": {
+     "default": "uV",
+     "maxLength": 20,
+     "type": "string"
+    }
+   },
+   "required": [
+    "chunk_index"
+   ],
+   "type": "object"
+  },
+  "RawPresignItem": {
+   "properties": {
+    "chunk_id": {
+     "type": "string"
+    },
+    "chunk_index": {
+     "type": "integer"
+    },
+    "object_key": {
+     "type": "string"
+    },
+    "stream_id": {
+     "type": "string"
+    },
+    "upload_status": {
+     "type": "string"
+    },
+    "upload_url": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "chunk_id",
+    "stream_id",
+    "chunk_index",
+    "object_key",
+    "upload_url",
+    "upload_status"
+   ],
+   "type": "object"
+  },
+  "RawPresignRequest": {
+   "properties": {
+    "chunks": {
+     "items": {
+      "$ref": "#/components/schemas/RawChunkMeta"
+     },
+     "maxItems": 500,
+     "minItems": 1,
+     "type": "array"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "play_group_id": {
+     "anyOf": [
+      {
+       "maxLength": 64,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "chunks"
+   ],
+   "type": "object"
+  },
+  "RawPresignResponse": {
+   "properties": {
+    "chunks": {
+     "items": {
+      "$ref": "#/components/schemas/RawPresignItem"
+     },
+     "type": "array"
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "chunks"
+   ],
+   "type": "object"
+  },
+  "RecordResponse": {
+   "properties": {
+    "ai_summary": {
+     "additionalProperties": true,
+     "type": "object"
+    },
+    "counselor_notes": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "edit_history": {
+     "items": {
+      "additionalProperties": true,
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "is_edited": {
+     "default": false,
+     "type": "boolean"
+    },
+    "markers": {
+     "items": {
+      "additionalProperties": true,
+      "type": "object"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "subjective_state": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "transcript": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "video_actual_chunks": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "video_expected_chunks": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "video_status": {
+     "default": "idle",
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "RecordUpdateRequest": {
+   "properties": {
+    "ai_summary": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "counselor_notes": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "ReportChoiceRequest": {
+   "properties": {
+    "notice_acknowledged": {
+     "default": false,
+     "type": "boolean"
+    },
+    "notice_version": {
+     "anyOf": [
+      {
+       "maxLength": 20,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "report_included": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "participant_id",
+    "report_included"
+   ],
+   "type": "object"
+  },
+  "ReportChoiceResponse": {
+   "properties": {
+    "changed": {
+     "default": false,
+     "type": "boolean"
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "report_included": {
+     "type": "boolean"
+    },
+    "report_notice_ack_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "report_notice_version": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "participant_id",
+    "report_included"
+   ],
+   "type": "object"
+  },
+  "ReportChoiceSummaryResponse": {
+   "properties": {
+    "excluded": {
+     "type": "integer"
+    },
+    "included": {
+     "type": "integer"
+    },
+    "total": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "included",
+    "excluded",
+    "total"
+   ],
+   "type": "object"
+  },
+  "ReportCreate": {
+   "properties": {
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "type": {
+     "default": "counselor",
+     "type": "string"
+    }
+   },
+   "type": "object"
+  },
+  "ReportEmailRequest": {
+   "properties": {
+    "email": {
+     "format": "email",
+     "type": "string"
+    },
+    "email_verify_token": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "format": "uuid",
+     "type": "string"
+    },
+    "participant_token": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "participant_id",
+    "email"
+   ],
+   "type": "object"
+  },
+  "ReportEmailResponse": {
+   "properties": {
+    "message": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "status",
+    "message"
+   ],
+   "type": "object"
+  },
+  "ReportProgressStep": {
+   "properties": {
+    "key": {
+     "type": "string"
+    },
+    "label": {
+     "type": "string"
+    },
+    "state": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "key",
+    "label",
+    "state"
+   ],
+   "type": "object"
+  },
+  "ReportResponse": {
+   "properties": {
+    "birth_date": {
+     "anyOf": [
+      {
+       "format": "date",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "content": {
+     "additionalProperties": true,
+     "type": "object"
+    },
+    "counselor_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "created_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "data_credibility": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "gender": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "generation_error": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "generation_started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "generation_status": {
+     "default": "pending",
+     "type": "string"
+    },
+    "heart_rate_max": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate_min": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "hf_power_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_guest": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_read": {
+     "default": false,
+     "type": "boolean"
+    },
+    "lf_hf_ratio_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "lf_power_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "motion_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "pdf_url": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "report_email": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "respiratory_rate_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "rmssd_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sdnn_mean": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sent_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "session_title": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_type": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "subjective_state": {
+     "anyOf": [
+      {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "type": {
+     "type": "string"
+    },
+    "user_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "session_id",
+    "type"
+   ],
+   "type": "object"
+  },
+  "ReportStatusResponse": {
+   "properties": {
+    "generation_status": {
+     "type": "string"
+    },
+    "progress": {
+     "type": "integer"
+    },
+    "reason": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "report_status": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "stage": {
+     "type": "string"
+    },
+    "steps": {
+     "items": {
+      "$ref": "#/components/schemas/ReportProgressStep"
+     },
+     "type": "array"
+    },
+    "updated_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "session_id",
+    "generation_status",
+    "stage",
+    "progress"
+   ],
+   "type": "object"
+  },
+  "ResearchConsentRequest": {
+   "properties": {
+    "consented": {
+     "type": "boolean"
+    },
+    "notice_version": {
+     "anyOf": [
+      {
+       "maxLength": 20,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "consented"
+   ],
+   "type": "object"
+  },
+  "ResearchConsentResponse": {
+   "properties": {
+    "changed": {
+     "default": false,
+     "type": "boolean"
+    },
+    "consented": {
+     "default": false,
+     "type": "boolean"
+    },
+    "consented_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "export_block_reason": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "export_state": {
+     "default": "not_applicable",
+     "type": "string"
+    },
+    "notice_version": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "participant_id"
+   ],
+   "type": "object"
+  },
+  "ResearchConsentSummaryResponse": {
+   "properties": {
+    "consented": {
+     "type": "integer"
+    },
+    "total": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "consented",
+    "total"
+   ],
+   "type": "object"
+  },
+  "SessionChatEnabledRequest": {
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "enabled"
+   ],
+   "type": "object"
+  },
+  "SessionChatRoomResponse": {
+   "properties": {
+    "chat_enabled": {
+     "default": false,
+     "type": "boolean"
+    },
+    "room_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "room_type": {
+     "default": "session",
+     "type": "string"
+    },
+    "session_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id"
+   ],
+   "type": "object"
+  },
+  "SessionCreateRequest": {
+   "properties": {
+    "custom_type_name": {
+     "anyOf": [
+      {
+       "maxLength": 30,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "duration_min": {
+     "maximum": 600.0,
+     "minimum": 1.0,
+     "type": "integer"
+    },
+    "force": {
+     "default": false,
+     "type": "boolean"
+    },
+    "is_template": {
+     "default": false,
+     "type": "boolean"
+    },
+    "linkband_mode": {
+     "default": "none",
+     "enum": [
+      "none",
+      "required",
+      "optional"
+     ],
+     "type": "string"
+    },
+    "location_address": {
+     "anyOf": [
+      {
+       "maxLength": 300,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "location_type": {
+     "default": "offline",
+     "enum": [
+      "online",
+      "offline"
+     ],
+     "type": "string"
+    },
+    "max_participants": {
+     "default": 10,
+     "maximum": 100.0,
+     "minimum": 1.0,
+     "type": "integer"
+    },
+    "notes": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_ids": {
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "participant_mode": {
+     "default": "one_on_one",
+     "enum": [
+      "one_on_one",
+      "group"
+     ],
+     "type": "string"
+    },
+    "record_audio": {
+     "default": true,
+     "type": "boolean"
+    },
+    "record_video": {
+     "default": true,
+     "type": "boolean"
+    },
+    "reminder_offsets": {
+     "items": {
+      "type": "integer"
+     },
+     "type": "array"
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sfu_enabled": {
+     "default": false,
+     "type": "boolean"
+    },
+    "type": {
+     "enum": [
+      "clinical",
+      "hypnosis",
+      "meditation",
+      "custom"
+     ],
+     "type": "string"
+    }
+   },
+   "required": [
+    "type",
+    "duration_min"
+   ],
+   "type": "object"
+  },
+  "SessionDuplicateRequest": {
+   "properties": {
+    "force": {
+     "default": false,
+     "type": "boolean"
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "SessionListResponse": {
+   "properties": {
+    "sessions": {
+     "items": {
+      "$ref": "#/components/schemas/SessionResponse"
+     },
+     "type": "array"
+    },
+    "total": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "sessions",
+    "total"
+   ],
+   "type": "object"
+  },
+  "SessionLiveMetric": {
+   "properties": {
+    "avg_efficiency": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "band_battery": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "band_connected": {
+     "default": false,
+     "type": "boolean"
+    },
+    "birth_date": {
+     "anyOf": [
+      {
+       "format": "date",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "concerns": {
+     "default": [],
+     "items": {
+      "type": "string"
+     },
+     "type": "array"
+    },
+    "consent_eeg": {
+     "default": false,
+     "type": "boolean"
+    },
+    "current_efficiency": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "device_status": {
+     "default": "unknown",
+     "enum": [
+      "ok",
+      "lead_off",
+      "disconnected",
+      "unsupported",
+      "unknown"
+     ],
+     "type": "string"
+    },
+    "display_name": {
+     "type": "string"
+    },
+    "gender": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "heart_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_guest": {
+     "default": false,
+     "type": "boolean"
+    },
+    "last_eeg_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "respiratory_rate": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "rmssd": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "seat_number": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "session_log_state": {
+     "default": "READY",
+     "enum": [
+      "READY",
+      "STARTED",
+      "COMPLETED"
+     ],
+     "type": "string"
+    },
+    "signal_quality": {
+     "anyOf": [
+      {
+       "type": "number"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "signal_state": {
+     "default": "unknown",
+     "enum": [
+      "valid",
+      "degraded",
+      "invalid",
+      "unknown"
+     ],
+     "type": "string"
+    },
+    "upload_status": {
+     "default": "idle",
+     "enum": [
+      "idle",
+      "streaming",
+      "delayed",
+      "failed",
+      "completed"
+     ],
+     "type": "string"
+    },
+    "user_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "participant_id",
+    "display_name"
+   ],
+   "type": "object"
+  },
+  "SessionLiveMetricsResponse": {
+   "properties": {
+    "access_code": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "metrics": {
+     "default": [],
+     "items": {
+      "$ref": "#/components/schemas/SessionLiveMetric"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "enum": [
+      "ready",
+      "scheduled",
+      "open",
+      "in_progress",
+      "completed",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "summary": {
+     "$ref": "#/components/schemas/SessionLiveMetricsSummary"
+    },
+    "version": {
+     "default": 0,
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "status",
+    "summary"
+   ],
+   "type": "object"
+  },
+  "SessionLiveMetricsSummary": {
+   "properties": {
+    "band_low_count": {
+     "default": 0,
+     "type": "integer"
+    },
+    "contact_fail_count": {
+     "default": 0,
+     "type": "integer"
+    },
+    "device_fail_count": {
+     "default": 0,
+     "type": "integer"
+    },
+    "participant_count": {
+     "default": 0,
+     "type": "integer"
+    }
+   },
+   "type": "object"
+  },
+  "SessionResponse": {
+   "properties": {
+    "access_code": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "chat_enabled": {
+     "default": false,
+     "type": "boolean"
+    },
+    "chat_room_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "created_at": {
+     "format": "date-time",
+     "type": "string"
+    },
+    "custom_type_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "duration_min": {
+     "type": "integer"
+    },
+    "ended_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "host_id": {
+     "type": "string"
+    },
+    "host_name": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "id": {
+     "type": "string"
+    },
+    "invite_result": {
+     "anyOf": [
+      {
+       "$ref": "#/components/schemas/InviteResult"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "is_template": {
+     "default": false,
+     "type": "boolean"
+    },
+    "linkband_mode": {
+     "enum": [
+      "none",
+      "required",
+      "optional"
+     ],
+     "type": "string"
+    },
+    "location_address": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "location_type": {
+     "enum": [
+      "online",
+      "offline"
+     ],
+     "type": "string"
+    },
+    "max_participants": {
+     "type": "integer"
+    },
+    "notes": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "opened_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_mode": {
+     "enum": [
+      "one_on_one",
+      "group"
+     ],
+     "type": "string"
+    },
+    "participants": {
+     "default": [],
+     "items": {
+      "$ref": "#/components/schemas/ParticipantInfo"
+     },
+     "type": "array"
+    },
+    "record_audio": {
+     "default": true,
+     "type": "boolean"
+    },
+    "record_video": {
+     "default": true,
+     "type": "boolean"
+    },
+    "reminder_offsets": {
+     "default": [],
+     "items": {
+      "type": "integer"
+     },
+     "type": "array"
+    },
+    "run_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sfu_enabled": {
+     "default": false,
+     "type": "boolean"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "enum": [
+      "ready",
+      "scheduled",
+      "open",
+      "in_progress",
+      "completed",
+      "cancelled"
+     ],
+     "type": "string"
+    },
+    "type": {
+     "enum": [
+      "clinical",
+      "hypnosis",
+      "meditation",
+      "custom"
+     ],
+     "type": "string"
+    },
+    "waitlist_count": {
+     "default": 0,
+     "type": "integer"
+    },
+    "webrtc_room_id": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "required": [
+    "id",
+    "type",
+    "status",
+    "host_id",
+    "duration_min",
+    "max_participants",
+    "location_type",
+    "participant_mode",
+    "linkband_mode",
+    "created_at"
+   ],
+   "type": "object"
+  },
+  "SessionTemplateSaveRequest": {
+   "properties": {},
+   "type": "object"
+  },
+  "SessionUpdateRequest": {
+   "properties": {
+    "chat_enabled": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "custom_type_name": {
+     "anyOf": [
+      {
+       "maxLength": 30,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "duration_min": {
+     "anyOf": [
+      {
+       "maximum": 600.0,
+       "minimum": 1.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "force": {
+     "default": false,
+     "type": "boolean"
+    },
+    "linkband_mode": {
+     "anyOf": [
+      {
+       "enum": [
+        "none",
+        "required",
+        "optional"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "location_address": {
+     "anyOf": [
+      {
+       "maxLength": 300,
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "location_type": {
+     "anyOf": [
+      {
+       "enum": [
+        "online",
+        "offline"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "max_participants": {
+     "anyOf": [
+      {
+       "maximum": 100.0,
+       "minimum": 1.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "notes": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "participant_mode": {
+     "anyOf": [
+      {
+       "enum": [
+        "one_on_one",
+        "group"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "record_audio": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "record_video": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "reminder_offsets": {
+     "anyOf": [
+      {
+       "items": {
+        "type": "integer"
+       },
+       "type": "array"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "scheduled_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "sfu_enabled": {
+     "anyOf": [
+      {
+       "type": "boolean"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "type": {
+     "anyOf": [
+      {
+       "enum": [
+        "clinical",
+        "hypnosis",
+        "meditation",
+        "custom"
+       ],
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "SpeakingRequest": {
+   "properties": {
+    "granted": {
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "granted"
+   ],
+   "type": "object"
+  },
+  "SpeakingStateResponse": {
+   "properties": {
+    "can_publish": {
+     "default": false,
+     "type": "boolean"
+    },
+    "participant_id": {
+     "type": "string"
+    },
+    "raise_hand": {
+     "default": false,
+     "type": "boolean"
+    },
+    "speaking": {
+     "default": false,
+     "type": "boolean"
+    }
+   },
+   "required": [
+    "participant_id"
+   ],
+   "type": "object"
+  },
+  "TranscriptResponse": {
+   "properties": {
+    "raw_text": {
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "segments": {
+     "items": {
+      "$ref": "#/components/schemas/TranscriptSegment"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "TranscriptSegment": {
+   "properties": {
+    "end": {
+     "type": "number"
+    },
+    "speaker": {
+     "type": "string"
+    },
+    "start": {
+     "type": "number"
+    },
+    "text": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "speaker",
+    "text",
+    "start",
+    "end"
+   ],
+   "type": "object"
+  },
+  "VideoStartRequest": {
+   "properties": {
+    "consent_video": {
+     "default": true,
+     "type": "boolean"
+    }
+   },
+   "type": "object"
+  },
+  "VideoStartResponse": {
+   "properties": {
+    "session_id": {
+     "type": "string"
+    },
+    "started_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "status": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "session_id",
+    "status"
+   ],
+   "type": "object"
+  },
+  "VideoStopRequest": {
+   "properties": {
+    "expected_count": {
+     "anyOf": [
+      {
+       "maximum": 100000.0,
+       "minimum": 0.0,
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    }
+   },
+   "type": "object"
+  },
+  "VideoStopResponse": {
+   "properties": {
+    "ended_at": {
+     "anyOf": [
+      {
+       "format": "date-time",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "expected_chunks": {
+     "anyOf": [
+      {
+       "type": "integer"
+      },
+      {
+       "type": "null"
+      }
+     ]
+    },
+    "missing_chunks": {
+     "default": [],
+     "items": {
+      "type": "integer"
+     },
+     "type": "array"
+    },
+    "session_id": {
+     "type": "string"
+    },
+    "status": {
+     "type": "string"
+    },
+    "total_chunks": {
+     "type": "integer"
+    }
+   },
+   "required": [
+    "session_id",
+    "status",
+    "total_chunks"
+   ],
+   "type": "object"
+  },
+  "WaitlistCancelResponse": {
+   "properties": {
+    "cancelled": {
+     "default": true,
+     "type": "boolean"
+    },
+    "changed": {
+     "default": false,
+     "type": "boolean"
+    },
+    "participant_id": {
+     "type": "string"
+    }
+   },
+   "required": [
+    "participant_id"
+   ],
+   "type": "object"
+  }
+ },
+ "meta": {
+  "baseline_operation_count": 61,
+  "selection_rule": "경로에 '/sessions' 또는 '{session_id}' 를 포함한 모든 라우트"
+ },
+ "operations": {
+  "DELETE /api/v1/sessions/{session_id}": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "204": {
+     "content": {}
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "DELETE /api/v1/sessions/{session_id}/participants/{user_id}": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "path",
+     "name": "user_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/admin/sessions/{session_id}/research-consents": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "type": "object"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions": {
+   "parameters": [
+    {
+     "in": "query",
+     "name": "page",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "minimum": 1,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "query",
+     "name": "limit",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "maximum": 100,
+        "minimum": 1,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionListResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/templates": {
+   "parameters": [
+    {
+     "in": "query",
+     "name": "page",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "minimum": 1,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "query",
+     "name": "limit",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "maximum": 100,
+        "minimum": 1,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionListResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/chat-room": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionChatRoomResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/eeg-rollup": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "query",
+     "name": "participant_id",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "query",
+     "name": "resolution",
+     "required": false,
+     "schema": {
+      "default": 60,
+      "maximum": 3600,
+      "minimum": 1,
+      "type": "integer"
+     }
+    },
+    {
+     "in": "query",
+     "name": "start_bucket",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "minimum": 0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    {
+     "in": "query",
+     "name": "end_bucket",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "minimum": 0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EEGRollupResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/entry-state": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EntryStateResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/invite/email": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InviteEmailListResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/live-metrics": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionLiveMetricsResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/record": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecordResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/report-choice/summary": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportChoiceSummaryResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/report-email/view": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "format": "uuid",
+      "type": "string"
+     }
+    },
+    {
+     "in": "query",
+     "name": "token",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "text/html": {
+       "schema": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   }
+  },
+  "GET /api/v1/sessions/{session_id}/report-status": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportStatusResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/research-consent": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResearchConsentResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/research-consent/summary": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResearchConsentSummaryResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/transcript": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TranscriptResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/video/stream": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "GET /api/v1/sessions/{session_id}/video/url": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/admin/sessions/{session_id}/originals/delete": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/OriginalDeleteRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "type": "object"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/reports/generate/{session_id}": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ReportCreate"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions": {
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/SessionCreateRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "201": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/enter": {
+   "parameters": [
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/EnterRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EnterResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/enter/verify": {
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/EnterVerifyRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EnterVerifyResponse"
+       }
+      }
+     }
+    }
+   }
+  },
+  "POST /api/v1/sessions/entry/revoke": {
+   "parameters": [
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "204": {
+     "content": {}
+    }
+   }
+  },
+  "POST /api/v1/sessions/{session_id}/audio/chunk": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "multipart/form-data": {
+      "schema": {
+       "$ref": "#/components/schemas/Body_upload_chunk_api_v1_sessions__session_id__audio_chunk_post"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChunkUploadResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/audio/start": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/AudioStartRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AudioStartResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/audio/stop": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AudioStopResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/cancel": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/chat-enabled": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/SessionChatEnabledRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionChatRoomResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/checkin": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/CheckinRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CheckinResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/duplicate": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "anyOf": [
+        {
+         "$ref": "#/components/schemas/SessionDuplicateRequest"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "responses": {
+    "201": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/eeg-raw/ack": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/RawAckRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RawAckResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/eeg-raw/presign": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/RawPresignRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RawPresignResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/end": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/enter": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EnterResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/entry/livekit-token": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MemberLiveKitTokenResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/features": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/EEGFeatureBatchRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EEGFeatureBatchResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/invite": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/InviteParticipantRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/invite/email": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/InviteEmailRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InviteEmailResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/invite/remind": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "anyOf": [
+        {
+         "$ref": "#/components/schemas/InviteRemindRequest"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/InviteRemindResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/join": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/livekit-token": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/markers": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/MarkerRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/new-run": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/open": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/participants/{participant_id}/data-exports": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "format": "uuid",
+      "type": "string"
+     }
+    },
+    {
+     "in": "path",
+     "name": "participant_id",
+     "required": true,
+     "schema": {
+      "format": "uuid",
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "idempotency-key",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "maxLength": 128,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/DataExportCreate"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "202": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DataExportStatus"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/participants/{participant_id}/raise-hand": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "path",
+     "name": "participant_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SpeakingStateResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/participants/{participant_id}/speaking": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "path",
+     "name": "participant_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/SpeakingRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SpeakingStateResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/report-email": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "format": "uuid",
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ReportEmailRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "202": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportEmailResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/save-as-template": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "anyOf": [
+        {
+         "$ref": "#/components/schemas/SessionTemplateSaveRequest"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "responses": {
+    "201": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/start": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/video/chunk": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "multipart/form-data": {
+      "schema": {
+       "$ref": "#/components/schemas/Body_upload_video_chunk_api_v1_sessions__session_id__video_chunk_post"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChunkUploadResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/video/start": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/VideoStartRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VideoStartResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/video/stop": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "anyOf": [
+        {
+         "$ref": "#/components/schemas/VideoStopRequest"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      }
+     }
+    }
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VideoStopResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "POST /api/v1/sessions/{session_id}/waitlist/cancel": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WaitlistCancelResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "PUT /api/v1/sessions/{session_id}": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/SessionUpdateRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SessionResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "PUT /api/v1/sessions/{session_id}/record": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/RecordUpdateRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RecordResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "PUT /api/v1/sessions/{session_id}/report-choice": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ReportChoiceRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportChoiceResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  },
+  "PUT /api/v1/sessions/{session_id}/research-consent": {
+   "parameters": [
+    {
+     "in": "path",
+     "name": "session_id",
+     "required": true,
+     "schema": {
+      "type": "string"
+     }
+    },
+    {
+     "in": "header",
+     "name": "X-Entry-Credential",
+     "required": false,
+     "schema": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   ],
+   "requestBody": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ResearchConsentRequest"
+      }
+     }
+    },
+    "required": true
+   },
+   "responses": {
+    "200": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResearchConsentResponse"
+       }
+      }
+     }
+    }
+   },
+   "security": [
+    "OAuth2PasswordBearer"
+   ]
+  }
+ },
+ "unspecified_response_ops": [
+  "DELETE /api/v1/sessions/{session_id}",
+  "GET /api/v1/sessions/{session_id}/report-email/view",
+  "GET /api/v1/sessions/{session_id}/video/stream",
+  "GET /api/v1/sessions/{session_id}/video/url",
+  "POST /api/v1/sessions/entry/revoke",
+  "POST /api/v1/sessions/{session_id}/join",
+  "POST /api/v1/sessions/{session_id}/livekit-token",
+  "POST /api/v1/sessions/{session_id}/markers"
+ ]
+}
