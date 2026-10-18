@@ -42,8 +42,27 @@ from app.models.normalization_baseline import NormalizationBaseline
 from app.models.normalization_model import NormalizationModel
 from app.models.narrative_cache import NarrativeCache
 from app.models.original_deletion_audit import OriginalDeletionAudit
+from app.models.class_program import Class, ClassInstructor, ClassMember, ClassMemberEvent
+from app.models.counseling import (
+    CounselingGuest,
+    CounselingRelationship,
+    CounselingRelationshipCounselor,
+    CounselingRelationshipEvent,
+    GuestClaimEvent,
+)
+from app.models.session_parent import SessionHostHistory
 
 __all__ = [
+    "Class",
+    "ClassInstructor",
+    "ClassMember",
+    "ClassMemberEvent",
+    "CounselingGuest",
+    "CounselingRelationship",
+    "CounselingRelationshipCounselor",
+    "CounselingRelationshipEvent",
+    "GuestClaimEvent",
+    "SessionHostHistory",
     "ReportChoiceEvent",
     "OriginalDeletionAudit",
     "NormalizationBaseline",

@@ -30,6 +30,16 @@ def _new_class(session, host, code: str, **over):
     from app.models.session import Session
 
     fields = {"status": "open", **over}
+    if not fields.get("is_template"):
+        # SDD-214: 비템플릿 세션은 부모(클래스)와 그 강사 행이 먼저 있어야 한다(ck_sessions_one_parent·복합 FK).
+        from app.models.class_program import Class, ClassInstructor
+
+        parent = Class(created_by=host.id, default_duration_min=30)
+        session.add(parent)
+        session.flush()
+        session.add(ClassInstructor(class_id=parent.id, user_id=host.id))
+        session.flush()
+        fields = {**fields, "class_id": parent.id, "seq": 1, "host_state": "assigned"}
     row = Session(type="meditation", host_id=host.id, duration_min=30, access_code=code, **fields)
     session.add(row)
     return row
