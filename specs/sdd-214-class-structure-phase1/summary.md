@@ -30,7 +30,7 @@
 - 초기화: dev DB 전체(63,174행: 세션 218·사용자 18·기관 6)와 Redis 85키 삭제. S3는 미삭제(조사 결과: `eeg-raw/` 1,550개 3MB, `video/` 1,316개 2.2GB, `_server-archive-20261010/` 유지 대상).
 - PR #15 머지(`98b275db`) → Deploy Dev: 055 적용, 가드 통과, 서버 alembic `e036a0000055`.
 - 재시드: E2E 계정(기관 1·계정 4)과 `counselor@test.com`·`client@test.com`. `E2E_PASSWORD` 시크릿은 무작위 값으로 교체.
-- e2e-smoke: 계정 재시드 후 63 PASS / 1 FAIL(내담자 목록 — 클래스 0건 빈 안내 때문, 테스트 수정으로 해소).
+- e2e-smoke: 계정 재시드 직후 63 PASS / 1 FAIL(내담자 목록, 클래스 0건 빈 안내) → 테스트 수정 후 Deploy Dev(`7974621d`)의 e2e-smoke 전체 success(통과 63·실패 0).
 
 ## 남은 항목
 - 후속 정리: 세션 종료·취소 시 클래스 `status` 연동과 guest 강사 `removed` 전환(Phase 3), 비회원 관계·강사 수명 처리(Phase 3), `alembic check` 정보성 17건(기존 드리프트), PG 쿼리 성능 200ms 목표 미측정.
