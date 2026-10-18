@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import ThemeToggle from '../../components/ThemeToggle';
 import { submitOrganizationApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
+import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
 
 // FORM-03: 기관 담당자 연락처(휴대전화·유선) 형식 검증 — 임의 문자열 접수를 막는다.
 const PHONE_REGEX = /^0\d{1,2}-\d{3,4}-\d{4}$/;
@@ -213,7 +214,8 @@ export default function RegisterOrganizationPage() {
               />
               <span>
                 (필수) 개인정보 수집·이용에 동의합니다. 입력한 정보는 가입 상담 목적으로만 사용되며,
-                미전환 신청 정보는 접수 후 90일 이내 삭제됩니다.
+                미전환 신청 정보는 접수 후 90일 이내 삭제됩니다.{' '}
+                <PrivacyPolicyLink>개인정보 처리방침 보기</PrivacyPolicyLink>
               </span>
             </label>
 

@@ -1,6 +1,8 @@
 // 음성 녹음 동의 모달
 
 import { useDialogA11y } from '../../hooks/useDialogA11y';
+import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
+import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
 
 interface Props {
   open: boolean;
@@ -28,9 +30,10 @@ export function ConsentModal({ open, onConfirm, onCancel }: Props) {
           이 세션의 음성을 녹음하고 AI 기록지 자동 생성을 위해 사용합니다. 동의하지 않으시면 수동 기록 모드로 진행됩니다.
         </p>
         <ul className="mt-4 list-disc space-y-1 pl-5 text-xs text-neutral-500 dark:text-neutral-400">
-          <li>녹음 데이터는 STT/요약 처리 후 30일간 보관됩니다</li>
+          <li>녹음 데이터는 STT/요약 처리 후 클래스 종료일부터 {RAW_RETENTION_DAYS}일이 지나면 삭제됩니다</li>
           <li>본인 세션과 담당 상담사만 접근할 수 있습니다</li>
           <li>언제든지 녹음을 중지할 수 있습니다</li>
+          <li><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>에서 자세한 내용을 확인할 수 있습니다</li>
         </ul>
         <div className="mt-6 flex justify-end gap-2">
           <button

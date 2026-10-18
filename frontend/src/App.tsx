@@ -70,6 +70,7 @@ const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage')
 const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPage'));
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
 const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -155,6 +156,7 @@ const router = createBrowserRouter(
         <Route path="/join" element={<CodeEntryPage />} />
         <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />

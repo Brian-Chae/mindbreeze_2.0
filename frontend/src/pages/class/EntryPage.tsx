@@ -25,12 +25,14 @@ import { takeEntryHandoff } from '../../lib/class/flow/member-handoff';
 import {
   buildSteps, deriveEnterStage, deriveFlowStateKind, entryReducer, initialEntryState, startedSheetApplies, type FlowStateKind,
 } from '../../lib/class/flow/member-machine';
-import { buildSummaryRows, parseRetentionDays, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
+import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
+import { buildSummaryRows, remainingPrepLabels, type SurveyOutcome } from '../../lib/class/flow/member-prep';
 import { buildMemberReadiness, type BandSnapshot } from '../../lib/class/flow/member-presence';
 import type { FlowBandMode } from '../../lib/class/flow/types';
 import { useAuthStore } from '../../stores/authStore';
 
-const RETENTION_DAYS = parseRetentionDays(import.meta.env.VITE_RETENTION_RAW_DAYS as string | undefined);
+/** 방침(/privacy)과 같은 보관 기간 — 환경 변수로 달리 표시하지 않는다 */
+const RETENTION_DAYS = RAW_RETENTION_DAYS;
 
 function bandModeOf(mode: string | undefined): FlowBandMode {
   return mode === 'none' ? 'none' : mode === 'required' ? 'req' : 'opt';

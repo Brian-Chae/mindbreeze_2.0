@@ -80,7 +80,7 @@ import type { OpenPrefs } from '../../lib/class/flow/host-open';
 import type { StartAudioPlan } from '../../lib/class/flow/host-start-model';
 import type { LobbyContext, LobbyPresenceEntry, LobbyRosterEntry } from '../../lib/class/flow/host-lobby-model';
 import { formatWhen } from '../../lib/class/flow/member-format';
-import { parseRetentionDays } from '../../lib/class/flow/member-prep';
+import { RAW_RETENTION_DAYS } from '../../lib/privacy-policy';
 import { getReportChoiceSummary, getResearchConsentSummary, remindInvitees } from '../../lib/api/class-flow-host';
 import { useWaitingRoomCount, type WaitingRoomEntry } from '../../hooks/useWaitingRoomCount';
 import { useClassAudioPlayer } from '../../hooks/useClassAudioPlayer';
@@ -103,7 +103,8 @@ const SESSION_POLL_MS = 5000;
 /** SDD-083: 상태 변화 시계열 누적 최소 간격 — 3초 평균 표시와 동일 리듬 */
 const HISTORY_MIN_INTERVAL_MS = 3000;
 /** 시작 확인 시트에 보여 주는 기록 보관 기간(서버 설정값, 모르면 null) */
-const RETENTION_DAYS = parseRetentionDays(import.meta.env.VITE_RETENTION_RAW_DAYS as string | undefined);
+/** 방침(/privacy)과 같은 보관 기간 */
+const RETENTION_DAYS = RAW_RETENTION_DAYS;
 /** SDD-083: participant당 시계열 최대 포인트 (3초 간격 ≈ 1시간) */
 const HISTORY_MAX_POINTS = 1200;
 

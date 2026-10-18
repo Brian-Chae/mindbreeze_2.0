@@ -1,5 +1,7 @@
 // 약관 동의 체크리스트 (3종 모두 필수)
 
+import { PrivacyPolicyLink } from '../legal/PrivacyPolicyLink';
+
 export interface Consents {
   tos: boolean;
   privacy: boolean;
@@ -61,6 +63,11 @@ export function ConsentCheckList({ consents, onChange }: ConsentCheckListProps) 
                 {item.label}
               </span>
             </label>
+            {item.key === 'privacy' || item.key === 'sensitive' ? (
+              <p className="pl-11 pb-1 text-xs text-[var(--mb-fg-muted,#6F6F6F)]">
+                <PrivacyPolicyLink>개인정보 처리방침 전문 보기</PrivacyPolicyLink>
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>
