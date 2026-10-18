@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session as DBSession
 
 from app.models.session import Session
 from app.models.record import SessionRecord, VideoChunk
+from app.services.session_authz import SessionAction, get_session_authorized
 from app.schemas.record import MAX_VIDEO_EXPECTED_CHUNKS
 from app.services import storage_service
 
@@ -114,16 +115,6 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _get_host_session(session_id: str, host_id: str, db: DBSession) -> Session:
-    sid = _to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != _to_uuid(host_id):
-        raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
-    return s
-
-
 def _get_or_create_record(session_id: UUID, db: DBSession) -> SessionRecord:
     record = db.query(SessionRecord).filter(SessionRecord.session_id == session_id).first()
     if not record:
@@ -137,7 +128,7 @@ def start_recording(session_id: str, host_id: str, consent_video: bool, db: DBSe
     if not consent_video:
         raise HTTPException(status_code=400, detail="영상 녹화 동의가 필요합니다")
 
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.VIDEO_RECORD)
     if s.status not in ("scheduled", "in_progress"):
         raise HTTPException(status_code=400, detail="종료된 세션은 녹화할 수 없습니다")
 
@@ -154,7 +145,7 @@ def start_recording(session_id: str, host_id: str, consent_video: bool, db: DBSe
 
 
 def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.VIDEO_RECORD)
     record = _get_or_create_record(s.id, db)
     if record.video_status != "recording":
         raise HTTPException(status_code=400, detail="영상 녹화가 시작되지 않았습니다")
@@ -230,7 +221,7 @@ def save_chunk(session_id: str, host_id: str, chunk_index: int, content: bytes, 
 
 
 def stop_recording(session_id: str, host_id: str, expected_count: int | None, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.VIDEO_RECORD)
     record = _get_or_create_record(s.id, db)
     # VIDEO-EXPECTED-COUNT-DOS: 스키마 상한을 우회한 직접 호출·기존 오염값을 방어한다.
     # 비정상적으로 큰 expected_count 는 저장하지 않고 422 로 거부한다(누락 range OOM 방지).

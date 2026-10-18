@@ -23,6 +23,7 @@ from app.config import settings
 from app.models.session import Session
 from app.models.session_email_invite import SessionEmailInvite
 from app.models.user import User
+from app.services.session_authz import SessionAction, get_session_authorized
 
 logger = logging.getLogger(__name__)
 
@@ -61,20 +62,6 @@ def enqueue_invite_email(invite_id: str) -> None:
     session_invite_email_task.apply_async(args=[invite_id], retry=False)
 
 
-def _get_host_session(session_id: str, host_id: str, db: DBSession) -> Session:
-    try:
-        sid = uuid.UUID(str(session_id))
-        hid = uuid.UUID(str(host_id))
-    except (TypeError, ValueError):
-        raise HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
-    s = db.query(Session).filter(Session.id == sid).first()
-    if not s:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-    if s.host_id != hid:
-        raise HTTPException(status_code=403, detail="호스트만 초대할 수 있습니다")
-    return s
-
-
 def _is_stale(invite: SessionEmailInvite, now: datetime) -> bool:
     queued_at = _aware(invite.queued_at)
     return (
@@ -99,7 +86,7 @@ def _serialize(invite: SessionEmailInvite, now: datetime) -> dict:
 
 def invite_by_email(session_id: str, host_id: str, emails: list[str], db: DBSession) -> dict:
     """이메일 초대 요청. 응답은 주소별로 ``registered``(등록 여부)와 ``request``(발송 요청 결과)를 분리한다."""
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.EMAIL_INVITE_MANAGE)
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 클래스에는 초대할 수 없어요")
     if s.is_template or not s.access_code:
@@ -188,7 +175,7 @@ def invite_by_email(session_id: str, host_id: str, emails: list[str], db: DBSess
 
 
 def list_email_invites(session_id: str, host_id: str, db: DBSession) -> dict:
-    s = _get_host_session(session_id, host_id, db)
+    s = get_session_authorized(db, session_id, host_id, SessionAction.EMAIL_INVITE_MANAGE)
     now = _now()
     rows = (
         db.query(SessionEmailInvite)

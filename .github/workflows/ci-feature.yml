@@ -92,3 +92,115 @@ jobs:
           # Linux 폰트 메트릭에서 3~5페이지로 어긋나 422를 띄움. Linux 재보정 전까지 제외.
           pytest -q --tb=short --ignore=tests/test_sprint4_integration.py \
             --deselect=tests/test_sdd070_pdf_metrics.py::test_real_pdf_metric_pages
+
+  backend-pg-smoke:
+    # SDD-211(P1): 테스트는 SQLite create_all 이라 마이그레이션이 CI 어디서도 PostgreSQL 로 실행되지 않았다.
+    # 빈 PG 에 alembic 체인을 처음부터 적용해 head 단일성·적용 가능성을 항상 확인한다(paths 필터 없음).
+    # 이 잡 실패 = dev 배포(deploy-dev.yml)에서도 마이그레이션이 실패한다. 차단 효력은 브랜치 보호의
+    # 필수 상태 점검 등록(저장소 설정)이 있어야 생긴다 — deploy-dev 는 ci-feature 를 needs 하지 않는다.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        # 운영 RDS 는 PostgreSQL 16 이다.
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci_pw
+          POSTGRES_DB: smoke
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # 비밀 없음. alembic env.py 가 읽는 환경변수는 DATABASE_URL 하나뿐이다(비밀번호에 % 금지).
+      DATABASE_URL: postgresql://postgres:ci_pw@127.0.0.1:5432/smoke
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install (alembic 최소 패키지 — 버전은 requirements.txt 와 동일)
+        run: |
+          pkgs=$(grep -i -E '^(sqlalchemy|alembic|psycopg2-binary|pydantic|pydantic-settings|python-dotenv)==' requirements.txt)
+          test "$(echo "$pkgs" | wc -l)" -eq 6
+          pip install $pkgs
+
+      - name: alembic head 는 정확히 1개
+        run: |
+          heads=$(alembic heads 2>/dev/null)
+          echo "$heads"
+          test "$(echo "$heads" | grep -c '(head)')" -eq 1
+
+      - name: 빈 DB 에 alembic upgrade head
+        run: |
+          alembic upgrade head
+          current=$(alembic current 2>/dev/null | grep -oE '^[0-9a-z]+')
+          head=$(alembic heads 2>/dev/null | grep -oE '^[0-9a-z]+')
+          echo "current=$current head=$head"
+          test -n "$head" && test "$current" = "$head"
+          python - <<'PY'
+          import os
+          import sqlalchemy as sa
+          with sa.create_engine(os.environ["DATABASE_URL"]).connect() as conn:
+              rows = conn.execute(sa.text("select version_num from alembic_version")).fetchall()
+          assert len(rows) == 1, rows
+          print("alembic_version:", rows[0][0])
+          PY
+
+      - name: PG 제약·마이그레이션 결과 테스트 (pg 마커)
+        # 루트 conftest(SQLite 전용, fakeredis 등)를 불러오지 않도록 --confcutdir 로 tests/pg 만 쓴다.
+        # PG_SMOKE=1 + 로컬 PostgreSQL DATABASE_URL 일 때만 실행되며 기본 `pytest -q` 에서는 skip 된다.
+        env:
+          PG_SMOKE: '1'
+        run: |
+          pip install "$(grep -E '^pytest==' requirements.txt)"
+          pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider
+
+      - name: PG 픽스처 위생 (스키마 덤프에 데이터 행·개인정보 없음)
+        run: python tests/fixtures/pg/check_fixture_hygiene.py
+
+      - name: 스냅샷 복원본 + 합성 시드 + upgrade head (덤프 픽스처가 커밋되면 실행)
+        # SDD-211 P2 자리. baseline_*.sql(스키마 전용 덤프)이 아직 없으면 건너뛴다 — 덤프 생성은 dev DB 읽기가 필요해
+        # Brian go 후 수행한다. 덤프의 \restrict 메타 명령은 러너 psql 버전에 따라 오류가 나므로 걸러서 복원한다.
+        if: ${{ hashFiles('backend/tests/fixtures/pg/baseline_*.sql') != '' }}
+        run: |
+          command -v psql >/dev/null || sudo apt-get install -y -qq postgresql-client
+          test "$(ls tests/fixtures/pg/baseline_*.sql | wc -l)" -eq 1
+          base=$(ls tests/fixtures/pg/baseline_*.sql)
+          admin="${DATABASE_URL%/*}/postgres"
+          snap="${DATABASE_URL%/*}/smoke_snap"
+          psql "$admin" -v ON_ERROR_STOP=1 -c "create database smoke_snap"
+          grep -v -E '^\\(un)?restrict ' "$base" | psql "$snap" -v ON_ERROR_STOP=1 -q
+          psql "$snap" -v ON_ERROR_STOP=1 -q -f tests/fixtures/pg/seed_synthetic.sql
+          DATABASE_URL="$snap" alembic upgrade head
+          current=$(DATABASE_URL="$snap" alembic current 2>/dev/null | grep -oE '^[0-9a-z]+')
+          head=$(alembic heads 2>/dev/null | grep -oE '^[0-9a-z]+')
+          echo "snapshot current=$current head=$head"
+          test -n "$head" && test "$current" = "$head"
+
+      - name: alembic check (정보성 — 모델↔마이그레이션 드리프트 건수)
+        # 검출 전용 명령이라 마이그레이션을 생성하지 않는다. 현재 드리프트가 있어 차단하면 모든 PR 이 빨개지므로
+        # 건수만 기록한다(continue-on-error). 드리프트 정리 후 건수 상한을 두는 차단 승격은 후속.
+        continue-on-error: true
+        run: |
+          set +e
+          alembic check > "$RUNNER_TEMP/alembic-check.log" 2>&1
+          rc=$?
+          set -e
+          count=$(grep -c 'alembic.autogenerate.compare.*Detected' "$RUNNER_TEMP/alembic-check.log" || true)
+          echo "alembic check rc=$rc, 감지 ${count}건"
+          grep 'alembic.autogenerate.compare.*Detected' "$RUNNER_TEMP/alembic-check.log" | sed 's/^.*\] Detected /- /' || true
+          {
+            echo "### alembic check (정보성)"
+            echo "모델↔마이그레이션 드리프트 감지 **${count}건** (rc=${rc}). 차단 승격은 드리프트 정리 후."
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          exit $rc

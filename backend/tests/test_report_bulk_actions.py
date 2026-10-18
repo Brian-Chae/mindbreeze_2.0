@@ -99,9 +99,13 @@ def test_mark_all_read(client):
     assert gen.status_code == 200, gen.text
     assert gen.json()["is_read"] is False
 
+    # SDD-211(R6-X1): 승인 전 리포트는 회원에게 '리뷰 중' 이라 read-all 로 읽음 처리되지 않는다 → 승인 후 전체 읽음.
+    approve = client.post(f"/api/v1/reports/{gen.json()['id']}/approve", json={}, headers=host["auth"])
+    assert approve.status_code == 200, approve.text
+
     res = client.put("/api/v1/reports/read-all", headers=member["auth"])
     assert res.status_code == 200, res.text
-    assert res.json()["count"] >= 1
+    assert res.json()["count"] == 1
 
     listing = client.get("/api/v1/reports", headers=member["auth"]).json()
     assert listing["total"] >= 1

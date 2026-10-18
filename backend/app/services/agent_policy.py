@@ -27,6 +27,7 @@ from app.models.counselor_profile import CounselorProfile
 from app.models.record import Report
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
+from app.services import session_terms
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +43,7 @@ MAX_CONTEXT_MEMORIES = 100
 # 상담사 채널에서 루시가 참조하는 최근 대화 메시지 상한 — SDD-195.
 MAX_CONTEXT_RECENT_MESSAGES = 20
 
-SESSION_TYPE_LABELS: dict[str, str] = {
-    "clinical": "임상심리상담",
-    "hypnosis": "최면심리상담",
-    "meditation": "명상수업",
-}
+SESSION_TYPE_LABELS: dict[str, str] = session_terms.type_label_table("reminder")
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -59,9 +56,7 @@ def _now() -> datetime:
 
 
 def session_type_label(session: Session) -> str:
-    if session.type == "custom":
-        return session.custom_type_name or "클래스"
-    return SESSION_TYPE_LABELS.get(session.type, "클래스")
+    return session_terms.session_type_label(session.type, session.custom_type_name, variant="reminder")
 
 
 def format_schedule(scheduled_at: datetime | None) -> str:
@@ -209,7 +204,9 @@ def report_facts(report: Report, db: DBSession) -> dict:
         "report_id": str(report.id),
         "session_id": str(report.session_id),
         "session_title": session.title if session else None,
-        "type_label": session_type_label(session) if session else "클래스",
+        "type_label": (
+            session_type_label(session) if session else session_terms.session_type_fallback_label(variant="reminder")
+        ),
         "scheduled_text": format_schedule(session.scheduled_at) if session else "일정 미정",
         "counselor_name": (host.name if host else None) or "상담사",
         "headline": headline,

@@ -1,0 +1,897 @@
+{
+ "E401 GET /sessions (비로그인)": {
+  "content_type": "application/json",
+  "shape": {
+   "detail": "str"
+  },
+  "status": 401
+ },
+ "E403 PUT /sessions/{id} (비호스트)": {
+  "content_type": "application/json",
+  "shape": {
+   "detail": "str"
+  },
+  "status": 403
+ },
+ "E404 GET /sessions/{id} (없음)": {
+  "content_type": "application/json",
+  "shape": {
+   "detail": "str"
+  },
+  "status": 404
+ },
+ "E422 POST /sessions (검증 실패)": {
+  "content_type": "application/json",
+  "shape": {
+   "detail": [
+    {
+     "ctx": {
+      "expected?": "str",
+      "ge?": "number"
+     },
+     "input": "str",
+     "loc": [
+      "str"
+     ],
+     "msg": "str",
+     "type": "str"
+    }
+   ]
+  },
+  "status": 422
+ },
+ "S01 POST /sessions": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "null",
+   "participant_mode": "str",
+   "participants": [],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "null",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 201
+ },
+ "S02 GET /sessions": {
+  "content_type": "application/json",
+  "shape": {
+   "sessions": [
+    {
+     "access_code": "str",
+     "chat_enabled": "bool",
+     "chat_room_id": "null",
+     "created_at": "datetime",
+     "custom_type_name": "null",
+     "duration_min": "number",
+     "ended_at": "null",
+     "host_id": "uuid",
+     "host_name": "str",
+     "id": "uuid",
+     "invite_result": "null",
+     "is_template": "bool",
+     "linkband_mode": "str",
+     "location_address": "null",
+     "location_type": "str",
+     "max_participants": "number",
+     "notes": "null",
+     "opened_at": "datetime",
+     "participant_mode": "str",
+     "participants": [
+      {
+       "band_connected": "bool",
+       "birth_date": "date",
+       "consent_audio": "bool",
+       "consent_eeg": "bool",
+       "entered_at": "datetime",
+       "gender": "str",
+       "guest_name": "str",
+       "is_guest": "bool",
+       "is_waitlisted": "bool",
+       "linkband_device_id": "null",
+       "participant_id": "uuid",
+       "raise_hand": "bool",
+       "report_email_status": "null",
+       "speaking": "bool",
+       "user_email": "str",
+       "user_id": "null",
+       "user_name": "str",
+       "waitlist_position": "null",
+       "webrtc_peer_id": "null"
+      }
+     ],
+     "record_audio": "bool",
+     "record_video": "bool",
+     "reminder_offsets": [],
+     "run_id": "uuid",
+     "scheduled_at": "null",
+     "sfu_enabled": "bool",
+     "started_at": "null",
+     "status": "str",
+     "title": "str",
+     "type": "str",
+     "waitlist_count": "number",
+     "webrtc_room_id": "uuid"
+    }
+   ],
+   "total": "number"
+  },
+  "status": 200
+ },
+ "S03 GET /sessions/{id}": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "datetime",
+   "participant_mode": "str",
+   "participants": [
+    {
+     "band_connected": "bool",
+     "birth_date": "date",
+     "consent_audio": "bool",
+     "consent_eeg": "bool",
+     "entered_at": "datetime",
+     "gender": "str",
+     "guest_name": "str",
+     "is_guest": "bool",
+     "is_waitlisted": "bool",
+     "linkband_device_id": "null",
+     "participant_id": "uuid",
+     "raise_hand": "bool",
+     "report_email_status": "null",
+     "speaking": "bool",
+     "user_email": "str",
+     "user_id": "uuid",
+     "user_name": "str",
+     "waitlist_position": "null",
+     "webrtc_peer_id": "null"
+    }
+   ],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "null",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S04 PUT /sessions/{id}": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "null",
+   "participant_mode": "str",
+   "participants": [],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "null",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S05 POST open": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "datetime",
+   "participant_mode": "str",
+   "participants": [],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "null",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S06 POST start": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "datetime",
+   "participant_mode": "str",
+   "participants": [
+    {
+     "band_connected": "bool",
+     "birth_date": "date",
+     "consent_audio": "bool",
+     "consent_eeg": "bool",
+     "entered_at": "datetime",
+     "gender": "str",
+     "guest_name": "str",
+     "is_guest": "bool",
+     "is_waitlisted": "bool",
+     "linkband_device_id": "null",
+     "participant_id": "uuid",
+     "raise_hand": "bool",
+     "report_email_status": "null",
+     "speaking": "bool",
+     "user_email": "str",
+     "user_id": "null",
+     "user_name": "str",
+     "waitlist_position": "null",
+     "webrtc_peer_id": "null"
+    }
+   ],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "datetime",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S07 POST end": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "chat_room_id": "uuid",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "datetime",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "invite_result": "null",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "datetime",
+   "participant_mode": "str",
+   "participants": [
+    {
+     "band_connected": "bool",
+     "birth_date": "date",
+     "consent_audio": "bool",
+     "consent_eeg": "bool",
+     "entered_at": "datetime",
+     "gender": "str",
+     "guest_name": "str",
+     "is_guest": "bool",
+     "is_waitlisted": "bool",
+     "linkband_device_id": "null",
+     "participant_id": "uuid",
+     "raise_hand": "bool",
+     "report_email_status": "null",
+     "speaking": "bool",
+     "user_email": "str",
+     "user_id": "null",
+     "user_name": "str",
+     "waitlist_position": "null",
+     "webrtc_peer_id": "null"
+    }
+   ],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "datetime",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S08 POST enter/verify": {
+  "content_type": "application/json",
+  "shape": {
+   "host_name": "str",
+   "scheduled_at": "null",
+   "title": "str"
+  },
+  "status": 200,
+  "strict_keys": true
+ },
+ "S09 POST enter (비회원)": {
+  "content_type": "application/json",
+  "shape": {
+   "entry_credential": "str",
+   "expires_at": "datetime",
+   "is_guest": "bool",
+   "is_waitlisted": "bool",
+   "participant_id": "uuid",
+   "session": {
+    "access_code": "str",
+    "chat_enabled": "bool",
+    "chat_room_id": "uuid",
+    "created_at": "datetime",
+    "custom_type_name": "null",
+    "duration_min": "number",
+    "ended_at": "null",
+    "host_id": "uuid",
+    "host_name": "str",
+    "id": "uuid",
+    "invite_result": "null",
+    "is_template": "bool",
+    "linkband_mode": "str",
+    "location_address": "null",
+    "location_type": "str",
+    "max_participants": "number",
+    "notes": "null",
+    "opened_at": "datetime",
+    "participant_mode": "str",
+    "participants": [
+     {
+      "band_connected": "bool",
+      "birth_date": "null",
+      "consent_audio": "bool",
+      "consent_eeg": "bool",
+      "entered_at": "null",
+      "gender": "null",
+      "guest_name": "str",
+      "is_guest": "bool",
+      "is_waitlisted": "bool",
+      "linkband_device_id": "null",
+      "participant_id": "uuid",
+      "raise_hand": "bool",
+      "report_email_status": "null",
+      "speaking": "bool",
+      "user_email": "null",
+      "user_id": "null",
+      "user_name": "str",
+      "waitlist_position": "null",
+      "webrtc_peer_id": "null"
+     }
+    ],
+    "record_audio": "bool",
+    "record_video": "bool",
+    "reminder_offsets": [],
+    "run_id": "uuid",
+    "scheduled_at": "null",
+    "sfu_enabled": "bool",
+    "started_at": "null",
+    "status": "str",
+    "title": "str",
+    "type": "str",
+    "waitlist_count": "number",
+    "webrtc_room_id": "uuid"
+   }
+  },
+  "status": 200
+ },
+ "S10 GET entry-state": {
+  "content_type": "application/json",
+  "shape": {
+   "band_battery": "null",
+   "band_connected": "bool",
+   "chat_enabled": "bool",
+   "device_status": "str",
+   "ended": "bool",
+   "ended_at": "null",
+   "focus_index": "null",
+   "guest_state": "str",
+   "in_progress": "bool",
+   "is_waitlisted": "bool",
+   "last_eeg_at": "null",
+   "participant_id": "uuid",
+   "participant_state": "str",
+   "relaxation_index": "null",
+   "report_included": "bool",
+   "session_id": "uuid",
+   "signal_quality": "null",
+   "signal_state": "str",
+   "started_at": "null",
+   "status": "str",
+   "stress_index": "null",
+   "version": "number"
+  },
+  "status": 200
+ },
+ "S11 POST join": {
+  "content_type": "application/json",
+  "shape": {
+   "access_code": "str",
+   "chat_enabled": "bool",
+   "created_at": "datetime",
+   "custom_type_name": "null",
+   "duration_min": "number",
+   "ended_at": "null",
+   "host_id": "uuid",
+   "host_name": "str",
+   "id": "uuid",
+   "is_template": "bool",
+   "linkband_mode": "str",
+   "livekit_token": "str",
+   "location_address": "null",
+   "location_type": "str",
+   "max_participants": "number",
+   "notes": "null",
+   "opened_at": "datetime",
+   "participant_mode": "str",
+   "participants": [],
+   "record_audio": "bool",
+   "record_video": "bool",
+   "reminder_offsets": [],
+   "run_id": "uuid",
+   "scheduled_at": "null",
+   "sfu_enabled": "bool",
+   "started_at": "datetime",
+   "status": "str",
+   "title": "str",
+   "type": "str",
+   "waitlist_count": "number",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S12 POST livekit-token": {
+  "content_type": "application/json",
+  "shape": {
+   "livekit_token": "str",
+   "webrtc_room_id": "uuid"
+  },
+  "status": 200
+ },
+ "S13 POST markers": {
+  "content_type": "application/json",
+  "shape": {
+   "markers": [
+    {
+     "created_at": "datetime",
+     "note": "str",
+     "timestamp_sec": "number"
+    }
+   ]
+  },
+  "status": 200
+ },
+ "S14 GET record (참여자)": {
+  "content_type": "application/json",
+  "shape": {
+   "ai_summary": {},
+   "counselor_notes": "null",
+   "edit_history": [],
+   "is_edited": "bool",
+   "markers": [
+    {
+     "created_at": "datetime",
+     "note": "str",
+     "timestamp_sec": "number"
+    }
+   ],
+   "session_id": "uuid",
+   "status": "str",
+   "subjective_state": {
+    "after": {
+     "arousal": "number",
+     "emotion": "number",
+     "note": "str",
+     "recorded_at": "datetime",
+     "valence": "number"
+    },
+    "before": "null",
+    "scope": "str"
+   },
+   "transcript": "null",
+   "video_actual_chunks": "number",
+   "video_expected_chunks": "null",
+   "video_status": "str"
+  },
+  "status": 200
+ },
+ "S14 GET record (호스트)": {
+  "content_type": "application/json",
+  "shape": {
+   "ai_summary": {},
+   "counselor_notes": "null",
+   "edit_history": [],
+   "is_edited": "bool",
+   "markers": [
+    {
+     "created_at": "datetime",
+     "note": "str",
+     "timestamp_sec": "number"
+    }
+   ],
+   "session_id": "uuid",
+   "status": "str",
+   "subjective_state": {
+    "participants": {
+     "<uuid>": {
+      "after": {
+       "arousal": "number",
+       "emotion": "number",
+       "note": "str",
+       "recorded_at": "datetime",
+       "valence": "number"
+      },
+      "before": "null"
+     }
+    },
+    "scope": "str"
+   },
+   "transcript": "null",
+   "video_actual_chunks": "number",
+   "video_expected_chunks": "null",
+   "video_status": "str"
+  },
+  "status": 200
+ },
+ "S14 PUT record": {
+  "content_type": "application/json",
+  "shape": {
+   "ai_summary": {
+    "headline": "str"
+   },
+   "counselor_notes": "str",
+   "edit_history": [
+    {
+     "changes": {
+      "ai_summary": {
+       "after": {
+        "headline": "str"
+       },
+       "before": {}
+      },
+      "counselor_notes": {
+       "after": "str",
+       "before": "null"
+      }
+     },
+     "edited_at": "datetime",
+     "editor_id": "uuid"
+    }
+   ],
+   "is_edited": "bool",
+   "markers": [
+    {
+     "created_at": "datetime",
+     "note": "str",
+     "timestamp_sec": "number"
+    }
+   ],
+   "session_id": "uuid",
+   "status": "str",
+   "subjective_state": {
+    "participants": {
+     "<uuid>": {
+      "after": {
+       "arousal": "number",
+       "emotion": "number",
+       "note": "str",
+       "recorded_at": "datetime",
+       "valence": "number"
+      },
+      "before": "null"
+     }
+    },
+    "scope": "str"
+   },
+   "transcript": "null",
+   "video_actual_chunks": "null",
+   "video_expected_chunks": "null",
+   "video_status": "str"
+  },
+  "status": 200
+ },
+ "S15 GET report-choice/summary": {
+  "content_type": "application/json",
+  "shape": {
+   "excluded": "number",
+   "included": "number",
+   "total": "number"
+  },
+  "status": 200
+ },
+ "S15 GET report-status": {
+  "content_type": "application/json",
+  "shape": {
+   "generation_status": "str",
+   "progress": "number",
+   "reason": "null",
+   "report_status": "null",
+   "session_id": "uuid",
+   "stage": "str",
+   "steps": [
+    {
+     "key": "str",
+     "label": "str",
+     "state": "str"
+    }
+   ],
+   "updated_at": "datetime"
+  },
+  "status": 200
+ },
+ "S15 PUT report-choice": {
+  "content_type": "application/json",
+  "shape": {
+   "changed": "bool",
+   "participant_id": "uuid",
+   "report_included": "bool",
+   "report_notice_ack_at": "null",
+   "report_notice_version": "null"
+  },
+  "status": 200
+ },
+ "S16 GET eeg-rollup": {
+  "content_type": "application/json",
+  "shape": {
+   "algorithm_version": "number",
+   "bucket_count": "number",
+   "buckets": [
+    {
+     "bucket_index": "number",
+     "coverage": "number",
+     "end_sec": "number",
+     "metrics": {
+      "attention_level": "null",
+      "cognitive_load": "null",
+      "emotional_stability": "null",
+      "faa": "null",
+      "focus_index": "null",
+      "heart_rate": "null",
+      "hemispheric_balance": "null",
+      "hf_power": "null",
+      "lf_hf_ratio": "null",
+      "lf_power": "null",
+      "meditation_level": "null",
+      "motion": "null",
+      "relaxation_index": "number",
+      "respiratory_rate": "null",
+      "rmssd": "null",
+      "sdnn": "null",
+      "stress_index": "null",
+      "total_neural_activity": "null"
+     },
+     "play_group_id": "null",
+     "sample_count": "number",
+     "start_sec": "number",
+     "valid_count": "number"
+    }
+   ],
+   "overall": {
+    "heart_rate_max": "null",
+    "heart_rate_mean": "null",
+    "heart_rate_min": "null",
+    "hf_power_mean": "null",
+    "lf_hf_ratio_mean": "null",
+    "lf_power_mean": "null",
+    "metrics": {
+     "attention_level": "null",
+     "cognitive_load": "null",
+     "emotional_stability": "null",
+     "faa": "null",
+     "focus_index": "null",
+     "heart_rate": "null",
+     "hemispheric_balance": "null",
+     "hf_power": "null",
+     "lf_hf_ratio": "null",
+     "lf_power": "null",
+     "meditation_level": "null",
+     "motion": "null",
+     "relaxation_index": "number",
+     "respiratory_rate": "null",
+     "rmssd": "null",
+     "sdnn": "null",
+     "stress_index": "null",
+     "total_neural_activity": "null"
+    },
+    "motion_mean": "null",
+    "respiratory_rate_mean": "null",
+    "rmssd_mean": "null",
+    "sample_count": "number",
+    "sdnn_mean": "null",
+    "valid_count": "number"
+   },
+   "participant_id": "null",
+   "resolution_sec": "number",
+   "session_id": "uuid",
+   "window_count": "number"
+  },
+  "status": 200
+ },
+ "S16 GET invite/email": {
+  "content_type": "application/json",
+  "shape": {
+   "invites": [
+    {
+     "email": "str",
+     "invite_id": "uuid",
+     "pii_scrubbed": "bool",
+     "queued_at": "datetime",
+     "request_count": "number",
+     "requested_at": "null",
+     "stale": "bool",
+     "status": "str"
+    }
+   ],
+   "session_id": "uuid",
+   "summary": {
+    "failed": "number",
+    "requested": "number",
+    "stale": "number",
+    "total": "number"
+   }
+  },
+  "status": 200
+ },
+ "S16 POST checkin": {
+  "content_type": "application/json",
+  "shape": {
+   "participant_id": "uuid",
+   "phase": "str",
+   "session_id": "uuid",
+   "subjective_state": {
+    "after": "null",
+    "before": {
+     "arousal": "number",
+     "emotion": "null",
+     "note": "null",
+     "recorded_at": "datetime",
+     "valence": "number"
+    },
+    "scope": "str"
+   }
+  },
+  "status": 200
+ },
+ "S16 POST features": {
+  "content_type": "application/json",
+  "shape": {
+   "saved": "number",
+   "session_id": "uuid"
+  },
+  "status": 200
+ },
+ "S16 POST invite/email": {
+  "content_type": "application/json",
+  "shape": {
+   "cooldown_sec": "number",
+   "results": [
+    {
+     "email": "str",
+     "invite_id": "uuid",
+     "registered": "bool",
+     "request": "str"
+    }
+   ],
+   "session_id": "uuid",
+   "summary": {
+    "queued": "number"
+   }
+  },
+  "status": 200
+ },
+ "S17 GET video/url (영상 없음)": {
+  "content_type": "application/json",
+  "shape": {
+   "url": "null"
+  },
+  "status": 200
+ },
+ "S17 GET video/url (영상 있음)": {
+  "content_type": "application/json",
+  "shape": {
+   "url": "str"
+  },
+  "status": 200
+ }
+}
