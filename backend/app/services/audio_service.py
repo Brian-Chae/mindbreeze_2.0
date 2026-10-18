@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.session import Session, SessionParticipant
 from app.models.record import SessionRecord, AudioChunk
 from app.services.session_authz import SessionAction, get_session_authorized
@@ -24,7 +25,8 @@ CHUNK_STORAGE_DIR = Path(os.environ.get("AUDIO_CHUNK_DIR", "/var/lib/mindbreeze/
 # status='published' 로 표시한 뒤 중간 태스크가 죽어 체인이 끝나지 않으면 워치독이 재발행한다.
 # 정상 수행 시간을 확보하기 위해 이 시간이 지난 뒤에만 재드라이브 대상으로 본다
 # (진행 중인 체인을 중복 발행하지 않는다).
-PIPELINE_REDRIVE_DELAY_SECONDS = 30 * 60
+# SDD-212 TD4: 줄 대기 시간(음성 변환 최대 30분 × 대기)을 정상 진행으로 인정하도록 설정값(기본 90분)을 쓴다.
+PIPELINE_REDRIVE_DELAY_SECONDS = settings.pipeline_redrive_delay_seconds
 
 
 def _to_uuid(value: str) -> UUID:
