@@ -50,7 +50,7 @@
 | 2 | **제약(즉시 유효)** | `ck_sessions_one_parent`(템플릿 제외, 부모 정확히 하나 + `seq`·`host_state` 필수), 복합 FK 2개, `UNIQUE(class_id, seq)`·`UNIQUE(counseling_relationship_id, seq)`, `UNIQUE(session_id, member_id)`, 회원/비회원 배타 CHECK, 부분 유니크. 새 컬럼에 처음부터 부과. 마이그레이션 시작 시 가드: 비템플릿 세션이 남아 있으면 중단 | §9 P1-4 (시점 변경, 변경 이력 참조) |
 | 3 | **분류 함수 1개** | 신규 세션 → 부모 종류(명상 클래스 / 상담 관계 / 없음) 판정. 순수 함수. 입력은 유형·참여 방식·템플릿 여부뿐 | §9 P1-2 (단순화) |
 | 4 | **데이터 초기화(Z)** | dev DB 전 데이터 삭제 → 테스트 계정 재시드. 절차서(+환경 가드가 있는 스크립트). **실행은 Brian 확인 후** | 신규 |
-| 5 | **세션 생성 경로** | `POST /sessions`·`duplicate`·`new-run` 이 세션과 부모를 **같은 트랜잭션**에서 생성. Phase 1 에서 클래스를 만드는 유일한 경로 | §9 P1-6 (재정의) |
+| 5 | **세션 생성 경로** | `POST /sessions`·`duplicate` 가 세션과 부모를 **같은 트랜잭션**에서 생성(`new-run` 은 `run_id` 만 교체하며 세션·부모를 만들지 않음 — 구현 확인). Phase 1 에서 클래스를 만드는 유일한 경로 | §9 P1-6 (재정의) |
 | 6 | **내부 일관성** | `PUT /sessions/{id}` 의 클래스 단위 필드를 클래스에 동기화, 클래스의 마지막 가시 세션이 숨겨지면 클래스도 숨김 | R7 §6.5 (단순화) |
 | 7 | **읽기 API** | `GET /classes`, `GET /classes/{id}`, `GET /classes/{id}/sessions`, `GET /counseling`, `GET /counseling/{id}`. 기존 세션 응답에 `class_id`·`class_title`·`seq`·`area` **가산** | §9 P1-5 |
 | 8 | **숨김 필터** | 새 부모 모델(`Class`, `CounselingRelationship`)에도 `hidden_at` ORM 전역 필터 적용 | §9 P1-7 |

@@ -36,7 +36,7 @@
 | TD12 | 라우터 | `backend/app/api/v1/classes.py`(`/classes`), `counseling.py`(`/counseling`) 신설, `api/v1/__init__.py` 에 등록. 기존 `class_audio.py` 의 `/class` 접두사는 건드리지 않음 | `/class` 와 `/classes` 혼동 방지를 verify 로 확인 |
 | TD13 | 응답 가산 | `SessionResponse`(`schemas/session.py:154`)에 선택 필드 `class_id`·`class_title`·`seq`·`area` 가산. 프론트 `SessionDto`(`frontend/src/lib/api/session.ts`)에 선택 필드로 반영 | SDD-211 계약 골든은 가산 통과(경고) 규칙 |
 | TD14 | 세션 생성 경로 | 세션 생성(`services/session_service.py:335 create_session`, `duplicate`, `new-run`)에서 **분류 함수 → 부모 생성/선택 → 세션 INSERT 를 같은 트랜잭션**으로(CHECK 때문에 부모가 먼저 있어야 세션이 들어간다). `class_instructors(host_id,'lead','active')` 와 `seq`·`host_state` 도 같은 트랜잭션. 템플릿은 제외. 생성 지점 전수는 P0 에서 확정 | **폴백이 아니라 Phase 1 의 유일한 정식 경로**: 클래스 쓰기 API 가 Phase 3 에야 생긴다 |
-| TD15 | `new-run` 산출물 | 별도 부모(클래스 1 + 세션 1)로 만든다. 같은 클래스의 다음 회차로 붙이지 않는다 | `미확인`: 문서에 new-run 의 부모 귀속 규칙이 없음. 가장 보수적(구 의미 유지: 회차 연결은 `run_id` 가 담당). Phase 3 에서 재논의 |
+| TD15 | `new-run` 산출물 | **세션도 부모도 새로 만들지 않는다**(구현 확인: `start_new_run` 은 `run_id` 만 교체, 완료·취소 세션은 거부). 정정 전 문구는 "별도 부모로 만든다" | `미확인`: 문서에 new-run 의 부모 귀속 규칙이 없음. 가장 보수적(구 의미 유지: 회차 연결은 `run_id` 가 담당). Phase 3 에서 재논의 |
 | TD16 | 상담 세션 부모 | 만들 때 내담자를 알 수 없으므로 호스트별 **보관용 관계**(`is_placeholder`)에 배치하고 `seq` 를 이어 부여. 재배치는 이 SDD 에서 정의하지 않음(Phase 6) | 기본값 확정(구 U4). 보관용 관계는 `uq_rel_placeholder`(상담사당 1개)로 보호 |
 | TD17 | 숨김 필터 | `core/database.py` 의 `with_loader_criteria` 에 `Class`·`CounselingRelationship` 의 `hidden_at IS NULL` 추가, 같은 `include_hidden` 옵션으로 해제 | 기획 §9 P1-7 |
 | TD18 | 클래스 동기화·숨김 연쇄 | `PUT /sessions/{id}` 로 클래스 단위 필드가 바뀌면, 부모 클래스의 가시 세션이 1개일 때 클래스에 반영(Phase 1 의 클래스는 항상 1:1). 마지막 가시 세션이 숨겨지면 클래스도 `hidden_at`. 다회차 클래스는 Phase 3 이 규칙을 다시 정한다 | `GET /classes` 가 클래스 행의 설정을 보여주므로 어긋나면 안 됨(내부 일관성). `origin` 조건은 불필요(§TD20) |
@@ -396,3 +396,14 @@ dev: [초기화] → PR-A 배포 → PR-B 배포. prod: 같은 순서(N4 범위)
 **사라진 것**: 백필 M2 전부(Task B1~B6, `session_migration_map`, V1~V19), M3 별도 리비전/PR, M5 호환 윈도우·계측·스트레이 재백필, 코드 입장 해석·8개 파일 폴백·발급 합집합, 알림 `params` 가산, 스위프 확장, 역방향 SQL, 스냅샷 선행, 사용자 결정 U1·U3·U4(단순화), 확인 C1·C2·C4.
 
 **유지**: dual-write·세션 생성 시 부모 동시 생성·일관성 동기화·읽기 API·동치성 원칙·숨김 필터·계약 골든·엔진 불변·시안 매핑.
+
+## 16. 구현 중 확정 사항 (2026-10-18, W-CP·리뷰 반영)
+
+| 항목 | 확정 |
+|---|---|
+| `new-run` | 세션·부모 생성 없음(TD15 정정) |
+| 클래스 기본값 | `planned_session_count=1`, `schedule_mode='fixed'` (일정 없는 즉석 세션에도 동일 적용, Phase 1 1:1·즉석 구조 가정) |
+| PUT 으로 `type`·`participant_mode` 변경 | 부모 **고정**(재분류·재배치 안 함, Phase 1). 필요 시 후속 Phase |
+| 세션 종료·취소 시 클래스 `status` | 연동 안 함(Phase 3 에서 상태 필터·코드 해제 정책과 함께 결정). 코드 충돌은 실제 유니크 충돌 대상 클래스의 `access_code` 만 비워 방어 |
+| 호스트 삭제(`admin_service`) | 가시 세션이 0이 된 클래스를 같은 트랜잭션에서 숨김 |
+| 신규 읽기 API 의 미존재·접근 불가 | 동일 404(존재 여부 비노출). 기존 `/sessions` 는 변경 없음 |

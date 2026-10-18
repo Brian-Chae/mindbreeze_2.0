@@ -151,8 +151,8 @@
 | [ ] | CP-1 | `POST /sessions` (meditation) → 클래스 + `class_instructors(lead, active)` + 세션(`seq=1`·`host_state='assigned'`·`session_kind='regular'`)이 **한 트랜잭션**에 생성. 클래스 설정·코드가 세션 값과 동일(dual-write). 응답은 기존 필드 + 가산 필드 | B·P | 통과 |
 | [ ] | CP-2 | `POST /sessions` (clinical/hypnosis, one_on_one) → 호스트별 보관용 관계에 배치, `seq` 이어 부여. 같은 호스트의 2번째 상담 세션은 **같은 보관용 관계** 재사용(관계 1개, `uq_rel_placeholder` 위반 없음) | B·P | 통과 |
 | [ ] | CP-3 | 생성 중 부모 생성 실패 시 세션도 생성되지 않음(원자성). 분류 `X0` 도달 시 세션 생성 롤백 + 서버 오류 | B·P | 통과 |
-| [ ] | CP-4 | **같은 분류 함수**: 생성 경로 전체(`POST /sessions`·`duplicate`·`new-run`)가 분류 함수 하나만 호출(규칙 중복 구현 없음, 정적 검사) | S·B | 통과 |
-| [ ] | CP-5 | `duplicate`·`new-run`·템플릿 적용 경로의 산출물도 부모를 가진다(P0 전수 결과 기준), `new-run` 은 별도 부모(TD15), 템플릿 저장(`save-as-template`)은 부모 없음 | B | 통과 |
+| [ ] | CP-4 | **같은 분류 함수**: 생성 경로 전체(`POST /sessions`·`duplicate`)가 분류 함수 하나만 호출(규칙 중복 구현 없음, 정적 검사) | S·B | 통과 |
+| [ ] | CP-5 | `duplicate`·`new-run`·템플릿 적용 경로의 산출물도 부모를 가진다(P0 전수 결과 기준), `new-run` 은 세션·부모를 새로 만들지 않음(TD15 정정), 템플릿 저장(`save-as-template`)은 부모 없음 | B | 통과 |
 | [ ] | CP-6 | **세션 생성 지점 전수**: `Session(` 생성 지점 목록(P0)의 모든 지점이 부모 생성을 거치거나 템플릿 사유로 제외됨 — 누락 0 (CHECK 가 PG 에서 누락을 잡으므로 PG 경로별 테스트로 확인) | S·P | 누락 0 |
 | [ ] | CP-7 | 일관성 동기화: `PUT /sessions/{id}` 로 클래스 단위 필드(제목·설명·정원·참여 방식·LINK BAND 모드·장소·소요·녹음/채팅/SFU·알림 오프셋·코드) 수정 시 가시 세션 1개인 클래스에 반영 | B | 통과 |
 | [ ] | CP-8 | 클래스의 **마지막 가시 세션**을 `DELETE`(숨김)하면 클래스도 `hidden_at`, 가시 세션이 남아 있으면 클래스 유지 | B | 통과 |
