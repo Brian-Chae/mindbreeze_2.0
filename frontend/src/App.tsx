@@ -17,6 +17,7 @@ import LandingPage from './pages/LandingPage';
 import { useAuthStore } from './stores/authStore';
 import { resolvePostLoginPath } from './lib/auth-routing';
 import { RoleGuard } from './components/auth/RoleGuard';
+import { LegacySessionRedirect } from './components/routing/legacy-session-redirect';
 
 // 랜딩에서 사용하지 않는 화면과 분석 라이브러리는 해당 경로를 열 때 불러온다.
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -44,7 +45,6 @@ const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
 const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
-const SessionListPage = lazy(() => import('./pages/sessions/SessionListPage'));
 const CreateWizardContainer = lazy(() => import('./components/class/flow/host/CreateWizardContainer').then((m) => ({ default: m.CreateWizardContainer })));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
@@ -75,6 +75,13 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
+const HostClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
+const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
+const MemberStructureHomePage = lazy(() => import('./pages/client/member-structure-home-page').then((module) => ({ default: module.MemberStructureHomePage })));
+const MemberClassesPage = lazy(() => import('./pages/client/member-classes-page').then((module) => ({ default: module.MemberClassesPage })));
+const MemberClassDetailPage = lazy(() => import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
+const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
+const CounselingDetailPage = lazy(() => import('./pages/counseling/counseling-detail-page').then((module) => ({ default: module.CounselingDetailPage })));
 const CodeEntryPage = lazy(() => import('./pages/class/CodeEntryPage'));
 const ClassEntryPage = lazy(() => import('./pages/class/EntryPage'));
 const OrgPublicPage = lazy(() => import('./pages/OrgPublicPage'));
@@ -165,7 +172,13 @@ const router = createBrowserRouter(
         <Route path="/register/organization" element={<RegisterOrganizationPage />} />
         <Route path="/register/*" element={<Navigate to="/register" replace />} />
         <Route path="/role-redirect" element={<RoleRouter />} />
-        <Route path="/app" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
+        {/* 상담사 미연결 회원도 새 읽기 화면에 진입하도록 기존 연결 분기보다 먼저 등록한다. */}
+        <Route path="/app" element={<RoleGuard role="client"><MemberStructureHomePage /></RoleGuard>} />
+        <Route path="/app/classes" element={<RoleGuard role="client"><MemberClassesPage /></RoleGuard>} />
+        <Route path="/app/classes/:classId" element={<RoleGuard role="client"><MemberClassDetailPage /></RoleGuard>} />
+        <Route path="/app/counseling" element={<RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard>} />
+        <Route path="/app/counseling/:relationshipId" element={<RoleGuard role="client"><CounselingDetailPage role="member" /></RoleGuard>} />
+        <Route path="/app/sessions" element={<RoleGuard role="client"><Navigate to="/app/classes" replace /></RoleGuard>} />
         <Route path="/app/*" element={<RoleGuard role="client"><ClientAppPage /></RoleGuard>} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -190,9 +203,19 @@ const router = createBrowserRouter(
         <Route path="/org/counselors" element={<RoleGuard role="org_admin"><OrgCounselorsPage /></RoleGuard>} />
         <Route path="/org/:org_id" element={<OrgManagementPage />} />
         <Route path="/credentials" element={<RoleGuard role={['counselor', 'org_admin']}><CredentialDashboardPage /></RoleGuard>} />
-        <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><SessionListPage /></RoleGuard>} />
-        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
-        <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
+        <Route path="/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes" replace /></RoleGuard>} />
+        <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
+        <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
+        <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassesPage /></RoleGuard>} />
+        <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
+        <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
+        <Route path="/classes/:classId/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
+        {/* 기존 상세가 읽는 내부 파라미터 이름 id를 유지한다(값은 회차 식별자다). */}
+        <Route path="/classes/:classId/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
+        <Route path="/counseling" element={<RoleGuard role={['counselor', 'org_admin']}><CounselingListPage role="host" /></RoleGuard>} />
+        <Route path="/counseling/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
+        <Route path="/counseling/:relationshipId" element={<RoleGuard role={['counselor', 'org_admin']}><CounselingDetailPage role="host" /></RoleGuard>} />
+        <Route path="/counseling/:relationshipId/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
         {/* SDD-088: /live 는 하위 호환 리다이렉트, 실제 화면은 /player */}
         <Route path="/sessions/:id/live" element={<SessionLivePage />} />
         <Route path="/sessions/:id/player" element={<ClassPlayerPage />} />

@@ -19,6 +19,8 @@ import { resolveNotificationTarget } from '../../lib/api/notifications';
 
 export interface ClientShellProps {
   children: ReactNode;
+  /** 새 읽기 화면에서만 적용하는 셸 스타일. */
+  variant?: 'default' | 'structure';
   title: string;
   sub?: string;
   rightSlot?: ReactNode;
@@ -32,6 +34,7 @@ export interface ClientShellProps {
 
 export default function ClientShell({
   children,
+  variant = 'default',
   title,
   sub,
   rightSlot,
@@ -102,7 +105,7 @@ export default function ClientShell({
   };
 
   return (
-    <div className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
+    <div data-shell-variant={variant} className="h-full w-full bg-[#F7F4F0] font-sans text-[#1F1F1F] md:grid md:grid-cols-[240px_1fr] flex flex-col">
       {/* 데스크톱 사이드바 */}
       <aside className="hidden md:flex bg-[#F5EDFC] border-r border-[#EFEFEF] flex-col">
         <SidebarNav
