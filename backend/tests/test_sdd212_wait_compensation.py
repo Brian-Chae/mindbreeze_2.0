@@ -265,7 +265,7 @@ def test_브로커_조회가_실패해도_재드라이브는_계속된다(client
     assert process_pipeline_outbox()["redriven"] == 1
 
 
-def test_종료_직후_아웃박스_재드라이브_지연은_설정값이다(client, monkeypatch):
+def test_종료_직후_아웃박스_재드라이브_지연은_설정값이다(client, monkeypatch, published):
     from tests.test_audio_record import _mock_ai_pipeline, _upload_chunk
 
     _mock_ai_pipeline(monkeypatch)
@@ -276,5 +276,6 @@ def test_종료_직후_아웃박스_재드라이브_지연은_설정값이다(cl
     assert client.post(f"/api/v1/sessions/{sid}/end", headers=host["auth"]).status_code == 200
 
     outbox = _get(uuid.UUID(sid))
+    assert outbox.status == "published", "브로커 없이도(발행 대체) 발행 완료 상태여야 한다"
     delta = (_aware(outbox.available_at) - datetime.now(timezone.utc)).total_seconds()
     assert REDRIVE_DELAY - 120 < delta <= REDRIVE_DELAY
