@@ -14,12 +14,23 @@ const state = vi.hoisted(() => ({
   agentUnread: 0,
   reportUnread: 6,
   pendingReview: 5,
+  notificationUnread: 0,
+  swapChatReport: false,
 }));
 
 vi.mock('../src/lib/terms', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/terms')>();
-  const replaced: Record<string, string> = { class: 'XYZ-클래스', chat: 'XYZ-채팅', report: 'XYZ-리포트', notification: 'XYZ-알림' };
-  return { ...actual, term: (key: Parameters<typeof actual.term>[0], area?: Parameters<typeof actual.term>[1]) => replaced[key] ?? actual.term(key, area) };
+  const replaced: Record<string, string> = {
+    class: 'XYZ-클래스', 'meditation-class': 'XYZ-명상 클래스', counseling: 'XYZ-상담',
+    'my-class': 'XYZ-내 클래스', 'my-counseling': 'XYZ-내 상담',
+    members: 'XYZ-구성원', more: 'XYZ-더보기',
+    chat: 'XYZ-채팅', report: 'XYZ-리포트', notification: 'XYZ-알림',
+  };
+  return { ...actual, term: (key: Parameters<typeof actual.term>[0], area?: Parameters<typeof actual.term>[1]) => {
+    if (state.swapChatReport && key === 'chat') return replaced.report;
+    if (state.swapChatReport && key === 'report') return replaced.chat;
+    return replaced[key] ?? actual.term(key, area);
+  } };
 });
 vi.mock('../src/stores/authStore', () => ({
   useAuthStore: (selector: (s: { user: typeof state.user; logout: () => Promise<void> }) => unknown) =>
@@ -27,7 +38,7 @@ vi.mock('../src/stores/authStore', () => ({
 }));
 vi.mock('../src/stores/notificationStore', () => ({
   useNotificationStore: (selector: (s: { wsConnected: boolean; sessionInvites: unknown[]; unread: number }) => unknown) =>
-    selector({ wsConnected: true, sessionInvites: state.sessionInvites, unread: 0 }),
+    selector({ wsConnected: true, sessionInvites: state.sessionInvites, unread: state.notificationUnread }),
 }));
 vi.mock('../src/stores/chatStore', () => ({
   useChatStore: (selector: (s: { rooms: { unread_count: number }[] }) => unknown) =>
@@ -51,6 +62,14 @@ let root: Root;
 let container: HTMLDivElement;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  state.user = { id: 'u1', role: 'org_admin', name: '테스트', email: 'a@example.com' };
+  state.sessionInvites = [1, 2, 3];
+  state.chatUnread = 4;
+  state.agentUnread = 0;
+  state.reportUnread = 6;
+  state.pendingReview = 5;
+  state.notificationUnread = 0;
+  state.swapChatReport = false;
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -64,7 +83,7 @@ function badgeOf(el: Element): string | null {
   return Array.from(el.querySelectorAll('span.rounded-full')).map((s) => s.textContent ?? '').find((t) => t !== '') ?? null;
 }
 function labelOf(el: Element): string {
-  return el.querySelector('span.flex-1')?.textContent ?? el.lastElementChild?.textContent ?? '';
+  return el.querySelector('span.flex-1')?.textContent ?? el.querySelector(':scope > span:not([class])')?.textContent ?? '';
 }
 function byLabel(selector: string): Record<string, string | null> {
   return Object.fromEntries(Array.from(container.querySelectorAll(selector)).map((el) => [labelOf(el), badgeOf(el)]));
@@ -75,30 +94,53 @@ describe('FE-NAV-06 키-배지 결합: 사전 라벨을 바꿔도 배지는 해�
     await act(async () => root.render(
       <MemoryRouter><SidebarNav notificationBadge={2} chatBadge={1} reportBadge={3} sessionBadge={4} /></MemoryRouter>,
     ));
-    expect(byLabel('nav a')).toMatchObject({
-      'XYZ-클래스': '4', 'XYZ-채팅': '1', 'XYZ-리포트': '3', 'XYZ-알림': '2', 내담자: null, 설정: null,
+    expect(byLabel('nav a')).toEqual({
+      '기관 대시보드': null, 'XYZ-명상 클래스': null, 'XYZ-상담': null,
+      'XYZ-채팅': '1', 'XYZ-구성원': null, 'XYZ-리포트': '3', 'XYZ-알림': '4', 설정: null,
     });
   });
   it('상담사·관리자 하단 탭', async () => {
     await act(async () => root.render(
       <MemoryRouter><LayoutBottomTabBar onMoreClick={() => undefined} role="org_admin" /></MemoryRouter>,
     ));
-    expect(byLabel('nav > a')).toMatchObject({ 홈: null, 'XYZ-클래스': '3', 'XYZ-채팅': '4', 'XYZ-리포트': '5' });
+    expect(byLabel('nav > a, nav > button')).toEqual({ 홈: null, 'XYZ-클래스': null, 'XYZ-상담': null, 'XYZ-채팅': '4', 'XYZ-더보기': '8' });
+    expect(container.querySelector('nav > button')?.getAttribute('aria-label')).toBe('더보기 8건');
   });
   it('회원 하단 탭', async () => {
     await act(async () => root.render(
       <MemoryRouter><ClientBottomTabBar onMoreClick={() => undefined} /></MemoryRouter>,
     ));
-    expect(byLabel('nav > button')).toMatchObject({ 홈: null, 'XYZ-클래스': '3', 'XYZ-채팅': '4', 'XYZ-리포트': '6', 더보기: null });
+    expect(byLabel('nav > button')).toEqual({ 홈: null, 'XYZ-내 클래스': null, 'XYZ-내 상담': null, 'XYZ-리포트': '6', 'XYZ-더보기': '7' });
+    expect(container.querySelector('button[aria-label="더보기 7건"]')).not.toBeNull();
   });
 });
 
 describe('FE-NAV-07 드로어 경로', () => {
-  it('알림 배지만 전달받으면 채팅·리포트·클래스 배지는 붙지 않는다', async () => {
+  it('알림과 승인 대기 리포트가 라벨 변경 후에도 올바른 링크에 붙는다', async () => {
     await act(async () => root.render(
       <MemoryRouter><SidebarNav role="counselor" notificationBadge={4} /></MemoryRouter>,
     ));
-    expect(byLabel('nav a')).toMatchObject({ 'XYZ-알림': '4', 'XYZ-채팅': null, 'XYZ-리포트': null, 'XYZ-클래스': null });
+    expect(byLabel('nav a')).toEqual({
+      '기관 대시보드': null, 'XYZ-명상 클래스': null, 'XYZ-상담': null,
+      'XYZ-채팅': null, 'XYZ-구성원': null, 'XYZ-리포트': '5', 'XYZ-알림': '4', 설정: null,
+    });
+  });
+});
+
+describe('라벨 교환 회귀', () => {
+  it('채팅·리포트 라벨을 서로 바꿔도 배지는 경로의 키를 따른다', async () => {
+    state.swapChatReport = true;
+    await act(async () => root.render(
+      <MemoryRouter><SidebarNav chatBadge={2} reportBadge={7} notificationBadge={3} /></MemoryRouter>,
+    ));
+    const chat = container.querySelector('a[href="/chat"]');
+    const report = container.querySelector('a[href="/reports"]');
+    expect(chat).not.toBeNull();
+    expect(report).not.toBeNull();
+    expect(labelOf(chat!)).toBe('XYZ-리포트');
+    expect(badgeOf(chat!)).toBe('2');
+    expect(labelOf(report!)).toBe('XYZ-채팅');
+    expect(badgeOf(report!)).toBe('7');
   });
 });
 
