@@ -268,3 +268,54 @@ def test_google_로그인_remember_me_true_지속쿠키(client):
         )
     assert res.status_code == 200, res.text
     assert f"max-age={EXPECTED_MAX_AGE}" in _refresh_cookie_header(res).lower()
+
+
+# ---------------------------------------------------------------------------
+# 4. refresh 회전 직후 동시 요청 유예(로그인 직후 강제 로그아웃 방지)
+# ---------------------------------------------------------------------------
+
+def test_refresh_회전_직후_같은_토큰_재요청은_유예_허용(client):
+    _register(client)
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "remember@test.com", "password": VALID_PASSWORD},
+    )
+    token = _refresh_cookie_value(login)
+
+    first = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": token})
+    assert first.status_code == 200, first.text
+    # 같은 (이미 회전된) 토큰으로 곧바로 재요청 — 동시 경합 시뮬레이션
+    second = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": token})
+    assert second.status_code == 200, second.text
+    third = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": token})
+    assert third.status_code == 200, third.text
+
+
+def test_refresh_유예_초과_재사용은_전체_폐기(client):
+    from datetime import datetime, timedelta, timezone
+
+    from app.core.database import SessionLocal
+    from app.models.refresh_token import RefreshToken
+
+    _register(client)
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "remember@test.com", "password": VALID_PASSWORD},
+    )
+    token = _refresh_cookie_value(login)
+    first = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": token})
+    new_token = _refresh_cookie_value(first)
+
+    db = SessionLocal()
+    try:
+        for r in db.query(RefreshToken).filter(RefreshToken.revoked_at.isnot(None)).all():
+            r.revoked_at = datetime.now(timezone.utc) - timedelta(minutes=5)
+        db.commit()
+    finally:
+        db.close()
+
+    reuse = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": token})
+    assert reuse.status_code == 401
+    # 전체 폐기 — 새 토큰도 더는 쓸 수 없다
+    after = client.post("/api/v1/auth/refresh", cookies={"mb_refresh_token": new_token})
+    assert after.status_code == 401

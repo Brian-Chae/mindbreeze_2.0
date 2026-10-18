@@ -607,12 +607,16 @@ async def refresh(
         )
 
     if record.revoked_at is not None:
-        # 재사용 감지 → 사용자 전체 토큰 폐기
-        refresh_token_service.revoke_all_user_tokens(user_id, db)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
-        )
+        # 회전 직후 유예 시간 내 동시 요청은 정상 경합으로 보고 후속 유효 토큰을 이어서 회전한다.
+        successor = refresh_token_service.find_grace_successor(record, db)
+        if successor is None:
+            # 재사용 감지 → 사용자 전체 토큰 폐기
+            refresh_token_service.revoke_all_user_tokens(user_id, db)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="토큰이 재사용되었습니다. 모든 기기를 로그아웃합니다.",
+            )
+        jti = successor.jti
 
     # SDD-020: 비활성화 실효성 — 발급 시점엔 active 였더라도 이후 suspended/pending 이
     # 되면 토큰 회전을 차단한다. (탈취/정지 계정의 세션 연장 방지)
