@@ -67,7 +67,7 @@ export default function ClientEssentialsPage() {
         auth_provider: string;
         counselors: Array<{ id: string; name: string; profile_image: string | null }>;
       }>('/auth/users/me', {
-        name: form.name,
+        name: form.name.trim(),
         gender: form.gender,
         birth_date: form.birthDate,
         phone: form.phone || undefined,
@@ -121,16 +121,20 @@ export default function ClientEssentialsPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 이름 (Google에서 받은 값 pre-fill, readonly) */}
+            {/* 이름 (Google에서 받은 값 pre-fill, 수정 가능) */}
             <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-[#1F1F1F]">
+              <label htmlFor="essentials-name" className="block text-sm font-medium text-[#1F1F1F]">
                 이름
               </label>
               <input
+                id="essentials-name"
                 type="text"
                 value={form.name}
-                readOnly
-                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl bg-gray-50 text-[#6F6F6F] outline-none cursor-not-allowed"
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                disabled={loading}
+                maxLength={100}
+                placeholder="이름을 입력해주세요"
+                className="w-full px-4 py-3 border border-[#D4D4D4] rounded-xl text-[#1F1F1F] bg-white placeholder:text-[#9A9BA8] focus:ring-2 focus:ring-[#5F0080] focus:border-transparent outline-none disabled:opacity-50"
               />
             </div>
 
