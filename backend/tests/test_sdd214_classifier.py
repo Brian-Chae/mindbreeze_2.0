@@ -27,7 +27,22 @@ def test_template_has_no_parent(type_: str) -> None:
 
 
 def test_template_wins_even_with_unknown_mode() -> None:
-    assert classify_session(_facts("meditation", "???", is_template=True)).rule == "T0"
+    result = classify_session(_facts("meditation", "???", is_template=True))
+    assert result.rule == "T0"
+    assert result.parent_kind == "none"
+
+
+@pytest.mark.parametrize("type_", ["clinical", "hypnosis", "meditation", "custom", "bogus"])
+def test_one_on_one_template_has_no_parent_for_each_type(type_: str) -> None:
+    result = classify_session(_facts(type_, "one_on_one", is_template=True))
+    assert result.rule == "T0"
+    assert result.parent_kind == "none"
+
+
+def test_template_with_unknown_type_and_mode_has_no_parent() -> None:
+    result = classify_session(_facts("bogus", "bogus", is_template=True))
+    assert result.rule == "T0"
+    assert result.parent_kind == "none"
 
 
 # CL-2: C1
@@ -66,19 +81,31 @@ def test_one_on_one_non_meditation_is_counseling(type_: str) -> None:
 )
 def test_unknown_values_are_unclassifiable(type_: str, mode: str) -> None:
     result = classify_session(_facts(type_, mode))
-    assert result == Classification(parent_kind="unclassifiable", rule="X0")
+    assert result.rule == "X0"
+    assert result.parent_kind == "unclassifiable"
+
+
+@pytest.mark.parametrize("type_,mode", [("bogus", "bogus"), (" ", " ")])
+def test_unknown_type_and_mode_together_are_unclassifiable(type_: str, mode: str) -> None:
+    result = classify_session(_facts(type_, mode))
+    assert result.rule == "X0"
+    assert result.parent_kind == "unclassifiable"
 
 
 def test_meditation_with_unknown_mode_is_still_c1() -> None:
     # 명상은 참여 방식이 어느 쪽이든 C1 (plan §4.1 행 1)
-    assert classify_session(_facts("meditation", "bogus")).rule == "C1"
+    result = classify_session(_facts("meditation", "bogus"))
+    assert result.rule == "C1"
+    assert result.parent_kind == "meditation_class"
 
 
 def test_custom_type_name_boundary_is_not_an_input() -> None:
     # 경계: custom_type_name(NULL 포함)은 판정 입력이 아니다
     names = {f.name for f in dataclasses.fields(SessionFacts)}
     assert names == {"is_template", "type", "participant_mode"}
-    assert classify_session(_facts("custom", "one_on_one")).rule == "R3"
+    result = classify_session(_facts("custom", "one_on_one"))
+    assert result.rule == "R3"
+    assert result.parent_kind == "counseling_relationship"
 
 
 # CL-6: 순수성
