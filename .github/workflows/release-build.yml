@@ -14,7 +14,9 @@
 #     AWS_RELEASE_BUILD_ROLE_ARN = <PLACEHOLDER: arn:aws:iam::187768779388:role/… 릴리스 버킷 PUT 전용 OIDC 역할>
 #     RELEASE_BUCKET             = <PLACEHOLDER: mindbreeze-prod-releases>
 #     (선택) PROD_WEB_HOST / PROD_API_HOST — 기본 mindbreeze.looxidlabs.com / api.mindbreeze.looxidlabs.com
-#   Repository secret: VITE_GOOGLE_CLIENT_ID (공개 값, 기존 사용 중)
+#   Repository variable: GOOGLE_CLIENT_ID_PROD = 운영 Google OAuth 클라이언트 ID (공개 값. 비어 있으면 빈 값으로 빌드 + 경고)
+#     ※ dev 용 secrets.VITE_GOOGLE_CLIENT_ID 는 운영 빌드에 쓰지 않는다(dev 클라이언트 ID 혼입 방지).
+#   ※ 운영 호스트는 워크플로 입력(web_host/api_host, 기본=최종 운영 주소)만 사용 — 리허설용 저장소 변수(PROD_*_HOST)는 번들에 굽지 않는다.
 # ─────────────────────────────────────────
 
 name: Release Build
@@ -26,6 +28,14 @@ on:
         description: "빌드할 브랜치/태그/SHA"
         required: true
         default: develop
+      web_host:
+        description: "번들에 굽는 운영 웹 호스트 (기본: 최종 운영 주소)"
+        required: false
+        default: "mindbreeze.looxidlabs.com"
+      api_host:
+        description: "번들에 굽는 운영 API 호스트 (기본: 최종 운영 주소)"
+        required: false
+        default: "api.mindbreeze.looxidlabs.com"
       base_release_sha:
         description: "직전 운영 릴리스 SHA (파괴적 마이그레이션 검사 범위. 비우면 전체 이력)"
         required: false
@@ -42,8 +52,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PROD_WEB_HOST: ${{ vars.PROD_WEB_HOST || 'mindbreeze.looxidlabs.com' }}
-  PROD_API_HOST: ${{ vars.PROD_API_HOST || 'api.mindbreeze.looxidlabs.com' }}
+  PROD_WEB_HOST: ${{ github.event.inputs.web_host || 'mindbreeze.looxidlabs.com' }}
+  PROD_API_HOST: ${{ github.event.inputs.api_host || 'api.mindbreeze.looxidlabs.com' }}
 
 jobs:
   build:
@@ -105,8 +115,12 @@ jobs:
         env:
           VITE_API_BASE_URL: https://${{ env.PROD_API_HOST }}/api/v1
           VITE_PUBLIC_APP_URL: https://${{ env.PROD_WEB_HOST }}
-          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID_PROD }}
         run: |
+          if [ -z "${VITE_GOOGLE_CLIENT_ID:-}" ]; then
+            echo "::warning::GOOGLE_CLIENT_ID_PROD 저장소 변수가 비어 있음 — 운영 Google 로그인이 동작하지 않는 빌드입니다(변수 설정 후 재빌드 필요)."
+            echo "### ⚠️ Google 클라이언트 ID 미주입 (GOOGLE_CLIENT_ID_PROD 비어 있음)" >> "$GITHUB_STEP_SUMMARY"
+          fi
           cd frontend
           rm -rf dist
           npm install --legacy-peer-deps

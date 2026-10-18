@@ -12,7 +12,7 @@ bash deploy/cutover/cutover.sh --from C-5     # 재개(같은 RUN_ID)
 bash deploy/cutover/rollback.sh               # 롤백(사람이 판단 후 실행. 점검 해제 후에는 거부)
 ```
 
-필수 환경변수(비밀 아님): `MB_ADMIN_IPS`(점검 중 우회 IP, 운영자 로컬 포함) · `MB_RELEASE_ID` · `MB_ACK_RESEARCH_KEY_BACKUP=1` · `MB_ACK_PRIVACY_POLICY=1` · `MB_ACK_NOTICE_D1=1`.
+필수 환경변수(비밀 아님): `MB_ADMIN_IPS`(점검 중 우회 IP, 운영자 로컬 포함. 미지정 시 `admin-ips.txt` 목록 사용 — 한 줄에 하나, IP 추가는 이 파일에 한 줄 추가) · `MB_RELEASE_ID` · `MB_ACK_RESEARCH_KEY_BACKUP=1` · `MB_ACK_PRIVACY_POLICY=1` · `MB_ACK_NOTICE_D1=1`.
 선택: `MB_SMOKE_EMAIL`+`MB_SMOKE_PASSWORD_FILE`(C-8 API 스모크 계정), `MB_OBSERVE_MIN`(C-5 관찰, 기본 2분), `MB_MAINT_LIMIT_MIN`(60), `MB_DNS_DEADLINE_MIN`(48), `MB_ALLOW_OVERRUN=1`, `MB_ALLOW_AUDIO_COUNT_DRIFT=1`, `MB_WORKFLOW_REF`(기본 develop).
 AWS: `looxid-las`/ap-northeast-1, `MB_AWS_PY`(기본 `backend/venv/bin/python -m awscli`). 시크릿 값은 어디에도 출력·저장하지 않는다(DB 비밀번호는 SSM→boto3).
 
@@ -47,3 +47,11 @@ AWS: `looxid-las`/ap-northeast-1, `MB_AWS_PY`(기본 `backend/venv/bin/python -m
 - prod 점검 모드는 C-6 에서 켜고 C-9 에서 끈다(DNS 전환 순간부터 공개되므로 사용자 차단 필요).
 - nginx 점검 적용은 reload 가 아니라 **restart**(기존 WebSocket 연결 유지 방지).
 - 검증 한계: nginx -t·SSM·RDS·Route53 실행 경로는 이 환경에서 실행하지 않았다(dry-run·구문·단위 시험만).
+
+## 운영 Google 클라이언트 ID 반영 절차 (Brian 이 ID 를 준비한 뒤)
+Google OAuth 클라이언트 ID 는 공개 값이지만 프론트 번들(빌드 시점)과 백엔드(SSM) 양쪽에 필요하다. 번들에는 dev 용 `secrets.VITE_GOOGLE_CLIENT_ID` 가 아니라 저장소 변수 `GOOGLE_CLIENT_ID_PROD` 만 주입된다(비어 있으면 빈 값으로 빌드 + 경고).
+1. Google Cloud 콘솔에서 운영용 웹 클라이언트 생성 — 승인된 JavaScript 원본 `https://mindbreeze.looxidlabs.com`, (리허설 확인용 `https://prod-check.mindbreeze.looxidlabs.com`).
+2. 저장소 변수: `gh variable set GOOGLE_CLIENT_ID_PROD --body "<클라이언트 ID>"`
+3. SSM: `deploy/aws/t12-ssm.sh` 의 키 목록과 동일하게 `GOOGLE_CLIENT_ID` 를 운영 SSM 경로에 입력(값은 화면·로그에 출력하지 않는다. 입력 방법은 `deploy/aws/t12-ssm.sh` 주석 참조).
+4. 재빌드: `gh workflow run release-build.yml --ref main -f ref=develop -f base_release_sha=<직전 운영 릴리스 SHA>` → 새 릴리스 ID 확인(요약에 Google 경고가 없어야 함).
+5. 새 릴리스 ID 로 `MB_RELEASE_ID` 갱신 후 C-0 부터 진행(deploy-prod 는 C-5 에서 승인 후 실행).

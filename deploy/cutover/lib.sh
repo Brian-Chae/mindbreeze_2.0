@@ -14,6 +14,11 @@ MB_DRY_RUN="${MB_DRY_RUN:-0}"
 for _a in "$@"; do [ "$_a" = "--dry-run" ] && MB_DRY_RUN=1; done
 export MB_DRY_RUN
 is_dry() { [ "$MB_DRY_RUN" = "1" ]; }
+# 관리자 우회 IP 목록: MB_ADMIN_IPS 가 없으면 deploy/cutover/admin-ips.txt(한 줄에 IP/CIDR 하나, # 주석)를 쉼표로 합쳐 사용.
+if [ -z "${MB_ADMIN_IPS:-}" ] && [ -r "$CUT_DIR/admin-ips.txt" ]; then
+  MB_ADMIN_IPS="$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$CUT_DIR/admin-ips.txt" | grep -v '^$' | paste -sd, - || true)"
+  export MB_ADMIN_IPS
+fi
 if is_dry; then   # dry-run 표시용 기본값(실제 실행에서는 반드시 직접 지정)
   : "${MB_ADMIN_IPS:=<관리자IP>}" "${MB_RELEASE_ID:=<릴리스ID>}" "${MB_ACK_RESEARCH_KEY_BACKUP:=1}" "${MB_ACK_PRIVACY_POLICY:=1}" "${MB_ACK_NOTICE_D1:=1}"
   export MB_ADMIN_IPS MB_RELEASE_ID MB_ACK_RESEARCH_KEY_BACKUP MB_ACK_PRIVACY_POLICY MB_ACK_NOTICE_D1
