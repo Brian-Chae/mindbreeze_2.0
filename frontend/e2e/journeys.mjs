@@ -9,7 +9,8 @@ await client('홈: 인사·담당 상담사·이번 주 클래스 영역', async
 // SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
 await client('클래스: 목록 표시(달력 없음)', async (p) => {
   const t = await expectText(p, '/app/sessions', '클래스', '클래스 신청하기');
-  await p.locator('.sh-list-sec').first().waitFor({ timeout: 10000 });
+  // 클래스가 하나도 없으면 목록 섹션 대신 빈 안내가 보인다(초기화 직후 신규 E2E 내담자) — 둘 중 하나면 통과.
+  await p.locator('.sh-list-sec, :text("아직 예정된 클래스가 없어요")').first().waitFor({ timeout: 10000 });
   if (/달력/.test(t)) throw new Error('달력 문구가 남아 있음');
 });
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
