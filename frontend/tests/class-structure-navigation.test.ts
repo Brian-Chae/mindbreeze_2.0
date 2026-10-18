@@ -337,13 +337,13 @@ describe('T13 실제 라우트 연결', () => {
   }
   for (const [from, to, role] of [
     ['/sessions','/classes','counselor'], ['/sessions/new','/classes/new','org_admin'],
-    ['/app/sessions','/app/classes','client'], ['/clients','/counseling','counselor'],
+    ['/app/sessions','/app/classes','client'],
   ] as const) it(`레거시 ${from} → ${to}`, async () => {
     await open(from, role);
     expect(routing.router!.state.location.pathname).toBe(to);
     expect(routing.getSession).not.toHaveBeenCalled();
   });
-  for (const [path, page] of [['/clients/invite','client-invite'], ['/clients/person','client-profile']]) {
+  for (const [path, page] of [['/clients','legacy-clients'], ['/clients/invite','client-invite'], ['/clients/person','client-profile']]) {
     it(`기존 내담자 경로 유지: ${path}`, async () => expect(await open(path)).toContain(`${page}|`));
   }
   for (const [response, target] of [

@@ -35,6 +35,7 @@ const MembershipInvitePage = lazy(() => import('./pages/MembershipInvitePage'));
 const CounselorOnboardingPage = lazy(() => import('./pages/onboarding/CounselorOnboardingPage'));
 const ClientOnboardingPage = lazy(() => import('./pages/onboarding/ClientOnboardingPage'));
 const ClientEssentialsPage = lazy(() => import('./pages/onboarding/ClientEssentialsPage'));
+const ClientListPage = lazy(() => import('./pages/clients/ClientListPage'));
 const ClientProfilePage = lazy(() => import('./pages/clients/ClientProfilePage'));
 const ClientInvitePage = lazy(() => import('./pages/clients/ClientInvitePage'));
 const InviteLandingPage = lazy(() => import('./pages/clients/InviteLandingPage'));
@@ -189,7 +190,7 @@ const router = createBrowserRouter(
         <Route path="/onboarding/counselor" element={<CounselorOnboardingPage />} />
         <Route path="/onboarding/client" element={<ClientOnboardingPage />} />
         <Route path="/onboarding/client/essentials" element={<ClientEssentialsPage />} />
-        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/counseling" replace /></RoleGuard>} />
+        <Route path="/clients" element={<RoleGuard role={['counselor', 'org_admin']}><ClientListPage /></RoleGuard>} />
         <Route path="/clients/invite" element={<RoleGuard role={['counselor', 'org_admin']}><ClientInvitePage /></RoleGuard>} />
         <Route path="/clients/:id" element={<RoleGuard role={['counselor', 'org_admin']}><ClientProfilePage /></RoleGuard>} />
         <Route path="/invite/:token" element={<InviteLandingPage />} />
