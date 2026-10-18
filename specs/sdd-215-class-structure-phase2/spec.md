@@ -11,7 +11,9 @@
 
 이번 작업은 이 폴더의 Spec·Plan·Verify 작성만 한다. 코드 변경·실행, DB·AWS·dev/prod 접근, 파일·데이터 삭제, 메일, 머지를 금지한다. 지정 워크트리에서 문서 커밋·해당 브랜치 push·develop 대상 PR·CI 결과 확인까지만 수행한다. Stage ④ 이후는 별도 승인 대상이다. `summary.md`를 구현 완료처럼 미리 작성하지 않는다.
 
-작업 중 이미 추가된 Spec 초안 커밋은 보존한다. 초안의 상세 축소·강제 리다이렉트·후속 탭·백엔드 알림 변경·dev 검증은 이번 사용자 지시에 맞춰 아래 범위로 정정한다.
+작업 중 이미 추가된 Spec 초안 커밋은 보존한다. 초안의 후속 탭·백엔드 알림 변경·dev 검증은 이번 사용자 지시에 맞춰 아래 범위로 정정한다.
+
+> **2026-10-19 Brian 개정 — 기존 세션은 모두 테스트 데이터이므로 보존하지 않는다.** 기존 세션 URL·화면 보존 제약을 폐기하고 새 경로 체계(기획 §7.4)로 일괄 전환한다. 아래 §5 마지막 문단·§8 첫 항목·verify V-16이 이에 맞춰 개정되었다.
 
 ## 2. 근거와 우선순위
 
@@ -61,7 +63,7 @@ SDD-214 plan §7.1 응답 필드는 **초안**이다. 최종 envelope, 페이지
 
 | 사용자 | 새 메뉴/경로 | 유지할 진입점 |
 |---|---|---|
-| 상담사·센터 관리자 | 명상 클래스 `/classes`, 상담 `/counseling` | 대시보드·채팅·리포트·알림·설정, 기존 플레이그라운드/구성원 등 역할별 메뉴, `/clients`, `/sessions/new` |
+| 상담사·센터 관리자 | 명상 클래스 `/classes`, 상담 `/counseling` | 대시보드·채팅·리포트·알림·설정, 기존 플레이그라운드/구성원 등 역할별 메뉴, `/clients`, `/classes/new` |
 | 회원 | 홈 `/app`, 내 클래스 `/app/classes`, 내 상담 `/app/counseling` | 채팅·리포트·알림·프로필·기존 세션 URL |
 | 플랫폼 관리자 | 기존 관리 내비 유지 | 새 업무 권한을 추가하지 않음 |
 
@@ -97,7 +99,19 @@ SDD-214 plan §7.1 응답 필드는 **초안**이다. 최종 envelope, 페이지
 | counseling.html / CN07 | 내 상담 `/app/counseling` | `GET /counseling` | 카드 → CN08. 표시명 계약 미확인 시 ‘상담 일정’ |
 | counseling.html / CN08 | 내 상담 일정 `/app/counseling/:relationshipId` | `GET /counseling/{id}` | 가시 회차 → `/app/sessions/:sessionId`. 개인 누적 횟수·종결 사유 미표시 |
 
-기존 `/sessions`, `/sessions/:id`, `/sessions/new`, `/sessions/:id/live`, `/sessions/:id/player`, `/sessions/:id/record`, `/app/sessions`, `/app/sessions/:id`, `/join`, `/class/:sessionId/enter`를 유지한다. 기존 목록 URL도 강제 리다이렉트하지 않는다. 기획의 레거시 전환은 **내비 목적지 변경**으로 제한해 기존 세션 화면 보존 지시를 지킨다.
+**라우트 전환(기획 §7.4 적용)**: 모든 내비·링크·알림 목적지를 새 경로로 바꾼다.
+
+| 구분 | 처리 |
+|---|---|
+| `/sessions` | `/classes`로 이동(얇은 `Navigate`, 북마크·메일·알림 링크용) |
+| `/sessions/new` | 새 클래스 만들기 `/classes/new`(기존 위저드 컴포넌트를 새 경로에 연결, 상담 유형은 `/counseling/new`로 분기). Phase 3에서 위저드 개편 |
+| `/sessions/:id` | 세션의 `class_id`/`area`로 `/classes/:classId/sessions/:id` 또는 `/counseling/:relationshipId/sessions/:id`로 해석해 이동. 해석 실패 시 `/classes` |
+| `/app/sessions` | `/app/classes`로 이동 |
+| `/app/sessions/:id` | 회원 회차 상세. 부모가 해석되면 `/app/classes/:classId`(회차 선택 상태) 또는 `/app/counseling/:relationshipId`, 실패 시 기존 상세 화면 폴백 |
+| `/sessions/:id/{live,player,record}` | 공유 엔진 경로로 **유지**(기획 §7.4: 영역 무관). 진입 링크는 새 회차 상세에서 연결 |
+| `/join`, `/class/:sessionId/enter` | 유지(입장 코드·외부 링크 호환). id는 세션 id |
+
+기존 세션·위저드 화면 자체의 보존은 요구하지 않는다. 회차 상세는 기획대로 코드·참여자·장소·기록·취소 중심으로 축소하고 새 경로에 둔다(CH30).
 
 | 기존/후속 시안 참조 | 확인 상태·이번 처리 |
 |---|---|
@@ -130,7 +144,7 @@ SDD-214 plan §7.1 응답 필드는 **초안**이다. 최종 envelope, 페이지
 
 ## 8. 회귀·시각 수용 기준
 
-- 기존 세션 페이지·위저드·입장·플레이어·기록·리포트의 코드/동작과 URL을 유지한다. 새 셸 시각 변형은 선택 적용하고 기존 화면의 공통 스타일을 전역 변경하지 않는다.
+- 입장·플레이어·기록·리포트 동작은 회귀 없이 유지한다(경로 `/sessions/:id/{live,player,record}`, `/join`, `/class/:sessionId/enter` 포함). 목록·상세·위저드는 새 경로로 대체하고 기존 세션 목록·상세 화면은 폐기·교체할 수 있다. 공통 스타일 전역 변경은 피한다.
 - SDD-209 `ShellFrame`은 디자인 하네스용이므로 실제 AppShell/ClientShell에 중첩하지 않는다. `shell-data.ts`·`host-shell-data.ts`의 세션→카드 변환을 부모 데이터 변환으로 재해석하지 않는다.
 - LINK BAND 연결·측정·녹음 유무로 읽기/이동을 막지 않는다. no-band를 오류·0점으로 표현하지 않는다.
 - **390×844, 834×1194, 1194×834, 1280×720** 전부 검증한다. 최소 글자 12px, 유효 터치 영역 44px 이상, 페이지 가로/세로 넘침 0, 셸 내부 목록 스크롤만 허용한다.

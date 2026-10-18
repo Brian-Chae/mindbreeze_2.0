@@ -53,7 +53,7 @@ T01에서 최종 계약을 확인할 때 필드별 출처·필수/선택·nullab
 | `shell-data.ts`, `host-shell-data.ts` | 기존 SessionDto 변환 유지. 새 부모 DTO를 억지로 넣지 않음 |
 | `HostClassListView`, `HostDetailView`, `MemberHomeView`, `MemberClassListView`, `ClassDetailView` | 기존 세션용 action/state 보존. 새 부모 페이지는 새 구조 컴포넌트 조합 |
 | `shell-kit.css`·기존 시안 토큰 | 시각 기준으로 재사용하되 전역 수정 금지. 신규 CSS는 `.cs-structure` 안에 한정 |
-| AppShell/ClientShell | 새 페이지용 opt-in 변형으로 레이아웃 적용. 공통 내비 목적지는 갱신하되 기존 페이지 본문·입장 흐름은 보존 |
+| AppShell/ClientShell | 새 페이지용 opt-in 변형으로 레이아웃 적용. 공통 내비 목적지를 새 경로로 갱신. 입장·플레이어·기록 흐름은 보존하고, 기존 세션 목록·상세·위저드 라우트는 새 경로로 교체(Brian 2026-10-19: 기존 세션은 테스트 데이터, 보존 불필요) |
 
 App.tsx의 신규 페이지는 현재 역할 경계를 따른다. 호스트 화면은 counselor/org_admin, 회원은 client만 진입한다. URL 진입 허용이 데이터 조회 권한을 대신하지 않는다. 플랫폼 관리자의 업무 화면 권한을 새로 만들지 않는다. `/app` 명시적 홈 → 새 부모 라우트 → 기존 `/app/*` fallback으로 구성한다. 상담 안의 `/clients` 링크는 기존 독립 페이지로 이동하며 그 페이지를 새 셸 안에 임베드하지 않는다.
 
@@ -125,7 +125,7 @@ App.tsx의 신규 페이지는 현재 역할 경계를 따른다. 호스트 화�
 | T10 | M / T09 | MC02·MC03 개인 상태 없음/타임라인/기존 회차 링크 테스트 → 읽기 구현 |
 | T11 | C / T04·T06 | CN01·CN07 빈 목록·임시 관계·내담자 링크 테스트 → 목록 구현 |
 | T12 | C / T11 | CN02·CN08 가시 회차·본문 미노출·누락 seq·번호 빈칸 테스트 → 상세 구현 |
-| T13 | F / T08·T10·T12 | App 라우트 연결, 기존 wildcard·URL 회귀, 부모 알림 해석 가산. 통합 내비/용어 검증 |
+| T13 | F / T08·T10·T12 | App 라우트 연결(새 경로 등록 + `/sessions`·`/sessions/new`·`/sessions/:id`·`/app/sessions` 얇은 리다이렉트, `/sessions/:id` 는 class_id/area 해석), wildcard 회귀, 부모 알림 해석 가산. 통합 내비/용어 검증 |
 | T14 | Q / T13 | Verify의 case×viewport manifest, API 합성 fixture, 외부 네트워크 차단 후 기능·시각 검증 |
 | T15 | Q·각 소유자 / T14 | Q가 실패 증거 전달 → 파일 담당자가 수정 → 영향 시나리오 재검증. 새 실패·회귀 0, 시각 차이 승인 |
 | T16 | 문서 담당 / T15 | 후속 summary에 변경 파일·실행 결과·기준선 실패·미확인·남은 승인 기록. 구현 PR/최종 리뷰는 별도 승인 범위 |

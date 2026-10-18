@@ -37,7 +37,7 @@ U-215-01에서 10개 읽기 화면·후속 기능 제외·상담 임시 표시·
 | V-13 | client→호스트 URL, 호스트→회원 URL, platform_admin, 미인증 | 현재 RoleGuard 경계 유지, 허용 역할만 화면 진입; 거부 시 보호 데이터 렌더링 0 | Playwright | F/T13 |
 | V-14 | 늦은 응답 중 로그아웃/계정 전환/빠른 부모 이동 | 이전 계정·부모 데이터 표시 0, 취소된 요청의 오류 배너 오염 0 | vitest + Playwright | D/T04 |
 | V-15 | 새 화면 진입·탭·검색·재시도·뒤로 | 허용 GET만, 새 화면 자체의 POST/PUT/PATCH/DELETE 0. 기존 화면 이동 후 동작과 구분 | Playwright | Q/T14 |
-| V-16 | 기존 세션 URL 직접 진입/북마크·새 부모에서 회차 선택 | 기존 목록/상세/위저드/입장/live/player/record 유지, 부모로 강제 이동·화면 축소 0 | Playwright + 수동 비교 | F·Q/T13~14 |
+| V-16 | 기존 세션 URL 직접 진입·새 부모에서 회차 선택 | `/sessions`→`/classes`, `/sessions/new`→`/classes/new`, `/sessions/:id`→부모 해석 경로(실패 시 `/classes`), `/app/sessions`→`/app/classes`로 이동. 입장/live/player/record 경로는 동작 유지. 회차 상세는 새 경로에서 축소 형태로 표시 | Playwright + 수동 비교 | F·Q/T13~14 |
 | V-17 | `class_id·class_title·seq·area` 유무/미지 area | 가산 필드 없는 구 DTO도 기존 상세 이동, 타입명 기반 영역 추정·상담 ID 추정 0 | vitest | D/T03~04 |
 | V-18 | 기존 session/report/chat 알림과 새 부모 대상·알 수 없는 target | 기존 목적지/입장 이벤트 동일, 부모 ID 유효할 때만 새 경로, 미지 대상 안전 처리 | vitest + Playwright | F/T05·T13 |
 | V-19 | 3곳 내비에서 라벨 변경·활성 경로·배지 변경 | key 기반 active/배지/권한 유지. 영역 미확인 초대는 공통 알림, 이중 집계 0. 리포트는 더보기에서 접근/배지 유지 | vitest + Playwright | F/T05·T13 |
@@ -48,7 +48,7 @@ U-215-01에서 10개 읽기 화면·후속 기능 제외·상담 임시 표시·
 | V-24 | 키보드 Tab/Shift-Tab/Enter/Escape, 모바일 터치 | 모든 조작 가능, 초점 표시·복귀 정상, 드로어 닫기 가능, 비활성 요소 오동작 0 | Playwright + 수동 비교 | Q/T14 |
 | V-25 | 변경 전후 관련 단위 테스트·빌드·린트 | 새 실패 0, 기존 실패는 이름/원인/전후 결과 분리. 금지된 파일 변경 0 | vitest + 수동 비교 | F·Q/T00·T15 |
 
-V-16의 기존 URL 목록: `/sessions`, `/sessions/new`, `/sessions/:id`, `/sessions/:id/live`, `/sessions/:id/player`, `/sessions/:id/record`, `/app/sessions`, `/app/sessions/:id`, `/join`, `/class/:sessionId/enter`, 기존 `/reports`·`/app/reports` 진입. 기존 세션 상태 ready/scheduled/open/in_progress/completed/cancelled는 현행 계약에서 확인 가능한 fixture로 점검하며 없는 상태를 임의 추가하지 않는다.
+V-16의 대상 URL 목록(이동 확인 + 유지 확인): `/sessions`, `/sessions/new`, `/sessions/:id`, `/sessions/:id/live`, `/sessions/:id/player`, `/sessions/:id/record`, `/app/sessions`, `/app/sessions/:id`, `/join`, `/class/:sessionId/enter`, 기존 `/reports`·`/app/reports` 진입. 기존 세션 상태 ready/scheduled/open/in_progress/completed/cancelled는 현행 계약에서 확인 가능한 fixture로 점검하며 없는 상태를 임의 추가하지 않는다.
 
 ## 3. 시안 케이스 전수 매핑
 
