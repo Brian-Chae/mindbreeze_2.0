@@ -20,11 +20,14 @@ def _apply_preservation_filters(state) -> None:
     - Session.hidden_at IS NULL            (execution_options include_hidden=True 로 해제)
     - SessionParticipant.removed_at IS NULL (include_removed=True 로 해제)
     - SessionParticipant.waitlist_cancelled_at IS NULL (B6 대기 취소 — include_removed=True 로 함께 해제)
+    - Class / CounselingRelationship .hidden_at IS NULL (SDD-214, 세션과 같은 include_hidden=True 로 해제)
     보존 전환은 행을 지우지 않고(FK CASCADE 로 원본 소실 방지) 조회에서만 감춘다.
     스위프·관리자 삭제처럼 숨김 행까지 봐야 하는 경로만 옵션으로 해제한다.
     """
     if not state.is_select or state.is_column_load:
         return
+    from app.models.class_program import Class as ClassModel
+    from app.models.counseling import CounselingRelationship
     from app.models.session import Session as SessionModel, SessionParticipant
 
     options = state.execution_options
@@ -32,6 +35,10 @@ def _apply_preservation_filters(state) -> None:
     if not options.get("include_hidden"):
         statement = statement.options(
             with_loader_criteria(SessionModel, SessionModel.hidden_at.is_(None), include_aliases=True)
+        )
+        statement = statement.options(
+            with_loader_criteria(ClassModel, ClassModel.hidden_at.is_(None), include_aliases=True),
+            with_loader_criteria(CounselingRelationship, CounselingRelationship.hidden_at.is_(None), include_aliases=True),
         )
     if not options.get("include_removed"):
         statement = statement.options(
