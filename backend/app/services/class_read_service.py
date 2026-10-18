@@ -20,8 +20,9 @@ from app.models.counseling import CounselingGuest, CounselingRelationship
 from app.models.record import Report, SessionRecord
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
-from app.services.session_authz import DENY_NO_ACCESS
 
+# 미존재·접근 불가·숨김을 구분하지 않는 단일 404 문구(기존 세션 API 의 404 문구 재사용). 403 은 쓰지 않는다.
+NOT_FOUND = "세션을 찾을 수 없습니다"
 PLACEHOLDER_CLIENT_LABEL = "내담자 미지정"
 AREA_MEDITATION = "meditation"
 AREA_COUNSELING = "counseling"
@@ -76,7 +77,9 @@ def _next_session(rows: list, now: datetime):
 
 def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
     completed = sum(1 for r in rows if r.status == "completed")
-    total = cls.planned_session_count or sum(1 for r in rows if r.status != "cancelled")
+    cancelled = sum(1 for r in rows if r.status == "cancelled")
+    # 계획 횟수가 있어도 취소 회차는 분모에서 뺀다(verify RD-10). 취소가 계획보다 많아도 음수가 되지 않는다.
+    total = max(cls.planned_session_count - cancelled, 0) if cls.planned_session_count else len(rows) - cancelled
     nxt = _next_session(rows, now)
     return {
         "id": str(cls.id),
@@ -143,17 +146,14 @@ def list_classes(
 
 
 def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Class, list]:
-    """400(ID 형식) → 404(없음) → 403(가시 회차 없음) 순서. 현행 세션 상세(session_authz)와 같은 상태코드·문구."""
+    """400(ID 형식) → 404(없음·숨김·접근 불가 동일). 존재 여부를 노출하지 않는다(plan §7.1)."""
     cid = _to_uuid(class_id)
     cls = db.query(Class).filter(Class.id == cid).first()
     if not cls:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
     rows = _visible_class_sessions(db, uid, [cid]).get(cid, [])
     if not rows:
-        any_session = db.query(Session.id).filter(Session.class_id == cid, Session.is_template.is_(False)).first()
-        if not any_session:
-            raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-        raise HTTPException(status_code=403, detail=DENY_NO_ACCESS)
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
     return cls, rows
 
 
@@ -312,13 +312,10 @@ def get_counseling_detail(relationship_id: str, user_id: str, db: DBSession, *, 
     rid = _to_uuid(relationship_id)
     rel = db.query(CounselingRelationship).filter(CounselingRelationship.id == rid).first()
     if not rel:
-        raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
     rows = _visible_relationship_sessions(db, uid, [rid]).get(rid, [])
     if not rows:
-        any_session = db.query(Session.id).filter(Session.counseling_relationship_id == rid, Session.is_template.is_(False)).first()
-        if not any_session:
-            raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
-        raise HTTPException(status_code=403, detail=DENY_NO_ACCESS)
+        raise HTTPException(status_code=404, detail=NOT_FOUND)
 
     summary = _counseling_summaries(db, uid, [rel], {rid: rows}, now)[0]
     session_ids = [r.id for r in rows]
