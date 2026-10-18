@@ -154,6 +154,10 @@ export function resolveNotificationTarget(
           messageId ? `?message=${encodeURIComponent(messageId)}` : ''
         }`,
       };
+    case 'class':
+    case 'counseling':
+      if (!targetId.trim()) return null;
+      return { path: `${isClient ? '/app' : ''}/${targetType === 'class' ? 'classes' : 'counseling'}/${encodeURIComponent(targetId)}` };
     case 'session':
       if (!targetId) return null;
       // SDD-209: 열림·시작·대기열 승격 알림은 회원을 입장 화면으로 바로 보낸다(열리기 전이면 입장 화면이 대기 카드로 안내)
