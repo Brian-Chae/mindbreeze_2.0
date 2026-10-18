@@ -144,3 +144,14 @@ def evaluate_alerts(snap: dict) -> list[str]:
             if consumers.get(name, 0) == 0:
                 alerts.append(f"no_consumer:{name}")
     return alerts
+
+
+def count_consumers(active_queues: Optional[dict]) -> dict[str, int]:
+    """celery inspect active_queues 응답 → 줄별 소비 중인 일꾼 수. 응답이 없으면 모든 줄 0."""
+    counts = {name: 0 for name in ALL_QUEUES}
+    for queues in (active_queues or {}).values():
+        for queue in queues or []:
+            name = queue.get("name")
+            if name in counts:
+                counts[name] += 1
+    return counts

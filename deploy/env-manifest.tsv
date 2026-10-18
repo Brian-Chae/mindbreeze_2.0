@@ -42,3 +42,4 @@ ALERT_SNS_TOPIC_ARN	ssm	0		주기 작업 실패 알림(SNS) — 비밀 아님
 PIPELINE_QUEUE_SPLIT_ENABLED	static	1	true	SDD-212 — stt/report 줄 분리. 신규 워커 유닛이 같은 릴리스로 설치되므로 운영은 켠다(롤백: false)
 PIPELINE_QUEUE_GRACE_SECONDS	static	1	3600	SDD-212 — 정체 스윕 대기 유예(초)
 PIPELINE_REDRIVE_DELAY_SECONDS	static	1	5400	SDD-212 — 체인 미완료 재발행 지연(초)
+PIPELINE_METRICS_CLOUDWATCH_ENABLED	static	1	false	SDD-212 — CloudWatch 지표 게시. AWS 권한 확인·승인 전 활성 금지

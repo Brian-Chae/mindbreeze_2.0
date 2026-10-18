@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     # SDD-212 TD6: 적체 경보 임계. 최장 대기(D-3 몰림 목표 45분의 2/3)와 줄별 대기 건수.
     pipeline_alert_max_wait_seconds: int = 30 * 60
     pipeline_alert_queue_len: int = 20
+    # SDD-212 TD6: CloudWatch 사용자 지정 지표 게시. AWS 권한 확인·승인 전에는 꺼 둔다(꺼져 있으면 로그만 출력).
+    pipeline_metrics_cloudwatch_enabled: bool = False
 
     # JWT — 기본값 없음. 미설정 시 기동 중단(main.py lifespan fail-fast).
     jwt_secret_key: str = ""
