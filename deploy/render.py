@@ -46,6 +46,8 @@ STATIC_OUTPUTS: dict[str, str] = {
     "coturn/turnserver.conf.tpl": "etc/turnserver.conf",
     "systemd/mindbreeze-backend.service.tpl": "etc/systemd/system/mindbreeze-backend.service",
     "systemd/mindbreeze-worker.service.tpl": "etc/systemd/system/mindbreeze-worker.service",
+    "systemd/mindbreeze-stt-worker.service.tpl": "etc/systemd/system/mindbreeze-stt-worker.service",
+    "systemd/mindbreeze-report-worker.service.tpl": "etc/systemd/system/mindbreeze-report-worker.service",
     "systemd/mindbreeze-email-worker.service.tpl": "etc/systemd/system/mindbreeze-email-worker.service",
     "systemd/mindbreeze-export-worker.service.tpl": "etc/systemd/system/mindbreeze-export-worker.service",
     "systemd/livekit.service.tpl": "etc/systemd/system/livekit.service",
