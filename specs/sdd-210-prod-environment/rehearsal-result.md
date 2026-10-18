@@ -84,3 +84,15 @@
 7. C-4b 오디오 청크(존재 1,072·유실 333, 영상 로컬 경로 982행) 처리 방식 결정.
 8. C-2 절차 보강: 복원 후 `ALTER DATABASE mindbreeze_dev RENAME TO mindbreeze_prod`, 마스터 비밀번호 재설정, 파라미터 그룹 적용 재시작, `mindbreeze-prod` 경보 4종 연결 확인.
 9. 업타임 감시(V-1.32) 생성 · 경보 시험 발화(V-1.31) · EIP 재부팅 유지(V-1.7) · 운영 도메인 인증서 실발급(컷오버 C-7, DNS-01).
+
+## 8. 컷오버 준비 반영 (2026-10-18, `deploy/cutover/` · plan §6-1/6-2)
+
+- Brian 승인: 컷오버 **2026-10-22 02:00~03:00 KST**(점검창 60분), D-3 공지 10/19·D-1 공지 10/21. ※ 달력상 10/22 는 목요일 — 요일 표기 확인 필요(`docs/컷오버_공지문_초안.md` 상단).
+- §7 차단 요소 처리 현황
+  - #5 6자리 코드 5건 → `ops/cancel-legacy-sessions.sh`(list/cancel --execute) 절차·스크립트 작성, **미실행**(전날 상담사 안내 → 점검 직전 취소).
+  - #6 리허설 임시 설정 원복 → `revert-rehearsal.sh`. 시점은 'C-5 직전'에서 **C-9 로 조정**(deploy-prod 스모크가 DNS 전환 전 임시 호스트 필요).
+  - #7 C-4b → 승인안: 오디오 존재 1,072건(84MB) 이관·유실 333행 prod 정리 / 영상 982행은 스키마(`video_chunks`: file_path·size_bytes 뿐)에 만료 표시가 없으면 변경 없이 보고(`c04b-audio-migrate.sh`).
+  - #8 C-2 보강(RENAME·마스터 비밀번호 재설정·파라미터 그룹 재시작·백업/삭제방지 재적용) → `c02-db-restore.sh` 에 반영, `mindbreeze-prod` 경보 4종은 T-13 에서 선생성(재시작 후 INSUFFICIENT_DATA 해소 여부는 C-10 에서 확인).
+  - #9 업타임 감시 → `uptime-monitor.sh`(C-9 에서 생성). 경보 시험 발화는 `test-alarm`(Brian 확인 후). EIP 재부팅 유지·운영 도메인 인증서 실발급은 컷오버 중(C-6) 확인.
+- 점검창 시간표(분 단위, 실측 반영)와 롤백 기준은 plan §6-1/6-2 로 이관. 구간 합 59분 — 예비 1분(여유 거의 없음).
+- 실행 시험: `cutover.sh --dry-run`(전 단계) 통과 — AWS·SSH·SSM·gh 호출 없음. 실서버 경로(nginx -t, SSM, RDS, Route53)는 미실행.
