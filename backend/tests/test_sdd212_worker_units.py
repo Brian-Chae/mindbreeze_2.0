@@ -119,3 +119,16 @@ def test_운영_매니페스트에_줄_분리_설정이_등록되고_기본값�
     assert rows["PIPELINE_REDRIVE_DELAY_SECONDS"]["static_value"] == str(settings.pipeline_redrive_delay_seconds)
     assert all(rows[k]["source"] == "static" and rows[k]["required"] == "1" for k in (
         "PIPELINE_QUEUE_SPLIT_ENABLED", "PIPELINE_QUEUE_GRACE_SECONDS", "PIPELINE_REDRIVE_DELAY_SECONDS"))
+
+
+def test_컷오버_운영_서비스_점검_목록에_신규_일꾼이_포함된다():
+    for script in ("deploy/cutover/c05-deploy.sh", "deploy/cutover/c06-activate.sh"):
+        body = (ROOT / script).read_text()
+        for unit in ("mindbreeze-stt-worker", "mindbreeze-report-worker"):
+            assert unit in body, (script, unit)
+
+
+def test_컷오버_dev_중지_목록은_dev_유닛_구성을_유지한다():
+    body = (ROOT / "deploy/cutover/lib.sh").read_text()
+    line = next(l for l in body.splitlines() if l.startswith("DEV_SERVICES="))
+    assert "stt-worker" not in line and "report-worker" not in line, "dev 서버에는 신규 유닛이 설치되지 않는다"
