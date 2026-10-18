@@ -13,4 +13,12 @@ NULL/중복 해당 항목 전부 0건, careers·qualifications 0행, users 18행
 - 신규 `tests/pg/test_sdd213_schema_drift.py` (11 케이스): 임시 DB 2개(덤프 픽스처 복원 / 빈 체인 0051까지)에 NULL·배열 값 시드 → `upgrade head` → ① 두 DB 스키마 수렴 ② `read_by` jsonb·NOT NULL·`varchar(200)`·`is_current` 기본값·FK CASCADE·인덱스 ③ NULL 백필·행 보존·배열값 보존 ④ `downgrade 51`+`upgrade head` 재실행 후 스키마 동일(멱등) ⑤ dev 전용 컬럼 5개와 값 보존.
 - 구현 전 RED(9 failed) → 리비전 후 GREEN(11 passed) 확인.
 - 로컬 PG16 `tests/pg` 전체 19 passed. 기존 SQLite `pytest -q`: head 하드코딩 2건 갱신 후 신규 실패 0.
-- CI·Deploy Dev·e2e-smoke·배포 후 해소 확인 결과는 PR 코멘트와 최종 보고에 기록.
+- PR #10 머지, CI(frontend·backend·backend-pg-smoke) green, Deploy Dev·e2e-smoke 성공.
+
+## 배포 후 해소 확인 (dev, 읽기 전용)
+- `alembic_version` = `e036a0000052`
+- `recipient_count`·`auth_provider`·`careers` 4컬럼·`qualifications.created_at/updated_at` NOT NULL
+- `qualifications.name/issuer` varchar(200), `careers.is_current` 기본값 false
+- `careers`·`qualifications` `user_id` FK CASCADE, `ix_careers_user_id`·`ix_qualifications_user_id` 존재
+- `chat_messages.read_by` jsonb, dev 전용 컬럼 5개 보존
+- 최종 리뷰: Brian 결정 1~4 반영 완료 (2026-10-18)
