@@ -152,7 +152,7 @@ describe('FE-NAV-02 상담사·관리자 하단 탭 라벨·경로 골든', () =
   const cases: [UserRole | undefined, Entry[]][] = [
     ['counselor', [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
     ['org_admin', [['/dashboard/org', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
-    ['platform_admin', [['/admin/orgs', '홈'], ['/sessions', '클래스'], ['/chat', '채팅'], ['/reports?status=pending', '리포트']]],
+    ['platform_admin', [['/admin/orgs', '홈'], ['/classes', '클래스'], ['/chat', '채팅'], ['/reports?status=pending', '리포트']]],
     ['client', [['/app', '홈'], ['/app/classes', '내 클래스'], ['/app/counseling', '내 상담'], ['/app/reports', '리포트']]],
     [undefined, [['/dashboard', '홈'], ['/classes', '클래스'], ['/counseling', '상담'], ['/chat', '채팅']]],
   ];

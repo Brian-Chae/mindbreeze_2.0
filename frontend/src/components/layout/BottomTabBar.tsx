@@ -27,7 +27,7 @@ function homePathForRole(role: UserRole | null | undefined): string {
 function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
   if (role === 'platform_admin') return [
     { to: '/admin/orgs', key: 'home', icon: ICONS.home },
-    { to: '/sessions', key: 'class', icon: ICONS.calendar },
+    { to: '/classes', key: 'class', icon: ICONS.calendar },
     { to: '/chat', key: 'chat', icon: ICONS.message },
     { to: '/reports?status=pending', key: 'report', icon: ICONS.report },
   ];
