@@ -89,6 +89,8 @@ jobs:
             backend/deploy/mindbreeze-worker.service \
             backend/deploy/mindbreeze-email-worker.service \
             backend/deploy/mindbreeze-export-worker.service \
+            backend/deploy/mindbreeze-stt-worker.service \
+            backend/deploy/mindbreeze-report-worker.service \
             backend/deploy/logrotate-mindbreeze
 
       - name: Deploy bundle to EC2
@@ -139,6 +141,10 @@ jobs:
                 sudo systemctl restart mindbreeze-worker 2>/dev/null || true
                 sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
                 sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
+                # SDD-212: 줄 전용 일꾼도 이전 버전 코드로 재시작한다(유닛 파일은 그대로 두어도 무해 —
+                #   PIPELINE_QUEUE_SPLIT_ENABLED 가 꺼져 있으면 빈 줄을 기다릴 뿐이다).
+                sudo systemctl restart mindbreeze-stt-worker 2>/dev/null || true
+                sudo systemctl restart mindbreeze-report-worker 2>/dev/null || true
               fi
             }
             trap rollback EXIT
@@ -220,7 +226,22 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable mindbreeze-export-worker 2>/dev/null || true
 
+            # 4.11 SDD-212: 리포트 파이프라인 줄 전용 일꾼 2종 설치 (stt 줄 / report 줄)
+            #      — cp(덮어쓰기)·daemon-reload·enable 만 사용하므로 재실행해도 결과가 같다(멱등).
+            #      — 라우팅은 서버 .env.dev 의 PIPELINE_QUEUE_SPLIT_ENABLED 로 제어하며 이 워크플로는 건드리지 않는다.
+            #        꺼져 있으면 두 줄은 비어 있어 유닛은 대기만 한다.
+            #      — 롤백(수동): 플래그 false → 재시작, 줄 잔량 0 확인(redis-cli llen stt/report) 후
+            #        sudo systemctl disable --now mindbreeze-stt-worker mindbreeze-report-worker (deploy/README.md).
+            sudo cp "$BASE/backend/deploy/mindbreeze-stt-worker.service" /etc/systemd/system/mindbreeze-stt-worker.service
+            sudo cp "$BASE/backend/deploy/mindbreeze-report-worker.service" /etc/systemd/system/mindbreeze-report-worker.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable mindbreeze-stt-worker
+            sudo systemctl enable mindbreeze-report-worker
+
             # 5. 서비스 재시작
+            #    SDD-212: 줄 전용 일꾼을 먼저 기동(빈 줄 소비 대기) → 이후 백엔드·기존 일꾼 순서(deploy/README.md 배포 순서)
+            sudo systemctl restart mindbreeze-stt-worker
+            sudo systemctl restart mindbreeze-report-worker
             sudo systemctl restart mindbreeze-backend
             sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
             sudo systemctl restart mindbreeze-export-worker 2>/dev/null || true
@@ -229,6 +250,9 @@ jobs:
             sudo systemctl is-active mindbreeze-backend
             sudo systemctl is-active mindbreeze-worker
             sudo systemctl is-active mindbreeze-export-worker 2>/dev/null || true
+            # SDD-212: 신규 유닛이 죽어 있으면 배포 실패(롤백 트랩) — 줄 분리를 켠 뒤 소비자 없는 줄이 생기지 않게 한다.
+            sudo systemctl is-active mindbreeze-stt-worker
+            sudo systemctl is-active mindbreeze-report-worker
 
             # 5.0 진단: 워커·백엔드 최근 로그 (파이프라인 소비 여부 확인용)
             echo "=== [진단] mindbreeze-worker 상태 ==="
