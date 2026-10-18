@@ -28,3 +28,5 @@ frontend/e2e/explore-result.json
 
 # 디자인 스크린샷(수백 MB) — 커밋 제외
 designs/*/shots/
+# SDD 번호는 scripts/sdd 로 발급(폐기된 카운터 파일)
+specs/.sdd-counter

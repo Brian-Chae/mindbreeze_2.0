@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""SDD 번호 발급·목록 도구 (저장소 공용, 표준 라이브러리만 사용).
+
+  scripts/sdd new "한글 제목" <영문-슬러그> [--worktree] [--dry-run]
+  scripts/sdd list
+
+- 번호는 origin/develop 의 specs 폴더, 원격 sdd/NNN-* 브랜치, 원격 예약(refs/sdd-claims/NNN),
+  로컬 브랜치·specs 중 최댓값 + 1. 발급은 원격 예약 참조를 '없을 때만' 생성해 선점하므로
+  동시에 두 워크스페이스가 실행해도 같은 번호를 받지 못한다(실패하면 다음 번호로 재시도).
+- specs/.sdd-counter 는 더 이상 쓰지 않는다(공유 파일 충돌의 원인).
+- 제목은 한글: spec.md 첫 줄 `# SDD-NNN — 한글 제목`, PR 제목 `[SDD-NNN] 한글 제목`.
+- 폴더·브랜치는 영문 슬러그(macOS 한글 정규화·CI 호환 때문): sdd/NNN-슬러그, specs/[sdd-]NNN-슬러그.
+"""
+import os, re, subprocess, sys, datetime
+
+def git(*a, check=False, cwd=None):
+    r = subprocess.run(["git", *a], capture_output=True, text=True, stdin=subprocess.DEVNULL, cwd=cwd)
+    if check and r.returncode:
+        sys.exit("git 실패: git %s\n%s" % (" ".join(a), r.stderr.strip()))
+    return r
+
+def out(*a, cwd=None):
+    return git(*a, cwd=cwd).stdout.strip()
+
+ROOT = out("rev-parse", "--show-toplevel") or sys.exit("git 저장소 안에서 실행하세요")
+NUM = re.compile(r"(?:^|/)(?:sdd-)?(\d{3})-")
+
+def sync():
+    git("fetch", "-q", "--prune", "origin", cwd=ROOT)
+    git("fetch", "-q", "origin", "+refs/sdd-claims/*:refs/sdd-claims/*", cwd=ROOT)
+
+def base_ref():
+    for r in ("origin/develop", "origin/main"):
+        if git("rev-parse", "--verify", "-q", r, cwd=ROOT).returncode == 0:
+            return r
+    sys.exit("origin/develop 이 없습니다")
+
+def spec_dirs(ref):
+    names = out("ls-tree", "--name-only", ref, "specs/", cwd=ROOT).splitlines()
+    return [n.split("/", 1)[1] for n in names]
+
+def title_of(ref, d):
+    for fn in ("spec.md", "plan.md", "verify.md", "summary.md"):
+        t = git("show", "%s:specs/%s/%s" % (ref, d, fn), cwd=ROOT).stdout.splitlines()
+        if t and t[0].startswith("#"):
+            h = re.sub(r"^\[?SDD-\d+\]?\s*[—\-:]*\s*", "", t[0].lstrip("# ").strip())
+            h = re.sub(r"\s*\((?:Spec|Plan|Verify)\)\s*$", "", h)
+            if h: return h
+    return re.sub(r"^(?:sdd-)?\d{3}-", "", d).replace("-", " ")
+
+def collect():
+    ref = base_ref()
+    found = {}  # num -> [(종류, 설명)]
+    def add(n, kind, desc=""):
+        found.setdefault(int(n), []).append((kind, desc))
+    for d in spec_dirs(ref):
+        m = re.match(r"(?:sdd-)?(\d{3})-", d)
+        if m: add(m.group(1), "develop", d)
+    for line in out("for-each-ref", "--format=%(refname)", "refs/remotes/origin/sdd", cwd=ROOT).splitlines():
+        m = re.search(r"/sdd/(\d{3})", line)
+        if m: add(m.group(1), "원격브랜치", line.split("origin/")[-1])
+    for line in out("for-each-ref", "--format=%(refname)", "refs/sdd-claims", cwd=ROOT).splitlines():
+        add(line.rsplit("/", 1)[1], "예약", "")
+    for line in out("for-each-ref", "--format=%(refname:short)", "refs/heads/sdd", cwd=ROOT).splitlines():
+        m = re.match(r"sdd/(\d{3})", line)
+        if m: add(m.group(1), "로컬브랜치", line)
+    sp = os.path.join(ROOT, "specs")
+    if os.path.isdir(sp):
+        for d in os.listdir(sp):
+            m = re.match(r"(?:sdd-)?(\d{3})-", d)
+            if m: add(m.group(1), "로컬specs", d)
+    return ref, found
+
+def dir_prefix(ref):
+    return "sdd-" if any(re.match(r"sdd-\d{3}-", d) for d in spec_dirs(ref)) else ""
+
+def cmd_new(args):
+    flags = [a for a in args if a.startswith("--")]
+    pos = [a for a in args if not a.startswith("--")]
+    if len(pos) < 2:
+        sys.exit('사용법: scripts/sdd new "한글 제목" <영문-슬러그> [--worktree] [--dry-run]')
+    title, slug = pos[0].strip(), pos[1].strip().lower()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", slug):
+        sys.exit("슬러그는 영문 소문자·숫자·하이픈 2~41자여야 합니다: %r" % slug)
+    if not re.search(r"[가-힣]", title):
+        sys.exit("제목은 한글로 쓰세요(이해하기 쉬운 한 줄 설명): %r" % title)
+    sync()
+    ref, found = collect()
+    n = (max(found) if found else 0) + 1
+    dry = "--dry-run" in flags
+    claimed = False
+    if not dry:
+        tree = out("rev-parse", ref + "^{tree}", cwd=ROOT)
+        parent = out("rev-parse", ref, cwd=ROOT)
+        who = out("config", "user.name", cwd=ROOT) or "unknown"
+        msg = "SDD-%03d %s\n\n슬러그: %s\n예약자: %s\n예약일: %s" % (n, title, slug, who, datetime.datetime.now().strftime("%F %T"))
+        for _ in range(20):
+            env = dict(os.environ, GIT_AUTHOR_NAME="sdd", GIT_AUTHOR_EMAIL="sdd@local", GIT_COMMITTER_NAME="sdd", GIT_COMMITTER_EMAIL="sdd@local")
+            c = subprocess.run(["git", "commit-tree", tree, "-p", parent, "-m", msg], capture_output=True, text=True, cwd=ROOT, env=env, stdin=subprocess.DEVNULL).stdout.strip()
+            r = git("push", "-q", "--force-with-lease=refs/sdd-claims/%03d:" % n, "origin", "%s:refs/sdd-claims/%03d" % (c, n), cwd=ROOT)
+            if r.returncode == 0:
+                claimed = True
+                break
+            sync(); _, found = collect(); n = max(max(found), n) + 1
+            msg = re.sub(r"^SDD-\d{3}", "SDD-%03d" % n, msg)
+        if not claimed:
+            sys.exit("번호 예약에 실패했습니다(원격 쓰기 권한/네트워크 확인)")
+    nn = "%03d" % n
+    pre = dir_prefix(ref)
+    branch = "sdd/%s-%s" % (nn, slug)
+    sdir = "specs/%s%s-%s" % (pre, nn, slug)
+    print("SDD-%s %s" % (nn, "(시험 — 예약 안 함)" if dry else "예약 완료"))
+    print("  제목        : %s" % title)
+    print("  브랜치      : %s" % branch)
+    print("  스펙 폴더   : %s/spec.md" % sdir)
+    print("  spec 첫 줄  : # SDD-%s — %s" % (nn, title))
+    print("  PR 제목     : [SDD-%s] %s" % (nn, title))
+    print("  Paseo 제목  : SDD-%s %s" % (nn, title))
+    if "--worktree" in flags and not dry:
+        wt = os.path.join(os.path.dirname(ROOT), "%s-sdd%s" % (os.path.basename(ROOT), nn))
+        git("worktree", "add", "-q", "-b", branch, wt, ref, check=True, cwd=ROOT)
+        d = os.path.join(wt, sdir); os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "spec.md"), "w", encoding="utf-8").write(
+            "# SDD-%s — %s\n\n- 상태: Stage ① Spec — 작성 중\n- 브랜치: `%s`\n- 작성일: %s\n" % (nn, title, branch, datetime.date.today()))
+        print("  워크트리    : %s (spec.md 뼈대 생성, 미커밋)" % wt)
+
+def cmd_list(_):
+    sync()
+    ref, found = collect()
+    rows = []
+    dirs = {int(re.match(r"(?:sdd-)?(\d{3})-", d).group(1)): d for d in spec_dirs(ref) if re.match(r"(?:sdd-)?(\d{3})-", d)}
+    for n in sorted(found, reverse=True)[:40]:
+        kinds = {k for k, _ in found[n]}
+        t = title_of(ref, dirs[n]) if n in dirs else ""
+        if not t:
+            c = out("log", "-1", "--format=%s", "refs/sdd-claims/%03d" % n, cwd=ROOT) if "예약" in kinds else ""
+            t = re.sub(r"^SDD-\d{3}\s*", "", c)
+        st = "develop 반영" if "develop" in kinds else ("진행 중(브랜치)" if kinds & {"원격브랜치", "로컬브랜치"} else "예약")
+        rows.append("SDD-%03d | %-14s | %s" % (n, st, (t or "(제목 없음)")[:70]))
+    print("번호     | 상태           | 제목 (최근 40건)")
+    print("\n".join(rows))
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if not a or a[0] not in ("new", "list"):
+        print(__doc__); sys.exit(1)
+    (cmd_new if a[0] == "new" else cmd_list)(a[1:])
