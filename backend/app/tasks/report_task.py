@@ -11,6 +11,7 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session as DBSession
 
@@ -27,6 +28,8 @@ from app.services.normalization_score import sigmoid_score
 from app.tasks.summary_task import _call_narrative_llm
 
 logger = logging.getLogger(__name__)
+
+REPORT_TASK_MAX_RETRIES = 3
 
 
 def _ensure_aware_dt(dt):
@@ -702,12 +705,17 @@ try:
             db.close()
 
     @celery_app.task(
+        bind=True,
         name="tasks.generate_reports_for_session",
         autoretry_for=(Exception,),
         retry_backoff=True,
-        retry_kwargs={"max_retries": 3},
+        retry_kwargs={"max_retries": REPORT_TASK_MAX_RETRIES},
+        # SDD-212 TD3: 정체 스윕 기준(30분, report_progress_service.REPORT_GENERATION_TIMEOUT_SECONDS)
+        #   안쪽에서 끝나도록 상한을 둔다. 상한이 없으면 대규모 클래스가 일꾼을 무기한 점유한다.
+        soft_time_limit=25 * 60,
+        time_limit=28 * 60,
     )
-    def generate_reports_for_session(session_id: str) -> None:
+    def generate_reports_for_session(self, session_id: str) -> None:
         """세션 종료 후 counselor+client 리포트를 생성한다 (STT/요약 완료 후 chain에서 호출).
 
         CEL-CHAIN-01: 중간 단계 실패를 조용히 유실하지 않도록 Celery 자동 재시도(backoff,
@@ -728,6 +736,13 @@ try:
                 # SDD-095: 세션의 모든 리포트 생성이 끝난 뒤 최종 진행 상태를 1회 push 한다.
                 # (개별 리포트 생성 중 발생한 이벤트를 최종 집계값으로 확정)
                 _emit_report_progress(str(s.id), db)
+            except SoftTimeLimitExceeded:
+                # SDD-212 TD3: 시간 초과는 중간 재시도에서 마킹하지 않는다 — 마킹하면 이미 만든
+                # 회원 리포트(pending_review)까지 error 로 되돌아가 재시도가 전부 다시 생성한다.
+                # 재시도는 완료분을 건너뛰고 남은 건만 이어서 처리(멱등). 소진된 마지막 시도만 마킹한다.
+                if self.request.retries >= REPORT_TASK_MAX_RETRIES:
+                    _mark_pipeline_failure(session_id, db, SoftTimeLimitExceeded("report_time_limit"))
+                raise
             except Exception as exc:  # noqa: BLE001
                 # 재시도 전에 실패를 기록하고 재전파한다(autoretry 가 재시도).
                 # 재시도가 모두 소진되면 마지막 시도의 실패 마킹이 남아 유실되지 않는다.
