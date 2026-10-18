@@ -192,6 +192,11 @@ class SessionResponse(BaseModel):
     waitlist_count: int = 0
     # SDD-209(B7): 초대 응답에서만 채워진다 — 참여자 등록 성공과 알림 요청 결과를 분리.
     invite_result: "InviteResult | None" = None
+    # SDD-214: 세션의 상위(클래스·상담 관계) 정보. 부모가 없는 세션(템플릿 등)은 모두 null.
+    class_id: str | None = None
+    class_title: str | None = None
+    seq: int | None = None
+    area: Literal["meditation", "counseling"] | None = None
 
     model_config = {"from_attributes": True}
 

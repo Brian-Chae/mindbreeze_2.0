@@ -57,6 +57,7 @@ from app.schemas.eeg import (
     RawPresignResponse,
 )
 from app.services import (
+    class_read_service,
     eeg_raw_service,
     eeg_rollup_service,
     report_email_service,
@@ -84,7 +85,7 @@ def list_sessions(
     sessions, total = session_service.list_sessions(
         current_user["id"], db, page=page, limit=limit
     )
-    return SessionListResponse(sessions=sessions, total=total)
+    return SessionListResponse(sessions=class_read_service.add_parent_fields(db, sessions), total=total)
 
 
 @router.post("", response_model=SessionResponse, status_code=status.HTTP_201_CREATED)
@@ -93,7 +94,7 @@ def create_session(
     current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
-    return session_service.create_session(current_user["id"], payload, db)
+    return class_read_service.add_parent_fields(db, session_service.create_session(current_user["id"], payload, db))
 
 
 # ── SDD-209(B5a): 로그인 없는 4자리 코드 입장 ──
@@ -201,7 +202,7 @@ def get_session(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return session_service.get_session(session_id, current_user["id"], db)
+    return class_read_service.add_parent_fields(db, session_service.get_session(session_id, current_user["id"], db))
 
 
 @router.put("/{session_id}", response_model=SessionResponse)
@@ -211,7 +212,7 @@ def update_session(
     current_user: dict = Depends(require_roles(*SESSION_MANAGE_ROLES)),
     db: DBSession = Depends(get_db),
 ):
-    return session_service.update_session(session_id, current_user["id"], payload, db)
+    return class_read_service.add_parent_fields(db, session_service.update_session(session_id, current_user["id"], payload, db))
 
 
 @router.delete("/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -258,7 +259,9 @@ def _make_transition_endpoint(action: str):
         current_user: dict = Depends(get_current_user),
         db: DBSession = Depends(get_db),
     ):
-        return session_service.transition_status(session_id, current_user["id"], action, db)
+        return class_read_service.add_parent_fields(
+            db, session_service.transition_status(session_id, current_user["id"], action, db)
+        )
     return endpoint
 
 
@@ -283,7 +286,7 @@ def start_new_run(
 
     completed·cancelled 세션은 즉시 재시작할 수 없다(400). host 상담사 전용.
     """
-    return session_service.start_new_run(session_id, current_user["id"], db)
+    return class_read_service.add_parent_fields(db, session_service.start_new_run(session_id, current_user["id"], db))
 
 
 # ── SDD-095: 클래스 복제 · 템플릿 저장 ──
@@ -305,13 +308,16 @@ def duplicate_session(
     원본이 템플릿이어도 결과물은 항상 실제 클래스다. host 상담사 전용.
     """
     body = payload or SessionDuplicateRequest()
-    return session_service.duplicate_session(
-        session_id,
-        current_user["id"],
+    return class_read_service.add_parent_fields(
         db,
-        scheduled_at=body.scheduled_at,
-        title=body.title,
-        force=body.force,
+        session_service.duplicate_session(
+            session_id,
+            current_user["id"],
+            db,
+            scheduled_at=body.scheduled_at,
+            title=body.title,
+            force=body.force,
+        ),
     )
 
 
@@ -342,7 +348,9 @@ def invite_participant(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return session_service.invite_participant(session_id, current_user["id"], payload.user_id, db)
+    return class_read_service.add_parent_fields(
+        db, session_service.invite_participant(session_id, current_user["id"], payload.user_id, db)
+    )
 
 
 @router.post("/{session_id}/invite/remind", response_model=InviteRemindResponse)
@@ -389,7 +397,9 @@ def remove_participant(
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ):
-    return session_service.remove_participant(session_id, current_user["id"], user_id, db)
+    return class_read_service.add_parent_fields(
+        db, session_service.remove_participant(session_id, current_user["id"], user_id, db)
+    )
 
 
 # SDD-094: 발언권 관리 — 회원/게스트 손들기

@@ -1,0 +1,125 @@
+"""SDD-214: 클래스·상담 읽기 API 응답 스키마.
+
+EEG·녹음·전사·리포트 본문과 상담사 메모는 어떤 응답에도 담지 않는다(진행 상태 값만).
+"""
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel
+
+Area = Literal["meditation", "counseling"]
+
+
+class UserBrief(BaseModel):
+    id: str
+    name: str | None = None
+
+
+class NextSession(BaseModel):
+    id: str
+    seq: int | None = None
+    scheduled_at: datetime | None = None
+    status: str
+    host: UserBrief
+
+
+class Progress(BaseModel):
+    completed: int
+    total: int
+
+
+class ClassSummary(BaseModel):
+    id: str
+    title: str | None = None
+    status: str
+    schedule_mode: str
+    planned_session_count: int | None = None
+    area: Area = "meditation"
+    progress: Progress
+    session_count: int
+    next_session: NextSession | None = None
+    has_open_session: bool
+
+
+class ClassInstructorInfo(BaseModel):
+    user_id: str
+    name: str | None = None
+    role: str
+    status: str
+
+
+class ClassHostView(BaseModel):
+    """호스트(강사) 시점에서만 채워진다."""
+
+    access_code: str | None = None
+    instructors: list[ClassInstructorInfo]
+
+
+class ClassDetail(ClassSummary):
+    location_type: str
+    location_address: str | None = None
+    linkband_mode: str
+    record_audio: bool
+    capacity: int
+    participant_mode: str
+    default_duration_min: int
+    host_view: ClassHostView | None = None
+
+
+class ClassListResponse(BaseModel):
+    classes: list[ClassSummary]
+    total: int
+
+
+class ClassSessionItem(BaseModel):
+    id: str
+    seq: int | None = None
+    scheduled_at: datetime | None = None
+    status: str
+    session_kind: str
+    host: UserBrief
+    host_state: str | None = None
+
+
+class ClassSessionsResponse(BaseModel):
+    sessions: list[ClassSessionItem]
+    total: int
+
+
+class SessionBrief(BaseModel):
+    id: str
+    seq: int | None = None
+    scheduled_at: datetime | None = None
+    status: str
+
+
+class CounselingSummary(BaseModel):
+    id: str
+    status: str
+    area: Area = "counseling"
+    counselor: UserBrief
+    client_display: str | None = None
+    modality_default: str | None = None
+    session_count: int
+    next_session: SessionBrief | None = None
+    latest_session: SessionBrief | None = None
+
+
+class CounselingSessionItem(BaseModel):
+    id: str
+    seq: int | None = None
+    scheduled_at: datetime | None = None
+    status: str
+    type: str
+    record_status: str | None = None
+    report_status: str | None = None
+
+
+class CounselingDetail(CounselingSummary):
+    sessions: list[CounselingSessionItem]
+
+
+class CounselingListResponse(BaseModel):
+    relationships: list[CounselingSummary]
+    total: int
