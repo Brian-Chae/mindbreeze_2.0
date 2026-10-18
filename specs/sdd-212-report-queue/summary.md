@@ -9,7 +9,7 @@
 
 | 항목 | 결과 |
 |---|---|
-| 구현 Task | T1·T2·T3·T4·T6·T7·T8·T9·T11 완료 / T0 미실시 / T5·T10 조건 미충족으로 미구현 |
+| 구현 Task | T0(dev 한정)·T1·T2·T3·T4·T6·T7·T8·T9·T11 완료 / T5·T10 조건 미충족으로 미구현 |
 | 백엔드 pytest 전체 | **2911 passed, 20 skipped, 0 failed** (기준선 2807 passed → 신규 104건) |
 | 프론트 vitest | 1685 passed, 11 failed / 6파일 (기준선 1676 passed, 11 failed / 6파일 — **실패 케이스 동일**, 신규 9건 통과) |
 | 프론트 tsc | 오류 0 (기준선 동일) |
@@ -20,7 +20,7 @@
 
 | Task | 상태 | 내용 | 테스트 |
 |---|---|---|---|
-| T0 실측 보정 | **미실시** | 운영 로그·DB·공급자 한도 확인은 서버/AWS 접근이 필요해 건너뜀(§7) | — |
+| T0 실측 보정 | **dev 완료**(prod 미실시) | 2026-10-18 dev 서버 읽기 전용 실측 → `t0-measurement.md`. 2/2/1 유지 권고(dev 기존 일꾼은 인자 유지) | — |
 | T1 라우팅 | 완료 | `build_task_routes()`; `stt`(음성 변환·영상 병합) / `report`(요약·리포트 생성) / 나머지 `celery`, `exports` 유지. 설정 플래그로 제어 | `test_sdd212_queue_routing.py` |
 | T2 일꾼 유닛 | 완료 | 유닛 템플릿 2종 신설(`stt` 동시 2 / `report` 동시 2), 기존 일꾼 `-Q celery --concurrency=1`, 설치·활성화·컷오버 점검 목록·운영 매니페스트 반영, dev용 유닛 파일 준비 | `test_sdd212_worker_units.py` |
 | T3 시간 상한·멱등 | 완료 | 리포트 생성 soft 25분 / hard 28분. 시간 초과 시 완료분 보존(§3-2) | `test_sdd212_report_time_limit.py` |
@@ -91,19 +91,28 @@
 - 기존 단일 줄: 첫 세션의 요약이 10분 넘게 STT 뒤에서 대기, 마지막 리포트도 더 늦음
 - 리포트 행 생성까지 대기가 30분을 넘는 건이 3건 이상 → 보정 전 기준(30분)이면 오판 대상, 보정 후 기준(스윕 90분 / 재발행 90분)에서는 0건
 
+## 6-2. dev 롤아웃·재현 결과 (2026-10-18, PR #11)
+- 배포: PR #11(develop) 머지 → Deploy Dev 성공(`deploy-dev.yml` 이 `mindbreeze-stt-worker`·`mindbreeze-report-worker` 설치·선기동·is-active 검사) → 서버에서 두 유닛 `active/enabled`, `celery inspect active_queues` 로 `stt`·`report`·`celery`·`exports`·`email` 소비자 확인. 일꾼 기동 후 메모리 사용 1.17→1.69GB(가용 2.1GB, 85% 경보 임계 대비 여유).
+- 켬: 서버 `.env.dev` 에 `PIPELINE_QUEUE_SPLIT_ENABLED=true` 키만 추가 후 일꾼·백엔드 재시작.
+- 재현 1 — 합성 세션 12개 동시 종료(절반 녹음 보유, `dev-load-repro.py`, 실제 `finalize_on_session_end` 발행 경로): `stt` 유닛이 `tasks.stt` 6건, `report` 유닛이 `tasks.summary` 6건 + `generate_reports_for_session` 12건을 처리, 기존 `mindbreeze-worker` 는 파이프라인 태스크 0건. 태스크 id 중복 수신 0, 아웃박스 `attempts` 전부 0(중복 발행 없음), 줄 잔량 0 복귀. 합성 세션은 오디오가 없어 STT 가 즉시 끝나므로 **줄 구조·중복 여부 확인용이며 처리 시간 수치는 아님**.
+- 재현 2 — `report` 일꾼 중지 상태에서 6세션 종료(C-04 수동 확인): `stt` 줄은 계속 비워지고 `report` 줄에 6건 적재(`oldest_wait_seconds` 23초), 일꾼 재기동 후 25초 내 잔량 0, 재발행·유실 없음(attempts 0). ⇒ 한 줄이 멈춰도 다른 줄이 굶지 않음 확인.
+- e2e-smoke: 배포 직후 실행(플래그 켜기 전) 성공, 플래그 켠 뒤 수동 재실행(run 39121975785)도 성공.
+- 합성 세션 18건은 재현 직후 삭제(`dev-load-repro.py cleanup`).
+- 부수 발견(기존 문제, 이번 변경 무관): 일꾼 로그의 `RuntimeError: Event loop is closed`(`_broadcast`, 진행 상태 소켓 푸시) 가 분리 이전에도 30일간 202건 있었다. 태스크는 모두 성공하므로 지연·유실 영향 없으나 별도 정리 대상.
+- 미확인(한계): 실제 분 단위 STT 로 줄이 밀리는 상황의 대기 보정(스윕 90분·재발행 90분) 동작은 시간 때문에 dev 실환경에서 재현하지 못했다(T9 시뮬레이션과 단위 테스트로만 검증). M-07(경보 도달)·AWS 항목 미실시 유지.
+
 ## 7. 미실시 항목과 사유
 | 항목 | 사유 |
 |---|---|
-| T0 실측(STT·요약·리포트 소요 분포, 몰림 빈도, 공급자 한도) | 운영 DB·로그·dev 서버 접근이 필요해 건너뜀(지시 (c)). 동시 처리 수 초기값(2/2/1)과 대기 보정 기본값은 **가정값** |
+| prod T0 실측(STT·요약·리포트 소요 분포, 몰림 빈도, 공급자 한도) | dev 는 완료(`t0-measurement.md`), prod 는 접근 승인 없음. dev 표본이 작아(STT 2건) 대기 보정 기본값은 여전히 **가정값** |
 | CloudWatch `PutMetricData` 권한 확인·게시, 경보 생성, SNS 수신자 구독 | AWS 변경(지시 (a)). 코드·정책·스크립트만 준비 |
-| 서버 적용(신규 유닛 설치·기동·설정 변경), 배포·롤백 리허설(P-01~P-05), 일꾼 중지 확인(C-04 수동) | 서버 직접 변경 금지(지시 (b)) |
-| dev 서버 N세션 동시 종료 재현(P-05) | dev SSH 금지(지시 (c)) |
+| prod 서버 적용·배포·롤백 리허설(P-01~P-04) | prod 금지. dev 에서는 P-01(선기동)·P-04(메모리)·P-05·C-04 수행(§6-2), 롤백 리허설(P-03)만 미수행 |
 | Linear 코멘트에 문서 게시 | 이슈 ID 미지정 |
 
 ## 8. 승인 필요 목록
 1. **AWS**: 인스턴스 역할의 `cloudwatch:PutMetricData` 허용 확인(`CloudWatchAgentServerPolicy` 에 포함돼 있을 가능성 있음, 부족하면 `deploy/aws/pipeline-metrics-policy.json` 인라인 추가) → 경보 생성(`t14-pipeline-alarms.sh`, 임계 1800초/20건) → 알림 수신자(Brian·운영 담당) SNS 구독
 2. **운영 값**: `PIPELINE_METRICS_CLOUDWATCH_ENABLED=true` 전환 시점
-3. **dev 서버**: T0 실측을 위한 로그·DB 읽기 접근, 분리 구성 재현(P-05), `deploy-dev.yml` 에 신규 유닛 2종 설치 추가(CI/CD 변경)
+3. ~~dev 서버 T0·재현·`deploy-dev.yml` 변경~~ — 2026-10-18 승인·완료
 4. **D-6**: 외부 AI 한도 확인 결과에 따른 Phase B(T10) 착수 여부
 5. **배포(supervisor)**: 순서 — 신규 유닛 기동 → 라우팅 설정 → 기존 일꾼 인자 변경(직전 `celery` 줄 잔량 확인). 마이그레이션은 없음
 
