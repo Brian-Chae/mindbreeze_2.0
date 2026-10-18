@@ -96,7 +96,7 @@ def test_실제_저장소_head_는_1개다():
     revs = [mig.parse_revision(p) for p in (ROOT / "backend/alembic/versions").glob("*.py") if p.name != "__init__.py"]
     ids = {r["revision"] for r in revs}
     downs = {d for r in revs for d in r["down"]}
-    assert sorted(ids - downs) == ["e036a0000052"]
+    assert sorted(ids - downs) == ["e036a0000055"]
 
 
 def test_head_가_2개면_실패한다(tmp_path):

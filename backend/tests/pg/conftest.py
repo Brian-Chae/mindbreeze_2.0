@@ -11,7 +11,10 @@ SQLite create_all 로는 볼 수 없는 PG 제약·마이그레이션 결과를 
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+import subprocess
+import sys
+from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import pytest
 import sqlalchemy as sa
@@ -65,3 +68,46 @@ def pg_session(pg_conn: Connection) -> Iterator[OrmSession]:
         yield session
     finally:
         session.close()
+
+
+BACKEND = Path(__file__).parents[2]
+
+
+def db_url(base_url: str, database: str) -> str:
+    """접속 정보는 그대로 두고 DB 이름만 바꾼 URL."""
+    return make_url(base_url).set(database=database, drivername="postgresql").render_as_string(hide_password=False)
+
+
+def run_alembic(url: str, *args: str) -> subprocess.CompletedProcess[str]:
+    """지정 DB 에 alembic 명령을 실행해 결과를 돌려준다(성공 여부는 호출자가 판단)."""
+    env = {**os.environ, "DATABASE_URL": url}
+    return subprocess.run(
+        [sys.executable, "-m", "alembic", *args], cwd=BACKEND, env=env, capture_output=True, text=True
+    )
+
+
+def alembic_ok(url: str, *args: str) -> None:
+    proc = run_alembic(url, *args)
+    assert proc.returncode == 0, f"alembic {' '.join(args)} 실패:\n{proc.stdout}\n{proc.stderr}"
+
+
+@pytest.fixture(scope="session")
+def scratch_db(pg_engine: Engine) -> Iterator[Callable[..., str]]:
+    """임시 DB 를 만들어 URL 을 돌려주고 세션 종료 시 모두 지운다. template 이면 그 DB 를 복제한다."""
+    base = pg_engine.url.render_as_string(hide_password=False)
+    admin = pg_engine.execution_options(isolation_level="AUTOCOMMIT")
+    created: list[str] = []
+
+    def create(label: str, template: str | None = None) -> str:
+        name = f"sdd214_{os.getpid()}_{label}"
+        tpl = f' TEMPLATE "{template}"' if template else ""
+        with admin.connect() as conn:
+            conn.execute(sa.text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+            conn.execute(sa.text(f'CREATE DATABASE "{name}"{tpl}'))
+        created.append(name)
+        return db_url(base, name)
+
+    yield create
+    with admin.connect() as conn:
+        for name in created:
+            conn.execute(sa.text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))

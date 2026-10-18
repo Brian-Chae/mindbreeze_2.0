@@ -16,11 +16,20 @@ from app.models.user import User
 from app.models.client_profile import ClientProfile
 from app.models.session import ReportChoiceEvent, Session, SessionParticipant
 from app.models.record import SessionRecord
+from app.models.class_program import Class, ClassInstructor
+from app.models.counseling import CounselingRelationship, CounselingRelationshipCounselor
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
 from app.services import class_code_service, code_service, eeg_query, reminder_service as _reminder_service
 from app.services import session_terms
 from app.services.session_authz import SessionAction, get_session_authorized
+from app.services.session_classifier import (
+    PARENT_COUNSELING_RELATIONSHIP,
+    PARENT_MEDITATION_CLASS,
+    PARENT_NONE,
+    SessionFacts,
+    classify_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -272,6 +281,10 @@ def generate_access_code(db: DBSession) -> str:
         raise class_code_service.exhausted_http_error()
 
 
+# uq_classes_active_access_code 에서 제외되는 클래스 상태(모델 정의와 같다)
+_CLASS_CODE_RELEASED_STATUSES = ("completed", "cancelled", "archived")
+
+
 def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
     """세션 행 삽입. 동시 발급 경합(활성 코드 부분 유니크 위반)이면 코드를 재발급해 재시도한다."""
     for attempt in range(5):
@@ -279,11 +292,171 @@ def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
             with db.begin_nested():
                 db.add(session)
                 db.flush()
-            return
+            break
         except IntegrityError:
             if session.access_code is None or attempt == 4:
                 raise
             session.access_code = generate_access_code(db)
+    # 클래스 코드는 최종 세션 코드를 복사한다(재발급 반영 위해 세션 INSERT 뒤에 한 번만 쓴다).
+    if session.class_id is not None and session.access_code is not None:
+        klass = db.get(Class, session.class_id)
+        if klass is not None and klass.access_code != session.access_code:
+            # 세션 쪽 유일성은 종료·취소 세션의 코드를 풀어 주지만 클래스 status 는 세션을 따라가지 않는다.
+            # uq_classes_active_access_code 범위(숨김 아님 + 종료·취소·보관 아님)에서 같은 코드를 쥔 클래스만 비워 충돌을 막는다.
+            db.query(Class).filter(
+                Class.access_code == session.access_code,
+                Class.id != klass.id,
+                Class.hidden_at.is_(None),
+                Class.status.notin_(_CLASS_CODE_RELEASED_STATUSES),
+            ).update({Class.access_code: None}, synchronize_session="fetch")
+            klass.access_code = session.access_code
+            db.flush()
+
+
+# ---------------------------------------------------------------------------
+# SDD-214: 세션 생성 시 부모(명상 클래스 / 상담 관계) 동시 생성
+# ---------------------------------------------------------------------------
+
+
+def _sync_class_from_session(klass: Class, s: Session) -> None:
+    """세션의 클래스 단위 설정을 클래스 행에 복사한다(dual-write — 엔진은 계속 세션 값을 읽는다)."""
+    klass.title = s.title
+    klass.description = s.notes
+    klass.capacity = s.max_participants
+    klass.participant_mode = s.participant_mode
+    klass.linkband_mode = s.linkband_mode
+    klass.location_type = s.location_type
+    klass.location_address = s.location_address
+    klass.default_duration_min = s.duration_min
+    klass.record_audio = s.record_audio
+    klass.record_video = s.record_video
+    klass.chat_enabled = bool(s.chat_enabled)
+    klass.sfu_enabled = bool(s.sfu_enabled)
+    klass.reminder_offsets = list(s.reminder_offsets or [])
+
+
+def _visible_session_count(class_id: UUID, db: DBSession) -> int:
+    return (
+        db.query(func.count(Session.id))
+        .filter(Session.class_id == class_id, Session.hidden_at.is_(None), Session.is_template.is_(False))
+        .scalar()
+    )
+
+
+def _sync_parent_class(s: Session, db: DBSession) -> None:
+    """클래스의 가시 세션이 1개일 때만 세션 설정을 클래스에 반영한다(Phase 1 의 클래스는 세션과 1:1).
+
+    다회차 클래스의 동기화 규칙은 Phase 3 이 다시 정한다.
+    """
+    if s.class_id is None:
+        return
+    db.flush()
+    if _visible_session_count(s.class_id, db) != 1:
+        return
+    klass = db.get(Class, s.class_id)
+    if klass is not None:
+        _sync_class_from_session(klass, s)
+
+
+def _hide_class_if_no_visible_sessions(s: Session, db: DBSession) -> None:
+    """마지막 가시 세션이 숨겨지면 클래스도 숨긴다(가시 세션 0개의 고아 클래스 방지)."""
+    if s.class_id is None:
+        return
+    db.flush()
+    if _visible_session_count(s.class_id, db) > 0:
+        return
+    klass = db.get(Class, s.class_id)
+    if klass is not None and klass.hidden_at is None:
+        klass.hidden_at = s.hidden_at
+
+
+def _get_or_create_placeholder_relationship(s: Session, db: DBSession) -> CounselingRelationship:
+    """호스트별 보관용 관계(is_placeholder, 상담사당 1개)를 찾거나 만들고, 동시 생성에 대비해 행을 잠근다."""
+    def _lookup() -> CounselingRelationship | None:
+        return (
+            db.query(CounselingRelationship)
+            .execution_options(include_hidden=True)
+            .filter(CounselingRelationship.counselor_id == s.host_id, CounselingRelationship.is_placeholder.is_(True))
+            .with_for_update()
+            .first()
+        )
+
+    rel = _lookup()
+    if rel is None:
+        try:
+            with db.begin_nested():
+                rel = CounselingRelationship(
+                    organization_id=s.organization_id,
+                    organization_attribution_known=True,
+                    counselor_id=s.host_id,
+                    is_placeholder=True,
+                    modality_default=s.type if s.type in ("clinical", "hypnosis") else None,
+                    status="active",
+                )
+                db.add(rel)
+                db.flush()
+        except IntegrityError:
+            # 동시에 다른 요청이 먼저 만든 경우(uq_rel_placeholder) — 그 행을 쓴다.
+            rel = _lookup()
+            if rel is None:
+                raise
+    if rel.hidden_at is not None:
+        rel.hidden_at = None
+    link_exists = (
+        db.query(CounselingRelationshipCounselor.id)
+        .filter_by(relationship_id=rel.id, counselor_id=s.host_id)
+        .first()
+    )
+    if link_exists is None:
+        # sessions 의 (relationship_id, host_id) 복합 FK 참조 대상
+        db.add(CounselingRelationshipCounselor(relationship_id=rel.id, counselor_id=s.host_id, status="active"))
+        db.flush()
+    return rel
+
+
+def _attach_parent(s: Session, db: DBSession) -> None:
+    """분류 함수로 부모를 정해 같은 트랜잭션에서 만들고 세션에 연결한다(세션 INSERT 전에 호출).
+
+    CHECK(ck_sessions_one_parent) 때문에 부모가 먼저 있어야 비템플릿 세션이 들어간다.
+    템플릿은 부모가 없다(T0). 분류 불가(X0)는 버그이므로 아무것도 만들지 않고 서버 오류로 끝낸다.
+    """
+    result = classify_session(
+        SessionFacts(is_template=bool(s.is_template), type=s.type, participant_mode=s.participant_mode)
+    )
+    if result.parent_kind == PARENT_NONE:
+        return
+    if result.parent_kind == PARENT_MEDITATION_CLASS:
+        klass = Class(
+            organization_id=s.organization_id,
+            organization_attribution_known=True,
+            created_by=s.host_id,
+            schedule_mode="fixed",
+            planned_session_count=1,
+            status="active",
+        )
+        _sync_class_from_session(klass, s)
+        db.add(klass)
+        db.flush()
+        db.add(ClassInstructor(class_id=klass.id, user_id=s.host_id, role="lead", status="active", added_by=s.host_id))
+        db.flush()
+        s.class_id = klass.id
+        s.seq = 1
+    elif result.parent_kind == PARENT_COUNSELING_RELATIONSHIP:
+        rel = _get_or_create_placeholder_relationship(s, db)
+        last_seq = (
+            db.query(func.max(Session.seq))
+            .execution_options(include_hidden=True)
+            .filter(Session.counseling_relationship_id == rel.id)
+            .scalar()
+        )
+        s.counseling_relationship_id = rel.id
+        s.seq = (last_seq or 0) + 1
+    else:
+        db.rollback()
+        logger.error("[session] 분류 불가 세션 생성 중단 rule=%s type=%s mode=%s", result.rule, s.type, s.participant_mode)
+        raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다")
+    s.session_kind = "regular"
+    s.host_state = "assigned"
 
 
 def _ensure_aware(dt: datetime) -> datetime:
@@ -404,6 +577,7 @@ def create_session(host_id: str, payload, db: DBSession) -> dict:
         record_audio=payload.record_audio,
         record_video=payload.record_video,
     )
+    _attach_parent(session, db)
     _add_session_with_code_retry(session, db)
 
     # SDD-028: 기본 run_id = session_id. 최초 실행의 회차 식별자로 자기 id 를 채운다.
@@ -561,6 +735,7 @@ def _clone_session_config(
         webrtc_room_id=None if is_template else uuid.uuid4(),
         is_template=is_template,
     )
+    _attach_parent(clone, db)
     _add_session_with_code_retry(clone, db)
     # SDD-028: 복제본도 새 실행 회차 — run_id = 자기 id.
     clone.run_id = clone.id
@@ -734,6 +909,8 @@ def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_UPDATE)
+    # SDD-214: 동시 PUT 이 같은 클래스에 서로의 변경을 덮어쓰지 않도록 세션 행을 잠그고 최신 값을 다시 읽는다.
+    s = _lock_session_for_capacity(s.id, db) or s
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
@@ -825,6 +1002,7 @@ def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dic
         s.reminder_offsets = normalize_reminder_offsets(payload.reminder_offsets)
         reminders_changed = True
 
+    _sync_parent_class(s, db)
     db.commit()
     db.refresh(s)
     if promoted_by_capacity:
@@ -884,6 +1062,7 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
         body=s.title or session_terms.notification_body_fallback(),
     )
     s.hidden_at = datetime.now(timezone.utc)
+    _hide_class_if_no_visible_sessions(s, db)
     db.commit()
 
 

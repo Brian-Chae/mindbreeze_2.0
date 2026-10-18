@@ -33,7 +33,7 @@
 | [ ] | G3 | `tsc -p tsconfig.app.json` 0 · `eslint src/` 0 · `npm run build` 성공 | S | 0 |
 | [ ] | G4 | **기존 테이블 변경 한정**: `sessions`·`session_participants`·`reports` 에 대한 마이그레이션 문장은 컬럼 추가·인덱스·FK·CHECK·UNIQUE 추가뿐. **기존 컬럼** 삭제·개명·타입 변경·NOT NULL 승격·기본값 변경 0. 053~055 `upgrade()` 에 `DROP/DELETE/TRUNCATE/UPDATE` 0 | S | 충족 |
 | [ ] | G5 | **변경 최소화**: `git diff --name-only <기준 SHA>..HEAD` 가 plan §9 소유 파일 + 신규 테스트·골든·픽스처 + `specs/sdd-214-…/` + `backend/scripts/reset_dev_data.py`(+서비스) 안에만 있다. 엔진(진행·입장·뇌파·녹음/STT/요약·리포트 *생성*) 파일 수정 0, `report_service.py` 승인 경로 수정 0(TD10), `models/user.py`·`users` 마이그레이션 0(U2). **구 호환 항목이던 `class_code_service`·`class_code_reissue`·`code_service`·`reminder_service`·`org_public_service`·`dashboard_service`·`session_email_invite_service`·`notification_service`·`retention_sweep_service` 수정 0** | S | 범위 밖 파일 0 |
-| [ ] | G6 | **사용자 노출 문구 변경 0**: 서버·프론트 사용자 노출 문구 리터럴 diff 0 (에러 `detail` 포함). 읽기 API 신규 에러 문구는 기존 세션 API 와 같은 문구 재사용 | S | 변경 0 |
+| [ ] | G6 | **사용자 노출 문구 변경 0**: 서버·프론트 사용자 노출 문구 리터럴 diff 0 (에러 `detail` 포함). 읽기 API 의 404 는 기존 세션 API 의 문구(`세션을 찾을 수 없습니다`)를 재사용하고, 400 은 `잘못된 ID 형식입니다` 를 재사용한다. 신규 API 는 403 을 쓰지 않는다(RD-3 근거, 2026-10-18) | S | 변경 0 |
 | [ ] | G7 | **안전망 불변**: SDD-211 계약 골든(`tests/contract/golden/*`)·특성화 테스트는 **구현 커밋에서 수정 0**(예외: 가산 필드로 인한 갱신이 불가피하면 `breaking_exemptions.json` 절차, 변경 이력에 기록). 가산 전용 규칙은 유지(사유: 프론트 무변경 회귀망, plan §6.2) | S | 수정 0 또는 승인된 예외 |
 | [ ] | G8 | `any` 사용 0(신규·수정 TS), 객체·배열 직접 변경 0, 주석은 한글·WHY 만, 파일명 kebab-case/snake_case | S | 0 |
 | [ ] | G9 | **비밀·개인정보 0**: 신규·수정 파일(절차서·보고·픽스처·로그 샘플 포함)에 이메일(`@example.com` 제외. 단 시드 계정 `counselor@test.com`·`client@test.com` 명칭은 허용)·전화·UUID 실값·토큰·**비밀번호**·DB 접속 문자열·IP·라벨 원문 0건 | S | grep 0건 |
@@ -56,9 +56,9 @@
 | [ ] | SC-5 | 모든 부모 FK 가 `ON DELETE RESTRICT`, `reports.approved_by_user_id` 는 NO ACTION (`pg_constraint.confdeltype`) | P | 일치 |
 | [ ] | SC-6 | 부분 유니크 `uq_classes_active_access_code`: 활성(숨김·종료·취소 제외) 클래스 간 코드 중복 INSERT 는 실패, 종료/숨김 클래스와 같은 코드는 허용 | P | 규칙대로 |
 | [ ] | SC-7 | `class_instructors UNIQUE(class_id, user_id)` 위반 INSERT 실패 (복합 FK 의 참조 대상) | P | 실패 확인 |
-| [ ] | SC-8 | `counseling_relationships`: `uq_rel_guest`(비회원 1명 1관계)·`uq_rel_placeholder`(상담사당 보관용 1개) 위반 INSERT 실패 | P | 실패 확인 |
+| [ ] | SC-8 | `counseling_relationships`: `uq_rel_guest`(비회원 1명 비종료 관계 1개 — `pending`·`active` 만, 종결·보관이 있어도 새 상담사 관계 허용)·`uq_rel_placeholder`(상담사당 보관용 1개) 위반 INSERT 실패 | P | 실패 확인 |
 | [ ] | SC-9 | `hidden_at`/soft 상태 컬럼 존재(삭제 금지 정책의 전제): `class_instructors.status`, `classes.hidden_at`, `counseling_relationships.hidden_at` | P | 존재 |
-| [ ] | SC-10 | ORM 모델이 DB 와 일치: `alembic check`(정보성) 에서 **이 SDD 가 추가한 객체**에 대한 차이 0 (CHECK·복합 FK 는 ORM 미선언이라 비교 대상 아님, TD8) | S | 신규 차이 0 |
+| [ ] | SC-10 | ORM 모델이 DB 와 일치: `alembic check`(정보성) 에서 **이 SDD 가 추가한 객체**에 대한 차이 0 (CHECK 는 비교 대상이 아니고, 복합 FK 2개는 ORM 미선언이라 차이로 감지되므로 `env.py` `include_object` 에서 이름으로 제외한다, TD8) | S | 신규 차이 0 |
 | [ ] | SC-11 | ORM 전역 숨김 필터: `Class`·`CounselingRelationship` 의 숨김 행이 기본 조회에서 제외, `include_hidden` 옵션으로 포함 (기존 `Session` 필터 동작 불변) | B | 통과 |
 | [ ] | SC-12 | 순환 FK 순서(053 → 055): 빈 DB 체인에서 `upgrade head` 오류 0 | P | 통과 |
 | [ ] | SC-13 | 컬럼 확정표 근거 표기: 모든 컬럼 행에 근거 문서(§) 열 존재, `미확인` 이 남은 컬럼은 0 또는 사유와 함께 Brian 보고. `origin` 컬럼 제거 여부 결정이 기록됨(TD20) | S | 충족 |
@@ -90,7 +90,7 @@
 | [ ] | CL-2 | `meditation` → 명상 클래스 `C1` (`participant_mode` 가 어느 쪽이든) | U | 통과 |
 | [ ] | CL-3 | `clinical`·`hypnosis`·`custom` + `participant_mode='group'` → 명상 클래스 `C2`, 세션 `type` 라벨은 그대로 | U | 통과 |
 | [ ] | CL-4 | `clinical`·`hypnosis`·`custom` + `participant_mode='one_on_one'` → 상담 관계(보관용) `R3`. **정원(`max_participants`)을 판정에 쓰지 않음**(정원 10 인 1:1 도 상담) | U | 통과 |
-| [ ] | CL-5 | 알 수 없는 `type` 또는 `participant_mode` → `X0`, 예외를 던지지 않고 결과로 반환 | U | 통과 |
+| [ ] | CL-5 | T0·C1 등 선행 규칙에 해당하지 않는 알 수 없는 `type` 또는 `participant_mode` → `X0`(템플릿·명상은 모드가 미상이어도 T0·C1 이 먼저 적용), 예외를 던지지 않고 결과로 반환 | U | 통과 |
 | [ ] | CL-6 | **순수성**: 같은 입력 → 같은 출력, 함수 모듈이 DB 세션·시계·난수·환경변수를 import 하지 않음(정적 검사). 입력 타입에 참여자 수·`custom_type_name` 이 없음 | U·S | 통과 |
 | [ ] | CL-7 | 규칙표 전수: plan §4.1 의 모든 행(T0, C1, C2, R3, X0)이 최소 1개 테스트로 커버 | U | 커버리지 100% (규칙 코드 기준) |
 
@@ -119,7 +119,7 @@
 | [ ] | CN-4 | `UNIQUE(class_id, seq)`·`UNIQUE(counseling_relationship_id, seq)`: 같은 부모 내 중복 `seq` 실패, 다른 부모 간 같은 `seq` 허용, 템플릿(부모 NULL)은 영향 없음 | P | 규칙대로 |
 | [ ] | CN-5 | `UNIQUE(session_id, member_id)`: 같은 회차·멤버 출석 행 중복 실패, `member_id` NULL 다수 허용 | P | 규칙대로 |
 | [ ] | CN-6 | `CHECK(member_id IS NULL OR guest_client_id IS NULL)`: 둘 다 채우면 실패, 둘 다 NULL 은 통과 | P | 규칙대로 |
-| [ ] | CN-7 | `uq_rel_active_pair`: 같은 상담사·회원의 활성 관계 2개는 실패, 종결(`closed`)/보관 관계와는 공존 | P | 규칙대로 |
+| [ ] | CN-7 | `uq_rel_active_pair`: 같은 상담사·회원의 비보관(`pending`·`active`·`closed`) 관계 2개는 실패, 보관(`archived`) 관계와만 공존 — R-DB 리뷰로 정정(기획-상세-상담 §179, 종결은 재개로 이어 감) | P | 규칙대로 |
 | [ ] | CN-8 | **기존 SQLite 테스트 영향 0**: ORM 이 CHECK 를 선언하지 않으므로, 부모 없이 `Session(...)` 을 직접 만드는 기존 pytest 가 그대로 통과 (G1) | B | 신규 실패 0 |
 | [ ] | CN-9 | **기존 `tests/pg`**: 부모 없이 `sessions` 를 INSERT 하던 테스트는 P0 목록의 허용 범위(§4)에서만 정정되고 그 외 신규 실패 0 | P | 신규 실패 0 |
 
@@ -129,7 +129,7 @@
 |---|---|---|---|---|
 | [ ] | RD-1 | 5개 엔드포인트 존재·응답 모델: `GET /classes`·`/classes/{id}`·`/classes/{id}/sessions`·`/counseling`·`/counseling/{id}`. OpenAPI 에 등록 | B | 5/5 |
 | [ ] | RD-2 | **동치성**: 역할 5종(호스트 상담사·타 상담사·센터 관리자·플랫폼 관리자·참여 회원, 무관한 회원 포함) × 시드(새 생성 경로로 생성)에서, 새 API 로 도달 가능한 세션 집합의 합 == 같은 사용자의 `GET /sessions` 목록 집합 (넓히지도 좁히지도 않음) | B | 불일치 0 |
-| [ ] | RD-3 | 타 호스트의 클래스/관계 id 접근 → 현행 세션 상세와 **같은 상태코드·메시지**(존재 여부 비노출) | B | 일치 |
+| [ ] | RD-3 | 신규 API(클래스 상세·회차 목록·상담 상세)에서 **미존재·숨김·접근 불가가 바이트 단위로 같은 404**(존재 여부 비노출, plan §7.1), 형식 오류만 400. 기존 `/sessions/{id}` 의 403/404 응답은 **변경하지 않는다**(별도 회귀 테스트). 근거: 현행 세션 상세의 403/404 구분은 존재 여부를 노출하므로 신규 API 에는 이어받지 않기로 함(2026-10-18 리뷰 반영, Brian 지시) | B | 일치 |
 | [ ] | RD-4 | 숨김 클래스·숨김 세션은 목록·상세·회차 목록에서 제외 | B | 통과 |
 | [ ] | RD-5 | 제거/대기취소 참여자는 회원 시점에서 제외. 회원 시점 가시 범위는 `session_participants` 기준(`class_members` 는 비어 있음) | B | 통과 |
 | [ ] | RD-6 | **회원 시점 마스킹**: 타 참여자 정보·코드·`organization_attribution_known` 가 응답에 없음(`origin` 컬럼을 남기면 그것도 제외, TD20). 호스트 시점에만 포함 | B | 통과 |
@@ -151,8 +151,8 @@
 | [ ] | CP-1 | `POST /sessions` (meditation) → 클래스 + `class_instructors(lead, active)` + 세션(`seq=1`·`host_state='assigned'`·`session_kind='regular'`)이 **한 트랜잭션**에 생성. 클래스 설정·코드가 세션 값과 동일(dual-write). 응답은 기존 필드 + 가산 필드 | B·P | 통과 |
 | [ ] | CP-2 | `POST /sessions` (clinical/hypnosis, one_on_one) → 호스트별 보관용 관계에 배치, `seq` 이어 부여. 같은 호스트의 2번째 상담 세션은 **같은 보관용 관계** 재사용(관계 1개, `uq_rel_placeholder` 위반 없음) | B·P | 통과 |
 | [ ] | CP-3 | 생성 중 부모 생성 실패 시 세션도 생성되지 않음(원자성). 분류 `X0` 도달 시 세션 생성 롤백 + 서버 오류 | B·P | 통과 |
-| [ ] | CP-4 | **같은 분류 함수**: 생성 경로 전체(`POST /sessions`·`duplicate`·`new-run`)가 분류 함수 하나만 호출(규칙 중복 구현 없음, 정적 검사) | S·B | 통과 |
-| [ ] | CP-5 | `duplicate`·`new-run`·템플릿 적용 경로의 산출물도 부모를 가진다(P0 전수 결과 기준), `new-run` 은 별도 부모(TD15), 템플릿 저장(`save-as-template`)은 부모 없음 | B | 통과 |
+| [ ] | CP-4 | **같은 분류 함수**: 생성 경로 전체(`POST /sessions`·`duplicate`)가 분류 함수 하나만 호출(규칙 중복 구현 없음, 정적 검사) | S·B | 통과 |
+| [ ] | CP-5 | `duplicate`·`new-run`·템플릿 적용 경로의 산출물도 부모를 가진다(P0 전수 결과 기준), `new-run` 은 세션·부모를 새로 만들지 않음(TD15 정정), 템플릿 저장(`save-as-template`)은 부모 없음 | B | 통과 |
 | [ ] | CP-6 | **세션 생성 지점 전수**: `Session(` 생성 지점 목록(P0)의 모든 지점이 부모 생성을 거치거나 템플릿 사유로 제외됨 — 누락 0 (CHECK 가 PG 에서 누락을 잡으므로 PG 경로별 테스트로 확인) | S·P | 누락 0 |
 | [ ] | CP-7 | 일관성 동기화: `PUT /sessions/{id}` 로 클래스 단위 필드(제목·설명·정원·참여 방식·LINK BAND 모드·장소·소요·녹음/채팅/SFU·알림 오프셋·코드) 수정 시 가시 세션 1개인 클래스에 반영 | B | 통과 |
 | [ ] | CP-8 | 클래스의 **마지막 가시 세션**을 `DELETE`(숨김)하면 클래스도 `hidden_at`, 가시 세션이 남아 있으면 클래스 유지 | B | 통과 |
@@ -235,6 +235,7 @@
 | `backend/tests/test_sdd210_ci_gates.py` | 하드코딩된 head 리비전 단언(SDD-213 선례) | head 문자열 갱신만 |
 | `backend/tests/test_sdd211_migration_30c1_idempotent.py` | 하드코딩된 head·리비전 개수 단언(SDD-213 선례: 85) | head·개수 갱신만 |
 | (그 외 head/개수 하드코딩 테스트) | G0 의 grep 으로 확정 | head·개수 갱신만, 목록은 `baseline.md` 에 기록 후 이 표에 추가(변경 이력 기재) |
+| `backend/tests/pg/test_m0_prequery_pg.py` | 이전 전 모양(부모 없는 세션) 시드 때문에 `ck_sessions_one_parent` 가 걸림 | **트랜잭션 안에서만** CHECK 를 해제하고 끝에 롤백. 해제는 `sessions` 에 ACCESS EXCLUSIVE 잠금을 쓰므로 **전용(로컬/CI 임시) DB 에서 직렬 실행**하고, 사후에 제약 존재·`convalidated` 를 확인하는 복구·유효 검증 테스트를 둔다 |
 | (`backend/tests/pg/` 중 부모 없이 `sessions` 를 INSERT 하는 테스트) | `ck_sessions_one_parent` 때문. P0 가 목록 확정 | 부모(클래스) 생성 또는 템플릿 사용으로 정정하는 최소 변경만, 목록은 `baseline.md` 에 기록 후 이 표에 추가(변경 이력 기재) |
 
 ---

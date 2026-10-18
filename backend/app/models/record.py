@@ -234,5 +234,10 @@ class Report(Base):
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # SDD-214: 승인 증빙 컬럼. Phase 5 전까지 값을 쓰는 코드가 없다.
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session = relationship("Session", back_populates="reports")

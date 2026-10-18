@@ -20,7 +20,7 @@ from alembic.script import ScriptDirectory
 
 BACKEND = Path(__file__).parents[1]
 REVISION = "30c1bfbc724f"
-HEAD = "e036a0000052"
+HEAD = "e036a0000055"
 
 
 def _script() -> ScriptDirectory:
@@ -40,7 +40,7 @@ def _load_module():
 def test_리비전_id와_체인은_그대로다():
     script = _script()
     revisions = list(script.walk_revisions())
-    assert len(revisions) == 85
+    assert len(revisions) == 88
     assert script.get_heads() == [HEAD]
     rev = script.get_revision(REVISION)
     assert rev.down_revision == "d74027f66e1c"

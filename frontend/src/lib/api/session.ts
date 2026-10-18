@@ -67,6 +67,13 @@ export interface SessionDto {
   is_template?: boolean;
   /** SDD-097: 예약 사전 안내(리마인더) 시점 — 시작 N분 전 정수 목록(빈 배열=끔) */
   reminder_offsets?: number[];
+  /** SDD-214: 세션의 상위 클래스 ID·제목(상담·템플릿은 null) */
+  class_id?: string | null;
+  class_title?: string | null;
+  /** SDD-214: 부모 내 회차 번호(템플릿은 null) */
+  seq?: number | null;
+  /** SDD-214: 세션 영역(부모 없는 템플릿은 null) */
+  area?: 'meditation' | 'counseling' | null;
 }
 
 export interface SessionListResponse {

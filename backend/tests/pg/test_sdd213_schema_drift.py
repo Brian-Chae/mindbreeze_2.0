@@ -126,10 +126,10 @@ def migrated(scratch: dict[str, str]) -> dict[str, dict]:
     for key, url in scratch.items():
         engine = sa.create_engine(url)
         before = _snapshot(engine)
-        _alembic(url, "upgrade", "head")
+        _alembic(url, "upgrade", REV)  # SDD-214 이후 head 는 더 앞서므로 이 리비전까지만 적용한다
         first = _snapshot(engine)
         _alembic(url, "downgrade", PREV)  # downgrade 는 no-op → 리비전 재실행
-        _alembic(url, "upgrade", "head")
+        _alembic(url, "upgrade", REV)  # SDD-214 이후 head 는 더 앞서므로 이 리비전까지만 적용한다
         second = _snapshot(engine)
         result[key] = {"engine": engine, "before": before, "first": first, "second": second}
     yield result
