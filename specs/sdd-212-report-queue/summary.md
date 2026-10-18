@@ -96,7 +96,7 @@
 - 켬: 서버 `.env.dev` 에 `PIPELINE_QUEUE_SPLIT_ENABLED=true` 키만 추가 후 일꾼·백엔드 재시작.
 - 재현 1 — 합성 세션 12개 동시 종료(절반 녹음 보유, `dev-load-repro.py`, 실제 `finalize_on_session_end` 발행 경로): `stt` 유닛이 `tasks.stt` 6건, `report` 유닛이 `tasks.summary` 6건 + `generate_reports_for_session` 12건을 처리, 기존 `mindbreeze-worker` 는 파이프라인 태스크 0건. 태스크 id 중복 수신 0, 아웃박스 `attempts` 전부 0(중복 발행 없음), 줄 잔량 0 복귀. 합성 세션은 오디오가 없어 STT 가 즉시 끝나므로 **줄 구조·중복 여부 확인용이며 처리 시간 수치는 아님**.
 - 재현 2 — `report` 일꾼 중지 상태에서 6세션 종료(C-04 수동 확인): `stt` 줄은 계속 비워지고 `report` 줄에 6건 적재(`oldest_wait_seconds` 23초), 일꾼 재기동 후 25초 내 잔량 0, 재발행·유실 없음(attempts 0). ⇒ 한 줄이 멈춰도 다른 줄이 굶지 않음 확인.
-- e2e-smoke: 배포 직후 실행(플래그 켜기 전) 성공, 플래그 켠 뒤 수동 재실행 결과는 아래 PR 본문에 기록.
+- e2e-smoke: 배포 직후 실행(플래그 켜기 전) 성공, 플래그 켠 뒤 수동 재실행(run 39121975785)도 성공.
 - 합성 세션 18건은 재현 직후 삭제(`dev-load-repro.py cleanup`).
 - 부수 발견(기존 문제, 이번 변경 무관): 일꾼 로그의 `RuntimeError: Event loop is closed`(`_broadcast`, 진행 상태 소켓 푸시) 가 분리 이전에도 30일간 202건 있었다. 태스크는 모두 성공하므로 지연·유실 영향 없으나 별도 정리 대상.
 - 미확인(한계): 실제 분 단위 STT 로 줄이 밀리는 상황의 대기 보정(스윕 90분·재발행 90분) 동작은 시간 때문에 dev 실환경에서 재현하지 못했다(T9 시뮬레이션과 단위 테스트로만 검증). M-07(경보 도달)·AWS 항목 미실시 유지.
