@@ -162,7 +162,8 @@ jobs:
         env:
           PG_SMOKE: '1'
         run: |
-          pip install "$(grep -E '^pytest==' requirements.txt)"
+          # SDD-214: 생성 경로·초기화 PG 테스트는 앱 코드(app.*)를 import 하므로 전체 의존성이 필요하다.
+          pip install -r requirements.txt
           pytest --confcutdir=tests/pg tests/pg -q -m pg -p no:cacheprovider
 
       - name: PG 픽스처 위생 (스키마 덤프에 데이터 행·개인정보 없음)
