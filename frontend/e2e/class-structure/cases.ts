@@ -25,9 +25,9 @@ const screens: Screen[] = [
   { id: 'MC02', prototype: 'member-classes.html', role: 'member', appPath: '/app/classes', cases: { R: ['list', 'empty'], A: ['left-open', 'waitlist', 'invited'], X: ['apply'] } },
   { id: 'MC03', prototype: 'member-classes.html', role: 'member', appPath: '/app/classes/class-1', cases: { R: ['ongoing', 'cancelled'], A: ['makeup-planned', 'makeup-done', 'joined-mid', 'host-changed', 'rolling', 'completed', 'left'], X: ['makeup-pick'] } },
   { id: 'CN01', prototype: 'counseling.html', role: 'host', appPath: '/counseling', cases: { R: ['active', 'clients', 'search', 'search-empty', 'empty', 'net'], A: ['closed', 'closed-archived'], X: [] } },
-  { id: 'CN02', prototype: 'counseling.html', role: 'host', appPath: '/counseling/relationship-1', cases: { R: ['active', 'ongoing', 'net'], A: ['recurring', 'closed', 'archived'], X: ['guest-pending', 'guest-active', 'guest-expired', 'closed-guest', 'scrubbed'] } },
+  { id: 'CN02', prototype: 'counseling.html', role: 'host', appPath: '/counseling/temporary-relationship-1', cases: { R: ['active', 'ongoing', 'net'], A: ['recurring', 'closed', 'archived'], X: ['guest-pending', 'guest-active', 'guest-expired', 'closed-guest', 'scrubbed'] } },
   { id: 'CN07', prototype: 'counseling.html', role: 'member', appPath: '/app/counseling', cases: { R: ['list', 'empty', 'net'], A: ['list-open', 'invited'], X: [] } },
-  { id: 'CN08', prototype: 'counseling.html', role: 'member', appPath: '/app/counseling/relationship-1', cases: { R: ['active', 'ready-now', 'no-next', 'net'], A: ['report-waiting', 'closed-me', 'closed-counselor'], X: [] } },
+  { id: 'CN08', prototype: 'counseling.html', role: 'member', appPath: '/app/counseling/temporary-relationship-1', cases: { R: ['active', 'ready-now', 'no-next', 'net'], A: ['report-waiting', 'closed-me', 'closed-counselor'], X: [] } },
 ];
 
 export type CaseManifestEntry = {
@@ -77,8 +77,8 @@ const entries: CaseManifestEntry[] = screens.flatMap((screen) =>
         case_id: caseId,
         classification,
         role: screen.role,
-        prototype_url: `http://127.0.0.1:5415/class-structure-redesign/${screen.prototype}?${screen.prototype === 'counseling.html' ? `role=${screen.role}&` : ''}screen=${screen.id}&case=${caseId}${screen.id.startsWith('CH') ? '&k=mbsr' : ''}`,
-        app_url: `http://127.0.0.1:4173${screen.appPath}?qaCase=${caseId}`,
+        prototype_url: `http://127.0.0.1:5440/class-structure-redesign/${screen.prototype}?${screen.prototype === 'counseling.html' ? `role=${screen.role}&` : ''}screen=${screen.id}&case=${caseId}${screen.id.startsWith('CH') ? '&k=mbsr' : ''}`,
+        app_url: `http://127.0.0.1:5441${screen.appPath}?qaCase=${caseId}`,
         fixture_id: `${screen.role}-${classification.toLowerCase()}-${screen.id}-${caseId}`,
         source_sha: 'runtime' as const,
         app_sha: 'runtime' as const,
