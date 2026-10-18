@@ -12,6 +12,7 @@ vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureS
         rightSlot: ReactNode;
         title: string;
     }) => <main><h1>{title}</h1>{rightSlot}{children}</main> }));
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const row = { id: 'c1', title: '마음 명상', status: 'active', schedule_mode: 'fixed', progress: { completed: 0, total: 3 }, session_count: 3, next_session: null, has_open_session: true };
 let root: Root;
 let box: HTMLDivElement;
@@ -84,4 +85,18 @@ it('회차 0·누락 번호·0 분모·정상 빈 목록을 보존한다', async
  await render('/classes/c1/sessions', <HostClassDetailPage/>);
  expect(box.querySelector('a[href="/classes/c1/sessions/zero"]')?.textContent).toContain('0회차');
  expect(box.querySelector('a[href="/classes/c1/sessions/missing"]')?.textContent).toContain('데이터 없음');
+});
+it('입장 준비 상태를 누락으로 바꾸지 않는다', async () => {
+ setup(); const result = mocks.detail(); result.state.data.sessions.sessions[0].status = 'ready';
+ await render('/classes/c1/sessions', <HostClassDetailPage/>);
+ expect(box.querySelector('a[href="/classes/c1/sessions/s1"]')?.closest('[role="row"]')?.textContent).toContain('준비');
+ await click('타임라인');
+ expect(box.querySelector('a[href="/classes/c1/sessions/s1"]')?.textContent).toContain('준비');
+});
+it('현재 탭을 시각적으로 구분하고 회차 표의 네 열 의미를 제공한다', async () => {
+ setup(); await render('/classes/c1/sessions', <HostClassDetailPage/>);
+ const current = box.querySelector('nav[aria-label="클래스 메뉴"] a[aria-current="page"]');
+ expect(current?.className).toContain('border-purple-800');
+ expect([...box.querySelectorAll('[role="columnheader"]')].map(cell => cell.textContent)).toEqual(['회차', '일시', '진행 지도사', '상태']);
+ expect(box.querySelectorAll('[role="cell"]')).toHaveLength(12);
 });
