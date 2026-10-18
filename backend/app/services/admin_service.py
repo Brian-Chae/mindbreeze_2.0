@@ -761,6 +761,15 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
         text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND hidden_at IS NULL"),
         {"id": uid, "now": datetime.now(timezone.utc)},
     )
+    # SDD-214: 같은 트랜잭션에서, 이 호스트의 세션이 속했고 가시 세션이 0이 된 클래스도 숨긴다(고아 클래스 방지).
+    db.execute(
+        text(
+            "UPDATE classes SET hidden_at = :now WHERE hidden_at IS NULL "
+            "AND id IN (SELECT class_id FROM sessions WHERE host_id = :id AND class_id IS NOT NULL) "
+            "AND NOT EXISTS (SELECT 1 FROM sessions v WHERE v.class_id = classes.id AND v.hidden_at IS NULL)"
+        ),
+        {"id": uid, "now": datetime.now(timezone.utc)},
+    )
 
     user.status = "deleted"
     db.commit()

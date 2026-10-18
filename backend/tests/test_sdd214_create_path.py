@@ -103,6 +103,7 @@ def test_cp3_분류_불가_X0이면_세션이_만들어지지_않는다(client, 
     )
     res = client.post("/api/v1/sessions", json=_create_payload(), headers=host["auth"])
     assert res.status_code == 500
+    assert res.json() == {"detail": "서버 내부 오류가 발생했습니다"}
     db = _db()
     try:
         assert _all(db, Session) == [] and _all(db, Class) == [] and _all(db, CounselingRelationship) == []
@@ -331,5 +332,74 @@ def test_cp1_종료_세션의_코드를_재사용해도_클래스_코드_충돌�
         sa_, sb = _row(db, a["id"]), _row(db, b["id"])
         assert db.get(Class, sb.class_id).access_code == b["access_code"] == a["access_code"]
         assert db.get(Class, sa_.class_id).access_code is None
+    finally:
+        db.close()
+
+
+def _reuse_code_after(client, host, monkeypatch, mutate):
+    """첫 클래스에 mutate(db, 세션행, 클래스행) 를 적용한 뒤 같은 코드로 새 클래스를 만들고 (첫 클래스, 새 응답) 을 돌려준다."""
+    from app.services import class_code_service
+
+    a = _post(client, host, type="meditation", scheduled_at=None)
+    db = _db()
+    try:
+        sa_ = _row(db, a["id"])
+        mutate(db, sa_, db.query(Class).execution_options(include_hidden=True).filter(Class.id == sa_.class_id).one())
+        db.commit()
+        class_a = sa_.class_id
+    finally:
+        db.close()
+    monkeypatch.setattr(class_code_service, "generate_class_code", lambda db: a["access_code"])
+    return a, class_a, _post(client, host, type="meditation", scheduled_at=None)
+
+
+def test_cp1_코드_충돌_정리는_숨긴_클래스를_건드리지_않는다(client, monkeypatch):
+    from datetime import datetime, timezone
+
+    def hide(db, s, k):
+        s.hidden_at = k.hidden_at = datetime.now(timezone.utc)
+
+    a, class_a, b = _reuse_code_after(client, _register(client, "cp1h@test.com"), monkeypatch, hide)
+    db = _db()
+    try:
+        assert db.query(Class).execution_options(include_hidden=True).filter(Class.id == class_a).one().access_code == a["access_code"]
+        assert db.get(Class, _row(db, b["id"]).class_id).access_code == b["access_code"]
+    finally:
+        db.close()
+
+
+def test_cp1_코드_충돌_정리는_종료된_클래스를_건드리지_않는다(client, monkeypatch):
+    def end(db, s, k):
+        s.status, k.status = "completed", "completed"
+
+    a, class_a, b = _reuse_code_after(client, _register(client, "cp1e@test.com"), monkeypatch, end)
+    db = _db()
+    try:
+        assert db.get(Class, class_a).access_code == a["access_code"]
+        assert db.get(Class, _row(db, b["id"]).class_id).access_code == b["access_code"]
+    finally:
+        db.close()
+
+
+def test_정책_PUT으로_유형과_참여방식이_바뀌어도_부모는_고정된다(client):
+    host = _register(client, "pin@test.com")
+    body = _post(client, host, type="meditation", scheduled_at=None, participant_mode="group")
+    db = _db()
+    try:
+        class_id = _row(db, body["id"]).class_id
+    finally:
+        db.close()
+    res = client.put(
+        f"/api/v1/sessions/{body['id']}",
+        json={"type": "clinical", "participant_mode": "one_on_one"},
+        headers=host["auth"],
+    )
+    assert res.status_code == 200, res.text
+    db = _db()
+    try:
+        s = _row(db, body["id"])
+        assert (s.type, s.participant_mode) == ("clinical", "one_on_one")
+        assert s.class_id == class_id and s.counseling_relationship_id is None and s.seq == 1
+        assert _all(db, CounselingRelationship) == [] and len(_all(db, Class)) == 1
     finally:
         db.close()
