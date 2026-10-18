@@ -131,13 +131,12 @@ cd backend && alembic upgrade head          # DB 마이그레이션
 - **spec + plan + verify + summary 4종 모두 존재해야 SDD 완료**
 - **Stage ③ Verify는 구현 전에만 작성. 사후 작성 금지.**
 - Git commit: `feat(sdd-NNN):` / `fix(sdd-NNN):` 태그 포함
-- 스펙 번호는 `specs/.sdd-counter`로 관리 (NNN 순차 증가)
+- 스펙 번호는 `scripts/sdd new "한글 제목" <슬러그>` 로 발급 (`.sdd-counter` 폐기 — 규칙: `.claude/rules/branch-management.md`)
 
 ### 스펙 디렉토리 구조
 
 ```
 specs/
-├── .sdd-counter          # 현재 NNN 값
 ├── 001-feature/          # SDD-001
 │   ├── spec.md           # Stage ①
 │   ├── plan.md           # Stage ②
@@ -226,3 +225,9 @@ Brian 요청 → Phase 1 (docs/) ──[승인]──→ Phase 2 (designs/) ─�
 4. **AI 파이프라인**: STT → Diarization → LLM 요약은 Celery 비동기 큐로 처리. 수 분 소요.
 5. **데이터 프라이버시**: 뇌파 데이터 + 상담 내용 → 접근 제어, 동의 플로우, 보관 기간 정책 필수.
 6. **제품 로드맵 (31주)**: MVP1 17주(웹·B2B·AI·PC BLE) → MVP2 8주(앱·푸시·앱 BLE) → MVP3 6주(케어·고도화). 개발 착수 전 문서 정합·§18 승인.
+
+## 브랜치·SDD 번호 규칙 (필수)
+
+- 기능·SDD 작업은 `sdd/<NNN>-<슬러그>` 브랜치 + 전용 워크트리에서 하고 PR로 develop에 합친다. 빠른 수정만 develop 직접 푸시 가능.
+- SDD 번호는 `scripts/sdd new "한글 제목" <영문-슬러그> --worktree` 로만 발급한다(`specs/.sdd-counter` 폐기). 제목은 한글(spec 첫 줄 `# SDD-NNN — 제목`, PR `[SDD-NNN] 제목`).
+- 전체 규칙: `.claude/rules/branch-management.md`
