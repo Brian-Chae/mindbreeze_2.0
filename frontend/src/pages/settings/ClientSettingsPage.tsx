@@ -11,6 +11,7 @@ import {
 } from '../../lib/api/client-profile';
 import ClientAccountSection from '../../components/settings/ClientAccountSection';
 import ClientProfileSection from '../../components/settings/ClientProfileSection';
+import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
 
 export default function ClientSettingsPage() {
   const navigate = useNavigate();
@@ -158,6 +159,7 @@ export default function ClientSettingsPage() {
 
         {/* 푸터 */}
         <div className="text-center text-[12px] text-[#9B9B9B] py-4">
+          <p className="mb-1"><PrivacyPolicyLink className="inline-flex min-h-11 items-center underline underline-offset-2">개인정보 처리방침</PrivacyPolicyLink></p>
           MIND BREEZE 2.0 · Looxid Labs
         </div>
       </div>

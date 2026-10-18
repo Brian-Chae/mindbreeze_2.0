@@ -7,6 +7,7 @@ import { OtpInput } from '../../components/auth/OtpInput';
 import { requestOtp, verifyOtp } from '../../lib/api/auth';
 import { submitIndividualCounselorApplication } from '../../lib/api/signup';
 import { ApiError } from '../../lib/api/client';
+import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
 
 type Mode = 'select' | 'org' | 'individual';
 
@@ -338,7 +339,8 @@ export default function RegisterCounselorPage() {
               />
               <span>
                 (필수) 개인정보 수집·이용에 동의합니다. 입력한 정보는 신청 검토·연락 목적으로만
-                사용되며, 미승인 신청 정보는 접수 후 90일 이내 삭제됩니다.
+                사용되며, 미승인 신청 정보는 접수 후 90일 이내 삭제됩니다.{' '}
+                <PrivacyPolicyLink>개인정보 처리방침 보기</PrivacyPolicyLink>
               </span>
             </label>
 

@@ -7,6 +7,7 @@ import type { FlowBandMode, FlowPlace, FlowSize } from '../../../../lib/class/fl
 import { FlowButton, FlowCard, FlowH1, FlowSub } from '../shared/flow-primitives';
 import { MemberFlowFrame, type MemberFlowSteps } from './MemberFlowFrame';
 import { MethodChips } from './MethodChips';
+import { PrivacyPolicyLink } from '../../../legal/PrivacyPolicyLink';
 
 export interface NoticeStepViewProps {
   place: FlowPlace;
@@ -66,6 +67,7 @@ export function NoticeStepView({
         <>
           <FlowButton kind="primary" onClick={onNext}>확인하고 계속하기</FlowButton>
           <p className="fl-note fm-slot">리포트 반영은 클래스가 끝나기 전까지 바꿀 수 있어요.</p>
+          <p className="fl-note fm-slot"><PrivacyPolicyLink>개인정보 처리방침 보기</PrivacyPolicyLink></p>
         </>
       }
     >
@@ -116,7 +118,7 @@ export function NoticeStepView({
                 <p className="fm-failhint" role="status"><CircleAlert size={16} aria-hidden="true" /><span>연구 동의를 저장하지 못했어요. 미동의로 진행해요.</span></p>
               ) : null}
               <div className="fm-rlist">
-                <p className="fm-ft">동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년월일이 삭제 기한 없이 계속 보관돼요</p>
+                <p className="fm-ft">동의하면 비식별 처리한 뇌파·맥박·움직임 데이터와 지표, 암호화한 이름 ID·성별·생년·월이 삭제 기한 없이 계속 보관돼요</p>
                 <p className="fm-ft">이메일·전화번호·이름·녹음 내용은 보관하지 않아요</p>
                 <p className="fm-ft">동의하지 않아도 클래스에 참여할 수 있어요</p>
                 <p className="fm-ft">철회하려면 운영팀에 요청해 주세요</p>

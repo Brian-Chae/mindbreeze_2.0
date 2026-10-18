@@ -5,6 +5,7 @@ import { isNativeApp } from '../lib/native/platform';
 import { nativeGoogleIdToken } from '../lib/native/google';
 import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
+import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
 
 // SEC-05: 역할 시뮬레이션 패널은 DEV 빌드에서만 조건부 동적 import 한다.
@@ -193,7 +194,7 @@ export default function LoginPage() {
       <input id="google-consent" type="checkbox" checked={googleConsent} disabled={busy}
         onChange={(event) => setGoogleConsent(event.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50" />
-      <span>Google로 가입·로그인하면 <span className="underline">이용약관</span>, <span className="underline">개인정보 처리방침</span>, <span className="underline">민감정보 처리</span>에 동의합니다.</span>
+      <span>Google로 가입·로그인하면 <span className="underline">이용약관</span>, <PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>, <span className="underline">민감정보 처리</span>에 동의합니다.</span>
     </label>
   );
   const divider = <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />또는<span className="h-px flex-1 bg-white/30" /></div>;
@@ -249,6 +250,7 @@ export default function LoginPage() {
             {!isAdmin && <Link to="/forgot-password" className="text-center text-sm underline">비밀번호 찾기</Link>}
             {(loginRole === 'client' || loginRole === 'counselor') && <Link to={`/register?role=${loginRole}`} className="text-center text-sm font-semibold underline">{loginRole === 'client' ? '회원가입' : '상담사 가입'}</Link>}
             {isAdmin && <Link to="/login?role=client" className="text-center text-sm underline">일반 로그인으로 돌아가기</Link>}
+            <p className="text-center text-xs text-white/80"><PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink></p>
           </section>
           {DevRoleSimulationPanel && isRoleSimEnabled && (
             <Suspense fallback={null}>
