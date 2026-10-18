@@ -90,7 +90,7 @@
 | [ ] | CL-2 | `meditation` → 명상 클래스 `C1` (`participant_mode` 가 어느 쪽이든) | U | 통과 |
 | [ ] | CL-3 | `clinical`·`hypnosis`·`custom` + `participant_mode='group'` → 명상 클래스 `C2`, 세션 `type` 라벨은 그대로 | U | 통과 |
 | [ ] | CL-4 | `clinical`·`hypnosis`·`custom` + `participant_mode='one_on_one'` → 상담 관계(보관용) `R3`. **정원(`max_participants`)을 판정에 쓰지 않음**(정원 10 인 1:1 도 상담) | U | 통과 |
-| [ ] | CL-5 | 알 수 없는 `type` 또는 `participant_mode` → `X0`, 예외를 던지지 않고 결과로 반환 | U | 통과 |
+| [ ] | CL-5 | T0·C1 등 선행 규칙에 해당하지 않는 알 수 없는 `type` 또는 `participant_mode` → `X0`(템플릿·명상은 모드가 미상이어도 T0·C1 이 먼저 적용), 예외를 던지지 않고 결과로 반환 | U | 통과 |
 | [ ] | CL-6 | **순수성**: 같은 입력 → 같은 출력, 함수 모듈이 DB 세션·시계·난수·환경변수를 import 하지 않음(정적 검사). 입력 타입에 참여자 수·`custom_type_name` 이 없음 | U·S | 통과 |
 | [ ] | CL-7 | 규칙표 전수: plan §4.1 의 모든 행(T0, C1, C2, R3, X0)이 최소 1개 테스트로 커버 | U | 커버리지 100% (규칙 코드 기준) |
 

@@ -108,6 +108,7 @@ sessions: class_id XOR counseling_relationship_id  -- 비템플릿 세션, ck_se
 | 3 | `clinical`·`hypnosis`·`custom` 이고 `participant_mode = 'one_on_one'` | 상담 관계(호스트별 보관용, TD16) | `R3` |
 | — | 위에 해당 없음(알 수 없는 `type`/`participant_mode`) | 분류 불가 | `X0` — 세션 생성 롤백 + 서버 오류 로그(도달하면 버그) |
 
+- **`parent_kind` 허용 문자열**(분류 함수 반환값, 호출 측 P1 이 동일 상수를 사용): `none`(T0) · `meditation_class`(C1·C2) · `counseling_relationship`(R3) · `unclassifiable`(X0). 대소문자는 정규화하지 않고 엄격 비교한다(`"GROUP"` → X0). 템플릿·명상은 `participant_mode` 가 미상이어도 선행 규칙(T0·C1)이 먼저 적용된다.
 - 이전 규칙에서 **삭제한 것**: 활성 참여자 수 판정(`C3`·`R1`·`R2`), `custom` 키워드 판정(`needs_host_confirm`), `flags`. 근거: 이전 대상 소멸(D-55~57) + 생성 시점에 참여자가 없음.
 - `C2` 는 구 D-55("여러 명이면 명상 클래스, 유형 라벨 유지")의 취지를 **참여 방식으로 근사**한 plan 가정이다. 정원(`max_participants`)으로 그룹/1:1 을 판정하지 않는다(기본 정원이 10). `미확인`: 위 근사에 이의가 있는지 → Brian 이 plan 검토 시 확인(별도 결정 아님, 이의 없으면 이대로).
 - 단위 테스트: 위 표 5행(T0, C1, C2, R3, X0) + 경계(`custom_type_name` NULL, 알 수 없는 `type`/`participant_mode`) + 순수성(같은 입력 → 같은 출력, DB 접근 없음).
