@@ -18,6 +18,7 @@ from app.models.class_program import Class, ClassInstructor
 from app.models.counseling import CounselingRelationship, CounselingRelationshipCounselor
 from app.models.record import Report, SessionRecord
 from app.models.session import Session, SessionParticipant
+from app.services import class_read_service
 from tests.test_sdd015_class_code import _db, _promote, _register
 
 API = "/api/v1"
@@ -117,58 +118,105 @@ def seed_relationship(
     return rel
 
 
-# ───────────────────────── 세계 구성 ─────────────────────────
+# ───────────────────────── 세계 구성 (세션은 POST /sessions 실제 생성 경로로 만든다) ─────────────────────────
+
+
+def _when(days: float) -> str:
+    return (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+
+
+def post_session(client, headers: dict, **overrides) -> dict:
+    payload = {"type": "meditation", "duration_min": 30, "title": "명상", "participant_mode": "group", "max_participants": 10}
+    payload.update(overrides)
+    res = client.post(f"{API}/sessions", json=payload, headers=headers)
+    assert res.status_code == 201, res.text
+    return res.json()
+
+
+def _row(db, session_id: str) -> Session:
+    return db.query(Session).execution_options(include_hidden=True).filter(Session.id == _uid(session_id)).one()
+
+
+def _add_participant(db, session_id, user_id: str, **flags) -> SessionParticipant:
+    row = SessionParticipant(session_id=session_id, user_id=_uid(user_id), **flags)
+    db.add(row)
+    db.commit()
+    return row
 
 
 @pytest.fixture
 def world(client):
     users = {
-        "host_a": _register(client, "rd-host-a@test.com"),
-        "host_b": _register(client, "rd-host-b@test.com"),
-        "org_admin": _register(client, "rd-orgadmin@test.com"),
-        "platform_admin": _register(client, "rd-platadmin@test.com"),
-        "member_a": _register(client, "rd-member-a@test.com", role="client"),
-        "member_b": _register(client, "rd-member-b@test.com", role="client"),
-        "removed": _register(client, "rd-removed@test.com", role="client"),
-        "unrelated": _register(client, "rd-unrelated@test.com", role="client"),
+        "host_a": _register(client, "rd-host-a@example.com"),
+        "host_b": _register(client, "rd-host-b@example.com"),
+        "org_admin": _register(client, "rd-orgadmin@example.com"),
+        "platform_admin": _register(client, "rd-platadmin@example.com"),
+        "member_a": _register(client, "rd-member-a@example.com", role="client"),
+        "member_b": _register(client, "rd-member-b@example.com", role="client"),
+        "removed": _register(client, "rd-removed@example.com", role="client"),
+        "waitcancel": _register(client, "rd-waitcancel@example.com", role="client"),
+        "unrelated": _register(client, "rd-unrelated@example.com", role="client"),
     }
     _promote(users["org_admin"]["id"], "org_admin")
     _promote(users["platform_admin"]["id"], "platform_admin")
-
-    db = _db()
-    ha, hb = users["host_a"]["id"], users["host_b"]["id"]
+    ha, hb = users["host_a"], users["host_b"]
     ma, mb = users["member_a"]["id"], users["member_b"]["id"]
 
-    c1 = seed_class(db, host_id=ha, title="MBSR 봄", planned=4)
-    c1s1 = seed_session(db, host_id=ha, class_id=c1.id, seq=1, status="completed", scheduled_at=NOW - timedelta(days=7), participants=[ma])
-    c1s2 = seed_session(db, host_id=ha, class_id=c1.id, seq=2, status="scheduled", scheduled_at=NOW + timedelta(days=7), participants=[ma, users["removed"]["id"]])
-    c1s3 = seed_session(db, host_id=ha, class_id=c1.id, seq=3, status="cancelled", scheduled_at=NOW + timedelta(days=14))
-    c1hidden = seed_session(db, host_id=ha, class_id=c1.id, seq=4, hidden=True, scheduled_at=NOW + timedelta(days=21), participants=[ma])
-    removed_row = (
-        db.query(SessionParticipant)
-        .filter(SessionParticipant.session_id == c1s2.id, SessionParticipant.user_id == _uid(users["removed"]["id"]))
-        .first()
-    )
-    removed_row.removed_at = NOW
+    # 명상 클래스 C1: 첫 회차는 생성 경로, 2회차부터는 Phase 3 이전이라 시드 헬퍼로 같은 클래스에 더한다.
+    post_c1 = post_session(client, ha["h"], title="MBSR 봄", scheduled_at=_when(30))
+    # C2: 생성 직후 오픈 상태로 바꿔 열린 세션 사례로 쓴다.
+    post_c2 = post_session(client, hb["h"], title="걷기 명상", scheduled_at=_when(31))
+    # 숨김 클래스: 생성 후 세션과 클래스를 함께 숨긴다.
+    post_hidden = post_session(client, ha["h"], title="숨김 클래스", scheduled_at=_when(32))
+    # 상담: 같은 호스트의 두 번 생성은 같은 보관용 관계에 seq 1·2 로 들어간다.
+    post_r1 = post_session(client, ha["h"], type="clinical", participant_mode="one_on_one", max_participants=1, title="상담 1", scheduled_at=_when(40))
+    post_r2 = post_session(client, ha["h"], type="clinical", participant_mode="one_on_one", max_participants=1, title="상담 2", scheduled_at=_when(41))
+    post_template = client.post(f"{API}/sessions/{post_c2['id']}/save-as-template", json={}, headers=hb["h"])
+    assert post_template.status_code == 201, post_template.text
+
+    db = _db()
+    c1s1 = _row(db, post_c1["id"])
+    c1 = db.query(Class).filter(Class.id == c1s1.class_id).one()
+    c1.planned_session_count = 4
+    c1s1.status, c1s1.scheduled_at = "completed", NOW - timedelta(days=7)
+    db.commit()
+    c1s2 = seed_session(db, host_id=ha["id"], class_id=c1.id, seq=2, status="scheduled", scheduled_at=NOW + timedelta(days=7))
+    c1s3 = seed_session(db, host_id=ha["id"], class_id=c1.id, seq=3, status="cancelled", scheduled_at=NOW + timedelta(days=14))
+    c1hidden = seed_session(db, host_id=ha["id"], class_id=c1.id, seq=4, hidden=True, scheduled_at=NOW + timedelta(days=21))
+    _add_participant(db, c1s1.id, ma)
+    _add_participant(db, c1s2.id, ma)
+    _add_participant(db, c1hidden.id, ma)
+    _add_participant(db, c1s2.id, users["removed"]["id"], removed_at=NOW)
+    _add_participant(db, c1s2.id, users["waitcancel"]["id"], is_waitlisted=True, waitlist_cancelled_at=NOW)
+
+    c2s1 = _row(db, post_c2["id"])
+    c2 = db.query(Class).filter(Class.id == c2s1.class_id).one()
+    c2s1.status, c2s1.scheduled_at = "open", NOW + timedelta(hours=1)
+    db.commit()
+    _add_participant(db, c2s1.id, ma)
+    _add_participant(db, c2s1.id, users["org_admin"]["id"])
+
+    hidden_session = _row(db, post_hidden["id"])
+    c_hidden = db.query(Class).filter(Class.id == hidden_session.class_id).one()
+    hidden_session.hidden_at = c_hidden.hidden_at = NOW
     db.commit()
 
-    c2 = seed_class(db, host_id=hb, title="걷기 명상", planned=None, access_code="5678")
-    c2s1 = seed_session(db, host_id=hb, class_id=c2.id, seq=1, status="open", scheduled_at=NOW + timedelta(hours=1), participants=[ma])
-
-    c_hidden = seed_class(db, host_id=ha, title="숨김 클래스", hidden=True, access_code="9999")
-    seed_session(db, host_id=ha, class_id=c_hidden.id, seq=1, hidden=True)
-
-    rel = seed_relationship(db, counselor_id=ha)
-    r1 = seed_session(db, host_id=ha, relationship_id=rel.id, seq=1, status="completed", type_="clinical", scheduled_at=NOW - timedelta(days=3), participants=[mb])
-    r2 = seed_session(db, host_id=ha, relationship_id=rel.id, seq=2, status="scheduled", type_="clinical", scheduled_at=NOW + timedelta(days=2))
+    r1, r2 = _row(db, post_r1["id"]), _row(db, post_r2["id"])
+    rel = db.query(CounselingRelationship).filter(CounselingRelationship.id == r1.counseling_relationship_id).one()
+    assert r2.counseling_relationship_id == rel.id
+    r1.status, r1.scheduled_at = "completed", NOW - timedelta(days=3)
+    r2.scheduled_at = NOW + timedelta(days=2)
     db.add(SessionRecord(session_id=r1.id, status="completed", transcript="비밀-전사-본문-XYZ"))
     db.add(Report(session_id=r1.id, user_id=_uid(mb), type="client", content={"summary": "비밀-리포트-본문-XYZ"}, generation_status="ready"))
     db.commit()
+    _add_participant(db, r1.id, mb)
+    _add_participant(db, r1.id, users["platform_admin"]["id"])
 
-    template = seed_session(db, host_id=ha, seq=0, is_template=True, title="템플릿")
+    template = db.query(Session).filter(Session.id == _uid(post_template.json()["id"])).one()
 
     result = {
         "users": users,
+        "posts": {"c1": post_c1, "c2": post_c2, "r1": post_r1, "r2": post_r2},
         "c1": c1, "c1_sessions": [c1s1, c1s2, c1s3, c1hidden],
         "c2": c2, "c2_sessions": [c2s1],
         "c_hidden": c_hidden,
@@ -240,17 +288,22 @@ def test_RD15_인증_없으면_401(client):
 
 @pytest.mark.parametrize(
     "role_key",
-    ["host_a", "host_b", "org_admin", "platform_admin", "member_a", "member_b", "removed", "unrelated"],
+    ["host_a", "host_b", "org_admin", "platform_admin", "member_a", "member_b", "removed", "waitcancel", "unrelated"],
 )
 def test_RD2_새_API_로_도달하는_세션_집합은_GET_sessions_와_같다(client, world, role_key):
     headers = _h(world, role_key)
     assert _session_ids_from_parents(client, headers) == _session_ids_from_sessions_api(client, headers)
 
 
-def test_RD2_시드가_비어있지_않다는_확인(client, world):
-    assert len(_session_ids_from_sessions_api(client, _h(world, "host_a"))) == 5  # 명상 3(숨김 제외) + 상담 2, 템플릿 제외
-    assert _session_ids_from_sessions_api(client, _h(world, "unrelated")) == set()
-    assert _session_ids_from_sessions_api(client, _h(world, "org_admin")) == set()
+def test_RD2_시드가_역할별로_기대한_집합을_만든다(client, world):
+    def ids(key):
+        return _session_ids_from_sessions_api(client, _h(world, key))
+
+    assert len(ids("host_a")) == 5  # 명상 3(숨김 제외) + 상담 2, 템플릿·숨김 클래스 제외
+    assert ids("org_admin") == {str(world["c2_sessions"][0].id)}
+    assert ids("platform_admin") == {str(world["rel_sessions"][0].id)}
+    for key in ("unrelated", "removed", "waitcancel"):
+        assert ids(key) == set(), key
 
 
 # ───────────────────────── GET /classes ─────────────────────────
@@ -269,8 +322,9 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
     assert item["id"] == str(world["c1"].id)
     assert item["area"] == "meditation"
     assert item["planned_session_count"] == 4
-    assert item["progress"] == {"completed": 1, "total": 4}
-    assert item["session_count"] == 3  # 숨김 회차 제외
+    # 계획 4회 중 취소 1회는 분모에서 빠진다(RD-10)
+    assert item["progress"] == {"completed": 1, "total": 3}
+    assert item["session_count"] == 3  # 숨김 회차 제외, 취소 회차는 포함
     assert item["has_open_session"] is False
     nxt = item["next_session"]
     assert nxt["id"] == str(world["c1_sessions"][1].id) and nxt["seq"] == 2
@@ -278,9 +332,9 @@ def test_클래스_목록_호스트_시점_필드와_진행률(client, world):
     assert nxt["host"]["id"] == world["users"]["host_a"]["id"]
 
 
-def test_클래스_목록_계획_횟수_없으면_분모는_취소_제외_가시_회차(client, world):
+def test_클래스_목록_생성_경로가_만든_클래스는_계획_1회이고_열린_세션을_표시(client, world):
     item = client.get(f"{API}/classes", headers=_h(world, "host_b")).json()["classes"][0]
-    assert item["planned_session_count"] is None
+    assert item["planned_session_count"] == 1
     assert item["progress"] == {"completed": 0, "total": 1}
     assert item["has_open_session"] is True
     assert item["next_session"]["id"] == str(world["c2_sessions"][0].id)
@@ -332,7 +386,7 @@ def test_클래스_상세_호스트_시점은_강사와_코드를_포함(client,
     for key in ("location_type", "location_address", "linkband_mode", "record_audio", "capacity", "participant_mode", "default_duration_min"):
         assert key in body
     host_view = body["host_view"]
-    assert host_view["access_code"] == "1234"
+    assert host_view["access_code"] == world["posts"]["c1"]["access_code"] and host_view["access_code"]
     assert [i["user_id"] for i in host_view["instructors"]] == [world["users"]["host_a"]["id"]]
     assert set(host_view["instructors"][0]) == {"user_id", "name", "role", "status"}
 
@@ -343,36 +397,48 @@ def test_RD6_회원_시점은_코드와_내부_필드가_없다(client, world):
     body = res.json()
     assert body["host_view"] is None
     text = res.text
-    assert "1234" not in text
+    assert world["posts"]["c1"]["access_code"] not in text
     for forbidden in ("access_code", "organization_attribution_known", "email", "legacy_access_code", "created_by"):
         assert forbidden not in text.replace('"host_view":null', ""), forbidden
 
 
-def test_RD3_클래스_접근_오류는_세션_상세와_같은_상태코드와_메시지(client, world):
+def test_RD3_클래스_접근_불가와_미존재는_같은_404(client, world):
+    # 존재 여부 비노출(plan §7.1): 접근 불가·미존재·숨김이 바이트 단위로 같은 응답이다. 기존 /sessions 는 바꾸지 않는다.
     outsider = _h(world, "unrelated")
-    sid = world["c1_sessions"][0].id
-    session_res = client.get(f"{API}/sessions/{sid}", headers=outsider)
-    class_res = client.get(f"{API}/classes/{world['c1'].id}", headers=outsider)
-    assert (class_res.status_code, class_res.json()) == (session_res.status_code, session_res.json()) == (403, {"detail": "접근 권한이 없습니다"})
-
     missing = uuid.uuid4()
-    s404 = client.get(f"{API}/sessions/{missing}", headers=outsider)
-    c404 = client.get(f"{API}/classes/{missing}", headers=outsider)
-    assert (c404.status_code, c404.json()) == (s404.status_code, s404.json())
+    paths = (
+        lambda cid: f"{API}/classes/{cid}",
+        lambda cid: f"{API}/classes/{cid}/sessions",
+    )
+    for build in paths:
+        responses = [
+            client.get(build(world["c1"].id), headers=outsider),      # 존재하지만 접근 불가
+            client.get(build(missing), headers=outsider),             # 미존재
+            client.get(build(world["c_hidden"].id), headers=_h(world, "host_a")),  # 숨김
+        ]
+        assert {(r.status_code, r.text) for r in responses} == {(404, responses[0].text)}, [(r.status_code, r.text) for r in responses]
+        assert responses[0].json() == {"detail": "세션을 찾을 수 없습니다"}
+    # 형식 오류는 존재 여부와 무관하므로 400 을 유지한다.
+    assert client.get(f"{API}/classes/not-a-uuid", headers=outsider).status_code == 400
 
-    s400 = client.get(f"{API}/sessions/not-a-uuid", headers=outsider)
-    c400 = client.get(f"{API}/classes/not-a-uuid", headers=outsider)
-    assert (c400.status_code, c400.json()) == (s400.status_code, s400.json())
-    assert client.get(f"{API}/classes/{missing}/sessions", headers=outsider).status_code == 404
 
-
-def test_RD3_상담_접근_오류도_같은_상태코드와_메시지(client, world):
+def test_RD3_기존_세션_상세_응답은_변경되지_않는다(client, world):
     outsider = _h(world, "unrelated")
-    session_res = client.get(f"{API}/sessions/{world['rel_sessions'][0].id}", headers=outsider)
-    res = client.get(f"{API}/counseling/{world['rel'].id}", headers=outsider)
-    assert (res.status_code, res.json()) == (session_res.status_code, session_res.json())
-    missing = uuid.uuid4()
-    assert client.get(f"{API}/counseling/{missing}", headers=outsider).status_code == 404
+    res = client.get(f"{API}/sessions/{world['c1_sessions'][0].id}", headers=outsider)
+    assert (res.status_code, res.json()) == (403, {"detail": "접근 권한이 없습니다"})
+    assert client.get(f"{API}/sessions/{uuid.uuid4()}", headers=outsider).status_code == 404
+    assert client.get(f"{API}/sessions/not-a-uuid", headers=outsider).status_code == 400
+
+
+def test_RD3_상담_접근_불가와_미존재는_같은_404(client, world):
+    outsider = _h(world, "unrelated")
+    responses = [
+        client.get(f"{API}/counseling/{world['rel'].id}", headers=outsider),
+        client.get(f"{API}/counseling/{uuid.uuid4()}", headers=outsider),
+        client.get(f"{API}/counseling/{world['rel'].id}", headers=_h(world, "member_a")),  # 관계는 있으나 이 사용자의 회차 없음
+    ]
+    assert {(r.status_code, r.text) for r in responses} == {(404, responses[0].text)}
+    assert responses[0].json() == {"detail": "세션을 찾을 수 없습니다"}
     assert client.get(f"{API}/counseling/not-a-uuid", headers=outsider).status_code == 400
 
 
@@ -392,11 +458,28 @@ def test_RD4_숨김_회차는_회차_목록에서_제외(client, world):
     assert str(world["c1_sessions"][3].id) not in res.text
 
 
-def test_RD5_제거된_참여자는_회원_시점에서_제외(client, world):
-    headers = _h(world, "removed")
-    assert client.get(f"{API}/classes", headers=headers).json()["total"] == 0
-    assert client.get(f"{API}/classes/{world['c1'].id}", headers=headers).status_code == 403
-    assert client.get(f"{API}/classes/{world['c1'].id}/sessions", headers=headers).status_code == 403
+def test_RD5_제거_대기취소_참여자는_회원_시점에서_제외(client, world):
+    for key in ("removed", "waitcancel"):
+        headers = _h(world, key)
+        assert client.get(f"{API}/classes", headers=headers).json()["total"] == 0, key
+        assert client.get(f"{API}/classes/{world['c1'].id}", headers=headers).status_code == 404, key
+        assert client.get(f"{API}/classes/{world['c1'].id}/sessions", headers=headers).status_code == 404, key
+        assert client.get(f"{API}/counseling", headers=headers).json()["total"] == 0, key
+
+
+def test_RD5_참여자_행이_되살아나면_다시_보인다(client, world):
+    db = _db()
+    try:
+        row = db.query(SessionParticipant).execution_options(include_removed=True).filter(
+            SessionParticipant.user_id == _uid(world["users"]["waitcancel"]["id"])
+        ).one()
+        row.waitlist_cancelled_at = None
+        db.commit()
+    finally:
+        db.close()
+    headers = _h(world, "waitcancel")
+    assert client.get(f"{API}/classes", headers=headers).json()["total"] == 1
+    assert _session_ids_from_parents(client, headers) == _session_ids_from_sessions_api(client, headers) != set()
 
 
 def test_클래스_회차_목록_필드와_순서(client, world):
@@ -464,11 +547,26 @@ def test_RD7_어떤_응답에도_본문이_없다(client, world):
                 assert word not in res.text, (who, path, word)
 
 
-def test_RD8_센터_관리자는_현행_가시_범위를_넘지_않는다(client, world):
-    headers = _h(world, "org_admin")
-    assert client.get(f"{API}/counseling", headers=headers).json()["total"] == 0
-    assert client.get(f"{API}/classes", headers=headers).json()["total"] == 0
-    assert client.get(f"{API}/counseling/{world['rel'].id}", headers=headers).status_code == 403
+def test_RD8_관리자_응답은_회원_시점과_같이_마스킹된다(client, world):
+    # org_admin 은 C2 의 참여자, platform_admin 은 상담 1회차의 참여자일 뿐이다 — 관리자라는 이유로 더 보이지 않는다.
+    org = _h(world, "org_admin")
+    classes = client.get(f"{API}/classes", headers=org).json()
+    assert [c["id"] for c in classes["classes"]] == [str(world["c2"].id)]
+    detail = client.get(f"{API}/classes/{world['c2'].id}", headers=org)
+    assert detail.status_code == 200 and detail.json()["host_view"] is None
+    code = world["posts"]["c2"]["access_code"]
+    assert code and code not in detail.text and "instructors" not in detail.text
+    assert client.get(f"{API}/classes/{world['c1'].id}", headers=org).status_code == 404
+    assert client.get(f"{API}/counseling", headers=org).json()["total"] == 0
+    assert client.get(f"{API}/counseling/{world['rel'].id}", headers=org).status_code == 404
+
+    platform = _h(world, "platform_admin")
+    assert client.get(f"{API}/classes", headers=platform).json()["total"] == 0
+    rel = client.get(f"{API}/counseling/{world['rel'].id}", headers=platform)
+    assert rel.status_code == 200
+    assert [x["seq"] for x in rel.json()["sessions"]] == [1]  # 참여한 회차만
+    assert rel.json()["sessions"][0]["report_status"] is None  # 타인의 리포트 진행 상태는 보이지 않는다
+    assert "비밀" not in rel.text
 
 
 def test_상담_비보관용_관계의_내담자_표시는_상담사와_본인에게만(client, world):
@@ -513,19 +611,24 @@ def _count_queries(db, call) -> int:
 def test_RD12_목록_질의_수는_항목_수에_비례하지_않는다(client, world):
     db = _db()
     host = world["users"]["host_a"]
+    member = world["users"]["member_a"]["id"]
+    counter = {"n": 0}
     try:
         def make(n: int) -> None:
-            for i in range(n):
-                c = seed_class(db, host_id=host["id"], title=f"부하 {i}", access_code=None)
-                for seq in (1, 2):
-                    seed_session(db, host_id=host["id"], class_id=c.id, seq=seq, scheduled_at=NOW + timedelta(days=seq), participants=[world["users"]["member_a"]["id"]])
-                r = seed_relationship(db, counselor_id=host["id"], placeholder=False)
-                seed_session(db, host_id=host["id"], relationship_id=r.id, seq=1, type_="clinical")
+            for _ in range(n):
+                counter["n"] += 1
+                body = post_session(client, host["h"], title=f"부하 {counter['n']}", scheduled_at=_when(100 + counter["n"]))
+                first = _row(db, body["id"])
+                _add_participant(db, first.id, member)
+                second = seed_session(db, host_id=host["id"], class_id=first.class_id, seq=2, scheduled_at=NOW + timedelta(days=200 + counter["n"]), participants=[member])
+                assert second.class_id == first.class_id
+                rel = seed_relationship(db, counselor_id=host["id"], placeholder=False)
+                seed_session(db, host_id=host["id"], relationship_id=rel.id, seq=1, type_="clinical")
 
-        make(2)
         def _get(path: str) -> None:
             assert client.get(f"{API}{path}", headers=host["h"]).status_code == 200
 
+        make(2)
         small = (_count_queries(db, lambda: _get("/classes")), _count_queries(db, lambda: _get("/counseling")))
         make(20)
         large = (_count_queries(db, lambda: _get("/classes")), _count_queries(db, lambda: _get("/counseling")))
@@ -537,36 +640,185 @@ def test_RD12_목록_질의_수는_항목_수에_비례하지_않는다(client, 
 
 # ───────────────────────── R4: SessionResponse 가산 필드 ─────────────────────────
 
-
-def test_세션_응답_가산_필드_명상(client, world):
-    sid = world["c1_sessions"][1].id
-    body = client.get(f"{API}/sessions/{sid}", headers=_h(world, "host_a")).json()
-    assert body["class_id"] == str(world["c1"].id)
-    assert body["class_title"] == "MBSR 봄"
-    assert body["seq"] == 2
-    assert body["area"] == "meditation"
+PRESERVED_KEYS = (
+    "id", "run_id", "type", "status", "host_id", "title", "duration_min", "max_participants",
+    "participant_mode", "location_type", "access_code", "scheduled_at", "linkband_mode", "is_template",
+)
 
 
-def test_세션_응답_가산_필드_상담과_목록(client, world):
-    rows = {s["id"]: s for s in client.get(f"{API}/sessions", headers=_h(world, "host_a")).json()["sessions"]}
-    rel_row = rows[str(world["rel_sessions"][0].id)]
-    assert rel_row["area"] == "counseling" and rel_row["seq"] == 1
-    assert rel_row["class_id"] is None and rel_row["class_title"] is None
-    class_row = rows[str(world["c1_sessions"][0].id)]
-    assert class_row["area"] == "meditation" and class_row["class_title"] == "MBSR 봄"
-
-
-def test_세션_응답_가산_필드_부모_없는_세션은_전부_null(client, world):
+def test_R4_POST_명상_생성_응답의_가산_필드는_정확한_값(client, world):
     host = world["users"]["host_a"]
-    res = client.post(f"{API}/sessions", json={"type": "meditation", "duration_min": 30, "title": "부모 없음"}, headers=host["h"])
-    assert res.status_code == 201, res.text
-    body = res.json()
+    body = post_session(client, host["h"], title="가산 확인", scheduled_at=_when(60))
+    db = _db()
+    try:
+        row = _row(db, body["id"])
+        assert row.class_id is not None
+        assert (body["class_id"], body["class_title"], body["seq"], body["area"]) == (
+            str(row.class_id), "가산 확인", 1, "meditation",
+        )
+    finally:
+        db.close()
+
+
+def test_R4_POST_상담_생성_응답의_가산_필드는_정확한_값(client, world):
+    host = world["users"]["host_b"]
+    first = post_session(client, host["h"], type="clinical", participant_mode="one_on_one", max_participants=1, scheduled_at=_when(70))
+    second = post_session(client, host["h"], type="hypnosis", participant_mode="one_on_one", max_participants=1, scheduled_at=_when(71))
+    for body, seq in ((first, 1), (second, 2)):
+        assert (body["class_id"], body["class_title"], body["seq"], body["area"]) == (None, None, seq, "counseling")
+    assert client.get(f"{API}/counseling", headers=host["h"]).json()["relationships"][0]["session_count"] == 2
+
+
+def test_R4_POST_응답은_GET_상세와_기존_필드_값이_같고_가산_필드도_일치(client, world):
+    host = world["users"]["host_a"]
+    created = post_session(client, host["h"], title="보존 확인", scheduled_at=_when(80), max_participants=7)
+    fetched = client.get(f"{API}/sessions/{created['id']}", headers=host["h"]).json()
+    assert created["title"] == "보존 확인" and created["max_participants"] == 7 and created["status"] == "scheduled"
+    assert created["host_id"] == host["id"] and created["type"] == "meditation"
+    for key in PRESERVED_KEYS:
+        assert created[key] == fetched[key], key
     for key in ("class_id", "class_title", "seq", "area"):
-        assert key in body
+        assert created[key] == fetched[key], key
+        assert created[key] is not None, key
+    assert fetched["class_title"] == "보존 확인" and fetched["seq"] == 1 and fetched["area"] == "meditation"
 
 
-def test_세션_응답_기존_필드는_바뀌지_않는다(client, world):
-    body = client.get(f"{API}/sessions/{world['c1_sessions'][1].id}", headers=_h(world, "host_a")).json()
-    for key in ("id", "run_id", "type", "status", "host_id", "host_name", "access_code", "participants", "waitlist_count", "created_at"):
-        assert key in body
-    assert json.dumps(body, default=str)  # 직렬화 가능
+def test_R4_목록_응답에도_정확한_가산_값(client, world):
+    rows = {s["id"]: s for s in client.get(f"{API}/sessions", headers=_h(world, "host_a")).json()["sessions"]}
+    class_row = rows[str(world["c1_sessions"][1].id)]
+    assert (class_row["class_id"], class_row["class_title"], class_row["seq"], class_row["area"]) == (
+        str(world["c1"].id), "MBSR 봄", 2, "meditation",
+    )
+    rel_row = rows[str(world["rel_sessions"][1].id)]
+    assert (rel_row["class_id"], rel_row["class_title"], rel_row["seq"], rel_row["area"]) == (None, None, 2, "counseling")
+
+
+def test_R4_다른_엔드포인트_응답에도_가산_필드가_붙는다(client, world):
+    host = world["users"]["host_a"]
+    sid = post_session(client, host["h"], title="수정 대상", scheduled_at=_when(95))["id"]
+    updated = client.put(f"{API}/sessions/{sid}", json={"notes": "메모"}, headers=host["h"])
+    assert updated.status_code == 200, updated.text
+    assert (updated.json()["class_title"], updated.json()["seq"], updated.json()["area"]) == ("수정 대상", 1, "meditation")
+    duplicated = client.post(f"{API}/sessions/{sid}/duplicate", json={"scheduled_at": _when(90)}, headers=host["h"])
+    assert duplicated.status_code == 201, duplicated.text
+    assert duplicated.json()["area"] == "meditation" and duplicated.json()["class_id"] != updated.json()["class_id"]
+
+
+def test_R4_템플릿_응답은_부모가_없어_가산_필드가_전부_null(client, world):
+    template = client.post(
+        f"{API}/sessions/{world['posts']['c2']['id']}/save-as-template", json={}, headers=_h(world, "host_b")
+    ).json()
+    assert template["is_template"] is True
+    assert (template["class_id"], template["class_title"], template["seq"], template["area"]) == (None, None, None, None)
+
+
+# ───────────────────────── 진행률 · 다음 회차 (RD-10) ─────────────────────────
+
+
+def _make_class(db, host_id: str, title: str, planned: int | None, specs: list[tuple[str, datetime | None]]) -> Class:
+    cls = seed_class(db, host_id=host_id, title=title, planned=planned, access_code=None)
+    for seq, (status, at) in enumerate(specs, start=1):
+        seed_session(db, host_id=host_id, class_id=cls.id, seq=seq, status=status, scheduled_at=at, participants=[])
+    return cls
+
+
+def _summary(db, host_id: str, title: str, now: datetime) -> dict:
+    items, _ = class_read_service.list_classes(host_id, db, now=now)
+    return next(i for i in items if i["title"] == title)
+
+
+def test_RD10_계획_횟수가_있어도_취소_회차는_분모에서_제외(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        _make_class(db, host, "계획 있음 취소 2", 8, [("completed", NOW - timedelta(days=2)), ("cancelled", None), ("cancelled", None), ("scheduled", NOW + timedelta(days=1))])
+        _make_class(db, host, "계획 있음 취소 없음", 8, [("completed", NOW - timedelta(days=2)), ("scheduled", NOW + timedelta(days=1))])
+        assert _summary(db, host, "계획 있음 취소 2", NOW)["progress"] == {"completed": 1, "total": 6}
+        assert _summary(db, host, "계획 있음 취소 없음", NOW)["progress"] == {"completed": 1, "total": 8}
+    finally:
+        db.close()
+
+
+def test_RD10_계획_횟수가_없으면_분모는_취소_제외_가시_회차(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        _make_class(db, host, "계획 없음 취소 1", None, [("completed", NOW - timedelta(days=2)), ("cancelled", None), ("scheduled", NOW + timedelta(days=1))])
+        assert _summary(db, host, "계획 없음 취소 1", NOW)["progress"] == {"completed": 1, "total": 2}
+    finally:
+        db.close()
+
+
+def test_RD10_취소가_계획보다_많아도_분모는_음수가_되지_않는다(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        _make_class(db, host, "과다 취소", 1, [("cancelled", None), ("cancelled", None)])
+        assert _summary(db, host, "과다 취소", NOW)["progress"] == {"completed": 0, "total": 0}
+    finally:
+        db.close()
+
+
+def test_RD10_다음_회차는_순번이_아니라_가장_가까운_미래_일정(client, world):
+    # 순번 역전: seq 2 가 seq 3 보다 늦은 일정이다.
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        cls = _make_class(db, host, "순번 역전", None, [("completed", NOW - timedelta(days=1)), ("scheduled", NOW + timedelta(days=10)), ("scheduled", NOW + timedelta(days=3))])
+        nxt = _summary(db, host, "순번 역전", NOW)["next_session"]
+        assert nxt["seq"] == 3
+        assert nxt["id"] == str(db.query(Session).filter(Session.class_id == cls.id, Session.seq == 3).one().id)
+    finally:
+        db.close()
+
+
+def test_RD10_다음_회차는_취소_완료_회차와_과거_일정을_건너뛴다(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        _make_class(db, host, "건너뛰기", None, [
+            ("cancelled", NOW + timedelta(days=1)),       # 취소 — 가장 가깝지만 제외
+            ("completed", NOW + timedelta(days=2)),       # 완료 — 제외
+            ("scheduled", NOW - timedelta(days=1)),       # 과거 미종료 — 후보 아님
+            ("scheduled", NOW + timedelta(days=5)),
+            ("scheduled", None),                          # 일정 미정 — 후보 아님
+        ])
+        assert _summary(db, host, "건너뛰기", NOW)["next_session"]["seq"] == 4
+    finally:
+        db.close()
+
+
+def test_RD10_다음_회차_시각_경계는_현재_시각을_포함하고_1초_전은_제외(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        boundary = datetime(2030, 1, 1, 9, 0, 0, tzinfo=timezone.utc)
+        _make_class(db, host, "경계 정각", None, [("scheduled", boundary)])
+        _make_class(db, host, "경계 1초 전", None, [("scheduled", boundary - timedelta(seconds=1))])
+        assert _summary(db, host, "경계 정각", boundary)["next_session"]["seq"] == 1
+        assert _summary(db, host, "경계 1초 전", boundary)["next_session"] is None
+    finally:
+        db.close()
+
+
+def test_RD10_같은_일정이면_순번이_작은_회차가_다음_회차(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        at = NOW + timedelta(days=4)
+        _make_class(db, host, "동시각", None, [("scheduled", at), ("scheduled", at)])
+        assert _summary(db, host, "동시각", NOW)["next_session"]["seq"] == 1
+    finally:
+        db.close()
+
+
+def test_RD10_열린_세션_유무는_open_과_in_progress(client, world):
+    db = _db()
+    try:
+        host = world["users"]["host_a"]["id"]
+        _make_class(db, host, "진행 중", None, [("in_progress", NOW - timedelta(minutes=5))])
+        _make_class(db, host, "대기 중", None, [("scheduled", NOW + timedelta(days=1))])
+        assert _summary(db, host, "진행 중", NOW)["has_open_session"] is True
+        assert _summary(db, host, "대기 중", NOW)["has_open_session"] is False
+    finally:
+        db.close()

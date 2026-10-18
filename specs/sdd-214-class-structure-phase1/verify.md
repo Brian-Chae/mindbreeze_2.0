@@ -33,7 +33,7 @@
 | [ ] | G3 | `tsc -p tsconfig.app.json` 0 · `eslint src/` 0 · `npm run build` 성공 | S | 0 |
 | [ ] | G4 | **기존 테이블 변경 한정**: `sessions`·`session_participants`·`reports` 에 대한 마이그레이션 문장은 컬럼 추가·인덱스·FK·CHECK·UNIQUE 추가뿐. **기존 컬럼** 삭제·개명·타입 변경·NOT NULL 승격·기본값 변경 0. 053~055 `upgrade()` 에 `DROP/DELETE/TRUNCATE/UPDATE` 0 | S | 충족 |
 | [ ] | G5 | **변경 최소화**: `git diff --name-only <기준 SHA>..HEAD` 가 plan §9 소유 파일 + 신규 테스트·골든·픽스처 + `specs/sdd-214-…/` + `backend/scripts/reset_dev_data.py`(+서비스) 안에만 있다. 엔진(진행·입장·뇌파·녹음/STT/요약·리포트 *생성*) 파일 수정 0, `report_service.py` 승인 경로 수정 0(TD10), `models/user.py`·`users` 마이그레이션 0(U2). **구 호환 항목이던 `class_code_service`·`class_code_reissue`·`code_service`·`reminder_service`·`org_public_service`·`dashboard_service`·`session_email_invite_service`·`notification_service`·`retention_sweep_service` 수정 0** | S | 범위 밖 파일 0 |
-| [ ] | G6 | **사용자 노출 문구 변경 0**: 서버·프론트 사용자 노출 문구 리터럴 diff 0 (에러 `detail` 포함). 읽기 API 신규 에러 문구는 기존 세션 API 와 같은 문구 재사용 | S | 변경 0 |
+| [ ] | G6 | **사용자 노출 문구 변경 0**: 서버·프론트 사용자 노출 문구 리터럴 diff 0 (에러 `detail` 포함). 읽기 API 의 404 는 기존 세션 API 의 문구(`세션을 찾을 수 없습니다`)를 재사용하고, 400 은 `잘못된 ID 형식입니다` 를 재사용한다. 신규 API 는 403 을 쓰지 않는다(RD-3 근거, 2026-10-18) | S | 변경 0 |
 | [ ] | G7 | **안전망 불변**: SDD-211 계약 골든(`tests/contract/golden/*`)·특성화 테스트는 **구현 커밋에서 수정 0**(예외: 가산 필드로 인한 갱신이 불가피하면 `breaking_exemptions.json` 절차, 변경 이력에 기록). 가산 전용 규칙은 유지(사유: 프론트 무변경 회귀망, plan §6.2) | S | 수정 0 또는 승인된 예외 |
 | [ ] | G8 | `any` 사용 0(신규·수정 TS), 객체·배열 직접 변경 0, 주석은 한글·WHY 만, 파일명 kebab-case/snake_case | S | 0 |
 | [ ] | G9 | **비밀·개인정보 0**: 신규·수정 파일(절차서·보고·픽스처·로그 샘플 포함)에 이메일(`@example.com` 제외. 단 시드 계정 `counselor@test.com`·`client@test.com` 명칭은 허용)·전화·UUID 실값·토큰·**비밀번호**·DB 접속 문자열·IP·라벨 원문 0건 | S | grep 0건 |
@@ -129,7 +129,7 @@
 |---|---|---|---|---|
 | [ ] | RD-1 | 5개 엔드포인트 존재·응답 모델: `GET /classes`·`/classes/{id}`·`/classes/{id}/sessions`·`/counseling`·`/counseling/{id}`. OpenAPI 에 등록 | B | 5/5 |
 | [ ] | RD-2 | **동치성**: 역할 5종(호스트 상담사·타 상담사·센터 관리자·플랫폼 관리자·참여 회원, 무관한 회원 포함) × 시드(새 생성 경로로 생성)에서, 새 API 로 도달 가능한 세션 집합의 합 == 같은 사용자의 `GET /sessions` 목록 집합 (넓히지도 좁히지도 않음) | B | 불일치 0 |
-| [ ] | RD-3 | 타 호스트의 클래스/관계 id 접근 → 현행 세션 상세와 **같은 상태코드·메시지**(존재 여부 비노출) | B | 일치 |
+| [ ] | RD-3 | 신규 API(클래스 상세·회차 목록·상담 상세)에서 **미존재·숨김·접근 불가가 바이트 단위로 같은 404**(존재 여부 비노출, plan §7.1), 형식 오류만 400. 기존 `/sessions/{id}` 의 403/404 응답은 **변경하지 않는다**(별도 회귀 테스트). 근거: 현행 세션 상세의 403/404 구분은 존재 여부를 노출하므로 신규 API 에는 이어받지 않기로 함(2026-10-18 리뷰 반영, Brian 지시) | B | 일치 |
 | [ ] | RD-4 | 숨김 클래스·숨김 세션은 목록·상세·회차 목록에서 제외 | B | 통과 |
 | [ ] | RD-5 | 제거/대기취소 참여자는 회원 시점에서 제외. 회원 시점 가시 범위는 `session_participants` 기준(`class_members` 는 비어 있음) | B | 통과 |
 | [ ] | RD-6 | **회원 시점 마스킹**: 타 참여자 정보·코드·`organization_attribution_known` 가 응답에 없음(`origin` 컬럼을 남기면 그것도 제외, TD20). 호스트 시점에만 포함 | B | 통과 |
