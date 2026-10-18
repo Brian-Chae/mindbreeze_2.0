@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     pipeline_alert_queue_len: int = 20
     # SDD-212 TD6: CloudWatch 사용자 지정 지표 게시. AWS 권한 확인·승인 전에는 꺼 둔다(꺼져 있으면 로그만 출력).
     pipeline_metrics_cloudwatch_enabled: bool = False
+    # SDD-212 TD7: 회원 '리뷰 중' 에 생성 지연 보조 문구를 붙이는 기준(세션 종료 후 경과, 초). D-3 평상시 목표 15분.
+    pipeline_report_delay_notice_seconds: int = 15 * 60
 
     # JWT — 기본값 없음. 미설정 시 기동 중단(main.py lifespan fail-fast).
     jwt_secret_key: str = ""

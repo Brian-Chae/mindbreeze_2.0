@@ -85,7 +85,7 @@ EMPTY_CONTENT: JsonDict = {
     "markers": [],
 }
 ALL_KEYS: frozenset[str] = frozenset(
-    set(NULL_KEYS) | set(PRESERVED_KEYS) | set(META_KEYS) | {"content", "in_review"}
+    set(NULL_KEYS) | set(PRESERVED_KEYS) | set(META_KEYS) | {"content", "in_review", "in_review_delayed"}
 )
 
 # 키별 허용 타입 태그 (구 앱 호환: 마스킹 전후 타입 불변)
@@ -118,6 +118,8 @@ ALLOWED_TAGS: dict[str, set[str]] = {
     "is_guest": {"bool", "null"},
     "content": {"object"},
     "in_review": {"bool"},
+    # SDD-212: 생성 지연 안내 가산 필드(비내용 메타 — 마스킹 대상 아님)
+    "in_review_delayed": {"bool"},
 }
 
 # sentinel 접두 — 승인 전 영구 비공개 / 승인 후 공개 / 처음부터 공개
