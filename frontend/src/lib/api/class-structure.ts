@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
 import type { ClassId, RelationshipId } from '../class-structure/read-model';
 
 export interface UserBriefDto { id: string; name: string | null }
@@ -36,20 +36,47 @@ function query(params?: ListParams): string {
   if (params?.limit !== undefined) search.set('limit', String(params.limit));
   return search.size ? `?${search.toString()}` : '';
 }
+type ResponseKind = 'classes' | 'class' | 'sessions' | 'counseling' | 'relationship';
+const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+const identified = (value: unknown): value is Record<string, unknown> => object(value) && typeof value.id === 'string' && value.id.trim().length > 0;
+function validateResponse(value: unknown, kind: ResponseKind): void {
+  const invalid = () => { throw new ApiError(502, '응답을 확인할 수 없습니다.', null); };
+  if (!object(value)) return invalid();
+  let rows: unknown[];
+  if (kind === 'class' || kind === 'relationship') {
+    if (!identified(value)) return invalid();
+    rows = [value];
+    if (kind === 'relationship') {
+      if (!Array.isArray(value.sessions)) return invalid();
+      rows = rows.concat(value.sessions);
+    }
+  } else {
+    const key = kind === 'counseling' ? 'relationships' : kind;
+    if (!Array.isArray(value[key]) || typeof value.total !== 'number' || !Number.isInteger(value.total) || value.total < 0) return invalid();
+    rows = value[key] as unknown[];
+  }
+  for (const row of rows) {
+    if (!identified(row)) return invalid();
+    for (const key of ['next_session', 'latest_session']) {
+      if (row[key] != null && !identified(row[key])) return invalid();
+    }
+  }
+}
+
 /** 공통 클라이언트의 인증 처리를 유지하고 취소 이후 결과를 폐기한다. */
-function read<T>(path: string, signal?: AbortSignal): Promise<T> {
+function read<T>(path: string, kind: ResponseKind, signal?: AbortSignal): Promise<T> {
   if (signal?.aborted) return Promise.reject(new DOMException('요청 취소', 'AbortError'));
   return new Promise<T>((resolve, reject) => {
     const abort = () => reject(new DOMException('요청 취소', 'AbortError'));
     signal?.addEventListener('abort', abort, { once: true });
-    apiClient.get<T>(path).then(
+    apiClient.get<unknown>(path).then((data) => { validateResponse(data, kind); return data as T; }).then(
       (data) => { if (!signal?.aborted) resolve(data); },
       (error: unknown) => { if (!signal?.aborted) reject(error); },
     ).finally(() => signal?.removeEventListener('abort', abort));
   });
 }
-export const getClasses = (params?: ListParams, signal?: AbortSignal): Promise<ClassListResponse> => read(`/classes${query(params)}`, signal);
-export const getClass = (id: ClassId, signal?: AbortSignal): Promise<ClassDetailDto> => read(`/classes/${encodeURIComponent(id)}`, signal);
-export const getClassSessions = (id: ClassId, signal?: AbortSignal): Promise<ClassSessionsResponse> => read(`/classes/${encodeURIComponent(id)}/sessions`, signal);
-export const getCounseling = (params?: ListParams, signal?: AbortSignal): Promise<CounselingListResponse> => read(`/counseling${query(params)}`, signal);
-export const getCounselingDetail = (id: RelationshipId, signal?: AbortSignal): Promise<CounselingDetailDto> => read(`/counseling/${encodeURIComponent(id)}`, signal);
+export const getClasses = (params?: ListParams, signal?: AbortSignal): Promise<ClassListResponse> => read(`/classes${query(params)}`, 'classes', signal);
+export const getClass = (id: ClassId, signal?: AbortSignal): Promise<ClassDetailDto> => read(`/classes/${encodeURIComponent(id)}`, 'class', signal);
+export const getClassSessions = (id: ClassId, signal?: AbortSignal): Promise<ClassSessionsResponse> => read(`/classes/${encodeURIComponent(id)}/sessions`, 'sessions', signal);
+export const getCounseling = (params?: ListParams, signal?: AbortSignal): Promise<CounselingListResponse> => read(`/counseling${query(params)}`, 'counseling', signal);
+export const getCounselingDetail = (id: RelationshipId, signal?: AbortSignal): Promise<CounselingDetailDto> => read(`/counseling/${encodeURIComponent(id)}`, 'relationship', signal);

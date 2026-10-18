@@ -76,8 +76,8 @@ function date(value: string | null | undefined): DisplayField<string> {
 function session(row: SessionBriefDto, hostName?: string | null): SessionReadModel {
   return {
     id: asSessionId(row.id), seq: displayField(row.seq), scheduledAt: date(row.scheduled_at), status: text(row.status),
-    hostName: text(hostName), sessionKind: displayField(null), hostState: displayField(null),
-    recordStatus: displayField(null), reportStatus: displayField(null),
+    hostName: text(hostName), sessionKind: displayField<string>(null), hostState: displayField<string>(null),
+    recordStatus: displayField<string>(null), reportStatus: displayField<string>(null),
   };
 }
 export function adaptClassSessions(rows: readonly ClassSessionDto[]): SessionReadModel[] {
@@ -88,7 +88,8 @@ export function adaptMemberClass(row: ClassSummaryDto | ClassDetailDto): ClassRe
   return {
     id: asClassId(row.id), title: text(row.title), status: text(row.status), scheduleMode: text(row.schedule_mode),
     plannedSessionCount: displayField(row.planned_session_count), sessionCount: displayField(row.session_count),
-    progress: displayField(row.progress ? { completed: row.progress.completed, total: row.progress.total } : null),
+    progress: displayField(row.progress && Number.isFinite(row.progress.completed) && Number.isFinite(row.progress.total)
+      ? { completed: row.progress.completed, total: row.progress.total } : null),
     nextSession: displayField(row.next_session ? session(row.next_session, row.next_session.host?.name) : null),
     hasOpenSession: displayField(row.has_open_session), locationType: text(detail?.location_type),
     locationAddress: text(detail?.location_address), linkbandMode: text(detail?.linkband_mode),
@@ -140,6 +141,8 @@ export function adaptMixedHome(
   return {
     classes: mapState(classes, (data) => ({ classes: data.classes.map(adaptMemberClass), total: data.total })),
     counseling: mapState(counseling, (data) => ({ relationships: data.relationships.map(adaptCounseling), total: data.total })),
-    next: displayField(candidates[0]), nextIsComplete: classes.status === 'success' && counseling.status === 'success',
+    next: displayField(candidates[0]), nextIsComplete: classes.status === 'success' && counseling.status === 'success'
+      && classes.data.total === classes.data.classes.length
+      && counseling.data.total === counseling.data.relationships.length,
   };
 }
