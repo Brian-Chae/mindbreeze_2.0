@@ -20,7 +20,7 @@
 
 | Task | 상태 | 내용 | 테스트 |
 |---|---|---|---|
-| T0 실측 보정 | **미실시** | 운영 로그·DB·공급자 한도 확인은 서버/AWS 접근이 필요해 건너뜀(§6) | — |
+| T0 실측 보정 | **미실시** | 운영 로그·DB·공급자 한도 확인은 서버/AWS 접근이 필요해 건너뜀(§7) | — |
 | T1 라우팅 | 완료 | `build_task_routes()`; `stt`(음성 변환·영상 병합) / `report`(요약·리포트 생성) / 나머지 `celery`, `exports` 유지. 설정 플래그로 제어 | `test_sdd212_queue_routing.py` |
 | T2 일꾼 유닛 | 완료 | 유닛 템플릿 2종 신설(`stt` 동시 2 / `report` 동시 2), 기존 일꾼 `-Q celery --concurrency=1`, 설치·활성화·컷오버 점검 목록·운영 매니페스트 반영, dev용 유닛 파일 준비 | `test_sdd212_worker_units.py` |
 | T3 시간 상한·멱등 | 완료 | 리포트 생성 soft 25분 / hard 28분. 시간 초과 시 완료분 보존(§3-2) | `test_sdd212_report_time_limit.py` |
