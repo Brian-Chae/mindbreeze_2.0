@@ -281,6 +281,10 @@ def generate_access_code(db: DBSession) -> str:
         raise class_code_service.exhausted_http_error()
 
 
+# uq_classes_active_access_code 에서 제외되는 클래스 상태(모델 정의와 같다)
+_CLASS_CODE_RELEASED_STATUSES = ("completed", "cancelled", "archived")
+
+
 def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
     """세션 행 삽입. 동시 발급 경합(활성 코드 부분 유니크 위반)이면 코드를 재발급해 재시도한다."""
     for attempt in range(5):
@@ -298,10 +302,13 @@ def _add_session_with_code_retry(session: Session, db: DBSession) -> None:
         klass = db.get(Class, session.class_id)
         if klass is not None and klass.access_code != session.access_code:
             # 세션 쪽 유일성은 종료·취소 세션의 코드를 풀어 주지만 클래스 status 는 세션을 따라가지 않는다.
-            # 같은 코드를 쥔 클래스는 코드가 풀린 세션의 것이므로 비워서 uq_classes_active_access_code 충돌을 막는다.
-            db.query(Class).filter(Class.access_code == session.access_code, Class.id != klass.id).update(
-                {Class.access_code: None}, synchronize_session="fetch"
-            )
+            # uq_classes_active_access_code 범위(숨김 아님 + 종료·취소·보관 아님)에서 같은 코드를 쥔 클래스만 비워 충돌을 막는다.
+            db.query(Class).filter(
+                Class.access_code == session.access_code,
+                Class.id != klass.id,
+                Class.hidden_at.is_(None),
+                Class.status.notin_(_CLASS_CODE_RELEASED_STATUSES),
+            ).update({Class.access_code: None}, synchronize_session="fetch")
             klass.access_code = session.access_code
             db.flush()
 
@@ -447,7 +454,7 @@ def _attach_parent(s: Session, db: DBSession) -> None:
     else:
         db.rollback()
         logger.error("[session] 분류 불가 세션 생성 중단 rule=%s type=%s mode=%s", result.rule, s.type, s.participant_mode)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다")
     s.session_kind = "regular"
     s.host_state = "assigned"
 
@@ -902,6 +909,8 @@ def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
 
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_UPDATE)
+    # SDD-214: 동시 PUT 이 같은 클래스에 서로의 변경을 덮어쓰지 않도록 세션 행을 잠그고 최신 값을 다시 읽는다.
+    s = _lock_session_for_capacity(s.id, db) or s
     if s.status in ("completed", "cancelled"):
         raise HTTPException(status_code=400, detail="종료된 세션은 수정할 수 없습니다")
 
