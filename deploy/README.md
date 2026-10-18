@@ -44,6 +44,7 @@ sudo python3 deploy/render_env.py --out /etc/mindbreeze/prod.env      # 인스�
 | `mindbreeze-report-worker` | `report` | 2 | 요약, 리포트 생성(`tasks.summary`/`generate_reports_for_session`/`report`) |
 | `mindbreeze-worker` | `celery`(기본) | 1 | 아웃박스·알림·예약 등 나머지 |
 - 동시 처리 수는 유닛 인자(`--concurrency`)다. **초기값은 가정(서버 2 vCPU·4GB, 일꾼 5프로세스)** — 실측(T0) 후 조정한다.
+- **dev**: `deploy-dev.yml` 이 `mindbreeze-stt-worker`·`mindbreeze-report-worker` 를 설치·기동한다(`backend/deploy/*.service`, 멱등). 기존 `mindbreeze-worker` 는 인자 변경 없이(기본 줄만 소비) 둔다 — 플래그를 끄면 단일 줄 구성으로 즉시 복귀하도록. 라우팅 플래그는 서버 `.env.dev` 에서 수동 관리(워크플로 불간섭). dev 실측·재현 결과: `specs/sdd-212-report-queue/t0-measurement.md`.
 - 줄 분리는 환경 변수 `PIPELINE_QUEUE_SPLIT_ENABLED` 로 켠다(운영 매니페스트 기본 `true`, 코드 기본 `false`). 꺼져 있으면 기존 단일 줄 구성이다.
 
 ### 배포 순서 (순서를 어기면 유실이 아니라 **지연**만 생긴다 — 메시지는 Redis 에 보존)

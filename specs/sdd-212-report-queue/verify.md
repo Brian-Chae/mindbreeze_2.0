@@ -94,3 +94,20 @@
 - 위 [자동] 항목 전부 통과 + `cd backend && pytest` + `cd frontend && npm test && npm run build` 통과
 - [수동] 항목은 배포 승인 후 결과를 summary.md 에 기록
 - spec·plan·verify·summary 4종 존재, Linear 코멘트에 각 문서 게시
+
+## 개정 이력
+
+### 개정 1 (2026-10-18, dev 롤아웃 착수 전 — 구현 전에 추가)
+Brian 의 dev 서버 작업 승인에 따라 `deploy-dev.yml` 에 신규 일꾼 유닛 2종 설치를 추가한다. 기존 항목은 변경하지 않고 아래를 추가한다.
+
+| ID | 시나리오 | 기대 결과 | 방식 |
+|---|---|---|---|
+| D-01 | dev 배포 번들 | `backend/deploy/mindbreeze-stt-worker.service`·`mindbreeze-report-worker.service` 가 tar 번들에 포함 | 자동 |
+| D-02 | dev 설치 단계 | 두 유닛을 `/etc/systemd/system/` 로 복사 → `daemon-reload` → `enable`, 모두 재실행해도 결과 동일(`cp`·`enable` 만 사용, 추가 줄 누적 없음) | 자동 |
+| D-03 | 기동 순서 | 두 신규 유닛 재시작이 백엔드·기존 일꾼 재시작보다 **앞** | 자동 |
+| D-04 | 활성 확인 | 배포 스크립트가 두 유닛 `is-active` 를 검사하고 실패 시 스크립트 실패(롤백 트랩 발동) | 자동 |
+| D-05 | 실패 시 롤백 | 롤백 트랩이 두 유닛도 재시작 대상에 포함 | 자동 |
+| D-06 | 라우팅 플래그 불간섭 | 워크플로는 `PIPELINE_QUEUE_SPLIT_ENABLED` 를 건드리지 않는다(서버 `.env.dev` 수동 관리) | 자동 |
+| D-07 | 컷오버 중지 목록 | `DEV_SERVICES` 에 신규 유닛 2종 포함(점검 중 중지·롤백 시 재기동 대상) | 자동 |
+| D-08 | 배포 후 서버 | 신규 유닛 2종 `active`, 줄별 소비자 확인(`stt`/`report`) | 수동 |
+| D-09 | 플래그 켠 뒤 부하 재현(P-05) | 동시 종료 N세션이 줄별로 처리, 중복 발행 0, 대기 보정 동작, e2e-smoke 성공 | 수동 |

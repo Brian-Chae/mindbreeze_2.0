@@ -128,7 +128,7 @@ def test_컷오버_운영_서비스_점검_목록에_신규_일꾼이_포함된�
             assert unit in body, (script, unit)
 
 
-def test_컷오버_dev_중지_목록은_dev_유닛_구성을_유지한다():
+def test_컷오버_dev_중지_목록은_dev_유닛_구성과_일치한다():
     body = (ROOT / "deploy/cutover/lib.sh").read_text()
     line = next(l for l in body.splitlines() if l.startswith("DEV_SERVICES="))
-    assert "stt-worker" not in line and "report-worker" not in line, "dev 서버에는 신규 유닛이 설치되지 않는다"
+    assert "stt-worker" in line and "report-worker" in line, "dev 서버에도 신규 유닛이 설치된다(deploy-dev.yml)"
