@@ -182,6 +182,8 @@ jobs:
           psql "$admin" -v ON_ERROR_STOP=1 -c "create database smoke_snap"
           grep -v -E '^\\(un)?restrict ' "$base" | psql "$snap" -v ON_ERROR_STOP=1 -q
           psql "$snap" -v ON_ERROR_STOP=1 -q -f tests/fixtures/pg/seed_synthetic.sql
+          # SDD-214: 055 가드는 비템플릿 세션이 남아 있으면 중단한다 → 배포 절차와 같이 데이터 초기화(Z) 후 적용한다.
+          python scripts/reset_dev_data.py --scope all --apply --i-understand-this-deletes-data --database-url "$snap" > /dev/null
           DATABASE_URL="$snap" alembic upgrade head
           current=$(DATABASE_URL="$snap" alembic current 2>/dev/null | grep -oE '^[0-9a-z]+')
           head=$(alembic heads 2>/dev/null | grep -oE '^[0-9a-z]+')
