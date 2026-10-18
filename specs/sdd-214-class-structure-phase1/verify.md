@@ -56,9 +56,9 @@
 | [ ] | SC-5 | 모든 부모 FK 가 `ON DELETE RESTRICT`, `reports.approved_by_user_id` 는 NO ACTION (`pg_constraint.confdeltype`) | P | 일치 |
 | [ ] | SC-6 | 부분 유니크 `uq_classes_active_access_code`: 활성(숨김·종료·취소 제외) 클래스 간 코드 중복 INSERT 는 실패, 종료/숨김 클래스와 같은 코드는 허용 | P | 규칙대로 |
 | [ ] | SC-7 | `class_instructors UNIQUE(class_id, user_id)` 위반 INSERT 실패 (복합 FK 의 참조 대상) | P | 실패 확인 |
-| [ ] | SC-8 | `counseling_relationships`: `uq_rel_guest`(비회원 1명 1관계)·`uq_rel_placeholder`(상담사당 보관용 1개) 위반 INSERT 실패 | P | 실패 확인 |
+| [ ] | SC-8 | `counseling_relationships`: `uq_rel_guest`(비회원 1명 비종료 관계 1개 — `pending`·`active` 만, 종결·보관이 있어도 새 상담사 관계 허용)·`uq_rel_placeholder`(상담사당 보관용 1개) 위반 INSERT 실패 | P | 실패 확인 |
 | [ ] | SC-9 | `hidden_at`/soft 상태 컬럼 존재(삭제 금지 정책의 전제): `class_instructors.status`, `classes.hidden_at`, `counseling_relationships.hidden_at` | P | 존재 |
-| [ ] | SC-10 | ORM 모델이 DB 와 일치: `alembic check`(정보성) 에서 **이 SDD 가 추가한 객체**에 대한 차이 0 (CHECK·복합 FK 는 ORM 미선언이라 비교 대상 아님, TD8) | S | 신규 차이 0 |
+| [ ] | SC-10 | ORM 모델이 DB 와 일치: `alembic check`(정보성) 에서 **이 SDD 가 추가한 객체**에 대한 차이 0 (CHECK 는 비교 대상이 아니고, 복합 FK 2개는 ORM 미선언이라 차이로 감지되므로 `env.py` `include_object` 에서 이름으로 제외한다, TD8) | S | 신규 차이 0 |
 | [ ] | SC-11 | ORM 전역 숨김 필터: `Class`·`CounselingRelationship` 의 숨김 행이 기본 조회에서 제외, `include_hidden` 옵션으로 포함 (기존 `Session` 필터 동작 불변) | B | 통과 |
 | [ ] | SC-12 | 순환 FK 순서(053 → 055): 빈 DB 체인에서 `upgrade head` 오류 0 | P | 통과 |
 | [ ] | SC-13 | 컬럼 확정표 근거 표기: 모든 컬럼 행에 근거 문서(§) 열 존재, `미확인` 이 남은 컬럼은 0 또는 사유와 함께 Brian 보고. `origin` 컬럼 제거 여부 결정이 기록됨(TD20) | S | 충족 |
@@ -119,7 +119,7 @@
 | [ ] | CN-4 | `UNIQUE(class_id, seq)`·`UNIQUE(counseling_relationship_id, seq)`: 같은 부모 내 중복 `seq` 실패, 다른 부모 간 같은 `seq` 허용, 템플릿(부모 NULL)은 영향 없음 | P | 규칙대로 |
 | [ ] | CN-5 | `UNIQUE(session_id, member_id)`: 같은 회차·멤버 출석 행 중복 실패, `member_id` NULL 다수 허용 | P | 규칙대로 |
 | [ ] | CN-6 | `CHECK(member_id IS NULL OR guest_client_id IS NULL)`: 둘 다 채우면 실패, 둘 다 NULL 은 통과 | P | 규칙대로 |
-| [ ] | CN-7 | `uq_rel_active_pair`: 같은 상담사·회원의 활성 관계 2개는 실패, 종결(`closed`)/보관 관계와는 공존 | P | 규칙대로 |
+| [ ] | CN-7 | `uq_rel_active_pair`: 같은 상담사·회원의 비보관(`pending`·`active`·`closed`) 관계 2개는 실패, 보관(`archived`) 관계와만 공존 — R-DB 리뷰로 정정(기획-상세-상담 §179, 종결은 재개로 이어 감) | P | 규칙대로 |
 | [ ] | CN-8 | **기존 SQLite 테스트 영향 0**: ORM 이 CHECK 를 선언하지 않으므로, 부모 없이 `Session(...)` 을 직접 만드는 기존 pytest 가 그대로 통과 (G1) | B | 신규 실패 0 |
 | [ ] | CN-9 | **기존 `tests/pg`**: 부모 없이 `sessions` 를 INSERT 하던 테스트는 P0 목록의 허용 범위(§4)에서만 정정되고 그 외 신규 실패 0 | P | 신규 실패 0 |
 
@@ -235,6 +235,7 @@
 | `backend/tests/test_sdd210_ci_gates.py` | 하드코딩된 head 리비전 단언(SDD-213 선례) | head 문자열 갱신만 |
 | `backend/tests/test_sdd211_migration_30c1_idempotent.py` | 하드코딩된 head·리비전 개수 단언(SDD-213 선례: 85) | head·개수 갱신만 |
 | (그 외 head/개수 하드코딩 테스트) | G0 의 grep 으로 확정 | head·개수 갱신만, 목록은 `baseline.md` 에 기록 후 이 표에 추가(변경 이력 기재) |
+| `backend/tests/pg/test_m0_prequery_pg.py` | 이전 전 모양(부모 없는 세션) 시드 때문에 `ck_sessions_one_parent` 가 걸림 | **트랜잭션 안에서만** CHECK 를 해제하고 끝에 롤백. 해제는 `sessions` 에 ACCESS EXCLUSIVE 잠금을 쓰므로 **전용(로컬/CI 임시) DB 에서 직렬 실행**하고, 사후에 제약 존재·`convalidated` 를 확인하는 복구·유효 검증 테스트를 둔다 |
 | (`backend/tests/pg/` 중 부모 없이 `sessions` 를 INSERT 하는 테스트) | `ck_sessions_one_parent` 때문. P0 가 목록 확정 | 부모(클래스) 생성 또는 템플릿 사용으로 정정하는 최소 변경만, 목록은 `baseline.md` 에 기록 후 이 표에 추가(변경 이력 기재) |
 
 ---

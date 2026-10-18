@@ -62,13 +62,13 @@ class CounselingRelationship(Base):
     __table_args__ = (
         Index(
             "uq_rel_active_pair", "counselor_id", "client_user_id", unique=True,
-            postgresql_where=text("client_user_id IS NOT NULL AND status = 'active'"),
-            sqlite_where=text("client_user_id IS NOT NULL AND status = 'active'"),
+            postgresql_where=text("client_user_id IS NOT NULL AND status <> 'archived'"),
+            sqlite_where=text("client_user_id IS NOT NULL AND status <> 'archived'"),
         ),
         Index(
             "uq_rel_guest", "client_guest_id", unique=True,
-            postgresql_where=text("client_guest_id IS NOT NULL"),
-            sqlite_where=text("client_guest_id IS NOT NULL"),
+            postgresql_where=text("client_guest_id IS NOT NULL AND status IN ('pending', 'active')"),
+            sqlite_where=text("client_guest_id IS NOT NULL AND status IN ('pending', 'active')"),
         ),
         Index(
             "uq_rel_placeholder", "counselor_id", unique=True,
