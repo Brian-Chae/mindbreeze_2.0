@@ -47,6 +47,12 @@ describe('/privacy 페이지', () => {
     expect(container.querySelector('h1')?.textContent).toBe('개인정보 처리방침');
   });
 
+  it('문의 연락처를 admin-mindbreeze@looxidlabs.com 으로 안내한다', () => {
+    const text = renderPage();
+    expect(text).toContain('admin-mindbreeze@looxidlabs.com');
+    expect(text).not.toContain('contact@looxidlabs.com');
+  });
+
   it('금지 문구(초안·법률 검토·자리표시자)를 노출하지 않는다', () => {
     const text = renderPage();
     for (const banned of ['초안', '법률 검토', '검토 필요', 'TODO', '{', '}', '미정', '임시']) {

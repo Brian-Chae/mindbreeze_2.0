@@ -227,32 +227,49 @@ T-0 ─┬─ T-1 ────────────────────�
 
 ---
 
-## 6. 컷오버 런북 (T-20 상세, `[제안]`)
+## 6. 컷오버 런북 (T-20 상세 · 2026-10-18 리허설 실측 반영 · 실행 코드 `deploy/cutover/`)
 
-**전제(모두 충족해야 시작)**: T-15~T-18 통과 / N-6 게시 확인 / Brian 컷오버 승인 / 공지 D-1 완료 / dev `in_progress` 세션 0건 / 릴리스 후보 SHA 동결 / 롤백 담당(에이전트) 대기.
+**일정(Brian 승인)**: 2026-10-22(목) **02:00~03:00 KST**(점검창 60분, T0=02:00). 공지 D-3=10/19, D-1=10/21 (`docs/컷오버_공지문_초안.md`, 발송은 Brian 승인 후).
+**실행**: `bash deploy/cutover/cutover.sh` — C-0~C-10 단계 사이 확인 프롬프트 없음, 실패·게이트 불일치·시간 가드에서만 중단. `--dry-run` 은 AWS·SSH·SSM·gh 호출 없이 명령·전제조건만 출력. 단계 스크립트는 단독 실행도 가능(`c00-record.sh` … `c10-observe.sh`).
 
-| 단계 | 내용 | 확인 | 누적 시간 `[추정]` |
+**전제(모두 충족해야 시작)**: T-15~T-18 통과(완료) / N-6 게시 확인(`MB_ACK_PRIVACY_POLICY`) / 연구 가명 키 오프라인 백업(`MB_ACK_RESEARCH_KEY_BACKUP`) / D-1 공지 발송(`MB_ACK_NOTICE_D1`) / SSM 필수 키 자리표시 0(GOOGLE_CLIENT_ID 포함, C-0 가 `ssm-check-required` 로 검사) / dev `in_progress`·6자리 코드 비종료 세션 0건(C-0 게이트) / 릴리스 후보 동결(`MB_RELEASE_ID`) / 관리자 우회 IP 확정(`MB_ADMIN_IPS`, 운영자 로컬 IP 포함) / 롤백 담당 대기.
+
+### 6-1. 시간표 (T0 = 02:00, 리허설 실측 기준 · `[예상]`은 실측 없는 구간)
+
+| 시각 | T+ | 단계 | 내용 | 근거 | 확인(자동 판정) |
+|---|---|---|---|---|---|
+| 01:30~01:50 | −30~−10 | 사전(OPS) | `ops/cancel-legacy-sessions.sh list` → `cancel --execute` (6자리 코드 비종료 5건 취소, 전날 상담사 안내 완료), 필요 시 `c04b … --pack-only` 사전 안전 복사 | Brian 승인(점검 직전 취소) | 잔여 0건 |
+| 01:55 | −5 | **C-0** | 전제 검증·dev 기록(alembic·행 수·precheck·outbox) | `c00-record.sh` | in_progress=0, 6자리 비종료=0 |
+| 02:00 | 0 | **C-1** | dev nginx 503 점검(관리자 IP 우회, nginx **restart**로 기존 연결 차단) → cron 백업 후 비움 → 워커 3종 중지 → 행 수 20초 간격 2회 동일(동결 기준 `C1-freeze-counts`) | `c01-maintenance-on.sh` | 503 응답, 워커 inactive, 행 수 불변 |
+| 02:04 | +4 | **C-2** | dev 스냅샷 **≤5.5분** → KMS 암호화 복사 **≤5분** → `mindbreeze-prod` 복원 **3분** → 마스터 비밀번호 재설정(SSM, 값 비출력) → 파라미터 그룹 재시작 **1~2분** → 백업 14일·삭제방지 재적용 → SSM `DB_HOST` 갱신·prod.env 재렌더(엄격) → `RENAME mindbreeze_dev→mindbreeze_prod` | 리허설 T-17 실측 합 15~20분 + 정리 | 암호화·삭제방지·백업14·단일AZ·비공개·클래스·파라미터 in-sync |
+| 02:24 | +24 | **C-3** | prod 검증: alembic = dev, 행 수 = 동결 기준 **완전 일치** → dev 계정 정지·`refresh_tokens` 전체 폐기·기기 토큰 `revoked_at` | 실측 3분(정리 SQL 0.02초) | 활성 dev 계정 0 · refresh 0 · 활성 기기 토큰 0 |
+| 02:27 | +27 | **C-4** | S3 `eeg-raw/`·`video/` dev→prod sync, 객체 수·바이트·샘플 5건 해시 | 실측 2,866개/2.19GB **40초** + 대조 | 일치 |
+| 02:29 | +29 | **C-4b** | 오디오 청크: 존재 **1,072건(84MB)** tar→prod 서버 같은 경로 복원, 유실 **333행** prod DB 정리. 영상 982행은 스키마에 '파일 없음(만료)' 표시가 없으면 **그대로 두고 보고** | Brian 승인 · `video-report.txt` | present=1072/missing=333(다르면 중단), 복원 후 누락 0, 잔여 행=복원 수 |
+| 02:32 | +32 | **C-5** | `deploy-prod`(Brian 환경 승인 클릭) → 설치·헬스·**임시 호스트** 스모크·관찰 2분 | 실측 설치 **21초**, 워크플로 **2분** | run=success, current=릴리스, `ENVIRONMENT=production`, 보관/연구 내보내기 false |
+| 02:39 | +39 | **C-6** | `server-config.sh` 를 운영 호스트명으로 재적용(인증서 DNS-01 선발급) → timer **14개** 활성화 → 워커 확인 → **prod 점검 모드 ON**(공개 전 사용자 차단) | 인증서 발급 `[예상]` 2~3분 | 인증서 SAN 2개, timer 14/14, 서비스 active |
+| 02:45 | +45 | **C-7** | Route53 `mindbreeze.`·`api.mindbreeze.` A **CREATE ×2**(TTL 60) → INSYNC → 공개 DNS(8.8.8.8)·HTTPS 헬스 | 시간 가드: **T+48 이후 시작 금지** | 존 전후 diff 추가 2·변경 0 |
+| 02:49 | +49 | **C-8** | 공개 스모크 9항목 + 인증서 + 스모크 계정 API(지정 시) + 정지 dev 계정 차단 + LiveKit/TURN 포트 + 오류 로그 0 | smoke.sh · `[예상]` 4~6분 | 전부 통과 |
+| 02:55 | +55 | **C-9** | 리허설 임시 설정 원복(저장소 변수 `PROD_WEB_HOST`·`PROD_API_HOST` 삭제, SSM `CORS_ALLOWED_ORIGINS` 의 prod-check 오리진 제거, backend 재시작) → 공개 스모크 재확인 → **prod 점검 OFF** → dev '새 주소 안내' 페이지 → 업타임 감시 생성 | `c09-release.sh` `[예상]` 4분 | 점검 해제 완료 = **T+59 목표** |
+| 03:00 | +60 | 점검창 종료 | 예비 ≤1분. 03:00 초과 시 사용자 영향 → 공지 정정 | | |
+| 03:00~03:30 | +60~+90 | **C-10** | 관찰 30분(헬스 30초·서버/경보 5분 간격) + 수동 스모크(Google 로그인·클래스 입장 4자리·실시간 EEG·화상·음성→리포트·본인 메일) | `c10-observe.sh` | 헬스 연속 3회 실패·ALARM·실패 유닛 시 중단 |
+
+- 리허설 합계(§6 구 산정 50~60분)와 일치: 구간 합 59분, 예비 1분 → **여유가 거의 없다**. C-4b 사전 `--pack-only`, 사전 승인 클릭 대기(C-5 환경 승인 즉시 처리), 인증서 사전 확인으로 단축한다.
+- **C-5 에서 임시 호스트 설정을 유지하는 이유**: `deploy-prod` 스모크가 DNS 전환 전(C-7 이전)에 도는데, 기본 운영 호스트는 아직 공개되지 않았다. rehearsal-result §7 #6('C-5 직전 원복')을 **C-9 로 조정**한다(저장소 변수 삭제 시 스모크 대상이 운영 호스트로 바뀜).
+- **prod 점검 모드를 C-6 에 켜는 이유**: C-7 DNS 전환 순간부터 공개되므로, C-9 점검 해제 전까지 일반 사용자는 점검 페이지(503)만 보고 스모크는 관리자 IP 에서 수행한다.
+- 인증서는 DNS-01 로 DNS 전환 **전** 발급(R6 해소) — plan 구 문구 'C-7 에서 DNS 후 발급'을 변경.
+- 업타임 감시(V-1.32)는 C-9 점검 해제 후 생성(점검 중 503 오경보 방지). Route53 health check 지표는 us-east-1 이라 us-east-1 SNS 토픽을 신설하고 수신자 확인 메일이 필요하다(`uptime-monitor.sh`).
+
+### 6-2. 롤백 기준 (판단은 사람, 실행은 `rollback.sh`)
+
+| 구간 | 시점 | 롤백 방법 | 데이터 |
 |---|---|---|---|
-| C-0 | dev 에서 마지막 확인: `alembic current`, 행 수 집계 스냅샷(전후 비교용) 기록, dev `notification_outbox` 미발송 건수 기록 | 기록 파일 | −5 |
-| C-1 | **점검 모드**: dev nginx 점검 페이지(503, 관리자 IP 우회) → 쓰기 차단. dev cron·워커 **중지**(알림·스윕이 점검 중 데이터를 바꾸지 않게) | 신규 요청 503, 워커 inactive | 0 |
-| C-2 | dev RDS 최종 수동 스냅샷 → **암호화 사본 복사**(KMS) → 새 인스턴스 `mindbreeze-prod` 로 복원(스냅샷 복원은 항상 새 인스턴스. 리허설 T-17 과 같은 옵션: 서브넷 그룹·`mb-prod-rds` SG·파라미터 그룹·t4g.small·단일 AZ·백업 14일·삭제방지 재적용). 복원 후 SSM 의 DB 접속 주소를 새 엔드포인트로 갱신하고 T-9 의 빈 인스턴스 `mindbreeze-prod-empty` 는 컷오버 안정 확인 후 삭제 | 인스턴스 available, 암호화 true, 삭제방지 true, 백업 14 | +15 |
-| C-3 | prod DB 검증: `alembic current`=`e036a0000051`, 행 수 집계 = C-0 기록, `auth_provider='dev'` 3계정 비활성, `refresh_tokens` 폐기, 기기 토큰 비움, 필요한 경우 `ALEMBIC upgrade head`(릴리스 후보가 더 새 마이그레이션을 가지면) | 집계 일치 | +25 |
-| C-4 | S3: `eeg-raw/`·`video/` dev→prod sync(최종분), 객체 수·총 바이트 일치, 샘플 5건 다운로드 | 일치 | +35 |
-| C-4b | **서버 로컬 청크 이관 (T-17 에서 발견, 2026-10-18)**: dev `audio_chunks` 1,405행 전부 `/tmp/mindbreeze_audio/…` 절대 경로 — dev 서버 디스크에 실제 존재 1,072건(84.2MB), 333건 유실. `video_chunks` 2,277행 중 982행이 `/tmp/mindbreeze_video/…` 절대 경로이나 **실제 파일 0건**(이미 정리됨, 나머지 1,295행은 S3 키). 조치: (1) dev 서버에서 존재하는 오디오 청크 1,072건을 tar → prod 버킷 `_migration/` 임시 접두사 → prod 서버 동일 경로(`/tmp/mindbreeze_audio`, 서비스 PrivateTmp 여부 확인)로 복원하거나, STT 완료된 세션 청크면 이관 생략(`session_records.audio_s3_key` 가 영속 원본)하고 (2) 파일 없는 청크 행(오디오 333·영상 982)은 `media_cleanup_service` 가 처리하도록 두거나 컷오버 후 정리 SQL 로 제거 — Brian 결정 | 존재 파일 수 = 복원 수, 유실 행 목록 보고 | +37 |
-| C-5 | prod 릴리스 확정 배포(`deploy-prod` — GitHub 환경 승인은 컷오버 승인과 별개로 Brian 이 이 시점에 직접 클릭): `ENVIRONMENT=production`, `RETENTION_SWEEP_ENABLED=false`, `RESEARCH_EXPORT_ENABLED=false` | `/health/ready` 200(임시 호스트명) | +40 |
-| C-6 | **실행 주체 전환**: prod timer **활성화**(14개), prod 워커 3종 기동. dev 는 C-1 에서 중지된 상태 유지 | prod `systemctl list-timers` 14개, dev cron 0 | +45 |
-| C-7 | **DNS 전환**: `mindbreeze.`·`api.mindbreeze.` A→prod EIP(TTL 60). certbot 본 인증서 발급(웹+API SAN) → nginx reload | `curl https://api.…/health/ready` 200, 인증서 유효 | +50 |
-| C-8 | **스모크**(prod): 로그인(이메일·Google)·세션 생성·클래스 입장 코드·실시간 EEG 연결·화상(LiveKit/TURN)·음성 업로드→리포트 생성·본인 주소 메일·CORS/WebSocket·`/api/v1/dev/auth/*`=404 | 체크리스트 전부 통과 | +60 |
-| C-9 | **점검 해제**: 신규 접속 허용. **dev 는 계속 점검 모드/발송 차단 유지** — T-21 전까지 사용자 접속 시 "새 주소 안내" 페이지(점검 페이지에 새 주소 표시) | 사용자 접속 가능 | +60 |
-| C-10 | 관찰 30분(오류율·큐 적체·경보) 후 컷오버 완료 선언 | 이상 없음 | +90 |
+| **A** | C-1~C-6 (DNS 전환 전) | prod 변경은 그대로 두고 **dev 복귀**: 점검 해제 + cron 복원 + 워커 재가동 + 헬스 확인. prod timer 가 켜져 있으면 먼저 중지 | 분기 없음(dev 쓰기 차단 상태였음) |
+| **B** | C-7~C-8 (DNS 후·점검 해제 전) | prod timer **먼저 중지**(이중 발송 방지) → 신규 A 레코드 2개 **삭제**(운영 주소는 원래 없던 레코드. dev IP 로 UPSERT 해도 dev nginx 에 운영 호스트 블록이 없어 응답 불가) → 구간 A | prod 에 스모크 쓰기만 → 분기 없음. DNS 음성 캐시 최대 약 15분 |
+| **C** | C-9 이후 (점검 해제 후) | **자동 롤백 금지**: 수정 배포/`rollback-prod`(코드), 데이터 손상은 PITR(RPO≈2분19초, RTO≈9~10분 실측). dev 복귀가 필요하면 prod→dev 역복원 별도 승인 | 실사용 쓰기가 prod 에 있음 |
 
-**점검 시간 `[추정]`**: 60분 목표(C-1~C-9), 데이터가 작아 복원·복사는 합쳐 15~25분. T-17 리허설 실측으로 확정. **D2 한도 30~60분을 넘기면** 롤백 판단.
-
-**롤백 기준·방법**
-- C-1~C-6(DNS 전환 전): prod 폐기 없이 **dev 점검 모드 해제 + dev cron/워커 재가동**으로 즉시 복귀. 데이터 분기 없음(쓰기 차단 상태였음).
-- C-7~C-9(DNS 전환 후, 점검 해제 전): DNS 를 dev EIP 로 되돌리고(TTL 60) dev 점검 해제·cron/워커 재가동. prod 에는 스모크 계정 쓰기만 있음 → 분기 없음. 단 prod timer 는 **먼저 중지**(이중 발송 방지).
-- **점검 해제(C-9) 이후**: 실사용 쓰기가 prod 에 생김 → **단순 복귀 금지**. 수정 배포 우선, 데이터 손상 시 PITR. 이 시점 이후 dev 로 DNS 복귀가 필요하면 prod→dev 역복원 절차(별도 승인) 사용.
-- 어느 단계든 S3 sync 는 dev 원본을 건드리지 않으므로(복사) 영향 없음.
+**롤백 트리거(하나라도 해당하면 중단·롤백 판단)**: ① 단계 스크립트 실패(`cutover.sh` 가 구간 안내 출력 후 중단) ② C-3 행 수 불일치 ③ C-4b 오디오 수가 승인값(1,072/333)과 다름 ④ **T+60 도달 + DNS 전환 전**(다음 단계 진입 전 자동 중단, `MB_ALLOW_OVERRUN=1` 로만 우회) ⑤ **T+48 이후 DNS 전환 시작 불가**(C-7 가드) ⑥ C-8 자동 스모크 실패 ⑦ `deploy-prod` 실패/롤백(서버는 자동 복귀하므로 원인 확인 후 재시도 가능, 시간 초과 시 ④).
+**롤백 아님(핫픽스 대상)**: C-10 수동 스모크 중 Google 로그인·화상·실시간 EEG 개별 결함 — 사용자 영향도에 따라 수정 배포.
+- S3 sync·스냅샷 복사는 dev 원본을 건드리지 않으므로 어느 구간에서도 영향 없음. 롤백 시 prod 리소스(RDS·스냅샷·S3 복사본·서버 릴리스)는 보존한다(재시도·원인 분석용).
 
 ---
 

@@ -15,7 +15,7 @@ cp backend/alembic.ini backend/requirements.txt "$STAGE/backend/"
 cp backend/*_cron.py "$STAGE/backend/"
 rsync -a --exclude '__pycache__' --exclude 'precheck' deploy/ "$STAGE/deploy/" 2>/dev/null || cp -R deploy/. "$STAGE/deploy/"
 # 운영자 전용(인프라 생성·점검 스크립트, 사전 점검)은 릴리스에 싣지 않는다 — 서버에 불필요하고 dev 비교 문자열을 담는다.
-rm -rf "$STAGE/deploy/aws" "$STAGE/deploy/precheck"
+rm -rf "$STAGE/deploy/aws" "$STAGE/deploy/precheck" "$STAGE/deploy/cutover"
 find "$STAGE" \( -name '__pycache__' -o -name '._*' -o -name '.DS_Store' -o -name '*.pyc' \) -prune -exec rm -rf {} + 2>/dev/null || true
 REQ_SHA="$(shasum -a 256 backend/requirements.txt | cut -d' ' -f1)"
 python3 - "$STAGE" "$RID" "$SHA" "$REQ_SHA" "$RUN_ID" "$MIGREPORT" <<'PY'

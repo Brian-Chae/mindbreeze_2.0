@@ -14,6 +14,7 @@
 | `notify-job-failure.sh` | 작업 실패 알림(journald + 선택 SNS) |
 | `install-release.sh` | 릴리스 설치·링크 전환·롤백(T-5) |
 | `precheck/` | 컷오버 사전 집계 SQL(읽기 전용, T-1) |
+| `cutover/` | 컷오버 실행 세트(C-0~C-10 스크립트·점검 페이지·롤백, 운영자 로컬 실행 — 릴리스에는 싣지 않음) → `cutover/README.md` |
 
 ## 렌더 (서버에서, T-14)
 ```bash

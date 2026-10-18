@@ -78,7 +78,7 @@ def test_실제_저장소_프론트_백엔드_스테이징은_허용목록_외_0
         subprocess.run(["cp", str(p), str(stage / "backend" / p.name)], check=True)
     subprocess.run(["cp", "-R", str(ROOT / "deploy"), str(stage / "deploy")], check=True)
     # build-release.sh 와 동일: 운영자 전용 디렉터리는 릴리스에서 제외
-    subprocess.run(["rm", "-rf", str(stage / "deploy" / "aws"), str(stage / "deploy" / "precheck")], check=True)
+    subprocess.run(["rm", "-rf", str(stage / "deploy" / "aws"), str(stage / "deploy" / "precheck"), str(stage / "deploy" / "cutover")], check=True)
     findings = scan.scan(stage, scan.load_allowlist(CI / "dev-leak-allowlist.txt"))
     assert findings == [], findings
 

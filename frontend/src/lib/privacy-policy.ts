@@ -9,7 +9,7 @@ export const PRIVACY_POLICY_EFFECTIVE_ISO = '2026-10-22';
 /** 기록 원본(뇌파·음성·영상·전사 원문) 및 비회원 개인정보 삭제 기한(일) — 서버 RETENTION_RAW_DAYS 기본값과 동일 */
 export const RAW_RETENTION_DAYS = 90;
 /** 개인정보 문의처 */
-export const PRIVACY_CONTACT_EMAIL = 'contact@looxidlabs.com';
+export const PRIVACY_CONTACT_EMAIL = 'admin-mindbreeze@looxidlabs.com';
 
 export interface PrivacyArticle {
   id: string;
