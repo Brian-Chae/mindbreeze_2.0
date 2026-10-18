@@ -5,15 +5,19 @@ import { useState, useCallback } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
+import type { Consents } from './ConsentCheckList';
 
 interface GoogleLoginButtonProps {
   inviteToken?: string;
+  /** 신규 가입 시 서버로 전달할 약관 동의 상태 (SEC-04) */
+  consents?: Consents;
   onSuccess?: (user: ReturnType<typeof useAuthStore.getState>['user']) => void;
   onError?: (error: Error) => void;
 }
 
 export default function GoogleLoginButton({
   inviteToken,
+  consents,
   onSuccess,
   onError,
 }: GoogleLoginButtonProps) {
@@ -27,7 +31,13 @@ export default function GoogleLoginButton({
       setLoading(true);
       try {
         // access_token을 id_token으로 서버에 전달
-        const user = await loginGoogle(tokenResponse.access_token, inviteToken);
+        const user = await loginGoogle(
+          tokenResponse.access_token,
+          inviteToken,
+          undefined,
+          true,
+          consents,
+        );
         onSuccess?.(user);
       } catch (err) {
         const message =

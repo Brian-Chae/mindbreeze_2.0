@@ -4,6 +4,7 @@ import { getInviteInfo, type InviteInfoResponse } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 import type { User } from '../../lib/api/auth';
 import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
+import { ConsentCheckList, type Consents } from '../../components/auth/ConsentCheckList';
 
 export default function InviteLandingPage() {
   const { token } = useParams<{ token: string }>();
@@ -14,6 +15,8 @@ export default function InviteLandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // SEC-04: Google 신규 가입은 약관·개인정보·민감정보 동의를 서버에 명시적으로 전달해야 한다.
+  const [consents, setConsents] = useState<Consents>({ tos: false, privacy: false, sensitive: false });
 
   useEffect(() => {
     setLoading(true);
@@ -133,10 +136,16 @@ export default function InviteLandingPage() {
               상담사님이 MIND BREEZE에 초대했습니다.
             </p>
 
+            {/* 약관 동의 (신규 가입 필수) */}
+            <div className="mb-4 text-left">
+              <ConsentCheckList consents={consents} onChange={setConsents} />
+            </div>
+
             {/* Google 로그인 CTA */}
             <div className="mb-4">
               <GoogleLoginButton
                 inviteToken={token}
+                consents={consents}
                 onSuccess={handleGoogleSuccess}
               />
             </div>
