@@ -419,6 +419,28 @@ def test_ORM_메타데이터에_CHECK_와_복합_FK_가_없다():
     assert not [c for t in [table, *new_tables] for c in t.constraints if isinstance(c, CheckConstraint)]
 
 
+def test_alembic_check_는_복합_FK_를_차이로_제안하지_않는다(head_url):
+    proc = run_alembic(head_url, "check")
+    out = proc.stdout + proc.stderr
+    assert "(class_id, host_id)" not in out and "(counseling_relationship_id, host_id)" not in out, out
+    # 제외는 비교에서만이다 — DB 에는 두 FK 가 실제로 있다
+    engine = sa.create_engine(head_url)
+    with engine.connect() as c:
+        names = set(c.execute(sa.text(
+            "select conname from pg_constraint where conrelid='sessions'::regclass and contype='f'"
+        )).scalars())
+    engine.dispose()
+    assert {"fk_sessions_class_host", "fk_sessions_relationship_host"} <= names
+
+
+def test_공용_DB_의_부모_CHECK_가_살아_있고_유효하다(pg_conn):
+    """test_m0_prequery_pg 가 트랜잭션 안에서 CHECK 를 풀었다가 롤백한 뒤에도 공용 DB 가 온전한지 확인(사후 복구·유효 검증)."""
+    row = pg_conn.execute(sa.text(
+        "select convalidated from pg_constraint where conname='ck_sessions_one_parent' and conrelid='sessions'::regclass"
+    )).one_or_none()
+    assert row is not None and row[0] is True
+
+
 # ── CN: 제약 동작 ────────────────────────────────────────────────────────────
 
 
@@ -544,7 +566,12 @@ def test_상담_관계_부분_유니크(conn):
         conn, lambda: mk_relationship(conn, counselor, is_placeholder=False, client_user_id=client, status="active"),
         "23505", "uq_rel_active_pair",
     )
-    mk_relationship(conn, counselor, is_placeholder=False, client_user_id=client, status="closed")
+    # 종결(closed)도 비-보관이라 같은 쌍의 새 관계를 막는다(재개는 같은 관계로). 보관(archived)과는 공존한다.
+    violation(
+        conn, lambda: mk_relationship(conn, counselor, is_placeholder=False, client_user_id=client, status="closed"),
+        "23505", "uq_rel_active_pair",
+    )
+    mk_relationship(conn, counselor, is_placeholder=False, client_user_id=client, status="archived")
     mk_relationship(conn, counselor, is_placeholder=False, client_user_id=client, status="archived")
     assert first
 
@@ -554,6 +581,19 @@ def test_상담_관계_부분_유니크(conn):
         "23505", "uq_rel_guest",
     )
     mk_relationship(conn, counselor, is_placeholder=False, client_guest_id=guest_b)
+
+    # 종결·보관된 관계가 있어도 같은 비회원 행에 새 상담사의 관계를 만들 수 있다(비종료 상태만 1개로 제한)
+    guest_c = _uid()
+    conn.execute(sa.text(
+        "INSERT INTO counseling_guests (id, created_by_counselor_id, display_name) VALUES (:id, :c, '비회원')"
+    ), {"id": guest_c, "c": counselor})
+    mk_relationship(conn, counselor, is_placeholder=False, client_guest_id=guest_c, status="closed")
+    mk_relationship(conn, mk_user(conn), is_placeholder=False, client_guest_id=guest_c, status="active")
+    mk_relationship(conn, mk_user(conn), is_placeholder=False, client_guest_id=guest_c, status="archived")
+    violation(
+        conn, lambda: mk_relationship(conn, mk_user(conn), is_placeholder=False, client_guest_id=guest_c, status="pending"),
+        "23505", "uq_rel_guest",
+    )
 
 
 def test_상담_관계_내담자_체크(conn):

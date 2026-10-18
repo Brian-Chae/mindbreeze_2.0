@@ -155,11 +155,11 @@ def upgrade() -> None:
     _constraint(rel, "ck_rel_modality", "CHECK (modality_default IS NULL OR modality_default IN ('clinical', 'hypnosis'))")
     op.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_rel_active_pair ON counseling_relationships (counselor_id, client_user_id)
-        WHERE client_user_id IS NOT NULL AND status = 'active'
+        WHERE client_user_id IS NOT NULL AND status <> 'archived'
     """)
     op.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_rel_guest ON counseling_relationships (client_guest_id)
-        WHERE client_guest_id IS NOT NULL
+        WHERE client_guest_id IS NOT NULL AND status IN ('pending', 'active')
     """)
     op.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS uq_rel_placeholder ON counseling_relationships (counselor_id)

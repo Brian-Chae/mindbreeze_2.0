@@ -16,7 +16,7 @@
 | `session_migration_map`·`class_templates` | 만들지 않는다 | spec 조사 정정 2 |
 | 판단 보류 항목 | `counseling_relationships.counselor_memo`·`retention_hold` 는 R1 이 "판단 보류"라 **제외**(해당 Phase 에서 가산) | R1 §8.4 |
 | 시각 컬럼 | `timestamptz`, `created_at`/`updated_at` 은 `DEFAULT now()` | R1 §8 서두 |
-| ORM 미선언 | `ck_sessions_one_parent` 와 `sessions` 복합 FK 2개는 ORM 메타데이터에 없다. 신규 테이블의 CHECK 도 ORM 에 선언하지 않는다(PG 마이그레이션이 정본) | TD8 · SC-14 |
+| ORM 미선언 | `ck_sessions_one_parent` 와 `sessions` 복합 FK 2개는 ORM 메타데이터에 없다. 신규 테이블의 CHECK 도 ORM 에 선언하지 않는다(PG 마이그레이션이 정본). `alembic check` 는 ORM 에 없는 복합 FK 를 차이(remove_fk)로 감지하므로 `alembic/env.py` 의 `include_object` 에서 두 FK 를 **이름으로 제외**한다(CHECK 는 비교 대상이 아님). DB 정의 존재는 PG 테스트가 계속 검증 | TD8 · SC-10 · SC-14 |
 | `member_id` 의미 | `session_participants.member_id` → `class_members.id` | R4 §3.2 |
 
 ## 1. 신규 테이블 — 053 (클래스군)
@@ -252,8 +252,8 @@
 | `ck_rel_client` | CHECK | `(is_placeholder AND client_user_id IS NULL AND client_guest_id IS NULL) OR (NOT is_placeholder AND (client_user_id IS NOT NULL OR client_guest_id IS NOT NULL))` |
 | `ck_rel_status` | CHECK | 4값 |
 | `ck_rel_modality` | CHECK | NULL 또는 2값 |
-| `uq_rel_active_pair` | UNIQUE IDX | `(counselor_id, client_user_id) WHERE client_user_id IS NOT NULL AND status = 'active'` |
-| `uq_rel_guest` | UNIQUE IDX | `(client_guest_id) WHERE client_guest_id IS NOT NULL` |
+| `uq_rel_active_pair` | UNIQUE IDX | `(counselor_id, client_user_id) WHERE client_user_id IS NOT NULL AND status <> 'archived'` |
+| `uq_rel_guest` | UNIQUE IDX | `(client_guest_id) WHERE client_guest_id IS NOT NULL AND status IN ('pending','active')` — 종결·보관 관계는 제외해 같은 비회원 행에 새 상담사 관계를 만들 수 있다 |
 | `uq_rel_placeholder` | UNIQUE IDX | `(counselor_id) WHERE is_placeholder` |
 | `ix_counseling_relationships_counselor_status` | IDX | `(counselor_id, status)` |
 | `ix_counseling_relationships_client_user_id` | IDX | `(client_user_id)` |
@@ -414,9 +414,20 @@
 |---|---|---|---|---|
 | 1 | `origin` 컬럼 | R1 §8.1·8.4·8.6, 상담 §4.2 에 존재 | 제거 | 이전·`shim` 폐기(TD20) |
 | 2 | `class_members.joined_via` 값 | `migration` 포함 | 제외 | 이전 폐기 |
-| 3 | `uq_rel_active_pair` 조건 | 상담 §2.2: `status <> 'archived'` / R1: `status = 'active'` | `status = 'active'` | verify CN-7 이 "종결·보관 관계와 공존"을 요구 |
+| 3 | `uq_rel_active_pair` 조건 | 상담 §2.2: `status <> 'archived'` / R1: `status = 'active'` | `status <> 'archived'` (R-DB 리뷰 반영, 기획 우선) | 종결 관계는 재개(같은 관계)로 이어 가므로 closed 와 새 관계 공존 금지 — 기획-상세-상담 §179. verify CN-7 정정 |
+| 3b | `uq_rel_guest` 조건 | R1: 전체 유일 | `status IN ('pending','active')` 부분 유니크 | 종결·보관 관계가 남아도 같은 비회원 행으로 새 상담사 관계 생성 가능(상담 §198 "같은 counseling_guests 행을 새 관계가 참조") |
 | 4 | 관계 `status` | R1: `active·closed·archived` | `pending·active·closed·archived` | 상담 §2.2 가 `pending` 을 정의(비회원 초대 대기) |
 | 5 | `counselor_memo`·`retention_hold` | R1 §8.4 "판단 보류" | 제외 | 해당 Phase 에서 가산 |
 | 6 | `sessions` 선택 참조 삭제 규칙 | (미정) | `SET NULL` | 세션 원본 삭제(플랫폼 관리자·보관 정책) 경로를 FK 가 막지 않도록 |
 | 7 | `classes.recurrence_rule`·`assignment_rule` | B §4.3·강사 §4.1 | 포함(NULL 허용 jsonb) | 기획 문서 우선 규칙. Phase 1 은 쓰지 않음 |
 | 8 | 상담 세션의 `host_state` | 강사: 상담은 배정 단계 없음 | 비템플릿 세션은 항상 NOT NULL(상담도 `assigned`) | plan TD4 · verify CN-2 의 CHECK 정의 |
+
+## 6. `sessions` 선택 참조의 `ON DELETE SET NULL` 의미
+
+| 참조 | 세션 삭제 시 | 후속 Phase 의무 |
+|---|---|---|
+| `class_instructors.scope_session_id` | NULL 이 되면 범위가 사라진 `guest`(대체) 강사가 `active` 로 남을 수 있다. Phase 1 에는 세션을 삭제하는 경로가 없어(삭제=숨김) 발생하지 않는다 | **Phase 3 의 세션 삭제 트랜잭션에서 해당 guest 강사를 `removed` 로 전환해야 한다**(필수). 스키마는 바꾸지 않는다 |
+| `class_members.first_session_id` | NULL 이면 "합류 기준 회차를 알 수 없음"을 뜻한다(합류 전 판정 불가). 중간 합류 멤버의 합류 전 회차 판정은 이 값이 있을 때만 유효 | 세션 삭제 경로를 만드는 Phase 가 NULL 처리 후 판정을 앱에서 보완 |
+| `session_participants.makeup_for_session_id` | NULL 이면 "대체 대상 회차가 삭제됨"을 뜻하며 `attendance_kind='makeup'` 행은 대상 없는 보강으로 남는다 | 보강 상태 파생 로직(Phase 4)이 NULL 을 "대상 없음"으로 처리 |
+
+세 컬럼 모두 세션 원본 삭제(플랫폼 관리자·보관 정책) 경로를 FK 가 막지 않게 하려는 선택이다.
