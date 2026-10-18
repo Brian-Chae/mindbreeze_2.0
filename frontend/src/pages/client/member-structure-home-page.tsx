@@ -21,7 +21,7 @@ export function MemberStructureHomePage() {
         <p className="mc-muted"><ReadField value={memberDate(displayField(next.scheduledAt))} /></p>
         <p className="mc-muted">{next.area === 'meditation' ? '지도사' : '상담사'} · <ReadField value={memberValue(next.hostName)} /></p>
         <Link className="mc-link mc-primary" to={`/class/${encodeURIComponent(next.sessionId)}/enter`}>입장하기</Link></>
-        : <h2>{model.nextIsComplete ? '예정된 일정이 없어요' : '일정을 확인하고 있어요'}</h2>}
+        : <h2>{model.nextIsComplete ? '예정된 일정이 없어요' : read.classes.status === 'loading' || read.counseling.status === 'loading' ? '일정을 확인하고 있어요' : '확인된 예정 일정이 없어요'}</h2>}
     </section>
     <section aria-label="내 클래스" data-area="meditation"><div className="mc-row"><h2 className="mc-heading">내 클래스</h2><Link className="mc-link" to="/app/classes">전체 보기</Link></div>
       <ReadStateView status={model.classes.status === 'success' && classes.length === 0 ? 'empty' : model.classes.status} backTo="/app/classes" onRetry={read.retry}>
