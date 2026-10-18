@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { ICONS, StrokeIcon } from './SidebarNav';
 import type { UserRole } from '../../lib/api/auth';
 import { useChatStore } from '../../stores/chatStore';
@@ -25,6 +25,12 @@ function homePathForRole(role: UserRole | null | undefined): string {
 }
 
 function tabItemsForRole(role: UserRole | null | undefined): TabItem[] {
+  if (role === 'platform_admin') return [
+    { to: '/admin/orgs', key: 'home', icon: ICONS.home },
+    { to: '/sessions', key: 'class', icon: ICONS.calendar },
+    { to: '/chat', key: 'chat', icon: ICONS.message },
+    { to: '/reports?status=pending', key: 'report', icon: ICONS.report },
+  ];
   const isClient = role === 'client';
   return [
     { to: homePathForRole(role), key: 'home', icon: ICONS.home },
@@ -41,6 +47,9 @@ interface BottomTabBarProps {
 }
 
 export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
+  const { pathname } = useLocation();
+  const morePaths = role === 'platform_admin' ? ['/notifications', '/settings', '/playground'] : role === 'client' ? ['/app/chat', '/app/notifications', '/app/profile'] : ['/reports', '/notifications', '/settings', '/playground', '/org/counselors'];
+  const moreActive = morePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
   const tabItems = tabItemsForRole(role);
   const chatUnread = useChatStore((s) =>
     s.rooms.reduce((sum, r) => sum + (r.unread_count ?? 0), 0),
@@ -53,7 +62,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
   // role별 리포트 배지: 내담자=미열람(is_read), 상담사=검토중(pending_review)
   const reportBadge = role === 'client' ? reportUnread : pendingReviewCount;
 
-  const moreBadge = notificationUnread + sessionInvites.length + (role === 'client' ? chatUnread : reportBadge);
+  const moreBadge = Math.max(notificationUnread, sessionInvites.length) + (role === 'client' ? chatUnread : role === 'platform_admin' ? 0 : reportBadge);
 
   return (
     <nav
@@ -73,7 +82,7 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.key === 'home'}
+            end={item.key === 'home' && role === 'client'}
             className={({ isActive }) =>
               `relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 ${
                 isActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'
@@ -102,12 +111,13 @@ export default function BottomTabBar({ onMoreClick, role }: BottomTabBarProps) {
       <button
         type="button"
         onClick={onMoreClick}
+        aria-current={moreActive ? 'page' : undefined}
         aria-label={moreBadge > 0 ? `더보기 ${moreBadge}건` : '더보기'}
-        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
+        className={`relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 text-[12px] flex-1 h-14 ${moreActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'}` }
       >
         <StrokeIcon d={ICONS.menu} size={22} />
         <span>{term('more')}</span>
-        {moreBadge > 0 && <span className="text-[12px]">{moreBadge > 9 ? '9+' : moreBadge}</span>}
+        {moreBadge > 0 && <span className="absolute top-1 right-2 min-w-4 rounded-full bg-[#EF4444] px-1 text-[12px] text-white">{moreBadge > 9 ? '9+' : moreBadge}</span>}
       </button>
     </nav>
   );

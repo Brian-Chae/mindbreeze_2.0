@@ -1,0 +1,82 @@
+[
+  {
+    "role": "host",
+    "width": 390,
+    "height": 844,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "host",
+    "width": 834,
+    "height": 1194,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "host",
+    "width": 1194,
+    "height": 834,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "host",
+    "width": 1280,
+    "height": 720,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "member",
+    "width": 390,
+    "height": 844,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "member",
+    "width": 834,
+    "height": 1194,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "member",
+    "width": 1194,
+    "height": 834,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  },
+  {
+    "role": "member",
+    "width": 1280,
+    "height": 720,
+    "horizontal": 0,
+    "vertical": 0,
+    "smallTargets": 0,
+    "smallText": 0,
+    "brokenImages": 0
+  }
+]

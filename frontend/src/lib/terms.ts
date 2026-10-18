@@ -1,6 +1,6 @@
 // 용어 사전 — 내비게이션 항목 라벨의 단일 출처.
 // 키는 화면 위치별 항목 정체성이다(같은 의미라도 글자가 다르면 키를 나눈다: dashboard / home / org-dashboard).
-// Phase 0 은 구조만 만들고 두 영역의 값을 현행 글자와 동일하게 둔다. 값 분화는 Phase 2 에서 한다.
+// 기존 키·기본 반환값을 보존하고 새 영역의 메뉴와 호칭 키를 가산한다.
 
 export type TermArea = 'meditation' | 'counseling';
 
@@ -31,7 +31,7 @@ export const TERM_KEYS = [
 
 export type TermKey = (typeof TERM_KEYS)[number];
 
-/** 두 영역 값이 같은 항목을 한 줄로 적기 위한 헬퍼(Phase 2 에서 영역별로 풀어 쓴다). */
+/** 두 영역에서 같은 문구를 사용하는 항목. */
 const same = (value: string): Record<TermArea, string> => ({ meditation: value, counseling: value });
 
 const TERMS: Readonly<Record<TermKey, Readonly<Record<TermArea, string>>>> = {

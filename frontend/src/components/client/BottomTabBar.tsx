@@ -38,7 +38,8 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   const agentUnread = useAgentStore((s) => s.unread);
   const reportUnread = useReportStore((s) => s.unread);
 
-  const moreBadge = notificationUnread + sessionInvites.length + chatUnread + agentUnread;
+  const moreActive = ['/app/chat', '/app/notifications', '/app/profile'].some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const moreBadge = Math.max(notificationUnread, sessionInvites.length) + chatUnread + agentUnread;
 
   const isActive = (path: string): boolean => {
     if (path === '/app') return pathname === '/app';
@@ -89,12 +90,13 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       <button
         type="button"
         onClick={onMoreClick}
+        aria-current={moreActive ? 'page' : undefined}
         aria-label={moreBadge > 0 ? `더보기 ${moreBadge}건` : '더보기'}
-        className="flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[12px] flex-1 h-14 text-[#6F6F6F]"
+        className={`relative flex flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[12px] flex-1 h-14 ${moreActive ? 'text-[#5F0080] font-semibold' : 'text-[#6F6F6F]'}` }
       >
         <StrokeIcon d={ICONS.menu} size={22} />
         <span>{term('more')}</span>
-        {moreBadge > 0 && <span className="text-[12px]">{moreBadge > 9 ? '9+' : moreBadge}</span>}
+        {moreBadge > 0 && <span className="absolute top-1 right-2 min-w-4 rounded-full bg-[#EF4444] px-1 text-[12px] text-white">{moreBadge > 9 ? '9+' : moreBadge}</span>}
       </button>
     </nav>
   );

@@ -1,0 +1,20 @@
+/* 새 읽기 화면에서만 쓰는 소프트 셸. 기존 전역 토큰은 유지한다. */
+.cs-structure { height: 100%; min-height: 0; color: #26232b; font-size: 14px; }
+.cs-structure [data-shell-variant="structure"] { overflow: hidden; background: #f7f5f9; }
+.cs-structure [data-shell-variant="structure"] > aside { min-height: 0; overflow-y: auto; background: #fff; }
+.cs-structure .cs-structure-content { display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 24px; }
+.cs-structure .cs-structure-scroll { width: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+.cs-structure .cs-read-state { display: flex; min-height: 240px; padding: 32px 16px; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; }
+.cs-structure .cs-read-state p { margin: 0; color: #625b6c; }
+.cs-structure .cs-read-state button, .cs-structure .cs-read-state a { display: inline-flex; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; padding: 8px 16px; border: 1px solid #dcd2e5; border-radius: 12px; background: #fff; color: #5f0080; }
+.cs-structure button, .cs-structure a { min-width: 44px; min-height: 44px; }
+.cs-structure button:focus-visible, .cs-structure a:focus-visible { outline: 2px solid #7c3aed; outline-offset: 2px; }
+.cs-structure [class~="text-[10px]"] { font-size: 12px; }
+@media (max-width: 767px) {
+  .cs-structure .cs-structure-content { padding: 16px 16px calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .cs-structure [data-shell-variant="structure"] > header { height: 56px; }
+}
+
+@media (min-width: 768px) {
+  .cs-structure [data-shell-variant="structure"] { grid-template-columns: 220px minmax(0, 1fr); }
+}

@@ -219,7 +219,7 @@ export default function SidebarNav({
         count = (chatBadge ?? 0) + (user?.role === 'counselor' && role !== 'client' ? counselorUnread + openRisk : agentBadge ?? 0);
         break;
       case 'notification':
-        count = (notificationBadge ?? 0) + (sessionBadge ?? 0);
+        count = Math.max(notificationBadge ?? 0, sessionBadge ?? 0);
         break;
       case 'report':
         count = reportBadge ?? (role === 'client' || user?.role === 'client' ? unreadReports : pendingReview);
