@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     #   - redrive_delay: 발행 후 체인 미완료로 보고 재발행하기까지의 지연(초, D-3 몰림 목표의 2배)
     pipeline_queue_grace_seconds: int = 60 * 60
     pipeline_redrive_delay_seconds: int = 90 * 60
+    # SDD-212 TD6: 적체 경보 임계. 최장 대기(D-3 몰림 목표 45분의 2/3)와 줄별 대기 건수.
+    pipeline_alert_max_wait_seconds: int = 30 * 60
+    pipeline_alert_queue_len: int = 20
 
     # JWT — 기본값 없음. 미설정 시 기동 중단(main.py lifespan fail-fast).
     jwt_secret_key: str = ""
