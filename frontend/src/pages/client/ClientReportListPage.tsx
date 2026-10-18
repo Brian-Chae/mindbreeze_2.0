@@ -6,7 +6,12 @@ import { useSearchParams } from 'react-router-dom';
 import { ClientReportDetailModal } from './ClientReportDetailModal';
 import { listReports, markAllReportsRead, type ReportDto } from '../../lib/api/reports';
 import { useReportStore } from '../../stores/reportStore';
-import { isReportInReview, REPORT_IN_REVIEW_BADGE } from '../../lib/report-review-copy';
+import {
+  isReportDelayed,
+  isReportInReview,
+  REPORT_IN_REVIEW_BADGE,
+  REPORT_IN_REVIEW_DELAYED_NOTICE,
+} from '../../lib/report-review-copy';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -245,6 +250,7 @@ export default function ClientReportListPage() {
         {formatDateTime(report.scheduled_at ?? report.created_at)}
       </div>
       <p className="mt-2 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+      {isReportDelayed(report) && <p className="mt-1 text-[12px] text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
       <div className="mt-2 text-[12px] text-[#6F6F6F]">
         {SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}
       </div>
@@ -282,6 +288,7 @@ export default function ClientReportListPage() {
               <span className="font-bold text-[#1F1F1F] truncate" title={reportTitle(report)}>{reportTitle(report)}</span>
             </div>
               <p className="mt-1 text-[13px] text-[#6F6F6F] line-clamp-2">{reportSummary(report)}</p>
+              {isReportDelayed(report) && <p className="mt-1 text-[12px] text-[#6F6F6F]">{REPORT_IN_REVIEW_DELAYED_NOTICE}</p>}
             </td>
             <td className="px-5 py-3.5 text-[13px] text-[#6F6F6F]">{SESSION_TYPE_LABELS[report.session_type ?? ''] ?? report.session_type ?? '-'}</td>
             <td className="px-5 py-3.5 text-[12px] font-bold text-[#1F1F1F] font-mono whitespace-nowrap">{formatDateTime(report.scheduled_at ?? report.created_at)}</td>

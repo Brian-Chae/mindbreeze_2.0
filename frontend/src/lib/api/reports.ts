@@ -119,6 +119,11 @@ export interface ReportDto {
    * 서버 미배포·구 응답에서는 없을 수 있어 optional 로 둔다.
    */
   in_review?: boolean;
+  /**
+   * SDD-212 — 승인 전이면서 리포트 생성이 평소보다 늦어질 때만 true.
+   * 상담사 확인 대기 건은 false. 구 응답에는 없을 수 있어 optional.
+   */
+  in_review_delayed?: boolean;
 }
 
 export interface ReportListResponse {
