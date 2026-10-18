@@ -50,7 +50,7 @@ sudo python3 deploy/render_env.py --out /etc/mindbreeze/prod.env      # 인스�
 1. 신규 일꾼 유닛 설치·기동(`install-release.sh`가 `mindbreeze-stt-worker`·`mindbreeze-report-worker`를 기존 일꾼보다 먼저 재시작). 이 시점 두 줄은 비어 있다.
 2. 라우팅 설정 적용(`PIPELINE_QUEUE_SPLIT_ENABLED=true`) → 이후 적재분부터 `stt`/`report` 줄로 들어간다.
 3. 기존 일꾼은 `-Q celery --concurrency=1`. **변경 직전 기본 큐(`celery`) 잔량을 확인**한다: `redis-cli llen celery`. 잔량이 있으면 비워진 뒤(또는 임시로 `-Q celery,stt,report`) 적용.
-4. 확인: `curl`/관리자 화면이 아닌 `GET /api/v1/admin/pipeline/backlog`(platform_admin) 로 줄별 대기 건수·소비자 수·최장 대기 시간을 본다.
+4. 확인: `GET /api/v1/admin/pipeline/backlog`(platform_admin 토큰)으로 줄별 대기 건수·최장 대기 시간을 보고, 일꾼 생존(줄별 소비자 수)은 `report_backlog_probe` 로그의 `consumers` 로 본다.
 
 ### 롤백 (설정 한 곳)
 1. `PIPELINE_QUEUE_SPLIT_ENABLED=false` 로 되돌리고 백엔드·일꾼 재시작 → 새 작업은 다시 `celery` 줄로 들어간다.
