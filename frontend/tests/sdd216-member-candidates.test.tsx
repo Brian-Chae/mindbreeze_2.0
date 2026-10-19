@@ -84,3 +84,41 @@ it('선택 회원은 이름·이메일 없이 UUID와 관리자 사유로 초대
   expect(JSON.stringify(api.post.mock.calls)).not.toContain('me***@example.com');
   expect(box.textContent).toContain('저장했어요');
 });
+
+function BoundaryHarness({ classId, onClear }: { classId: string; onClear: (visibleSelection: string) => void }) {
+  const [selected, setSelected] = useState<ClassMemberSelection[]>([{ userId: 'old-id', name: '이전 선택 회원' }]);
+  return <><ClassMemberPicker classId={classId} selected={selected} onChange={next => {
+    if (next.length === 0) onClear(box.querySelector('.class-member-picker__selected')?.textContent ?? '');
+    setSelected(next);
+  }} maxParticipants={2} /><output>{JSON.stringify(selected)}</output></>;
+}
+it.each(['account', 'class'])('%s 경계가 바뀌면 첫 렌더부터 이전 선택을 숨기고 부모 UUID도 비운다', async kind => {
+  vi.useFakeTimers(); const onClear = vi.fn(); const oldId = auth.user.id;
+  await act(async () => root.render(<BoundaryHarness classId="first-class" onClear={onClear} />));
+  expect(box.textContent).toContain('이전 선택 회원');
+  if (kind === 'account') auth.user.id = 'new-actor';
+  try {
+    await act(async () => root.render(<BoundaryHarness classId={kind === 'class' ? 'second-class' : 'first-class'} onClear={onClear} />));
+    expect(onClear).toHaveBeenCalledWith('');
+    expect(box.textContent).not.toContain('이전 선택 회원');
+    expect(box.querySelector('output')?.textContent).toBe('[]');
+  } finally { auth.user.id = oldId; }
+});
+it('같은 계정과 클래스에서 검색어만 바꾸면 기존 선택은 유지한다', async () => {
+  vi.useFakeTimers(); const onClear = vi.fn();
+  await act(async () => root.render(<BoundaryHarness classId="first-class" onClear={onClear} />));
+  await searchText('다른 회원');
+  expect(onClear).not.toHaveBeenCalled();
+  expect(box.querySelector('output')?.textContent).toContain('old-id');
+  expect(box.textContent).toContain('이전 선택 회원');
+});
+it('부모 선택 초기화가 늦어도 이전 이름을 다시 표시하거나 새 선택에 섞지 않는다', async () => {
+  vi.useFakeTimers(); api.get.mockResolvedValue({ members: candidateRows, has_more: false });
+  const onChange = vi.fn(); const selected = [{ userId: 'old-id', name: '이전 선택 회원' }];
+  await act(async () => root.render(<ClassMemberPicker classId="old-class" selected={selected} onChange={onChange} maxParticipants={3} />));
+  await act(async () => root.render(<ClassMemberPicker classId="new-class" selected={selected} onChange={onChange} maxParticipants={3} />));
+  await settleSearch();
+  expect(onChange).toHaveBeenCalledWith([]);
+  expect(box.textContent).not.toContain('이전 선택 회원');
+  expect([...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].every(input => input.disabled)).toBe(true);
+});
