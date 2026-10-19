@@ -281,3 +281,10 @@ python -m pytest tests/pg/test_sdd216_performance.py --confcutdir=tests/pg -q -s
 - 이월 상세: [next-sdd-handoff.md](next-sdd-handoff.md). 다음 spec/plan/구현 전 verify 입력 6 Task·12 시나리오. 다음 SDD 번호는 아직 발급하지 않았다.
 - 최신 제품 PR CI의 FE·PG 성공, BE 진행 중. 배포 후 E2E journeys/full-journey 실패는 별도 미해결 검증 항목이다. 전체 테스트 통과·전체 QA 완료를 의미하지 않는다.
 - 제품 코드·원본 verify 수정 없이 문서만 정리했다. 로컬 전체 BE 회귀는 실행하지 않았다.
+
+
+## 다음 SDD 착수 전 통합 마무리
+
+- 사용자 지시에 따라 214~216 통합 정리를 다음 SDD보다 먼저 수행한다. [통합 변경·dev 반영 정리](integration-closeout.md).
+- 214·215·215 후속 수정은 develop 병합 및 dev 제품 포함 확인. 216은 dev 직접 배포 완료이나 develop PR OPEN. 제품 코드 재배포와 PR 통합을 구분한다.
+- 배포 후 E2E 실패는 클래스/세션 생성 409와 후속 선행 조건 실패로 분류했다. 409 근본 원인은 아직 미확인. 사용자 발견 3건의 다음 SDD 이월과 별도 통합 검증 항목이다.
