@@ -257,3 +257,9 @@ python -m pytest tests/pg/test_sdd216_performance.py --confcutdir=tests/pg -q -s
 - 마이그레이션 없음. 원본 verify 유지. 외부 메일 전송은 없으며 로컬 대역만 사용했다. 실제 수신함·푸시·LiveKit/BLE·배포는 미확인. 사용자 정책 결정 필요 없음.
 - 로컬 커밋: 요구/QA `4f00d5c7`, 마법사 `e74128c8`, 회원 입장 `157d06da`, BE `61bfba34`, 예약값 보완 `e63f6112`, 발송 상태 `c0275a70`. 현재 결과 문서/버튼 정렬 커밋이 마지막 변경이다.
 - 코드/시나리오별 결과·증거·한계: [instant-class-followup.md](instant-class-followup.md). 확인 링크: https://brian-macmini.taila00d2a.ts.net:8443/classes/new
+
+
+## 사진 타이틀 카드 대비 보완
+
+- 사용자 첨부의 어두운 ‘1회차’ 제목/일시 원인은 전역 h2/p 색 지정. 클래스 개요와 목록 사진 카드에 밝은 제목(#F7F4F0)·보조 문구(#CFC6D6)를 직접 지정했다.
+- CSS 구문·로컬 스타일 제공 확인. 브라우저 연결 시간 초과로 새 화면 실측은 미확인. 상세: operations-visual-followup.md OV-11~12.

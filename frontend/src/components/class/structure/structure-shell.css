@@ -74,3 +74,9 @@
 .cs-structure .cs-hero-actions a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 24px; border-radius: 9999px; color: var(--cs-brand); background: #F7F4F0; font-size: 15px; font-weight: 700; }
 @media(min-width: 1194px) { .cs-structure .cs-class-hero { grid-template-columns: minmax(0,1fr) 240px; align-items: center; } }
 @media(max-width: 767px) { .cs-structure .cs-class-hero { padding: 16px; gap: 16px; } }
+
+/* 사진 위 제목·일시는 전역 h2/p 색보다 우선해 읽기 대비를 유지한다. */
+.cs-structure .cs-class-hero h2,
+.cs-structure .cs-open-hero h2 { color: #F7F4F0; }
+.cs-structure .cs-class-hero .cs-hero-when,
+.cs-structure .cs-open-hero > p { color: #CFC6D6; }
