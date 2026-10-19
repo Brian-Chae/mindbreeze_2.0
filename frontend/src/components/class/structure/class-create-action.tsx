@@ -6,16 +6,18 @@ import { schedulingApi } from '../../../lib/api/class-scheduling';
 /** 기존 클래스가 없는 계정도 서버 스위치와 현재 개설 권한으로 판정한다. */
 export function ClassCreateAction() {
   const user = useAuthStore(state => state.user);
-  const scope = `${user?.id}:${user?.role}`;
+  const userId = user?.id;
+  const userRole = user?.role;
+  const scope = `${userId}:${userRole}`;
   const [result, setResult] = useState<{ scope: string; enabled: boolean } | null>(null);
   useEffect(() => {
-    if (!user || !['counselor', 'org_admin'].includes(user.role)) return;
+    if (!userRole || !['counselor', 'org_admin'].includes(userRole)) return;
     const controller = new AbortController(); let active = true;
     schedulingApi.candidates(undefined, controller.signal).then(() => {
       if (active) setResult({ scope, enabled: true });
     }).catch(() => { if (active) setResult({ scope, enabled: false }); });
     return () => { active = false; controller.abort(); };
-  }, [scope, user?.id, user?.role]);
+  }, [scope, userRole]);
   const classes = 'inline-flex min-h-11 items-center rounded-xl bg-purple-800 px-4 py-2 text-sm font-semibold text-white';
   return result?.scope === scope && result.enabled
     ? <Link className={classes} to="/classes/new">새 클래스 만들기</Link>

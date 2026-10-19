@@ -6,7 +6,8 @@ import { classOperationsApi, type ClassInstructor } from '../../../lib/api/class
 import { schedulingApi, type InstructorCandidate, type ScheduleInput } from '../../../lib/api/class-scheduling';
 import { settingsSchedule } from '../../../lib/class-structure/operation-settings';
 import { useAuthStore } from '../../../stores/authStore';
-import { OperationFeedback, operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { OperationFeedback } from './class-operation-feedback';
 const days=['월','화','수','목','금','토','일'];
 export function ClassSettingsPanel({detail,onSaved}:{detail:ClassDetailDto;onSaved:()=>void}) {
  const admin=useAuthStore(s=>s.user?.role==='org_admin'); const operation=useClassOperation(detail.revision,onSaved);

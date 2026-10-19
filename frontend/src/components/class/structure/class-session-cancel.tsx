@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ClassDetailDto, ClassSessionDto } from '../../../lib/api/class-structure';
 import { schedulingApi } from '../../../lib/api/class-scheduling';
-import { OperationFeedback, operationButton, useClassOperation } from './class-operation-state';
+import { operationButton, useClassOperation } from './class-operation-state';
+import { OperationFeedback } from './class-operation-feedback';
 
 interface Props { detail: ClassDetailDto; session: ClassSessionDto; admin: boolean; onSaved: () => void }
 export function ClassSessionCancel(props: Props) {

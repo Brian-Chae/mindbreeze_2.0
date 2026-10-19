@@ -3,7 +3,8 @@ import { schedulingApi, type HostRequest, type InstructorCandidate, type WriteCo
 import { classOperationsApi } from '../../../lib/api/class-operations';
 import { ApiError } from '../../../lib/api/client';
 import { useAuthStore } from '../../../stores/authStore';
-import { OperationFeedback, operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { OperationFeedback } from './class-operation-feedback';
 const noCandidates:InstructorCandidate[]=[];
 interface Props {teamCandidates?:InstructorCandidate[];instructorIds?:string[];requestId?:string|null;classId:string;sessionId:string;revision:number|undefined;stateVersion:number|undefined;status:string;hostId:string|null;manager:boolean;onSaved:()=>void}
 export function ClassHostRequests({teamCandidates=noCandidates,instructorIds=[],requestId,classId,sessionId,revision,stateVersion,status,hostId,manager,onSaved}:Props) {

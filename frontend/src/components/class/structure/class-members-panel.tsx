@@ -4,7 +4,8 @@ import { classOperationsApi, type ClassMember } from '../../../lib/api/class-ope
 import { schedulingApi, type EmailInvite } from '../../../lib/api/class-scheduling';
 import { ClassMemberPicker, type ClassMemberSelection } from './class-member-picker';
 import { useAuthStore } from '../../../stores/authStore';
-import { OperationFeedback, operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
+import { OperationFeedback } from './class-operation-feedback';
 interface Props { detail: ClassDetailDto; onSaved: () => void }
 export function ClassMembersPanel(props: Props) {
   const user = useAuthStore(state => state.user);

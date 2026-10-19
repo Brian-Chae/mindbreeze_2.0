@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import {classOperationsApi} from '../../../lib/api/class-operations';
-import {OperationFeedback,operationButton,operationInput,useClassOperation} from './class-operation-state';
+import {operationButton,operationInput,useClassOperation} from './class-operation-state';
+import { OperationFeedback } from './class-operation-feedback';
 interface Props {classId:string;sessionId:string;revision:number|undefined;stateVersion:number|undefined;instructors:{user_id:string;name:string|null}[];onSaved:()=>void}
 export function ClassHostCorrection({classId,sessionId,revision,stateVersion,instructors,onSaved}:Props) {
  const operation=useClassOperation(revision,onSaved);const [mode,setMode]=useState<'correct'|'note'>('correct');const [candidate,setCandidate]=useState('');const [name,setName]=useState('');const [confirm,setConfirm]=useState(false);const [error,setError]=useState('');
