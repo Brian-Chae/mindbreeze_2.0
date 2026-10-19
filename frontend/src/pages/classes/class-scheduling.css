@@ -347,3 +347,12 @@
 .cs-wizard .cw-invite-members .w-count{order:3}
 .cs-wizard .cw-invite-members .class-member-picker__selected{order:4}
 .cs-wizard .cw-invite-members .class-member-picker__list{order:5}
+
+.cs-wizard .w-resrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;min-height:56px;padding:8px 16px;border-radius:var(--r-card);background:rgba(255,255,255,.08);border:1px solid var(--sheet-border);flex:none}
+.cs-wizard .w-resrow .tx{display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--tx-mid);line-height:20px}
+.cs-wizard .w-resrow .tx b{font-size:15px;color:var(--tx-hi)}
+.cs-wizard{color-scheme:dark}
+.cs-wizard *{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.3) transparent}
+.cs-wizard ::-webkit-scrollbar{width:8px;height:8px}
+.cs-wizard ::-webkit-scrollbar-track{background:transparent}
+.cs-wizard ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:9999px}
