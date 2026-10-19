@@ -38,3 +38,12 @@ class GuestRecovery(MemberCommand):
 class GuestExchange(BaseModel):
     model_config=ConfigDict(extra='forbid')
     exchange_token:str=Field(min_length=32,max_length=200)
+
+
+class GuestEntryResponse(BaseModel):
+    class_id: str
+    revision: int
+    session_id: str
+    participant_id: str
+    entry_credential: str
+    expires_at: str

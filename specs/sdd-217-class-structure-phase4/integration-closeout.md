@@ -41,3 +41,13 @@ Commit hygiene: source/document whitespace checks exclude raw evidence logs/diff
 - RED 2실패/35통과 → GREEN37통과, 독립 리뷰 PASS. 전체 PG 재검증은406통과/21deselected/8경고(71.62초). evidence/release-all-pg.log 참조.
 - FE 비차단 전체 테스트:2090통과/15실패. 기존 textarea/input 검사 불일치4, Dashboard 글꼴검사1, 기록된 navigation기준선3, Vite5175 미기동 fetch실패5 및 브라우저 locator timeout2. 관련 파일은 base대비 변경없음; timeout2의 환경 원인은 로그 정황상 추론이다. 신규217 회귀 근거 없음. 전체FE 통과로 보고하지 않는다.
 - 수정 push로 PR CI를 최신 커밋 기준 다시 실행하며, 최신 필수 게이트 결과를 병합 판단에 사용한다.
+
+## 백엔드 CI 5건 보완
+- d78d2975 CI39297914645: BE3152통과/5실패/407skip/1deselected, PG406통과 및 빈DB·스냅샷057 적용 통과. FE는2090통과/기존15실패 유지.
+- 신규 attendance/participation/guest-entry 응답 모델을 실제 DTO와 동일하게 명시했다. 기존 미지정 응답 골든8개는 유지했다.
+- 즉시 마지막 정규 회차 종료의 부모완료 계약에 맞춰 S07의 access_code 골든 한 필드만null로 정합화했다. heartbeat 등록 계약도 반영했다.
+- PDF 검증에 실제 타 상담사 계정을 생성해403을 유지하고 미존재주체404를 독립 확인했다. 제품 리포트 권한은 변경하지 않았다.
+- 초기화 도구 sessions 범위에서 신규 운영6테이블을 분류하고 append-only 감사3개를 보존한다. 기존 FK·환경·확인 플래그 가드 유지. scope=all의 기존 전체 삭제 의미는 바꾸지 않았으며 실제 운영 초기화는 수행하지 않았다.
+- 관련 계약105·HTTP응답보존3·PG75, 실제PDF/guard33·scratchPG14 통과. 두 묶음 독립 리뷰PASS.
+- 반복 사용한 로컬 합성DB에서는 기존 누적행으로 집계2건이 실패했다. 기존 DB를 변경하지 않고 새 sdd217_release_final DB에057까지 적용한 전체PG는408통과/21deselected/8경고(66.47초). 원격CI도 매번 빈DB를 사용한다.
+- 상세 원인·검증은 evidence/release-be-contract-fix.md, release-be-pdf-reset-fix.md, release-fresh-pg.log 참조. 최신 원격CI 결과를 병합 게이트로 사용한다.

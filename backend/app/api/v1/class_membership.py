@@ -10,6 +10,8 @@ from app.schemas.class_membership import MemberTransitionCommand, MemberWaitlist
 from app.services.class_membership_service import transition_membership, request_waitlist
 from app.services.class_effect_service import dispatch_class_effects
 
+from app.schemas.class_membership import AttendanceResponse, ParticipationResponse
+
 router = APIRouter(prefix="/classes", tags=["classes"], dependencies=[Depends(scheduling_enabled)])
 
 
@@ -30,7 +32,7 @@ async def waitlist(class_id: UUID, payload: MemberWaitlistCommand, request: Requ
     return await code_limited(request, redis, payload.code, lambda: request_waitlist(db, current_user['id'], class_id, payload) if current_user else guest_waitlist(db, class_id, x_class_member_credential, payload))
 
 
-@router.post('/{class_id}/sessions/{session_id}/members/{member_id}/attendance')
+@router.post('/{class_id}/sessions/{session_id}/members/{member_id}/attendance', response_model=AttendanceResponse)
 def attendance(class_id: UUID, session_id: UUID, member_id: UUID, payload: 'AttendanceCommand', current_user: dict | None = Depends(get_current_user_optional), db: Session = Depends(get_db), x_class_member_credential: str | None = Header(default=None, alias='X-Class-Member-Credential')):
     from app.services.class_attendance_service import change_attendance
     if current_user:
@@ -39,7 +41,7 @@ def attendance(class_id: UUID, session_id: UUID, member_id: UUID, payload: 'Atte
     return guest_attendance(db, class_id, session_id, member_id, x_class_member_credential, payload)
 
 
-@router.get('/{class_id}/sessions/{session_id}/participation')
+@router.get('/{class_id}/sessions/{session_id}/participation', response_model=ParticipationResponse)
 def participation(class_id: UUID, session_id: UUID, x_class_member_credential: str | None = Header(default=None, alias='X-Class-Member-Credential'), x_entry_credential: str | None = Header(default=None, alias='X-Entry-Credential'), current_user: dict | None = Depends(get_current_user_optional), db: Session = Depends(get_db)):
     from app.services.class_participation_service import snapshot
     return snapshot(db, class_id, session_id, current_user['id'] if current_user else None, entry_credential=x_entry_credential, member_credential=x_class_member_credential)

@@ -247,3 +247,90 @@ def test_cli_두_플래그가_모두_있으면_삭제한다(synthetic_db):
     assert proc.returncode == 0, proc.stderr
     assert set(_counts(engine).values()) == {0}
     assert json.loads(proc.stdout)["applied"] is True
+
+
+@pytest.mark.parametrize("with_audit", [False, True])
+def test_sdd217_sessions_초기화는_운영행만_정리하고_감사와_FK가드를_보존한다(scratch_db, with_audit):
+    """새057 임시DB 전용. 감사 유무 각각 FK차단·dry-run·apply·trigger 보존을 검사한다."""
+    from datetime import datetime, timedelta, timezone
+    from sqlalchemy.exc import DBAPIError
+    from app.models.class_program import ClassMember
+    from app.models.class_membership import (
+        ClassAttendanceEvent, ClassGuestCredential, ClassGuestJoinOperation, ClassGuestMerge,
+        ClassGuestRecovery, ClassMakeupAssignment, ClassMemberConsentEvent,
+        ClassMemberOperation, SessionPresenceLease,
+    )
+    from tests.pg.test_sdd217_schema import _rows
+
+    url = scratch_db(f"reset217_{int(with_audit)}")
+    alembic_ok(url, "upgrade", "head")
+    engine = sa.create_engine(url)
+    audit_tables = ("class_attendance_events", "class_guest_merges", "class_member_consent_events")
+    operational = ("class_makeup_assignments", "class_guest_credentials", "class_guest_recoveries",
+                   "class_member_operations", "class_guest_join_operations", "session_presence_leases")
+    expires = datetime.now(timezone.utc) + timedelta(days=1)
+    try:
+        with OrmSession(engine) as db:
+            cls, host, member, sessions, participants = _rows(db)
+            alias = ClassMember(class_id=cls.id, kind="guest", status="removed", joined_via="code")
+            db.add(alias); db.flush()
+            db.add_all([
+                ClassMakeupAssignment(class_id=cls.id, member_id=member.id,
+                    source_session_id=sessions[0].id, source_participant_id=participants[0].id,
+                    target_session_id=sessions[1].id, target_participant_id=participants[1].id),
+                ClassGuestCredential(class_id=cls.id, member_id=member.id, scope="read", expires_at=expires),
+                ClassGuestRecovery(class_id=cls.id, member_id=member.id, token_hash="a" * 64,
+                    expires_at=expires, issued_by=host.id, reason="합성 본인 확인"),
+                ClassMemberOperation(member_id=member.id, operation_key="reset-test", request_hash="b" * 64, result={}),
+                ClassGuestJoinOperation(class_id=cls.id, member_id=member.id, operation_key="reset-test", request_hash="c" * 64),
+                SessionPresenceLease(id="reset-test-socket", session_id=sessions[0].id,
+                    participant_id=participants[0].id, expires_at=expires),
+            ])
+            if with_audit:
+                db.add_all([
+                    ClassAttendanceEvent(class_id=cls.id, session_id=sessions[0].id,
+                        participant_id=participants[0].id, member_id=member.id, new_status="absent",
+                        actor_kind="host", actor_user_id=host.id, operation_key="reset-test"),
+                    ClassGuestMerge(class_id=cls.id, source_member_id=alias.id, target_member_id=member.id,
+                        actor_user_id=host.id, reason="합성 동일인 확인", preview_fingerprint="d" * 64),
+                    ClassMemberConsentEvent(class_id=cls.id, member_id=member.id, choice="research",
+                        value=True, notice_version="test-v1", actor_user_id=host.id, operation_key="reset-test"),
+                ])
+            db.commit()
+        before = _counts(engine)
+        with engine.connect() as c:
+            evidence = {table: c.execute(sa.text(f'SELECT * FROM "{table}" ORDER BY id')).all() for table in audit_tables}
+            # 217 감사는 부모 삭제와 독립적으로 보존하는 FK 없는 스키마다.
+            assert all(not sa.inspect(c).get_foreign_keys(table) for table in audit_tables)
+            revision = c.execute(sa.text('SELECT version_num FROM alembic_version')).scalar_one()
+        # 보존 감사에 부모 FK가 추가되면 빈 테이블이어도 삭제 전에 막아야 한다.
+        with engine.begin() as c:
+            c.execute(sa.text('ALTER TABLE class_attendance_events ADD CONSTRAINT test_reset_owner_fk FOREIGN KEY (class_id) REFERENCES classes(id)'))
+        with pytest.raises(dr.ResetGuardError, match="보존 테이블이 삭제 테이블을 참조한다: class_attendance_events"):
+            dr.reset_database(engine, scope="sessions", apply=True)
+        assert _counts(engine) == before
+        with engine.begin() as c:
+            c.execute(sa.text('ALTER TABLE class_attendance_events DROP CONSTRAINT test_reset_owner_fk'))
+        dry = dr.reset_database(engine, scope="sessions", apply=False)
+        assert not dry.applied and _counts(engine) == before
+        assert all(dry.table_counts[table] == 1 for table in operational)
+        assert not set(audit_tables) & set(dry.table_counts)
+        assert dr.reset_database(engine, scope="sessions", apply=True).applied
+        after = _counts(engine)
+        assert all(after[table] == 0 for table in (*operational, "classes", "class_members", "sessions", "session_participants"))
+        assert after["users"] == before["users"] and after["organizations"] == before["organizations"]
+        with engine.connect() as c:
+            assert c.execute(sa.text('SELECT version_num FROM alembic_version')).scalar_one() == revision
+            for table in audit_tables:
+                assert c.execute(sa.text(f'SELECT * FROM "{table}" ORDER BY id')).all() == evidence[table]
+                assert c.execute(sa.text("SELECT count(*) FROM pg_trigger WHERE tgrelid=CAST(:table AS regclass) AND NOT tgisinternal AND tgenabled='O'"), {"table": table}).scalar_one() == 1
+        if with_audit:
+            for table in audit_tables:
+                for sql in (f'UPDATE "{table}" SET id=id', f'DELETE FROM "{table}"'):
+                    with pytest.raises(DBAPIError, match="append-only"), engine.begin() as c:
+                        c.execute(sa.text(sql))
+        # 재실행도 보존 감사는 건드리지 않는다.
+        dr.reset_database(engine, scope="sessions", apply=True)
+        assert _counts(engine) == after
+    finally:
+        engine.dispose()

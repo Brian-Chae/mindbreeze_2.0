@@ -342,7 +342,7 @@
  "S07 POST end": {
   "content_type": "application/json",
   "shape": {
-   "access_code": "str",
+   "access_code": "null",
    "chat_enabled": "bool",
    "chat_room_id": "uuid",
    "created_at": "datetime",

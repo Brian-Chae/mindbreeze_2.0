@@ -11,6 +11,8 @@ from app.schemas.class_membership import MemberCommand,MemberWaitlistCommand
 from app.services import class_guest_service as service
 from app.services.class_effect_service import dispatch_class_effects
 
+from app.schemas.class_guests import GuestEntryResponse
+
 router=APIRouter(prefix='/classes',tags=['classes'],dependencies=[Depends(scheduling_enabled)])
 
 def guest_credential(value:str|None=Header(default=None,alias='X-Class-Member-Credential')):
@@ -34,7 +36,7 @@ def logout(class_id:UUID,background_tasks:BackgroundTasks,token:str=Depends(gues
 async def rejoin(class_id:UUID,payload:MemberWaitlistCommand,request:Request,token:str=Depends(guest_credential),db:Session=Depends(get_db),redis=Depends(get_redis)):
     return await code_limited(request,redis,payload.code,lambda:service.rejoin_guest(db,class_id,token,payload))
 
-@router.post('/{class_id}/sessions/{session_id}/guest-entry')
+@router.post('/{class_id}/sessions/{session_id}/guest-entry', response_model=GuestEntryResponse)
 def enter(class_id:UUID,session_id:UUID,payload:MemberCommand,token:str=Depends(guest_credential),db:Session=Depends(get_db)):
     return service.guest_entry(db,class_id,session_id,token,payload)
 

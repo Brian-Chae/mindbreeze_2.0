@@ -28,3 +28,43 @@ class MakeupAssignmentCommand(MemberCommand):
     member_id: UUID
     source_session_id: UUID
     target_session_id: UUID
+
+
+class AttendanceParticipantResponse(BaseModel):
+    """기존 출석 DTO의 문자열 ID·시간 표현을 그대로 유지한다."""
+    id: str
+    session_id: str
+    member_id: str | None
+    canonical_member_id: str | None
+    attendance_status: str | None
+    attendance_kind: str | None
+    entered_at: str | None
+    makeup_for_session_id: str | None
+    makeup_assignment_id: str | None
+
+
+class AttendanceResponse(BaseModel):
+    class_id: str
+    revision: int
+    participant: AttendanceParticipantResponse
+    participation_version: int
+
+
+class ParticipationParticipantResponse(BaseModel):
+    participant_id: str
+    member_id: str | None
+    canonical_member_id: str | None
+    attendance_status: str | None
+    entered_at: str | None
+    checkin_state: Literal['completed', 'not_completed', 'unknown']
+    checkin_at: str | None
+    presence_state: Literal['connected', 'disconnected', 'unknown']
+    presence_expires_at: str | None
+
+
+class ParticipationResponse(BaseModel):
+    session_id: str
+    participation_version: int
+    generated_at: str
+    presence_ttl_seconds: int
+    participants: list[ParticipationParticipantResponse]

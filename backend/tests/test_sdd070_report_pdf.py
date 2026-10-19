@@ -58,6 +58,9 @@ def test_pdf_requires_host_counselor_and_approval(client):
     db, provider, session, participant, report = _view_report(client)
     # SDD-216: 리포트 접근은 실제 활성 지도사 계정 기준이다(D-05/D-28). 호스트 행이 없는 가짜 ID 는 허용하지 않는다.
     db.add(User(id=session.host_id, email="pdf-host-sdd216@example.com", password_hash="unused", name="PDF 지도사", role="counselor", status="active"))
+    other_counselor = User(id=uuid4(), email="pdf-other-sdd217@example.com", password_hash="unused",
+                           name="다른 PDF 지도사", role="counselor", status="active")
+    db.add(other_counselor)
     db.flush()
     try:
         path = f"/api/v1/reports/{report.id}/pdf"
@@ -66,8 +69,11 @@ def test_pdf_requires_host_counselor_and_approval(client):
         report.status = "pending_review"
         db.commit()
         assert client.get(path).status_code == 409
-        app.dependency_overrides[get_current_user] = lambda: {"id": str(uuid4()), "role": "counselor"}
+        app.dependency_overrides[get_current_user] = lambda: {"id": str(other_counselor.id), "role": "counselor"}
         assert client.get(path).status_code == 403
+        # SDD-217: 존재하지 않는 주체의 404와 실제 타 상담사의 403을 구별한다.
+        app.dependency_overrides[get_current_user] = lambda: {"id": str(uuid4()), "role": "counselor"}
+        assert client.get(path).status_code == 404
         app.dependency_overrides[get_current_user] = lambda: {"id": str(session.host_id), "role": "client"}
         assert client.get(path).status_code == 403
     finally:
