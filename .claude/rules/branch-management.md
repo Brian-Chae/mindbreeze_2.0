@@ -45,3 +45,9 @@ main (운영 릴리스 전용)
 - PR은 **Merge commit**(기존 방식 유지). 머지 후 원격·로컬 브랜치와 워크트리를 삭제한다.
 - 끝난 워크트리는 바로 정리한다: `git worktree remove <경로>` → `git branch -d <브랜치>` → `git push origin --delete <브랜치>`.
 - 미커밋 변경이 있는 워크트리는 정리하지 않는다(내용 확인 후 결정).
+
+## 5. CI·테스트 실행 시점
+
+- 작업 브랜치(`sdd/**`·`fix/**`·`feature/**`) push 에서는 CI 가 돌지 않는다. 작업 중에는 로컬에서 `scripts/test-changed` (변경 파일 관련 테스트만)를 쓴다.
+- `develop` 대상 **PR 생성·갱신 시 전체 CI 1회**(backend 전체 pytest 포함)가 머지 게이트다. 새 push 가 오면 이전 실행은 취소된다.
+- `develop` push(머지·빠른 수정)는 frontend 검증 + PG 마이그레이션 스모크만 돌고, 배포(Deploy Dev) 후 e2e-smoke 가 이어진다.

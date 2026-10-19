@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""변경된 파일과 관련된 테스트만 로컬에서 실행한다 (전체 CI 는 PR 단계에서만 돈다).
+
+사용: scripts/test-changed [기준브랜치=origin/develop]
+- backend: 바뀐 backend/app/**/*.py 를 import 하는 tests/*.py (+ 바뀐 테스트 파일 자체)만 pytest
+- frontend: 바뀐 frontend/src 파일에 관련된 vitest (vitest related)
+- 마이그레이션(alembic) 변경 시 tests/pg 는 CI 에서 확인하므로 안내만 출력
+"""
+import re, subprocess, sys
+from pathlib import Path
+
+root = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], text=True).strip())
+base = sys.argv[1] if len(sys.argv) > 1 else "origin/develop"
+
+def git(*a):
+    return subprocess.check_output(["git", *a], text=True, cwd=root).splitlines()
+
+changed = set(git("diff", "--name-only", f"{base}...HEAD")) | set(git("diff", "--name-only", "HEAD")) | set(git("ls-files", "--others", "--exclude-standard"))
+be = sorted(f for f in changed if f.startswith("backend/") and f.endswith(".py"))
+fe = sorted(f for f in changed if f.startswith("frontend/src/") and re.search(r"\.(tsx?|css)$", f))
+rc = 0
+
+if be:
+    tests = {f[len("backend/"):] for f in be if f.startswith("backend/tests/") and Path(root, f).exists()}
+    mods = [f[len("backend/"):-3].replace("/", ".").removesuffix(".__init__") for f in be if f.startswith("backend/app/")]
+    if mods:
+        pats = [re.compile(r"\b" + re.escape(m) + r"\b|from " + re.escape(m.rsplit(".", 1)[0]) + r" import .*\b" + re.escape(m.rsplit(".", 1)[1]) + r"\b") for m in mods]
+        for t in Path(root, "backend/tests").rglob("test_*.py"):
+            if "/pg/" in str(t):
+                continue
+            txt = t.read_text(errors="ignore")
+            if any(p.search(txt) for p in pats):
+                tests.add(str(t.relative_to(root / "backend")))
+    if any("alembic/versions" in f for f in be):
+        print("⚠ 마이그레이션 변경 감지 — PG 검증은 PR CI(backend-pg-smoke)에서 확인됩니다.")
+    if tests:
+        print(f"[backend] 관련 테스트 {len(tests)}개 파일 실행")
+        rc |= subprocess.call(["python3", "-m", "pytest", "-q", "--tb=short", *sorted(tests)], cwd=root / "backend")
+    else:
+        print("[backend] 관련 테스트 없음 (app 모듈을 import 하는 테스트를 찾지 못함)")
+if fe:
+    print(f"[frontend] 관련 vitest 실행 ({len(fe)}개 파일)")
+    rc |= subprocess.call(["npx", "vitest", "related", "--run", "--passWithNoTests", *[f[len("frontend/"):] for f in fe]], cwd=root / "frontend")
+if not be and not fe:
+    print("변경된 backend/frontend 소스가 없습니다.")
+sys.exit(rc)
