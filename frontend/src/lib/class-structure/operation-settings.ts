@@ -1,0 +1,7 @@
+import type { ClassDetailDto } from '../api/class-structure';
+import type { ScheduleInput } from '../api/class-scheduling';
+/** 응답 누락을 기본값으로 채우면 전체 설정 갱신이 기존 값을 덮어쓰므로 저장하지 않는다. */
+export function settingsSchedule(detail: ClassDetailDto): ScheduleInput {
+  if (!detail.recurrence_rule || !detail.assignment_rule || detail.record_video === undefined || detail.chat_enabled === undefined || !detail.reminder_offsets || !detail.host_view || !['online','offline'].includes(detail.location_type) || !['fixed','rolling'].includes(detail.schedule_mode) || !['none','optional'].includes(detail.linkband_mode) || !detail.planned_session_count) throw new Error('현재 설정을 모두 확인할 수 없어요. 새로고침해 주세요.');
+  return { title:detail.title ?? '',location_type:detail.location_type as 'online'|'offline',location_address:detail.location_address,capacity:detail.capacity,linkband_mode:detail.linkband_mode as 'none'|'optional',record_audio:detail.record_audio,record_video:detail.record_video,chat_enabled:detail.chat_enabled,schedule_mode:detail.schedule_mode as 'fixed'|'rolling',planned_session_count:detail.planned_session_count,duration_min:detail.default_duration_min,recurrence_rule:detail.recurrence_rule,assignment_rule:detail.assignment_rule,instructors:detail.host_view.instructors.filter(i=>i.status==='active'&&(i.role==='lead'||i.role==='assistant')).map(i=>({user_id:i.user_id,role:i.role as 'lead'|'assistant'})),rows:[],member_ids:[],reminder_offsets:[...detail.reminder_offsets],ends_on:detail.ends_on??null };
+}
