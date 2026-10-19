@@ -33,3 +33,11 @@ head e036a0000057. upgrade는 가산 스키마·기존 회차 동의 override �
 배포 전 lint2건은 일반 콜백 이름과 미사용 의존성만 수정했다. 관련66 테스트·빌드 통과, 독립 검토 PASS. 보고서는 evidence/release-lint-fix-report.md에 보존한다.
 
 Commit hygiene: source/document whitespace checks exclude raw evidence logs/diffs, whose original terminal formatting is preserved. One whitespace-only source line was normalized. Full frontend lint passed.
+
+## 첫 PR CI와 스키마 검사 정합 수정
+- 제품 커밋: e24923b41f01f19fd32b3c53116a04b39ab23ac5, PR #20.
+- CI 39296788201: 타입·lint·빌드 통과. PG는 404통과/2실패로, 과거 테이블 수77 및 ORM CHECK 없음 기대가057 계약과 충돌했다.
+- 테스트 두 파일만 수정: 실제86개 테이블을 확인하고 기존214 제약 제외 검사를 유지하면서217 canonical guest CHECK/복합 FK를 이름·식·컬럼·참조·RESTRICT까지 정확히 허용한다. 제품 코드는 바꾸지 않았다.
+- RED 2실패/35통과 → GREEN37통과, 독립 리뷰 PASS. 전체 PG 재검증은406통과/21deselected/8경고(71.62초). evidence/release-all-pg.log 참조.
+- FE 비차단 전체 테스트:2090통과/15실패. 기존 textarea/input 검사 불일치4, Dashboard 글꼴검사1, 기록된 navigation기준선3, Vite5175 미기동 fetch실패5 및 브라우저 locator timeout2. 관련 파일은 base대비 변경없음; timeout2의 환경 원인은 로그 정황상 추론이다. 신규217 회귀 근거 없음. 전체FE 통과로 보고하지 않는다.
+- 수정 push로 PR CI를 최신 커밋 기준 다시 실행하며, 최신 필수 게이트 결과를 병합 판단에 사용한다.

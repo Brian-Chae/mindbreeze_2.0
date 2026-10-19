@@ -407,7 +407,7 @@ def test_모든_제약이_유효_상태다(head_engine):
     assert bad == []
 
 
-def test_ORM_메타데이터에_CHECK_와_복합_FK_가_없다():
+def test_ORM_메타데이터는_214_제약을_제외하고_217_제약만_허용한다():
     from app.core.database import Base
     from app.models import Session  # noqa: F401
 
@@ -418,7 +418,34 @@ def test_ORM_메타데이터에_CHECK_와_복합_FK_가_없다():
     from sqlalchemy import CheckConstraint
 
     new_tables = [Base.metadata.tables[t] for t in NEW_TABLES]
-    assert not [c for t in [table, *new_tables] for c in t.constraints if isinstance(c, CheckConstraint)]
+    # 214 제약의 ORM 제외를 유지하고, 057에서 추가한 guest 병합 제약만 정확히 허용한다.
+    checks = {
+        (t.name, c.name): str(c.sqltext)
+        for t in [table, *new_tables]
+        for c in t.constraints
+        if isinstance(c, CheckConstraint)
+    }
+    assert checks == {
+        ("class_members", "ck_class_members_canonical_guest"):
+            "canonical_member_id IS NULL OR (canonical_member_id <> id AND kind = 'guest')",
+    }
+    composite_fks = {
+        (t.name, fk.name): (
+            tuple(fk.column_keys),
+            tuple(element.target_fullname for element in fk.elements),
+            fk.ondelete,
+        )
+        for t in [table, *new_tables]
+        for fk in t.foreign_key_constraints
+        if len(fk.columns) > 1
+    }
+    assert composite_fks == {
+        ("class_members", "fk_class_members_canonical_guest"): (
+            ("class_id", "canonical_member_id", "kind"),
+            ("class_members.class_id", "class_members.id", "class_members.kind"),
+            "RESTRICT",
+        ),
+    }
 
 
 def test_alembic_check_는_복합_FK_를_차이로_제안하지_않는다(head_url):
