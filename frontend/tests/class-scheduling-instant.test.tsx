@@ -5,7 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { defaultSchedule, scheduleProblems } from '../src/lib/class-structure/scheduling-model';
 import { ClassSchedulingWizard } from '../src/pages/classes/class-scheduling-wizard';
-const mocks = vi.hoisted(() => ({ role: 'counselor', candidates: vi.fn(), preview: vi.fn(), create: vi.fn(), getClasses: vi.fn(), getClass: vi.fn(), update: vi.fn(), publish: vi.fn(), inviteEmails: vi.fn() }));
+const mocks = vi.hoisted(() => ({ role: 'counselor', candidates: vi.fn(), preview: vi.fn(), create: vi.fn(), getClasses: vi.fn(), getClass: vi.fn(), update: vi.fn(), publish: vi.fn(), inviteEmails: vi.fn(), emailInvites: vi.fn(), retryEmail: vi.fn() }));
 vi.mock('../src/lib/api/class-scheduling', () => ({ schedulingApi: mocks }));
 vi.mock('../src/lib/api/class-structure', () => ({ getClasses: mocks.getClasses, getClass: mocks.getClass }));
 vi.mock('../src/components/class/structure/class-member-picker', () => ({ ClassMemberPicker: ({ onChange }: { onChange: (items: { userId: string; name: string }[]) => void }) => <button onClick={() => onChange([{ userId: 'member-one', name: '회원' }])}>회원 선택</button> }));
@@ -20,6 +20,8 @@ beforeEach(() => {
   mocks.create.mockResolvedValue({ class_id: 'created-one', revision: 1, session_ids: ['open-session'] });
   mocks.getClass.mockResolvedValue({ host_view: { access_code: '2941' } });
   mocks.inviteEmails.mockResolvedValue({ invitations: [] });
+  mocks.emailInvites.mockResolvedValue({ invitations: [] });
+  mocks.retryEmail.mockResolvedValue({});
 });
 afterEach(async () => { if (root) await act(async () => root.unmount()); box?.remove(); });
 async function press(text: string) { const button = [...box.querySelectorAll('button')].find(x => x.textContent === text); expect(button, `버튼: ${text}`).toBeDefined(); await act(async () => button!.click()); }
@@ -106,4 +108,32 @@ it('일반 예약의 요일을 모두 지운 뒤 즉시로 바꾸면 유효한 �
   expect(mocks.preview.mock.calls[0][0].recurrence_rule).toEqual({ ...defaultSchedule('u1').recurrence_rule, start_now: true });
   await press('이전'); await press('정해진 횟수');
   expect(box.querySelectorAll('[aria-label="요일"] button[aria-pressed="true"]')).toHaveLength(0);
+});
+
+it('완료 화면은 실제 발송 대기·실패·처리됨 상태를 조회하고 수동 새로고침한다', async () => {
+  const invitation = { id: 'invite-one', email: 'guest@example.com', status: 'pending', created_at: '2026-10-19T01:00:00Z', sent_at: null };
+  mocks.emailInvites.mockResolvedValueOnce({ invitations: [invitation] }).mockResolvedValueOnce({ invitations: [{ ...invitation, status: 'failed' }] }).mockResolvedValueOnce({ invitations: [{ ...invitation, status: 'sent' }] });
+  await chooseNow(); await press('다음'); await press('비회원 이메일'); await input('초대할 이메일', invitation.email); await press('추가'); await press('클래스 만들기');
+  expect(box.textContent).toContain('발송 대기');
+  await press('발송 상태 새로고침'); expect(box.textContent).toContain('발송 실패');
+  await press('발송 상태 새로고침'); expect(box.textContent).toContain('발송 처리됨');
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+});
+it('실제 발송 실패 재시도는 최신 버전·관리자 사유와 같은 작업 키를 쓰며 클래스를 재생성하지 않는다', async () => {
+  const invitation = { id: 'invite-one', email: 'guest@example.com', status: 'failed', created_at: '2026-10-19T01:00:00Z', sent_at: null };
+  mocks.role = 'org_admin';
+  mocks.emailInvites.mockResolvedValue({ invitations: [invitation] });
+  mocks.retryEmail.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce({});
+  mocks.getClass.mockResolvedValue({ revision: 7, host_view: { access_code: '2941' } });
+  await chooseNow(); await press('다음');
+  const select = box.querySelector<HTMLSelectElement>('[aria-label="진행 지도사"]')!;
+  await act(async () => { select.value = 'u2'; select.dispatchEvent(new Event('change', { bubbles: true })); });
+  await press('다음'); await press('비회원 이메일'); await input('초대할 이메일', invitation.email); await press('추가');
+  const reason = box.querySelector<HTMLTextAreaElement>('[aria-label="센터 관리자 대행 사유"]')!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(reason, '즉시 수업 초대 지원'); reason.dispatchEvent(new Event('input', { bubbles: true })); });
+  await press('클래스 만들기'); await press('다시 보내기');
+  expect(mocks.retryEmail.mock.calls[0]).toEqual(['created-one', 'invite-one', expect.objectContaining({ expected_revision: 7, reason: '즉시 수업 초대 지원', operation_key: expect.any(String) })]);
+  await press('다시 보내기');
+  expect(mocks.retryEmail.mock.calls[1]).toEqual(mocks.retryEmail.mock.calls[0]);
+  expect(mocks.create).toHaveBeenCalledTimes(1);
 });
