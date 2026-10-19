@@ -3,7 +3,7 @@ import type { ClassId, RelationshipId } from '../class-structure/read-model';
 
 export interface UserBriefDto { id: string; name: string | null }
 export interface SessionBriefDto { id: string; seq: number | null; scheduled_at: string | null; status: string }
-export interface NextSessionDto extends SessionBriefDto { host: UserBriefDto }
+export interface NextSessionDto extends SessionBriefDto { host: UserBriefDto | null }
 export interface ProgressDto { completed: number; total: number }
 export interface ClassSummaryDto {
   id: string; title: string | null; status: string; schedule_mode: string;
@@ -15,8 +15,13 @@ export interface ClassHostViewDto { access_code: string | null; instructors: Cla
 export interface ClassDetailDto extends ClassSummaryDto {
   location_type: string; location_address: string | null; linkband_mode: string; record_audio: boolean;
   capacity: number; participant_mode: string; default_duration_min: number; host_view: ClassHostViewDto | null;
+  revision?: number; capabilities?: { manage: boolean; invite: boolean; schedule: boolean };
+  record_video?: boolean; chat_enabled?: boolean; reminder_offsets?: number[];
+  draft_schedule?: import('./class-scheduling').ScheduleInput | null;
+  recurrence_rule?: import('./class-scheduling').RecurrenceRule | null;
+  assignment_rule?: import('./class-scheduling').AssignmentRule | null; ends_on?: string | null;
 }
-export interface ClassSessionDto extends SessionBriefDto { session_kind: string; host: UserBriefDto; host_state: string | null }
+export interface ClassSessionDto extends SessionBriefDto { session_kind: string; host: UserBriefDto | null; host_state: string | null; state_version?: number; duration_min?: number; location_type?: 'online' | 'offline'; location_address?: string | null; assignment_override?: boolean }
 export interface ClassListResponse { classes: ClassSummaryDto[]; total: number }
 export interface ClassSessionsResponse { sessions: ClassSessionDto[]; total: number }
 export interface CounselingSummaryDto {
