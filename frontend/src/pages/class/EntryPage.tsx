@@ -49,7 +49,7 @@ export default function EntryPage() {
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
-  const prep = useEntryPrep({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
+  const prep = useEntryPrep({ sessionId, sessionType: entry?.classInfo?.sessionType, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   const survey = useEntrySurvey({ sessionId, credential: entry?.credential ?? null, participantId: entry?.participantId ?? null });
   // 시작 후 시트에서 `준비 이어서 하기`를 누르면 이후 단계에서는 다시 띄우지 않는다
   const [startedDismissed, setStartedDismissed] = useState(false);
@@ -257,7 +257,7 @@ export default function EntryPage() {
   if (machine.phase === 'wizard' && machine.step === 'a') {
     return (
       <NoticeStepView
-        place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
+        sessionType={info.sessionType} place={place} size={size} bandMode={bandMode} title={title} hostName={info.hostName} retentionDays={RETENTION_DAYS}
         reportChoice={prep.draft.reportChoice} researchConsent={prep.draft.researchConsent} researchSaveFailed={prep.draft.researchSaveFailed}
         steps={stepsView}
         onReportChoice={prep.chooseReport}
