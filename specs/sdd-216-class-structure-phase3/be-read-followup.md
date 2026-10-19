@@ -72,3 +72,6 @@
 - BF-12 RED에서 guest 클래스 상세 자체가 404임을 추가 확인했다. 구현 전에 범위를 보완: 활성 대강의 지정 회차만 상세·회차 목록에 허용하고 다른 회차 및 removed 대강 차단을 같은 테스트로 확인한다. 전체 클래스 목록·전체 운영정보는 넓히지 않는다.
 
 - BF-T8 결과: 필드 누락 RED, 이후 guest 기존 상세 404 확인·지정 범위 조회 보완 → **1 passed / 10 deselected / 1 warning, 1.69초**. host-request-capability-red/green.log. 스위치 off false·host_view null·회차 1개만 반환·removed 404 확인.
+
+- BF-11 보강 기대값: 대강 계정에 일반 출석 행이 겸해도 현재 진행자가 아니면 팀 전체 리포트 목록을 조회할 수 없다. 기존 상세의 일반 참여자 판정을 목록 권한으로 확장하지 않는다.
+- BF-11 보강 결과: 출석 겸직 guest의 200 RED → 팀/관리자 열람 정책 함수를 직접 재사용해 일반 참가자 fallback 제외 → **1 passed / 10 deselected / 1 warning, 1.71초**. report-guest-red/green.log.

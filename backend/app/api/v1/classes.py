@@ -542,7 +542,10 @@ def list_session_reports(
     db: DBSession = Depends(get_db),
 ) -> dict:
     from app.models.record import Report
-    from app.services.report_service import _can_access_report
+    from app.services.class_access_service import (
+        admin_can_read_meditation_report,
+        can_read_team_material,
+    )
 
     # 회원 본인 리포트는 기존 경로를 사용한다. 대강도 현재 진행자일 때만 허용한다.
     cls, actor = load_class_actor(db, class_id, current_user, "host_request")
@@ -557,7 +560,12 @@ def list_session_reports(
     )
     if cls.hidden_at is not None or session is None:
         raise HTTPException(404, detail={"code": "session_not_found"})
-    if not _can_access_report(str(actor.id), session, db):
+    allowed = (
+        admin_can_read_meditation_report(db, actor, session)
+        if actor.role == "org_admin"
+        else session.host_id == actor.id or can_read_team_material(db, actor.id, session)
+    )
+    if not allowed:
         raise HTTPException(403, detail={"code": "report_read_forbidden"})
     return {
         "reports": [

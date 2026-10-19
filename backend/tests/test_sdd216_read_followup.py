@@ -393,6 +393,8 @@ def test_회차_리포트_목록은_기존_팀열람과_관리자_권한을_따�
             report_notice_ack_at=datetime.now(timezone.utc),
         )
         db.add(participant)
+        # 대강이 회원 출석 행도 가져도 전체 회차 리포트 목록 권한은 생기지 않는다.
+        db.add(SessionParticipant(session_id=UUID(ids["session"]), user_id=UUID(ids["guest"])))
         report = Report(
             session_id=UUID(ids["session"]),
             type="counselor",
