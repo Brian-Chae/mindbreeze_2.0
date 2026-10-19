@@ -211,6 +211,9 @@ const router = createBrowserRouter(
         <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         <Route path="/classes/:classId/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
+        <Route path="/classes/:classId/members" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
+        <Route path="/classes/:classId/settings" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
+        <Route path="/classes/:classId/schedule" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         {/* 기존 상세가 읽는 내부 파라미터 이름 id를 유지한다(값은 회차 식별자다). */}
         <Route path="/classes/:classId/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><SessionDetailPage /></RoleGuard>} />
         <Route path="/counseling" element={<RoleGuard role={['counselor', 'org_admin']}><CounselingListPage role="host" /></RoleGuard>} />

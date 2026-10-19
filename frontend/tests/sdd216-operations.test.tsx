@@ -31,3 +31,16 @@ it('향후 일정 시각을 수정하면서 요일·배정·리마인더·종료
 it('이메일 상태 조회가 거절돼도 허용된 회원 목록을 표시한다',async()=>{mocks.get.mockImplementation((path:string)=>path.endsWith('/email-invites')?Promise.reject(new Error('초대 기능을 사용할 수 없어요.')):Promise.resolve({members:[{id:'m',user_id:'u',name:'회원 이름',status:'active'}]}));await render('/classes/c?tab=members');expect(box.textContent).toContain('회원 이름');expect(box.textContent).toContain('초대 기능을 사용할 수 없어요.');});
 
 it('편성 스위치가 꺼져 있으면 회원 조회만 하고 초대·재시도는 숨긴다',async()=>{mocks.get.mockResolvedValue({members:[]});await render('/classes/c?tab=members',true,false);expect(mocks.get).toHaveBeenCalledWith('/classes/c/members');expect(mocks.get).not.toHaveBeenCalledWith('/classes/c/email-invites');expect([...box.querySelectorAll('button')].some(b=>['회원 초대','초대 보내기','다시 보내기'].includes(b.textContent??''))).toBe(false);});
+it('대강을 보조강사로 명시 전환하고 기존 주강사에는 요청하지 않는다',async()=>{
+ mocks.get.mockImplementation((path:string)=>Promise.resolve(path.endsWith('/instructors')?{instructors:[{user_id:'h',role:'lead',status:'active',scope_session_id:null},{user_id:'g',role:'guest',status:'active',scope_session_id:'s'}]}:{instructors:[{id:'g',name:'대강 지도사'}],members:[],invitations:[]}));
+ await render('/classes/c?tab=settings');const button=(label:string)=>[...box.querySelectorAll('button')].find(b=>b.textContent===label);expect(button('보조강사로 전환')).toBeTruthy();await act(async()=>button('보조강사로 전환')!.click());expect(mocks.patch).not.toHaveBeenCalled();await act(async()=>button('변경 확인')!.click());expect(mocks.patch).toHaveBeenCalledTimes(1);expect(mocks.patch).toHaveBeenCalledWith('/classes/c/instructors/g',expect.objectContaining({role:'assistant',expected_revision:3}));
+});
+it('문서 경로의 설정·멤버 탭을 열고 편성 경로에서만 편집기를 표시한다',async()=>{
+ await render('/classes/c/settings');expect(box.textContent).toContain('설정 저장');await act(async()=>root.unmount());box.remove();
+ await render('/classes/c/members');expect(box.textContent).toContain('이메일 초대');await act(async()=>root.unmount());box.remove();
+ await render('/classes/c/sessions');expect(box.querySelector('[aria-label="회차 일괄 편집"]')).toBeNull();expect(box.querySelector('a[href="/classes/c/schedule"]')).toBeTruthy();await act(async()=>root.unmount());box.remove();
+ await render('/classes/c/schedule');expect(box.querySelector('[aria-label="회차 일괄 편집"]')).toBeTruthy();expect(box.querySelector('[aria-label="회차 보기 방식"]')).toBeNull();
+});
+it('마지막 주강사의 제거 버튼은 비활성화한다',async()=>{
+ mocks.get.mockImplementation((path:string)=>Promise.resolve(path.endsWith('/instructors')?{instructors:[{user_id:'h',role:'lead',status:'active',scope_session_id:null}]}:{instructors:[],members:[],invitations:[]}));await render('/classes/c/settings');expect([...box.querySelectorAll('button')].find(b=>b.textContent==='강사 제거')?.disabled).toBe(true);
+});
