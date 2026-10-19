@@ -4,13 +4,14 @@ import { classOperationsApi } from '../../../lib/api/class-operations';
 import { ApiError } from '../../../lib/api/client';
 import { useAuthStore } from '../../../stores/authStore';
 import { OperationFeedback, operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
-interface Props {instructorIds?:string[];requestId?:string|null;classId:string;sessionId:string;revision:number|undefined;stateVersion:number|undefined;status:string;hostId:string|null;manager:boolean;onSaved:()=>void}
-export function ClassHostRequests({instructorIds=[],requestId,classId,sessionId,revision,stateVersion,status,hostId,manager,onSaved}:Props) {
+const noCandidates:InstructorCandidate[]=[];
+interface Props {teamCandidates?:InstructorCandidate[];instructorIds?:string[];requestId?:string|null;classId:string;sessionId:string;revision:number|undefined;stateVersion:number|undefined;status:string;hostId:string|null;manager:boolean;onSaved:()=>void}
+export function ClassHostRequests({teamCandidates=noCandidates,instructorIds=[],requestId,classId,sessionId,revision,stateVersion,status,hostId,manager,onSaved}:Props) {
  const user=useAuthStore(s=>s.user);const admin=user?.role==='org_admin';
  const [requests,setRequests]=useState<HostRequest[]>([]);const [candidates,setCandidates]=useState<InstructorCandidate[]>([]);const [candidate,setCandidate]=useState('');const [error,setError]=useState('');const [refresh,setRefresh]=useState(0);
  const [conflict,setConflict]=useState<{fingerprint:string;signature:string;action:(command:WriteCommand)=>Promise<unknown>}|null>(null);
  const operation=useClassOperation(revision,()=>{setRefresh(v=>v+1);onSaved();});
- useEffect(()=>{let active=true;setConflict(null);void Promise.all([schedulingApi.hostRequests(classId,sessionId),schedulingApi.candidates(classId)]).then(([r,c])=>{if(active){setRequests(r.requests);setCandidates(c.instructors);setError('');}}).catch(e=>{if(active)setError(operationError(e));});return()=>{active=false;};},[classId,sessionId,refresh,revision]);
+ useEffect(()=>{let active=true;setConflict(null);void Promise.all([schedulingApi.hostRequests(classId,sessionId),manager?schedulingApi.candidates(classId):Promise.resolve({instructors:teamCandidates})]).then(([r,c])=>{if(active){setRequests(r.requests);setCandidates(c.instructors);setError('');}}).catch(e=>{if(active)setError(operationError(e));});return()=>{active=false;};},[classId,sessionId,refresh,revision,manager,teamCandidates]);
  const execute=async(signature:string,action:(command:WriteCommand)=>Promise<unknown>,fingerprint?:string)=>operation.run(signature+(fingerprint??''),async command=>{try{await action({...command,...(fingerprint?{force:true,confirmed_conflict_fingerprint:fingerprint}:{})});setConflict(null);}catch(e){if(e instanceof ApiError){const detail=(e.data as {detail?:{conflict_fingerprint?:string}}|null)?.detail;if(detail?.conflict_fingerprint)setConflict({fingerprint:detail.conflict_fingerprint,signature,action});}throw e;}},admin);
  const editable=['ready','scheduled'].includes(status);
  const name=(id:string)=>candidates.find(c=>c.id===id)?.name??'이름 미확인';

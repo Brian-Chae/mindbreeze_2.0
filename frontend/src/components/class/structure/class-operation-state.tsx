@@ -9,6 +9,8 @@ const errors: Record<string, string> = {
   reason_required: '센터 관리자의 변경 사유를 입력해 주세요.',
   regular_sessions_remaining: '아직 완료하지 않은 정규 회차가 있어요. 회차를 완료하거나 취소한 뒤 마무리해 주세요.',
   class_transition_conflict: '입장 중이거나 진행 중인 회차를 먼저 종료해 주세요.',
+  approved_attribution_immutable: '승인된 리포트의 진행자 귀속은 바꿀 수 없어요. 표시 메모를 남겨 주세요.',
+  host_correction_state: '완료 회차의 최신 상태를 확인한 뒤 정정해 주세요.',
   class_capacity: '클래스 정원을 초과했어요.',
   last_lead: '마지막 주강사는 제거할 수 없어요. 새 주강사를 먼저 지정해 주세요.',
   instructor_has_sessions: '아직 배정된 회차가 있어요. 회차의 진행자를 먼저 변경해 주세요.',

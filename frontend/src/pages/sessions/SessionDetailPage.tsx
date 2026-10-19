@@ -310,6 +310,8 @@ function LegacySessionDetailPage() {
 
   const data = useMemo(() => (session ? toHostDetailData(session, { mailInvites: mailInputs }) : null), [session, mailInputs]);
 
+  if (session?.class_id) return <ClassSessionDetail classId={session.class_id} sessionId={session.id}/>;
+
   if (error && !session) {
     return (
       <AppShell title="클래스 상세">

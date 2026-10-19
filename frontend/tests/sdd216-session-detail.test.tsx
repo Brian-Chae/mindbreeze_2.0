@@ -5,7 +5,7 @@ const state=vi.hoisted(()=>({user:{id:'admin',role:'org_admin'},detail:{id:'c',t
 vi.mock('../src/hooks/use-class-structure',()=>({useClassDetail:()=>({state:{status:'success',data:{detail:state.detail,sessions:{sessions:state.sessions,total:1}}},retry:vi.fn()})}));
 vi.mock('../src/stores/authStore',()=>({useAuthStore:(s:(v:typeof state)=>unknown)=>s(state)}));
 vi.mock('../src/components/class/structure/structure-shell',()=>({StructureShell:({children}:{children:ReactNode})=><main>{children}</main>}));
-vi.mock('../src/components/class/structure/class-host-requests',()=>({ClassHostRequests:()=>null}));
+vi.mock('../src/components/class/structure/class-host-requests',()=>({ClassHostRequests:()=><div>진행자 요청 패널</div>}));
 vi.mock('../src/components/class/structure/class-observer-view',()=>({ClassObserverView:()=>null}));
 vi.mock('../src/lib/api/session',()=>({getSession:vi.fn().mockResolvedValue({participants:[]})}));
 Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true});let root:Root;let box:HTMLDivElement;
@@ -13,3 +13,5 @@ afterEach(async()=>{if(root)await act(async()=>root.unmount());box?.remove();});
 async function render(){box=document.createElement('div');root=createRoot(box);await act(async()=>root.render(<MemoryRouter><ClassSessionDetail classId="c" sessionId="s"/></MemoryRouter>));}
 it('관리자는 편성으로 이동할 수 있지만 진행과 기록지 수정 CTA는 없다',async()=>{state.user={id:'admin',role:'org_admin'};await render();expect(box.querySelector('a[href="/classes/c/sessions"]')).toBeTruthy();expect(box.querySelector('a[href="/sessions/s/player"]')).toBeNull();expect(box.querySelector('a[href="/sessions/s/record"]')).toBeNull();});
 it('확정 진행 지도사만 플레이어 진입을 표시한다',async()=>{state.user={id:'host',role:'counselor'};await render();expect(box.querySelector('a[href="/sessions/s/player"]')).toBeTruthy();});
+
+it('대강은 host_view 없이도 host_request 권한으로 자기 요청 패널을 연다',async()=>{state.user={id:'guest',role:'counselor'};Object.assign(state.detail,{host_view:null,capabilities:{manage:false,invite:false,schedule:false,host_request:true}});await render();expect(box.textContent).toContain('진행자 요청 패널');expect(box.querySelector('a[href="/sessions/s/player"]')).toBeNull();});
