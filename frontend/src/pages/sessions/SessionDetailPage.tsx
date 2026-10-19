@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ClassSessionDetail } from '../../components/class/structure/class-session-detail';
 import { Ellipsis } from 'lucide-react';
 import {
   deleteSession,
@@ -46,6 +47,10 @@ const toSessionParticipant = (metric: SessionLiveMetric): SessionParticipant => 
 });
 
 export default function SessionDetailPage() {
+  const { classId, id } = useParams<{ classId: string; id: string }>();
+  return classId && id ? <ClassSessionDetail classId={classId} sessionId={id}/> : <LegacySessionDetailPage/>;
+}
+function LegacySessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<SessionDto | null>(null);

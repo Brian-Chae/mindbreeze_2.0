@@ -5,7 +5,7 @@ import type { DisplayField, ClassId } from '../../../lib/class-structure/read-mo
 import { classPath, classSessionPath } from '../../../lib/class-structure/navigation';
 import { ReadField } from './read-state';
 function fieldValue<T>(field: DisplayField<T>): T | undefined { return field.kind === 'value' ? field.value : undefined; }
-const labels: Record<string, string> = { active: '진행 중', ready: '준비', draft: '편성 중', completed: '완료', cancelled: '취소', scheduled: '예정', waiting: '대기 중', in_progress: '진행 중', open: '입장 중', fixed: '고정형', rolling: '정기형', online: '온라인', offline: '오프라인', hybrid: '온·오프라인', optional: '선택', required: '필수', none: '사용 안 함', regular: '정규', makeup: '보강' };
+const labels: Record<string, string> = { active: '진행 중', ready: '준비', draft: '편성 중', completed: '완료', cancelled: '취소', scheduled: '예정', waiting: '대기 중', in_progress: '진행 중', open: '입장 중', fixed: '고정형', rolling: '정기형', online: '온라인', offline: '오프라인', hybrid: '온·오프라인', optional: '선택', required: '필수', none: '사용 안 함', regular: '정규', makeup: '보강', assigned: '배정 완료', pending_ack: '수락 대기', needs_reassign: '재배정 필요' };
 export function LabelField({ field }: {
     field: DisplayField<string>;
 }) { const value = fieldValue(field); return <ReadField value={value === undefined ? undefined : labels[value]}/>; }
@@ -36,7 +36,7 @@ export function NextClassView({ model }: {
 export function HostSessionViews({ classId, sessions }: { classId: ClassId; sessions: SessionReadModel[] }) {
     const [timeline, setTimeline] = useState(false);
     const number = (session: SessionReadModel) => fieldValue(session.seq) === undefined ? <ReadField/> : `${fieldValue(session.seq)}회차`;
-    const status = (session: SessionReadModel) => <><LabelField field={session.status}/>{fieldValue(session.sessionKind) === 'makeup' && ' · 보강'}</>;
+    const status = (session: SessionReadModel) => <><LabelField field={session.status}/>{fieldValue(session.sessionKind) === 'makeup' && ' · 보강'}{['needs_reassign','pending_ack'].includes(fieldValue(session.hostState)??'')&&<span className="ml-2 rounded-full bg-amber-50 px-2 py-1 text-xs text-amber-900"><LabelField field={session.hostState}/></span>}</>;
     return (
         <section>
             <div className="mb-5 flex flex-wrap gap-2" role="group" aria-label="회차 보기 방식">
