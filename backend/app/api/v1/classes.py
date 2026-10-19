@@ -495,8 +495,14 @@ def list_members(
     load_class_actor(db, class_id, current_user, "invite")
     return {
         "members": [
-            {"id": str(m.id), "user_id": str(m.user_id), "status": m.status}
-            for m in db.query(ClassMember)
+            {
+                "id": str(m.id),
+                "user_id": str(m.user_id) if m.user_id is not None else None,
+                "name": name,
+                "status": m.status,
+            }
+            for m, name in db.query(ClassMember, User.name)
+            .outerjoin(User, User.id == ClassMember.user_id)
             .filter(ClassMember.class_id == class_id)
             .all()
         ]

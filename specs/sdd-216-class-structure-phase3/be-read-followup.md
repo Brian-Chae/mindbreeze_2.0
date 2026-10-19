@@ -42,3 +42,9 @@
 - BF-07: HTTP 조회에서 같은 기관 활성 counselor만 포함, 관리자/회원/타 기관/정지 계정·소속 제외. 클래스 관리 권한 없는 사용자의 class_id 조회는 차단.
 - BF-08: 회원·정지·기관 소속 해제·기관 비활성·스위치 off 차단. 테스트는 해당 두 함수만 RED, 구현 후 해당 두 함수만 GREEN. DB 변경 없음.
 - BF-T4 구현 결과: 2 failed(기존 상세 라우트로 들어가 400) → **2 passed / 5 deselected / 1 warning, 2.34초**. `candidates-red.log`·`candidates-green.log`. 기존 5개는 변경 영향이 없어 이번 실행에서 제외했다.
+
+## FE 연결 중 추가: 회원 표시 이름
+
+- 구현 전 기록 BF-T5/BF-09: GET members에 `name: string|null` 추가. user_id가 없는 회원은 JSON null로 반환. 기존 invite 권한 유지. 이메일·연락처는 반환하지 않는다.
+- 실제 HTTP에서 회원 이름·미연결 회원 null·회원/타인 조회 거부를 검증하는 테스트 1개만 RED→GREEN 실행한다. 소유: api/v1/classes.py·동일 테스트·API 계약.
+- BF-T5 결과: name 누락 1 failed → **1 passed / 7 deselected / 1 warning, 1.67초**. `member-name-red.log`·`member-name-green.log`. 조회 1회 outer join으로 연결 계정 이름만 추가했다.

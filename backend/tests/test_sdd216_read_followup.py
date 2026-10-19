@@ -307,3 +307,29 @@ def test_강사_후보_조회는_계정_기관_소속과_편성_스위치를_검
         )
         db.commit()
     assert client.get(path).status_code == 403
+
+
+def test_회원_목록은_이름과_미연결_회원_null을_권한자에게만_반환한다(client, scene):
+    ids, login = scene
+    with database.SessionLocal() as db:
+        db.get(User, UUID(ids["member"])).name = "표시할 회원"
+        guest_member = ClassMember(
+            class_id=UUID(ids["cls"]), user_id=None, status="active", joined_via="code"
+        )
+        db.add(guest_member)
+        db.commit()
+        guest_id = str(guest_member.id)
+    path = f'/api/v1/classes/{ids["cls"]}/members'
+    login("lead")
+    response = client.get(path)
+    assert response.status_code == 200, response.text
+    rows = response.json()["members"]
+    assert (
+        next(r for r in rows if r["user_id"] == ids["member"])["name"] == "표시할 회원"
+    )
+    guest = next(r for r in rows if r["id"] == guest_id)
+    assert guest["name"] is None and guest["user_id"] is None
+    assert all(set(r) == {"id", "user_id", "name", "status"} for r in rows)
+    for name, status in (("member", 403), ("outsider", 404)):
+        login(name)
+        assert client.get(path).status_code == status

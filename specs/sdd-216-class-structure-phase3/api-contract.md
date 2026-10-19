@@ -62,6 +62,7 @@
 - 성공한 DB 저장과 외부 전달 성공은 구분한다. 생성의 `invitation_results`는 현재 빈 배열이며 이메일 전달 결과는 GET 이메일 초대 API에서 조회한다.
 - 요청 조회 항목: `id`, `session_id`, `requested_by`, `candidate_host_id`, `request_kind`, `status`, `expected_state_version`, `expires_at`, `created_at`, `resolved_at`. 이유 본문은 반환하지 않는다. 생성 시각·ID 순서. 요청 조회 후 처리는 기존 resolve API가 최신 상태·권한을 재검사한다.
 - 이메일 조회 항목: `id`, `email`, `status`(pending/sent/failed), `created_at`, `sent_at`. 생성 시각·ID 순서. sent는 발송 함수 성공 기록이며 수신함 도착 증거가 아니다.
+- 회원 조회 항목: `id`, `user_id: string|null`, `name: string|null`, `status`. 연결 계정이 없으면 user_id·name은 null, 이메일·연락처는 제공하지 않는다. 기존 초대 권한 필요.
 - GET 클래스 상세는 `record_video: bool`, `chat_enabled: bool`, `reminder_offsets: int[]`의 현재 저장값도 반환한다. FE는 전체 설정 저장 시 조회값을 유지한다.
 - `effects_pending`은 생성 회차의 준비 의도 수다. 클래스 전체 outbox 잔량이나 전달 성공 건수가 아니다.
 - draft에는 실제 회차·코드·멤버·전달 의도가 없다. 부분 생성 성공 응답은 없다.
