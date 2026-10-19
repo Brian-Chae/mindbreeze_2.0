@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKeyConstraint, String, Integer, Date, DateTime, Text, Boolean, ForeignKey, UniqueConstraint, Index, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -51,6 +51,7 @@ class Session(Base):
     # SDD-026: 상태 계약 버전. 상태전이(start/pause/resume/end/cancel)마다 +1 증가시켜
     # join snapshot / session_state_changed 이벤트의 중복·역순 처리를 가능케 한다.
     state_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    participation_version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     host_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     # SDD-015: 즉석 클래스는 일정 없이 생성되므로 nullable
     # 생성 당시 기관 귀속. 기존 데이터는 추정하여 보완하지 않는다.
@@ -139,6 +140,14 @@ class SessionParticipant(Base):
     # 대리 키(id)를 PK로 두고 (session_id, user_id)는 UNIQUE 제약으로 강등한다.
     # PostgreSQL의 UNIQUE는 NULL을 서로 다른 값으로 취급하므로 게스트 중복 참여가 허용된다.
     __table_args__ = (
+        UniqueConstraint("session_id", "id", name="uq_session_participants_session_id"),
+        ForeignKeyConstraint(["session_id", "superseded_by_participant_id"],
+            ["session_participants.session_id", "session_participants.id"],
+            name="fk_session_participants_superseded", ondelete="RESTRICT"),
+        CheckConstraint("superseded_by_participant_id IS NULL OR superseded_by_participant_id <> id",
+                        name="ck_session_participants_superseded_not_self"),
+        CheckConstraint("checkin_state IS NULL OR checkin_state IN ('completed', 'not_completed', 'unknown')",
+                        name="ck_session_participants_checkin_state"),
         UniqueConstraint("session_id", "user_id", name="uq_session_participant_user"),
         # SDD-214: 같은 회차에 같은 멤버십의 출석 행은 최대 1개(member_id NULL 은 영향 없음).
         UniqueConstraint("session_id", "member_id", name="uq_session_participants_session_member"),
@@ -205,6 +214,15 @@ class SessionParticipant(Base):
     # system, host, self
     attendance_marked_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
     absence_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    # SDD-217: 출석·체크인·presence 근거는 서로 독립적으로 보존한다.
+    checkin_state: Mapped[str | None] = mapped_column(String(20))
+    checkin_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    presence_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    report_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    research_consent_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    research_origin_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    superseded_by_participant_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
 
     session = relationship("Session", back_populates="participants", foreign_keys=[session_id])
 

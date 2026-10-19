@@ -122,7 +122,7 @@ describe('H3 오프라인 헤드(C04) — 셀프뷰·카메라 토글 DOM 없음
     expect(panel).toContain('녹음');
     expect(panel).toContain('08:12');
     expect(panel).toContain('체크인');
-    expect(panel).toContain('6/7');
+    expect(panel).toContain('7/8'); // 현재 접속과 별개로 저장된 체크인 완료를 보존한다.
     expect(panel).toContain('밴드');
     expect(panel).toContain('5/8');
   });

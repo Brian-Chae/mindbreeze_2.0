@@ -127,7 +127,7 @@ def resolve_class_code(db, code):
         Session.is_template.is_(False)).order_by(Session.scheduled_at,Session.seq).first()
     def metadata(row):
         return {"session_id":str(row.id),"seq":row.seq,"scheduled_at":row.scheduled_at,"status":row.status}
-    return {"class_id":str(cls.id),"title":cls.title,"sessions":[metadata(r) for r in rows],
+    return {"class_id":str(cls.id),"revision":cls.revision,"title":cls.title,"sessions":[metadata(r) for r in rows],
             "next_session":metadata(next_row) if next_row else None}
 
 
@@ -135,17 +135,31 @@ def join_class_code(db, class_id, user_id, code, now=None):
     from datetime import datetime, timezone
     from uuid import UUID
     from app.models.user import User
-    from app.services.class_membership_service import invite_members
+    from app.models.class_program import ClassMember
+    from app.services.class_membership_service import invite_members, rejoin_member, _sessions_locked, _activate_future
     now=now or datetime.now(timezone.utc)
     try:
-        actor=db.query(User).filter(User.id==UUID(str(user_id))).with_for_update().first()
+        actor=db.query(User).filter(User.id==UUID(str(user_id))).with_for_update(key_share=True).first()
         if actor is None or actor.status!="active" or actor.role!="client":
             raise HTTPException(403,detail={"code":"member_only"})
         cls=db.query(Class).filter(Class.id==UUID(str(class_id))).populate_existing().with_for_update().first()
         normalized=normalize_class_code(code)
         if not cls or cls.status!="active" or not normalized or cls.access_code!=normalized:
             raise HTTPException(404,detail="클래스를 찾을 수 없습니다")
-        member=invite_members(db,cls,[actor.id],actor.id,now,via="code")[0]
+        members = db.query(ClassMember).filter(ClassMember.class_id == cls.id).order_by(ClassMember.id).populate_existing().with_for_update().all()
+        existing = next((m for m in members if m.user_id == actor.id), None)
+        changed = existing is None or existing.status != "active"
+        if existing and existing.status == "left":
+            member = rejoin_member(db, cls, existing, actor.id, now)
+        else:
+            if (existing is None or existing.status != "active") and any(m.status == "waitlisted" and m.canonical_member_id is None for m in members):
+                raise HTTPException(409, detail={"code": "waitlist_precedes"})
+            sessions = _sessions_locked(db, cls) if changed else []
+            member=invite_members(db,cls,[actor.id],actor.id,now,via="code")[0]
+            if changed:
+                _activate_future(db, cls, member, sessions, now)
+        if changed:
+            cls.revision += 1
         result={"class_id":str(cls.id),"member_id":str(member.id),"status":member.status}
         db.commit()
         return result

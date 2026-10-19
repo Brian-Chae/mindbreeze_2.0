@@ -1,0 +1,201 @@
+ M backend/app/api/v1/__init__.py
+ M backend/app/api/v1/classes.py
+ M backend/app/api/v1/reports.py
+ M backend/app/models/__init__.py
+ M backend/app/models/class_program.py
+ M backend/app/models/research.py
+ M backend/app/models/session.py
+ M backend/app/schemas/class_parent.py
+ M backend/app/schemas/class_scheduling.py
+ M backend/app/services/class_access_service.py
+ M backend/app/services/class_code_service.py
+ M backend/app/services/class_effect_service.py
+ M backend/app/services/class_membership_service.py
+ M backend/app/services/class_read_service.py
+ M backend/app/services/class_rolling_service.py
+ M backend/app/services/class_write_service.py
+ M backend/app/services/record_service.py
+ M backend/app/services/report_email_service.py
+ M backend/app/services/report_service.py
+ M backend/app/services/research_consent_service.py
+ M backend/app/services/retention_sweep_service.py
+ M backend/app/services/session_service.py
+ M backend/app/ws/session_live_namespace.py
+ M backend/tests/pg/test_sdd216_lifecycle.py
+ M backend/tests/pg/test_sdd216_members.py
+ M frontend/src/App.tsx
+ M frontend/src/components/class/player/host/HostChipLine.tsx
+ M frontend/src/components/class/player/host/HostHeadSlot.tsx
+ M frontend/src/components/class/player/host/HostLiveContainer.tsx
+ M frontend/src/components/class/player/host/HostLiveKitBridge.tsx
+ M frontend/src/components/class/player/host/HostLiveView.tsx
+ M frontend/src/components/class/player/host/HostParticipantGrid.tsx
+ M frontend/src/components/class/player/host/host-live-model.ts
+ M frontend/src/components/class/structure/class-members-panel.tsx
+ M frontend/src/components/class/structure/class-schedule-editor.tsx
+ M frontend/src/components/class/structure/class-settings-panel.tsx
+ M frontend/src/components/class/structure/member-class-views.tsx
+ M frontend/src/hooks/use-class-structure.ts
+ M frontend/src/hooks/useBand.ts
+ M frontend/src/hooks/useSessionLiveSocket.ts
+ M frontend/src/lib/api/class-code.ts
+ M frontend/src/lib/api/class-operations.ts
+ M frontend/src/lib/api/class-structure.ts
+ M frontend/src/lib/api/session.ts
+ M frontend/src/lib/class/fixtures/host-cases.ts
+ M frontend/src/lib/class/host-player-case.ts
+ M frontend/src/lib/socket.ts
+ M frontend/src/pages/classes/host-class-detail-page.tsx
+ M frontend/src/pages/client/member-class-detail-page.tsx
+ M frontend/src/pages/client/member-classes-page.tsx
+ M frontend/src/pages/sessions/ClassPlayerPage.tsx
+ M frontend/tests/class-player-host-container.test.tsx
+ M frontend/tests/class-player-host-detail.test.tsx
+ M frontend/tests/class-player-page-live.test.tsx
+?? backend/alembic/versions/e036a0000057_sdd217_membership.py
+?? backend/app/api/v1/class_guests.py
+?? backend/app/api/v1/class_membership.py
+?? backend/app/models/class_membership.py
+?? backend/app/schemas/class_consents.py
+?? backend/app/schemas/class_guests.py
+?? backend/app/schemas/class_membership.py
+?? backend/app/services/class_attendance_service.py
+?? backend/app/services/class_guest_service.py
+?? backend/app/services/class_makeup_service.py
+?? backend/app/services/class_member_commands.py
+?? backend/app/services/class_member_consent_service.py
+?? backend/app/services/class_participation_service.py
+?? backend/tests/pg/test_sdd217_attendance.py
+?? backend/tests/pg/test_sdd217_browser_regressions.py
+?? backend/tests/pg/test_sdd217_completion.py
+?? backend/tests/pg/test_sdd217_consent_retention.py
+?? backend/tests/pg/test_sdd217_guests.py
+?? backend/tests/pg/test_sdd217_makeup.py
+?? backend/tests/pg/test_sdd217_membership.py
+?? backend/tests/pg/test_sdd217_participation.py
+?? backend/tests/pg/test_sdd217_read_access.py
+?? backend/tests/pg/test_sdd217_schema.py
+?? backend/tests/test_sdd217_contract.py
+?? backend/tests/test_sdd217_read_access.py
+?? frontend/e2e/sdd217-browser-fixture.py
+?? frontend/e2e/sdd217-class-membership.mjs
+?? frontend/src/components/class/structure/host-member-operations.tsx
+?? frontend/src/components/class/structure/member-operations.tsx
+?? frontend/src/components/class/structure/membership-operation-state.ts
+?? frontend/src/hooks/useParticipationSnapshot.ts
+?? frontend/src/lib/api/participation.ts
+?? frontend/src/lib/class-structure/invalidation.ts
+?? frontend/src/pages/client/guest-class-membership-page.tsx
+?? frontend/tests/sdd217-band-revocation.test.tsx
+?? frontend/tests/sdd217-completion-drafts.test.tsx
+?? frontend/tests/sdd217-completion.test.tsx
+?? frontend/tests/sdd217-host-summary.test.ts
+?? frontend/tests/sdd217-integration-regressions.test.tsx
+?? frontend/tests/sdd217-member-operations.test.tsx
+?? frontend/tests/sdd217-participation.test.tsx
+?? frontend/tests/sdd217-presence-socket.test.tsx
+?? frontend/tests/sdd217-self-view.test.tsx
+?? specs/sdd-217-class-structure-phase4/api-contract.md
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-attendance-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-attendance-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-attendance-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-attendance-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-consents-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-consents-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-consents-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-consents-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-layout-results.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-layout.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-layout.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-reserved-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-reserved-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-reserved-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-makeup-reserved-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-top-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-top-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-top-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-active-top-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-browser-results.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-browser.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-consent-dom-red.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-consent-green.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-consent-integration-red.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-create-ready.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-create-success.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-environment.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-0.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-1.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-2.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-3.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-4.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-failure-5.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-final-build.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-guest-left-read.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-guest-public-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-guest-public-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-guest-public-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-guest-public-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-before-checkin.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-container-baseline.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-lower-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-lower-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-lower-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-members-lower-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-host-restored.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-instant-completed.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-layout-results.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-layout.json
+?? specs/sdd-217-class-structure-phase4/evidence/T11-layout.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-left-approved-report.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-lower-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-lower-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-lower-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-completed-before-lower-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-lower-1194x834.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-lower-1280x720.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-lower-390x844.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-member-left-lower-834x1194.png
+?? specs/sdd-217-class-structure-phase4/evidence/T11-recovery-pg-green.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-recovery-pg-red.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-recovery-sequence.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/T11-summary-counts-green.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-summary-counts-red.log
+?? specs/sdd-217-class-structure-phase4/evidence/T11-visual-review.md
+?? specs/sdd-217-class-structure-phase4/evidence/changed-files.txt
+?? specs/sdd-217-class-structure-phase4/evidence/final-build.log
+?? specs/sdd-217-class-structure-phase4/evidence/final-fe.log
+?? specs/sdd-217-class-structure-phase4/evidence/final-pg.log
+?? specs/sdd-217-class-structure-phase4/evidence/final-sqlite.log
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T00-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T00-schema-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T01-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T02-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T03-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T04-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T05-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T06-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T07-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T08-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T09-report.md
+?? specs/sdd-217-class-structure-phase4/evidence/prior-task-reports/T10-report.md
+?? specs/sdd-217-class-structure-phase4/plan.md
+?? specs/sdd-217-class-structure-phase4/spec.md
+?? specs/sdd-217-class-structure-phase4/summary.md
+?? specs/sdd-217-class-structure-phase4/verify.md

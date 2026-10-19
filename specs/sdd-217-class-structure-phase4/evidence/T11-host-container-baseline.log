@@ -1,0 +1,31 @@
+
+ RUN  v5.0.2 /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd217/frontend
+
+ ❯ tests/.t11-baseline-container.test.tsx (29 tests | 1 failed | 28 skipped) 45ms
+   ❯ 네트워크 배너(C16) — 소켓 끊김·복구 (3)
+     × 소켓이 끊기면 재연결 배너, 값 흐림, "데이터 수신 일시 중단" → 복구되면 사라진다 44ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/.t11-baseline-container.test.tsx > 네트워크 배너(C16) — 소켓 끊김·복구 > 소켓이 끊기면 재연결 배너, 값 흐림, "데이터 수신 일시 중단" → 복구되면 사라진다
+AssertionError: expected '60이완서연접속 확인 중' to contain '수신 일시 중단'
+
+Expected: "수신 일시 중단"
+Received: "60이완서연접속 확인 중"
+
+ ❯ tests/.t11-baseline-container.test.tsx:189:46
+    187|     expect(text(one('[data-pz="banner"]'))).toContain('데이터 수신이 잠시 중단됐어…
+    188|     expect(one('.hp-grid')?.getAttribute('data-net-bad')).toBe('true');
+    189|     expect(text(all('[data-pz="tile"]')[0])).toContain('수신 일시 중단');
+       |                                              ^
+    190|     await render(<HostLiveContainer {...baseProps({ live: { socketConn…
+    191|     expect(one('[data-pz="banner"]')).toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 28 skipped (29)
+   Start at  21:24:23
+   Duration  824ms (environment 45%, transform 33%, import 15%, tests 6%, setup 1%)
+

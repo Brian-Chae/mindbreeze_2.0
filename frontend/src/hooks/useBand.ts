@@ -387,6 +387,7 @@ export function useBand({
   const autoReconnectRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wsConnectedRef = useRef(false);
+  const revokedSessionRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
   /** SDD-112: 재전송 in-flight 가드 — 5초 타이머·재연결 중복 호출 방지 */
   const retransmitInFlightRef = useRef(false);
@@ -1252,6 +1253,7 @@ export function useBand({
     retainSessionLiveRoom(sessionId);
 
     const onConnect = (): void => {
+      if (revokedSessionRef.current === sessionId) return;
       wsConnectedRef.current = true;
       if (mountedRef.current) setIsWsConnected(true);
       joinSessionLive(socket, sessionId, participantIdRef.current, entryCredentialRef.current);
@@ -1261,6 +1263,13 @@ export function useBand({
 
     const onDisconnect = (): void => {
       // 단절 시 큐 유지
+      wsConnectedRef.current = false;
+      if (mountedRef.current) setIsWsConnected(false);
+    };
+
+    const onAccessRevoked = (event: {session_id?: string}): void => {
+      if (event.session_id !== sessionId) return;
+      revokedSessionRef.current = sessionId;
       wsConnectedRef.current = false;
       if (mountedRef.current) setIsWsConnected(false);
     };
@@ -1353,6 +1362,7 @@ export function useBand({
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
+    socket.on('access_revoked', onAccessRevoked);
     const unsubAck = subscribeSessionLiveFeatureAck(socket, onAck);
     const unsubscribe = subscribeSessionLiveEegFeature(socket, onEegFeature);
 
@@ -1368,6 +1378,7 @@ export function useBand({
       unsubscribe();
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
+      socket.off('access_revoked', onAccessRevoked);
       wsConnectedRef.current = false;
       if (mountedRef.current) setIsWsConnected(false);
     };

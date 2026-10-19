@@ -79,6 +79,7 @@ const ClientAppPage = lazy(() => import('./pages/client/ClientAppPage'));
 const HostClassesPage = lazy(() => import('./pages/classes/host-classes-page').then((module) => ({ default: module.HostClassesPage })));
 const HostClassDetailPage = lazy(() => import('./pages/classes/host-class-detail-page').then((module) => ({ default: module.HostClassDetailPage })));
 const MemberStructureHomePage = lazy(() => import('./pages/client/member-structure-home-page').then((module) => ({ default: module.MemberStructureHomePage })));
+const GuestClassMembershipPage = lazy(() => import('./pages/client/guest-class-membership-page').then(module => ({ default: module.GuestClassMembershipPage })));
 const MemberClassesPage = lazy(() => import('./pages/client/member-classes-page').then((module) => ({ default: module.MemberClassesPage })));
 const MemberClassDetailPage = lazy(() => import('./pages/client/member-class-detail-page').then((module) => ({ default: module.MemberClassDetailPage })));
 const CounselingListPage = lazy(() => import('./pages/counseling/counseling-list-page').then((module) => ({ default: module.CounselingListPage })));
@@ -175,6 +176,7 @@ const router = createBrowserRouter(
         <Route path="/role-redirect" element={<RoleRouter />} />
         {/* 상담사 미연결 회원도 새 읽기 화면에 진입하도록 기존 연결 분기보다 먼저 등록한다. */}
         <Route path="/app" element={<RoleGuard role="client"><MemberStructureHomePage /></RoleGuard>} />
+        <Route path="/class-members/:classId" element={<GuestClassMembershipPage />} />
         <Route path="/app/classes" element={<RoleGuard role="client"><MemberClassesPage /></RoleGuard>} />
         <Route path="/app/classes/:classId" element={<RoleGuard role="client"><MemberClassDetailPage /></RoleGuard>} />
         <Route path="/app/counseling" element={<RoleGuard role="client"><CounselingListPage role="member" /></RoleGuard>} />

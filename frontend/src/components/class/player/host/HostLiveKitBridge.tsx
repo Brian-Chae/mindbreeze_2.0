@@ -3,7 +3,7 @@
 // - 내 마이크·카메라는 로컬 참가자를 직접 제어한다. LiveKitRoom 의 audio/video props 는 연결 직후 한 번만 발행에 쓰이고 이후 변경은 반영되지 않는다.
 import { useEffect, useMemo, useState } from 'react';
 import { LiveKitRoom, RoomAudioRenderer, useConnectionState, useLocalParticipant, useTracks } from '@livekit/components-react';
-import { ConnectionState, MediaDeviceFailure, Track } from 'livekit-client';
+import { ConnectionState, MediaDeviceFailure, Track, type LocalVideoTrack } from 'livekit-client';
 import type { MediaFailureKind, MediaFailureReason } from './host-media-control';
 
 interface HostLiveKitBridgeProps {
@@ -18,6 +18,8 @@ interface HostLiveKitBridgeProps {
   onMediaFailure?: (kind: MediaFailureKind, reason: MediaFailureReason) => void;
   /** 내 카메라 트랙의 스트림(셀프뷰). 없으면 null */
   onSelfStream?: (stream: MediaStream | null) => void;
+  /** SDK가 원본 교체를 셀프뷰에 반영하도록 트랙 자체를 전달한다. */
+  onSelfTrack?: (track: LocalVideoTrack | null) => void;
   /** 회원이 켠 카메라 트랙의 스트림. 없거나 꺼졌으면 null */
   onMemberStream?: (stream: MediaStream | null) => void;
 }
@@ -33,10 +35,12 @@ interface ProbeProps {
   camOn: boolean;
   retryKey: number;
   onSelfStream?: (stream: MediaStream | null) => void;
+  /** SDK가 원본 교체를 셀프뷰에 반영하도록 트랙 자체를 전달한다. */
+  onSelfTrack?: (track: LocalVideoTrack | null) => void;
   onMemberStream?: (stream: MediaStream | null) => void;
 }
 
-function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onMemberStream }: ProbeProps) {
+function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onSelfTrack, onMemberStream }: ProbeProps) {
   const { localParticipant } = useLocalParticipant();
   const connected = useConnectionState() === ConnectionState.Connected;
   const tracks = useTracks([Track.Source.Camera]);
@@ -50,6 +54,13 @@ function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onMemberStream }: P
     if (!connected || !localParticipant) return;
     void localParticipant.setCameraEnabled(camOn).catch(() => undefined);
   }, [connected, localParticipant, camOn, retryKey]);
+
+  const selfTrack = tracks.find((t) => t.participant.isLocal)?.publication?.track as LocalVideoTrack | undefined;
+
+  useEffect(() => {
+    onSelfTrack?.(selfTrack ?? null);
+    return () => onSelfTrack?.(null);
+  }, [selfTrack, onSelfTrack]);
 
   const selfStream = useMemo(
     () => tracks.find((t) => t.participant.isLocal && t.publication?.track?.mediaStream)?.publication?.track?.mediaStream ?? null,
@@ -70,7 +81,7 @@ function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onMemberStream }: P
   return <RoomAudioRenderer />;
 }
 
-export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0, onDisconnected, onMediaFailure, onSelfStream, onMemberStream }: HostLiveKitBridgeProps) {
+export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0, onDisconnected, onMediaFailure, onSelfStream, onSelfTrack, onMemberStream }: HostLiveKitBridgeProps) {
   // 연결 시점의 발행 상태만 LiveKitRoom 에 준다(이후 변경은 BridgeProbe 가 로컬 참가자로 직접 반영)
   const [initial] = useState({ audio: micOn, video: camOn });
   const handleFailure = (failure: MediaDeviceFailure | undefined, kind?: MediaDeviceKind): void => {
@@ -88,7 +99,7 @@ export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0
       onMediaDeviceFailure={handleFailure}
       style={{ display: 'none' }}
     >
-      <BridgeProbe micOn={micOn} camOn={camOn} retryKey={retryKey} onSelfStream={onSelfStream} onMemberStream={onMemberStream} />
+      <BridgeProbe micOn={micOn} camOn={camOn} retryKey={retryKey} onSelfStream={onSelfStream} onSelfTrack={onSelfTrack} onMemberStream={onMemberStream} />
     </LiveKitRoom>
   );
 }

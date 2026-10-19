@@ -1,0 +1,1683 @@
+{
+  "synthetic": true,
+  "base": "http://127.0.0.1:55440",
+  "api": "http://127.0.0.1:55439/api/v1",
+  "results": [
+    {
+      "name": "실제 UI 로그인 합성 강사",
+      "status": "PASS",
+      "detail": "실제 로그인 성공"
+    },
+    {
+      "name": "실제 UI 로그인 합성 회원",
+      "status": "PASS",
+      "detail": "실제 로그인 성공"
+    },
+    {
+      "name": "실제 UI 로그인 합성 중간합류",
+      "status": "PASS",
+      "detail": "실제 로그인 성공"
+    },
+    {
+      "name": "실제 UI 로그인 합성 미입장",
+      "status": "PASS",
+      "detail": "실제 로그인 성공"
+    },
+    {
+      "name": "V30 active 전용 실제 클래스·결석·빈 보강 회차 준비",
+      "status": "PASS",
+      "detail": {
+        "class_id": "be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+        "class_status": "active",
+        "member_status": "active",
+        "source_session": "8cb795d8-ec5e-4b6f-a468-7775f546bf4f",
+        "future_session": "f052ce06-3095-4d13-a7c4-ed9896a8c4fa",
+        "makeup_session": "11f44477-a514-4ee1-b3e0-cb91c7b1e3d6"
+      }
+    },
+    {
+      "name": "V30 active 4뷰포트 사전 결석·보강 신청·동의 활성 조작 영역",
+      "status": "PASS",
+      "detail": {
+        "viewports": 4,
+        "sections_per_viewport": 4,
+        "screenshots": 16,
+        "enabled_controls": [
+          "사전 결석",
+          "보강 예약하기",
+          "동의 설정 저장"
+        ]
+      }
+    },
+    {
+      "name": "V30 active 표시한 동의·사전 결석/복귀·보강 실제 저장",
+      "status": "PASS",
+      "detail": {
+        "consents": 200,
+        "excuse": 200,
+        "undo_excuse": 200,
+        "makeup": 201,
+        "member_status": "active"
+      }
+    },
+    {
+      "name": "V30 active 보강 예약 배지·취소 버튼 4뷰포트",
+      "status": "PASS",
+      "detail": {
+        "viewports": 4,
+        "screenshots": 4,
+        "member_status": "active",
+        "reservation": "reserved",
+        "cancel_enabled": true
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/counselor",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/dashboard/counselor",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/counseling",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/counseling",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/devices/web-push/public-key",
+      "status": 503
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/counseling",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/client/counselors",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/members",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sessions/8cb795d8-ec5e-4b6f-a468-7775f546bf4f/open",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sessions/8cb795d8-ec5e-4b6f-a468-7775f546bf4f/start",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sessions/8cb795d8-ec5e-4b6f-a468-7775f546bf4f/end",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/consents",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/consents",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions/f052ce06-3095-4d13-a7c4-ed9896a8c4fa/participation",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions/f052ce06-3095-4d13-a7c4-ed9896a8c4fa/members/657fa748-a984-4690-a507-af6bcfb00938/attendance",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions/f052ce06-3095-4d13-a7c4-ed9896a8c4fa/participation",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions/f052ce06-3095-4d13-a7c4-ed9896a8c4fa/members/657fa748-a984-4690-a507-af6bcfb00938/attendance",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/makeup-assignments",
+      "status": 201
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/checkin/clients",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/counselor/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/rooms",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/reports",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/sessions",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/attendance",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/classes/be575f9d-4749-4c63-98ac-9bbb2fc228b4/me/membership",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/unread-count",
+      "status": 200
+    }
+  ],
+  "errors": []
+}

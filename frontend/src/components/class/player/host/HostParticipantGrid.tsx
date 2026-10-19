@@ -36,11 +36,23 @@ function viewportWidth(): number {
 }
 
 function tileStatus(p: HostParticipant, netBad: boolean, warn: boolean): { tone: string | undefined; node: ReactNode } {
+  if (p.presenceState !== 'connected') return { tone: undefined, node: (<><i className="hp-dot" data-state="off" />{presenceLabel(p)}</>) };
   if (p.speaking) return { tone: 'speak', node: (<><i className="hp-dot" data-state="on" />말하는 중</>) };
   if (p.hand) return { tone: 'hand', node: (<><Hand aria-hidden="true" strokeWidth={2} />손듦 · 대기 중</>) };
   if (netBad) return { tone: undefined, node: (<><Pause aria-hidden="true" strokeWidth={2} />수신 일시 중단</>) };
   if (p.lowBattery) return { tone: 'caution', node: (<><BatteryLow aria-hidden="true" strokeWidth={2} />배터리 낮음</>) };
   return { tone: warn ? 'warn' : undefined, node: (<><i className="hp-dot" data-state="on" />연결됨{warn ? ' · 살펴보기' : ''}</>) };
+}
+
+function checkinLabel(p: HostParticipant): string {
+  if (p.checkinState === 'completed') return '체크인 완료';
+  if (p.checkinState === 'not_completed') return '체크인 전';
+  return '체크인 확인 중';
+}
+function presenceLabel(p: HostParticipant): string {
+  if (p.presenceState === 'connected') return '참여 중';
+  if (p.enteredAt === null) return '미입장';
+  return p.presenceState === 'disconnected' ? '현재 미접속' : '접속 확인 중';
 }
 
 function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
@@ -52,10 +64,10 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
   if (allOff) {
     return (
       <button type="button" className="hp-tile" data-pz="tile" data-away="true" data-band="off" data-participant-id={p.id}
-        aria-pressed={pressed} aria-label={`${p.name} 체크인 ${p.checkin[0]?.[1] ?? '전'}`} onClick={() => onSelect(p.id)}>
+        aria-pressed={pressed} aria-label={`${p.name} ${checkinLabel(p)} ${presenceLabel(p)}`} onClick={() => onSelect(p.id)}>
         <div className="hp-avring"><span className="hp-avt">{p.name.slice(0, 1)}</span></div>
         <span className="hp-tile__nm">{p.name}</span>
-        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{p.checkin[0]?.[1] ?? '체크인 전'}</span>
+        <span className="hp-tile__st"><i className="hp-dot" data-state="off" />{checkinLabel(p)} · {presenceLabel(p)}</span>
       </button>
     );
   }
@@ -86,7 +98,7 @@ function HostTile({ p, metric, allOff, netBad, pressed, onSelect }: {
   const lost = p.band === 'lost';
   const ringTone = p.band === 'off' ? 'idle' : 'lost';
   const nb = leadoff ? '접촉' : lost ? '끊김' : '미착용';
-  const statusText = leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
+  const statusText = p.presenceState !== 'connected' ? presenceLabel(p) : leadoff ? '접촉 불량 · 확인' : lost ? `연결 끊김 · ${p.agoLabel ?? '방금 전'}` : '밴드 없이 참여';
   const label = leadoff ? `${p.name} 접촉 불량` : lost ? `${p.name} 연결 끊김` : `${p.name} 밴드 미착용`;
   return (
     <button type="button" className="hp-tile" data-pz="tile" data-band={p.band} data-participant-id={p.id}

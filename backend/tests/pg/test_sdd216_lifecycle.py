@@ -153,6 +153,8 @@ def test_completed_class_makeup_preserves_member_and_source(pg_session):
         row.status = "completed"
     cls.status = "completed"
     membership.status = "completed"
+    # SDD-217 개인 보강은 완료 회차의 명시적 원결석 근거가 필요하다.
+    pg_session.query(SessionParticipant).filter_by(session_id=rows[0].id, member_id=membership.id).one().attendance_status = "absent"
     pg_session.commit()
     result = writer().add_session(
         pg_session,

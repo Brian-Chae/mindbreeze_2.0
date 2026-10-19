@@ -10,6 +10,9 @@ import ClassPlayerPage from '../src/pages/sessions/ClassPlayerPage';
 import { useAuthStore } from '../src/stores/authStore';
 
 const h = vi.hoisted(() => ({
+  liveOptions: {} as Record<string, unknown>,
+  bandOptions: {} as Record<string, unknown>,
+  participation: {sessionId:'s1',version: -1, revoked: false, participants: {} as Record<string, unknown>},
   containerProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
   prepProps: [] as Array<Record<string, any>>, // eslint-disable-line @typescript-eslint/no-explicit-any
   calls: [] as string[],
@@ -55,16 +58,17 @@ vi.mock('../src/lib/socket', () => ({ getActiveSessionLiveSocket: () => h.rawSoc
 vi.mock('../src/hooks/useAudioRecorder', () => ({ useAudioRecorder: () => h.recorder }));
 vi.mock('../src/hooks/useVideoRecorder', () => ({ useVideoRecorder: () => h.videoRecorder }));
 vi.mock('../src/hooks/useBand', () => ({
-  useBand: () => ({
+  useBand: (options: Record<string, unknown>) => {h.bandOptions=options;return ({
     isSupported: true, isMock: false, connectionState: 'disconnected', battery: null, deviceStatus: null, signalQualityLevel: 'unknown',
     signalQuality: null, lastEegAt: null, currentEfficiency: null, uploadStatus: null, error: null,
     connect: vi.fn(), disconnect: vi.fn(),
-  }),
+  });},
 }));
 vi.mock('../src/hooks/useLiveKit', () => ({ useLiveKit: () => h.liveKit }));
 vi.mock('../src/hooks/useSessionLiveSocket', () => ({
-  useSessionLiveSocket: () => ({ isConnected: true, isReady: true, hasSnapshot: true, sendSignal: vi.fn(), sendAudioSync: vi.fn() }),
+  useSessionLiveSocket: (options:Record<string, unknown>) => {h.liveOptions=options;return ({ isConnected: true, isReady: true, hasSnapshot: true, sendSignal: vi.fn(), sendAudioSync: vi.fn() });},
 }));
+vi.mock('../src/hooks/useParticipationSnapshot',()=>({useParticipationSnapshot:()=>h.participation}));
 vi.mock('../src/hooks/useWakeLock', () => ({ useWakeLock: vi.fn() }));
 vi.mock('../src/hooks/useLeaveGuard', () => ({ useLeaveGuard: () => ({ state: 'unblocked' }) }));
 vi.mock('../src/hooks/useWaitingRoomCount', () => ({ useWaitingRoomCount: () => ({ entries: [], count: 0, nicknames: [] }) }));
@@ -105,8 +109,9 @@ function makeSession(status: string, extra: Record<string, unknown> = {}) {
 
 let root: Root;
 let container: HTMLDivElement;
+let pageRouter: ReturnType<typeof createMemoryRouter>;
 async function renderPage(): Promise<void> {
-  const router = createMemoryRouter(
+  const router = pageRouter = createMemoryRouter(
     [
       { path: '/sessions/:id/player', element: createElement(ClassPlayerPage) },
       { path: '/sessions/:id/record', element: createElement('p', null, '기록 화면') },
@@ -127,6 +132,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2026-10-16T05:00:00Z'));
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   Object.defineProperty(window, 'matchMedia', { configurable: true, value: (query: string) => ({ matches: false, media: query, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined }) });
+  h.participation={sessionId:'s1',version:-1,revoked:false,participants:{}};
   h.containerProps.length = 0;
   h.prepProps.length = 0;
   h.calls.length = 0;
@@ -361,4 +367,70 @@ describe('호스트가 아닌 사용자는 옛 화면을 그대로 쓴다', () =
     expect(q('[data-testid="host-live-container"]')).toBeNull();
     expect(document.body.textContent).toContain('나가기');
   });
+});
+
+describe('T04 리뷰: 실제 페이지의 참여 갱신 경계',()=>{
+  beforeEach(()=>{h.session=makeSession('in_progress',{class_id:'c1'});});
+  const emitParticipant = (version:number, participants:unknown[]) => fire(()=>{
+    const callback=h.liveOptions.onParticipantChanged as (event:unknown)=>void;
+    callback({session_id:'s1',version:0,participation_version:version,participants});
+  });
+  it('최신 A+B roster 뒤 오래된 A 이벤트가 와도 B를 제거하지 않는다',async()=>{
+    await renderPage();
+    h.participation={sessionId:'s1',version:5,revoked:false,participants:{a:{participant_id:'a',entered_at:null,presence_state:'unknown'},b:{participant_id:'b',entered_at:null,presence_state:'unknown'}}};
+    await emitParticipant(5,[metric('a'),metric('b')]);await emitParticipant(4,[metric('a')]);
+    expect(lastProps().rows.map((row:{participant_id:string})=>row.participant_id)).toContain('b');
+  });
+  it('heartbeat의 참여상태만 갱신하고 최신 EEG 측정값은 유지한다',async()=>{
+    await renderPage();const before=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='a');
+    await emitParticipant(1,[metric('a',{device_status:null,current_efficiency:null,avg_efficiency:null,last_eeg_at:null})]);
+    const after=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='a');
+    expect(after.current_efficiency).toBe(before.current_efficiency);expect(after.last_eeg_at).toBe(before.last_eeg_at);expect(after.device_status).toBe('ok');
+  });
+  it('권한회수 뒤 페이지에 남아있는 BLE 훅의 session과 upload 자격도 비활성화한다',async()=>{
+    await renderPage();expect(h.bandOptions.enabled).toBe(true);
+    h.participation={sessionId:'s1',version:2,revoked:true,participants:{}};
+    await fire(()=>{const cb=h.liveOptions.onSessionStateChanged as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1});});
+    expect(h.bandOptions.enabled).toBe(false);expect(h.bandOptions.sessionId).toBe('');expect(h.bandOptions.participantId).toBe(null);
+  });
+});
+it('T04: REST 최신 roster 뒤 오래된 joined snapshot도 B의 EEG를 지우지 않는다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'c1'});await renderPage();
+  const before=lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b');
+  h.participation={sessionId:'s1',version:5,revoked:false,participants:{a:{participant_id:'a'},b:{participant_id:'b'}}};
+  await fire(()=>{const cb=h.liveOptions.onSessionStateChanged as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1});});
+  await fire(()=>{const cb=h.liveOptions.onSnapshot as (event:unknown)=>void;cb({session_id:'s1',status:'in_progress',version:1,participation_version:4,participants:[metric('a')]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').current_efficiency).toBe(before.current_efficiency);
+});
+
+it('T04 route reuse: A 버전50을 B에 이월하지 않고 B 버전1과2를 즉시 반영한다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'class-a'});
+  h.participation={sessionId:'s1',version:50,revoked:false,participants:{a:{participant_id:'a'}}};
+  await renderPage();
+  // 훅이 effect에서 reset하기 전 첫 B 렌더에도 A 상태를 돌려주는 경계를 보존한다.
+  h.session=makeSession('in_progress',{id:'s2',class_id:'class-b'});
+  await act(async()=>{await pageRouter.navigate('/sessions/s2/player');});
+  h.participation={sessionId:'s2',version:0,revoked:false,participants:{b:{participant_id:'b'}}};
+  await fire(()=>{const cb=h.liveOptions.onSnapshot as (event:unknown)=>void;cb({session_id:'s2',status:'in_progress',version:1,participation_version:1,participants:[metric('b',{display_name:'B 최초'})]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').display_name).toBe('B 최초');
+  await fire(()=>{const cb=h.liveOptions.onParticipantChanged as (event:unknown)=>void;cb({session_id:'s2',version:1,participation_version:2,participants:[metric('b',{display_name:'B 최신'})]});});
+  expect(lastProps().rows.find((row:{participant_id:string})=>row.participant_id==='b').display_name).toBe('B 최신');
+});
+it('T04 route reuse: B 로딩 중 A 데이터를 숨기고 늦은 A HTTP·joined 응답도 B를 덮지 않는다',async()=>{
+  h.session=makeSession('in_progress',{class_id:'class-a'});await renderPage();
+  const lateSnapshot=h.liveOptions.onSnapshot as (event:unknown)=>void;
+  let oldMetrics!:(value:unknown)=>void;let oldSession!:(value:unknown)=>void;let newSession!:(value:unknown)=>void;
+  h.getSessionLiveMetrics.mockImplementationOnce(()=>new Promise(resolve=>{oldMetrics=resolve;}));
+  h.getSession.mockImplementationOnce(()=>new Promise(resolve=>{oldSession=resolve;}));
+  await act(async()=>{await vi.advanceTimersByTimeAsync(5000);});
+  h.getSession.mockImplementationOnce(()=>new Promise(resolve=>{newSession=resolve;}));
+  h.getSessionLiveMetrics.mockResolvedValue({metrics:[metric('b',{display_name:'B 화면'})]});
+  await act(async()=>{await pageRouter.navigate('/sessions/s2/player');});
+  expect(q('[data-testid="host-live-container"]')).toBeNull();
+  await act(async()=>newSession(makeSession('in_progress',{id:'s2',class_id:'class-b'})));
+  await act(async()=>oldMetrics({metrics:[metric('old-a',{display_name:'과거 A'})]}));
+  await act(async()=>oldSession(makeSession('in_progress',{class_id:'class-a'})));
+  await fire(()=>lateSnapshot({session_id:'s1',status:'in_progress',version:5,participation_version:55,participants:[metric('old-a',{display_name:'과거 A'})]}));
+  expect(lastProps().session.id).toBe('s2');
+  expect(lastProps().rows.map((row:{participant_id:string})=>row.participant_id)).not.toContain('old-a');
 });

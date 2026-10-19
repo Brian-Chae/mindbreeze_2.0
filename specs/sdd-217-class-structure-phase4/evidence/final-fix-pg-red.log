@@ -1,0 +1,89 @@
+FFFFFF.FFFFFF                                                            [100%]
+=================================== FAILURES ===================================
+__________ test_completed_owner_entry_state_and_after_checkin[False] ___________
+tests/pg/test_sdd217_final_fixes.py:38: in test_completed_owner_entry_state_and_after_checkin
+    assert r.status_code==200,r.text
+E   AssertionError: {"detail":{"code":"member_access_revoked"}}
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+___________ test_completed_owner_entry_state_and_after_checkin[True] ___________
+tests/pg/test_sdd217_final_fixes.py:38: in test_completed_owner_entry_state_and_after_checkin
+    assert r.status_code==200,r.text
+E   AssertionError: {"detail":{"code":"member_access_revoked"}}
+E   assert 403 == 200
+E    +  where 403 = <Response [403 Forbidden]>.status_code
+_______ test_makeup_source_invalidation_is_atomic_conflict[undo_excuse] ________
+tests/pg/test_sdd217_final_fixes.py:64: in test_makeup_source_invalidation_is_atomic_conflict
+    with pytest.raises(HTTPException) as exc:
+E   Failed: DID NOT RAISE <class 'fastapi.exceptions.HTTPException'>
+__________ test_makeup_source_invalidation_is_atomic_conflict[enter] ___________
+tests/pg/test_sdd217_final_fixes.py:64: in test_makeup_source_invalidation_is_atomic_conflict
+    with pytest.raises(HTTPException) as exc:
+E   Failed: DID NOT RAISE <class 'fastapi.exceptions.HTTPException'>
+_____ test_makeup_source_invalidation_is_atomic_conflict[correct_attended] _____
+tests/pg/test_sdd217_final_fixes.py:64: in test_makeup_source_invalidation_is_atomic_conflict
+    with pytest.raises(HTTPException) as exc:
+E   Failed: DID NOT RAISE <class 'fastapi.exceptions.HTTPException'>
+____ test_makeup_source_invalidation_is_atomic_conflict[correct_completed] _____
+tests/pg/test_sdd217_final_fixes.py:64: in test_makeup_source_invalidation_is_atomic_conflict
+    with pytest.raises(HTTPException) as exc:
+E   Failed: DID NOT RAISE <class 'fastapi.exceptions.HTTPException'>
+_ test_staff_correction_uses_sessions_version_without_full_participation[lead] _
+tests/pg/test_sdd217_final_fixes.py:100: in test_staff_correction_uses_sessions_version_without_full_participation
+    assert item['capabilities']['correct_attendance'] and item.get('participation_version')==7
+E   AssertionError: assert (True and None == 7)
+E    +  where None = <built-in method get of dict object at 0x112fb2280>('participation_version')
+E    +    where <built-in method get of dict object at 0x112fb2280> = {'assignment_override': False, 'capabilities': {'assign_makeup': False, 'correct_attendance': True, 'excuse': False, '...wn_reports': False}, 'duration_min': 60, 'host': {'id': '1d3f7cd0-faec-4441-bafc-6e48e26af460', 'name': '합성 사용자'}, ...}.get
+_ test_staff_correction_uses_sessions_version_without_full_participation[assistant] _
+tests/pg/test_sdd217_final_fixes.py:100: in test_staff_correction_uses_sessions_version_without_full_participation
+    assert item['capabilities']['correct_attendance'] and item.get('participation_version')==7
+E   AssertionError: assert (True and None == 7)
+E    +  where None = <built-in method get of dict object at 0x1130af780>('participation_version')
+E    +    where <built-in method get of dict object at 0x1130af780> = {'assignment_override': False, 'capabilities': {'assign_makeup': False, 'correct_attendance': True, 'excuse': False, '...wn_reports': False}, 'duration_min': 60, 'host': {'id': '2f9a0146-9de2-4333-aa2d-f87523cce730', 'name': '합성 사용자'}, ...}.get
+_ test_staff_correction_uses_sessions_version_without_full_participation[guest] _
+tests/pg/test_sdd217_final_fixes.py:100: in test_staff_correction_uses_sessions_version_without_full_participation
+    assert item['capabilities']['correct_attendance'] and item.get('participation_version')==7
+E   AssertionError: assert (True and None == 7)
+E    +  where None = <built-in method get of dict object at 0x113262700>('participation_version')
+E    +    where <built-in method get of dict object at 0x113262700> = {'assignment_override': False, 'capabilities': {'assign_makeup': False, 'correct_attendance': True, 'excuse': False, '...wn_reports': False}, 'duration_min': 60, 'host': {'id': 'b3c58a58-725a-47c0-b288-166589ffc7e7', 'name': '합성 사용자'}, ...}.get
+_______ test_upgrade_preserves_legacy_session_choices_on_default_change ________
+tests/pg/test_sdd217_final_fixes.py:132: in test_upgrade_preserves_legacy_session_choices_on_default_change
+    assert [(p.id,p.report_included) for p in db.query(SessionParticipant).order_by(SessionParticipant.id)]==original
+E   AssertionError: assert [(UUID('18e16...cf5f'), True)] == [(UUID('18e16...f5f'), False)]
+E     
+E     At index 1 diff: (UUID('375c1803-d5dd-4ccd-9f60-d2695d0509d6'), True) != (UUID('375c1803-d5dd-4ccd-9f60-d2695d0509d6'), False)
+E     Use -v to get more diff
+_______ test_departure_preserves_makeup_source_and_revokes_access[leave] _______
+tests/pg/test_sdd217_final_fixes.py:148: in test_departure_preserves_makeup_source_and_revokes_access
+    assert source.attendance_status=='excused' and source.entry_ver>old_version
+E   AssertionError: assert ('withdrawn' == 'excused'
+E     
+E     - excused
+E     + withdrawn)
+______ test_departure_preserves_makeup_source_and_revokes_access[remove] _______
+tests/pg/test_sdd217_final_fixes.py:148: in test_departure_preserves_makeup_source_and_revokes_access
+    assert source.attendance_status=='excused' and source.entry_ver>old_version
+E   AssertionError: assert ('withdrawn' == 'excused'
+E     
+E     - excused
+E     + withdrawn)
+=============================== warnings summary ===============================
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/pg/test_sdd217_final_fixes.py::test_completed_owner_entry_state_and_after_checkin[False]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_completed_owner_entry_state_and_after_checkin[True]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_makeup_source_invalidation_is_atomic_conflict[undo_excuse]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_makeup_source_invalidation_is_atomic_conflict[enter]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_makeup_source_invalidation_is_atomic_conflict[correct_attended]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_makeup_source_invalidation_is_atomic_conflict[correct_completed]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_staff_correction_uses_sessions_version_without_full_participation[lead]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_staff_correction_uses_sessions_version_without_full_participation[assistant]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_staff_correction_uses_sessions_version_without_full_participation[guest]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_upgrade_preserves_legacy_session_choices_on_default_change
+FAILED tests/pg/test_sdd217_final_fixes.py::test_departure_preserves_makeup_source_and_revokes_access[leave]
+FAILED tests/pg/test_sdd217_final_fixes.py::test_departure_preserves_makeup_source_and_revokes_access[remove]
+12 failed, 1 passed, 1 warning in 3.36s

@@ -46,7 +46,9 @@ function row(id: string, name: string, over: Partial<SessionLiveMetric> = {}): S
   return {
     participant_id: id, user_id: `u-${id}`, display_name: name, is_guest: false, band_connected: true, device_status: 'ok', band_battery: 80,
     avg_efficiency: null, current_efficiency: 60, upload_status: null, last_eeg_at: new Date(NOW).toISOString(),
-    heart_rate: 70, respiratory_rate: 14, sdnn: 50, raise_hand: false, speaking: false, ...over,
+    heart_rate: 70, respiratory_rate: 14, sdnn: 50, raise_hand: false, speaking: false,
+    presence_state: 'connected', // 이 테스트는 서버 접속이 확인된 참가자의 수신 중단을 검증한다.
+    ...over,
   };
 }
 

@@ -1,9 +1,9 @@
 """AI 리포트 API"""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, Header
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user, require_roles
+from app.api.deps import get_current_user, get_current_user_optional, require_roles
 from app.core.database import get_db
 from app.schemas.report import (
     ReportApprovalRequest,
@@ -117,10 +117,14 @@ def download_pdf(
 @router.get("/{report_id}", response_model=ReportResponse)
 def get_one(
     report_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict | None = Depends(get_current_user_optional),
+    member_credential: str | None = Header(default=None, alias="X-Class-Member-Credential"),
     db: DBSession = Depends(get_db),
 ):
-    return report_service.get_report(report_id, current_user["id"], db)
+    if current_user is None and member_credential is None:
+        raise HTTPException(401, detail="인증이 필요합니다")
+    return report_service.get_report(report_id, current_user["id"] if current_user else None, db,
+        member_credential=member_credential)
 
 
 @router.put("/{report_id}", response_model=ReportResponse)

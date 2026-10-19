@@ -110,6 +110,9 @@ export function toHostParticipant(row: SessionLiveMetric, { extra, entry, nowMs 
     speaking: row.speaking === true,
     agoLabel: band === 'lost' ? agoLabelOf(row.last_eeg_at, nowMs) : null,
     checkin: checkinAnswers(checkin),
+    checkinState: row.checkin_state,
+    presenceState: row.presence_state,
+    enteredAt: row.entered_at,
     attention: checkinAttention(checkin),
   };
 }

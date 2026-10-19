@@ -1,3 +1,4 @@
+import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H5 — 상담사 진행 중 화면 컨테이너. ClassPlayerPage 가 들고 있는 진행 중 상태·핸들러를 props 로 받아 뷰 모델을 조립한다.
 // 훅(useBand·소켓·녹음기·LiveKit 토큰)은 페이지가 한 번만 호출하고 여기서는 값만 받는다(useBand 인스턴스 중복 금지, X4).
 // 서버·소켓 판정은 하지 않는다 — 데이터 규칙은 host-live-model·host-player-case, 마이크/카메라 규칙은 host-media-control 에 있다.
@@ -186,6 +187,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   const [micFailure, setMicFailure] = useState<MediaFailureReason | null>(DEFAULT_MEDIA_FAILURE);
   const [camFailure, setCamFailure] = useState<MediaFailureReason | null>(DEFAULT_MEDIA_FAILURE);
   const [deviceRetry, setDeviceRetry] = useState(0);
+  const [selfTrack, setSelfTrack] = useState<LocalVideoTrack | null>(null);
   const [selfStream, setSelfStream] = useState<MediaStream | null>(null);
   const [memberStream, setMemberStream] = useState<MediaStream | null>(null);
 
@@ -357,6 +359,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
         errorBanners={errorBanners}
         codeCopied={codeCopy.copied}
         selfStream={selfStream}
+        selfTrack={selfTrack}
         memberStream={solo ? memberStream : null}
         trendOf={trendOf}
         actions={actions}
@@ -371,6 +374,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
           onDisconnected={liveKit.onDisconnected}
           onMediaFailure={(kind, reason) => (kind === 'mic' ? setMicFailure(reason) : setCamFailure(reason))}
           onSelfStream={setSelfStream}
+          onSelfTrack={setSelfTrack}
           onMemberStream={setMemberStream}
         />
       ) : null}

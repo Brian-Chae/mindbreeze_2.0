@@ -1,6 +1,8 @@
+import type { ParticipationRow } from "./participation";
 // 세션 관리 API
 
 import { apiClient } from './client';
+import { invalidateClassReads } from '../class-structure/invalidation';
 
 export type SessionType = 'clinical' | 'hypnosis' | 'meditation' | 'custom';
 /** SDD-088: 'open' = 오픈/대기 — 상담사가 클래스를 열어 회원 입장을 받는 단계 */
@@ -150,7 +152,7 @@ export interface ReportEmailResponse {
 export type DeviceStatus = 'ok' | 'lead_off' | 'disconnected' | 'unsupported' | 'unknown';
 export type UploadStatus = 'idle' | 'streaming' | 'delayed' | 'failed' | 'completed' | null;
 
-export interface SessionLiveMetric {
+export interface SessionLiveMetric extends Partial<ParticipationRow> {
   participant_id: string;
   user_id?: string | null;
   display_name: string;
@@ -282,8 +284,11 @@ export const createSessionFromTemplate = (
 
 export type SessionAction = 'open' | 'start' | 'end' | 'cancel';
 
-export const transitionSession = (id: string, action: SessionAction): Promise<SessionDto> =>
-  apiClient.post<SessionDto>(`/sessions/${id}/${action}`);
+export const transitionSession = async (id: string, action: SessionAction): Promise<SessionDto> => {
+  const result = await apiClient.post<SessionDto>(`/sessions/${id}/${action}`);
+  if (action === 'end' || action === 'cancel') invalidateClassReads();
+  return result;
+};
 
 export const inviteParticipant = (id: string, userId: string): Promise<SessionDto> =>
   apiClient.post<SessionDto>(`/sessions/${id}/invite`, { user_id: userId });

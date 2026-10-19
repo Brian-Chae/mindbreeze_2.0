@@ -1,0 +1,590 @@
+--- a/backend/alembic/versions/e036a0000057_sdd217_membership.py
++++ b/backend/alembic/versions/e036a0000057_sdd217_membership.py
+@@ -42,6 +42,11 @@
+         ADD CONSTRAINT ck_session_participants_checkin_state CHECK
+             (checkin_state IS NULL OR checkin_state IN ('completed', 'not_completed', 'unknown'))""")
+     op.execute("""CREATE INDEX ix_session_participants_superseded_by_participant_id ON session_participants(superseded_by_participant_id)""")
++    # 056 이전에는 회차별 선택과 기본값 사본을 구별하는 표시가 없었다.
++    # ResearchConsent·선택 이력·거절·철회 및 증빙 없는 행까지 원값을 보수적으로 보존한다.
++    # 신규 행의 DEFAULT false는 유지하며 가입 연구 동의/원선택 ID를 추정하지 않는다.
++    op.execute("""UPDATE session_participants
++        SET report_consent_override = true, research_consent_override = true""")
+     op.execute("""ALTER TABLE research_consents ADD COLUMN origin_id uuid""")
+     op.execute("""UPDATE session_participants AS p SET checkin_state = 'completed'
+         WHERE EXISTS (SELECT 1 FROM session_records AS r WHERE r.session_id = p.session_id
+--- a/backend/app/services/class_attendance_service.py
++++ b/backend/app/services/class_attendance_service.py
+@@ -20,7 +20,7 @@
+     return db.query(SessionParticipant).filter_by(session_id=session.id).order_by(SessionParticipant.id).populate_existing().with_for_update().all()
+ 
+ 
+-def eligible_participant(db, participant, *, allow_excused=True):
++def eligible_participant(db, participant, *, allow_excused=True, allow_completed=False):
+     if participant.removed_at or participant.waitlist_cancelled_at or participant.superseded_by_participant_id or participant.attendance_status == 'withdrawn':
+         return False
+     if not allow_excused and participant.member_id and participant.attendance_status == 'excused':
+@@ -34,6 +34,11 @@
+     if member.status == 'active':
+         return True
+     if member.status == 'completed':
++        # 종료 본인 조회·사후 체크인만 활동 자격과 분리한다. 새 입장에는 적용하지 않는다.
++        if allow_completed and not participant.is_waitlisted:
++            session = db.get(Session, participant.session_id)
++            if session and session.status == 'completed' and session.class_id == member.class_id:
++                return True
+         if participant.attendance_kind == 'makeup':
+             ids = {m.id for m in db.query(ClassMember).filter(
+                 ClassMember.class_id == member.class_id,
+@@ -61,8 +66,8 @@
+     return False
+ 
+ 
+-def require_eligible(db, participant, *, allow_excused=True):
+-    if not eligible_participant(db, participant, allow_excused=allow_excused):
++def require_eligible(db, participant, *, allow_excused=True, allow_completed=False):
++    if not eligible_participant(db, participant, allow_excused=allow_excused, allow_completed=allow_completed):
+         raise HTTPException(403,detail={'code':'member_access_revoked'})
+ 
+ 
+@@ -71,10 +76,27 @@
+         raise HTTPException(409,detail={'code':'session_capacity'})
+ 
+ 
++def source_assignment(db, participant):
++    """이 참가행을 원결석으로 사용하는 예약·완료 이력. 클래스 잠금 안에서 검사한다."""
++    return db.query(ClassMakeupAssignment).filter(
++        ClassMakeupAssignment.source_participant_id == participant.id,
++        ClassMakeupAssignment.status.in_(('reserved', 'completed')),
++    ).first()
++
++
++def require_source_preserved(db, participant, status):
++    if participant.attendance_status in ('absent', 'excused') and status not in ('absent', 'excused'):
++        assignment = source_assignment(db, participant)
++        if assignment is not None:
++            raise HTTPException(409, detail={'code': 'makeup_source_in_use',
++                'assignment_id': str(assignment.id), 'assignment_status': assignment.status})
++
++
+ def _change(db, cls, session, participant, status, actor_id, key, reason=None, actor_kind='self'):
+     previous = participant.attendance_status
+     if previous == status:
+         return False
++    require_source_preserved(db, participant, status)
+     participant.attendance_status = status
+     participant.attendance_marked_by = 'self' if actor_kind == 'guest' else actor_kind
+     if participant.member_id:
+@@ -102,6 +124,7 @@
+     if participant.entered_at is not None and participant.attendance_status == 'attended':
+         return
+     check_capacity(db, cls, session, participant, participants)
++    require_source_preserved(db, participant, 'attended')
+     first = participant.entered_at is None
+     if first:
+         participant.entered_at = now or datetime.now(timezone.utc)
+--- a/backend/app/services/session_service.py
++++ b/backend/app/services/session_service.py
+@@ -2265,7 +2265,8 @@
+     if not s:
+         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
+     p = resolve_participant_actor(
+-        sid, db, entry_credential=entry_credential, current_user_id=current_user_id
++        sid, db, entry_credential=entry_credential, current_user_id=current_user_id,
++        allow_completed=True
+     )
+     # SDD-023/026: 본인 최신 EEG feature 윈도우 (없으면 null). LIMIT 1 헬퍼로 최신 1건만 조회.
+     latest = eeg_query.latest_feature_window(db, s.id, p.id)
+@@ -2439,6 +2440,7 @@
+     entry_credential: str | None,
+     current_user_id: str | None,
+     participant_id: str | None = None,
++    allow_completed: bool = False,
+ ) -> SessionParticipant:
+     """소유권 통합(SDD-209 B5b) — 요청 주체의 본인 참여자 행을 확정한다.
+ 
+@@ -2486,7 +2488,7 @@
+         if participant.id != explicit:
+             raise HTTPException(status_code=403, detail="본인 참여자만 요청할 수 있습니다")
+     from app.services.class_attendance_service import require_eligible
+-    require_eligible(db, participant)
++    require_eligible(db, participant, allow_completed=allow_completed)
+     return participant
+ 
+ 
+--- a/backend/app/services/record_service.py
++++ b/backend/app/services/record_service.py
+@@ -261,6 +261,7 @@
+     participant = resolve_participant_actor(
+         s.id, db, entry_credential=entry_credential, current_user_id=user_id,
+         participant_id=payload.participant_id,
++        allow_completed=payload.phase == "after",
+     )
+     if participant.is_waitlisted:
+         raise HTTPException(status_code=403, detail="해당 세션의 참가자가 아닙니다")
+--- a/backend/app/services/class_membership_service.py
++++ b/backend/app/services/class_membership_service.py
+@@ -224,6 +224,8 @@
+             ):
+                 participant.removed_at = None
+                 participant.waitlist_cancelled_at = None
++                from app.services.class_attendance_service import require_source_preserved
++                require_source_preserved(db, participant, "expected")
+                 participant.attendance_status = "expected"
+                 participant.member_id = member.id
+         ensure_expected(db, cls, sessions, [member])
+@@ -406,6 +408,10 @@
+         session = by_id[participant.session_id]
+         future = session.status in ("ready", "scheduled") and session.scheduled_at and utc(session.scheduled_at) >= now and session.started_at is None
+         if future and participant.entered_at is None and participant.attendance_status in ("expected", "excused"):
++            from app.services.class_attendance_service import source_assignment
++            # 이탈·제외의 자격 회수는 유지하면서 유효 보강의 원결석만 이력으로 보존한다.
++            if participant.attendance_status == "excused" and source_assignment(db, participant):
++                continue
+             old = participant.attendance_status
+             participant.attendance_status = "withdrawn"
+             db.add(ClassAttendanceEvent(class_id=cls.id, session_id=session.id, participant_id=participant.id, member_id=participant.member_id, old_status=old, new_status="withdrawn", actor_kind="self" if member.user_id == actor.id else "host", actor_user_id=actor.id, reason=data.get("reason"), operation_key=data["operation_key"]))
+--- a/backend/app/services/class_read_service.py
++++ b/backend/app/services/class_read_service.py
+@@ -219,7 +219,7 @@
+     rows = (
+         db.query(
+             Session.class_id, Session.id, Session.seq, Session.scheduled_at, Session.status,
+-            Session.session_kind, Session.host_id, Session.host_state, Session.state_version,
++            Session.session_kind, Session.host_id, Session.host_state, Session.state_version, Session.participation_version,
+             Session.duration_min, Session.location_type, Session.location_address, Session.assignment_override, Session.started_at,
+         )
+         .filter(Session.class_id.in_(list(class_ids)), or_(Session.class_id.in_(_class_access_ids(db, uid)), _legacy_class_sessions_filter(db, uid), Session.id == guest_session_id))
+@@ -367,6 +367,8 @@
+         role = class_role(db, db.get(User, uid), cls)
+         for item, row in zip(items, rows):
+             item["capabilities"] = _session_staff_capabilities(role, uid, cls, row)
++            if item["capabilities"]["correct_attendance"]:
++                item["participation_version"] = row.participation_version
+     return items, len(items)
+ 
+ 
+@@ -536,7 +538,8 @@
+             assignment = item["makeup"] = assignment_dto(cancellable[str(p.id)])
+         item["capabilities"]["cancel_makeup"] = bool(activity and member.status in ("active", "completed")
+             and cls.status in ("active", "completed") and assignment and assignment["status"] == "reserved"
+-            and valid and p.entered_at is None and row.started_at is None and row.status in ("ready", "scheduled", "open", "cancelled"))
++            # 이탈 후 복구한 본인은 입장 불가인 withdrawn 대상 예약도 명시 취소할 수 있다.
++            and p is not None and p.entered_at is None and row.started_at is None and row.status in ("ready", "scheduled", "open", "cancelled"))
+         entry_scope = (activity and member.status == "active" and cls.status == "active") or (
+             not activity and member.status == "completed" and cls.status in ("active", "completed") and cls.schedule_mode == "fixed")
+         item["capabilities"]["guest_entry"] = bool(guest and entry_scope and valid and seat and row.status in ("open", "in_progress"))
+--- a/backend/app/schemas/class_parent.py
++++ b/backend/app/schemas/class_parent.py
+@@ -96,6 +96,7 @@
+ 
+ 
+ class ClassSessionItem(BaseModel):
++    participation_version: int | None = None
+     participation_scope: Literal["before_join", "eligible", "outside_membership"] | None = None
+     attendance: dict | None = None
+     makeup: dict | None = None
+--- a/frontend/src/components/class/structure/host-member-operations.tsx
++++ b/frontend/src/components/class/structure/host-member-operations.tsx
+@@ -32,7 +32,7 @@
+  {member&&<div className="space-y-4"><div className="flex flex-wrap gap-2">{caps.manage_members&&['active','waitlisted'].includes(member.status)&&<button className={operationButton} disabled={blocked} onClick={()=>transition('remove')}>참여 해제</button>}{caps.manage_members&&member.status==='removed'&&<button className={operationButton} disabled={blocked} onClick={()=>transition('restore')}>멤버 복구</button>}{caps.manage_members&&member.status==='waitlisted'&&<button className={operationButton} disabled={blocked} onClick={()=>transition('promote')}>대기 순서대로 승격</button>}
+  {caps.manage_members&&member.user_id===null&&<button className={operationButton} disabled={blocked} onClick={()=>{const request={...selection.current};void operation.run(`recovery:${request.memberId}`,command=>membershipApi.recovery(detail.id,request.memberId,{...command,identity_confirmed:true}),reason).then(result=>{if(!result||selection.current.memberId!==request.memberId||selection.current.generation!==request.generation)return;if(result.exchange_token&&result.expires_at)setRecovery({...request,token:result.exchange_token,expires:result.expires_at});else operation.setError('이전 복구 코드는 다시 표시하지 않아요. 새 본인 확인 후 다시 발급해 주세요.');});}}>본인 확인 완료 · 단회 복구 발급</button>}</div>
+  {recovery&&recovery.memberId===selected&&recovery.generation===selection.current.generation&&<div role="status" className="rounded-xl border p-4 space-y-2"><strong>확인된 본인에게만 전달해 주세요</strong><p>10분 · 한 번만 사용 · {new Date(recovery.expires).toLocaleString('ko-KR')}까지</p><output className="block break-all select-all">{recovery.token}</output><button className={operationButton} onClick={()=>setRecovery(null)}>복구 코드 숨기기</button></div>}
+- {(caps.correct_attendance||caps.assign_makeup)&&<><label className="block">출석 정정 회차<select aria-label="출석 정정 회차" className={operationInput} value={sessionId} onChange={e=>setSessionId(e.target.value)}><option value="">선택해 주세요</option>{sessions.filter(s=>s.capabilities?.correct_attendance).map(s=><option key={s.id} value={s.id}>{s.seq}회차</option>)}</select></label>{session?.capabilities?.correct_attendance&&<div className="flex flex-wrap gap-3"><select aria-label="정정할 출석" className={operationInput} value={action} onChange={e=>setAction(e.target.value)}><option value="correct_attended">참석</option><option value="correct_absent">결석</option><option value="correct_excused">사전 결석</option></select><button className={operationButton} disabled={blocked} onClick={()=>void operation.run(`attendance:${sessionId}:${selected}:${action}`,async (command,prepare)=>{const snapshot=await prepare(()=>membershipApi.participation(detail.id,sessionId));return membershipApi.changeAttendance(detail.id,sessionId,selected,{...command,action,expected_participation_version:snapshot.participation_version});},reason)}>출석 정정 저장</button></div>}
++ {(caps.correct_attendance||caps.assign_makeup)&&<><label className="block">출석 정정 회차<select aria-label="출석 정정 회차" className={operationInput} value={sessionId} onChange={e=>setSessionId(e.target.value)}><option value="">선택해 주세요</option>{sessions.filter(s=>s.capabilities?.correct_attendance).map(s=><option key={s.id} value={s.id}>{s.seq}회차</option>)}</select></label>{session?.capabilities?.correct_attendance&&<div className="flex flex-wrap gap-3"><select aria-label="정정할 출석" className={operationInput} value={action} onChange={e=>setAction(e.target.value)}><option value="correct_attended">참석</option><option value="correct_absent">결석</option><option value="correct_excused">사전 결석</option></select><button className={operationButton} disabled={blocked||session.participation_version==null} onClick={()=>void operation.run(`attendance:${sessionId}:${selected}:${action}`,async (command,prepare)=>{const version=await prepare(()=>Promise.resolve(session.participation_version!));return membershipApi.changeAttendance(detail.id,sessionId,selected,{...command,action,expected_participation_version:version});},reason)}>출석 정정 저장</button></div>}
+  {caps.assign_makeup&&<form className="space-y-3" onSubmit={e=>{e.preventDefault();void operation.run(`makeup:${selected}:${source}:${target}`,command=>membershipApi.makeup(detail.id,{...command,member_id:selected,source_session_id:source,target_session_id:target}),reason);}}><h3>개인 보강 배정</h3><p className="text-sm text-gray-500">원회차의 실제 결석·사전 결석과 대상 정원은 서버에서 확인해요.</p><label className="block">보강 원회차<select aria-label="운영 보강 원회차" className={operationInput} required value={source} onChange={e=>setSource(e.target.value)}><option value="">선택해 주세요</option>{sessions.filter(s=>s.session_kind==='regular'&&s.status!=='cancelled').map(s=><option key={s.id} value={s.id}>{s.seq}회차</option>)}</select></label><label className="block">보강 대상 회차<select aria-label="운영 보강 대상 회차" className={operationInput} required value={target} onChange={e=>setTarget(e.target.value)}><option value="">선택해 주세요</option>{sessions.filter(s=>s.capabilities?.assign_makeup&&s.id!==source).map(s=><option key={s.id} value={s.id}>{s.seq}회차</option>)}</select></label><button className={operationButton} disabled={blocked||!source||!target}>보강 배정 저장</button></form>}</>}
+  </div>}
+  {caps.merge_guests&&<div className="border-t pt-4 space-y-3"><h3>중복 비회원 병합</h3><p className="text-sm text-gray-500">본인 확인 후 기록을 합쳐요. 양쪽 옛 자격은 모두 회수되며 본인에게 단회 복구를 발급해야 해요.</p><label className="block">합칠 원본 비회원<select aria-label="병합 원본 비회원" className={operationInput} value={mergeSource} onChange={e=>setMergeSource(e.target.value)}><option value="">선택해 주세요</option>{guests.map(m=><option key={m.id} value={m.id}>{m.name??'이름 미확인'} · {m.id.slice(0,8)}</option>)}</select></label><label className="block">남길 비회원<select aria-label="병합 대상 비회원" className={operationInput} value={mergeTarget} onChange={e=>setMergeTarget(e.target.value)}><option value="">선택해 주세요</option>{guests.filter(m=>m.id!==mergeSource).map(m=><option key={m.id} value={m.id}>{m.name??'이름 미확인'} · {m.id.slice(0,8)}</option>)}</select></label><button className={operationButton} disabled={blocked||!mergeSource||!mergeTarget} onClick={()=>void operation.run(`preview:${mergeSource}:${mergeTarget}`,async()=>{const result=await membershipApi.mergePreview(detail.id,{source_member_id:mergeSource,target_member_id:mergeTarget,reason});setPreview(result);return result;})}>병합 미리보기</button>
+--- a/frontend/src/components/class/structure/membership-operation-state.ts
++++ b/frontend/src/components/class/structure/membership-operation-state.ts
+@@ -6,7 +6,7 @@
+ export function membershipError(error:unknown):string {
+   if(error instanceof ApiError){
+     const code=(error.data as {detail?:{code?:string}}|null)?.detail?.code;
+-    const messages:Record<string,string>={class_capacity:'정원이 찼어요. 대기 신청을 선택해 주세요.',session_capacity:'회차 정원이 찼어요. 다른 회차를 선택해 주세요.',waitlist_precedes:'먼저 신청한 대기자가 있어요.',waitlist_not_required:'현재 빈자리가 있어요. 일반 가입을 선택해 주세요.',member_transition_invalid:'현재 상태에서는 이 작업을 할 수 없어요.',guest_merge_record_conflict:'양쪽의 실제 기록이 겹쳐 병합할 수 없어요.',guest_merge_preview_stale:'병합 대상이 바뀌었어요. 미리보기를 다시 확인해 주세요.',makeup_already_reserved:'이미 유효한 보강 예약이 있어요.',target_participant_exists:'이미 참여하는 회차예요. 다른 보강 회차를 선택해 주세요.',recovery_unavailable:'복구를 발급할 수 없어요. 본인과 현재 상태를 확인해 주세요.'};
++    const messages:Record<string,string>={class_capacity:'정원이 찼어요. 대기 신청을 선택해 주세요.',session_capacity:'회차 정원이 찼어요. 다른 회차를 선택해 주세요.',waitlist_precedes:'먼저 신청한 대기자가 있어요.',waitlist_not_required:'현재 빈자리가 있어요. 일반 가입을 선택해 주세요.',member_transition_invalid:'현재 상태에서는 이 작업을 할 수 없어요.',guest_merge_record_conflict:'양쪽의 실제 기록이 겹쳐 병합할 수 없어요.',guest_merge_preview_stale:'병합 대상이 바뀌었어요. 미리보기를 다시 확인해 주세요.',makeup_already_reserved:'이미 유효한 보강 예약이 있어요.',makeup_source_in_use:'연결된 보강 예약을 먼저 취소해 주세요. 완료된 보강의 원결석은 변경할 수 없어요.',target_participant_exists:'이미 참여하는 회차예요. 다른 보강 회차를 선택해 주세요.',recovery_unavailable:'복구를 발급할 수 없어요. 본인과 현재 상태를 확인해 주세요.'};
+     if(code&&messages[code])return messages[code];
+     if(error.status===409)return '다른 변경이 있어요. 최신 내용을 다시 불러온 뒤 시도해 주세요.';
+     if(error.status===403)return '이 작업을 수행할 권한이 없어요. 현재 참여 상태를 확인해 주세요.';
+--- a/frontend/src/lib/api/class-structure.ts
++++ b/frontend/src/lib/api/class-structure.ts
+@@ -23,7 +23,7 @@
+   recurrence_rule?: import('./class-scheduling').RecurrenceRule | null;
+   assignment_rule?: import('./class-scheduling').AssignmentRule | null; ends_on?: string | null;
+ }
+-export interface ClassSessionDto extends SessionBriefDto { capabilities?: Record<string,boolean>; session_kind: string; host: UserBriefDto | null; host_state: string | null; state_version?: number; duration_min?: number; location_type?: 'online' | 'offline'; location_address?: string | null; assignment_override?: boolean }
++export interface ClassSessionDto extends SessionBriefDto { participation_version?: number | null; capabilities?: Record<string,boolean>; session_kind: string; host: UserBriefDto | null; host_state: string | null; state_version?: number; duration_min?: number; location_type?: 'online' | 'offline'; location_address?: string | null; assignment_override?: boolean }
+ export interface ClassListResponse { classes: ClassSummaryDto[]; total: number }
+ export interface ClassSessionsResponse { sessions: ClassSessionDto[]; total: number }
+ export interface CounselingSummaryDto {
+--- a/backend/tests/pg/test_sdd217_final_fixes.py
++++ b/backend/tests/pg/test_sdd217_final_fixes.py
+@@ -0,0 +1,182 @@
++"""최종 통합 리뷰 네 지적사항의 실제 PG·HTTP 회귀."""
++from datetime import timedelta
++from uuid import UUID, uuid4
++import pytest
++from fastapi import FastAPI, HTTPException
++from fastapi.testclient import TestClient
++from sqlalchemy import create_engine, text
++from sqlalchemy.orm import Session as DBSession
++from app.models.class_membership import ClassAttendanceEvent, ClassMakeupAssignment
++from app.models.class_program import Class, ClassInstructor, ClassMember
++from app.models.session import Session, SessionParticipant
++from tests.pg.test_sdd217_membership import NOW, command
++from tests.pg.test_sdd217_completion import instant, external_boundaries
++from tests.pg.test_sdd217_makeup import scene, reserve
++pytestmark = pytest.mark.pg
++
++@pytest.mark.parametrize('guest', [False, True])
++def test_completed_owner_entry_state_and_after_checkin(pg_session, guest):
++    from app.api.v1 import session as session_api, records
++    from app.api.deps import get_current_user, get_current_user_optional
++    from app.core.database import get_db
++    from app.services import session_service as service
++    from app.services.entry_credential_service import issue
++    host, cls, member, row, p = instant(pg_session)
++    owner = str(member.user_id)
++    if guest: member.kind='guest'; member.user_id=None; p.user_id=None
++    p.attendance_status='attended'; p.entered_at=NOW; pg_session.commit()
++    token,_=issue(p)
++    app=FastAPI(); app.include_router(session_api.router,prefix='/api/v1'); app.include_router(records.router,prefix='/api/v1')
++    app.dependency_overrides[get_current_user_optional]=lambda: {'id':owner} if not guest else None
++    app.dependency_overrides[get_db]=lambda:pg_session
++    app.dependency_overrides[get_current_user]=lambda:{'id':str(host.id)}
++    headers={'X-Entry-Credential':token} if guest else {}
++    body={'phase':'after','participant_id':str(p.id),'arousal':3,'valence':3}
++    with TestClient(app) as c:
++        ended=c.post(f'/api/v1/sessions/{row.id}/end')
++        assert ended.status_code==200,ended.text
++        assert member.status=='completed'
++        r=c.get(f'/api/v1/sessions/{row.id}/entry-state',headers=headers)
++        assert r.status_code==200,r.text
++        assert r.json()['ended'] and r.json()['participant_id']==str(p.id)
++        r=c.post(f'/api/v1/sessions/{row.id}/checkin',json=body,headers=headers)
++        assert r.status_code==200,r.text
++        assert r.json()['subjective_state']['after']['arousal']==3
++        assert c.post(f'/api/v1/sessions/{row.id}/checkin',json={**body,'phase':'before'},headers=headers).status_code==403
++        assert c.post(f'/api/v1/sessions/{row.id}/checkin',json={**body,'participant_id':str(uuid4())},headers=headers).status_code==403
++        with pytest.raises(HTTPException): service.participant_livekit_token(str(row.id),pg_session,current_user_id=None if guest else owner,entry_credential=token if guest else None)
++        for status in ('left','removed'):
++            member.status=status;pg_session.commit()
++            assert c.get(f'/api/v1/sessions/{row.id}/entry-state',headers=headers).status_code==403
++            assert c.post(f'/api/v1/sessions/{row.id}/checkin',json=body,headers=headers).status_code==403
++
++@pytest.mark.parametrize('action',['undo_excuse','enter','correct_attended','correct_completed'])
++def test_makeup_source_invalidation_is_atomic_conflict(pg_session,action):
++    from app.services import class_attendance_service as attendance, session_service
++    db=pg_session;host,_,cls,clients,member,rows,source=scene(db,state='excused' if action in ('undo_excuse','enter') else 'absent')
++    if action in ('undo_excuse','enter'): rows[0].status='scheduled';rows[0].scheduled_at=NOW+timedelta(days=1)
++    db.commit();result=reserve(db,clients[0],cls,member,rows)
++    assignment=db.get(ClassMakeupAssignment,UUID(result['assignment']['id']))
++    if action=='correct_completed':
++        target=db.get(SessionParticipant,assignment.target_participant_id);rows[1].status='open';db.commit()
++        attendance.mark_entered(db,rows[1],target,NOW);db.commit();assert assignment.status=='completed'
++    if action=='enter':rows[0].status='open';db.commit()
++    before=(source.attendance_status,source.entered_at,rows[0].participation_version,assignment.status,assignment.completed_at)
++    events=db.query(ClassAttendanceEvent).count()
++    with pytest.raises(HTTPException) as exc:
++        if action=='enter':session_service._enter_resolved(rows[0],db,user_id=str(clients[0].id),require_invite=True)
++        else: attendance.change_attendance(db,clients[0].id if action=='undo_excuse' else host.id,cls.id,rows[0].id,member.id,command(cls,action='undo_excuse' if action=='undo_excuse' else 'correct_attended',expected_participation_version=rows[0].participation_version,reason='강사 확인'),now=NOW)
++    assert exc.value.status_code==409 and exc.value.detail['code']=='makeup_source_in_use'
++    db.rollback();db.expire_all()
++    assert (source.attendance_status,source.entered_at,rows[0].participation_version,assignment.status,assignment.completed_at)==before
++    assert db.query(ClassAttendanceEvent).count()==events
++
++def test_cancel_makeup_then_undo_excuse_allowed(pg_session):
++    from app.services import class_attendance_service as attendance,class_makeup_service as makeup
++    db=pg_session;host,_,cls,clients,member,rows,source=scene(db,state='excused')
++    rows[0].status='scheduled';rows[0].scheduled_at=NOW+timedelta(days=1);db.commit()
++    result=reserve(db,clients[0],cls,member,rows)
++    makeup.cancel_makeup(db,clients[0].id,cls.id,result['assignment']['id'],command(cls),now=NOW)
++    attendance.change_attendance(db,clients[0].id,cls.id,rows[0].id,member.id,command(cls,action='undo_excuse',expected_participation_version=rows[0].participation_version),now=NOW)
++    assert source.attendance_status=='expected'
++
++@pytest.mark.parametrize('role',['lead','assistant','guest'])
++def test_staff_correction_uses_sessions_version_without_full_participation(pg_session,monkeypatch,role):
++    from app.api.v1 import classes,class_membership
++    from app.api.deps import get_current_user,get_current_user_optional
++    from app.core.database import get_db
++    from app.config import settings
++    from app.models.organization import Organization
++    from tests.pg.sdd216_helpers import user
++    db=pg_session;lead,other,cls,clients,member,rows,source=scene(db)
++    cls.recurrence_rule={'version':1};db.add(ClassInstructor(class_id=cls.id,user_id=other.id,role='guest',scope_session_id=rows[0].id));rows[0].host_id=other.id
++    assistant=user(db,db.get(Organization,cls.organization_id));db.add(ClassInstructor(class_id=cls.id,user_id=assistant.id,role='assistant'))
++    rows[0].participation_version=7;db.commit();actor={'lead':lead,'assistant':assistant,'guest':other}[role]
++    monkeypatch.setattr(settings,'class_scheduling_enabled',True)
++    app=FastAPI();app.include_router(classes.router,prefix='/api/v1');app.include_router(class_membership.router,prefix='/api/v1')
++    app.dependency_overrides[get_db]=lambda:db;app.dependency_overrides[get_current_user]=lambda:{'id':str(actor.id)}
++    app.dependency_overrides[get_current_user_optional]=app.dependency_overrides[get_current_user]
++    with TestClient(app) as c:
++        r=c.get(f'/api/v1/classes/{cls.id}/sessions');assert r.status_code==200,r.text
++        item=next(s for s in r.json()['sessions'] if s['id']==str(rows[0].id))
++        assert item['capabilities']['correct_attendance'] and item.get('participation_version')==7
++        r=c.get(f'/api/v1/classes/{cls.id}/sessions/{rows[0].id}/participation');assert r.status_code==(200 if role=='guest' else 403),r.text
++        body=command(cls,action='correct_attended',expected_participation_version=item['participation_version'],reason='정정 확인')
++        path=f'/api/v1/classes/{cls.id}/sessions/{rows[0].id}/members/{member.id}/attendance'
++        r=c.post(path,json=body);assert r.status_code==200,r.text;assert c.post(path,json=body).json()==r.json()
++
++def test_upgrade_preserves_legacy_session_choices_on_default_change(scratch_db):
++    from tests.pg.conftest import alembic_ok
++    from tests.pg.test_sdd214_schema import mk_user,mk_class,mk_instructor,mk_session,mk_participant
++    from app.services.class_member_consent_service import update_consents
++    from app.models.research import ResearchConsent
++    url=scratch_db('sdd217_legacy_consent');alembic_ok(url,'upgrade','e036a0000056');engine=create_engine(url);mid=str(uuid4())
++    try:
++        with engine.begin() as conn:
++            host=mk_user(conn);owner=mk_user(conn);cid=mk_class(conn,host);mk_instructor(conn,cid,host)
++            conn.execute(text("UPDATE classes SET status='active', revision=1 WHERE id=:id"),{'id':cid})
++            conn.execute(text("INSERT INTO class_members (id,class_id,user_id,kind,status,joined_via,report_included_default,entry_ver) VALUES (:id,:cid,:uid,'member','active','code',false,0)"),{'id':mid,'cid':cid,'uid':owner})
++            participant_ids=[]
++            for seq in range(1,5):
++                sid=mk_session(conn,host,class_id=cid,seq=seq,host_state='assigned')
++                conn.execute(text("UPDATE sessions SET status='scheduled',scheduled_at=:at WHERE id=:id"),{'at':NOW+timedelta(days=seq),'id':sid})
++                pid=mk_participant(conn,sid,user_id=owner);participant_ids.append(pid)
++                conn.execute(text('UPDATE session_participants SET member_id=:mid,report_included=:choice WHERE id=:id'),{'mid':mid,'choice':seq==1,'id':pid})
++                if seq in (1,2,3):
++                    conn.execute(text("INSERT INTO research_consents (id,session_id,participant_id,consented,notice_version,consented_at,withdrawn_at,export_state) VALUES (:id,:sid,:pid,:choice,'legacy-v1',:selected,:withdrawn,:state)"),{'id':str(uuid4()),'sid':sid,'pid':pid,'choice':seq==1,'selected':NOW-timedelta(days=2) if seq in (1,3) else None,'withdrawn':NOW-timedelta(days=1) if seq==3 else None,'state':'withdrawn' if seq==3 else 'not_applicable'})
++                if seq==2:conn.execute(text("INSERT INTO report_choice_events (id,session_id,participant_id,previous_included,new_included,actor_kind) VALUES (:id,:sid,:pid,true,false,'self')"),{'id':str(uuid4()),'sid':sid,'pid':pid})
++        alembic_ok(url,'upgrade','head');alembic_ok(url,'upgrade','head')
++        with DBSession(engine) as db:
++            member=db.get(ClassMember,UUID(mid));cls=db.get(Class,UUID(cid));assert member.research_consented is False and member.research_origin_id is None
++            original=[(p.id,p.report_included) for p in db.query(SessionParticipant).order_by(SessionParticipant.id)]
++            evidence=[(r.id,r.consented,r.consented_at,r.withdrawn_at,r.notice_version,r.export_state) for r in db.query(ResearchConsent).order_by(ResearchConsent.id)]
++            update_consents(db,cid,command(cls,report_included_default=True,notice_version='class-team-v1',research_consented=True,research_notice_version='research-v1'),user_id=owner,now=NOW);db.expire_all()
++            assert [(p.id,p.report_included) for p in db.query(SessionParticipant).order_by(SessionParticipant.id)]==original
++            assert [(r.id,r.consented,r.consented_at,r.withdrawn_at,r.notice_version,r.export_state) for r in db.query(ResearchConsent).order_by(ResearchConsent.id)]==evidence
++            update_consents(db,cid,command(cls,report_included_default=False,research_consented=False),user_id=owner,now=NOW);db.expire_all()
++            assert [(p.id,p.report_included) for p in db.query(SessionParticipant).order_by(SessionParticipant.id)]==original
++            assert [(r.id,r.consented,r.consented_at,r.withdrawn_at,r.notice_version,r.export_state) for r in db.query(ResearchConsent).order_by(ResearchConsent.id)]==evidence
++            assert all(p.report_consent_override and p.research_consent_override for p in db.query(SessionParticipant))
++            assert db.query(ResearchConsent).filter_by(participant_id=UUID(participant_ids[3])).count()==0
++            new=SessionParticipant(session_id=UUID(sid));db.add(new);db.flush();assert not new.report_consent_override and not new.research_consent_override
++    finally:engine.dispose()
++
++@pytest.mark.parametrize('action',['leave','remove'])
++def test_departure_preserves_makeup_source_and_revokes_access(pg_session,action):
++    from app.services import class_membership_service as membership, class_attendance_service as attendance
++    db=pg_session;host,_,cls,clients,member,rows,source=scene(db,state='excused')
++    rows[0].status='scheduled';rows[0].scheduled_at=NOW+timedelta(days=1);rows[1].session_kind='makeup';db.commit()
++    result=reserve(db,clients[0],cls,member,rows);assignment=db.get(ClassMakeupAssignment,UUID(result['assignment']['id']))
++    target=db.get(SessionParticipant,assignment.target_participant_id);old_version=source.entry_ver
++    membership.transition_membership(db,clients[0].id if action=='leave' else host.id,cls.id,member.id,command(cls,action=action),now=NOW)
++    assert member.status==('left' if action=='leave' else 'removed')
++    assert source.attendance_status=='excused' and source.entry_ver>old_version
++    assert target.attendance_status=='withdrawn' and assignment.status=='reserved'
++    assert not attendance.eligible_participant(db,source) and not attendance.eligible_participant(db,target)
++    assert membership._occupied_seats(db,cls,[source,target])==0
++    membership.transition_membership(db,clients[0].id if action=='leave' else host.id,cls.id,member.id,command(cls,action='rejoin' if action=='leave' else 'restore'),now=NOW)
++    assert member.status=='active' and source.attendance_status=='excused' and assignment.status=='reserved'
++    assert target.attendance_status=='withdrawn'
++    from app.services.class_read_service import get_my_attendance
++    from app.services.class_makeup_service import cancel_makeup
++    dto=get_my_attendance(db,cls.id,user_id=clients[0].id)
++    target_item=next(item for item in dto['sessions'] if item['id']==str(rows[1].id))
++    assert target_item['capabilities']['cancel_makeup'] is True
++    cancel_makeup(db,clients[0].id,cls.id,assignment.id,command(cls),now=NOW)
++    attendance.change_attendance(db,clients[0].id,cls.id,rows[0].id,member.id,command(cls,action='undo_excuse',expected_participation_version=rows[0].participation_version),now=NOW)
++    assert source.attendance_status=='expected' and assignment.status=='cancelled'
++
++
++
++def test_explicit_reinvite_cannot_erase_reserved_source(pg_session):
++    from app.services import class_membership_service as membership
++    db=pg_session;host,_,cls,clients,member,rows,source=scene(db,state='excused')
++    rows[0].status='scheduled';rows[0].scheduled_at=NOW+timedelta(days=1);db.commit()
++    result=reserve(db,clients[0],cls,member,rows)
++    membership.transition_membership(db,host.id,cls.id,member.id,command(cls,action='remove'),now=NOW)
++    with pytest.raises(HTTPException) as exc:
++        membership.invite_members(db,cls,[clients[0].id],host.id,NOW,reactivate=True)
++    assert exc.value.status_code==409 and exc.value.detail['code']=='makeup_source_in_use'
++    db.rollback();db.expire_all()
++    assert member.status=='removed' and source.attendance_status=='excused'
++    assert db.get(ClassMakeupAssignment,UUID(result['assignment']['id'])).status=='reserved'
+--- a/frontend/tests/sdd217-member-operations.test.tsx
++++ b/frontend/tests/sdd217-member-operations.test.tsx
+@@ -34,13 +34,13 @@
+ it('동의 기본값 변경은 바뀐 선택만 보내고 명시 연구 철회는 별도 API다',async()=>{await mount(<MemberOperations classId="class"/>);const checks=view.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');await act(async()=>checks[0].click());await click('동의 설정 저장');const command=calls.find(c=>c.url.endsWith('/me/consents'));expect(command?.body.report_included_default).toBe(true);expect(command?.body).not.toHaveProperty('research_consented');await act(async()=>input('연구 철회 사유','본인 연구 철회'));await click('이 클래스 연구 동의 철회');expect(calls.find(c=>c.url.endsWith('/me/research-withdrawal'))?.body.reason).toBe('본인 연구 철회');});
+ it('로그인 코드 대기는 공개 해석 응답의 실제 revision으로 신청한다',async()=>{const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/resolve-code'))return response({class_id:'class',revision:12,title:'코드 클래스',sessions:[],next_session:null});return original(input,init);}));const { MemberCodeJoin }=await import('../src/pages/client/member-classes-page');await mount(<MemberCodeJoin/>);await act(async()=>input('회원 클래스 코드','1234'));await click('클래스 코드 확인');await click('대기 신청');expect(calls.find(c=>c.url.endsWith('/waitlist'))?.body).toMatchObject({code:'1234',expected_revision:12});});
+ function select(label:string,value:string){const field=view.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`)!;expect(field).toBeTruthy();field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));}
+-it('호스트 출석 정정은 멤버 ID·서버 참여 버전·사유를 전송한다',async()=>{const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input).endsWith('/classes/class/sessions')?response({sessions:[{id:'past',seq:1,status:'completed',session_kind:'regular',host:null,host_state:'assigned',scheduled_at:null,capabilities:{correct_attendance:true}}],total:1}):original(input,init)));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision:3,capabilities:{manage:true,invite:true,schedule:true,manage_members:true,correct_attendance:true,assign_makeup:true,merge_guests:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[member]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','강사 확인 정정');select('운영 대상 멤버','member-uuid');select('출석 정정 회차','past');});await click('출석 정정 저장');expect(calls.find(c=>c.body.action==='correct_attended')?.body).toMatchObject({expected_revision:3,expected_participation_version:7,reason:'강사 확인 정정'});});
++it('호스트 출석 정정은 멤버 ID·서버 참여 버전·사유를 전송한다',async()=>{const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>String(input).endsWith('/classes/class/sessions')?response({sessions:[{id:'past',seq:1,status:'completed',participation_version:7,session_kind:'regular',host:null,host_state:'assigned',scheduled_at:null,capabilities:{correct_attendance:true}}],total:1}):original(input,init)));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision:3,capabilities:{manage:true,invite:true,schedule:true,manage_members:true,correct_attendance:true,assign_makeup:true,merge_guests:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[member]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','강사 확인 정정');select('운영 대상 멤버','member-uuid');select('출석 정정 회차','past');});await click('출석 정정 저장');expect(calls.find(c=>c.body.action==='correct_attended')?.body).toMatchObject({expected_revision:3,expected_participation_version:7,reason:'강사 확인 정정'});});
+ it('호스트 guest 병합은 미리보기 fingerprint와 직접 본인 확인 후 확정한다',async()=>{const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/classes/class/sessions'))return response({sessions:[],total:0});if(url.endsWith('/guest-merges/preview')){calls.push({url,body:JSON.parse(String(init?.body)),headers:new Headers(init?.headers)});return response({source_member_id:'guest-a',target_member_id:'guest-b',conflicts:[],withdraw_participant_ids:['future-p'],preview_fingerprint:'a'.repeat(64)});}return original(input,init);}));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision:3,capabilities:{manage:true,manage_members:true,merge_guests:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[{...member,id:'guest-a',user_id:null},{...member,id:'guest-b',user_id:null}]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','본인 증빙 확인');select('병합 원본 비회원','guest-a');select('병합 대상 비회원','guest-b');});await click('병합 미리보기');expect(view.textContent).toContain('미래 중복 참여 정리 1건');const confirm=Array.from(view.querySelectorAll('button')).find(b=>b.textContent==='확인한 비회원 병합')!;expect(confirm.disabled).toBe(true);await act(async()=>view.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());await click('확인한 비회원 병합');expect(calls.find(c=>c.url.endsWith('/guest-merges'))?.body).toMatchObject({source_member_id:'guest-a',target_member_id:'guest-b',confirmed_preview_fingerprint:'a'.repeat(64),identity_confirmed:true,reason:'본인 증빙 확인'});});
+ it('V38 비회원 복구 교환·갱신·로그아웃은 공개/자격 헤더 경계를 유지한다',async()=>{await mount(<Routes><Route path="/class-members/:classId" element={<GuestClassMembershipPage/>}/></Routes>,'/class-members/class');await act(async()=>input('단회 복구 코드','x'.repeat(40)));const form=view.querySelectorAll('form')[1];await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));const exchange=calls.find(c=>c.url.endsWith('/guest-credentials/exchange'));expect(exchange?.headers.has('Authorization')).toBe(false);expect(exchange?.body.exchange_token).toBe('x'.repeat(40));await click('비회원 자격 갱신');expect(calls.find(c=>c.url.endsWith('/guest-credentials/refresh'))?.headers.get('X-Class-Member-Credential')).toBe('activity');await click('비회원 로그아웃');expect(calls.find(c=>c.url.endsWith('/guest-credentials/logout'))?.headers.get('X-Class-Member-Credential')).toBe('activity');expect(view.textContent).toContain('모든 이전 비회원 자격이 회수');expect(view.querySelector('[aria-label="내 클래스 참여 관리"]')).toBeNull();});
+ it('호스트 해제·복구·승격·단회 자격 복구·보강·코드회전은 실제 계약 경로로 연결한다',async()=>{const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/classes/class/sessions'))return response({sessions:[{id:'past',seq:1,status:'completed',session_kind:'regular',scheduled_at:null},{id:'future',seq:2,status:'scheduled',session_kind:'makeup',scheduled_at:null,capabilities:{assign_makeup:true}}],total:2});if(url.endsWith('/recovery')){calls.push({url,body:JSON.parse(String(init?.body)),headers:new Headers(init?.headers)});return response({class_id:'class',revision:4,exchange_token:'synthetic-recovery-only',expires_at:new Date(Date.now()+600000).toISOString()});}return original(input,init);}));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision:3,capabilities:{manage:true,manage_members:true,assign_makeup:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[{...member,id:'guest-active',user_id:null},{...member,id:'guest-removed',user_id:null,status:'removed'},{...member,id:'waiting',status:'waitlisted'}]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','본인 확인 및 운영');select('운영 대상 멤버','guest-active');});await click('참여 해제');expect(calls.find(c=>c.body.action==='remove')?.url).toContain('/members/guest-active/transition');await click('본인 확인 완료 · 단회 복구 발급');expect(calls.find(c=>c.url.endsWith('/recovery'))?.body).toMatchObject({identity_confirmed:true,reason:'본인 확인 및 운영'});expect(view.textContent).toContain('10분 · 한 번만 사용');await click('복구 코드 숨기기');expect(view.textContent).not.toContain('synthetic-recovery-only');await act(async()=>select('운영 대상 멤버','guest-removed'));await click('멤버 복구');expect(calls.find(c=>c.body.action==='restore')?.url).toContain('/members/guest-removed/transition');await act(async()=>{select('운영 대상 멤버','waiting');select('운영 보강 원회차','past');select('운영 보강 대상 회차','future');});await click('대기 순서대로 승격');await click('보강 배정 저장');expect(calls.find(c=>c.url.endsWith('/makeup-assignments'))?.body).toMatchObject({member_id:'waiting',source_session_id:'past',target_session_id:'future'});await click('공개 코드 새로 발급');expect(calls.find(c=>c.url.endsWith('/access-code/rotate'))?.body.expected_revision).toBe(3);});
+ it.each([['waitlisted','대기 취소','cancel_waitlist'],['left','재가입','rejoin']])('회원 %s 전이는 서버 capability와 실제 멤버 ID로 연결한다',async(status,label,action)=>{membership={...membership,member:{...member,status},capabilities:{...caps,leave:false,cancel_waitlist:status==='waitlisted',rejoin:status==='left'}};await mount(<MemberOperations classId="class"/>);await click(label);expect(calls.find(c=>c.body.action===action)?.url).toContain('/members/member-uuid/transition');});
+ it('fix1 복구 A 요청 중 B 또는 A로 다시 바꿔도 늦은 A 코드를 노출하지 않는다',async()=>{let finish:(r:Response)=>void=()=>{};const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/classes/class/sessions'))return response({sessions:[],total:0});if(url.endsWith('/recovery'))return new Promise<Response>(resolve=>{finish=resolve;});return original(input,init);}));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision:3,capabilities:{manage_members:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[{...member,id:'guest-a',user_id:null},{...member,id:'guest-b',user_id:null}]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','직접 본인 확인');select('운영 대상 멤버','guest-a');});await click('본인 확인 완료 · 단회 복구 발급');await act(async()=>select('운영 대상 멤버','guest-b'));await act(async()=>select('운영 대상 멤버','guest-a'));await act(async()=>finish(response({exchange_token:'late-a-recovery',expires_at:new Date(Date.now()+600000).toISOString()})));expect(view.querySelector('output')).toBeNull();});
+-it.each(['member','host'])('fix1 %s 출석 응답 유실 재시도는 최초 revision·참여버전·키·본문을 그대로 전송한다',async(role)=>{let participationReads=0,revision=3;const writes:Record<string,unknown>[]=[];const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/me/membership'))return response({...membership,revision});if(url.endsWith('/classes/class/sessions'))return response({sessions:[{id:'past',seq:1,status:'completed',session_kind:'regular',scheduled_at:null,capabilities:{correct_attendance:true}}],total:1});if(url.endsWith('/participation'))return response({participation_version:7+participationReads++});if(url.endsWith('/attendance')&&init?.method==='POST'){writes.push(JSON.parse(String(init.body)));if(writes.length===1){revision=4;throw new TypeError('응답 유실');}return response({class_id:'class',revision:4});}return original(input,init);}));if(role==='member')await mount(<MemberOperations classId="class"/>);else{const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision,capabilities:{correct_attendance:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[member]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','본인 출석 정정');select('운영 대상 멤버','member-uuid');select('출석 정정 회차','past');});}const label=role==='member'?'사전 결석':'출석 정정 저장';await click(label);await act(async()=>window.dispatchEvent(new Event('focus')));await click(label);expect(writes).toHaveLength(2);expect(writes[1]).toEqual(writes[0]);expect(participationReads).toBe(1);});
++it.each(['member','host'])('fix1 %s 출석 응답 유실 재시도는 최초 revision·참여버전·키·본문을 그대로 전송한다',async(role)=>{let participationReads=0,revision=3;const writes:Record<string,unknown>[]=[];const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/me/membership'))return response({...membership,revision});if(url.endsWith('/classes/class/sessions'))return response({sessions:[{id:'past',seq:1,status:'completed',participation_version:7,session_kind:'regular',scheduled_at:null,capabilities:{correct_attendance:true}}],total:1});if(url.endsWith('/participation'))return response({participation_version:7+participationReads++});if(url.endsWith('/attendance')&&init?.method==='POST'){writes.push(JSON.parse(String(init.body)));if(writes.length===1){revision=4;throw new TypeError('응답 유실');}return response({class_id:'class',revision:4});}return original(input,init);}));if(role==='member')await mount(<MemberOperations classId="class"/>);else{const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const detail={id:'class',revision,capabilities:{correct_attendance:true}} as import('../src/lib/api/class-structure').ClassDetailDto;await mount(<HostMemberOperations detail={detail} members={[member]} onSaved={()=>{}}/>);await act(async()=>{input('멤버 운영 사유','본인 출석 정정');select('운영 대상 멤버','member-uuid');select('출석 정정 회차','past');});}const label=role==='member'?'사전 결석':'출석 정정 저장';await click(label);await act(async()=>window.dispatchEvent(new Event('focus')));await click(label);expect(writes).toHaveLength(2);expect(writes[1]).toEqual(writes[0]);expect(participationReads).toBe(role==='host'?0:1);});
+ async function exchangeGuest(){await act(async()=>input('단회 복구 코드','x'.repeat(40)));await act(async()=>view.querySelectorAll('form')[1].dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));}
+ it('fix1 완료된 guest의 활동 401은 읽기로 전환해 본인 리포트·지정 보강을 유지한다',async()=>{const original=globalThis.fetch;const readCalls:{url:string;credential:string|null}[]=[];vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input),credential=new Headers(init?.headers).get('X-Class-Member-Credential');if(url.endsWith('/me/membership')||url.endsWith('/me/attendance')){readCalls.push({url,credential});if(credential==='activity')return response({detail:{code:'guest_credential_invalid'}},401);if(url.endsWith('/me/membership'))return response({...membership,member:{...member,status:'completed'},capabilities:{leave:false,edit_consents:false,request_makeup:false}});return response({sessions:[{...session,status:'open',attendance:session.attendance,makeup:null,capabilities:{guest_entry:true},approved_report_ids:['report']}],total:1});}if(url.endsWith('/guest-entry')){calls.push({url,body:JSON.parse(String(init?.body)),headers:new Headers(init?.headers)});return response({session_id:'future',participant_id:'p',entry_credential:'session-only',expires_at:'2099-01-01'});}return original(input,init);}));await mount(<Routes><Route path="/class-members/:classId" element={<GuestClassMembershipPage/>}/><Route path="/class/:sessionId/enter" element={<p>기존 입장</p>}/></Routes>,'/class-members/class');await exchangeGuest();expect(view.textContent).toContain('수료');expect(view.textContent).not.toContain('클래스 나가기');expect(readCalls.some(c=>c.credential==='read')).toBe(true);await click('승인 리포트 보기');expect(calls.find(c=>c.url.endsWith('/reports/report'))?.headers.get('X-Class-Member-Credential')).toBe('read');await click('회차 입장');expect(calls.find(c=>c.url.endsWith('/guest-entry'))?.headers.get('X-Class-Member-Credential')).toBe('read');});
+ it.each([401,403,503])('fix1 guest 갱신 %s 중 활동 401만 읽기 자격으로 재시도한다',async(status)=>{const original=globalThis.fetch;const used:string[]=[];vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/guest-credentials/refresh')){const credential=new Headers(init?.headers).get('X-Class-Member-Credential')!;used.push(credential);if(credential==='activity')return response({detail:{code:'guest_credential_invalid'}},status);return response({credential_bundle:{activity_credential:null,read_credential:'read-renewed',expires_at:'2099-01-01'}});}return original(input,init);}));await mount(<Routes><Route path="/class-members/:classId" element={<GuestClassMembershipPage/>}/></Routes>,'/class-members/class');await exchangeGuest();await click('비회원 자격 갱신');expect(used).toEqual(status===401?['activity','read']:['activity']);if(status===401){const latest=calls.filter(c=>c.url.endsWith('/me/membership')).at(-1);expect(latest?.headers.get('X-Class-Member-Credential')).toBe('read-renewed');}else expect(view.querySelector('[role="alert"]')).toBeTruthy();});
+@@ -50,3 +50,20 @@
+ it('fix1 연구 철회 사유를 바꾸면 새 본문에 새 키를 사용한다',async()=>{const original=globalThis.fetch;const writes:Record<string,unknown>[]=[];vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/me/research-withdrawal')){writes.push(JSON.parse(String(init?.body)));if(writes.length===1)throw new TypeError('network');return response({class_id:'class',revision:4});}return original(input,init);}));await mount(<MemberOperations classId="class"/>);await act(async()=>input('연구 철회 사유','첫 사유'));await click('이 클래스 연구 동의 철회');await act(async()=>input('연구 철회 사유','변경한 사유'));await click('이 클래스 연구 동의 철회');expect(writes[1].reason).toBe('변경한 사유');expect(writes[1].operation_key).not.toBe(writes[0].operation_key);});
+ it.each([403,503])('fix1 활동 읽기의 %s 응답은 읽기 자격으로 자동 전환하지 않는다',async(status)=>{const original=globalThis.fetch;const used:string[]=[];vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{if(String(input).endsWith('/me/membership')||String(input).endsWith('/me/attendance')){used.push(new Headers(init?.headers).get('X-Class-Member-Credential')!);return response({detail:{code:'action_forbidden'}},status);}return original(input,init);}));await mount(<Routes><Route path="/class-members/:classId" element={<GuestClassMembershipPage/>}/></Routes>,'/class-members/class');await exchangeGuest();expect(used.length).toBeGreaterThan(0);expect(used.every(token=>token==='activity')).toBe(true);expect(view.querySelector('[role="alert"]')).toBeTruthy();});
+ it.each(['account','class'])('fix1 복구 요청 뒤 %s 전환은 같은 멤버를 다시 골라도 이전 자격을 표시하지 않는다',async(scope)=>{let finish:(r:Response)=>void=()=>{};const original=globalThis.fetch;vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);if(url.endsWith('/sessions'))return response({sessions:[],total:0});if(url.endsWith('/recovery'))return new Promise<Response>(resolve=>{finish=resolve;});return original(input,init);}));const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');const members=[{...member,id:'guest-a',user_id:null}];const node=(classId:string)=><HostMemberOperations detail={{id:classId,revision:3,capabilities:{manage_members:true}} as import('../src/lib/api/class-structure').ClassDetailDto} members={members} onSaved={()=>{}}/>;await mount(node('class'));await act(async()=>{input('멤버 운영 사유','본인 확인');select('운영 대상 멤버','guest-a');});await click('본인 확인 완료 · 단회 복구 발급');if(scope==='account')await act(async()=>useAuthStore.setState({user:{...useAuthStore.getState().user!,id:'other-account'}}));else await act(async()=>root.render(<MemoryRouter>{node('other-class')}</MemoryRouter>));await act(async()=>select('운영 대상 멤버','guest-a'));await act(async()=>finish(response({exchange_token:'previous-scope-recovery',expires_at:new Date(Date.now()+600000).toISOString()})));expect(view.querySelector('output')).toBeNull();});
++
++it.each(['lead','assistant'])('최종검토 %s는 전체 participation 권한 없이 회차 DTO 버전으로 정정한다',async(role)=>{
++ const original=globalThis.fetch;
++ vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
++  const url=String(input);
++  if(url.endsWith('/classes/class/sessions'))return response({sessions:[{id:'past',seq:1,status:'completed',participation_version:23,session_kind:'regular',scheduled_at:null,host:{id:'different-session-host',name:'회차 진행자'},capabilities:{correct_attendance:true}}],total:1});
++  if(url.endsWith('/participation')){calls.push({url,body:{},headers:new Headers()});return response({detail:{code:'action_forbidden'}},403);}
++  return original(input,init);
++ }));
++ useAuthStore.setState({user:{...useAuthStore.getState().user!,id:role,role:'counselor'}});
++ const {HostMemberOperations}=await import('../src/components/class/structure/host-member-operations');
++ await mount(<HostMemberOperations detail={{id:'class',revision:3,capabilities:{correct_attendance:true}} as import('../src/lib/api/class-structure').ClassDetailDto} members={[member]} onSaved={()=>{}}/>);
++ await act(async()=>{input('멤버 운영 사유','강사 확인 정정');select('운영 대상 멤버','member-uuid');select('출석 정정 회차','past');});
++ await click('출석 정정 저장');
++ expect(calls.find(c=>c.body.action==='correct_attended')?.body.expected_participation_version).toBe(23);
++ expect(calls.filter(c=>c.url.endsWith('/participation'))).toHaveLength(0);
++});
+--- a/specs/sdd-217-class-structure-phase4/spec.md
++++ b/specs/sdd-217-class-structure-phase4/spec.md
+@@ -0,0 +1,100 @@
++# SDD-217 — 클래스 멤버십·출석·보강과 진행 상태 안정화
++
++- 상태: Stage ① Spec 승인 완료. 구현 진행 중.
++- 작성일: 2026-10-19
++- 브랜치: `sdd/217-class-structure-phase4`
++- 기준: origin/develop `a4acf6ba` (SDD-216 PR #18 병합). 번호는 `scripts/sdd new`로 예약했다.
++- 216 선행 확인: 병합본 `a4acf6ba`의 Deploy Dev 실행 `39218970297` success 확인(2026-10-19). 전체 실기기 QA 통과와는 구분한다.
++- 사용자 승인 범위: 217 준비·문서 작성. 제품 구현·배포 승인으로 확대하지 않는다.
++
++## 1. 목적과 출시 순서
++
++클래스 우선 출시의 Phase 4다. 지도사는 멤버의 합류·이탈·결석·보강을 관리하고 회원은 자신의 참여 상태와 지난 기록을 확인한다. 216에서 사용자가 발견한 진행 화면 결함 3건을 함께 해결한다.
++
++순서: 216(Phase 3) → 217(Phase 4) → Phase 5 클래스 리포트 → 클래스 출시 점검(8-A). 상담 Phase 6·7은 출시 이후 업데이트다. 이 순서는 현재 대화에서 승인된 출시 조정이며, 기준 커밋의 오래된 전체 기획보다 우선한다. 상담 메뉴 공개 여부·운영 배포는 이 SDD에서 자동 결정하지 않는다.
++
++입력: `docs/class-session-restructure/기획-상세-회원내클래스.md`, `기획-상세-상태머신권한.md`, `결정-필요.md`, `specs/sdd-216-class-structure-phase3/{spec,api-contract,next-sdd-handoff,integration-closeout}.md`. 과거 문서의 미구현 설명보다 기준 코드가 우선한다.
++
++## 2. 기존 구현과 경계
++
++| 재사용 | 217에서 확장 |
++|---|---|
++| ClassMember·ClassMemberEvent, 출석 컬럼, session/member UNIQUE | 상태 전이·대기열·출석 확정·감사·비회원 자격 |
++| `class_membership_service.invite_members/ensure_expected` | 탈퇴·제외·재가입·승격, guest 식별자 지원 |
++| 편성·초대·코드 가입·정원 초과 409 | 대기 신청·순번 승격, 클래스 정원과 회차 상한 분리 |
++| 보강 회차 생성·대상 회원 선택 | 원 결석 연결·중복 및 정원 검사·보강 완료 파생 |
++| 회차 종료와 `finish_class_if_due` | 종료 원자성·화면 갱신 회귀·출석 확정 |
++| 회원 내 클래스·호스트 멤버 탭 | 상태·출석·보강 UI, 본인 과거 리포트 열람 |
++
++제외: 클래스 리포트 일괄 승인·추이·변화 서사(Phase 5), 상담/비회원 상담, 휴회, 타 클래스 보강, 이메일 링크 복구, 팀 참관 활성화, 운영 데이터 초기화·S3 삭제. 카메라 결함을 이유로 전체 미디어 엔진을 재설계하지 않는다.
++
++## 3. 기능 요구사항
++
++### R1 멤버십·정원·대기열
++
++- 상태는 기존 `invited/waitlisted/active/completed/left/removed/declined`를 유지한다. 초대는 현행 즉시 active 기본값이며 수락제는 신설하지 않는다.
++- active → left(본인), active → removed(관리 권한 강사), waitlisted → left(본인 취소), left → active/waitlisted(재가입), removed → active/waitlisted(강사 명시 복구만). cancelled/archived 클래스 신규 가입 금지. completed 회원을 코드로 active로 되돌리지 않는다.
++- 재가입은 같은 멤버 행을 사용한다. 합류 이전·이탈 중 과거 회차를 expected/absent로 생성하지 않는다. 과거 참가자 ID·EEG·리포트 FK를 보존한다.
++- 정원이 찼거나 선행 대기자가 있으면 명시적 대기 신청으로 waitlisted를 생성한다. 기존 초대 API의 409를 조용히 바꾸지 않는다. 순번 FIFO, 취소 후 재대기는 끝 순번. 남은 한 자리 동시 요청에서도 1명만 활성화한다.
++- 탈퇴/제외는 미래 expected/excused를 withdrawn으로 바꾸고 대기 승격·감사·알림 의도를 같은 트랜잭션에 기록한다. attended 및 종료된 과거 기록은 유지한다. 단, 유효 reserved/completed 보강의 원본인 excused는 원결석 이력으로 보존한다. 이 예외로 탈퇴·제외를 막지 않으며 멤버 상태와 entry_ver로 접근을 즉시 회수하고 대상 미래 보강행은 기존대로 철회한다. 클래스 제외와 한 회차 내보내기는 별개다.
++- 현재 open/in_progress 회차에서도 입장 시 멤버 상태를 잠금 안에서 재검사한다. 제외/탈퇴와 입장이 경합하면 커밋 순서에 맞춰 최종 접근을 차단하고 기존 attended 이력은 유지한다. 현재 접속의 자격·WS·미디어 권한 회수는 기존 회수 경로를 재사용한다. excused의 직접 입장은 복귀와 동일하게 정원을 다시 검사한다.
++- 클래스 정원과 회차 상한을 각각 검사한다. 정원 축소 시 기존 active 강등 금지. 이 스펙의 정원은 현행 유한 정수 계약을 유지하며 정기형 무제한 정원은 별도 후속이다.
++
++### R2 출석과 현재 참여
++
++- 체크인 설문 완료, 회차 출석, 현재 접속은 별도 상태다. 초대 행·joined_at·밴드 유무만으로 참여 중을 판정하지 않는다.
++- 입장 성공은 entered_at 최초 기록과 attended 전이를 멱등 처리한다. 정상 종료 시 expected이며 실제 입장 근거가 없는 사람만 absent. 취소 회차는 absent 확정 제외; 진행 중 취소의 기존 attended는 유지한다.
++- 시작 전 사전 결석은 excused, 복귀는 회차 정원 재검사 후 expected. 자기 absent 설정 금지. 강사의 사후 정정은 이전/이후·행위자·사유 감사 이력을 남긴다.
++- 초기 조회·늦은 입장·새로고침·재접속에서 서버 스냅샷으로 복원하고 이후 이벤트를 적용한다. 오래된 이벤트가 새 스냅샷을 덮지 않도록 버전을 제공한다. 서버에 체크인 근거가 없으면 unknown으로 표현하며 ‘체크인 전’으로 단정하지 않는다.
++
++### R3 보강
++
++- 216 `class_write_service`의 보강 회차 생성과 개인 결석 보강 매칭을 분리한다. 취소 회차의 대체 편성은 유지하되 개인 결석을 임의로 만들거나 개인 보강 완료로 집계하지 않는다. 기존 생성 API도 새 매칭 검증을 우회할 수 없어야 한다. 현행 `member_ids`가 user ID를 받는 계약은 유지하고, 신규 명시적 member ID 필드는 T00에서 별도로 정의해 guest를 지원한다.
++- 같은 클래스·같은 멤버의 absent/excused 회차만 원 결석으로 연결한다. 원 결석은 삭제하거나 참석으로 덮지 않는다.
++- 별도 보강 회차와 기존 정규 회차 합류를 지원하되 원회차=대상회차 금지, 대상은 입장 전 회차여야 한다. 한 원결석의 유효 보강 예약은 1개, 완료도 중복 계산하지 않는다.
++- `(session_id, member_id)` UNIQUE를 보존한다. 이미 대상 회차에 정규 출석 행이 있으면 중복 행을 만들거나 정규 참석을 보강으로 바꾸지 않고 충돌로 응답한다. 취소·철회된 보강은 감사 기록을 보존한 채 다른 대상에 재예약할 수 있다.
++- 완료 고정형의 기존 completed 멤버도 216의 지정 보강을 이어갈 수 있다. 보강 때문에 클래스·멤버를 active로 되돌리지 않는다.
++- 보강 완료는 대상 attended로 파생한다. 보강 예약/미예약/완료를 구분하고 회원에게 참석·결석·보강 횟수를 사실로 표시한다. 출석 점수·등급·순위는 만들지 않는다.
++
++### R4 비회원 클래스·동의
++
++- guest의 user_id=NULL을 동일인으로 취급하지 않는다. 회차 출석 생성·조회는 member_id 기준. 이름·이메일 일치만으로 자동 병합하지 않는다.
++- 클래스와 member에 묶인 90일 슬라이딩 자격을 제안한다(기획 D-16). 토큰 검증에서 만료·entry_ver·멤버 상태·클래스 범위를 확인한다. 탈퇴/제외/로그아웃·병합 시 기존 자격을 회수한다. 회원 전환·이메일 복구는 범위 밖이다.
++- 강사의 동일인 병합은 동일 클래스 guest끼리만, 근거 확인·미리보기·명시 확인·감사 필수. 참가자 ID와 리포트 FK를 보존한다. 같은 회차에 두 실제 입장/기록이 존재하면 409로 전체 롤백한다. 미래 미입장 expected 중복은 병합을 막지 않는다: 원 멤버를 removed로 보존하고 canonical member 매핑으로 신원을 연결하며, 중복 미래 행은 withdrawn 처리하고 하나만 유효하게 사용한다. 참가 행의 member_id를 일괄 덮어 UNIQUE를 깨지 않는다. 읽기·입장·집계·스크럽 모두 canonical 범위를 일관되게 적용하는 계약을 T00에서 고정한다.
++- 병합 복구는 강사가 동일인을 확인한 뒤 살아남은 멤버에 연결되는 단회 교환 자격을 발급한다. 10분 만료·일회 사용·클래스 범위로 제한하고 교환 시 새 장기 자격을 발급한다(기술 제안). 이름/공개 코드만으로 기존 이력을 인계하지 않는다. guest 전용 최소 화면의 경로는 기존 라우트와 충돌하지 않게 `/class-members/:classId`로 신설한다.
++- guest의 이탈 후 과거 기록 열람은 활동 자격과 분리된 본인 기록 읽기 자격으로 제공한다. 재입장·타인 데이터 접근은 불허하며 명시 로그아웃은 읽기 자격도 폐기한다. 기기 자격 상실은 같은 강사 확인 복구 절차를 사용한다.
++- 개인정보 스크럽은 기획상 마지막 출석 회차 종료/멤버십 종료 중 늦은 기준 +90일. 활동 중 회원의 종료 기준 부재를 임의 날짜로 채우지 않는다. 멤버 원본과 출석 사본을 함께 처리하며 재노출·재발송을 막는다.
++- 리포트 기본값은 false, 연구 기본값은 미동의. 회차별 고지는 유지한다. 기본값 변경은 아직 입장하지 않은 미래 회차에만 적용하고 회차별 명시 override와 종료 회차를 덮지 않는다.
++- **연구 동의 O3 확정(2026-10-19 사용자 응답): 클래스 가입 시 1회 선택 → 이후 회차에 선택값 복사.** 신규 연구 동의의 선택값·고지 버전·선택 시각·원동의 식별자를 회차 증빙과 연결한다. 매 회차 연구 동의 재확인을 필수로 추가하지 않는다. 법무 확인 완료를 뜻하지 않는다. 기존 research_consents·report_scope·내보내기 의미는 유지한다.
++- 클래스 기본값 변경과 연구 동의 철회는 별개다. 명시적 철회는 기존 철회/내보내기 제외 경로를 적용하며, 종료 스냅샷 불변을 이유로 철회 처리를 막지 않는다.
++- 비회원 리마인더는 별도 명시 동의가 있을 때만. 코드 재발급은 기존 공유 코드 서비스로 수행하고 이전 코드의 신규 교환을 차단한다. 자격 회수는 entry_ver로 별도 처리한다.
++
++### R5 화면·권한
++
++- 회원은 참여 중/완료/이탈과 보강 대기 배지, 회차별 참석·결석·사전 결석·참여 전·취소 상태를 확인한다. 본인 나가기/대기 취소/사전 결석/보강 신청/동의 설정을 제공한다.
++- 호스트 멤버 탭은 초대 기능을 보존하고 상태 필터·제외/복구·출석 정정·보강 제안·guest 병합/코드 재발급을 권한에 맞춰 제공한다.
++- 이탈 이후에도 승인된 본인 과거 리포트만 열람 가능하다. 합류 전 회차는 일정 메타만, 타인 기록·미승인 리포트·다른 클래스·기관 정보는 노출하지 않는다. 관리자 권한을 216보다 확대하지 않는다.
++- API는 권한·상태로 capability를 반환한다. 버튼 숨김만으로 보호하지 않는다. 모바일 390×844, 834×1194, 1194×834, 1280×720에서 검증한다. 기존 class-structure 시안을 재사용한다.
++
++### R6 216 이월 결함 (원인 확정과 수정 분리)
++
++- DEV-01 본인 카메라 끊김: 녹화 켬/끔·트랙 교체·장치 복구로 재현하고 인과관계 확인 후 수정한다. attach/detach 또는 캡처 공유를 미리 확정하지 않는다.
++- DEV-02 체크인 오표시: R2의 서버 상태 복원과 타일 표시로 해결한다.
++- DEV-03 즉시 클래스 완료 표시: 마지막 정규 회차 종료 커밋 직후 부모/회차 완료 일치 및 화면 무효화. cron을 기다리지 않는다. 정기형·취소·보강은 미래 회차가 없다는 이유만으로 완료 처리하지 않는다.
++- 216 인계 NV-01~12를 verify에 원 ID로 편입한다. 재현 실패·실기기 미검증을 해결 완료로 기록하지 않는다.
++
++## 4. 승인 시 확인할 선택
++
++| ID | 검토안 | 근거/처리 |
++|---|---|---|
++| P01 | D-16의 90일 장기 자격·강사 병합 | 기존 기획 기본값. 이번 승인 전까지 제안이며 별도 정책 승인 이력으로 가장하지 않음 |
++| P02 | **O3: 가입 시 1회 선택 후 이후 회차 복사 — 사용자 확정** | 2026-10-19 사용자 응답. 법무 확인과 별개 |
++| P03 | 실제 기록 충돌 보강/병합은 409, 미래 expected 중복은 canonical 매핑으로 정리, 유한 정원 유지 | 기술 설계. T00 계약·마이그레이션에서 구체화 |
++
++## 5. 완료·배포 기준
++
++Spec·Verify 승인 후 구현. 기존 056 다음 가산 변경만 허용, 필요 마이그레이션은 단일 담당. API 계약 정본 확정 후 FE 착수. PG 실제 다중 연결 경합, 실제 BE 연결 브라우저, 실카메라 검증을 대역 테스트와 구분한다. 기능 테스트·배포·운영 릴리스는 각각 별도 증거로 기록한다. Stage ⑥ summary는 구현 뒤 작성하며 현재 생성하지 않는다.
++
++## 승인 기록
++
++2026-10-19 사용자 “ㅇㅇ 진행해”로 Spec·Verify 기준 구현 승인. 연구 동의 O3 확정 포함. 실제 push·PR·배포·prod 변경은 별도이며 이번 승인으로 수행하지 않는다.
+--- a/specs/sdd-217-class-structure-phase4/api-contract.md
++++ b/specs/sdd-217-class-structure-phase4/api-contract.md
+@@ -113,3 +113,12 @@
+ 
+ - 회차 capability에 `undo_excuse`, `cancel_makeup`, `guest_entry` bool을 가산한다. 각각 현재 본인의 사전 결석 복귀, 유효 예약 취소, 비회원의 현재 회차 자격 교환 가능 여부이며 서버의 실제 상태·권한·정원 검사에 따른다. 기존 `excuse`와 `request_makeup` 의미를 바꾸지 않는다. 취소된 대상의 유효 예약은 취소 UI용으로 표시하되 출석·보강 집계에서는 제외한다.
+ - 공개 코드 확인 성공 응답에 현재 `revision`만 가산해 아직 가입하지 않은 로그인 사용자의 대기 명령에 사용한다. 멤버/개인정보를 추가하지 않으며 충돌 시 다시 코드 확인 후 새 명령을 만든다.
++
++
++## 최종 통합 리뷰 보완 계약 (2026-10-19)
++
++- 정상 종료한 회차의 본인 `GET /sessions/{sid}/entry-state`와 `POST /sessions/{sid}/checkin`의 `phase=after`는 completed 멤버에게도 허용한다. 로그인 본인 또는 기존 유효 class_entry로 소유를 확인한다. left/removed, 철회·제거·superseded 참가행, 타인 요청은 계속 차단한다. 이 예외는 before 체크인·새 입장·WS·미디어 자격으로 확대하지 않는다.
++- `GET /classes/{id}/sessions`의 회차 DTO에 `participation_version: int|null`을 가산한다. `correct_attendance=true`인 회차만 실제 버전을 제공하고 나머지는 null이다. 출석 정정 UI는 이 값을 최초 명령에 고정해 응답 유실 재시도에도 같은 본문을 보낸다. 전체 `/participation` 읽기 권한은 기존 회차 host 한정으로 유지한다.
++- 유효 reserved/completed 보강의 원결석을 absent/excused 밖으로 변경하는 사전 결석 복귀·직접 입장·강사 정정·명시 재초대는 409 `makeup_source_in_use`다. 응답에는 `assignment_id,assignment_status`를 제공한다. reserved는 명시 취소 후 변경할 수 있고, completed는 기존 감사·예약을 자동 변조하지 않고 충돌로 유지한다.
++- 탈퇴·제외는 위 충돌로 차단하지 않는다. 유효 보강의 원본 excused는 원결석으로 보존하는 예외를 두고, 멤버 자격·entry_ver 회수와 대상 미래행 철회는 기존대로 처리한다. 비활동 멤버는 입장·정원·새 예약에서 제외하며 재가입/복구 뒤에도 원결석 이력은 유지한다. 복구한 본인은 withdrawn인 미입장 대상의 reserved 예약도 기존 서버 조건대로 명시 취소할 수 있고 cancel_makeup capability를 제공한다. 이탈 후 미래 원행이 excused로 남을 수 있으므로 화면은 멤버 상태·참여 범위를 함께 해석해야 한다.
++- 미배포 057의 기존 참가행 backfill은 두 consent_override를 true로 설정한다. 056 이전에는 회차 선택과 기본값 사본을 확정 구분할 수 없으므로 ResearchConsent·선택 이력·거절·철회·증빙 없는 값까지 보수 보존한다. 신규 참가행 DEFAULT는 false이며, 기존 회차 동의로 클래스 가입 연구 동의·origin을 추정하지 않는다.
+--- a/specs/sdd-217-class-structure-phase4/summary.md
++++ b/specs/sdd-217-class-structure-phase4/summary.md
+@@ -12,9 +12,17 @@
+ 
+ 합성 시계 fixture는 기존 가입일을 이틀 전, 첫 회차 일정을 하루 전으로 이동해 중간 합류를 재현한다. 승인 리포트2개는 실제 참가행 FK에 연결한 합성 completed 리포트 fixture다. AI 생성·임상 품질·일괄 승인·PDF 전달 검증이 아니다. 생성/입장/종료/보강/탈퇴/병합/자격 교환은 실제 제품 API를 통과했다. 사람·연락처·기관은 모두 합성이다.
+ 
++## 최종 통합 리뷰 4건 보완
++
++Important4건을 한 수정 단계로 보완했다. 정상 종료한 본인의 entry-state·after 체크인을 허용하고 활동 자격은 분리했다. 057 이전 회차 동의는 보수적으로 override=true로 보존한다. 보강 원결석을 바꾸는 복귀·입장·정정·재초대는 명시409로 차단하며, 탈퇴·제외는 자격을 즉시 회수하고 보강 원본 excused만 보존한다. 출석 정정 UI는 권한 있는 회차 DTO의 최소 버전을 소비해 전체 participation 권한을 요구하지 않는다. [단일 수정 보고서](evidence/final-fix-report.md). 복구한 멤버가 withdrawn 보강 대상의 예약을 명시 취소할 수 있도록 기존 서버와 capability를 맞췄고, 취소→사전 결석 복귀까지 확인했다. [마지막 PG41](evidence/final-fix-cancel-capability-green.log).
++
++**관련 검증: PG172(신규14 포함), SQLite26, FE67, build0. 마지막 취소 capability 보완 후 PG41 통과.** PG41은 앞선172와 포함 관계이며 선행 집중PG13/FE33 및 기존T11 결과와 중복 합산하지 않는다. [PG](evidence/final-fix-pg-regression.log) · [SQLite](evidence/final-fix-sqlite.log) · [FE](evidence/final-fix-fe-regression.log) · [build](evidence/final-fix-build.log). 실제 HTTP end→entry-state→after를 로그인/guest 각각 검증했으며, 추가 브라우저 전체여정·실기기·외부 전달은 재검증하지 않았다. root가 수정 API를 재시작했고 DB/Redis readiness를 확인했다. 057의056→057 검증은 별도 임시DB이며 기존 브라우저DB와 구분한다.
++
++이탈 후 미래 보강 원본에 excused가 남는 예외는 원결석·감사와 보안 회수를 함께 보존하기 위한 root 승인 결정이다. 화면은 멤버 상태·참여 범위를 함께 확인해야 한다. 완료 보강의 원결석을 자동으로 정정하는 정책은 추가하지 않았다. 제한된 재리뷰와 Brian 최종 승인이 남는다.
++
+ ## 구현 중 확정한 해석
+ 
+-진행 기록의 Ruling 13건을 기록 순서대로 보존한다. 해석 오류의 비용은 원 기록의 명시 내용과 해당 결정의 영향을 설명한 것이며, 새 정책이나 승인 범위를 추가하지 않는다.
++진행 기록의 Ruling 14건을 기록 순서대로 보존한다. 해석 오류의 비용은 원 기록의 명시 내용과 해당 결정의 영향을 설명한 것이며, 새 정책이나 승인 범위를 추가하지 않는다.
+ 
+ 1. **공유 파일은 순차 구현하고 태스크별 검토 뒤 다음 작업으로 진행한다.** 승인된 계획을 지키고 변경 책임을 분명히 하며, 전체 BE 반복 대신 변경 관련 회귀를 수행하기 위한 결정이다. 해석이 틀리면 공유 변경 충돌·회귀 누락을 복구하고 재검증하는 비용이 생긴다.
+ 2. **임시 HTTP 계약은 T00에서 고정하고 API와 UI가 같은 정본을 사용한다.** 실제 서버 계약과 다른 가짜 응답을 기준으로 구현하는 일을 막기 위함이다. 해석이 틀리면 입력·응답·식별자 의미가 어긋나 API와 화면을 함께 다시 수정해야 한다.
+@@ -29,6 +37,8 @@
+ 11. **안전하지 않은 guest 병합은 미리보기200에 충돌을 표시하고 확정에서409로 거부하며, 보강 예약을 조용히 취소하지 않는다.** 실제 기록을 보존할 행을 선택하는 과정에서 유효 보강의 원참가행을 무효화하지 않고, 사용자 예약과 원 FK를 보존하기 위함이다. 해석이 틀리면 병합 전에 사용자가 예약을 수동 취소해야 하는 운영 비용이 생긴다.
+ 12. **클래스 본인의 연구 철회는 canonical 소유 동의 행·현재 상태·이벤트로 한정하고 전역 ResearchWithdrawalRequest를 만들지 않는다.** 기존 전역 철회 판정이 다른 클래스의 미래 동의까지 막기 때문이다. 플랫폼 관리자의 기존 전역 철회는 유지한다. 해석이 틀리면 연구 외부 삭제 확인 응답(ack)의 적용 범위를 다시 검토해야 한다.
+ 13. **멤버 FK가 없는 이메일 초대는 이메일 일치만으로 guest에 귀속하거나 삭제하지 않는다.** 스크럽 후 원문 재노출 차단은 명시 member ID가 있는 작업 결과 DTO에 적용하고, 독립 초대메일의 보관 정책을 유지한다. 비회원 리마인더는 기존 전체 미발송을 유지하며 opt-in=true를 이유로 새 전달 채널을 만들지 않는다. 해석이 틀리면 초대 연락처 보관 정책과 별도 전달 채널을 후속 검토해야 한다.
++
++14. **최종 수정 담당에게 미배포057 단일 소유권을 위임하고 기존 회차 동의·보강 원결석을 보수 보존한다.** root 승인으로056 기존 참가행의 두 override를 true로 설정한다. 기존 선택과 기본값 사본을 확정 구분할 수 없기 때문이며, legacy행은 이후 클래스 기본값 자동전파에서 제외되는 비용이 있다. 보강 원결석을 무효화하는 명시 변경은409지만 탈퇴·제외는 차단하지 않는다. 유효보강 원본 excused만 보존하고 자격회수·대상미래행철회를 유지하여 원FK·감사·보안을 함께 보존한다. 비용은 이탈 후 미래 원행에 excused가 남아 운영화면에서 멤버상태·참여범위를 함께 해석해야 한다는 점이다. 복구 후 withdrawn 대상 예약의 명시취소 capability는 기존 서버 허용조건에 맞춘다. 완료 보강 자동취소·감사변조·새상태는 추가하지 않는다.
+ 
+ ## 환경·SHA·스위치
+ 

@@ -189,6 +189,13 @@ class AddSessionCommand(WriteCommand):
     row: ScheduleRow
     makeup_for_session_id: UUID | None = None
     member_ids: list[UUID] = Field(default_factory=list, max_length=100)
+    class_member_ids: list[UUID] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def unambiguous_member_ids(self):
+        if self.member_ids and self.class_member_ids:
+            raise ValueError("ambiguous_member_identifiers")
+        return self
 
 
 class TransitionCommand(WriteCommand):

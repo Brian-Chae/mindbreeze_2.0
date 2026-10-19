@@ -1,9 +1,12 @@
+import type { MembershipMember } from '../../../lib/api/class-operations';
 import { Link } from 'react-router-dom';
 import type { ClassReadModel, SessionReadModel } from '../../../lib/class-structure/adapters';
 import type { DisplayField } from '../../../lib/class-structure/read-model';
 import { classPath } from '../../../lib/class-structure/navigation';
 import { ReadField } from './read-state';
 
+// eslint-disable-next-line react-refresh/only-export-components
+export const membershipLabels:Record<string,string>={active:'참여 중',waitlisted:'대기 중',left:'탈퇴',removed:'참여 해제',completed:'수료',withdrawn:'참여 종료'};
 // 같은 소유 파일에서 회원 표시 규칙을 공유한다. 컴포넌트 외 export는 새로고침 경계에서 제외한다.
 // eslint-disable-next-line react-refresh/only-export-components
 export function memberValue<T>(field: DisplayField<T>): T | undefined {
@@ -58,10 +61,11 @@ export function MemberProgress({ model }: { model: ClassReadModel }) {
 export function MemberSessionMeta({ session }: { session: SessionReadModel }) {
   return <div className="mc-muted"><div><ReadField value={memberDate(session.scheduledAt)} /></div><div>지도사 · <ReadField value={memberValue(session.hostName)} /></div></div>;
 }
-export function MemberClassCard({ model }: { model: ClassReadModel }) {
+export function MemberClassCard({ model, membership }: { model: ClassReadModel; membership?: MembershipMember | null }) {
   const next = memberValue(model.nextSession);
   return <article className="mc-card"><Link className="mc-card-link" to={classPath('member', model.id)}>
     <span className="mc-chip"><ReadField value={memberStatus(model.status)} /></span>
+    {membership && <span className="mc-chip">{membershipLabels[membership.status] ?? membership.status}{membership.waitlist_position != null ? ` · ${membership.waitlist_position}번` : ''}</span>}
     <h3><ReadField value={memberValue(model.title)} /></h3><MemberProgress model={model} />
     <p className="mc-muted">다음 회차 · <ReadField value={next && memberValue(next.seq) != null ? `${memberValue(next.seq)}회차` : undefined} /></p>
     {next ? <MemberSessionMeta session={next} /> : <ReadField />}

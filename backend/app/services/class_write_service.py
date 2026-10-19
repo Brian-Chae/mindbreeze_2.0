@@ -34,12 +34,13 @@ def request_hash(command) -> str:
 
 
 def lock_users(db, ids):
+    # PostgreSQL FOR NO KEY UPDATE: 상태 변경·삭제는 막고 FK KEY SHARE와는 공존한다.
     return (
         db.query(User)
         .filter(User.id.in_(set(ids)))
         .order_by(User.id)
         .populate_existing()
-        .with_for_update()
+        .with_for_update(key_share=True)
         .all()
     )
 
@@ -304,7 +305,7 @@ def create_class(
 
 
 def mutate_class(
-    db, actor_id, class_id, command, action, callback, permission="manage"
+    db, actor_id, class_id, command, action, callback, permission="manage", authorize=None
 ):
     """재시도·역할·버전·잠금을 모든 클래스 쓰기에 동일 적용한다."""
     from app.models.class_program import ClassInstructor
@@ -345,6 +346,8 @@ def mutate_class(
         if cls is None:
             raise HTTPException(404, detail={"code": "class_not_found"})
         authorize_class_action(db, actor, cls, permission)
+        if authorize is not None:
+            authorize(cls, actor, data)
         if actor.role == "org_admin" and not (data.get("reason") or "").strip():
             raise HTTPException(422, detail={"code": "reason_required"})
         digest = hashlib.sha256(
@@ -703,12 +706,24 @@ def duplicate_class(db, actor_id, class_id, command, now=None):
 
 
 def add_session(db, actor_id, class_id, command, now=None):
-    from sqlalchemy import func
+    from sqlalchemy import func, null
     from app.schemas.class_scheduling import ScheduleRow, WriteCommand
     from app.models.class_program import ClassMember
     from app.services.class_membership_service import ensure_expected
 
     now = now or datetime.now(timezone.utc)
+
+    def authorize(cls, actor, data):
+        from app.services.class_makeup_service import require_assign_permission
+        row = data.get("row") or {}
+        if row.get("session_kind") == "makeup":
+            source_id = data.get("makeup_for_session_id")
+            source = db.query(Session).filter_by(id=UUID(str(source_id)), class_id=cls.id).first() if source_id else None
+            if source is None:
+                raise HTTPException(409, detail={"code": "makeup_source_invalid"})
+            if source.status != "cancelled":
+                # 기존 편성 권한과 별도로 현재 관리 강사 자격을 재시도에서도 검사한다.
+                require_assign_permission(db, cls, actor, source)
 
     def apply(cls, actor, data):
         row = ScheduleRow.model_validate(data["row"])
@@ -734,22 +749,17 @@ def add_session(db, actor_id, class_id, command, now=None):
                 or source.session_kind != "regular"
             ):
                 raise HTTPException(409, detail={"code": "makeup_source_invalid"})
-            wanted = {UUID(str(uid)) for uid in data.get("member_ids", [])}
-            members = (
-                db.query(ClassMember)
-                .filter(
-                    ClassMember.class_id == cls.id,
-                    ClassMember.status.in_(
-                        ("active", "completed")
-                        if cls.status == "completed"
-                        else ("active",)
-                    ),
-                    ClassMember.user_id.in_(wanted),
-                )
-                .all()
-            )
+            if data.get("member_ids") and data.get("class_member_ids"):
+                raise HTTPException(422, detail={"code": "ambiguous_member_identifiers"})
+            legacy = data.get("member_ids", [])
+            wanted = {UUID(str(value)) for value in (legacy or data.get("class_member_ids", []))}
+            column = ClassMember.user_id if legacy else ClassMember.id
+            members = db.query(ClassMember).filter(ClassMember.class_id == cls.id, column.in_(wanted)).all()
             if len(members) != len(wanted):
                 raise HTTPException(422, detail={"code": "makeup_member_invalid"})
+            from app.services.class_makeup_service import canonical_member, lock_context
+            members = list({m.id: m for m in (canonical_member(db, cls, m.id) for m in members)}.values())
+            _, participants = lock_context(db, cls)
         else:
             cls.planned_session_count = (
                 (cls.planned_session_count or 0) + 1
@@ -772,17 +782,30 @@ def add_session(db, actor_id, class_id, command, now=None):
         )
         check_conflicts(db, [row], actor, common, class_id=cls.id)
         sessions = create_sessions(db, cls, [row])
-        ensure_expected(db, cls, sessions, members)
         if row.session_kind == "makeup":
+            from app.services.class_makeup_service import reserve_locked, _valid_member, _occupied_seats
             from app.models.session import SessionParticipant
-
-            for participant in (
-                db.query(SessionParticipant)
-                .filter(SessionParticipant.session_id == sessions[0].id)
-                .all()
-            ):
-                participant.attendance_kind = "makeup"
-                participant.makeup_for_session_id = source.id
+            if source.status == "cancelled":
+                # 취소 회차 대체는 개인 결석 매칭이 아니다. NULL guest도 member_id로 생성한다.
+                for member in members:
+                    _valid_member(cls, member)
+                    target = sessions[0]
+                    target_rows = db.query(SessionParticipant).filter_by(session_id=target.id).all()
+                    if _occupied_seats(db, cls, target_rows) >= target.max_participants:
+                        raise HTTPException(409, detail={"code": "session_capacity"})
+                    participant = SessionParticipant(session_id=target.id, member_id=member.id, user_id=member.user_id,
+                        attendance_status="expected", attendance_kind="regular", makeup_for_session_id=source.id, joined_at=null(), report_included=False)
+                    db.add(participant)
+                    db.flush()
+                    from app.services.class_member_consent_service import copy_member_defaults
+                    copy_member_defaults(db,member,participant,pii=True)
+                    target.participation_version += 1
+                    db.flush()
+            else:
+                for member in members:
+                    reserve_locked(db, cls, member, source, sessions[0], participants, now)
+        else:
+            ensure_expected(db, cls, sessions, members)
         recipients = (
             members
             if members is not None
@@ -802,7 +825,7 @@ def add_session(db, actor_id, class_id, command, now=None):
         )
         return {"session_ids": [str(s.id) for s in sessions]}
 
-    return mutate_class(db, actor_id, class_id, command, "add_session", apply)
+    return mutate_class(db, actor_id, class_id, command, "add_session", apply, authorize=authorize)
 
 
 def transition_class(db, actor_id, class_id, command, now=None):
@@ -1060,11 +1083,8 @@ def lock_class_session(db, session, actor_id=None):
         .with_for_update()
         .first()
     )
-    row = (
-        db.query(Session)
-        .filter_by(id=session.id)
-        .populate_existing()
-        .with_for_update()
-        .one()
-    )
+    from app.models.class_program import ClassMember
+    db.query(ClassMember).filter_by(class_id=cls.id).order_by(ClassMember.id).populate_existing().with_for_update().all()
+    rows = db.query(Session).filter_by(class_id=cls.id).order_by(Session.id).populate_existing().with_for_update().all()
+    row = next(row for row in rows if row.id == session.id)
     return cls, row

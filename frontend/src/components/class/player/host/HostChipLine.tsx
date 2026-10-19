@@ -145,7 +145,7 @@ function chipItem(chip: HostChip, handlers: HostChipHandlers): ChipItem {
         ) : (
           <span className="hp-achip" role="group" aria-label="밴드 상태 요약">
             <span className="hp-ap" data-size="sm">
-              <span className="hp-ap__sg"><i className="hp-dot" data-state={chip.on > 0 ? 'on' : 'zero'} />연결 <b>{chip.on}</b></span>
+              <span className="hp-ap__sg"><i className="hp-dot" data-state={chip.on > 0 ? 'on' : 'zero'} />밴드 연결 <b>{chip.on}</b></span>
               <span className="hp-ap__sg"><i className="hp-dot" data-state="off" />미착용 <b>{chip.off}</b></span>
               <span className="hp-ap__sg"><i className="hp-dot" data-state={chip.lost > 0 ? 'lost' : 'zero'} />끊김 <b>{chip.lost}</b></span>
             </span>
