@@ -89,8 +89,7 @@ export function NoticeStepView({
               {bandMode === 'none' ? null : <NoticeRow icon={<Activity size={20} aria-hidden="true" />} label="뇌파 측정(LINK BAND를 쓸 때만)" />}
               {online ? <NoticeRow icon={<Video size={20} aria-hidden="true" />} label="영상(카메라를 켤 때만)" /> : null}
               {sessionType === 'meditation' && <div className="fm-rlist" aria-label="클래스 강사팀 열람 고지">
-                <p className="fm-ft">클래스 강사팀은 수업을 참관할 수 있어요. 참관 강사는 음성·영상을 송출하거나 수업을 제어하지 않으며, 실시간 개인 뇌파 지표를 볼 수 없어요.</p>
-                <p className="fm-ft">리포트 반영을 선택하면 클래스 강사팀이 수업 후 내 기록지와 리포트를 읽을 수 있어요. 전사 원문과 음성·영상 원본은 열람하지 못해요.</p>
+                <p className="fm-ft">이 클래스의 진행 지도사와 등록된 다른 지도사는 함께 진행하기 위해 기록지와 리포트를 읽을 수 있어요. 진행하지 않는 지도사에게는 전사 원문·음성 및 영상 원본·실시간 개인 뇌파 지표를 제공하지 않아요. 참관하는 지도사는 송출·녹음·발언권을 조작할 수 없어요.</p>
                 <p className="fm-ft">센터 관리자는 명상 리포트를 읽을 수 있지만 수정하거나 승인할 수 없어요. 상담 본문은 공개되지 않아요.</p>
               </div>}
               <p className="fm-ft hi">{retention}</p>
