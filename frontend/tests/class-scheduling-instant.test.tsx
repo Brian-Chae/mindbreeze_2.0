@@ -92,3 +92,18 @@ it('즉시 프리뷰 충돌 동의를 유지하고 생성 요청에는 예약 ro
   await press('클래스 만들기');
   expect(mocks.create.mock.calls[0][0]).toMatchObject({ force: true, confirmed_conflict_fingerprint: 'instant-conflict', schedule: { rows: [] } });
 });
+
+it('일반 예약의 요일을 모두 지운 뒤 즉시로 바꾸면 유효한 구조로 검사하고 예약 복귀 시 입력을 복원한다', async () => {
+  mocks.preview.mockImplementation(async schedule => {
+    if (!schedule.recurrence_rule.weekdays.length) throw new Error('요일 구조 오류');
+    return { rows: [{ client_key: 'instant', seq: 1, scheduled_at: '2026-10-19T01:03:00Z', host_id: 'u1', duration_min: 60 }], conflicts: [], conflict_fingerprint: 'fp' };
+  });
+  await mount(); await press('다음');
+  const weekdays = [...box.querySelectorAll<HTMLButtonElement>('[aria-label="요일"] button[aria-pressed="true"]')];
+  for (const day of weekdays) await act(async () => day.click());
+  await press('바로 지금'); await press('다음');
+  expect(box.querySelector('[data-screen="CH14"]')).not.toBeNull();
+  expect(mocks.preview.mock.calls[0][0].recurrence_rule).toEqual({ ...defaultSchedule('u1').recurrence_rule, start_now: true });
+  await press('이전'); await press('정해진 횟수');
+  expect(box.querySelectorAll('[aria-label="요일"] button[aria-pressed="true"]')).toHaveLength(0);
+});

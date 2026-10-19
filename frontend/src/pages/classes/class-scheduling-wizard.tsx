@@ -97,7 +97,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
       regularSchedule.current = schedule;
       const hostId = user.role === 'counselor' ? user.id : schedule.assignment_rule.host_ids.find(id => candidates.some(candidate => candidate.id === id)) ?? null;
       patch({ schedule_mode: 'fixed', planned_session_count: 1, ends_on: null, rows: [],
-        recurrence_rule: { ...schedule.recurrence_rule, start_now: true },
+        recurrence_rule: { ...defaultSchedule(null).recurrence_rule, start_now: true },
         assignment_rule: { version: 1, mode: 'all_one', host_ids: hostId ? [hostId] : [], weekday_hosts: {} },
         instructors: hostId ? [{ user_id: hostId, role: 'lead' }] : [],
       });
