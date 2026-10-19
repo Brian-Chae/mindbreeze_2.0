@@ -58,3 +58,33 @@ export function schedulingError(error: unknown): string {
   }
   return '요청을 완료하지 못했어요. 입력을 유지했으니 연결을 확인하고 다시 시도해 주세요.';
 }
+
+/** CSV는 이메일 열만 사용한다. 이름·전화 등 다른 열은 저장하지 않는다. */
+export function parseInviteCsv(source: string): string[] {
+  const text = source.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  const rows: string[][] = []; let cells: string[] = []; let cell = ''; let quoted = false;
+  for (let index = 0; index <= text.length; index += 1) {
+    const char = text[index];
+    if (char === '"') {
+      if (quoted && text[index + 1] === '"') { cell += '"'; index += 1; } else quoted = !quoted;
+    } else if (!quoted && (char === ',' || char === '\n' || char === undefined)) {
+      cells.push(cell.trim()); cell = '';
+      if (char !== ',') { if (cells.some(value => value)) rows.push(cells); cells = []; }
+    } else if (char !== undefined) cell += char;
+  }
+  if (quoted) throw new Error('CSV 인용부호가 닫히지 않았어요.');
+  if (!rows.length) throw new Error('CSV 이메일을 찾을 수 없어요.');
+  const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  const headerIndex = rows[0].findIndex(value => ['email', 'e-mail', '이메일'].includes(value.toLowerCase()));
+  const withoutHeader = headerIndex < 0 && rows[0].length === 1 && emailPattern.test(rows[0][0]);
+  if (headerIndex < 0 && !withoutHeader) throw new Error('CSV에 email 또는 이메일 열이 필요해요.');
+  const start = withoutHeader ? 0 : 1; const column = withoutHeader ? 0 : headerIndex; const emails: string[] = [];
+  for (let index = start; index < rows.length; index += 1) {
+    const email = rows[index][column]?.trim().toLowerCase();
+    if (!email || !emailPattern.test(email)) throw new Error(`CSV ${index + 1}행 이메일 주소를 확인해 주세요.`);
+    emails.push(email);
+  }
+  const unique = [...new Set(emails)];
+  if (!unique.length || unique.length > 100) throw new Error('CSV 이메일은 1~100개로 입력해 주세요.');
+  return unique;
+}

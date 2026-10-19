@@ -48,3 +48,9 @@ it('후보와 미리보기의 취소 신호를 공용 클라이언트에 전달�
   expect(post).toHaveBeenCalledWith('/classes/preview-schedule', schedule, { signal: controller.signal });
   get.mockRestore(); post.mockRestore();
 });
+it('CSV의 이메일 열을 읽고 이름·인용부호·중복을 처리한다', async () => {
+  const { parseInviteCsv } = await import('../src/lib/class-structure/scheduling-model');
+  expect(parseInviteCsv('이름,email\n"김,하나",A@EXAMPLE.COM\n이둘,a@example.com')).toEqual(['a@example.com']);
+  expect(() => parseInviteCsv('이름,이메일\n김하나,잘못된주소')).toThrow('2행');
+  expect(() => parseInviteCsv('이름,전화\n김하나,010')).toThrow('이메일');
+});
