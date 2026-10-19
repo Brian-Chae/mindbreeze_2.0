@@ -95,3 +95,12 @@ it('초안 저장 완료는 공개 코드나 발송 완료를 꾸미지 않고 �
   expect(box.textContent).not.toContain('클래스 코드');
   expect(mocks.getClass).not.toHaveBeenCalled();
 });
+it('공개 완료는 서버가 돌려준 첫 회차로 이동한다', async () => {
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  mocks.preview.mockResolvedValue({ rows: [{ client_key: 'regular:2026-12-21', seq: 1, scheduled_at: '2026-12-21T10:00:00Z', host_id: 'u1', duration_min: 60 }], conflicts: [], conflict_fingerprint: 'fp' });
+  mocks.create.mockResolvedValue({ class_id: 'created-one', revision: 1, session_ids: ['session-first', 'session-second'] });
+  mocks.getClass.mockResolvedValue({ host_view: { access_code: '2941' } });
+  await mount(); await input('title', '마음 명상'); await press('다음'); await press('다음'); await press('다음'); await press('클래스 만들기');
+  expect(box.querySelector('a[href="/classes/created-one/sessions/session-first"]')?.textContent).toBe('첫 회차 보러 가기');
+  expect(box.querySelector('.w-codebig')?.textContent).toBe('2941');
+});

@@ -336,3 +336,14 @@
 .cs-wizard .fl-body:not(.w-fill)>.fl-col{max-height:100%;overflow-y:auto;scrollbar-width:thin}
 .cs-wizard .class-member-picker__selected{max-height:88px;overflow:auto}
 .cs-wizard .class-member-picker__list>p{color:var(--tx-mid)}
+.cs-wizard h1,.cs-wizard h2{color:var(--tx-hi)}
+.cs-wizard .w-sumrow .tx{text-align:left}
+.cs-wizard .w-sumrow>svg{color:var(--mb-pale)}
+.cs-wizard .fl-seg>button.on{border-color:var(--mb-lavender)}
+.cs-wizard .cw-invite-members{gap:16px}
+.cs-wizard .cw-invite-members .cw-member-picker{display:contents}
+.cs-wizard .cw-invite-members .class-member-picker__search{order:1}
+.cs-wizard .cw-invite-members .class-member-picker__hint{order:2}
+.cs-wizard .cw-invite-members .w-count{order:3}
+.cs-wizard .cw-invite-members .class-member-picker__selected{order:4}
+.cs-wizard .cw-invite-members .class-member-picker__list{order:5}
