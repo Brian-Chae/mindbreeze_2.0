@@ -135,12 +135,14 @@ def _deliver(db, intent, now):
     if intent.kind == "live_access_reconcile":
         import asyncio
         from app.services.class_access_service import reconcile_observers
+        from app.ws.session_live_namespace import _refresh_instructor_rooms
 
         for row in (
             db.query(Session)
-            .filter(Session.class_id == cls.id, Session.webrtc_room_id.isnot(None))
+            .filter(Session.class_id == cls.id)
             .all()
         ):
+            asyncio.run(_refresh_instructor_rooms(str(row.id)))
             asyncio.run(reconcile_observers(db, row))
         return
     if intent.kind == "session_updated" and intent.payload.get("session_ids"):

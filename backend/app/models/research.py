@@ -24,6 +24,8 @@ class ResearchConsent(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     participant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, unique=True)
+    # SDD-217: 가입/기본값 선택 원본 연결. 기존 회차 동의를 가입 동의로 추정하지 않는다.
+    origin_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     consented: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # 동의 시점에 본 고지 문구 버전
     notice_version: Mapped[str | None] = mapped_column(String(20), nullable=True)

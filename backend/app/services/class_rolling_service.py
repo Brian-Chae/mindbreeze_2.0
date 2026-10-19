@@ -142,7 +142,7 @@ def finish_class_if_due(db, cls, now):
     regular = [r for r in rows if r.session_kind == "regular"]
     due = (
         cls.schedule_mode == "fixed"
-        and bool(regular)
+        and any(r.status == "completed" for r in regular)
         and all(r.status in ("completed", "cancelled") for r in regular)
     )
     due = due or bool(

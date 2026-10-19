@@ -173,6 +173,7 @@ export interface SessionLiveFeatureAck {
 
 /** join 응답 snapshot — status/version/참여자/집계 */
 export interface SessionLiveJoinSnapshot {
+  participation_version?: number;
   session_id: string;
   /** SDD-028: 실행 회차 키(기본=session_id). 반복 실행 UI는 후순위 */
   run_id?: string | null;
@@ -213,6 +214,7 @@ export interface SessionStateChangedEvent {
 }
 
 export interface ParticipantChangedEvent {
+  participation_version?: number;
   session_id: string;
   version: number;
   /** 서버가 참여자 배열을 실어 보낼 때만 존재(현재 BE 는 카운트만 전송) */

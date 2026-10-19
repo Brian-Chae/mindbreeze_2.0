@@ -31,6 +31,7 @@ def test_member_idempotency_future_only_and_capacity(pg_session):
                 status="scheduled",
                 host_state="assigned",
                 duration_min=60,
+                max_participants=2,
                 scheduled_at=NOW + timedelta(days=days),
             )
         )

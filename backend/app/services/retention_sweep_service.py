@@ -263,6 +263,7 @@ def _pii_stage(db: DBSession, eligible: dict[uuid.UUID, datetime], *, execute: b
         .filter(
             SessionParticipant.session_id.in_(ids),
             SessionParticipant.user_id.is_(None),
+            SessionParticipant.member_id.is_(None),
             SessionParticipant.pii_scrubbed_at.is_(None),
         )
         .execution_options(include_removed=True)
@@ -331,6 +332,10 @@ def run_retention_sweep(
         raw_rep, refs = _raw_stage(db, raw_eligible, holds, execute=execute)
         hold_rep = _hold_stage(db, raw_eligible, holds, moment, execute=execute)
         pii_rep = _pii_stage(db, pii_eligible, execute=execute)
+        from app.services.class_member_consent_service import scrub_expired_guests
+        pii_rep["class_members"] = scrub_expired_guests(db,now=moment,execute=execute,apply_from=apply_from)
+        if execute:
+            db.commit()
 
         # 스토리지 삭제는 DB 커밋 뒤 best-effort
         for ref in refs:

@@ -60,7 +60,7 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
         SessionParticipant.id == payload.participant_id,
         SessionParticipant.session_id == session.id,
         SessionParticipant.is_waitlisted.is_(False),
-    ).first()
+    ).populate_existing().with_for_update().first()
     if not participant:
         raise HTTPException(403, "해당 세션의 참가자가 아닙니다")
     if participant.user_id:
@@ -70,6 +70,8 @@ def request_report_email(session_id: UUID, payload, db: DBSession, user_id: str 
         claims = _decode(payload.participant_token, "report_participant")
         if claims.get("sub") != str(participant.id) or claims.get("session_id") != str(session.id):
             raise HTTPException(403, "참가자 확인 정보가 일치하지 않습니다")
+    if participant.pii_scrubbed_at is not None:
+        raise HTTPException(409, "개인정보 보관 기간이 만료된 참가자입니다")
     if session.status != "completed":
         raise HTTPException(409, "완료된 세션에서만 리포트를 요청할 수 있습니다")
     if not participant.report_included:
@@ -178,8 +180,8 @@ def deliver_report_email(report_id: str, db: DBSession) -> str:
     participant = db.query(SessionParticipant).filter(
         SessionParticipant.id == report.participant_id,
         SessionParticipant.session_id == report.session_id,
-    ).with_for_update().first()
-    if not participant or not participant.report_email:
+    ).populate_existing().with_for_update().first()
+    if not participant or participant.pii_scrubbed_at is not None or not participant.report_email:
         return "unavailable"
     if not participant.report_included:
         # SDD-209(B3): 제외 참가자에게는 발송하지 않는다.
@@ -240,9 +242,11 @@ def resend_report_email(report_id: str, email: str, db: DBSession) -> bool:
     participant = db.query(SessionParticipant).filter(
         SessionParticipant.id == report.participant_id,
         SessionParticipant.session_id == report.session_id,
-    ).first()
+    ).populate_existing().with_for_update().first()
     if not participant:
         raise HTTPException(400, "리포트 참가자를 찾을 수 없습니다")
+    if participant.pii_scrubbed_at is not None:
+        raise HTTPException(409, "개인정보 보관 기간이 만료된 참가자입니다")
     if not participant.report_included:
         raise HTTPException(409, "리포트에 반영되지 않은 참가자입니다")
 

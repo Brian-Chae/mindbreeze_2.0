@@ -153,3 +153,9 @@ def test_s3_apply_는_지정_프리픽스_밖은_건드리지_않는다():
 def test_s3_프리픽스는_슬래시로_끝나는_비어있지_않은_값만_허용한다(bad):
     with pytest.raises(dr.ResetGuardError, match="프리픽스"):
         dr.reset_s3(FakeS3([]), bucket="b", prefixes=(bad,), apply=False)
+
+
+def test_sdd217_운영_종속_행은_삭제하고_append_only_감사는_보존한다():
+    assert {"class_makeup_assignments", "class_guest_credentials", "class_guest_recoveries",
+            "class_member_operations", "class_guest_join_operations", "session_presence_leases"} <= dr.SESSIONS_SCOPE_DELETE
+    assert {"class_attendance_events", "class_guest_merges", "class_member_consent_events"} <= dr.SESSIONS_SCOPE_KEEP

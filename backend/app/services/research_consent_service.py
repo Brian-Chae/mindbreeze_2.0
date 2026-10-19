@@ -161,7 +161,8 @@ def set_own_consent(
 ) -> dict:
     """연구 동의 저장/변경 — 본인만, 종료·취소 409, 멱등. 성공 여부가 입장·업로드를 막지 않는다."""
     sid = session_service._to_uuid(session_id)
-    s = db.query(Session).filter(Session.id == sid).first()
+    from app.services.class_member_consent_service import lock_session_choice
+    s = lock_session_choice(db,sid,current_user_id)
     if not s:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if s.status in ("completed", "cancelled"):
@@ -173,9 +174,12 @@ def set_own_consent(
         participant_id=participant_id,
     )
 
+    if s.class_id:
+        p.research_consent_override = True
     row = _get_consent(p.id, db)
     previous = bool(row and row.consented)
     if consented == previous:
+        db.commit()
         return _view(p.id, row, changed=False)
 
     version = notice_version or DEFAULT_NOTICE_VERSION
@@ -345,3 +349,59 @@ def admin_withdraw(name: str, birth_date: date, reason: str, admin_id: uuid.UUID
         )
     db.commit()
     return {"withdrawn_count": withdrawn, "requests_recorded": len(candidates)}
+
+
+def copy_class_choice(db, participant, member):
+    """O3 원선택을 기존 current/event 계약으로 복사한다. commit은 호출자 소유."""
+    row = _get_consent(participant.id, db)
+    previous = bool(row and row.consented)
+    previous_origin = row.origin_id if row else None
+    selected = bool(member.research_consented)
+    if not selected and (row is None or row.withdrawn_at is not None):
+        return
+    if row is None:
+        row = ResearchConsent(session_id=participant.session_id, participant_id=participant.id)
+        db.add(row)
+    if selected:
+        name, birth, gender = _identity(participant, db)
+        kv = current_key_version()
+        subject = compute_subject_id(name, birth, kv) if name and birth else None
+        state = STATE_PENDING
+        if not key_for_version(kv): state = STATE_BLOCKED_KEY
+        elif not subject: state = STATE_BLOCKED_IDENTITY
+        elif _withdrawn_subject(subject, kv, db): state = STATE_BLOCKED_WITHDRAWN
+        row.notice_version = member.research_notice_version
+        row.consented_at = member.research_selected_at
+        row.withdrawn_at = None
+        row.origin_id = member.research_origin_id
+        participant.research_origin_id = member.research_origin_id
+        row.research_subject_id = subject
+        row.key_version = kv if subject else None
+        row.birth_year_month = birth_year_month(birth) if birth else None
+        row.gender = gender
+        row.export_state = state
+    else:
+        row.export_state = STATE_NOT_APPLICABLE
+        row.research_subject_id = None
+        row.key_version = None
+        row.birth_year_month = None
+        row.gender = None
+    row.consented = selected
+    if previous != selected or (selected and previous_origin != member.research_origin_id):
+        db.add(ResearchConsentEvent(session_id=participant.session_id,participant_id=participant.id,
+            event_type='consented' if selected else 'declined',previous_consented=previous,new_consented=selected,
+            notice_version=row.notice_version,actor_kind='self',actor_user_id=member.user_id,
+            created_at=member.research_selected_at if selected else _now()))
+    db.flush()
+
+
+def withdraw_rows(db, rows, *, now, actor_kind, actor_user_id, reason):
+    """명시된 current 행만 철회. 전역 subject 철회 요청을 만들지 않는다."""
+    for row in rows:
+        db.add(ResearchConsentEvent(session_id=row.session_id,participant_id=row.participant_id,
+            event_type='withdrawn',previous_consented=True,new_consented=False,notice_version=row.notice_version,
+            actor_kind=actor_kind,actor_user_id=actor_user_id,reason=reason,created_at=now))
+        row.consented=False
+        row.withdrawn_at=now
+        row.export_state=STATE_WITHDRAWN
+    db.flush()

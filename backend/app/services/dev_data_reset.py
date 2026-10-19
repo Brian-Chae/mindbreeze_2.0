@@ -25,6 +25,9 @@ SESSIONS_SCOPE_DELETE = frozenset({
     "agent_relay_events", "audio_chunks", "chat_message_reads", "chat_messages", "chat_room_participants",
     "chat_rooms", "class_instructors", "class_member_events", "class_members", "classes",
     "class_effects", "class_email_invites", "class_operations", "session_host_notes", "session_host_requests",
+    # SDD-217: 클래스/참가행 FK에 종속된 운영 상태·자격·멱등 결과만 함께 정리한다.
+    "class_makeup_assignments", "class_guest_credentials", "class_guest_recoveries",
+    "class_member_operations", "class_guest_join_operations", "session_presence_leases",
     "counseling_guests", "counseling_relationship_counselors", "counseling_relationship_events",
     "counseling_relationships", "eeg_feature_windows", "eeg_raw_chunks", "eeg_records", "guest_claim_events",
     "narrative_cache", "notification_outbox", "notifications", "pipeline_outbox", "report_choice_events",
@@ -34,6 +37,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
 SESSIONS_SCOPE_KEEP = frozenset({
+    # SDD-217: FK 없이 보존하는 감사 원본. TRUNCATE는 행 DELETE 트리거를 거치지 않으므로 제외한다.
+    "class_attendance_events", "class_guest_merges", "class_member_consent_events",
     "agent_briefing_logs", "agent_checkin_enablements", "agent_checkin_prefs", "agent_checkins",
     "agent_conversations", "agent_counselor_settings", "agent_delivery_logs", "agent_memory_items",
     "agent_messages", "agent_profile_items", "agent_risk_signals", "careers", "client_counselor_links",

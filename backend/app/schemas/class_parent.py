@@ -41,6 +41,9 @@ class Progress(BaseModel):
 
 
 class ClassSummary(BaseModel):
+    membership: dict | None = None
+    attendance_summary: dict[str, int] | None = None
+    capabilities: dict[str, bool] = Field(default_factory=dict)
     id: str
     title: str | None = None
     status: str
@@ -93,6 +96,12 @@ class ClassListResponse(BaseModel):
 
 
 class ClassSessionItem(BaseModel):
+    participation_version: int | None = None
+    participation_scope: Literal["before_join", "eligible", "outside_membership"] | None = None
+    attendance: dict | None = None
+    makeup: dict | None = None
+    approved_report_ids: list[str] = Field(default_factory=list)
+    capabilities: dict[str, bool] = Field(default_factory=dict)
     id: str
     seq: int | None = None
     scheduled_at: datetime | None = None

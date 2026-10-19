@@ -1,0 +1,73 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_recovery_after_merge_uses_production_autoflush_false ___________
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "class_effects_effect_key_key"
+E   DETAIL:  Key (effect_key)=(guest-revoke:dd8d28a9-6121-42f7-ba6d-ffed4c1c4e6e:0) already exists.
+
+The above exception was the direct cause of the following exception:
+tests/pg/test_sdd217_browser_regressions.py:19: in test_recovery_after_merge_uses_production_autoflush_false
+    recovered=api().exchange_recovery(db,cls.id,issued['exchange_token'],now=NOW)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app/services/class_guest_service.py:357: in exchange_recovery
+    _revoke(db,cls,member,now)
+app/services/class_guest_service.py:124: in _revoke
+    db.flush()
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+../../mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+E   sqlalchemy.exc.IntegrityError: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "class_effects_effect_key_key"
+E   DETAIL:  Key (effect_key)=(guest-revoke:dd8d28a9-6121-42f7-ba6d-ffed4c1c4e6e:0) already exists.
+E   
+E   [SQL: INSERT INTO class_effects (id, class_id, session_id, effect_key, kind, payload, status, attempts) VALUES (%(id)s::UUID, %(class_id)s::UUID, %(session_id)s::UUID, %(effect_key)s, %(kind)s, %(payload)s::JSONB, %(status)s, %(attempts)s) RETURNING class_effects.available_at]
+E   [parameters: {'id': UUID('a66d7766-9b22-41fc-90dc-de21a7786def'), 'class_id': UUID('800e9669-858d-4d14-9ba8-272e38a8dbd9'), 'session_id': None, 'effect_key': 'guest-revoke:dd8d28a9-6121-42f7-ba6d-ffed4c1c4e6e:0', 'kind': 'live_access_reconcile', 'payload': '{}', 'status': 'pending', 'attempts': 0}]
+E   (Background on this error at: https://sqlalche.me/e/20/gkpj)
+______ test_repeated_recovery_increments_member_and_participant_versions _______
+tests/pg/test_sdd217_browser_regressions.py:35: in test_repeated_recovery_increments_member_and_participant_versions
+    assert db.get(ClassMember,mid).entry_ver==version
+E   AssertionError: assert 0 == 1
+E    +  where 0 = <app.models.class_program.ClassMember object at 0x1149e8110>.entry_ver
+E    +    where <app.models.class_program.ClassMember object at 0x1149e8110> = get(ClassMember, UUID('84ee6470-dfd0-4006-978d-99b3f0f303d0'))
+E    +      where get = <sqlalchemy.orm.session.Session object at 0x115070490>.get
+=============================== warnings summary ===============================
+tests/pg/test_sdd217_browser_regressions.py::test_recovery_after_merge_uses_production_autoflush_false
+  /Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0/backend/venv/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/pg/test_sdd217_browser_regressions.py::test_recovery_after_merge_uses_production_autoflush_false
+FAILED tests/pg/test_sdd217_browser_regressions.py::test_repeated_recovery_increments_member_and_participant_versions
+2 failed, 1 warning in 0.95s

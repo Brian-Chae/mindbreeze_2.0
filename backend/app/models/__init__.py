@@ -143,3 +143,15 @@ __all__ += ["ResearchExportBatch", "ResearchExportItem"]
 # SDD-216: 편성 트랜잭션과 진행자 요청
 from app.models.class_scheduling import ClassOperation, ClassEffect, ClassEmailInvite, SessionHostRequest, SessionHostNote
 __all__ += ["ClassOperation", "ClassEffect", "ClassEmailInvite", "SessionHostRequest", "SessionHostNote"]
+
+# SDD-217: 클래스 멤버십·보강·guest 자격·동의·현재 참여
+from app.models.class_membership import (
+    ClassAttendanceEvent, ClassMakeupAssignment, ClassGuestCredential, ClassGuestRecovery,
+    ClassGuestMerge, ClassMemberOperation, ClassGuestJoinOperation,
+    ClassMemberConsentEvent, SessionPresenceLease,
+)
+__all__ += [
+    'ClassAttendanceEvent', 'ClassMakeupAssignment', 'ClassGuestCredential', 'ClassGuestRecovery',
+    'ClassGuestMerge', 'ClassMemberOperation', 'ClassGuestJoinOperation',
+    'ClassMemberConsentEvent', 'SessionPresenceLease',
+]

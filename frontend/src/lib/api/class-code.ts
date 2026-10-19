@@ -7,6 +7,7 @@ export interface ClassCodeSession {
   status: string;
 }
 export interface ClassCodeResult {
+  revision?: number;
   class_id: string;
   title: string | null;
   sessions: ClassCodeSession[];

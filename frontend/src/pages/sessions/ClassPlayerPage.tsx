@@ -28,6 +28,7 @@ import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { useVideoRecorder } from '../../hooks/useVideoRecorder';
 import { useBand } from '../../hooks/useBand';
 import { useLiveKit } from '../../hooks/useLiveKit';
+import { useParticipationSnapshot } from '../../hooks/useParticipationSnapshot';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
@@ -277,7 +278,13 @@ function mergeFeatureBufferAverages(
 export default function ClassPlayerPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [session, setSession] = useState<SessionDto | null>(null);
+  const routeRef = useRef({id, generation:0});
+  if (routeRef.current.id !== id) routeRef.current = {id, generation:routeRef.current.generation + 1};
+  const routeGeneration = routeRef.current.generation;
+  const isCurrentRoute = useCallback((requestedId: string | undefined): boolean =>
+    routeRef.current.id === requestedId && routeRef.current.generation === routeGeneration, [routeGeneration]);
+  const [loadedSession, setSession] = useState<SessionDto | null>(null);
+  const session = loadedSession?.id === id ? loadedSession : null;
   // FE-PERF-002: setSession 업데이터 내부에서 setMetrics 를 호출하면 updater 가 부수효과를
   // 갖게 된다(StrictMode 이중 호출 위험). 최신 세션은 ref 로 읽어 updater 밖에서 갱신한다.
   const sessionRef = useRef<SessionDto | null>(null);
@@ -358,21 +365,27 @@ export default function ClassPlayerPage() {
 
   /** 호스트 본인 참가자 id — live-metrics 행의 user_id 매칭 */
   const hostParticipantId = useMemo(() => {
-    if (!currentUserId) return null;
+    if (!currentUserId || !session) return null;
     const fromMetrics = metrics.find((m) => m.user_id === currentUserId);
     if (fromMetrics) return fromMetrics.participant_id;
     return null;
-  }, [currentUserId, metrics]);
+  }, [currentUserId, metrics, session]);
+
+  const participationState = useParticipationSnapshot({classId: session?.class_id, sessionId: id});
+  const participation = participationState.sessionId === id ? participationState : {sessionId:id, participants:{}, version:-1, revoked:false};
+  const participationVersionRef = useRef({sessionId: id, version: -1});
+  if (participationVersionRef.current.sessionId !== id) participationVersionRef.current = {sessionId: id, version: -1};
+  participationVersionRef.current.version = Math.max(participationVersionRef.current.version, participation.version);
 
   const band = useBand({
-    sessionId: id ?? '',
-    participantId: hostParticipantId,
-    enabled: Boolean(id && hostParticipantId),
+    sessionId: participation.revoked || !session ? '' : id ?? '',
+    participantId: participation.revoked ? null : hostParticipantId,
+    enabled: Boolean(id && hostParticipantId && !participation.revoked),
   });
 
   const handleLiveFeature = useCallback(
     (event: SessionLiveEegFeatureEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       // saved=0 은 이미 저장된 window의 재전송 중복(멱등 skip) — 과거 timestamp가
       // last_eeg_at을 되돌리고(→ false "수신끊김") 구간 평균을 오염시키므로 무시한다.
       if (event.saved === 0) return;
@@ -434,11 +447,15 @@ export default function ClassPlayerPage() {
       }
       setMetrics((prev) => mergeFeatureBufferAverages(prev, bufferSnapshot, envelopeSnapshot));
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleSnapshot = useCallback((snap: SessionLiveJoinSnapshot) => {
-    if (snap.participants?.length) {
+    if (snap.session_id !== id || !isCurrentRoute(id)) return;
+    const participationVersion = snap.participation_version;
+    const stale = typeof participationVersion === 'number' && participationVersion <= participationVersionRef.current.version;
+    if (!stale && snap.participants) {
+      if (typeof participationVersion === 'number') participationVersionRef.current.version = participationVersion;
       setMetrics(scoreServerRows(snap.participants));
     }
     if (snap.status) {
@@ -446,11 +463,11 @@ export default function ClassPlayerPage() {
         prev ? { ...prev, status: snap.status as SessionStatus } : prev,
       );
     }
-  }, []);
+  }, [id, isCurrentRoute]);
 
   const handleSessionState = useCallback(
     (event: SessionStateChangedEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       setSession((prev) =>
         prev
           ? {
@@ -461,22 +478,40 @@ export default function ClassPlayerPage() {
           : prev,
       );
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleParticipantChanged = useCallback(
     (event: ParticipantChangedEvent) => {
-      if (!id || event.session_id !== id) return;
-      if (event.participants && event.participants.length > 0) {
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
+      if (typeof event.participation_version === 'number') {
+        if (event.participation_version <= participationVersionRef.current.version) return;
+        participationVersionRef.current.version = event.participation_version;
+        if (event.participants) {
+          // 참여 이벤트의 NULL 측정 placeholder는 최신 EEG를 덮지 않는다.
+          const incoming = event.participants;
+          setMetrics(previous => {
+            const known = new Set(previous.map(row => row.participant_id));
+            return [
+              ...previous.map(row => {
+                const update = incoming.find(p => p.participant_id === row.participant_id);
+                return update ? {...row, display_name:update.display_name, user_id:update.user_id, is_guest:update.is_guest,
+                  raise_hand:update.raise_hand, speaking:update.speaking} : row;
+              }),
+              ...scoreServerRows(incoming.filter(row => !known.has(row.participant_id))),
+            ];
+          });
+        }
+      } else if (event.participants) {
         setMetrics(scoreServerRows(event.participants));
       }
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   const handleDeviceStatus = useCallback(
     (event: DeviceStatusChangedEvent) => {
-      if (!id || event.session_id !== id) return;
+      if (!id || event.session_id !== id || !isCurrentRoute(id)) return;
       setMetrics((prev) => {
         let changed = false;
         const next = prev.map((row) => {
@@ -512,7 +547,7 @@ export default function ClassPlayerPage() {
         return changed ? next : prev;
       });
     },
-    [id],
+    [id, isCurrentRoute],
   );
 
   /** SDD-094: 참여자별 발언권 상태 오버레이 — WS 이벤트/API 응답에서만 갱신 */
@@ -618,10 +653,27 @@ export default function ClassPlayerPage() {
     [quietSignals],
   );
 
+  useEffect(() => {
+    // 같은 페이지 인스턴스의 회차 전환에서 이전 EEG·체크인 캐시는 재사용하지 않는다.
+    setMetrics([]);
+    setMetricsPollFailing(false);
+    setError(null);
+    setLoadErrorKind(null);
+    setHostExtras({});
+    setSpeakingPatch({});
+    setQuietSignals({});
+    setSessionCheckins([]);
+    retainedCheckinsRef.current.clear();
+    featureBufferRef.current.clear();
+    lastFeatureEnvelopeRef.current.clear();
+    historyRef.current.clear();
+    lastFeaturePatchAtRef.current = 0;
+  }, [id]);
+
   const liveSocket = useSessionLiveSocket({
     sessionId: id,
     participantId: hostParticipantId,
-    enabled: Boolean(id && session),
+    enabled: Boolean(id && session && !participation.revoked),
     onEegFeature: handleLiveFeature,
     onSnapshot: handleSnapshot,
     onSessionStateChanged: handleSessionState,
@@ -635,29 +687,33 @@ export default function ClassPlayerPage() {
     if (!id) return;
     try {
       const next = await getSession(id);
+      if (!isCurrentRoute(id) || next.id !== id) return;
       setSession(next);
       // 폴링 재시도 성공 시 이전 오류 문구를 지운다(에러 복구)
       setError(null);
       setLoadErrorKind(null);
     } catch (e) {
+      if (!isCurrentRoute(id)) return;
       setError(e instanceof Error ? e.message : '클래스를 불러오지 못했습니다');
       setLoadErrorKind(deriveHostStateKind({ error: e, online: typeof navigator === 'undefined' ? undefined : navigator.onLine }));
     }
-  }, [id]);
+  }, [id, isCurrentRoute]);
 
   const refreshMetrics = useCallback(async (): Promise<void> => {
     if (!id) return;
     try {
       const res = await getSessionLiveMetrics(id);
+      if (!isCurrentRoute(id)) return;
       setMetrics(scoreServerRows(res.metrics ?? res.participants ?? []));
       setMetricsPollFailing(false);
     } catch {
+      if (!isCurrentRoute(id)) return;
       setMetricsPollFailing(true);
       // FE-PERF-002: sessionRef 에서 최신 세션을 읽어 setMetrics 를 직접 호출한다.
       const current = sessionRef.current;
       if (current) setMetrics(participantsToMetrics(current));
     }
-  }, [id]);
+  }, [id, isCurrentRoute]);
 
   useEffect(() => {
     if (!id) return;
@@ -1028,7 +1084,13 @@ export default function ClassPlayerPage() {
   );
 
   const displayMetrics = useMemo(() => {
-    const base = speakingMetrics;
+    const base: SessionLiveMetric[] = participation.version >= 0
+      ? Object.values(participation.participants).map(p => ({
+          display_name:'참가자', is_guest:false, band_connected:false, device_status:null,
+          band_battery:null, avg_efficiency:null, current_efficiency:null, upload_status:null, last_eeg_at:null,
+          ...speakingMetrics.find(row => row.participant_id === p.participant_id), ...p,
+        }))
+      : speakingMetrics;
 
     if (!hostParticipantId || band.connectionState !== 'connected') return base;
 
@@ -1070,6 +1132,8 @@ export default function ClassPlayerPage() {
     return changed ? next : base;
   }, [
     speakingMetrics,
+    participation.participants,
+    participation.version,
     hostParticipantId,
     band.connectionState,
     band.lastEegAt,
@@ -1159,6 +1223,10 @@ export default function ClassPlayerPage() {
       setError('클래스 코드를 복사하지 못했습니다. 코드를 직접 선택해 주세요.');
     }
   };
+
+  if (participation.revoked) {
+    return <main role="alert" className="flex min-h-screen items-center justify-center"><p>참여 권한이 종료되었습니다. 수업 목록에서 현재 상태를 확인해 주세요.</p></main>;
+  }
 
   if (!session && loadErrorKind) {
     return (

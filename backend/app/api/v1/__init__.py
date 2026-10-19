@@ -6,7 +6,7 @@ from app.api.v1 import normalization
 from app.api.v1 import auth, client, client_portal, credential, dashboard, onboarding, org, org_public, session, chat, audio, video, records, reports, admin, notifications, signup_applications, research_export
 from app.api.v1 import class_audio
 # SDD-214: 클래스·상담 읽기 API
-from app.api.v1 import classes, counseling
+from app.api.v1 import classes, counseling, class_membership, class_guests
 # SDD-188: AI 에이전트 채널(내담자 전용)
 from app.api.v1 import agent
 from app.api.v1 import agent_counselor
@@ -26,6 +26,8 @@ router.include_router(client_portal.router)
 router.include_router(session.router)
 router.include_router(class_audio.router)
 router.include_router(classes.router)
+router.include_router(class_membership.router)
+router.include_router(class_guests.router)
 router.include_router(counseling.router)
 router.include_router(chat.router)
 router.include_router(audio.router)

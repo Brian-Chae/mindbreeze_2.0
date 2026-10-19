@@ -194,6 +194,7 @@ _EXPECTED_WS_EVENTS = (
     "waiting_room",
     "waiting_room_remind",
     "class:audio_sync",
+    "participation_heartbeat",
 )
 
 

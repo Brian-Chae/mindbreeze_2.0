@@ -286,11 +286,17 @@ async def reconcile_observers(db, session, client=None):
             raise
         for participant in response.participants:
             identity = participant.identity
-            if not identity.startswith("observer:"):
-                continue
             try:
-                allowed = can_observe(db, UUID(identity.split(":", 1)[1]), session)
+                if identity.startswith("observer:"):
+                    allowed = can_observe(db, UUID(identity.split(":", 1)[1]), session)
+                else:
+                    from app.services.class_attendance_service import eligible_participant
+                    ident = UUID(identity)
+                    member = db.query(SessionParticipant).filter(SessionParticipant.session_id == session.id, (SessionParticipant.id == ident) | (SessionParticipant.user_id == ident)).first()
+                    allowed = ident == session.host_id or (member is not None and not member.is_waitlisted and eligible_participant(db, member, allow_excused=False))
             except (ValueError, TypeError):
+                if not identity.startswith("observer:"):
+                    continue
                 allowed = False
             if not allowed:
                 try:

@@ -1,8 +1,10 @@
+import { membershipApi } from '../lib/api/class-operations';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   getClasses, getClass, getClassSessions, getCounseling, getCounselingDetail,
   type ListParams, type ClassDetailDto, type ClassSessionsResponse,
 } from '../lib/api/class-structure';
+import { subscribeClassReads, classReadRevision } from '../lib/class-structure/invalidation';
 import { ApiError } from '../lib/api/client';
 import { useAuthStore } from '../stores/authStore';
 import type { ClassId, RelationshipId, ReadState } from '../lib/class-structure/read-model';
@@ -55,31 +57,43 @@ function acquire<T>(key: string, load: (signal: AbortSignal) => Promise<T>): { p
     },
   };
 }
-export interface StructureRead<T> { state: ReadState<T>; retry: () => void }
-function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>): StructureRead<T> {
+const noSubscribe = (): (() => void) => () => {};
+const noRevision = (): number => 0;
+export interface StructureRead<T> { state: ReadState<T>; retry: () => void; refreshError?: string; errorStatus?:number }
+function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>, publicRead = false): StructureRead<T> {
   const scope = useSyncExternalStore(subscribe, scopeSnapshot, scopeSnapshot);
+  const isClassRead = resource.startsWith('class:') || resource.startsWith('classes:');
+  const revision = useSyncExternalStore(isClassRead ? subscribeClassReads : noSubscribe, isClassRead ? classReadRevision : noRevision, noRevision);
   const [attempt, setAttempt] = useState(0);
-  const key = JSON.stringify([scope, resource, attempt]);
-  const [result, setResult] = useState<{ key: string; state: ReadState<T> } | null>(null);
+  const resourceKey = JSON.stringify([scope, resource]);
+  const key = JSON.stringify([resourceKey, attempt, revision]);
+  const [result, setResult] = useState<{ key: string; resourceKey: string; state: ReadState<T>; refreshError?: string; errorStatus?:number } | null>(null);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
   useEffect(() => {
     const auth = useAuthStore.getState();
-    if (!auth.isAuthenticated || !auth.user) return;
+    if (!publicRead && (!auth.isAuthenticated || !auth.user)) return;
     let active = true;
     const request = acquire(key, load);
     request.promise.then((data) => {
-      if (active && scopeSnapshot() === scope) setResult({ key, state: { status: 'success', data } });
+      if (active && scopeSnapshot() === scope) setResult({ key, resourceKey, state: { status: 'success', data } });
     }, (error: unknown) => {
       if (!active || scopeSnapshot() !== scope) return;
       const state: ReadState<T> = error instanceof ApiError && error.status === 404
         ? { status: 'not_found', message: '내용을 찾을 수 없어요' }
         : { status: 'error', message: '목록을 불러오지 못했어요' };
-      setResult({ key, state });
+      setResult(previous => {
+        // 일시 재조회 실패도 열린 편집을 지우지 않는다. 404는 현재 접근 회수를 반영한다.
+        if (isClassRead && (!(error instanceof ApiError) || error.status >= 500) && previous?.resourceKey === resourceKey && previous.state.status === 'success') {
+          return { ...previous, key, refreshError: '최신 내용을 불러오지 못했어요. 입력을 유지하고 있어요.' };
+        }
+        return { key, resourceKey, state, errorStatus: error instanceof ApiError ? error.status : undefined };
+      });
     });
     return () => { active = false; request.release(); };
-  }, [key, scope, load]);
-  // effect 정리 이전 렌더에서도 다른 계정/부모의 이전 결과를 노출하지 않는다.
-  return { state: result?.key === key ? result.state : { status: 'loading' }, retry };
+  }, [key, resourceKey, scope, load, isClassRead, publicRead]);
+  // 같은 계정·부모의 성공 화면은 재조회 중 유지하되 계정/부모 전환에는 노출하지 않는다.
+  const current = result?.resourceKey === resourceKey && (result.key === key || isClassRead && result.state.status === 'success') ? result : null;
+  return { state: current?.state ?? { status: 'loading' }, retry, refreshError: current?.refreshError, errorStatus:current?.errorStatus };
 }
 function paramsKey(params?: ListParams): string {
   return JSON.stringify([params?.status ?? null, params?.page ?? null, params?.limit ?? null]);
@@ -113,4 +127,13 @@ export function useMixedHome() {
   const retryCounseling = counseling.retry;
   const retry = useCallback(() => { retryClasses(); retryCounseling(); }, [retryClasses, retryCounseling]);
   return { classes: classes.state, counseling: counseling.state, retry };
+}
+
+export function useMyClassMembership(id: string, credential?: string) {
+  const load = useCallback((signal: AbortSignal) => membershipApi.membership(id, credential, signal), [id, credential]);
+  return useRead(`class:${id}:membership:${credential ?? 'login'}`, load, credential !== undefined);
+}
+export function useMyClassAttendance(id: string, credential?: string) {
+  const load = useCallback((signal: AbortSignal) => membershipApi.attendance(id, credential, signal), [id, credential]);
+  return useRead(`class:${id}:attendance:${credential ?? 'login'}`, load, credential !== undefined);
 }

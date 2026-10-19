@@ -1,6 +1,6 @@
 """클래스 읽기(SDD-214)와 편성·강사·최소 멤버십(SDD-216) API."""
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Request, Header
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import (
     UpdateClassCommand,
@@ -33,7 +33,7 @@ from app.services import class_write_service as writes
 from app.services.class_access_service import authorize_class_action
 from sqlalchemy.orm import Session as DBSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_current_user_optional
 from app.core.database import get_db
 from app.schemas.class_parent import (
     ClassMemberCandidatesResponse,
@@ -55,7 +55,7 @@ def queue_class_effects(result, background_tasks, db):
     return result
 
 
-@router.get("", response_model=ClassListResponse)
+@router.get("", response_model=ClassListResponse, response_model_exclude_unset=True)
 def list_classes(
     status: str | None = Query(default=None, max_length=12),
     page: int | None = Query(default=None, ge=1),
@@ -849,7 +849,7 @@ def get_class(
     return class_read_service.get_class_detail(class_id, current_user["id"], db)
 
 
-@router.get("/{class_id}/sessions", response_model=ClassSessionsResponse)
+@router.get("/{class_id}/sessions", response_model=ClassSessionsResponse, response_model_exclude_unset=True)
 def list_class_sessions(
     class_id: str,
     current_user: dict = Depends(get_current_user),
@@ -859,3 +859,17 @@ def list_class_sessions(
         class_id, current_user["id"], db
     )
     return ClassSessionsResponse(sessions=sessions, total=total)
+
+
+@router.get("/{class_id}/me/membership", dependencies=[Depends(scheduling_enabled)])
+def my_membership(class_id: UUID, current_user: dict | None = Depends(get_current_user_optional),
+    member_credential: str | None = Header(default=None, alias="X-Class-Member-Credential"), db: DBSession = Depends(get_db)):
+    return class_read_service.get_my_membership(db, class_id,
+        user_id=current_user["id"] if current_user else None, member_credential=member_credential)
+
+
+@router.get("/{class_id}/me/attendance", dependencies=[Depends(scheduling_enabled)])
+def my_attendance(class_id: UUID, current_user: dict | None = Depends(get_current_user_optional),
+    member_credential: str | None = Header(default=None, alias="X-Class-Member-Credential"), db: DBSession = Depends(get_db)):
+    return class_read_service.get_my_attendance(db, class_id,
+        user_id=current_user["id"] if current_user else None, member_credential=member_credential)

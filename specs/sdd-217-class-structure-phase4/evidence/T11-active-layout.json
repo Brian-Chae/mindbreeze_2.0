@@ -1,0 +1,167 @@
+{
+  "synthetic": true,
+  "class_id": "be575f9d-4749-4c63-98ac-9bbb2fc228b4",
+  "member_status": "active",
+  "findings": [
+    {
+      "section": "top",
+      "width": 390,
+      "height": 844,
+      "viewport": 390,
+      "scroll": 390,
+      "clipped": []
+    },
+    {
+      "section": "attendance",
+      "width": 390,
+      "height": 844,
+      "viewport": 390,
+      "scroll": 390,
+      "clipped": []
+    },
+    {
+      "section": "makeup",
+      "width": 390,
+      "height": 844,
+      "viewport": 390,
+      "scroll": 390,
+      "clipped": []
+    },
+    {
+      "section": "consents",
+      "width": 390,
+      "height": 844,
+      "viewport": 390,
+      "scroll": 390,
+      "clipped": []
+    },
+    {
+      "section": "top",
+      "width": 834,
+      "height": 1194,
+      "viewport": 834,
+      "scroll": 834,
+      "clipped": []
+    },
+    {
+      "section": "attendance",
+      "width": 834,
+      "height": 1194,
+      "viewport": 834,
+      "scroll": 834,
+      "clipped": []
+    },
+    {
+      "section": "makeup",
+      "width": 834,
+      "height": 1194,
+      "viewport": 834,
+      "scroll": 834,
+      "clipped": []
+    },
+    {
+      "section": "consents",
+      "width": 834,
+      "height": 1194,
+      "viewport": 834,
+      "scroll": 834,
+      "clipped": []
+    },
+    {
+      "section": "top",
+      "width": 1194,
+      "height": 834,
+      "viewport": 1194,
+      "scroll": 1194,
+      "clipped": []
+    },
+    {
+      "section": "attendance",
+      "width": 1194,
+      "height": 834,
+      "viewport": 1194,
+      "scroll": 1194,
+      "clipped": []
+    },
+    {
+      "section": "makeup",
+      "width": 1194,
+      "height": 834,
+      "viewport": 1194,
+      "scroll": 1194,
+      "clipped": []
+    },
+    {
+      "section": "consents",
+      "width": 1194,
+      "height": 834,
+      "viewport": 1194,
+      "scroll": 1194,
+      "clipped": []
+    },
+    {
+      "section": "top",
+      "width": 1280,
+      "height": 720,
+      "viewport": 1280,
+      "scroll": 1280,
+      "clipped": []
+    },
+    {
+      "section": "attendance",
+      "width": 1280,
+      "height": 720,
+      "viewport": 1280,
+      "scroll": 1280,
+      "clipped": []
+    },
+    {
+      "section": "makeup",
+      "width": 1280,
+      "height": 720,
+      "viewport": 1280,
+      "scroll": 1280,
+      "clipped": []
+    },
+    {
+      "section": "consents",
+      "width": 1280,
+      "height": 720,
+      "viewport": 1280,
+      "scroll": 1280,
+      "clipped": []
+    },
+    {
+      "section": "makeup-reserved",
+      "width": 390,
+      "height": 844,
+      "viewport": 390,
+      "scroll": 390,
+      "clipped": []
+    },
+    {
+      "section": "makeup-reserved",
+      "width": 834,
+      "height": 1194,
+      "viewport": 834,
+      "scroll": 834,
+      "clipped": []
+    },
+    {
+      "section": "makeup-reserved",
+      "width": 1194,
+      "height": 834,
+      "viewport": 1194,
+      "scroll": 1194,
+      "clipped": []
+    },
+    {
+      "section": "makeup-reserved",
+      "width": 1280,
+      "height": 720,
+      "viewport": 1280,
+      "scroll": 1280,
+      "clipped": []
+    }
+  ]
+}

@@ -8,7 +8,7 @@ import uuid
 from datetime import date, datetime
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, event, func, text,
+    Boolean, CheckConstraint, Date, DateTime, ForeignKey, ForeignKeyConstraint, Index, Integer, String, Text, UniqueConstraint, event, func, text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -101,6 +101,13 @@ class ClassMember(Base):
         # NULL(비회원)은 서로 다른 값으로 취급되므로 비회원 다중 등록이 허용된다.
         UniqueConstraint("class_id", "user_id", name="uq_class_members_class_user"),
         Index("ix_class_members_class_status", "class_id", "status"),
+        UniqueConstraint("class_id", "id", "kind", name="uq_class_members_class_id_kind"),
+        ForeignKeyConstraint(
+            ["class_id", "canonical_member_id", "kind"],
+            ["class_members.class_id", "class_members.id", "class_members.kind"],
+            name="fk_class_members_canonical_guest", ondelete="RESTRICT"),
+        CheckConstraint("canonical_member_id IS NULL OR (canonical_member_id <> id AND kind = 'guest')",
+                        name="ck_class_members_canonical_guest"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -113,6 +120,13 @@ class ClassMember(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     # host_invite, code, email_invite, waitlist_promotion
     joined_via: Mapped[str] = mapped_column(String(20), nullable=False)
+    # SDD-217: 병합 원본만 같은 클래스 guest survivor를 참조한다. cycle는 서비스 잠금으로 검사한다.
+    canonical_member_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    research_consented: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    research_notice_version: Mapped[str | None] = mapped_column(String(20))
+    research_selected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    research_origin_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    reminder_opt_in: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     guest_name: Mapped[str | None] = mapped_column(String(100))
     gender: Mapped[str | None] = mapped_column(String(20))
     birth_date: Mapped[date | None] = mapped_column(Date)

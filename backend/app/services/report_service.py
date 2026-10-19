@@ -776,12 +776,32 @@ def list_reports(
     return response
 
 
-def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
+def get_report(report_id: str, user_id: str | None, db: DBSession, *, member_credential: str | None = None) -> dict:
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
+    # SDD-217 본인 클래스 이력은 기존 세션 활동권한과 분리한다. 관리자/강사 경로는 유지한다.
+    from app.models.class_program import Class, ClassMember
+    viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first() if user_id else None
+    cls = db.query(Class).filter(Class.id == session.class_id).first() if session and session.class_id else None
+    if session and session.class_id and cls is None:
+        raise HTTPException(404, detail="리포트를 찾을 수 없습니다")
+    own_member = db.query(ClassMember).filter_by(class_id=session.class_id, user_id=viewer.id).first() if cls and viewer else None
+    from app.services.class_access_service import class_role
+    staff = bool(cls and viewer and (viewer.id == session.host_id or class_role(db, viewer, cls) in ("lead", "assistant", "guest", "org_admin")))
+    personal = bool(member_credential or (cls and viewer and not staff and (own_member or cls.recurrence_rule is not None)))
+    if personal:
+        from app.services.class_read_service import require_own_approved_report
+        from app.services.class_access_service import without_raw_material
+        member, participant = require_own_approved_report(db, report, session, user_id=user_id, member_credential=member_credential)
+        result = _serialize(report, session, subjective=_subjective_for_report(report, db))
+        result = without_raw_material(result)
+        result.update(pdf_url=None, report_email=None, generation_error=None)
+        return result
+    if viewer is None:
+        raise HTTPException(404, detail="리포트를 찾을 수 없습니다")
     if not _can_access_report(user_id, session, db):
         raise HTTPException(status_code=403, detail="접근 권한이 없습니다")
     viewer = db.query(User).filter(User.id == _to_uuid(user_id)).first()

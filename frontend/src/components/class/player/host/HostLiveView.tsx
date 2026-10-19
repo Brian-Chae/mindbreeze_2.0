@@ -1,3 +1,4 @@
+import type { LocalVideoTrack } from 'livekit-client';
 // SDD-208 H1·H2 — 상담사 진행 중 화면(뷰). props 만 받는 순수 컴포넌트라 서버·BLE·LiveKit 없이 픽스처로 렌더·측정할 수 있다.
 // 구성: 상단 바 → (배너) → 헤드 행(지표 띠 + 셀프뷰/요약 패널) → 칩 줄 → 세로 스크롤 그리드 → 도크, 시트는 도크·칩·타일에서 연다.
 import { useState, type ReactNode } from 'react';
@@ -94,6 +95,7 @@ export interface HostLiveViewProps {
   codeCopied: boolean;
   /** 내 카메라 영상(없으면 실루엣) */
   selfStream: MediaStream | null;
+  selfTrack?: LocalVideoTrack | null;
   /** 회원이 켠 카메라 영상 — 1:1 에서만 쓰며 null 이면 영상 자리 자체가 없다 */
   memberStream: MediaStream | null;
   /** 최근 5분 추이(오래된 값부터). 점이 없으면 빈 배열 */
@@ -115,7 +117,7 @@ function selfBandText(band: HostSelfBand): string {
 }
 
 export function HostLiveView(props: HostLiveViewProps) {
-  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, memberStream, trendOf, actions, backdropSrc } = props;
+  const { hostCase, participants, ui, uiActions, meta, queue, speakingPanel, readinessPanel, preCheckins, quietSignals, selfBand, chat, media, errorBanners, codeCopied, selfStream, selfTrack, memberStream, trendOf, actions, backdropSrc } = props;
   const sheetMode = useSheetMode();
   const [range, setRange] = useState<string | null>(null);
   const metric = metricByKey(ui.metric);
@@ -239,7 +241,7 @@ export function HostLiveView(props: HostLiveViewProps) {
           {strip}
           {hostCase.headSlot === 'selfview' ? (
             <HostSelfView
-              cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} netBad={netBad}
+              cam={hostCase.cam} mic={hostCase.mic} big={camBig} stream={selfStream} track={selfTrack} netBad={netBad}
               onPress={hostCase.cam === 'denied' || hostCase.cam === 'nodevice' ? () => uiActions.openSheet('permcam') : uiActions.toggleCamBig}
             />
           ) : hostCase.summary ? (

@@ -202,7 +202,7 @@ def _class_access_ids(db, uid):
         ClassInstructor.user_id == uid, ClassInstructor.status == "active", ClassInstructor.role.in_(("lead", "assistant")),
         Class.organization_id.in_(memberships.filter(UserOrgMembership.role == "counselor", User.role == "counselor")),
     )
-    member_ids = db.query(ClassMember.class_id).filter(ClassMember.user_id == uid, ClassMember.status == "active")
+    member_ids = db.query(ClassMember.class_id).filter(ClassMember.user_id == uid, ClassMember.status.in_(("active", "waitlisted", "completed", "left", "removed")))
     admin_orgs = memberships.filter(UserOrgMembership.role == "org_admin")
     return db.query(Class.id).filter(or_(Class.id.in_(instructor_ids),
         and_(Class.id.in_(member_ids), Class.status != "draft"), Class.organization_id.in_(admin_orgs)))
@@ -219,8 +219,8 @@ def _visible_class_sessions(db: DBSession, uid: UUID, class_ids, *, guest_sessio
     rows = (
         db.query(
             Session.class_id, Session.id, Session.seq, Session.scheduled_at, Session.status,
-            Session.session_kind, Session.host_id, Session.host_state, Session.state_version,
-            Session.duration_min, Session.location_type, Session.location_address, Session.assignment_override,
+            Session.session_kind, Session.host_id, Session.host_state, Session.state_version, Session.participation_version,
+            Session.duration_min, Session.location_type, Session.location_address, Session.assignment_override, Session.started_at,
         )
         .filter(Session.class_id.in_(list(class_ids)), or_(Session.class_id.in_(_class_access_ids(db, uid)), _legacy_class_sessions_filter(db, uid), Session.id == guest_session_id))
         .order_by(Session.seq.asc())
@@ -253,7 +253,9 @@ def list_classes(
         return [], total
     grouped = _visible_class_sessions(db, uid, [c.id for c in classes])
     names = _user_names(db, {r.host_id for rows in grouped.values() for r in rows})
-    return [_class_summary(c, grouped.get(c.id, []), names, now) for c in classes], total
+    member_classes = {cid for cid, in db.query(ClassMember.class_id).filter(ClassMember.class_id.in_([c.id for c in classes]), ClassMember.user_id == uid).all()}
+    return [{**_class_summary(c, grouped.get(c.id, []), names, now),
+        **(_viewer_fields(db, c, uid, now=now) if c.recurrence_rule is not None or c.id in member_classes else {})} for c in classes], total
 
 
 def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Class, list]:
@@ -307,8 +309,10 @@ def get_class_detail(class_id: str, user_id: str, db: DBSession, *, now: datetim
     actor = db.query(User).filter(User.id == uid).first()
     role = class_role(db, actor, cls)
     is_host = role in ("lead", "assistant", "org_admin") or (cls.recurrence_rule is None and any(r.host_id == uid for r in rows))
+    detail.update(_viewer_fields(db, cls, uid, now=now))
     detail["revision"] = cls.revision
     detail["capabilities"] = {
+        **detail["capabilities"],
         "manage": role in ("lead", "org_admin"),
         "invite": role in ("lead", "assistant", "org_admin"),
         "schedule": bool(settings.class_scheduling_enabled and role in ("lead", "org_admin")),
@@ -351,7 +355,266 @@ def list_class_sessions(class_id: str, user_id: str, db: DBSession) -> tuple[lis
         }
         for r in rows
     ]
+    cls = db.query(Class).filter_by(id=_to_uuid(class_id)).first()
+    member = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
+    if member:
+        own_items = {item["id"]: item for item in get_my_attendance(db, cls.id, user_id=uid)["sessions"]}
+        for item in items:
+            extra = own_items.get(item["id"], {})
+            item.update({key: value for key, value in extra.items() if key not in item})
+    elif cls.recurrence_rule is not None:
+        from app.services.class_access_service import class_role
+        role = class_role(db, db.get(User, uid), cls)
+        for item, row in zip(items, rows):
+            item["capabilities"] = _session_staff_capabilities(role, uid, cls, row)
+            if item["capabilities"]["correct_attendance"]:
+                item["participation_version"] = row.participation_version
     return items, len(items)
+
+
+# ───────────────────────── SDD-217 본인 이력 ─────────────────────────
+
+
+def _read_context(db, class_id, *, user_id=None, member_credential=None):
+    # 동의 읽기와 같은 로그인/장기 guest 인증을 재사용한다. 활동 권한은 여기서 부여하지 않는다.
+    from app.services.class_member_consent_service import _own_member
+    member = _own_member(db, class_id, user_id, member_credential)
+    cls = db.query(Class).filter(Class.id == member.class_id, Class.status != "draft").first()
+    if cls is None:
+        raise HTTPException(404, detail=NOT_FOUND)
+    return cls, member
+
+
+def _member_rows(db, cls, member):
+    from app.services.class_guest_service import canonical_member_ids
+    ids = canonical_member_ids(db, member)
+    originals = db.query(ClassMember).filter(ClassMember.id.in_(ids)).all()
+    sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).order_by(Session.seq, Session.id).all()
+    participants = db.query(SessionParticipant).filter(
+        SessionParticipant.session_id.in_([s.id for s in sessions]), SessionParticipant.member_id.in_(ids),
+        SessionParticipant.superseded_by_participant_id.is_(None), SessionParticipant.is_waitlisted.is_(False),
+    ).execution_options(include_removed=True).all()
+    grouped = defaultdict(list)
+    for participant in participants:
+        grouped[participant.session_id].append(participant)
+    # 중복 유효행은 임의로 한 명을 택하지 않고 본인 기록을 보수적으로 숨긴다.
+    own = {sid: ps[0] for sid, ps in grouped.items() if len(ps) == 1}
+    return ids, originals, sessions, own
+
+
+def _participation_scope(db, member, originals, session, participant):
+    starts = [m.joined_at for m in originals if m.joined_at]
+    scheduled = _aware(session.scheduled_at) if session.scheduled_at else None
+    if scheduled and starts and scheduled < min(_aware(stamp) for stamp in starts):
+        return "before_join"
+    # 과거 참가 근거는 최근 재가입/이탈 시각에 의해 사라지지 않는다.
+    if participant is not None and participant.attendance_status in ("attended", "absent", "excused"):
+        return "eligible"
+    # 수료 뒤에도 명시 배정된 개인 보강/취소 대체는 T05와 같은 참가자격으로 읽는다.
+    # 일반 expected나 이탈/제외 회차에는 이 예외를 적용하지 않는다.
+    if member.status == "completed" and participant is not None and session.status != "cancelled":
+        from app.services.class_attendance_service import eligible_participant
+        if eligible_participant(db, participant):
+            return "eligible"
+    end = member.left_at if member.status == "left" else member.removed_at if member.status == "removed" else member.completed_at if member.status == "completed" else None
+    if member.status in ("left", "removed") or (end and scheduled and scheduled > _aware(end)):
+        return "outside_membership"
+    if member.status in ("invited", "waitlisted", "declined"):
+        return "outside_membership"
+    return "eligible"
+
+
+def _member_capabilities(db, cls, member, sessions, own, *, activity=True, now=None):
+    now = now or datetime.now(timezone.utc)
+    active = bool(activity and cls.status == "active" and member.status == "active")
+    future = lambda row: row.status in ("ready", "scheduled", "open") and row.started_at is None and (row.scheduled_at is None or _aware(row.scheduled_at) >= now)
+    excuse = active and any(future(row) and (p := own.get(row.id)) is not None and p.entered_at is None and not p.removed_at and not p.waitlist_cancelled_at and p.attendance_status == "expected" for row in sessions)
+    makeup_available = False
+    if activity:
+        from app.services.class_makeup_service import validate_reservation
+        # 실제 예약이 사용하는 제거/alias/superseded 행도 함께 읽어 같은 쌍을 판정한다.
+        participants = db.query(SessionParticipant).filter(
+            SessionParticipant.session_id.in_([row.id for row in sessions]),
+        ).execution_options(include_removed=True).all()
+        sources = [row for row in sessions if row.session_kind == "regular" and (p := own.get(row.id)) is not None
+            and p.attendance_kind == "regular" and p.attendance_status in ("absent", "excused")]
+        targets = [row for row in sessions if row.status in ("ready", "scheduled")]
+        for source in sources:
+            for target in targets:
+                try:
+                    validate_reservation(db, cls, member, source, target, participants, now)
+                except HTTPException:
+                    continue
+                makeup_available = True
+                break
+            if makeup_available:
+                break
+    return {"manage_members": False, "correct_attendance": False, "assign_makeup": False, "merge_guests": False,
+        "leave": active, "cancel_waitlist": bool(activity and cls.status == "active" and member.status == "waitlisted"),
+        "rejoin": bool(cls.status == "active" and member.status == "left"), "excuse": bool(excuse),
+        "request_makeup": makeup_available,
+        "edit_consents": bool(activity and cls.status == "active" and member.status in ("active", "waitlisted")),
+        "read_own_reports": member.status in ("active", "completed", "left", "removed")}
+
+
+def _makeup_rows(db, cls, member):
+    from app.models.class_membership import ClassMakeupAssignment
+    from app.services.class_guest_service import canonical_member_ids
+    return db.query(ClassMakeupAssignment).filter(ClassMakeupAssignment.class_id == cls.id,
+        ClassMakeupAssignment.member_id.in_(canonical_member_ids(db, member)),
+        ClassMakeupAssignment.status.in_(("reserved", "completed"))).order_by(ClassMakeupAssignment.id).all()
+
+
+def _own_attendance(db, cls, member, *, now=None):
+    from app.services.class_attendance_service import participant_dto
+    from app.services.class_makeup_service import assignment_dto
+    _, originals, sessions, own = _member_rows(db, cls, member)
+    assignments = _makeup_rows(db, cls, member)
+    valid = {p.id: p for p in own.values()}
+    by_session = {row.id: row for row in sessions}
+    # 집계/표시는 현재 유효한 원결석과 보강 대상의 같은 클래스 근거만 사용한다.
+    assignments = [a for a in assignments if a.source_participant_id in valid and a.target_participant_id in valid
+        and valid[a.source_participant_id].session_id == a.source_session_id
+        and valid[a.target_participant_id].session_id == a.target_session_id
+        and by_session[a.source_session_id].status != "cancelled" and by_session[a.target_session_id].status != "cancelled"]
+    by_target = {a.target_participant_id: a for a in assignments}
+    reports = defaultdict(list)
+    for r in db.query(Report).filter(Report.participant_id.in_(valid), Report.type == "client", Report.status == "completed").order_by(Report.id).all():
+        participant = valid[r.participant_id]
+        if r.session_id == participant.session_id and by_session[r.session_id].status == "completed":
+            reports[r.participant_id].append(str(r.id))
+    items = []
+    count = {"attended": set(), "absent": set(), "excused": set()}
+    for row in sessions:
+        p = own.get(row.id)
+        scope = _participation_scope(db, member, originals, row, p)
+        visible = p if scope == "eligible" else None
+        if visible and row.status != "cancelled" and p.attendance_status in count:
+            count[p.attendance_status].add(row.id)
+        assignment = by_target.get(p.id) if visible else None
+        items.append({"id": str(row.id), "seq": row.seq, "scheduled_at": row.scheduled_at, "status": row.status,
+            "session_kind": row.session_kind, "participation_scope": scope,
+            "attendance": participant_dto(db, visible) if visible else None,
+            "makeup": assignment_dto(assignment) if assignment else None,
+            "approved_report_ids": reports.get(p.id, []) if visible else [],
+            "capabilities": {"excuse": bool(visible and member.status == "active" and cls.status == "active"
+                and row.status in ("ready", "scheduled", "open") and row.started_at is None
+                and (row.scheduled_at is None or _aware(row.scheduled_at) >= (now or datetime.now(timezone.utc)))
+                and p.attendance_status == "expected" and p.entered_at is None and not p.removed_at and not p.waitlist_cancelled_at),
+                "correct_attendance": False, "assign_makeup": False,
+                "read_own_reports": bool(visible and reports.get(p.id))}})
+    summary = {key: len(values) for key, values in count.items()}
+    for state in ("reserved", "completed"):
+        summary["makeup_" + state] = len({a.source_participant_id for a in assignments if a.status == state
+            and _participation_scope(db, member, originals, by_session[a.source_session_id], valid[a.source_participant_id]) == "eligible"})
+    return items, summary, sessions, own
+
+
+def _decorate_my_actions(db, cls, member, items, sessions, own, *, activity, guest=False, now=None):
+    """화면 동작은 기존 유효 참가자·정원 판정을 읽기로 재사용한다."""
+    from app.services.class_attendance_service import eligible_participant, check_capacity
+    now = now or datetime.now(timezone.utc)
+    rows = db.query(SessionParticipant).filter(SessionParticipant.session_id.in_([row.id for row in sessions])).all()
+    by_session = {str(row.id): row for row in sessions}
+    cancellable = {str(a.target_participant_id): a for a in _makeup_rows(db, cls, member) if a.status == "reserved"}
+    for item in items:
+        row = by_session[item["id"]]
+        p = own.get(row.id) if item["attendance"] else None
+        valid = bool(p and eligible_participant(db, p) and not p.is_waitlisted)
+        seat = False
+        if valid:
+            try:
+                check_capacity(db, cls, row, p, [r for r in rows if r.session_id == row.id])
+                seat = True
+            except HTTPException:
+                pass
+        future = row.status in ("ready", "scheduled", "open") and row.started_at is None and (row.scheduled_at is None or _aware(row.scheduled_at) >= now)
+        item["capabilities"]["undo_excuse"] = bool(activity and cls.status == "active" and member.status == "active"
+            and valid and p.attendance_status == "excused" and p.entered_at is None and future and seat)
+        assignment = item["makeup"]
+        # 취소 회차는 집계에서 제외하되 남은 예약을 취소할 수 있게 표시한다.
+        if assignment is None and p and row.status == "cancelled" and str(p.id) in cancellable:
+            from app.services.class_makeup_service import assignment_dto
+            assignment = item["makeup"] = assignment_dto(cancellable[str(p.id)])
+        item["capabilities"]["cancel_makeup"] = bool(activity and member.status in ("active", "completed")
+            and cls.status in ("active", "completed") and assignment and assignment["status"] == "reserved"
+            # 이탈 후 복구한 본인은 입장 불가인 withdrawn 대상 예약도 명시 취소할 수 있다.
+            and p is not None and p.entered_at is None and row.started_at is None and row.status in ("ready", "scheduled", "open", "cancelled"))
+        entry_scope = (activity and member.status == "active" and cls.status == "active") or (
+            not activity and member.status == "completed" and cls.status in ("active", "completed") and cls.schedule_mode == "fixed")
+        item["capabilities"]["guest_entry"] = bool(guest and entry_scope and valid and seat and row.status in ("open", "in_progress"))
+        if not activity:
+            item["capabilities"]["excuse"] = False
+    return items
+
+
+def get_my_membership(db, class_id, *, user_id=None, member_credential=None, now=None):
+    from app.services.class_membership_service import member_dto
+    from app.services.class_member_consent_service import consent_view
+    from app.services.class_guest_service import authenticate_guest
+    cls, member = _read_context(db, class_id, user_id=user_id, member_credential=member_credential)
+    items, summary, sessions, own = _own_attendance(db, cls, member, now=now)
+    activity = bool(user_id) or authenticate_guest(db, cls.id, member_credential)[1].scope == "activity"
+    items = _decorate_my_actions(db, cls, member, items, sessions, own, activity=activity, guest=not bool(user_id), now=now)
+    caps = _member_capabilities(db, cls, member, sessions, own, activity=activity, now=now)
+    caps.update({key: any(item["capabilities"][key] for item in items) for key in ("undo_excuse", "cancel_makeup", "guest_entry")})
+    dto = member_dto(db, member, cls=cls)
+    dto["capabilities"] = caps
+    return {"class_id": str(cls.id), "revision": cls.revision, "member": dto,
+        "attendance_summary": summary, "capabilities": caps, "consents": consent_view(member)}
+
+
+def get_my_attendance(db, class_id, *, user_id=None, member_credential=None):
+    cls, member = _read_context(db, class_id, user_id=user_id, member_credential=member_credential)
+    items, _, sessions, own = _own_attendance(db, cls, member)
+    activity = True
+    if not user_id:
+        from app.services.class_guest_service import authenticate_guest
+        activity = authenticate_guest(db, cls.id, member_credential)[1].scope == "activity"
+    _decorate_my_actions(db, cls, member, items, sessions, own, activity=activity, guest=not bool(user_id))
+    return {"sessions": items, "total": len(items)}
+
+
+def _session_staff_capabilities(role, uid, cls, session):
+    clinical = role in ("lead", "assistant") or (role == "guest" and session.host_id == uid)
+    return {"correct_attendance": bool(clinical and session.status == "completed"),
+        "assign_makeup": bool(clinical and cls.status in ("active", "completed") and session.status in ("ready", "scheduled") and session.started_at is None),
+        "excuse": False, "read_own_reports": False}
+
+
+def _viewer_fields(db, cls, uid, *, now=None):
+    from app.services.class_access_service import class_role
+    actor = db.get(User, uid)
+    role = class_role(db, actor, cls)
+    manager = role in ("lead", "assistant", "org_admin")
+    sessions = db.query(Session).filter(Session.class_id == cls.id, Session.is_template.is_(False)).all()
+    clinical = role in ("lead", "assistant")
+    caps = {"manage_members": manager, "merge_guests": manager,
+        "correct_attendance": bool((clinical or role == "guest") and any(s.status == "completed" and (clinical or s.host_id == uid) for s in sessions)),
+        "assign_makeup": bool((clinical or role == "guest") and cls.status in ("active", "completed") and any(s.status in ("ready", "scheduled") and (clinical or s.host_id == uid) for s in sessions)),
+        **{key: False for key in ("leave", "cancel_waitlist", "rejoin", "excuse", "request_makeup", "edit_consents", "read_own_reports")}}
+    membership = db.query(ClassMember).filter_by(class_id=cls.id, user_id=uid, canonical_member_id=None).first()
+    if membership and cls.status != "draft":
+        data = get_my_membership(db, cls.id, user_id=uid, now=now)
+        own_caps = data["capabilities"]
+        own_caps.update({key: caps[key] for key in ("manage_members", "merge_guests", "correct_attendance", "assign_makeup")})
+        return {"membership": data["member"], "attendance_summary": data["attendance_summary"], "capabilities": own_caps}
+    return {"membership": None, "attendance_summary": None, "capabilities": caps}
+
+
+def require_own_approved_report(db, report, session, *, user_id=None, member_credential=None):
+    """개인 리포트 원본 FK를 보존하며 canonical 본인 소유권만 검사한다."""
+    try:
+        if session is None or session.class_id is None or session.status != "completed" or report.type != "client" or report.status != "completed":
+            raise HTTPException(404, detail=NOT_FOUND)
+        cls, member = _read_context(db, session.class_id, user_id=user_id, member_credential=member_credential)
+        _, originals, _, own = _member_rows(db, cls, member)
+        participant = own.get(session.id)
+        if member.status not in ("active", "completed", "left", "removed") or participant is None or participant.id != report.participant_id or _participation_scope(db, member, originals, session, participant) != "eligible":
+            raise HTTPException(404, detail=NOT_FOUND)
+        return member, participant
+    except HTTPException:
+        raise HTTPException(404, detail=NOT_FOUND)
 
 
 # ───────────────────────── 상담 ─────────────────────────

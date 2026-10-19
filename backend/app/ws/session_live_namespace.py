@@ -389,8 +389,13 @@ def build_quiet_signal_payload(
 def register_session_live_namespace(sio):
     """app.ws.__init__ 에서 sio 초기화 후 호출하여 `/session-live` 네임스페이스 등록"""
 
+    expiry_task = None
+
     @sio.event(namespace=_NAMESPACE)
     async def connect(sid, environ, auth):
+        nonlocal expiry_task
+        if expiry_task is None or expiry_task.done():
+            expiry_task = asyncio.create_task(_participation_expiry_loop())
         # SDD-026: 무토큰은 게스트로 허용하되, 토큰이 있으면 반드시 유효해야 한다.
         # 잘못된 토큰은 예외를 무시하지 않고 연결을 거부(False)한다.
         global _loop
@@ -437,6 +442,11 @@ def register_session_live_namespace(sio):
 
     @sio.event(namespace=_NAMESPACE)
     async def disconnect(sid):
+        try:
+            context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+            await asyncio.to_thread(_participation_socket, sid, context, "leave")
+        except Exception:
+            logger.exception("[session-live] disconnect lease 정리 실패 — TTL로 만료")
         # WS-01: 마지막 소켓이 끊기면(세션 종료) 세션 스코프 휘발성 상태를 정리한다(메모리 누수 방지).
         _clear_session_if_last_socket(sid)
 
@@ -452,6 +462,8 @@ def register_session_live_namespace(sio):
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
         # 재인증 실패·같은 회차 역할 변경도 기존 민감 룸을 먼저 제거한다.
+        if (session or {}).get("session_id"):
+            await asyncio.to_thread(_participation_socket, sid, session, "leave")
         previous=(session or {}).get("session_id")
         previous_pid=(session or {}).get("participant_id")
         if previous:
@@ -546,6 +558,28 @@ def register_session_live_namespace(sio):
 
         # WS-01: 세션별 활성 소켓 추적 — 마지막 소켓 이탈(disconnect/leave) 시 세션 상태를 지운다.
         _register_session_socket(sid, session_id)
+        await _refresh_instructor_rooms(str(session_id))
+        current_context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        if not current_context.get("session_id"):
+            return
+
+        try:
+            participation = await asyncio.to_thread(_participation_socket, sid, current_context, "join")
+            if participation:
+                fields = {p["participant_id"]:p for p in participation["participants"]}
+                metrics = snapshot.get("participants") or []
+                merged = [{**p, **fields.get(p["participant_id"], {})} for p in metrics]
+                snapshot = {**snapshot, **{k:v for k,v in participation.items() if k != "participants"}, "participants":merged or participation["participants"]}
+        except Exception:
+            logger.exception("[session-live] DB 참여 join 거부")
+            for room in (_room_host(session_id), _room_all(session_id), f"session:{session_id}:observer"):
+                await sio.leave_room(sid, room, namespace=_NAMESPACE)
+            if pid:
+                await sio.leave_room(sid, _room_self(session_id, pid), namespace=_NAMESPACE)
+            await sio.save_session(sid, {"user_id":current_user_id}, namespace=_NAMESPACE)
+            _clear_session_if_last_socket(sid)
+            await sio.emit("join_denied", {"session_id":str(session_id)}, to=sid, namespace=_NAMESPACE)
+            return
 
         logger.info("[WS /session-live] sid=%s joined session=%s as %s", sid, session_id, role)
         await sio.emit(
@@ -575,6 +609,17 @@ def register_session_live_namespace(sio):
             # SDD-124: 늦게 입장한 회원도 즉시 절대 그룹 평균을 받는다(본인 소켓으로 1건).
             await publish_group_average(session_id, force=True, to=sid)
 
+    @sio.on("participation_heartbeat", namespace=_NAMESPACE)
+    async def participation_heartbeat(sid, data):
+        context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        try:
+            result = await asyncio.to_thread(_participation_socket, sid, context, "heartbeat")
+            return {"participation_version":result["participation_version"]} if result else None
+        except Exception:
+            await _refresh_instructor_rooms(str(context.get("session_id")))
+            await sio.emit("access_revoked", {"session_id":context.get("session_id")}, to=sid, namespace=_NAMESPACE)
+            return None
+
     @sio.on("leave", namespace=_NAMESPACE)
     async def on_leave(sid, data):
         data = data or {}
@@ -593,6 +638,8 @@ def register_session_live_namespace(sio):
                 session_id,
             )
             return
+        await asyncio.to_thread(_participation_socket, sid, session, "leave")
+        await sio.save_session(sid, {"user_id":session.get("user_id")}, namespace=_NAMESPACE)
         pid = (session or {}).get("participant_id")
         # 입장했을 수 있는 모든 룸에서 퇴장(멱등 — 없으면 무시)
         await sio.leave_room(sid, _room_host(session_id), namespace=_NAMESPACE)
@@ -935,6 +982,55 @@ def register_session_live_namespace(sio):
     logger.info("[WS /session-live] namespace registered")
 
 
+def _participation_socket(sid, context, action):
+    """각 호출은 독립 DB 트랜잭션. 인증 문맥은 서버가 저장한 값만 쓴다."""
+    from app.services import class_participation_service as participation
+    from app.services.session_service import _notify_participant_changed
+    from app.models.session import Session
+    from uuid import UUID
+    if not context.get("session_id") or context.get("role") == "observer":
+        return None
+    db = _open_db()
+    try:
+        try:
+            result = participation.socket_update(db, sid, context, action)
+        except Exception:
+            if action != "leave":
+                raise
+            # 접근 회수·룸 퇴장은 DB 장애에도 진행한다. 실패 lease는 TTL 재정리한다.
+            logger.exception("[session-live] lease 퇴장 저장 실패 sid=%s — TTL 재정리 필요", sid)
+            return None
+        # socket_update 커밋 뒤에만 발행한다.
+        _notify_participant_changed(db.get(Session, UUID(context["session_id"])), db)
+        if context.get("role") == "participant" and result:
+            result = {**result, "participants":[p for p in result["participants"] if p["participant_id"] == context.get("participant_id")]}
+        return result
+    finally:
+        db.close()
+
+
+def _expire_participation():
+    from app.services.class_participation_service import expire_due
+    from app.services.session_service import _notify_participant_changed
+    from app.models.session import Session
+    from uuid import UUID
+    db = _open_db()
+    try:
+        for result in expire_due(db):
+            _notify_participant_changed(db.get(Session, UUID(result["session_id"])), db)
+    finally:
+        db.close()
+
+
+async def _participation_expiry_loop():
+    while True:
+        await asyncio.sleep(30)
+        try:
+            await asyncio.to_thread(_expire_participation)
+        except Exception:
+            logger.exception("[session-live] 참여 lease 만료 정리 실패")
+
+
 def _resolve_join(session_id, current_user_id, participant_id, entry_credential=None):
     """join 권한 판정을 서비스 레이어에 위임(전용 DB 세션)."""
     from app.services import session_service
@@ -1022,6 +1118,19 @@ def _store_feature(session_id, participant_id, current_user_id, feature, entry_c
 # ---------------------------------------------------------------------------
 
 
+def _completed_participant_state(session_id, context):
+    from app.services.session_service import completed_participant_state
+
+    db = _open_db()
+    try:
+        return completed_participant_state(
+            session_id, context.get("user_id"), context.get("participant_id"), db,
+            entry_credential=context.get("entry_credential"),
+        )
+    finally:
+        db.close()
+
+
 async def _refresh_instructor_rooms(session_id: str) -> None:
     """단일 WS 워커에서 민감 이벤트를 보내기 전에 현재 진행·참관 권한을 재검사한다."""
     sio = _get_sio()
@@ -1032,18 +1141,33 @@ async def _refresh_instructor_rooms(session_id: str) -> None:
             context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
         except KeyError:
             continue
-        if context.get("role") not in ("host", "observer"):
+        if context.get("role") not in ("host", "observer", "participant"):
             continue
         try:
-            current = await asyncio.to_thread(_resolve_join, session_id, context.get("user_id"), None)
+            current = await asyncio.to_thread(_resolve_join, session_id, context.get("user_id"), context.get("participant_id"), context.get("entry_credential"))
         except Exception:
             current = None
         if current and current.get("role") == context.get("role"):
             continue
+        terminal = None
+        if context.get("role") == "participant":
+            try:
+                terminal = await asyncio.to_thread(_completed_participant_state, session_id, context)
+            except Exception:
+                terminal = None
+        if terminal:
+            # 정상 수료는 종료·재생 정리 알림을 먼저 전달한 뒤 활동 룸을 회수한다.
+            await sio.emit("session_state_changed", terminal, to=sid, namespace=_NAMESPACE)
+            stop = build_audio_sync_payload(str(session_id), "stop", None, 0.0)
+            await sio.emit(AUDIO_SYNC_EVENT, {"session_id": str(session_id), **stop}, to=sid, namespace=_NAMESPACE)
         for room in (_room_host(session_id), _room_all(session_id), f"session:{session_id}:observer"):
             await sio.leave_room(sid, room, namespace=_NAMESPACE)
+        if context.get("participant_id"):
+            await sio.leave_room(sid, _room_self(session_id, context["participant_id"]), namespace=_NAMESPACE)
+        await asyncio.to_thread(_participation_socket, sid, context, "leave")
         await sio.save_session(sid, {"user_id": context.get("user_id")}, namespace=_NAMESPACE)
-        await sio.emit("access_revoked", {"session_id": str(session_id)}, to=sid, namespace=_NAMESPACE)
+        if not terminal:
+            await sio.emit("access_revoked", {"session_id": str(session_id)}, to=sid, namespace=_NAMESPACE)
 
 
 async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
