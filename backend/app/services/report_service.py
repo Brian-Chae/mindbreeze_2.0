@@ -421,7 +421,7 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         .all()
     )
     host = db.query(User).filter(User.id == s.host_id).first()
-    auto_approve = bool(host and host.role == "counselor" and host.auto_approve_report)
+    auto_approve = auto_approve_enabled(host, s)
 
     # RPT-03: 세션의 기존 client 리포트를 배치로 1회 조회한다(participant_id → Report).
     # 존재하는 리포트는 재조회 없이 재사용하고, 없는 경우에만 생성 헬퍼를 호출한다.
@@ -934,6 +934,31 @@ def _can_edit_report(user_id: str, session, db: DBSession) -> bool:
             except HTTPException:
                 return False
     return allowed
+
+
+def report_domain(session) -> str:
+    """SDD-218 D-37: 자동 승인 정책이 갈라지는 지점.
+
+    클래스 회차는 "meditation", 그 밖은 "counseling" 으로 본다.
+    이번 단계에서는 두 영역의 동작이 같다. 영역을 나누는 분기점만 만들어 두고
+    상담 쪽 정책 변경은 Phase 6 에서 다룬다. 지금 동작을 바꾸면 안 된다.
+    """
+    if session is not None and getattr(session, "class_id", None):
+        return "meditation"
+    return "counseling"
+
+
+def auto_approve_enabled(host, session) -> bool:
+    """진행자 설정에 따른 자동 승인 여부. 영역별로 분리 가능한 형태로 둔다.
+
+    주의: 현재 두 영역의 판정은 동일하다. 한쪽만 바꾸면 D-37 범위를 넘는다.
+    """
+    if not (host and host.role == "counselor" and host.auto_approve_report):
+        return False
+    domain = report_domain(session)
+    if domain == "meditation":
+        return True
+    return True
 
 
 def can_approve_report(db: DBSession, user, session) -> bool:
