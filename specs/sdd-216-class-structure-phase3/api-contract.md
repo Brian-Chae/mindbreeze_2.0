@@ -18,12 +18,23 @@
 
 - `title`, `location_type`(online/offline), `location_address`, `capacity`, `linkband_mode`, `record_audio`, `record_video`, `chat_enabled`.
 - 온라인 정원 최대 50, 오프라인 최대 100. 영상 녹화 기본 off. 오프라인 후보는 장소 입력 필요.
-- `schedule_mode`: fixed/rolling. `planned_session_count`: 기본 8, 2~52. `duration_min`: 기본 60, 5~480의 5분 단위.
+- `schedule_mode`: fixed/rolling. `planned_session_count`: 기본 8, 일반 예약 2~52. 바로 지금은 fixed·1회. `duration_min`: 기본 60, 5~480의 5분 단위.
 - `recurrence_rule`: version=1, start_date, weekdays(월=1~일=7), time(07:00~22:00·5분 단위), interval_weeks, skip_dates.
 - `assignment_rule`: version=1, mode(all_one/rotate/by_weekday/per_session), host_ids 또는 weekday_hosts. 미정 null은 draft만 저장한다.
 - `instructors`: user_id·role(lead/assistant). counselor 개설자는 lead. org_admin 개설은 별도 lead 필수.
 - `rows`: client_key(`regular:YYYY-MM-DD`)·seq·scheduled_at·duration_min·location_type/address·host_id·session_kind·assignment_override. 수동 수정은 원래 후보 키로 식별한다.
 - `reminder_offsets`, `ends_on`, `member_ids`. 이메일/CSV 초대는 별도 API다.
+
+### 바로 지금 추가 계약
+
+- 구현 전 확정한 계약과 로컬 구현·검증 결과: [추가 요구사항·QA](instant-class-followup.md).
+- `recurrence_rule.start_now: boolean` 선택 필드, 생략하면 false. true이면 fixed·planned_session_count=1·all_one 진행자 1명·rows=[]·ends_on=null. 기존 날짜·시각은 입력 구조를 유지하되 즉시 편성 시각으로 쓰지 않는다.
+- 프리뷰는 서버 조회 시각의 후보 1개. 생성/초안 게시에서 서버의 실제 현재 시각으로 확정한다. 회차는 open·opened_at 설정, started_at 없음. 일반 예약 입력 제한은 유지한다.
+- draft는 회차를 만들지 않는다. 즉시 원본 복제는 start_now=false·일반 fixed 2회 초안이다.
+- 즉시 클래스 초대는 현재 열린 정규 회차에도 expected 참가자를 연결한다. 무초대 계정의 회차 ID만으로는 참가 자격을 발급하지 않는다.
+- 커밋 후 해당 클래스의 outbox 즉시 처리 요청, 실패는 기존 상태/재시도 경로 사용. 생성 성공 응답은 이메일 수신함 도착 증거가 아니다.
+- 즉시 `class_invited`: target_type=class·target_id=class_id 유지, params에 `start_now: true`, `session_id` 가산. 회원 앱 이동은 `/class/{session_id}/enter`. 일반 초대/직원 이동 경로는 유지한다.
+- 이메일에 frontend_base_url 기반 `/class/{session_id}/enter`, `/join`, 본문 참여 코드를 제공한다. 코드·이메일을 URL에 넣지 않는다. 입장 자격 없는 수신자는 코드 경로로 진입하며 기존 개인정보·동의 절차를 거친다.
 
 ## 2. 연결된 HTTP 경로
 

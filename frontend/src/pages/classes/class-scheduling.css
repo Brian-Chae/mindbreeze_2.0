@@ -359,7 +359,7 @@
 
 /* 즉시·예약 방식은 작은 화면에서도 각 선택을 읽을 수 있게 줄바꿈한다. */
 .cs-wizard .cw-schedule-modes { display: flex; flex-wrap: wrap; }
-.cs-wizard .cw-schedule-modes > button { flex: 1 1 8rem; }
+.cs-wizard .cw-schedule-modes > button { flex: 1 1 8rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
 
 .cs-wizard .cw-invite-status { display: grid; gap: 12px; }
 .cs-wizard .cw-invite-status-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 0; }

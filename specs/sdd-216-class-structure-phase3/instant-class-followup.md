@@ -1,6 +1,6 @@
 # SDD-216 — 바로 지금 1회차와 즉시 초대 추가 요구사항
 
-- 상태: 구현 전 요구사항·계획·검증 게이트. 2026-10-19 사용자 지시로 구현 승인: “시안 작성 안해도 되고 SDD-216 추가 요구 사항으로 반영해서 구현해줘”.
+- 최초 작성: 구현 전 요구사항·계획·검증 게이트. 2026-10-19 사용자 지시로 구현 승인: “시안 작성 안해도 되고 SDD-216 추가 요구 사항으로 반영해서 구현해줘”.
 - 원본 verify.md는 변경하지 않는다. 이 문서의 기대값을 먼저 고정하고 구현한다.
 - 목적: 긴급 클래스를 날짜·시간·반복 설정 없이 만들고 회원에게 바로 입장 경로를 제공한다.
 
@@ -26,13 +26,13 @@
 | IN-T01 | BE: backend/app/schemas/class_scheduling.py, services/class_schedule_service.py, 신규 instant 테스트 | 즉시 스키마·서버 시각·일반 예약 보존 RED→GREEN |
 | IN-T02 | BE: services/class_write_service.py, class_membership_service.py, class_code_service.py | 1회 원자 생성·open·expected·초안 게시·복제·멱등성 RED→GREEN |
 | IN-T03 | BE: services/class_effect_service.py, api/v1/classes.py; BE 공유 파일과 마이그레이션 담당도 동일 1명 | 커밋 후 클래스 한정 dispatch·초대 링크·재시도 RED→GREEN |
-| IN-T04 | FE 마법사: pages/classes/class-scheduling-wizard.tsx, lib/api/class-scheduling.ts, lib/class-structure/scheduling-model.ts, 마법사 전용 스타일·신규 테스트 | 바로 지금 선택·강사 축약·초대 유지·초안·완료 동선 RED→GREEN |
+| IN-T04 | FE 마법사: pages/classes/class-scheduling-wizard.tsx, lib/api/class-scheduling.ts, lib/class-structure/scheduling-model.ts, components/class/structure/class-settings-panel.tsx, 마법사 전용 스타일·신규 테스트 | 바로 지금 선택·강사 축약·초대 유지·초안·완료 동선 RED→GREEN |
 | IN-T05 | FE 입장: lib/api/notifications.ts, pages/class/EntryPage.tsx, pages/client/member-class-detail-page.tsx, 신규 테스트 | 앱 초대 직접 입장·메일 무자격 안내·열린 회차 입장 RED→GREEN |
 | IN-T06 | 통합: specs/sdd-216-class-structure-phase3 문서, 로컬 검증 증거 | 초점 테스트·1회 FE 빌드·실제 로컬 PG/API/브라우저 확인·결과 기록 |
 
 - BE·FE 마법사·FE 입장을 각각 루트 내부 전용 워크트리에서 병렬 구현. 공유 파일은 BE 1명만 소유한다. 각 담당 파일만 추가하여 로컬 커밋. push·배포·merge·삭제·외부 메일 발송 없음.
 - 출시 순서 ① BE 선택 필드/동작 배포 ② FE CTA 배포. 기존 FE 요청 기본 false로 호환. 실제 배포는 이번 작업 범위 밖이다.
-- 전체 BE 회귀·전체 수집은 하지 않는다. 변경 관련 테스트만 실행하며 통합 FE 빌드는 최종 1회 수행한다.
+- 전체 BE 회귀·전체 수집은 하지 않는다. 변경 관련 테스트만 실행하며 통합 FE 빌드는 변경이 모인 시점에 수행한다. 리뷰에서 컴포넌트가 추가되면 해당 변경을 반영해 한 번 더 확인한다.
 
 ## 구현 전 QA 게이트
 
@@ -49,9 +49,9 @@
 | IN-Q09 | 이메일 입장·코드 경로 정확, URL에 코드/이메일 없음, 앱 extra.session_id 계약 | 초점 pytest | BE |
 | IN-Q10 | 바로 지금 선택 시 시간 입력 숨김·1회, 상담사 강사 단계 건너뜀, 관리자 유효 진행자 선택 | 초점 Vitest | FE 마법사 |
 | IN-Q11 | 회원+이메일 초대 둘 다 유지, 실패 재시도 중 클래스 중복0, 일반 방식 전환 시 정상 복원 | 초점 Vitest | FE 마법사 |
-| IN-Q12 | 즉시 초안 재개/게시·생성 완료 진행 링크, 모바일 넘침0 | 초점 Vitest/브라우저 | FE 마법사/통합 |
+| IN-Q12 | 즉시 초안 재개/게시·생성 완료 진행 링크, 즉시 클래스 설정은 반복·배정 편집 숨김, 모바일 넘침0 | 초점 Vitest/브라우저 | FE 마법사/통합 |
 | IN-Q13 | 즉시 회원 알림 직접 입장, 일반 초대·직원은 기존 경로, 잘못된 extra 안전 처리 | 초점 Vitest | FE 입장 |
-| IN-Q14 | 이메일 링크의 무자격 수신자는 코드 입장 안내, 참가 자격/동의·정원 우회 없음 | 초점 Vitest/실제 API | FE 입장/BE |
+| IN-Q14 | 이메일 링크의 무자격 수신자는 코드 입장 안내. 미초대 회원의 POST /sessions/{id}/enter는 403·멤버/expected 생성0. 코드 입장은 정상 가입. 참가 자격/동의·정원 우회 없음 | 초점 Vitest/실제 API | FE 입장/BE |
 | IN-Q15 | 회원 클래스 open/in_progress 입장 버튼, 완료/취소 회차 버튼 없음 | 초점 Vitest | FE 입장 |
 | IN-Q16 | 실제 PG 서버에서 생성→회원 앱 알림→입장 준비 화면, 초대 메일 본문은 대역으로 확인 | 로컬 브라우저/API, 메일 실발송 금지 | 통합 |
 
@@ -61,4 +61,14 @@
 
 ## 검증 결과
 
-- 구현 전: 미실행. 실제 외부 메일/푸시 전달, LiveKit·기기 연결은 미확인.
+- IN-T01~06 구현 완료. 추가 6 Task·16 시나리오. 원본 40 Task·79 QA 수와 구분한다.
+- PG 신규 21개 통과(2.21초): 실제 PG16/head056, 외부 트랜잭션+savepoint 롤백. 즉시 1회 원자성/실패 원복/operation key 재실행/시간 경과 충돌 지문/새 충돌 거부/직접 링크 무초대403/초안·게시·복제/효과 처리·메일 대역 검증. 원본 8회·복합FK·계정정지 전체 세트는 이번에 재실행하지 않았다.
+- FE 신규 고유 41개: 최초 통합 5파일38개 통과(3.86초), 리뷰 보완 3개 추가 후 변경된 마법사 파일11개 통과(2.06초). 이 두 실행은 8개가 겹친다. 담당 트랙에서 기존 편성 계산18개·인접 FE 사례도 확인했으며 전체 회귀는 실행하지 않았다.
+- FE 프로덕션 빌드 성공. 첫 통합 이후 실제 발송 상태 컴포넌트 추가로 최종 빌드 1회 재실행(번들 단계2.68초). 기존 큰 청크·동적/정적 import 혼용 경고 유지. 마지막 버튼 아이콘 정렬은 로컬 Vite·브라우저로 확인한다.
+- 읽기 전용 리뷰에서 발견한 2건 수정: 숨겨진 예약값(빈 날짜/요일 등)은 즉시 전환 시 유효 기본값으로 정규화, 일반 복귀 원본 입력은 보존. 완료 화면은 실제 pending/sent/failed 조회·새로고침·실패 재시도를 제공한다. 수정 diff 재리뷰에서 추가 P1/P2 없음.
+- 실제 로컬 브라우저: 상담사 → 바로 지금 → 회원1명+이메일1개 → 생성 → 진행자 로비 → 회원 로그인 → 앱 초대 알림 → 입장 확인 → 기존 고지/준비 화면. 1회차가 open이고 scheduled_at=opened_at, started_at=null 확인. 수업 시작·녹음은 실행하지 않았다.
+- 실제 생성 클래스 `bf797fb8-b0b3-450f-81d7-c4b9e0bd6344`, 회차 `d621062b-f5b4-476a-87be-8a72bbe42610`. 합성 계정/테스트 데이터다. 이메일 sent는 로컬 발송 함수 대역의 성공 기록이며 외부 메일 전송은 없다.
+- 모바일390px에서 일정·초대·진행자 로비·회원 준비 화면을 확인했다. 일정/회원 준비 document.scrollWidth=390. 데스크톱1280px 알림·회원 준비 화면 확인. 별도 시안 및 전체 픽셀 비교는 하지 않았다.
+- expected 참가자의 joined_at=None이 DB 기본값으로 현재 시각이 되던 경로도 SQL NULL 명시로 바로잡았다. 실제 입장 전에 참여 이력을 만들지 않는다.
+- 근거 로그: `.superpowers/sdd/plan/instant-pg-integrated.log`, `instant-fe-integrated.log`, `instant-fe-final.log`, `instant-fe-build-final.log`. 브라우저 캡처/실제 DB 요약: `.superpowers/sdd/plan/instant-review/`.
+- 사용자 결정 필요 없음. 실제 외부 메일 수신함·모바일 푸시·LiveKit·BLE·실기기·배포는 미확인. 클래스 효과의 즉시 처리와 기존 알림 전달 worker는 별도이며 운영 worker 설정 검증은 출시 단계에 남는다.
