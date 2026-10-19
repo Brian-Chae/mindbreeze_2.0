@@ -122,3 +122,21 @@ it('부모 선택 초기화가 늦어도 이전 이름을 다시 표시하거나
   expect(box.textContent).not.toContain('이전 선택 회원');
   expect([...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].every(input => input.disabled)).toBe(true);
 });
+it('회원 선택기를 닫고 계정을 바꾼 뒤 다시 열면 부모의 이전 선택도 복원되지 않는다', async () => {
+  vi.useFakeTimers(); const previousActor = auth.user.id;
+  try {
+    await act(async () => root.render(<ClassMembersPanel detail={detail} onSaved={() => {}} />));
+    await click('회원 초대'); await settleSearch();
+    await act(async () => box.querySelector<HTMLInputElement>('input[aria-label="검색 회원 선택"]')!.click());
+    expect(box.querySelector('.class-member-picker__selected')?.textContent).toContain('검색 회원');
+    await click('회원 초대');
+    expect(box.querySelector('[data-class-member-picker]')).toBeNull();
+    auth.user.id = 'second-admin';
+    await act(async () => root.render(<ClassMembersPanel detail={detail} onSaved={() => {}} />));
+    await click('회원 초대'); await settleSearch();
+    expect(box.querySelector('.class-member-picker__selected')).toBeNull();
+    const invite = [...box.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === '선택 회원 초대')!;
+    expect(invite.disabled).toBe(true);
+    expect(api.post).not.toHaveBeenCalled();
+  } finally { auth.user.id = previousActor; }
+});

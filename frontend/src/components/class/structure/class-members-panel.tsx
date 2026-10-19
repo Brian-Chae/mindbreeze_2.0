@@ -5,7 +5,12 @@ import { schedulingApi, type EmailInvite } from '../../../lib/api/class-scheduli
 import { ClassMemberPicker, type ClassMemberSelection } from './class-member-picker';
 import { useAuthStore } from '../../../stores/authStore';
 import { OperationFeedback, operationButton, operationInput, operationError, useClassOperation } from './class-operation-state';
-export function ClassMembersPanel({ detail, onSaved }: { detail: ClassDetailDto; onSaved: () => void }) {
+interface Props { detail: ClassDetailDto; onSaved: () => void }
+export function ClassMembersPanel(props: Props) {
+  const user = useAuthStore(state => state.user);
+  return <ClassMembersPanelState key={`${user?.id}:${user?.role}:${props.detail.id}`} {...props} />;
+}
+function ClassMembersPanelState({ detail, onSaved }: Props) {
   const admin = useAuthStore(s=>s.user?.role==='org_admin');
   const [members,setMembers]=useState<ClassMember[]>([]); const [emails,setEmails]=useState<EmailInvite[]>([]);
   const [selected,setSelected]=useState<ClassMemberSelection[]>([]); const [emailInput,setEmailInput]=useState('');
