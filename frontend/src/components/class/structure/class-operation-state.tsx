@@ -4,9 +4,11 @@ import type { WriteCommand } from '../../../lib/api/class-scheduling';
 export const operationButton = 'rounded-xl border border-[#ded8d0] bg-white px-4 py-2 text-sm font-medium disabled:opacity-40';
 export const operationInput = 'w-full rounded-xl border border-[#ded8d0] bg-white px-3 py-2 text-sm';
 const errors: Record<string, string> = {
-  stale_class_revision: '다른 변경이 있어요. 최신 내용을 다시 불러온 뒤 시도해 주세요.',
-  stale_session_version: '회차가 변경됐어요. 최신 내용을 다시 불러와 주세요.',
+  stale_class: '다른 변경이 있어요. 최신 내용을 다시 불러온 뒤 시도해 주세요.',
+  stale_session: '회차가 변경됐어요. 최신 내용을 다시 불러와 주세요.',
   reason_required: '센터 관리자의 변경 사유를 입력해 주세요.',
+  regular_sessions_remaining: '아직 완료하지 않은 정규 회차가 있어요. 회차를 완료하거나 취소한 뒤 마무리해 주세요.',
+  class_transition_conflict: '입장 중이거나 진행 중인 회차를 먼저 종료해 주세요.',
   class_capacity: '클래스 정원을 초과했어요.',
   last_lead: '마지막 주강사는 제거할 수 없어요. 새 주강사를 먼저 지정해 주세요.',
   instructor_has_sessions: '아직 배정된 회차가 있어요. 회차의 진행자를 먼저 변경해 주세요.',
