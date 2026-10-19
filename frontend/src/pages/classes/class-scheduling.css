@@ -333,3 +333,6 @@
 .cs-wizard .cw-datetime{position:relative;display:flex;align-items:center;justify-content:center;height:44px;font-size:13px;font-weight:700;white-space:nowrap;min-width:0}
 .cs-wizard .w-stepper .cw-datetime input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .cs-wizard .cw-datetime:focus-within{outline:2px solid var(--mb-pale);outline-offset:2px;border-radius:8px}
+.cs-wizard .fl-body:not(.w-fill)>.fl-col{max-height:100%;overflow-y:auto;scrollbar-width:thin}
+.cs-wizard .class-member-picker__selected{max-height:88px;overflow:auto}
+.cs-wizard .class-member-picker__list>p{color:var(--tx-mid)}
