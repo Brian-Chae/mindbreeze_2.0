@@ -1,15 +1,16 @@
 # SDD-216 Plan — 명상 클래스 편성·강사 구현 계획
 
+- 실행 갱신: 문서 승인 뒤 Brian의 후속 “진행해”로 백엔드 로컬 구현·테스트에 착수했다. 아래의 문서 워커 범위는 최초 작성 당시 기록이다. push·배포·삭제·메일·머지 금지는 유지한다.
 - 상태: Stage ② 작성. **구현 전 계획이며 아래 Task는 모두 미실행**.
 - 목표: 8회 원자 편성·강사 운영·권한을 BE에서 먼저 제공하고, 시안에 맞춘 FE를 두 번째로 출시한다.
 - 구조: 기존 Session 엔진·Class 모델·session_authz·notification outbox를 확장한다. 반복/충돌 계산과 변경 트랜잭션을 분리하고, 단건 생성 함수를 N번 호출하지 않는다.
 - 기술: 현재 저장소 FastAPI·SQLAlchemy·Alembic·PostgreSQL·Celery/OS cron, React·TypeScript·기존 apiClient·Vitest·Playwright 사용. 버전 변경·새 UI 라이브러리 도입 없음.
 - 기준: [spec.md](spec.md), [verify.md](verify.md). 작업 경로: `/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd216`.
-- 향후 실행자는 Task별 실패 테스트 → 최소 구현 → 같은 테스트 통과 → 정리 → 파일 소유자 검토 순서를 따른다. 구현 전 승인 없이 이 계획을 실행하지 않는다.
+- 향후 실행자는 Task별 실패 테스트 → 최소 구현 → 같은 테스트 통과 → 정리 → 파일 소유자 검토 순서를 따른다. 구현 전 승인은 2026-10-19 Brian "승인한다."로 확보했다.
 
 ## 1. 구현 전 확인·설계 고정
 
-- T00에서 승인 기록·시작 SHA·dirty 파일·허용 경로를 기록한다. 이번 문서 작업에는 승인된 구현이 없다.
+- T00에서 승인 기록·시작 SHA·dirty 파일·허용 경로를 기록한다. 승인: 2026-10-19 Brian "승인한다."(spec·plan·verify·U-216-01 문구/처리).
 - T01에서 신규 API/DTO/오류/권한을 `api-contract.md`에 고정한다(향후 산출물). SDD-215의 코드 대조 → 타입/fixture 고정 → 화면 연결 순서를 재사용한다.
 - 정적 기준 head는 `e036a0000055`. 기존 053~055 수정 금지. 새 번호는 B가 실제 head 확인 후 단일 후속 리비전으로 발급한다. 지금 번호를 선점하거나 마이그레이션 파일을 만들지 않는다.
 - 공유 잠금 순서: 관련 User 행(UUID 오름차순) → Class 행(UUID 오름차순) → Session 행(UUID 오름차순) → 요청/멤버 행 → 코드 발급 잠금. 여러 클래스를 건드리는 정지도 같은 순서를 따른다.
@@ -117,7 +118,7 @@
 
 | 트랙/단일 담당 | 독점 경로 | 책임 |
 |---|---|---|
-| B BE 통합·DB | `backend/alembic/versions/` 전체(새 리비전 1명), `backend/app/models/class_program.py`, `backend/app/models/session.py`, `backend/app/models/session_parent.py`, `backend/app/models/user.py`, 신규 `backend/app/models/class_scheduling.py` | 가산 스키마·유일성·기본값 |
+| B BE 통합·DB | `backend/alembic/versions/` 전체(새 리비전 1명), `backend/app/models/class_program.py`, `backend/app/models/session.py`, `backend/app/models/session_parent.py`, `backend/app/models/user.py`, `backend/app/models/__init__.py`, 신규 `backend/app/models/class_scheduling.py` | 가산 스키마·유일성·기본값 |
 | B | `backend/app/services/agent_llm.py`, `backend/app/services/agent_service.py`, `backend/app/services/session_service.py`, `backend/app/services/agent_checkin.py`, `backend/app/config.py`, `backend/app/schemas/session.py`, `backend/app/api/v1/session.py` | 공유 파일은 B만. AI·생성·입장·전이 연동. 불필요한 파일은 수정하지 않음 |
 | B | `backend/app/services/class_read_service.py`, `backend/app/services/session_authz.py`, `backend/app/services/admin_service.py`, `backend/app/services/org_service.py`, `backend/app/services/org_management_service.py`, `backend/app/services/membership_service.py`, `backend/app/services/chat_service.py` | 부모 읽기·권한·정지/삭제·소속 해제·채팅 |
 | B | `backend/app/services/report_service.py`, `backend/app/services/record_service.py`, `backend/app/services/report_pdf_service.py`, `backend/app/services/report_email_service.py`, `backend/app/services/report_progress_service.py`, `backend/app/services/report_comment_service.py`, `backend/app/services/export_service.py`, `backend/app/services/video_service.py`, `backend/app/services/class_audio_service.py`, `backend/app/services/agent_policy.py` | D-05/D-28·본문 우회·진행자 변경 권한 |
