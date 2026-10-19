@@ -74,7 +74,7 @@ function read<T>(path: string, kind: ResponseKind, signal?: AbortSignal): Promis
   return new Promise<T>((resolve, reject) => {
     const abort = () => reject(new DOMException('요청 취소', 'AbortError'));
     signal?.addEventListener('abort', abort, { once: true });
-    apiClient.get<unknown>(path).then((data) => { validateResponse(data, kind); return data as T; }).then(
+    apiClient.get<unknown>(path, { signal }).then((data) => { validateResponse(data, kind); return data as T; }).then(
       (data) => { if (!signal?.aborted) resolve(data); },
       (error: unknown) => { if (!signal?.aborted) reject(error); },
     ).finally(() => signal?.removeEventListener('abort', abort));
