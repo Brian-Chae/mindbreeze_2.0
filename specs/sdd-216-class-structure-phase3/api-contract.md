@@ -30,7 +30,7 @@
 | 메서드·상대 경로 | 입력·권한 | 결과·핵심 조건 |
 |---|---|---|
 | GET 빈 경로 | 인증, 기존 목록 필터·페이지 | `classes`, `total` |
-| GET `/{class_id}` | 현재 강사·회원·센터 관리자 | 상세 직접 반환, 관리 권한자만 draft_schedule |
+| GET `/{class_id}` | 현재 강사·회원·센터 관리자 | 상세 직접 반환, 관리 권한자만 draft_schedule, capabilities.schedule은 편성 스위치와 관리 권한을 반영한 bool |
 | GET `/{class_id}/sessions` | 부모 가시 범위 | `sessions`, `total`, 미정 host nullable |
 | POST `/preview-schedule` | ScheduleInput, counselor/org_admin | rows/conflicts/warnings/input_hash/conflict_fingerprint/class_revision. 저장 없음 |
 | POST 빈 경로 | operation_key, status(draft/active), schedule, 충돌 확인 | 201, class_id/revision/session_ids/effects_pending/invitation_results |
@@ -60,6 +60,16 @@
 - `effects_pending`은 생성 회차의 준비 의도 수다. 클래스 전체 outbox 잔량이나 전달 성공 건수가 아니다.
 - draft에는 실제 회차·코드·멤버·전달 의도가 없다. 부분 생성 성공 응답은 없다.
 - 숨김과 상태 변경도 `operation_key`를 사용한다. 동일 키 재시도는 권한이 유지되는 가시 클래스에서 처리한다.
+
+### 클래스 상세 capabilities
+
+- `manage`: 현재 클래스의 주강사(`lead`) 또는 같은 센터 관리자(`org_admin`)이면 true.
+- `invite`: 현재 주강사·보조강사·같은 센터 관리자이면 true.
+- `schedule`: **bool, 항상 반환**. `CLASS_SCHEDULING_ENABLED=true`이고 `manage=true`일 때만 true. 설정 객체에서는 `settings.class_scheduling_enabled`로 읽는다.
+- 권한은 현재 활성 계정·소속·강사 상태를 검사하는 `class_role` 기준이다. 보조강사·회원 및 기존 회차 호스트라는 사실만으로 편성 권한을 부여하지 않는다.
+- 스위치 off에서도 GET 상세는 유지하고 `schedule=false`를 반환한다. 기존 `manage`·`invite` 값은 스위치로 바꾸지 않는다.
+- FE의 새 편성 마법사 CTA는 `capabilities.schedule === true`일 때만 활성화한다. 요청 시 서버의 편성 스위치·권한 검사는 계속 적용한다.
+- 추가 검증 SC-01: 실제 GET 상세에서 스위치 off/on × 주강사/센터 관리자/보조강사/회원 8조합의 bool 값과 기존 capability 보존을 확인한다. 구현 전에 기대값·실패 테스트를 작성한다.
 
 ## 3. 오류·권한·기존 엔진 연결
 

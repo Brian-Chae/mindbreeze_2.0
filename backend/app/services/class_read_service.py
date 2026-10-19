@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session as DBSession
 
+from app.config import settings
 from app.models.class_program import Class, ClassInstructor, ClassMember
 from app.models.counseling import CounselingGuest, CounselingRelationship
 from app.models.record import Report, SessionRecord
@@ -212,7 +213,11 @@ def get_class_detail(class_id: str, user_id: str, db: DBSession, *, now: datetim
     role = class_role(db, actor, cls)
     is_host = role in ("lead", "assistant", "org_admin") or (cls.recurrence_rule is None and any(r.host_id == uid for r in rows))
     detail["revision"] = cls.revision
-    detail["capabilities"] = {"manage": role in ("lead", "org_admin"), "invite": role in ("lead", "assistant", "org_admin")}
+    detail["capabilities"] = {
+        "manage": role in ("lead", "org_admin"),
+        "invite": role in ("lead", "assistant", "org_admin"),
+        "schedule": bool(settings.class_scheduling_enabled and role in ("lead", "org_admin")),
+    }
     if role in ("lead", "org_admin"):
         detail.update(draft_schedule=cls.draft_schedule, recurrence_rule=cls.recurrence_rule,
                       assignment_rule=cls.assignment_rule, ends_on=cls.ends_on)
