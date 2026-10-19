@@ -263,3 +263,11 @@ python -m pytest tests/pg/test_sdd216_performance.py --confcutdir=tests/pg -q -s
 
 - 사용자 첨부의 어두운 ‘1회차’ 제목/일시 원인은 전역 h2/p 색 지정. 클래스 개요와 목록 사진 카드에 밝은 제목(#F7F4F0)·보조 문구(#CFC6D6)를 직접 지정했다.
 - CSS 구문·로컬 스타일 제공 확인. 브라우저 연결 시간 초과로 새 화면 실측은 미확인. 상세: operations-visual-followup.md OV-11~12.
+
+
+## dev 확인으로 이관 (사용자 확인 반영)
+
+- 사진 타이틀 카드 글자색: 사용자 확인 완료. 운영 흐름: 사용자가 “지금까지는 큰 문제는 없어보임”으로 확인. 에이전트의 새 브라우저 실측 결과와 구분한다.
+- 나머지 화면·외부 연동·기기 검증은 사용자 지시에 따라 dev에서 진행한다. 로컬 전체 BE 회귀를 다시 실행하지 않는다.
+- 로컬 제품 코드 HEAD 82bfb27e, PR #18 원격 HEAD eb26f41f. 원격 CI 성공은 이전 HEAD의 결과다. 최신 변경은 아직 원격/dev 반영 증거가 없다.
+- 감독자 푸시·출시 인계와 dev 확인 목록: [dev-handoff.md](dev-handoff.md). 최종 SDD 완료는 dev 확인 결과·최종 Review 후 기록한다.
