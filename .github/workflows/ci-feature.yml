@@ -1,6 +1,10 @@
 # ─────────────────────────────────────────
-# MIND BREEZE 2.0 — Feature Branch CI
-# 트리거: feature/**, fix/** 브랜치 push
+# MIND BREEZE 2.0 — CI
+# 정책(SDD 마무리 시점에만 전체 검증):
+#   - 작업 브랜치(sdd/**, fix/**, feature/** 등) push 에서는 돌지 않는다. 로컬은 scripts/test-changed 사용.
+#   - develop 대상 PR(생성·갱신) = 전체 CI 1회 → 머지 게이트.
+#   - develop 직접 push(빠른 수정)·머지 push = 가벼운 검증만(전체 pytest 제외). 배포는 deploy-dev 가 담당.
+#   - 같은 브랜치/PR 에서 새 실행이 시작되면 이전 실행은 취소한다.
 # ─────────────────────────────────────────
 
 name: CI — Feature Branch
@@ -9,12 +13,13 @@ on:
   push:
     branches:
       - develop
-      - 'feature/**'
-      - 'fix/**'
-      - 'sdd/**'
   pull_request:
     branches:
       - develop
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
@@ -63,6 +68,8 @@ jobs:
           npm test -- --passWithNoTests
 
   backend:
+    # 전체 pytest(약 20분)는 PR 게이트에서만 실행한다. develop push 는 건너뛴다.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
