@@ -90,6 +90,7 @@ def test_dev_등록_명령은_두_cron만_멱등하게_추가한다(tmp_path):
         line = next(line for line in content.splitlines() if script in line)
         assert line.startswith(schedule + " ")
         assert "flock -n -E 0" in line
+        assert f"{script} --dev-env" in line
         assert "CLASS_SCHEDULING_ENABLED=true" not in line
 
 
@@ -204,3 +205,31 @@ rollback
         if previous_jobs
         else ""
     )
+
+
+@pytest.mark.parametrize("script", ["class_operations_cron.py", "class_rolling_cron.py"])
+@pytest.mark.parametrize("dev_env", [False, True])
+def test_dev_옵션은_앱_import_전에_명시한_환경을_읽는다(tmp_path, script, dev_env):
+    target = tmp_path / script
+    target.write_text((ROOT / "backend" / script).read_text())
+    (tmp_path / ".env").write_text("CLASS_SCHEDULING_ENABLED=wrong\n")
+    (tmp_path / ".env.dev").write_text("CLASS_SCHEDULING_ENABLED=dev-value\n")
+    probe = """
+import builtins, os, runpy, sys
+original = builtins.__import__
+def intercept(name, *args, **kwargs):
+    if name.startswith('app.'):
+        print(os.environ['CLASS_SCHEDULING_ENABLED'])
+        raise SystemExit(0)
+    return original(name, *args, **kwargs)
+builtins.__import__ = intercept
+runpy.run_path(sys.argv[1], run_name='__main__')
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe, str(target)] + (["--dev-env"] if dev_env else []),
+        cwd=tmp_path,
+        env={**os.environ, "CLASS_SCHEDULING_ENABLED": "existing-value"},
+        capture_output=True, text=True, timeout=20,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == ("dev-value" if dev_env else "existing-value")
