@@ -12,6 +12,17 @@ KST = ZoneInfo("Asia/Seoul")
 
 def expand_schedule(payload: ScheduleInput, now: datetime) -> list[ScheduleRow]:
     rule = payload.recurrence_rule
+    if rule.start_now:
+        # 서버 시각만 예약 시간 격자에서 제외한다. 외부 rows 검증은 유지한다.
+        return [
+            ScheduleRow.model_construct(
+                client_key="instant:1", seq=1, scheduled_at=now,
+                duration_min=payload.duration_min,
+                location_type=payload.location_type,
+                location_address=payload.location_address,
+                host_id=payload.assignment_rule.host_ids[0],
+            )
+        ]
     start = datetime.combine(rule.start_date, rule.time, KST)
     if payload.schedule_mode == "fixed" and start <= now:
         raise HTTPException(422, detail={"code": "schedule_in_past"})

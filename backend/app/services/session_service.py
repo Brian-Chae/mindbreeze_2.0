@@ -16,7 +16,7 @@ from app.models.user import User
 from app.models.client_profile import ClientProfile
 from app.models.session import ReportChoiceEvent, Session, SessionParticipant
 from app.models.record import SessionRecord
-from app.models.class_program import Class, ClassInstructor
+from app.models.class_program import Class, ClassInstructor, ClassMember
 from app.models.counseling import CounselingRelationship, CounselingRelationshipCounselor
 from app.models.eeg_feature import EEGFeatureWindow
 from app.schemas.session import EEGFeatureItem
@@ -1974,6 +1974,19 @@ def _enter_resolved(
                     raise HTTPException(403,detail={"code":"use_observation_endpoint"})
                 invited_makeup=(parent.status=="completed" and s.session_kind=="makeup" and require_invite and
                     db.query(SessionParticipant).filter_by(session_id=s.id,user_id=member_uid).first() is not None)
+                if require_invite and not invited_makeup:
+                    # 직접 링크는 기존 초대 자격만 사용한다. 코드 가입보다 먼저 검사한다.
+                    invited = db.query(SessionParticipant).filter_by(
+                        session_id=s.id, user_id=member_uid
+                    ).first()
+                    existing_member = db.query(ClassMember).filter_by(
+                        class_id=parent.id, user_id=member_uid, status="active"
+                    ).first()
+                    if invited is None or existing_member is None:
+                        raise HTTPException(
+                            status_code=403,
+                            detail="초대받은 클래스가 아니에요. 클래스 코드로 입장해 주세요",
+                        )
                 if not invited_makeup:
                     membership=invite_members(db,parent,[member_uid],member_uid,_now(),via="code")[0]
     if s.class_id:

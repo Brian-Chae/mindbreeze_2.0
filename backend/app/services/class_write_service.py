@@ -91,7 +91,7 @@ def validate_row_settings(cls, row):
         raise HTTPException(422, detail={"code": "offline_settings_invalid"})
 
 
-def create_sessions(db, cls, rows, *, allow_inactive=False):
+def create_sessions(db, cls, rows, *, allow_inactive=False, open_now=False):
     sessions = []
     for row in rows:
         validate_row_settings(cls, row)
@@ -115,7 +115,8 @@ def create_sessions(db, cls, rows, *, allow_inactive=False):
             host_state=host_state,
             seq=row.seq,
             session_kind=row.session_kind,
-            status="scheduled",
+            status="open" if open_now else "scheduled",
+            opened_at=row.scheduled_at if open_now else None,
             scheduled_at=row.scheduled_at,
             duration_min=row.duration_min,
             participant_mode="group",
@@ -261,7 +262,9 @@ def create_class(
                 member_ids=schedule.member_ids,
             )
             cls.access_code = generate_class_code(db)
-            sessions = create_sessions(db, cls, rows)
+            sessions = create_sessions(
+                db, cls, rows, open_now=schedule.recurrence_rule.start_now
+            )
             from app.services.class_membership_service import invite_members
 
             invite_members(db, cls, schedule.member_ids, actor.id, now)
@@ -418,7 +421,9 @@ def publish_class(db, actor_id, class_id, command, now=None):
         )
         cls.status = "active"
         cls.access_code = generate_class_code(db)
-        sessions = create_sessions(db, cls, rows)
+        sessions = create_sessions(
+            db, cls, rows, open_now=schedule.recurrence_rule.start_now
+        )
         invite_members(db, cls, schedule.member_ids, actor.id, now)
         cls.draft_schedule = None
         if cls.schedule_mode == "rolling":
@@ -653,6 +658,7 @@ def duplicate_class(db, actor_id, class_id, command, now=None):
         **source.recurrence_rule,
         "start_date": command["start_date"],
         "skip_dates": [],
+        "start_now": False,
     }
     schedule = ScheduleInput(
         title=source.title,

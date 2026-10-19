@@ -1,6 +1,7 @@
-"""active 멤버와 미래 expected 생성. 호출자가 클래스 잠금·커밋을 소유한다."""
+"""active 멤버와 미래·즉시 열린 회차 expected 생성. 호출자가 클래스 잠금·커밋을 소유한다."""
 
 from fastapi import HTTPException
+from sqlalchemy import and_, or_, null
 from app.models.class_program import ClassMember, ClassMemberEvent, ClassInstructor
 from app.models.class_scheduling import ClassEffect
 from app.models.session import Session, SessionParticipant
@@ -36,7 +37,7 @@ def ensure_expected(db, cls, sessions, members=None):
                     attendance_status="expected",
                     attendance_kind="regular",
                     report_included=False,
-                    joined_at=None,
+                    joined_at=null(),
                 )
             )
     db.flush()
@@ -76,8 +77,16 @@ def invite_members(
         db.query(Session)
         .filter(
             Session.class_id == cls.id,
-            Session.status.in_(("ready", "scheduled")),
-            Session.scheduled_at >= now,
+            or_(
+                and_(
+                    Session.status.in_(("ready", "scheduled")),
+                    Session.scheduled_at >= now,
+                ),
+                and_(
+                    bool((cls.recurrence_rule or {}).get("start_now")),
+                    Session.status.in_(("open", "in_progress")),
+                ),
+            ),
             Session.session_kind == "regular",
         )
         .all()

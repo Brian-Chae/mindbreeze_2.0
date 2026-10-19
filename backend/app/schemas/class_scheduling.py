@@ -12,6 +12,7 @@ class StrictInput(BaseModel):
 
 
 class RecurrenceRule(StrictInput):
+    start_now: bool = False
     version: Literal[1] = 1
     start_date: date
     weekdays: list[int] = Field(min_length=1, max_length=7)
@@ -96,7 +97,7 @@ class ScheduleInput(StrictInput):
     record_video: bool = False
     chat_enabled: bool = False
     schedule_mode: Literal["fixed", "rolling"] = "fixed"
-    planned_session_count: int = Field(default=8, ge=2, le=52)
+    planned_session_count: int = Field(default=8, ge=1, le=52)
     duration_min: int = Field(default=60, ge=5, le=480, multiple_of=5)
     recurrence_rule: RecurrenceRule
     assignment_rule: AssignmentRule = Field(default_factory=AssignmentRule)
@@ -116,6 +117,20 @@ class ScheduleInput(StrictInput):
 
     @model_validator(mode="after")
     def valid_settings(self):
+        if self.recurrence_rule.start_now:
+            if (
+                self.schedule_mode != "fixed"
+                or self.planned_session_count != 1
+                or self.assignment_rule.mode != "all_one"
+                or len(self.assignment_rule.host_ids) != 1
+                or self.assignment_rule.host_ids[0] is None
+                or self.assignment_rule.weekday_hosts
+                or self.rows
+                or self.ends_on is not None
+            ):
+                raise ValueError("바로 지금은 진행자 한 명의 단일 회차만 가능합니다")
+        elif self.planned_session_count < 2:
+            raise ValueError("일반 편성은 최소 2회입니다")
         if self.location_type == "online" and self.capacity > 50:
             raise ValueError("온라인 정원은 최대 50명입니다")
         if self.location_type == "offline" and (

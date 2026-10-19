@@ -1,6 +1,6 @@
 """클래스 읽기(SDD-214)와 편성·강사·최소 멤버십(SDD-216) API."""
 
-from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Request
 from app.core.redis import get_redis
 from app.schemas.class_scheduling import (
     UpdateClassCommand,
@@ -44,6 +44,15 @@ from app.schemas.class_parent import (
 from app.services import class_read_service
 
 router = APIRouter(prefix="/classes", tags=["classes"])
+
+
+def queue_class_effects(result, background_tasks, db):
+    from app.services.class_effect_service import dispatch_class_effects
+
+    cls = db.get(Class, UUID(result["class_id"]))
+    if cls is not None and (cls.recurrence_rule or {}).get("start_now"):
+        background_tasks.add_task(dispatch_class_effects, result["class_id"])
+    return result
 
 
 @router.get("", response_model=ClassListResponse)
@@ -171,10 +180,12 @@ def preview_schedule(
 @router.post("", status_code=201, dependencies=[Depends(scheduling_enabled)])
 def create_class(
     payload: CreateClassCommand,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    return writes.create_class(db, current_user["id"], payload)
+    result = writes.create_class(db, current_user["id"], payload)
+    return queue_class_effects(result, background_tasks, db)
 
 
 @router.patch("/{class_id}", dependencies=[Depends(scheduling_enabled)])
@@ -255,6 +266,7 @@ def list_email_invites(
 def invite_emails(
     class_id: UUID,
     payload: EmailInvitesCommand,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
@@ -269,9 +281,10 @@ def invite_emails(
             ]
         }
 
-    return writes.mutate_class(
+    result = writes.mutate_class(
         db, current_user["id"], class_id, payload, "email_invite", apply, "invite"
     )
+    return queue_class_effects(result, background_tasks, db)
 
 
 @router.post(
@@ -282,6 +295,7 @@ def retry_email(
     class_id: UUID,
     invite_id: UUID,
     payload: WriteCommand,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
@@ -293,9 +307,10 @@ def retry_email(
         row = retry_email(db, cls, invite_id)
         return {"invite_id": str(row.id), "status": row.status}
 
-    return writes.mutate_class(
+    result = writes.mutate_class(
         db, current_user["id"], class_id, data, "email_retry", apply, "invite"
     )
+    return queue_class_effects(result, background_tasks, db)
 
 
 async def code_limited(request, redis, code, callback):
@@ -353,10 +368,12 @@ async def join_class(
 def publish_class(
     class_id: UUID,
     payload: WriteCommand,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
-    return writes.publish_class(db, current_user["id"], class_id, payload)
+    result = writes.publish_class(db, current_user["id"], class_id, payload)
+    return queue_class_effects(result, background_tasks, db)
 
 
 @router.post(
@@ -530,6 +547,7 @@ def list_members(
 def invite_members(
     class_id: UUID,
     payload: MembersCommand,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
 ) -> dict:
@@ -546,9 +564,10 @@ def invite_members(
         )
         return {"member_ids": [str(m.id) for m in members]}
 
-    return writes.mutate_class(
+    result = writes.mutate_class(
         db, current_user["id"], class_id, payload, "invite", apply, "invite"
     )
+    return queue_class_effects(result, background_tasks, db)
 
 
 @router.get("/{class_id}/sessions/{session_id}/reports")

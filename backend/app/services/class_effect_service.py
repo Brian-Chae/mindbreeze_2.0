@@ -120,6 +120,18 @@ def _deliver(db, intent, now):
         if intent.session_id
         else None
     )
+    instant_session = None
+    if (cls.recurrence_rule or {}).get("start_now"):
+        instant_session = (
+            db.query(Session)
+            .filter(
+                Session.class_id == cls.id,
+                Session.status.in_(("open", "in_progress")),
+                Session.hidden_at.is_(None),
+            )
+            .order_by(Session.seq)
+            .first()
+        )
     if intent.kind == "live_access_reconcile":
         import asyncio
         from app.services.class_access_service import reconcile_observers
@@ -175,10 +187,19 @@ def _deliver(db, intent, now):
         if cls.status != "active" or not cls.access_code:
             invite.status = "failed"
             return
+        from app.config import settings
+
+        base = settings.frontend_base_url.rstrip("/")
+        entry = f"{base}/class/{instant_session.id}/enter\n" if instant_session else ""
+        body = (
+            f"{cls.title}\n{entry}코드로 입장: {base}/join\n"
+            f"참여 코드: {cls.access_code}\n"
+            "로그인 또는 초대 자격이 없으면 코드로 입장해 주세요."
+        )
         if not _send_email(
             invite.email_norm,
             "명상 클래스 초대",
-            f"{cls.title}\n참여 코드: {cls.access_code}\n입장 화면에서 코드를 입력해 주세요.",
+            body,
         ):
             raise RuntimeError("클래스 초대 전달 실패")
         invite.status = "sent"
@@ -201,13 +222,19 @@ def _deliver(db, intent, now):
         return
     target = "class" if intent.kind.startswith("class_") else "session"
     target_id = str(cls.id) if target == "class" else str(intent.session_id)
+    instant_invite = intent.kind == "class_invited" and instant_session is not None
+    body = "클래스의 변경 내용을 확인해 주세요."
+    if instant_invite:
+        from app.config import settings
+
+        body = f"{cls.title}: 지금 입장할 수 있어요. {settings.frontend_base_url.rstrip('/')}/class/{instant_session.id}/enter"
     for recipient in sorted(_recipients(db, cls, session, intent, now)):
         notification = notify_event(
             intent.kind,
             recipient,
             {
-                "title": "명상 클래스 안내",
-                "body": "클래스의 변경 내용을 확인해 주세요.",
+                "title": "클래스 초대" if instant_invite else "명상 클래스 안내",
+                "body": body,
                 "extra": build_standard_extra(
                     intent.kind,
                     target,
@@ -215,6 +242,10 @@ def _deliver(db, intent, now):
                     params={
                         "area": "meditation",
                         "class_id": str(cls.id),
+                        **(
+                            {"start_now": True, "session_id": str(instant_session.id)}
+                            if instant_invite else {}
+                        ),
                         **(
                             {"request_id": intent.payload["request_id"]}
                             if (intent.payload or {}).get("request_id")
@@ -271,13 +302,16 @@ def _deliver(db, intent, now):
                 )
 
 
-def process_effects(db, limit=100, now=None):
+def process_effects(db, limit=100, now=None, *, class_id=None):
     now = now or datetime.now(timezone.utc)
     counts = {"done": 0, "failed": 0}
     for _ in range(limit):
         intent = (
             db.query(ClassEffect)
-            .filter(ClassEffect.status == "pending", ClassEffect.available_at <= now)
+            .filter(
+                ClassEffect.status == "pending", ClassEffect.available_at <= now,
+                *([ClassEffect.class_id == UUID(str(class_id))] if class_id is not None else []),
+            )
             .order_by(ClassEffect.available_at, ClassEffect.id)
             .with_for_update(skip_locked=True)
             .first()
@@ -317,3 +351,15 @@ def process_effects(db, limit=100, now=None):
             db.commit()
             counts["failed"] += 1
     return counts
+
+
+def dispatch_class_effects(class_id):
+    """요청 커밋 뒤 새 DB 세션으로 해당 클래스만 소비한다. cron 재시도는 유지한다."""
+    import logging
+    from app.core.database import SessionLocal
+
+    try:
+        with SessionLocal() as db:
+            process_effects(db, class_id=class_id, limit=500)
+    except Exception:
+        logging.getLogger(__name__).exception("클래스 전달 의도 즉시 처리 실패")
