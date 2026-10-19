@@ -241,9 +241,9 @@ export default function SidebarNav({
   };
 
   return (
-    <div className="flex flex-col gap-7 px-5 py-8 h-full">
+    <div data-sidebar-root className="flex flex-col gap-7 px-5 py-8 h-full">
       {/* 브랜딩 블록 */}
-      <div className="flex flex-col gap-1.5">
+      <div data-sidebar-brand className="flex flex-col gap-1.5">
         <div className="flex items-center gap-2.5 px-2.5">
           <img
             src="/mb-design/assets/logo_symbol_dark.svg"
@@ -263,7 +263,7 @@ export default function SidebarNav({
         </div>
       </div>
 
-      <nav className="flex flex-col gap-1">
+      <nav data-sidebar-menu className="flex flex-col gap-1">
         {navItems.map((it) => (
           <NavLink
             key={it.to}
@@ -291,7 +291,7 @@ export default function SidebarNav({
         ))}
       </nav>
 
-      <div className="mt-auto bg-white rounded-2xl p-4">
+      <div data-sidebar-profile className="mt-auto bg-white rounded-2xl p-4">
         <div className="text-[12px] text-[#6F6F6F] font-mono">{roleLabel}</div>
         <div className="font-bold text-[15px] text-[#1F1F1F] mt-1">
           {user?.name ?? '게스트'}

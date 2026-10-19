@@ -18,3 +18,59 @@
 @media (min-width: 768px) {
   .cs-structure [data-shell-variant="structure"] { grid-template-columns: 220px minmax(0, 1fr); }
 }
+
+/* SDD-216 시안 토큰: structure 셸 안에만 적용한다. */
+.cs-structure { --cs-brand: #5F0080; --cs-cream: #F5EDFC; --cs-ink: #1F1F1F; --cs-muted: #6F6F6F; --cs-line: #ECE6F0; --cs-surface: #F7F4F0; }
+.cs-structure [data-shell-variant="structure"] { background: var(--cs-surface); }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-root] { padding: 24px 16px; gap: 16px; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-brand] { padding: 8px 0 16px; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-brand] img { width: 40px; height: 18px; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] { gap: 8px; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a { min-height: 48px; padding: 12px 16px; gap: 16px; border-radius: 9999px; font-size: 15px; font-weight: 600; box-shadow: none; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a[aria-current="page"] { background: var(--cs-cream); color: var(--cs-brand); }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-menu] > a:not([aria-current]):hover { background: #F7F4FA; }
+.cs-structure [data-shell-variant="structure"] [data-sidebar-profile] { background: var(--cs-cream); border-radius: 16px; padding: 16px; }
+.cs-structure .cs-class-list { container: class-list / inline-size; display: grid; gap: 12px; }
+.cs-structure .cs-class-columns { display: none; }
+.cs-structure .cs-class-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "identity identity" "next host" "progress progress" "state state"; gap: 16px; padding: 16px; border: 1px solid var(--cs-line); border-radius: 16px; background: #fff; color: var(--cs-ink); align-items: start; }
+.cs-structure .cs-class-row:hover { border-color: #D2AEFC; }
+.cs-structure .cs-class-identity { grid-area: identity; display: grid; grid-template-columns: 44px minmax(0,1fr); align-items: center; gap: 16px; min-width: 0; }
+.cs-structure .cs-class-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 16px; background: var(--cs-cream); color: var(--cs-brand); }
+.cs-structure .cs-class-identity h2 { font-size: 15px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.cs-structure .cs-class-identity p { margin-top: 8px; color: var(--cs-muted); font-size: 13px; }
+.cs-structure .cs-class-next { grid-area: next; }
+.cs-structure .cs-class-progress { grid-area: progress; }
+.cs-structure .cs-class-host { grid-area: host; }
+.cs-structure .cs-class-next, .cs-structure .cs-class-host, .cs-structure .cs-class-progress { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.cs-structure .cs-class-key { font-size: 13px; font-weight: 600; color: var(--cs-muted); }
+.cs-structure .cs-class-row strong { font-size: 15px; font-weight: 700; line-height: 1.4; }
+.cs-structure .cs-class-row small { font-size: 13px; color: var(--cs-muted); line-height: 20px; }
+.cs-structure .cs-progress-line { display: flex; align-items: center; gap: 16px; }
+.cs-structure .cs-progress-line progress { flex: 1; width: 100%; min-width: 40px; height: 8px; border: 0; border-radius: 9999px; accent-color: var(--cs-brand); overflow: hidden; background: #EFE8F5; }
+.cs-structure .cs-progress-line progress::-webkit-progress-bar { background: #EFE8F5; }
+.cs-structure .cs-progress-line progress::-webkit-progress-value { background: var(--cs-brand); border-radius: 9999px; }
+.cs-structure .cs-progress-line progress::-moz-progress-bar { background: var(--cs-brand); border-radius: 9999px; }
+.cs-structure .cs-class-state { grid-area: state; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cs-structure .cs-state-chip { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 9999px; background: var(--cs-cream); color: var(--cs-brand); font-size: 12px; font-weight: 600; }
+.cs-structure .cs-muted-chip { background: #F0ECF3; color: var(--cs-muted); }
+.cs-structure .cs-open-chip { background: #E3F8F2; color: #0B6B55; }
+@container class-list (min-width: 760px) {
+  .cs-structure .cs-class-columns, .cs-structure .cs-class-row { grid-template-columns: minmax(0,2.2fr) minmax(0,1.5fr) minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1.5fr); }
+  .cs-structure .cs-class-columns { display: grid; gap: 16px; padding: 0 16px; font-size: 13px; font-weight: 600; color: var(--cs-muted); }
+  .cs-structure .cs-class-row { grid-template-areas: "identity next progress host state"; align-items: center; }
+  .cs-structure .cs-class-row .cs-class-key { display: none; }
+}
+.cs-structure .cs-class-hero { position: relative; isolation: isolate; display: grid; gap: 24px; border-radius: 24px; padding: 24px; color: #F7F4F0; background-size: cover; background-position: center; overflow: hidden; }
+.cs-structure .cs-class-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to bottom,rgba(18,8,28,.35),rgba(18,8,28,.75)); }
+.cs-structure .cs-hero-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.cs-structure .cs-hero-top, .cs-structure .cs-hero-chips, .cs-structure .cs-hero-when { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.cs-structure .cs-hero-top > span:last-child { color: #CFC6D6; }
+.cs-structure .cs-hero-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; border: 1px solid rgba(255,255,255,.18); border-radius: 9999px; background: rgba(24,12,36,.4); padding: 6px 12px; color: #F7F4F0; font-size: 13px; }
+.cs-structure .cs-class-hero h2 { margin: 0; font-size: 24px; line-height: 1.45; font-weight: 700; overflow-wrap: anywhere; }
+.cs-structure .cs-hero-guide { display: flex; align-items: flex-start; gap: 12px; padding: 16px; background: rgba(24,12,36,.4); border-radius: 16px; }
+.cs-structure .cs-hero-guide strong { font-size: 15px; font-weight: 600; }
+.cs-structure .cs-hero-guide p, .cs-structure .cs-hero-actions p { font-size: 13px; line-height: 1.6; color: #CFC6D6; margin-top: 8px; }
+.cs-structure .cs-hero-actions { display: flex; flex-direction: column; gap: 8px; }
+.cs-structure .cs-hero-actions a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 12px 24px; border-radius: 9999px; color: var(--cs-brand); background: #F7F4F0; font-size: 15px; font-weight: 700; }
+@media(min-width: 1194px) { .cs-structure .cs-class-hero { grid-template-columns: minmax(0,1fr) 240px; align-items: center; } }
+@media(max-width: 767px) { .cs-structure .cs-class-hero { padding: 16px; gap: 16px; } }

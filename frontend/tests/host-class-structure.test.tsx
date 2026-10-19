@@ -101,3 +101,21 @@ it('현재 탭을 시각적으로 구분하고 회차 표의 네 열 의미를 �
  expect([...box.querySelectorAll('[role="columnheader"]')].map(cell => cell.textContent)).toEqual(['회차', '일시', '진행 지도사', '상태']);
  expect(box.querySelectorAll('[role="cell"]')).toHaveLength(12);
 });
+it('시안 목록 5열·아이콘·정기형 다음 N회차째를 표시한다', async () => {
+    mocks.list.mockReturnValue({ state: { status: 'success', data: { classes: [{ ...row, schedule_mode: 'rolling', has_open_session: false, next_session: { id: 's12', seq: 12, status: 'scheduled', scheduled_at: '2099-12-21T10:00:00Z', host: { id: 'h1', name: '김지도사' } } }], total: 1 } }, retry: mocks.retry });
+    await render();
+    expect([...box.querySelectorAll('[data-class-column]')].map(element => element.textContent)).toEqual(['클래스', '다음 회차', '진행', '진행 지도사', '상태']);
+    expect(box.querySelector('[data-class-card] svg')).toBeTruthy();
+    expect(box.querySelector('[data-class-card]')?.textContent).toContain('12회차째');
+    expect(box.querySelector('[data-class-card]')?.textContent).not.toContain('0/3');
+    expect(box.querySelector('[aria-label="다음 회차"] a')?.getAttribute('href')).toBe('/classes/c1/sessions/s12');
+});
+it('상세 다음 회차를 시안 이미지와 진행자·상태·행동 영역으로 표시한다', async () => {
+    mocks.detail.mockReturnValue({ state: { status: 'success', data: { detail: { ...row, location_type: 'online', default_duration_min: 60, linkband_mode: 'optional', next_session: { id: 's4', seq: 4, scheduled_at: '2099-12-21T10:00:00Z', status: 'scheduled', host: { id: 'h1', name: '김지도사' } } }, sessions: { sessions: [], total: 0 } } }, retry: mocks.retry });
+    await render('/classes/c1', <HostClassDetailPage />);
+    const hero = box.querySelector<HTMLElement>('[aria-label="다음 회차"]');
+    expect(hero?.style.backgroundImage).toContain('/images/background8.webp');
+    expect(hero?.textContent).toContain('김지도사');
+    expect(hero?.textContent).toContain('4회차');
+    expect(hero?.querySelector('[data-hero-actions] a')?.getAttribute('href')).toBe('/classes/c1/sessions/s4');
+});
