@@ -21,13 +21,20 @@ export function scheduleProblems(value: ScheduleInput, today = koreanToday(), st
     if (value.location_type === 'offline' && !value.location_address?.trim()) problems.push('오프라인 장소를 입력해 주세요.');
   }
   if (step === undefined || step === 1) {
-    if (!value.recurrence_rule.start_date || value.recurrence_rule.start_date < today) problems.push('시작 날짜는 오늘 이후로 정해 주세요.');
-    if (!value.recurrence_rule.weekdays.length) problems.push('요일을 하나 이상 골라 주세요.');
-    const time = value.recurrence_rule.time.slice(0, 5);
-    if (time < '07:00' || time > '22:00' || Number(time.slice(3)) % 5) problems.push('시작 시각은 07:00~22:00의 5분 단위로 입력해 주세요.');
-    if (!Number.isInteger(value.planned_session_count) || value.planned_session_count < 2 || value.planned_session_count > 52) problems.push('횟수는 2~52회로 입력해 주세요.');
+    if (!value.recurrence_rule.start_now) {
+      if (!value.recurrence_rule.start_date || value.recurrence_rule.start_date < today) problems.push('시작 날짜는 오늘 이후로 정해 주세요.');
+      if (!value.recurrence_rule.weekdays.length) problems.push('요일을 하나 이상 골라 주세요.');
+      const time = value.recurrence_rule.time.slice(0, 5);
+      if (time < '07:00' || time > '22:00' || Number(time.slice(3)) % 5) problems.push('시작 시각은 07:00~22:00의 5분 단위로 입력해 주세요.');
+      if (!Number.isInteger(value.planned_session_count) || value.planned_session_count < 2 || value.planned_session_count > 52) problems.push('횟수는 2~52회로 입력해 주세요.');
+      if (value.ends_on && value.ends_on < value.recurrence_rule.start_date) problems.push('종료일은 시작일 이후로 정해 주세요.');
+    } else if (value.schedule_mode !== 'fixed' || value.planned_session_count !== 1 || value.rows.length || value.ends_on !== null) {
+      problems.push('바로 지금은 종료일과 개별 일정 없이 1회만 진행해요.');
+    }
     if (value.duration_min < 5 || value.duration_min > 480 || value.duration_min % 5) problems.push('소요 시간은 5~480분의 5분 단위로 입력해 주세요.');
-    if (value.ends_on && value.ends_on < value.recurrence_rule.start_date) problems.push('종료일은 시작일 이후로 정해 주세요.');
+  }
+  if (value.recurrence_rule.start_now && (step === undefined || step === 2)) {
+    if (value.assignment_rule.mode !== 'all_one' || value.assignment_rule.host_ids.length !== 1 || !value.assignment_rule.host_ids[0]) problems.push('바로 지금 진행할 지도사 한 명을 선택해 주세요.');
   }
   return problems;
 }

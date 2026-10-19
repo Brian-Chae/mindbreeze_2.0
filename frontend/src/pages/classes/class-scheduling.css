@@ -356,3 +356,7 @@
 .cs-wizard ::-webkit-scrollbar{width:8px;height:8px}
 .cs-wizard ::-webkit-scrollbar-track{background:transparent}
 .cs-wizard ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:9999px}
+
+/* 즉시·예약 방식은 작은 화면에서도 각 선택을 읽을 수 있게 줄바꿈한다. */
+.cs-wizard .cw-schedule-modes { display: flex; flex-wrap: wrap; }
+.cs-wizard .cw-schedule-modes > button { flex: 1 1 8rem; }

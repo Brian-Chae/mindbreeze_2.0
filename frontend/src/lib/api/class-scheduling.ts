@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 
 export type AssignmentMode = 'all_one' | 'rotate' | 'by_weekday' | 'per_session';
-export interface RecurrenceRule { version: 1; start_date: string; weekdays: number[]; time: string; interval_weeks: number; skip_dates: string[] }
+export interface RecurrenceRule { version: 1; start_now?: boolean; start_date: string; weekdays: number[]; time: string; interval_weeks: number; skip_dates: string[] }
 export interface AssignmentRule { version: 1; mode: AssignmentMode; host_ids: (string | null)[]; weekday_hosts: Record<number, string | null> }
 export interface ScheduleRow {
   client_key: string; session_id?: string | null; seq: number; scheduled_at: string; duration_min: number;
