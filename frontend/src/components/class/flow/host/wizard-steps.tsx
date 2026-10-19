@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { LinkbandMode } from '../../../../lib/api/session';
 import {
-  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MAX_TIME_MIN, MIN_CAPACITY, MIN_DURATION_MIN, MIN_TIME_MIN, wizardTypeOptions,
+  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MAX_TIME_MIN, MIN_CAPACITY, MIN_DURATION_MIN, MIN_TIME_MIN, wizardTypeOptions, isSoloAllowed,
   capacityMax, fmtDay, fmtDuration, fmtHour, fmtMinute, fmtWhen, memberLimit, typeLabel,
   type WizardAction, type WizardDraft, type WizardMember, type WizardStep, type WizardType, type WizardUi,
 } from '../../../../lib/class/class-wizard';
@@ -94,7 +94,7 @@ export function StepType({ draft, dispatch }: WizardStepProps) {
             label="인원"
             value={draft.size}
             options={[
-              { value: 'solo', label: '1:1', icon: <Users size={20} aria-hidden="true" /> },
+              ...(isSoloAllowed(draft.type) ? [{ value: 'solo' as const, label: '1:1', icon: <Users size={20} aria-hidden="true" /> }] : []),
               { value: 'group', label: '그룹', icon: <Users size={20} aria-hidden="true" /> },
             ]}
             onChange={(size) => dispatch({ type: 'setSize', size })}

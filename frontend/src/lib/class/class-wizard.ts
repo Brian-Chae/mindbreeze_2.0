@@ -244,8 +244,21 @@ export function memberLimit(draft: WizardDraft): number {
   return draft.size === 'solo' ? 1 : draft.capacity;
 }
 
+/**
+ * SDD-219: 상담 비공개 중에는 명상이 아닌 유형의 1:1 편성을 막는다.
+ * 서버 분류기가 custom 1:1 을 상담 관계로 분류하므로(session_classifier) 화면에서 입구를 닫는다.
+ */
+export function isSoloAllowed(type: WizardType): boolean {
+  return isCounselingEnabled() || type === 'meditation';
+}
+
 function withDraft(state: WizardState, patch: Partial<WizardDraft>): WizardState {
-  return { ...state, draft: { ...state.draft, ...patch } };
+  const draft = { ...state.draft, ...patch };
+  if (draft.size === 'solo' && !isSoloAllowed(draft.type)) {
+    const guarded = { ...draft, size: 'group' as const };
+    return { ...state, draft: { ...guarded, members: trimMembers(guarded) } };
+  }
+  return { ...state, draft };
 }
 
 function withUi(state: WizardState, patch: Partial<WizardUi>): WizardState {
@@ -377,7 +390,7 @@ const REMIND_OFFSETS: Readonly<Record<WizardRemind, number[]>> = { off: [], day:
 
 export function buildCreatePayload(draft: WizardDraft, base: Date, force: boolean): CreateSessionPayload {
   const locationType: LocationType = draft.place;
-  const participantMode: ParticipantMode = draft.size === 'solo' ? 'one_on_one' : 'group';
+  const participantMode: ParticipantMode = draft.size === 'solo' && isSoloAllowed(draft.type) ? 'one_on_one' : 'group';
   const start = scheduledStart(draft, base);
   const type: SessionType = draft.type === 'other' ? 'custom' : draft.type;
   const address = locationType === 'offline' ? draft.address.trim() : '';
