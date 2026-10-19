@@ -36,6 +36,7 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.class_parent import (
+    ClassMemberCandidatesResponse,
     ClassDetail,
     ClassListResponse,
     ClassSessionsResponse,
@@ -71,6 +72,22 @@ def load_class_actor(db, class_id, current_user, action="view"):
         raise HTTPException(404, detail={"code": "class_not_found"})
     authorize_class_action(db, actor, cls, action)
     return cls, actor
+
+
+@router.get(
+    "/member-candidates",
+    response_model=ClassMemberCandidatesResponse,
+    dependencies=[Depends(scheduling_enabled)],
+)
+def list_member_candidates(
+    class_id: UUID | None = Query(default=None),
+    q: str = Query(default="", max_length=254),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return class_read_service.list_member_candidates(
+        db, current_user["id"], class_id=class_id, query=q
+    )
 
 
 @router.get("/instructor-candidates", dependencies=[Depends(scheduling_enabled)])

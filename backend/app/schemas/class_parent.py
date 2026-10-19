@@ -16,6 +16,17 @@ class UserBrief(BaseModel):
     name: str | None = None
 
 
+class ClassMemberCandidate(BaseModel):
+    id: str
+    name: str | None = None
+    masked_email: str
+
+
+class ClassMemberCandidatesResponse(BaseModel):
+    members: list[ClassMemberCandidate]
+    has_more: bool
+
+
 class NextSession(BaseModel):
     id: str
     seq: int | None = None

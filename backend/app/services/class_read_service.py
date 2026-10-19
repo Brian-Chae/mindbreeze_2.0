@@ -41,6 +41,83 @@ def _to_uuid(value: str | UUID) -> UUID:
         raise HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
 
 
+def list_member_candidates(db, actor_id, *, class_id=None, query=""):
+    """초대 가능 관계의 이름 검색과 정확 이메일 검색만 제공한다."""
+    from sqlalchemy import func
+    from app.models.client_counselor_link import ClientCounselorLink
+    from app.models.user_org_membership import UserOrgMembership
+    from app.services.class_access_service import (
+        active_membership,
+        authorize_class_action,
+    )
+    from app.services.session_email_invite_service import is_valid_email
+
+    actor = db.query(User).filter(User.id == _to_uuid(actor_id)).first()
+    if class_id is not None:
+        cls = db.query(Class).filter(Class.id == class_id, Class.hidden_at.is_(None)).first()
+        if cls is None:
+            raise HTTPException(404, detail={"code": "class_not_found"})
+        authorize_class_action(db, actor, cls, "invite")
+        org_id = cls.organization_id
+    else:
+        if (
+            actor is None
+            or actor.status != "active"
+            or actor.role not in ("counselor", "org_admin")
+            or not active_membership(db, actor.id, actor.org_id, actor.role)
+        ):
+            raise HTTPException(403, detail={"code": "class_creation_forbidden"})
+        org_id = actor.org_id
+
+    value = query.strip().lower()
+    candidates = db.query(User).filter(User.role == "client", User.status == "active")
+    if "@" in value:
+        if not is_valid_email(value):
+            return {"members": [], "has_more": False}
+        candidates = candidates.filter(func.lower(User.email) == value)
+    else:
+        # 이름 검색에서 기관 전체 사용자 디렉터리나 상담 내용을 노출하지 않는다.
+        classes = db.query(Class.id).filter(
+            Class.organization_id == org_id, Class.hidden_at.is_(None)
+        )
+        linked = db.query(ClientCounselorLink.client_id).filter(
+            ClientCounselorLink.status == "active"
+        )
+        if actor.role == "org_admin":
+            counselors = db.query(User.id).join(
+                UserOrgMembership, UserOrgMembership.user_id == User.id
+            ).filter(
+                User.role == "counselor", User.status == "active",
+                UserOrgMembership.org_id == org_id,
+                UserOrgMembership.role == "counselor",
+                UserOrgMembership.status == "active",
+            )
+            linked = linked.filter(ClientCounselorLink.counselor_id.in_(counselors))
+        else:
+            invited_classes = db.query(ClassInstructor.class_id).filter(
+                ClassInstructor.user_id == actor.id,
+                ClassInstructor.status == "active",
+                ClassInstructor.role.in_(("lead", "assistant")),
+            )
+            classes = classes.filter(Class.id.in_(invited_classes))
+            linked = linked.filter(ClientCounselorLink.counselor_id == actor.id)
+        members = db.query(ClassMember.user_id).filter(ClassMember.class_id.in_(classes))
+        candidates = candidates.filter(or_(User.id.in_(members), User.id.in_(linked)))
+        if value:
+            candidates = candidates.filter(func.lower(User.name).contains(value, autoescape=True))
+    rows = candidates.order_by(User.name, User.id).limit(21).all()
+    return {
+        "members": [
+            {
+                "id": str(row.id), "name": row.name,
+                "masked_email": f"{row.email.partition('@')[0][:2]}***@{row.email.partition('@')[2]}",
+            }
+            for row in rows[:20]
+        ],
+        "has_more": len(rows) > 20,
+    }
+
+
 def _aware(value: datetime | None) -> datetime | None:
     if value is not None and value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
