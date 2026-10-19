@@ -936,6 +936,34 @@ def _can_edit_report(user_id: str, session, db: DBSession) -> bool:
     return allowed
 
 
+def can_approve_report(db: DBSession, user, session) -> bool:
+    """SDD-218 D-36: 승인 권한만 주강사 대행까지 넓힌다.
+
+    편집 권한(`_can_edit_report`)은 그대로 둔다. 승인과 편집은 다른 권한이다.
+    - 해당 회차 진행 지도사: 기존 의미 그대로 허용
+    - 현재 주강사(class_role == "lead"): 타인 진행 회차를 대행 승인
+    - 보조 강사·센터 관리자·비활성·제거된 강사·타 기관: 불허
+
+    대행 승인이어도 `approved_by_user_id` 에는 실제 승인자(주강사 본인)를 쓴다.
+    """
+    if user is None or session is None or getattr(user, "status", None) != "active":
+        return False
+    if _can_edit_report(str(user.id), session, db):
+        return True
+    if not session.class_id:
+        return False
+
+    from app.models.class_program import Class
+    from app.services.class_access_service import class_role
+
+    cls = db.query(Class).filter(Class.id == session.class_id).first()
+    if cls is None:
+        return False
+    # class_role 은 활성 멤버십·활성 강사 등록을 모두 검사하므로
+    # 비활성·제거·타 기관·교체된 구 주강사는 여기서 걸러진다.
+    return class_role(db, user, cls) == "lead"
+
+
 def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
     """리포트 쓰기는 현재 진행 지도사만 허용한다."""
     rid = _to_uuid(report_id)

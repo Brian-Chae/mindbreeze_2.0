@@ -30,3 +30,4 @@ frontend/e2e/explore-result.json
 designs/*/shots/
 # SDD 번호는 scripts/sdd 로 발급(폐기된 카운터 파일)
 specs/.sdd-counter
+backend/.venv/
