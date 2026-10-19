@@ -15,7 +15,7 @@ export interface ClassHostViewDto { access_code: string | null; instructors: Cla
 export interface ClassDetailDto extends ClassSummaryDto {
   location_type: string; location_address: string | null; linkband_mode: string; record_audio: boolean;
   capacity: number; participant_mode: string; default_duration_min: number; host_view: ClassHostViewDto | null;
-  revision?: number; capabilities?: { manage: boolean; invite: boolean; schedule: boolean };
+  revision?: number; capabilities?: { manage: boolean; invite: boolean; schedule: boolean; host_request?: boolean };
   record_video?: boolean; chat_enabled?: boolean; reminder_offsets?: number[];
   draft_schedule?: import('./class-scheduling').ScheduleInput | null;
   recurrence_rule?: import('./class-scheduling').RecurrenceRule | null;

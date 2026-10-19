@@ -374,3 +374,91 @@ def test_홈_일정은_유형_추정_없이_실제_부모와_영역을_반환한
     assert rows[counseling_id]["class_id"] is None
     assert rows[counseling_id]["counseling_relationship_id"] == relationship_id
     assert rows[counseling_id]["area"] == "counseling"
+
+
+def test_회차_리포트_목록은_기존_팀열람과_관리자_권한을_따른다(
+    client, scene, monkeypatch
+):
+    from app.models.record import Report
+    from app.models.session import SessionParticipant
+
+    ids, login = scene
+    monkeypatch.setattr(settings, "class_team_read_enabled", True)
+    with database.SessionLocal() as db:
+        participant = SessionParticipant(
+            session_id=UUID(ids["session"]),
+            user_id=UUID(ids["member"]),
+            report_included=True,
+            report_notice_version="class-team-v1",
+            report_notice_ack_at=datetime.now(timezone.utc),
+        )
+        db.add(participant)
+        report = Report(
+            session_id=UUID(ids["session"]),
+            type="counselor",
+            status="completed",
+            content={},
+            is_read=False,
+        )
+        db.add(report)
+        db.flush()
+        expected = {"id": str(report.id), "type": "counselor", "status": "completed"}
+        pid, rid = participant.id, report.id
+        db.commit()
+    path = f'/api/v1/classes/{ids["cls"]}/sessions/{ids["session"]}/reports'
+    for name in ("lead", "candidate", "admin"):
+        login(name)
+        response = client.get(path)
+        assert response.status_code == 200, response.text
+        assert response.json() == {"reports": [expected]}
+    for name, status in (("member", 403), ("outsider", 404), ("guest", 403)):
+        login(name)
+        assert client.get(path).status_code == status
+    login("candidate")
+    assert client.get(path.replace(ids["cls"], ids["foreign"])).status_code == 404
+    monkeypatch.setattr(settings, "class_team_read_enabled", False)
+    assert client.get(path).status_code == 403
+    monkeypatch.setattr(settings, "class_team_read_enabled", True)
+    with database.SessionLocal() as db:
+        assert db.get(Report, rid).is_read is False
+        db.get(SessionParticipant, pid).report_notice_ack_at = None
+        db.commit()
+    assert client.get(path).status_code == 403
+    login("admin")
+    assert client.get(path).status_code == 200
+    with database.SessionLocal() as db:
+        db.get(Session, UUID(ids["session"])).hidden_at = datetime.now(timezone.utc)
+        db.commit()
+    assert client.get(path).status_code == 404
+
+
+def test_진행자_요청_진입은_대강에게_전체_운영정보를_노출하지_않는다(
+    client, scene, monkeypatch
+):
+    ids, login = scene
+    path = f'/api/v1/classes/{ids["cls"]}'
+    for name, expected in (
+        ("lead", True),
+        ("candidate", True),
+        ("admin", True),
+        ("guest", True),
+        ("member", False),
+    ):
+        login(name)
+        response = client.get(path)
+        assert response.status_code == 200, response.text
+        assert response.json()["capabilities"]["host_request"] is expected
+        if name == "guest":
+            assert response.json()["host_view"] is None
+            assert [
+                row["id"] for row in client.get(path + "/sessions").json()["sessions"]
+            ] == [ids["session"]]
+    monkeypatch.setattr(settings, "class_scheduling_enabled", False)
+    login("guest")
+    assert client.get(path).json()["capabilities"]["host_request"] is False
+    with database.SessionLocal() as db:
+        db.query(ClassInstructor).filter_by(
+            class_id=UUID(ids["cls"]), user_id=UUID(ids["guest"])
+        ).one().status = "removed"
+        db.commit()
+    assert client.get(path).status_code == 404

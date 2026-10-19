@@ -54,3 +54,21 @@
 - 구현 전 기록 BF-T6/BF-10: 대시보드 classes 항목에 실제 class_id/counseling_relationship_id·area·seq를 가산한다. Session.type 추정·새 전체 집계·추가 조회 없음.
 - 담당 경로: services/dashboard_service.py·schemas/dashboard.py·동일 테스트·API 계약. HTTP에서 서로 다른 부모의 ID·영역·회차를 확인하는 1개 테스트만 RED→GREEN 실행한다.
 - BF-T6 결과: class_id 누락 1 failed → **1 passed / 8 deselected / 1 warning, 1.63초**. `dashboard-parent-red.log`·`dashboard-parent-green.log`. 그룹 임상 유형도 클래스 FK를 따라 meditation으로 반환하는 사례 포함.
+
+## FE 연결 중 추가: 회차 리포트 식별자 조회
+
+- 구현 전 기록 BF-T7/BF-11: 비진행 강사는 기존 리포트 목록에서 현재 진행자가 아닌 회차의 리포트를 발견할 수 없다. 클래스 회차의 읽기 전용 목록을 추가하고 기존 get_report 권한을 재사용한다.
+- GET /classes/{class_id}/sessions/{session_id}/reports → reports: [{id, type, status}]. 현재 진행자, 고지·스위치 조건을 충족한 주/보조강사, D-28 센터 관리자만 허용. 회원 목록 조회는 차단하며 본인 리포트 기존 경로 유지.
+- 다른 부모·숨김·외부 계정·대강 지정 범위 밖·동의 미충족·팀 스위치 off 차단. 읽음 변경·원문·주소·이메일 반환 없음.
+- 소유: api/v1/classes.py·동일 신규 테스트·API 계약. 한 HTTP 테스트로 역할/동의/flag/부모 범위를 RED→GREEN. 전체 회귀·마이그레이션 없음.
+
+- BF-T7 결과: 누락 경로 404 RED → **1 passed / 9 deselected / 1 warning, 2.09초**. report-index-red/green.log.
+
+## 인수 검토 추가: 대강 수락 진입
+
+- 구현 전 BF-T8/BF-12: 대강에게 host_view 전체를 제공하지 않으면서 본인 요청 수락 화면을 열 수 있게 capabilities.host_request를 추가한다. 편성 스위치 on × 현재 주/보조/대강/관리자만 true, 회원 false. 회차별 허용은 기존 요청 조회/처리 API에서 재검사한다.
+- 소유: class_read_service.py·동일 신규 테스트·API 계약. 역할과 스위치를 확인하는 HTTP 테스트 1개만 RED→GREEN.
+
+- BF-12 RED에서 guest 클래스 상세 자체가 404임을 추가 확인했다. 구현 전에 범위를 보완: 활성 대강의 지정 회차만 상세·회차 목록에 허용하고 다른 회차 및 removed 대강 차단을 같은 테스트로 확인한다. 전체 클래스 목록·전체 운영정보는 넓히지 않는다.
+
+- BF-T8 결과: 필드 누락 RED, 이후 guest 기존 상세 404 확인·지정 범위 조회 보완 → **1 passed / 10 deselected / 1 warning, 1.69초**. host-request-capability-red/green.log. 스위치 off false·host_view null·회차 1개만 반환·removed 404 확인.

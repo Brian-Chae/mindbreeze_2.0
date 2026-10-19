@@ -534,6 +534,42 @@ def invite_members(
     )
 
 
+@router.get("/{class_id}/sessions/{session_id}/reports")
+def list_session_reports(
+    class_id: UUID,
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.models.record import Report
+    from app.services.report_service import _can_access_report
+
+    # 회원 본인 리포트는 기존 경로를 사용한다. 대강도 현재 진행자일 때만 허용한다.
+    cls, actor = load_class_actor(db, class_id, current_user, "host_request")
+    session = (
+        db.query(Session)
+        .filter(
+            Session.id == session_id,
+            Session.class_id == class_id,
+            Session.hidden_at.is_(None),
+        )
+        .first()
+    )
+    if cls.hidden_at is not None or session is None:
+        raise HTTPException(404, detail={"code": "session_not_found"})
+    if not _can_access_report(str(actor.id), session, db):
+        raise HTTPException(403, detail={"code": "report_read_forbidden"})
+    return {
+        "reports": [
+            {"id": str(row.id), "type": row.type, "status": row.status}
+            for row in db.query(Report.id, Report.type, Report.status)
+            .filter(Report.session_id == session_id)
+            .order_by(Report.created_at, Report.id)
+            .all()
+        ]
+    }
+
+
 @router.get(
     "/{class_id}/sessions/{session_id}/host-requests",
     dependencies=[Depends(scheduling_enabled)],

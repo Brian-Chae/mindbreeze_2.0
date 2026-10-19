@@ -138,14 +138,14 @@ def _legacy_class_sessions_filter(db, uid):
     return and_(Session.class_id.in_(legacy), *_visible_session_filter(uid, db))
 
 
-def _visible_class_sessions(db: DBSession, uid: UUID, class_ids) -> dict[UUID, list]:
+def _visible_class_sessions(db: DBSession, uid: UUID, class_ids, *, guest_session_id: UUID | None = None) -> dict[UUID, list]:
     rows = (
         db.query(
             Session.class_id, Session.id, Session.seq, Session.scheduled_at, Session.status,
             Session.session_kind, Session.host_id, Session.host_state, Session.state_version,
             Session.duration_min, Session.location_type, Session.location_address, Session.assignment_override,
         )
-        .filter(Session.class_id.in_(list(class_ids)), or_(Session.class_id.in_(_class_access_ids(db, uid)), _legacy_class_sessions_filter(db, uid)))
+        .filter(Session.class_id.in_(list(class_ids)), or_(Session.class_id.in_(_class_access_ids(db, uid)), _legacy_class_sessions_filter(db, uid), Session.id == guest_session_id))
         .order_by(Session.seq.asc())
         .all()
     )
@@ -185,7 +185,22 @@ def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Cla
     cls = db.query(Class).filter(Class.id == cid).first()
     if not cls:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    rows = _visible_class_sessions(db, uid, [cid]).get(cid, [])
+    from app.services.class_access_service import class_role
+    from app.services.class_instructor_service import validate_instructor
+
+    actor = db.query(User).filter(User.id == uid).first()
+    guest_session_id = None
+    if class_role(db, actor, cls) == "guest":
+        guest = db.query(ClassInstructor).filter_by(
+            class_id=cid, user_id=uid, role="guest", status="active"
+        ).first()
+        if guest and guest.scope_session_id:
+            try:
+                validate_instructor(db, cls, uid, guest.scope_session_id)
+                guest_session_id = guest.scope_session_id
+            except HTTPException:
+                pass
+    rows = _visible_class_sessions(db, uid, [cid], guest_session_id=guest_session_id).get(cid, [])
     if not rows and not db.query(Class.id).filter(Class.id == cid, Class.id.in_(_class_access_ids(db, uid))).first():
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return cls, rows
@@ -220,6 +235,7 @@ def get_class_detail(class_id: str, user_id: str, db: DBSession, *, now: datetim
         "manage": role in ("lead", "org_admin"),
         "invite": role in ("lead", "assistant", "org_admin"),
         "schedule": bool(settings.class_scheduling_enabled and role in ("lead", "org_admin")),
+        "host_request": bool(settings.class_scheduling_enabled and role in ("lead", "assistant", "guest", "org_admin")),
     }
     if role in ("lead", "org_admin"):
         detail.update(draft_schedule=cls.draft_schedule, recurrence_rule=cls.recurrence_rule,
