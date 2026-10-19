@@ -256,6 +256,8 @@ def test_upgrade_backfills_only_before_evidence_and_is_repeatable(scratch_db):
             states = {str(r.id): r.checkin_state for r in conn.execute(text('SELECT id,checkin_state FROM session_participants'))}
             assert states == {before: 'completed', after_only: None, no_evidence: None}
             assert conn.execute(text('SELECT participation_version FROM sessions WHERE id=:id'), {'id': sid}).scalar_one() == 0
-            assert conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one() == 'e036a0000057'
+            # head 는 새 SDD 마다 올라간다. 057 이 체인에 적용됐고 그 이상인지만 본다.
+            applied = conn.execute(text('SELECT version_num FROM alembic_version')).scalar_one()
+            assert applied >= 'e036a0000057'
     finally:
         engine.dispose()

@@ -261,15 +261,30 @@ def test_approval_and_correction_freeze_approved_owner(pg_engine, frozen):
         lambda db: approve_report(str(rid), str(aid), db),
         lambda db: correct_host(db, aid, cid, command, NOW),
     )
-    assert sum(code == 200 for code, _ in results) == 1
+    # SDD-218 D-36: 주강사는 타인 진행 회차도 대행 승인한다. 따라서 "승인자 == 진행자" 는
+    # 더 이상 전제가 아니고, 정정이 먼저 커밋되면 승인은 바뀐 진행자 위에서 성공할 수 있다.
+    # 이 테스트가 지키는 것은 **승인 후에는 귀속을 바꿀 수 없다**는 동결 규칙이다.
     assert all(code in (200, 403, 409) for code, _ in results)
+    approve_code, correct_code = (code for code, _ in results)
     with DBSession(pg_engine) as db:
         row, report = db.get(Session, sid), db.get(Report, rid)
+        # 상담사 리포트의 귀속은 언제나 현재 진행자를 따른다.
         assert row.host_id == report.user_id
-        if report.approved_at:
-            assert report.approved_by_user_id == aid and row.host_id == aid
+        if correct_code == 200:
+            # 정정이 이겼다 — 진행자는 b 로 바뀐다.
+            assert row.host_id == bid
+            if approve_code == 200:
+                # 대행 승인: 승인자는 실제 승인자(a)로 남고 진행자로 위장하지 않는다.
+                assert report.approved_by_user_id == aid
+                assert report.status == "completed"
+            else:
+                assert report.status == "pending_review"
         else:
-            assert row.host_id == bid and report.status == "pending_review"
+            # 승인이 이겼다 — 동결이 걸려 정정은 막힌다.
+            assert approve_code == 200
+            assert correct_code == 409
+            assert row.host_id == aid
+            assert report.approved_by_user_id == aid
 
 
 def test_two_rolling_workers_generate_one_next_week(pg_engine):
