@@ -37,6 +37,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
   const alive = useRef(true);
   const locked = useRef(false);
   const generation = useRef(0);
+  const previewRequest = useRef<AbortController | null>(null);
   const keyFor = useRef(operationKeys());
   const saved = useRef<{ id: string; revision: number; input: string } | null>(null);
   const sourceRevision = useRef<number | undefined>(undefined);
@@ -48,7 +49,8 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
   useEffect(() => {
     alive.current = true;
     let active = true;
-    Promise.all([schedulingApi.candidates(draftId || copyId || undefined), draftId || copyId ? getClass(asClassId((draftId || copyId)!)) : Promise.resolve(null)])
+    const controller = new AbortController();
+    Promise.all([schedulingApi.candidates(draftId || copyId || undefined, controller.signal), draftId || copyId ? getClass(asClassId((draftId || copyId)!), controller.signal) : Promise.resolve(null)])
       .then(([result, detail]) => {
         if (!active) return;
         setCandidates(result.instructors);
@@ -60,10 +62,10 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
         }
         setAvailable(true);
       }).catch((error: unknown) => { if (active) setError(schedulingError(error)); });
-    return () => { active = false; alive.current = false; generation.current += 1; };
+    return () => { active = false; alive.current = false; generation.current += 1; controller.abort(); previewRequest.current?.abort(); };
   }, [draftId, copyId]);
   function change(next: ScheduleInput) {
-    generation.current += 1; setSchedule(next); setDirty(true); setPreview(null); setConfirmed(false); setError('');
+    generation.current += 1; previewRequest.current?.abort(); setSchedule(next); setDirty(true); setPreview(null); setConfirmed(false); setError('');
   }
   function patch(next: Partial<ScheduleInput>) { change({ ...schedule, ...next }); }
   function rule(next: Partial<ScheduleInput['recurrence_rule']>) { patch({ recurrence_rule: { ...schedule.recurrence_rule, ...next }, rows: [] }); }
@@ -84,7 +86,9 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
     if (issues.length) { setError(issues.join(' ')); return; }
     const current = generation.current;
     await execute(async () => {
-      const result = await schedulingApi.preview(schedule);
+      previewRequest.current?.abort();
+      const controller = new AbortController(); previewRequest.current = controller;
+      const result = await schedulingApi.preview(schedule, controller.signal);
       if (!alive.current || generation.current !== current) return;
       setPreview(result); setConfirmed(false);
       if (advance) {

@@ -37,3 +37,14 @@ describe('편성 입력과 재시도', () => {
     spy.mockRestore();
   });
 });
+it('후보와 미리보기의 취소 신호를 공용 클라이언트에 전달한다', async () => {
+  const controller = new AbortController();
+  const get = vi.spyOn(apiClient, 'get').mockResolvedValue({ instructors: [] });
+  const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ rows: [] });
+  await schedulingApi.candidates('c1', controller.signal);
+  const schedule = defaultSchedule('u1', '2026-10-20');
+  await schedulingApi.preview(schedule, controller.signal);
+  expect(get).toHaveBeenCalledWith('/classes/instructor-candidates?class_id=c1', { signal: controller.signal });
+  expect(post).toHaveBeenCalledWith('/classes/preview-schedule', schedule, { signal: controller.signal });
+  get.mockRestore(); post.mockRestore();
+});

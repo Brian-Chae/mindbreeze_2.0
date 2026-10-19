@@ -27,13 +27,13 @@ export interface EmailInvite { id: string; email: string; status: 'pending' | 's
 export interface HostRequest { id: string; session_id: string; requested_by: string; candidate_host_id: string; request_kind: 'change' | 'transfer'; status: string; expected_state_version: number; expires_at: string | null; created_at: string; resolved_at: string | null }
 const path = (id: string) => `/classes/${encodeURIComponent(id)}`;
 export const schedulingApi = {
-  candidates: (classId?: string) => apiClient.get<{ instructors: InstructorCandidate[] }>(`/classes/instructor-candidates${classId ? `?class_id=${encodeURIComponent(classId)}` : ''}`),
-  preview: (schedule: ScheduleInput) => apiClient.post<SchedulePreview>('/classes/preview-schedule', schedule),
+  candidates: (classId?: string, signal?: AbortSignal) => apiClient.get<{ instructors: InstructorCandidate[] }>(`/classes/instructor-candidates${classId ? `?class_id=${encodeURIComponent(classId)}` : ''}`, { signal }),
+  preview: (schedule: ScheduleInput, signal?: AbortSignal) => apiClient.post<SchedulePreview>('/classes/preview-schedule', schedule, { signal }),
   create: (command: CreateCommand) => apiClient.post<WriteResult>('/classes', command),
   update: (id: string, command: WriteCommand & { schedule: ScheduleInput }) => apiClient.patch<WriteResult>(path(id), command),
   publish: (id: string, command: WriteCommand) => apiClient.post<WriteResult>(`${path(id)}/publish`, command),
   duplicate: (id: string, command: WriteCommand & { start_date: string; invite_members: boolean }) => apiClient.post<WriteResult>(`${path(id)}/duplicate`, command),
-  previewBulk: (id: string, command: BulkCommand) => apiClient.post<SchedulePreview>(`${path(id)}/schedule/preview`, command),
+  previewBulk: (id: string, command: BulkCommand, signal?: AbortSignal) => apiClient.post<SchedulePreview>(`${path(id)}/schedule/preview`, command, { signal }),
   bulk: (id: string, command: BulkCommand) => apiClient.patch<WriteResult>(`${path(id)}/sessions/bulk`, command),
   addSession: (id: string, command: WriteCommand & { row: ScheduleRow; makeup_for_session_id?: string; member_ids: string[] }) => apiClient.post<WriteResult>(`${path(id)}/sessions`, command),
   emailInvites: (id: string) => apiClient.get<{ invitations: EmailInvite[] }>(`${path(id)}/email-invites`),
