@@ -3,6 +3,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { heroBackdrop } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
 import ClientHomePage from './ClientHomePage';
+import { useClientCounselors } from '../../hooks/use-client-counselors';
 import { useMixedHome } from '../../hooks/use-class-structure';
 import { adaptMixedHome } from '../../lib/class-structure/adapters';
 import { displayField } from '../../lib/class-structure/read-model';
@@ -12,6 +13,7 @@ import { ReadField, ReadStateView } from '../../components/class/structure/read-
 import { MemberClassCard, MemberClassStyles, memberDate, memberValue } from '../../components/class/structure/member-class-views';
 
 export function MemberStructureHomePage() {
+  useClientCounselors();
   const read = useMixedHome();
   const model = adaptMixedHome(read.classes, read.counseling);
   const next = memberValue(model.next);

@@ -1,4 +1,5 @@
 import { useClassApply } from './use-class-apply';
+import { useClientCounselors } from '../../hooks/use-client-counselors';
 import { useClasses } from '../../hooks/use-class-structure';
 import { adaptMemberClass } from '../../lib/class-structure/adapters';
 import { StructureShell } from '../../components/class/structure/structure-shell';
@@ -6,6 +7,7 @@ import { ReadStateView } from '../../components/class/structure/read-state';
 import { MemberClassCard, MemberClassStyles, memberValue } from '../../components/class/structure/member-class-views';
 
 export function MemberClassesPage() {
+  useClientCounselors();
   const { state, retry } = useClasses();
   const { openApply, overlay } = useClassApply();
   const items = state.status === 'success' ? state.data.classes.map(adaptMemberClass) : [];
