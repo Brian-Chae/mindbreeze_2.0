@@ -48,3 +48,9 @@
 - 구현 전 기록 BF-T5/BF-09: GET members에 `name: string|null` 추가. user_id가 없는 회원은 JSON null로 반환. 기존 invite 권한 유지. 이메일·연락처는 반환하지 않는다.
 - 실제 HTTP에서 회원 이름·미연결 회원 null·회원/타인 조회 거부를 검증하는 테스트 1개만 RED→GREEN 실행한다. 소유: api/v1/classes.py·동일 테스트·API 계약.
 - BF-T5 결과: name 누락 1 failed → **1 passed / 7 deselected / 1 warning, 1.67초**. `member-name-red.log`·`member-name-green.log`. 조회 1회 outer join으로 연결 계정 이름만 추가했다.
+
+## FE 연결 중 추가: 홈 일정 부모 정보
+
+- 구현 전 기록 BF-T6/BF-10: 대시보드 classes 항목에 실제 class_id/counseling_relationship_id·area·seq를 가산한다. Session.type 추정·새 전체 집계·추가 조회 없음.
+- 담당 경로: services/dashboard_service.py·schemas/dashboard.py·동일 테스트·API 계약. HTTP에서 서로 다른 부모의 ID·영역·회차를 확인하는 1개 테스트만 RED→GREEN 실행한다.
+- BF-T6 결과: class_id 누락 1 failed → **1 passed / 8 deselected / 1 warning, 1.63초**. `dashboard-parent-red.log`·`dashboard-parent-green.log`. 그룹 임상 유형도 클래스 FK를 따라 meditation으로 반환하는 사례 포함.

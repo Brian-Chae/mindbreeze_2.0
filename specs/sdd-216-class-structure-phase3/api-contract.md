@@ -64,6 +64,7 @@
 - 이메일 조회 항목: `id`, `email`, `status`(pending/sent/failed), `created_at`, `sent_at`. 생성 시각·ID 순서. sent는 발송 함수 성공 기록이며 수신함 도착 증거가 아니다.
 - 회원 조회 항목: `id`, `user_id: string|null`, `name: string|null`, `status`. 연결 계정이 없으면 user_id·name은 null, 이메일·연락처는 제공하지 않는다. 기존 초대 권한 필요.
 - GET 클래스 상세는 `record_video: bool`, `chat_enabled: bool`, `reminder_offsets: int[]`의 현재 저장값도 반환한다. FE는 전체 설정 저장 시 조회값을 유지한다.
+- GET `/dashboard/counselor`·`/dashboard/org`의 `classes[]`에 실제 부모 `class_id`, `counseling_relationship_id`, `area`(meditation/counseling/null), `seq`를 가산한다. ID·seq는 nullable. 영역은 실제 부모 FK 기준이며 세션 유형으로 추정하지 않는다. 기존 집계는 유지한다.
 - `effects_pending`은 생성 회차의 준비 의도 수다. 클래스 전체 outbox 잔량이나 전달 성공 건수가 아니다.
 - draft에는 실제 회차·코드·멤버·전달 의도가 없다. 부분 생성 성공 응답은 없다.
 - 숨김과 상태 변경도 `operation_key`를 사용한다. 동일 키 재시도는 권한이 유지되는 가시 클래스에서 처리한다.

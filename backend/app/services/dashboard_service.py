@@ -34,6 +34,12 @@ def _class_summary(
     guest_count = sum(1 for p in participants if p.user_id is None)
     return {
         "id": str(s.id),
+        "class_id": str(s.class_id) if s.class_id else None,
+        "counseling_relationship_id": (
+            str(s.counseling_relationship_id) if s.counseling_relationship_id else None
+        ),
+        "area": "meditation" if s.class_id else "counseling" if s.counseling_relationship_id else None,
+        "seq": s.seq,
         "title": s.title,
         "type": s.type,
         "custom_type_name": s.custom_type_name,

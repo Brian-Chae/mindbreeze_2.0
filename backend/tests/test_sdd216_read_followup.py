@@ -333,3 +333,44 @@ def test_회원_목록은_이름과_미연결_회원_null을_권한자에게만_
     for name, status in (("member", 403), ("outsider", 404)):
         login(name)
         assert client.get(path).status_code == status
+
+
+def test_홈_일정은_유형_추정_없이_실제_부모와_영역을_반환한다(client, scene):
+    from app.models.counseling import CounselingRelationship
+
+    ids, login = scene
+    with database.SessionLocal() as db:
+        # 그룹 임상 유형이어도 클래스 FK에 속하면 명상 클래스 영역이다.
+        row = db.get(Session, UUID(ids["session"]))
+        row.type = "clinical"
+        row.participant_mode = "group"
+        relationship = CounselingRelationship(
+            counselor_id=UUID(ids["lead"]),
+            client_user_id=UUID(ids["member"]),
+            is_placeholder=False,
+        )
+        db.add(relationship)
+        db.flush()
+        counseling = Session(
+            type="clinical",
+            host_id=UUID(ids["lead"]),
+            counseling_relationship_id=relationship.id,
+            seq=1,
+            participant_mode="one_on_one",
+            status="scheduled",
+            duration_min=60,
+        )
+        db.add(counseling)
+        db.commit()
+        relationship_id, counseling_id = str(relationship.id), str(counseling.id)
+    login("lead")
+    response = client.get("/api/v1/dashboard/counselor")
+    assert response.status_code == 200, response.text
+    rows = {row["id"]: row for row in response.json()["classes"]}
+    assert rows[ids["session"]]["class_id"] == ids["cls"]
+    assert rows[ids["session"]]["area"] == "meditation"
+    assert rows[ids["session"]]["counseling_relationship_id"] is None
+    assert rows[ids["session"]]["seq"] == 1
+    assert rows[counseling_id]["class_id"] is None
+    assert rows[counseling_id]["counseling_relationship_id"] == relationship_id
+    assert rows[counseling_id]["area"] == "counseling"
