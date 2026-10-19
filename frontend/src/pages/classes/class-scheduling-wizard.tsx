@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useWizardLeaveGuard } from '../../hooks/useWizardLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
 import { getClass } from '../../lib/api/class-structure';
@@ -29,6 +30,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
   const [emails, setEmails] = useState('');
   const [leave, setLeave] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [reason, setReason] = useState('');
   const [created, setCreated] = useState<WriteResult | null>(null);
   const [code, setCode] = useState<string | null>(null);
   const [inviteState, setInviteState] = useState<'none' | 'pending' | 'failed'>('none');
@@ -41,6 +43,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
   const [copyMembers, setCopyMembers] = useState(false);
   const [copyDate, setCopyDate] = useState(koreanToday());
   const [copyReady, setCopyReady] = useState(!copyId);
+  const { blocker, bypass } = useWizardLeaveGuard(dirty && !created);
 
   useEffect(() => {
     alive.current = true;
@@ -59,12 +62,6 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
       }).catch((error: unknown) => { if (active) setError(schedulingError(error)); });
     return () => { active = false; alive.current = false; generation.current += 1; };
   }, [draftId, copyId]);
-  useEffect(() => {
-    if (!dirty || created) return;
-    const prevent = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
-    window.addEventListener('beforeunload', prevent);
-    return () => window.removeEventListener('beforeunload', prevent);
-  }, [dirty, created]);
   function change(next: ScheduleInput) {
     generation.current += 1; setSchedule(next); setDirty(true); setPreview(null); setConfirmed(false); setError('');
   }
@@ -106,13 +103,14 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
   async function sendInvitations(result: WriteResult) {
     const addresses = parseInviteEmails(emails);
     if (!addresses.length) return;
-    const payload = { expected_revision: result.revision, emails: addresses };
+    const payload = { expected_revision: result.revision, emails: addresses, ...(reason.trim() ? { reason: reason.trim() } : {}) };
     try {
       await schedulingApi.inviteEmails(result.class_id, { ...payload, operation_key: keyFor.current({ invite: result.class_id, ...payload }) });
       if (alive.current) setInviteState('pending');
     } catch { if (alive.current) setInviteState('failed'); }
   }
   async function save(status: 'draft' | 'active') {
+    if (user.role === 'org_admin' && (draftId || parseInviteEmails(emails).length > 0) && !reason.trim()) { setError('센터 관리자 대행 사유를 입력해 주세요.'); return; }
     const issues = scheduleProblems(schedule);
     if (issues.length) { setError(issues.join(' ')); return; }
     if (status === 'active' && (!preview || preview.rows.some(row => !row.host_id))) { setError('일정을 확인하고 모든 회차의 진행 지도사를 배정해 주세요.'); return; }
@@ -125,14 +123,14 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
       if (draftId) {
         const input = JSON.stringify(schedule);
         if (!saved.current || saved.current.input !== input) {
-          const payload = { schedule, expected_revision: saved.current?.revision ?? sourceRevision.current };
+          const payload = { schedule, expected_revision: saved.current?.revision ?? sourceRevision.current, ...(reason.trim() ? { reason: reason.trim() } : {}) };
           const updated = await schedulingApi.update(draftId, { ...payload, operation_key: keyFor.current({ update: draftId, ...payload }) });
           saved.current = { id: draftId, revision: updated.revision, input };
         }
         if (!alive.current) return;
         result = { class_id: draftId, revision: saved.current.revision };
         if (status === 'active') {
-          const payload = { expected_revision: result.revision, ...confirmation };
+          const payload = { expected_revision: result.revision, ...confirmation, ...(reason.trim() ? { reason: reason.trim() } : {}) };
           result = await schedulingApi.publish(draftId, { ...payload, operation_key: keyFor.current({ publish: draftId, ...payload }) });
         }
       } else {
@@ -141,7 +139,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
       }
       if (!alive.current) return;
       setDirty(false);
-      if (status === 'draft') { navigate(`/classes/${result.class_id}`); return; }
+      if (status === 'draft') { bypass(); navigate(`/classes/${result.class_id}`); return; }
       setCreated(result);
       const detail = await getClass(asClassId(result.class_id)).catch(() => null);
       if (alive.current) setCode(detail?.host_view?.access_code ?? null);
@@ -153,7 +151,7 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
     await execute(async () => {
       const payload = { start_date: copyDate, invite_members: copyMembers, expected_revision: sourceRevision.current };
       const result = await schedulingApi.duplicate(copyId, { ...payload, operation_key: keyFor.current({ copyId, ...payload }) });
-      if (alive.current) navigate(`/classes/new?draft=${encodeURIComponent(result.class_id)}`, { replace: true });
+      if (alive.current) { bypass(); navigate(`/classes/new?draft=${encodeURIComponent(result.class_id)}`, { replace: true }); }
     });
   }
   const hostOptions = <><option value="">미정</option>{schedule.instructors.map(person => <option key={person.user_id} value={person.user_id}>{candidates.find(x => x.id === person.user_id)?.name ?? '이름 없음'}</option>)}</>;
@@ -168,12 +166,13 @@ function Wizard({ user, draftId, copyId }: { user: { id: string; role: string };
       {step === 1 && <><div className="cs-options">{(['fixed', 'rolling'] as const).map(mode => <button type="button" key={mode} aria-pressed={schedule.schedule_mode === mode} onClick={() => patch({ schedule_mode: mode, rows: [] })}>{mode === 'fixed' ? '정해진 횟수' : '계속 이어져요'}</button>)}</div><div className="cs-grid"><Field title="시작 날짜"><input type="date" min={koreanToday()} value={schedule.recurrence_rule.start_date} onChange={e => rule({ start_date: e.target.value })} /></Field><Field title="시작 시각"><input type="time" min="07:00" max="22:00" step={300} value={schedule.recurrence_rule.time} onChange={e => rule({ time: e.target.value })} /></Field><Field title="소요 시간(분)"><input type="number" min={5} max={480} step={5} value={schedule.duration_min} onChange={e => patch({ duration_min: Number(e.target.value), rows: [] })} /></Field>{schedule.schedule_mode === 'fixed' ? <Field title="횟수"><input type="number" min={2} max={52} value={schedule.planned_session_count} onChange={e => patch({ planned_session_count: Number(e.target.value), rows: [] })} /></Field> : <Field title="종료일(선택)"><input type="date" min={schedule.recurrence_rule.start_date} value={schedule.ends_on ?? ''} onChange={e => patch({ ends_on: e.target.value || null, rows: [] })} /></Field>}<Field title="반복 간격(주)"><input type="number" min={1} max={52} value={schedule.recurrence_rule.interval_weeks} onChange={e => rule({ interval_weeks: Number(e.target.value) })} /></Field><Field title="예약 알림"><select value={schedule.reminder_offsets.join(',')} onChange={e => patch({ reminder_offsets: e.target.value ? e.target.value.split(',').map(Number) : [] })}><option value="">끄기</option><option value="1440">하루 전</option><option value="60">1시간 전</option><option value="1440,60">둘 다</option></select></Field></div><div className="cs-days" role="group" aria-label="요일">{days.map((day, i) => <button type="button" key={day} aria-pressed={schedule.recurrence_rule.weekdays.includes(i + 1)} onClick={() => rule({ weekdays: schedule.recurrence_rule.weekdays.includes(i + 1) ? schedule.recurrence_rule.weekdays.filter(n => n !== i + 1) : [...schedule.recurrence_rule.weekdays, i + 1].sort() })}>{day}</button>)}</div><Field title="건너뛸 날짜(쉼표로 구분, YYYY-MM-DD)"><input value={schedule.recurrence_rule.skip_dates.join(',')} onChange={e => rule({ skip_dates: e.target.value.split(',').map(x => x.trim()).filter(Boolean) })} /></Field><p className="cs-note">{schedule.schedule_mode === 'rolling' ? '처음 4주 분량을 만들고 이후 일정은 자동으로 이어져요.' : '선택한 요일의 일정을 한 번에 만들어요.'} 공휴일은 자동으로 건너뛰지 않아요.</p></>}
       {step === 2 && <><div className="cs-instructors">{schedule.instructors.map((person, i) => <div key={person.user_id}><span>{candidates.find(x => x.id === person.user_id)?.name ?? '이름 없음'}</span><select aria-label={`${i + 1}번째 강사 역할`} value={person.role} onChange={e => patch({ instructors: schedule.instructors.map(x => x.user_id === person.user_id ? { ...x, role: e.target.value as 'lead' | 'assistant' } : x) })}><option value="lead">주강사</option><option value="assistant">강사</option></select><button type="button" onClick={() => patch({ instructors: schedule.instructors.filter(x => x.user_id !== person.user_id), assignment_rule: { ...schedule.assignment_rule, host_ids: schedule.assignment_rule.host_ids.filter(id => id !== person.user_id), weekday_hosts: Object.fromEntries(Object.entries(schedule.assignment_rule.weekday_hosts).map(([day, id]) => [day, id === person.user_id ? null : id])) }, rows: [] })}>제외</button></div>)}</div><Field title="강사 추가"><select value="" onChange={e => { const id = e.target.value; if (id) patch({ instructors: [...schedule.instructors, { user_id: id, role: schedule.instructors.length ? 'assistant' : 'lead' }], assignment_rule: { ...schedule.assignment_rule, host_ids: schedule.assignment_rule.mode === 'rotate' ? [...schedule.assignment_rule.host_ids, id] : schedule.assignment_rule.mode === 'all_one' ? [schedule.assignment_rule.host_ids[0] ?? id] : schedule.assignment_rule.host_ids }, rows: [] }); }}><option value="">같은 센터 지도사 선택</option>{candidates.filter(person => !schedule.instructors.some(x => x.user_id === person.id)).map(person => <option key={person.id} value={person.id}>{person.name ?? '이름 없음'}</option>)}</select></Field><Field title="배정 방식"><select value={schedule.assignment_rule.mode} onChange={e => patch({ assignment_rule: { ...schedule.assignment_rule, mode: e.target.value as ScheduleInput['assignment_rule']['mode'], host_ids: e.target.value === 'per_session' || e.target.value === 'by_weekday' ? [] : e.target.value === 'all_one' ? [schedule.instructors[0]?.user_id ?? null] : schedule.instructors.map(x => x.user_id), weekday_hosts: Object.fromEntries(schedule.recurrence_rule.weekdays.map(day => [day, schedule.assignment_rule.weekday_hosts[day] ?? null])) }, rows: [] })}><option value="all_one">모두 한 분이 맡아요</option><option value="rotate">번갈아 맡아요</option><option value="by_weekday">요일마다 달라요</option><option value="per_session">회차마다 직접 정해요</option></select></Field>{schedule.assignment_rule.mode === 'all_one' && <Field title="진행 지도사"><select value={schedule.assignment_rule.host_ids[0] ?? ''} onChange={e => patch({ assignment_rule: { ...schedule.assignment_rule, host_ids: [e.target.value || null] }, rows: [] })}>{hostOptions}</select></Field>}{schedule.assignment_rule.mode === 'rotate' && schedule.assignment_rule.host_ids.map((id, index) => <div className="cs-order" key={`${id}:${index}`}><span>{index + 1}. {candidates.find(x => x.id === id)?.name ?? '미정'}</span><button type="button" disabled={index === 0} onClick={() => { const ids = [...schedule.assignment_rule.host_ids]; [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]]; patch({ assignment_rule: { ...schedule.assignment_rule, host_ids: ids }, rows: [] }); }}>위로</button></div>)}{schedule.assignment_rule.mode === 'by_weekday' && schedule.recurrence_rule.weekdays.map(day => <Field title={`${days[day - 1]}요일 지도사`} key={day}><select value={schedule.assignment_rule.weekday_hosts[day] ?? ''} onChange={e => patch({ assignment_rule: { ...schedule.assignment_rule, weekday_hosts: { ...schedule.assignment_rule.weekday_hosts, [day]: e.target.value || null } }, rows: [] })}>{hostOptions}</select></Field>)}<button type="button" onClick={() => inspect(false)}>일정 확인</button>{(preview || schedule.rows.length > 0) && <div className="cs-rows">{(preview?.rows ?? schedule.rows).map(row => <div key={row.client_key}><span><strong>{row.seq}회차</strong><small>{dateLabel(row.scheduled_at)} · {row.duration_min}분</small></span><select aria-label={`${row.seq}회차 진행 지도사`} value={row.host_id ?? ''} onChange={e => patch({ rows: (preview?.rows ?? schedule.rows).map(item => item.client_key === row.client_key ? { ...item, host_id: e.target.value || null, assignment_override: true } : item) })}>{hostOptions}</select></div>)}</div>}</>}
       {step === 3 && <><Field title="초대 이메일(선택)"><textarea value={emails} onChange={e => { setEmails(e.target.value); setDirty(true); }} placeholder="이메일을 쉼표 또는 줄바꿈으로 구분해 주세요" /></Field><p>초대는 건너뛰어도 돼요. 만든 뒤 클래스 코드로 멤버가 합류할 수 있어요.</p><div className="cs-note"><strong>{schedule.title}</strong><p>{preview?.rows.length ?? 0}회차 · 정원 {schedule.capacity}명 · {schedule.location_type === 'online' ? '온라인' : schedule.location_address}</p><p>이메일 초대 {parseInviteEmails(emails).length}명 · 발송 결과는 저장 후 따로 확인해요.</p></div>{preview?.rows.map(row => <div className="cs-review-row" key={row.client_key}><strong>{row.seq}회차</strong><span>{dateLabel(row.scheduled_at)}</span><span>{candidates.find(x => x.id === row.host_id)?.name ?? '미정'}</span></div>)}</>}
+      {user.role === 'org_admin' && <Field title="센터 관리자 대행 사유"><textarea maxLength={1000} value={reason} onChange={e => { setReason(e.target.value); setDirty(true); }} placeholder="초안 수정·공개·초대 사유를 입력해 주세요" /></Field>}
       </fieldset>
       {preview && preview.conflicts.length > 0 && <section className="cs-warning" aria-label="겹치는 일정"><h2>겹치는 일정 {preview.conflicts.length}건</h2>{preview.conflicts.map((item, index) => <p key={index}>{item.kind === 'host' ? '지도사' : item.kind === 'member' ? '멤버' : '장소'} · {dateLabel(item.starts_at)} · {item.visible && item.parent_title ? item.parent_title : '다른 일정'}</p>)}{preview.conflicts.some(item => item.kind !== 'place') && <label className="cs-check"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />겹치는 일정을 확인했고 그대로 편성해요</label>}</section>}
       {error && <p className="cs-error" role="alert">{error}</p>}
       <footer className="cs-footer">{step > 0 && <button disabled={busy} onClick={() => { setStep(step - 1); setError(''); }}>이전</button>}<button data-save-draft disabled={busy || !available} onClick={() => save('draft')}>초안 저장</button>{step < 3 ? <button className="cs-primary" disabled={busy || !available} onClick={next}>다음</button> : <button className="cs-primary" disabled={busy || !available} onClick={() => save('active')}>{busy ? '저장 중…' : '클래스 만들기'}</button>}</footer>
       </section><aside className="cs-sidebar"><span className="cs-eyebrow">나만의 명상 클래스</span><h2>함께할 시간을<br />하나씩 정해요</h2><p>횟수와 요일을 정하고 강사를 배정하면 모든 회차를 한 번에 만들 수 있어요.</p><div><strong>{schedule.title || '새 클래스'}</strong><p>{schedule.schedule_mode === 'fixed' ? `${schedule.planned_session_count}회` : '계속 이어지는 정기형'} · {schedule.duration_min}분</p><p>{schedule.instructors.length}명의 지도사 · {schedule.capacity}명 정원</p></div><p className="cs-note">미정인 회차는 초안으로 저장하고 이어서 편성할 수 있어요.</p></aside></div>
     </>}
-    {leave && <div className="cs-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="cs-leave-title" className="cs-card"><h2 id="cs-leave-title">만들기를 그만둘까요?</h2><p>저장하지 않은 입력은 사라져요.</p><button autoFocus onClick={() => setLeave(false)}>계속 만들기</button><button onClick={() => navigate('/classes')}>나가기</button></section></div>}
+    {(leave || blocker.state === 'blocked') && <div className="cs-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="cs-leave-title" className="cs-card"><h2 id="cs-leave-title">만들기를 그만둘까요?</h2><p>저장하지 않은 입력은 사라져요.</p><button autoFocus onClick={() => { setLeave(false); if (blocker.state === 'blocked') blocker.reset(); }}>계속 만들기</button><button onClick={() => { bypass(); if (blocker.state === 'blocked') blocker.proceed(); else navigate('/classes'); }}>나가기</button></section></div>}
   </main>;
 }

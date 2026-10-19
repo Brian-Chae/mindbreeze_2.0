@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ClassSchedulingWizard } from '../src/pages/classes/class-scheduling-wizard';
 const mocks = vi.hoisted(() => ({ candidates: vi.fn(), preview: vi.fn(), create: vi.fn() }));
@@ -9,7 +9,7 @@ vi.mock('../src/lib/api/class-scheduling', () => ({ schedulingApi: mocks }));
 vi.mock('../src/stores/authStore', () => ({ useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: 'u1', name: '지도사', role: 'counselor' } }) }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let box: HTMLDivElement; let root: Root;
-async function mount() { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<MemoryRouter><ClassSchedulingWizard /></MemoryRouter>)); }
+async function mount() { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '*', element: <ClassSchedulingWizard /> }])} />)); }
 afterEach(async () => { if (root) await act(async () => root.unmount()); box?.remove(); vi.clearAllMocks(); });
 it('4단계와 기본값을 표시하고 이름 없이 다음 단계에 가지 않는다', async () => {
   mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
