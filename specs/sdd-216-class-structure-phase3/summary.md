@@ -271,3 +271,13 @@ python -m pytest tests/pg/test_sdd216_performance.py --confcutdir=tests/pg -q -s
 - 나머지 화면·외부 연동·기기 검증은 사용자 지시에 따라 dev에서 진행한다. 로컬 전체 BE 회귀를 다시 실행하지 않는다.
 - 로컬 제품 코드 HEAD 82bfb27e, PR #18 원격 HEAD eb26f41f. 원격 CI 성공은 이전 HEAD의 결과다. 최신 변경은 아직 원격/dev 반영 증거가 없다.
 - 감독자 푸시·출시 인계와 dev 확인 목록: [dev-handoff.md](dev-handoff.md). 최종 SDD 완료는 dev 확인 결과·최종 Review 후 기록한다.
+
+
+## dev 배포와 사용자 확인 후 작업 종료 (2026-10-19)
+
+- 사용자 push·dev 배포 승인 이후 제품 커밋 `7e34c056` 반영. 프론트 빌드·서버 배포 성공, DB 056·편성/롤링 활성·팀 참관 비활성·공개 준비 상태 정상 확인. 이전 절의 미배포 기록은 당시 상태다.
+- 사용자가 본인 카메라 끊김, 체크인 후 ‘체크인 전’, 즉시 클래스 종료 후 완료 표시 문제를 보고했다. 추가 지시에 따라 이번 단계의 구현·배포는 여기서 끝내고 다음 Phase 4 SDD로 넘긴다.
+- 체크인 표시의 코드 결함은 확인. 영상 원인은 후보만 확인. dev 즉시 클래스·회차는 현재 모두 completed이나 관찰 시점 응답·화면 갱신 원인은 미확인. 해결 완료로 기록하지 않는다.
+- 이월 상세: [next-sdd-handoff.md](next-sdd-handoff.md). 다음 spec/plan/구현 전 verify 입력 6 Task·12 시나리오. 다음 SDD 번호는 아직 발급하지 않았다.
+- 최신 제품 PR CI의 FE·PG 성공, BE 진행 중. 배포 후 E2E journeys/full-journey 실패는 별도 미해결 검증 항목이다. 전체 테스트 통과·전체 QA 완료를 의미하지 않는다.
+- 제품 코드·원본 verify 수정 없이 문서만 정리했다. 로컬 전체 BE 회귀는 실행하지 않았다.
