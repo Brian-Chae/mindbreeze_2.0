@@ -13,6 +13,7 @@ export function allowedPushDeeplink(value: unknown): string | null {
   if (path.split('/').some((part) => part === '.' || part === '..')) return null;
   return path === '/app' || path.startsWith('/app/') || path === '/agent'
     || path === '/chat' || path.startsWith('/chat/')
+    || /^\/classes\/[a-zA-Z0-9_-]+\/sessions\/[a-zA-Z0-9_-]+$/.test(path)
     ? value : null;
 }
 

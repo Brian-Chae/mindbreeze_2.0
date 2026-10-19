@@ -40,8 +40,9 @@ describe('요청 수명', () => {
     await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
     const assertion = expect(result).rejects.toMatchObject({ name: 'AbortError' });
     controller.abort();
+    await assertion;
     finish(new Response(JSON.stringify({ access_token: 'new-token' })));
-    await assertion; await Promise.resolve();
+    await Promise.resolve(); await Promise.resolve();
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 });

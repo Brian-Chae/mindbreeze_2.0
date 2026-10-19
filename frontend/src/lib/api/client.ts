@@ -337,6 +337,7 @@ async function requestActive<T>(path: string, options: RequestOptions): Promise<
     if (refresh.ok) {
       token = refresh.token;
       res = await doFetch(token);
+      checkCancelled();
       // API7-05: 갱신 후 재시도도 401이면 세션이 실제로 무효다.
       // 초기 401(무효 refresh) 경로와 동일하게 정리·로그인 이동을 수행해야
       // '인증됨' 상태로 남아 401만 반복되는 상태에 빠지지 않는다.

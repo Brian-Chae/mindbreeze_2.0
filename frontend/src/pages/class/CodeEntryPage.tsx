@@ -14,8 +14,11 @@ import {
   type EntryProfileDraft, type EntryProfileErrors,
 } from '../../lib/class/flow/member-entry';
 import { useAuthStore } from '../../stores/authStore';
+import { joinClassCode, resolveClassCode, type ClassCodeResult } from '../../lib/api/class-code';
+import { MemberFlowFrame } from '../../components/class/flow/member/MemberFlowFrame';
+import { FlowButton, FlowCard, FlowH1, FlowSub } from '../../components/class/flow/shared/flow-primitives';
 
-type Step = 'code' | 'profile';
+type Step = 'code' | 'profile' | 'class';
 
 function toGender(value: string | null | undefined): EntryGender | null {
   return value === 'female' || value === 'male' || value === 'other' ? value : null;
@@ -33,6 +36,8 @@ export default function CodeEntryPage() {
   const memberName = isAuthenticated && user ? user.name : null;
 
   const [step, setStep] = useState<Step>('code');
+  const [classInfo, setClassInfo] = useState<ClassCodeResult | null>(null);
+  const codeRequest = useRef<AbortController | null>(null);
   const [digits, setDigits] = useState('');
   const [status, setStatus] = useState<CodeEntryStatus>('idle');
   const [summary, setSummary] = useState<EntrySummary | null>(null);
@@ -46,6 +51,7 @@ export default function CodeEntryPage() {
     aliveRef.current = true;
     return () => {
       aliveRef.current = false;
+      codeRequest.current?.abort();
     };
   }, []);
 
@@ -73,7 +79,21 @@ export default function CodeEntryPage() {
   const submitCode = useCallback(async () => {
     if (!isCompleteCode(digits) || status === 'verifying' || status === 'throttled') return;
     setStatus('verifying');
+    codeRequest.current?.abort();
+    const controller = new AbortController();
+    codeRequest.current = controller;
     try {
+      if (isAuthenticated && user?.role === 'client') {
+        const resolved = await resolveClassCode(digits, controller.signal);
+        if (!aliveRef.current || controller.signal.aborted) return;
+        if (resolved) {
+          setClassInfo(resolved);
+          setSubmitError(null);
+          setStatus('idle');
+          setStep('class');
+          return;
+        }
+      }
       const result = await verifyEntryCode(digits);
       if (!aliveRef.current) return;
       setSummary({ title: result.title ?? '클래스', startLabel: formatStartLabel(result.scheduled_at), hostName: result.host_name });
@@ -84,7 +104,29 @@ export default function CodeEntryPage() {
       const failure = classifyCodeError(error);
       setStatus(failure === 'invalid' ? 'error' : failure === 'throttled' ? 'throttled' : 'unavailable');
     }
-  }, [digits, status]);
+  }, [digits, status, isAuthenticated, user?.role]);
+
+  const joinClass = async () => {
+    if (!classInfo || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    const controller = new AbortController();
+    codeRequest.current = controller;
+    try {
+      await joinClassCode(classInfo.class_id, digits, controller.signal);
+      if (!aliveRef.current) return;
+      const session = classInfo.sessions.length === 1 ? classInfo.sessions[0] : null;
+      navigate(`/app/classes/${encodeURIComponent(classInfo.class_id)}${session ? `?sessionId=${encodeURIComponent(session.session_id)}` : ''}`, { replace: true });
+    } catch (error) {
+      if (!aliveRef.current) return;
+      setSubmitError(error instanceof ApiError && error.status === 403
+        ? '이 계정으로는 클래스에 가입할 수 없어요.'
+        : error instanceof ApiError && error.status === 429
+          ? '잠시 후 다시 시도해 주세요.' : '가입하지 못했어요. 코드를 확인하거나 다시 시도해 주세요.');
+    } finally {
+      if (aliveRef.current) setSubmitting(false);
+    }
+  };
 
   const mode = memberName ? 'member' : 'guest';
 
@@ -131,6 +173,19 @@ export default function CodeEntryPage() {
     }
   }, [digits, draft, memberName, mode, navigate, submitting]);
 
+  if (step === 'class' && classInfo) {
+    return <MemberFlowFrame title="클래스 가입" onBack={() => { if (!submitting) setStep('code'); }} colClassName="fm-narrow"
+      foot={<FlowButton disabled={submitting} onClick={() => void joinClass()}>{submitting ? '가입 중…' : '클래스 가입하기'}</FlowButton>}>
+      <FlowCard>
+        <FlowH1>{classInfo.title ?? '명상 클래스'}</FlowH1>
+        <FlowSub>클래스에 가입하면 앞으로의 일정을 내 클래스에서 확인할 수 있어요.</FlowSub>
+        <p className="my-5 text-sm text-stone-600">{classInfo.sessions.length > 0
+          ? `지금 열려 있는 회차가 ${classInfo.sessions.length}개 있어요. 가입 후 선택해 주세요.`
+          : classInfo.next_session ? `다음 일정: ${formatStartLabel(classInfo.next_session.scheduled_at)}` : '새 일정이 정해지면 내 클래스에서 확인할 수 있어요.'}</p>
+        {submitError && <p role="alert" className="mb-4 text-sm text-red-700">{submitError}</p>}
+      </FlowCard>
+    </MemberFlowFrame>;
+  }
   if (step === 'profile' && summary) {
     return (
       <ProfileEntryView

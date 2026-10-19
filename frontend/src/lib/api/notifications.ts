@@ -164,6 +164,14 @@ export function resolveNotificationTarget(
       if (isClient && typeof extra.event_type === 'string' && DIRECT_ENTER_EVENTS.has(extra.event_type)) {
         return { path: `/class/${encodeURIComponent(targetId)}/enter` };
       }
+      if (typeof extra.params?.class_id === 'string' && extra.params.class_id.trim()) {
+        const classId = encodeURIComponent(extra.params.class_id);
+        const sessionId = encodeURIComponent(targetId);
+        if (isClient) return { path: `/app/classes/${classId}?sessionId=${sessionId}` };
+        const requestId = typeof extra.params.request_id === 'string' && extra.params.request_id.trim()
+          ? `?requestId=${encodeURIComponent(extra.params.request_id)}` : '';
+        return { path: `/classes/${classId}/sessions/${sessionId}${requestId}` };
+      }
       return { path: `${isClient ? '/app' : ''}/sessions/${targetId}` };
     case 'report':
       if (!targetId) return null;
