@@ -12,3 +12,6 @@
 .co-people li{display:flex;align-items:center;gap:16px;padding:12px 0;border-top:1px solid #e9e4ec}.co-people li div{display:flex;flex-direction:column;gap:8px}.co-people small{font-size:13px;color:#736b79}.co-info dl>div{display:flex;align-items:center;gap:16px;min-height:56px;padding:8px 0;border-bottom:1px solid #e9e4ec}.co-info dt{font-size:13px;color:#736b79;flex:0 0 72px}.co-info dd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.co-info-actions,.co-refresh{display:flex;flex-wrap:wrap;gap:8px}.co-refresh button{display:flex;gap:8px;align-items:center}.co-info-actions>button{color:#884932}
 .ce-diff{padding:12px 0;border-bottom:1px solid #e9e4ec}.ce-diff dl{display:grid;gap:8px;margin-top:8px}.ce-diff dl>div{display:grid;grid-template-columns:80px minmax(0,1fr);gap:8px}.ce-diff dt{color:#736b79}.ce-diff dd{overflow-wrap:anywhere}
 @container co-operations (min-width:760px){.co-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.co-session-hero{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:24px;align-items:center;padding:24px}}
+
+/* 전역 h1·p의 어두운 글자색보다 사진 히어로의 시안 전경색을 우선한다. */
+.co-session-hero h1,.co-session-hero .co-when{color:#f7f4f0}
