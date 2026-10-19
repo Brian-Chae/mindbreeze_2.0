@@ -3,15 +3,16 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
+import { defaultSchedule } from '../src/lib/class-structure/scheduling-model';
 import { ClassSchedulingWizard } from '../src/pages/classes/class-scheduling-wizard';
-const mocks = vi.hoisted(() => ({ candidates: vi.fn(), preview: vi.fn(), create: vi.fn(), getClasses: vi.fn(), getClass: vi.fn() }));
+const mocks = vi.hoisted(() => ({ candidates: vi.fn(), preview: vi.fn(), create: vi.fn(), getClasses: vi.fn(), getClass: vi.fn(), update: vi.fn() }));
 vi.mock('../src/lib/api/class-scheduling', () => ({ schedulingApi: mocks }));
 vi.mock('../src/lib/api/class-structure', () => ({ getClasses: mocks.getClasses, getClass: mocks.getClass }));
 vi.mock('../src/components/class/structure/class-member-picker', () => ({ ClassMemberPicker: ({ onChange }: { onChange: (items: { userId: string; name: string }[]) => void }) => <button onClick={() => onChange([{ userId: 'member-one', name: '회원' }])}>회원 선택</button> }));
 vi.mock('../src/stores/authStore', () => ({ useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: 'u1', name: '지도사', role: 'counselor' } }) }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let box: HTMLDivElement; let root: Root;
-async function mount(start = true) { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '*', element: <ClassSchedulingWizard /> }])} />)); if (start) await press('처음부터 만들어요이름·일정·강사를 새로 정해요'); }
+async function mount(start = true, initialEntry = '/classes/new') { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '*', element: <ClassSchedulingWizard /> }], { initialEntries: [initialEntry] })} />)); if (start) await press('처음부터 만들어요이름·일정·강사를 새로 정해요'); }
 afterEach(async () => { if (root) await act(async () => root.unmount()); box?.remove(); vi.clearAllMocks(); });
 it('4단계와 기본값을 표시하고 이름 없이 다음 단계에 가지 않는다', async () => {
   mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
@@ -103,4 +104,22 @@ it('공개 완료는 서버가 돌려준 첫 회차로 이동한다', async () =
   await mount(); await input('title', '마음 명상'); await press('다음'); await press('다음'); await press('다음'); await press('클래스 만들기');
   expect(box.querySelector('a[href="/classes/created-one/sessions/session-first"]')?.textContent).toBe('첫 회차 보러 가기');
   expect(box.querySelector('.w-codebig')?.textContent).toBe('2941');
+});
+
+it('같은 초안 재저장 뒤 이어서 하기는 최신 초안과 revision을 다시 읽는다', async () => {
+  const schedule = { ...defaultSchedule('u1'), title: '이어 쓸 초안' };
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  mocks.getClass.mockResolvedValueOnce({ status: 'draft', revision: 3, draft_schedule: schedule, capabilities: { schedule: true } })
+    .mockResolvedValueOnce({ status: 'draft', revision: 5, draft_schedule: { ...schedule, title: '서버의 최신 초안' }, capabilities: { schedule: true } });
+  mocks.update.mockResolvedValueOnce({ class_id: 'draft-existing', revision: 4 }).mockResolvedValueOnce({ class_id: 'draft-existing', revision: 6 });
+  await mount(false, '/classes/new?draft=draft-existing');
+  await press('초안 저장');
+  expect(box.textContent).toContain('편성을 저장했어요');
+  await act(async () => box.querySelector<HTMLAnchorElement>('a[href="/classes/new?draft=draft-existing"]')!.click());
+  expect(box.querySelector('[data-screen="CH11"]')).not.toBeNull();
+  expect(mocks.getClass).toHaveBeenCalledTimes(2);
+  expect(box.querySelector<HTMLInputElement>('[name="title"]')?.value).toBe('서버의 최신 초안');
+  await press('초안 저장');
+  expect(mocks.update.mock.calls[1][1].expected_revision).toBe(5);
+  expect(mocks.update.mock.calls[1][1].operation_key).not.toBe(mocks.update.mock.calls[0][1].operation_key);
 });

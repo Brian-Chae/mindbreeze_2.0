@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useWizardLeaveGuard } from '../../hooks/useWizardLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { ApiError } from '../../lib/api/client';
@@ -17,7 +17,9 @@ const days = ['월', '화', '수', '목', '금', '토', '일'];
 export function ClassSchedulingWizard() {
   const user = useAuthStore(state => state.user);
   const [search] = useSearchParams();
-  return user ? <Wizard key={`${user.id}:${search.toString()}`} user={user} draftId={search.get('draft')} copyId={search.get('copy')} /> : null;
+  const location = useLocation();
+  // 같은 초안 주소의 재개도 새 진입으로 처리해 완료 상태와 저장 체크포인트를 초기화한다.
+  return user ? <Wizard key={`${user.id}:${location.key}:${search.toString()}`} user={user} draftId={search.get('draft')} copyId={search.get('copy')} /> : null;
 }
 function Wizard({ user, draftId, copyId }: { user: { id: string; role: string }; draftId: string | null; copyId: string | null }) {
   const navigate = useNavigate();
