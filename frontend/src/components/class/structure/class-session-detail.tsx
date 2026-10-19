@@ -35,6 +35,12 @@ export function ClassSessionDetail({ classId, sessionId }: { classId: string; se
     return () => { active = false; };
   }, [sessionId, isHost, session?.status]);
   const manager = detail?.capabilities?.schedule === true;
+  // 현재 클래스 설정으로 추정하지 않고 표시 중인 회차에 저장된 값만 사용한다.
+  const snapshot = isHost ? fullSession?.id === sessionId ? fullSession : null : session;
+  const recordAudio = snapshot && 'record_audio' in snapshot && typeof snapshot.record_audio === 'boolean' ? snapshot.record_audio : null;
+  const linkbandMode = snapshot && 'linkband_mode' in snapshot ? snapshot.linkband_mode : null;
+  const recordingLabel = recordAudio === null ? '음성 녹음 미확인' : recordAudio ? '음성 녹음' : '음성 녹음 안 함';
+  const bandLabel = linkbandMode === 'optional' ? 'LINK BAND 선택' : linkbandMode === 'none' ? 'LINK BAND 사용 안 함' : linkbandMode === 'required' ? 'LINK BAND 필수' : 'LINK BAND 미확인';
   const guide = session?.host_state === 'needs_reassign' ? ['진행 지도사 재배정이 필요해요', '주강사·센터 관리자가 진행자를 다시 배정하면 회차를 열 수 있어요.']
     : session?.host_state === 'pending_ack' ? ['새 지도사의 수락을 기다리고 있어요', '수락한 뒤에 새 진행 지도사가 회차를 열 수 있어요.']
     : session?.status === 'cancelled' ? ['이 회차는 취소됐어요', '회차 번호는 그대로 유지해요. 필요한 경우 편성에서 보강을 추가할 수 있어요.']
@@ -72,7 +78,7 @@ export function ClassSessionDetail({ classId, sessionId }: { classId: string; se
               {detail.host_view?.access_code && <div><dt>클래스 코드</dt><dd><strong className="co-code">{detail.host_view.access_code}</strong><button className={operationButton} onClick={() => void navigator.clipboard.writeText(detail.host_view!.access_code!).then(() => setCopied(true)).catch(() => setPeopleError('코드를 복사하지 못했어요. 직접 선택해 주세요.'))}>{copied ? '복사했어요' : '코드 복사'}</button></dd></div>}
               <div><dt>진행 지도사</dt><dd><UserRound size={18} aria-hidden="true"/>{session.host_state === 'needs_reassign' ? '재배정 필요' : session.host_state === 'pending_ack' ? '수락 대기' : session.host?.name ?? '이름 미확인'}</dd></div>
               <div><dt>장소</dt><dd>{session.location_type === 'offline' ? session.location_address ?? '장소 미확인' : session.location_type === 'online' ? '온라인' : '방식 미확인'}</dd></div>
-              <div><dt>기록</dt><dd>{detail.record_audio ? '음성 녹음' : '음성 녹음 안 함'}{detail.linkband_mode === 'optional' && ' · LINK BAND 선택'}</dd></div>
+              <div><dt>기록</dt><dd>{recordingLabel} · {bandLabel}</dd></div>
             </dl><div className="co-info-actions"><Link className={operationButton} to={`/classes/${classId}/${manager ? 'schedule' : 'sessions'}`}>{manager ? '일정·장소 편집' : '회차 목록'}</Link><ClassSessionCancel detail={detail} session={session} admin={admin} onSaved={retry}/></div></section>
             <section className="co-card"><h2>기록</h2><p className="co-note">{session.status === 'completed' ? '역할에 따라 제공되는 기록과 리포트를 확인해요.' : session.status === 'cancelled' ? '취소된 회차예요. 다른 회차의 기록은 클래스에서 확인해요.' : '회차가 끝난 뒤에 기록과 리포트가 만들어져요. 녹음 동의는 멤버가 시작 전에 선택해요.'}</p>{isHost && session.status === 'completed' && <Link className={operationButton} to={`/sessions/${sessionId}/record`}>기록 보기</Link>}</section>
           </div>
