@@ -451,6 +451,15 @@ def register_session_live_namespace(sio):
         entry_credential = data.get("entry_credential")
         session = await sio.get_session(sid, namespace=_NAMESPACE)
         current_user_id = (session or {}).get("user_id")
+        # 재인증 실패·같은 회차 역할 변경도 기존 민감 룸을 먼저 제거한다.
+        previous=(session or {}).get("session_id")
+        previous_pid=(session or {}).get("participant_id")
+        if previous:
+            for room in (_room_host(previous),_room_all(previous),f"session:{previous}:observer"):
+                await sio.leave_room(sid,room,namespace=_NAMESPACE)
+            if previous_pid:
+                await sio.leave_room(sid,_room_self(previous,previous_pid),namespace=_NAMESPACE)
+        await sio.save_session(sid,{"user_id":current_user_id},namespace=_NAMESPACE)
         # WS-03: connect 이후 계정이 정지·대기·삭제로 바뀐 경우에도 join 을 허용하지 않는다
         # (정지 계정이 유효 토큰 소켓으로 세션 room 에 들어오는 것을 막는다).
         if current_user_id:
@@ -526,10 +535,13 @@ def register_session_live_namespace(sio):
         )
 
         # 상태 이벤트 공용 룸(호스트+참가자)
-        await sio.enter_room(sid, _room_all(session_id), namespace=_NAMESPACE)
+        if role == "observer":
+            await sio.enter_room(sid,f"session:{session_id}:observer",namespace=_NAMESPACE)
+        else:
+            await sio.enter_room(sid, _room_all(session_id), namespace=_NAMESPACE)
         if role == "host":
             await sio.enter_room(sid, _room_host(session_id), namespace=_NAMESPACE)
-        else:
+        elif role == "participant":
             await sio.enter_room(sid, _room_self(session_id, pid), namespace=_NAMESPACE)
 
         # WS-01: 세션별 활성 소켓 추적 — 마지막 소켓 이탈(disconnect/leave) 시 세션 상태를 지운다.
@@ -555,7 +567,7 @@ def register_session_live_namespace(sio):
 
         # 개선 10: 늦게 입장한 회원은 진행 중인 가이드·BGM 에 같은 위치로 합류한다.
         # (상담사 본인은 자기 플레이어가 원본이므로 replay 하지 않는다 — 자기 명령을 되받을 필요 없음)
-        if role != "host":
+        if role == "participant":
             state = audio_state_for(session_id)
             if state is not None:
                 await sio.emit(AUDIO_SYNC_EVENT, state, to=sid, namespace=_NAMESPACE)
@@ -585,6 +597,7 @@ def register_session_live_namespace(sio):
         # 입장했을 수 있는 모든 룸에서 퇴장(멱등 — 없으면 무시)
         await sio.leave_room(sid, _room_host(session_id), namespace=_NAMESPACE)
         await sio.leave_room(sid, _room_all(session_id), namespace=_NAMESPACE)
+        await sio.leave_room(sid,f"session:{session_id}:observer",namespace=_NAMESPACE)
         if pid:
             await sio.leave_room(sid, _room_self(session_id, pid), namespace=_NAMESPACE)
         logger.info("[WS /session-live] sid=%s left session=%s", sid, session_id)
@@ -1009,6 +1022,30 @@ def _store_feature(session_id, participant_id, current_user_id, feature, entry_c
 # ---------------------------------------------------------------------------
 
 
+async def _refresh_instructor_rooms(session_id: str) -> None:
+    """단일 WS 워커에서 민감 이벤트를 보내기 전에 현재 진행·참관 권한을 재검사한다."""
+    sio = _get_sio()
+    for sid, joined in list(_sid_session_ids.items()):
+        if joined != str(session_id):
+            continue
+        try:
+            context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
+        except KeyError:
+            continue
+        if context.get("role") not in ("host", "observer"):
+            continue
+        try:
+            current = await asyncio.to_thread(_resolve_join, session_id, context.get("user_id"), None)
+        except Exception:
+            current = None
+        if current and current.get("role") == context.get("role"):
+            continue
+        for room in (_room_host(session_id), _room_all(session_id), f"session:{session_id}:observer"):
+            await sio.leave_room(sid, room, namespace=_NAMESPACE)
+        await sio.save_session(sid, {"user_id": context.get("user_id")}, namespace=_NAMESPACE)
+        await sio.emit("access_revoked", {"session_id": str(session_id)}, to=sid, namespace=_NAMESPACE)
+
+
 async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
     """세션의 호스트 전체 수신 룸에 실시간 EEG feature 를 브로드캐스트한다.
 
@@ -1017,6 +1054,7 @@ async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
         feature: 브로드캐스트 payload (participant_id, feature, saved 등)
     """
     sio = _get_sio()
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     payload = {"session_id": str(session_id), **feature}
     await sio.emit("eeg_feature", payload, room=room, namespace=_NAMESPACE)
@@ -1026,6 +1064,7 @@ async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
 async def broadcast_session_state(session_id: str, payload: dict) -> None:
     """세션 상태 변경(start/end/cancel)을 공용 룸에 브로드캐스트한다."""
     sio = _get_sio()
+    await _refresh_instructor_rooms(session_id)
     room = _room_all(session_id)
     await sio.emit(
         "session_state_changed",
@@ -1033,12 +1072,18 @@ async def broadcast_session_state(session_id: str, payload: dict) -> None:
         room=room,
         namespace=_NAMESPACE,
     )
+    await sio.emit(
+        "session_state_changed",
+        {"session_id": str(session_id), **{key: payload[key] for key in ("status", "state_version", "started_at", "ended_at") if key in payload}},
+        room=f"session:{session_id}:observer", namespace=_NAMESPACE,
+    )
     logger.info("[WS /session-live] broadcast session_state_changed → %s", room)
 
 
 async def broadcast_participant(session_id: str, payload: dict) -> None:
     """참가자 구성 변경(입장/퇴장/대기열)을 호스트 전체 수신 룸에 브로드캐스트한다."""
     sio = _get_sio()
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(
         "participant_changed",
@@ -1096,6 +1141,7 @@ async def broadcast_quiet_signal(session_id: str, payload: dict) -> None:
     공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다(참여자 간 비노출).
     """
     sio = _get_sio()
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(
         QUIET_SIGNAL_EVENT,
@@ -1112,6 +1158,7 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
     대기 인원은 상담사 관제용이므로 공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다.
     """
     sio = _get_sio()
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(
         "waiting_room_changed",
@@ -1203,6 +1250,7 @@ async def broadcast_audio_sync(session_id: str, payload: dict, *, to: str | None
         await sio.emit(AUDIO_SYNC_EVENT, body, to=to, namespace=_NAMESPACE)
         logger.info("[WS /session-live] emit %s → sid=%s", AUDIO_SYNC_EVENT, to)
         return
+    await _refresh_instructor_rooms(session_id)
     room = _room_all(session_id)
     await sio.emit(AUDIO_SYNC_EVENT, body, room=room, namespace=_NAMESPACE)
     logger.info("[WS /session-live] broadcast %s → %s", AUDIO_SYNC_EVENT, room)
@@ -1242,6 +1290,7 @@ async def broadcast_group_aggregate(session_id: str, payload: dict, *, to: str |
         await sio.emit(GROUP_AGGREGATE_EVENT, body, to=to, namespace=_NAMESPACE)
         logger.info("[WS /session-live] emit %s → sid=%s", GROUP_AGGREGATE_EVENT, to)
         return
+    await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(GROUP_AGGREGATE_EVENT, body, room=room, namespace=_NAMESPACE)
     logger.info("[WS /session-live] broadcast %s → %s", GROUP_AGGREGATE_EVENT, room)
@@ -1298,6 +1347,7 @@ async def broadcast_group_average(
         await sio.emit(GROUP_AVERAGE_EVENT, body, to=to, namespace=_NAMESPACE)
         logger.info("[WS /session-live] emit %s → sid=%s", GROUP_AVERAGE_EVENT, to)
         return
+    await _refresh_instructor_rooms(session_id)
     room = _room_all(session_id)
     await sio.emit(GROUP_AVERAGE_EVENT, body, room=room, namespace=_NAMESPACE)
     logger.info("[WS /session-live] broadcast %s → %s", GROUP_AVERAGE_EVENT, room)

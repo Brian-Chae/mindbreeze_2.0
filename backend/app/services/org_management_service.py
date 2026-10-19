@@ -293,6 +293,8 @@ def change_counselor(org_id: uuid.UUID, user_id: uuid.UUID, admin_id: uuid.UUID,
         active_session = db.query(CounselingSession.id).filter(
             CounselingSession.host_id == user.id,
             CounselingSession.status.in_(["ready", "scheduled", "open", "in_progress"]),
+            # 명상 예정 회차는 소속 해제 트랜잭션에서 needs_reassign으로 넘긴다.
+            ~and_(CounselingSession.type == "meditation", CounselingSession.class_id.isnot(None), CounselingSession.status.in_(["ready", "scheduled"])),
         ).first()
         if active_session:
             raise HTTPException(409, "진행·예정·대기 세션을 먼저 정리해주세요")

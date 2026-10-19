@@ -130,12 +130,13 @@ def test_RG1_client_가_본인이_호스트인_세션도_403(client, route):
 
 @pytest.mark.parametrize("route", ROUTE_NAMES)
 @pytest.mark.parametrize("role", ALLOWED_ROLES)
-def test_RG2_RG3_RG9_허용_3역할은_5개_라우트에서_정상_동작(client, role, route):
+def test_RG2_RG3_RG9_역할별_레거시_동작과_D28_제어_차단(client, role, route):
     """RG-2(counselor·org_admin) + RG-3(platform_admin 현행 보존) + RG-9(역할×라우트 매트릭스 고정)."""
     actor = _make_user(role)
     sid = _make_session(actor)
     res = _call(client, route, actor["h"], sid)
-    assert res.status_code == EXPECTED_OK[route], res.text
+    expected = 403 if role == "org_admin" and route != "create" else EXPECTED_OK[route]
+    assert res.status_code == expected, res.text
 
 
 @pytest.mark.parametrize("route", ROUTE_NAMES)

@@ -27,13 +27,13 @@ _SESSION_TYPE_LABELS = session_terms.type_label_table("report_comment")
 
 def _load_client_report(report_id: str, host_id: str, db: DBSession) -> tuple[Report, Session]:
     """client 리포트 + host 접근 제어 공통 로드 (기존 리포트 접근 제어 재사용)."""
-    from app.services.report_service import _can_access_report, _to_uuid
+    from app.services.report_service import _can_edit_report, _to_uuid
 
     report = db.query(Report).filter(Report.id == _to_uuid(report_id)).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
     if report.type != "client":
         raise HTTPException(status_code=400, detail="내담자 리포트에만 코멘트를 작성할 수 있습니다")

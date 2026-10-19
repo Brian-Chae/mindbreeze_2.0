@@ -158,7 +158,8 @@ class SessionResponse(BaseModel):
     type: SessionType
     custom_type_name: str | None = None
     status: SessionStatus
-    host_id: str
+    host_id: str | None
+    host_state: Literal["assigned", "pending_ack", "needs_reassign"] | None = None
     # SDD-209(B8): 진행자(상담사) 표시 이름 — 참가자 화면에서 호스트 id 대신 이름을 보여준다.
     host_name: str | None = None
     scheduled_at: datetime | None = None

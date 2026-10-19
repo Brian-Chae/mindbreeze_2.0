@@ -197,7 +197,9 @@ def test_upload_failure_is_explicit(export_env, monkeypatch):
     assert job.error_code == 'storage_unavailable'
 
 
-def test_migration_can_render_offline():
+def test_migration_can_render_offline(monkeypatch):
+    # 오프라인 DDL은 테스트 DB(SQLite)가 아닌 실제 마이그레이션 방언으로 렌더링한다. 연결은 없다.
+    monkeypatch.setenv("DATABASE_URL", "postgresql://offline:offline@127.0.0.1/offline_render")
     import subprocess
     import sys
     # Alembic env.py의 fileConfig가 현재 pytest 로거를 변경하지 않도록 별도 프로세스 사용.

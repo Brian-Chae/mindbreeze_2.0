@@ -88,6 +88,18 @@ DEFAULT_NOTIFICATION_PREFERENCES: dict = {
     },
 }
 
+DEFAULT_NOTIFICATION_PREFERENCES["push"] = {"session_updated": True, "session_cancelled": True, "session_host_changed": True, "session_host_change_requested": True}
+
+# SDD-216: 신규 클래스 운영 이벤트는 인앱 켬·이메일 끔으로 시작한다.
+CLASS_NOTIFICATION_EVENTS = (
+    "class_invited", "class_member_joined", "class_session_added", "class_completed", "class_cancelled",
+    "session_host_assigned", "session_host_change_requested", "session_host_change_resolved",
+    "session_host_transfer_requested", "session_host_changed", "session_host_released", "session_host_needed",
+)
+for _event in CLASS_NOTIFICATION_EVENTS:
+    DEFAULT_NOTIFICATION_PREFERENCES["in_app"][_event] = True
+    DEFAULT_NOTIFICATION_PREFERENCES["email"][_event] = False
+
 from app.core.database import Base
 
 

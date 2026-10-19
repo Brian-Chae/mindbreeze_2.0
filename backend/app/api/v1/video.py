@@ -80,6 +80,9 @@ def get_video_url(
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if session.host_id != UUID(current_user["id"]) and current_user.get("role") != "platform_admin":
         raise HTTPException(status_code=403, detail="호스트 상담사만 영상을 조회할 수 있습니다")
+    if current_user.get("role") != "platform_admin":
+        from app.services.session_authz import authorize_session, SessionAction
+        authorize_session(db,current_user["id"],session,SessionAction.VIDEO_RECORD)
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     if not record or not record.video_s3_key:
@@ -107,6 +110,9 @@ def stream_video(
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if session.host_id != UUID(current_user["id"]) and current_user.get("role") != "platform_admin":
         raise HTTPException(status_code=403, detail="호스트 상담사만 영상을 조회할 수 있습니다")
+    if current_user.get("role") != "platform_admin":
+        from app.services.session_authz import authorize_session, SessionAction
+        authorize_session(db,current_user["id"],session,SessionAction.VIDEO_RECORD)
 
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     key = record.video_s3_key if record else None

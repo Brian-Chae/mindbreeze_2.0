@@ -129,6 +129,7 @@ def _serialize(
             object_session(s), [s.host_id, *(p.user_id for p in parts)]
         )
     host_info = users.get(s.host_id) or {}
+    hide_host = not include_participant_pii and s.class_id is not None and s.host_state in ("pending_ack", "needs_reassign")
     waitlist_count = sum(1 for p in parts if p.is_waitlisted)
     return {
         "id": str(s.id),
@@ -137,10 +138,11 @@ def _serialize(
         "type": s.type,
         "custom_type_name": s.custom_type_name,
         "status": s.status,
-        "host_id": str(s.host_id),
-        "host_name": host_info.get("name"),
+        "host_id": None if hide_host else str(s.host_id),
+        "host_name": None if hide_host else host_info.get("name"),
+        "host_state": s.host_state,
         "scheduled_at": s.scheduled_at,
-        "access_code": s.access_code,
+        "access_code": class_code_service.display_code(object_session(s), s),
         "opened_at": s.opened_at,
         "started_at": s.started_at,
         "ended_at": s.ended_at,
@@ -506,6 +508,8 @@ def normalize_reminder_offsets(value) -> list[int]:
 
 
 def create_session(host_id: str, payload, db: DBSession) -> dict:
+    if settings.class_scheduling_enabled and payload.type == "meditation" and not getattr(payload, "is_template", False):
+        raise HTTPException(409, detail={"code": "use_class_scheduling"})
     host_uuid = _to_uuid(host_id)
     from app.services.org_management_service import require_active_user_org
     host = db.get(User, host_uuid)
@@ -760,6 +764,9 @@ def duplicate_session(
     호스트 상담사만 호출할 수 있다.
     """
     source = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DUPLICATE)
+    _require_legacy_mutation(source, db)
+    if settings.class_scheduling_enabled and source.type == "meditation":
+        raise HTTPException(409, detail={"code": "use_class_scheduling"})
     host_uuid = _to_uuid(host_id)
     host = db.get(User, host_uuid)
     if host is None:
@@ -873,6 +880,10 @@ def list_sessions(
 ) -> tuple[list[dict], int]:
     """내 클래스 목록 — 템플릿(is_template=True)은 제외한다(별도 /sessions/templates)."""
     uid = _to_uuid(user_id)
+    actor=db.query(User).filter_by(id=uid).first()
+    if actor and actor.role=="org_admin":
+        # 관리자 일정 메타는 /classes·/counseling DTO로 조회한다.
+        return [],0
     # host 이거나 참여자인 세션을 단일 쿼리로 모은다(중복 제거 포함).
     participates = (
         db.query(SessionParticipant.id)
@@ -907,8 +918,16 @@ def get_session(session_id: str, user_id: str, db: DBSession) -> dict:
     )
 
 
+def _require_legacy_mutation(session,db):
+    if session.class_id:
+        parent=db.query(Class).filter_by(id=session.class_id).first()
+        if parent and parent.recurrence_rule:
+            raise HTTPException(409,detail={"code":"use_class_scheduling_api"})
+
+
 def update_session(session_id: str, host_id: str, payload, db: DBSession) -> dict:
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_UPDATE)
+    _require_legacy_mutation(s,db)
     # SDD-214: 동시 PUT 이 같은 클래스에 서로의 변경을 덮어쓰지 않도록 세션 행을 잠그고 최신 값을 다시 읽는다.
     s = _lock_session_for_capacity(s.id, db) or s
     if s.status in ("completed", "cancelled"):
@@ -1047,6 +1066,7 @@ def delete_session(session_id: str, host_id: str, db: DBSession) -> None:
     플랫폼 관리자 삭제(original_deletion_service)로만 지운다.
     """
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_DELETE)
+    _require_legacy_mutation(s,db)
     # SDD-209(B8 / BE-13): 준비·예정·취소 상태만 삭제할 수 있다. 열림(대기실 개방)·진행 중·완료는 거부 —
     # 열린 클래스는 먼저 취소(닫기)해야 하고, 완료된 기록은 삭제 대상이 아니다. 거부 시 알림·숨김 없음.
     if s.status not in _DELETABLE_STATUSES:
@@ -1086,10 +1106,30 @@ def _close_out_media_on_cancel(s: Session, db: DBSession) -> None:
 
 
 def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
-                      *, restrict_from: set[str] | None = None) -> dict:
+                      *, restrict_from: set[str] | None = None, force: bool = False, confirmed_conflict_fingerprint: str | None = None) -> dict:
     if action not in TRANSITIONS:
         raise HTTPException(status_code=400, detail="알 수 없는 액션입니다")
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_TRANSITION)
+    parent=None
+    if s.class_id:
+        from app.services.class_write_service import lock_class_session,check_conflicts
+        from app.services.session_authz import authorize_session
+        parent,s=lock_class_session(db,s,host_id)
+        authorize_session(db,host_id,s,SessionAction.SESSION_TRANSITION)
+        if parent and parent.recurrence_rule and action in ("open","start"):
+            from app.schemas.class_scheduling import ScheduleRow,WriteCommand
+            row=ScheduleRow.model_construct(client_key=str(s.id),session_id=s.id,seq=s.seq,
+                scheduled_at=_ensure_aware(s.scheduled_at) if s.scheduled_at else _now(),
+                duration_min=s.duration_min,host_id=s.host_id,location_type=s.location_type,location_address=s.location_address)
+            actor=db.query(User).filter_by(id=_to_uuid(host_id)).one()
+            check_conflicts(db,[row],actor,WriteCommand(operation_key="transition",force=force,
+                confirmed_conflict_fingerprint=confirmed_conflict_fingerprint),{s.id},class_id=s.class_id)
+            from app.models.class_scheduling import SessionHostRequest
+            for pending in db.query(SessionHostRequest).filter(SessionHostRequest.session_id==s.id,
+                    SessionHostRequest.status.in_(("requested","pending_ack"))).all():
+                pending.status="expired";pending.resolved_at=_now()
+            s.host_state="assigned"
+
     allowed_from, target = TRANSITIONS[action]
     # STATE-SWEEP-TOCTOU: 호출부가 전이 출발 상태를 더 좁힐 수 있다(예: 스윕은 open 에서만
     #   cancel). effective_from 을 사전 검사와 CAS WHERE 절 양쪽에 사용해, 조회 이후 다른
@@ -1111,15 +1151,6 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
                 s.host_id,
             )
 
-    s.status = target
-    # SDD-015: 실제 시작/종료 시각 기록 (재시작 시 최초 시작 시각은 보존)
-    # SDD-088: 오픈 시각도 최초 1회만 기록 (대기 경과 표시·오픈→시작 지표용)
-    if action == "open" and s.opened_at is None:
-        s.opened_at = _now()
-    elif action == "start" and s.started_at is None:
-        s.started_at = _now()
-    elif action == "end":
-        s.ended_at = _now()
     # SDD-026: 상태 계약 버전 — 전이마다 정확히 +1 증가(계약: SDD-026).
     # STATE-01: 인메모리 선반영(s.state_version += 1) 후 CAS values 에서 다시 +1 을
     # 계산해 DB 에 +2 가 반영되던 문제를 제거한다. 원본 값을 스냅샷해 1회만 증가시킨다.
@@ -1149,6 +1180,9 @@ def transition_status(session_id: str, host_id: str, action: str, db: DBSession,
     if result.rowcount == 0:
         db.rollback()
         raise HTTPException(status_code=409, detail="상태가 이미 변경되었습니다")
+    if parent and parent.recurrence_rule and action in ("end","cancel"):
+        from app.services.class_rolling_service import finish_class_if_due
+        finish_class_if_due(db,parent,now)
     db.commit()
     db.refresh(s)
 
@@ -1275,6 +1309,7 @@ def start_new_run(session_id: str, host_id: str, db: DBSession) -> dict:
     호스트 상담사만 호출할 수 있다.
     """
     s = get_session_authorized(db, session_id, host_id, SessionAction.SESSION_NEW_RUN)
+    _require_legacy_mutation(s,db)
     if s.status in _NON_RESTARTABLE_STATUSES:
         raise HTTPException(
             status_code=400,
@@ -1793,6 +1828,11 @@ def generate_livekit_token(
 def join_session(session_id: str, user_id: str, user_name: str, db: DBSession) -> dict:
     """세션 참여자 입장 처리 — 상태 전이 + WebRTC 룸 ID 생성 + LiveKit 토큰 발급"""
     s = get_session_authorized(db, session_id, user_id, SessionAction.SESSION_JOIN)
+    if s.class_id:
+        parent=db.query(Class).filter_by(id=s.class_id).first()
+        if parent and parent.recurrence_rule and s.status not in ("open","in_progress"):
+            raise HTTPException(409,detail={"code":"session_not_open"})
+
 
     # webrtc_room_id가 없으면 생성 (상태 전이와 분리해 먼저 확정)
     if not s.webrtc_room_id:
@@ -1916,6 +1956,29 @@ def _enter_resolved(
     from app.services import entry_credential_service
 
     member_uid = _to_uuid(user_id) if user_id else None
+    membership=None
+    if s.class_id:
+        parent=db.query(Class).filter_by(id=s.class_id).first()
+        if parent and parent.recurrence_rule:
+            from app.services.class_write_service import lock_class_session
+            from app.services.session_authz import authorize_session
+            from app.services.class_membership_service import invite_members
+            parent,s=lock_class_session(db,s,member_uid)
+            if s.status not in ("open","in_progress"):
+                raise HTTPException(409,detail={"code":"session_not_open"})
+            if member_uid==s.host_id:
+                authorize_session(db,member_uid,s,SessionAction.SESSION_JOIN)
+            elif member_uid:
+                actor=db.query(User).filter_by(id=member_uid).first()
+                if not actor or actor.role!="client" or actor.status!="active":
+                    raise HTTPException(403,detail={"code":"use_observation_endpoint"})
+                invited_makeup=(parent.status=="completed" and s.session_kind=="makeup" and require_invite and
+                    db.query(SessionParticipant).filter_by(session_id=s.id,user_id=member_uid).first() is not None)
+                if not invited_makeup:
+                    membership=invite_members(db,parent,[member_uid],member_uid,_now(),via="code")[0]
+    if s.class_id:
+        from app.services.class_access_service import queue_live_reconcile
+        queue_live_reconcile(db, s.class_id)
     promoted: list[SessionParticipant] = []
     if member_uid is not None and s.host_id == member_uid:
         if require_invite:
@@ -1965,6 +2028,8 @@ def _enter_resolved(
         if participant.is_waitlisted:
             # 재입장이 순번을 앞지르지 못한다 — 정원 여유가 있으면 대기열 앞에서부터 순서대로 승격한다.
             promoted = _promote_waitlist_all(s, db)
+        if membership is not None:
+            participant.member_id=membership.id
         _mark_entered(participant)
         db.commit()
         db.refresh(s)
@@ -2407,6 +2472,10 @@ def set_report_choice(
         participant, db, entry_credential=entry_credential, current_user_id=current_user_id
     )
 
+    if notice_acknowledged and (notice_version not in ("r5-1", "class-team-v1") or
+            (notice_version=="class-team-v1" and s.type!="meditation")):
+        raise HTTPException(422,detail={"code":"invalid_notice_version"})
+
     previous = bool(participant.report_included)
     changed = previous != report_included
     if changed:
@@ -2424,6 +2493,9 @@ def set_report_choice(
     if notice_acknowledged:
         participant.report_notice_ack_at = _now()
         participant.report_notice_version = notice_version
+    if s.class_id:
+        from app.services.class_access_service import queue_live_reconcile
+        queue_live_reconcile(db, s.class_id)
     db.commit()
     db.refresh(participant)
     if changed:
@@ -2504,6 +2576,8 @@ def set_speaking(
     if s.host_id != _to_uuid(host_id):
         raise HTTPException(status_code=403, detail="발언권은 상담사만 부여/해제할 수 있습니다")
 
+    from app.services.session_authz import authorize_session
+    authorize_session(db,host_id,s,SessionAction.LIVE_METRICS_READ)
     participant = _get_participant_in_session(sid, participant_id, db)
 
     # AUTHZ-WAITLIST-SPEAKING: 대기열 참여자는 아직 입장 전이므로 발언권을 부여할 수 없다
@@ -2628,6 +2702,8 @@ def resolve_audio_sync_host(
         raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
     if s.host_id != _to_uuid(current_user_id):
         raise HTTPException(status_code=403, detail="상담사만 재생을 제어할 수 있습니다")
+    from app.services.session_authz import authorize_session
+    authorize_session(db,current_user_id,s,SessionAction.AUDIO_RECORD)
     return {"session_id": str(sid), "status": s.status}
 
 
@@ -2760,7 +2836,7 @@ def get_live_metrics(session_id: str, host_id: str, db: DBSession) -> dict:
         # SDD-026: 상태 계약 버전 + 시작 시각 — join snapshot/이벤트와 동일 계약
         "version": s.state_version or 0,
         "started_at": s.started_at,
-        "access_code": s.access_code,
+        "access_code": class_code_service.display_code(object_session(s), s),
         # WS-SNAPSHOT-METRICS-KEY: join 스냅샷 소비자 계약이 'metrics'(백엔드 내부 핸들러)와
         #   'participants'(프론트 SessionLiveJoinSnapshot)로 갈려 있어 둘 다 노출한다.
         #   REST(/live-metrics)는 response_model 이 'metrics' 만 남기므로 무영향.
@@ -2854,6 +2930,11 @@ def resolve_live_join(
         snapshot = get_live_metrics(str(sid), str(uid), db)
         snapshot["role"] = "host"
         return {"role": "host", "participant_id": None, "snapshot": snapshot}
+
+    if uid is not None:
+        from app.services.class_access_service import can_observe,observer_snapshot
+        if can_observe(db,uid,s):
+            return {"role":"observer","participant_id":None,"snapshot":observer_snapshot(s)}
 
     # 참가자(회원/비회원)
     try:

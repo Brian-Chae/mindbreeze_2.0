@@ -108,7 +108,6 @@ def download_pdf(
     current_user: dict = Depends(require_roles("counselor", "org_admin")),
     db: DBSession = Depends(get_db),
 ):
-    report_service.require_report_host(report_id, current_user["id"], db)
     report = report_service.get_report(report_id, current_user["id"], db)
     if report["status"] != "completed":
         raise HTTPException(409, "승인된 리포트만 PDF로 다운로드할 수 있습니다.")

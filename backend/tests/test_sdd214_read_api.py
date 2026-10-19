@@ -292,7 +292,12 @@ def test_RD15_인증_없으면_401(client):
 )
 def test_RD2_새_API_로_도달하는_세션_집합은_GET_sessions_와_같다(client, world, role_key):
     headers = _h(world, role_key)
-    assert _session_ids_from_parents(client, headers) == _session_ids_from_sessions_api(client, headers)
+    if role_key == "org_admin":
+        # SDD-216 D-28: 기존 본문 목록은 비우고 부모 운영 메타 경로를 사용한다.
+        assert _session_ids_from_sessions_api(client, headers) == set()
+        assert _session_ids_from_parents(client, headers) == {str(world["c2_sessions"][0].id)}
+    else:
+        assert _session_ids_from_parents(client, headers) == _session_ids_from_sessions_api(client, headers)
 
 
 def test_RD2_시드가_역할별로_기대한_집합을_만든다(client, world):
@@ -300,7 +305,7 @@ def test_RD2_시드가_역할별로_기대한_집합을_만든다(client, world)
         return _session_ids_from_sessions_api(client, _h(world, key))
 
     assert len(ids("host_a")) == 5  # 명상 3(숨김 제외) + 상담 2, 템플릿·숨김 클래스 제외
-    assert ids("org_admin") == {str(world["c2_sessions"][0].id)}
+    assert ids("org_admin") == set()
     assert ids("platform_admin") == {str(world["rel_sessions"][0].id)}
     for key in ("unrelated", "removed", "waitcancel"):
         assert ids(key) == set(), key
@@ -486,7 +491,7 @@ def test_클래스_회차_목록_필드와_순서(client, world):
     sessions = client.get(f"{API}/classes/{world['c1'].id}/sessions", headers=_h(world, "member_a")).json()["sessions"]
     # 회원은 자신이 참여한 회차만 본다(GET /sessions 와 동일 범위): seq 1·2
     assert [s["seq"] for s in sessions] == [1, 2]
-    assert set(sessions[0]) == {"id", "seq", "scheduled_at", "status", "session_kind", "host", "host_state"}
+    assert set(sessions[0]) == {"id", "seq", "scheduled_at", "status", "session_kind", "host", "host_state", "state_version", "duration_min", "location_type", "location_address", "assignment_override"}
     assert set(sessions[0]["host"]) == {"id", "name"}
     assert sessions[0]["session_kind"] == "regular" and sessions[0]["host_state"] == "assigned"
 

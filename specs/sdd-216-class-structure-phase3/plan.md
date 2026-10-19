@@ -1,16 +1,16 @@
 # SDD-216 Plan — 명상 클래스 편성·강사 구현 계획
 
-- 실행 갱신: 문서 승인 뒤 Brian의 후속 “진행해”로 백엔드 로컬 구현·테스트에 착수했다. 아래의 문서 워커 범위는 최초 작성 당시 기록이다. push·배포·삭제·메일·머지 금지는 유지한다.
-- 상태: Stage ② 작성. **구현 전 계획이며 아래 Task는 모두 미실행**.
+- 실행 갱신: Brian의 명시적 후속 지시 “아니 괜찮아. 계속 개발 진행해줘”에 따라 백엔드 로컬 구현·테스트를 계속한다. 아래의 문서 워커 범위는 최초 작성 당시 기록이다. push·배포·삭제·메일·머지 금지는 유지한다.
+- 상태: Stage ②는 구현 전 작성. 후속 실행 결과는 [summary.md](summary.md)에 구분한다. 아래 표는 원래 Task와 선행 조건을 유지한다.
 - 목표: 8회 원자 편성·강사 운영·권한을 BE에서 먼저 제공하고, 시안에 맞춘 FE를 두 번째로 출시한다.
 - 구조: 기존 Session 엔진·Class 모델·session_authz·notification outbox를 확장한다. 반복/충돌 계산과 변경 트랜잭션을 분리하고, 단건 생성 함수를 N번 호출하지 않는다.
 - 기술: 현재 저장소 FastAPI·SQLAlchemy·Alembic·PostgreSQL·Celery/OS cron, React·TypeScript·기존 apiClient·Vitest·Playwright 사용. 버전 변경·새 UI 라이브러리 도입 없음.
 - 기준: [spec.md](spec.md), [verify.md](verify.md). 작업 경로: `/Volumes/Looxid SSD/looxid/repository/mindbreeze_2.0-sdd216`.
-- 향후 실행자는 Task별 실패 테스트 → 최소 구현 → 같은 테스트 통과 → 정리 → 파일 소유자 검토 순서를 따른다. 구현 전 승인은 2026-10-19 Brian "승인한다."로 확보했다.
+- 향후 실행자는 Task별 실패 테스트 → 최소 구현 → 같은 테스트 통과 → 정리 → 파일 소유자 검토 순서를 따른다. 구현 전 게이트 문서는 작성되어 있으며, 최신 실행 근거는 Brian의 명시적 개발 계속 지시다.
 
 ## 1. 구현 전 확인·설계 고정
 
-- T00에서 승인 기록·시작 SHA·dirty 파일·허용 경로를 기록한다. 승인: 2026-10-19 Brian "승인한다."(spec·plan·verify·U-216-01 문구/처리).
+- T00에서 승인 기록·시작 SHA·dirty 파일·허용 경로를 기록한다. 실행 근거: Brian의 기본값 적용 지시와 “아니 괜찮아. 계속 개발 진행해줘”.
 - T01에서 신규 API/DTO/오류/권한을 `api-contract.md`에 고정한다(향후 산출물). SDD-215의 코드 대조 → 타입/fixture 고정 → 화면 연결 순서를 재사용한다.
 - 정적 기준 head는 `e036a0000055`. 기존 053~055 수정 금지. 새 번호는 B가 실제 head 확인 후 단일 후속 리비전으로 발급한다. 지금 번호를 선점하거나 마이그레이션 파일을 만들지 않는다.
 - 공유 잠금 순서: 관련 User 행(UUID 오름차순) → Class 행(UUID 오름차순) → Session 행(UUID 오름차순) → 요청/멤버 행 → 코드 발급 잠금. 여러 클래스를 건드리는 정지도 같은 순서를 따른다.
@@ -55,7 +55,7 @@
 
 ## 3. API·모듈 계약
 
-경로 접두는 `/api/v1` 생략. 아래 신규 API는 아직 없다. 기존 읽기 envelope `classes/total`, `sessions/total`, 상세 직접 반환을 유지하되 host nullable·권한 필드 변경을 함께 타입화한다.
+경로 접두는 `/api/v1` 생략. 아래 표는 구현 전 계약이다. 실제 연결·오류·제약은 [api-contract.md](api-contract.md)를 따른다. 기존 읽기 envelope `classes/total`, `sessions/total`, 상세 직접 반환을 유지하되 host nullable·권한 필드 변경을 함께 타입화한다.
 
 ### 3.1 공통 요청/응답
 
@@ -114,7 +114,7 @@
 
 ## 4. 파일 소유 표
 
-**향후 구현 소유권 표이며 이번 문서 수정 경계를 넓히지 않는다.** 트랙마다 별도 워크트리. 같은 파일 수정 금지. 새 발견 경로는 통합 담당 B/F가 이 표에 먼저 배정한다. 기존 파일은 그대로 이름을 쓰며 신규 Python 모듈은 저장소의 snake_case import 관례를 따른다.
+**원래 병렬 구현 소유권 표다. 이번 로컬 BE 실행은 B가 S/I 경로도 순차 소유하고, 보조 리뷰는 읽기 전용으로 수행한다.** 트랙마다 별도 워크트리. 같은 파일 수정 금지. 새 발견 경로는 통합 담당 B/F가 이 표에 먼저 배정한다. 기존 파일은 그대로 이름을 쓰며 신규 Python 모듈은 저장소의 snake_case import 관례를 따른다.
 
 | 트랙/단일 담당 | 독점 경로 | 책임 |
 |---|---|---|
@@ -147,6 +147,16 @@
 - 디자인 원본·과거 SDD 문서·기존 banned 파일은 수정 대상이 아니다. 다른 BE API/WS 구독 경로가 발견되면 B 소유로 명시 추가하고 누락 없이 D-28를 적용한다.
 - 단위 파일명이 현재 없으면 신규, 실제 경로가 다르면 T01에서 문서의 해당 행을 코드와 맞춘 뒤 수정한다. 광범위 문자열 치환 금지.
 
+
+### 로컬 실행의 추가 독점 경로
+
+- B: `backend/app/services/class_operations_service.py`, `backend/tests/pg/sdd216_helpers.py`, `backend/tests/pg/test_sdd216_*.py` 전체. 편성/강사 신규 서비스도 B가 순차 구현하며 같은 워크트리에서 동시 쓰기 없음.
+- B: `backend/tests/pg/test_sdd214_schema.py`, `backend/tests/pg/test_sdd214_create_path.py`, `backend/tests/pg/test_pg_migration_schema.py`. 053~055의 역사적 스키마 테스트와 최신 모델 테스트를 분리하고 D-30 기대값을 반영한다.
+- B: `backend/app/api/v1/notifications.py`, `backend/app/schemas/notification.py`. 임박 변경 푸시 수신 선호의 가산 계약.
+- B: `backend/tests/contract/golden/sessions_openapi.json`, `backend/tests/test_data_exports.py`, `backend/tests/test_mb2_low_fixes_7th.py`, `backend/tests/test_report_email.py`, `backend/tests/test_sdd026_live_session_p0.py`. host nullable 계약, 오프라인 PG 방언, 실제 승인자 fixture, 참관 이벤트 투영을 검증한다.
+- B: `backend/app/services/dev_data_reset.py`, `backend/tests/test_sdd214_reset_guards.py`. 신규 테이블의 범위 분류만 추가하며 실제 초기화는 실행하지 않는다.
+- B: `backend/tests/test_sdd209_b2_report_choice.py`, `backend/tests/test_sdd209_b11_research_consent.py`, `backend/tests/test_sdd210_ci_gates.py`, `backend/tests/test_sdd211_migration_30c1_idempotent.py`, `backend/tests/test_sdd211_session_role_guard.py`, `backend/tests/test_sdd211_member_report_visibility.py`, `backend/tests/test_sdd211_authz_characterization.py`. 고지 버전 fixture·가산 head·D-28 권한 변경 회귀를 담당한다.
+- 문서: 이 폴더의 `api-contract.md`, `summary.md`, `release-checklist.md`. `verify.md`는 구현 전 게이트 원본을 유지하며 실행 결과를 덮어쓰지 않는다.
 
 ## 5. Task 분해·TDD
 

@@ -232,6 +232,8 @@ def _ensure_member(room: ChatRoom, user_id: str, db: DBSession) -> Session | Non
     if not session:
         raise HTTPException(status_code=404, detail="세션을 찾을 수 없습니다")
     if session.host_id == uid:
+        from app.services.session_authz import authorize_session,SessionAction
+        authorize_session(db,uid,session,SessionAction.SESSION_CHAT_ROOM_VIEW)
         return session
     is_participant = (
         db.query(SessionParticipant)

@@ -60,6 +60,11 @@ class Class(Base):
     reminder_offsets: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     recurrence_rule: Mapped[dict | None] = mapped_column(JSONB)
     assignment_rule: Mapped[dict | None] = mapped_column(JSONB)
+    draft_schedule: Mapped[dict | None] = mapped_column(JSONB)
+    ends_on: Mapped[date | None] = mapped_column(Date)
+    generation_cursor: Mapped[date | None] = mapped_column(Date)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    archived_from_status: Mapped[str | None] = mapped_column(String(12))
     access_code: Mapped[str | None] = mapped_column(String(6))
     legacy_access_code: Mapped[str | None] = mapped_column(String(6))
     # 삭제는 숨김(보존 전환). 값이 있으면 모든 ORM 조회에서 제외된다(app/core/database.py).

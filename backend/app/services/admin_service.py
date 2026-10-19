@@ -640,7 +640,7 @@ def serialize_client_detail(user: User, db: Session) -> dict[str, Any]:
 def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
     if not reason or not reason.strip():
         raise HTTPException(status_code=422, detail="정지 사유는 필수입니다")
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).with_for_update().first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
@@ -653,6 +653,8 @@ def suspend_user(user_id: uuid.UUID, reason: str, admin_id: uuid.UUID, db: Sessi
             status_code=status.HTTP_409_CONFLICT,
             detail="초대 미수락(대기) 상태의 계정은 정지할 수 없습니다",
         )
+    from app.services.class_instructor_service import mark_needs_reassign
+    mark_needs_reassign(db, user.id, None, datetime.now(timezone.utc))
     previous_status = user.status
     user.status = "suspended"
     db.add(user)
@@ -733,7 +735,7 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
     토큰·조직 소속·알림만 걷어내고, 호스트 클래스는 숨김 처리하며 원본·리포트는 보존한다.
     실제 삭제는 보관 스위프나 관리자 원본 삭제(original_deletion_service)로만 도달한다.
     """
-    user = db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).with_for_update().first()
     if user is None:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.role == "platform_admin":
@@ -741,6 +743,8 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
     if user.status == "deleted":
         return {"id": str(user_id), "deleted": True}
 
+    from app.services.class_instructor_service import mark_needs_reassign
+    mark_needs_reassign(db, user.id, None, datetime.now(timezone.utc))
     uid = str(user_id)
 
     # 기관의 primary_admin_id/owner_user_id/deactivated_by 참조 해제 (SET NULL)
@@ -758,19 +762,10 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
 
     # 호스트 클래스는 숨김(원본 보존). 이미 숨김인 행은 건드리지 않는다.
     db.execute(
-        text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND hidden_at IS NULL"),
+        text("UPDATE sessions SET hidden_at = :now WHERE host_id = :id AND class_id IS NULL AND hidden_at IS NULL"),
         {"id": uid, "now": datetime.now(timezone.utc)},
     )
-    # SDD-214: 같은 트랜잭션에서, 이 호스트의 세션이 속했고 가시 세션이 0이 된 클래스도 숨긴다(고아 클래스 방지).
-    db.execute(
-        text(
-            "UPDATE classes SET hidden_at = :now WHERE hidden_at IS NULL "
-            "AND id IN (SELECT class_id FROM sessions WHERE host_id = :id AND class_id IS NOT NULL) "
-            "AND NOT EXISTS (SELECT 1 FROM sessions v WHERE v.class_id = classes.id AND v.hidden_at IS NULL)"
-        ),
-        {"id": uid, "now": datetime.now(timezone.utc)},
-    )
-
+    # 명상 클래스·지난 회차는 보존하고 미래 진행자만 재배정 대상으로 남긴다.
     user.status = "deleted"
     db.commit()
     return {"id": uid, "deleted": True}

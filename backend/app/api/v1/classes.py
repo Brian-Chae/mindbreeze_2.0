@@ -1,11 +1,45 @@
-"""클래스(명상 프로그램) 읽기 API (SDD-214). 쓰기 API 는 Phase 3."""
+"""클래스 읽기(SDD-214)와 편성·강사·최소 멤버십(SDD-216) API."""
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
+from app.core.redis import get_redis
+from app.schemas.class_scheduling import (
+    UpdateClassCommand,
+    InstructorRoleCommand,
+    EmailInvitesCommand,
+    ClassCodeInput,
+    HostCorrectionCommand,
+)
+from datetime import datetime, timezone
+from uuid import UUID
+from app.config import settings
+from app.models.class_program import Class, ClassInstructor, ClassMember
+from app.models.class_scheduling import SessionHostRequest
+from app.models.session import Session
+from app.models.user import User
+from app.schemas.class_scheduling import (
+    ScheduleInput,
+    CreateClassCommand,
+    WriteCommand,
+    BulkCommand,
+    DuplicateCommand,
+    AddSessionCommand,
+    TransitionCommand,
+    InstructorCommand,
+    MembersCommand,
+    HostRequestCommand,
+    ResolveHostCommand,
+)
+from app.services import class_write_service as writes
+from app.services.class_access_service import authorize_class_action
 from sqlalchemy.orm import Session as DBSession
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.schemas.class_parent import ClassDetail, ClassListResponse, ClassSessionsResponse
+from app.schemas.class_parent import (
+    ClassDetail,
+    ClassListResponse,
+    ClassSessionsResponse,
+)
 from app.services import class_read_service
 
 router = APIRouter(prefix="/classes", tags=["classes"])
@@ -18,9 +52,574 @@ def list_classes(
     limit: int | None = Query(default=None, ge=1, le=100),
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
-):
-    classes, total = class_read_service.list_classes(current_user["id"], db, status=status, page=page, limit=limit)
+) -> dict:
+    classes, total = class_read_service.list_classes(
+        current_user["id"], db, status=status, page=page, limit=limit
+    )
     return ClassListResponse(classes=classes, total=total)
+
+
+def scheduling_enabled():
+    if not settings.class_scheduling_enabled:
+        raise HTTPException(404, detail={"code": "class_scheduling_disabled"})
+
+
+def load_class_actor(db, class_id, current_user, action="view"):
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    actor = db.query(User).filter(User.id == UUID(str(current_user["id"]))).first()
+    if cls is None:
+        raise HTTPException(404, detail={"code": "class_not_found"})
+    authorize_class_action(db, actor, cls, action)
+    return cls, actor
+
+
+@router.post("/preview-schedule", dependencies=[Depends(scheduling_enabled)])
+def preview_schedule(
+    payload: ScheduleInput,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from types import SimpleNamespace
+    from app.services.class_schedule_service import expand_schedule
+    from app.services.class_conflict_service import (
+        detect_conflicts_bulk,
+        conflict_fingerprint,
+    )
+    from app.services.class_instructor_service import eligible_user
+    import hashlib
+
+    actor = db.query(User).filter(User.id == UUID(str(current_user["id"]))).first()
+    if (
+        not actor
+        or actor.status != "active"
+        or actor.role not in ("counselor", "org_admin")
+    ):
+        raise HTTPException(403, detail={"code": "class_creation_forbidden"})
+    rows = expand_schedule(payload, datetime.now(timezone.utc))
+    for host in {r.host_id for r in rows if r.host_id}:
+        eligible_user(db, SimpleNamespace(organization_id=actor.org_id), host)
+    conflicts = detect_conflicts_bulk(
+        db, rows, set(), current_user, member_ids=payload.member_ids
+    )
+    return {
+        "rows": rows,
+        "conflicts": conflicts,
+        "warnings": [],
+        "input_hash": hashlib.sha256(payload.model_dump_json().encode()).hexdigest(),
+        "conflict_fingerprint": conflict_fingerprint(conflicts),
+        "class_revision": None,
+    }
+
+
+@router.post("", status_code=201, dependencies=[Depends(scheduling_enabled)])
+def create_class(
+    payload: CreateClassCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.create_class(db, current_user["id"], payload)
+
+
+@router.patch("/{class_id}", dependencies=[Depends(scheduling_enabled)])
+def update_class(
+    class_id: UUID,
+    payload: UpdateClassCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.update_class(db, current_user["id"], class_id, payload)
+
+
+@router.post("/{class_id}/schedule/preview", dependencies=[Depends(scheduling_enabled)])
+def preview_bulk(
+    class_id: UUID,
+    payload: BulkCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.preview_bulk(db, current_user["id"], class_id, payload)
+
+
+@router.patch(
+    "/{class_id}/instructors/{user_id}", dependencies=[Depends(scheduling_enabled)]
+)
+def update_instructor(
+    class_id: UUID,
+    user_id: UUID,
+    payload: InstructorRoleCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_instructor_service import add_instructor
+
+    data = {**payload.model_dump(mode="json"), "user_id": str(user_id)}
+
+    def apply(cls, actor, command):
+        row = add_instructor(
+            db, cls, user_id, payload.role, actor.id, payload.scope_session_id
+        )
+        return {"user_id": str(row.user_id), "role": row.role}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, data, "instructor_role", apply
+    )
+
+
+@router.post("/{class_id}/email-invites", dependencies=[Depends(scheduling_enabled)])
+def invite_emails(
+    class_id: UUID,
+    payload: EmailInvitesCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_membership_service import invite_emails
+
+    def apply(cls, actor, data):
+        rows = invite_emails(db, cls, payload.emails, actor.id)
+        return {
+            "invitations": [
+                {"id": str(r.id), "email": r.email_norm, "status": r.status}
+                for r in rows
+            ]
+        }
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, payload, "email_invite", apply, "invite"
+    )
+
+
+@router.post(
+    "/{class_id}/email-invites/{invite_id}/retry",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def retry_email(
+    class_id: UUID,
+    invite_id: UUID,
+    payload: WriteCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_membership_service import retry_email
+
+    data = {**payload.model_dump(mode="json"), "invite_id": str(invite_id)}
+
+    def apply(cls, actor, command):
+        row = retry_email(db, cls, invite_id)
+        return {"invite_id": str(row.id), "status": row.status}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, data, "email_retry", apply, "invite"
+    )
+
+
+async def code_limited(request, redis, code, callback):
+    from app.services import class_code_attempt_service as attempts, class_code_service
+    from starlette.concurrency import run_in_threadpool
+    from app.api.v1.session import _client_ip
+
+    ip = _client_ip(request)
+    await attempts.check_allowed(redis, ip)
+    await attempts.note_code_request(
+        redis, class_code_service.normalize_class_code(code)
+    )
+    try:
+        return await run_in_threadpool(callback)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            await attempts.record_failure(redis, ip)
+        raise
+
+
+@router.post("/resolve-code", dependencies=[Depends(scheduling_enabled)])
+async def resolve_code(
+    payload: ClassCodeInput,
+    request: Request,
+    db: DBSession = Depends(get_db),
+    redis=Depends(get_redis),
+) -> dict:
+    from app.services.class_code_service import resolve_class_code
+
+    return await code_limited(
+        request, redis, payload.code, lambda: resolve_class_code(db, payload.code)
+    )
+
+
+@router.post("/{class_id}/join", dependencies=[Depends(scheduling_enabled)])
+async def join_class(
+    class_id: UUID,
+    payload: ClassCodeInput,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+    redis=Depends(get_redis),
+) -> dict:
+    from app.services.class_code_service import join_class_code
+
+    return await code_limited(
+        request,
+        redis,
+        payload.code,
+        lambda: join_class_code(db, class_id, current_user["id"], payload.code),
+    )
+
+
+@router.post("/{class_id}/publish", dependencies=[Depends(scheduling_enabled)])
+def publish_class(
+    class_id: UUID,
+    payload: WriteCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.publish_class(db, current_user["id"], class_id, payload)
+
+
+@router.post(
+    "/{class_id}/duplicate", status_code=201, dependencies=[Depends(scheduling_enabled)]
+)
+def duplicate_class(
+    class_id: UUID,
+    payload: DuplicateCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.duplicate_class(
+        db, current_user["id"], class_id, payload.model_dump(mode="json")
+    )
+
+
+@router.patch("/{class_id}/sessions/bulk", dependencies=[Depends(scheduling_enabled)])
+def bulk_update(
+    class_id: UUID,
+    payload: BulkCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.bulk_update(
+        db, current_user["id"], class_id, payload.model_dump(mode="json")
+    )
+
+
+@router.post(
+    "/{class_id}/sessions", status_code=201, dependencies=[Depends(scheduling_enabled)]
+)
+def add_session(
+    class_id: UUID,
+    payload: AddSessionCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.add_session(
+        db, current_user["id"], class_id, payload.model_dump(mode="json")
+    )
+
+
+@router.post("/{class_id}/transition", dependencies=[Depends(scheduling_enabled)])
+def transition_class(
+    class_id: UUID,
+    payload: TransitionCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.transition_class(
+        db, current_user["id"], class_id, payload.model_dump(mode="json")
+    )
+
+
+@router.delete("/{class_id}", dependencies=[Depends(scheduling_enabled)])
+def hide_class(
+    class_id: UUID,
+    payload: WriteCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    return writes.transition_class(
+        db,
+        current_user["id"],
+        class_id,
+        {**payload.model_dump(mode="json"), "action": "hide"},
+    )
+
+
+@router.post("/{class_id}/roll-forward", dependencies=[Depends(scheduling_enabled)])
+def roll_forward(
+    class_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_rolling_service import roll_forward
+
+    load_class_actor(db, class_id, current_user, "manage")
+    return roll_forward(db, class_id)
+
+
+@router.get("/{class_id}/instructors")
+def list_instructors(
+    class_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    load_class_actor(db, class_id, current_user, "invite")
+    return {
+        "instructors": [
+            {
+                "user_id": str(i.user_id),
+                "role": i.role,
+                "status": i.status,
+                "scope_session_id": i.scope_session_id,
+            }
+            for i in db.query(ClassInstructor)
+            .filter(ClassInstructor.class_id == class_id)
+            .all()
+        ]
+    }
+
+
+@router.post("/{class_id}/instructors", dependencies=[Depends(scheduling_enabled)])
+def add_instructor(
+    class_id: UUID,
+    payload: InstructorCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_instructor_service import add_instructor
+
+    def apply(cls, actor, data):
+        row = add_instructor(
+            db, cls, payload.user_id, payload.role, actor.id, payload.scope_session_id
+        )
+        return {"user_id": str(row.user_id), "role": row.role, "status": row.status}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, payload, "instructor_add", apply
+    )
+
+
+@router.delete(
+    "/{class_id}/instructors/{user_id}", dependencies=[Depends(scheduling_enabled)]
+)
+def remove_instructor(
+    class_id: UUID,
+    user_id: UUID,
+    payload: WriteCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_instructor_service import remove_instructor
+
+    data = {**payload.model_dump(mode="json"), "user_id": str(user_id)}
+
+    def apply(cls, actor, command):
+        remove_instructor(db, cls, user_id)
+        return {"user_id": str(user_id), "status": "removed"}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, data, "instructor_remove", apply
+    )
+
+
+@router.get("/{class_id}/members")
+def list_members(
+    class_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    load_class_actor(db, class_id, current_user, "invite")
+    return {
+        "members": [
+            {"id": str(m.id), "user_id": str(m.user_id), "status": m.status}
+            for m in db.query(ClassMember)
+            .filter(ClassMember.class_id == class_id)
+            .all()
+        ]
+    }
+
+
+@router.post("/{class_id}/members", dependencies=[Depends(scheduling_enabled)])
+def invite_members(
+    class_id: UUID,
+    payload: MembersCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_membership_service import invite_members
+
+    def apply(cls, actor, data):
+        members = invite_members(
+            db,
+            cls,
+            payload.user_ids,
+            actor.id,
+            datetime.now(timezone.utc),
+            reactivate=payload.reactivate,
+        )
+        return {"member_ids": [str(m.id) for m in members]}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, payload, "invite", apply, "invite"
+    )
+
+
+@router.post(
+    "/{class_id}/sessions/{session_id}/host-requests",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def request_host(
+    class_id: UUID,
+    session_id: UUID,
+    payload: HostRequestCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_instructor_service import apply_host_request
+
+    data = {**payload.model_dump(mode="json"), "session_id": str(session_id)}
+
+    def apply(cls, actor, command):
+        session = (
+            db.query(Session)
+            .filter(Session.id == session_id, Session.class_id == class_id)
+            .with_for_update()
+            .first()
+        )
+        if not session:
+            raise HTTPException(404, detail={"code": "session_not_found"})
+        request = apply_host_request(
+            db, cls, session, command, actor, datetime.now(timezone.utc)
+        )
+        return {"request_id": str(request.id), "status": request.status}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, data, "host_request", apply, "host_request"
+    )
+
+
+@router.post(
+    "/{class_id}/sessions/{session_id}/host-requests/{request_id}/resolve",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def resolve_host(
+    class_id: UUID,
+    session_id: UUID,
+    request_id: UUID,
+    payload: ResolveHostCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_instructor_service import resolve_host_request
+
+    data = {
+        **payload.model_dump(mode="json"),
+        "session_id": str(session_id),
+        "request_id": str(request_id),
+    }
+
+    def apply(cls, actor, command):
+        session = (
+            db.query(Session)
+            .filter(Session.id == session_id, Session.class_id == class_id)
+            .with_for_update()
+            .first()
+        )
+        request = (
+            db.query(SessionHostRequest)
+            .filter(
+                SessionHostRequest.id == request_id,
+                SessionHostRequest.session_id == session_id,
+            )
+            .with_for_update()
+            .first()
+        )
+        if not session or not request:
+            raise HTTPException(404, detail={"code": "host_request_not_found"})
+        resolve_host_request(
+            db,
+            cls,
+            session,
+            request,
+            payload.action,
+            actor,
+            datetime.now(timezone.utc),
+            force=payload.force,
+            fingerprint=payload.confirmed_conflict_fingerprint,
+        )
+        return {"request_id": str(request.id), "status": request.status}
+
+    return writes.mutate_class(
+        db, current_user["id"], class_id, data, "host_resolve", apply, "host_resolve"
+    )
+
+
+@router.post(
+    "/{class_id}/sessions/{session_id}/observe",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def observe(
+    class_id: UUID,
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.services.class_access_service import observe_session
+
+    return observe_session(db, current_user["id"], class_id, session_id)
+
+
+@router.post(
+    "/{class_id}/sessions/{session_id}/host-correction",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def correct_host(
+    class_id: UUID,
+    session_id: UUID,
+    payload: HostCorrectionCommand,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    data = {**payload.model_dump(mode="json"), "session_id": str(session_id)}
+    return writes.correct_host(db, current_user["id"], class_id, data)
+
+
+@router.get("/reassignment-queue", dependencies=[Depends(scheduling_enabled)])
+def reassignment_queue(
+    current_user: dict = Depends(get_current_user), db: DBSession = Depends(get_db)
+) -> dict:
+    from app.models.user_org_membership import UserOrgMembership
+    from app.services.class_access_service import active_membership
+
+    actor = db.query(User).filter_by(id=UUID(str(current_user["id"]))).first()
+    if not actor or actor.status != "active" or actor.role != "org_admin":
+        raise HTTPException(403, detail={"code": "administrator_required"})
+    orgs = [
+        m.org_id
+        for m in db.query(UserOrgMembership)
+        .filter_by(user_id=actor.id, role="org_admin", status="active")
+        .all()
+        if active_membership(db, actor.id, m.org_id, "org_admin")
+    ]
+    rows = (
+        db.query(Session, Class)
+        .join(Class, Class.id == Session.class_id)
+        .filter(
+            Class.organization_id.in_(orgs),
+            Session.host_state == "needs_reassign",
+            Session.status.in_(("ready", "scheduled")),
+        )
+        .order_by(Session.scheduled_at, Session.id)
+        .all()
+    )
+    return {
+        "sessions": [
+            {
+                "class_id": str(cls.id),
+                "session_id": str(row.id),
+                "title": cls.title,
+                "seq": row.seq,
+                "scheduled_at": row.scheduled_at,
+                "host_state": row.host_state,
+            }
+            for row, cls in rows
+        ]
+    }
 
 
 @router.get("/{class_id}", response_model=ClassDetail)
@@ -28,7 +627,7 @@ def get_class(
     class_id: str,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
-):
+) -> dict:
     return class_read_service.get_class_detail(class_id, current_user["id"], db)
 
 
@@ -37,6 +636,8 @@ def list_class_sessions(
     class_id: str,
     current_user: dict = Depends(get_current_user),
     db: DBSession = Depends(get_db),
-):
-    sessions, total = class_read_service.list_class_sessions(class_id, current_user["id"], db)
+) -> dict:
+    sessions, total = class_read_service.list_class_sessions(
+        class_id, current_user["id"], db
+    )
     return ClassSessionsResponse(sessions=sessions, total=total)
