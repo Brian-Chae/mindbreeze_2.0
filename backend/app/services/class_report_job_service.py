@@ -51,23 +51,48 @@ def _digest(action: str, class_id, targets: list[str]) -> str:
 
 # ──────────────────────────── ② 대상 확정 ────────────────────────────
 
-def classify_target(db: DBSession, actor: User, report: Report) -> tuple[str, str | None]:
+def _is_current_lead(db: DBSession, actor: User, class_id) -> bool:
+    """클래스 단위 주강사 여부. 대상마다 다시 계산할 필요가 없다."""
+    if actor is None or actor.status != "active":
+        return False
+    from app.services.class_access_service import class_role
+
+    cls = db.query(Class).filter(Class.id == _to_uuid(class_id)).first()
+    if cls is None:
+        return False
+    return class_role(db, actor, cls) == "lead"
+
+
+def classify_target(
+    db: DBSession,
+    actor: User,
+    report: Report,
+    *,
+    session=None,
+    participant=None,
+    is_lead: bool | None = None,
+) -> tuple[str, str | None]:
     """실행 시점 판정. (state, reason_code) 를 돌려준다.
 
     excluded 는 재시도해도 결과가 달라지지 않는 정책적 제외다.
+    session/participant/is_lead 를 미리 넘기면 조회를 건너뛴다(N+1 방지).
     """
-    from app.services.report_service import can_approve_report
-
-    session = db.query(Session).filter(Session.id == report.session_id).first()
+    if session is None:
+        session = db.query(Session).filter(Session.id == report.session_id).first()
     if session is None:
         return "excluded", "not_target"
 
     # 실행 시점에 권한을 다시 본다 (verify A10).
-    if not can_approve_report(db, actor, session):
+    if is_lead:
+        authorized = actor is not None and actor.status == "active"
+    else:
+        from app.services.report_service import can_approve_report
+
+        authorized = can_approve_report(db, actor, session)
+    if not authorized:
         return "excluded", "forbidden"
 
-    participant = None
-    if report.participant_id:
+    if participant is None and report.participant_id:
         participant = (
             db.query(SessionParticipant)
             .filter(
@@ -171,15 +196,41 @@ def accept_job(
     db.add(job)
     db.flush()
 
+    # N+1 방지: 세션과 참여자를 한 번에 읽어 둔다 (verify B12·B13).
+    session_ids = {r.session_id for r in reports}
+    sessions = {
+        s.id: s for s in db.query(Session).filter(Session.id.in_(session_ids)).all()
+    }
+    participant_ids = {r.participant_id for r in reports if r.participant_id}
+    participants = (
+        {
+            p.id: p
+            for p in db.query(SessionParticipant)
+            .filter(SessionParticipant.id.in_(participant_ids))
+            .all()
+        }
+        if participant_ids
+        else {}
+    )
+    # 클래스 단위 권한은 리포트마다 달라지지 않는다. 회차 호스트 여부만 건별로 본다.
+    approver_is_lead = _is_current_lead(db, actor, class_id)
+
     on_behalf = False
     accepted = 0
     for report in reports:
+        session = sessions.get(report.session_id)
         # 다른 클래스의 리포트를 섞어 보내는 경로를 막는다 (IDOR).
-        session = db.query(Session).filter(Session.id == report.session_id).first()
         if session is None or session.class_id != class_id:
             state, reason = "excluded", "not_target"
         else:
-            state, reason = classify_target(db, actor, report)
+            state, reason = classify_target(
+                db,
+                actor,
+                report,
+                session=session,
+                participant=participants.get(report.participant_id),
+                is_lead=approver_is_lead,
+            )
             if state == "pending" and session.host_id != actor_id:
                 on_behalf = True
         if state == "pending":
@@ -298,14 +349,13 @@ def run_job(db: DBSession, job_id) -> dict:
     return job_result(db, job_id)
 
 
-def retry_job(db: DBSession, job_id, actor_id) -> dict:
-    """실패한 건만 다시 시도한다. succeeded·excluded 는 건드리지 않는다 (verify B7)."""
+def reopen_failed(db: DBSession, job_id, actor_id, *, class_id=None) -> dict:
+    """실패한 건만 pending 으로 되돌린다. succeeded·excluded 는 건드리지 않는다 (verify B7).
+
+    실제 재실행은 호출자(API 백그라운드 또는 retry_job)가 이어서 한다.
+    """
     job_id = _to_uuid(job_id)
-    job = db.query(ClassReportJob).filter(ClassReportJob.id == job_id).first()
-    if job is None:
-        raise HTTPException(404, detail={"code": "job_not_found"})
-    if job.actor_id != _to_uuid(actor_id):
-        raise HTTPException(403, detail={"code": "action_forbidden"})
+    job = _owned_job(db, job_id, actor_id=actor_id, class_id=class_id)
 
     failed = (
         db.query(ClassReportJobItem)
@@ -321,16 +371,32 @@ def retry_job(db: DBSession, job_id, actor_id) -> dict:
         item.error_message = None
     job.status = "running"
     db.commit()
+    return job_result(db, job_id)
+
+
+def retry_job(db: DBSession, job_id, actor_id, *, class_id=None) -> dict:
+    """실패 건을 되돌리고 바로 재실행한다(동기). 테스트·워커용."""
+    reopen_failed(db, job_id, actor_id, class_id=class_id)
     return run_job(db, job_id)
 
 
 # ──────────────────────────── 조회 ────────────────────────────
 
-def job_result(db: DBSession, job_id) -> dict:
-    job_id = _to_uuid(job_id)
-    job = db.query(ClassReportJob).filter(ClassReportJob.id == job_id).first()
+def _owned_job(db: DBSession, job_id, *, actor_id=None, class_id=None) -> ClassReportJob:
+    """작업 소유권을 확인한다. 남의 작업·다른 클래스의 작업은 404 로 가린다 (IDOR)."""
+    job = db.query(ClassReportJob).filter(ClassReportJob.id == _to_uuid(job_id)).first()
     if job is None:
         raise HTTPException(404, detail={"code": "job_not_found"})
+    if class_id is not None and job.class_id != _to_uuid(class_id):
+        raise HTTPException(404, detail={"code": "job_not_found"})
+    if actor_id is not None and job.actor_id != _to_uuid(actor_id):
+        raise HTTPException(403, detail={"code": "action_forbidden"})
+    return job
+
+
+def job_result(db: DBSession, job_id, *, actor_id=None, class_id=None) -> dict:
+    job_id = _to_uuid(job_id)
+    job = _owned_job(db, job_id, actor_id=actor_id, class_id=class_id)
 
     rows = (
         db.query(ClassReportJobItem, Report)
