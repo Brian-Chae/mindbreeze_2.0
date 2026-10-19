@@ -30,6 +30,7 @@
 | 메서드·상대 경로 | 입력·권한 | 결과·핵심 조건 |
 |---|---|---|
 | GET 빈 경로 | 인증, 기존 목록 필터·페이지 | `classes`, `total` |
+| GET `/instructor-candidates` | 편성 스위치 on, 활성 counselor/org_admin·현재 기관 소속. 선택 query `class_id`는 해당 클래스 관리 권한 필요 | `instructors: [{id, name}]`. 기본 현재 기관, class_id 지정 시 해당 클래스 기관의 활성 counselor만. 이메일·연락처 제외 |
 | GET `/{class_id}` | 현재 강사·회원·센터 관리자 | 상세 직접 반환, 관리 권한자만 draft_schedule, capabilities.schedule은 편성 스위치와 관리 권한을 반영한 bool |
 | GET `/{class_id}/sessions` | 부모 가시 범위 | `sessions`, `total`, 미정 host nullable |
 | POST `/preview-schedule` | ScheduleInput, counselor/org_admin | rows/conflicts/warnings/input_hash/conflict_fingerprint/class_revision. 저장 없음 |

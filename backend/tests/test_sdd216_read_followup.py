@@ -14,6 +14,8 @@ from app.models.class_scheduling import ClassEmailInvite, SessionHostRequest
 from app.models.notification import Notification
 from app.models.session import Session
 from app.models.user import User
+from app.models.user_org_membership import UserOrgMembership
+from app.models.organization import Organization
 from app.services.class_effect_service import process_effects
 from app.services.class_instructor_service import _request_effect
 from tests.pg.sdd216_helpers import user, world
@@ -239,3 +241,69 @@ def test_편집_화면에_현재_녹화_채팅_리마인더_설정을_반환한�
             assert detail["record_video"] is True
             assert detail["chat_enabled"] is True
             assert detail["reminder_offsets"] == [60, 180]
+
+
+def test_강사_후보는_같은_기관의_활성_지도사만_반환한다(client, scene):
+    ids, login = scene
+    path = "/api/v1/classes/instructor-candidates"
+    for name in ("lead", "admin"):
+        login(name)
+        for suffix in ("", f'?class_id={ids["cls"]}'):
+            response = client.get(path + suffix)
+            assert response.status_code == 200, response.text
+            rows = response.json()["instructors"]
+            assert {r["id"] for r in rows} == {
+                ids[n] for n in ("lead", "candidate", "other", "guest")
+            }
+            assert all(set(r) == {"id", "name"} for r in rows)
+    login("candidate")
+    assert client.get(path + f'?class_id={ids["cls"]}').status_code == 403
+    login("outsider")
+    assert client.get(path + f'?class_id={ids["cls"]}').status_code == 404
+    with database.SessionLocal() as db:
+        db.get(User, UUID(ids["candidate"])).status = "suspended"
+        db.query(UserOrgMembership).filter_by(
+            user_id=UUID(ids["other"])
+        ).one().status = "suspended"
+        db.commit()
+    login("lead")
+    assert {r["id"] for r in client.get(path).json()["instructors"]} == {
+        ids["lead"],
+        ids["guest"],
+    }
+
+
+def test_강사_후보_조회는_계정_기관_소속과_편성_스위치를_검사한다(
+    client, scene, monkeypatch
+):
+    ids, login = scene
+    path = "/api/v1/classes/instructor-candidates"
+    login("lead")
+    assert client.get(path).status_code == 200
+    monkeypatch.setattr(settings, "class_scheduling_enabled", False)
+    assert client.get(path).status_code == 404
+    monkeypatch.setattr(settings, "class_scheduling_enabled", True)
+    login("member")
+    assert client.get(path).status_code == 403
+    login("lead")
+    with database.SessionLocal() as db:
+        db.get(User, UUID(ids["lead"])).status = "suspended"
+        db.commit()
+    assert client.get(path).status_code == 403
+    with database.SessionLocal() as db:
+        db.get(User, UUID(ids["lead"])).status = "active"
+        db.query(UserOrgMembership).filter_by(
+            user_id=UUID(ids["lead"])
+        ).one().status = "suspended"
+        db.commit()
+    assert client.get(path).status_code == 403
+    with database.SessionLocal() as db:
+        membership = (
+            db.query(UserOrgMembership).filter_by(user_id=UUID(ids["lead"])).one()
+        )
+        membership.status = "active"
+        db.get(Organization, membership.org_id).deactivated_at = datetime.now(
+            timezone.utc
+        )
+        db.commit()
+    assert client.get(path).status_code == 403

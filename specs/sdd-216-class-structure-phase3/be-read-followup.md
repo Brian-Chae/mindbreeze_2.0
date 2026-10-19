@@ -34,3 +34,11 @@
 - 최종 선택 실행: 신규 5개+기존 capability 1개, **6 passed / 1 warning, 1.87초**. `read-followup-green.log`. 로그는 `.superpowers/sdd/plan/` 아래다.
 - 실제 HTTP·SQLite·알림 DB 저장 검증. 외부 메일/푸시·PG·전체 회귀·배포는 이번에 실행하지 않았다. 경고는 crypt 의존성 폐기 예고다.
 - 사용자 정책 결정 없음. FE 구현과 실제 서버 검증은 남아 있다.
+
+## FE 연결 중 추가: 강사 선택 목록
+
+- 구현 전 기록: 일반 지도사는 기존 기관 강사 목록 API를 사용할 수 없어 선택 화면이 막힌다. BF-T4는 `api/v1/classes.py`·동일 신규 테스트·API 계약만 담당한다.
+- GET `/classes/instructor-candidates`: 편성 스위치 on, 활성 counselor/org_admin 및 현재 기관 소속 확인. 기본 현재 기관, 선택 `class_id`를 주면 그 클래스 관리 권한 확인 후 해당 기관. `instructors: [{id, name}]`만 반환한다.
+- BF-07: HTTP 조회에서 같은 기관 활성 counselor만 포함, 관리자/회원/타 기관/정지 계정·소속 제외. 클래스 관리 권한 없는 사용자의 class_id 조회는 차단.
+- BF-08: 회원·정지·기관 소속 해제·기관 비활성·스위치 off 차단. 테스트는 해당 두 함수만 RED, 구현 후 해당 두 함수만 GREEN. DB 변경 없음.
+- BF-T4 구현 결과: 2 failed(기존 상세 라우트로 들어가 400) → **2 passed / 5 deselected / 1 warning, 2.34초**. `candidates-red.log`·`candidates-green.log`. 기존 5개는 변경 영향이 없어 이번 실행에서 제외했다.

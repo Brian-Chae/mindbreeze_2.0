@@ -73,6 +73,46 @@ def load_class_actor(db, class_id, current_user, action="view"):
     return cls, actor
 
 
+@router.get("/instructor-candidates", dependencies=[Depends(scheduling_enabled)])
+def list_instructor_candidates(
+    class_id: UUID | None = Query(default=None),
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from app.models.user_org_membership import UserOrgMembership
+    from app.services.class_access_service import active_membership
+
+    if class_id is not None:
+        cls, _ = load_class_actor(db, class_id, current_user, "manage")
+        org_id = cls.organization_id
+    else:
+        actor = db.query(User).filter(User.id == UUID(str(current_user["id"]))).first()
+        if (
+            actor is None
+            or actor.status != "active"
+            or actor.role not in ("counselor", "org_admin")
+            or not active_membership(db, actor.id, actor.org_id, actor.role)
+        ):
+            raise HTTPException(403, detail={"code": "class_creation_forbidden"})
+        org_id = actor.org_id
+    candidates = (
+        db.query(User)
+        .join(UserOrgMembership, UserOrgMembership.user_id == User.id)
+        .filter(
+            UserOrgMembership.org_id == org_id,
+            UserOrgMembership.status == "active",
+            UserOrgMembership.role == "counselor",
+            User.status == "active",
+            User.role == "counselor",
+        )
+        .order_by(User.name, User.id)
+        .all()
+    )
+    return {
+        "instructors": [{"id": str(row.id), "name": row.name} for row in candidates]
+    }
+
+
 @router.post("/preview-schedule", dependencies=[Depends(scheduling_enabled)])
 def preview_schedule(
     payload: ScheduleInput,
