@@ -7,6 +7,7 @@ from pypdf import PdfReader
 
 from app.api.deps import get_current_user
 from app.main import app
+from app.models.user import User
 from app.services import report_email_service
 from tests.test_sdd052_report_view import _view_report
 
@@ -55,6 +56,9 @@ def test_token_pdf_auth_and_attachment(client):
 
 def test_pdf_requires_host_counselor_and_approval(client):
     db, provider, session, participant, report = _view_report(client)
+    # SDD-216: 리포트 접근은 실제 활성 지도사 계정 기준이다(D-05/D-28). 호스트 행이 없는 가짜 ID 는 허용하지 않는다.
+    db.add(User(id=session.host_id, email="pdf-host-sdd216@example.com", password_hash="unused", name="PDF 지도사", role="counselor", status="active"))
+    db.flush()
     try:
         path = f"/api/v1/reports/{report.id}/pdf"
         app.dependency_overrides[get_current_user] = lambda: {"id": str(session.host_id), "role": "counselor"}
