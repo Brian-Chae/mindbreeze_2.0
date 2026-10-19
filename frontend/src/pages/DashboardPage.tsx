@@ -14,6 +14,7 @@ import {
 import type { SessionType } from '../lib/api/session';
 import { listChatRooms, type ChatRoom } from '../lib/api/chat';
 import { listNotifications, type NotificationDto } from '../lib/api/notifications';
+import { dashboardSessionArea, dashboardSessionPath } from '../lib/class-structure/dashboard-navigation';
 import { useAuthStore } from '../stores/authStore';
 
 const TYPE_LABELS: Record<SessionType, string> = {
@@ -107,7 +108,7 @@ function ClassCard({ cls, onEnter }: { cls: ClassSummary; onEnter?: (id: string)
   return (
     <div className="bg-white border border-[#E8E3EC] rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
-        <Link to={`/sessions/${cls.id}`} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
+        <Link to={dashboardSessionPath(cls)} className="font-bold text-[15px] text-[#1F1F1F] hover:text-[#5F0080] truncate">
           {cls.title || '제목 없음'}
         </Link>
         <StatusBadge status={cls.status} />
@@ -386,7 +387,7 @@ export default function DashboardPage() {
                         </button>
                       ) : (
                         <Link
-                          to={`/sessions/${nextSession.id}`}
+                          to={dashboardSessionPath(nextSession)}
                           className="rounded-lg bg-white px-5 py-2.5 text-[15px] font-extrabold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
                         >
                           상세 보기
@@ -467,9 +468,10 @@ export default function DashboardPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-[15px] font-bold text-[#1F1F1F]">
-                            {cls.title || '제목 없음'}
+                            <Link to={dashboardSessionPath(cls)}>{cls.title || '제목 없음'}</Link>
                           </div>
                           <div className="truncate text-[12px] text-[#6F6F6F]">
+                            {dashboardSessionArea(cls) && <span className="mr-2 inline-flex rounded-full bg-[#F0EAF6] px-2 py-0.5 text-[11px] font-semibold text-[#665185]" aria-label="일정 영역">{dashboardSessionArea(cls)}</span>}
                             {cls.participant_count > 0 ? `참여 ${cls.participant_count}명` : ''}
                             {isToday ? ' · 오늘' : ''}
                           </div>

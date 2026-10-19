@@ -5,6 +5,10 @@ import type { ParticipantMode, SessionStatus, SessionType } from './session';
 
 export interface ClassSummary {
   id: string;
+  class_id?: string | null;
+  counseling_relationship_id?: string | null;
+  area?: 'meditation' | 'counseling' | null;
+  seq?: number | null;
   title: string | null;
   type: SessionType;
   custom_type_name: string | null;

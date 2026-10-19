@@ -5,6 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { HostClassesPage } from '../src/pages/classes/host-classes-page';
 import { HostClassDetailPage } from '../src/pages/classes/host-class-detail-page';
+vi.mock('../src/components/class/structure/class-create-action', () => ({ ClassCreateAction: () => <a href="/classes/new">새 클래스 만들기</a> }));
 const mocks = vi.hoisted(() => ({ list: vi.fn(), detail: vi.fn(), retry: vi.fn() }));
 vi.mock('../src/hooks/use-class-structure', () => ({ useClasses: mocks.list, useClassDetail: mocks.detail }));
 vi.mock('../src/components/class/structure/structure-shell', () => ({ StructureShell: ({ children, rightSlot, title }: {

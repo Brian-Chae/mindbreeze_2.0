@@ -25,7 +25,7 @@ export function MemberStructureHomePage() {
     <section className="sh-scope sh-hero" data-testid="class-hero" aria-label="다음 일정" data-area={next?.area}>
       {next && <div className="sh-hero__bg" style={{ backgroundImage: `url(${heroBackdrop(next.sessionId)})` }} aria-hidden="true" />}
       <div className="sh-hero__in">
-      <div className="sh-hero__row"><span className="sh-hchip">{model.nextIsComplete ? '다음 일정' : '확인된 다음 일정'}</span></div>
+      <div className="sh-hero__row"><span className="sh-hchip">{model.nextIsComplete ? '다음 일정' : '확인된 다음 일정'}</span>{next && <span className="sh-hchip" aria-label="일정 영역">{next.area === 'meditation' ? '명상' : '상담'}</span>}</div>
       {next ? <><h2 className="sh-hero__title">{next.area === 'meditation' ? <><ReadField value={memberValue(next.title)} /> · <ReadField value={nextSeq == null ? undefined : `${nextSeq}회차`} /></> : <ReadField value={nextSeq == null ? undefined : `상담 ${nextSeq}회차`} />}</h2>
         <div className="sh-hbox"><div className="sh-hbox__tx"><b>{next.area === 'meditation' ? '지도사' : '상담사'} · <ReadField value={memberValue(next.hostName)} /></b><span><ReadField value={memberDate(displayField(next.scheduledAt))} /></span></div></div>
         <Link className="sh-hcta" to={`/class/${encodeURIComponent(next.sessionId)}/enter`}>입장하기</Link></>
