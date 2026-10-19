@@ -7,14 +7,15 @@ from app.services.class_operations_service import maintain_classes
 from app.services.class_effect_service import process_effects
 
 
-def main():
+def main() -> int:
     if not settings.class_scheduling_enabled:
         print(json.dumps({"status": "disabled"}))
-        return
+        return 0
     with SessionLocal() as db:
         result = {"maintenance": maintain_classes(db), "effects": process_effects(db)}
     print(json.dumps(result))
+    return 1 if any(part["failed"] for part in result.values()) else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

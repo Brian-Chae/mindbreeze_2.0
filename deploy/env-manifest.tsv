@@ -43,3 +43,6 @@ PIPELINE_QUEUE_SPLIT_ENABLED	static	1	true	SDD-212 — stt/report 줄 분리. �
 PIPELINE_QUEUE_GRACE_SECONDS	static	1	3600	SDD-212 — 정체 스윕 대기 유예(초)
 PIPELINE_REDRIVE_DELAY_SECONDS	static	1	5400	SDD-212 — 체인 미완료 재발행 지연(초)
 PIPELINE_METRICS_CLOUDWATCH_ENABLED	static	1	false	SDD-212 — CloudWatch 지표 게시. AWS 권한 확인·승인 전 활성 금지
+CLASS_SCHEDULING_ENABLED	ssm	0		SDD-216 편성 API·운영 작업 — 미설정 기본 false, 단계별 검증 후 변경
+CLASS_ROLLING_ENABLED	ssm	0		SDD-216 정기형 보충 — 미설정 기본 false, 단계별 검증 후 변경
+CLASS_TEAM_READ_ENABLED	ssm	0		SDD-216 고지 확인 후 팀 열람·참관 — 미설정 기본 false, 단계별 검증 후 변경

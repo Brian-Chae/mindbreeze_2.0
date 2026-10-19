@@ -5,10 +5,12 @@ from app.core.database import SessionLocal
 from app.services.class_operations_service import roll_classes
 
 
-def main():
+def main() -> int:
     with SessionLocal() as db:
-        print(json.dumps(roll_classes(db)))
+        result = roll_classes(db)
+    print(json.dumps(result))
+    return 1 if result["failed"] else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

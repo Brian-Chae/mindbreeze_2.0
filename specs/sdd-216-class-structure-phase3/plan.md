@@ -158,6 +158,14 @@
 - B: `backend/tests/test_sdd209_b2_report_choice.py`, `backend/tests/test_sdd209_b11_research_consent.py`, `backend/tests/test_sdd210_ci_gates.py`, `backend/tests/test_sdd211_migration_30c1_idempotent.py`, `backend/tests/test_sdd211_session_role_guard.py`, `backend/tests/test_sdd211_member_report_visibility.py`, `backend/tests/test_sdd211_authz_characterization.py`. 고지 버전 fixture·가산 head·D-28 권한 변경 회귀를 담당한다.
 - 문서: 이 폴더의 `api-contract.md`, `summary.md`, `release-checklist.md`. `verify.md`는 구현 전 게이트 원본을 유지하며 실행 결과를 덮어쓰지 않는다.
 
+### T26~T27 로컬 출시 준비의 추가 독점 경로
+
+- B: `deploy/ci/ssm-run.sh`, `deploy/render.py`, `deploy/jobs.tsv`, `deploy/env-manifest.tsv`, `deploy/templates/systemd/mindbreeze-*.service.tpl`, `.github/workflows/deploy-dev.yml`. SSM 실행 파일 인용·앱 PREFIX 공백 처리·새 cron 설치 산출물. 실제 서버 실행 없음.
+- B: `backend/class_operations_cron.py`, `backend/class_rolling_cron.py`. 작업 실패 건수를 프로세스 종료 코드로 전달한다.
+- B: `backend/tests/test_sdd210_ci_gates.py`, `backend/tests/test_sdd210_deploy_templates.py`, `backend/tests/test_sdd210_install_release.py`, 신규 `backend/tests/test_sdd216_release.py`. 합성 설치·복귀와 스위치 off 검증.
+- B 추가 요청: `backend/app/services/class_read_service.py`, `backend/tests/test_sdd216_capabilities.py`. 클래스 상세의 편성 활성 여부를 bool로 가산한다. 감독자 소유 `backend/tests/test_sdd070_report_pdf.py`는 수정·stage하지 않는다.
+- 문서: `api-contract.md`, `release-local-verify.md`, `release-checklist.md`, `summary.md`. 기존 `verify.md`의 구현 전 시나리오를 바꾸지 않는다.
+
 ## 5. Task 분해·TDD
 
 총 **40개 Task(T00~T39)**. 각 구현 Task는 아래 5단계를 개별 수행한다. 테스트 이름·입력·정확한 기대값은 verify의 연결 행이 정본이다.
@@ -258,7 +266,9 @@
 
 ## 8. 테스트 실행 계획
 
-아래는 **구현 승인 후 실행할 명령**이다. 신규 테스트 파일은 현재 없다. 이번에는 문서 정적 검증만 수행한다. 환경 변수는 로컬 합성 PG만 사용하며 `.env`/시크릿을 출력하지 않는다.
+- 2026-10-19 사용자 실행 지침: **전체 BE 회귀·전체 수집을 실행하지 않는다.** 개발 중에는 변경한 기능의 실패 재현·직접 관련 테스트만 실행하고 통과 후 반복하지 않는다. 기존 전체 회귀 미완료를 통과로 바꾸지 않는다.
+- 아래는 최초 계획의 명령 예시다. 현재 구현 파일·결과는 summary와 후속 문서를 따른다. FE도 변경별 테스트와 타입/빌드로 진행하고 전체 회귀는 자동 실행하지 않는다.
+- 환경 변수는 로컬 합성 PG만 사용하며 `.env`/시크릿을 출력하지 않는다.
 
 ```bash
 # 저장소 루트: 파일 그래프 확인
@@ -282,12 +292,11 @@ npx vitest run tests/class-structure-data.test.ts tests/class-structure-navigati
 npx playwright test --config=e2e/class-scheduling/playwright.config.ts
 npm run build
 npm run lint
-npm test -- --run
 ```
 
 - B/Q는 PG 필수 4대 시나리오를 CI 차단 단계로 실행한다. PG skip은 통과가 아니다. 2연결 동시성 테스트는 단일 savepoint fixture로 대신하지 않는다.
 - 단위 테스트의 SQLite 통과는 CHECK/FK/행 잠금 증거가 아니다.
-- 전체 backend 회귀는 T01에서 확인한 현재 CI 명령·제외 사유를 그대로 기록하고 T26에서 비교한다. 이전 summary의 3024/77·1874/11 같은 건수를 이번 결과로 쓰지 않는다.
+- 전체 backend 회귀는 이번 로컬 개발에서 제외한다. 별도 CI 결과를 확인하기 전 전체 통과를 주장하지 않는다. 이전 summary의 건수를 이번 결과로 쓰지 않는다.
 - SDD-215 리플레이 방식: 로컬 앱 + designs 상위 루트 정적 시안 서버, 합성 역할/API·고정 시계·외부 네트워크 차단. 신규 config는 두 프로젝트 `replay`/`local-api`로 분리한다. 로컬 API 프로젝트만 합성 PG를 사용한다.
 - capture 산출 경로는 Q의 evidence 아래 실행별 SHA 디렉터리. 원본 시안 수정·앱을 정답 스크린샷으로 자동 승인 금지.
 - 브라우저·픽셀·PG·실제 서비스·실기기는 별도 결과로 기록한다.

@@ -68,16 +68,16 @@
 - `EXPLAIN (ANALYZE, BUFFERS)`도 같은 실행에서 기록했다. SQL 실행 시간은 각각 0.142ms/1.539ms이고 전체 함수 지연과 다르다. 넓은 일정의 Python 후보 비교 비용이 남아 있다.
 - 운영 p95나 200ms 달성으로 보고하지 않는다. 재실행하면 로컬 부하·플래너 통계에 따라 값이 달라질 수 있다.
 
-### 전체 회귀 실행의 제한과 남은 실패
+### 최초 BE 구현 시 전체 회귀의 제한과 당시 남은 실패
 
 - 중간 전체 BE 실행: **3027 passed / 39 failed / 12 skipped**, 1164.05초. `.superpowers/sdd/plan/backend-full.log`.
 - 실행 도중 코드가 변경되어 이 결과를 최종 전체 스위트 또는 변경 전 기준선으로 사용하지 않는다.
 - 39건 중 31건은 정책 변경 기대값·fixture·head·임시 경로·구현 문제 수정 후 관련 파일 재실행에서 통과했다.
-- 남은 8건: 변경하지 않은 배포 스크립트가 테스트 임시 절대경로의 `Looxid SSD` 공백을 처리하지 못한다.
+- 당시 남은 8건(아래 §6 출시 준비에서 후속 처리): 변경하지 않은 배포 스크립트가 테스트 임시 절대경로의 `Looxid SSD` 공백을 처리하지 못한다.
   - `test_sdd210_ci_gates.py::test_ssm_run_은_원격_종료코드를_전달한다`: `deploy/ci/ssm-run.sh`의 `$AWS` 확장에서 경로 분리.
   - `test_sdd210_install_release.py` 7개: 첫 설치, 두 번째 설치, 헬스 실패 복귀, 복귀 실패, 파괴적 마이그레이션 승인, 활성 timer, 보관 개수. `deploy/render.py`의 PREFIX 공백 거부로 실패하거나 후속 파일이 없음.
 - 배포 스크립트와 설치 테스트 원본은 수정하지 않았다. 별도 깨끗한 기준 커밋에서 이 8건을 재실행하지 않았으므로 “기준선에서도 통과/실패했다”고 단정하지 않는다. 경로 제한이 없는 Linux CI 결과는 미확인이다.
-- 따라서 **전체 BE 테스트 전부 통과·출시 게이트 G1 완료로 보고하지 않는다**. 최종 재실행한 로컬 PG·관련 회귀만 통과로 기록한다.
+- 최초 구현 종료 시점에는 **전체 BE 테스트 전부 통과·출시 게이트 G1 완료로 보고하지 않았다**. 최종 재실행한 로컬 PG·관련 회귀만 통과로 기록한다.
 
 ## 3. Task·검증 진행 상태
 
@@ -117,3 +117,79 @@ python -m pytest tests/pg/test_sdd216_performance.py --confcutdir=tests/pg -q -s
 - 이 폴더 `spec.md`, `plan.md`, `api-contract.md`, `release-checklist.md`, `summary.md`. `verify.md` 변경 없음.
 - 사용자 정책 결정 필요: **없음**. U-216-01은 요청한 기본값 적용. 배포·팀 열람 활성화·최종 리뷰는 별도 실행 게이트다.
 - 미확인: 실제 dev/prod DB head·배포·cron 설치, 실제 메일/푸시/리마인더 수신, LiveKit 송출 거부/연결 회수·WS 배포 토폴로지, FE·시안·실기기/BLE, Linux 전체 CI·운영 성능.
+
+
+## 6. 후속: 백엔드 출시 준비
+
+- 실행 근거: Brian의 “좋아. 다음 단계 진행해줘”. 시작 HEAD `36d42741`, 시작 시 미커밋 변경 없음. 이전 결과 커밋은 `fb0347b6`이다.
+- `36d42741`의 develop 병합과 회원 화면 변경은 이 후속 작업 이전 상태이며 이번 작업에서 병합하지 않았다.
+- 범위: T26 남은 일반 회귀, T27의 배포 설정·복귀 산출물. T27 실제 배포와 T28 이후 FE는 실행하지 않았다.
+- 제품·테스트 수정은 기존 워크트리에서 B 담당 1명이 수행했다. 별도 읽기 전용 리뷰에서 발견한 복귀 누락은 실패 테스트를 먼저 확인한 뒤 수정했다.
+- 구현 전 `verify.md` 원본 유지. 이번 출시 준비 기대값은 [release-local-verify.md](release-local-verify.md)에 분리했다. 원래 40 Task·79 검증 행 수는 그대로이며 추가 출시 검증은 RL-01~08이다.
+
+### 변경
+
+| 경로·영역 | 결과 |
+|---|---|
+| `deploy/ci/ssm-run.sh` | AWS 실행 파일 경로를 인용해 `Looxid SSD` 공백 경로를 한 인자로 유지 |
+| `deploy/render.py`·앱 systemd 템플릿 8개 | 앱 전용 PREFIX의 일반 공백 허용·ExecStart 경로 인용. 인프라 공백 및 제어·인용·확장 문자는 계속 거부 |
+| `deploy/jobs.tsv`·`deploy/env-manifest.tsv` | 매분 운영·매시 롤링 작업 추가. 활성 timer 15→17. 세 스위치는 선택 SSM 값이며 미지정은 기본 off |
+| `deploy-dev.yml` | cron 진입점 두 파일을 번들에 포함. 중복 실행 잠금과 cron 두 행 등록. 등록 시 스위치 자동 활성화 없음 |
+| dev 실패 복귀 | 배포 전 클래스 cron 두 행·진입점 두 파일을 보관해 복원. 기존 파일이 없었으면 새 파일만 제거. 다른 작업의 신규 등록 유지 |
+| cron 진입점 두 개 | 처리 실패 건수가 있으면 종료 코드 1. 실패 없거나 off면 0. 결과 JSON 유지 |
+| 테스트·문서 | 신규 출시 테스트, 기존 렌더·설치 기대값 갱신, 소유 경로·실제 반영 전 확인 목록 보완 |
+
+### 실패 재현과 후속 실행
+
+| 실행 | 결과·해석 | 로그 |
+|---|---|---|
+| 이전 배포 회귀 8건 재현 | 8 failed / 28 passed. 실제 공백 경로 문제 확인 | `release-red.log` |
+| 추가 앱 렌더·cron/환경 기대값 | 7 failed / 35 passed | `render-red.log` |
+| dev 번들·등록 | 1 failed / 2 passed | `dev-cron-red.log` |
+| cron 실패 종료 코드 | 5 failed / 3 passed → 0/1 반환 수정 | `cron-exit-red.log` |
+| dev 실패 복귀 | 이전 작업 있음/없음 2 failed → snapshot/restore 수정 | `rollback-red.log` |
+| 수정 후 선택 회귀 4파일 | 87 passed / 1 failed. 실패는 cron 프로세스 시작의 20초 제한 초과. 이전 공백 경로 8건과 복귀는 통과 | `release-focused.log` |
+| 동일 코드·동일 20초 제한 재실행 | 신규 출시 10 passed / 1 warning, 17.61초. 임계 시간을 늘리지 않음 | `release-cron-recheck.log` |
+| 일반 BE 전체 CI 명령, 추가 요청 전 | 감독자 커밋·capability 추가 요청 수신 후 중단. 1612 passed / 179 skipped / 1 deselected / 64 warnings, 841.36초. 전체 통과 증거 아님 | `release-full.log` |
+| 추가 요청 반영 후 일반 BE 전체 CI 명령 | 장시간 진행 지연으로 중단: 1407 passed / 169 skipped / 1 deselected / 55 warnings, 1987.56초. 전체 통과 증거 아님 | `release-full-final.log` |
+| 같은 코드의 전체 수집 목록 | 3279/3280 collected, 1 deselected. 232.11초 | `release-collected.log` |
+| 남은 항목 분할 실행 | 41 passed / 2 warnings, 438.64초 후 중단. 사용자 중지 요청에 따라 소유 테스트 프로세스 종료. 전체 통과 증거 아님 | `release-full-rest.log` |
+| 정적 검사 | YAML·원격 셸·SSM 셸·수정 Python AST 통과, 89 리비전·단일 head 056 | 로컬 명령 결과 |
+
+- 로그 경로는 모두 `.superpowers/sdd/plan/` 아래다. 선택 회귀와 전체 실행은 중복되므로 건수를 합산하지 않는다.
+- off 프로세스 제한 초과는 별도 `-X importtime` 진단에서 정상 off 종료했고 같은 테스트 재실행도 통과했다. 최초 시간 초과 사실은 유지하며 서비스 동작 오류로 단정하지 않는다.
+- 전체 실행 시작·분할 재개 시 추적 중인 backend/deploy/.github 파일과 새 테스트의 SHA-256이 동일함을 확인했다. 중지 직후 최종 대조는 수행하지 않았다.
+- 단일 실행 중 진행 지연과 로컬 스왑 약 20GB 사용을 관찰했다. 특정 제품 결함으로 단정하지 않는다. 중단 요약 후 종료 대기 중이던 자기 pytest만 종료했고 다른 작업 프로세스는 건드리지 않았다.
+- 분할 실행은 수집 순서의 앞 1576개와 뒤 1704개(1개 중복)를 대조하려 했으나 미완료다. `release-all-nodes.json`·`release-remaining-nodes.json`에 목록을 보관한다. 분할 결과를 단일 전체 명령의 정상 종료나 원격 Linux CI 통과로 보고하지 않는다.
+- DB 모델·마이그레이션 변경 없음. 아래 추가 요청으로 읽기 서비스 capability만 가산했다. 기존 PG 181건은 §2의 이전 실행 근거이며 이번 전체 일반 테스트의 PG skip을 그 재실행으로 보고하지 않는다.
+
+### 남은 출시 조건
+
+- 이 워커의 push·dev 배포·마이그레이션·스위치 전환·cron 설치 미실행. 감독자 추가 지시로 push는 감독자가 담당한다. 이 워커는 자기 파일만 명시적으로 stage해 로컬 커밋한다.
+- 현재 dev 워크플로는 FE 빌드도 함께 반영한다. 이번 1차는 BE 기능 출시이며, 실제 배포할 기존 FE SHA·빌드도 확인해야 한다.
+- 실제 dev/prod 구성·Linux CI·메일/푸시·LiveKit·WS·FE 구현/시안/실기기는 미확인 또는 미실행 상태다.
+- 새 비즈니스 정책 결정 항목 없음. 기본값 유지. SDD 전체 완료 및 최종 Review 승인을 받은 것으로 표시하지 않는다.
+
+
+## 7. 감독자 추가 요청: FE 편성 CTA 권한
+
+- 감독자가 제공한 PR #18 CI 실패 수정 커밋 `eb26f41f`가 현재 로컬 HEAD에 반영된 것을 확인했다. `backend/tests/test_sdd070_report_pdf.py`는 감독자 소유 변경이며 이 워커가 수정·stage하지 않는다. 원격 CI 상태는 직접 확인하지 않았다.
+- `GET /api/v1/classes/{id}`에 `capabilities.schedule: bool`을 가산했다. 현재 클래스의 주강사·같은 센터 관리자이고 편성 스위치가 켜진 경우에만 true다. 기존 manage·invite는 유지한다.
+- 실제 설정 필드는 `settings.class_scheduling_enabled`다. 계정·센터 소속·강사 상태는 기존 `class_role` 판정을 재사용한다. 권한 범위를 확대하지 않는다.
+- API 계약에 FE CTA 조건 `capabilities.schedule === true`와 off에서 읽기 유지 규칙을 기록했다.
+- 테스트 함수 1개 추가: 실제 GET 상세에서 off/on × 주강사/센터 관리자/보조강사/회원 8조합. 최초 시드의 필수 joined_via 누락을 고친 뒤 `KeyError: schedule` 실패를 확인하고 제품 코드를 수정했다. 시드 오류를 기능 RED로 집계하지 않는다.
+- 추가 검증 SC-01은 이 필드 구현 전에 계약 문서와 테스트에 작성했다. 원래 40 Task·79 QA, 출시 검증 RL 8개와 별개다.
+- 로컬 커밋 `9cff4593`: 읽기 서비스·신규 테스트·API 계약 3파일만 포함. push 없음.
+- 관련 실행: `test_sdd216_capabilities.py`, `test_sdd214_read_api.py`, `test_sdd070_report_pdf.py`에서 **51 passed / 10 skipped / 2 warnings, 50.65초**. `.superpowers/sdd/plan/capabilities-green.log`.
+- 최초 PDF 10건 skip은 기본 검색 경로에서 WeasyPrint 시스템 라이브러리를 불러오지 못한 결과다. 설치된 Homebrew 라이브러리 경로를 별도 테스트 프로세스에 지정해 재실행했다.
+- PDF 별도 실행: **10 passed / 7 warnings, 12.30초**. 감독자가 수정한 `test_pdf_requires_host_counselor_and_approval` 포함. `.superpowers/sdd/plan/pdf-native.log`. 코드·의존성 설치 변경 없이 `DYLD_FALLBACK_LIBRARY_PATH`를 Python 프로세스 안에서 pango/glib/cairo/harfbuzz/libffi/fontconfig/freetype의 `/opt/homebrew/opt/<이름>/lib`로 지정했다. `XDG_CACHE_HOME`은 워크트리 안으로 고정했다. 실제 Linux CI 결과는 감독자가 확인한다.
+- 이 워커의 FE 코드 변경은 없으며 FE 트랙 결과·실제 배포 여부는 미확인이다.
+
+## 8. 후속: 전체 회귀 제외·FE 연결 조회 보완
+
+- 사용자 지시로 전체 BE 회귀를 더 실행하지 않는다. 선택 테스트가 통과하면 코드·계약을 커밋하고 다음 구현으로 진행한다. 전체 회귀 통과 주장은 하지 않는다.
+- 점검 결과 이전 T02~25 완료 보고에는 FE에서 다시 조회할 경로 3건이 빠져 있었다. `b1df4787`에서 진행자 요청 조회·알림 request_id, 이메일 초대 전달 결과 조회, 현재 녹화/채팅/리마인더 설정 반환을 보완했다.
+- [be-read-followup.md](be-read-followup.md): 구현 전 3 Task·6 시나리오, 신규 5개 RED 확인. 최종 선택 테스트 **6 passed / 1 warning, 1.87초**. DB 마이그레이션 변경 없음.
+- 기존 출시 설정은 앞의 선택 실행·정적 검사 근거로 별도 로컬 커밋한다. 이번 단계에서 전체 테스트를 다시 실행하지 않는다.
+- 사용자가 FE 하위 에이전트 진행을 명시했다. 지정 루트 안 `.claude/worktrees/sdd216-fe-followup`, 브랜치 `sdd/216-fe-followup`, 시작 `b1df4787`에서 별도 작업한다. BE 배포 전 로컬 FE 구현을 진행하되 실제 배포와 시안 검증 완료로 표시하지 않는다.
+- 다음 구현: FE API/DTO·마법사 → 일괄 편집·강사/멤버/설정 운영 → 고지·참관·권한 UI. 완료 내용은 FE 후속 문서·커밋으로 별도 확인한다.

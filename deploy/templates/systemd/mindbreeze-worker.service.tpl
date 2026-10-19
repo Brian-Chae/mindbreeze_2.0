@@ -10,7 +10,7 @@ User=@@SERVICE_USER@@
 Group=@@SERVICE_USER@@
 WorkingDirectory=@@PREFIX@@/current/backend
 EnvironmentFile=@@ENV_FILE@@
-ExecStart=@@PREFIX@@/venv/bin/celery -A app.core.celery_app:celery_app worker -Q celery --concurrency=1 --prefetch-multiplier=1 --hostname=main@%H --loglevel=INFO
+ExecStart="@@PREFIX@@/venv/bin/celery" -A app.core.celery_app:celery_app worker -Q celery --concurrency=1 --prefetch-multiplier=1 --hostname=main@%H --loglevel=INFO
 Restart=on-failure
 RestartSec=5
 # PrivateTmp 미사용: 백엔드가 쓰는 호스트 /tmp 의 청크를 읽어야 한다.

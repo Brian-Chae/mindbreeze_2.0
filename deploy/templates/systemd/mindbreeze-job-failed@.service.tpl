@@ -7,4 +7,4 @@ Type=oneshot
 User=@@SERVICE_USER@@
 Group=@@SERVICE_USER@@
 EnvironmentFile=-@@ENV_FILE@@
-ExecStart=@@PREFIX@@/current/deploy/notify-job-failure.sh %i
+ExecStart="@@PREFIX@@/current/deploy/notify-job-failure.sh" %i

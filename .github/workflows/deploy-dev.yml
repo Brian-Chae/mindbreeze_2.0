@@ -86,6 +86,8 @@ jobs:
             backend/upgrade_narrative_cache_cron.py \
             backend/sweep_stale_eeg_raw_cron.py \
             backend/sweep_stale_media_cron.py \
+            backend/class_operations_cron.py \
+            backend/class_rolling_cron.py \
             backend/deploy/mindbreeze-worker.service \
             backend/deploy/mindbreeze-email-worker.service \
             backend/deploy/mindbreeze-export-worker.service \
@@ -125,6 +127,45 @@ jobs:
             [ -d backend/app ]     && cp -r backend/app "$BACKUP_DIR/app" || true
             [ -d backend/alembic ] && cp -r backend/alembic "$BACKUP_DIR/alembic" || true
 
+            # SDD-216: 클래스 작업 두 개의 이전 등록과 진입점을 함께 보관한다.
+            snapshot_class_jobs() {
+              local snapshot="$BACKUP_DIR/class-jobs"
+              mkdir -p "$snapshot"
+              if ! LC_ALL=C crontab -l > "$snapshot/all-crontab" 2> "$snapshot/crontab-error"; then
+                if ! grep -q 'no crontab for' "$snapshot/crontab-error"; then
+                  echo "클래스 작업 백업 실패: crontab을 읽을 수 없습니다." >&2
+                  return 1
+                fi
+              fi
+              grep -E 'class_(operations|rolling)_cron[.]py([[:space:]]|$)' "$snapshot/all-crontab" > "$snapshot/rows" || true
+              for name in class_operations_cron.py class_rolling_cron.py; do
+                if [ -f "$BASE/backend/$name" ]; then cp -p "$BASE/backend/$name" "$snapshot/$name"; fi
+              done
+              touch "$snapshot/ready"
+            }
+            restore_class_jobs() {
+              local snapshot="$BACKUP_DIR/class-jobs"
+              [ -f "$snapshot/ready" ] || return 0
+              if ! LC_ALL=C crontab -l > "$snapshot/current-crontab" 2> "$snapshot/crontab-error"; then
+                if ! grep -q 'no crontab for' "$snapshot/crontab-error"; then
+                  echo "클래스 작업 복귀 실패: 현재 crontab을 읽을 수 없습니다." >&2
+                  return 1
+                fi
+              fi
+              # 배포 중 추가된 다른 작업은 유지하고 클래스 작업만 복귀한다.
+              grep -Ev 'class_(operations|rolling)_cron[.]py([[:space:]]|$)' "$snapshot/current-crontab" > "$snapshot/restored-crontab" || true
+              for name in class_operations_cron.py class_rolling_cron.py; do
+                if [ -f "$snapshot/$name" ]; then
+                  cp -p "$snapshot/$name" "$BASE/backend/$name"
+                else
+                  rm -f "$BASE/backend/$name"
+                fi
+              done
+              cat "$snapshot/rows" >> "$snapshot/restored-crontab"
+              crontab - < "$snapshot/restored-crontab"
+            }
+            snapshot_class_jobs
+
             # 롤백 트랩: 스크립트가 실패(set -e 로 조기 종료)하면 이전 버전을 복원한다.
             # 성공 경로에서는 DEPLOY_OK=1 로 확정해 롤백을 막는다.
             DEPLOY_OK=0
@@ -137,6 +178,7 @@ jobs:
                 if [ -d "$BACKUP_DIR/dist" ]; then rm -rf dist; cp -r "$BACKUP_DIR/dist" dist; fi
                 if [ -d "$BACKUP_DIR/app" ]; then rm -rf backend/app; cp -r "$BACKUP_DIR/app" backend/app; fi
                 if [ -d "$BACKUP_DIR/alembic" ]; then rm -rf backend/alembic; cp -r "$BACKUP_DIR/alembic" backend/alembic; fi
+                restore_class_jobs
                 sudo systemctl restart mindbreeze-backend 2>/dev/null || true
                 sudo systemctl restart mindbreeze-worker 2>/dev/null || true
                 sudo systemctl restart mindbreeze-email-worker 2>/dev/null || true
@@ -302,6 +344,10 @@ jobs:
             (crontab -l 2>/dev/null | grep -v 'process_push_outbox_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_PROJECT_ID=$(grep -E ^FCM_PROJECT_ID= ./.env.dev | head -1 | cut -d= -f2-) && export FCM_SERVICE_ACCOUNT_JSON=$(grep -E ^FCM_SERVICE_ACCOUNT_JSON= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PUBLIC_KEY=$(grep -E ^VAPID_PUBLIC_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_PRIVATE_KEY=$(grep -E ^VAPID_PRIVATE_KEY= ./.env.dev | head -1 | cut -d= -f2-) && export VAPID_SUBJECT=$(grep -E ^VAPID_SUBJECT= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python process_push_outbox_cron.py >> /var/log/mindbreeze-push-outbox.log 2>&1') | crontab -
             # SDD-191: AI 비서 안부 대화(체크인) 아웃리치 스윕 cron 등록 (매 5분)
             (crontab -l 2>/dev/null | grep -v 'sweep_agent_checkins_cron'; echo '*/5 * * * * cd /home/ubuntu/mindbreeze/backend && export DATABASE_URL=$(grep -E ^DATABASE_URL= ./.env.dev | head -1 | cut -d= -f2-) && export REDIS_URL=$(grep -E ^REDIS_URL= ./.env.dev | head -1 | cut -d= -f2-) && venv/bin/python sweep_agent_checkins_cron.py >> /var/log/mindbreeze-agent-checkins.log 2>&1') | crontab -
+            # SDD-216: 클래스 운영/정기 보충. Settings가 .env.dev를 읽으며 기능 스위치 기본값은 off다.
+            # 같은 작업의 겹친 실행은 flock으로 건너뛴다. 롤링 함수가 서버 시간대와 무관하게 KST 02시를 판정한다.
+            (crontab -l 2>/dev/null | grep -v 'class_operations_cron'; echo '* * * * * cd /home/ubuntu/mindbreeze/backend && flock -n -E 0 .class_operations.lock venv/bin/python class_operations_cron.py >> /var/log/mindbreeze-class-operations.log 2>&1') | crontab -
+            (crontab -l 2>/dev/null | grep -v 'class_rolling_cron'; echo '0 * * * * cd /home/ubuntu/mindbreeze/backend && flock -n -E 0 .class_rolling.lock venv/bin/python class_rolling_cron.py >> /var/log/mindbreeze-class-rolling.log 2>&1') | crontab -
             # SDD-188: cron 로그 파일은 ubuntu 가 /var/log 에 직접 만들 수 없어(Permission denied) cron 이 실행되지 못했다 → 미리 생성·소유권 부여
             for f in $(crontab -l | grep -o '/var/log/mindbreeze-[a-z-]*\.log' | sort -u); do sudo touch "$f" && sudo chown ubuntu:ubuntu "$f"; done
             # cron 프로세스의 SQLAlchemy echo(DEBUG=true) 로 로그가 폭증하는 것을 막는다 (crontab 환경변수 줄)
