@@ -8,10 +8,19 @@ const client = (name, fn, o) => scenario(`[내담자] ${name}`, async (p) => { a
 await client('홈: 인사·담당 상담사·이번 주 클래스 영역', async (p) => { await expectText(p, '/app', '안녕하세요, E2E-내담자님', '담당 상담사', '이번 주 클래스'); });
 // SDD-209: 달력 제거(D-5②) — 목록(예정/지난 클래스 섹션)이 보이는지 확인한다.
 await client('클래스: 목록 표시(달력 없음)', async (p) => {
-  const t = await expectText(p, '/app/sessions', '클래스', '클래스 신청하기');
+  const t = await expectText(p, '/app/classes', '내 클래스', '클래스 신청하기');
   // 클래스가 하나도 없으면 목록 섹션 대신 빈 안내가 보인다(초기화 직후 신규 E2E 내담자) — 둘 중 하나면 통과.
-  await p.locator('.sh-list-sec, :text("아직 예정된 클래스가 없어요")').first().waitFor({ timeout: 10000 });
+  await p.locator('a[href^="/app/classes/"], :text("아직 클래스가 없어요")').first().waitFor({ timeout: 10000 });
   if (/달력/.test(t)) throw new Error('달력 문구가 남아 있음');
+});
+await client('코드로 입장하기: 홈에서 /join 으로 이동', async (p) => {
+  await go(p, '/app');
+  await p.getByTestId('enter-with-code').click();
+  await p.waitForURL((u) => u.pathname === '/join', { timeout: 8000 });
+});
+await client('구 경로 /app/sessions → /app/classes 이동', async (p) => {
+  await go(p, '/app/sessions');
+  await p.waitForURL((u) => u.pathname === '/app/classes', { timeout: 8000 });
 });
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
 await client('채팅: 루시·담당 상담사 대화방 노출', async (p) => { await expectText(p, '/app/chat', '루시', 'E2E-상담사'); });
@@ -68,10 +77,10 @@ await cou('클래스: 목록·클래스 만들기 버튼(달력·타임라인 �
   const text = await expectText(p, '/sessions', '클래스 만들기');
   if (/예약 만들기|타임라인|달력/.test(text)) throw new Error('캘린더·예약 모달 문구가 남아 있음');
 });
-await cou('클래스 만들기: 버튼 → /sessions/new 마법사(예약 모달 없음)', async (p) => {
-  await go(p, '/sessions');
-  await p.getByRole('button', { name: /클래스 만들기/ }).first().click();
-  await p.waitForURL((u) => u.pathname === '/sessions/new', { timeout: 8000 });
+await cou('클래스 만들기: 링크 → /classes/new 마법사(예약 모달 없음)', async (p) => {
+  await go(p, '/classes');
+  await p.getByRole('link', { name: /클래스 만들기/ }).first().click();
+  await p.waitForURL((u) => u.pathname === '/classes/new', { timeout: 8000 });
   await p.getByText('클래스 만들기').first().waitFor({ timeout: 8000 });
 });
 await cou('클래스 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {

@@ -26,8 +26,12 @@ ROOT = out("rev-parse", "--show-toplevel") or sys.exit("git 저장소 안에서 
 NUM = re.compile(r"(?:^|/)(?:sdd-)?(\d{3})-")
 
 def sync():
-    git("fetch", "-q", "--prune", "origin", cwd=ROOT)
-    git("fetch", "-q", "origin", "+refs/sdd-claims/*:refs/sdd-claims/*", cwd=ROOT)
+    # fetch 실패(오프라인·권한)를 무시하면 낡은 정보로 이미 쓰인 번호를 또 발급할 수 있으므로 즉시 중단한다.
+    for args in (("fetch", "-q", "--prune", "origin"),
+                 ("fetch", "-q", "origin", "+refs/sdd-claims/*:refs/sdd-claims/*")):
+        r = git(*args, cwd=ROOT)
+        if r.returncode:
+            sys.exit("원격 동기화 실패 — 번호를 발급하지 않았습니다(네트워크·권한 확인 후 재시도):\n" + r.stderr.strip()[:300])
 
 def base_ref():
     for r in ("origin/develop", "origin/main"):
@@ -60,7 +64,9 @@ def collect():
         m = re.search(r"/sdd/(\d{3})", line)
         if m: add(m.group(1), "원격브랜치", line.split("origin/")[-1])
     for line in out("for-each-ref", "--format=%(refname)", "refs/sdd-claims", cwd=ROOT).splitlines():
-        add(line.rsplit("/", 1)[1], "예약", "")
+        tail = line.rsplit("/", 1)[1]
+        if tail.isdigit():  # 사람이 손으로 만든 비숫자 참조는 무시
+            add(tail, "예약", "")
     for line in out("for-each-ref", "--format=%(refname:short)", "refs/heads/sdd", cwd=ROOT).splitlines():
         m = re.match(r"sdd/(\d{3})", line)
         if m: add(m.group(1), "로컬브랜치", line)
@@ -80,8 +86,8 @@ def cmd_new(args):
     if len(pos) < 2:
         sys.exit('사용법: scripts/sdd new "한글 제목" <영문-슬러그> [--worktree] [--dry-run]')
     title, slug = pos[0].strip(), pos[1].strip().lower()
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", slug):
-        sys.exit("슬러그는 영문 소문자·숫자·하이픈 2~41자여야 합니다: %r" % slug)
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,38}[a-z0-9]", slug) or "--" in slug:
+        sys.exit("슬러그는 영문 소문자·숫자·하이픈 2~40자, 하이픈으로 시작·끝나거나 연속 불가: %r" % slug)
     if not re.search(r"[가-힣]", title):
         sys.exit("제목은 한글로 쓰세요(이해하기 쉬운 한 줄 설명): %r" % title)
     sync()
