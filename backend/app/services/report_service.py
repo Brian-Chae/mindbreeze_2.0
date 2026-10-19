@@ -1038,7 +1038,14 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
         db.query(Class).filter_by(id=session.class_id).populate_existing().with_for_update().one()
         session=db.query(Session).filter_by(id=session.id).populate_existing().with_for_update().one()
         report=db.query(Report).filter_by(id=rid).populate_existing().with_for_update().one()
-    if not _can_edit_report(host_id, session, db):
+    # SDD-218 D-36: 클래스 회차는 현재 주강사의 대행 승인을 허용한다.
+    # 클래스에 속하지 않은 상담 세션은 기존 판정(_can_edit_report)을 그대로 쓴다.
+    if session is not None and session.class_id:
+        actor = db.query(User).filter(User.id == _to_uuid(host_id)).first()
+        approved = can_approve_report(db, actor, session)
+    else:
+        approved = _can_edit_report(host_id, session, db)
+    if not approved:
         raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
 
     # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.
