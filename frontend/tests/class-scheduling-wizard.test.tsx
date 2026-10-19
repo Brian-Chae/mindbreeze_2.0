@@ -4,12 +4,14 @@ import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ClassSchedulingWizard } from '../src/pages/classes/class-scheduling-wizard';
-const mocks = vi.hoisted(() => ({ candidates: vi.fn(), preview: vi.fn(), create: vi.fn() }));
+const mocks = vi.hoisted(() => ({ candidates: vi.fn(), preview: vi.fn(), create: vi.fn(), getClasses: vi.fn(), getClass: vi.fn() }));
 vi.mock('../src/lib/api/class-scheduling', () => ({ schedulingApi: mocks }));
+vi.mock('../src/lib/api/class-structure', () => ({ getClasses: mocks.getClasses, getClass: mocks.getClass }));
+vi.mock('../src/components/class/structure/class-member-picker', () => ({ ClassMemberPicker: ({ onChange }: { onChange: (items: { userId: string; name: string }[]) => void }) => <button onClick={() => onChange([{ userId: 'member-one', name: '회원' }])}>회원 선택</button> }));
 vi.mock('../src/stores/authStore', () => ({ useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: 'u1', name: '지도사', role: 'counselor' } }) }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let box: HTMLDivElement; let root: Root;
-async function mount() { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '*', element: <ClassSchedulingWizard /> }])} />)); }
+async function mount(start = true) { box = document.createElement('div'); document.body.append(box); root = createRoot(box); await act(async () => root.render(<RouterProvider router={createMemoryRouter([{ path: '*', element: <ClassSchedulingWizard /> }])} />)); if (start) await press('처음부터 만들어요이름·일정·강사를 새로 정해요'); }
 afterEach(async () => { if (root) await act(async () => root.unmount()); box?.remove(); vi.clearAllMocks(); });
 it('4단계와 기본값을 표시하고 이름 없이 다음 단계에 가지 않는다', async () => {
   mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
@@ -52,4 +54,44 @@ it('충돌 동의 없이는 생성하지 않는다', async () => {
   await mount(); await input('title', '마음 명상'); await press('다음'); await press('다음'); await press('다음'); await press('클래스 만들기');
   expect(mocks.create).not.toHaveBeenCalled(); expect(box.textContent).not.toContain('비공개 제목');
   expect(box.textContent).toContain('겹치는 일정을 확인해 주세요');
+});
+
+it('시작 방법에서 완료된 실제 클래스 목록을 읽고 선택할 때만 복제를 진행한다', async () => {
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  mocks.getClasses.mockResolvedValue({ classes: [{ id: 'class-old', title: '지난 명상', schedule_mode: 'fixed', planned_session_count: 8, session_count: 8, status: 'completed' }], total: 1 });
+  await mount(false);
+  expect(box.querySelector('[data-screen="CH10"]')).not.toBeNull();
+  await press('지난 클래스 그대로 시작해요요일·시각·횟수·강사 배정을 가져와요');
+  expect(mocks.getClasses).toHaveBeenCalledWith({ status: 'completed', limit: 20 }, expect.any(AbortSignal));
+  expect(box.querySelector('[role="dialog"]')?.textContent).toContain('지난 명상');
+  expect([...box.querySelectorAll('button')].find(x => x.textContent === '이 클래스로 시작')?.disabled).toBe(true);
+});
+it('기본 정보는 승인된 중앙 카드·하단 버튼 구조와 단계점을 사용한다', async () => {
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  await mount();
+  expect(box.querySelector('.fl-body .fl-col .fl-card.strong')).not.toBeNull();
+  expect(box.querySelector('.fl-foot .fl-btn.primary')?.textContent).toBe('다음');
+  expect(box.querySelectorAll('.fl-steps li')).toHaveLength(4);
+  expect(box.querySelector('.cs-sidebar')).toBeNull();
+});
+it('회원 선택 변경은 이전 충돌 검사를 폐기하고 재검사한 UUID로 생성한다', async () => {
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  mocks.preview.mockResolvedValue({ rows: [{ client_key: 'regular:2026-12-21', seq: 1, scheduled_at: '2026-12-21T10:00:00Z', host_id: 'u1', duration_min: 60 }], conflicts: [], conflict_fingerprint: 'fp' });
+  mocks.create.mockImplementation(() => new Promise(() => {}));
+  await mount(); await input('title', '마음 명상'); await press('다음'); await press('다음'); await press('다음');
+  await press('회원 선택'); await press('클래스 만들기');
+  expect(mocks.create).not.toHaveBeenCalled();
+  await press('초대할 멤버의 일정 확인'); await press('클래스 만들기');
+  expect(mocks.preview.mock.calls.at(-1)[0].member_ids).toEqual(['member-one']);
+  expect(mocks.create.mock.calls[0][0].schedule.member_ids).toEqual(['member-one']);
+});
+it('초안 저장 완료는 공개 코드나 발송 완료를 꾸미지 않고 이어서 하기 경로를 표시한다', async () => {
+  mocks.candidates.mockResolvedValue({ instructors: [{ id: 'u1', name: '지도사' }] });
+  mocks.create.mockResolvedValue({ class_id: 'draft-one', revision: 1 });
+  await mount(); await input('title', '임시 명상'); await press('초안 저장');
+  expect(box.querySelector('[data-screen="CH15"]')).not.toBeNull();
+  expect(box.textContent).toContain('편성을 저장했어요');
+  expect(box.querySelector('a[href="/classes/new?draft=draft-one"]')).not.toBeNull();
+  expect(box.textContent).not.toContain('클래스 코드');
+  expect(mocks.getClass).not.toHaveBeenCalled();
 });
