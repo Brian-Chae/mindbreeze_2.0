@@ -44,7 +44,7 @@ const messages: Record<string, string> = {
   stale_class: '다른 변경이 먼저 저장됐어요. 최신 내용을 불러온 뒤 다시 확인해 주세요.',
   stale_session: '회차가 변경됐어요. 최신 내용을 불러온 뒤 다시 확인해 주세요.',
   operation_key_reused: '저장할 내용이 변경됐어요. 다시 확인해 주세요.',
-  conflicts_require_confirmation: '겹치는 일정을 확인한 뒤 다시 저장해 주세요.',
+  schedule_conflict: '겹치는 일정을 확인한 뒤 다시 저장해 주세요.',
 };
 export function schedulingError(error: unknown): string {
   if (error instanceof ApiError) {

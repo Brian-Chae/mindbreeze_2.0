@@ -18,7 +18,7 @@ export interface ScheduleInput {
 }
 export interface WriteCommand { operation_key: string; expected_revision?: number; force?: boolean; confirmed_conflict_fingerprint?: string; reason?: string }
 export interface ConflictItem { candidate_key: string; kind: 'host' | 'place' | 'member'; starts_at: string; ends_at: string; parent_title: string | null; seq: number | null; visible: boolean }
-export interface SchedulePreview { rows: ScheduleRow[]; conflicts: ConflictItem[]; warnings: string[]; input_hash: string; conflict_fingerprint: string; class_revision: number | null }
+export interface SchedulePreview { rows: ScheduleRow[]; conflicts: ConflictItem[]; warnings?: string[]; input_hash?: string; conflict_fingerprint: string; class_revision: number | null }
 export interface WriteResult { class_id: string; revision: number; session_ids?: string[]; effects_pending?: number }
 export interface CreateCommand extends WriteCommand { schedule: ScheduleInput; status: 'draft' | 'active' }
 export interface BulkCommand extends WriteCommand { action: 'shift_week' | 'replace' | 'cancel'; session_ids: string[]; expected_state_versions: Record<string, number>; rows: ScheduleRow[] }

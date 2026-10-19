@@ -45,6 +45,7 @@ const OrgManagementPage = lazy(() => import('./pages/org/OrgManagementPage'));
 const OrgCounselorsPage = lazy(() => import('./pages/org/OrgCounselorsPage'));
 const MyRequestsPage = lazy(() => import('./pages/org/MyRequestsPage'));
 const CredentialDashboardPage = lazy(() => import('./pages/credentials/CredentialDashboardPage'));
+const ClassSchedulingWizard = lazy(() => import('./pages/classes/class-scheduling-wizard').then((m) => ({ default: m.ClassSchedulingWizard })));
 const CreateWizardContainer = lazy(() => import('./components/class/flow/host/CreateWizardContainer').then((m) => ({ default: m.CreateWizardContainer })));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SessionLivePage = lazy(() => import('./pages/sessions/SessionLivePage'));
@@ -207,7 +208,7 @@ const router = createBrowserRouter(
         <Route path="/sessions/new" element={<RoleGuard role={['counselor', 'org_admin']}><Navigate to="/classes/new" replace /></RoleGuard>} />
         <Route path="/sessions/:id" element={<RoleGuard role={['counselor', 'org_admin']}><LegacySessionRedirect /></RoleGuard>} />
         <Route path="/classes" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassesPage /></RoleGuard>} />
-        <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><CreateWizardContainer /></RoleGuard>} />
+        <Route path="/classes/new" element={<RoleGuard role={['counselor', 'org_admin']}><ClassSchedulingWizard /></RoleGuard>} />
         <Route path="/classes/:classId" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         <Route path="/classes/:classId/sessions" element={<RoleGuard role={['counselor', 'org_admin']}><HostClassDetailPage /></RoleGuard>} />
         {/* 기존 상세가 읽는 내부 파라미터 이름 id를 유지한다(값은 회차 식별자다). */}
