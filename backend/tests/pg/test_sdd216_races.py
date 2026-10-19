@@ -6,7 +6,7 @@ from threading import Barrier
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session as DBSession
 
@@ -116,8 +116,9 @@ def test_last_seat_two_invites_never_overfill(pg_engine, frozen):
             MembersCommand(
                 operation_key=str(uuid4()), expected_revision=revision, user_ids=[mid]
             ),
-            {"id": str(aid)},
-            db,
+            background_tasks=BackgroundTasks(),
+            current_user={"id": str(aid)},
+            db=db,
         )
 
     results = race(pg_engine, *[invite(mid) for mid in members])
@@ -135,8 +136,9 @@ def test_last_seat_two_invites_never_overfill(pg_engine, frozen):
                     expected_revision=db.get(Class, cid).revision,
                     user_ids=[loser],
                 ),
-                {"id": str(aid)},
-                db,
+                background_tasks=BackgroundTasks(),
+                current_user={"id": str(aid)},
+                db=db,
             )
         assert exc.value.status_code == 409
 
