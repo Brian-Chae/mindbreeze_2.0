@@ -6,7 +6,7 @@ EEG·녹음·전사·리포트 본문과 상담사 메모는 어떤 응답에도
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Area = Literal["meditation", "counseling"]
 
@@ -67,6 +67,9 @@ class ClassDetail(ClassSummary):
     location_address: str | None = None
     linkband_mode: str
     record_audio: bool
+    record_video: bool = False
+    chat_enabled: bool = False
+    reminder_offsets: list[int] = Field(default_factory=list)
     capacity: int
     participant_mode: str
     default_duration_min: int

@@ -46,17 +46,22 @@
 | GET/POST `/{class_id}/instructors` | 조회 또는 강사 추가 입력 | 동일 센터 active counselor. guest는 scope_session_id 필요 |
 | PATCH/DELETE `/{class_id}/instructors/{user_id}` | 역할 변경/제거, 공통 쓰기 입력 | 마지막 lead 제거·미진행 배정이 남은 제거·다른 진행 회차를 잃는 guest 축소는 409 |
 | POST `/{class_id}/sessions/{session_id}/host-requests` | candidate_host_id, request_kind, 회차 버전, 충돌 확인 | request_id/status. 후보와 확정 host 분리 |
+| GET `/{class_id}/sessions/{session_id}/host-requests` | 편성 스위치 on, 현재 강사·같은 센터 관리자 | `requests`: 관리자는 전체, 다른 강사는 본인이 요청자/후보/현재 진행자인 요청만. guest는 지정 회차만. 상태 전체 반환 |
 | POST `/{class_id}/sessions/{session_id}/host-requests/{request_id}/resolve` | action(approve/accept/reject/cancel), 공통 입력 | 후보/관리자/요청자 권한 분리. 수락 시 최신 충돌 fingerprint 재확인 |
 | POST `/{class_id}/sessions/{session_id}/host-correction` | mode(correct/note), reason, 후보 또는 displayed_host_name | 승인 전 귀속 정정, 승인 후 append-only 표시 메모 |
 | GET/POST `/{class_id}/members` | 조회 또는 user_ids·reactivate·공통 입력 | active 1행, 미래 정규 expected. 수료·탈퇴 회원 재초대는 명시 reactivate |
 | POST `/{class_id}/email-invites` | emails·공통 쓰기 입력 | 주소 정규화·중복 제거·전달 의도. 회원 신원·동의 자동 생성 없음 |
+| GET `/{class_id}/email-invites` | 편성 스위치 on, lead/assistant/org_admin | `invitations`: 해당 클래스의 현재 전달 상태 목록. 조회는 발송·재시도하지 않음 |
 | POST `/{class_id}/email-invites/{invite_id}/retry` | 공통 쓰기 입력 | failed만 pending 재처리. 실제 메일은 별도 워커 |
 | POST `/resolve-code` | code, 기존 시도 제한 | 공개 부모·입장 가능한 일정, 개인정보 목록 없음 |
 | POST `/{class_id}/join` | 인증 회원·code, 시도 제한 | 코드와 부모 일치 검증 후 최소 멤버십. 미래 회차 자동 시작 없음 |
 | POST `/{class_id}/sessions/{session_id}/observe` | 현재 lead/assistant, 새 고지·팀 스위치 | 참관 token/room_name/snapshot. participant 생성 없음 |
 | GET `/reassignment-queue` | 센터 관리자 | 같은 센터 needs_reassign 운영 메타 |
 
-- 성공한 DB 저장과 외부 전달 성공은 구분한다. 생성의 `invitation_results`는 현재 빈 배열이며 이메일 전달 결과는 이메일 초대 API에서 조회한다.
+- 성공한 DB 저장과 외부 전달 성공은 구분한다. 생성의 `invitation_results`는 현재 빈 배열이며 이메일 전달 결과는 GET 이메일 초대 API에서 조회한다.
+- 요청 조회 항목: `id`, `session_id`, `requested_by`, `candidate_host_id`, `request_kind`, `status`, `expected_state_version`, `expires_at`, `created_at`, `resolved_at`. 이유 본문은 반환하지 않는다. 생성 시각·ID 순서. 요청 조회 후 처리는 기존 resolve API가 최신 상태·권한을 재검사한다.
+- 이메일 조회 항목: `id`, `email`, `status`(pending/sent/failed), `created_at`, `sent_at`. 생성 시각·ID 순서. sent는 발송 함수 성공 기록이며 수신함 도착 증거가 아니다.
+- GET 클래스 상세는 `record_video: bool`, `chat_enabled: bool`, `reminder_offsets: int[]`의 현재 저장값도 반환한다. FE는 전체 설정 저장 시 조회값을 유지한다.
 - `effects_pending`은 생성 회차의 준비 의도 수다. 클래스 전체 outbox 잔량이나 전달 성공 건수가 아니다.
 - draft에는 실제 회차·코드·멤버·전달 의도가 없다. 부분 생성 성공 응답은 없다.
 - 숨김과 상태 변경도 `operation_key`를 사용한다. 동일 키 재시도는 권한이 유지되는 가시 클래스에서 처리한다.
@@ -89,6 +94,7 @@
 
 - 클래스 전달 의도→`notify_event(commit=False)`→Notification/NotificationOutbox→효과 완료를 같은 DB 커밋으로 처리한다.
 - 요청/수락 결과, 가입, 추가 회차, 배정·변경, 재배정, 클래스 종료 이벤트를 생산한다. 일괄 변경은 묶어서 전달한다. 수락 대기 행 때문에 확정된 다른 행 알림이 누락되지 않도록 확정 행을 선택한다.
+- 진행자 변경·양도 요청 알림의 `extra.params.request_id`로 요청을 식별한다. 알림 ID로 권한을 인정하지 않으며 조회·resolve에서 현재 권한을 검사한다.
 - `GET/PUT /api/v1/notifications/preferences`에 `push` 맵 추가. 시작 60분 이내 확정 변경은 해당 push 선호를 확인해 기존 push outbox에 적재한다. 실제 FCM/Web Push는 이번 실행에서 호출하지 않았다.
 - LiveKit 참관 토큰: identity=`observer:{user_id}`, TTL 60초, canPublish=false, canPublishData=false. 토큰만으로 이미 연결된 사용자의 권한 회수를 대신하지 않는다.
 - 참관 WS 방은 `session:{session_id}:observer`. 상태·버전·시각만 투영하며 EEG·참여자·기기 payload를 포함하지 않는다. 민감 이벤트 직전 현재 역할을 재검사한다.

@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 from app.config import settings
 from app.models.class_program import Class, ClassInstructor, ClassMember
-from app.models.class_scheduling import SessionHostRequest
+from app.models.class_scheduling import ClassEmailInvite, SessionHostRequest
 from app.models.session import Session
 from app.models.user import User
 from app.schemas.class_scheduling import (
@@ -163,6 +163,35 @@ def update_instructor(
     return writes.mutate_class(
         db, current_user["id"], class_id, data, "instructor_role", apply
     )
+
+
+@router.get("/{class_id}/email-invites", dependencies=[Depends(scheduling_enabled)])
+def list_email_invites(
+    class_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    cls, _ = load_class_actor(db, class_id, current_user, "invite")
+    if cls.hidden_at is not None:
+        raise HTTPException(404, detail={"code": "class_not_found"})
+    rows = (
+        db.query(ClassEmailInvite)
+        .filter(ClassEmailInvite.class_id == class_id)
+        .order_by(ClassEmailInvite.created_at, ClassEmailInvite.id)
+        .all()
+    )
+    return {
+        "invitations": [
+            {
+                "id": str(row.id),
+                "email": row.email_norm,
+                "status": row.status,
+                "created_at": row.created_at,
+                "sent_at": row.sent_at,
+            }
+            for row in rows
+        ]
+    }
 
 
 @router.post("/{class_id}/email-invites", dependencies=[Depends(scheduling_enabled)])
@@ -457,6 +486,69 @@ def invite_members(
     return writes.mutate_class(
         db, current_user["id"], class_id, payload, "invite", apply, "invite"
     )
+
+
+@router.get(
+    "/{class_id}/sessions/{session_id}/host-requests",
+    dependencies=[Depends(scheduling_enabled)],
+)
+def list_host_requests(
+    class_id: UUID,
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    from sqlalchemy import or_
+    from app.services.class_access_service import class_role
+    from app.services.class_instructor_service import validate_instructor
+
+    cls, actor = load_class_actor(db, class_id, current_user, "host_request")
+    session = (
+        db.query(Session)
+        .filter(
+            Session.id == session_id,
+            Session.class_id == class_id,
+            Session.hidden_at.is_(None),
+        )
+        .first()
+    )
+    if cls.hidden_at is not None or session is None:
+        raise HTTPException(404, detail={"code": "session_not_found"})
+    role = class_role(db, actor, cls)
+    if role == "guest":
+        try:
+            validate_instructor(db, cls, actor.id, session.id)
+        except HTTPException:
+            raise HTTPException(404, detail={"code": "session_not_found"}) from None
+    query = db.query(SessionHostRequest).filter(
+        SessionHostRequest.session_id == session_id
+    )
+    if role not in ("lead", "org_admin") and session.host_id != actor.id:
+        query = query.filter(
+            or_(
+                SessionHostRequest.requested_by == actor.id,
+                SessionHostRequest.candidate_host_id == actor.id,
+            )
+        )
+    return {
+        "requests": [
+            {
+                "id": str(row.id),
+                "session_id": str(row.session_id),
+                "requested_by": str(row.requested_by),
+                "candidate_host_id": str(row.candidate_host_id),
+                "request_kind": row.request_kind,
+                "status": row.status,
+                "expected_state_version": row.expected_state_version,
+                "expires_at": row.expires_at,
+                "created_at": row.created_at,
+                "resolved_at": row.resolved_at,
+            }
+            for row in query.order_by(
+                SessionHostRequest.created_at, SessionHostRequest.id
+            ).all()
+        ]
+    }
 
 
 @router.post(

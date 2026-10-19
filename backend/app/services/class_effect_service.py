@@ -215,6 +215,11 @@ def _deliver(db, intent, now):
                     params={
                         "area": "meditation",
                         "class_id": str(cls.id),
+                        **(
+                            {"request_id": intent.payload["request_id"]}
+                            if (intent.payload or {}).get("request_id")
+                            else {}
+                        ),
                         **({"seq": session.seq} if session else {}),
                     },
                 ),
