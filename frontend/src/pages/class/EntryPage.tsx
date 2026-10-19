@@ -2,6 +2,9 @@
 // FM05 입장 확인 → (M2~M5 준비 마법사) → (M6 시작 대기) → (M7 대기열) → 진행 화면 → (M8 종료) 를 하나의 상태 머신으로 돌린다.
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { Key } from 'lucide-react';
+import { FlowStateScreen } from '../../components/class/flow/shared/FlowStateScreen';
+import { ApiError } from '../../lib/api/client';
 import { EntryConfirmView } from '../../components/class/flow/member/EntryConfirmView';
 import { BandStepContainer } from '../../components/class/flow/member/BandStepContainer';
 import { DeviceStepContainer } from '../../components/class/flow/member/DeviceStepContainer';
@@ -40,12 +43,22 @@ function bandModeOf(mode: string | undefined): FlowBandMode {
 
 export default function EntryPage() {
   const { sessionId = '' } = useParams<{ sessionId: string }>();
+  // 회차를 바꾸면 자격·준비 초안·폴링·늦은 응답까지 이전 회차와 분리한다.
+  return <SessionEntryPage key={sessionId} sessionId={sessionId} />;
+}
+
+function SessionEntryPage({ sessionId }: { sessionId: string }) {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
 
-  const [entry, setEntry] = useState<StoredEntry | null>(() => loadEntry(sessionId));
+  const [entry, setEntry] = useState<StoredEntry | null>(() => {
+    const stored = loadEntry(sessionId);
+    return stored?.sessionId === sessionId && stored.credential ? stored : null;
+  });
   const [entryChecked, setEntryChecked] = useState(entry !== null);
+  const [invitationError, setInvitationError] = useState<FlowStateKind | null>(null);
+  const [invitationAttempt, setInvitationAttempt] = useState(0);
   const [machine, dispatch] = useReducer(entryReducer, undefined, initialEntryState);
   const [handoff] = useState(() => takeEntryHandoff(sessionId));
   const handoffName = handoff?.displayName ?? '';
@@ -56,30 +69,37 @@ export default function EntryPage() {
   /** 밴드 단계에서 본 마지막 상태 — 준비 현황(presence)으로 상담사 로비에 중계된다(서버 저장 없음) */
   const [bandSnapshot, setBandSnapshot] = useState<BandSnapshot | null>(null);
 
-  // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(실패하면 만료 안내)
+  // 초대받은 로그인 회원의 편의 입장: 저장된 자격이 없으면 초대 행으로 같은 자격을 받는다(자격이 없으면 코드 입장 안내)
   useEffect(() => {
     if (entry || !sessionId || !isAuthenticated) {
       setEntryChecked(true);
       return undefined;
     }
     let cancelled = false;
+    setEntryChecked(false);
+    setInvitationError(null);
     void enterInvitedSession(sessionId)
       .then((result) => {
         if (cancelled) return;
         const next = entryFromResult(result);
-        if (next) {
+        if (next?.sessionId === sessionId) {
           saveEntry(next);
           setEntry(next);
         }
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        // 초대 자격이 없는 이메일 수신자는 코드로 확인한다. 통신 장애는 재시도할 수 있게 구분한다.
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return;
+        setInvitationError(deriveFlowStateKind({ error, online: navigator.onLine }));
+      })
       .finally(() => {
         if (!cancelled) setEntryChecked(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [entry, sessionId, isAuthenticated]);
+  }, [entry, sessionId, isAuthenticated, invitationAttempt]);
 
   const terminalState = machine.phase === 'state' && (machine.stateKind === 'cancelled' || machine.stateKind === 'closed' || machine.stateKind === 'entry-expired');
   const polling = entry !== null && machine.phase !== 'end' && !terminalState;
@@ -105,9 +125,6 @@ export default function EntryPage() {
       dispatch({ type: 'showState', kind: failureKind });
     }
   }, [failureKind, sessionId]);
-  useEffect(() => {
-    if (entryChecked && !entry) dispatch({ type: 'showState', kind: 'entry-expired' });
-  }, [entryChecked, entry]);
 
   const info = entry?.classInfo;
   const title = info?.title ?? '클래스';
@@ -162,6 +179,24 @@ export default function EntryPage() {
     dispatch({ type: 'resume' });
     void refresh();
   }, [refresh]);
+
+  if (!entry) {
+    if (!entryChecked) return <p role="status">입장 정보를 확인하고 있어요.</p>;
+    if (invitationError) {
+      return <MemberStateScreen kind={invitationError} classTitle="클래스" whenLabel={null}
+        onPrimary={() => invitationError === 'closed' || invitationError === 'cancelled'
+          ? navigate(listPath) : setInvitationAttempt((attempt) => attempt + 1)}
+        onSecondary={() => navigate(homePath)} />;
+    }
+    return <FlowStateScreen icon={<Key size={28} />} warn={false}
+      heading="초대받은 클래스에 입장해 주세요"
+      lead={<>초대 이메일의 참여 코드를 입력해 입장할 수 있어요.<br />회원으로 초대받았다면 로그인한 뒤 초대 링크를 다시 열어 주세요.</>}
+      note="참여 코드가 없으면 진행자에게 문의해 주세요."
+      primary={{ label: '코드 입력하기', onClick: () => navigate('/join', { replace: true }) }}
+      secondary={isAuthenticated
+        ? { label: '내 클래스 보기', onClick: () => navigate('/app/classes') }
+        : { label: '로그인하기', onClick: () => navigate('/login?role=client') }} />;
+  }
 
   const showKind: FlowStateKind | null = machine.phase === 'state' ? machine.stateKind : connectionLost && machine.phase !== 'live' ? 'offline' : null;
   if (showKind) {

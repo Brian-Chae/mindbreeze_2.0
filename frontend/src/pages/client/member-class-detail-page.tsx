@@ -37,6 +37,7 @@ function MemberClassDetail({ classId }: { classId: string }) {
             <div><dt>음성 녹음</dt><dd><ReadField value={memberValue(model.recordAudio)} /></dd></div>
           </dl></section> : <section aria-label="회차"><h2 className="mc-heading">회차</h2>{sessions.length === 0 ? <p className="mc-card mc-muted">아직 회차가 없어요</p> : <ol className="mc-timeline">{sessions.map((session) => <li key={session.id} className={`mc-card${selectedId === session.id ? ' mc-selected' : ''}`} data-session-id={session.id} aria-current={selectedId === session.id ? 'true' : undefined}>
             <Link className="mc-card-link" to={sessionPath('member', session.id, { area: 'meditation', classId: model.id })}><div className="mc-row"><h3><ReadField value={memberValue(session.seq) == null ? undefined : `${memberValue(session.seq)}회차`} /></h3><span className="mc-chip"><ReadField value={memberStatus(session.status)} /></span></div><MemberSessionMeta session={session} /></Link>
+            {(memberValue(session.status) === 'open' || memberValue(session.status) === 'in_progress') && <Link className="mc-link" to={`/class/${encodeURIComponent(session.id)}/enter`}>입장하기</Link>}
           </li>)}</ol>}</section>}
         </div>
       </>}

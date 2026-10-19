@@ -195,9 +195,9 @@ describe('EntryPage', () => {
     await renderPage();
     expect(text()).toContain('열리면 자동으로 입장해요 · 이 화면을 열어 두세요');
   });
-  it('자격이 없으면 입장 정보 만료 → 코드 입력하기로 /join 이동', async () => {
+  it('자격이 없으면 초대 안내 → 코드 입력하기로 /join 이동', async () => {
     await renderPage();
-    expect(text()).toContain('입장 정보가 만료됐어요');
+    expect(text()).toContain('초대받은 클래스에 입장해 주세요');
     await act(async () => { qa<HTMLButtonElement>('button').find((b) => b.textContent === '코드 입력하기')?.click(); });
     expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/join');
   });
