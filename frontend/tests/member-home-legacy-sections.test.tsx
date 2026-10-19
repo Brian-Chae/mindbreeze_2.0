@@ -4,6 +4,8 @@ import { createRoot } from 'react-dom/client';
 import { act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
+vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 import { MemberStructureHomePage } from '../src/pages/client/member-structure-home-page';
 import { MemberClassesPage } from '../src/pages/client/member-classes-page';
 import { useAuthStore } from '../src/stores/authStore';

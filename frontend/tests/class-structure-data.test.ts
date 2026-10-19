@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
+vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 import { apiClient, ApiError, tokenStorage } from '../src/lib/api/client';
 import * as api from '../src/lib/api/class-structure';
 import { asClassId, asRelationshipId } from '../src/lib/class-structure/read-model';

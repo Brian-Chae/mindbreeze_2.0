@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { LinkbandMode } from '../../../../lib/api/session';
 import {
-  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MAX_TIME_MIN, MIN_CAPACITY, MIN_DURATION_MIN, MIN_TIME_MIN, WIZARD_TYPES,
+  BAND_LABEL, MAX_DAY_OFFSET, MAX_DURATION_MIN, MAX_TIME_MIN, MIN_CAPACITY, MIN_DURATION_MIN, MIN_TIME_MIN, wizardTypeOptions,
   capacityMax, fmtDay, fmtDuration, fmtHour, fmtMinute, fmtWhen, memberLimit, typeLabel,
   type WizardAction, type WizardDraft, type WizardMember, type WizardStep, type WizardType, type WizardUi,
 } from '../../../../lib/class/class-wizard';
@@ -40,7 +40,7 @@ export function StepType({ draft, dispatch }: WizardStepProps) {
             label="유형"
             variant="fh-types"
             value={draft.type}
-            options={WIZARD_TYPES.map((t) => {
+            options={wizardTypeOptions().map((t) => {
               const Icon = TYPE_ICON[t.id];
               return { value: t.id, label: t.label, icon: <Icon size={20} aria-hidden="true" /> };
             })}

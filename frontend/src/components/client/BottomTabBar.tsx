@@ -9,6 +9,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 
 interface TabItem {
   to: string;
@@ -51,7 +52,8 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#EFEFEF] flex items-stretch justify-around"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {TAB_ITEMS.map((tab) => {
+      {/* SDD-219: 상담 비공개 시 상담 탭 제거(남은 탭은 flex-1 균등) */}
+      {(isCounselingEnabled() ? TAB_ITEMS : TAB_ITEMS.filter((tab) => tab.key !== 'my-counseling')).map((tab) => {
         const active = isActive(tab.to);
         const unread =
           tab.key === 'chat'

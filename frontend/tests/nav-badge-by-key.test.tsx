@@ -6,6 +6,8 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
+vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
 
 const state = vi.hoisted(() => ({
   user: { id: 'u1', role: 'org_admin', name: '테스트', email: 'a@example.com' } as { id: string; role: string; name: string; email: string },

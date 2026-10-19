@@ -2,6 +2,7 @@
 // 근거: plan §1.2 FH02a~e, designs/class-flow-redesign/host-a.html (stepA~stepE).
 import type { CreateSessionPayload, LinkbandMode, LocationType, ParticipantMode, SessionType } from '../api/session';
 import type { FlowPlace, FlowSize } from './flow/types';
+import { isCounselingEnabled } from '../feature-flags';
 
 export const WIZARD_STEP_COUNT = 5;
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
@@ -87,6 +88,11 @@ export const WIZARD_TYPES: ReadonlyArray<{ id: WizardType; label: string }> = [
   { id: 'meditation', label: '명상' },
   { id: 'other', label: '기타' },
 ];
+
+/** SDD-219: 상담 비공개 시 임상·최면 유형을 선택지에서 제외한다(라벨 조회용 WIZARD_TYPES 는 유지). */
+export function wizardTypeOptions(): ReadonlyArray<{ id: WizardType; label: string }> {
+  return isCounselingEnabled() ? WIZARD_TYPES : WIZARD_TYPES.filter((t) => t.id !== 'clinical' && t.id !== 'hypnosis');
+}
 
 export const BAND_LABEL: Readonly<Record<LinkbandMode, string>> = {
   none: 'LINK BAND 사용 안 함',

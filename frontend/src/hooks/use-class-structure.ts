@@ -2,10 +2,11 @@ import { membershipApi } from '../lib/api/class-operations';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   getClasses, getClass, getClassSessions, getCounseling, getCounselingDetail,
-  type ListParams, type ClassDetailDto, type ClassSessionsResponse,
+  type ListParams, type CounselingListResponse, type ClassDetailDto, type ClassSessionsResponse,
 } from '../lib/api/class-structure';
 import { subscribeClassReads, classReadRevision } from '../lib/class-structure/invalidation';
 import { ApiError } from '../lib/api/client';
+import { isCounselingEnabled } from '../lib/feature-flags';
 import { useAuthStore } from '../stores/authStore';
 import type { ClassId, RelationshipId, ReadState } from '../lib/class-structure/read-model';
 
@@ -60,7 +61,7 @@ function acquire<T>(key: string, load: (signal: AbortSignal) => Promise<T>): { p
 const noSubscribe = (): (() => void) => () => {};
 const noRevision = (): number => 0;
 export interface StructureRead<T> { state: ReadState<T>; retry: () => void; refreshError?: string; errorStatus?:number }
-function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>, publicRead = false): StructureRead<T> {
+function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>, publicRead = false, enabled = true): StructureRead<T> {
   const scope = useSyncExternalStore(subscribe, scopeSnapshot, scopeSnapshot);
   const isClassRead = resource.startsWith('class:') || resource.startsWith('classes:');
   const revision = useSyncExternalStore(isClassRead ? subscribeClassReads : noSubscribe, isClassRead ? classReadRevision : noRevision, noRevision);
@@ -70,6 +71,7 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
   const [result, setResult] = useState<{ key: string; resourceKey: string; state: ReadState<T>; refreshError?: string; errorStatus?:number } | null>(null);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
   useEffect(() => {
+    if (!enabled) return;
     const auth = useAuthStore.getState();
     if (!publicRead && (!auth.isAuthenticated || !auth.user)) return;
     let active = true;
@@ -90,7 +92,7 @@ function useRead<T>(resource: string, load: (signal: AbortSignal) => Promise<T>,
       });
     });
     return () => { active = false; request.release(); };
-  }, [key, resourceKey, scope, load, isClassRead, publicRead]);
+  }, [key, resourceKey, scope, load, isClassRead, publicRead, enabled]);
   // 같은 계정·부모의 성공 화면은 재조회 중 유지하되 계정/부모 전환에는 노출하지 않는다.
   const current = result?.resourceKey === resourceKey && (result.key === key || isClassRead && result.state.status === 'success') ? result : null;
   return { state: current?.state ?? { status: 'loading' }, retry, refreshError: current?.refreshError, errorStatus:current?.errorStatus };
@@ -103,10 +105,10 @@ export function useClasses(params?: ListParams) {
   const load = useCallback((signal: AbortSignal) => getClasses({ status, page, limit }, signal), [status, page, limit]);
   return useRead(`classes:${paramsKey(params)}`, load);
 }
-export function useCounseling(params?: ListParams) {
+export function useCounseling(params?: ListParams, enabled = true) {
   const { status, page, limit } = params ?? {};
   const load = useCallback((signal: AbortSignal) => getCounseling({ status, page, limit }, signal), [status, page, limit]);
-  return useRead(`counseling:${paramsKey(params)}`, load);
+  return useRead(`counseling:${paramsKey(params)}`, load, false, enabled);
 }
 export interface ClassDetailRead { detail: ClassDetailDto; sessions: ClassSessionsResponse }
 export function useClassDetail(id: ClassId): StructureRead<ClassDetailRead> {
@@ -122,11 +124,15 @@ export function useCounselingDetail(id: RelationshipId) {
 }
 export function useMixedHome() {
   const classes = useClasses();
-  const counseling = useCounseling();
+  // SDD-219: 상담 비공개 시 상담 조회를 생략하고 빈 목록으로 취급한다.
+  const counselingEnabled = isCounselingEnabled();
+  const counseling = useCounseling(undefined, counselingEnabled);
   const retryClasses = classes.retry;
   const retryCounseling = counseling.retry;
   const retry = useCallback(() => { retryClasses(); retryCounseling(); }, [retryClasses, retryCounseling]);
-  return { classes: classes.state, counseling: counseling.state, retry };
+  const counselingState: ReadState<CounselingListResponse> = counselingEnabled
+    ? counseling.state : { status: 'success', data: { relationships: [], total: 0 } };
+  return { classes: classes.state, counseling: counselingState, retry };
 }
 
 export function useMyClassMembership(id: string, credential?: string) {

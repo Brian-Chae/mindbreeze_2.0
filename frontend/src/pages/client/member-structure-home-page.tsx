@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useAuthStore } from '../../stores/authStore';
 import { heroBackdrop } from '../../components/class/flow/shell/shell-data';
 import '../../components/class/flow/shell/shell-kit.css';
@@ -20,6 +21,7 @@ export function MemberStructureHomePage() {
   const nextSeq = next && memberValue(next.seq);
   const classes = model.classes.status === 'success' ? model.classes.data.classes : [];
   const counseling = model.counseling.status === 'success' ? model.counseling.data.relationships : [];
+  const counselingEnabled = isCounselingEnabled();
   const name = useAuthStore((state) => state.user?.name);
   return <StructureShell role="member" title={`안녕하세요, ${name ?? '내담자'}님`}><MemberClassStyles /><div className="mc-stack">
     <section className="sh-scope sh-hero" data-testid="class-hero" aria-label="다음 일정" data-area={next?.area}>
@@ -37,11 +39,11 @@ export function MemberStructureHomePage() {
         <div className="mc-grid">{classes.map((item) => <MemberClassCard key={item.id} model={item} />)}</div>
       </ReadStateView>
     </section>
-    <section aria-label="내 상담" data-area="counseling"><div className="mc-row"><h2 className="mc-heading">내 상담</h2><Link className="mc-link" to="/app/counseling">전체 보기</Link></div>
+    {counselingEnabled && <section aria-label="내 상담" data-area="counseling"><div className="mc-row"><h2 className="mc-heading">내 상담</h2><Link className="mc-link" to="/app/counseling">전체 보기</Link></div>
       <ReadStateView area="counseling" status={model.counseling.status === 'success' && counseling.length === 0 ? 'empty' : model.counseling.status} backTo="/app/counseling" onRetry={read.retry}>
         <div className="mc-grid">{counseling.map((item) => <article className="mc-card" key={item.id}><Link className="mc-card-link" to={counselingPath('member', item.id)}><h3>상담 일정</h3><p className="mc-muted">상담사 · <ReadField value={memberValue(item.counselorName)} /></p><p className="mc-muted">다음 상담 · <ReadField value={item.nextSession.kind === 'value' ? memberDate(item.nextSession.value.scheduledAt) : undefined} /></p></Link></article>)}</div>
       </ReadStateView>
-    </section>
+    </section>}
     <ClientHomePage hideHero />
   </div></StructureShell>;
 }

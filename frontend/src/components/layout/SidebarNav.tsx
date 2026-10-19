@@ -8,6 +8,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
+import { isCounselingEnabled } from '../../lib/feature-flags';
 
 interface NavItem {
   to: string;
@@ -87,6 +88,11 @@ export function StrokeIcon({ d, size = 20 }: { d: string[]; size?: number }) {
       ))}
     </svg>
   );
+}
+
+/** 상담 영역 경로 여부 (/counseling, /app/counseling 및 하위) */
+function isCounselingPath(to: string): boolean {
+  return /^\/(app\/)?counseling(\/|$)/.test(to);
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -189,7 +195,7 @@ export default function SidebarNav({
   const logout = useAuthStore((s) => s.logout);
   const wsConnected = useNotificationStore((s) => s.wsConnected);
   const navigate = useNavigate();
-  const navItems =
+  const allNavItems =
     user?.role === 'client' || role === 'client'
       ? CLIENT_NAV_ITEMS
       : user?.role === 'platform_admin'
@@ -197,6 +203,8 @@ export default function SidebarNav({
         : user?.role === 'org_admin'
           ? ORG_ADMIN_NAV_ITEMS
           : NAV_ITEMS;
+  // SDD-219: 상담 비공개 시 상담 항목(/counseling, /app/counseling)을 숨긴다.
+  const navItems = isCounselingEnabled() ? allNavItems : allNavItems.filter((it) => !isCounselingPath(it.to));
   const roleLabel =
     user?.role === 'client' || role === 'client'
       ? '회원 전용'

@@ -1,6 +1,7 @@
 // 알림 API 클라이언트
 
 import { apiClient } from './client';
+import { isCounselingEnabled } from '../feature-flags';
 
 export interface NotificationDto {
   id: string;
@@ -165,6 +166,8 @@ export function resolveNotificationTarget(
     }
     case 'counseling':
       if (!targetId.trim()) return null;
+      // SDD-219: 상담 비공개 시 클래스 홈으로 보낸다.
+      if (!isCounselingEnabled()) return { path: isClient ? '/app/classes' : '/classes' };
       return { path: `${isClient ? '/app' : ''}/counseling/${encodeURIComponent(targetId)}` };
     case 'session':
       if (!targetId) return null;
