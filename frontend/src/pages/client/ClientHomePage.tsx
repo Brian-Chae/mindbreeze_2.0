@@ -117,7 +117,7 @@ function SummaryTiles({
 
 // ── 메인 ──────────────────────────────────────────────────────────
 
-export default function ClientHomePage() {
+export default function ClientHomePage({ hideHero = false }: { hideHero?: boolean } = {}) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const counselors: Counselor[] = useMemo(() => user?.counselors ?? [], [user?.counselors]);
@@ -346,7 +346,7 @@ export default function ClientHomePage() {
       {/* ── 좌측 컬럼 ── */}
       <div className="flex min-w-0 flex-col gap-6">
         {/* 다음 클래스 히어로 (항상 표시) — 참여코드 값·복사 UI 는 두지 않는다 */}
-        {heroData ? (
+        {hideHero ? null : heroData ? (
           <ClassHero data={heroData} action={heroAction} onAction={openHeroClass} busy={enteringId !== null} />
         ) : (
           <ClassHeroEmpty backdropSrc={heroBackdrop('empty')} onApply={() => navigate('/app/sessions', { state: { openApply: true } })} />
@@ -391,7 +391,7 @@ export default function ClientHomePage() {
               <p className="mt-1 text-[13px] text-[#6F6F6F]">상담사에게 클래스를 신청해 보세요.</p>
               <button
                 type="button"
-                onClick={() => navigate('/app/sessions')}
+                onClick={() => navigate('/app/classes', { state: { openApply: true } })}
                 className="mt-4 rounded-lg border border-[#DDD0EA] bg-white px-4 py-2 text-[13px] font-bold text-[#5F0080] min-h-[44px] hover:bg-[#F5EDFC] transition-colors"
               >
                 클래스 신청하기
@@ -473,7 +473,7 @@ export default function ClientHomePage() {
           completedCount={completedCount}
           onOpenNext={openHeroDetail}
           onOpenReports={() => navigate('/app/reports')}
-          onOpenClasses={() => navigate('/app/sessions')}
+          onOpenClasses={() => navigate('/app/classes')}
         />
 
         {/* 담당 상담사 */}
