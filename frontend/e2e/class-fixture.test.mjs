@@ -20,8 +20,8 @@ for (const instant of [false, true]) {
     assert.equal(s.planned_session_count, instant ? 1 : 2);
     assert.equal(s.recurrence_rule.start_now, instant);
     assert.equal(s.recurrence_rule.start_date, '2026-10-21');
-    assert.equal(s.recurrence_rule.time, '01:15');
-    assert.deepEqual(s.recurrence_rule.weekdays, [2]);
+    assert.equal(s.recurrence_rule.time, '07:00');
+    assert.deepEqual(s.recurrence_rule.weekdays, [3]);
     assert.deepEqual(s.assignment_rule, { mode: 'all_one', host_ids: ['host'] });
     assert.deepEqual(s.member_ids, ['member']);
     assert.deepEqual(s.reminder_offsets, []);
@@ -34,4 +34,17 @@ test('생성 실패 원인을 숨기거나 기존 API로 우회하지 않는다'
   await assert.rejects(createClassFixture({ api: 'https://test/api/v1', token: 'x', hostId: 'host', title: '합성',
     fetcher: async () => { calls++; return new Response(JSON.stringify({ detail: { code: 'schedule_conflict' } }), { status: 409 }); } }), /409.*schedule_conflict/);
   assert.equal(calls, 1);
+});
+
+for (const [at, day, time] of [
+  ['2026-10-25T07:41:00Z', 7, '16:45'],
+  ['2026-10-25T14:59:00Z', 7, '22:00'],
+]) test(`편성 시간 경계: ${at}`, async () => {
+  await createClassFixture({ api: 'https://test', token: 'x', hostId: 'host', title: '합성', scheduledAt: at,
+    fetcher: async (_url, init) => {
+      const rule = JSON.parse(init.body).schedule.recurrence_rule;
+      assert.deepEqual(rule.weekdays, [day]);
+      assert.equal(rule.time, time);
+      return new Response(JSON.stringify({ class_id: 'p', session_ids: ['s'] }), { status: 201 });
+    } });
 });

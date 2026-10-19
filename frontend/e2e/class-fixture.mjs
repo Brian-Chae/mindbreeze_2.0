@@ -4,12 +4,15 @@ import { randomUUID } from 'node:crypto';
 export async function createClassFixture({ api, token, hostId, title, memberIds = [], instant = false,
   scheduledAt = new Date(Date.now() + 2 * 86400000).toISOString(), fetcher = fetch }) {
   const kst = new Date(new Date(scheduledAt).getTime() + 9 * 3600000);
+  // 예약 입력은 KST 07~22시·5분 단위, 요일은 월=1~일=7 계약이다.
+  const minutes = Math.min(22 * 60, Math.max(7 * 60, Math.ceil((kst.getUTCHours() * 60 + kst.getUTCMinutes()) / 5) * 5));
+  const time = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
   const schedule = {
     title, location_type: 'online', capacity: 2, duration_min: 30,
     linkband_mode: 'optional', record_audio: true, record_video: false,
     schedule_mode: 'fixed', planned_session_count: instant ? 1 : 2,
     recurrence_rule: { start_now: instant, start_date: kst.toISOString().slice(0, 10),
-      weekdays: [(kst.getUTCDay() + 6) % 7], time: kst.toISOString().slice(11, 16) },
+      weekdays: [kst.getUTCDay() || 7], time },
     assignment_rule: { mode: 'all_one', host_ids: [hostId] },
     member_ids: memberIds, reminder_offsets: [],
   };
