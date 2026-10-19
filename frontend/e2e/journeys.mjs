@@ -1,3 +1,5 @@
+import { createClassFixture } from './class-fixture.mjs';
+import { randomUUID } from 'node:crypto';
 // SDD-205 역할별 여정 (약 29개). 실행: E2E_PASSWORD=... node e2e/journeys.mjs
 import { scenario, uiLogin, go, bodyText, expectText, apiLogin, apiLoginFull, finish, BASE, API, EMAIL, HOME } from './lib.mjs';
 
@@ -31,9 +33,8 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
   const cl = await apiLoginFull('client');
   const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
   const at = new Date(Date.now() + 2 * 86400000).toISOString();
-  const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: `E2E-히어로-${Date.now()}`, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: [cl.user.id] }) });
-  if (r.status !== 201) throw new Error(`클래스 생성 ${r.status}`);
-  const id = (await r.json()).id;
+  const fixture = await createClassFixture({ api: API, token: c.token, hostId: c.user.id,
+    title: `E2E-히어로-${Date.now()}`, memberIds: [cl.user.id], scheduledAt: at });
   try {
     await go(p, '/app');
     const hero = p.locator('section[data-testid="class-hero"]').first();
@@ -44,8 +45,9 @@ await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운
     const dark = colors.filter(({ c: col }) => { const m = col.match(/\d+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) < 150; });
     if (dark.length) throw new Error(`어두운 글자색: ${dark.map((d) => `${d.t} ${d.c}`).join(', ')}`);
   } finally {
-    const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
-    if (d.status !== 204) throw new Error(`E2E 클래스 삭제 실패 ${d.status} (id=${id})`);
+    const d = await fetch(`${API}/classes/${fixture.class_id}`, { method: 'DELETE', headers: H,
+      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: fixture.revision }) });
+    if (d.status !== 200) throw new Error(`E2E 클래스 숨김 실패 ${d.status}`);
   }
 });
 await client('설정: 계정 정보 표시 및 카드 제목 중복 없음', async (p) => {
@@ -83,19 +85,18 @@ await cou('클래스 만들기: 링크 → /classes/new 마법사(예약 모달 
   await p.waitForURL((u) => u.pathname === '/classes/new', { timeout: 8000 });
   await p.getByText('클래스 만들기').first().waitFor({ timeout: 8000 });
 });
-await cou('클래스 생성 → 목록 노출 → 삭제(잔여 0)', async (p) => {
-  const token = await apiLogin('counselor');
-  const H = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
-  const at = new Date(Date.now() + 3 * 86400000).toISOString();
-  const r = await fetch(`${API}/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ type: 'meditation', duration_min: 30, title: TITLE, scheduled_at: at, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2 }) });
-  if (r.status !== 201) throw new Error(`세션 생성 ${r.status}`);
-  const id = (await r.json()).id;
+await cou('클래스 생성 → 목록 노출 → 미진행 클래스 숨김', async (p) => {
+  const c = await apiLoginFull('counselor');
+  const H = { Authorization: `Bearer ${c.token}`, 'Content-Type': 'application/json' };
+  const fixture = await createClassFixture({ api: API, token: c.token, hostId: c.user.id, title: TITLE,
+    scheduledAt: new Date(Date.now() + 3 * 86400000).toISOString() });
   try {
     await go(p, '/sessions');
     await p.getByText(TITLE).first().waitFor({ timeout: 10000 });
   } finally {
-    const d = await fetch(`${API}/sessions/${id}`, { method: 'DELETE', headers: H });
-    if (d.status !== 204) throw new Error(`E2E 세션 삭제 실패 ${d.status} (id=${id})`);
+    const d = await fetch(`${API}/classes/${fixture.class_id}`, { method: 'DELETE', headers: H,
+      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: fixture.revision }) });
+    if (d.status !== 200) throw new Error(`E2E 클래스 숨김 실패 ${d.status}`);
   }
 });
 await cou('리포트: 목록·샘플 리포트 열기', async (p) => {
