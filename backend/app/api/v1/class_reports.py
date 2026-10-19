@@ -83,3 +83,31 @@ def retry_report_job(
     result = job_service.reopen_failed(db, job_id, current_user["id"], class_id=class_id)
     background_tasks.add_task(_run_in_background, str(job_id))
     return result
+
+
+@router.get("/{class_id}/me/trend")
+def get_my_trend(
+    class_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    """본인 변화 추이. 승인된 본인 리포트만 쓴다 (D-43: 회원 전용)."""
+    from app.services import class_report_trend_service as trend
+
+    return trend.member_trend(db, class_id=class_id, viewer_user_id=current_user["id"])
+
+
+@router.get("/{class_id}/sessions/{session_id}/summary")
+def get_session_summary(
+    class_id: UUID,
+    session_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+) -> dict:
+    """회차 출석 요약과 익명 방향 분포. 개인별 수치·순위는 제공하지 않는다."""
+    from app.api.v1.classes import load_class_actor
+    from app.services import class_report_trend_service as trend
+
+    # 클래스 열람 권한을 기존 판정으로 확인한다. 새로 넓히지 않는다.
+    load_class_actor(db, class_id, current_user, "host_request")
+    return trend.session_summary(db, class_id=class_id, session_id=session_id)
