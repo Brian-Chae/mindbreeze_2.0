@@ -12,6 +12,7 @@ from app.api.deps import get_current_user, get_current_user_optional, require_ro
 from app.api.v1.onboarding import _parse_date
 from app.core.database import get_db
 from app.core.redis import get_redis
+from app.schemas.class_scheduling import TransitionConfirmation
 from app.schemas.session import (
     ReportEmailRequest,
     ReportEmailResponse,
@@ -256,11 +257,12 @@ def set_session_chat_enabled(
 def _make_transition_endpoint(action: str):
     def endpoint(
         session_id: str,
+        payload: TransitionConfirmation | None = None,
         current_user: dict = Depends(get_current_user),
         db: DBSession = Depends(get_db),
     ):
         return class_read_service.add_parent_fields(
-            db, session_service.transition_status(session_id, current_user["id"], action, db)
+            db, session_service.transition_status(session_id, current_user["id"], action, db, **(payload.model_dump() if payload else {}))
         )
     return endpoint
 

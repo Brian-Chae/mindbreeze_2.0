@@ -2,7 +2,7 @@
 
 verify 의 SC·MG·CN·RB 항목을 로컬/CI PostgreSQL 에서 증명한다. 임시 DB 는 `scratch_db` 로 만들고 끝에 지운다.
   - t052: 체인을 e036a0000052 까지 적용한 템플릿 DB(이후 복제만 한다 — alembic 재실행 최소화)
-  - head: t052 복제 + upgrade head (대부분의 제약 테스트가 사용, 테스트마다 롤백)
+  - head: t052 복제 + upgrade e036a0000055 (대부분의 제약 테스트가 사용, 테스트마다 롤백)
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ def t052_url(scratch_db) -> str:
 @pytest.fixture(scope="module")
 def head_url(scratch_db, t052_url) -> str:
     url = scratch_db("head", template=_db_name(t052_url))
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     return url
 
 
@@ -267,11 +267,13 @@ def test_단일_head_와_체인(request):
     cfg = Config(str(BACKEND / "alembic.ini"))
     cfg.set_main_option("script_location", str(BACKEND / "alembic"))
     script = ScriptDirectory.from_config(cfg)
-    assert script.get_heads() == [HEAD]
+    heads=script.get_heads()
+    assert len(heads)==1
+    assert HEAD in {revision.revision for revision in script.iterate_revisions(heads[0], PREV)}
     assert script.get_revision(REVS["053"]).down_revision == PREV
     assert script.get_revision(REVS["054"]).down_revision == REVS["053"]
     assert script.get_revision(REVS["055"]).down_revision == REVS["054"]
-    assert not list(VERSIONS.glob("e036a0000056_*.py")) and not list(VERSIONS.glob("e036a0000057_*.py"))
+    # 055는 Phase 1 계약 기준점이며 이후 SDD 리비전의 선형 확장은 허용한다.
 
 
 def _upgrade_node(path: Path) -> ast.FunctionDef:
@@ -631,13 +633,13 @@ def test_soft_삭제_컬럼이_존재한다(head_engine):
 # ── 숨김 필터 (SC-11, TD17) ──────────────────────────────────────────────────
 
 
-def test_숨김_클래스와_상담_관계는_기본_조회에서_제외된다(head_engine):
+def test_숨김_클래스와_상담_관계는_기본_조회에서_제외된다(pg_engine):
     from sqlalchemy.orm import Session as OrmSession
 
     from app.models.class_program import Class
     from app.models.counseling import CounselingRelationship
 
-    with head_engine.connect() as c:
+    with pg_engine.connect() as c:
         outer = c.begin()
         try:
             host = mk_user(c)
@@ -701,7 +703,7 @@ def test_템플릿만_있으면_통과하고_기존_컬럼_값이_보존된다(s
     )
     with engine.connect() as c:
         before = c.execute(sa.text(row_hash), {"i": sid}).scalar_one()
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     with engine.connect() as c:
         after = c.execute(sa.text(row_hash), {"i": sid}).scalar_one()
         parent = c.execute(sa.text(
@@ -715,11 +717,11 @@ def test_템플릿만_있으면_통과하고_기존_컬럼_값이_보존된다(s
 def test_멱등_upgrade_downgrade_upgrade(scratch_db, t052_url):
     url = scratch_db("idem", template=_db_name(t052_url))
     engine = sa.create_engine(url)
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     first = _snapshot(engine)
     alembic_ok(url, "downgrade", PREV)
     mid = _snapshot(engine)
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     second = _snapshot(engine)
     engine.dispose()
     assert NEW_TABLES <= {r[0] for r in first["columns"]}
@@ -736,11 +738,11 @@ def test_멱등_upgrade_downgrade_upgrade(scratch_db, t052_url):
 def test_이미_적용된_스키마에_리비전을_다시_실행해도_같다(scratch_db, t052_url):
     url = scratch_db("rerun", template=_db_name(t052_url))
     engine = sa.create_engine(url)
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     full = _snapshot(engine)
     with engine.begin() as c:
         c.execute(sa.text("UPDATE alembic_version SET version_num = :v"), {"v": PREV})
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     assert _snapshot(engine) == full
     engine.dispose()
 
@@ -748,7 +750,7 @@ def test_이미_적용된_스키마에_리비전을_다시_실행해도_같다(s
 def test_일부만_적용된_상태에서도_이어서_적용된다(scratch_db, t052_url):
     url = scratch_db("partial", template=_db_name(t052_url))
     engine = sa.create_engine(url)
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     full = _snapshot(engine)
     with engine.begin() as c:
         for stmt in (
@@ -761,7 +763,7 @@ def test_일부만_적용된_상태에서도_이어서_적용된다(scratch_db, 
         ):
             c.execute(sa.text(stmt))
         c.execute(sa.text("UPDATE alembic_version SET version_num = :v"), {"v": PREV})
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     assert _snapshot(engine) == full
     engine.dispose()
 
@@ -776,7 +778,7 @@ def test_덤프_픽스처_복원본에도_head_적용이_된다(scratch_db):
     )
     proc = subprocess.run(["psql", url, "-X", "-q", "-v", "ON_ERROR_STOP=1"], input=sql, capture_output=True, text=True)
     assert proc.returncode == 0, proc.stderr
-    alembic_ok(url, "upgrade", "head")
+    alembic_ok(url, "upgrade", HEAD)
     engine = sa.create_engine(url)
     with engine.connect() as c:
         assert c.execute(sa.text("select version_num from alembic_version")).scalars().all() == [HEAD]

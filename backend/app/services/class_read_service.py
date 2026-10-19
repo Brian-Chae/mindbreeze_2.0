@@ -1,7 +1,7 @@
 """SDD-214: 클래스·상담 읽기 서비스.
 
-가시 범위는 현행 `GET /sessions`(session_service.list_sessions)의 부모 단위 투영이다 — 호스트이거나 참여자인
-비템플릿 세션만 보이고, 부모(클래스·상담 관계)는 그런 세션이 하나라도 있을 때만 보인다. 새 권한 정책은 없다.
+기존 단건 부모는 세션 가시 범위를 유지한다. SDD-216 편성 부모는 현재 강사·멤버·기관 관리자
+역할로 판정하며 초안은 관리 권한자만 조회한다. 센터 관리자의 상담 조회는 운영 메타만 제공한다.
 EEG·녹음·전사·리포트 본문은 조회하지 않는다(진행 상태 값만).
 """
 
@@ -12,10 +12,11 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from sqlalchemy.orm import Session as DBSession
 
-from app.models.class_program import Class, ClassInstructor
+from app.config import settings
+from app.models.class_program import Class, ClassInstructor, ClassMember
 from app.models.counseling import CounselingGuest, CounselingRelationship
 from app.models.record import Report, SessionRecord
 from app.models.session import Session, SessionParticipant
@@ -40,6 +41,83 @@ def _to_uuid(value: str | UUID) -> UUID:
         raise HTTPException(status_code=400, detail="잘못된 ID 형식입니다")
 
 
+def list_member_candidates(db, actor_id, *, class_id=None, query=""):
+    """초대 가능 관계의 이름 검색과 정확 이메일 검색만 제공한다."""
+    from sqlalchemy import func
+    from app.models.client_counselor_link import ClientCounselorLink
+    from app.models.user_org_membership import UserOrgMembership
+    from app.services.class_access_service import (
+        active_membership,
+        authorize_class_action,
+    )
+    from app.services.session_email_invite_service import is_valid_email
+
+    actor = db.query(User).filter(User.id == _to_uuid(actor_id)).first()
+    if class_id is not None:
+        cls = db.query(Class).filter(Class.id == class_id, Class.hidden_at.is_(None)).first()
+        if cls is None:
+            raise HTTPException(404, detail={"code": "class_not_found"})
+        authorize_class_action(db, actor, cls, "invite")
+        org_id = cls.organization_id
+    else:
+        if (
+            actor is None
+            or actor.status != "active"
+            or actor.role not in ("counselor", "org_admin")
+            or not active_membership(db, actor.id, actor.org_id, actor.role)
+        ):
+            raise HTTPException(403, detail={"code": "class_creation_forbidden"})
+        org_id = actor.org_id
+
+    value = query.strip().lower()
+    candidates = db.query(User).filter(User.role == "client", User.status == "active")
+    if "@" in value:
+        if not is_valid_email(value):
+            return {"members": [], "has_more": False}
+        candidates = candidates.filter(func.lower(User.email) == value)
+    else:
+        # 이름 검색에서 기관 전체 사용자 디렉터리나 상담 내용을 노출하지 않는다.
+        classes = db.query(Class.id).filter(
+            Class.organization_id == org_id, Class.hidden_at.is_(None)
+        )
+        linked = db.query(ClientCounselorLink.client_id).filter(
+            ClientCounselorLink.status == "active"
+        )
+        if actor.role == "org_admin":
+            counselors = db.query(User.id).join(
+                UserOrgMembership, UserOrgMembership.user_id == User.id
+            ).filter(
+                User.role == "counselor", User.status == "active",
+                UserOrgMembership.org_id == org_id,
+                UserOrgMembership.role == "counselor",
+                UserOrgMembership.status == "active",
+            )
+            linked = linked.filter(ClientCounselorLink.counselor_id.in_(counselors))
+        else:
+            invited_classes = db.query(ClassInstructor.class_id).filter(
+                ClassInstructor.user_id == actor.id,
+                ClassInstructor.status == "active",
+                ClassInstructor.role.in_(("lead", "assistant")),
+            )
+            classes = classes.filter(Class.id.in_(invited_classes))
+            linked = linked.filter(ClientCounselorLink.counselor_id == actor.id)
+        members = db.query(ClassMember.user_id).filter(ClassMember.class_id.in_(classes))
+        candidates = candidates.filter(or_(User.id.in_(members), User.id.in_(linked)))
+        if value:
+            candidates = candidates.filter(func.lower(User.name).contains(value, autoescape=True))
+    rows = candidates.order_by(User.name, User.id).limit(21).all()
+    return {
+        "members": [
+            {
+                "id": str(row.id), "name": row.name,
+                "masked_email": f"{row.email.partition('@')[0][:2]}***@{row.email.partition('@')[2]}",
+            }
+            for row in rows[:20]
+        ],
+        "has_more": len(rows) > 20,
+    }
+
+
 def _aware(value: datetime | None) -> datetime | None:
     if value is not None and value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
@@ -53,7 +131,14 @@ def _visible_session_filter(uid: UUID, db: DBSession):
         .filter(SessionParticipant.session_id == Session.id, SessionParticipant.user_id == uid)
         .exists()
     )
-    return (Session.is_template.is_(False), or_(Session.host_id == uid, participates))
+    from app.models.user_org_membership import UserOrgMembership
+    from app.models.organization import Organization
+    admin_orgs=db.query(UserOrgMembership.org_id).join(User,User.id==UserOrgMembership.user_id).join(
+        Organization,Organization.id==UserOrgMembership.org_id).filter(UserOrgMembership.user_id==uid,
+        UserOrgMembership.role=="org_admin",UserOrgMembership.status=="active",User.role=="org_admin",
+        User.status=="active",Organization.deactivated_at.is_(None))
+    metadata=and_(Session.organization_attribution_known.is_(True),Session.organization_id.in_(admin_orgs))
+    return (Session.is_template.is_(False), or_(Session.host_id == uid, participates,metadata))
 
 
 def _user_names(db: DBSession, user_ids) -> dict[UUID, str | None]:
@@ -76,10 +161,10 @@ def _next_session(rows: list, now: datetime):
 
 
 def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
-    completed = sum(1 for r in rows if r.status == "completed")
-    cancelled = sum(1 for r in rows if r.status == "cancelled")
+    completed = sum(1 for r in rows if r.status == "completed" and r.session_kind == "regular")
+    cancelled = sum(1 for r in rows if r.status == "cancelled" and r.session_kind == "regular")
     # 계획 횟수가 있어도 취소 회차는 분모에서 뺀다(verify RD-10). 취소가 계획보다 많아도 음수가 되지 않는다.
-    total = max(cls.planned_session_count - cancelled, 0) if cls.planned_session_count else len(rows) - cancelled
+    total = max(cls.planned_session_count - cancelled, 0) if cls.planned_session_count else sum(r.session_kind == "regular" for r in rows) - cancelled
     nxt = _next_session(rows, now)
     return {
         "id": str(cls.id),
@@ -96,7 +181,7 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
                 "seq": nxt.seq,
                 "scheduled_at": nxt.scheduled_at,
                 "status": nxt.status,
-                "host": {"id": str(nxt.host_id), "name": names.get(nxt.host_id)},
+                "host": {"id": str(nxt.host_id), "name": names.get(nxt.host_id)} if nxt.host_state == "assigned" else None,
             }
             if nxt
             else None
@@ -105,13 +190,39 @@ def _class_summary(cls: Class, rows: list, names: dict, now: datetime) -> dict:
     }
 
 
-def _visible_class_sessions(db: DBSession, uid: UUID, class_ids) -> dict[UUID, list]:
+def _class_access_ids(db, uid):
+    from app.models.user_org_membership import UserOrgMembership
+    from app.models.organization import Organization
+    memberships = db.query(UserOrgMembership.org_id).join(User, User.id == UserOrgMembership.user_id).join(
+        Organization, Organization.id == UserOrgMembership.org_id).filter(
+        UserOrgMembership.user_id == uid, UserOrgMembership.status == "active", User.status == "active",
+        Organization.deactivated_at.is_(None),
+    )
+    instructor_ids = db.query(ClassInstructor.class_id).join(Class, Class.id == ClassInstructor.class_id).filter(
+        ClassInstructor.user_id == uid, ClassInstructor.status == "active", ClassInstructor.role.in_(("lead", "assistant")),
+        Class.organization_id.in_(memberships.filter(UserOrgMembership.role == "counselor", User.role == "counselor")),
+    )
+    member_ids = db.query(ClassMember.class_id).filter(ClassMember.user_id == uid, ClassMember.status == "active")
+    admin_orgs = memberships.filter(UserOrgMembership.role == "org_admin")
+    return db.query(Class.id).filter(or_(Class.id.in_(instructor_ids),
+        and_(Class.id.in_(member_ids), Class.status != "draft"), Class.organization_id.in_(admin_orgs)))
+
+
+def _legacy_class_sessions_filter(db, uid):
+    # 기존 단건 엔진의 부모는 편성 규칙이 없다. 제거 강사에게 개설자 영구 권한을 주지 않는다.
+    removed = db.query(ClassInstructor.class_id).filter(ClassInstructor.user_id == uid, ClassInstructor.status == "removed")
+    legacy = db.query(Class.id).filter(Class.recurrence_rule.is_(None), Class.id.notin_(removed))
+    return and_(Session.class_id.in_(legacy), *_visible_session_filter(uid, db))
+
+
+def _visible_class_sessions(db: DBSession, uid: UUID, class_ids, *, guest_session_id: UUID | None = None) -> dict[UUID, list]:
     rows = (
         db.query(
             Session.class_id, Session.id, Session.seq, Session.scheduled_at, Session.status,
-            Session.session_kind, Session.host_id, Session.host_state,
+            Session.session_kind, Session.host_id, Session.host_state, Session.state_version,
+            Session.duration_min, Session.location_type, Session.location_address, Session.assignment_override,
         )
-        .filter(Session.class_id.in_(list(class_ids)), *_visible_session_filter(uid, db))
+        .filter(Session.class_id.in_(list(class_ids)), or_(Session.class_id.in_(_class_access_ids(db, uid)), _legacy_class_sessions_filter(db, uid), Session.id == guest_session_id))
         .order_by(Session.seq.asc())
         .all()
     )
@@ -128,9 +239,9 @@ def list_classes(
     uid = _to_uuid(user_id)
     now = now or datetime.now(timezone.utc)
     visible_class_ids = (
-        db.query(Session.class_id).filter(Session.class_id.isnot(None), *_visible_session_filter(uid, db))
+        db.query(Session.class_id).filter(Session.class_id.isnot(None), _legacy_class_sessions_filter(db,uid))
     )
-    base = db.query(Class).filter(Class.id.in_(visible_class_ids))
+    base = db.query(Class).filter(or_(Class.id.in_(_class_access_ids(db, uid)), and_(Class.recurrence_rule.is_(None), Class.id.in_(visible_class_ids))))
     if status:
         base = base.filter(Class.status == status)
     total = base.count()
@@ -151,8 +262,23 @@ def _load_class_for_viewer(db: DBSession, class_id: str, uid: UUID) -> tuple[Cla
     cls = db.query(Class).filter(Class.id == cid).first()
     if not cls:
         raise HTTPException(status_code=404, detail=NOT_FOUND)
-    rows = _visible_class_sessions(db, uid, [cid]).get(cid, [])
-    if not rows:
+    from app.services.class_access_service import class_role
+    from app.services.class_instructor_service import validate_instructor
+
+    actor = db.query(User).filter(User.id == uid).first()
+    guest_session_id = None
+    if class_role(db, actor, cls) == "guest":
+        guest = db.query(ClassInstructor).filter_by(
+            class_id=cid, user_id=uid, role="guest", status="active"
+        ).first()
+        if guest and guest.scope_session_id:
+            try:
+                validate_instructor(db, cls, uid, guest.scope_session_id)
+                guest_session_id = guest.scope_session_id
+            except HTTPException:
+                pass
+    rows = _visible_class_sessions(db, uid, [cid], guest_session_id=guest_session_id).get(cid, [])
+    if not rows and not db.query(Class.id).filter(Class.id == cid, Class.id.in_(_class_access_ids(db, uid))).first():
         raise HTTPException(status_code=404, detail=NOT_FOUND)
     return cls, rows
 
@@ -168,13 +294,29 @@ def get_class_detail(class_id: str, user_id: str, db: DBSession, *, now: datetim
         "location_address": cls.location_address,
         "linkband_mode": cls.linkband_mode,
         "record_audio": cls.record_audio,
+        "record_video": cls.record_video,
+        "chat_enabled": cls.chat_enabled,
+        "reminder_offsets": cls.reminder_offsets,
         "capacity": cls.capacity,
         "participant_mode": cls.participant_mode,
         "default_duration_min": cls.default_duration_min,
         "host_view": None,
     }
     instructors = db.query(ClassInstructor).filter(ClassInstructor.class_id == cls.id).order_by(ClassInstructor.added_at).all()
-    is_host = any(i.user_id == uid and i.status == "active" for i in instructors) or any(r.host_id == uid for r in rows)
+    from app.services.class_access_service import class_role
+    actor = db.query(User).filter(User.id == uid).first()
+    role = class_role(db, actor, cls)
+    is_host = role in ("lead", "assistant", "org_admin") or (cls.recurrence_rule is None and any(r.host_id == uid for r in rows))
+    detail["revision"] = cls.revision
+    detail["capabilities"] = {
+        "manage": role in ("lead", "org_admin"),
+        "invite": role in ("lead", "assistant", "org_admin"),
+        "schedule": bool(settings.class_scheduling_enabled and role in ("lead", "org_admin")),
+        "host_request": bool(settings.class_scheduling_enabled and role in ("lead", "assistant", "guest", "org_admin")),
+    }
+    if role in ("lead", "org_admin"):
+        detail.update(draft_schedule=cls.draft_schedule, recurrence_rule=cls.recurrence_rule,
+                      assignment_rule=cls.assignment_rule, ends_on=cls.ends_on)
     if is_host:
         instructor_names = _user_names(db, {i.user_id for i in instructors})
         return {
@@ -201,8 +343,11 @@ def list_class_sessions(class_id: str, user_id: str, db: DBSession) -> tuple[lis
             "scheduled_at": r.scheduled_at,
             "status": r.status,
             "session_kind": r.session_kind,
-            "host": {"id": str(r.host_id), "name": names.get(r.host_id)},
+            "host": {"id": str(r.host_id), "name": names.get(r.host_id)} if r.host_state == "assigned" else None,
             "host_state": r.host_state,
+            "state_version": r.state_version, "duration_min": r.duration_min,
+            "location_type": r.location_type, "location_address": r.location_address,
+            "assignment_override": r.assignment_override,
         }
         for r in rows
     ]

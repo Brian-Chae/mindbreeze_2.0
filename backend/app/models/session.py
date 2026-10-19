@@ -16,6 +16,7 @@ class Session(Base):
     # SDD-095: 일반 클래스 목록/템플릿 목록 조회를 (host_id, is_template) 로 좁힌다.
     __table_args__ = (
         Index("ix_sessions_host_is_template", "host_id", "is_template"),
+        Index("ix_sessions_host_scheduled_at", "host_id", "scheduled_at"),
         # SDD-214: 부모 안 회차 번호 유일. NULL 은 서로 다르므로 템플릿·부모 없는 행은 영향 없다.
         # 부모 정확히 하나(ck_sessions_one_parent)와 진행자 복합 FK 는 PG 마이그레이션(055)에만 있다(ORM 미선언).
         UniqueConstraint("class_id", "seq", name="uq_sessions_class_seq"),
@@ -118,6 +119,8 @@ class Session(Base):
     session_kind: Mapped[str] = mapped_column(String(10), nullable=False, default="regular", server_default="regular")  # regular, makeup
     # 진행 강사 상태: assigned, pending_ack, needs_reassign. host_id 는 항상 NOT NULL.
     host_state: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
+    assignment_override: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
     host = relationship("User", back_populates="hosted_sessions", foreign_keys=[host_id])
     participants = relationship(

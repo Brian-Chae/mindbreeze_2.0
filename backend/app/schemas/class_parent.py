@@ -3,10 +3,10 @@
 EEG·녹음·전사·리포트 본문과 상담사 메모는 어떤 응답에도 담지 않는다(진행 상태 값만).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 Area = Literal["meditation", "counseling"]
 
@@ -16,12 +16,23 @@ class UserBrief(BaseModel):
     name: str | None = None
 
 
+class ClassMemberCandidate(BaseModel):
+    id: str
+    name: str | None = None
+    masked_email: str
+
+
+class ClassMemberCandidatesResponse(BaseModel):
+    members: list[ClassMemberCandidate]
+    has_more: bool
+
+
 class NextSession(BaseModel):
     id: str
     seq: int | None = None
     scheduled_at: datetime | None = None
     status: str
-    host: UserBrief
+    host: UserBrief | None
 
 
 class Progress(BaseModel):
@@ -57,10 +68,19 @@ class ClassHostView(BaseModel):
 
 
 class ClassDetail(ClassSummary):
+    revision: int = 0
+    capabilities: dict[str, bool] = {}
+    draft_schedule: dict | None = None
+    recurrence_rule: dict | None = None
+    assignment_rule: dict | None = None
+    ends_on: date | None = None
     location_type: str
     location_address: str | None = None
     linkband_mode: str
     record_audio: bool
+    record_video: bool = False
+    chat_enabled: bool = False
+    reminder_offsets: list[int] = Field(default_factory=list)
     capacity: int
     participant_mode: str
     default_duration_min: int
@@ -78,8 +98,13 @@ class ClassSessionItem(BaseModel):
     scheduled_at: datetime | None = None
     status: str
     session_kind: str
-    host: UserBrief
+    host: UserBrief | None
     host_state: str | None = None
+    state_version: int = 0
+    duration_min: int = 60
+    location_type: str = "online"
+    location_address: str | None = None
+    assignment_override: bool = False
 
 
 class ClassSessionsResponse(BaseModel):

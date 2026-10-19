@@ -144,12 +144,13 @@ DEV_CRON_14 = {
 
 # SDD-212: 운영 전용 추가 timer(dev 서버 cron 에는 없음) — 적체 감시.
 PROD_ONLY_JOBS = {"report_backlog_probe"}
+CLASS_JOBS = {"class_operations", "class_rolling"}
 
 
 def test_jobs_tsv_는_dev_cron_14개를_활성으로_포함하고_SDD209_2종은_비활성이다():
     jobs = render.load_jobs(DEPLOY / "jobs.tsv")
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
-    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS
+    assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
     assert disabled == {"retention_sweep", "research_export"}
 
@@ -171,7 +172,7 @@ def test_jobs_tsv_주기가_dev_cron_과_같다():
 
 def test_활성_작업_수만큼_timer_와_타임아웃_드롭인이_생성된다(rendered):
     timers = sorted(p.name for p in (rendered / "etc/systemd/system").glob("mindbreeze-job-*.timer"))
-    assert len(timers) == 14 + len(PROD_ONLY_JOBS)
+    assert len(timers) == 14 + len(PROD_ONLY_JOBS) + len(CLASS_JOBS)
     assert not (rendered / "etc/systemd/system/mindbreeze-job-retention_sweep.timer").exists()
     t = (rendered / "etc/systemd/system/mindbreeze-job-process_email_outbox.timer").read_text()
     assert "Unit=mindbreeze-job@process_email_outbox.service" in t and "Persistent=false" in t
@@ -317,3 +318,51 @@ def test_자리표시_값은_미설정으로_취급되고_옵션이_있을_때�
     text, warns = render_env.build_env(params, allow_placeholders=True)
     assert "GEMINI_API_KEY" not in text and "FCM_PROJECT_ID" not in text and render_env.PLACEHOLDER not in text
     assert any("GEMINI_API_KEY" in w for w in warns)
+
+
+# SDD-216 출시 준비: 앱 유닛의 공백 경로, 신규 작업, 스위치 전달.
+def test_앱_유닛은_공백_PREFIX를_하나의_실행_인자로_렌더한다(tmp_path):
+    import shlex
+
+    prefix = "/srv/명상 클래스"
+    render.render_all(tmp_path, _vars(PREFIX=prefix), only="app")
+    units = tmp_path / "etc/systemd/system"
+    for name in ("backend", "worker", "stt-worker", "report-worker", "email-worker", "export-worker", "job@", "job-failed@"):
+        body = (units / f"mindbreeze-{name}.service").read_text()
+        start = next(line.split("=", 1)[1] for line in body.splitlines() if line.startswith("ExecStart="))
+        args = shlex.split(start)
+        if name == "job@":
+            assert args[-2:] == [f"{prefix}/venv/bin/python", f"{prefix}/current/backend/%i_cron.py"]
+        else:
+            assert args[0].startswith(prefix + "/")
+        if name != "job-failed@":
+            assert f"WorkingDirectory={prefix}/current/backend" in body
+
+
+@pytest.mark.parametrize("prefix", ["/srv/a\nb", "/srv/a\tb", '/srv/a"b', "/srv/a\\b", "/srv/a%ib", "/srv/a$b"])
+def test_앱_PREFIX의_제어문자와_해석문자는_거부한다(tmp_path, prefix):
+    with pytest.raises(render.RenderError, match="PREFIX"):
+        render.render_all(tmp_path, _vars(PREFIX=prefix), only="app")
+
+
+def test_인프라_공백_PREFIX는_계속_거부한다(tmp_path):
+    with pytest.raises(render.RenderError, match="PREFIX"):
+        render.render_all(tmp_path, _vars(PREFIX="/srv/a b"))
+
+
+def test_클래스_작업_timer와_타임아웃을_렌더한다(tmp_path):
+    render.render_all(tmp_path, _vars(), only="app")
+    units = tmp_path / "etc/systemd/system"
+    for name, calendar, timeout in (("class_operations", "*-*-* *:*:00 UTC", 55), ("class_rolling", "*-*-* *:00:00 UTC", 1800)):
+        body = (units / f"mindbreeze-job-{name}.timer").read_text()
+        assert f"OnCalendar={calendar}" in body
+        assert f"Unit=mindbreeze-job@{name}.service" in body
+        assert f"TimeoutStartSec={timeout}" in (units / f"mindbreeze-job@{name}.service.d/timeout.conf").read_text()
+
+
+def test_클래스_스위치는_기본_미설정이며_명시한_값만_환경으로_전달한다():
+    flags = ("CLASS_SCHEDULING_ENABLED", "CLASS_ROLLING_ENABLED", "CLASS_TEAM_READ_ENABLED")
+    body, _ = render_env.build_env(_good_params())
+    assert all(f"{key}=" not in body for key in flags)
+    body, _ = render_env.build_env({**_good_params(), **{key: "false" for key in flags}})
+    assert all(f'{key}="false"' in body for key in flags)

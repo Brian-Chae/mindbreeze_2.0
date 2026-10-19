@@ -2,11 +2,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { setReportChoice, setResearchConsent } from '../lib/api/class-flow';
 import {
-  REPORT_NOTICE_VERSION, RESEARCH_NOTICE_VERSION, emptyPrepDraft, type PrepDraft, type ReportChoice,
+  reportNoticeVersion, RESEARCH_NOTICE_VERSION, emptyPrepDraft, type PrepDraft, type ReportChoice,
 } from '../lib/class/flow/member-prep';
 
 interface UseEntryPrepOptions {
   sessionId: string;
+  sessionType?: string;
   credential: string | null;
   participantId: string | null;
 }
@@ -21,7 +22,7 @@ export interface UseEntryPrepResult {
   changeResearch: (consented: boolean) => Promise<void>;
 }
 
-export function useEntryPrep({ sessionId, credential, participantId }: UseEntryPrepOptions): UseEntryPrepResult {
+export function useEntryPrep({ sessionId, credential, participantId, sessionType }: UseEntryPrepOptions): UseEntryPrepResult {
   const [draft, setDraft] = useState<PrepDraft>(emptyPrepDraft);
   const draftRef = useRef(draft);
   draftRef.current = draft;
@@ -43,13 +44,13 @@ export function useEntryPrep({ sessionId, credential, participantId }: UseEntryP
         participantId,
         reportIncluded: draftRef.current.reportChoice === 'included',
         noticeAcknowledged: true,
-        noticeVersion: REPORT_NOTICE_VERSION,
+        noticeVersion: reportNoticeVersion(sessionType),
       });
       patch({ reportSaveFailed: false });
     } catch {
       patch({ reportSaveFailed: true });
     }
-  }, [sessionId, credential, participantId, patch]);
+  }, [sessionId, credential, participantId, sessionType, patch]);
 
   const changeResearch = useCallback(
     async (consented: boolean): Promise<void> => {

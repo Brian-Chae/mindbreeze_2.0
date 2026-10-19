@@ -29,8 +29,10 @@ class UnreadCountResponse(BaseModel):
 class NotificationPreferencesResponse(BaseModel):
     email: dict[str, bool]
     in_app: dict[str, bool]
+    push: dict[str, bool] = Field(default_factory=dict)
 
 
 class NotificationPreferencesRequest(BaseModel):
     email: dict[str, bool] = Field(default_factory=dict)
     in_app: dict[str, bool] = Field(default_factory=dict)
+    push: dict[str, bool] = Field(default_factory=dict)

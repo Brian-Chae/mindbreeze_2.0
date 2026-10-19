@@ -41,6 +41,7 @@ jobs:
           cd frontend
           npm install --legacy-peer-deps
           npx playwright install --with-deps chromium-headless-shell
+          node --test e2e/class-fixture.test.mjs
 
       # 배포 직후 서비스 재시작 대기: 서버 준비 상태 확인(최대 2분)
       - name: Wait for dev ready

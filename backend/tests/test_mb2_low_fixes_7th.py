@@ -296,10 +296,13 @@ def test_mb_err_005_approve_notification_failure_logged(monkeypatch, caplog):
         user_id=uuid.uuid4(),
         content={},
         sent_at=None,
+        approved_at=None,
+        approved_by_user_id=None,
         participant_id=None,
         type="counselor",
     )
-    session = SimpleNamespace(id=session_id, host_id=host_id, title="세션")
+    session = SimpleNamespace(id=session_id, host_id=host_id, title="세션", class_id=None)
+    actor = SimpleNamespace(id=host_id, status="active", role="counselor")
 
     class _Query:
         def __init__(self, target):
@@ -313,7 +316,8 @@ def test_mb_err_005_approve_notification_failure_logged(monkeypatch, caplog):
 
     class _DB:
         def query(self, model):
-            return _Query(report if model is Report else session)
+            from app.models.user import User
+            return _Query(report if model is Report else actor if model is User else session)
 
         def commit(self):
             pass

@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session as DBSession
 
 from app.models.notification import Notification
-from app.models.user import User, DEFAULT_NOTIFICATION_PREFERENCES
+from app.models.user import User, DEFAULT_NOTIFICATION_PREFERENCES, CLASS_NOTIFICATION_EVENTS
 from app.tasks.email import _send_email
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # 표준 딥링크 대상 유형 (프론트 라우트 화이트리스트와 1:1 대응)
 STANDARD_TARGET_TYPES: frozenset[str] = frozenset(
-    {"chat_room", "report", "session", "credentials", "self_profile", "organization", "notice"}
+    {"chat_room", "report", "session", "credentials", "self_profile", "organization", "notice", "class"}
 )
 
 # 이벤트 카탈로그 — event_type → (화면 분류 type, 딥링크 대상 target_type)
@@ -77,6 +77,9 @@ EVENT_CATALOG: dict[str, dict[str, str]] = {
     "risk_signal": {"type": "system", "target_type": "notice"},
 }
 
+for _event in CLASS_NOTIFICATION_EVENTS:
+    EVENT_CATALOG[_event] = {"type": "session", "target_type": "class" if _event.startswith("class_") else "session"}
+
 # 하위 호환: 이전 이벤트→type 매핑 (기존 호출부가 참조하던 이름)
 EVENT_TO_NOTIF_TYPE: dict[str, str] = {
     event: meta["type"] for event, meta in EVENT_CATALOG.items()
@@ -127,10 +130,12 @@ def get_user_preferences(user: User) -> dict[str, dict[str, bool]]:
         return {
             "email": dict(DEFAULT_NOTIFICATION_PREFERENCES["email"]),
             "in_app": dict(DEFAULT_NOTIFICATION_PREFERENCES["in_app"]),
+            "push": dict(DEFAULT_NOTIFICATION_PREFERENCES["push"]),
         }
     return {
         "email": {**DEFAULT_NOTIFICATION_PREFERENCES["email"], **(prefs.get("email") or {})},
         "in_app": {**DEFAULT_NOTIFICATION_PREFERENCES["in_app"], **(prefs.get("in_app") or {})},
+        "push": {**DEFAULT_NOTIFICATION_PREFERENCES["push"], **(prefs.get("push") or {})},
     }
 
 
@@ -385,7 +390,9 @@ def update_preferences(
     email_prefs: dict[str, bool],
     in_app_prefs: dict[str, bool],
     db: DBSession,
+    *, push_prefs: dict[str, bool] | None = None,
 ) -> dict[str, dict[str, bool]]:
+    push_prefs = push_prefs or {}
     uid = _to_uuid(user_id)
     user = db.query(User).filter(User.id == uid).first()
     if not user:
@@ -393,7 +400,7 @@ def update_preferences(
     # NOTIF-CONF-08: 임의 event key 저장 금지 — 이벤트 카탈로그(EVENT_CATALOG)에 존재하는
     #   키만 허용한다. 화이트리스트 없이 저장하면 임의 키가 영속화되고, 오타/미지원 키가
     #   조용히 누적돼 실제 이벤트 설정을 우회한다.
-    unknown = sorted((set(email_prefs) | set(in_app_prefs)) - set(EVENT_CATALOG))
+    unknown = sorted((set(email_prefs) | set(in_app_prefs) | set(push_prefs)) - set(EVENT_CATALOG))
     if unknown:
         raise HTTPException(
             status_code=422,
@@ -404,6 +411,7 @@ def update_preferences(
     user.notification_preferences = {
         "email": {**current["email"], **email_prefs},
         "in_app": {**current["in_app"], **in_app_prefs},
+        "push": {**current["push"], **push_prefs},
     }
     db.commit()
     db.refresh(user)

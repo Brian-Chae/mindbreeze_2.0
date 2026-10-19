@@ -3345,7 +3345,15 @@
      ]
     },
     "host_id": {
-     "type": "string"
+     "anyOf": [
+      {
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "title": "Host Id"
     },
     "host_name": {
      "anyOf": [

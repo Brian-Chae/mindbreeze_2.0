@@ -269,7 +269,7 @@ def test_동시_PUT_이_클래스_설정을_과거_값으로_되돌리지_않는
     assert (k.title, k.capacity) == (s.title, s.max_participants)
 
 
-def test_호스트_삭제는_가시_세션이_0이_된_클래스만_숨긴다(factory):
+def test_호스트_삭제는_명상_클래스를_숨기지_않고_재배정한다(factory):
     from app.services import admin_service
 
     host, _ = _mk_user(factory)
@@ -298,4 +298,5 @@ def test_호스트_삭제는_가시_세션이_0이_된_클래스만_숨긴다(fa
         db.commit()
         admin_service.delete_user(host, admin, db)
     assert _scalar(factory, "select hidden_at is null from classes where id = :c", c=str(shared)) is True
-    assert _scalar(factory, "select hidden_at is not null from classes where id = :c", c=str(alone)) is True
+    assert _scalar(factory, "select hidden_at is null from classes where id = :c", c=str(alone)) is True
+    assert _scalar(factory, "select count(*) from sessions where host_id = :u and host_state = 'needs_reassign' and hidden_at is null", u=str(host)) == 2

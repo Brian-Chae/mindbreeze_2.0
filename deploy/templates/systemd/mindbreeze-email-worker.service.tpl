@@ -10,7 +10,7 @@ User=@@SERVICE_USER@@
 Group=@@SERVICE_USER@@
 WorkingDirectory=@@PREFIX@@/current/backend
 EnvironmentFile=@@ENV_FILE@@
-ExecStart=@@PREFIX@@/venv/bin/celery -A app.tasks.report_email_task:email_app worker -Q email --loglevel=info --concurrency=2
+ExecStart="@@PREFIX@@/venv/bin/celery" -A app.tasks.report_email_task:email_app worker -Q email --loglevel=info --concurrency=2
 Restart=always
 RestartSec=5
 UMask=0077

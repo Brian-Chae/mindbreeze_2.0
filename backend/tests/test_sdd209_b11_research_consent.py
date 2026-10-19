@@ -238,7 +238,7 @@ def test_BT51_리포트_선택_고지_증빙과_저장소가_다르다(client):
     me = _guest(client, cls)
     client.put(
         f"/api/v1/sessions/{cls['id']}/report-choice",
-        json={"participant_id": me["participant_id"], "report_included": True, "notice_acknowledged": True},
+        json={"participant_id": me["participant_id"], "report_included": True, "notice_acknowledged": True, "notice_version": "r5-1"},
         headers=_cred(me),
     )
     _put(client, cls, _cred(me), True)

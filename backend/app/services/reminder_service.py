@@ -192,6 +192,19 @@ def reminder_recipients(session: Session, db: DBSession) -> list[dict]:
 
     게스트(비회원)는 계정이 없으므로 이메일·인앱 알림 대상이 아니다.
     """
+    if session.class_id:
+        from app.models.class_program import Class,ClassMember
+        parent=db.query(Class).filter_by(id=session.class_id).first()
+        if parent and parent.recurrence_rule:
+            excluded=db.query(SessionParticipant.user_id).filter(SessionParticipant.session_id==session.id,
+                SessionParticipant.user_id.isnot(None),SessionParticipant.attendance_status.in_(("excused","withdrawn"))).subquery()
+            users=db.query(User).join(ClassMember,ClassMember.user_id==User.id).filter(
+                ClassMember.class_id==parent.id,ClassMember.status=="active",User.status=="active",
+                User.id.notin_(db.query(excluded.c.user_id))).all()
+            if session.session_kind=="makeup":
+                chosen={p.user_id for p in db.query(SessionParticipant).filter_by(session_id=session.id).all()}
+                users=[u for u in users if u.id in chosen]
+            return [{"user_id":str(u.id),"email":u.email,"name":u.name or "회원"} for u in users]
     rows = (
         db.query(SessionParticipant, User)
         .join(User, User.id == SessionParticipant.user_id)
@@ -332,9 +345,21 @@ def run_reminder(session_id: str | UUID, offset_min: int, db: DBSession) -> dict
     수신자별로 발송 로그를 확인해 중복 발송을 건너뛴다.
     """
     sid = _to_uuid(session_id)
-    session = db.get(Session, sid)
+    session = db.query(Session).filter(Session.id==sid).first()
     if session is None:
         return {"status": "skipped", "reason": "not_found"}
+    if session.class_id:
+        from app.models.class_program import Class
+        from app.services.class_instructor_service import validate_instructor
+        from fastapi import HTTPException
+        parent=db.query(Class).filter_by(id=session.class_id).first()
+        if parent and parent.recurrence_rule:
+            if parent.status!="active" or session.host_state!="assigned":
+                return {"status":"skipped","reason":"host_unavailable"}
+            try:
+                validate_instructor(db,parent,session.host_id,session.id)
+            except HTTPException:
+                return {"status":"skipped","reason":"host_unavailable"}
     if session.is_template:
         return {"status": "skipped", "reason": "template"}
     # 예약(scheduled) 상태에서만 사전 안내를 보낸다. 오픈(open)까지는 허용(입장 안내 유효).

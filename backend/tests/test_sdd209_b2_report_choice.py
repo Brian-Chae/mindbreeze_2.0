@@ -66,11 +66,11 @@ def test_BT6_본인_선택_저장_멱등_이력_고지증빙_분리(client):
     _, cls, joined = _group_with_guest(client, "b2c2@test.com")
     pid = joined["participant_id"]
 
-    r = _put(client, cls, joined, True, notice_acknowledged=True, notice_version="v1")
+    r = _put(client, cls, joined, True, notice_acknowledged=True, notice_version="r5-1")
     assert r.status_code == 200, r.text
     assert r.json()["report_included"] is True and r.json()["changed"] is True
     row = _row(pid)
-    assert row["included"] is True and row["ack_at"] is not None and row["ack_ver"] == "v1"
+    assert row["included"] is True and row["ack_at"] is not None and row["ack_ver"] == "r5-1"
     assert _events(pid) == [(False, True, "self")]
 
     # 멱등: 같은 값 재요청은 이력을 늘리지 않는다
@@ -83,7 +83,7 @@ def test_BT6_본인_선택_저장_멱등_이력_고지증빙_분리(client):
     assert r3.status_code == 200 and r3.json()["changed"] is True
     assert _events(pid) == [(False, True, "self"), (True, False, "self")]
     # 고지 증빙은 선택 변경으로 지워지지 않고 이력과 별개로 남는다
-    assert _row(pid)["ack_ver"] == "v1"
+    assert _row(pid)["ack_ver"] == "r5-1"
 
 
 def test_고지확인_없이_선택만_하면_증빙을_남기지_않는다(client):

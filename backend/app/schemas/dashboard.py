@@ -1,6 +1,7 @@
 """SDD-015 — 상담사 / 기관 대시보드 Pydantic 스키마"""
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -9,6 +10,10 @@ class ClassSummary(BaseModel):
     """대시보드에 표시되는 클래스 1건 요약."""
 
     id: str
+    class_id: str | None = None
+    counseling_relationship_id: str | None = None
+    area: Literal["meditation", "counseling"] | None = None
+    seq: int | None = None
     title: str | None = None
     type: str
     custom_type_name: str | None = None

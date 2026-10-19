@@ -9,7 +9,7 @@ AWS="${MB_AWS:-aws}"
 [[ "$IID" =~ ^i-[0-9a-f]{8,17}$ ]] || { echo "instance-id 형식 오류" >&2; exit 1; }
 [[ "$TIMEOUT" =~ ^[0-9]+$ ]] || { echo "timeout 형식 오류" >&2; exit 1; }
 PARAMS="$(python3 -c 'import json,sys; print(json.dumps({"commands": open(sys.argv[1]).read().splitlines(), "executionTimeout": [sys.argv[2]]}))' "$SCRIPT" "$TIMEOUT")"
-CID="$($AWS ssm send-command --instance-ids "$IID" --document-name AWS-RunShellScript \
+CID="$("$AWS" ssm send-command --instance-ids "$IID" --document-name AWS-RunShellScript \
   --comment "mindbreeze deploy ${GITHUB_RUN_ID:-manual}" --timeout-seconds 60 --parameters "$PARAMS" \
   --query 'Command.CommandId' --output text)"
 echo "SSM CommandId: $CID"
@@ -17,10 +17,10 @@ DEADLINE=$(( $(date +%s) + TIMEOUT + 60 ))
 STATUS=""
 while [ "$(date +%s)" -lt "$DEADLINE" ]; do
   sleep 5
-  STATUS="$($AWS ssm get-command-invocation --command-id "$CID" --instance-id "$IID" --query 'Status' --output text 2>/dev/null || echo Pending)"
+  STATUS="$("$AWS" ssm get-command-invocation --command-id "$CID" --instance-id "$IID" --query 'Status' --output text 2>/dev/null || echo Pending)"
   case "$STATUS" in Success|Failed|TimedOut|Cancelled|Cancelling) break ;; esac
 done
-INV="$($AWS ssm get-command-invocation --command-id "$CID" --instance-id "$IID" --output json)"
+INV="$("$AWS" ssm get-command-invocation --command-id "$CID" --instance-id "$IID" --output json)"
 python3 - "$INV" <<'PY'
 import json, sys
 d = json.loads(sys.argv[1])

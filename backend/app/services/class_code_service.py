@@ -15,7 +15,10 @@ import re
 import secrets
 
 from fastapi import HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.orm import Session as DBSession
+
+from app.models.class_program import Class
 
 from app.models.session import Session
 
@@ -56,7 +59,9 @@ def _active_codes(db: DBSession) -> set[str]:
         )
         .all()
     )
-    return {c for (c,) in rows if is_valid_class_code(c)}
+    parents = db.query(Class.access_code).filter(Class.access_code.is_not(None),
+        Class.status.notin_(("completed", "cancelled", "archived"))).all()
+    return {c for (c,) in [*rows, *parents] if is_valid_class_code(c)}
 
 
 def generate_class_code(db: DBSession) -> str:
@@ -65,6 +70,9 @@ def generate_class_code(db: DBSession) -> str:
     공간 소진 시 ``ClassCodeExhausted``. 동시 발급 경합은 부분 유니크 인덱스가 최종 방어하며,
     호출측(create_session)이 IntegrityError 시 재발급한다.
     """
+    # Class와 Session의 두 인덱스 사이 경합도 같은 트랜잭션 잠금으로 직렬화한다.
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(2160042)"))
     used = _active_codes(db)
     if len(used) >= CLASS_CODE_SPACE:
         raise ClassCodeExhausted("사용 가능한 클래스 코드가 없습니다")
@@ -91,6 +99,11 @@ def find_enterable_session(db: DBSession, code: str | None) -> Session | None:
     normalized = normalize_class_code(code)
     if normalized is None:
         return None
+    parent = db.query(Class).filter(Class.access_code==normalized, Class.status=="active").first()
+    if parent is not None and parent.recurrence_rule:
+        sessions = db.query(Session).filter(Session.class_id==parent.id,
+            Session.status.in_(("open","in_progress")), Session.is_template.is_(False)).all()
+        return sessions[0] if len(sessions)==1 else None
     return (
         db.query(Session)
         .filter(
@@ -100,3 +113,51 @@ def find_enterable_session(db: DBSession, code: str | None) -> Session | None:
         )
         .first()
     )
+
+
+def resolve_class_code(db, code):
+    """코드만으로 공개 일정 메타를 해석하며 회원·본문은 반환하지 않는다."""
+    normalized=normalize_class_code(code)
+    cls=db.query(Class).filter(Class.access_code==normalized,Class.status=="active").first() if normalized else None
+    if cls is None:
+        raise HTTPException(404, detail="클래스를 찾을 수 없습니다")
+    rows=db.query(Session).filter(Session.class_id==cls.id,Session.status.in_(("open","in_progress")),
+        Session.is_template.is_(False)).order_by(Session.scheduled_at,Session.seq).all()
+    next_row=db.query(Session).filter(Session.class_id==cls.id,Session.status.in_(("ready","scheduled")),
+        Session.is_template.is_(False)).order_by(Session.scheduled_at,Session.seq).first()
+    def metadata(row):
+        return {"session_id":str(row.id),"seq":row.seq,"scheduled_at":row.scheduled_at,"status":row.status}
+    return {"class_id":str(cls.id),"title":cls.title,"sessions":[metadata(r) for r in rows],
+            "next_session":metadata(next_row) if next_row else None}
+
+
+def join_class_code(db, class_id, user_id, code, now=None):
+    from datetime import datetime, timezone
+    from uuid import UUID
+    from app.models.user import User
+    from app.services.class_membership_service import invite_members
+    now=now or datetime.now(timezone.utc)
+    try:
+        actor=db.query(User).filter(User.id==UUID(str(user_id))).with_for_update().first()
+        if actor is None or actor.status!="active" or actor.role!="client":
+            raise HTTPException(403,detail={"code":"member_only"})
+        cls=db.query(Class).filter(Class.id==UUID(str(class_id))).populate_existing().with_for_update().first()
+        normalized=normalize_class_code(code)
+        if not cls or cls.status!="active" or not normalized or cls.access_code!=normalized:
+            raise HTTPException(404,detail="클래스를 찾을 수 없습니다")
+        member=invite_members(db,cls,[actor.id],actor.id,now,via="code")[0]
+        result={"class_id":str(cls.id),"member_id":str(member.id),"status":member.status}
+        db.commit()
+        return result
+    except Exception:
+        db.rollback()
+        raise
+
+
+def display_code(db, session):
+    if session.class_id and db is not None:
+        parent=db.query(Class).filter(Class.id==session.class_id).first()
+        if parent and parent.status=="active":
+            return parent.access_code
+        return None
+    return session.access_code

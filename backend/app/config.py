@@ -30,6 +30,11 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
 
+    # SDD-216: 두 차례 출시. 팀 본문은 개정 고지 UI 검증 후 활성화한다.
+    class_scheduling_enabled: bool = False
+    class_rolling_enabled: bool = False
+    class_team_read_enabled: bool = False
+
     # Database
     database_url: str = "postgresql://localhost:5432/mindbreeze_dev"
 

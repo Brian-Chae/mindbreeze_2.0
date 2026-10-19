@@ -1,3 +1,5 @@
+import { createClassFixture } from './class-fixture.mjs';
+import { randomUUID } from 'node:crypto';
 // 전수조사 E2E — 기업(기관) > 상담사 > 회원가입 > 로그인 > 클래스 참여 > 리포트 발송
 // 실행: E2E_PASSWORD=... node e2e/full-journey.mjs   (BASE_URL/API_URL 로 대상 변경 가능)
 // 종료코드: 0=전부 통과, 1=하나 이상 실패. 결과는 e2e/full-journey-result.json 에 저장.
@@ -169,19 +171,14 @@ const classes = { A: { id: null, code: null, title: TITLE }, B: { id: null, titl
 
 async function createStartedClass(title, participantIds) {
   const c = await counselor();
-  const r = await fetch(`${API}/sessions`, {
-    method: 'POST', headers: H(c.token),
-    body: JSON.stringify({ type: 'meditation', duration_min: 30, title, location_type: 'online', participant_mode: 'one_on_one', max_participants: 2, participant_ids: participantIds }),
-  });
-  if (r.status !== 201 && r.status !== 200) throw new Error(`클래스 생성 ${r.status}`);
-  const s = await r.json();
-  for (const action of ['open', 'start']) {
-    const t = await fetch(`${API}/sessions/${s.id}/${action}`, { method: 'POST', headers: H(c.token) });
-    if (t.status !== 200) throw new Error(`클래스 ${action} ${t.status}`);
-  }
+  const fixture = await createClassFixture({ api: API, token: c.token, hostId: c.user.id,
+    title, memberIds: participantIds, instant: true });
+  const s = { id: fixture.session_ids[0] };
+  const t = await fetch(`${API}/sessions/${s.id}/start`, { method: 'POST', headers: H(c.token) });
+  if (t.status !== 200) throw new Error(`클래스 start ${t.status}: ${JSON.stringify((await t.json()).detail)}`);
   const chk = await (await fetch(`${API}/sessions/${s.id}`, { headers: H(c.token) })).json();
   if (chk.status !== 'in_progress') throw new Error('클래스가 in_progress 가 아님');
-  return { id: s.id, code: chk.access_code ?? s.access_code ?? null };
+  return { id: s.id, classId: fixture.class_id, code: chk.access_code ?? null };
 }
 
 /** 입장 마법사의 보이는 CTA 를 순서대로 눌러 진행 화면까지 간다. 본 단계(h1) 순서를 기록해 돌려준다. */
@@ -226,7 +223,8 @@ async function walkToLive(p, { includeReport }) {
 
 await scenario('[클래스] (A) 상담사 클래스 생성 → 오픈 → 시작 (4자리 코드 발급)', async () => {
   const made = await createStartedClass(TITLE, []);
-  classes.A.id = made.id; classes.A.code = made.code;
+  classes.A.id = made.id;
+  classes.A.classId = made.classId; classes.A.code = made.code;
   if (!/^\d{4}$/.test(String(made.code ?? ''))) throw new Error('입장 코드가 4자리 숫자가 아님');
 });
 
@@ -253,10 +251,24 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   if (iNotice < 0) throw new Error(`고지·리포트 반영 단계 없음 (${seen.join(' → ')})`);
 });
 
+async function endClass(key) {
+  await scenario(`[클래스] (${key}) 상담사 종료(end) → 상태 completed`, async () => {
+    if (!classes[key].id) throw new Error('선행 클래스 생성 실패');
+    const c = await counselor();
+    const r = await fetch(`${API}/sessions/${classes[key].id}/end`, { method: 'POST', headers: H(c.token) });
+    if (r.status !== 200) throw new Error(`클래스 종료 ${r.status}`);
+    const s = await r.json();
+    if (s.status !== 'completed') throw new Error(`종료 후 상태 ${s.status}`);
+  });
+}
+
+await endClass('A');
+
 await scenario('[클래스] (B) 초대 회원 클래스 생성 → 오픈 → 시작', async () => {
   const cl = await client();
   const made = await createStartedClass(TITLE_B, [cl.user.id]);
   classes.B.id = made.id;
+  classes.B.classId = made.classId;
 });
 
 await scenario('[클래스] (B) 초대 회원 입장(편의 경로) → 준비(기본 리포트 제외) → 진행 화면', async (p) => {
@@ -268,16 +280,7 @@ await scenario('[클래스] (B) 초대 회원 입장(편의 경로) → 준비(�
   console.log(`      /class/{id}/enter 단계 순서: ${seen.join(' → ')} → 진행 화면`);
 });
 
-for (const key of ['A', 'B']) {
-  await scenario(`[클래스] (${key}) 상담사 종료(end) → 상태 completed`, async () => {
-    if (!classes[key].id) throw new Error('선행 클래스 생성 실패');
-    const c = await counselor();
-    const r = await fetch(`${API}/sessions/${classes[key].id}/end`, { method: 'POST', headers: H(c.token) });
-    if (r.status !== 200) throw new Error(`클래스 종료 ${r.status}`);
-    const s = await r.json();
-    if (s.status !== 'completed') throw new Error(`종료 후 상태 ${s.status}`);
-  });
-}
+await endClass('B');
 
 // ════════════════════════════════════════════════════════════════════════
 // 6. 리포트 발송 (자동 생성 → 열람 → 승인 → 발송)
@@ -359,14 +362,18 @@ await scenario('[리포트] (A) 리포트 이메일 재발송(승인 후) → qu
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// 정리 — 테스트 세션 삭제(리포트·기록은 cascade). 실패해도 무시.
+// 정리 — 완료된 테스트 클래스 보관. 원본·리포트는 보존한다.
 // ════════════════════════════════════════════════════════════════════════
-await scenario('[정리] 테스트 클래스 삭제(잔여 0)', async () => {
+await scenario('[정리] 완료된 테스트 클래스 보관', async () => {
   const c = await counselor();
   for (const key of ['A', 'B']) {
     if (!classes[key].id) continue;
-    const d = await fetch(`${API}/sessions/${classes[key].id}`, { method: 'DELETE', headers: H(c.token) });
-    if (d.status !== 204) console.log(`      클래스 ${key} 삭제 ${d.status} — e2e_seed cleanup 에 맡김`);
+    const parent = await fetch(`${API}/classes/${classes[key].classId}`, { headers: H(c.token) });
+    if (!parent.ok) throw new Error(`정리 클래스 조회 ${parent.status}`);
+    const detail = await parent.json();
+    const d = await fetch(`${API}/classes/${classes[key].classId}/transition`, { method: 'POST', headers: H(c.token),
+      body: JSON.stringify({ operation_key: randomUUID(), expected_revision: detail.revision, action: 'archive' }) });
+    if (d.status !== 200) throw new Error(`클래스 ${key} 보관 ${d.status}`);
   }
 });
 

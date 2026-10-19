@@ -118,6 +118,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
+  signal?: AbortSignal;
   method?: string;
   body?: unknown;
   skipAuth?: boolean;
@@ -137,12 +138,15 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const BLOB_TIMEOUT_MS = 60_000;
 
 /** AbortController 기반 타임아웃 signal 을 만든다. 사용 후 반드시 clear() 로 타이머를 해제한다. */
-function createTimeoutSignal(timeoutMs: number): { signal: AbortSignal; clear: () => void } {
+function createTimeoutSignal(timeoutMs: number, caller?: AbortSignal): { signal: AbortSignal; clear: () => void } {
   const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (caller?.aborted) abort();
+  else caller?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return {
     signal: controller.signal,
-    clear: () => clearTimeout(timer),
+    clear: () => { clearTimeout(timer); caller?.removeEventListener('abort', abort); },
   };
 }
 
@@ -268,7 +272,23 @@ export function formatErrorDetail(detail: unknown): string | null {
   return null;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** 호출자 취소는 공유 인증 갱신을 끊지 않고 해당 요청만 즉시 종료한다. */
+function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const { signal } = options;
+  if (signal?.aborted) return Promise.reject(new DOMException('요청 취소', 'AbortError'));
+  if (!signal) return requestActive<T>(path, options);
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(new DOMException('요청 취소', 'AbortError'));
+    signal.addEventListener('abort', abort, { once: true });
+    requestActive<T>(path, options).then(resolve, reject)
+      .finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
+async function requestActive<T>(path: string, options: RequestOptions): Promise<T> {
+  const checkCancelled = () => {
+    if (options.signal?.aborted) throw new DOMException('요청 취소', 'AbortError');
+  };
   const { method = 'GET', body, skipAuth = false, headers = {} } = options;
 
   const buildHeaders = (token: string | null): Record<string, string> => {
@@ -279,9 +299,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   };
 
   const doFetch = async (token: string | null): Promise<Response> => {
+    checkCancelled();
     // API7-02: 응답이 오지 않으면 상한 시간 후 요청을 중단한다.
     const { signal, clear } = createTimeoutSignal(
       options.responseType === 'blob' ? BLOB_TIMEOUT_MS : REQUEST_TIMEOUT_MS,
+      options.signal,
     );
     try {
       const response = await fetch(`${BASE_URL}${path}`, {
@@ -294,6 +316,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       captureNativeRefresh(response);
       return response;
     } catch (error) {
+      checkCancelled();
       if (isAbortError(error)) {
         throw new ApiError(408, '요청 시간이 초과되었습니다. 네트워크 상태를 확인한 후 다시 시도해 주세요.', null);
       }
@@ -305,13 +328,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   let token = tokenStorage.getAccess();
   let res = await doFetch(token);
+  checkCancelled();
 
   // 401 → refresh 재시도 1회
   if (res.status === 401 && !skipAuth) {
     const refresh = await refreshAccessTokenResult();
+    checkCancelled();
     if (refresh.ok) {
       token = refresh.token;
       res = await doFetch(token);
+      checkCancelled();
       // API7-05: 갱신 후 재시도도 401이면 세션이 실제로 무효다.
       // 초기 401(무효 refresh) 경로와 동일하게 정리·로그인 이동을 수행해야
       // '인증됨' 상태로 남아 401만 반복되는 상태에 빠지지 않는다.

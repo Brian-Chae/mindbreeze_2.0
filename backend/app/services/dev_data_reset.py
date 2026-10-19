@@ -24,6 +24,7 @@ PRESERVED_TABLE = "alembic_version"
 SESSIONS_SCOPE_DELETE = frozenset({
     "agent_relay_events", "audio_chunks", "chat_message_reads", "chat_messages", "chat_room_participants",
     "chat_rooms", "class_instructors", "class_member_events", "class_members", "classes",
+    "class_effects", "class_email_invites", "class_operations", "session_host_notes", "session_host_requests",
     "counseling_guests", "counseling_relationship_counselors", "counseling_relationship_events",
     "counseling_relationships", "eeg_feature_windows", "eeg_raw_chunks", "eeg_records", "guest_claim_events",
     "narrative_cache", "notification_outbox", "notifications", "pipeline_outbox", "report_choice_events",

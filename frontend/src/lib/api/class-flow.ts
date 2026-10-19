@@ -215,6 +215,7 @@ export async function raiseEntryHand(sessionId: string, participantId: string, c
 
 /** 새로고침 뒤 화면을 다시 그리기 위한 클래스 요약 — 개인정보가 아니다(제목·시각·방식 설정) */
 export interface EntryClassInfo {
+  sessionType?: SessionDto['type'];
   title: string | null;
   hostName: string | null;
   scheduledAt: string | null;
@@ -289,6 +290,7 @@ export function clearEntry(sessionId: string): void {
 
 export function classInfoFromSession(session: EntrySessionDto): EntryClassInfo {
   return {
+    sessionType: session.type,
     title: session.title,
     hostName: session.host_name ?? null,
     scheduledAt: session.scheduled_at,

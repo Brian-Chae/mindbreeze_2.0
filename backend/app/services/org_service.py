@@ -422,6 +422,8 @@ def set_counselor_suspension(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="활성 상태의 상담사만 비활성화할 수 있습니다",
             )
+        from app.services.class_instructor_service import mark_needs_reassign
+        mark_needs_reassign(db, target.id, None, datetime.now(timezone.utc))
         target.status = "suspended"
     else:
         if target.status != "suspended":

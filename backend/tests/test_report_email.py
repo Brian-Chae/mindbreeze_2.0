@@ -155,6 +155,9 @@ def test_approval_enqueues_client_email(client, setup_email, monkeypatch):
     """RPT-EMAIL-SEND-002: 승인으로 completed 전이하면 내담자 메일 발송을 (재)예약한다."""
     from app.services import report_email_service, report_service
     db, session, participant = setup_email
+    from app.models.user import User
+    db.add(User(id=session.host_id, email="approval-sdd216@example.com", password_hash="unused", name="승인 지도사", role="counselor", status="active"))
+    db.commit()
     client.post(f"/api/v1/sessions/{session.id}/report-email", json=request_body(participant))
     report = db.query(Report).one()
     enqueue = Mock()

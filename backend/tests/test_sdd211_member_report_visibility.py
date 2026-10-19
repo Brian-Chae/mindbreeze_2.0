@@ -214,6 +214,9 @@ def _make_org_admin(org_code: str) -> JsonDict:
             org_id=org.id,
         )
         db.add(user)
+        db.flush()
+        from app.services.membership_service import add_membership
+        add_membership(db, user, org.id, status_="active", role="org_admin")
         db.commit()
         return {
             "id": str(user.id),
@@ -988,7 +991,7 @@ def _staff_unmasked_problems(rows: list[JsonDict], env: JsonDict) -> list[str]:
     return problems
 
 
-def test_RX15_staff_호스트_org_admin_목록_상세_마스킹_없음_회귀고정(client):
+def test_RX15_호스트_본문과_D28_관리자_상담_비공개(client):
     org_code = create_test_org()
     host = _make_host(org_code=org_code)
     org_admin = _make_org_admin(org_code)
@@ -1001,7 +1004,14 @@ def test_RX15_staff_호스트_org_admin_목록_상세_마스킹_없음_회귀고
         res = client.get("/api/v1/reports", headers=viewer["auth"])
         assert res.status_code == 200, res.text
         rows = res.json()["reports"]
-        problems += [f"[{label} 목록] {p}" for p in _staff_unmasked_problems(rows, env)]
+        if label == "호스트":
+            problems += [f"[{label} 목록] {p}" for p in _staff_unmasked_problems(rows, env)]
+        else:
+            # 이 fixture는 clinical 상담이다. D-28 관리자에게 본문 목록을 주지 않는다.
+            assert rows == []
+            for rid in env["ids"].values():
+                assert client.get(f"/api/v1/reports/{rid}", headers=viewer["auth"]).status_code == 403
+            continue
         if not any(r["session_id"] == bare_sid and r["id"] is None for r in rows):
             problems.append(f"[{label} 목록] 합성(미생성) 행이 사라짐")
 

@@ -313,6 +313,8 @@ def generate_report(
     if report_type not in ("counselor", "client"):
         raise HTTPException(status_code=400, detail="잘못된 리포트 유형")
     s = get_session_authorized(db, session_id, host_id, SessionAction.REPORT_GENERATE)
+    if not _can_edit_report(host_id, s, db):
+        raise HTTPException(403, detail="현재 진행 지도사만 생성 가능합니다")
 
     if report_type == "client":
         # FUNC-02: client 리포트는 대상 participant 를 명시해야 한다.
@@ -599,7 +601,7 @@ def list_reports(
             )
             .select_from(Session)
             .outerjoin(Report, Report.session_id == Session.id)
-            .filter(Session.host_id.in_(host_ids))
+            .filter(Session.host_id.in_(host_ids) if user.role == "counselor" else True)
             .filter(
                 or_(
                     Report.id.isnot(None),
@@ -622,6 +624,18 @@ def list_reports(
             .join(Session, Session.id == Report.session_id)
             .filter(Report.user_id == uid)
         )
+
+    if user and user.role == "org_admin":
+        from app.models.class_program import Class
+        from app.models.user_org_membership import UserOrgMembership
+        from app.models.organization import Organization
+        permitted = db.query(Class.id).join(UserOrgMembership, UserOrgMembership.org_id == Class.organization_id).join(
+            Organization, Organization.id == Class.organization_id).filter(
+            Class.organization_attribution_known.is_(True), UserOrgMembership.user_id == uid,
+            UserOrgMembership.status == "active", UserOrgMembership.role == "org_admin",
+            Organization.deactivated_at.is_(None),
+        )
+        base = base.filter(Session.type == "meditation", Session.class_id.in_(permitted))
 
     # 페이지네이션 total 은 별도 count 쿼리로 산출한다(창과 무관한 전체 건수).
     total = base.count()
@@ -739,6 +753,8 @@ def list_reports(
             # SDD-211(R6-X1): 회원(비-staff) 조회에서는 승인 전 행을 '리뷰 중' 으로 마스킹한다(총계·페이지 불변).
             if not is_staff and _is_unapproved(report):
                 serialized = _mask_unapproved(serialized, report, sessions_map.get(report.session_id))
+            from app.services.class_access_service import project_report_for_viewer
+            serialized=project_report_for_viewer(serialized,user,sessions_map.get(report.session_id))
             result.append(serialized)
         else:
             session = missing_by_id.get(row.session_id)
@@ -803,11 +819,12 @@ def get_report(report_id: str, user_id: str, db: DBSession) -> dict:
     if report.type == "counselor":
         result["content"]["client_comments"] = _collect_client_comments(report.session_id, db)
     # 신규 리포트 배지용: 최초 열람 시 is_read=true 마킹
-    if not report.is_read:
+    if not report.is_read and viewer and viewer.role != "org_admin" and (viewer.role=="client" or viewer.id==session.host_id):
         report.is_read = True
         db.add(report)
         db.commit()
-    return result
+    from app.services.class_access_service import project_report_for_viewer
+    return project_report_for_viewer(result,viewer,session)
 
 
 def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
@@ -866,37 +883,47 @@ def _collect_client_comments(session_id, db: DBSession) -> list[dict]:
 
 
 def _can_access_report(user_id: str, session, db: DBSession) -> bool:
-    """사용자가 리포트 세션에 접근 가능한지 (본인 세션 host / 기관 관리자 / 참여 내담자)."""
+    """D-05/D-28: 읽기와 수정 권한을 분리한다."""
+    from app.services.class_access_service import admin_can_read_meditation_report, can_read_team_material
     uid = _to_uuid(user_id)
-    if session and session.host_id == uid:
-        return True
     user = db.query(User).filter(User.id == uid).first()
-    if user and user.role == "org_admin" and user.org_id and session:
-        host = db.query(User).filter(User.id == session.host_id).first()
-        return bool(host and host.org_id == user.org_id)
-    # 내담자(client): 자신이 참여한 세션의 리포트는 열람 가능
-    if session:
-        is_participant = (
-            db.query(SessionParticipant)
-            .filter(
-                SessionParticipant.session_id == session.id,
-                SessionParticipant.user_id == uid,
-            )
-            .first()
-        )
-        if is_participant is not None:
-            return True
-    return False
+    if user is None or user.status != "active" or session is None:
+        return False
+    if user.role == "org_admin":
+        return admin_can_read_meditation_report(db, user, session)
+    if session.host_id == uid:
+        return True
+    if can_read_team_material(db, uid, session):
+        return True
+    return db.query(SessionParticipant).filter(
+        SessionParticipant.session_id == session.id, SessionParticipant.user_id == uid,
+    ).first() is not None
+
+
+def _can_edit_report(user_id: str, session, db: DBSession) -> bool:
+    uid = _to_uuid(user_id)
+    user = db.query(User).filter(User.id == uid).first()
+    allowed=bool(session and user and user.status=="active" and user.role=="counselor" and session.host_id==uid)
+    if allowed and session.class_id:
+        from app.models.class_program import Class
+        from app.services.class_instructor_service import validate_instructor
+        cls=db.query(Class).filter_by(id=session.class_id).first()
+        if cls and cls.recurrence_rule:
+            try:
+                validate_instructor(db,cls,uid,session.id)
+            except HTTPException:
+                return False
+    return allowed
 
 
 def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
-    """리포트가 현재 상담사의 세션에 속하는지 확인한다. (org_admin은 소속 기관 세션 허용)"""
+    """리포트 쓰기는 현재 진행 지도사만 허용한다."""
     rid = _to_uuid(report_id)
     report = db.query(Report).filter(Report.id == rid).first()
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 가능합니다")
 
 
@@ -906,7 +933,7 @@ def update_report(report_id: str, host_id: str, payload, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not _can_access_report(host_id, session, db):
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 수정 가능합니다")
 
     if payload.content is not None:
@@ -956,7 +983,14 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     if not report:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다")
     session = db.query(Session).filter(Session.id == report.session_id).first()
-    if not session or session.host_id != _to_uuid(host_id):
+    if session and session.class_id:
+        from app.models.class_program import Class, ClassInstructor
+        from app.services.class_write_service import lock_users
+        lock_users(db,[r[0] for r in db.query(ClassInstructor.user_id).filter_by(class_id=session.class_id).all()])
+        db.query(Class).filter_by(id=session.class_id).populate_existing().with_for_update().one()
+        session=db.query(Session).filter_by(id=session.id).populate_existing().with_for_update().one()
+        report=db.query(Report).filter_by(id=rid).populate_existing().with_for_update().one()
+    if not _can_edit_report(host_id, session, db):
         raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
 
     # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.
@@ -967,6 +1001,8 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
     already_completed = report.status == "completed"
     report.status = "completed"
     report.sent_at = report.sent_at or _now()
+    report.approved_at = report.approved_at or _now()
+    report.approved_by_user_id = report.approved_by_user_id or _to_uuid(host_id)
     content = dict(report.content or {})
     content["approved"] = True
     report.content = content
@@ -988,7 +1024,7 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
                         legacy={"report_id": str(report.id), "session_id": str(report.session_id)},
                     ),
                 },
-                db,
+                db, commit=False,
             )
         except Exception:  # noqa: BLE001
             # MB-ERR-005: 승인 완료 알림 발화 실패를 삼키지 않고 로그로 남긴다.
