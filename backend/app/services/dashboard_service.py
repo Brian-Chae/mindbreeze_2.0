@@ -125,6 +125,42 @@ def _sorted_sessions(query) -> list[Session]:
     return sorted(sessions, key=_activity_sort_key, reverse=True)
 
 
+def _team_instructor_sessions(
+    uid: uuid.UUID, user: User, exclude_ids: set[uuid.UUID], db: DBSession
+) -> list[Session]:
+    """본인이 활성 팀 강사(lead/assistant)인 클래스의 회차 중 본인이 host 가 아닌 것.
+
+    guest 강사는 진행 요청 외 접근이 없으므로 제외하고, 접근 판정은 class_role 을 그대로 따른다
+    (기관 소속·상담사 역할 불일치 시 제외). 템플릿(is_template)은 계속 제외한다.
+    """
+    from app.models.class_program import Class, ClassInstructor
+    from app.services.class_access_service import class_role
+
+    class_ids = [
+        row.class_id
+        for row in db.query(ClassInstructor)
+        .filter(
+            ClassInstructor.user_id == uid,
+            ClassInstructor.status == "active",
+            ClassInstructor.role.in_(("lead", "assistant")),
+        )
+        .all()
+    ]
+    if not class_ids:
+        return []
+    allowed = [
+        c.id
+        for c in db.query(Class).filter(Class.id.in_(class_ids)).all()
+        if class_role(db, user, c) in ("lead", "assistant")
+    ]
+    if not allowed:
+        return []
+    query = db.query(Session).filter(
+        Session.class_id.in_(allowed), Session.is_template.is_(False)
+    )
+    return [s for s in _sorted_sessions(query) if s.id not in exclude_ids]
+
+
 def counselor_dashboard(user_id: str, db: DBSession) -> dict:
     """상담사 본인이 host인 클래스 목록 + 기록/참여자/상태 집계."""
     uid = _to_uuid(user_id)
@@ -137,6 +173,21 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         db.query(Session).filter(Session.host_id == uid, Session.is_template.is_(False))
     )
     summaries = _build_summaries(sessions, db)
+
+    # SDD-221: 팀 강사(lead/assistant)로만 속한 클래스의 타인 진행 회차도 목록·집계에 합친다.
+    team_sessions = _team_instructor_sessions(uid, user, {s.id for s in sessions}, db)
+    if team_sessions:
+        team_summaries = _build_summaries(team_sessions, db)
+        for row in team_summaries:
+            # 리포트는 진행 강사 몫이다(팀 열람은 별도 동의 경로) — 건수·검토 대기를 노출하지 않는다.
+            row["report_count"] = 0
+            row["pending_review_count"] = 0
+        merged = sorted(
+            zip(sessions + team_sessions, summaries + team_summaries),
+            key=lambda pair: _activity_sort_key(pair[0]),
+            reverse=True,
+        )
+        summaries = [summary for _, summary in merged]
 
     org = db.query(Organization).filter(Organization.id == user.org_id).first() if user.org_id else None
 
