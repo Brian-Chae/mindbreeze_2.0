@@ -28,6 +28,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
     # SDD-217: 클래스/참가행 FK에 종속된 운영 상태·자격·멱등 결과만 함께 정리한다.
     "class_makeup_assignments", "class_guest_credentials", "class_guest_recoveries",
     "class_member_operations", "class_guest_join_operations", "session_presence_leases",
+    # SDD-218: 리포트 일괄 작업 기록. classes/reports FK 에 종속되므로 함께 정리한다.
+    "class_report_jobs", "class_report_job_items",
     "counseling_guests", "counseling_relationship_counselors", "counseling_relationship_events",
     "counseling_relationships", "eeg_feature_windows", "eeg_raw_chunks", "eeg_records", "guest_claim_events",
     "narrative_cache", "notification_outbox", "notifications", "pipeline_outbox", "report_choice_events",

@@ -421,7 +421,7 @@ def generate_client_reports_for_session(session_id: str, db: DBSession) -> list[
         .all()
     )
     host = db.query(User).filter(User.id == s.host_id).first()
-    auto_approve = bool(host and host.role == "counselor" and host.auto_approve_report)
+    auto_approve = auto_approve_enabled(host, s)
 
     # RPT-03: 세션의 기존 client 리포트를 배치로 1회 조회한다(participant_id → Report).
     # 존재하는 리포트는 재조회 없이 재사용하고, 없는 경우에만 생성 헬퍼를 호출한다.
@@ -936,6 +936,59 @@ def _can_edit_report(user_id: str, session, db: DBSession) -> bool:
     return allowed
 
 
+def report_domain(session) -> str:
+    """SDD-218 D-37: 자동 승인 정책이 갈라지는 지점.
+
+    클래스 회차는 "meditation", 그 밖은 "counseling" 으로 본다.
+    이번 단계에서는 두 영역의 동작이 같다. 영역을 나누는 분기점만 만들어 두고
+    상담 쪽 정책 변경은 Phase 6 에서 다룬다. 지금 동작을 바꾸면 안 된다.
+    """
+    if session is not None and getattr(session, "class_id", None):
+        return "meditation"
+    return "counseling"
+
+
+def auto_approve_enabled(host, session) -> bool:
+    """진행자 설정에 따른 자동 승인 여부. 영역별로 분리 가능한 형태로 둔다.
+
+    주의: 현재 두 영역의 판정은 동일하다. 한쪽만 바꾸면 D-37 범위를 넘는다.
+    """
+    if not (host and host.role == "counselor" and host.auto_approve_report):
+        return False
+    domain = report_domain(session)
+    if domain == "meditation":
+        return True
+    return True
+
+
+def can_approve_report(db: DBSession, user, session) -> bool:
+    """SDD-218 D-36: 승인 권한만 주강사 대행까지 넓힌다.
+
+    편집 권한(`_can_edit_report`)은 그대로 둔다. 승인과 편집은 다른 권한이다.
+    - 해당 회차 진행 지도사: 기존 의미 그대로 허용
+    - 현재 주강사(class_role == "lead"): 타인 진행 회차를 대행 승인
+    - 보조 강사·센터 관리자·비활성·제거된 강사·타 기관: 불허
+
+    대행 승인이어도 `approved_by_user_id` 에는 실제 승인자(주강사 본인)를 쓴다.
+    """
+    if user is None or session is None or getattr(user, "status", None) != "active":
+        return False
+    if _can_edit_report(str(user.id), session, db):
+        return True
+    if not session.class_id:
+        return False
+
+    from app.models.class_program import Class
+    from app.services.class_access_service import class_role
+
+    cls = db.query(Class).filter(Class.id == session.class_id).first()
+    if cls is None:
+        return False
+    # class_role 은 활성 멤버십·활성 강사 등록을 모두 검사하므로
+    # 비활성·제거·타 기관·교체된 구 주강사는 여기서 걸러진다.
+    return class_role(db, user, cls) == "lead"
+
+
 def require_report_host(report_id: str, host_id: str, db: DBSession) -> None:
     """리포트 쓰기는 현재 진행 지도사만 허용한다."""
     rid = _to_uuid(report_id)
@@ -1010,7 +1063,14 @@ def approve_report(report_id: str, host_id: str, db: DBSession) -> dict:
         db.query(Class).filter_by(id=session.class_id).populate_existing().with_for_update().one()
         session=db.query(Session).filter_by(id=session.id).populate_existing().with_for_update().one()
         report=db.query(Report).filter_by(id=rid).populate_existing().with_for_update().one()
-    if not _can_edit_report(host_id, session, db):
+    # SDD-218 D-36: 클래스 회차는 현재 주강사의 대행 승인을 허용한다.
+    # 클래스에 속하지 않은 상담 세션은 기존 판정(_can_edit_report)을 그대로 쓴다.
+    if session is not None and session.class_id:
+        actor = db.query(User).filter(User.id == _to_uuid(host_id)).first()
+        approved = can_approve_report(db, actor, session)
+    else:
+        approved = _can_edit_report(host_id, session, db)
+    if not approved:
         raise HTTPException(status_code=403, detail="host 상담사만 승인 가능합니다")
 
     # SDD-027: 승인 게이트 = pending_review → completed. 이미 completed 면 멱등 처리.

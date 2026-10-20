@@ -155,3 +155,6 @@ __all__ += [
     'ClassGuestMerge', 'ClassMemberOperation', 'ClassGuestJoinOperation',
     'ClassMemberConsentEvent', 'SessionPresenceLease',
 ]
+
+from app.models.class_report_job import ClassReportJob, ClassReportJobItem
+__all__ += ['ClassReportJob', 'ClassReportJobItem']

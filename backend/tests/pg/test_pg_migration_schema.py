@@ -34,7 +34,7 @@ def test_테이블_집합이_모델_메타데이터와_같다(pg_conn):
 
     tables = set(sa.inspect(pg_conn).get_table_names(schema="public")) - {"alembic_version"}
     assert tables == set(Base.metadata.tables)
-    assert len(tables) == 86  # SDD-217 멤버십·보강·guest·동의·현재 참여 테이블 9개 추가
+    assert len(tables) == 88  # SDD-218 리포트 일괄 작업 테이블 2개 추가
 
 
 def test_30c1_리비전이_채워야_하는_변경_4건이_있다(pg_conn):
