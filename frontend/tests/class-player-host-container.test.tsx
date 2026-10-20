@@ -360,6 +360,9 @@ describe('발언권·채팅·녹음 연결', () => {
     await click(all('[data-pz="dk"]')[4]);
     await click(all('button', sheet() ?? document).find((b) => text(b) === '보기') ?? null);
     await click(buttonByText('밴드 연결', sheet() ?? document));
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(props.band.connect).not.toHaveBeenCalled();
+    await click(buttonByText('확인하고 계속', document));
     expect(props.band.connect).toHaveBeenCalledTimes(1);
   });
 

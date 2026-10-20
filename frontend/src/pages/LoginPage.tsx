@@ -7,6 +7,9 @@ import { useAuthStore } from '../stores/authStore';
 import { ApiError } from '../lib/api/client';
 import { PrivacyPolicyLink } from '../components/legal/PrivacyPolicyLink';
 import { resolvePostLoginPath } from '../lib/auth-routing';
+import AppleLoginButton from '../components/auth/AppleLoginButton';
+import { toConsentPayload } from '../lib/auth/consents';
+import { todayKst } from '../lib/auth/age';
 
 // SEC-05: 역할 시뮬레이션 패널은 DEV 빌드에서만 조건부 동적 import 한다.
 // 프로덕션에서는 import.meta.env.DEV===false 로 분기가 제거되어 번들에 포함되지 않는다.
@@ -45,6 +48,12 @@ export default function LoginPage() {
   // 기존 사용자는 체크 없이 통과하므로, 신규 가입 422를 받은 뒤에만 체크박스를 노출한다.
   const [googleConsent, setGoogleConsent] = useState(false);
   const [needsGoogleConsent, setNeedsGoogleConsent] = useState(false);
+  // SDD-220: 소셜 신규 가입은 생년월일(만 14세)과 선택 동의(뇌파·연구)를 함께 받는다. 기존 사용자 재로그인에는 불필요.
+  const [socialBirthDate, setSocialBirthDate] = useState('');
+  const [optEeg, setOptEeg] = useState(false);
+  const [optResearch, setOptResearch] = useState(false);
+  const socialConsents = () =>
+    toConsentPayload({ tos: googleConsent, privacy: googleConsent, sensitive: googleConsent, eeg: optEeg, research: optResearch });
   // 팝업이 열린 동안 URL이 바뀌어도 인증 시작 시 선택한 역할을 사용한다.
   const intent = useRef<LoginIntent | null>(null);
   const googleExchanging = useRef(false);
@@ -103,7 +112,9 @@ export default function LoginPage() {
           undefined,
           started.role,
           started.rememberMe,
-          { tos: googleConsent, privacy: googleConsent, sensitive: googleConsent },
+          socialConsents(),
+          'access_token',
+          socialBirthDate || undefined,
         );
         navigate(resolvePostLoginPath(user, started.next));
       } catch (err) {
@@ -140,7 +151,7 @@ export default function LoginPage() {
       const idToken = await nativeGoogleIdToken();
       const user = await loginGoogle(
         idToken, undefined, started.role, started.rememberMe,
-        { tos: googleConsent, privacy: googleConsent, sensitive: googleConsent }, 'id_token',
+        socialConsents(), 'id_token', socialBirthDate || undefined,
       );
       navigate(resolvePostLoginPath(user, started.next));
     } catch (err) {
@@ -190,12 +201,38 @@ export default function LoginPage() {
   // SEC-04 / FUNC-10: Google 동의 체크박스 — 신규 가입 422를 받은 뒤에만 노출한다.
   // 기존 사용자는 동의 없이 로그인되므로 처음부터 강제하지 않는다.
   const googleConsentField = (
+    <div className="flex flex-col gap-3">
+    <label htmlFor="social-birth-date" className="flex flex-col gap-1 text-xs text-white/80">
+      생년월일 (만 14세 이상 가입)
+      <input id="social-birth-date" type="date" value={socialBirthDate} max={todayKst()} disabled={busy}
+        onChange={(event) => setSocialBirthDate(event.target.value)}
+        className="h-11 rounded-full border border-[#DDDEE7] bg-white px-4 text-sm text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50" />
+    </label>
     <label htmlFor="google-consent" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
       <input id="google-consent" type="checkbox" checked={googleConsent} disabled={busy}
         onChange={(event) => setGoogleConsent(event.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080] disabled:cursor-not-allowed disabled:opacity-50" />
       <span>Google로 가입·로그인하면 <span className="underline">이용약관</span>, <PrivacyPolicyLink>개인정보 처리방침</PrivacyPolicyLink>, <span className="underline">민감정보 처리</span>에 동의합니다.</span>
     </label>
+    <label htmlFor="social-opt-eeg" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
+      <input id="social-opt-eeg" type="checkbox" checked={optEeg} disabled={busy} onChange={(event) => setOptEeg(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080]" />
+      <span>[선택] 뇌파(LINK BAND) 측정 데이터 수집·이용에 동의합니다.</span>
+    </label>
+    <label htmlFor="social-opt-research" className="flex cursor-pointer items-start gap-2 text-xs leading-relaxed text-white/80">
+      <input id="social-opt-research" type="checkbox" checked={optResearch} disabled={busy} onChange={(event) => setOptResearch(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border border-white/50 accent-[#5F0080]" />
+      <span>[선택] 비식별 연구 목적 활용에 동의합니다.</span>
+    </label>
+    </div>
+  );
+  const appleButton = (
+    <AppleLoginButton role={loginRole} rememberMe={rememberMe} disabled={busy}
+      consents={needsGoogleConsent ? socialConsents() : undefined}
+      birthDate={needsGoogleConsent ? socialBirthDate : undefined}
+      onSuccess={(user) => user && navigate(resolvePostLoginPath(user, next))}
+      onNeedsSignupInfo={() => setNeedsGoogleConsent(true)}
+      onError={setError} />
   );
   const divider = <div className="flex items-center gap-3 text-[13px] text-white/80"><span className="h-px flex-1 bg-white/30" />또는<span className="h-px flex-1 bg-white/30" /></div>;
   const inputClass = 'h-[52px] w-full rounded-full border border-[#DDDEE7] bg-white px-5 text-[15px] text-[#1F1F1F] outline-none focus:ring-2 focus:ring-[#5F0080] disabled:opacity-50';
@@ -242,8 +279,8 @@ export default function LoginPage() {
           </div>}
           <section role={isAdmin ? undefined : 'tabpanel'} id={`login-panel-${loginRole}`} aria-labelledby={isAdmin ? undefined : `login-tab-${loginRole}`} aria-busy={busy} className="flex flex-col gap-4">
             <p className="text-center text-sm text-white/90">{isAdmin ? 'Google Workspace 계정으로 로그인하세요.' : config.description}</p>
-            {!isAdmin && loginRole === 'client' && <>{googleButton}{needsGoogleConsent && googleConsentField}{divider}{emailForm}</>}
-            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}<p className="text-center text-xs text-white/80">Google 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
+            {!isAdmin && loginRole === 'client' && <>{googleButton}{appleButton}{needsGoogleConsent && googleConsentField}{divider}{emailForm}</>}
+            {!isAdmin && loginRole === 'counselor' && <>{emailForm}{divider}{googleButton}{appleButton}<p className="text-center text-xs text-white/80">Google·Apple 로그인은 기존 상담사 계정만 이용할 수 있습니다.</p></>}
             {!isAdmin && loginRole === 'org_admin' && emailForm}
             {isAdmin && <>{rememberMeField}{googleButton}</>}
             {error && <p role="alert" className="rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-red-900/30">{error}</p>}

@@ -6,6 +6,7 @@ import { surveyHasValue, type SurveyDraft } from '../../../../lib/class/flow/mem
 import { MemberBrandMark } from '../../player/member/MemberBrandMark';
 import { FlowButton, FlowH1, FlowSheet } from '../shared/flow-primitives';
 import { MemberFullFrame } from './MemberFlowFrame';
+import { isAiEnabled } from '../../../../lib/feature-flags';
 
 export type EndReportMode = 'member' | 'guest' | 'excluded';
 export type EndSheet = 'none' | 'report' | 'reportsent' | 'checkin';
@@ -65,7 +66,9 @@ export function EndView(props: EndViewProps) {
     ? '종료 전에는 설정에서 바꿀 수 있어요. 종료 뒤에는 상담사에게 요청해 주세요.'
     : guest
       ? '상담사가 확인하면 자동으로 보내져요.'
-      : 'AI 기록과 리포트를 만드는 데 몇 분 걸릴 수 있어요.';
+      : isAiEnabled()
+        ? 'AI 기록과 리포트를 만드는 데 몇 분 걸릴 수 있어요.'
+        : '리포트를 만드는 데 몇 분 걸릴 수 있어요.';
   const checkinPrimary = excluded || guest;
 
   let sheetNode = null;

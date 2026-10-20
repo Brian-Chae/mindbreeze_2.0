@@ -5,6 +5,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
 vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
+// SDD-220: 이 테스트는 AI 공개(on) 계약을 검증한다 — 기본값이 off 로 바뀌어 모듈 수준에서 켠다(단언 불변).
+vi.stubEnv('VITE_AI_ENABLED', 'true');
 import { WizardView } from '../src/components/class/flow/host/CreateWizard';
 import { FIXTURE_BASE, FIXTURE_MEMBERS, fixtureDraft } from '../src/lib/class/flow/host-fixture-data';
 import { createInitialDraft, createInitialState, wizardReducer, type WizardDraft, type WizardState } from '../src/lib/class/class-wizard';

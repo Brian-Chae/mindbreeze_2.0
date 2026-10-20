@@ -1,3 +1,4 @@
+import { WellnessNotice } from '../legal/wellness-notice';
 // EEG 3채널 타임라인 — concentration / relaxation / stress
 // mindbreeze 라이트 토큰 (haru 다크 테마 금지)
 
@@ -41,6 +42,7 @@ export default function EegTimeline({ data, dense = false }: EegTimelineProps) {
         )}
       </div>
 
+      <WellnessNotice />
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#EFEFEF" />

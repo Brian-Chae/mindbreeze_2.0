@@ -6,6 +6,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useAgentStore } from '../../stores/agent-store';
 import { useAuthStore } from '../../stores/authStore';
 import { getUnreadCount } from '../../lib/api/agent';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarNav, { ICONS, StrokeIcon } from '../layout/SidebarNav';
 import MobileDrawer from '../layout/MobileDrawer';
@@ -48,7 +49,8 @@ export default function ClientShell({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const userId = useAuthStore((s) => s.user?.id);
-  const agentUnread = useAgentStore((s) => s.unread);
+  const agentUnreadRaw = useAgentStore((s) => s.unread);
+  const agentUnread = isAiEnabled() ? agentUnreadRaw : 0;
   const unread = useNotificationStore((s) => s.unread);
   const toast = useNotificationStore((s) => s.toast);
   const dismissToast = useNotificationStore((s) => s.dismissToast);
@@ -63,6 +65,8 @@ export default function ClientShell({
 
   useEffect(() => {
     let cancelled = false;
+    // SDD-220: AI 비공개면 루시 미읽음 조회·배지를 만들지 않는다.
+    if (!isAiEnabled()) return;
     // 대화 페이지에서는 실제 읽음 API 응답으로 배지를 갱신한다.
     if (pathname.startsWith('/app/chat/lucy')) return;
     const refresh = () => {

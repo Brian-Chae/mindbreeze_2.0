@@ -1,3 +1,4 @@
+import { isNativeApp } from '../lib/native/platform';
 // 회원가입 진입: 역할 선택 (회원 / 상담사 / 기관) — SDD-073
 // 기존 ?role=client|counselor, ?type=client&token=... 주소는 역할별 페이지로 연결한다.
 
@@ -73,12 +74,12 @@ export default function RegisterPage() {
             description="기관 초대를 받았거나 개인 상담사로 시작해요."
             cta="시작하기"
           />
-          <RoleCard
+          {!isNativeApp() && <RoleCard
             to="/register/organization"
             title="기관 가입 상담"
             description="우리 기관의 MIND BREEZE 도입을 상담해요."
             cta="상담 신청"
-          />
+          />}
         </div>
 
         <p className="text-center text-sm text-ink-tertiary">

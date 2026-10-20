@@ -95,8 +95,10 @@ def _is_retryable(exc: BaseException) -> bool:
 
 
 def is_enabled() -> bool:
-    """LLM 사용 가능 여부 — 키가 없으면 항상 템플릿 폴백이다."""
-    return bool(settings.gemini_api_key)
+    """LLM 사용 가능 여부 — AI 기능이 꺼졌거나 키가 없으면 항상 템플릿 폴백이다(SDD-220)."""
+    from app.core.ai_features import is_ai_enabled
+
+    return is_ai_enabled() and bool(settings.gemini_api_key)
 
 
 @dataclass(frozen=True)
@@ -165,6 +167,15 @@ def generate_stream(
         yield clip_message(fallback)
         return
 
+    # SDD-220: 네트워크 직전 단일 가드 — is_enabled() 가 이미 막지만 transport 에서도 한 번 더 확인한다.
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        if raise_on_failure:
+            raise LLMUnavailableError("ai_features_disabled")
+        yield clip_message(fallback)
+        return
+
     import httpx
 
     api_key = settings.gemini_api_key
@@ -225,6 +236,11 @@ def generate_stream(
 
 def _call_gemini_chat(request: ChatRequest) -> str | None:
     """멀티턴 generateContent 호출 — 실패 시 None(호출부에서 폴백)."""
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(호출부 _invoke 가 폴백 처리).
+    from app.core.ai_features import require_ai_enabled
+
+    require_ai_enabled()
+
     api_key = settings.gemini_api_key
     if not api_key:
         return None

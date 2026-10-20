@@ -150,11 +150,19 @@ async def lifespan(app: FastAPI):
         pass
 
 
+def docs_urls(environment: str) -> dict[str, str | None]:
+    """SDD-220: 운영(production)에서는 API 문서·스키마 경로를 만들지 않는다."""
+    if environment == "production":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
 app = FastAPI(
     title="MIND BREEZE 2.0",
     description="뇌파 기반 심리상담·명상 통합 서비스 플랫폼 API",
     version="0.1.0",
     lifespan=lifespan,
+    **docs_urls(settings.environment),
 )
 
 # SDD-210: 허용 오리진은 CORS_ALLOWED_ORIGINS 로 주입(미설정 시 기존 기본 목록 — app/core/cors.py).

@@ -24,6 +24,8 @@ export interface NoticeStepViewProps {
   researchSaveFailed: boolean;
   steps: MemberFlowSteps;
   backdropSrc?: string;
+  /** SDD-220 — AI 기능 공개 여부. false 면 "AI 기록" 문구 없이 "녹음"만 안내한다(기본 true = 기존 문구) */
+  aiEnabled?: boolean;
   onReportChoice: (choice: 'included' | 'excluded') => void;
   onResearchChange: (consented: boolean) => void;
   onNext: () => void;
@@ -44,7 +46,7 @@ function NoticeRow({ icon, label, desc }: { icon: ReactNode; label: string; desc
 }
 
 export function NoticeStepView({
-  sessionType, place, size, bandMode, title, hostName, retentionDays, reportChoice, researchConsent, researchSaveFailed, steps, backdropSrc,
+  sessionType, place, size, bandMode, title, hostName, retentionDays, reportChoice, researchConsent, researchSaveFailed, steps, backdropSrc, aiEnabled = true,
   onReportChoice, onResearchChange, onNext, onBack, onExit,
 }: NoticeStepViewProps) {
   const online = place === 'online';
@@ -83,8 +85,10 @@ export function NoticeStepView({
             <section className="fm-blk" aria-label="고지">
               <NoticeRow
                 icon={<Mic size={20} aria-hidden="true" />}
-                label="녹음과 AI 기록"
-                desc={online ? '음성을 녹음하고 AI가 기록지를 만들어요' : '현장 대화를 녹음하고 AI가 기록지를 만들어요'}
+                label={aiEnabled ? '녹음과 AI 기록' : '녹음'}
+                desc={aiEnabled
+                  ? (online ? '음성을 녹음하고 AI가 기록지를 만들어요' : '현장 대화를 녹음하고 AI가 기록지를 만들어요')
+                  : (online ? '음성을 녹음해 클래스 기록으로 보관해요' : '현장 대화를 녹음해 클래스 기록으로 보관해요')}
               />
               {bandMode === 'none' ? null : <NoticeRow icon={<Activity size={20} aria-hidden="true" />} label="뇌파 측정(LINK BAND를 쓸 때만)" />}
               {online ? <NoticeRow icon={<Video size={20} aria-hidden="true" />} label="영상(카메라를 켤 때만)" /> : null}

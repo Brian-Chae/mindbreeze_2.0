@@ -19,7 +19,7 @@ export function usePushRegistration(): void {
       // SDD-192: 웹 — 이미 구독한 브라우저는 재등록하고 서비스 워커 메시지를 받는다(no-op if 미지원).
       return startWebPushSync(navigate, refresh);
     }
-    const session = startPushRegistration(navigate, refresh);
+    const session = startPushRegistration(navigate, refresh, false);
     return () => { void session.stop().catch(() => {}); };
   }, [userId]);
 }

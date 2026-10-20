@@ -35,6 +35,8 @@ SESSIONS_SCOPE_DELETE = frozenset({
     "narrative_cache", "notification_outbox", "notifications", "pipeline_outbox", "report_choice_events",
     "reports", "session_email_invites", "session_host_history", "session_participants", "session_records",
     "session_reminder_logs", "sessions", "video_chunks",
+    # SDD-220: 채팅 신고·차단(chat_rooms/messages FK 에 종속)도 채팅과 함께 정리한다.
+    "chat_reports", "chat_blocks",
 })
 
 # scope=sessions 에서 보존하는 테이블(계정·기관·인증·에이전트·연구·감사).
@@ -50,6 +52,12 @@ SESSIONS_SCOPE_KEEP = frozenset({
     "qualifications", "refresh_tokens", "research_consent_events", "research_consents", "research_export_batches",
     "research_export_items", "research_withdrawal_requests", "retention_sweep_runs", "signup_applications",
     "user_org_memberships", "users", "verification_audits",
+})
+# SDD-220: 소셜 연결(users FK)·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청은 계정 영역이라 sessions 범위에서 보존한다.
+#   (삭제 원장은 영구 삭제 완료의 근거이므로 개발 초기화로 지우지 않는다.)
+SESSIONS_SCOPE_KEEP = SESSIONS_SCOPE_KEEP | frozenset({
+    "social_identities", "social_revoke_outbox", "account_deletion_ledger",
+    "account_deletion_objects", "account_deletion_requests",
 })
 
 

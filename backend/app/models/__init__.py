@@ -19,7 +19,7 @@ from app.models.organization import Organization
 from app.models.org_join_request import OrganizationJoinRequest
 from app.models.user_org_membership import UserOrgMembership
 from app.models.client_invite import ClientInvite
-from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant
+from app.models.chat import ChatRoom, ChatMessage, ChatMessageRead, ChatRoomParticipant, ChatReport, ChatBlock
 from app.models.org_document import OrgDocument
 from app.models.qualification import Qualification
 from app.models.career import Career
@@ -51,6 +51,14 @@ from app.models.counseling import (
     GuestClaimEvent,
 )
 from app.models.session_parent import SessionHostHistory
+# SDD-220: 소셜 연결·탈퇴 원장·소셜 해제 outbox·공개 삭제 요청 (감독자 등록 요청 전에도 메타데이터 일치 테스트가 통과하도록 최소 1줄)
+from app.models.account_deletion import (
+    AccountDeletionLedger,
+    AccountDeletionObject,
+    AccountDeletionRequest,
+    SocialIdentity,
+    SocialRevokeOutbox,
+)
 
 __all__ = [
     "Class",
@@ -72,6 +80,8 @@ __all__ = [
     "ChatMessage",
     "ChatMessageRead",
     "ChatRoomParticipant",
+    "ChatReport",
+    "ChatBlock",
     "User",
     "Session",
     "SessionParticipant",

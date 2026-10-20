@@ -12,6 +12,8 @@ import {
 import ClientAccountSection from '../../components/settings/ClientAccountSection';
 import ClientProfileSection from '../../components/settings/ClientProfileSection';
 import { PrivacyPolicyLink } from '../../components/legal/PrivacyPolicyLink';
+import { AccountDeletionSection } from '../../components/settings/account-deletion';
+import { PrivacyConsentsSection } from '../../components/settings/privacy-consents';
 
 export default function ClientSettingsPage() {
   const navigate = useNavigate();
@@ -156,6 +158,9 @@ export default function ClientSettingsPage() {
             로그아웃
           </button>
         </div>
+
+        <PrivacyConsentsSection />
+        <AccountDeletionSection />
 
         {/* 푸터 */}
         <div className="text-center text-[12px] text-[#9B9B9B] py-4">

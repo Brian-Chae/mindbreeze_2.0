@@ -402,6 +402,43 @@ def delete_object(object_key: str) -> bool:
         return False
 
 
+def delete_object_everywhere(object_key: str) -> bool:
+    """SDD-220: 사용자 영구 삭제용 — 모든 버전(delete marker 포함)과 진행 중 multipart 잔여물까지 지운다.
+
+    버저닝 버킷에서 delete_object 는 delete marker 만 만들 뿐 이전 버전이 남는다.
+    자격증명이 없으면 지울 객체가 없으므로 True(멱등 성공)를 돌려준다. 일부라도 실패하면 예외를 올려 호출자가 재시도하게 한다.
+    """
+    client = _s3_client()
+    if client is None:
+        return True
+    bucket = settings.s3_bucket
+    key_marker = version_marker = None
+    while True:
+        params: dict = {"Bucket": bucket, "Prefix": object_key}
+        if key_marker:
+            params.update(KeyMarker=key_marker, VersionIdMarker=version_marker)
+        page = client.list_object_versions(**params)
+        targets = [
+            {"Key": v["Key"], "VersionId": v["VersionId"]}
+            for v in [*page.get("Versions", []), *page.get("DeleteMarkers", [])]
+            if v["Key"] == object_key
+        ]
+        if targets:
+            result = client.delete_objects(Bucket=bucket, Delete={"Objects": targets, "Quiet": True})
+            if result.get("Errors"):
+                raise RuntimeError("s3_version_delete_failed")
+        if not page.get("IsTruncated"):
+            break
+        key_marker, version_marker = page.get("NextKeyMarker"), page.get("NextVersionIdMarker")
+    # 현재 버전이 버저닝 없는 버킷이면 위 목록이 비어 있을 수 있어 단순 삭제도 한 번 더 시도한다(멱등).
+    client.delete_object(Bucket=bucket, Key=object_key)
+    uploads = client.list_multipart_uploads(Bucket=bucket, Prefix=object_key)
+    for upload in uploads.get("Uploads", []):
+        if upload["Key"] == object_key:
+            client.abort_multipart_upload(Bucket=bucket, Key=object_key, UploadId=upload["UploadId"])
+    return True
+
+
 def delete_export(object_key: str) -> None:
     try:
         _export_client().delete_object(Bucket=settings.s3_bucket, Key=object_key)

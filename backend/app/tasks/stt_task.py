@@ -52,6 +52,11 @@ class GeminiTransientError(RuntimeError):
 
 def _gemini_request_once(url: str, headers: dict, body: dict, timeout: int) -> dict:
     """Gemini POST 1회. 일시 오류는 GeminiTransientError, 영구 오류는 그대로 전파한다."""
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건(재시도 대상 아님).
+    from app.core.ai_features import require_ai_enabled
+
+    require_ai_enabled()
+
     import httpx
 
     try:
@@ -111,6 +116,11 @@ def _call_whisper(chunk_paths: list[str]) -> dict:
     고정된다 — 폴백 사실을 결과에 diarization_fallback=True 로 명시해 상담사/내담자
     구분이 소실됐음을 상위에서 기록할 수 있게 한다.
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건.
+    from app.core.ai_features import require_ai_enabled
+
+    require_ai_enabled()
+
     openai_api_key = settings.openai_api_key
     if not openai_api_key:
         # SDD-085 G5: 키 미설정 시 가짜 stub 전사를 만들지 않는다 — 실패로 처리해
@@ -495,6 +505,18 @@ def run_stt_inline(session_id: str, db: DBSession) -> None:
     record = db.query(SessionRecord).filter(SessionRecord.session_id == sid).first()
     if not record:
         logger.warning("[stt_task] SessionRecord not found: %s", session_id)
+        return
+
+    # SDD-220: AI off — 이미 큐에 적재된 작업도 외부 호출 없이 skip 한다(retry 0).
+    #   녹음 원본은 보존하고, 저장 완료(completed)로 마감해 리포트 단계가 이어지게 한다.
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        logger.info("[stt_task] AI 기능 off — STT 스킵: %s", session_id)
+        if record.status == "processing":
+            record.status = "completed"
+            db.commit()
+        _emit_report_progress(session_id, db)
         return
 
     # SDD-085 가드 1: 수동 기록 모드(마이크 오프)는 STT 대상 아님

@@ -152,7 +152,8 @@ def test_jobs_tsv_는_dev_cron_14개를_활성으로_포함하고_SDD209_2종은
     enabled = {j["name"] for j in jobs if j["enabled"] == "1"}
     assert enabled == DEV_CRON_14 | PROD_ONLY_JOBS | CLASS_JOBS
     disabled = {j["name"] for j in jobs if j["enabled"] == "0"}
-    assert disabled == {"retention_sweep", "research_export"}
+    # SDD-220: 탈퇴 30일 영구 삭제 작업은 운영 승인 전 비활성으로 등록한다.
+    assert disabled == {"retention_sweep", "research_export", "account_deletion_sweep"}
 
 
 def test_jobs_tsv_스크립트가_실제로_존재한다():

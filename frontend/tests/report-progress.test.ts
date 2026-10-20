@@ -4,6 +4,8 @@
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+// SDD-220: 이 테스트는 AI 공개(on) 계약을 검증한다 — 기본값이 off 로 바뀌어 모듈 수준에서 켠다(단언 불변).
+vi.stubEnv('VITE_AI_ENABLED', 'true');
 
 const { fakeSocket, ioCalls, listeners } = vi.hoisted(() => {
   const listeners: Record<string, Array<(payload: unknown) => void>> = {};

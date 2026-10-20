@@ -25,6 +25,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.agent import AgentBriefingLog
 from app.models.user import User
 from app.services import agent_counselor_service, agent_guard, agent_llm, agent_policy, agent_service
@@ -497,6 +498,9 @@ def sweep(db: DBSession, *, now: datetime | None = None, limit: int = SWEEP_LIMI
 
     설정 행이 없는 상담사는 기본값(08:00/21:00)으로 동작하며 조회 시 행이 생성된다.
     """
+    # SDD-220: AI off — 자동 브리핑 메시지·알림을 만들지 않는다.
+    if not is_ai_enabled():
+        return {"scanned": 0, "sent": 0, "skipped": 0}
     now = now or _now()
     briefing_date = now.astimezone(KST).date()
 

@@ -6,6 +6,8 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // SDD-219: 상담 공개(플래그 on) 기준의 기존 동작을 검증한다.
 vi.stubEnv('VITE_COUNSELING_ENABLED', 'true');
+// SDD-220: 이 테스트는 AI 공개(on) 계약을 검증한다 — 기본값이 off 로 바뀌어 모듈 수준에서 켠다(단언 불변).
+vi.stubEnv('VITE_AI_ENABLED', 'true');
 
 const state = vi.hoisted(() => ({
   user: { id: 'u1', role: 'counselor', name: '테스트', email: 'a@example.com' } as { id: string; role: string; name: string; email: string } | null,

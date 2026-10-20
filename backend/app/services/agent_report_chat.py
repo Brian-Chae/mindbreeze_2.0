@@ -18,6 +18,7 @@ import logging
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.record import Report
 from app.models.session import Session
 from app.models.user import User
@@ -38,6 +39,9 @@ def on_report_approved(report: Report, db: DBSession) -> bool:
     승인 트랜잭션을 깨지 않도록 이 함수는 예외를 밖으로 던지지 않는다.
     반환 True = 메시지를 새로 만들었음.
     """
+    # SDD-220: AI off — 루시 대화 생성을 건너뛴다(일반 리포트 알림은 호출부가 따로 유지).
+    if not is_ai_enabled():
+        return False
     try:
         return _create_report_message(report, db)
     except Exception:  # noqa: BLE001 — 승인 흐름 보호

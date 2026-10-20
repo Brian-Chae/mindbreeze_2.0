@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session as DBSession
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.schemas.chat import (
+    ChatReportRequest,
+    ChatReportResponse,
     InvitableCounselorOut,
     InvitableCounselorsResponse,
     MarkMessagesReadRequest,
@@ -23,7 +25,7 @@ from app.schemas.chat import (
     RoomUpdateRequest,
     UnreadCountsResponse,
 )
-from app.services import chat_service
+from app.services import chat_moderation_service, chat_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -241,3 +243,22 @@ def get_unread_counts(
     """채팅방의 각 메시지별 안읽은 수 반환 (Phase 3a)."""
     counts = chat_service.get_unread_counts(room_id, current_user["id"], db)
     return UnreadCountsResponse(unread_counts=counts)
+
+
+@router.post("/reports", response_model=ChatReportResponse, status_code=status.HTTP_201_CREATED)
+def report_chat_user(
+    payload: ChatReportRequest,
+    current_user: dict = Depends(get_current_user),
+    db: DBSession = Depends(get_db),
+):
+    """채팅 신고 (SDD-220) — 신고 즉시 상호 차단 + 운영 알림. 같은 operation_key 재전송은 멱등."""
+    result = chat_moderation_service.report_user(
+        current_user["id"],
+        payload.target_user_id,
+        room_id=payload.room_id,
+        message_id=payload.message_id,
+        reason=payload.reason,
+        operation_key=payload.operation_key,
+        db=db,
+    )
+    return ChatReportResponse(**result)

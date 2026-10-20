@@ -44,6 +44,10 @@ export interface ChatRoom {
     content: string | null;
     created_at: string;
   } | null;
+  /** SDD-220: direct 방 상대와 상호 차단 상태(서버 판정) */
+  is_blocked?: boolean;
+  /** SDD-220: direct 방 상대가 탈퇴한 사용자인지 */
+  peer_deleted?: boolean;
 }
 
 export interface ChatRoomListResponse {
@@ -184,4 +188,45 @@ export async function listChatMessagesAround(roomId: string, messageId: string):
       next_cursor: context.before_cursor,
     };
   }
+}
+
+// ── SDD-220: 채팅 신고 → 즉시 상호 차단 ──────────────────────────────
+
+export type ChatReportReason = 'abuse' | 'spam' | 'sexual' | 'privacy' | 'other';
+
+/** 신고 사유(선택 입력). 사용자 노출 문구는 한국어. */
+export const CHAT_REPORT_REASONS: ReadonlyArray<{ value: ChatReportReason; label: string }> = [
+  { value: 'abuse', label: '욕설·비하·괴롭힘' },
+  { value: 'sexual', label: '불쾌하거나 선정적인 내용' },
+  { value: 'spam', label: '광고·스팸' },
+  { value: 'privacy', label: '개인정보 노출' },
+  { value: 'other', label: '기타' },
+];
+
+/** 신고·차단 문의를 받는 운영 이메일 */
+export const CHAT_REPORT_CONTACT_EMAIL = 'brian.chae@looxidlabs.com';
+
+export interface ChatReportPayload {
+  target_user_id: string;
+  room_id?: string;
+  message_id?: string;
+  reason?: ChatReportReason;
+  /** 같은 신고를 재전송해도 중복 접수되지 않게 하는 키 */
+  operation_key: string;
+}
+
+export interface ChatReportResult {
+  reported: boolean;
+  blocked: boolean;
+  report_id: string;
+}
+
+export const reportChatUser = (payload: ChatReportPayload): Promise<ChatReportResult> =>
+  apiClient.post<ChatReportResult>('/chat/reports', payload);
+
+/** 서버가 차단 때문에 거부했는지(detail.code === 'CHAT_BLOCKED') */
+export function isChatBlockedError(error: unknown): boolean {
+  if (!(error instanceof ApiError) || error.status !== 403) return false;
+  const data = error.data as { detail?: { code?: string } } | null;
+  return data?.detail?.code === 'CHAT_BLOCKED';
 }

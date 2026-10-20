@@ -12,6 +12,8 @@ from app.api.v1 import agent
 from app.api.v1 import agent_counselor
 # SDD-190: 앱 푸시 디바이스 토큰
 from app.api.v1 import devices
+# SDD-220: 회원 탈퇴·공개 삭제 요청 접수
+from app.api.v1 import account
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -45,6 +47,8 @@ router.include_router(org_public.router)
 router.include_router(agent.router)
 router.include_router(agent_counselor.router)
 router.include_router(devices.router)
+router.include_router(account.router)
+router.include_router(account.public_router)
 
 # SDD-019: dev 전용 역할 시뮬레이션 라우터.
 # 프로덕션에는 엔드포인트 자체가 존재하지 않도록, 아래 두 조건이 모두 참일 때만 조건부 include.

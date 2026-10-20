@@ -290,6 +290,9 @@ describe('기기 시트 — 밴드 상태별', () => {
     const actions = await mount('M07', 'device');
     expect(sheetEl()?.textContent).toContain('연결된 기기 없음');
     await act(async () => { buttonByText('LINK BAND 연결')?.click(); });
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(actions.onBandConnect).not.toHaveBeenCalled();
+    await act(async () => { buttonByText('확인하고 계속')?.click(); });
     expect(actions.onBandConnect).toHaveBeenCalledTimes(1);
     const base = memberCaseViewProps('M07');
     await mount('M07', 'device', { device: { ...base.device, isMock: true } });

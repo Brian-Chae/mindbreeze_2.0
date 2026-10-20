@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getClientProfile, updateMemo, type ClientProfile } from '../../lib/api/clients';
 import { ApiError } from '../../lib/api/client';
 import { useRequireAuth, useRequireRole } from '../../hooks/useAuth';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 export default function ClientProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -151,7 +152,8 @@ export default function ClientProfilePage() {
           )}
         </div>
 
-        {id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
+        {/* SDD-220: AI 비공개면 체크인 패널(조회 포함)을 mount 하지 않는다 */}
+        {isAiEnabled() && id && user?.role === 'counselor' && <AgentCheckinPanel key={id} clientId={id} />}
 
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-2">상담사 비공개 메모</h2>

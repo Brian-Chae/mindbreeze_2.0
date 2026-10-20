@@ -111,3 +111,16 @@ def scratch_db(pg_engine: Engine) -> Iterator[Callable[..., str]]:
     with admin.connect() as conn:
         for name in created:
             conn.execute(sa.text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+
+
+@pytest.fixture(autouse=True)
+def _sdd220_legacy_recording_consent(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """SDD-220(F1) 이전에 작성된 PG 통합 시나리오는 회차 녹음·녹화 동의 저장 없이 입장한다.
+
+    동의 게이트 자체(누락·거부·저장 실패 → 403, 토큰·자격 0)는 SQLite 스위트 tests/test_sdd220_recording_consent.py 가 검증한다.
+    여기서는 기존 PG 시나리오(출석·보충·게스트 등)가 동의 저장 여부와 무관하게 계속 검증되도록 판정만 통과시킨다.
+    """
+    from app.services import recording_consent_service as rcs
+
+    monkeypatch.setattr(rcs, "is_recorded", lambda participant: True)
+    yield

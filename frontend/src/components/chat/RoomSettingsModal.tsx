@@ -195,7 +195,7 @@ export function RoomSettingsModal({ room, onClose, onSaved, onInvite }: Props) {
             <dt className="text-[#6F6F6F]">방 종류</dt><dd>{detail.room_type === 'direct' ? '1:1 채팅' : detail.room_type === 'group' ? '그룹 채팅' : '세션 채팅'}</dd>
             <dt className="text-[#6F6F6F]">생성일</dt><dd>{formatDate(detail.created_at)}</dd>
             <dt className="text-[#6F6F6F]">{detail.room_type === 'session' ? '세션 등록 참여자' : '참여자'}</dt><dd>{detail.participant_count}명</dd>
-            {detail.room_type === 'direct' && <><dt className="text-[#6F6F6F]">상대방</dt><dd>{detail.peer_name || '이름 정보 없음'}</dd></>}
+            {detail.room_type === 'direct' && <><dt className="text-[#6F6F6F]">상대방</dt><dd>{detail.peer_name || '이름 정보 없음'}{detail.is_blocked ? ' (차단됨)' : ''}</dd></>}
             {detail.room_type === 'session' && <><dt className="text-[#6F6F6F]">세션 제목</dt><dd>{detail.session_title || '제목 없음'}</dd><dt className="text-[#6F6F6F]">예정일</dt><dd>{formatDate(detail.session_scheduled_at)}</dd></>}
           </dl>
           <form onSubmit={(event) => { event.preventDefault(); void save(); }}>

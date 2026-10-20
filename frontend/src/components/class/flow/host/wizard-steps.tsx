@@ -12,6 +12,7 @@ import {
 } from '../../../../lib/class/class-wizard';
 import { FlowButton, FlowH1 } from '../shared/flow-primitives';
 import { FhCard, FhForm, FhGroup, FhInfo, FhSeg, FhStaticRow, FhStepper, FhToggleRow, type SegOption } from './host-flow-atoms';
+import { isAiEnabled } from '../../../../lib/feature-flags';
 
 export interface WizardStepProps {
   draft: WizardDraft;
@@ -157,9 +158,12 @@ export function StepRecord({ draft, dispatch }: WizardStepProps) {
             checked={draft.voice}
             onToggle={() => dispatch({ type: 'patch', patch: { voice: !draft.voice } })}
           />
-          <FhStaticRow icon={<Sparkles size={20} aria-hidden="true" />}>
-            <span className="fh-two"><b>AI 분석</b><span>요약·리포트를 자동 생성</span></span>
-          </FhStaticRow>
+          {/* SDD-220: AI 비공개면 'AI 분석' 안내 행을 숨긴다(녹음·영상 토글은 유지) */}
+          {isAiEnabled() && (
+            <FhStaticRow icon={<Sparkles size={20} aria-hidden="true" />}>
+              <span className="fh-two"><b>AI 분석</b><span>요약·리포트를 자동 생성</span></span>
+            </FhStaticRow>
+          )}
           {offline ? (
             <FhStaticRow icon={<VideoOff size={20} aria-hidden="true" />}>대면 클래스는 영상 녹화 없이 진행해요.</FhStaticRow>
           ) : (
@@ -443,7 +447,7 @@ export function StepConfirm({ draft, dispatch, base }: ConfirmStepProps) {
   const place = draft.place === 'online' ? '온라인' : '오프라인';
   const t1 = `${typeLabel(draft)} · ${place} · ${sizeText}${draft.place === 'offline' && draft.address.trim() ? ` · ${draft.address.trim()}` : ''}`;
   const t2 = `${fmtWhen(draft, base)} · ${fmtDuration(draft.durationMin)}`;
-  const t3 = [BAND_LABEL[draft.band], draft.voice ? '음성 녹음' : '녹음 안 함', draft.voice ? 'AI 분석' : null, draft.place === 'online' && draft.video ? '영상 녹화' : null].filter(Boolean).join(' · ');
+  const t3 = [BAND_LABEL[draft.band], draft.voice ? '음성 녹음' : '녹음 안 함', draft.voice && isAiEnabled() ? 'AI 분석' : null, draft.place === 'online' && draft.video ? '영상 녹화' : null].filter(Boolean).join(' · ');
   const first = draft.members[0];
   const memberText = draft.members.length ? `${draft.members.length}명 초대 · ${first.name}${draft.members.length > 1 ? ` 외 ${draft.members.length - 1}명` : ''}` : '초대 없이 만들어요';
   const t4 = `${memberText}${draft.emails.length ? ` · 이메일 ${draft.emails.length}명` : ''}`;

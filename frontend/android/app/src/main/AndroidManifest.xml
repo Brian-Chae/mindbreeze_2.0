@@ -63,7 +63,7 @@
     <!-- BLE 플러그인이 병합하는 위치 권한 제거: neverForLocation 스캔이므로 불필요(Android 11 이하 FINE만 위 선언으로 유지) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" tools:node="remove" />
 
-    <!-- 화상 상담(LiveKit)·AI 기록용 마이크/카메라. 하드웨어는 필수가 아니다. -->
+    <!-- 화상 클래스·동의한 녹음·녹화용 마이크/카메라. 하드웨어는 필수가 아니다. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />

@@ -23,6 +23,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.session import Session, SessionParticipant
 from app.models.user import User
 from app.services import agent_policy, agent_service
@@ -302,6 +303,9 @@ def sweep(db: DBSession, *, now: datetime | None = None, limit: int = SWEEP_LIMI
 
     취소·종료된 세션, 그룹 세션, 일정 없는 즉석 세션은 후보 쿼리에서 제외된다.
     """
+    # SDD-220: AI off — 루시 메시지 생성을 멈춘다(일반 클래스 리마인더는 별도 경로라 유지).
+    if not is_ai_enabled():
+        return {"scanned": 0, "sent": 0, "corrected": 0}
     now = now or _now()
     horizon = now + timedelta(hours=SWEEP_LOOKAHEAD_HOURS)
 

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { CounselingGate } from './components/routing/counseling-gate';
+import { isAiEnabled, isDesignRoutesEnabled } from './lib/feature-flags';
 import { useStatusBar } from './lib/native/use-status-bar';
 import { isNativeApp } from './lib/native/platform';
 import { initNativeKeyboard } from './lib/native/keyboard';
@@ -73,6 +74,11 @@ const ClientManagementPage = lazy(() => import('./pages/admin/ClientManagementPa
 const AdminOrgManagementPage = lazy(() => import('./pages/admin/OrgManagementPage'));
 const SignupApplicationsPage = lazy(() => import('./pages/admin/SignupApplicationsPage'));
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'));
+// SDD-220: 약관·위기 도움·측정 안내·계정 삭제 요청(공개 경로)
+const TermsPage = lazy(() => import('./pages/terms-page').then((m) => ({ default: m.TermsPage })));
+const CrisisHelpPage = lazy(() => import('./pages/crisis-help-page').then((m) => ({ default: m.CrisisHelpPage })));
+const MeasurementGuidePage = lazy(() => import('./pages/measurement-guide-page').then((m) => ({ default: m.MeasurementGuidePage })));
+const AccountDeletionPage = lazy(() => import('./pages/account-deletion-page'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const NotificationCenterPage = lazy(() => import('./pages/notifications/NotificationCenterPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
@@ -115,6 +121,8 @@ function RoleRouter() {
 /** 구 AI 대화 경로(/agent, 푸시 딥링크) → 채팅 목록의 루시(AI) 채널 */
 function LegacyAgentRedirect() {
   const location = useLocation();
+  // SDD-220: AI 비공개면 루시 채널 대신 채팅 목록으로 보낸다.
+  if (!isAiEnabled()) return <Navigate to="/chat" replace />;
   return <Navigate to={`/chat/lucy${location.search}`} replace />;
 }
 
@@ -167,6 +175,10 @@ const router = createBrowserRouter(
         <Route path="/class/:sessionId/enter" element={<ClassEntryPage />} />
         <Route path="/o/:org_code" element={<OrgPublicPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/crisis-help" element={<CrisisHelpPage />} />
+        <Route path="/measurement-guide" element={<MeasurementGuidePage />} />
+        <Route path="/account-deletion" element={<AccountDeletionPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/login/client" element={<ClientLoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -229,14 +241,19 @@ const router = createBrowserRouter(
         <Route path="/sessions/:id/record" element={<SessionRecordPage />} />
         <Route path="/chat" element={<RoleGuard><ChatPage /></RoleGuard>} />
         <Route path="/chat/:roomId" element={<RoleGuard><ChatPage /></RoleGuard>} />
-        <Route path="/design" element={<DesignIndexPage />} />
-        <Route path="/design/homepage" element={<HomepagePage />} />
-        <Route path="/design/app" element={<OperatorAppPage />} />
-        <Route path="/design/user-app" element={<UserAppPage />} />
-        <Route path="/design/report" element={<ReportPage />} />
-        <Route path="/design/docs" element={<DocsPage />} />
-        <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
-        <Route path="/design/class-flow" element={<ClassFlowCasesPage />} />
+        {/* SDD-220: 디자인 시안 경로는 운영 빌드에서 등록하지 않는다(심사 노출 방지). */}
+        {isDesignRoutesEnabled() && (
+          <>
+            <Route path="/design" element={<DesignIndexPage />} />
+            <Route path="/design/homepage" element={<HomepagePage />} />
+            <Route path="/design/app" element={<OperatorAppPage />} />
+            <Route path="/design/user-app" element={<UserAppPage />} />
+            <Route path="/design/report" element={<ReportPage />} />
+            <Route path="/design/docs" element={<DocsPage />} />
+            <Route path="/design/class-player" element={<ClassPlayerCasesPage />} />
+            <Route path="/design/class-flow" element={<ClassFlowCasesPage />} />
+          </>
+        )}
         <Route path="/admin" element={<PlatformAdminRoute><Navigate to="/admin/orgs" replace /></PlatformAdminRoute>} />
         <Route path="/reports" element={<RoleGuard role={['counselor', 'org_admin']}><ReportListPage /></RoleGuard>} />
         <Route path="/reports/sample" element={<ReportSamplePage />} />

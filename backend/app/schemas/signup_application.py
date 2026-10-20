@@ -26,6 +26,8 @@ class IndividualCounselorApplicationCreate(BaseModel):
     display_name: str | None = Field(None, max_length=200)
     specialties: str | None = Field(None, max_length=300)
     inquiry: str | None = Field(None, max_length=2000)
+    # SDD-220: 신규 계정이 만들어지므로 만 14세 확인용 생년월일을 서버가 검증한다(YYYY-MM-DD).
+    birth_date: str | None = Field(None, description="YYYY-MM-DD 형식")
     consents: SignupConsent
 
 

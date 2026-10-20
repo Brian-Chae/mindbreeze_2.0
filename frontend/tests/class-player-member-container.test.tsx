@@ -453,6 +453,9 @@ describe('밴드 조작', () => {
     await render(<Container />);
     await act(async () => { dockButton('기기')?.click(); });
     await act(async () => { buttonByText('LINK BAND 연결')?.click(); });
+    // SDD-220 TS26: OS 권한 요청 전 사전 안내를 거친다(확인 전에는 연결하지 않는다).
+    expect(h.band.connect).not.toHaveBeenCalled();
+    await act(async () => { buttonByText('확인하고 계속')?.click(); });
     expect(h.band.connect).toHaveBeenCalledTimes(1);
     expect(new Set(h.bandOptions.map((o) => JSON.stringify(o))).size).toBe(1);
   });

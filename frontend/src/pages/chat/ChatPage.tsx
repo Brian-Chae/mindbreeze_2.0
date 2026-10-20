@@ -17,6 +17,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useChatSortPreference } from '../../hooks/useChatSortPreference';
 import CounselorAgentPage from '../agent/counselor-agent-page';
 import { useCounselorAgentStore } from '../../stores/agent-counselor-store';
+import { isAiEnabled } from '../../lib/feature-flags';
 import { sortRooms, chatRoomDisplayName, lastMessagePreview, formatChatTime } from '../../lib/chat-sort';
 
 function formatSessionDate(iso: string | null | undefined): string {
@@ -59,7 +60,9 @@ export default function ChatPage() {
   };
   const rooms = useChatStore((s) => s.rooms);
   const agentUnread = useCounselorAgentStore((state) => state.unread + state.openRisk);
-  const isLucy = paramRoomId === LUCY_ROOM_ID;
+  // SDD-220: AI 비공개일 때는 루시 채널·embedded agent 를 만들지 않고, 직접 URL 은 일반 채팅으로 돌려보낸다.
+  const aiEnabled = isAiEnabled();
+  const isLucy = aiEnabled && paramRoomId === LUCY_ROOM_ID;
   const setRooms = useChatStore((s) => s.setRooms);
   const sortPreference = useChatSortPreference();
   const sortedRooms = useMemo(() => sortRooms(rooms, sortPreference.unreadFirst), [rooms, sortPreference.unreadFirst]);
@@ -72,6 +75,10 @@ export default function ChatPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => { setInviteRoom(null); setSettingsRoom(null); }, [paramRoomId]);
+
+  useEffect(() => {
+    if (!aiEnabled && paramRoomId === LUCY_ROOM_ID) navigate('/chat', { replace: true });
+  }, [aiEnabled, paramRoomId, navigate]);
 
   useEffect(() => {
     if (!status) return;
@@ -158,6 +165,7 @@ export default function ChatPage() {
           </div>
 
           <ChatSortToggle {...sortPreference} />
+          {aiEnabled && (
           <button
             type="button"
             onClick={() => navigate(`/chat/${LUCY_ROOM_ID}`)}
@@ -175,6 +183,7 @@ export default function ChatPage() {
               </span>
             )}
           </button>
+          )}
           {loading ? (
             <div className="p-6 text-center text-sm text-[#6F6F6F]">불러오는 중…</div>
           ) : error ? (

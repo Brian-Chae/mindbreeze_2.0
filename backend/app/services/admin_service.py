@@ -573,6 +573,11 @@ def create_client(
             detail="활성 상태(인증 완료)의 상담사에게만 회원을 배정할 수 있습니다",
         )
 
+    # SDD-220(F2): 탈퇴 처리 중인 이메일로는 초대 계정도 만들 수 없다.
+    from app.services import signup_policy_service
+
+    signup_policy_service.assert_email_not_pending_deletion(db, normalized_email)
+
     # 4. pending 내담자 계정 생성 — 비밀번호는 난수(초대 메일로만 활성화)
     client = User(
         email=normalized_email,
@@ -727,6 +732,22 @@ _ACCOUNT_ACCESS_TABLES: list[tuple[str, list[str]]] = [
 ]
 
 
+def remove_account_access(db: Session, user_id: uuid.UUID) -> None:
+    """계정 접근 권한·소속·알림·토큰 자식 행을 지운다(커밋하지 않는다 — 호출자 트랜잭션에 참여).
+
+    SDD-220: 관리자 삭제(delete_user)와 본인 탈퇴(account_deletion_service)가 같은 정리 규칙을 쓰도록 추출했다.
+    상담·원본·리포트 데이터와 다른 기관 관리자의 참조는 건드리지 않는다.
+    """
+    uid = str(user_id)
+    for table, cols in _ACCOUNT_ACCESS_TABLES:
+        for col in cols:
+            db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
+    db.execute(
+        text("DELETE FROM signup_applications WHERE user_id = :id OR reviewed_by = :id"),
+        {"id": uid},
+    )
+
+
 def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[str, Any]:
     """사용자 계정 삭제 = 비활성(숨김) 전환 (플랫폼 관리자 전용, SDD-209 B1 / RV1-4).
 
@@ -752,13 +773,7 @@ def delete_user(user_id: uuid.UUID, admin_id: uuid.UUID, db: Session) -> dict[st
         text("UPDATE organizations SET primary_admin_id = NULL, owner_user_id = NULL, deactivated_by = NULL WHERE primary_admin_id = :id OR owner_user_id = :id OR deactivated_by = :id"),
         {"id": uid},
     )
-    for table, cols in _ACCOUNT_ACCESS_TABLES:
-        for col in cols:
-            db.execute(text(f"DELETE FROM {table} WHERE {col} = :id"), {"id": uid})
-    db.execute(
-        text("DELETE FROM signup_applications WHERE user_id = :id OR reviewed_by = :id"),
-        {"id": uid},
-    )
+    remove_account_access(db, user_id)
 
     # 호스트 클래스는 숨김(원본 보존). 이미 숨김인 행은 건드리지 않는다.
     db.execute(

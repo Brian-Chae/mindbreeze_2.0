@@ -1,3 +1,4 @@
+import { isAiEnabled } from '../../lib/feature-flags';
 import { Link } from 'react-router-dom';
 
 const stats = [
@@ -33,7 +34,7 @@ const Hero: React.FC = () => {
             <span className="text-purple-900">이해하는 순간</span>
           </h1>
           <p className="font-medium text-[18px] leading-[30px] text-black/60 max-w-[480px] mt-7">
-            LINK BAND가 뇌파를 측정하고 AI가 분석합니다.
+            {isAiEnabled() ? 'LINK BAND가 뇌파를 측정하고 AI가 분석합니다.' : 'LINK BAND로 뇌파를 선택적으로 측정하고 기록을 살펴봅니다.'}
             <br />
             상담사는 기록에서 자유로워지고 내담자에게 집중할 수 있습니다.
           </p>
@@ -42,7 +43,7 @@ const Hero: React.FC = () => {
               to="/register"
               className="mb-btn h-[52px] px-7 text-[16px] rounded-[14px] inline-flex items-center"
             >
-              무료로 시작하기
+              시작하기
             </Link>
             <Link
               to="/join"

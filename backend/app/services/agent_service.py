@@ -21,6 +21,7 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import require_ai_enabled
 from app.models.agent import (
     AgentConversation,
     AgentDeliveryLog,
@@ -703,6 +704,7 @@ def _companion_reply(db: DBSession, user_id: UUID, user_text: str) -> str:
 
 def send_user_message(db: DBSession, user_id: str | UUID, content: str) -> dict:
     """사용자 메시지 저장 + 에이전트 응답 생성 (동의 필수)."""
+    require_ai_enabled()  # SDD-220: AI off 면 대화 생성 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     text = content.strip()
@@ -749,6 +751,7 @@ def stream_user_message(db: DBSession, user_id: str | UUID, content: str):
     `agent_guard.sanitize` 를 거쳐 진단·점수 표현이 제거된 뒤 저장된다(프론트는 완료 후
     폴링으로 확정 메시지를 다시 받는다).
     """
+    require_ai_enabled()  # SDD-220: AI off 면 스트림·도구 실행 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     text = content.strip()
@@ -960,6 +963,7 @@ def execute_cta(
     text: str | None = None,
 ) -> dict:
     """CTA 실행 — 소유자 검증 후 액션별로 처리한다(IDOR 방지)."""
+    require_ai_enabled()  # SDD-220: AI off 면 도구 실행 0
     require_consent(db, user_id)
     uid = _to_uuid(user_id)
     mid = _to_uuid(message_id)

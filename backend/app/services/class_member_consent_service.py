@@ -256,3 +256,27 @@ def _scrub_operation_results(db, class_id, member_ids):
     for operation in operations:
         clean=redact(operation.result)
         if clean!=operation.result: operation.result=clean
+
+
+def set_session_recording_consent(db, class_id, session_id, consented, notice_version, *, user_id=None, member_credential=None):
+    """SDD-220(F1): 클래스 멤버(회원·게스트)의 이 회차 녹음·녹화 동의를 참여자 행에 저장한다.
+
+    입장 자격(entry_credential)을 받기 전에 호출하므로 로그인 또는 멤버 자격(X-Class-Member-Credential)으로 본인을 확인한다.
+    거부(false)는 기록만 하고 이후 guest-entry/입장은 계속 403 RECORDING_CONSENT_REQUIRED 다.
+    """
+    from app.services import recording_consent_service as rcs
+    from app.services.class_guest_service import canonical_member_ids
+    member=_own_member(db,class_id,user_id,member_credential)
+    sid=UUID(str(session_id))
+    if db.query(Session.id).filter_by(id=sid,class_id=UUID(str(class_id))).first() is None:
+        raise _error('session_not_found',404)
+    rows=db.query(SessionParticipant).filter(SessionParticipant.session_id==sid,
+        SessionParticipant.member_id.in_(canonical_member_ids(db,member)),
+        SessionParticipant.superseded_by_participant_id.is_(None)).all()
+    if len(rows)!=1: raise _error('participant_not_found',404)
+    p=rows[0]
+    if consented: rcs.apply_recording_consent(p,notice_version)
+    else:
+        p.recording_consented=False;p.recording_consent_at=None;p.recording_notice_version=None
+    db.commit()
+    return rcs._view(p)

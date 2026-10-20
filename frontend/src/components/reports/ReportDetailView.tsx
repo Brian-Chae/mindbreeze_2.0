@@ -14,6 +14,7 @@ import SessionReplayPanel from './SessionReplayPanel';
 import ReportCoverSection from './ReportCoverSection';
 import ReportStatusBadge from './ReportStatusBadge';
 import { useAuthStore } from '../../stores/authStore';
+import { aiRecordUnavailableText } from '../../lib/features';
 import {
   approveReport,
   resendReportEmail,
@@ -226,12 +227,7 @@ export default function ReportDetailView({
   const { markers, displayNarrative, transcriptSegments } = adapted;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
-  const aiRecordReasonText =
-    adapted.aiRecord?.reason === 'mic_off'
-      ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
-      : adapted.aiRecord?.reason === 'low_confidence'
-        ? '오디오 분석 신뢰도가 낮아 AI 자동 요약을 제공하지 않습니다. 녹음 원본 전사문은 아래 기록지에서 확인할 수 있습니다.'
-        : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
+  const aiRecordReasonText = aiRecordUnavailableText(adapted.aiRecord?.reason);
   const isCounselor = report.type === 'counselor';
   const eeg = adapted.eeg;
   const eegQualityLabel = eeg ? eegQualitySummaryLabel(eeg.status) : null;

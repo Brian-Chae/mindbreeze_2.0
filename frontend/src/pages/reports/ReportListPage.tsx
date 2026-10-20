@@ -17,6 +17,7 @@ import {
 } from '../../lib/api/reports';
 import BulkApproveModal from '../../components/reports/BulkApproveModal';
 import { useReportStore } from '../../stores/reportStore';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'failed';
 type ReportTypeFilter = 'all' | 'counselor' | 'client';
@@ -518,7 +519,7 @@ export default function ReportListPage() {
   );
 
   return (
-    <AppShell title="리포트" sub="AI REPORTS" rightSlot={!loading ? rightSlot : undefined}>
+    <AppShell title="리포트" sub={isAiEnabled() ? 'AI REPORTS' : 'REPORTS'} rightSlot={!loading ? rightSlot : undefined}>
       {!loading && (
         <div className="mb-4 md:hidden flex items-center gap-3 flex-wrap">
           {autoApproveToggle}

@@ -21,6 +21,8 @@ interface ChatState {
   updateSenderName: (senderId: string, newName: string) => void;
   updateMessageReadCount: (roomId: string, messageId: string, readCount: number, unreadCount: number, readBy?: string[]) => void;
   markAllMessagesRead: (roomId: string, readerId?: string) => void;
+  /** SDD-220: 신고·차단 즉시 해당 사용자의 메시지·preview·미읽음을 캐시에서 제거한다(서버도 별도로 차단). */
+  applyBlock: (blockedUserId: string) => void;
   reset: () => void;
 }
 
@@ -148,6 +150,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
             };
           }),
         },
+      };
+    }),
+
+  applyBlock: (blockedUserId) =>
+    set((state) => {
+      const messagesByRoom: Record<string, ChatMessage[]> = {};
+      for (const [roomId, msgs] of Object.entries(state.messagesByRoom)) {
+        messagesByRoom[roomId] = msgs.filter((m) => m.sender_id !== blockedUserId);
+      }
+      return {
+        messagesByRoom,
+        rooms: state.rooms.map((room) =>
+          room.room_type === 'direct' && room.peer_id === blockedUserId
+            ? { ...room, is_blocked: true, last_message: null, unread_count: 0 }
+            : room,
+        ),
       };
     }),
 

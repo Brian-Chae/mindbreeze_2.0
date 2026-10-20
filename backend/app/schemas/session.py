@@ -287,6 +287,42 @@ class EnterRequest(BaseModel):
     email: EmailStr | None = None
     # 복귀: 이전에 받은 입장 자격(헤더 X-Entry-Credential 로도 전달 가능). 이름 일치로는 인계하지 않는다.
     entry_credential: str | None = None
+    # SDD-220(F1): 회차별 녹음·녹화 필수 동의. 누락·거부면 403 RECORDING_CONSENT_REQUIRED 로 입장 자격을 내주지 않는다.
+    recording_consent: bool | None = None
+    recording_notice_version: str | None = Field(None, min_length=1, max_length=20)
+    # SDD-220: 뇌파 수집 선택(밴드 연결 사전 선택). 생략하면 회원은 계정 동의값, 비회원은 미동의로 둔다.
+    eeg_collection_consent: bool | None = None
+    eeg_notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class EntryConsentBody(BaseModel):
+    """초대 회원 편의 입장(POST /{id}/enter)의 선택 본문 — F1 동의."""
+
+    recording_consent: bool | None = None
+    recording_notice_version: str | None = Field(None, min_length=1, max_length=20)
+    eeg_collection_consent: bool | None = None
+    eeg_notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class RecordingConsentRequest(BaseModel):
+    """회차 녹음·녹화 동의 저장. consented=false 는 거부 기록이며 입장은 열리지 않는다."""
+
+    consented: bool
+    notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class EegCollectionConsentRequest(BaseModel):
+    consented: bool
+    notice_version: str | None = Field(None, min_length=1, max_length=20)
+
+
+class EntryConsentState(BaseModel):
+    participant_id: str
+    recording_consented: bool
+    recording_notice_version: str | None = None
+    recording_consent_at: datetime | None = None
+    eeg_collection_consented: bool | None = None
+    eeg_notice_version: str | None = None
 
 
 class EnterResponse(BaseModel):
@@ -295,6 +331,8 @@ class EnterResponse(BaseModel):
     participant_id: str | None = None
     is_guest: bool = False
     is_waitlisted: bool = False
+    # SDD-220: 뇌파 수집 선택 현황(True 동의 / False 거부 / None 미확인). 밴드 연결 사전 선택 화면 표시 판단용.
+    eeg_collection_consented: bool | None = None
     session: SessionResponse
 
 
