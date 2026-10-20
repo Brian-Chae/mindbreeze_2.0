@@ -1,4 +1,5 @@
 import UIKit
+import AVFoundation
 import Capacitor
 import FirebaseCore
 import FirebaseMessaging
@@ -13,7 +14,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             FirebaseApp.configure()
             Messaging.messaging().delegate = self
         }
+        configureAudioSession()
         return true
+    }
+
+    // 화면 잠금·앱 전환 중에도 수업 음성과 프로세스가 유지되도록 playback 카테고리를 사용한다(SDD-222).
+    // mixWithOthers 는 실기기 확인 후 결정하므로 기본 미사용. 실패해도 앱 시작을 막지 않는다.
+    private func configureAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
+        } catch {
+            NSLog("[SDD-222] AVAudioSession 설정 실패: \(error.localizedDescription)")
+        }
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {

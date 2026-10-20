@@ -210,3 +210,13 @@ removeAllListeners(): Promise<void>
 - `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle`: keep-awake + foreground-service 프로젝트 2개 추가.
 - `ios/App/CapApp-SPM/Package.swift`: `CapacitorCommunityKeepAwake` 추가(foreground-service 는 Android 전용이라 없음).
 - `capacitor.config.ts`: 변경 없음(플러그인 설정 불필요).
+
+## 부록 C. Track I (iOS) 구현 결과
+
+- `Info.plist`: `UIBackgroundModes` = `bluetooth-central`, `audio` 추가(기존 키 보존). `plutil -lint` OK.
+- `AppDelegate.swift`: `didFinishLaunching` 에서 `configureAudioSession()` 호출 — `AVAudioSession` 카테고리 `.playback`, 모드 `.default`, 옵션 없음(`mixWithOthers` 미사용, 실기기 확인 후 결정), `setActive(true)`. 실패는 `NSLog` 만 하고 앱 시작을 막지 않음. 기존 push 토큰·URL·userActivity 처리 메서드 변경 없음.
+- Xcode capability: `project.pbxproj` 의 `SystemCapabilities` 에는 Push 만 선언됨. Background Modes 는 `Info.plist` 값이 실제 동작 기준이며 pbxproj 는 수정하지 않음(Xcode UI 의 체크박스는 표시용).
+- 인터럽트(전화 등) 종료 후 세션 재활성화는 plan 범위에 없어 미구현 — 실기기 M8 결과에 따라 후속 판단.
+- 검증: `swiftc -parse`(AppDelegate) OK, AVAudioSession 호출 시그니처 iOS 시뮬레이터 SDK 타입체크 OK. 전체 `xcodebuild` 는 `node_modules` 미설치로 SPM 해석 실패(환경 사유).
+- 스토어 사유 문구(audio·bluetooth-central)는 §8 과 spec D2/R5 에 일치함.
+- 실기기 필요(미수행): verify M7(잠금 중 BLE notify 지속), M8(잠금·앱 전환 중 음성 유지).
