@@ -115,7 +115,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u1', role: 'counselor', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/dashboard', '홈'], ['/classes', '명상 클래스'], ['/counseling', '상담'], ['/chat', '채팅'],
+      ['/dashboard', '홈'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
       ['/reports', '리포트'], ['/playground', '플레이그라운드'], ['/notifications', '알림'], ['/settings', '설정'],
     ]);
   });
@@ -123,7 +123,7 @@ describe('FE-NAV-01 사이드바 라벨·경로 골든(역할 4종)', () => {
     state.user = { id: 'u2', role: 'org_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar();
     expect(sidebarEntries()).toEqual([
-      ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/counseling', '상담'], ['/chat', '채팅'],
+      ['/dashboard/org', '기관 대시보드'], ['/classes', '명상 클래스'], ['/clients', '회원'], ['/counseling', '상담'], ['/chat', '채팅'],
       ['/org/counselors', '구성원'], ['/reports', '리포트'], ['/notifications', '알림'], ['/settings', '설정'],
     ]);
   });
@@ -193,7 +193,7 @@ describe('FE-NAV-05 배지 현행값', () => {
   it('사이드바: 알림·리포트·채팅 배지(비상담사: chatBadge + agentBadge)', async () => {
     state.user = { id: 'u2', role: 'org_admin', name: '테스트', email: 'a@example.com' };
     await renderSidebar({ notificationBadge: 12, reportBadge: 2, chatBadge: 1, agentBadge: 2, sessionBadge: 5 });
-    expect(sidebarBadges()).toEqual({ '기관 대시보드': null, '명상 클래스': null, 상담: null, 채팅: '3', 구성원: null, 리포트: '2', 알림: '9+', 설정: null });
+    expect(sidebarBadges()).toEqual({ '기관 대시보드': null, '명상 클래스': null, 회원: null, 상담: null, 채팅: '3', 구성원: null, 리포트: '2', 알림: '9+', 설정: null });
   });
   it('사이드바: 상담사 채팅 배지는 chatBadge + 루시 미읽음 + 위험(agentBadge 무시)', async () => {
     state.user = { id: 'u1', role: 'counselor', name: '테스트', email: 'a@example.com' };
@@ -215,7 +215,7 @@ describe('FE-NAV-05 배지 현행값', () => {
     state.pendingReview = 2;
     state.sessionInvites = [1, 2];
     await renderSidebar({ role: 'counselor', notificationBadge: 4 });
-    expect(sidebarBadges()).toEqual({ 홈: null, '명상 클래스': null, 상담: null, 채팅: null, 리포트: '2', 플레이그라운드: null, 알림: '4', 설정: null });
+    expect(sidebarBadges()).toEqual({ 홈: null, '명상 클래스': null, 회원: null, 상담: null, 채팅: null, 리포트: '2', 플레이그라운드: null, 알림: '4', 설정: null });
   });
   it('상담사·관리자 하단 탭: 승인 대기·공통 알림은 더보기에 합산한다', async () => {
     state.sessionInvites = [1, 2, 3];

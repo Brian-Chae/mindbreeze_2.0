@@ -8,7 +8,7 @@ const GOLDEN = {
   home: '홈',
   'org-dashboard': '기관 대시보드',
   class: '클래스',
-  client: '내담자',
+  client: '회원',
   chat: '채팅',
   report: '리포트',
   playground: '플레이그라운드',

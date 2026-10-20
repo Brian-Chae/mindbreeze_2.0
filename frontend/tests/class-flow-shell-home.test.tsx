@@ -36,12 +36,16 @@ const NOW = new Date(2026, 9, 17, 12, 0);
 const L = (day: number, hour: number, minute = 0): string => new Date(2026, 9, day, hour, minute).toISOString();
 
 beforeEach(() => {
+  // 고정 일정이 실행 날짜에 따라 입장 가능 상태로 바뀌지 않게 한다.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
 });
 afterEach(async () => {
+  vi.useRealTimers();
   await act(async () => root.unmount());
   container.remove();
   vi.clearAllMocks();

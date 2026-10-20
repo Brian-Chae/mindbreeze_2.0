@@ -41,6 +41,9 @@ function session(over: Partial<SessionDto> & { host_name?: string } = {}): Sessi
 }
 
 beforeEach(() => {
+  // 고정 일정이 실행 날짜에 따라 입장 가능 상태로 바뀌지 않게 한다.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   container = document.createElement('div');
   document.body.append(container);
@@ -48,6 +51,7 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 afterEach(async () => {
+  vi.useRealTimers();
   await act(async () => root.unmount());
   container.remove();
   vi.clearAllMocks();

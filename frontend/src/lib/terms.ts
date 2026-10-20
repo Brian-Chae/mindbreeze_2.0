@@ -39,7 +39,7 @@ const TERMS: Readonly<Record<TermKey, Readonly<Record<TermArea, string>>>> = {
   home: same('홈'),
   'org-dashboard': same('기관 대시보드'),
   class: same('클래스'),
-  client: same('내담자'),
+  client: same('회원'),
   chat: same('채팅'),
   report: same('리포트'),
   playground: same('플레이그라운드'),

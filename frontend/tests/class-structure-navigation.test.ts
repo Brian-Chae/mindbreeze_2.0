@@ -51,6 +51,7 @@ vi.mock('../src/pages/client/member-classes-page', () => ({ MemberClassesPage: (
 vi.mock('../src/pages/client/member-class-detail-page', () => ({ MemberClassDetailPage: () => createElement(RoutedPage, { name: 'member-detail' }) }));
 vi.mock('../src/pages/sessions/SessionDetailPage', () => ({ default: () => createElement(RoutedPage, { name: 'session-detail' }) }));
 vi.mock('../src/pages/sessions/SessionListPage', () => ({ default: () => createElement(RoutedPage, { name: 'legacy-list' }) }));
+vi.mock('../src/pages/classes/class-scheduling-wizard', () => ({ ClassSchedulingWizard: () => createElement(RoutedPage, { name: 'wizard' }) }));
 vi.mock('../src/components/class/flow/host/CreateWizardContainer', () => ({ CreateWizardContainer: () => createElement(RoutedPage, { name: 'wizard' }) }));
 vi.mock('../src/pages/sessions/SessionLivePage', () => ({ default: () => createElement(RoutedPage, { name: 'live' }) }));
 vi.mock('../src/pages/sessions/ClassPlayerPage', () => ({ default: () => createElement(RoutedPage, { name: 'player' }) }));
@@ -75,7 +76,7 @@ const render = (node: ReturnType<typeof createElement>, path = '/classes') => {
 describe('현재 계약 보존', () => {
   it('기존 용어 키와 기본 영역을 보존한다', () => {
     expect(term('class')).toBe('클래스');
-    expect(term('client', 'counseling')).toBe('내담자');
+    expect(term('client', 'counseling')).toBe('회원');
     expect(term('org-counselors')).toBe('상담사');
   });
   it('기존 알림과 회원 입장 경로를 보존한다', () => {
@@ -108,7 +109,7 @@ describe('새 내비게이션', () => {
     const html = render(createElement(SidebarNav));
     expect(html).toContain('href="/classes"');
     expect(html).toContain('href="/counseling"');
-    expect(html).not.toContain('href="/clients"');
+    expect(html).toContain('href="/clients"');
     expect(html).toContain('명상 클래스');
   });
   it('플랫폼 관리자는 기존 업무 권한을 유지한다', () => {
@@ -228,6 +229,14 @@ describe('더보기 상호작용', () => {
     expect(buttons[buttons.length - 1].className).toContain('text-[#5F0080]');
     expect([...buttons].filter((button) => button.getAttribute('aria-current') === 'page')).toHaveLength(1);
   });
+});
+
+it.each(['counselor', 'org_admin'] as const)('%s 회원 상세에서는 모바일 더보기가 활성화된다', (role) => {
+  const html = render(createElement(HostTabs, { role, onMoreClick: () => {} }), '/clients/person');
+  const element = document.createElement('div');
+  element.innerHTML = html;
+  expect(element.querySelector('nav > button')?.getAttribute('aria-current')).toBe('page');
+  expect(element.querySelectorAll('nav > a').length).toBeLessThanOrEqual(4);
 });
 
 describe('역할 경계 회귀', () => {

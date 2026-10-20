@@ -11,7 +11,7 @@ export default function ClientProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, isInitialized, user } = useAuthStore();
 
-  // SEC-07: 내담자 프로필 상세는 상담사·기관관리자 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
+  // SEC-07: 회원 프로필 상세는 상담사·기관관리자 역할만 접근 가능 (라우트 RoleGuard와 이중 방어)
   useRequireAuth();
   useRequireRole(['counselor', 'org_admin']);
 
@@ -155,7 +155,7 @@ export default function ClientProfilePage() {
 
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold mb-2">상담사 비공개 메모</h2>
-          <p className="text-xs text-gray-500 mb-3">내담자에게 공개되지 않습니다.</p>
+          <p className="text-xs text-gray-500 mb-3">회원에게 공개되지 않습니다.</p>
           <textarea
             id="client-memo"
             value={memo}

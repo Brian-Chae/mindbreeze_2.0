@@ -98,6 +98,7 @@ function isCounselingPath(to: string): boolean {
 const NAV_ITEMS: NavItem[] = [
   { to: '/dashboard', key: 'home', icon: ICONS.home },
   { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
+  { to: '/clients', key: 'client', icon: ICONS.users },
   { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   { to: '/reports', key: 'report', icon: ICONS.report },
@@ -109,6 +110,7 @@ const NAV_ITEMS: NavItem[] = [
 const ORG_ADMIN_NAV_ITEMS: NavItem[] = [
   { to: '/dashboard/org', key: 'org-dashboard', icon: ICONS.home },
   { to: '/classes', key: 'meditation-class', icon: ICONS.calendar },
+  { to: '/clients', key: 'client', icon: ICONS.users },
   { to: '/counseling', key: 'counseling', icon: ICONS.users },
   { to: '/chat', key: 'chat', icon: ICONS.message },
   // SDD-082: 기관 관리자 전용 상담사 관리 페이지
