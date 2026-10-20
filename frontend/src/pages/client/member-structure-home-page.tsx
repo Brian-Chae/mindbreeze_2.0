@@ -1,3 +1,5 @@
+import { MemberClassStrip } from '../../components/client/home/member-class-strip';
+import '../../components/client/home/member-home-layout.css';
 import { Link } from 'react-router-dom';
 import { isCounselingEnabled } from '../../lib/feature-flags';
 import { useAuthStore } from '../../stores/authStore';
@@ -11,7 +13,7 @@ import { displayField } from '../../lib/class-structure/read-model';
 import { counselingPath } from '../../lib/class-structure/navigation';
 import { StructureShell } from '../../components/class/structure/structure-shell';
 import { ReadField, ReadStateView } from '../../components/class/structure/read-state';
-import { MemberClassCard, MemberClassStyles, memberDate, memberValue } from '../../components/class/structure/member-class-views';
+import { MemberClassStyles, memberDate, memberValue } from '../../components/class/structure/member-class-views';
 
 export function MemberStructureHomePage() {
   useClientCounselors();
@@ -23,7 +25,7 @@ export function MemberStructureHomePage() {
   const counseling = model.counseling.status === 'success' ? model.counseling.data.relationships : [];
   const counselingEnabled = isCounselingEnabled();
   const name = useAuthStore((state) => state.user?.name);
-  return <StructureShell role="member" title={`안녕하세요, ${name ?? '내담자'}님`}><MemberClassStyles /><div className="mc-stack">
+  return <StructureShell role="member" title={`안녕하세요, ${name ?? '내담자'}님`}><MemberClassStyles /><div className="mc-stack mh-home">
     <section className="sh-scope sh-hero" data-testid="class-hero" aria-label="다음 일정" data-area={next?.area}>
       {next && <div className="sh-hero__bg" style={{ backgroundImage: `url(${heroBackdrop(next.sessionId)})` }} aria-hidden="true" />}
       <div className="sh-hero__in">
@@ -34,9 +36,9 @@ export function MemberStructureHomePage() {
         : <h2 className="sh-hero__title">{model.nextIsComplete ? '예정된 일정이 없어요' : read.classes.status === 'loading' || read.counseling.status === 'loading' ? '일정을 확인하고 있어요' : '확인된 예정 일정이 없어요'}</h2>}
       </div>
     </section>
-    <section aria-label="내 클래스" data-area="meditation"><div className="mc-row"><h2 className="mc-heading">내 클래스</h2><Link className="mc-link" to="/app/classes">전체 보기</Link></div>
+    <section className="mh-classes" aria-label="내 클래스" data-area="meditation"><div className="mc-row"><h2 className="mc-heading">내 클래스</h2><Link className="mc-link" to="/app/classes">전체 보기</Link></div>
       <ReadStateView status={model.classes.status === 'success' && classes.length === 0 ? 'empty' : model.classes.status} backTo="/app/classes" onRetry={read.retry}>
-        <div className="mc-grid">{classes.map((item) => <MemberClassCard key={item.id} model={item} />)}</div>
+        <MemberClassStrip classes={classes} />
       </ReadStateView>
     </section>
     {counselingEnabled && <section aria-label="내 상담" data-area="counseling"><div className="mc-row"><h2 className="mc-heading">내 상담</h2><Link className="mc-link" to="/app/counseling">전체 보기</Link></div>
