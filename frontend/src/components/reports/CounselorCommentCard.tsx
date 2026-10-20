@@ -8,8 +8,12 @@ import {
   updateReportComment,
   type ReportDto,
 } from '../../lib/api/reports';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 const COMMENT_MAX_LENGTH = 1000;
+
+// SDD-220: AI 비공개면 서버가 규칙 초안(source=rule)을 주므로 화면에서 AI 표현을 쓰지 않고 '초안' 으로만 표기한다.
+const draftNoun = (): string => (isAiEnabled() ? 'AI 초안' : '초안');
 
 function savedCommentOf(report: ReportDto): string {
   const value = report.content?.counselor_comment;
@@ -55,7 +59,7 @@ export default function CounselorCommentCard({
 
   const handleDraft = useCallback(async () => {
     if (drafting || saving) return;
-    if (text.trim() && !window.confirm('작성 중인 내용을 AI 초안으로 덮어쓸까요?')) return;
+    if (text.trim() && !window.confirm(`작성 중인 내용을 ${draftNoun()}으로 덮어쓸까요?`)) return;
     setDrafting(true);
     setSuccess(null);
     setError(null);
@@ -63,7 +67,7 @@ export default function CounselorCommentCard({
       const { draft } = await generateCommentDraft(report.id!);
       setText(draft.slice(0, COMMENT_MAX_LENGTH));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 초안 생성에 실패했습니다.');
+      setError(e instanceof Error ? e.message : `${draftNoun()} 생성에 실패했습니다.`);
     } finally {
       setDrafting(false);
     }
@@ -94,7 +98,7 @@ export default function CounselorCommentCard({
         내담자에게 보내는 코멘트
       </h3>
       <p className="mt-1.5 text-[13px] text-[#6D547A]">
-        승인·발송 시 리포트와 메일에 함께 전달됩니다. AI 초안을 받아 편집할 수도 있어요.
+        승인·발송 시 리포트와 메일에 함께 전달됩니다. {draftNoun()}을 받아 편집할 수도 있어요.
       </p>
 
       {showNoDataBanner && (
@@ -133,7 +137,7 @@ export default function CounselorCommentCard({
             disabled={drafting || saving}
             className="border border-[#E8D9F5] bg-white text-[#5F0080] font-medium hover:bg-[#F5EDFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#5F0080] text-[13px] px-4 py-2 rounded-xl disabled:opacity-50"
           >
-            {drafting ? 'AI 초안 생성 중...' : 'AI 초안 받기'}
+            {drafting ? `${draftNoun()} 생성 중...` : `${draftNoun()} 받기`}
           </button>
           <button
             type="button"

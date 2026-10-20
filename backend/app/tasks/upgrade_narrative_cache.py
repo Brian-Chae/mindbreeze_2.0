@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy.orm import Session as DBSession
 
+from app.core.ai_features import is_ai_enabled
 from app.models.narrative_cache import NarrativeCache
 from app.services.report_narrative import summary_from_signature
 from app.tasks.summary_task import _call_narrative_llm
@@ -22,6 +23,10 @@ def _generate_narrative_for_upgrade(row: NarrativeCache, db: DBSession) -> dict 
 def upgrade_rule_narratives(db: DBSession, limit: int = 5) -> int:
     """오래된 규칙 항목부터 최대 limit개를 시도하고 성공한 수를 반환한다."""
     if limit < 1:
+        return 0
+    # SDD-220: AI off — 업그레이드는 외부 LLM 호출이므로 0건으로 종료한다.
+    if not is_ai_enabled():
+        logger.info("[upgrade_narrative_cache] AI 기능 off — 업그레이드 스킵")
         return 0
     rows = (
         db.query(NarrativeCache)

@@ -17,6 +17,7 @@ import { listNotifications, type NotificationDto } from '../lib/api/notification
 import { dashboardSessionArea, dashboardSessionPath } from '../lib/class-structure/dashboard-navigation';
 import { isCounselingEnabled } from '../lib/feature-flags';
 import { useAuthStore } from '../stores/authStore';
+import { AiOnly } from '../components/routing/ai-gate';
 
 const TYPE_LABELS: Record<SessionType, string> = {
   clinical: '임상심리상담',
@@ -304,9 +305,12 @@ export default function DashboardPage() {
       }
     >
       <OrgRemovedNoticeDialog />
-      <Link to="/chat/lucy" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
-        <span><strong>루시 (AI) 브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
-      </Link>
+      {/* SDD-220: AI 비공개면 루시 브리핑 CTA 를 mount 하지 않는다 */}
+      <AiOnly>
+        <Link to="/chat/lucy" className="mb-4 flex items-center justify-between rounded-2xl bg-[#F5EDFC] p-4 text-[#5F0080]">
+          <span><strong>루시 (AI) 브리핑</strong><span className="ml-3 text-sm">오늘 일정과 내담자 피드백 확인</span></span><span aria-hidden="true">→</span>
+        </Link>
+      </AiOnly>
 
       {error && (
         <div className="mb-4 flex flex-col gap-2 rounded-xl bg-[#FDECEC] p-3 text-sm text-[#B3261E] sm:flex-row sm:items-center sm:justify-between">

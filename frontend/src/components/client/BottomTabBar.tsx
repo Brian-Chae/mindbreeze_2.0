@@ -9,7 +9,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { useNotificationStore } from '../../stores/notificationStore';
 import { useReportStore } from '../../stores/reportStore';
 import { term, type TermKey } from '../../lib/terms';
-import { isCounselingEnabled } from '../../lib/feature-flags';
+import { isAiEnabled, isCounselingEnabled } from '../../lib/feature-flags';
 
 interface TabItem {
   to: string;
@@ -36,7 +36,9 @@ export default function BottomTabBar({ onMoreClick }: BottomTabBarProps) {
   );
   const notificationUnread = useNotificationStore((s) => s.unread);
   const sessionInvites = useNotificationStore((s) => s.sessionInvites);
-  const agentUnread = useAgentStore((s) => s.unread);
+  const agentUnreadRaw = useAgentStore((s) => s.unread);
+  // SDD-220: AI 비공개면 루시 미읽음을 배지에 합산하지 않는다.
+  const agentUnread = isAiEnabled() ? agentUnreadRaw : 0;
   const reportUnread = useReportStore((s) => s.unread);
 
   const moreActive = ['/app/chat', '/app/notifications', '/app/profile'].some((path) => pathname === path || pathname.startsWith(`${path}/`));

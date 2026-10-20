@@ -7,6 +7,7 @@ import {
   type DataCredibilityDisplay,
   type ReportPipelineStatus,
 } from '../../lib/api/report-status';
+import { isAiEnabled } from '../../lib/feature-flags';
 
 interface ReportStatusChipProps {
   status?: string | null;
@@ -67,7 +68,9 @@ function statusHint(status: ReportPipelineStatus, showApprovalHint: boolean): st
     return '상담사 승인 대기 중입니다. 검수 후 승인하고 메일 발송을 진행해 주세요.';
   }
   if (status === 'pending_analysis') {
-    return 'AI 분석이 진행 중입니다. 완료되면 검수 단계로 이동합니다.';
+    return isAiEnabled()
+      ? 'AI 분석이 진행 중입니다. 완료되면 검수 단계로 이동합니다.'
+      : '리포트를 만들고 있습니다. 완료되면 검수 단계로 이동합니다.';
   }
   if (status === 'error') {
     return '리포트 생성 중 오류가 발생했습니다. 재생성 또는 지원팀에 문의하세요.';

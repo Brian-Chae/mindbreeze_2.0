@@ -5,7 +5,7 @@ import EegTimeline from './EegTimeline';
 import NarrativeSections from './NarrativeSections';
 import ReportCoverSection from './ReportCoverSection';
 import SubjectiveCheckinCard from './SubjectiveCheckinCard';
-import { ENABLE_STT_AI_RECORD } from '../../lib/features';
+import { aiRecordUnavailableText, isSttAiRecordVisible } from '../../lib/features';
 import { parseSubjectiveState } from '../../lib/api/checkin';
 import { useNotificationStore } from '../../stores/notificationStore';
 import {
@@ -38,10 +38,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
   const eeg = adapted.eeg;
   // SDD-085: 마이크 오프(수동 기록) 세션 — AI 요약 섹션 숨김 + 사유 표기
   const aiRecordUnavailable = adapted.aiRecord?.status === 'not_available';
-  const aiRecordReasonText =
-    adapted.aiRecord?.reason === 'mic_off'
-      ? '이 세션은 마이크를 사용하지 않아 AI 자동 기록(전사·요약)이 제공되지 않습니다.'
-      : '이 세션에는 AI 자동 기록(전사·요약)이 없습니다.';
+  const aiRecordReasonText = aiRecordUnavailableText(adapted.aiRecord?.reason);
   // SDD-096 — 셀프 체크인(주관 상태): 참여자 스코프 슬롯 + EEG 두뇌휴식도 병기
   const subjective = parseSubjectiveState(report.subjective_state);
   const relaxationScore = eeg?.metrics?.relaxation_score ?? null;
@@ -86,7 +83,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
           />
         )}
 
-        {!aiRecordUnavailable && ENABLE_STT_AI_RECORD && summary && (
+        {!aiRecordUnavailable && isSttAiRecordVisible() && summary && (
           <SummaryCard title="AI 요약">
             <p className="text-[15px] text-[#1F1F1F] leading-relaxed whitespace-pre-wrap">
               {summary}
@@ -94,7 +91,7 @@ export default function ClientReportViewer({ report, onClose, closeLabel = '닫�
           </SummaryCard>
         )}
 
-        {!aiRecordUnavailable && ENABLE_STT_AI_RECORD && insights.length > 0 && (
+        {!aiRecordUnavailable && isSttAiRecordVisible() && insights.length > 0 && (
           <SummaryCard title="인사이트 카드">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {insights.map((insight, i) => (

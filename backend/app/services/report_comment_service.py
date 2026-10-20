@@ -244,6 +244,12 @@ def _call_gemini(
     model 을 주지 않으면 settings.gemini_model(STT·요약 공용)을 쓰고, 루시는
     settings.agent_llm_model 을 넘겨 전용 모델을 쓴다(SDD-201).
     """
+    # SDD-220: 네트워크 직전 단일 가드 — AI off 면 호출 0건, 호출부는 규칙 폴백(None)으로 처리한다.
+    from app.core.ai_features import is_ai_enabled
+
+    if not is_ai_enabled():
+        return None
+
     api_key = settings.gemini_api_key
     if not api_key:
         return None

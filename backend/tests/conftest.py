@@ -237,6 +237,18 @@ def _reset_entry_credentials():
     ENTRY_CREDENTIALS.clear()
 
 
+@pytest.fixture(autouse=True)
+def _ai_features_enabled_for_legacy_tests(monkeypatch):
+    """SDD-220: AI 기능 기본값이 off 로 바뀌었으므로 기존(AI on 계약) 테스트는 on 으로 실행한다.
+
+    기존 단언은 바꾸지 않는다 — on 회귀를 유지하기 위한 fixture 다. off 동작은
+    `test_sdd220_ai_features.py` 가 테스트 안에서 `ai_features_enabled=False` 로 되돌려 검증한다.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ai_features_enabled", True)
+
+
 @pytest.fixture
 def client(app_client):
     return app_client[0]

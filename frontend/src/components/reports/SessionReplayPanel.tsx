@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { VideoPlayer, type VideoPlayerHandle } from './VideoPlayer';
 import TranscriptTimeline from './TranscriptTimeline';
 import type { TranscriptSegment } from '../../lib/api/report';
-import { ENABLE_STT_AI_RECORD } from '../../lib/features';
+import { isSttAiRecordVisible } from '../../lib/features';
 
 export default function SessionReplayPanel({
   sessionId,
@@ -16,7 +16,7 @@ export default function SessionReplayPanel({
   const videoRef = useRef<VideoPlayerHandle>(null);
   // STT AI 기록 MVP 비활성 — 전사 기록지를 노출하지 않고 영상 재생만 남긴다.
   const hasTranscript =
-    ENABLE_STT_AI_RECORD && Boolean(segments && segments.length > 0);
+    isSttAiRecordVisible() && Boolean(segments && segments.length > 0);
 
   return (
     <div
