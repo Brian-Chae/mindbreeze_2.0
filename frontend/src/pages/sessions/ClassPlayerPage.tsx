@@ -34,6 +34,8 @@ import { useLiveKit } from '../../hooks/useLiveKit';
 import { useParticipationSnapshot } from '../../hooks/useParticipationSnapshot';
 import { useSessionLiveSocket } from '../../hooks/useSessionLiveSocket';
 import { useWakeLock } from '../../hooks/useWakeLock';
+import { useHostBackgroundSession } from '../../hooks/useHostBackgroundSession';
+import { useAppResume } from '../../hooks/useAppResume';
 import { useLeaveGuard } from '../../hooks/useLeaveGuard';
 import { useAuthStore } from '../../stores/authStore';
 import { applyEegFeatureToMetricsDetailed } from '../../lib/session-live/apply-eeg-feature';
@@ -778,6 +780,11 @@ export default function ClassPlayerPage() {
 
   // 대기·진행 중 화면 꺼짐 방지 (회원 immersive 와 동일 정책)
   useWakeLock(isLobby || isRunning);
+  // SDD-222 D3: 상담사도 화면이 꺼지거나 앱이 백그라운드여도 BLE·음성 송출·소켓이 유지되도록 Foreground Service 를 켠다.
+  useHostBackgroundSession({ isHost, isLobby, isRunning, online: session?.location_type === 'online' });
+  // 앱 복귀 시 경과 시각을 즉시 다시 계산한다 — setInterval 은 백그라운드에서 멈추므로 서버 기준 시각(started_at·opened_at)으로 보정.
+  const [resumeTick, setResumeTick] = useState(0);
+  useAppResume(() => setResumeTick((n) => n + 1));
 
   // 개선 3: 회원 대기실(입장 전 준비) 인원 — 대기실 씬에서만 구독한다
   const waitingRoom = useWaitingRoomCount({ sessionId: id, enabled: Boolean(id && isLobby) });
@@ -1056,7 +1063,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [session?.started_at]);
+  }, [session?.started_at, resumeTick]);
 
   // 녹음/녹화 경과 타이머 — recordingStartedAt 기준 (일시정지 시에도 누적 경과 표시)
   useEffect(() => {
@@ -1070,7 +1077,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [recordingStartedAt]);
+  }, [recordingStartedAt, resumeTick]);
 
   // 대기실 경과 타이머 — opened_at 기준 (SDD-088)
   useEffect(() => {
@@ -1085,7 +1092,7 @@ export default function ClassPlayerPage() {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [isLobby, session?.opened_at]);
+  }, [isLobby, session?.opened_at, resumeTick]);
 
   /** 라이브 지표가 있으면 그것을, 없으면 세션 참가자로 만든 대체 행을 쓴다 */
   const baseMetrics = useMemo(

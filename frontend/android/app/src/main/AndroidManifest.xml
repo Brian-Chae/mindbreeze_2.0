@@ -26,11 +26,11 @@
 
         </activity>
 
-        <!-- SDD-222: 수업 중 화면이 꺼져도 BLE·서버 통신을 유지하는 포그라운드 서비스(connectedDevice).
+        <!-- SDD-222: 수업 중 화면이 꺼져도 BLE·서버 통신을 유지하는 포그라운드 서비스(connectedDevice|microphone — 마이크는 상담사 온라인 수업 음성 송출용, SDD-222 D3).
              서비스 클래스는 capawesome 플러그인이 제공하지만 Manifest 에는 병합되지 않아 앱에서 선언한다. -->
         <service
             android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="connectedDevice|microphone"
             android:exported="false" />
 
         <provider
@@ -58,6 +58,7 @@
     <!-- SDD-222: 백그라운드 BLE 유지(포그라운드 서비스 connectedDevice) + 화면 꺼짐 방지 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- BLE 플러그인이 병합하는 위치 권한 제거: neverForLocation 스캔이므로 불필요(Android 11 이하 FINE만 위 선언으로 유지) -->

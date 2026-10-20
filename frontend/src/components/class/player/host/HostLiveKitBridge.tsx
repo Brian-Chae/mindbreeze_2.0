@@ -1,9 +1,12 @@
 // SDD-208 H4 — 상담사 화상 연결(VideoConference 대체). 화면에는 아무것도 그리지 않는 헤드리스 브리지다.
 // - 회원 음성은 RoomAudioRenderer 로 들려 주고, 회원 카메라 트랙이 있을 때만 그 스트림을 위로 올린다(확정 결정 #1: 회원 영상은 기본 비공개).
 // - 내 마이크·카메라는 로컬 참가자를 직접 제어한다. LiveKitRoom 의 audio/video props 는 연결 직후 한 번만 발행에 쓰이고 이후 변경은 반영되지 않는다.
-import { useEffect, useMemo, useState } from 'react';
-import { LiveKitRoom, RoomAudioRenderer, useConnectionState, useLocalParticipant, useTracks } from '@livekit/components-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { LiveKitRoom, RoomAudioRenderer, useConnectionState, useLocalParticipant, useRoomContext, useTracks } from '@livekit/components-react';
 import { ConnectionState, MediaDeviceFailure, Track, type LocalVideoTrack } from 'livekit-client';
+import { useAppResume } from '../../../../hooks/useAppResume';
+import { RESUME_ORDER } from '../../../../lib/native/app-lifecycle';
+import { recoverHostLiveKit } from '../../../../lib/native/host-resume-recovery';
 import type { MediaFailureKind, MediaFailureReason } from './host-media-control';
 
 interface HostLiveKitBridgeProps {
@@ -34,16 +37,22 @@ interface ProbeProps {
   micOn: boolean;
   camOn: boolean;
   retryKey: number;
+  /** 앱 복귀 시 연결이 끊겨 있으면 LiveKit 연결을 새로 맺도록 요청한다 */
+  onReconnectNeeded: () => void;
   onSelfStream?: (stream: MediaStream | null) => void;
   /** SDK가 원본 교체를 셀프뷰에 반영하도록 트랙 자체를 전달한다. */
   onSelfTrack?: (track: LocalVideoTrack | null) => void;
   onMemberStream?: (stream: MediaStream | null) => void;
 }
 
-function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onSelfTrack, onMemberStream }: ProbeProps) {
+function BridgeProbe({ micOn, camOn, retryKey, onReconnectNeeded, onSelfStream, onSelfTrack, onMemberStream }: ProbeProps) {
   const { localParticipant } = useLocalParticipant();
   const connected = useConnectionState() === ConnectionState.Connected;
   const tracks = useTracks([Track.Source.Camera]);
+  const room = useRoomContext();
+
+  // 앱 복귀(SDD-222 T-J10): 소켓 재연결(RESUME_ORDER.socket) 뒤에 연결 확인 → 카메라 복구 순으로 실행한다.
+  useAppResume(() => recoverHostLiveKit({ room, camOn, reconnect: onReconnectNeeded }), RESUME_ORDER.liveKit);
 
   useEffect(() => {
     if (!connected || !localParticipant) return;
@@ -84,12 +93,16 @@ function BridgeProbe({ micOn, camOn, retryKey, onSelfStream, onSelfTrack, onMemb
 export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0, onDisconnected, onMediaFailure, onSelfStream, onSelfTrack, onMemberStream }: HostLiveKitBridgeProps) {
   // 연결 시점의 발행 상태만 LiveKitRoom 에 준다(이후 변경은 BridgeProbe 가 로컬 참가자로 직접 반영)
   const [initial] = useState({ audio: micOn, video: camOn });
+  // key 를 올리면 LiveKitRoom 이 새로 마운트되어 연결을 다시 맺는다 — 백그라운드에서 완전히 끊긴 경우 복구용
+  const [connectKey, setConnectKey] = useState(0);
+  const handleReconnectNeeded = useCallback((): void => setConnectKey((k) => k + 1), []);
   const handleFailure = (failure: MediaDeviceFailure | undefined, kind?: MediaDeviceKind): void => {
     if (kind === 'audioinput') onMediaFailure?.('mic', reasonOf(failure));
     else if (kind === 'videoinput') onMediaFailure?.('camera', reasonOf(failure));
   };
   return (
     <LiveKitRoom
+      key={connectKey}
       token={token}
       serverUrl={serverUrl}
       connect
@@ -99,7 +112,7 @@ export function HostLiveKitBridge({ token, serverUrl, micOn, camOn, retryKey = 0
       onMediaDeviceFailure={handleFailure}
       style={{ display: 'none' }}
     >
-      <BridgeProbe micOn={micOn} camOn={camOn} retryKey={retryKey} onSelfStream={onSelfStream} onSelfTrack={onSelfTrack} onMemberStream={onMemberStream} />
+      <BridgeProbe micOn={micOn} camOn={camOn} retryKey={retryKey} onReconnectNeeded={handleReconnectNeeded} onSelfStream={onSelfStream} onSelfTrack={onSelfTrack} onMemberStream={onMemberStream} />
     </LiveKitRoom>
   );
 }

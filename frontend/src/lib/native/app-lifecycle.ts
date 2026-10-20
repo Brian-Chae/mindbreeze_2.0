@@ -16,9 +16,9 @@ interface Entry {
 
 /**
  * 복귀 처리 순서 — 훅 마운트 순서와 무관하게 "소켓 재연결 → raw flush → BLE 확인 → 화면 켜짐"
- * 순으로 호출되도록 order 가 작은 구독자부터 실행한다. (plan §3.1)
+ * 순으로(상담사 화면은 이어서 LiveKit → 음원) 호출되도록 order 가 작은 구독자부터 실행한다. (plan §3.1)
  */
-export const RESUME_ORDER = { socket: 10, rawFlush: 20, ble: 30, screen: 40 } as const;
+export const RESUME_ORDER = { socket: 10, rawFlush: 20, ble: 30, screen: 40, liveKit: 50, audio: 60 } as const;
 const DEFAULT_ORDER = 100;
 
 const resumeListeners = new Set<Entry>();

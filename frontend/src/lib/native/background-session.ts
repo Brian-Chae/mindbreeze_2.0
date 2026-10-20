@@ -10,6 +10,8 @@ const logger = createLogger('background-session');
 
 /** Android ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE — 플러그인 enum 에는 없어 숫자로 전달한다 */
 export const FGS_TYPE_CONNECTED_DEVICE = 16;
+/** Android ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE — 상담사 온라인 수업의 음성 송출 유지(D3) */
+export const FGS_TYPE_MICROPHONE = 128;
 export const FGS_NOTIFICATION_ID = 2220;
 export const FGS_CHANNEL_ID = 'mindbreeze_class_session';
 /** Track A(Android)가 res/drawable 에 만드는 리소스 이름 — 변경 금지 */
@@ -19,7 +21,13 @@ export const FGS_NOTIFICATION_TEXT = '명상 클래스 진행 중';
 // connectedDevice 타입은 Android 14(API 34)부터 BLUETOOTH_CONNECT 보유가 시작 조건이다.
 const ANDROID_FGS_PERMISSION_GATE_VERSION = 14;
 
+export interface BackgroundSessionOptions {
+  /** 상담사 온라인 수업처럼 마이크를 송출하는 경우 true — 서비스 타입에 microphone 을 더한다 */
+  microphone?: boolean;
+}
+
 let running = false;
+let desiredMicrophone = false;
 let desired = false;
 let chain: Promise<void> = Promise.resolve();
 
@@ -66,6 +74,9 @@ async function ensureNotificationPermission(fgs: ForegroundServiceModule): Promi
   }
 }
 
+type FgsStartOptions = Parameters<ForegroundServiceModule['ForegroundService']['startForegroundService']>[0];
+type FgsServiceType = FgsStartOptions['serviceType'];
+
 async function doStart(): Promise<void> {
   if (!(await isBleConnectAllowed())) {
     logger.warn('BLE 권한이 없어 백그라운드 서비스를 시작하지 않습니다');
@@ -85,15 +96,27 @@ async function doStart(): Promise<void> {
     } catch (error: unknown) {
       logger.warn('알림 채널 생성 실패 — 기본 채널로 진행합니다', error);
     }
-    await fgs.ForegroundService.startForegroundService({
-      id: FGS_NOTIFICATION_ID,
-      title: FGS_NOTIFICATION_TEXT,
-      body: FGS_NOTIFICATION_TEXT,
-      smallIcon: FGS_SMALL_ICON,
-      serviceType: FGS_TYPE_CONNECTED_DEVICE as import('@capawesome-team/capacitor-android-foreground-service').ServiceType,
-      notificationChannelId: FGS_CHANNEL_ID,
-      silent: true,
-    });
+    const startWith = (type: number): Promise<void> =>
+      fgs.ForegroundService.startForegroundService({
+        id: FGS_NOTIFICATION_ID,
+        title: FGS_NOTIFICATION_TEXT,
+        body: FGS_NOTIFICATION_TEXT,
+        smallIcon: FGS_SMALL_ICON,
+        serviceType: type as FgsServiceType,
+        notificationChannelId: FGS_CHANNEL_ID,
+        silent: true,
+      });
+    if (desiredMicrophone) {
+      try {
+        await startWith(FGS_TYPE_CONNECTED_DEVICE | FGS_TYPE_MICROPHONE);
+      } catch (error: unknown) {
+        // 마이크 권한 거부 등으로 microphone 타입 시작이 거부돼도 BLE 유지는 지켜야 한다(H10).
+        logger.warn('마이크 타입 서비스 시작 실패 — connectedDevice 로 재시도합니다', error);
+        await startWith(FGS_TYPE_CONNECTED_DEVICE);
+      }
+    } else {
+      await startWith(FGS_TYPE_CONNECTED_DEVICE);
+    }
     running = true;
   } catch (error: unknown) {
     logger.error('백그라운드 서비스 시작 실패', error);
@@ -129,9 +152,11 @@ function enqueue(): Promise<void> {
 }
 
 /** 수업 진행 중 서비스 시작. Android 외에는 no-op. 이미 실행 중이면 no-op. */
-export function startBackgroundSession(): Promise<void> {
+export function startBackgroundSession(options: BackgroundSessionOptions = {}): Promise<void> {
   if (!isAndroid()) return Promise.resolve();
   desired = true;
+  // 실행 중에는 타입을 바꾸지 않는다(멱등) — 다음 시작부터 적용된다.
+  if (!running) desiredMicrophone = options.microphone === true;
   return enqueue();
 }
 
