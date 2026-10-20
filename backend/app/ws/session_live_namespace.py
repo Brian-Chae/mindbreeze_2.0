@@ -129,6 +129,26 @@ def clear_group_aggregates() -> None:
     """집계 throttle 상태 전역 초기화(테스트/세션 종료 정리용)."""
     _last_aggregate_at.clear()
     _last_group_average_at.clear()
+    clear_refresh_state()
+
+
+# 권한 재검사(_refresh_instructor_rooms) throttle. 고빈도 방송(eeg_feature 매초 등)마다 접속 소켓
+# 전원을 DB로 재검증하면 참가자 N명에서 초당 O(N²) 조회가 되어 이벤트 루프가 밀린다.
+# 세션별 마지막 실행 시각(monotonic)과 진행 중 여부를 두고, 간격 안 재호출은 생략한다.
+REFRESH_MIN_INTERVAL_SEC = 5.0
+_last_refresh_at: dict[str, float] = {}
+_refresh_in_flight: set[str] = set()
+
+
+def clear_refresh_state(session_id=None) -> None:
+    """권한 재검사 throttle 상태 초기화. session_id 가 있으면 그 세션 키만 제거한다."""
+    if session_id is None:
+        _last_refresh_at.clear()
+        _refresh_in_flight.clear()
+        return
+    sid = str(session_id)
+    _last_refresh_at.pop(sid, None)
+    _refresh_in_flight.discard(sid)
 
 
 # 세션 종료 시 정리해야 하는 프로세스 전역(워커 로컬) 세션 스코프 상태:
@@ -159,6 +179,7 @@ def clear_session_state(session_id) -> None:
     _last_group_average_at.pop(sid, None)
     _audio_states.pop(sid, None)
     _audio_revisions.pop(sid, None)
+    clear_refresh_state(sid)
 
 
 def _release_session_socket(sid) -> str | None:
@@ -558,7 +579,7 @@ def register_session_live_namespace(sio):
 
         # WS-01: 세션별 활성 소켓 추적 — 마지막 소켓 이탈(disconnect/leave) 시 세션 상태를 지운다.
         _register_session_socket(sid, session_id)
-        await _refresh_instructor_rooms(str(session_id))
+        await _refresh_instructor_rooms(str(session_id), force=True)
         current_context = await sio.get_session(sid, namespace=_NAMESPACE) or {}
         if not current_context.get("session_id"):
             return
@@ -616,7 +637,7 @@ def register_session_live_namespace(sio):
             result = await asyncio.to_thread(_participation_socket, sid, context, "heartbeat")
             return {"participation_version":result["participation_version"]} if result else None
         except Exception:
-            await _refresh_instructor_rooms(str(context.get("session_id")))
+            await _refresh_instructor_rooms(str(context.get("session_id")), force=True)
             await sio.emit("access_revoked", {"session_id":context.get("session_id")}, to=sid, namespace=_NAMESPACE)
             return None
 
@@ -1131,8 +1152,26 @@ def _completed_participant_state(session_id, context):
         db.close()
 
 
-async def _refresh_instructor_rooms(session_id: str) -> None:
-    """단일 WS 워커에서 민감 이벤트를 보내기 전에 현재 진행·참관 권한을 재검사한다."""
+async def _refresh_instructor_rooms(session_id: str, *, force: bool = False) -> None:
+    """단일 WS 워커에서 민감 이벤트를 보내기 전에 현재 진행·참관 권한을 재검사한다.
+
+    고빈도 방송 경로는 REFRESH_MIN_INTERVAL_SEC 안의 재호출·동시 중복 실행을 생략한다.
+    권한 변화가 즉시 반영돼야 하는 경로(join, 세션 상태/구성 변경)는 force=True 로 호출한다.
+    """
+    key = str(session_id)
+    if not force:
+        last = _last_refresh_at.get(key)
+        if key in _refresh_in_flight or (last is not None and time.monotonic() - last < REFRESH_MIN_INTERVAL_SEC):
+            return
+    _last_refresh_at[key] = time.monotonic()
+    _refresh_in_flight.add(key)
+    try:
+        await _refresh_instructor_rooms_now(session_id)
+    finally:
+        _refresh_in_flight.discard(key)
+
+
+async def _refresh_instructor_rooms_now(session_id: str) -> None:
     sio = _get_sio()
     for sid, joined in list(_sid_session_ids.items()):
         if joined != str(session_id):
@@ -1188,7 +1227,7 @@ async def broadcast_session_eeg(session_id: str, feature: dict) -> None:
 async def broadcast_session_state(session_id: str, payload: dict) -> None:
     """세션 상태 변경(start/end/cancel)을 공용 룸에 브로드캐스트한다."""
     sio = _get_sio()
-    await _refresh_instructor_rooms(session_id)
+    await _refresh_instructor_rooms(session_id, force=True)
     room = _room_all(session_id)
     await sio.emit(
         "session_state_changed",
@@ -1207,7 +1246,7 @@ async def broadcast_session_state(session_id: str, payload: dict) -> None:
 async def broadcast_participant(session_id: str, payload: dict) -> None:
     """참가자 구성 변경(입장/퇴장/대기열)을 호스트 전체 수신 룸에 브로드캐스트한다."""
     sio = _get_sio()
-    await _refresh_instructor_rooms(session_id)
+    await _refresh_instructor_rooms(session_id, force=True)
     room = _room_host(session_id)
     await sio.emit(
         "participant_changed",
@@ -1282,6 +1321,7 @@ async def broadcast_waiting_room(session_id: str, payload: dict) -> None:
     대기 인원은 상담사 관제용이므로 공용 룸(`:all`)이나 참여자 본인 룸으로는 내보내지 않는다.
     """
     sio = _get_sio()
+    # 대기실 heartbeat(회원당 15초)마다 호출되므로 force 하지 않는다(throttle 적용).
     await _refresh_instructor_rooms(session_id)
     room = _room_host(session_id)
     await sio.emit(

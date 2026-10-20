@@ -193,7 +193,7 @@ export function HostLiveContainer(props: HostLiveContainerProps) {
   const [memberStream, setMemberStream] = useState<MediaStream | null>(null);
 
   const micUi = resolveMicUi({ micOn: media.micOn, failure: micFailure, recorderState: recorder.state });
-  const camUi = resolveCamUi({ camOn: media.camOn, failure: camFailure, videoState: videoRecorder.state });
+  const camUi = resolveCamUi({ camOn: media.camOn, failure: camFailure, videoState: videoRecorder.state, hasLocalTrack: selfTrack !== null });
 
   const recheckPermission = useCallback((kind: 'camera' | 'microphone'): void => {
     const getUserMedia = navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);

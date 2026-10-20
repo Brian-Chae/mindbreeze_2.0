@@ -26,6 +26,7 @@ import {
 import { createLogger } from '../lib/eeg/logger';
 import { RESUME_ORDER } from '../lib/native/app-lifecycle';
 import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
+import { ApiError } from '../lib/api/client';
 
 const logger = createLogger('useEegRawUpload');
 
@@ -133,6 +134,7 @@ export function useEegRawUpload(
         return false;
       }
 
+      let uploadingToStorage = false;
       try {
         const presignBody = {
             participant_id: item.participantId,
@@ -161,7 +163,10 @@ export function useEegRawUpload(
           throw new Error('raw presign 응답에 chunk가 없습니다');
         }
 
+        // 저장소 서명 만료 등은 새 presign으로 복구할 수 있으므로 재시도를 유지한다.
+        uploadingToStorage = true;
         await putEegRawToPresignedUrl(chunk.upload_url, item.payload);
+        uploadingToStorage = false;
 
         const ackBody = {
             participant_id: item.participantId,
@@ -181,6 +186,11 @@ export function useEegRawUpload(
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'raw 업로드 실패';
+        if (!uploadingToStorage && err instanceof ApiError && [400, 403, 404, 409, 413, 422].includes(err.status)) {
+          await removeRawChunk(item.streamId, item.chunkIndex, item.sessionId);
+          logger.error('raw chunk 재시도 불가 오류 — dead-letter로 분리 제거했습니다', item.id, err.status, message);
+          return false;
+        }
         await markRawChunkAttempt(item.streamId, item.chunkIndex, message);
         throw err;
       }

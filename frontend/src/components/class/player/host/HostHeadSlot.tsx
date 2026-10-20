@@ -22,6 +22,8 @@ interface HostSelfViewProps {
 
 function SelfVideo({ stream, track }: { stream: MediaStream | null; track?: LocalVideoTrack | null }) {
   const ref = useRef<HTMLVideoElement>(null);
+  // SDK 트랙이 있으면 폴백 스트림 변경은 연결 수명에 영향을 주지 않는다.
+  const fallbackStream = track ? null : stream;
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
@@ -29,9 +31,9 @@ function SelfVideo({ stream, track }: { stream: MediaStream | null; track?: Loca
       track.attach(element);
       return () => { track.detach(element); };
     }
-    element.srcObject = stream;
+    element.srcObject = fallbackStream;
     return () => { element.srcObject = null; };
-  }, [track, stream]);
+  }, [track, fallbackStream]);
   return <video ref={ref} autoPlay playsInline muted aria-hidden="true" />;
 }
 

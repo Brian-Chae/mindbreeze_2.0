@@ -134,7 +134,8 @@ def _deliver(db, intent, now):
             .filter(Session.class_id == cls.id)
             .all()
         ):
-            asyncio.run(_refresh_instructor_rooms(str(row.id)))
+            # 멤버 제외 등 권한 회수는 throttle 없이 즉시 반영한다(SDD-224).
+            asyncio.run(_refresh_instructor_rooms(str(row.id), force=True))
             asyncio.run(reconcile_observers(db, row))
         return
     if intent.kind == "session_updated" and intent.payload.get("session_ids"):

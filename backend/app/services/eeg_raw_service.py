@@ -48,8 +48,9 @@ def _object_prefix(sid: UUID, participant: SessionParticipant, play_group_id: st
     return f"eeg-raw/{sid}/{participant.id}/{seg}"
 
 
-# STG-11: S3 key 에 삽입되는 stream_id 허용 문자(영숫자·.·_·-).
-_STREAM_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+# STG-11: S3 key 에 삽입되는 stream_id 허용 문자(영숫자·.·_·-·:).
+# 프론트 stream_id 는 `eeg:{session_uuid}:{participant_uuid}` 형태라 `:` 를 허용한다.
+_STREAM_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 def _validate_stream_id(stream_id: str) -> str:
@@ -57,9 +58,9 @@ def _validate_stream_id(stream_id: str) -> str:
 
     stream_id 는 클라이언트 입력이며 object key 에 그대로 들어간다. ``../``·``/`` 같은
     문자가 허용되면 다른 prefix(참가자·세션 경계)로 키가 이탈하거나 예기치 않은 객체를
-    덮어쓸 수 있다. 허용: 영숫자와 ``.``·``_``·``-`` (1~128자).
+    덮어쓸 수 있다. 허용: 영숫자와 ``.``·``_``·``-``·``:`` (1~128자). ``/``·``\``·``..`` 는 거부한다.
     """
-    if not isinstance(stream_id, str) or not _STREAM_ID_RE.fullmatch(stream_id):
+    if not isinstance(stream_id, str) or not _STREAM_ID_RE.fullmatch(stream_id) or ".." in stream_id:
         raise HTTPException(status_code=422, detail="stream_id 형식이 올바르지 않습니다")
     return stream_id
 

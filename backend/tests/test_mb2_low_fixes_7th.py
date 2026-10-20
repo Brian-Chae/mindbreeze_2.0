@@ -166,6 +166,24 @@ def test_stg11_stream_id_rejects_key_escaping_chars():
     assert key == "eeg-raw/x/y/s0-1_2/00000003.bin"
 
 
+def test_sdd224_stream_id_allows_colon_but_rejects_escapes():
+    """프론트 stream_id `eeg:{session}:{participant}` 허용, 경로 이탈 문자는 계속 422."""
+    from uuid import uuid4
+
+    from fastapi import HTTPException
+
+    from app.services.eeg_raw_service import _build_object_key
+
+    sid = f"eeg:{uuid4()}:{uuid4()}"
+    assert len(sid) <= 128
+    assert _build_object_key("eeg-raw/x/y", sid, 1) == f"eeg-raw/x/y/{sid}/00000001.bin"
+
+    for bad in ("a/b", "../x", "a\\b", "a..b", "", "a" * 129):
+        with pytest.raises(HTTPException) as exc:
+            _build_object_key("eeg-raw/x/y", bad, 0)
+        assert exc.value.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # [5] STG-13 — 리포트 content 내부 S3 key 미노출
 # ---------------------------------------------------------------------------
