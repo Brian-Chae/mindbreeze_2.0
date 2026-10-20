@@ -165,6 +165,45 @@ async def on_leave_room(sid, data):
 _MAX_MESSAGE_LEN = 4000
 
 
+def _moderation_check(user_id: str, room_id: str) -> dict:
+    """WS 전송 직전 서버 판정(SDD-220). 동기 DB 라 `asyncio.to_thread` 로 호출한다.
+
+    반환: {"error": 코드 | None, "allowed": 수신 허용 user_id 집합 | None}
+    - 계정이 active 가 아니면(탈퇴·정지) ACCOUNT_INACTIVE — 이미 열린 소켓/토큰도 막는다.
+    - direct 방에서 상대와 차단 관계면 CHAT_BLOCKED.
+    - 그 외 방에서 차단 구성원이 있으면 allowed 에 차단되지 않은 구성원만 담는다.
+    """
+    from uuid import UUID
+
+    from app.core.database import SessionLocal
+    from app.models.chat import ChatRoom
+    from app.models.user import User as UserModel
+    from app.services import chat_moderation_service as moderation
+
+    db = SessionLocal()
+    try:
+        user = db.query(UserModel).filter(UserModel.id == user_id).first()
+        if user is None or user.status != "active":
+            return {"error": "ACCOUNT_INACTIVE", "allowed": None}
+        room = db.query(ChatRoom).filter(ChatRoom.id == UUID(str(room_id))).first()
+        if room is None:
+            return {"error": None, "allowed": None}
+        blocked_members = moderation.blocked_members_of(room, user_id, db)
+        if not blocked_members:
+            return {"error": None, "allowed": None}
+        if room.room_type == "direct":
+            return {"error": "CHAT_BLOCKED", "allowed": None}
+        members = moderation.room_member_ids(room, db)
+        return {"error": None, "allowed": {str(u) for u in members - blocked_members}}
+    except Exception as exc:  # noqa: BLE001
+        # `_user_is_active` 와 같은 정책: 조회가 불가한 환경(DB 장애·테스트 스텁)에서는 이 relay 를 막지 않는다.
+        # 이 이벤트는 저장 없이 중계만 하며, 저장 경로(REST post_message)는 DB 가 없으면 어차피 실패한다.
+        logger.warning(f"[WS] moderation check failed (user={user_id}, room={room_id}): {exc}")
+        return {"error": None, "allowed": None}
+    finally:
+        db.close()
+
+
 @sio.on("message", namespace="/chat")
 async def on_message(sid, data):
     data = data if isinstance(data, dict) else {}
@@ -214,11 +253,31 @@ async def on_message(sid, data):
     # 클라이언트 임시 키(에코 매칭용)가 있으면 보존하되 서버 값으로 덮지 않는다.
     if data.get("client_id") is not None:
         payload["client_id"] = data.get("client_id")
-    await sio.emit("new_message", payload, room=room_id, namespace="/chat")
+    verdict = await asyncio.to_thread(_moderation_check, sender_id, str(room_id))
+    if verdict["error"]:
+        logger.warning(f"[WS] blocked message (sid={sid}, code={verdict['error']})")
+        return {"ok": False, "error": {"code": verdict["error"]}}
+    if verdict["allowed"] is not None:
+        await _emit_to_users("new_message", payload, verdict["allowed"])
+    else:
+        await sio.emit("new_message", payload, room=room_id, namespace="/chat")
+    return {"ok": True}
 
 
-async def broadcast_message(room_id: str, payload: dict) -> None:
-    """서버 내부에서 REST API로 저장된 메시지 브로드캐스트."""
+async def _emit_to_users(event: str, payload: dict, user_ids) -> None:
+    """허용된 사용자 개인 room(user:<id>)으로만 보낸다 — 차단 상대의 소켓에는 emit 하지 않는다."""
+    for uid in sorted(user_ids):
+        await sio.emit(event, payload, room=f"user:{uid}", namespace="/chat")
+
+
+async def broadcast_message(room_id: str, payload: dict, only_user_ids=None) -> None:
+    """서버 내부에서 REST API로 저장된 메시지 브로드캐스트.
+
+    only_user_ids 가 있으면(차단 관계 구성원이 있는 방) 방 전체가 아니라 해당 사용자 개인 room 으로만 보낸다.
+    """
+    if only_user_ids is not None:
+        await _emit_to_users("new_message", payload, only_user_ids)
+        return
     await sio.emit("new_message", payload, room=room_id, namespace="/chat")
 
 

@@ -15,6 +15,7 @@ from app.models.client_counselor_link import ClientCounselorLink
 from app.models.organization import Organization
 from app.models.user_org_membership import UserOrgMembership
 from app.models.user import User
+from app.services import chat_moderation_service as moderation
 
 logger = logging.getLogger(__name__)
 
@@ -143,8 +144,10 @@ def _sender_names_for_messages(messages: list[ChatMessage], db: DBSession) -> di
     if not sender_ids:
         return {}
     return {
-        str(uid): name
-        for uid, name in db.query(User.id, User.name).filter(User.id.in_(sender_ids)).all()
+        str(uid): moderation.display_user_name(name, status)
+        for uid, name, status in db.query(User.id, User.name, User.status)
+        .filter(User.id.in_(sender_ids))
+        .all()
     }
 
 
@@ -169,7 +172,7 @@ def _serialize_msg(
             from app.models.user import User as UserModel
             sender = db.query(UserModel).filter(UserModel.id == m.sender_id).first()
             if sender:
-                sender_name = sender.name
+                sender_name = moderation.display_user_name(sender.name, sender.status)
     # ── 읽음 상태 추적 (Phase 3a): read_by / recipient_count 우선, 없으면 ChatMessageRead 하위호환 ──
     unread_count = 0
     read_by_list = m.read_by or []
@@ -390,6 +393,8 @@ def create_group_room(
         participant_uuids.append(puid)
     if not participant_uuids:
         raise HTTPException(status_code=422, detail="참여자를 1명 이상 선택해야 합니다")
+    # SDD-220: 차단 관계인 사람이 한 방에 섞이지 않게 서버에서 막는다.
+    moderation.ensure_no_block_among([host_uuid, *participant_uuids], db)
     room = ChatRoom(
         session_id=None,
         room_type="group",
@@ -430,6 +435,8 @@ def create_room(
         )
         if not link and not _share_org(counselor_uuid, client_uuid, db):
             raise HTTPException(status_code=403, detail="연결되지 않은 내담자입니다")
+        # SDD-220: 신고·차단된 상대와는 방을 새로 만들 수 없다(방 재생성 우회 차단).
+        moderation.ensure_not_blocked(counselor_uuid, client_uuid, db)
         room = get_or_create_direct_room(counselor_uuid, client_uuid, db)
         return _serialize_room(room, host_id, db)
     if room_type == "group":
@@ -458,35 +465,51 @@ def _peer_name_for_direct(room: ChatRoom, user_id: UUID, db: DBSession) -> str |
     if not peer_id:
         return None
     peer = db.query(User).filter(User.id == peer_id).first()
-    return peer.name if peer else None
+    return moderation.display_user_name(peer.name, peer.status) if peer else None
 
 
 # _serialize_room의 last_msg 기본값 — 미전달 시 해당 방 1건만 단건 조회
 _LAST_MSG_UNSET = object()
 
 
-def _last_messages_for_rooms(room_ids: list[UUID], db: DBSession) -> dict[str, ChatMessage]:
+def _not_from_blocked(blocked: set[UUID] | None):
+    """차단 상대가 보낸 메시지를 제외하는 조건. 시스템 메시지(sender 없음)는 유지한다.
+
+    SQL 의 `NOT IN` 은 NULL 과 비교하면 행을 버리므로 sender_id IS NULL 을 명시한다.
+    """
+    if not blocked:
+        return None
+    return or_(ChatMessage.sender_id.is_(None), ChatMessage.sender_id.notin_(blocked))
+
+
+def _last_messages_for_rooms(
+    room_ids: list[UUID], db: DBSession, blocked: set[UUID] | None = None
+) -> dict[str, ChatMessage]:
     """방별 최신 메시지 1건 일괄 조회 (SDD-090).
 
     PostgreSQL은 DISTINCT ON 단일 쿼리, 그 외(테스트용 SQLite)는 조회 후 축약.
     """
     if not room_ids:
         return {}
+    # SDD-220: 차단 상대의 마지막 메시지가 preview 로 새지 않게 서버에서 제외한다.
+    visible = _not_from_blocked(blocked)
     if db.get_bind().dialect.name == "postgresql":
+        q = db.query(ChatMessage).filter(ChatMessage.room_id.in_(room_ids))
+        if visible is not None:
+            q = q.filter(visible)
         rows = (
-            db.query(ChatMessage)
-            .filter(ChatMessage.room_id.in_(room_ids))
-            .order_by(ChatMessage.room_id, ChatMessage.created_at.desc())
+            q.order_by(ChatMessage.room_id, ChatMessage.created_at.desc())
             .distinct(ChatMessage.room_id)
             .all()
         )
         return {str(r.room_id): r for r in rows}
     # SQLite fallback: 오래된 순으로 순회하며 덮어쓰기 → 방별 마지막 값이 최신
     result: dict[str, ChatMessage] = {}
+    q = db.query(ChatMessage).filter(ChatMessage.room_id.in_(room_ids))
+    if visible is not None:
+        q = q.filter(visible)
     for m in (
-        db.query(ChatMessage)
-        .filter(ChatMessage.room_id.in_(room_ids))
-        .order_by(ChatMessage.created_at.asc())
+        q.order_by(ChatMessage.created_at.asc())
         .all()
     ):
         result[str(m.room_id)] = m
@@ -542,11 +565,15 @@ def _build_room_serialize_cache(
             session_ids.add(r.session_id)
 
     peer_names: dict[str, str] = {}
+    peer_deleted: set[str] = set()
     if peer_ids:
+        peer_users = db.query(User).filter(User.id.in_(peer_ids)).all()
         peer_names = {
-            str(u.id): u.name
-            for u in db.query(User).filter(User.id.in_(peer_ids)).all()
+            str(u.id): moderation.display_user_name(u.name, u.status) for u in peer_users
         }
+        peer_deleted = {str(u.id) for u in peer_users if u.status == "deleted"}
+    blocked = moderation.blocked_user_ids(uid, db)
+    visible = _not_from_blocked(blocked)
 
     # 참여자 수 — 방 유형별(원 `_participant_count` 와 동일 의미)
     participant_counts: dict[str, int] = {}
@@ -589,24 +616,23 @@ def _build_room_serialize_cache(
     # 미읽음 수 = 방 전체 메시지 수 − 사용자가 읽은 메시지 수 (원 `_unread_count` 와 동일)
     unread_counts: dict[str, int] = {}
     if room_ids:
-        totals = {
-            row[0]: row[1]
-            for row in db.query(ChatMessage.room_id, func.count())
-            .filter(ChatMessage.room_id.in_(room_ids))
-            .group_by(ChatMessage.room_id)
-            .all()
-        }
-        reads = {
-            row[0]: row[1]
-            for row in db.query(ChatMessage.room_id, func.count())
+        # SDD-220: 차단 상대 메시지는 미읽음 수에서도 제외한다.
+        totals_q = db.query(ChatMessage.room_id, func.count()).filter(
+            ChatMessage.room_id.in_(room_ids)
+        )
+        reads_q = (
+            db.query(ChatMessage.room_id, func.count())
             .join(ChatMessageRead, ChatMessageRead.message_id == ChatMessage.id)
             .filter(
                 ChatMessage.room_id.in_(room_ids),
                 ChatMessageRead.user_id == uid,
             )
-            .group_by(ChatMessage.room_id)
-            .all()
-        }
+        )
+        if visible is not None:
+            totals_q = totals_q.filter(visible)
+            reads_q = reads_q.filter(visible)
+        totals = {row[0]: row[1] for row in totals_q.group_by(ChatMessage.room_id).all()}
+        reads = {row[0]: row[1] for row in reads_q.group_by(ChatMessage.room_id).all()}
         for rid in room_ids:
             unread_counts[str(rid)] = max(
                 int(totals.get(rid, 0)) - int(reads.get(rid, 0)), 0
@@ -614,6 +640,8 @@ def _build_room_serialize_cache(
 
     return {
         "peer_names": peer_names,
+        "peer_deleted": peer_deleted,
+        "blocked": blocked,
         "participant_counts": participant_counts,
         "unread_counts": unread_counts,
         "sessions": sessions,
@@ -668,8 +696,9 @@ def _serialize_room(
             session_title = session.title
             session_scheduled_at = session.scheduled_at
     # ── SDD-090: 마지막 메시지 (목록은 일괄 조회 결과 주입, 단건 경로는 여기서 조회) ──
+    blocked = cache["blocked"] if cache is not None else moderation.blocked_user_ids(uid, db)
     if last_msg is _LAST_MSG_UNSET:
-        last_msg = _last_messages_for_rooms([room.id], db).get(str(room.id))
+        last_msg = _last_messages_for_rooms([room.id], db, blocked).get(str(room.id))
     last_message, last_message_at = _last_message_preview(last_msg)
     # ── SDD-090: 표시 이름·이름 변경 권한 계산 ──
     if cache is not None:
@@ -677,6 +706,14 @@ def _serialize_room(
     else:
         peer_name = _peer_name_for_direct(room, uid, db)
     can_rename, rename_disabled_reason = _can_rename_room(room, uid)
+    # SDD-220: direct 방은 상대와 차단 관계인지, 상대가 탈퇴했는지 내려준다.
+    peer_key = _peer_ids_for_direct(room, uid) or ""
+    is_blocked = bool(peer_key) and peer_key in {str(b) for b in blocked}
+    if cache is not None:
+        peer_deleted = peer_key in cache["peer_deleted"]
+    else:
+        peer_user = db.query(User.status).filter(User.id == peer_key).first() if peer_key else None
+        peer_deleted = bool(peer_user and peer_user[0] == "deleted")
     if room.room_type == "direct":
         custom_name = room.display_name
         display_name = custom_name or peer_name or "1:1 채팅"
@@ -689,7 +726,7 @@ def _serialize_room(
     unread = (
         cache["unread_counts"].get(str(room.id), 0)
         if cache is not None
-        else _unread_count(room, user_id, db)
+        else _unread_count(room, user_id, db, blocked)
     )
     return {
         "id": str(room.id),
@@ -710,6 +747,8 @@ def _serialize_room(
         "display_name": display_name,
         "can_rename": can_rename,
         "rename_disabled_reason": rename_disabled_reason,
+        "is_blocked": is_blocked,
+        "peer_deleted": peer_deleted,
     }
 
 
@@ -728,15 +767,22 @@ def _participant_count(room: ChatRoom, db: DBSession) -> int:
     return 0
 
 
-def _unread_count(room: ChatRoom, user_id: str, db: DBSession) -> int:
+def _unread_count(
+    room: ChatRoom, user_id: str, db: DBSession, blocked: set[UUID] | None = None
+) -> int:
     uid = _uuid(user_id)
-    total = db.query(ChatMessage).filter(ChatMessage.room_id == room.id).count()
-    read = (
+    visible = _not_from_blocked(blocked)
+    total_q = db.query(ChatMessage).filter(ChatMessage.room_id == room.id)
+    read_q = (
         db.query(ChatMessageRead)
         .join(ChatMessage, ChatMessage.id == ChatMessageRead.message_id)
         .filter(ChatMessage.room_id == room.id, ChatMessageRead.user_id == uid)
-        .count()
     )
+    if visible is not None:
+        total_q = total_q.filter(visible)
+        read_q = read_q.filter(visible)
+    total = total_q.count()
+    read = read_q.count()
     return max(total - read, 0)
 
 
@@ -865,8 +911,8 @@ def list_my_rooms(user_id: str, db: DBSession) -> list[dict]:
     # MB2-ORM-N1-03: 상대 이름·참여자 수·미읽음 수·세션도 캐시로 일괄 산출해
     # _serialize_room 이 방마다 개별 쿼리(N+1)를 하지 않게 한다.
     room_list = list(seen.values())
-    last_map = _last_messages_for_rooms([r.id for r in room_list], db)
     cache = _build_room_serialize_cache(room_list, user_id, db)
+    last_map = _last_messages_for_rooms([r.id for r in room_list], db, cache["blocked"])
     result = [
         _serialize_room(r, user_id, db, last_msg=last_map.get(str(r.id)), cache=cache)
         for r in room_list
@@ -1025,6 +1071,8 @@ def add_room_participants(room_id: str, user_id: str, participant_ids: list[str]
         if puid == uid or puid == room.host_id or puid in existing:
             continue
         _validate_invitee(room.host_id, puid, db)
+        # SDD-220: 초대 대상이 방장·초대자·기존 참여자 누구와도 차단 관계면 초대할 수 없다.
+        moderation.ensure_no_block_with(puid, {room.host_id, uid, *existing}, db)
         db.add(ChatRoomParticipant(room_id=room.id, user_id=puid))
         existing.add(puid)
         invited_ids.append(puid)
@@ -1090,6 +1138,8 @@ def fork_group_room(
         if puid == host_uuid or puid in carried:
             continue
         _validate_invitee(host_uuid, puid, db)
+        # SDD-220: 새 참여자는 방장·초대자·승계 참여자·다른 새 참여자와 차단 관계일 수 없다.
+        moderation.ensure_no_block_with(puid, {host_uuid, uid, *carried}, db)
         new_uuids.append(puid)
         carried.add(puid)
     if not new_uuids:
@@ -1182,6 +1232,10 @@ def list_invitable_counselors(
             User.id != uid,
         )
     )
+    # SDD-220: 차단 관계인 상담사는 초대 후보에서 제외한다.
+    blocked_ids = moderation.blocked_user_ids(uid, db)
+    if blocked_ids:
+        query = query.filter(User.id.notin_(blocked_ids))
     if q and q.strip():
         query = query.filter(User.name.ilike(f"%{q.strip()}%"))
     # VB-04: 필터된 전체를 .all() 로 메모리에 적재한 뒤 파이썬 슬라이스하던 것을
@@ -1289,7 +1343,7 @@ def get_room_participants(room_id: str, user_id: str, db: DBSession) -> list[dic
     return [
         {
             "user_id": str(p.user_id),
-            "name": u.name if u else "알 수 없음",
+            "name": moderation.display_user_name(u.name, u.status) if u else "알 수 없음",
             # SDD-092: 상담사/내담자 구분 — 컬럼 추가 없이 User.role JOIN 값 노출
             "role": u.role if u else None,
             "joined_at": p.joined_at,
@@ -1304,13 +1358,12 @@ def list_messages(room_id: str, user_id: str, db: DBSession, limit: int = 50) ->
     if not room:
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
     _ensure_member(room, user_id, db)
-    msgs = (
-        db.query(ChatMessage)
-        .filter(ChatMessage.room_id == rid)
-        .order_by(ChatMessage.created_at.desc())
-        .limit(limit)
-        .all()
-    )
+    # SDD-220: 차단 상대의 메시지는 서버에서 제외한다(UI 숨김에 의존하지 않는다).
+    visible = _not_from_blocked(moderation.blocked_user_ids(user_id, db))
+    q = db.query(ChatMessage).filter(ChatMessage.room_id == rid)
+    if visible is not None:
+        q = q.filter(visible)
+    msgs = q.order_by(ChatMessage.created_at.desc()).limit(limit).all()
     # MB2-ORM-N1-01: 발신자 이름을 1회 배치 조회하고 방 1건을 재사용해 N+1 을 제거한다.
     sender_names = _sender_names_for_messages(msgs, db)
     return [_serialize_msg(m, db, sender_names=sender_names, room=room) for m in msgs]
@@ -1336,9 +1389,16 @@ def get_message_context(
     ).first()
     if not message:
         raise HTTPException(status_code=404, detail="메시지를 찾을 수 없습니다")
+    # SDD-220: 차단 상대 메시지를 앵커로 한 context 조회는 존재하지 않는 것처럼 404.
+    blocked = moderation.blocked_user_ids(user_id, db)
+    if message.sender_id is not None and message.sender_id in blocked:
+        raise HTTPException(status_code=404, detail="메시지를 찾을 수 없습니다")
     if not 0 <= before <= 50 or not 0 <= after <= 50:
         raise HTTPException(status_code=422, detail="주변 메시지 개수는 0~50이어야 합니다")
     base = db.query(ChatMessage).filter(ChatMessage.room_id == rid)
+    visible = _not_from_blocked(blocked)
+    if visible is not None:
+        base = base.filter(visible)
     previous = base.filter(or_(
         ChatMessage.created_at < message.created_at,
         and_(ChatMessage.created_at == message.created_at, ChatMessage.id < mid),
@@ -1428,6 +1488,11 @@ def _resolve_recipients(room: ChatRoom, sender_id: UUID, db: DBSession) -> list[
                 for p in participants:
                     recipients.append(str(p.user_id))
 
+    # SDD-220: 발신자와 차단 관계인 사람은 알림·푸시·WS 수신자에서 제외한다.
+    blocked = moderation.blocked_user_ids(sender_id, db)
+    if blocked:
+        blocked_str = {str(b) for b in blocked}
+        recipients = [r for r in recipients if r not in blocked_str]
     return recipients
 
 
@@ -1469,6 +1534,11 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     _ensure_member(room, user_id, db)
     # 클래스 채팅 off 면 참여자 발신 차단 (host 는 예외)
     _ensure_session_chat_enabled(room, user_id, db)
+    # SDD-220: 1:1 방에서 상대와 차단 관계면 전송 불가. 그룹·클래스 방은 전송은 허용하되
+    #   차단 상대에게만 수신/알림이 가지 않는다(차단되지 않은 사람의 대화는 방해하지 않는다).
+    if room.room_type == "direct":
+        for member in moderation.room_member_ids(room, db) - {_uuid(user_id)}:
+            moderation.ensure_not_blocked(user_id, member, db)
     if not content or not content.strip():
         raise HTTPException(status_code=422, detail="메시지 내용이 비어있습니다")
     msg = ChatMessage(
@@ -1534,7 +1604,14 @@ async def post_message(room_id: str, user_id: str, content: str, msg_type: str, 
     serialized = _serialize_msg(msg, db)
     try:
         from app.ws.chat_namespace import broadcast_message
-        await broadcast_message(str(rid), serialized)
+        # SDD-220: 발신자와 차단 관계인 구성원이 있으면 방 전체 broadcast 대신 허용된 사람의
+        #   개인 room 으로만 보낸다(FE 숨김이 아니라 서버가 emit 자체를 하지 않는다).
+        blocked_members = moderation.blocked_members_of(room, sender_uid, db)
+        if blocked_members:
+            allowed = {str(u) for u in moderation.room_member_ids(room, db) - blocked_members}
+            await broadcast_message(str(rid), serialized, only_user_ids=allowed)
+        else:
+            await broadcast_message(str(rid), serialized)
     except Exception as e:
         logger.error(f"Failed to broadcast for room={room_id}: {e}")  # WS 실패해도 REST 응답은 정상
     return serialized
@@ -1547,7 +1624,11 @@ async def mark_read(room_id: str, user_id: str, db: DBSession) -> None:
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
     _ensure_member(room, user_id, db)
     uid = _uuid(user_id)
-    msgs = db.query(ChatMessage).filter(ChatMessage.room_id == rid).all()
+    visible = _not_from_blocked(moderation.blocked_user_ids(uid, db))
+    msgs_q = db.query(ChatMessage).filter(ChatMessage.room_id == rid)
+    if visible is not None:
+        msgs_q = msgs_q.filter(visible)
+    msgs = msgs_q.all()
     existing = {
         r.message_id
         for r in db.query(ChatMessageRead)
@@ -1599,10 +1680,14 @@ async def mark_messages_read(room_id: str, user_id: str, message_ids: list[str],
         raise HTTPException(status_code=400, detail="잘못된 메시지 ID 형식입니다")
 
     # 메시지 조회
-    msgs = db.query(ChatMessage).filter(
+    msgs_q = db.query(ChatMessage).filter(
         ChatMessage.id.in_(msg_uuids),
         ChatMessage.room_id == rid,
-    ).all()
+    )
+    visible = _not_from_blocked(moderation.blocked_user_ids(uid, db))
+    if visible is not None:
+        msgs_q = msgs_q.filter(visible)
+    msgs = msgs_q.all()
 
     if not msgs:
         return  # 읽음 처리할 메시지 없음
@@ -1664,7 +1749,11 @@ def get_unread_counts(room_id: str, user_id: str, db: DBSession) -> dict[str, in
         raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다")
     _ensure_member(room, user_id, db)
 
-    msgs = db.query(ChatMessage).filter(ChatMessage.room_id == rid).all()
+    msgs_q = db.query(ChatMessage).filter(ChatMessage.room_id == rid)
+    visible = _not_from_blocked(moderation.blocked_user_ids(user_id, db))
+    if visible is not None:
+        msgs_q = msgs_q.filter(visible)
+    msgs = msgs_q.all()
     # MB2-ORM-N1-04: 레거시(recipient_count==0) 메시지 미읽음 수를 배치로 1회 계산한다.
     legacy_counts = _legacy_unread_counts(msgs, room, db)
     result: dict[str, int] = {}
