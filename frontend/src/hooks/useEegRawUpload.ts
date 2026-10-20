@@ -24,6 +24,8 @@ import {
   type QueuedRawChunkItem,
 } from '../lib/session-live/raw-chunk-queue';
 import { createLogger } from '../lib/eeg/logger';
+import { RESUME_ORDER } from '../lib/native/app-lifecycle';
+import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
 
 const logger = createLogger('useEegRawUpload');
 
@@ -188,6 +190,12 @@ export function useEegRawUpload(
 
   const flush = useCallback(async () => {
     if (!enabled || flushingRef.current) return;
+    // SDD-222 Q3: 오프라인(비행기 모드 등)에서는 업로드를 시도하지 않는다.
+    // 시도하면 청크마다 attemptCount 가 소모되어 MAX_ATTEMPTS 초과 시 dead-letter 로 유실된다.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      if (mountedRef.current) setUploadStatus('delayed');
+      return;
+    }
     flushingRef.current = true;
     if (mountedRef.current) setUploadStatus('uploading');
 
@@ -349,6 +357,15 @@ export function useEegRawUpload(
       window.clearInterval(timer);
     };
   }, [enabled, flushIntervalMs, refreshPendingCount, flush]);
+
+  // SDD-222 G1·G6: 앱 복귀 즉시 flush(주기 타이머는 백그라운드에서 스로틀·정지됨),
+  // 백그라운드 전환 직전에도 한 번 시도한다. 중복 호출은 flushingRef 가드가 막는다.
+  useAppLifecycle({
+    onResume: () => flush(),
+    onPause: () => flush(),
+    order: RESUME_ORDER.rawFlush,
+    pauseOrder: PAUSE_ORDER.rawFlush,
+  });
 
   return {
     pendingCount,

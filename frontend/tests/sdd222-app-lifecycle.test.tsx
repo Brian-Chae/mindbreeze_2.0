@@ -75,6 +75,29 @@ describe('app-lifecycle', () => {
     expect(good).toHaveBeenCalledTimes(1);
   });
 
+  it('V9 order 가 작은 구독자부터 호출된다(소켓 → flush → BLE 확인 순서 보장)', async () => {
+    const { subscribeAppResume, RESUME_ORDER } = await load();
+    const calls: string[] = [];
+    // 등록 순서를 일부러 뒤섞는다 — 마운트 순서와 무관하게 order 로 정렬돼야 한다
+    subscribeAppResume(() => calls.push('ble'), RESUME_ORDER.ble);
+    subscribeAppResume(() => calls.push('flush'), RESUME_ORDER.rawFlush);
+    subscribeAppResume(() => calls.push('socket'), RESUME_ORDER.socket);
+    subscribeAppResume(() => calls.push('screen'), RESUME_ORDER.screen);
+    await Promise.resolve();
+    await emit(true);
+    expect(calls).toEqual(['socket', 'flush', 'ble', 'screen']);
+  });
+
+  it('V10 구독자 하나가 비동기로 reject 해도 나머지 구독자가 실행된다', async () => {
+    const { subscribeAppResume } = await load();
+    const good = vi.fn();
+    subscribeAppResume(() => Promise.reject(new Error('async fail')) as unknown as void, 1);
+    subscribeAppResume(good, 2);
+    await Promise.resolve();
+    await emit(true);
+    expect(good).toHaveBeenCalledTimes(1);
+  });
+
   it('구독 해제 후에는 호출되지 않는다', async () => {
     const { subscribeAppResume } = await load();
     const cb = vi.fn(); const other = vi.fn();

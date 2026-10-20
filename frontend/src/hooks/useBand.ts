@@ -28,6 +28,9 @@ import type { EEGAnalysisMetrics } from '../lib/eeg/types/processed-data';
 import { createLogger } from '../lib/eeg/logger';
 import { bleGapLog } from '../lib/eeg/ble-gap-log';
 import { nextReconnectDelay } from '../lib/ble/reconnect-policy';
+import { RESUME_ORDER } from '../lib/native/app-lifecycle';
+import { isNativeApp } from '../lib/native/platform';
+import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
 import {
   enqueueFeature,
   listPendingFeatures,
@@ -1285,6 +1288,41 @@ export function useBand({
 
   const connect = useCallback(() => connectInternal(false), [connectInternal]);
   autoConnectRef.current = () => connectInternal(true);
+
+  // SDD-222 G1: 앱 복귀 — BLE 연결 상태 확인.
+  // - 재연결 진행 중(끊김 구간 열림)이면 백그라운드에서 멈춘 백오프 타이머를 기다리지 않고 즉시 재시도한다.
+  // - 연결 중이면 어댑터 프로브로 실제 연결을 확인하고, 끊겼으면 어댑터가 connectionLost 와 같은 경로를 태워
+  //   위 onConnectionLost 핸들러(갭 로그 + 백오프 재연결)가 시작된다.
+  // - 밴드를 쓰지 않는 회원(opt-in 안 함)은 아무 것도 하지 않는다.
+  // 전환(pause) 시에는 메모리 raw 버퍼를 큐에 적재한다(소켓은 끊지 않는다).
+  useAppLifecycle({
+    order: RESUME_ORDER.ble,
+    pauseOrder: PAUSE_ORDER.bufferFlush,
+    onResume: async () => {
+      if (isMock || !isSupported) return;
+      if (gapOpenRef.current) {
+        if (!bandConnectInFlight && autoReconnectRef.current && mountedRef.current) {
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+          void autoConnectRef.current();
+        }
+        return;
+      }
+      if (!bluetoothService.isConnected() || !isNativeApp()) return;
+      try {
+        // 정적 import 하면 웹 번들·실행 경로에 네이티브 BLE 플러그인이 들어가므로 동적으로 로드한다.
+        const { verifyActiveBleConnection } = await import('../lib/ble/capacitor-ble-adapter');
+        await verifyActiveBleConnection();
+      } catch (err) {
+        logger.warn('복귀 시 BLE 연결 확인 실패', err);
+      }
+    },
+    onPause: () => {
+      if (!observationOnlyRef.current && collectingRef.current) flushRawChunk();
+    },
+  });
 
   // 표시용 정규화에 쓸 활성 표준 모델을 1회 로드한다 (playground 외 화면도 표준모델 적용).
   // 실패 시 코호트(B0) fallback — scoreIndices 내부에서 처리된다.

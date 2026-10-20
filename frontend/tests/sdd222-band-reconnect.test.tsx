@@ -15,6 +15,24 @@ const gap = vi.hoisted(() => ({
   open: vi.fn(), recordAttempt: vi.fn(), close: vi.fn(() => null), getOpenGap: vi.fn(() => null), getClosedGaps: vi.fn(() => []),
 }));
 
+const life = vi.hoisted(() => ({
+  resume: [] as { cb: () => void | Promise<void>; order?: number }[],
+  pause: [] as { cb: () => void | Promise<void>; order?: number }[],
+  verify: vi.fn<() => Promise<boolean | null>>(),
+}));
+vi.mock('../src/lib/native/app-lifecycle', () => ({
+  RESUME_ORDER: { socket: 10, rawFlush: 20, ble: 30, screen: 40 },
+  subscribeAppResume: (cb: () => void | Promise<void>, order?: number) => {
+    const e = { cb, order }; life.resume.push(e);
+    return () => { life.resume.splice(life.resume.indexOf(e), 1); };
+  },
+  subscribeAppPause: (cb: () => void | Promise<void>, order?: number) => {
+    const e = { cb, order }; life.pause.push(e);
+    return () => { life.pause.splice(life.pause.indexOf(e), 1); };
+  },
+}));
+vi.mock('../src/lib/native/platform', () => ({ isNativeApp: () => true, getPlatform: () => 'android' }));
+vi.mock('../src/lib/ble/capacitor-ble-adapter', () => ({ verifyActiveBleConnection: () => life.verify() }));
 vi.mock('../src/lib/ble', () => ({ isBleSupported: () => true }));
 vi.mock('../src/lib/eeg/ble-gap-log', () => ({ bleGapLog: gap, createBleGapLog: () => gap }));
 vi.mock('../src/lib/eeg/bluetoothService', () => ({
@@ -97,6 +115,7 @@ beforeEach(() => {
   ble.connectImpl.mockReset().mockResolvedValue(undefined);
   gap.open.mockClear(); gap.recordAttempt.mockClear(); gap.close.mockClear();
   policy.delays.length = 0;
+  life.resume.length = 0; life.pause.length = 0; life.verify.mockReset().mockResolvedValue(true);
   root = createRoot(document.createElement('div'));
 });
 afterEach(async () => {
@@ -180,5 +199,68 @@ describe('useBand 자동 재연결', () => {
     expect(gap.close).not.toHaveBeenCalled();
     expect(policy.delays).toEqual([]);
     expect(ble.connectImpl).not.toHaveBeenCalled();
+  });
+});
+
+const fireResume = () => act(async () => { await Promise.all(life.resume.map((e) => e.cb())); await vi.advanceTimersByTimeAsync(0); });
+
+describe('useBand 복귀 시 BLE 확인 (V8)', () => {
+  it('BLE 단계(order 30)로 복귀 구독을 등록한다', async () => {
+    await act(async () => root.render(<Harness />));
+    expect(life.resume.map((e) => e.order)).toContain(30);
+  });
+
+  it('V8 연결 중 복귀했을 때 verifyConnection 실패 → 끊김 경로와 동일하게 재연결이 시작된다', async () => {
+    await mountAndConnect();
+    life.verify.mockImplementation(async () => {
+      ble.connected = false;
+      ble.lost?.(); // 어댑터가 connectionLost 와 같은 경로를 탄다
+      return false;
+    });
+    await fireResume();
+    expect(life.verify).toHaveBeenCalledTimes(1);
+    expect(gap.open).toHaveBeenCalledTimes(1);
+    const before = ble.connectImpl.mock.calls.length;
+    await advance(1000);
+    expect(ble.connectImpl.mock.calls.length).toBe(before + 1);
+    expect(api.connectionState).toBe('connected');
+  });
+
+  it('연결이 정상이면 재연결을 시작하지 않는다', async () => {
+    await mountAndConnect();
+    await fireResume();
+    expect(life.verify).toHaveBeenCalledTimes(1);
+    expect(gap.open).not.toHaveBeenCalled();
+  });
+
+  it('재연결 백오프 대기 중 복귀하면 타이머를 기다리지 않고 즉시 재시도한다', async () => {
+    await mountAndConnect();
+    ble.connectImpl.mockRejectedValueOnce(new Error('fail'));
+    await dropLink();
+    await advance(1000); // 1차 실패 → 2초 후 재시도 예약
+    const before = ble.connectImpl.mock.calls.length;
+    await fireResume(); // 백그라운드에서 타이머가 멈춰 있었다고 가정
+    expect(ble.connectImpl.mock.calls.length).toBe(before + 1);
+    expect(api.connectionState).toBe('connected');
+  });
+
+  it('V17 백그라운드 전환 구독은 raw 큐 flush(20)보다 먼저(메모리 버퍼 적재) 실행되도록 등록된다', async () => {
+    await act(async () => root.render(<Harness />));
+    expect(life.pause).toHaveLength(1);
+    expect(life.pause[0].order).toBeLessThan(20);
+  });
+
+  it('V7 밴드를 연결한 적 없으면 복귀해도 검증·재연결을 하지 않는다', async () => {
+    await act(async () => root.render(<Harness />));
+    await fireResume();
+    expect(life.verify).not.toHaveBeenCalled();
+    expect(ble.connectImpl).not.toHaveBeenCalled();
+    expect(gap.open).not.toHaveBeenCalled();
+  });
+
+  it('검증 중 예외가 나도 복귀 처리는 던지지 않는다(V10)', async () => {
+    await mountAndConnect();
+    life.verify.mockRejectedValue(new Error('probe boom'));
+    await expect(fireResume()).resolves.not.toThrow();
   });
 });
