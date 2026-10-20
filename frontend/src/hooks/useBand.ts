@@ -26,6 +26,11 @@ import { StreamProcessor } from '../lib/eeg/StreamProcessor';
 import type { BandPowers, LeadOffStatus } from '../lib/eeg/types/eeg';
 import type { EEGAnalysisMetrics } from '../lib/eeg/types/processed-data';
 import { createLogger } from '../lib/eeg/logger';
+import { bleGapLog } from '../lib/eeg/ble-gap-log';
+import { nextReconnectDelay } from '../lib/ble/reconnect-policy';
+import { RESUME_ORDER } from '../lib/native/app-lifecycle';
+import { isNativeApp } from '../lib/native/platform';
+import { PAUSE_ORDER, useAppLifecycle } from './useAppResume';
 import {
   enqueueFeature,
   listPendingFeatures,
@@ -110,6 +115,8 @@ function toScoredIndices(raw: BandRawIndices): BandRawIndices {
 }
 
 const FEATURE_FLUSH_MS = 5000;
+/** SDD-222 G6: BLE 콜백 경로 raw flush 최소 간격 */
+const CALLBACK_FLUSH_MIN_INTERVAL_MS = 5000;
 /** SDD-112: REST 폴백 재전송 배치 상한(1분치) — 거대 큐를 5초 주기로 나눠 drain */
 const RETRANSMIT_BATCH_MAX = 60;
 /** SDD-113: 세션 경과시간 기반 window_index 영속 base 키 */
@@ -386,6 +393,12 @@ export function useBand({
   /** SDD-120 후속: 밴드 끊김(gattserverdisconnected) 시 자동 재연결 */
   const autoReconnectRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** SDD-222: 자동 재연결 시도 횟수(백오프 단계). 연결 성공 시 0 으로 리셋 */
+  const reconnectAttemptRef = useRef(0);
+  /** SDD-222: 끊김 구간 로그가 열려 있는지 — 밴드를 쓰지 않는 회원은 로그 코드가 호출되지 않는다 */
+  const gapOpenRef = useRef(false);
+  /** 재시도 타이머가 최신 connect 를 호출하도록 하는 ref (stale closure 방지) */
+  const autoConnectRef = useRef<() => Promise<void>>(async () => undefined);
   const wsConnectedRef = useRef(false);
   const revokedSessionRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
@@ -424,6 +437,10 @@ export function useBand({
   rawEnqueueRef.current = rawUpload.enqueueChunk;
   const rawDrainRef = useRef(rawUpload.drain);
   rawDrainRef.current = rawUpload.drain;
+  const rawFlushRef = useRef(rawUpload.flush);
+  rawFlushRef.current = rawUpload.flush;
+  /** SDD-222 G6: BLE 콜백 경로 flush 의 마지막 시각(throttle 기준) */
+  const lastCallbackFlushAtRef = useRef(0);
 
   const rawSamplesRef = useRef<RawEegSample[]>([]);
   const rawChunkIndexRef = useRef(0);
@@ -458,6 +475,14 @@ export function useBand({
       }
       if (rawSamplesRef.current.length >= RAW_SAMPLES_PER_CHUNK) {
         flushRawChunk();
+      }
+      // SDD-222 G6: 백그라운드에서 setInterval flush 가 멈춰도 BLE 수신이 살아 있는 동안은
+      // 업로드가 진행되도록 콜백 경로에서도 최소 5초 간격으로 flush 한다.
+      // 중복 전송은 useEegRawUpload 의 flushingRef 가드가 막는다.
+      const now = Date.now();
+      if (now - lastCallbackFlushAtRef.current >= CALLBACK_FLUSH_MIN_INTERVAL_MS) {
+        lastCallbackFlushAtRef.current = now;
+        void rawFlushRef.current().catch((err) => logger.warn('콜백 경로 raw flush 실패', err));
       }
     },
     [flushRawChunk],
@@ -987,6 +1012,11 @@ export function useBand({
     }
     // 수동 해제 시 자동 재연결 중단 — 예기치 않은 끊김(gattserverdisconnected)만 자동 재연결한다.
     autoReconnectRef.current = false;
+    reconnectAttemptRef.current = 0;
+    if (gapOpenRef.current) {
+      gapOpenRef.current = false;
+      bleGapLog.close();
+    }
     connectedAtRef.current = null;
 
     if (streamRef.current) {
@@ -1025,7 +1055,24 @@ export function useBand({
     }, 1000);
   }, []);
 
-  const connect = useCallback(async () => {
+  /** SDD-222: 자동 재연결 예약 — 지수 백오프, 수동 해제·언마운트 시 실행되지 않는다 */
+  const scheduleReconnect = useCallback(() => {
+    if (!autoReconnectRef.current || !mountedRef.current) return;
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    const delay = nextReconnectDelay(reconnectAttemptRef.current);
+    reconnectAttemptRef.current += 1;
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      if (!autoReconnectRef.current || !mountedRef.current) return;
+      void autoConnectRef.current();
+    }, delay);
+  }, []);
+
+  /**
+   * @param isAuto true 면 자동 재연결 시도 — 실패해도 autoReconnectRef 를 끄지 않고 다음 백오프를 예약한다.
+   *   (기존에는 실패 catch 의 disconnect() 가 플래그를 꺼서 재시도가 1회로 끝났다)
+   */
+  const connectInternal = useCallback(async (isAuto: boolean) => {
     // BLE 연결 자체는 세션/참가자 정보와 무관하게 가능해야 한다.
     // (participantId가 아직 없어도 웹블루투스 다이얼로그는 떠야 함)
     if (!isSupported) {
@@ -1038,13 +1085,19 @@ export function useBand({
     // (싱글톤 BLE 연결에 다중 StreamProcessor/큐가 붙으면 업로드가 이중화된다.)
     if (bandConnectInFlight) {
       logger.warn('중복 connect 무시 — 연결 시도가 이미 진행 중입니다');
+      if (isAuto) scheduleReconnect();
       return;
     }
     bandConnectInFlight = true;
 
     setError(null);
-    // 연결 시도 시 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
-    autoReconnectRef.current = true;
+    if (isAuto) {
+      if (gapOpenRef.current) bleGapLog.recordAttempt();
+    } else {
+      // 사용자 연결 시도 — 자동 재연결 재활성화 (수동 해제로 꺼진 플래그 복원)
+      autoReconnectRef.current = true;
+      reconnectAttemptRef.current = 0;
+    }
     setConnectionState('connecting');
 
     try {
@@ -1154,6 +1207,10 @@ export function useBand({
       if (!alreadyConnected) {
         await bluetoothService.connect(selectedDeviceId!);
       }
+      // 재시도 도중 사용자가 수동 해제했다면 연결을 이어 가지 않는다.
+      if (isAuto && !autoReconnectRef.current) {
+        throw new Error('수동 해제로 자동 재연결을 중단했습니다');
+      }
 
       try {
         const level = await bluetoothService.getBatteryLevel();
@@ -1177,25 +1234,46 @@ export function useBand({
           void drainPendingQueue();
           void rawDrainRef.current(15_000);
         }
-        // SDD-120 후속: 자동 재연결 — 캐시된 디바이스로 재선택 다이얼로그 없이 gatt.connect() 재호출.
+        // SDD-120 후속 / SDD-222: 자동 재연결 — 캐시된 디바이스로 재선택 다이얼로그 없이
+        // gatt.connect() 를 지수 백오프(1s→30s)로 재호출하고, 끊김 구간을 로그로 남긴다.
         if (autoReconnectRef.current && mountedRef.current) {
-          if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = setTimeout(() => {
-            void connect();
-          }, 1500);
+          if (!gapOpenRef.current) {
+            gapOpenRef.current = true;
+            bleGapLog.open('connection-lost');
+          }
+          reconnectAttemptRef.current = 0;
+          scheduleReconnect();
         }
       });
 
+      reconnectAttemptRef.current = 0;
+      if (gapOpenRef.current) {
+        gapOpenRef.current = false;
+        bleGapLog.close();
+      }
       collectingRef.current = true;
       setConnectionState('connected');
       setUploadStatus(observationOnly ? 'idle' : 'streaming');
       markConnected();
     } catch (err) {
       logger.error('연결 실패', err);
-      await disconnect();
-      if (mountedRef.current) {
-        setConnectionState('error');
-        setError(err instanceof Error ? err.message : 'LINK BAND 연결 실패');
+      if (isAuto && autoReconnectRef.current && mountedRef.current) {
+        // 자동 재연결 실패: disconnect() 는 autoReconnectRef 를 꺼서 루프를 끊고
+        // 캐시된 디바이스 ID 까지 지우므로 호출하지 않는다. 스트림만 정리하고 다음 백오프를 예약한다.
+        if (streamRef.current) {
+          streamRef.current.cleanup();
+          streamRef.current = null;
+        }
+        if (!observationOnlyRef.current) flushRawChunk();
+        setConnectionState('disconnected');
+        setError('LINK BAND 연결이 끊어졌습니다 — 자동 재연결 시도 중');
+        scheduleReconnect();
+      } else {
+        await disconnect();
+        if (mountedRef.current) {
+          setConnectionState('error');
+          setError(err instanceof Error ? err.message : 'LINK BAND 연결 실패');
+        }
       }
     } finally {
       // FE-BAND-001: 성공/실패와 무관하게 in-flight 가드를 해제한다.
@@ -1217,9 +1295,48 @@ export function useBand({
     participantId,
     refreshPendingCount,
     retransmitPending,
+    scheduleReconnect,
     sessionId,
     startMock,
   ]);
+
+  const connect = useCallback(() => connectInternal(false), [connectInternal]);
+  autoConnectRef.current = () => connectInternal(true);
+
+  // SDD-222 G1: 앱 복귀 — BLE 연결 상태 확인.
+  // - 재연결 진행 중(끊김 구간 열림)이면 백그라운드에서 멈춘 백오프 타이머를 기다리지 않고 즉시 재시도한다.
+  // - 연결 중이면 어댑터 프로브로 실제 연결을 확인하고, 끊겼으면 어댑터가 connectionLost 와 같은 경로를 태워
+  //   위 onConnectionLost 핸들러(갭 로그 + 백오프 재연결)가 시작된다.
+  // - 밴드를 쓰지 않는 회원(opt-in 안 함)은 아무 것도 하지 않는다.
+  // 전환(pause) 시에는 메모리 raw 버퍼를 큐에 적재한다(소켓은 끊지 않는다).
+  useAppLifecycle({
+    order: RESUME_ORDER.ble,
+    pauseOrder: PAUSE_ORDER.bufferFlush,
+    onResume: async () => {
+      if (isMock || !isSupported) return;
+      if (gapOpenRef.current) {
+        if (!bandConnectInFlight && autoReconnectRef.current && mountedRef.current) {
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+          void autoConnectRef.current();
+        }
+        return;
+      }
+      if (!bluetoothService.isConnected() || !isNativeApp()) return;
+      try {
+        // 정적 import 하면 웹 번들·실행 경로에 네이티브 BLE 플러그인이 들어가므로 동적으로 로드한다.
+        const { verifyActiveBleConnection } = await import('../lib/ble/capacitor-ble-adapter');
+        await verifyActiveBleConnection();
+      } catch (err) {
+        logger.warn('복귀 시 BLE 연결 확인 실패', err);
+      }
+    },
+    onPause: () => {
+      if (!observationOnlyRef.current && collectingRef.current) flushRawChunk();
+    },
+  });
 
   // 표시용 정규화에 쓸 활성 표준 모델을 1회 로드한다 (playground 외 화면도 표준모델 적용).
   // 실패 시 코호트(B0) fallback — scoreIndices 내부에서 처리된다.

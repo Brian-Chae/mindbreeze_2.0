@@ -7,6 +7,7 @@ import { invalidateClassReads } from '../lib/class-structure/invalidation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
+import { RESUME_ORDER, subscribeAppResume } from '../lib/native/app-lifecycle';
 import { type ClassSignalType } from '../lib/class/quiet-signal';
 import {
   normalizeAggregate,
@@ -300,6 +301,8 @@ export function useSessionLiveSocket({
       // snapshot 없는 joined(구 BE) → hasSnapshot 유지 false, 폴백 계속
       // 단절 중 눌린 신호 flush — 확정된 pid가 있을 때만
       if (pid) flushPendingSignals(pid);
+      // 복귀 재연결 후 첫 joined 에서만 즉시 heartbeat (참여 상태 공백 최소화)
+      if (heartbeatAfterJoin && normalized && sendHeartbeat()) heartbeatAfterJoin = false;
     };
 
     const onJoinDenied = (event: { session_id?: string }): void => {
@@ -322,11 +325,27 @@ export function useSessionLiveSocket({
       setSnapshot(null);
       snapshotRef.current = null;
     };
-    const heartbeatTimer = window.setInterval(() => {
+    const sendHeartbeat = (): boolean => {
       if (socket.connected && snapshotRef.current && !joinDeniedRef.current && revokedSessionRef.current !== sessionId) {
         socket.emit('participation_heartbeat', {});
+        return true;
       }
-    }, 30000);
+      return false;
+    };
+    const heartbeatTimer = window.setInterval(sendHeartbeat, 30000);
+
+    // SDD-222 G1: 앱 복귀 — 30초 타이머는 백그라운드에서 멈추므로 즉시 1회 보낸다.
+    // 단절 상태면 재연결(connect 이벤트 → onConnect 의 재join 경로)하고, joined 확정 직후 1회 보낸다.
+    // 이미 연결된 상태에서는 connect()/join 을 다시 호출하지 않는다.
+    let heartbeatAfterJoin = false;
+    const unsubResume = subscribeAppResume(() => {
+      if (!socket.connected) {
+        heartbeatAfterJoin = true;
+        socket.connect();
+        return;
+      }
+      sendHeartbeat();
+    }, RESUME_ORDER.socket);
 
     const onState = (event: SessionStateChangedEvent): void => {
       if (event.session_id !== sessionId) return;
@@ -449,6 +468,7 @@ export function useSessionLiveSocket({
       socket.off('join_denied', onJoinDenied);
       socket.off('access_revoked', onAccessRevoked);
       window.clearInterval(heartbeatTimer);
+      unsubResume();
       signalParticipantRef.current = null;
       joinDeniedRef.current = false;
       socketRef.current = null;
