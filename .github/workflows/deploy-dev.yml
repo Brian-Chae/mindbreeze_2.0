@@ -42,7 +42,8 @@ jobs:
           # SDD-197: 개발용 역할 시뮬레이션(무인증 계정 생성·무비번 로그인)은 실사용자가 있는 환경에서 끈다.
           npm install --legacy-peer-deps
           npx tsc -b --clean 2>/dev/null; true
-          npm run build
+          # SDD-220 이후 기본 모드(production)는 운영 출시 빌드로 취급돼 운영 API 주소가 박힌다 → dev는 mode=dev로 빌드
+          npx tsc -b && npx vite build --mode dev
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
