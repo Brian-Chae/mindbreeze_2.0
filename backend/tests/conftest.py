@@ -128,6 +128,32 @@ def _isolate_external_storage_credentials():
     settings.aws_access_key_id, settings.aws_secret_access_key = saved
 
 
+# SDD-220: 신규 가입 경로는 생년월일(만 14세)이 필수가 됐다. SDD-220 이전에 작성된 가입 fixture 는
+#   birth_date 를 보내지 않으므로, 테스트 클라이언트가 프론트의 필수 입력을 흉내 내 기본값을 채운다.
+#   (EntryAwareClient 뿐 아니라 테스트가 직접 만든 TestClient 도 같은 규칙을 따르도록 기반 클래스에서 보정한다.)
+#   연령 검증 자체를 검증하는 테스트는 헤더 ``X-Test-Strict-Signup: 1`` 로 이 보정을 끈다.
+_SIGNUP_BIRTH_DATE_PATHS = ("/auth/register/client", "/auth/register", "/auth/google", "/auth/apple")
+_original_testclient_request = TestClient.request
+
+
+def _request_with_signup_defaults(self, method, url, **kwargs):
+    headers = {str(k).lower(): v for k, v in (kwargs.get("headers") or {}).items()}
+    body = kwargs.get("json")
+    path = str(url).split("?")[0]
+    if (
+        str(method).upper() == "POST"
+        and isinstance(body, dict)
+        and "x-test-strict-signup" not in headers
+        and "birth_date" not in body
+        and any(path.endswith(p) for p in _SIGNUP_BIRTH_DATE_PATHS)
+    ):
+        kwargs["json"] = {**body, "birth_date": "1990-01-01"}
+    return _original_testclient_request(self, method, url, **kwargs)
+
+
+TestClient.request = _request_with_signup_defaults
+
+
 class EntryAwareClient(TestClient):
     """SDD-209(B5b): 프론트 클라이언트의 "입장 자격 저장소" 동작을 흉내 내는 테스트 클라이언트.
 
