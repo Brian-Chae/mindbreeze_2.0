@@ -137,3 +137,76 @@
 ## 9. 롤백
 
 - 네이티브 설정은 모두 추가 항목이므로 되돌리기 쉽다(Manifest 권한·서비스, Info.plist 키, AppDelegate 블록). JS 는 `isNativeApp()` 분기 뒤에 있어 웹 영향이 없고, `useBackgroundSession` 호출 한 줄을 제거하면 FGS 가 비활성화된다.
+
+---
+
+## 부록 A. T-J0 스파이크 결과
+
+> 2026-10-20, `node_modules` 소스(Java·`definitions.d.ts`·README)를 직접 확인한 결과. 설치 버전: `@capacitor-community/keep-awake@8.0.1`, `@capawesome-team/capacitor-android-foreground-service@8.1.0`. 설치는 CI 와 같은 `npm install --legacy-peer-deps`(storybook ↔ vite 8 peer 충돌은 기존 이슈).
+
+### A.1 결론: capawesome 플러그인 **사용 가능** (커스텀 플러그인 대안 불필요). 단 아래 3가지는 앱이 직접 처리한다.
+
+| # | 항목 | 확인 결과 | 조치 |
+|---|---|---|---|
+| 1 | **Manifest `<service>` 병합** | 플러그인 자체 Manifest 는 `POST_NOTIFICATIONS` 권한 1줄뿐. **서비스는 병합되지 않는다.** README 도 앱 Manifest 에 직접 선언하라고 안내 | **Track A 가 앱 Manifest 에 선언** (A.2) |
+| 2 | **`connectedDevice` 타입** | TS enum `ServiceType` 은 `Location=8`, `Microphone=128` 만 정의. 하지만 Java 가 `Integer` 를 `startForeground(id, n, serviceType)` 에 **그대로 전달**(`AndroidForegroundService.java:67`, SDK≥29 && ≠0). 따라서 `16`(=`FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE`)을 숫자로 넘기면 동작 | JS 에서 `serviceType: 16 as ServiceType` 캐스트 + 상수 `FGS_TYPE_CONNECTED_DEVICE = 16` (Track J, `any` 금지) |
+| 3 | **알림 중요도 LOW** | `startForegroundService` 옵션에는 중요도가 없고, `notificationChannelId` 미지정 시 기본 채널이 `IMPORTANCE_DEFAULT`(소리 가능). 채널은 한 번 만들면 중요도를 바꿀 수 없음 | `createNotificationChannel({ id, name, description, importance: Importance.Low })` 를 **start 전에 호출**하고 `notificationChannelId` 로 지정 |
+
+### A.2 Track A 가 앱 `AndroidManifest.xml` 에 직접 넣을 항목
+
+```xml
+<!-- application 태그 바깥 -->
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+<!-- POST_NOTIFICATIONS 는 플러그인 Manifest 에서 병합됨(앱에 이미 있으면 중복 무방) -->
+
+<!-- application 태그 안 -->
+<service
+    android:name="io.capawesome.capacitorjs.plugins.foregroundservice.AndroidForegroundService"
+    android:foregroundServiceType="connectedDevice"
+    android:exported="false" />
+```
+
+- README 예시의 `FOREGROUND_SERVICE_LOCATION` / `foregroundServiceType="location"` / `SYSTEM_ALERT_WINDOW` 는 **넣지 않는다**(위치·오버레이 불필요, 스토어 심사 사유 증가). `moveToForeground()` 는 오버레이 권한이 필요하므로 쓰지 않는다.
+- Android 14+(targetSdk 34+)는 `FOREGROUND_SERVICE_CONNECTED_DEVICE` 권한 + 타입 선언이 없으면 `startForeground` 가 예외를 던진다. 또한 `connectedDevice` 타입은 런타임에 `BLUETOOTH_CONNECT`(등) 권한 보유가 요구되므로, **FGS 시작은 BLE 권한이 허용된 뒤**에만 호출해야 한다(Track J `useBackgroundSession` 가드).
+- 알림 아이콘: `smallIcon` 은 `res/drawable` 리소스명(확장자 없음). Track A 가 `ic_stat_*` 리소스를 추가하고 그 이름을 Track J 와 합의(제안: `ic_stat_mindbreeze`).
+- 플러그인 `AndroidForegroundService` 의 `.setPriority(PRIORITY_HIGH)` 는 API 26+ 에서 무시되고 채널 중요도가 우선하므로 LOW 채널이면 조용하다.
+- 소스에 배터리 최적화 API 는 **없다**. §2 의 계획대로 설정 화면 이동 인텐트가 필요하면 별도 처리(후속/Track A 판단).
+
+### A.3 JS API 시그니처 (Track J 가 `background-session.ts` 에서 사용)
+
+```ts
+import {
+  ForegroundService, Importance, ServiceType,
+} from '@capawesome-team/capacitor-android-foreground-service';
+
+createNotificationChannel(o: { id: string; name: string; description?: string; importance?: Importance }): Promise<void>
+//   Importance: Min=1 Low=2 Default=3 High=4 Max=5  → Low(2) 사용
+startForegroundService(o: {
+  id: number;                    // 알림 ID (탭 이벤트의 notificationId 와 동일)
+  title: string; body: string;
+  smallIcon: string;             // res/drawable 리소스명
+  serviceType?: ServiceType;     // 숫자 16 을 캐스트해 전달
+  notificationChannelId?: string;
+  silent?: boolean;              // true: 업데이트 시 재알림 안 함 (setOnlyAlertOnce)
+  buttons?: { title: string; id: number }[];  // 불필요(미사용)
+}): Promise<void>
+updateForegroundService(o: 위와 동일 타입): Promise<void>   // 문구 갱신
+stopForegroundService(): Promise<void>
+checkPermissions(): Promise<{ display: PermissionState }>   // 알림 권한(Android 13+)
+requestPermissions(): Promise<{ display: PermissionState }>
+addListener('notificationTapped', (e: { notificationId: number }) => void): Promise<PluginListenerHandle>
+removeAllListeners(): Promise<void>
+```
+
+- **시작/종료**: `startForegroundService` 는 내부에서 기존 서비스를 먼저 `stop` 한 뒤 시작(중복 호출 안전). 이미 실행 중 문구만 바꿀 땐 `updateForegroundService`. 종료는 `stopForegroundService`.
+- **탭 시 앱 복귀**: 별도 코드 불필요. 알림 `contentIntent` 가 `getLaunchIntentForPackage` + `NEW_TASK|SINGLE_TOP` 으로 앱을 앞으로 가져온다. 탭 이벤트는 `notificationTapped` 로 수신(8.1.0+) — 필요 시 라우팅에 사용.
+- **iOS**: 이 플러그인은 Android 전용(`cap sync` 가 iOS Package.swift 에 추가하지 않음, 정상). iOS 에서 호출하면 미구현 오류이므로 **반드시 `Capacitor.getPlatform() === 'android'` 가드 + 동적 import** 후 호출. `keep-awake` 는 iOS·Android 모두 `cap sync` 에 포함됨.
+- **keep-awake**: `import { KeepAwake } from '@capacitor-community/keep-awake'` → `KeepAwake.keepAwake()` / `allowSleep()` / `isSupported()` / `isKeptAwake()`. 웹 구현도 있으나 네이티브에서만 호출(§2).
+
+### A.4 `cap sync` 산출물 (T-J0 커밋에 포함)
+
+- `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle`: keep-awake + foreground-service 프로젝트 2개 추가.
+- `ios/App/CapApp-SPM/Package.swift`: `CapacitorCommunityKeepAwake` 추가(foreground-service 는 Android 전용이라 없음).
+- `capacitor.config.ts`: 변경 없음(플러그인 설정 불필요).
