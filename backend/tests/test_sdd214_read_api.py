@@ -258,7 +258,8 @@ def _session_ids_from_parents(client, headers) -> set[str]:
 
 
 def test_RD1_5개_엔드포인트가_openapi에_등록된다(client):
-    paths = client.get("/openapi.json").json()["paths"]
+    # SDD-220: 운영(기본 environment=production)에서는 /openapi.json 을 노출하지 않으므로 스키마를 앱에서 직접 읽는다.
+    paths = client.app.openapi()["paths"]
     for path in (
         f"{API}/classes",
         f"{API}/classes/{{class_id}}",

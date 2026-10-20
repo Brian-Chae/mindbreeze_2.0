@@ -54,6 +54,9 @@ USER_OWNED: dict[str, tuple[str, ...]] = {
     "agent_relay_events": ("source_user_id", "target_user_id"),
     "agent_risk_signals": ("client_id", "counselor_id"),
     "careers": ("user_id",),
+    # SDD-220 ⓓ: 신고·차단 행은 보관 근거가 없으므로 당사자 탈퇴 시 함께 삭제한다(본문 사본 포함).
+    "chat_blocks": ("user_low_id", "user_high_id", "blocker_id"),
+    "chat_reports": ("reporter_id", "reported_user_id"),
     "chat_message_reads": ("user_id",),
     "chat_room_participants": ("user_id",),
     "client_counselor_links": ("client_id", "counselor_id"),
