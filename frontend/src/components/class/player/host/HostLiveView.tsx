@@ -58,6 +58,7 @@ export interface HostLiveActions {
   /** 허용 방법 시트의 "허용했어요 · 다시 확인" */
   recheckPermission: (kind: 'camera' | 'microphone') => void;
   copyCode: () => void;
+  invite?: () => void;
   connectSelfBand: () => void;
   disconnectSelfBand: () => void;
 }
@@ -154,6 +155,7 @@ export function HostLiveView(props: HostLiveViewProps) {
               sort={ui.sort} onSort={uiActions.setSort}
               showHandsFirst={online && !hostCase.solo} handsFirst={ui.handsFirst} onHandsFirst={uiActions.setHandsFirst}
               table={ui.table} onTable={uiActions.setTable}
+              onInvite={actions.invite ? () => { uiActions.closeSheet(); actions.invite?.(); } : undefined}
               accessCode={meta.accessCode} codeCopied={codeCopied} onCopyCode={actions.copyCode}
               selfBandText={selfBandText(selfBand)} onOpenMyband={() => uiActions.openSheet('myband')}
             />

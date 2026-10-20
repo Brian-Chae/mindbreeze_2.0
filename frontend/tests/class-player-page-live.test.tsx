@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   calls: [] as string[],
   media: { mic: 'on', cam: 'on', level: 0.2, steps: 1, quiet: false, speakerPlaying: false, videoRef: { current: null }, startMic: vi.fn(async () => undefined), stopMic: vi.fn(), toggleMic: vi.fn(async () => undefined), startCamera: vi.fn(async () => undefined), stopCamera: vi.fn(), toggleCamera: vi.fn(async () => undefined), recheck: vi.fn(async () => undefined), playTestTone: vi.fn(async () => undefined) },
   session: {} as Record<string, unknown>,
+  getClass: vi.fn(),
   getSession: vi.fn(),
   getSessionLiveMetrics: vi.fn(),
   setParticipantSpeaking: vi.fn(),
@@ -29,6 +30,9 @@ const h = vi.hoisted(() => ({
   rawSocket: { connected: false, connect: vi.fn() },
 }));
 
+vi.mock('../src/lib/api/class-structure', () => ({ getClass: (...args: unknown[]) => h.getClass(...args) }));
+vi.mock('../src/lib/api/class-operations', () => ({ classOperationsApi: { members: vi.fn(async () => ({ members: [] })) } }));
+vi.mock('../src/lib/api/class-member-candidates', () => ({ searchClassMemberCandidates: vi.fn(async () => ({ members: [], has_more: false })) }));
 vi.mock('../src/lib/api/session', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/lib/api/session')>()),
   getSession: (...a: unknown[]) => h.getSession(...a),
@@ -137,6 +141,7 @@ beforeEach(() => {
   h.prepProps.length = 0;
   h.calls.length = 0;
   Object.assign(h.liveKit, { token: null, loading: false, error: null });
+  h.getClass.mockReset().mockResolvedValue({ id: 'class-1', revision: 1, status: 'active', capacity: 10, capabilities: { invite: true } });
   h.getSession.mockReset().mockImplementation(async () => h.session);
   h.getSessionLiveMetrics.mockReset().mockResolvedValue({ metrics: [metric('host-p', { user_id: 'host-1' }), metric('a'), metric('b')] });
   h.setParticipantSpeaking.mockReset().mockResolvedValue({ participant_id: 'a', speaking: true, raise_hand: false });
@@ -353,7 +358,8 @@ describe('시작 전·닫힘 호스트: HostPrepContainer 로 교체 (SDD-209 I2
 
   it('세션을 못 받으면 서버 문구 없이 FH10 오류 화면(404=찾을 수 없는 클래스)을 보여 준다', async () => {
     const { ApiError } = await import('../src/lib/api/client');
-    h.getSession.mockReset().mockRejectedValue(new ApiError(404, '서버 원문 메시지', null));
+    h.getClass.mockReset().mockResolvedValue({ id: 'class-1', revision: 1, status: 'active', capacity: 10, capabilities: { invite: true } });
+  h.getSession.mockReset().mockRejectedValue(new ApiError(404, '서버 원문 메시지', null));
     await renderPage();
     expect(document.body.textContent).toContain('찾을 수 없는 클래스예요');
     expect(document.body.textContent).not.toContain('서버 원문 메시지');
@@ -433,4 +439,22 @@ it('T04 route reuse: B 로딩 중 A 데이터를 숨기고 늦은 A HTTP·joined
   await fire(()=>lateSnapshot({session_id:'s1',status:'in_progress',version:5,participation_version:55,participants:[metric('old-a',{display_name:'과거 A'})]}));
   expect(lastProps().session.id).toBe('s2');
   expect(lastProps().rows.map((row:{participant_id:string})=>row.participant_id)).not.toContain('old-a');
+});
+
+describe('SDD-223 진행 화면 내부 초대', () => {
+  it.each(['open', 'in_progress'])('%s에서 클래스 상세를 조회하고 화면 이동 없이 공용 시트를 연다', async status => {
+    h.session = makeSession(status, { class_id: 'class-1' });
+    await renderPage();
+    expect(h.getClass).toHaveBeenCalledWith('class-1', expect.any(AbortSignal));
+    const props = status === 'open' ? h.prepProps.at(-1)! : lastProps();
+    if (status === 'open') expect(props.canInvite).toBe(true);
+    await fire(status === 'open' ? props.onInviteAdd : props.onInvite);
+    expect(q('[role="dialog"]')?.getAttribute('aria-label')).toBe('회원 초대');
+    expect(pageRouter.state.location.pathname).toBe('/sessions/s1/player');
+  });
+  it.each([{ status: 'completed', invite: true }, { status: 'active', invite: false }])('클래스 상태 $status, invite=$invite이면 초대를 숨긴다', async value => {
+    h.getClass.mockResolvedValue({ id: 'class-1', status: value.status, capabilities: { invite: value.invite } });
+    h.session = makeSession('in_progress', { class_id: 'class-1' });
+    await renderPage(); expect(lastProps().onInvite).toBeUndefined();
+  });
 });

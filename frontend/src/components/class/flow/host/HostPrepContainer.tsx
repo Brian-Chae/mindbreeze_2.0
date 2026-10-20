@@ -53,6 +53,7 @@ export interface HostPrepContainerProps {
   research: number;
   retentionDays: number | null;
   onRemind: (participantIds: string[]) => void;
+  canInvite?: boolean;
   onInviteAdd: () => void;
   onCopyCode: () => void;
   codeCopied?: boolean;
@@ -183,7 +184,8 @@ export function HostPrepContainer(props: HostPrepContainerProps) {
           reminding: props.reminding,
           onCopyCode: props.onCopyCode,
           onRemind: props.onRemind,
-          onInviteAdd: props.onInviteAdd,
+          canInvite: props.canInvite,
+          onInviteAdd: () => { setSheet(null); props.onInviteAdd(); },
         }}
         bgm={{ ...props.sheets.bgm, tracks: props.sheets.bgm.tracks }}
         band={props.sheets.band}
@@ -240,7 +242,8 @@ export function HostPrepContainer(props: HostPrepContainerProps) {
       sheetOpen={sheet !== null || startOpen || leaveStage !== null}
       onBack={() => setLeaveStage('choose')}
       onStart={() => setStartOpen(true)}
-      onInviteAdd={props.onInviteAdd}
+      canInvite={props.canInvite}
+      onInviteAdd={() => { setSheet(null); props.onInviteAdd(); }}
       onInviteSheet={() => setSheet('invite')}
       onDock={(kind) => setSheet(kind)}
     />
