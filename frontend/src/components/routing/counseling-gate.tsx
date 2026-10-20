@@ -2,15 +2,12 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { isCounselingEnabled } from '../../lib/feature-flags';
+import { counselingFallbackPath } from './counseling-fallback-path';
 
 interface CounselingGateProps {
   /** 회원 영역(/app/*)이면 member, 그 외 host */
   area: 'host' | 'member';
   children: ReactNode;
-}
-
-export function counselingFallbackPath(area: 'host' | 'member'): string {
-  return area === 'member' ? '/app/classes' : '/classes';
 }
 
 export function CounselingGate({ area, children }: CounselingGateProps) {
