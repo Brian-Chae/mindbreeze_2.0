@@ -103,6 +103,11 @@ def _build_summaries(sessions: list[Session], db: DBSession) -> list[dict]:
     ]
 
 
+def _distinct_class_count(sessions: list[Session]) -> int:
+    """서로 다른 클래스 수 — class_id 기준 고유 개수. class_id 없는 레거시 단건 회차는 회차 1건 = 클래스 1개."""
+    return len({s.class_id if s.class_id is not None else s.id for s in sessions})
+
+
 _FALLBACK_SORT_TIME = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
@@ -177,6 +182,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         )
     )
     summaries = _build_summaries(sessions, db)
+    all_sessions = list(sessions)
 
     # SDD-221: 팀 강사(lead/assistant)로만 속한 클래스의 타인 진행 회차도 목록·집계에 합친다.
     team_sessions = _team_instructor_sessions(uid, user, {s.id for s in sessions}, db)
@@ -192,6 +198,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
             reverse=True,
         )
         summaries = [summary for _, summary in merged]
+        all_sessions = sessions + team_sessions
 
     org = db.query(Organization).filter(Organization.id == user.org_id).first() if user.org_id else None
 
@@ -202,7 +209,7 @@ def counselor_dashboard(user_id: str, db: DBSession) -> dict:
         "org_name": org.name if org else None,
         # SDD-081: 개인 상담소(individual)면 FE 가 "내 개인 상담소"로 표시한다
         "org_kind": org.kind if org else None,
-        "total_classes": len(summaries),
+        "total_classes": _distinct_class_count(all_sessions),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "total_participants": sum(c["participant_count"] for c in summaries),
@@ -244,8 +251,10 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
     summaries = _build_summaries(sessions, db)
 
     by_host: dict[str, list[dict]] = {}
+    sessions_by_host: dict[str, list[Session]] = {}
     for s, summary in zip(sessions, summaries):
         by_host.setdefault(str(s.host_id), []).append(summary)
+        sessions_by_host.setdefault(str(s.host_id), []).append(s)
 
     counselor_stats = []
     for m in counselors:
@@ -255,7 +264,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
                 "id": str(m.id),
                 "name": m.name,
                 "email": m.email,
-                "class_count": len(owned),
+                "class_count": _distinct_class_count(sessions_by_host.get(str(m.id), [])),
                 "participant_count": sum(c["participant_count"] for c in owned),
                 "completed_count": sum(1 for c in owned if c["status"] == "completed"),
             }
@@ -266,7 +275,7 @@ def org_dashboard(user_id: str, db: DBSession) -> dict:
         "org_name": org.name,
         "org_code": org.org_code,
         "total_counselors": len(counselor_stats),
-        "total_classes": len(summaries),
+        "total_classes": _distinct_class_count(sessions),
         "total_participants": sum(c["participant_count"] for c in summaries),
         "completed_classes": sum(1 for c in summaries if c["status"] == "completed"),
         "in_progress_classes": sum(1 for c in summaries if c["status"] in _IN_PROGRESS),
