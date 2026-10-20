@@ -182,9 +182,15 @@ async function createStartedClass(title, participantIds) {
 }
 
 /** 입장 마법사의 보이는 CTA 를 순서대로 눌러 진행 화면까지 간다. 본 단계(h1) 순서를 기록해 돌려준다. */
+// SDD-220 F1: 회차 입장 전 녹음·녹화 필수 동의 체크(미체크 시 입장 버튼 비활성)
+async function checkRecordingConsent(p) {
+  const box = p.getByRole('checkbox', { name: '녹음·녹화에 동의해요 (필수)' });
+  if (await box.count() && (await box.first().getAttribute('aria-checked')) !== 'true') await box.first().click();
+}
+
 async function walkToLive(p, { includeReport }) {
   // 시작 후 시트(`지금 입장하기`)가 뜨면 뒤의 단계 버튼이 가려지므로 가장 먼저 누른다
-  const steps = ['지금 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
+  const steps = ['지금 입장하기', '동의하고 입장하기', '입장하기', '확인하고 계속하기', '건너뛰기', 'LINK BAND 없이 계속하기', '다음'];
   const seen = [];
   let chose = false;
   for (let round = 0; round < 14; round += 1) {
@@ -200,6 +206,7 @@ async function walkToLive(p, { includeReport }) {
         chose = true;
       }
     }
+    await checkRecordingConsent(p);
     let clicked = false;
     for (const name of steps) {
       const button = p.getByRole('button', { name, exact: true });
@@ -242,6 +249,7 @@ await scenario('[클래스] (A) 비회원 입장: 4자리 코드 → 개인정�
   await p.fill('#fm-birth', '1990.03.12');
   await p.fill('#fm-email', GUEST_EMAIL);
   await p.fill('#fm-email2', GUEST_EMAIL);
+  await checkRecordingConsent(p);
   await p.getByRole('button', { name: '입장하기', exact: true }).click();
   // ③ /class/{id}/enter 로 이동 → 준비 → 입장
   await p.waitForURL((u) => u.pathname === `/class/${classes.A.id}/enter`, { timeout: 15000 });

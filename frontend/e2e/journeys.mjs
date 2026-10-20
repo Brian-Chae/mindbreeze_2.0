@@ -25,7 +25,8 @@ await client('구 경로 /app/sessions → /app/classes 이동', async (p) => {
   await p.waitForURL((u) => u.pathname === '/app/classes', { timeout: 8000 });
 });
 await client('리포트: 빈 상태 안내', async (p) => { await expectText(p, '/app/reports', '리포트'); });
-await client('채팅: 루시·담당 상담사 대화방 노출', async (p) => { await expectText(p, '/app/chat', '루시', 'E2E-상담사'); });
+// SDD-220: AI 비공개 기본값 — 루시 대화방이 없어야 한다
+await client('채팅: 담당 상담사 대화방 노출(AI 비공개 시 루시 없음)', async (p) => { const t = await expectText(p, '/app/chat', 'E2E-상담사'); if (t.includes('루시')) throw new Error('AI 비공개인데 루시 노출'); });
 await client('알림: 빈 상태', async (p) => { await expectText(p, '/app/notifications', '알림'); });
 await client('다음 클래스 카드: 제목·설명 글자가 흰색(어두운 배경 대비)', async (p) => {
   // 상담사가 E2E 세션을 만들어 내담자를 참여시킨 뒤, 내담자 홈의 '다음 클래스' 히어로(class-hero) 글자색을 확인하고 삭제한다.
@@ -109,7 +110,8 @@ await cou('설정: 코드·카드 제목 중복 없음', async (p) => {
   const dup = heads.filter((h, i, a) => a.indexOf(h) !== i);
   if (dup.length) throw new Error(`카드 제목 중복: ${dup.join(',')}`);
 });
-await cou('채팅: 루시 AI 대화방과 내담자 대화방', async (p) => { await expectText(p, '/chat/lucy', '루시 (AI)', 'E2E-내담자'); });
+// SDD-220: AI 비공개 기본값 — /chat/lucy 는 채팅 목록으로 돌려보낸다
+await cou('채팅: 루시 경로 차단(AI 비공개)·내담자 대화방', async (p) => { const t = await expectText(p, '/chat/lucy', 'E2E-내담자'); if (t.includes('루시 (AI)')) throw new Error('AI 비공개인데 루시 노출'); });
 await cou('인증 등급 페이지', async (p) => { await expectText(p, '/credentials', '인증 등급', '증빙 업로드'); });
 
 // ── 기관 관리자 (5) ────────────────────────────────────
