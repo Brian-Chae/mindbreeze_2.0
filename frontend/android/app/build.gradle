@@ -14,7 +14,7 @@ android {
     namespace = "com.looxidlabs.mindbreeze"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.looxidlabs.mindbreeze"
+        applicationId "com.looxidlabs.mindbreeze2"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode appVersionCode
