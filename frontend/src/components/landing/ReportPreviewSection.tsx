@@ -1,3 +1,4 @@
+import { WELLNESS_DISCLAIMER } from '../../lib/legal-copy';
 import { Component, lazy, Suspense, useState, type ReactNode } from 'react';
 import { Arrow, primaryButton, SectionHeading, sectionContainer } from './landing-ui';
 
@@ -37,7 +38,7 @@ export default function ReportPreviewSection() {
           </div>
           <p className="mt-6 border-t border-[#ECE5F0] pt-4 text-[12px] leading-6 text-[#95869C]">나를 평가하는 점수 대신,<br />나를 이해하는 이야기를 남깁니다.</p>
         </article>
-        <p className="mt-4 text-center text-[12px] leading-5 text-[#8A7593]">디자인 소개용 예시 · 의학적 진단이나 치료를 대신하지 않습니다.</p>
+        <p className="mt-4 text-center text-[12px] leading-5 text-[#8A7593]">예시 데이터 · {WELLNESS_DISCLAIMER}</p>
       </div>
     </div>
     {open && <PreviewLoadBoundary onClose={() => setOpen(false)}><Suspense fallback={<div role="status" className="fixed inset-x-6 bottom-6 z-50 mx-auto flex max-w-md items-center justify-between gap-4 rounded-2xl border border-[#E4D6E9] bg-white p-5 text-sm text-[#5F0080] shadow-xl">리포트를 불러오는 중이에요.<button type="button" onClick={() => setOpen(false)} className="rounded-lg border px-3 py-2">취소</button></div>}><ReportSampleModal onClose={() => setOpen(false)} /></Suspense></PreviewLoadBoundary>}

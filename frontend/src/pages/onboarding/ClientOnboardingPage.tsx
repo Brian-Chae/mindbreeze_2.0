@@ -28,7 +28,7 @@ const CONCERN_OPTIONS = [
   '기타',
 ];
 
-const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전념', '미술치료'];
+const INTEREST_OPTIONS = ['명상', '인지행동', '마음챙김', '수용전념', '미술 활동'];
 
 const STEP_LABELS = ['기본 정보', '상세 정보', '프로필', '상담사 매칭'];
 
