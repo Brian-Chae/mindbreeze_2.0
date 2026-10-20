@@ -1,6 +1,6 @@
 /**
  * SDD-038 — 명상 지표 실시간 뷰.
- * 몸 3개(BPM·호흡수·HRV=SDNN) + 마음 게이지 + 효과적 휴식 + 중지 시 요약.
+ * 몸 3개(BPM·호흡수·HRV=SDNN) + 마음 게이지 + 고요 구간 + 중지 시 요약.
  * useBand 실제 지표 + 몸/마음 1Hz 시계열 그래프.
  */
 
@@ -253,7 +253,7 @@ export function PlaygroundMeditationPanel({ band, connected }: Props) {
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-[#1F1F1F]">명상 지표</h3>
         <p className="mt-0.5 text-xs text-[#6F6F6F]">
-          몸(PPG) · 마음(EEG) · 효과적 휴식 — useBand 실제 지표
+          몸(PPG) · 마음(EEG) · 추정 참고 지표{band.isMock ? ' · 예시 데이터' : ''}
           {connected ? '' : ' · 밴드 미연결'}
         </p>
       </div>
@@ -297,7 +297,7 @@ export function PlaygroundMeditationPanel({ band, connected }: Props) {
             </div>
           </div>
           <p className="mt-2 text-[11px] text-[#6F6F6F]">
-            효과적 휴식 {formatMmSs(summary.calmSec)} / 경과{' '}
+            고요 구간 {formatMmSs(summary.calmSec)} / 경과{' '}
             {formatMmSs(summary.elapsedSec)}
           </p>
         </div>
@@ -306,7 +306,7 @@ export function PlaygroundMeditationPanel({ band, connected }: Props) {
       {showLive && (
         <>
           <div className="mb-5 rounded-xl border border-[#EFEFEF] bg-[#F8FAFC] px-4 py-3">
-            <p className="text-xs font-medium text-[#5F0080]">효과적 휴식</p>
+            <p className="text-xs font-medium text-[#5F0080]">고요 구간</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-[#1F1F1F]">
               {formatMmSs(calmSec)}
               <span className="ml-2 text-base font-semibold text-[#6F6F6F]">
@@ -344,7 +344,7 @@ export function PlaygroundMeditationPanel({ band, connected }: Props) {
             />
           </div>
           <p className="mt-1 text-[10px] text-[#6F6F6F]">
-            HRV=SDNN(ms) · useBand PPG 경로
+            심박 변동(SDNN, ms)
           </p>
 
           <h4 className="mb-2 mt-5 text-xs font-semibold text-[#5F0080]">마음</h4>
