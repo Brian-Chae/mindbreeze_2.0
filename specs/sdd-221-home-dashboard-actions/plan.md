@@ -32,9 +32,11 @@
 | T3 | `DashboardPage` 호출부 교체(타일·일정 행·ClassCard·알림), 문구 `입장하기`→상황별 | pages/DashboardPage.tsx | 워커 B (T1·T2 후) |
 | T4 | `OrgDashboardPage` 동일 증상 점검, 필요 시 같은 컴포넌트 적용 | pages/OrgDashboardPage.tsx | 워커 B |
 | T5 | 팀 강사 회차 누락 재현(백엔드 테스트로 재현 + dev 실데이터 비교) → 필요 시 서버 수정 | backend/app/services/dashboard_service.py, tests | 워커 C(병렬) |
+| T7a | 회원 홈 데스크톱 시안 HTML 3안 이내(1440px 기준) + 4뷰포트 측정 → Brian 승인 | designs/member-home-desktop/ | 워커 D(Codex 시안), 승인 게이트 |
+| T7b | 시안 승인 후 구현: `ClientHomePage`·`member-structure-home-page`·`member-class-views` 스타일 통일, `내 클래스` 가로 스크롤 줄(스냅·키보드), 타일 격자 | pages/client/*, components/class/structure/member-class-views.tsx | 워커 E |
 | T6 | dev 배포 후 실화면 검증, `summary.md` | specs | 지휘 |
 
-병렬: A ∥ C. B 는 A 완료 후.
+병렬: A ∥ C ∥ D(시안). B 는 A 완료 후, E 는 시안 승인 후. 회원 홈 파일은 상담사 홈 파일과 겹치지 않는다.
 
 ## 3. 위험·롤백
 - 카드 전체 링크로 내부 버튼 클릭이 막히거나 번지는 회귀 → 오버레이 구조 + 이벤트 테스트로 방지.
